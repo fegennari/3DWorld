@@ -312,7 +312,7 @@ struct building_lights_manager_t : public city_lights_manager_t {
 		float const light_radius(0.1*light_radius_scale*get_tile_smap_dist()); // distance from the camera where lights are drawn
 		if (!begin_lights_setup(xlate, light_radius, dl_sources)) return;
 		// no room lights if player is hiding in a closed closet/windowless room with light off (prevents light leakage)
-		if (sec_camera_mode || !player_in_dark_room()) {add_building_interior_lights(xlate, lights_bcube);}
+		if (sec_camera_mode || !player_in_dark_room()) {add_building_interior_lights(xlate, lights_bcube, sec_camera_mode);}
 		if (flashlight_on && !sec_camera_mode) {add_player_flashlight(0.12);} // add player flashlight, even when outside of building so that flashlight can shine through windows
 		if (camera_in_building && !sec_camera_mode && player_holding_lit_candle()) {add_player_candle_light(xlate);}
 		clamp_to_max_lights(xlate, dl_sources);
@@ -2944,7 +2944,7 @@ public:
 		return camera_pdu.sphere_and_cube_visible_test((grid_bcube.get_cube_center() + xlate), grid_bcube.get_bsphere_radius(), (grid_bcube + xlate));
 	}
 
-	void add_interior_lights(vector3d const &xlate, cube_t &lights_bcube) { // Note: non const because this caches light bcubes
+	void add_interior_lights(vector3d const &xlate, cube_t &lights_bcube, bool sec_camera_mode) { // Note: non const because this caches light bcubes
 		if (!draw_building_interiors || !has_interior_geom) return; // no interior
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		vector<point> points; // reused temporary
@@ -2963,6 +2963,7 @@ public:
 				if (!b.has_room_geom()) continue; // no interior room geom, skip
 				if (!lights_bcube.intersects_xy(b.bcube)) continue; // not within light volume (too far from camera)
 				bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1, 1)); // inc_attic=1, inc_ext_basement=1
+				if (sec_camera_mode && !camera_in_this_building) continue; // security cameras only show lights in their building
 				// limit room lights to when the player is in a building because we can restrict them to a single floor, otherwise it's too slow
 				if (!camera_in_this_building && !camera_pdu.cube_visible(b.bcube + xlate) && !b.interior_visible_from_other_building_ext_basement(xlate, 1)) continue; // VFC
 				if (is_first_building) {oc.set_camera(camera_pdu);} // setup occlusion culling on the first visible building
@@ -4213,12 +4214,12 @@ public:
 			if (i->second.is_visible(xlate)) {bcs.push_back(&i->second);}
 		}
 	}
-	void add_interior_lights(vector3d const &xlate, cube_t &lights_bcube) {
+	void add_interior_lights(vector3d const &xlate, cube_t &lights_bcube, bool sec_camera_mode) {
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {
 			cube_t const &bcube(i->second.get_bcube());
-			if (!lights_bcube.intersects_xy(bcube)) continue; // not within light volume (too far from camera)
+			if (!lights_bcube.intersects_xy(bcube))      continue; // not within light volume (too far from camera)
 			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
-			i->second.add_interior_lights(xlate, lights_bcube);
+			i->second.add_interior_lights(xlate, lights_bcube, sec_camera_mode);
 		}
 	}
 	void get_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) const {
@@ -4379,9 +4380,9 @@ cube_t get_grid_bcube_for_building(building_t const &b) {
 	return ret;
 }
 void clear_building_vbos() {
-	building_creator.clear_vbos();
+	building_creator     .clear_vbos();
 	building_creator_city.clear_vbos();
-	building_tiles.clear_vbos();
+	building_tiles       .clear_vbos();
 }
 
 // city interface
@@ -4394,11 +4395,11 @@ void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways  ) 
 void add_buildings_exterior_lights(vector3d const &xlate, cube_t &lights_bcube) {building_creator_city.add_exterior_lights(xlate, lights_bcube);}
 float get_max_house_size() {return global_building_params.get_max_house_size();}
 
-void add_building_interior_lights(point const &xlate, cube_t &lights_bcube) {
+void add_building_interior_lights(point const &xlate, cube_t &lights_bcube, bool sec_camera_mode) {
 	//highres_timer_t timer("Add building interior lights"); // 0.97/0.37
-	building_creator.add_interior_lights(xlate, lights_bcube);
-	building_creator_city.add_interior_lights(xlate, lights_bcube);
-	building_tiles.add_interior_lights(xlate, lights_bcube);
+	building_creator     .add_interior_lights(xlate, lights_bcube, sec_camera_mode);
+	building_creator_city.add_interior_lights(xlate, lights_bcube, sec_camera_mode);
+	building_tiles       .add_interior_lights(xlate, lights_bcube, sec_camera_mode);
 }
 // cars + peds
 void get_city_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) {building_creator_city.get_occluders(pdu, state);}

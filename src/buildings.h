@@ -2156,7 +2156,7 @@ void get_balcony_cubes(room_object_t const &c, cube_t cubes[4]);
 void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_gen_t &rgen);
 bool door_opens_inward(door_base_t const &door, cube_t const &room);
 bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t const &door, unsigned check_dirs=2, unsigned open_dirs=2, bool allow_block_door=0);
-void add_building_interior_lights(point const &xlate, cube_t &lights_bcube);
+void add_building_interior_lights(point const &xlate, cube_t &lights_bcube, bool sec_camera_mode);
 unsigned calc_num_floors(cube_t const &c, float window_vspacing, float floor_thickness);
 unsigned calc_num_floors_room(room_t const &r, float window_vspacing, float floor_thickness);
 void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim);
