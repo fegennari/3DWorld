@@ -197,6 +197,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	assert(P.rooms.size() >= 2); // must have at least basement and primary hallway
 	interior->place_exterior_room(hallway, wall_area, fc_thick, wall_thickness, P, basement_part_ix, 0, hallway.is_hallway); // use basement part_ix; num_lights=0
 	if (interior->has_backrooms) {interior->rooms.back().assign_all_to(RTYPE_BACKROOMS);} // make it backrooms
+	interior->rooms.reserve(interior->rooms.size() + (P.rooms.size()-2) + 1); // allocate an extra room for a possible connector to an adjacent building
 
 	for (auto r = P.rooms.begin()+2; r != P.rooms.end(); ++r) { // skip basement and primary hallway
 		interior->place_exterior_room(*r, *r, fc_thick, wall_thickness, P, basement_part_ix, 0, r->is_hallway);
@@ -460,6 +461,8 @@ bool building_t::add_ext_basement_rooms_recur(extb_room_t &parent_room, ext_base
 	bool was_added(0);
 
 	for (unsigned n = 0; n < global_building_params.max_ext_basement_hall_branches; ++n) {
+		if (interior->rooms.size() + P.rooms.size() >= 255) break; // cap the number of rooms at 255 so that we can store room_ix in a uint8_t
+
 		for (unsigned N = 0; N < 2; ++N) { // make up to 2 tries to place this room
 			bool const dir(rgen.rand_bool());
 			float const conn_edge(parent_room.d[dim][dir]), room_pos(rgen.rand_uniform(pos_lo, pos_hi));
