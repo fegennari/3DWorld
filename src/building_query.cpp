@@ -1027,12 +1027,32 @@ bool building_t::are_rooms_connected(room_t const &r1, room_t const &r2, float z
 			if (!ds.is_same_stack(door)) break; // moved to a different stack, done
 			if (door.z1() < zval && door.z2() > zval && door.open_amt > 0.0 && tc1.contains_cube(door)) return 1;
 		}
-	} // for door_stacks
+	} // for ds
 	return 0;
 }
 bool building_t::are_rooms_connected(unsigned room_ix1, unsigned room_ix2, float zval, bool check_door_open) const {
 	if (room_ix1 == room_ix2) return 1; // error?
 	return are_rooms_connected(get_room(room_ix1), get_room(room_ix2), zval, check_door_open);
+}
+
+bool building_t::all_room_int_doors_closed(unsigned room_ix, float zval) const {
+	if (has_complex_floorplan) return 0; // not supported, as there may be missing walls
+	room_t const &room(get_room(room_ix));
+	if (!is_house && room.is_hallway) return 0; // office hallways can connect to other hallways with no doors
+	cube_t tc(room);
+	tc.expand_by_xy(2.0*get_wall_thickness()); // expand so that doors overlap
+
+	for (auto const &ds : interior->door_stacks) {
+		if (!tc.contains_cube(ds)) continue;
+		assert(ds.first_door_ix < interior->doors.size());
+
+		for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
+			door_t const &door(interior->doors[dix]);
+			if (!ds.is_same_stack(door)) break; // moved to a different stack, done
+			if (door.z1() < zval && door.z2() > zval && door.open_amt > 0.0 && tc.contains_cube(door)) return 0;
+		}
+	} // for ds
+	return 1;
 }
 
 // Note: called on basketballs, soccer balls, and particles

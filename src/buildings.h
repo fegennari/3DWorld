@@ -1508,6 +1508,7 @@ struct building_t : public building_geom_t {
 	bool check_pos_in_unlit_room_recur(point const &pos, std::set<unsigned> &rooms_visited, int known_room_id=-1) const;
 	bool are_rooms_connected(room_t const &r1, room_t const &r2, float zval, bool check_door_open) const;
 	bool are_rooms_connected(unsigned room_ix1, unsigned room_ix2, float zval, bool check_door_open) const;
+	bool all_room_int_doors_closed(unsigned room_ix, float zval) const;
 	unsigned check_line_coll(point const &p1, point const &p2, float &t, bool occlusion_only=0, bool ret_any_pt=0, bool no_coll_pt=0, bool check_non_coll=0) const;
 	bool get_interior_color_at_xy(point const &pos, colorRGBA &color) const;
 	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points, bool inc_attic, bool inc_ext_basement) const;
@@ -1585,7 +1586,7 @@ struct building_t : public building_geom_t {
 	void get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt_in, bool make_all_front=0) const;
 	void get_ext_wall_verts_no_sec(building_draw_t &bdraw) const;
 	void write_basement_entrance_depth_pass(shader_t &s) const;
-	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building,
+	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, bool sec_camera_mode,
 		occlusion_checker_noncity_t &oc, vect_cube_with_ix_t &ped_bcubes, cube_t &lights_bcube);
 	void run_light_motion_detect_logic(point const &camera_bs);
 	bool toggle_room_light(point const &closest_to, bool sound_from_closest_to=0, int room_id=-1, bool inc_lamps=1, bool closet_light=0, bool known_in_attic=0);

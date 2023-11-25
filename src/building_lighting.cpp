@@ -1269,7 +1269,7 @@ bool check_cube_visible_through_cut(vect_cube_t const &cuts, cube_t const &light
 }
 
 // Note: non const because this caches light_bcubes
-void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building,
+void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, bool sec_camera_mode,
 	occlusion_checker_noncity_t &oc, vect_cube_with_ix_t &ped_bcubes, cube_t &lights_bcube)
 {
 	if (!has_room_geom()) return; // error?
@@ -1290,7 +1290,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	bool const player_in_pool(camera_in_building && has_pool() && interior->pool.contains_pt(camera_bs));
 	unsigned camera_part(parts.size()); // start at an invalid value
 	bool camera_by_stairs(0), camera_on_stairs(0), camera_somewhat_by_stairs(0), camera_in_hallway(0), camera_can_see_ext_basement(0);
-	bool camera_near_building(camera_in_building), check_ramp(0), stairs_or_ramp_visible(0), camera_room_tall(0);
+	bool camera_near_building(camera_in_building), check_ramp(0), stairs_or_ramp_visible(0), camera_room_tall(0), camera_in_closed_room(0);
 	float camera_z(camera_bs.z);
 	// if player is in the pool, increase camera zval to the top of the pool so that lights in the room above are within a single floor and not culled
 	if (player_in_pool) {camera_z = interior->pool.z2();}
@@ -1358,6 +1358,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			} // for s
 			// set camera_somewhat_by_stairs when camera is in room with stairs, or adjacent to one with stairs
 			if (stairs_or_ramp_visible) {camera_somewhat_by_stairs |= bool(room_or_adj_room_has_stairs(camera_room, camera_rot.z, 1, 1));} // inc_adj_rooms=1, check_door_open=1
+			camera_in_closed_room = all_room_int_doors_closed(room_ix, camera_z);
 		}
 		else if (point_in_attic(camera_rot)) {
 			if (show_room_name) {lighting_update_text = room_names[RTYPE_ATTIC];}
@@ -1383,6 +1384,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	}
 	//highres_timer_t timer("Lighting", camera_in_building); // 13.8ms => 13.1ms => 12.7ms => 3.6ms => 3.2ms => 0.81
 	//unsigned num_add(0);
+	unsigned last_room_ix(interior->rooms.size()); // start at an invalid value
+	bool last_room_closed(0);
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_light_on() || !i->is_light_type()) continue; // light not on, or not a light or lamp
@@ -1415,8 +1418,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		float const floor_below_zval(floor_z - window_vspacing), ceil_above_zval(ceil_z + window_vspacing);
 		// Note: we use level_z rather than floor_z for floor_is_above test so that it agrees with the threshold logic for player_in_basement
 		bool const floor_is_above((camera_z < level_z) && !is_single_floor), floor_is_below(camera_z > (ceil_z + fc_thick)); // check floor_ix transition points
-		if (!is_house && floor_is_below && in_ext_basement && !camera_in_ext_basement && lpos.z   < get_basement().z1()) continue; // light in lower level extb, player not in extb
-		if (!is_house && floor_is_above && !in_ext_basement && camera_in_ext_basement && camera_z < get_basement().z1()) continue; // player in lower level extb, light not in extb
+		if (!is_house && floor_is_below && in_ext_basement && !camera_in_ext_basement && lpos.z   < get_basement().z1()) continue; // light  in lower level extb, player not in extb
+		if (!is_house && floor_is_above && !in_ext_basement && camera_in_ext_basement && camera_z < get_basement().z1()) continue; // player in lower level extb, light  not in extb
 		bool const camera_in_room_part_xy(parts[room.part_id].contains_pt_xy(camera_rot)), in_camera_room((int)i->room_id == camera_room);
 		bool const camera_room_same_part(room.part_id == camera_part || (is_house && camera_in_room_part_xy)); // treat stacked house parts as the same
 		bool const has_stairs_this_floor(!is_in_attic && room.has_stairs_on_floor(cur_floor));
@@ -1431,6 +1434,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			room_object_t const &car(interior->get_elevator_car(e)); // elevator car for this elevator
 			if (car.contains_pt(camera_rot)) {player_in_elevator = 1;} // player inside elevator
 			else if (e.open_amt == 0.0 && (floor_is_above || floor_is_below)) continue; // closed elevator viewed from a different floor
+		}
+		if (camera_in_building && !is_in_elevator && !is_in_attic && !floor_is_above && !floor_is_below) {
+			if (i->room_id != last_room_ix) { // new room
+				last_room_closed = all_room_int_doors_closed(i->room_id, lpos.z);
+				last_room_ix     = i->room_id;
+			}
+			// if either the camera or the light are in different rooms with closed doors, on the same floor (not separated by stairs), then the light isn't visible
+			if ((last_room_closed || camera_in_closed_room) && i->room_id != camera_room) continue;
 		}
 		if (!player_in_elevator) { // none of the below culling applies when the player is in the elevator
 			// if the light is in the basement and the camera isn't, it's not visible unless the player is by the stairs

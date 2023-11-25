@@ -2972,7 +2972,7 @@ public:
 				if (is_first_building) {oc.set_camera(camera_pdu);} // setup occlusion culling on the first visible building
 				is_first_building = 0;
 				oc.set_exclude_bix(bi->ix);
-				b.add_room_lights(xlate, bi->ix, camera_in_this_building, oc, ped_bcubes, lights_bcube);
+				b.add_room_lights(xlate, bi->ix, camera_in_this_building, sec_camera_mode, oc, ped_bcubes, lights_bcube);
 			} // for bi
 		} // for g
 	}
