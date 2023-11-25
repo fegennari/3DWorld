@@ -1680,9 +1680,9 @@ void building_t::get_all_drawn_ext_wall_verts(building_draw_t &bdraw) {
 		if (!is_basement(i)) {bdraw.add_section(*this, 1, *i, mat.wall_tex, wall_color, 3, 0, 0, 1, 0);} // XY
 	}
 	ext_side_qv_range.end = bdraw.get_num_verts(mat.wall_tex);
-	get_basment_ext_wall_verts(bdraw);
+	get_basement_ext_wall_verts(bdraw);
 }
-void building_t::get_basment_ext_wall_verts(building_draw_t &bdraw) const {
+void building_t::get_basement_ext_wall_verts(building_draw_t &bdraw) const {
 	if (!has_basement()) return;
 	tid_nm_pair_t const tp(get_basement_wall_texture());
 	// find basement door and exclude it
@@ -2902,7 +2902,7 @@ public:
 						b.draw_room_geom(nullptr, s, amask_shader, oc, xlate, bi->ix, 1, 0, inc_small, 1); // shadow_only=1, player_in_building=1
 						bool const basement_light(lpos.z < b.ground_floor_z1);
 						if (!basement_light) {b.get_ext_wall_verts_no_sec(ext_parts_draw);} // add exterior walls to prevent light leaking between adjacent parts, if not basement
-						else if (b.has_ext_basement()) {b.get_basment_ext_wall_verts(ext_parts_draw);} // draw basement exterior walls to block light from entering ext basement
+						else if (b.has_ext_basement()) {b.get_basement_ext_wall_verts(ext_parts_draw);} // draw basement exterior walls to block light from entering ext basement
 						b.draw_cars_in_building(s, xlate, 1, 1); // player_in_building=1, shadow_only=1
 						bool const viewer_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
 						bool const add_player_shadow(camera_surf_collide && camera_in_this_building && viewer_close && (actual_player_pos.z - get_bldg_player_height()) < lpos.z);
