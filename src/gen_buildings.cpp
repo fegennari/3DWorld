@@ -2971,7 +2971,7 @@ public:
 				if (sec_camera_mode && !camera_in_this_building) continue; // security cameras only show lights in their building
 				// limit room lights to when the player is in a building because we can restrict them to a single floor, otherwise it's too slow
 				if (!camera_in_this_building && !camera_pdu.cube_visible(b.bcube + xlate) && !b.interior_visible_from_other_building_ext_basement(xlate, 1)) continue; // VFC
-				if (is_first_building) {oc.set_camera(camera_pdu);} // setup occlusion culling on the first visible building
+				if (is_first_building) {oc.set_camera(camera_pdu, sec_camera_mode);} // setup occlusion culling on the first visible building; cur_building_only=sec_camera_mode
 				is_first_building = 0;
 				oc.set_exclude_bix(bi->ix);
 				b.add_room_lights(xlate, bi->ix, camera_in_this_building, sec_camera_mode, oc, ped_bcubes, lights_bcube);
@@ -4030,8 +4030,9 @@ public:
 		} // for y
 	}
 
-	void get_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) const {
+	void get_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state, bool cur_building_only=0) const {
 		state.init(pdu.pos, get_camera_coord_space_xlate());
+		if (cur_building_only) return; // no grid/buildings iteration
 		
 		for (auto g = grid.begin(); g != grid.end(); ++g) {
 			if (g->bc_ixs.empty()) continue;
@@ -4227,9 +4228,9 @@ public:
 			i->second.add_interior_lights(xlate, lights_bcube, sec_camera_mode);
 		}
 	}
-	void get_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) const {
+	void get_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state, bool cur_building_only) const {
 		auto it(get_tile_by_pos_cs(pdu.pos));
-		if (it != tiles.end()) {it->second.get_occluders(pdu, state);}
+		if (it != tiles.end()) {it->second.get_occluders(pdu, state, cur_building_only);}
 	}
 	bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t const &state) const {
 		auto it(get_tile_by_pos_cs(state.pos));
@@ -4251,11 +4252,11 @@ public:
 }; // end building_tiles_t
 
 
-void occlusion_checker_noncity_t::set_camera(pos_dir_up const &pdu) {
+void occlusion_checker_noncity_t::set_camera(pos_dir_up const &pdu, bool cur_building_only) {
 	if ((display_mode & 0x08) == 0) {state.building_ids.clear(); return;} // occlusion culling disabled
 	pos_dir_up near_pdu(pdu);
 	near_pdu.far_ = 0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE); // set far clipping plane to half a tile (currently 4.0)
-	bc.get_occluders(near_pdu, state);
+	bc.get_occluders(near_pdu, state, cur_building_only);
 	//cout << "buildings: " << bc.get_num_buildings() << ", occluders: " << state.building_ids.size() << endl;
 }
 bool occlusion_checker_noncity_t::is_occluded(cube_t const &c) const {

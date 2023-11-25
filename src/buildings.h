@@ -155,7 +155,7 @@ public:
 	bool query_is_for_light;
 	occlusion_checker_noncity_t(building_creator_t const &bc_, bool for_light=0) : bc(bc_), query_is_for_light(for_light) {}
 	void set_exclude_bix(int exclude_bix) {state.exclude_bix = exclude_bix;}
-	void set_camera(pos_dir_up const &pdu);
+	void set_camera(pos_dir_up const &pdu, bool cur_building_only=0);
 	bool is_occluded(cube_t const &c) const;
 	vector3d const &get_xlate() const {return state.xlate;}
 };
