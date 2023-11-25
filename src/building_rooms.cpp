@@ -911,7 +911,7 @@ void building_t::add_gutter_downspouts(rand_gen_t &rgen, vect_cube_t const &balc
 	for (cube_with_ix_t const &g : gutters) {
 		bool const dim(g.ix >> 1), dir(g.ix & 1);
 		float const len(g.get_sz_dim(!dim)), width(g.get_sz_dim(dim)), ds_width(0.5f*width), edge_spacing(1.65*ds_width); // just enough to clear the fence post
-		float const wall_pos(g.d[dim][!dir]), extend_wall_pos(g.d[dim][dir]), dir_sign(dir ? 1.0 : -1.0);
+		float const wall_pos(g.d[dim][!dir]), dir_sign(dir ? 1.0 : -1.0);
 		assert(len > 0.0 && width > 0.0);
 		assert(ground_floor_z1 < g.z1());
 		cube_t ds;

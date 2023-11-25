@@ -209,7 +209,7 @@ public:
 			cur_monitors.clear();
 
 			for (monitor_t const &m : monitors) {
-				if (m.camera_ix != camera_ix) continue;
+				if (m.camera_ix != (int)camera_ix) continue;
 				assert(m.obj_ix < objs.size());
 				room_object_t const &monitor(objs[m.obj_ix]);
 				if (monitor.type != TYPE_MONITOR) continue; // taken by the player? should we remove this monitor from the list?
