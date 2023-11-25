@@ -2193,10 +2193,12 @@ void building_t::get_ext_wall_verts_no_sec(building_draw_t &bdraw) const { // us
 
 void building_t::add_split_roof_shadow_quads(building_draw_t &bdraw) const {
 	if (!interior || is_house || real_num_parts == 1) return; // no a stacked case
+	float const light_zval(get_camera_pos().z); // light pos is stored in camera_pos during the shadow pass
 
 	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
-		if (is_basement(i)) continue; // skip the basement
+		if (is_basement(i))        continue; // skip the basement
 		if (i->z2() == bcube.z2()) continue; // skip top roof
+		if (i->z2() > light_zval ) continue; // if roof is above the light, and lights all point down, then it can't cast a shadow
 
 		if (clip_part_ceiling_for_stairs(*i, bdraw.temp_cubes, bdraw.temp_cubes2)) {
 			for (auto c = bdraw.temp_cubes.begin(); c != bdraw.temp_cubes.end(); ++c) { // add floors after removing stairwells
@@ -2873,7 +2875,7 @@ public:
 		s.begin_color_only_shader(); // really don't even need colors
 		glEnable(GL_CULL_FACE); // slightly faster for interior shadow maps
 		vector<point> points; // reused temporary
-		building_draw_t ext_parts_draw; // roof and exterior walls
+		static building_draw_t ext_parts_draw; // roof and exterior walls; reused across calls
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			if (interior_shadow_maps) { // draw interior shadow maps
@@ -2933,6 +2935,7 @@ public:
 		} // for i
 		if ( interior_shadow_maps) {glDisable(GL_CULL_FACE);} // need to draw back faces of exterior parts to handle shadows on blinds
 		ext_parts_draw.draw(s, 1, 1);
+		ext_parts_draw.clear();
 		if (!interior_shadow_maps) {glDisable(GL_CULL_FACE);}
 		s.end_shader();
 		fgPopMatrix();
