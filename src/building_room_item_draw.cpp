@@ -1558,12 +1558,13 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	string onscreen_text;
 	bool const check_clip_cube(shadow_only && !is_rotated && !smap_light_clip_cube.is_all_zeros()); // check clip cube for shadow pass; not implemented for rotated buildings
 	bool const check_occlusion(display_mode & 0x08);
+	cube_t const clip_cube_bs(smap_light_clip_cube - xlate);
 
 	// draw object models
 	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
 		room_object_t &obj(get_room_object_by_index(i->obj_id));
 		if (!player_in_building && !shadow_only && obj.is_interior()) continue; // don't draw objects in interior rooms if the player is outside the building (useful for office bathrooms)
-		if (check_clip_cube && !smap_light_clip_cube.intersects(obj + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
+		if (check_clip_cube && !clip_cube_bs.intersects(obj))         continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 
 		if (shadow_only) {
 			if (obj.type == TYPE_CEIL_FAN) continue; // not shadow casting; would shadow its own light
@@ -1601,7 +1602,6 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				onscreen_text_mat.upload_draw_and_clear(text_state);
 				disable_blend();
 			}
-			// TODO: draw the floor number over the screen in the corner, or on a sign by the monitor, or on a sign in front of the camera
 			s.set_color_e(BLACK);
 		}
 		if (player_in_building && !shadow_only && obj.type == TYPE_SINK) { // sink
