@@ -292,6 +292,7 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 			slice.d[edim][!edir]  = end_wall;
 			slice.d[edim][ edir] += step_dist;
 			slice.expand_by_xy(wall_pad); // add some space around it for the walls
+			slice.z1() -= pool_max_depth; // account for the bottom of the pool
 			if (slice.intersects(basement)) break;
 			bool had_coll(0);
 
