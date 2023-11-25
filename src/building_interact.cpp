@@ -48,6 +48,7 @@ bool is_motion_detected(point const &activator, cube_t const &light, cube_t cons
 }
 
 void building_t::run_light_motion_detect_logic(point const &camera_bs) {
+	if (!animate2)             return;
 	if (is_house || !interior) return; // office buildings only
 	if (player_in_elevator)    return; // skip so that we don't have a lot of clicking when lights switch on due to AIs while passing floors
 	float const floor_spacing(get_window_vspace());
