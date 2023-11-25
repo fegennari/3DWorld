@@ -1323,32 +1323,37 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			// stairs and ramps only allow light to pass if visible to the player
 			float const zval(room.z1() + camera_floor*window_vspacing), ceil_below_z(zval - fc_thick), floor_below_z(zval + fc_thick);
 			float const ceil_above_z(ceil_below_z + window_vspacing), floor_above_z(floor_below_z + window_vspacing);
-			vect_cube_t stair_ramp_cuts;
+			vect_cube_with_ix_t stair_ramp_cuts; // ix enables cuts {below, above}
 
 			for (stairwell_t const &s : interior->stairwells) { // check stairs
 				if (s.z1() > camera_z || s.z2() < camera_z) continue; // wrong floor
-				if (s.shape == SHAPE_U && ((camera_bs[s.dim] < s.get_center_dim(s.dim)) ^ s.dir) && !s.contains_pt(camera_rot)) continue; // back facing - light not visible
-				//if (s.shape == SHAPE_WALLED || s.shape == SHAPE_WALLED_SIDES) {} // light only visible in one direction, could use this for culling
-				stair_ramp_cuts.push_back(s);
+				unsigned cut_mask(3); // both dirs enabled by default
+
+				if (!s.contains_pt(camera_rot)) { // disable these optimizations if the player is on the stairs
+					bool const dir_val((camera_bs[s.dim] < s.get_center_dim(s.dim)) ^ s.dir);
+					if (s.shape == SHAPE_U && dir_val) continue; // back facing - light not visible
+					if ((s.shape == SHAPE_WALLED || s.shape == SHAPE_WALLED_SIDES) && !dir_val) {cut_mask = 2;} // floor below not visible on this side of stairs
+				}
+				stair_ramp_cuts.emplace_back(s, cut_mask);
 			}
 			if (has_pg_ramp()) { // check ramp if player is in the parking garage or the backrooms doorway
 				if (room.contains_pt(interior->pg_ramp.get_cube_center()) ||
 					(has_ext_basement() && interior->get_ext_basement_door().get_clearance_bcube().contains_pt(camera_bs)))
 				{
-					stair_ramp_cuts.push_back(interior->pg_ramp);
+					stair_ramp_cuts.emplace_back(interior->pg_ramp, 3); // both dirs
 				}
 			}
-			for (cube_t const &s : stair_ramp_cuts) {
+			for (cube_with_ix_t const &s : stair_ramp_cuts) {
 				if (s.contains_pt(camera_rot)) {camera_on_stairs = stairs_or_ramp_visible = camera_by_stairs = camera_somewhat_by_stairs = 1;} // player on this stairs or ramp
 
-				if (s.z2() >= floor_above_z) { // cut above
+				if ((s.ix & 2) && s.z2() >= floor_above_z) { // cut above
 					cube_t cut(s);
 					set_cube_zvals(cut, ceil_above_z, floor_above_z);
 					bool const visible(is_rot_cube_visible(cut, xlate) && !((display_mode & 0x08) && check_obj_occluded(cut, camera_bs, oc, 0))); // VFC + occlusion culling
 					(visible ? cuts_above : cuts_above_nonvis).push_back(cut);
 					stairs_or_ramp_visible |= visible;
 				}
-				if (s.z1() <= ceil_below_z) { // cut below
+				if ((s.ix & 1) && s.z1() <= ceil_below_z) { // cut below
 					cube_t cut(s);
 					set_cube_zvals(cut, ceil_below_z, floor_below_z);
 					bool const visible(is_rot_cube_visible(cut, xlate) && !((display_mode & 0x08) && check_obj_occluded(cut, camera_bs, oc, 0))); // VFC + occlusion culling
