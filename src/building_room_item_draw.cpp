@@ -1568,8 +1568,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 
 		if (shadow_only) {
 			if (obj.type == TYPE_CEIL_FAN) continue; // not shadow casting; would shadow its own light
-			if (obj.type == TYPE_KEY || obj.type == TYPE_FESCAPE || obj.type == TYPE_WALL_LAMP || obj.type == TYPE_SILVER) continue; // too small or outdoors
-			if (obj.z1() > camera_bs.z) continue; // above the light
+			if (obj.type == TYPE_KEY || obj.type == TYPE_FESCAPE || obj.type == TYPE_WALL_LAMP || obj.type == TYPE_SILVER || obj.type == TYPE_FOLD_SHIRT) continue; // small or outdoors
+			if (obj.z1() > camera_bs.z)    continue; // above the light
 			if (obj.z2() < camera_bs.z - 2.0*floor_spacing) continue; // more than two floors below the light
 		}
 		point obj_center(obj.get_cube_center());
