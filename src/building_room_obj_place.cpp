@@ -2334,6 +2334,9 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 			pref_dir ^= 1; // alternate sides
 		}
 	}
+	// add a clock on the wall
+	// TODO
+	
 	// add other objects in and around the pool;
 	// note that stairs haven't been placed yet, so we shouldn't place objects near the future stairs when there's no water
 	bool const pool_has_water(has_water());

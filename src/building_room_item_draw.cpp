@@ -964,6 +964,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_FLASHLIGHT: add_flashlight(c); break;
 		case TYPE_CANDLE:     add_candle(c); break;
 		case TYPE_CAMERA:     add_camera(c); break;
+		case TYPE_CLOCK:      add_clock (c); break;
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		default: break;
 		} // end switch
