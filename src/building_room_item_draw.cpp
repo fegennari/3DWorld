@@ -1979,7 +1979,8 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 		else { // regular walls case
 			for (unsigned D = 0; D < 2; ++D) {
 				bool const d(bool(D) ^ pri_dim); // try primary dim first
-				if (are_pts_occluded_by_any_cubes<1>(viewer, pts, npts, occ_area, interior->walls[d], d, c.get_sz_dim(!d))) return 1; // with size check (helps with light bcubes)
+				float const min_sz(0.5*c.get_sz_dim(!d)); // account for perspective
+				if (are_pts_occluded_by_any_cubes<1>(viewer, pts, npts, occ_area, interior->walls[d], d, min_sz)) return 1; // with size check (helps with light bcubes)
 			}
 		}
 	}
