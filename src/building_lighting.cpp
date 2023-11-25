@@ -1432,8 +1432,12 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (is_in_elevator) {
 			elevator_t const &e(get_elevator(i->obj_id));
 			room_object_t const &car(interior->get_elevator_car(e)); // elevator car for this elevator
+			
 			if (car.contains_pt(camera_rot)) {player_in_elevator = 1;} // player inside elevator
-			else if (e.open_amt == 0.0 && (floor_is_above || floor_is_below)) continue; // closed elevator viewed from a different floor
+			else if (e.open_amt == 0.0) { // closed elevator
+				if (floor_is_above || floor_is_below)          continue; // viewed from a different floor
+				if ((lpos[e.dim] < camera_rot[e.dim]) ^ e.dir) continue; // camera facing the back of the elevator: light not visible
+			}
 		}
 		if (camera_in_building && !is_in_elevator && !is_in_attic && !floor_is_above && !floor_is_below) {
 			if (i->room_id != last_room_ix) { // new room
