@@ -769,6 +769,7 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 	if (!objs.empty() && objs.back().type == TYPE_FESCAPE) {avoid.push_back(objs.back());} // avoid fire escape
 	if (has_driveway()) {avoid.push_back(driveway);}
 	if (!city_driveway.is_all_zeros()) {avoid.push_back(city_driveway);}
+	// what about trees in the front yard? can/should we avoid them as well?
 
 	// find suitable rooms for balconies; since room walls will never intersect windows, we can make the balcony the same width to avoid intersecting windows
 	for (auto room = interior->rooms.begin(); room != interior->rooms.end(); ++room) {
@@ -789,9 +790,10 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 		for (unsigned dim = 0; dim < 2 && !added; ++dim) {
 			for (unsigned dir = 0; dir < 2 && !added; ++dir) {
 				if (classify_room_wall(*room, balcony_z1, dim, dir, 1) != ROOM_WALL_EXT) continue; // not fully exterior wall, skip
+				float const ext_wall_pos(room->d[dim][dir]);
 				cube_t balcony(*room);
 				balcony.z1() = balcony_z1;
-				balcony.d[dim][!dir]  = balcony.d[dim][dir]; // abuts the exterior wall of the room
+				balcony.d[dim][!dir]  = ext_wall_pos; // abuts the exterior wall of the room
 				balcony.d[dim][ dir] += (dir ? 1.0 : -1.0)*balcony_depth; // extend outward from the house
 				if (has_bcube_int(balcony, avoid)) continue; // blocked
 				if (check_cube_intersect_non_main_part(balcony)) continue; // porch roof, porch support, and chimney, etc.
@@ -816,6 +818,7 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 				bool const hanging(has_bcube_int(area_below, avoid) || check_cube_intersect_non_main_part(area_below));
 				room_object_t balcony_obj(balcony, TYPE_BALCONY, room_id, dim, dir, (hanging ? RO_FLAG_HANGING : 0), 1.0, SHAPE_CUBE, WHITE);
 				balcony_obj.obj_id = balcony_style; // set so that we can select from multiple balcony styles
+				unsigned const balcony_obj_ix(objs.size());
 				objs.push_back(balcony_obj);
 				balconies.push_back(balcony);
 				avoid.push_back(balcony); // shouldn't need to consider area_below
@@ -882,7 +885,18 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 				if (!hanging) { // add colliders for vertical supports
 					cube_t pillar[2];
 					get_balcony_pillars(balcony_obj, ground_floor_z1, pillar);
-					for (unsigned d = 0; d < 2; ++d) {details.emplace_back(pillar[d], DETAIL_OBJ_COLL_SHAD);} // collider + shadow caster
+					bool no_pillars(0);
+
+					for (unsigned d = 0; d < 2; ++d) { // check for pillars blocking exterior door
+						cube_t pillar_exp(pillar[d]);
+						pillar_exp.d[dim][!dir] = ext_wall_pos; // extend to exterior wall
+						pillar_exp.expand_by_xy(wall_thickness);
+						if (cube_int_ext_door(pillar_exp)) {no_pillars = 1; break;}
+					}
+					if (no_pillars) {objs[balcony_obj_ix].flags |= RO_FLAG_HANGING;} // make it hanging instead
+					else { // add pillars
+						for (unsigned d = 0; d < 2; ++d) {details.emplace_back(pillar[d], DETAIL_OBJ_COLL_SHAD);} // collider + shadow caster
+					}
 				}
 				union_with_coll_bcube(balcony_ext_down);
 				++num_balconies;
