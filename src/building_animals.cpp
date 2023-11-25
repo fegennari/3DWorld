@@ -1496,6 +1496,10 @@ void building_t::update_fly(insect_t &fly, point const &camera_bs, float timeste
 		if (ret) { // collision
 			// if coll_dir is not set, use the direction we last moved in, or our dir if that's zero
 			if (coll_dir == zero_vector) {coll_dir = ((fly.last_pos == fly.pos) ? fly.dir : (fly.pos - fly.last_pos).get_norm());}
+
+			if (ret == 2 && !target_player) { // static object collision
+				// TODO: land on the object? we need to get the object index first
+			}
 			fly.pos = fly.last_pos; // move back to a point where we didn't collide (assuming update is frequent enough)
 			fly.dir = rgen.signed_rand_vector_norm();
 			if (dot_product(fly.dir, coll_dir) > 0.0) {fly.dir.negate();}

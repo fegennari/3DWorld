@@ -1047,6 +1047,12 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					bool const elevators_only(pref_split && ntries > 20); // allow blocking stairs if there's no other way to insert a door
 					int  const no_check_enter_exit((ntries > 5) ? (pref_conn ? 2 : 1) : 0); // no stairs enter/exit pad after first 5 tries, no enter/exit at all if pref_conn
 					if (interior->is_blocked_by_stairs_or_elevator(cand, stairs_elev_pad, elevators_only, no_check_enter_exit)) continue; // should we assert !pref_split?
+
+					if (is_house) {
+						// TODO: find rooms on each side, check if is_room_adjacent_to_ext_door(room) for one of them (likely the living room or entryway),
+						// check that neither room is a hallway, then remove the entire wall on the first floor rather than adding a door;
+						// but this will make the floorplans different, is that legal? and will require updates to AI navigation logic
+					}
 					bool const open_dir(wall.get_center_dim(d) > bldg_door_open_dir_tp[d]); // doors open away from the building center
 					insert_door_in_wall_and_add_seg(wall, lo_pos, hi_pos, !d, open_dir, 0); // Note: modifies wall
 					was_split = 1;
