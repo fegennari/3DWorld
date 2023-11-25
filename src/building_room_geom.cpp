@@ -4298,14 +4298,19 @@ void building_room_geom_t::add_camera(room_object_t const &c) {
 	// tilt downward
 	rotate_verts(mat.quad_verts, rot_axis, rot_angle, rot_pt, qv_start);
 	rotate_verts(mat.itri_verts, rot_axis, rot_angle, rot_pt, tv_start);
+	// TODO: red blinking light? does that make it a dynamic object? or can we make the light a different material and only enable it for all cameras on alternating frames?
 }
 
 void building_room_geom_t::add_clock(room_object_t const &c) {
+	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small; placeholder
+
 	if (c.item_flags & 1) { // digital clock
-		// TODO
+		mat.add_cube_to_verts_untextured(c, apply_light_color(c), ~get_face_mask(c.dim, !c.dir)); // skip back face against wall
+		// TODO: numbers, emissive
 	}
 	else { // analog clock
-		//
+		mat.add_ortho_cylin_to_verts(c, apply_light_color(c), c.dim, !c.dir, c.dir);
+		// TODO: draw hands and face numbers (as a texture?)
 	}
 }
 
