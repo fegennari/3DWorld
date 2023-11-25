@@ -392,11 +392,12 @@ void building_room_geom_t::expand_breaker_panel(room_object_t const &c, bool has
 			cube_t label(breaker);
 			string label_text;
 
-			if (has_elevator && C == 0 && r == 0) { // first breaker - add elevator label
+			if (has_elevator && obj.obj_id == 0) { // first breaker - add elevator label
 				label.translate_dim(!c.dim, -0.75*breaker_dc); // lo side
 				label_text = "Elevator";
 			}
-			else if (has_parking_garage && C == num_cols-1 && r == num_rows-1) { // last breaker - add parking garage label
+			// FIXME: no longer last when there's an extended basement/backrooms
+			else if (has_parking_garage && obj.obj_id == num_breakers-1) { // last breaker - add parking garage label
 				label.translate_dim(!c.dim, 0.75*breaker_dc); // hi side
 				label_text = "Garage";
 			}

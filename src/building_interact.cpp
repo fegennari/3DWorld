@@ -210,6 +210,7 @@ bool building_room_geom_t::closet_light_is_on(cube_t const &closet) const {
 	return 0;
 }
 
+// TODO: add a function that takes the zone_id and returns {room_type, rooms_start, rooms_end, label} for use in toggling breakers and drawing the breaker panel
 void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned num_zones) {
 	assert(zone_id < num_zones);
 	assert(has_room_geom());
@@ -236,7 +237,9 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 	if (num_zones == 0 || num_rooms == 0) return; // no zones left, or no rooms
 	// determine which rooms this breaker controls;
 	// we really should have breakers control lights on separate floors rather than vertical rooms stacks, but this is much easier;
-	// note that the first breaker/room will be the primary hallway in office buildings and will also control all cameras
+	// note that the first breaker/room (after the elevator) will be the primary hallway in office buildings and will also control all cameras,
+	// and the last breaker will be for the parking garage, which is labeled;
+	// should we have (labeled) breakers for backrooms, server, security, utility, etc.?
 	float const rooms_per_zone(max(1.0f, float(num_rooms)/num_zones));
 	unsigned const rooms_start(round_fp(zone_id*rooms_per_zone)), rooms_end(min((unsigned)round_fp((zone_id+1)*rooms_per_zone), num_rooms));
 	if (rooms_start >= rooms_end) return; // no rooms
