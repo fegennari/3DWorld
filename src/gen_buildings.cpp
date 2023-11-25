@@ -2876,6 +2876,7 @@ public:
 		glEnable(GL_CULL_FACE); // slightly faster for interior shadow maps
 		vector<point> points; // reused temporary
 		static building_draw_t ext_parts_draw; // roof and exterior walls; reused across calls
+		bool const sec_camera_mode(pre_smap_player_pos != actual_player_pos); // hack to determine if this is the shadow for a security camera light
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			if (interior_shadow_maps) { // draw interior shadow maps
@@ -2907,7 +2908,8 @@ public:
 						else if (b.has_ext_basement()) {b.get_basement_ext_wall_verts(ext_parts_draw);} // draw basement exterior walls to block light from entering ext basement
 						b.draw_cars_in_building(s, xlate, 1, 1); // player_in_building=1, shadow_only=1
 						bool const viewer_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
-						bool const add_player_shadow(camera_surf_collide && camera_in_this_building && viewer_close && (actual_player_pos.z - get_bldg_player_height()) < lpos.z);
+						bool const add_player_shadow(camera_surf_collide && camera_in_this_building && viewer_close && !sec_camera_mode &&
+							(actual_player_pos.z - get_bldg_player_height()) < lpos.z);
 						bool const add_people_shadow((camera_in_this_building || viewer_close) && b.has_people());
 						bool const enable_animations(global_building_params.enable_people_ai);
 
