@@ -75,6 +75,10 @@ tid_nm_pair_t tid_nm_pair_t::get_scaled_version(float scale) const {
 	tex.tscale_y *= scale;
 	return tex;
 }
+float tid_nm_pair_t::get_emissive_val() const {
+	if (tid == RED_TEX) {return ((fract(tfticks/(1.5*TICKS_PER_SECOND)) < 0.5) ? 1.0 : 0.0);} // camera light flashes on and off with a period of 1.5s
+	return emissive;
+}
 void tid_nm_pair_t::set_specular_color(colorRGB const &color, float mag, float shine) {
 	if (shine == 0.0) {assert(color == WHITE);} // can't set zero shininess with a colored specular
 	float max_comp(max(color.R, max(color.G, color.B)));
@@ -93,15 +97,16 @@ void tid_nm_pair_t::set_gl(tid_nm_pair_dstate_t &state) const {
 	bool const has_normal_map(get_nm_tid() != FLAT_NMAP_TEX);
 	if (has_normal_map) {select_texture(get_nm_tid(), 5);} // else we set bump_map_mag=0.0
 	state.set_for_shader(has_normal_map ? 1.0 : 0.0); // enable or disable normal map (only ~25% of calls have a normal map)
-	if (emissive  > 0.0) {state.s.add_uniform_float("emissive_scale", emissive);} // enable emissive
+	float const e_val(get_emissive_val());
+	if (e_val     > 0.0) {state.s.add_uniform_float("emissive_scale", e_val);} // enable emissive
 	if (shininess > 0  ) {state.s.set_specular_color(spec_color.get_c3(), shininess);} // colored specular
 }
 void tid_nm_pair_t::unset_gl(tid_nm_pair_dstate_t &state) const {
 	if (tid == REFLECTION_TEXTURE_ID && room_mirror_ref_tid != 0) {state.s.make_current(); return;}
 	bool const has_normal_map(get_nm_tid() != FLAT_NMAP_TEX);
 	if (has_normal_map) {select_texture(FLAT_NMAP_TEX, 5);} // reset back to flat normal map
-	if (emissive  > 0.0) {state.s.add_uniform_float("emissive_scale", 0.0);} // disable emissive
-	if (shininess > 0  ) {state.s.clear_specular();} // clear specular
+	if (get_emissive_val() > 0.0) {state.s.add_uniform_float("emissive_scale", 0.0);} // disable emissive
+	if (shininess          > 0  ) {state.s.clear_specular();} // clear specular
 }
 void tid_nm_pair_t::toggle_transparent_windows_mode() { // hack
 	if      (tid == BLDG_WINDOW_TEX    ) {tid = BLDG_WIND_TRANS_TEX;}

@@ -4280,8 +4280,8 @@ void get_security_camera_info(room_object_t const &c, point &lens_pt, point &rot
 	rot_pt.assign(mount.xc(), mount.yc(), body.zc());
 	rot_angle = ((c.dim ^ c.dir) ? -1.0 : 1.0)*15*TO_RADIANS; // in radians
 }
-void building_room_geom_t::add_camera(room_object_t const &c) {
-	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small
+void building_room_geom_t::add_camera(room_object_t const &c) { // Note: camera does not cast shadows because it's too high up
+	rgeom_mat_t &mat(get_metal_material(0, 0, 1)); // unshadowed, small
 	colorRGBA const color(apply_light_color(c));
 	cube_t mount, body, shaft;
 	get_security_camera_parts(c, mount, body, shaft);
@@ -4294,11 +4294,19 @@ void building_room_geom_t::add_camera(room_object_t const &c) {
 	vector3d camera_dir, rot_axis;
 	float rot_angle(0.0);
 	get_security_camera_info(c, lens_pt, rot_pt, camera_dir, rot_axis, rot_angle);
-	mat.add_disk_to_verts(lens_pt, 0.45*min(body.dz(), c.get_width()), camera_dir, BLACK);
+	float const lens_radius(0.45*min(body.dz(), c.get_width()));
+	mat.add_disk_to_verts(lens_pt, lens_radius, camera_dir, BLACK);
 	// tilt downward
 	rotate_verts(mat.quad_verts, rot_axis, rot_angle, rot_pt, qv_start);
 	rotate_verts(mat.itri_verts, rot_axis, rot_angle, rot_pt, tv_start);
-	// TODO: red blinking light? does that make it a dynamic object? or can we make the light a different material and only enable it for all cameras on alternating frames?
+	// add a red blinking light
+	point light_pt(lens_pt);
+	light_pt.z += 0.9*lens_radius; // shift up
+	light_pt[!c.dim] += ((c.dim ^ c.dir) ? 1.0 : -1.0)*1.0*lens_radius; // shift to the side
+	rgeom_mat_t &light_mat(get_material(tid_nm_pair_t(RED_TEX), 0, 0, 1)); // unshadowed, small
+	unsigned const tvl_start(light_mat.itri_verts.size());
+	light_mat.add_disk_to_verts(light_pt, 0.2*lens_radius, camera_dir, RED);
+	rotate_verts(light_mat.itri_verts, rot_axis, rot_angle, rot_pt, tvl_start);
 }
 
 void building_room_geom_t::add_clock(room_object_t const &c) {
