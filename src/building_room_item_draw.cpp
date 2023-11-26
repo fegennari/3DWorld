@@ -1553,15 +1553,17 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	bool const disable_cull_face(0); // better but slower?
 	if (disable_cull_face) {glDisable(GL_CULL_FACE);}
 	point const building_center(building.bcube.get_cube_center());
-	bool const is_rotated(building.is_rotated());
 	oc.set_exclude_bix(building_ix);
-	bool obj_drawn(0);
 	water_sound_manager_t water_sound_manager(camera_bs);
 	rgeom_mat_t monitor_screens_mat, onscreen_text_mat=rgeom_mat_t(tid_nm_pair_t(FONT_TEXTURE_ID));
 	string onscreen_text;
+	bool const is_rotated(building.is_rotated()), check_occlusion(display_mode & 0x08);
 	bool const check_clip_cube(shadow_only && !is_rotated && !smap_light_clip_cube.is_all_zeros()); // check clip cube for shadow pass; not implemented for rotated buildings
-	bool const check_occlusion(display_mode & 0x08);
 	cube_t const clip_cube_bs(smap_light_clip_cube - xlate);
+	int const camera_room(is_rotated ? -1 : building.get_room_containing_pt(camera_bs)); // skip for rotated buildings; should we use actual_player_pos for shadow_only mode?
+	bool const camera_in_closed_room((camera_room < 0) ? 0 : building.all_room_int_doors_closed(camera_room, camera_bs.z));
+	unsigned last_room_ix(building.interior->rooms.size()); // start at an invalid value
+	bool last_room_closed(0), obj_drawn(0);
 
 	// draw object models
 	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
@@ -1581,6 +1583,15 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (!shadow_only && obj.type != TYPE_FIRE_EXT && !dist_less_than(camera_bs, obj_center, 32.0*(obj.dx() + obj.dy() + obj.dz()))) continue; // too far (obj.max_len()?)
 		if (!(is_rotated ? building.is_rot_cube_visible(obj, xlate) : camera_pdu.cube_visible(obj + xlate))) continue; // VFC
 		if (check_occlusion && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
+
+		if (camera_room >= 0 && (display_mode & 0x20)) {
+			if (obj.room_id != last_room_ix) { // new room
+				last_room_closed = building.all_room_int_doors_closed(obj.room_id, obj.zc());
+				last_room_ix     = obj.room_id;
+			}
+			// if either the camera or the light are in different rooms with closed doors, on the same floor (not separated by stairs), then the object isn't visible
+			if ((last_room_closed || camera_in_closed_room) && obj.room_id != camera_room) continue;
+		}
 		apply_room_obj_rotate(obj, *i, objs); // Note: may modify obj by clearing flags and inst by updating dir
 		
 		if (bbd_in && !shadow_only && !is_rotated && (obj.type == TYPE_WALL_LAMP || obj.type == TYPE_FESCAPE)) { // not for rotated buildings
