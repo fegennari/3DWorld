@@ -1416,6 +1416,9 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 			dir = obj.get_dir(); // base model rotation based on object dim/dir orient and not instance rotation vector
 		}
 	}
+	// disable the leg and rubber feet for hanging monitors; materials are {glass screen, plastic body, logo + metal + leg, object, rubber feet}
+	if (obj.type == TYPE_MONITOR && obj.is_hanging()) {rot_only_mat_mask |= 20;}
+
 	building_obj_model_loader.draw_model(s, obj_center, obj, dir, obj.color, xlate, model_id, shadow_only,
 		0, nullptr, rot_only_mat_mask, untextured, 0, upside_down, emissive_body_mat);
 	if (!shadow_only && obj.type == TYPE_STOVE) {draw_stove_flames(obj, (camera_pdu.pos - xlate), s);} // draw blue burner flame
