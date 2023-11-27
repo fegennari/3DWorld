@@ -2628,7 +2628,7 @@ bool building_t::add_security_room_objs(rand_gen_t rgen, room_t const &room, flo
 		float const door_edge(door.d[!dim][side]), wall_edge(room_bounds.d[!dim][side]);
 		float const wall_len(fabs(door_edge - wall_edge)), wall_center(0.5*(door_edge + wall_edge)), wall_pos(room_bounds.d[dim][dir]);
 		float const width(min(0.5f*wall_len, rgen.rand_uniform(0.25, 0.35)*floor_spacing)), depth(0.04*floor_spacing);
-		set_cube_zvals(breaker_panel, (ceil_zval - 0.75*floor_spacing), (ceil_zval - rgen.rand_uniform(0.35, 0.4)*floor_spacing));
+		set_cube_zvals(breaker_panel, (ceil_zval - 0.75*floor_spacing), (ceil_zval - rgen.rand_uniform(0.25, 0.3)*floor_spacing));
 		set_wall_width(breaker_panel, wall_center, 0.5*width, !dim);
 		breaker_panel.d[dim][ dir] = wall_pos;
 		breaker_panel.d[dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*depth;
