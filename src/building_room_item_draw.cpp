@@ -1603,7 +1603,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			draw_obj_model(*i, obj, s, xlate, obj_center, shadow_only); // draw now
 			obj_drawn = 1;
 		}
-		if (player_in_building && obj.type == TYPE_MONITOR && obj.is_active()) { // active security camera monitor
+		// check for security camera monitor if player is in this building; must be on on, powered, and active
+		if (player_in_building && obj.type == TYPE_MONITOR && !(obj.obj_id & 1) && obj.is_powered() && obj.is_active()) {
 			onscreen_text.clear();
 			setup_monitor_screen_draw(obj, monitor_screens_mat, onscreen_text);
 			add_tv_or_monitor_screen (obj, monitor_screens_mat, onscreen_text, &onscreen_text_mat);
