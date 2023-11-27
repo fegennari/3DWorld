@@ -126,6 +126,13 @@ colorRGBA building_interior_t::get_attic_ceiling_color() const {
 	return WHITE; // never gets here
 }
 
+bool line_contained_in_cube(point const &p1, point const &p2, vect_cube_t const &cubes, vect_cube_t::const_iterator end) {
+	for (auto i = cubes.begin(); i != end; ++i) {
+		if (i->contains_pt(p1) && i->contains_pt(p2)) return 1;
+	}
+	return 0;
+}
+
 // Note: static objects only; excludes people; pos in building space
 bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t const &valid_area, cube_bvh_t const &bvh, bool in_attic, bool in_ext_basement,
 	point &cpos, vector3d &cnorm, colorRGBA &ccolor, rand_gen_t *rgen) const
@@ -151,6 +158,7 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t
 		if (hit) {p2  = p1 + (p2 - p1)*t; t = 1.0;} // clip p2 to t (minor optimization)
 	}
 	else if (in_ext_basement) {} // no exterior walls to check
+	else if (line_contained_in_cube(p1, p2, parts, get_real_parts_end_inc_sec())) {} // both points in same part; no exterior wall hit
 	// check parts (exterior walls); should chimneys and porch roofs be included?
 	else if (ray_cast_exterior_walls(p1, p2, cnorm, t)) { // interior ray (common case) - find furthest exit point
 		p2  = p1 + (p2 - p1)*t; t = 1.0; // clip p2 to t (minor optimization)
@@ -228,7 +236,6 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 	colorRGBA const wall_color(wall_color.modulate_with(mat.wall_tex.get_avg_color()));
 	float const floor_spacing(get_window_vspace()), z1(ext_bcube.z1()), z2(ext_bcube.z2());
 	float const stairs_z1(z1 - floor_spacing), stairs_z2(z2 + floor_spacing); // stairs extend an extra floor up and down to block rays in stairwells
-
 	for (unsigned d = 0; d < 2; ++d) {add_colored_cubes(interior->walls[d], wall_color, ext_bcube, cc);}
 
 	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
@@ -551,6 +558,7 @@ class building_indir_light_mgr_t {
 			else { // omidirectional or sky ambient from windows
 				pri_dir = rgen.signed_rand_vector_spherical().get_norm(); // should this be cosine weighted for windows?
 				if (is_window && ((pri_dir[dim] > 0.0) ^ dir)) {pri_dir[dim] *= -1.0;} // reflect light if needed about window plane to ensure it enters the room
+				//if (!is_window && dim == 2 && dir == 2 && pri_dir.z > 0.0) {pri_dir.z = -pri_dir.z;} // must point down
 			}
 			float const lum_thresh(0.1*ray_lcolor.get_luminance());
 			point origin, init_cpos, cpos;
