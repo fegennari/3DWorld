@@ -86,7 +86,8 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 
 	if (office_chair_model) {
 		unsigned const flags(enable_rotation ? RO_FLAG_RAND_ROT : 0);
-		float const lum(chair_color.get_luminance()); // calculate grayscale luminance
+		float lum(chair_color.get_luminance()); // calculate grayscale luminance
+		if (lum > 0.5) {lum = 1.0 - lum;} // not white; clamp to [0.0, 0.5] range
 		objs.emplace_back(chair, TYPE_OFF_CHAIR, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, colorRGBA(lum, lum, lum));
 	}
 	else {
