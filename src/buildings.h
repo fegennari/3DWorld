@@ -424,11 +424,16 @@ enum {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_
 	  RTYPE_BACKROOMS, RTYPE_ELEVATOR, NUM_RTYPES};
 typedef uint8_t room_type;
 
+// full room names for UI display
 std::string const room_names[NUM_RTYPES] =
 	{"Unset", "Hallway", "Stairs", "Office", "Bathroom", "Bedroom", "Kitchen", "Living Room", "Dining Room", "Study",
 	 "Entryway", "Library", "Storage Room", "Garage", "Shed", "Lobby", "Laundry Room", "Card Room", "Play Room", "Art Room",
 	 "Utility Room", "Parking Garage", "Ramp Exit", "Attic", "Master Bedroom", "Unfinished Room", "Server Room", "Pool Room", "Swimming Pool Room", "Security Room",
 	 "Backrooms", "Elevator"};
+// short room names for elevator buttons (should be <= 8 characters)
+std::string const room_names_short[NUM_RTYPES] =
+{"", "Hall", "Stairs", "Office", "Bath", "Bed", "Kitchen", "Living", "Dining", "Study", "Entry", "Library", "Storage", "Garage", "Shed", "Lobby", "Laundry", "Card", "Play", "Art",
+"Utility", "Garage", "Ramp", "Attic", "Bed", "", "Server", "Pool", "Swim", "Security", "Basement", "Elevator"};
 
 enum {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES, SHAPE_RAMP};
 typedef uint8_t stairs_shape;
@@ -1055,7 +1060,7 @@ struct building_room_geom_t {
 	void expand_cabinet(room_object_t const &c);
 	void expand_wine_rack(room_object_t const &c) {add_wine_rack_bottles(c, expanded_objs);}
 	void expand_med_cab(room_object_t const &c);
-	void expand_breaker_panel(room_object_t const &c, bool has_elevator, bool has_parking_garage);
+	void expand_breaker_panel(room_object_t const &c, building_t const &building);
 	void expand_dishwasher(room_object_t &c, cube_t const &dishwasher);
 	void unexpand_dishwasher(room_object_t &c, cube_t const &dishwasher);
 	bool expand_object(room_object_t &c, building_t const &building);
@@ -1174,6 +1179,13 @@ struct extb_room_t : public cube_t { // extended basement room candidate
 	void clip_hallway_to_conn_bcube(bool dim);
 };
 typedef vector<extb_room_t> vect_extb_room_t;
+
+struct breaker_zone_t {
+	unsigned rtype, room_start=0, room_end=0;
+	breaker_zone_t() : rtype(RTYPE_NOTSET) {} // invalud room
+	breaker_zone_t(unsigned t, unsigned s, unsigned e) : rtype(t), room_start(s), room_end(e) {}
+	bool invalid() const {return (rtype != RTYPE_ELEVATOR && room_start == room_end);}
+};
 
 struct stairs_landing_base_t : public cube_t {
 	bool dim, dir, roof_access, stack_conn, in_ext_basement, against_wall[2];
@@ -1372,6 +1384,7 @@ struct building_interior_t {
 	bool cube_in_ext_basement_room(cube_t const &c, bool xy_only) const;
 	door_t const &get_ext_basement_door() const;
 	void assign_master_bedroom(float window_vspacing, float floor_thickness);
+	breaker_zone_t get_circuit_breaker_info(unsigned zone_id, unsigned num_zones) const;
 };
 
 struct building_stats_t {

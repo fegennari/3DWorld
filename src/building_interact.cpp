@@ -210,46 +210,63 @@ bool building_room_geom_t::closet_light_is_on(cube_t const &closet) const {
 	return 0;
 }
 
-// TODO: add a function that takes the zone_id and returns {room_type, rooms_start, rooms_end, label} for use in toggling breakers and drawing the breaker panel
-void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned num_zones) {
+breaker_zone_t building_interior_t::get_circuit_breaker_info(unsigned zone_id, unsigned num_zones) const {
 	assert(zone_id < num_zones);
-	assert(has_room_geom());
 
 	// Note: if there are multiple panels, they will affect the same set of zones; it seems too difficult to assign rooms/zones across panels;
 	// this means that zones will follow the state of the last breaker that was toggled to a different state
-	if (!interior->elevators.empty()) { // elevators are always zone 0 (lower left or right breaker)
-		if (zone_id == 0) { // disable elevator; as long as we don't place breakers in elevators, the player can't get trapped in an elevator
-			interior->elevators_disabled = !is_on;
-			interior->room_geom->modified_by_player = 1;
-			interior->room_geom->invalidate_lights_geom  ();
-			interior->room_geom->update_dynamic_draw_data(); // needed for lit buttons
-			auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
-
-			for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-				if (i->type != TYPE_LIGHT || !i->in_elevator() || i->is_lit() == is_on) continue;
-				i->flags ^= RO_FLAG_LIT; // toggle elevator light lit state
-			}
-			return;
-		}
-		--zone_id; --num_zones;
+	if (!elevators.empty()) { // elevators are always zone 0 (lower left or right breaker)
+		if (zone_id == 0) return breaker_zone_t(RTYPE_ELEVATOR, 0, 0);
+		--zone_id; --num_zones; // exclude elevator
 	}
-	unsigned const num_rooms(interior->rooms.size());
-	if (num_zones == 0 || num_rooms == 0) return; // no zones left, or no rooms
+	unsigned const num_rooms(rooms.size());
+	if (num_zones == 0 || num_rooms == 0) return breaker_zone_t(); // no zones left, or no rooms
 	// determine which rooms this breaker controls;
 	// we really should have breakers control lights on separate floors rather than vertical rooms stacks, but this is much easier;
 	// note that the first breaker/room (after the elevator) will be the primary hallway in office buildings and will also control all cameras,
 	// and the last breaker will be for the parking garage, which is labeled;
 	// should we have (labeled) breakers for backrooms, server, security, utility, etc.?
 	float const rooms_per_zone(max(1.0f, float(num_rooms)/num_zones));
-	unsigned const rooms_start(round_fp(zone_id*rooms_per_zone)), rooms_end(min((unsigned)round_fp((zone_id+1)*rooms_per_zone), num_rooms));
-	if (rooms_start >= rooms_end) return; // no rooms
-	for (unsigned r = rooms_start; r < rooms_end; ++r) {interior->rooms[r].unpowered = !is_on;} // update room unpowered flags; not yet used, but they may be later
+	unsigned const room_start(round_fp(zone_id*rooms_per_zone)), room_end(min((unsigned)round_fp((zone_id+1)*rooms_per_zone), num_rooms));
+	if (room_start >= room_end) return breaker_zone_t(); // no rooms
+	// pick a room with the highest priority for the label
+	unsigned const room_priorities[NUM_RTYPES] = {0, 2, 1, 1, 2, 2, 3, 3, 3, 2, 1, 3, 2, 3, 3, 3, 2, 2, 2, 2, 3, 3, 0, 3, 3, 0, 4, 3, 4, 4, 4, 0};
+	unsigned room_ix(room_start), ret_rtype(0), highest_priority(0);
+
+	for (unsigned r = room_start; r < room_end; ++r) {
+		room_t const &room(rooms[r]);
+		unsigned const rtype(room.get_room_type(0)); // use room on the first floor, since it's more likely to be special
+		assert(rtype < NUM_RTYPES);
+		unsigned const priority(room_priorities[rtype] + 1); // add one to be nonzero
+		if (priority > highest_priority) {room_ix = r; ret_rtype = rtype; highest_priority = priority;}
+	}
+	return breaker_zone_t(ret_rtype, room_start, room_end);
+}
+void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned num_zones) {
+	assert(has_room_geom());
+	breaker_zone_t const zone(interior->get_circuit_breaker_info(zone_id, num_zones));
+	if (zone.invalid()) return; // no rooms for this zone
+
+	if (zone.rtype == RTYPE_ELEVATOR) { // disable elevator; as long as we don't place breakers in elevators, the player can't get trapped in an elevator
+		interior->elevators_disabled = !is_on;
+		interior->room_geom->modified_by_player = 1;
+		interior->room_geom->invalidate_lights_geom  ();
+		interior->room_geom->update_dynamic_draw_data(); // needed for lit buttons
+		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+		for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+			if (i->type != TYPE_LIGHT || !i->in_elevator() || i->is_lit() == is_on) continue;
+			i->flags ^= RO_FLAG_LIT; // toggle elevator light lit state
+		}
+		return;
+	}
+	for (unsigned r = zone.room_start; r < zone.room_end; ++r) {interior->rooms[r].unpowered = !is_on;} // update room unpowered flags; not yet used, but they may be later
 	bool updated(0);
 	auto objs_start(interior->room_geom->objs.begin());
 	auto objs_end  (interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = objs_start; i != objs_end; ++i) {
-		if ((i->is_powered() == is_on) || i->room_id < rooms_start || i->room_id >= rooms_end) continue; // no state change, or wrong zone
+		if ((i->is_powered() == is_on) || i->room_id < zone.room_start || i->room_id >= zone.room_end) continue; // no state change, or wrong zone
 
 		if (i->is_light_type()) { // light
 			if (i->in_elevator()) continue; // handled above

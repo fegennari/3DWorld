@@ -359,8 +359,7 @@ void building_room_geom_t::expand_med_cab(room_object_t const &c) { // aka house
 	invalidate_small_geom();
 }
 
-// Note: see building_room_geom_t::add_breaker_panel()
-void building_room_geom_t::expand_breaker_panel(room_object_t const &c, bool has_elevator, bool has_parking_garage) {
+void building_room_geom_t::expand_breaker_panel(room_object_t const &c, building_t const &building) {
 	float const box_width(c.get_sz_dim(!c.dim)), box_depth(c.get_sz_dim(c.dim)), box_height(c.dz());
 	float const thickness(0.25*box_depth), dir_sign(c.dir ? -1.0 : 1.0);
 	cube_t breakers(c);
@@ -389,28 +388,21 @@ void building_room_geom_t::expand_breaker_panel(room_object_t const &c, bool has
 			obj.item_flags = num_breakers; // store the number of breakers
 			expanded_objs.push_back(obj);
 			// add labels
+			breaker_zone_t const zone(building.interior->get_circuit_breaker_info(obj.obj_id, num_breakers));
+			if (zone.invalid()) continue; // no zone/label
+			float label_xlate(0.0);
+			if      (C == 0         ) {label_xlate = -0.75;} // first column/lo side
+			else if (C == num_cols-1) {label_xlate =  0.75;} // last column/hi side
+			else {continue;} // else middle column; no space to add a label
 			cube_t label(breaker);
-			string label_text;
-
-			if (has_elevator && obj.obj_id == 0) { // first breaker - add elevator label
-				label.translate_dim(!c.dim, -0.75*breaker_dc); // lo side
-				label_text = "Elevator";
-			}
-			// FIXME: no longer last when there's an extended basement/backrooms
-			else if (has_parking_garage && obj.obj_id == num_breakers-1) { // last breaker - add parking garage label
-				label.translate_dim(!c.dim, 0.75*breaker_dc); // hi side
-				label_text = "Garage";
-			}
-			else {
-				// could add breakers for "backrooms", "server", "security", "utility", etc.
-			}
-			if (!label_text.empty()) {
-				label.d[c.dim][!c.dir] = label.d[c.dim][c.dir] + dir_sign*0.05*thickness;
-				label.expand_in_dim(!c.dim, -0.2*breaker_dc); // small shrink
-				label.expand_in_dim(2,      -0.2*breaker_dr); // small shrink
-				expanded_objs.emplace_back(label, TYPE_SIGN, c.room_id, c.dim, !c.dir, RO_FLAG_NOCOLL, c.light_amt, SHAPE_CUBE, BLACK);
-				expanded_objs.back().obj_id = register_sign_text(label_text);
-			}
+			label.translate_dim(!c.dim, label_xlate*breaker_dc);
+			string const &label_text(room_names_short[zone.rtype]);
+			if (label_text.empty()) continue;
+			label.d[c.dim][!c.dir] = label.d[c.dim][c.dir] + dir_sign*0.05*thickness;
+			label.expand_in_dim(!c.dim, -0.2*breaker_dc); // small shrink
+			label.expand_in_dim(2,      -0.2*breaker_dr); // small shrink
+			expanded_objs.emplace_back(label, TYPE_SIGN, c.room_id, c.dim, !c.dir, RO_FLAG_NOCOLL, c.light_amt, SHAPE_CUBE, BLACK);
+			expanded_objs.back().obj_id = register_sign_text(label_text);
 		}
 	} // for C
 	invalidate_small_geom();
@@ -1108,7 +1100,7 @@ bool building_room_geom_t::expand_object(room_object_t &c, building_t const &bui
 	case TYPE_WINE_RACK: expand_wine_rack(c); break;
 	case TYPE_CABINET: case TYPE_COUNTER: case TYPE_KSINK: expand_cabinet(c); break;
 	case TYPE_MIRROR:    expand_med_cab(c); break;
-	case TYPE_BRK_PANEL: expand_breaker_panel(c, !building.interior->elevators.empty(), building.has_parking_garage); break;
+	case TYPE_BRK_PANEL: expand_breaker_panel(c, building); break;
 	default: assert(0); // not a supported expand type
 	}
 	if (c.type == TYPE_CLOSET) {maybe_spawn_spider_in_drawer(c, c, 0, building.get_window_vspace(), 1);} // spawn spider when first opened
