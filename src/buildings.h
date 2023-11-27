@@ -1384,7 +1384,7 @@ struct building_interior_t {
 	bool cube_in_ext_basement_room(cube_t const &c, bool xy_only) const;
 	door_t const &get_ext_basement_door() const;
 	void assign_master_bedroom(float window_vspacing, float floor_thickness);
-	breaker_zone_t get_circuit_breaker_info(unsigned zone_id, unsigned num_zones) const;
+	breaker_zone_t get_circuit_breaker_info(unsigned zone_id, unsigned num_zones, float floor_spacing) const;
 };
 
 struct building_stats_t {

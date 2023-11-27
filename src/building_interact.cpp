@@ -210,7 +210,7 @@ bool building_room_geom_t::closet_light_is_on(cube_t const &closet) const {
 	return 0;
 }
 
-breaker_zone_t building_interior_t::get_circuit_breaker_info(unsigned zone_id, unsigned num_zones) const {
+breaker_zone_t building_interior_t::get_circuit_breaker_info(unsigned zone_id, unsigned num_zones, float floor_spacing) const {
 	assert(zone_id < num_zones);
 
 	// Note: if there are multiple panels, they will affect the same set of zones; it seems too difficult to assign rooms/zones across panels;
@@ -221,11 +221,15 @@ breaker_zone_t building_interior_t::get_circuit_breaker_info(unsigned zone_id, u
 	}
 	unsigned const num_rooms(rooms.size());
 	if (num_zones == 0 || num_rooms == 0) return breaker_zone_t(); // no zones left, or no rooms
+	// wrap around if there are more zones than rooms; this will assign the same room to multiple zones/breakers;
+	// labels will use room names on upper floors for wrapped zones; maybe this should also split toggle behavior by floor groups?
+	// but that would be extra complex because we would need per-floor room unpowered flags, and it's unclear if the player would even understand how this works
+	unsigned const floor_block_ix(zone_id/num_rooms);
+	zone_id = zone_id % num_rooms;
 	// determine which rooms this breaker controls;
 	// we really should have breakers control lights on separate floors rather than vertical rooms stacks, but this is much easier;
 	// note that the first breaker/room (after the elevator) will be the primary hallway in office buildings and will also control all cameras,
-	// and the last breaker will be for the parking garage, which is labeled;
-	// should we have (labeled) breakers for backrooms, server, security, utility, etc.?
+	// and the last breaker will be for the extended basement/backrooms if there is one, otherwise the basement/parking garage
 	float const rooms_per_zone(max(1.0f, float(num_rooms)/num_zones));
 	unsigned const room_start(round_fp(zone_id*rooms_per_zone)), room_end(min((unsigned)round_fp((zone_id+1)*rooms_per_zone), num_rooms));
 	if (room_start >= room_end) return breaker_zone_t(); // no rooms
@@ -235,7 +239,9 @@ breaker_zone_t building_interior_t::get_circuit_breaker_info(unsigned zone_id, u
 
 	for (unsigned r = room_start; r < room_end; ++r) {
 		room_t const &room(rooms[r]);
-		unsigned const rtype(room.get_room_type(0)); // use room on the first floor, since it's more likely to be special
+		// use room on the first floor, since it's more likely to be special, unless the zones wrap around (more zones than rooms)
+		unsigned const floor_ix(min(floor_block_ix, ((unsigned)round_fp(room.dz()/floor_spacing)-1)));
+		unsigned const rtype(room.get_room_type(floor_ix));
 		assert(rtype < NUM_RTYPES);
 		unsigned const priority(room_priorities[rtype] + 1); // add one to be nonzero
 		if (priority > highest_priority) {room_ix = r; ret_rtype = rtype; highest_priority = priority;}
@@ -244,7 +250,7 @@ breaker_zone_t building_interior_t::get_circuit_breaker_info(unsigned zone_id, u
 }
 void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned num_zones) {
 	assert(has_room_geom());
-	breaker_zone_t const zone(interior->get_circuit_breaker_info(zone_id, num_zones));
+	breaker_zone_t const zone(interior->get_circuit_breaker_info(zone_id, num_zones, get_window_vspace()));
 	if (zone.invalid()) return; // no rooms for this zone
 
 	if (zone.rtype == RTYPE_ELEVATOR) { // disable elevator; as long as we don't place breakers in elevators, the player can't get trapped in an elevator
