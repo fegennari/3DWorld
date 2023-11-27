@@ -4310,15 +4310,19 @@ void building_room_geom_t::add_camera(room_object_t const &c) { // Note: camera 
 }
 
 void building_room_geom_t::add_clock(room_object_t const &c) {
-	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small; placeholder
+	colorRGBA const color(apply_light_color(c));
+	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
 
 	if (c.item_flags & 1) { // digital clock
-		mat.add_cube_to_verts_untextured(c, apply_light_color(c), ~get_face_mask(c.dim, !c.dir)); // skip back face against wall
+		mat.add_cube_to_verts_untextured(c, color, ~get_face_mask(c.dim, !c.dir)); // skip back face against wall
 		// TODO: numbers, emissive
 	}
 	else { // analog clock
-		mat.add_ortho_cylin_to_verts(c, apply_light_color(c), c.dim, !c.dir, c.dir);
-		// TODO: draw hands and face numbers (as a texture?)
+		mat.add_ortho_cylin_to_verts(c, color, c.dim, 0, 0); // draw sides only
+		rgeom_mat_t &face_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/clock_face.png")), 1, 0, 1)); // shadows, small
+		// FIXME: backwards for (c.dim ^ c.dir) and slightly rotated; probably should add an invert_tx to add_disk_to_verts() and call that
+		face_mat.add_ortho_cylin_to_verts(c, color, c.dim, !c.dir, c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // draw end only; skip_sides=1
+		// TODO: draw hands
 	}
 }
 

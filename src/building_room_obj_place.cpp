@@ -2345,7 +2345,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 		set_wall_width(clock, place_pos, 0.5*clock_width, !pool.dim);
 
 		if (!is_cube_close_to_doorway(clock, room, wall_thickness, 1)) { // inc_open=1
-			bool const digital(rgen.rand_bool());
+			bool const digital(!rgen.rand_bool());
 			objs.emplace_back(clock, TYPE_CLOCK, room_id, pool.dim, !pool.dir, RO_FLAG_NOCOLL, tot_light_amt, (digital ? SHAPE_CUBE : SHAPE_CYLIN), WHITE);
 			if (digital) {objs.back().item_flags = 1;}
 		}
