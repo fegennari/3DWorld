@@ -36,6 +36,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj);
 int get_toilet_paper_nm_id();
 void setup_monitor_screen_draw(room_object_t const &monitor, rgeom_mat_t &mat, std::string &onscreen_text);
 void add_tv_or_monitor_screen(room_object_t const &c, rgeom_mat_t &mat, std::string const &onscreen_text, rgeom_mat_t *text_mat);
+bool check_clock_time();
 
 bool has_key_3d_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 
@@ -1472,6 +1473,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		invalidate_static_geom(); // user created a new screenshot texture, and this building has pictures - recreate room geom
 		num_pic_tids = num_screenshot_tids;
 	}
+	if (!shadow_only && !reflection_pass && have_clock && check_clock_time()) {update_dynamic_draw_data();} // moved to next second
 	check_invalid_draw_data();
 	// generate vertex data in the shadow pass or if we haven't hit our generation limit; must be consistent for static and small geom
 	// Note that the distance cutoff for mats_static and mats_small is different, so we generally won't be creating them both

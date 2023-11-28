@@ -20,7 +20,7 @@ vect_room_object_t temp_objects;
 vect_cube_t &get_temp_cubes() {temp_cubes.clear(); return temp_cubes;}
 vect_room_object_t &get_temp_objects() {temp_objects.clear(); return temp_objects;}
 
-extern int display_mode, player_in_closet;
+extern int display_mode, player_in_closet, frame_counter;
 
 int get_rand_screenshot_texture(unsigned rand_ix);
 unsigned get_num_screenshot_tids();
@@ -4309,6 +4309,32 @@ void building_room_geom_t::add_camera(room_object_t const &c) { // Note: camera 
 	rotate_verts(light_mat.itri_verts, rot_axis, rot_angle, rot_pt, tvl_start);
 }
 
+struct clock_time_t {
+	unsigned hours=0, mins=0, secs=0;
+	int last_update_frame=-1;
+
+	void update(bool use_12_hours=1) {
+		if (last_update_frame == frame_counter) return; // already valid, since we're only using second resolution and the frame time should be less than a second
+		last_update_frame = frame_counter;
+		std::time_t const cur_time(std::time(nullptr)); // get the current time point
+		std::tm const cal_time(*std::localtime(std::addressof(cur_time)));
+		hours = cal_time.tm_hour;
+		mins  = cal_time.tm_min;
+		secs  = cal_time.tm_sec;
+		if (use_12_hours) {hours = hours % 12;} // convert 24h => 12h
+	}
+	bool operator==(clock_time_t const &c) const {return (secs == c.secs && mins == c.mins && hours == c.hours);}
+	void print_time() const {cout << hours << ":" << mins << ":" << secs << endl;}
+};
+
+clock_time_t cur_clock_time;
+
+bool check_clock_time() { // returns true if time has moved at least a second since the last call
+	clock_time_t const prev_clock_time(cur_clock_time);
+	cur_clock_time.update();
+	return !(cur_clock_time == prev_clock_time);
+}
+
 // hand_pos is the position around the clock from 0.0 at 12:00 to 1.0 clockwise
 void add_clock_hand(rgeom_mat_t &mat, point const &center, float length, float stub_len, float width, float hand_pos, bool dim, bool dir) {
 	// start with a vertical quad, then rotate into place
@@ -4345,7 +4371,7 @@ void building_room_geom_t::add_clock(room_object_t const &c, bool add_dynamic) {
 			tp.emissive = 1.0;
 			rgeom_mat_t &mat(get_material(tp, 0, 1)); // unshadowed, dynamic
 			mat.add_cube_to_verts_untextured(face, RED, get_face_mask(c.dim, c.dir)); // only draw front face
-			// TODO: draw numbers, emissive
+			// TODO: draw numbers, emissive; use cur_clock_time.hours : cur_clock_time.mins
 		}
 		else {
 			get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(c, apply_light_color(c), ~get_face_mask(c.dim, !c.dir)); // shadowed, small; skip back face
@@ -4357,8 +4383,8 @@ void building_room_geom_t::add_clock(room_object_t const &c, bool add_dynamic) {
 		center[c.dim] = c.d[c.dim][c.dir];
 
 		if (add_dynamic) {
-			unsigned const time_hour(3), time_min(25), time_sec(40);
-			float const second_pos(time_sec/60.0), minute_pos((time_min + second_pos)/60.0), hour_pos((time_hour + minute_pos)/12.0); // [0.0, 1.0]
+			check_clock_time();
+			float const second_pos(cur_clock_time.secs/60.0), minute_pos((cur_clock_time.mins + second_pos)/60.0), hour_pos((cur_clock_time.hours + minute_pos)/12.0); // [0.0, 1.0]
 			float const step_dist((c.dir ? 1.0 : -1.0)*0.1*c.get_depth());
 			rgeom_mat_t& mat(get_untextured_material(0, 1)); // unshadowed, dynamic
 			center[c.dim] += step_dist;
