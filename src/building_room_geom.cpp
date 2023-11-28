@@ -4320,8 +4320,13 @@ void building_room_geom_t::add_clock(room_object_t const &c) {
 	else { // analog clock
 		mat.add_ortho_cylin_to_verts(c, color, c.dim, 0, 0); // draw sides only
 		rgeom_mat_t &face_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/clock_face.png")), 1, 0, 1)); // shadows, small
-		// FIXME: backwards for (c.dim ^ c.dir) and slightly rotated; probably should add an invert_tx to add_disk_to_verts() and call that
-		face_mat.add_ortho_cylin_to_verts(c, color, c.dim, !c.dir, c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // draw end only; skip_sides=1
+		float const radius(0.5*c.dz());
+		point face_center(c.get_cube_center());
+		face_center[c.dim] = c.d[c.dim][c.dir];
+		vector3d face_dir;
+		face_dir[c.dim] = (c.dir ? 1.0 : -1.0);
+		bool const swap_txy(1), inv_ts(c.dir ^ c.dim), inv_tt(c.dir ^ c.dim ^ 1);
+		face_mat.add_disk_to_verts(face_center, radius, face_dir, WHITE, swap_txy, inv_ts, inv_tt); // always white
 		// TODO: draw hands
 	}
 }

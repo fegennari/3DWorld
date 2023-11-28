@@ -2335,20 +2335,24 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 			pref_dir ^= 1; // alternate sides
 		}
 	}
-	if (1) { // add a clock on the wall by the door
-		float const wall_pos(place_area.d[pool.dim][pool.dir]), place_pos(room.get_center_dim(!pool.dim)), clock_z1(zval + 0.6*floor_spacing);
-		float const clock_width(0.2*floor_spacing), clock_height(clock_width), clock_depth(0.12*clock_width);
+	if (1) { // add a clock on the wall by the door or opposite the door
+		float const place_pos(room.get_center_dim(!pool.dim)), clock_z1(max((zval + 0.6*floor_spacing), (room.z2() - 0.4*floor_spacing))); // near the ceiling in tall rooms
+		float const clock_width(0.2*floor_spacing), clock_height(clock_width), clock_depth(0.08*clock_width);
 		cube_t clock;
 		set_cube_zvals(clock, clock_z1, clock_z1+clock_height);
-		clock.d[pool.dim][ pool.dir] = wall_pos;
-		clock.d[pool.dim][!pool.dir] = wall_pos + (pool.dir ? -1.0 : 1.0)*clock_depth;
 		set_wall_width(clock, place_pos, 0.5*clock_width, !pool.dim);
 
-		if (!is_cube_close_to_doorway(clock, room, wall_thickness, 1)) { // inc_open=1
+		for (unsigned d = 0; d < 2; ++d) {
+			bool const dir(pool.dir ^ d);
+			float const wall_pos(place_area.d[pool.dim][dir]);
+			clock.d[pool.dim][ dir] = wall_pos;
+			clock.d[pool.dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*clock_depth;
+			if (is_cube_close_to_doorway(clock, room, wall_thickness, 1)) continue; // inc_open=1
 			bool const digital(!rgen.rand_bool());
-			objs.emplace_back(clock, TYPE_CLOCK, room_id, pool.dim, !pool.dir, RO_FLAG_NOCOLL, tot_light_amt, (digital ? SHAPE_CUBE : SHAPE_CYLIN), WHITE);
+			objs.emplace_back(clock, TYPE_CLOCK, room_id, pool.dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, (digital ? SHAPE_CUBE : SHAPE_CYLIN), WHITE);
 			if (digital) {objs.back().item_flags = 1;}
-		}
+			break;
+		} // for d
 	}
 	// add other objects in and around the pool;
 	// note that stairs haven't been placed yet, so we shouldn't place objects near the future stairs when there's no water

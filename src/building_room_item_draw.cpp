@@ -209,7 +209,7 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 	if (two_sided) {add_inverted_triangles(itri_verts, indices, itris_start, ixs_start);}
 }
 
-void rgeom_mat_t::add_disk_to_verts(point const &pos, float radius, vector3d const &dir, colorRGBA const &color) {
+void rgeom_mat_t::add_disk_to_verts(point const &pos, float radius, vector3d const &dir, colorRGBA const &color, bool swap_txy, bool inv_ts, bool inv_tt) {
 	assert(radius > 0.0);
 	color_wrapper const cw(color);
 	norm_comp const nc(dir);
@@ -220,8 +220,8 @@ void rgeom_mat_t::add_disk_to_verts(point const &pos, float radius, vector3d con
 	itri_verts.emplace_back(pos, nc, 0.5, 0.5, cw);
 
 	for (unsigned i = 0; i < ndiv; ++i) {
-		float const s(sin_s), c(cos_s);
-		itri_verts.emplace_back((pos + (radius*s)*v1 + (radius*c)*v2), nc, 0.5*(1.0 + s), 0.5*(1.0 + c), cw);
+		float const s(sin_s), c(cos_s), ts(0.5*(1.0 + (swap_txy ? c : s))), tt(0.5*(1.0 + (swap_txy ? s : c)));
+		itri_verts.emplace_back((pos + (radius*s)*v1 + (radius*c)*v2), nc, (inv_ts ? 1.0-ts : ts), (inv_tt ? 1.0-tt : tt), cw);
 		indices.push_back(itris_start); // center
 		indices.push_back(itris_start + i + 1);
 		indices.push_back(itris_start + ((i+1)%ndiv) + 1);
