@@ -2351,6 +2351,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 			bool const digital(!rgen.rand_bool());
 			objs.emplace_back(clock, TYPE_CLOCK, room_id, pool.dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, (digital ? SHAPE_CUBE : SHAPE_CYLIN), WHITE);
 			if (digital) {objs.back().item_flags = 1;}
+			interior->room_geom->have_clock = 1; // flag so that we know to update the draw state
 			break;
 		} // for d
 	}

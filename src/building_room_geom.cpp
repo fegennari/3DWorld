@@ -4309,25 +4309,73 @@ void building_room_geom_t::add_camera(room_object_t const &c) { // Note: camera 
 	rotate_verts(light_mat.itri_verts, rot_axis, rot_angle, rot_pt, tvl_start);
 }
 
-void building_room_geom_t::add_clock(room_object_t const &c) {
-	colorRGBA const color(apply_light_color(c));
-	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
-
+// hand_pos is the position around the clock from 0.0 at 12:00 to 1.0 clockwise
+void add_clock_hand(rgeom_mat_t &mat, point const &center, float length, float stub_len, float width, float hand_pos, bool dim, bool dir) {
+	// start with a vertical quad, then rotate into place
+	float const bot_hwidth(0.5*width), top_hwidth(0.2*bot_hwidth), angle(TWO_PI*hand_pos);
+	point pts[6]; // start at the origin
+	pts[0].z = pts[1].z =  -stub_len; // zbot
+	pts[2].z = pts[5].z = 0.2*length; // zmid
+	pts[3].z = pts[4].z =     length; // ztop
+	pts[0][!dim] = pts[5][!dim] = -bot_hwidth;
+	pts[1][!dim] = pts[2][!dim] =  bot_hwidth;
+	pts[3][!dim] =  top_hwidth;
+	pts[4][!dim] = -top_hwidth;
+	//if (dim ^ dir ^ 1) {reverse(pts, pts+6);} // use correct winding order
+	vector3d rot_axis;
+	rot_axis[dim] = (dir ? 1.0 : -1.0);
+	rotate_vector3d_multi(rot_axis, angle, pts, 6);
+	norm_comp const normal(rot_axis);
+	color_wrapper const cw(BLACK);
+	float const ts[6] = {0.0, 1.0, 1.0, 1.0, 0.0, 0.0}, tt[6] = {0.0, 0.0, 0.5, 1.0, 1.0, 0.5};
+	unsigned const vix(mat.itri_verts.size());
+	for (unsigned n = 0; n < 6; ++n) {mat.itri_verts.emplace_back((pts[n] + center), normal, ts[n], tt[n], cw);}
+	unsigned ixs[12] = {0,1,2, 0,2,5, 5,2,3, 5,3,4}; // 4 triangles
+	if (dim ^ dir ^ 1) {reverse(ixs, ixs+12);} // use correct winding order
+	for (unsigned n = 0; n < 12; ++n) {mat.indices.push_back(vix + ixs[n]);}
+}
+void building_room_geom_t::add_clock(room_object_t const &c, bool add_dynamic) {
 	if (c.item_flags & 1) { // digital clock
-		mat.add_cube_to_verts_untextured(c, color, ~get_face_mask(c.dim, !c.dir)); // skip back face against wall
-		// TODO: numbers, emissive
+		if (add_dynamic) {
+			cube_t face(c);
+			face.expand_in_dim(!c.dim, -0.1*c.get_width ());
+			face.expand_in_dim(2,      -0.1*c.get_height());
+			face.d[c.dim][0] = face.d[c.dim][1] = c.d[c.dim][c.dir] + (c.dir ? 1.0 : -1.0)*0.1*c.get_depth(); // move out a bit from the front
+			tid_nm_pair_t tp; // unshadowed
+			tp.emissive = 1.0;
+			rgeom_mat_t &mat(get_material(tp, 0, 1)); // unshadowed, dynamic
+			mat.add_cube_to_verts_untextured(face, RED, get_face_mask(c.dim, c.dir)); // only draw front face
+			// TODO: draw numbers, emissive
+		}
+		else {
+			get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(c, apply_light_color(c), ~get_face_mask(c.dim, !c.dir)); // shadowed, small; skip back face
+		}
 	}
 	else { // analog clock
-		mat.add_ortho_cylin_to_verts(c, color, c.dim, 0, 0); // draw sides only
-		rgeom_mat_t &face_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/clock_face.png")), 1, 0, 1)); // shadows, small
 		float const radius(0.5*c.dz());
-		point face_center(c.get_cube_center());
-		face_center[c.dim] = c.d[c.dim][c.dir];
-		vector3d face_dir;
-		face_dir[c.dim] = (c.dir ? 1.0 : -1.0);
-		bool const swap_txy(1), inv_ts(c.dir ^ c.dim), inv_tt(c.dir ^ c.dim ^ 1);
-		face_mat.add_disk_to_verts(face_center, radius, face_dir, WHITE, swap_txy, inv_ts, inv_tt); // always white
-		// TODO: draw hands
+		point center(c.get_cube_center());
+		center[c.dim] = c.d[c.dim][c.dir];
+
+		if (add_dynamic) {
+			unsigned const time_hour(3), time_min(25), time_sec(40);
+			float const second_pos(time_sec/60.0), minute_pos((time_min + second_pos)/60.0), hour_pos((time_hour + minute_pos)/12.0); // [0.0, 1.0]
+			float const step_dist((c.dir ? 1.0 : -1.0)*0.1*c.get_depth());
+			rgeom_mat_t& mat(get_untextured_material(0, 1)); // unshadowed, dynamic
+			center[c.dim] += step_dist;
+			add_clock_hand(mat, center, 0.56*radius, 0.1*radius, 0.06*radius, hour_pos,   c.dim, c.dir); // hour hand
+			center[c.dim] += step_dist;
+			add_clock_hand(mat, center, 0.86*radius, 0.1*radius, 0.06*radius, minute_pos, c.dim, c.dir); // minute hand
+			center[c.dim] += step_dist;
+			add_clock_hand(mat, center, 0.88*radius, 0.2*radius, 0.03*radius, second_pos, c.dim, c.dir); // second hand
+		}
+		else {
+			get_untextured_material(1, 0, 1).add_ortho_cylin_to_verts(c, apply_light_color(c), c.dim, 0, 0); // shadowed, small; draw sides only
+			rgeom_mat_t& face_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/clock_face.png")), 1, 0, 1)); // shadows, small
+			vector3d face_dir;
+			face_dir[c.dim] = (c.dir ? 1.0 : -1.0);
+			bool const swap_txy(1), inv_ts(c.dir ^ c.dim), inv_tt(c.dir ^ c.dim ^ 1);
+			face_mat.add_disk_to_verts(center, radius, face_dir, WHITE, swap_txy, inv_ts, inv_tt); // always white
+		}
 	}
 }
 

@@ -964,7 +964,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_FLASHLIGHT: add_flashlight(c); break;
 		case TYPE_CANDLE:     add_candle(c); break;
 		case TYPE_CAMERA:     add_camera(c); break;
-		case TYPE_CLOCK:      add_clock (c); break;
+		case TYPE_CLOCK:      add_clock (c, 0); break; // add_dynamic=0
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		default: break;
 		} // end switch
@@ -1064,11 +1064,14 @@ void building_room_geom_t::create_lights_vbos(building_t const &building) {
 void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 	//highres_timer_t timer(string("Gen Room Geom Dynamic ") + (building.is_house ? "house" : "office"));
 	
-	if (!obj_dstate.empty()) { // we have an object with dynamic state
+	// TODO: better to have a rgeom type just for clocks that gets updated when the second/minute changes?
+	if (!obj_dstate.empty() || have_clock) { // we have an object with dynamic state or a dynamic clock
 		auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
 
 		for (auto i = objs.begin(); i != objs_end; ++i) {
-			if (!i->is_dynamic() || !i->is_visible()) continue; // only visible + dynamic objects; can't do VFC because this is not updated every frame
+			if (!i->is_visible()) continue; // only visible objects; can't do VFC because this is not updated every frame
+			if (i->type == TYPE_CLOCK) {add_clock(*i, 1); continue;} // add_dynamic=1
+			if (!i->is_dynamic()) continue; // only dynamic objects
 			switch (i->type) {
 			case TYPE_LG_BALL: add_lg_ball(*i); break;
 			default: assert(0); // not a supported dynamic object type

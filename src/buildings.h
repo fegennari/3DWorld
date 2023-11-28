@@ -870,7 +870,7 @@ struct courtyard_t : public cube_t {
 
 struct building_room_geom_t {
 
-	bool has_elevators=0, has_pictures=0, has_garage_car=0, modified_by_player=0, trim_was_added=0;
+	bool has_elevators=0, has_pictures=0, has_garage_car=0, modified_by_player=0, trim_was_added=0, have_clock=0;
 	unsigned char num_pic_tids=0, invalidate_mats_mask=0;
 	float obj_scale=1.0;
 	unsigned wall_ps_start=0, buttons_start=0, stairs_start=0, backrooms_start=0; // index of first object of {TYPE_PG_*|TYPE_PSPACE, TYPE_BUTTON, TYPE_STAIR}
@@ -1049,7 +1049,7 @@ struct building_room_geom_t {
 	void add_flashlight(room_object_t const &c);
 	void add_candle(room_object_t const &c);
 	void add_camera(room_object_t const &c);
-	void add_clock (room_object_t const &c);
+	void add_clock (room_object_t const &c, bool add_dynamic);
 	void add_debug_shape(room_object_t const &c);
 	static void draw_lg_ball_in_building   (room_object_t  const &c, shader_t &s);
 	void draw_interactive_player_obj(carried_item_t const &c, shader_t &s, vector3d const &xlate);
