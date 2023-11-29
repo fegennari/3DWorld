@@ -2336,8 +2336,10 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 		}
 	}
 	if (1) { // add a clock on the wall by the door or opposite the door
+		bool const digital(rgen.rand_bool());
 		float const place_pos(room.get_center_dim(!pool.dim)), clock_z1(max((zval + 0.6*floor_spacing), (room.z2() - 0.4*floor_spacing))); // near the ceiling in tall rooms
-		float const clock_width(0.2*floor_spacing), clock_height(clock_width), clock_depth(0.08*clock_width);
+		float const clock_height((digital ? 0.12 : 0.2)*floor_spacing), clock_width((digital ? 4.0 : 1.0)*clock_height), clock_depth(0.08*clock_width);
+		colorRGBA const color(digital ? BLACK : WHITE);
 		cube_t clock;
 		set_cube_zvals(clock, clock_z1, clock_z1+clock_height);
 		set_wall_width(clock, place_pos, 0.5*clock_width, !pool.dim);
@@ -2348,8 +2350,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 			clock.d[pool.dim][ dir] = wall_pos;
 			clock.d[pool.dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*clock_depth;
 			if (is_cube_close_to_doorway(clock, room, wall_thickness, 1)) continue; // inc_open=1
-			bool const digital(!rgen.rand_bool());
-			objs.emplace_back(clock, TYPE_CLOCK, room_id, pool.dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, (digital ? SHAPE_CUBE : SHAPE_CYLIN), WHITE);
+			objs.emplace_back(clock, TYPE_CLOCK, room_id, pool.dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, (digital ? SHAPE_CUBE : SHAPE_CYLIN), color);
 			if (digital) {objs.back().item_flags = 1;}
 			interior->room_geom->have_clock = 1; // flag so that we know to update the draw state
 			break;
