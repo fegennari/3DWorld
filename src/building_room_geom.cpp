@@ -4375,7 +4375,7 @@ void add_display_digit_pair(rgeom_mat_t &mat, cube_t const &face, colorRGBA cons
 	
 	for (unsigned d = 0; d < 2; ++d) {
 		bool const skip(skip_leading_zero && d == 0 && nums[d] == 0); // if skipping leading zero, use off color for all digits
-		add_display_digit(mat, digits[d ^ ddir], (skip ? off_color : on_color), off_color, nums[d], dim, dir, ddir);
+		add_display_digit(mat, digits[bool(d) ^ ddir], (skip ? off_color : on_color), off_color, nums[d], dim, dir, ddir);
 	}
 }
 void add_display_colon(rgeom_mat_t &mat, cube_t const &face, colorRGBA const &color, bool dim, bool dir) {

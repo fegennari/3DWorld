@@ -2345,7 +2345,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 		set_wall_width(clock, place_pos, 0.5*clock_width, !pool.dim);
 
 		for (unsigned d = 0; d < 2; ++d) {
-			bool const dir(pool.dir ^ d);
+			bool const dir(pool.dir ^ bool(d));
 			float const wall_pos(place_area.d[pool.dim][dir]);
 			clock.d[pool.dim][ dir] = wall_pos;
 			clock.d[pool.dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*clock_depth;
