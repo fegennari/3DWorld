@@ -1065,7 +1065,9 @@ void building_room_geom_t::create_lights_vbos(building_t const &building) {
 void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 	//highres_timer_t timer(string("Gen Room Geom Dynamic ") + (building.is_house ? "house" : "office"));
 	
-	// TODO: better to have a rgeom type just for clocks that gets updated when the second/minute changes?
+	// is it better to have a rgeom type just for clocks that gets updated when the second/minute changes?
+	// unclear if this would help, since we need to iterate over objs in either case, and that may be more expensive than drawing (and would be shared the current way);
+	// plus when we get here we often want to update both dynamic objects and clocks anyway
 	if (!obj_dstate.empty() || have_clock) { // we have an object with dynamic state or a dynamic clock
 		auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
 
