@@ -1047,15 +1047,47 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					bool const elevators_only(pref_split && ntries > 20); // allow blocking stairs if there's no other way to insert a door
 					int  const no_check_enter_exit((ntries > 5) ? (pref_conn ? 2 : 1) : 0); // no stairs enter/exit pad after first 5 tries, no enter/exit at all if pref_conn
 					if (interior->is_blocked_by_stairs_or_elevator(cand, stairs_elev_pad, elevators_only, no_check_enter_exit)) continue; // should we assert !pref_split?
+					was_split = 1;
 
-					if (is_house) {
-						// TODO: find rooms on each side, check if is_room_adjacent_to_ext_door(room) for one of them (likely the living room or entryway),
-						// check that neither room is a hallway, then remove the entire wall on the first floor rather than adding a door;
-						// but this will make the floorplans different, is that legal? and will require updates to AI navigation logic
+					// Note: this code doesn't work for multiple reasons but is left in for reference in case I figure this out later
+					if (0 && is_house && wall.z1() >= ground_floor_z1) { // not the basement
+						// find rooms on each side, check if one is adjacent to an exterior door (likely the living room or entryway),
+						// then remove the entire wall on the first floor rather than adding a door; but this doesn't work because doors haven't been placed yet
+						// but this will make the floorplans different, is that legal? only for single floor rooms? and it will require updates to AI navigation logic
+						cube_t door_area(wall);
+						door_area.d[!d][0] = lo_pos; // clip to door range
+						door_area.d[!d][1] = hi_pos;
+						door_area.expand_in_dim(d, wall_thick); // make sure the wall overlaps the rooms on both sides
+						room_t rl, rh; // room to the {low, high} sides
+
+						for (room_t const &r : rooms) {
+							if (r.intersects_no_adj(door_area)) {((r.get_center_dim(d) < wall.get_center_dim(d)) ? rl : rh) = r;}
+						}
+						if (!rl.is_hallway && !rh.is_hallway && !rl.is_all_zeros() && !rh.is_all_zeros()) { // don't connect a hallway
+							if (is_room_adjacent_to_ext_door(rl) || is_room_adjacent_to_ext_door(rh)) { // one room must be adjacent to an exterior door
+								float const cut_lo(max(rl.d[!d][0], rh.d[!d][0])), cut_hi(min(rl.d[!d][1], rh.d[!d][1]));
+
+								if (cut_lo <= lo_pos && cut_hi >= hi_pos) { // check for valid range; can fail occasionally when the same wall is split multiple times
+									cube_t wall2(wall);
+									wall .d[!d][1] = cut_lo; // lo side
+									wall2.d[!d][0] = cut_hi; // hi side
+								
+									if (wall2.is_strictly_normalized()) {
+										if (!wall.is_strictly_normalized()) {wall = wall2;}
+										else {interior->walls[d].push_back(wall2);}
+									}
+									else if (!wall.is_strictly_normalized()) {
+										wall = walls.back(); // remove this wall
+										walls.pop_back();
+										nsplits = 0; // reset outer loop iteration (well, will start at 1 out of 4 anyway; could set to -1)
+									}
+									break; // done
+								}
+							}
+						}
 					}
 					bool const open_dir(wall.get_center_dim(d) > bldg_door_open_dir_tp[d]); // doors open away from the building center
 					insert_door_in_wall_and_add_seg(wall, lo_pos, hi_pos, !d, open_dir, 0); // Note: modifies wall
-					was_split = 1;
 					break;
 				} // for ntries
 				if (!was_split) break; // no more splits
