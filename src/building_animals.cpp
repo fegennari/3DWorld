@@ -1498,7 +1498,8 @@ void building_t::update_fly(insect_t &fly, point const &camera_bs, float timeste
 			if (coll_dir == zero_vector) {coll_dir = ((fly.last_pos == fly.pos) ? fly.dir : (fly.pos - fly.last_pos).get_norm());}
 
 			if (ret == 2 && !target_player) { // static object collision
-				// TODO: land on the object? we need to get the object index first
+				// land on the object? we need to get the object index first (if a room object) and check that it's a cube; or only land on walls?
+				// we would also need to change the fly's up vector from +z to align to a vertical surface, similar to how spiders are drawn
 			}
 			fly.pos = fly.last_pos; // move back to a point where we didn't collide (assuming update is frequent enough)
 			fly.dir = rgen.signed_rand_vector_norm();
