@@ -958,9 +958,14 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 							wall.z2() = min(p->z2(), p2->z2()) - fc_thick;
 
 							for (unsigned d = 0; d < 2; ++d) {
-								wall.d[dim][d] = place_area.d[dim][d]; // shorter part side with slight offset
-								if (p->d[dim][d] != p2->d[dim][d]) {wall.d[dim][d] += (d ? 1.0 : -1.0)*0.8*wall_edge_spacing;} // reduce the gap at the corner between the two parts
-							}
+								if (p->d[dim][d] != p2->d[dim][d]) { // corner between the two parts
+									wall.d[dim][d] = p->d[dim][d]; // shorter part side with no gap
+									//wall.d[dim][d] -= (d ? 1.0 : -1.0)*0.2*wall_edge_spacing; // reduced gap (but still causes a noticeable split in the interior wall and trim)
+								}
+								else {
+									wall.d[dim][d] = place_area.d[dim][d]; // shorter part side with slight offset
+								}
+							} // for d
 							if (wall.get_sz_dim(dim) < min_split_wall_len) continue; // wall is too short to add (can this happen?)
 							wall.d[!dim][ dir] = val;
 							wall.d[!dim][!dir] = val + (dir ? -1.0 : 1.0)*wall_thick;
