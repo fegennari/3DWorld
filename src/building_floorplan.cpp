@@ -1236,6 +1236,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					elevator_t E(elevator);
 					E.d[long_dim][bool(e) ^ E.dir ^ 1] = center[long_dim]; // back-to-back
 					E.dir ^= bool(e); // facing opposite directions
+					E.is_sec_adj_pair = bool(e); // flag so that we don't include this in our hallway elevator count
 					add_or_extend_elevator(E, 1);
 				}
 			}
