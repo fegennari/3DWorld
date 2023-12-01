@@ -154,10 +154,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	setup_courtyard();
 	//highres_timer_t timer("Gen Room Details");
 	// Note: people move from room to room, so using their current positions for room object generation is both nondeterministic and unnecessary
-	vect_cube_t blockers, valid_lights; // blockers are used for fireplaces
+	vect_cube_t blockers, valid_lights, segs; // blockers are used for fireplaces
 	vect_room_object_t &objs(interior->room_geom->objs);
 	vector<room_t> &rooms(interior->rooms);
-	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
+	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const light_thick(0.025*window_vspacing), def_light_size(0.1*window_vspacing);
 	interior->room_geom->obj_scale = window_vspacing; // used to scale room object textures
 	unsigned tot_num_rooms(0), num_bathrooms(0), num_bedrooms(0), num_storage_rooms(0);
@@ -332,15 +332,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 			if (num_lights > 1) { // r->is_hallway or ext basement
 				// hallway: place a light on each side (of the stairs if they exist), and also between stairs and elevator if there are both
-				if (r->is_hallway && r->has_elevator && r->has_stairs == 255) {
-					max_eq(num_lights, (2U + r->has_elevator)); // main hallway with elevator + stairs on all floors; 3+ lights
-					cube_t room_slice(*r);
-					set_cube_zvals(room_slice, floor_zval, light_z2); // clip to the range of this floor
-					unsigned num_elevators(0), num_stairs(0);
-					for (elevator_t  const &e : interior->elevators ) {num_elevators += (!e.is_sec_adj_pair && room_slice.intersects(e));}
-					for (stairwell_t const &s : interior->stairwells) {num_stairs    += room_slice.intersects(s);}
-					num_lights += max(num_elevators, 1U)-1 + max(num_stairs, 1U)-1; // add an extra light for each additional elevator or stairs above one
-				}
+				if (r->is_hallway && r->has_elevator && r->has_stairs == 255) {max_eq(num_lights, (2U + r->has_elevator));} // hall with elevator + stairs on all floors; 3+ lights
 				min_eq(num_lights, 6U);
 				float const offsets[6] = {0.0, -0.2, -0.3, -0.36, -0.4, -0.43}, steps[6] = {0.0, 0.4, 0.3, 0.24, 0.2, 0.172}; // indexed by num_lights-1
 				float const hallway_len(r->get_sz_dim(light_dim));
@@ -352,6 +344,31 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					cube_t hall_light(light);
 					hall_light.translate_dim(light_dim, delta);
 					try_place_light_on_ceiling(hall_light, *r, room_dim, fc_thick, 0, 0, num[0], num[1], lcheck_start_ix, valid_lights, rgen); // allow_rot=0, allow_mult=0
+				}
+				if (r->is_hallway && has_pri_hall()) { // make sure to place lights between all stairs and elevators
+					float const light_len(light.get_sz_dim(room_dim));
+					cube_t centerline(*r);
+					set_wall_width(centerline, r->get_center_dim(!room_dim), wall_thickness, !room_dim);
+					set_cube_zvals(centerline, floor_zval, light_z2); // clip to the range of this floor
+					segs.clear();
+					segs.push_back(centerline);
+
+					for (elevator_t  const &e : interior->elevators ) {
+						if (centerline.intersects(e)) {subtract_cube_from_cubes(e, segs);}
+					}
+					for (stairwell_t const &s : interior->stairwells) {
+						if (centerline.intersects(s)) {subtract_cube_from_cubes(s, segs);}
+					}
+					for (cube_t const &seg : segs) {
+						if (seg.d[!room_dim][0] != centerline.d[!room_dim][0] || seg.d[!room_dim][1] != centerline.d[!room_dim][1]) continue; // not full width
+						if (seg.get_sz_dim(room_dim) < 1.5*light_len) continue; // too short
+
+						if (!has_bcube_int_xy(seg, valid_lights)) { // no light yet on this segment
+							cube_t light2(light);
+							set_wall_width(light2, seg.get_center_dim(room_dim), 0.5*light_len, room_dim); // place on segment center
+							if (is_light_placement_valid(light2, *r, fc_thick) && !overlaps_other_room_obj(light2, lcheck_start_ix)) {valid_lights.push_back(light2);}
+						}
+					}
 				}
 			}
 			else if (nx > 1 || ny > 1) { // office, parking garage, or backrooms with multiple lights
@@ -427,7 +444,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				// add blockers at both room ends to avoid placing objects there, since there's a door to the other building blocking it
 				for (unsigned d = 0; d < 2; ++d) {
 					cube_t blocker(*r);
-					blocker.d[conn_dim][!d] = blocker.d[conn_dim][d] + (d ? -1.0 : 1.0)*2.0*get_wall_thickness();
+					blocker.d[conn_dim][!d] = blocker.d[conn_dim][d] + (d ? -1.0 : 1.0)*2.0*wall_thickness;
 					objs.emplace_back(blocker, TYPE_BLOCKER, room_id, conn_dim, d, RO_FLAG_INVIS);
 				}
 			}
