@@ -397,7 +397,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			}
 		}
 		else if (!is_house && is_basement_part && min(psz.x, psz.y) > 5.0*car_sz.x && max(psz.x, psz.y) > 12.0*car_sz.y) { // make this a parking garage
-			add_room(*p, part_id, 1, 0, 0); // add entire part as a room; num_lights will be calculated later
+			add_room(*p, part_id, 1); // add entire part as a room; num_lights will be calculated later
 			rooms.back().assign_all_to(RTYPE_PARKING); // make it a parking garage
 			has_parking_garage = 1;
 		}
@@ -814,7 +814,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			bool const no_walls(min(p->dx(), p->dy()) < min_wall_len2); // not enough space to add a room (chimney, porch support, garage, shed, etc.)
 			float const min_split_len(max(global_building_params.wall_split_thresh, 1.0f)*min_wall_len);
 			assert(to_split.empty());
-			if (no_walls) {add_room(*p, part_id, 1, 0, 0);} // add entire part as a room
+			if (no_walls) {add_room(*p, part_id, 1);} // add entire part as a room
 			else {to_split.emplace_back(*p);} // seed room is entire part, no door
 			bool is_first_split(1);
 			point part_door_open_dir_tp(p->get_cube_center()); // used to determine in which direction doors open; updated base on central hallway
@@ -842,7 +842,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				else {wall_dim = rgen.rand_bool();} // choose a random split dim for nearly square rooms
 				
 				if (min(csz.x, csz.y) < min_wall_len2) {
-					add_room(c, part_id, 1, 0, 0);
+					add_room(c, part_id, 1);
 					continue; // not enough space to add a wall
 				}
 				float const min_dist_abs(1.5*doorway_width + wall_thick);
@@ -865,7 +865,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					break; // done, keep wall_pos
 				} // for num
 				if (!pos_valid) { // no valid pos, skip this split
-					add_room(c, part_id, 1, 0, 0);
+					add_room(c, part_id, 1);
 					continue;
 				}
 				// insert a doorway into the wall
@@ -927,7 +927,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					c_sub.d[wall_dim][d] = wall.d[wall_dim][!d]; // clip to wall pos
 					c_sub.door_lo[!wall_dim][d] = door_lo[!d] - wall_half_thick; // set new door pos in this dim (keep door pos in other dim, if set)
 					c_sub.door_hi[!wall_dim][d] = door_hi[!d] + wall_half_thick;
-					if (do_split) {to_split.push_back(c_sub);} else {add_room(c_sub, part_id, 1, 0, 0);} // leaf case (unsplit), add a new room
+					if (do_split) {to_split.push_back(c_sub);} else {add_room(c_sub, part_id, 1);} // leaf case (unsplit), add a new room
 				}
 				is_first_split = 0;
 			} // end while()
