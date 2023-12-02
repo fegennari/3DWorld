@@ -401,6 +401,10 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			rooms.back().assign_all_to(RTYPE_PARKING); // make it a parking garage
 			has_parking_garage = 1;
 		}
+		else if (has_retail_ground_floor && part_id == 0) {
+			add_room(*p, part_id, 1); // add entire part as a room; num_lights will be calculated later
+			rooms.back().assign_all_to(RTYPE_RETAIL);
+		}
 		else if (use_hallway) {
 			// building with rectangular slice (no adjacent exterior walls at this level), generate rows of offices
 			// Note: we could probably make these unsigned, but I want to avoid unepected negative numbers in the math

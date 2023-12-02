@@ -280,7 +280,8 @@ struct building_params_t {
 	float ao_factor=0.0, sec_extra_spacing=0.0, player_coll_radius_scale=1.0, interior_view_dist_scale=1.0;
 	float window_width=0.0, window_height=0.0, window_xspace=0.0, window_yspace=0.0; // windows
 	float wall_split_thresh=4.0, max_fp_wind_xscale=0.0, max_fp_wind_yscale=0.0, basement_water_level_min=0.0, basement_water_level_max=0.0; // interiors
-	float open_door_prob=1.0, locked_door_prob=0.0, basement_prob_house=0.5, basement_prob_office=0.5, ball_prob=0.3, split_stack_floorplan_prob=0.0; // interior probabilities
+	float open_door_prob=1.0, locked_door_prob=0.0, basement_prob_house=0.5, basement_prob_office=0.5, ball_prob=0.3; // interior probabilities
+	float split_stack_floorplan_prob=0.0, retail_floorplan_prob=0.0; // floorplan probabilities
 	// consistency probabilities of houses for cities and blocks
 	float house_same_mat_prob =0.0, house_same_size_prob =0.0, house_same_geom_prob =0.0, house_same_per_city_prob =0.0;
 	float office_same_mat_prob=0.0, office_same_size_prob=0.0, office_same_geom_prob=0.0, office_same_per_city_prob=0.0;
@@ -421,7 +422,7 @@ typedef uint8_t room_obj_shape;
 enum {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_BED, RTYPE_KITCHEN, RTYPE_LIVING, RTYPE_DINING, RTYPE_STUDY,
 	  RTYPE_ENTRY, RTYPE_LIBRARY, RTYPE_STORAGE, RTYPE_GARAGE, RTYPE_SHED, RTYPE_LOBBY, RTYPE_LAUNDRY, RTYPE_CARD, RTYPE_PLAY, RTYPE_ART,
 	  RTYPE_UTILITY, RTYPE_PARKING, RTYPE_RAMP_EXIT, RTYPE_ATTIC, RTYPE_MASTER_BED, RTYPE_UNFINISHED, RTYPE_SERVER, RTYPE_POOL, RTYPE_SWIM, RTYPE_SECURITY,
-	  RTYPE_BACKROOMS, RTYPE_ELEVATOR, NUM_RTYPES};
+	  RTYPE_BACKROOMS, RTYPE_RETAIL, RTYPE_ELEVATOR, NUM_RTYPES};
 typedef uint8_t room_type;
 
 // full room names for UI display
@@ -429,11 +430,11 @@ std::string const room_names[NUM_RTYPES] =
 	{"Unset", "Hallway", "Stairs", "Office", "Bathroom", "Bedroom", "Kitchen", "Living Room", "Dining Room", "Study",
 	 "Entryway", "Library", "Storage Room", "Garage", "Shed", "Lobby", "Laundry Room", "Card Room", "Play Room", "Art Room",
 	 "Utility Room", "Parking Garage", "Ramp Exit", "Attic", "Master Bedroom", "Unfinished Room", "Server Room", "Pool Room", "Swimming Pool Room", "Security Room",
-	 "Backrooms", "Elevator"};
+	 "Backrooms", "Retail", "Elevator"};
 // short room names for elevator buttons (should be <= 8 characters)
 std::string const room_names_short[NUM_RTYPES] =
 {"", "Hall", "Stairs", "Office", "Bath", "Bed", "Kitchen", "Living", "Dining", "Study", "Entry", "Library", "Storage", "Garage", "Shed", "Lobby", "Laundry", "Card", "Play", "Art",
-"Utility", "Garage", "Ramp", "Attic", "Bed", "", "Server", "Pool", "Swim", "Security", "Basement", "Elevator"};
+"Utility", "Garage", "Ramp", "Attic", "Bed", "", "Server", "Pool", "Swim", "Security", "Basement", "Retail", "Elevator"};
 
 enum {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES, SHAPE_RAMP};
 typedef uint8_t stairs_shape;
@@ -1422,6 +1423,7 @@ struct building_t : public building_geom_t {
 	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_complex_floorplan=0, has_helipad=0, has_ac=0, has_attic_window=0;
 	bool multi_family=0; // apartments, multi-family house, duplex, etc. - split by floor
 	bool has_int_fplace=0, has_parking_garage=0, has_small_part=0, has_basement_door=0, has_basement_pipes=0, parts_generated=0, is_in_city=0, has_skylight_light=0;
+	bool has_retail_ground_floor=0;
 	mutable bool player_visited=0; // for stats tracking
 	colorRGBA side_color=WHITE, roof_color=WHITE, detail_color=BLACK, door_color=WHITE, wall_color=WHITE;
 	cube_t bcube, coll_bcube, pri_hall, driveway, porch, assigned_plot, exterior_flag;
@@ -1911,6 +1913,7 @@ private:
 	bool add_laundry_objs    (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned &added_bathroom_objs_mask);
 	bool add_pool_room_objs  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
+	void add_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id);
 	void add_fire_ext        (float height, float radius, float zval, float wall_edge, float pos_along_wall, unsigned room_id, float tot_light_amt, bool dim, bool dir);
 	void add_pri_hall_objs   (rand_gen_t rgen, rand_gen_t room_rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor_ix);
 	void assign_attic_type   (rand_gen_t rgen);

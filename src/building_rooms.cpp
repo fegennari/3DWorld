@@ -214,6 +214,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_parking_garage(init_rtype_f0 == RTYPE_PARKING   ); // all floors should be parking garage
 		bool const is_unfinished    (init_rtype_f0 == RTYPE_UNFINISHED); //  // unfinished room, for example in a non-cube shaped office building
 		bool const is_swim_pool_room(init_rtype_f0 == RTYPE_SWIM); // room with a swimming pool
+		bool const is_retail_room   (init_rtype_f0 == RTYPE_RETAIL);
 		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(is_room_backrooms(*r));
 		float light_density(0.0), light_size(def_light_size); // default size for houses
 		unsigned const room_objs_start(objs.size());
@@ -234,6 +235,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		else if (is_backrooms) { // large office basement room
 			light_density = 0.55;
 			light_size   *= 0.75; // smaller
+		}
+		else if (is_retail_room) {
+			light_density = 0.55;
+			light_size   *= 0.8; // smaller
 		}
 		else if (is_swim_pool_room) {
 			light_density = 0.4;
@@ -289,6 +294,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			else if (is_backrooms) { // should be single floor only
 				add_backrooms_objs(rgen, *r, room_center.z, room_id, f, rooms_to_light);
 			}
+			else if (is_retail_room) {
+				add_retail_room_objs(rgen, *r, room_center.z, room_id);
+			}
 			if ((!has_stairs && (f == 0 || top_floor) && interior->stairwells.size() > 1) || top_of_stairs) { // should this be outside the loop?
 				// check for stairwells connecting stacked parts (is this still needed?); check for roof access stairs and set top_of_stairs=0
 				for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
@@ -311,7 +319,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			else if (r->is_sec_bldg) {is_lit = 0;} // garage and shed lights start off
 			else {
 				// 50% of lights are on, 75% for top of stairs, 100% for non-basement hallways, 100% for parking garages and backrooms
-				is_lit  = ((r->is_hallway && !is_basement) || is_parking_garage || is_backrooms || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0));
+				is_lit  = ((r->is_hallway && !is_basement) || is_parking_garage || is_backrooms || is_retail_room || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0));
 				is_lit |= (r->is_ext_basement_conn() || (r->is_ext_basement() && r->intersects(get_basement()))); // ext basement conn or primary hallway
 
 				if (!is_lit) { // check people and set is_lit if anyone is in this floor of this room
@@ -427,8 +435,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				add_missing_backrooms_lights(rgen, room_center.z, room_id, floor_objs_start, objs_start_inc_lights, ref_light, rooms_to_light, light_ix_assign);
 				continue; // nothing else to add
 			}
-			if (is_parking_garage) continue; // generated above, done; no outlets or light switches
-			if (is_unfinished    ) continue; // no objects for now; if adding objects later, need to make sure they stay inside the building bounds
+			if (is_parking_garage || is_retail_room) continue; // generated above, done; no outlets or light switches
+			if (is_unfinished) continue; // no objects for now; if adding objects later, need to make sure they stay inside the building bounds
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
 			if (is_lit) {tot_light_amt += r->light_intensity;}
 			bool const is_garage_or_shed(r->is_garage_or_shed(f));

@@ -256,9 +256,10 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	if (mat.min_levels < mat.max_levels) { // have a range of levels
 		if (was_cube || rgen.rand_bool()) {num_levels += rgen.rand() % (mat.max_levels - mat.min_levels + 1);} // only half of non-cubes are multilevel (unless min_level > 1)
 	}
-	if (mat.min_level_height > 0.0) {num_levels = max(mat.min_levels, min(num_levels, unsigned(bcube.get_size().z/mat.min_level_height)));}
+	if (mat.min_level_height > 0.0) {num_levels = max(mat.min_levels, min(num_levels, unsigned(bcube.dz()/mat.min_level_height)));}
 	num_levels = max(num_levels, 1U); // min_levels can be zero to apply more weight to 1 level buildings
 	bool const do_split(num_levels < 4 && is_cube() && rgen.rand_probability(mat.split_prob)); // don't split buildings with 4 or more levels, or non-cubes
+	float const height(base.dz()), floor_spacing(get_window_vspace());
 
 	if (num_levels == 1) { // single level
 		if (do_split) { // generate L, T, or U shape
@@ -276,14 +277,20 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 			parts.push_back(base);
 			if ((rgen.rand()&3) != 0) {maybe_add_special_roof(rgen);} // 75% chance
 			
-			if (interior_enabled() && rgen.rand_probability(global_building_params.split_stack_floorplan_prob)) {
+			// consider a possible vertical split of the floorplan into two parts
+			if (!interior_enabled() || height < 1.5*floor_spacing) {} // no interior, or single floor, can't split vertically
+			else if (rgen.rand_probability(global_building_params.split_stack_floorplan_prob)) {
 				// while this works, it doesn't seem to add much value, it only creates odd geometry and makes connecting stairs/elevators difficult
 				// two stacked parts of the same x/y dimensions but different interior floorplans
-				float const dz(base.dz()), split_zval(rgen.rand_uniform(0.4, 0.6));
 				parts.push_back(base);
-				parts[0].z2() = parts[0].z1() + split_zval*dz; // split in Z: parts[0] is the bottom, parts[1] is the top
+				parts[0].z2() = base.z1() + rgen.rand_uniform(0.4, 0.6)*height; // split in Z: parts[0] is the bottom, parts[1] is the top
 				adjust_part_zvals_for_floor_spacing(parts[0]);
 				parts[1].z1() = parts[0].z2();
+			}
+			else if (rgen.rand_probability(global_building_params.retail_floorplan_prob)) {
+				parts.push_back(base);
+				parts[0].z2() = parts[1].z1() = base.z1() + floor_spacing; // split in Z: parts[0] is the bottom, parts[1] is the top
+				has_retail_ground_floor = 1;
 			}
 			gen_details(rgen, 1);
 		}
@@ -291,8 +298,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		return; // for now the bounding cube
 	}
 	// generate building levels and splits
-	float const height(base.dz()), dz(height/num_levels);
-	float const abs_min_edge_move(0.5*get_window_vspace()); // same as door width
+	float const dz(height/num_levels), abs_min_edge_move(0.5*floor_spacing); // same as door width
 	bool const not_too_small(min(bcube.dx(), bcube.dy()) > 4.0*abs_min_edge_move);
 	assert(height > 0.0);
 

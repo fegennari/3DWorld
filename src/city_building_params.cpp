@@ -298,6 +298,7 @@ void building_params_t::init_kw_maps() {
 	kwmr.add("basement_prob_office", basement_prob_office, FP_CHECK_01);
 	kwmr.add("ball_prob",            ball_prob,            FP_CHECK_01);
 	kwmr.add("split_stack_floorplan_prob", split_stack_floorplan_prob, FP_CHECK_01);
+	kwmr.add("retail_floorplan_prob",      retail_floorplan_prob,      FP_CHECK_01);
 	kwmf.add("player_weight_limit",  player_weight_limit);
 	// building water
 	kwmr.add("basement_water_level_min", basement_water_level_min); // negative is allowed for no water
