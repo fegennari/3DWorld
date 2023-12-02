@@ -6,6 +6,7 @@
 #include "buildings.h"
 #include "scenery.h" // for s_plant
 #include "shaders.h"
+#include <ctime>
 
 extern int frame_counter;
 

@@ -235,7 +235,7 @@ breaker_zone_t building_interior_t::get_circuit_breaker_info(unsigned zone_id, u
 	if (room_start >= room_end) return breaker_zone_t(); // no rooms
 	// pick a room with the highest priority for the label
 	unsigned const room_priorities[NUM_RTYPES] = {0, 2, 1, 1, 2, 2, 3, 3, 3, 2, 1, 3, 2, 3, 3, 3, 2, 2, 2, 2, 3, 3, 0, 3, 3, 0, 4, 3, 4, 4, 4, 0};
-	unsigned room_ix(room_start), ret_rtype(0), highest_priority(0);
+	unsigned ret_rtype(0), highest_priority(0);
 
 	for (unsigned r = room_start; r < room_end; ++r) {
 		room_t const &room(rooms[r]);
@@ -244,7 +244,7 @@ breaker_zone_t building_interior_t::get_circuit_breaker_info(unsigned zone_id, u
 		unsigned const rtype(room.get_room_type(floor_ix));
 		assert(rtype < NUM_RTYPES);
 		unsigned const priority(room_priorities[rtype] + 1); // add one to be nonzero
-		if (priority > highest_priority) {room_ix = r; ret_rtype = rtype; highest_priority = priority;}
+		if (priority > highest_priority) {ret_rtype = rtype; highest_priority = priority;}
 	}
 	return breaker_zone_t(ret_rtype, room_start, room_end);
 }
