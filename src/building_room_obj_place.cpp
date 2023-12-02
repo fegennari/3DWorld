@@ -2437,7 +2437,7 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 	float const window_vspacing(get_window_vspace());
 	vect_room_object_t &objs(interior->room_geom->objs);
 
-	if (floor_ix == 0) { // place first floor objects
+	if (floor_ix == 0 && room.z1() == ground_floor_z1) { // place ground floor objects
 		// reception desks
 		float const desk_width(0.9*window_vspacing);
 		
