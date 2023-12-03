@@ -7,6 +7,7 @@
 #include "city.h" // for object_model_loader_t
 #include "subdiv.h" // for sd_sphere_d
 #include "profiler.h"
+#include "openal_wrap.h"
 
 unsigned const MAX_ROOM_GEOM_GEN_PER_FRAME = 1;
 
@@ -1062,8 +1063,9 @@ void building_room_geom_t::create_lights_vbos(building_t const &building) {
 	mats_lights.create_vbos(building);
 }
 
-void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
+void building_room_geom_t::create_dynamic_vbos(building_t const &building, point const &camera_bs, vector3d const &xlate, bool play_clock_tick) {
 	//highres_timer_t timer(string("Gen Room Geom Dynamic ") + (building.is_house ? "house" : "office"));
+	float const clock_sound_dist(10.0*CAMERA_RADIUS);
 	
 	// is it better to have a rgeom type just for clocks that gets updated when the second/minute changes?
 	// unclear if this would help, since we need to iterate over objs in either case, and that may be more expensive than drawing (and would be shared the current way);
@@ -1073,7 +1075,16 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 
 		for (auto i = objs.begin(); i != objs_end; ++i) {
 			if (!i->is_visible()) continue; // only visible objects; can't do VFC because this is not updated every frame
-			if (i->type == TYPE_CLOCK) {add_clock(*i, 1); continue;} // add_dynamic=1
+			
+			if (i->type == TYPE_CLOCK) {
+				add_clock(*i, 1); // add_dynamic=1
+				if (!play_clock_tick || (i->item_flags & 1)) continue; // skip for digital clocks
+				point const pos(i->get_cube_center());
+				float const dist(p2p_dist(camera_bs, pos));
+				if (dist > clock_sound_dist) continue;
+				gen_sound_thread_safe(SOUND_CLICK, (pos + xlate), 0.5*(1.0 - dist/clock_sound_dist));
+				continue;
+			}
 			if (!i->is_dynamic()) continue; // only dynamic objects
 			switch (i->type) {
 			case TYPE_LG_BALL: add_lg_ball(*i); break;
@@ -1461,6 +1472,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	// only parking garages and attics have detail objects that cast shadows
 	bool const draw_detail_objs(inc_small >= 2 && (!shadow_only || building.has_parking_garage || building.has_attic()));
 	bool const draw_int_detail_objs(inc_small >= 3 && !shadow_only);
+	// update clocks if moved to next second; only applies to the player's building
+	bool const update_clocks(player_in_building && inc_small >= 2 && !shadow_only && !reflection_pass && have_clock && check_clock_time());
 	if (bbd != nullptr) {bbd->set_camera_dir_mask(camera_bs, building.bcube);}
 	brg_batch_draw_t *const bbd_in(bbd); // capture bbd for instance drawing before setting to null if player_in_building
 	if (player_in_building) {bbd = nullptr;} // use immediate drawing when player is in the building because draw order matters for alpha blending
@@ -1475,9 +1488,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		invalidate_static_geom(); // user created a new screenshot texture, and this building has pictures - recreate room geom
 		num_pic_tids = num_screenshot_tids;
 	}
-	if (player_in_building && inc_small >= 2 && !shadow_only && !reflection_pass && have_clock && check_clock_time()) {
-		update_dynamic_draw_data(); // update if moved to next second; only applies to the player's building
-	}
+	if (update_clocks) {update_dynamic_draw_data();}
 	check_invalid_draw_data();
 	// generate vertex data in the shadow pass or if we haven't hit our generation limit; must be consistent for static and small geom
 	// Note that the distance cutoff for mats_static and mats_small is different, so we generally won't be creating them both
@@ -1518,7 +1529,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		}
 	}
 	if (draw_lights && !mats_lights .valid) {create_lights_vbos (building);} // create lights  materials if needed (no limit)
-	if (inc_small   && !mats_dynamic.valid) {create_dynamic_vbos(building);} // create dynamic materials if needed (no limit); drawn with small objects
+	if (inc_small   && !mats_dynamic.valid) {create_dynamic_vbos(building, camera_bs, xlate, update_clocks);} // create dynamic materials if needed (no limit)
 	if (!mats_doors.valid) {create_door_vbos(building);} // create door materials if needed (no limit)
 	enable_blend(); // needed for rugs and book text
 	assert(s.is_setup());
