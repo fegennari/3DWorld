@@ -27,7 +27,7 @@ snow_random 0.05
 num_test_snowflakes 1000 # in M
 snow_file ../models/san-miguel-new/snow.map 0
 
-num_threads 8
+num_threads 0 # auto
 vertex_optimize_flags 0 1 1 # enable full_opt verbose
 max_ray_bounces 4
 num_light_rays 50000 10000 10000000 500000000

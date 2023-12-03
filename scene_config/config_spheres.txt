@@ -39,7 +39,7 @@ sphere_gen max_light_atten 20.0
 sphere_gen max_light_radius 10.0
 sphere_gen rand_seed 0
 
-num_threads 8
+num_threads 0 # auto
 ray_step_size_mult 0.25
 num_light_rays 10000 10000 20000000 1000000 # npts nrays local_rays [global_rays [dynamic_rays]]
 lighting_file_local ../cached_lighting/spheres.lighting.local.data 0 0.5 0.0

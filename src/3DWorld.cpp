@@ -17,6 +17,7 @@
 #include "draw_utils.h"
 #include "tree_leaf.h"
 #include <set>
+#include <thread> // for std::thread::hardware_concurrency()
 
 #ifdef _WIN32 // wglew.h seems to be Windows only
 #include <GL/wglew.h> // for wglSwapIntervalEXT
@@ -2190,7 +2191,12 @@ int load_config(string const &config_file) {
 			if (fscanf(fp, "%u%u%u%u%u", &NPTS, &NRAYS, &LOCAL_RAYS, &GLOBAL_RAYS, &DYNAMIC_RAYS) < 3) cfg_err("num_light_rays command", error);
 		}
 		else if (str == "num_threads") {
-			if (!read_nonzero_uint(fp, NUM_THREADS) || NUM_THREADS > 100) cfg_err("num_threads", error);
+			if (!read_uint(fp, NUM_THREADS) || NUM_THREADS > 100) cfg_err("num_threads", error);
+			
+			if (NUM_THREADS == 0) { // auto special case
+				unsigned const num_hw_threads(std::thread::hardware_concurrency()); // includes hyperthreading
+				NUM_THREADS = ((num_hw_threads > 0) ? num_hw_threads : 4); // default to 4 if the call returns 0
+			}
 		}
 		else if (str == "ambient_lighting_scale") {
 			if (fscanf(fp, "%f%f%f", &ambient_lighting_scale.R, &ambient_lighting_scale.G, &ambient_lighting_scale.B) != 3) cfg_err("ambient_lighting_scale command", error);
