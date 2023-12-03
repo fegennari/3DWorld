@@ -2394,7 +2394,51 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 }
 
 void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
-	// TODO
+	// Note: this room should occupy the entire floor, so walkable room bounds == room == part
+	float const floor_spacing(get_window_vspace()), dx(room.dx()), dy(room.dy()), spacing(0.6);
+	float const door_width(get_doorway_width()), se_pad(0.8*door_width), nom_aisle_width(1.5*door_width), rack_height(0.75*get_floor_ceil_gap());
+	unsigned const nx(max(1U, unsigned(spacing*dx/floor_spacing))), ny(max(1U, unsigned(spacing*dy/floor_spacing))); // same spacing as room lights
+	bool const dim(dx < dy); // long dim
+	float const length(dim ? dy : dx), width(dim ? dx : dy), max_rack_width(0.5*floor_spacing);
+	if (width < 4.0*nom_aisle_width) return; // too small for shelf racks
+	unsigned const nrows(dim ? nx : ny), nracks(max(2U, (dim ? ny : nx)/4));
+	if (nrows == 0) return; // too small for shelf racks
+	float aisle_width(nom_aisle_width), aisle_spacing((width - aisle_width)/nrows), rack_width(aisle_spacing - aisle_width);
+	assert(rack_width > 0.0);
+	
+	if (rack_width > max_rack_width) { // rack is too wide; widen the aisle instead
+		rack_width    = max_rack_width;
+		aisle_width   = aisle_spacing - rack_width;
+		aisle_spacing = (width - aisle_width)/nrows;
+	}
+	float const rack_spacing((length - aisle_width)/nracks), rack_length(rack_spacing - aisle_width);
+	assert(rack_length > 0.0);
+	vect_room_object_t &objs(interior->room_geom->objs);
+	cube_t rack;
+	set_cube_zvals(rack, zval, zval+rack_height);
+	
+	for (unsigned n = 0; n < nrows; ++n) { // n+1 aisles
+		float const rack_lo(room.d[!dim][0] + aisle_width + n*aisle_spacing);
+		rack.d[!dim][0] = rack_lo;
+		rack.d[!dim][1] = rack_lo + rack_width;
+
+		for (unsigned r = 0; r < nracks; ++r) {
+			float const start(room.d[dim][0] + aisle_width + r*rack_spacing);
+			rack.d[dim][0] = start;
+			rack.d[dim][1] = start + rack_length;
+			// no other items have been placed in this room yet (other than lights), and there are no interior doors,
+			// and all exterior doors have aisle_spacing around them, so we only need to check for stairs and elevators
+			cube_t test_cube(rack);
+			test_cube.expand_by_xy(se_pad); // add extra padding
+			
+			if (interior->is_blocked_by_stairs_or_elevator(test_cube)) { // blocked
+				// TODO: try to shorten each end
+				continue;
+			}
+			objs.emplace_back(rack, TYPE_SHELFRACK, room_id, !dim, 0, 0, 1.0, SHAPE_CUBE, WHITE); // tot_light_amt=1.0
+			set_obj_id(objs);
+		} // for r
+	} // for n
 }
 
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius) {

@@ -164,6 +164,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CAMERA    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 150.0, 1.5,   "security camera");
 	bldg_obj_types[TYPE_CLOCK     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,  20.0, 1.0,   "clock");
 	bldg_obj_types[TYPE_DOWNSPOUT ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1,  0.0,  0.0,   "downspout");
+	bldg_obj_types[TYPE_SHELFRACK ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1,  0.0,  0.0,   "shelf rack");
 	bldg_obj_types[TYPE_DBG_SHAPE ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 1,  0.0,  0.0,   "debug shape"); // small (optimization)
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models

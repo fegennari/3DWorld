@@ -238,7 +238,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			light_size   *= 0.75; // smaller
 		}
 		else if (is_retail_room) {
-			light_density = 0.55;
+			light_density = 0.6;
 			light_size   *= 0.8; // smaller
 		}
 		else if (is_swim_pool_room) {

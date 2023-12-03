@@ -886,6 +886,11 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	add_small_static_objs_to_verts(objects, 1); // inc_text=1
 }
 
+void building_room_geom_t::add_rack(room_object_t const &c) {
+	rgeom_mat_t &mat(get_untextured_material(1)); // shadowed
+	mat.add_cube_to_verts_untextured(c, c.color, EF_Z1); // skip bottom face
+}
+
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name(texture_name), 0.0), 1, 0, is_small)); // shadows
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // top face only
