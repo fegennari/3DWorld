@@ -1475,7 +1475,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		invalidate_static_geom(); // user created a new screenshot texture, and this building has pictures - recreate room geom
 		num_pic_tids = num_screenshot_tids;
 	}
-	if (inc_small >= 2 && !shadow_only && !reflection_pass && have_clock && check_clock_time()) {update_dynamic_draw_data();} // moved to next second
+	if (player_in_building && inc_small >= 2 && !shadow_only && !reflection_pass && have_clock && check_clock_time()) {
+		update_dynamic_draw_data(); // update if moved to next second; only applies to the player's building
+	}
 	check_invalid_draw_data();
 	// generate vertex data in the shadow pass or if we haven't hit our generation limit; must be consistent for static and small geom
 	// Note that the distance cutoff for mats_static and mats_small is different, so we generally won't be creating them both

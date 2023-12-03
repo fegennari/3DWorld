@@ -34,7 +34,7 @@ struct clock_time_t {
 
 clock_time_t cur_clock_time;
 
-bool check_clock_time() { // returns true if time has moved at least a second since the last call
+bool check_clock_time() { // returns true if time has moved at least a second since the last call (should be last frame)
 	clock_time_t const prev_clock_time(cur_clock_time);
 	cur_clock_time.update();
 	return !(cur_clock_time == prev_clock_time);
@@ -178,6 +178,14 @@ void building_room_geom_t::add_clock(room_object_t const &c, bool add_dynamic) {
 			face_mat.add_disk_to_verts(center, radius, face_dir, WHITE, swap_txy, inv_ts, inv_tt); // always white
 		}
 	}
+}
+
+void building_t::add_clock(cube_t const &clock, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool digital) {
+	assert(has_room_geom());
+	room_object_t obj(clock, TYPE_CLOCK, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, (digital ? SHAPE_CUBE : SHAPE_CYLIN), (digital ? BLACK : WHITE));
+	if (digital) {obj.item_flags = 1;}
+	interior->room_geom->objs.push_back(obj);
+	interior->room_geom->have_clock = 1; // flag so that we know to update the draw state
 }
 
 

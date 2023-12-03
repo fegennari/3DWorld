@@ -2397,14 +2397,6 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	// TODO
 }
 
-void building_t::add_clock(cube_t const &clock, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool digital) {
-	assert(has_room_geom());
-	room_object_t obj(clock, TYPE_CLOCK, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, (digital ? SHAPE_CUBE : SHAPE_CYLIN), (digital ? BLACK : WHITE));
-	if (digital) {obj.item_flags = 1;}
-	interior->room_geom->objs.push_back(obj);
-	interior->room_geom->have_clock = 1; // flag so that we know to update the draw state
-}
-
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius) {
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_FIRE_EXT)) return 0;
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FIRE_EXT)); // D, W, H
