@@ -2339,7 +2339,6 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 		bool const digital(rgen.rand_bool());
 		float const place_pos(room.get_center_dim(!pool.dim)), clock_z1(max((zval + 0.6*floor_spacing), (room.z2() - 0.4*floor_spacing))); // near the ceiling in tall rooms
 		float const clock_height((digital ? 0.12 : 0.2)*floor_spacing), clock_width((digital ? 4.0 : 1.0)*clock_height), clock_depth(0.08*clock_width);
-		colorRGBA const color(digital ? BLACK : WHITE);
 		cube_t clock;
 		set_cube_zvals(clock, clock_z1, clock_z1+clock_height);
 		set_wall_width(clock, place_pos, 0.5*clock_width, !pool.dim);
@@ -2350,9 +2349,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 			clock.d[pool.dim][ dir] = wall_pos;
 			clock.d[pool.dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*clock_depth;
 			if (is_cube_close_to_doorway(clock, room, wall_thickness, 1)) continue; // inc_open=1
-			objs.emplace_back(clock, TYPE_CLOCK, room_id, pool.dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, (digital ? SHAPE_CUBE : SHAPE_CYLIN), color);
-			if (digital) {objs.back().item_flags = 1;}
-			interior->room_geom->have_clock = 1; // flag so that we know to update the draw state
+			add_clock(clock, room_id, tot_light_amt, pool.dim, !dir, digital);
 			break;
 		} // for d
 	}
@@ -2400,6 +2397,14 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	// TODO
 }
 
+void building_t::add_clock(cube_t const &clock, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool digital) {
+	assert(has_room_geom());
+	room_object_t obj(clock, TYPE_CLOCK, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, (digital ? SHAPE_CUBE : SHAPE_CYLIN), (digital ? BLACK : WHITE));
+	if (digital) {obj.item_flags = 1;}
+	interior->room_geom->objs.push_back(obj);
+	interior->room_geom->have_clock = 1; // flag so that we know to update the draw state
+}
+
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius) {
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_FIRE_EXT)) return 0;
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FIRE_EXT)); // D, W, H
@@ -2438,7 +2443,7 @@ void building_t::add_fire_ext(float height, float radius, float zval, float wall
 
 void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor_ix) {
 	bool const long_dim(room.dx() < room.dy());
-	float const window_vspacing(get_window_vspace());
+	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	vect_room_object_t &objs(interior->room_geom->objs);
 
 	if (floor_ix == 0 && room.z1() == ground_floor_z1) { // place ground floor objects
@@ -2475,6 +2480,21 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 				} // for n
 			} // for dir
 		}
+		if (room.has_stairs) { // maybe add a clock on the back of the stairs
+			for (stairwell_t const &s : interior->stairwells) {
+				if (s.z1() > zval || !room.contains_cube(s)) continue; // stairs not on ground floor, or not contained; will skip stairs down to the basement/parking garage
+				bool const digital(rgen.rand_bool());
+				float const place_pos(s.get_center_dim(!s.dim)), clock_z1(zval + 0.6*window_vspacing);
+				float const clock_height((digital ? 0.08 : 0.2)*window_vspacing), clock_width((digital ? 4.0 : 1.0)*clock_height), clock_depth(0.08*clock_width);
+				cube_t clock;
+				set_cube_zvals(clock, clock_z1, clock_z1+clock_height);
+				set_wall_width(clock, place_pos, 0.5*clock_width, !s.dim);
+				float const wall_pos(s.d[s.dim][s.dir] + (s.dir ? 1.0 : -1.0)*0.3*wall_thickness); // account for stairs wall (approximate)
+				clock.d[s.dim][!s.dir] = wall_pos;
+				clock.d[s.dim][ s.dir] = wall_pos + (s.dir ? 1.0 : -1.0)*clock_depth;
+				add_clock(clock, room_id, tot_light_amt, s.dim, s.dir, digital);
+			}
+		}
 	}
 	float fe_height(0.0), fe_radius(0.0);
 
@@ -2483,7 +2503,7 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 
 		if (wall_pos_lo < wall_pos_hi) { // should always be true?
 			bool const dir(room_rgen.rand_bool()); // random, but the same across all floors
-			float const wall_pos(room.d[!long_dim][dir] + (dir ? -1.0 : 1.0)*0.5*get_wall_thickness());
+			float const wall_pos(room.d[!long_dim][dir] + (dir ? -1.0 : 1.0)*0.5*wall_thickness);
 
 			for (unsigned n = 0; n < 20; ++n) { // make 20 attempts at placing a fire extinguisher
 				float const val(room_rgen.rand_uniform(wall_pos_lo, wall_pos_hi)), cov_lo(val - min_clearance), cov_hi(val + min_clearance);
