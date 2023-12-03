@@ -125,6 +125,7 @@ void building_t::setup_courtyard() {
 		if (p->y1() > bcube.yc()) {courtyard.y2() = p->y1();}
 	} // for p
 	assert(courtyard.is_strictly_normalized());
+	if (!has_courtyard_door) return; // return here with courtyard.door_ix and courtyard.room_ix left as -1
 	// find courtyard door
 	cube_t door_bc;
 	unsigned num_doors(0), num_rooms(0);
@@ -133,18 +134,18 @@ void building_t::setup_courtyard() {
 		cube_t bc(d->get_bcube());
 		bool const dim(bc.dy() < bc.dx());
 		bc.expand_in_dim(dim, get_wall_thickness());
-		if (bc.intersects(courtyard)) {courtyard.door_ix = (d - doors.begin()); door_bc = bc; ++num_doors;}
+		if (bc.intersects(courtyard)) {courtyard.door_ix = int16_t(d - doors.begin()); door_bc = bc; ++num_doors;}
 	}
 	assert(num_doors == 1);
 
 	// find courtyard room
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-		if (r->intersects(door_bc)) {courtyard.room_ix = (r - interior->rooms.begin()); ++num_rooms;}
+		if (r->intersects(door_bc)) {courtyard.room_ix = int16_t(r - interior->rooms.begin()); ++num_rooms;}
 	}
 	assert(num_rooms == 1);
 }
 bool building_t::point_in_courtyard(point const &pos_bs) const {
-	return has_courtyard && has_room_geom() && interior->room_geom->courtyard.contains_pt(pos_bs);
+	return (has_courtyard && has_room_geom() && interior->room_geom->courtyard.contains_pt(pos_bs));
 }
 
 void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {

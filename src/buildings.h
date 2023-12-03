@@ -866,7 +866,7 @@ struct index_pair_t {
 };
 
 struct courtyard_t : public cube_t {
-	uint16_t room_ix=0, door_ix=0;
+	int16_t room_ix=-1, door_ix=-1; // starts as <unset>
 };
 
 struct building_room_geom_t {
@@ -1420,7 +1420,7 @@ struct building_t : public building_geom_t {
 	uint8_t has_chimney=0; // 0=none, 1=interior, 2=exterior with fireplace
 	uint8_t city_ix=0; // supports up to 256 cities
 	uint8_t floor_ext_door_mask=0; // used for multi-family houses
-	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_complex_floorplan=0, has_helipad=0, has_ac=0, has_attic_window=0;
+	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_courtyard_door=0, has_complex_floorplan=0, has_helipad=0, has_ac=0, has_attic_window=0;
 	bool multi_family=0; // apartments, multi-family house, duplex, etc. - split by floor
 	bool has_int_fplace=0, has_parking_garage=0, has_small_part=0, has_basement_door=0, has_basement_pipes=0, parts_generated=0, is_in_city=0, has_skylight_light=0;
 	bool has_retail_ground_floor=0;
@@ -1547,7 +1547,7 @@ struct building_t : public building_geom_t {
 	bool maybe_add_house_driveway(cube_t const &plot, unsigned building_ix) const;
 	bool get_power_point(vector<point> &ppts) const;
 	void add_solar_panels(rand_gen_t &rgen);
-	bool add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_office_building, bool roof_access=0);
+	bool add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_office_building, bool roof_access=0, bool courtyard=0);
 	float gen_peaked_roof(cube_t const &top_, float peak_height, bool dim, float extend_to, float max_dz, unsigned skip_side_tri);
 	float gen_hipped_roof(cube_t const &top_, float peak_height, float extend_to);
 	float gen_sloped_roof_for_stacked_parts(cube_t const &bot, cube_t const &top);
