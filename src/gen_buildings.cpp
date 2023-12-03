@@ -3481,7 +3481,9 @@ public:
 			//timer_t timer2("Draw Buildings Smap"); // 0.3
 			enable_city_shader(city_shader, use_city_dlights, use_bmap, min_alpha);
 			float const draw_dist(get_tile_smap_dist() + 0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE));
-			glEnable(GL_CULL_FACE); // cull back faces to avoid lighting/shadows on inside walls of building interiors
+			// cull back faces to avoid lighting/shadows on inside walls of building interiors;
+			// disable when there are no interiors so that the bottom surfaces of roof overhangs/gutters are drawn
+			if (draw_interior) {glEnable(GL_CULL_FACE);}
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 				bool const single_tile((*i)->is_single_tile()), no_depth_write(!single_tile), transparent_windows(draw_interior && (*i)->has_interior_to_draw());
@@ -3510,7 +3512,7 @@ public:
 				} // for g
 				if (no_depth_write) {glDepthMask(GL_TRUE);} // re-enable depth writing
 			} // for i
-			glDisable(GL_CULL_FACE);
+			if (draw_interior) {glDisable(GL_CULL_FACE);}
 			bbd.draw_obj_models(city_shader, xlate, 0); // shadow_only=0
 			city_shader.end_shader();
 		}
