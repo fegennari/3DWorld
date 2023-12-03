@@ -1212,6 +1212,7 @@ struct landing_t : public stairs_landing_base_t {
 };
 
 struct stairwell_t : public stairs_landing_base_t {
+	bool extends_to_pg=0;
 	uint8_t num_floors=0;
 	int16_t stairs_door_ix=-1;
 
@@ -1464,7 +1465,7 @@ struct building_t : public building_geom_t {
 	bool skip_top_of_ceilings() const {return (roof_type == ROOF_TYPE_FLAT || !is_house || has_attic());}
 	bool enable_driveway_coll() const {return !is_rotated();} // no collision with rotated driveways/porches for now
 	bool has_pg_ramp() const {return (interior && !interior->pg_ramp.is_all_zeros());}
-	bool can_extend_pri_hall_stairs_to_pg() const {return (has_parking_garage && has_pri_hall() && pri_hall.z1() == ground_floor_z1);}
+	bool can_extend_pri_hall_stairs_to_pg() const;
 	bool is_basement(vect_cube_t::const_iterator it) const {return (int(it - parts.begin()) == basement_part_ix);}
 	bool is_pos_in_basement(point const &pos) const {return ((has_basement() && parts[basement_part_ix].contains_pt(pos)) || point_in_extended_basement(pos));}
 	bool has_ext_door_this_floor(float part_z1, unsigned floor_ix) const {return (part_z1 == ground_floor_z1 && (1 << floor_ix) & floor_ext_door_mask);}

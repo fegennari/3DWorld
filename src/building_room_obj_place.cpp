@@ -2474,7 +2474,9 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 		}
 		if (room.has_stairs) { // maybe add a clock on the back of the stairs
 			for (stairwell_t const &s : interior->stairwells) {
-				if (s.z1() > zval || !room.contains_cube(s)) continue; // stairs not on ground floor, or not contained; will skip stairs down to the basement/parking garage
+				if (s.shape != SHAPE_U && s.shape != SHAPE_WALLED_SIDES) continue;
+				if (s.extends_to_pg && s.shape != SHAPE_U)   continue; // skip stairs extending down to the basement/parking garage
+				if (s.z1() > zval || !room.contains_cube(s)) continue; // stairs not on ground floor, or not contained
 				bool const digital(rgen.rand_bool());
 				float const place_pos(s.get_center_dim(!s.dim)), clock_z1(zval + 0.6*window_vspacing);
 				float const clock_height((digital ? 0.08 : 0.2)*window_vspacing), clock_width((digital ? 4.0 : 1.0)*clock_height), clock_depth(0.08*clock_width);

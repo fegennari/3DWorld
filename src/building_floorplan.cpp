@@ -1264,10 +1264,10 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		stairs_cut = stairs;
 		stairs_dim = long_dim;
 	}
-	else if (is_basement && can_extend_pri_hall_stairs_to_pg() && part.contains_cube_xy_overlaps_z(pri_hall)) {
+	else if (is_basement && can_extend_pri_hall_stairs_to_pg() && part.contains_cube_xy(pri_hall)) {
 		assert(!interior->stairwells.empty());
-		stairwell_t const &s(interior->stairwells.front());
-		assert(stairs_contained_in_part(s, pri_hall));
+		stairwell_t &s(interior->stairwells.front());
+		s.extends_to_pg = 1;
 		// copy fields from these stairs and extend down
 		stairs_cut = s;
 		stairs_dim = s.dim;
@@ -1578,6 +1578,11 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	std::reverse(interior->floors.begin()+floors_start, interior->floors.end()); // order floors top to bottom to reduce overdraw when viewed from above
 }
 
+bool building_t::can_extend_pri_hall_stairs_to_pg() const {
+	if (!has_parking_garage || !has_pri_hall() || pri_hall.z1() != ground_floor_z1 || interior->stairwells.empty()) return 0;
+	return stairs_contained_in_part(interior->stairwells.front(), pri_hall); // Note: can only return false when using split_stack_floorplan_prob
+}
+
 void building_t::add_ceiling_cube_no_skylights(cube_t const &c) {
 	assert(interior);
 
@@ -1769,10 +1774,10 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			float const cand_z1(cand_z2 - window_vspacing); // top of top floor for this part
 			
 			// try to extend primary hallway stairs down to parking garage below; should this apply to all ground floor stairwells?
-			if (is_basement && can_extend_pri_hall_stairs_to_pg() && part.contains_cube_xy_overlaps_z(pri_hall)) {
+			if (is_basement && can_extend_pri_hall_stairs_to_pg() && part.contains_cube_xy(pri_hall)) {
 				assert(!interior->stairwells.empty());
-				stairwell_t const &s(interior->stairwells.front());
-				assert(stairs_contained_in_part(s, pri_hall));
+				stairwell_t &s(interior->stairwells.front());
+				s.extends_to_pg = 1;
 				cand = s; dim = s.dim; stairs_dir = s.dir; sshape = s.shape; // copy fields from these stairs and extend down
 				stack_conn    = 0; // not stacked - extended main stairs
 				cand_is_valid = 1;
