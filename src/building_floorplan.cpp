@@ -1276,21 +1276,23 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		stairs_cut = stairs;
 		stairs_dim = long_dim;
 	}
+	// Note: can_extend_stairs_to_pg() will never be true for retail buildings because the primary hall stairs aren't extended down to the ground floor until later
 	else if (is_basement && part.contains_cube_xy(pri_hall) && can_extend_stairs_to_pg(stairs_ix)) { // multi-floor parking garage case
 		stairwell_t &s(interior->stairwells[stairs_ix]);
-		s.extends_below       = 1;
-		pri_hall_stairs_to_pg = 1;
+		s.extends_below = 1;
 		// copy fields from these stairs and extend down
 		stairs_cut = s;
 		stairs_dim = s.dim;
 		force_stairs_dir    = s.dir;
 		extended_from_above = 1;
 		sshape       = s.shape;
-		// assume we can extend the existing hallway elevator downward
+		// assume we can extend the existing hallway stairs downward
 		set_cube_zvals(stairs_cut, part.z1(), part.z2());
 		room_t &room(interior->rooms.back()); // should be the last room
 		room.has_stairs = 255; // stairs on all floors
-		find_and_merge_with_landing(interior->landings, s, sshape, num_floors); // merge with bottom landing
+		cube_t stairs_bot(s);
+		stairs_bot.z2() = stairs_bot.z1() + window_vspacing; // limit to bottom landing
+		find_and_merge_with_landing(interior->landings, stairs_bot, sshape, num_floors); // merge with bottom landing
 	}
 	// only add stairs to first part of a house unless we haven't added stairs yet, or if it's the top floor of a stacked part
 	else if (!is_house || interior->stairwells.empty() || (first_part_this_stack && part.z1() > ground_floor_z1)) {
@@ -1592,7 +1594,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 }
 
 bool building_t::can_extend_stairs_to_pg(unsigned &stairs_ix) const {
-	if (!has_parking_garage || !has_pri_hall() || interior->stairwells.empty()) return 0;
+	if (!has_parking_garage || !has_pri_hall()) return 0;
 	
 	for (unsigned i = 0; i < interior->stairwells.size(); ++i) {
 		stairwell_t const &s(interior->stairwells[i]);
@@ -1790,14 +1792,17 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			unsigned stairs_ix(0);
 			
 			// try to extend primary hallway stairs down to parking garage below; should this apply to all ground floor stairwells?
-			if (is_basement && part.contains_cube_xy(pri_hall) && can_extend_stairs_to_pg(stairs_ix)) { // single floor parking garage case
+			if (is_basement && part.contains_cube_xy(pri_hall) && can_extend_stairs_to_pg(stairs_ix)) { // single floor parking garage, or upper floor connect only
 				stairwell_t &s(interior->stairwells[stairs_ix]);
 				s.extends_below       = 1;
 				pri_hall_stairs_to_pg = 1;
 				cand = s; dim = s.dim; stairs_dir = s.dir; sshape = s.shape; // copy fields from these stairs and extend down
 				stack_conn    = 0; // not stacked - extended main stairs
 				cand_is_valid = 1;
-				find_and_merge_with_landing(interior->landings, s, sshape, num_floors); // merge with bottom landing
+				if (num_floors > 1) {} // can we extend down to the lower parking garage level from here?
+				cube_t stairs_bot(s);
+				stairs_bot.z2() = stairs_bot.z1() + window_vspacing; // limit to bottom landing
+				find_and_merge_with_landing(interior->landings, stairs_bot, sshape, 1); // merge with bottom landing; num_floors=1
 			}
 			else if (!is_basement && is_cube()) { // try to extend an existing stairwell on the part above or below upward/downward; not for basements or non-cube buildings
 				for (unsigned ab = 0; ab < 2 && !cand_is_valid; ++ab) { // extend {below, above}
@@ -1820,7 +1825,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 						cand = s; dim = s.dim; stairs_dir = s.dir; sshape = s.shape; // copy fields from these stairs and extend down
 						stack_conn    = 0; // not stacked - extended main stairs
 						cand_is_valid = 1;
-						find_and_merge_with_landing(interior->landings, s, sshape, num_floors);
+						find_and_merge_with_landing(interior->landings, s, sshape, 1); // num_floors=1
 					} // for s
 				} // for ab
 			}
@@ -1900,6 +1905,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				for (unsigned d = 0; d < 2; ++d) {
 					if (has_bcube_int(cand_test[d], interior->exclusion)) {bad_place = 1; break;} // bad placement
 					if (!is_valid_stairs_elevator_placement(cand_test[d], stairs_pad, dim, !allow_clip_walls)) {bad_place = 1; break;} // bad placement
+					// what about stairs intersecting bathrooms when allow_clip_walls=1? I've seen that happen once
 					if (is_cube()) continue;
 					// handle non-cube building; need to check both parts above and below, so clip our test cube to each part
 					cube_t tb[2] = {cand_test[d], cand_test[d]};
