@@ -1728,11 +1728,12 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 	if (use_cylinder_coll())                 return; // can't place doors on curved building sides
 	if (!is_cube() && has_complex_floorplan) return; // this case isn't handled either
 	assert(!parts.empty());
-	float const door_height(1.06*get_door_height()), wscale(0.7); // a bit taller and a lot wider than house doors
+	float const door_height(get_office_bldg_door_height()), wscale(DOOR_WIDTH_SCALE_OFFICE); // a bit taller and a lot wider than house doors
 
 	if (has_pri_hall()) { // building has primary hallway, place doors at both ends of first part
 		for (unsigned d = 0; d < 2; ++d) {
-			if (add_door(place_door(parts.front(), bool(hallway_dim), d, door_height, 0.0, 0.0, 0.0, wscale, 0, 0, rgen), 0, bool(hallway_dim), d, 1)) {floor_ext_door_mask |= 1;}
+			cube_t const door(place_door(parts.front(), bool(hallway_dim), d, door_height, 0.0, 0.0, 0.0, wscale, 0, 0, rgen));
+			if (add_door(door, 0, bool(hallway_dim), d, 1)) {floor_ext_door_mask |= 1;}
 		}
 		return;
 	}

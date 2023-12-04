@@ -1900,6 +1900,23 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				} // for d
 				if (bad_place) continue;
 
+				if (has_pri_hall()) { // check for stairs blocking pri hallway entrance or exit
+					bool const hdim(hallway_dim);
+					cube_t const &base(parts[0]);
+					float const door_height(get_office_bldg_door_height()), door_width(DOOR_WIDTH_SCALE_OFFICE*door_height), door_clearance(0.6*door_width);
+					float const hall_center(base.get_center_dim(!hdim));
+
+					for (unsigned d = 0; d < 2; ++d) {
+						float const wall_pos(base.d[hdim][d]);
+						cube_t door;
+						set_cube_zvals(door, ground_floor_z1, (ground_floor_z1 + door_height));
+						set_wall_width(door, hall_center, 0.5*door_width, !hdim);
+						door.d[hdim][ d] = wall_pos;
+						door.d[hdim][!d] = wall_pos + (d ? -1.0 : 1.0)*door_clearance;
+						if (cand_test[0].intersects(door) || cand_test[1].intersects(door)) {bad_place = 1; break;}
+					} // for d
+					if (bad_place) continue;
+				}
 				if (allow_clip_walls) { // clip out walls around stairs
 					cand_test[0].z1() = cand.z1(); cand_test[0].z2() = part.z2(); // lower
 					cand_test[1].z1() = part.z2(); cand_test[1].z2() = part.z2() + window_vspacing - fc_thick; // upper (bot of ceiling for first floor on upper part)

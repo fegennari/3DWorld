@@ -26,6 +26,7 @@ float const WALL_THICK_VAL         = 0.05; // 5% of floor spacing
 float const DOOR_THICK_TO_WIDTH    = 0.04; // ratio of door thickness to width for doors opening to the side
 float const DEF_CITY_MIN_ALPHA     = 0.01;
 float const DOOR_WIDTH_SCALE       = 0.5;
+float const DOOR_WIDTH_SCALE_OFFICE= 0.7; // wider than house doors
 float const STAIRS_WALL_WIDTH_MULT = 0.15; // relative to the depth of a stair
 float const ELEVATOR_Z2_SHIFT      = 0.6; // shift downward, relative to ceiling thickness
 float const DOOR_FRAME_WIDTH       = 0.07; // for door texture, relative to door width
@@ -1489,6 +1490,7 @@ struct building_t : public building_geom_t {
 	float get_trim_height    () const {return 0.04*get_window_vspace();}
 	float get_floor_ceil_gap () const {return (get_window_vspace() - get_floor_thickness());}
 	float get_door_height    () const {return 0.95f*get_floor_ceil_gap();} // set height based on window spacing, 95% of ceiling height (may be too large)
+	float get_office_bldg_door_height() const {return 1.06*get_door_height();} // a bit taller
 	float get_attic_beam_depth()const {return 0.08*get_window_vspace();}
 	float get_min_wall_len   () const {return 2.0 *get_window_vspace();}
 	float get_door_shift_dist() const {return 0.01*get_window_vspace();}
