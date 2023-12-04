@@ -1137,6 +1137,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 		for (cube_t const &dk : door_keepout) {
 			if (dk.intersects_xy(r)) {++num_doors;}
 		}
+		if (interior->get_ext_basement_door().get_true_bcube().intersects(r)) {++num_doors;} // backrooms entrance door counts
 		if (num_doors == 0) continue; // not connected with a door, not reachable, skip (and don't need a light either)
 		rooms_to_light.push_back(r);
 		room_t sub_room(room, r); // keep flags, copy cube
