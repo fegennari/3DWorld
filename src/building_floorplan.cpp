@@ -1784,8 +1784,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				assert(!interior->landings.empty());
 				merge_with_landing(interior->landings.front(), sshape, num_floors); // bottom landing
 			}
-			else if (!is_basement && is_cube()) { // try to extend an existing stairwell on the part above or below upward; not for basements or non-cube buildings
-				for (unsigned ab = 0; ab < 2 && !cand_is_valid; ++ab) { // {below, above}
+			else if (!is_basement && is_cube()) { // try to extend an existing stairwell on the part above or below upward/downward; not for basements or non-cube buildings
+				for (unsigned ab = 0; ab < 2 && !cand_is_valid; ++ab) { // extend {below, above}
 					cube_t const &targ_part(ab ? part : *p);
 
 					for (stairwell_t const &s : interior->stairwells) {
@@ -1794,13 +1794,13 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 						// check for clearance on the other part
 						cube_t ext_cube(s);
 						set_cube_zvals(ext_cube, cand_z1, cand_z2);
-						if (!ab) {ext_cube.z1() += 0.1*window_vspacing; ext_cube.z2() -= 0.1*window_vspacing;} // shrink to lower part
-						else     {ext_cube.z1() += 1.1*window_vspacing; ext_cube.z2() += 0.9*window_vspacing;} // move to upper part
+						if (ab == 0) {ext_cube.z1() += floor_thickness; ext_cube.z2() -= floor_thickness;} // shrink to lower part
+						else         {ext_cube.z1() += window_vspacing + floor_thickness; ext_cube.z2() += window_vspacing - floor_thickness;} // move to upper part
 						if (bool(ab) ^ stairs_dir) {ext_cube.d[dim][0] -= stairs_pad;} // add padding on exit side
 						else                       {ext_cube.d[dim][1] += stairs_pad;} // add padding on exit side
 						if (!shared.contains_cube_xy(ext_cube)) continue; // test for space to enter and exit
 						if (has_bcube_int(ext_cube, interior->exclusion)) continue; // bad placement
-						if (!is_valid_stairs_elevator_placement(ext_cube, s.dim, stairs_pad)) continue; // bad placement
+						if (!is_valid_stairs_elevator_placement(ext_cube, stairs_pad, s.dim)) continue; // bad placement
 						cand = s; dim = s.dim; stairs_dir = s.dir; sshape = s.shape; // copy fields from these stairs and extend down
 						stack_conn    = 0; // not stacked - extended main stairs
 						cand_is_valid = 1;
