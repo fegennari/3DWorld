@@ -1540,6 +1540,8 @@ struct building_t : public building_geom_t {
 		point &cpos, vector3d &cnorm, colorRGBA &ccolor, rand_gen_t *rgen=nullptr) const;
 	void create_building_volume_light_texture(unsigned bix, point const &target, unsigned &tid) const;
 	bool ray_cast_camera_dir(point const &camera_bs, point &cpos, colorRGBA &ccolor) const;
+	cube_t calc_parts_bcube() const;
+	cube_t get_unrotated_parts_bcube() const {return (is_rotated() ? calc_parts_bcube() : bcube);}
 	void calc_bcube_from_parts();
 	void adjust_part_zvals_for_floor_spacing(cube_t &c) const;
 	void gen_geometry(int rseed1, int rseed2);
