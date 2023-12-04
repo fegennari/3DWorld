@@ -279,7 +279,7 @@ void building_t::update_security_cameras(point const &camera_bs) {
 	room_t const &sec_room(get_room(interior->security_room_ix)); // Note: security room is on the ground floor
 	assert(sec_room.get_room_type(0) == RTYPE_SECURITY);
 	if (!sec_room.contains_pt(camera_bs)) return;
-	if (camera_bs.z > ground_floor_z1 + get_window_vspace()) return; // player not the ground floor (which contains the security room)
+	if (sec_room.get_floor_containing_zval(camera_bs.z, get_window_vspace()) != 0) return; // player not the floor which contains the security room
 	video_camera_manager.register_building(*this, sec_room);
 }
 void update_security_camera_image() {video_camera_manager.update_cameras();}

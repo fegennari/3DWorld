@@ -2519,7 +2519,7 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 		}
 	}
 	// maybe add a clock on the back of the stairs, if this is the lobby or the floor directly above the retail area
-	if (floor_ix == 0 && (room.z1() == ground_floor_z1 || (has_retail_ground_floor && room.z1() < ground_floor_z1 + 1.5*window_vspacing)) && room.has_stairs) {
+	if (floor_ix == 0 && is_ground_floor_excluding_retail(room.z1()) && room.has_stairs) {
 		for (stairwell_t const &s : interior->stairwells) {
 			if (s.shape != SHAPE_U && s.shape != SHAPE_WALLED_SIDES) continue;
 			if (s.extends_to_pg && s.shape != SHAPE_U)   continue; // skip stairs extending down to the basement/parking garage

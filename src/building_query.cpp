@@ -1793,6 +1793,12 @@ bool room_object_t::is_vert_cylinder() const {
 	if (type != TYPE_DUCT && type != TYPE_PIPE) return 1; // only ducts and pipes can be horizontal cylinders
 	return dir; // duct/pipe encoding for vertical is dim=x, dir=1
 }
+
+bool building_t::is_ground_floor_excluding_retail(float zval) const {
+	if (zval == ground_floor_z1)  return 1;
+	if (!has_retail_ground_floor) return 0;
+	return (fabs(zval - (ground_floor_z1 + get_window_vspace())) < get_floor_thickness()); // close to the second floor zval
+}
 float building_t::get_ground_floor_z_thresh(bool for_spider) const {
 	return (ground_floor_z1 + (for_spider ? 1.0f : 0.25f)*get_window_vspace()); // rats are on the ground, while spiders can climb walls and insects can fly
 }

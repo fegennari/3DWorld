@@ -419,7 +419,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				room_len = wind_hspacing*windows_per_room;
 			}
 			bool const partial_room((num_windows % windows_per_room) != 0); // an odd number of windows leaves a small room at the end
-			bool const is_ground_floor(p->z1() == ground_floor_z1);
+			bool const is_ground_floor(is_ground_floor_excluding_retail(p->z1()));
 			float const hwall_extend(0.5f*(room_len - doorway_width - wall_thick));
 			float const wall_pos(p->d[!min_dim][0] + room_len); // pos of first wall separating first from second rooms
 			float num_hall_windows, hall_width, room_width;
@@ -787,7 +787,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				} // for i
 			} // end single main hallway case
 			add_room(hall, part_id, 3, 1, 0); // add hallway as room with 3 lights
-			if (is_ground_floor || pri_hall.is_all_zeros()) {pri_hall = hall;} // assign to primary hallway if on first floor of hasn't yet been assigned
+			if (is_ground_floor || pri_hall.is_all_zeros()) {pri_hall = hall;} // assign to primary hallway if on first floor and hasn't yet been assigned
 			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();} // don't split any walls added up to this point
 
 			// add special ground floor room types
