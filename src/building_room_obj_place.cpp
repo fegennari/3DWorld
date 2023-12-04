@@ -2418,6 +2418,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	set_cube_zvals(rack, zval, zval+rack_height);
 	
 	for (unsigned n = 0; n < nrows; ++n) { // n+1 aisles
+		if ((nrows & 1) && n == nrows/2) continue; // skip middle aisle rack to allow direct access to central stairs and elevator
 		float const rack_lo(room.d[!dim][0] + aisle_width + n*aisle_spacing);
 		rack.d[!dim][0] = rack_lo;
 		rack.d[!dim][1] = rack_lo + rack_width;
@@ -2426,17 +2427,22 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 			float const start(room.d[dim][0] + aisle_width + r*rack_spacing);
 			rack.d[dim][0] = start;
 			rack.d[dim][1] = start + rack_length;
-			// no other items have been placed in this room yet (other than lights), and there are no interior doors,
-			// and all exterior doors have aisle_spacing around them, so we only need to check for stairs and elevators
-			cube_t test_cube(rack);
-			test_cube.expand_by_xy(se_pad); // add extra padding
-			
-			if (interior->is_blocked_by_stairs_or_elevator(test_cube)) { // blocked
-				// TODO: try to shorten each end
-				continue;
-			}
-			objs.emplace_back(rack, TYPE_SHELFRACK, room_id, !dim, 0, 0, 1.0, SHAPE_CUBE, WHITE); // tot_light_amt=1.0
-			set_obj_id(objs);
+
+			for (unsigned n = 0; n < 5; ++n) { // try to trim ends to make it fit
+				cube_t cand(rack);
+				if      (n == 1) {cand.d[dim][0] += 0.25*rack_length;} // 25% length reduction
+				else if (n == 2) {cand.d[dim][1] -= 0.25*rack_length;}
+				else if (n == 3) {cand.d[dim][0] += 0.50*rack_length;} // 50% length reduction
+				else if (n == 4) {cand.d[dim][1] -= 0.50*rack_length;}
+				// no other items have been placed in this room yet (other than lights), and there are no interior doors,
+				// and all exterior doors have aisle_spacing around them, so we only need to check for stairs and elevators
+				cube_t test_cube(cand);
+				test_cube.expand_by_xy(se_pad); // add extra padding
+				if (interior->is_blocked_by_stairs_or_elevator(test_cube)) continue; // blocked
+				objs.emplace_back(cand, TYPE_SHELFRACK, room_id, !dim, 0, 0, 1.0, SHAPE_CUBE, WHITE); // tot_light_amt=1.0
+				set_obj_id(objs);
+				break; // done
+			} // for n
 		} // for r
 	} // for n
 }
