@@ -1195,6 +1195,17 @@ bool building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
 	return 1;
 }
 
+void find_and_merge_with_landing(vector<landing_t> &landings, cube_t const &stairs, stairs_shape &sshape, unsigned num_floors) {
+	for (landing_t &landing : landings) { // process and maybe update all landings for this stairwell
+		if (!landing.intersects(stairs)) continue; // wrong landing; only one landing stack should intersect the stairs
+		if (landing.shape == SHAPE_WALLED) {sshape = SHAPE_WALLED; landing.shape = SHAPE_WALLED_SIDES;} // shift bottom wall down a floor
+		// if the parking garage is multiple levels, exclude the back wall so that we can connect the lower level(s) with this same stairwell
+		if (sshape == SHAPE_WALLED && num_floors > 1) {sshape = SHAPE_WALLED_SIDES;}
+		return;
+	}
+	assert(0); // should never get here
+}
+
 void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,
 	unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border)
 {
@@ -1210,6 +1221,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	bool const must_add_stairs(first_part_this_stack || (has_complex_floorplan && part == parts.back())); // first part in stack, or tallest/last part of complex building
 	bool const is_basement((int)part_ix == basement_part_ix);
 	int force_stairs_dir(2); // 2=unset
+	unsigned stairs_ix(0);
 
 	// add stairwells and elevator shafts
 	if (num_floors == 1) {} // no need for stairs or elevator
@@ -1264,10 +1276,10 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		stairs_cut = stairs;
 		stairs_dim = long_dim;
 	}
-	else if (is_basement && can_extend_pri_hall_stairs_to_pg() && part.contains_cube_xy(pri_hall)) {
-		assert(!interior->stairwells.empty());
-		stairwell_t &s(interior->stairwells.front());
-		s.extends_to_pg = 1;
+	else if (is_basement && part.contains_cube_xy(pri_hall) && can_extend_stairs_to_pg(stairs_ix)) { // multi-floor parking garage case
+		stairwell_t &s(interior->stairwells[stairs_ix]);
+		s.extends_below       = 1;
+		pri_hall_stairs_to_pg = 1;
 		// copy fields from these stairs and extend down
 		stairs_cut = s;
 		stairs_dim = s.dim;
@@ -1278,6 +1290,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		set_cube_zvals(stairs_cut, part.z1(), part.z2());
 		room_t &room(interior->rooms.back()); // should be the last room
 		room.has_stairs = 255; // stairs on all floors
+		find_and_merge_with_landing(interior->landings, s, sshape, num_floors); // merge with bottom landing
 	}
 	// only add stairs to first part of a house unless we haven't added stairs yet, or if it's the top floor of a stacked part
 	else if (!is_house || interior->stairwells.empty() || (first_part_this_stack && part.z1() > ground_floor_z1)) {
@@ -1578,9 +1591,17 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	std::reverse(interior->floors.begin()+floors_start, interior->floors.end()); // order floors top to bottom to reduce overdraw when viewed from above
 }
 
-bool building_t::can_extend_pri_hall_stairs_to_pg() const {
-	if (!has_parking_garage || !has_pri_hall() || pri_hall.z1() != ground_floor_z1 || interior->stairwells.empty()) return 0;
-	return stairs_contained_in_part(interior->stairwells.front(), pri_hall); // Note: can only return false when using split_stack_floorplan_prob
+bool building_t::can_extend_stairs_to_pg(unsigned &stairs_ix) const {
+	if (!has_parking_garage || !has_pri_hall() || interior->stairwells.empty()) return 0;
+	
+	for (unsigned i = 0; i < interior->stairwells.size(); ++i) {
+		stairwell_t const &s(interior->stairwells[i]);
+		if (s.z1() < ground_floor_z1 || s.z1() > ground_floor_z1 + get_floor_thickness()) continue; // not ground floor stairs
+		if (!pri_hall.contains_cube_xy(s)) continue; // not in primary hall or the retail room below
+		stairs_ix = i; // can be primary hall stairs or stairs extended into retail area below
+		return 1;
+	}
+	return 0;
 }
 
 void building_t::add_ceiling_cube_no_skylights(cube_t const &c) {
@@ -1728,12 +1749,6 @@ void subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs) {
 	}
 }
 
-void merge_with_landing(landing_t &landing, stairs_shape &sshape, unsigned num_floors) {
-	if (landing.shape == SHAPE_WALLED) {sshape = SHAPE_WALLED; landing.shape = SHAPE_WALLED_SIDES;} // shift bottom wall down a floor
-	// if the parking garage is multiple levels, exclude the back wall so that we can connect the lower level(s) with this same stairwell
-	if (sshape == SHAPE_WALLED && num_floors > 1) {sshape = SHAPE_WALLED_SIDES;}
-}
-
 void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part) { // and extend elevators vertically; part is on the bottom
 
 	//highres_timer_t timer("Connect Stairs"); // 72ms (serial)
@@ -1771,24 +1786,24 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			stairs_shape sshape(0);
 			bool cand_is_valid(0), dim(0), stairs_dir(0), add_railing(1), stack_conn(1), is_at_top(0);
 			float const cand_z2(part.z2() + fc_thick); // top of bottom floor of upper part *p
-			float const cand_z1(cand_z2 - window_vspacing); // top of top floor for this part
+			float const cand_z1(cand_z2 - window_vspacing); // top of top floor for this/lower part
+			unsigned stairs_ix(0);
 			
 			// try to extend primary hallway stairs down to parking garage below; should this apply to all ground floor stairwells?
-			if (is_basement && can_extend_pri_hall_stairs_to_pg() && part.contains_cube_xy(pri_hall)) {
-				assert(!interior->stairwells.empty());
-				stairwell_t &s(interior->stairwells.front());
-				s.extends_to_pg = 1;
+			if (is_basement && part.contains_cube_xy(pri_hall) && can_extend_stairs_to_pg(stairs_ix)) { // single floor parking garage case
+				stairwell_t &s(interior->stairwells[stairs_ix]);
+				s.extends_below       = 1;
+				pri_hall_stairs_to_pg = 1;
 				cand = s; dim = s.dim; stairs_dir = s.dir; sshape = s.shape; // copy fields from these stairs and extend down
 				stack_conn    = 0; // not stacked - extended main stairs
 				cand_is_valid = 1;
-				assert(!interior->landings.empty());
-				merge_with_landing(interior->landings.front(), sshape, num_floors); // bottom landing
+				find_and_merge_with_landing(interior->landings, s, sshape, num_floors); // merge with bottom landing
 			}
 			else if (!is_basement && is_cube()) { // try to extend an existing stairwell on the part above or below upward/downward; not for basements or non-cube buildings
 				for (unsigned ab = 0; ab < 2 && !cand_is_valid; ++ab) { // extend {below, above}
 					cube_t const &targ_part(ab ? part : *p);
 
-					for (stairwell_t const &s : interior->stairwells) {
+					for (stairwell_t &s : interior->stairwells) {
 						if (s.in_ext_basement) continue; // not stacked/stackable, skip (also should skip basement stairs themselves?)
 						if (!shared.contains_cube_xy(s) || s.z2() < targ_part.zc() || s.z1() > targ_part.zc()) continue; // stairs not contained in both and crossing one part
 						// check for clearance on the other part
@@ -1801,17 +1816,11 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 						if (!shared.contains_cube_xy(ext_cube)) continue; // test for space to enter and exit
 						if (has_bcube_int(ext_cube, interior->exclusion)) continue; // bad placement
 						if (!is_valid_stairs_elevator_placement(ext_cube, stairs_pad, s.dim)) continue; // bad placement
+						s.extends_below = (ab == 0);
 						cand = s; dim = s.dim; stairs_dir = s.dir; sshape = s.shape; // copy fields from these stairs and extend down
 						stack_conn    = 0; // not stacked - extended main stairs
 						cand_is_valid = 1;
-						bool found_landing(0);
-						
-						for (landing_t &landing : interior->landings) { // process and maybe update all landings for this stairwell
-							if (!landing.intersects(s)) continue; // wrong landing; only one landing stack should intersect the stairs
-							merge_with_landing(landing, sshape, num_floors);
-							found_landing = 1;
-						}
-						assert(found_landing);
+						find_and_merge_with_landing(interior->landings, s, sshape, num_floors);
 					} // for s
 				} // for ab
 			}

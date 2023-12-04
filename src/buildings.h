@@ -1214,7 +1214,7 @@ struct landing_t : public stairs_landing_base_t {
 };
 
 struct stairwell_t : public stairs_landing_base_t {
-	bool extends_to_pg=0;
+	bool extends_below=0;
 	uint8_t num_floors=0;
 	int16_t stairs_door_ix=-1;
 
@@ -1426,7 +1426,7 @@ struct building_t : public building_geom_t {
 	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_courtyard_door=0, has_complex_floorplan=0, has_helipad=0, has_ac=0, has_attic_window=0;
 	bool multi_family=0; // apartments, multi-family house, duplex, etc. - split by floor
 	bool has_int_fplace=0, has_parking_garage=0, has_small_part=0, has_basement_door=0, has_basement_pipes=0, parts_generated=0, is_in_city=0, has_skylight_light=0;
-	bool has_retail_ground_floor=0;
+	bool has_retail_ground_floor=0, pri_hall_stairs_to_pg=0;
 	mutable bool player_visited=0; // for stats tracking
 	colorRGBA side_color=WHITE, roof_color=WHITE, detail_color=BLACK, door_color=WHITE, wall_color=WHITE;
 	cube_t bcube, coll_bcube, pri_hall, driveway, porch, assigned_plot, exterior_flag;
@@ -1467,7 +1467,7 @@ struct building_t : public building_geom_t {
 	bool skip_top_of_ceilings() const {return (roof_type == ROOF_TYPE_FLAT || !is_house || has_attic());}
 	bool enable_driveway_coll() const {return !is_rotated();} // no collision with rotated driveways/porches for now
 	bool has_pg_ramp() const {return (interior && !interior->pg_ramp.is_all_zeros());}
-	bool can_extend_pri_hall_stairs_to_pg() const;
+	bool can_extend_stairs_to_pg(unsigned &stairs_ix) const;
 	bool is_basement(vect_cube_t::const_iterator it) const {return (int(it - parts.begin()) == basement_part_ix);}
 	bool is_pos_in_basement(point const &pos) const {return ((has_basement() && parts[basement_part_ix].contains_pt(pos)) || point_in_extended_basement(pos));}
 	bool has_ext_door_this_floor(float part_z1, unsigned floor_ix) const {return (part_z1 == ground_floor_z1 && (1 << floor_ix) & floor_ext_door_mask);}

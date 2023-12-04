@@ -388,12 +388,11 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	// add walls and pillars
 	bool const no_sep_wall(num_walls == 0 || (capacity < 100 && (room_id & 1))); // use room_id rather than rgen so that this agrees between floors
 	bool const split_sep_wall(!no_sep_wall && (num_pillars >= 5 || (num_pillars >= 4 && rgen.rand_bool())));
-	bool const have_cent_stairs(can_extend_pri_hall_stairs_to_pg()); // assume pri hall stairs were extended down to PG
 	float sp_const(0.0);
-	if      (no_sep_wall)      {sp_const = 0.25;} // no separator wall, minimal clearance around stairs
-	else if (have_cent_stairs) {sp_const = 0.50;} // central stairs should open along the wall, not a tight space, need less clearance
-	else if (split_sep_wall)   {sp_const = 0.75;} // gap should provide access, need slightly less clearance
-	else                       {sp_const = 1.00;} // stairs may cut through/along full wall, need max clearance
+	if      (no_sep_wall)           {sp_const = 0.25;} // no separator wall, minimal clearance around stairs
+	else if (pri_hall_stairs_to_pg) {sp_const = 0.50;} // central stairs should open along the wall, not a tight space, need less clearance
+	else if (split_sep_wall)        {sp_const = 0.75;} // gap should provide access, need slightly less clearance
+	else                            {sp_const = 1.00;} // stairs may cut through/along full wall, need max clearance
 	float const space_clearance(sp_const*max(0.5f*window_vspacing, parking_sz.y));
 	// obstacles with clearance all sides, for parking spaces
 	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles_ps, max(space_clearance, 0.9f*window_vspacing), space_clearance);
