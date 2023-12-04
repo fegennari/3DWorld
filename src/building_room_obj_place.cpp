@@ -2482,8 +2482,9 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	vect_room_object_t &objs(interior->room_geom->objs);
 
-	if (floor_ix == 0 && room.z1() == ground_floor_z1) { // place ground floor objects
-		// reception desks
+	// place ground floor/lobby objects
+	if (floor_ix == 0 && room.z1() == ground_floor_z1) {
+		// lobby reception desks
 		float const desk_width(0.9*window_vspacing);
 		
 		if (room.get_sz_dim(!long_dim) > (desk_width + 1.6*get_doorway_width())) { // hallway is wide enough for a reception desk
@@ -2516,22 +2517,23 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 				} // for n
 			} // for dir
 		}
-		if (room.has_stairs) { // maybe add a clock on the back of the stairs
-			for (stairwell_t const &s : interior->stairwells) {
-				if (s.shape != SHAPE_U && s.shape != SHAPE_WALLED_SIDES) continue;
-				if (s.extends_to_pg && s.shape != SHAPE_U)   continue; // skip stairs extending down to the basement/parking garage
-				if (s.z1() > zval || !room.contains_cube(s)) continue; // stairs not on ground floor, or not contained
-				bool const digital(rgen.rand_bool());
-				float const place_pos(s.get_center_dim(!s.dim)), clock_z1(zval + 0.6*window_vspacing);
-				float const clock_height((digital ? 0.08 : 0.2)*window_vspacing), clock_width((digital ? 4.0 : 1.0)*clock_height), clock_depth(0.08*clock_width);
-				cube_t clock;
-				set_cube_zvals(clock, clock_z1, clock_z1+clock_height);
-				set_wall_width(clock, place_pos, 0.5*clock_width, !s.dim);
-				float const wall_pos(s.d[s.dim][s.dir] + (s.dir ? 1.0 : -1.0)*0.3*wall_thickness); // account for stairs wall (approximate)
-				clock.d[s.dim][!s.dir] = wall_pos;
-				clock.d[s.dim][ s.dir] = wall_pos + (s.dir ? 1.0 : -1.0)*clock_depth;
-				add_clock(clock, room_id, tot_light_amt, s.dim, s.dir, digital);
-			}
+	}
+	// maybe add a clock on the back of the stairs, if this is the lobby or the floor directly above the retail area
+	if (floor_ix == 0 && (room.z1() == ground_floor_z1 || (has_retail_ground_floor && room.z1() < ground_floor_z1 + 1.5*window_vspacing)) && room.has_stairs) {
+		for (stairwell_t const &s : interior->stairwells) {
+			if (s.shape != SHAPE_U && s.shape != SHAPE_WALLED_SIDES) continue;
+			if (s.extends_to_pg && s.shape != SHAPE_U)   continue; // skip stairs extending down to the basement/parking garage
+			if (s.z1() > zval || !room.contains_cube(s)) continue; // stairs not on ground floor, or not contained
+			bool const digital(rgen.rand_bool());
+			float const place_pos(s.get_center_dim(!s.dim)), clock_z1(zval + 0.6*window_vspacing);
+			float const clock_height((digital ? 0.08 : 0.2)*window_vspacing), clock_width((digital ? 4.0 : 1.0)*clock_height), clock_depth(0.08*clock_width);
+			cube_t clock;
+			set_cube_zvals(clock, clock_z1, clock_z1+clock_height);
+			set_wall_width(clock, place_pos, 0.5*clock_width, !s.dim);
+			float const wall_pos(s.d[s.dim][s.dir] + (s.dir ? 1.0 : -1.0)*0.3*wall_thickness); // account for stairs wall (approximate)
+			clock.d[s.dim][!s.dir] = wall_pos;
+			clock.d[s.dim][ s.dir] = wall_pos + (s.dir ? 1.0 : -1.0)*clock_depth;
+			add_clock(clock, room_id, tot_light_amt, s.dim, s.dir, digital);
 		}
 	}
 	float fe_height(0.0), fe_radius(0.0);
