@@ -121,6 +121,8 @@ void add_clock_hand(rgeom_mat_t &mat, point const &center, float length, float s
 }
 
 void building_room_geom_t::add_clock(room_object_t const &c, bool add_dynamic) {
+	if (add_dynamic) {check_clock_time();} // may be needed for the first frame a clock is visible when the seconds haven't yet changed
+
 	if (c.item_flags & 1) { // digital clock
 		if (add_dynamic) {
 			colorRGBA const on_color(RED), off_color(on_color*0.05);
@@ -158,7 +160,6 @@ void building_room_geom_t::add_clock(room_object_t const &c, bool add_dynamic) {
 		center[c.dim] = c.d[c.dim][c.dir];
 
 		if (add_dynamic) {
-			check_clock_time();
 			float const second_pos(cur_clock_time.secs/60.0), minute_pos((cur_clock_time.mins + second_pos)/60.0), hour_pos((cur_clock_time.hours + minute_pos)/12.0); // [0.0, 1.0]
 			float const step_dist((c.dir ? 1.0 : -1.0)*0.1*c.get_depth());
 			rgeom_mat_t& mat(get_untextured_material(0, 1)); // unshadowed, dynamic
