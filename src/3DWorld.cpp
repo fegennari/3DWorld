@@ -1807,6 +1807,7 @@ int load_config(string const &config_file) {
 	kwmb.add("rotate_trees", rotate_trees);
 	kwmb.add("invert_model3d_faces", invert_model3d_faces);
 	kwmb.add("play_gameplay_alert", play_gameplay_alert);
+	kwmb.add("vsync_enabled", vsync_enabled);
 
 	kw_to_val_map_t<int> kwmi(error);
 	kwmi.add("verbose", verbose_mode);
