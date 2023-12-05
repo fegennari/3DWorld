@@ -237,9 +237,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			light_density = 0.55;
 			light_size   *= 0.75; // smaller
 		}
-		else if (is_retail_room) {
-			light_density = 0.6;
-			light_size   *= 0.8; // smaller
+		else if (is_retail_room) { // more lights in the shorter dim
+			light_size *= 0.7; // smaller
+			nx = max(1U, unsigned((room_dim ? 0.7 : 0.4)*dx/window_vspacing));
+			ny = max(1U, unsigned((room_dim ? 0.4 : 0.7)*dy/window_vspacing));
 		}
 		else if (is_swim_pool_room) {
 			light_density = 0.4;
@@ -381,14 +382,18 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 			}
 			else if (nx > 1 || ny > 1) { // office, parking garage, or backrooms with multiple lights
-				float const xstep(dx/nx), ystep(dy/ny);
 				vector3d const shrink(0.5*light.dx()*sqrt((nx - 1)/nx), 0.5*light.dy()*sqrt((ny - 1)/ny), 0.0);
+				float xstep(dx/nx), ystep(dy/ny), xs(-0.5f*dx + 0.5*xstep), ys(-0.5f*dy + 0.5*ystep);
 
+				if (is_retail_room) { // custom logic to align lights to aisles
+					xs -= 0.25*xstep; ys -= 0.25*ystep;
+					xstep = dx/(nx - 0.5); ystep = dy/(ny - 0.5);
+				}
 				for (unsigned y = 0; y < ny; ++y) {
 					for (unsigned x = 0; x < nx; ++x) {
 						cube_t cur_light(light);
 						cur_light.expand_by_xy(-shrink);
-						cur_light.translate(point((-0.5f*dx + (x + 0.5)*xstep), (-0.5f*dy + (y + 0.5)*ystep), 0.0));
+						cur_light.translate(point((xs + x*xstep), (ys + y*ystep), 0.0));
 						try_place_light_on_ceiling(cur_light, *r, room_dim, fc_thick, 0, 0, nx, ny, lcheck_start_ix, valid_lights, rgen); // allow_rot=0, allow_mult=0
 					}
 				} // for y

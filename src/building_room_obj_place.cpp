@@ -2395,13 +2395,13 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 
 void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
 	// Note: this room should occupy the entire floor, so walkable room bounds == room == part
-	float const floor_spacing(get_window_vspace()), dx(room.dx()), dy(room.dy()), spacing(0.6);
+	float const floor_spacing(get_window_vspace()), dx(room.dx()), dy(room.dy()), spacing(0.7);
 	float const door_width(get_doorway_width()), se_pad(0.8*door_width), nom_aisle_width(1.5*door_width), rack_height(0.75*get_floor_ceil_gap());
 	unsigned const nx(max(1U, unsigned(spacing*dx/floor_spacing))), ny(max(1U, unsigned(spacing*dy/floor_spacing))); // same spacing as room lights
 	bool const dim(dx < dy); // long dim
 	float const length(dim ? dy : dx), width(dim ? dx : dy), max_rack_width(0.5*floor_spacing);
 	if (width < 4.0*nom_aisle_width) return; // too small for shelf racks
-	unsigned const nrows(dim ? nx : ny), nracks(max(2U, (dim ? ny : nx)/4));
+	unsigned const nrows((dim ? nx : ny)-1), nracks(max(2U, (dim ? ny : nx)/4));
 	if (nrows == 0) return; // too small for shelf racks
 	float aisle_width(nom_aisle_width), aisle_spacing((width - aisle_width)/nrows), rack_width(aisle_spacing - aisle_width);
 	assert(rack_width > 0.0);
