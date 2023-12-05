@@ -1276,7 +1276,6 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		stairs_cut = stairs;
 		stairs_dim = long_dim;
 	}
-	// Note: can_extend_stairs_to_pg() will never be true for retail buildings because the primary hall stairs aren't extended down to the ground floor until later
 	else if (is_basement && part.contains_cube_xy(pri_hall) && can_extend_stairs_to_pg(stairs_ix)) { // multi-floor parking garage case
 		stairwell_t &s(interior->stairwells[stairs_ix]);
 		s.extends_below = 1;
@@ -1595,14 +1594,22 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 
 bool building_t::can_extend_stairs_to_pg(unsigned &stairs_ix) const {
 	if (!has_parking_garage || !has_pri_hall()) return 0;
-	
-	for (unsigned i = 0; i < interior->stairwells.size(); ++i) {
-		stairwell_t const &s(interior->stairwells[i]);
-		if (s.z1() < ground_floor_z1 || s.z1() > ground_floor_z1 + get_floor_thickness()) continue; // not ground floor stairs
-		if (!pri_hall.contains_cube_xy(s)) continue; // not in primary hall or the retail room below
-		stairs_ix = i; // can be primary hall stairs or stairs extended into retail area below
-		return 1;
-	}
+	float stairs_zmax(ground_floor_z1 + get_floor_thickness());
+
+	// check ground floor stairs, then possibly stairs above the retail floor; prefer stairs on the ground floor when there are both
+	for (unsigned pass = 0; pass < 2; ++pass) {
+		if (pass == 1) {
+			if (!has_retail_ground_floor) break; // only one pass
+			stairs_zmax += get_window_vspace(); // assume stairs can be extended down to retail ground floor
+		}
+		for (unsigned i = 0; i < interior->stairwells.size(); ++i) {
+			stairwell_t const &s(interior->stairwells[i]);
+			if (s.z1() < ground_floor_z1 || s.z1() > stairs_zmax) continue; // not ground floor stairs (or just above ground floor if retail)
+			if (!pri_hall.contains_cube_xy(s)) continue; // not in primary hall or the retail room below
+			stairs_ix = i; // can be primary hall stairs or stairs extended into retail area below
+			return 1;
+		}
+	} // for pass
 	return 0;
 }
 
