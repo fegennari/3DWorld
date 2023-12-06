@@ -2062,11 +2062,10 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	// draw attic windows
 	bdraw.temp_tquads.clear();
 	get_attic_windows(bdraw.temp_tquads, offset_scale);
+	if (bdraw.temp_tquads.empty()) {has_attic_window = 0;}
 	for (tquad_with_ix_t const &window : bdraw.temp_tquads) {bdraw.add_tquad(*this, window, bcube, tex, color);}
-	
-	if (only_cont_pt_in) { // camera inside this building, cut out holes so that the exterior doors show through
-		cut_holes_for_ext_doors(bdraw, only_cont_pt, draw_parts_mask);
-	}
+	// if camera is inside this building, cut out holes so that the exterior doors show through
+	if (only_cont_pt_in) {cut_holes_for_ext_doors(bdraw, only_cont_pt, draw_parts_mask);}
 }
 
 void building_t::get_all_drawn_window_verts_as_quads(vect_vnctcc_t &verts) const {
