@@ -675,6 +675,7 @@ class building_draw_t {
 	}; // end draw_block_t
 	vector<draw_block_t> to_draw; // one per texture, assumes tids are dense
 
+public:
 	vect_vnctcc_t &get_verts(tid_nm_pair_t const &tex, bool quads_or_tris=0) { // default is quads
 		unsigned const ix(get_to_draw_ix(tex));
 		if (ix >= to_draw.size()) {to_draw.resize(ix+1);}
@@ -697,6 +698,7 @@ class building_draw_t {
 		}
 		return (quads_or_tris ? block.tri_verts : block.quad_verts);
 	}
+private:
 	static void setup_ao_color(colorRGBA const &color, float bcz1, float ao_bcz2, float z1, float z2, color_wrapper cw[2], vert_norm_comp_tc_color &vert, bool no_ao) {
 		if (!no_ao && global_building_params.ao_factor > 0.0) {
 			min_eq(z1, ao_bcz2); min_eq(z2, ao_bcz2); // clamp zvals to AO zmax
@@ -1409,6 +1411,8 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		}
 		else if (has_chimney && (i+1 == parts.end())) { // chimney
 			tid_nm_pair_t const tp(mat.side_tex.get_scaled_version(chimney_tscale));
+			auto &verts(bdraw.get_verts(tp));
+			unsigned const verts_start(verts.size());
 			bdraw.add_section(*this, 0, *i, tp, side_color, 3, 0, 0, is_house, 0); // XY exterior walls
 			float const wall_width(0.25*min(i->dx(), i->dy()));
 			cube_t hole(*i);
@@ -1417,6 +1421,25 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			subtract_cube_xy(*i, hole, sides);
 			unsigned const face_masks[4] = {127-64, 127-32, 127-16, 127-8}; // enable XYZ but skip all but {+y, -y, +x, -x} in XY
 			for (unsigned n = 0; n < 4; ++n) {bdraw.add_section(*this, 0, sides[n], tp, side_color, face_masks[n], 1, 0, 1, 0);} // skip bottom
+
+			if (has_chimney == 1 && has_attic()) { // clip interior chimney verts to top of roof
+				for (auto v = verts.begin()+verts_start; v != verts.end(); ++v) {
+					if (v->v.z == i->z2()) continue; // top surface is unchanged
+
+					for (auto const &tq : roof_tquads) {
+						if (!is_attic_roof(tq, 1)) continue; // type_roof_only=1
+						if (!point_in_polygon_2d(v->v.x, v->v.y, tq.pts, tq.npts)) continue; // check 2D XY point containment
+						vector3d const normal(tq.get_norm());
+						if (normal.z == 0.0) continue; // skip vertical sides
+						float const rdist(dot_product_ptv(normal, v->v, tq.pts[0]));
+						if (rdist >= 0) continue; // above the roof
+						float const dz(rdist/normal.z);
+						v->v.z  -= dz; // move exactly to the roof
+						v->t[1] -= 2.0f*tp.tscale_y*dz;
+						break;
+					} // for tq
+				} // for v
+			}
 			continue;
 		}
 		bdraw.add_section(*this, 1, *i, mat.side_tex, side_color, 3, 0, 0, is_house, 0); // XY exterior walls
