@@ -1871,6 +1871,8 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 	if (c.is_round()) {non_cubes.push_back(c);}
 	else if (c.type == TYPE_RAILING || c.type == TYPE_SHELVES || c.type == TYPE_RAMP || c.type == TYPE_BALCONY || c.type == TYPE_POOL_LAD) {
 		non_cubes.push_back(c); // non-cubes
+		// allow walking on the floor above a parking garage ramp if there's no cutout; shrink ramp bcube to the ceiling of the top floor of the parking garage
+		if (c.type == TYPE_RAMP && interior->ignore_ramp_placement && c.z2() >= ground_floor_z1) {non_cubes.back().z2() -= get_floor_thickness();}
 	}
 	else if (c.type == TYPE_CLOSET && (c.is_open() || c.contains_pt(pos))) {
 		cube_t cubes[5];
