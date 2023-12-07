@@ -25,6 +25,7 @@ void force_player_height(double height);
 bool is_player_model_female();
 void apply_building_fall_damage(float delta_z);
 bool get_sphere_poly_int_val(point const &sc, float sr, point const *const points, unsigned npoints, vector3d const &normal, float thickness, float &val, vector3d &cnorm);
+unsigned get_shelf_rack_cubes(room_object_t const &c, cube_t &back, cube_t &top, cube_t sides[2], cube_t shelves[5]);
 
 
 // assumes player is in this building; handles windows and exterior doors but not attics and basements
@@ -637,6 +638,24 @@ cube_t get_shelves_no_bot_gap(room_object_t const &c) {
 	return bcube;
 }
 
+unsigned get_all_shelf_rack_cubes(room_object_t const &c, cube_t cubes[9]) { // back, <= 5 shelves, top, <= 2 sides
+	cube_t back, top, sides[2], shelves[5];
+	unsigned const num_shelves(get_shelf_rack_cubes(c, back, top, sides, shelves));
+	unsigned num(0);
+	cubes[num++] = back;
+	for (unsigned n = 0; n < num_shelves; ++n) {cubes[num++] = shelves[n];}
+	if (!top.is_all_zeros()) {cubes[num++] = top;}
+	
+	if (!sides[0].is_all_zeros()) {
+		for (unsigned d = 0; d < 2; ++d) {cubes[num++] = sides[d];}
+	}
+	return num;
+}
+unsigned check_shelf_rack_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+	cube_t cubes[9];
+	return check_cubes_collision(cubes, get_all_shelf_rack_cubes(c, cubes), pos, p_last, radius, cnorm);
+}
+
 bool maybe_inside_room_object(room_object_t const &obj, point const &pos, float radius) {
 	return ((obj.is_open() && sphere_cube_intersect(pos, radius, obj)) || obj.contains_pt(pos));
 }
@@ -1144,6 +1163,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			else if (c->is_sloped_ramp()    ) {coll_ret |= (unsigned)check_ramp_collision   (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_BALCONY) {had_coll |= (unsigned)check_balcony_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_POOL_TABLE) {coll_ret |= check_pool_table_collision(*c, pos, p_last, radius, &cnorm);}
+			else if (c->type == TYPE_SHELFRACK ) {coll_ret |= check_shelf_rack_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_STALL  && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_stall_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_SHOWER && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_shower_collision(*c, pos, p_last, radius, &cnorm);}
 			else {coll_ret |= (unsigned)sphere_cube_int_update_pos(pos, radius, bc, p_last, 0, &cnorm);} // skip_z=0
@@ -1849,7 +1869,7 @@ void get_approx_car_cubes(room_object_t const &cb, cube_t cubes[5]) {
 // for spiders; lg_cubes and sm_cubes are currently handled the same
 void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, vect_cube_t &lg_cubes, vect_cube_t &sm_cubes, vect_cube_t &non_cubes) const {
 	if (c.is_round()) {non_cubes.push_back(c);}
-	else if (c.type == TYPE_RAILING || c.type == TYPE_SHELVES || c.type == TYPE_RAMP || c.type == TYPE_BALCONY || c.type == TYPE_POOL_LAD || c.type == TYPE_SHELFRACK) {
+	else if (c.type == TYPE_RAILING || c.type == TYPE_SHELVES || c.type == TYPE_RAMP || c.type == TYPE_BALCONY || c.type == TYPE_POOL_LAD) {
 		non_cubes.push_back(c); // non-cubes
 	}
 	else if (c.type == TYPE_CLOSET && (c.is_open() || c.contains_pt(pos))) {
@@ -1896,6 +1916,11 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		top.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.94*c.get_depth();
 		lg_cubes.push_back(body);
 		lg_cubes.push_back(top); // or sm_cubes?
+	}
+	else if (c.type == TYPE_SHELFRACK) {
+		cube_t cubes[9];
+		unsigned const num(get_all_shelf_rack_cubes(c, cubes));
+		lg_cubes.insert(lg_cubes.end(), cubes, cubes+num);
 	}
 	else if (c.type == TYPE_ATTIC_DOOR) {lg_cubes.push_back(get_true_room_obj_bcube(c));}
 	// otherwise, treat as a large object; this includes: TYPE_BCASE, TYPE_KSINK (with dishwasher), TYPE_COUCH, TYPE_COLLIDER (cars)
@@ -2064,6 +2089,11 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 			}
 			else if (c->type == TYPE_SHELVES) {
 				if (line_int_cube_exp(p1, p2, get_shelves_no_bot_gap(*c), expand)) return 9; // there's space under the shelves
+			}
+			else if (c->type == TYPE_SHELFRACK) {
+				cube_t cubes[9];
+				unsigned const num(get_all_shelf_rack_cubes(*c, cubes));
+				if (line_int_cubes_exp(p1, p2, cubes, num, expand)) return 9;
 			}
 			else if (c->type == TYPE_BENCH) {
 				cube_t cubes[3]; // seat, lo side, hi side
