@@ -2396,7 +2396,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
 	// Note: this room should occupy the entire floor, so walkable room bounds == room == part
 	float const floor_spacing(get_window_vspace()), dx(room.dx()), dy(room.dy()), spacing(0.7);
-	float const door_width(get_doorway_width()), se_pad(0.8*door_width), nom_aisle_width(1.5*door_width), rack_height(0.75*get_floor_ceil_gap());
+	float const door_width(get_doorway_width()), se_pad(0.8*door_width), nom_aisle_width(1.5*door_width), rack_height(0.85*get_floor_ceil_gap());
 	unsigned const nx(max(1U, unsigned(spacing*dx/floor_spacing))), ny(max(1U, unsigned(spacing*dy/floor_spacing))); // same spacing as room lights
 	bool const dim(dx < dy); // long dim
 	float const length(dim ? dy : dx), width(dim ? dx : dy), max_rack_width(0.5*floor_spacing);
@@ -2416,6 +2416,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t rack;
 	set_cube_zvals(rack, zval, zval+rack_height);
+	unsigned const obj_id(rgen.rand()); // same style for each rack
 	
 	for (unsigned n = 0; n < nrows; ++n) { // n+1 aisles
 		if ((nrows & 1) && n == nrows/2) continue; // skip middle aisle rack to allow direct access to central stairs and elevator
@@ -2440,7 +2441,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 				test_cube.expand_by_xy(se_pad); // add extra padding
 				if (interior->is_blocked_by_stairs_or_elevator(test_cube)) continue; // blocked
 				objs.emplace_back(cand, TYPE_SHELFRACK, room_id, !dim, 0, 0, 1.0, SHAPE_CUBE, WHITE); // tot_light_amt=1.0
-				set_obj_id(objs);
+				objs.back().obj_id = obj_id;
 				break; // done
 			} // for n
 		} // for r

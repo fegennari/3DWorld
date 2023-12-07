@@ -887,8 +887,47 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 }
 
 void building_room_geom_t::add_rack(room_object_t const &c) {
-	rgeom_mat_t &mat(get_untextured_material(1)); // shadowed
-	mat.add_cube_to_verts_untextured(c, c.color, EF_Z1); // skip bottom face
+	// 3-5 shelves, with optional top and sides, and central back with holes
+	unsigned const num_shelves(3 + (c.obj_id%3)); // 3-5
+	bool const add_top(c.obj_id & 4), add_ends(c.obj_id & 2);
+	float const height(c.get_height()), length(c.get_width()), depth(c.get_depth());
+	float const shelf_thickness(0.015*height), bot_gap(1.0*shelf_thickness), back_thickness(0.05*depth);
+	float const side_thickness(min(0.1f*length, 0.75f*shelf_thickness)), top_thickness(add_top ? side_thickness : 0.0);
+	float const shelf_spacing((height - bot_gap - top_thickness)/num_shelves);
+	cube_t back(c); // pegboard
+	if (add_ends) {back.expand_in_dim(!c.dim, -side_thickness);}
+	back.z2() -= top_thickness; // back is under top
+	back.expand_in_dim(c.dim, -0.5*(depth - back_thickness));
+	colorRGBA const back_color(c.color*0.67); // make a bit darker
+	rgeom_mat_t &back_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/pegboard.png"), 2.5/height, 1), 1)); // shadowed
+	back_mat.add_cube_to_verts(back, back_color, back.get_llc(), ~get_skip_mask_for_xy(c.dim)); // front and back sides only
+	unsigned const face_mask_ends(get_skip_mask_for_xy(!c.dim));
+	unsigned const skip_faces_shelves(add_ends ? face_mask_ends : 0); // skip ends if drawing ends
+	rgeom_mat_t &mat(get_untextured_material(1)); // shadowed; no apply_light_color()
+	if (!add_ends) {mat.add_cube_to_verts_untextured(back, back_color, ~face_mask_ends);} // pegboard ends
+	if (!add_top ) {mat.add_cube_to_verts_untextured(back, back_color, ~EF_Z2         );} // pegboard top
+	cube_t shelf(c);
+	shelf.expand_in_dim(!c.dim, -(add_ends ? 1.0 : 0.5)*side_thickness); // shrink a bit even if there are no ends to prevent Z-fighting
+	shelf.expand_in_dim(c.dim, -0.75*side_thickness); // slight recess
+
+	for (unsigned n = 0; n < num_shelves; ++n) {
+		float const zval(c.z1() + bot_gap + n*shelf_spacing);
+		set_cube_zvals(shelf, zval, zval+shelf_thickness);
+		mat.add_cube_to_verts_untextured(shelf, c.color, skip_faces_shelves);
+	}
+	if (add_top) {
+		cube_t top(c);
+		top.z1() = c.z2() - top_thickness;
+		mat.add_cube_to_verts_untextured(top, c.color, 0); // draw all faces
+	}
+	if (add_ends) {
+		for (unsigned d = 0; d < 2; ++d) { // {left, right}
+			cube_t end(c);
+			end.z2() -= top_thickness; // end is under top
+			end.d[!c.dim][!d] = c.d[!c.dim][d] + (d ? -1.0 : 1.0)*side_thickness;
+			mat.add_cube_to_verts_untextured(end, c.color, (add_top ? EF_Z12 : EF_Z1)); // skip bottom and maybe top
+		}
+	}
 }
 
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {
@@ -1622,7 +1661,7 @@ void building_room_geom_t::add_filing_cabinet(room_object_t const &c, bool inc_l
 		vect_cube_t &drawers(get_temp_cubes());
 		vect_room_object_t &objects(get_temp_objects());
 		get_untextured_material(1, 0, 1); // ensure material is loaded
-		rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/filing_cabinet_drawer.png"), 0.0), 1, 0, 1)); // shadows, small
+		rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/filing_cabinet_drawer.png"), 0.0, 1), 1, 0, 1)); // shadows, small
 		rgeom_mat_t &sides_mat(get_untextured_material(1, 0, 1)); // shadows, small
 		unsigned const front_mask(get_face_mask(c.dim, c.dir)), fb_mask(~get_skip_mask_for_xy(c.dim)), sides_mask(~get_skip_mask_for_xy(!c.dim));
 		colorRGBA const &drawers_color(apply_light_color(c, color));
