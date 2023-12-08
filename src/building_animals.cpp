@@ -960,10 +960,10 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 					if (is_basement(i) && has_ext_basement()) { // check for extended basement door and exclude it if open
 						door_t const &door(interior->get_ext_basement_door());
 						
-						if (door.open) {
+						if (door.open && door.z1() < tc.z2() && door.z2() > tc.z1()) { // open door that overlaps spider zval
 							cube_t wall_cut(door);
 							wall_cut.expand_in_dim(door.dim, get_wall_thickness());
-							subtract_cube_from_cubes(wall_cut, cubes);
+							subtract_cube_from_cubes(wall_cut, cubes, nullptr, 1); // clip_in_z=1
 						}
 					}
 					for (cube_t const &c : cubes) {surface_orienter.register_cube(c);}
