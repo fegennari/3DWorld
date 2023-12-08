@@ -961,7 +961,7 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 	unsigned const elem_tex_y = (1<<10); // larger = slower, but more lights/higher quality
 	unsigned const max_gb_entries(elem_tex_x*elem_tex_y), gbx(get_grid_xsize()), gby(get_grid_ysize());
 	assert(max_gb_entries <= (1<<24)); // gb_data low bits allocation
-	elem_data.resize(0);
+	elem_data.clear();
 	gb_data.resize(gbx*gby, 0);
 
 	for (unsigned y = 0; y < gby && elem_data.size() < max_gb_entries; ++y) {
@@ -1279,7 +1279,7 @@ void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh
 
 		for (++ix; ix < ndl; ++ix) { // determine range of stacked lights with the same X/Y value
 			light_source const &ls2(dl_sources[ix]);
-			if (ls2.get_pos().x != lpos.x || ls2.get_pos().y != lpos.y || ls2.get_radius() != ls.get_radius()) break;
+			if (ls2.get_pos().x != lpos.x || ls2.get_pos().y != lpos.y || ls2.get_radius() != ls.get_radius() && ls2.get_dir() == ls.get_dir()) break;
 		}
 		int const xcent((lpos.x - scene_llc.x)*grid_dx_inv + 0.5f), ycent((lpos.y - scene_llc.y)*grid_dy_inv + 0.5f);
 		cube_t bcube(ls.calc_bcube(0, sqrt_dlight_add_thresh, 0, falloff)); // padded below
@@ -1293,7 +1293,7 @@ void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh
 			bnds[0][e] = max(0, min((int)gbx-1, int((bcube.d[0][e] - scene_llc.x)*grid_dx_inv)));
 			bnds[1][e] = max(0, min((int)gby-1, int((bcube.d[1][e] - scene_llc.y)*grid_dy_inv)));
 		}
-		int const radius(ls.get_radius()*max(grid_dx_inv, grid_dy_inv) + 2), rsq(radius*radius);
+		int const radius(round_fp(ls.get_radius()*max(grid_dx_inv, grid_dy_inv)) + 2), rsq(radius*radius);
 
 		if (ix - start_ix == 1) { // single light case
 			for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) { // add lights to ldynamic
