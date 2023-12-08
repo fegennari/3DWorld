@@ -1791,29 +1791,38 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				min_eq(light_bc2.z2(), (ceil_z + fc_thick)); // doesn't reach higher than the ceiling of this room
 			}
 			if (is_rotated()) {light_bc2 = get_rotated_bcube(light_bc2);}
+			float sec_light_radius(0.0);
+			point sec_lpos(lpos_rot);
 
 			if (is_lamp) { // add a second shadowed light source pointing up
 				bool const cache_shadows(!lamp_was_moved);
 				dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, plus_z, 0.5*bwidth); // points up
 				// lamps are static and have no dynamic shadows, so always cache their shadow maps
 				assign_light_for_building_interior(dl_sources.back(), &(*i), light_bc2, cache_shadows, 1); // is_lamp=1
-				dl_sources.emplace_back(0.15*light_radius, lpos_rot, lpos_rot, color); // add an additional small unshadowed light for ambient effect
-				dl_sources.back().set_custom_bcube(light_bc2); // not sure if this is helpful, but should be okay
+				sec_light_radius = 0.15*light_radius;
+				dl_sources.emplace_back(sec_light_radius, sec_lpos, sec_lpos, color); // add an additional small unshadowed light for ambient effect
 			}
 			else { // add a second, smaller unshadowed light for the upper hemisphere or omnidirectional for wall lights
 				// the secondary light is unshadowed and won't pick up shadows from any stairs in the room, so reduce the radius
 				float const rscale((room.is_hallway ? 0.25 : room.is_office ? 0.45 : 0.5)*(has_stairs_this_floor ? 0.67 : 1.0));
+				sec_light_radius = rscale*light_radius;
 
 				if (wall_light) {
-					point const lpos2(lpos_rot + (2.0*i->get_sz_dim(i->dim))*dir);
-					dl_sources.emplace_back(rscale*light_radius, lpos2, lpos2, color, 0, -dir, 1.0); // omnidirectional
+					sec_lpos += (2.0*i->get_sz_dim(i->dim))*dir; // shift to the side
+					dl_sources.emplace_back(sec_light_radius, sec_lpos, sec_lpos, color, 0, -dir, 1.0); // omnidirectional
 				}
 				else { // ceiling light
-					point const lpos_up(lpos_rot - vector3d(0.0, 0.0, 2.0*i->dz()));
-					dl_sources.emplace_back(rscale*light_radius, lpos_up, lpos_up, color, 0, plus_z, 0.5); // hemisphere that points up
+					sec_lpos.z -= 2.0*i->dz(); // shift down
+					dl_sources.emplace_back(sec_light_radius, sec_lpos, sec_lpos, color, 0, plus_z, 0.5); // hemisphere that points up
 				}
 			}
-			if (!light_bc2.is_all_zeros()) {dl_sources.back().set_custom_bcube(light_bc2);}
+			if (!light_bc2.is_all_zeros()) {
+				cube_t sphere_bc;
+				sphere_bc.set_from_sphere(sec_lpos, sec_light_radius);
+				assert(light_bc2.intersects(sphere_bc));
+				light_bc2.intersect_with_cube(sphere_bc);
+				dl_sources.back().set_custom_bcube(light_bc2);
+			}
 			dl_sources.back().disable_shadows();
 		}
 	} // for i (objs)
