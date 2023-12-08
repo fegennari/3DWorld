@@ -1388,6 +1388,10 @@ colorRGBA building_t::get_ceil_tex_and_color(cube_t const &ceil_cube, tid_nm_pai
 	return (is_house ? mat.house_ceil_color : mat.ceil_color);
 }
 
+void draw_building_ext_door(building_draw_t &bdraw, tquad_with_ix_t const &door, building_t const &b) {
+	colorRGBA const &dcolor((door.type == tquad_with_ix_t::TYPE_GDOOR) ? WHITE : b.door_color); // garage doors are always white
+	bdraw.add_tquad(b, door, b.bcube, tid_nm_pair_t(get_building_door_tid(door.type), -1, 1.0, 1.0), dcolor);
+}
 void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exterior building parts
 	if (!is_valid()) return; // invalid building
 	building_mat_t const &mat(get_material());
@@ -1678,10 +1682,8 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			}
 		}
 	} // for i
-	for (auto i = doors.begin(); i != doors.end(); ++i) { // these are the exterior doors
-		colorRGBA const &dcolor((i->type == tquad_with_ix_t::TYPE_GDOOR) ? WHITE : door_color); // garage doors are always white
-		bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(get_building_door_tid(i->type), -1, 1.0, 1.0), dcolor);
-	}
+	for (auto d = doors.begin(); d != doors.end(); ++d) {draw_building_ext_door(bdraw, *d, *this);} // draw exterior doors
+
 	for (auto i = fences.begin(); i != fences.end(); ++i) {
 		bdraw.add_fence(*this, *i, tid_nm_pair_t(WOOD_TEX, 0.4f/min(i->dx(), i->dy())), WHITE, (fences.size() > 1));
 	}
@@ -2138,8 +2140,10 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 		if (int(d - doors.begin()) == door_ix) continue; // skip the open door
 		vector3d const normal2(d->get_norm());
 		if (dot_product_ptv(normal2, pos, d->pts[0]) > 0.0) continue; // facing exterior of door rather than interior, skip
-		bool const dim2(fabs(normal2.x) < fabs(normal2.y)), dir2(normal2[dim] > 0.0); // dir2 is reversed
-		add_door_verts(d->get_bcube(), open_door_draw, d->type, dim2, dir2, 0.0, opens_outward, 1, 0); // open_amt=0.0, exterior=1, on_stairs=0
+		tquad_with_ix_t door_rev(*d);
+		std::swap(door_rev.pts[0], door_rev.pts[1]); // reverse winding order
+		std::swap(door_rev.pts[2], door_rev.pts[3]);
+		draw_building_ext_door(open_door_draw, door_rev, *this);
 	}
 	open_door_draw.draw(s, 0, 1); // direct_draw_no_vbo=1
 	return 1;
