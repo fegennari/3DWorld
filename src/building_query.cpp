@@ -1804,7 +1804,7 @@ bool room_object_t::is_spider_collidable() const { // include objects on the flo
 		if (type != TYPE_LIGHT && type != TYPE_BRSINK && type != TYPE_MIRROR && type != TYPE_MWAVE && type != TYPE_HANGER_ROD &&
 			type != TYPE_LAPTOP && type != TYPE_MONITOR && type != TYPE_CLOTHES && type != TYPE_TOASTER && type != TYPE_CABINET) return 0;
 	}
-	if (type == TYPE_CEIL_FAN || type == TYPE_OFF_CHAIR || type == TYPE_POOL_LAD) return 0; // not a cube
+	if (type == TYPE_CEIL_FAN || type == TYPE_OFF_CHAIR || type == TYPE_POOL_LAD || type == TYPE_BAR_STOOL) return 0; // not a cube
 	if (type == TYPE_BOOK) return 0; // I guess books don't count, since they're too small to walk on?
 	return 1;
 }

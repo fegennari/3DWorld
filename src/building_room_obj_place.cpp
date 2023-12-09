@@ -2223,6 +2223,15 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 			place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, room, 0.40, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 4, 0, color);
 		}
 	}
+	// TODO: place a mini bar and two bar stools?
+#if 0
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_BAR_STOOL)) {
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_BAR_STOOL)); // D, W, H
+		float const height(0.35*floor_spacing), hdepth(0.5*height*sz.x/sz.z), hwidth(0.5*height*sz.y/sz.z);
+		//
+		objs.emplace_back(ladder, TYPE_BAR_STOOL, room_id, !pool.dim, !ldir, RO_FLAG_NOCOLL, tot_light_amt);
+	}
+#endif
 	return 1;
 }
 
