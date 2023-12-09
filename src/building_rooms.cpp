@@ -61,9 +61,9 @@ bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor_i
 				if (r.has_stairs_on_floor(floor_ix))  {stairs_rooms.push_back(i);}
 				if (is_room_adjacent_to_ext_door(r))  {door_rooms  .push_back(i);}
 			}
-			if (cur_room < 0 || stairs_rooms.empty()) {cout << TXT(bcube.str());}
+			if (cur_room < 0 || stairs_rooms.empty()) {cout << "House with missing stairs: " << bcube.str() << endl;}
 			assert(cur_room >= 0); // must be found
-			assert(!stairs_rooms.empty());
+			if (stairs_rooms.empty()) return 1; // failed to place stairs in this house, but there were basement stairs?
 
 			if (!is_rotated() && is_cube() && !has_complex_floorplan) { // too strong for rotated or non-cube buildings, where door placement can sometimes fail
 				assert(!doors.empty());
