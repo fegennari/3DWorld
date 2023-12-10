@@ -18,9 +18,10 @@ int map_drag_x(0), map_drag_y(0);
 float map_zoom(0.0);
 double map_x(0.0), map_y(0.0);
 
-extern bool water_is_lava, begin_motion, show_map_view_mandelbrot;
+extern bool water_is_lava, begin_motion;
 extern int window_width, window_height, xoff2, yoff2, map_mode, map_color, read_landscape, read_heightmap, do_read_mesh;
 extern int world_mode, display_mode, num_smileys, DISABLE_WATER, cache_counter, default_ground_tex, frame_counter;
+extern unsigned show_map_view_fractal;
 extern float zmax_est, zmin, zmax, water_plane_z, water_h_off, glaciate_exp, glaciate_exp_inv, vegetation, relh_adj_tex, temperature, mesh_height_scale, mesh_scale;
 extern int coll_id[];
 extern point surface_pos;
@@ -38,21 +39,42 @@ struct complex_num {
 	double r, i;
 	complex_num() : r(0), i(0) {}
 	complex_num(double r_, double i_) : r(r_), i(i_) {}
-	complex_num operator+(complex_num const &n) const {return complex_num((r+n.r), (i+n.i));}
-	complex_num operator*(complex_num const &n) const {return complex_num((r*n.r - i*n.i), (r*n.i + i*n.r));}
-	double mag_sq() const {return (r*r + i*i);}
-	double mag() const {return sqrt(mag_sq());}
+	complex_num operator+ (complex_num const &n) const {return complex_num((r+n.r), (i+n.i));}
+	complex_num operator* (complex_num const &n) const {return complex_num((r*n.r - i*n.i), (r*n.i + i*n.r));}
+	complex_num conjugaqte(complex_num const &n) const {return complex_num((r*n.r - i*n.i), -2.0*r*n.i);}
+	complex_num abs() const {return complex_num(fabs(r), fabs(i));}
+	double mag_sq()   const {return (r*r + i*i);}
+	double mag   ()   const {return sqrt(mag_sq());}
 };
 
-double eval_mandelbrot_set(complex_num const &c) {
+double eval_fractal_set(complex_num const &c) {
 
 	complex_num z(0.0, 0.0);
 	unsigned val(0);
 	
-	for (; val < 200; ++val) {
-		if (z.mag_sq() > 4.0) break;
-		z = z*z + c;
-	}
+	switch (show_map_view_fractal) {
+	case 0: // disabled, error?
+		break;
+	case 1: // madelbrot
+		for (; val < 200; ++val) {
+			if (z.mag_sq() > 4.0) break;
+			z = z*z + c;
+		}
+		break;
+	case 2: // tricorn
+		for (; val < 200; ++val) {
+			if (z.mag_sq() > 4.0) break;
+			z = z.conjugaqte(z) + c;
+		}
+		break;
+	case 3: // burning ship
+		for (; val < 200; ++val) {
+			if (z.mag_sq() > 4.0) break;
+			z = z.abs();
+			z = z*z + c;
+		}
+		break;
+	} // end switch
 	return (double(val) - log2(log2(z.mag_sq())) + 1.0)/200.0; // from http://www.iquilezles.org/www/articles/mset_smooth/mset_smooth.htm
 	//return val/200.0;
 }
@@ -116,7 +138,7 @@ void draw_overhead_map() {
 	unsigned const tot_sz(nx*ny);
 	vector<unsigned char> buf(tot_sz*3*sizeof(unsigned char));
 
-	if (show_map_view_mandelbrot) {
+	if (show_map_view_fractal) {
 		double const y_scale(10.0*map_zoom), x_scale(window_ar*y_scale);
 		double const i_scale(2.0*y_scale/ny), j_scale(2.0*x_scale/nx);
 		double const x_off(-x_scale + 0.05*map_x), y_off(-y_scale + 0.05*map_y);
@@ -128,7 +150,7 @@ void draw_overhead_map() {
 
 			for (int j = 0; j < nx; ++j) {
 				double const mx(j_scale*j + x_off);
-				double const val(eval_mandelbrot_set(complex_num(mx, my)));
+				double const val(eval_fractal_set(complex_num(mx, -my)));
 				colorize(val, &buf[3*(i*nx + j)]);
 			}
 		}
@@ -178,7 +200,7 @@ void draw_overhead_map() {
 
 		bool const uses_hmap(world_mode == WMODE_GROUND && (read_landscape || read_heightmap || do_read_mesh));
 		mesh_xy_grid_cache_t height_gen;
-		if (!uses_hmap && !show_map_view_mandelbrot) {setup_height_gen(height_gen, xstart, ystart, xscale, yscale, nx, ny, 1);} // cache_values=1
+		if (!uses_hmap && !show_map_view_fractal) {setup_height_gen(height_gen, xstart, ystart, xscale, yscale, nx, ny, 1);} // cache_values=1
 		point const lpos(get_light_pos());
 		vector3d const light_dir(lpos.get_norm()); // assume directional lighting to origin
 		float const texels_per_pixel(mesh_scale*0.5f*(xscale*DX_VAL_INV + yscale*DY_VAL_INV));

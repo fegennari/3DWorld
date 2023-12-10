@@ -80,7 +80,7 @@ bool detail_normal_map(0), init_core_context(0), use_core_context(0), enable_mul
 bool enable_dlight_shadows(1), tree_indir_lighting(0), ctrl_key_pressed(0), only_pine_palm_trees(0), enable_gamma_correct(0), use_z_prepass(0), reflect_dodgeballs(0);
 bool store_cobj_accum_lighting_as_blocked(0), all_model3d_ref_update(0), begin_motion(0), enable_mouse_look(MOUSE_LOOK_DEF), enable_init_shields(1), tt_triplanar_tex(0);
 bool enable_model3d_bump_maps(1), use_obj_file_bump_grayscale(1), invert_bump_maps(0), use_interior_cube_map_refl(0), enable_cube_map_bump_maps(1), no_store_model_textures_in_memory(0);
-bool enable_model3d_custom_mipmaps(1), flatten_tt_mesh_under_models(0), show_map_view_mandelbrot(0), smileys_chase_player(0), disable_fire_delay(0), disable_recoil(0);
+bool enable_model3d_custom_mipmaps(1), flatten_tt_mesh_under_models(0), smileys_chase_player(0), disable_fire_delay(0), disable_recoil(0);
 bool enable_dpart_shadows(0), enable_tt_model_reflect(1), enable_tt_model_indir(0), auto_calc_tt_model_zvals(0), use_model_lod_blocks(0), enable_translocator(0), enable_grass_fire(0);
 bool disable_model_textures(0), start_in_inf_terrain(0), allow_shader_invariants(1), config_unlimited_weapons(0), disable_tt_water_reflect(0), allow_model3d_quads(1);
 bool enable_timing_profiler(0), fast_transparent_spheres(0), force_ref_cmap_update(0), use_instanced_pine_trees(0), enable_postproc_recolor(0), draw_building_interiors(0);
@@ -102,7 +102,7 @@ int reset_timing(0), read_heightmap(0), default_ground_tex(-1), num_dodgeballs(1
 int enable_fsource(0), run_forward(0), advanced(0), dynamic_mesh_scroll(0), default_anim_id(-1);
 int read_snow_file(0), write_snow_file(0), mesh_detail_tex(NOISE_TEX);
 int read_light_files[NUM_LIGHTING_TYPES] = {0}, write_light_files[NUM_LIGHTING_TYPES] = {0};
-unsigned num_snowflakes(0), create_voxel_landscape(0), hmap_filter_width(0), num_dynam_parts(100), snow_coverage_resolution(2);
+unsigned num_snowflakes(0), create_voxel_landscape(0), hmap_filter_width(0), num_dynam_parts(100), snow_coverage_resolution(2), show_map_view_fractal(0);
 unsigned num_birds_per_tile(2), num_fish_per_tile(15), num_bflies_per_tile(4);
 unsigned erosion_iters(0), erosion_iters_tt(0), skybox_tid(0), tiled_terrain_gen_heightmap_sz(0), game_mode_disable_mask(0), num_frame_draw_calls(0);
 float NEAR_CLIP(DEF_NEAR_CLIP), FAR_CLIP(DEF_FAR_CLIP), system_max_orbit(1.0), sky_occlude_scale(0.0), tree_slope_thresh(5.0), mouse_sensitivity(1.0), tt_grass_scale_factor(1.0);
@@ -1781,7 +1781,6 @@ int load_config(string const &config_file) {
 	kwmb.add("disable_tt_water_reflect", disable_tt_water_reflect);
 	kwmb.add("use_model_lod_blocks", use_model_lod_blocks);
 	kwmb.add("flatten_tt_mesh_under_models", flatten_tt_mesh_under_models);
-	kwmb.add("show_map_view_mandelbrot", show_map_view_mandelbrot);
 	kwmb.add("def_texture_compress", def_tex_compress);
 	kwmb.add("smileys_chase_player", smileys_chase_player);
 	kwmb.add("disable_fire_delay", disable_fire_delay);
@@ -1862,6 +1861,7 @@ int load_config(string const &config_file) {
 	kwmu.add("dlight_grid_bitshift", DL_GRID_BS);
 	kwmu.add("tiled_terrain_gen_heightmap_sz", tiled_terrain_gen_heightmap_sz);
 	kwmu.add("game_mode_disable_mask", game_mode_disable_mask);
+	kwmu.add("show_map_view_fractal", show_map_view_fractal);
 
 	kw_to_val_map_t<float> kwmf(error);
 	kwmf.add("gravity", base_gravity);
