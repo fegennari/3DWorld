@@ -1059,6 +1059,7 @@ struct building_room_geom_t {
 	void draw_interactive_player_obj(carried_item_t const &c, shader_t &s, vector3d const &xlate);
 	// functions for expanding nested objects
 	void expand_shelves(room_object_t const &c);
+	void expand_shelfrack(room_object_t const &c);
 	void get_bookcase_books(room_object_t const &c, vect_room_object_t &books) {add_bookcase(c, 0, 0, 0, 1.0, 0, 1.0, nullptr, &books);} // Note: technically const
 	void expand_closet(room_object_t const &c) {add_closet_objects(c, expanded_objs);}
 	void expand_cabinet(room_object_t const &c);
@@ -1105,6 +1106,7 @@ private:
 	static void add_closet_objects(room_object_t const &c, vect_room_object_t &objects);
 	static unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]);
 	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vect_room_object_t &objects);
+	static void get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects);
 	static void add_wine_rack_bottles(room_object_t const &c, vect_room_object_t &objects);
 	static void add_vert_roll_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio=1.0, bool player_held=0);
 	void add_bcase_book(room_object_t const &c, cube_t const &book, bool inc_lg, bool inc_sm, bool inc_text, bool backwards, bool in_set,

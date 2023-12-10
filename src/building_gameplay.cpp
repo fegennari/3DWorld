@@ -1083,7 +1083,7 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 	}
 	room_object_t &obj(get_room_object_by_index(obj_id));
 
-	if (obj.type == TYPE_SHELVES || (obj.type == TYPE_WINE_RACK && !obj.obj_expanded())) { // shelves or unexpanded wine rack
+	if (obj.type == TYPE_SHELVES || obj.type == TYPE_SHELFRACK || (obj.type == TYPE_WINE_RACK && !obj.obj_expanded())) { // shelves/racks or unexpanded wine rack
 		assert(!obj.obj_expanded()); // should not have been expanded
 		expand_object(obj, building);
 		bool const picked_up(player_pickup_object(building, at_pos, in_dir)); // call recursively on contents

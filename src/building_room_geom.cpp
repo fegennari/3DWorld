@@ -941,6 +941,11 @@ void building_room_geom_t::add_rack(room_object_t const &c) {
 			mat.add_cube_to_verts_untextured(sides[d], c.color, (add_top ? EF_Z12 : EF_Z1)); // skip bottom and maybe top
 		}
 	}
+	// add objects to the racks
+	if (c.obj_expanded()) return; // already been expanded, don't need to create contained objects below
+	vect_room_object_t &objects(get_temp_objects());
+	get_shelfrack_objects(c, objects);
+	add_small_static_objs_to_verts(objects, 1); // inc_text=1
 }
 
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {

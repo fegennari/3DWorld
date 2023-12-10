@@ -15,6 +15,7 @@ vect_cube_t &get_temp_cubes();
 bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher);
 void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim);
 float get_med_cab_wall_thickness(room_object_t const &c);
+unsigned get_shelf_rack_cubes(room_object_t const &c, cube_t &back, cube_t &top, cube_t sides[2], cube_t shelves[5]);
 
 void resize_model_cube_xy(cube_t &cube, float dim_pos, float not_dim_pos, unsigned id, bool dim) {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(id)); // L, W, H
@@ -624,6 +625,14 @@ void building_room_geom_t::expand_shelves(room_object_t const &c) {
 	get_shelf_objects(c, shelves, num_shelves, expanded_objs);
 }
 
+void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects) {
+	cube_t back, top, sides[2], shelves[5];
+	unsigned const num_shelves(get_shelf_rack_cubes(c, back, top, sides, shelves));
+	// TODO
+}
+
+void building_room_geom_t::expand_shelfrack(room_object_t const &c) {get_shelfrack_objects(c, expanded_objs);}
+
 void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_room_object_t &objects) {
 	float const height(c.dz()), width(c.get_width()), depth(c.get_depth()), shelf_thick(0.1*depth);
 	unsigned const num_rows(max(1, round_fp(2.0*height/depth))), num_cols(max(1, round_fp(2.0*width/depth)));
@@ -1097,6 +1106,7 @@ bool building_room_geom_t::expand_object(room_object_t &c, building_t const &bui
 	switch (c.type) {
 	case TYPE_CLOSET:    expand_closet   (c); break;
 	case TYPE_SHELVES:   expand_shelves  (c); break;
+	case TYPE_SHELFRACK: expand_shelfrack(c); break;
 	case TYPE_WINE_RACK: expand_wine_rack(c); break;
 	case TYPE_CABINET: case TYPE_COUNTER: case TYPE_KSINK: expand_cabinet(c); break;
 	case TYPE_MIRROR:    expand_med_cab(c); break;
