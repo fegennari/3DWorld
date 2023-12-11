@@ -314,10 +314,11 @@ class file_reader_assimp {
 		else if (!check_texture_file_exists(full_path)) {
 			string const fn(filename);
 			string local_path;
-			bool found(0);
+			bool found(0), try_local(0);
+			if (fn.size() > 3 && (fn[0] >= 'A' && fn[0] <= 'Z') && fn[1] == ':' && (fn[2] == '\\' || fn[2] == '/')) {try_local = 1;} // Windows path?
+			else if (fn.size() > 2 && fn[0] == '/') {try_local = 1;} // linux path?
 
-			if (fn.size() > 3 && (fn[0] >= 'A' && fn[0] <= 'Z') && fn[1] == ':' && (fn[2] == '\\' || fn[2] == '/')) {
-				// looks like a Windows path that's invalid; try stripping off the path and looking in the current directory
+			if (try_local) { // try stripping off the path and looking in the current directory
 				local_path = model_dir + get_base_filename(fn);
 				if (check_texture_file_exists(local_path)) {full_path = local_path; found = 1;}
 			}
