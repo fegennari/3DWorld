@@ -283,7 +283,7 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 	float const box_sz(0.3*c.get_length());
 	room_object_t cb(c);
 	cb.light_amt = light_amt;
-	add_boxes_to_space(cb, expanded_objs, interior, cubes, rgen, num_boxes, box_sz, 0.8*box_sz, 1.5*box_sz, 0, flags); // allow_crates=0
+	add_boxes_to_space(cb, expanded_objs, interior, cubes, rgen, num_boxes, box_sz, 0.8*box_sz, 1.5*box_sz, 0, (flags | RO_FLAG_NOCOLL)); // allow_crates=0
 	// add paint cans (slightly smaller than normal)
 	float const sz_scale(0.7*c_sz.z), pc_height(0.6*sz_scale), pc_radius(0.24*sz_scale);
 
@@ -494,7 +494,8 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 		unsigned const num_boxes(rgen.rand() % (is_house ? 8 : 13)); // 0-12
 		cube_t bounds(S);
 		bounds.z1() = S.z2(); // place on top of shelf
-		add_boxes_to_space(c, objects, bounds, cubes, rgen, num_boxes, 0.42*width*sz_scale*(is_house ? 1.5 : 1.0), 0.4*box_zscale, 0.98*box_zscale, 1, c.flags); // allow_crates=1
+		add_boxes_to_space(c, objects, bounds, cubes, rgen, num_boxes, 0.42*width*sz_scale*(is_house ? 1.5 : 1.0),
+			0.4*box_zscale, 0.98*box_zscale, 1, (c.flags | RO_FLAG_NOCOLL)); // allow_crates=1
 		// add computers; what about monitors?
 		bool const top_shelf(s+1 == num_shelves);
 		float const h_val(0.21*floor_spacing), cheight(0.75*h_val), cwidth(0.44*cheight), cdepth(0.9*cheight); // fixed AR=0.44 to match the texture
@@ -628,7 +629,52 @@ void building_room_geom_t::expand_shelves(room_object_t const &c) {
 void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects) {
 	cube_t back, top, sides[2], shelves[5];
 	unsigned const num_shelves(get_shelf_rack_cubes(c, back, top, sides, shelves));
-	// TODO
+	float const floor_spacing(c.dz()/SHELF_RACK_HEIGHT_FS);
+	float const top_shelf_z2(top.is_all_zeros() ? c.z2() : top.z1()); // bottom of the top, if present
+	rand_gen_t rgen;
+	vect_cube_t cubes; // for placed object overlap tests
+
+	for (unsigned dir = 0; dir < 2; ++dir) { // each shelf has two sides/aisles
+		unsigned const rack_id((c.obj_id << 1) + 1);
+		rgen.set_state(123*c.obj_id, 207*rack_id+1);
+		rgen.rand_mix();
+		int const category(rgen.rand() % 7);
+
+		for (unsigned n = 0; n < num_shelves; ++n) {
+			float const ztop(((n+1) == num_shelves) ? top_shelf_z2 : shelves[n+1].z1());
+			cube_t shelf(shelves[n]); // this is the valid shelf area where objects can be placed
+			shelf.d[c.dim][!dir] = back.d[c.dim][dir]; // excludes the back
+			set_cube_zvals(shelf, shelf.z2(), ztop);
+			float const length(shelf.get_sz_dim(!c.dim)), depth(shelf.get_sz_dim(c.dim)), height(shelf.dz());
+			if (length < depth) continue; // shouldn't happen
+			cubes.clear();
+
+			if (1 || category == 0) { // boxed items
+				unsigned const num_boxes(rgen.rand() % 51); // 0-50
+				// the call below adds boxes randomly; should they be organized in more orderly rows/columns, or have a more consistent size?
+				add_boxes_to_space(c, objects, shelf, cubes, rgen, num_boxes, 0.375*depth, 0.3*height, 0.8*height, 0, RO_FLAG_NOCOLL); // allow_crates=0
+			}
+			else if (category == 1) { // food
+				// TYPE_BOTTLE, TYPE_PIZZA_BOX
+			}
+			else if (category == 2) { // houshold goods
+				// TYPE_PAINTCAN, TYPE_TPROLL, TYPE_SPRAYCAN, TYPE_VASE, TYPE_FLASHLIGHT, TYPE_CANDLE, TYPE_BOOK
+			}
+			else if (category == 3) { // clothing
+				// TYPE_FOLD_SHIRT
+			}
+			else if (category == 4) { // kitchen
+				// TYPE_CUP, TYPE_PAN, TYPE_MWAVE, TYPE_TOASTER, TYPE_FIRE_EXT
+			}
+			else if (category == 5) { // toys
+				// TYPE_LG_BALL, TYPE_TOY
+			}
+			else if (category == 6) { // electronics
+				// TYPE_COMPUTER, TYPE_LAPTOP, TYPE_MONITOR, TYPE_LAMP
+			}
+			// TODO: new items: grocery items, appliances, etc.
+		} // for n
+	} // for dir
 }
 
 void building_room_geom_t::expand_shelfrack(room_object_t const &c) {get_shelfrack_objects(c, expanded_objs);}

@@ -900,8 +900,8 @@ unsigned get_shelf_rack_cubes(room_object_t const &c, cube_t &back, cube_t &top,
 	back.z2() -= top_thickness; // back is under top
 	back.expand_in_dim(c.dim, -0.5*(depth - back_thickness));
 	cube_t shelf(c);
-	shelf.expand_in_dim(!c.dim, -(add_sides ? 1.0 : 0.5)*side_thickness); // shrink a bit even if there are no ends to prevent Z-fighting
-	shelf.expand_in_dim(c.dim, -0.75*side_thickness); // slight recess
+	shelf.expand_in_dim(!c.dim, -(add_sides ? 1.0 : 0.5)*side_thickness); // shrink a bit even if there are no sides to prevent Z-fighting
+	shelf.expand_in_dim(c.dim, -0.75*side_thickness); // slight recess at the front
 
 	for (unsigned n = 0; n < num_shelves; ++n) {
 		float const zval(c.z1() + bot_gap + n*shelf_spacing);
@@ -921,31 +921,34 @@ unsigned get_shelf_rack_cubes(room_object_t const &c, cube_t &back, cube_t &top,
 	}
 	return num_shelves;
 }
-void building_room_geom_t::add_rack(room_object_t const &c) {
-	cube_t back, top, sides[2], shelves[5];
-	unsigned const num_shelves(get_shelf_rack_cubes(c, back, top, sides, shelves));
-	bool const add_top(!top.is_all_zeros()), add_sides(!sides[0].is_all_zeros());
-	colorRGBA const back_color(c.color*0.67); // make a bit darker
-	rgeom_mat_t &back_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/pegboard.png"), 2.5/c.get_height(), 1), 1)); // shadowed
-	back_mat.add_cube_to_verts(back, back_color, back.get_llc(), ~get_skip_mask_for_xy(c.dim)); // front and back sides only
-	unsigned const face_mask_ends(get_skip_mask_for_xy(!c.dim));
-	unsigned const skip_faces_shelves(add_sides ? face_mask_ends : 0); // skip ends if drawing ends
-	rgeom_mat_t &mat(get_untextured_material(1)); // shadowed; no apply_light_color()
-	if (!add_sides) {mat.add_cube_to_verts_untextured(back, back_color, ~face_mask_ends);} // pegboard ends
-	if (!add_top  ) {mat.add_cube_to_verts_untextured(back, back_color, ~EF_Z2         );} // pegboard top
-	if (add_top   ) {mat.add_cube_to_verts_untextured(top,  c.color,     0             );} // draw all faces
-	for (unsigned n = 0; n < num_shelves; ++n) {mat.add_cube_to_verts_untextured(shelves[n], c.color, skip_faces_shelves);}
+void building_room_geom_t::add_rack(room_object_t const &c, bool add_rack, bool add_objs) {
+	if (add_rack) { // static objects
+		cube_t back, top, sides[2], shelves[5];
+		unsigned const num_shelves(get_shelf_rack_cubes(c, back, top, sides, shelves));
+		bool const add_top(!top.is_all_zeros()), add_sides(!sides[0].is_all_zeros());
+		colorRGBA const back_color(c.color*0.67); // make a bit darker
+		rgeom_mat_t &back_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/pegboard.png"), 2.5/c.get_height(), 1), 1)); // shadowed
+		back_mat.add_cube_to_verts(back, back_color, back.get_llc(), ~get_skip_mask_for_xy(c.dim)); // front and back sides only
+		unsigned const face_mask_ends(get_skip_mask_for_xy(!c.dim));
+		unsigned const skip_faces_shelves(add_sides ? face_mask_ends : 0); // skip ends if drawing ends
+		rgeom_mat_t &mat(get_untextured_material(1)); // shadowed; no apply_light_color()
+		if (!add_sides) {mat.add_cube_to_verts_untextured(back, back_color, ~face_mask_ends);} // pegboard ends
+		if (!add_top  ) {mat.add_cube_to_verts_untextured(back, back_color, ~EF_Z2         );} // pegboard top
+		if (add_top   ) {mat.add_cube_to_verts_untextured(top,  c.color,     0             );} // draw all faces
+		for (unsigned n = 0; n < num_shelves; ++n) {mat.add_cube_to_verts_untextured(shelves[n], c.color, skip_faces_shelves);}
 
-	if (add_sides) { // if one side is valid, they should both be valid
-		for (unsigned d = 0; d < 2; ++d) { // {left, right}
-			mat.add_cube_to_verts_untextured(sides[d], c.color, (add_top ? EF_Z12 : EF_Z1)); // skip bottom and maybe top
+		if (add_sides) { // if one side is valid, they should both be valid
+			for (unsigned d = 0; d < 2; ++d) { // {left, right}
+				mat.add_cube_to_verts_untextured(sides[d], c.color, (add_top ? EF_Z12 : EF_Z1)); // skip bottom and maybe top
+			}
 		}
 	}
-	// add objects to the racks
-	if (c.obj_expanded()) return; // already been expanded, don't need to create contained objects below
-	vect_room_object_t &objects(get_temp_objects());
-	get_shelfrack_objects(c, objects);
-	add_small_static_objs_to_verts(objects, 1); // inc_text=1
+	if (add_objs) { // add objects to the racks; drawn as small static objects
+		if (c.obj_expanded()) return; // already been expanded, don't need to create contained objects below
+		vect_room_object_t &objects(get_temp_objects());
+		get_shelfrack_objects(c, objects);
+		add_small_static_objs_to_verts(objects, 1); // inc_text=1
+	}
 }
 
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {

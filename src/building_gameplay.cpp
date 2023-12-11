@@ -164,7 +164,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CAMERA    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 150.0, 1.5,   "security camera");
 	bldg_obj_types[TYPE_CLOCK     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,  20.0, 1.0,   "clock");
 	bldg_obj_types[TYPE_DOWNSPOUT ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1,  0.0,  0.0,   "downspout");
-	bldg_obj_types[TYPE_SHELFRACK ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1,  0.0,  0.0,   "shelf rack");
+	bldg_obj_types[TYPE_SHELFRACK ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 1,  0.0,  0.0,   "shelf rack");
 	bldg_obj_types[TYPE_DBG_SHAPE ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 1,  0.0,  0.0,   "debug shape"); // small (optimization)
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
@@ -1301,7 +1301,8 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			if (i->type == TYPE_MIRROR  && !i->is_house())                continue; // can only pick up mirrors from houses, not office buildings
 			if (i->type == TYPE_TABLE   && i->shape == SHAPE_CUBE)        continue; // can only pick up short (TV) tables and cylindrical tables
 			if (i->type == TYPE_BED     && i->taken_level > 2)            continue; // can only take pillow, sheets, and mattress - not the frame
-			if (i->type == TYPE_SHELVES && i->obj_expanded())             continue; // shelves are already expanded, can no longer select this object
+			if (i->type == TYPE_SHELVES   && i->obj_expanded())           continue; // shelves are   already expanded, can no longer select this object
+			if (i->type == TYPE_SHELFRACK && i->obj_expanded())           continue; // shelf rack is already expanded, can no longer select this object
 			if (i->type == TYPE_MIRROR  && i->is_open())                  continue; // can't take mirror/medicine cabinet until it's closed
 			if (i->type == TYPE_LIGHT   && !i->is_visible())              continue; // can't take light attached to a ceiling fan as a separate object
 			if (i->type == TYPE_MWAVE   && (i->flags & RO_FLAG_NONEMPTY)) continue; // can't take a microwave with something inside it

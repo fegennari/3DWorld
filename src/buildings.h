@@ -33,6 +33,7 @@ float const DOOR_FRAME_WIDTH       = 0.07; // for door texture, relative to door
 float const EXT_BASEMENT_JOIN_DIST = 4.0; // relative to floor spacing
 float const BALCONY_PILLAR_SCALE   = 0.15; // relative to depth
 float const BASEMENT_ENTRANCE_SCALE= 0.33;
+float const SHELF_RACK_HEIGHT_FS   = 0.85*(1.0 - FLOOR_THICK_VAL_OFFICE);
 
 unsigned const NUM_CHAIR_COLORS = 12;
 unsigned const MAX_BCASE_BOOKS  = 48; // limited by available bit flags
@@ -1013,7 +1014,7 @@ struct building_room_geom_t {
 	void add_box(room_object_t const &c);
 	void add_paint_can(room_object_t const &c);
 	void add_shelves(room_object_t const &c, float tscale);
-	void add_rack(room_object_t const &c);
+	void add_rack(room_object_t const &c, bool add_rack, bool add_objs);
 	void add_keyboard(room_object_t const &c);
 	void add_obj_with_top_texture  (room_object_t const &c, std::string const &texture_name, colorRGBA const &sides_color, bool is_small=0);
 	void add_obj_with_front_texture(room_object_t const &c, std::string const &texture_name, colorRGBA const &sides_color, bool is_small=0);

@@ -857,7 +857,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_FALSE_DOOR: add_false_door(*i); break;
 		case TYPE_RAILING:   if (i->is_exterior()) {add_railing(*i);}  break; // exterior only
 		case TYPE_DOWNSPOUT: add_downspout(*i); break;
-		case TYPE_SHELFRACK: add_rack(*i); break;
+		case TYPE_SHELFRACK: add_rack(*i, 1, 0); break; // add_rack=1, add_objs=0
 		//case TYPE_FRIDGE: if (i->is_open()) {} break; // draw open fridge?
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
@@ -910,6 +910,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_CRATE:     add_crate    (c); break; // not small but only added to windowless rooms
 		case TYPE_BOX:       add_box      (c); break; // not small but only added to windowless rooms
 		case TYPE_SHELVES:   add_shelves  (c, tscale); break; // not small but only added to windowless rooms
+		case TYPE_SHELFRACK: add_rack(c, 0, 1); break; // add_rack=0, add_objs=1
 		case TYPE_COMPUTER:  add_computer (c); break;
 		case TYPE_KEYBOARD:  add_keyboard (c); break;
 		case TYPE_WINE_RACK: add_wine_rack(c, 0, 1, tscale); break;
