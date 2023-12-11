@@ -2223,15 +2223,30 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 			place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, room, 0.40, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 4, 0, color);
 		}
 	}
-	// TODO: place a mini bar and two bar stools?
-#if 0
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_BAR_STOOL)) {
-		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_BAR_STOOL)); // D, W, H
-		float const height(0.35*floor_spacing), hdepth(0.5*height*sz.x/sz.z), hwidth(0.5*height*sz.y/sz.z);
-		//
-		objs.emplace_back(ladder, TYPE_BAR_STOOL, room_id, !pool.dim, !ldir, RO_FLAG_NOCOLL, tot_light_amt);
+	// TODO: place a mini bar?
+	// place two bar stools
+	unsigned const bs_id(objs.size());
+
+	if (place_model_along_wall(OBJ_MODEL_BAR_STOOL, TYPE_BAR_STOOL, room, 0.4, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 4, 0)) {
+		// if a bar stool was placed, try to place another next to it
+		room_object_t const &bs(objs[bs_id]);
+		float const translate_dist(rgen.rand_uniform(1.2, 2.0)*bs.get_sz_dim(!bs.dim));
+		bool const pref_dir(rgen.rand_bool());
+		bool placed(0);
+
+		for (unsigned d = 0; d < 2 && !placed; ++d) {
+			bool const dir(d ^ pref_dir);
+			room_object_t bs2(bs);
+			bs2.translate_dim(!bs.dim, (dir ? 1.0 : -1.0)*translate_dist);
+			if (!place_area.contains_cube_xy(bs2)) continue;
+			if (overlaps_other_room_obj(bs2, objs_start) || interior->is_blocked_by_stairs_or_elevator(bs2) || is_cube_close_to_doorway(bs2, room, 0.0, 1)) continue;
+			objs.push_back(bs2);
+			placed = 1;
+		} // for d
+		if (!placed) { // if not placed next to the other bar stool, try placing anywhere along the same wall as the first one
+			place_model_along_wall(OBJ_MODEL_BAR_STOOL, TYPE_BAR_STOOL, room, 0.4, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, bs.get_orient(), 0);
+		}
 	}
-#endif
 	return 1;
 }
 
