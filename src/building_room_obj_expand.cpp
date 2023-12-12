@@ -630,6 +630,43 @@ void building_room_geom_t::expand_shelves(room_object_t const &c) {
 	get_shelf_objects(c, shelves, num_shelves, expanded_objs);
 }
 
+void add_rows_cols_of_vcylinders(room_object_t const &c, cube_t const &region, float radius, float height, float spacing_factor,
+	unsigned type, unsigned max_cols, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen)
+{
+	float const length(region.get_sz_dim(!c.dim)), depth(region.get_sz_dim(c.dim));
+	float const space(spacing_factor*radius), stride(2.0*radius + space);
+	unsigned const num_rows(length/stride), num_cols(min((1U + (rgen.rand()%max_cols)), unsigned(depth/stride))); // round down
+	float const row_spacing(length/num_rows), col_spacing(depth/num_cols);
+	point pos;
+	pos[ c.dim] = region.d[ c.dim][0] + 0.5*col_spacing;
+	pos[!c.dim] = region.d[!c.dim][0] + 0.5*row_spacing;
+	cube_t obj;
+	obj.set_from_sphere(pos, radius);
+	set_cube_zvals(obj, region.z1(), region.z1()+height);
+	bool const is_bottle(type == TYPE_BOTTLE);
+	unsigned rand_id(is_bottle ? rgen.rand() : 0);
+	if (is_bottle) {flags |= RO_FLAG_NO_CONS;} // not consumable
+
+	for (unsigned row = 0; row < num_rows; ++row) {
+		cube_t row_obj(obj);
+
+		for (unsigned col = 0; col < num_cols; ++col) {
+			if (rgen.rand_float() < 0.75) { // 75% chance
+				room_object_t obj(row_obj, type, c.room_id, 0, 0, flags, c.light_amt, SHAPE_CYLIN);
+				if      (is_bottle              ) {obj.set_as_bottle(rand_id, 3, 1);} // 0-3; excludes poison and medicine; should we include medicine?; no_empty=1
+				else if (type == TYPE_VASE      ) {obj.obj_id = objects.size();}
+				else if (type == TYPE_SPRAYCAN  ) {set_spraypaint_color(obj, rgen);}
+				else if (type == TYPE_FLASHLIGHT) {obj.color = BLACK;}
+				else if (type == TYPE_CANDLE    ) {obj.color = candle_color;}
+				objects.push_back(obj);
+			}
+			row_obj.translate_dim(c.dim, col_spacing);
+		} // for col
+		if (is_bottle && rgen.rand_float() < 0.1) {rand_id = rgen.rand();} // 10% chance to update bottle type
+		obj.translate_dim(!c.dim, row_spacing);
+	} // for row
+}
+
 void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects) {
 	cube_t back, top, sides[2], shelves[5];
 	unsigned const num_shelves(get_shelf_rack_cubes(c, back, top, sides, shelves));
@@ -643,7 +680,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 		unsigned const rack_id((c.item_flags << 1) + dir);
 		rgen.set_state(123*c.obj_id, 207*rack_id+1);
 		rgen.rand_mix();
-		int const category(rgen.rand() % 7);//, sub_cat(rgen.rand());
+		int const category(rgen.rand() % 7);
 
 		for (unsigned n = 0; n < num_shelves; ++n) {
 			float const ztop(((n+1) == num_shelves) ? top_shelf_z2 : shelves[n+1].z1());
@@ -651,7 +688,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 			shelf.d[c.dim][!dir] = back.d[c.dim][dir]; // excludes the back
 			set_cube_zvals(shelf, shelf.z2(), ztop);
 			float const length(shelf.get_sz_dim(!c.dim)), depth(shelf.get_sz_dim(c.dim)), height(shelf.dz());
-			if (length < depth) continue; // shouldn't happen
+			if (length <= depth) continue; // shouldn't happen
 			cubes.clear();
 
 			if (category == 0) { // boxed items
@@ -690,34 +727,50 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 				}
 				else { // add bottles; these aren't consumable by the player because that would be too powerful
 					float const bot_height(height*rgen.rand_uniform(0.7, 0.9)), bot_radius(min(0.25f*depth, bot_height*rgen.rand_uniform(0.12, 0.18)));
-					float const bot_space(0.25*bot_radius), bot_stride(2.0*bot_radius + bot_space);
-					unsigned const num_rows(length/bot_stride), num_cols(min((1U + (rgen.rand()%3)), unsigned(depth/bot_stride))); // round down; 1-3 columns
-					float const row_spacing(length/num_rows), col_spacing(depth/num_cols);
-					point pos;
-					pos[ c.dim] = shelf.d[ c.dim][0] + 0.5*col_spacing;
-					pos[!c.dim] = shelf.d[!c.dim][0] + 0.5*row_spacing;
-					cube_t bottle;
-					bottle.set_from_sphere(pos, bot_radius);
-					set_cube_zvals(bottle, shelf.z1(), shelf.z1()+bot_height);
-					unsigned rand_id(rgen.rand());
-					
-					for (unsigned row = 0; row < num_rows; ++row) {
-						cube_t row_bottle(bottle);
-
-						for (unsigned col = 0; col < num_cols; ++col) {
-							if (rgen.rand_float() < 0.75) { // 75% chance
-								objects.emplace_back(row_bottle, TYPE_BOTTLE, c.room_id, 0, 0, (flags | RO_FLAG_NO_CONS), c.light_amt, SHAPE_CYLIN);
-								objects.back().set_as_bottle(rand_id, 3, 1); // 0-3; excludes poison and medicine; should we include medicine?; no_empty=1
-							}
-							row_bottle.translate_dim(c.dim, col_spacing);
-						}
-						if (rgen.rand_float() < 0.1) {rand_id = rgen.rand();} // 10% chance to update bottle type
-						bottle.translate_dim(!c.dim, row_spacing);
-					} // for r
+					add_rows_cols_of_vcylinders(c, shelf, bot_radius, bot_height, 0.25, TYPE_BOTTLE, 3, flags, objects, rgen); // 1-3 columns
 				}
 			}
 			else if (category == 2) { // houshold goods
-				// TYPE_PAINTCAN, TYPE_TPROLL, TYPE_SPRAYCAN, TYPE_VASE, TYPE_FLASHLIGHT, TYPE_CANDLE, TYPE_BOOK
+				unsigned const num_sections(min(unsigned(0.75*length/depth), (3U + rgen.rand()&3))); // 3-6
+				float const section_width(length/num_sections);
+				float section_offset(0.0);
+
+				for (unsigned s = 0; s < num_sections; ++s) {
+					float const lo_edge(shelf.d[!c.dim][0]);
+					cube_t section(shelf); // FIXME: add a gap between sections; also, the last section is wrong
+					section.d[!c.dim][0] = lo_edge +  s   *section_width + section_offset;
+					if (s+1 < num_sections) {section_offset = min(0.25f*section_width, (section_width - depth))*rgen.signed_rand_float();}
+					section.d[!c.dim][1] = lo_edge + (s+1)*section_width + section_offset;
+					unsigned const type_ix(rgen.rand() % 7);
+
+					if (type_ix == 0) { // paint cans
+						float const oheight(height*rgen.rand_uniform(0.6, 0.8)), radius(min(0.4f*depth, 0.44f*oheight));
+						add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.1, TYPE_PAINTCAN, 2, flags, objects, rgen); // 1-2 columns
+					}
+					else if (type_ix == 1) { // toilet paper rolls
+						float const oheight(0.6*height), radius(min(0.4f*depth, 0.4f*oheight));
+						add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.2, TYPE_TPROLL, 3, flags, objects, rgen); // 1-3 columns
+					}
+					else if (type_ix == 2) { // spray paint cans
+						float const oheight(height*rgen.rand_uniform(0.7, 0.9)), radius(min(0.25f*depth, 0.17f*oheight));
+						add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.2, TYPE_SPRAYCAN, 3, flags, objects, rgen); // 1-3 columns
+					}
+					else if (type_ix == 3) { // vases
+						float const oheight(height*rgen.rand_uniform(0.6, 0.9)), radius(min(0.45f*depth, oheight*rgen.rand_uniform(0.3, 0.5)));
+						add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.4, TYPE_VASE, 2, flags, objects, rgen); // 1-2 columns
+					}
+					else if (type_ix == 4) { // flashlights
+						float const oheight(height*rgen.rand_uniform(0.6, 0.8)), radius(min(0.25f*depth, 0.2f*oheight*rgen.rand_uniform(0.8, 1.25)));
+						add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.25, TYPE_FLASHLIGHT, 3, flags, objects, rgen); // 1-3 columns
+					}
+					else if (type_ix == 5) { // candles
+						float const oheight(height*rgen.rand_uniform(0.5, 0.7)), radius(min(0.2f*depth, 0.16f*oheight*rgen.rand_uniform(0.8, 1.25)));
+						add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.25, TYPE_CANDLE, 3, flags, objects, rgen); // 1-3 columns
+					}
+					else if (type_ix == 6) { // book???
+						// TYPE_BOOK
+					}
+				} // for s
 			}
 			else if (category == 3) { // clothing
 				// TYPE_FOLD_SHIRT
