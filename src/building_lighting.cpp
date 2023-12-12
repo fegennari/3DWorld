@@ -134,9 +134,17 @@ bool line_contained_in_cube(point const &p1, point const &p2, vect_cube_t const 
 	return 0;
 }
 
+void building_t::set_building_colors(building_colors_t &bcolors) const {
+	building_mat_t const &mat(get_material());
+	bcolors.side_color = side_color.modulate_with(mat.side_tex.get_avg_color());
+	bcolors.wall_color = mat.wall_color.modulate_with(mat.wall_tex.get_avg_color());
+	if (has_basement()) {bcolors.basement_wall_color = get_basement_wall_texture().get_avg_color();} // this one is particularly expensive
+	if (has_attic   ()) {bcolors.attic_color         = interior->get_attic_ceiling_color();}
+}
+
 // Note: static objects only; excludes people; pos in building space
 bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t const &valid_area, cube_bvh_t const &bvh, bool in_attic, bool in_ext_basement,
-	point &cpos, vector3d &cnorm, colorRGBA &ccolor, rand_gen_t *rgen) const
+	building_colors_t const &bcolors, point &cpos, vector3d &cnorm, colorRGBA &ccolor, rand_gen_t *rgen) const
 {
 	if (!interior || is_rotated()) return 0; // these cases are not yet supported
 	float const extent(valid_area.get_max_dim_sz());
@@ -154,7 +162,7 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t
 			vector3d const normal(-tq.get_norm()); // negate because we're testing the inside of the roof
 			float t_tq(t);
 			if (!line_poly_intersect(p1, p2, tq.pts, tq.npts, normal, t_tq) || t_tq >= t) continue;
-			t = t_tq; cnorm = normal; hit = 1; ccolor = interior->get_attic_ceiling_color();
+			t = t_tq; cnorm = normal; hit = 1; ccolor = bcolors.attic_color;
 		}
 		if (hit) {p2  = p1 + (p2 - p1)*t; t = 1.0;} // clip p2 to t (minor optimization)
 	}
@@ -164,8 +172,8 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t
 	else if (ray_cast_exterior_walls(p1, p2, cnorm, t)) { // interior ray (common case) - find furthest exit point
 		p2  = p1 + (p2 - p1)*t; t = 1.0; // clip p2 to t (minor optimization)
 		hit = 1;
-		if (p2.z < ground_floor_z1) {ccolor = get_basement_wall_texture().get_avg_color();} // basement wall
-		else {ccolor = mat.wall_color.modulate_with(mat.wall_tex.get_avg_color());} // non-basement wall
+		if (p2.z < ground_floor_z1) {ccolor = bcolors.basement_wall_color;} // basement wall
+		else {ccolor = bcolors.wall_color;} // non-basement wall
 	}
 	else { // check for exterior rays (uncommon case)
 		bool hit(0);
@@ -180,7 +188,7 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t
 		}
 		if (hit) { // exterior hit (ray outside building) - don't need to check interior geometry
 			cpos   = p1 + (p2 - p1)*t;
-			ccolor = side_color.modulate_with(mat.side_tex.get_avg_color());
+			ccolor = bcolors.side_color;
 			return 1;
 		}
 	}
@@ -549,6 +557,8 @@ class building_indir_light_mgr_t {
 		unsigned NUM_PRI_SPLITS(is_window ? 4 : 16); // we're counting primary rays for windows, use fewer primary splits to reduce noise at the cost of increased time
 		max_eq(base_num_rays, NUM_PRI_SPLITS);
 		int const num_rays(base_num_rays/NUM_PRI_SPLITS);
+		building_colors_t bcolors;
+		b.set_building_colors(bcolors);
 		
 		// Note: dynamic scheduling is faster, and using blocks doesn't help
 #pragma omp parallel for schedule(dynamic) num_threads(num_rt_threads)
@@ -582,7 +592,7 @@ class building_indir_light_mgr_t {
 				if (light_radius == 0.0 || dist_xy_less_than(origin, light_center, light_radius)) break; // done/success
 			} // for N
 			init_cpos = origin; // init value
-			bool const hit(b.ray_cast_interior(origin, pri_dir, valid_area, bvh, in_attic, in_ext_basement, init_cpos, init_cnorm, ccolor, &rgen));
+			bool const hit(b.ray_cast_interior(origin, pri_dir, valid_area, bvh, in_attic, in_ext_basement, bcolors, init_cpos, init_cnorm, ccolor, &rgen));
 
 			// room lights already contribute direct lighting, so we skip this ray; however, windows don't, so we add their primary ray contribution
 			if (is_window && /*!is_skylight_dir*/!is_skylight && init_cpos != origin) {
@@ -602,7 +612,7 @@ class building_indir_light_mgr_t {
 
 				for (unsigned bounce = 1; bounce < MAX_RAY_BOUNCES; ++bounce) { // allow up to MAX_RAY_BOUNCES bounces
 					cpos = pos; // init value
-					bool const hit(b.ray_cast_interior(pos, dir, valid_area, bvh, in_attic, in_ext_basement, cpos, cnorm, ccolor, &rgen));
+					bool const hit(b.ray_cast_interior(pos, dir, valid_area, bvh, in_attic, in_ext_basement, bcolors, cpos, cnorm, ccolor, &rgen));
 
 					if (cpos != pos) { // accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
 						point const p1(pos*ray_scale + llc_shift), p2(cpos*ray_scale + llc_shift); // transform building space to global scene space
@@ -856,9 +866,11 @@ void building_t::create_building_volume_light_texture(unsigned bix, point const 
 bool building_t::ray_cast_camera_dir(point const &camera_bs, point &cpos, colorRGBA &ccolor) const { // unused - for debugging; excludes attic and extended basement
 	assert(!USE_BKG_THREAD); // not legal to call when running lighting in a background thread
 	building_indir_light_mgr.build_bvh(*this, camera_bs);
+	building_colors_t bcolors;
+	set_building_colors(bcolors);
 	vector3d cnorm; // unused
 	return ray_cast_interior(camera_bs, cview_dir, bcube, building_indir_light_mgr.get_bvh(), point_in_attic(camera_bs),
-		point_in_extended_basement_not_basement(camera_bs), cpos, cnorm, ccolor);
+		point_in_extended_basement_not_basement(camera_bs), bcolors, cpos, cnorm, ccolor);
 }
 
 // Note: target is building space camera

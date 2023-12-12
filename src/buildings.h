@@ -1417,6 +1417,10 @@ struct ext_step_t : public cube_t {
 		cube_t(c), dim(dim_), step_dir(sdir), wall_dir(wdir), at_door(door), is_base(base), at_ground(ag), enclosed(enc) {}
 };
 
+struct building_colors_t {
+	colorRGBA side_color, wall_color, basement_wall_color, attic_color;
+};
+
 struct building_t : public building_geom_t {
 
 	unsigned mat_ix=0;
@@ -1543,9 +1547,10 @@ struct building_t : public building_geom_t {
 	bool cube_in_attic(cube_t const &c) const;
 	bool check_point_xy_in_part(point const &pos) const;
 	bool player_can_see_outside() const;
+	void set_building_colors(building_colors_t &bcolors) const;
 	bool ray_cast_exterior_walls(point const &p1, point const &p2, vector3d &cnorm, float &t) const;
 	bool ray_cast_interior(point const &pos, vector3d const &dir, cube_t const &valid_area, cube_bvh_t const &bvh, bool in_attic, bool in_ext_basement,
-		point &cpos, vector3d &cnorm, colorRGBA &ccolor, rand_gen_t *rgen=nullptr) const;
+		building_colors_t const &bcolors, point &cpos, vector3d &cnorm, colorRGBA &ccolor, rand_gen_t *rgen=nullptr) const;
 	void create_building_volume_light_texture(unsigned bix, point const &target, unsigned &tid) const;
 	bool ray_cast_camera_dir(point const &camera_bs, point &cpos, colorRGBA &ccolor) const;
 	cube_t calc_parts_bcube() const;
