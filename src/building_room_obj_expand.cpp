@@ -476,6 +476,11 @@ unsigned building_room_geom_t::get_shelves_for_object(room_object_t const &c, cu
 	return num_shelves;
 }
 
+void set_spraypaint_color(room_object_t &obj, rand_gen_t &rgen, unsigned *color_ix=nullptr) {
+	obj.color  = spcan_colors[(color_ix ? (*color_ix)++ : rgen.rand()) % NUM_SPCAN_COLORS];
+	obj.obj_id = rgen.rand(); // used to select emissive color
+}
+
 void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vect_room_object_t &objects) {
 	room_object_t c(c_in);
 	c.flags |= RO_FLAG_WAS_EXP;
@@ -569,8 +574,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 
 			for (unsigned n = 0; n < num_spcans; ++n) {
 				gen_xy_pos_for_round_obj(C, S, spcan_radius, spcan_height, 1.5*spcan_radius, rgen);
-				C.color  = spcan_colors[rgen.rand() % NUM_SPCAN_COLORS]; // random color
-				C.obj_id = rgen.rand(); // used to select emissive color
+				set_spraypaint_color(C, rgen);
 				add_if_not_intersecting(C, objects, cubes);
 			}
 		}
@@ -941,9 +945,9 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	{
 		bool const dim(c.dim ^ bool(per_drawer_ix & 1)); // random orient, but consistent across the items in the drawer
 		float const length(rgen.rand_uniform(0.8, 0.9)*min(1.8f*drawer_dz, min(sz.x, sz.y))), diameter(min(0.8f*sz.z, 0.34f*length));
-		obj = room_object_t(drawer, TYPE_SPRAYCAN, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN, spcan_colors[rgen.rand() % NUM_SPCAN_COLORS]);
-		obj.z2()   = obj.z1() + diameter;
-		obj.obj_id = rgen.rand(); // used to select emissive color
+		obj = room_object_t(drawer, TYPE_SPRAYCAN, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN);
+		obj.z2() = obj.z1() + diameter;
+		set_spraypaint_color(obj, rgen);
 		set_rand_pos_for_sz(obj, dim, length, diameter, rgen);
 		break;
 	}
@@ -1099,8 +1103,7 @@ void building_t::add_box_contents(room_object_t const &box) {
 			
 			for (auto i = obj_bcubes.begin(); i != obj_bcubes.end(); ++i) {
 				objs.emplace_back(*i, TYPE_SPRAYCAN, room_id, 0, 0, flags, light_amt, SHAPE_CYLIN);
-				objs.back().color  = spcan_colors[(color_ix++) % NUM_SPCAN_COLORS];
-				objs.back().obj_id = rgen.rand(); // used to select emissive color
+				set_spraypaint_color(objs.back(), rgen, &color_ix);
 			}
 		}
 		else if (obj_type == 5) { // toilet paper rolls

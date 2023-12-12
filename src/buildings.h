@@ -68,6 +68,7 @@ colorRGBA const WALL_LAMP_COLOR(1.0, 0.9, 0.8);
 colorRGBA const WOOD_COLOR(0.9, 0.7, 0.5); // light brown, multiplies wood texture color; typical value to use
 colorRGBA const DUCT_COLOR(WHITE);
 colorRGBA const rat_color(GRAY); // make the rat's fur darker
+colorRGBA const candle_color(0.95, 0.9, 0.75, 1.0); // cream
 
 inline colorRGBA gen_box_color(rand_gen_t &rgen) {return colorRGBA(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0));} // add minor color variation
 

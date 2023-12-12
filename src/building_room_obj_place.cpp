@@ -736,7 +736,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 		i->flags |= RO_FLAG_ADJ_TOP;
 		cube_t bc;
 		gen_xy_pos_for_round_obj(bc, *i, radius, height, 1.2*radius, rgen);
-		colorRGBA const color(is_flashlight ? BLACK : colorRGBA(0.95, 0.9, 0.75, 1.0)); // candle is cream colored
+		colorRGBA const color(is_flashlight ? BLACK : candle_color);
 		objs.emplace_back(bc, (is_flashlight ? TYPE_FLASHLIGHT : TYPE_CANDLE), room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, color);
 		break; // only add one object; adding invalidates the iterator anyway
 	} // for i
