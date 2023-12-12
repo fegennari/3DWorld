@@ -485,7 +485,8 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 					else if (i->type == TYPE_PICTURE || i->type == TYPE_TPROLL || i->type == TYPE_BUTTON || i->type == TYPE_MWAVE || i->type == TYPE_STOVE ||
 						/*i->type == TYPE_FRIDGE ||*/ i->type == TYPE_TV || i->type == TYPE_MONITOR || i->type == TYPE_BLINDS || i->type == TYPE_SHOWER ||
 						i->type == TYPE_SWITCH || i->type == TYPE_BOOK || i->type == TYPE_BRK_PANEL || i->type == TYPE_BREAKER || i->type == TYPE_ATTIC_DOOR ||
-						i->type == TYPE_OFF_CHAIR || i->type == TYPE_PIZZA_BOX || i->type == TYPE_FALSE_DOOR) {keep = 1;}
+						i->type == TYPE_OFF_CHAIR || i->type == TYPE_FALSE_DOOR) {keep = 1;}
+					else if (i->type == TYPE_PIZZA_BOX && !i->was_expanded()) {keep = 1;} // can't open if on a shelf
 					else if (i->is_parked_car() && !i->is_broken()) {keep = 1;} // parked car with unbroken windows
 				}
 				else if (i->type == TYPE_LIGHT) {keep = 1;} // closet light

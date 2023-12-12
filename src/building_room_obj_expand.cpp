@@ -629,16 +629,17 @@ void building_room_geom_t::expand_shelves(room_object_t const &c) {
 void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects) {
 	cube_t back, top, sides[2], shelves[5];
 	unsigned const num_shelves(get_shelf_rack_cubes(c, back, top, sides, shelves));
+	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_WAS_EXP);
 	float const floor_spacing(c.dz()/SHELF_RACK_HEIGHT_FS);
 	float const top_shelf_z2(top.is_all_zeros() ? c.z2() : top.z1()); // bottom of the top, if present
 	rand_gen_t rgen;
 	vect_cube_t cubes; // for placed object overlap tests
 
 	for (unsigned dir = 0; dir < 2; ++dir) { // each shelf has two sides/aisles
-		unsigned const rack_id((c.obj_id << 1) + 1);
+		unsigned const rack_id((c.item_flags << 1) + dir);
 		rgen.set_state(123*c.obj_id, 207*rack_id+1);
 		rgen.rand_mix();
-		int const category(rgen.rand() % 7);
+		int const category(rgen.rand() % 7);//, sub_cat(rgen.rand());
 
 		for (unsigned n = 0; n < num_shelves; ++n) {
 			float const ztop(((n+1) == num_shelves) ? top_shelf_z2 : shelves[n+1].z1());
@@ -649,13 +650,43 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 			if (length < depth) continue; // shouldn't happen
 			cubes.clear();
 
-			if (1 || category == 0) { // boxed items
+			if (category == 0) { // boxed items
 				unsigned const num_boxes(rgen.rand() % 51); // 0-50
 				// the call below adds boxes randomly; should they be organized in more orderly rows/columns, or have a more consistent size?
-				add_boxes_to_space(c, objects, shelf, cubes, rgen, num_boxes, 0.375*depth, 0.3*height, 0.8*height, 0, RO_FLAG_NOCOLL); // allow_crates=0
+				add_boxes_to_space(c, objects, shelf, cubes, rgen, num_boxes, 0.375*depth, 0.3*height, 0.8*height, 0, flags); // allow_crates=0
 			}
 			else if (category == 1) { // food
-				// TYPE_BOTTLE, TYPE_PIZZA_BOX
+				if (n == 0) { // bottom shelf, add pizza
+					float const pbox_width(0.8*depth), pbox_height(0.1*pbox_width), pbox_space(0.2*pbox_width), pbox_stride(pbox_width + pbox_space);
+					unsigned const num_boxes(length/pbox_stride), max_stack_height(min(4U, unsigned(height/pbox_height))); // round down
+					if (num_boxes == 0 || max_stack_height == 0) continue; // none can fit?
+					float const spacing(length/num_boxes), stack_xy_rand(1.0*pbox_space/max_stack_height);
+					point pos;
+					pos[ c.dim] = shelf.get_center_dim(c.dim);
+					pos[!c.dim] = shelf.d[!c.dim][0] + 0.5*spacing;
+					cube_t pizza;
+					pizza.set_from_point(pos);
+					set_cube_zvals(pizza, shelf.z1(), shelf.z1()+pbox_height);
+					pizza.expand_by_xy(0.5*pbox_width);
+
+					for (unsigned n = 0; n < num_boxes; ++n) {
+						unsigned const stack_sz(rgen.rand() % max_stack_height);
+						cube_t pizza_stacked(pizza);
+
+						for (unsigned N = 0; N < stack_sz; ++N) {
+							objects.emplace_back(pizza_stacked, TYPE_PIZZA_BOX, c.room_id, c.dim, dir, flags, c.light_amt);
+							point xlate;
+							xlate.z = pbox_height; // stacked vertically
+							for (unsigned d = 0; d < 2; ++d) {xlate[d] = stack_xy_rand*rgen.signed_rand_float();}
+							pizza_stacked.translate(xlate);
+							if (pizza_stacked.intersects(back)) break; // leaning over, hit the back of the shelf, no more stacking
+						}
+						pizza.translate_dim(!c.dim, spacing);
+					} // for n
+				}
+				else { // add bottles
+					// TYPE_BOTTLE
+				}
 			}
 			else if (category == 2) { // houshold goods
 				// TYPE_PAINTCAN, TYPE_TPROLL, TYPE_SPRAYCAN, TYPE_VASE, TYPE_FLASHLIGHT, TYPE_CANDLE, TYPE_BOOK
