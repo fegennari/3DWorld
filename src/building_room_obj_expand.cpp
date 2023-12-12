@@ -684,8 +684,32 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 						pizza.translate_dim(!c.dim, spacing);
 					} // for n
 				}
-				else { // add bottles
-					// TYPE_BOTTLE
+				else { // add bottles; these aren't consumable by the player because that would be too powerful
+					float const bot_height(height*rgen.rand_uniform(0.7, 0.9)), bot_radius(min(0.25f*depth, bot_height*rgen.rand_uniform(0.12, 0.18)));
+					float const bot_space(0.25*bot_radius), bot_stride(2.0*bot_radius + bot_space);
+					unsigned const num_rows(length/bot_stride), num_cols(min((1U + (rgen.rand()%3)), unsigned(depth/bot_stride))); // round down; 1-3 columns
+					float const row_spacing(length/num_rows), col_spacing(depth/num_cols);
+					point pos;
+					pos[ c.dim] = shelf.d[ c.dim][0] + 0.5*col_spacing;
+					pos[!c.dim] = shelf.d[!c.dim][0] + 0.5*row_spacing;
+					cube_t bottle;
+					bottle.set_from_sphere(pos, bot_radius);
+					set_cube_zvals(bottle, shelf.z1(), shelf.z1()+bot_height);
+					unsigned rand_id(rgen.rand());
+					
+					for (unsigned row = 0; row < num_rows; ++row) {
+						cube_t row_bottle(bottle);
+
+						for (unsigned col = 0; col < num_cols; ++col) {
+							if (rgen.rand_float() < 0.75) { // 75% chance
+								objects.emplace_back(row_bottle, TYPE_BOTTLE, c.room_id, 0, 0, (flags | RO_FLAG_NO_CONS), c.light_amt, SHAPE_CYLIN);
+								objects.back().set_as_bottle(rand_id, 3, 1); // 0-3; excludes poison and medicine; should we include medicine?; no_empty=1
+							}
+							row_bottle.translate_dim(c.dim, col_spacing);
+						}
+						if (rgen.rand_float() < 0.1) {rand_id = rgen.rand();} // 10% chance to update bottle type
+						bottle.translate_dim(!c.dim, row_spacing);
+					} // for r
 				}
 			}
 			else if (category == 2) { // houshold goods
