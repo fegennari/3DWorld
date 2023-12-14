@@ -732,15 +732,15 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 			}
 			else if (category == 2) { // houshold goods
 				unsigned const num_sections(min(unsigned(0.75*length/depth), (3U + rgen.rand()&3))); // 3-6
-				float const section_width(length/num_sections);
+				float const section_width(length/num_sections), section_gap(section_width*rgen.rand_uniform(0.01, 0.05));
 				float section_offset(0.0);
 
 				for (unsigned s = 0; s < num_sections; ++s) {
 					float const lo_edge(shelf.d[!c.dim][0]);
-					cube_t section(shelf); // FIXME: add a gap between sections; also, the last section is wrong
-					section.d[!c.dim][0] = lo_edge +  s   *section_width + section_offset;
-					if (s+1 < num_sections) {section_offset = min(0.25f*section_width, (section_width - depth))*rgen.signed_rand_float();}
-					section.d[!c.dim][1] = lo_edge + (s+1)*section_width + section_offset;
+					cube_t section(shelf);
+					section.d[!c.dim][0] = lo_edge +  s   *section_width + section_offset + section_gap;
+					section_offset = ((s+1 == num_sections) ? 0.0 : min(0.25f*section_width, (section_width - depth))*rgen.signed_rand_float()); // no offset for last section
+					section.d[!c.dim][1] = lo_edge + (s+1)*section_width + section_offset - section_gap;
 					unsigned const type_ix(rgen.rand() % 7);
 
 					if (type_ix == 0) { // paint cans
