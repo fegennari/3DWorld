@@ -591,7 +591,10 @@ public:
 		bool const bladder_was_full(bladder >= 0.9);
 		float const value(get_obj_value(obj));
 		if (obj.type == TYPE_PAPER && value >= 500.0) {register_achievement("Top Secret Document");}
-		if (obj.type == TYPE_TCAN || obj.type == TYPE_TOILET || obj.type == TYPE_URINAL || (obj.type == TYPE_RAT && obj.is_broken())) {register_fly_attract(0);}
+		
+		if ((obj.type == TYPE_TCAN && !obj.was_expanded()) || obj.type == TYPE_TOILET || obj.type == TYPE_URINAL || (obj.type == TYPE_RAT && obj.is_broken())) {
+			register_fly_attract(0); // trahscans not on a shelf, toilets, urinals, and dead rats attract flies
+		}
 		damage_done += value;
 		colorRGBA text_color(GREEN);
 		std::ostringstream oss;

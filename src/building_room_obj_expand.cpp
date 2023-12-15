@@ -632,11 +632,11 @@ void building_room_geom_t::expand_shelves(room_object_t const &c) {
 }
 
 void add_rows_cols_of_vcylinders(room_object_t const &c, cube_t const &region, float radius, float height, float spacing_factor,
-	unsigned type, unsigned max_cols, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen)
+	unsigned type, unsigned max_cols, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen, unsigned inv_dim=0, unsigned inv_dir=0)
 {
 	float const length(region.get_sz_dim(!c.dim)), depth(region.get_sz_dim(c.dim));
 	float const space(spacing_factor*radius), stride(2.0*radius + space);
-	unsigned const num_rows(length/stride), num_cols(min((1U + (rgen.rand()%max_cols)), unsigned(depth/stride))); // round down
+	unsigned const num_rows(length/stride), num_cols(min((1U + (rgen.rand()%max_cols)), max(1U, unsigned(depth/stride)))); // round down
 	float const row_spacing(length/num_rows), col_spacing(depth/num_cols);
 	point pos;
 	pos[ c.dim] = region.d[ c.dim][0] + 0.5*col_spacing;
@@ -653,17 +653,42 @@ void add_rows_cols_of_vcylinders(room_object_t const &c, cube_t const &region, f
 
 		for (unsigned col = 0; col < num_cols; ++col) {
 			if (rgen.rand_float() < 0.75) { // 75% chance
-				room_object_t obj(row_obj, type, c.room_id, 0, 0, flags, c.light_amt, SHAPE_CYLIN);
+				room_object_t obj(row_obj, type, c.room_id, (c.dim ^ inv_dim), (c.dir ^ inv_dir), flags, c.light_amt, SHAPE_CYLIN);
 				if      (is_bottle              ) {obj.set_as_bottle(rand_id, 3, 1);} // 0-3; excludes poison and medicine; should we include medicine?; no_empty=1
 				else if (type == TYPE_VASE      ) {obj.obj_id = objects.size();}
 				else if (type == TYPE_SPRAYCAN  ) {set_spraypaint_color(obj, rgen);}
 				else if (type == TYPE_FLASHLIGHT) {obj.color = BLACK;}
 				else if (type == TYPE_CANDLE    ) {obj.color = candle_color;}
+				else if (type == TYPE_TCAN      ) {obj.color = tcan_colors[rgen.rand()%NUM_TCAN_COLORS];}
+				else if (type == TYPE_PAN       ) {obj.color = GRAY_BLACK;}
 				objects.push_back(obj);
 			}
 			row_obj.translate_dim(c.dim, col_spacing);
 		} // for col
 		if (is_bottle && rgen.rand_float() < 0.1) {rand_id = rgen.rand();} // 10% chance to update bottle type
+		objc.translate_dim(!c.dim, row_spacing);
+	} // for row
+}
+void add_rows_of_cubes(room_object_t const &c, cube_t const &region, float width, float depth, float height, float spacing_factor,
+	unsigned type, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen, unsigned inv_dim=0, unsigned inv_dir=0)
+{
+	float const length(region.get_sz_dim(!c.dim)), space(spacing_factor*width), stride(2.0*width + space);
+	unsigned const num_rows(length/stride); // round down
+	float const row_spacing(length/num_rows);
+	point pos;
+	pos[ c.dim] = region.d[ c.dim][0] + 0.5*region.get_sz_dim(c.dim);
+	pos[!c.dim] = region.d[!c.dim][0] + 0.5*row_spacing;
+	pos.z = region.z1();
+	cube_t objc(pos);
+	objc.expand_in_dim( c.dim, 0.5*depth);
+	objc.expand_in_dim(!c.dim, 0.5*width);
+
+	for (unsigned row = 0; row < num_rows; ++row) {
+		if (rgen.rand_float() < 0.75) { // 75% chance
+			room_object_t obj(objc, type, c.room_id, (c.dim ^ inv_dim), (c.dir ^ inv_dir), flags, c.light_amt);
+			// set color, etc. based on type
+			objects.push_back(obj);
+		}
 		objc.translate_dim(!c.dim, row_spacing);
 	} // for row
 }
@@ -680,6 +705,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 	for (unsigned dir = 0; dir < 2; ++dir) { // each shelf has two sides/aisles
 		unsigned const rack_id((c.item_flags << 1) + dir);
 		rgen.set_state(123*c.obj_id, 207*rack_id+1);
+		rgen.rand_mix();
 		rgen.rand_mix();
 		int const category(rgen.rand() % 5);
 
@@ -775,10 +801,54 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 						}
 					} // end household goods
 					else if (category == 3) { // kitchen
-						// TYPE_CUP, TYPE_PAN, TYPE_MWAVE, TYPE_TOASTER, TYPE_FIRE_EXT
+						unsigned const type_ix(rgen.rand() % 6);
+
+						if (type_ix == 0) { // cups; TODO: make models work here
+							//float const oheight(height*rgen.rand_uniform(0.4, 0.6)), radius(0.5f*height*get_radius_for_square_model(OBJ_MODEL_CUP));
+							//add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.5, TYPE_CUP, 3, flags, objects, rgen); // 1-3 columns
+						}
+						else if (type_ix == 1) { // pans
+							float const radius(depth*rgen.rand_uniform(0.3, 0.4)), oheight(radius*rgen.rand_uniform(0.4, 0.6));
+							section.expand_in_dim(!c.dim, -1.2*radius); // make room for handles
+							
+							if (section.get_sz_dim(!c.dim) > depth) { // add if large enough: 1 column, enough spacing for handle, random dir
+								add_rows_cols_of_vcylinders(c, section, radius, oheight, 1.25, TYPE_PAN, 1, flags, objects, rgen, 0, rgen.rand_bool());
+							}
+						}
+						else if (type_ix == 2) { // trashcans
+							unsigned const objs_start(objects.size());
+							float const oheight(height*rgen.rand_uniform(0.7, 0.9)), radius(oheight*rgen.rand_uniform(0.36, 0.6));
+							add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.2, TYPE_TCAN, 1, flags, objects, rgen); // 1 column
+							
+							for (auto i = objects.begin()+objs_start; i != objects.end(); ++i) {
+								if (rgen.rand_bool()) {i->shape = SHAPE_CUBE;} // 50% cylinders, 50% cubes
+							}
+						}
+						else if (type_ix == 3) { // microwaves
+							// TYPE_MWAVE
+						}
+						else if (type_ix == 4) { // toasters
+							// TYPE_TOASTER
+						}
+						else if (type_ix == 5) { // fire extinguishers
+							// TYPE_FIRE_EXT
+						}
 					}
 					else if (category == 4) { // electronics
-						// TYPE_COMPUTER, TYPE_LAPTOP, TYPE_MONITOR, TYPE_LAMP
+						unsigned const type_ix(rgen.rand() % 4);
+
+						if (type_ix == 0) { // computers
+							// TYPE_COMPUTER
+						}
+						else if (type_ix == 1) { // laptops
+							// TYPE_LAPTOP
+						}
+						else if (type_ix == 2) { // monitors
+							// TYPE_MONITOR
+						}
+						else if (type_ix == 3) { // lamps
+							// TYPE_LAMP
+						}
 					}
 					else if (category == 5) { // clothing
 						// TYPE_FOLD_SHIRT
