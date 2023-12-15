@@ -1587,10 +1587,8 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 				unsigned const burner_ix(rgen.rand() & 3); // 0-3
 				point &loc(locs[burner_ix]);
 				loc.z += delta_z;
-				cube_t burner(loc, loc);
-				burner.expand_by_xy(pan_radius);
-				burner.z2() += pan_height;
-				objs.emplace_back(burner, TYPE_PAN, room_id, stove.dim, stove.dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK);
+				cube_t const pan(get_cube_height_radius(loc, pan_radius, pan_height));
+				objs.emplace_back(pan, TYPE_PAN, room_id, stove.dim, stove.dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK);
 			}
 			placed_obj = 1;
 		}

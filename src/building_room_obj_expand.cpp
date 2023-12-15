@@ -15,6 +15,7 @@ vect_cube_t &get_temp_cubes();
 bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher);
 void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim);
 float get_med_cab_wall_thickness(room_object_t const &c);
+float get_radius_for_square_model(unsigned model_id);
 unsigned get_shelf_rack_cubes(room_object_t const &c, cube_t &back, cube_t &top, cube_t sides[2], cube_t shelves[5]);
 
 void resize_model_cube_xy(cube_t &cube, float dim_pos, float not_dim_pos, unsigned id, bool dim) {
@@ -640,15 +641,15 @@ void add_rows_cols_of_vcylinders(room_object_t const &c, cube_t const &region, f
 	point pos;
 	pos[ c.dim] = region.d[ c.dim][0] + 0.5*col_spacing;
 	pos[!c.dim] = region.d[!c.dim][0] + 0.5*row_spacing;
-	cube_t obj;
-	obj.set_from_sphere(pos, radius);
-	set_cube_zvals(obj, region.z1(), region.z1()+height);
+	pos.z = region.z1();
+	if (type == TYPE_PAN || type == TYPE_TCAN || type == TYPE_VASE) {pos.z += 0.005*c.dz();} // shift up slightly to prevent Z-fighting
+	cube_t objc(get_cube_height_radius(pos, radius, height));
 	bool const is_bottle(type == TYPE_BOTTLE);
 	unsigned rand_id(is_bottle ? rgen.rand() : 0);
 	if (is_bottle) {flags |= RO_FLAG_NO_CONS;} // not consumable
 
 	for (unsigned row = 0; row < num_rows; ++row) {
-		cube_t row_obj(obj);
+		cube_t row_obj(objc);
 
 		for (unsigned col = 0; col < num_cols; ++col) {
 			if (rgen.rand_float() < 0.75) { // 75% chance
@@ -663,7 +664,7 @@ void add_rows_cols_of_vcylinders(room_object_t const &c, cube_t const &region, f
 			row_obj.translate_dim(c.dim, col_spacing);
 		} // for col
 		if (is_bottle && rgen.rand_float() < 0.1) {rand_id = rgen.rand();} // 10% chance to update bottle type
-		obj.translate_dim(!c.dim, row_spacing);
+		objc.translate_dim(!c.dim, row_spacing);
 	} // for row
 }
 
