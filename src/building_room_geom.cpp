@@ -4238,8 +4238,8 @@ void building_room_geom_t::add_pan(room_object_t const &c) { // is_small=1
 	// add handle
 	float const diameter(c.get_sz_dim(!c.dim)), handle_radius(0.08*diameter), edge_pos(c.d[!c.dim][c.dir]);
 	cube_t handle;
-	handle.d[!c.dim][!c.dir] = edge_pos;
-	handle.d[!c.dim][ c.dir] = edge_pos + (c.dir ? 1.0 : -1.0)*0.6*diameter;
+	handle.d[!c.dim][!c.dir] = edge_pos - (c.dir ? 1.0 : -1.0)*0.02*diameter; // inner edge - shift slightly
+	handle.d[!c.dim][ c.dir] = edge_pos + (c.dir ? 1.0 : -1.0)*0.60*diameter; // outer edge
 	set_wall_width(handle, c.get_center_dim(c.dim), handle_radius, c.dim);
 	set_cube_zvals(handle, (c.z2() - 2.0*handle_radius), c.z2());
 	unsigned const base_start(mat.itri_verts.size());
