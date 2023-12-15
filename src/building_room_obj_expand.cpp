@@ -680,7 +680,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 		unsigned const rack_id((c.item_flags << 1) + dir);
 		rgen.set_state(123*c.obj_id, 207*rack_id+1);
 		rgen.rand_mix();
-		int const category(rgen.rand() % 7);
+		int const category(rgen.rand() % 5);
 
 		for (unsigned n = 0; n < num_shelves; ++n) {
 			float const ztop(((n+1) == num_shelves) ? top_shelf_z2 : shelves[n+1].z1());
@@ -729,8 +729,8 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 					float const bot_height(height*rgen.rand_uniform(0.7, 0.9)), bot_radius(min(0.25f*depth, bot_height*rgen.rand_uniform(0.12, 0.18)));
 					add_rows_cols_of_vcylinders(c, shelf, bot_radius, bot_height, 0.25, TYPE_BOTTLE, 3, flags, objects, rgen); // 1-3 columns
 				}
-			}
-			else if (category == 2) { // houshold goods
+			} // end food
+			else { // items grouped into sections
 				unsigned const num_sections(min(unsigned(0.75*length/depth), (3U + rgen.rand()&3))); // 3-6
 				float const section_width(length/num_sections), section_gap(section_width*rgen.rand_uniform(0.01, 0.05));
 				float section_offset(0.0);
@@ -741,48 +741,51 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 					section.d[!c.dim][0] = lo_edge +  s   *section_width + section_offset + section_gap;
 					section_offset = ((s+1 == num_sections) ? 0.0 : min(0.25f*section_width, (section_width - depth))*rgen.signed_rand_float()); // no offset for last section
 					section.d[!c.dim][1] = lo_edge + (s+1)*section_width + section_offset - section_gap;
-					unsigned const type_ix(rgen.rand() % 7);
 
-					if (type_ix == 0) { // paint cans
-						float const oheight(height*rgen.rand_uniform(0.6, 0.8)), radius(min(0.4f*depth, 0.44f*oheight));
-						add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.1, TYPE_PAINTCAN, 2, flags, objects, rgen); // 1-2 columns
+					if (category == 2) { // houshold goods
+						unsigned const type_ix(rgen.rand() % 6);
+
+						if (type_ix == 0) { // paint cans
+							float const oheight(height*rgen.rand_uniform(0.6, 0.8)), radius(min(0.4f*depth, 0.44f*oheight));
+							add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.1, TYPE_PAINTCAN, 2, flags, objects, rgen); // 1-2 columns
+						}
+						else if (type_ix == 1) { // toilet paper rolls
+							float const oheight(0.6*height), radius(min(0.4f*depth, 0.4f*oheight));
+							add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.2, TYPE_TPROLL, 3, flags, objects, rgen); // 1-3 columns
+						}
+						else if (type_ix == 2) { // spray paint cans
+							float const oheight(height*rgen.rand_uniform(0.7, 0.9)), radius(min(0.25f*depth, 0.17f*oheight));
+							add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.2, TYPE_SPRAYCAN, 3, flags, objects, rgen); // 1-3 columns
+						}
+						else if (type_ix == 3) { // vases
+							float const oheight(height*rgen.rand_uniform(0.6, 0.9)), radius(min(0.45f*depth, oheight*rgen.rand_uniform(0.3, 0.5)));
+							add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.4, TYPE_VASE, 2, flags, objects, rgen); // 1-2 columns
+						}
+						else if (type_ix == 4) { // flashlights
+							float const oheight(height*rgen.rand_uniform(0.6, 0.8)), radius(min(0.25f*depth, 0.2f*oheight*rgen.rand_uniform(0.8, 1.25)));
+							add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.25, TYPE_FLASHLIGHT, 3, flags, objects, rgen); // 1-3 columns
+						}
+						else if (type_ix == 5) { // candles
+							float const oheight(height*rgen.rand_uniform(0.5, 0.7)), radius(min(0.2f*depth, 0.16f*oheight*rgen.rand_uniform(0.8, 1.25)));
+							add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.25, TYPE_CANDLE, 3, flags, objects, rgen); // 1-3 columns
+						}
+						else if (type_ix == 6) { // books???
+							// TYPE_BOOK
+						}
+					} // end household goods
+					else if (category == 3) { // kitchen
+						// TYPE_CUP, TYPE_PAN, TYPE_MWAVE, TYPE_TOASTER, TYPE_FIRE_EXT
 					}
-					else if (type_ix == 1) { // toilet paper rolls
-						float const oheight(0.6*height), radius(min(0.4f*depth, 0.4f*oheight));
-						add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.2, TYPE_TPROLL, 3, flags, objects, rgen); // 1-3 columns
+					else if (category == 4) { // electronics
+						// TYPE_COMPUTER, TYPE_LAPTOP, TYPE_MONITOR, TYPE_LAMP
 					}
-					else if (type_ix == 2) { // spray paint cans
-						float const oheight(height*rgen.rand_uniform(0.7, 0.9)), radius(min(0.25f*depth, 0.17f*oheight));
-						add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.2, TYPE_SPRAYCAN, 3, flags, objects, rgen); // 1-3 columns
+					else if (category == 5) { // clothing
+						// TYPE_FOLD_SHIRT
 					}
-					else if (type_ix == 3) { // vases
-						float const oheight(height*rgen.rand_uniform(0.6, 0.9)), radius(min(0.45f*depth, oheight*rgen.rand_uniform(0.3, 0.5)));
-						add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.4, TYPE_VASE, 2, flags, objects, rgen); // 1-2 columns
-					}
-					else if (type_ix == 4) { // flashlights
-						float const oheight(height*rgen.rand_uniform(0.6, 0.8)), radius(min(0.25f*depth, 0.2f*oheight*rgen.rand_uniform(0.8, 1.25)));
-						add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.25, TYPE_FLASHLIGHT, 3, flags, objects, rgen); // 1-3 columns
-					}
-					else if (type_ix == 5) { // candles
-						float const oheight(height*rgen.rand_uniform(0.5, 0.7)), radius(min(0.2f*depth, 0.16f*oheight*rgen.rand_uniform(0.8, 1.25)));
-						add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.25, TYPE_CANDLE, 3, flags, objects, rgen); // 1-3 columns
-					}
-					else if (type_ix == 6) { // book???
-						// TYPE_BOOK
+					else if (category == 6) { // toys
+						// TYPE_LG_BALL, TYPE_TOY
 					}
 				} // for s
-			}
-			else if (category == 3) { // clothing
-				// TYPE_FOLD_SHIRT
-			}
-			else if (category == 4) { // kitchen
-				// TYPE_CUP, TYPE_PAN, TYPE_MWAVE, TYPE_TOASTER, TYPE_FIRE_EXT
-			}
-			else if (category == 5) { // toys
-				// TYPE_LG_BALL, TYPE_TOY
-			}
-			else if (category == 6) { // electronics
-				// TYPE_COMPUTER, TYPE_LAPTOP, TYPE_MONITOR, TYPE_LAMP
 			}
 			// TODO: new items: grocery items, appliances, etc.
 		} // for n
