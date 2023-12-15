@@ -2435,11 +2435,12 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 		aisle_width   = aisle_spacing - rack_width;
 		aisle_spacing = (width - aisle_width)/nrows;
 	}
-	float const rack_spacing((length - aisle_width)/nracks), rack_length(rack_spacing - aisle_width);
+	float const rack_spacing((length - aisle_width)/nracks), rack_length(rack_spacing - aisle_width), pillar_width(1.8*get_wall_thickness());
 	assert(rack_length > 0.0);
 	vect_room_object_t &objs(interior->room_geom->objs);
-	cube_t rack;
-	set_cube_zvals(rack, zval, zval+rack_height);
+	cube_t rack, pillar;
+	set_cube_zvals(rack,   zval, zval+rack_height);
+	set_cube_zvals(pillar, zval, zval+get_floor_ceil_gap());
 	unsigned const obj_id(rgen.rand()); // same style for each rack
 	unsigned rack_id(0);
 	
@@ -2448,11 +2449,13 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 		float const rack_lo(room.d[!dim][0] + aisle_width + n*aisle_spacing);
 		rack.d[!dim][0] = rack_lo;
 		rack.d[!dim][1] = rack_lo + rack_width;
+		set_wall_width(pillar, (rack_lo + 0.5*rack_width), 0.5*pillar_width, !dim); // centered on the rack
 
 		for (unsigned r = 0; r < nracks; ++r) {
 			float const start(room.d[dim][0] + aisle_width + r*rack_spacing);
 			rack.d[dim][0] = start;
 			rack.d[dim][1] = start + rack_length;
+			bool was_shortened(0);
 
 			for (unsigned n = 0; n < 5; ++n) { // try to trim ends to make it fit
 				cube_t cand(rack);
@@ -2464,12 +2467,17 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 				// and all exterior doors have aisle_spacing around them, so we only need to check for stairs and elevators
 				cube_t test_cube(cand);
 				test_cube.expand_by_xy(se_pad); // add extra padding
-				if (interior->is_blocked_by_stairs_or_elevator(test_cube)) continue; // blocked
+				if (interior->is_blocked_by_stairs_or_elevator(test_cube)) {was_shortened = 1; continue;} // blocked
 				objs.emplace_back(cand, TYPE_SHELFRACK, room_id, !dim, 0, 0, 1.0, SHAPE_CUBE, WHITE); // tot_light_amt=1.0
 				objs.back().obj_id     = obj_id; // common for all racks
 				objs.back().item_flags = rack_id++; // unique per rack
 				break; // done
 			} // for n
+			if (!was_shortened && r > 0) { // place a pillar at the end of the rack
+				pillar.d[dim][0] = start - pillar_width;
+				pillar.d[dim][1] = start;
+				interior->room_geom->objs.emplace_back(pillar, TYPE_PG_WALL, room_id, 0, 0); // interior is okay since pillars are hard to see up against shelf racks
+			}
 		} // for r
 	} // for n
 }
