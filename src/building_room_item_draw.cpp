@@ -1082,8 +1082,10 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building, point
 				add_clock(*i, 1); // add_dynamic=1
 				if (!play_clock_tick || (i->item_flags & 1)) continue; // skip for digital clocks
 				point const pos(i->get_cube_center());
+				if (fabs(pos.z - camera_bs.z) > 0.75*building.get_window_vspace()) continue; // different floors
 				float const dist(p2p_dist(camera_bs, pos));
 				if (dist > clock_sound_dist) continue;
+				if (!building.get_room(i->room_id).contains_pt(camera_bs)) continue; // only play ticking when the player and clock are in the same room (ignoring rotation)
 				gen_sound_thread_safe(SOUND_CLICK, (pos + xlate), 0.5*(1.0 - dist/clock_sound_dist));
 				continue;
 			}
