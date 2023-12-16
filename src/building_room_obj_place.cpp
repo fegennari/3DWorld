@@ -2478,6 +2478,8 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 			}
 		} // for r
 	} // for n
+	// TODO: really laggy, need better light/shadow culling
+	add_cameras_to_room(rgen, room, zval, room_id, 1.0); // tot_light_amt=1.0
 }
 
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius) {
@@ -2601,8 +2603,13 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 			} // for n
 		}
 	}
-	// add cameras at each end of the hallway
-	float const ceil_zval(zval + get_floor_ceil_gap()), doorway_width(get_doorway_width());
+	add_cameras_to_room(rgen, room, zval, room_id, tot_light_amt);
+}
+
+void building_t::add_cameras_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
+	// add cameras at each end of the room in the long dim (for hallways, etc.)
+	bool const long_dim(room.dx() < room.dy());
+	float const window_vspacing(get_window_vspace()), ceil_zval(zval + get_floor_ceil_gap()), doorway_width(get_doorway_width());
 	float const length(0.09*window_vspacing), width(0.4*length), height(0.5*length);
 	cube_t camera;
 	set_cube_zvals(camera, (ceil_zval - height), ceil_zval);
@@ -2615,7 +2622,7 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 		set_wall_width(camera, pos, 0.5*width, !long_dim);
 		camera.d[long_dim][!dir] = place_area.d[long_dim][!dir] + (dir ? 1.0 : -1.0)*0.25*length; // near the wall
 		camera.d[long_dim][ dir] = camera    .d[long_dim][!dir] + (dir ? 1.0 : -1.0)*     length; // extend away from the wall
-		objs.emplace_back(camera, TYPE_CAMERA, room_id, long_dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, WHITE);
+		interior->room_geom->objs.emplace_back(camera, TYPE_CAMERA, room_id, long_dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, WHITE);
 	}
 }
 
