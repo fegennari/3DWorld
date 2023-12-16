@@ -2174,6 +2174,7 @@ void get_bookcase_cubes(room_object_t const &c, cube_t &top, cube_t &middle, cub
 float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only, bool inside_only);
 void get_bench_cubes(room_object_t const &c, cube_t cubes[3]);
 void get_diving_board_cubes(room_object_t const &c, cube_t cubes[2]);
+unsigned get_shelf_rack_cubes(room_object_t const &c, cube_t &back, cube_t &top, cube_t sides[2], cube_t shelves[5]);
 cube_t get_open_closet_door(room_object_t const &obj);
 void get_cabinet_or_counter_doors(room_object_t const &c, vect_cube_t &doors, vect_cube_t &drawers);
 bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher);

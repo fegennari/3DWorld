@@ -25,7 +25,6 @@ void force_player_height(double height);
 bool is_player_model_female();
 void apply_building_fall_damage(float delta_z);
 bool get_sphere_poly_int_val(point const &sc, float sr, point const *const points, unsigned npoints, vector3d const &normal, float thickness, float &val, vector3d &cnorm);
-unsigned get_shelf_rack_cubes(room_object_t const &c, cube_t &back, cube_t &top, cube_t sides[2], cube_t shelves[5]);
 
 
 // assumes player is in this building; handles windows and exterior doors but not attics and basements

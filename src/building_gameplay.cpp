@@ -1085,6 +1085,7 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 		return 0;
 	}
 	room_object_t &obj(get_room_object_by_index(obj_id));
+	if (obj.type == TYPE_SHELFRACK && obj.obj_expanded()) return 0; // line hits back of shelf rack, not another object; no pickup
 
 	if (obj.type == TYPE_SHELVES || obj.type == TYPE_SHELFRACK || (obj.type == TYPE_WINE_RACK && !obj.obj_expanded())) { // shelves/racks or unexpanded wine rack
 		assert(!obj.obj_expanded()); // should not have been expanded
@@ -1259,7 +1260,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			cube_t const obj_bcube(get_true_obj_bcube(*i));
 			point p1c(at_pos), p2c(p2);
 			if (!do_line_clip(p1c, p2c, obj_bcube.d)) continue; // test ray intersection vs. bcube
-			float const dsq(p2p_dist(at_pos, p1c)); // use closest intersection point
+			float dsq(p2p_dist(at_pos, p1c)); // use closest intersection point
 			if (dmin_sq > 0.0 && dsq > dmin_sq)       continue; // not the closest
 			if (obj_bcube.contains_pt(at_pos))        continue; // skip when the player is standing inside a plant, etc.
 		
@@ -1305,10 +1306,19 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			if (i->type == TYPE_TABLE   && i->shape == SHAPE_CUBE)        continue; // can only pick up short (TV) tables and cylindrical tables
 			if (i->type == TYPE_BED     && i->taken_level > 2)            continue; // can only take pillow, sheets, and mattress - not the frame
 			if (i->type == TYPE_SHELVES   && i->obj_expanded())           continue; // shelves are   already expanded, can no longer select this object
-			if (i->type == TYPE_SHELFRACK && i->obj_expanded())           continue; // shelf rack is already expanded, can no longer select this object
 			if (i->type == TYPE_MIRROR  && i->is_open())                  continue; // can't take mirror/medicine cabinet until it's closed
 			if (i->type == TYPE_LIGHT   && !i->is_visible())              continue; // can't take light attached to a ceiling fan as a separate object
 			if (i->type == TYPE_MWAVE   && (i->flags & RO_FLAG_NONEMPTY)) continue; // can't take a microwave with something inside it
+
+			if (i->type == TYPE_SHELFRACK && i->obj_expanded()) { // shelf rack is already expanded, can no longer select this object
+				// check the back of the shelf rack to make sure the player can't take an object through it
+				cube_t back, top, sides[2], shelves[5];
+				get_shelf_rack_cubes(*i, back, top, sides, shelves);
+				point p1c2(p1c), p2c2(p2c);
+				if (!do_line_clip(p1c2, p2c2, back.d)) continue; // line not hitting back
+				dsq = p2p_dist(at_pos, p1c2); // use closest intersection point
+				if (dmin_sq > 0.0 && dsq > dmin_sq)    continue; // not the closest
+			}
 			if (obj_has_open_drawers(*i))                                 continue; // can't take if any drawers are open
 			if (object_has_something_on_it(*i,       obj_vect, objs_end)) continue; // can't remove a table, etc. that has something on it
 			if (object_has_something_on_it(*i, other_obj_vect, other_objs_end)) continue; // check the other one as well
