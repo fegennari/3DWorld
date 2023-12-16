@@ -1093,11 +1093,11 @@ void building_room_geom_t::add_mwave(room_object_t const &c) {
 		body.d[!c.dim][!open_dir] = panel.d[!c.dim][open_dir]; // the other half
 		// draw the sides/top/back
 		unsigned const front_mask(get_face_mask(c.dim, c.dir));
-		get_untextured_material(1).add_cube_to_verts_untextured(c, apply_light_color(c, GRAY), ~front_mask); // sides, shadows, is_small=0
+		rgeom_mat_t &untex_mat(get_untextured_material(1, 0, 1)); // shadowed, small
+		untex_mat.add_cube_to_verts_untextured(c, apply_light_color(c, GRAY), ~front_mask); // sides, shadows, is_small=1
 		// draw the interior
 		colorRGBA const interior_color(apply_light_color(c, WHITE));
 		float const wall_width(0.25*panel.get_sz_dim(!c.dim));
-		rgeom_mat_t &untex_mat(get_untextured_material(1)); // shadowed
 		add_interior_and_front_face(c, body, untex_mat, wall_width, front_mask, interior_color);
 		unsigned const door_front_mask(get_face_mask(!c.dim, open_dir));
 		colorRGBA const color(apply_light_color(c));
@@ -1111,13 +1111,13 @@ void building_room_geom_t::add_mwave(room_object_t const &c) {
 		// draw the open door
 		bool const panel_mx(open_dir), door_mx(panel_mx ^ c.dim);
 		tid_nm_pair_t tex(tid, -1, (c.dim ? 0.0 : tscale), (c.dim ? tscale : 0.0));
-		get_material(tex, 1, 0, 0).add_cube_to_verts(door, color, (door_mx ? door.get_urc() : door.get_llc()), door_front_mask, c.dim, door_mx, 0); // shadows, is_small=0
+		get_material(tex, 1, 0, 1).add_cube_to_verts(door, color, (door_mx ? door.get_urc() : door.get_llc()), door_front_mask, c.dim, door_mx, 0); // shadows, is_small=1
 		// draw the front panel, front face only
 		swap(tex.tscale_x, tex.tscale_y); // clipped in other dim
-		get_material(tex, 1, 0, 0).add_cube_to_verts(panel, color, (panel_mx ? c.get_urc() : c.get_llc()), front_mask, !c.dim, panel_mx, 0); // shadows, is_small=0
+		get_material(tex, 1, 0, 1).add_cube_to_verts(panel, color, (panel_mx ? c.get_urc() : c.get_llc()), front_mask, !c.dim, panel_mx, 0); // shadows, is_small=1
 	}
 	else { // closed
-		add_obj_with_front_texture(c, texture_name, GRAY, 0); // is_small=0
+		add_obj_with_front_texture(c, texture_name, GRAY, 1); // is_small=1
 	}
 }
 

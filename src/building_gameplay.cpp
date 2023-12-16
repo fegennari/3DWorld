@@ -99,7 +99,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_BOTTLE    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 1.0,   1.0,   "bottle", 1); // single use
 	bldg_obj_types[TYPE_WINE_RACK ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 3, 75.0,  40.0,  "wine rack");
 	bldg_obj_types[TYPE_COMPUTER  ] = bldg_obj_type_t(0, 1, 1, 1, 0, 0, 2, 500.0, 20.0,  "computer"); // rats can collide with computers
-	bldg_obj_types[TYPE_MWAVE     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 100.0, 50.0,  "microwave oven");
+	bldg_obj_types[TYPE_MWAVE     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 100.0, 50.0,  "microwave oven");
 	bldg_obj_types[TYPE_PAPER     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.0,   "sheet of paper"); // will have a random value that's often 0
 	bldg_obj_types[TYPE_BLINDS    ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1, 50.0,  7.0,   "window blinds");
 	bldg_obj_types[TYPE_PEN       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.10,  0.02,  "pen");

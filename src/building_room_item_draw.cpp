@@ -845,7 +845,6 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_CLOSET:  add_closet  (*i, wall_tex, 1, 0); break;
 		case TYPE_MIRROR:  add_mirror  (*i); break;
 		case TYPE_SHOWER:  add_shower  (*i, tscale); break;
-		case TYPE_MWAVE:   add_mwave   (*i); break;
 		case TYPE_BLINDS:  add_blinds  (*i); break;
 		case TYPE_FPLACE:  add_fireplace(*i, tscale); break;
 		case TYPE_FCABINET: add_filing_cabinet(*i, 1, 0); break; // lg
@@ -911,6 +910,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_BOX:       add_box      (c); break; // not small but only added to windowless rooms
 		case TYPE_SHELVES:   add_shelves  (c, tscale); break; // not small but only added to windowless rooms
 		case TYPE_SHELFRACK: add_rack(c, 0, 1); break; // add_rack=0, add_objs=1
+		case TYPE_MWAVE:     add_mwave    (c); break;
 		case TYPE_COMPUTER:  add_computer (c); break;
 		case TYPE_KEYBOARD:  add_keyboard (c); break;
 		case TYPE_WINE_RACK: add_wine_rack(c, 0, 1, tscale); break;
