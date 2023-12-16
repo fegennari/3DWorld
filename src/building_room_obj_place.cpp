@@ -2607,11 +2607,11 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 	cube_t camera;
 	set_cube_zvals(camera, (ceil_zval - height), ceil_zval);
 	cube_t const place_area(get_walkable_room_bounds(room));
-	bool const camera_side(rgen.rand_bool());
+	bool const camera_side(rgen.rand_bool()), is_ground_floor(zval >= ground_floor_z1 && zval < ground_floor_z1 + window_vspacing);
 
 	for (unsigned dir = 0; dir < 2; ++dir) {
 		float pos(room.get_center_dim(!long_dim));
-		if (floor_ix == 0) {pos += 0.65*doorway_width*((bool(dir) ^ camera_side) ? 1.0 : -1.0);} // place off to the side on ground floor to avoid blocking doorway and exit sign
+		if (is_ground_floor) {pos += 0.65*doorway_width*((bool(dir) ^ camera_side) ? 1.0 : -1.0);} // place off to the side on ground floor to avoid blocking doorway and exit sign
 		set_wall_width(camera, pos, 0.5*width, !long_dim);
 		camera.d[long_dim][!dir] = place_area.d[long_dim][!dir] + (dir ? 1.0 : -1.0)*0.25*length; // near the wall
 		camera.d[long_dim][ dir] = camera    .d[long_dim][!dir] + (dir ? 1.0 : -1.0)*     length; // extend away from the wall

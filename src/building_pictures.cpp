@@ -175,10 +175,18 @@ public:
 				lens_pt += rot_pt;
 				cameras.emplace_back(lens_pt, camera_dir, (i - objs.begin()));
 				room_t const &room(b.get_room(i->room_id));
-				unsigned const floor_ix(room.get_floor_containing_zval(i->z1(), b.get_window_vspace()) + 1); // starts from 1
+				unsigned const floor_ix(room.get_floor_containing_zval(i->z1(), b.get_window_vspace()));
 				std::string const dir_strs[4] = {"E", "W", "N", "S"};
+				std::string const &dir_str(dir_strs[i->get_orient()]);
+				std::string const &room_str(room_names[room.get_room_type(floor_ix)]);
 				std::ostringstream oss;
-				oss << "Hall " << floor_ix << " " << dir_strs[i->get_orient()]; // all cameras are in hallways; dir is opposite the hallway end
+				
+				if (room_str == "Hallway") { // shorten hallway => hall and add floor number
+					oss << "Hall " << (floor_ix+1) << " " << dir_str;
+				}
+				else {
+					oss << room_str << " " << dir_str; // floor starts from 1; dir is opposite the room end
+				}
 				cameras.back().tag = oss.str();
 			}
 			else if (i->type == TYPE_MONITOR && room.contains_cube(*i)) { // register monitor
