@@ -155,10 +155,10 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 		if (rgen.rand_bool()) { // maybe add a lamp in the closet
 			try_add_lamp(interior, window_vspacing, c.room_id, flags, c.light_amt, cubes, objects, rgen);
 		}
-		if (rgen.rand_bool()) { // maybe add a computer in the closet
+		if (rgen.rand_bool()) { // maybe add an old computer in the closet
 			float const height(0.21*window_vspacing*rgen.rand_uniform(1.0, 1.2)), cheight(0.75*height), cwidth(0.44*cheight), cdepth(0.9*cheight);
 			sz[c.dim] = 0.5*cdepth; sz[!c.dim] = 0.5*cwidth; sz.z = cheight;
-			add_obj_to_closet(c, interior, objects, cubes, rgen, sz, TYPE_COMPUTER, flags);
+			add_obj_to_closet(c, interior, objects, cubes, rgen, sz, TYPE_COMPUTER, (flags | RO_FLAG_BROKEN));
 		}
 		if (rgen.rand_bool()) { // maybe add a keyboard in the closet
 			float const kbd_hwidth(0.12*window_vspacing), kbd_depth(0.6*kbd_hwidth), kbd_height(0.06*kbd_hwidth);
@@ -511,14 +511,16 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 
 		if (2.1*sz.x < c_sz.x && 2.1*sz.y < c_sz.y && (top_shelf || cheight < shelf_clearance)) { // if it fits in all dims
 			unsigned const num_comps(rgen.rand() % (is_house ? 3 : 6)); // 0-5
-			C.dim   = c.dim; C.dir = !c.dir; // reset dim, flip dir
-			C.type  = TYPE_COMPUTER;
-			C.shape = SHAPE_CUBE;
+			C.dim    = c.dim; C.dir = !c.dir; // reset dim, flip dir
+			C.type   = TYPE_COMPUTER;
+			C.shape  = SHAPE_CUBE;
+			C.flags |= RO_FLAG_BROKEN; // flag as old
 
 			for (unsigned n = 0; n < num_comps; ++n) {
 				gen_xy_pos_for_cube_obj(C, S, sz, cheight, rgen);
 				add_if_not_intersecting(C, objects, cubes);
 			}
+			C.flags &= ~RO_FLAG_BROKEN; // unset old flag
 		}
 		// add keyboards
 		float const kbd_hwidth(0.7*0.5*1.1*2.0*h_val), kbd_depth(0.6*kbd_hwidth), kbd_height(0.06*kbd_hwidth);

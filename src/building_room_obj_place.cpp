@@ -2233,7 +2233,7 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 		bool placed(0);
 
 		for (unsigned d = 0; d < 2 && !placed; ++d) {
-			bool const dir(d ^ pref_dir);
+			bool const dir(bool(d) ^ pref_dir);
 			room_object_t bs2(bs);
 			bs2.translate_dim(!bs.dim, (dir ? 1.0 : -1.0)*translate_dist);
 			if (!place_area.contains_cube_xy(bs2)) continue;

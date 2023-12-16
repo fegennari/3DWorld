@@ -487,7 +487,7 @@ unsigned const RO_FLAG_IN_ATTIC  = 0x020000;
 unsigned const RO_FLAG_HAS_EXTRA = 0x040000; // used for counter backsplash, exterior wall trim, desks with computer monitors and keyboards, and books on glass tables
 unsigned const RO_FLAG_EXTERIOR  = 0x080000; // for signs, window trim, etc.
 unsigned const RO_FLAG_EXPANDED  = 0x100000; // for shelves, closets, boxes, and mirrors
-unsigned const RO_FLAG_WAS_EXP   = 0x200000; // for objects in/on shelves, closets, and drawers, cabinets, and books
+unsigned const RO_FLAG_WAS_EXP   = 0x200000; // for objects in/on shelves, closets, drawers, cabinets, shelfracks, and books
 unsigned const RO_FLAG_ROTATING  = 0x400000; // for office chairs and clothes on hangers
 unsigned const RO_FLAG_IN_CLOSET = 0x800000; // for closet lights
 unsigned const RO_FLAG_NONEMPTY  = 0x040000; // for microwaves, aliased with RO_FLAG_HAS_EXTRA
@@ -502,7 +502,7 @@ unsigned const RO_FLAG_USED     = 0x10000000; // used by the player (spraypaint,
 unsigned const RO_FLAG_IN_ELEV  = 0x20000000; // for elevator lights, buttons, and flooring
 unsigned const RO_FLAG_BACKROOM = 0x20000000; // in backrooms, for walls; aliased with RO_FLAG_IN_ELEV and RO_FLAG_IN_POOL
 unsigned const RO_FLAG_IN_POOL  = 0x20000000; // aliased with RO_FLAG_IN_ELEV and RO_FLAG_BACKROOM
-unsigned const RO_FLAG_BROKEN   = 0x40000000; // for TVs, monitors, and flickering lights, maybe can use for windows
+unsigned const RO_FLAG_BROKEN   = 0x40000000; // for TVs, monitors, flickering lights, and ond computers; maybe can use for windows
 unsigned const RO_FLAG_MOVED    = 0x80000000; // for player push/pull
 
 // reflection pass flags

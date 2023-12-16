@@ -248,7 +248,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		if (obj.taken_level < 4) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 0.5, 0.025, "toy ring");}
 		// else take the toy base
 	}
-	if (obj.type == TYPE_COMPUTER && obj.was_expanded()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 100.0, 20.0, "old computer");}
+	if (obj.type == TYPE_COMPUTER && obj.is_broken   ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 100.0, 20.0, "old computer");}
 	if (obj.type == TYPE_BOX      && obj.is_open     ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,   0.0, 0.05, "opened box"  );}
 	if (obj.type == TYPE_CRATE    && obj.is_open     ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,   2.0, 0.5,  "opened crate");}
 	if (obj.type == TYPE_TV       && obj.is_broken   ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 1, 1,  20.0, 70.0, "broken TV"   );}
