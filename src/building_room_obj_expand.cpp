@@ -633,7 +633,7 @@ void building_room_geom_t::expand_shelves(room_object_t const &c) {
 }
 
 void add_rows_cols_of_vcylinders(room_object_t const &c, cube_t const &region, float radius, float height, float spacing_factor,
-	unsigned type, unsigned max_cols, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen, unsigned inv_dim=0, unsigned inv_dir=0)
+	unsigned type, unsigned max_cols, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen, bool dir=0, bool inv_dim=0)
 {
 	float const length(region.get_sz_dim(!c.dim)), depth(region.get_sz_dim(c.dim));
 	float const space(spacing_factor*radius), stride(2.0*radius + space);
@@ -654,9 +654,9 @@ void add_rows_cols_of_vcylinders(room_object_t const &c, cube_t const &region, f
 
 		for (unsigned col = 0; col < num_cols; ++col) {
 			if (rgen.rand_float() < 0.75) { // 75% chance
-				room_object_t obj(row_obj, type, c.room_id, (c.dim ^ inv_dim), (c.dir ^ inv_dir), flags, c.light_amt, SHAPE_CYLIN);
+				room_object_t obj(row_obj, type, c.room_id, (c.dim ^ inv_dim), dir, flags, c.light_amt, SHAPE_CYLIN);
 				if      (is_bottle              ) {obj.set_as_bottle(rand_id, 3, 1);} // 0-3; excludes poison and medicine; should we include medicine?; no_empty=1
-				else if (type == TYPE_VASE      ) {obj.obj_id = objects.size();}
+				else if (type == TYPE_VASE      ) {obj.obj_id = rgen.rand();} // randomize the vase
 				else if (type == TYPE_SPRAYCAN  ) {set_spraypaint_color(obj, rgen);}
 				else if (type == TYPE_FLASHLIGHT) {obj.color = BLACK;}
 				else if (type == TYPE_CANDLE    ) {obj.color = candle_color;}
@@ -671,9 +671,9 @@ void add_rows_cols_of_vcylinders(room_object_t const &c, cube_t const &region, f
 	} // for row
 }
 void add_rows_of_cubes(room_object_t const &c, cube_t const &region, float width, float depth, float height, float spacing_factor,
-	unsigned type, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen, unsigned inv_dim=0, unsigned inv_dir=0)
+	unsigned type, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen, bool dir=0, bool inv_dim=0)
 {
-	float const length(region.get_sz_dim(!c.dim)), space(spacing_factor*width), stride(2.0*width + space);
+	float const length(region.get_sz_dim(!c.dim)), space(spacing_factor*width), stride(width + space);
 	unsigned const num_rows(length/stride); // round down
 	float const row_spacing(length/num_rows);
 	point pos;
@@ -681,12 +681,13 @@ void add_rows_of_cubes(room_object_t const &c, cube_t const &region, float width
 	pos[!c.dim] = region.d[!c.dim][0] + 0.5*row_spacing;
 	pos.z = region.z1();
 	cube_t objc(pos);
+	objc.z2() += height;
 	objc.expand_in_dim( c.dim, 0.5*depth);
 	objc.expand_in_dim(!c.dim, 0.5*width);
 
 	for (unsigned row = 0; row < num_rows; ++row) {
 		if (rgen.rand_float() < 0.75) { // 75% chance
-			room_object_t obj(objc, type, c.room_id, (c.dim ^ inv_dim), (c.dir ^ inv_dir), flags, c.light_amt);
+			room_object_t obj(objc, type, c.room_id, (c.dim ^ inv_dim), dir, flags, c.light_amt);
 			// set color, etc. based on type
 			objects.push_back(obj);
 		}
@@ -813,7 +814,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 							section.expand_in_dim(!c.dim, -1.2*radius); // make room for handles
 							
 							if (section.get_sz_dim(!c.dim) > depth) { // add if large enough: 1 column, enough spacing for handle, random dir
-								add_rows_cols_of_vcylinders(c, section, radius, oheight, 1.25, TYPE_PAN, 1, flags, objects, rgen, 0, rgen.rand_bool());
+								add_rows_cols_of_vcylinders(c, section, radius, oheight, 1.25, TYPE_PAN, 1, flags, objects, rgen, rgen.rand_bool());
 							}
 						}
 						else if (type_ix == 2) { // trashcans
@@ -826,7 +827,8 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 							}
 						}
 						else if (type_ix == 3) { // microwaves
-							// TYPE_MWAVE
+							float const mheight(height*rgen.rand_uniform(0.9, 0.95)), mwidth(1.7*mheight), mdepth(1.2*mheight); // fixed AR=1.7 to match the texture
+							add_rows_of_cubes(c, section, mwidth, mdepth, mheight, 0.1, TYPE_MWAVE, (flags | RO_FLAG_NO_POWER), objects, rgen, dir);
 						}
 						else if (type_ix == 4) { // toasters
 							// TYPE_TOASTER
@@ -839,10 +841,12 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 						unsigned const type_ix(rgen.rand() % 4);
 
 						if (type_ix == 0) { // computers
-							// TYPE_COMPUTER
+							float const cheight(height*rgen.rand_uniform(0.9, 0.95)), cwidth(0.44*cheight), cdepth(0.9*cheight); // fixed AR=0.44 to match the texture
+							add_rows_of_cubes(c, section, cwidth, cdepth, cheight, 0.35, TYPE_COMPUTER, (flags | RO_FLAG_NO_POWER), objects, rgen, dir);
 						}
 						else if (type_ix == 1) { // laptops
-							// TYPE_LAPTOP
+							float const lwidth(depth*rgen.rand_uniform(0.7, 0.75)), ldepth(0.7*lwidth), lheight(0.06*lwidth);
+							add_rows_of_cubes(c, section, lwidth, ldepth, lheight, 0.15, TYPE_LAPTOP, flags, objects, rgen, dir);
 						}
 						else if (type_ix == 2) { // monitors
 							// TYPE_MONITOR
