@@ -697,7 +697,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 	cube_t back, top, sides[2], shelves[5];
 	unsigned const num_shelves(get_shelf_rack_cubes(c, back, top, sides, shelves));
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_WAS_EXP);
-	float const floor_spacing(c.dz()/SHELF_RACK_HEIGHT_FS);
+	//float const floor_spacing(c.dz()/SHELF_RACK_HEIGHT_FS);
 	float const top_shelf_z2(top.is_all_zeros() ? c.z2() : top.z1()); // bottom of the top, if present
 	rand_gen_t rgen;
 	vect_cube_t cubes; // for placed object overlap tests
@@ -758,7 +758,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 				}
 			} // end food
 			else { // items grouped into sections
-				unsigned const num_sections(min(unsigned(0.75*length/depth), (3U + rgen.rand()&3))); // 3-6
+				unsigned const num_sections(min(unsigned(0.75*length/depth), (3U + (rgen.rand()&3)))); // 3-6
 				float const section_width(length/num_sections), section_gap(section_width*rgen.rand_uniform(0.01, 0.05));
 				float section_offset(0.0);
 

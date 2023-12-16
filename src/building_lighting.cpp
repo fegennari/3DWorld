@@ -152,7 +152,6 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t
 	clip_cube.expand_by(0.01*extent); // expand slightly so that collisions with objects on the edge are still considered interior
 	point p1(pos), p2(pos + dir*(2.0*extent));
 	if (!do_line_clip(p1, p2, clip_cube.d)) return 0; // ray does not intersect clip cube
-	building_mat_t const &mat(get_material());
 	float t(1.0); // start at p2
 	bool hit(0);
 	cpos = p2; // use far clip point for clip cube if there is no hit
