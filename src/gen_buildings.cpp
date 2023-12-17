@@ -3249,7 +3249,8 @@ public:
 							defer_ped_draw_vars.assign(&b, *i, bi->ix);
 						}
 						else {gen_and_draw_people_in_building(ped_draw_vars_t(b, oc, s, xlate, bi->ix, 0, reflection_pass));} // draw people in this building
-						if (b.has_cars_to_draw(player_in_building_bcube)) {buildings_with_cars.push_back(&b);}
+						// there currently shouldn't be any parked cars visible in mirrors or security cameras, so skip them in the reflection pass
+						if (!reflection_pass && b.has_cars_to_draw(player_in_building_bcube)) {buildings_with_cars.push_back(&b);}
 						
 						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
 						if (!camera_near_building && !ext_basement_conn_visible) { // camera not near building or ext basement conn
