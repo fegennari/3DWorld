@@ -53,7 +53,7 @@ bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room
 
 float get_radius_for_square_model(unsigned model_id) {
 	vector3d const chair_sz(building_obj_model_loader.get_model_world_space_size(model_id));
-	return 0.5f*(chair_sz.x + chair_sz.y)/chair_sz.z; // assume square and take average of xsize and ysize
+	return 0.5f*0.5f*(chair_sz.x + chair_sz.y)/chair_sz.z; // assume square and take average of xsize and ysize
 }
 
 bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
@@ -65,7 +65,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 	point chair_pos(place_pos); // same starting center and z1
 
 	if (office_chair_model) {
-		chair_hwidth = 0.5f*chair_height*get_radius_for_square_model(OBJ_MODEL_OFFICE_CHAIR);
+		chair_hwidth = chair_height*get_radius_for_square_model(OBJ_MODEL_OFFICE_CHAIR);
 		min_push_out = 0.5;
 		push_out     = min_push_out + rgen.rand_uniform(0.0, 0.6); // pushed out a bit so that the arms don't intersect the table top, but can push out more
 	}
@@ -455,7 +455,7 @@ bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, flo
 
 	if (has_office_chair) {
 		chair_height = 0.425*floor_spacing;
-		chair_radius = 0.5f*chair_height*get_radius_for_square_model(OBJ_MODEL_OFFICE_CHAIR);
+		chair_radius = chair_height*get_radius_for_square_model(OBJ_MODEL_OFFICE_CHAIR);
 	}
 	for (unsigned n = 0; n < num_cubes; ++n) {
 		float const hi_pos(lo_pos + cube_width);
@@ -1910,7 +1910,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 
 	// add a random office chair if there's space
 	if (!is_house && min(crate_bounds.dx(), crate_bounds.dy()) > 1.2*window_vspacing && building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR)) {
-		float const chair_height(0.425*window_vspacing), chair_radius(0.5f*chair_height*get_radius_for_square_model(OBJ_MODEL_OFFICE_CHAIR));
+		float const chair_height(0.425*window_vspacing), chair_radius(chair_height*get_radius_for_square_model(OBJ_MODEL_OFFICE_CHAIR));
 		point const pos(gen_xy_pos_in_area(crate_bounds, chair_radius, rgen, zval));
 		cube_t chair(get_cube_height_radius(pos, chair_radius, chair_height));
 		
@@ -2000,7 +2000,7 @@ void building_t::add_floor_clutter_objs(rand_gen_t rgen, room_t const &room, flo
 		float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 		cube_t place_area(get_walkable_room_bounds(room));
 		place_area.expand_by(-1.0*wall_thickness); // add some extra padding
-		float const height(0.11*window_vspacing), radius(0.5f*height*(use_model ? get_radius_for_square_model(OBJ_MODEL_TOY) : 0.67f));
+		float const height(0.11*window_vspacing), radius(height*(use_model ? get_radius_for_square_model(OBJ_MODEL_TOY) : 0.5f*0.67f));
 
 		if (radius < 0.1*min(place_area.dx(), place_area.dy())) {
 			point const pos(gen_xy_pos_in_area(place_area, radius, rgen, zval));
@@ -2544,7 +2544,7 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 					if (interior->is_blocked_by_stairs_or_elevator(desk)) continue; // bad location, try a new one
 
 					if (building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR)) {
-						float const chair_height(0.425*window_vspacing), chair_radius(0.5f*chair_height*get_radius_for_square_model(OBJ_MODEL_OFFICE_CHAIR));
+						float const chair_height(0.425*window_vspacing), chair_radius(chair_height*get_radius_for_square_model(OBJ_MODEL_OFFICE_CHAIR));
 						point pos;
 						pos.z = zval;
 						pos[!long_dim] = centerline;
@@ -2903,7 +2903,7 @@ bool building_t::place_plate_on_obj(rand_gen_t &rgen, cube_t const &place_on, un
 
 bool building_t::place_cup_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid) {
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_CUP)) return 0;
-	float const height(0.06*get_window_vspace()), radius(0.5f*height*get_radius_for_square_model(OBJ_MODEL_CUP)); // almost square
+	float const height(0.06*get_window_vspace()), radius(height*get_radius_for_square_model(OBJ_MODEL_CUP)); // almost square
 	if (min(place_on.dx(), place_on.dy()) < 2.5*radius) return 0; // surface is too small to place this cup
 	cube_t const cup(place_cylin_object(rgen, place_on, radius, height, 1.2*radius));
 	if (has_bcube_int(cup, avoid)) return 0; // only make one attempt
