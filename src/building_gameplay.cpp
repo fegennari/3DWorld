@@ -1085,10 +1085,25 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 		return 0;
 	}
 	room_object_t &obj(get_room_object_by_index(obj_id));
-	if (obj.type == TYPE_SHELFRACK && obj.obj_expanded()) return 0; // line hits back of shelf rack, not another object; no pickup
+	bool const is_shelfrack(obj.type == TYPE_SHELFRACK);
+	if (is_shelfrack && obj.obj_expanded()) return 0; // line hits back of shelf rack, not another object; no pickup
 
-	if (obj.type == TYPE_SHELVES || obj.type == TYPE_SHELFRACK || (obj.type == TYPE_WINE_RACK && !obj.obj_expanded())) { // shelves/racks or unexpanded wine rack
+	if (obj.type == TYPE_SHELVES || is_shelfrack || (obj.type == TYPE_WINE_RACK && !obj.obj_expanded())) { // shelves/racks or unexpanded wine rack
 		assert(!obj.obj_expanded()); // should not have been expanded
+
+		if (is_shelfrack && !do_room_obj_pickup) {
+			// player has not used the pickup key; since expanding a shelf rack is expensive, just get the object list for selection;
+			// but this also means we can't open boxes and microwaves until we take an object from this shelfrack and expand it for real
+			static vect_room_object_t temp_objs;
+			temp_objs.clear();
+			get_shelfrack_objects(obj, temp_objs);
+			temp_objs.swap(expanded_objs); // use our temp objects
+			obj.flags |=  RO_FLAG_EXPANDED; // temporarily mark expanded to avoid infinite recursion and enable the blocked-by-back-of-shelf logic above
+			player_pickup_object(building, at_pos, in_dir);
+			obj.flags &= ~RO_FLAG_EXPANDED;
+			temp_objs.swap(expanded_objs); // back to regular expanded objects
+			return 0; // object not actually picked up; no small geom invalidation (which is the point of this optimization)
+		}
 		expand_object(obj, building);
 		bool const picked_up(player_pickup_object(building, at_pos, in_dir)); // call recursively on contents
 		// if we picked up an object, assume the VBOs have already been updated; otherwise we need to update them to expand this object
