@@ -1044,7 +1044,7 @@ void show_icon_image(string const &fn, float xsize, float ysize, float xpos=0.0)
 	float const ar(float(window_width)/float(window_height)), s(10.0*DEF_NEAR_CLIP), quad_sz_x(0.025*s*xsize), quad_sz_y(0.025*s*ysize);
 	quad_batch_draw qbd;
 	qbd.add_quad_dirs(point((0.52 - 0.05*xpos)*s*ar, 0.52*s, -s), quad_sz_x*plus_x, quad_sz_y*plus_y, WHITE); // top right
-	draw_qbd_with_textured_shader(qbd, get_texture_by_name(fn));
+	draw_qbd_with_textured_shader(qbd, get_texture_by_name(fn, 0, 0, 0)); // wrap_mir=0 (clamp)
 }
 void show_key_icon       () {show_icon_image("icons/key.png",        1.0, 0.4, 0.0);} // rightmost slot
 void show_flashlight_icon() {show_icon_image("icons/flashlight.png", 1.0, 1.0, 1.0);} // one slot to the left

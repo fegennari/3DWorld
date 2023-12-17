@@ -1959,7 +1959,7 @@ string const icon_fns[NUM_ICONS] = {"plus", "shield", "fist", "alcohol", "toilet
 int get_icon_tid(unsigned icon_id) {
 	assert(icon_id < NUM_ICONS);
 	string const fn("icons/" + icon_fns[icon_id] + ".png"); // all 128x128 PNGs
-	return get_texture_by_name(fn);
+	return get_texture_by_name(fn, 0, 0, 0); // wrap_mir=0 (clamp)
 }
 void draw_icon(shader_t &s, unsigned icon_id, float x1, float x2, float y1, float y2, float zval) {
 	s.set_cur_color(WHITE);
