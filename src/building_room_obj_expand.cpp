@@ -698,7 +698,7 @@ void add_rows_of_cubes(room_object_t const &c, cube_t const &region, float width
 void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects) {
 	cube_t back, top, sides[2], shelves[5];
 	unsigned const num_shelves(get_shelf_rack_cubes(c, back, top, sides, shelves));
-	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_WAS_EXP);
+	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_WAS_EXP | RO_FLAG_ON_SRACK);
 	//float const floor_spacing(c.dz()/SHELF_RACK_HEIGHT_FS);
 	float const top_shelf_z2(top.is_all_zeros() ? c.z2() : top.z1()); // bottom of the top, if present
 	rand_gen_t rgen;
@@ -756,7 +756,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 				}
 				else { // add bottles; these aren't consumable by the player because that would be too powerful
 					float const bot_height(height*rgen.rand_uniform(0.7, 0.9)), bot_radius(min(0.25f*depth, bot_height*rgen.rand_uniform(0.12, 0.18)));
-					add_rows_cols_of_vcylinders(c, shelf, bot_radius, bot_height, 0.25, TYPE_BOTTLE, 3, flags, objects, rgen); // 1-3 columns
+					add_rows_cols_of_vcylinders(c, shelf, bot_radius, bot_height, 0.25, TYPE_BOTTLE, 2, flags, objects, rgen); // 1-2 columns
 				}
 			} // end food
 			else { // items grouped into sections

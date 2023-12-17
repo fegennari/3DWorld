@@ -489,7 +489,8 @@ unsigned const RO_FLAG_EXTERIOR  = 0x080000; // for signs, window trim, etc.
 unsigned const RO_FLAG_EXPANDED  = 0x100000; // for shelves, closets, boxes, and mirrors
 unsigned const RO_FLAG_WAS_EXP   = 0x200000; // for objects in/on shelves, closets, drawers, cabinets, shelfracks, and books
 unsigned const RO_FLAG_ROTATING  = 0x400000; // for office chairs and clothes on hangers
-unsigned const RO_FLAG_IN_CLOSET = 0x800000; // for closet lights
+unsigned const RO_FLAG_IN_CLOSET = 0x800000; // for closet lights and light switches
+unsigned const RO_FLAG_ON_SRACK  = 0x800000; // on shelf rack; aliased with RO_FLAG_IN_CLOSET
 unsigned const RO_FLAG_NONEMPTY  = 0x040000; // for microwaves, aliased with RO_FLAG_HAS_EXTRA
 unsigned const RO_FLAG_BROKEN2   = 0x040000; // for lights that are completely broken, aliased with RO_FLAG_HAS_EXTRA and RO_FLAG_NONEMPTY
 // object flags, fourth byte

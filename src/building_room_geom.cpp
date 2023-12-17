@@ -1311,7 +1311,7 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 
 void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	// obj_id: bits 1-3 for type, bits 6-7 for emptiness, bit 6 for cap color
-	unsigned const bottle_ndiv = 16; // use smaller ndiv to reduce vertex count
+	unsigned const bottle_ndiv = 16; // use smaller ndiv to reduce vertex count; must be 16 to match sphere low_detail mode
 	bool const cap_color_ix(c.obj_id & 64);
 	colorRGBA const color(apply_light_color(c));
 	colorRGBA const cap_colors[2] = {LT_GRAY, GOLD}, cap_spec_colors[2] = {WHITE, GOLD};
@@ -1344,7 +1344,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	mat.add_ortho_cylin_to_verts(neck, color, dim, 0, 0, is_empty, 0, (c.dir ? 0.85 : 1.0), (c.dir ? 1.0 : 0.85), 1.0, 1.0, 0, bottle_ndiv);
 
 	if (!is_empty) { // draw cap if nonempty
-		bool const draw_bot(c.was_expanded());
+		bool const draw_bot(c.was_expanded() && !(c.flags & RO_FLAG_ON_SRACK));
 		tid_nm_pair_t cap_tex(-1, 1.0, 0); // unshadowed
 		cap_tex.set_specular_color(cap_spec_colors[cap_color_ix], 0.8, 80.0);
 		rgeom_mat_t &cap_mat(get_material(cap_tex, 0, 0, 1)); // inc_shadows=0, dynamic=0, small=1
@@ -1373,7 +1373,8 @@ void building_room_geom_t::add_vase(room_object_t const &c) { // or urn
 	colorRGBA color(apply_light_color(c));
 	UNROLL_3X(min_eq(color[i_], 0.9f);); // clamp color to 90% max to avoid over saturation
 	// parametric curve rotated around the Z-axis
-	unsigned const num_stacks = 32;
+	unsigned const lod_factor(c.was_expanded() ? 2 : 1); // use lower detail for expanded vases/urns on shelf racks
+	unsigned const num_stacks(32 / lod_factor);
 	rand_gen_t rgen(c.create_rgen());
 	float tex_scale_v(1.0), tex_scale_h(1.0);
 	int tid(WHITE_TEX);
@@ -1390,7 +1391,7 @@ void building_room_geom_t::add_vase(room_object_t const &c) { // or urn
 		}
 	}
 	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(tid, 0.0, 1), 1, 0, 1)); // shadowed, small
-	unsigned const ndiv(N_CYL_SIDES), itris_start(side_mat.itri_verts.size()), ixs_start(side_mat.indices.size());
+	unsigned const ndiv(N_CYL_SIDES / lod_factor), itris_start(side_mat.itri_verts.size()), ixs_start(side_mat.indices.size());
 	float const tscale(tex_scale_v/num_stacks), zstep(c.dz()/num_stacks);
 	float const rbase(c.get_radius()), rmax(rbase);
 	float rmin(rgen.rand_uniform(0.25, 0.75)*rbase);
