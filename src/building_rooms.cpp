@@ -724,6 +724,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	add_balconies          (rgen, balconies);
 	add_gutter_downspouts  (rgen, balconies);
 	add_exterior_door_items(rgen);
+	if (has_chimney) {add_chimney_cap(rgen);}
 	if (!is_rotated()) {add_ext_door_steps(ext_objs_start);} // must be after adding balconies and fire escape
 	add_extra_obj_slots(); // needed to handle balls taken from one building and brought to another
 	add_stairs_and_elevators(rgen); // the room objects - stairs and elevators have already been placed within a room
@@ -754,6 +755,13 @@ void building_interior_t::assign_master_bedroom(float window_vspacing, float flo
 }
 
 // *** Exterior Objects - not really room objects ***
+
+void building_t::add_chimney_cap(rand_gen_t &rgen) {
+	assert(interior);
+	cube_t ccap(get_chimney()); // start with full chimney, then place the cap on top
+	set_cube_zvals(ccap, ccap.z2(), (ccap.z2() + 0.1*get_window_vspace()));
+	interior->room_geom->objs.emplace_back(ccap, TYPE_CHIM_CAP, 0); // room_id=0
+}
 
 void building_t::maybe_add_fire_escape(rand_gen_t &rgen) {
 	if (!is_house) return; // houses only for now

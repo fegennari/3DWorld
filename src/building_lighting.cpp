@@ -285,10 +285,10 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			c->type == TYPE_SWITCH || c->type == TYPE_TAPE || c->type == TYPE_OUTLET || c->type == TYPE_PARK_SPACE || c->type == TYPE_RAMP || c->type == TYPE_PIPE ||
 			c->type == TYPE_VENT || c->type == TYPE_BREAKER || c->type == TYPE_KEY || c->type == TYPE_HANGER || c->type == TYPE_FESCAPE || c->type == TYPE_CUP ||
 			c->type == TYPE_CLOTHES || c->type == TYPE_LAMP || c->type == TYPE_OFF_CHAIR || c->type == TYPE_LIGHT || c->type == TYPE_SIGN || c->type == TYPE_PAPER ||
-			c->type == TYPE_WALL_LAMP || c->type == TYPE_RCHAIR || c->type == TYPE_SILVER || c->type == TYPE_STAPLER || c->type == TYPE_WIND_SILL || c->type == TYPE_EXT_STEP ||
+			c->type == TYPE_WALL_LAMP || c->type == TYPE_RCHAIR || c->type == TYPE_SILVER || c->type == TYPE_STAPLER || c->type == TYPE_WIND_SILL ||
 			c->type == TYPE_BALCONY || c->type == TYPE_TOY_MODEL || c->type == TYPE_CEIL_FAN || c->type == TYPE_PLANT_MODEL || c->type == TYPE_POOL_FLOAT ||
 			c->type == TYPE_BENCH || c->type == TYPE_DIV_BOARD || c->type == TYPE_POOL_LAD || c->type == TYPE_FLASHLIGHT || c->type == TYPE_CANDLE || c->type == TYPE_CAMERA ||
-			c->type == TYPE_CLOCK || c->type == TYPE_DOWNSPOUT || c->type == TYPE_BAR_STOOL) continue;
+			c->type == TYPE_CLOCK || c->type == TYPE_BAR_STOOL) continue;
 		bool const is_stairs(c->type == TYPE_STAIR || c->type == TYPE_STAIR_WALL);
 		if (c->z1() > (is_stairs ? stairs_z2 : z2) || c->z2() < (is_stairs ? stairs_z1 : z1)) continue;
 		if (!c->intersects_xy(ext_bcube)) continue;

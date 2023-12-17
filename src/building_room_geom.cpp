@@ -951,6 +951,10 @@ void building_room_geom_t::add_rack(room_object_t const &c, bool add_rack, bool 
 	}
 }
 
+void building_room_geom_t::add_chimney_cap(room_object_t const &c) {
+	// TODO
+}
+
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name(texture_name), 0.0), 1, 0, is_small)); // shadows
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // top face only

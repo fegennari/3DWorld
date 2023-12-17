@@ -409,7 +409,7 @@ enum {
 	TYPE_TOY, TYPE_DRESS_MIR, TYPE_PAN, TYPE_VASE, TYPE_URN, TYPE_FCABINET, TYPE_STAPLER, TYPE_WIND_SILL, TYPE_BALCONY, TYPE_SPRINKLER,
 	TYPE_FEXT_MOUNT, TYPE_FEXT_SIGN, TYPE_PIZZA_BOX, TYPE_PIZZA_TOP, TYPE_TEESHIRT, TYPE_PANTS, TYPE_BLANKET, TYPE_SERVER, TYPE_EXT_STEP, TYPE_DBG_SHAPE,
 	TYPE_POOL_BALL, TYPE_POOL_CUE, TYPE_WALL_MOUNT, TYPE_POOL_TILE, TYPE_POOL_FLOAT, TYPE_BENCH, TYPE_DIV_BOARD, TYPE_FALSE_DOOR, TYPE_FLASHLIGHT, TYPE_CANDLE,
-	TYPE_CAMERA, TYPE_CLOCK, TYPE_DOWNSPOUT, TYPE_SHELFRACK,
+	TYPE_CAMERA, TYPE_CLOCK, TYPE_DOWNSPOUT, TYPE_SHELFRACK, TYPE_CHIM_CAP,
 	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_WALL_LAMP, TYPE_CUP, TYPE_TOASTER,
@@ -1017,6 +1017,7 @@ struct building_room_geom_t {
 	void add_paint_can(room_object_t const &c);
 	void add_shelves(room_object_t const &c, float tscale);
 	void add_rack(room_object_t const &c, bool add_rack, bool add_objs);
+	void add_chimney_cap(room_object_t const &c);
 	void add_keyboard(room_object_t const &c);
 	void add_obj_with_top_texture  (room_object_t const &c, std::string const &texture_name, colorRGBA const &sides_color, bool is_small=0);
 	void add_obj_with_front_texture(room_object_t const &c, std::string const &texture_name, colorRGBA const &sides_color, bool is_small=0);
@@ -1982,6 +1983,7 @@ private:
 	bool find_mirror_in_room(unsigned room_id, vector3d const &xlate, bool same_room) const;
 	bool find_mirror_needing_reflection(vector3d const &xlate) const;
 	int find_main_roof_tquad_ix(rand_gen_t &rgen, bool skip_if_has_other_obj) const;
+	void add_chimney_cap(rand_gen_t &rgen);
 	void maybe_add_fire_escape(rand_gen_t &rgen);
 	void add_balconies(rand_gen_t &rgen, vect_cube_t &balconies);
 	void add_gutter_downspouts(rand_gen_t &rgen, vect_cube_t const &balconies);
