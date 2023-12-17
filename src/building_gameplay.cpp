@@ -249,17 +249,17 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		if (obj.taken_level < 4) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 0.5, 0.025, "toy ring");}
 		// else take the toy base
 	}
-	if (obj.type == TYPE_COMPUTER && obj.is_broken   ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 100.0, 20.0, "old computer");}
-	if (obj.type == TYPE_BOX      && obj.is_open     ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,   0.0, 0.05, "opened box"  );}
-	if (obj.type == TYPE_CRATE    && obj.is_open     ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,   2.0, 0.5,  "opened crate");}
-	if (obj.type == TYPE_TV       && obj.is_broken   ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 1, 1,  20.0, 70.0, "broken TV"   );}
-	if (obj.type == TYPE_MONITOR  && obj.is_broken   ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 1, 1,  10.0, 15.0, "broken computer monitor");}
-	if (obj.type == TYPE_LIGHT    && obj.is_broken   ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0,  20.0,  5.0, "flickering light");}
-	if (obj.type == TYPE_LIGHT    && obj.flags & RO_FLAG_BROKEN2) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0,  10.0,  5.0, "broken light");}
-	if (obj.type == TYPE_RAT      && obj.is_broken   ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,   0.0,  1.0, "cooked/dead rat");}
-	if (obj.type == TYPE_ROACH    && obj.is_broken   ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0,   0.0, 0.01, "dead cockroach");} // same stats as live cockroach
-	if (obj.type == TYPE_FIRE_EXT && obj.is_broken   ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,  20.0, 10.0, "empty fire extinguisher");}
-	if (obj.type == TYPE_CANDLE   && obj.is_used     ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   0.5,  0.4, "used candle");}
+	if (obj.type == TYPE_COMPUTER && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 100.0, 20.0, "old computer");}
+	if (obj.type == TYPE_BOX      && obj.is_open   ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,   0.0, 0.05, "opened box"  );}
+	if (obj.type == TYPE_CRATE    && obj.is_open   ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,   2.0, 0.5,  "opened crate");}
+	if (obj.type == TYPE_TV       && obj.is_broken ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 1, 1,  20.0, 70.0, "broken TV"   );}
+	if (obj.type == TYPE_MONITOR  && obj.is_broken ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 1, 1,  10.0, 15.0, "broken computer monitor");}
+	if (obj.type == TYPE_LIGHT    && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0,  20.0,  5.0, "flickering light");}
+	if (obj.type == TYPE_LIGHT    && obj.is_broken2()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0,  10.0,  5.0, "broken light");}
+	if (obj.type == TYPE_RAT      && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,   0.0,  1.0, "cooked/dead rat");}
+	if (obj.type == TYPE_ROACH    && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0,   0.0, 0.01, "dead cockroach");} // same stats as live cockroach
+	if (obj.type == TYPE_FIRE_EXT && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,  20.0, 10.0, "empty fire extinguisher");}
+	if (obj.type == TYPE_CANDLE   && obj.is_used   ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   0.5,  0.4, "used candle");}
 
 	if (obj.type == TYPE_INSECT) { // unused
 		bool const is_fly(obj.is_hanging());
@@ -274,6 +274,9 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 			type.name    = "empty " + type.name;
 			type.weight *= 0.25;
 			type.value   = 0.0;
+		}
+		else if (!(obj.flags & RO_FLAG_NO_CONS)) {
+			type.name = "consumable " + type.name;
 		}
 		return type;
 	}

@@ -881,8 +881,7 @@ void building_t::get_lights_with_priorities(point const &target, cube_t const &v
 	int const target_room(get_room_containing_pt(target)); // generally always should be >= 0
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (!i->is_light_type() || !i->is_light_on()) continue; // not a light, or light not on
-		if (i->flags & RO_FLAG_BROKEN2) continue; // fully broken light
+		if (!i->is_light_type() || !i->is_light_on() || i->is_broken2()) continue; // not a light, or light not on, or fully broken
 		bool const light_in_basement(i->z1() < ground_floor_z1);
 		if (!check_indir_enabled(light_in_basement, i->in_attic())) continue;
 		if (!valid_area.contains_cube(*i)) continue; // outside valid area
@@ -1635,7 +1634,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		//if (line_intersect_walls(lpos, camera_rot)) continue; // straight line visibility test - for debugging, or maybe future use in assigning priorities
 		//if (check_cube_occluded(clipped_bc, interior->fc_occluders, camera_rot)) continue; // legal, but may not help much
-		bool const is_fully_broken(i->flags & RO_FLAG_BROKEN2);
+		bool const is_fully_broken(i->is_broken2());
 		
 		// run flicker logic for broken lights; this is done later in the control flow because updating light geometry can be expensive
 		if (i->is_broken() || is_fully_broken) {

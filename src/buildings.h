@@ -572,7 +572,8 @@ struct room_object_t : public oriented_cube_t { // size=64
 	bool has_dstate () const {return  (flags & RO_FLAG_DSTATE);}
 	bool is_moving  () const {return (is_dynamic() && has_dstate());}
 	bool was_moved  () const {return  (flags & RO_FLAG_MOVED);}
-	bool is_broken  () const {return  (flags & RO_FLAG_BROKEN);}
+	bool is_broken  () const {return  (flags & RO_FLAG_BROKEN );}
+	bool is_broken2 () const {return  (flags & RO_FLAG_BROKEN2);} // fully broken
 	bool is_active  () const {return  (flags & RO_FLAG_IS_ACTIVE);}
 	bool is_used    () const {return  (flags & RO_FLAG_USED);}
 	bool is_hanging () const {return  (flags & RO_FLAG_HANGING);}
@@ -590,7 +591,7 @@ struct room_object_t : public oriented_cube_t { // size=64
 	bool is_glass_table () const {return (type == TYPE_TABLE && (flags & RO_FLAG_IS_HOUSE) && (obj_id & 1));} // 50% chance if in a house
 	bool is_parked_car  () const {return (type == TYPE_COLLIDER && (flags & RO_FLAG_FOR_CAR));}
 	bool is_sloped_ramp () const {return (type == TYPE_RAMP || (type == TYPE_POOL_TILE && shape == SHAPE_ANGLED));}
-	bool light_is_out   () const {return ((is_broken() || (flags & RO_FLAG_BROKEN2)) && !is_open());} // only makes sense to call on lights
+	bool light_is_out   () const {return ((is_broken() || is_broken2()) && !is_open());} // only makes sense to call on lights
 	bool is_player_collidable() const;
 	bool can_use        () const;
 	bool is_interactive () const {return (has_dstate() || can_use());}
