@@ -1110,7 +1110,9 @@ private:
 	static void add_closet_objects(room_object_t const &c, vect_room_object_t &objects);
 	static unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]);
 	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vect_room_object_t &objects);
-	static void get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects);
+public:
+	static void get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects, bool add_models_mode=0);
+private:
 	static void add_wine_rack_bottles(room_object_t const &c, vect_room_object_t &objects);
 	static void add_vert_roll_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio=1.0, bool player_held=0);
 	void add_bcase_book(room_object_t const &c, cube_t const &book, bool inc_lg, bool inc_sm, bool inc_text, bool backwards, bool in_set,

@@ -2466,19 +2466,20 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 				cube_t test_cube(cand);
 				test_cube.expand_by_xy(se_pad); // add extra padding
 				if (interior->is_blocked_by_stairs_or_elevator(test_cube)) {was_shortened = 1; continue;} // blocked
-				objs.emplace_back(cand, TYPE_SHELFRACK, room_id, !dim, 0, 0, 1.0, SHAPE_CUBE, WHITE); // tot_light_amt=1.0
-				objs.back().obj_id     = obj_id; // common for all racks
-				objs.back().item_flags = rack_id++; // unique per rack
+				room_object_t srack(cand, TYPE_SHELFRACK, room_id, !dim, 0, 0, 1.0, SHAPE_CUBE, WHITE); // tot_light_amt=1.0
+				srack.obj_id     = obj_id; // common for all racks
+				srack.item_flags = rack_id++; // unique per rack
+				objs.push_back(srack);
+				interior->room_geom->get_shelfrack_objects(srack, objs, 1); // add_models_mode=1
 				break; // done
 			} // for n
 			if (!was_shortened && r > 0) { // place a pillar at the end of the rack
 				pillar.d[dim][0] = start - pillar_width;
 				pillar.d[dim][1] = start;
-				interior->room_geom->objs.emplace_back(pillar, TYPE_PG_WALL, room_id, 0, 0); // interior is okay since pillars are hard to see up against shelf racks
+				objs.emplace_back(pillar, TYPE_PG_WALL, room_id, 0, 0); // interior is okay since pillars are hard to see up against shelf racks
 			}
 		} // for r
 	} // for n
-	// TODO: really laggy, need better light/shadow culling
 	add_cameras_to_room(rgen, room, zval, room_id, 1.0); // tot_light_amt=1.0
 }
 
