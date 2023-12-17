@@ -632,6 +632,11 @@ void building_room_geom_t::expand_shelves(room_object_t const &c) {
 	get_shelf_objects(c, shelves, num_shelves, expanded_objs);
 }
 
+void set_book_id_and_color(room_object_t &obj, rand_gen_t &rgen) {
+	obj.obj_id = rgen.rand();
+	obj.color  = book_colors[rgen.rand() % NUM_BOOK_COLORS];
+}
+
 void add_rows_cols_of_vcylinders(room_object_t const &c, cube_t const &region, float radius, float height, float spacing_factor,
 	unsigned type, unsigned max_cols, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen, bool dir=0, bool inv_dim=0)
 {
@@ -643,7 +648,7 @@ void add_rows_cols_of_vcylinders(room_object_t const &c, cube_t const &region, f
 	pos[ c.dim] = region.d[ c.dim][0] + 0.5*col_spacing;
 	pos[!c.dim] = region.d[!c.dim][0] + 0.5*row_spacing;
 	pos.z = region.z1();
-	if (type == TYPE_PAN || type == TYPE_TCAN || type == TYPE_VASE) {pos.z += 0.005*c.dz();} // shift up slightly to prevent Z-fighting
+	if (type == TYPE_PAN || type == TYPE_TCAN || type == TYPE_VASE) {pos.z += 0.002*c.dz();} // shift up slightly to prevent Z-fighting
 	cube_t objc(get_cube_height_radius(pos, radius, height));
 	bool const is_bottle(type == TYPE_BOTTLE);
 	unsigned rand_id(is_bottle ? rgen.rand() : 0);
@@ -688,7 +693,13 @@ void add_rows_of_cubes(room_object_t const &c, cube_t const &region, float width
 	for (unsigned row = 0; row < num_rows; ++row) {
 		if (rgen.rand_float() < 0.75) { // 75% chance
 			room_object_t obj(objc, type, c.room_id, (c.dim ^ inv_dim), dir, flags, c.light_amt);
-			// set color, etc. based on type
+			
+			if (type == TYPE_BOOK) { // reduce size randomly
+				obj.z2() -= 0.5*height*rgen.rand_float();
+				obj.expand_in_dim( c.dim, -0.1*width*rgen.rand_float()); // length
+				obj.expand_in_dim(!c.dim, -0.2*width*rgen.rand_float()); // width
+				set_book_id_and_color(obj, rgen);
+			}
 			objects.push_back(obj);
 		}
 		objc.translate_dim(!c.dim, row_spacing);
@@ -773,7 +784,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 					section.d[!c.dim][1] = lo_edge + (s+1)*section_width + section_offset - section_gap;
 
 					if (category == 2) { // houshold goods
-						unsigned const type_ix(rgen.rand() % 6);
+						unsigned const type_ix(rgen.rand() % 7);
 
 						if (type_ix == 0) { // paint cans
 							float const oheight(height_val*rgen.rand_uniform(0.6, 0.8)), radius(min(0.4f*depth, 0.44f*oheight));
@@ -799,8 +810,8 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 							float const oheight(height_val*rgen.rand_uniform(0.55, 0.7)), radius(min(0.2f*depth, 0.16f*oheight*rgen.rand_uniform(0.8, 1.25)));
 							add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.25, TYPE_CANDLE, 3, flags, objects, rgen); // 1-3 columns
 						}
-						else if (type_ix == 6) { // books???
-							// TYPE_BOOK
+						else if (type_ix == 6) { // books; should these be stacked or upright?
+							add_rows_of_cubes(c, section, 0.7*depth, 0.9*depth, 0.12*depth, 0.1, TYPE_BOOK, flags, objects, rgen, (c.dim ^ dir), 1);
 						}
 					} // end household goods
 					else if (category == 3) { // kitchen
@@ -856,11 +867,11 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 							// TYPE_LAMP
 						}
 					}
-					else if (category == 5) { // clothing
-						// TYPE_FOLD_SHIRT
-					}
-					else if (category == 6) { // toys
+					else if (category == 5) { // toys
 						// TYPE_LG_BALL, TYPE_TOY
+					}
+					else if (category == 6) { // clothing
+						// TYPE_FOLD_SHIRT
 					}
 				} // for s
 			}
@@ -918,10 +929,6 @@ void place_phone(room_object_t &obj, cube_t const &parent, float length, float w
 	obj.color = phone_colors[rgen.rand() % NUM_PHONE_COLORS];
 	obj.z2()  = obj.z1() + 0.045*length;
 	set_rand_pos_for_sz(obj, dim, length, width, rgen);
-}
-void set_book_id_and_color(room_object_t &obj, rand_gen_t &rgen) {
-	obj.obj_id = rgen.rand();
-	obj.color  = book_colors[rgen.rand() % NUM_BOOK_COLORS];
 }
 void place_book(room_object_t &obj, cube_t const &parent, float length, float max_height, unsigned room_id, bool dim, bool dir, rand_gen_t &rgen) {
 	float const width(rgen.rand_uniform(0.6, 1.0)*length);
