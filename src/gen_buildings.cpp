@@ -22,7 +22,7 @@ float const WIND_LIGHT_ON_RAND     = 0.08;
 unsigned const NO_SHADOW_WHITE_TEX = BLACK_TEX; // alias to differentiate shadowed    vs. unshadowed untextured objects
 unsigned const SHADOW_ONLY_TEX     = RED_TEX;   // alias to differentiate shadow only vs. other      untextured objects
 
-bool camera_in_building(0), interior_shadow_maps(0), player_is_hiding(0), player_in_unlit_room(0), building_has_open_ext_door(0);
+bool camera_in_building(0), interior_shadow_maps(0), player_is_hiding(0), player_in_unlit_room(0), building_has_open_ext_door(0), sec_camera_shadow_mode(0);
 int player_in_basement(0); // 0=no, 1=below ground level, 2=in basement and not on stairs, 3=in extended basement
 int player_in_closet  (0); // uses flags RO_FLAG_IN_CLOSET (player in closet), RO_FLAG_LIT (closet light is on), RO_FLAG_OPEN (closet door is open)
 int player_in_water   (0); // 0=no, 1=standing in water, 2=head underwater
@@ -326,7 +326,12 @@ struct building_lights_manager_t : public city_lights_manager_t {
 		if (camera_in_building && !sec_camera_mode && player_holding_lit_candle()) {add_player_candle_light(xlate);}
 		clamp_to_max_lights(xlate, dl_sources);
 		tighten_light_bcube_bounds(dl_sources); // clip bcube to tight bounds around lights for better dlights texture utilization (possible optimization)
-		if (ADD_ROOM_SHADOWS) {setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate), global_building_params.max_shadow_maps, sec_camera_mode);}
+		
+		if (ADD_ROOM_SHADOWS) {
+			sec_camera_shadow_mode = sec_camera_mode; // optimization
+			setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate), global_building_params.max_shadow_maps, sec_camera_mode);
+			sec_camera_shadow_mode = 0; // restore
+		}
 		finalize_lights(dl_sources);
 	}
 	void add_player_candle_light(vector3d const &xlate) {
@@ -2940,7 +2945,8 @@ public:
 						bool camera_in_this_building(b.check_point_or_cylin_contained(pre_smap_player_pos, 0.0, points, 1, 1)); // inc_attic=1, inc_ext_basement=1
 						camera_in_this_building |= b.interior_visible_from_other_building_ext_basement(xlate, 1); // check conn building as well; expand_for_light=1
 						// generate interior detail objects during the shadow pass when the player is in the building so that it can be done in parallel with small static geom gen
-						int const inc_small(camera_in_this_building ? 3 : 1);
+						// skip drawing small object shadows for secondary camera (security camera) as an optimization
+						int const inc_small(sec_camera_shadow_mode ? 0 : (camera_in_this_building ? 3 : 1));
 						b.draw_room_geom(nullptr, s, amask_shader, oc, xlate, bi->ix, 1, 0, inc_small, 1); // shadow_only=1, player_in_building=1
 						bool const basement_light(lpos.z < b.ground_floor_z1);
 						if (!basement_light) {b.get_ext_wall_verts_no_sec(ext_parts_draw);} // add exterior walls to prevent light leaking between adjacent parts, if not basement

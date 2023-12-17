@@ -1360,7 +1360,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	float const tscale(bp.label_tscale); // some labels are more square and scaled 2x to repeat as they're more stretched out; should we use a partial cylinder instead?
 	float const tscale_add(0.123*c.obj_id); // add a pseudo-random rotation to the label texture
 	string const &texture_fn(bp.texture_fn); // select the custom label texture for each bottle type
-	rgeom_mat_t &label_mat(get_material(tid_nm_pair_t(texture_fn.empty() ? -1 : get_texture_by_name(texture_fn)), 0, 0, 1));
+	rgeom_mat_t &label_mat(get_material(tid_nm_pair_t(texture_fn.empty() ? -1 : get_texture_by_name(texture_fn)), 0, 0, 1)); // unshadowed
 	label_mat.add_ortho_cylin_to_verts(body, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, tscale, 1.0, 0, bottle_ndiv, tscale_add); // draw label
 }
 
