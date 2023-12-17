@@ -716,8 +716,9 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 			cube_t shelf(shelves[n]); // this is the valid shelf area where objects can be placed
 			shelf.d[c.dim][!dir] = back.d[c.dim][dir]; // excludes the back
 			set_cube_zvals(shelf, shelf.z2(), ztop);
-			float const length(shelf.get_sz_dim(!c.dim)), depth(shelf.get_sz_dim(c.dim)), height(shelf.dz());
+			float const length(shelf.get_sz_dim(!c.dim)), depth(shelf.get_sz_dim(c.dim));
 			if (length <= depth) continue; // shouldn't happen
+			float const height(shelf.dz()), height_val(min(height, c.dz()/5.0f)); // height_val is for use with objects that were tuned for 5 shelf racks
 			cubes.clear();
 
 			if (category == 0) { // boxed items
@@ -755,7 +756,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 					} // for n
 				}
 				else { // add bottles; these aren't consumable by the player because that would be too powerful
-					float const bot_height(height*rgen.rand_uniform(0.7, 0.9)), bot_radius(min(0.25f*depth, bot_height*rgen.rand_uniform(0.12, 0.18)));
+					float const bot_height(height_val*rgen.rand_uniform(0.7, 0.9)), bot_radius(min(0.25f*depth, bot_height*rgen.rand_uniform(0.12, 0.18)));
 					add_rows_cols_of_vcylinders(c, shelf, bot_radius, bot_height, 0.25, TYPE_BOTTLE, 2, flags, objects, rgen); // 1-2 columns
 				}
 			} // end food
@@ -775,27 +776,27 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 						unsigned const type_ix(rgen.rand() % 6);
 
 						if (type_ix == 0) { // paint cans
-							float const oheight(height*rgen.rand_uniform(0.6, 0.8)), radius(min(0.4f*depth, 0.44f*oheight));
+							float const oheight(height_val*rgen.rand_uniform(0.6, 0.8)), radius(min(0.4f*depth, 0.44f*oheight));
 							add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.1, TYPE_PAINTCAN, 2, flags, objects, rgen); // 1-2 columns
 						}
 						else if (type_ix == 1) { // toilet paper rolls
-							float const oheight(0.6*height), radius(min(0.4f*depth, 0.4f*oheight));
+							float const oheight(0.6*height_val), radius(min(0.4f*depth, 0.4f*oheight));
 							add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.2, TYPE_TPROLL, 3, flags, objects, rgen); // 1-3 columns
 						}
 						else if (type_ix == 2) { // spray paint cans
-							float const oheight(height*rgen.rand_uniform(0.7, 0.9)), radius(min(0.25f*depth, 0.17f*oheight));
+							float const oheight(height_val*rgen.rand_uniform(0.75, 0.8)), radius(min(0.25f*depth, 0.17f*oheight));
 							add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.2, TYPE_SPRAYCAN, 3, flags, objects, rgen); // 1-3 columns
 						}
 						else if (type_ix == 3) { // vases
-							float const oheight(height*rgen.rand_uniform(0.6, 0.9)), radius(min(0.45f*depth, oheight*rgen.rand_uniform(0.3, 0.5)));
+							float const oheight(height*rgen.rand_uniform(0.6, 0.9)), radius(min(0.4f*depth, oheight*rgen.rand_uniform(0.3, 0.5)));
 							add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.4, TYPE_VASE, 2, flags, objects, rgen); // 1-2 columns
 						}
 						else if (type_ix == 4) { // flashlights
-							float const oheight(height*rgen.rand_uniform(0.6, 0.8)), radius(min(0.25f*depth, 0.2f*oheight*rgen.rand_uniform(0.8, 1.25)));
+							float const oheight(height_val*rgen.rand_uniform(0.7, 0.85)), radius(min(0.25f*depth, 0.2f*oheight*rgen.rand_uniform(0.8, 1.25)));
 							add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.25, TYPE_FLASHLIGHT, 3, flags, objects, rgen); // 1-3 columns
 						}
 						else if (type_ix == 5) { // candles
-							float const oheight(height*rgen.rand_uniform(0.5, 0.7)), radius(min(0.2f*depth, 0.16f*oheight*rgen.rand_uniform(0.8, 1.25)));
+							float const oheight(height_val*rgen.rand_uniform(0.55, 0.7)), radius(min(0.2f*depth, 0.16f*oheight*rgen.rand_uniform(0.8, 1.25)));
 							add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.25, TYPE_CANDLE, 3, flags, objects, rgen); // 1-3 columns
 						}
 						else if (type_ix == 6) { // books???
@@ -806,7 +807,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 						unsigned const type_ix(rgen.rand() % 6);
 
 						if (type_ix == 0) { // cups; TODO: make models work here
-							//float const oheight(height*rgen.rand_uniform(0.4, 0.6)), radius(0.5f*height*get_radius_for_square_model(OBJ_MODEL_CUP));
+							//float const oheight(height_val*rgen.rand_uniform(0.4, 0.6)), radius(0.5f*height*get_radius_for_square_model(OBJ_MODEL_CUP));
 							//add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.5, TYPE_CUP, 3, flags, objects, rgen); // 1-3 columns
 						}
 						else if (type_ix == 1) { // pans
@@ -827,7 +828,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 							}
 						}
 						else if (type_ix == 3) { // microwaves
-							float const mheight(height*rgen.rand_uniform(0.9, 0.95)), mwidth(1.7*mheight), mdepth(1.2*mheight); // fixed AR=1.7 to match the texture
+							float const mheight(height*rgen.rand_uniform(0.9, 0.95)), mwidth(1.7*mheight), mdepth(min(1.2f*mheight, 0.95f*depth)); // AR=1.7 to match the texture
 							add_rows_of_cubes(c, section, mwidth, mdepth, mheight, 0.1, TYPE_MWAVE, (flags | RO_FLAG_NO_POWER), objects, rgen, dir);
 						}
 						else if (type_ix == 4) { // toasters
