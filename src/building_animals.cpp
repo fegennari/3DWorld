@@ -399,6 +399,16 @@ bool can_hide_under(room_object_t const &c, cube_t &hide_area) {
 		hide_area.z1() += 0.05*c.dz();
 		return 1;
 	}
+	else if (c.type == TYPE_SHELFRACK) {
+		cube_t back, top, sides[2], shelves[5];
+		unsigned const num_shelves(get_shelf_rack_cubes(c, back, top, sides, shelves));
+
+		if (num_shelves > 0) { // can possibly hide under the bottom shelf, though there's not much space
+			hide_area = shelves[0]; // ignores the back
+			set_cube_zvals(hide_area, c.z1(), shelves[0].z1());
+			return 1;
+		}
+	}
 	else if (c.is_parked_car()) { // parked car
 		hide_area = c;
 		hide_area.z1() += 0.12*c.dz(); // there's space under the car
