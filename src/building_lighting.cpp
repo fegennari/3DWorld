@@ -271,8 +271,8 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 	vect_room_object_t const &objs(interior->room_geom->objs);
 	static vect_cube_t temp; // used across calls for subtracting holes
 		
-	for (auto c = objs.begin(); c != objs.end(); ++c) {
-		if (!c->is_visible()) continue;
+	for (auto c = objs.begin(); c != objs.end(); ++c) { // Note: ignores expanded objects (including shelf rack objects)
+		if (!c->is_visible())          continue;
 		if (c->type  == TYPE_ELEVATOR) continue; // elevator cars/internals can move so should not contribute to lighting
 		if (c->type  == TYPE_SHOWER  ) continue; // transparent
 		if (c->type  == TYPE_BLOCKER || c->type == TYPE_COLLIDER) continue; // blockers and colliders are not drawn
