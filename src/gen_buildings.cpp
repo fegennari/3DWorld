@@ -3419,7 +3419,8 @@ public:
 					// if we're not by an exterior door, draw the back sides of exterior doors as closed; always draw roof geometry
 					// this is required for drawing objects such as the underside of roof overhangs and roof doors and their covers
 					int const tex_filt_mode(ext_door_draw.empty() ? 2 : 3);
-					setup_building_draw_shader(s, min_alpha, 0, 1, 0); // enable_indir=0, force_tsl=1, use_texgen=0
+					bool const enable_indir(camera_in_building); // need to enable indir lighting when drawing the back sides of exterior doors
+					setup_building_draw_shader(s, min_alpha, enable_indir, 1, 0); // force_tsl=1, use_texgen=0
 					for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(s, 0, 0, tex_filt_mode);}
 					reset_interior_lighting_and_end_shader(s);
 				}
