@@ -318,6 +318,10 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		if (number == 15) {oss << "cue ball";} else {oss << (number+1) << " ball";}
 		type.name = oss.str();
 	}
+	else if (obj.type == TYPE_FOOD_BOX) {
+		string const &food_name(obj.get_food_box_name());
+		if (!food_name.empty()) {type.name = food_name;}
+	}
 	return type;
 }
 bool is_refillable(room_object_t const &obj) {return (obj.type == TYPE_FIRE_EXT);}

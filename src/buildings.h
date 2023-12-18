@@ -310,7 +310,8 @@ struct building_params_t {
 	building_mat_t cur_mat;
 	vector<building_mat_t> materials;
 	vector<unsigned> mat_gen_ix, mat_gen_ix_city, mat_gen_ix_nocity, mat_gen_ix_res; // {any, city_only, non_city, residential}
-	vector<unsigned> rug_tids, picture_tids, desktop_tids, sheet_tids, paper_tids, flag_tids;
+	vector<unsigned> rug_tids, picture_tids, desktop_tids, sheet_tids, paper_tids, food_box_tids, flag_tids;
+	vector<std::string> food_box_names; // same size as food_box_tids
 	// use for option reading
 	int read_error=0;
 	kw_to_val_map_t<bool     >  kwmb;
@@ -617,6 +618,8 @@ struct room_object_t : public oriented_cube_t { // size=64
 	int get_comp_monitor_tid() const;
 	int get_sheet_tid() const;
 	int get_paper_tid() const;
+	int get_food_box_tid() const;
+	std::string const &get_food_box_name() const;
 	int get_model_id () const;
 	void set_as_bottle(unsigned rand_id, unsigned max_type=NUM_BOTTLE_TYPES-1, bool no_empty=0, unsigned exclude_mask=0);
 	void remove() {type = TYPE_BLOCKER; flags = (RO_FLAG_NOCOLL | RO_FLAG_INVIS);} // replace it with an invisible blocker that won't collide with anything

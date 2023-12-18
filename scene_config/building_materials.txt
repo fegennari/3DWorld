@@ -107,6 +107,9 @@ buildings add_paper_texture papers/report_card.jpeg
 buildings add_paper_texture papers/welcome_letter.jpeg
 buildings add_paper_texture papers/handwritten.jpeg
 
+buildings add_food_box_texture food_boxes/pianos_cereal.png "Pianos Cereal"
+buildings add_food_box_texture food_boxes/froot_loop_bars.jpg "Froot Loop Bars"
+
 # house ceilings and floors
 buildings house_ceil_color  1.0 1.0 1.0 1.0 # white
 buildings house_floor_color 1.0 1.0 1.0 1.0 # white

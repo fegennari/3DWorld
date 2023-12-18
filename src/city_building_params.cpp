@@ -392,6 +392,12 @@ bool building_params_t::parse_buildings_option(FILE *fp) {
 	else if (str == "add_sheet_texture"  ) {read_texture_and_add_if_valid(fp, str, read_error, sheet_tids  );}
 	else if (str == "add_paper_texture"  ) {read_texture_and_add_if_valid(fp, str, read_error, paper_tids  );}
 	else if (str == "add_flag_texture"   ) {read_texture_and_add_if_valid(fp, str, read_error, flag_tids   );} // not a room object, but fits with this loading system
+	else if (str == "add_food_box_texture") {
+		read_texture_and_add_if_valid(fp, str, read_error, food_box_tids);
+		string const food_name(read_quoted_string(fp));
+		if (food_name.empty()) {buildings_file_err(str, read_error);}
+		food_box_names.push_back(food_name);
+	}
 	// special commands
 	else if (str == "add_material") {add_cur_mat();}
 	else {

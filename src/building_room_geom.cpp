@@ -4380,7 +4380,12 @@ void building_room_geom_t::add_camera(room_object_t const &c) { // Note: camera 
 }
 
 void building_room_geom_t::add_food_box(room_object_t const &c) {
-	// TODO
+	int const tid(c.get_food_box_tid());
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(tid, 0.0, 1), 1, 0, 1)); // shadows, small
+	colorRGBA const bkg_color(apply_light_color(c, texture_color(tid))); // use average texture color for the top and edges
+	unsigned const front_back_mask(~get_skip_mask_for_xy(c.dim));
+	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, front_back_mask, !c.dim, (c.dim ^ c.dir ^ 1), 0); // front face only
+	get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(c, bkg_color, (~front_back_mask | EF_Z1)); // sides, shadows, small
 }
 
 void building_room_geom_t::add_debug_shape(room_object_t const &c) {
@@ -4448,6 +4453,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_PANTS:    return LT_BLUE; // close enough, don't need to use the texture color
 	case TYPE_POOL_TABLE: return (BROWN*0.75 + GREEN*0.25);
 	case TYPE_POOL_TILE: return texture_color(get_pool_tile_params(*this).get_tid());
+	case TYPE_FOOD_BOX:  return texture_color(get_food_box_tid());
 	//case TYPE_POOL_BALL: return ???; // uses a texture atlas, so unclear what color to use here; use white by default
 	//case TYPE_CHIMNEY:  return texture_color(get_material().side_tex); // should modulate with texture color, but we don't have it here
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
