@@ -4379,6 +4379,10 @@ void building_room_geom_t::add_camera(room_object_t const &c) { // Note: camera 
 	rotate_verts(light_mat.itri_verts, rot_axis, rot_angle, rot_pt, tvl_start);
 }
 
+void building_room_geom_t::add_food_box(room_object_t const &c) {
+	// TODO
+}
+
 void building_room_geom_t::add_debug_shape(room_object_t const &c) {
 	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
 	if      (c.shape == SHAPE_CUBE  ) {mat.add_cube_to_verts_untextured(c, c.color);} // all faces

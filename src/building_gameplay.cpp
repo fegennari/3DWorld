@@ -166,6 +166,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_DOWNSPOUT ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1,  0.0,  0.0,   "downspout");
 	bldg_obj_types[TYPE_SHELFRACK ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 1,  0.0,  0.0,   "shelf rack");
 	bldg_obj_types[TYPE_CHIM_CAP  ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1,  0.0,  0.0,   "exterior step");
+	bldg_obj_types[TYPE_FOOD_BOX  ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2,  8.0,  1.0,   "box of food");
 	bldg_obj_types[TYPE_DBG_SHAPE ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 1,  0.0,  0.0,   "debug shape"); // small (optimization)
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
@@ -200,6 +201,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_POOL_TABLE] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 400.0, 250.0, "pool table");
 	bldg_obj_types[TYPE_POOL_LAD  ] = bldg_obj_type_t(0, 0, 1, 0, 1, 1, 0, 200.0, 35.0,  "pool ladder");
 	bldg_obj_types[TYPE_BAR_STOOL ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 100.0, 40.0,  "bar stool");
+	bldg_obj_types[TYPE_PADLOCK   ] = bldg_obj_type_t(0, 0, 0, 0, 1, 1, 0, 10.0,  0.2,   "lock");
 	// animals; not room objects
 	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 8.99,  1.0,   "rat"); // can be picked up
 	bldg_obj_types[TYPE_ROACH     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 0.0,   0.01,  "cockroach");

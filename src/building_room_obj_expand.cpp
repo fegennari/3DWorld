@@ -744,7 +744,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 				if (add_models_mode) continue; // not model
 				rand_gen_t rgen2(rgen); // local rgen so that we get the same outcome for either value of add_models_model
 
-				if (n == 0) { // bottom shelf, add pizza
+				if (n == 0) { // bottom shelf, add pizza; box can't be opened by the player
 					float const pbox_width(0.8*depth), pbox_height(0.1*pbox_width), pbox_space(0.2*pbox_width), pbox_stride(pbox_width + pbox_space);
 					unsigned const num_boxes(length/pbox_stride), max_stack_height(min(4U, unsigned(height/pbox_height))); // round down
 					if (num_boxes == 0 || max_stack_height == 0) continue; // none can fit?
@@ -776,6 +776,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 					float const bot_height(height_val*rgen2.rand_uniform(0.7, 0.9)), bot_radius(min(0.25f*depth, bot_height*rgen2.rand_uniform(0.12, 0.18)));
 					add_rows_cols_of_vcylinders(c, shelf, bot_radius, bot_height, 0.25, TYPE_BOTTLE, 2, flags, objects, rgen2); // 1-2 columns
 				}
+				// TODO: TYPE_FOOD_BOX
 			} // end food
 			else { // items grouped into sections
 				unsigned const num_sections(min(unsigned(0.75*length/depth), (3U + (rgen.rand()&3)))); // 3-6
@@ -851,7 +852,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 							}
 						}
 						else if (type_ix == 3) { // microwaves
-							if (add_models_mode) continue; // not model
+							if (add_models_mode) continue; // not model; should they be, so that they can be opened without taking an object from the rack?
 							float const mheight(height*rgen2.rand_uniform(0.9, 0.95)), mwidth(1.7*mheight), mdepth(min(1.2f*mheight, 0.95f*depth)); // AR=1.7 to match texture
 							add_rows_of_cubes(c, section, mwidth, mdepth, mheight, 0.1, TYPE_MWAVE, (flags | RO_FLAG_NO_POWER), objects, rgen2, dir);
 						}
