@@ -2417,6 +2417,8 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 
 void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
 	// Note: this room should occupy the entire floor, so walkable room bounds == room == part
+	assert(has_room_geom());
+	interior->room_geom->shelf_rack_occluders.clear();
 	float const floor_spacing(get_window_vspace()), dx(room.dx()), dy(room.dy()), spacing(0.7);
 	float const door_width(get_doorway_width()), se_pad(0.8*door_width), nom_aisle_width(1.5*door_width), rack_height(SHELF_RACK_HEIGHT_FS*floor_spacing);
 	unsigned const nx(max(1U, unsigned(spacing*dx/floor_spacing))), ny(max(1U, unsigned(spacing*dy/floor_spacing))); // same spacing as room lights
@@ -2441,9 +2443,11 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	set_cube_zvals(pillar, zval, zval+get_floor_ceil_gap());
 	unsigned const obj_id(rgen.rand()); // same style for each rack
 	unsigned rack_id(0);
+	bool const skip_middle_row(nrows & 1);
+	interior->room_geom->shelf_rack_occluders.reserve((nrows - skip_middle_row)*nracks);
 	
 	for (unsigned n = 0; n < nrows; ++n) { // n+1 aisles
-		if ((nrows & 1) && n == nrows/2) continue; // skip middle aisle rack to allow direct access to central stairs and elevator
+		if (skip_middle_row && n == nrows/2) continue; // skip middle aisle rack to allow direct access to central stairs and elevator
 		float const rack_lo(room.d[!dim][0] + aisle_width + n*aisle_spacing);
 		rack.d[!dim][0] = rack_lo;
 		rack.d[!dim][1] = rack_lo + rack_width;
@@ -2470,7 +2474,9 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 				srack.obj_id     = obj_id; // common for all racks
 				srack.item_flags = rack_id++; // unique per rack
 				objs.push_back(srack);
-				interior->room_geom->get_shelfrack_objects(srack, objs, 1); // add_models_mode=1
+				cube_t back_cube;
+				interior->room_geom->get_shelfrack_objects(srack, objs, 1, &back_cube); // add_models_mode=1; capture back cube for occlusion culling
+				interior->room_geom->shelf_rack_occluders.push_back(back_cube);
 				break; // done
 			} // for n
 			if (!was_shortened && r > 0) { // place a pillar at the end of the rack

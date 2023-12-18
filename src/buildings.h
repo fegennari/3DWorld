@@ -897,7 +897,7 @@ struct building_room_geom_t {
 	vect_insect_t insects;
 	// {large static, small static, dynamic, lights, alpha mask, transparent, door} materials
 	building_materials_t mats_static, mats_small, mats_text, mats_detail, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors, mats_exterior, mats_ext_detail;
-	vect_cube_t light_bcubes, pgbr_walls[2]; // parking garage and backrooms walls, in each dim
+	vect_cube_t light_bcubes, shelf_rack_occluders, pgbr_walls[2]; // parking garage and backrooms walls, in each dim
 	vector<index_pair_t> pgbr_wall_ixs; // indexes into pgbr_walls
 	building_decal_manager_t decal_manager;
 	particle_manager_t particle_manager;
@@ -1112,7 +1112,7 @@ private:
 	static unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]);
 	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vect_room_object_t &objects);
 public:
-	static void get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects, bool add_models_mode=0);
+	static void get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects, bool add_models_mode=0, cube_t *back_cube=nullptr);
 private:
 	static void add_wine_rack_bottles(room_object_t const &c, vect_room_object_t &objects);
 	static void add_vert_roll_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio=1.0, bool player_held=0);
@@ -1523,6 +1523,7 @@ struct building_t : public building_geom_t {
 	bool check_bcube_overlap_xy(building_t const &b, float expand_rel, float expand_abs) const;
 	bool check_cube_within_part_sides(cube_t const &c) const;
 	bool check_pt_within_part_sides(point const &p) const;
+	bool check_pt_in_retail_room(point const &p) const;
 	vect_cube_t::const_iterator get_real_parts_end() const {return (parts.begin() + real_num_parts);}
 	vect_cube_t::const_iterator get_real_parts_end_inc_sec() const {return (get_real_parts_end() + has_sec_bldg());}
 	vect_point const &get_part_ext_verts(unsigned part_id) const {assert(part_id < per_part_ext_verts.size()); return per_part_ext_verts[part_id];}

@@ -84,16 +84,18 @@ bool building_t::check_part_contains_cube_xy(cube_t const &part, unsigned part_i
 	}
 	return 1;
 }
-
 bool building_t::cube_int_parts_no_sec(cube_t const &c) const {
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
 		if (p->intersects_no_adj(c)) return 1;
 	}
 	return 0;
 }
+bool building_t::check_pt_in_retail_room(point const &p) const {
+	if (!has_retail_ground_floor || !interior || interior->rooms.empty()) return 0;
+	return interior->rooms.front().contains_pt(p); // retail is the first room
+}
 
 bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs) const { // can be called before levels/splits are created
-
 	// Note: easy cases are handled by check_bcube_overlap_xy() above
 	point const center1(b.bcube.get_cube_center()), center2(bcube.get_cube_center());
 

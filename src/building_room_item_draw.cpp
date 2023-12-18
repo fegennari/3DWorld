@@ -1969,11 +1969,11 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	maybe_inv_rotate_point(viewer); // rotate viewer pos into building space
 	bool const player_in_building(reflection_pass || point_in_building_or_basement_bcube(viewer)); // if reflection pass, assume the player is in this building
 	bool const targ_in_basement(c.z2() <= ground_floor_z1);
-	float const floor_spacing(get_window_vspace());
+	float const floor_spacing(get_window_vspace()), ground_floor_ceiling(ground_floor_z1 + floor_spacing);
 	bool checked_conn_ret(0);
 	
 	if (targ_in_basement) { // fully inside basement
-		if (viewer.z > (ground_floor_z1 + floor_spacing)) return 1; // viewer not on first floor
+		if (viewer.z > ground_floor_ceiling) return 1; // viewer not on first floor
 		
 		if (!player_in_building) { // player not in this building
 			checked_conn_ret = (camera_in_building && player_in_basement && interior_visible_from_other_building_ext_basement(oc.get_xlate(), oc.query_is_for_light));
@@ -1984,7 +1984,8 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	unsigned const npts(get_cube_corners(c.d, pts, viewer, 0)); // should return only the 6 visible corners
 	cube_t occ_area(c);
 	occ_area.union_with_pt(viewer); // any occluder must intersect this cube
-	vector3d const dir(viewer - c.get_cube_center());
+	point const center(c.get_cube_center());
+	vector3d const dir(viewer - center);
 	bool const pri_dim(fabs(dir.x) < fabs(dir.y));
 	
 	if (!c_is_building_part && !reflection_pass) {
@@ -2053,7 +2054,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 		if (is_rotated())      return 0; // not implemented yet - c is not an axis aligned cube in global coordinate space
 		if (oc.is_occluded(c)) return 1; // check other buildings
 	}
-	if (!c_is_building_part && viewer.z > (ground_floor_z1 + floor_spacing) && is_cube()) {
+	if (!c_is_building_part && viewer.z > ground_floor_ceiling && is_cube()) {
 		// player above first floor of this building; check if object is occluded by a roof; we don't check bcube.z2() becase a lower part roof may be an occluder
 		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
 			float const roof_z(p->z2());
@@ -2074,6 +2075,11 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 			}
 			if (!not_occluded) return 1;
 		} // for p
+	}
+	if (check_pt_in_retail_room(center) && viewer.z > ground_floor_z1 && viewer.z < ground_floor_ceiling && has_room_geom()) {
+		// both the object and the viewer are in the ground floor of a retail building - check shelf rack backs as occluders
+		bool const long_dim(parts[0].dx() < parts[0].dy());
+		if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, interior->room_geom->shelf_rack_occluders, !long_dim)) return 1;
 	}
 	return 0;
 }

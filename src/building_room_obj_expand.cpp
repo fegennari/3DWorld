@@ -706,7 +706,7 @@ void add_rows_of_cubes(room_object_t const &c, cube_t const &region, float width
 	} // for row
 }
 
-void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects, bool add_models_mode) {
+void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects, bool add_models_mode, cube_t *back_cube) {
 	cube_t back, top, sides[2], shelves[5];
 	unsigned const num_shelves(get_shelf_rack_cubes(c, back, top, sides, shelves));
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_WAS_EXP | RO_FLAG_ON_SRACK);
@@ -714,6 +714,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 	float const top_shelf_z2(top.is_all_zeros() ? c.z2() : top.z1()); // bottom of the top, if present
 	rand_gen_t rgen;
 	vect_cube_t cubes; // for placed object overlap tests
+	if (back_cube != nullptr) {*back_cube = back;}
 
 	for (unsigned dir = 0; dir < 2; ++dir) { // each shelf has two sides/aisles
 		unsigned const rack_id((c.item_flags << 1) + dir);
