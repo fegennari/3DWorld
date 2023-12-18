@@ -1604,8 +1604,12 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		}
 		point obj_center(obj.get_cube_center());
 		if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
-		// allow fire extinguishers to be visible all the way down a long hallway
-		if (!shadow_only && obj.type != TYPE_FIRE_EXT && !dist_less_than(camera_bs, obj_center, 32.0*(obj.dx() + obj.dy() + obj.dz()))) continue; // too far (obj.max_len()?)
+		
+		if (!shadow_only && obj.type != TYPE_FIRE_EXT) { // distance culling; allow fire extinguishers to be visible all the way down a long hallway
+			float cull_dist(32.0*(obj.dx() + obj.dy() + obj.dz()));
+			if (building.check_pt_in_retail_room(obj_center)) {cull_dist *= 2.5;} // increased culling distance for retail areas
+			if (!dist_less_than(camera_bs, obj_center, cull_dist)) continue; // too far
+		}
 		if (!(is_rotated ? building.is_rot_cube_visible(obj, xlate) : camera_pdu.cube_visible(obj + xlate))) continue; // VFC
 		if (check_occlusion && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
 
