@@ -64,14 +64,16 @@ void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool
 
 // use_smap: 0=no, 1=sun/moon + dynamic lights; enable in shader and set shadow map uniforms, 2=dynamic lights only; disable in shader but set shadow map uniforms
 void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap,
-	float min_alpha, bool force_tsl, float pcf_scale, bool use_texgen, bool indir_lighting, bool is_outside)
+	float min_alpha, bool force_tsl, float pcf_scale, int use_texgen, bool indir_lighting, bool is_outside)
 {
 	use_dlights &= (lights_bcube.is_strictly_normalized() && !dl_sources.empty());
 	have_indir_smoke_tex = indir_lighting; // assume someone is going to set the indir texture in this case
 	if (indir_lighting) {s.set_prefix("#define USE_ALT_SCENE_BOUNDS", 1);} // FS; need to use different scene_llc_scale for dynamic lighting vs. building indir lighting
 	// Note: here use_texgen mode 5 is used as a hack so that the shader still has binding points for tex coords (can't optimize it out)
-	// and we can share the same VAO between texgen and texcoords modes without having to worry about which mode we were in when the VAO was created
-	setup_smoke_shaders(s, min_alpha, (use_texgen ? 5 : 0), 0, indir_lighting, 1, use_dlights, 0, 0,
+	// and we can share the same VAO between texgen and texcoords modes without having to worry about which mode we were in when the VAO was created;
+	// use texgen mode 6 instead for cylinder buildings
+	int const use_texgen_val(use_texgen ? ((use_texgen == 2) ? 6 : 5) : 0);
+	setup_smoke_shaders(s, min_alpha, use_texgen_val, 0, indir_lighting, 1, use_dlights, 0, 0,
 		((use_smap == 1) ? 2 : 0), use_bmap, 0, (use_dlights || indir_lighting), force_tsl, 0.0, 0.0, 0, 0, is_outside); // use_spec_map=0
 	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, (use_smap != 0), pcf_scale);
 	if (use_texgen) {s.add_uniform_float("tc_texgen_mix", 0.0);} // always uses texgen in this mode

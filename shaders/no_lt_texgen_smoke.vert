@@ -25,6 +25,7 @@ void main() {
 	else if (use_texgen == 3) {set_tc0_from_vert_id();}
 	else if (use_texgen == 4) {set_bent_quad_tc0_from_vert_id();}
 	else if (use_texgen == 5) {setup_texgen_st(); tc = mix(tc, fg_TexCoord, tc_texgen_mix);}
+	else if (use_texgen == 6) {setup_texgen_st_no_xy_cancel(); tc = mix(tc, fg_TexCoord, tc_texgen_mix);}
 	else                      {tc = fg_TexCoord * vec2(tex_scale_s, tex_scale_t);}
 
 	vec4 vertex    = vec4((vertex_offset_scale*vertex_offset), 0.0) + fg_Vertex;

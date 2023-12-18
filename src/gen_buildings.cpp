@@ -398,7 +398,7 @@ void setup_building_draw_shader_post(shader_t &s, bool have_indir) {
 	set_interior_lighting(s, have_indir);
 	if (have_indir) {indir_tex_mgr.setup_for_building(s);}
 }
-void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, bool use_texgen) { // for building interiors
+void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, int use_texgen) { // for building interiors
 	float const pcf_scale = 0.2;
 	// disable indir if the player is in a closed closet
 	bool const have_indir(enable_indir && have_building_indir_lighting() && !(player_in_closet && !(player_in_closet & RO_FLAG_OPEN)));
@@ -3351,7 +3351,16 @@ public:
 		if (draw_interior) {
 			if (!ref_pass_extb) { // skip for extended basement room reflections
 				// draw back faces of buildings, which will be interior walls
-				setup_building_draw_shader(s, min_alpha, 1, 1, 1); // enable_indir=1, force_tsl=1, use_texgen=1
+				cube_t player_part;
+				
+				// since walls are mostly XY axis aligned, we can use both axes for the texture 's' component scale and Z for the 't' component scale;
+				// this doesn't really work for non-cube buildings though, in particular on near 45 degree edges where the delta_x cancels with the delta_y;
+				// so set special texgen mode so that X and Y are of opposite signs and don't cancel at near 45 degree edges; this fixes cylinders but not 5-6 sides
+				if (player_building != nullptr && player_building->num_sides > 8) { // player in non-cube cylinder-like building
+					player_part = player_building->get_part_containing_pt(camera_xlated);
+				}
+				bool const diag_texgen_mode(!player_part.is_all_zeros());
+				setup_building_draw_shader(s, min_alpha, 1, 1, (diag_texgen_mode ? 2 : 1)); // enable_indir=1, force_tsl=1, use_texgen=1|2
 				glEnable(GL_CULL_FACE);
 				glCullFace(swap_front_back ? GL_BACK : GL_FRONT); // draw back faces
 
@@ -3360,26 +3369,18 @@ public:
 					unsigned const bcs_ix(i - bcs.begin());
 					vertex_range_t const *exclude(nullptr);
 					building_mat_t const &mat((*i)->buildings.front().get_material()); // Note: assumes all wall textures have a consistent tscale
-					// translate texture near the camera to get better tex coord resolution; make a multiple of tscale to avoid visible shift
-					vector3d texgen_origin(xoff2*DX_VAL, yoff2*DY_VAL, 0.0);
-					for (unsigned d = 0; d < 2; ++d) {texgen_origin[d] = mat.wall_tex.tscale_x*int(texgen_origin[d]/mat.wall_tex.tscale_x);}
-					s.add_uniform_vector3d("texgen_origin", texgen_origin);
-					float const side_tscale(2.0f*mat.wall_tex.tscale_x);
-					float tsx(side_tscale), tsy(side_tscale);
+					vector3d texgen_origin;
 
-					// since walls are mostly XY axis aligned, we can use both axes for the texture 's' component scale and Z for the 't' component scale;
-					// this doesn't really work for non-cube buildings though, in particular on near 45 degree edges where the delta_x cancels with the delta_y;
-					// so we hack it by selecting the sign based on the room/quadrant the player is in (or maybe the view dir?);
-					// this produces a pop when the player crosses rooms, but it's better when the player remains inside a room
-					if (player_building != nullptr && player_building->num_sides > 8 && (display_mode & 0x20)) { // player in cylinder building
-						cube_t const part(player_building->get_part_containing_pt(camera_xlated));
-
-						if (!part.is_all_zeros()) {
-							vector3d const dir(camera_xlated - part.get_cube_center());
-							if ((dir.x < 0) == (dir.y < 0)) {tsx *= -1.0;}
-						}
+					if (diag_texgen_mode) { // use building player part center
+						texgen_origin.assign(player_part.xc(), player_part.yc(), 0.0);
 					}
-					setup_texgen_full(tsx, tsy, 0.0, 0.0, 0.0, 0.0, 2.0f*mat.wall_tex.tscale_y, 0.0, s, 0);
+					else { // translate texture near the camera to get better tex coord resolution; make a multiple of tscale to avoid visible shift
+						texgen_origin.assign(xoff2*DX_VAL, yoff2*DY_VAL, 0.0);
+						for (unsigned d = 0; d < 2; ++d) {texgen_origin[d] = mat.wall_tex.tscale_x*int(texgen_origin[d]/mat.wall_tex.tscale_x);}
+					}
+					float const side_tscale(2.0f*mat.wall_tex.tscale_x);
+					s.add_uniform_vector3d("texgen_origin", texgen_origin);
+					setup_texgen_full(side_tscale, side_tscale, 0.0, 0.0, 0.0, 0.0, 2.0f*mat.wall_tex.tscale_y, 0.0, s, 0);
 				
 					if (!per_bcs_exclude.empty()) { // draw this range using stencil test but the rest of the buildings without stencil test
 						vertex_range_t const &vr(per_bcs_exclude[bcs_ix]);

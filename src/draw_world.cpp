@@ -354,6 +354,7 @@ void invalidate_snow_coverage() {free_texture(sky_zval_tid);}
 //                     13: depth, 14: reflection, 15: ripples/dlight bcubes, 16-31: dlight shadow maps
 // use_texgen: 0 = use texture coords, 1 = use standard texture gen matrix, 2 = use custom shader tex0_s/tex0_t,
 //             3 = use vertex id for texture, 4 = use bent quad vertex id for texture, 5 = mix between tc and texgen using tc_texgen_mix
+//             6 = similar to 5, except ensure X and Y have opposite signs so that they don't cancel on near 45 degree edges
 // use_bmap  : 0 = none, 1 = auto generate tangent vector, 2 = tangent vector in vertex attribute
 // is_outside: 0 = inside, 1 = outside, 2 = use snow coverage mask
 // enable_reflect: 0 = none, 1 = planar, 2 = cube map

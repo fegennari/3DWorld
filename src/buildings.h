@@ -2222,7 +2222,7 @@ int get_plywood_tid   ();
 int get_insulation_tid();
 int get_normal_map_for_bldg_tid(int tid);
 unsigned register_sign_text(std::string const &text);
-void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, bool use_texgen);
+void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, int use_texgen);
 void rotate_verts(vector<rgeom_mat_t::vertex_t> &verts, building_t const &building);
 void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,
 	colorRGBA const &color, vect_vnctcc_t &verts, bool invert_tc_x=0, bool exclude_frame=0, bool no_tc=0, bool no_rotate=0, bool swap_tc_xy=0);
@@ -2255,7 +2255,7 @@ bldg_obj_type_t const &get_room_obj_type(room_object_t const &obj);
 void register_building_water_splash(point const &pos, float size=1.0, bool alert_zombies=1);
 // functions in city_gen.cc
 void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap,
-	float min_alpha=0.0, bool force_tsl=0, float pcf_scale=1.0, bool use_texgen=0, bool indir_lighting=0, bool is_outside=1);
+	float min_alpha=0.0, bool force_tsl=0, float pcf_scale=1.0, int use_texgen=0, bool indir_lighting=0, bool is_outside=1);
 void enable_animations_for_shader(shader_t &s);
 void setup_city_lights(vector3d const &xlate);
 void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only);
