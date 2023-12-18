@@ -1609,7 +1609,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (!(is_rotated ? building.is_rot_cube_visible(obj, xlate) : camera_pdu.cube_visible(obj + xlate))) continue; // VFC
 		if (check_occlusion && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
 
-		if (camera_room >= 0 && (display_mode & 0x20)) {
+		if (camera_room >= 0) {
 			if (obj.room_id != last_room_ix) { // new room
 				last_room_closed = building.all_room_int_doors_closed(obj.room_id, obj.zc());
 				last_room_ix     = obj.room_id;
