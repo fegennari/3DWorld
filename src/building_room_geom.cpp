@@ -952,7 +952,52 @@ void building_room_geom_t::add_rack(room_object_t const &c, bool add_rack, bool 
 }
 
 void building_room_geom_t::add_chimney_cap(room_object_t const &c) {
-	// TODO
+	float const dx(c.dx()), dy(c.dy()), dz(c.dz()), min_sz(min(dx, dy));
+	bool const long_dim(dx < dy);
+
+	if ((c.obj_id & 1) && min_sz < 1.5*max(dx, dy)) { // split top in half; could be more efficient
+		float const split_pos(c.get_center_dim(long_dim));
+		room_object_t c_sub[2] = {c, c};
+
+		for (unsigned d = 0; d < 2; ++d) {
+			c_sub[d].obj_id &= ~1; // remove LSB to avoid infinite recursion
+			c_sub[d].d[long_dim][d] = split_pos;
+			add_chimney_cap(c_sub[d]);
+		}
+		return;
+	}
+	// crown
+	bool const add_overlap(c.obj_id & 2);
+	cube_t crown(c), hole(c);
+	crown.z2() -= 0.75*dz; // shorten height
+	hole.expand_in_dim(0, -0.5*(dx - 0.4*min_sz)); // shrink
+	hole.expand_in_dim(1, -0.5*(dy - 0.4*min_sz)); // shrink
+	if (add_overlap) {crown.expand_by_xy(0.1*min_sz);} // grow
+	cube_t sides[4]; // {-y, +y, -x, +x}
+	subtract_cube_xy(crown, hole, sides);
+	rgeom_mat_t &crown_mat(get_material(tid_nm_pair_t(get_texture_by_name("roads/asphalt.jpg"), 64.0), 0, 0, 0, 0, 1)); // no shadows, exterior
+
+	for (unsigned n = 0; n < 4; ++n) { // skip Y edges of short sides
+		crown_mat.add_cube_to_verts(sides[n], LT_GRAY, tex_origin, (((n > 1) ? EF_Y12 : 0) | (add_overlap ? 0 : EF_Z1)));
+	}
+	// top
+	cube_t top(hole);
+	top.z1() = crown.z2();
+	top.expand_by_xy(0.1*min_sz);
+	subtract_cube_xy(top, hole, sides);
+	rgeom_mat_t &top_mat(get_untextured_material(0, 0, 0, 0, 1)); // no shadows, exterior
+
+	for (unsigned n = 0; n < 4; ++n) { // skip Y edges of short sides
+		top_mat.add_cube_to_verts_untextured(sides[n], colorRGBA(0.7, 0.24, 0.04), ((n > 1) ? EF_Y12 : 0)); // orange-brown
+	}
+	if (0 && (c.obj_id & 4)) { // cage/cover - not working because alpha test is disabled and drawn order is wrong for blending
+		cube_t cage(c), roof(c);
+		set_cube_zvals(cage, crown.z2(), (c   .z2() + 0.4*dz));
+		set_cube_zvals(roof, cage .z2(), (cage.z2() + 0.1*dz));
+		rgeom_mat_t &cage_mat(get_material(tid_nm_pair_t(get_texture_by_name("roads/chainlink_fence.png"), 400.0), 0, 0, 0, 0, 1)); // no shadows, exterior
+		for (unsigned inv = 0; inv < 2; ++inv) {cage_mat.add_cube_to_verts(cage, WHITE, tex_origin, EF_Z12, 0, 0, 0, inv);} // skip top and bottom surfaces
+		get_metal_material(0, 0, 0, 1).add_cube_to_verts_untextured(roof, GRAY, 0); // no shadows, exterior, all sides
+	}
 }
 
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {

@@ -758,9 +758,12 @@ void building_interior_t::assign_master_bedroom(float window_vspacing, float flo
 
 void building_t::add_chimney_cap(rand_gen_t &rgen) {
 	assert(interior);
+	if (rgen.rand_float() < 0.25) return; // 25% chance of no chimney cap
 	cube_t ccap(get_chimney()); // start with full chimney, then place the cap on top
-	set_cube_zvals(ccap, ccap.z2(), (ccap.z2() + 0.1*get_window_vspace()));
+	set_cube_zvals(ccap, ccap.z2(), (ccap.z2() + 0.2*get_window_vspace()));
 	interior->room_geom->objs.emplace_back(ccap, TYPE_CHIM_CAP, 0); // room_id=0
+	set_obj_id(interior->room_geom->objs); // used for the style
+	bcube.union_with_cube(ccap); // extend bcube to include the chimnmey cap so that it's always drawn
 }
 
 void building_t::maybe_add_fire_escape(rand_gen_t &rgen) {
