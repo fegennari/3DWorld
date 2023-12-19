@@ -1339,8 +1339,11 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shad
 		for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {
 			if (camera_pdu.cube_visible(*p + xlate)) {any_part_visible = 1; break;}
 		}
-		if (!any_part_visible && point_in_attic(camera_pdu.pos - xlate)) {any_part_visible = 1;} // check the attic
-		if (!any_part_visible) return;
+		if (!any_part_visible && !point_in_attic(camera_pdu.pos - xlate)) { // check the attic
+			// exterior geometry such as roof vents and chimney caps may still be visible even if no parts are visible, so draw them
+			if (is_house && !reflection_pass && has_room_geom()) {interior->room_geom->mats_exterior.draw(bbd, s, 0, 0, 1);}
+			return;
+		}
 	}
 	if (!has_room_geom()) {
 		interior->room_geom.reset(new building_room_geom_t(bcube.get_llc()));
