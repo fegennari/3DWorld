@@ -1694,8 +1694,6 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 					set_wall_width(toaster, pos_d, 0.5*tdepth,  dim);
 
 					if (!placed_mwave || !mwave.intersects(toaster)) { // don't overlap the microwave
-						unsigned const NUM_TOASTER_COLORS = 7;
-						colorRGBA const toaster_colors[NUM_TOASTER_COLORS] = {WHITE, LT_GRAY, GRAY, DK_GRAY, GRAY_BLACK, colorRGBA(0.0, 0.0, 0.5), colorRGBA(0.5, 0.0, 0.0)};
 						objs.emplace_back(toaster, TYPE_TOASTER, room_id, !dim, rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt); // random dir
 						objs.back().color = toaster_colors[rgen.rand()%NUM_TOASTER_COLORS];
 						objs[cabinet_id].flags |= RO_FLAG_ADJ_TOP; // flag as having a toaster so that we don't add a book or bottle that could overlap it
