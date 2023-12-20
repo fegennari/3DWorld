@@ -638,13 +638,13 @@ void set_book_id_and_color(room_object_t &obj, rand_gen_t &rgen) {
 	obj.color  = book_colors[rgen.rand() % NUM_BOOK_COLORS];
 }
 
-void add_rows_cols_of_vcylinders(room_object_t const &c, cube_t const &region, float radius, float height, float spacing_factor,
+void add_rows_of_vcylinders(room_object_t const &c, cube_t const &region, float radius, float height, float spacing_factor,
 	unsigned type, unsigned max_cols, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen, bool dir=0, bool inv_dim=0)
 {
-	float const length(region.get_sz_dim(!c.dim)), depth(region.get_sz_dim(c.dim));
+	float const length(region.get_sz_dim(!c.dim)), shelf_depth(region.get_sz_dim(c.dim));
 	float const space(spacing_factor*radius), stride(2.0*radius + space);
-	unsigned const num_rows(length/stride), num_cols(min((1U + (rgen.rand()%max_cols)), max(1U, unsigned(depth/stride)))); // round down
-	float const row_spacing(length/num_rows), col_spacing(depth/num_cols);
+	unsigned const num_rows(length/stride), num_cols(min((1U + (rgen.rand()%max_cols)), max(1U, unsigned(shelf_depth/stride)))); // round down
+	float const row_spacing(length/num_rows), col_spacing(shelf_depth/num_cols);
 	point pos;
 	pos[ c.dim] = region.d[ c.dim][0] + 0.5*col_spacing;
 	pos[!c.dim] = region.d[!c.dim][0] + 0.5*row_spacing;
@@ -677,14 +677,14 @@ void add_rows_cols_of_vcylinders(room_object_t const &c, cube_t const &region, f
 		objc.translate_dim(!c.dim, row_spacing);
 	} // for row
 }
-void add_rows_of_cubes(room_object_t const &c, cube_t const &region, float width, float depth, float height, float spacing_factor,
+void add_row_of_cubes(room_object_t const &c, cube_t const &region, float width, float depth, float height, float spacing_factor,
 	unsigned type, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen, bool dir=0, bool inv_dim=0)
 {
 	float const length(region.get_sz_dim(!c.dim)), space(spacing_factor*width), stride(width + space);
 	unsigned const objects_start(objects.size()), num_rows(length/stride); // round down
-	float const row_spacing(length/num_rows);
+	float const row_spacing(length/num_rows), shelf_depth(region.get_sz_dim(c.dim));
 	point pos;
-	pos[ c.dim] = region.d[ c.dim][0] + 0.5*region.get_sz_dim(c.dim);
+	pos[ c.dim] = region.d[ c.dim][0] + 0.5*shelf_depth;
 	pos[!c.dim] = region.d[!c.dim][0] + 0.5*row_spacing;
 	pos.z = region.z1();
 	cube_t objc(pos);
@@ -710,12 +710,37 @@ void add_rows_of_cubes(room_object_t const &c, cube_t const &region, float width
 		objc.translate_dim(!c.dim, row_spacing);
 	} // for row
 }
+void add_row_of_balls(room_object_t const &c, cube_t const &region, float spacing_factor,
+	float floor_spacing, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen)
+{
+	unsigned const btype(rgen.rand() % NUM_BALL_TYPES);
+	float const radius(ball_types[btype].radius*floor_spacing/(12*8)), diameter(2.0*radius), shelf_depth(region.get_sz_dim(c.dim));
+	if (diameter > region.dz() || diameter > shelf_depth) return; // not enough space to fit a ball of this type; often happens with beach balls
+	float const length(region.get_sz_dim(!c.dim)), space(spacing_factor*diameter), stride(diameter + space);
+	unsigned const objects_start(objects.size()), num_rows(length/stride); // round down
+	float const row_spacing(length/num_rows);
+	point pos;
+	pos[ c.dim] = region.d[ c.dim][0] + 0.5*shelf_depth;
+	pos[!c.dim] = region.d[!c.dim][0] + 0.5*row_spacing;
+	pos.z = region.z1() + radius;
+	cube_t objc;
+	objc.set_from_sphere(pos, radius);
+
+	for (unsigned row = 0; row < num_rows; ++row) {
+		if (rgen.rand_float() < 0.75) { // 75% chance
+			room_object_t obj(objc, TYPE_LG_BALL, c.room_id, 0, 0, flags, c.light_amt);
+			obj.item_flags = btype; // no dstate
+			objects.push_back(obj);
+		}
+		objc.translate_dim(!c.dim, row_spacing);
+	}
+}
 
 void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects, bool add_models_mode, cube_t *back_cube) {
 	cube_t back, top, sides[2], shelves[5];
 	unsigned const num_shelves(get_shelf_rack_cubes(c, back, top, sides, shelves));
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_WAS_EXP | RO_FLAG_ON_SRACK), unpowered_flags(flags | RO_FLAG_NO_POWER);
-	//float const floor_spacing(c.dz()/SHELF_RACK_HEIGHT_FS);
+	float const floor_spacing(c.dz()/SHELF_RACK_HEIGHT_FS);
 	float const top_shelf_z2(top.is_all_zeros() ? c.z2() : top.z1()); // bottom of the top, if present
 	bool const add_food_boxes(!global_building_params.food_box_tids.empty());
 	rand_gen_t rgen;
@@ -787,7 +812,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 				}
 				else { // add bottles; these aren't consumable by the player because that would be too powerful
 					float const bot_height(height_val*rgen2.rand_uniform(0.7, 0.9)), bot_radius(min(0.25f*depth, bot_height*rgen2.rand_uniform(0.12, 0.18)));
-					add_rows_cols_of_vcylinders(c, shelf, bot_radius, bot_height, 0.25, TYPE_BOTTLE, 2, flags, objects, rgen2); // 1-2 columns
+					add_rows_of_vcylinders(c, shelf, bot_radius, bot_height, 0.25, TYPE_BOTTLE, 2, flags, objects, rgen2); // 1-2 columns
 					continue;
 				}
 			} // end food
@@ -808,39 +833,47 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 				if (category == 1) { // food boxes (add_models_mode == 0)
 					float const fheight(height_val*rgen2.rand_uniform(0.7, 0.9)), fdepth(min(depth, fheight)*rgen2.rand_uniform(0.15, 0.25));
 					float const fwidth(min(depth, fheight)*rgen2.rand_uniform(0.6, 0.9));
-					add_rows_of_cubes(c, section, fwidth, fdepth, fheight, 0.2, TYPE_FOOD_BOX, flags, objects, rgen2, dir);
+					add_row_of_cubes(c, section, fwidth, fdepth, fheight, 0.2, TYPE_FOOD_BOX, flags, objects, rgen2, dir);
 				}
 				else if (category == 2) { // houshold goods
 					if (add_models_mode) continue; // not model
-					unsigned const type_ix(rgen2.rand() % 7);
+					unsigned const type_ix(rgen2.rand() % 8);
 
 					if (type_ix == 0) { // paint cans
 						float const oheight(height_val*rgen2.rand_uniform(0.6, 0.8)), radius(min(0.4f*depth, 0.44f*oheight));
-						add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.1, TYPE_PAINTCAN, 2, flags, objects, rgen2); // 1-2 columns
+						add_rows_of_vcylinders(c, section, radius, oheight, 0.1, TYPE_PAINTCAN, 2, flags, objects, rgen2); // 1-2 columns
 					}
 					else if (type_ix == 1) { // toilet paper rolls
 						float const oheight(0.6*height_val), radius(min(0.4f*depth, 0.4f*oheight));
-						add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.2, TYPE_TPROLL, 3, flags, objects, rgen2); // 1-3 columns
+						add_rows_of_vcylinders(c, section, radius, oheight, 0.2, TYPE_TPROLL, 3, flags, objects, rgen2); // 1-3 columns
 					}
 					else if (type_ix == 2) { // spray paint cans
 						float const oheight(height_val*rgen2.rand_uniform(0.75, 0.8)), radius(min(0.25f*depth, 0.17f*oheight));
-						add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.2, TYPE_SPRAYCAN, 3, flags, objects, rgen2); // 1-3 columns
+						add_rows_of_vcylinders(c, section, radius, oheight, 0.2, TYPE_SPRAYCAN, 3, flags, objects, rgen2); // 1-3 columns
 					}
 					else if (type_ix == 3) { // vases
 						float const oheight(height*rgen2.rand_uniform(0.6, 0.9)), radius(min(0.4f*depth, oheight*rgen2.rand_uniform(0.3, 0.5)));
-						add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.4, TYPE_VASE, 2, flags, objects, rgen2); // 1-2 columns
+						add_rows_of_vcylinders(c, section, radius, oheight, 0.4, TYPE_VASE, 2, flags, objects, rgen2); // 1-2 columns
 					}
 					else if (type_ix == 4) { // flashlights
 						float const oheight(height_val*rgen2.rand_uniform(0.7, 0.85)), radius(min(0.25f*depth, 0.2f*oheight*rgen2.rand_uniform(0.8, 1.25)));
-						add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.25, TYPE_FLASHLIGHT, 3, flags, objects, rgen2); // 1-3 columns
+						add_rows_of_vcylinders(c, section, radius, oheight, 0.25, TYPE_FLASHLIGHT, 3, flags, objects, rgen2); // 1-3 columns
 					}
 					else if (type_ix == 5) { // candles
 						float const oheight(height_val*rgen2.rand_uniform(0.55, 0.7)), radius(min(0.2f*depth, 0.16f*oheight*rgen2.rand_uniform(0.8, 1.25)));
-						add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.25, TYPE_CANDLE, 3, flags, objects, rgen2); // 1-3 columns
+						add_rows_of_vcylinders(c, section, radius, oheight, 0.25, TYPE_CANDLE, 3, flags, objects, rgen2); // 1-3 columns
 					}
 					else if (type_ix == 6) { // books; should these be stacked or upright?
-						add_rows_of_cubes(c, section, 0.7*depth, 0.9*depth, 0.12*depth, 0.1, TYPE_BOOK, flags, objects, rgen2, (c.dim ^ dir), 1);
+						add_row_of_cubes(c, section, 0.7*depth, 0.9*depth, 0.12*depth, 0.1, TYPE_BOOK, flags, objects, rgen2, (c.dim ^ dir), 1);
 					}
+					else if (type_ix == 7) { // balls; not dynamic objects
+						add_row_of_balls(c, section, 0.25, floor_spacing, flags, objects, rgen2);
+					}
+					else if (type_ix == 8) { // clothing
+						if (!add_models_mode) continue; // not adding models
+						// TYPE_FOLD_SHIRT
+					}
+					// else TYPE_TOY?
 				} // end household goods
 				else if (category == 3) { // kitchen
 					unsigned const type_ix(rgen2.rand() % 6);
@@ -849,7 +882,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 						if (!add_models_mode) continue; // not adding models
 						if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_CUP)) continue;
 						float const oheight(height_val*rgen2.rand_uniform(0.42, 0.44)), radius(oheight*get_radius_for_square_model(OBJ_MODEL_CUP));
-						add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.5, TYPE_CUP, 2, flags, objects, rgen2); // 1-2 columns
+						add_rows_of_vcylinders(c, section, radius, oheight, 0.5, TYPE_CUP, 2, flags, objects, rgen2); // 1-2 columns
 					}
 					else if (type_ix == 1) { // pans
 						if (add_models_mode) continue; // not model
@@ -857,14 +890,14 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 						section.expand_in_dim(!c.dim, -1.2*radius); // make room for handles
 							
 						if (section.get_sz_dim(!c.dim) > depth) { // add if large enough: 1 column, enough spacing for handle, random dir
-							add_rows_cols_of_vcylinders(c, section, radius, oheight, 1.25, TYPE_PAN, 1, flags, objects, rgen2, rgen2.rand_bool());
+							add_rows_of_vcylinders(c, section, radius, oheight, 1.25, TYPE_PAN, 1, flags, objects, rgen2, rgen2.rand_bool());
 						}
 					}
 					else if (type_ix == 2) { // trashcans
 						if (add_models_mode) continue; // not model
 						unsigned const objs_start(objects.size());
 						float const oheight(height*rgen2.rand_uniform(0.7, 0.9)), radius(oheight*rgen2.rand_uniform(0.36, 0.6));
-						add_rows_cols_of_vcylinders(c, section, radius, oheight, 0.2, TYPE_TCAN, 1, flags, objects, rgen2); // 1 column
+						add_rows_of_vcylinders(c, section, radius, oheight, 0.2, TYPE_TCAN, 1, flags, objects, rgen2); // 1 column
 							
 						for (auto i = objects.begin()+objs_start; i != objects.end(); ++i) {
 							if (rgen2.rand_bool()) {i->shape = SHAPE_CUBE;} // 50% cylinders, 50% cubes
@@ -873,21 +906,21 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 					else if (type_ix == 3) { // microwaves
 						if (add_models_mode) continue; // not model; should they be, so that they can be opened without taking an object from the rack?
 						float const mheight(height*rgen2.rand_uniform(0.9, 0.95)), mwidth(1.7*mheight), mdepth(min(1.2f*mheight, 0.95f*depth)); // AR=1.7 to match texture
-						add_rows_of_cubes(c, section, mwidth, mdepth, mheight, 0.1, TYPE_MWAVE, unpowered_flags, objects, rgen2, dir);
+						add_row_of_cubes(c, section, mwidth, mdepth, mheight, 0.1, TYPE_MWAVE, unpowered_flags, objects, rgen2, dir);
 					}
 					else if (type_ix == 4) { // toasters
 						if (!add_models_mode) continue; // not adding models
 						if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_TOASTER)) continue;
 						vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOASTER));
 						float const theight(height_val*0.6), twidth(theight*sz.x/sz.z), tdepth(theight*sz.y/sz.z);
-						add_rows_of_cubes(c, section, twidth, tdepth, theight, 0.2, TYPE_TOASTER, unpowered_flags, objects, rgen2, dir, 1); // inv_dim=1
+						add_row_of_cubes(c, section, twidth, tdepth, theight, 0.2, TYPE_TOASTER, unpowered_flags, objects, rgen2, dir, 1); // inv_dim=1
 					}
 					else if (type_ix == 5) { // fire extinguishers
 						if (!add_models_mode) continue; // not adding models
 						if (num_shelves > 4 ) continue; // not enough space for fire extinguishers
 						if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_FIRE_EXT)) continue;
 						float const fheight(height*rgen2.rand_uniform(0.85, 0.95)), radius(fheight*get_radius_for_square_model(OBJ_MODEL_FIRE_EXT));
-						add_rows_cols_of_vcylinders(c, section, radius, fheight, 0.25, TYPE_FIRE_EXT, 1, flags, objects, rgen2); // 1 column
+						add_rows_of_vcylinders(c, section, radius, fheight, 0.25, TYPE_FIRE_EXT, 1, flags, objects, rgen2); // 1 column
 					}
 				}
 				else if (category == 4) { // electronics
@@ -896,12 +929,12 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 					if (type_ix == 0) { // computers
 						if (add_models_mode) continue; // not model
 						float const cheight(height*rgen2.rand_uniform(0.9, 0.95)), cwidth(0.44*cheight), cdepth(0.9*cheight); // fixed AR=0.44 to match texture
-						add_rows_of_cubes(c, section, cwidth, cdepth, cheight, 0.35, TYPE_COMPUTER, unpowered_flags, objects, rgen2, dir);
+						add_row_of_cubes(c, section, cwidth, cdepth, cheight, 0.35, TYPE_COMPUTER, unpowered_flags, objects, rgen2, dir);
 					}
 					else if (type_ix == 1) { // laptops
 						if (add_models_mode) continue; // not model
 						float const lwidth(depth*rgen2.rand_uniform(0.7, 0.75)), ldepth(0.7*lwidth), lheight(0.06*lwidth);
-						add_rows_of_cubes(c, section, lwidth, ldepth, lheight, 0.15, TYPE_LAPTOP, flags, objects, rgen2, dir);
+						add_row_of_cubes(c, section, lwidth, ldepth, lheight, 0.15, TYPE_LAPTOP, flags, objects, rgen2, dir);
 					}
 					else if (type_ix == 2) { // monitors
 						if (!add_models_mode) continue; // not adding models
@@ -909,23 +942,15 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 						if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) continue;
 						vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV));
 						float const mheight(height*rgen2.rand_uniform(0.85, 0.95)), mwidth(mheight*sz.y/sz.z), mdepth(mheight*sz.x/sz.z);
-						add_rows_of_cubes(c, section, mwidth, mdepth, mheight, 0.2, TYPE_MONITOR, unpowered_flags, objects, rgen2, dir);
+						add_row_of_cubes(c, section, mwidth, mdepth, mheight, 0.2, TYPE_MONITOR, unpowered_flags, objects, rgen2, dir);
 					}
 					else if (type_ix == 3) { // lamps
 						if (!add_models_mode) continue; // not adding models
 						if (num_shelves > 3 ) continue; // not enough space for lamps
 						if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_LAMP)) continue;
 						float const lheight(height*rgen2.rand_uniform(0.85, 0.95)), radius(lheight*get_radius_for_square_model(OBJ_MODEL_LAMP));
-						add_rows_cols_of_vcylinders(c, section, radius, lheight, 0.25, TYPE_LAMP, 1, unpowered_flags, objects, rgen2); // 1 column
+						add_rows_of_vcylinders(c, section, radius, lheight, 0.25, TYPE_LAMP, 1, unpowered_flags, objects, rgen2); // 1 column
 					}
-				}
-				else if (category == 5) { // toys
-					if (add_models_mode) continue; // not model
-					// TYPE_LG_BALL, TYPE_TOY
-				}
-				else if (category == 6) { // clothing
-					if (!add_models_mode) continue; // not adding models
-					// TYPE_FOLD_SHIRT
 				}
 			} // for s
 			// TODO: new items: furniture, appliances, etc.
