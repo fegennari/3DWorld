@@ -1216,10 +1216,12 @@ bool is_obj_in_or_on_obj(room_object_t const &parent, room_object_t const &child
 	return 0;
 }
 bool object_can_have_something_on_it(room_object_t const &obj) {
+	auto const type(obj.type);
 	// only these types can have objects placed on them (what about TYPE_SHELF? what about TYPE_BED with a ball, book, or blanket placed on it?)
-	return (obj.type == TYPE_TABLE || obj.type == TYPE_DESK || obj.type == TYPE_COUNTER || obj.type == TYPE_DRESSER || obj.type == TYPE_NIGHTSTAND ||
-		obj.type == TYPE_BOX || obj.type == TYPE_CRATE || obj.type == TYPE_WINE_RACK || obj.type == TYPE_BOOK || obj.type == TYPE_STOVE || obj.type == TYPE_MWAVE
-		|| obj.type == TYPE_BED || obj.type == TYPE_SERVER /*|| obj.type == TYPE_FCABINET*/ /*|| obj.type == TYPE_SHELF*/);
+	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_COUNTER || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND ||
+		type == TYPE_BOX || type == TYPE_CRATE || type == TYPE_WINE_RACK || type == TYPE_BOOK || type == TYPE_STOVE || type == TYPE_MWAVE ||
+		type == TYPE_BED || type == TYPE_SERVER || type == TYPE_PIZZA_BOX || type == TYPE_LAPTOP || type == TYPE_FOLD_SHIRT
+		/*|| type == TYPE_FCABINET*/ /*|| type == TYPE_SHELF*/);
 }
 bool object_has_something_on_it(room_object_t const &obj, vect_room_object_t const &objs, vect_room_object_t::const_iterator objs_end) {
 	if (!object_can_have_something_on_it(obj)) return 0;

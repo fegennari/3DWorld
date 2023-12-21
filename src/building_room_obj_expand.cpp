@@ -678,7 +678,7 @@ void add_rows_of_vcylinders(room_object_t const &c, cube_t const &region, float 
 	} // for row
 }
 void add_row_of_cubes(room_object_t const &c, cube_t const &region, float width, float depth, float height, float spacing_factor,
-	unsigned type, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen, bool dir=0, bool inv_dim=0)
+	unsigned type, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen, bool dir=0, bool inv_dim=0, unsigned max_stack_height=1)
 {
 	float const length(region.get_sz_dim(!c.dim)), space(spacing_factor*width), stride(width + space);
 	unsigned const objects_start(objects.size()), num_rows(length/stride); // round down
@@ -694,18 +694,31 @@ void add_row_of_cubes(room_object_t const &c, cube_t const &region, float width,
 
 	for (unsigned row = 0; row < num_rows; ++row) {
 		if (rgen.rand_float() < 0.75) { // 75% chance
-			room_object_t obj(objc, type, c.room_id, (c.dim ^ inv_dim), dir, flags, c.light_amt);
+			unsigned const stack_height(1 + ((max_stack_height > 1) ? (rgen.rand() % max_stack_height) : 0));
+			cube_t objc_stack(objc);
 			
-			if (type == TYPE_BOOK) { // reduce size randomly
-				obj.z2() -= 0.5*height*rgen.rand_float();
-				obj.expand_in_dim( c.dim, -0.1*width*rgen.rand_float()); // length
-				obj.expand_in_dim(!c.dim, -0.2*width*rgen.rand_float()); // width
-				set_book_id_and_color(obj, rgen);
-			}
-			else if (type == TYPE_FOOD_BOX) {obj.obj_id  = objects_start;} // unique per section
-			else if (type == TYPE_TOASTER ) {obj.color   = toaster_colors[rgen.rand()%NUM_TOASTER_COLORS];} // random color
-			else if (type == TYPE_MONITOR ) {obj.obj_id |= 1;} // off by default; set LSB
-			objects.push_back(obj);
+			for (unsigned stack = 0; stack < stack_height; ++stack) {
+				room_object_t obj(objc_stack, type, c.room_id, (c.dim ^ inv_dim), dir, flags, c.light_amt);
+
+				if (type == TYPE_BOOK) { // reduce size randomly
+					obj.z2() -= 0.5*height*rgen.rand_float();
+					obj.expand_in_dim( c.dim, -0.1*width*rgen.rand_float()); // length
+					obj.expand_in_dim(!c.dim, -0.2*width*rgen.rand_float()); // width
+					set_book_id_and_color(obj, rgen);
+				}
+				else if (type == TYPE_FOOD_BOX  ) {obj.obj_id  = objects_start;} // unique per section
+				else if (type == TYPE_TOASTER   ) {obj.color   = toaster_colors[rgen.rand()%NUM_TOASTER_COLORS];} // random color
+				else if (type == TYPE_FOLD_SHIRT) {obj.color   = TSHIRT_COLORS [rgen.rand()%NUM_TSHIRT_COLORS ];} // random color
+				else if (type == TYPE_MONITOR   ) {obj.obj_id |= 1;} // off by default; set LSB
+				objects.push_back(obj);
+				if (stack+1 == stack_height) break; // done with stack
+				objc_stack.translate_dim(2, obj.dz()); // shift stack up
+				if (objc_stack.z2() > region.z2()) break; // stack is too tall
+				
+				if (type == TYPE_LAPTOP) { // add a bit of horizontal jitter
+					for (unsigned d = 0; d < 2; ++d) {objc_stack.translate_dim(d, 0.05*objc.get_sz_dim(d)*rgen.signed_rand_float());}
+				}
+			} // for stack
 		}
 		objc.translate_dim(!c.dim, row_spacing);
 	} // for row
@@ -807,7 +820,6 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 					continue;
 				}
 				else if (add_food_boxes && n == num_shelves-1) { // add food boxes on the top shelf
-					if (add_models_mode) continue; // not model
 					// will fall through to grouped items case below
 				}
 				else { // add bottles; these aren't consumable by the player because that would be too powerful
@@ -828,16 +840,17 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 				section_offset = ((s+1 == num_sections) ? 0.0 : min(0.25f*section_width, (section_width - depth))*rgen.signed_rand_float()); // no offset for last section
 				section.d[!c.dim][1] = lo_edge + (s+1)*section_width + section_offset - section_gap;
 				rgen.rand_mix(); // make sure to change the random values every section even if the items are skipped
-				rand_gen_t rgen2(rgen); // local rgen so that we get the same outcome for either value of add_models_model; no use of rgen beyong this point
+				rand_gen_t rgen2(rgen); // local rgen so that we get the same outcome for either value of add_models_model; no use of rgen beyond this point
 
 				if (category == 1) { // food boxes (add_models_mode == 0)
+					if (add_models_mode) continue; // not model
 					float const fheight(height_val*rgen2.rand_uniform(0.7, 0.9)), fdepth(min(depth, fheight)*rgen2.rand_uniform(0.15, 0.25));
 					float const fwidth(min(depth, fheight)*rgen2.rand_uniform(0.6, 0.9));
 					add_row_of_cubes(c, section, fwidth, fdepth, fheight, 0.2, TYPE_FOOD_BOX, flags, objects, rgen2, dir);
 				}
 				else if (category == 2) { // houshold goods
-					if (add_models_mode) continue; // not model
-					unsigned const type_ix(rgen2.rand() % 8);
+					unsigned const type_ix(rgen2.rand() % 9);
+					if (add_models_mode && type_ix != 8) continue; // not model
 
 					if (type_ix == 0) { // paint cans
 						float const oheight(height_val*rgen2.rand_uniform(0.6, 0.8)), radius(min(0.4f*depth, 0.44f*oheight));
@@ -864,19 +877,23 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 						add_rows_of_vcylinders(c, section, radius, oheight, 0.25, TYPE_CANDLE, 3, flags, objects, rgen2); // 1-3 columns
 					}
 					else if (type_ix == 6) { // books; should these be stacked or upright?
-						add_row_of_cubes(c, section, 0.7*depth, 0.9*depth, 0.12*depth, 0.1, TYPE_BOOK, flags, objects, rgen2, (c.dim ^ dir), 1);
+						add_row_of_cubes(c, section, 0.7*depth, 0.9*depth, 0.12*depth, 0.1, TYPE_BOOK, flags, objects, rgen2, (c.dim ^ dir), 1, 3); // stacked up to 3 high
 					}
 					else if (type_ix == 7) { // balls; not dynamic objects
 						add_row_of_balls(c, section, 0.25, floor_spacing, flags, objects, rgen2);
 					}
 					else if (type_ix == 8) { // clothing
 						if (!add_models_mode) continue; // not adding models
-						// TYPE_FOLD_SHIRT
+						if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_FOLD_SHIRT)) continue;
+						vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FOLD_SHIRT));
+						float const sdepth(depth*rgen2.rand_uniform(0.55, 0.7)), sheight(sdepth*sz.z/sz.y), swidth(sheight*sz.x/sz.z);
+						add_row_of_cubes(c, section, swidth, sdepth, sheight, 0.2, TYPE_FOLD_SHIRT, flags, objects, rgen2, dir, 0, 3); // stacked up to 3 high
 					}
 					// else TYPE_TOY?
 				} // end household goods
 				else if (category == 3) { // kitchen
-					unsigned const type_ix(rgen2.rand() % 6);
+					bool can_have_fire_ext(num_shelves <= 4); // if there are more than 4 shelves, there isn't enough space for fire extinguishers
+					unsigned const type_ix(rgen2.rand() % (can_have_fire_ext ? 6 : 5));
 
 					if (type_ix == 0) { // cups
 						if (!add_models_mode) continue; // not adding models
@@ -898,7 +915,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 						unsigned const objs_start(objects.size());
 						float const oheight(height*rgen2.rand_uniform(0.7, 0.9)), radius(oheight*rgen2.rand_uniform(0.36, 0.6));
 						add_rows_of_vcylinders(c, section, radius, oheight, 0.2, TYPE_TCAN, 1, flags, objects, rgen2); // 1 column
-							
+						
 						for (auto i = objects.begin()+objs_start; i != objects.end(); ++i) {
 							if (rgen2.rand_bool()) {i->shape = SHAPE_CUBE;} // 50% cylinders, 50% cubes
 						}
@@ -917,14 +934,14 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 					}
 					else if (type_ix == 5) { // fire extinguishers
 						if (!add_models_mode) continue; // not adding models
-						if (num_shelves > 4 ) continue; // not enough space for fire extinguishers
 						if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_FIRE_EXT)) continue;
 						float const fheight(height*rgen2.rand_uniform(0.85, 0.95)), radius(fheight*get_radius_for_square_model(OBJ_MODEL_FIRE_EXT));
 						add_rows_of_vcylinders(c, section, radius, fheight, 0.25, TYPE_FIRE_EXT, 1, flags, objects, rgen2); // 1 column
 					}
 				}
 				else if (category == 4) { // electronics
-					unsigned const type_ix(rgen2.rand() % 4);
+					bool can_have_monitors_lamps(num_shelves <= 3); // if there are more than 3 shelves, there isn't enough space for monitors and lamps
+					unsigned const type_ix(rgen2.rand() % (can_have_monitors_lamps ? 4 : 2));
 
 					if (type_ix == 0) { // computers
 						if (add_models_mode) continue; // not model
@@ -934,11 +951,10 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 					else if (type_ix == 1) { // laptops
 						if (add_models_mode) continue; // not model
 						float const lwidth(depth*rgen2.rand_uniform(0.7, 0.75)), ldepth(0.7*lwidth), lheight(0.06*lwidth);
-						add_row_of_cubes(c, section, lwidth, ldepth, lheight, 0.15, TYPE_LAPTOP, flags, objects, rgen2, dir);
+						add_row_of_cubes(c, section, lwidth, ldepth, lheight, 0.15, TYPE_LAPTOP, flags, objects, rgen2, dir, 0, 2); // stacked up to 3 high
 					}
 					else if (type_ix == 2) { // monitors
 						if (!add_models_mode) continue; // not adding models
-						if (num_shelves > 3 ) continue; // not enough space for monitors
 						if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) continue;
 						vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV));
 						float const mheight(height*rgen2.rand_uniform(0.85, 0.95)), mwidth(mheight*sz.y/sz.z), mdepth(mheight*sz.x/sz.z);
@@ -946,7 +962,6 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 					}
 					else if (type_ix == 3) { // lamps
 						if (!add_models_mode) continue; // not adding models
-						if (num_shelves > 3 ) continue; // not enough space for lamps
 						if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_LAMP)) continue;
 						float const lheight(height*rgen2.rand_uniform(0.85, 0.95)), radius(lheight*get_radius_for_square_model(OBJ_MODEL_LAMP));
 						add_rows_of_vcylinders(c, section, radius, lheight, 0.25, TYPE_LAMP, 1, unpowered_flags, objects, rgen2); // 1 column
