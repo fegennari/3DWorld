@@ -717,7 +717,7 @@ void add_row_of_balls(room_object_t const &c, cube_t const &region, float spacin
 	float const radius(ball_types[btype].radius*floor_spacing/(12*8)), diameter(2.0*radius), shelf_depth(region.get_sz_dim(c.dim));
 	if (diameter > region.dz() || diameter > shelf_depth) return; // not enough space to fit a ball of this type; often happens with beach balls
 	float const length(region.get_sz_dim(!c.dim)), space(spacing_factor*diameter), stride(diameter + space);
-	unsigned const objects_start(objects.size()), num_rows(length/stride); // round down
+	unsigned const num_rows(length/stride); // round down
 	float const row_spacing(length/num_rows);
 	point pos;
 	pos[ c.dim] = region.d[ c.dim][0] + 0.5*shelf_depth;

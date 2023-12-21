@@ -22,6 +22,7 @@ textures/skybox/skybox*.png
 textures/skybox/craterlake
 textures/pictures
 textures/papers
+textures/food_boxes
 dependencies/meshoptimizer/src/*.o
 house/snow.wind.map
 temp_assimp_embedded_image.*
