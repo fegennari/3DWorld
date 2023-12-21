@@ -827,7 +827,7 @@ void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
 }
 
 void building_room_geom_t::add_paint_can(room_object_t const &c) {
-	float const side_tscale_add(fract(11111*c.x1() + 22222*c.y1() + 33333*c.z1())); // somewhat random (but not enough for shelf racks?)
+	float const side_tscale_add(fract(21111*c.x1() + 22222*c.y1() + 23333*c.z1())); // somewhat random
 	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/paint_can_label.png")), 1, 0, 1)); // shadows, small
 	side_mat.add_vcylin_to_verts(c, apply_light_color(c), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 24, side_tscale_add); // draw sides only; random texture rotation
 	point top(c.get_cube_center());
@@ -4221,8 +4221,10 @@ tid_nm_pair_t get_ball_tex_params(room_object_t const &c, bool shadowed) {
 void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
 	bool const dynamic(c.is_dynamic()); // either small or dynamic
 	rgeom_mat_t &mat(get_material(get_ball_tex_params(c, 1), 1, dynamic, !dynamic)); // shadowed=1
-	// rotate the texture coords when the ball is rolling
-	mat.add_sphere_to_verts(c, apply_light_color(c), 0, zero_vector, tex_range_t(), (c.has_dstate() ? &get_dstate(c).rot_matrix : nullptr)); // low_detail=0
+	float ts_off(0.0);
+	if (c.rotates()) {ts_off = fract(21111*c.x1() + 22222*c.y1());} // ball placed with random rotation
+	// rotate the texture coords using rot_matrix when the ball is rolling
+	mat.add_sphere_to_verts(c, apply_light_color(c), 0, zero_vector, tex_range_t(), (c.has_dstate() ? &get_dstate(c).rot_matrix : nullptr), ts_off, 0.0); // low_detail=0
 }
 /*static*/ void building_room_geom_t::draw_lg_ball_in_building(room_object_t const &c, shader_t &s) {
 	//highres_timer_t timer("Draw Ball"); // 0.105ms

@@ -479,7 +479,7 @@ unsigned const RO_FLAG_ADJ_HI  = 0x0800; // for kitchen counters/closets/door tr
 unsigned const RO_FLAG_ADJ_BOT = 0x1000; // for door trim/railings
 unsigned const RO_FLAG_ADJ_TOP = 0x2000; // for door trim/railings
 unsigned const RO_FLAG_IS_HOUSE= 0x4000; // used for mirror reflections, shelves, and tables
-unsigned const RO_FLAG_RAND_ROT= 0x8000; // random rotation; used for office chairs, papers, pictures, and cups
+unsigned const RO_FLAG_RAND_ROT= 0x8000; // random rotation; used for office chairs, papers, pictures, cups, and balls
 unsigned const RO_FLAG_UNTEXTURED= 0x1000; // for shirts, aliased with RO_FLAG_ADJ_BOT
 unsigned const RO_FLAG_FROM_SET  = 0x1000; // for books,  aliased with RO_FLAG_ADJ_BOT
 unsigned const RO_FLAG_HAS_VOL_IX= 0x2000; // for books,  aliased with RO_FLAG_ADJ_TOP
@@ -721,14 +721,14 @@ public:
 		add_disk_to_verts(pos, radius, (normal_z_neg ? -plus_z : plus_z), color, swap_txy, inv_ts, inv_tt);
 	}
 	void add_sphere_to_verts(point const &center, vector3d const &size, colorRGBA const &color, bool low_detail=0,
-		vector3d const &skip_hemi_dir=zero_vector, tex_range_t const &tr=tex_range_t(), xform_matrix const *const matrix=nullptr);
+		vector3d const &skip_hemi_dir=zero_vector, tex_range_t const &tr=tex_range_t(), xform_matrix const *const matrix=nullptr, float ts_add=0.0, float tt_add=0.0);
 	void add_sphere_to_verts(point const &center, float radius, colorRGBA const &color, bool low_detail=0, tex_range_t const &tr=tex_range_t()) {
 		add_sphere_to_verts(center, vector3d(radius, radius, radius), color, low_detail, zero_vector, tr);
 	}
 	void add_sphere_to_verts(cube_t const &c, colorRGBA const &color, bool low_detail=0, vector3d const &skip_hemi_dir=zero_vector,
-		tex_range_t const &tr=tex_range_t(), xform_matrix const *const matrix=nullptr)
+		tex_range_t const &tr=tex_range_t(), xform_matrix const *const matrix=nullptr, float ts_add=0.0, float tt_add=0.0)
 	{
-		add_sphere_to_verts(c.get_cube_center(), 0.5*c.get_size(), color, low_detail, skip_hemi_dir, tr, matrix);
+		add_sphere_to_verts(c.get_cube_center(), 0.5*c.get_size(), color, low_detail, skip_hemi_dir, tr, matrix, ts_add, tt_add);
 	}
 	void add_vert_torus_to_verts(point const &center, float r_inner, float r_outer, colorRGBA const &color, float tscale=1.0, bool low_detail=0);
 	void add_contained_vert_torus_to_verts(cube_t const &c, colorRGBA const &color, float tscale=1.0, bool low_detail=0);

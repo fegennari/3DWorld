@@ -234,7 +234,7 @@ void rgeom_mat_t::add_disk_to_verts(point const &pos, float radius, vector3d con
 
 // Note: size can be nonuniform in X/Y/Z
 void rgeom_mat_t::add_sphere_to_verts(point const &center, vector3d const &size, colorRGBA const &color, bool low_detail,
-	vector3d const &skip_hemi_dir, tex_range_t const &tr, xform_matrix const *const matrix)
+	vector3d const &skip_hemi_dir, tex_range_t const &tr, xform_matrix const *const matrix, float ts_add, float tt_add)
 {
 	static vector<vert_norm_tc>      cached_verts[2]; // high/low detail, reused across all calls
 	static vector<vert_norm_comp_tc> cached_vncs [2];
@@ -262,12 +262,12 @@ void rgeom_mat_t::add_sphere_to_verts(point const &center, vector3d const &size,
 			point pt(i->v*size);
 			vector3d normal(i->n);
 			matrix->apply_to_vector3d(pt); matrix->apply_to_vector3d(normal);
-			itri_verts.emplace_back((pt + center), normal, (tr.x1 + i->t[0]*tscale[0]), (tr.y1 + i->t[1]*tscale[1]), cw);
+			itri_verts.emplace_back((pt + center), normal, (tr.x1 + i->t[0]*tscale[0] + ts_add), (tr.y1 + i->t[1]*tscale[1] + tt_add), cw);
 		}
 	}
 	else { // can use vncs (norm_comps)
 		for (auto i = vncs.begin(); i != vncs.end(); ++i) {
-			itri_verts.emplace_back((i->v*size + center), *i, (tr.x1 + i->t[0]*tscale[0]), (tr.y1 + i->t[1]*tscale[1]), cw);
+			itri_verts.emplace_back((i->v*size + center), *i, (tr.x1 + i->t[0]*tscale[0] + ts_add), (tr.y1 + i->t[1]*tscale[1] + tt_add), cw);
 		}
 	}
 	for (auto i = ixs.begin(); i != ixs.end(); i += 4) { // indices are for quads, but we want triangles, so expand them
