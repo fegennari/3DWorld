@@ -2443,6 +2443,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	unsigned rack_id(0);
 	bool const skip_middle_row(nrows & 1);
 	interior->room_geom->shelf_rack_occluders.reserve((nrows - skip_middle_row)*nracks);
+	//vect_room_object_t temp_objs;
 	
 	for (unsigned n = 0; n < nrows; ++n) { // n+1 aisles
 		if (skip_middle_row && n == nrows/2) continue; // skip middle aisle rack to allow direct access to central stairs and elevator
@@ -2475,6 +2476,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 				cube_t back_cube;
 				interior->room_geom->get_shelfrack_objects(srack, objs, 1, &back_cube); // add_models_mode=1; capture back cube for occlusion culling
 				interior->room_geom->shelf_rack_occluders.push_back(back_cube);
+				//for (unsigned n = 0; n < 2; ++n) {interior->room_geom->get_shelfrack_objects(srack, temp_objs, n);}
 				break; // done
 			} // for n
 			if (!was_shortened && r > 0) { // place a pillar at the end of the rack
@@ -2485,6 +2487,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 		} // for r
 	} // for n
 	add_cameras_to_room(rgen, room, zval, room_id, 1.0); // tot_light_amt=1.0
+	//cout << TXT(temp_objs.size()) << endl;
 }
 
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius) {
