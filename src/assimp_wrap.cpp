@@ -452,6 +452,8 @@ class file_reader_assimp {
 			if (load_animations) {cur_xf.xform_pos(bcube_pt);} // if we didn't transform the point above, transform it now to compute a (hopefully more accurate) bcube
 			if (i == 0) {mesh_bcube.set_from_point(bcube_pt);} else {mesh_bcube.union_with_pt(bcube_pt);}
 		} // for i
+		// alternate AABB approach; requires setting aiProcess_GenBoundingBoxes; Doesn't handle load_animations=1 case; unclear what benefits this has
+		//cube_t aabb(aiVector3D_to_vector3d(mesh->mAABB.mMin), aiVector3D_to_vector3d(mesh->mAABB.mMax));
 		assert(mesh->mFaces != nullptr);
 		assert(mesh->mNumFaces > 0); // if there were verts, there must be faces
 
@@ -538,6 +540,7 @@ public:
 		// aiProcess_FindDegenerates, aiProcess_FindInvalidData - optional
 		// aiProcess_FlipUVs - not needed since this can be done in the texture loading
 		// aiProcess_CalcTangentSpace - ???
+		// aiProcess_GenBoundingBoxes - calculate mesh AABBs
 		unsigned flags(aiProcess_Triangulate | aiProcess_SortByPType | aiProcess_JoinIdenticalVertices |
 			           aiProcess_FixInfacingNormals | aiProcess_GenUVCoords | aiProcess_OptimizeMeshes);
 		// Note: here we treat the recalc_normals flag as using smooth normals; if the model already contains normals, they're always used
