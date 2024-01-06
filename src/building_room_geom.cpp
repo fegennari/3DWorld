@@ -4435,6 +4435,10 @@ void building_room_geom_t::add_food_box(room_object_t const &c) {
 	get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(c, bkg_color, (~front_back_mask | EF_Z1)); // sides, shadows, small
 }
 
+void building_room_geom_t::add_safe(room_object_t const &c) {
+	// TODO: WRITE
+}
+
 void building_room_geom_t::add_debug_shape(room_object_t const &c) {
 	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
 	if      (c.shape == SHAPE_CUBE  ) {mat.add_cube_to_verts_untextured(c, c.color);} // all faces

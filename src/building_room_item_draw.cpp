@@ -971,6 +971,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_CAMERA:     add_camera(c); break;
 		case TYPE_CLOCK:      add_clock (c, 0); break; // add_dynamic=0
 		case TYPE_FOOD_BOX:   add_food_box(c); break;
+		case TYPE_SAFE:       add_safe(c); break;
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		default: break;
 		} // end switch
