@@ -717,6 +717,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	if (is_house && has_basement()) {add_basement_electrical_house(rgen);}
 	if (is_house && has_basement_pipes) {add_house_basement_pipes (rgen);}
 	if (has_attic()) {add_attic_objects(rgen);}
+	add_exterior_ac_pipes();
 	unsigned const ext_objs_start(objs.size());
 	vect_cube_t balconies;
 	ext_steps.clear(); // clear prev value in case this building's interior is recreated
@@ -1026,6 +1027,41 @@ void building_t::add_gutter_downspouts(rand_gen_t &rgen, vect_cube_t const &balc
 			interior->room_geom->objs.emplace_back(ds, TYPE_DOWNSPOUT, 0, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR), 1.0, SHAPE_CUBE, WHITE);
 		} // for e
 	} // for g
+}
+
+void building_t::add_exterior_ac_pipes() {
+	if (!is_house || !has_ac) return; // no AC
+	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR | RO_FLAG_HANGING);
+	colorRGBA const colors[3] = {BLACK, COPPER_C, GRAY }; // insulated, non-insulated, power
+	float    const radius [3] = {0.06,  0.025,    0.035}; // relative to height
+	float    const offsets[3] = {0.2,   0.32,     0.85 }; // from end
+
+	for (roof_obj_t const &ac : details) {
+		if (ac.type != ROOF_OBJ_AC) continue;
+		bool const wall_dim(ac.dy() < ac.dx()); // adjacent to wall in short dim/along long dim
+		float const depth(ac.get_sz_dim(wall_dim)); // actual spacing is smaller than this
+
+		// find closest wall of closest part
+		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+			cube_t bc(*p);
+			bc.expand_in_dim(wall_dim, 2.0*depth);
+			if (!bc.contains_cube(ac)) continue; // wrong part
+			bool const wall_dir(p->get_center_dim(wall_dim) < ac.get_center_dim(wall_dim));
+			cube_t gap(ac);
+			gap.d[wall_dim][ wall_dir] = ac.d[wall_dim][!wall_dir]; // edge of AC unit
+			gap.d[wall_dim][!wall_dir] = p->d[wall_dim][ wall_dir]; // edge of part exterior wall
+			float const height(gap.dz()), length(gap.get_sz_dim(!wall_dim));
+			cube_t pipe(gap);
+
+			for (unsigned n = 0; n < 3; ++n) {
+				float const r(radius[n]*height);
+				set_wall_width(pipe, (gap.z1() + 0.08*height + r), r, 2);
+				set_wall_width(pipe, (gap.d[!wall_dim][0] + offsets[n]*length), r, !wall_dim);
+				interior->room_geom->objs.emplace_back(pipe, TYPE_PIPE, 0, wall_dim, 0, flags, 1.0, SHAPE_CYLIN, colors[n]);
+			}
+			break; // done - there should only be one part
+		} // for p
+	} // for i
 }
 
 void building_t::add_extra_obj_slots() {

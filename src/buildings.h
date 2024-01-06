@@ -1954,6 +1954,7 @@ private:
 	bool add_attic_roof_vent(point const &bot_center, float radius, unsigned room_id, float light_amt=1.0);
 	int choose_air_intake_room() const;
 	int vent_in_attic_test(cube_t const &vent, bool dim) const;
+	void add_exterior_ac_pipes();
 	vector3d get_parked_car_size() const;
 	void add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 		unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z);
