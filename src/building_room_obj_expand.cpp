@@ -968,7 +968,6 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 					}
 				}
 			} // for s
-			// TODO: new items: furniture, appliances, etc.
 		} // for n
 	} // for dir
 }

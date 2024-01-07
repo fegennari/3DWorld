@@ -701,6 +701,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		}
 	} // for r (room)
 	if (is_house) {interior->assign_master_bedroom(window_vspacing, floor_thickness);}
+	add_padlocks(rgen);
 
 	if (is_rotated() || !is_cube()) {} // skip for rotated and non-cube buildings, since toilets, etc. may not be placed
 	else if (num_bathrooms == 0) { // can happen, but very rare
@@ -1062,6 +1063,16 @@ void building_t::add_exterior_ac_pipes() {
 			break; // done - there should only be one part
 		} // for p
 	} // for i
+}
+
+void building_t::add_padlocks(rand_gen_t rgen) {
+	if (!is_house) return; // houses only for now, to avoid adding too many locks
+	assert(has_room_geom());
+
+	for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) {
+		if (!d->locked || d->open || rgen.rand_bool()) continue;
+		add_padlock_to_door(d - interior->doors.begin());
+	}
 }
 
 void building_t::add_extra_obj_slots() {

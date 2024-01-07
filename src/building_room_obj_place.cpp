@@ -3781,3 +3781,52 @@ void building_t::try_place_light_on_wall(cube_t const &light, room_t const &room
 	} // for n
 }
 
+bool building_t::add_padlock_to_door(unsigned door_ix) {
+	if (!has_room_geom() || !building_obj_model_loader.is_model_valid(OBJ_MODEL_PADLOCK)) return 0;
+	door_t &door(get_door(door_ix));
+	if (door.locked == 2 || door.open) return 0; // already has a padlock, or door is not closed
+	assert(door.obj_ix < 0); // not yet assigned
+	vect_room_object_t &objs(interior->room_geom->objs);
+	door.obj_ix = objs.size();
+	door.locked = 2; // padlocked
+	cube_t const door_bc(door.get_true_bcube());
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_PADLOCK)); // D, W, H
+	float const door_width(door_bc.get_sz_dim(!door.dim)), door_height(door_bc.dz());
+	float const height(0.078*door_height), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
+	bool const side(door.get_check_dirs());
+	cube_t lock;
+	lock.z1() = door.z1() + 0.41*door_height;
+	lock.z2() = lock.z1() + height;
+	set_wall_width(lock, (door_bc.d[!door.dim][0] + (side ? 0.062 : 0.938)*door_width), hwidth, !door.dim);
+	colorRGBA const color(WHITE); // for now
+
+	// since we don't know which side of the door the player will be on, add the padlock to both sides
+	for (unsigned d = 0; d < 2; ++d) {
+		float const pos(door_bc.d[door.dim][!d]);
+		lock.d[door.dim][ d] = pos;
+		lock.d[door.dim][!d] = pos + (d ? -1.0 : 1.0)*depth;
+		int const room_id(get_room_containing_pt(lock.get_cube_center()));
+		assert(room_id >= 0);
+		objs.emplace_back(lock, TYPE_PADLOCK, ((room_id < 0) ? 0 : room_id), door.dim, d, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, color);
+	} // for d
+	interior->room_geom->invalidate_model_geom();
+	return 1;
+}
+bool building_t::remove_padlock_from_door(unsigned door_ix) {
+	if (!has_room_geom() || !building_obj_model_loader.is_model_valid(OBJ_MODEL_PADLOCK)) return 0;
+	door_t &door(get_door(door_ix));
+	if (door.locked != 2) return 0; // no padlock
+	//assert(!door.open); // too strong?
+	door.locked = 0; // unlocked
+	vect_room_object_t &objs(interior->room_geom->objs);
+	assert(door.obj_ix >= 0 && door.obj_ix+1 < objs.size()); // must be space for two locks
+
+	for (unsigned d = 0; d < 2; ++d) {
+		room_object_t &obj(objs[door.obj_ix + d]);
+		assert(obj.type == TYPE_PADLOCK);
+		obj.remove();
+	}
+	interior->room_geom->invalidate_model_geom();
+	return 1;
+}
+

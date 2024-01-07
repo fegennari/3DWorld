@@ -428,7 +428,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 
 	if (mode == 0) { // if the player is in the closet, only the closet door can be opened
 		for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
-			if (player_in_closet && i->obj_ix < 0) continue; // only allow the player to open closet doors when in the closet
+			if (player_in_closet && !i->is_closet_door())         continue; // only allow the player to open closet doors when in the closet
 			if (i->z1() > closest_to.z || i->z2() < closest_to.z) continue; // wrong floor, skip
 			point const center(i->get_cube_center());
 			float const dist_sq(p2p_dist_sq(closest_to, center));
@@ -542,6 +542,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		door_t &door(interior->doors[door_ix]);
 		if (!player_can_open_door(door)) return 0; // locked/blocked
 		if (door.locked && !player_has_room_key()) {door.locked = 0;} // don't lock door when closing, to prevent the player from locking themselves in a room
+		if (door.locked == 2 && !door.open) {remove_padlock_from_door(door_ix);}
 		toggle_door_state(door_ix, 1, 1, closest_to); // toggle state if interior door; player_in_this_building=1, by_player=1, at player pos
 		//interior->room_geom->modified_by_player = 1; // should door state always be preserved?
 	}

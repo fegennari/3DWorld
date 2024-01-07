@@ -913,6 +913,7 @@ struct building_room_geom_t {
 	void clear();
 	void clear_materials();
 	void invalidate_static_geom  () {invalidate_mats_mask |= (1 << MAT_TYPE_STATIC );}
+	void invalidate_model_geom   () {invalidate_static_geom();}
 	void invalidate_small_geom   () {invalidate_mats_mask |= (1 << MAT_TYPE_SMALL  );}
 	void update_text_draw_data   () {invalidate_mats_mask |= (1 << MAT_TYPE_TEXT   );}
 	void invalidate_lights_geom  () {invalidate_mats_mask |= (1 << MAT_TYPE_LIGHTS );} // cache state and apply change later in case this is called from a different thread
@@ -1271,7 +1272,8 @@ struct door_stack_t : public door_base_t {
 	door_stack_t(door_base_t const &db, unsigned fdix) : door_base_t(db), first_door_ix(fdix) {}
 };
 struct door_t : public door_base_t {
-	bool open=0, locked=0, blocked=0, is_bldg_conn=0;
+	bool open=0, blocked=0, is_bldg_conn=0;
+	uint8_t locked=0; // 1=regular lock, 2=padlock
 	int obj_ix=-1; // for closets, etc.
 	float open_amt=0.0; // 0.0=fully closed, 1.0=fully open
 
@@ -1280,6 +1282,7 @@ struct door_t : public door_base_t {
 	bool is_closed_and_locked() const {return (!open && locked);}
 	bool is_locked_or_blocked(bool have_key) const {return (blocked || (is_closed_and_locked() && !have_key));}
 	bool is_partially_open() const {return (open_amt != (open ? 1.0 : 0.0));}
+	bool is_closet_door   () const {return (obj_ix >= 0 && locked != 2);}
 	void toggle_open_state(bool allow_partial_open=0);
 	void make_fully_open_or_closed() {open_amt = (open ? 1.0 : 0.0);}
 	bool next_frame();
@@ -1376,6 +1379,7 @@ struct building_interior_t {
 	float get_doorway_width() const;
 	room_t const &get_room(unsigned room_ix) const {assert(room_ix < rooms.size()); return rooms[room_ix];}
 	door_t const &get_door(unsigned door_ix) const {assert(door_ix < doors.size()); return doors[door_ix];}
+	door_t       &get_door(unsigned door_ix)       {assert(door_ix < doors.size()); return doors[door_ix];}
 	bool is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin=0.0f, bool inc_open=0, bool check_open_dir=0) const;
 	bool is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin=0.0f, bool elevators_only=0, int no_check_enter_exit=0) const;
 	void get_stairs_and_elevators_bcubes_intersecting_cube(cube_t const &c, vect_cube_t &bcubes, float ends_clearance=0.0, float sides_clearance=0.0) const;
@@ -1685,6 +1689,7 @@ struct building_t : public building_geom_t {
 	bool cube_int_ext_door(cube_t const &c) const;
 	room_t const &get_room(unsigned room_ix) const {assert(interior); return interior->get_room(room_ix);}
 	door_t const &get_door(unsigned door_ix) const {assert(interior); return interior->get_door(door_ix);}
+	door_t       &get_door(unsigned door_ix)       {assert(interior); return interior->get_door(door_ix);}
 	point get_center_of_room(unsigned room_ix) const {return get_room(room_ix).get_cube_center();}
 
 	// building AI people
@@ -1956,6 +1961,9 @@ private:
 	int choose_air_intake_room() const;
 	int vent_in_attic_test(cube_t const &vent, bool dim) const;
 	void add_exterior_ac_pipes();
+	void add_padlocks(rand_gen_t rgen);
+	bool add_padlock_to_door     (unsigned door_ix);
+	bool remove_padlock_from_door(unsigned door_ix);
 	vector3d get_parked_car_size() const;
 	void add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 		unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z);
