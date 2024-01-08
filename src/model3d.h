@@ -363,6 +363,7 @@ public:
 	void simplify(vector<unsigned> &out, float target) const;
 	void simplify_meshoptimizer(vector<unsigned> &out, float target) const;
 	void simplify_indices(float reduce_target);
+	void reverse_winding_order(unsigned npts);
 	void clear();
 	void clear_blocks() {blocks.clear(); lod_blocks.clear();}
 	unsigned num_verts() const {return unsigned(indices.empty() ? size() : indices.size());}
@@ -400,6 +401,7 @@ template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t
 	void get_polygons(get_polygon_args_t &args, unsigned npts) const;
 	void invert_tcy();
 	void simplify_indices(float reduce_target);
+	void reverse_winding_order(unsigned npts);
 	void merge_into_single_vector();
 	bool write(ostream &out) const;
 	bool read(istream &in, unsigned npts);
@@ -429,6 +431,7 @@ template<typename T> struct geometry_t {
 	void get_stats(model3d_stats_t &stats) const;
 	void calc_area(float &area, unsigned &ntris);
 	void simplify_indices(float reduce_target);
+	void reverse_winding_order();
 	bool write(ostream &out) const {return (triangles.write(out)  && quads.write(out)) ;}
 	bool read(istream &in)         {return (triangles.read(in, 3) && quads.read(in, 4));}
 	bool write_to_obj_file(ostream &out, unsigned &cur_vert_ix) const {return (triangles.write_to_obj_file(out, cur_vert_ix, 3) && quads.write_to_obj_file(out, cur_vert_ix, 4));}
@@ -516,6 +519,7 @@ struct material_t : public material_params_t {
 	bool is_partial_transparent() const {return ((alpha < 1.0 || get_needs_alpha_test()) && !no_blend);}
 	void compute_area_per_tri();
 	void simplify_indices(float reduce_target);
+	void reverse_winding_order();
 	void ensure_textures_loaded(texture_manager &tmgr);
 	void init_textures(texture_manager &tmgr);
 	void queue_textures_to_load(texture_manager &tmgr);
@@ -626,6 +630,7 @@ public:
 	void bind_all_used_tids();
 	void calc_tangent_vectors();
 	void simplify_indices(float reduce_target);
+	void reverse_winding_order(uint64_t mats_mask=~uint64_t(0));
 	static void bind_default_flat_normal_map() {select_texture(FLAT_NMAP_TEX, 5);}
 	void set_sky_lighting_file(string const &fn, float weight, unsigned sz[3]);
 	void set_occlusion_cube(cube_t const &cube) {occlusion_cube = cube;}
@@ -751,8 +756,8 @@ void write_models_to_cobj_file(std::ostream &out);
 void adjust_zval_for_model_coll(point &pos, float radius, float mesh_zval, float step_height=0.0);
 void check_legal_movement_using_model_coll(point const &prev, point &cur, float radius=0.0);
 
-bool load_model_file(string const &filename, model3ds &models, geom_xform_t const &xf, string const &anim_name, int def_tid,
-	colorRGBA const &def_c, int reflective, float metalness, float lod_scale, int recalc_normals, int group_cobjs_level, bool write_file, bool verbose);
+bool load_model_file(string const &filename, model3ds &models, geom_xform_t const &xf, string const &anim_name, int def_tid, colorRGBA const &def_c,
+	int reflective, float metalness, float lod_scale, int recalc_normals, int group_cobjs_level, bool write_file, bool verbose, uint64_t rev_winding_mask=0);
 bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid, colorRGBA const &def_c,
 	int reflective, float metalness, float lod_scale, bool load_model_file, int recalc_normals, int group_cobjs_level, bool write_file, bool verbose);
 

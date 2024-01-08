@@ -538,14 +538,20 @@ template<typename T> void indexed_vntc_vect_t<T>::simplify_meshoptimizer(vector<
 }
 
 template<typename T> void indexed_vntc_vect_t<T>::simplify_indices(float reduce_target) {
-
 	vector<unsigned> simplified_indices;
 	simplify_meshoptimizer(simplified_indices, reduce_target);
 	indices.swap(simplified_indices);
 }
 
+template<typename T> void indexed_vntc_vect_t<T>::reverse_winding_order(unsigned npts) {
+	if (indices.empty()) return; // unsupported (error?)
+	unsigned const nverts(num_verts());
+	assert((nverts%npts) == 0);
+	for (unsigned i = 0; i < nverts; i += npts) {reverse(indices.begin()+i, indices.begin()+i+npts);}
+	for (auto &v : *this) {v.invert_normal();}
+}
+
 template<typename T> void indexed_vntc_vect_t<T>::clear() {
-	
 	vntc_vect_t<T>::clear();
 	indices.clear();
 	clear_blocks();
@@ -1108,6 +1114,10 @@ template<typename T> void vntc_vect_block_t<T>::simplify_indices(float reduce_ta
 	for (auto i = begin(); i != end(); ++i) {i->simplify_indices(reduce_target);}
 }
 
+template<typename T> void vntc_vect_block_t<T>::reverse_winding_order(unsigned npts) {
+	for (auto i = begin(); i != end(); ++i) {i->reverse_winding_order(npts);}
+}
+
 template<typename T> void vntc_vect_block_t<T>::merge_into_single_vector() {
 	if (this->size() <= 1) return; // nothing to merge
 	unsigned tot_verts(0), tot_ixs(0);
@@ -1196,7 +1206,7 @@ template<typename T> void geometry_t<T>::add_poly(polygon_t const &poly, vertex_
 
 template<typename T> void geometry_t<T>::get_polygons(get_polygon_args_t &args) const {
 	triangles.get_polygons(args, 3); // should be empty in quads_only mode (will be checked)
-	quads.get_polygons    (args, 4);
+	quads    .get_polygons(args, 4);
 }
 
 template<typename T> cube_t geometry_t<T>::get_bcube() const {
@@ -1217,7 +1227,7 @@ template<typename T> void geometry_t<T>::clear() {
 
 	free_vbos();
 	triangles.clear();
-	quads.clear();
+	quads    .clear();
 }
 
 template<typename T> void geometry_t<T>::get_stats(model3d_stats_t &stats) const {
@@ -1225,7 +1235,7 @@ template<typename T> void geometry_t<T>::get_stats(model3d_stats_t &stats) const
 	stats.tris  += triangles.num_verts()/3;
 	stats.quads += quads.num_verts()/4;
 	triangles.get_stats(stats);
-	quads.get_stats(stats);
+	quads    .get_stats(stats);
 }
 
 template<typename T> void geometry_t<T>::calc_area(float &area, unsigned &ntris) {
@@ -1235,6 +1245,11 @@ template<typename T> void geometry_t<T>::calc_area(float &area, unsigned &ntris)
 
 template<typename T> void geometry_t<T>::simplify_indices(float reduce_target) {
 	triangles.simplify_indices(reduce_target); // mesh simplification only applies to triangles, not quads
+}
+
+template<typename T> void geometry_t<T>::reverse_winding_order() {
+	triangles.reverse_winding_order(3);
+	quads    .reverse_winding_order(4);
 }
 
 
@@ -1260,12 +1275,16 @@ void material_t::compute_area_per_tri() {
 }
 
 void material_t::simplify_indices(float reduce_target) {
-	geom.simplify_indices(reduce_target);
+	geom    .simplify_indices(reduce_target);
 	geom_tan.simplify_indices(reduce_target);
 }
 
-void material_t::ensure_textures_loaded(texture_manager &tmgr) {
+void material_t::reverse_winding_order() {
+	geom    .reverse_winding_order();
+	geom_tan.reverse_winding_order();
+}
 
+void material_t::ensure_textures_loaded(texture_manager &tmgr) {
 	tmgr.ensure_tid_loaded(get_render_texture(), 0); // only one tid for now
 	// if bump_tid is set, but bump maps are disabled, then clear bump_tid because either a) we won't use it, or b) it won't be loaded later when we try to use it
 	if (use_bump_map()) {tmgr.ensure_tid_loaded(bump_tid, 1);} else {bump_tid = -1;}
@@ -1949,6 +1968,15 @@ void model3d::calc_tangent_vectors() {
 void model3d::simplify_indices(float reduce_target) {
 	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {m->simplify_indices(reduce_target);}
 	unbound_geom.simplify_indices(reduce_target);
+}
+
+void model3d::reverse_winding_order(uint64_t mats_mask) { // Note: only handles up to 64 materials
+	if (mats_mask == 0) return; // nothing to do
+
+	for (unsigned m = 0; m < materials.size(); ++m) {
+		if (mats_mask & (uint64_t(1) << m)) {materials[m].reverse_winding_order();}
+	}
+	if (mats_mask & (uint64_t(1) << materials.size())) {unbound_geom.reverse_winding_order();} // use the last material slot
 }
 
 
