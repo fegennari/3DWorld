@@ -9,9 +9,35 @@ extern city_params_t city_params;
 bool read_assimp_model(string const &filename, model3d &model, geom_xform_t const &xf, string const &anim_name, int recalc_normals, bool verbose);
 
 
+bool read_keyword(FILE *fp, string &str) {
+	str.clear();
+	
+	while (1) {
+		int c(getc(fp));
+		if (is_EOF(c) || c == '\n') break;
+
+		if (isspace(c)) {
+			if (str.empty()) continue; // leading whitespace
+			break; // end of string
+		}
+		if (c == '=') {
+			if (str.empty()) {
+				cerr << "Error: Found stray '=' with no keyword in config file" << endl;
+				return 0;
+			}
+			return 1; // done/success
+		}
+		if (c == '#' || (!isalpha(c) && c != '_')) {ungetc(c, fp); break;} // end of string
+		str.push_back(c);
+	} // end while
+	if (str.empty()) return 1;
+	cerr << "Error: Found keyword string in config file with missing '=': " << str << endl;
+	return 0;
+}
+
 bool city_model_t::read(FILE *fp, bool is_helicopter, bool is_person) {
 
-	// filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xy scale lod_mult <blade_mat_id for helicopter> [shadow_mat_ids]
+	// filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xy scale lod_mult <blade_mat_id for helicopter> [keywords] [shadow_mat_ids]
 	assert(fp);
 	unsigned swap_xyz(0), shadow_mat_id(0);
 	fn = read_quoted_string(fp);
@@ -34,6 +60,21 @@ bool city_model_t::read(FILE *fp, bool is_helicopter, bool is_person) {
 		if (!read_float(fp, anim_speed)) return 0;
 		if (!read_bool (fp, is_zombie))  return 0;
 	}
+	// read any keywords; must be before reading shadow_mat_ids, before the newline is encountered
+	string keyword;
+
+	while (1) {
+		if (!read_keyword(fp, keyword)) return 0;
+		if (keyword.empty()) break;
+
+		if (keyword == "reverse_winding") {
+			if (!read_uint64(fp, rev_winding_mask)) return 0;
+		}
+		else {
+			cerr << "Error: Unrecognized keyword " << keyword << " in config file" << endl;
+			return 0;
+		}
+	} // end while
 	shadow_mat_ids.clear();
 	while (read_uint(fp, shadow_mat_id)) {shadow_mat_ids.push_back(shadow_mat_id);}
 	swap_xz = bool(swap_xyz & 2);
