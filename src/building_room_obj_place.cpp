@@ -3781,7 +3781,7 @@ void building_t::try_place_light_on_wall(cube_t const &light, room_t const &room
 	} // for n
 }
 
-bool building_t::add_padlock_to_door(unsigned door_ix) {
+bool building_t::add_padlock_to_door(unsigned door_ix, rand_gen_t &rgen) {
 	if (!has_room_geom() || !building_obj_model_loader.is_model_valid(OBJ_MODEL_PADLOCK)) return 0;
 	door_t &door(get_door(door_ix));
 	if (door.locked == 2 || door.open) return 0; // already has a padlock, or door is not closed
@@ -3791,6 +3791,7 @@ bool building_t::add_padlock_to_door(unsigned door_ix) {
 	door.locked = 2; // padlocked
 	cube_t const door_bc(door.get_true_bcube());
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_PADLOCK)); // D, W, H
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float const door_width(door_bc.get_sz_dim(!door.dim)), door_height(door_bc.dz());
 	float const height(0.078*door_height), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
 	bool const side(door.get_check_dirs());
@@ -3798,15 +3799,21 @@ bool building_t::add_padlock_to_door(unsigned door_ix) {
 	lock.z1() = door.z1() + 0.41*door_height;
 	lock.z2() = lock.z1() + height;
 	set_wall_width(lock, (door_bc.d[!door.dim][0] + (side ? 0.062 : 0.938)*door_width), hwidth, !door.dim);
-	colorRGBA const color(WHITE); // for now
+	colorRGBA const color(lock_colors[rgen.rand() % NUM_LOCK_COLORS]);
 
 	// since we don't know which side of the door the player will be on, add the padlock to both sides
 	for (unsigned d = 0; d < 2; ++d) {
 		float const pos(door_bc.d[door.dim][!d]);
 		lock.d[door.dim][ d] = pos;
 		lock.d[door.dim][!d] = pos + (d ? -1.0 : 1.0)*depth;
-		int const room_id(get_room_containing_pt(lock.get_cube_center()));
-		assert(room_id >= 0);
+		point center(lock.get_cube_center());
+		center[door.dim] += (d ? -1.0 : 1.0)*wall_thickness; // make sure the point is fully inside the room and not inside the wall area/doorway
+		int const room_id(get_room_containing_pt(center));
+		assert(room_id >= 0); // must be found
+		// if the room has a single interior door, no exterior door, and no stairs, then the player can't be inside it unless it's unlocked, and we can skip the interior lock
+		room_t const &room(get_room(room_id));
+		unsigned const floor_ix(room.get_floor_containing_zval(lock.z1(), floor_spacing));
+		if (!room.has_stairs_on_floor(floor_ix) && !(floor_ix == 0 && is_room_adjacent_to_ext_door(room)) && count_num_int_doors(room) == 1) continue;
 		objs.emplace_back(lock, TYPE_PADLOCK, ((room_id < 0) ? 0 : room_id), door.dim, d, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, color);
 	} // for d
 	interior->room_geom->invalidate_model_geom();

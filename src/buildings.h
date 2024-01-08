@@ -72,6 +72,10 @@ colorRGBA const DUCT_COLOR(WHITE);
 colorRGBA const rat_color(GRAY); // make the rat's fur darker
 colorRGBA const candle_color(0.95, 0.9, 0.75, 1.0); // cream
 
+unsigned const NUM_LOCK_COLORS = 8;
+colorRGBA   const lock_colors     [NUM_LOCK_COLORS] = {WHITE, BLACK, RED, GREEN, BLUE, YELLOW, ORANGE, BROWN};
+std::string const lock_color_names[NUM_LOCK_COLORS] = {"white", "black", "red", "green", "blue", "yellow", "orange", "brown"};
+
 inline colorRGBA gen_box_color(rand_gen_t &rgen) {return colorRGBA(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0));} // add minor color variation
 
 class light_source;
@@ -1963,7 +1967,7 @@ private:
 	int vent_in_attic_test(cube_t const &vent, bool dim) const;
 	void add_exterior_ac_pipes();
 	void add_padlocks(rand_gen_t rgen);
-	bool add_padlock_to_door     (unsigned door_ix);
+	bool add_padlock_to_door     (unsigned door_ix, rand_gen_t &rgen);
 	bool remove_padlock_from_door(unsigned door_ix);
 	vector3d get_parked_car_size() const;
 	void add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,

@@ -1627,7 +1627,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				last_room_closed = building.all_room_int_doors_closed(obj.room_id, obj.zc());
 				last_room_ix     = obj.room_id;
 			}
-			// if either the camera or the light are in different rooms with closed doors, on the same floor (not separated by stairs), then the object isn't visible
+			// if either the camera or the object are in different rooms with closed doors, on the same floor (not separated by stairs), then the object isn't visible
 			if ((last_room_closed || camera_in_closed_room) && obj.room_id != camera_room) continue;
 		}
 		apply_room_obj_rotate(obj, *i, objs); // Note: may modify obj by clearing flags and inst by updating dir
