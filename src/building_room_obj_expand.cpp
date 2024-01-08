@@ -877,7 +877,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 						add_rows_of_vcylinders(c, section, radius, oheight, 0.25, TYPE_CANDLE, 3, flags, objects, rgen2); // 1-3 columns
 					}
 					else if (type_ix == 6) { // books; should these be stacked or upright?
-						add_row_of_cubes(c, section, 0.7*depth, 0.9*depth, 0.12*depth, 0.1, TYPE_BOOK, flags, objects, rgen2, (c.dim ^ dir), 1, 3); // stacked up to 3 high
+						add_row_of_cubes(c, section, 0.7*depth, 0.9*depth, 0.12*depth, 0.1, TYPE_BOOK, flags, objects, rgen2, (c.dim ^ bool(dir)), 1, 3); // stacked up to 3 high
 					}
 					else if (type_ix == 7) { // balls; not dynamic objects
 						add_row_of_balls(c, section, 0.25, floor_spacing, flags, objects, rgen2);

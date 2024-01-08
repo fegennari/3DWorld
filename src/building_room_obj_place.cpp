@@ -3826,7 +3826,7 @@ bool building_t::remove_padlock_from_door(unsigned door_ix) {
 	//assert(!door.open); // too strong?
 	door.locked = 0; // unlocked
 	vect_room_object_t &objs(interior->room_geom->objs);
-	assert(door.obj_ix >= 0 && door.obj_ix+1 < objs.size()); // must be space for two locks
+	assert(door.obj_ix >= 0 && unsigned(door.obj_ix+1) < objs.size()); // must be space for two locks
 
 	for (unsigned d = 0; d < 2; ++d) {
 		room_object_t &obj(objs[door.obj_ix + d]);
