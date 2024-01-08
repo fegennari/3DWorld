@@ -1071,7 +1071,7 @@ void building_t::add_padlocks(rand_gen_t rgen) {
 
 	for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) {
 		if (!d->locked || d->open || rgen.rand_bool()) continue;
-		add_padlock_to_door(d - interior->doors.begin());
+		add_padlock_to_door((d - interior->doors.begin()), rgen);
 	}
 }
 
