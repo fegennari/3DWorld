@@ -168,6 +168,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CHIM_CAP  ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1,  0.0,  0.0,   "exterior step");
 	bldg_obj_types[TYPE_FOOD_BOX  ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2,  8.0,  1.0,   "box of food");
 	bldg_obj_types[TYPE_SAFE      ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 250.0, 300.0, "safe");
+	bldg_obj_types[TYPE_LADDER    ] = bldg_obj_type_t(1, 0, 0, 0, 1, 0, 1,  0.0,  0.0,   "ladder");
 	bldg_obj_types[TYPE_DBG_SHAPE ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 1,  0.0,  0.0,   "debug shape"); // small (optimization)
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
