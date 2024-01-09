@@ -1001,8 +1001,26 @@ void building_room_geom_t::add_chimney_cap(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_ext_ladder(room_object_t const &c) {
-	//rgeom_mat_t &mat(get_metal_material(0, 0, 0, 1)); // unshadowed, specular metal, exterior
-	// TODO: vertical cubes and cube rungs
+	rgeom_mat_t &mat(get_metal_material(0, 0, 0, 1)); // unshadowed, specular metal, exterior; no apply_light_color()
+	float const height(c.get_height()), depth(c.get_depth()), width(c.get_width());
+	float const side_width(0.06*width), rung_spacing(0.8*width), rung_height(0.08*rung_spacing), rung_inset(0.05*depth);
+	unsigned const num_rungs((height - rung_height)/rung_spacing); // round down
+	
+	for (unsigned d = 0; d < 2; ++d) { // left/right side verticals
+		cube_t side(c);
+		side.d[!c.dim][!d] = c.d[!c.dim][d] + (d ? -1.0 : 1.0)*side_width;
+		mat.add_cube_to_verts_untextured(side, c.color, EF_Z1); // draw all but the bottom face
+	}
+	cube_t rung(c);
+	rung.expand_in_dim(!c.dim, -side_width);
+	rung.expand_in_dim( c.dim, -rung_inset);
+	rung.z2() = c.z1() + rung_height; // set top
+	unsigned const rung_skip_faces(get_skip_mask_for_xy(!c.dim)); // skip ends against the sides
+
+	for (unsigned r = 0; r < num_rungs; ++r) { // draw rungs
+		rung.translate_dim(2, rung_spacing); // translate up, starting with first rung
+		mat.add_cube_to_verts_untextured(rung, c.color, rung_skip_faces);
+	}
 }
 
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {
