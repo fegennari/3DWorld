@@ -305,7 +305,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		// make short if against an exterior wall, in an office, or if there's a complex floorplan (in case there's no back wall)
 		bool const is_tall(!room.is_office && !has_complex_floorplan && rgen.rand_float() < 0.5 && (is_basement || classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT));
 		unsigned const desk_obj_ix(objs.size());
-		room_object_t const desk(c, TYPE_DESK, room_id, dim, !dir, 0, tot_light_amt, (is_tall ? SHAPE_TALL : SHAPE_CUBE));
+		room_object_t const desk(c, TYPE_DESK, room_id, dim, !dir, (is_house ? RO_FLAG_IS_HOUSE : 0), tot_light_amt, (is_tall ? SHAPE_TALL : SHAPE_CUBE));
 		objs.push_back(desk);
 		set_obj_id(objs);
 		objs.back().obj_id += 123*desk_ix; // set even more differently per-desk so that they have different drawer contents
@@ -3784,11 +3784,12 @@ void building_t::try_place_light_on_wall(cube_t const &light, room_t const &room
 bool building_t::add_padlock_to_door(unsigned door_ix, rand_gen_t &rgen) {
 	if (!has_room_geom() || !building_obj_model_loader.is_model_valid(OBJ_MODEL_PADLOCK)) return 0;
 	door_t &door(get_door(door_ix));
-	if (door.locked == 2 || door.open) return 0; // already has a padlock, or door is not closed
+	if (door.is_padlocked() || door.open) return 0; // already has a padlock, or door is not closed
 	assert(door.obj_ix < 0); // not yet assigned
 	vect_room_object_t &objs(interior->room_geom->objs);
 	door.obj_ix = objs.size();
-	door.locked = 2; // padlocked
+	unsigned const color_ix(rgen.rand() % NUM_LOCK_COLORS);
+	door.set_padlock_color_ix(color_ix); // padlocked
 	cube_t const door_bc(door.get_true_bcube());
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_PADLOCK)); // D, W, H
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
@@ -3799,7 +3800,7 @@ bool building_t::add_padlock_to_door(unsigned door_ix, rand_gen_t &rgen) {
 	lock.z1() = door.z1() + 0.41*door_height;
 	lock.z2() = lock.z1() + height;
 	set_wall_width(lock, (door_bc.d[!door.dim][0] + (side ? 0.062 : 0.938)*door_width), hwidth, !door.dim);
-	colorRGBA const color(lock_colors[rgen.rand() % NUM_LOCK_COLORS]);
+	colorRGBA const color(lock_colors[color_ix]);
 
 	// since we don't know which side of the door the player will be on, add the padlock to both sides
 	for (unsigned d = 0; d < 2; ++d) {
@@ -3822,7 +3823,7 @@ bool building_t::add_padlock_to_door(unsigned door_ix, rand_gen_t &rgen) {
 bool building_t::remove_padlock_from_door(unsigned door_ix) {
 	if (!has_room_geom() || !building_obj_model_loader.is_model_valid(OBJ_MODEL_PADLOCK)) return 0;
 	door_t &door(get_door(door_ix));
-	if (door.locked != 2) return 0; // no padlock
+	if (!door.is_padlocked()) return 0; // no padlock
 	//assert(!door.open); // too strong?
 	door.locked = 0; // unlocked
 	vect_room_object_t &objs(interior->room_geom->objs);

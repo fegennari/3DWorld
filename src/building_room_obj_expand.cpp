@@ -1137,7 +1137,12 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 		obj.expand_in_dim( obj.dim, -0.40*sz[ obj.dim]); // long  dim
 		obj.expand_in_dim(!obj.dim, -0.46*sz[!obj.dim]); // short dim
 		for (unsigned d = 0; d < 2; ++d) {obj.translate_dim(d, 0.35*sz[d]*rgen.rand_uniform(-1.0, 1.0));}
-		obj.z2() = obj.z1() + 0.05*sz.z;
+		obj.z2()   = obj.z1() + 0.05*sz.z;
+
+		if (c.type != TYPE_DESK || c.is_house()) { // only houses have colored keys
+			obj.obj_id = rgen.rand() % NUM_LOCK_COLORS; // lock/key color index
+			obj.color  = lock_colors[obj.obj_id];
+		}
 		break;
 	}
 	case TYPE_BOTTLE: // bottle

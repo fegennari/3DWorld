@@ -324,6 +324,10 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		string const &food_name(obj.get_food_box_name());
 		if (!food_name.empty()) {type.name = food_name;}
 	}
+	else if (obj.type == TYPE_KEY) {
+		assert(obj.obj_id < NUM_LOCK_COLORS);
+		type.name = lock_color_names[obj.obj_id] + " " + type.name;
+	}
 	return type;
 }
 bool is_refillable(room_object_t const &obj) {return (obj.type == TYPE_FIRE_EXT);}
@@ -478,8 +482,8 @@ class player_inventory_t { // manages player inventory, health, and other stats
 	vector<dead_person_t > dead_players;
 	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, oxygen, thirst;
 	float prev_player_zval, respawn_time=0.0;
-	unsigned num_doors_unlocked;
-	bool prev_in_building, has_key, has_flashlight, is_poisoned, poison_from_spider;
+	unsigned num_doors_unlocked, has_key; // has_key is a bit mask for key colors
+	bool prev_in_building, has_flashlight, is_poisoned, poison_from_spider;
 
 	void register_player_death(unsigned sound_id, string const &why) {
 		player_wait_respawn = 1;
@@ -503,8 +507,8 @@ public:
 		cur_value     = cur_weight = tot_value = tot_weight = damage_done = 0.0;
 		drunkenness   = bladder = bladder_time = prev_player_zval = 0.0;
 		player_health = oxygen = thirst = 1.0; // full health, oxygen, and (anti-)thirst
-		num_doors_unlocked = 0; // not saved on death, but maybe should be?
-		prev_in_building = has_key = has_flashlight = is_poisoned = poison_from_spider = 0;
+		num_doors_unlocked = has_key = 0; // num_doors_unlocked not saved on death, but maybe should be?
+		prev_in_building = has_flashlight = is_poisoned = poison_from_spider = 0;
 		player_attracts_flies = 0;
 		phone_manager.disable();
 		carried.clear();
@@ -552,7 +556,7 @@ public:
 	float get_drunkenness() const {return drunkenness;}
 	float get_oxygen     () const {return oxygen;}
 	bool  player_is_dead () const {return (player_health <= 0.0);}
-	bool  player_has_key () const {return has_key;}
+	unsigned player_has_key    () const {return has_key;}
 	bool  player_has_flashlight() const {return has_flashlight;}
 	bool  player_at_full_health() const {return (player_health == 1.0 && !is_poisoned);}
 	bool  player_is_thirsty    () const {return (thirst < 0.5);}
@@ -560,7 +564,7 @@ public:
 	void  refill_thirst() {thirst = 1.0;}
 
 	bool can_open_door(door_t const &door) { // non-const because num_doors_unlocked is modified
-		if (door.is_closed_and_locked() && !has_key) {
+		if (!door.check_key_mask_unlocks(has_key)) {
 			print_text_onscreen("Door is locked", RED, 1.0, 2.0*TICKS_PER_SECOND, 0);
 			gen_sound_thread_safe_at_player(SOUND_CLICK, 1.0, 0.6);
 			return 0;
@@ -646,7 +650,7 @@ public:
 		if (obj.type == TYPE_FLASHLIGHT) {has_flashlight = 1;} // also goes in inventory
 
 		if (obj.type == TYPE_KEY) {
-			has_key = 1; // mark as having the key, but it doesn't go into the inventory or contribute to weight or value
+			has_key |= (1 << obj.obj_id); // mark as having the key and record the color, but it doesn't go into the inventory or contribute to weight or value
 		}
 		else if (health == 0.0 && drunk == 0.0) { // print value and weight if item is not consumed
 			float const weight(get_obj_weight(obj));
@@ -723,7 +727,11 @@ public:
 		}
 		float const value(1000), weight((person_height > 0.025) ? 180.0 : 80.0); // always worth $1000; use height to select man vs. girl
 		if (!check_weight_limit(weight)) {show_weight_limit_message(); return 0;}
-		has_key    |= person_has_key; person_has_key = 0; // steal their key
+
+		if (person_has_key) { // steal their key
+			has_key = 1; // assume the default silver key since we're not tracking the color per-perzon/zombie
+			person_has_key = 0;
+		}
 		cur_value  += value;
 		cur_weight += weight;
 		std::ostringstream oss;
@@ -874,7 +882,7 @@ public:
 			if (oxygen < 1.0) {extra_bars.emplace_back(CYAN, oxygen, ICON_OXYGEN);} // oxygen bar is only shown when oxygen is less than full
 			draw_health_bar(100.0*player_health, 100.0*drunkenness, bladder, YELLOW, is_poisoned, extra_bars);
 		}
-		if (has_key) {show_key_icon();}
+		if (has_key) {show_key_icon();} // TODO: show the color of the key(s)
 		if (has_flashlight) {show_flashlight_icon();}
 	}
 	bool apply_fall_damage(float delta_z, float dscale=1.0) {
@@ -2478,7 +2486,7 @@ void building_t::update_creepy_sounds(point const &player_pos) const {
 
 // gameplay logic
 
-bool player_has_room_key() {return player_inventory.player_has_key();}
+unsigned player_has_room_key() {return player_inventory.player_has_key();}
 
 bool flashlight_enabled() { // flashlight can't be used in tiled terrain building gameplay mode if the player didn't pick up a flashlight
 	return (world_mode != WMODE_INF_TERRAIN || !in_building_gameplay_mode() || player_inventory.player_has_flashlight());

@@ -74,7 +74,7 @@ colorRGBA const candle_color(0.95, 0.9, 0.75, 1.0); // cream
 
 unsigned const NUM_LOCK_COLORS = 8;
 colorRGBA   const lock_colors     [NUM_LOCK_COLORS] = {WHITE, BLACK, RED, GREEN, BLUE, YELLOW, ORANGE, BROWN};
-std::string const lock_color_names[NUM_LOCK_COLORS] = {"white", "black", "red", "green", "blue", "yellow", "orange", "brown"};
+std::string const lock_color_names[NUM_LOCK_COLORS] = {"silver", "black", "red", "green", "blue", "yellow", "orange", "brown"};
 
 inline colorRGBA gen_box_color(rand_gen_t &rgen) {return colorRGBA(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0));} // add minor color variation
 
@@ -482,7 +482,7 @@ unsigned const RO_FLAG_ADJ_LO  = 0x0400; // for kitchen counters/closets/door tr
 unsigned const RO_FLAG_ADJ_HI  = 0x0800; // for kitchen counters/closets/door trim/blinds/railings
 unsigned const RO_FLAG_ADJ_BOT = 0x1000; // for door trim/railings
 unsigned const RO_FLAG_ADJ_TOP = 0x2000; // for door trim/railings
-unsigned const RO_FLAG_IS_HOUSE= 0x4000; // used for mirror reflections, shelves, and tables
+unsigned const RO_FLAG_IS_HOUSE= 0x4000; // used for mirror reflections, shelves, tables, and desks
 unsigned const RO_FLAG_RAND_ROT= 0x8000; // random rotation; used for office chairs, papers, pictures, cups, and balls
 unsigned const RO_FLAG_UNTEXTURED= 0x1000; // for shirts, aliased with RO_FLAG_ADJ_BOT
 unsigned const RO_FLAG_FROM_SET  = 0x1000; // for books,  aliased with RO_FLAG_ADJ_BOT
@@ -1278,7 +1278,7 @@ struct door_stack_t : public door_base_t {
 };
 struct door_t : public door_base_t {
 	bool open=0, blocked=0, is_bldg_conn=0;
-	uint8_t locked=0; // 1=regular lock, 2=padlock
+	uint8_t locked=0; // 1=regular lock, >= 2=padlock, where color index is locked-2
 	int obj_ix=-1; // for closets, etc.
 	float open_amt=0.0; // 0.0=fully closed, 1.0=fully open
 
@@ -1287,7 +1287,11 @@ struct door_t : public door_base_t {
 	bool is_closed_and_locked() const {return (!open && locked);}
 	bool is_locked_or_blocked(bool have_key) const {return (blocked || (is_closed_and_locked() && !have_key));}
 	bool is_partially_open() const {return (open_amt != (open ? 1.0 : 0.0));}
-	bool is_closet_door   () const {return (obj_ix >= 0 && locked != 2);}
+	bool is_closet_door   () const {return (obj_ix >= 0 && !is_padlocked());}
+	bool is_padlocked     () const {return (locked >= 2);}
+	bool check_key_mask_unlocks(unsigned key_mask) const;
+	void set_padlock_color_ix(unsigned ix) {assert(ix < NUM_LOCK_COLORS); locked = ix + 2;}
+	unsigned get_padlock_color_ix() const {assert(is_padlocked()); return (locked - 2);}
 	void toggle_open_state(bool allow_partial_open=0);
 	void make_fully_open_or_closed() {open_amt = (open ? 1.0 : 0.0);}
 	bool next_frame();

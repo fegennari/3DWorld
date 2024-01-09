@@ -24,7 +24,7 @@ extern building_t const *player_building;
 
 
 bool player_can_open_door(door_t const &door);
-bool player_has_room_key();
+unsigned player_has_room_key();
 void register_broken_object(room_object_t const &obj);
 void record_building_damage(float damage);
 void refill_thirst();
@@ -541,8 +541,8 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 	else { // interior door
 		door_t &door(interior->doors[door_ix]);
 		if (!player_can_open_door(door)) return 0; // locked/blocked
+		if (door.is_padlocked() && !door.open) {remove_padlock_from_door(door_ix);}
 		if (door.locked && !player_has_room_key()) {door.locked = 0;} // don't lock door when closing, to prevent the player from locking themselves in a room
-		if (door.locked == 2 && !door.open) {remove_padlock_from_door(door_ix);}
 		toggle_door_state(door_ix, 1, 1, closest_to); // toggle state if interior door; player_in_this_building=1, by_player=1, at player pos
 		//interior->room_geom->modified_by_player = 1; // should door state always be preserved?
 	}
@@ -929,6 +929,12 @@ void building_t::handle_items_intersecting_closed_door(door_t const &door) {
 	} // for obj
 }
 
+bool door_t::check_key_mask_unlocks(unsigned key_mask) const {
+	if (!is_closed_and_locked()) return 1;
+	if (key_mask == 0)           return 0; // no key
+	if (!is_padlocked())         return 1; // any key color opens a non-padlocked door
+	return (key_mask & (1 << get_padlock_color_ix())); // only a key matching the padlock color unlocks a padlocked door
+}
 void door_t::toggle_open_state(bool allow_partial_open) {
 	open ^= 1;
 	if (!allow_partial_open || on_stairs) {make_fully_open_or_closed();} // update open_amt immediately if needed
