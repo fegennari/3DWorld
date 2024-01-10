@@ -770,39 +770,72 @@ void building_t::add_chimney_cap(rand_gen_t &rgen) {
 
 void building_t::maybe_add_fire_escape(rand_gen_t &rgen) {
 	if (!is_house) return; // houses only for now
-	// our hard-coded fire escape model is designed for a 5 story building; but the max number of floors for a 'house' is 5-6 anyway, which makes them relatively rare
-	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_FESCAPE)) return;
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), wall_thickness(get_wall_thickness()), fe_height(4.25*window_vspacing);
 
-	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
-		unsigned const num_floors(calc_num_floors(*p, window_vspacing, floor_thickness));
-		if (num_floors != 5 && num_floors != 6) continue; // not 5-6 stories
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_FESCAPE)) {
+		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+			unsigned const num_floors(calc_num_floors(*p, window_vspacing, floor_thickness));
+			// our hard-coded fire escape model is designed for a 5 story building; but the max number of floors for a 'house' is 5-6 anyway, which makes them relatively rare
+			if (num_floors != 5 && num_floors != 6) continue; // not 5-6 stories
+			unsigned const pref_dim_dir(rgen.rand() & 3);
+			// it's uncommon to get here, so we only check if the model size here
+			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FESCAPE)); // D, W, H
+			float const fe_hwidth(0.5*fe_height*sz.y/sz.z), fe_depth(fe_height*sz.x/sz.z);
+
+			for (unsigned d = 0; d < 4; ++d) {
+				unsigned const dd((d + pref_dim_dir) & 3);
+				bool const dim(dd >> 1), dir(dd & 1);
+				if (p->d[dim][dir] != bcube.d[dim][dir]) continue; // not on the building bcube - could intersect another part, porch, etc.
+				if (p->get_sz_dim(!dim) < 3.0*fe_hwidth) continue; // wall is too narrow
+				cube_t fe_bc;
+				set_cube_zvals(fe_bc, p->z1(), (p->z1() + fe_height));
+				set_wall_width(fe_bc, rgen.rand_uniform((p->d[!dim][0] + 1.2*fe_hwidth), (p->d[!dim][1] - 1.2*fe_hwidth)), fe_hwidth, !dim);
+				fe_bc.d[dim][0]    = fe_bc.d[dim][1] = p->d[dim][dir];
+				fe_bc.d[dim][dir] += (dir ? 1.0 : -1.0)*fe_depth;
+				cube_t fe_bc_exp(fe_bc);
+				fe_bc_exp.expand_by(wall_thickness); // needed for exterior door check
+				if (has_bcube_int_no_adj(fe_bc, parts))              continue; // check for intersection with other parts, in particular the chimney and fireplace
+				if (has_driveway() && fe_bc.intersects_xy(driveway)) continue; // skip if intersects driveway or garage
+				if (cube_int_ext_door(fe_bc_exp))                    continue; // check exterior doors
+				interior->room_geom->objs.emplace_back(fe_bc, TYPE_FESCAPE, 0, dim, dir, 0, 1.0, SHAPE_CUBE, BLACK); // room_id=0
+				details.emplace_back(fe_bc, DETAIL_OBJ_COLLIDER);
+				union_with_coll_bcube(fe_bc);
+				return; // success/done
+			} // for d
+		} // for p
+	}
+	// if no fire escape was added, maybe add a TYPE_LADDER to the roof between windows; only for hipped roofs, to avoid the gutter; skip houses with stacked parts
+	if (roof_type == ROOF_TYPE_HIPPED && (real_num_parts == 1 || parts[1].z1() == parts[0].z1()) && rgen.rand_bool()) {
+		cube_t const &part(parts[0]); // add to first/primary part
 		unsigned const pref_dim_dir(rgen.rand() & 3);
-		// it's uncommon to get here, so we only check if the model size here
-		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FESCAPE)); // D, W, H
-		float const fe_hwidth(0.5*fe_height*sz.y/sz.z), fe_depth(fe_height*sz.x/sz.z);
+		float const window_h_border(get_window_h_border()), hwidth(0.3*get_doorway_width()), depth(0.3*hwidth);
 
 		for (unsigned d = 0; d < 4; ++d) {
 			unsigned const dd((d + pref_dim_dir) & 3);
 			bool const dim(dd >> 1), dir(dd & 1);
-			if (p->d[dim][dir] != bcube.d[dim][dir]) continue; // not on the building bcube - could intersect another part, porch, etc.
-			if (p->get_sz_dim(!dim) < 3.0*fe_hwidth) continue; // wall is too narrow
-			cube_t fe_bc;
-			set_cube_zvals(fe_bc, p->z1(), (p->z1() + fe_height));
-			set_wall_width(fe_bc, rgen.rand_uniform((p->d[!dim][0] + 1.2*fe_hwidth), (p->d[!dim][1] - 1.2*fe_hwidth)), fe_hwidth, !dim);
-			fe_bc.d[dim][0]    = fe_bc.d[dim][1] = p->d[dim][dir];
-			fe_bc.d[dim][dir] += (dir ? 1.0 : -1.0)*fe_depth;
-			cube_t fe_bc_exp(fe_bc);
-			fe_bc_exp.expand_by(wall_thickness); // needed for exterior door check
-			if (has_bcube_int_no_adj(fe_bc, parts))              continue; // check for intersection with other parts, in particular the chimney and fireplace
-			if (has_driveway() && fe_bc.intersects_xy(driveway)) continue; // skip if intersects driveway or garage
-			if (cube_int_ext_door(fe_bc_exp))                    continue; // check exterior doors
-			interior->room_geom->objs.emplace_back(fe_bc, TYPE_FESCAPE, 0, dim, dir, 0, 1.0, SHAPE_CUBE, BLACK); // room_id=0
-			details.emplace_back(fe_bc, DETAIL_OBJ_COLLIDER);
-			union_with_coll_bcube(fe_bc);
-			return; // success/done
+			if (part.d[dim][dir] != bcube.d[dim][dir]) continue; // not on the building bcube - could intersect another part, porch, etc.
+			if (part.get_sz_dim(!dim) < 8.0*hwidth)    continue; // wall is too narrow
+
+			for (unsigned n = 0; n < 10; ++n) { // make 10 tries
+				cube_t bc(part); // copy zvals
+				set_wall_width(bc, rgen.rand_uniform((part.d[!dim][0] + 2.0*hwidth), (part.d[!dim][1] - 2.0*hwidth)), hwidth, !dim);
+				float const window_hspacing(get_hspacing_for_part(part, !dim));
+				if (is_val_inside_window(part, !dim, bc.d[!dim][0]-wall_thickness, window_hspacing, window_h_border)) continue; // check for window intersection
+				if (is_val_inside_window(part, !dim, bc.d[!dim][1]+wall_thickness, window_hspacing, window_h_border)) continue; // check for window intersection
+				bc.d[dim][0]    = bc.d[dim][1] = part.d[dim][dir];
+				bc.d[dim][dir] += (dir ? 1.0 : -1.0)*depth;
+				cube_t bc_exp(bc);
+				bc_exp.expand_by(wall_thickness); // needed for exterior door check
+				if (has_bcube_int_no_adj(bc, parts))              continue; // check for intersection with other parts, in particular the chimney and fireplace
+				if (has_driveway() && bc.intersects_xy(driveway)) continue; // skip if intersects driveway or garage
+				if (cube_int_ext_door(bc_exp))                    continue; // check exterior doors
+				// what about AC unit?
+				interior->room_geom->objs.emplace_back(bc, TYPE_LADDER, 0, dim, dir, 0, 1.0, SHAPE_CUBE, GRAY); // room_id=0
+				union_with_coll_bcube(bc);
+				return; // success/done
+			} // for n
 		} // for d
-	} // for p
+	}
 }
 
 void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
@@ -818,7 +851,7 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 	auto &objs(interior->room_geom->objs);
 	unsigned const init_objs_sz(objs.size());
 	vect_cube_t avoid;
-	if (!objs.empty() && objs.back().type == TYPE_FESCAPE) {avoid.push_back(objs.back());} // avoid fire escape
+	if (!objs.empty() && (objs.back().type == TYPE_FESCAPE || objs.back().type == TYPE_LADDER)) {avoid.push_back(objs.back());} // avoid fire escape or ladder
 	if (has_driveway()) {avoid.push_back(driveway);}
 	if (!city_driveway.is_all_zeros()) {avoid.push_back(city_driveway);}
 	// what about trees in the front yard? can/should we avoid them as well?
