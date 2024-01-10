@@ -778,7 +778,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			if (is_placement_blocked(trashcan.bcube, blockers, house, prev_blockers_end, 0.0, 0))          continue; // no expand
 			if (check_sphere_coll_building((pos + vector3d(0.0, 0.0, tc_radius)), tc_radius, 0, house.ix)) continue; // xy_only=0
 
-			if (!get_building_door_pos_closest_to(house.ix, pos, door_pos) || !dist_xy_less_than(pos, door_pos, 2.0*tc_radius)) { // not too close to doors
+			if (!get_building_door_pos_closest_to(house.ix, pos, door_pos) || !dist_xy_less_than(pos, door_pos, 3.0*tc_radius)) { // not too close to doors
 				trashcan_groups.add_obj(trashcan, trashcans);
 				add_cube_to_colliders_and_blockers(trashcan.bcube, colliders, blockers);
 				break; // success
