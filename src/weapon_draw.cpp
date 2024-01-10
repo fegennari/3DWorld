@@ -1040,12 +1040,30 @@ void show_player_keycards() {
 	draw_qbd_with_textured_shader(qbd, KEYCARD_TEX);
 }
 
-void show_icon_image(string const &fn, float xsize, float ysize, float xpos=0.0) {
+void show_icon_image(string const &fn, float xsize, float ysize, float xpos=0.0, vector<colorRGBA> const &colors=vector<colorRGBA>()) {
 	float const ar(float(window_width)/float(window_height)), s(10.0*DEF_NEAR_CLIP), quad_sz_x(0.025*s*xsize), quad_sz_y(0.025*s*ysize);
 	quad_batch_draw qbd;
-	qbd.add_quad_dirs(point((0.52 - 0.05*xpos)*s*ar, 0.52*s, -s), quad_sz_x*plus_x, quad_sz_y*plus_y, WHITE); // top right
+	point pos((0.52 - 0.05*xpos)*s*ar, 0.52*s, -s);
+	qbd.add_quad_dirs(pos, quad_sz_x*plus_x, quad_sz_y*plus_y, WHITE); // top right; dx and dy are radius values
 	draw_qbd_with_textured_shader(qbd, get_texture_by_name(fn, 0, 0, 0)); // wrap_mir=0 (clamp)
+
+	if (!colors.empty()) { // draw colors as bars in a row below the icon
+		float const pitch(2.2*quad_sz_x/max(colors.size(), size_t(2))), width(0.75*pitch), hheight(0.67*quad_sz_y);
+		qbd.clear();
+		pos.y -= 1.25*quad_sz_y + hheight; // shift below
+		pos.x -= quad_sz_x - 0.5*pitch; // shift nearly to left edge
+
+		for (colorRGBA const &color : colors) {
+			if (color.A > 0.0) {qbd.add_quad_dirs(pos, 0.5*width*plus_x, hheight*plus_y, color);} // skip transparent color
+			pos.x += pitch;
+		}
+		shader_t s;
+		s.begin_color_only_shader();
+		glDisable(GL_DEPTH_TEST);
+		qbd.draw();
+		glEnable(GL_DEPTH_TEST);
+	}
 }
-void show_key_icon       () {show_icon_image("icons/key.png",        1.0, 0.4, 0.0);} // rightmost slot
-void show_flashlight_icon() {show_icon_image("icons/flashlight.png", 1.0, 1.0, 1.0);} // one slot to the left
+void show_key_icon(vector<colorRGBA> const &key_colors) {show_icon_image("icons/key.png",        1.0, 0.4, 0.0, key_colors);} // rightmost slot
+void show_flashlight_icon()                             {show_icon_image("icons/flashlight.png", 1.0, 1.0, 1.0            );} // one slot to the left
 

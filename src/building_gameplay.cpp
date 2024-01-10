@@ -30,7 +30,7 @@ extern building_t const *player_building;
 
 
 void place_player_at_xy(float xval, float yval);
-void show_key_icon();
+void show_key_icon(vector<colorRGBA> const &key_colors);
 void show_flashlight_icon();
 bool is_shirt_model(room_object_t const &obj);
 bool is_pants_model(room_object_t const &obj);
@@ -882,7 +882,11 @@ public:
 			if (oxygen < 1.0) {extra_bars.emplace_back(CYAN, oxygen, ICON_OXYGEN);} // oxygen bar is only shown when oxygen is less than full
 			draw_health_bar(100.0*player_health, 100.0*drunkenness, bladder, YELLOW, is_poisoned, extra_bars);
 		}
-		if (has_key) {show_key_icon();} // TODO: show the color of the key(s)
+		if (has_key) {
+			vector<colorRGBA> key_colors(NUM_LOCK_COLORS);
+			for (unsigned n = 0; n < NUM_LOCK_COLORS; ++n) {key_colors[n] = ((has_key & (1 << n)) ? lock_colors[n] : ALPHA0);}
+			show_key_icon(key_colors);
+		}
 		if (has_flashlight) {show_flashlight_icon();}
 	}
 	bool apply_fall_damage(float delta_z, float dscale=1.0) {
