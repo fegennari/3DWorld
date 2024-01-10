@@ -120,6 +120,22 @@ https://3dworldgen.blogspot.com
 
 Here are some screenshots linked from my blog:
 
+![alt text](https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiDYcHMxI8d4EmqEt_R9zwbcmtk0wfCadahSXeP3xZU9SdXGkMqMAcFVxMMlcOvDRh7Lg5KhEjgosmId9HtHdtuErQd0okK7Vb7IU0RHeKpONDTc887BDIgWeuR8E0dHChU-vKQxkdnjWzaRLGSWBjmIa3O7z6PYR9v-j4oNYpuOzD9PJcv4XR-45YJYghK/w640-h360/racks1.jpg)
+
+Here is a retail area of a building with racks of shelves. Buildings can contain tens of thousands of interactive objects the player can take and carry around. (config_heightmap.txt)
+
+![alt text](https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgI1KwsSM00BSkCWUr5OPrXMg5lsjeKk7GOPFdmGkk1NsHlYv4w-StMW8NJKZMHpRt3EoriqCyjD0xRM2E2BqLSBX5zts36VHn8s6TEuQCuhHFq6sFzLyqWSdOxroqB_37utAtB8nN0soiLp-cVFJwnL8VHyBdNNupxdF3HbjmtDdPm4-clTvTquk_JgOYK/w640-h360/sec_monitors_no_base.jpg)
+
+Cameras placed in other rooms show realtime video feeds on security monitors. (config_heightmap.txt)
+
+![alt text](https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgUaakhysxiViFwntixF7D2F_FAOnU6mnm6A6jIkpdVrLmu5aW80dFXJ6pTiWWUcoamsLy44aPl3aZtM5QgwLDQxk2LpoGvy03TMAW0jlOr7bpNsoI-en8TXIJDjxkGhgIxhq1yFvRfq5xeYX1ElEK_kIUMt-Fsw9SaT_ap7tpNVXwrxLpJ5b9nCB-rruWz/w640-h338/zombie_pool_party.jpg)
+
+Zombies (with path finding and other AI behaviors) walking around and falling into an indoor pool. The water water surface has ripples, splashes, reflections, and refractions. (config_heightmap.txt)
+
+![alt text](https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjtYUsFpkEeENoYmiyj0tWBJY-vAOfBhisVfK6GRhA5IZlprB0MgQ9KgyxecHigRF9gm5kiR4ADcH0LvxUdFrOtV1YsUYfeF1eYmWJF76vvUa-_LjyDcQlo80Q9ReNcfeSSLJ-kRMVGILU3zMBBXla_8ph0fcRV8DKJJwU1NdH0s5tgLPLDQ5wFe-JikA/w640-h360/sprinklers_with_cars_and_indir.jpg)
+
+Parking garage with parked cars and sprinkler pipes routed on the ceiling. (config_heightmap.txt)
+
 ![alt text](https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgbKNuwYqJV9LSFC7hg18_yb76dG9JecG74WqLQs7ZMiS0sXTyJO6k7RbDpoQWH09-gh3eJrN4jabU64DvspqLeZvT1Uvfp87dbF2CKsK-KRDtsE4skVYHW2dcWC1POaIsy3ANCZj-BONgOFuIJtqCP1GcFCLSjt827q8OUnAnbKu_KTN4_iaBlEGQuWA/s1920/basement_indir_pipes.jpg)
 
 Procedural building basement with people, indirect lighting, and pipes routed along the ceiling. (config_heightmap.txt)
