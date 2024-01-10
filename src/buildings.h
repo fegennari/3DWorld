@@ -1285,7 +1285,7 @@ struct door_t : public door_base_t {
 	door_t() {}
 	door_t(cube_t const &c, bool dim_, bool dir, bool open_=1, bool os=0, bool hs=0) : door_base_t(c, dim_, dir, os, hs), open(open_), open_amt(open ? 1.0 : 0.0) {}
 	bool is_closed_and_locked() const {return (!open && locked);}
-	bool is_locked_or_blocked(bool have_key) const {return (blocked || (is_closed_and_locked() && !have_key));}
+	bool is_locked_or_blocked(unsigned have_key) const {return (blocked || !check_key_mask_unlocks(have_key));}
 	bool is_partially_open() const {return (open_amt != (open ? 1.0 : 0.0));}
 	bool is_closet_door   () const {return (obj_ix >= 0 && !is_padlocked());}
 	bool is_padlocked     () const {return (locked >= 2);}
@@ -2263,7 +2263,7 @@ bool enable_building_indir_lighting_no_cib();
 bool enable_building_indir_lighting();
 bool player_in_windowless_building();
 bool player_cant_see_outside_building();
-bool player_take_damage(float damage_scale, int poison_type=0, bool *has_key=nullptr);
+bool player_take_damage(float damage_scale, int poison_type=0, uint8_t *has_key=nullptr);
 float get_bldg_player_height();
 // functions in building_room_obj_expand.cc
 point gen_xy_pos_in_area(cube_t const &S, vector3d const &sz, rand_gen_t &rgen, float zval=0.0);

@@ -26,7 +26,7 @@ bool ai_follow_player() {return (global_building_params.ai_follow_player || in_b
 bool can_ai_follow_player(person_t const &person, bool allow_diff_building=0);
 float get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing);
 void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool alert_other_zombies, bool high_priority=0, float gain=1.0, float pitch=1.0);
-int register_ai_player_coll(bool &has_key, float height);
+int register_ai_player_coll(uint8_t &has_key, float height);
 unsigned get_stall_cubes(room_object_t const &c, cube_t sides[3]);
 unsigned get_shower_cubes(room_object_t const &c, cube_t sides[2]);
 void resize_cubes_xy(vect_cube_t &cubes, float val);
@@ -376,7 +376,7 @@ public:
 		remove_connection(room1, room2);
 		remove_connection(room2, room1);
 	}
-	bool is_room_connected_to(unsigned room1, unsigned room2, vect_door_t const &doors, float zval, bool has_key) const {
+	bool is_room_connected_to(unsigned room1, unsigned room2, vect_door_t const &doors, float zval, unsigned has_key) const {
 		// Note: likely faster than running full A* algorithm
 		assert(room1 < num_rooms && room2 < num_rooms);
 		if (room1 == room2) return 1;
@@ -762,7 +762,7 @@ public:
 		return 1;
 	}
 
-	bool can_use_conn(conn_room_t const &conn, vect_door_t const &doors, float zval, bool has_key) const {
+	bool can_use_conn(conn_room_t const &conn, vect_door_t const &doors, float zval, unsigned has_key) const {
 		if (conn.door_ix < 0) return 1; // no door
 		//if (global_building_params.ai_opens_doors && has_key) return 1; // locked door won't stop us; incorrect because door may not cover z-range (for multi-floor backrooms)
 		unsigned const door_ix(conn.door_ix);
@@ -773,7 +773,7 @@ public:
 			if (!i->is_same_stack(first_door))        break;    // we've reached the end of the vertical stack of doors
 			//if (i->mult_floor_room && zval > i->z2()) return 0; // no door at this level - can't pass; but then if the AI gets here they can't get out
 			if (zval < i->z1() || zval > i->z2())     continue; // not the correct floor
-			return (i->open || (global_building_params.ai_opens_doors && (!i->locked || has_key)));
+			return (i->open || (global_building_params.ai_opens_doors && i->check_key_mask_unlocks(has_key)));
 		}
 		return 1; // Note: we can get here for complex floorplan office buildings with bad interior walls (-4.18, 4.28, -3.46)
 	}
@@ -781,7 +781,7 @@ public:
 	// A* algorithm; Note: path is stored backwards
 	bool find_path_points(unsigned room1, unsigned room2, unsigned ped_ix, float radius, bool use_stairs, bool is_first_path,
 		bool up_or_down, unsigned ped_rseed, vect_cube_t const &avoid, building_t const &building, point const &cur_pt,
-		vect_door_t const &doors, bool has_key, point const *const custom_dest, ai_path_t &path) const
+		vect_door_t const &doors, unsigned has_key, point const *const custom_dest, ai_path_t &path) const
 	{
 		// Note: opening and closing doors updates the nav graph; an AI encountering a closed door after choosing a path can either open it or stop and wait
 		assert(room1 < nodes.size() && room2 < nodes.size());

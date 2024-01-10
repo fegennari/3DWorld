@@ -720,18 +720,15 @@ public:
 		print_value_and_weight(oss, item.value, item.weight);
 		print_text_onscreen(oss.str(), GREEN, 1.0, 3*TICKS_PER_SECOND, 0);
 	}
-	bool take_person(bool &person_has_key, float person_height) {
+	bool take_person(uint8_t &person_has_key, float person_height) {
 		if (drunkenness < 1.5) { // not drunk enough
 			print_text_onscreen("Not drunk enough", RED, 1.0, 2.0*TICKS_PER_SECOND, 0);
 			return 0;
 		}
 		float const value(1000), weight((person_height > 0.025) ? 180.0 : 80.0); // always worth $1000; use height to select man vs. girl
 		if (!check_weight_limit(weight)) {show_weight_limit_message(); return 0;}
-
-		if (person_has_key) { // steal their key
-			has_key = 1; // assume the default silver key since we're not tracking the color per-perzon/zombie
-			person_has_key = 0;
-		}
+		has_key |= person_has_key; // steal their key(s)
+		person_has_key = 0;
 		cur_value  += value;
 		cur_weight += weight;
 		std::ostringstream oss;
@@ -2499,7 +2496,7 @@ bool flashlight_enabled() { // flashlight can't be used in tiled terrain buildin
 // returns player_dead
 // should we include falling damage? currently the player can't fall down elevator shafts or stairwells,
 // and falling off building roofs doesn't count because gameplay isn't enabled because the player isn't in the building
-bool player_take_damage(float damage_scale, int poison_type, bool *has_key) {
+bool player_take_damage(float damage_scale, int poison_type, uint8_t *has_key) {
 	if (player_wait_respawn) return 0;
 	static double last_scream_time(0.0), last_hurt_time(0.0);
 
@@ -2519,13 +2516,13 @@ bool player_take_damage(float damage_scale, int poison_type, bool *has_key) {
 	player_inventory.take_damage(damage_scale*fticks, poison_type); // take damage over time
 
 	if (player_inventory.player_is_dead()) {
-		if (has_key && player_has_room_key()) {*has_key = 1;}
+		if (has_key) {*has_key |= player_has_room_key();}
 		return 1;
 	}
 	return 0;
 }
 // return value: 0=no effect, 1=player is killed, 2=this person is killed
-int register_ai_player_coll(bool &has_key, float height) {
+int register_ai_player_coll(uint8_t &has_key, float height) {
 	if (do_room_obj_pickup && player_inventory.take_person(has_key, height)) {
 		gen_sound_thread_safe_at_player(SOUND_ITEM, 0.5);
 		do_room_obj_pickup = 0; // no more object pickups
