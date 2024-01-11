@@ -722,7 +722,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	unsigned const ext_objs_start(objs.size());
 	vect_cube_t balconies;
 	ext_steps.clear(); // clear prev value in case this building's interior is recreated
-	maybe_add_fire_escape  (rgen);
+	maybe_add_fire_escape  (rgen); // or ladder
 	add_balconies          (rgen, balconies);
 	add_gutter_downspouts  (rgen, balconies);
 	add_exterior_door_items(rgen);
@@ -768,7 +768,7 @@ void building_t::add_chimney_cap(rand_gen_t &rgen) {
 	bcube.union_with_cube(ccap); // extend bcube to include the chimnmey cap so that it's always drawn
 }
 
-void building_t::maybe_add_fire_escape(rand_gen_t &rgen) {
+void building_t::maybe_add_fire_escape(rand_gen_t &rgen) { // or ladder
 	if (!is_house) return; // houses only for now
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), wall_thickness(get_wall_thickness()), fe_height(4.25*window_vspacing);
 
@@ -832,6 +832,7 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) {
 				// what about AC unit?
 				interior->room_geom->objs.emplace_back(bc, TYPE_LADDER, 0, dim, dir, 0, 1.0, SHAPE_CUBE, GRAY); // room_id=0
 				union_with_coll_bcube(bc);
+				ladder = bc;
 				return; // success/done
 			} // for n
 		} // for d

@@ -24,7 +24,7 @@ extern int display_mode, player_in_closet, frame_counter;
 
 int get_rand_screenshot_texture(unsigned rand_ix);
 unsigned get_num_screenshot_tids();
-string gen_random_full_name (rand_gen_t &rgen);
+string gen_random_full_name(rand_gen_t &rgen);
 
 void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize,
 	vector3d const &column_dir, vector3d const &line_dir, bool use_quads=0, bool include_space_chars=0);
@@ -1005,11 +1005,12 @@ void building_room_geom_t::add_ext_ladder(room_object_t const &c) {
 	float const height(c.get_height()), depth(c.get_depth()), width(c.get_width());
 	float const side_width(0.06*width), rung_spacing(0.8*width), rung_height(0.08*rung_spacing), rung_inset(0.05*depth);
 	unsigned const num_rungs((height - rung_height)/rung_spacing); // round down
+	unsigned const sides_dim_mask(EF_Z1 | ~get_face_mask(c.dim, !c.dir)); // draw all but the bottom and back face against the wall
 	
 	for (unsigned d = 0; d < 2; ++d) { // left/right side verticals
 		cube_t side(c);
 		side.d[!c.dim][!d] = c.d[!c.dim][d] + (d ? -1.0 : 1.0)*side_width;
-		mat.add_cube_to_verts_untextured(side, c.color, EF_Z1); // draw all but the bottom face
+		mat.add_cube_to_verts_untextured(side, c.color, sides_dim_mask);
 	}
 	cube_t rung(c);
 	rung.expand_in_dim(!c.dim, -side_width);

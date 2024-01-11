@@ -459,6 +459,7 @@ void move_camera_pos(vector3d const &v, float dist) { // remember that dist is n
 	else {move_camera_pos_xy(v, dist);}
 }
 
+float get_player_move_dist() {return fticks*speed_mult*player_speed*GROUND_SPEED*calc_speed();}
 
 void advance_camera(int dir) { // player movement processing
 
@@ -471,7 +472,7 @@ void advance_camera(int dir) { // player movement processing
 	}
 	if (camera_mode != 1 || (map_mode && world_mode != WMODE_INF_TERRAIN)) return;
 	vector3d v;
-	float dist(fticks*speed_mult*player_speed*GROUND_SPEED*calc_speed());
+	float dist(get_player_move_dist());
 	
 	if (game_mode && sstates != NULL) {
 		if (sstates[CAMERA_ID].freeze_time > 0) return; // can't move

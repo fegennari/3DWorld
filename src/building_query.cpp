@@ -25,6 +25,7 @@ void force_player_height(double height);
 bool is_player_model_female();
 void apply_building_fall_damage(float delta_z);
 bool get_sphere_poly_int_val(point const &sc, float sr, point const *const points, unsigned npoints, vector3d const &normal, float thickness, float &val, vector3d &cnorm);
+float get_player_move_dist();
 
 
 // assumes player is in this building; handles windows and exterior doors but not attics and basements
@@ -346,6 +347,12 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 			}
 			else {had_coll |= sphere_cube_int_update_pos(pos2, radius, c, p_last2, xy_only, cnorm_ptr);} // check collision with sides
 		} // for i
+		if (!ladder.is_all_zeros() && sphere_cube_intersect(pos2, radius, ladder)) {
+			//had_coll = sphere_cube_int_update_pos(pos2, radius, ladder, p_last2, xy_only, cnorm_ptr); // no, don't want to collide when player is on the roof
+			pos2.z   = p_last2.z + 0.5*get_player_move_dist()*cview_dir.z; // move up/down based on player vertical view (looking up vs. down)
+			pos2.z   = min((ladder.z2() + radius), max((ladder.z1() + radius), pos2.z)); // clamp to ladder height range
+			had_coll = 1;
+		}
 	}
 	if (player_wait_respawn) {pos2.x = p_last2.x; pos2.y = p_last2.y;} // player can't move
 	else if (reduce_speed) {apply_speed_factor(pos2, p_last2, 0.6);} // slow down to 60% when on exterior stairs or balconies
