@@ -1820,7 +1820,7 @@ void building_t::place_roof_ac_units(unsigned num, float sz_scale, cube_t const 
 	if (num == 0) return;
 	vector3d cube_sz(sz_scale, 1.5*sz_scale, 1.2*sz_scale); // consistent across all AC units (note that x and y will be doubled)
 	if (rgen.rand_bool()) {swap(cube_sz.x, cube_sz.y);} // other orientation
-	unsigned const num_floors(round_fp(bounds.dz()/get_window_vspace()));
+	unsigned const num_floors(round_fp(bounds.dz()/get_window_vspace())), acs_start(details.size());
 	bool add_array(num_floors > 1);
 
 	for (unsigned i = 0; i < num; ++i) {
@@ -1859,6 +1859,29 @@ void building_t::place_roof_ac_units(unsigned num, float sz_scale, cube_t const 
 			if (num_added >= nx*ny/2) {add_array = 0;} // we placed our array - done
 		}
 	} // for n
+	// add ducts
+	unsigned const acs_end(details.size());
+	if (acs_end == acs_start) return; // no AC units placed
+	float const height_scale(rgen.rand_uniform(0.7, 0.9)), width_scale(rgen.rand_uniform(0.4, 0.7)); // consistent per part
+
+	for (unsigned i = acs_start; i != acs_end; ++i) {
+		roof_obj_t const &ac(details[i]);
+		assert(ac.type == ROOF_OBJ_AC);
+		bool const dim(ac.dy() < ac.dx()); // short dim
+		bool const dir(rgen.rand_bool());
+		float const length(ac.get_sz_dim(!dim)), width(ac.get_sz_dim(dim)), height(ac.dz()), edge(ac.d[dim][dir]);
+		roof_obj_t duct(ROOF_OBJ_DUCT);
+		set_cube_zvals(duct, ac.z1(), (ac.z1() + height_scale*height));
+		set_wall_width(duct, ac.get_center_dim(!dim), 0.5*(1.0 - width_scale)*length, !dim);
+		duct.d[dim][!dir] = edge;
+
+		for (float duct_len = rgen.rand_uniform(1.0, 3.0)*length; duct_len >= 0.75*length; duct_len *= 0.75) { // try to shorten the length if placement fails
+			duct.d[dim][dir] = edge + (dir ? 1.0 : -1.0)*duct_len;
+			if (!bounds.contains_cube_xy(duct) || has_bcube_int_no_adj(duct, avoid) || has_bcube_int_no_adj(duct, details)) continue; // skip if bad placement
+			details.push_back(duct);
+			break;
+		}
+	} // for i
 }
 
 void building_t::add_roof_walls(cube_t const &c, float wall_width, bool overlap_corners, cube_t out[4]) {
