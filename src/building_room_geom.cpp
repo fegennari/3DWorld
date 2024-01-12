@@ -4460,7 +4460,8 @@ void building_room_geom_t::add_food_box(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_safe(room_object_t const &c) {
-	// TODO: WRITE
+	add_obj_with_front_texture(c, "interiors/room_safe.jpg", c.color, 1);
+	// see add_mwave() for code to draw the open door
 }
 
 void building_room_geom_t::add_debug_shape(room_object_t const &c) {
