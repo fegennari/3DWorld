@@ -2251,13 +2251,17 @@ void building_t::add_or_extend_elevator(elevator_t const &elevator, bool add) {
 }
 
 void building_t::remove_intersecting_roof_cubes(cube_t const &c) {
+	vect_cube_t ac_to_remove;
+
 	for (unsigned i = 0; i < details.size(); ++i) { // remove any existing objects that overlap ecap
 		auto &obj(details[i]);
 		// only remove blocks, AC units, ducts, antennas, and water towers; may cause ducts to become disconnected from AC units
 		if (obj.type != ROOF_OBJ_BLOCK && obj.type != ROOF_OBJ_AC && obj.type != ROOF_OBJ_DUCT && obj.type != ROOF_OBJ_ANT && obj.type != ROOF_OBJ_WTOWER) continue;
 		if (!obj.intersects(c)) continue;
+		if (obj.type == ROOF_OBJ_AC) {ac_to_remove.push_back(obj);} // need to remove ducts connected to this AC unit
 		swap(obj, details.back());
 		details.pop_back();
 		--i; // wraparound okay
 	}
+	for (cube_t const &ac : ac_to_remove) {remove_intersecting_roof_cubes(ac);} // remove connecting ducts as well
 }
