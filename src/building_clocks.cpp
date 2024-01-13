@@ -27,6 +27,7 @@ struct clock_time_t {
 		mins  = cal_time.tm_min;
 		secs  = cal_time.tm_sec;
 		if (use_12_hours) {hours = hours % 12;} // convert 24h => 12h
+		if (hours == 0  ) {hours = 12;}
 	}
 	bool operator==(clock_time_t const &c) const {return (secs == c.secs && mins == c.mins && hours == c.hours);}
 	void print_time() const {cout << hours << ":" << mins << ":" << secs << endl;}
