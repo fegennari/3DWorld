@@ -309,9 +309,10 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			if (c->type  == TYPE_TABLE  ) {inner_cube.z1() += 0.88*c->dz();} // top of table
 			cc.emplace_back(inner_cube, color);
 		}
-		else if (c->type == TYPE_CLOSET) {
+		else if (c->type == TYPE_CLOSET) { // Note: lighting cubes and indir lighting are *not* updated when closet doors are opened and closed
 			cube_t cubes[5];
 			get_closet_cubes(*c, cubes, 1); // for_collision=1
+			if (!c->is_small_closet() && c->is_open()) {cubes[4].set_to_zeros();} // ignore open doors of large closets
 			add_colored_cubes(cubes, 5, color, cc); // include door, whether closed or open
 		}
 		else if (c->type == TYPE_BED) { // Note: posts are not included
