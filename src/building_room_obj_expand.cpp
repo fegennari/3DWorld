@@ -94,17 +94,19 @@ cube_t get_closet_interior_space(room_object_t const &c, cube_t const cubes[5]) 
 	return interior;
 }
 
-bool add_obj_to_closet(room_object_t const &c, cube_t const &interior, vect_room_object_t &objects, vect_cube_t &cubes,
-	rand_gen_t &rgen, vector3d const &sz, unsigned obj_type, unsigned flags, room_obj_shape shape=SHAPE_CUBE)
+bool add_obj_to_closet(room_object_t const &c, cube_t const &interior, vect_room_object_t &objects, vect_cube_t &cubes, rand_gen_t &rgen,
+	vector3d const &sz, unsigned obj_type, unsigned flags, room_obj_shape shape=SHAPE_CUBE, colorRGBA const &color=WHITE, bool against_back=0)
 {
 	for (unsigned n = 0; n < 4; ++n) { // make up to 4 attempts
+		point center(gen_xy_pos_in_area(interior, sz, rgen));
+		if (against_back) {center[c.dim] = interior.d[c.dim][!c.dir] + (c.dir ? 1.0 : -1.0)*sz[c.dim];}
 		cube_t obj;
-		obj.set_from_point(gen_xy_pos_in_area(interior, sz, rgen));
+		obj.set_from_point(center);
 		set_cube_zvals(obj, interior.z1(), (interior.z1() + sz.z));
 		obj.expand_by_xy(sz);
 
 		if (!has_bcube_int(obj, cubes)) { // check for intersection with boxes
-			objects.emplace_back(obj, obj_type, c.room_id, c.dim, c.dir, flags, c.light_amt, shape);
+			objects.emplace_back(obj, obj_type, c.room_id, c.dim, c.dir, flags, c.light_amt, shape, color);
 			cubes.push_back(obj);
 			return 1; // success
 		}
@@ -152,6 +154,11 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 	if (!c.is_small_closet()) { // larger closets have more random items
 		vector3d sz;
 
+		if (rgen.rand_bool()) { // maybe add a safe
+			float const sheight(0.15*window_vspacing*rgen.rand_uniform(1.0, 1.2)), swidth(1.0*sheight), sdepth(min(1.1f*sheight, 0.67f*depth));
+			sz[c.dim] = 0.5*sdepth; sz[!c.dim] = 0.5*swidth; sz.z = sheight;
+			add_obj_to_closet(c, interior, objects, cubes, rgen, sz, TYPE_SAFE, flags, SHAPE_CUBE, colorRGBA(0.7, 0.7, 0.7, 1.0), 1); // against_back=1
+		}
 		if (rgen.rand_bool()) { // maybe add a lamp in the closet
 			try_add_lamp(interior, window_vspacing, c.room_id, flags, c.light_amt, cubes, objects, rgen);
 		}
