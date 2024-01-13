@@ -2034,7 +2034,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			cube_t const *clamp_cube(nullptr);
 			set_cube_zvals(part, slice_z1, (split_per_floor ? (slice_z1 + floor_spacing) : i->z2()));
 
-			if (only_cont_pt_in && !i->contains_pt(only_cont_pt)) { // not the part containing the point
+			if (only_cont_pt_in && *i != cont_part && !i->contains_pt(only_cont_pt)) { // not the part containing the point
 				float const z_exp(get_fc_thickness()); // allow a bit of extra Z overlap, which helps when the player is on the stairs
 
 				if (i->contains_pt_xy(only_cont_pt) && only_cont_pt.z > i->z1()-z_exp && only_cont_pt.z < i->z2()+z_exp) {} // okay, can draw unsplit in this case
@@ -2199,7 +2199,7 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels; include house garage/shed
 		if (is_basement(i)) continue; // skip basement walls because they have no windows
 
-		if (make_all_front || i->contains_pt(only_cont_pt) || // part containing the point
+		if (make_all_front || *i == cont_part || i->contains_pt(only_cont_pt) || // part containing the point
 			are_parts_stacked(*i, cont_part)) // stacked building parts, contained, draw as front in case player can see through stairs
 		{
 			bdraw_front.add_section(*this, 1, *i, mat.wall_tex, wall_color, 3, 0, 0, 1, 0); // XY
@@ -2964,7 +2964,7 @@ public:
 						(*i)->building_draw_interior.draw_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
 						b.add_split_roof_shadow_quads(ext_parts_draw);
 						// no batch draw for shadow pass since textures aren't used; draw everything, since shadow may be cached
-						bool camera_in_this_building(b.check_point_or_cylin_contained(pre_smap_player_pos, 0.0, points, 1, 1)); // inc_attic=1, inc_ext_basement=1
+						bool camera_in_this_building(b.check_point_or_cylin_contained(pre_smap_player_pos, 0.0, points, 1, 1, 0)); // inc_attic=1, inc_ext_basement=1, inc_roof_acc=0
 						camera_in_this_building |= b.interior_visible_from_other_building_ext_basement(xlate, 1); // check conn building as well; expand_for_light=1
 						// generate interior detail objects during the shadow pass when the player is in the building so that it can be done in parallel with small static geom gen
 						// skip drawing small object shadows for secondary camera (security camera) as an optimization
@@ -3034,7 +3034,7 @@ public:
 				building_t &b(get_building(bi->ix));
 				if (!b.has_room_geom()) continue; // no interior room geom, skip
 				if (!lights_bcube.intersects_xy(b.bcube)) continue; // not within light volume (too far from camera)
-				bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1, 1)); // inc_attic=1, inc_ext_basement=1
+				bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1, 1, 0)); // inc_attic=1, inc_ext_basement=1, inc_roof_acc=0
 				if (sec_camera_mode && !camera_in_this_building) continue; // security cameras only show lights in their building
 				// limit room lights to when the player is in a building because we can restrict them to a single floor, otherwise it's too slow
 				if (!camera_in_this_building && !camera_pdu.cube_visible(b.bcube + xlate) && !b.interior_visible_from_other_building_ext_basement(xlate, 1)) continue; // VFC
@@ -3267,7 +3267,7 @@ public:
 						g->has_room_geom = 1;
 						if (!draw_interior) continue;
 						// when player is in the building (not attic or ext basement), draw people later so that alpha blending of hair against ext walls and windows works properly
-						if (defer_people_draw_for_player_building && player_in_building_bcube && b.has_people() && b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 0, 0)) {
+						if (defer_people_draw_for_player_building && player_in_building_bcube && b.has_people() && b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 0, 0, 0)) {
 							defer_ped_draw_vars.assign(&b, *i, bi->ix);
 						}
 						else {gen_and_draw_people_in_building(ped_draw_vars_t(b, oc, s, xlate, bi->ix, 0, reflection_pass));} // draw people in this building
@@ -3282,7 +3282,7 @@ public:
 						if (ref_pass_interior) continue; // interior room, don't need to draw windows and exterior doors
 						// it would be nice to open doors for pedestrians, but we don't have access to them here and this system doesn't support more than one open door
 						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist, reflection_pass); // and draw opened door
-						bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1, 1)); // inc_attic=1, inc_ext_basement=1
+						bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1, 1, 1)); // inc_attic=1, inc_ext_basement=1, inc_roof_acc=1
 						
 						if (!reflection_pass && (camera_in_this_building || !this_frame_camera_in_building)) { // player in this building, or near but not inside another
 							// disable grass in building part(s) containing the player
@@ -4048,7 +4048,7 @@ public:
 			if (building.bcube.x1() > bcube.x2()) break; // no further buildings can intersect (sorted by x1)
 			if (!building.bcube.intersects_xy(bcube)) continue;
 			// double the radius value to add padding to account for inaccuracy
-			if (building.check_point_or_cylin_contained(pos, 2.0*radius, points, 0, 0)) {building_id = *b; return 1;} // inc_attic=0, inc_ext_basement=0
+			if (building.check_point_or_cylin_contained(pos, 2.0*radius, points, 0, 0, 0)) {building_id = *b; return 1;} // inc_attic=0, inc_ext_basement=0, inc_roof_acc=0
 		}
 		return 0;
 	}

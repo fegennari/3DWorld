@@ -1568,7 +1568,7 @@ struct building_t : public building_geom_t {
 	bool all_room_int_doors_closed(unsigned room_ix, float zval) const;
 	unsigned check_line_coll(point const &p1, point const &p2, float &t, bool occlusion_only=0, bool ret_any_pt=0, bool no_coll_pt=0, bool check_non_coll=0) const;
 	bool get_interior_color_at_xy(point const &pos, colorRGBA &color) const;
-	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points, bool inc_attic, bool inc_ext_basement) const;
+	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points, bool inc_attic, bool inc_ext_basement, bool inc_roof_acc) const;
 	bool point_under_attic_roof(point const &pos, vector3d *const cnorm=nullptr) const;
 	bool point_in_attic(point const &pos, vector3d *const cnorm=nullptr) const;
 	bool cube_in_attic(cube_t const &c) const;

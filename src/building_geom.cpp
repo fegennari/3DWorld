@@ -126,7 +126,7 @@ cube_t building_t::get_part_containing_pt(point const &pt) const {
 	for (auto i = parts.begin(); i != parts_end; ++i) { // includes garage/shed
 		if (i->contains_pt(pt)) {return *i;}
 	}
-	// we can get here in rare cases due to FP precision problems; find the closest cube to pt, which should be very close
+	// we can get here in rare cases due to FP precision problems, or we're on the roof access stairs; find the closest cube to pt, which should be very close
 	float dmin_sq(0.0);
 	cube_t closest;
 

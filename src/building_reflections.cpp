@@ -199,7 +199,7 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 	if (is_rotated())     return 0; // mirrors don't yet work in rotated buildings, so disable for now
 	point const camera_bs(camera_pdu.pos - xlate);
 	vector<point> points;
-	if (!check_point_or_cylin_contained(camera_bs, 0.0, points, 0, 1)) return 0; // camera not in the building; inc_attic=0, inc_ext_basement=1
+	if (!check_point_or_cylin_contained(camera_bs, 0.0, points, 0, 1, 0)) return 0; // camera not in the building; inc_attic=0, inc_ext_basement=1, inc_roof_acc=0
 	int camera_room_ix(-1);
 	
 	// find room containing the camera; note that this applies to the entire backrooms, since it's one room

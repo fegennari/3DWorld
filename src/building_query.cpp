@@ -1609,42 +1609,50 @@ void expand_convex_polygon_xy(vect_point &points, point const &center, float exp
 }
 
 // Note: if xy_radius == 0.0, this is a point test; otherwise, it's an approximate vertical cylinder test; attic and basement queries only work with points
-bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points, bool inc_attic, bool inc_ext_basement) const {
-	if (inc_ext_basement && point_in_extended_basement_not_basement(pos)) { // extended basement is not rotated
-		// this check must be accurate; since the extended basement is sparse, we need to check every extended basement room
-		// expand by wall thickness to avoid failing when crossing between two rooms that don't exactly line up, such as with conn room boundary with adj building
-		return interior->point_in_ext_basement_room(pos, get_wall_thickness());
-	}
-	if (inc_ext_basement && has_pool() && interior->pool.contains_pt(pos)) return 1; // in the pool
-	if (xy_radius == 0.0 && !bcube.contains_pt(pos)) return 0; // no intersection (bcube does not need to be rotated)
+bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points, bool inc_attic, bool inc_ext_basement, bool inc_roof_acc) const {
 	point pr(pos);
 	maybe_inv_rotate_point(pr);
-	if (inc_attic && point_in_attic(pr)) return 1;
 
-	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
-		if (pr.z > i->z2() || pr.z < i->z1()) continue; // no overlap in z
+	if (inc_ext_basement && point_in_extended_basement_not_basement(pr)) { // extended basement is not rotated
+		// this check must be accurate; since the extended basement is sparse, we need to check every extended basement room
+		// expand by wall thickness to avoid failing when crossing between two rooms that don't exactly line up, such as with conn room boundary with adj building
+		return interior->point_in_ext_basement_room(pr, get_wall_thickness());
+	}
+	if (inc_ext_basement && has_pool() && interior->pool.contains_pt(pr)) return 1; // in the pool
+	
+	if (xy_radius > 0.0 || bcube.contains_pt(pos)) { // check parts
+		if (inc_attic && point_in_attic(pr)) return 1;
 
-		if (use_cylinder_coll()) { // vertical cylinder
-			point const cc(i->get_cube_center());
-			vector3d const csz(i->get_size());
-			float const dx(cc.x - pr.x), dy(cc.y - pr.y), rx(0.5*csz.x + xy_radius), ry(0.5*csz.y + xy_radius);
-			if (dx*dx/(rx*rx) + dy*dy/(ry*ry) > 1.0f) continue; // no intersection (below test should return true as well)
-			return 1;
-		}
-		else if (num_sides != 4) {
-			points = get_part_ext_verts(i - parts.begin()); // deep copy so that we can modify points below to apply the expand
-			expand_convex_polygon_xy(points, i->get_cube_center(), xy_radius); // cylinder case: expand polygon by xy_radius; assumes a convex polygon
-			if (point_in_polygon_2d(pr.x, pr.y, points.data(), points.size())) return 1; // XY plane test for top surface
-		}
-		else { // cube
-			if (xy_radius > 0.0) {
-				cube_t cube(*i);
-				cube.expand_by(xy_radius);
-				if (cube.contains_pt(pr)) return 1;
+		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
+			if (pr.z > i->z2() || pr.z < i->z1()) continue; // no overlap in z
+
+			if (use_cylinder_coll()) { // vertical cylinder
+				point const cc(i->get_cube_center());
+				vector3d const csz(i->get_size());
+				float const dx(cc.x - pr.x), dy(cc.y - pr.y), rx(0.5*csz.x + xy_radius), ry(0.5*csz.y + xy_radius);
+				if (dx*dx/(rx*rx) + dy*dy/(ry*ry) > 1.0f) continue; // no intersection (below test should return true as well)
+				return 1;
 			}
-			else if (i->contains_pt(pr)) return 1;
+			else if (num_sides != 4) {
+				points = get_part_ext_verts(i - parts.begin()); // deep copy so that we can modify points below to apply the expand
+				expand_convex_polygon_xy(points, i->get_cube_center(), xy_radius); // cylinder case: expand polygon by xy_radius; assumes a convex polygon
+				if (point_in_polygon_2d(pr.x, pr.y, points.data(), points.size())) return 1; // XY plane test for top surface
+			}
+			else { // cube
+				if (xy_radius > 0.0) {
+					cube_t cube(*i);
+					cube.expand_by(xy_radius);
+					if (cube.contains_pt(pr)) return 1;
+				}
+				else if (i->contains_pt(pr)) return 1;
+			}
+		} // for i
+	}
+	if (inc_roof_acc && !is_house && interior) { // check roof access stairs
+		for (stairwell_t const &s : interior->stairwells) {
+			if (s.roof_access && s.contains_pt_xy(pr) && pr.z > s.z1() && pr.z < s.z2() + get_window_vspace()) return 1;
 		}
-	} // for i
+	}
 	return 0;
 }
 
