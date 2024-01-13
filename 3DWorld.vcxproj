@@ -1114,6 +1114,7 @@
     <None Include="shaders\common_header.geom" />
     <None Include="shaders\common_header.vert" />
     <None Include="shaders\common_header_shared.part" />
+    <None Include="shaders\convert_to_grayscale.frag" />
     <None Include="shaders\craters.part.frag" />
     <None Include="shaders\cube_map.frag" />
     <None Include="shaders\cube_map.vert" />

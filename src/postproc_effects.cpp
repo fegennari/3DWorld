@@ -180,6 +180,19 @@ void add_vignette(colorRGBA const &color) {
 	color_buffer_frame = 0; // reset to invalidate buffer
 }
 
+void postproc_convert_to_grayscale(unsigned xsize, unsigned ysize) {
+
+	bind_frame_buffer_RGB();
+	shader_t s;
+	s.set_vert_shader("no_lighting_tex_coord");
+	s.set_frag_shader("convert_to_grayscale");
+	s.begin_shader();
+	// since the screen resolution may be different, we have to scale the texture coordinates
+	s.add_uniform_float("xscale", float(xsize)/float(window_width ));
+	s.add_uniform_float("yscale", float(ysize)/float(window_height));
+	fill_screen_white_and_end_shader(s);
+	color_buffer_frame = 0; // reset to invalidate buffer
+}
 
 void add_sphere_refract_effect(sphere_t const &sphere, float intensity) {
 

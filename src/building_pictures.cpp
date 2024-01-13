@@ -9,12 +9,13 @@
 
 
 extern bool def_tex_compress;
-extern int window_width, window_height, animate2, frame_counter;
+extern int window_width, window_height, animate2, frame_counter, display_mode, window_width, window_height;
 extern float def_tex_aniso, NEAR_CLIP;
 extern double tfticks;
 extern vector<texture_t> textures;
 
 colorRGBA get_clear_color();
+void postproc_convert_to_grayscale(unsigned xsize, unsigned ysize);
 void set_camera_pos_dir(point const &pos, vector3d const &dir);
 void get_security_camera_info(room_object_t const &c, point &lens_pt, point &rot_pt, vector3d &camera_dir, vector3d &rot_axis, float &rot_angle);
 void setup_building_lights(vector3d const &xlate, bool sec_camera_mode);
@@ -141,6 +142,10 @@ class video_camera_manager_t {
 		// not house, and not a mirror (no swapping of front/back face culling); cameras should be pointing to the interior and windows are unlikely to be seen
 		int const reflection_pass(REF_PASS_ENABLED | REF_PASS_INTERIOR | REF_PASS_NO_MIRROR);
 		draw_buildings(0, reflection_pass, xlate);
+		
+		if ((display_mode & 0x20) && SEC_CAMERA_XSIZE <= window_width && SEC_CAMERA_YSIZE <= window_height) { // experimental grayscale mode; doesn't work for small windows
+			postproc_convert_to_grayscale(SEC_CAMERA_XSIZE, SEC_CAMERA_YSIZE);
+		}
 		// write to a texture and reset the state
 		render_to_texture(camera.tid, SEC_CAMERA_XSIZE, SEC_CAMERA_YSIZE); // render reflection to texture
 		restore_matrices_and_clear(); // reset state
