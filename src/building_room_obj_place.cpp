@@ -405,6 +405,15 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 	return 0; // failed
 }
 
+void building_t::add_filing_cabinet_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	float const fc_height(rgen.rand_uniform(0.45, 0.6)*get_window_vspace());
+	vector3d const fc_sz_scale(rgen.rand_uniform(0.40, 0.45), rgen.rand_uniform(0.25, 0.30), 1.0); // depth, width, height
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by(-0.25*get_wall_thickness());
+	place_obj_along_wall(TYPE_FCABINET, room, fc_height, fc_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 1); // door clearance
+}
+
+// Note: can be for an office building or a house
 bool building_t::add_office_objs(rand_gen_t rgen, room_t const &room, vect_cube_t &blockers, colorRGBA const &chair_color,
 	float zval, unsigned room_id, unsigned floor, float tot_light_amt, unsigned objs_start, bool is_basement)
 {
@@ -412,7 +421,7 @@ bool building_t::add_office_objs(rand_gen_t rgen, room_t const &room, vect_cube_
 	unsigned const desk_obj_id(objs.size());
 	if (!add_desk_to_room(rgen, room, blockers, chair_color, zval, room_id, tot_light_amt, objs_start, is_basement)) return 0;
 
-	if (rgen.rand_float() < 0.5 && !room_has_stairs_or_elevator(room, zval, floor)) { // allow two desks in one office
+	if (!is_house && rgen.rand_float() < 0.5 && !room_has_stairs_or_elevator(room, zval, floor)) { // allow two desks in one office
 		assert(objs[desk_obj_id].type == TYPE_DESK);
 		blockers.push_back(objs[desk_obj_id]); // temporarily add the previous desk as a blocker for the new desk and its chair
 		room_object_t const &maybe_chair(objs.back());
@@ -422,12 +431,8 @@ bool building_t::add_office_objs(rand_gen_t rgen, room_t const &room, vect_cube_
 		if (added_chair) {blockers.pop_back();} // remove the chair if it was added
 		blockers.pop_back(); // remove the first desk blocker
 	}
-	if (rgen.rand_float() < 0.75) { // maybe place a filing cabinet along a wall
-		float const fc_height(rgen.rand_uniform(0.45, 0.6)*get_window_vspace());
-		vector3d const fc_sz_scale(rgen.rand_uniform(0.40, 0.45), rgen.rand_uniform(0.25, 0.30), 1.0); // depth, width, height
-		cube_t place_area(get_walkable_room_bounds(room));
-		place_area.expand_by(-0.25*get_wall_thickness());
-		place_obj_along_wall(TYPE_FCABINET, room, fc_height, fc_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 1); // door clearance
+	if (rgen.rand_float() < (is_house ? 0.25 : 0.75)) { // maybe place a filing cabinet along a wall; more likely for office buildings than houses
+		add_filing_cabinet_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	}
 	return 1;
 }
