@@ -822,11 +822,13 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) { // or ladder
 				float const window_hspacing(get_hspacing_for_part(part, !dim));
 				if (is_val_inside_window(part, !dim, bc.d[!dim][0]-wall_thickness, window_hspacing, window_h_border)) continue; // check for window intersection
 				if (is_val_inside_window(part, !dim, bc.d[!dim][1]+wall_thickness, window_hspacing, window_h_border)) continue; // check for window intersection
-				bc.d[dim][0]    = bc.d[dim][1] = part.d[dim][dir];
-				bc.d[dim][dir] += (dir ? 1.0 : -1.0)*depth;
-				cube_t bc_exp(bc);
+				bc.d[dim][0]    = bc.d[dim][1] = part.d[dim][dir]; // at wall
+				bc.d[dim][dir] += (dir ? 1.0 : -1.0)*depth; // extend outward
+				cube_t bc_pad(bc);
+				bc_pad.d[dim][dir] += (dir ? 1.0 : -1.0)*2.0*get_scaled_player_radius(); // add space for the player; may not be needed
+				cube_t bc_exp(bc_pad);
 				bc_exp.expand_by(wall_thickness); // needed for exterior door check
-				if (has_bcube_int_no_adj(bc, parts))              continue; // check for intersection with other parts, in particular the chimney and fireplace
+				if (has_bcube_int_no_adj(bc_pad, parts))          continue; // check for intersection with other parts, in particular the chimney and fireplace
 				if (has_driveway() && bc.intersects_xy(driveway)) continue; // skip if intersects driveway or garage
 				if (cube_int_ext_door(bc_exp))                    continue; // check exterior doors
 				// what about AC unit?
