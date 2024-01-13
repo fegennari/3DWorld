@@ -4,6 +4,7 @@
 #pragma once
 
 #include <fstream>
+#include <inttypes.h> // for SCNu64
 #include "3DWorld.h"
 
 inline bool is_EOF(int v) {return (v == EOF || v == '\0');}
@@ -12,7 +13,7 @@ bool read_block_comment(FILE *fp);
 
 inline bool read_int   (FILE *fp, int      &val) {return (fscanf(fp, "%i", &val) == 1);}
 inline bool read_uint  (FILE *fp, unsigned &val) {return (fscanf(fp, "%u", &val) == 1);}
-inline bool read_uint64(FILE *fp, uint64_t &val) {return (fscanf(fp, "%llu", &val) == 1);} // SCNu64 in inttypes.h
+inline bool read_uint64(FILE *fp, uint64_t &val) {return (fscanf(fp, "%" SCNu64, &val) == 1);}
 inline bool read_nonzero_uint(FILE *fp, unsigned &val) {return (fscanf(fp, "%u", &val) == 1 && val > 0);}
 inline bool read_float(FILE *fp, float    &val) {return (fscanf(fp, "%f", &val) == 1);}
 inline bool read_pos_float     (FILE *fp, float &val) {return (read_float(fp, val) && val >  0.0);}
