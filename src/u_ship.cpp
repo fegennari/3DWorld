@@ -57,6 +57,7 @@ extern bool player_autopilot, player_auto_stop, player_enemy, regen_uses_credits
 extern int frame_counter, iticks, onscreen_display, display_mode, animate2;
 extern float fticks, urm_proj, global_regen, ship_build_delay, hyperspeed_mult, player_turn_rate, rand_spawn_ship_dmax;
 extern unsigned alloced_fobjs[], team_credits[], init_credits[], ind_ships_used[];
+extern string player_killer;
 extern exp_type_params et_params[];
 extern vector<free_obj const *> a_targets, attackers;
 extern vector<ship_explosion> exploding;
@@ -2106,7 +2107,11 @@ bool u_ship::capture_ship(u_ship *ship, bool add_as_fighter) { // this captures 
 	assert(ship != NULL && ship != this);
 	free_obj const *const old_parent(ship->parent);
 	bool const player(ship->is_player_ship());
-	if (player) destroy_player_ship(1);
+	
+	if (player) {
+		player_killer = get_name();
+		destroy_player_ship(1);
+	}
 	register_damage(sclass, ship->sclass, WCLASS_CAPTURE, (ship->get_shields() + ship->get_armor()), alignment, ship->get_align(), 1); // counts as a kill
 	acknowledge_kill(); // counts as a kill
 	ship->register_destruction(this); // counts as destroying the ship
@@ -2462,6 +2467,7 @@ float u_ship::damage(float val, int type, point const &hit_pos, free_obj const *
 	if (attack) {register_destruction(source);}
 	// Note: we may need to increment kills and tot_kills here, which means that source can't be const, so we have to cast it to const; is it better to make kills mutable?
 	if (source) {const_cast<free_obj *>(source)->acknowledge_kill();}
+	if (is_player_ship()) {player_killer = (source ? source->get_name() : "");}
 	acknowledge_death();
 	destroy_ship(val);
 	return damage_amt;
