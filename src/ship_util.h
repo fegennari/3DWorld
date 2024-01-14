@@ -220,7 +220,7 @@ bool is_valid_starting_ship_pos(point const &spos, unsigned sclass);
 u_ship *add_ship(unsigned sclass, unsigned align, unsigned ai, unsigned targ, point const &pos, float spread, bool rand_spawned=0);
 
 // universe_control.cpp
-void send_warning_message(string const &msg);
+void send_warning_message(string const &msg, bool no_duplicate=0);
 bool player_near_system();
 bool player_inside_system();
 void disable_player_ship();

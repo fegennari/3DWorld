@@ -528,7 +528,7 @@ void u_ship::acquire_target(float min_dist) {
 				retarg_time = RETARG_DELAY;
 				
 				if (target_obj->is_player_ship() && target_obj != parent) {
-					send_warning_message(string("Enemy Ship Detected: ") + get_name());
+					send_warning_message((string("Enemy Ship Detected: ") + get_name()), 1); // no_duplicate=1
 				}
 			}
 			if (target_obj != NULL && target_mode == TARGET_LAST) {target_set = 1;}
@@ -2435,7 +2435,7 @@ float u_ship::damage(float val, int type, point const &hit_pos, free_obj const *
 	bool const friendly(source == this || ((type == DAMAGE_COLL || alignment == ALIGN_PLAYER) && src_align == alignment)); // accidental collision, etc.
 	bool const attack(!friendly && (wc != WCLASS_EXPLODE || (source && source->hostile_explode())) &&
 		(wc != WCLASS_HEAT || (source && source->is_ship())) && register_attacker(source));
-	if (attack && wc != WCLASS_COLLISION && is_player_ship()) send_warning_message("Under Attack");
+	if (attack && wc != WCLASS_COLLISION && is_player_ship()) {send_warning_message("Under Attack");}
 	
 	if (!ignores_shields) { // determine damage absorbed by shields
 		if (shields >= val) {

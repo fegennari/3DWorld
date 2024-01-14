@@ -640,10 +640,15 @@ void draw_universe_sun_flare() {
 }
 
 
-void send_warning_message(string const &msg) {
+void send_warning_message(string const &msg, bool no_duplicate) {
 
 	static int last_warning_tfticks(0);
+	static string last_msg;
 	
+	if (no_duplicate) {
+		if (msg == last_msg) return;
+		last_msg = msg;
+	}
 	if ((tfticks - last_warning_tfticks) > 5.0*TICKS_PER_SECOND) {
 		print_text_onscreen(msg.c_str(), RED, 1.0, 1.0*TICKS_PER_SECOND, 1);
 		gen_sound(SOUND_ALERT, get_player_pos2(), 0.75);
