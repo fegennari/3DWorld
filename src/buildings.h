@@ -1187,7 +1187,7 @@ struct room_t : public cube_t { // size=64
 	room_type get_room_type (unsigned floor) const {return rtype[wrap_room_floor(floor)];}
 	bool is_rtype_locked    (unsigned floor) const {return (rtype_locked & (1 << wrap_room_floor(floor)));}
 	bool is_lit_on_floor    (unsigned floor) const {return (lit_by_floor & (1ULL << (floor&63)));}
-	bool has_stairs_on_floor(unsigned floor) const {return (has_stairs & (1U << min(floor, 7U)));} // floors >= 7 are treated as the top floor
+	bool has_stairs_on_floor(unsigned floor) const {return (has_center_stairs || (has_stairs & (1U << min(floor, 7U))));} // floors >= 7 are treated as the top floor
 	bool is_garage_or_shed  (unsigned floor) const {return (is_sec_bldg || get_room_type(floor) == RTYPE_GARAGE || get_room_type(floor) == RTYPE_SHED);}
 	bool is_ext_basement     () const {return (interior >= 2);}
 	bool is_ext_basement_conn() const {return (interior >= 3);}

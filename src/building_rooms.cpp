@@ -491,6 +491,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					add_pri_hall_objs(rgen, room_rgen, *r, room_center.z, room_id, tot_light_amt, f);
 					if (is_ground_floor) {r->assign_to(RTYPE_LOBBY, f);} // first floor primary hallway, make it the lobby
 				}
+				if (has_stairs_this_floor && r->get_room_type(f) == RTYPE_NOTSET) {r->assign_to(RTYPE_STAIRS, f);}
 				continue; // no other geometry for this room
 			}
 			//if (has_stairs && !pri_hall.is_all_zeros()) continue; // no other geometry in office building base part rooms that have stairs
@@ -583,6 +584,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				added_obj = can_place_onto = added_desk = add_office_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_basement);
 				if (added_obj && !has_stairs_this_floor) {r->assign_to((is_house ? (room_type)RTYPE_STUDY : (room_type)RTYPE_OFFICE), f);} // or other room type - may overwrite below
 			}
+			// Note: added_obj is not set to 1 below this point
 			if (is_house && (added_tc || added_desk) && !is_kitchen && is_entry_floor) { // don't add second living room unless we added a kitchen and have enough rooms
 				if ((!added_living && !r->has_center_stairs && rooms.size() >= 8 && (added_kitchen_mask || rgen.rand_bool())) || is_room_an_exit(*r, room_id, room_center.z)) {
 					// add a living room on the ground floor if it has a table or desk but isn't a kitchen
@@ -611,6 +613,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					r->assign_to(RTYPE_LIBRARY, f);
 					added_library = 1;
 				}
+			}
+			if (!is_house && !added_obj && has_stairs_this_floor) { // office building "office" with stairs and no furniture
+				r->assign_to(RTYPE_STAIRS, f);
+				no_whiteboard = 1;
 			}
 			if (!is_house && r->is_office && !no_whiteboard && (rgen.rand() % (pri_hall.is_all_zeros() ? 30U : max(50U, (unsigned)interior->rooms.size()))) == 0) {
 				// office, no cubicles or bathroom - try to make it a library (in rare cases)
