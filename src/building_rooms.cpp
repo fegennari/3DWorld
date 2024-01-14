@@ -898,6 +898,15 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 				balcony.d[dim][ dir] += (dir ? 1.0 : -1.0)*balcony_depth; // extend outward from the house
 				if (has_bcube_int(balcony, avoid)) continue; // blocked
 				if (check_cube_intersect_non_main_part(balcony)) continue; // porch roof, porch support, and chimney, etc.
+
+				if (real_num_parts > 1) { // check if adjacent to the second part (may block a window or clip through a windowsill)
+					cube_t const &other_part(parts[(room->part_id == 0) ? 1 : 0]);
+					cube_t test_cube(balcony);
+					test_cube.z1() = ground_floor_z1; // extend down to the ground
+					test_cube.expand_in_dim( dim,    -wall_thickness); // shrink to exclude adjacencies
+					test_cube.expand_in_dim(!dim, 2.0*wall_thickness); // expand to include adjacencies
+					if (test_cube.intersects(other_part)) continue;
+				}
 				if (!exterior_flag.is_all_zeros() && exterior_flag.intersects(balcony)) continue; // flag placed in the way, no balcony
 				cube_t balcony_ext_down(balcony), balcony_ext_out(balcony);
 				balcony_ext_down.z1() = ground_floor_z1; // extend down to the ground
