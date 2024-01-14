@@ -803,10 +803,11 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) { // or ladder
 		} // for p
 	}
 	// if no fire escape was added, maybe add a TYPE_LADDER to the roof between windows; only for hipped roofs, to avoid the gutter; skip houses with stacked parts
-	if (roof_type == ROOF_TYPE_HIPPED && (real_num_parts == 1 || parts[1].z1() == parts[0].z1()) && rgen.rand_bool()) {
+	if (roof_type == ROOF_TYPE_HIPPED && rgen.rand_bool()) {
 		cube_t const &part(parts[0]); // add to first/primary part
 		unsigned const pref_dim_dir(rgen.rand() & 3);
 		float const window_h_border(get_window_h_border()), hwidth(0.3*get_doorway_width()), depth(0.3*hwidth);
+		bool const check_stacked(real_num_parts > 1 && parts[1].z1() > parts[0].z1());
 
 		for (unsigned d = 0; d < 4; ++d) {
 			unsigned const dd((d + pref_dim_dir) & 3);
@@ -822,6 +823,13 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) { // or ladder
 				if (is_val_inside_window(part, !dim, bc.d[!dim][1]+wall_thickness, window_hspacing, window_h_border)) continue; // check for window intersection
 				bc.d[dim][0]    = bc.d[dim][1] = part.d[dim][dir]; // at wall
 				bc.d[dim][dir] += (dir ? 1.0 : -1.0)*depth; // extend outward
+
+				if (check_stacked) {
+					if (parts[1].d[dim][dir] != part.d[dim][dir]) continue; // walls not aligned - may clip through roof overhang, skip
+					// if entire upper wall is not shared, then this is a bad placement because the upper windows are likely misaligned
+					if (parts[1].d[!dim][0] != part.d[!dim][0] || parts[1].d[!dim][1] != part.d[!dim][1]) continue;
+					bc.z2() = parts[1].z2(); // extend upward
+				}
 				cube_t bc_pad(bc);
 				bc_pad.d[dim][dir] += (dir ? 1.0 : -1.0)*2.0*get_scaled_player_radius(); // add space for the player; may not be needed
 				cube_t bc_exp(bc_pad);
@@ -829,7 +837,7 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) { // or ladder
 				if (has_bcube_int_no_adj(bc_pad, parts))          continue; // check for intersection with other parts, in particular the chimney and fireplace
 				if (has_driveway() && bc.intersects_xy(driveway)) continue; // skip if intersects driveway or garage
 				if (cube_int_ext_door(bc_exp))                    continue; // check exterior doors
-				// what about AC unit?
+				if (has_bcube_int(bc_exp, details))               continue; // check details; outdoor AC units can intersect
 				interior->room_geom->objs.emplace_back(bc, TYPE_LADDER, 0, dim, dir, 0, 1.0, SHAPE_CUBE, GRAY); // room_id=0
 				union_with_coll_bcube(bc);
 				ladder = bc;
