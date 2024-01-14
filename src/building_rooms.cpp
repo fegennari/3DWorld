@@ -985,11 +985,11 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 					get_balcony_pillars(balcony_obj, ground_floor_z1, pillar);
 					bool no_pillars(0);
 
-					for (unsigned d = 0; d < 2; ++d) { // check for pillars blocking exterior door
+					for (unsigned d = 0; d < 2; ++d) { // check for pillars blocking exterior door or clipping through the fence
 						cube_t pillar_exp(pillar[d]);
 						pillar_exp.d[dim][!dir] = ext_wall_pos; // extend to exterior wall
 						pillar_exp.expand_by_xy(wall_thickness);
-						if (cube_int_ext_door(pillar_exp)) {no_pillars = 1; break;}
+						if (cube_int_ext_door(pillar_exp) || has_bcube_int(pillar[d], fences)) {no_pillars = 1; break;}
 					}
 					if (no_pillars) {objs[balcony_obj_ix].flags |= RO_FLAG_HANGING;} // make it hanging instead
 					else { // add pillars
