@@ -5,9 +5,11 @@
 #include "buildings.h"
 #include "city.h" // for object_model_loader_t
 
+extern int world_mode;
 extern object_model_loader_t building_obj_model_loader;
 
 void setup_bldg_obj_types();
+bool cube_int_tiled_terrain_trees(cube_t const &c);
 bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i, cube_t &c, float &tx1, float &tx2, float &tz1, float &tz2);
 void get_balcony_pillars(room_object_t const &c, float ground_floor_z1, cube_t pillar[2]);
 void expand_convex_polygon_xy(vect_point &points, point const &center, float expand);
@@ -869,7 +871,6 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 	if (!objs.empty() && (objs.back().type == TYPE_FESCAPE || objs.back().type == TYPE_LADDER)) {avoid.push_back(objs.back());} // avoid fire escape or ladder
 	if (has_driveway()) {avoid.push_back(driveway);}
 	if (!city_driveway.is_all_zeros()) {avoid.push_back(city_driveway);}
-	// what about trees in the front yard? can/should we avoid them as well?
 
 	// find suitable rooms for balconies; since room walls will never intersect windows, we can make the balcony the same width to avoid intersecting windows
 	for (auto room = interior->rooms.begin(); room != interior->rooms.end(); ++room) {
@@ -908,6 +909,7 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 				if (bad_pos) continue;
 				balcony_ext_out.expand_by_xy(0.2*floor_spacing); // for testing against upper floor doors
 				if (cube_int_ext_door(balcony_ext_out)) continue; // check exterior doors; we may want to create doors to balconies in the future
+				if (world_mode == WMODE_INF_TERRAIN && cube_int_tiled_terrain_trees(balcony - get_tiled_terrain_model_xlate())) continue; // check trees (slow)
 				balcony.z2() -= 0.6*floor_spacing; // reduce wall height to 40%
 				balcony.expand_in_dim(!dim, wall_thickness); // expand slightly to include window frame and merge adj balcony shared walls
 				max_eq(balcony.d[!dim][0], (part.d[!dim][0] + 0.25f*wall_thickness)); // clamp slightly smaller than the containing part in !dim

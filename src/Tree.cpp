@@ -264,7 +264,6 @@ void tree::add_tree_collision_objects() {
 
 
 void tree::remove_collision_objects() {
-
 	for (unsigned i = 0; i < branch_cobjs.size(); i++) {remove_reset_coll_obj(branch_cobjs[i]);}
 	for (unsigned i = 0; i < leaf_cobjs  .size(); i++) {remove_reset_coll_obj(leaf_cobjs  [i]);}
 	branch_cobjs.clear();
@@ -276,8 +275,8 @@ void tree_cont_t::remove_cobjs() {
 }
 
 
-bool tree::check_sphere_coll(point &center, float radius) const { // 10.7% of CPU time, 4.5x slower than scenery coll
-
+bool tree::check_sphere_coll(point &center, float radius) const { // collision with the trunk
+	// 10.7% of CPU time, 4.5x slower than scenery coll
 	tree_data_t const &td(tdata());
 	if (!td.branches_bcube.contains_pt_exp((center - tree_center), radius)) return 0; // optimization
 	float const trunk_radius(0.9*td.br_scale*td.base_radius);
@@ -285,13 +284,26 @@ bool tree::check_sphere_coll(point &center, float radius) const { // 10.7% of CP
 	cylinder_3dw const cylin(tree_center, tree_center+vector3d(0.0, 0.0, trunk_height), trunk_radius, trunk_radius);
 	return sphere_vert_cylin_intersect(center, radius, cylin);
 }
-
 bool tree_cont_t::check_sphere_coll(point &center, float radius) const {
-
-	if (!all_bcube.is_zero_area() && !sphere_cube_intersect(center, radius, all_bcube)) return 0;
+	if (!all_bcube.is_zero_area() && !sphere_cube_intersect(center, radius, all_bcube)) return 0; // optimization
 	bool coll(0);
 	for (const_iterator i = begin(); i != end(); ++i) {coll |= i->check_sphere_coll(center, radius);}
 	return coll;
+}
+
+bool tree::check_cube_int(cube_t const &c) const {
+	cube_t const c_tree_rel(c - tree_center);
+	tree_data_t const &td(tdata());
+	if (!td.leaves_bcube.intersects(c_tree_rel) && !td.branches_bcube.intersects(c_tree_rel)) return 0;
+	return sphere_cube_intersect(td.get_center(), td.sphere_radius, c_tree_rel);
+}
+bool tree_cont_t::check_cube_int(cube_t const &c) const {
+	if (!all_bcube.is_zero_area() && !all_bcube.intersects(c)) return 0; // optimization
+	
+	for (const_iterator i = begin(); i != end(); ++i) {
+		if (i->check_cube_int(c)) return 1;
+	}
+	return 0;
 }
 
 

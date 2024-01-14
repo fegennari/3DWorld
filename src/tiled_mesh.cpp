@@ -2006,6 +2006,11 @@ bool tile_t::check_sphere_collision(point &pos, float sradius, bool inc_dtrees, 
 	return coll;
 }
 
+bool tile_t::check_cube_int_trees(cube_t const &c) const { // cube is in camera space; deciduous trees only for now
+	if (decid_trees.empty()) return 0;
+	return decid_trees.check_cube_int(c - dtree_off.get_xlate());
+}
+
 
 int tile_t::get_tid_under_point(point const &pos) const {
 
@@ -3402,6 +3407,10 @@ bool tile_draw_t::check_player_collision() const {
 	surface_pos = camera; // write modified camera pos back to the scene state
 	return 1;
 }
+bool tile_draw_t::check_cube_int_trees(cube_t const &c) const {
+	tile_t const *const tile(get_tile_containing_point(c.get_cube_center())); // assumes cube is contained in one tile
+	return (tile ? tile->check_cube_int_trees(c) : 0);
+}
 
 int tile_draw_t::get_tid_under_point(point const &pos) const {
 	tile_t const *const tile(get_tile_containing_point(pos));
@@ -3564,6 +3573,7 @@ void clear_tiled_terrain_shaders() {terrain_tile_draw.free_compute_shader();}
 void draw_tiled_terrain_water(shader_t &s, float zval) {terrain_tile_draw.draw_water(s, zval);}
 bool check_player_tiled_terrain_collision() {return terrain_tile_draw.check_player_collision();}
 bool sphere_int_tiled_terrain(point &pos, float radius) {return terrain_tile_draw.check_sphere_collision(pos, radius);}
+bool cube_int_tiled_terrain_trees(cube_t const &c) {return terrain_tile_draw.check_cube_int_trees(c);}
 float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : terrain_tile_draw.get_actual_zmin());}
 bool try_bind_tile_smap_at_point(point const &pos, shader_t &s, bool check_only) {return terrain_tile_draw.try_bind_tile_smap_at_point(pos, s, check_only);}
 // defer update until tile draw (if called from non-drawing thread)

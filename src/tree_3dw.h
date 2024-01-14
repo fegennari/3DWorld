@@ -346,6 +346,7 @@ public:
 	void add_tree_collision_objects();
 	void remove_collision_objects();
 	bool check_sphere_coll(point &center, float radius) const;
+	bool check_cube_int(cube_t const &c) const;
 	float calc_size_scale(point const &draw_pos) const;
 	void update_leaf_orients_wind();
 	void draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, bool reflection_pass, vector3d const &xlate, int wsoff_loc);
@@ -406,6 +407,7 @@ public:
 	bool was_generated() const {return generated;}
 	void remove_cobjs();
 	bool check_sphere_coll(point &center, float radius) const;
+	bool check_cube_int(cube_t const &c) const;
 	void draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves,
 		bool shadow_only, bool reflection_pass, vector3d const &xlate);
 	static void pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shadow_only=0, bool use_fs_smap=0, bool enable_smap=1, bool enable_dlights=1);

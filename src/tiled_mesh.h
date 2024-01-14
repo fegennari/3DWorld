@@ -418,6 +418,7 @@ public:
 	void draw_water(shader_t &s, float z) const;
 	bool is_water_visible() const;
 	bool check_sphere_collision(point &pos, float sradius, bool inc_dtrees=1, bool inc_ptrees=1, bool inc_scenery=1) const;
+	bool check_cube_int_trees(cube_t const &c) const;
 	int get_tid_under_point(point const &pos) const;
 	bool line_intersect_mesh(point const &v1, point const &v2, float &t, int &xpos, int &ypos, float inc_trees) const;
 }; // tile_t
@@ -507,6 +508,7 @@ public:
 	void invalidate_tile_smap_at_pt(point const &pos, float radius);
 	bool try_bind_tile_smap_at_point(point const &pos, shader_t &s, bool check_only) const;
 	bool check_sphere_collision(point &pos, float radius) const;
+	bool check_cube_int_trees(cube_t const &c) const;
 	bool check_player_collision() const;
 	int get_tid_under_point(point const &pos) const;
 	bool line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &xpos, int &ypos, float inc_trees) const;
