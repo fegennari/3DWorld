@@ -1596,7 +1596,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	cube_t const clip_cube_bs(smap_light_clip_cube - xlate);
 	int const camera_room(is_rotated ? -1 : building.get_room_containing_pt(camera_bs)); // skip for rotated buildings; should we use actual_player_pos for shadow_only mode?
 	bool const camera_in_closed_room((camera_room < 0) ? 0 : building.all_room_int_doors_closed(camera_room, camera_bs.z));
-	unsigned last_room_ix(building.interior->rooms.size()); // start at an invalid value
+	unsigned last_room_ix(building.interior->rooms.size()), last_floor_ix(0); // start at an invalid value
 	bool last_room_closed(0), obj_drawn(0);
 
 	// draw object models
@@ -1623,9 +1623,12 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (check_occlusion && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
 
 		if (camera_room >= 0) {
-			if (obj.room_id != last_room_ix) { // new room
+			unsigned const floor_ix(building.get_room(obj.room_id).get_floor_containing_zval(obj.zc(), floor_spacing));
+
+			if (obj.room_id != last_room_ix || floor_ix != last_floor_ix) { // new room or new floor
 				last_room_closed = building.all_room_int_doors_closed(obj.room_id, obj.zc());
 				last_room_ix     = obj.room_id;
+				last_floor_ix    = floor_ix;
 			}
 			// if either the camera or the object are in different rooms with closed doors, on the same floor (not separated by stairs), then the object isn't visible
 			if ((last_room_closed || camera_in_closed_room) && obj.room_id != camera_room) continue;
