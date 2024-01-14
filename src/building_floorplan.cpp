@@ -1855,7 +1855,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				else {dim  = rgen.rand_bool();}
 				stairs_dir = rgen.rand_bool(); // the direction we move in when going up the stairs
 				// shrink place_region sides slightly to allow for the railing in office buildings and avoid z-fighting with the walls in houses
-				place_region.expand_in_dim(!dim, -(is_house ? 0.01 : 0.5)*wall_thickness);
+				place_region.expand_in_dim(!dim, -0.5*wall_thickness);
 				bool too_small(0);
 
 				for (unsigned d = 0; d < 2; ++d) {
