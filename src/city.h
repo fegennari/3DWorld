@@ -685,7 +685,7 @@ struct pedestrian_t : public person_base_t { // city pedestrian
 	unsigned plot=0, next_plot=0, dest_plot=0, dest_bldg=0; // Note: can probably be made unsigned short later, though these are global plot and building indices
 	unsigned short city=0, colliding_ped=0;
 	unsigned char stuck_count=0;
-	bool collided=0, ped_coll=0, in_the_road=0, at_crosswalk=0, at_dest=0, has_dest_bldg=0, has_dest_car=0, destroyed=0;
+	bool collided=0, ped_coll=0, in_the_road=0, at_crosswalk=0, at_dest=0, has_dest_bldg=0, has_dest_car=0, destroyed=0, follow_player=0;
 
 	pedestrian_t(float radius_) : person_base_t(radius_) {}
 	bool operator<(pedestrian_t const &ped) const {return ((city == ped.city) ? (plot < ped.plot) : (city < ped.city));} // currently only compares city + plot
@@ -696,7 +696,7 @@ struct pedestrian_t : public person_base_t { // city pedestrian
 	void move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, float &delta_dir);
 	bool check_for_safe_road_crossing(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vect_cube_t *dbg_cubes=nullptr) const;
 	bool check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned pid, unsigned ped_start, unsigned target_plot, float prox_radius, vector3d &force);
-	void run_collision_avoid(point const &ipos, vector3d const &ivel, float r2, float dist_sq, vector3d &force);
+	void run_collision_avoid(point const &ipos, vector3d const &ivel, float r2, float dist_sq, bool is_player, vector3d &force);
 	bool check_ped_ped_coll(ped_manager_t const &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, float delta_dir);
 	bool check_ped_ped_coll_stopped(vector<pedestrian_t> &peds, unsigned pid);
 	bool check_inside_plot(ped_manager_t &ped_mgr, point const &prev_pos, cube_t &plot_bcube, cube_t &next_plot_bcube);

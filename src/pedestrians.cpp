@@ -127,7 +127,7 @@ float get_inner_sidewalk_width  () {return 1.00*get_sidewalk_width();} // walkab
 // Note: may update plot_bcube and next_plot_bcube
 bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_pos, cube_t &plot_bcube, cube_t &next_plot_bcube) {
 	//if (ssn == 2516) {cout << "in_the_road: " << in_the_road << ", pos: " << pos.str() << ", plot_bcube: " << plot_bcube.str() << ", npbc: " << next_plot_bcube.str() << endl;}
-	if (plot_bcube.contains_pt_xy(pos)) {return 1;} // inside the plot
+	if (plot_bcube.contains_pt_xy(pos)) return 1; // inside the plot
 	stuck_count = 0; // no longer stuck
 	if (next_plot == plot) return 0; // no next plot - clip to this plot
 	
@@ -216,7 +216,7 @@ bool check_for_ped_future_coll(point const &p1, point const &p2, vector3d const 
 #endif
 }
 
-void pedestrian_t::run_collision_avoid(point const &ipos, vector3d const &ivel, float r2, float dist_sq, vector3d &force) {
+void pedestrian_t::run_collision_avoid(point const &ipos, vector3d const &ivel, float r2, float dist_sq, bool is_player, vector3d &force) {
 	if (speed < TOLERANCE) return; // not moving
 	point const p1_xy(pos.x, pos.y, 0.0), p2_xy(ipos.x, ipos.y, 0.0); // z=0.0
 	vector3d const delta_v(vel - ivel), delta_p(p1_xy - p2_xy);
@@ -244,7 +244,7 @@ bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned
 		if (i->destroyed) continue; // dead
 		float const r2(i->get_coll_radius()), r_sum(get_coll_radius() + r2);
 		if (dist_sq < r_sum*r_sum) {register_ped_coll(*this, *i, pid, (i - peds.begin())); return 1;} // collision
-		if (speed > TOLERANCE) {run_collision_avoid(i->pos, i->vel, r2, dist_sq, force);}
+		if (speed > TOLERANCE) {run_collision_avoid(i->pos, i->vel, r2, dist_sq, 0, force);} // is_player=0
 	} // for i
 	if (camera_surf_collide && !camera_in_building) {
 		point const player_pos(get_camera_pos() - get_camera_coord_space_xlate());
@@ -253,7 +253,8 @@ bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned
 		if (dist_sq < prox_radius_sq) {
 			float const r2(CAMERA_RADIUS), r_sum(get_coll_radius() + r2);
 			if (dist_sq < r_sum*r_sum) {collided = 1; return 1;} // collision
-			if (speed > TOLERANCE) {run_collision_avoid(player_pos, zero_vector, r2, dist_sq, force);} // use zero velocity for the player since it's unpredictable
+			// avoid the player if not following; use zero velocity for the player since it's unpredictable
+			if (!follow_player && speed > TOLERANCE) {run_collision_avoid(player_pos, zero_vector, r2, dist_sq, 1, force);} // is_player=1
 		}
 	}
 	return 0;
@@ -596,7 +597,8 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 		bool avoid_entire_plot(0);
 
 		if (is_home_plot) {
-			if (city_params.assign_house_plots && (has_dest_bldg || has_dest_car)) { // we can only walk through our own sub-plot
+			// we can only walk through our own sub-plot; even zombies must obey because otherwise they can get stuck in a back yard with a wall/fence/hedge
+			if (city_params.assign_house_plots && (has_dest_bldg || has_dest_car) && !follow_player) {
 				cube_t dest_cube;
 				if      (has_dest_bldg) {dest_cube = get_building_bcube(dest_bldg);}
 				else if (has_dest_car ) {dest_cube.set_from_sphere(dest_car_center, city_params.get_nom_car_size().x);} // somewhat approximate/conservative
@@ -628,8 +630,9 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 				}
 			} // else we can walk through this plot
 		}
-		else {avoid_entire_plot = 1;} // not our destination plot, we can't walk through any residential properties
-
+		else if (!follow_player) { // must apply to zombies to keep them from getting stuck
+			avoid_entire_plot = 1; // not our destination plot, we can't walk through any residential properties
+		}
 		if (!in_the_road) { // include collider bcubes for cars parked in house driveways
 			static vect_cube_t car_bcubes; // reused across calls
 			car_bcubes.clear();
@@ -677,7 +680,8 @@ bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t const &ped_mgr, cu
 	// just exited the plot and about the cross the road - check for cars; use speed rather than vel in case we're already stopped and vel==zero_vector
 	float const dx(min((pos.x - plot_bcube.x1()), (plot_bcube.x2() - pos.x))), dy(min((pos.y - plot_bcube.y1()), (plot_bcube.y2() - pos.y)));
 	bool const road_dim(dx < dy); // if at crosswalk, need to know which direction/road the ped is crossing
-	float const time_to_cross((city_params.road_width - 2.0f*sw_width)/(speed*get_speed_mult())); // road area where cars can drive excluding sidewalks on each side
+	float time_to_cross((city_params.road_width - 2.0f*sw_width)/(speed*get_speed_mult())); // road area where cars can drive excluding sidewalks on each side
+	if (is_zombie) {time_to_cross *= 0.25;} // zombies mostly ignore cars, but need to check a bit ahead to avoid running into them
 	//cout << "plot_bcube: " << plot_bcube.str() << " " << TXT(dx) << TXT(dy) << TXT(road_dim) << TXT(time_to_cross) << endl;
 	return !ped_mgr.has_nearby_car(*this, road_dim, time_to_cross, dbg_cubes);
 }
@@ -1245,6 +1249,7 @@ bool ped_manager_t::has_nearby_car_on_road(pedestrian_t const &ped, bool dim, un
 		if (lo >= pos_max || hi <= pos_min) { // current car doesn't already overlap, do more work to determine if it will overlap pos sometime in the near future
 			if (c.turn_dir != TURN_NONE) {} // car is turning; since it's already on this road, it must be turning off this road; don't update its future position
 			else if (c.stopped_at_light) { // check if the light will change in time for this car to reach pos; would it be easier to check the crosswalk signal?
+				if (ped.is_zombie) continue; // zombies are too dumb to figure this out
 				float const dist_gap(dir ? (pos_min - hi) : (lo - pos_max)), time_to_close(dist_gap/(speed_mult*c.max_speed));
 				if (dist_gap > 0.0 && get_car_isec(c).will_be_green_light_in(c, time_to_close/TICKS_PER_SECOND)) {travel_dist = 1.01*dist_gap;} // move it just enough to cover the gap
 			}
