@@ -1139,25 +1139,33 @@ void building_t::add_exterior_ac_pipes(rand_gen_t rgen) {
 					if (has_bcube_int(pipe, skylights))                continue;
 					if (d == 0 && has_bcube_int_no_adj(pipe, details)) continue; // if pref dir is blocked, try the other dir
 
-					for (unsigned n = 0; n < 3; ++n) {
+					for (unsigned n = 0; n < 3; ++n) { // 3 pipes
 						float const r(radius[n]*height), pipe_end(pipe.d[min_dim][dir]), vert_ext(pipe_end + dsign*r);
+						if (length < 5.0*r) continue; // too small for pipe - shouldn't happen
 						set_wall_width(pipe, (ac.z1() + 0.24*height + r), r, 2);
 						set_wall_width(pipe, (ac.d[!min_dim][0] + offsets[n]*length), r, !min_dim);
-						cube_t pipe_ext(pipe);
-						pipe_ext.z1() = pipe_ext_z1; // extend downward to include helipads, etc.
-						pipe_ext.d[min_dim][dir] = vert_ext; // space for the bend + vertical section
-						if (has_bcube_int_no_adj(pipe_ext, details)) continue; // no adj to exclude the AC unit the pipe is connected to
-						if (has_bcube_int(pipe_ext, avoid_pipes))    continue;
-						avoid_pipes.push_back(pipe_ext);
-						interior->room_geom->objs.emplace_back(pipe, TYPE_PIPE, 0, min_dim, 0, (flags | RO_FLAG_HANGING), 1.0, SHAPE_CYLIN, colors[n]); // flat ends
-						// add bend and vertical section
-						cube_t vpipe(pipe);
-						vpipe.d[min_dim][!dir] = pipe_end - dsign*r;
-						vpipe.d[min_dim][ dir] = vert_ext;
-						vpipe.z2() -= r;
-						vpipe.z1()  = p->z1();
-						interior->room_geom->objs.emplace_back(vpipe, TYPE_PIPE, 0, 0, 1, (flags | RO_FLAG_ADJ_HI), 1.0, SHAPE_CYLIN, colors[n]); // round top end
-					}
+
+						for (unsigned m = 0; m < 4; ++m) { // 4 placement tries
+							if (m > 0) { // select a random position
+								set_wall_width(pipe, rgen.rand_uniform(ac.d[!min_dim][0]+2.0*r, ac.d[!min_dim][1]-2.0*r), r, !min_dim);
+							}
+							cube_t pipe_ext(pipe);
+							pipe_ext.z1() = pipe_ext_z1; // extend downward to include helipads, etc.
+							pipe_ext.d[min_dim][dir] = vert_ext; // space for the bend + vertical section
+							if (has_bcube_int_no_adj(pipe_ext, details)) continue; // no adj to exclude the AC unit the pipe is connected to
+							if (has_bcube_int(pipe_ext, avoid_pipes))    continue;
+							avoid_pipes.push_back(pipe_ext);
+							interior->room_geom->objs.emplace_back(pipe, TYPE_PIPE, 0, min_dim, 0, (flags | RO_FLAG_HANGING), 1.0, SHAPE_CYLIN, colors[n]); // flat ends
+							// add bend and vertical section
+							cube_t vpipe(pipe);
+							vpipe.d[min_dim][!dir] = pipe_end - dsign*r;
+							vpipe.d[min_dim][ dir] = vert_ext;
+							vpipe.z2() -= r;
+							vpipe.z1()  = p->z1();
+							interior->room_geom->objs.emplace_back(vpipe, TYPE_PIPE, 0, 0, 1, (flags | RO_FLAG_ADJ_HI), 1.0, SHAPE_CYLIN, colors[n]); // round top end
+							break;
+						} // for m
+					} // for n
 					break;
 				} // for d
 			}
