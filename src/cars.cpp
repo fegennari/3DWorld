@@ -995,7 +995,7 @@ bool car_manager_t::check_car_for_ped_colls(car_t &car) const {
 	auto const &peds_by_road(peds_crossing_roads.peds[car.cur_city]);
 	if (car.cur_road >= peds_by_road.size()) return 0; // no peds in this road; ignores player
 	point const player_pos(camera_pdu.pos - dstate.xlate);
-	bool const check_player(camera_surf_collide && dist_less_than(car.get_center(), player_pos, (X_SCENE_SIZE + Y_SCENE_SIZE)));
+	bool const check_player(camera_surf_collide && !camera_in_building && dist_less_than(car.get_center(), player_pos, (X_SCENE_SIZE + Y_SCENE_SIZE)));
 	auto const &peds(peds_by_road[car.cur_road]);
 	if (peds.empty() && !check_player) return 0;
 	cube_t coll_area(car.bcube);

@@ -12,7 +12,7 @@ bool const FORCE_USE_CROSSWALKS = 0; // more realistic and safe, but causes prob
 
 bool some_person_has_idle_animation(0);
 
-extern bool tt_fire_button_down;
+extern bool tt_fire_button_down, camera_in_building;
 extern int display_mode, game_mode, animate2, frame_counter, camera_surf_collide;
 extern float fticks, FAR_CLIP;
 extern double camera_zh;
@@ -214,6 +214,24 @@ bool check_for_ped_future_coll(point const &p1, point const &p2, vector3d const 
 #endif
 }
 
+void pedestrian_t::run_collision_avoid(point const &ipos, vector3d const &ivel, float r2, float dist_sq, vector3d &force) {
+	if (speed < TOLERANCE) return; // not moving
+	point const p1_xy(pos.x, pos.y, 0.0), p2_xy(ipos.x, ipos.y, 0.0); // z=0.0
+	vector3d const delta_v(vel - ivel), delta_p(p1_xy - p2_xy);
+	float const dp(-dot_product_xy(delta_v, delta_p));
+	if (dp <= 0.0) return; // diverging, no avoidance needed
+	float const r1(get_coll_radius());
+	if (!check_for_ped_future_coll(p1_xy, p2_xy, vel, ivel, r1, r2)) return;
+	float const dv_mag(delta_v.mag());
+	if (dv_mag < TOLERANCE) return;
+	float const dist(sqrt(dist_sq)), fmag(dist/(dist - 0.9*(r1 + r2)));
+	vector3d const rejection(delta_p - (dp/(dv_mag*dv_mag))*delta_v); // component of velocity perpendicular to delta_p (avoid dir)
+	float const rmag(rejection.mag()), rel_vel(max(dv_mag/speed, 0.5f)); // higher when peds are converging
+	if (rmag < TOLERANCE) return;
+	float const force_mult(dp/(dv_mag*dist)); // stronger with head-on collisions
+	force += rejection*(rel_vel*force_mult*fmag/rmag);
+	//cout << TXT(r_sum) << TXT(dist) << TXT(fmag) << ", dv: " << delta_v.str() << ", dp: " << delta_p.str() << ", rej: " << rejection.str() << ", force: " << force.str() << endl;
+}
 bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned pid, unsigned ped_start, unsigned target_plot, float prox_radius, vector3d &force) {
 	float const prox_radius_sq(prox_radius*prox_radius);
 
@@ -222,24 +240,20 @@ bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned
 		float const dist_sq(p2p_dist_xy_sq(pos, i->pos));
 		if (dist_sq > prox_radius_sq) continue; // proximity test
 		if (i->destroyed) continue; // dead
-		float const r1(get_coll_radius()), r2(i->get_coll_radius()), r_sum(r1 + r2);
+		float const r2(i->get_coll_radius()), r_sum(get_coll_radius() + r2);
 		if (dist_sq < r_sum*r_sum) {register_ped_coll(*this, *i, pid, (i - peds.begin())); return 1;} // collision
-		if (speed < TOLERANCE) continue;
-		point const p1_xy(pos.x, pos.y, 0.0), p2_xy(i->pos.x, i->pos.y, 0.0); // z=0.0
-		vector3d const delta_v(vel - i->vel), delta_p(p1_xy - p2_xy);
-		float const dp(-dot_product_xy(delta_v, delta_p));
-		if (dp <= 0.0) continue; // diverging, no avoidance needed
-		if (!check_for_ped_future_coll(p1_xy, p2_xy, vel, i->vel, r1, r2)) continue;
-		float const dv_mag(delta_v.mag());
-		if (dv_mag < TOLERANCE) continue;
-		float const dist(sqrt(dist_sq)), fmag(dist/(dist - 0.9*r_sum));
-		vector3d const rejection(delta_p - (dp/(dv_mag*dv_mag))*delta_v); // component of velocity perpendicular to delta_p (avoid dir)
-		float const rmag(rejection.mag()), rel_vel(max(dv_mag/speed, 0.5f)); // higher when peds are converging
-		if (rmag < TOLERANCE) continue;
-		float const force_mult(dp/(dv_mag*dist)); // stronger with head-on collisions
-		force += rejection*(rel_vel*force_mult*fmag/rmag);
-		//cout << TXT(r_sum) << TXT(dist) << TXT(fmag) << ", dv: " << delta_v.str() << ", dp: " << delta_p.str() << ", rej: " << rejection.str() << ", force: " << force.str() << endl;
+		if (speed > TOLERANCE) {run_collision_avoid(i->pos, i->vel, r2, dist_sq, force);}
 	} // for i
+	if (camera_surf_collide && !camera_in_building) {
+		point const player_pos(get_camera_pos() - get_camera_coord_space_xlate());
+		float const dist_sq(p2p_dist_xy_sq(pos, player_pos));
+		
+		if (dist_sq < prox_radius_sq) {
+			float const r2(CAMERA_RADIUS), r_sum(get_coll_radius() + r2);
+			if (dist_sq < r_sum*r_sum) {collided = 1; return 1;} // collision
+			if (speed > TOLERANCE) {run_collision_avoid(player_pos, zero_vector, r2, dist_sq, force);} // use zero velocity for the player since it's unpredictable
+		}
+	}
 	return 0;
 }
 
