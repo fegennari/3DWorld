@@ -25,7 +25,9 @@ extern object_model_loader_t building_obj_model_loader; // for umbrella model
 
 string gen_random_name(rand_gen_t &rgen, bool for_universe=0); // from Universe_name.cpp
 bool in_building_gameplay_mode(); // from building_gameplay.cpp
+bool ai_follow_player();
 void get_dead_players_in_building(vector<dead_person_t> &dead_players, building_t const &building); // from building_gameplay.cpp
+bool check_city_building_line_coll_bs_any(point const &p1, point const &p2);
 
 
 class person_name_gen_t {
@@ -498,6 +500,14 @@ cube_t get_avoid_area_for_plot(cube_t const &plot_bcube, float radius) {
 
 // pedestrian_t
 point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_plot_bcube, ped_manager_t const &ped_mgr, int &debug_state) const {
+	if (camera_surf_collide && !camera_in_building && ai_follow_player()) { // target the player if visible
+		float const view_dist(/*X_SCENE_SIZE + Y_SCENE_SIZE*/2.0*city_params.road_spacing); // tile or city block
+		point const player_pos(get_camera_pos() - get_camera_coord_space_xlate());
+
+		if (dist_xy_less_than(pos, player_pos, view_dist) && !check_city_building_line_coll_bs_any(pos, player_pos)) { // close and visible (approximate)
+			return player_pos;
+		}
+	}
 	if (is_stopped && target_valid()) {debug_state = 0; return target_pos;} // stay the course (this case only needed for debug drawing)
 
 	if (plot == dest_plot) { // this plot contains our dest building/car
