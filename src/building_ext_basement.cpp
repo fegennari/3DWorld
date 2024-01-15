@@ -931,6 +931,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	// Add doorways + doors to guarantee full connectivity using space
 	if (space_groups.size() > 1) { // multiple disconnected sub-graphs
 		float const door_min_spacing(0.5*doorway_width), min_shared_edge(doorway_width + 2*wall_thickness); // allow space for door frame
+		float const min_wall_spacing(get_trim_thickness());
 		vector<group_range_t> adj;
 		vect_cube_t doors_to_add, walls_to_add, all_doors;
 		set<pair<unsigned, unsigned>> connected;
@@ -967,10 +968,11 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 					for (unsigned j = i+1; j < adj.size(); ++j) {
 						group_range_t const &g1(adj[i]), &g2(adj[j]);
 						float const lo(max(g1.lo, g2.lo)), hi(min(g1.hi, g2.hi));
-						if (hi - lo < min_shared_edge) continue; // not enough space to add a door
+						if (hi - lo <= min_shared_edge) continue; // not enough space to add a door
 						pair<unsigned, unsigned> const ix_pair(min(g1.gix, g2.gix), max(g1.gix, g2.gix));
 						if (connected.find(ix_pair) != connected.end()) continue; // these two groups were already connected
-						float const vmin(lo + doorway_hwidth), vmax(hi - doorway_hwidth);
+						float const vmin(lo + doorway_hwidth + min_wall_spacing), vmax(hi - doorway_hwidth - min_wall_spacing);
+						if (vmin >= vmax) continue; // not enough space to add a door (should be rare)
 							
 						// add a doorway here if possible
 						for (unsigned n = 0; n < 10; ++n) { // make up to 10 tries
@@ -1006,6 +1008,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 					bool const make_unlocked = 1; // makes exploring easier
 					bool const make_closed   = 1; // makes it easier to tell if the door has been used
 					// this should add one door and one door stack
+					assert(door.d[!dim][0] > wall.d[!dim][0] && door.d[!dim][1] < wall.d[!dim][1]);
 					remove_section_from_cube_and_add_door(wall, wall2, door.d[!dim][0], door.d[!dim][1], !dim, open_dir, 0, make_unlocked, make_closed); // is_bathroom=0
 					walls_to_add.push_back(wall2); // keep high side as it won't be used with any other doors
 					// add a blocker so that no ceiling lights are placed in the path of this door
