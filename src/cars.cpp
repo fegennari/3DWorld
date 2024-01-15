@@ -13,7 +13,7 @@ bool const DYNAMIC_HELICOPTERS = 1;
 float const MIN_CAR_STOP_SEP   = 0.25; // in units of car lengths
 
 extern bool tt_fire_button_down, enable_hcopter_shadows, city_action_key, camera_in_building;
-extern int display_mode, game_mode, map_mode, animate2, player_in_basement, player_in_closet, player_in_attic;
+extern int display_mode, game_mode, map_mode, animate2, player_in_basement, player_in_closet, player_in_attic, camera_surf_collide;
 extern float fticks, FAR_CLIP;
 extern point pre_smap_player_pos;
 extern vector<light_source> dl_sources;
@@ -202,6 +202,12 @@ void car_t::complete_turn_and_swap_dim() {
 	turn_val = 0.0; // reset
 	turn_dir = TURN_NONE; // turn completed
 	entering_city = 0; // clear flag in case we turned into the city
+}
+
+void car_t::person_in_the_way() {
+	decelerate_fast();
+	static rand_gen_t rgen;
+	if ((rgen.rand()&3) == 0) {honk_horn_if_close_and_fast();}
 }
 
 bool car_t::must_wait_entering_or_crossing_road(vector<car_t> const &cars, driveway_t const &driveway, unsigned road_ix, float lookahead_time) const {
@@ -984,26 +990,30 @@ int car_manager_t::find_next_car_after_turn(car_t &car) {
 }
 
 bool car_manager_t::check_car_for_ped_colls(car_t &car) const {
-	if (car.cur_city >= peds_crossing_roads.peds.size())  return 0; // no peds in this city (includes connector road network)
 	if (car.turn_val != 0.0 || car.turn_dir != TURN_NONE) return 0; // for now, don't check for cars when turning as this causes problems with blocked intersections
+	if (car.cur_city >= peds_crossing_roads.peds.size())  return 0; // no peds in this city (includes connector road network); ignores player
 	auto const &peds_by_road(peds_crossing_roads.peds[car.cur_city]);
-	if (car.cur_road >= peds_by_road.size()) return 0; // no peds in this road
+	if (car.cur_road >= peds_by_road.size()) return 0; // no peds in this road; ignores player
+	point const player_pos(camera_pdu.pos - dstate.xlate);
+	bool const check_player(camera_surf_collide && dist_less_than(car.get_center(), player_pos, (X_SCENE_SIZE + Y_SCENE_SIZE)));
 	auto const &peds(peds_by_road[car.cur_road]);
-	if (peds.empty()) return 0;
+	if (peds.empty() && !check_player) return 0;
 	cube_t coll_area(car.bcube);
 	coll_area.d[ car.dim][!car.dir] = coll_area.d[car.dim][car.dir]; // exclude the car itself
 	coll_area.d[ car.dim][car.dir] += (car.dir ? 1.25 : -1.25)*car.get_length(); // extend the front
 	coll_area.d[!car.dim][0] -= 0.5*car.get_width();
 	coll_area.d[!car.dim][1] += 0.5*car.get_width();
-	static rand_gen_t rgen;
 
 	for (auto i = peds.begin(); i != peds.end(); ++i) {
 		if (coll_area.contains_pt_xy_exp(i->pos, i->radius)) {
-			car.decelerate_fast();
-			if ((rgen.rand()&3) == 0) {car.honk_horn_if_close_and_fast();}
+			car.person_in_the_way();
 			return 1;
 		}
-	} // for i
+	}
+	if (check_player && coll_area.contains_pt_xy_exp(player_pos, CAMERA_RADIUS)) { // check for player collision
+		car.person_in_the_way();
+		return 1;
+	}
 	return 0;
 }
 
