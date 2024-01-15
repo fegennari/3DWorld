@@ -155,7 +155,7 @@ void building_geom_t::do_xy_rotate_normal_inv(point &n) const {::do_xy_rotate_no
 
 class building_texture_mgr_t {
 	int window_tid=-1, hdoor_tid=-1, odoor_tid=-1, bdoor_tid=-1, bdoor2_tid=-1, gdoor_tid=-1, ac_unit_tid1=-1, ac_unit_tid2=-1, bath_wind_tid=-1, helipad_tex=-1,
-		solarp_tex=-1, concrete_tex=-1, met_plate_tex=-1, mplate_nm_tex=-1, met_roof_tex=-1, tile_floor_tex=-1, tile_floor_nm_tex=-1, duct_tid=-1;
+		solarp_tex=-1, concrete_tex=-1, met_plate_tex=-1, mplate_nm_tex=-1, met_roof_tex=-1, tile_floor_tex=-1, tile_floor_nm_tex=-1, duct_tid=-1, vent_tid=-1;
 
 	int ensure_tid(int &tid, const char *name, bool is_normal_map=0) {
 		if (tid < 0) {tid = get_texture_by_name(name, is_normal_map);}
@@ -172,6 +172,7 @@ public:
 	int get_ac_unit_tid1 () {return ensure_tid(ac_unit_tid1,  "buildings/AC_unit1.jpg");} // AC unit (should this be a <d> loop?)
 	int get_ac_unit_tid2 () {return ensure_tid(ac_unit_tid2,  "buildings/AC_unit2.jpg");} // AC unit
 	int get_duct_tid     () {return ensure_tid(duct_tid,      "interiors/duct.jpg");} // duct
+	int get_vent_tid     () {return ensure_tid(vent_tid,      "interiors/vent.jpg");} // vent
 	int get_bath_wind_tid() {return ensure_tid(bath_wind_tid, "buildings/window_blocks.jpg");} // bathroom window
 	int get_helipad_tid  () {return ensure_tid(helipad_tex,   "buildings/helipad.jpg");}
 	int get_solarp_tid   () {return ensure_tid(solarp_tex,    "buildings/solar_panel.jpg");}
@@ -236,6 +237,7 @@ public:
 		register_tid(building_texture_mgr.get_ac_unit_tid1());
 		register_tid(building_texture_mgr.get_ac_unit_tid2());
 		register_tid(building_texture_mgr.get_duct_tid());
+		register_tid(building_texture_mgr.get_vent_tid());
 		register_tid(building_texture_mgr.get_helipad_tid());
 		register_tid(building_texture_mgr.get_solarp_tid());
 		register_tid(building_texture_mgr.get_concrete_tid());
@@ -1658,13 +1660,14 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			continue;
 		}
 		if (i->type == ROOF_OBJ_DUCT) {
-			int const tid(building_texture_mgr.get_duct_tid());
-			bool const swap_st_z(i->dx() > i->dy());
+			int const duct_tid(building_texture_mgr.get_duct_tid()), vent_tid(building_texture_mgr.get_vent_tid());
+			bool const duct_dim(i->dx() < i->dy()), swap_st_z(!duct_dim), has_vent(i->get_sz_dim(duct_dim) < 2.0*i->get_sz_dim(!duct_dim)); // add vent if short
 			float ts[3] = {1.0, 1.0, 1.0};
-			ts[!swap_st_z] = 0.5; // half texture/single section for the end
+			if (!has_vent) {ts[duct_dim] = 0.5;} // half texture/single section for the end
 
 			for (unsigned dim = 0; dim < 3; ++dim) { // {x, y, z}
 				bool const swap_st((dim == 2) ? swap_st_z : 0);
+				int const tid((has_vent && dim == duct_dim) ? vent_tid : duct_tid);
 				bdraw.add_cube(*this, *i, tid_nm_pair_t(tid, -1, ts[dim], 1.0), GRAY, swap_st, (1 << dim), 1, 0, 0); // skip_bottom, ws_texture=0
 			}
 			continue;

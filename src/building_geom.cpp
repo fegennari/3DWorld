@@ -1864,23 +1864,26 @@ void building_t::place_roof_ac_units(unsigned num, float sz_scale, cube_t const 
 		unsigned const acs_end(details.size());
 		bool const dim(c.dy() < c.dx()); // short dim
 		bool dir(rgen.rand_bool());
-		float const length(c.get_sz_dim(!dim)), init_len(rgen.rand_uniform(1.0, 3.0)*length);
+		float const length(c.get_sz_dim(!dim)), duct_width((1.0 - duct_width_scale)*length);
+		float const min_len(min(0.25f*length, 1.1f*duct_width)), init_len(max(min_len, rgen.rand_uniform(1.0, 3.0)*length));
 		roof_obj_t duct(ROOF_OBJ_DUCT);
 		set_cube_zvals(duct, c.z1(), (c.z1() + duct_height_scale*c.dz()));
 
 		for (unsigned i = acs_start; i != acs_end; ++i) {
 			roof_obj_t const &ac(details[i]);
 			assert(ac.type == ROOF_OBJ_AC);
-			set_wall_width(duct, ac.get_center_dim(!dim), 0.5*(1.0 - duct_width_scale)*length, !dim);
+			set_wall_width(duct, ac.get_center_dim(!dim), 0.5*duct_width, !dim);
 
 			for (unsigned d = 0; d < 2; ++d) { // dir
 				float const edge(ac.d[dim][dir]);
 				duct.d[dim][!dir] = edge;
 				bool placed(0);
 
-				for (float duct_len = init_len; duct_len >= 0.75*length; duct_len *= 0.75) { // try to shorten the length if placement fails
+				for (float duct_len = init_len; duct_len > min_len; duct_len *= 0.75) { // try to shorten the length if placement fails
 					duct.d[dim][dir] = edge + (dir ? 1.0 : -1.0)*duct_len;
-					if (!bounds.contains_cube_xy(duct) || has_bcube_int_no_adj(duct, avoid) || has_bcube_int_no_adj(duct, details)) continue; // skip if bad placement
+					cube_t test_cube(duct);
+					test_cube.d[dim][dir] = duct.d[dim][dir] + (dir ? 1.0 : -1.0)*max(0.6f*duct_width, duct.dz()); // add extra spacing at the end
+					if (!bounds.contains_cube_xy(test_cube) || has_bcube_int_no_adj(test_cube, avoid) || has_bcube_int_no_adj(test_cube, details)) continue; // skip if bad
 					details.push_back(duct);
 					placed = 1;
 					break;
