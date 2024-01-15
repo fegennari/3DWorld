@@ -1835,7 +1835,7 @@ void building_t::place_roof_ac_units(unsigned num, float sz_scale, cube_t const 
 			c.z2() += cube_sz.z; // z2
 			if (!bounds.contains_cube_xy(c)) continue; // not contained
 			if (has_bcube_int_no_adj(c, avoid) || has_bcube_int_no_adj(c, details)) continue; // intersects avoid cubes or other detail objects (inc_adj=0)
-			placed = 1;
+			placed = has_ac = 1;
 		} // for n
 		if (!placed) break; // failed, exit loop
 		details.push_back(c);

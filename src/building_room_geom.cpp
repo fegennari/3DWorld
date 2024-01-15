@@ -2050,7 +2050,7 @@ void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) {
 		0, 0, 1.0, 1.0, side_tscale, 1.0, 0, ndiv, 0.0, is_duct, len_tscale);
 	if (flat_ends) return; // done
 
-	for (unsigned d = 0; d < 2; ++d) {
+	for (unsigned d = 0; d < 2; ++d) { // draw round joints as spheres
 		if (!draw_joints[d]) continue;
 		point center(c.get_cube_center());
 		center[dim] = c.d[dim][d]; // move to one end along the cylinder

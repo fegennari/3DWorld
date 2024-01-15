@@ -724,7 +724,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	if (is_house && has_basement()) {add_basement_electrical_house(rgen);}
 	if (is_house && has_basement_pipes) {add_house_basement_pipes (rgen);}
 	if (has_attic()) {add_attic_objects(rgen);}
-	add_exterior_ac_pipes();
+	add_exterior_ac_pipes(rgen);
 	unsigned const ext_objs_start(objs.size());
 	vect_cube_t balconies;
 	ext_steps.clear(); // clear prev value in case this building's interior is recreated
@@ -1089,35 +1089,77 @@ void building_t::add_gutter_downspouts(rand_gen_t &rgen, vect_cube_t const &balc
 	} // for g
 }
 
-void building_t::add_exterior_ac_pipes() {
-	if (!is_house || !has_ac) return; // no AC
-	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR | RO_FLAG_HANGING);
+void building_t::add_exterior_ac_pipes(rand_gen_t rgen) {
+	if (!has_ac) return; // no AC
+	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR);
 	colorRGBA const colors[3] = {BLACK, COPPER_C, GRAY }; // insulated, non-insulated, power
 	float    const radius [3] = {0.06,  0.025,    0.035}; // relative to height
 	float    const offsets[3] = {0.2,   0.32,     0.85 }; // from end
+	vect_cube_t avoid_pipes;
 
 	for (roof_obj_t const &ac : details) {
 		if (ac.type != ROOF_OBJ_AC) continue;
-		bool const wall_dim(ac.dy() < ac.dx()); // adjacent to wall in short dim/along long dim
-		float const depth(ac.get_sz_dim(wall_dim)); // actual spacing is smaller than this
-
-		// find closest wall of closest part
+		bool const min_dim(ac.dy() < ac.dx()); // adjacent to wall in short dim/along long dim (for ground AC units)
+		float const depth(ac.get_sz_dim(min_dim)); // actual spacing is smaller than this
+		float const height(ac.dz()), length(ac.get_sz_dim(!min_dim));
+		
 		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
-			cube_t bc(*p);
-			bc.expand_in_dim(wall_dim, 2.0*depth);
-			if (!bc.contains_cube(ac)) continue; // wrong part
-			bool const wall_dir(p->get_center_dim(wall_dim) < ac.get_center_dim(wall_dim));
-			cube_t gap(ac);
-			gap.d[wall_dim][ wall_dir] = ac.d[wall_dim][!wall_dir]; // edge of AC unit
-			gap.d[wall_dim][!wall_dir] = p->d[wall_dim][ wall_dir]; // edge of part exterior wall
-			float const height(gap.dz()), length(gap.get_sz_dim(!wall_dim));
-			cube_t pipe(gap);
+			if (ac.z1() == ground_floor_z1) { // AC on ground (house); find closest wall of closest part
+				cube_t bc(*p);
+				bc.expand_in_dim(min_dim, 2.0*depth);
+				if (!bc.contains_cube(ac)) continue; // wrong part
+				bool const wall_dir(p->get_center_dim(min_dim) < ac.get_center_dim(min_dim));
+				cube_t gap(ac);
+				gap.d[min_dim][ wall_dir] = ac.d[min_dim][!wall_dir]; // edge of AC unit
+				gap.d[min_dim][!wall_dir] = p->d[min_dim][ wall_dir]; // edge of part exterior wall
+				cube_t pipe(gap);
 
-			for (unsigned n = 0; n < 3; ++n) {
-				float const r(radius[n]*height);
-				set_wall_width(pipe, (gap.z1() + 0.08*height + r), r, 2);
-				set_wall_width(pipe, (gap.d[!wall_dim][0] + offsets[n]*length), r, !wall_dim);
-				interior->room_geom->objs.emplace_back(pipe, TYPE_PIPE, 0, wall_dim, 0, flags, 1.0, SHAPE_CYLIN, colors[n]);
+				for (unsigned n = 0; n < 3; ++n) {
+					float const r(radius[n]*height);
+					set_wall_width(pipe, (ac.z1() + 0.12*height + r), r, 2);
+					set_wall_width(pipe, (ac.d[!min_dim][0] + offsets[n]*length), r, !min_dim);
+					interior->room_geom->objs.emplace_back(pipe, TYPE_PIPE, 0, min_dim, 0, (flags | RO_FLAG_HANGING), 1.0, SHAPE_CYLIN, colors[n]); // flat ends
+				}
+			}
+			else { // AC on roof (office); find part whose roof contains the unit
+				if (p->z2() != ac.z1() || !p->contains_cube_xy(ac)) continue; // wrong part
+				bool const pref_dir(rgen.rand_bool());
+				float const pipe_ext_z1(p->z1() - get_fc_thickness()), pipe_len(max(4.0f*radius[0]*height, rgen.rand_uniform(0.25, 1.0)*depth));
+				cube_t valid_area(*p);
+				valid_area.expand_by_xy(-get_wall_thickness()); // shrink to account for any roof wall
+
+				for (unsigned d = 0; d < 2; ++d) { // try both dirs
+					bool const dir(pref_dir ^ bool(d));
+					float const edge_val(ac.d[min_dim][dir]), dsign(dir ? 1.0 : -1.0);
+					cube_t pipe(ac);
+					pipe.d[min_dim][!dir] = edge_val; // edge of AC unit
+					pipe.d[min_dim][ dir] = edge_val + dsign*pipe_len; // edge of part exterior wall
+					pipe.z1() = pipe_ext_z1; // extend downward to include helipads, etc.; zval will be overwritten below
+					if (!valid_area.contains_cube_xy(pipe))            continue;
+					if (has_bcube_int(pipe, skylights))                continue;
+					if (d == 0 && has_bcube_int_no_adj(pipe, details)) continue; // if pref dir is blocked, try the other dir
+
+					for (unsigned n = 0; n < 3; ++n) {
+						float const r(radius[n]*height), pipe_end(pipe.d[min_dim][dir]), vert_ext(pipe_end + dsign*r);
+						set_wall_width(pipe, (ac.z1() + 0.24*height + r), r, 2);
+						set_wall_width(pipe, (ac.d[!min_dim][0] + offsets[n]*length), r, !min_dim);
+						cube_t pipe_ext(pipe);
+						pipe_ext.z1() = pipe_ext_z1; // extend downward to include helipads, etc.
+						pipe_ext.d[min_dim][dir] = vert_ext; // space for the bend + vertical section
+						if (has_bcube_int_no_adj(pipe_ext, details)) continue; // no adj to exclude the AC unit the pipe is connected to
+						if (has_bcube_int(pipe_ext, avoid_pipes))    continue;
+						avoid_pipes.push_back(pipe_ext);
+						interior->room_geom->objs.emplace_back(pipe, TYPE_PIPE, 0, min_dim, 0, (flags | RO_FLAG_HANGING), 1.0, SHAPE_CYLIN, colors[n]); // flat ends
+						// add bend and vertical section
+						cube_t vpipe(pipe);
+						vpipe.d[min_dim][!dir] = pipe_end - dsign*r;
+						vpipe.d[min_dim][ dir] = vert_ext;
+						vpipe.z2() -= r;
+						vpipe.z1()  = p->z1();
+						interior->room_geom->objs.emplace_back(vpipe, TYPE_PIPE, 0, 0, 1, (flags | RO_FLAG_ADJ_HI), 1.0, SHAPE_CYLIN, colors[n]); // round top end
+					}
+					break;
+				} // for d
 			}
 			break; // done - there should only be one part
 		} // for p
