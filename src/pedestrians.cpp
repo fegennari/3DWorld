@@ -29,6 +29,7 @@ bool ai_follow_player();
 void get_dead_players_in_building(vector<dead_person_t> &dead_players, building_t const &building); // from building_gameplay.cpp
 bool check_city_building_line_coll_bs_any(point const &p1, point const &p2);
 bool check_line_int_xy(vect_cube_t const &c, point const &p1, point const &p2);
+void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool alert_other_zombies=0, bool high_priority=0, float gain=1.0, float pitch=1.0);
 
 
 class person_name_gen_t {
@@ -253,7 +254,12 @@ bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned
 		
 		if (dist_sq < prox_radius_sq) {
 			float const r2(CAMERA_RADIUS), r_sum(get_coll_radius() + r2);
-			if (dist_sq < r_sum*r_sum) {collided = 1; return 1;} // collision
+			
+			if (dist_sq < r_sum*r_sum) { // collision
+				if (follow_player) {maybe_play_zombie_sound(pos, ssn);} // moan
+				collided = 1;
+				return 1;
+			}
 			// avoid the player if not following; use zero velocity for the player since it's unpredictable
 			if (!follow_player && speed > TOLERANCE) {run_collision_avoid(player_pos, zero_vector, r2, dist_sq, 1, force);} // is_player=1
 		}
@@ -831,13 +837,14 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 
 		if (camera_surf_collide && !camera_in_building && ai_follow_player()) { // target the player if visible
 			float const view_dist(2.0*city_params.road_spacing); // tile or city block
-			point const player_pos(get_camera_pos() - get_camera_coord_space_xlate());
+			point const player_pos(get_camera_pos() - get_camera_coord_space_xlate()); // in building space
 
 			if (dist_xy_less_than(pos, player_pos, view_dist) && !check_city_building_line_coll_bs_any(pos, player_pos)) { // close and visible (approximate)
 				// only follow player if there's no object blocking the path (such as a fence, wall, or hedge)
 				if (!check_path_blocked(ped_mgr, player_pos, 0)) { // check_buildings=0 (check_city_building_line_coll_bs_any() should handle this)
 					next_follow_player = 1;
 					dest_pos = player_pos;
+					if (!follow_player) {maybe_play_zombie_sound(pos, ssn);} // moan if newly following the player
 				}
 			}
 		}
