@@ -707,7 +707,7 @@ struct pedestrian_t : public person_base_t { // city pedestrian
 	bool choose_alt_next_plot(ped_manager_t const &ped_mgr);
 	void get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t const &colliders, cube_t const &plot_bcube, cube_t const &next_plot_bcube,
 		point &dest_pos, vect_cube_t &avoid) const;
-	bool check_path_blocked(ped_manager_t &ped_mgr, point const &dest, bool check_buildings) const;
+	bool check_path_blocked(ped_manager_t &ped_mgr, point const &dest, bool check_buildings);
 	void next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir);
 	void register_at_dest();
 	void debug_draw(ped_manager_t &ped_mgr) const;
@@ -862,7 +862,6 @@ class ped_manager_t { // pedestrians
 	void remove_destroyed_peds();
 	void sort_by_city_and_plot();
 	road_isec_t const &get_car_isec(car_base_t const &car) const;
-	void register_ped_new_plot(pedestrian_t const &ped);
 	int get_road_ix_for_ped_crossing(pedestrian_t const &ped, bool road_dim) const;
 	bool draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,
 		bool &in_sphere_draw, bool shadow_only, bool is_dlight_shadows, animation_state_t *anim_state, bool is_in_building);
@@ -874,6 +873,7 @@ public:
 	vect_cube_t const &get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const;
 	road_plot_t const &get_city_plot_for_peds(unsigned city_ix, unsigned plot_ix) const;
 	int get_plot_ix_for_pos(unsigned city_ix, point const &pos) const;
+	void register_ped_new_plot(pedestrian_t const &ped);
 	dw_query_t get_nearby_driveway(unsigned city_ix, unsigned plot_ix, point const &pos, float dist) const;
 	car_base_t const *find_car_using_driveway(unsigned city_ix, dw_query_t const &dw) const;
 	cube_t get_expanded_city_bcube_for_peds(unsigned city_ix) const;
