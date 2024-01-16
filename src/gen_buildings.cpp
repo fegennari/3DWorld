@@ -4037,12 +4037,12 @@ public:
 		return grid[get_grid_ix(b.bcube.get_cube_center())].bcube;
 	}
 
-	bool check_ped_coll(point const &pos, float radius, unsigned plot_id, unsigned &building_id) const { // Note: not thread safe due to static points
+	bool check_ped_coll(point const &pos, float bcube_radius, float detail_radius, unsigned plot_id, unsigned &building_id) const { // Note: not thread safe due to static points
 		if (empty()) return 0;
 		assert(plot_id < bix_by_plot.size());
 		vector<unsigned> const &bixes(bix_by_plot[plot_id]); // should be populated in gen()
 		if (bixes.empty()) return 0;
-		cube_t bcube; bcube.set_from_sphere(pos, radius);
+		cube_t bcube; bcube.set_from_sphere(pos, bcube_radius);
 		static vector<point> points; // reused across calls
 
 		// Note: assumes buildings are separated so that only one ped collision can occur
@@ -4050,8 +4050,7 @@ public:
 			building_t const &building(get_building(*b));
 			if (building.bcube.x1() > bcube.x2()) break; // no further buildings can intersect (sorted by x1)
 			if (!building.bcube.intersects_xy(bcube)) continue;
-			// double the radius value to add padding to account for inaccuracy
-			if (building.check_point_or_cylin_contained(pos, 2.0*radius, points, 0, 0, 0)) {building_id = *b; return 1;} // inc_attic=0, inc_ext_basement=0, inc_roof_acc=0
+			if (building.check_point_or_cylin_contained(pos, detail_radius, points, 0, 0, 0)) {building_id = *b; return 1;} // inc_attic=0, inc_ext_basement=0, inc_roof_acc=0
 		}
 		return 0;
 	}
@@ -4503,9 +4502,11 @@ bool get_building_door_pos_closest_to(unsigned building_id, point const &target_
 bool check_sphere_coll_building(point const &pos, float radius, bool xy_only, unsigned building_id) {
 	return building_creator_city.check_sphere_coll_building(pos, radius, xy_only, building_id);
 }
+bool check_buildings_ped_coll(point const &pos, float bcube_radius, float detail_radius, unsigned plot_id, unsigned &building_id) {
+	return building_creator_city.check_ped_coll(pos, bcube_radius, detail_radius, plot_id, building_id);
+}
 bool check_line_coll_building(point const &p1, point const &p2, unsigned building_id) {return building_creator_city.check_line_coll_building(p1, p2, building_id);}
 int get_building_bcube_contains_pos(point const &pos) {return building_creator_city.get_building_bcube_contains_pos(pos);}
-bool check_buildings_ped_coll(point const &pos, float radius, unsigned plot_id, unsigned &building_id) {return building_creator_city.check_ped_coll(pos, radius, plot_id, building_id);}
 bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &building_id) {return building_creator_city.select_building_in_plot(plot_id, rand_val, building_id);}
 
 // used for people in buildings

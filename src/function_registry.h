@@ -1019,7 +1019,6 @@ bool check_line_coll_building(point const &p1, point const &p2, unsigned buildin
 cube_t get_building_bcube(unsigned building_id);
 cube_t get_sec_building_bcube(unsigned building_id);
 int get_building_bcube_contains_pos(point const &pos);
-bool check_buildings_ped_coll(point const &pos, float radius, unsigned plot_id, unsigned &building_id);
 bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &building_id);
 void get_building_bcubes(cube_t const &xy_range, vect_cube_t &bcubes);
 void get_building_bcubes(cube_t const &xy_range, vect_cube_with_ix_t &bcubes);
