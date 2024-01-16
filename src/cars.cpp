@@ -205,9 +205,9 @@ void car_t::complete_turn_and_swap_dim() {
 }
 
 void car_t::person_in_the_way() {
-	decelerate_fast();
 	static rand_gen_t rgen;
 	if ((rgen.rand()&3) == 0) {honk_horn_if_close_and_fast();}
+	decelerate_fast(); // must be after honk logic
 }
 
 bool car_t::must_wait_entering_or_crossing_road(vector<car_t> const &cars, driveway_t const &driveway, unsigned road_ix, float lookahead_time) const {
@@ -336,9 +336,9 @@ bool car_t::front_intersects_car(car_t const &c) const {
 }
 
 void car_t::honk_horn_if_close() const {
-	point const pos(get_center());
+	point const pos(get_center()), pos_cs(pos + get_tiled_terrain_model_xlate());
 	
-	if (dist_less_than((pos + get_tiled_terrain_model_xlate()), get_camera_pos(), 1.0)) {
+	if (dist_less_than(pos_cs, get_camera_pos(), 1.0*city_params.road_spacing)) {
 #pragma omp critical(gen_sound)
 		gen_sound(SOUND_HORN, pos);
 	}
