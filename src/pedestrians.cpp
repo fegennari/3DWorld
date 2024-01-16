@@ -30,6 +30,7 @@ void get_dead_players_in_building(vector<dead_person_t> &dead_players, building_
 bool check_city_building_line_coll_bs_any(point const &p1, point const &p2);
 bool check_line_int_xy(vect_cube_t const &c, point const &p1, point const &p2);
 void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool alert_other_zombies=0, bool high_priority=0, float gain=1.0, float pitch=1.0);
+int register_ai_player_coll(uint8_t &has_key, float height);
 
 
 class person_name_gen_t {
@@ -94,6 +95,7 @@ string pedestrian_t::str() const { // Note: no label_str()
 }
 
 float pedestrian_t::get_speed_mult() const { // run across the street if there are cars
+	if (follow_player) return 1.5; // a bit faster, but not as fast as crossing the street
 	return ((in_the_road && city_params.num_cars > 0) ? CROSS_SPEED_MULT : 1.0);
 }
 
@@ -249,7 +251,7 @@ bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned
 		if (speed > TOLERANCE) {run_collision_avoid(i->pos, i->vel, r2, dist_sq, 0, force);} // is_player=0
 	} // for i
 	if (camera_surf_collide && !camera_in_building) {
-		point const player_pos(get_camera_pos() - get_camera_coord_space_xlate());
+		point const player_pos(get_camera_pos() - get_camera_coord_space_xlate()); // in building space
 		float const dist_sq(p2p_dist_xy_sq(pos, player_pos));
 		
 		if (dist_sq < prox_radius_sq) {
@@ -257,6 +259,8 @@ bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned
 			
 			if (dist_sq < r_sum*r_sum) { // collision
 				if (follow_player) {maybe_play_zombie_sound(pos, ssn);} // moan
+				uint8_t has_key(0); // final valid is unused
+				register_ai_player_coll(has_key, get_height()); // has_key=0; return value: 0=no effect, 1=player is killed, 2=this person is killed
 				collided = 1;
 				return 1;
 			}

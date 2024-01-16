@@ -2525,7 +2525,7 @@ bool player_take_damage(float damage_scale, int poison_type, uint8_t *has_key) {
 }
 // return value: 0=no effect, 1=player is killed, 2=this person is killed
 int register_ai_player_coll(uint8_t &has_key, float height) {
-	if (do_room_obj_pickup && player_inventory.take_person(has_key, height)) {
+	if (camera_in_building && do_room_obj_pickup && player_inventory.take_person(has_key, height)) {
 		gen_sound_thread_safe_at_player(SOUND_ITEM, 0.5);
 		do_room_obj_pickup = 0; // no more object pickups
 		return 2;
