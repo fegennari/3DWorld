@@ -471,6 +471,7 @@ void advance_camera(int dir) { // player movement processing
 		return;
 	}
 	if (camera_mode != 1 || (map_mode && world_mode != WMODE_INF_TERRAIN)) return;
+	if (world_mode == WMODE_INF_TERRAIN && player_wait_respawn) return; // can't move during respawn
 	vector3d v;
 	float dist(get_player_move_dist());
 	
