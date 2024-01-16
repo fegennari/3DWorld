@@ -696,7 +696,7 @@ bool pedestrian_t::check_path_blocked(ped_manager_t &ped_mgr, point const &dest,
 	int plots_to_test   [2] = {-1, -1};
 
 	for (unsigned d = 0; d < 2; ++d) { // find plot index for each of {pos, dest}; special case optimization for when they're the current plot
-		plots_to_test[d] = (cur_plot.contains_pt_xy(test_pts[d]) ? plot : ped_mgr.get_plot_ix_for_pos(city, test_pts[d]));
+		plots_to_test[d] = (cur_plot.contains_pt_xy(test_pts[d]) ? plot : ped_mgr.get_global_plot_id_for_pos(city, test_pts[d]));
 		if (plots_to_test[d] == -1) continue; // no or duplicate plot
 
 		if (d == 0 && plot != plots_to_test[d]) { // update current plot so that VFC, etc. works properly

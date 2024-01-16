@@ -872,7 +872,7 @@ public:
 	path_finder_t path_finder;
 	vect_cube_t const &get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const;
 	road_plot_t const &get_city_plot_for_peds(unsigned city_ix, unsigned plot_ix) const;
-	int get_plot_ix_for_pos(unsigned city_ix, point const &pos) const;
+	int get_global_plot_id_for_pos(unsigned city_ix, point const &pos) const;
 	void register_ped_new_plot(pedestrian_t const &ped);
 	dw_query_t get_nearby_driveway(unsigned city_ix, unsigned plot_ix, point const &pos, float dist) const;
 	car_base_t const *find_car_using_driveway(unsigned city_ix, dw_query_t const &dw) const;
