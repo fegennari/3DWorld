@@ -705,7 +705,9 @@ struct pedestrian_t : public person_base_t { // city pedestrian
 	bool try_place_in_plot(cube_t const &plot_cube, vect_cube_t const &colliders, unsigned plot_id, rand_gen_t &rgen);
 	point get_dest_pos(cube_t const &plot_bcube, cube_t const &next_plot_bcube, ped_manager_t const &ped_mgr, int &debug_state) const;
 	bool choose_alt_next_plot(ped_manager_t const &ped_mgr);
-	void get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t const &colliders, cube_t const &plot_bcube, cube_t const &next_plot_bcube, point &dest_pos, vect_cube_t &avoid) const;
+	void get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t const &colliders, cube_t const &plot_bcube, cube_t const &next_plot_bcube,
+		point &dest_pos, vect_cube_t &avoid) const;
+	bool check_path_blocked(ped_manager_t &ped_mgr, point const &dest, bool check_buildings) const;
 	void next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir);
 	void register_at_dest();
 	void debug_draw(ped_manager_t &ped_mgr) const;
@@ -871,6 +873,7 @@ public:
 	path_finder_t path_finder;
 	vect_cube_t const &get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const;
 	road_plot_t const &get_city_plot_for_peds(unsigned city_ix, unsigned plot_ix) const;
+	int get_plot_ix_for_pos(unsigned city_ix, point const &pos) const;
 	dw_query_t get_nearby_driveway(unsigned city_ix, unsigned plot_ix, point const &pos, float dist) const;
 	car_base_t const *find_car_using_driveway(unsigned city_ix, dw_query_t const &dw) const;
 	cube_t get_expanded_city_bcube_for_peds(unsigned city_ix) const;

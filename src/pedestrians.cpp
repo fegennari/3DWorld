@@ -28,6 +28,7 @@ bool in_building_gameplay_mode(); // from building_gameplay.cpp
 bool ai_follow_player();
 void get_dead_players_in_building(vector<dead_person_t> &dead_players, building_t const &building); // from building_gameplay.cpp
 bool check_city_building_line_coll_bs_any(point const &p1, point const &p2);
+bool check_line_int_xy(vect_cube_t const &c, point const &p1, point const &p2);
 
 
 class person_name_gen_t {
@@ -501,14 +502,6 @@ cube_t get_avoid_area_for_plot(cube_t const &plot_bcube, float radius) {
 
 // pedestrian_t
 point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_plot_bcube, ped_manager_t const &ped_mgr, int &debug_state) const {
-	if (camera_surf_collide && !camera_in_building && ai_follow_player()) { // target the player if visible
-		float const view_dist(/*X_SCENE_SIZE + Y_SCENE_SIZE*/2.0*city_params.road_spacing); // tile or city block
-		point const player_pos(get_camera_pos() - get_camera_coord_space_xlate());
-
-		if (dist_xy_less_than(pos, player_pos, view_dist) && !check_city_building_line_coll_bs_any(pos, player_pos)) { // close and visible (approximate)
-			return player_pos;
-		}
-	}
 	if (is_stopped && target_valid()) {debug_state = 0; return target_pos;} // stay the course (this case only needed for debug drawing)
 
 	if (plot == dest_plot) { // this plot contains our dest building/car
@@ -671,6 +664,40 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	}
 }
 
+// used for zombie path finding
+bool pedestrian_t::check_path_blocked(ped_manager_t &ped_mgr, point const &dest, bool check_buildings) const { // Note: ped_mgr is non-const due to avoid
+	float const height(get_height()), expand(1.1*radius); // slightly larger than radius to leave some room for floating-point error
+	cube_t const check_area(pos, dest); // area between pos and dest
+	vect_cube_t &avoid(ped_mgr.path_finder.get_avoid_vector());
+	avoid.clear();
+
+	if (!check_buildings) {
+		get_building_bcubes(check_area, avoid);
+		expand_cubes_by_xy(avoid, expand); // expand building cubes in x and y to approximate a cylinder collision (conservative)
+	}
+	road_plot_t const &cur_plot(ped_mgr.get_city_plot_for_peds(city, plot));
+	point const test_pts[2] = {pos, dest};
+	int plots_to_test   [2] = {-1, -1};
+
+	for (unsigned d = 0; d < 2; ++d) { // find plot index for each of {pos, dest}; special case optimization for when they're the current plot
+		plots_to_test[d] = (cur_plot.contains_pt_xy(test_pts[d]) ? plot : ped_mgr.get_plot_ix_for_pos(city, test_pts[d]));
+		if (plots_to_test[d] == -1) continue; // no or duplicate plot
+		if (d == 1 && plots_to_test[0] == plots_to_test[1]) continue; // don't need to test the second plot if it's the same as the first
+		for (cube_t const &c : ped_mgr.get_colliders_for_plot(city, plots_to_test[d])) {add_and_expand_ped_avoid_cube(c, avoid, expand, height);} // check plot colliders
+	}
+	if (!in_the_road) { // include collider bcubes for cars parked in house driveways
+		static vect_cube_t car_bcubes; // reused across calls
+		car_bcubes.clear();
+		ped_mgr.get_parked_car_bcubes_for_plot(check_area, city, car_bcubes);
+
+		for (auto i = car_bcubes.begin(); i != car_bcubes.end(); ++i) {
+			i->expand_by_xy(0.75*radius); // use smaller collision radius
+			avoid.push_back(*i);
+		}
+	}
+	return check_line_int_xy(avoid, pos, dest);
+}
+
 bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vect_cube_t *dbg_cubes) const {
 	if (!in_the_road || speed < TOLERANCE) return 1;
 	float const sw_width(get_sidewalk_width());
@@ -789,19 +816,35 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	// reset state for next frame; these may be set back to 1 below; don't reset if we were collided with, since this will skip the check_inside_plot() call below
 	if (!collided) {at_crosswalk = in_the_road = 0;}
 	vect_cube_t const &colliders(ped_mgr.get_colliders_for_plot(city, plot));
-	bool outside_plot(0);
+	bool outside_plot(0), next_follow_player(0);
 
 	if (collided) {} // already collided with a previous ped this frame, handled below
-	// this call will set at_crosswalk and in_the_road
-	else if (!check_inside_plot(ped_mgr, prev_pos, plot_bcube, next_plot_bcube)) {collided = outside_plot = 1;} // outside the plot, treat as a collision with the plot bounds
+	else if (!check_inside_plot(ped_mgr, prev_pos, plot_bcube, next_plot_bcube) && !follow_player) { // this call will set at_crosswalk and in_the_road
+		collided = outside_plot = 1; // outside the plot, treat as a collision with the plot bounds, but not if following the player
+	}
 	else if (!is_valid_pos(colliders, at_dest, &ped_mgr))           {collided = 1;} // collided with a static collider
 	else if (check_road_coll(ped_mgr, plot_bcube, next_plot_bcube)) {collided = 1;} // collided with something in the road (stoplight, streetlight, etc.)
 	else if (check_ped_ped_coll(ped_mgr, peds, pid, delta_dir))     {collided = 1;} // collided with another pedestrian
 	else { // no collisions
 		//cout << TXT(pid) << TXT(plot) << TXT(dest_plot) << TXT(next_plot) << TXT(at_dest) << TXT(delta_dir) << TXT((unsigned)stuck_count) << TXT(collided) << endl;
-		int debug_state(0); // unused
-		vector3d dest_pos(get_dest_pos(plot_bcube, next_plot_bcube, ped_mgr, debug_state));
+		vector3d dest_pos;
 
+		if (camera_surf_collide && !camera_in_building && ai_follow_player()) { // target the player if visible
+			float const view_dist(2.0*city_params.road_spacing); // tile or city block
+			point const player_pos(get_camera_pos() - get_camera_coord_space_xlate());
+
+			if (dist_xy_less_than(pos, player_pos, view_dist) && !check_city_building_line_coll_bs_any(pos, player_pos)) { // close and visible (approximate)
+				// only follow player if there's no object blocking the path (such as a fence, wall, or hedge)
+				if (!check_path_blocked(ped_mgr, player_pos, 0)) { // check_buildings=0 (check_city_building_line_coll_bs_any() should handle this)
+					next_follow_player = 1;
+					dest_pos = player_pos;
+				}
+			}
+		}
+		if (!next_follow_player) {
+			int debug_state(0); // unused
+			dest_pos = get_dest_pos(plot_bcube, next_plot_bcube, ped_mgr, debug_state);
+		}
 		if (dest_pos != pos) {
 			bool update_path(0);
 			if (dist_less_than(pos, get_camera_pos(), 1000.0*radius)) { // nearby pedestrian - higher update rate
@@ -868,6 +911,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		float const xy_mag_inv(1.0/dir.xy_mag()); // normalize using XY only
 		dir.x *= xy_mag_inv; dir.y *= xy_mag_inv;
 	}
+	follow_player = next_follow_player;
 	collided = ped_coll = 0; // reset for next frame
 }
 

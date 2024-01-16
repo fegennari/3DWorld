@@ -36,6 +36,13 @@ point get_cube_center_zval(cube_t const &c, float zval) {return point(c.xc(), c.
 float get_ped_coll_radius() {return COLL_RADIUS_SCALE*ped_manager_t::get_ped_radius();}
 
 
+bool check_line_int_xy(vect_cube_t const &c, point const &p1, point const &p2) {
+	for (auto i = c.begin(); i != c.end(); ++i) {
+		if (check_line_clip_xy(p1, p2, i->d)) return 1;
+	}
+	return 0;
+}
+
 class cube_nav_grid {
 	float radius=0.0;
 	cube_t bcube, grid_bcube;
@@ -490,12 +497,6 @@ public:
 		return pos;
 	}
 
-	static bool check_line_int_xy(vect_cube_t const &c, point const &p1, point const &p2) {
-		for (auto i = c.begin(); i != c.end(); ++i) {
-			if (check_line_clip_xy(p1, p2, i->d)) return 1;
-		}
-		return 0;
-	}
 	static bool check_pt_contained_xy(vect_cube_t const &c, point const &p) {
 		for (auto i = c.begin(); i != c.end(); ++i) {
 			if (i->contains_pt_xy(p)) return 1;
