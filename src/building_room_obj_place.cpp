@@ -285,7 +285,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace());
 	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return 0; // room is too small
-	float const width(0.8*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.38*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.21*vspace*rgen.rand_uniform(1.0, 1.2));
+	float const width(0.8*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.38*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.21*vspace*rgen.rand_uniform(1.08, 1.2));
 	float const clearance(max(0.5f*depth, get_min_front_clearance_inc_people()));
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t c;
@@ -309,12 +309,6 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		objs.push_back(desk);
 		set_obj_id(objs);
 		objs.back().obj_id += 123*desk_ix; // set even more differently per-desk so that they have different drawer contents
-
-		if (desk.desk_has_drawers()) { // place blocker in front of drawers so that they have room to open
-			room_object_t drawers(get_desk_drawers_part(desk));
-			drawers.d[dim][!dir] += dsign*drawers.get_sz_dim(dim);
-			objs.emplace_back(drawers, TYPE_BLOCKER, room_id, dim, !dir, RO_FLAG_INVIS);
-		}
 		bool const add_computer(!no_computer && building_obj_model_loader.is_model_valid(OBJ_MODEL_TV) && rgen.rand_bool());
 
 		if (add_computer) {
@@ -390,6 +384,12 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 					objs.emplace_back(pp_bcube, (is_pen ? TYPE_PEN : TYPE_PENCIL), room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, color);
 				} // for n
 			}
+		}
+		if (desk.desk_has_drawers()) { // place blocker in front of drawers so that they have room to open
+			room_object_t &desk_obj(objs[desk_obj_ix]);
+			room_object_t drawers(get_desk_drawers_part(desk_obj)); // use the actual object, after adding computer, since drawers side depends on obj_id
+			drawers.d[dim][!dir] += dsign*0.55*drawers.get_sz_dim(dim); // apply approximate drawer extend
+			objs.emplace_back(drawers, TYPE_BLOCKER, room_id, dim, !dir, RO_FLAG_INVIS);
 		}
 		if (rgen.rand_float() > 0.05) { // 5% chance of no chair
 			point chair_pos;
