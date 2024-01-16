@@ -1035,7 +1035,7 @@ void free_building_indir_texture();
 void end_building_rt_job();
 
 // function prototypes - csg
-void expand_cubes_by_xy(vect_cube_t &cubes, float val);
+void expand_cubes_by_xy(vect_cube_t &cubes, float val, unsigned start=0);
 bool any_cube_contains_pt_xy(vect_cube_t const &cubes, vector3d const &pos);
 bool line_int_cubes_xy(point const &p1, point const &p2, vect_cube_t const &cubes);
 bool remove_cube_if_contains_pt_xy(vect_cube_t &cubes, vector3d const &pos, unsigned start=0);
