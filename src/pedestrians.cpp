@@ -576,7 +576,11 @@ point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_pl
 				union_plot_bcube.union_with_cube(next_plot_bcube);
 				// if we went outside on the wrong side, go back inside the current plot, or the union of the current and next plots if in the road
 				float const exp(in_the_road ? radius : 0.0); // allow a bit of slack when crossing the road
-				if (!union_plot_bcube.contains_pt_xy_exp(pos, exp)) {debug_state = 4; dest_pos = (in_the_road ? union_plot_bcube : plot_bcube).closest_pt(pos);}
+				
+				if (!union_plot_bcube.contains_pt_xy_exp(pos, exp)) {
+					dest_pos = (in_the_road ? union_plot_bcube : plot_bcube).closest_pt(pos);
+					debug_state = 4;
+				}
 				else {debug_state = 5;}
 			}
 			dest_pos.z = pos.z; // same zval
@@ -649,8 +653,12 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 				}
 			} // else we can walk through this plot
 		}
-		else if (!follow_player) { // must apply to zombies to keep them from getting stuck
-			avoid_entire_plot = 1; // not our destination plot, we can't walk through any residential properties
+		else if (!follow_player) {
+			// not our destination plot, we can't walk through any residential properties
+			// must apply to zombies to keep them from getting stuck
+			cube_t avoid_inner(avoid_area);
+			avoid_inner.expand_by_xy(-2.0*radius);
+			if (!avoid_inner.contains_pt_xy(pos)) {avoid_entire_plot = 1;}
 		}
 		if (!in_the_road) { // include collider bcubes for cars parked in house driveways
 			static vect_cube_t car_bcubes; // reused across calls
@@ -1487,6 +1495,7 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	else if (in_the_road) {draw_colored_cube(get_bcube(), GREEN, s);}
 
 	if (1) { // show debug state cube
+		// {stopped, walk to building, walk to car, next plot, return to plot, in road?, ?, ?}
 		colorRGBA const debug_colors[8] = {BLACK, WHITE, RED, GREEN, BLUE, YELLOW, ORANGE, PURPLE};
 		cube_t c(get_bcube());
 		c.z1() = c.z2(); c.z2() += 0.5*get_height();
