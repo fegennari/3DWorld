@@ -275,14 +275,20 @@ bool pedestrian_t::check_ped_ped_coll(ped_manager_t const &ped_mgr, vector<pedes
 		if (dist_sq < prox_radius*prox_radius) {
 			float const r_sum(get_coll_radius() + CAMERA_RADIUS);
 
-			if (dist_sq < r_sum*r_sum && player_pos.z > get_z1() && (player_pos.z - camera_zh) < get_z2()) { // collision
-				if (is_zombie && zombies_can_target_player()) {
+			if (player_pos.z > get_z1() && (player_pos.z - camera_zh) < get_z2()) { // check height
+				if (dist_sq < 4.0*r_sum*r_sum && is_zombie && zombies_can_target_player()) { // near collision
 					maybe_play_zombie_sound(pos, ssn); // moan
-					uint8_t has_key(0); // final valid is unused
-					register_ai_player_coll(has_key, get_height()); // has_key=0; return value: 0=no effect, 1=player is killed, 2=this person is killed
+
+					if (dist_sq < r_sum*r_sum) { // collision
+						uint8_t has_key(0); // final valid is unused
+						register_ai_player_coll(has_key, get_height()); // has_key=0; return value: 0=no effect, 1=player is killed, 2=this person is killed
+					}
 				}
-				collided = 1;
-				return 1;
+				if (dist_sq < r_sum*r_sum) { // collision
+					if (!follow_player) return 1; // only treat this as a collision if we're not trying to collide with the player
+					vector3d const coll_dir((pos.x - player_pos.x), (pos.y - player_pos.y), 0.0);
+					pos += coll_dir*((r_sum - sqrt(dist_sq))/coll_dir.mag()); // move so that we don't collide
+				}
 			}
 			// avoid the player if not following; use zero velocity for the player since it's unpredictable
 			if (!follow_player && speed > TOLERANCE) {run_collision_avoid(player_pos, zero_vector, CAMERA_RADIUS, dist_sq, 1, force);} // is_player=1
