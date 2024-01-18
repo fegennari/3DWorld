@@ -693,6 +693,7 @@ struct pedestrian_t : public person_base_t { // city pedestrian
 	float get_coll_radius() const {return 0.6f*radius;} // using a smaller radius to allow peds to get close to each other
 	float get_speed_mult () const;
 	void destroy() {destroyed = 1;} // that's it, no other effects
+	void clear_current_dest() {has_dest_bldg = has_dest_car = at_dest = 0;}
 	void move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, float &delta_dir);
 	bool check_for_safe_road_crossing(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vect_cube_t *dbg_cubes=nullptr) const;
 	bool check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned pid, unsigned ped_start, unsigned target_plot, float prox_radius, vector3d &force);
@@ -706,7 +707,7 @@ struct pedestrian_t : public person_base_t { // city pedestrian
 	point get_dest_pos(cube_t const &plot_bcube, cube_t const &next_plot_bcube, ped_manager_t const &ped_mgr, int &debug_state) const;
 	bool choose_alt_next_plot(ped_manager_t const &ped_mgr);
 	void get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t const &colliders, cube_t const &plot_bcube, cube_t const &next_plot_bcube,
-		point &dest_pos, vect_cube_t &avoid) const;
+		point &dest_pos, vect_cube_t &avoid, bool &in_illegal_area) const;
 	bool check_path_blocked(ped_manager_t &ped_mgr, point const &dest, bool check_buildings);
 	void next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir);
 	void register_at_dest();

@@ -2845,7 +2845,7 @@ int ped_manager_t::get_road_ix_for_ped_crossing(pedestrian_t const &ped, bool ro
 // path finding
 bool ped_manager_t::choose_dest_building_or_parked_car(pedestrian_t &ped) { // modifies rgen, non-const
 	unsigned const prev_dest_plot(ped.dest_plot);
-	ped.has_dest_bldg = ped.has_dest_car = ped.at_dest = 0; // will choose a new dest
+	ped.clear_current_dest(); // will choose a new dest
 
 	if (city_params.num_cars == 0 || (rgen.rand() & 3) != 0) { // choose a dest building 75% of the time, 100% of the time if there are no cars
 		ped.has_dest_bldg = road_gen.choose_dest_building(ped.city, ped.dest_plot, ped.dest_bldg, rgen);

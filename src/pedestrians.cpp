@@ -245,7 +245,6 @@ void pedestrian_t::run_collision_avoid(point const &ipos, vector3d const &ivel, 
 	if (rmag < TOLERANCE) return;
 	float const force_mult(dp/(dv_mag*dist)); // stronger with head-on collisions
 	force += -rejection*(rel_vel*force_mult*fmag/rmag); // move away from the other person
-	//if (is_player) {cout << TXT((r1+r2)) << TXT(dist) << TXT(fmag) << " dv: " << delta_v.str() << " dp: " << delta_p.str() << " rej: " << rejection.str() << " force: " << force.str() << endl;}
 }
 bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned pid, unsigned ped_start, unsigned target_plot, float prox_radius, vector3d &force) {
 	float const prox_radius_sq(prox_radius*prox_radius);
@@ -550,7 +549,7 @@ point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_pl
 			// should cross at intersection, not in the middle of the street; find closest crosswalk (corner of plot_bcube) to dest_pos;
 			// while the code below is correct, it tends to make peds collide with the stoplight on the corner and each other and never actually reach their destinations,
 			// so we allow peds to cross the street wherever they want until at the very least the stoplights can be moved
-			if (FORCE_USE_CROSSWALKS) { // closest corner (crosswalk)
+			if (FORCE_USE_CROSSWALKS && !is_zombie) { // closest corner (crosswalk)
 				cube_t const &cube(in_cur_plot ? plot_bcube : next_plot_bcube); // target the corner of the current plot, then the corner of the next plot
 				float const val((in_cur_plot ? 0.01 : -0.01)*city_params.road_width); // slightly outside the cur plot / inside the next plot, to ensure a proper transition
 
@@ -571,7 +570,7 @@ point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_pl
 						pos_adj[dim] = avoid.d[dim][dir]; // move to the edge of the avoid cube
 					}
 				}
-				dest_pos = next_plot_bcube.closest_pt(pos_adj);
+				dest_pos    = next_plot_bcube.closest_pt(pos_adj);
 				debug_state = 3;
 			}
 			if (!in_cur_plot) { // went outside the current plot
@@ -581,7 +580,7 @@ point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_pl
 				float const exp(in_the_road ? radius : 0.0); // allow a bit of slack when crossing the road
 				
 				if (!union_plot_bcube.contains_pt_xy_exp(pos, exp)) {
-					dest_pos = (in_the_road ? union_plot_bcube : plot_bcube).closest_pt(pos);
+					dest_pos    = (in_the_road ? union_plot_bcube : plot_bcube).closest_pt(pos);
 					debug_state = 4;
 				}
 				else {debug_state = 5;}
@@ -609,7 +608,7 @@ void add_and_expand_ped_avoid_cube(cube_t const &c, vect_cube_t &avoid, float ex
 }
 
 void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t const &colliders,
-	cube_t const &plot_bcube, cube_t const &next_plot_bcube, point &dest_pos, vect_cube_t &avoid) const
+	cube_t const &plot_bcube, cube_t const &next_plot_bcube, point &dest_pos, vect_cube_t &avoid, bool &in_illegal_area) const
 {
 	avoid.clear();
 	float const height(get_height()), expand(1.1*radius); // slightly larger than radius to leave some room for floating-point error
@@ -661,7 +660,8 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 			// must apply to zombies to keep them from getting stuck
 			cube_t avoid_inner(avoid_area);
 			avoid_inner.expand_by_xy(-4.0*radius);
-			if (!avoid_inner.contains_pt_xy(pos)) {avoid_entire_plot = 1;}
+			if (avoid_inner.contains_pt_xy(pos)) {in_illegal_area = 1;} // may pick a new destination if path finding fails and not following the player
+			else {avoid_entire_plot = 1;}
 		}
 		if (!in_the_road) { // include collider bcubes for cars parked in house driveways
 			static vect_cube_t car_bcubes; // reused across calls
@@ -720,7 +720,7 @@ bool pedestrian_t::check_path_blocked(ped_manager_t &ped_mgr, point const &dest,
 		if (d == 0 && plot != plots_to_test[d]) { // update current plot so that VFC, etc. works properly
 			plot = plots_to_test[d];
 			ped_mgr.register_ped_new_plot(*this);
-			if (follow_player) {has_dest_bldg = has_dest_car = 0;} // clear previous dest in case it's no longer reachable from this plot (next_plot is not adjacent)
+			if (follow_player) {clear_current_dest();} // clear dest in case it's no longer reachable from this plot (next_plot is not adjacent)
 		}
 		if (d == 1 && plots_to_test[0] == plots_to_test[1]) continue; // don't need to test the second plot if it's the same as the first
 		for (cube_t const &c : ped_mgr.get_colliders_for_plot(city, plots_to_test[d])) {add_and_expand_ped_avoid_cube(c, avoid, expand, height);} // check plot colliders
@@ -743,7 +743,6 @@ bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t const &ped_mgr, cu
 	bool const road_dim(dx < dy); // if at crosswalk, need to know which direction/road the ped is crossing
 	float time_to_cross((city_params.road_width - 2.0f*sw_width)/(speed*get_speed_mult())); // road area where cars can drive excluding sidewalks on each side
 	if (is_zombie) {time_to_cross *= 0.25;} // zombies mostly ignore cars, but need to check a bit ahead to avoid running into them
-	//cout << "plot_bcube: " << plot_bcube.str() << " " << TXT(dx) << TXT(dy) << TXT(road_dim) << TXT(time_to_cross) << endl;
 	return !ped_mgr.has_nearby_car(*this, road_dim, time_to_cross, dbg_cubes);
 }
 
@@ -799,13 +798,18 @@ void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, 
 }
 
 void pedestrian_t::run_path_finding(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vect_cube_t const &colliders, vector3d &dest_pos) {
+	bool in_illegal_area(0);
 	vect_cube_t &avoid(ped_mgr.path_finder.get_avoid_vector());
-	get_avoid_cubes(ped_mgr, colliders, plot_bcube, next_plot_bcube, dest_pos, avoid);
+	get_avoid_cubes(ped_mgr, colliders, plot_bcube, next_plot_bcube, dest_pos, avoid, in_illegal_area);
 	target_pos = all_zeros;
 	cube_t union_plot_bcube(plot_bcube);
 	union_plot_bcube.union_with_cube(next_plot_bcube); // this is the area the ped is constrained to (both plots + road in between)
 	// run path finding between pos and dest_pos using avoid cubes
 	if (ped_mgr.path_finder.run(pos, dest_pos, union_plot_bcube, PATH_GAP_FACTOR*radius, dest_pos)) {target_pos = dest_pos;}
+
+	if (in_illegal_area && !follow_player && !ped_mgr.path_finder.found_complete_path()) { // stuck in a residential plot where we shouldn't be, and no path out
+		clear_current_dest(); // choose new dest
+	}
 }
 
 void pedestrian_t::get_plot_bcubes_inc_sidewalks(ped_manager_t const &ped_mgr, cube_t &plot_bcube, cube_t &next_plot_bcube) const {
@@ -814,7 +818,7 @@ void pedestrian_t::get_plot_bcubes_inc_sidewalks(ped_manager_t const &ped_mgr, c
 	plot_bcube      = ped_mgr.get_city_plot_for_peds(city, plot);
 	next_plot_bcube = ped_mgr.get_city_plot_for_peds(city, next_plot);
 	float const sidewalk_width(get_sidewalk_walkable_area());
-	plot_bcube.expand_by_xy(sidewalk_width);
+	plot_bcube     .expand_by_xy(sidewalk_width);
 	next_plot_bcube.expand_by_xy(sidewalk_width);
 }
 
@@ -1438,7 +1442,8 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	path_finder_t path_finder(1); // debug=1
 	vect_cube_t const &colliders(ped_mgr.get_colliders_for_plot(city, plot));
 	vect_cube_t &avoid(path_finder.get_avoid_vector());
-	get_avoid_cubes(ped_mgr, colliders, plot_bcube, next_plot_bcube, dest_pos, avoid);
+	bool in_illegal_area(0);
+	get_avoid_cubes(ped_mgr, colliders, plot_bcube, next_plot_bcube, dest_pos, avoid, in_illegal_area);
 	cube_t union_plot_bcube(plot_bcube);
 	union_plot_bcube.union_with_cube(next_plot_bcube);
 	vector<point> path;
@@ -1499,6 +1504,11 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	if (collided        ) {draw_colored_cube(get_bcube(), RED, s);} // show marker if collided this frame
 	else if (in_the_road) {draw_colored_cube(get_bcube(), GREEN, s);}
 
+	if (in_illegal_area) { // show illegal area
+		cube_t debug_cube(plot_bcube);
+		debug_cube.z2() += radius;
+		draw_colored_cube(debug_cube, BLACK, s);
+	}
 	if (1) { // show debug state cube
 		// {stopped, walk to building, walk to car, next plot, return to plot, in road?, ?, ?}
 		colorRGBA const debug_colors[8] = {BLACK, WHITE, RED, GREEN, BLUE, YELLOW, ORANGE, PURPLE};
