@@ -5,10 +5,11 @@
 #include "shaders.h"
 #include <fstream>
 
-float const CROSS_SPEED_MULT = 1.8; // extra speed multiplier when crossing the road
-float const CROSS_WAIT_TIME  = 60.0; // in seconds
-float const LOOKAHEAD_TICKS  = 2.0*TICKS_PER_SECOND; // 2s
-bool const FORCE_USE_CROSSWALKS = 0; // more realistic and safe, but causes problems with pedestian collisions
+float const CROSS_SPEED_MULT     = 1.8; // extra speed multiplier when crossing the road
+float const CROSS_WAIT_TIME      = 60.0; // in seconds
+float const LOOKAHEAD_TICKS      = 2.0*TICKS_PER_SECOND; // 2s
+float const PATH_GAP_FACTOR      = 0.1;
+bool  const FORCE_USE_CROSSWALKS = 0; // more realistic and safe, but causes problems with pedestian collisions
 
 bool some_person_has_idle_animation(0);
 
@@ -364,20 +365,22 @@ bool path_finder_t::add_pts_around_cube_xy(path_t &path, path_t const &cur_path,
 	ec.expand_by_xy(gap); // expand cubes in x and y
 	point const corners [4] = {point( c.x1(),  c.y1(), p->z), point( c.x1(),  c.y2(), p->z), point( c.x2(),  c.y2(), p->z), point( c.x2(),  c.y1(), p->z)}; // CW
 	point const ecorners[4] = {point(ec.x1(), ec.y1(), p->z), point(ec.x1(), ec.y2(), p->z), point(ec.x2(), ec.y2(), p->z), point(ec.x2(), ec.y1(), p->z)}; // CW; expanded cube
-	vector3d const delta(n - *p); // not normalized
+	vector3d const delta((n - *p).get_norm());
 	// find the two closest corners to the left and right
 	float min_dp1(0.0), min_dp2(0.0);
 	unsigned cix1(4), cix2(4); // start at invalid values
-	//cout << TXT(p->x) << TXT(p->y) << TXT(n.x) << TXT(n.y) << TXT(delta.x) << TXT(delta.y) << TXT(c.x1()) << TXT(c.x2()) << TXT(c.y1()) << TXT(c.y2()) << endl;
 
 	for (unsigned i = 0; i < 4; ++i) {
 		vector3d const delta2(corners[i] - *p); // unexpanded corners
-		float const dp(dot_product_xy(delta, delta2)/delta2.mag());
+		float dp(dot_product_xy(delta, delta2)/delta2.mag());
+		//if (any_cube_contains_pt_xy(avoid, corners[i])) {dp += 1.0;} // blocked by another avoid cube - increase the cost to prefer the other corner
 		bool const turn_dir(cross_product_xy(delta, delta2) < 0.0);
-		//cout << TXT(delta2.x) << TXT(delta2.y) << TXT(i) << TXT(dp) << TXT(turn_dir) << endl;
-		if ((turn_dir ? cix1 : cix2) == 4 || dp < (turn_dir ? min_dp1 : min_dp2)) {(turn_dir ? min_dp1 : min_dp2) = dp; (turn_dir ? cix1 : cix2) = i;}
-	}
-	//cout << TXT(dir) << TXT(min_dp1) << TXT(min_dp2) << TXT(cix1) << TXT(cix2) << endl;
+		unsigned &cand_ix(turn_dir ? cix1 : cix2);
+		float &cand_dp(turn_dir ? min_dp1 : min_dp2);
+		if (cand_ix < 4 && dp >= cand_dp) continue; // not smaller dot product
+		cand_dp = dp;
+		cand_ix = i;
+	} // for i
 	if (cix1 == 4 || cix2 == 4) return 0; // something bad happened (floating-point error?), fail
 	unsigned dest_cix(dir ? cix2 : cix1);
 	bool const move_dir((((dest_cix+1)&3) == (dir ? cix1 : cix2)) ? 0 : 1); // CCW/CW based on which dir moves around the other side of the cube
@@ -657,7 +660,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 			// not our destination plot, we can't walk through any residential properties
 			// must apply to zombies to keep them from getting stuck
 			cube_t avoid_inner(avoid_area);
-			avoid_inner.expand_by_xy(-2.0*radius);
+			avoid_inner.expand_by_xy(-4.0*radius);
 			if (!avoid_inner.contains_pt_xy(pos)) {avoid_entire_plot = 1;}
 		}
 		if (!in_the_road) { // include collider bcubes for cars parked in house driveways
@@ -674,7 +677,8 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 		if (avoid_entire_plot) {
 			avoid.push_back(avoid_area); // this is the highest priority
 
-			for (auto i = colliders.begin(); i != colliders.end(); ++i) { // exclude any cubes contained in the plot, since they're redundant
+			for (auto i = colliders.begin(); i != colliders.end(); ++i) {
+				// exclude any cubes contained in the plot, since they're redundant; maybe shouldn't do this if pos is inside avoid_area?
 				if (!avoid_area.contains_cube_xy(*i)) {add_and_expand_ped_avoid_cube(*i, avoid, expand, height);}
 			}
 			return; // done
@@ -707,7 +711,7 @@ bool pedestrian_t::check_path_blocked(ped_manager_t &ped_mgr, point const &dest,
 	if (check_buildings) {get_building_bcubes(check_area, avoid);}
 	road_plot_t const &cur_plot(ped_mgr.get_city_plot_for_peds(city, plot));
 	point const test_pts[2] = {pos, dest};
-	int plots_to_test   [2] = {-1, -1};
+	int plots_to_test   [2] = {-1,  -1  };
 
 	for (unsigned d = 0; d < 2; ++d) { // find plot index for each of {pos, dest}; special case optimization for when they're the current plot
 		plots_to_test[d] = (cur_plot.contains_pt_xy(test_pts[d]) ? plot : ped_mgr.get_global_plot_id_for_pos(city, test_pts[d]));
@@ -716,6 +720,7 @@ bool pedestrian_t::check_path_blocked(ped_manager_t &ped_mgr, point const &dest,
 		if (d == 0 && plot != plots_to_test[d]) { // update current plot so that VFC, etc. works properly
 			plot = plots_to_test[d];
 			ped_mgr.register_ped_new_plot(*this);
+			if (follow_player) {has_dest_bldg = has_dest_car = 0;} // clear previous dest in case it's no longer reachable from this plot (next_plot is not adjacent)
 		}
 		if (d == 1 && plots_to_test[0] == plots_to_test[1]) continue; // don't need to test the second plot if it's the same as the first
 		for (cube_t const &c : ped_mgr.get_colliders_for_plot(city, plots_to_test[d])) {add_and_expand_ped_avoid_cube(c, avoid, expand, height);} // check plot colliders
@@ -800,7 +805,7 @@ void pedestrian_t::run_path_finding(ped_manager_t &ped_mgr, cube_t const &plot_b
 	cube_t union_plot_bcube(plot_bcube);
 	union_plot_bcube.union_with_cube(next_plot_bcube); // this is the area the ped is constrained to (both plots + road in between)
 	// run path finding between pos and dest_pos using avoid cubes
-	if (ped_mgr.path_finder.run(pos, dest_pos, union_plot_bcube, 0.1*radius, dest_pos)) {target_pos = dest_pos;}
+	if (ped_mgr.path_finder.run(pos, dest_pos, union_plot_bcube, PATH_GAP_FACTOR*radius, dest_pos)) {target_pos = dest_pos;}
 }
 
 void pedestrian_t::get_plot_bcubes_inc_sidewalks(ped_manager_t const &ped_mgr, cube_t &plot_bcube, cube_t &next_plot_bcube) const {
@@ -1437,7 +1442,7 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	cube_t union_plot_bcube(plot_bcube);
 	union_plot_bcube.union_with_cube(next_plot_bcube);
 	vector<point> path;
-	unsigned const ret(path_finder.run(pos, dest_pos, union_plot_bcube, 0.05*radius, dest_pos)); // 0=failed, 1=valid path, 2=init contained, 3=straight path (no collisions)
+	unsigned const ret(path_finder.run(pos, dest_pos, union_plot_bcube, PATH_GAP_FACTOR*radius, dest_pos)); // 0=failed, 1=valid path, 2=init contained, 3=straight path (no coll)
 	bool const at_dest_plot(plot == dest_plot), complete(path_finder.found_complete_path());
 	colorRGBA line_color(at_dest_plot ? RED : YELLOW); // paths
 	colorRGBA node_color(complete ? YELLOW : ORANGE);
