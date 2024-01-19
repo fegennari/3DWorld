@@ -236,6 +236,10 @@ bool check_for_ped_future_coll(point const &p1, point const &p2, vector3d const 
 #endif
 }
 
+bool pedestrian_t::overlaps_player_in_z(point const &player_pos) const {
+	return (player_pos.z > get_z1() && (player_pos.z - camera_zh) < get_z2());
+}
+
 void pedestrian_t::run_collision_avoid(point const &ipos, vector3d const &ivel, float r2, float dist_sq, bool is_player, vector3d &force) {
 	if (speed < TOLERANCE) return; // not moving
 	point const p1_xy(pos.x, pos.y, 0.0), p2_xy(ipos.x, ipos.y, 0.0); // z=0.0
@@ -267,7 +271,6 @@ bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned
 	} // for i
 	return 0;
 }
-
 bool pedestrian_t::check_ped_ped_coll(ped_manager_t const &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, float delta_dir) { // and player coll
 	assert(pid < peds.size());
 	float const lookahead_dist(LOOKAHEAD_TICKS*speed); // how far we can travel in 2s
@@ -282,7 +285,7 @@ bool pedestrian_t::check_ped_ped_coll(ped_manager_t const &ped_mgr, vector<pedes
 		if (dist_sq < prox_radius*prox_radius) {
 			float const r_sum(get_coll_radius() + CAMERA_RADIUS);
 
-			if (player_pos.z > get_z1() && (player_pos.z - camera_zh) < get_z2()) { // check height
+			if (overlaps_player_in_z(player_pos)) { // check height
 				if (dist_sq < 4.0*r_sum*r_sum && is_zombie && zombies_can_target_player()) { // near collision
 					maybe_play_zombie_sound(pos, ssn); // moan
 
@@ -876,7 +879,8 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			float const view_dist(2.0*city_params.road_spacing); // tile or city block
 			point const player_pos(get_camera_pos() - get_camera_coord_space_xlate()); // in building space
 
-			if (dist_xy_less_than(pos, player_pos, view_dist) && !check_city_building_line_coll_bs_any(pos, player_pos)) { // close and visible (approximate)
+			// check if close to the player, player is visible (approximate), and not on a roof
+			if (dist_xy_less_than(pos, player_pos, view_dist) && overlaps_player_in_z(player_pos) && !check_city_building_line_coll_bs_any(pos, player_pos)) {
 				// only follow player if there's no object blocking the path (such as a fence, wall, or hedge)
 				bool const check_buildings(0); // check_city_building_line_coll_bs_any() should handle buildings
 
