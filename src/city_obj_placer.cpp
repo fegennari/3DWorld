@@ -195,7 +195,7 @@ void place_tree(point const &pos, float radius, int ttype, vect_cube_t &collider
 	// use 15% of the placement radius for collision (trunk + planter), smaller if no planter
 	cube_t bcube;
 	bcube.set_from_sphere(pos, (has_planter ? 0.15 : 0.05)*radius);
-	bcube.z2() += radius; // increase cube height
+	bcube.z2() += max(radius, 0.25f*city_params.road_width); // increase cube height; make sure it's taller than people
 	colliders.push_back(bcube);
 	tree_pos.push_back(pos);
 }

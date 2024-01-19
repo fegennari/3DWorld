@@ -189,12 +189,19 @@ bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest,
 		ped_at_dest = 1;
 		return ret; // only valid if we just reached our dest
 	}
-	float const xmin(pos.x - radius), xmax(pos.x + radius);
+	float const xmin(pos.x - radius), xmax(pos.x + radius), height(get_height());
 
 	for (auto i = colliders.begin(); i != colliders.end(); ++i) {
 		if (i->x2() < xmin) continue; // to the left
 		if (i->x1() > xmax) break; // to the right - sorted from left to right, so no more colliders can intersect - done
-		if (!sphere_cube_intersect(pos, radius, *i)) continue;
+		if (!sphere_cube_intersect_xy(pos, radius, *i)) continue;
+		// hack: all tall, thin, and square footprint colliders happen to be vertical cylinders (trees, power poles, streetlights, flags, etc.)
+		float const dx(i->dx()), dy(i->dy()), dz(i->dz());
+		
+		if (dz > height && dx < height && dy < height && fabs(dx - dy) < 0.05*min(dx, dy)) {
+			float const r_sum(radius + 0.25*(dx + dy));
+			if (!dist_xy_less_than(pos, i->get_cube_center(), r_sum)) continue;
+		}
 		if (!has_dest_car || !ped_mgr || plot != dest_plot) return 0; // not looking for car intersection
 		
 		if (i->intersects_xy(dest_car_center)) { // check if collider is a parking lot car group that contains the dest car
