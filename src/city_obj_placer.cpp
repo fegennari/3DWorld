@@ -190,16 +190,18 @@ bool try_place_obj(cube_t const &plot, vect_cube_t &blockers, rand_gen_t &rgen, 
 	}
 	return 0;
 }
-void place_tree(point const &pos, float radius, int ttype, vect_cube_t &colliders, vector<point> &tree_pos, bool allow_bush, bool is_sm_tree) {
+void place_tree(point const &pos, float radius, int ttype, vect_cube_t &colliders, vector<point> &tree_pos, bool allow_bush, bool is_sm_tree, bool has_planter) {
 	tree_placer.add(pos, 0, ttype, allow_bush, is_sm_tree); // use same tree type
-	cube_t bcube; bcube.set_from_sphere(pos, 0.15*radius); // use 15% of the placement radius for collision (trunk + planter)
+	// use 15% of the placement radius for collision (trunk + planter), smaller if no planter
+	cube_t bcube;
+	bcube.set_from_sphere(pos, (has_planter ? 0.15 : 0.05)*radius);
 	bcube.z2() += radius; // increase cube height
 	colliders.push_back(bcube);
 	tree_pos.push_back(pos);
 }
 
 void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t &blockers,
-	vect_cube_t &colliders, vector<point> &tree_pos, rand_gen_t &rgen, unsigned buildings_end)
+	vect_cube_t &colliders, vector<point> &tree_pos, rand_gen_t &rgen, bool is_residential, unsigned buildings_end)
 {
 	if (city_params.max_trees_per_plot == 0) return;
 	float const radius(city_params.tree_spacing*city_params.get_nom_car_size().x); // in multiples of car length
@@ -213,6 +215,7 @@ void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t
 	unsigned const input_blockers_end(blockers.size());
 	float const non_buildings_overlap(0.7*radius);
 	for (auto i = blockers.begin()+buildings_end; i != blockers.end(); ++i) {i->expand_by_xy(-non_buildings_overlap);}
+	bool const has_planter(!is_residential && !plot.is_park); // only commercial trees
 
 	for (unsigned n = 0; n < num_trees; ++n) {
 		bool const is_sm_tree((rgen.rand()%3) == 0); // 33% of the time is a pine/palm tree
@@ -224,7 +227,8 @@ void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t
 		float const bldg_extra_radius(is_palm ? 0.5f*radius : 0.0f); // palm trees are larger and must be kept away from buildings, but can overlap with other trees
 		point pos;
 		if (!try_place_obj(plot, blockers, rgen, (spacing + bldg_extra_radius), (radius - bldg_extra_radius), 10, pos)) continue; // 10 tries per tree, extra spacing for palm trees
-		place_tree(pos, radius, ttype, colliders, tree_pos, allow_bush, is_sm_tree); // size is randomly selected by the tree generator using default values; allow bushes in parks
+		// size is randomly selected by the tree generator using default values; allow bushes in parks
+		place_tree(pos, radius, ttype, colliders, tree_pos, allow_bush, is_sm_tree, has_planter);
 		if (plot.is_park) continue; // skip row logic and just place trees randomly throughout the park
 		// now that we're here, try to place more trees at this same distance from the road in a row
 		bool const dim(min((pos.x - plot.x1()), (plot.x2() - pos.x)) < min((pos.y - plot.y1()), (plot.y2() - pos.y)));
@@ -235,7 +239,7 @@ void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t
 			pos[dim] += step;
 			if (pos[dim] < plot.d[dim][0]+radius || pos[dim] > plot.d[dim][1]-radius) break; // outside place area
 			if (!check_pt_and_place_blocker(pos, blockers, (spacing + bldg_extra_radius), (spacing - bldg_extra_radius))) break; // placement failed
-			place_tree(pos, radius, ttype, colliders, tree_pos, plot.is_park, is_sm_tree); // use same tree type
+			place_tree(pos, radius, ttype, colliders, tree_pos, plot.is_park, is_sm_tree, has_planter); // use same tree type
 		} // for n
 	} // for n
 	for (auto i = blockers.begin()+buildings_end; i != blockers.begin()+input_blockers_end; ++i) {i->expand_by_xy(non_buildings_overlap);} // undo initial expand
@@ -1127,7 +1131,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 		if (city_params.assign_house_plots && plot_subdiv_sz > 0.0) {
 			place_residential_plot_objects(*i, bcubes, colliders, roads, driveways_start, city_id, detail_rgen); // before placing trees
 		}
-		place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen, buildings_end);
+		place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen, is_residential, buildings_end);
 		place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_residential, have_streetlights);
 	} // for i
 	for (unsigned n = 0; n < 3; ++n) {
