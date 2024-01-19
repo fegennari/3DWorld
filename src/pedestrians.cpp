@@ -35,6 +35,8 @@ void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool
 int register_ai_player_coll(uint8_t &has_key, float height);
 
 bool zombies_can_target_player() {return (camera_surf_collide && !camera_in_building && ai_follow_player());}
+point get_player_pos_bs       () {return (get_camera_pos() - get_camera_coord_space_xlate());}
+float get_player_eye_height   () {return (CAMERA_RADIUS + camera_zh);}
 
 
 class person_name_gen_t {
@@ -279,7 +281,7 @@ bool pedestrian_t::check_ped_ped_coll(ped_manager_t const &ped_mgr, vector<pedes
 	if (check_ped_ped_coll_range(peds, pid, pid+1, plot, prox_radius, force)) return 1;
 
 	if (camera_surf_collide && !camera_in_building) {
-		point const player_pos(get_camera_pos() - get_camera_coord_space_xlate()); // in building space
+		point const player_pos(get_player_pos_bs()); // in building space
 		float const dist_sq(p2p_dist_xy_sq(pos, player_pos));
 
 		if (dist_sq < prox_radius*prox_radius) {
@@ -694,7 +696,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 			return; // done
 		}
 	} // else we can walk through this plot
-	if (is_home_plot && has_dest_bldg && !keep_cur_dest) {
+	if (is_home_plot && has_dest_bldg && !keep_cur_dest && !follow_player) {
 		// target a building door; if it's on the wrong side of the building we'll still collide with the building when walking to it;
 		// it would be nice to have the door open when the ped enters, but it's not easy to do this with the way peds and buildings are separate and in different threads
 		point door_pos;
@@ -877,17 +879,18 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 
 		if (is_zombie && zombies_can_target_player()) { // target the player if visible
 			float const view_dist(2.0*city_params.road_spacing); // tile or city block
-			point const player_pos(get_camera_pos() - get_camera_coord_space_xlate()); // in building space
+			point const player_pos(get_player_pos_bs()); // in building space
 
-			// check if close to the player, player is visible (approximate), and not on a roof
-			if (dist_xy_less_than(pos, player_pos, view_dist) && overlaps_player_in_z(player_pos) && !check_city_building_line_coll_bs_any(pos, player_pos)) {
-				// only follow player if there's no object blocking the path (such as a fence, wall, or hedge)
-				bool const check_buildings(0); // check_city_building_line_coll_bs_any() should handle buildings
+			if (dist_xy_less_than(pos, player_pos, view_dist) && overlaps_player_in_z(player_pos)) { // if player is close and not on a roof
+				if (!check_city_building_line_coll_bs_any(get_eye_pos(), (player_pos + camera_zh*plus_z))) { // player is visible (approximate)
+					// only follow player if there's no object blocking the path (such as a fence, wall, or hedge)
+					bool const check_buildings(0); // check_city_building_line_coll_bs_any() should handle buildings
 
-				if (!check_path_blocked(ped_mgr, player_pos, check_buildings)) {
-					next_follow_player = 1;
-					dest_pos = target_pos = player_pos;
-					if (!follow_player) {maybe_play_zombie_sound(pos, ssn);} // moan if newly following the player
+					if (!check_path_blocked(ped_mgr, player_pos, check_buildings)) {
+						next_follow_player = 1;
+						dest_pos = player_pos;
+						if (!follow_player) {maybe_play_zombie_sound(pos, ssn);} // moan if newly following the player
+					}
 				}
 			}
 		}
@@ -898,7 +901,10 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		if (dest_pos != pos) {
 			bool update_path(0);
 
-			if (dist_less_than(pos, get_camera_pos(), 1000.0*radius)) { // nearby pedestrian - higher update rate
+			if (next_follow_player) { // update every frame
+				update_path = 1;
+			}
+			else if (dist_less_than(pos, get_camera_pos(), 1000.0*radius)) { // nearby pedestrian - higher update rate
 				update_path = (((frame_counter + ssn) & 15) == 0 || (target_valid() && dist_xy_less_than(pos, target_pos, radius)));
 			}
 			else { // distant pedestrian - lower update rate
@@ -931,7 +937,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		if (++stuck_count > 8) {
 			int debug_state(0); // unused
 			if (target_valid()) {pos += (0.1*radius)*(target_pos - pos).get_norm();} // move toward target_pos if it's valid since this should be a good direction
-			else if (stuck_count > 100) {pos += (0.1*radius)*(get_dest_pos(plot_bcube, next_plot_bcube, ped_mgr, debug_state) - pos).get_norm();} // move toward dest if stuck count is high
+			else if (stuck_count > 100) {pos += (0.1*radius)*(get_dest_pos(plot_bcube, next_plot_bcube, ped_mgr, debug_state) - pos).get_norm();} // move to dest if stuck count is high
 			else {pos += rgen.signed_rand_vector_spherical_xy()*(0.1*radius); } // shift randomly by 10% radius to get unstuck
 		}
 		if (ped_coll) {
@@ -1444,7 +1450,8 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	int debug_state(0);
 	cube_t plot_bcube, next_plot_bcube;
 	get_plot_bcubes_inc_sidewalks(ped_mgr, plot_bcube, next_plot_bcube);
-	point const orig_dest_pos(get_dest_pos(plot_bcube, next_plot_bcube, ped_mgr, debug_state));
+	point const player_pos(get_player_pos_bs());
+	point const orig_dest_pos(follow_player ? player_pos : get_dest_pos(plot_bcube, next_plot_bcube, ped_mgr, debug_state));
 	point dest_pos(orig_dest_pos);
 	if (dest_pos == pos) return; // no path, nothing to draw
 	vect_cube_t dbg_cubes;
@@ -1483,19 +1490,19 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	}
 	else if (ret == 2) { // show segment from current pos to edge of building/car
 		assert(!path.empty());
-		draw_sphere_vbo(path[0], radius, 16, 0);
+		if (!dist_less_than(path[0], player_pos, CAMERA_RADIUS)) {draw_sphere_vbo(path[0], radius, 16, 0);}
 		line_pts.emplace_back(pos,     BLUE);
 		line_pts.emplace_back(path[0], BLUE);
 	}
 	for (auto p = path.begin(); p+1 < path.end(); ++p) { // iterate over line segments, skip last point
 		point const &n(*(p+1));
-		draw_sphere_vbo(n, radius, 16, 0);
+		if (!dist_less_than(n, player_pos, CAMERA_RADIUS)) {draw_sphere_vbo(n, radius, 16, 0);}
 		line_pts.emplace_back(*p, line_color);
 		line_pts.emplace_back(n,  line_color);
 	}
 	if (at_dest_plot && (has_dest_car || !complete)) { // show destination when in dest plot with incomplete path or car
 		s.set_cur_color(PURPLE);
-		draw_sphere_vbo(orig_dest_pos, 1.5*radius, 16, 0);
+		if (!dist_less_than(orig_dest_pos, player_pos, CAMERA_RADIUS)) {draw_sphere_vbo(orig_dest_pos, 1.5*radius, 16, 0);}
 	}
 	end_sphere_draw(in_sphere_draw);
 
@@ -1697,7 +1704,7 @@ void ped_manager_t::draw_people_in_building(vector<person_t> const &people, ped_
 
 		if (model.is_loaded()) {
 			for (dead_person_t const &p : dead_players) {
-				float const player_eye_height(CAMERA_RADIUS + camera_zh), player_height(player_eye_height/EYE_HEIGHT_RATIO), player_radius(player_height/PED_HEIGHT_SCALE);
+				float const player_eye_height(get_player_eye_height()), player_height(player_eye_height/EYE_HEIGHT_RATIO), player_radius(player_height/PED_HEIGHT_SCALE);
 				cube_t bcube;
 				bcube.set_from_point(p.pos);
 				// always facing with head in +X, face down in -Z, and arms out to the sides in a Y T-pose; scale to account for different bcube
@@ -1830,7 +1837,7 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 		player_anim_time += fticks*city_params.ped_speed;
 	}
 	animation_state_t anim_state(enable_animations, animation_id);
-	float const player_eye_height(CAMERA_RADIUS + camera_zh), player_height(player_eye_height/EYE_HEIGHT_RATIO), player_radius(player_height/PED_HEIGHT_SCALE);
+	float const player_eye_height(get_player_eye_height()), player_height(player_eye_height/EYE_HEIGHT_RATIO), player_radius(player_height/PED_HEIGHT_SCALE);
 	point const pos(actual_player_pos + vector3d(0.0, 0.0, (player_radius - player_eye_height)));
 	vector3d const dir_horiz(vector3d(cview_dir.x, cview_dir.y, 0.0).get_norm()); // always face a horizontal direction, even if walking on a slope
 	cube_t bcube;
