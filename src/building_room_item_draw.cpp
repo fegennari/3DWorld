@@ -1598,10 +1598,14 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	bool const check_clip_cube(shadow_only && !is_rotated && !smap_light_clip_cube.is_all_zeros()); // check clip cube for shadow pass; not implemented for rotated buildings
 	cube_t const clip_cube_bs(smap_light_clip_cube - xlate);
 	int const camera_room(is_rotated ? -1 : building.get_room_containing_pt(camera_bs)); // skip for rotated buildings; should we use actual_player_pos for shadow_only mode?
-	bool const camera_in_closed_room((camera_room < 0) ? 0 : building.all_room_int_doors_closed(camera_room, camera_bs.z));
 	unsigned last_room_ix(building.interior->rooms.size()), last_floor_ix(0); // start at an invalid value
-	bool last_room_closed(0), obj_drawn(0);
+	bool camera_in_closed_room(0), last_room_closed(0), obj_drawn(0);
 
+	if (camera_room >= 0) { // check for stairs in case an object is visible through an open door on a floor above or below
+		room_t const &room(building.get_room(camera_room));
+		unsigned const camera_floor(room.get_floor_containing_zval(max(camera_bs.z, room.z1()), floor_spacing)); // clamp zval to room range
+		camera_in_closed_room = (!room.has_stairs_on_floor(camera_floor) && building.all_room_int_doors_closed(camera_room, camera_bs.z));
+	}
 	// draw object models
 	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
 		room_object_t &obj(get_room_object_by_index(i->obj_id));

@@ -1411,7 +1411,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			} // for s
 			// set camera_somewhat_by_stairs when camera is in room with stairs, or adjacent to one with stairs
 			if (stairs_or_ramp_visible) {camera_somewhat_by_stairs |= bool(room_or_adj_room_has_stairs(camera_room, camera_rot.z, 1, 1));} // inc_adj_rooms=1, check_door_open=1
-			camera_in_closed_room = all_room_int_doors_closed(room_ix, camera_z);
+			// if player is by the stairs in a room with all closed doors, it's still possible to see a light shining through a door of the floor above or below
+			camera_in_closed_room = (!camera_by_stairs && all_room_int_doors_closed(room_ix, camera_z));
 		}
 		else if (point_in_attic(camera_rot)) {
 			if (show_room_name) {lighting_update_text = room_names[RTYPE_ATTIC];}
