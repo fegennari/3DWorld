@@ -2420,7 +2420,8 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 	if (whiteboard) { // add a marker ledge
 		cube_t ledge(c);
 		ledge.z2() = ledge.z1() + 0.016*c.dz(); // along the bottom edge
-		ledge.d[c.dim][c.dir] += (c.dir ? 1.5 : -1.5)*c.get_depth(); // extrude outward
+		ledge.d[c.dim][!c.dir] = ledge.d[c.dim][c.dir]; // flush with the face, so that it doesn't extend through the ext wall of a windowless building (should we clip the bcube?)
+		ledge.d[c.dim][ c.dir] += (c.dir ? 1.5 : -1.5)*c.get_depth(); // extrude outward
 		get_untextured_material(1).add_cube_to_verts_untextured(ledge, GRAY, (1 << (2*(2-c.dim) + !c.dir))); // shadowed
 	}
 	else if (c.rotates()) { // apply a random rotation
