@@ -149,7 +149,7 @@ bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_p
 	}
 	cube_t union_plot_bcube(plot_bcube);
 	union_plot_bcube.union_with_cube(next_plot_bcube);
-	if (!union_plot_bcube.contains_pt_xy(pos) && union_plot_bcube.contains_pt_xy(prev_pos)) {return 0;} // went outside the valid area
+	if (!union_plot_bcube.contains_pt_xy(pos) && union_plot_bcube.contains_pt_xy(prev_pos)) return 0; // went outside the valid area
 	float const dx(min(fabs(pos.x - plot_bcube.x1()), fabs(pos.x - plot_bcube.x2()))), dy(min(fabs(pos.y - plot_bcube.y1()), fabs(pos.y - plot_bcube.y2())));
 
 	if (max(dx, dy) < 0.75*city_params.road_width) { // near an intersection - near the road in both dims
@@ -257,7 +257,7 @@ void pedestrian_t::run_collision_avoid(point const &ipos, vector3d const &ivel, 
 	float const rmag(rejection.mag()), rel_vel(max(dv_mag/speed, 0.5f)); // higher when peds are converging
 	if (rmag < TOLERANCE) return;
 	float const force_mult(dp/(dv_mag*dist)); // stronger with head-on collisions
-	force += -rejection*(rel_vel*force_mult*fmag/rmag); // move away from the other person
+	force += -0.5*rejection*(rel_vel*force_mult*fmag/rmag); // move away from the other person
 }
 bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned pid, unsigned ped_start, unsigned target_plot, float prox_radius, vector3d &force) {
 	float const prox_radius_sq(prox_radius*prox_radius);
@@ -312,8 +312,12 @@ bool pedestrian_t::check_ped_ped_coll(ped_manager_t const &ped_mgr, vector<pedes
 		assert(ped_ix <= peds.size()); // could be at the end
 		if (check_ped_ped_coll_range(peds, pid, ped_ix, next_plot, prox_radius, force)) return 1;
 	}
-	if (force != zero_vector) {set_velocity((0.1*delta_dir)*force + ((1.0 - delta_dir)/speed)*vel);} // apply ped repulsive force
+	if (force != zero_vector) {update_velocity_dir(force, delta_dir);} // apply ped repulsive force to velocity/dir
 	return 0;
+}
+
+void pedestrian_t::update_velocity_dir(vector3d const &force, float delta_dir) {
+	set_velocity((0.1*delta_dir)*force + ((1.0 - delta_dir)/speed)*vel);
 }
 
 bool pedestrian_t::check_ped_ped_coll_stopped(vector<pedestrian_t> &peds, unsigned pid) {
@@ -539,6 +543,12 @@ cube_t get_avoid_area_for_plot(cube_t const &plot_bcube, float radius) {
 	avoid_area.expand_by_xy(0.5f*radius - (get_inner_sidewalk_width() + get_sidewalk_walkable_area())); // shrink to plot interior, and undo the expand applied to the plot
 	return avoid_area;
 }
+void move_to_closest_pt_outside_cube(cube_t const &c, point &pos) {
+	if (!c.contains_pt(pos)) return; // already outside cube
+	bool dim(0), dir(0);
+	get_closest_dim_dir_xy(cube_t(pos, pos), c, dim, dir);
+	pos[dim] = c.d[dim][dir]; // move to the edge of the avoid cube
+}
 
 // pedestrian_t
 point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_plot_bcube, ped_manager_t const &ped_mgr, int &debug_state) const {
@@ -575,12 +585,7 @@ point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_pl
 				
 				if (cur_plot.is_residential && !cur_plot.is_park) { // residential plot
 					cube_t const avoid(get_avoid_area_for_plot(plot_bcube, 2.0*radius)); // 2x radius for extra padding
-
-					if (avoid.contains_pt(pos)) { // move point away from plot edge so that the line to the closest point doesn't clip through the avoid cube
-						bool dim(0), dir(0);
-						get_closest_dim_dir_xy(cube_t(pos, pos), avoid, dim, dir);
-						pos_adj[dim] = avoid.d[dim][dir]; // move to the edge of the avoid cube
-					}
+					move_to_closest_pt_outside_cube(avoid, pos_adj); // move pos away from plot edge so that line to closest point doesn't clip through avoid cube
 				}
 				dest_pos    = next_plot_bcube.closest_pt(pos_adj);
 				debug_state = 3;
@@ -920,7 +925,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 				dest_dir /= dmag; // normalize
 				// if destination is in exactly the opposite dir, pick an orthogonal direction using our SSN to decide which way deterministically
 				if (dot_product_xy(dest_dir, vel) < -0.99*speed) {dest_dir = cross_product(vel, plus_z*((ssn&1) ? 1.0 : -1.0)).get_norm();}
-				set_velocity((0.1*delta_dir)*dest_dir + ((1.0 - delta_dir)/speed)*vel); // slowly blend in destination dir (to avoid sharp direction changes)
+				update_velocity_dir(dest_dir, delta_dir); // slowly blend in destination dir (to avoid sharp direction changes)
 			}
 		}
 		stuck_count = 0;
@@ -951,14 +956,31 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		else if (outside_plot && !in_the_road && !plot_bcube.contains_pt_xy(pos)) { // attempt to re-enter the plot at the nearest point
 			point plot_pt(pos);
 			plot_bcube.clamp_pt_xy(plot_pt);
-			new_dir = (plot_pt - pos).get_norm();
+			update_velocity_dir((plot_pt - pos).get_norm(), 0.5*delta_dir); // slow turn
+			collided = 0; // handled
 		}
 		else { // static object collision (should be rare if path_finder does a good job), or in_the_road (need this to get around traffic lights, etc.)
-			new_dir = rgen.signed_rand_vector_spherical_xy(); // try a random new direction
-			if (dot_product_xy(vel, new_dir) > 0.0) {new_dir.negate();} // negate if pointing in the same dir
+			if (!follow_player && plot != dest_plot) { // not in home plot
+				road_plot_t const &cur_plot(ped_mgr.get_city_plot_for_peds(city, plot));
+
+				if (cur_plot.is_residential && !cur_plot.is_park) {
+					cube_t const avoid_area(get_avoid_area_for_plot(plot_bcube, radius));
+					
+					if (avoid_area.contains_pt_xy(pos)) { // bad pos
+						point good_pos(pos);
+						move_to_closest_pt_outside_cube(avoid_area, good_pos);
+						update_velocity_dir((good_pos - pos).get_norm(), 0.5*delta_dir); // slow turn
+						collided = 0; // handled
+					}
+				}
+			}
+			if (collided) { // not yet handled
+				new_dir = rgen.signed_rand_vector_spherical_xy(); // try a random new direction
+				if (dot_product_xy(vel, new_dir) > 0.0) {new_dir.negate();} // negate if pointing in the same dir
+			}
 		}
-		if (new_dir != zero_vector) {set_velocity(new_dir);}
-		target_pos = all_zeros; // reset and force path finding to re-route from this new direction/pos
+		if (new_dir != zero_vector) {update_velocity_dir(new_dir.get_norm(), 0.5*delta_dir);} // slow turn
+		if (collided) {target_pos = all_zeros;} // reset and force path finding to re-route from this new direction/pos
 	}
 	if (vel != zero_vector) { // if stopped, don't update dir
 		if (target_valid()) {delta_dir *= 4.0;} // use a tighter turning radius when there's a valid target_pos

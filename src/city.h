@@ -695,6 +695,7 @@ struct pedestrian_t : public person_base_t { // city pedestrian
 	void destroy() {destroyed = 1;} // that's it, no other effects
 	void clear_current_dest() {has_dest_bldg = has_dest_car = at_dest = 0;}
 	void move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, float &delta_dir);
+	void update_velocity_dir(vector3d const &force, float delta_dir);
 	bool check_for_safe_road_crossing(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vect_cube_t *dbg_cubes=nullptr) const;
 	bool check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned pid, unsigned ped_start, unsigned target_plot, float prox_radius, vector3d &force);
 	void run_collision_avoid(point const &ipos, vector3d const &ivel, float r2, float dist_sq, bool is_player, vector3d &force);
