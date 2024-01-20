@@ -1476,7 +1476,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (!is_house && floor_is_above && !in_ext_basement && camera_in_ext_basement && camera_z < get_basement().z1()) continue; // player in lower level extb, light  not in extb
 		if (floor_is_below && !floor_below_region.is_all_zeros() && !floor_below_region.contains_pt_xy(lpos)) continue; // check floor_below_region
 		if (floor_is_above && !floor_above_region.is_all_zeros() && !floor_above_region.contains_pt_xy(lpos)) continue; // check floor_below_region
-		bool const camera_in_room_part_xy(parts[room.part_id].contains_pt_xy(camera_rot)), in_camera_room((int)i->room_id == camera_room);
+		cube_t const &room_part(get_part_for_room(room));
+		bool const camera_in_room_part_xy(room_part.contains_pt_xy(camera_rot)), in_camera_room((int)i->room_id == camera_room);
 		bool const camera_room_same_part(room.part_id == camera_part || (is_house && camera_in_room_part_xy)); // treat stacked house parts as the same
 		bool const has_stairs_this_floor(!is_in_attic && room.has_stairs_on_floor(cur_floor));
 		bool const light_room_has_stairs_or_ramp(i->has_stairs() || has_stairs_this_floor || (check_ramp && is_room_above_ramp(room, i->z1())));
@@ -1561,13 +1562,15 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 						if (!is_rotated()) { // check exterior wall visibility; this part doesn't work for rotated buildings
 							// is it better to check if light half sphere is occluded by the floor above/below?
-							cube_t const &part(get_part_for_room(room));
 							bool visible[2] = {0};
 
 							for (unsigned d = 0; d < 2; ++d) { // for each dim
 								bool const dir(camera_bs[d] > lpos_rot[d]);
-								if ((camera_rot[d] > part.d[d][dir]) ^ dir) continue; // camera not on the outside face of the part containing this room, so can't see through any windows
+								// if we're not on the outside face of the part containing this room, we can't see through any windows
+								if ((camera_rot[d] > room_part.d[d][dir]) ^ dir) continue;
 								visible[d] = (room.ext_sides & (1 << (2*d + dir)));
+								// if we're by the stairs, a light in the other part may be visible through a door in the wall separating the rooms/parts
+								if (camera_somewhat_by_stairs) {visible[d] |= (fabs(room.d[d][dir] - parts[camera_part].d[d][!dir]) < 2.0*wall_thickness);}
 							}
 							if (!visible[0] && !visible[1]) continue; // room is not on the exterior of the building on either side facing the camera
 						}
