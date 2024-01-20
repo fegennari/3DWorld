@@ -173,6 +173,17 @@ bool pedestrian_t::check_road_coll(ped_manager_t const &ped_mgr, cube_t const &p
 	return 0;
 }
 
+bool check_collider_coll(cube_t const &c, point const &pos, float radius, float height) {
+	if (!sphere_cube_intersect_xy(pos, radius, c)) return 0;
+	// hack: all tall, thin, and square footprint colliders happen to be vertical cylinders (trees, power poles, streetlights, flags, etc.)
+	float const dx(c.dx()), dy(c.dy()), dz(c.dz());
+
+	if (dz > height && dx < height && dy < height && fabs(dx - dy) < 0.05*min(dx, dy)) {
+		float const r_sum(radius + 0.25*(dx + dy));
+		if (!dist_xy_less_than(pos, c.get_cube_center(), r_sum)) return 0;
+	}
+	return 1;
+}
 bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest, ped_manager_t const *const ped_mgr) const {
 	if (in_the_road) return 1; // not in a plot, no collision detection needed
 	unsigned building_id(0);
@@ -196,14 +207,7 @@ bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest,
 	for (auto i = colliders.begin(); i != colliders.end(); ++i) {
 		if (i->x2() < xmin) continue; // to the left
 		if (i->x1() > xmax) break; // to the right - sorted from left to right, so no more colliders can intersect - done
-		if (!sphere_cube_intersect_xy(pos, radius, *i)) continue;
-		// hack: all tall, thin, and square footprint colliders happen to be vertical cylinders (trees, power poles, streetlights, flags, etc.)
-		float const dx(i->dx()), dy(i->dy()), dz(i->dz());
-		
-		if (dz > height && dx < height && dy < height && fabs(dx - dy) < 0.05*min(dx, dy)) {
-			float const r_sum(radius + 0.25*(dx + dy));
-			if (!dist_xy_less_than(pos, i->get_cube_center(), r_sum)) continue;
-		}
+		if (!check_collider_coll(*i, pos, radius, height)) continue;
 		if (!has_dest_car || !ped_mgr || plot != dest_plot) return 0; // not looking for car intersection
 		
 		if (i->intersects_xy(dest_car_center)) { // check if collider is a parking lot car group that contains the dest car
@@ -217,6 +221,17 @@ bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest,
 		}
 		return 0; // bad collision
 	} // for i
+	return 1;
+}
+// only checks colliders, and ignores dest car; buildings and road objects aren't checked
+bool pedestrian_t::is_possibly_valid_dest_pos(point const &dpos, vect_cube_t const &colliders) const {
+	float const xmin(pos.x - radius), xmax(pos.x + radius), height(get_height());
+
+	for (auto i = colliders.begin(); i != colliders.end(); ++i) {
+		if (i->x2() < xmin) continue; // to the left
+		if (i->x1() > xmax) break; // to the right - sorted from left to right, so no more colliders can intersect - done
+		if (check_collider_coll(*i, pos, radius, height)) return 0;
+	}
 	return 1;
 }
 
@@ -937,8 +952,6 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			// if prev pos is also invalid, undo the restore to avoid getting this ped stuck in a collision object
 			if (!is_valid_pos(colliders, at_dest, &ped_mgr) || check_road_coll(ped_mgr, plot_bcube, next_plot_bcube)) {pos = cur_pos;}
 		}
-		vector3d new_dir;
-
 		if (++stuck_count > 8) {
 			int debug_state(0); // unused
 			if (target_valid()) {pos += (0.1*radius)*(target_pos - pos).get_norm();} // move toward target_pos if it's valid since this should be a good direction
@@ -949,15 +962,19 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			assert(colliding_ped < peds.size());
 			pedestrian_t const &other(peds[colliding_ped]);
 			vector3d const coll_dir(other.pos - pos);
-			new_dir = cross_product(vel, plus_z); // right angle turn - using the tangent causes peds to get stuck together
+			vector3d new_dir(cross_product(vel, plus_z)); // right angle turn - using the tangent causes peds to get stuck together
 			if (dot_product_xy(new_dir, coll_dir) > 0.0) {new_dir.negate();} // orient away from the other ped's position
 			if (dot_product_xy(new_dir, other.vel)/(new_dir.mag()*other.vel.mag()) > 0.9) {new_dir.negate();} // velocities too close together (stuck together?)
+			update_velocity_dir(new_dir.get_norm(), 0.5*delta_dir); // slow turn
 		}
 		else if (outside_plot && !in_the_road && !plot_bcube.contains_pt_xy(pos)) { // attempt to re-enter the plot at the nearest point
 			point plot_pt(pos);
 			plot_bcube.clamp_pt_xy(plot_pt);
-			update_velocity_dir((plot_pt - pos).get_norm(), 0.5*delta_dir); // slow turn
-			collided = 0; // handled
+
+			if (is_possibly_valid_dest_pos(plot_pt, colliders)) { // only update if new pos is valid; otherwise will pick a different target or continue walking
+				update_velocity_dir((plot_pt - pos).get_norm(), 0.5*delta_dir); // slow turn
+				collided = 0; // handled
+			}
 		}
 		else { // static object collision (should be rare if path_finder does a good job), or in_the_road (need this to get around traffic lights, etc.)
 			if (!follow_player && plot != dest_plot) { // not in home plot
@@ -969,17 +986,22 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 					if (avoid_area.contains_pt_xy(pos)) { // bad pos
 						point good_pos(pos);
 						move_to_closest_pt_outside_cube(avoid_area, good_pos);
-						update_velocity_dir((good_pos - pos).get_norm(), 0.5*delta_dir); // slow turn
-						collided = 0; // handled
+						
+						if (is_possibly_valid_dest_pos(good_pos, colliders)) { // only update if new pos is valid; otherwise will pick a different target or continue walking
+							update_velocity_dir((good_pos - pos).get_norm(), 0.5*delta_dir); // slow turn
+							collided = 0; // handled
+						}
 					}
 				}
 			}
 			if (collided) { // not yet handled
-				new_dir = rgen.signed_rand_vector_spherical_xy(); // try a random new direction
+				// try a random new direction; ideally we want to choose something consistent away from the object, but we don't have the object or direction
+				vector3d new_dir(rgen.signed_rand_vector_spherical_xy());
 				if (dot_product_xy(vel, new_dir) > 0.0) {new_dir.negate();} // negate if pointing in the same dir
+				//update_velocity_dir(new_dir.get_norm(), 0.5*delta_dir); // can get stuck against an object or travel through a wall
+				set_velocity(new_dir);
 			}
 		}
-		if (new_dir != zero_vector) {update_velocity_dir(new_dir.get_norm(), 0.5*delta_dir);} // slow turn
 		if (collided) {target_pos = all_zeros;} // reset and force path finding to re-route from this new direction/pos
 	}
 	if (vel != zero_vector) { // if stopped, don't update dir
