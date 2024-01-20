@@ -1161,7 +1161,7 @@ void building_t::add_exterior_ac_pipes(rand_gen_t rgen) {
 							vpipe.d[min_dim][!dir] = pipe_end - dsign*r;
 							vpipe.d[min_dim][ dir] = vert_ext;
 							vpipe.z2() -= r;
-							vpipe.z1()  = p->z1();
+							vpipe.z1()  = p->z2();
 							interior->room_geom->objs.emplace_back(vpipe, TYPE_PIPE, 0, 0, 1, (flags | RO_FLAG_ADJ_HI), 1.0, SHAPE_CYLIN, colors[n]); // round top end
 							break;
 						} // for m
