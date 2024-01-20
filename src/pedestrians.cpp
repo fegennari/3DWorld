@@ -646,7 +646,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	float const height(get_height()), expand(1.1*radius); // slightly larger than radius to leave some room for floating-point error
 	road_plot_t const &cur_plot(ped_mgr.get_city_plot_for_peds(city, plot));
 	bool const is_home_plot(plot == dest_plot); // plot contains our destination
-	if (is_home_plot) {assert(plot_bcube == next_plot_bcube);}
+	if (is_home_plot && !follow_player) {assert(plot_bcube == next_plot_bcube);} // doesn't hold when following the player?
 	bool keep_cur_dest(0);
 
 	if (cur_plot.is_residential && !cur_plot.is_park) { // apply special restrictions when walking through a residential block
@@ -751,6 +751,7 @@ bool pedestrian_t::check_path_blocked(ped_manager_t &ped_mgr, point const &dest,
 
 		if (d == 0 && plot != plots_to_test[d]) { // update current plot so that VFC, etc. works properly
 			plot = plots_to_test[d];
+			if (plot == dest_plot) {next_plot = plot;} // reached dest plot
 			ped_mgr.register_ped_new_plot(*this);
 			if (follow_player) {clear_current_dest();} // clear dest in case it's no longer reachable from this plot (next_plot is not adjacent)
 		}
