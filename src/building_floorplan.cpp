@@ -26,7 +26,7 @@ void building_t::add_interior_door(door_t &door, bool is_bathroom, bool make_unl
 	interior->door_stacks.back().num_doors = (interior->doors.size() - interior->door_stacks.back().first_door_ix);
 }
 void building_t::add_interior_door_for_floor(door_t &door, bool is_bathroom, bool make_unlocked, bool make_closed) {
-	if (is_bathroom) {door.open = door.locked = 0;} // bathroom doors are always closed but unlocked
+	if (is_bathroom) {door.open = 0; door.locked = 0;} // bathroom doors are always closed but unlocked
 	else if (!door.on_stairs) { // don't set open/locked state for stairs doors
 		door.open   = (!make_closed   &&               fract(interior->doors.size()*1.61803) < global_building_params.open_door_prob  ); // use the golden ratio
 		door.locked = (!make_unlocked && !door.open && fract(interior->doors.size()*3.14159) < global_building_params.locked_door_prob); // use pi
