@@ -1358,7 +1358,7 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shad
 		gen_room_details(rgen, building_ix); // generate so that we can draw it
 		assert(has_room_geom());
 	}
-	if (has_room_geom() && inc_small >= 2) {add_wall_and_door_trim_if_needed();} // gen trim (exterior and interior) when close to the player
+	if (has_room_geom() && (inc_small == 2 || inc_small == 3)) {add_wall_and_door_trim_if_needed();} // gen trim (exterior and interior) when close to the player
 	draw_room_geom(bbd, s, amask_shader, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
 }
 void building_t::clear_room_geom() {
@@ -1468,7 +1468,7 @@ void brg_batch_draw_t::draw_obj_models(shader_t &s, vector3d const &xlate, bool 
 	if (!models_to_draw.empty()) {check_mvm_update();}
 }
 
-// Note: non-const because it creates the VBO; inc_small: 0=large only, 1=large+small, 2=large+small+ext detail, 3=large+small+ext detail+int detail
+// Note: non-const because it creates the VBO; inc_small: 0=large only, 1=large+small, 2=large+small+ext detail, 3=large+small+ext detail+int detail, 4=ext only
 void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, building_t const &building, occlusion_checker_noncity_t &oc,
 	vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
 {
@@ -1479,8 +1479,10 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (frame_counter < 100 || frame_counter > last_frame) {num_geom_this_frame = 0; last_frame = frame_counter;} // unlimited for the first 100 frames
 	point const camera_bs(camera_pdu.pos - xlate);
 	float const floor_spacing(building.get_window_vspace());
+	bool const draw_ext_only(inc_small == 4);
+	if (draw_ext_only) {inc_small = 0;}
 	// don't draw ceiling lights when player is above the building unless there's a light placed on a skylight
-	bool const draw_lights(camera_bs.z < building.bcube.z2() + (building.has_skylight_light ? 20.0*floor_spacing : 0.0));
+	bool const draw_lights(!draw_ext_only && (camera_bs.z < building.bcube.z2() + (building.has_skylight_light ? 20.0*floor_spacing : 0.0)));
 	// only parking garages and attics have detail objects that cast shadows
 	bool const draw_detail_objs(inc_small >= 2 && (!shadow_only || building.has_parking_garage || building.has_attic()));
 	bool const draw_int_detail_objs(inc_small >= 3 && !shadow_only);
@@ -1547,7 +1549,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (!mats_doors.valid) {create_door_vbos(building);} // create door materials if needed (no limit)
 	enable_blend(); // needed for rugs and book text
 	assert(s.is_setup());
-	mats_static.draw(bbd, s, shadow_only, reflection_pass); // this is the slowest call
+	if (!draw_ext_only) {mats_static .draw(bbd, s, shadow_only, reflection_pass);} // this is the slowest call
 	if (draw_lights)    {mats_lights .draw(bbd, s, shadow_only, reflection_pass);}
 	if (inc_small  )    {mats_dynamic.draw(bbd, s, shadow_only, reflection_pass);}
 	if (inc_small >= 3) {mats_detail .draw(bbd, s, shadow_only, reflection_pass);} // now included in the shadow pass
@@ -1559,10 +1561,10 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		mats_exterior.draw(bbd_in, s, shadow_only, reflection_pass, 1); // exterior_geom=1
 		if (draw_detail_objs) {mats_ext_detail.draw(bbd_in, s, shadow_only, reflection_pass, 1);} // exterior_geom=1
 	}
-	mats_doors.draw(bbd, s, shadow_only, reflection_pass);
-	if (inc_small) {mats_small.draw(bbd, s, shadow_only, reflection_pass);}
+	if (!draw_ext_only) {mats_doors.draw(bbd, s, shadow_only, reflection_pass);}
+	if (inc_small     ) {mats_small.draw(bbd, s, shadow_only, reflection_pass);}
 
-	if (!mats_amask.empty()) { // draw plants, etc. using alpha masks in the detail pass
+	if (!mats_amask.empty() && !draw_ext_only) { // draw plants, etc. using alpha masks in the detail pass
 		if (shadow_only) {
 			if (!amask_shader.is_setup()) {amask_shader.begin_simple_textured_shader(0.9);} // need to use texture with alpha test
 			else {amask_shader.make_current();}
@@ -1584,6 +1586,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (draw_int_detail_objs && !shadow_only) {mats_text.draw(bbd, s, shadow_only, reflection_pass);} // text must be drawn last; drawn as interior detail objects
 	disable_blend();
 	indexed_vao_manager_with_shadow_t::post_render();
+	if (draw_ext_only) return; // done
 	bool const disable_cull_face(0); // better but slower?
 	if (disable_cull_face) {glDisable(GL_CULL_FACE);}
 	point const building_center(building.bcube.get_cube_center());

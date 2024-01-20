@@ -3257,15 +3257,20 @@ public:
 						if (!debug_draw && !player_in_building_bcube && !ext_basement_conn_visible && !camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
 						b.maybe_gen_chimney_smoke();
 						bool const camera_near_building(player_in_building_bcube || b.bcube.contains_pt_xy_exp(camera_xlated, door_open_dist));
+						bool cant_see_inside(0);
 
 						if (!debug_draw && !ext_basement_conn_visible) {
 							// check if player is outside a windowless building (city office building); need to account for open doors and exterior signs over doors
-							if (!camera_near_building && !b.has_windows() && !b.point_near_ext_door(camera_xlated, 10.0*door_open_dist)) continue;
+							if (!camera_near_building && !b.has_windows()) {
+								if (!b.point_near_ext_door(camera_xlated, 20.0*door_open_dist)) continue; // too far away
+								cant_see_inside = 1; // can see exterior objects, but not interiors
+							}
 							if ((display_mode & 0x08) && !player_in_building_bcube && b.is_entire_building_occluded(camera_xlated, oc))  continue; // check occlusion
 						}
 						// draw interior detail objects if player is in the building (inc ext basement), even if far from the building center
 						unsigned inc_small(bdist_sq < rgeom_sm_draw_dist_sq);
-						if      (player_in_building_bcube)                         {inc_small = 3;} // include interior and exterior detail objects
+						if      (cant_see_inside)                                  {inc_small = 4;} // only exterior detail objects
+						else if (player_in_building_bcube)                         {inc_small = 3;} // include interior and exterior detail objects
 						else if (inc_small && bdist_sq < rgeom_int_detail_dist_sq) {inc_small = 3;} // include interior and exterior detail objects
 						else if (inc_small && bdist_sq < rgeom_ext_detail_dist_sq) {inc_small = 2;} // include exterior detail objects
 						if (debug_draw) {inc_small = 3;} // TESTING
