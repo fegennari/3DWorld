@@ -749,7 +749,7 @@ bool pedestrian_t::check_path_blocked(ped_manager_t &ped_mgr, point const &dest,
 		plots_to_test[d] = (cur_plot.contains_pt_xy(test_pts[d]) ? plot : ped_mgr.get_global_plot_id_for_pos(city, test_pts[d]));
 		if (plots_to_test[d] == -1) continue; // no or duplicate plot
 
-		if (d == 0 && plot != plots_to_test[d]) { // update current plot so that VFC, etc. works properly
+		if (d == 0 && (int)plot != plots_to_test[d]) { // update current plot so that VFC, etc. works properly
 			plot = plots_to_test[d];
 			if (plot == dest_plot) {next_plot = plot;} // reached dest plot
 			ped_mgr.register_ped_new_plot(*this);

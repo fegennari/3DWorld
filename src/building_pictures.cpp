@@ -143,7 +143,7 @@ class video_camera_manager_t {
 		int const reflection_pass(REF_PASS_ENABLED | REF_PASS_INTERIOR | REF_PASS_NO_MIRROR);
 		draw_buildings(0, reflection_pass, xlate);
 		
-		if ((display_mode & 0x20) && SEC_CAMERA_XSIZE <= window_width && SEC_CAMERA_YSIZE <= window_height) { // experimental grayscale mode; doesn't work for small windows
+		if ((display_mode & 0x20) && (int)SEC_CAMERA_XSIZE <= window_width && (int)SEC_CAMERA_YSIZE <= window_height) { // experimental grayscale mode; doesn't work for small windows
 			postproc_convert_to_grayscale(SEC_CAMERA_XSIZE, SEC_CAMERA_YSIZE);
 		}
 		// write to a texture and reset the state
