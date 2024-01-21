@@ -437,7 +437,9 @@ bool streetlights_t::check_streetlight_sphere_coll_xy(point const &center, float
 	for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {
 		if (i->pos.y > y_end) break; // streetlights are sorted by y-val; if this holds, we can no longer intersect
 		if (!dist_xy_less_than(i->pos, center, rtot)) continue;
-		coll_cube.set_from_sphere(i->pos, pradius);
+		coll_cube.set_from_point(i->pos);
+		coll_cube.expand_by_xy(pradius);
+		coll_cube.z2() += streetlight_ns::get_streetlight_height();
 		return 1;
 	}
 	return 0;
