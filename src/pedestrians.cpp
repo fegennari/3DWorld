@@ -840,7 +840,8 @@ void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, 
 	reset_waiting();
 	if (is_stopped) {go();}
 
-	if (target_valid()) { // if facing away from the target, rotate in place rather than moving in a circle
+	if (target_valid() && plot_bcube.contains_pt_xy(pos)) { // only valid if we're inside a plot since we don't want to stop while in the road
+		// if facing away from the target, rotate in place rather than moving in a circle
 		vector3d const delta(target_pos - pos);
 		float const dist(delta.mag());
 		if (dist > radius && dot_product_xy(vel, delta) < 0.01*speed*dist) {delta_dir = min(1.0f, 4.0f*delta_dir); return;} // rotate faster
@@ -1044,7 +1045,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		float const xy_mag_inv(1.0/dir.xy_mag()); // normalize using XY only
 		dir.x *= xy_mag_inv; dir.y *= xy_mag_inv;
 	}
-	if (follow_player && !next_follow_player) {target_pos = all_zeros;} // target_pos is no longer valid when we stop following the player
+	if (follow_player && !next_follow_player) {target_pos = all_zeros;} // target_pos is no longer valid when we stop following the player; only needed when plot != next_plot?
 	follow_player = next_follow_player;
 	collided = ped_coll = 0; // reset for next frame
 }
