@@ -964,19 +964,12 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	if (collided) { // collision
 		if (!outside_plot) {
 			if (!ped_coll && !coll_cube.is_all_zeros()) { // should always get here if !ped_coll?
-				if (treat_bcube_as_vcylin(coll_cube, get_height())) { // vertical cylinder
-					float const r_sum(radius + 0.25*(coll_cube.dx() + coll_cube.dy()));
-					point const center(coll_cube.xc(), coll_cube.yc(), pos.z);
-					pos = center + r_sum*(pos - center).get_norm();
-				}
-				else { // cube
-					float const travel_dist(p2p_dist_xy(pos, prev_pos));
-					sphere_cube_int_update_pos(pos, radius, coll_cube, prev_pos, 1); // resolve the collision; skip_z=1
-					point const dest_pos(get_obj_avoid_move_pos(dir, pos, radius, coll_cube));
-					vector3d target_dir((dest_pos - prev_pos).get_norm());
-					pos = prev_pos + travel_dist*target_dir;
-					update_velocity_dir(target_dir, 0.5*delta_dir); // slow turn - has no effect?
-				}
+				float const travel_dist(p2p_dist_xy(pos, prev_pos));
+				sphere_cube_int_update_pos(pos, radius, coll_cube, prev_pos, 1); // resolve the collision; skip_z=1
+				point const dest_pos(get_obj_avoid_move_pos(dir, pos, radius, coll_cube));
+				vector3d target_dir((dest_pos - prev_pos).get_norm());
+				pos = prev_pos + travel_dist*target_dir;
+				update_velocity_dir(target_dir, 0.5*delta_dir); // slow turn - has no effect?
 				collided = 0; // handled
 			}
 			else {
