@@ -20,6 +20,8 @@ extern vector<light_source> dl_sources;
 extern city_params_t city_params;
 
 
+bool in_building_gameplay_mode();
+
 float get_clamped_fticks() {return min(fticks, 4.0f);} // clamp to 100ms
 
 float car_t::get_max_lookahead_dist() const {return (get_length() + city_params.road_width);} // extend one car length + one road width in front
@@ -204,9 +206,10 @@ void car_t::complete_turn_and_swap_dim() {
 	entering_city = 0; // clear flag in case we turned into the city
 }
 
-void car_t::person_in_the_way() {
+void car_t::person_in_the_way(bool is_player) {
 	static rand_gen_t rgen;
-	if ((rgen.rand()&3) == 0) {honk_horn_if_close_and_fast();}
+	unsigned const rgen_mod_val((in_building_gameplay_mode() && !is_player) ? 16 : 4); // honk less often for zombies since they're often in the road
+	if ((rgen.rand() % rgen_mod_val) == 0) {honk_horn_if_close_and_fast();}
 	decelerate_fast(); // must be after honk logic
 }
 
@@ -1006,12 +1009,12 @@ bool car_manager_t::check_car_for_ped_colls(car_t &car) const {
 
 	for (auto i = peds.begin(); i != peds.end(); ++i) {
 		if (coll_area.contains_pt_xy_exp(i->pos, i->radius)) {
-			car.person_in_the_way();
+			car.person_in_the_way(0); // is_player=0
 			return 1;
 		}
 	}
 	if (check_player && coll_area.contains_pt_xy_exp(player_pos, CAMERA_RADIUS)) { // check for player collision
-		car.person_in_the_way();
+		car.person_in_the_way(1); // is_player=1
 		return 1;
 	}
 	return 0;
