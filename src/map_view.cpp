@@ -24,7 +24,7 @@ extern int world_mode, display_mode, num_smileys, DISABLE_WATER, cache_counter, 
 extern unsigned show_map_view_fractal;
 extern float zmax_est, zmin, zmax, water_plane_z, water_h_off, glaciate_exp, glaciate_exp_inv, vegetation, relh_adj_tex, temperature, mesh_height_scale, mesh_scale;
 extern int coll_id[];
-extern point surface_pos;
+extern point surface_pos, camera_last_pos;
 extern obj_group obj_groups[];
 extern coll_obj_group coll_objects;
 
@@ -374,6 +374,7 @@ void teleport_to_map_location() {
 	last_update_frame = frame_counter;
 	float const xval(surface_pos.x + map_x), yval(surface_pos.y + map_y);
 	place_player_at_xy(xval, yval);
+	camera_last_pos = surface_pos; // avoid slow falling and rising on map teleport
 	map_x = map_y = 0.0; // recenter on the new location
 }
 
