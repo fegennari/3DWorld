@@ -567,6 +567,13 @@ void move_to_closest_pt_outside_cube(cube_t const &c, point &pos) {
 	get_closest_dim_dir_xy(cube_t(pos, pos), c, dim, dir);
 	pos[dim] = c.d[dim][dir]; // move to the edge of the avoid cube
 }
+point get_obj_avoid_move_pos(vector3d const &target_dir, point const &pos, float radius, cube_t const &c) { // Note: target_dir does not need to be normalized
+	bool const dim(fabs(target_dir.x) < fabs(target_dir.y)); // primary movement dim
+	bool const dir(dim ? (c.xc() < pos.x) : (c.yc() < pos.y)); // direction to shift in the other dim
+	point ret(pos);
+	ret[!dim] = c.d[!dim][dir] + (dir ? 1.0 : -1.0)*1.1*radius; // move to the side to avoid this object
+	return ret;
+}
 
 // pedestrian_t
 point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_plot_bcube, ped_manager_t const &ped_mgr, int &debug_state) const {
@@ -611,13 +618,7 @@ point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_pl
 				pedestrian_t dest_ped(*this);
 				dest_ped.pos = dest_pos;
 				cube_t coll_cube;
-				
-				if (ped_mgr.check_streetlight_sphere_coll(dest_ped, coll_cube)) {
-					vector3d const delta(dest_pos - pos);
-					bool const dim(fabs(delta.x) < fabs(delta.y)); // primary movement dim
-					bool const dir(dim ? (coll_cube.xc() < dest_pos.x) : (coll_cube.yc() < dest_pos.y)); // direction to shift in the other dim
-					dest_pos[!dim] = coll_cube.d[!dim][dir] + (dir ? 1.0 : -1.0)*1.1*radius; // move to the side to avoid this object
-				}
+				if (ped_mgr.check_streetlight_sphere_coll(dest_ped, coll_cube)) {dest_pos = get_obj_avoid_move_pos((dest_pos - pos), dest_pos, radius, coll_cube);}
 			}
 			if (!in_cur_plot) { // went outside the current plot
 				cube_t union_plot_bcube(plot_bcube);
@@ -962,10 +963,29 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	}
 	if (collided) { // collision
 		if (!outside_plot) {
-			point const cur_pos(pos);
-			pos = prev_pos; // restore to previous valid pos unless we're outside the plot
-			// if prev pos is also invalid, undo the restore to avoid getting this ped stuck in a collision object
-			if (!is_valid_pos(colliders, at_dest, &ped_mgr) || check_road_coll(ped_mgr, plot_bcube, next_plot_bcube)) {pos = cur_pos;}
+			if (!ped_coll && !coll_cube.is_all_zeros()) { // should always get here if !ped_coll?
+				if (treat_bcube_as_vcylin(coll_cube, get_height())) { // vertical cylinder
+					float const r_sum(radius + 0.25*(coll_cube.dx() + coll_cube.dy()));
+					point const center(coll_cube.xc(), coll_cube.yc(), pos.z);
+					pos = center + r_sum*(pos - center).get_norm();
+				}
+				else { // cube
+					float const travel_dist(p2p_dist_xy(pos, prev_pos));
+					sphere_cube_int_update_pos(pos, radius, coll_cube, prev_pos, 1); // resolve the collision; skip_z=1
+					point const dest_pos(get_obj_avoid_move_pos(dir, pos, radius, coll_cube));
+					vector3d target_dir((dest_pos - prev_pos).get_norm());
+					pos = prev_pos + travel_dist*target_dir;
+					update_velocity_dir(target_dir, 0.5*delta_dir); // slow turn - has no effect?
+				}
+				collided = 0; // handled
+			}
+			else {
+				point const cur_pos(pos);
+				pos = prev_pos; // restore to previous valid pos unless we're outside the plot
+				cube_t new_coll_cube; // unused
+				// if prev pos is also invalid, undo the restore to avoid getting this ped stuck in a collision object
+				if (!is_valid_pos(colliders, at_dest, new_coll_cube, &ped_mgr) || check_road_coll(ped_mgr, plot_bcube, next_plot_bcube, new_coll_cube)) {pos = cur_pos;}
+			}
 		}
 		if (++stuck_count > 8) {
 			int debug_state(0); // unused
@@ -991,7 +1011,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 				collided = 0; // handled
 			}
 		}
-		else { // static object collision (should be rare if path_finder does a good job), or in_the_road (need this to get around traffic lights, etc.)
+		else if (collided) { // static object collision (should be rare if path_finder does a good job), or in_the_road (need this to get around traffic lights, etc.)
 			if (!follow_player && plot != dest_plot) { // not in home plot
 				road_plot_t const &cur_plot(ped_mgr.get_city_plot_for_peds(city, plot));
 
@@ -1013,7 +1033,6 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 				// try a random new direction; ideally we want to choose something consistent away from the object, but we don't have the object or direction
 				vector3d new_dir(rgen.signed_rand_vector_spherical_xy());
 				if (dot_product_xy(vel, new_dir) > 0.0) {new_dir.negate();} // negate if pointing in the same dir
-				//update_velocity_dir(new_dir.get_norm(), 0.5*delta_dir); // can get stuck against an object or travel through a wall
 				set_velocity(new_dir);
 			}
 		}
