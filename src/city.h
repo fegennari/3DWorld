@@ -891,6 +891,8 @@ public:
 	bool choose_dest_building_or_parked_car(pedestrian_t &ped);
 	unsigned get_next_plot(pedestrian_t &ped, int exclude_plot=-1) const;
 	void move_ped_to_next_plot(pedestrian_t &ped);
+	// cars
+	bool has_cars_in_city(unsigned city_ix) const {return (city_ix < cars_by_city.size());}
 	bool has_nearby_car(pedestrian_t const &ped, bool road_dim, float delta_time, vect_cube_t *dbg_cubes=nullptr) const;
 	bool has_nearby_car_on_road(pedestrian_t const &ped, bool dim, unsigned road_ix, float delta_time, vect_cube_t *dbg_cubes) const;
 	bool has_car_at_pt(point const &pos, unsigned city, bool is_parked) const;

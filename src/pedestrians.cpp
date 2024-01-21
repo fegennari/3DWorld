@@ -803,7 +803,8 @@ void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, 
 	if (in_the_road) {
 		if (!check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube)) {stop(); return;}
 	}
-	else if (city_params.cars_use_driveways) { // in a plot; check for cars if about to enter a driveway that's in use
+	else if (city_params.cars_use_driveways && ped_mgr.has_cars_in_city(city)) { // in a plot
+		// check for cars if about to enter a driveway that's in use
 		float const sw_width(get_sidewalk_width());
 		dw_query_t const dw(ped_mgr.get_nearby_driveway(city, plot, pos, max(sw_width, radius)));
 
