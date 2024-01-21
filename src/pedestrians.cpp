@@ -1044,6 +1044,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		float const xy_mag_inv(1.0/dir.xy_mag()); // normalize using XY only
 		dir.x *= xy_mag_inv; dir.y *= xy_mag_inv;
 	}
+	if (follow_player && !next_follow_player) {target_pos = all_zeros;} // target_pos is no longer valid when we stop following the player
 	follow_player = next_follow_player;
 	collided = ped_coll = 0; // reset for next frame
 }
