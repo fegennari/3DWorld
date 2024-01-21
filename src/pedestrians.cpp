@@ -607,6 +607,17 @@ point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_pl
 				}
 				dest_pos    = next_plot_bcube.closest_pt(pos_adj);
 				debug_state = 3;
+				// check if this is an invalid pos
+				pedestrian_t dest_ped(*this);
+				dest_ped.pos = dest_pos;
+				cube_t coll_cube;
+				
+				if (ped_mgr.check_streetlight_sphere_coll(dest_ped, coll_cube)) {
+					vector3d const delta(dest_pos - pos);
+					bool const dim(fabs(delta.x) < fabs(delta.y)); // primary movement dim
+					bool const dir(dim ? (coll_cube.xc() < dest_pos.x) : (coll_cube.yc() < dest_pos.y)); // direction to shift in the other dim
+					dest_pos[!dim] = coll_cube.d[!dim][dir] + (dir ? 1.0 : -1.0)*1.1*radius; // move to the side to avoid this object
+				}
 			}
 			if (!in_cur_plot) { // went outside the current plot
 				cube_t union_plot_bcube(plot_bcube);
