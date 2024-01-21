@@ -486,7 +486,7 @@ struct streetlights_t {
 
 	void draw_streetlights(draw_state_t &dstate, bool shadow_only, bool always_on) const;
 	void add_streetlight_dlights(vector3d const &xlate, cube_t &lights_bcube, bool always_on) const;
-	bool check_streetlight_sphere_coll_xy(point const &center, float radius) const;
+	bool check_streetlight_sphere_coll_xy(point const &center, float radius, cube_t &coll_cube) const;
 	bool proc_streetlight_sphere_coll(point &pos, float radius, vector3d const &xlate, vector3d *cnorm) const;
 	bool line_intersect_streetlights(point const &p1, point const &p2, float &t) const;
 	void sort_streetlights_by_yx() {sort(streetlights.begin(), streetlights.end());}
@@ -537,7 +537,7 @@ struct road_isec_t : public cube_t {
 	point get_stop_sign_pos  (unsigned n) const;
 	float get_stop_sign_height  () const {return 0.075*(dx() + dy());}
 	float get_street_sign_height() const {return SIGN_STOPSIGN_HEIGHT*get_stop_sign_height();}
-	bool check_sphere_coll(point const &pos, float radius) const;
+	bool check_sphere_coll(point const &pos, float radius, cube_t &coll_cube) const;
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, float dist, vector3d *cnorm) const;
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
 	void draw_stoplights_and_street_signs(road_draw_state_t &dstate, vector<road_t> const &roads, unsigned cur_city, bool shadow_only) const;
@@ -703,8 +703,8 @@ struct pedestrian_t : public person_base_t { // city pedestrian
 	bool check_ped_ped_coll(ped_manager_t const &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, float delta_dir);
 	bool check_ped_ped_coll_stopped(vector<pedestrian_t> &peds, unsigned pid);
 	bool check_inside_plot(ped_manager_t &ped_mgr, point const &prev_pos, cube_t &plot_bcube, cube_t &next_plot_bcube);
-	bool check_road_coll(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube) const;
-	bool is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest, ped_manager_t const *const ped_mgr) const;
+	bool check_road_coll(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, cube_t &coll_cube) const;
+	bool is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest, cube_t &coll_cube, ped_manager_t const *const ped_mgr) const;
 	bool is_possibly_valid_dest_pos(point const &dpos, vect_cube_t const &colliders) const;
 	bool try_place_in_plot(cube_t const &plot_cube, vect_cube_t const &colliders, unsigned plot_id, rand_gen_t &rgen);
 	point get_dest_pos(cube_t const &plot_bcube, cube_t const &next_plot_bcube, ped_manager_t const &ped_mgr, int &debug_state) const;
@@ -885,8 +885,8 @@ public:
 	bool is_city_residential(unsigned city_ix) const;
 	car_manager_t const &get_car_manager() const {return car_manager;}
 	void choose_new_ped_plot_pos(pedestrian_t &ped);
-	bool check_isec_sphere_coll(pedestrian_t const &ped) const;
-	bool check_streetlight_sphere_coll(pedestrian_t const &ped) const;
+	bool check_isec_sphere_coll       (pedestrian_t const &ped, cube_t &coll_cube) const;
+	bool check_streetlight_sphere_coll(pedestrian_t const &ped, cube_t &coll_cube) const;
 	bool mark_crosswalk_in_use(pedestrian_t const &ped);
 	bool choose_dest_building_or_parked_car(pedestrian_t &ped);
 	unsigned get_next_plot(pedestrian_t &ped, int exclude_plot=-1) const;

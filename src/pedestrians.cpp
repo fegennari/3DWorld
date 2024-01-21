@@ -159,7 +159,7 @@ bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_p
 	return 1; // allow peds to cross the road; don't need to check for building or other object collisions
 }
 
-bool pedestrian_t::check_road_coll(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube) const {
+bool pedestrian_t::check_road_coll(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, cube_t &coll_cube) const {
 	// Note: streetlights and stoplights now sit on the edges between sidewalks and roads, so they contribute to collisions in both of these areas;
 	// this step can only be skipped if the player is inside a plot, and neither on the sidewalk or in the road
 	if (!in_the_road && plot_bcube.contains_pt_xy(pos)) return 0;
@@ -168,23 +168,23 @@ bool pedestrian_t::check_road_coll(ped_manager_t const &ped_mgr, cube_t const &p
 	pbce .expand_by_xy(expand);
 	npbce.expand_by_xy(expand);
 	if ((!pbce.contains_pt_xy(pos)) && (!npbce.contains_pt_xy(pos))) return 0; // ped is too far from the edge of the road to collide with streetlights or stoplights
-	if (ped_mgr.check_isec_sphere_coll       (*this)) return 1;
-	if (ped_mgr.check_streetlight_sphere_coll(*this)) return 1;
+	if (ped_mgr.check_isec_sphere_coll       (*this, coll_cube)) return 1;
+	if (ped_mgr.check_streetlight_sphere_coll(*this, coll_cube)) return 1;
 	return 0;
 }
 
+// all tall, thin, and square footprint colliders happen to be vertical cylinders (trees, power poles, streetlights, flags, etc.)
+bool treat_bcube_as_vcylin(cube_t const &c, float height) {
+	float const dx(c.dx()), dy(c.dy()), dz(c.dz());
+	return (dz > height && dx < height && dy < height && fabs(dx - dy) < 0.05*min(dx, dy));
+}
 bool check_collider_coll(cube_t const &c, point const &pos, float radius, float height) {
 	if (!sphere_cube_intersect_xy(pos, radius, c)) return 0;
-	// hack: all tall, thin, and square footprint colliders happen to be vertical cylinders (trees, power poles, streetlights, flags, etc.)
-	float const dx(c.dx()), dy(c.dy()), dz(c.dz());
-
-	if (dz > height && dx < height && dy < height && fabs(dx - dy) < 0.05*min(dx, dy)) {
-		float const r_sum(radius + 0.25*(dx + dy));
-		if (!dist_xy_less_than(pos, c.get_cube_center(), r_sum)) return 0;
-	}
-	return 1;
+	if (!treat_bcube_as_vcylin(c, height))         return 1;
+	float const r_sum(radius + 0.25*(c.dx() + c.dy()));
+	return dist_xy_less_than(pos, c.get_cube_center(), r_sum);
 }
-bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest, ped_manager_t const *const ped_mgr) const {
+bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest, cube_t &coll_cube, ped_manager_t const *const ped_mgr) const {
 	if (in_the_road) return 1; // not in a plot, no collision detection needed
 	unsigned building_id(0);
 	// double the radius to add padding to account for inaccuracy, but not when following the player as this can block the path between the garage/shed and house;
@@ -194,9 +194,10 @@ bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest,
 	float const detail_radius(zombie_follow ? get_coll_radius() : 2.0*radius);
 
 	if (check_buildings_ped_coll(pos, bcube_radius, detail_radius, plot, building_id)) {
+		coll_cube = get_building_bcube(dest_bldg);
 		if (!has_dest_bldg || building_id != dest_bldg) return 0; // collided with the wrong building
 		float const enter_radius(0.25*radius);
-		if (!get_building_bcube(dest_bldg).contains_pt_xy_exp(pos, enter_radius))              return 1; // collided with dest building, but not yet entered
+		if (!coll_cube.contains_pt_xy_exp(pos, enter_radius)) return 1; // collided with dest building, but not yet entered
 		if (!check_buildings_ped_coll(pos, enter_radius, 2.0*enter_radius, plot, building_id)) return 1; // test this building at a smaller radius to make sure we've entered
 		bool const ret(!at_dest);
 		ped_at_dest = 1;
@@ -208,6 +209,7 @@ bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest,
 		if (i->x2() < xmin) continue; // to the left
 		if (i->x1() > xmax) break; // to the right - sorted from left to right, so no more colliders can intersect - done
 		if (!check_collider_coll(*i, pos, radius, height)) continue;
+		coll_cube = *i;
 		if (!has_dest_car || !ped_mgr || plot != dest_plot) return 0; // not looking for car intersection
 		
 		if (i->intersects_xy(dest_car_center)) { // check if collider is a parking lot car group that contains the dest car
@@ -362,7 +364,8 @@ bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, vect_cube_t const 
 	pos.z += radius; // place on top of the plot
 	plot   = next_plot = dest_plot = plot_id; // set next_plot and dest_plot as well so that they're valid for the first frame
 	bool temp_at_dest(0); // we don't want to set at_dest from this call
-	if (!is_valid_pos(colliders, temp_at_dest, nullptr)) return 0; // plot == next_plot; return if failed
+	cube_t coll_cube; // unused
+	if (!is_valid_pos(colliders, temp_at_dest, coll_cube, nullptr)) return 0; // plot == next_plot; return if failed
 	return 1; // success
 }
 
@@ -886,21 +889,23 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	// reset state for next frame; these may be set back to 1 below; don't reset if we were collided with, since this will skip the check_inside_plot() call below
 	if (!collided) {at_crosswalk = in_the_road = 0;}
 	vect_cube_t const &colliders(ped_mgr.get_colliders_for_plot(city, plot));
+	point const player_pos(get_player_pos_bs()); // in building space
+	cube_t coll_cube;
 	bool outside_plot(0), next_follow_player(0);
+	int debug_state(0); // unused
 
 	if (collided) {} // already collided with a previous ped this frame, handled below
-	else if (!check_inside_plot(ped_mgr, prev_pos, plot_bcube, next_plot_bcube) && !follow_player) { // this call will set at_crosswalk and in_the_road
+	else if (!check_inside_plot(ped_mgr, prev_pos, plot_bcube, next_plot_bcube) && !follow_player) { // this call will set at_crosswalk and in_the_road; coll_cube unset
 		collided = outside_plot = 1; // outside the plot, treat as a collision with the plot bounds, but not if following the player
 	}
-	else if (!is_valid_pos(colliders, at_dest, &ped_mgr))           {collided = 1;} // collided with a static collider
-	else if (check_road_coll(ped_mgr, plot_bcube, next_plot_bcube)) {collided = 1;} // collided with something in the road (stoplight, streetlight, etc.)
-	else if (check_ped_ped_coll(ped_mgr, peds, pid, delta_dir))     {collided = 1;} // collided with another pedestrian
+	else if (!is_valid_pos(colliders, at_dest, coll_cube, &ped_mgr))           {collided = 1;} // collided with a static collider
+	else if (check_road_coll(ped_mgr, plot_bcube, next_plot_bcube, coll_cube)) {collided = 1;} // collided with something in the road (stoplight, streetlight, etc.)
+	else if (check_ped_ped_coll(ped_mgr, peds, pid, delta_dir))                {collided = 1;} // collided with another pedestrian; coll_cube unset since ped is dynamic
 	else { // no collisions
-		vector3d dest_pos;
+		point dest_pos;
 
 		if (is_zombie && zombies_can_target_player()) { // target the player if visible
 			float const view_dist(2.0*city_params.road_spacing); // tile or city block
-			point const player_pos(get_player_pos_bs()); // in building space
 
 			if (dist_xy_less_than(pos, player_pos, view_dist) && overlaps_player_in_z(player_pos)) { // if player is close and not on a roof
 				if (!check_city_building_line_coll_bs_any(get_eye_pos(), (player_pos + camera_zh*plus_z))) { // player is visible (approximate)
@@ -915,10 +920,8 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 				}
 			}
 		}
-		if (!next_follow_player) {
-			int debug_state(0); // unused
-			dest_pos = get_dest_pos(plot_bcube, next_plot_bcube, ped_mgr, debug_state);
-		}
+		if (!next_follow_player) {dest_pos = get_dest_pos(plot_bcube, next_plot_bcube, ped_mgr, debug_state);}
+
 		if (dest_pos != pos) {
 			bool update_path(0);
 

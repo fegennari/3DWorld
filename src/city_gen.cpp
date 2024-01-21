@@ -2036,10 +2036,10 @@ public:
 		isec->mark_crosswalk_in_use(dim, dir);
 		return 1;
 	}
-	bool check_isec_sphere_coll(point const &pos, float radius) const {
+	bool check_isec_sphere_coll(point const &pos, float radius, cube_t &coll_cube) const {
 		road_isec_t const *isec(find_isec_containing_pt(pos, 1, 3)); // 2-way can be skipped because there's no light/crosswalk
 		if (isec == nullptr) return 0;
-		return isec->check_sphere_coll(pos, radius);
+		return isec->check_sphere_coll(pos, radius, coll_cube);
 	}
 	int get_nearby_road_ix(point const &pos, bool road_dim) const {
 		for (auto r = roads.begin(); r != roads.end(); ++r) {
@@ -2832,11 +2832,11 @@ bool ped_manager_t::mark_crosswalk_in_use(pedestrian_t const &ped) {
 	bool const dim(fabs(ped.dir.y) > fabs(ped.dir.x)), dir(ped.dir[dim] > 0); // something like this?
 	return road_gen.get_city(ped.city).mark_crosswalk_in_use(ped.pos, dim, dir);
 }
-bool ped_manager_t::check_isec_sphere_coll(pedestrian_t const &ped) const {
-	return road_gen.get_city(ped.city).check_isec_sphere_coll(ped.pos, 0.6*ped.radius); // Note: no xlate is required since peds and city are in the same coord space
+bool ped_manager_t::check_isec_sphere_coll(pedestrian_t const &ped, cube_t &coll_cube) const {
+	return road_gen.get_city(ped.city).check_isec_sphere_coll(ped.pos, 0.6*ped.radius, coll_cube); // Note: no xlate is required since peds and city are in the same coord space
 }
-bool ped_manager_t::check_streetlight_sphere_coll(pedestrian_t const &ped) const {
-	return road_gen.get_city(ped.city).check_streetlight_sphere_coll_xy(ped.pos, ped.radius);
+bool ped_manager_t::check_streetlight_sphere_coll(pedestrian_t const &ped, cube_t &coll_cube) const {
+	return road_gen.get_city(ped.city).check_streetlight_sphere_coll_xy(ped.pos, ped.radius, coll_cube);
 }
 int ped_manager_t::get_road_ix_for_ped_crossing(pedestrian_t const &ped, bool road_dim) const { // returns -1 on failure (ped not in the road)
 	return road_gen.get_city(ped.city).get_nearby_road_ix(ped.pos, road_dim);

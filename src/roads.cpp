@@ -431,12 +431,14 @@ bool streetlights_t::proc_streetlight_sphere_coll(point &center, float radius, v
 	return 0;
 }
 
-bool streetlights_t::check_streetlight_sphere_coll_xy(point const &center, float radius) const {
+bool streetlights_t::check_streetlight_sphere_coll_xy(point const &center, float radius, cube_t &coll_cube) const {
 	float const pradius(streetlight_ns::get_streetlight_pole_radius()), rtot(pradius + radius), y_end(center.y + rtot);
 
 	for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {
 		if (i->pos.y > y_end) break; // streetlights are sorted by y-val; if this holds, we can no longer intersect
-		if (dist_xy_less_than(i->pos, center, rtot)) return 1;
+		if (!dist_xy_less_than(i->pos, center, rtot)) continue;
+		coll_cube.set_from_sphere(i->pos, pradius);
+		return 1;
 	}
 	return 0;
 }
@@ -635,14 +637,17 @@ point road_isec_t::get_stop_sign_pos(unsigned n) const {
 	return pos;
 }
 
-bool road_isec_t::check_sphere_coll(point const &pos, float radius) const { // used for peds
+bool road_isec_t::check_sphere_coll(point const &pos, float radius, cube_t &coll_cube) const { // used for peds
 	//if (has_stopsign) {} // not handled here
 	if (!has_stoplight) return 0; // no stoplights
 	if (!sphere_cube_intersect_xy(pos, radius, *this)) return 0;
 
 	for (unsigned n = 0; n < 4; ++n) {
 		if (!(conn & (1 << n))) continue; // no road in this dir
-		if (sphere_cube_intersect(pos, radius, get_stoplight_cube(n))) return 1;
+		cube_t const sl_cube(get_stoplight_cube(n));
+		if (!sphere_cube_intersect(pos, radius, sl_cube)) continue;
+		coll_cube = sl_cube;
+		return 1;
 	}
 	return 0;
 }
