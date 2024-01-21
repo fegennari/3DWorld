@@ -974,9 +974,7 @@ bool building_t::maybe_add_fireplace_to_room(rand_gen_t &rgen, room_t const &roo
 	fireplace.d[dim][ dir] = wall_pos; // flush with the house wall
 	fireplace.d[dim][!dir] = wall_pos + depth_signed; // extend out into the room
 	fireplace.z2() -= top_gap; // shorten slightly
-	cube_t room_exp(room);
-	room_exp.expand_by_xy(0.5*get_wall_thickness()); // allow fireplace to extend slightly into room walls
-	if (!room_exp.contains_cube_xy(fireplace)) return 0; // fireplace not in this room
+	if (!room.contains_cube_xy_exp(fireplace, -0.5*get_wall_thickness())) return 0; // fireplace not in this room; allow fireplace to extend slightly into room walls
 	// the code below should be run at most once per building
 	cube_t fireplace_ext(fireplace);
 	fireplace_ext.d[dim][!dir] = fireplace.d[dim][!dir] + 0.5*depth_signed; // extend out into the room even further for clearance
@@ -3729,11 +3727,9 @@ void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &r
 	}
 	if (light_placed) {
 		cube_t &cur_light(lights.back());
-		cube_t light_exp(cur_light);
-		light_exp.expand_by_xy(get_doorway_width());
 		
 		// check doors if placed off-center or centered but close to the room bounds; only needed for non-centered lights, lights in small rooms, and backrooms
-		if (light_placed == 2 || is_room_backrooms(room) || !room.contains_cube_xy(light_exp)) {
+		if (light_placed == 2 || is_room_backrooms(room) || !room.contains_cube_xy_exp(cur_light, get_doorway_width())) {
 			cube_t test_cube(cur_light);
 			test_cube.z1() -= 0.4*window_vspacing; // lower Z1 so that it's guaranteed to overlap a door
 

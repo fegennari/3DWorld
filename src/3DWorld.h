@@ -557,6 +557,10 @@ struct cube_t { // size = 24; Note: AABB, not actually a cube
 		UNROLL_2X(if (cube.d[i_][0] < d[i_][0] || cube.d[i_][1] > d[i_][1]) return 0;)
 		return 1;
 	}
+	bool contains_cube_xy_exp(const cube_t &cube, float exp) const {
+		UNROLL_2X(if (cube.d[i_][0]-exp < d[i_][0] || cube.d[i_][1]+exp > d[i_][1]) return 0;)
+			return 1;
+	}
 	bool contains_cube_xy_no_adj(const cube_t &cube) const {
 		UNROLL_2X(if (cube.d[i_][0] <= d[i_][0] || cube.d[i_][1] >= d[i_][1]) return 0;)
 		return 1;

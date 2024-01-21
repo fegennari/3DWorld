@@ -711,7 +711,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 
 			for (auto i = colliders.begin(); i != colliders.end(); ++i) {
 				// exclude any cubes contained in the plot, since they're redundant; maybe shouldn't do this if pos is inside avoid_area?
-				if (!avoid_area.contains_cube_xy(*i)) {add_and_expand_ped_avoid_cube(*i, avoid, expand, height);}
+				if (!avoid_area.contains_cube_xy_exp(*i, expand)) {add_and_expand_ped_avoid_cube(*i, avoid, expand, height);}
 			}
 			return; // done
 		}
