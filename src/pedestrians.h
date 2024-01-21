@@ -42,7 +42,7 @@ struct person_base_t : public waiting_obj_t {
 	point get_eye_pos() const {return (pos + vector3d(0.0, 0.0, (EYE_HEIGHT_RATIO*get_height() - radius)));}
 	bool target_valid() const {return (target_pos != all_zeros);}
 	bool is_waiting_or_stopped() const {return (speed == 0.0 || is_stopped || (in_building && waiting_start > 0));} // city peds normally have waiting_start > 0
-	void set_velocity(vector3d const &v) {vel = v*(speed/v.mag());} // normalize to original velocity
+	void set_velocity(vector3d const &v);
 	void stop();
 	void go();
 	void wait_for(float seconds); // for building people

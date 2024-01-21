@@ -105,6 +105,10 @@ float pedestrian_t::get_speed_mult() const { // run across the street if there a
 	return ((in_the_road && city_params.num_cars > 0) ? CROSS_SPEED_MULT : 1.0);
 }
 
+void person_base_t::set_velocity(vector3d const &v) {
+	float const vmag(v.mag());
+	if (vmag > TOLERANCE) {vel = v*(speed/vmag);} // normalize to original velocity; avoid divide-by-zero
+}
 void person_base_t::stop() {
 	//dir = vel.get_norm(); // ???
 	vel = zero_vector;
@@ -334,6 +338,7 @@ bool pedestrian_t::check_ped_ped_coll(ped_manager_t const &ped_mgr, vector<pedes
 }
 
 void pedestrian_t::update_velocity_dir(vector3d const &force, float delta_dir) {
+	if (force == zero_vector) return;
 	set_velocity((0.1*delta_dir)*force + ((1.0 - delta_dir)/speed)*vel);
 }
 
@@ -995,7 +1000,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			if (dot_product_xy(new_dir, other.vel)/(new_dir.mag()*other.vel.mag()) > 0.9) {new_dir.negate();} // velocities too close together (stuck together?)
 			update_velocity_dir(new_dir.get_norm(), 0.5*delta_dir); // slow turn
 		}
-		else if (outside_plot && !in_the_road && !plot_bcube.contains_pt_xy(pos)) { // attempt to re-enter the plot at the nearest point
+		else if (outside_plot && !in_the_road && !plot_bcube.contains_pt_xy_inclusive(pos)) { // attempt to re-enter the plot at the nearest point
 			point plot_pt(pos);
 			plot_bcube.clamp_pt_xy(plot_pt);
 
