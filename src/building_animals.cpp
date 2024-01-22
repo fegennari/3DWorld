@@ -14,7 +14,7 @@ float const RAT_ATTACK_SPEED = 1.2; // multiplier
 float const RAT_FOV_DP(cos(0.5*RAT_FOV_DEG*TO_RADIANS));
 float const SPIDER_VIEW_FLOORS = 4.0; // view distance in floors
 
-extern bool player_attracts_flies, player_wait_respawn;
+extern bool player_attracts_flies, player_wait_respawn, camera_in_building;
 extern int animate2, camera_surf_collide, frame_counter, display_mode;
 extern float fticks, NEAR_CLIP;
 extern double tfticks, camera_zh;
@@ -685,7 +685,7 @@ void building_t::scare_rat(rat_t &rat, point const &camera_bs) const {
 		if (p.is_waiting_or_stopped()) continue; // only scare if moving
 		scare_rat_at_pos(rat, point(p.pos.x, p.pos.y, p.get_z1()), sight_scare_amt, 1);
 	}
-	if (camera_surf_collide) {
+	if (camera_surf_collide && camera_in_building) {
 		if (global_building_params.min_attack_rats > 0 && in_building_gameplay_mode()) { // rat attacks are enabled in gameplay mode
 			// determine if the player is close and visible for attack strength; can't use a return value of scare_rat_at_pos() due to early termination
 			if (fabs(rat.pos.z - camera_bs.z) < get_window_vspace()) { // same floor
