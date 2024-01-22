@@ -260,7 +260,7 @@ bool check_for_ped_future_coll(point const &p1, point const &p2, vector3d const 
 }
 
 bool pedestrian_t::overlaps_player_in_z(point const &player_pos) const {
-	return (player_pos.z > get_z1() && (player_pos.z - camera_zh) < get_z2());
+	return (player_pos.z > get_z1() && (player_pos.z - get_player_eye_height()) < get_z2());
 }
 
 void pedestrian_t::run_collision_avoid(point const &ipos, vector3d const &ivel, float r2, float dist_sq, bool is_player, vector3d &force) {
@@ -927,7 +927,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			float const view_dist(2.0*city_params.road_spacing); // tile or city block
 
 			if (dist_xy_less_than(pos, player_pos, view_dist) && overlaps_player_in_z(player_pos)) { // if player is close and not on a roof
-				if (!check_city_building_line_coll_bs_any(get_eye_pos(), (player_pos + camera_zh*plus_z))) { // player is visible (approximate)
+				if (!check_city_building_line_coll_bs_any(get_eye_pos(), player_pos)) { // player is visible (approximate)
 					// only follow player if there's no object blocking the path (such as a fence, wall, or hedge)
 					bool const check_buildings(0); // check_city_building_line_coll_bs_any() should handle buildings
 
