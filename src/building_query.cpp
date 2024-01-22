@@ -1639,12 +1639,7 @@ bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radiu
 				if (point_in_polygon_2d(pr.x, pr.y, points.data(), points.size())) return 1; // XY plane test for top surface
 			}
 			else { // cube
-				if (xy_radius > 0.0) {
-					cube_t cube(*i);
-					cube.expand_by(xy_radius);
-					if (cube.contains_pt(pr)) return 1;
-				}
-				else if (i->contains_pt(pr)) return 1;
+				if (i->contains_pt_exp_xy_only(pr, xy_radius)) return 1;
 			}
 		} // for i
 	}
