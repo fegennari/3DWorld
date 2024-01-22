@@ -29,7 +29,7 @@ bool in_building_gameplay_mode(); // from building_gameplay.cpp
 bool ai_follow_player();
 void get_dead_players_in_building(vector<dead_person_t> &dead_players, building_t const &building); // from building_gameplay.cpp
 bool check_city_building_line_coll_bs_any(point const &p1, point const &p2);
-bool check_buildings_ped_coll(point const &pos, float bcube_radius, float detail_radius, unsigned plot_id, unsigned &building_id);
+bool check_buildings_ped_coll(point const &pos, float bcube_radius, float detail_radius, unsigned plot_id, unsigned &building_id, cube_t *coll_cube);
 bool check_line_int_xy(vect_cube_t const &c, point const &p1, point const &p2);
 void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool alert_other_zombies=0, bool high_priority=0, float gain=1.0, float pitch=1.0);
 int register_ai_player_coll(uint8_t &has_key, float height);
@@ -197,12 +197,11 @@ bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest,
 	float const bcube_radius (zombie_follow ? get_coll_radius() : 1.0*radius);
 	float const detail_radius(zombie_follow ? get_coll_radius() : 2.0*radius);
 
-	if (check_buildings_ped_coll(pos, bcube_radius, detail_radius, plot, building_id)) {
-		coll_cube = get_building_bcube(dest_bldg);
+	if (check_buildings_ped_coll(pos, bcube_radius, detail_radius, plot, building_id, &coll_cube)) {
 		if (!has_dest_bldg || building_id != dest_bldg) return 0; // collided with the wrong building
 		float const enter_radius(0.25*radius);
-		if (!coll_cube.contains_pt_xy_exp(pos, enter_radius)) return 1; // collided with dest building, but not yet entered
-		if (!check_buildings_ped_coll(pos, enter_radius, 2.0*enter_radius, plot, building_id)) return 1; // test this building at a smaller radius to make sure we've entered
+		if (!get_building_bcube(dest_bldg).contains_pt_xy_exp(pos, enter_radius)) return 1; // collided with dest building, but not yet entered
+		if (!check_buildings_ped_coll(pos, enter_radius, 2.0*enter_radius, plot, building_id, nullptr)) return 1; // test this building at a smaller radius to make sure we've entered
 		bool const ret(!at_dest);
 		ped_at_dest = 1;
 		return ret; // only valid if we just reached our dest
@@ -931,7 +930,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 					// only follow player if there's no object blocking the path (such as a fence, wall, or hedge)
 					bool const check_buildings(0); // check_city_building_line_coll_bs_any() should handle buildings
 
-					if (!check_path_blocked(ped_mgr, player_pos, check_buildings)) {
+					if (!check_path_blocked(ped_mgr, player_pos, check_buildings)) { // check fences, walls, hedges, trees, etc.
 						next_follow_player = 1;
 						dest_pos = player_pos;
 						if (!follow_player) {maybe_play_zombie_sound(pos, ssn);} // moan if newly following the player
@@ -953,7 +952,8 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			else { // distant pedestrian - lower update rate
 				update_path = (((frame_counter + ssn) & 63) == 0);
 			}
-			// run only every several frames to reduce runtime; also run when at dest and when close to the current target pos or at the destination
+			// run only every several frames to reduce runtime; also run when at dest and when close to the current target pos or at the destination;
+			// if path finding fails while following the player (and player is visible), move in a straight line to the player
 			if (at_dest || update_path) {run_path_finding(ped_mgr, plot_bcube, next_plot_bcube, colliders, dest_pos);}
 			else if (target_valid() && !next_follow_player) {dest_pos = target_pos;} // use previous frame's dest if valid
 			vector3d dest_dir((dest_pos.x - pos.x), (dest_pos.y - pos.y), 0.0); // zval=0, not normalized

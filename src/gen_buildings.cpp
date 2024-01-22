@@ -4045,7 +4045,8 @@ public:
 		return grid[get_grid_ix(b.bcube.get_cube_center())].bcube;
 	}
 
-	bool check_ped_coll(point const &pos, float bcube_radius, float detail_radius, unsigned plot_id, unsigned &building_id) const { // Note: not thread safe due to static points
+	// Note: not thread safe due to static points
+	bool check_ped_coll(point const &pos, float bcube_radius, float detail_radius, unsigned plot_id, unsigned &building_id, cube_t *coll_cube) const {
 		if (empty()) return 0;
 		assert(plot_id < bix_by_plot.size());
 		vector<unsigned> const &bixes(bix_by_plot[plot_id]); // should be populated in gen()
@@ -4058,7 +4059,8 @@ public:
 			building_t const &building(get_building(*b));
 			if (building.bcube.x1() > bcube.x2()) break; // no further buildings can intersect (sorted by x1)
 			if (!building.bcube.intersects_xy(bcube)) continue;
-			if (building.check_point_or_cylin_contained(pos, detail_radius, points, 0, 0, 0)) {building_id = *b; return 1;} // inc_attic=0, inc_ext_basement=0, inc_roof_acc=0
+			// inc_attic=0, inc_ext_basement=0, inc_roof_acc=0, inc_details=1
+			if (building.check_point_or_cylin_contained(pos, detail_radius, points, 0, 0, 0, 1, coll_cube)) {building_id = *b; return 1;}
 		}
 		return 0;
 	}
@@ -4510,8 +4512,8 @@ bool get_building_door_pos_closest_to(unsigned building_id, point const &target_
 bool check_sphere_coll_building(point const &pos, float radius, bool xy_only, unsigned building_id) {
 	return building_creator_city.check_sphere_coll_building(pos, radius, xy_only, building_id);
 }
-bool check_buildings_ped_coll(point const &pos, float bcube_radius, float detail_radius, unsigned plot_id, unsigned &building_id) {
-	return building_creator_city.check_ped_coll(pos, bcube_radius, detail_radius, plot_id, building_id);
+bool check_buildings_ped_coll(point const &pos, float bcube_radius, float detail_radius, unsigned plot_id, unsigned &building_id, cube_t *coll_cube) {
+	return building_creator_city.check_ped_coll(pos, bcube_radius, detail_radius, plot_id, building_id, coll_cube);
 }
 bool check_line_coll_building(point const &p1, point const &p2, unsigned building_id) {return building_creator_city.check_line_coll_building(p1, p2, building_id);}
 int get_building_bcube_contains_pos(point const &pos) {return building_creator_city.get_building_bcube_contains_pos(pos);}
