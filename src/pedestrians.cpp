@@ -973,17 +973,21 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	}
 	if (collided) { // collision
 		if (!outside_plot) {
+			point const cur_pos(pos);
+
 			if (!ped_coll && !coll_cube.is_all_zeros()) { // should always get here if !ped_coll?
-				float const travel_dist(p2p_dist_xy(pos, prev_pos));
 				sphere_cube_int_update_pos(pos, radius, coll_cube, prev_pos, 1); // resolve the collision; skip_z=1
-				point const dest_pos(get_obj_avoid_move_pos(dir, pos, radius, coll_cube));
-				vector3d target_dir((dest_pos - prev_pos).get_norm());
-				pos = prev_pos + travel_dist*target_dir;
-				update_velocity_dir(target_dir, 0.5*delta_dir); // slow turn - has no effect?
+
+				if (dot_product(dir, (pos - cur_pos)) < 0.0) { // only update pos if sphere_cube_int_update_pos() moved us backward
+					float const travel_dist(p2p_dist_xy(cur_pos, prev_pos));
+					point const dest_pos(get_obj_avoid_move_pos(dir, pos, radius, coll_cube));
+					vector3d target_dir((dest_pos - prev_pos).get_norm());
+					pos = prev_pos + travel_dist*target_dir;
+					update_velocity_dir(target_dir, 0.5*delta_dir); // slow turn - has no effect?
+				}
 				collided = 0; // handled
 			}
 			else {
-				point const cur_pos(pos);
 				pos = prev_pos; // restore to previous valid pos unless we're outside the plot
 				cube_t new_coll_cube; // unused
 				// if prev pos is also invalid, undo the restore to avoid getting this ped stuck in a collision object
@@ -991,10 +995,11 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			}
 		}
 		if (++stuck_count > 8) {
+			float const shift_val(0.1*radius);
 			int debug_state(0); // unused
-			if (target_valid()) {pos += (0.1*radius)*(target_pos - pos).get_norm();} // move toward target_pos if it's valid since this should be a good direction
-			else if (stuck_count > 100) {pos += (0.1*radius)*(get_dest_pos(plot_bcube, next_plot_bcube, ped_mgr, debug_state) - pos).get_norm();} // move to dest if stuck count is high
-			else {pos += rgen.signed_rand_vector_spherical_xy()*(0.1*radius); } // shift randomly by 10% radius to get unstuck
+			if (target_valid()) {pos += shift_val*(target_pos - pos).get_norm();} // move toward target_pos if it's valid since this should be a good direction
+			else if (stuck_count > 100) {pos += shift_val*(get_dest_pos(plot_bcube, next_plot_bcube, ped_mgr, debug_state) - pos).get_norm();} // move to dest if stuck count is high
+			else {pos += shift_val*rgen.signed_rand_vector_spherical_xy();} // shift randomly by 10% radius to get unstuck
 		}
 		if (ped_coll) {
 			assert(colliding_ped < peds.size());
