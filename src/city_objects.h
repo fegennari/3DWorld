@@ -15,7 +15,7 @@ struct textured_mat_t {
 	textured_mat_t(string const &tn, string const &nm_tn, bool ham, colorRGBA const &c, colorRGBA const &mc) :
 		has_alpha_mask(ham), color(c), map_color(mc), tex_name(tn), nm_tex_name(nm_tn) {}
 	colorRGBA get_avg_color() const {return ((tid >= 0) ? texture_color(tid) : map_color).modulate_with(color);} // for overhead map
-	void pre_draw(bool shadow_only);
+	void pre_draw (bool shadow_only);
 	void post_draw(bool shadow_only);
 };
 struct plot_divider_type_t : public textured_mat_t {
@@ -41,7 +41,8 @@ struct city_obj_t : public sphere_t {
 	cube_t const &get_outer_bcube() const {return bcube;}
 	float get_bsphere_radius(bool shadow_only) const {return radius;}
 	void set_bsphere_from_bcube() {*((sphere_t *)this) = bcube.get_bsphere();}
-	static void post_draw(draw_state_t &dstate, bool shadow_only) {}
+	static void pre_draw (draw_state_t &dstate, bool shadow_only) {} // nothing to do
+	static void post_draw(draw_state_t &dstate, bool shadow_only) {} // nothing to do
 	cube_t get_bird_bcube() const {return bcube;}
 	bool check_point_contains_xy(point const &p) const {return bcube.contains_pt_xy(p);}
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const; // default bcube coll, can override in derived class
@@ -73,7 +74,7 @@ struct trashcan_t : public city_obj_t {
 	trashcan_t(point const &pos_, float radius_, float height, bool is_cylin_);
 	float get_cylin_radius() const {assert(is_cylin); return 0.5*bcube.dx();}
 	//cube_t get_bird_bcube() const {} // custom, not single cube; handled during object placement
-	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
@@ -123,14 +124,13 @@ struct swimming_pool_t : public oriented_city_obj_t { // Note: dim and dir are u
 
 struct pool_ladder_t : public oriented_city_obj_t { // for in-ground pools
 	pool_ladder_t(cube_t const &bcube_, bool dim_, bool dir_);
-	static void pre_draw(draw_state_t &dstate, bool shadow_only) {} // nothing to do
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
 
 struct pool_deck_t : public oriented_city_obj_t {
 	unsigned mat_id;
 	pool_deck_t(cube_t const &bcube_, unsigned tid_, bool dim_, bool dir_);
-	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
@@ -194,7 +194,6 @@ struct manhole_t : public city_obj_t {
 struct mailbox_t : public oriented_city_obj_t {
 	mailbox_t(point const &pos_, float height, bool dim_, bool dir_);
 	float get_height() const {return 2.0*radius;}
-	static void pre_draw(draw_state_t &dstate, bool shadow_only) {} // nothing to do
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
 
@@ -205,7 +204,6 @@ struct city_bird_base_t : public city_obj_t {
 
 struct pigeon_t : public city_bird_base_t {
 	pigeon_t(point const &pos_, float height, vector3d const &dir_) : city_bird_base_t(pos_, height, dir_, OBJ_MODEL_PIGEON) {}
-	static void pre_draw(draw_state_t &dstate, bool shadow_only) {} // nothing to do
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
 
@@ -230,7 +228,6 @@ class city_bird_t : public city_bird_base_t {
 	bool check_for_mid_flight_coll(float dir_dp, city_obj_placer_t &placer, rand_gen_t &rgen);
 public:
 	city_bird_t(point const &pos_, float height_, vector3d const &init_dir, colorRGBA const &color_, unsigned loc_ix_, rand_gen_t &rgen);
-	static void pre_draw (draw_state_t &dstate, bool shadow_only) {} // nothing to do
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	void next_frame(float timestep, float delta_dir, bool &tile_changed, bool &bird_moved, city_obj_placer_t &placer, rand_gen_t &rgen);
@@ -246,7 +243,7 @@ struct sign_t : public oriented_city_obj_t {
 
 	sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, colorRGBA const &bc, colorRGBA const &tc,
 		bool two_sided_=0, bool emissive_=0, bool small_=0, bool scrolling_=0);
-	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	void draw_text(draw_state_t &dstate, city_draw_qbds_t &qbds, string const &text_to_draw, float first_char_clip_val=0.0, float last_char_clip_val=0.0) const;
