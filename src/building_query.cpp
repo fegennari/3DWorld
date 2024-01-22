@@ -1610,7 +1610,8 @@ void expand_convex_polygon_xy(vect_point &points, point const &center, float exp
 
 // Note: xy_radius == 0.0 is a point test; xy_radius > 0.0 an approx vert cylinder contains test; xy_radius < 0.0 is an intersection test;
 // attic and basement queries only work with points; the xy_radius != 0 and coll_cube cases are only used with pedestrians
-bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points,
+// return value: 0=no cont, 1=part, 2=attic, 3=ext basement, 4=roof access, 5=detail
+int building_t::check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points,
 	bool inc_attic, bool inc_ext_basement, bool inc_roof_acc, bool inc_details, cube_t *coll_cube) const
 {
 	if (coll_cube) {assert(!inc_attic && !inc_ext_basement && !inc_roof_acc);} // not supported
@@ -1620,12 +1621,12 @@ bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radiu
 	if (inc_ext_basement && point_in_extended_basement_not_basement(pr)) { // extended basement is not rotated
 		// this check must be accurate; since the extended basement is sparse, we need to check every extended basement room
 		// expand by wall thickness to avoid failing when crossing between two rooms that don't exactly line up, such as with conn room boundary with adj building
-		return interior->point_in_ext_basement_room(pr, get_wall_thickness());
+		return (interior->point_in_ext_basement_room(pr, get_wall_thickness()) ? 3 : 0);
 	}
-	if (inc_ext_basement && has_pool() && interior->pool.contains_pt(pr)) return 1; // in the pool
+	if (inc_ext_basement && has_pool() && interior->pool.contains_pt(pr)) return 3; // in the pool
 
 	if (xy_radius > 0.0 || bcube.contains_pt(pos)) { // check parts
-		if (inc_attic && point_in_attic(pr)) return 1;
+		if (inc_attic && point_in_attic(pr)) return 2;
 
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
 			if (pr.z > i->z2() || pr.z < i->z1()) continue; // no overlap in z
@@ -1650,20 +1651,20 @@ bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radiu
 	}
 	if (inc_roof_acc && !is_house && interior) { // check roof access stairs
 		for (stairwell_t const &s : interior->stairwells) {
-			if (s.roof_access && s.contains_pt_xy(pr) && pr.z > s.z1() && pr.z < s.z2() + get_window_vspace()) return 1;
+			if (s.roof_access && s.contains_pt_xy(pr) && pr.z > s.z1() && pr.z < s.z2() + get_window_vspace()) return 4;
 		}
 	}
 	if (inc_details) {
 		for (auto const &i : details) { // AC unit; what else?
 			if (i.contains_pt_exp_xy_only(pr, xy_radius)) {
 				if (coll_cube) {*coll_cube = i;}
-				return 1;
+				return 5;
 			}
 		}
 		for (cube_t const &fence : fences) {
 			if (fence.contains_pt_exp_xy_only(pr, xy_radius)) {
 				if (coll_cube) {*coll_cube = fence;}
-				return 1;
+				return 5;
 			}
 		}
 	}
