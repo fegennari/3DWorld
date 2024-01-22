@@ -1150,6 +1150,30 @@ void mailbox_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 	building_obj_model_loader.draw_model(dstate.s, pos, bcube, get_orient_dir(), WHITE, dstate.xlate, OBJ_MODEL_MAILBOX, shadow_only);
 }
 
+// traffic cones
+
+traffic_cone_t::traffic_cone_t(point const &pos_, float radius_) : city_obj_t(pos_, radius_) {
+	bcube.set_from_point(pos);
+	bcube.expand_by_xy(radius);
+	bcube.z2() += get_height();
+}
+/*static*/ void traffic_cone_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
+	dstate.s.add_uniform_int("two_sided_lighting", 1);
+}
+/*static*/ void traffic_cone_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	dstate.s.add_uniform_int("two_sided_lighting", 0);
+}
+void traffic_cone_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	cube_t base(bcube);
+	base.z2() = bcube.z1() + 0.05*bcube.dz();
+	color_wrapper const cw(colorRGBA(1.0, 0.25, 0.0, 1.0)); // dark orange
+	unsigned const ndiv(max(4U, min(32U, unsigned(2.0f*dist_scale*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, pos)))));
+	dstate.draw_cube(qbds.untex_qbd, base, cw, 1); // skip bottom
+	float const xc(bcube.xc()), yc(bcube.yc());
+	point const ce[2] = {point(xc, yc, base.z2()), point(xc, yc, bcube.z2())};
+	add_cylin_as_tris(qbds.untex_qbd.verts, ce, 0.8*radius, 0.2*radius, cw, ndiv, 0); // draw sides, no end
+}
+
 // birds/pigeons
 
 // pos is at the feet; ignore dir.z

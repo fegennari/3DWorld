@@ -197,6 +197,14 @@ struct mailbox_t : public oriented_city_obj_t {
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
 
+struct traffic_cone_t : public city_obj_t {
+	traffic_cone_t(point const &pos_, float radius_);
+	float get_height() const {return 2.8*radius;}
+	static void pre_draw (draw_state_t &dstate, bool shadow_only);
+	static void post_draw(draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+};
+
 struct city_bird_base_t : public city_obj_t {
 	vector3d dir;
 	city_bird_base_t(point const &pos_, float height, vector3d const &dir, unsigned model_id);
@@ -346,6 +354,7 @@ private:
 	vector<hcap_space_t> hcaps; // handicap signs painted on parking lots
 	vector<manhole_t> manholes;
 	vector<mailbox_t> mboxes;
+	vector<traffic_cone_t> tcones;
 	vector<pigeon_t> pigeons;
 	vector<city_bird_t> birds;
 	vector<sign_t> signs;
@@ -354,8 +363,8 @@ private:
 	vector<newsrack_t> newsracks;
 	vector<park_path_t> ppaths;
 	// index is last obj in group
-	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, divider_groups, pool_groups, plad_groups, pdeck_groups,
-		ppole_groups, hcap_groups, manhole_groups, mbox_groups, pigeon_groups, bird_groups, sign_groups, stopsign_groups, flag_groups, nrack_groups, ppath_groups;
+	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, divider_groups, pool_groups, plad_groups, pdeck_groups, ppole_groups,
+		hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups, stopsign_groups, flag_groups, nrack_groups, ppath_groups;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
 	vect_bird_place_t bird_locs;
