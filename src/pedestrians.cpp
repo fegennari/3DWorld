@@ -188,7 +188,7 @@ bool check_collider_coll(cube_t const &c, point const &pos, float radius, float 
 	float const r_sum(radius + 0.25*(c.dx() + c.dy()));
 	return dist_xy_less_than(pos, c.get_cube_center(), r_sum);
 }
-bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest, cube_t &coll_cube, ped_manager_t const *const ped_mgr) const {
+bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest, cube_t &coll_cube, ped_manager_t const *const ped_mgr, int *coll_bldg_ix) const {
 	if (in_the_road) return 1; // not in a plot, no collision detection needed
 	unsigned building_id(0);
 	// double the radius to add padding to account for inaccuracy, but not when following the player as this can block the path between the garage/shed and house;
@@ -196,9 +196,11 @@ bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest,
 	bool const zombie_follow(is_zombie && zombies_can_target_player());
 	float const bcube_radius (zombie_follow ? get_coll_radius() : 1.0*radius);
 	float const detail_radius(zombie_follow ? get_coll_radius() : 2.0*radius);
+	int const coll_ret(check_buildings_ped_coll(pos, bcube_radius, detail_radius, plot, building_id, &coll_cube));
 
-	if (check_buildings_ped_coll(pos, bcube_radius, detail_radius, plot, building_id, &coll_cube)) {
-		if (!has_dest_bldg || building_id != dest_bldg) return 0; // collided with the wrong building
+	if (coll_ret) {
+		if (coll_ret == 1 && coll_bldg_ix) {*coll_bldg_ix = building_id;} // only update when coll_ret==1 (intersects a part, not a fence or detail object)
+		if (!has_dest_bldg || building_id != dest_bldg || coll_ret > 1) return 0; // collided with the wrong building or the fence/detail object
 		float const enter_radius(0.25*radius);
 		if (!get_building_bcube(dest_bldg).contains_pt_xy_exp(pos, enter_radius)) return 1; // collided with dest building, but not yet entered
 		if (!check_buildings_ped_coll(pos, enter_radius, 2.0*enter_radius, plot, building_id, nullptr)) return 1; // test this building at a smaller radius to make sure we've entered
@@ -913,15 +915,27 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	point const player_pos(get_player_pos_bs()); // in building space
 	cube_t coll_cube;
 	bool outside_plot(0), next_follow_player(0);
-	int debug_state(0); // unused
+	int coll_bldg_ix(-1), debug_state(0); // debug_state is unused
 
 	if (collided) {} // already collided with a previous ped this frame, handled below
 	else if (!check_inside_plot(ped_mgr, prev_pos, plot_bcube, next_plot_bcube) && !follow_player) { // this call will set at_crosswalk and in_the_road; coll_cube unset
 		collided = outside_plot = 1; // outside the plot, treat as a collision with the plot bounds, but not if following the player
 	}
-	else if (!is_valid_pos(colliders, at_dest, coll_cube, &ped_mgr))           {collided = 1;} // collided with a static collider
-	else if (check_road_coll(ped_mgr, plot_bcube, next_plot_bcube, coll_cube)) {collided = 1;} // collided with something in the road (stoplight, streetlight, etc.)
-	else if (check_ped_ped_coll(ped_mgr, peds, pid, delta_dir))                {collided = 1;} // collided with another pedestrian; coll_cube unset since ped is dynamic
+	else if (!is_valid_pos(colliders, at_dest, coll_cube, &ped_mgr, &coll_bldg_ix)) { // collided with a static collider
+		// if we collided with some other building that's not our dest, and we can't the player, then we'll likely get stuck
+		if (coll_bldg_ix >= 0 && coll_bldg_ix != dest_bldg && !zombies_can_target_player()) {
+			dest_bldg = coll_bldg_ix; // make this building our dest so that we respawn
+			dest_plot = plot;
+			at_dest   = 1;
+		}
+		else {collided = 1;}
+	}
+	else if (check_road_coll(ped_mgr, plot_bcube, next_plot_bcube, coll_cube)) { // collided with something in the road (stoplight, streetlight, etc.)
+		collided = 1;
+	}
+	else if (check_ped_ped_coll(ped_mgr, peds, pid, delta_dir)) { // collided with another ped; coll_cube unset since ped is dynamic
+		collided = 1;
+	}
 	else { // no collisions
 		point dest_pos;
 
