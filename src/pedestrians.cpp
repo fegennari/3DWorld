@@ -679,12 +679,15 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 				if      (has_dest_bldg) {dest_cube = get_building_bcube(dest_bldg);}
 				else if (has_dest_car ) {dest_cube.set_from_sphere(dest_car_center, city_params.get_nom_car_size().x);} // somewhat approximate/conservative
 				assert(dest_cube.intersects_xy(plot_bcube)); // or contains, or is that too strong?
-				bool dim(0), dir(0);
-				get_closest_dim_dir_xy(dest_cube, plot_bcube, dim, dir);
+				bool dim(0), dir(0), use_proxy_pt(0);
+				cube_t target_cube(dest_cube); // default is to use the side of the building closest to the road, which is where the front/driveway generally is
+				// if there's a nearby door, use this as our target rather than the closest building edge
+				point door_pos;
+				if (has_dest_bldg && get_building_door_pos_closest_to(dest_bldg, pos, door_pos)) {target_cube.set_from_point(door_pos);}
+				get_closest_dim_dir_xy(target_cube, plot_bcube, dim, dir);
 				cube_t approach_area(dest_cube);
 				approach_area.d[dim][dir] = plot_bcube.d[dim][dir]; // expand out to the plot
 				approach_area.expand_by_xy(radius); // add a small fudge factor
-				bool use_proxy_pt(0);
 
 				if (!approach_area.contains_pt(pos)) { // not in approach area
 					if (avoid_area.contains_pt_xy(pos)) { // we're already in the avoid area, get out of it/don't avoid this plot
