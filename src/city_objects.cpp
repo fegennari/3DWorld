@@ -1169,10 +1169,14 @@ void traffic_cone_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float di
 	base.z2() = bcube.z1() + 0.05*bcube.dz();
 	color_wrapper const cw(colorRGBA(1.0, 0.25, 0.0, 1.0)); // dark orange
 	unsigned const ndiv(max(4U, min(32U, unsigned(2.0f*dist_scale*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, pos)))));
-	dstate.draw_cube(qbds.untex_qbd, base, cw, 1); // skip bottom
+	dstate.draw_cube(qbds.untex_qbd, base, color_wrapper(BKGRAY), 1); // skip bottom
 	float const xc(bcube.xc()), yc(bcube.yc());
-	point const ce[2] = {point(xc, yc, base.z2()), point(xc, yc, bcube.z2())};
-	add_cylin_as_tris(qbds.untex_qbd.verts, ce, 0.54*radius, 0.13*radius, cw, ndiv, 0); // draw sides, no end
+	float const cone_height(bcube.z2() - base.z2()), cone_r1(0.54*radius), cone_r2(0.13*radius), cone_dr(cone_r1 - cone_r2);
+	point ce[2] = {point(xc, yc, base.z2()), point(xc, yc, bcube.z2())};
+	add_cylin_as_tris(qbds.untex_qbd.verts, ce, cone_r1, cone_r2, cw, ndiv, 0); // draw sides, no end
+	ce[0].z += 0.5*cone_height;
+	ce[1].z -= 0.2*cone_height;
+	add_cylin_as_tris(qbds.untex_qbd.verts, ce, 1.02*(cone_r1 - 0.5*cone_dr), 1.02*(cone_r2 + 0.2*cone_dr), color_wrapper(WHITE), ndiv, 0); // stripe
 }
 
 // birds/pigeons
