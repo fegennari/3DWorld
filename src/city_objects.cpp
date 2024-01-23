@@ -1153,9 +1153,10 @@ void mailbox_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 // traffic cones
 
 traffic_cone_t::traffic_cone_t(point const &pos_, float radius_) : city_obj_t(pos_, radius_) {
+	pos.z += radius; // move to the center
 	bcube.set_from_point(pos);
-	bcube.expand_by_xy(radius);
-	bcube.z2() += get_height();
+	bcube.expand_by_xy(0.67*radius);
+	set_cube_zvals(bcube, pos.z-radius, pos.z+radius);
 }
 /*static*/ void traffic_cone_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	dstate.s.add_uniform_int("two_sided_lighting", 1);
@@ -1171,7 +1172,7 @@ void traffic_cone_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float di
 	dstate.draw_cube(qbds.untex_qbd, base, cw, 1); // skip bottom
 	float const xc(bcube.xc()), yc(bcube.yc());
 	point const ce[2] = {point(xc, yc, base.z2()), point(xc, yc, bcube.z2())};
-	add_cylin_as_tris(qbds.untex_qbd.verts, ce, 0.8*radius, 0.2*radius, cw, ndiv, 0); // draw sides, no end
+	add_cylin_as_tris(qbds.untex_qbd.verts, ce, 0.54*radius, 0.13*radius, cw, ndiv, 0); // draw sides, no end
 }
 
 // birds/pigeons

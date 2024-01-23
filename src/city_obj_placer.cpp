@@ -1018,6 +1018,32 @@ void city_obj_placer_t::place_signs_in_isec(road_isec_t &isec) {
 	} // for n
 }
 
+void city_obj_placer_t::place_objects_in_isec(road_isec_t const &isec, bool is_residential, rand_gen_t &rgen) {
+	if (/*!is_residential &&*/ isec.num_conn == 2) { // bend in road at city corner
+		// place some traffic cones
+		float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
+		float const cone_radius(0.075*car_length), isec_radius(0.25*(isec.dx() + isec.dy())), place_radius(2.0*isec_radius);
+		point center(isec.xc(), isec.yc(), isec.z2());
+		// set center of curvature
+		center.x += ((isec.conn & 1) ? -1.0 : 1.0)*isec_radius;
+		center.y += ((isec.conn & 4) ? -1.0 : 1.0)*isec_radius;
+
+		for (unsigned A = 0; A < 360; A += 9) {
+			float const angle(TO_RADIANS*A), dx(sin(angle)), dy(cos(angle));
+			// filter out positions blocked by roads connected to this intersection, including cones along axes
+			if (dx <  0.2 && (isec.conn & 1)) continue; // -x
+			if (dx > -0.2 && (isec.conn & 2)) continue; // +x
+			if (dy <  0.2 && (isec.conn & 4)) continue; // -y
+			if (dy > -0.2 && (isec.conn & 8)) continue; // +y
+			point pos(center);
+			pos.x += place_radius*dx;
+			pos.y += place_radius*dy;
+			for (unsigned d = 0; d < 2; ++d) {pos[d] += 0.5*cone_radius*rgen.signed_rand_float();} // add a small amount of random jitter to the position
+			tcone_groups.add_obj(traffic_cone_t(pos, cone_radius), tcones); // Note: colliders not needed
+		} // for angle
+	}
+}
+
 void city_obj_placer_t::add_stop_sign_plot_colliders(vector<road_plot_t> const &plots, vector<vect_cube_t> &plot_colliders) const {
 	assert(plots.size() == plot_colliders.size());
 	float const bcube_expand(2.0*get_sidewalk_width()); // include sidewalk stop signs in their associated plots
@@ -1135,7 +1161,10 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 		place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_residential, have_streetlights);
 	} // for i
 	for (unsigned n = 0; n < 3; ++n) {
-		for (road_isec_t &isec : isecs[n]) {place_signs_in_isec(isec);} // Note: not a plot, can't use plot colliders
+		for (road_isec_t &isec : isecs[n]) {
+			place_signs_in_isec(isec); // Note: not a plot, can't use plot colliders
+			place_objects_in_isec(isec, is_residential, rgen);
+		}
 	}
 	add_stop_sign_plot_colliders(plots, plot_colliders);
 	connect_power_to_buildings(plots);
@@ -1303,7 +1332,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(signs,     sign_groups,     dstate, 0.25, shadow_only, 0, 1); // dist_scale=0.25, draw_qbd_as_quads=1
 	draw_objects(flags,     flag_groups,     dstate, 0.18, shadow_only, 0); // dist_scale=0.18
 	draw_objects(newsracks, nrack_groups,    dstate, 0.10, shadow_only, 0); // dist_scale=0.10
-	draw_objects(tcones,    tcone_groups,    dstate, 0.05, shadow_only, 1); // dist_scale=0.05, has_immediate_draw=1
+	draw_objects(tcones,    tcone_groups,    dstate, 0.08, shadow_only, 1); // dist_scale=0.08, has_immediate_draw=1
 	
 	if (!shadow_only) { // unshadowed objects
 		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0); // dist_scale=0.12
