@@ -1667,7 +1667,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 
 			for (unsigned dim = 0; dim < 3; ++dim) { // {x, y, z}
 				bool const swap_st((dim == 2) ? swap_st_z : 0);
-				int const tid((has_vent && dim == duct_dim) ? vent_tid : duct_tid);
+				int const tid((has_vent && bool(dim) == duct_dim) ? vent_tid : duct_tid);
 				bdraw.add_cube(*this, *i, tid_nm_pair_t(tid, -1, ts[dim], 1.0), GRAY, swap_st, (1 << dim), 1, 0, 0); // skip_bottom, ws_texture=0
 			}
 			continue;
