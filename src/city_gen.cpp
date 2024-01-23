@@ -1308,7 +1308,10 @@ public:
 				dstate.end_cur_tile(); // once for all tiles, since shadows aren't used
 			}
 		}
-		else {
+		else { // regular draw pass
+			// it would be nice to have raised sidewalks here, or possibly curbs;
+			// however, they would need to apply to all tiles, including city plots and curved road segments, which makes it difficult;
+			// also, we would have to adjust the height of pedestrians, fire hydrants, etc.
 			bool const use_road_normal_maps(rain_wetness > 0.0); // use dirt normal map texture for rain effects
 
 			for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
