@@ -26,5 +26,6 @@ textures/food_boxes
 dependencies/meshoptimizer/src/*.o
 house/snow.wind.map
 temp_assimp_embedded_image.*
+lib32/assimp-vc140-mt.dll
 TAGS
 *~
