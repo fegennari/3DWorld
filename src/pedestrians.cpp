@@ -852,8 +852,7 @@ void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, 
 		if (dist > radius && dot_product_xy(vel, delta) < 0.01*speed*dist) {delta_dir = min(1.0f, 4.0f*delta_dir); return;} // rotate faster
 	}
 	float const timestep(min(fticks, 4.0f)*get_speed_mult()); // clamp fticks to 100ms
-	pos       += timestep*vel;
-	anim_time += timestep*speed;
+	pos += timestep*vel;
 }
 
 void pedestrian_t::run_path_finding(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vect_cube_t const &colliders, vector3d &dest_pos) {
@@ -1068,6 +1067,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		float const xy_mag_inv(1.0/dir.xy_mag()); // normalize using XY only
 		dir.x *= xy_mag_inv; dir.y *= xy_mag_inv;
 	}
+	anim_time += dot_product((pos - prev_pos), dir); // animation updates based on how far we actually moved in our intended direction, so that we don't walk when stuck
 	if (follow_player && !next_follow_player) {target_pos = all_zeros;} // target_pos is no longer valid when we stop following the player; only needed when plot != next_plot?
 	follow_player = next_follow_player;
 	collided = ped_coll = 0; // reset for next frame
