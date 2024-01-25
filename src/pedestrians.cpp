@@ -985,10 +985,10 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		stuck_count = 0;
 	}
 	if (collided) { // collision
-		if (!outside_plot) {
+		if (!outside_plot && !ped_coll) {
 			point const cur_pos(pos);
 
-			if (!ped_coll && !coll_cube.is_all_zeros()) { // should always get here if !ped_coll?
+			if (!coll_cube.is_all_zeros()) { // should always get here if !ped_coll?
 				sphere_cube_int_update_pos(pos, radius, coll_cube, prev_pos, 1); // resolve the collision; skip_z=1
 
 				if (dot_product(dir, (pos - cur_pos)) < 0.0) { // only update pos if sphere_cube_int_update_pos() moved us backward
@@ -1017,11 +1017,11 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		if (ped_coll) {
 			assert(colliding_ped < peds.size());
 			pedestrian_t const &other(peds[colliding_ped]);
-			vector3d const coll_dir(other.pos - pos);
-			vector3d new_dir(cross_product(vel, plus_z)); // right angle turn - using the tangent causes peds to get stuck together
-			if (dot_product_xy(new_dir, coll_dir) > 0.0) {new_dir.negate();} // orient away from the other ped's position
-			if (dot_product_xy(new_dir, other.vel)/(new_dir.mag()*other.vel.mag()) > 0.9) {new_dir.negate();} // velocities too close together (stuck together?)
-			update_velocity_dir(new_dir.get_norm(), 0.5*delta_dir); // slow turn
+			vector3d const coll_dir((other.pos.x - pos.x), (other.pos.y - pos.y), 0.0);
+			if (pid < colliding_ped) {} // move the first ped only (the one who moves to avoid)?
+			// move peds apart so that they no longer collide; this will force them to push past each other
+			float const dist_xy(p2p_dist_xy(pos, other.pos)), r_sum(get_coll_radius() + other.get_coll_radius());
+			if (dist_xy < r_sum) {pos -= ((r_sum - dist_xy)/coll_dir.mag())*coll_dir;}
 		}
 		else if (outside_plot && !in_the_road && !plot_bcube.contains_pt_xy_inclusive(pos)) { // attempt to re-enter the plot at the nearest point
 			point plot_pt(pos);
