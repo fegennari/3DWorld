@@ -4465,6 +4465,44 @@ void building_room_geom_t::add_safe(room_object_t const &c) {
 	// see add_mwave() for code to draw the open door
 }
 
+void building_room_geom_t::add_checkout(room_object_t const &c, float tscale) {
+	cube_t base(c), top(c);
+	base.z2() = top.z1() = c.z1() + 0.94*c.dz();
+	colorRGBA const color(apply_light_color(c));
+	// wood paneling sides
+	tid_nm_pair_t paneling(get_tex_auto_nm(PANELING_TEX, 4.0f*tscale));
+	paneling.set_specular(0.1, 50.0);
+	base.expand_by_xy(-0.04*c.get_depth()); // recessed overhang
+	get_material(paneling, 1).add_cube_to_verts(base, color, tex_origin, EF_Z12, 0, 0, 0, 0, 1); // skip top and bottom faces; z_dim_uses_ty=1; with shadows
+	// shiny marble top
+	tid_nm_pair_t top_tex(get_counter_tid(), 2.5*tscale);
+	top_tex.set_specular(0.5, 80.0);
+	get_material(top_tex, 1).add_cube_to_verts(top, color, tex_origin, 0); // all faces drawn (Z1 for overhang); with shadows
+}
+
+void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed, except for bottom
+	float const height(c.dz()), glass_thickness(0.01*height);
+	cube_t glass(c), bottom(c);
+	bottom.z2() = glass.z1() = c.z1() + 0.05*height;
+	get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(bottom, apply_light_color(c, BKGRAY), EF_Z1); // bottom, shadowed, small
+	// draw the sides
+	cube_t hole(glass);
+	hole.expand_by_xy(-glass_thickness); // shrink
+	cube_t sides[4]; // {-y, +y, -x, +x}
+	subtract_cube_xy(glass, hole, sides);
+	colorRGBA const glass_color(apply_light_color(c, table_glass_color));
+	rgeom_mat_t &glass_mat(get_untextured_material(0, 0, 1, 1)); // no shadows, small, transparent
+	for (unsigned n = 0; n < 4; ++n) {glass_mat.add_cube_to_verts_untextured(sides[n], glass_color, EF_Z1);}
+	// TODO: draw ater
+	// TODO: draw fish, etc.
+}
+
+void building_room_geom_t::add_lava_lamp(room_object_t const &c) {
+	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
+	mat.add_vcylin_to_verts(c, apply_light_color(c), 0, 1); // draw sides and top
+	// TODO: draw with a custom shader?
+}
+
 void building_room_geom_t::add_debug_shape(room_object_t const &c) {
 	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
 	if      (c.shape == SHAPE_CUBE  ) {mat.add_cube_to_verts_untextured(c, c.color);} // all faces
@@ -4531,6 +4569,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_POOL_TABLE: return (BROWN*0.75 + GREEN*0.25);
 	case TYPE_POOL_TILE: return texture_color(get_pool_tile_params(*this).get_tid());
 	case TYPE_FOOD_BOX:  return texture_color(get_food_box_tid());
+	case TYPE_FISHTANK:  return table_glass_color; // glass
 	//case TYPE_POOL_BALL: return ???; // uses a texture atlas, so unclear what color to use here; use white by default
 	//case TYPE_CHIMNEY:  return texture_color(get_material().side_tex); // should modulate with texture color, but we don't have it here
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
