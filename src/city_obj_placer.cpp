@@ -16,6 +16,7 @@ void add_signs_for_city(unsigned city_id, vector<sign_t> &signs);
 void add_flags_for_city(unsigned city_id, vector<city_flag_t> &flags);
 city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, float length, int flag_id=-1);
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
+float get_inner_sidewalk_width();
 
 bool are_birds_enabled() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_BIRD_ANIM);}
 
@@ -942,7 +943,8 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				break; // done
 			}
 			if (pref_side == 2) continue; // no subplot found? error, or just skip the mailbox?
-			pos[dim] = dw->d[dim][dir] - (dir ? 1.0 : -1.0)*1.5*mbox_height; // at end of driveway at the road, but far enough back to leave space for peds
+			// place at end of driveway at the road, but far enough back to leave space for peds
+			pos[dim] = dw->d[dim][dir] - (dir ? 1.0 : -1.0)*(get_inner_sidewalk_width() + 0.5*mbox_height);
 
 			for (unsigned n = 0; n < 2; ++n) {
 				unsigned const side(pref_side ^ n);
