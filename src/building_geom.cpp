@@ -888,7 +888,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 					fence2.d[fdim][!fdir2] = fence2.d[fdim][fdir2] + (fdir2 ? -1.0 : 1.0)*fence_thickness;
 					
 					if (clip_cube_to_parts(fence2, cubes)) {
-						float const center_pt(fence2.get_center_dim(!fdim)), gate_width(0.8*door_height);
+						float const center_pt(fence2.get_center_dim(!fdim)), gate_width(1.0*door_height);
 
 						for (unsigned d = 0; d < 2; ++d) { // split fence, add gap for gate, and add each segment if it's large enough
 							cube_t seg(fence2);
