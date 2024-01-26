@@ -17,6 +17,7 @@ void add_flags_for_city(unsigned city_id, vector<city_flag_t> &flags);
 city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, float length, int flag_id=-1);
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
 float get_inner_sidewalk_width();
+void play_hum_sound(point const &pos, float gain, float pitch);
 
 bool are_birds_enabled() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_BIRD_ANIM);}
 
@@ -1544,6 +1545,29 @@ void city_obj_placer_t::get_occluders(pos_dir_up const &pdu, vect_cube_t &occlud
 			if (dist_less_than(pdu.pos, d->bcube.closest_pt(pdu.pos), dmax) && pdu.cube_visible(d->bcube)) {occluders.push_back(d->bcube);}
 		}
 	} // for i
+}
+
+void city_obj_placer_t::play_sounds() {
+	if (ppole_groups.empty()) return;
+	point const camera_bs(get_camera_building_space());
+	if (!all_objs_bcube.contains_pt(camera_bs)) return; // player not in this city
+	float const sound_dist(0.65*city_params.road_width);
+	cube_t test_cube;
+	test_cube.set_from_sphere(camera_bs, sound_dist);
+	unsigned start_ix(0);
+	
+	for (auto g = ppole_groups.begin(); g != ppole_groups.end(); start_ix = g->ix, ++g) {
+		if (!g->intersects(test_cube)) continue;
+		assert(start_ix <= g->ix && g->ix <= ppoles.size());
+		
+		for (auto i = ppoles.begin()+start_ix; i != ppoles.begin()+g->ix; ++i) {
+			if (!i->has_transformer() || !i->bcube.intersects(test_cube)) continue;
+			point const transformer_pos(i->get_transformer_center());
+			float const dist(p2p_dist(camera_bs, transformer_pos));
+			if (dist > sound_dist) continue;
+			play_hum_sound(transformer_pos, (1.0 - dist/sound_dist), 0.6); // 60Hz
+		}
+	} // for g
 }
 
 

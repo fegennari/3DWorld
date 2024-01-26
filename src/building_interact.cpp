@@ -29,6 +29,7 @@ void register_broken_object(room_object_t const &obj);
 void record_building_damage(float damage);
 void refill_thirst();
 colorRGBA get_glow_color(float stime, bool fade);
+void play_hum_sound(point const &pos, float gain, float pitch);
 
 // Note: pos is in camera space
 void gen_sound_thread_safe(unsigned id, point const &pos, float gain, float pitch, float gain_scale, bool skip_if_already_playing) {
@@ -1256,6 +1257,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 			}
 			continue;
 		}
+		// play_hum_sound() for ceiling fan, microwave, breaker box, AC, etc.?
 		if (c->no_coll() || !c->has_dstate()) continue; // Note: no test of player_coll flag
 		run_ball_update(c, player_pos, player_z1, player_is_moving);
 	} // for c
@@ -1283,6 +1285,21 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 		}
 		maybe_update_tape(player_pos, 0); // end_of_tape=0
 		if (interior->room_geom->fire_manager.get_closest_fire(player_pos, player_radius, player_z1, player_z2)) {player_take_damage(0.006);} // small amount of fire damage
+		// sounds
+		point camera_rot(player_pos);
+		maybe_inv_rotate_point(camera_rot); // rotate camera pos into building space; should we use camera_rot above?
+		int const room_ix(get_room_containing_pt(camera_rot));
+
+		if (room_ix >= 0) {
+			room_t const &room(get_room(room_ix));
+			unsigned const camera_floor(room.get_floor_containing_zval(camera_rot.z, get_window_vspace()));
+			unsigned const room_type(room.get_room_type(camera_floor));
+			assert(room_type < NUM_RTYPES);
+			float hum_amt(0.0), hum_freq(0.0);
+			if      (room_type == RTYPE_UTILITY) {hum_amt = 0.1; hum_freq =  60.0;}
+			else if (room_type == RTYPE_SERVER ) {hum_amt = 0.2; hum_freq = 120.0;}
+			if (hum_amt > 0.0) {play_hum_sound(player_pos, hum_amt, 0.01*hum_freq);}
+		}
 	}
 	doors_next_frame(); // run for current and connected buildings
 	interior->room_geom->particle_manager.next_frame(*this);

@@ -723,6 +723,13 @@ point power_pole_t::get_nearest_connection_point(point const &to_pos, bool near_
 	} // for d
 	return ret;
 }
+point power_pole_t::get_transformer_center() const { // not checking has_transformer()
+	float const pole_height(bcube.dz()), tf_radius(2.0*pole_radius), tf_height(0.1*pole_height), y_sign(at_line_end[1] ? 1.0 : -1.0);
+	point tf_pos(base);
+	tf_pos.z += 0.77*pole_height + 0.5*tf_height;
+	tf_pos.y += y_sign*(tf_radius + pole_radius);
+	return tf_pos;
+}
 bool power_pole_t::add_wire(point const &p1, point const &p2, bool add_pole) { // Note: p1 connects to building or streetlight; p2 connects to wires on pole
 	wire_t wire(p1, p2);
 	
@@ -858,12 +865,12 @@ void power_pole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist
 		bool const draw_top(ce[1].z < camera_bs.z);
 		add_cylin_as_tris(qbds.qbd.verts, ce, pole_radius, pole_radius, cw, pole_ndiv, (draw_top ? 2 : 0), vert_tscale, 1.0/pole_ndiv, 1); // swap_ts_tt=1
 
-		if (dims == 3 && (shadow_only || bcube.closest_dist_less_than(camera_bs, 0.7*dmax))) { // draw transformer, untextured
+		if (has_transformer() && (shadow_only || bcube.closest_dist_less_than(camera_bs, 0.7*dmax))) { // draw transformer, untextured
 			float const tf_radius(2.0*pole_radius), tf_height(0.1*pole_height), y_sign(at_line_end[1] ? 1.0 : -1.0);
 			ce[0].z = base.z  + 0.77*pole_height;
 			ce[1].z = ce[0].z + tf_height;
 			ce[0].x = ce[1].x = base.x;
-			ce[0].y = ce[1].y = base.y + y_sign*(tf_radius + pole_radius); // offset in -y, +y at end (so that wires across above it)
+			ce[0].y = ce[1].y = base.y + y_sign*(tf_radius + pole_radius); // offset in -y, +y at end (so that wires cross above it)
 			bool const draw_top_bot(camera_bs.z > 0.5f*(ce[0].z + ce[1].z));
 			add_cylin_as_tris(s_qbd.verts, ce, tf_radius, tf_radius, gray, ndiv, (draw_top_bot ? 2 : 1)); // specular
 			tf_bcube.set_from_points(ce, 2);

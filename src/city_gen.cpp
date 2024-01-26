@@ -1972,6 +1972,7 @@ public:
 		//cout << TXT(city_id) << TXT(tot_road_len) << TXT(num_cars) << TXT(get_traffic_density()) << endl;
 		num_cars = 0;
 		city_obj_placer.next_frame();
+		city_obj_placer.play_sounds();
 	}
 	static road_network_t const &get_city(unsigned city_ix, vector<road_network_t> const &road_networks, road_network_t const &global_rn) {
 		if (city_ix == CONN_CITY_IX) return global_rn;

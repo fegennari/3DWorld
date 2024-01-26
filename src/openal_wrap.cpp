@@ -166,6 +166,7 @@ public:
 		add_new_sound("fly_buzz.wav"   ); // SOUND_FLY_BUZZ
 		add_new_sound("eating.wav"     ); // SOUND_EATING
 		add_new_sound("bubble.au"      ); // SOUND_BUBBLE
+		add_new_sound("neon_sign_sm.wav"); // SOUND_NEON_SIGN
 		cout << endl;
 
 		// create sources

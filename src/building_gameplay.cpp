@@ -2490,6 +2490,10 @@ void building_t::update_creepy_sounds(point const &player_pos) const {
 	if (player_in_basement == 3) {creepy_sound_manager.next_frame(*this, player_pos);} // update if player in extended basement
 }
 
+void play_hum_sound(point const &pos, float gain, float pitch) { // pos is in building space; nominal hum is 100Hz
+	gen_sound_thread_safe(SOUND_NEON_SIGN, (pos + get_camera_coord_space_xlate()), gain, pitch, 1.0, 1); // skip_if_already_playing=1
+}
+
 // gameplay logic
 
 unsigned player_has_room_key() {return player_inventory.player_has_key();}

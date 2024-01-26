@@ -158,6 +158,7 @@ public:
 	power_pole_t(point const &base_, point const &center_, float pole_radius_, float height, float wires_offset_,
 		float const pole_spacing_[2], uint8_t dims_, bool at_grid_edge_, bool const at_line_end_[2], bool residential_);
 	bool is_at_grid_edge() const {return at_grid_edge;}
+	bool has_transformer() const {return (dims == 3);}
 	point get_top() const {return point(base.x, base.y, bcube.z2());}
 	void get_wires_conn_pts(point pts[3], bool d) const;
 	void get_top_wires_conn_pts(point pts[3]) const {get_wires_conn_pts(pts, ((dims&1) ? 0 : 1));} // use X if enabled, otherwise Y
@@ -166,6 +167,7 @@ public:
 	cube_t get_bird_bcube  () const {return get_ped_occluder();} // centered on the pole; same as pedestrians
 	cube_t get_ped_occluder() const;
 	point get_nearest_connection_point(point const &to_pos, bool near_power_pole) const;
+	point get_transformer_center() const;
 	bool add_wire(point const &p1, point const &p2, bool add_pole);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
@@ -413,6 +415,7 @@ public:
 	void get_occluders(pos_dir_up const &pdu, vect_cube_t &occluders) const;
 	void move_to_not_intersect_driveway(point &pos, float radius, bool dim) const;
 	void next_frame();
+	void play_sounds();
 	int check_path_segment_coll(point const &p1, point const &p2, float radius) const;
 	bool choose_bird_dest(point const &pos, float radius, unsigned &loc_ix, point &dest_pos, vector3d &dest_dir);
 };
