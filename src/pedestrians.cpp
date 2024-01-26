@@ -1034,19 +1034,22 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			}
 		}
 		else if (collided) { // static object collision (should be rare if path_finder does a good job), or in_the_road (need this to get around traffic lights, etc.)
-			if (!follow_player && plot != dest_plot) { // not in home plot
+			if (!follow_player) {
 				road_plot_t const &cur_plot(ped_mgr.get_city_plot_for_peds(city, plot));
 
-				if (cur_plot.is_residential && !cur_plot.is_park) {
+				if (cur_plot.is_residential && !cur_plot.is_park) { // plot has private property
 					cube_t const avoid_area(get_avoid_area_for_plot(plot_bcube, radius));
-					
-					if (avoid_area.contains_pt_xy(pos)) { // bad pos
-						point good_pos(pos);
-						move_to_closest_pt_outside_cube(avoid_area, good_pos);
+
+					// skip check if this is our home plot and our target is inside the avoid area
+					if (plot != dest_plot || (target_valid() && !avoid_area.contains_pt_xy(target_pos))) {
+						if (avoid_area.contains_pt_xy(pos)) { // bad pos
+							point good_pos(pos);
+							move_to_closest_pt_outside_cube(avoid_area, good_pos);
 						
-						if (is_possibly_valid_dest_pos(good_pos, colliders)) { // only update if new pos is valid; otherwise will pick a different target or continue walking
-							update_velocity_dir((good_pos - pos).get_norm(), 0.5*delta_dir); // slow turn
-							collided = 0; // handled
+							if (is_possibly_valid_dest_pos(good_pos, colliders)) { // only update if new pos is valid; else will pick a different target or continue walking
+								update_velocity_dir((good_pos - pos).get_norm(), 0.5*delta_dir); // slow turn
+								collided = 0; // handled
+							}
 						}
 					}
 				}
