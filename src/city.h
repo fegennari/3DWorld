@@ -880,6 +880,7 @@ public:
 	void register_ped_new_plot(pedestrian_t const &ped);
 	dw_query_t get_nearby_driveway(unsigned city_ix, unsigned plot_ix, point const &pos, float dist) const;
 	car_base_t const *find_car_using_driveway(unsigned city_ix, dw_query_t const &dw) const;
+	cube_t get_city_bcube_for_peds(unsigned city_ix) const;
 	cube_t get_expanded_city_bcube_for_peds(unsigned city_ix) const;
 	cube_t get_expanded_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
 	bool is_city_residential(unsigned city_ix) const;

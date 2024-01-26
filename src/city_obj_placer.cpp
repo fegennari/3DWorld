@@ -1039,7 +1039,9 @@ void city_obj_placer_t::place_objects_in_isec(road_isec_t const &isec, bool is_r
 			pos.x += place_radius*dx;
 			pos.y += place_radius*dy;
 			for (unsigned d = 0; d < 2; ++d) {pos[d] += 0.5*cone_radius*rgen.signed_rand_float();} // add a small amount of random jitter to the position
-			tcone_groups.add_obj(traffic_cone_t(pos, cone_radius), tcones); // Note: colliders not needed
+			tcone_groups.add_obj(traffic_cone_t(pos, cone_radius), tcones);
+			// Note: colliders not needed since people normally don't walk here (through zombies can chase the player here);
+			// also, colliders don't work anyway because these cones are in the intersection, which counts as the road, not a plot
 		} // for angle
 	}
 }

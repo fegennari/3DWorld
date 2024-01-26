@@ -938,7 +938,8 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	else { // no collisions
 		point dest_pos;
 
-		if (is_zombie && zombies_can_target_player()) { // target the player if visible
+		// target the player if visible and reachable
+		if (is_zombie && zombies_can_target_player() && ped_mgr.get_city_bcube_for_peds(city).contains_pt_xy(player_pos)) {
 			float const view_dist(2.0*city_params.road_spacing); // tile or city block
 
 			if (dist_xy_less_than(pos, player_pos, view_dist) && overlaps_player_in_z(player_pos)) { // if player is close and not on a roof

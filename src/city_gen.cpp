@@ -2816,9 +2816,10 @@ dw_query_t ped_manager_t::get_nearby_driveway(unsigned city_ix, unsigned plot_ix
 	return road_gen.get_nearby_driveway(city_ix, plot_ix, pos, dist);
 }
 bool ped_manager_t::is_city_residential(unsigned city_ix) const {return road_gen.is_city_residential(city_ix);}
+cube_t ped_manager_t::get_city_bcube_for_peds(unsigned city_ix) const {return road_gen.get_city_bcube(city_ix);}
 
 cube_t ped_manager_t::get_expanded_city_bcube_for_peds(unsigned city_ix) const {
-	cube_t bcube(road_gen.get_city_bcube(city_ix));
+	cube_t bcube(get_city_bcube_for_peds(city_ix));
 	expand_cube_for_ped(bcube);
 	return bcube;
 }
