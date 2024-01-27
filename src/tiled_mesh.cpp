@@ -3514,7 +3514,7 @@ void draw_tiled_terrain(int reflection_pass) {
 	//RESET_TIME;
 	// skip terrain draw if the player is in a closed elevator so that we don't see the terrain when crossing the ground;
 	// but the terrain may be visible through tw window through the crack between the doors, though this isn't too much of an issue
-	if (player_in_elevator == 2) return;
+	if (player_in_elevator >= 2) return;
 	bool const disable_dclamp(enable_depth_clamp &&  camera_in_building && !reflection_pass   ); // helps with terrain covering basement stairs entrance
 	bool const enable_dclamp(!enable_depth_clamp && !camera_in_building && camera_surf_collide); // helps prevent camera clipping through the terrain
 	if (disable_dclamp) {glDisable(GL_DEPTH_CLAMP);}

@@ -2313,7 +2313,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 			verts.clear();
 			gen_text_verts(verts, up_down_pos, (d ? ">" : "<"), 1000.0*up_down_text_height, plus_z, col_dir, 1); // R90, use_quads=1
 			if (need_swap) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
-			bool const is_lit(bool(d) == e.going_up && e.is_moving());
+			bool const is_lit(bool(d) == e.going_up && e.may_be_moving());
 			rgeom_mat_t &cur_ud_mat(is_lit ? get_material(lit_tp, 0, 1) : mat); // lit, as long as the elevator is powered
 			for (auto i = verts.begin(); i != verts.end(); ++i) {cur_ud_mat.quad_verts.emplace_back(i->v, nc, i->t[0], i->t[1], (is_lit ? lit_cw : cw));}
 		} // for d

@@ -1147,7 +1147,7 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 		call_request_t(unsigned f, float z, unsigned d, bool ip) : floor_ix(f), zval(z), req_dirs(d), inside_press(ip) {}
 		bool operator<(call_request_t const &cr) const {return (cr.inside_press < inside_press);} // sort so that CRs with inside_press=1 are first
 	};
-	bool at_edge=0, going_up=0, at_dest=0, stop_on_passing_floor=0, hold_doors=0, hold_movement=0, under_skylight=0, is_sec_adj_pair=0;
+	bool at_edge=0, going_up=0, at_dest=0, stop_on_passing_floor=0, hold_doors=0, hold_movement=0, under_skylight=0, is_sec_adj_pair=0, is_moving=0;
 	unsigned room_id=0, car_obj_id=0, light_obj_id=0, button_id_start=0, button_id_end=0, num_occupants=0;
 	int at_dest_frame=0;
 	float open_amt=0;
@@ -1159,7 +1159,7 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 	float get_frame_width    () const {return 0.20*get_width();}
 	unsigned get_door_face_id() const {return (2*dim + dir);}
 	bool was_called          () const {return !call_requests.empty();}
-	bool is_moving           () const {return was_called();} // Note: conservative, could track this more accurately
+	bool may_be_moving       () const {return (is_moving || was_called());} // Note: conservative; includes elevator or doors moving
 	unsigned get_target_floor() const {assert(was_called()); return call_requests.front().floor_ix;}
 	float    get_target_zval () const {assert(was_called()); return call_requests.front().zval;}
 	bool was_floor_called(unsigned floor_ix, unsigned up_down_mask) const;

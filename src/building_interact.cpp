@@ -1507,6 +1507,8 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 
 	// Note: the player can only be in one elevator at a time, but they can push the call button for one elevator and get into another, so we have to check all elevators
 	for (auto e = elevators.begin(); e != elevators.end(); ++e) { // find containing elevator (optimization + need to know z-range of elevator shaft)
+		e->is_moving = 0; // reset this frame
+
 		if (e->at_dest || !e->was_called()) { // stopped on a floor (either in between stops or at the end of the call requests)
 			bool const time_for_doors_to_close(e->at_dest_frame > 0 && frame_counter > (e->at_dest_frame + elevator_wait_time) && !e->hold_doors);
 
@@ -1561,7 +1563,7 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 		else               {max_eq(dist, (e->z1() - obj.z1() + z_space));} // going down
 		update_ddd = 1;
 
-		if (fabs(dist) < 0.001*z_space) { // no movement, at target_zval or top/bottom of elevator shaft (check with a tolerance)
+		if (fabs(dist) < 0.001*z_space) { // no movement; maybe at target_zval or top/bottom of elevator shaft (check with a tolerance)
 			max_eq(e->open_amt, delta_open_amt); // begin to open if not already open
 			e->register_at_dest(); // will remove the current call request
 			obj.flags |= RO_FLAG_OPEN;
@@ -1578,10 +1580,11 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 			point const sound_pos(obj.get_cube_center());
 			gen_sound_thread_safe(SOUND_BEEP, building.local_to_camera_space(sound_pos), 0.5, 0.75); // lower frequency beep
 			register_building_sound(sound_pos, 0.5);
-			break;
+			continue;
 		}
 		obj.translate_dim(2, dist); // translate in Z
 		obj.item_flags = uint16_t(floor((obj.zc() - e->z1())/building.get_window_vspace())); // set current floor
+		e->is_moving   = 1;
 		assert(e->light_obj_id < objs.size());
 		room_object_t &light(objs[e->light_obj_id]); // light for this elevator
 

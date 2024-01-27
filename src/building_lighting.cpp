@@ -755,13 +755,13 @@ public:
 			if (!is_negative_light) {lights_complete.insert(cur_light);} // mark the most recent light as complete if not a light removal
 			cur_light = -1;
 		}
-		if (!remove_queue.empty()) { // remove an existing light; must run even when player_in_elevator==2 to remove elevator light at old pos
+		if (!remove_queue.empty()) { // remove an existing light; must run even when player_in_elevator>=2 (doors closed/moving) to remove elevator light at old pos
 			cur_light = remove_queue.front();
 			remove_queue.pop_front();
 			is_negative_light = 1;
 		}
 		else { // find a new light to add
-			if (player_in_elevator == 2) return; // pause updates for player in closed elevator since lighting is not visible
+			if (player_in_elevator >= 2) return; // pause updates for player in closed elevator since lighting is not visible
 			is_negative_light = 0; // back to normal positive lights
 			b.get_lights_with_priorities(target, valid_area, lights_to_sort);
 			add_window_lights(b, target);
@@ -888,7 +888,7 @@ void building_t::get_lights_with_priorities(point const &target, cube_t const &v
 		if (!valid_area.contains_cube(*i)) continue; // outside valid area
 
 		if (i->in_elevator()) { // elevator light
-			if (get_elevator(i->obj_id).is_moving()) continue; // possibly moving elevator or elevator doors, don't update light yet
+			if (get_elevator(i->obj_id).may_be_moving()) continue; // possibly moving elevator or elevator doors, don't update light yet
 		}
 		point const center(i->get_cube_center());
 		float dist_sq(p2p_dist_sq(center, target));
@@ -1699,7 +1699,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			clip_cube.expand_in_dim(!e.dim, 0.1*room_xy_expand); // expand sides to include walls adjacent to elevator (enough to account for FP error)
 			if (e.open_amt > 0.0) {clip_cube.d[e.dim][e.dir] += (e.dir ? 1.0 : -1.0)*light_radius;} // allow light to extend outside open elevator door
 			clipped_bc.intersect_with_cube(clip_cube); // Note: clipped_bc is likely contained in clip_cube and could be replaced with it
-			if (e.is_moving()) {hash_mix_point(e.get_llc(), shadow_caster_hash);} // make sure to update shadows if elevator or its doors are potentially moving
+			if (e.may_be_moving()) {hash_mix_point(e.get_llc(), shadow_caster_hash);} // make sure to update shadows if elevator or its doors are potentially moving
 			if (e.open_amt > 0.0 && e.open_amt < 1.0) {shadow_caster_hash += hash_by_bytes<float>()(e.open_amt);} // update shadows if door is opening or closing
 		}
 		else {

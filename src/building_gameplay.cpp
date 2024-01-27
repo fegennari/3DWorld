@@ -14,7 +14,7 @@ float const PLAYER_RESPAWN = 5.0; // in seconds
 
 bool do_room_obj_pickup(0), use_last_pickup_object(0), show_bldg_pickup_crosshair(0), player_near_toilet(0), player_attracts_flies(0), player_wait_respawn(0);
 bool city_action_key(0), can_do_building_action(0);
-int can_pickup_bldg_obj(0), player_in_elevator(0); // player_in_elevator: 0=no, 1=in, 2=in + doors closed/moving
+int can_pickup_bldg_obj(0), player_in_elevator(0); // player_in_elevator: 0=no, 1=in, 2=in + doors closed, 3=moving
 float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
 carried_item_t player_held_object;
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];

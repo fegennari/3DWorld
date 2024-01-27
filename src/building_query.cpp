@@ -798,15 +798,15 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 
 			if (c->type == TYPE_ELEVATOR) { // special handling for elevators
 				if (!c->contains_pt_xy(pos)) continue;
-				assert(c->room_id < interior->elevators.size());
+				elevator_t const &elevator(get_elevator(c->room_id));
 				bool ecoll(0);
-				if      (obj_z >= interior->elevators[c->room_id].z2()) {} // above the elevator shaft - not in the elevator
+				if      (obj_z >= elevator.z2()) {} // above the elevator shaft - not in the elevator
 				else if (obj_z >= c->z2()) {max_eq(pos.z, (c->z2() + radius)); ecoll = 1;} // standing on the roof of the elevator
 				else if (obj_z >= c->z1()) {max_eq(pos.z, (c->z1() + radius + get_fc_thickness())); ecoll = 1;} // inside the elevator
 				
 				if (ecoll) {
-					// 2 if doors are closed, otherwise 1; this is used to avoid drawing terrain as we pass through it when the elevator enters or leaves the basement
-					player_in_elevator = ((get_elevator(c->obj_id).open_amt == 0.0) ? 2 : 1);
+					// 3 if moving, 2 if doors are closed, otherwise 1; used to avoid drawing terrain as we pass through it when the elevator enters or leaves the basement
+					player_in_elevator = ((elevator.open_amt == 0.0) ? (elevator.is_moving ? 3 : 2) : 1);
 					had_coll = 1;
 				}
 				continue;
