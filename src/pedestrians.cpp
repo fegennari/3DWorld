@@ -922,7 +922,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	}
 	else if (!is_valid_pos(colliders, at_dest, coll_cube, &ped_mgr, &coll_bldg_ix)) { // collided with a static collider
 		// if we collided with some other building that's not our dest, and we can't the player, then we'll likely get stuck
-		if (coll_bldg_ix >= 0 && coll_bldg_ix != dest_bldg && !zombies_can_target_player()) {
+		if (coll_bldg_ix >= 0 && coll_bldg_ix != (int)dest_bldg && !zombies_can_target_player()) {
 			dest_bldg = coll_bldg_ix; // make this building our dest so that we respawn
 			dest_plot = plot;
 			at_dest   = 1;
