@@ -30,6 +30,7 @@ void record_building_damage(float damage);
 void refill_thirst();
 colorRGBA get_glow_color(float stime, bool fade);
 void play_hum_sound(point const &pos, float gain, float pitch);
+bool ceiling_fan_is_on(room_object_t &obj, vect_room_object_t const &objs);
 
 // Note: pos is in camera space
 void gen_sound_thread_safe(unsigned id, point const &pos, float gain, float pitch, float gain_scale, bool skip_if_already_playing) {
@@ -1213,11 +1214,21 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 	interior->update_elevators(*this, player_pos);
 	update_creepy_sounds(player_pos);
 	if (!has_room_geom()) return; // nothing else to do
+	float const floor_spacing(get_window_vspace());
 	float const player_radius(get_scaled_player_radius()), player_z1(player_pos.z - get_bldg_player_height()), player_z2(player_pos.z);
 	bool const player_in_this_building(this == player_building);
 	static point last_player_pos(all_zeros);
 	bool const player_is_moving(player_pos != last_player_pos);
-	if (player_in_this_building) {last_player_pos = player_pos;}
+	point camera_rot(player_pos);
+	int player_room_ix(-1);
+	float hum_amt(0.0), hum_freq(0.0);
+	
+	if (player_in_this_building) {
+		last_player_pos = player_pos;
+		maybe_inv_rotate_point(camera_rot); // rotate camera pos into building space; should we use camera_rot elsewhere below?
+		player_room_ix = get_room_containing_pt(camera_rot);
+		if (player_in_elevator >= 3) {hum_amt = 0.2; hum_freq = 100.0;} // moving elevator sound
+	}
 	// update dynamic objects; run for current and connected buildings
 	auto &objs(interior->room_geom->objs);
 
@@ -1257,7 +1268,22 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 			}
 			continue;
 		}
-		// play_hum_sound() for ceiling fan, microwave, breaker box, AC, etc.?
+		if (player_room_ix >= 0 && (int)c->room_id == player_room_ix) {
+			if (c->type == TYPE_CEIL_FAN) {
+				if (player_pos.z < c->z2() && player_pos.z > c->z1() - floor_spacing && ceiling_fan_is_on(*c, objs)) {
+					float const dist(p2p_dist(camera_rot, c->get_cube_center())), sound_dist(2.0*floor_spacing);
+					if (dist < sound_dist) {hum_amt = 0.15*(1.0 - dist/sound_dist); hum_freq = 90.0;}
+				}
+			}
+			else if (c->type == TYPE_BRK_PANEL) {
+				if (c->is_open()) {
+					float const dist(p2p_dist(camera_rot, c->get_cube_center())), sound_dist(0.75*floor_spacing);
+					if (dist < sound_dist) {hum_amt = 0.2*(1.0 - dist/sound_dist); hum_freq = 60.0;}
+				}
+			}
+			//else if (c->type == TYPE_FURNACE) {} // or AC unit?
+			//else if (c->type == TYPE_FRIDGE ) {}
+		}
 		if (c->no_coll() || !c->has_dstate()) continue; // Note: no test of player_coll flag
 		run_ball_update(c, player_pos, player_z1, player_is_moving);
 	} // for c
@@ -1285,22 +1311,20 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 		}
 		maybe_update_tape(player_pos, 0); // end_of_tape=0
 		if (interior->room_geom->fire_manager.get_closest_fire(player_pos, player_radius, player_z1, player_z2)) {player_take_damage(0.006);} // small amount of fire damage
-		// sounds
-		point camera_rot(player_pos);
-		maybe_inv_rotate_point(camera_rot); // rotate camera pos into building space; should we use camera_rot above?
-		int const room_ix(get_room_containing_pt(camera_rot));
 
-		if (room_ix >= 0) {
-			room_t const &room(get_room(room_ix));
+		if (player_room_ix >= 0) { // check for sounds
+			room_t const &room(get_room(player_room_ix));
 			unsigned const camera_floor(room.get_floor_containing_zval(camera_rot.z, get_window_vspace()));
 			unsigned const room_type(room.get_room_type(camera_floor));
 			assert(room_type < NUM_RTYPES);
-			float hum_amt(0.0), hum_freq(0.0);
-			if      (room_type == RTYPE_UTILITY) {hum_amt = 0.1; hum_freq =  60.0;}
-			else if (room_type == RTYPE_SERVER ) {hum_amt = 0.2; hum_freq = 120.0;}
-			if (hum_amt > 0.0) {play_hum_sound(player_pos, hum_amt, 0.01*hum_freq);}
+			if      (room_type == RTYPE_UTILITY ) {hum_amt = 0.1; hum_freq =  60.0;}
+			else if (room_type == RTYPE_SERVER  ) {hum_amt = 0.2; hum_freq = 120.0;}
+			//else if (room_type == RTYPE_SECURITY) {}
+			//else if (room_type == RTYPE_SWIM    ) {}
+			// TODO: in moving elevator
 		}
-	}
+	} // end player_in_this_building
+	if (hum_amt > 0.0) {play_hum_sound(player_pos, hum_amt, 0.01*hum_freq);}
 	doors_next_frame(); // run for current and connected buildings
 	interior->room_geom->particle_manager.next_frame(*this);
 	interior->room_geom->fire_manager.next_frame(interior->room_geom->particle_manager);

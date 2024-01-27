@@ -1133,6 +1133,11 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 	mats_doors.create_vbos(building);
 }
 
+bool ceiling_fan_is_on(room_object_t &obj, vect_room_object_t const &objs) {
+	if (!obj.is_powered()) return 0; // only enabled for some fans
+	assert(obj.obj_id < objs.size());
+	return (objs[obj.obj_id].type == TYPE_LIGHT && objs[obj.obj_id].is_light_on()); // fan is on if light is on
+}
 void rotate_dir_about_z(vector3d &dir, float angle) { // Note: assumes dir is normalized
 	if (angle == 0.0) return;
 	assert(dir.z == 0.0); // dir must be in XY plane
@@ -1152,10 +1157,7 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst, vect_room
 		rotate_dir_about_z(inst.dir, -angle); // limited rotation angle
 	}
 	else if (obj.type == TYPE_CEIL_FAN) { // rotate the entire model rather than just the fan blades
-		if (obj.is_powered()) { // only enabled for some fans
-			assert(obj.obj_id < objs.size());
-			if (objs[obj.obj_id].type == TYPE_LIGHT && objs[obj.obj_id].is_light_on()) {rotate_dir_about_z(inst.dir, 0.2*fticks);} // fan is on if light is on
-		}
+		if (ceiling_fan_is_on(obj, objs)) {rotate_dir_about_z(inst.dir, 0.2*fticks);} // fan is on if light is on
 	}
 	else {
 		cerr << "Error: apply_room_obj_rotate() on unsupported object type " << unsigned(obj.type) << endl;
