@@ -328,8 +328,8 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 				canopy.z2() = canopy.z1() + 0.001*c->dz(); // almost zero thickness
 				cc.emplace_back(canopy, get_canopy_base_color(*c).modulate_with(texture_color(get_canopy_texture())));
 			}
-			get_tc_leg_cubes(cubes[5], 0.04, cubes); // head_width=0.04; cubes[5] is not overwritten
-			add_colored_cubes(cubes,   4, wood_color,   cc); // legs
+			get_tc_leg_cubes(cubes[5], 0.04, 0, cubes); // head_width=0.04; cubes[5] is not overwritten
+			add_colored_cubes(cubes, 4, wood_color, cc); // legs
 		}
 		else if (c->type == TYPE_DESK || c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND || c->type == TYPE_TABLE) { // objects with legs
 			if (c->is_glass_table()) continue; // skip glass table (transparent with thin legs)
@@ -343,7 +343,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			get_chair_cubes(*c, cubes);
 			cc.emplace_back(cubes[0], color     ); // seat
 			cc.emplace_back(cubes[1], wood_color); // back
-			get_tc_leg_cubes(cubes[2], 0.15, leg_cubes); // width=0.15
+			get_tc_leg_cubes(cubes[2], 0.15, 1, leg_cubes); // width=0.15
 			add_colored_cubes(leg_cubes, 4, wood_color, cc);
 		}
 		else if (c->type == TYPE_CUBICLE || (c->type == TYPE_STALL && c->shape != SHAPE_SHORT)) { // cubicle or bathroom stall - hollow

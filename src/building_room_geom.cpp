@@ -100,23 +100,28 @@ rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale, bool inc_shad
 		3.0*tscale, 3.0*tscale, 0.0, 0.0, inc_shadows), inc_shadows, dynamic, small, 0, exterior); // hard-coded for common material
 }
 
-void get_tc_leg_cubes_abs_width(cube_t const &c, float leg_width, cube_t cubes[4]) {
+void get_tc_leg_cubes_abs_width(cube_t const &c, float leg_width, bool recessed, cube_t cubes[4]) {
 	for (unsigned y = 0; y < 2; ++y) {
 		for (unsigned x = 0; x < 2; ++x) {
 			cube_t leg(c);
 			leg.d[0][x] += (x ? -1.0f : 1.0f)*(c.dx() - leg_width);
 			leg.d[1][y] += (y ? -1.0f : 1.0f)*(c.dy() - leg_width);
+
+			if (recessed) { // slight recess
+				leg.d[0][!x] -= (x ? -1.0f : 1.0f)*0.1*leg_width;
+				leg.d[1][!y] -= (y ? -1.0f : 1.0f)*0.1*leg_width;
+			}
 			cubes[2*y+x] = leg;
-		}
-	}
+		} // for x
+	} // for y
 }
-void get_tc_leg_cubes(cube_t const &c, float width, cube_t cubes[4]) {
-	get_tc_leg_cubes_abs_width(c, get_tc_leg_width(c, width), cubes);
+void get_tc_leg_cubes(cube_t const &c, float width, bool recessed, cube_t cubes[4]) {
+	get_tc_leg_cubes_abs_width(c, get_tc_leg_width(c, width), recessed, cubes);
 }
-void building_room_geom_t::add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale, bool use_metal_mat, bool draw_tops, float frame_height) {
+void building_room_geom_t::add_tc_legs(cube_t const &c, colorRGBA const &color, float width, bool recessed, float tscale, bool use_metal_mat, bool draw_tops, float frame_height) {
 	rgeom_mat_t &mat(use_metal_mat ? get_metal_material(1) : get_wood_material(tscale)); // shadowed=1, dynamic=0, small=0
 	cube_t cubes[4];
-	get_tc_leg_cubes(c, width, cubes);
+	get_tc_leg_cubes(c, width, recessed, cubes);
 	point const llc(c.get_llc());
 	for (unsigned i = 0; i < 4; ++i) {mat.add_cube_to_verts(cubes[i], color, llc, (draw_tops ? EF_Z1 : EF_Z12));} // skip top and bottom faces
 
@@ -151,7 +156,7 @@ void get_table_cubes(room_object_t const &c, cube_t cubes[5]) {
 	top.z1() += (is_desk ? 0.85 : (is_dns ? 0.12 : 0.88))*c.dz();
 	legs_bcube.z2() = top.z1();
 	cubes[0] = top;
-	get_tc_leg_cubes(legs_bcube, (is_desk ? 0.06 : (is_dns ? 0.10 : 0.08)), (cubes+1));
+	get_tc_leg_cubes(legs_bcube, (is_desk ? 0.06 : (is_dns ? 0.10 : 0.08)), 1, (cubes+1)); // legs are inexact for glass tables
 }
 
 colorRGBA const table_glass_color(0.7, 1.0, 0.85, 0.25); // greenish tint, semi transparent
@@ -202,13 +207,13 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 			colorRGBA const top_color(apply_light_color(c, table_glass_color));
 			rgeom_mat_t &mat(get_untextured_material(0, 0, 0, 1)); // no shadows + transparent
 			mat.add_cube_to_verts_untextured(top, top_color); // all faces drawn
-			add_tc_legs(legs_bcube, BLACK, 0.5*leg_width, tscale, glass, glass, 1.0*top.dz()); // use_metal_mat=1, draw_tops=1, frame_height=nonzero
+			add_tc_legs(legs_bcube, BLACK, 0.5*leg_width, 0, tscale, glass, glass, 1.0*top.dz()); // use_metal_mat=1, draw_tops=1, frame_height=nonzero
 		}
 		else { // wood
 			colorRGBA const color(apply_wood_light_color(c));
 			rgeom_mat_t &mat(get_wood_material(tscale));
 			mat.add_cube_to_verts(top, color, c.get_llc()); // all faces drawn
-			add_tc_legs(legs_bcube, color, leg_width, tscale);
+			add_tc_legs(legs_bcube, color, leg_width, 1, tscale);
 		}
 	}
 }
@@ -228,7 +233,7 @@ void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 
 	get_material(tid_nm_pair_t(MARBLE_TEX, 1.2*tscale), 1).add_cube_to_verts(cubes[0], apply_light_color(c), c.get_llc()); // seat; all faces drawn
 	colorRGBA const color(apply_wood_light_color(c));
 	get_wood_material(tscale).add_cube_to_verts(cubes[1], color, c.get_llc(), EF_Z1); // back; skip bottom face
-	add_tc_legs(cubes[2], color, 0.15, tscale); // legs
+	add_tc_legs(cubes[2], color, 0.15, 1, tscale); // legs
 }
 
 room_object_t get_dresser_middle(room_object_t const &c) {
@@ -2906,7 +2911,7 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale, bool i
 		top.z1() += 0.85 * c.dz();
 		legs_bcube.z2() = top.z1();
 		get_wood_material(tscale).add_cube_to_verts(top, color, tex_origin); // all faces drawn
-		add_tc_legs(legs_bcube, color, 0.06, tscale);
+		add_tc_legs(legs_bcube, color, 0.06, 1, tscale);
 	}
 	if (c.desk_has_drawers()) { // add drawers 75% of the time
 		room_object_t drawers(get_desk_drawers_part(c));
@@ -3054,7 +3059,7 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 	if (inc_lg) {
 		bool const no_mattress(c.taken_level > 2);
 		colorRGBA const color(apply_wood_light_color(c));
-		add_tc_legs(legs_bcube, color, max(head_width, foot_width), tscale);
+		add_tc_legs(legs_bcube, color, max(head_width, foot_width), 0, tscale);
 		if (no_mattress) {get_wood_material(4.0*tscale);} // pre-allocate slats material if needed
 		rgeom_mat_t &wood_mat(get_wood_material(tscale));
 
@@ -3095,7 +3100,7 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 			posts_area.z1() = foot.z2(); // start at the foot
 			posts_area.z2() = posts_area.z1() + (add_canopy ? 1.4 : 0.6)*c.dz(); // higher posts for canopy bed
 			cube_t posts[4];
-			get_tc_leg_cubes_abs_width(posts_area, post_width, posts);
+			get_tc_leg_cubes_abs_width(posts_area, post_width, 0, posts); // recessed=0
 			bool const use_cylinders(!add_canopy && (c.obj_id & 4));
 
 			for (unsigned i = 0; i < 4; ++i) {

@@ -941,7 +941,7 @@ struct building_room_geom_t {
 	vect_room_object_t::const_iterator get_stairs_start   () const {return (objs.begin() + stairs_start );} // excludes stairs
 	bool cube_int_backrooms_walls(cube_t const &c) const;
 	// Note: these functions are all for drawing objects / adding them to the vertex list
-	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale, bool use_metal_mat=0, bool draw_tops=0, float frame_height=0.0);
+	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width, bool recessed, float tscale, bool use_metal_mat=0, bool draw_tops=0, float frame_height=0.0);
 	void add_table(room_object_t const &c, float tscale, float top_dz, float leg_width);
 	void add_chair(room_object_t const &c, float tscale);
 	void add_dresser(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);
@@ -2207,7 +2207,7 @@ void get_bed_cubes   (room_object_t const &c, cube_t cubes[6]);
 void get_table_cubes (room_object_t const &c, cube_t cubes[5]);
 unsigned get_table_like_object_cubes(room_object_t const &c, cube_t cubes[7]);
 void get_chair_cubes (room_object_t const &c, cube_t cubes[3]);
-void get_tc_leg_cubes(cube_t const &c, float width, cube_t cubes[4]);
+void get_tc_leg_cubes(cube_t const &c, float width, bool recessed, cube_t cubes[4]);
 void get_bookcase_cubes(room_object_t const &c, cube_t &top, cube_t &middle, cube_t &back, cube_t lr[2], bool no_shelves=0, float sides_scale=1.0);
 float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only, bool inside_only);
 void get_bench_cubes(room_object_t const &c, cube_t cubes[3]);
