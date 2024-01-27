@@ -1452,7 +1452,7 @@ void building_room_geom_t::add_vase(room_object_t const &c) { // or urn
 	float tex_scale_v(1.0), tex_scale_h(1.0);
 	int tid(WHITE_TEX);
 
-	if (c.color == WHITE) { // while color, apply a texture
+	if (c.color.get_luminance() > 0.9) { // nearly white color, apply a texture
 		if (rgen.rand_bool()) { // marble
 			tid = get_texture_by_name(rgen.rand_bool() ? "marble2.jpg" : "marble.jpg");
 			tex_scale_v = tex_scale_h = (1 + (rgen.rand()&3)); // must be an integer, 1-4

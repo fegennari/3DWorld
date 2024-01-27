@@ -17,6 +17,7 @@ bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher);
 void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim);
 float get_med_cab_wall_thickness(room_object_t const &c);
 float get_radius_for_square_model(unsigned model_id);
+colorRGBA gen_vase_color(rand_gen_t &rgen);
 
 void resize_model_cube_xy(cube_t &cube, float dim_pos, float not_dim_pos, unsigned id, bool dim) {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(id)); // L, W, H
@@ -644,6 +645,10 @@ void set_book_id_and_color(room_object_t &obj, rand_gen_t &rgen) {
 	obj.obj_id = rgen.rand();
 	obj.color  = book_colors[rgen.rand() % NUM_BOOK_COLORS];
 }
+void set_vase_id_and_color(room_object_t &obj, rand_gen_t &rgen) {
+	obj.obj_id = rgen.rand();
+	obj.color  = gen_vase_color(rgen);
+}
 
 void add_rows_of_vcylinders(room_object_t const &c, cube_t const &region, float radius, float height, float spacing_factor,
 	unsigned type, unsigned max_cols, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen, bool dir=0, bool inv_dim=0)
@@ -669,8 +674,8 @@ void add_rows_of_vcylinders(room_object_t const &c, cube_t const &region, float 
 			if (rgen.rand_float() < 0.75) { // 75% chance
 				room_object_t obj(row_obj, type, c.room_id, (c.dim ^ inv_dim), dir, flags, c.light_amt, SHAPE_CYLIN);
 				if      (is_bottle              ) {obj.set_as_bottle(rand_id, 3, 1);} // 0-3; excludes poison and medicine; should we include medicine?; no_empty=1
-				else if (type == TYPE_VASE      ) {obj.obj_id = rgen.rand();} // randomize the vase
-				else if (type == TYPE_SPRAYCAN  ) {set_spraypaint_color(obj, rgen);}
+				else if (type == TYPE_VASE      ) {set_vase_id_and_color(obj, rgen);} // randomize the vase
+				else if (type == TYPE_SPRAYCAN  ) {set_spraypaint_color (obj, rgen);}
 				else if (type == TYPE_FLASHLIGHT) {obj.color = BLACK;}
 				else if (type == TYPE_CANDLE    ) {obj.color = candle_color;}
 				else if (type == TYPE_TCAN      ) {obj.color = tcan_colors[rgen.rand()%NUM_TCAN_COLORS];}
