@@ -4472,7 +4472,7 @@ void building_room_geom_t::add_checkout(room_object_t const &c, float tscale) {
 	// wood paneling sides
 	tid_nm_pair_t paneling(get_tex_auto_nm(PANELING_TEX, 4.0f*tscale));
 	paneling.set_specular(0.1, 50.0);
-	base.expand_by_xy(-0.04*c.get_depth()); // recessed overhang
+	base.expand_by_xy(-0.025*c.get_width()); // recessed overhang
 	get_material(paneling, 1).add_cube_to_verts(base, color, tex_origin, EF_Z12, 0, 0, 0, 0, 1); // skip top and bottom faces; z_dim_uses_ty=1; with shadows
 	// shiny marble top
 	tid_nm_pair_t top_tex(get_counter_tid(), 2.5*tscale);

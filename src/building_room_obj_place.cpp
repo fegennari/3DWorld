@@ -2223,7 +2223,7 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 			place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, room, 0.40, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 4, 0, color);
 		}
 	}
-	// TODO: place a mini bar?
+	// place a mini bar?
 	// place two bar stools
 	unsigned const bs_id(objs.size());
 
@@ -2443,7 +2443,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	cube_t rack, pillar;
 	set_cube_zvals(rack,   zval, zval+rack_height);
 	set_cube_zvals(pillar, zval, zval+get_floor_ceil_gap());
-	unsigned const obj_id(rgen.rand()); // same style for each rack
+	unsigned const objs_start(objs.size()), obj_id(rgen.rand()); // same style for each rack
 	unsigned rack_id(0);
 	bool const skip_middle_row(nrows & 1);
 	interior->room_geom->shelf_rack_occluders.reserve((nrows - skip_middle_row)*nracks);
@@ -2490,6 +2490,43 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 			}
 		} // for r
 	} // for n
+	if (!doors.empty()) { // add checkout counter
+		cube_t const &door(doors.front().get_bcube()); // front door
+		bool const door_dim(door.dy() < door.dx()), dir(room.get_center_dim(door_dim) < door.get_center_dim(door_dim));
+
+		if (door_dim == dim) { // should always be true?
+			// find union of primary stairs and central elevators, which forms the other bounds of our checkout counter
+			cube_t blocked(room.get_cube_center()); // block off the center
+		
+			for (auto const &e : interior->elevators) {
+				if (e.intersects(room)) {blocked.union_with_cube(e);}
+			}
+			for (auto const &s : interior->stairwells) {
+				if (s.intersects(room)) {blocked.union_with_cube(s);}
+			}
+			cube_t checkout(room);
+			checkout.d[dim][!dir] = blocked.d[dim][dir];
+			checkout.expand_in_dim(dim, -1.6*nom_aisle_width); // shrink
+			float const length(checkout.get_sz_dim(dim));
+
+			if (length > 0.4*floor_spacing) { // add if large enough
+				checkout.expand_in_dim(dim, -0.1*(length - 0.4*floor_spacing)); // shrink slightly more if long
+				set_wall_width(checkout, room.get_center_dim(!dim), min(rack_width, 0.2f*floor_spacing), !dim); // set width
+				set_cube_zvals(checkout, zval, (zval + 0.4*floor_spacing));
+				bool bad_place(0);
+
+				if (!skip_middle_row) { // check shelfracks; shouldn't need to check stairs or elevators
+					cube_t test_cube(checkout);
+					test_cube.expand_by_xy(nom_aisle_width);
+
+					for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+						if (i->intersects(test_cube)) {bad_place = 1; break;}
+					}
+				}
+				if (!bad_place) {objs.emplace_back(checkout, TYPE_CHECKOUT, room_id, dim, dir);}
+			}
+		}
+	}
 	add_cameras_to_room(rgen, room, zval, room_id, 1.0); // tot_light_amt=1.0
 	//cout << TXT(temp_objs.size()) << endl;
 }
