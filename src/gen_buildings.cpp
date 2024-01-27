@@ -55,6 +55,7 @@ void try_join_house_ext_basements(vect_building_t &buildings);
 void add_sign_text_verts_both_sides(string const &text, cube_t const &sign, bool dim, bool dir, vect_vnctcc_t &verts);
 void draw_candle_flames();
 void update_security_camera_image();
+void get_pedestrians_in_area(cube_t const &area, int building_ix, vector<point> &pts);
 
 float get_door_open_dist   () {return 3.5*CAMERA_RADIUS;}
 bool player_in_ext_basement() {return (player_in_basement == 3 && player_building != nullptr);}
@@ -2158,10 +2159,10 @@ void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &co
 	} // for d
 }
 
-bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist, bool reflection_pass) { // for exterior doors
+bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist, bool update_state) { // for exterior doors
 	tquad_with_ix_t door;
 	int const door_ix(find_ext_door_close_to_point(door, pos, dist));
-	if (!reflection_pass) {register_open_ext_door_state(door_ix);}
+	if (update_state) {register_open_ext_door_state(door_ix);}
 	if (door_ix < 0) return 0; // no nearby door
 	move_door_to_other_side_of_wall(door, -1.01, 0); // move a bit further away from the outside of the building to make it in front of the orig door
 	clip_door_to_interior(door);
@@ -2185,11 +2186,12 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 	open_door_draw.draw(s, 0, 1); // direct_draw_no_vbo=1
 	return 1;
 }
-void building_t::get_all_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, vector<point> const &pts, float dist) {
+bool building_t::get_all_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, vector<point> const &pts, float dist, bool update_state) {
 	for (auto const &p : pts) {
 		// we currently only support drawing one open door, so stop when we find one; future work is to use a bit mask to keep track of which doors are open
-		if (get_nearby_ext_door_verts(bdraw, s, p, dist)) return;
+		if (get_nearby_ext_door_verts(bdraw, s, p, dist, update_state)) return 1;
 	}
+	return 0;
 }
 
 void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt_in, bool make_all_front) const {
@@ -2305,6 +2307,7 @@ void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
 
 class building_creator_t {
 
+	bool use_smap_this_frame=0, has_interior_geom=0, is_city=0;
 	unsigned grid_sz=1, gpu_mem_usage=0;
 	vector3d range_sz, range_sz_inv, max_extent;
 	cube_t range, buildings_bcube;
@@ -2315,7 +2318,6 @@ class building_creator_t {
 	building_draw_t building_draw, building_draw_vbo, building_draw_windows, building_draw_wind_lights, building_draw_interior, building_draw_int_ext_walls;
 	point_sprite_drawer_sized building_lights;
 	vector<point> points; // reused temporary
-	bool use_smap_this_frame=0, has_interior_geom=0;
 
 	struct grid_elem_t {
 		vector<cube_with_ix_t> bc_ixs;
@@ -2480,8 +2482,9 @@ class building_creator_t {
 	};
 
 public:
-	building_creator_t(bool is_city=0) : max_extent(zero_vector), building_draw(is_city), building_draw_vbo(is_city) {}
+	building_creator_t(bool is_city_=0) : is_city(is_city_), max_extent(zero_vector), building_draw(is_city), building_draw_vbo(is_city) {}
 	bool empty() const {return buildings.empty();}
+	bool get_is_city() const {return is_city;}
 	bool has_interior_to_draw() const {return (has_interior_geom && !building_draw_interior.empty());}
 
 	void clear() {
@@ -3153,6 +3156,7 @@ public:
 		building_t const *building_cont_player(nullptr);
 		defer_ped_draw_vars_t defer_ped_draw_vars;
 		vector<building_t *> buildings_with_cars;
+		vector<point> pts;
 		static brg_batch_draw_t bbd; // allocated memory is reused across building interiors
 		bool const defer_people_draw_for_player_building(global_building_params.people_min_alpha > 0.0);
 
@@ -3283,16 +3287,23 @@ public:
 						}
 						else {gen_and_draw_people_in_building(ped_draw_vars_t(b, oc, s, xlate, bi->ix, 0, reflection_pass));} // draw people in this building
 						// there currently shouldn't be any parked cars visible in mirrors or security cameras, so skip them in the reflection pass
-						if (!reflection_pass && b.has_cars_to_draw(player_in_building_bcube)) {buildings_with_cars.push_back(&b);}
-						
+						if (!reflection_pass && b.has_cars_to_draw(player_in_building_bcube)) {buildings_with_cars.push_back(&b);}					
+
+						if ((*i)->get_is_city()) { // check for nearby pedestrians in city buildings and open doors for them
+							float const ped_od(0.4*door_open_dist); // smaller than player dist
+							pts.clear();
+							cube_t door_test_cube(b.bcube);
+							door_test_cube.expand_by_xy(ped_od);
+							get_pedestrians_in_area(door_test_cube, bi->ix, pts); // is this thread safe?
+							b.get_all_nearby_ext_door_verts(ext_door_draw, s, pts, ped_od, 0); // update_state=0
+						}
 						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
 						if (!camera_near_building && !ext_basement_conn_visible) { // camera not near building or ext basement conn
 							if (!reflection_pass) {b.player_not_near_building();}
 							continue;
 						}
 						if (ref_pass_interior) continue; // interior room, don't need to draw windows and exterior doors
-						// it would be nice to open doors for pedestrians, but we don't have access to them here and this system doesn't support more than one open door
-						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist, reflection_pass); // and draw opened door
+						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist, !reflection_pass); // and draw opened door; update_state if not ref pass
 						bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1, 1, 1)); // inc_attic=1, inc_ext_basement=1, inc_roof_acc=1
 						
 						if (!reflection_pass && (camera_in_this_building || !this_frame_camera_in_building)) { // player in this building, or near but not inside another

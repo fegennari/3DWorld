@@ -1362,7 +1362,10 @@ void ped_manager_t::next_frame() {
 				i->next_frame(*this, peds, (i - peds.begin()), rgen, delta_dir);
 			}
 		} // for city
-		if (need_to_sort_peds) {sort_by_city_and_plot();}
+		if (need_to_sort_peds) {
+#pragma omp critical(access_pedestrian_data)
+			sort_by_city_and_plot();
+		}
 		first_frame = 0;
 	}
 }
@@ -1394,6 +1397,26 @@ void ped_manager_t::get_peds_crossing_roads(ped_city_vect_t &pcv) const {
 		int const road_ix(get_road_ix_for_ped_crossing(*i, road_dim));
 		if (road_ix >= 0) {pcv.add_ped(*i, road_ix);}
 	} // for i
+}
+
+void ped_manager_t::get_pedestrians_in_area(cube_t const &area, int building_ix, vector<point> &pts) const {
+	// called by building drawing code, so must be thread safe
+#pragma omp critical(access_pedestrian_data)
+	for (unsigned city = 0; city+1 < by_city.size(); ++city) {
+		if (!get_city_bcube_for_peds(city).intersects_xy(area)) continue; // skip
+
+		for (unsigned plot = by_city[city].plot_ix; plot < by_city[city+1].plot_ix; ++plot) {
+			if (!get_expanded_city_plot_bcube_for_peds(city, plot).intersects_xy(area)) continue; // skip
+			unsigned const ped_start(by_plot[plot]), ped_end(by_plot[plot+1]);
+
+			for (unsigned i = ped_start; i < ped_end; ++i) { // peds iteration
+				assert(i < peds.size());
+				pedestrian_t const &ped(peds[i]);
+				if (building_ix >= 0 && (int)ped.dest_bldg != building_ix) continue; // not targeting this building, skip
+				if (area.contains_pt_xy(ped.pos)) {pts.push_back(ped.pos);}
+			}
+		} // for plot
+	} // for city
 }
 
 bool ped_manager_t::has_nearby_car(pedestrian_t const &ped, bool road_dim, float delta_time, vect_cube_t *dbg_cubes) const {

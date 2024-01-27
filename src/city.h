@@ -917,6 +917,7 @@ public:
 	pedestrian_t const *get_ped_at(point const &p1, point const &p2) const;
 	unsigned get_first_ped_at_plot(unsigned plot) const {assert(plot < by_plot.size()); return by_plot[plot];}
 	void get_peds_crossing_roads(ped_city_vect_t &pcv) const;
+	void get_pedestrians_in_area(cube_t const &area, int building_ix, vector<point> &pts) const;
 	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
 	void gen_and_draw_people_in_building(ped_draw_vars_t const &pdv);
 	void draw_people_in_building(vector<person_t> const &people, ped_draw_vars_t const &pdv);
