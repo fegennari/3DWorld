@@ -174,7 +174,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 100
 	void begin_turn() {turn_val = bcube.get_center_dim(!dim);}
 	bool maybe_apply_turn(float centerline, bool for_driveway);
 	void complete_turn_and_swap_dim();
-	void person_in_the_way(bool is_player);
+	void person_in_the_way(bool is_player, bool at_stopsign);
 	bool must_wait_entering_or_crossing_road(vector<car_t> const &cars, driveway_t const &driveway, unsigned road_ix, float lookahead_time) const;
 	bool check_for_road_clear_and_wait(vector<car_t> const &cars, driveway_t const &driveway, unsigned road_ix);
 	bool run_enter_driveway_logic(vector<car_t> const &cars, driveway_t const &driveway);

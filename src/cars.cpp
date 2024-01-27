@@ -206,9 +206,11 @@ void car_t::complete_turn_and_swap_dim() {
 	entering_city = 0; // clear flag in case we turned into the city
 }
 
-void car_t::person_in_the_way(bool is_player) {
+void car_t::person_in_the_way(bool is_player, bool at_stopsign) {
 	static rand_gen_t rgen;
-	unsigned const rgen_mod_val((in_building_gameplay_mode() && !is_player) ? 16 : 4); // honk less often for zombies since they're often in the road
+	bool const is_zombie(in_building_gameplay_mode() && !is_player);
+	// honk less often for zombies since they're often in the road; honk less often at stop signs because peds don't predict stop sign logic as well as traffic lights
+	unsigned const rgen_mod_val(is_zombie ? 16 : ((at_stopsign && !is_player) ? 8 : 4));
 	if ((rgen.rand() % rgen_mod_val) == 0) {honk_horn_if_close_and_fast();}
 	decelerate_fast(); // must be after honk logic
 }
@@ -1007,15 +1009,16 @@ bool car_manager_t::check_car_for_ped_colls(car_t &car) const {
 	coll_area.d[ car.dim][car.dir] += (car.dir ? 1.25 : -1.25)*car.get_length(); // extend the front
 	coll_area.d[!car.dim][0] -= 0.5*car.get_width();
 	coll_area.d[!car.dim][1] += 0.5*car.get_width();
+	bool const at_stopsign(car.in_isect() && get_car_isec(car).has_stopsign);
 
 	for (auto i = peds.begin(); i != peds.end(); ++i) {
 		if (coll_area.contains_pt_xy_exp(i->pos, i->radius)) {
-			car.person_in_the_way(0); // is_player=0
+			car.person_in_the_way(0, at_stopsign); // is_player=0
 			return 1;
 		}
 	}
 	if (check_player && coll_area.contains_pt_xy_exp(player_pos, CAMERA_RADIUS)) { // check for player collision
-		car.person_in_the_way(1); // is_player=1
+		car.person_in_the_way(1, at_stopsign); // is_player=1
 		return 1;
 	}
 	return 0;
