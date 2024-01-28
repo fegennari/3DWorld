@@ -1661,7 +1661,7 @@ void elevator_t::call_elevator(unsigned floor_ix, float targ_z, unsigned req_dir
 		if (inside_press && !prev_ip) {stable_sort(call_requests.begin(), call_requests.end());} // prioritize inside press if changed
 		return;
 	} // for cr
-	call_requests.emplace_back(floor_ix, targ_z, req_dirs, inside_press); // place the request at the end to make this this last floor visited
+	call_requests.emplace_back(floor_ix, targ_z, req_dirs, inside_press); // place the request at the end to make this the last floor visited
 	if (inside_press) {stable_sort(call_requests.begin(), call_requests.end());} // prioritize inside press
 }
 void elevator_t::register_at_dest() {
@@ -1718,7 +1718,9 @@ void building_t::call_elevator_to_floor(elevator_t &elevator, unsigned floor_ix,
 	if (interior->elevators_disabled) return; // nope
 	float const targ_z(elevator.z1() + max(get_window_vspace()*floor_ix, 0.05f*get_floor_thickness())); // bottom of elevator car for this floor
 	assert(targ_z <= bcube.z2()); // sanity check
-	unsigned const req_dirs(is_inside_elevator ? 3 : (is_up ? 2 : 1)); // inside: both up and down, otherwise depends on the call button pressed
+	// inside: check if button is above or below current elevator car pos, otherwise depends on the call button pressed
+	bool const dest_is_up(targ_z > interior->room_geom->objs[elevator.car_obj_id].z1());
+	unsigned const req_dirs(is_inside_elevator ? (dest_is_up ? 2 : 1) : (is_up ? 2 : 1));
 	elevator.call_elevator(floor_ix, targ_z, req_dirs, is_inside_elevator);
 }
 
