@@ -219,7 +219,6 @@ void gen_wind_texture();
 void gen_noise_texture();
 void regrow_landscape_texture_amt0();
 void update_lt_section(int x1, int y1, int x2, int y2);
-bool endswith(string const &value, string const &ending);
 unsigned get_building_textures_gpu_mem();
 
 

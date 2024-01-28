@@ -272,6 +272,15 @@ class file_reader_assimp {
 		string full_path(model_dir + filename);
 		bool is_temp_image(0);
 
+		// hack: if this is a PSD (Photoshop) file, we don't support reading it, but we can see if the actual file is a JPG (which happens for one model)
+		if (endswith(full_path, ".psd")) {
+			string mod_path(full_path);
+			unsigned const sz(full_path.size());
+			mod_path[sz-3] = 'j';
+			mod_path[sz-2] = 'p';
+			mod_path[sz-1] = 'g';
+			if (check_texture_file_exists(mod_path)) {full_path = mod_path;}
+		}
 		if (texture) {
 			assert(texture->pcData);
 			// try to read from memory

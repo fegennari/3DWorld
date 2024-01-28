@@ -51,7 +51,6 @@ bool enable_spec_map() {return (ENABLE_SPEC_MAPS && !disable_shader_effects);}
 bool no_sparse_smap_update();
 bool enable_reflection_dynamic_updates();
 string texture_str(int tid);
-bool endswith(string const &value, string const &ending);
 bool use_model3d_bump_maps() {return enable_bump_map();} // global function export
 
 

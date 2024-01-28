@@ -1041,6 +1041,7 @@ bool remove_cube_if_contains_pt_xy(vect_cube_t &cubes, vector3d const &pos, unsi
 
 void sleep_for_ms(unsigned milliseconds);
 void checked_fclose(FILE *fp);
+bool endswith(std::string const &value, std::string const &ending);
 
 #include "inlines.h"
 
