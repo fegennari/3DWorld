@@ -782,6 +782,7 @@ unsigned building_room_geom_t::get_num_verts() const {
 building_materials_t &building_room_geom_t::get_building_mat(tid_nm_pair_t const &tex, bool dynamic, unsigned small, bool transparent, bool exterior) {
 	assert(!(dynamic && exterior));
 	assert(small <= 2); // 0=mats_static, 1=mats_small, 2=mats_detail
+	if (transparent) {assert(!small && !dynamic && !exterior);} // transparent objects must be static and can't be small
 	if (exterior)   return (small ? mats_ext_detail : mats_exterior);
 	if (dynamic)    return mats_dynamic;
 	if (small == 2) return mats_detail;

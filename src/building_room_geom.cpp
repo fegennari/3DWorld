@@ -4517,7 +4517,8 @@ void building_room_geom_t::add_lava_lamp(room_object_t const &c) {
 	// draw center part
 	tid_nm_pair_t tp;
 	if (c.is_light_on()) {tp.emissive = 1.0;} // make it lit
-	rgeom_mat_t &mat(get_material(tp, 1, 0, 1, 1)); // shadowed, small, transparent
+	bool const transparent(0); // should be, but small objects can't be transparent
+	rgeom_mat_t &mat(get_material(tp, 1, 0, 1, transparent)); // shadowed, small
 	mat.add_vcylin_to_verts(center, apply_light_color(c, colorRGBA(1.0, 1.0, 1.0, 0.5)), 0, 0, 0, 0, 1.0, 0.5); // draw sides
 	// TODO: draw with a custom shader?
 }
