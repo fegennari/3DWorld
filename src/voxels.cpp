@@ -29,8 +29,8 @@ voxel_model_ground terrain_voxel_model(GROUND_NUM_LOD);
 voxel_brush_params_t voxel_brush_params;
 bool voxel_ppb_enable_falling(0);
 
-extern bool group_back_face_cull, voxel_shadows_updated;
-extern int dynamic_mesh_scroll, rand_gen_index, scrolling, display_mode, display_framerate, voxel_editing, mesh_gen_mode, mesh_freq_filter;
+extern bool group_back_face_cull, voxel_shadows_updated, voxel_add_remove;
+extern int dynamic_mesh_scroll, rand_gen_index, scrolling, display_mode, voxel_editing, mesh_gen_mode, mesh_freq_filter;
 extern float FAR_CLIP;
 extern double tfticks;
 extern coll_obj_group coll_objects;
@@ -2120,7 +2120,7 @@ bool update_voxel_sphere_region(point const &center, float radius, float val_at_
 
 	// optimization/hack to skip the update if the player didn't cause it and the camera can't see it
 	if (shooter != CAMERA_ID && !camera_pdu.sphere_visible_test(center, radius)) return 0;
-	return terrain_voxel_model.update_voxel_sphere_region(center, radius, val_at_center*(display_framerate ? 1.0 : -1.0), 1, 1, NULL, shooter, num_fragments);
+	return terrain_voxel_model.update_voxel_sphere_region(center, radius, val_at_center*(voxel_add_remove ? 1.0 : -1.0), 1, 1, NULL, shooter, num_fragments);
 }
 
 void proc_voxel_updates() {

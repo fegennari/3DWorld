@@ -84,7 +84,7 @@ bool enable_model3d_custom_mipmaps(1), flatten_tt_mesh_under_models(0), smileys_
 bool enable_dpart_shadows(0), enable_tt_model_reflect(1), enable_tt_model_indir(0), auto_calc_tt_model_zvals(0), use_model_lod_blocks(0), enable_translocator(0), enable_grass_fire(0);
 bool disable_model_textures(0), start_in_inf_terrain(0), allow_shader_invariants(1), config_unlimited_weapons(0), disable_tt_water_reflect(0), allow_model3d_quads(1);
 bool enable_timing_profiler(0), fast_transparent_spheres(0), force_ref_cmap_update(0), use_instanced_pine_trees(0), enable_postproc_recolor(0), draw_building_interiors(0);
-bool toggle_room_light(0), teleport_to_screenshot(0), merge_model_objects(0), display_frame_time(0), reverse_3ds_vert_winding_order(1), disable_dlights(0);
+bool toggle_room_light(0), teleport_to_screenshot(0), merge_model_objects(0), display_frame_time(0), reverse_3ds_vert_winding_order(1), disable_dlights(0), voxel_add_remove(0);
 bool enable_hcopter_shadows(0), pre_load_full_tiled_terrain(0), disable_blood(0), enable_model_animations(1), rotate_trees(0), invert_model3d_faces(0), play_gameplay_alert(1);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), mesh_rgen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
 int animate(1), animate2(1), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0), init_num_balls(-1), change_wmode_frame(0);
@@ -867,7 +867,7 @@ void next_game_mode() {
 // key repeat is only enabled for movement keys wasd
 void keyboard_proc(unsigned char key, int x, int y) {
 
-    switch (key) { // available: O, P,. somtimes Z
+    switch (key) { // available: O, sometimes Z
 	case 0x1B: // ESC key (27)
 		quit_3dworld();
 		break;
@@ -986,6 +986,10 @@ void keyboard_proc(unsigned char key, int x, int y) {
 			break;
 		}
 		reset_camera_pos();
+		break;
+
+	case 'P':
+		voxel_add_remove ^= 1;
 		break;
 
 	case 'v': // reset camera and change camera mode from air to surface
