@@ -4496,9 +4496,14 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 	cube_t sides[4]; // {-y, +y, -x, +x}
 	subtract_cube_xy(glass, hole, sides);
 	colorRGBA const glass_color(apply_light_color(c, table_glass_color));
-	rgeom_mat_t &glass_mat(get_untextured_material(0, 0, 0, 1)); // no shadows, transparent
-	for (unsigned n = 0; n < 4; ++n) {glass_mat.add_cube_to_verts_untextured(sides[n], glass_color, EF_Z1);}
-	// TODO: draw water
+	rgeom_mat_t &trans_mat(get_untextured_material(0, 0, 0, 1)); // no shadows, transparent; for glass and water
+	for (unsigned n = 0; n < 4; ++n) {trans_mat.add_cube_to_verts_untextured(sides[n], glass_color, EF_Z1);}
+	
+	if (!c.is_broken()) { // draw water
+		cube_t water(c);
+		water.z2() -= 0.1*height; // 90% filled
+		trans_mat.add_cube_to_verts_untextured(water, apply_light_color(c, colorRGBA(0.7, 0.85, 1.0, 0.15)), ~EF_Z2); // top surface
+	}
 	// TODO: draw fish, etc.
 }
 

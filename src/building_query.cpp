@@ -1837,6 +1837,7 @@ bool room_object_t::is_spider_collidable() const { // include objects on the flo
 	}
 	if (type == TYPE_CEIL_FAN || type == TYPE_OFF_CHAIR || type == TYPE_POOL_LAD || type == TYPE_BAR_STOOL) return 0; // not a cube
 	if (type == TYPE_BOOK) return 0; // I guess books don't count, since they're too small to walk on?
+	//if (type == TYPE_FISHTANK) {} // spider can collide with sides but not top?
 	return 1;
 }
 bool room_object_t::is_vert_cylinder() const {
