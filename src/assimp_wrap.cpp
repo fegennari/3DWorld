@@ -279,7 +279,14 @@ class file_reader_assimp {
 			mod_path[sz-3] = 'j';
 			mod_path[sz-2] = 'p';
 			mod_path[sz-1] = 'g';
-			if (check_texture_file_exists(mod_path)) {full_path = mod_path;}
+			
+			if (check_texture_file_exists(mod_path)) {full_path = mod_path;} // jpg
+			else {
+				mod_path[sz-3] = 'p';
+				mod_path[sz-2] = 'n';
+				mod_path[sz-1] = 'g';
+				if (check_texture_file_exists(mod_path)) {full_path = mod_path;} // png
+			}
 		}
 		if (texture) {
 			assert(texture->pcData);
