@@ -41,12 +41,12 @@ vector4d clip_plane;
 vector<camera_filter> cfilters;
 pt_line_drawer bubble_pld;
 
-extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting, tree_indir_lighting, display_frame_time;
+extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting, tree_indir_lighting;
 extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp, dynamic_smap_bias, volume_lighting, dl_smap_enabled, underwater;
 extern bool enable_gamma_correct, smoke_dlights, enable_clip_plane_z, enable_cube_map_bump_maps, enable_tt_model_indir, fast_transparent_spheres, disable_dlights;
 extern bool enable_dlight_bcubes;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_for_fog, num_groups, xoff, yoff;
-extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2, camera_coll_id;
+extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2, camera_coll_id, stats_display_mode;
 extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, reflection_tid, scene_smap_vbo_invalid, sky_zval_tid, skybox_tid;
 extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias, clip_plane_z, fog_dist_scale, sky_occlude_scale, cloud_cover;
 extern double tfticks;
@@ -81,6 +81,7 @@ extern reflective_cobjs_t reflective_cobjs;
 void create_dlight_volumes();
 void create_sky_vis_zval_texture(unsigned &tid);
 void pre_bind_smap_tus(shader_t &s);
+uint64_t get_tiled_terrain_gpu_mem();
 
 
 void set_fill_mode() {
@@ -1927,13 +1928,26 @@ void draw_splashes() {
 
 void draw_framerate(float val) {
 
-	char text[32];
-	if (display_frame_time) {sprintf(text, "%.2f", 1000.0/val);} // frame time in ms
-	else {sprintf(text, "%i", round_fp(val));} // framerate in FPS
+	char text[64];
+
+	switch (stats_display_mode) {
+	case 0: // framerate in FPS
+		sprintf(text, "%i", round_fp(val));
+		break;
+	case 1: // frame time in ms
+		sprintf(text, "%.2f", 1000.0/val);
+		break;
+	case 2: // frame stats
+		// Note: GPU memory usage is approximate and may miss some data
+		// Note: CPU memory usage would be useful to show, but there's no cross-platform way to get this
+		sprintf(text, "Time: %.2f  Draws: %u  GPU Mem: %u", 1000.0/val, num_frame_draw_calls, in_mb(get_tiled_terrain_gpu_mem()));
+		break;
+	case 3: return; // off
+	default: assert(0);
+	}
 	float const ar(((float)window_width)/((float)window_height));
 	draw_text(WHITE, -0.011*ar, -0.011, -0.02, text);
 }
-
 
 void draw_compass_and_alt() { // and temperature
 

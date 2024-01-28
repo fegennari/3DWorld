@@ -2538,11 +2538,10 @@ bool tile_draw_t::can_have_reflection(tile_t const *const tile, tile_set_t &tile
 
 unsigned get_building_models_gpu_mem();
 unsigned get_dlights_smap_gpu_mem();
-unsigned in_mb(unsigned long long v) {return v/1024/1024;}
 
-void tile_draw_t::show_debug_stats() const {
+uint64_t tile_draw_t::show_debug_stats(bool calc_mem_only) const {
 	unsigned num_trees(0), num_smaps(0);
-	unsigned long long mem(0), tree_mem(0), smap_mem(0);
+	uint64_t mem(0), tree_mem(0), smap_mem(0);
 
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 		tile_t *const tile(i->second.get());
@@ -2564,12 +2563,16 @@ void tile_draw_t::show_debug_stats() const {
 		mem += 2ULL*tile_size*(tile_size+1ULL)*sizeof(point);
 		for (unsigned i = 0; i < NUM_LODS; ++i) {mem += 4ULL*(tile_size>>i)*(tile_size>>i)*sizeof(unsigned);} // approximate
 	}
+	uint64_t const tot_mem(mem + dtree_mem + ptree_mem + grass_mem + smap_free_list_mem + dlights_smap_mem + texture_mem + building_mem + models_mem + frame_buf_mem + room_geom_mem);
+	if (calc_mem_only) return tot_mem;
+
 	cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees drawn: " << num_trees << ", shadow maps: " << num_smaps
-		<< ", GPU MB: " << in_mb(mem + dtree_mem + ptree_mem + grass_mem + smap_free_list_mem + dlights_smap_mem + texture_mem + building_mem + models_mem + frame_buf_mem + room_geom_mem)
+		<< ", GPU MB: " << in_mb(tot_mem)
 		<< ", tile MB: " << in_mb(mem - smap_mem) << ", tree CPU MB: " << in_mb(tree_mem) << ", tree GPU MB: " << in_mb((unsigned long long)dtree_mem + ptree_mem)
 		<< ", grass MB: " << in_mb(grass_mem) << ", smap MB: " << in_mb(smap_mem) << ", smap free list MB: " << in_mb(smap_free_list_mem)
 		<< ", dlights smap mem MB: " << in_mb(dlights_smap_mem) << ", frame buf MB: " << in_mb(frame_buf_mem) << ", texture MB: " << in_mb(texture_mem)
 		<< ", building MB: " << in_mb(building_mem) << ", room_geom MB: " << in_mb(room_geom_mem) << ", model MB: " << in_mb(models_mem) << endl;
+	return tot_mem;
 }
 
 
@@ -2769,7 +2772,7 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 			if (ENABLE_ANIMALS)        {draw_animals    (reflection_pass);}
 		}
 	}
-	if (DEBUG_TILES) {show_debug_stats();}
+	if (DEBUG_TILES) {show_debug_stats(0);} // calc_mem_only=0
 	//if ((GET_TIME_MS() - timer1) > 100) {PRINT_TIME("Draw Tiled Terrain");}
 }
 
@@ -3469,7 +3472,8 @@ bool tile_smap_data_t::needs_update(point const &lpos) {
 tile_t *get_tile_from_xy  (tile_xy_pair const &tp) {return terrain_tile_draw.get_tile_from_xy(tp);}
 float update_tiled_terrain(float &min_camera_dist) {return terrain_tile_draw.update(min_camera_dist);}
 void pre_draw_tiled_terrain() {terrain_tile_draw.pre_draw();}
-void show_tiled_terrain_debug_stats() {terrain_tile_draw.show_debug_stats();}
+void show_tiled_terrain_debug_stats() {terrain_tile_draw.show_debug_stats(0);} // calc_mem_only=0
+uint64_t get_tiled_terrain_gpu_mem() {return terrain_tile_draw.show_debug_stats(1);} // calc_mem_only=1
 
 
 colorRGBA get_inf_terrain_mod_color() {

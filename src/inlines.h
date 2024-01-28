@@ -74,6 +74,8 @@ inline float get_pos_fract(float v) {
 inline float extract_low_bits_01 (float v, float m) {return     get_pos_fract(m*v)      ;}
 inline float extract_low_bits_pm1(float v, float m) {return 2.0*get_pos_fract(m*v) - 1.0;}
 
+inline unsigned in_mb(uint64_t v) {return v/1024/1024;}
+
 
 // ***************** RANDOM NUMBER GENERATION ********************
 
