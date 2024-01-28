@@ -4486,17 +4486,17 @@ void building_room_geom_t::add_checkout(room_object_t const &c, float tscale) {
 }
 
 void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed, except for bottom
-	float const height(c.dz()), glass_thickness(0.01*height);
+	float const height(c.dz()), glass_thickness(0.02*height);
 	cube_t glass(c), bottom(c);
 	bottom.z2() = glass.z1() = c.z1() + 0.05*height;
-	get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(bottom, apply_light_color(c, BKGRAY), EF_Z1); // bottom, shadowed, small
+	get_untextured_material(1).add_cube_to_verts_untextured(bottom, apply_light_color(c, BKGRAY), EF_Z1); // bottom, shadowed
 	// draw the sides
 	cube_t hole(glass);
 	hole.expand_by_xy(-glass_thickness); // shrink
 	cube_t sides[4]; // {-y, +y, -x, +x}
 	subtract_cube_xy(glass, hole, sides);
 	colorRGBA const glass_color(apply_light_color(c, table_glass_color));
-	rgeom_mat_t &glass_mat(get_untextured_material(0, 0, 1, 1)); // no shadows, small, transparent
+	rgeom_mat_t &glass_mat(get_untextured_material(0, 0, 0, 1)); // no shadows, transparent
 	for (unsigned n = 0; n < 4; ++n) {glass_mat.add_cube_to_verts_untextured(sides[n], glass_color, EF_Z1);}
 	// TODO: draw water
 	// TODO: draw fish, etc.

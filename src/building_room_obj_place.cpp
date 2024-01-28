@@ -1785,7 +1785,7 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 		cube_t table(tv); // same XY bounds as the TV
 		tv.translate_dim(2, height); // move TV up
 		table.z2() = tv.z1();
-		objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, RO_FLAG_IS_HOUSE, tot_light_amt, SHAPE_SHORT); // short table; houses only
+		objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, (RO_FLAG_IS_HOUSE | RO_FLAG_ADJ_TOP), tot_light_amt, SHAPE_SHORT); // short table; houses only
 	}
 	if (placed_couch && placed_tv) {
 		room_object_t const &couch(objs[couch_ix]), &tv(objs[tv_ix]);
@@ -1809,6 +1809,27 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 				objs[chair_ix].flags |= RO_FLAG_RAND_ROT; // rotate to face the center of the room rather than having it be random?
 				objs[chair_ix].shape  = SHAPE_CYLIN; // make it a cylinder since it no longer fits in a tight cube
 			}
+		}
+	}
+	if ((rgen.rand()%3) == 0) { // add fishtank on a tall table 33% of the time
+		// first add the table
+		float const floor_spacing(get_window_vspace());
+		float const table_height(rgen.rand_uniform(0.22, 0.24)*floor_spacing);
+		vector3d const fc_sz_scale(rgen.rand_uniform(0.7, 0.8), rgen.rand_uniform(1.6, 1.8), 1.0); // depth, width, height
+		unsigned const table_obj_ix(objs.size());
+
+		// not_at_a_window=1
+		if (place_obj_along_wall(TYPE_TABLE, room, table_height, fc_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.5, 1, 4, 0, WHITE, 1)) {
+			// then add the fishtank
+			float const tank_height(rgen.rand_uniform(0.22, 0.24)*floor_spacing);
+			assert(table_obj_ix < objs.size());
+			room_object_t &table(objs[table_obj_ix]); // table was placed first, then a blocker
+			table.shape  = SHAPE_SHORT;
+			table.flags |= RO_FLAG_ADJ_TOP; // flag table as having something on it
+			cube_t tank(table);
+			tank.expand_by_xy(-0.1*min(table.dx(), table.dy()));
+			set_cube_zvals(tank, table.z2(), (table.z2() + tank_height));
+			objs.emplace_back(tank, TYPE_FISHTANK, room_id, table.dim, table.dir, RO_FLAG_NOCOLL, tot_light_amt);
 		}
 	}
 	if (room.is_single_floor && objs_start > 0) {replace_light_with_ceiling_fan(rgen, room, cube_t(), room_id, tot_light_amt, objs_start-1);} // light is prev placed object

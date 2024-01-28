@@ -861,6 +861,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_CHIM_CAP:  add_chimney_cap(*i); break;
 		case TYPE_LADDER:    add_ext_ladder(*i); break;
 		case TYPE_CHECKOUT:  add_checkout(*i, tscale); break;
+		case TYPE_FISHTANK:  add_fishtank(*i); break;
 		//case TYPE_FRIDGE: if (i->is_open()) {} break; // draw open fridge?
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
@@ -975,7 +976,6 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_CLOCK:      add_clock (c, 0); break; // add_dynamic=0
 		case TYPE_FOOD_BOX:   add_food_box(c); break;
 		case TYPE_SAFE:       add_safe(c); break;
-		case TYPE_FISHTANK:   add_fishtank(c); break;
 		case TYPE_LAVALAMP:   add_lava_lamp(c); break;
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		default: break;
