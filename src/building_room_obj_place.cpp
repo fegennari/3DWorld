@@ -55,6 +55,11 @@ float get_radius_for_square_model(unsigned model_id) {
 	vector3d const chair_sz(building_obj_model_loader.get_model_world_space_size(model_id));
 	return 0.5f*0.5f*(chair_sz.x + chair_sz.y)/chair_sz.z; // assume square and take average of xsize and ysize
 }
+cube_t place_cylin_object(rand_gen_t rgen, cube_t const &place_on, float radius, float height, float dist_from_edge) {
+	cube_t c;
+	gen_xy_pos_for_round_obj(c, place_on, radius, height, dist_from_edge, rgen); // place at dist_from_edge from edge
+	return c;
+}
 
 bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
 	colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair_model, bool enable_rotation)
@@ -556,7 +561,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 	unsigned const first_corner(rgen.rand() & 3);
 	bool const first_dim(rgen.rand_bool());
 	cube_t const part(get_part_for_room(room));
-	bool placed_closet(0);
+	bool placed_closet(0), placed_lamp(0);
 	unsigned closet_obj_id(0);
 	bool chk_windows[2][2] = {0}; // precompute which walls are exterior and can have windows, {dim}x{dir}
 
@@ -700,7 +705,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 		int obj_id(-1);
 		float dmin_sq(0.0);
 
-		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) { // choose the dresser or nightstand closest to be bed
+		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) { // choose the dresser or nightstand closest to the bed
 			if (i->type != TYPE_DRESSER && i->type != TYPE_NIGHTSTAND) continue; // not a dresser or nightstand
 			if (i->flags & RO_FLAG_ADJ_TOP)    continue; // don't add a lamp if there's a mirror on it
 			if (min(i->dx(), i->dy()) < width) continue; // too small to place a lamp on
@@ -725,7 +730,23 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 			if (rgen.rand_bool() && !room_is_lit) {flags |= RO_FLAG_LIT;} // 50% chance of being lit if the room is dark (Note: don't let room_is_lit affect rgen)
 			obj.flags |= RO_FLAG_ADJ_TOP; // flag this object as having something on it
 			objs.emplace_back(lamp, TYPE_LAMP, room_id, obj.dim, obj.dir, flags, tot_light_amt, SHAPE_CYLIN, lamp_colors[rgen.rand()%NUM_LAMP_COLORS]); // Note: invalidates obj ref
+			placed_lamp = 1;
 		}
+	}
+	if (!placed_lamp && rgen.rand_bool()) { // place a lava lamp on a dresser or nightstand
+		float const height(0.15*window_vspacing), radius(0.135*height);
+		bool const on_dresser(rgen.rand() & 3); // dresser 75% of the time
+
+		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+			if (i->type != (on_dresser ? TYPE_DRESSER : TYPE_NIGHTSTAND)) continue; // not a dresser or nightstand
+			if (i->flags & RO_FLAG_ADJ_TOP)         continue; // don't add a lava lamp if there's a mirror on it
+			if (min(i->dx(), i->dy()) < 3.0*radius) continue; // too small to place a lava lamp on
+			cube_t const llamp(place_cylin_object(rgen, *i, radius, height, 1.0*radius));
+			i->flags |= RO_FLAG_ADJ_TOP; // flag this object as having something on it
+			objs.emplace_back(llamp, TYPE_LAVALAMP, room_id, i->dim, i->dir, (RO_FLAG_NOCOLL | RO_FLAG_LIT), tot_light_amt, SHAPE_CYLIN, LT_GRAY); // on by default
+			placed_lamp = 1; // counts as a lamp
+			break;
+		} // for i
 	}
 	if (min(room_bounds.dx(), room_bounds.dy()) > 2.5*window_vspacing && max(room_bounds.dx(), room_bounds.dy()) > 3.0*window_vspacing) {
 		// large room, try to add a desk and chair as well
@@ -2860,12 +2881,6 @@ void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_
 	if (place_on.is_glass_table()) {flags |= RO_FLAG_HAS_EXTRA;} // flag so that shadows are enabled
 	objs.emplace_back(book, TYPE_BOOK, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, color); // Note: invalidates place_on reference
 	set_obj_id(objs);
-}
-
-cube_t place_cylin_object(rand_gen_t rgen, cube_t const &place_on, float radius, float height, float dist_from_edge) {
-	cube_t c;
-	gen_xy_pos_for_round_obj(c, place_on, radius, height, dist_from_edge, rgen); // place at dist_from_edge from edge
-	return c;
 }
 
 bool building_t::place_bottle_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid) {

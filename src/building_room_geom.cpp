@@ -4498,13 +4498,27 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 	colorRGBA const glass_color(apply_light_color(c, table_glass_color));
 	rgeom_mat_t &glass_mat(get_untextured_material(0, 0, 1, 1)); // no shadows, small, transparent
 	for (unsigned n = 0; n < 4; ++n) {glass_mat.add_cube_to_verts_untextured(sides[n], glass_color, EF_Z1);}
-	// TODO: draw ater
+	// TODO: draw water
 	// TODO: draw fish, etc.
 }
 
 void building_room_geom_t::add_lava_lamp(room_object_t const &c) {
-	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
-	mat.add_vcylin_to_verts(c, apply_light_color(c), 0, 1); // draw sides and top
+	float const height(c.get_height());
+	// draw top and bottom
+	colorRGBA const color(apply_light_color(c));
+	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small=1
+	cube_t base_bot(c), base_top(c), center(c), top(c);
+	base_bot.z2() = base_top.z1() = c.z1() + 0.21 *height;
+	base_top.z2() = center  .z1() = c.z1() + 0.42 *height;
+	center  .z2() = top     .z1() = c.z2() - 0.167*height;
+	metal_mat.add_vcylin_to_verts(base_bot, color, 0, 0, 0, 0, 1.0, 0.5); // draw sides
+	metal_mat.add_vcylin_to_verts(base_top, color, 0, 0, 0, 0, 0.5, 1.0); // draw sides
+	metal_mat.add_vcylin_to_verts(top,      color, 0, 1, 0, 0, 0.5, 0.3); // draw sides and top
+	// draw center part
+	tid_nm_pair_t tp;
+	if (c.is_light_on()) {tp.emissive = 1.0;} // make it lit
+	rgeom_mat_t &mat(get_material(tp, 1, 0, 1, 1)); // shadowed, small, transparent
+	mat.add_vcylin_to_verts(center, apply_light_color(c, colorRGBA(1.0, 1.0, 1.0, 0.5)), 0, 0, 0, 0, 1.0, 0.5); // draw sides
 	// TODO: draw with a custom shader?
 }
 
