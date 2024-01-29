@@ -1282,7 +1282,7 @@ public:
 	water_draw_t() : mat(rgeom_mat_t(tid_nm_pair_t(FOAM_TEX))), tex_off(0.0) {}
 
 	void add_water_for_sink(room_object_t const &obj) {
-		if (!obj.is_active()) return; // not turned on
+		if (!obj.is_active()) return;
 		bool const is_cube(obj.type == TYPE_KSINK || obj.type == TYPE_BRSINK);
 		float const dz(obj.dz());
 		cube_t c;
@@ -1308,6 +1308,50 @@ public:
 };
 
 water_draw_t water_draw;
+
+class lava_lamp_draw_t {
+	bool closest_is_on=0;
+	float dmin_sq=0.0, cur_time=0.0;
+	quad_batch_draw qbd;
+public:
+	void add_lava_lamp(room_object_t const &obj, point const &camera_bs) {
+		// Note: must match code in building_room_geom_t::add_lava_lamp()
+		float const radius(obj.get_radius()), r_top(0.5*radius), height(obj.dz());
+		point const center(obj.get_cube_center());
+		vector3d const vdir((camera_bs - center).get_norm()), vside(cross_product(vdir, plus_z).get_norm());
+		point pts[4] = {(center - radius*vside), (center + radius*vside), (center + r_top*vside), (center - r_top*vside)};
+		pts[0].z = pts[1].z = obj.z1() + 0.42 *height; // z1
+		pts[2].z = pts[3].z = obj.z2() - 0.167*height; // z2
+		bool const is_on(obj.is_light_on());
+		color_wrapper const cw(is_on ? WHITE : GRAY); // we can't do proper lighting here, so make the color gray if it's off
+		qbd.add_quad_pts(pts, cw, vdir, tex_range_t());
+		float const dsq(p2p_dist_sq(camera_bs, center));
+		
+		if (dmin_sq == 0.0 || dsq < dmin_sq) {
+			dmin_sq = dsq;
+			closest_is_on = is_on;
+		}
+	}
+	void next_frame() {
+		if (closest_is_on) {cur_time += fticks;} // update even if empty/not visible
+		dmin_sq = 0.0; // reset for next frame
+	}
+	void draw_and_clear(shader_t &s) { // Note: not drawn in the shadow pass, so the interior part doesn't cast a shadow
+		if (qbd.empty()) {
+			if (cur_time > 10000) {cur_time = 0.0;} // reset time when not visible to avoid FP accuracy issues
+			return;
+		}
+		shader_t lls;
+		lls.set_vert_shader("no_lighting_tex_coord");
+		lls.set_frag_shader("lava_lamp");
+		lls.begin_shader();
+		lls.add_uniform_float("time", cur_time/TICKS_PER_SECOND);
+		qbd.draw_and_clear();
+		s.make_current(); // switch back to the normal shader
+	}
+};
+
+lava_lamp_draw_t lava_lamp_draw;
 
 int room_object_t::get_model_id() const { // Note: first 8 bits is model ID, last 8 bits is sub-model ID
 	assert(type >= TYPE_TOILET);
@@ -1697,14 +1741,23 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (disable_cull_face) {glEnable(GL_CULL_FACE);}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
 
-	if (player_in_building && !shadow_only) { // draw water for sinks that are turned on
+	if (player_in_building && !shadow_only) { // draw water for sinks that are turned on, and draw lava lamps
 		auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
 
 		for (auto i = objs.begin(); i != objs_end; ++i) {
-			if (i->type != TYPE_KSINK && i->type != TYPE_BRSINK) continue; // TYPE_SINK is handled above
-			water_sound_manager.register_running_water(*i, building);
-			water_draw.add_water_for_sink(*i);
-		}
+			if (i->type == TYPE_KSINK || i->type == TYPE_BRSINK) { // TYPE_SINK is handled above
+				water_sound_manager.register_running_water(*i, building);
+				if (!i->is_active()) continue; // not turned on
+				if (!(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate))) continue; // VFC
+				water_draw.add_water_for_sink(*i);
+			}
+			else if (i->type == TYPE_LAVALAMP) {
+				if (!(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate))) continue; // VFC
+				lava_lamp_draw.add_lava_lamp(*i, camera_bs);
+			}
+		} // for i
+		lava_lamp_draw.draw_and_clear(s);
+		if (!reflection_pass) {lava_lamp_draw.next_frame();}
 	}
 	water_sound_manager.finalize();
 	water_draw.draw_and_clear(s);

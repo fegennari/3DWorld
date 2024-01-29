@@ -4529,13 +4529,15 @@ void building_room_geom_t::add_lava_lamp(room_object_t const &c) {
 	metal_mat.add_vcylin_to_verts(base_bot, color, 0, 0, 0, 0, 1.0, 0.5); // draw sides
 	metal_mat.add_vcylin_to_verts(base_top, color, 0, 0, 0, 0, 0.5, 1.0); // draw sides
 	metal_mat.add_vcylin_to_verts(top,      color, 0, 1, 0, 0, 0.5, 0.3); // draw sides and top
-	// draw center part
+	// draw center part top and bottom surfaces
 	tid_nm_pair_t tp;
-	if (c.is_light_on()) {tp.emissive = 1.0;} // make it lit
-	bool const transparent(0); // should be, but small objects can't be transparent
-	rgeom_mat_t &mat(get_material(tp, 1, 0, 1, transparent)); // shadowed, small
-	mat.add_vcylin_to_verts(center, apply_light_color(c, colorRGBA(1.0, 1.0, 1.0, 0.5)), 0, 0, 0, 0, 1.0, 0.5); // draw sides
-	// TODO: draw with a custom shader?
+	tp.emissive = 1.0; // always emissive, to match the shader
+	rgeom_mat_t &mat(get_material(tp, 1, 0, 1));
+	colorRGBA const lit_color(apply_light_color(c, colorRGBA(1.0, 0.99, 0.8)*(c.is_light_on() ? 1.0 : 0.5)));
+	unsigned const vix_start(mat.itri_verts.size());
+	mat.add_vcylin_to_verts(center, lit_color, 1, 1, 0, 1, 1.0, 0.5, 1.0, 1.0, 1); // shadowed, small, no sides, invert top/bottom
+	for (auto i = mat.itri_verts.begin()+vix_start; i != mat.itri_verts.end(); ++i) {i->set_norm(-plus_z);} // normals point down
+	// lava part is drawn elswhere since it's dynamic, but it doesn't cast a shadow
 }
 
 void building_room_geom_t::add_debug_shape(room_object_t const &c) {
