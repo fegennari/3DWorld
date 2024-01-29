@@ -478,7 +478,7 @@ unsigned const RO_FLAG_NODYNAM = 0x40; // for light shadow maps
 unsigned const RO_FLAG_INTERIOR= 0x80; // applies to containing room
 // object flags, second byte
 unsigned const RO_FLAG_EMISSIVE= 0x0100; // for signs, lights, and phones
-unsigned const RO_FLAG_HANGING = 0x0200; // for signs, blinds, hangers, shirts, beams, and balconies; treated as "folding" for closet doors
+unsigned const RO_FLAG_HANGING = 0x0200; // for signs, blinds, hangers, shirts, beams, walls, and balconies; treated as "folding" for closet doors
 unsigned const RO_FLAG_ADJ_LO  = 0x0400; // for kitchen counters/closets/door trim/blinds/railings
 unsigned const RO_FLAG_ADJ_HI  = 0x0800; // for kitchen counters/closets/door trim/blinds/railings
 unsigned const RO_FLAG_ADJ_BOT = 0x1000; // for door trim/railings
@@ -1230,7 +1230,7 @@ struct stairs_landing_base_t : public cube_t {
 };
 
 struct landing_t : public stairs_landing_base_t {
-	bool for_elevator=0, for_ramp=0, has_railing=0, is_at_top=0;
+	bool for_elevator=0, for_ramp=0, has_railing=0, is_at_top=0, not_an_exit=0;
 	uint8_t floor=0;
 
 	landing_t() {}

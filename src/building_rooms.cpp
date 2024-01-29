@@ -1973,7 +1973,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 	// add floor signs for U-shaped stairs
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
-		if (i->for_elevator || i->for_ramp || i->shape != SHAPE_U) continue; // not U-shaped stairs
+		if (i->for_elevator || i->for_ramp || i->shape != SHAPE_U || i->not_an_exit) continue; // not U-shaped stairs, or no exit
 		// stacked conn stairs start at floor 0 but are really the top floor of the part below; i->floor is not a global index and can't be used
 		unsigned const floor_offset(calc_floor_offset(bcube.z1())); // use building z1 - should return number of underground levels
 		unsigned const real_floor(round_fp((i->z1() - bcube.z1())/get_window_vspace()));
@@ -2134,6 +2134,15 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 		if ((i->shape == SHAPE_WALLED && !(i->against_wall[0] || i->against_wall[1]) && (!i->stack_conn || !i->is_at_top)) || i->shape == SHAPE_U) {
 			objs.emplace_back(wall, TYPE_STAIR_WALL, 0, dim, dir); // add wall at back/end of stairs
+
+			if (i->not_an_exit && i->shape == SHAPE_U) { // blocked U-shaped stairs
+				cube_t front_wall(*i);
+				front_wall.z2() -= floor_thickness;
+				front_wall.z1()  = floor_z - floor_thickness;
+				front_wall.expand_in_dim(!dim, wall_hw); // widen slightly
+				set_wall_width(front_wall, (i->d[dim][!dir] + (dir ? -1.0 : 1.0)*wall_hw), wall_hw, dim); // move to the front, not the back
+				objs.emplace_back(front_wall, TYPE_STAIR_WALL, 0, dim, !dir, RO_FLAG_HANGING); // add wall front of stairs, hanging so that bottom surface is drawn
+			}
 		}
 		else if ((i->shape == SHAPE_WALLED || i->shape == SHAPE_WALLED_SIDES) && extend_walls_up) { // add upper section only
 			cube_t wall_upper(wall);
