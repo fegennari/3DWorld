@@ -1149,7 +1149,7 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 	};
 	bool at_edge=0, going_up=0, at_dest=0, stop_on_passing_floor=0, hold_doors=0, hold_movement=0, under_skylight=0, is_sec_adj_pair=0, is_moving=0;
 	unsigned room_id=0, car_obj_id=0, light_obj_id=0, button_id_start=0, button_id_end=0, num_occupants=0;
-	int at_dest_frame=0;
+	int at_dest_frame=0, adj_elevator_ix=-1;
 	float open_amt=0;
 	deque<call_request_t> call_requests; // used as a queue
 

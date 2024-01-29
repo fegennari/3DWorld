@@ -1258,6 +1258,9 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					E.d[long_dim][bool(e) ^ E.dir ^ 1] = center[long_dim]; // back-to-back
 					E.dir ^= bool(e); // facing opposite directions
 					E.is_sec_adj_pair = bool(e); // flag so that we don't include this in our hallway elevator count
+					unsigned const elevator_ix(interior->elevators.size());
+					if (e) {assert(elevator_ix > 0); E.adj_elevator_ix = elevator_ix-1;} // adjacent to previous elevator
+					else {E.adj_elevator_ix = elevator_ix+1;} // adjacent to next elevator
 					add_or_extend_elevator(E, 1);
 				}
 			}
@@ -2011,8 +2014,19 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			cand_test.d[e->dim][e->dir] += doorway_width*(e->dir ? 1.0 : -1.0); // add extra space in front of the elevator
 			if (!p->contains_cube_xy(cand_test)) continue; // not enough space at elevator entrance
 			bool const allow_clip_walls = 1; // optional
-			// Note: this check prevents us from extending both elevators in a back-to-back pair up or down at the same time, since they'll be too close to each other
-			if (!is_valid_stairs_elevator_placement(cand_test, doorway_width, e->dim, !allow_clip_walls)) continue; // bad placement
+			// this check prevents us from extending both elevators in a back-to-back pair up or down at the same time, since they'll be too close to each other;
+			// to work around this, we temporarily remove the adjacent elevator by mapping it to the building LLC
+			cube_t orig_adj_elevator;
+
+			if (e->adj_elevator_ix >= 0) {
+				assert((unsigned)e->adj_elevator_ix < interior->elevators.size());
+				elevator_t &adj(interior->elevators[e->adj_elevator_ix]);
+				orig_adj_elevator = adj;
+				adj.set_from_point(bcube.get_llc());
+			}
+			bool const is_valid(is_valid_stairs_elevator_placement(cand_test, doorway_width, e->dim, !allow_clip_walls));
+			if (e->adj_elevator_ix >= 0) {interior->elevators[e->adj_elevator_ix].copy_from(orig_adj_elevator);} // restore original pos
+			if (!is_valid)                                     continue; // bad placement
 			if (!check_cube_within_part_sides(cand_test))      continue; // bad placement; do we need to check for clearance?
 			if (has_bcube_int(cand_test, interior->exclusion)) continue; // bad placement
 
