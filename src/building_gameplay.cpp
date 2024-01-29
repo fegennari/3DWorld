@@ -1307,6 +1307,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			float dsq(p2p_dist(at_pos, p1c)); // use closest intersection point
 			if (dmin_sq > 0.0 && dsq > dmin_sq)       continue; // not the closest
 			if (obj_bcube.contains_pt(at_pos))        continue; // skip when the player is standing inside a plant, etc.
+			if (player_in_elevator && !i->in_elevator() && !i->is_dynamic()) continue; // can't take an elevator call button from inside the elevator
 		
 			if (obj_bcube == *i) { // check non-cube shapes, but only when get_true_obj_bcube() didn't return a custom cube
 				if (i->shape == SHAPE_SPHERE) {
