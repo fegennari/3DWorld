@@ -4487,18 +4487,27 @@ void building_room_geom_t::add_checkout(room_object_t const &c, float tscale) {
 }
 
 void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed, except for bottom
-	float const height(c.dz()), glass_thickness(0.02*height);
-	cube_t glass(c), bottom(c);
-	bottom.z2() = glass.z1() = c.z1() + 0.05*height;
-	get_untextured_material(1).add_cube_to_verts_untextured(bottom, apply_light_color(c, BKGRAY), EF_Z1); // bottom, shadowed
+	float const height(c.dz()), glass_thickness(0.02*height), trim_height(0.05*height), trim_thickness(0.04*height);
+	cube_t glass(c), bottom(c), top(c);
+	bottom.z2() = glass.z1() = c.z1() + trim_height;
+	glass .z2() = top  .z1() = c.z2() - trim_height;
+	// draw bottom and upper trim
+	colorRGBA const trim_color(apply_light_color(c, BKGRAY));
+	rgeom_mat_t &trim_mat(get_untextured_material(1));
+	trim_mat.add_cube_to_verts_untextured(bottom, trim_color, EF_Z1); // bottom, shadowed
+	cube_t trim_hole(top);
+	cube_t sides[4]; // {-y, +y, -x, +x}
+	trim_hole.expand_by_xy(-trim_thickness); // shrink
+	subtract_cube_xy(top, trim_hole, sides);
+	for (unsigned n = 0; n < 4; ++n) {trim_mat.add_cube_to_verts_untextured(sides[n], trim_color, 0);}
 	// draw the sides
+	glass.expand_by_xy(-0.5*glass_thickness); // shrink slightly
 	cube_t hole(glass);
 	hole.expand_by_xy(-glass_thickness); // shrink
-	cube_t sides[4]; // {-y, +y, -x, +x}
 	subtract_cube_xy(glass, hole, sides);
 	colorRGBA const glass_color(apply_light_color(c, table_glass_color));
 	rgeom_mat_t &trans_mat(get_untextured_material(0, 0, 0, 1)); // no shadows, transparent; for glass and water
-	for (unsigned n = 0; n < 4; ++n) {trans_mat.add_cube_to_verts_untextured(sides[n], glass_color, EF_Z1);}
+	for (unsigned n = 0; n < 4; ++n) {trans_mat.add_cube_to_verts_untextured(sides[n], glass_color, EF_Z12);} // skip top and bottom
 	
 	if (!c.is_broken()) { // draw water
 		cube_t water(c);
