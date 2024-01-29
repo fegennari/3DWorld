@@ -24,6 +24,7 @@ buildings max_ext_basement_hall_branches 4
 buildings max_ext_basement_room_depth 4
 buildings add_office_backroom_basements 1
 buildings put_doors_in_corners 0 # more representative of real buildings, but changes a lot of buildings and doesn't always work
+buildings two_floor_retail 0 # Warning: stairs and elevators are currently broken in this mode
 
 buildings min_altitude 0.05 # slightly above sea level
 buildings max_altitude 4.00 # same for all buildings

@@ -1524,7 +1524,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 
 		// Note: it's not legal to use multiple threads for retail buildings because the shelf racks contain books, which draw text in the non-text pass;
 		// this isn't thread safe due to text material and static text verts; text time should be small in this case, so threads are unlikely to help anyway
-		if (create_small && create_text && !building.has_retail_ground_floor) { // MT case
+		if (create_small && create_text && !building.has_retail()) { // MT case
 #pragma omp parallel num_threads(2)
 			if (omp_get_thread_num_3dw() == 0) {create_small_static_vbos(building);} else {create_text_vbos();}
 		}

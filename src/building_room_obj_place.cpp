@@ -2492,8 +2492,8 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	assert(rack_length > 0.0);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t rack, pillar;
-	set_cube_zvals(rack,   zval, zval+rack_height);
-	set_cube_zvals(pillar, zval, zval+get_floor_ceil_gap());
+	set_cube_zvals(rack,   zval, (zval + rack_height));
+	set_cube_zvals(pillar, zval, (zval + get_floor_ceil_gap() + (retail_floor_levels - 1)*floor_spacing)); // up to the ceiling
 	unsigned const objs_start(objs.size()), obj_id(rgen.rand()); // same style for each rack
 	unsigned rack_id(0);
 	bool const skip_middle_row(nrows & 1);

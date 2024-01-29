@@ -1383,7 +1383,7 @@ colorRGBA building_t::get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_p
 	else { // office building
 		bool const in_ext_basement(in_basement && !get_basement().contains_cube_xy(floor_cube));
 		if (in_basement && (has_parking_garage || in_ext_basement)) {tex = get_concrete_texture();} // parking garage or extended basement
-		else if (has_retail_ground_floor && floor_cube.z1() == ground_floor_z1) {
+		else if (has_retail() && floor_cube.z1() == ground_floor_z1) {
 			float const tscale(0.125*mat.floor_tex.tscale_x); // stretch the texture out for large tiles
 			tex = tid_nm_pair_t(building_texture_mgr.get_tile_floor_tid(), building_texture_mgr.get_tile_floor_nm_tid(), tscale, tscale);
 		}

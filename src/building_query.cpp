@@ -92,7 +92,7 @@ bool building_t::cube_int_parts_no_sec(cube_t const &c) const {
 	return 0;
 }
 bool building_t::check_pt_in_retail_room(point const &p) const {
-	if (!has_retail_ground_floor || !interior || interior->rooms.empty()) return 0;
+	if (!has_retail() || !interior || interior->rooms.empty()) return 0;
 	return interior->rooms.front().contains_pt(p); // retail is the first room
 }
 
@@ -1847,9 +1847,9 @@ bool room_object_t::is_vert_cylinder() const {
 }
 
 bool building_t::is_ground_floor_excluding_retail(float zval) const {
-	if (zval == ground_floor_z1)  return 1;
-	if (!has_retail_ground_floor) return 0;
-	return (fabs(zval - (ground_floor_z1 + get_window_vspace())) < get_floor_thickness()); // close to the second floor zval
+	if (zval == ground_floor_z1) return 1;
+	if (!has_retail())           return 0;
+	return (fabs(zval - (ground_floor_z1 + retail_floor_levels*get_window_vspace())) < get_floor_thickness()); // close to the second floor zval
 }
 float building_t::get_ground_floor_z_thresh(bool for_spider) const {
 	return (ground_floor_z1 + (for_spider ? 1.0f : 0.25f)*get_window_vspace()); // rats are on the ground, while spiders can climb walls and insects can fly

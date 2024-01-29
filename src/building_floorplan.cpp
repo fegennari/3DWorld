@@ -314,8 +314,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 	// generate walls and floors for each part;
 	// this will need to be modified to handle buildings that have overlapping parts, or skip those building types completely
 	for (auto p = parts.begin(); p != parts_end; ++p) {
-		unsigned const num_floors(calc_num_floors(*p, window_vspacing, floor_thickness)), part_id(p - parts.begin());
+		unsigned num_floors(calc_num_floors(*p, window_vspacing, floor_thickness)), part_id(p - parts.begin());
 		if (num_floors == 0) continue; // not enough space to add a floor (can this happen?)
+		if (is_retail_part(*p)) {num_floors = 1;} // retail area is always one floor
 		// for now, assume each part has the same XY bounds and can use the same floorplan; this means walls can span all floors and don't need to be duplicated for each floor
 		vector3d const psz(p->get_size());
 		bool const is_basement_part(is_basement(p)), first_part(part_id == 0), first_part_this_stack(first_part || is_basement_part || (p-1)->z1() < p->z1());
@@ -401,9 +402,10 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			rooms.back().assign_all_to(RTYPE_PARKING); // make it a parking garage
 			has_parking_garage = 1;
 		}
-		else if (has_retail_ground_floor && part_id == 0) {
+		else if (has_retail() && part_id == 0) {
 			add_room(*p, part_id, 1); // add entire part as a room; num_lights will be calculated later
 			rooms.back().assign_all_to(RTYPE_RETAIL);
+			rooms.back().is_single_floor = 1;
 		}
 		else if (use_hallway) {
 			// building with rectangular slice (no adjacent exterior walls at this level), generate rows of offices
@@ -1415,13 +1417,15 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	C.z1() = z; C.z2() = z + fc_thick;
 	unsigned const floors_start(interior->floors.size());
 	interior->floors.push_back(C); // ground floor, full area
-	z += window_vspacing; // move to next floor
 	bool const has_stairs(!stairs_cut.is_all_zeros()), has_elevator(!elevator_cut.is_all_zeros());
 	bool const stairs_dir((force_stairs_dir < 2) ? force_stairs_dir : (has_stairs ? rgen.rand_bool() : 0)); // same for every floor, could maybe alternate for stairwells
+	float const floor_vert_spacing((is_retail_part(part) ? retail_floor_levels : 1)*window_vspacing);
 	cube_t &first_cut(has_elevator ? elevator_cut : stairs_cut); // elevator is larger
+	//unsigned const first_ceiling_ix(max(1U, unsigned(retail_floor_levels))); // skip first floor and any ground floor retail space
 	unsigned last_landing_ix(0);
+	z += floor_vert_spacing; // move to next floor
 
-	for (unsigned f = 1; f < num_floors; ++f, z += window_vspacing) { // skip first floor - draw pairs of floors and ceilings
+	for (unsigned f = 1; f < num_floors; ++f, z += floor_vert_spacing) { // skip first floor; draw pairs of floors and ceilings
 		cube_t to_add[8]; // up to 2 cuts for stairs + elevator
 		float const zc(z - fc_thick), zf(z + fc_thick);
 
@@ -1602,8 +1606,8 @@ bool building_t::can_extend_stairs_to_pg(unsigned &stairs_ix) const {
 	// check ground floor stairs, then possibly stairs above the retail floor; prefer stairs on the ground floor when there are both
 	for (unsigned pass = 0; pass < 2; ++pass) {
 		if (pass == 1) {
-			if (!has_retail_ground_floor) break; // only one pass
-			stairs_zmax += get_window_vspace(); // assume stairs can be extended down to retail ground floor
+			if (!has_retail()) break; // only one pass
+			stairs_zmax += retail_floor_levels*get_window_vspace(); // assume stairs can be extended down to retail ground floor
 		}
 		for (unsigned i = 0; i < interior->stairwells.size(); ++i) {
 			stairwell_t const &s(interior->stairwells[i]);
@@ -1767,9 +1771,10 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const doorway_width(0.5*window_vspacing), stairs_len(4.0*doorway_width);
 	bool const is_basement(has_basement() && part == get_basement()), use_basement_stairs(is_basement && is_house); // office basement has regular stairs
+	bool const is_retail(is_retail_part(part));
 	// use fewer iterations on tiled buildings to reduce the frame spikes when new tiles are generated
 	unsigned const iter_mult_factor(global_building_params.gen_inf_buildings() ? 1 : 10), num_iters(20*iter_mult_factor);
-	unsigned const num_floors(calc_num_floors(part, window_vspacing, floor_thickness));
+	unsigned const num_floors(is_retail ? 1 : calc_num_floors(part, window_vspacing, floor_thickness)); // retail area is always one floor
 	assert(num_floors > 0);
 
 	if (part.z2() < bcube.z2()) { // if this is the top floor, there is nothing above it (but roof geom may get us into this case anyway)
@@ -1797,8 +1802,9 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			cube_t cand;
 			stairs_shape sshape(0);
 			bool cand_is_valid(0), dim(0), stairs_dir(0), add_railing(1), stack_conn(1), is_at_top(0);
+			float const stairs_height((is_retail ? retail_floor_levels : 1)*window_vspacing);
 			float const cand_z2(part.z2() + fc_thick); // top of bottom floor of upper part *p
-			float const cand_z1(cand_z2 - window_vspacing); // top of top floor for this/lower part
+			float const cand_z1(cand_z2 - stairs_height); // top of top floor for this/lower part
 			unsigned stairs_ix(0);
 			
 			// try to extend primary hallway stairs down to parking garage below; should this apply to all ground floor stairwells?
@@ -1811,7 +1817,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				cand_is_valid = 1;
 				if (num_floors > 1) {} // can we extend down to the lower parking garage level from here?
 				cube_t stairs_bot(s);
-				stairs_bot.z2() = stairs_bot.z1() + window_vspacing; // limit to bottom landing
+				stairs_bot.z2() = s.z1() + window_vspacing; // limit to bottom landing
 				find_and_merge_with_landing(interior->landings, stairs_bot, sshape, 1); // merge with bottom landing; num_floors=1
 			}
 			else if (!is_basement && is_cube()) { // try to extend an existing stairwell on the part above or below upward/downward; not for basements or non-cube buildings
@@ -1957,6 +1963,14 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			stairwell.z2() = part.z2() + window_vspacing - fc_thick; // bottom of ceiling of upper part; must cover z-range of upper floor for AIs and room object collisions
 			interior->landings.push_back(landing);
 			interior->stairwells.emplace_back(stairwell, 1); // num_floors=1
+
+			if (is_retail) { // add intermediate landings/flights of stairs for multi-story retail areas
+				for (unsigned n = 1; n < retail_floor_levels; ++n) { // skip first
+					interior->landings.back().not_an_exit = 1; // all but the last (ground floor) landing are not exits
+					landing.translate_dim(2, -window_vspacing); // shift down by a floor
+					interior->landings.push_back(landing);
+				}
+			}
 			// attempt to cut holes in ceiling of this part and floor of above part
 			cube_t cut_cube(cand);
 			cut_cube.z1() += fc_thick; // shrink to avoid clipping floors exactly at the base of the stairs

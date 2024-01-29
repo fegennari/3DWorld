@@ -291,10 +291,10 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				adjust_part_zvals_for_floor_spacing(parts[0]);
 				parts[1].z1() = parts[0].z2();
 			}
-			else if (rgen.rand_probability(global_building_params.retail_floorplan_prob)) {
+			else if (height > 2.5*floor_spacing && rgen.rand_probability(global_building_params.retail_floorplan_prob)) { // 3+ floors
+				retail_floor_levels = (global_building_params.two_floor_retail ? 2 : 1);
 				parts.push_back(base);
-				parts[0].z2() = parts[1].z1() = base.z1() + floor_spacing; // split in Z: parts[0] is the bottom, parts[1] is the top
-				has_retail_ground_floor = 1;
+				parts[0].z2() = parts[1].z1() = base.z1() + retail_floor_levels*floor_spacing; // split in Z: parts[0] is the bottom, parts[1] is the top
 			}
 			gen_details(rgen, 1);
 		}
