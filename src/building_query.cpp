@@ -1068,6 +1068,7 @@ bool building_t::all_room_int_doors_closed(unsigned room_ix, float zval) const {
 	if (!is_house && room.is_hallway)  return 0; // office hallways can connect to other hallways with no doors
 	if (is_room_pg_or_backrooms(room)) return 0; // these cases are excluded because they have interior doors or ramps
 	if (has_retail() && room.z1() == ground_floor_z1) return 0; // retail doesn't work because objects may be visible through stairs (similar to office hallway)
+	if (room.has_stairs_on_floor(room.get_floor_containing_zval(zval, get_window_vspace()))) return 0; // might be visible through stairs
 	cube_t tc(room);
 	tc.expand_by_xy(2.0*get_wall_thickness()); // expand so that doors overlap
 
