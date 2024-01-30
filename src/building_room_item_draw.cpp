@@ -1762,7 +1762,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	water_sound_manager.finalize();
 	water_draw.draw_and_clear(s);
 
-	if (player_in_building && !shadow_only && player_held_object.is_valid()) {
+	if (player_in_building && !shadow_only && player_held_object.is_valid() && &building == player_building) {
 		// draw the item the player is holding; actual_player_pos should be the correct position for reflections
 		point const obj_pos((reflection_pass ? actual_player_pos : camera_bs) + CAMERA_RADIUS*cview_dir - vector3d(0.0, 0.0, 0.5*CAMERA_RADIUS));
 		player_held_object.translate(obj_pos - player_held_object.get_cube_center());
