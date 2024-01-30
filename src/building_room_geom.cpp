@@ -4507,6 +4507,8 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 	subtract_cube_xy(glass, hole, sides);
 	colorRGBA const glass_color(apply_light_color(c, table_glass_color));
 	rgeom_mat_t &trans_mat(get_untextured_material(0, 0, 0, 1)); // no shadows, transparent; for glass and water
+	unsigned const back_wall_ix(2*(!c.dim) + (!c.dir));
+	if (back_wall_ix > 0) {swap(sides[back_wall_ix], sides[0]);} // back wall should be first for improved back-to-front alpha blending
 	for (unsigned n = 0; n < 4; ++n) {trans_mat.add_cube_to_verts_untextured(sides[n], glass_color, EF_Z12);} // skip top and bottom
 	
 	if (!c.is_broken()) { // draw water
