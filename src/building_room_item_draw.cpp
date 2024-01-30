@@ -1391,6 +1391,12 @@ class fishtank_manager_t {
 			if (pad > 0.0) {va.expand_by(-pad);}
 			return va;
 		}
+		void update_object(room_object_t const &obj) { // handle movement when the table is pushed
+			if (obj == bcube) return; // no update
+			vector3d const delta(obj.get_llc() - bcube.get_llc());
+			bcube = obj;
+			for (fish_t &f : fish) {f.pos += delta;}
+		}
 		void draw(shader_t &s, float anim_time) const {
 			if (!visible) return;
 			for (fish_t const &f : fish) {f.draw(s, anim_time);}
@@ -1415,7 +1421,12 @@ public:
 		if (fishtanks.size() <= fishtank_ix) {fishtanks.push_back(fishtank_t(obj));} // fishtank not yet added
 
 		for (fishtank_t &ft : fishtanks) {
-			if (ft.obj_id == obj.obj_id) {ft.present = 1; ft.visible = is_visible; break;}
+			if (ft.obj_id == obj.obj_id) {
+				ft.update_object(obj);
+				ft.present = 1;
+				ft.visible = is_visible;
+				break;
+			}
 		}
 		++fishtank_ix;
 	}
