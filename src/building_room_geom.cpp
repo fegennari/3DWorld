@@ -4514,7 +4514,7 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 		water.z2() -= 0.1*height; // 90% filled
 		trans_mat.add_cube_to_verts_untextured(water, apply_light_color(c, colorRGBA(0.7, 0.85, 1.0, 0.15)), ~EF_Z2); // top surface
 	}
-	// TODO: draw fish, etc.
+	// TODO: draw gravel, pump, lid, plants, etc.
 }
 
 void building_room_geom_t::add_lava_lamp(room_object_t const &c) {

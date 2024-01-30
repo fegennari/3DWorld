@@ -38,6 +38,7 @@ int get_toilet_paper_nm_id();
 void setup_monitor_screen_draw(room_object_t const &monitor, rgeom_mat_t &mat, std::string &onscreen_text);
 void add_tv_or_monitor_screen(room_object_t const &c, rgeom_mat_t &mat, std::string const &onscreen_text, rgeom_mat_t *text_mat);
 bool check_clock_time();
+void draw_animated_fish_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, float anim_time, colorRGBA const &color);
 
 bool has_key_3d_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 
@@ -1353,6 +1354,85 @@ public:
 
 lava_lamp_draw_t lava_lamp_draw;
 
+// fish in fishtanks are handled here rather than as building animals since they're only drawn and not interactive
+class fishtank_manager_t {
+	struct fish_t {
+		float radius=0.0, speed=0.0;
+		point pos;
+		vector3d dir;
+
+		void draw(shader_t &s, float anim_time) const {
+			draw_animated_fish_model(s, pos, radius, dir, speed*anim_time, WHITE);
+		}
+	};
+	struct fishtank_t {
+		cube_t bcube;
+		vector<fish_t> fish;
+		rand_gen_t rgen;
+		unsigned obj_id=0; // used as a unique identifier
+		bool present=1, visible=0;
+		
+		fishtank_t(room_object_t const &obj) : bcube(obj), obj_id(obj.obj_id) {
+			rgen.set_state(obj.room_id+1, obj.obj_id+1);
+			rgen.rand_mix();
+			fish.resize(1); // TODO: multiple fish
+			float const max_fish_radius(0.2*bcube.min_len());
+
+			for (fish_t &f : fish) {
+				f.pos    = bcube.get_cube_center(); // TODO: use get_valid_area
+				f.radius = max_fish_radius;
+				f.speed  = 0.002;
+				f.dir[!obj.dim] = (rgen.rand_bool() ? -1.0 : 1.0); // long dim
+			}
+		}
+		cube_t get_valid_area(float pad=0.0) const {
+			cube_t va(bcube);
+			va.expand_by(-0.1*bcube.get_size()); // 10% smaller in each dim
+			if (pad > 0.0) {va.expand_by(-pad);}
+			return va;
+		}
+		void draw(shader_t &s, float anim_time) const {
+			if (!visible) return;
+			for (fish_t const &f : fish) {f.draw(s, anim_time);}
+		}
+	};
+	vector<fishtank_t> fishtanks;
+	building_t const *prev_building=nullptr;
+	unsigned fishtank_ix=0;
+	float anim_time=0.0;
+public:
+	void next_frame(building_t const &building) {
+		if (&building != prev_building) { // new building
+			fishtanks.clear();
+			prev_building = &building;
+			anim_time     = 0.0; // reset
+		}
+		for (fishtank_t &ft : fishtanks) {ft.present = ft.visible = 0;} // mark as not present or visible until it's seen
+		fishtank_ix = 0;
+		anim_time  += fticks;
+	}
+	void register_fishtank(room_object_t const &obj, bool is_visible) {
+		if (fishtanks.size() <= fishtank_ix) {fishtanks.push_back(fishtank_t(obj));} // fishtank not yet added
+
+		for (fishtank_t &ft : fishtanks) {
+			if (ft.obj_id == obj.obj_id) {ft.present = 1; ft.visible = is_visible; break;}
+		}
+		++fishtank_ix;
+	}
+	void end_fishtanks() { // remove any fishtanks that are no longer present
+		fishtanks.erase(remove_if(fishtanks.begin(), fishtanks.end(), [](fishtank_t const &ft) {return !ft.present;}), fishtanks.end());
+		assert(fishtank_ix == fishtanks.size());
+	}
+	void draw_fish(shader_t &s) const {
+		if (fishtanks.empty()) return;
+		shader_t fish_shader;
+		for (fishtank_t const &ft : fishtanks) {ft.draw(fish_shader, anim_time);}
+		s.make_current(); // switch back to the normal shader
+	}
+};
+
+fishtank_manager_t fishtank_manager;
+
 int room_object_t::get_model_id() const { // Note: first 8 bits is model ID, last 8 bits is sub-model ID
 	assert(type >= TYPE_TOILET);
 	if (type == TYPE_MONITOR) return OBJ_MODEL_TV; // monitor has same model as TV
@@ -1741,7 +1821,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (disable_cull_face) {glEnable(GL_CULL_FACE);}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
 
-	if (player_in_building && !shadow_only) { // draw water for sinks that are turned on, and draw lava lamps
+	if (player_in_building && !shadow_only) { // draw water for sinks that are turned on, draw lava lamps, and draw fish in fishtanks
+		fishtank_manager.next_frame(building);
 		auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
 
 		for (auto i = objs.begin(); i != objs_end; ++i) {
@@ -1755,9 +1836,15 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				if (!(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate))) continue; // VFC
 				lava_lamp_draw.add_lava_lamp(*i, camera_bs);
 			}
+			else if (i->type == TYPE_FISHTANK) {
+				bool const visible(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate));
+				fishtank_manager.register_fishtank(*i, visible);
+			}
 		} // for i
 		lava_lamp_draw.draw_and_clear(s);
 		if (!reflection_pass) {lava_lamp_draw.next_frame();}
+		fishtank_manager.end_fishtanks();
+		fishtank_manager.draw_fish(s);
 	}
 	water_sound_manager.finalize();
 	water_draw.draw_and_clear(s);

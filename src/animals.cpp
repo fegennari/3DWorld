@@ -515,6 +515,17 @@ int animal_t::get_ndiv(point const &pos_) const {
 	return min(N_SPHERE_DIV, max(3, int(4.0*sqrt(radius*window_width/distance_to_camera(pos_)))));
 }
 
+void draw_animated_fish_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, float anim_time, colorRGBA const &color) {
+	if (!s.is_setup()) {
+		s.set_vert_shader("fish_animate");
+		s.set_frag_shader("simple_texture");
+		s.begin_shader();
+		s.add_uniform_float("min_alpha", 0.0);
+		s.add_uniform_int("tex0", 0);
+	}
+	animal_model_loader.draw_fish_model(s, pos, radius, dir, anim_time, color);
+}
+
 void fish_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) const { // Note: tile is unused, but could be used for shadows
 
 	point const pos_(get_camera_space_pos());
@@ -529,15 +540,7 @@ void fish_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) const
 	if (draw_color.alpha < 0.01) return;
 	if (draw_color.alpha < 0.1) {glDepthMask(GL_FALSE);} // disable depth writing to avoid alpha blend order problems
 	//draw_color = lerp(cur_fog_color, draw_color, alpha);
-	
-	if (!s.is_setup()) {
-		s.set_vert_shader("fish_animate");
-		s.set_frag_shader("simple_texture");
-		s.begin_shader();
-		s.add_uniform_float("min_alpha", 0.0);
-		s.add_uniform_int("tex0", 0);
-	}
-	animal_model_loader.draw_fish_model(s, pos_, radius, dir, anim_time, draw_color);
+	draw_animated_fish_model(s, pos_, radius, dir, anim_time, draw_color);
 	if (draw_color.alpha < 0.1) {glDepthMask(GL_TRUE);}
 }
 
