@@ -2290,6 +2290,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 		up_down_pos [!c.dim] += 0.8f*up_down_text_height;
 	}
 	for (unsigned f = 0; f < num_floors; ++f) { // Note: floor number starts at 1 even if the elevator doesn't extend to the ground floor
+		if (e.skip_floor_ix(f)) continue;
 		bool const is_lit(is_powered && f == cur_floor);
 		text_pos.z = panel.z1() + (f + 1)*button_spacing - 0.5*text_height;
 		verts.clear();

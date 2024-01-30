@@ -2067,6 +2067,15 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					} // for h
 				} // for d
 			}
+			if (is_below) { // extend below case
+				if (is_retail_part(*p)) { // disable this floor on any elevators in the retail area
+					for (unsigned n = 1; n < retail_floor_levels; ++n) {e->set_skip_floor(n);} // skip first
+				}
+				else { // shift skip_floors_mask up by the number of floors added to the bottom
+					unsigned const num_floors_add(round_fp((e->z1() - extension.z1())/window_vspacing));
+					e->skip_floors_mask <<= num_floors_add;
+				}
+			}
 			float const shift((is_above ? -1.1 : 1.1)*fc_thick);
 			min_eq(e->z1(), extension.z1()); max_eq(e->z2(), extension.z2()); // perform extension in Z
 			extension.z1() += shift; extension.z2() += shift; // also cut a hole in the lower ceiling/upper floor

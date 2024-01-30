@@ -2023,6 +2023,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		set_wall_width(sign, (i->d[!i->dim][1] - 0.1*ewidth), 0.04*ewidth, !i->dim); // to the high side, opposite the call button
 
 		for (unsigned f = 0; f < num_floors; ++f) { // Note: floor number starts at 1 even if the elevator doesn't extend to the ground floor
+			if (i->skip_floor_ix(f)) continue;
 			sign.z1() = i->z1()   + (f + 0.5)*window_vspacing;
 			sign.z2() = sign.z1() + 0.1*ewidth;
 			objs.emplace_back(sign, TYPE_SIGN, i->room_id, i->dim, i->dir, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, DK_BLUE);
@@ -2046,6 +2047,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 		// call buttons on each floor outside the elevator
 		for (unsigned f = 0; f < num_floors; ++f) {
+			if (i->skip_floor_ix(f)) continue;
 			point pos;
 			pos[ i->dim] = i->d[i->dim][i->dir]; // front of the elevator
 			pos[!i->dim] = i->d[!i->dim][0] + 0.1*ewidth; // to the low side
@@ -2069,6 +2071,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		pos[!i->dim] = panel.get_center_dim(!i->dim) + 0.8*inner_button_radius; // a bit right of center to make room for floor number text
 		
 		for (unsigned f = 0; f < num_floors; ++f) {
+			if (i->skip_floor_ix(f)) continue;
 			pos.z = panel.z1() + (f + 1)*button_spacing;
 			add_elevator_button(pos, inner_button_radius, i->dim, !i->dir, elevator_id, f, 1, 0, objs); // inside=1, is_up=0, pointing in opposite dir
 		}

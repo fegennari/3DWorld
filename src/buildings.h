@@ -1149,6 +1149,7 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 	};
 	bool at_edge=0, going_up=0, at_dest=0, stop_on_passing_floor=0, hold_doors=0, hold_movement=0, under_skylight=0, is_sec_adj_pair=0, is_moving=0;
 	unsigned room_id=0, car_obj_id=0, light_obj_id=0, button_id_start=0, button_id_end=0, num_occupants=0;
+	uint64_t skip_floors_mask=0; // good for up to 64 floors
 	int at_dest_frame=0, adj_elevator_ix=-1;
 	float open_amt=0;
 	deque<call_request_t> call_requests; // used as a queue
@@ -1163,6 +1164,8 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 	unsigned get_target_floor() const {assert(was_called()); return call_requests.front().floor_ix;}
 	float    get_target_zval () const {assert(was_called()); return call_requests.front().zval;}
 	bool was_floor_called(unsigned floor_ix, unsigned up_down_mask) const;
+	bool skip_floor_ix   (unsigned floor_ix) const {return (floor_ix < 64 && (skip_floors_mask & (1ULL << floor_ix)));}
+	void set_skip_floor  (unsigned floor_ix) {if (floor_ix < 64) {skip_floors_mask |= (1ULL << floor_ix);}}
 	unsigned get_coll_cubes(cube_t cubes[5]) const; // returns 1 or 5 cubes
 	void call_elevator(unsigned floor_ix, float targ_z, unsigned req_dirs, bool inside_press);
 	void register_at_dest();
