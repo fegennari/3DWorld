@@ -4487,7 +4487,7 @@ void building_room_geom_t::add_checkout(room_object_t const &c, float tscale) {
 	get_material(top_tex, 1).add_cube_to_verts(top, color, tex_origin, 0); // all faces drawn (Z1 for overhang); with shadows
 }
 
-void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed, except for bottom
+void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed, except for bottom; can't be small
 	float const height(c.dz()), glass_thickness(0.02*height), trim_height(0.05*height), trim_thickness(0.04*height);
 	cube_t glass(c), bottom(c), top(c);
 	bottom.z2() = glass.z1() = c.z1() + trim_height;
@@ -4517,7 +4517,11 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 		water.z2() -= 0.1*height; // 90% filled
 		trans_mat.add_cube_to_verts_untextured(water, apply_light_color(c, colorRGBA(0.7, 0.85, 1.0, 0.15)), ~EF_Z2); // top surface
 	}
-	// TODO: draw gravel, pump, lid, plants, etc.
+	// draw gravel bottom
+	cube_t gravel(glass);
+	gravel.z2() = glass.z1() + 0.05*height; // shallow
+	rgeom_mat_t &gravel_mat(get_material(tid_nm_pair_t(get_texture_by_name("gravel.jpg"), 3.0/height), 1));
+	gravel_mat.add_cube_to_verts(gravel, apply_light_color(c, WHITE), c.get_llc(), EF_Z1);
 }
 
 void building_room_geom_t::add_lava_lamp(room_object_t const &c) {

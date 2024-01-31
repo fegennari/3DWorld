@@ -1370,7 +1370,7 @@ class fishtank_manager_t {
 		vector<fish_t> fish;
 		rand_gen_t rgen;
 		unsigned obj_id=0; // used as a unique identifier
-		bool present=1, visible=0;
+		bool present=0, visible=0;
 		
 		fishtank_t(room_object_t const &obj) : bcube(obj), obj_id(obj.obj_id) {
 			rgen.set_state(obj.room_id+1, obj.obj_id+1);
@@ -1422,10 +1422,10 @@ public:
 
 		for (fishtank_t &ft : fishtanks) {
 			if (ft.obj_id == obj.obj_id) {
+				assert(!ft.present); // check for duplicate obj_id
 				ft.update_object(obj);
 				ft.present = 1;
 				ft.visible = is_visible;
-				break;
 			}
 		}
 		++fishtank_ix;
