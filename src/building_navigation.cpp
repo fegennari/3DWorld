@@ -1352,6 +1352,10 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 	}
 }
 
+unsigned get_elevator_floor(float zval, elevator_t const &e, float floor_spacing) { // floor index relative to this elevator
+	return max(0.0f, (zval - e.z1()))/floor_spacing;
+}
+
 bool building_t::stairs_contained_in_part(stairwell_t const &s, cube_t const &p) const {
 	cube_t sc(s);
 	if (s.roof_access) {sc.z2() -= get_window_vspace();} // clip off top floor roof access
@@ -1386,6 +1390,7 @@ int building_t::find_nearest_elevator_this_floor(point const &pos) const {
 
 	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
 		if (e->z1() > pos.z || e->z2() < pos.z) continue; // doesn't span the correct floor
+		if (e->skip_floor_ix(get_elevator_floor(pos.z, *e, get_window_vspace()))) continue; // floor not reachable from this elevator; unclear if we can get here
 		// skip if elevator is currently in use?
 		float const dsq(p2p_dist_xy_sq(pos, e->get_cube_center()));
 		if (nearest < 0 || dsq < dmin_sq) {nearest = (e - interior->elevators.begin()); dmin_sq = dsq;}
@@ -1770,9 +1775,6 @@ void building_t::all_ai_room_update(rand_gen_t &rgen, float delta_dir) {
 	}
 }
 
-unsigned get_elevator_floor(float zval, elevator_t const &e, float floor_spacing) { // floor index relative to this elevator
-	return max(0.0f, (zval - e.z1()))/floor_spacing;
-}
 float get_person_max_move_dist(person_t const &person, float speed_mult=1.0) {
 	return person.speed*speed_mult*min(fticks, 4.0f); // clamp fticks to 100ms
 }
@@ -2002,13 +2004,13 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	if (person.speed == 0.0) {person.anim_time = 0.0; return AI_STOP;} // stopped
 	assert(interior);
 	if (!interior->room_geom && frame_counter < 60) {person.anim_time = 0.0; return AI_WAITING;} // wait until room geom is generated for this building
-	float const coll_dist(COLL_RADIUS_SCALE*person.radius);
+	float const coll_dist(COLL_RADIUS_SCALE*person.radius), floor_spacing(get_window_vspace());
 	float &wait_time(person.waiting_start); // reuse this field
 	float speed_mult(1.0);
 	person.following_player = person.is_stopped = 0; // reset for this frame
 	// skip the same building check for coll if both this person and the player may be in different but connected buildings
 	bool allow_diff_building(interior->conn_info && person.pos.z < ground_floor_z1 && cur_player_building_loc.pos.z < ground_floor_z1 &&
-		dist_xy_less_than(person.pos, cur_player_building_loc.pos, 2.0*get_window_vspace()));
+		dist_xy_less_than(person.pos, cur_player_building_loc.pos, 2.0*floor_spacing));
 
 	if (person.retreat_time > 0.0) {
 		if (person.retreat_time == global_building_params.ai_retreat_time*TICKS_PER_SECOND) { // first retreating frame - clear path
@@ -2115,7 +2117,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			bool const same_room_and_floor(same_room_and_floor_as_player(person));
 			bool play_sound(same_room_and_floor); // always play sound if in the same room and floor; even if in backrooms?
 			if (!play_sound && (person_ix & 1)) {play_sound |= is_player_visible(person, 1);} // 50% of zombies use line of sight test
-			if (!play_sound && (person_ix & 2)) {play_sound |= has_nearby_sound(person, get_window_vspace());} // 50% of zombies use sound test
+			if (!play_sound && (person_ix & 2)) {play_sound |= has_nearby_sound (person, floor_spacing);} // 50% of zombies use sound test
 			
 			if (play_sound) { // alert other zombies if in the same room and floor as the player, except in backrooms or parking garage, unless the player is visible
 				bool const alert_other_zombies(same_room_and_floor && (!is_pos_in_pg_or_backrooms(person.pos) || is_player_visible(person, 1)));
@@ -2164,8 +2166,6 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			//return AI_NEXT_PT; // returning here and recalculating the path on the next frame can get us stuck at this point when chasing the player
 		}
 		else {
-			float const floor_spacing(get_window_vspace());
-
 			if (person.goal_type == GOAL_TYPE_ELEVATOR) {
 				elevator_t &e(get_elevator(person.cur_elevator));
 				// floor index relative to this elevator, not the room or building
@@ -2176,7 +2176,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 				// select the destination floor, different from the current floor; this must be done before calling the elevator so that we know if we're going up or down
 				while (1) {
 					person.dest_elevator_floor = rgen.rand() % num_floors;
-					if (person.dest_elevator_floor != cur_floor) break; // floor is valid
+					if (person.dest_elevator_floor != cur_floor && !e.skip_floor_ix(person.dest_elevator_floor)) break; // floor is valid
 				}
 				bool const is_up(person.dest_elevator_floor > cur_floor);
 				call_elevator_to_floor_and_light_nearest_button(e, cur_floor, 0, is_up); // is_inside_elevator=0
@@ -2267,7 +2267,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		if (person.goal_type == GOAL_TYPE_ELEVATOR) { // heading for the elevator
 			// check for collisions with someone else waiting for the elevator
 			for (auto p = interior->people.begin(); p < interior->people.end(); ++p) {
-				if (!person.waiting_for_same_elevator_as(*p, get_window_vspace())) continue;
+				if (!person.waiting_for_same_elevator_as(*p, floor_spacing)) continue;
 				float const rsum(coll_dist + COLL_RADIUS_SCALE*p->radius);
 				if (!dist_xy_less_than(new_pos, p->pos, rsum)) continue; // new pos not close
 
@@ -2334,7 +2334,6 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			int const new_room_ix(get_room_containing_pt(new_pos));
 			if (new_room_ix >= 0) {room = get_room(new_room_ix);}
 		}
-		float const floor_spacing(get_window_vspace());
 		int cur_floor(max(0, round_fp((new_pos.z - min_valid_zval)/floor_spacing)));
 		int const max_floor(round_fp((room.z2() - true_z1)/floor_spacing) - 1);
 		min_eq(cur_floor, max_floor); // clip to the valid floors for this room relative to lowest building floor
