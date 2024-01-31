@@ -1741,7 +1741,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 			if (!obj.was_moved()) {interior->room_geom->moved_obj_ids.push_back(closest_obj_id);} // add to moved_obj_ids on first movement
 			obj.flags |= RO_FLAG_MOVED;
 			interior->room_geom->modified_by_player = 1; // flag so that we avoid re-generating room geom if the player leaves and comes back
-			gen_sound_thread_safe_at_player(SOUND_SLIDING);
+			gen_sound_thread_safe_at_player(SOUND_SLIDING, 1.0, 1.0, 1); // skip_if_already_playing=1
 			register_building_sound_at_player(0.7);
 			return 1; // success
 		} // for n
