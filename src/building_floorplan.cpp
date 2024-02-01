@@ -256,18 +256,25 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 }
 
 // Note: these are used in gen_interior_int() and maybe_add_skylight()
+float building_t::get_min_hallway_width() const {
+	// need wider hallway for U-shaped stairs, but not quite the 6.0 factor used in add_ceilings_floors_stairs()
+	return (((retail_floor_levels > 1) ? 5.4 : 3.6)*get_nominal_doorway_width());
+}
 bool building_t::can_use_hallway_for_part(unsigned part_id) const {
 	if (is_house || has_complex_floorplan || !is_cube() || (int)part_id == basement_part_ix) return 0;
 	assert(part_id < parts.size());
 	cube_t const &p(parts[part_id]);
 	bool const first_part_this_stack(part_id == 0 || parts[part_id-1].z1() < p.z1());
+	if (!first_part_this_stack) return 0;
 	bool const next_diff_stack(part_id+1 == parts.size() || parts[part_id+1].z1() != p.z1());
-	return (first_part_this_stack && next_diff_stack && min(p.dx(), p.dy()) > 4.0*get_min_wall_len());
+	if (!next_diff_stack)       return 0;
+	float const min_wall_len(get_min_wall_len());
+	return (min(p.dx(), p.dy()) > max(4.0f*min_wall_len, (get_min_hallway_width() + 2.0f*min_wall_len)));
 }
 cube_t building_t::get_hallway_for_part(cube_t const &part, float &num_hall_windows, float &hall_width, float &room_width) const {
 	bool const min_dim(part.dy() < part.dx());
 	int const num_windows_od(get_num_windows_on_side(part.d[min_dim][0], part.d[min_dim][1])); // in short dim
-	float const doorway_width(0.5*get_window_vspace()), min_hall_width(3.6*doorway_width), part_width(part.get_sz_dim(min_dim));
+	float const part_width(part.get_sz_dim(min_dim)), min_hall_width(get_min_hallway_width()); // need wider hallway for U-shaped stairs
 	num_hall_windows = ((num_windows_od & 1) ? 1.4 : 1.8); // hall either contains 1 (odd) or 2 (even) windows, wider for single window case to make room for stairs
 	max_eq(num_hall_windows, min_hall_width*num_windows_od/part_width); // enforce min_hall_width (may split a window, but this limit is only hit for non-window city office buildings)
 	hall_width = num_hall_windows*part_width/num_windows_od;
@@ -282,7 +289,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 	// defer this until the building is close to the player?
 	interior.reset(new building_interior_t);
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
-	float const doorway_width(0.5*window_vspacing), doorway_hwidth(0.5*doorway_width);
+	float const doorway_width(get_nominal_doorway_width()), doorway_hwidth(0.5*doorway_width);
 	float const wall_thick(get_wall_thickness()), wall_half_thick(0.5*wall_thick), wall_edge_spacing(0.05*wall_thick), min_wall_len(get_min_wall_len());
 	float const window_border(get_window_h_border());
 	vector3d const car_sz(get_nom_car_size());
@@ -437,10 +444,10 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			if (num_windows_od >= 7 && num_rooms >= 4) { // at least 7 windows (3 on each side of hallway)
 				float const min_hall_width(1.5f*doorway_width), max_hall_width(2.5f*doorway_width);
 				float const sh_width(max(min(0.4f*hall_width, max_hall_width), min_hall_width)), hspace(window_hspacing[!min_dim]);
+				float const ring_hall_room_depth(0.5f*(room_width - sh_width)); // for inner and outer rows of rooms
 
-				if (rgen.rand_bool()) { // ring hallway
-					float const room_depth(0.5f*(room_width - sh_width)); // for inner and outer rows of rooms
-					assert(room_depth > 2.0f*doorway_width); // I'm not sure if this can fail or what we should do in that case - no secondary hallways?
+				// Note: the ring_hall_room_depth check can fail for two level retail areas that force wider hallways for U-shaped stairs
+				if (ring_hall_room_depth > 2.0f*doorway_width && rgen.rand_bool()) { // ring hallway
 					float const hall_offset(room_len); // outer edge of hallway to building exterior on each end
 					bool const add_doors_to_main_wall(rgen.rand_bool());
 					unsigned const num_cent_rooms(num_rooms - 2); // skip the rooms on each side
@@ -458,7 +465,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 
 					for (unsigned d = 0; d < 2; ++d) { // for each side of main hallway
 						float const dsign(d ? -1.0 : 1.0);
-						float const wall_edge(p->d[min_dim][d]), targ_hall_outer(wall_edge + dsign*room_depth);
+						float const wall_edge(p->d[min_dim][d]), targ_hall_outer(wall_edge + dsign*ring_hall_room_depth);
 						float const hall_outer(shift_val_to_not_intersect_window(*p, targ_hall_outer, window_hspacing[min_dim], window_border, min_dim));
 						float const hall_inner(hall_outer + dsign*sh_width), conn_hall_len(dsign*(hall_wall_pos[d] - hall_inner));
 						float const targ_side_room_split(hall_outer + 0.5f*dsign*(conn_hall_len + sh_width)); // split room halfway
@@ -1213,7 +1220,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 {
 	// increase floor thickness if !is_house? but then we would probably have to increase the space between floors as well, which involves changing the texture scale
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
-	float const doorway_width(0.5*window_vspacing), wall_thickness(get_wall_thickness());
+	float const doorway_width(get_nominal_doorway_width()), wall_thickness(get_wall_thickness());
 	float min_ewidth(1.5*doorway_width), ewidth(min_ewidth); // for elevators
 	float z(part.z1());
 	cube_t stairs_cut, elevator_cut;
@@ -1231,8 +1238,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		assert(!interior->rooms.empty());
 		room_t &room(interior->rooms.back()); // hallway is always the last room to be added
 		bool const long_dim(hall.dx() < hall.dy());
-		// U-shape if there's enough room in width
-		if (room.get_sz_dim(!long_dim) > 6.0*doorway_width) {sshape = SHAPE_U; ewidth *= 1.6;} // increase the width of both the stairs and elevator
+		// U-shape if there's enough room in width; also required for two floor retail; increase the width of both the stairs and elevator
+		if (room.get_sz_dim(!long_dim) > 6.0*doorway_width || retail_floor_levels > 1) {sshape = SHAPE_U; ewidth *= 1.6;}
 		else {sshape = SHAPE_WALLED_SIDES;} // walled sides to meet fire codes
 		cube_t stairs(hall); // start as hallway
 		// add elevator(s)
@@ -1769,7 +1776,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 
 	//highres_timer_t timer("Connect Stairs"); // 72ms (serial)
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
-	float const doorway_width(0.5*window_vspacing), stairs_len(4.0*doorway_width);
+	float const doorway_width(get_nominal_doorway_width()), stairs_len(4.0*doorway_width);
 	bool const is_basement(has_basement() && part == get_basement()), use_basement_stairs(is_basement && is_house); // office basement has regular stairs
 	bool const is_retail(is_retail_part(part));
 	// use fewer iterations on tiled buildings to reduce the frame spikes when new tiles are generated

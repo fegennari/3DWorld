@@ -1861,6 +1861,8 @@ private:
 	std::string get_name_for_floor(unsigned floor_ix) const;
 	bool add_outdoor_ac_unit(rand_gen_t &rgen);
 	bool add_chimney(bool two_parts, bool stacked_parts, bool hipped_roof[4], float roof_dz[4], unsigned force_dim[2], rand_gen_t &rgen);
+	float get_nominal_doorway_width() const {return 0.5*get_window_vspace();} // constant per-building, but not exactly the same as get_doorway_width()
+	float get_min_hallway_width() const;
 	bool can_use_hallway_for_part(unsigned part_id) const;
 	cube_t get_hallway_for_part(cube_t const &part, float &num_hall_windows, float &hall_width, float &room_width) const;
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
