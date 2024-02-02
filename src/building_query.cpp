@@ -1836,11 +1836,12 @@ bool room_object_t::is_floor_collidable() const {return bldg_obj_types[type].rat
 bool room_object_t::is_spider_collidable() const { // include objects on the floor, walls, and ceilings
 	if (!is_floor_collidable()) { // below are the exceptions: objects that are not floor collidable but spiders can walk on
 		if (type != TYPE_LIGHT && type != TYPE_BRSINK && type != TYPE_MIRROR && type != TYPE_MWAVE && type != TYPE_HANGER_ROD &&
-			type != TYPE_LAPTOP && type != TYPE_MONITOR && type != TYPE_CLOTHES && type != TYPE_TOASTER && type != TYPE_CABINET) return 0;
+			type != TYPE_LAPTOP && type != TYPE_MONITOR && type != TYPE_CLOTHES && type != TYPE_TOASTER && type != TYPE_CABINET &&
+			type != TYPE_FISHTANK) return 0;
 	}
-	if (type == TYPE_CEIL_FAN || type == TYPE_OFF_CHAIR || type == TYPE_POOL_LAD || type == TYPE_BAR_STOOL) return 0; // not a cube
+	if (type == TYPE_CEIL_FAN || type == TYPE_OFF_CHAIR || type == TYPE_POOL_LAD || type == TYPE_BAR_STOOL ||
+		type == TYPE_LAVALAMP || type == TYPE_CASHREG) return 0; // not a cube
 	if (type == TYPE_BOOK) return 0; // I guess books don't count, since they're too small to walk on?
-	//if (type == TYPE_FISHTANK) {} // spider can collide with sides but not top?
 	return 1;
 }
 bool room_object_t::is_vert_cylinder() const {

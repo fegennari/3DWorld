@@ -1358,38 +1358,45 @@ lava_lamp_draw_t lava_lamp_draw;
 class fishtank_manager_t {
 	struct fish_t {
 		float radius=0.0, speed=0.0;
+		unsigned id=0;
 		point pos;
-		vector3d dir;
+		vector3d dir, target_dir;
+		colorRGBA color=WHITE;
 
 		void draw(shader_t &s, float anim_time) const {
-			draw_animated_fish_model(s, pos, radius, dir, speed*anim_time, WHITE);
+			draw_animated_fish_model(s, pos, radius, dir, 300.0*speed*anim_time, color);
 		}
 	};
-	struct fishtank_t {
+	class fishtank_t {
 		cube_t bcube;
 		vector<fish_t> fish;
 		rand_gen_t rgen;
+	public:
 		unsigned obj_id=0; // used as a unique identifier
 		bool present=0, visible=0;
 		
 		fishtank_t(room_object_t const &obj) : bcube(obj), obj_id(obj.obj_id) {
 			rgen.set_state(obj.room_id+1, obj.obj_id+1);
 			rgen.rand_mix();
-			fish.resize(1); // TODO: multiple fish
-			float const max_fish_radius(0.2*bcube.min_len());
+			unsigned const num_fish(1 + (rgen.rand()&3)); // 1-4
+			fish.resize(num_fish);
+			float const max_fish_radius(0.125*(1.0 + 1.0/num_fish)*bcube.min_len()); // more fish = smaller size
+			unsigned id(0);
 
 			for (fish_t &f : fish) {
-				f.pos    = bcube.get_cube_center(); // TODO: use get_valid_area
-				f.radius = max_fish_radius;
-				f.speed  = 0.002;
-				f.dir[!obj.dim] = (rgen.rand_bool() ? -1.0 : 1.0); // long dim
-			}
-		}
-		cube_t get_valid_area(float pad=0.0) const {
-			cube_t va(bcube);
-			va.expand_by(-0.1*bcube.get_size()); // 10% smaller in each dim
-			if (pad > 0.0) {va.expand_by(-pad);}
-			return va;
+				f.radius = max_fish_radius*rgen.rand_uniform(0.67, 1.0);
+				f.dir    = assign_fish_dir();
+				f.speed  = 0.00004*rgen.rand_uniform(0.8, 1.2);
+				f.id     = id++;
+				for (unsigned d = 0; d < 3; ++d) {f.color[d] *= rgen.rand_uniform(0.8, 1.0);} // slight color variation
+				cube_t const valid_area(get_valid_area(1.05*f.radius)); // slightly larger radius so that we don't start out intersecting
+
+				for (unsigned n = 0; n < 100; ++n) { // 100 tries
+					for (unsigned d = 0; d < 3; ++d) {f.pos[d] = rgen.rand_uniform(valid_area.d[d][0], valid_area.d[d][1]);}
+					point coll_pos; // unused
+					if (!check_fish_coll(f.pos, f.radius, f.id, coll_pos)) break; // success
+				}
+			} // for f
 		}
 		void update_object(room_object_t const &obj) { // handle movement when the table is pushed
 			if (obj == bcube) return; // no update
@@ -1397,9 +1404,61 @@ class fishtank_manager_t {
 			bcube = obj;
 			for (fish_t &f : fish) {f.pos += delta;}
 		}
+		void next_frame() {
+			present = visible = 0; // mark as not present or visible until it's seen
+			if (!animate2) return;
+			float const delta_dir(0.6*(1.0 - pow(0.7f, fticks)));
+
+			for (fish_t &f : fish) {
+				if (f.target_dir != zero_vector) { // fish is turning in place
+					f.dir = delta_dir*f.target_dir + (1.0 - delta_dir)*f.dir;
+					if (f.dir == zero_vector) {f.dir = assign_fish_dir();} // error?
+					else {f.dir.normalize();}
+					if (dot_product(f.dir, f.target_dir) > 0.95) {f.target_dir = zero_vector;} // turn complete
+					continue;
+				}
+				cube_t const valid_area(get_valid_area(f.radius));
+				point const prev_pos(f.pos);
+				assert(valid_area.contains_pt(prev_pos));
+				f.pos += f.speed*f.dir*fticks;
+				vector3d coll_dir; // fish => target
+				point coll_pos;
+				
+				if (!valid_area.contains_pt(f.pos)) { // hit the tank edge
+					coll_dir = valid_area.closest_side_dir(prev_pos);
+				}
+				else if (check_fish_coll(f.pos, 0.7*f.radius, f.id, coll_pos)) { // hit another fish (use a smaller radius)
+					coll_dir = (coll_pos - f.pos).get_norm();
+				}
+				if (coll_dir != zero_vector) {
+					f.pos = prev_pos;
+					f.target_dir = assign_fish_dir();
+					if (dot_product(f.target_dir, coll_dir) > 0.0) {f.target_dir.negate();}
+				}
+			} // for f
+		}
 		void draw(shader_t &s, float anim_time) const {
 			if (!visible) return;
 			for (fish_t const &f : fish) {f.draw(s, anim_time);}
+		}
+	private:
+		vector3d assign_fish_dir() {
+			return (rgen.signed_rand_vector_xy() * bcube.get_size() * vector3d(1.0, 1.0, 0.6)).get_norm(); // match the aspect ratio of the aquarium, smaller in Z
+		}
+		cube_t get_valid_area(float pad=0.0) const {
+			cube_t va(bcube);
+			va.expand_by(-bcube.get_size() * vector3d(0.02, 0.02, 0.1)); // slightly smaller in each dim, somewhat more in Z
+			if (pad > 0.0) {va.expand_by(-pad);}
+			assert(va.is_strictly_normalized());
+			return va;
+		}
+		bool check_fish_coll(point const &pos, float radius, unsigned id, point &coll_pos) const {
+			for (fish_t const &f : fish) {
+				if (f.radius == 0.0) continue; // not yet setup
+				if (f.id >= id     ) continue; // skip ourself and higher ID fish
+				if (dist_less_than(pos, f.pos, (radius + f.radius))) {coll_pos = f.pos; return 1;}
+			} // for f
+			return 0;
 		}
 	};
 	vector<fishtank_t> fishtanks;
@@ -1413,9 +1472,9 @@ public:
 			prev_building = &building;
 			anim_time     = 0.0; // reset
 		}
-		for (fishtank_t &ft : fishtanks) {ft.present = ft.visible = 0;} // mark as not present or visible until it's seen
+		for (fishtank_t &ft : fishtanks) {ft.next_frame();}
+		if (animate2) {anim_time += fticks;}
 		fishtank_ix = 0;
-		anim_time  += fticks;
 	}
 	void register_fishtank(room_object_t const &obj, bool is_visible) {
 		if (fishtanks.size() <= fishtank_ix) {fishtanks.push_back(fishtank_t(obj));} // fishtank not yet added

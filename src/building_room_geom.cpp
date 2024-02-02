@@ -4520,6 +4520,7 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 	// draw gravel bottom
 	cube_t gravel(glass);
 	gravel.z2() = glass.z1() + 0.05*height; // shallow
+	gravel.expand_by_xy(-0.1*glass_thickness); // shrink slightly to prevent Z-fighting
 	rgeom_mat_t &gravel_mat(get_material(tid_nm_pair_t(get_texture_by_name("gravel.jpg"), 3.0/height), 1));
 	gravel_mat.add_cube_to_verts(gravel, apply_light_color(c, WHITE), c.get_llc(), EF_Z1);
 }
