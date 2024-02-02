@@ -19,12 +19,12 @@ buildings basement_water_level_max 1.1 # flooded a bit onto the floor above
 buildings ball_prob 0.6 # set to 1.0 for testing of balls
 buildings split_stack_floorplan_prob 0.0
 buildings retail_floorplan_prob 0.5
+buildings two_floor_retail_prob 0.0 # Warning: stairs are currently broken in this mode
 buildings add_office_basements 1
 buildings max_ext_basement_hall_branches 4
 buildings max_ext_basement_room_depth 4
 buildings add_office_backroom_basements 1
 buildings put_doors_in_corners 0 # more representative of real buildings, but changes a lot of buildings and doesn't always work
-buildings two_floor_retail 0 # Warning: stairs and elevators are currently broken in this mode
 
 buildings min_altitude 0.05 # slightly above sea level
 buildings max_altitude 4.00 # same for all buildings
