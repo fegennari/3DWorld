@@ -2134,6 +2134,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		else {wall.z2() -= 0.5*floor_thickness;} // prevent z-fighting on top floor
 		wall.z1() = max((stairs_zmin + half_thick), wall_bottom); // full height
 		set_wall_width(wall, i->d[dim][dir], wall_hw, dim);
+		float walls_extend_to(0.0);
 
 		if ((i->shape == SHAPE_WALLED && !(i->against_wall[0] || i->against_wall[1]) && (!i->stack_conn || !i->is_at_top)) || i->shape == SHAPE_U) {
 			objs.emplace_back(wall, TYPE_STAIR_WALL, 0, dim, dir); // add wall at back/end of stairs
@@ -2141,10 +2142,23 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			if (i->not_an_exit && i->shape == SHAPE_U) { // blocked U-shaped stairs
 				cube_t front_wall(*i);
 				front_wall.z2() -= floor_thickness;
-				front_wall.z1()  = floor_z - floor_thickness;
+				front_wall.z1()  = floor_z - 0.5*floor_thickness;
 				front_wall.expand_in_dim(!dim, wall_hw); // widen slightly
-				set_wall_width(front_wall, (i->d[dim][!dir] + (dir ? -1.0 : 1.0)*wall_hw), wall_hw, dim); // move to the front, not the back
-				objs.emplace_back(front_wall, TYPE_STAIR_WALL, 0, dim, !dir, RO_FLAG_HANGING); // add wall front of stairs, hanging so that bottom surface is drawn
+				// create a box for the landing so that the player and AI can walk there when changing floors
+				float const landing_width(0.5*min(tot_len, window_vspacing)), front_pos(i->d[dim][!dir]);
+				set_wall_width(front_wall, (front_pos + (dir ? -1.0 : 1.0)*(wall_hw + landing_width)), wall_hw, dim); // move to the front
+				objs.emplace_back(front_wall, TYPE_STAIR_WALL, 0, dim, !dir, 0); // add wall in front of stairs
+				walls_extend_to = front_wall.d[dim][dir];
+				cube_t sub_floor(*i);
+				sub_floor.d[dim][ dir] = front_pos - 0.25*(dir ? -1.0 : 1.0)*wall_hw; // move toward stairs slightly to prevent Z-fighting and fill the gap
+				sub_floor.d[dim][!dir] = front_wall.d[dim][!dir]; // furthest extent of wall
+				sub_floor.z1() = front_wall.z1();
+				sub_floor.z2() = sub_floor.z1() + 0.5*floor_thickness;
+				sub_floor.expand_in_dim(!dim, wall_hw); // cover the bottoms of the side walls
+				// add as both a stairs wall (for drawing) and a floor (for player collision)
+				objs.emplace_back(sub_floor, TYPE_STAIR_WALL, 0, dim, !dir, RO_FLAG_HANGING);
+				interior->floors.push_back(sub_floor);
+				// Can we add a light on the wall or ceiling here? it's not in the correct range of objects, we don't have a valid room, and we don't have light_ix_assign
 			}
 		}
 		else if ((i->shape == SHAPE_WALLED || i->shape == SHAPE_WALLED_SIDES) && extend_walls_up) { // add upper section only
@@ -2169,6 +2183,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			if (add_wall) { // add walls around stairs for this floor
 				// clip basement stairs wall to the basement to avoid drawing artifacts at the bottom of a house exterior wall; or just skip drawing the wall?
 				cube_t wall_clipped(wall);
+				if (walls_extend_to != 0.0) {wall_clipped.d[dim][!dir] = walls_extend_to;} // extend outward to meet front wall
 				if (i->z1() < ground_floor_z1 && !i->in_ext_basement) {wall_clipped.intersect_with_cube_xy(get_basement());}
 				assert(wall_clipped.is_strictly_normalized());
 				objs.emplace_back(wall_clipped, TYPE_STAIR_WALL, 0, dim, dir);
