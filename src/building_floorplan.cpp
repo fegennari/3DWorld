@@ -258,7 +258,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 // Note: these are used in gen_interior_int() and maybe_add_skylight()
 float building_t::get_min_hallway_width() const {
 	// need wider hallway for U-shaped stairs, but not quite the 6.0 factor used in add_ceilings_floors_stairs()
-	return (((retail_floor_levels > 1) ? 5.4 : 3.6)*get_nominal_doorway_width());
+	return ((has_tall_retail() ? 5.4 : 3.6)*get_nominal_doorway_width());
 }
 bool building_t::can_use_hallway_for_part(unsigned part_id) const {
 	if (is_house || has_complex_floorplan || !is_cube() || (int)part_id == basement_part_ix) return 0;
@@ -1239,7 +1239,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		room_t &room(interior->rooms.back()); // hallway is always the last room to be added
 		bool const long_dim(hall.dx() < hall.dy());
 		// U-shape if there's enough room in width; also required for two floor retail; increase the width of both the stairs and elevator
-		if (room.get_sz_dim(!long_dim) > 6.0*doorway_width || retail_floor_levels > 1) {sshape = SHAPE_U; ewidth *= 1.6;}
+		if (room.get_sz_dim(!long_dim) > 6.0*doorway_width || has_tall_retail()) {sshape = SHAPE_U; ewidth *= 1.6;}
 		else {sshape = SHAPE_WALLED_SIDES;} // walled sides to meet fire codes
 		cube_t stairs(hall); // start as hallway
 		// add elevator(s)

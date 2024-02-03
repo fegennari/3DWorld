@@ -1125,7 +1125,7 @@ bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, 
 	point dest_pos(room.get_cube_center());
 	static vect_cube_t avoid; // reuse across frames/people
 	get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
-	bool const no_use_init(is_room_pg_or_backrooms(room)); // don't use the room center for a parking garage or backrooms
+	bool const no_use_init(is_single_large_room(room)); // don't use the room center for a parking garage, backrooms, or retail area
 	if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, person.target_pos.z, room, rgen, dest_pos, no_use_init)) return 0;
 	
 	if (!is_cube()) { // non-cube building
@@ -1578,7 +1578,7 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 			float const zval(r->z1() + f*window_vspacing);
 			if (has_water() && r->intersects(get_water_cube()) && zval < interior->water_zval) continue; // don't place in a room with water on the floor
 			
-			if (!r->is_hallway && !r->has_stairs_on_floor(f) && !is_room_pg_or_backrooms(*r)) { // check if this room has all locked doors
+			if (!r->is_hallway && !r->has_stairs_on_floor(f) && !is_single_large_room(*r)) { // check if this room has all locked doors
 				float const z_test(zval + 0.5*window_vspacing); // mid-floor height
 				bool any_unlocked_doors(0);
 
