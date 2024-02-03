@@ -1180,22 +1180,22 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 			}
 		}
 	}
-	bool const is_single_large_room(loc.room_ix >= 0 && is_room_pg_or_backrooms(get_room(loc.room_ix)));
-	bool const standing_in_water(point_in_water_area(person.pos));
+	bool const is_single_large_room(loc.room_ix >= 0 && is_single_large_room(get_room(loc.room_ix)));
+	bool const must_leave_room(point_in_water_area(person.pos) || is_above_retail_area(person.pos)); // Note: should never be above the retail area anyway
 
-	if (is_single_large_room && !standing_in_water && (person.is_first_path || rgen.rand_float() < 0.75)) { // stay in this room 75% of the time, always on the first path
+	if (is_single_large_room && !must_leave_room && (person.is_first_path || rgen.rand_float() < 0.75)) { // stay in this room 75% of the time, always on the first path
 		person.is_first_path = 0; // respect the walls
 		if (select_person_dest_in_room(person, rgen, get_room(loc.room_ix))) return 1;
 	}
-	// sometimes use stairs in backrooms and parking garages
-	bool const try_use_stairs(is_single_large_room && get_room(loc.room_ix).has_stairs && (standing_in_water || rgen.rand_bool()));
+	// sometimes use stairs in backrooms, parking garages, and retail areas
+	bool const try_use_stairs(is_single_large_room && get_room(loc.room_ix).has_stairs && (must_leave_room || rgen.rand_bool()));
 	unsigned const num_tries(try_use_stairs ? 0 : 100);
 
 	// try to find a valid room to move to
 	for (unsigned n = 0; n < num_tries; ++n) {
 		unsigned const cand_room(rgen.rand() % interior->rooms.size());
 		if (cand_room == (unsigned)loc.room_ix) continue;
-		room_t const &room(interior->rooms[cand_room]);
+		room_t const &room(get_room(cand_room));
 		if (room.is_hallway) continue; // don't select a hallway
 		float const bot_floor_z(room.z1()), top_ceil_z(room.is_single_floor ? (bot_floor_z + floor_spacing) : room.z2()); // approximate
 		if ((person.pos.z + floor_spacing) < bot_floor_z || (person.pos.z - floor_spacing) > top_ceil_z) continue; // room more than one floor above/below current pos
@@ -1248,7 +1248,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		}
 	}
 	// how about a different location in the same room? this will at least get the person unstuck from an object and moving inside a parking garage
-	if ((person.is_first_path || is_single_large_room) && !standing_in_water) {
+	if ((person.is_first_path || is_single_large_room) && !must_leave_room) {
 		if (select_person_dest_in_room(person, rgen, room)) return 1;
 	}
 	return 2; // failed, but can retry
@@ -1361,7 +1361,7 @@ bool building_t::stairs_contained_in_part(stairwell_t const &s, cube_t const &p)
 	if (s.roof_access) {sc.z2() -= get_window_vspace();} // clip off top floor roof access
 	return p.contains_cube(sc);
 }
-void building_t::find_nearest_stairs_or_ramp(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, int part_ix) const {
+void building_t::find_nearest_stairs_or_ramp(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, int part_ix) const { // p1=from, p2=to
 	nearest_stairs.clear();
 	assert(interior);
 	assert(part_ix < 0 || (unsigned)part_ix < parts.size());
@@ -1372,6 +1372,11 @@ void building_t::find_nearest_stairs_or_ramp(point const &p1, point const &p2, v
 		stairwell_t const &stairs(interior->stairwells[s]);
 		if (zmin < stairs.z1() || zmax > stairs.z2()) continue; // stairs don't span the correct floors
 		if (part_ix >= 0 && !stairs_contained_in_part(stairs, parts[part_ix])) continue; // stairs don't belong to this part (Note: this option is currently unused)
+
+		if (stairs.not_an_exit_mask) {
+			int const to_floor(max(0, int((p2.z - stairs.z1())/get_window_vspace())));
+			if (stairs.not_an_exit_mask & (1 << to_floor)) continue; // not an exit
+		}
 		point const center(stairs.get_cube_center());
 		sorted.emplace_back((p2p_dist(p1, center) + p2p_dist(center, p2)), s);
 	} // for s
@@ -1519,9 +1524,17 @@ void person_t::next_path_pt(bool starting_path) {
 	path.pop_back();
 }
 
+bool building_t::is_above_retail_area(point const &pos) const {
+	if (!has_tall_retail()) return 0;
+
+	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // find retail part
+		if (p->z1() == ground_floor_z1 && p->contains_pt(pos) && pos.z > (p->z1() + get_window_vspace())) return 1;
+	}
+	return 0;
+}
 bool building_t::is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll) const { // for people and animals
-	if (!is_pos_inside_building(pos, radius, radius, 1)) return 0; // required for attic; for_attic=1
-	if (point_in_water_area(pos)) return 0;
+	if (!is_pos_inside_building(pos, radius, radius, 1))       return 0; // required for attic; for_attic=1
+	if (point_in_water_area(pos) || is_above_retail_area(pos)) return 0;
 	cube_t ai_bcube(pos);
 	ai_bcube.expand_by(radius); // expand more in Z?
 	if (!is_valid_stairs_elevator_placement(ai_bcube, radius)) return 0;

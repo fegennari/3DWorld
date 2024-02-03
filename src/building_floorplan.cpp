@@ -1974,6 +1974,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			if (is_retail) { // add intermediate landings/flights of stairs for multi-story retail areas
 				for (unsigned n = 1; n < retail_floor_levels; ++n) { // skip first
 					interior->landings.back().not_an_exit = 1; // all but the last (ground floor) landing are not exits
+					if (n < 16) {interior->stairwells.back().not_an_exit_mask |= (1 << n);} // flag stairwells as well (used by building AI)
 					landing.translate_dim(2, -window_vspacing); // shift down by a floor
 					interior->landings.push_back(landing);
 				}

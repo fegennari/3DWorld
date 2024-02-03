@@ -1246,7 +1246,7 @@ struct landing_t : public stairs_landing_base_t {
 struct stairwell_t : public stairs_landing_base_t {
 	bool extends_below=0;
 	uint8_t num_floors=0;
-	int16_t stairs_door_ix=-1;
+	int16_t stairs_door_ix=-1, not_an_exit_mask=0;
 
 	stairwell_t() {}
 	stairwell_t(cube_t const &c, unsigned n, bool dim_, bool dir_, stairs_shape s=SHAPE_STRAIGHT, bool r=0, bool sc=0, bool ieb=0) :
