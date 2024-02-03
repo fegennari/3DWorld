@@ -1932,7 +1932,7 @@ unsigned ped_manager_t::get_player_model_id() {
 	unsigned const num_ped_models(ped_model_loader.num_models());
 	assert(num_ped_models > 0);
 	unsigned const model_id(global_building_params.player_model_ix % num_ped_models); // wrap around if set too large
-	if (city_params.num_peds == 0 && !global_building_params.building_people_enabled()) {ped_model_loader.load_model_id(model_id);} // only need to load this particular model
+	ped_model_loader.load_model_id(model_id); // only need to load this particular model, so make sure it's loaded
 	return model_id;
 }
 bool ped_manager_t::is_player_model_female() {
