@@ -791,10 +791,13 @@ public:
 		vector<a_star_node_state_t> state(nodes.size());
 		vector<uint8_t> open(nodes.size(), 0), closed(nodes.size(), 0); // tentative/already evaluated nodes
 		std::priority_queue<pair<float, unsigned> > open_queue;
-		point const dest_pos(get_node(room2).get_center(cur_pt.z)); // Note: approximate, actual dest may be different
+		node_t const &start_node(get_node(room1)), &dest_node(get_node(room2));
+		point dest_pos;
+		if (custom_dest) {dest_pos = *custom_dest;}
+		else {dest_pos = dest_node.get_center(cur_pt.z);} // Note: approximate, actual dest may be different
 		a_star_node_state_t &start(state[room1]);
 		start.g_score = 0.0;
-		start.f_score = p2p_dist_xy(get_node(room1).get_center(cur_pt.z), dest_pos); // estimated total cost from start to goal through current
+		start.f_score = p2p_dist_xy(start_node.get_center(cur_pt.z), dest_pos); // estimated total cost from start to goal through current
 		open[room1]   = 1;
 		open_queue.push(make_pair(-start.f_score, room1));
 
@@ -802,30 +805,31 @@ public:
 			unsigned const cur(open_queue.top().second);
 			open_queue.pop();
 			node_t const &cur_node(get_node(cur));
-			point const center(cur_node.get_center(cur_pt.z));
 			closed[cur] = 1;
 			open  [cur] = 0;
 
 			for (auto i = cur_node.conn_rooms.begin(); i != cur_node.conn_rooms.end(); ++i) {
 				assert(i->ix < nodes.size());
 				if (closed[i->ix]) continue; // already closed (duplicate)
+				bool const is_goal(i->ix == room2);
 				node_t const &conn_node(get_node(i->ix));
-				if (conn_node.is_vert_conn() && !use_stairs && i->ix != room2) continue; // skip stairs/ramp in this mode
+				if (conn_node.is_vert_conn() && !use_stairs && !is_goal) continue; // skip stairs/ramp in this mode
 				if (!can_use_conn(*i, doors, cur_pt.z, has_key)) continue; // blocked by closed or locked door; must do this check before setting open state
-				point const conn_center(conn_node.get_center(cur_pt.z));
+				point const cur_pt (cur_node.get_center(cur_pt.z));
+				point const next_pt(is_goal ? dest_pos : conn_node.get_center(cur_pt.z));
 				a_star_node_state_t &sn(state[i->ix]);
 				vector2d const &pt(i->pt[up_or_down]);
-				float const new_g_score(state[cur].g_score + p2p_dist_xy(center, pt) + p2p_dist_xy(pt, conn_center));
+				float const new_g_score(state[cur].g_score + p2p_dist_xy(cur_pt, pt) + p2p_dist_xy(pt, next_pt));
 				if (!open[i->ix]) {open[i->ix] = 1;}
 				else if (new_g_score >= sn.g_score) continue; // not better
 				sn.came_from_ix = cur;
 				sn.path_pt.assign(pt.x, pt.y, cur_pt.z);
 				
-				if (i->ix == room2) { // done, reconstruct path (in reverse)
+				if (is_goal) { // done, reconstruct path (in reverse)
 					return reconstruct_path(state, avoid, building, cur_pt, radius, i->ix, room1, ped_ix, is_first_path, up_or_down, ped_rseed, custom_dest, path);
 				}
 				sn.g_score = new_g_score;
-				sn.f_score = sn.g_score + p2p_dist_xy(conn_center, dest_pos);
+				sn.f_score = sn.g_score + p2p_dist_xy(next_pt, dest_pos);
 				open_queue.push(make_pair(-sn.f_score, i->ix));
 			} // for i
 		} // end while()
@@ -1504,8 +1508,14 @@ bool building_t::find_route_to_point(person_t const &person, float radius, bool 
 		return 0; // failed
 	}
 	assert(loc1.room_ix != loc2.room_ix);
+	bool have_goal_pos(0);
 	// if the target is an elevator, use that as the preferred destination rather than the center of the room
-	point const *const custom_dest((person.goal_type == GOAL_TYPE_ELEVATOR) ? &person.target_pos : nullptr);
+	if (person.goal_type == GOAL_TYPE_ELEVATOR) {have_goal_pos = 1;}
+	// if the target is the player and they're in a hallway, use the correct dest along the hallway
+	else if (person.goal_type == GOAL_TYPE_PLAYER || person.goal_type == GOAL_TYPE_PLAYER_LAST_POS) {
+		have_goal_pos = get_room(loc2.room_ix).is_hallway;//is_valid_ai_placement(person.target_pos, person.radius, 0, 1); // skip_nocoll=0, no_check_objs=1
+	}
+	point const *const custom_dest(have_goal_pos ? &person.target_pos : nullptr);
 	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, person.ssn, radius, 0, is_first_path,
 		0, person.cur_rseed, avoid, *this, from, interior->doors, person.has_key, custom_dest, path)) return 0;
 	assert(!path.empty());
@@ -1532,7 +1542,7 @@ bool building_t::is_above_retail_area(point const &pos) const {
 	}
 	return 0;
 }
-bool building_t::is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll) const { // for people and animals
+bool building_t::is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll, bool no_check_objs) const { // for people and animals
 	if (!is_pos_inside_building(pos, radius, radius, 1))       return 0; // required for attic; for_attic=1
 	if (point_in_water_area(pos) || is_above_retail_area(pos)) return 0;
 	cube_t ai_bcube(pos);
@@ -1540,7 +1550,7 @@ bool building_t::is_valid_ai_placement(point const &pos, float radius, bool skip
 	if (!is_valid_stairs_elevator_placement(ai_bcube, radius)) return 0;
 
 	// Note: people are placed before room geom is generated for all buildings, so this may not work and will have to be handled during room geom placement
-	if (interior->room_geom) { // check placement against room geom objects
+	if (!no_check_objs && interior->room_geom) { // check placement against room geom objects
 		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 		for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {

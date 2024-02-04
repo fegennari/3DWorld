@@ -1727,7 +1727,7 @@ struct building_t : public building_geom_t {
 	bool is_above_retail_area(point const &pos) const;
 private:
 	void build_nav_graph() const;
-	bool is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll) const;
+	bool is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll, bool no_check_objs=0) const;
 	bool choose_dest_goal(person_t &person, rand_gen_t &rgen) const;
 	int  choose_dest_room(person_t &person, rand_gen_t &rgen) const;
 	bool is_room_pg_or_backrooms(room_t const &room) const {return(room.get_room_type(0) == RTYPE_PARKING || is_room_backrooms(room));}
