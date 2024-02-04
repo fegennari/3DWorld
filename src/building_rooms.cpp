@@ -218,7 +218,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_unfinished    (init_rtype_f0 == RTYPE_UNFINISHED); //  // unfinished room, for example in a non-cube shaped office building
 		bool const is_swim_pool_room(init_rtype_f0 == RTYPE_SWIM); // room with a swimming pool
 		bool const is_retail_room   (init_rtype_f0 == RTYPE_RETAIL);
-		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(is_room_backrooms(*r));
+		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(r->is_backrooms());
 		float light_density(0.0), light_size(def_light_size); // default size for houses
 		unsigned const room_objs_start(objs.size());
 		unsigned nx(1), ny(1); // number of lights in X and Y for this room

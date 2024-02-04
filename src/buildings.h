@@ -1199,7 +1199,9 @@ struct room_t : public cube_t { // size=64
 	bool is_ext_basement     () const {return (interior >= 2);}
 	bool is_ext_basement_conn() const {return (interior >= 3);}
 	bool inc_half_walls      () const {return (is_hallway || is_office || is_ext_basement());} // hallway, office, or extended basement
-	bool is_retail           () const {return (get_room_type(0) == RTYPE_RETAIL);}
+	bool is_parking          () const {return (get_room_type(0) == RTYPE_PARKING  );}
+	bool is_backrooms        () const {return (get_room_type(0) == RTYPE_BACKROOMS);}
+	bool is_retail           () const {return (get_room_type(0) == RTYPE_RETAIL   );}
 	bool has_room_of_type(room_type type) const;
 	float get_light_amt() const;
 	unsigned get_floor_containing_zval(float zval, float floor_spacing) const {return (is_single_floor ? 0 : unsigned((zval - z1())/floor_spacing));}
@@ -1724,16 +1726,14 @@ struct building_t : public building_geom_t {
 	bool run_ai_pool_logic(person_t &person, float &speed_mult) const;
 	bool maybe_zombie_retreat(unsigned person_ix, point const &hit_pos);
 	void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
-	bool is_room_backrooms(unsigned room_ix)   const {return is_room_backrooms(get_room(room_ix));}
-	bool is_room_backrooms(room_t const &room) const {return (room.get_room_type(0) == RTYPE_BACKROOMS);}
+	bool is_room_backrooms(unsigned room_ix)   const {return get_room(room_ix).is_backrooms();}
 	bool is_above_retail_area(point const &pos) const;
 private:
 	void build_nav_graph() const;
 	bool is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll, bool no_check_objs=0) const;
 	bool choose_dest_goal(person_t &person, rand_gen_t &rgen) const;
 	int  choose_dest_room(person_t &person, rand_gen_t &rgen) const;
-	bool is_room_pg_or_backrooms(room_t const &room) const {return(room.get_room_type(0) == RTYPE_PARKING || is_room_backrooms(room));}
-	bool is_single_large_room(room_t const &room) const {return(is_room_pg_or_backrooms(room) || room.is_retail());}
+	bool is_single_large_room(room_t const &room) const {return(room.is_parking() || room.is_backrooms() || room.is_retail());}
 	bool is_pos_in_pg_or_backrooms(point const &pos) const {return (has_parking_garage && pos.z < ground_floor_z1);}
 	bool select_person_dest_in_room(person_t &person, rand_gen_t &rgen, room_t const &room) const;
 	void get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player, cube_t const *const fires_select_cube=nullptr) const;

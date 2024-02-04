@@ -171,7 +171,7 @@ bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, bo
 		if (!found || dsq < dmin_sq) {
 			room_t const &room(get_room(room_id));
 
-			if (is_room_pg_or_backrooms(room)) { // backrooms bathroom mirror
+			if (room.is_backrooms()) { // backrooms bathroom mirror
 				// check for closed door line intersection; if found, mirror is not visible
 				assert(interior->ext_basement_door_stack_ix >= 0 && (unsigned)interior->ext_basement_door_stack_ix < interior->door_stacks.size());
 				bool found_closed_door(0);

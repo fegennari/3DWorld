@@ -3844,7 +3844,7 @@ void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &r
 		cube_t &cur_light(lights.back());
 		
 		// check doors if placed off-center or centered but close to the room bounds; only needed for non-centered lights, lights in small rooms, and backrooms
-		if (light_placed == 2 || is_room_backrooms(room) || !room.contains_cube_xy_exp(cur_light, get_doorway_width())) {
+		if (light_placed == 2 || room.is_backrooms() || !room.contains_cube_xy_exp(cur_light, get_doorway_width())) {
 			cube_t test_cube(cur_light);
 			test_cube.z1() -= 0.4*window_vspacing; // lower Z1 so that it's guaranteed to overlap a door
 

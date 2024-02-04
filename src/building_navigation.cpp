@@ -904,7 +904,7 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 				ng.connect_rooms(r, r2, -1, conn_cube);
 			} // for r2
 		}
-		if (room.get_room_type(0) == RTYPE_PARKING && has_ramp && room.intersects_no_adj(interior->pg_ramp)) { // include parking garage ramp
+		if (room.is_parking() && has_ramp && room.intersects_no_adj(interior->pg_ramp)) { // include parking garage ramp
 			bool const dim(interior->pg_ramp.ix >> 1), dir(interior->pg_ramp.ix & 1);
 			ng.connect_stairs(r, 0, dim, dir, 0, 1); // stairs_ix=0, is_u=0, is_ramp=1
 		}
@@ -1630,7 +1630,7 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 				} // for i
 				if (!any_unlocked_doors) continue; // skip
 			}
-			unsigned const num_cands(is_room_backrooms(*r) ? 4 : 1); // add 4x for backrooms since this is one room with many sub-rooms (even if multi-level?)
+			unsigned const num_cands(r->is_backrooms() ? 4 : 1); // add 4x for backrooms since this is one room with many sub-rooms (even if multi-level?)
 			for (unsigned n = 0; n < num_cands; ++n) {room_cands.emplace_back(room_ix, f);}
 		} // for f
 	} // for r
