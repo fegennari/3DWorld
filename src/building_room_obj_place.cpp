@@ -2591,13 +2591,13 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 		// find central stairs (should be first stairs)
 		for (stairwell_t const &s : interior->stairwells) {
 			if (s.z2() < room.z2() || !s.intersects(room)) continue; // wrong stairs
-			float const landing_width(0.5*min(s.get_sz_dim(s.dim), floor_spacing)); // matches building_t::add_stairs_and_elevators()
+			float const landing_width(s.get_retail_landing_width(floor_spacing));
 			float const radius(0.15*landing_width), dsign(s.dir ? -1.0 : 1.0), wall_pos(s.d[s.dim][!s.dir] + dsign*landing_width);
 			cube_t light;
 			light.d[s.dim][!s.dir] = wall_pos;
 			light.d[s.dim][ s.dir] = wall_pos - dsign*0.01*floor_spacing; // extend out from wall
 			set_wall_width(light, s.get_center_dim(!s.dim), radius, !s.dim); // width
-			set_wall_width(light, (room.z2() - get_fc_thickness() - 0.3*floor_spacing), radius, 2); // height
+			set_wall_width(light, (room.z2() - get_fc_thickness() - 0.25*floor_spacing), radius, 2); // height
 			colorRGBA const light_color(get_light_color_temp(0.6)); // slightly blue-ish white
 			objs.emplace_back(light, TYPE_LIGHT, room_id, s.dim, s.dir, (RO_FLAG_NOCOLL | RO_FLAG_LIT | RO_FLAG_ADJ_HI), 0.0, SHAPE_CYLIN, light_color);
 			objs.back().obj_id = light_ix_assign.get_next_ix();
@@ -3767,7 +3767,7 @@ template<typename T> bool any_cube_contains(cube_t const &cube, T const &cubes) 
 	for (auto const &c : cubes) {if (c.contains_cube(cube)) return 1;}
 	return 0;
 }
-bool building_t::is_light_placement_valid(cube_t const &light, cube_t const &room, float pad) const {
+bool building_t::is_light_placement_valid(cube_t const &light, room_t const &room, float pad) const {
 	cube_t light_ext(light);
 	light_ext.expand_by_xy(pad);
 	if (!room.contains_cube(light_ext))            return 0; // room too small?
@@ -3782,6 +3782,15 @@ bool building_t::is_light_placement_valid(cube_t const &light, cube_t const &roo
 
 		for (auto i = (objs.begin() + pg_wall_start); i != objs.end(); ++i) {
 			if (i->type == TYPE_PIPE && i->intersects(light)) return 0; // check for pipe intersections (in particular horizontal sprinkler pipes)
+		}
+	}
+	if (has_tall_retail() && room.is_retail()) { // handle lights blocked by retail stairs
+		for (stairwell_t const &s : interior->stairwells) {
+			if (s.z2() < room.z2() || !s.intersects(room)) continue; // wrong stairs
+			float const landing_width(s.get_retail_landing_width(get_window_vspace()));
+			cube_t stairs_ext(s);
+			stairs_ext.d[s.dim][!s.dir] += (s.dir ? -1.0 : 1.0)*(landing_width + get_wall_thickness()); // extend outward to include the landing
+			if (stairs_ext.intersects(light)) return 0;
 		}
 	}
 	light_ext.z1() = light_ext.z1() = light.z2() + get_fc_thickness(); // shift in between the ceiling and floor so that we can do a cube contains check

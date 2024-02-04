@@ -1199,6 +1199,7 @@ struct room_t : public cube_t { // size=64
 	bool is_ext_basement     () const {return (interior >= 2);}
 	bool is_ext_basement_conn() const {return (interior >= 3);}
 	bool inc_half_walls      () const {return (is_hallway || is_office || is_ext_basement());} // hallway, office, or extended basement
+	bool is_retail           () const {return (get_room_type(0) == RTYPE_RETAIL);}
 	bool has_room_of_type(room_type type) const;
 	float get_light_amt() const;
 	unsigned get_floor_containing_zval(float zval, float floor_spacing) const {return (is_single_floor ? 0 : unsigned((zval - z1())/floor_spacing));}
@@ -1230,6 +1231,7 @@ struct stairs_landing_base_t : public cube_t {
 	void set_against_wall(bool const val[2]) {against_wall[0] = val[0]; against_wall[1] = val[1];}
 	unsigned get_face_id   () const {return (2*dim + dir);}
 	unsigned get_num_stairs() const {return ((shape == SHAPE_U) ? NUM_STAIRS_PER_FLOOR_U : NUM_STAIRS_PER_FLOOR);}
+	float get_retail_landing_width(float floor_spacing) const {return 0.5*min(get_sz_dim(dim), floor_spacing);}
 };
 
 struct landing_t : public stairs_landing_base_t {
@@ -1731,7 +1733,7 @@ private:
 	bool choose_dest_goal(person_t &person, rand_gen_t &rgen) const;
 	int  choose_dest_room(person_t &person, rand_gen_t &rgen) const;
 	bool is_room_pg_or_backrooms(room_t const &room) const {return(room.get_room_type(0) == RTYPE_PARKING || is_room_backrooms(room));}
-	bool is_single_large_room(room_t const &room) const {return(is_room_pg_or_backrooms(room) || room.get_room_type(0) == RTYPE_RETAIL);}
+	bool is_single_large_room(room_t const &room) const {return(is_room_pg_or_backrooms(room) || room.is_retail());}
 	bool is_pos_in_pg_or_backrooms(point const &pos) const {return (has_parking_garage && pos.z < ground_floor_z1);}
 	bool select_person_dest_in_room(person_t &person, rand_gen_t &rgen, room_t const &room) const;
 	void get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player, cube_t const *const fires_select_cube=nullptr) const;
@@ -1890,7 +1892,7 @@ private:
 	bool has_L_shaped_roof_area() const;
 	void get_attic_roof_tquads(vect_tquad_with_ix_t &tquads) const;
 	bool add_attic_access_door(cube_t const &ceiling, unsigned part_ix, unsigned num_floors, unsigned rooms_start, rand_gen_t &rgen);
-	bool is_light_placement_valid(cube_t const &light, cube_t const &room, float pad) const;
+	bool is_light_placement_valid(cube_t const &light, room_t const &room, float pad) const;
 	void try_place_light_on_ceiling(cube_t const &light, room_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult,
 		unsigned nx, unsigned ny, unsigned check_coll_start, vect_cube_t &lights, rand_gen_t &rgen) const;
 	void try_place_light_on_wall   (cube_t const &light, room_t const &room, bool room_dim, float zval, vect_cube_t &lights, rand_gen_t &rgen) const;

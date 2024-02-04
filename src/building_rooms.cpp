@@ -2145,7 +2145,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				front_wall.z1()  = floor_z - 0.5*floor_thickness;
 				front_wall.expand_in_dim(!dim, wall_hw); // widen slightly
 				// create a box for the landing so that the player and AI can walk there when changing floors
-				float const landing_width(0.5*min(tot_len, window_vspacing)), front_pos(i->d[dim][!dir]);
+				float const landing_width(i->get_retail_landing_width(window_vspacing)), front_pos(i->d[dim][!dir]);
 				set_wall_width(front_wall, (front_pos + (dir ? -1.0 : 1.0)*(wall_hw + landing_width)), wall_hw, dim); // move to the front
 				objs.emplace_back(front_wall, TYPE_STAIR_WALL, 0, dim, !dir, 0); // add wall in front of stairs
 				walls_extend_to = front_wall.d[dim][dir];
