@@ -1435,10 +1435,12 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 	}
 	if (camera_in_building && point_in_building_or_basement_bcube(camera_bs)) { // camera in building interior; matches rat update logic
-		// add a base index to each animal group to make all moving objects unique
-		get_animal_shadow_casters(interior->room_geom->rats,    moving_objs, xlate, 10000);
-		get_animal_shadow_casters(interior->room_geom->spiders, moving_objs, xlate, 20000);
-		get_animal_shadow_casters(interior->room_geom->snakes,  moving_objs, xlate, 30000);
+		if (has_retail() && get_retail_part().contains_pt(camera_bs)) {} // optimization: no dynamic animal shadows in retail area
+		else { // add a base index to each animal group to make all moving objects unique
+			get_animal_shadow_casters(interior->room_geom->rats,    moving_objs, xlate, 10000);
+			get_animal_shadow_casters(interior->room_geom->spiders, moving_objs, xlate, 20000);
+			get_animal_shadow_casters(interior->room_geom->snakes,  moving_objs, xlate, 30000);
+		}
 	}
 	//highres_timer_t timer("Lighting", camera_in_building); // 13.8ms => 13.1ms => 12.7ms => 3.6ms => 3.2ms => 0.81
 	//unsigned num_add(0);

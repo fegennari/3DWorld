@@ -1886,7 +1886,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				obj_drawn = 1;
 			} // for model_objs
 		}
-		draw_animals(s, building, oc, xlate, camera_bs, shadow_only, reflection_pass, check_clip_cube);
+		bool const skip_animals(shadow_only && building.has_retail() && building.get_retail_part().contains_pt(camera_bs));
+		if (!skip_animals) {draw_animals(s, building, oc, xlate, camera_bs, shadow_only, reflection_pass, check_clip_cube);}
 	}
 	if (disable_cull_face) {glEnable(GL_CULL_FACE);}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
