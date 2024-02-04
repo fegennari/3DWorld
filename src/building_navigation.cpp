@@ -16,7 +16,7 @@ building_dest_t cur_player_building_loc, prev_player_building_loc;
 room_object_t player_hiding_obj;
 
 extern bool player_is_hiding;
-extern int frame_counter, display_mode, animate2;
+extern int frame_counter, display_mode, animate2, player_in_elevator;
 extern float fticks;
 extern building_params_t global_building_params;
 extern bldg_obj_type_t bldg_obj_types[];
@@ -1667,6 +1667,8 @@ bool can_ai_follow_player(person_t const &person, bool allow_diff_building) {
 	if (!allow_diff_building && cur_player_building_loc.building_ix != person.cur_bldg) return 0; // wrong building
 	if (player_is_hiding && !person.saw_player_hide) return 0; // ignore player in closet, bathroom stall, or shower with door closed, and we didn't see them hide
 	if (person.retreat_time > 0.0) return 0; // ignore the player if retreating
+	// handle elevator case; this isn't perfect because it doesn't handle the case of player and zombie in adjacent elevators, but I've never seen that failure mode
+	if (player_in_elevator != (person.ai_state >= AI_ENTER_ELEVATOR)) return 0; // {player, zombie) in elevator, and {zombie, player} is not
 	return 1;
 }
 bool has_nearby_sound(person_t const &person, float floor_spacing) {
@@ -2383,6 +2385,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	person.pos        = new_pos; // Note: new_pos.z should equal person.poz.z unless on stairs, which is difficult to accurately check for in this function
 	person.anim_time += max_dist;
 	bool enable_bl_update(display_mode & 0x20); // disabled by default, enable with key '6'
+	if (in_building_gameplay_mode()) {enable_bl_update = 0;} // zombies don't turn on and off lights
 	if (ai_follow_player() && global_building_params.ai_player_vis_test >= 3) {enable_bl_update = 0;} // if AI tests that player is lit, don't turn on/off lights
 	if (enable_bl_update) {ai_room_lights_update(person);} // non-const part
 	// update cur_room after moving and lights update; needed if player is in the room and for ai_room_lights_update() same room optimization
