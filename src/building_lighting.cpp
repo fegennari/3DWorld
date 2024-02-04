@@ -1604,7 +1604,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		clipped_bc.intersect_with_cube(light_clip_cube);
 		// clip zval to current floor if light not in a room with stairs or elevator
 		if (!stairs_light && !is_in_elevator && !is_over_pool) {max_eq(clipped_bc.z1(), (floor_z - fc_thick));}
-		min_eq(clipped_bc.z2(), (ceil_z + fc_thick)); // ceiling is always valid, since lights point downward
+		float const z2_adj((wall_light ? 1.1 : 1.0)*fc_thick); // prevent Z-fighting on stairs lights
+		min_eq(clipped_bc.z2(), (ceil_z + z2_adj)); // ceiling is always valid, since lights point downward
 
 		if (!clipped_bc.is_strictly_normalized()) {
 			cout << "Error: Invalid light bcube: " << TXT(clipped_bc.str()) << TXT(sphere_bc.str()) << TXT(light_clip_cube.str())
@@ -1791,8 +1792,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		cube_t const clipped_bc_rot(is_rotated() ? get_rotated_bcube(clipped_bc) : clipped_bc);
 		setup_light_for_building_interior(dl_sources.back(), *i, clipped_bc_rot, force_smap_update, shadow_caster_hash);
 		
-		// add upward pointing light; only when the player is near/inside a building (optimization); not for lights hanging on ceiling fans or walls
-		if (camera_near_building && (is_lamp || lpos_rot.z > camera_bs.z) && !i->is_hanging()) {
+		// add upward pointing light (sideways for wall lights); only when player is near/inside a building (optimization); not for lights hanging on ceiling fans
+		if (camera_near_building && (is_lamp || wall_light || lpos_rot.z > camera_bs.z) && !i->is_hanging()) {
 			cube_t light_bc2(clipped_bc);
 
 			if (is_in_elevator) {
@@ -1818,12 +1819,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 			else { // add a second, smaller unshadowed light for the upper hemisphere or omnidirectional for wall lights
 				// the secondary light is unshadowed and won't pick up shadows from any stairs in the room, so reduce the radius
-				float const rscale((room.is_hallway ? 0.25 : room.is_office ? 0.45 : 0.5)*(has_stairs_this_floor ? 0.67 : 1.0));
+				float const rscale((room.is_hallway ? 0.25 : (room.is_office ? 0.45 : 0.5))*(has_stairs_this_floor ? 0.67 : 1.0));
 				sec_light_radius = rscale*light_radius;
 
 				if (wall_light) {
 					sec_lpos += (2.0*i->get_sz_dim(i->dim))*dir; // shift to the side
 					dl_sources.emplace_back(sec_light_radius, sec_lpos, sec_lpos, color, 0, -dir, 1.0); // omnidirectional
+					// clip to the centerline of the wall itself; needed for stairs wall lights
+					light_bc2.d[i->dim][!i->dir] = i->d[i->dim][!i->dir] + (i->dir ? -1.0 : 1.0)*0.5*wall_thickness;
 				}
 				else { // ceiling light
 					sec_lpos.z -= 2.0*i->dz(); // shift down
