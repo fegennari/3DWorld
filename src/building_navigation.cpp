@@ -1337,6 +1337,10 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 			}
 		}
 	} // for c
+	for (auto c = room_geom->get_stairs_start(); c != room_geom->objs.end(); ++c) { // include stairs walls
+		if (c->z1() > z2 || c->z2() < z1) continue;
+		if (!c->no_coll() && c->type == TYPE_STAIR_WALL) {avoid.push_back(*c);}
+	}
 	if (conn_info != nullptr) { // include extended basement connector doors because building people can't pass through these yet
 		for (auto const &c : conn_info->conn) {
 			for (auto const &room : c.rooms) {
