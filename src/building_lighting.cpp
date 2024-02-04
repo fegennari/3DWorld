@@ -809,6 +809,14 @@ public:
 					max_eq(VA.z2(), pool_room.z2()); // ceiling above the pool
 				}
 			}
+			if (b.has_tall_retail()) { // handle lights on tall retail ceilings
+				int const part_ix(b.get_part_ix_containing_pt(target));
+
+				if (part_ix >= 0) {
+					cube_t const &part(b.parts[part_ix]);
+					if (part.z1() == b.ground_floor_z1) {max_eq(VA.z2(), part.z2());} // use ceiling of retail part
+				}
+			}
 		}
 		return VA;
 	}
