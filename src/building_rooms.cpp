@@ -299,7 +299,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				add_backrooms_objs(rgen, *r, room_center.z, room_id, f, rooms_to_light);
 			}
 			else if (is_retail_room) {
-				add_retail_room_objs(rgen, *r, room_center.z, room_id);
+				add_retail_room_objs(rgen, *r, room_center.z, room_id, light_ix_assign);
 			}
 			if ((!has_stairs && (f == 0 || top_floor) && interior->stairwells.size() > 1) || top_of_stairs) { // should this be outside the loop?
 				// check for stairwells connecting stacked parts (is this still needed?); check for roof access stairs and set top_of_stairs=0
@@ -2158,7 +2158,6 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				// add as both a stairs wall (for drawing) and a floor (for player collision)
 				objs.emplace_back(sub_floor, TYPE_STAIR_WALL, 0, dim, !dir, RO_FLAG_HANGING);
 				interior->floors.push_back(sub_floor);
-				// Can we add a light on the wall or ceiling here? it's not in the correct range of objects, we don't have a valid room, and we don't have light_ix_assign
 			}
 		}
 		else if ((i->shape == SHAPE_WALLED || i->shape == SHAPE_WALLED_SIDES) && extend_walls_up) { // add upper section only

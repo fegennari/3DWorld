@@ -16,6 +16,7 @@ car_t car_from_parking_space(room_object_t const &o);
 void get_stove_burner_locs(room_object_t const &stove, point locs[4]);
 float get_cockroach_height_from_radius(float radius);
 string gen_random_full_name(rand_gen_t &rgen);
+colorRGBA get_light_color_temp(float t);
 
 
 class door_path_checker_t {
@@ -2469,7 +2470,7 @@ bool check_for_overlap(cube_t const &c, vect_room_object_t const &objs, unsigned
 	}
 	return 0;
 }
-void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
+void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, light_ix_assign_t &light_ix_assign) {
 	// Note: this room should occupy the entire floor, so walkable room bounds == room == part
 	assert(has_room_geom());
 	interior->room_geom->shelf_rack_occluders.clear();
@@ -2585,6 +2586,24 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	}
 	add_cameras_to_room(rgen, room, zval, room_id, 1.0); // tot_light_amt=1.0
 	//cout << TXT(temp_objs.size()) << endl;
+
+	if (has_tall_retail()) { // add a small wall light at the top of the stairs since the stairwell is extra tall
+		// find central stairs (should be first stairs)
+		for (stairwell_t const &s : interior->stairwells) {
+			if (s.z2() < room.z2() || !s.intersects(room)) continue; // wrong stairs
+			float const landing_width(0.5*min(s.get_sz_dim(s.dim), floor_spacing)); // matches building_t::add_stairs_and_elevators()
+			float const radius(0.15*landing_width), dsign(s.dir ? -1.0 : 1.0), wall_pos(s.d[s.dim][!s.dir] + dsign*landing_width);
+			cube_t light;
+			light.d[s.dim][!s.dir] = wall_pos;
+			light.d[s.dim][ s.dir] = wall_pos - dsign*0.01*floor_spacing; // extend out from wall
+			set_wall_width(light, s.get_center_dim(!s.dim), radius, !s.dim); // width
+			set_wall_width(light, (room.z2() - get_fc_thickness() - 0.3*floor_spacing), radius, 2); // height
+			colorRGBA const light_color(get_light_color_temp(0.6)); // slightly blue-ish white
+			objs.emplace_back(light, TYPE_LIGHT, room_id, s.dim, s.dir, (RO_FLAG_NOCOLL | RO_FLAG_LIT | RO_FLAG_ADJ_HI), 0.0, SHAPE_CYLIN, light_color);
+			objs.back().obj_id = light_ix_assign.get_next_ix();
+			break;
+		} // for s
+	}
 }
 
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius) {
