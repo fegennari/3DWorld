@@ -233,12 +233,22 @@ void write_placed_sounds_to_cobj_file(ostream &out) {sound_manager.write_placed_
 bool had_al_error  () {return (alGetError  () != AL_NO_ERROR);}
 bool had_alut_error() {return (alutGetError() != AL_NO_ERROR);}
 
-bool check_and_print_alut_error() { // returns 1 on error
+bool check_and_print_alut_error(const char *msg) { // returns 1 on error
 
 	ALenum const error_id(alutGetError());
 
 	if (error_id != AL_NO_ERROR) {
-		cerr << "alut error: " << alutGetErrorString(error_id) << endl;
+		cerr << "alut error in " << msg << ": " << alutGetErrorString(error_id) << endl;
+		return 1;
+	}
+	return 0;
+}
+bool check_and_print_al_error(const char *msg) { // returns 1 on error
+
+	ALenum error_id(alGetError());
+
+	if (error_id != AL_NO_ERROR) {
+		cerr << "OpenAL error in " << msg << ": ID " << error_id << endl; // Note: alutGetErrorString doesn't work on all AL error codes
 		return 1;
 	}
 	return 0;
@@ -258,13 +268,13 @@ void openal_buffer::alloc() {
 }
 
 void openal_buffer::free_buffer() {
-	if (is_valid()) alDeleteBuffers(1, &buffer);
+	if (is_valid()) {alDeleteBuffers(1, &buffer);}
 	buffer = 0;
 	time   = 0.0;
 }
 
 bool openal_buffer::load_check() {
-	if (check_and_print_alut_error()) {
+	if (check_and_print_alut_error("load_check")) {
 		free_buffer();
 		return 0;
 	}
@@ -301,14 +311,16 @@ unsigned buffer_manager_t::add_file_buffer(std::string const &fn) {
 
 	unsigned const ix((unsigned)buffers.size());
 	buffers.push_back(openal_buffer());
-	
-	if (!buffers.back().load_from_file_std_path(fn)) { // check sounds directory first
-		if (!buffers.back().load_from_file(fn)) { // check current directory second
-			cerr << "Failed to load sound file: " << fn << endl;
-			exit(1);
-		}
+	openal_buffer &buf(buffers.back());
+	// check here because I sometimes see an existing OpenAL error
+	check_and_print_al_error("pre_load");
+
+	// check sounds directory first, and current directory second
+	if (!buf.load_from_file_std_path(fn) && !buf.load_from_file(fn)) {
+		cerr << "Failed to load sound file: " << fn << endl;
+		exit(1);
 	}
-	cout << "."; cout.flush();
+	if (frame_counter <= 1) {cout << "."; cout.flush();} // only show progress in pre-load
 	return ix;
 }
 
@@ -354,7 +366,9 @@ void openal_source::set_gain(float gain) {
 
 void openal_source::set_buffer_ix(unsigned buffer_ix) {alSourcei(source, AL_BUFFER, buffer_ix);}
 
-void openal_source::play_if_not_playing() const {if (!is_playing()) alSourcePlay(source);}
+void openal_source::play_if_not_playing() const {
+	if (!is_playing()) {play();}
+}
 void openal_source::play()   const {alSourcePlay  (source);}
 void openal_source::stop()   const {alSourceStop  (source);}
 void openal_source::pause()  const {alSourcePause (source);}
@@ -532,7 +546,7 @@ void init_openal(int &argc, char** argv) {
 	if (disable_sound) return;
 
 	if (!alutInit(&argc, argv)) {
-		check_and_print_alut_error();
+		check_and_print_alut_error("init");
 		cerr << "alutInit failed" << endl;
 		exit(1);
 	}
@@ -543,7 +557,7 @@ void init_openal(int &argc, char** argv) {
 }
 
 void exit_openal() {
-	if (!alutExit()) check_and_print_alut_error();
+	if (!alutExit()) {check_and_print_alut_error("exit");}
 }
 
 #else // !ENABLE_OPENAL
