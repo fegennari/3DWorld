@@ -2290,7 +2290,7 @@ void gen_xy_pos_for_round_obj(cube_t &C, cube_t const &S, float radius, float he
 void gen_sound_thread_safe(unsigned id, point const &pos, float gain=1.0, float pitch=1.0, float gain_scale=1.0, bool skip_if_already_playing=0);
 
 inline void gen_sound_thread_safe_at_player(unsigned id, float gain=1.0, float pitch=1.0, bool skip_if_already_playing=0) {
-	gen_sound_thread_safe(id, get_camera_pos(), gain, pitch, skip_if_already_playing);
+	gen_sound_thread_safe(id, get_camera_pos(), gain, pitch, 1.0, skip_if_already_playing);
 }
 void register_building_sound(point const &pos, float volume);
 void register_building_sound_at_player(float volume);

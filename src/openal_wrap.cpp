@@ -312,7 +312,7 @@ unsigned buffer_manager_t::add_file_buffer(std::string const &fn) {
 	unsigned const ix((unsigned)buffers.size());
 	buffers.push_back(openal_buffer());
 	openal_buffer &buf(buffers.back());
-	// check here because I sometimes see an existing OpenAL error
+	// check here because an existing OpenAL error will cause loading to fail
 	check_and_print_al_error("pre_load");
 
 	// check sounds directory first, and current directory second

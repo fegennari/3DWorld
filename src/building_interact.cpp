@@ -34,6 +34,7 @@ bool ceiling_fan_is_on(room_object_t &obj, vect_room_object_t const &objs);
 
 // Note: pos is in camera space
 void gen_sound_thread_safe(unsigned id, point const &pos, float gain, float pitch, float gain_scale, bool skip_if_already_playing) {
+	assert(gain > 0.0 && pitch > 0.0 && gain_scale > 0.0);
 	float const dist(p2p_dist(get_camera_pos(), pos)), dscale(10.0*CAMERA_RADIUS*gain_scale); // distance at which volume is halved
 	gain *= dscale/(dist + dscale);
 	if (gain < 0.025) return; // too soft to hear
