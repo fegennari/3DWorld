@@ -2005,28 +2005,29 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 	// add elevator lights, and signs on each floor; must be done before setting buttons_start
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
+		bool const dim(i->dim), dir(i->dir);
 		// add light
 		i->light_obj_id = objs.size();
 		float const light_zval(max(ground_floor_z1, i->z1()) + elevator_car_z1_add + (1.0 - fc_thick_scale)*window_vspacing); // starts on the ground floor
 		cube_t light(point(i->xc(), i->yc(), light_zval));
 		light.z1() -= 0.02*window_vspacing;
 		light.expand_by_xy(0.06*window_vspacing);
-		objs.emplace_back(light, TYPE_LIGHT, i->room_id, i->dim, i->dir, (RO_FLAG_NOCOLL | RO_FLAG_IN_ELEV | RO_FLAG_LIT), 0.0, SHAPE_CYLIN, WHITE);
+		objs.emplace_back(light, TYPE_LIGHT, i->room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_IN_ELEV | RO_FLAG_LIT), 0.0, SHAPE_CYLIN, WHITE);
 		objs.back().obj_id = uint16_t(i - interior->elevators.begin()); // encode elevator index as obj_id
 		// add floor signs
 		unsigned const num_floors(calc_num_floors(*i, window_vspacing, floor_thickness));
 		unsigned const floor_offset(calc_floor_offset(i->z1()));
-		float const ewidth(i->get_width());
+		float const ewidth(i->get_width()), dsign(dir ? 1.0 : -1.0), front_wall(i->d[dim][dir]);
 		cube_t sign;
-		sign.d[i->dim][0] = sign.d[i->dim][1] = i->d[i->dim][i->dir];
-		sign.d[i->dim][i->dir] += (i->dir ? 1.0 : -1.0)*0.1*wall_thickness; // front of sign
-		set_wall_width(sign, (i->d[!i->dim][1] - 0.1*ewidth), 0.04*ewidth, !i->dim); // to the high side, opposite the call button
+		sign.d[dim][0] = sign.d[dim][1] = front_wall;
+		sign.d[dim][dir] += dsign*0.1*wall_thickness; // front of sign
+		set_wall_width(sign, (i->d[!dim][1] - 0.1*ewidth), 0.04*ewidth, !dim); // to the high side, opposite the call button
 
 		for (unsigned f = 0; f < num_floors; ++f) { // Note: floor number starts at 1 even if the elevator doesn't extend to the ground floor
 			if (i->skip_floor_ix(f)) continue;
 			sign.z1() = i->z1()   + (f + 0.5)*window_vspacing;
 			sign.z2() = sign.z1() + 0.1*ewidth;
-			objs.emplace_back(sign, TYPE_SIGN, i->room_id, i->dim, i->dir, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, DK_BLUE);
+			objs.emplace_back(sign, TYPE_SIGN, i->room_id, dim, dir, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, DK_BLUE);
 			set_floor_text_for_sign(objs.back(), f+1, floor_offset, has_parking_garage, oss);
 		}
 		// add concrete flooring at the base of the elevator, over the carpet
@@ -2034,7 +2035,19 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		efloor.expand_by_xy(-0.25*half_thick); // less than the width of the elevator walls, to prevent z-fighting
 		efloor.z1() += half_thick; // on top of the carpet
 		efloor.z2()  = efloor.z1() + 0.01*half_thick; // set thickness (very thin)
-		objs.emplace_back(efloor, TYPE_FLOORING, i->room_id, i->dim, i->dir, (RO_FLAG_NOCOLL | RO_FLAG_IN_ELEV), 1.0, SHAPE_CUBE, WHITE, FLOORING_CONCRETE);
+		objs.emplace_back(efloor, TYPE_FLOORING, i->room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_IN_ELEV), 1.0, SHAPE_CUBE, WHITE, FLOORING_CONCRETE);
+
+		if (i->skip_floors_mask > 0) { // block off any unreachable floors
+			for (unsigned f = 0; f < 64; ++f) {
+				if (!(i->skip_floors_mask & (1ULL << f))) continue;
+				cube_t wall(*i);
+				wall.d[dim][0] = wall.d[dim][1] = front_wall;
+				wall.d[dim][dir] += 0.5*dsign*wall_thickness;
+				wall.z1() = i->z1() + f*window_vspacing - half_thick;
+				wall.z2() = wall.z1() + window_vspacing;
+				objs.emplace_back(wall, TYPE_STAIR_WALL, 0, dim, !dir, RO_FLAG_HANGING); // hanging so that the bottom surface is drawn
+			} // for f
+		}
 	} // for e
 	interior->room_geom->buttons_start = objs.size();
 
@@ -2156,7 +2169,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				sub_floor.z2() = sub_floor.z1() + floor_thickness;
 				sub_floor.expand_in_dim(!dim, wall_hw); // cover the bottoms of the side walls
 				// add as both a stairs wall (for drawing) and a floor (for player collision)
-				objs.emplace_back(sub_floor, TYPE_STAIR_WALL, 0, dim, !dir, RO_FLAG_HANGING);
+				objs.emplace_back(sub_floor, TYPE_STAIR_WALL, 0, dim, !dir, RO_FLAG_HANGING); // hanging so that the bottom surface is drawn
 				interior->floors.push_back(sub_floor);
 			}
 		}
