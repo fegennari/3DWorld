@@ -1521,9 +1521,11 @@ struct building_t : public building_geom_t {
 	bool is_basement(vect_cube_t::const_iterator it) const {return (int(it - parts.begin()) == basement_part_ix);}
 	bool is_pos_in_basement(point const &pos) const {return ((has_basement() && parts[basement_part_ix].contains_pt(pos)) || point_in_extended_basement(pos));}
 	bool has_ext_door_this_floor(float part_z1, unsigned floor_ix) const {return (part_z1 == ground_floor_z1 && (1 << floor_ix) & floor_ext_door_mask);}
-	unsigned get_attic_part_ix() const;
-	cube_t const &get_basement  () const {assert(has_basement()); return parts[basement_part_ix   ];}
-	cube_t const &get_attic_part() const {assert(has_attic   ()); return parts[get_attic_part_ix()];}
+	unsigned get_attic_part_ix   () const;
+	room_t const &get_retail_room() const {assert(interior && !interior->rooms.empty()); assert(has_retail()); return interior->rooms.front();} // always the first room
+	cube_t const &get_retail_part() const {assert(has_retail()); assert(!parts.empty()); return parts.front();} // always the first part
+	cube_t const &get_basement   () const {assert(has_basement()); return parts[basement_part_ix   ];}
+	cube_t const &get_attic_part () const {assert(has_attic   ()); return parts[get_attic_part_ix()];}
 	int check_player_in_basement(point const &pos) const;
 	colorRGBA get_avg_side_color  () const {return side_color  .modulate_with(get_material().side_tex.get_avg_color());}
 	colorRGBA get_avg_roof_color  () const {return roof_color  .modulate_with(get_material().roof_tex.get_avg_color());}

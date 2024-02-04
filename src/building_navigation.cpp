@@ -1548,11 +1548,8 @@ void person_t::next_path_pt(bool starting_path) {
 
 bool building_t::is_above_retail_area(point const &pos) const {
 	if (!has_tall_retail()) return 0;
-
-	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // find retail part
-		if (p->z1() == ground_floor_z1 && p->contains_pt(pos) && pos.z > (p->z1() + get_window_vspace())) return 1;
-	}
-	return 0;
+	cube_t const &retail_room(get_retail_part());
+	return (retail_room.contains_pt(pos) && pos.z > (retail_room.z1() + get_window_vspace()));
 }
 bool building_t::is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll, bool no_check_objs) const { // for people and animals
 	if (!is_pos_inside_building(pos, radius, radius, 1))       return 0; // required for attic; for_attic=1

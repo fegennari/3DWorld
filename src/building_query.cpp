@@ -93,7 +93,7 @@ bool building_t::cube_int_parts_no_sec(cube_t const &c) const {
 }
 bool building_t::check_pt_in_retail_room(point const &p) const {
 	if (!has_retail() || !interior || interior->rooms.empty()) return 0;
-	return interior->rooms.front().contains_pt(p); // retail is the first room
+	return get_retail_room().contains_pt(p);
 }
 
 bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs) const { // can be called before levels/splits are created
