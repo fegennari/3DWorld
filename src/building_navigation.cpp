@@ -791,13 +791,12 @@ public:
 		vector<a_star_node_state_t> state(nodes.size());
 		vector<uint8_t> open(nodes.size(), 0), closed(nodes.size(), 0); // tentative/already evaluated nodes
 		std::priority_queue<pair<float, unsigned> > open_queue;
-		node_t const &start_node(get_node(room1)), &dest_node(get_node(room2));
 		point dest_pos;
 		if (custom_dest) {dest_pos = *custom_dest;}
-		else {dest_pos = dest_node.get_center(cur_pt.z);} // Note: approximate, actual dest may be different
+		else {dest_pos = get_node(room2).get_center(cur_pt.z);} // Note: approximate, actual dest may be different
 		a_star_node_state_t &start(state[room1]);
 		start.g_score = 0.0;
-		start.f_score = p2p_dist_xy(start_node.get_center(cur_pt.z), dest_pos); // estimated total cost from start to goal through current
+		start.f_score = p2p_dist_xy(cur_pt, dest_pos); // estimated total cost from start to goal through current
 		open[room1]   = 1;
 		open_queue.push(make_pair(-start.f_score, room1));
 
@@ -814,12 +813,21 @@ public:
 				bool const is_goal(i->ix == room2);
 				node_t const &conn_node(get_node(i->ix));
 				if (conn_node.is_vert_conn() && !use_stairs && !is_goal) continue; // skip stairs/ramp in this mode
-				if (!can_use_conn(*i, doors, cur_pt.z, has_key)) continue; // blocked by closed or locked door; must do this check before setting open state
-				point const cur_pt (cur_node.get_center(cur_pt.z));
-				point const next_pt(is_goal ? dest_pos : conn_node.get_center(cur_pt.z));
+				if (!can_use_conn(*i, doors, cur_pt.z, has_key))         continue; // blocked by closed or locked door; must do this check before setting open state
+				point const cur_pt ((cur == room1) ? cur_pt   : cur_node .get_center(cur_pt.z));
+				point const next_pt(is_goal        ? dest_pos : conn_node.get_center(cur_pt.z));
 				a_star_node_state_t &sn(state[i->ix]);
-				vector2d const &pt(i->pt[up_or_down]);
-				float const new_g_score(state[cur].g_score + p2p_dist_xy(cur_pt, pt) + p2p_dist_xy(pt, next_pt));
+				vector2d const &pt(i->pt[up_or_down]); // point in doorway, etc.
+				// Note: in the case of long hallways, the shortest path may pass between doors/adjacencies rather than through the center of the room/node
+				float const dist_through_cur(state[cur].g_score + p2p_dist_xy(cur_pt, pt) + p2p_dist_xy(pt, next_pt));
+				float new_g_score(dist_through_cur);
+
+				if (cur != room1) { // not coming from the starting room
+					point const &prev_edge_pt(state[cur].path_pt); // point in doorway, etc.
+					float const dist_without_last_seg(state[cur].g_score - p2p_dist_xy(cur_pt, prev_edge_pt));
+					float const dist_door_to_door(dist_without_last_seg + p2p_dist_xy(pt, prev_edge_pt));
+					min_eq(new_g_score, dist_door_to_door); // dist_door_to_door is always smaller?
+				}
 				if (!open[i->ix]) {open[i->ix] = 1;}
 				else if (new_g_score >= sn.g_score) continue; // not better
 				sn.came_from_ix = cur;
