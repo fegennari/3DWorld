@@ -2152,8 +2152,8 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				cube_t sub_floor(*i);
 				sub_floor.d[dim][ dir] = front_pos - 0.25*(dir ? -1.0 : 1.0)*wall_hw; // move toward stairs slightly to prevent Z-fighting and fill the gap
 				sub_floor.d[dim][!dir] = front_wall.d[dim][!dir]; // furthest extent of wall
-				sub_floor.z1() = front_wall.z1();
-				sub_floor.z2() = sub_floor.z1() + 0.5*floor_thickness;
+				sub_floor.z1() = front_wall.z1() - half_thick;
+				sub_floor.z2() = sub_floor.z1() + floor_thickness;
 				sub_floor.expand_in_dim(!dim, wall_hw); // cover the bottoms of the side walls
 				// add as both a stairs wall (for drawing) and a floor (for player collision)
 				objs.emplace_back(sub_floor, TYPE_STAIR_WALL, 0, dim, !dir, RO_FLAG_HANGING);
