@@ -2411,9 +2411,10 @@ void building_t::ai_room_lights_update(person_t const &person) {
 	if (room_ix == person.cur_room) return; // same room as last time - done
 	if (room_ix >= 0) {set_room_light_state_to(get_room(room_ix), person.pos.z, 1);} // make sure current room light is on when entering
 	if (person.cur_room < 0)        return; // no old room (error?)
-	if (is_pos_in_pg_or_backrooms(person.pos)) return; // don't turn off parking garage or backrooms lights since they affect a large area
+	room_t const &room(get_room(person.cur_room));
+	if (is_single_large_room(room)) return; // don't turn off parking garage or backrooms lights since they affect a large area
 	float const floor_spacing(get_window_vspace());
-	bool other_person_in_room(0);
+	bool other_person_in_room(cur_player_building_loc.building_ix == person.cur_bldg && same_room_and_floor_as_player(person)); // player counts
 
 	// check for other people in the room before turning the lights off on them
 	for (person_t const &p : interior->people) {
