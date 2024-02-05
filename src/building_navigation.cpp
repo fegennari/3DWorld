@@ -14,6 +14,7 @@ float const COLL_RADIUS_SCALE = 0.75; // somewhat smaller than radius, but large
 int player_hiding_frame(0);
 building_dest_t cur_player_building_loc, prev_player_building_loc;
 room_object_t player_hiding_obj;
+bool debug_mode(0);
 
 extern bool player_is_hiding;
 extern int frame_counter, display_mode, animate2, player_in_elevator;
@@ -558,7 +559,8 @@ public:
 		// straight line not valid, need to run path finding
 		assert(!keepout.empty());
 		cube_t pts_bcube(p1, p2);
-		bool const use_pts_bcube(min(pts_bcube.dx(), pts_bcube.dy()) > 2.0*radius); // don't use if too small/narrow
+		bool const use_pts_bcube(min(pts_bcube.dx(), pts_bcube.dy()) > 2.0*radius && pts_bcube.intersects_xy(walk_area)); // don't use if too small/narrow
+		if (use_pts_bcube) {pts_bcube.intersect_with_cube_xy(walk_area);} // must be contained in walkable area of the current room (in case p1 or p2 is in adjacent room)
 
 		// do something simple and brute force:
 		// since rooms tend to only have objects in the middle, try to find the best point that creates the shortest non-intersecting 2-part or 3-part path
@@ -2096,6 +2098,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	run_ai_pool_logic(person, speed_mult); // handle AI inside the pool; this can happen for zombies
 	if (prev_in_pool && !person.in_pool) {person.retreat_time = 0.5*TICKS_PER_SECOND;} // retreat for 0.5s to avoid falling back into the pool chasing the player
 	build_nav_graph();
+	//debug_mode = (cur_player_building_loc.building_ix == person.cur_bldg);
 
 	if (can_ai_follow_player(person, allow_diff_building)) { // check for player intersection/damage
 		// use zval of the feet to handle cases where the person and the player are different heights
