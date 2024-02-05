@@ -240,7 +240,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			light_size   *= 0.75; // smaller
 		}
 		else if (is_retail_room) { // more lights in the shorter dim
-			light_size *= 0.7*sqrt(double(retail_floor_levels)); // smaller; increase size for taller rooms
+			light_size *= 0.7*pow(double(retail_floor_levels), 0.4); // smaller; increase size for taller rooms
 			nx = max(1U, unsigned((room_dim ? 0.7 : 0.4)*dx/window_vspacing));
 			ny = max(1U, unsigned((room_dim ? 0.4 : 0.7)*dy/window_vspacing));
 		}
