@@ -2071,7 +2071,8 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				add_elevator_button(pos, button_radius, i->dim, i->dir, elevator_id, f, 0, d, objs); // inside=0, is_up=d
 			}
 		} // for f
-		// call buttons for each floor inside the elevator car; first find the panel location for the starting elevator car position
+		// call buttons for each floor inside the elevator car; first find the panel location for the starting elevator car position;
+		// floor numbers are added in building_room_geom_t::add_elevator();
 		cube_t elevator_car(*i);
 		max_eq(elevator_car.z1(), ground_floor_z1); // always starts on the ground floor, not the bottom of the basement
 		elevator_car.z1() += elevator_car_z1_add;
@@ -2082,10 +2083,12 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		point pos;
 		pos[ i->dim] = panel.d[i->dim][!i->dir]; // front face of inside panel
 		pos[!i->dim] = panel.get_center_dim(!i->dim) + 0.8*inner_button_radius; // a bit right of center to make room for floor number text
+		float cur_z(panel.z1() + button_spacing);
 		
 		for (unsigned f = 0; f < num_floors; ++f) {
-			if (i->skip_floor_ix(f)) continue;
-			pos.z = panel.z1() + (f + 1)*button_spacing;
+			if (i->skip_floor_ix(f)) continue; // also skips cur_z update to avoid a gap in the buttons, but there's still a gap in the floor numbers
+			pos.z  = cur_z;
+			cur_z += button_spacing;
 			add_elevator_button(pos, inner_button_radius, i->dim, !i->dir, elevator_id, f, 1, 0, objs); // inside=1, is_up=0, pointing in opposite dir
 		}
 		i->button_id_end = objs.size();

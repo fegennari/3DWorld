@@ -2244,7 +2244,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 	// add button panel
 	cube_t const panel(get_elevator_car_panel(c, fc_thick_scale));
 	get_untextured_material(0, 1).add_cube_to_verts_untextured(panel, DK_GRAY, ~front_face_mask);
-	// add floor numbers to either the panel (or the buttons themselves?)
+	// add floor numbers to either the panel (or the buttons themselves?); buttons are added in building_t::add_stairs_and_elevators()
 	unsigned const num_floors(c.drawer_flags), cur_floor(c.item_flags);
 	assert(num_floors > 1);
 	assert(num_floors >= floor_offset); // no sub-basement only elevators
@@ -2289,10 +2289,13 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 	else {
 		up_down_pos [!c.dim] += 0.8f*up_down_text_height;
 	}
+	float cur_z(panel.z1() + button_spacing - 0.5*text_height);
+
 	for (unsigned f = 0; f < num_floors; ++f) { // Note: floor number starts at 1 even if the elevator doesn't extend to the ground floor
-		if (e.skip_floor_ix(f)) continue;
+		if (e.skip_floor_ix(f)) continue; // also skips cur_z update to avoid a gap in the buttons, but there's still a gap in the floor numbers
 		bool const is_lit(is_powered && f == cur_floor);
-		text_pos.z = panel.z1() + (f + 1)*button_spacing - 0.5*text_height;
+		text_pos.z = cur_z;
+		cur_z += button_spacing;
 		verts.clear();
 		add_floor_number((f+1), floor_offset, has_parking_garage, oss);
 		gen_text_verts(verts, text_pos, oss.str(), 1000.0*text_height, col_dir, plus_z, 1); // use_quads=1
