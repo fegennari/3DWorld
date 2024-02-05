@@ -495,6 +495,12 @@ public:
 		point pos;
 		if (custom_dest != nullptr) {pos = *custom_dest;}
 		else {pos = get_room_center(building, node.bcube, zval);} // first candidate is the center of the room
+		
+		if (building.is_above_retail_area(pos)) {
+			point const landing_pos(building.get_retail_upper_stairs_landing_center());
+			//zval += (up_or_down ? -1.0 : 1.0)*building.get_window_vspace(); // one floor above or below so that we skip the blocked floor; but this asserts
+			return point(landing_pos.x, landing_pos.y, zval);
+		}
 		if (find_valid_pt_in_room(avoid, building, radius, zval, node.bcube, rgen, pos, no_use_init)) {not_room_center = 1;} // success
 		return pos;
 	}
@@ -1196,7 +1202,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		}
 	}
 	bool const is_single_large_room(loc.room_ix >= 0 && is_single_large_room(get_room(loc.room_ix)));
-	bool const must_leave_room(point_in_water_area(person.pos) || is_above_retail_area(person.pos)); // Note: should never be above the retail area anyway
+	bool const must_leave_room(point_in_water_area(person.pos) || is_above_retail_area(person.pos));
 
 	if (is_single_large_room && !must_leave_room && (person.is_first_path || rgen.rand_float() < 0.75)) { // stay in this room 75% of the time, always on the first path
 		person.is_first_path = 0; // respect the walls
@@ -1372,6 +1378,23 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 	}
 }
 
+point building_t::get_retail_upper_stairs_landing_center() const {
+	assert(has_tall_retail());
+	float const floor_spacing(get_window_vspace());
+	room_t const &room(get_retail_room());
+
+	for (stairwell_t const &s : interior->stairwells) {
+		if (s.z2() < room.z2() || !s.intersects(room)) continue; // wrong stairs
+		point pos;
+		pos[!s.dim] = s.get_center_dim(!s.dim);
+		pos[ s.dim] = s.d[s.dim][!s.dir] + (s.dir ? -1.0 : 1.0)*0.5*s.get_retail_landing_width(floor_spacing); // halfway out
+		pos.z = room.z2() - floor_spacing;
+		return pos;
+	} // for s
+	assert(0); // should never get here
+	return all_zeros;
+}
+
 unsigned get_elevator_floor(float zval, elevator_t const &e, float floor_spacing) { // floor index relative to this elevator
 	return max(0.0f, (zval - e.z1()))/floor_spacing;
 }
@@ -1380,6 +1403,11 @@ bool building_t::stairs_contained_in_part(stairwell_t const &s, cube_t const &p)
 	cube_t sc(s);
 	if (s.roof_access) {sc.z2() -= get_window_vspace();} // clip off top floor roof access
 	return p.contains_cube(sc);
+}
+bool building_t::no_stairs_exit_on_floor(stairwell_t const &stairs, float zval) const {
+	if (stairs.not_an_exit_mask == 0) return 0;
+	int const to_floor(max(0, int((zval - stairs.z1())/get_window_vspace())));
+	return (stairs.not_an_exit_mask & (1 << to_floor));
 }
 void building_t::find_nearest_stairs_or_ramp(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, int part_ix) const { // p1=from, p2=to
 	nearest_stairs.clear();
@@ -1392,11 +1420,7 @@ void building_t::find_nearest_stairs_or_ramp(point const &p1, point const &p2, v
 		stairwell_t const &stairs(interior->stairwells[s]);
 		if (zmin < stairs.z1() || zmax > stairs.z2()) continue; // stairs don't span the correct floors
 		if (part_ix >= 0 && !stairs_contained_in_part(stairs, parts[part_ix])) continue; // stairs don't belong to this part (Note: this option is currently unused)
-
-		if (stairs.not_an_exit_mask) {
-			int const to_floor(max(0, int((p2.z - stairs.z1())/get_window_vspace())));
-			if (stairs.not_an_exit_mask & (1 << to_floor)) continue; // not an exit
-		}
+		//if (no_stairs_exit_on_floor(stairs, p2.z))    continue; // not an exit; now handled in path reconstruction by pathing to the floor above or below through this point
 		point const center(stairs.get_cube_center());
 		sorted.emplace_back((p2p_dist(p1, center) + p2p_dist(center, p2)), s);
 	} // for s
@@ -1434,7 +1458,7 @@ void building_t::get_avoid_cubes(float zval, float height, float radius, vect_cu
 	float const z1(zval - radius);
 	interior->get_avoid_cubes(avoid, z1, (z1 + height), 0.5*radius, get_floor_thickness(), get_floor_ceil_gap(), following_player, 0, fires_select_cube); // skip_stairs=0
 }
-bool building_t::find_route_to_point(person_t const &person, float radius, bool is_first_path, bool following_player, ai_path_t &path) const {
+bool building_t::find_route_to_point(person_t &person, float radius, bool is_first_path, bool following_player, ai_path_t &path) const {
 
 	assert(interior && interior->nav_graph);
 	point const &from(person.pos), &to(person.target_pos);
@@ -1510,9 +1534,28 @@ bool building_t::find_route_to_point(person_t const &person, float radius, bool 
 					float const turn_pt(stairs.d[dim][dir] - 0.1*(dir ? 1.0 : -1.0)*stairs.get_sz_dim(dim)), seg_delta_z(0.45f*(to.z - from.z));
 					point exit_turn(exit_pt.x, exit_pt.y, (to.z - seg_delta_z));
 					exit_turn[dim] = turn_pt;
-					path.add(exit_turn); // turning point for exit side of stairs
 					point enter_turn(enter_pt.x, enter_pt.y, (from.z + seg_delta_z));
 					enter_turn[dim] = turn_pt;
+
+					if (no_stairs_exit_on_floor(stairs, exit_pt.z)) {
+						// two level retail stairs where exit point is at the middle level that can't be exited;
+						// end our path here, since it may be invalid, then extend a new path away from the stairs
+						path.clear();
+						bool const going_up(exit_pt.z > enter_pt.z);
+						point const next_floor_delta(0.0, 0.0, (going_up ? 1.0 : -1.0)*floor_spacing); // dz
+						vector3d path_extend;
+						path_extend[dim] -= (dir ? 1.0 : -1.0)*0.5*get_doorway_width(); // move out of the extended stairs area
+						path.add(exit_pt    + next_floor_delta + path_extend);
+						// create another loop around the stairs to the floor above or below
+						path.add(exit_pt    + next_floor_delta); // move the exit to the other floor
+						path.add(exit_turn  + next_floor_delta); // turning point for exit side of stairs on other floor
+						path.add(enter_turn + next_floor_delta); // turning point for entrance side of stairs on other floor
+						path.add(enter_pt   + next_floor_delta); // entrance on prev exit floor
+						path.add(exit_pt); // original exit point
+						person.no_wait_at_dest = 1; // don't wait at (blocking) the stairs exit, since this isn't our real destination anyway
+						// Note: person.dest_room can be wrong when exiting in the hallway above the retail room, but it should be unused
+					}
+					path.add(exit_turn); // turning point for exit side of stairs
 					path.add(enter_turn); // turning point for entrance side of stairs
 				}
 			}
@@ -2228,9 +2271,14 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 				person.wait_for(global_building_params.elevator_wait_time); // wait there for the elevator to arrive; if we're waiting too long, give up and choose another dest
 				return AI_WAIT_ELEVATOR;
 			}
+			if (person.no_wait_at_dest) {
+				person.target_pos      = all_zeros; // reset target without waiting
+				person.no_wait_at_dest = 0; // reset for next goal
+			}
 			// don't wait if we can follow the player
-			bool const no_wait(global_building_params.ai_target_player && (can_target_player(person) || has_nearby_sound(person, floor_spacing)));
-			if (!no_wait) {person.wait_for(rgen.rand_uniform(1.0, (can_ai_follow_player(person) ? 2.0 : 10.0)));} // stop for 1-10s, 1-2s if player is in this building in gameplay mode
+			else if (!(global_building_params.ai_target_player && (can_target_player(person) || has_nearby_sound(person, floor_spacing)))) {
+				person.wait_for(rgen.rand_uniform(1.0, (can_ai_follow_player(person) ? 2.0 : 10.0))); // stop for 1-10s, 1-2s if player is in this building in gameplay mode
+			}
 			person.on_new_path_seg    = 1; // allow player following AI update logic to rerun this frame
 			person.last_used_elevator = 0;
 			return AI_AT_DEST;

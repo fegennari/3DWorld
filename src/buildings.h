@@ -1730,6 +1730,7 @@ struct building_t : public building_geom_t {
 	void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
 	bool is_room_backrooms(unsigned room_ix)   const {return get_room(room_ix).is_backrooms();}
 	bool is_above_retail_area(point const &pos) const;
+	point get_retail_upper_stairs_landing_center() const;
 private:
 	void build_nav_graph() const;
 	bool is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll, bool no_check_objs=0) const;
@@ -1739,8 +1740,9 @@ private:
 	bool is_pos_in_pg_or_backrooms(point const &pos) const {return (has_parking_garage && pos.z < ground_floor_z1);}
 	bool select_person_dest_in_room(person_t &person, rand_gen_t &rgen, room_t const &room) const;
 	void get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player, cube_t const *const fires_select_cube=nullptr) const;
-	bool find_route_to_point(person_t const &person, float radius, bool is_first_path, bool following_player, ai_path_t &path) const;
+	bool find_route_to_point(person_t &person, float radius, bool is_first_path, bool following_player, ai_path_t &path) const;
 	bool stairs_contained_in_part(stairwell_t const &s, cube_t const &p) const;
+	bool no_stairs_exit_on_floor(stairwell_t const &stairs, float zval) const;
 	void find_nearest_stairs_or_ramp(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, int part_ix=-1) const;
 	int find_nearest_elevator_this_floor(point const &pos) const;
 	void ai_room_lights_update(person_t const &person);
