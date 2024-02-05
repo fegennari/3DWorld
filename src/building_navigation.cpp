@@ -823,17 +823,17 @@ public:
 				node_t const &conn_node(get_node(i->ix));
 				if (conn_node.is_vert_conn() && !use_stairs && !is_goal) continue; // skip stairs/ramp in this mode
 				if (!can_use_conn(*i, doors, cur_pt.z, has_key))         continue; // blocked by closed or locked door; must do this check before setting open state
-				point const cur_pt ((cur == room1) ? cur_pt   : cur_node .get_center(cur_pt.z));
+				point const node_pt((cur == room1) ? cur_pt   : cur_node .get_center(cur_pt.z));
 				point const next_pt(is_goal        ? dest_pos : conn_node.get_center(cur_pt.z));
 				a_star_node_state_t &sn(state[i->ix]);
 				vector2d const &pt(i->pt[up_or_down]); // point in doorway, etc.
 				// Note: in the case of long hallways, the shortest path may pass between doors/adjacencies rather than through the center of the room/node
-				float const dist_through_cur(state[cur].g_score + p2p_dist_xy(cur_pt, pt) + p2p_dist_xy(pt, next_pt));
+				float const dist_through_cur(state[cur].g_score + p2p_dist_xy(node_pt, pt) + p2p_dist_xy(pt, next_pt));
 				float new_g_score(dist_through_cur);
 
 				if (cur != room1) { // not coming from the starting room
 					point const &prev_edge_pt(state[cur].path_pt); // point in doorway, etc.
-					float const dist_without_last_seg(state[cur].g_score - p2p_dist_xy(cur_pt, prev_edge_pt));
+					float const dist_without_last_seg(state[cur].g_score - p2p_dist_xy(node_pt, prev_edge_pt));
 					float const dist_door_to_door(dist_without_last_seg + p2p_dist_xy(pt, prev_edge_pt));
 					min_eq(new_g_score, dist_door_to_door); // dist_door_to_door is always smaller?
 				}
