@@ -3791,7 +3791,7 @@ bool building_t::is_light_placement_valid(cube_t const &light, room_t const &roo
 			cube_t stairs_ext(s);
 			stairs_ext.d[s.dim][!s.dir] += (s.dir ? -1.0 : 1.0)*(landing_width + get_wall_thickness()); // extend outward to include the landing
 			if (stairs_ext.intersects(light)) return 0;
-		}
+		} // for s
 	}
 	light_ext.z1() = light_ext.z1() = light.z2() + get_fc_thickness(); // shift in between the ceiling and floor so that we can do a cube contains check
 	if (any_cube_contains(light_ext, interior->fc_occluders)) return 1; // Note: don't need to check skylights because fc_occluders excludes skylights

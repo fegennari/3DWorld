@@ -2269,7 +2269,13 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 		// viewer inside this building; includes shadow_only case and reflection_pass (even if reflected camera is outside the building);
 		// check floors/ceilings of this building
 		if (fabs(viewer.z - c.zc()) > (reflection_pass ? 1.0 : 0.5)*floor_spacing) { // on different floors
-			if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, interior->fc_occluders, 2, 0.0, floor_spacing)) return 1; // max_sep_dist=floor_spacing
+			float max_sep_dist(floor_spacing);
+			
+			if (has_tall_retail()) { // handle ceilings more than one part tall
+				cube_t const retail_part(get_retail_part());
+				if (retail_part.contains_pt(viewer) || retail_part.contains_pt(center)) {max_sep_dist *= retail_floor_levels;}
+			}
+			if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, interior->fc_occluders, 2, 0.0, max_sep_dist)) return 1;
 		}
 	}
 	else if (camera_in_building) { // player in some other building
