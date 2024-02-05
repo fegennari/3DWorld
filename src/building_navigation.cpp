@@ -486,6 +486,7 @@ public:
 		float const blend_val(1.0/SQRT2);
 		return blend_val * pos + (1.0 - blend_val)*point(part_center.x, part_center.y, pos.z);
 	}
+	// up_or_down: 0=up, 1=down
 	point find_valid_room_dest(vect_cube_t const &avoid, building_t const &building, float radius, float zval, unsigned node_ix,
 		bool up_or_down, bool &not_room_center, rand_gen_t &rgen, bool no_use_init, point const *const custom_dest) const
 	{
@@ -1253,6 +1254,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 
 	// how about a different floor of the same room? only check this 50% of the time for parking garages to allow movement within a level
 	if (room.has_stairs == 255 && (try_use_stairs || !is_single_large_room || rgen.rand_bool())) {
+		// use person.prev_walked_down?
 		bool const try_below(rgen.rand_bool() && !point_in_water_area(person.target_pos - floor_spacing*plus_z));
 		float const new_z(person.target_pos.z + (try_below ? -1.0 : 1.0)*floor_spacing); // one floor above or below
 
@@ -2184,6 +2186,8 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			return AI_WAITING;
 		}
 		if (has_rgeom) {person.is_first_path = 0;} // treat the path as the first path until room geom is generated
+		if      (person.target_pos.z < person.pos.z) {person.prev_walked_down = 1;}
+		else if (person.target_pos.z > person.pos.z) {person.prev_walked_down = 0;}
 		person.next_path_pt(1);
 		return AI_BEGIN_PATH;
 	}
