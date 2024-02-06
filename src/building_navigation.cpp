@@ -642,7 +642,7 @@ public:
 			}
 			if (nav_grid.find_path(p1, p2, path)) {path.uses_nav_grid = 1; return 2;}
 		}
-		// else, what about parking garages?
+		// else, what about parking garages and retail areas?
 		return 0; // failed
 	}
 	static point closest_room_pt(cube_t const &c, point const &pos) {
@@ -1200,7 +1200,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 			}
 		}
 	}
-	bool const is_single_large_room(loc.room_ix >= 0 && is_single_large_room(get_room(loc.room_ix)));
+	bool const is_single_large_room(loc.room_ix >= 0 && is_single_large_room(loc.room_ix));
 	bool const must_leave_room(point_in_water_area(person.pos) || is_above_retail_area(person.pos));
 
 	if (is_single_large_room && !must_leave_room && (person.is_first_path || rgen.rand_float() < 0.75)) { // stay in this room 75% of the time, always on the first path
@@ -1217,10 +1217,12 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		if (cand_room == (unsigned)loc.room_ix) continue;
 		room_t const &room(get_room(cand_room));
 		if (room.is_hallway) continue; // don't select a hallway
-		float const bot_floor_z(room.z1()), top_ceil_z(room.is_single_floor ? (bot_floor_z + floor_spacing) : room.z2()); // approximate
+		bool const is_retail(room.is_retail());
+		// allow targeting the top floor of a retail room as the path construction will route to the lowest level
+		float const bot_floor_z(room.z1()), top_ceil_z((room.is_single_floor && !is_retail) ? (bot_floor_z + floor_spacing) : room.z2()); // approximate
 		if ((person.pos.z + floor_spacing) < bot_floor_z || (person.pos.z - floor_spacing) > top_ceil_z) continue; // room more than one floor above/below current pos
-		// allow move to a different stacked part 25% of the time; 100% of the time for parking garages, since they're more rare
-		if ((person.pos.z < bot_floor_z || person.pos.z > top_ceil_z) && !(has_parking_garage && bot_floor_z < ground_floor_z1) && (rgen.rand()&3) != 0) continue;
+		// allow move to a different stacked part 25% of the time; 100% of the time for parking garages and retail, since they're more rare
+		if ((person.pos.z < bot_floor_z || person.pos.z > top_ceil_z) && !(has_parking_garage && bot_floor_z < ground_floor_z1) && !is_retail && (rgen.rand()&3) != 0) continue;
 		if (!interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room, interior->doors, person.pos.z, person.has_key)) continue;
 		person.target_pos   = get_center_of_room(cand_room);
 		person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
@@ -1257,7 +1259,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 	if (loc.room_ix < 0) return 2; // failed - room not valid (error?)
 	room_t const &room(get_room(loc.room_ix));
 
-	// how about a different floor of the same room? only check this 50% of the time for parking garages to allow movement within a level
+	// how about a different floor of the same room? only check this 50% of the time for parking garages/backrooms/retail to allow movement within a level
 	if (room.has_stairs == 255 && (try_use_stairs || !is_single_large_room || rgen.rand_bool())) {
 		// use person.prev_walked_down?
 		bool const try_below(rgen.rand_bool() && !point_in_water_area(person.target_pos - floor_spacing*plus_z));
@@ -1265,7 +1267,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 
 		if (new_z > room.z1() && new_z < room.z2()) { // valid if this floor is inside the room
 			person.target_pos.z = new_z;
-			if (select_person_dest_in_room(person, rgen, room)) return 1;
+			if (select_person_dest_in_room(person, rgen, room)) return 1; // if retail, this may lead to an upper floor stairs path that exits the room
 		}
 	}
 	// how about a different location in the same room? this will at least get the person unstuck from an object and moving inside a parking garage
@@ -1760,7 +1762,8 @@ bool building_t::is_player_visible(person_t const &person, unsigned vis_test) co
 		else {has_los = 1;} // assume that we have a line of sight if we're in the same room and floor as the player (optimization)
 	}
 	if (!has_los && same_room && floor_delta == 1 && person.pos.z > ground_floor_z1) {
-		// if the person and the player are on adjacent floors of the same room connected by stairs (and not in a parking garage), cheat and say they have a line of sight
+		// if the person and the player are on adjacent floors of the same room connected by stairs (and not in a parking garage), cheat and say they have a line of sight;
+		// what about U-shaped stairs in office building hallways?
 		room_t const &room(get_room(person.cur_room));
 		unsigned const room_floor_start(get_floor_for_zval(room.z1()));
 		assert(room_floor_start <= cur_player_building_loc.floor_ix && room_floor_start <= person_floor_ix);
@@ -2197,8 +2200,8 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			if (!play_sound && (person_ix & 1)) {play_sound |= is_player_visible(person, 1);} // 50% of zombies use line of sight test
 			if (!play_sound && (person_ix & 2)) {play_sound |= has_nearby_sound (person, floor_spacing);} // 50% of zombies use sound test
 			
-			if (play_sound) { // alert other zombies if in the same room and floor as the player, except in backrooms or parking garage, unless the player is visible
-				bool const alert_other_zombies(same_room_and_floor && (!is_pos_in_pg_or_backrooms(person.pos) || is_player_visible(person, 1)));
+			if (play_sound) { // alert other zombies if in the same room and floor as the player, except in backrooms/parking garage/retail, unless the player is visible
+				bool const alert_other_zombies(same_room_and_floor && (!is_single_large_room(person.cur_room) || is_player_visible(person, 1)));
 				maybe_play_zombie_sound(person.pos, person_ix, alert_other_zombies);
 			}
 		}
@@ -2220,8 +2223,8 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			return AI_STOP;
 		}
 		if (!find_route_to_point(person, coll_dist, person.is_first_path, 0, person.path)) { // following_player=0
-			float const wait_time(is_pos_in_pg_or_backrooms(person.pos) ? 0.1 : 1.0);
-			person.wait_for(wait_time); // stop for 1 second (0.1s for parking garage or backrooms), then try again
+			float const wait_time(is_single_large_room(person.cur_room) ? 0.1 : 1.0);
+			person.wait_for(wait_time); // stop for 1 second (0.1s for parking garage/backrooms/retail), then try again
 			return AI_WAITING;
 		}
 		if (has_rgeom) {person.is_first_path = 0;} // treat the path as the first path until room geom is generated
@@ -2460,7 +2463,7 @@ void building_t::ai_room_lights_update(person_t const &person) {
 	if (room_ix >= 0) {set_room_light_state_to(get_room(room_ix), person.pos.z, 1);} // make sure current room light is on when entering
 	if (person.cur_room < 0)        return; // no old room (error?)
 	room_t const &room(get_room(person.cur_room));
-	if (is_single_large_room(room)) return; // don't turn off parking garage or backrooms lights since they affect a large area
+	if (is_single_large_room(room)) return; // don't turn off parking garage/backrooms/retail lights since they affect a large area
 	float const floor_spacing(get_window_vspace());
 	bool other_person_in_room(cur_player_building_loc.building_ix == person.cur_bldg && same_room_and_floor_as_player(person)); // player counts
 
