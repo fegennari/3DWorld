@@ -2470,6 +2470,10 @@ bool check_for_overlap(cube_t const &c, vect_room_object_t const &objs, unsigned
 	}
 	return 0;
 }
+bool building_t::get_retail_long_dim() const {
+	cube_t const &part(get_retail_part());
+	return (part.dx() < part.dy());
+}
 void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, light_ix_assign_t &light_ix_assign) {
 	// Note: this room should occupy the entire floor, so walkable room bounds == room == part
 	assert(has_room_geom());
@@ -2477,7 +2481,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	float const floor_spacing(get_window_vspace()), dx(room.dx()), dy(room.dy()), spacing(0.7);
 	float const door_width(get_doorway_width()), se_pad(0.8*door_width), nom_aisle_width(1.5*door_width), rack_height(SHELF_RACK_HEIGHT_FS*floor_spacing);
 	unsigned const nx(max(1U, unsigned(spacing*dx/floor_spacing))), ny(max(1U, unsigned(spacing*dy/floor_spacing))); // same spacing as room lights
-	bool const dim(dx < dy); // long dim
+	bool const dim(dx < dy); // long dim (could also use get_retail_long_dim())
 	float const length(dim ? dy : dx), width(dim ? dx : dy), max_rack_width(0.5*floor_spacing);
 	if (width < 4.0*nom_aisle_width) return; // too small for shelf racks
 	unsigned const nrows((dim ? nx : ny)-1), nracks(max(2U, (dim ? ny : nx)/4));

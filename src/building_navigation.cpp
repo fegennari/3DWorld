@@ -1740,26 +1740,22 @@ bool building_t::is_player_visible(person_t const &person, unsigned vis_test) co
 	bool has_los(0);
 
 	if (same_room_and_floor) {
-		if (is_pos_in_pg_or_backrooms(person.pos) && has_room_geom()) {
-			point const eye_pos(person.get_eye_pos());
+		room_t const &room(get_room(person.cur_room));
+
+		if (is_single_large_room(room) && has_room_geom()) { // rooms with additional occluders
+			point const viewer(person.get_eye_pos());
+			cube_t occ_area(target.pos);
+			occ_area.expand_by(player_radius);
+			occ_area.union_with_pt(viewer); // any occluder must intersect this cube
 			point pts[5]; // center, -x, +x, -y, +y; no need to check -z/+z
 			get_sphere_boundary_pts(target.pos, player_radius, pts, 1); // skip_z=1
-			
-			for (unsigned n = 0; n < 5 && !has_los; ++n) { // check backrooms and parking garage walls
-				cube_t const line_bcube(pts[n], eye_pos);
-				has_los = 1;
-				index_pair_t start, end;
-				get_pgbr_wall_ix_for_pos(eye_pos, start, end);
 
-				for (unsigned d = 0; d < 2 && has_los; ++d) {
-					vect_cube_t const &pbgr_walls(interior->room_geom->pgbr_walls[d]);
-
-					for (auto w = pbgr_walls.begin()+start.ix[d]; w != pbgr_walls.begin()+end.ix[d]; ++w) {
-						if (line_bcube.intersects(*w) && w->line_intersects(pts[n], eye_pos)) {has_los = 0; break;}
-					}
-				}
+			if (room.is_retail()) { // retail room
+				if (check_shelfrack_occlusion(viewer, pts, 5, occ_area)) return 0; // blocked by a shelfrack
 			}
-			if (!has_los) return 0; // blocked by a wall
+			else { // parking garage or backrooms
+				if (check_pg_br_wall_occlusion(viewer, pts, 5, occ_area, (viewer - target.pos))) return 0; // blocked by a wall
+			}
 		}
 		else {has_los = 1;} // assume that we have a line of sight if we're in the same room and floor as the player (optimization)
 	}

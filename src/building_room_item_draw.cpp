@@ -2245,17 +2245,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 				for (unsigned d = 0; d < 2; ++d) {walls[d].d[!dim][!d] = door.d[!dim][d];} // exclude the door
 				if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, walls, walls+2, dim, 0.0)) return 1; // no size check
 			}
-			if (has_room_geom()) {
-				index_pair_t start, end;
-				get_pgbr_wall_ix_for_pos(viewer, start, end);
-				// in cases where we clipped under the building the range will be empty and there will be no occlusion
-
-				for (unsigned D = 0; D < 2; ++D) {
-					bool const d(bool(D) ^ pri_dim); // try primary dim first
-					vect_cube_t const &walls(interior->room_geom->pgbr_walls[d]);
-					if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, walls.begin()+start.ix[d], walls.begin()+end.ix[d], d, 0.0)) return 1; // no size check
-				}
-			}
+			if (has_room_geom() && check_pg_br_wall_occlusion(viewer, pts, npts, occ_area, dir)) return 1;
 		}
 		else { // regular walls case
 			for (unsigned D = 0; D < 2; ++D) {
@@ -2324,10 +2314,26 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	}
 	if (check_pt_in_retail_room(center) && viewer.z > ground_floor_z1 && viewer.z < ground_floor_ceiling && has_room_geom()) {
 		// both the object and the viewer are in the ground floor of a retail building - check shelf rack backs as occluders
-		bool const long_dim(parts[0].dx() < parts[0].dy());
-		if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, interior->room_geom->shelf_rack_occluders, !long_dim)) return 1;
+		if (check_shelfrack_occlusion(viewer, pts, npts, occ_area)) return 1;
 	}
 	return 0;
+}
+bool building_t::check_pg_br_wall_occlusion(point const &viewer, point const *const pts, unsigned npts, cube_t const &occ_area, vector3d const &view_dir) const {
+	bool const pri_dim(fabs(view_dir.x) < fabs(view_dir.y));
+	index_pair_t start, end;
+	get_pgbr_wall_ix_for_pos(viewer, start, end);
+	// in cases where we clipped under the building the range will be empty and there will be no occlusion
+
+	for (unsigned D = 0; D < 2; ++D) {
+		bool const d(bool(D) ^ pri_dim); // try primary dim first
+		vect_cube_t const &walls(interior->room_geom->pgbr_walls[d]);
+		if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, walls.begin()+start.ix[d], walls.begin()+end.ix[d], d, 0.0)) return 1; // no size check
+	}
+	return 0;
+}
+bool building_t::check_shelfrack_occlusion(point const &viewer, point const *const pts, unsigned npts, cube_t const &occ_area) const {
+	bool const long_dim(get_retail_long_dim());
+	return are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, interior->room_geom->shelf_rack_occluders, !long_dim);
 }
 
 bool building_t::is_entire_building_occluded(point const &viewer, occlusion_checker_noncity_t &oc) const {
