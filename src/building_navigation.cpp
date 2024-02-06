@@ -806,6 +806,7 @@ public:
 		a_star_node_state_t &start(state[room1]);
 		start.g_score = 0.0;
 		start.f_score = p2p_dist_xy(cur_pt, dest_pos); // estimated total cost from start to goal through current
+		start.path_pt = cur_pt;
 		open[room1]   = 1;
 		open_queue.push(make_pair(-start.f_score, room1));
 
@@ -827,16 +828,14 @@ public:
 				point const next_pt(is_goal        ? dest_pos : conn_node.get_center(cur_pt.z));
 				a_star_node_state_t &sn(state[i->ix]);
 				vector2d const &pt(i->pt[up_or_down]); // point in doorway, etc.
-				// Note: in the case of long hallways, the shortest path may pass between doors/adjacencies rather than through the center of the room/node
 				float const dist_through_cur(state[cur].g_score + p2p_dist_xy(node_pt, pt) + p2p_dist_xy(pt, next_pt));
 				float new_g_score(dist_through_cur);
-
-				if (cur != room1) { // not coming from the starting room
-					point const &prev_edge_pt(state[cur].path_pt); // point in doorway, etc.
-					float const dist_without_last_seg(state[cur].g_score - p2p_dist_xy(node_pt, prev_edge_pt));
-					float const dist_door_to_door(dist_without_last_seg + p2p_dist_xy(pt, prev_edge_pt));
-					min_eq(new_g_score, dist_door_to_door); // dist_door_to_door is always smaller?
-				}
+				// in the case of long hallways, the shortest path may pass between doors/adjacencies rather than through the center of the room/node,
+				// so we take that into account here by calculating the straight line path between room entrance and exit without going through the center
+				point const &prev_edge_pt(state[cur].path_pt); // point in doorway, etc.
+				float const dist_without_last_seg(state[cur].g_score - p2p_dist_xy(node_pt, prev_edge_pt));
+				float const dist_door_to_door(dist_without_last_seg + p2p_dist_xy(pt, prev_edge_pt));
+				min_eq(new_g_score, dist_door_to_door); // dist_door_to_door is always smaller?
 				if (!open[i->ix]) {open[i->ix] = 1;}
 				else if (new_g_score >= sn.g_score) continue; // not better
 				sn.came_from_ix = cur;
@@ -1051,7 +1050,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 			auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 			for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
-				if (!is_ai_coll_obj(*c, 1))     continue; // same_as_player=1
+				if (!is_ai_coll_obj(*c, 1))     continue; // same_as_player=1; affects objects such as chairs
 				if (!c->contains_pt(sound_pos)) continue;
 				int const room_ix(get_room_containing_pt(sound_pos));
 				if (room_ix < 0) continue; // error?
@@ -1283,6 +1282,7 @@ template<typename T> void add_bcube_if_overlaps_zval(vector<T> const &cubes, vec
 }
 
 // for AI collision detection
+// same_as_player allows the AI to follow the player, but can result in it getting stuck when turning gameplay mode off
 void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float r_shrink_if_low, float floor_thickness,
 	float floor_ceil_gap, bool same_as_player, bool skip_stairs, cube_t const *const fires_select_cube) const
 {
@@ -2143,7 +2143,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	run_ai_pool_logic(person, speed_mult); // handle AI inside the pool; this can happen for zombies
 	if (prev_in_pool && !person.in_pool) {person.retreat_time = 0.5*TICKS_PER_SECOND;} // retreat for 0.5s to avoid falling back into the pool chasing the player
 	build_nav_graph();
-	//debug_mode = (cur_player_building_loc.building_ix == person.cur_bldg);
+	debug_mode = (cur_player_building_loc.building_ix == person.cur_bldg); // used for debugging printouts
 
 	if (can_ai_follow_player(person, allow_diff_building)) { // check for player intersection/damage
 		// use zval of the feet to handle cases where the person and the player are different heights
