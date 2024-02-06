@@ -1071,6 +1071,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 	person.target_pos   = (global_building_params.ai_target_player ? goal.pos: get_center_of_room(cand_room));
 	person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
 	person.is_on_stairs = 0;
+	person.last_used_stairs = 0; // non-stairs dest, reset
 
 	// allow moving to a different floor, currently only one floor at a time
 	// note that if we're following a sound this may lead us to the wrong floor of the room if more than one floor above or below;
@@ -1195,25 +1196,33 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 					person.goal_type    = GOAL_TYPE_ELEVATOR;
 					person.cur_elevator = (uint8_t)nearest_elevator;
 					person.last_used_elevator = 1;
+					person.last_used_stairs   = 0; // non-stairs dest, reset
 					return 1;
 				}
 			}
 		}
 	}
-	bool const is_single_large_room(loc.room_ix >= 0 && is_single_large_room(loc.room_ix));
+	bool const single_large_room(loc.room_ix >= 0 && is_single_large_room(loc.room_ix));
 	bool const must_leave_room(point_in_water_area(person.pos) || is_above_retail_area(person.pos));
 
-	if (is_single_large_room && !must_leave_room && (person.is_first_path || rgen.rand_float() < 0.75)) { // stay in this room 75% of the time, always on the first path
+	if (single_large_room && !must_leave_room && (person.is_first_path || rgen.rand_float() < 0.75)) { // stay in this room 75% of the time, always on the first path
 		person.is_first_path = 0; // respect the walls
 		if (select_person_dest_in_room(person, rgen, get_room(loc.room_ix))) return 1;
 	}
 	// sometimes use stairs in backrooms, parking garages, and retail areas
-	bool const try_use_stairs(is_single_large_room && get_room(loc.room_ix).has_stairs && (must_leave_room || rgen.rand_bool()));
+	bool const try_use_stairs(single_large_room && get_room(loc.room_ix).has_stairs && (must_leave_room || (!person.last_used_stairs && rgen.rand_bool())));
 	unsigned const num_tries(try_use_stairs ? 0 : 100);
+	// handle special rooms that should have more traffic
+	int special_rooms[2] = {-1, -1};
+	if (has_retail()) {special_rooms[0] = 0;} // retail is the first room
+	if (has_parking_garage) {special_rooms[1] = interior->rooms.size()-1;} // parking garage or backrooms
 
 	// try to find a valid room to move to
 	for (unsigned n = 0; n < num_tries; ++n) {
-		unsigned const cand_room(rgen.rand() % interior->rooms.size());
+		unsigned cand_room(0);
+		// select a special room with higher probability
+		unsigned const room_sel(rgen.rand() & 7); // 25% chance for each special room type
+		if (room_sel < 2 && special_rooms[room_sel] >= 0) {cand_room = special_rooms[room_sel];} else {cand_room = (rgen.rand() % interior->rooms.size());}
 		if (cand_room == (unsigned)loc.room_ix) continue;
 		room_t const &room(get_room(cand_room));
 		if (room.is_hallway) continue; // don't select a hallway
@@ -1254,13 +1263,14 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		}
 		person.dest_room = cand_room; // set but not yet used
 		person.goal_type = GOAL_TYPE_ROOM;
+		person.last_used_stairs = 0; // non-stairs dest, reset
 		return 1;
 	} // for n
 	if (loc.room_ix < 0) return 2; // failed - room not valid (error?)
 	room_t const &room(get_room(loc.room_ix));
 
 	// how about a different floor of the same room? only check this 50% of the time for parking garages/backrooms/retail to allow movement within a level
-	if (room.has_stairs == 255 && (try_use_stairs || !is_single_large_room || rgen.rand_bool())) {
+	if (try_use_stairs || (room.has_stairs == 255 && (!single_large_room || rgen.rand_bool()))) {
 		// use person.prev_walked_down?
 		bool const try_below(rgen.rand_bool() && !point_in_water_area(person.target_pos - floor_spacing*plus_z));
 		float const new_z(person.target_pos.z + (try_below ? -1.0 : 1.0)*floor_spacing); // one floor above or below
@@ -1271,8 +1281,8 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		}
 	}
 	// how about a different location in the same room? this will at least get the person unstuck from an object and moving inside a parking garage
-	if ((person.is_first_path || is_single_large_room) && !must_leave_room) {
-		if (select_person_dest_in_room(person, rgen, room)) return 1;
+	if ((person.is_first_path || single_large_room) && !must_leave_room) {
+		if (select_person_dest_in_room(person, rgen, room)) {person.last_used_stairs = 0; return 1;}
 	}
 	return 2; // failed, but can retry
 }
@@ -1554,7 +1564,8 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 						path.add(enter_turn + next_floor_delta); // turning point for entrance side of stairs on other floor
 						path.add(enter_pt   + next_floor_delta); // entrance on prev exit floor
 						path.add(exit_pt); // original exit point
-						person.no_wait_at_dest = 1; // don't wait at (blocking) the stairs exit, since this isn't our real destination anyway
+						person.no_wait_at_dest  = 1; // don't wait at (blocking) the stairs exit, since this isn't our real destination anyway
+						person.last_used_stairs = 1; // don't immediately go back up/down the stairs
 						// Note: person.dest_room can be wrong when exiting in the hallway above the retail room, but it should be unused
 					}
 					path.add(exit_turn); // turning point for exit side of stairs
