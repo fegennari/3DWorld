@@ -72,6 +72,7 @@ struct person_t : public person_base_t { // building person
 
 	person_t(float radius_) : person_base_t(radius_) {in_building = 1;}
 	bool on_stairs() const {return is_on_stairs;}
+	bool last_changed_floor() const {return (last_used_elevator || last_used_stairs);}
 	bool waiting_for_same_elevator_as(person_t const &other, float floor_spacing) const;
 	void next_path_pt(bool starting_path);
 	void abort_dest() {target_pos = all_zeros; path.clear(); goal_type = GOAL_TYPE_NONE;}

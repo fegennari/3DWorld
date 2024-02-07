@@ -1178,7 +1178,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 	float const floor_spacing(get_window_vspace());
 
 	// maybe choose a destination elevator (for office buildings) if our prev dest wasn't an elevator
-	if (!is_house && !person.is_first_path && !interior->elevators_disabled && !person.last_used_elevator &&
+	if (!is_house && !person.is_first_path && !interior->elevators_disabled && !person.last_changed_floor() &&
 		person.goal_type != GOAL_TYPE_ELEVATOR && global_building_params.elevator_capacity > 0)
 	{
 		if (rgen.rand_probability(global_building_params.use_elevator_prob)) {
@@ -1210,7 +1210,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		if (select_person_dest_in_room(person, rgen, get_room(loc.room_ix))) return 1;
 	}
 	// sometimes use stairs in backrooms, parking garages, and retail areas
-	bool const try_use_stairs(single_large_room && get_room(loc.room_ix).has_stairs && (must_leave_room || (!person.last_used_stairs && rgen.rand_bool())));
+	bool const try_use_stairs(single_large_room && get_room(loc.room_ix).has_stairs && (must_leave_room || (!person.last_changed_floor() && rgen.rand_bool())));
 	unsigned const num_tries(try_use_stairs ? 0 : 100);
 	// handle special rooms that should have more traffic
 	int special_rooms[2] = {-1, -1};
@@ -1272,7 +1272,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 	// how about a different floor of the same room? only check this 50% of the time for parking garages/backrooms/retail to allow movement within a level
 	if (try_use_stairs || (room.has_stairs == 255 && (!single_large_room || rgen.rand_bool()))) {
 		// use person.prev_walked_down?
-		bool const try_below(rgen.rand_bool() && !point_in_water_area(person.target_pos - floor_spacing*plus_z));
+		bool const try_below(rgen.rand_bool() && !room.is_retail() && !point_in_water_area(person.target_pos - floor_spacing*plus_z));
 		float const new_z(person.target_pos.z + (try_below ? -1.0 : 1.0)*floor_spacing); // one floor above or below
 
 		if (new_z > room.z1() && new_z < room.z2()) { // valid if this floor is inside the room
