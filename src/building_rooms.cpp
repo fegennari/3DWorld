@@ -803,7 +803,7 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) { // or ladder
 				if (has_bcube_int_no_adj(fe_bc, parts))              continue; // check for intersection with other parts, in particular the chimney and fireplace
 				if (has_driveway() && fe_bc.intersects_xy(driveway)) continue; // skip if intersects driveway or garage
 				if (cube_int_ext_door(fe_bc_exp))                    continue; // check exterior doors
-				interior->room_geom->objs.emplace_back(fe_bc, TYPE_FESCAPE, 0, dim, dir, 0, 1.0, SHAPE_CUBE, BLACK); // room_id=0
+				interior->room_geom->objs.emplace_back(fe_bc, TYPE_FESCAPE, 0, dim, dir, RO_FLAG_EXTERIOR, 1.0, SHAPE_CUBE, BLACK); // room_id=0
 				details.emplace_back(fe_bc, DETAIL_OBJ_COLLIDER);
 				union_with_coll_bcube(fe_bc);
 				return; // success/done
@@ -846,7 +846,7 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) { // or ladder
 				if (has_driveway() && bc.intersects_xy(driveway)) continue; // skip if intersects driveway or garage
 				if (cube_int_ext_door(bc_exp))                    continue; // check exterior doors
 				if (has_bcube_int(bc_exp, details))               continue; // check details; outdoor AC units can intersect
-				interior->room_geom->objs.emplace_back(bc, TYPE_LADDER, 0, dim, dir, 0, 1.0, SHAPE_CUBE, GRAY); // room_id=0
+				interior->room_geom->objs.emplace_back(bc, TYPE_LADDER, 0, dim, dir, RO_FLAG_EXTERIOR, 1.0, SHAPE_CUBE, GRAY); // room_id=0
 				union_with_coll_bcube(bc);
 				ladder = bc;
 				return; // success/done
