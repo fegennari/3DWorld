@@ -1804,7 +1804,7 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 		cube_t chair_place_area(place_area);
 		chair_place_area.expand_by(-wall_thickness); // move a bit further back from the wall to prevent intersections when rotating
 
-		if (place_model_along_wall(OBJ_MODEL_RCHAIR, TYPE_RCHAIR, room, 0.45, rgen, zval, room_id, tot_light_amt, chair_place_area, objs_start, 1.0)) {
+		if (place_model_along_wall(OBJ_MODEL_RCHAIR, TYPE_RCHAIR, room, 0.5, rgen, zval, room_id, tot_light_amt, chair_place_area, objs_start, 1.0)) {
 			if (rgen.rand_bool()) { // add a random rotation half the time
 				assert(chair_ix < objs.size()); // chair must have been placed
 				objs[chair_ix].flags |= RO_FLAG_RAND_ROT; // rotate to face the center of the room rather than having it be random?
