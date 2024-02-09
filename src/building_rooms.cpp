@@ -2321,20 +2321,21 @@ int building_t::get_ext_door_dir(cube_t const &door_bcube, bool dim) const { // 
 	return 2; // not found
 }
 
-void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door, rand_gen_t &rgen) { // and porch packages
+void building_t::add_doorbell_lamp_and_porch_items(tquad_with_ix_t const &door, rand_gen_t &rgen) { // and porch packages
 	cube_t const door_bcube(door.get_bcube());
 	bool const dim(door_bcube.dy() < door_bcube.dx());
 	int const dir_ret(get_ext_door_dir(door_bcube, dim));
-	if (dir_ret > 1) return; // not found, skip doorbell and lamp
+	if (dir_ret > 1) return; // not found, skip doorbell, lamp, and chair
+	// add doorbell
 	bool dir(dir_ret != 0);
 	bool const side(dir ^ dim); // currently always to the right, which matches the door handle side
 	float const door_width(door_bcube.get_sz_dim(!dim)), half_width(0.016*door_width), half_height(1.8*half_width), button_thickness(0.1*half_width);
-	float const zval(door_bcube.z1() + 0.55*door_bcube.dz());
-	float const pos(door_bcube.d[!dim][side] + (side ? 1.0 : -1.0)*5.0*half_width);
+	float const db_zval(door_bcube.z1() + 0.55*door_bcube.dz()), floor_spacing(get_window_vspace());
+	float const pos(door_bcube.d[!dim][side] + (side ? 1.0 : -1.0)*5.0*half_width), dsign(dir ? 1.0 : -1.0);
 	cube_t c;
-	c.d[dim][0  ]  = c.d[dim][1] = door_bcube.d[dim][dir] - 0.02*(dir ? 1.0 : -1.0)*get_window_vspace(); // slightly in front of exterior wall
-	c.d[dim][dir] += (dir ? 1.0 : -1.0)*button_thickness;
-	set_cube_zvals(c, (zval - half_height), (zval + half_height));
+	c.d[dim][0  ]  = c.d[dim][1] = door_bcube.d[dim][dir] - 0.02*dsign*floor_spacing; // slightly in front of exterior wall
+	c.d[dim][dir] += dsign*button_thickness;
+	set_cube_zvals(c, (db_zval - half_height), (db_zval + half_height));
 	set_wall_width(c, pos, half_width, !dim);
 	expand_to_nonzero_area(c, button_thickness, dim);
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -2350,7 +2351,7 @@ void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door, rand_gen_t &
 		float const z1(door_bcube.z1() + 0.7*door_bcube.dz());
 		float const lamp_pos(door_bcube.d[!dim][side] + (side ? 1.0 : -1.0)*0.6*width);
 		cube_t lamp(c);
-		lamp.d[dim][dir] = c.d[dim][!dir] + (dir ? 1.0 : -1.0)*depth;
+		lamp.d[dim][dir] = c.d[dim][!dir] + dsign*depth;
 		set_cube_zvals(lamp, z1, (z1 + height));
 		set_wall_width(lamp, lamp_pos, 0.5*width, !dim);
 		unsigned flags(base_flags);
@@ -2358,19 +2359,22 @@ void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door, rand_gen_t &
 		objs.emplace_back(lamp, TYPE_WALL_LAMP, room_id, dim, dir, flags, tot_light_amt);
 		if (objs.back().is_lit()) {ext_lights.emplace_back(lamp.get_cube_center(), 20.0*width, WALL_LAMP_COLOR);}
 	}
-	if (has_porch() && rgen.rand_bool()) { // maybe add a package on the porch
+	if (has_porch()) { // add porch items
 		// find the front door
 		float const wall_thickness(get_wall_thickness());
 		cube_t front_door;
 
 		for (auto const &d : doors) {
 			cube_t dbc(d.get_bcube());
-			dbc.expand_by_xy(wall_thickness);
+			dbc.expand_by(wall_thickness);
 			if (porch.intersects(dbc)) {front_door = dbc;}
 		}
-		if (!front_door.is_all_zeros()) { // should never fail?
+		if (front_door.is_all_zeros()) return; // should never fail?
+		float const rand_val(rgen.rand_float());
+
+		if (rand_val > 0.6) { // maybe add a package on the porch
 			vector3d sz; // half size relative to window_vspacing
-			gen_crate_sz(sz, rgen, get_window_vspace());
+			gen_crate_sz(sz, rgen, floor_spacing);
 			bool const door_dim(front_door.dy() < front_door.dx());
 			cube_t place_area(front_door), avoid(front_door);
 			place_area.expand_by(vector3d(4.0*sz.x, 4.0*sz.y, 0.0));
@@ -2394,6 +2398,21 @@ void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door, rand_gen_t &
 					break; // done
 				} // for n
 			}
+		}
+		else if (rand_val < 0.4 && building_obj_model_loader.is_model_valid(OBJ_MODEL_RCHAIR)) { // add a chair on the porch
+			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RCHAIR)); // D, W, H
+			float const height(0.5*floor_spacing), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z), zbot(porch.z2());
+			float const back_pos(porch.d[dim][!dir] + dsign*0.1*depth);
+			bool const chair_side(!side); // opposite the doorbell
+			float const center(door_bcube.d[!dim][chair_side] + (chair_side ? 1.0 : -1.0)*2.25*hwidth);
+			vect_room_object_t &objs(interior->room_geom->objs);
+			cube_t chair;
+			set_cube_zvals(chair, zbot, zbot+height);
+			chair.d[dim][!dir] = back_pos;
+			chair.d[dim][ dir] = back_pos + dsign*depth;
+			set_wall_width(chair, center, hwidth, !dim);
+			// Note: collision detection doesn't work for objects outside the house
+			if (porch.contains_cube_xy(chair)) {objs.emplace_back(chair, TYPE_RCHAIR, room_id, dim, dir, RO_FLAG_EXTERIOR, tot_light_amt);}
 		}
 	}
 }

@@ -1638,7 +1638,7 @@ struct building_t : public building_geom_t {
 	void add_stairs_and_elevators(rand_gen_t &rgen);
 	int get_ext_door_dir(cube_t const &door_bcube, bool dim) const;
 	void add_sign_by_door(tquad_with_ix_t const &door, bool outside, std::string const &text, colorRGBA const &color, bool emissive);
-	void add_doorbell_and_lamp(tquad_with_ix_t const &door, rand_gen_t &rgen);
+	void add_doorbell_lamp_and_porch_items(tquad_with_ix_t const &door, rand_gen_t &rgen);
 	void add_exterior_door_items(rand_gen_t &rgen);
 	unsigned get_street_house_number() const;
 	void gen_building_doors_if_needed(rand_gen_t &rgen);

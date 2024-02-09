@@ -214,7 +214,7 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 	if (is_house) { // maybe add welcome sign and add doorbell
 		assert(!doors.empty());
 		tquad_with_ix_t const &front_door(doors.front());
-		add_doorbell_and_lamp(front_door, rgen);
+		add_doorbell_lamp_and_porch_items(front_door, rgen);
 
 		if ((rgen.rand() & 3) == 0) { // add a welcome sign to 25% of houses
 			add_sign_by_door(front_door, 1, "Welcome", choose_sign_color(rgen), 0); // front door only, outside
