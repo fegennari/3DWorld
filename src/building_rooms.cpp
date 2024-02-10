@@ -2411,8 +2411,11 @@ void building_t::add_doorbell_lamp_and_porch_items(tquad_with_ix_t const &door, 
 			chair.d[dim][!dir] = back_pos;
 			chair.d[dim][ dir] = back_pos + dsign*depth;
 			set_wall_width(chair, center, hwidth, !dim);
-			// Note: collision detection doesn't work for objects outside the house
-			if (porch.contains_cube_xy(chair)) {objs.emplace_back(chair, TYPE_RCHAIR, room_id, dim, dir, RO_FLAG_EXTERIOR, tot_light_amt);}
+			
+			if (porch.contains_cube_xy(chair)) {
+				objs.emplace_back(chair, TYPE_RCHAIR, room_id, dim, dir, RO_FLAG_EXTERIOR, tot_light_amt);
+				details.emplace_back(chair, DETAIL_OBJ_COLLIDER);
+			}
 		}
 	}
 }
