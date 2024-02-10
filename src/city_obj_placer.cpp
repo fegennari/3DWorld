@@ -1442,7 +1442,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	return ret;
 }
 
-template<typename T> bool check_city_obj_pt_xy_contains(city_obj_groups_t const &groups, vector<T> const &objs, point const &pos, unsigned &obj_ix) {
+template<typename T> bool check_city_obj_pt_xy_contains(city_obj_groups_t const &groups, vector<T> const &objs, point const &pos, unsigned &obj_ix, bool is_cylin=0) {
 	if (groups.empty() || !groups.get_bcube().contains_pt_xy(pos)) return 0;
 	unsigned start_ix(0);
 
@@ -1452,7 +1452,10 @@ template<typename T> bool check_city_obj_pt_xy_contains(city_obj_groups_t const 
 
 		for (auto b = objs.begin()+start_ix; b != objs.begin()+i->ix; ++b) {
 			if (pos.x < b->bcube.x1()) break; // objects are sorted by x1, none after this can match
-			if (b->check_point_contains_xy(pos)) {obj_ix = (b - objs.begin()); return 1;}
+			if (!b->check_point_contains_xy(pos)) continue;
+			if (is_cylin && !dist_xy_less_than(pos, b->pos, b->radius)) continue; // cylinder case
+			obj_ix = (b - objs.begin());
+			return 1;
 		}
 	} // for i
 	return 0;
@@ -1478,19 +1481,8 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 		} // for i
 	}
 	// fire hydrants are now placed on the edges of the road, so they're not inside plots and are skipped here
-	if (!skip_in_road && !fhydrant_groups.empty() && fhydrant_groups.get_bcube().contains_pt_xy(pos)) {
-		unsigned start_ix(0);
-
-		for (auto i = fhydrant_groups.begin(); i != fhydrant_groups.end(); start_ix = i->ix, ++i) {
-			if (!i->contains_pt_xy(pos)) continue;
-			assert(start_ix <= i->ix && i->ix <= fhydrants.size());
-
-			for (auto b = fhydrants.begin()+start_ix; b != fhydrants.begin()+i->ix; ++b) {
-				if (pos.x < b->bcube.x1()) break; // fire_hydrants are sorted by x1, none after this can match
-				if (dist_xy_less_than(pos, b->pos, b->radius)) {color = colorRGBA(1.0, 0.75, 0.0); return 1;} // orange/yellow color
-			}
-		} // for i
-	}
+	if (!skip_in_road && check_city_obj_pt_xy_contains(fhydrant_groups, fhydrants, pos, obj_ix, 1)) {color = colorRGBA(1.0, 0.75, 0.0); return 1;} // orange/yellow; is_cylin=1
+	
 	if (check_city_obj_pt_xy_contains(divider_groups, dividers, pos, obj_ix)) {
 		assert(obj_ix < dividers.size());
 		color = plot_divider_types[dividers[obj_ix].type].get_avg_color();
