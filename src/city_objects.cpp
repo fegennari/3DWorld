@@ -298,6 +298,28 @@ void substation_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist
 	building_obj_model_loader.draw_model(dstate.s, pos, bcube, get_orient_dir(), WHITE, dstate.xlate, OBJ_MODEL_SUBSTATION, shadow_only);
 }
 
+// fountains
+
+fountain_t::fountain_t(point const &pos_, float radius_, float height) : city_obj_t(pos_, radius_) {
+	bcube.set_from_point(pos);
+	bcube.expand_by_xy(radius);
+	bcube.z2() += height;
+	set_bsphere_from_bcube(); // recompute bcube from bsphere
+}
+/*static*/ void fountain_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_scale", 0.0);} // disable hemispherical lighting
+}
+/*static*/ void fountain_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_scale", 0.5);} // set hemispherical lighting back to the default
+}
+void fountain_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
+	building_obj_model_loader.draw_model(dstate.s, pos, bcube, plus_x, WHITE, dstate.xlate, OBJ_MODEL_FOUNTAIN, shadow_only); // XY symmetric, so dir=plus_x
+}
+bool fountain_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	return sphere_city_obj_cylin_coll(pos, radius, pos_, p_last, radius_, xlate, cnorm);
+}
+
 // plot dividers
 
 plot_divider_type_t plot_divider_types[DIV_NUM_TYPES] = {

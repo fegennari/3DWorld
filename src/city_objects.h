@@ -97,6 +97,14 @@ struct substation_t : public oriented_city_obj_t {
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
 
+struct fountain_t : public city_obj_t {
+	fountain_t(point const &pos_, float radius_, float height);
+	static void pre_draw (draw_state_t &dstate, bool shadow_only);
+	static void post_draw(draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
+};
+
 struct divider_t : public oriented_city_obj_t {
 	unsigned type;
 	uint8_t skip_dims;
@@ -348,6 +356,7 @@ private:
 	vector<trashcan_t> trashcans;
 	vector<fire_hydrant_t> fhydrants;
 	vector<substation_t> sstations;
+	vector<fountain_t> fountains;
 	vector<divider_t> dividers; // dividers for residential plots
 	vector<swimming_pool_t> pools;
 	vector<pool_ladder_t> pladders;
@@ -365,8 +374,9 @@ private:
 	vector<newsrack_t> newsracks;
 	vector<park_path_t> ppaths;
 	// index is last obj in group
-	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, divider_groups, pool_groups, plad_groups, pdeck_groups, ppole_groups,
-		hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups, stopsign_groups, flag_groups, nrack_groups, ppath_groups;
+	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, fountain_groups, divider_groups, pool_groups, plad_groups,
+		pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups, stopsign_groups, flag_groups,
+		nrack_groups, ppath_groups;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
 	vect_bird_place_t bird_locs;

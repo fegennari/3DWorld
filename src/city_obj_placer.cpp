@@ -326,8 +326,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	vector<point> const &tree_pos, rand_gen_t &rgen, bool is_residential, bool have_streetlights)
 {
 	float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
-	unsigned const benches_start(benches.size()), trashcans_start(trashcans.size()), substations_start(sstations.size()), ppoles_start(ppoles.size());
-	unsigned const paths_start(ppaths.size());
+	unsigned const benches_start(benches.size()), trashcans_start(trashcans.size()), substations_start(sstations.size());
+	unsigned const fountains_start(fountains.size()), ppoles_start(ppoles.size()), paths_start(ppaths.size());
 
 	// place paths in parks
 	if (plot.is_park) {
@@ -525,6 +525,10 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			}
 		} // for d
 	}
+	// place fountains in cities and parks
+	if ((!is_residential || plot.is_park) && building_obj_model_loader.is_model_valid(OBJ_MODEL_FOUNTAIN)) {
+		// TODO: fountains/fountain_groups
+	}
 	// place newsracks along non-residential city streets
 	if (!is_residential) {
 		unsigned const NUM_NR_COLORS = 8;
@@ -608,7 +612,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		// find all bird placements
 		vect_bird_place_t pigeon_locs;
 
-		// maybe place on benches, trashcans, and substations
+		// maybe place on benches, trashcans, substations, and fountains
 		for (auto i = benches.begin()+benches_start; i != benches.end(); ++i) {
 			if (i->bcube.get_sz_dim(!i->dim) <= 2.0*obj_edge_spacing) continue;
 			vect_bird_place_t *const dest(select_bird_loc_dest(add_pigeons, add_birds, pigeon_locs, bird_locs, rgen));
@@ -625,6 +629,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			dest->add_placement_rand_dim_dir(top_place, obj_edge_spacing, rgen); // facing outward on a random side of the rim
 		}
 		add_objs_top_center(sstations, substations_start, add_pigeons, add_birds, pigeon_locs, bird_locs, rgen);
+		add_objs_top_center(fountains, fountains_start,   add_pigeons, add_birds, pigeon_locs, bird_locs, rgen);
 
 		// place pigeons
 		if (add_pigeons) {
@@ -1111,12 +1116,12 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 }
 
 void city_obj_placer_t::clear() {
-	parking_lots.clear(); benches.clear(); planters.clear(); trashcans.clear(); fhydrants.clear(); sstations.clear(); driveways.clear(); dividers.clear(); pools.clear();
-	pladders.clear(); pdecks.clear(); ppoles.clear(); hcaps.clear(); manholes.clear(); mboxes.clear(); tcones.clear(); pigeons.clear(); birds.clear(); signs.clear();
+	parking_lots.clear(); benches.clear(); planters.clear(); trashcans.clear(); fhydrants.clear(); sstations.clear(); fountains.clear(); driveways.clear(); dividers.clear();
+	pools.clear(); pladders.clear(); pdecks.clear(); ppoles.clear(); hcaps.clear(); manholes.clear(); mboxes.clear(); tcones.clear(); pigeons.clear(); birds.clear(); signs.clear();
 	stopsigns.clear(); flags.clear(); ppaths.clear(); bench_groups.clear(); planter_groups.clear(); trashcan_groups.clear(); fhydrant_groups.clear(); sstation_groups.clear();
-	divider_groups.clear(); pool_groups.clear(); plad_groups.clear(); pdeck_groups.clear(); ppole_groups.clear(); hcap_groups.clear(); manhole_groups.clear();
-	mbox_groups.clear(); tcone_groups.clear(); pigeon_groups.clear(); bird_groups.clear(); sign_groups.clear(); stopsign_groups.clear(); flag_groups.clear();
-	nrack_groups.clear(); ppath_groups.clear(); all_objs_bcube.set_to_zeros();
+	fountain_groups.clear(); divider_groups.clear(); pool_groups.clear(); plad_groups.clear(); pdeck_groups.clear(); ppole_groups.clear(); hcap_groups.clear();
+	manhole_groups.clear(); mbox_groups.clear(); tcone_groups.clear(); pigeon_groups.clear(); bird_groups.clear(); sign_groups.clear(); stopsign_groups.clear();
+	flag_groups.clear(); nrack_groups.clear(); ppath_groups.clear(); all_objs_bcube.set_to_zeros();
 	num_spaces = filled_spaces = 0;
 }
 
@@ -1182,6 +1187,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	trashcan_groups.create_groups(trashcans, all_objs_bcube);
 	fhydrant_groups.create_groups(fhydrants, all_objs_bcube);
 	sstation_groups.create_groups(sstations, all_objs_bcube);
+	fountain_groups.create_groups(fountains, all_objs_bcube);
 	divider_groups .create_groups(dividers,  all_objs_bcube);
 	pool_groups    .create_groups(pools,     all_objs_bcube);
 	plad_groups    .create_groups(pladders,  all_objs_bcube);
@@ -1200,9 +1206,9 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	ppath_groups   .create_groups(ppaths,    all_objs_bcube);
 
 	if (0) { // debug info printing
-		cout << TXT(benches.size()) << TXT(planters.size()) << TXT(trashcans.size()) << TXT(fhydrants.size()) << TXT(sstations.size()) << TXT(dividers.size())
-			 << TXT(pools.size()) << TXT(pladders.size()) << TXT(pdecks.size()) << TXT(ppoles.size()) << TXT(hcaps.size()) << TXT(manholes.size()) << TXT(mboxes.size())
-			 << TXT(tcones.size()) << TXT(pigeons.size()) << TXT(birds.size()) << TXT(signs.size()) << TXT(stopsigns.size()) << TXT(flags.size())
+		cout << TXT(benches.size()) << TXT(planters.size()) << TXT(trashcans.size()) << TXT(fhydrants.size()) << TXT(sstations.size()) << TXT(fountains.size())
+			 << TXT(dividers.size()) << TXT(pools.size()) << TXT(pladders.size()) << TXT(pdecks.size()) << TXT(ppoles.size()) << TXT(hcaps.size()) << TXT(manholes.size())
+			 << TXT(mboxes.size()) << TXT(tcones.size()) << TXT(pigeons.size()) << TXT(birds.size()) << TXT(signs.size()) << TXT(stopsigns.size()) << TXT(flags.size())
 			 << TXT(newsracks.size()) << TXT(ppaths.size()) << endl;
 	}
 	if (add_parking_lots) {
@@ -1332,6 +1338,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(benches,   bench_groups,    dstate, 0.16, shadow_only, 0); // dist_scale=0.16
 	draw_objects(fhydrants, fhydrant_groups, dstate, 0.06, shadow_only, 1); // dist_scale=0.06, has_immediate_draw=1
 	draw_objects(sstations, sstation_groups, dstate, 0.15, shadow_only, 1); // dist_scale=0.15, has_immediate_draw=1
+	draw_objects(fountains, fountain_groups, dstate, 0.20, shadow_only, 1); // dist_scale=0.20, has_immediate_draw=1
 	draw_objects(mboxes,    mbox_groups,     dstate, 0.04, shadow_only, 1); // dist_scale=0.04, has_immediate_draw=1
 	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0); // dist_scale=0.20
 	draw_objects(signs,     sign_groups,     dstate, 0.25, shadow_only, 0, 1); // dist_scale=0.25, draw_qbd_as_quads=1
@@ -1402,6 +1409,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(trashcans, trashcan_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(fhydrants, fhydrant_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(sstations, sstation_groups, pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(fountains, fountain_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(dividers,  divider_groups,  pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(pools,     pool_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(ppoles,    ppole_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
@@ -1431,6 +1439,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(trashcans, trashcan_groups, p1, p2, t, ret);
 	check_vector_line_intersect(fhydrants, fhydrant_groups, p1, p2, t, ret); // check bounding cube; cylinder intersection may be more accurate, but likely doesn't matter much
 	check_vector_line_intersect(sstations, sstation_groups, p1, p2, t, ret);
+	check_vector_line_intersect(fountains, fountain_groups, p1, p2, t, ret);
 	check_vector_line_intersect(dividers,  divider_groups,  p1, p2, t, ret);
 	check_vector_line_intersect(pools,     pool_groups,     p1, p2, t, ret);
 	check_vector_line_intersect(ppoles,    ppole_groups,    p1, p2, t, ret); // inaccurate, could be customized if needed
@@ -1516,7 +1525,8 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 	}
 	if (check_city_obj_pt_xy_contains(sstation_groups, sstations, pos, obj_ix)) {color = colorRGBA(0.6, 0.8, 0.4, 1.0); return 1;} // light olive
 	if (check_city_obj_pt_xy_contains(trashcan_groups, trashcans, pos, obj_ix)) {color = colorRGBA(0.8, 0.6, 0.3, 1.0); return 1;} // tan
-	if (check_city_obj_pt_xy_contains(ppath_groups,    ppaths,    pos, obj_ix)) {color = GRAY; return 1;} // can/should we restrict this to only run when inside a park?
+	if (check_city_obj_pt_xy_contains(ppath_groups,    ppaths,    pos, obj_ix))    {color = GRAY; return 1;} // can/should we restrict this to only run when inside a park?
+	if (check_city_obj_pt_xy_contains(fountain_groups, fountains, pos, obj_ix, 1)) {color = GRAY; return 1;} // is_cylin=1
 	// Note: ppoles, hcaps, manholes, mboxes, tcones, pladders, signs, stopsigns, flags, pigeons, and birds are skipped for now
 	return 0;
 }
