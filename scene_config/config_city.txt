@@ -210,14 +210,15 @@ city silverware_model    ../models/interiors/S3_cutlery_gold_Obj.model3d  1 0 0 
 city ceiling_fan_model ../models/interiors/ceiling_fan/CeilingFan.model3d 0 1 5  -1 -1 0   1 1.0 1.0  reverse_winding=4 # bad vertex winding order for top/bot; missing texture; centered in XZ (xy)
 city fire_ext_model ../models/interiors/fire_extinguisher/fire_extinguisher_co2.fbx 0 0 0  -1 -1 0 1 1.0 1.0
 city folded_shirt_model "../models/interiors/teeshirt/simple folded shirt.model3d"  0 0 0  0 0 90  1 1.0 1.0
-city pool_table_model  ../models/interiors/pool_table/pool_table_002.fbx  0 0 0  0 0 0  1 1.0 1.0
-city pool_ladder_model ../models/ladder-pool.fbx                 0 0 0  0 0 0  1 1.0 1.0
-city bar_stool_model   ../models/interiors/bar_stool/bar_stool_avorio.glb  0 0 0  1 -1 90  1 1.0 1.0
+city pool_table_model   ../models/interiors/pool_table/pool_table_002.fbx  0 0 0  0 0 0  1 1.0 1.0
+city pool_ladder_model  ../models/ladder-pool.fbx                 0 0 0  0 0 0  1 1.0 1.0
+city bar_stool_model    ../models/interiors/bar_stool/bar_stool_avorio.glb  0 0 0  1 -1 90  1 1.0 1.0
 #city bar_stool_model   ../models/interiors/bar_stool/Bar_Stool_Bellatier.fbx  0 0 0  0 0 90  1 1.0 1.0
 #city bar_stool_model   ../models/interiors/bar_stool/bar_stool_triangle/scene.gltf  0 0 0  0 0 90  1 1.0 1.0
 #city bar_stool_model   ../models/interiors/bar_stool/pub_stool/scene.gltf  0 0 0  0 0 90  1 1.0 1.0
-city padlock_model     ../models/interiors/padlock/untextured/scene.gltf   0 0 0  0 0 0  1 1.0 20.0  reverse_winding=8 # invert winding order of shackle
-city cash_register_model     ../models/interiors/cash_register/checkout_conv/scene.gltf  0 0 0  0 -1 26  1 1.0 1.0 # rotated at an odd angle
+city padlock_model      ../models/interiors/padlock/untextured/scene.gltf   0 0 0  0 0 0  1 1.0 20.0  reverse_winding=8 # invert winding order of shackle
+city cash_register_model   ../models/interiors/cash_register/checkout_conv/scene.gltf  0 0 0  0 -1 26  1 1.0 1.0 # rotated at an odd angle
+city water_fountain_model  ../models/interiors/drinking_fountain/scene.gltf 0 0 0  0 0 270  1 1.0 1.0
 #city toy_model    ../models/interiors/toys/Stacking_Toy.model3d 0 0 0  0 -1 90   1 1.0 1.0  reverse_winding=1 # two sided; center white part has wrong winding order
 
 # closet objects

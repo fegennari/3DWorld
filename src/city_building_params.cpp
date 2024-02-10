@@ -14,7 +14,7 @@ string const model_opt_names[NUM_OBJ_MODELS] =
 {"toilet_model", "sink_model", "tub_model", "fridge_model", "stove_model", "tv_model", ""/*monitor*/, "couch_model", "office_chair_model", "urinal_model",
 "lamp_model", "washer_model", "dryer_model", "key_model", "hanger_model", "clothing_model", "fire_escape_model", "wall_lamp_model", "cup_model", "toaster_model",
 "hood_model", "rocking_chair_model", "silverware_model", "toy_model", "ceiling_fan_model", "fire_ext_model", "folded_shirt_model", "plant_model", "pool_table_model",
-"pool_ladder_model", "bar_stool_model", "padlock_model", "cash_register_model",
+"pool_ladder_model", "bar_stool_model", "padlock_model", "cash_register_model", "water_fountain_model",
 /*animal models*/ "rat_model", "roach_model",
 /*city models*/ "fire_hydrant_model", "substation_model", "mailbox_model", "umbrella_model", "pigeon_model", "bird_animated_model", "flag_model"};
 
