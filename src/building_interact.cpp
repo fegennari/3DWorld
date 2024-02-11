@@ -955,15 +955,31 @@ void door_t::toggle_open_state(bool allow_partial_open) {
 }
 bool door_t::next_frame() { // returns true if state changed
 	if (!is_partially_open()) return 0;
-	open_amt += (open ? 1.0 : -1.0)*4.0*(fticks/TICKS_PER_SECOND); // 0.25s to open/close
+	open_amt += (open ? 1.0 : -(auto_close ? 0.1 : 1.0))*4.0*(fticks/TICKS_PER_SECOND); // 0.25s to open/close; auto closing doors close slowly
 	open_amt  = CLIP_TO_01(open_amt);
 	return 1;
 }
-void building_t::doors_next_frame() {
+void building_t::doors_next_frame(point const &player_pos) {
 	if (!has_room_geom()) return;
 	interior->last_active_door_ix = -1;
 
 	for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) {
+		if (d->auto_close && d->open_amt > 0.0) { // handle auto closing
+			cube_t open_area(*d);
+			open_area.expand_in_dim(d->dim, 0.5*d->get_width()); // expand halfway (for the non-opening side)
+			open_area.union_with_cube(d->get_open_door_path_bcube()); // include the path of the door
+			bool is_blocked(open_area.contains_pt_exp_xy_only(player_pos, get_scaled_player_radius())); // check if blocked by player
+			
+			if (!is_blocked) { // check building AI people blocking the door
+				for (person_t const &person : interior->people) {
+					if (open_area.contains_pt_exp_xy_only(person.pos, person.radius)) {is_blocked = 1; break;}
+				}
+			}
+			if (is_blocked) {d->open = 1;} // push open
+			else if (d->open_amt == 1.0) { // auto close
+				toggle_door_state((d - interior->doors.begin()), 1, 1, d->get_cube_center());
+			}
+		}
 		if (!d->next_frame()) continue;
 		handle_items_intersecting_closed_door(*d);
 		
@@ -1333,11 +1349,10 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 			else if (room_type == RTYPE_SERVER  ) {hum_amt = 0.2; hum_freq = 120.0;}
 			//else if (room_type == RTYPE_SECURITY) {}
 			//else if (room_type == RTYPE_SWIM    ) {}
-			// TODO: in moving elevator
 		}
 	} // end player_in_this_building
 	if (hum_amt > 0.0) {play_hum_sound(player_pos, hum_amt, 0.01*hum_freq);}
-	doors_next_frame(); // run for current and connected buildings
+	doors_next_frame(player_pos); // run for current and connected buildings
 	interior->room_geom->particle_manager.next_frame(*this);
 	interior->room_geom->fire_manager.next_frame(interior->room_geom->particle_manager);
 }

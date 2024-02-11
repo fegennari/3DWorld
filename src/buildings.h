@@ -1270,7 +1270,7 @@ struct stairs_place_t : public cube_t { // for extended basements
 };
 
 struct door_base_t : public cube_t {
-	bool dim=0, open_dir=0, hinge_side=0, on_stairs=0, mult_floor_room=0, for_closet=0;
+	bool dim=0, open_dir=0, hinge_side=0, on_stairs=0, mult_floor_room=0, for_closet=0, auto_close=0;
 	// is it useful to store the two rooms in the door/door_stack? this will speed up connectivity searches for navigation and room assignment,
 	// but only for finding the second room connected to a door, because we still need to iterate over all doors;
 	// unfortunately, it's not easy/cheap to assign these values because the room may not even be added until after the door is placed, so we have to go back and set room1/room2 later
@@ -1687,7 +1687,7 @@ struct building_t : public building_geom_t {
 	void toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, point const &actor_pos);
 	void notify_door_fully_closed_state(door_t const &door);
 	void handle_items_intersecting_closed_door(door_t const &door);
-	void doors_next_frame();
+	void doors_next_frame(point const &player_pos);
 	bool set_room_light_state_to(room_t const &room, float zval, bool make_on);
 	void set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state);
 	bool player_pickup_object(point const &at_pos, vector3d const &in_dir);
