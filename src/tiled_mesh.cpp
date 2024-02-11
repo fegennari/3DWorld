@@ -3389,12 +3389,19 @@ bool tile_draw_t::try_bind_tile_smap_at_point(point const &pos, shader_t &s, boo
 }
 
 void tile_draw_t::invalidate_tile_smap_at_pt(point const &pos, float radius) {
+	cube_t region;
+	region.set_from_sphere(pos, radius);
+	invalidate_tile_smap_in_region(region);
+}
+// Note: region should be less than one tile in size
+void tile_draw_t::invalidate_tile_smap_in_region(cube_t region) {
 	vector3d const b_ext(get_buildings_max_extent());
-	radius += max(0.5f*get_road_max_len().get_max_val(), max(b_ext.x, b_ext.y)); // expand by city tile overlap (should also include trees?)
+	float const road_len_exp(0.5f*get_road_max_len().get_max_val());
+	for (unsigned d = 0; d < 2; ++d) {region.expand_in_dim(d, max(road_len_exp, b_ext[d]));} // expand by city tile overlap (should also include trees?)
 
 	for (int y = 0; y < 2; ++y) { // try 4 corners, needed to handle objects that overlap more than one tile
 		for (int x = 0; x < 2; ++x) {
-			tile_t *const tile(get_tile_containing_point(pos + vector3d((x ? radius : -radius), (y ? radius : -radius), 0.0)));
+			tile_t *const tile(get_tile_containing_point(point(region.d[0][x], region.d[1][y], 0.0)));
 			if (tile) {tile->clear_shadow_map(&smap_manager);}
 		}
 	}

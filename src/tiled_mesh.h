@@ -506,6 +506,7 @@ public:
 	tile_t *get_tile_from_xy(tile_xy_pair const &tp) const;
 	tile_t *get_tile_containing_point(point const &pos) const;
 	void invalidate_tile_smap_at_pt(point const &pos, float radius);
+	void invalidate_tile_smap_in_region(cube_t region);
 	bool try_bind_tile_smap_at_point(point const &pos, shader_t &s, bool check_only) const;
 	bool check_sphere_collision(point &pos, float radius) const;
 	bool check_cube_int_trees(cube_t const &c) const;
