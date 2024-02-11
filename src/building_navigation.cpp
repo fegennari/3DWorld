@@ -2089,6 +2089,13 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 	return person.ai_state; // fallthrough case, no change to ai_state
 }
 
+bool zombie_in_attack_range(person_t &person) {
+	// use zval of the feet to handle cases where the person and the player are different heights
+	float const player_height(get_bldg_player_height());
+	point const feet_pos(person.pos.x, person.pos.y, person.get_z1()), player_feet_pos(cur_player_building_loc.pos - vector3d(0.0, 0.0, player_height));
+	return (fabs(feet_pos.z - player_feet_pos.z) < 0.5*player_height && dist_less_than(feet_pos, player_feet_pos, 1.2f*(person.radius + building_t::get_scaled_player_radius())));
+}
+
 // Note: non-const because this updates room light and door state
 int building_t::ai_room_update(person_t &person, float delta_dir, unsigned person_ix, rand_gen_t &rgen) {
 
@@ -2146,47 +2153,45 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		cout << TXT(person.pos.str()) << TXT(bcube.str()) << TXT(interior->basement_ext_bcube.str()) << endl;
 		assert(0);
 	}
-	if (person.ai_state >= AI_WAIT_ELEVATOR) {return run_ai_elevator_logic(person, delta_dir, rgen);} // handle elevator case
+	debug_mode = (cur_player_building_loc.building_ix == person.cur_bldg); // used for debugging printouts
+	bool const zombie_attack_mode(can_ai_follow_player(person, allow_diff_building));
+	
+	if (zombie_attack_mode && zombie_in_attack_range(person)) { // check for player intersection/damage (even if zombie is in the elevator)
+		if (!check_for_wall_ceil_floor_int(person.pos, cur_player_building_loc.pos, 1)) { // inc_pg_br_walls=1
+			int const ret_status(register_ai_player_coll(person.has_key, person.get_height())); // return value: 0=no effect, 1=player is killed, 2=this person is killed
+			// player is killed, we could track kills here
+			if (ret_status == 1) {register_player_death(cur_player_building_loc.pos);}
+			else if (ret_status == 2) {return AI_TO_REMOVE;} // player defeats zombie, remove it
+		}
+	}
+	if (person.ai_state >= AI_WAIT_ELEVATOR) { // handle elevator case
+		return run_ai_elevator_logic(person, delta_dir, rgen);
+	}
 	person.must_re_call_elevator = 0; // reset if we got out of the elevator logic with this set
 	bool const prev_in_pool(person.in_pool);
 	person.in_pool = 0; // reset for this frame
 	run_ai_pool_logic(person, speed_mult); // handle AI inside the pool; this can happen for zombies
 	if (prev_in_pool && !person.in_pool) {person.retreat_time = 0.5*TICKS_PER_SECOND;} // retreat for 0.5s to avoid falling back into the pool chasing the player
 	build_nav_graph();
-	debug_mode = (cur_player_building_loc.building_ix == person.cur_bldg); // used for debugging printouts
 
-	if (can_ai_follow_player(person, allow_diff_building)) { // check for player intersection/damage
-		// use zval of the feet to handle cases where the person and the player are different heights
-		float const player_height(get_bldg_player_height());
-		point const feet_pos(person.pos.x, person.pos.y, person.get_z1()), player_feet_pos(cur_player_building_loc.pos - vector3d(0.0, 0.0, player_height));
+	if (zombie_attack_mode && player_is_hiding && person.saw_player_hide && global_building_params.ai_opens_doors && global_building_params.ai_sees_player_hide >= 2 &&
+		player_hiding_obj.type != TYPE_NONE && same_room_and_floor_as_player(person) && cur_player_building_loc.building_ix == person.cur_bldg)
+	{
+		// open the closet, stall, or shower door (closet door should already be open)
+		// it may not be safe to use an object iterator or even an index since we're in a different thread, so do a linear search for the target object
+		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+		cube_t coll_cube(person.get_bcube());
+		coll_cube.expand_by_xy(1.5*person.radius);
 
-		if (fabs(feet_pos.z - player_feet_pos.z) < 0.5*player_height && dist_less_than(feet_pos, player_feet_pos, 1.2f*(person.radius + get_scaled_player_radius()))) {
-			if (!check_for_wall_ceil_floor_int(person.pos, cur_player_building_loc.pos, 1)) { // inc_pg_br_walls=1
-				int const ret_status(register_ai_player_coll(person.has_key, person.get_height())); // return value: 0=no effect, 1=player is killed, 2=this person is killed
-				// player is killed, we could track kills here
-				if (ret_status == 1) {register_player_death(cur_player_building_loc.pos);}
-				else if (ret_status == 2) {return AI_TO_REMOVE;} // player defeats zombie, remove it
-			}
-		}
-		if (player_is_hiding && person.saw_player_hide && global_building_params.ai_opens_doors && global_building_params.ai_sees_player_hide >= 2 &&
-			player_hiding_obj.type != TYPE_NONE && same_room_and_floor_as_player(person) && cur_player_building_loc.building_ix == person.cur_bldg)
-		{
-			// open the closet, stall, or shower door (closet door should already be open)
-			// it may not be safe to use an object iterator or even an index since we're in a different thread, so do a linear search for the target object
-			auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
-			cube_t coll_cube(person.get_bcube());
-			coll_cube.expand_by_xy(1.5*person.radius);
-
-			for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-				if (*i != player_hiding_obj)   continue;
-				if (i->is_open())              break; // already open
-				if (!i->intersects(coll_cube)) break; // too far away (uses full object, not door, but should be close enough)
-				i->flags |= RO_FLAG_OPEN; // open the door
-				play_open_close_sound(*i, person.pos);
-				interior->room_geom->update_draw_state_for_room_object(*i, *this, 0);
-				break; // done
-			} // for i
-		}
+		for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+			if (*i != player_hiding_obj)   continue;
+			if (i->is_open())              break; // already open
+			if (!i->intersects(coll_cube)) break; // too far away (uses full object, not door, but should be close enough)
+			i->flags |= RO_FLAG_OPEN; // open the door
+			play_open_close_sound(*i, person.pos);
+			interior->room_geom->update_draw_state_for_room_object(*i, *this, 0);
+			break; // done
+		} // for i
 	}
 	bool choose_dest(!person.target_valid());
 	bool const update_path(!person.in_pool && need_to_update_ai_path(person)), has_rgeom(has_room_geom());
