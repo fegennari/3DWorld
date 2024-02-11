@@ -2464,8 +2464,8 @@ void building_t::print_building_stats() const {
 
 		for (unsigned f = 0; f < num_floors; ++f) {
 			room_type const rtype(room.get_room_type(f));
-			if      (rtype == RTYPE_BED || rtype == RTYPE_MASTER_BED) {++num_bedrooms;}
-			else if (rtype == RTYPE_BATH) {++num_bathrooms;}
+			if (rtype == RTYPE_BED || rtype == RTYPE_MASTER_BED) {++num_bedrooms;}
+			else if (is_bathroom(rtype)) {++num_bathrooms;}
 		}
 	} // for room
 	cout << TXT(num_rooms) << TXT(num_bedrooms) << TXT(num_bathrooms) << TXT(square_footage) << endl;

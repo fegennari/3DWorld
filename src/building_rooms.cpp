@@ -883,7 +883,7 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 		unsigned const floor_ix(room->get_floor_containing_zval((balcony_z1 + 0.1*floor_spacing), floor_spacing));
 		unsigned const room_id(room - interior->rooms.begin());
 		room_type const rtype(room->get_room_type(floor_ix));
-		if (rtype == RTYPE_BATH) continue; // no bathroom balconies as that would be weird
+		if (is_bathroom(rtype)) continue; // no bathroom balconies as that would be weird
 		assert(room->part_id < parts.size());
 		cube_t const &part(parts[room->part_id]);
 		bool added(0);
@@ -1605,7 +1605,7 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 					int const room_id(get_room_id_for_window(window, dim, dir, is_split));
 					unsigned floor_ix(0); // unused
 
-					if (get_room_type_and_floor(room_id, window.zc(), floor_ix) == RTYPE_BATH) { // check for bathroom block windows
+					if (is_bathroom(get_room_type_and_floor(room_id, window.zc(), floor_ix))) { // check for bathroom block windows
 						cube_t window_exp(window);
 						window_exp.expand_by_xy(2.0*trim_thickness); // window is shifted by trim_thickness, so need to expand by more than that
 
@@ -1841,8 +1841,8 @@ void building_t::add_window_coverings(cube_t const &window, bool dim, bool dir) 
 	unsigned floor_ix(0);
 
 	switch (get_room_type_and_floor(room_id, window.zc(), floor_ix)) {
-	case RTYPE_BED: case RTYPE_MASTER_BED: add_window_blinds(window, dim, dir, room_id, floor_ix); break; // bedroom
-	case RTYPE_BATH: add_bathroom_window(window, dim, dir, room_id, floor_ix); break; // bathroom
+	case RTYPE_BED : case RTYPE_MASTER_BED: add_window_blinds(window, dim, dir, room_id, floor_ix); break; // bedroom
+	case RTYPE_BATH: case RTYPE_MENS: case RTYPE_WOMENS: add_bathroom_window(window, dim, dir, room_id, floor_ix); break; // bathroom
 	} // end switch
 }
 
@@ -2438,7 +2438,8 @@ void room_t::assign_all_to(room_type rt, bool locked) {
 void room_t::assign_to(room_type rt, unsigned floor, bool locked) {
 	// room types are only tracked up to the 4th floor, and every floor above that has the same type as the 4th floor; good enough for houses at least
 	floor = wrap_room_floor(floor);
-	if (rtype[floor] == RTYPE_BATH) return; // assign unless already set to a bathroom, since we need that for has_room_of_type(RTYPE_BATH)
+	// assign unless already set to a bathroom, unless we're refining the bathroom type to men's or women's
+	if (is_bathroom(rtype[floor]) && !is_bathroom(rt)) return;
 	rtype[floor] = rt;
 	if (locked) {rtype_locked |= (1 << floor);} // lock this floor
 }
