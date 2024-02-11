@@ -938,6 +938,7 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 				cube_t floor_slab(balcony);
 				floor_slab.z2() = balcony.z1() + 0.12*balcony.dz(); // matches code in get_balcony_cubes()
 				ext_steps.emplace_back(floor_slab, dim, 0, dir, 0, 0, 0, 1); // enclosed, no step dir
+				details.emplace_back(floor_slab, DETAIL_OBJ_SHAD_ONLY);
 				
 				// add door connecting to the house if possible
 				if (has_windows()) { // find a space between two windows
@@ -1785,6 +1786,7 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 					set_cube_zvals(collider, ground_floor_z1, (ground_floor_z1 + 0.5*(step.z1() - ground_floor_z1)));
 					details.emplace_back(collider, DETAIL_OBJ_COLLIDER);
 				}
+				details.emplace_back(step, DETAIL_OBJ_SHAD_ONLY);
 			} // for cand
 			ext_steps.back().is_base = ext_steps.back().at_ground = 1; // last step is at the bottom
 			// add side railing, with balusters
@@ -1820,6 +1822,7 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 			railings.emplace_back(railing, TYPE_RAILING, 0, !dim, !step_dir, (RO_FLAG_TOS | RO_FLAG_EXTERIOR), 1.0, SHAPE_CUBE, railing_color);
 		}
 		ext_steps.emplace_back(door_step, !dim, step_dir, dir, 1); // add the door step; here dim is wall dim, but we store stairs dim
+		details.emplace_back(door_step, DETAIL_OBJ_SHAD_ONLY);
 	} // for ix
 	vector_add_to(railings, objs); // add railings at the end
 	for (ext_step_t const &step : ext_steps) {union_with_coll_bcube(step);}

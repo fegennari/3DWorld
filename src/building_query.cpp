@@ -357,9 +357,11 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 	if (player_wait_respawn) {pos2.x = p_last2.x; pos2.y = p_last2.y;} // player can't move
 	else if (reduce_speed) {apply_speed_factor(pos2, p_last2, 0.6);} // slow down to 60% when on exterior stairs or balconies
 
-	if (on_ext_stair) {
-		// only need to check for blockers at the bottom of stairs
-		for (auto const &i : details) {had_coll |= sphere_cube_int_update_pos(pos2, radius, (i + xlate), p_last2, xy_only, cnorm_ptr);} // treat as cubes
+	if (on_ext_stair) { // only need to check for blockers at the bottom of stairs
+		for (auto const &i : details) {
+			if (i.type == DETAIL_OBJ_SHAD_ONLY) continue; // not a collider
+			had_coll |= sphere_cube_int_update_pos(pos2, radius, (i + xlate), p_last2, xy_only, cnorm_ptr); // treat as cubes
+		}
 	}
 	else if (is_interior) {
 		point pos2_bs(pos2 - xlate);
@@ -424,8 +426,10 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 
 		// Note: driveways are handled elsewhere in the control flow
 		if (!xy_only) { // don't need to check details and roof in xy_only mode because they're contained in the XY footprint of the parts (except balconies and stairs)
-			for (auto const &i : details) {had_coll |= sphere_cube_int_update_pos(pos2, radius, (i + xlate), p_last2, xy_only, cnorm_ptr);} // treat as cubes
-
+			for (auto const &i : details) {
+				if (i.type == DETAIL_OBJ_SHAD_ONLY) continue; // not a collider
+				had_coll |= sphere_cube_int_update_pos(pos2, radius, (i + xlate), p_last2, xy_only, cnorm_ptr); // treat as cubes
+			}
 			for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
 				point const pos_xlate(pos2 - xlate);
 

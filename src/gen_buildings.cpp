@@ -1649,8 +1649,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		else {assert(0);} // unsupported type
 	} // for i
 	for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
-		if (i->type == DETAIL_OBJ_COLLIDER ) continue; // not drawn
-		if (i->type == DETAIL_OBJ_COLL_SHAD) continue; // should only be drawn in the shadow pass, which isn't setup here; future work (also ext_steps should cast shadows)
+		if (i->type == DETAIL_OBJ_COLLIDER || i->type == DETAIL_OBJ_COLL_SHAD || i->type == DETAIL_OBJ_SHAD_ONLY) continue; // only drawn in the shadow pass
 
 		if (i->type == ROOF_OBJ_AC) {
 			bool const swap_st(i->dx() > i->dy());
@@ -1735,6 +1734,12 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		tid_nm_pair_t tex(mat.roof_tex); // use a different dome texture?
 		tex.tscale_x *= tscale; tex.tscale_y *= tscale;
 		bdraw.add_roof_dome(point(center.x, center.y, top.z2()), 0.5*dx, 0.5*dy, tex, roof_color*1.5, (roof_type == ROOF_TYPE_ONION));
+	}
+}
+
+void building_t::get_detail_shadow_casters(building_draw_t &bdraw) {
+	for (auto const &i : details) {
+		if (i.type == DETAIL_OBJ_COLL_SHAD || i.type == DETAIL_OBJ_SHAD_ONLY) {bdraw.add_cube(*this, i, tid_nm_pair_t(), WHITE);} // always a cube
 	}
 }
 
@@ -3004,12 +3009,19 @@ public:
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // draw only visible tiles
 					if (!building_grid_visible(xlate, g->bcube)) continue; // VFC; use exterior bcube
 					(*i)->building_draw_vbo.draw_tile(s, (g - (*i)->grid_by_tile.begin()), 1);
+
+					// draw shadow casters such as balconies that are added later as buildings come into view; won't show up until shadow map is regenerated
+					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
+						building_t &b((*i)->get_building(bi->ix));
+						if (!b.interior || !camera_pdu.cube_visible(b.bcube + xlate)) continue; // no interior or not visible
+						b.get_detail_shadow_casters(ext_parts_draw);
+					}
 				}
 				//(*i)->building_draw_vbo.draw(s, 1); // less CPU time but more GPU work, in general seems to be slower
 			}
 		} // for i
 		if ( interior_shadow_maps) {glDisable(GL_CULL_FACE);} // need to draw back faces of exterior parts to handle shadows on blinds
-		ext_parts_draw.draw(s, 1, 1);
+		ext_parts_draw.draw(s, 1, 1); // shadow_only=1, direct_draw_no_vbo=1
 		ext_parts_draw.clear();
 		if (!interior_shadow_maps) {glDisable(GL_CULL_FACE);}
 		s.end_shader();

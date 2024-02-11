@@ -1317,7 +1317,7 @@ typedef vector<door_t> vect_door_t;
 
 // Note: some of these roof objects are actually on the ground next to houses
 enum {ROOF_OBJ_BLOCK=0, ROOF_OBJ_ANT, ROOF_OBJ_WALL, ROOF_OBJ_ECAP, ROOF_OBJ_AC, ROOF_OBJ_SCAP, ROOF_OBJ_SIGN, ROOF_OBJ_SIGN_CONN, ROOF_OBJ_WTOWER, ROOF_OBJ_DUCT,
-	DETAIL_OBJ_COLLIDER, DETAIL_OBJ_COLL_SHAD};
+	DETAIL_OBJ_COLLIDER, DETAIL_OBJ_COLL_SHAD, DETAIL_OBJ_SHAD_ONLY};
 enum {ROOF_TYPE_FLAT=0, ROOF_TYPE_SLOPE, ROOF_TYPE_PEAK, ROOF_TYPE_HIPPED, ROOF_TYPE_DOME, ROOF_TYPE_ONION, ROOF_TYPE_SHED};
 
 struct roof_obj_t : public cube_t {
@@ -1656,6 +1656,7 @@ struct building_t : public building_geom_t {
 	colorRGBA get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_pair_t &tex) const;
 	colorRGBA get_ceil_tex_and_color (cube_t const &ceil_cube,  tid_nm_pair_t &tex) const;
 	void get_all_drawn_exterior_verts(building_draw_t &bdraw);
+	void get_detail_shadow_casters   (building_draw_t &bdraw);
 	void get_all_drawn_ext_wall_verts(building_draw_t &bdraw);
 	void get_basement_ext_wall_verts (building_draw_t &bdraw) const;
 	void get_all_drawn_interior_verts(building_draw_t &bdraw);
