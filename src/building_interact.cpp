@@ -815,7 +815,8 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		gen_sound_thread_safe(SOUND_CLICK, local_center, 0.35);
 	}
 	else if (obj.type == TYPE_WFOUNTAIN) {
-		refill_thirst(); // that's it?
+		refill_thirst();
+		gen_sound_thread_safe(SOUND_GULP, local_center, 0.5);
 		sound_scale = 0.1; // very little sound
 	}
 	else if (obj.type == TYPE_FALSE_DOOR) { // locked, can't open
