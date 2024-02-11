@@ -2494,12 +2494,13 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 		aisle_width   = aisle_spacing - rack_width;
 		aisle_spacing = (width - aisle_width)/nrows;
 	}
-	float const rack_spacing((length - aisle_width)/nracks), rack_length(rack_spacing - aisle_width), pillar_width(1.8*get_wall_thickness());
+	float const rack_spacing((length - aisle_width)/nracks), rack_length(rack_spacing - aisle_width);
+	float const wall_thickness(get_wall_thickness()), pillar_width(2.0*wall_thickness), fc_gap(get_floor_ceil_gap());
 	assert(rack_length > 0.0);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t rack, pillar;
 	set_cube_zvals(rack,   zval, (zval + rack_height));
-	set_cube_zvals(pillar, zval, (zval + get_floor_ceil_gap() + (retail_floor_levels - 1)*floor_spacing)); // up to the ceiling
+	set_cube_zvals(pillar, zval, (zval + fc_gap + (retail_floor_levels - 1)*floor_spacing)); // up to the ceiling
 	unsigned const objs_start(objs.size()), obj_id(rgen.rand()); // same style for each rack
 	unsigned rack_id(0);
 	bool const skip_middle_row(nrows & 1);
@@ -2544,6 +2545,14 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 				pillar.d[dim][0] = start - pillar_width;
 				pillar.d[dim][1] = start;
 				objs.emplace_back(pillar, TYPE_PG_WALL, room_id, 0, 0); // interior is okay since pillars are hard to see up against shelf racks
+
+				if (has_tall_retail()) { // add bare top part of pillars
+					objs.back().flags |= RO_FLAG_ADJ_TOP; // must draw the top surface
+					cube_t pillar_top(pillar);
+					objs.back().z2() = pillar_top.z1() = zval + fc_gap; // prev was bottom, next is top
+					pillar_top.expand_by_xy(-0.1*wall_thickness); // slight shrink
+					objs.emplace_back(pillar_top, TYPE_PG_PILLAR, room_id, 0, 0);
+				}
 			}
 		} // for r
 	} // for n

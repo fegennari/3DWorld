@@ -1954,9 +1954,9 @@ void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d cons
 	get_material(get_scaled_wall_tex(wall_tex), 1).add_cube_to_verts(c, c.color, tex_origin, skip_faces); // no room lighting color atten
 }
 void building_room_geom_t::add_basement_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
-	bool const is_concrete(c.flags & RO_FLAG_BACKROOM);
+	bool const is_concrete(c.flags & RO_FLAG_BACKROOM), draw_top(c.flags & RO_FLAG_ADJ_TOP);
 	tid_nm_pair_t const tex(is_concrete ? tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1) : get_scaled_wall_tex(wall_tex));
-	get_material(tex, 1, 0, 2).add_cube_to_verts(c, c.color, tex_origin, EF_Z12); // small=2/detail, shadowed, no color atten, sides only
+	get_material(tex, 1, 0, 2).add_cube_to_verts(c, c.color, tex_origin, (draw_top ? EF_Z1 : EF_Z12)); // small=2/detail, shadowed, no color atten, sides only unless draw_top
 }
 void building_room_geom_t::add_basement_pillar(room_object_t const &c, tid_nm_pair_t const &wall_tex) {
 	get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1), 1, 0, 2).add_cube_to_verts(c, c.color, all_zeros, EF_Z12); // small=2/detail, shadowed, no color atten
