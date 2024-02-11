@@ -1209,6 +1209,7 @@ struct room_t : public cube_t { // size=64
 	bool has_room_of_type(room_type type) const;
 	float get_light_amt() const;
 	unsigned get_floor_containing_zval(float zval, float floor_spacing) const {return (is_single_floor ? 0 : unsigned((zval - z1())/floor_spacing));}
+	room_type get_room_type_for_zval  (float zval, float floor_spacing) const {return get_room_type(get_floor_containing_zval(zval, floor_spacing));}
 }; // room_t
 
 struct extb_room_t : public cube_t { // extended basement room candidate

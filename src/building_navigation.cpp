@@ -1261,6 +1261,10 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 			}
 			assert(person.target_pos.z > bot_floor_z && person.target_pos.z < top_ceil_z);
 		}
+		if (!in_building_gameplay_mode()) { // handle bathroom genders, unless we're a zombie
+			room_type const rtype(room.get_room_type_for_zval(person.target_pos.z, floor_spacing));
+			if (rtype == (person.is_female ? RTYPE_MENS : RTYPE_WOMENS)) continue; // wrong gender
+		}
 		person.dest_room = cand_room; // set but not yet used
 		person.goal_type = GOAL_TYPE_ROOM;
 		person.last_used_stairs = 0; // non-stairs dest, reset
