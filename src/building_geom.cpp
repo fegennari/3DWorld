@@ -704,7 +704,7 @@ bool building_t::add_chimney(bool two_parts, bool stacked_parts, bool hipped_roo
 
 void building_t::maybe_gen_chimney_smoke() const {
 	if (has_chimney != 2 || !has_int_fplace || !animate2 || !begin_motion) return; // only if there's an interior fireplace; activate with 'b' key
-	if (int(24534*bcube.x1()) & 1) return; // only 50% of houses have chimney smoke; use position as random seed
+	if (int(24534*bcube.x1()) & 3) return; // only 25% of houses have chimney smoke; use position as random seed
 	static rand_gen_t smoke_rgen;
 	if (smoke_rgen.rand_float() > 4.0f*fticks/TICKS_PER_SECOND) return; // randomly spawn every so often
 	gen_arb_smoke(cube_top_center(get_chimney()), GRAY, vector3d(0.0, 0.0, 0.75), 0.25*smoke_rgen.rand_uniform(0.015, 0.025),
