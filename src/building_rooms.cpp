@@ -1701,7 +1701,9 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 		cube_t step(get_step_for_ext_door(d));
 		step.d[dim][!dir] -= (dir ? 1.0 : -1.0)*door_shift_dist; // shift slightly away from the building to prevent Z-fighting with the exterior wall
 		assert(step.is_strictly_normalized());
-		unsigned const obj_ix(objs.size()), flags(RO_FLAG_EXTERIOR | (above_ground ? RO_FLAG_ADJ_BOT : 0));
+		unsigned const obj_ix(objs.size());
+		// must draw the bottom surface in case it's on a hill, unless this is a city building
+		unsigned const flags(RO_FLAG_EXTERIOR | (above_ground ? RO_FLAG_ADJ_BOT : 0) | ((is_in_city && !above_ground) ? RO_FLAG_ADJ_LO : 0));
 		room_obj_shape const shape(is_garage ? SHAPE_ANGLED : SHAPE_CUBE); // garage door has a sloped ramp
 		objs.emplace_back(step, TYPE_EXT_STEP, 0, dim, !dir, flags, 1.0, shape, step_color);
 		if (above_ground && !is_garage) {to_add_stairs.push_back(obj_ix);} // add steps up to this door

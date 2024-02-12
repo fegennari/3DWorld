@@ -1724,7 +1724,8 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 	for (auto i = fences.begin(); i != fences.end(); ++i) {
 		bdraw.add_fence(*this, *i, tid_nm_pair_t(WOOD_TEX, 0.4f/min(i->dx(), i->dy())), WHITE, (fences.size() > 1));
 	}
-	add_driveway_or_porch(bdraw, *this, driveway, LT_GRAY, 0); // skip_bottom=0, since it may be visible when extended over the terrain
+	bool const skip_bottom(is_in_city); // skip_bottom=0, since it may be visible when extended over the terrain; okay to skip bottom for city driveways
+	add_driveway_or_porch(bdraw, *this, driveway, LT_GRAY, skip_bottom);
 	add_driveway_or_porch(bdraw, *this, porch,    LT_GRAY, 1); // skip_bottom=1
 
 	if (roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION) {
