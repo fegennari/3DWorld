@@ -1488,6 +1488,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool const has_stairs_this_floor(!is_in_attic && room.has_stairs_on_floor(cur_floor));
 		bool const light_room_has_stairs_or_ramp(i->has_stairs() || has_stairs_this_floor || (check_ramp && is_room_above_ramp(room, i->z1())));
 		bool const is_over_pool(has_pool() && (int)i->room_id == interior->pool.room_ix);
+		//bool const light_room_is_tall(room.is_single_floor && lpos.z > room.z1() + window_vspacing);
 		// special case for light shining down from above stairs when the player is below
 		bool const light_above_stairs(lpos.z > camera_z && light_room_has_stairs_or_ramp);
 		bool stairs_light(0), player_in_elevator(0), cull_if_not_by_stairs(0);

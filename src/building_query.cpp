@@ -1075,6 +1075,8 @@ bool building_t::all_room_int_doors_closed(unsigned room_ix, float zval) const {
 	if (room.has_stairs_on_floor(room.get_floor_containing_zval(zval, get_window_vspace()))) return 0; // might be visible through stairs
 	cube_t tc(room);
 	tc.expand_by_xy(2.0*get_wall_thickness()); // expand so that doors overlap
+	// if the room is a single floor, check doors within the full Z span; otherwise, only consider doors overlapping zval
+	float const z1(room.is_single_floor ? room.z1() : zval), z2(room.is_single_floor ? room.z2() : zval);
 
 	for (auto const &ds : interior->door_stacks) {
 		if (!tc.contains_cube(ds)) continue;
@@ -1083,7 +1085,7 @@ bool building_t::all_room_int_doors_closed(unsigned room_ix, float zval) const {
 		for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
 			door_t const &door(interior->doors[dix]);
 			if (!ds.is_same_stack(door)) break; // moved to a different stack, done
-			if (door.z1() < zval && door.z2() > zval && door.open_amt > 0.0 && tc.contains_cube(door)) return 0;
+			if (door.z1() < z2 && door.z2() > z1 && door.open_amt > 0.0 && tc.contains_cube(door)) return 0;
 		}
 	} // for ds
 	return 1;
