@@ -930,6 +930,7 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 				bool const hanging(has_bcube_int(area_below, avoid) || check_cube_intersect_non_main_part(area_below));
 				room_object_t balcony_obj(balcony, TYPE_BALCONY, room_id, dim, dir, (hanging ? RO_FLAG_HANGING : 0), 1.0, SHAPE_CUBE, WHITE);
 				balcony_obj.obj_id = balcony_style; // set so that we can select from multiple balcony styles
+				unsigned const draw_style(balcony_style & 3); // wooden walls, metal railing + bars, metal railing + 45 deg rotated bars, metal railing + wood sides
 				unsigned const balcony_obj_ix(objs.size());
 				objs.push_back(balcony_obj);
 				balconies.push_back(balcony);
@@ -940,7 +941,12 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 				floor_slab.z2() = balcony.z1() + 0.12*balcony.dz(); // matches code in get_balcony_cubes()
 				ext_steps.emplace_back(floor_slab, dim, 0, dir, 0, 0, 0, 1); // enclosed, no step dir
 				details.emplace_back(floor_slab, DETAIL_OBJ_SHAD_ONLY);
-				
+
+				if (draw_style == 0 || draw_style == 3) { // add shadow casters for sides
+					cube_t cubes[4]; // {bottom, front, left side, right side}
+					get_balcony_cubes(balcony_obj, cubes);
+					for (unsigned n = 1; n < 4; ++n) {details.emplace_back(cubes[n], DETAIL_OBJ_SHAD_ONLY);} // skip bottom, which was added above
+				}
 				// add door connecting to the house if possible
 				if (has_windows()) { // find a space between two windows
 					float const door_width(get_doorway_width()), door_hwidth(0.5*door_width), edge_pad(2.0*wall_thickness);
