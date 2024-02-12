@@ -1340,7 +1340,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 		maybe_update_tape(player_pos, 0); // end_of_tape=0
 		if (interior->room_geom->fire_manager.get_closest_fire(player_pos, player_radius, player_z1, player_z2)) {player_take_damage(0.006);} // small amount of fire damage
 
-		if (player_room_ix >= 0) { // check for sounds
+		if (player_room_ix >= 0 /*&& !is_house*/) { // check for sounds; should this be for office buildings only?
 			room_t const &room(get_room(player_room_ix));
 			unsigned const camera_floor(room.get_floor_containing_zval(camera_rot.z, get_window_vspace()));
 			unsigned const room_type(room.get_room_type(camera_floor));
@@ -1349,6 +1349,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 			else if (room_type == RTYPE_SERVER  ) {hum_amt = 0.2; hum_freq = 120.0;}
 			//else if (room_type == RTYPE_SECURITY) {}
 			//else if (room_type == RTYPE_SWIM    ) {}
+			//else if (room_type == RTYPE_LAUNDRY   ) {}
 		}
 	} // end player_in_this_building
 	if (hum_amt > 0.0) {play_hum_sound(player_pos, hum_amt, 0.01*hum_freq);}
