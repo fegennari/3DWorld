@@ -44,9 +44,9 @@ unsigned const AO_RAY_LEN(NUM_AO_STEPS*(NUM_AO_STEPS+1)/2); // 36
 
 enum {FM_NONE, FM_INC_MESH, FM_DEC_MESH, FM_FLATTEN, FM_REM_TREES, FM_ADD_TREES, FM_REM_GRASS, FM_ADD_GRASS, NUM_FIRE_MODES};
 
-struct clear_area_t : public sphere_t {
+struct clear_area_t : public cube_t {
 	bool clear_next_frame;
-	clear_area_t(point const &pos_, float radius_, bool cnf) : sphere_t(pos_, radius_), clear_next_frame(cnf) {}
+	clear_area_t(cube_t const &region, bool cnf) : cube_t(region), clear_next_frame(cnf) {}
 };
 
 
@@ -2586,9 +2586,9 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 	// handle clearing of tile shadow maps
 	vector<clear_area_t> to_clear_next_frame;
 
-	for (auto i = tile_smaps_to_clear.begin(); i != tile_smaps_to_clear.end(); ++i) {
-		invalidate_tile_smap_at_pt(i->pos, i->radius);
-		if (i->clear_next_frame) {to_clear_next_frame.push_back(*i); to_clear_next_frame.back().clear_next_frame = 0;}
+	for (clear_area_t const &i : tile_smaps_to_clear) {
+		invalidate_tile_smap_in_region(i);
+		if (i.clear_next_frame) {to_clear_next_frame.emplace_back(i, 0);} // insert again with clear_next_frame=0
 	}
 	tile_smaps_to_clear = to_clear_next_frame;
 	
@@ -3388,11 +3388,6 @@ bool tile_draw_t::try_bind_tile_smap_at_point(point const &pos, shader_t &s, boo
 	return (tile != nullptr && tile->try_bind_shadow_map(s, check_only));
 }
 
-void tile_draw_t::invalidate_tile_smap_at_pt(point const &pos, float radius) {
-	cube_t region;
-	region.set_from_sphere(pos, radius);
-	invalidate_tile_smap_in_region(region);
-}
 // Note: region should be less than one tile in size
 void tile_draw_t::invalidate_tile_smap_in_region(cube_t region) {
 	vector3d const b_ext(get_buildings_max_extent());
@@ -3587,9 +3582,14 @@ bool sphere_int_tiled_terrain(point &pos, float radius) {return terrain_tile_dra
 bool cube_int_tiled_terrain_trees(cube_t const &c) {return terrain_tile_draw.check_cube_int_trees(c);}
 float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : terrain_tile_draw.get_actual_zmin());}
 bool try_bind_tile_smap_at_point(point const &pos, shader_t &s, bool check_only) {return terrain_tile_draw.try_bind_tile_smap_at_point(pos, s, check_only);}
-// defer update until tile draw (if called from non-drawing thread)
-void invalidate_tile_smap_at_pt(point const &pos, float radius, bool repeat_next_frame) {tile_smaps_to_clear.emplace_back(pos, radius, repeat_next_frame);}
+// defer update until tile draw (if called from non-drawing thread); region and pos are in camera space
+void invalidate_tile_smap_in_region(cube_t const &region, bool repeat_next_frame) {tile_smaps_to_clear.emplace_back(region, repeat_next_frame);}
 
+void invalidate_tile_smap_at_pt(point const &pos, float radius, bool repeat_next_frame) {
+	cube_t region;
+	region.set_from_sphere(pos, radius);
+	invalidate_tile_smap_in_region(region, repeat_next_frame);
+}
 
 // *** tree/grass addition/removal ***
 

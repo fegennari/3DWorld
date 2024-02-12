@@ -14,6 +14,7 @@ bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i,
 void get_balcony_pillars(room_object_t const &c, float ground_floor_z1, cube_t pillar[2]);
 void expand_convex_polygon_xy(vect_point &points, point const &center, float expand);
 bool is_pool_tile_floor(room_object_t const &obj);
+void invalidate_tile_smap_in_region(cube_t const &region, bool repeat_next_frame=0);
 
 
 unsigned light_ix_assign_t::get_ix_for_light(cube_t const &c, bool walls_not_shared) {
@@ -1021,6 +1022,7 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 		} // for dim
 		if (num_balconies == max_balconies) break; // done
 	} // for room
+	if (num_balconies > 0) {invalidate_tile_smap_in_region(bcube + get_camera_coord_space_xlate());}
 }
 
 void building_t::add_gutter_downspouts(rand_gen_t &rgen, vect_cube_t const &balconies) {
@@ -1826,6 +1828,7 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 	} // for ix
 	vector_add_to(railings, objs); // add railings at the end
 	for (ext_step_t const &step : ext_steps) {union_with_coll_bcube(step);}
+	if (!ext_steps.empty()) {invalidate_tile_smap_in_region(bcube + get_camera_coord_space_xlate());}
 }
 
 // *** Windows ***

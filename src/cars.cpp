@@ -21,6 +21,7 @@ extern city_params_t city_params;
 
 
 bool in_building_gameplay_mode();
+void invalidate_tile_smap_in_region(cube_t const &region, bool repeat_next_frame=0);
 
 float get_clamped_fticks() {return min(fticks, 4.0f);} // clamp to 100ms
 
@@ -855,8 +856,7 @@ void car_manager_t::destroy_cars_in_radius(point const &pos_in, float radius) {
 			if (is_pt ? car.bcube.contains_pt(pos) : dist_less_than(car.get_center(), pos, radius)) { // destroy if within the sphere
 				car.destroy();
 				car_destroyed = 1;
-				// invalidate tile shadow map for destroyed parked cars
-				if (city_params.car_shadows && car.is_parked()) {invalidate_tile_smap_at_pt((car.get_center() + xlate), 0.5*car.get_length());} // radius = length/2
+				if (city_params.car_shadows && car.is_parked()) {invalidate_tile_smap_in_region(car.bcube + xlate);} // invalidate tile shadow map for destroyed parked cars
 			}
 		} // for c
 	} // for cb
@@ -1152,6 +1152,7 @@ float get_flight_path_zmax(point const &p1, point const &p2, float radius) {
 
 
 void helicopter_t::invalidate_tile_shadow_map(vector3d const &shadow_offset, bool repeat_next_frame) const {
+	// Note: we use the sphere version rather than the bcube version, since the helicopter may be rotated from its nominal bcube
 	invalidate_tile_smap_at_pt((bcube.get_cube_center() + shadow_offset), 0.5*max(bcube.dx(), bcube.dy()), repeat_next_frame);
 }
 
