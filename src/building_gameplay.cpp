@@ -21,7 +21,7 @@ bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
 
 extern bool camera_in_building, player_is_hiding, player_in_unlit_room, disable_blood;
-extern int window_width, window_height, display_framerate, display_mode, game_mode, building_action_key, frame_counter, player_in_basement, player_in_water;
+extern int window_width, window_height, display_framerate, display_mode, game_mode, building_action_key, frame_counter, player_in_basement, player_in_water, animate2;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks, camera_zh;
 extern colorRGBA vignette_color;
@@ -912,19 +912,21 @@ public:
 		}
 		show_stats();
 		phone_manager.next_frame(); // even if not in gameplay mode?
+		float const fticks_clamped(min(fticks, 0.25f*TICKS_PER_SECOND)); // limit to 250ms so that the player doesn't die when un-paused
+		float const elapsed_time(animate2 ? fticks_clamped : 0.0); // no time elapsed when time is paused
 		// update candle, even when not in gameplay mode
 		if (!carried.empty()) {
 			carried_item_t &obj(carried.back());
 
 			if (obj.type == TYPE_CANDLE && obj.is_lit()) {
-				if ((frame_counter % 10) == 0) {obj.use_count += 10.0*fticks;} // special logic for integer incrementing
+				if ((frame_counter % 10) == 0) {obj.use_count += 10.0*elapsed_time;} // special logic for integer incrementing
 				min_eq(obj.use_count, get_room_obj_type(obj).capacity); // use_count can't be > capacity
 				if (obj.get_remaining_capacity_ratio() <= 0.0) {obj.flags &= ~RO_FLAG_LIT;} // goes out when used up
 			}
 		}
 		if (!in_building_gameplay_mode()) return;
 		// handle oxygen
-		float oxygen_use_rate((fticks/TICKS_PER_SECOND)/30.0); // used up in 30s
+		float oxygen_use_rate((elapsed_time/TICKS_PER_SECOND)/30.0); // used up in 30s
 
 		if (player_in_water == 2) { // head underwater, lose oxygen slowly
 			oxygen = max(0.0f, (oxygen - oxygen_use_rate));
@@ -947,7 +949,6 @@ public:
 		// handle player fall damage logic
 		point const camera_pos(get_camera_pos());
 		float const player_zval(camera_pos.z), delta_z(prev_player_zval - player_zval);
-		float const fticks_clamped(min(fticks, 0.25f*TICKS_PER_SECOND)); // limit to 250ms so that the player doesn't die when paused
 		if (camera_in_building != prev_in_building) {prev_in_building = camera_in_building;}
 		else if (prev_player_zval != 0.0 && delta_z > 0.0 && apply_fall_damage(delta_z)) return; // Note: fall damage may no longer trigger with slow player fall logic
 		prev_player_zval = player_zval;
@@ -960,7 +961,7 @@ public:
 			return;
 		}
 		if (is_poisoned) {
-			player_health -= 0.0002*fticks_clamped;
+			player_health -= 0.0002*elapsed_time;
 
 			if (player_is_dead()) {
 				string const poison_type(poison_from_spider ? " of spider venom" : " of snake venom");
@@ -973,10 +974,10 @@ public:
 			return;
 		}
 		// update state for next frame
-		drunkenness = max(0.0f, (drunkenness - 0.0001f*fticks_clamped)); // slowly decrease over time
+		drunkenness = max(0.0f, (drunkenness - 0.0001f*elapsed_time)); // slowly decrease over time
 		// should the player drink when underwater? maybe depends on how clean the water is? how about only if thirst < 0.5
-		if (player_in_water == 2 && thirst < 0.5) {thirst = min(1.0f, (thirst + 0.01f *fticks_clamped));} // underwater
-		else {thirst = max(0.0f, (thirst - 0.0001f*fticks_clamped));} // slowly decrease over time (250s)
+		if (player_in_water == 2 && thirst < 0.5) {thirst = min(1.0f, (thirst + 0.01f *elapsed_time));} // underwater
+		else {thirst = max(0.0f, (thirst - 0.0001f*elapsed_time));} // slowly decrease over time (250s)
 		
 		if (player_near_toilet) { // empty bladder
 			if (bladder > 0.9) {gen_sound_thread_safe_at_player(SOUND_GASP);} // urinate
@@ -989,7 +990,7 @@ public:
 			bladder = 0.0;
 		}
 		else if (bladder > 0.9) {
-			bladder_time += fticks_clamped;
+			bladder_time += elapsed_time;
 
 			if (bladder_time > 5.0*TICKS_PER_SECOND) { // play the "I have to go" sound
 				gen_sound_thread_safe_at_player(SOUND_HURT);
