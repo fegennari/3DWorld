@@ -1650,7 +1650,7 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 	}
 	// Note: elevators/buttons/stairs haven't been placed at this point, so iterate over all objects
 	for (room_object_t const &i : interior->room_geom->objs) {
-		bool const no_blocking(i.type == TYPE_PICTURE || i.type == TYPE_WBOARD);
+		bool const no_blocking(i.type == TYPE_PICTURE || i.type == TYPE_WBOARD || i.type == TYPE_OUTLET || i.type == TYPE_SWITCH);
 		// Note: TYPE_PIPE (vertical electrical conduits from outlets) may block pipes from running horizontally along walls
 		if (i.no_coll() && !no_blocking && i.type != TYPE_LIGHT && i.type != TYPE_PIPE && i.type != TYPE_VENT) continue; // no collisions
 		if (i.z1() >= ground_floor_z1) continue; // not in the basement
