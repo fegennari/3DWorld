@@ -1041,11 +1041,21 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	colorRGBA const &pipes_color(pcolors[pipe_type]), &fittings_color(fcolors[pipe_type]);
 	vect_cube_t insul_exclude;
 	pipe_cubes.reserve(pipe_cubes.size() + pipes.size());
+	// if an extended basement room overlaps the non-basement part of this building, we may need to draw pipes crossing through this room; this is relatively rare
+	bool draw_pipes_outside_basement(0);
 
+	if (has_ext_basement()) {
+		assert(interior->ext_basement_hallway_room_id >= 0);
+
+		for (unsigned r = interior->ext_basement_hallway_room_id+1; r < interior->rooms.size(); ++r) { // skip hallway
+			room_t const &room(interior->rooms[r]);
+			if (room.z1() == basement.z1() && room.intersects_xy(bcube)) {draw_pipes_outside_basement = 1; break;}
+		}
+	}
 	for (pipe_t &p : pipes) {
 		if (!p.connected) continue; // unconnected drain, skip
 		cube_t const pbc(p.get_bcube());
-		if (!basement.intersects_xy(pbc)) {p.outside_pg = 1; continue;} // outside the basement, don't need to draw
+		if (!draw_pipes_outside_basement && !basement.intersects_xy(pbc)) {p.outside_pg = 1; continue;} // outside the basement, don't need to draw
 		pipe_cubes.push_back(pbc);
 		pipe_cubes.back().expand_in_dim(p.dim, 0.5*p.radius); // add a bit of extra space for the end cap
 		bool const pdim(p.dim & 1), pdir(p.dim >> 1); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
@@ -1109,7 +1119,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	} // for p
 	for (pipe_t const &p : fittings) {
 		cube_t const pbc(p.get_bcube());
-		if (!basement.intersects_xy(pbc)) continue; // outside the basement, don't need to draw
+		if (!draw_pipes_outside_basement && !basement.intersects_xy(pbc)) continue; // outside the basement, don't need to draw
 		bool const pdim(p.dim & 1), pdir(p.dim >> 1);
 		unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // non-colliding, flat ends on both sides
 		objs.emplace_back(pbc, TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, fittings_color);
