@@ -1478,6 +1478,7 @@ struct building_t : public building_geom_t {
 	bool multi_family=0; // apartments, multi-family house, duplex, etc. - split by floor
 	bool has_int_fplace=0, has_parking_garage=0, has_small_part=0, has_basement_door=0, has_basement_pipes=0, parts_generated=0, is_in_city=0, has_skylight_light=0;
 	bool pri_hall_stairs_to_pg=0;
+	mutable bool has_missing_stairs=0; // only used for printing a warning
 	uint8_t retail_floor_levels=0;
 	mutable bool player_visited=0; // for stats tracking
 	colorRGBA side_color=WHITE, roof_color=WHITE, detail_color=BLACK, door_color=WHITE, wall_color=WHITE;

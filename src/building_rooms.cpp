@@ -64,7 +64,10 @@ bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor_i
 				if (r.has_stairs_on_floor(floor_ix))  {stairs_rooms.push_back(i);}
 				if (is_room_adjacent_to_ext_door(r))  {door_rooms  .push_back(i);}
 			}
-			if (cur_room < 0 || stairs_rooms.empty()) {cout << "House with missing stairs: " << bcube.str() << endl;}
+			if (cur_room < 0 || stairs_rooms.empty()) {
+				if (!has_missing_stairs) {cout << "Building with missing stairs: " << bcube.str() << endl;}
+				has_missing_stairs = 1;
+			}
 			assert(cur_room >= 0); // must be found
 			if (stairs_rooms.empty()) return 1; // failed to place stairs in this house, but there were basement stairs?
 
