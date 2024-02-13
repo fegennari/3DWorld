@@ -1534,6 +1534,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			// clear any roof objects that are in the way
 			cube_t clear_cube(box);
 			clear_cube.d[stairs_dim][dir] += (dir ? 1.0 : -1.0)*window_vspacing; // clear out space in front of the door
+			clear_cube.expand_in_dim(!stairs_dim, doorway_width); // add clearance to the sides to make sure the player can reach other areas of the roof
 			remove_intersecting_roof_cubes(clear_cube);
 			// add a small 3-sided box around the stairs using roof blocks
 			unsigned const opening_ix(2*(1 - stairs_dim) + dir);
