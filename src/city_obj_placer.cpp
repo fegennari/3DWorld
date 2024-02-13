@@ -326,6 +326,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	vector<point> const &tree_pos, rand_gen_t &rgen, bool is_residential, bool have_streetlights)
 {
 	float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
+	float const min_obj_spacing(get_min_obj_spacing());
 	unsigned const benches_start(benches.size()), trashcans_start(trashcans.size()), substations_start(sstations.size());
 	unsigned const fountains_start(fountains.size()), ppoles_start(ppoles.size()), paths_start(ppaths.size());
 
@@ -397,7 +398,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	}
 	// place benches in parks and non-residential areas
 	if (!is_residential || plot.is_park) {
-		float const bench_radius(0.3 * car_length), bench_spacing(max(bench_radius, get_min_obj_spacing()));
+		float const bench_radius(0.3 * car_length), bench_spacing(max(bench_radius, min_obj_spacing));
 
 		for (unsigned n = 0; n < city_params.max_benches_per_plot; ++n) {
 			point pos;
@@ -506,7 +507,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		ss_bcube.expand_by_xy(bcube_exp);
 		ss_bcube.z2() += ss_height;
 		
-		if (!has_bcube_int_xy(ss_bcube, blockers, 0.2*ss_height)) { // skip if intersects a building or parking lot
+		if (!has_bcube_int_xy(ss_bcube, blockers, max(0.2f*ss_height, min_obj_spacing))) { // skip if intersects a building or parking lot
 			sstation_groups.add_obj(substation_t(ss_bcube, dim, dir), sstations);
 			add_cube_to_colliders_and_blockers(ss_bcube, colliders, blockers);
 		}
@@ -519,7 +520,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			vector3d const tc_center((1.0 - dist_from_corner)*point(plot.d[0][d&1], plot.d[1][d>>1], plot.z2()) + dist_from_corner*plot.get_cube_center());
 			trashcan_t const trashcan(tc_center, tc_radius, tc_height, 0); // is_cylin=0
 
-			if (!has_bcube_int_xy(trashcan.bcube, blockers, 1.5*tc_radius)) { // skip if intersects a building or parking lot, with some padding
+			if (!has_bcube_int_xy(trashcan.bcube, blockers, max(1.5f*tc_radius, min_obj_spacing))) { // skip if intersects a building or parking lot, with some padding
 				trashcan_groups.add_obj(trashcan, trashcans);
 				add_cube_to_colliders_and_blockers(trashcan.bcube, colliders, blockers);
 			}
@@ -527,7 +528,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	}
 	// place fountains in parks and sometimes in city blocks
 	if ((plot.is_park || (!is_residential && (rgen.rand() & 3) == 0)) && building_obj_model_loader.is_model_valid(OBJ_MODEL_FOUNTAIN)) {
-		float const radius(0.35 * car_length), spacing(max(1.5f*radius, get_min_obj_spacing()));
+		float const radius(0.35 * car_length), spacing(max(1.5f*radius, min_obj_spacing));
 		point pos;
 		
 		if (try_place_obj(plot, blockers, rgen, radius, spacing, 2, pos)) { // 2 tries
@@ -573,7 +574,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 					cube_t test_cube(newsrack.bcube);
 					test_cube.d[dim][!dir] += (dir ? -1.0 : 1.0)*nr_depth; // add front clearance; faces inward from the plot
 
-					if (!has_bcube_int_xy(test_cube, blockers, 0.1*nr_width)) { // skip if intersects a building or parking lot, with a bit of padding
+					if (!has_bcube_int_xy(test_cube, blockers, max(0.1f*nr_width, min_obj_spacing))) { // skip if intersects a building or parking lot, with padding
 						nrack_groups.add_obj(newsrack, newsracks);
 						add_cube_to_colliders_and_blockers(test_cube, colliders, blockers);
 					}
