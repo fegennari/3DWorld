@@ -30,19 +30,35 @@ float get_player_move_dist();
 
 // assumes player is in this building; handles windows and exterior doors but not attics and basements
 bool building_t::player_can_see_outside() const {
-	point const camera_pos(get_camera_pos());
+	vector3d const xlate(get_tiled_terrain_model_xlate());
+	point const camera_pos(get_camera_pos()), camera_bs(camera_pos - xlate);
+	float const floor_spacing(get_window_vspace());
 
 	if (!player_building->has_windows()) { // no windows
 		// should we check if the door is visible?
-		if (building_has_open_ext_door && !doors.empty() && camera_pos.z < (ground_floor_z1 + get_window_vspace())) return 1; // maybe can see out open door on first floor
+		if (building_has_open_ext_door && !doors.empty()) { // maybe can see out a door
+			if (camera_pos.z < (ground_floor_z1 + floor_spacing)) return 1; // maybe can see out open door on first floor
+
+			if (interior) { // check roof access stairs
+				point camera_bot_bs(camera_bs);
+				camera_bot_bs.z -= get_bldg_player_height();
+
+				for (stairwell_t const &s : interior->stairwells) {
+					if (s.roof_access && s.contains_pt(camera_bot_bs)) return 1;
+				}
+			}
+		}
+		for (cube_t const &skylight : skylights) { // check skylights
+			cube_t test_area(skylight);
+			test_area.expand_by_xy(2.0*floor_spacing);
+			test_area.z1() -= floor_spacing; // include the floor below
+			if (test_area.contains_pt(camera_bs)) return 1; // outside may be visible through the skylight
+		}
 		return 0;
 	}
 	// maybe can see out a window
 	if (!interior || !has_basement() || camera_pos.z > ground_floor_z1) return 1; // no interior, or not in the basement
-	float const floor_spacing(get_window_vspace());
 	if (camera_pos.z < ground_floor_z1 - floor_spacing) return 0; // on lower level of parking garage or extended basement
-	vector3d const xlate(get_tiled_terrain_model_xlate());
-	point const camera_bs(camera_pos - xlate);
 	if (point_in_extended_basement_not_basement(camera_bs)) return 0; // not visible from extended basement; not for rotated buildings
 
 	for (auto const &s : interior->stairwells) { // check basement stairs
