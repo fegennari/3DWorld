@@ -245,6 +245,9 @@ city mailbox_model       ../models/us_mailbox/mailbox.model3d         0 0 0  -1 
 city umbrella_model      ../models/umbrella/UmbrellaOpen.model3d      0 0 0   0 -1 270  0 1.0 1.0
 city flag_model          ../models/WallFlag.model3d                   0 1 0   1 -1 270  1 1.0 1.0
 city pigeon_model        ../models/pigeon/pigeon3.model3d             0 0 0   0 -1 90   1 1.0 1.0
+city fountain_model      ../models/Fountains/fountain3/scene.gltf     0 0 0  -1 -1 0    1 1.0 1.0
+city fountain_model      ../models/Fountains/fountain4/scene.gltf     0 0 0  -1 -1 0    1 1.0 1.0
+city fountain_model      ../models/Fountains/fountain5/scene.gltf     0 0 0  -1 -1 0    1 1.0 1.0
 
 # animated bird model
 city model_anim_scale 100.0 # model animations are scaled by 100 for some reason

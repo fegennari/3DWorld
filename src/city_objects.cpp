@@ -300,7 +300,7 @@ void substation_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist
 
 // fountains
 
-fountain_t::fountain_t(point const &pos_, float radius_, float height) : city_obj_t(pos_, radius_) {
+fountain_t::fountain_t(point const &pos_, float radius_, float height, unsigned model_select_) : city_obj_t(pos_, radius_), model_select(model_select_) {
 	bcube.set_from_point(pos);
 	bcube.expand_by_xy(radius);
 	bcube.z2() += height;
@@ -314,7 +314,8 @@ fountain_t::fountain_t(point const &pos_, float radius_, float height) : city_ob
 }
 void fountain_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
-	building_obj_model_loader.draw_model(dstate.s, pos, bcube, plus_x, WHITE, dstate.xlate, OBJ_MODEL_FOUNTAIN, shadow_only); // XY symmetric, so dir=plus_x
+	unsigned const model_id(OBJ_MODEL_FOUNTAIN + (model_select << 8)); // model_select selects sub-model if more than one are loaded
+	building_obj_model_loader.draw_model(dstate.s, pos, bcube, plus_x, WHITE, dstate.xlate, model_id, shadow_only); // XY symmetric, so dir=plus_x
 }
 bool fountain_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	return sphere_city_obj_cylin_coll(pos, radius, pos_, p_last, radius_, xlate, cnorm);

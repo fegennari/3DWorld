@@ -531,10 +531,10 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		float const radius(0.35 * car_length), spacing(max(1.5f*radius, min_obj_spacing));
 		point pos;
 		
-		if (try_place_obj(plot, blockers, rgen, radius, spacing, 2, pos)) { // 2 tries
+		if (try_place_obj(plot, blockers, rgen, radius, spacing, 5, pos)) { // 5 tries
 			vector3d const model_sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FOUNTAIN));
 			float const height(2.0*radius*(model_sz.z/(0.5*(model_sz.x + model_sz.y)))); // assumes square, sz.x == sz.y
-			fountain_t const fountain(pos, radius, height);
+			fountain_t const fountain(pos, radius, height, rgen.rand()); // random model_select
 			
 			if (!plot.is_park || !check_path_coll_xy(fountain.bcube, ppaths, paths_start)) { // check path collision
 				fountain_groups.add_obj(fountain, fountains);

@@ -98,7 +98,9 @@ struct substation_t : public oriented_city_obj_t {
 };
 
 struct fountain_t : public city_obj_t {
-	fountain_t(point const &pos_, float radius_, float height);
+	unsigned model_select=0;
+
+	fountain_t(point const &pos_, float radius_, float height, unsigned model_select_);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
