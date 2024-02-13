@@ -1230,11 +1230,18 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	bool stairs_dim(0), stairs_have_railing(1), extended_from_above(0);
 	bool stairs_against_wall[2] = {0, 0};
 	stairs_shape sshape(SHAPE_STRAIGHT); // straight by default
-	bool const must_add_stairs(first_part_this_stack || (has_complex_floorplan && part == parts.back())); // first part in stack, or tallest/last part of complex building
+	bool must_add_stairs(first_part_this_stack);
 	bool const is_basement((int)part_ix == basement_part_ix);
 	int force_stairs_dir(2); // 2=unset
 	unsigned stairs_ix(0);
 
+	if (has_complex_floorplan) { // the tallest part of a complex floorplan building contains the stairs; should be the last part, unless there's a basement
+		must_add_stairs = 1;
+
+		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+			if (p->z2() > part.z2()) {must_add_stairs = 0; break;} // don't need stairs if another part is taller
+		}
+	}
 	// add stairwells and elevator shafts
 	if (num_floors == 1) {} // no need for stairs or elevator
 	else if (use_hallway) { // part is the hallway cube
