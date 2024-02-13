@@ -164,7 +164,7 @@ trashcan_t::trashcan_t(point const &pos_, float radius_, float height, bool is_c
 	bcube.set_from_point(pos);
 	bcube.expand_by_xy(radius);
 	bcube.z2() += height;
-	set_bsphere_from_bcube(); // recompute bcube from bsphere
+	set_bsphere_from_bcube(); // recompute bsphere from bcube
 }
 /*static*/ void trashcan_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (shadow_only) {} // nothing to do
@@ -285,7 +285,7 @@ bool fire_hydrant_t::proc_sphere_coll(point &pos_, point const &p_last, float ra
 
 substation_t::substation_t(cube_t const &bcube_, bool dim_, bool dir_) : oriented_city_obj_t(dim_, dir_) {
 	bcube = bcube_;
-	set_bsphere_from_bcube(); // recompute bcube from bsphere
+	set_bsphere_from_bcube(); // recompute bsphere from bcube
 }
 /*static*/ void substation_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_scale", 0.0);} // disable hemispherical lighting
@@ -304,7 +304,7 @@ fountain_t::fountain_t(point const &pos_, float radius_, float height) : city_ob
 	bcube.set_from_point(pos);
 	bcube.expand_by_xy(radius);
 	bcube.z2() += height;
-	set_bsphere_from_bcube(); // recompute bcube from bsphere
+	pos.z += 0.5*height;
 }
 /*static*/ void fountain_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_scale", 0.0);} // disable hemispherical lighting

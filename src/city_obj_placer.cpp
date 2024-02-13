@@ -525,9 +525,21 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			}
 		} // for d
 	}
-	// place fountains in cities and parks
-	if ((!is_residential || plot.is_park) && building_obj_model_loader.is_model_valid(OBJ_MODEL_FOUNTAIN)) {
-		// TODO: fountains/fountain_groups
+	// place fountains in parks and sometimes in city blocks
+	if ((plot.is_park || (!is_residential && (rgen.rand() & 3) == 0)) && building_obj_model_loader.is_model_valid(OBJ_MODEL_FOUNTAIN)) {
+		float const radius(0.35 * car_length), spacing(max(1.5f*radius, get_min_obj_spacing()));
+		point pos;
+		
+		if (try_place_obj(plot, blockers, rgen, radius, spacing, 2, pos)) { // 2 tries
+			vector3d const model_sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FOUNTAIN));
+			float const height(2.0*radius*(model_sz.z/(0.5*(model_sz.x + model_sz.y)))); // assumes square, sz.x == sz.y
+			fountain_t const fountain(pos, radius, height);
+			
+			if (!plot.is_park || !check_path_coll_xy(fountain.bcube, ppaths, paths_start)) { // check path collision
+				fountain_groups.add_obj(fountain, fountains);
+				add_cube_to_colliders_and_blockers(fountain.bcube, colliders, blockers);
+			}
+		}
 	}
 	// place newsracks along non-residential city streets
 	if (!is_residential) {
