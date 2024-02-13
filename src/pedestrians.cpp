@@ -614,7 +614,7 @@ point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_pl
 				point pos_adj(pos);
 				road_plot_t const &cur_plot(ped_mgr.get_city_plot_for_peds(city, plot));
 				
-				if (cur_plot.is_residential && !cur_plot.is_park) { // residential plot
+				if (cur_plot.is_residential_not_park()) { // residential plot
 					cube_t const avoid(get_avoid_area_for_plot(plot_bcube, 2.0*radius)); // 2x radius for extra padding
 					move_to_closest_pt_outside_cube(avoid, pos_adj); // move pos away from plot edge so that line to closest point doesn't clip through avoid cube
 				}
@@ -670,7 +670,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	if (is_home_plot && !follow_player) {assert(plot_bcube == next_plot_bcube);} // doesn't hold when following the player?
 	bool keep_cur_dest(0);
 
-	if (cur_plot.is_residential && !cur_plot.is_park) { // apply special restrictions when walking through a residential block
+	if (cur_plot.is_residential_not_park()) { // apply special restrictions when walking through a residential block
 		cube_t const avoid_area(get_avoid_area_for_plot(plot_bcube, radius));
 		bool avoid_entire_plot(0);
 
@@ -989,7 +989,9 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		if (!outside_plot && !ped_coll) {
 			point const cur_pos(pos);
 
-			if (!coll_cube.is_all_zeros()) { // should always get here if !ped_coll?
+			// coll_cube should always be set if !ped_coll;
+			// apply collision resolution for residential areas since peds will be constrained to narrow sidewalks and mostly straight lines
+			if (!coll_cube.is_all_zeros() && ped_mgr.get_city_plot_for_peds(city, plot).is_residential_not_park()) {
 				sphere_cube_int_update_pos(pos, radius, coll_cube, prev_pos, 1); // resolve the collision; skip_z=1
 
 				if (dot_product(dir, (pos - cur_pos)) < 0.0) { // only update pos if sphere_cube_int_update_pos() moved us backward
@@ -1037,7 +1039,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			if (!follow_player) {
 				road_plot_t const &cur_plot(ped_mgr.get_city_plot_for_peds(city, plot));
 
-				if (cur_plot.is_residential && !cur_plot.is_park) { // plot has private property
+				if (cur_plot.is_residential_not_park()) { // plot has private property
 					cube_t const avoid_area(get_avoid_area_for_plot(plot_bcube, radius));
 
 					// skip check if this is our home plot and our target is inside the avoid area
