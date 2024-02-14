@@ -398,6 +398,7 @@ void update_ssbo(unsigned ssbo, unsigned data_sz, void const *const data) {
 	assert(data_sz > 0 && data != nullptr);
 	bind_ssbo(ssbo);
 	void *p(glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY));
+	assert(p != nullptr);
 	memcpy(p, data, data_sz);
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 }

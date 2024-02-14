@@ -1226,7 +1226,8 @@ void compute_shader_t::read_pixels(vector<float> &vals, bool is_last) {
 
 	assert(pbo); bind_pbo(pbo);
 	void *ptr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, get_pbo_size(), GL_MAP_READ_BIT); // Note: blocks until data is ready
-	memcpy((void *)&vals.front(), ptr, get_pbo_size());
+	assert(ptr != nullptr);
+	memcpy((void *)vals.data(), ptr, get_pbo_size());
 	glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 
 	if (is_last) {
