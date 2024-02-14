@@ -864,21 +864,6 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 		if (is_ice) {shader.clear_specular();} // reset specular
 		shader.end_shader();
 	}
-	if (0 && !no_asteroid_dust) { // draw fine dust as fog
-		shader.begin_color_only_shader(colorRGBA(0.5, 0.5, 0.5, 0.5));
-		select_texture(WHITE_TEX); // untextured
-		glEnable(GL_CULL_FACE);
-		glCullFace(GL_FRONT);
-		fgPushMatrix();
-		global_translate(afpos);
-		rotate_into_plus_z(orbital_plane_normal);
-		scale_by(orbit_scale);
-		draw_torus(all_zeros, inner_radius, outer_radius, N_SPHERE_DIV, N_SPHERE_DIV);
-		fgPopMatrix();
-		glDisable(GL_CULL_FACE);
-		glCullFace(GL_BACK);
-		shader.end_shader();
-	}
 	if (world_mode == WMODE_UNIVERSE && !no_asteroid_dust && !cloud_insts.empty() && (display_mode & 0x0100) != 0) { // draw volumetric fog/dust clouds
 		float const def_cloud_radius((is_planet_ab() ? 0.018 : 0.009)*radius);
 		
