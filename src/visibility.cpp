@@ -213,10 +213,26 @@ bool pos_dir_up::projected_cube_visible(cube_t const &cube, point const &proj_pt
 }
 
 bool pos_dir_up::sphere_and_cube_visible_test(point const &pos_, float radius, cube_t const &cube) const {
-
 	if (!sphere_visible_test(pos_,  radius)) return 0; // none of the sphere is visible
 	if ( sphere_visible_test(pos_, -radius)) return 1; // all  of the sphere is visible
 	return cube_visible(cube);
+}
+
+void pos_dir_up::get_frustum_corners(point pts[8]) const { // {near, far} x {ll, lr, ur, ul}
+	for (unsigned d = 0; d < 2; ++d) {
+		float const depth(d ? far_ : near_), dy(depth*tterm), dx(A*dy); // d*sin(theta)
+		point const center(pos + dir*depth); // plane center
+		pts[4*d+0] = center - cp*dx - upv_*dy;
+		pts[4*d+1] = center + cp*dx - upv_*dy;
+		pts[4*d+2] = center + cp*dx + upv_*dy;
+		pts[4*d+3] = center - cp*dx + upv_*dy;
+	}
+}
+point pos_dir_up::get_frustum_center() const {
+	point pts[8];
+	get_frustum_corners(pts);
+	// and bcube is cube_t::set_from_points(pts, 8)
+	return get_center_arb(pts, 8);
 }
 
 void pos_dir_up::rotate(vector3d const &axis, float angle) { // unused, but could use in model3d_xform_t::apply_inv_xform_to_pdu() (may require handling pos)

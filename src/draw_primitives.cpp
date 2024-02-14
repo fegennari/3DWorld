@@ -1134,24 +1134,18 @@ void line_tquad_draw_t::draw(float noise_scale) const { // supports quads and tr
 
 void pos_dir_up::draw_frustum() const {
 
-	float const nf_val[2] = {near_, far_};
-	point pts[2][4]; // {near, far} x {ll, lr, ur, ul}
+	point pts[8]; // {near, far} x {ll, lr, ur, ul}
 	vector<vert_wrap_t> verts;
+	get_frustum_corners(pts);
 
 	for (unsigned d = 0; d < 2; ++d) {
-		point const center(pos + dir*nf_val[d]); // plane center
-		float const dy(nf_val[d]*tterm), dx(A*dy); // d*sin(theta)
-		pts[d][0] = center - cp*dx - upv_*dy;
-		pts[d][1] = center + cp*dx - upv_*dy;
-		pts[d][2] = center + cp*dx + upv_*dy;
-		pts[d][3] = center - cp*dx + upv_*dy;
-		for (unsigned i = 0; i < 4; ++i) {verts.push_back(pts[d][i]);} // near and far clipping planes
+		for (unsigned i = 0; i < 4; ++i) {verts.push_back(pts[4*d+i]);} // near and far clipping planes
 	}
 	for (unsigned i = 0; i < 4; ++i) { // sides
-		verts.push_back(pts[0][(i+0)&3]);
-		verts.push_back(pts[0][(i+1)&3]);
-		verts.push_back(pts[1][(i+1)&3]);
-		verts.push_back(pts[1][(i+0)&3]);
+		verts.push_back(pts[0+((i+0)&3)]);
+		verts.push_back(pts[0+((i+1)&3)]);
+		verts.push_back(pts[4+((i+1)&3)]);
+		verts.push_back(pts[4+((i+0)&3)]);
 	}
 	draw_quad_verts_as_tris(verts);
 }

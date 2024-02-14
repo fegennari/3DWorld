@@ -35,7 +35,7 @@ extern platform_cont platforms;
 
 void draw_trees(bool shadow_only=0, bool reflection_pass=0);
 void free_light_source_gl_state();
-void set_shadow_tex_params(unsigned &tid, bool is_array);
+void set_shadow_tex_params(unsigned &tid, bool is_array, bool use_white_border=0);
 
 
 cube_t get_scene_bounds() {
@@ -441,7 +441,7 @@ void draw_scene_bounds_and_light_frustum(point const &lpos) {
 }
 
 
-void set_shadow_tex_params(unsigned &tid, bool is_array) {
+void set_shadow_tex_params(unsigned &tid, bool is_array, bool use_white_border) {
 
 	bool const nearest(0); // nearest filter: sharper shadow edges, but needs more biasing
 	setup_texture(tid, 0, 0, 0, 0, 0, nearest, 1.0, is_array);
@@ -449,13 +449,14 @@ void set_shadow_tex_params(unsigned &tid, bool is_array) {
 	int const target(get_2d_texture_target(is_array));
 	glTexParameteri(target, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
 	glTexParameteri(target, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
-#if 0
-	// clamps area outside the shadow volume to unshadowed rather than extending the value at the border;
-	// for buildings, this removes the incorrect shadow that extends above the player's head when near a wall, but causes some light leaking above walls
-	glTexParameteri (target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri (target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-	glTexParameterfv(target, GL_TEXTURE_BORDER_COLOR, &WHITE.R);
-#endif
+
+	if (use_white_border) {
+		// clamps area outside the shadow volume to unshadowed rather than extending the value at the border;
+		// for buildings, this removes the incorrect shadow that extends above the player's head when near a wall, but causes some light leaking above walls
+		glTexParameteri (target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTexParameteri (target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		glTexParameterfv(target, GL_TEXTURE_BORDER_COLOR, &WHITE.R);
+	}
 }
 
 

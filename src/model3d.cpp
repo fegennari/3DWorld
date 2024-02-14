@@ -2439,11 +2439,11 @@ cube_t model3d::get_single_transformed_bcube(vector3d const &xlate) const {
 
 void setup_smap_shader(shader_t &s, bool sam_pass) {
 
-	if (sam_pass == 1) {
+	if (sam_pass == 1) { // alpha mask
 		s.begin_simple_textured_shader(MIN_SHADOW_ALPHA);
 		select_texture(WHITE_TEX);
 	}
-	else {
+	else { // no alpha mask
 		s.begin_color_only_shader(); // really don't even need colors
 	}
 }

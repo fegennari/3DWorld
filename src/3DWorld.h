@@ -715,6 +715,8 @@ struct pos_dir_up { // defines a view frustum
 	bool cube_visible_for_light_cone(cube_t const &c) const;
 	bool projected_cube_visible(cube_t const &cube, point const &proj_pt) const;
 	bool sphere_and_cube_visible_test(point const &pos_, float radius, cube_t const &cube) const;
+	void get_frustum_corners(point pts[8]) const;
+	point get_frustum_center() const;
 	void draw_frustum() const;
 	void translate(vector3d const &tv) {pos += tv;}
 	void scale(float s) {pos *= s; near_ *= s; far_ *= s;}

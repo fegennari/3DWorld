@@ -137,9 +137,8 @@ void rect::print() const {
 
 
 void cube_t::set_from_points(point const *const pts, unsigned npts) {
-
 	assert(npts > 0);
-	UNROLL_3X(d[i_][0] = d[i_][1] = pts[0][i_];)
+	set_from_point(pts[0]);
 	for (unsigned i = 1; i < npts; ++i) {union_with_pt(pts[i]);} // get bounding xy rectangle
 }
 
@@ -159,15 +158,12 @@ std::string cube_t::str() const {
 }
 
 std::string cube_t::raw_str() const {
-	
 	std::ostringstream oss;
 	for (unsigned i = 0; i < 6; ++i) {oss << d[i>>1][i&1]; if (i < 5) {oss << " ";}}
 	return oss.str();
 }
 
-
-bool cube_t::is_near_zero_area() const {
-		
+bool cube_t::is_near_zero_area() const {	
 	UNROLL_3X(if (fabs(d[i_][0] - d[i_][1]) < TOLER) return 1;)
 	return 0;
 }
