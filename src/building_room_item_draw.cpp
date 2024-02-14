@@ -2164,7 +2164,7 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 	if (cars_to_draw.empty()) return;
 	
 	if (!s.is_setup()) { // caller didn't set up the shader
-		if (shadow_only) {s.begin_color_only_shader();} // this path should be unused
+		if (shadow_only) {s.begin_shadow_map_shader();} // this path should be unused
 		else {setup_building_draw_shader(s, 0.0, 1, 0, 0);} // min_alpha=0.0, enable_indir=1, force_tsl=0, use_texgen=0
 	}
 	for (auto &car : cars_to_draw) {draw_car_in_pspace(car, s, xlate, shadow_only);}

@@ -559,7 +559,7 @@ void draw_sides_and_bottom(bool shadow_pass) {
 	shader_t s;
 
 	if (shadow_pass) {
-		s.begin_color_only_shader();
+		s.begin_shadow_map_shader();
 		vert_wrap_t const bverts[4] = {point(x1, y1, botz), point(x1, y2, botz), point(x2, y2, botz), point(x2, y1, botz)};
 		draw_verts(bverts, 4, GL_TRIANGLE_FAN); // bottom
 		vector<vert_wrap_t> verts;

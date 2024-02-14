@@ -1503,6 +1503,12 @@
     <None Include="shaders\lava_lamp.frag">
       <Filter>Shaders\frag</Filter>
     </None>
+    <None Include="shaders\shadow_map.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\empty_shader.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">

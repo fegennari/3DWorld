@@ -95,7 +95,7 @@ public:
 	void render() const {
 		if (num_verts2 == 0) return; // empty
 		shader_t s;
-		s.begin_color_only_shader(WHITE); // Note: color is likely unused
+		s.begin_shadow_map_shader();
 		assert(num_verts1 <= num_verts2);
 		pre_render();
 		if (num_verts1 > 0) {draw_verts<vert_wrap_t>(NULL, num_verts1, GL_TRIANGLES);}
@@ -184,7 +184,7 @@ public:
 		//timer_t timer("Add Draw Dynamic");
 		shader_t shader;
 		shader.set_vert_shader("vertex_xlate_scale");
-		shader.set_frag_shader("color_only");
+		shader.set_frag_shader("empty_shader");
 		shader.begin_shader();
 		int const shader_loc(shader.get_uniform_loc("xlate_scale"));
 		assert(shader_loc >= 0);
@@ -427,14 +427,13 @@ pos_dir_up get_pt_cube_frustum_pdu(point const &pos_, cube_t const &bounds) {
 
 void draw_scene_bounds_and_light_frustum(point const &lpos) {
 
-	// draw scene bounds
 	shader_t s;
 	enable_blend();
+	// draw scene bounds
 	s.begin_color_only_shader(colorRGBA(1.0, 1.0, 1.0, 0.25)); // white
 	draw_simple_cube(get_scene_bounds(), 0);
-
 	// draw light frustum
-	s.begin_color_only_shader(colorRGBA(1.0, 1.0, 0.0, 0.25)); // yellow
+	s.set_cur_color(colorRGBA(1.0, 1.0, 0.0, 0.25)); // yellow
 	get_pt_cube_frustum_pdu(lpos, get_scene_bounds()).draw_frustum();
 	disable_blend();
 	s.end_shader();

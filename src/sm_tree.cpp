@@ -690,7 +690,7 @@ void small_tree_group::draw(bool shadow_only, int reflection_pass) {
 
 	// draw trunks
 	if (shadow_only) {
-		s.begin_color_only_shader();
+		s.begin_shadow_map_shader();
 	}
 	else {
 		setup_smoke_shaders(s, 0.0, 0, 0, tree_indir_lighting, 1, 1, 0, 0, 2, use_bump_map, 0, 1, 0, 0.0, 0.0, 0, 0, 1); // dynamic lights, but no smoke, is_outside=1

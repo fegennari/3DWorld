@@ -1060,16 +1060,19 @@ void shader_t::set_cur_normal(vector3d const &normal) const {
 
 // some simple shared shaders
 void shader_t::begin_color_only_shader() {
-
 	set_vert_shader("vert_xform_only");
 	set_frag_shader("color_only");
 	begin_shader();
 }
-
 void shader_t::begin_color_only_shader(colorRGBA const &color) {
-
 	begin_color_only_shader();
 	set_cur_color(color);
+}
+
+void shader_t::begin_shadow_map_shader() {
+	set_vert_shader("shadow_map");
+	set_frag_shader("empty_shader");
+	begin_shader();
 }
 
 void shader_t::begin_simple_textured_shader(float min_alpha, bool include_2_lights, bool use_texgen, colorRGBA const *const color) {

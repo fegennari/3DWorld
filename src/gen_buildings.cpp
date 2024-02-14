@@ -2950,7 +2950,7 @@ public:
 		fgPushMatrix();
 		translate_to(xlate);
 		shader_t s, amask_shader, person_shader;
-		s.begin_color_only_shader(); // really don't even need colors
+		s.begin_shadow_map_shader();
 		glEnable(GL_CULL_FACE); // slightly faster for interior shadow maps
 		vector<point> points; // reused temporary
 		static building_draw_t ext_parts_draw; // roof and exterior walls; reused across calls

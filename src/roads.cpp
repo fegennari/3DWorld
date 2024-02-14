@@ -1051,7 +1051,7 @@ void road_draw_state_t::post_draw() {
 	set_std_depth_func_with_eq(); // helps prevent Z-fighting
 	shader_t s;
 
-	if (shadow_only) {s.begin_color_only_shader();}
+	if (shadow_only) {s.begin_shadow_map_shader();}
 	else {
 		s.begin_simple_textured_shader(); // Note: no lighting
 		road_mat_mgr.set_stoplight_texture();

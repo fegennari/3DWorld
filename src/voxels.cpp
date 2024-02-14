@@ -1715,7 +1715,7 @@ void voxel_model::render(unsigned lod_level, bool is_shadow_pass) { // not const
 	set_fill_mode();
 	
 	if (is_shadow_pass) {
-		s.begin_color_only_shader();
+		s.begin_shadow_map_shader();
 	}
 	else {
 		float const min_alpha(0.0); // not needed (yet)

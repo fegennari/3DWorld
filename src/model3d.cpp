@@ -2444,7 +2444,7 @@ void setup_smap_shader(shader_t &s, bool sam_pass) {
 		select_texture(WHITE_TEX);
 	}
 	else { // no alpha mask
-		s.begin_color_only_shader(); // really don't even need colors
+		s.begin_shadow_map_shader();
 	}
 }
 

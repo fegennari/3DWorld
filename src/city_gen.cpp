@@ -120,7 +120,7 @@ void draw_state_t::unset_untextured_material() {
 }
 void draw_state_t::ensure_shader_active() {
 	if (s.is_setup()) return; // already active
-	if (shadow_only) {s.begin_color_only_shader();}
+	if (shadow_only) {s.begin_shadow_map_shader();}
 	else {city_shader_setup(s, get_city_lights_bcube(), use_dlights, 0, use_bmap, DEF_CITY_MIN_ALPHA, 0, 0.5);} // no smap
 }
 void draw_state_t::draw_and_clear_light_flares() {

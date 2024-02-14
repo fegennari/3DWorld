@@ -64,7 +64,7 @@ void draw_scene_for_building_reflection(unsigned &ref_tid, unsigned dim, bool di
 	glStencilOpSeparate(GL_BACK,  GL_KEEP, GL_KEEP, GL_KEEP); // ignore back faces
 	glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_INCR); // mark stencil on front faces
 	shader_t s;
-	s.begin_color_only_shader();
+	s.begin_shadow_map_shader(); // should be okay for stencil
 	draw_simple_cube((mirror + xlate), 0); // draw translated mirror
 	s.end_shader();
 	end_stencil_write();
