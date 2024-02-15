@@ -2045,7 +2045,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			if (i->skip_floor_ix(f)) continue;
 			sign.z1() = i->z1()   + (f + 0.5)*window_vspacing;
 			sign.z2() = sign.z1() + 0.1*ewidth;
-			objs.emplace_back(sign, TYPE_SIGN, i->room_id, dim, dir, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, DK_BLUE);
+			objs.emplace_back(sign, TYPE_SIGN, i->room_id, dim, dir, (RO_FLAG_NOCOLL /*| RO_FLAG_HAS_EXTRA*/), 1.0, SHAPE_CUBE, DK_BLUE); // no frame?
 			set_floor_text_for_sign(objs.back(), f+1, floor_offset, has_parking_garage, oss);
 		}
 		// add concrete flooring at the base of the elevator, over the carpet

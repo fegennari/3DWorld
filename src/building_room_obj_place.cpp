@@ -1305,7 +1305,8 @@ bool building_t::add_tp_roll(cube_t const &room, unsigned room_id, float tot_lig
 void add_hallway_sign(vect_room_object_t &objs, cube_t const &sign, string const &text, unsigned room_id, bool dim, bool dir) {
 	// Note: room_id is for the sign's room, not the hallway, though this doesn't seem to be a problem
 	float const sign_light_amt(1.0); // assume well lit since it's in the hallway, not in the room that the sign is attached to
-	objs.emplace_back(sign, TYPE_SIGN, room_id, dim, dir, RO_FLAG_NOCOLL, sign_light_amt, SHAPE_CUBE, DK_BLUE); // technically should use hallway room_id
+	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_HAS_EXTRA); // include a frame
+	objs.emplace_back(sign, TYPE_SIGN, room_id, dim, dir, flags, sign_light_amt, SHAPE_CUBE, DK_BLUE); // technically should use hallway room_id
 	objs.back().obj_id = register_sign_text(text);
 }
 

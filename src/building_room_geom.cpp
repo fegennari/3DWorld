@@ -3529,9 +3529,30 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 
 	if (inc_back) {
 		bool const hanging(c.is_hanging()), draw_top(c.flags & RO_FLAG_ADJ_TOP); // for exit sign and floor signs
-		unsigned const skip_faces(hanging ? (draw_top ? 0 : EF_Z2) : ~get_face_mask(c.dim, !c.dir)); // skip back face, top face if hanging and !draw_top
+		unsigned const skip_back_face(~get_face_mask(c.dim, !c.dir));
+		unsigned const skip_faces(hanging ? (draw_top ? 0 : EF_Z2) : skip_back_face); // skip back face, top face if hanging and !draw_top
 		// back of the sign, always white (for now); unshadowed; what about transparent plastic back for hanging signs?
-		get_untextured_material(0, 0, small, 0, exterior).add_cube_to_verts_untextured(c, apply_light_color(c, WHITE), skip_faces);
+		rgeom_mat_t &mat(get_untextured_material(0, 0, small, 0, exterior));
+		mat.add_cube_to_verts_untextured(c, apply_light_color(c, WHITE), skip_faces);
+
+		if (c.flags & RO_FLAG_HAS_EXTRA) { // add a black-ish frame
+			unsigned const skip_faces_frame(hanging ? 0 : skip_back_face);
+			colorRGBA const frame_color(apply_light_color(c, BKGRAY));
+			float const frame_width(0.1*c.dz()), frame_thickness(0.5*c.get_sz_dim(c.dim)); // actual thickness is 2x
+			cube_t frame(c);
+			frame.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*frame_thickness; // extend outward
+			frame.expand_in_dim(!c.dim, frame_width);
+			frame.expand_in_dim(2,      frame_width); // z
+
+			for (unsigned d = 0; d < 2; ++d) { // top/bot an sides
+				cube_t tb(frame), side(frame);
+				tb.d[2][d] = c.d[2][!d] + (d ? 1.0 : -1.0)*frame_thickness; // clip in z
+				side.d[!c.dim][d] = c.d[!c.dim][!d] + (d ? 1.0 : -1.0)*frame_thickness; // clip
+				side.z1() = c.z1(); side.z2() = c.z2();
+				mat.add_cube_to_verts_untextured(tb,   frame_color,  skip_faces_frame);
+				mat.add_cube_to_verts_untextured(side, frame_color, (skip_faces_frame | EF_Z12));
+			} // for d
+		}
 	}
 	if (!inc_text) return;
 	// add sign text
