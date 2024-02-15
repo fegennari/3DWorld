@@ -479,7 +479,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						s_hall.d[!min_dim][ 1] = p->d[!min_dim][1] - hall_offset;
 						c_hall.d[ min_dim][ d] = hall_inner;
 						c_hall.d[ min_dim][!d] = hall_wall_pos[d];
-						add_room(s_hall, part_id, 3, 1, 0); // add sec hallway as room with 3 lights
+						unsigned const num_lights(min(6U, max(2U, unsigned(0.5*s_hall.get_sz_dim(!min_dim)/s_hall.get_sz_dim(min_dim)))));
+						add_room(s_hall, part_id, num_lights, 1, 0); // add sec hallway as room with several lights
 						interior->exclusion.push_back(s_hall); // excluded from placing stairs and elevators
 
 						// walls along sec hallway
@@ -508,8 +509,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 							float const other_edge(p->d[!min_dim][e]), offset_outer(s_hall.d[!min_dim][e]), offset_inner(offset_outer + esign*sh_width);
 							c_hall.d[!min_dim][ e] = offset_outer;
 							c_hall.d[!min_dim][!e] = offset_inner;
-							unsigned const num_lights((c_hall.get_sz_dim(min_dim) > 0.25*s_hall.get_sz_dim(!min_dim)) ? 2 : 1); // 2 lights if it's long enough
-							add_room(c_hall, part_id, num_lights, 1, 0); // add conn hallway as room
+							unsigned const num_lights2((c_hall.get_sz_dim(min_dim) > 0.25*s_hall.get_sz_dim(!min_dim)) ? 2 : 1); // 2 lights if it's long enough
+							add_room(c_hall, part_id, num_lights2, 1, 0); // add conn hallway as room
 							cube_t exclude(c_hall);
 							exclude.d[min_dim][!d] += dsign*doorway_width; // expand out a bit into the main hallway to ensure there's space to enter this hallway
 							interior->exclusion.push_back(exclude); // excluded from placing stairs and elevators
