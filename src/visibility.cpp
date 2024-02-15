@@ -231,7 +231,6 @@ void pos_dir_up::get_frustum_corners(point pts[8]) const { // {near, far} x {ll,
 point pos_dir_up::get_frustum_center() const {
 	point pts[8];
 	get_frustum_corners(pts);
-	// and bcube is cube_t::set_from_points(pts, 8)
 	return get_center_arb(pts, 8);
 }
 

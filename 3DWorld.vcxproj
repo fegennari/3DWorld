@@ -1117,6 +1117,7 @@
     <None Include="shaders\common_header_shared.part" />
     <None Include="shaders\convert_to_grayscale.frag" />
     <None Include="shaders\craters.part.frag" />
+    <None Include="shaders\csm_layers.geom" />
     <None Include="shaders\cube_map.frag" />
     <None Include="shaders\cube_map.vert" />
     <None Include="shaders\depth_of_field.frag" />
@@ -1223,6 +1224,7 @@
     <None Include="shaders\screen_space_blur_1d.frag" />
     <None Include="shaders\shadow_map.part" />
     <None Include="shaders\shadow_map.vert" />
+    <None Include="shaders\shadow_map_csm.vert" />
     <None Include="shaders\ship_draw.frag" />
     <None Include="shaders\ship_draw.vert" />
     <None Include="shaders\ship_shields.frag" />

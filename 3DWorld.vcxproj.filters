@@ -1512,6 +1512,12 @@
     <None Include="shaders\alpha_mask_shadow.frag">
       <Filter>Shaders\frag</Filter>
     </None>
+    <None Include="shaders\csm_layers.geom">
+      <Filter>Shaders\geom</Filter>
+    </None>
+    <None Include="shaders\shadow_map_csm.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">

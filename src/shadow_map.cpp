@@ -532,7 +532,7 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *c
 		}
 		assert(is_allocated());
 		// render from the light POV to a FBO, store depth values only
-		enable_fbo(fbo_id, get_tid(), 1, 0, get_layer());
+		enable_fbo(fbo_id, get_tid(), 1, 0, get_layer()); // is_depth_fbo=1, multisample=0
 		glViewport(0, 0, smap_sz, smap_sz);
 		glClear(GL_DEPTH_BUFFER_BIT);
 		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
@@ -562,6 +562,33 @@ unsigned get_smap_bytes_per_pixel() {return smap_bytes_per_pixel;}
 unsigned smap_data_t::get_gpu_mem() const {return (is_allocated() ? smap_bytes_per_pixel*smap_sz*smap_sz : 0);}
 
 
+unsigned const NUM_CSM_CASCADES = 4; // must agree with the values in csm_layers.geom
+
+void setup_csm(unsigned &fbo_id, unsigned &tid) {
+	if (tid == 0) {set_shadow_tex_params(tid, 1, 1);} // is_array=1, use_white_border=1
+	enable_fbo(fbo_id, tid, 1, 0); // is_depth_fbo=1, multisample=0
+}
+glm::mat4 perspective_from_frustum(pos_dir_up const &pdu) {
+	return glm::perspective(glm::radians(pdu.angle), (float)pdu.A, pdu.near_, pdu.far_);
+}
+glm::mat4 setup_csm_matrix(pos_dir_up const &pdu, point const &lpos) {
+	float const far_plane(pdu.far_);
+	float const cascade_levels[NUM_CSM_CASCADES] = {far_plane/50.0f, far_plane/25.0f, far_plane/10.0f, far_plane/2.0f};
+	point const center(pdu.get_frustum_center());
+	vector3d const light_dir(-lpos.get_norm());
+	auto const light_view(glm::lookAt(vec3_from_vector3d(center + light_dir), vec3_from_vector3d(center), vec3_from_vector3d(pdu.upv_)));
+	point pts[8];
+	pdu.get_frustum_corners(pts);
+	for (unsigned i = 0; i < 8; ++i) {pts[i] = vector3d_from_vec3(light_view * glm::vec4(vec3_from_vector3d(pts[i]), 1.0));}
+	cube_t bcube(pts, 8);
+	float const z_mult = 10.0f; // tune this parameter according to the scene
+	if (bcube.z1() < 0) {bcube.z1() *= z_mult;} else {bcube.z1() /= z_mult;}
+	if (bcube.z2() < 0) {bcube.z2() /= z_mult;} else {bcube.z2() *= z_mult;}
+	glm::mat4 const light_projection = glm::ortho(bcube.x1(), bcube.x2(), bcube.y1(), bcube.y2(), bcube.z1(), bcube.z2());
+	return light_projection * light_view;
+}
+
+
 void draw_mesh_shadow_pass(point const &lpos, unsigned smap_sz) {
 
 	if (!(display_mode & 0x01) || ground_effects_level == 0) return;
@@ -586,7 +613,6 @@ void ground_mode_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	point const camera_pos_(camera_pos);
 	camera_pos = lpos;
 	vector3d const light_dir(-pdu.pos.get_norm()); // approximate as directional light; should be close enough for culling cube faces
-
 	// add static objects
 	smap_vertex_cache.add_cobjs(smap_sz, 0, 0); // no VFC for static cobjs
 	smap_vertex_cache.render();

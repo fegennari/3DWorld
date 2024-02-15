@@ -1069,8 +1069,9 @@ void shader_t::begin_color_only_shader(colorRGBA const &color) {
 	set_cur_color(color);
 }
 
-void shader_t::begin_shadow_map_shader(bool use_alpha_mask) {
+void shader_t::begin_shadow_map_shader(bool use_alpha_mask, bool use_csm) {
 	if (use_alpha_mask) {
+		assert(!use_csm); // not yet supported
 		set_vert_shader("pos_only");
 		set_frag_shader("alpha_mask_shadow");
 		begin_shader();
@@ -1078,7 +1079,13 @@ void shader_t::begin_shadow_map_shader(bool use_alpha_mask) {
 		add_uniform_int("tex0", 0);
 	}
 	else {
-		set_vert_shader("shadow_map");
+		if (use_csm) {
+			set_vert_shader("shadow_map_csm");
+			set_geom_shader("csm_layers");
+		}
+		else {
+			set_vert_shader("shadow_map");
+		}
 		set_frag_shader("empty_shader");
 		begin_shader();
 	}
