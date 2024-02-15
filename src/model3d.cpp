@@ -1361,17 +1361,17 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 	int const tex_id(get_render_texture());
 
 	if (is_z_prepass) { // no textures
-		if (alpha < 1.0 || (tex_id >= 0 && alpha_tid >= 0)) return; // partially transparent or has alpha mask
+		if (alpha < 1.0 || has_alpha_mask()) return; // partially transparent or has alpha mask
 		geom.render(shader, 0, xlate);
 		geom_tan.render(shader, 0, xlate);
 	}
 	else if (is_shadow_pass) {
-		bool const has_alpha_mask(tex_id >= 0 && alpha_tid >= 0);
-		if (enable_alpha_mask != 2 && has_alpha_mask != bool(enable_alpha_mask)) return; // incorrect pass
-		if (has_alpha_mask) {tmgr.bind_texture(tex_id);} // enable alpha mask texture
+		bool const has_amask(has_alpha_mask());
+		if (enable_alpha_mask != 2 && has_amask != bool(enable_alpha_mask)) return; // incorrect pass
+		if (has_amask) {tmgr.bind_texture(tex_id);} // enable alpha mask texture
 		geom.render(shader, 1, xlate);
 		geom_tan.render(shader, 1, xlate);
-		if (has_alpha_mask) {select_texture(WHITE_TEX);} // back to a default white texture
+		if (has_amask) {select_texture(WHITE_TEX);} // back to a default white texture
 	}
 	else {
 		bool bmap_disabled(0);
@@ -1952,6 +1952,7 @@ void model3d::bind_all_used_tids() {
 		}
 		needs_alpha_test |= m->get_needs_alpha_test();
 		needs_trans_pass |= m->is_partial_transparent();
+		has_alpha_mask   |= m->has_alpha_mask();
 	} // for m
 	calc_tangent_vectors();
 }
@@ -2441,7 +2442,7 @@ void model3d::model_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 
 	model->bind_all_used_tids();
 
-	for (unsigned sam_pass = 0; sam_pass < 2U; ++sam_pass) { // {normal, alpha mask}
+	for (unsigned sam_pass = 0; sam_pass < (model->get_has_alpha_mask() ? 2U : 1U); ++sam_pass) { // {normal, alpha mask}
 		shader_t s;
 		s.begin_shadow_map_shader(sam_pass == 1);
 		model->render_materials_def(s, 1, 0, 0, (sam_pass == 1), 3, 3, &zero_vector); // no transforms; both opaque and partially transparent
@@ -2722,12 +2723,14 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 	bool const allow_animations(!disable_shader_effects && (!is_shadow_pass || ENABLE_ANIMATION_SHADOWS));
 	// Note: in ground mode, lighting is global, so transforms are included in vpos with use_mvm=1; in TT mode, lighting is relative to each model instance
 	bool const use_mvm(!tt_mode && has_any_transforms()), v(!tt_mode), use_smap(1 || v);
-	bool needs_alpha_test(0), needs_bump_maps(0), any_planar_reflective(0), any_cube_map_reflective(0), any_non_reflective(0), use_spec_map(0), use_gloss_map(0), needs_trans_pass(0);
+	bool needs_alpha_test(0), needs_bump_maps(0), any_planar_reflective(0), any_cube_map_reflective(0), any_non_reflective(0);
+	bool use_spec_map(0), use_gloss_map(0), needs_trans_pass(0), has_alpha_mask(0);
 	unsigned num_models_with_animations(0);
 
 	for (iterator m = begin(); m != end(); ++m) {
 		needs_alpha_test |= m->get_needs_alpha_test();
 		needs_trans_pass |= m->get_needs_trans_pass();
+		has_alpha_mask   |= m->get_has_alpha_mask();
 		use_spec_map     |= (enable_spec_map() && m->uses_spec_map());
 		use_gloss_map    |= (enable_spec_map() && m->uses_gloss_map());
 		if (allow_animations) {num_models_with_animations += m->has_animations();}
@@ -2766,7 +2769,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 
 	// the bump map pass is first and the regular pass is second; this way, transparent objects such as glass that don't have bump maps are drawn last
 	for (int bmap_pass = (needs_bump_maps ? 1 : 0); bmap_pass >= 0; --bmap_pass) {
-		for (unsigned sam_pass = 0; sam_pass < (is_shadow_pass ? 2U : 1U); ++sam_pass) {
+		for (unsigned sam_pass = 0; sam_pass < ((is_shadow_pass && has_alpha_mask) ? 2U : 1U); ++sam_pass) {
 			for (unsigned ref_pass = (any_non_reflective ? 0U : 1U); ref_pass < (reflect_mode ? 2U : 1U); ++ref_pass) {
 				for (unsigned anim_pass = 0; anim_pass < 2; ++anim_pass) {
 					if ( anim_pass && !any_animated) continue;

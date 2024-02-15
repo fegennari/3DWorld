@@ -517,6 +517,7 @@ struct material_t : public material_params_t {
 	int get_render_texture() const {return ((d_tid >= 0 || a_tid < 0) ? d_tid : a_tid);} // return diffuse texture unless ambient texture is specified but diffuse texture is not
 	bool get_needs_alpha_test  () const {return (alpha_tid >= 0 || might_have_alpha_comp);}
 	bool is_partial_transparent() const {return ((alpha < 1.0 || get_needs_alpha_test()) && !no_blend);}
+	bool has_alpha_mask        () const {return (alpha_tid >= 0 && get_render_texture() >= 0);}
 	void compute_area_per_tri();
 	void simplify_indices(float reduce_target);
 	void reverse_winding_order();
@@ -552,7 +553,7 @@ class model3d {
 	unsigned model_refl_tid=0, model_refl_tsize=0, model_refl_last_tsize=0, model_indir_tid=0;
 	int reflective=0; // reflective: 0=none, 1=planar, 2=cube map
 	int indoors=2; // 0=no/outdoors, 1=yes/indoors, 2=unknown
-	bool from_model3d_file=0, has_cobjs=0, needs_alpha_test=0, needs_bump_maps=0, has_spec_maps=0, has_gloss_maps=0, xform_zvals_set=0, needs_trans_pass=0;
+	bool from_model3d_file=0, has_cobjs=0, needs_alpha_test=0, needs_bump_maps=0, has_spec_maps=0, has_gloss_maps=0, xform_zvals_set=0, needs_trans_pass=0, has_alpha_mask=0;
 	float metalness=0.0; // should be per-material, but not part of the material file and specified per-object instead
 	float lod_scale=1.0;
 
@@ -667,6 +668,7 @@ public:
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact, bool build_bvh_if_needed=0);
 	bool get_needs_alpha_test() const {return needs_alpha_test;}
 	bool get_needs_trans_pass() const {return needs_trans_pass;}
+	bool get_has_alpha_mask  () const {return has_alpha_mask;}
 	bool get_needs_bump_maps () const {return needs_bump_maps;}
 	bool uses_spec_map()        const {return has_spec_maps;}
 	bool uses_gloss_map()       const {return has_gloss_maps;}
