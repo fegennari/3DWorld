@@ -2437,25 +2437,13 @@ cube_t model3d::get_single_transformed_bcube(vector3d const &xlate) const {
 }
 
 
-void setup_smap_shader(shader_t &s, bool sam_pass) {
-
-	if (sam_pass == 1) { // alpha mask
-		s.begin_simple_textured_shader(MIN_SHADOW_ALPHA);
-		select_texture(WHITE_TEX);
-	}
-	else { // no alpha mask
-		s.begin_shadow_map_shader();
-	}
-}
-
-
 void model3d::model_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 
 	model->bind_all_used_tids();
 
-	for (unsigned sam_pass = 0; sam_pass < 2U; ++sam_pass) {
+	for (unsigned sam_pass = 0; sam_pass < 2U; ++sam_pass) { // {normal, alpha mask}
 		shader_t s;
-		setup_smap_shader(s, (sam_pass != 0));
+		s.begin_shadow_map_shader(sam_pass == 1);
 		model->render_materials_def(s, 1, 0, 0, (sam_pass == 1), 3, 3, &zero_vector); // no transforms; both opaque and partially transparent
 		s.end_shader();
 	}
@@ -2792,7 +2780,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 							// need to use smoke shader for animations, but disable all shading options
 							setup_smoke_shaders(s, min_alpha, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, use_mvm);
 						}
-						else {setup_smap_shader(s, (sam_pass != 0));}
+						else {s.begin_shadow_map_shader(sam_pass == 1);}
 					}
 					else if (shader_effects) {
 						int const use_bmap((bmap_pass == 0) ? 0 : (model_calc_tan_vect ? 2 : 1));

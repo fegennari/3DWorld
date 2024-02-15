@@ -1509,6 +1509,9 @@
     <None Include="shaders\empty_shader.frag">
       <Filter>Shaders\frag</Filter>
     </None>
+    <None Include="shaders\alpha_mask_shadow.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">

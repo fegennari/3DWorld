@@ -1092,6 +1092,7 @@
     <None Include="README.defaults" />
     <None Include="README.md" />
     <None Include="shaders\alpha_mask.frag" />
+    <None Include="shaders\alpha_mask_shadow.frag" />
     <None Include="shaders\asteroid.frag" />
     <None Include="shaders\asteroid.vert" />
     <None Include="shaders\asteroid_dust.frag" />

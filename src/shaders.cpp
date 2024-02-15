@@ -1069,10 +1069,19 @@ void shader_t::begin_color_only_shader(colorRGBA const &color) {
 	set_cur_color(color);
 }
 
-void shader_t::begin_shadow_map_shader() {
-	set_vert_shader("shadow_map");
-	set_frag_shader("empty_shader");
-	begin_shader();
+void shader_t::begin_shadow_map_shader(bool use_alpha_mask) {
+	if (use_alpha_mask) {
+		set_vert_shader("pos_only");
+		set_frag_shader("alpha_mask_shadow");
+		begin_shader();
+		add_uniform_float("min_alpha", MIN_SHADOW_ALPHA);
+		add_uniform_int("tex0", 0);
+	}
+	else {
+		set_vert_shader("shadow_map");
+		set_frag_shader("empty_shader");
+		begin_shader();
+	}
 }
 
 void shader_t::begin_simple_textured_shader(float min_alpha, bool include_2_lights, bool use_texgen, colorRGBA const *const color) {
@@ -1094,7 +1103,6 @@ void shader_t::begin_simple_textured_shader(float min_alpha, bool include_2_ligh
 }
 
 void shader_t::begin_untextured_lit_glcolor_shader() {
-
 	begin_simple_textured_shader(0.0, 1); // lighting (not actually textured)
 	select_texture(WHITE_TEX); // untextured
 }
