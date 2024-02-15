@@ -640,7 +640,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 			}
-			else if (has_pri_hall() && r->part_id == 0 && f == 0 && added_desk) { // office building part with primary hallway, first floor of any part
+			// office building part with primary hallway, first floor of first non-retail part
+			else if (has_pri_hall() && r->part_id == (has_retail() ? 1 : 0) && f == 0 && added_desk) {
 				add_office_door_sign(rgen, *r, room_center.z, room_id, tot_light_amt);
 			}
 			bool const room_type_was_not_set(r->get_room_type(f) == RTYPE_NOTSET);

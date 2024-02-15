@@ -359,7 +359,8 @@ void building_t::add_company_sign(rand_gen_t &rgen) {
 	}
 }
 
-void building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std::string const &text, colorRGBA const &color, bool emissive) { // interior signs
+// interior (exit) or exterior signs
+void building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std::string const &text, colorRGBA const &color, bool emissive) {
 	assert(!text.empty());
 	cube_t const door_bcube(door.get_bcube());
 	bool const dim(door_bcube.dy() < door_bcube.dx());
