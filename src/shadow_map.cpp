@@ -59,7 +59,7 @@ int get_smap_ndiv(float radius, unsigned smap_sz) {
 int get_def_smap_ndiv(float radius) {return get_smap_ndiv(radius, shadow_map_sz);}
 
 
-struct ground_mode_smap_data_t : public cached_dynamic_smap_data_t {
+struct ground_mode_smap_data_t : public cached_dynamic_smap_data_t { // used for ground mode sun and moon directional lights
 
 	ground_mode_smap_data_t(unsigned tu_id_) : cached_dynamic_smap_data_t(tu_id_, shadow_map_sz) {}
 	virtual void render_scene_shadow_pass(point const &lpos);
@@ -68,7 +68,7 @@ struct ground_mode_smap_data_t : public cached_dynamic_smap_data_t {
 
 vector<ground_mode_smap_data_t> smap_data;
 
-void ensure_smap_data() {
+void ensure_smap_data() { // sun/moon
 
 	if (smap_data.empty()) {
 		for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {smap_data.push_back(ground_mode_smap_data_t(GLOBAL_SMAP_START_TU_ID+l));} // tu_ids 6 and 7
@@ -77,7 +77,7 @@ void ensure_smap_data() {
 }
 
 
-class smap_vertex_cache_t : public vbo_wrap_t {
+class smap_vertex_cache_t : public vbo_wrap_t { // used for sun and moon shadows of dynamic objects in ground mode
 
 	unsigned num_verts1, num_verts2;
 	vector<vert_wrap_t> dverts;
@@ -239,7 +239,7 @@ public:
 		coll_obj const &c(coll_objects.get_cobj(cid));
 		if (!c.no_shadow_map() && c.is_movable()) {movable_cids.push_back(cid);}
 	}
-};
+}; // smap_vertex_cache_t
 
 smap_vertex_cache_t smap_vertex_cache;
 
@@ -303,7 +303,7 @@ bool smap_data_t::set_smap_shader_for_light(shader_t &s, int light, xform_matrix
 	return 1;
 }
 
-bool local_smap_data_t::set_smap_shader_for_light(shader_t &s, bool &arr_tex_set) const {
+bool local_smap_data_t::set_smap_shader_for_light(shader_t &s, bool &arr_tex_set) const { // point/spot lights
 
 	if (!shadow_map_enabled()) return 0;
 	assert(tu_id >= LOCAL_SMAP_START_TU_ID);
@@ -341,16 +341,16 @@ bool local_smap_data_t::set_smap_shader_for_light(shader_t &s, bool &arr_tex_set
 	return 1;
 }
 
-unsigned get_empty_smap_tid() {
+unsigned get_empty_smap_tid() { // default empty shadow map for use in shaders when the shadow map hasn't been generated yet; for tiled terrain and disabled sun/moon
 	if (empty_smap_tid == 0) {
 		set_shadow_tex_params(empty_smap_tid, 0);
 		char const zero_data[16] = {0};
-		glTexImage2D(GL_TEXTURE_2D, 0, SMAP_INTERNAL_FORMAT, 1, 1, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, zero_data);
+		glTexImage2D(GL_TEXTURE_2D, 0, SMAP_INTERNAL_FORMAT, 1, 1, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, zero_data); // 1x1 texel
 	}
 	return empty_smap_tid;
 }
 
-void bind_default_sun_moon_smap_textures() { // Note: uses different TUs compared to tiled terrain disable_shadow_maps()
+void bind_default_sun_moon_smap_textures() { // for tiled terrain and building exteriors; uses different TUs compared to tiled terrain disable_shadow_maps()
 	// ensure shadow map TU_IDs are valid in case we try to use them without binding to a tile;
 	// maybe this fixes the occasional shader undefined behavior warning we get with the debug callback?
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {

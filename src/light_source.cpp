@@ -389,7 +389,7 @@ void light_source_trig::register_activate(bool player_triggered) {
 
 // ************ SHADOW MAPS ***********
 
-// local shadow maps are used for cases such as buildings and streetlights and are capped at 64 max to agree with the shader;
+// local shadow maps are for point/spot lights used for cases such as buildings and streetlights and are capped at 64 max to agree with the shader;
 // this cap can be increased, but some GPUs may not have enough uniform slots for more, and it would take more GPU memory;
 // when the player rotates, different light sources may enter the view frustum as lights with cached shadows leave it, which can thrash the cache;
 // it may make sense to reserve some extra slots to help with this, though only if the max_shadow_maps config option is set less than the max;

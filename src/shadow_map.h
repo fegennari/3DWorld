@@ -42,7 +42,7 @@ public:
 	void disown() {assert(!is_arrayed()); local_tid = gen_id = fbo_id = 0;}
 };
 
-struct smap_data_t : public smap_data_state_t {
+struct smap_data_t : public smap_data_state_t { // used for all types of lights: ground mode, tiled terrain, and model3d
 
 	unsigned tu_id, smap_sz;
 	pos_dir_up pdu;
@@ -61,13 +61,13 @@ struct smap_data_t : public smap_data_state_t {
 	virtual bool is_local() const {return 0;} // for debugging only
 };
 
-struct cached_dynamic_smap_data_t : public smap_data_t {
+struct cached_dynamic_smap_data_t : public smap_data_t { // used for all types of lights (ground mode directional sun/moon, point, spotlight)
 
 	bool last_has_dynamic;
 	cached_dynamic_smap_data_t(unsigned tu_id_, unsigned smap_sz_) : smap_data_t(tu_id_, smap_sz_), last_has_dynamic(0) {}
 };
 
-struct local_smap_data_t : public cached_dynamic_smap_data_t {
+struct local_smap_data_t : public cached_dynamic_smap_data_t { // for point/spot lights that may be dynamic
 
 	bool used, outdoor_shadows;
 	unsigned user_smap_id;
@@ -80,7 +80,7 @@ struct local_smap_data_t : public cached_dynamic_smap_data_t {
 	virtual bool is_local() const {return 1;} // for debugging only
 };
 
-struct local_cube_map_smap_data_t : public local_smap_data_t { // to be implemented/used later
+struct local_cube_map_smap_data_t : public local_smap_data_t { // unused; to be implemented/used later
 	local_cube_map_smap_data_t(unsigned tu_id_, unsigned smap_sz_=DEF_LOCAL_SMAP_SZ) : local_smap_data_t(tu_id_, smap_sz_) {}
 };
 
