@@ -34,16 +34,6 @@ float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, float n_dot_l, in ma
 	shadow_coord.xyz /= shadow_coord.w;
 	shadow_coord.z   += -0.1*z_bias; // lower z-bias for local shadow maps
 #if 1
-	const float poisson_table[18] = {
-		0.007862935f, 0.1915329f,
-		-0.2005593f, 0.7925976f,
-		-0.6711889f, 0.5317522f,
-		-0.2714615f, -0.562771f,
-		-0.4523138f, -0.04493545f,
-		0.3200973f, -0.4987137f,
-		0.7931406f, 0.4579287f,
-		0.3831475f, 0.8574728f,
-		0.6333998f, -0.05667673f};
 	float ret = 0.0;
 	float pcf_offset = n_dot_l*dlight_pcf_offset; // scale by NdotL to avoid bands on surfaces nearly perpendicular to the light
 	float offset_scale = pcf_offset/shadow_coord.w;
