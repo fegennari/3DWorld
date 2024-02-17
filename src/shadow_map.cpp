@@ -44,7 +44,7 @@ extern platform_cont platforms;
 
 void draw_trees(bool shadow_only=0, bool reflection_pass=0);
 void free_light_source_gl_state();
-void set_shadow_tex_params(unsigned &tid, bool is_array, bool use_white_border=0);
+void set_shadow_tex_params(unsigned &tid, bool is_array, bool is_csm, bool use_white_border=0);
 
 
 cube_t get_scene_bounds() {
@@ -290,20 +290,33 @@ void smap_data_state_t::bind_tex_array(smap_texture_array_t *tex_arr_) { // must
 	layer_id = tex_arr->new_layer();
 }
 
+float const cascade_plane_dscales[NUM_CSM_CASCADES] = {1.0/50.0f, 1.0/25.0f, 1.0/10.0f, 1.0/2.0f};
+
 bool smap_data_t::set_smap_shader_for_light(shader_t &s, int light, xform_matrix const *const mvm) const {
 
 	if (!shadow_map_enabled() || !is_light_enabled(light)) return 0;
 	point lpos; // unused
 	bool const light_is_valid(light_valid(0xFF, light, lpos));
+	string sm_tex_str("sm_tex"), sm_scale_str("sm_scale"), smap_matrix_str("smap_matrix");
+	s.add_uniform_int  (append_ix(sm_tex_str,   light, 0), tu_id);
+	s.add_uniform_float(append_ix(sm_scale_str, light, 0), (light_is_valid ? 1.0 : 0.0));
 
 	if (is_csm) {
-		// TODO
+		// this part only needs to be done only once per light, but we have at most two lights, so it should be okay
+		float const far_plane(pdu.far_);
+		s.add_uniform_float("zfar", far_plane);
+		assert(cascade_matrices.size() == NUM_CSM_CASCADES);
+
+		for (unsigned i = 0; i < NUM_CSM_CASCADES; ++i) {
+			string cpd_str("cascade_plane_distances"), matrix_str(append_ix(smap_matrix_str, light, 0));
+			s.add_uniform_float(append_ix(cpd_str, i, 1), far_plane*cascade_plane_dscales[i]);
+			xform_matrix tm(cascade_matrices[i]);
+			if (mvm) {tm *= (*mvm) * glm::affineInverse((glm::mat4)fgGetMVM());} // ???
+			s.add_uniform_matrix_4x4(append_ix(matrix_str, i, 1), tm.get_ptr(), 0);
+		}
 		// TODO: must call glBindTexture(GL_TEXTURE_2D_ARRAY, local_tid); before use, rather than calling the code in tile_t::bind_textures()
 	}
 	else {
-		string sm_tex_str("sm_tex"), sm_scale_str("sm_scale"), smap_matrix_str("smap_matrix");
-		s.add_uniform_int  (append_ix(sm_tex_str,   light, 0), tu_id);
-		s.add_uniform_float(append_ix(sm_scale_str, light, 0), (light_is_valid ? 1.0 : 0.0));
 		xform_matrix tm(texture_matrix);
 		if (mvm) {tm *= (*mvm) * glm::affineInverse((glm::mat4)fgGetMVM());} // Note: works for translate, but not scale?
 		s.add_uniform_matrix_4x4(append_ix(smap_matrix_str, light, 0), tm.get_ptr(), 0);
@@ -317,6 +330,7 @@ bool local_smap_data_t::set_smap_shader_for_light(shader_t &s, bool &arr_tex_set
 	if (!shadow_map_enabled()) return 0;
 	assert(tu_id >= LOCAL_SMAP_START_TU_ID);
 	assert(is_arrayed());
+	assert(!is_csm); // not supported for point/spot lights
 
 	if (!arr_tex_set) { // Note: assumes all lights use the same texture array
 		arr_tex_set = bind_smap_texture(); // not setup until we bind a valid texture
@@ -353,7 +367,7 @@ bool local_smap_data_t::set_smap_shader_for_light(shader_t &s, bool &arr_tex_set
 // default empty shadow map for use in shaders when the shadow map hasn't been generated yet; for tiled terrain and disabled sun/moon
 unsigned get_empty_smap_tid(bool is_csm) {
 	if (empty_smap_tid == 0) {
-		set_shadow_tex_params(empty_smap_tid, 0);
+		set_shadow_tex_params(empty_smap_tid, 0, is_csm); // is_array=0
 		char const zero_data[16] = {0}; // large enough for any type
 		if (is_csm) {glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, SMAP_INTERNAL_FORMAT, 1, 1, NUM_CSM_CASCADES, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, zero_data);} // 1x1 texel
 		else        {glTexImage2D(GL_TEXTURE_2D,       0, SMAP_INTERNAL_FORMAT, 1, 1,                   0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, zero_data);} // 1x1 texel
@@ -458,13 +472,13 @@ void draw_scene_bounds_and_light_frustum(point const &lpos) {
 }
 
 
-void set_shadow_tex_params(unsigned &tid, bool is_array, bool use_white_border) {
+void set_shadow_tex_params(unsigned &tid, bool is_array, bool is_csm, bool use_white_border) {
 
 	bool const nearest(0); // nearest filter: sharper shadow edges, but needs more biasing
 	setup_texture(tid, 0, 0, 0, 0, 0, nearest, 1.0, is_array);
 	// This is to allow usage of textureProj function in the shader
 	int const target(get_2d_texture_target(is_array));
-	glTexParameteri(target, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
+	glTexParameteri(target, GL_TEXTURE_COMPARE_MODE, (is_csm ? GL_NONE : GL_COMPARE_R_TO_TEXTURE));
 	glTexParameteri(target, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 
 	if (use_white_border) {
@@ -509,7 +523,7 @@ void smap_texture_array_t::ensure_tid(unsigned xsize, unsigned ysize) {
 	assert(xsize > 0 && ysize > 0 && num_layers > 0);
 	if (tid) return; // already allocated
 	++gen_id;
-	set_shadow_tex_params(tid, 1);
+	set_shadow_tex_params(tid, 1, 0); // is_array=1, is_csm=0
 	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, SMAP_INTERNAL_FORMAT, xsize, ysize, num_layers, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, NULL);
 	check_gl_error(630);
 	gpu_mem += xsize*ysize*num_layers*smap_bytes_per_pixel;
@@ -520,8 +534,6 @@ glm::mat4 perspective_from_frustum(pos_dir_up const &pdu) {
 	return glm::perspective(glm::radians(pdu.angle), (float)pdu.A, pdu.near_, pdu.far_);
 }
 glm::mat4 setup_csm_matrix(pos_dir_up const &pdu, point const &lpos) {
-	float const far_plane(pdu.far_);
-	float const cascade_levels[NUM_CSM_CASCADES] = {far_plane/50.0f, far_plane/25.0f, far_plane/10.0f, far_plane/2.0f};
 	point const center(pdu.get_frustum_center());
 	vector3d const light_dir(-lpos.get_norm());
 	auto const light_view(glm::lookAt(vec3_from_vector3d(center + light_dir), vec3_from_vector3d(center), vec3_from_vector3d(pdu.upv_)));
@@ -553,12 +565,13 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *c
 
 	if (is_csm) {
 		glm::mat4 const M(setup_csm_matrix(pdu, lpos));
+		cascade_matrices.resize(NUM_CSM_CASCADES);
 		// TODO
 	}
 	else { // treat as perspective projection, even for directional lights
 		set_smap_mvm_pjm(pdu.pos, (pdu.pos + pdu.dir), pdu.upv, pdu.angle, pdu.A, pdu.near_, pdu.far_);
+		texture_matrix = get_texture_matrix(camera_mv_matrix);
 	}
-	texture_matrix = get_texture_matrix(camera_mv_matrix);
 	check_gl_error(201);
 
 	if (do_update) {
@@ -571,12 +584,12 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *c
 				gen_id = tex_arr->gen_id; // tag with current generation
 			}
 			else if (is_csm) {
-				set_shadow_tex_params(local_tid, 1, 1); // is_array=1, use_white_border=1
+				set_shadow_tex_params(local_tid, 1, 1, 1); // is_array=1, is_csm=1, use_white_border=1
 				glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, SMAP_INTERNAL_FORMAT, smap_sz, smap_sz, NUM_CSM_CASCADES, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, nullptr);
 				check_gl_error(631);
 			}
 			else { // non-arrayed
-				set_shadow_tex_params(local_tid, 0); // is_array=0
+				set_shadow_tex_params(local_tid, 0, 0); // is_array=0, is_csm=0
 				glTexImage2D(GL_TEXTURE_2D, 0, SMAP_INTERNAL_FORMAT, smap_sz, smap_sz, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, nullptr);
 			}
 		}

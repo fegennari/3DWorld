@@ -48,6 +48,7 @@ struct smap_data_t : public smap_data_state_t { // used for all types of lights:
 	pos_dir_up pdu;
 	point last_lpos;
 	xform_matrix texture_matrix;
+	vector<xform_matrix> cascade_matrices; // for CSMs
 
 	smap_data_t(unsigned tu_id_, unsigned smap_sz_, smap_data_state_t const &init_state=smap_data_state_t())
 	  : smap_data_state_t(init_state), tu_id(tu_id_), smap_sz(smap_sz_), last_lpos(all_zeros), texture_matrix(glm::mat4(1.0)) {}

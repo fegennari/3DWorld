@@ -13,6 +13,72 @@ uniform float z_bias          = 0.0;
 uniform float norm_bias_scale = 10.0;
 uniform float pcf_offset      = 0.01;
 uniform float sm_scale0, sm_scale1;
+
+#ifdef ENABLE_CSM
+
+#define NUM_CASCADES 4
+
+uniform float zfar;
+uniform float cascade_plane_distances[NUM_CASCADES];
+uniform sampler2DArray sm_tex0, sm_tex1;
+//layout (std140, binding = 0)
+uniform mat4 smap_matrix0[NUM_CASCADES], smap_matrix1[NUM_CASCADES];
+
+int get_cascade_layer(in vec4 pos) { // pos is in eye space
+	float depth = abs(pos.z);
+	int layer   = -1;
+
+	for (int i = 0; i < NUM_CASCADES; ++i) {
+		if (depth < cascade_plane_distances[i]) {layer = i; break;}
+	}
+	return ((layer == -1) ? NUM_CASCADES : layer);
+}
+
+// pos, normal, and lpos are in eye space
+float get_shadow_map_weight(in vec4 pos, in vec3 normal, in float sm_scale, in int light_ix, in sampler2DArray sm_tex, in vec3 lpos) {
+	int layer = get_cascade_layer(pos);
+	mat4 light_space_matrix;
+	if (light_ix == 0) {light_space_matrix = smap_matrix0[layer];}
+	else               {light_space_matrix = smap_matrix1[layer];} // assumes light_ix == 1
+	vec4 ws_pos = inverse(fg_ModelViewMatrix) * pos; // Note: vpos is in world space, but may not be present, so calculate world space pos inefficiently
+	vec4 pos_light_space = light_space_matrix * ws_pos;
+	vec3 proj_coords = pos_light_space.xyz / pos_light_space.w; // perform perspective divide
+	proj_coords = proj_coords * 0.5 + 0.5; // transform to [0,1] range
+	// get depth of current fragment from light's perspective
+	float depth = proj_coords.z;
+	if (depth  > 1.0) return 0.0;
+	// calculate bias (based on depth map resolution and slope)
+	float bias = max(0.05 * (1.0 - dot(normal, normalize(lpos))), 0.005);
+	if (layer == NUM_CASCADES) {bias *= 1 / (zfar * 0.5f);}
+	else {bias *= 1 / (cascade_plane_distances[layer] * 0.5f);}
+	depth -= bias;
+
+#ifndef NO_SHADOW_PCF
+	vec2 texel_size = 1.0 / vec2(textureSize(sm_tex, 0));
+	float ret = 0.0;
+
+	for (int i = 0; i < 9; ++i) {
+		float sample_depth = texture(sm_tex, vec3((proj_coords.xy + vec2(poisson_table[2*i], poisson_table[2*i+1]) * texel_size), layer)).r;
+        ret += ((depth > sample_depth) ? 1.0 : 0.0);
+	}
+	ret = ret/9.0; // 9-tap PCF
+#else
+	float sample_depth = texture(sm_tex, vec3(proj_coords.xy, layer)).r;
+	float ret = ((depth > sample_depth) ? 1.0 : 0.0);
+#endif
+	return max(sm_scale, 0.0)*ret - min(sm_scale, 0.0);
+}
+//float get_shadow_map_weight_light0_no_bias(in vec4 pos) {} // used for smoke dlights; not supported for CSMs
+
+float get_shadow_map_weight_light0(in vec4 pos, in vec3 normal) {
+	return get_shadow_map_weight(pos, normal, sm_scale0, 0, sm_tex0, fg_LightSource[0].position.xyz);
+}
+float get_shadow_map_weight_light1(in vec4 pos, in vec3 normal) {
+	return get_shadow_map_weight(pos, normal, sm_scale1, 1, sm_tex1, fg_LightSource[1].position.xyz);
+}
+
+#else // normal shadow map
+
 uniform sampler2DShadow sm_tex0, sm_tex1;
 uniform mat4 smap_matrix0, smap_matrix1;
 
@@ -55,6 +121,8 @@ float get_shadow_map_weight_light1(in vec4 pos, in vec3 normal) {
 	return get_shadow_map_weight(pos, normal, sm_scale1, smap_matrix1, sm_tex1, fg_LightSource[1].position.xyz);
 }
 
+#endif // normal shadow maps
+
 vec4 add_light_comp_pos_smap_light0(in vec3 normal, in vec4 epos) {
 	if (use_shadow_map) {normal *= get_shadow_map_weight_light0(epos, normal);}
 	return add_light_comp_pos0(normal, epos);
@@ -63,4 +131,3 @@ vec4 add_light_comp_pos_smap_light1(in vec3 normal, in vec4 epos) {
 	if (use_shadow_map) {normal *= get_shadow_map_weight_light1(epos, normal);}
 	return add_light_comp_pos1(normal, epos);
 }
-
