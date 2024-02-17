@@ -11,7 +11,6 @@
 #include "subdiv.h" // for sd_sphere_d
 #include "tree_3dw.h" // for tree_placer_t
 #include "profiler.h"
-#include "shadow_map.h" // for get_empty_smap_tid
 #include "lightmap.h" // for light_source
 
 using std::string;
@@ -46,6 +45,7 @@ extern tree_placer_t tree_placer;
 extern shader_t reflection_shader;
 
 
+void bind_default_sun_moon_smap_textures();
 void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
 cube_t get_building_indir_light_bounds(); // from building_lighting.cpp
 void register_player_not_in_building();
