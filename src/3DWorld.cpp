@@ -80,7 +80,7 @@ bool detail_normal_map(0), init_core_context(0), use_core_context(0), enable_mul
 bool enable_dlight_shadows(1), tree_indir_lighting(0), ctrl_key_pressed(0), only_pine_palm_trees(0), enable_gamma_correct(0), use_z_prepass(0), reflect_dodgeballs(0);
 bool store_cobj_accum_lighting_as_blocked(0), all_model3d_ref_update(0), begin_motion(0), enable_mouse_look(MOUSE_LOOK_DEF), enable_init_shields(1), tt_triplanar_tex(0);
 bool enable_model3d_bump_maps(1), use_obj_file_bump_grayscale(1), invert_bump_maps(0), use_interior_cube_map_refl(0), enable_cube_map_bump_maps(1), no_store_model_textures_in_memory(0);
-bool enable_model3d_custom_mipmaps(1), flatten_tt_mesh_under_models(0), smileys_chase_player(0), disable_fire_delay(0), disable_recoil(0);
+bool enable_model3d_custom_mipmaps(1), flatten_tt_mesh_under_models(0), smileys_chase_player(0), disable_fire_delay(0), disable_recoil(0), mesh_size_locked(0);
 bool enable_dpart_shadows(0), enable_tt_model_reflect(1), enable_tt_model_indir(0), auto_calc_tt_model_zvals(0), use_model_lod_blocks(0), enable_translocator(0), enable_grass_fire(0);
 bool disable_model_textures(0), start_in_inf_terrain(0), allow_shader_invariants(1), config_unlimited_weapons(0), disable_tt_water_reflect(0), allow_model3d_quads(1);
 bool enable_timing_profiler(0), fast_transparent_spheres(0), force_ref_cmap_update(0), use_instanced_pine_trees(0), enable_postproc_recolor(0), draw_building_interiors(0);
@@ -1700,7 +1700,10 @@ template class kw_to_val_map_t<colorRGBA>; // explicit instantiation of this one
 
 
 bool bmp_file_to_binary_array(char const *const fn, unsigned char **&data) {
-	if (strlen(fn) > 0) {if (!bmp_to_chars(fn, data)) return 0;}
+	if (strlen(fn) > 0) {
+		if (!bmp_to_chars(fn, data)) return 0;
+		mesh_size_locked = 1;
+	}
 	return 1;
 }
 
@@ -2046,6 +2049,11 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "mesh_size") {
 			if (fscanf(fp, "%i%i%i", &MESH_X_SIZE, &MESH_Y_SIZE, &MESH_Z_SIZE) != 3) cfg_err("mesh size command", error);
+
+			if (mesh_size_locked) {
+				cerr << "Error: mesh_size command cannot be called after loading a file that depends on the size" << endl;
+				error = 1;
+			}
 		}
 		else if (str == "scene_size") {
 			if (fscanf(fp, "%f%f%f", &X_SCENE_SIZE, &Y_SCENE_SIZE, &Z_SCENE_SIZE) != 3) cfg_err("scene size command", error);
