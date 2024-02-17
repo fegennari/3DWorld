@@ -13,6 +13,8 @@
 #include <glm/gtc/matrix_inverse.hpp>
 
 
+unsigned const NUM_CSM_CASCADES = 4; // must agree with the values in csm_layers.geom
+
 // texture storage datatypes for local shadow maps
 #if 1 // integer
 //int const SHADOW_MAP_DATATYPE = GL_UNSIGNED_BYTE; // 8-bit shadow maps
@@ -275,7 +277,7 @@ unsigned smap_texture_array_t::new_layer() {
 	return num_layers_used++;
 }
 
-void smap_texture_array_t::free_gl_state() {free_texture(tid);}
+void smap_texture_array_t::free_gl_state() {free_texture(tid); gpu_mem = 0;}
 
 void smap_data_state_t::free_gl_state() {
 	if (is_arrayed()) {gen_id = 0;} else {free_texture(local_tid);}
@@ -496,14 +498,34 @@ bool ground_mode_smap_data_t::needs_update(point const &lpos) {
 void smap_texture_array_t::ensure_tid(unsigned xsize, unsigned ysize) {
 
 	assert(xsize > 0 && ysize > 0 && num_layers > 0);
-	if (tid) {return;}
+	if (tid) return; // already allocated
 	++gen_id;
 	set_shadow_tex_params(tid, 1);
 	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, SMAP_INTERNAL_FORMAT, xsize, ysize, num_layers, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, NULL);
 	check_gl_error(630);
-	gpu_mem += xsize*ysize*smap_bytes_per_pixel;
+	gpu_mem += xsize*ysize*num_layers*smap_bytes_per_pixel;
 }
 
+
+glm::mat4 perspective_from_frustum(pos_dir_up const &pdu) {
+	return glm::perspective(glm::radians(pdu.angle), (float)pdu.A, pdu.near_, pdu.far_);
+}
+glm::mat4 setup_csm_matrix(pos_dir_up const &pdu, point const &lpos) {
+	float const far_plane(pdu.far_);
+	float const cascade_levels[NUM_CSM_CASCADES] = {far_plane/50.0f, far_plane/25.0f, far_plane/10.0f, far_plane/2.0f};
+	point const center(pdu.get_frustum_center());
+	vector3d const light_dir(-lpos.get_norm());
+	auto const light_view(glm::lookAt(vec3_from_vector3d(center + light_dir), vec3_from_vector3d(center), vec3_from_vector3d(pdu.upv_)));
+	point pts[8];
+	pdu.get_frustum_corners(pts);
+	for (unsigned i = 0; i < 8; ++i) {pts[i] = vector3d_from_vec3(light_view * glm::vec4(vec3_from_vector3d(pts[i]), 1.0));}
+	cube_t bcube(pts, 8);
+	float const z_mult = 10.0f; // TODO: tune this parameter according to the scene
+	if (bcube.z1() < 0) {bcube.z1() *= z_mult;} else {bcube.z1() /= z_mult;}
+	if (bcube.z2() < 0) {bcube.z2() /= z_mult;} else {bcube.z2() *= z_mult;}
+	glm::mat4 const light_projection = glm::ortho(bcube.x1(), bcube.x2(), bcube.y1(), bcube.y2(), bcube.z1(), bcube.z2());
+	return light_projection * light_view;
+}
 
 // if bounds is passed in, calculate pdu from it; otherwise, assume the user has alreay caclulated pdu;
 // note that we store the light pos and other light-specific data in the shadow map, which means we can't reuse it across lights, but we can reuse the texture
@@ -566,35 +588,12 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *c
 }
 
 unsigned get_smap_bytes_per_pixel() {return smap_bytes_per_pixel;}
-unsigned smap_data_t::get_gpu_mem() const {return (is_allocated() ? smap_bytes_per_pixel*smap_sz*smap_sz : 0);}
 
-
-unsigned const NUM_CSM_CASCADES = 4; // must agree with the values in csm_layers.geom
-
-void setup_csm(unsigned &fbo_id, unsigned &tid) {
-	if (tid == 0) {set_shadow_tex_params(tid, 1, 1);} // is_array=1, use_white_border=1
-	enable_fbo(fbo_id, tid, 1, 0); // is_depth_fbo=1, multisample=0
+unsigned smap_data_t::get_gpu_mem() const {
+	if (!is_allocated()) return 0;
+	if (tex_arr)         return 0; // not tex_arr->gpu_mem, as this is shared across shadow maps and added once in local_smap_manager_t::get_gpu_mem()
+	return smap_bytes_per_pixel*smap_sz*smap_sz;
 }
-glm::mat4 perspective_from_frustum(pos_dir_up const &pdu) {
-	return glm::perspective(glm::radians(pdu.angle), (float)pdu.A, pdu.near_, pdu.far_);
-}
-glm::mat4 setup_csm_matrix(pos_dir_up const &pdu, point const &lpos) {
-	float const far_plane(pdu.far_);
-	float const cascade_levels[NUM_CSM_CASCADES] = {far_plane/50.0f, far_plane/25.0f, far_plane/10.0f, far_plane/2.0f};
-	point const center(pdu.get_frustum_center());
-	vector3d const light_dir(-lpos.get_norm());
-	auto const light_view(glm::lookAt(vec3_from_vector3d(center + light_dir), vec3_from_vector3d(center), vec3_from_vector3d(pdu.upv_)));
-	point pts[8];
-	pdu.get_frustum_corners(pts);
-	for (unsigned i = 0; i < 8; ++i) {pts[i] = vector3d_from_vec3(light_view * glm::vec4(vec3_from_vector3d(pts[i]), 1.0));}
-	cube_t bcube(pts, 8);
-	float const z_mult = 10.0f; // tune this parameter according to the scene
-	if (bcube.z1() < 0) {bcube.z1() *= z_mult;} else {bcube.z1() /= z_mult;}
-	if (bcube.z2() < 0) {bcube.z2() /= z_mult;} else {bcube.z2() *= z_mult;}
-	glm::mat4 const light_projection = glm::ortho(bcube.x1(), bcube.x2(), bcube.y1(), bcube.y2(), bcube.z1(), bcube.z2());
-	return light_projection * light_view;
-}
-
 
 void draw_mesh_shadow_pass(point const &lpos, unsigned smap_sz) {
 
