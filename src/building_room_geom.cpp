@@ -4525,6 +4525,19 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 	trim_hole.expand_by_xy(-trim_thickness); // shrink
 	subtract_cube_xy(top, trim_hole, sides);
 	for (unsigned n = 0; n < 4; ++n) {trim_mat.add_cube_to_verts_untextured(sides[n], trim_color, 0);}
+
+	if (c.flags & RO_FLAG_ADJ_TOP) { // draw the lid and light; these extend above z2
+		cube_t lid(c);
+		lid.z1()  = top.z2();
+		lid.z2() += 0.75*trim_height;
+		lid.expand_by_xy(0.1*trim_thickness); // slight overhang
+		trim_mat.add_cube_to_verts_untextured(lid, trim_color, 0);
+		cube_t light(lid);
+		light.z1()  = lid.z2();
+		light.z2() += 0.075*height;
+		for (unsigned d = 0; d < 2; ++d) {light.expand_in_dim(d, -0.3*c.get_sz_dim(d));}
+		trim_mat.add_cube_to_verts_untextured(light, trim_color, EF_Z1); // skip bottom
+	}
 	// draw the sides
 	glass.expand_by_xy(-0.5*glass_thickness); // shrink slightly
 	cube_t hole(glass);

@@ -290,7 +290,7 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 			i->obj_id = 1; // turn it off
 			i->flags ^= RO_FLAG_NO_POWER;
 		}
-		else if (i->type == TYPE_MWAVE || i->type == TYPE_CEIL_FAN || i->type == TYPE_CAMERA || i->type == TYPE_CLOCK || i->type == TYPE_LAVALAMP) {
+		else if (i->type == TYPE_MWAVE || i->type == TYPE_CEIL_FAN || i->type == TYPE_CAMERA || i->type == TYPE_CLOCK || i->type == TYPE_LAVALAMP || i->type == TYPE_FISHTANK) {
 			i->flags ^= RO_FLAG_NO_POWER; // interactive powered devices; stove is gas and not electric powered
 		}
 		// Note: stoves use gas rather than electricity and don't need power; lit exit signs are always on
@@ -485,6 +485,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 					else if (i->type == TYPE_MIRROR && i->is_house())  {keep = 1;} // medicine cabinet
 					else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub
 					else if (i->is_light_type() || i->type == TYPE_LAVALAMP) {keep = 1;} // room light or lamp
+					else if (i->type == TYPE_FISHTANK && (i->flags & RO_FLAG_ADJ_TOP)) {keep = 1;} // fishtank with a lid and light
 					else if (i->type == TYPE_PICTURE || i->type == TYPE_TPROLL || i->type == TYPE_MWAVE || i->type == TYPE_STOVE ||
 						/*i->type == TYPE_FRIDGE ||*/ i->type == TYPE_TV || i->type == TYPE_MONITOR || i->type == TYPE_BLINDS || i->type == TYPE_SHOWER ||
 						i->type == TYPE_SWITCH || i->type == TYPE_BOOK || i->type == TYPE_BRK_PANEL || i->type == TYPE_BREAKER || i->type == TYPE_ATTIC_DOOR ||
@@ -813,6 +814,10 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		obj.flags       ^= RO_FLAG_LIT; // toggle lit
 		update_draw_data = 1;
 		gen_sound_thread_safe(SOUND_CLICK, local_center, 0.35);
+	}
+	else if (obj.type == TYPE_FISHTANK) {
+		obj.flags       ^= RO_FLAG_LIT; // toggle the light on the lid; no draw data update
+		gen_sound_thread_safe(SOUND_CLICK, local_center, 0.4);
 	}
 	else if (obj.type == TYPE_WFOUNTAIN) {
 		refill_thirst();

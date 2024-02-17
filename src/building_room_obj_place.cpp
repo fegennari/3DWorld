@@ -1832,7 +1832,13 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 			cube_t tank(table);
 			tank.expand_by_xy(-0.1*min(table.dx(), table.dy()));
 			set_cube_zvals(tank, table.z2(), (table.z2() + tank_height));
-			objs.emplace_back(tank, TYPE_FISHTANK, room_id, table.dim, table.dir, RO_FLAG_NOCOLL, tot_light_amt);
+			unsigned flags(RO_FLAG_NOCOLL);
+			
+			if (rgen.rand_float() < 0.80) { // add a lid 80% of the time
+				flags |= RO_FLAG_ADJ_TOP;
+				if (rgen.rand_float() < 0.85) {flags |= RO_FLAG_LIT;} // light is on 85% of the time
+			}
+			objs.emplace_back(tank, TYPE_FISHTANK, room_id, table.dim, table.dir, flags, tot_light_amt);
 			set_obj_id(objs);
 		}
 	}
