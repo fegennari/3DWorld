@@ -295,12 +295,19 @@ bool smap_data_t::set_smap_shader_for_light(shader_t &s, int light, xform_matrix
 	if (!shadow_map_enabled() || !is_light_enabled(light)) return 0;
 	point lpos; // unused
 	bool const light_is_valid(light_valid(0xFF, light, lpos));
-	string sm_tex_str("sm_tex"), sm_scale_str("sm_scale"), smap_matrix_str("smap_matrix");
-	s.add_uniform_int  (append_ix(sm_tex_str,   light, 0), tu_id);
-	s.add_uniform_float(append_ix(sm_scale_str, light, 0), (light_is_valid ? 1.0 : 0.0));
-	xform_matrix tm(texture_matrix);
-	if (mvm) {tm *= (*mvm) * glm::affineInverse((glm::mat4)fgGetMVM());} // Note: works for translate, but not scale?
-	s.add_uniform_matrix_4x4(append_ix(smap_matrix_str, light, 0), tm.get_ptr(), 0);
+
+	if (is_csm) {
+		// TODO
+		// TODO: must call glBindTexture(GL_TEXTURE_2D_ARRAY, local_tid); before use, rather than calling the code in tile_t::bind_textures()
+	}
+	else {
+		string sm_tex_str("sm_tex"), sm_scale_str("sm_scale"), smap_matrix_str("smap_matrix");
+		s.add_uniform_int  (append_ix(sm_tex_str,   light, 0), tu_id);
+		s.add_uniform_float(append_ix(sm_scale_str, light, 0), (light_is_valid ? 1.0 : 0.0));
+		xform_matrix tm(texture_matrix);
+		if (mvm) {tm *= (*mvm) * glm::affineInverse((glm::mat4)fgGetMVM());} // Note: works for translate, but not scale?
+		s.add_uniform_matrix_4x4(append_ix(smap_matrix_str, light, 0), tm.get_ptr(), 0);
+	}
 	bind_smap_texture(light_is_valid);
 	return 1;
 }
@@ -343,11 +350,13 @@ bool local_smap_data_t::set_smap_shader_for_light(shader_t &s, bool &arr_tex_set
 	return 1;
 }
 
-unsigned get_empty_smap_tid() { // default empty shadow map for use in shaders when the shadow map hasn't been generated yet; for tiled terrain and disabled sun/moon
+// default empty shadow map for use in shaders when the shadow map hasn't been generated yet; for tiled terrain and disabled sun/moon
+unsigned get_empty_smap_tid(bool is_csm) {
 	if (empty_smap_tid == 0) {
 		set_shadow_tex_params(empty_smap_tid, 0);
-		char const zero_data[16] = {0};
-		glTexImage2D(GL_TEXTURE_2D, 0, SMAP_INTERNAL_FORMAT, 1, 1, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, zero_data); // 1x1 texel
+		char const zero_data[16] = {0}; // large enough for any type
+		if (is_csm) {glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, SMAP_INTERNAL_FORMAT, 1, 1, NUM_CSM_CASCADES, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, zero_data);} // 1x1 texel
+		else        {glTexImage2D(GL_TEXTURE_2D,       0, SMAP_INTERNAL_FORMAT, 1, 1,                   0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, zero_data);} // 1x1 texel
 	}
 	return empty_smap_tid;
 }
@@ -365,7 +374,7 @@ bool smap_data_t::bind_smap_texture(bool light_valid) const {
 	// Note: the is_allocated() check shouldn't be required, but can happen in tiled terrain mode when switching between combined_gu mode (safe and conservative)
 	// due to some disagreement between the update pass and draw pass during reflection drawing
 	bool const use_tid(light_valid && is_allocated()); // otherwise, we know that sm_scale will be 0.0 and we won't do the lookup
-	bind_texture_tu((use_tid ? get_tid() : get_empty_smap_tid()), tu_id);
+	bind_texture_tu((use_tid ? get_tid() : get_empty_smap_tid(is_csm)), tu_id);
 	return use_tid;
 }
 
@@ -541,7 +550,14 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *c
 	fgPushMatrix();
 	fgMatrixMode(FG_MODELVIEW);
 	if (bounds && (do_update || !pdu.valid)) {pdu = get_pt_cube_frustum_pdu(lpos, *bounds);} // else pdu should have been set by the caller
-	set_smap_mvm_pjm(pdu.pos, (pdu.pos + pdu.dir), pdu.upv, pdu.angle, pdu.A, pdu.near_, pdu.far_);
+
+	if (is_csm) {
+		glm::mat4 const M(setup_csm_matrix(pdu, lpos));
+		// TODO
+	}
+	else { // treat as perspective projection, even for directional lights
+		set_smap_mvm_pjm(pdu.pos, (pdu.pos + pdu.dir), pdu.upv, pdu.angle, pdu.A, pdu.near_, pdu.far_);
+	}
 	texture_matrix = get_texture_matrix(camera_mv_matrix);
 	check_gl_error(201);
 
@@ -554,14 +570,19 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *c
 				tex_arr->ensure_tid(smap_sz, smap_sz); // create texture array if needed; point local to array texture so that we know it's bound
 				gen_id = tex_arr->gen_id; // tag with current generation
 			}
+			else if (is_csm) {
+				set_shadow_tex_params(local_tid, 1, 1); // is_array=1, use_white_border=1
+				glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, SMAP_INTERNAL_FORMAT, smap_sz, smap_sz, NUM_CSM_CASCADES, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, nullptr);
+				check_gl_error(631);
+			}
 			else { // non-arrayed
-				set_shadow_tex_params(local_tid, 0);
-				glTexImage2D(GL_TEXTURE_2D, 0, SMAP_INTERNAL_FORMAT, smap_sz, smap_sz, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, NULL);
+				set_shadow_tex_params(local_tid, 0); // is_array=0
+				glTexImage2D(GL_TEXTURE_2D, 0, SMAP_INTERNAL_FORMAT, smap_sz, smap_sz, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, nullptr);
 			}
 		}
 		assert(is_allocated());
 		// render from the light POV to a FBO, store depth values only
-		enable_fbo(fbo_id, get_tid(), 1, 0, get_layer()); // is_depth_fbo=1, multisample=0
+		enable_fbo(fbo_id, get_tid(), 1, 0, is_csm, get_layer()); // is_depth_fbo=1, multisample=0
 		glViewport(0, 0, smap_sz, smap_sz);
 		glClear(GL_DEPTH_BUFFER_BIT);
 		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
@@ -592,7 +613,7 @@ unsigned get_smap_bytes_per_pixel() {return smap_bytes_per_pixel;}
 unsigned smap_data_t::get_gpu_mem() const {
 	if (!is_allocated()) return 0;
 	if (tex_arr)         return 0; // not tex_arr->gpu_mem, as this is shared across shadow maps and added once in local_smap_manager_t::get_gpu_mem()
-	return smap_bytes_per_pixel*smap_sz*smap_sz;
+	return smap_bytes_per_pixel*smap_sz*smap_sz*(is_csm ? NUM_CSM_CASCADES : 1);
 }
 
 void draw_mesh_shadow_pass(point const &lpos, unsigned smap_sz) {

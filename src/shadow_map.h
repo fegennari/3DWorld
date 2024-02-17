@@ -28,17 +28,17 @@ public:
 class smap_data_state_t {
 
 protected:
-	smap_texture_array_t *tex_arr;
-	unsigned fbo_id, local_tid, gen_id, layer_id;
-
+	smap_texture_array_t *tex_arr=nullptr;
+	unsigned fbo_id=0, local_tid=0, gen_id=0, layer_id=0;
 public:
-	smap_data_state_t() : tex_arr(nullptr), fbo_id(0), local_tid(0), gen_id(0), layer_id(0) {}
+	bool is_csm=0;
+
 	bool is_arrayed() const {return (tex_arr != nullptr);}
 	void bind_tex_array(smap_texture_array_t *tex_arr_);
-	unsigned get_tid() const {return (is_arrayed() ? tex_arr->tid : local_tid);}
-	bool is_allocated() const {return (get_tid() > 0 && (!is_arrayed() || gen_id == tex_arr->gen_id));}
+	unsigned get_tid   () const {return (is_arrayed() ? tex_arr->tid : local_tid);}
+	bool is_allocated  () const {return (get_tid() > 0 && (!is_arrayed() || gen_id == tex_arr->gen_id));}
 	unsigned *get_layer() {return (tex_arr ? &layer_id : nullptr);}
-	void free_gl_state();
+	void free_gl_state ();
 	void disown() {assert(!is_arrayed()); local_tid = gen_id = fbo_id = 0;}
 };
 
@@ -67,7 +67,7 @@ struct cached_dynamic_smap_data_t : public smap_data_t { // used for all types o
 	cached_dynamic_smap_data_t(unsigned tu_id_, unsigned smap_sz_) : smap_data_t(tu_id_, smap_sz_), last_has_dynamic(0) {}
 };
 
-struct local_smap_data_t : public cached_dynamic_smap_data_t { // for point/spot lights that may be dynamic
+struct local_smap_data_t : public cached_dynamic_smap_data_t { // for point/spot lights that may be dynamic; CSMs not supported
 
 	bool used, outdoor_shadows;
 	unsigned user_smap_id;
@@ -118,6 +118,6 @@ template<class SD> struct vect_smap_t : public vector<SD> { // one per light sou
 	}
 };
 
-unsigned get_empty_smap_tid();
+unsigned get_empty_smap_tid(bool is_csm=0);
 void bind_default_sun_moon_smap_textures();
 
