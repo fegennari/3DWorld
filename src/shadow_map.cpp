@@ -290,7 +290,7 @@ void smap_data_state_t::bind_tex_array(smap_texture_array_t *tex_arr_) { // must
 	layer_id = tex_arr->new_layer();
 }
 
-float const cascade_plane_dscales[NUM_CSM_CASCADES] = {1.0/50.0f, 1.0/25.0f, 1.0/10.0f, 1.0/2.0f};
+float const cascade_plane_dscales[NUM_CSM_CASCADES] = {0.02, 0.05, 0.25, 1.0};
 
 bool smap_data_t::set_smap_shader_for_light(shader_t &s, int light, xform_matrix const *const mvm) const {
 
@@ -533,12 +533,15 @@ void smap_texture_array_t::ensure_tid(unsigned xsize, unsigned ysize) {
 glm::mat4 perspective_from_frustum(pos_dir_up const &pdu) {
 	return glm::perspective(glm::radians(pdu.angle), (float)pdu.A, pdu.near_, pdu.far_);
 }
-glm::mat4 setup_csm_matrix(pos_dir_up const &pdu, point const &lpos) {
-	point const center(pdu.get_frustum_center());
-	vector3d const light_dir(-lpos.get_norm());
-	auto const light_view(glm::lookAt(vec3_from_vector3d(center + light_dir), vec3_from_vector3d(center), vec3_from_vector3d(pdu.upv_)));
+glm::mat4 setup_csm_matrix(pos_dir_up const &pdu, point const &lpos, float near_plane, float far_plane) {
+	pos_dir_up frustum(pdu);
+	frustum.near_ = near_plane;
+	frustum.far_  = far_plane;
+	point const center(frustum.get_frustum_center());
+	vector3d const light_dir(lpos.get_norm());
+	auto const light_view(glm::lookAt(vec3_from_vector3d(center + light_dir), vec3_from_vector3d(center), vec3_from_vector3d(frustum.upv_)));
 	point pts[8];
-	pdu.get_frustum_corners(pts);
+	frustum.get_frustum_corners(pts);
 	for (unsigned i = 0; i < 8; ++i) {pts[i] = vector3d_from_vec3(light_view * glm::vec4(vec3_from_vector3d(pts[i]), 1.0));}
 	cube_t bcube(pts, 8);
 	float const z_mult = 10.0f; // TODO: tune this parameter according to the scene
@@ -546,6 +549,23 @@ glm::mat4 setup_csm_matrix(pos_dir_up const &pdu, point const &lpos) {
 	if (bcube.z2() < 0) {bcube.z2() /= z_mult;} else {bcube.z2() *= z_mult;}
 	glm::mat4 const light_projection = glm::ortho(bcube.x1(), bcube.x2(), bcube.y1(), bcube.y2(), bcube.z1(), bcube.z2());
 	return light_projection * light_view;
+}
+
+// hack to send a vector of matrices from CSM setup to rendering without passing it down the entire call tree
+smap_data_t const *active_smap_data = nullptr;
+
+void shader_csm_render_setup(shader_t &s) {
+	assert(active_smap_data != nullptr);
+	active_smap_data->set_csm_matrices(s);
+}
+void smap_data_t::set_csm_matrices(shader_t &s) const { // send matrices to the geometry shader
+	assert(is_csm);
+	assert(cascade_matrices.size() == NUM_CSM_CASCADES);
+
+	for (unsigned i = 0; i < NUM_CSM_CASCADES; ++i) {
+		string matrix_str("light_space_matrices");
+		s.add_uniform_matrix_4x4(append_ix(matrix_str, i, 1), cascade_matrices[i].get_ptr(), 0);
+	}
 }
 
 // if bounds is passed in, calculate pdu from it; otherwise, assume the user has alreay caclulated pdu;
@@ -564,9 +584,15 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *c
 	if (bounds && (do_update || !pdu.valid)) {pdu = get_pt_cube_frustum_pdu(lpos, *bounds);} // else pdu should have been set by the caller
 
 	if (is_csm) {
-		glm::mat4 const M(setup_csm_matrix(pdu, lpos));
+		set_smap_mvm_pjm(pdu.pos, (pdu.pos + pdu.dir), pdu.upv, pdu.angle, pdu.A, pdu.near_, pdu.far_); // ???
 		cascade_matrices.resize(NUM_CSM_CASCADES);
-		// TODO
+		
+		for (unsigned i = 0; i < NUM_CSM_CASCADES; ++i) {
+			float const near_plane((i == 0) ? camera_pdu.near_ : camera_pdu.far_*cascade_plane_dscales[i-1]);
+			float const far_plane(camera_pdu.far_*cascade_plane_dscales[i]);
+			cascade_matrices[i] = setup_csm_matrix(camera_pdu, lpos, near_plane, far_plane);
+			//get_texture_matrix(); ???
+		}
 	}
 	else { // treat as perspective projection, even for directional lights
 		set_smap_mvm_pjm(pdu.pos, (pdu.pos + pdu.dir), pdu.upv, pdu.angle, pdu.A, pdu.near_, pdu.far_);
@@ -607,7 +633,9 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *c
 		ensure_filled_polygons();
 		// render the scene
 		check_gl_error(202);
+		active_smap_data = this;
 		render_scene_shadow_pass(lpos);
+		active_smap_data = nullptr;
 		// restore state variables
 		camera_pdu     = camera_pdu_;
 		enabled_lights = orig_enabled_lights;
@@ -771,7 +799,6 @@ void create_shadow_map() {
 }
 
 void update_shadow_matrices() {
-
 	if (!shadow_map_enabled() || smap_data.empty()) return; // disabled
 	assert(scene_smap_vbo_invalid != 2);
 	create_shadow_map_inner(1); // no_update=1
@@ -779,7 +806,6 @@ void update_shadow_matrices() {
 
 
 void free_shadow_map_textures() {
-
 	for (unsigned l = 0; l < smap_data.size(); ++l) {smap_data[l].free_gl_state();}
 	free_smap_vbo();
 	free_light_source_gl_state(); // free any shadow maps within light sources

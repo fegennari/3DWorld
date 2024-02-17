@@ -48,13 +48,14 @@ struct smap_data_t : public smap_data_state_t { // used for all types of lights:
 	pos_dir_up pdu;
 	point last_lpos;
 	xform_matrix texture_matrix;
-	vector<xform_matrix> cascade_matrices; // for CSMs
+	vector<xform_matrix> cascade_matrices; // light space matrices, for CSMs
 
 	smap_data_t(unsigned tu_id_, unsigned smap_sz_, smap_data_state_t const &init_state=smap_data_state_t())
 	  : smap_data_state_t(init_state), tu_id(tu_id_), smap_sz(smap_sz_), last_lpos(all_zeros), texture_matrix(glm::mat4(1.0)) {}
 	virtual ~smap_data_t() {} // free_gl_state()?
 	bool set_smap_shader_for_light(shader_t &s, int light, xform_matrix const *const mvm=nullptr) const;
 	bool bind_smap_texture(bool light_valid=1) const;
+	void set_csm_matrices(shader_t &s) const;
 	void create_shadow_map_for_light(point const &lpos, cube_t const *const bounds=nullptr, bool use_world_space=0, bool no_update=0, bool force_update=0);
 	unsigned get_gpu_mem() const;
 	virtual void render_scene_shadow_pass(point const &lpos) = 0;
@@ -101,7 +102,7 @@ struct rotation_t {
 };
 
 
-template<class SD> struct vect_smap_t : public vector<SD> { // one per light source (sun, moon)
+template<class SD> struct vect_smap_t : public vector<SD> { // one per light source (sun, moon); used by tiled terrain
 	void set_for_all_lights(shader_t &s, xform_matrix const *const mvm) const {
 		for (unsigned i = 0; i < vector<SD>::size(); ++i) {vector<SD>::operator[](i).set_smap_shader_for_light(s, i, mvm);}
 	}

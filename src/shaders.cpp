@@ -1069,10 +1069,17 @@ void shader_t::begin_color_only_shader(colorRGBA const &color) {
 	set_cur_color(color);
 }
 
+void shader_csm_render_setup(shader_t &s);
+
 void shader_t::begin_shadow_map_shader(bool use_alpha_mask, bool use_csm) {
 	if (use_alpha_mask) {
-		assert(!use_csm); // not yet supported
-		set_vert_shader("pos_only");
+		if (use_csm) {
+			set_vert_shader("shadow_map_csm_tc");
+			set_geom_shader("csm_layers_tc");
+		}
+		else {
+			set_vert_shader("pos_only");
+		}
 		set_frag_shader("alpha_mask_shadow");
 		begin_shader();
 		add_uniform_float("min_alpha", MIN_SHADOW_ALPHA);
@@ -1089,6 +1096,7 @@ void shader_t::begin_shadow_map_shader(bool use_alpha_mask, bool use_csm) {
 		set_frag_shader("empty_shader");
 		begin_shader();
 	}
+	if (use_csm) {shader_csm_render_setup(*this);}
 }
 
 void shader_t::begin_simple_textured_shader(float min_alpha, bool include_2_lights, bool use_texgen, colorRGBA const *const color) {

@@ -14,7 +14,7 @@ uniform float norm_bias_scale = 10.0;
 uniform float pcf_offset      = 0.01;
 uniform float sm_scale0, sm_scale1;
 
-#ifdef ENABLE_CSM
+#ifdef ENABLE_CASCADED_SHADOW_MAPS
 
 #define NUM_CASCADES 4
 

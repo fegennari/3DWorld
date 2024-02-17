@@ -1521,6 +1521,12 @@
     <None Include="shaders\passthrough.geom">
       <Filter>Shaders\geom</Filter>
     </None>
+    <None Include="shaders\shadow_map_csm_tc.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\csm_layers_tc.geom">
+      <Filter>Shaders\geom</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">
