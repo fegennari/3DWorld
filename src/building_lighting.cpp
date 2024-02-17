@@ -1301,6 +1301,15 @@ bool check_cube_visible_through_cut(vect_cube_t const &cuts, cube_t const &light
 	return 0;
 }
 
+bool add_dlight_if_visible(point const &pos, float radius, colorRGBA const &color, vector3d const &xlate, cube_t &lights_bcube, vector3d const &dir=zero_vector, float bwidth=1.0) {
+	if (!lights_bcube.contains_pt_xy(pos)) return 0;
+	if (!camera_pdu.sphere_visible_test((pos + xlate), radius)) return 0; // VFC
+	dl_sources.emplace_back(radius, pos, pos, color, 0, dir, bwidth); // is_dynamic=0
+	dl_sources.back().disable_shadows();
+	expand_cube_zvals(lights_bcube, (pos.z - radius), (pos.z + radius));
+	return 1;
+}
+
 // Note: non const because this caches light_bcubes
 void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, bool sec_camera_mode,
 	occlusion_checker_noncity_t &oc, vect_cube_with_ix_t &ped_bcubes, cube_t &lights_bcube)
@@ -1448,6 +1457,27 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	bool last_room_closed(0);
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
+		if (camera_in_building) { // handle light emitting objects in the player's building
+			bool was_added(0);
+
+			if (i->type == TYPE_LAVALAMP && i->is_light_on()) { // should we do an occlusion query?
+				if (int((camera_bs.z - ground_floor_z1)/window_vspacing) != int((i->zc() - ground_floor_z1)/window_vspacing)) continue; // different floor
+				if (!add_dlight_if_visible(i->get_cube_center(), 10.0*i->get_radius(), colorRGBA(1.0, 0.75, 0.25), xlate, lights_bcube))	continue;
+				was_added = 1;
+			}
+			else if (i->type == TYPE_FISHTANK && i->is_light_on()) { // should we do an occlusion query?
+				if (int((camera_bs.z - ground_floor_z1)/window_vspacing) != int((i->zc() - ground_floor_z1)/window_vspacing)) continue; // different floor
+				if (!add_dlight_if_visible(cube_top_center(*i), 1.25*(i->dx() + i->dy()), colorRGBA(0.8, 0.9, 1.0), xlate, lights_bcube, -plus_z, 0.3)) continue; // pointed downward
+				was_added = 1;
+			}
+			if (was_added) {
+				cube_t room(get_room(i->room_id)); // should we clip to the current floor in Z?
+				assert(room.contains_pt(dl_sources.back().get_pos()));
+				room.expand_by_xy(wall_thickness);
+				dl_sources.back().set_custom_bcube(room);
+				continue;
+			}
+		}
 		if (!i->is_light_on() || !i->is_light_type()) continue; // light not on, or not a light or lamp
 		point lpos(i->get_cube_center()); // centered in the light fixture
 		min_eq(lpos.z, (i->z2() - 0.0125f*window_vspacing)); // make sure the light isn't too close to the ceiling (if shifted up to avoid a door intersection)
@@ -1963,12 +1993,6 @@ bool check_bcube_visible_for_building(cube_t const &bcube, vector3d const &xlate
 	if (!camera_pdu.cube_visible(bcube_cs)) return 0; // no particles are visible
 	if ((display_mode & 0x08) && building.check_obj_occluded(bcube_cs, get_camera_pos(), oc)) return 0;
 	return 1;
-}
-void add_dlight_if_visible(point const &pos, float radius, colorRGBA const &color, vector3d const &xlate, cube_t &lights_bcube) {
-	if (!lights_bcube.contains_pt_xy(pos)) return;
-	if (!camera_pdu.sphere_visible_test((pos + xlate), radius)) return; // VFC
-	dl_sources.emplace_back(radius, pos, pos, color);
-	expand_cube_zvals(lights_bcube, (pos.z - radius), (pos.z + radius));
 }
 void particle_manager_t::add_lights(vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t &oc, cube_t &lights_bcube) const {
 	if (particles.empty()) return;
