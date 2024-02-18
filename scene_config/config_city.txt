@@ -261,7 +261,7 @@ city rat_model    ../models/interiors/rat/rat.model3d           1 0 0  0 -1 90 1
 city roach_model  ../models/interiors/cockroach/cockroach.3ds   1 0 0  0 -1 90 0 1.0 1.0
 
 city max_lights 1024
-city max_shadow_maps 40
+city max_shadow_maps 40 # I recommend not setting this larger than 64
 city smap_size 0 # 0 = default
 city car_shadows 1
 

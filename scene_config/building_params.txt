@@ -32,6 +32,6 @@ buildings max_altitude 4.00 # same for all buildings
 buildings enable_people_ai 1
 buildings enable_rotated_room_geom 1
 
-buildings max_shadow_maps 60
+buildings max_shadow_maps 64 # I recommend not setting this larger than 64
 
 no_store_model_textures_in_memory 1 # Note: saves CPU side memory
