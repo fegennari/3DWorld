@@ -1302,11 +1302,11 @@ bool building_t::add_tp_roll(cube_t const &room, unsigned room_id, float tot_lig
 	return 1;
 }
 
-void add_hallway_sign(vect_room_object_t &objs, cube_t const &sign, string const &text, unsigned room_id, bool dim, bool dir) {
+void add_hallway_sign(vect_room_object_t &objs, cube_t const &sign, string const &text, colorRGBA const &color, unsigned room_id, bool dim, bool dir, bool add_frame) {
 	// Note: room_id is for the sign's room, not the hallway, though this doesn't seem to be a problem
 	float const sign_light_amt(1.0); // assume well lit since it's in the hallway, not in the room that the sign is attached to
-	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_HAS_EXTRA); // include a frame
-	objs.emplace_back(sign, TYPE_SIGN, room_id, dim, dir, flags, sign_light_amt, SHAPE_CUBE, DK_BLUE); // technically should use hallway room_id
+	unsigned const flags(RO_FLAG_NOCOLL | (add_frame ? RO_FLAG_HAS_EXTRA : 0));
+	objs.emplace_back(sign, TYPE_SIGN, room_id, dim, dir, flags, sign_light_amt, SHAPE_CUBE, color); // technically should use hallway room_id
 	objs.back().obj_id = register_sign_text(text);
 }
 
@@ -1330,6 +1330,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	bool br_dim(room.dy() < room.dx()), sink_side(0), sink_side_set(0); // br_dim is the smaller dim
 	cube_t place_area(room), br_door;
 	place_area.expand_by(-0.5*wall_thickness);
+	unsigned br_door_stack_ix(0);
 
 	// determine men's room vs. women's room
 	point const part_center(get_part_for_room(room).get_cube_center()), room_center(room.get_cube_center());
@@ -1359,6 +1360,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				sink_side = side; sink_side_set = 1;
 				place_area.d[!br_dim][side] += (sink_side ? -1.0 : 1.0)*(i->get_sz_dim(br_dim) - 0.25*swidth); // add sink clearance for the door to close
 				br_door = *i;
+				br_door_stack_ix = (i - interior->door_stacks.begin());
 				break; // sinks are on the side closest to the door
 			}
 		} // for side
@@ -1480,6 +1482,10 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	room.assign_to((mens_room ? RTYPE_MENS : RTYPE_WOMENS), floor);
 	// add a sign outside the bathroom door
 	add_door_sign((mens_room ? "Men" : "Women"), room, zval, room_id, tot_light_amt, 1); // no_check_adj_walls=1
+
+	if (rgen.rand_float() < 0.1) { // make this door/room out of order 10% of the time
+		make_door_out_or_order(room, zval, room_id, tot_light_amt, br_door_stack_ix);
+	}
 	return 1;
 }
 
@@ -1506,7 +1512,7 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 			test_cube.translate_dim(i->dim, side_sign*0.1*wall_thickness); // move out in front of the current wall to avoid colliding with it (in case of T-junction)
 			if (has_bcube_int(test_cube, interior->walls[!i->dim])) continue; // check for intersections with orthogonal walls; needed for inside corner offices
 		}
-		add_hallway_sign(interior->room_geom->objs, sign, text, room_id, i->dim, side);
+		add_hallway_sign(interior->room_geom->objs, sign, text, DK_BLUE, room_id, i->dim, side, 1); // add_frame=1
 	} // for i
 }
 void building_t::add_office_door_sign(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
@@ -1518,6 +1524,29 @@ void building_t::add_door_sign_remove_existing(std::string const &text, room_t c
 		if (i->type == TYPE_SIGN) {i->remove();}
 	}
 	add_door_sign(text, room, zval, room_id, tot_light_amt);
+}
+
+void building_t::make_door_out_or_order(room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned door_stack_ix) {
+	assert(interior && door_stack_ix < interior->door_stacks.size());
+	door_stack_t const &ds(interior->door_stacks[door_stack_ix]);
+
+	for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
+		door_t &door(interior->doors[dix]);
+		if (!ds.is_same_stack(door)) break; // moved to a different stack, done
+		if (door.z1() > zval || door.z2() <= zval) continue; // wrong floor
+		door.set_locked_unlockable();
+		// add an out of order sign
+		bool const dim(door.dim), dir(room.get_center_dim(dim) < door.get_center_dim(dim));
+		cube_t const door_bc(door.get_true_bcube());
+		float const door_height(door.dz()), door_width(door.get_width()), z1(zval + 0.5*door_height), door_pos(door_bc.d[dim][dir]);
+		cube_t sign;
+		set_cube_zvals(sign, z1, z1+0.15*door_height);
+		set_wall_width(sign, door.get_center_dim(!dim), 0.2*door_width, !dim);
+		sign.d[dim][!dir] = door_pos; // flush with the door
+		sign.d[dim][ dir] = door_pos + (dir ? 1.0 : -1.0)*0.1*get_wall_thickness(); // extend outward
+		add_hallway_sign(interior->room_geom->objs, sign, "OUT OF\nORDER", BLACK, room_id, dim, dir, 0); // add_frame=0
+		break; // done
+	} // for dix
 }
 
 void add_door_if_blocker(cube_t const &door, cube_t const &room, bool inc_open, bool dir, bool hinge_side, bool exterior, vect_cube_t &blockers) {
