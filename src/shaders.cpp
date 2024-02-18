@@ -941,7 +941,6 @@ void shader_t::clear() {
 
 
 void shader_t::make_current() {
-
 	assert(program);
 	glUseProgram(program);
 	restore_subroutines();
@@ -949,16 +948,13 @@ void shader_t::make_current() {
 }
 
 void shader_t::enable() {
-	
 	make_current();
 	upload_all_light_sources();
 	upload_pjm();
 	upload_mvm();
 	mvm_changed = 0;
 }
-
 void shader_t::disable() {
-	
 	cur_shader = NULL; // must be done first to prevent check_mvm_update() from trying to upload a new MVM in enable_vnct_atribs()
 	if (is_setup()) {enable_vnct_atribs(0, 0, 0, 0);} // disable all
 	glUseProgram(0);
@@ -970,14 +966,12 @@ bool shader_is_active() {return (cur_shader != nullptr);}
 // Note 1: We don't handle the case where the projection matrix is updated while a shader is active because this currently doesn't occur.
 // Note 2: We assume we only need to update the MVM in at most one active shader, and once updated we can clear the changed flag
 void check_mvm_update() {
-
 	if (!mvm_changed) return; // nothing to update
 	if (cur_shader) {cur_shader->upload_mvm();}
 	mvm_changed = 0;
 }
 
 void shader_t::cache_matrix_locs() {
-
 	pm_loc   = get_uniform_loc("fg_ProjectionMatrix"); // okay if returns -1
 	mvm_loc  = get_uniform_loc("fg_ModelViewMatrix");
 	mvmi_loc = get_uniform_loc("fg_ModelViewMatrixInverse");
@@ -1013,7 +1007,6 @@ void shader_t::upload_mvm() { // and everything that depends on the mvm
 
 // built-in attribute setup/enable/binding
 void shader_t::cache_vnct_locs() { // Note: program need not be enabled
-
 	assert(is_setup());
 	// Note: locations will generally be {0,1,2,3} as assigned in the vertex shader, but if unused they can be -1
 	const char *loc_strs[4] = {"fg_Vertex", "fg_Normal", "fg_Color", "fg_TexCoord"};
@@ -1345,7 +1338,6 @@ void compute_shader_comp_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid, 
 
 
 void upload_mvm_to_shader(shader_t &s, char const *const var_name) {
-
 	s.add_uniform_matrix_4x4(var_name, fgGetMVM().get_ptr(), 0);
 }
 
