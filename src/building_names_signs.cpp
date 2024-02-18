@@ -412,6 +412,8 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 	point const part_center(get_part_for_room(room).get_cube_center()), room_center(room.get_cube_center());
 	cube_t c(room);
 	set_cube_zvals(c, zval, zval+wall_thickness); // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
+	bool const dark_mode((interior->rooms.size() + interior->doors.size() + mat_ix) & 1); // random per-building
+	colorRGBA const text_color(dark_mode ? WHITE : DK_BLUE);
 
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
 		if (!is_cube_close_to_door(c, 0.0, 0, *i, 2)) continue; // check both dirs; should we check that the room on the other side of the door is a hallway?
@@ -430,7 +432,7 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 			test_cube.translate_dim(i->dim, side_sign*0.1*wall_thickness); // move out in front of the current wall to avoid colliding with it (in case of T-junction)
 			if (has_bcube_int(test_cube, interior->walls[!i->dim])) continue; // check for intersections with orthogonal walls; needed for inside corner offices
 		}
-		add_hallway_sign(interior->room_geom->objs, sign, text, DK_BLUE, room_id, i->dim, side, 1); // add_frame=1
+		add_hallway_sign(interior->room_geom->objs, sign, text, text_color, room_id, i->dim, side, !dark_mode); // add_frame=!dark_mode
 	} // for i
 }
 void building_t::add_office_door_sign(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
