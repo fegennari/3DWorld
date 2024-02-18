@@ -1342,6 +1342,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	cube_t floor_above_region, floor_below_region; // filters for lights on the floors above/below based on stairs
 	ped_bcubes.clear();
 	bool const track_lights(0 && camera_in_building && !sec_camera_mode && animate2); // used for debugging
+	bool const camera_above_ground_floor(camera_z > (ground_floor_z1 + window_vspacing));
+	bool const camera_feet_above_basement(player_feet_zval >= ground_floor_z1);
 	if (track_lights) {enabled_bldg_lights.clear();}
 
 	if (camera_in_building) {
@@ -1490,11 +1492,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		// elevator test is questionable because it can be open on the ground floor of a room with windows in a small office building, but should be good enough
 		if (!camera_in_building && ((light_in_basement && !camera_can_see_ext_basement) || is_in_windowless_attic || is_in_elevator)) continue;
 		if ((is_in_elevator || is_in_closet) && camera_z > lpos.z) continue; // elevator or closet light on the floor below the player
-		if (light_in_basement && camera_z > (ground_floor_z1 + window_vspacing)) continue; // basement lights only visible if player is on basement or ground floor
+		if (light_in_basement && camera_above_ground_floor)        continue; // basement lights only visible if player is on basement or ground floor
 		room_t const &room(get_room(i->room_id));
 		bool const in_ext_basement(room.is_ext_basement());
-		if (in_ext_basement && !camera_in_basement)       continue; // light  in extended basement, and camera not in basement
-		if (camera_in_ext_basement && !light_in_basement) continue; // camera in extended basement, and light  not in basement
+		if (in_ext_basement && camera_feet_above_basement) continue; // light  in extended basement, and camera not in basement or on basement stairs
+		if (camera_in_ext_basement && !light_in_basement)  continue; // camera in extended basement, and light  not in basement
 		//if (is_light_occluded(lpos_rot, camera_bs))  continue; // too strong a test in general, but may be useful for selecting high importance lights
 		//if (!camera_in_building && i->is_interior()) continue; // skip interior lights when camera is outside the building: makes little difference, not worth the trouble
 		bool const is_lamp(i->type == TYPE_LAMP), is_single_floor(room.is_single_floor || is_in_elevator), wall_light(i->flags & RO_FLAG_ADJ_HI);
@@ -1545,7 +1547,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			// if the light is in the basement and the camera isn't, it's not visible unless the player is by the stairs
 			if ( light_in_basement && player_in_basement == 0 && !camera_somewhat_by_stairs) continue;
 			//if (!light_in_basement && player_in_basement >= 2 && !light_room_has_stairs_or_ramp) continue; // the player is fully in the basement but the light isn't; too strong
-			if (!light_in_basement && player_in_basement >= 3) continue; // the player is in the extended basement but the light isn't
+			if (!light_in_basement && player_in_basement >= 3) continue; // the player is in the extended basement but the light isn't in the basement
 			bool const check_stairs(stairs_or_ramp_visible || light_above_stairs);
 			bool const camera_within_one_floor(camera_z > floor_below_zval && camera_z < ceil_above_zval);
 			
@@ -1576,8 +1578,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				bool const parts_are_stacked(camera_part < real_num_parts && (parts[camera_part].z2() <= room.z1() || parts[camera_part].z1() >= room.z2()));
 
 				// the basement is a different part, but it's still the same vertical stack; consider this the same effective part if the camera is in the basement above the room's part
-				if (camera_in_ext_basement && !in_camera_room &&
-					(camera_by_stairs || (light_room_has_stairs_or_ramp && camera_somewhat_by_stairs)) && has_stairs_this_floor && in_ext_basement)
+				if (camera_in_ext_basement && !in_camera_room && has_stairs_this_floor && in_ext_basement &&
+					(camera_by_stairs || (light_room_has_stairs_or_ramp && camera_somewhat_by_stairs)))
 				{
 					// camera and light are on different floors of different rooms of the extended basement in two rooms connected by stairs
 				}
