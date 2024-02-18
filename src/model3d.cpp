@@ -2766,7 +2766,6 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 	int const reflect_mode(any_planar_reflective ? 1 : (any_cube_map_reflective ? 2 : 0));
 	assert(!reflect_mode || xlate == all_zeros); // xlate not supported for reflections (and not used anyway)
 	float const min_alpha(needs_alpha_test ? 0.5 : 0.0); // will be reset per-material, but this variable is used to enable alpha testing
-	bool const use_csm(0); // FIXME: this needs to be passed in from create_shadow_map() when is_shadow_pass=1, and ... somehow for is_shadow_pass=0
 
 	// the bump map pass is first and the regular pass is second; this way, transparent objects such as glass that don't have bump maps are drawn last
 	for (int bmap_pass = (needs_bump_maps ? 1 : 0); bmap_pass >= 0; --bmap_pass) {
@@ -2784,13 +2783,12 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 							// need to use smoke shader for animations, but disable all shading options
 							setup_smoke_shaders(s, min_alpha, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, use_mvm);
 						}
-						else {s.begin_shadow_map_shader((sam_pass == 1), use_csm);}
+						else {s.begin_shadow_map_shader(sam_pass == 1);}
 					}
 					else if (shader_effects) {
 						int const use_bmap((bmap_pass == 0) ? 0 : (model_calc_tan_vect ? 2 : 1));
 						int const is_outside((is_shadow_pass || reflection_pass == 1) ? 0 : 2); // enable wet effect coverage mask
 						if (model3d_wn_normal) {s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1);} // FS
-						if (use_csm          ) {s.set_prefix("#define ENABLE_CASCADED_SHADOW_MAPS", 1);} // FS
 						setup_smoke_shaders(s, min_alpha, 0, 0, (enable_tt_model_indir || v), 1, v, v, 0, (use_smap ? 2 : 1), use_bmap, use_spec_map, use_mvm,
 							two_sided_lighting, 0.0, model_triplanar_tc_scale, 0, cur_reflect_mode, is_outside, 1, 0, use_gloss_map);
 						if (use_custom_smaps) {s.add_uniform_float("z_bias", cobj_z_bias);} // unnecessary?

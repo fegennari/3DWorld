@@ -1062,9 +1062,12 @@ void shader_t::begin_color_only_shader(colorRGBA const &color) {
 	set_cur_color(color);
 }
 
+bool is_csm_active();
 void shader_csm_render_setup(shader_t &s);
 
-void shader_t::begin_shadow_map_shader(bool use_alpha_mask, bool use_csm) {
+void shader_t::begin_shadow_map_shader(bool use_alpha_mask) {
+	bool const use_csm(is_csm_active());
+
 	if (use_alpha_mask) {
 		if (use_csm) {
 			set_vert_shader("shadow_map_csm_tc");

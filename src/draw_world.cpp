@@ -382,6 +382,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (enable_reflect ==2) {s.set_prefix("#define ENABLE_CUBE_MAP_REFLECT",1);} // FS
 	if (enable_puddles    ) {s.set_prefix("#define ENABLE_PUDDLES",         1);} // FS
 	if (is_snowy          ) {s.set_prefix("#define ENABLE_SNOW_COVERAGE",   1);} // FS
+	//if (1                 ) {s.set_prefix("#define ENABLE_CASCADED_SHADOW_MAPS", 1);} // FS
 	if (!anim_shader.empty()) {s.set_prefix("#define ENABLE_VERTEX_ANIMATION", 0);} // VS
 	if (use_clip_plane    ) {s.set_prefix("#define ENABLE_CLIP_PLANE",      0);} // VS
 	//if (0) {s.set_prefix("#define SCREEN_SPACE_DLIGHTS",   1);} // FS

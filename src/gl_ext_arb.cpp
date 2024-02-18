@@ -228,18 +228,23 @@ void const *vbo_ring_buffer_t::add_verts_bind_vbo(void const *const v, unsigned 
 
 void bind_fbo_texture(unsigned fbo_id, unsigned tid, bool is_depth_fbo, bool multisample, bool is_array, unsigned *layer=nullptr) {
 	assert(glIsTexture(tid));
+	int const attachment(is_depth_fbo ? GL_DEPTH_ATTACHMENT : GL_COLOR_ATTACHMENT0);
 
 	if (layer) {
 		assert(!multisample); // untested; probably doesn't work
-		glFramebufferTextureLayer(GL_FRAMEBUFFER, (is_depth_fbo ? GL_DEPTH_ATTACHMENT : GL_COLOR_ATTACHMENT0), tid, 0, *layer);
+		glFramebufferTextureLayer(GL_FRAMEBUFFER, attachment, tid, 0, *layer);
+	}
+	else if (is_array) {
+		assert(!multisample); // untested; probably doesn't work
+		glFramebufferTexture(GL_FRAMEBUFFER, attachment, tid, 0);
 	}
 	else {
-		glFramebufferTexture2D(GL_FRAMEBUFFER, (is_depth_fbo ? GL_DEPTH_ATTACHMENT : GL_COLOR_ATTACHMENT0), get_2d_texture_target(is_array, multisample), tid, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, get_2d_texture_target(0, multisample), tid, 0); // is_array=0
 	}
 	check_gl_error(551);
 }
+
 void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, bool multisample, bool is_array, unsigned *layer) {
-	
 	// Create a framebuffer object
 	check_gl_error(550);
 	glGenFramebuffers(1, &fbo_id);

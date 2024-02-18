@@ -75,7 +75,11 @@ vector<ground_mode_smap_data_t> smap_data;
 void ensure_smap_data() { // sun/moon
 
 	if (smap_data.empty()) {
-		for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {smap_data.push_back(ground_mode_smap_data_t(GLOBAL_SMAP_START_TU_ID+l));} // tu_ids 6 and 7
+		for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
+			ground_mode_smap_data_t smd(GLOBAL_SMAP_START_TU_ID+l); // tu_ids 6 and 7
+			//smd.is_csm = 1;
+			smap_data.push_back(smd);
+		}
 	}
 	assert(smap_data.size() == NUM_LIGHT_SRC);
 }
@@ -538,6 +542,8 @@ glm::mat4 setup_csm_matrix(pos_dir_up const &pdu, point const &lpos, float near_
 
 // hack to send a vector of matrices from CSM setup to rendering without passing it down the entire call tree
 smap_data_t const *active_smap_data = nullptr;
+
+bool is_csm_active() {return (active_smap_data != nullptr && active_smap_data->is_csm);}
 
 void shader_csm_render_setup(shader_t &s) {
 	assert(active_smap_data != nullptr);
