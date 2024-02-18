@@ -1318,7 +1318,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	point const camera_bs(camera_pdu.pos - xlate), building_center(bcube.get_cube_center()); // camera in building space
 	if ((display_mode & 0x08) && !camera_in_building && !bcube.contains_pt_xy(camera_bs) && is_entire_building_occluded(camera_bs, oc)) return;
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness());
-	float const room_xy_expand(0.75*wall_thickness), player_feet_zval(camera_bs.z - get_bldg_player_height());
+	float const room_xy_expand(0.75*wall_thickness), player_feet_zval(camera_bs.z - get_bldg_player_height()), ground_floor_z2(ground_floor_z1 + window_vspacing);
 	bool const check_building_people(enable_building_people_ai()), check_attic(camera_in_building && has_attic() && interior->attic_access_open);
 	bool const camera_in_basement(camera_bs.z < ground_floor_z1), camera_in_ext_basement(camera_in_building && point_in_extended_basement_not_basement(camera_bs));
 	bool const show_room_name(display_mode & 0x20); // debugging, key '6'
@@ -1342,8 +1342,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	cube_t floor_above_region, floor_below_region; // filters for lights on the floors above/below based on stairs
 	ped_bcubes.clear();
 	bool const track_lights(0 && camera_in_building && !sec_camera_mode && animate2); // used for debugging
-	bool const camera_above_ground_floor(camera_z > (ground_floor_z1 + window_vspacing));
-	bool const camera_feet_above_basement(player_feet_zval >= ground_floor_z1);
+	bool const camera_above_ground_floor(camera_z > ground_floor_z2), camera_feet_above_basement(player_feet_zval >= ground_floor_z1);
 	if (track_lights) {enabled_bldg_lights.clear();}
 
 	if (camera_in_building) {
@@ -1495,8 +1494,18 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (light_in_basement && camera_above_ground_floor)        continue; // basement lights only visible if player is on basement or ground floor
 		room_t const &room(get_room(i->room_id));
 		bool const in_ext_basement(room.is_ext_basement());
-		if (in_ext_basement && camera_feet_above_basement) continue; // light  in extended basement, and camera not in basement or on basement stairs
-		if (camera_in_ext_basement && !light_in_basement)  continue; // camera in extended basement, and light  not in basement
+		bool light_vis_from_basement(light_in_basement);
+
+		if (camera_in_ext_basement && !light_in_basement && lpos.z < ground_floor_z2) { // check if light by basement stairs; can happen with office ground floor hall lights
+			for (stairwell_t const &s : interior->stairwells) {
+				if (s.z1() >= ground_floor_z1 || s.z2() < ground_floor_z1) continue; // not basement stairs
+				cube_t stairs_exp(s);
+				stairs_exp.expand_in_dim(s.dim, 2.0*window_vspacing);
+				if (stairs_exp.intersects_xy(*i)) {light_vis_from_basement = 1; break;}
+			}
+		}
+		if (in_ext_basement && camera_feet_above_basement)      continue; // light  in extended basement, and camera not in basement or on basement stairs
+		if (camera_in_ext_basement && !light_vis_from_basement) continue; // camera in extended basement, and light  not in basement
 		//if (is_light_occluded(lpos_rot, camera_bs))  continue; // too strong a test in general, but may be useful for selecting high importance lights
 		//if (!camera_in_building && i->is_interior()) continue; // skip interior lights when camera is outside the building: makes little difference, not worth the trouble
 		bool const is_lamp(i->type == TYPE_LAMP), is_single_floor(room.is_single_floor || is_in_elevator), wall_light(i->flags & RO_FLAG_ADJ_HI);
@@ -1546,8 +1555,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (!player_in_elevator) { // none of the below culling applies when the player is in the elevator
 			// if the light is in the basement and the camera isn't, it's not visible unless the player is by the stairs
 			if ( light_in_basement && player_in_basement == 0 && !camera_somewhat_by_stairs) continue;
-			//if (!light_in_basement && player_in_basement >= 2 && !light_room_has_stairs_or_ramp) continue; // the player is fully in the basement but the light isn't; too strong
-			if (!light_in_basement && player_in_basement >= 3) continue; // the player is in the extended basement but the light isn't in the basement
+			//if (!light_vis_from_basement && player_in_basement >= 2 && !light_room_has_stairs_or_ramp) continue; // player is fully in basement but light isn't; too strong
+			if (!light_vis_from_basement && player_in_basement >= 3) continue; // player is in the extended basement but the light isn't in the basement
 			bool const check_stairs(stairs_or_ramp_visible || light_above_stairs);
 			bool const camera_within_one_floor(camera_z > floor_below_zval && camera_z < ceil_above_zval);
 			
