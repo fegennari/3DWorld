@@ -37,7 +37,7 @@ ubo_wrap_t shadow_matrix_ubo; // reused for dlights shadow map matrices
 extern bool snow_shadows, enable_depth_clamp, flashlight_on, interior_shadow_maps;
 extern int window_width, window_height, animate2, display_mode, tree_mode, ground_effects_level, num_trees, camera_coll_id;
 extern unsigned enabled_lights;
-extern float NEAR_CLIP, tree_deadness, vegetation, shadow_map_pcf_offset;
+extern float NEAR_CLIP, tree_deadness, vegetation;
 extern vector<shadow_sphere> shadow_objs;
 extern set<unsigned> moving_cobjs;
 extern coll_obj_group coll_objects;
@@ -385,7 +385,6 @@ void upload_shadow_data_to_shader(shader_t &s) {
 
 void set_smap_shader_for_all_lights(shader_t &s, float z_bias) {
 	s.add_uniform_float("z_bias", z_bias);
-	s.add_uniform_float("pcf_offset", shadow_map_pcf_offset);
 	upload_shadow_data_to_shader(s);
 }
 

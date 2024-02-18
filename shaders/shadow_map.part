@@ -11,7 +11,6 @@ const float poisson_table[18] = {
 
 uniform float z_bias          = 0.0;
 uniform float norm_bias_scale = 10.0;
-uniform float pcf_offset      = 0.01;
 uniform float sm_scale0, sm_scale1;
 
 #ifdef ENABLE_CASCADED_SHADOW_MAPS
@@ -82,8 +81,11 @@ uniform sampler2DShadow sm_tex0, sm_tex1;
 uniform mat4 smap_matrix0, smap_matrix1;
 
 float calc_shadow_pcf(in sampler2DShadow sm_tex, in vec4 shadow_coord) {
+	vec2 texel_size = shadow_coord.w / vec2(textureSize(sm_tex, 0));
 	float ret = 0.0;
-	for (int i = 0; i < 9; ++i) {ret += textureProj(sm_tex, (shadow_coord + 2.0*pcf_offset*vec4(poisson_table[2*i], poisson_table[2*i+1], 0, 0)));}
+	for (int i = 0; i < 9; ++i) {
+		ret += textureProj(sm_tex, (shadow_coord + vec4(texel_size.x*poisson_table[2*i], texel_size.y*poisson_table[2*i+1], 0, 0)));
+	}
 	return ret/9.0; // 9-tap PCF
 }
 

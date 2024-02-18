@@ -24,7 +24,7 @@ point pre_smap_player_pos(all_zeros), actual_player_pos(all_zeros); // Note: pre
 extern bool enable_dlight_shadows, dl_smap_enabled, flashlight_on, camera_in_building, have_indir_smoke_tex, disable_city_shadow_maps;
 extern int rand_gen_index, display_mode, animate2, draw_model, player_in_basement;
 extern unsigned shadow_map_sz, cur_display_iter;
-extern float shadow_map_pcf_offset, cobj_z_bias, rain_wetness;
+extern float cobj_z_bias, rain_wetness;
 extern building_params_t global_building_params;
 extern vector<light_source> dl_sources;
 
@@ -57,7 +57,6 @@ void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool
 	if (use_smap) {
 		cur_dlight_pcf_offset = 0.0005*pcf_scale*city_dlight_pcf_offset_scale; // record this value so that we can reset it when drawing building interior objects
 		s.add_uniform_float("z_bias", pcf_scale*cobj_z_bias); // I guess pcf_scale is really some sort of light size scale and should apply to the z-bias as well
-		s.add_uniform_float("pcf_offset", 8.0*pcf_scale*shadow_map_pcf_offset);
 		s.add_uniform_float("dlight_pcf_offset", cur_dlight_pcf_offset);
 	}
 }

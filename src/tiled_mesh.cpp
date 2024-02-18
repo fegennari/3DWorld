@@ -65,7 +65,7 @@ extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_ef
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode, auto_time_adv, draw_model;
 extern int player_in_elevator, player_in_attic;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, cloud_height_offset, clouds_per_tile;
-extern float ocean_wave_height, sm_tree_density, tree_density_thresh, atmosphere, cloud_cover, temperature, flower_density, FAR_CLIP, shadow_map_pcf_offset, biome_x_offset;
+extern float ocean_wave_height, sm_tree_density, tree_density_thresh, atmosphere, cloud_cover, temperature, flower_density, FAR_CLIP, biome_x_offset;
 extern float smap_thresh_scale, tt_grass_scale_factor;
 extern double tfticks;
 extern point sun_pos, moon_pos, surface_pos;
@@ -2420,7 +2420,6 @@ void setup_tile_shader_shadow_map(shader_t &s) {
 	}
 	s.add_uniform_float("smap_atten_cutoff", get_smap_atten_val());
 	s.add_uniform_float("z_bias", DEF_Z_BIAS);
-	s.add_uniform_float("pcf_offset", 10.0*shadow_map_pcf_offset);
 }
 
 void set_smap_enable_for_shader(shader_t &s, bool enable_smap, int shader_type) {
