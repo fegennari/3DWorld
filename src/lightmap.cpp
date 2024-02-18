@@ -1014,9 +1014,13 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 }
 
 
+void setup_and_bind_shadow_matrix_ubo();
+
 void setup_dlight_shadow_maps(shader_t &s) {
 	bool arr_tex_set(0); // required to only bind texture arrays once
+	setup_and_bind_shadow_matrix_ubo();
 	for (auto i = dl_sources.begin(); i != dl_sources.end(); ++i) {i->setup_and_bind_smap_texture(s, arr_tex_set);}
+	ubo_wrap_t::post_render(); // unbind the UBO
 }
 
 

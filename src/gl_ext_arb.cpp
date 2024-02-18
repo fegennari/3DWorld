@@ -155,6 +155,14 @@ void upload_ubo_data(void const *const data, size_t size, int dynamic_level) {
 	glBufferData(GL_UNIFORM_BUFFER, size, data, mode_from_dynamic_level(dynamic_level));
 }
 
+void ubo_wrap_t::allocate_with_size(unsigned size, int dynamic_level) {
+	if (ubo_valid()) return; // already created, assumed at the correct size
+	ubo = create_vbo();
+	check_bind_ubo(ubo);
+	upload_ubo_data(nullptr, size, dynamic_level);
+	bind_ubo(0); // optional?
+}
+
 
 unsigned create_vao() {
 	unsigned vao;

@@ -14,6 +14,7 @@
 
 
 unsigned const NUM_CSM_CASCADES = 4; // must agree with the values in csm_layers.geom
+unsigned const MAT4x4_SIZE      = sizeof(glm::mat4);
 
 // texture storage datatypes for local shadow maps
 #if 1 // integer
@@ -31,6 +32,7 @@ unsigned const smap_bytes_per_pixel = sizeof(float);
 bool voxel_shadows_updated(0);
 unsigned shadow_map_sz(0), scene_smap_vbo_invalid(0), empty_smap_tid(0);
 pos_dir_up orig_camera_pdu;
+ubo_wrap_t shadow_matrix_ubo; // reused for dlights shadow map matrices
 
 extern bool snow_shadows, enable_depth_clamp, flashlight_on, interior_shadow_maps;
 extern int window_width, window_height, animate2, display_mode, tree_mode, ground_effects_level, num_trees, camera_coll_id;
@@ -325,8 +327,13 @@ bool smap_data_t::set_smap_shader_for_light(shader_t &s, int light, xform_matrix
 	return 1;
 }
 
-bool local_smap_data_t::set_smap_shader_for_light(shader_t &s, bool &arr_tex_set) const { // point/spot lights
+void setup_and_bind_shadow_matrix_ubo() {
+	shadow_matrix_ubo.allocate_with_size(MAX_DLIGHT_SMAPS*MAT4x4_SIZE, 0); // static draw?
+	shadow_matrix_ubo.bind_base(0); // U_smap_matrix_dl is at binding point 0
+	shadow_matrix_ubo.pre_render();
+}
 
+bool local_smap_data_t::set_smap_shader_for_light(shader_t &s, bool &arr_tex_set) const { // point/spot lights
 	if (!shadow_map_enabled()) return 0;
 	assert(tu_id >= LOCAL_SMAP_START_TU_ID);
 	assert(is_arrayed());
@@ -338,29 +345,8 @@ bool local_smap_data_t::set_smap_shader_for_light(shader_t &s, bool &arr_tex_set
 		if (!tex_ret) {cerr << "Error: unable to set shader uniform 'smap_tex_arr_dl'." << endl;}
 		assert(tex_ret); // Note: we can assert this returns true, though it makes shader debugging harder
 	}
-	float const *const m(texture_matrix.get_ptr());
-	
-	if (layer_id <= 9) { // most common values
-		char str[18] = "smap_matrix_dl[?]";
-		str[15] = char('0' + layer_id);
-		bool const mat_ret(s.add_uniform_matrix_4x4(str, m, 0));
-		assert(mat_ret);
-	}
-	else if (layer_id <= 99) {
-		char str[19] = "smap_matrix_dl[??]";
-		str[15] = char('0' + (layer_id / 10));
-		str[16] = char('0' + (layer_id % 10));
-		bool const mat_ret(s.add_uniform_matrix_4x4(str, m, 0));
-		assert(mat_ret);
-	}
-	else {
-		assert(layer_id < 999);
-		char str[20] = {0};
-		sprintf(str, "smap_matrix_dl[%u]", layer_id); // use texture array layer id
-		bool const mat_ret(s.add_uniform_matrix_4x4(str, m, 0));
-		assert(mat_ret);
-	}
-	
+	assert(layer_id < MAX_DLIGHT_SMAPS);
+	upload_ubo_sub_data(texture_matrix.get_ptr(), layer_id*MAT4x4_SIZE, MAT4x4_SIZE); // shadow_matrix_ubo should be bound
 	return 1;
 }
 

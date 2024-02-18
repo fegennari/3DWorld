@@ -138,6 +138,7 @@ struct ubo_wrap_t { // uniform buffer object
 	ubo_wrap_t() : ubo(0) {}
 	bool ubo_valid() const {return (ubo > 0);}
 	void clear() {delete_and_zero_vbo(ubo);} // same as VBO
+	void allocate_with_size(unsigned size, int dynamic_level=0);
 	template<typename vert_type_t>
 	void create_and_upload(vector<vert_type_t> const &data, int dynamic_level=0, bool end_with_bind0=0) {
 		if (!ubo) {create_ubo_and_upload(ubo, data, end_with_bind0, dynamic_level);}
