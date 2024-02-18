@@ -16,7 +16,6 @@ float const CAR_LANE_OFFSET         = 0.15; // in units of road width
 float const CITY_LIGHT_FALLOFF      = 0.2;
 
 
-float city_dlight_pcf_offset_scale(1.0), cur_dlight_pcf_offset(0.0);
 vector2d actual_max_road_seg_len;
 city_params_t city_params;
 point pre_smap_player_pos(all_zeros), actual_player_pos(all_zeros); // Note: pre_smap_player_pos can be security cameras, but actual_player_pos is always the player
@@ -54,11 +53,7 @@ void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool
 			s.add_uniform_float("LDIR_FALL_THRESH",  1.5*FLASHLIGHT_BW);
 		}
 	}
-	if (use_smap) {
-		cur_dlight_pcf_offset = 0.0005*pcf_scale*city_dlight_pcf_offset_scale; // record this value so that we can reset it when drawing building interior objects
-		s.add_uniform_float("z_bias", pcf_scale*cobj_z_bias); // I guess pcf_scale is really some sort of light size scale and should apply to the z-bias as well
-		s.add_uniform_float("dlight_pcf_offset", cur_dlight_pcf_offset);
-	}
+	if (use_smap) {s.add_uniform_float("z_bias", pcf_scale*cobj_z_bias);} // I guess pcf_scale is really a light size scale and should apply to the z-bias as well
 }
 
 // use_smap: 0=no, 1=sun/moon + dynamic lights; enable in shader and set shadow map uniforms, 2=dynamic lights only; disable in shader but set shadow map uniforms

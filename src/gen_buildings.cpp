@@ -36,7 +36,7 @@ extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable
 extern bool teleport_to_screenshot, enable_dlight_bcubes, can_do_building_action, mirror_in_ext_basement;
 extern unsigned room_mirror_ref_tid;
 extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2, building_action_key, player_in_elevator;
-extern float CAMERA_RADIUS, city_dlight_pcf_offset_scale, fticks, FAR_CLIP;
+extern float CAMERA_RADIUS, fticks, FAR_CLIP;
 extern colorRGB cur_ambient, cur_diffuse;
 extern point sun_pos, pre_smap_player_pos, actual_player_pos;
 extern vector<light_source> dl_sources;
@@ -3096,7 +3096,6 @@ public:
 
 	static void ensure_city_lighting_setup(bool reflection_pass, vector3d const &xlate, bool &is_setup) {
 		if (is_setup) return;
-		city_dlight_pcf_offset_scale = 1.0; // restore city value
 		if (!reflection_pass) {setup_city_lights(xlate);}
 		is_setup = 1;
 	}
@@ -3157,10 +3156,8 @@ public:
 		}
 		bool const draw_interior((have_windows || global_building_params.add_city_interiors) && draw_building_interiors);
 		bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
-		float const min_alpha        = 0.0; // 0.0 to avoid alpha test
-		city_dlight_pcf_offset_scale = 0.6; // reduced for building interiors; below 0.6 and shadow edges are blocky, but above 0.6 clothes hangers have double shadows
-		enable_dlight_bcubes         = 1; // using light bcubes is both faster and more correct when shadow maps are not enabled
-		if (player_in_attic) {city_dlight_pcf_offset_scale *= 2.0;} // larger PCF offset for attic lights due to their large radius
+		float const min_alpha = 0.0; // 0.0 to avoid alpha test
+		enable_dlight_bcubes  = 1; // using light bcubes is both faster and more correct when shadow maps are not enabled
 		fgPushMatrix();
 		translate_to(xlate);
 		building_draw_t interior_wind_draw, ext_door_draw;

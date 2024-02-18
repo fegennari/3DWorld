@@ -19,7 +19,7 @@ object_model_loader_t building_obj_model_loader;
 extern bool camera_in_building;
 extern int display_mode, frame_counter, animate2, player_in_basement;
 extern unsigned room_mirror_ref_tid;
-extern float fticks, office_chair_rot_rate, cur_dlight_pcf_offset, building_ambient_scale;
+extern float fticks, office_chair_rot_rate, building_ambient_scale;
 extern point actual_player_pos, player_candle_pos;
 extern cube_t smap_light_clip_cube;
 extern pos_dir_up camera_pdu;
@@ -1625,11 +1625,7 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 	bool const untextured(obj.flags & RO_FLAG_UNTEXTURED);
 	bool const upside_down((obj.type == TYPE_RAT || obj.type == TYPE_ROACH || obj.type == TYPE_INSECT) && obj.is_broken());
 	if (emissive_first_mat) {s.set_color_e(LAMP_COLOR*0.4);}
-
-	if (use_low_z_bias) {
-		s.add_uniform_float("norm_bias_scale",   5.0); // half the default value
-		s.add_uniform_float("dlight_pcf_offset", 0.5*cur_dlight_pcf_offset);
-	}
+	if (use_low_z_bias    ) {s.add_uniform_float("norm_bias_scale", 5.0);} // half the default value
 	// Note: lamps are the most common and therefore most expensive models to draw
 	int const model_id(obj.get_model_id()); // first 8 bits is model ID, last 8 bits is sub-model ID
 	unsigned rot_only_mat_mask(0);
@@ -1651,11 +1647,7 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 	building_obj_model_loader.draw_model(s, obj_center, obj, dir, obj.color, xlate, model_id, shadow_only,
 		0, nullptr, rot_only_mat_mask, untextured, 0, upside_down, emissive_body_mat);
 	if (!shadow_only && obj.type == TYPE_STOVE) {draw_stove_flames(obj, (camera_pdu.pos - xlate), s);} // draw blue burner flame
-
-	if (use_low_z_bias) { // restore to the defaults
-		s.add_uniform_float("norm_bias_scale",   10.0);
-		s.add_uniform_float("dlight_pcf_offset", cur_dlight_pcf_offset);
-	}
+	if (use_low_z_bias    ) {s.add_uniform_float("norm_bias_scale", 10.0);} // restore to the defaults
 	if (emissive_first_mat) {s.set_color_e(BLACK);}
 }
 
