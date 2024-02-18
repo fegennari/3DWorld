@@ -73,6 +73,7 @@ colorRGBA const rat_color(GRAY); // make the rat's fur darker
 colorRGBA const candle_color(0.95, 0.9, 0.75, 1.0); // cream
 
 unsigned const NUM_LOCK_COLORS = 8;
+unsigned const MAX_LOCK_INDEX  = NUM_LOCK_COLORS + 2;
 colorRGBA   const lock_colors     [NUM_LOCK_COLORS] = {WHITE, BLACK, RED, GREEN, BLUE, YELLOW, ORANGE, BROWN};
 std::string const lock_color_names[NUM_LOCK_COLORS] = {"silver", "black", "red", "green", "blue", "yellow", "orange", "brown"};
 
@@ -1305,9 +1306,11 @@ struct door_t : public door_base_t {
 	bool is_partially_open() const {return (open_amt != (open ? 1.0 : 0.0));}
 	bool is_closet_door   () const {return (obj_ix >= 0 && !is_padlocked());}
 	bool is_padlocked     () const {return (locked >= 2);}
+	bool is_locked_unlockable() const {return (locked >= MAX_LOCK_INDEX);}
 	bool check_key_mask_unlocks(unsigned key_mask) const;
 	void set_padlock_color_ix(unsigned ix) {assert(ix < NUM_LOCK_COLORS); locked = ix + 2;}
-	unsigned get_padlock_color_ix() const {assert(is_padlocked()); return (locked - 2);}
+	void set_locked_unlockable() {locked = MAX_LOCK_INDEX;}; // use a lock for which there is no matching color key
+	unsigned get_padlock_color_ix() const {assert(is_padlocked()); assert(locked < MAX_LOCK_INDEX); return (locked - 2);}
 	void toggle_open_state(bool allow_partial_open=0);
 	void make_fully_open_or_closed() {open_amt = (open ? 1.0 : 0.0);}
 	bool next_frame();

@@ -951,6 +951,7 @@ void building_t::handle_items_intersecting_closed_door(door_t const &door) {
 bool door_t::check_key_mask_unlocks(unsigned key_mask) const {
 	if (!is_closed_and_locked()) return 1;
 	if (key_mask == 0)           return 0; // no key
+	if (is_locked_unlockable())  return 0;
 	if (!is_padlocked())         return 1; // any key color opens a non-padlocked door
 	return (key_mask & (1 << get_padlock_color_ix())); // only a key matching the padlock color unlocks a padlocked door
 }

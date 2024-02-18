@@ -571,7 +571,8 @@ public:
 	bool can_open_door(door_t const &door) { // non-const because num_doors_unlocked is modified
 		if (!door.check_key_mask_unlocks(has_key)) {
 			string str("Door is locked");
-			if (door.is_padlocked()) {str += " with " + lock_color_names[door.get_padlock_color_ix()] + " padlock";}
+			if      (door.is_locked_unlockable()) {str += " and unlockable";}
+			else if (door.is_padlocked        ()) {str += " with " + lock_color_names[door.get_padlock_color_ix()] + " padlock";}
 			print_text_onscreen(str, RED, 1.0, 2.0*TICKS_PER_SECOND, 0);
 			gen_sound_thread_safe_at_player(SOUND_CLICK, 1.0, 0.6);
 			return 0;
