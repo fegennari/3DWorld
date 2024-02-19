@@ -44,24 +44,24 @@ float get_shadow_map_weight(in vec4 pos, in vec3 normal, in float sm_scale, in i
 	proj_coords = proj_coords * 0.5 + 0.5; // transform to [0,1] range
 	// get depth of current fragment from light's perspective
 	float depth = proj_coords.z;
-	if (depth  > 1.0) return 0.0;
+	if (depth > 1.0) return 1.0; // outside shadow frustum
 	// calculate bias (based on depth map resolution and slope)
 	float bias = max(0.05 * (1.0 - dot(normal, normalize(lpos))), 0.005);
 	if (layer == NUM_CASCADES) {bias *= 1 / (zfar * 0.5f);}
 	else {bias *= 1 / (cascade_plane_distances[layer] * 0.5f);}
-	depth -= bias;
+	depth -= 0.1*bias;
 #ifndef NO_SHADOW_PCF
 	vec2 texel_size = 1.0 / vec2(textureSize(sm_tex, 0));
 	float ret = 0.0;
 
 	for (int i = 0; i < 9; ++i) {
 		float sample_depth = texture(sm_tex, vec3((proj_coords.xy + vec2(poisson_table[2*i], poisson_table[2*i+1]) * texel_size), layer)).r;
-        ret += ((depth > sample_depth) ? 1.0 : 0.0);
+        ret += ((depth < sample_depth) ? 1.0 : 0.0);
 	}
 	ret = ret/9.0; // 9-tap PCF
 #else
 	float sample_depth = texture(sm_tex, vec3(proj_coords.xy, layer)).r;
-	float ret = ((depth > sample_depth) ? 1.0 : 0.0);
+	float ret = ((depth < sample_depth) ? 1.0 : 0.0);
 #endif
 	return max(sm_scale, 0.0)*ret - min(sm_scale, 0.0);
 }

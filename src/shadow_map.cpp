@@ -13,8 +13,9 @@
 #include <glm/gtc/matrix_inverse.hpp>
 
 
-unsigned const NUM_CSM_CASCADES = 4; // must agree with the values in csm_layers.geom
-unsigned const MAT4x4_SIZE      = sizeof(glm::mat4);
+bool     const ENABLE_GROUND_CSM = 0;
+unsigned const NUM_CSM_CASCADES  = 4; // must agree with the values in csm_layers.geom
+unsigned const MAT4x4_SIZE       = sizeof(glm::mat4);
 
 // texture storage datatypes for local shadow maps
 #if 1 // integer
@@ -62,6 +63,8 @@ int get_smap_ndiv(float radius, unsigned smap_sz) {
 }
 int get_def_smap_ndiv(float radius) {return get_smap_ndiv(radius, shadow_map_sz);}
 
+bool enable_ground_mode_csms() {return ENABLE_GROUND_CSM;}
+
 
 struct ground_mode_smap_data_t : public cached_dynamic_smap_data_t { // used for ground mode sun and moon directional lights
 
@@ -77,7 +80,7 @@ void ensure_smap_data() { // sun/moon
 	if (smap_data.empty()) {
 		for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
 			ground_mode_smap_data_t smd(GLOBAL_SMAP_START_TU_ID+l); // tu_ids 6 and 7
-			//smd.is_csm = 1;
+			smd.is_csm = ENABLE_GROUND_CSM;
 			smap_data.push_back(smd);
 		}
 	}
@@ -298,6 +301,18 @@ void smap_data_state_t::bind_tex_array(smap_texture_array_t *tex_arr_) { // must
 
 float const cascade_plane_dscales[NUM_CSM_CASCADES] = {0.03, 0.1, 0.3, 1.0};
 
+float get_cascade_plane_dscale(unsigned cascade_ix) {
+	assert(cascade_ix < NUM_CSM_CASCADES);
+	if (cascade_ix == NUM_CSM_CASCADES-1) return 1.0;
+	float dscale(cascade_plane_dscales[cascade_ix]);
+	if (world_mode == WMODE_GROUND) {dscale *= min(1.0f, (X_SCENE_SIZE + Y_SCENE_SIZE)/camera_pdu.far_);}
+	return dscale;
+}
+void set_csm_near_far(pos_dir_up &frustum, unsigned cascade_ix) {
+	if (cascade_ix > 0) {frustum.near_ = frustum.far_*get_cascade_plane_dscale(cascade_ix-1);}
+	frustum.far_ *= get_cascade_plane_dscale(cascade_ix);
+}
+
 bool smap_data_t::set_smap_shader_for_light(shader_t &s, int light, xform_matrix const *const mvm) const {
 
 	if (!shadow_map_enabled() || !is_light_enabled(light)) return 0;
@@ -309,13 +324,13 @@ bool smap_data_t::set_smap_shader_for_light(shader_t &s, int light, xform_matrix
 
 	if (is_csm) {
 		// this part only needs to be done only once per light, but we have at most two lights, so it should be okay
-		float const far_plane(pdu.far_);
+		float const far_plane(camera_pdu.far_);
 		s.add_uniform_float("zfar", far_plane);
 		assert(cascade_matrices.size() == NUM_CSM_CASCADES);
 
 		for (unsigned i = 0; i < NUM_CSM_CASCADES; ++i) {
 			string cpd_str("cascade_plane_distances"), smap_matrix_str("smap_matrix"), matrix_str(append_ix(smap_matrix_str, light, 0));
-			s.add_uniform_float(append_ix(cpd_str, i, 1), far_plane*cascade_plane_dscales[i]);
+			s.add_uniform_float(append_ix(cpd_str, i, 1), far_plane*get_cascade_plane_dscale(i));
 			xform_matrix tm(cascade_matrices[i]);
 			//if (mvm) {tm *= (*mvm) * glm::affineInverse((glm::mat4)fgGetMVM());} // ???
 			s.add_uniform_matrix_4x4(append_ix(matrix_str, i, 1), tm.get_ptr(), 0);
@@ -522,21 +537,22 @@ void smap_texture_array_t::ensure_tid(unsigned xsize, unsigned ysize) {
 glm::mat4 perspective_from_frustum(pos_dir_up const &pdu) {
 	return glm::perspective(glm::radians(pdu.angle), (float)pdu.A, pdu.near_, pdu.far_);
 }
-glm::mat4 setup_csm_matrix(pos_dir_up const &pdu, point const &lpos, float near_plane, float far_plane) {
-	pos_dir_up frustum(pdu);
-	frustum.near_ = near_plane;
-	frustum.far_  = far_plane;
-	point const center(frustum.get_frustum_center());
-	vector3d const light_dir(lpos.get_norm());
-	auto const light_view(glm::lookAt(vec3_from_vector3d(center + light_dir), vec3_from_vector3d(center), vec3_from_vector3d(frustum.upv_)));
+glm::mat4 setup_csm_matrix(pos_dir_up const &frustum, point const &lpos) {
 	point pts[8];
 	frustum.get_frustum_corners(pts);
+
+	if (world_mode == WMODE_GROUND) { // clamp to scene bounds for a tighter fit
+		cube_t const scene_bounds(get_scene_bounds());
+		for (unsigned i = 0; i < 8; ++i) {scene_bounds.clamp_pt(pts[i]);}
+	}
+	point const center(get_center_arb(pts, 8));
+	auto const light_view(glm::lookAt(vec3_from_vector3d(center + 0.1*lpos.get_norm()), vec3_from_vector3d(center), vec3_from_vector3d(plus_y)));
 	for (unsigned i = 0; i < 8; ++i) {pts[i] = vector3d_from_vec3(light_view * glm::vec4(vec3_from_vector3d(pts[i]), 1.0));}
 	cube_t bcube(pts, 8);
-	float const z_mult = 10.0f; // TODO: tune this parameter according to the scene
-	if (bcube.z1() < 0) {bcube.z1() *= z_mult;} else {bcube.z1() /= z_mult;}
-	if (bcube.z2() < 0) {bcube.z2() /= z_mult;} else {bcube.z2() *= z_mult;}
-	glm::mat4 const light_projection = glm::ortho(bcube.x1(), bcube.x2(), bcube.y1(), bcube.y2(), bcube.z1(), bcube.z2());
+	float const z_mult = 10.0f; // tune this parameter according to the scene
+	if (bcube.z1() < 0.0) {bcube.z1() *= z_mult;} else {bcube.z1() /= z_mult;}
+	if (bcube.z2() < 0.0) {bcube.z2() /= z_mult;} else {bcube.z2() *= z_mult;}
+	glm::mat4 const light_projection(glm::ortho(bcube.x1(), bcube.x2(), bcube.y1(), bcube.y2(), bcube.z1(), bcube.z2()));
 	return light_projection * light_view;
 }
 
@@ -565,7 +581,7 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *c
 
 	// setup render state
 	assert(smap_sz > 0);
-	bool do_update(!no_update && (force_update || needs_update(lpos))); // must be called first, because this may indirectly update bounds
+	bool do_update(!no_update && (is_csm || force_update || needs_update(lpos))); // must be called first, because this may indirectly update bounds
 	xform_matrix camera_mv_matrix; // starts as identity matrix
 	if (!use_world_space) {camera_mv_matrix = fgGetMVM();} // cache the camera modelview matrix before we change it
 	fgPushMatrix();
@@ -575,14 +591,12 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *c
 	if (bounds && (do_update || !pdu.valid)) {pdu = get_pt_cube_frustum_pdu(lpos, *bounds);} // else pdu should have been set by the caller
 
 	if (is_csm) {
-		set_smap_mvm_pjm(pdu.pos, (pdu.pos + pdu.dir), pdu.upv, pdu.angle, pdu.A, pdu.near_, pdu.far_); // ???
 		cascade_matrices.resize(NUM_CSM_CASCADES);
 		
 		for (unsigned i = 0; i < NUM_CSM_CASCADES; ++i) {
-			float const near_plane((i == 0) ? camera_pdu.near_ : camera_pdu.far_*cascade_plane_dscales[i-1]);
-			float const far_plane(camera_pdu.far_*cascade_plane_dscales[i]);
-			cascade_matrices[i] = setup_csm_matrix(camera_pdu, lpos, near_plane, far_plane);
-			//get_texture_matrix(); ???
+			pos_dir_up frustum(camera_pdu);
+			set_csm_near_far(frustum, i);
+			cascade_matrices[i] = setup_csm_matrix(frustum, lpos);
 		}
 	}
 	else { // treat as perspective projection, even for directional lights

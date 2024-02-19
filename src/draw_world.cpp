@@ -81,6 +81,7 @@ extern reflective_cobjs_t reflective_cobjs;
 void create_dlight_volumes();
 void create_sky_vis_zval_texture(unsigned &tid);
 void pre_bind_smap_tus(shader_t &s);
+bool enable_ground_mode_csms();
 uint64_t get_tiled_terrain_gpu_mem();
 
 
@@ -372,7 +373,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	bool const enable_puddles(ground_mode && enable_rain_snow && is_wet && !is_rain_enabled()); // enable puddles when the ground is wet but it's not raining
 	bool use_smap(ground_mode ? (use_smap_in != 0) : (use_smap_in == 2)); // TT shadow maps are only enabled when use_smap_in == 2
 	bool const use_clip_plane(clip_plane != vector4d());
-	bool const use_csm(0 && use_smap);
+	bool const use_csm(use_smap && enable_ground_mode_csms());
 	smoke_en &= (ground_mode && have_indir_smoke_tex && smoke_tid > 0 && is_smoke_in_use());
 	if (disable_dlights) {dlights = 0;}
 	string const &anim_shader(s.get_property("animation_shader")); // Note: if it exists, it should end with a '+'
