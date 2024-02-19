@@ -74,16 +74,16 @@ These files are too large to store in the git repo. I've attempted to have 3DWor
 Many of the larger models can be found at the McGuire Computer Graphics Archive:
 http://casual-effects.com/data/
 
-I've packaged up the 3D models that are too large for the GitHub repo and put them on Google Drive here (up to v5 now):
-https://drive.google.com/file/d/1kLC20joYUt7EWO8f86WCJR3JSHv0wGtx/view?usp=drive_link
+I've packaged up the 3D models that are too large for the GitHub repo and put them on Google Drive here (up to v6 now):
+https://drive.google.com/file/d/1crN9rqT-LSvYyTZTw5wtkhwsubE651ex/view?usp=sharing
 Some of these models are stored in 3DWorld's internal format and should not be reused in other projects. Others come from websites such as Mixamo.
 
 System requirements:
-* Windows 7/8/10 (Runs on Windows 7, but I've only built on 8 and 10). Linux when using the makefile with gcc.
+* Windows 7/8/10/11 (Runs on Windows 7, but I've only built on 8, 10, and 11). Linux when using the makefile with gcc.
 * Microsoft Visual Studio 2019 or 2022. The professional or community version is needed for OpenMP support. You can also try to use gcc on linux.
 * A relatively new generation of Nvidia or ATI GPU (Runs on my laptop with Intel graphics, but at 12-20 FPS)
-* At least 4GB system memory for the larger scenes; My GPU has 8GB of memory
-* At least 4GB GPU memory for the larger scenes
+* At least 4GB system memory for the larger scenes
+* At least 4GB GPU memory for the larger scenes; My GPU has 12GB of memory
 
 Troubleshooting:
 It seems like some systems require an OpenGL core context. This can be selected by adding "use_core_context 1" in the config file.
