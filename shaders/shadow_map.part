@@ -50,7 +50,6 @@ float get_shadow_map_weight(in vec4 pos, in vec3 normal, in float sm_scale, in i
 	if (layer == NUM_CASCADES) {bias *= 1 / (zfar * 0.5f);}
 	else {bias *= 1 / (cascade_plane_distances[layer] * 0.5f);}
 	depth -= bias;
-
 #ifndef NO_SHADOW_PCF
 	vec2 texel_size = 1.0 / vec2(textureSize(sm_tex, 0));
 	float ret = 0.0;

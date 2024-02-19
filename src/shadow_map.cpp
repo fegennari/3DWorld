@@ -296,14 +296,14 @@ void smap_data_state_t::bind_tex_array(smap_texture_array_t *tex_arr_) { // must
 	layer_id = tex_arr->new_layer();
 }
 
-float const cascade_plane_dscales[NUM_CSM_CASCADES] = {0.02, 0.05, 0.25, 1.0};
+float const cascade_plane_dscales[NUM_CSM_CASCADES] = {0.03, 0.1, 0.3, 1.0};
 
 bool smap_data_t::set_smap_shader_for_light(shader_t &s, int light, xform_matrix const *const mvm) const {
 
 	if (!shadow_map_enabled() || !is_light_enabled(light)) return 0;
 	point lpos; // unused
 	bool const light_is_valid(light_valid(0xFF, light, lpos));
-	string sm_tex_str("sm_tex"), sm_scale_str("sm_scale"), smap_matrix_str("smap_matrix");
+	string sm_tex_str("sm_tex"), sm_scale_str("sm_scale");
 	s.add_uniform_int  (append_ix(sm_tex_str,   light, 0), tu_id);
 	s.add_uniform_float(append_ix(sm_scale_str, light, 0), (light_is_valid ? 1.0 : 0.0));
 
@@ -314,17 +314,17 @@ bool smap_data_t::set_smap_shader_for_light(shader_t &s, int light, xform_matrix
 		assert(cascade_matrices.size() == NUM_CSM_CASCADES);
 
 		for (unsigned i = 0; i < NUM_CSM_CASCADES; ++i) {
-			string cpd_str("cascade_plane_distances"), matrix_str(append_ix(smap_matrix_str, light, 0));
+			string cpd_str("cascade_plane_distances"), smap_matrix_str("smap_matrix"), matrix_str(append_ix(smap_matrix_str, light, 0));
 			s.add_uniform_float(append_ix(cpd_str, i, 1), far_plane*cascade_plane_dscales[i]);
 			xform_matrix tm(cascade_matrices[i]);
-			if (mvm) {tm *= (*mvm) * glm::affineInverse((glm::mat4)fgGetMVM());} // ???
+			//if (mvm) {tm *= (*mvm) * glm::affineInverse((glm::mat4)fgGetMVM());} // ???
 			s.add_uniform_matrix_4x4(append_ix(matrix_str, i, 1), tm.get_ptr(), 0);
 		}
-		// TODO: must call glBindTexture(GL_TEXTURE_2D_ARRAY, local_tid); before use, rather than calling the code in tile_t::bind_textures()
 	}
 	else {
 		xform_matrix tm(texture_matrix);
 		if (mvm) {tm *= (*mvm) * glm::affineInverse((glm::mat4)fgGetMVM());} // Note: works for translate, but not scale?
+		string smap_matrix_str("smap_matrix");
 		s.add_uniform_matrix_4x4(append_ix(smap_matrix_str, light, 0), tm.get_ptr(), 0);
 	}
 	bind_smap_texture(light_is_valid);
