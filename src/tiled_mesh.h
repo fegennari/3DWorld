@@ -325,6 +325,7 @@ public:
 	void check_shadow_map_and_normal_texture(bool no_push=0);
 	void upload_normal_texture(bool tid_is_valid);
 	void upload_shadow_map_texture(bool tid_is_valid);
+	void draw_smap_debug_vis(shader_t &s) const;
 	void setup_shadow_maps(tile_shadow_map_manager &smap_manager, bool cleanup_only);
 	bool shadow_maps_allocated() const;
 	bool using_shadow_maps() const {return !smap_data.empty();}
@@ -476,6 +477,7 @@ public:
 	void pre_draw();
 	void draw(int reflection_pass);
 	void draw_shadow_pass(point const &lpos, tile_t *tile, bool decid_trees_only=0);
+	void draw_smap_debug_vis() const;
 	void draw_decid_tree_shadows() {draw_shadow_pass(camera_pdu.pos, nullptr, 1);}
 	void draw_water(shader_t &s, float zval) const;
 	static void billboard_tree_shader_setup(shader_t &s);

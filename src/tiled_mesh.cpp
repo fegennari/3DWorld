@@ -943,6 +943,13 @@ cube_t tile_t::get_shadow_bcube() const {
 	return cube_t(xv1-x_ext, xv1+(x2-x1)*deltax+x_ext, yv1-y_ext, yv1+(y2-y1)*deltay+y_ext, mzmin-BCUBE_ZTOLER, max(get_tile_zmax()+BCUBE_ZTOLER, mzmax+b_ext.z));
 }
 
+void tile_t::draw_smap_debug_vis(shader_t &s) const {
+	if (smap_data.empty()) return; // no active shadow maps
+	colorRGBA const lod_colors[6] = {RED, ORANGE, YELLOW, GREEN, BLUE, PURPLE}; // rainbow
+	s.set_cur_color(lod_colors[min(smap_lod_level, 5U)]);
+	draw_simple_cube(get_shadow_bcube(), 0);
+}
+
 void tile_t::setup_shadow_maps(tile_shadow_map_manager &smap_manager, bool cleanup_only) {
 
 	if (!shadow_map_enabled()) return; // disabled
@@ -2813,6 +2820,7 @@ void tile_draw_t::draw_tiles(int reflection_pass, bool enable_shadow_map) const 
 		if (loc >= 0) {s.set_uniform_float(loc, 1.0);} // enable height texture
 	}
 	s.end_shader();
+	//if (display_mode & 0x10) {draw_smap_debug_vis();} // TESTING
 }
 
 void tile_draw_t::draw_tiles_shadow_pass(point const &lpos, tile_t const *const tile) { // not const because creates height_tid
@@ -2883,6 +2891,16 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile, bool decid_t
 	if (!enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
 	fog_enabled      = orig_fog_enabled;
 	camera_pdu.near_ = orig_near_plane;
+}
+
+
+void tile_draw_t::draw_smap_debug_vis() const {
+	shader_t s;
+	s.begin_color_only_shader();
+	ensure_outlined_polygons();
+	for (auto const &i : to_draw) {i.second->draw_smap_debug_vis(s);}
+	s.end_shader();
+	set_fill_mode();
 }
 
 

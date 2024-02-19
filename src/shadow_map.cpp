@@ -465,7 +465,6 @@ void draw_scene_bounds_and_light_frustum(point const &lpos) {
 
 	shader_t s;
 	s.begin_color_only_shader();
-	enable_blend();
 
 	if (ENABLE_GROUND_CSM) {
 		static pos_dir_up capture_pdu;
@@ -481,18 +480,19 @@ void draw_scene_bounds_and_light_frustum(point const &lpos) {
 				set_csm_near_far(frustum, i);
 				frustum.draw_frustum();
 			}
-			reset_fill_mode();
+			set_fill_mode();
 		}
 	}
 	else {
+		enable_blend();
 		// draw scene bounds
 		s.set_cur_color(colorRGBA(1.0, 1.0, 1.0, 0.25)); // white
 		draw_simple_cube(get_scene_bounds(), 0);
 		// draw light frustum
 		s.set_cur_color(colorRGBA(1.0, 1.0, 0.0, 0.25)); // yellow
 		get_pt_cube_frustum_pdu(lpos, get_scene_bounds()).draw_frustum();
+		disable_blend();
 	}
-	disable_blend();
 	s.end_shader();
 }
 
