@@ -901,7 +901,7 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 			if (stairwell.stairs_door_ix >= 0 && global_building_params.ai_opens_doors < 2) { // check for open doors; doors on stairs can't be locked
 				if (!get_door(stairwell.stairs_door_ix).open) continue; // stairs blocked by closed door, don't connect (even if unlocked)
 			}
-			if (room.intersects_no_adj(stairwell)) {ng.connect_stairs(r, s, stairwell.dim, stairwell.dir, (stairwell.shape == SHAPE_U), 0);} // is_ramp=0
+			if (room.intersects_no_adj(stairwell)) {ng.connect_stairs(r, s, stairwell.dim, stairwell.dir, stairwell.is_u_shape(), 0);} // is_ramp=0
 		}
 		if (!is_house && room.is_hallway && !room.is_ext_basement()) { // check for connected hallways in office buildings
 			for (unsigned r2 = r+1; r2 < num_rooms; ++r2) { // check rooms with higher index (since graph is bidirectional)
@@ -1545,7 +1545,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 				point const exit_pt(stairs_ext.closest_pt(path.back()));
 				path.add(exit_pt);
 
-				if (stairs.shape == SHAPE_U) { // add 2 extra points on mid-level landing; entrance and exit will be on the same side
+				if (stairs.is_u_shape()) { // add 2 extra points on mid-level landing; entrance and exit will be on the same side
 					bool const dim(stairs.dim), dir(stairs.dir); // Note: see code in add_stairs_and_elevators()
 					float const turn_pt(stairs.d[dim][dir] - 0.1*(dir ? 1.0 : -1.0)*stairs.get_sz_dim(dim)), seg_delta_z(0.45f*(to.z - from.z));
 					point exit_turn(exit_pt.x, exit_pt.y, (to.z - seg_delta_z));

@@ -2676,9 +2676,9 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 	// maybe add a clock on the back of the stairs, if this is the lobby or the floor directly above the retail area
 	if (floor_ix == 0 && is_ground_floor_excluding_retail(room.z1()) && room.has_stairs) {
 		for (stairwell_t const &s : interior->stairwells) {
-			if (s.shape != SHAPE_U && s.shape != SHAPE_WALLED_SIDES) continue;
-			if (s.extends_below && s.shape != SHAPE_U)   continue; // skip stairs extending down to the basement/parking garage
-			if (s.z1() > zval || !room.contains_cube(s)) continue; // stairs not on ground floor, or not contained
+			if (!s.is_u_shape() && s.shape != SHAPE_WALLED_SIDES) continue;
+			if (s.extends_below && !s.is_u_shape())               continue; // skip stairs extending down to the basement/parking garage
+			if (s.z1() > zval || !room.contains_cube(s))          continue; // stairs not on ground floor, or not contained
 			bool const digital(rgen.rand_bool());
 			float const place_pos(s.get_center_dim(!s.dim)), clock_z1(zval + 0.6*window_vspacing);
 			float const clock_height((digital ? 0.08 : 0.2)*window_vspacing), clock_width((digital ? 4.0 : 1.0)*clock_height), clock_depth(0.08*clock_width);

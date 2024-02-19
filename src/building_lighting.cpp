@@ -1379,7 +1379,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					float const center_val(s.get_center_dim(s.dim));
 					bool const dir_val((camera_bs[s.dim] < center_val) ^ s.dir);
 					
-					if (s.shape == SHAPE_U) {
+					if (s.is_u_shape()) {
 						if (dir_val) continue; // back facing - light not visible
 						// floors above and below are only visible from one side of stairs
 						cube_t vis_region(bcube); // start with full building bcube
@@ -1387,7 +1387,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 						floor_above_region.assign_or_union_with_cube(vis_region);
 						floor_below_region.assign_or_union_with_cube(vis_region);
 					}
-					else if (s.shape == SHAPE_WALLED || s.shape == SHAPE_WALLED_SIDES) {
+					else if (s.has_walled_sides()) {
 						if (!dir_val) {cut_mask = 2;} // floor below not visible on this side of stairs
 						else { // floor above only visible from one side of stairs
 							cube_t vis_region(bcube); // start with full building bcube

@@ -429,7 +429,7 @@ enum {
 	NUM_ROBJ_TYPES};
 typedef uint8_t room_object;
 
-enum {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_SPHERE, SHAPE_STAIRS_U, SHAPE_TALL, SHAPE_SHORT, SHAPE_ANGLED, SHAPE_VERT_TORUS};
+enum {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_SPHERE, SHAPE_STAIRS_U, SHAPE_TALL, SHAPE_SHORT, SHAPE_ANGLED, SHAPE_VERT_TORUS}; // room object shapes
 typedef uint8_t room_obj_shape;
 
 enum {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_MENS, RTYPE_WOMENS, RTYPE_BED, RTYPE_KITCHEN, RTYPE_LIVING,
@@ -451,7 +451,7 @@ std::string const room_names_short[NUM_RTYPES] =
 {"", "Hall", "Stairs", "Office", "Bath", "Bed", "Kitchen", "Living", "Dining", "Study", "Entry", "Library", "Storage", "Garage", "Shed", "Lobby", "Laundry", "Card", "Play", "Art",
 "Utility", "Garage", "Ramp", "Attic", "Bed", "", "Server", "Pool", "Swim", "Security", "Basement", "Retail", "Elevator"};
 
-enum {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES, SHAPE_RAMP};
+enum {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES, SHAPE_RAMP, SHAPE_L}; // stairs shapes; SHAPE_L is unused
 typedef uint8_t stairs_shape;
 
 enum {ROOM_WALL_INT=0, ROOM_WALL_SEP, ROOM_WALL_EXT, ROOM_WALL_BASEMENT};
@@ -1237,8 +1237,11 @@ struct stairs_landing_base_t : public cube_t {
 	stairs_landing_base_t(cube_t const &c, bool dim_, bool dir_, bool roof_access_, stairs_shape shape_, bool sc=0, bool ieb=0) :
 		cube_t(c), dim(dim_), dir(dir_), roof_access(roof_access_), stack_conn(sc), in_ext_basement(ieb), shape(shape_) {against_wall[0] = against_wall[1] = 0;}
 	void set_against_wall(bool const val[2]) {against_wall[0] = val[0]; against_wall[1] = val[1];}
+	bool is_u_shape        () const {return (shape == SHAPE_U);}
+	bool is_straight       () const {return !is_u_shape();}
+	bool has_walled_sides  () const {return (shape == SHAPE_WALLED || shape == SHAPE_WALLED_SIDES);}
 	unsigned get_face_id   () const {return (2*dim + dir);}
-	unsigned get_num_stairs() const {return ((shape == SHAPE_U) ? NUM_STAIRS_PER_FLOOR_U : NUM_STAIRS_PER_FLOOR);}
+	unsigned get_num_stairs() const {return (is_u_shape() ? NUM_STAIRS_PER_FLOOR_U : NUM_STAIRS_PER_FLOOR);}
 	float get_retail_landing_width(float floor_spacing) const {return 0.5*min(get_sz_dim(dim), floor_spacing);}
 };
 
