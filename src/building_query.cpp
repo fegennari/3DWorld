@@ -44,7 +44,7 @@ bool building_t::player_can_see_outside() const {
 				camera_bot_bs.z -= get_bldg_player_height();
 
 				for (stairwell_t const &s : interior->stairwells) {
-					if (s.roof_access && s.contains_pt(camera_bot_bs)) return 1;
+					if (s.roof_access && !s.is_u_shape() && s.contains_pt(camera_bot_bs)) return 1;
 				}
 			}
 		}
@@ -63,6 +63,7 @@ bool building_t::player_can_see_outside() const {
 
 	for (auto const &s : interior->stairwells) { // check basement stairs
 		if (s.z1() >= ground_floor_z1 || s.z2() <= ground_floor_z1) continue; // not basement stairs
+		if (s.is_u_shape()) continue; // can't see around the bend
 		if (!is_rot_cube_visible(s, xlate)) continue; // VFC
 		if (!s.contains_pt(camera_bs) && s.stairs_door_ix >= 0 && get_door(s.stairs_door_ix).open_amt == 0.0) continue; // closed stairs door, not visible
 		if (!has_parking_garage) return 1; // assume exterior may be visible through normal stairs, but not parking garage stairs
@@ -1031,7 +1032,7 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 		} // for dix
 	} // for i
 	if (room.has_stairs && room.is_ext_basement()) {
-		// extended basement room - check for stairs
+		// extended basement room - check for stairs (should all be straight)
 		for (stairwell_t const &s : interior->stairwells) {
 			if (!s.intersects(room)) continue;
 			bool room_is_above(room.z2() > s.z2());

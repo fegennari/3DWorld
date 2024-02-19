@@ -192,7 +192,7 @@ bool building_t::water_visible_to_player() const {
 	if (!is_rot_cube_visible(get_water_cube(), xlate)) return 0;
 
 	if (interior->has_backrooms) { // backrooms water
-		for (stairwell_t const &s : interior->stairwells) { // check stairs visibility
+		for (stairwell_t const &s : interior->stairwells) { // check stairs visibility; stairs should be straight
 			if (s.z1() > interior->water_zval) continue; // above the water level
 			if (s.z2() < floor_above)          continue; // stairs don't go up to the floor the player is on
 			if (!interior->basement_ext_bcube.contains_cube(s))          continue; // not extended basement stairs

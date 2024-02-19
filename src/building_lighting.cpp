@@ -1379,7 +1379,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					float const center_val(s.get_center_dim(s.dim));
 					bool const dir_val((camera_bs[s.dim] < center_val) ^ s.dir);
 					
-					if (s.is_u_shape()) {
+					if (s.is_u_shape()) { // light may be visible on the back wall of the stairs from the light above or on the edges of the stairs from the light below
 						if (dir_val) continue; // back facing - light not visible
 						// floors above and below are only visible from one side of stairs
 						cube_t vis_region(bcube); // start with full building bcube
@@ -1397,7 +1397,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					}
 				}
 				stair_ramp_cuts.emplace_back(s, cut_mask);
-			}
+			} // for s
 			if (has_pg_ramp()) { // check ramp if player is in the parking garage or the backrooms doorway
 				if (room.contains_pt(interior->pg_ramp.get_cube_center()) ||
 					(has_ext_basement() && interior->get_ext_basement_door().get_clearance_bcube().contains_pt(camera_bs)))
@@ -1499,6 +1499,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (camera_in_ext_basement && !light_in_basement && lpos.z < ground_floor_z2) { // check if light by basement stairs; can happen with office ground floor hall lights
 			for (stairwell_t const &s : interior->stairwells) {
 				if (s.z1() >= ground_floor_z1 || s.z2() < ground_floor_z1) continue; // not basement stairs
+				if (s.is_u_shape()) continue; // light from above U-shaped stairs can't be seen from the bottom
 				cube_t stairs_exp(s);
 				stairs_exp.expand_in_dim(s.dim, 2.0*window_vspacing);
 				if (stairs_exp.intersects_xy(*i)) {light_vis_from_basement = 1; break;}
