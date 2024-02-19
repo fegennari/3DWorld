@@ -464,13 +464,34 @@ pos_dir_up get_pt_cube_frustum_pdu(point const &pos_, cube_t const &bounds) {
 void draw_scene_bounds_and_light_frustum(point const &lpos) {
 
 	shader_t s;
+	s.begin_color_only_shader();
 	enable_blend();
-	// draw scene bounds
-	s.begin_color_only_shader(colorRGBA(1.0, 1.0, 1.0, 0.25)); // white
-	draw_simple_cube(get_scene_bounds(), 0);
-	// draw light frustum
-	s.set_cur_color(colorRGBA(1.0, 1.0, 0.0, 0.25)); // yellow
-	get_pt_cube_frustum_pdu(lpos, get_scene_bounds()).draw_frustum();
+
+	if (ENABLE_GROUND_CSM) {
+		static pos_dir_up capture_pdu;
+		if (display_mode & 0x10) {capture_pdu = camera_pdu;} // capture key = '5'
+
+		if (capture_pdu.valid) {
+			ensure_outlined_polygons();
+			colorRGBA const frustum_colors[NUM_CSM_CASCADES] = {RED, GREEN, BLUE, YELLOW};
+
+			for (unsigned i = 0; i < NUM_CSM_CASCADES; ++i) {
+				s.set_cur_color(frustum_colors[i]);
+				pos_dir_up frustum(capture_pdu);
+				set_csm_near_far(frustum, i);
+				frustum.draw_frustum();
+			}
+			reset_fill_mode();
+		}
+	}
+	else {
+		// draw scene bounds
+		s.set_cur_color(colorRGBA(1.0, 1.0, 1.0, 0.25)); // white
+		draw_simple_cube(get_scene_bounds(), 0);
+		// draw light frustum
+		s.set_cur_color(colorRGBA(1.0, 1.0, 0.0, 0.25)); // yellow
+		get_pt_cube_frustum_pdu(lpos, get_scene_bounds()).draw_frustum();
+	}
 	disable_blend();
 	s.end_shader();
 }
