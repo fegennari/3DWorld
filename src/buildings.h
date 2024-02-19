@@ -17,6 +17,7 @@ unsigned const MAX_CYLIN_SIDES     = 36;
 unsigned const MAX_DRAW_BLOCKS     = 8; // for building interiors only; currently have floor, ceiling, walls, and doors
 unsigned const NUM_STAIRS_PER_FLOOR= 12;
 unsigned const NUM_STAIRS_PER_FLOOR_U = 16;
+unsigned const NUM_STAIRS_PER_FLOOR_L = 12;
 float const FLOOR_THICK_VAL_HOUSE  = 0.10; // 10% of floor spacing
 float const FLOOR_THICK_VAL_OFFICE = 0.11; // thicker for office buildings
 float const FLOOR_THICK_VAL_WINDOWLESS = 0.12; // even thicker for windowless office buildings
@@ -1238,10 +1239,11 @@ struct stairs_landing_base_t : public cube_t {
 		cube_t(c), dim(dim_), dir(dir_), roof_access(roof_access_), stack_conn(sc), in_ext_basement(ieb), shape(shape_) {against_wall[0] = against_wall[1] = 0;}
 	void set_against_wall(bool const val[2]) {against_wall[0] = val[0]; against_wall[1] = val[1];}
 	bool is_u_shape        () const {return (shape == SHAPE_U);}
-	bool is_straight       () const {return !is_u_shape();}
+	bool is_l_shape        () const {return (shape == SHAPE_L);}
+	bool is_straight       () const {return !(is_u_shape() || is_l_shape());}
 	bool has_walled_sides  () const {return (shape == SHAPE_WALLED || shape == SHAPE_WALLED_SIDES);}
 	unsigned get_face_id   () const {return (2*dim + dir);}
-	unsigned get_num_stairs() const {return (is_u_shape() ? NUM_STAIRS_PER_FLOOR_U : NUM_STAIRS_PER_FLOOR);}
+	unsigned get_num_stairs() const {return (is_u_shape() ? NUM_STAIRS_PER_FLOOR_U : (is_l_shape() ? NUM_STAIRS_PER_FLOOR_L : NUM_STAIRS_PER_FLOOR));}
 	float get_retail_landing_width(float floor_spacing) const {return 0.5*min(get_sz_dim(dim), floor_spacing);}
 };
 

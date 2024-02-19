@@ -2327,6 +2327,7 @@ bool has_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, float do
 		if (tc.intersects(bcube)) return 1;
 		// extra check for objects blocking the entrance/exit to the side; this is really only needed for open ends, but helps to avoid squeezing objects behind stairs as well
 		if (no_check_enter_exit || s->is_u_shape()) continue; // U-shaped stairs are only open on one side and generally placed in hallways, so ignore
+		//if (s->is_l_shape()) {} // TODO_L
 
 		for (unsigned e = 0; e < 2; ++e) { // for each end (entrance/exit)
 			cube_t end(tc);

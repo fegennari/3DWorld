@@ -63,7 +63,7 @@ bool building_t::player_can_see_outside() const {
 
 	for (auto const &s : interior->stairwells) { // check basement stairs
 		if (s.z1() >= ground_floor_z1 || s.z2() <= ground_floor_z1) continue; // not basement stairs
-		if (s.is_u_shape()) continue; // can't see around the bend
+		if (s.is_u_shape())                 continue; // can't see around the bend
 		if (!is_rot_cube_visible(s, xlate)) continue; // VFC
 		if (!s.contains_pt(camera_bs) && s.stairs_door_ix >= 0 && get_door(s.stairs_door_ix).open_amt == 0.0) continue; // closed stairs door, not visible
 		if (!has_parking_garage) return 1; // assume exterior may be visible through normal stairs, but not parking garage stairs
@@ -2024,14 +2024,13 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 	} // for door_stacks
 	for (auto const &s : interior->stairwells) {
 		if (!line_int_cube_exp(p1, p2, s, expand)) continue;
-		bool walled_sides(s.shape == SHAPE_WALLED_SIDES);
-		if (s.shape != SHAPE_STRAIGHT && !walled_sides) return 6; // fully walled and U-shaped stairs always collide, even for spiders and insects
+		if (s.shape == SHAPE_WALLED || s.is_u_shape()) return 6; // fully walled and U-shaped stairs always collide, even for spiders and insects
 		if (!for_spider && s.z1() < zmin - 0.5f*get_window_vspace()) return 6; // not the ground floor - definitely a collision; but not for spiders or insects
 
 		if (has_room_geom()) { // maybe we're under the stairs; check for individual stairs collisions; this condition should always be true
 			for (auto c = interior->room_geom->get_stairs_start(); c != interior->room_geom->objs.end(); ++c) {
 				if (c->no_coll()) continue;
-				if ((c->type == TYPE_STAIR || (walled_sides && c->type == TYPE_STAIR_WALL)) && line_int_cube_exp(p1, p2, *c, expand)) return 6;
+				if ((c->type == TYPE_STAIR || (s.shape == SHAPE_WALLED_SIDES && c->type == TYPE_STAIR_WALL)) && line_int_cube_exp(p1, p2, *c, expand)) return 6;
 			}
 		}
 	} // for s

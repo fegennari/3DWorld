@@ -2190,7 +2190,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		tmin = tmin0; normal = n; target = *i;
 	}
 	for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
-		if (i->shape == SHAPE_STRAIGHT) continue; // no walls, skip
+		if (!i->is_u_shape() && !i->has_walled_sides()) continue; // no walls, skip
 		// expand by wall half-width; see building_t::add_stairs_and_elevators()
 		float const step_len_pos(i->get_sz_dim(i->dim)/i->get_num_stairs());
 		cube_t c(*i);

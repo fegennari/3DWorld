@@ -2247,6 +2247,9 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			set_wall_width(railing, railing_zc, 1.4*railing_side_dz, 2); // set zvals
 			objs.emplace_back(railing, TYPE_RAILING, 0, !dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_HI | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_BOT), 1.0, SHAPE_CUBE, railing_color); // no ends
 		}
+		else if (i->has_railing && i->is_l_shape()) { // add railings on the sides and along the hole at the top
+			// TODO_L
+		}
 		else if (i->has_railing && !has_wall_both_sides && (i->stack_conn || (extend_walls_up && i->shape == SHAPE_STRAIGHT))) {
 			// add railings around the top if: straight + top floor with no roof access, connector stairs, or basement stairs
 			room_object_t railing(*i, TYPE_RAILING, 0, !dim, dir, (RO_FLAG_TOS | RO_FLAG_ADJ_BOT), 1.0, SHAPE_CUBE, railing_color); // flag to skip drawing ends

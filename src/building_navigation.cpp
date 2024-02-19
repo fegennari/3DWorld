@@ -353,7 +353,7 @@ public:
 	void mark_hallway(unsigned room) {get_node(room).is_hallway = 1;}
 	void mark_exit   (unsigned room) {get_node(room).has_exit   = 1;}
 
-	void connect_stairs(unsigned room, unsigned stairs, bool dim, bool dir, bool is_u, bool is_ramp) {
+	void connect_stairs(unsigned room, unsigned stairs, bool dim, bool dir, bool is_u, bool is_l, bool is_ramp) {
 		assert(room < num_rooms && (is_ramp || stairs < num_stairs));
 		unsigned const node_ix2(num_rooms + (is_ramp ? num_stairs : stairs)); // pg_ramp comes after all stairs
 		node_t &n2(get_node(node_ix2));
@@ -366,6 +366,9 @@ public:
 			float const mid(n2.bcube.get_center_dim(!dim));
 			entry_u.d[!dim][ side] = mid; // bottom
 			entry_d.d[!dim][!side] = mid; // top
+		}
+		else if (is_l) {
+			// TODO_L
 		}
 		else { // straight stairs: entrances are on opposite ends
 			entry_u.d[dim][ dir] = entry_u.d[dim][!dir] + extend; // shrink to extend length at the entrance to the stairs when going up
@@ -901,7 +904,7 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 			if (stairwell.stairs_door_ix >= 0 && global_building_params.ai_opens_doors < 2) { // check for open doors; doors on stairs can't be locked
 				if (!get_door(stairwell.stairs_door_ix).open) continue; // stairs blocked by closed door, don't connect (even if unlocked)
 			}
-			if (room.intersects_no_adj(stairwell)) {ng.connect_stairs(r, s, stairwell.dim, stairwell.dir, stairwell.is_u_shape(), 0);} // is_ramp=0
+			if (room.intersects_no_adj(stairwell)) {ng.connect_stairs(r, s, stairwell.dim, stairwell.dir, stairwell.is_u_shape(), stairwell.is_l_shape(), 0);} // is_ramp=0
 		}
 		if (!is_house && room.is_hallway && !room.is_ext_basement()) { // check for connected hallways in office buildings
 			for (unsigned r2 = r+1; r2 < num_rooms; ++r2) { // check rooms with higher index (since graph is bidirectional)
@@ -914,7 +917,7 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 		}
 		if (room.is_parking() && has_ramp && room.intersects_no_adj(interior->pg_ramp)) { // include parking garage ramp
 			bool const dim(interior->pg_ramp.ix >> 1), dir(interior->pg_ramp.ix & 1);
-			ng.connect_stairs(r, 0, dim, dir, 0, 1); // stairs_ix=0, is_u=0, is_ramp=1
+			ng.connect_stairs(r, 0, dim, dir, 0, 0, 1); // stairs_ix=0, is_u=0, is_l=0, is_ramp=1
 		}
 		//for (unsigned e = 0; e < interior->elevators.size(); ++e) {} // elevators are ignored here by the AI; should check interior->elevators_disabled
 	} // for r
@@ -1575,7 +1578,10 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 					path.add(exit_turn); // turning point for exit side of stairs
 					path.add(enter_turn); // turning point for entrance side of stairs
 				}
-			}
+				else if (stairs.is_l_shape()) {
+					// TODO_L
+				}
+			} // end stairs case
 			path.add(enter_pt);
 			path.add(from_path); // concatenate the two path segments in reverse order
 			return 1; // done/success
