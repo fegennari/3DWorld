@@ -883,14 +883,6 @@ void tile_t::upload_shadow_map_texture(bool tid_is_valid) {
 	create_or_update_texture(shadow_tid, tid_is_valid, stride, shadow_data);
 }
 
-
-unsigned calc_max_smap_lod() {
-	unsigned const min_smap_sz(have_buildings() ? 1024U : 512U); // 1024x1024 seems to be required to prevent shadow artifacts on the sides of buildings
-	unsigned lod_level(0);
-	for (unsigned smap_sz = shadow_map_sz; (smap_sz > min_smap_sz && lod_level+1 < NUM_SMAP_LODS); ++lod_level) {smap_sz >>= 1;}
-	return lod_level;
-}
-
 tile_smap_data_t tile_shadow_map_manager::new_smap_data(unsigned tu_id, tile_t *tile, unsigned light, unsigned lod_level) {
 	assert(tile != nullptr);
 	assert(light < NUM_LIGHT_SRC);
@@ -948,8 +940,15 @@ void tile_t::draw_smap_debug_vis(shader_t &s) const {
 	colorRGBA const lod_colors[6] = {RED, ORANGE, YELLOW, GREEN, BLUE, PURPLE}; // rainbow
 	s.set_cur_color(lod_colors[min(smap_lod_level, 5U)]);
 	draw_simple_cube(get_shadow_bcube(), 0);
+	cout << (shadow_map_sz >> smap_lod_level) << " ";
 }
 
+unsigned calc_max_smap_lod() {
+	unsigned const min_smap_sz(have_buildings() ? 1024U : 512U); // 1024x1024 seems to be required to prevent shadow artifacts on the sides of buildings
+	unsigned lod_level(0);
+	for (unsigned smap_sz = shadow_map_sz; (smap_sz > min_smap_sz && lod_level+1 < NUM_SMAP_LODS); ++lod_level) {smap_sz >>= 1;}
+	return lod_level;
+}
 void tile_t::setup_shadow_maps(tile_shadow_map_manager &smap_manager, bool cleanup_only) {
 
 	if (!shadow_map_enabled()) return; // disabled
@@ -960,8 +959,14 @@ void tile_t::setup_shadow_maps(tile_shadow_map_manager &smap_manager, bool clean
 	if (smap_dist_scale < 1.0) { // allocate new shadow maps or change shadow map LOD levels
 		unsigned const max_lod_level(calc_max_smap_lod());
 		float const lod_level_f(min(5.0f*smap_dist_scale, float(max_lod_level))); // clamp to max supported LOD
-		unsigned const lod_level(floor(lod_level_f));
-		if (floor(lod_level_f - 0.1) > smap_lod_level) {clear_shadow_map(&smap_manager);} // LOD decrease with hysteresis
+		unsigned lod_level(floor(lod_level_f)), lod_level_reduce(floor(lod_level_f - 0.1)); // add hysteresis
+		
+		// for very large shadow maps, limit LOD 0 to only the tile containing the camera
+		if (shadow_map_sz >= 8192 && !get_mesh_bcube().contains_pt_xy(get_camera_pos())) {
+			if (lod_level == 0) {lod_level_reduce = 1;} // no hysteresis for LOD 0
+			lod_level = min(lod_level+1, max_lod_level);
+		}
+		if (lod_level_reduce > smap_lod_level) {clear_shadow_map(&smap_manager);} // LOD decrease
 		if (cleanup_only) return; // done
 		if (lod_level < smap_lod_level) {clear_shadow_map(&smap_manager);} // LOD increase
 
@@ -2895,12 +2900,14 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile, bool decid_t
 
 
 void tile_draw_t::draw_smap_debug_vis() const {
+	cout << "smap sizes: ";
 	shader_t s;
 	s.begin_color_only_shader();
 	ensure_outlined_polygons();
 	for (auto const &i : to_draw) {i.second->draw_smap_debug_vis(s);}
 	s.end_shader();
 	set_fill_mode();
+	cout << endl;
 }
 
 

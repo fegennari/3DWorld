@@ -275,7 +275,7 @@ public:
 	void fill_adj_mask(bool mask[3][3], int x, int y) const;
 	float get_min_dist_to_pt(point const &pt, bool xy_only=0, bool mesh_only=1) const;
 	float get_max_xy_dist_to_pt(point const &pt) const;
-	bool contains_point(point const &pos) const {return get_bcube().contains_pt_xy(pos);}
+	bool contains_point(point const &pos) const {return get_bcube().contains_pt_xy(pos);} // XY only
 	bool contains_camera() const {return contains_point(get_camera_pos());}
 	unsigned get_gpu_mem() const;
 	unsigned get_smap_mem() const;
