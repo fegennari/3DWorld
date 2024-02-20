@@ -32,6 +32,8 @@ unsigned get_stall_cubes(room_object_t const &c, cube_t sides[3]);
 unsigned get_shower_cubes(room_object_t const &c, cube_t sides[2]);
 void resize_cubes_xy(vect_cube_t &cubes, float val);
 void get_sphere_boundary_pts(point const &center, float radius, point *pts, bool skip_z=0);
+unsigned get_L_stairs_first_flight_count(stairs_landing_base_t const &s, float landing_width);
+void get_L_stairs_entrances(stairs_landing_base_t const &s, float doorway_width, cube_t entrances[2]);
 
 point get_cube_center_zval(cube_t const &c, float zval) {return point(c.xc(), c.yc(), zval);}
 float get_ped_coll_radius() {return COLL_RADIUS_SCALE*ped_manager_t::get_ped_radius();}
@@ -368,7 +370,7 @@ public:
 			entry_d.d[!dim][!side] = mid; // top
 		}
 		else if (is_l) {
-			// TODO_L
+			// TODO_L: use get_L_stairs_entrances()
 		}
 		else { // straight stairs: entrances are on opposite ends
 			entry_u.d[dim][ dir] = entry_u.d[dim][!dir] + extend; // shrink to extend length at the entrance to the stairs when going up
@@ -1582,7 +1584,13 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 					path.add(enter_turn); // turning point for entrance side of stairs
 				}
 				else if (stairs.is_l_shape()) {
-					// TODO_L
+					float const landing_width(get_landing_width()), stair_dz(floor_spacing/(stairs.get_num_stairs()+1));
+					unsigned const num_stairs1(get_L_stairs_first_flight_count(stairs, landing_width)); // number of stairs in first/lower flight
+					point landing_center;
+					landing_center.z = min(from.z, to.z) + (num_stairs1 + 1)*stair_dz; // landing is up num_stairs1 + 1 (for the landing itself) in height
+					bool const dirs[2] = {stairs.dir, stairs.bend_dir};
+					for (unsigned d = 0; d < 2; ++d) {landing_center[stairs.dim ^ d] = stairs.d[stairs.dim ^ d][dirs[d]] - (dirs[d] ? 1.0 : -1.0)*0.5*landing_width;}
+					path.add(landing_center); // turn at the landing center
 				}
 			} // end stairs case
 			if (from_path.empty() || from_path.front() != enter_pt) {path.add(enter_pt);} // don't add a duplicate

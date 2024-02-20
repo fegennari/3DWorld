@@ -1981,6 +1981,15 @@ unsigned building_t::calc_floor_offset(float zval) const { // for basements
 	return ((zval < ground_floor_z1) ? round_fp((ground_floor_z1 - zval)/get_window_vspace()) : 0);
 }
 
+unsigned get_L_stairs_first_flight_count(stairs_landing_base_t const &s, float landing_width) {
+	float const length(s.get_length() - landing_width), width(s.get_width() - landing_width), tot_len(length + width);
+	assert(length > 0.0 && width > 0.0);
+	unsigned const num_stairs_add(s.get_num_stairs() - 1); // Note: the -1 accounts for the landing, which servers as a stair
+	assert(num_stairs_add > 1); // must be at least one in each dim
+	unsigned const len_ratio(round_fp(num_stairs_add*length/tot_len));
+	return max(1U, min(num_stairs_add-1, len_ratio));
+}
+
 void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), half_thick(0.5*floor_thickness);
@@ -2162,18 +2171,13 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		else if (i->is_l_shape()) {
 			bool const dir2(i->bend_dir);
 			// determine the number of stairs in each dim by looking at stairs spans
-			float const landing_width(1.0*get_doorway_width());
-			float const length(i->get_length() - landing_width), width(i->get_width() - landing_width), tot_len(length + width);
-			assert(length > 0.0 && width > 0.0);
-			unsigned const num_stairs_add(num_stairs - 1); // Note: the -1 accounts for the landing, which servers as a stair
-			assert(num_stairs_add > 1); // must be at least one in each dim
-			unsigned const len_ratio(round_fp(num_stairs_add*length/tot_len));
-			unsigned const num_stairs1(max(1U, min(num_stairs_add-1, len_ratio))), num_stairs2(num_stairs_add - num_stairs1);
+			float const landing_width(get_landing_width());
+			unsigned const num_stairs1(get_L_stairs_first_flight_count(*i, landing_width)), num_stairs2(num_stairs-1 - num_stairs1);
 			// set width of first flight equal to the width of the landing
 			float const inner_edge(stair.d[!dim][!dir2] + (dir2 ? 1.0 : -1.0)*landing_width);
 			stair.d[!dim][dir2] = inner_edge;
 			// add stairs in dim
-			step_len = (dir ? 1.0 : -1.0)*length/num_stairs1;
+			step_len = (dir ? 1.0 : -1.0)*(i->get_length() - landing_width)/num_stairs1;
 
 			for (unsigned n = 0; n < num_stairs1; ++n, z += stair_dz, pos += step_len) {
 				stair.d[dim][!dir] = pos; stair.d[dim][dir] = pos + step_len;
@@ -2196,7 +2200,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			objs.emplace_back(wall, TYPE_STAIR_WALL, 0, dim, dir, 0);
 			// add stairs in !dim
 			pos = inner_edge;
-			step_len = (dir2 ? 1.0 : -1.0)*width/num_stairs2;
+			step_len = (dir2 ? 1.0 : -1.0)*(i->get_width() - landing_width)/num_stairs2;
 
 			for (unsigned n = 0; n < num_stairs2; ++n, z += stair_dz, pos += step_len) {
 				stair.d[!dim][!dir2] = pos; stair.d[!dim][dir2] = pos + step_len;
