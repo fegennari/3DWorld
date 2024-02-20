@@ -2119,12 +2119,12 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
 		if (i->for_elevator || i->for_ramp) continue; // for elevator or ramp, not stairs
 		unsigned const num_stairs(i->get_num_stairs());
-		float const stair_dz(window_vspacing/(num_stairs+1)), stair_height(stair_dz + floor_thickness);
+		float const stair_dz(window_vspacing/(num_stairs+1)), stair_height(stair_dz + floor_thickness), stair_z1h(0.4f*stair_height);
 		bool const dim(i->dim), dir(i->dir), has_side_walls(i->has_walled_sides() || i->is_u_shape());
 		bool const has_wall_both_sides(i->against_wall[0] && i->against_wall[1]); // ext basement stairs
 		bool const side(dir); // for U-shaped stairs; for now this needs to be consistent for the entire stairwell, can't use rgen.rand_bool()
 		// Note: stairs always start at floor_thickness above the landing z1, ignoring landing z2/height
-		float const tot_len(i->get_length()), floor_z(i->z1() + floor_thickness - window_vspacing), step_len_pos(tot_len/num_stairs);
+		float const floor_z(i->z1() + floor_thickness - window_vspacing), step_len_pos(i->get_length()/num_stairs);
 		float const wall_hw(min(STAIRS_WALL_WIDTH_MULT*max(step_len_pos, stair_dz), 0.25f*stair_dz));
 		float const stairs_zmin(i->in_ext_basement ? interior->basement_ext_bcube.z1() : bcube.z1());
 		float step_len((dir ? 1.0 : -1.0)*step_len_pos), z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
@@ -2135,12 +2135,12 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				// tag basement bottom stair so that no width extension is added, since this may clip through the basement door
 				unsigned const flags((n == 0 && !i->in_ext_basement && i->z1() < ground_floor_z1) ? RO_FLAG_RSTAIRS : 0);
 				stair.d[dim][!dir] = pos; stair.d[dim][dir] = pos + step_len;
-				set_cube_zvals(stair, max(stairs_zmin, (z + 0.4f*stair_height)), z+stair_height); // don't go below the floor (Note: z1 was (z + 0.5f*half_thick))
+				set_cube_zvals(stair, max(stairs_zmin, z+stair_z1h), z+stair_height); // don't go below the floor (Note: z1 was (z + 0.5f*half_thick))
 				assert(stair.z1() < stair.z2());
 				objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir, flags); // Note: room_id=0, not tracked, unused
 			} // for n
 		}
-		else { // U-shaped stairs
+		else if (i->is_u_shape()) { // U-shaped stairs
 			float const mid(i->get_center_dim(!dim));
 			stair.d[!dim][side] = mid;
 			step_len *= 2.0;
@@ -2159,6 +2159,50 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				objs.back().shape = SHAPE_STAIRS_U;
 			} // for n
 		}
+		else if (i->is_l_shape()) {
+			bool const dir2(i->bend_dir);
+			// determine the number of stairs in each dim by looking at stairs spans
+			float const landing_width(1.0*get_doorway_width());
+			float const length(i->get_length() - landing_width), width(i->get_width() - landing_width), tot_len(length + width);
+			assert(length > 0.0 && width > 0.0);
+			unsigned const num_stairs_add(num_stairs - 1); // Note: the -1 accounts for the landing, which servers as a stair
+			assert(num_stairs_add > 1); // must be at least one in each dim
+			unsigned const len_ratio(round_fp(num_stairs_add*length/tot_len));
+			unsigned const num_stairs1(max(1U, min(num_stairs_add-1, len_ratio))), num_stairs2(num_stairs_add - num_stairs1);
+			// set width of first flight equal to the width of the landing
+			float const inner_edge(stair.d[!dim][!dir2] + (dir2 ? 1.0 : -1.0)*landing_width);
+			stair.d[!dim][dir2] = inner_edge;
+			// add stairs in dim
+			step_len = (dir ? 1.0 : -1.0)*length/num_stairs1;
+
+			for (unsigned n = 0; n < num_stairs1; ++n, z += stair_dz, pos += step_len) {
+				stair.d[dim][!dir] = pos; stair.d[dim][dir] = pos + step_len;
+				set_cube_zvals(stair, max(stairs_zmin, z+stair_z1h), z+stair_height); // don't go below the floor
+				assert(stair.z1() < stair.z2());
+				objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir, 0);
+			}
+			// add landing
+			stair.d[dim][!dir] = pos; stair.d[dim][dir] = i->d[dim][dir]; // extend to the end
+			set_cube_zvals(stair, z+stair_z1h, z+stair_height);
+			objs.emplace_back(stair, TYPE_STAIR, 0, !dim, !dir, 0); // place in !dim but use first dir, so that player coll is enabled since we don't have a wall here
+			objs.back().shape = SHAPE_STAIRS_L; // only the landing needs a tag because it can be entered from right angle sides
+			z += stair_dz;
+			// add wall supporting landing
+			cube_t wall(stair);
+			set_cube_zvals(wall, max(stairs_zmin, (i->z1() - window_vspacing)), stair.z1()); // top of floor below to bottom of landing
+			wall.d[dim][!dir] = i->d[dim][dir] - (dir ? 1.0 : -1.0)*wall_thickness; // set thickness
+			objs.emplace_back(wall, TYPE_STAIR_WALL, 0, dim, dir, RO_FLAG_HANGING); // hanging so that the bottom surface is drawn
+			// add stairs in !dim
+			pos = inner_edge;
+			step_len = (dir2 ? 1.0 : -1.0)*width/num_stairs2;
+
+			for (unsigned n = 0; n < num_stairs2; ++n, z += stair_dz, pos += step_len) {
+				stair.d[!dim][!dir2] = pos; stair.d[!dim][dir2] = pos + step_len;
+				set_cube_zvals(stair, z+stair_z1h, z+stair_height);
+				objs.emplace_back(stair, TYPE_STAIR, 0, !dim, dir2, 0);
+			}
+		}
+		else {assert(0);}
 		// add walls and railings
 		bool const extend_walls_up(i->is_at_top && !i->roof_access); // space above is open, add a wall so that people can't fall down the stairs
 		float const railing_z2(i->z2() + (i->roof_access ? 0.025*i->dz() : 0.0)); // capture z2 before we change it; move roof access railing up a bit to offset the shrink resize

@@ -793,7 +793,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			if (!c->contains_pt_xy(pos))  continue; // sphere not on this stair
 			if (obj_z < c->z1())          continue; // below the stair
 			if (pos.z - radius > c->z2()) continue; // above the stair
-			bool const is_u(c->shape == SHAPE_STAIRS_U);
+			bool const is_u(c->shape == SHAPE_STAIRS_U), is_l(c->shape == SHAPE_STAIRS_L), is_ul(is_u || is_l);
 			// U-shaped stairs have strange collisions, and it seems to work better to have the player stand on the z1 value rather than the z2;
 			// but stairs that are tall (such as pool stairs) only work when standing on the z2 value
 			float const stairs_zval(is_u ? c->z1() : c->z2());
@@ -804,8 +804,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				if (camera_z > mesh_z && camera_z < entrance_z) {pos.z += 1.2*(entrance_z - camera_z);} // move up above the entrance plane
 			}
 			obj_z = max(pos.z, p_last.z);
-			if (!is_u || c->dir == 1) {max_eq(pos[!c->dim], (c->d[!c->dim][0] + xy_radius));} // force the sphere onto the stairs
-			if (!is_u || c->dir == 0) {min_eq(pos[!c->dim], (c->d[!c->dim][1] - xy_radius));}
+			if (!is_ul || c->dir == 1) {max_eq(pos[!c->dim], (c->d[!c->dim][0] + xy_radius));} // force the sphere onto the stairs
+			if (!is_ul || c->dir == 0) {min_eq(pos[!c->dim], (c->d[!c->dim][1] - xy_radius));}
 			had_coll     = on_stairs = 1;
 			speed_factor = (is_u ? 0.875 : 0.75); // U-shaped stairs are a bit faster
 		} // for c

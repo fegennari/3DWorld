@@ -430,7 +430,7 @@ enum {
 	NUM_ROBJ_TYPES};
 typedef uint8_t room_object;
 
-enum {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_SPHERE, SHAPE_STAIRS_U, SHAPE_TALL, SHAPE_SHORT, SHAPE_ANGLED, SHAPE_VERT_TORUS}; // room object shapes
+enum {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_SPHERE, SHAPE_STAIRS_U, SHAPE_STAIRS_L, SHAPE_TALL, SHAPE_SHORT, SHAPE_ANGLED, SHAPE_VERT_TORUS}; // room object shapes
 typedef uint8_t room_obj_shape;
 
 enum {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_MENS, RTYPE_WOMENS, RTYPE_BED, RTYPE_KITCHEN, RTYPE_LIVING,
@@ -1231,12 +1231,12 @@ struct breaker_zone_t {
 };
 
 struct stairs_landing_base_t : public cube_t {
-	bool dim, dir, roof_access, stack_conn, in_ext_basement, against_wall[2];
+	bool dim=0, dir=0, bend_dir=0, roof_access=0, stack_conn=0, in_ext_basement=0, against_wall[2]={};
 	stairs_shape shape;
 
-	stairs_landing_base_t() : dim(0), dir(0), roof_access(0), stack_conn(0), in_ext_basement(0), shape(SHAPE_STRAIGHT)  {against_wall[0] = against_wall[1] = 0;}
+	stairs_landing_base_t() {}
 	stairs_landing_base_t(cube_t const &c, bool dim_, bool dir_, bool roof_access_, stairs_shape shape_, bool sc=0, bool ieb=0) :
-		cube_t(c), dim(dim_), dir(dir_), roof_access(roof_access_), stack_conn(sc), in_ext_basement(ieb), shape(shape_) {against_wall[0] = against_wall[1] = 0;}
+		cube_t(c), dim(dim_), dir(dir_), roof_access(roof_access_), stack_conn(sc), in_ext_basement(ieb), shape(shape_) {}
 	void set_against_wall(bool const val[2]) {against_wall[0] = val[0]; against_wall[1] = val[1];}
 	bool is_u_shape        () const {return (shape == SHAPE_U);}
 	bool is_l_shape        () const {return (shape == SHAPE_L);}

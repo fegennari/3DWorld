@@ -1228,7 +1228,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	float min_ewidth(1.5*doorway_width), ewidth(min_ewidth); // for elevators
 	float z(part.z1());
 	cube_t stairs_cut, elevator_cut;
-	bool stairs_dim(0), stairs_have_railing(1), extended_from_above(0);
+	bool stairs_dim(0), bend_dir(0), stairs_have_railing(1), extended_from_above(0);
 	bool stairs_against_wall[2] = {0, 0};
 	stairs_shape sshape(SHAPE_STRAIGHT); // straight by default
 	bool must_add_stairs(first_part_this_stack);
@@ -1409,6 +1409,18 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					// skip if we can't push against a wall and the room is too narrow for space around the stairs to allow doors to open and people to walk
 					if (!against_wall && room.get_sz_dim(!stairs_dim) < (1.1*2.0*doorway_width + stairs_sz)) continue;
 
+					if (0 && is_house && against_wall) { // try to convert to L-shaped stairs
+						bend_dir = stairs_against_wall[0]; // bend away from the wall
+						cube_t cutout_l(cutout);
+						cutout_l.d[!stairs_dim][bend_dir] += (bend_dir ? 1.0 : -1.0)*2.0*doorway_width; // extend out for the L
+						cube_t cutout_l_pad(cutout_l);
+						cutout_l_pad.d[!stairs_dim][bend_dir] += (bend_dir ? 1.0 : -1.0)*stairs_sz; // extend out for the stairs exit
+
+						if (room.contains_cube_xy(cutout_l_pad) && !is_cube_close_to_doorway(cutout_l, room)) {
+							sshape = SHAPE_L;
+							cutout = cutout_l;
+						}
+					}
 					if (!is_cube()) { // check for stairs outside or too close to building walls
 						cube_t stairs_ext(cutout);
 						stairs_ext.expand_in_dim(stairs_dim, doorway_width);
@@ -1470,12 +1482,14 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					((f == 1 && sshape == SHAPE_WALLED_SIDES) ? (stairs_shape)SHAPE_WALLED : sshape), 0, is_at_top);
 				set_cube_zvals(landing, zc, zf);
 				landing.set_against_wall(stairs_against_wall);
-				last_landing_ix = interior->landings.size();
+				landing.bend_dir = bend_dir;
+				last_landing_ix  = interior->landings.size();
 				interior->landings.push_back(landing);
 
 				if (f == 1) { // only add for first floor
 					interior->stairwells.emplace_back(stairs_cut, num_floors, stairs_dim, stairs_dir, sshape);
 					interior->stairwells.back().set_against_wall(stairs_against_wall);
+					interior->stairwells.back().bend_dir = bend_dir;
 				}
 			}
 			if (has_elevator) {
