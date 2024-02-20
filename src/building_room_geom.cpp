@@ -1852,9 +1852,9 @@ void building_room_geom_t::add_ceiling_fan_light(room_object_t const &fan, room_
 }
 
 float get_railing_height(room_object_t const &c) {
-	bool const is_u_stairs(c.flags & (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI));
+	bool const is_tall(c.flags & RO_FLAG_HAS_EXTRA);
 	unsigned const num_floors(c.item_flags + 1);
-	return (is_u_stairs ? 0.70 : 0.35)*c.dz()/num_floors; // use a larger relative height for lo/hi railings on U-shaped stairs
+	return (is_tall ? 0.70 : 0.35)*c.dz()/num_floors; // use a larger relative height for lo/hi railings on U/L-shaped stairs
 }
 cylinder_3dw get_railing_cylinder(room_object_t const &c) {
 	float const radius(0.5*c.get_width()), center(c.get_center_dim(!c.dim)), height(get_railing_height(c));
@@ -1915,7 +1915,8 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vecto
 	bot.z2() = top.z1() = c.z2() - min(0.025*width, 0.25*c.dz()); // set top thickness
 
 	if (!(c.flags & RO_FLAG_RSTAIRS)) { // not basement stairs
-		top.d[c.dim][!c.dir] += (c.dir ? -1.0 : 1.0)*0.0125*width; // extension
+		bool const is_landing(c.shape == SHAPE_STAIRS_L), dir(c.dir ^ is_landing); // landing has the overhang on the other dim/dir
+		top.d[c.dim ^ is_landing][!dir] += (dir ? -1.0 : 1.0)*0.0125*width; // extension
 		top.expand_in_dim(!c.dim, 0.01*width); // make slightly wider
 	}
 	mat.add_cube_to_verts(top, STAIRS_COLOR_TOP, tex_origin); // all faces drawn

@@ -1520,8 +1520,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		float const floor_below_zval(floor_z - window_vspacing), ceil_above_zval(ceil_z + window_vspacing);
 		// Note: we use level_z rather than floor_z for floor_is_above test so that it agrees with the threshold logic for player_in_basement
 		bool const floor_is_above((camera_z < level_z) && !is_single_floor), floor_is_below(camera_z > (ceil_z + fc_thick)); // check floor_ix transition points
-		if (!is_house && floor_is_below && in_ext_basement && !camera_in_ext_basement && lpos.z   < get_basement().z1()) continue; // light  in lower level extb, player not in extb
-		if (!is_house && floor_is_above && !in_ext_basement && camera_in_ext_basement && camera_z < get_basement().z1()) continue; // player in lower level extb, light  not in extb
+		if (!is_house && floor_is_below &&  in_ext_basement && !camera_in_ext_basement && lpos.z   < get_basement().z1()) continue; // light  in lower level extb, player not in extb
+		if (!is_house && floor_is_above && !in_ext_basement &&  camera_in_ext_basement && camera_z < get_basement().z1()) continue; // player in lower level extb, light  not in extb
 		if (floor_is_below && !floor_below_region.is_all_zeros() && !floor_below_region.contains_pt_xy(lpos)) continue; // check floor_below_region
 		if (floor_is_above && !floor_above_region.is_all_zeros() && !floor_above_region.contains_pt_xy(lpos)) continue; // check floor_below_region
 		cube_t const &room_part(get_part_for_room(room));
@@ -1584,6 +1584,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			else if (check_attic && floor_is_above && lpos.z > attic_access.z2() && camera_room >= 0 && get_room(camera_room).contains_cube_xy(attic_access)) {
 				// light in attic, and camera in room with attic access
 			}
+			// TODO_L: check for light and camera both in same room with L-shaped stairs
 			else if (floor_is_above || (floor_is_below && !camera_room_tall)) { // light is on a different floor from the camera
 				bool const parts_are_stacked(camera_part < real_num_parts && (parts[camera_part].z2() <= room.z1() || parts[camera_part].z1() >= room.z2()));
 

@@ -2128,7 +2128,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		float const wall_hw(min(STAIRS_WALL_WIDTH_MULT*max(step_len_pos, stair_dz), 0.25f*stair_dz));
 		float const stairs_zmin(i->in_ext_basement ? interior->basement_ext_bcube.z1() : bcube.z1());
 		float step_len((dir ? 1.0 : -1.0)*step_len_pos), z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
-		cube_t stair(*i);
+		cube_t stair(*i), landing; // Note: landing is for L-shaped stairs
 
 		if (i->is_straight()) { // straight stairs
 			for (unsigned n = 0; n < num_stairs; ++n, z += stair_dz, pos += step_len) {
@@ -2186,6 +2186,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			set_cube_zvals(stair, z+stair_z1h, z+stair_height);
 			objs.emplace_back(stair, TYPE_STAIR, 0, !dim, !dir, 0); // place in !dim but use first dir, so that player coll is enabled since we don't have a wall here
 			objs.back().shape = SHAPE_STAIRS_L; // only the landing needs a tag because it can be entered from right angle sides
+			landing = stair;
 			z += stair_dz;
 			// add wall supporting landing
 			cube_t wall(stair);
@@ -2253,6 +2254,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		wall.d[dim][!dir] = i->d[dim][!dir];
 
 		for (unsigned d = 0; d < 2; ++d) { // sides of stairs
+			if (i->is_l_shape()) continue; // nothing to add in this loop
 			set_wall_width(wall, i->d[!dim][d], wall_hw, !dim);
 			wall.expand_in_dim(dim, 0.01*wall_hw); // just enough to avoid z-fighting with stairs
 			bool const add_wall(has_side_walls && !i->against_wall[d]); // don't add a wall if the stairs are already against a wall
@@ -2277,6 +2279,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 					railing.expand_in_dim( dim, -(i->roof_access ? 2.0 : 1.0)*wall_hw); // shrink slightly to avoid clipping through an end wall
 				}
 				if (i->is_u_shape()) { // adjust railing height/angle to match stairs
+					flags |= RO_FLAG_HAS_EXTRA; // make it taller
 					float const z_split(railing.zc());
 					if (bool(d) == side) {railing.z1() = z_split + railing_side_dz; flags |= RO_FLAG_ADJ_HI; railing_dir ^= 1;}
 					else                 {railing.z2() = z_split - railing_side_dz; flags |= RO_FLAG_ADJ_LO;}
@@ -2289,10 +2292,35 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			cube_t railing(*i);
 			set_wall_width(railing, (i->d[dim][dir] + (dir ? -1.0 : 1.0)*2.0*wall_hw), wall_hw, dim);
 			set_wall_width(railing, railing_zc, 1.4*railing_side_dz, 2); // set zvals
-			objs.emplace_back(railing, TYPE_RAILING, 0, !dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_HI | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_BOT), 1.0, SHAPE_CUBE, railing_color); // no ends
+			unsigned const railing_flags(RO_FLAG_NOCOLL | RO_FLAG_ADJ_HI | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_BOT | RO_FLAG_HAS_EXTRA); // make taller
+			objs.emplace_back(railing, TYPE_RAILING, 0, !dim, dir, railing_flags, 1.0, SHAPE_CUBE, railing_color); // no ends
 		}
-		else if (i->has_railing && i->is_l_shape()) { // add railings on the sides and along the hole at the top
-			// TODO_L
+		else if (i->has_railing && i->is_l_shape()) { // add railings to the sides of each segment, along the hole at the top on 3 sides, and around the two landing sides
+			bool const dir2(i->bend_dir);
+			// side railings
+			cube_t segs[2] = {*i, *i}; // {dim/dir, !dim/dir2}
+			set_cube_zvals(segs[0], wall   .z1(), landing.z1());
+			set_cube_zvals(segs[1], landing.z2(), railing_z2  );
+			segs[0].d[!dim][ dir2] = segs[1].d[!dim][!dir2] = landing.d[!dim][ dir2]; // inside of lower/first  flight
+			segs[1].d[ dim][!dir ] = segs[0].d[ dim][ dir ] = landing.d[ dim][!dir ]; // inside of upper/second flight
+			unsigned const railing_flags(RO_FLAG_OPEN | RO_FLAG_HAS_EXTRA); // make taller
+			float const railing_hw(0.75*wall_hw);
+			bool const dirs[2] = {dir, dir2};
+
+			for (unsigned d = 0; d < 2; ++d) { // sides of stairs
+				for (unsigned s = 0; s < 2; ++s) { // segs
+					bool const rdim(dim ^ s), rdir(dirs[s]);
+					cube_t railing(segs[s]);
+					set_wall_width(railing, segs[s].d[!rdim][d], railing_hw, !rdim);
+					objs.emplace_back(railing, TYPE_RAILING, 0, rdim, rdir, railing_flags, 1.0, SHAPE_CUBE, railing_color); // with balusters
+				}
+			} // for d
+			// landing railings
+			for (unsigned d = 0; d < 2; ++d) {
+
+			}
+			// top railings
+
 		}
 		else if (i->has_railing && !has_wall_both_sides && (i->stack_conn || (extend_walls_up && i->shape == SHAPE_STRAIGHT))) {
 			// add railings around the top if: straight + top floor with no roof access, connector stairs, or basement stairs
