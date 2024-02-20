@@ -1888,18 +1888,20 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 			point const p1(pt - vector3d(0, 0, hscale*height)), p2(pt - vector3d(0, 0, (is_top_railing ? 0.0 : num_floors*0.02*(d ? 1.0 : -1.0)*height)));
 			mat.add_cylin_to_verts(p1, p2, pole_radius, pole_radius, c.color, 0, 0); // no top or bottom
 		}
-		if (c.is_open()) { // add balusters
-			unsigned const num(num_floors*NUM_STAIRS_PER_FLOOR - 1);
-			float const step_sz(1.0/(num+1)), radius(0.75*pole_radius), bot_radius(0.85*pole_radius);
-			vector3d const delta(0, 0, -height);
+	}
+	if (!is_u_stairs && c.is_open()) { // add balusters
+		unsigned num(0);
+		if (is_top_railing) {num = round_fp(2.0*length/height);} // 2:1 aspect ratio
+		else                {num = num_floors*NUM_STAIRS_PER_FLOOR - 1;} // one per stair
+		float const step_sz(1.0/(num+1)), radius(0.75*pole_radius), bot_radius(0.85*pole_radius);
+		vector3d const delta(0, 0, -height);
 
-			for (unsigned n = 0; n < num; ++n) {
-				float const t((n+1)*step_sz);
-				point const pt(t*railing.p1 + (1.0 - t)*railing.p2);
-				mat.add_cylin_to_verts((pt + delta), pt, radius, radius, c.color, 0, 0, 0, 0, 1.0, 1.0, 0, 16); // only 16 sides, no top or bottom
-			}
-			mat.add_cylin_to_verts((railing.p1 + delta), (railing.p2 + delta), bot_radius, bot_radius, c.color, 1, 1); // bottom bar with both ends
+		for (unsigned n = 0; n < num; ++n) {
+			float const t((n+1)*step_sz);
+			point const pt(t*railing.p1 + (1.0 - t)*railing.p2);
+			mat.add_cylin_to_verts((pt + delta), pt, radius, radius, c.color, 0, 0, 0, 0, 1.0, 1.0, 0, 16); // only 16 sides, no top or bottom
 		}
+		mat.add_cylin_to_verts((railing.p1 + delta), (railing.p2 + delta), bot_radius, bot_radius, c.color, 1, 1); // bottom bar with both ends
 	}
 }
 

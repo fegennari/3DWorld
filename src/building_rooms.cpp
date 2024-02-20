@@ -2190,9 +2190,10 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			z += stair_dz;
 			// add wall supporting landing
 			cube_t wall(stair);
-			set_cube_zvals(wall, max(stairs_zmin, (i->z1() - window_vspacing)), stair.z1()); // top of floor below to bottom of landing
-			wall.d[dim][!dir] = i->d[dim][dir] - (dir ? 1.0 : -1.0)*wall_thickness; // set thickness
-			objs.emplace_back(wall, TYPE_STAIR_WALL, 0, dim, dir, RO_FLAG_HANGING); // hanging so that the bottom surface is drawn
+			set_cube_zvals(wall, floor_z, stair.z2()); // top of floor below to top of landing
+			wall.d[dim][!dir] = i->d[dim][dir]; // against landing
+			wall.d[dim][ dir] = i->d[dim][dir] + (dir ? 1.0 : -1.0)*wall_thickness; // extend out by thickness
+			objs.emplace_back(wall, TYPE_STAIR_WALL, 0, dim, dir, 0);
 			// add stairs in !dim
 			pos = inner_edge;
 			step_len = (dir2 ? 1.0 : -1.0)*width/num_stairs2;
@@ -2297,13 +2298,13 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		}
 		else if (i->has_railing && i->is_l_shape()) { // add railings to the sides of each segment, along the hole at the top on 3 sides, and around the two landing sides
 			bool const dir2(i->bend_dir);
-			// side railings
+			// add side railings
 			cube_t segs[2] = {*i, *i}; // {dim/dir, !dim/dir2}
-			set_cube_zvals(segs[0], wall   .z1(), landing.z1());
-			set_cube_zvals(segs[1], landing.z2(), railing_z2  );
+			set_cube_zvals(segs[0], floor_z, landing.z1()+stair_dz);
+			set_cube_zvals(segs[1], landing.z2(), railing_z2);
 			segs[0].d[!dim][ dir2] = segs[1].d[!dim][!dir2] = landing.d[!dim][ dir2]; // inside of lower/first  flight
 			segs[1].d[ dim][!dir ] = segs[0].d[ dim][ dir ] = landing.d[ dim][!dir ]; // inside of upper/second flight
-			unsigned const railing_flags(RO_FLAG_OPEN | RO_FLAG_HAS_EXTRA); // make taller
+			unsigned const railing_flags(RO_FLAG_OPEN | RO_FLAG_HAS_EXTRA); // make taller, with balusters
 			float const railing_hw(0.75*wall_hw);
 			bool const dirs[2] = {dir, dir2};
 
@@ -2312,21 +2313,39 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 					bool const rdim(dim ^ s), rdir(dirs[s]);
 					cube_t railing(segs[s]);
 					set_wall_width(railing, segs[s].d[!rdim][d], railing_hw, !rdim);
-					objs.emplace_back(railing, TYPE_RAILING, 0, rdim, rdir, railing_flags, 1.0, SHAPE_CUBE, railing_color); // with balusters
+					objs.emplace_back(railing, TYPE_RAILING, 0, rdim, rdir, railing_flags, 1.0, SHAPE_CUBE, railing_color);
 				}
-			} // for d
-			// landing railings
-			for (unsigned d = 0; d < 2; ++d) {
-
 			}
-			// top railings
-
+			// add landing railings
+			for (unsigned d = 0; d < 2; ++d) {
+				bool const rdim(dim ^ d), rdir(dirs[d] ^ d);
+				cube_t railing(landing);
+				set_cube_zvals(railing, landing.z2(), railing_z2);
+				set_wall_width(railing, landing.d[rdim][rdir], railing_hw, rdim);
+				objs.emplace_back(railing, TYPE_RAILING, 0, !rdim, rdir, (railing_flags | RO_FLAG_TOS), 1.0, SHAPE_CUBE, railing_color);
+			}
+			// add top railings
+			cube_t railing(*i);
+			set_cube_zvals(railing, i->z2(), (i->z2() + window_vspacing - floor_thickness)); // starts at the floor
+			if (!i->is_at_top) {railing.d[!dim][!dir2] = landing.d[!dim][dir2];} // inside edge of landing to make room for the flight above, if there is one
+			
+			// upper end next to landing and lower end; vertical poles are only needed for one end, except for the top floor
+			for (unsigned d = 0; d < 2; ++d) {
+				set_wall_width(railing, i->d[dim][d], railing_hw, dim);
+				unsigned const flags(RO_FLAG_TOS | (d ? 0 : RO_FLAG_OPEN)); // balusters on one side
+				objs.emplace_back(railing, TYPE_RAILING, 0, !dim, d, flags, 1.0, SHAPE_CUBE, railing_color);
+			}
+			// long edge
+			railing.d[dim][ dir] = landing.d[dim][!dir]; // ends at the landing/upper stairs
+			railing.d[dim][!dir] = i->d[dim][!dir]; // ends at stairs cutout to meet the other railing
+			railing.expand_in_dim(dim, railing_hw); // extend to cover the vertical poles
+			set_wall_width(railing, i->d[!dim][dir2], railing_hw, !dim);
+			objs.emplace_back(railing, TYPE_RAILING, 0, dim, dir2, (RO_FLAG_TOS | RO_FLAG_OPEN | RO_FLAG_ADJ_TOP), 1.0, SHAPE_CUBE, railing_color); // no vertical pole
 		}
 		else if (i->has_railing && !has_wall_both_sides && (i->stack_conn || (extend_walls_up && i->shape == SHAPE_STRAIGHT))) {
 			// add railings around the top if: straight + top floor with no roof access, connector stairs, or basement stairs
 			room_object_t railing(*i, TYPE_RAILING, 0, !dim, dir, (RO_FLAG_TOS | RO_FLAG_ADJ_BOT), 1.0, SHAPE_CUBE, railing_color); // flag to skip drawing ends
-			railing.z1()  = railing.z2(); // starts at the floor
-			railing.z2() += window_vspacing - floor_thickness;
+			set_cube_zvals(railing, i->z2(), (i->z2() + window_vspacing - floor_thickness)); // starts at the floor
 			set_wall_width(railing, (i->d[dim][!dir] + (dir ? -1.0 : 1.0)*wall_hw), wall_hw, dim); // no overlap with stairs cutout
 
 			for (unsigned d = 0; d < 2; ++d) {
