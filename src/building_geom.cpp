@@ -2311,8 +2311,8 @@ cube_t get_stairs_bcube_expanded(stairwell_t const &s, float ends_clearance, flo
 	// see step_len_pos logic in building_t::add_stairs_and_elevators()
 	unsigned const num_stairs(s.get_num_stairs());
 	float const floor_spacing(doorway_width/DOOR_WIDTH_SCALE);
-	float const stair_dz(floor_spacing/(num_stairs+1)), wall_hw(min(STAIRS_WALL_WIDTH_MULT*max(s.get_sz_dim(s.dim)/num_stairs, stair_dz), 0.25f*stair_dz)); // more accurate
-	//float const wall_hw(STAIRS_WALL_WIDTH_MULT*s.get_sz_dim(s.dim)/num_stairs); // faster/simpler
+	float const stair_dz(floor_spacing/(num_stairs+1)), wall_hw(min(STAIRS_WALL_WIDTH_MULT*max(s.get_length()/num_stairs, stair_dz), 0.25f*stair_dz)); // more accurate
+	//float const wall_hw(STAIRS_WALL_WIDTH_MULT*s.get_length()/num_stairs); // faster/simpler
 	tc.expand_in_dim(!s.dim, (sides_clearance + wall_hw)); // add extra space to account for walls and railings on stairs
 	return tc;
 }

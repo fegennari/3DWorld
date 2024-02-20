@@ -1244,7 +1244,9 @@ struct stairs_landing_base_t : public cube_t {
 	bool has_walled_sides  () const {return (shape == SHAPE_WALLED || shape == SHAPE_WALLED_SIDES);}
 	unsigned get_face_id   () const {return (2*dim + dir);}
 	unsigned get_num_stairs() const {return (is_u_shape() ? NUM_STAIRS_PER_FLOOR_U : (is_l_shape() ? NUM_STAIRS_PER_FLOOR_L : NUM_STAIRS_PER_FLOOR));}
-	float get_retail_landing_width(float floor_spacing) const {return 0.5*min(get_sz_dim(dim), floor_spacing);}
+	float get_length       () const {return get_sz_dim( dim);}
+	float get_width        () const {return get_sz_dim(!dim);}
+	float get_retail_landing_width(float floor_spacing) const {return 0.5*min(get_length(), floor_spacing);}
 };
 
 struct landing_t : public stairs_landing_base_t {

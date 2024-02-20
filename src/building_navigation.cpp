@@ -1550,7 +1550,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 
 				if (stairs.is_u_shape()) { // add 2 extra points on mid-level landing; entrance and exit will be on the same side
 					bool const dim(stairs.dim), dir(stairs.dir); // Note: see code in add_stairs_and_elevators()
-					float const turn_pt(stairs.d[dim][dir] - 0.1*(dir ? 1.0 : -1.0)*stairs.get_sz_dim(dim)), seg_delta_z(0.45f*(to.z - from.z));
+					float const turn_pt(stairs.d[dim][dir] - 0.1*(dir ? 1.0 : -1.0)*stairs.get_length()), seg_delta_z(0.45f*(to.z - from.z));
 					point exit_turn(exit_pt.x, exit_pt.y, (to.z - seg_delta_z));
 					exit_turn[dim] = turn_pt;
 					point enter_turn(enter_pt.x, enter_pt.y, (from.z + seg_delta_z));

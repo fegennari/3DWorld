@@ -2013,7 +2013,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			sign.translate_dim(2, window_vspacing); // move up one floor
 
 			if (check_skylight_intersection(sign)) { // check for sklight and move sign to the side
-				sign.translate_dim(!i->dim, 0.5*(i->get_sz_dim(!i->dim) - stairs_sign_width)); // translate to the positive side
+				sign.translate_dim(!i->dim, 0.5*(i->get_width() - stairs_sign_width)); // translate to the positive side
 				flags |= RO_FLAG_ADJ_TOP; // dra the top surface
 			}
 			objs.emplace_back(sign, TYPE_SIGN, 0, i->dim, !i->dir, flags, 1.0, SHAPE_CUBE, DK_BLUE); // no room_id
@@ -2124,7 +2124,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		bool const has_wall_both_sides(i->against_wall[0] && i->against_wall[1]); // ext basement stairs
 		bool const side(dir); // for U-shaped stairs; for now this needs to be consistent for the entire stairwell, can't use rgen.rand_bool()
 		// Note: stairs always start at floor_thickness above the landing z1, ignoring landing z2/height
-		float const tot_len(i->get_sz_dim(dim)), floor_z(i->z1() + floor_thickness - window_vspacing), step_len_pos(tot_len/num_stairs);
+		float const tot_len(i->get_length()), floor_z(i->z1() + floor_thickness - window_vspacing), step_len_pos(tot_len/num_stairs);
 		float const wall_hw(min(STAIRS_WALL_WIDTH_MULT*max(step_len_pos, stair_dz), 0.25f*stair_dz));
 		float const stairs_zmin(i->in_ext_basement ? interior->basement_ext_bcube.z1() : bcube.z1());
 		float step_len((dir ? 1.0 : -1.0)*step_len_pos), z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
