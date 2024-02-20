@@ -1575,14 +1575,14 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 						person.last_used_stairs = 1; // don't immediately go back up/down the stairs
 						// Note: person.dest_room can be wrong when exiting in the hallway above the retail room, but it should be unused
 					}
-					path.add(exit_turn); // turning point for exit side of stairs
+					path.add(exit_turn ); // turning point for exit side of stairs
 					path.add(enter_turn); // turning point for entrance side of stairs
 				}
 				else if (stairs.is_l_shape()) {
 					// TODO_L
 				}
 			} // end stairs case
-			path.add(enter_pt);
+			if (from_path.empty() || from_path.front() != enter_pt) {path.add(enter_pt);} // don't add a duplicate
 			path.add(from_path); // concatenate the two path segments in reverse order
 			return 1; // done/success
 		} // for s
@@ -2272,6 +2272,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		
 		if (!person.path.empty()) { // move to next path point
 			person.next_path_pt(0);
+			assert(person.target_pos != person.pos);
 			//return AI_NEXT_PT; // returning here and recalculating the path on the next frame can get us stuck at this point when chasing the player
 		}
 		else {
