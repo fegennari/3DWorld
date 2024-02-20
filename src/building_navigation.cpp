@@ -703,8 +703,9 @@ public:
 
 				// find path to first doorway; ignore collisions with p2 (cur_pt) in case this person was pushed into an object by another person
 				if (!connect_room_endpoints(avoid, building, walk_area, n, final_pt, cur_pt, radius, path, keepout, rgen, 0, 1)) {
-					// allow a failure if this is the first path taken by this AI so that it's not stuck behind an object due to bad initial placement
-					if (!is_first_path) {path.clear(); return 0;}
+					// allow a failure if this is the first path taken by this AI so that it's not stuck behind an object due to bad initial placement,
+					// but not if the node is a hallway, to avoid the AI walking through a building's stairs or elevator
+					if (!is_first_path || node.is_hallway) {path.clear(); return 0;}
 				}
 				return 1; // success
 			}
@@ -1249,6 +1250,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 			assert(new_z > bot_floor_z && new_z < top_ceil_z);
 			person.target_pos.z = new_z; // target the floor above
 		}
+		//if (person.is_first_path) {} // don't use stairs on the first path?
 		else if (interior->ext_basement_hallway_room_id < 0 || cand_room < (unsigned)interior->ext_basement_hallway_room_id) { // skip for ext basement rooms
 			// room covers floor this person is on; allow moving to a different floor, currently only one floor at a time
 			cube_t const &part(get_part_for_room(room)); // or just use the room?
