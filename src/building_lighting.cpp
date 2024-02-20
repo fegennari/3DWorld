@@ -1331,7 +1331,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	bool const player_on_attic_stairs(check_attic && player_in_attic && interior->attic_access.contains_pt_xy(camera_rot));
 	bool const player_in_pool(camera_in_building && has_pool() && interior->pool.contains_pt(camera_bs));
 	unsigned camera_part(parts.size()); // start at an invalid value
-	bool camera_by_stairs(0), camera_on_stairs(0), camera_somewhat_by_stairs(0), camera_in_hallway(0), camera_can_see_ext_basement(0);
+	bool camera_by_stairs(0), camera_on_stairs(0), camera_by_L_stairs(0), camera_somewhat_by_stairs(0), camera_in_hallway(0), camera_can_see_ext_basement(0);
 	bool camera_near_building(camera_in_building), check_ramp(0), stairs_or_ramp_visible(0), camera_room_tall(0), camera_in_closed_room(0);
 	float camera_z(camera_bs.z);
 	// if player is in the pool, increase camera zval to the top of the pool so that lights in the room above are within a single floor and not culled
@@ -1373,6 +1373,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 			for (stairwell_t const &s : interior->stairwells) { // check stairs
 				if (s.z1() > camera_z || s.z2() < camera_z) continue; // wrong floor
+				if (s.is_l_shape() && s.intersects(room)) {camera_by_L_stairs = 1;}
 				unsigned cut_mask(3); // both dirs enabled by default
 
 				if (!s.contains_pt(camera_rot)) { // disable these optimizations if the player is on the stairs
@@ -1584,7 +1585,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			else if (check_attic && floor_is_above && lpos.z > attic_access.z2() && camera_room >= 0 && get_room(camera_room).contains_cube_xy(attic_access)) {
 				// light in attic, and camera in room with attic access
 			}
-			// TODO_L: check for light and camera both in same room with L-shaped stairs
+			else if (in_camera_room && has_stairs_this_floor && camera_by_L_stairs) {
+				// lights may be visible multiple rooms above or below through the hole in the center of L-shaped stairs
+			}
 			else if (floor_is_above || (floor_is_below && !camera_room_tall)) { // light is on a different floor from the camera
 				bool const parts_are_stacked(camera_part < real_num_parts && (parts[camera_part].z2() <= room.z1() || parts[camera_part].z1() >= room.z2()));
 
