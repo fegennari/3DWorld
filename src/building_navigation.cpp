@@ -1467,8 +1467,9 @@ int building_t::find_nearest_elevator_this_floor(point const &pos) const {
 }
 
 cube_t get_stairs_plus_step_up(stairwell_t const &stairs) {
+	float const step_len((stairs.get_length()/stairs.get_num_stairs())*(stairs.is_straight() ? 1.0 : 2.0)); // U and L shaped stairs are longer due to bends
 	cube_t stairs_ext(stairs);
-	stairs_ext.d[stairs.dim][!stairs.dir] += (stairs.dir ? -1.0 : 1.0)*stairs.get_sz_dim(stairs.dim)/NUM_STAIRS_PER_FLOOR; // location of step up
+	stairs_ext.d[stairs.dim][!stairs.dir] += (stairs.dir ? -1.0 : 1.0)*step_len; // location of step up
 	return stairs_ext;
 }
 
