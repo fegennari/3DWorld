@@ -2316,6 +2316,19 @@ cube_t get_stairs_bcube_expanded(stairwell_t const &s, float ends_clearance, flo
 	tc.expand_in_dim(!s.dim, (sides_clearance + wall_hw)); // add extra space to account for walls and railings on stairs
 	return tc;
 }
+void get_L_stairs_entrances(stairs_landing_base_t const &s, float doorway_width, cube_t entrances[2]) {
+	bool const dirs[2] = {s.dir, s.bend_dir};
+	float const landing_width(doorway_width);
+
+	for (unsigned d = 0; d < 2; ++d) { // {lower, upper}
+		bool const dim(s.dim ^ d), dir(dirs[d] ^ d), dir2(dirs[!d] ^ 2);
+		cube_t &se(entrances[d]);
+		se = s; // copy stairs; will return full zval range
+		se.d[!dim][dir2]  = s .d[!dim][!dir2] + (dir2 ? 1.0 : -1.0)*landing_width; // set width
+		se.d[ dim][0   ]  = se.d[ dim][1] = s.d[dim][!dir]; // edge of stairs entrance
+		se.d[ dim][!dir] += (dir ? -1.0 : 1.0)*0.75*doorway_width; // extend away from stairs
+	}
+}
 // no_check_enter_exit: 0=check enter and exit with expand, 1=check enter and exit with no expand, 2=don't check enter and exit at all
 bool has_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, float doorway_width, int no_check_enter_exit=0) {
 	cube_t pre_test(bcube);
@@ -2327,14 +2340,20 @@ bool has_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, float do
 		if (tc.intersects(bcube)) return 1;
 		// extra check for objects blocking the entrance/exit to the side; this is really only needed for open ends, but helps to avoid squeezing objects behind stairs as well
 		if (no_check_enter_exit || s->is_u_shape()) continue; // U-shaped stairs are only open on one side and generally placed in hallways, so ignore
-		//if (s->is_l_shape()) {} // TODO_L
-
+		
+		if (s->is_l_shape()) { // L-shaped stairs are special
+			cube_t entrances[2];
+			get_L_stairs_entrances(*s, doorway_width, entrances);
+			// TODO: maybe this is too strong for the bottom floor? if we took floor_spacing, we could handle this
+			if (entrances[0].intersects(bcube) || entrances[1].intersects(bcube)) return 1;
+			continue;
+		}
 		for (unsigned e = 0; e < 2; ++e) { // for each end (entrance/exit)
 			cube_t end(tc);
 			end.d[s->dim][!e] = s->d[s->dim][e]; // shrink to the gap between *s and tc
 			if (!s->against_wall[0]) {end.d[!s->dim][0] -= 0.75*doorway_width;}
 			if (!s->against_wall[1]) {end.d[!s->dim][1] += 0.75*doorway_width;}
-			if (end.intersects(bcube)) return 1;
+			if (end.intersects(bcube)) return 1; // Note: ignores zval test, which can affect bottom exit and top entrance
 		}
 	} // for s
 	return 0;
