@@ -355,27 +355,42 @@ public:
 	void mark_hallway(unsigned room) {get_node(room).is_hallway = 1;}
 	void mark_exit   (unsigned room) {get_node(room).has_exit   = 1;}
 
-	void connect_stairs(unsigned room, unsigned stairs, bool dim, bool dir, bool is_u, bool is_l, bool is_ramp) {
-		assert(room < num_rooms && (is_ramp || stairs < num_stairs));
-		unsigned const node_ix2(num_rooms + (is_ramp ? num_stairs : stairs)); // pg_ramp comes after all stairs
+	void connect_stairs(unsigned room, unsigned stairs, stairwell_t const &s, float doorway_width) {
+		assert(room < num_rooms && stairs < num_stairs);
+		unsigned const node_ix2(num_rooms + stairs);
 		node_t &n2(get_node(node_ix2));
 		cube_t entry_u(n2.bcube), entry_d(n2.bcube);
+		bool const dim(s.dim), dir(s.dir);
 		float const extend((dir ? -1.0 : 1.0)*stairs_extend); // extend away from stairs for entrance/exit area; will be denormalized in this dim
 
-		if (is_u) { // U-shaped stairs: entrances are on the same side
+		if (s.is_u_shape()) { // U-shaped stairs: entrances are on the same side
 			bool const side(dir); // Note: see code in add_stairs_and_elevators()
 			entry_u.d[dim][dir] = entry_d.d[dim][dir] = entry_u.d[dim][!dir] + extend; // shrink to extend length at the entrance to the stairs
 			float const mid(n2.bcube.get_center_dim(!dim));
 			entry_u.d[!dim][ side] = mid; // bottom
 			entry_d.d[!dim][!side] = mid; // top
 		}
-		else if (is_l) {
-			// TODO_L: use get_L_stairs_entrances()
+		else if (s.is_l_shape()) { // L-shaped stairs: entrances are at right angles
+			cube_t entrances[2];
+			get_L_stairs_entrances(s, doorway_width, entrances);
+			entry_u = entrances[0]; entry_d = entrances[1];
 		}
 		else { // straight stairs: entrances are on opposite ends
 			entry_u.d[dim][ dir] = entry_u.d[dim][!dir] + extend; // shrink to extend length at the entrance to the stairs when going up
 			entry_d.d[dim][!dir] = entry_d.d[dim][ dir] - extend; // shrink to extend length at the entrance to the stairs when going down
 		}
+		get_node(room).add_conn_room(node_ix2, -1, entry_u, entry_d); // Note: entry_u and entry_d are denormalized here
+		n2.add_conn_room(room, -1, entry_u, entry_d);
+	}
+	void connect_ramp(unsigned room, bool dim, bool dir) {
+		assert(room < num_rooms);
+		unsigned const node_ix2(num_rooms + num_stairs); // pg_ramp comes after all stairs
+		node_t &n2(get_node(node_ix2));
+		cube_t entry_u(n2.bcube), entry_d(n2.bcube);
+		float const extend((dir ? -1.0 : 1.0)*stairs_extend); // extend away from stairs for entrance/exit area; will be denormalized in this dim
+		// straight ramp: entrances are on opposite ends
+		entry_u.d[dim][ dir] = entry_u.d[dim][!dir] + extend; // shrink to extend length at the entrance to the ramp when going up
+		entry_d.d[dim][!dir] = entry_d.d[dim][ dir] - extend; // shrink to extend length at the entrance to the ramp when going down
 		get_node(room).add_conn_room(node_ix2, -1, entry_u, entry_d); // Note: entry_u and entry_d are denormalized here
 		n2.add_conn_room(room, -1, entry_u, entry_d);
 	}
@@ -874,7 +889,7 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 	// Note: reallocating the nav_graph will also rebuild the nested nav_grid
 	interior->nav_graph.reset(new building_nav_graph_t(0.5*get_window_vspace())); // set stairs_extend == doorway width
 	building_nav_graph_t &ng(*interior->nav_graph);
-	float const wall_width(get_wall_thickness());
+	float const wall_width(get_wall_thickness()), doorway_width(get_doorway_width());
 	unsigned const num_rooms(interior->rooms.size()), num_stairs(interior->stairwells.size());
 	bool const has_ramp(has_pg_ramp());
 	ng.set_num_rooms(num_rooms, num_stairs, has_ramp);
@@ -907,7 +922,7 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 			if (stairwell.stairs_door_ix >= 0 && global_building_params.ai_opens_doors < 2) { // check for open doors; doors on stairs can't be locked
 				if (!get_door(stairwell.stairs_door_ix).open) continue; // stairs blocked by closed door, don't connect (even if unlocked)
 			}
-			if (room.intersects_no_adj(stairwell)) {ng.connect_stairs(r, s, stairwell.dim, stairwell.dir, stairwell.is_u_shape(), stairwell.is_l_shape(), 0);} // is_ramp=0
+			if (room.intersects_no_adj(stairwell)) {ng.connect_stairs(r, s, stairwell, doorway_width);}
 		}
 		if (!is_house && room.is_hallway && !room.is_ext_basement()) { // check for connected hallways in office buildings
 			for (unsigned r2 = r+1; r2 < num_rooms; ++r2) { // check rooms with higher index (since graph is bidirectional)
@@ -916,11 +931,11 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 				cube_t conn_cube(c);
 				conn_cube.intersect_with_cube(room2);
 				ng.connect_rooms(r, r2, -1, conn_cube);
-			} // for r2
+			}
 		}
 		if (room.is_parking() && has_ramp && room.intersects_no_adj(interior->pg_ramp)) { // include parking garage ramp
 			bool const dim(interior->pg_ramp.ix >> 1), dir(interior->pg_ramp.ix & 1);
-			ng.connect_stairs(r, 0, dim, dir, 0, 0, 1); // stairs_ix=0, is_u=0, is_l=0, is_ramp=1
+			ng.connect_ramp(r, dim, dir);
 		}
 		//for (unsigned e = 0; e < interior->elevators.size(); ++e) {} // elevators are ignored here by the AI; should check interior->elevators_disabled
 	} // for r
@@ -1584,13 +1599,20 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 					path.add(enter_turn); // turning point for entrance side of stairs
 				}
 				else if (stairs.is_l_shape()) {
-					float const landing_width(get_landing_width()), stair_dz(floor_spacing/(stairs.get_num_stairs()+1));
+					float const landing_width(get_landing_width()), landing_offset(0.25*landing_width), stair_dz(floor_spacing/(stairs.get_num_stairs()+1));
 					unsigned const num_stairs1(get_L_stairs_first_flight_count(stairs, landing_width)); // number of stairs in first/lower flight
 					point landing_center;
 					landing_center.z = min(from.z, to.z) + (num_stairs1 + 1)*stair_dz; // landing is up num_stairs1 + 1 (for the landing itself) in height
-					bool const dirs[2] = {stairs.dir, stairs.bend_dir};
-					for (unsigned d = 0; d < 2; ++d) {landing_center[stairs.dim ^ d] = stairs.d[stairs.dim ^ d][dirs[d]] - (dirs[d] ? 1.0 : -1.0)*0.5*landing_width;}
-					path.add(landing_center); // turn at the landing center
+					landing_center[ stairs.dim] = stairs.d[ stairs.dim][ stairs.dir     ] - (stairs.dir      ?  1.0 : -1.0)*0.5*landing_width;
+					landing_center[!stairs.dim] = stairs.d[!stairs.dim][!stairs.bend_dir] - (stairs.bend_dir ? -1.0 :  1.0)*0.5*landing_width;
+					//path.add(landing_center); // turn at the landing center
+					// cut the corner slightly rather than turning at the landing center so that our feet are closer to the landing z2;
+					// use a very small Z offset so that the path segment is sloped and we correctly detect that the person is on the stairs
+					vector3d const delta_exit(exit_pt - landing_center), delta_enter(enter_pt - landing_center);
+					vector3d const exit_dir_xy (vector3d(delta_exit .x, delta_exit .y, 0.01*delta_exit .z).get_norm());
+					vector3d const enter_dir_xy(vector3d(delta_enter.x, delta_enter.y, 0.01*delta_enter.z).get_norm());
+					path.add(landing_center + exit_dir_xy *landing_offset);
+					path.add(landing_center + enter_dir_xy*landing_offset);
 				}
 			} // end stairs case
 			if (from_path.empty() || from_path.front() != enter_pt) {path.add(enter_pt);} // don't add a duplicate

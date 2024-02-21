@@ -2316,17 +2316,17 @@ cube_t get_stairs_bcube_expanded(stairwell_t const &s, float ends_clearance, flo
 	tc.expand_in_dim(!s.dim, (sides_clearance + wall_hw)); // add extra space to account for walls and railings on stairs
 	return tc;
 }
-void get_L_stairs_entrances(stairs_landing_base_t const &s, float doorway_width, cube_t entrances[2]) {
+void get_L_stairs_entrances(stairs_landing_base_t const &s, float doorway_width, cube_t entrances[2]) { // {lower, upper}
 	bool const dirs[2] = {s.dir, s.bend_dir};
 	float const landing_width(doorway_width);
 
 	for (unsigned d = 0; d < 2; ++d) { // {lower, upper}
-		bool const dim(s.dim ^ d), dir(dirs[d] ^ d), dir2(dirs[!d] ^ 2);
+		bool const dim(s.dim ^ bool(d)), dir(dirs[d] ^ bool(d)), dir2(dirs[!d] ^ bool(d));
 		cube_t &se(entrances[d]);
 		se = s; // copy stairs; will return full zval range
 		se.d[!dim][dir2]  = s .d[!dim][!dir2] + (dir2 ? 1.0 : -1.0)*landing_width; // set width
 		se.d[ dim][0   ]  = se.d[ dim][1] = s.d[dim][!dir]; // edge of stairs entrance
-		se.d[ dim][!dir] += (dir ? -1.0 : 1.0)*0.75*doorway_width; // extend away from stairs
+		se.d[ dim][!dir] += (dir ? -1.0 : 1.0)*1.1*doorway_width; // extend away from stairs; must be >= doorway_width for correct AI path finding
 	}
 }
 // no_check_enter_exit: 0=check enter and exit with expand, 1=check enter and exit with no expand, 2=don't check enter and exit at all
