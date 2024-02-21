@@ -1464,7 +1464,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 			if (i->type == TYPE_LAVALAMP && i->is_light_on()) { // should we do an occlusion query?
 				if (int((camera_bs.z - ground_floor_z1)/window_vspacing) != int((i->zc() - ground_floor_z1)/window_vspacing)) continue; // different floor
-				if (!add_dlight_if_visible(i->get_cube_center(), 10.0*i->get_radius(), colorRGBA(1.0, 0.75, 0.25), xlate, lights_bcube))	continue;
+				if (!add_dlight_if_visible(i->get_cube_center(), 10.0*i->get_radius(), colorRGBA(1.0, 0.75, 0.25), xlate, lights_bcube)) continue;
 				was_added = 1;
 			}
 			else if (i->type == TYPE_FISHTANK && i->is_light_on()) { // should we do an occlusion query?
@@ -1531,6 +1531,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool const has_stairs_this_floor(!is_in_attic && room.has_stairs_on_floor(cur_floor));
 		bool const light_room_has_stairs_or_ramp(i->has_stairs() || has_stairs_this_floor || (check_ramp && is_room_above_ramp(room, i->z1())));
 		bool const is_over_pool(has_pool() && (int)i->room_id == interior->pool.room_ix);
+		bool const light_and_camera_by_L_stairs(in_camera_room && has_stairs_this_floor && camera_by_L_stairs);
 		//bool const light_room_is_tall(room.is_single_floor && lpos.z > room.z1() + window_vspacing);
 		// special case for light shining down from above stairs when the player is below
 		bool const light_above_stairs(lpos.z > camera_z && light_room_has_stairs_or_ramp);
@@ -1585,7 +1586,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			else if (check_attic && floor_is_above && lpos.z > attic_access.z2() && camera_room >= 0 && get_room(camera_room).contains_cube_xy(attic_access)) {
 				// light in attic, and camera in room with attic access
 			}
-			else if (in_camera_room && has_stairs_this_floor && camera_by_L_stairs) {
+			else if (light_and_camera_by_L_stairs) {
 				// lights may be visible multiple rooms above or below through the hole in the center of L-shaped stairs
 			}
 			else if (floor_is_above || (floor_is_below && !camera_room_tall)) { // light is on a different floor from the camera
@@ -1655,8 +1656,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		cube_t clipped_bc(sphere_bc);
 		clipped_bc.intersect_with_cube(light_clip_cube);
-		// clip zval to current floor if light not in a room with stairs or elevator
-		if (!stairs_light && !is_in_elevator && !is_over_pool) {max_eq(clipped_bc.z1(), (floor_z - fc_thick));}
+		// clip zval to current floor if light not in a room with stairs, elevator, pool, tall ceilings, or L-shaped stairs
+		if (!stairs_light && !is_single_floor && !is_over_pool && !light_and_camera_by_L_stairs) {max_eq(clipped_bc.z1(), (floor_z - fc_thick));}
 		float const z2_adj((wall_light ? 1.1 : 1.0)*fc_thick); // prevent Z-fighting on stairs lights
 		min_eq(clipped_bc.z2(), (ceil_z + z2_adj)); // ceiling is always valid, since lights point downward
 
