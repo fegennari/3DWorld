@@ -2316,36 +2316,53 @@ cube_t get_stairs_bcube_expanded(stairwell_t const &s, float ends_clearance, flo
 	tc.expand_in_dim(!s.dim, (sides_clearance + wall_hw)); // add extra space to account for walls and railings on stairs
 	return tc;
 }
-void get_L_stairs_entrances(stairs_landing_base_t const &s, float doorway_width, cube_t entrances[2]) { // {lower, upper}
+void get_L_stairs_entrances(stairs_landing_base_t const &s, float doorway_width, bool for_placement, cube_t entrances[2]) { // {lower, upper}
 	bool const dirs[2] = {s.dir, s.bend_dir};
-	float const landing_width(doorway_width);
+	float const landing_width(doorway_width), extend_amt((for_placement ? 1.0 : 1.1)*doorway_width); // must be >= doorway_width for correct AI path finding
 
 	for (unsigned d = 0; d < 2; ++d) { // {lower, upper}
 		bool const dim(s.dim ^ bool(d)), dir(dirs[d] ^ bool(d)), dir2(dirs[!d] ^ bool(d));
 		cube_t &se(entrances[d]);
 		se = s; // copy stairs; will return full zval range
-		se.d[!dim][dir2]  = s .d[!dim][!dir2] + (dir2 ? 1.0 : -1.0)*landing_width; // set width
-		se.d[ dim][0   ]  = se.d[ dim][1] = s.d[dim][!dir]; // edge of stairs entrance
-		se.d[ dim][!dir] += (dir ? -1.0 : 1.0)*1.1*doorway_width; // extend away from stairs; must be >= doorway_width for correct AI path finding
-	}
+		// set width, but include the full edge *plus* width for lower entrance placement queries, since we don't want to block the path between wall and railing
+		bool const block_full_side(for_placement && d == 0);
+		se.d[!dim][dir2] = s.d[!dim][dir2 ^ block_full_side ^ 1] + (dir2 ? 1.0 : -1.0)*landing_width; // set width
+		se.d[dim][0   ]  = se.d[ dim][1] = s.d[dim][!dir]; // edge of stairs entrance
+		se.d[dim][!dir] += (dir ? -1.0 : 1.0)*extend_amt; // extend away from stairs
+	} // for d
+	// extend the top of the stairs exit toward the wall to avoid blocking the space between the railing and wall on this side as well
+	if (for_placement) {entrances[1].d[s.dim][s.dir] += (s.dir ? 1.0 : -1.0)*doorway_width;}
 }
 // no_check_enter_exit: 0=check enter and exit with expand, 1=check enter and exit with no expand, 2=don't check enter and exit at all
 bool has_stairs_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, float doorway_width, int no_check_enter_exit) {
 	cube_t pre_test(bcube);
 	if (no_check_enter_exit < 2) {pre_test.expand_by_xy(doorway_width);}
+	float const approx_floor_spacing(2.0*doorway_width); // used for L-shaped stairs
 
 	for (auto s = stairs.begin(); s != stairs.end(); ++s) {
 		if (!s->intersects(pre_test)) continue; // early termination test optimization
 		cube_t const tc(get_stairs_bcube_expanded(*s, ((no_check_enter_exit == 2) ? 0.0 : doorway_width), 0.0, doorway_width)); // sides_clearance=0.0
-		if (tc.intersects(bcube)) return 1;
+		
+		if (tc.intersects(bcube)) { // intersects core stairs
+			if (!s->is_l_shape()) return 1; // L-shaped stairs are special
+			if (bcube.z2() >= s->z1() + approx_floor_spacing) return 1; // not on the bottom floor - counts as intersection
+			float const landing_width(doorway_width);
+			bool const dirs[2] = {s->dir, s->bend_dir};
+
+			for (unsigned d = 0; d < 2; ++d) { // {lower, upper}
+				bool const dim(s->dim ^ bool(d)), dir2(dirs[!d] ^ bool(d));
+				cube_t seg(tc);
+				seg.d[!dim][dir2] = s->d[!dim][!dir2] + (dir2 ? 1.0 : -1.0)*landing_width; // set width
+				if (seg.intersects(bcube)) return 1;
+			}
+		}
 		// extra check for objects blocking the entrance/exit to the side; this is really only needed for open ends, but helps to avoid squeezing objects behind stairs as well
 		if (no_check_enter_exit || s->is_u_shape()) continue; // U-shaped stairs are only open on one side and generally placed in hallways, so ignore
 		
 		if (s->is_l_shape()) { // L-shaped stairs are special
 			cube_t entrances[2]; // {lower, upper}
-			get_L_stairs_entrances(*s, doorway_width, entrances);
-			float const approx_floor_spacing(2.0*doorway_width);
-			entrances[0].z2() -= approx_floor_spacing; // lower entrance is not on upper floor
+			get_L_stairs_entrances(*s, doorway_width, 1, entrances); // for_placement=0
+			//entrances[0].z2() -= approx_floor_spacing; // lower entrance is not on upper floor; but we don't want to block the path between railing and wall either
 			entrances[1].z1() += approx_floor_spacing; // upper entrance is not on lower floor
 			if (entrances[0].intersects(bcube) || entrances[1].intersects(bcube)) return 1;
 			continue;

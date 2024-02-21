@@ -33,7 +33,7 @@ unsigned get_shower_cubes(room_object_t const &c, cube_t sides[2]);
 void resize_cubes_xy(vect_cube_t &cubes, float val);
 void get_sphere_boundary_pts(point const &center, float radius, point *pts, bool skip_z=0);
 unsigned get_L_stairs_first_flight_count(stairs_landing_base_t const &s, float landing_width);
-void get_L_stairs_entrances(stairs_landing_base_t const &s, float doorway_width, cube_t entrances[2]);
+void get_L_stairs_entrances(stairs_landing_base_t const &s, float doorway_width, bool for_placement, cube_t entrances[2]);
 
 point get_cube_center_zval(cube_t const &c, float zval) {return point(c.xc(), c.yc(), zval);}
 float get_ped_coll_radius() {return COLL_RADIUS_SCALE*ped_manager_t::get_ped_radius();}
@@ -372,7 +372,7 @@ public:
 		}
 		else if (s.is_l_shape()) { // L-shaped stairs: entrances are at right angles
 			cube_t entrances[2]; // {lower, upper}
-			get_L_stairs_entrances(s, doorway_width, entrances);
+			get_L_stairs_entrances(s, doorway_width, 0, entrances); // for_placement=0
 			entry_u = entrances[0]; entry_d = entrances[1];
 		}
 		else { // straight stairs: entrances are on opposite ends
