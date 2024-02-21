@@ -371,7 +371,7 @@ public:
 			entry_d.d[!dim][!side] = mid; // top
 		}
 		else if (s.is_l_shape()) { // L-shaped stairs: entrances are at right angles
-			cube_t entrances[2];
+			cube_t entrances[2]; // {lower, upper}
 			get_L_stairs_entrances(s, doorway_width, entrances);
 			entry_u = entrances[0]; entry_d = entrances[1];
 		}

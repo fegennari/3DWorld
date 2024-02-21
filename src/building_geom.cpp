@@ -2330,7 +2330,7 @@ void get_L_stairs_entrances(stairs_landing_base_t const &s, float doorway_width,
 	}
 }
 // no_check_enter_exit: 0=check enter and exit with expand, 1=check enter and exit with no expand, 2=don't check enter and exit at all
-bool has_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, float doorway_width, int no_check_enter_exit=0) {
+bool has_stairs_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, float doorway_width, int no_check_enter_exit) {
 	cube_t pre_test(bcube);
 	if (no_check_enter_exit < 2) {pre_test.expand_by_xy(doorway_width);}
 
@@ -2342,9 +2342,11 @@ bool has_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, float do
 		if (no_check_enter_exit || s->is_u_shape()) continue; // U-shaped stairs are only open on one side and generally placed in hallways, so ignore
 		
 		if (s->is_l_shape()) { // L-shaped stairs are special
-			cube_t entrances[2];
+			cube_t entrances[2]; // {lower, upper}
 			get_L_stairs_entrances(*s, doorway_width, entrances);
-			// TODO: maybe this is too strong for the bottom floor? if we took floor_spacing, we could handle this
+			float const approx_floor_spacing(2.0*doorway_width);
+			entrances[0].z2() -= approx_floor_spacing; // lower entrance is not on upper floor
+			entrances[1].z1() += approx_floor_spacing; // upper entrance is not on lower floor
 			if (entrances[0].intersects(bcube) || entrances[1].intersects(bcube)) return 1;
 			continue;
 		}
@@ -2353,12 +2355,12 @@ bool has_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, float do
 			end.d[s->dim][!e] = s->d[s->dim][e]; // shrink to the gap between *s and tc
 			if (!s->against_wall[0]) {end.d[!s->dim][0] -= 0.75*doorway_width;}
 			if (!s->against_wall[1]) {end.d[!s->dim][1] += 0.75*doorway_width;}
-			if (end.intersects(bcube)) return 1; // Note: ignores zval test, which can affect bottom exit and top entrance
+			if (end.intersects(bcube)) return 1; // Note: ignores zval test, which can affect bottom exit and top entrances of non-walled stairs
 		}
 	} // for s
 	return 0;
 }
-bool has_bcube_int(cube_t const &bcube, vector<elevator_t> const &elevators, float doorway_width) {
+bool has_elevator_bcube_int(cube_t const &bcube, vector<elevator_t> const &elevators, float doorway_width) {
 	for (auto e = elevators.begin(); e != elevators.end(); ++e) {
 		cube_t tc(*e);
 		tc.d[e->dim][e->dir] += doorway_width*(e->dir ? 1.0 : -1.0); // add extra space in front of the elevator
@@ -2378,10 +2380,10 @@ bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, floa
 	cube_t tc(c);
 	tc.expand_by_xy(dmin); // no pad in z
 	float const doorway_width(get_doorway_width()); // Note: can return zero
-	if (has_bcube_int(tc, elevators, doorway_width)) return 1;
+	if (has_elevator_bcube_int(tc, elevators, doorway_width)) return 1;
 	if (elevators_only) return 0;
 	tc.z1() -= 0.001*tc.dz(); // expand slightly to avoid placing an object exactly at the top of the stairs
-	if (has_bcube_int(tc, stairwells, doorway_width, no_check_enter_exit)) return 1; // must check zval to exclude stairs and elevators in parts with other z-ranges
+	if (has_stairs_bcube_int(tc, stairwells, doorway_width, no_check_enter_exit)) return 1; // must check zval to exclude stairs and elevators in parts with other z-ranges
 	
 	if (!pg_ramp.is_all_zeros()) { // Note: ramp is placed during basement room geom generation, which may not have been run yet
 		bool const dim(pg_ramp.ix >> 1), dir(pg_ramp.ix & 1);
