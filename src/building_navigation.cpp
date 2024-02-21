@@ -548,6 +548,19 @@ public:
 		}
 		for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(c.d[d][0], c.d[d][1]);}
 	}
+	static bool maybe_shorten_path(point const &p1, point const &p2, point &p, vect_cube_t const &keepout) {
+		float const t1(get_closest_pt_on_line_t(p1, p, p2));
+		if (t1 <= 0.0 || t1 >= 1.0) return 0; // closest point not on line
+		point const cand(p + get_closest_pt_on_line_t(p1, p, p2)*(p2 - p));
+		if (check_line_int_xy(keepout, p1, cand) || check_line_int_xy(keepout, cand, p2)) return 0; // bad point
+		p = cand;
+		return 1;
+	}
+	static bool maybe_shorten_either_path(point const &p1, point const &p2, point &p, vect_cube_t const &keepout) {
+		if (maybe_shorten_path(p1, p2, p, keepout)) return 1;
+		if (maybe_shorten_path(p2, p1, p, keepout)) return 1;
+		return 0;
+	}
 	// add any necessary points to <path> that are required to get from <p1> to <p2> inside <walk_area> without intersecting <avoid>
 	// return: 0=failed, 1=regular path, 2=nav grid path
 	int connect_room_endpoints(vect_cube_t const &avoid, building_t const &building, cube_t const &walk_area, unsigned room_ix, point const &p1, point const &p2,
@@ -630,8 +643,13 @@ public:
 				}
 			} // for n
 			if (dmin == 0.0) continue;
+			maybe_shorten_either_path(p1, (use_pos2 ? pos2 : p2), best_pt, keepout);
 			path.add(best_pt);
-			if (use_pos2) {path.add(best_pt2);}
+			
+			if (use_pos2) {
+				maybe_shorten_either_path(best_pt, p2, best_pt2, keepout);
+				path.add(best_pt2);
+			}
 			return 1; // success
 		} // for npts
 		if (!no_grid_path && building.is_room_backrooms(room_ix)) { // run detailed path finding on backrooms
