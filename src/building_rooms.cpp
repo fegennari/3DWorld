@@ -2336,7 +2336,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			// upper end next to landing and lower end; vertical poles are only needed for one end, except for the top floor
 			for (unsigned d = 0; d < 2; ++d) {
 				set_wall_width(railing, i->d[dim][d], railing_hw, dim);
-				unsigned const flags(RO_FLAG_TOS | (d ? 0 : RO_FLAG_OPEN)); // balusters on one side
+				unsigned const flags(RO_FLAG_TOS | ((d ^ dir ^ 1) ? 0 : RO_FLAG_OPEN)); // balusters on one side
 				objs.emplace_back(railing, TYPE_RAILING, 0, !dim, d, flags, 1.0, SHAPE_CUBE, railing_color);
 			}
 			// long edge
