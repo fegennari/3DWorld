@@ -1406,19 +1406,33 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 						}
 					} // for dim
 					bool const against_wall(stairs_against_wall[0] || stairs_against_wall[1]);
+					float const room_width(room.get_sz_dim(!stairs_dim));
 					// skip if we can't push against a wall and the room is too narrow for space around the stairs to allow doors to open and people to walk
-					if (!against_wall && room.get_sz_dim(!stairs_dim) < (1.1*2.0*doorway_width + stairs_sz)) continue;
+					if (!against_wall && room_width < (1.1*2.0*doorway_width + stairs_sz)) continue;
 
-					if (0 && is_house && against_wall) { // try to convert to L-shaped stairs
-						bend_dir = stairs_against_wall[0]; // bend away from the wall
-						cube_t cutout_l(cutout);
-						cutout_l.d[!stairs_dim][bend_dir] += (bend_dir ? 1.0 : -1.0)*2.0*doorway_width; // extend out for the L
-						cube_t cutout_l_pad(cutout_l);
-						cutout_l_pad.d[!stairs_dim][bend_dir] += (bend_dir ? 1.0 : -1.0)*stairs_sz; // extend out for the stairs exit
+					if (is_house && against_wall) { // try to convert to L-shaped stairs
+						float const stairs_len(cutout.get_sz_dim(stairs_dim)), stairs_width(cutout.get_sz_dim(!stairs_dim)); // primary/lower segment
 
-						if (room.contains_cube_xy(cutout_l_pad) && !is_cube_close_to_doorway(cutout_l, room)) {
-							sshape = SHAPE_L;
-							cutout = cutout_l;
+						if (stairs_len > 2.0*stairs_width) { // not too short and wide
+							bool const bdir(stairs_against_wall[0]); // bend away from the wall
+							float const room_edge_min_space(max(2.0f*stairs_sz, 0.5f*room_width)), dscale(bdir ? 1.0 : -1.0);
+							float const max_expand(min(2.0f*doorway_width, (stairs_len - stairs_width))); // primary/lower segment is always longer
+							float expand_l(max_expand);
+
+							for (unsigned M = 0; M < 5; ++M) { // 5 expansion attempts (50% reduction max)
+								cube_t cutout_l(cutout);
+								cutout_l.d[!stairs_dim][bdir] += dscale*expand_l; // extend out for the L
+								cube_t cutout_l_pad(cutout_l);
+								cutout_l_pad.d[!stairs_dim][bdir] += dscale*room_edge_min_space; // extend out for the stairs exit
+
+								if (room.contains_cube_xy(cutout_l_pad) && !is_cube_close_to_doorway(cutout_l, room)) {
+									sshape   = SHAPE_L;
+									cutout   = cutout_l;
+									bend_dir = bdir;
+									break; // done
+								}
+								expand_l -= 0.1*max_expand; // shorten it
+							} // for M
 						}
 					}
 					if (!is_cube()) { // check for stairs outside or too close to building walls
