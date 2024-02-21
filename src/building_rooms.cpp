@@ -2138,6 +2138,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		float const stairs_zmin(i->in_ext_basement ? interior->basement_ext_bcube.z1() : bcube.z1());
 		float step_len((dir ? 1.0 : -1.0)*step_len_pos), z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
 		cube_t stair(*i), landing; // Note: landing is for L-shaped stairs
+		unsigned num_stairs1(0), num_stairs2(0); // used for L-shaped stairs
 
 		if (i->is_straight()) { // straight stairs
 			for (unsigned n = 0; n < num_stairs; ++n, z += stair_dz, pos += step_len) {
@@ -2172,7 +2173,8 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			bool const dir2(i->bend_dir);
 			// determine the number of stairs in each dim by looking at stairs spans
 			float const landing_width(get_landing_width());
-			unsigned const num_stairs1(get_L_stairs_first_flight_count(*i, landing_width)), num_stairs2(num_stairs-1 - num_stairs1);
+			num_stairs1 = get_L_stairs_first_flight_count(*i, landing_width);
+			num_stairs2 = num_stairs-1 - num_stairs1;
 			// set width of first flight equal to the width of the landing
 			float const inner_edge(stair.d[!dim][!dir2] + (dir2 ? 1.0 : -1.0)*landing_width);
 			stair.d[!dim][dir2] = inner_edge;
@@ -2308,7 +2310,6 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			set_cube_zvals(segs[1], landing.z2(), railing_z2);
 			segs[0].d[!dim][ dir2] = segs[1].d[!dim][!dir2] = landing.d[!dim][ dir2]; // inside of lower/first  flight
 			segs[1].d[ dim][!dir ] = segs[0].d[ dim][ dir ] = landing.d[ dim][!dir ]; // inside of upper/second flight
-			unsigned const railing_flags(RO_FLAG_OPEN | RO_FLAG_HAS_EXTRA); // make taller, with balusters
 			float const railing_hw(0.75*wall_hw);
 			bool const dirs[2] = {dir, dir2};
 
@@ -2317,16 +2318,19 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 					bool const rdim(dim ^ s), rdir(dirs[s]);
 					cube_t railing(segs[s]);
 					set_wall_width(railing, segs[s].d[!rdim][d], railing_hw, !rdim);
-					objs.emplace_back(railing, TYPE_RAILING, 0, rdim, rdir, railing_flags, 1.0, SHAPE_CUBE, railing_color);
+					objs.emplace_back(railing, TYPE_RAILING, 0, rdim, rdir, RO_FLAG_OPEN, 1.0, SHAPE_CUBE, railing_color); // with balusters
+					objs.back().state_flags = (s ? num_stairs2+1 : num_stairs1); // encode num_stairs in state_flags so that railing height can be drawn correctly
 				}
 			}
 			// add landing railings
+			unsigned const railing_flags(RO_FLAG_OPEN | RO_FLAG_HAS_EXTRA | RO_FLAG_TOS); // make taller, with balusters
+
 			for (unsigned d = 0; d < 2; ++d) {
 				bool const rdim(dim ^ d), rdir(dirs[d] ^ d);
 				cube_t railing(landing);
 				set_cube_zvals(railing, landing.z2(), railing_z2);
 				set_wall_width(railing, landing.d[rdim][rdir], railing_hw, rdim);
-				objs.emplace_back(railing, TYPE_RAILING, 0, !rdim, rdir, (railing_flags | RO_FLAG_TOS), 1.0, SHAPE_CUBE, railing_color);
+				objs.emplace_back(railing, TYPE_RAILING, 0, !rdim, rdir, railing_flags, 1.0, SHAPE_CUBE, railing_color);
 			}
 			// add top railings
 			cube_t railing(*i);

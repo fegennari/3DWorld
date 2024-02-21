@@ -1853,8 +1853,10 @@ void building_room_geom_t::add_ceiling_fan_light(room_object_t const &fan, room_
 
 float get_railing_height(room_object_t const &c) {
 	bool const is_tall(c.flags & RO_FLAG_HAS_EXTRA);
-	unsigned const num_floors(c.item_flags + 1);
-	return (is_tall ? 0.70 : 0.35)*c.dz()/num_floors; // use a larger relative height for lo/hi railings on U/L-shaped stairs
+	unsigned const num_floors(c.item_flags + 1), num_stairs(c.state_flags);
+	float height((is_tall ? 0.70 : 0.35)*c.dz()/num_floors); // use a larger relative height for lo/hi railings on U/L-shaped stairs
+	if (num_stairs > 0) {height *= float(NUM_STAIRS_PER_FLOOR_L)/float(num_stairs);} // adjust height for shorter railings used in L-shaped stairs
+	return height;
 }
 cylinder_3dw get_railing_cylinder(room_object_t const &c) {
 	float const radius(0.5*c.get_width()), center(c.get_center_dim(!c.dim)), height(get_railing_height(c));
@@ -1892,7 +1894,7 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 	if (!is_u_stairs && c.is_open()) { // add balusters
 		unsigned num(0);
 		if (is_top_railing) {num = round_fp(2.0*length/height);} // 2:1 aspect ratio
-		else                {num = num_floors*NUM_STAIRS_PER_FLOOR - 1;} // one per stair
+		else                {num = num_floors*NUM_STAIRS_PER_FLOOR - 1;} // one per stair; assumes straight stairs
 		float const step_sz(1.0/(num+1)), radius(0.75*pole_radius), bot_radius(0.85*pole_radius);
 		vector3d const delta(0, 0, -height);
 
