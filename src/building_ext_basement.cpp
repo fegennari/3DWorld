@@ -13,7 +13,6 @@ extern building_params_t global_building_params;
 extern building_t const *player_building;
 
 bool using_hmap_with_detail();
-cube_t get_stairs_bcube_expanded(stairwell_t const &s, float ends_clearance, float sides_clearance, float doorway_width);
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius);
 float get_ped_coll_radius();
 

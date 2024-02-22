@@ -1333,8 +1333,8 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 }
 
 template<typename T> void add_bcube_if_overlaps_zval(vector<T> const &cubes, vect_cube_t &out, float z1, float z2) {
-	for (auto i = cubes.begin(); i != cubes.end(); ++i) {
-		if (i->z1() < z2 && i->z2() > z1) {out.push_back(*i);}
+	for (auto const &i : cubes) {
+		if (i.z1() < z2 && i.z2() > z1) {out.push_back(i);}
 	}
 }
 
@@ -1344,7 +1344,14 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 	float floor_ceil_gap, bool same_as_player, bool skip_stairs, cube_t const *const fires_select_cube) const
 {
 	avoid.clear();
-	if (!skip_stairs) {add_bcube_if_overlaps_zval(stairwells, avoid, z1, z2);} // clearance not required
+
+	if (!skip_stairs) {
+		float const doorway_width(get_doorway_width());
+
+		for (auto const &s : stairwells) { // add extra width for side walls only
+			if (s.z1() < z2 && s.z2() > z1) {avoid.push_back(get_stairs_bcube_expanded(s, 0.0, 0.0, doorway_width));}
+		}
+	}
 	add_bcube_if_overlaps_zval(elevators, avoid, z1, z2); // clearance not required
 	
 	if (pool.valid && z1 < (pool.z2() + floor_ceil_gap)) { // skip if !same_as_player to allow zombies in pools?

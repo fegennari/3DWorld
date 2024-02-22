@@ -2309,10 +2309,9 @@ cube_t get_stairs_bcube_expanded(stairwell_t const &s, float ends_clearance, flo
 	cube_t tc(s);
 	tc.expand_in_dim(s.dim, ends_clearance); // add extra space at both ends of stairs; may only need to add on open ends, but this is difficult to check for
 	// see step_len_pos logic in building_t::add_stairs_and_elevators()
-	unsigned const num_stairs(s.get_num_stairs());
 	float const floor_spacing(doorway_width/DOOR_WIDTH_SCALE);
-	float const stair_dz(floor_spacing/(num_stairs+1)), wall_hw(min(STAIRS_WALL_WIDTH_MULT*max(s.get_length()/num_stairs, stair_dz), 0.25f*stair_dz)); // more accurate
-	//float const wall_hw(STAIRS_WALL_WIDTH_MULT*s.get_length()/num_stairs); // faster/simpler
+	float const stair_dz(floor_spacing/(s.get_num_stairs()+1)), wall_hw(min(STAIRS_WALL_WIDTH_MULT*max(s.get_step_length(), stair_dz), 0.25f*stair_dz)); // more accurate
+	//float const wall_hw(STAIRS_WALL_WIDTH_MULT*s.get_step_length()); // faster/simpler
 	tc.expand_in_dim(!s.dim, (sides_clearance + wall_hw)); // add extra space to account for walls and railings on stairs
 	return tc;
 }
@@ -2337,7 +2336,7 @@ void get_L_stairs_entrances(stairs_landing_base_t const &s, float doorway_width,
 bool has_stairs_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, float doorway_width, int no_check_enter_exit) {
 	cube_t pre_test(bcube);
 	if (no_check_enter_exit < 2) {pre_test.expand_by_xy(doorway_width);}
-	float const approx_floor_spacing(2.0*doorway_width); // used for L-shaped stairs
+	float const approx_floor_spacing(doorway_width/DOOR_WIDTH_SCALE); // used for L-shaped stairs
 
 	for (auto s = stairs.begin(); s != stairs.end(); ++s) {
 		if (!s->intersects(pre_test)) continue; // early termination test optimization
