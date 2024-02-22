@@ -17,6 +17,8 @@ preproc_cube_cobjs 2 # slower load time (but not as slow as mode 1) but fewer cu
 group_back_face_cull 1
 disable_shader_effects 0
 shadow_map_sz 4096
+#shadow_map_sz 2048
+enable_ground_csm 0
 coll_obj_file coll_objs/coll_objs_minecraft.txt
 
 floating_light_range  1.0 1.0  1.0 1.0  0.5 1.0 # x1 x2 y1 y2 z1 z2

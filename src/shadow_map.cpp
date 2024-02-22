@@ -13,9 +13,8 @@
 #include <glm/gtc/matrix_inverse.hpp>
 
 
-bool     const ENABLE_GROUND_CSM = 0;
-unsigned const NUM_CSM_CASCADES  = 4; // must agree with the values in csm_layers.geom
-unsigned const MAT4x4_SIZE       = sizeof(glm::mat4);
+unsigned const NUM_CSM_CASCADES = 4; // must agree with the values in csm_layers.geom
+unsigned const MAT4x4_SIZE      = sizeof(glm::mat4);
 
 // texture storage datatypes for local shadow maps
 #if 1 // integer
@@ -35,7 +34,7 @@ unsigned shadow_map_sz(0), scene_smap_vbo_invalid(0), empty_smap_tid(0);
 pos_dir_up orig_camera_pdu;
 ubo_wrap_t shadow_matrix_ubo; // reused for dlights shadow map matrices
 
-extern bool snow_shadows, enable_depth_clamp, flashlight_on, interior_shadow_maps;
+extern bool snow_shadows, enable_depth_clamp, flashlight_on, interior_shadow_maps, enable_ground_csm;
 extern int window_width, window_height, animate2, display_mode, tree_mode, ground_effects_level, num_trees, camera_coll_id;
 extern unsigned enabled_lights;
 extern float NEAR_CLIP, tree_deadness, vegetation;
@@ -63,8 +62,6 @@ int get_smap_ndiv(float radius, unsigned smap_sz) {
 }
 int get_def_smap_ndiv(float radius) {return get_smap_ndiv(radius, shadow_map_sz);}
 
-bool enable_ground_mode_csms() {return ENABLE_GROUND_CSM;}
-
 
 struct ground_mode_smap_data_t : public cached_dynamic_smap_data_t { // used for ground mode sun and moon directional lights
 
@@ -80,7 +77,7 @@ void ensure_smap_data() { // sun/moon
 	if (smap_data.empty()) {
 		for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
 			ground_mode_smap_data_t smd(GLOBAL_SMAP_START_TU_ID+l); // tu_ids 6 and 7
-			smd.is_csm = ENABLE_GROUND_CSM;
+			smd.is_csm = enable_ground_csm;
 			smap_data.push_back(smd);
 		}
 	}
@@ -466,7 +463,7 @@ void draw_scene_bounds_and_light_frustum(point const &lpos) {
 	shader_t s;
 	s.begin_color_only_shader();
 
-	if (ENABLE_GROUND_CSM) {
+	if (enable_ground_csm) {
 		static pos_dir_up capture_pdu;
 		if (display_mode & 0x10) {capture_pdu = camera_pdu;} // capture key = '5'
 
