@@ -474,7 +474,6 @@ void tree_cont_t::draw(bool shadow_only, bool reflection_pass) {
 	tree_lod_render_t lod_renderer(0); // disabled
 
 	// draw leaves, then branches: much faster for distant trees, slightly slower for near trees
-	// draw leaves
 	shader_t ls;
 	pre_leaf_draw(ls, 0, shadow_only);
 	draw_branches_and_leaves(ls, lod_renderer, 0, 1, shadow_only, reflection_pass, zero_vector);
@@ -482,10 +481,10 @@ void tree_cont_t::draw(bool shadow_only, bool reflection_pass) {
 
 	// draw branches
 	shader_t bs;
-	bool const branch_smap(!shadow_only); // looks better, but slower
-	set_tree_branch_shader(bs, !shadow_only, !shadow_only, branch_smap);
+	if (shadow_only) {bs.begin_shadow_map_shader();}
+	else {set_tree_branch_shader(bs, 1, 1, 1);} // direct_lighting=1, dlights=1, smap=1
 	draw_branches_and_leaves(bs, lod_renderer, 1, 0, shadow_only, reflection_pass, zero_vector);
-	bs.add_uniform_vector4d("world_space_offset", vector4d()); // reset
+	if (!shadow_only) {bs.add_uniform_vector4d("world_space_offset", vector4d());} // reset
 	bs.end_shader();
 }
 
