@@ -556,17 +556,25 @@ glm::mat4 perspective_from_frustum(pos_dir_up const &pdu) {
 	return glm::perspective(glm::radians(pdu.angle), (float)pdu.A, pdu.near_, pdu.far_);
 }
 glm::mat4 setup_csm_matrix(pos_dir_up const &frustum, point const &lpos) {
-	point pts[8];
+	point pts[9];
 	frustum.get_frustum_corners(pts);
 
 	if (world_mode == WMODE_GROUND) { // clamp to scene bounds for a tighter fit
-		cube_t const scene_bounds(get_scene_bounds());
+		cube_t scene_bounds(get_scene_bounds());
+		scene_bounds.expand_by(DX_VAL + DY_VAL); // expand slightly so that shadow map covers the edges
 		for (unsigned i = 0; i < 8; ++i) {scene_bounds.clamp_pt(pts[i]);}
 	}
 	point const center(get_center_arb(pts, 8));
-	auto const light_view(glm::lookAt(vec3_from_vector3d(center + 0.1*lpos.get_norm()), vec3_from_vector3d(center), vec3_from_vector3d(plus_y)));
-	for (unsigned i = 0; i < 8; ++i) {pts[i] = vector3d_from_vec3(light_view * glm::vec4(vec3_from_vector3d(pts[i]), 1.0));}
-	cube_t bcube(pts, 8);
+	vector3d const light_dir(lpos.get_norm()); // pointing toward the light
+	unsigned npts(8);
+	
+	if (world_mode == WMODE_GROUND) { // project center in the light direction to zmax plane to make sure we capture all geometry
+		float const plane_z(max(ztop, czmax)), dz(plane_z - center.z);
+		if (dz > 0.0 && light_dir.z > 0.0) {pts[npts++] = center + (dz/light_dir.z)*light_dir;}
+	}
+	auto const light_view(glm::lookAt(vec3_from_vector3d(center + 0.1*light_dir), vec3_from_vector3d(center), vec3_from_vector3d(plus_y)));
+	for (unsigned i = 0; i < npts; ++i) {pts[i] = vector3d_from_vec3(light_view * glm::vec4(vec3_from_vector3d(pts[i]), 1.0));}
+	cube_t bcube(pts, npts);
 	float const z_mult = 10.0f; // tune this parameter according to the scene
 	if (bcube.z1() < 0.0) {bcube.z1() *= z_mult;} else {bcube.z1() /= z_mult;}
 	if (bcube.z2() < 0.0) {bcube.z2() /= z_mult;} else {bcube.z2() *= z_mult;}
