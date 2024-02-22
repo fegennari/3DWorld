@@ -372,7 +372,6 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	bool const enable_puddles(ground_mode && enable_rain_snow && is_wet && !is_rain_enabled()); // enable puddles when the ground is wet but it's not raining
 	bool use_smap(ground_mode ? (use_smap_in != 0) : (use_smap_in == 2)); // TT shadow maps are only enabled when use_smap_in == 2
 	bool const use_clip_plane(clip_plane != vector4d());
-	bool const use_csm(use_smap && enable_ground_csm);
 	smoke_en &= (ground_mode && have_indir_smoke_tex && smoke_tid > 0 && is_smoke_in_use());
 	if (disable_dlights) {dlights = 0;}
 	string const &anim_shader(s.get_property("animation_shader")); // Note: if it exists, it should end with a '+'
@@ -383,7 +382,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (enable_reflect ==2) {s.set_prefix("#define ENABLE_CUBE_MAP_REFLECT",1);} // FS
 	if (enable_puddles    ) {s.set_prefix("#define ENABLE_PUDDLES",         1);} // FS
 	if (is_snowy          ) {s.set_prefix("#define ENABLE_SNOW_COVERAGE",   1);} // FS
-	if (use_csm           ) {s.set_prefix("#define ENABLE_CASCADED_SHADOW_MAPS", 1);} // FS
+	if (use_smap && enable_ground_csm) {s.set_prefix("#define ENABLE_CASCADED_SHADOW_MAPS", 1);} // FS
 	if (!anim_shader.empty()) {s.set_prefix("#define ENABLE_VERTEX_ANIMATION", 0);} // VS
 	if (use_clip_plane    ) {s.set_prefix("#define ENABLE_CLIP_PLANE",      0);} // VS
 	//if (0) {s.set_prefix("#define SCREEN_SPACE_DLIGHTS",   1);} // FS
@@ -500,12 +499,13 @@ void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting,
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha, 0);
 	
 	if (use_bmap) {
-		s.set_prefix("#define USE_BUMP_MAP",    1); // FS
-		s.set_prefix("#define BUMP_MAP_CUSTOM", 1); // FS
+		s.set_prefix("#define USE_BUMP_MAP",       1); // FS
+		s.set_prefix("#define BUMP_MAP_CUSTOM",    1); // FS
 		s.set_prefix("#define USE_BUMP_MAP_INDIR", 1); // FS
 		s.set_prefix("#define USE_BUMP_MAP_DL",    1); // FS
 		s.set_prefix(make_shader_bool_prefix("use_fg_ViewMatrix", 0), 1); // FS - disabled
 	}
+	if (use_smap && enable_ground_csm) {s.set_prefix("#define ENABLE_CASCADED_SHADOW_MAPS", 1);} // FS
 	s.set_prefix(make_shader_bool_prefix("use_noise_tex", use_noise_tex), 1); // FS
 	s.set_prefix(make_shader_bool_prefix("z_top_test",    z_top_test),    1); // FS
 	s.setup_enabled_lights(2, 2); // FS; only 2, but could be up to 8 later

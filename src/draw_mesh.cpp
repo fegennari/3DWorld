@@ -32,6 +32,7 @@ float lt_green_int(1.0), water_xoff(0.0), water_yoff(0.0), wave_time(0.0);
 vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
 extern bool using_lightmap, combined_gu, has_snow, detail_normal_map, use_core_context, underwater, water_is_lava, have_indir_smoke_tex, water_is_lava, fog_enabled;
+extern bool enable_ground_csm;
 extern int num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ground_effects_level, animate2;
 extern int display_mode, frame_counter, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain, mesh_detail_tex;
 extern float zmax, zmin, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp, atmosphere, mesh_scale_z, snow_cov_amt, CAMERA_RADIUS;
@@ -265,20 +266,21 @@ void setup_shader_underwater_atten(shader_t &s, float atten_scale, float mud_amt
 void setup_mesh_and_water_shader(shader_t &s, bool use_detail_normal_map, bool is_water) {
 
 	bool const cloud_shadows(!has_snow && atmosphere > 0.0 && ground_effects_level >= 2);
-	bool const indir_lighting(using_lightmap && have_indir_smoke_tex);
+	bool const indir_lighting(using_lightmap && have_indir_smoke_tex), use_smap(shadow_map_enabled());
 	s.setup_enabled_lights(2, 2); // FS
 	set_dlights_booleans(s, 1, 1); // FS
 	s.check_for_fog_disabled();
 	if (cloud_shadows) {s.set_prefix("#define ENABLE_CLOUD_SHADOWS", 1);} // FS
+	if (use_smap && enable_ground_csm) {s.set_prefix("#define ENABLE_CASCADED_SHADOW_MAPS", 1);} // FS
 	s.set_prefix("in vec3 eye_norm;", 1); // FS
 	setup_detail_normal_map_prefix(s, use_detail_normal_map);
 	s.set_prefix(make_shader_bool_prefix("indir_lighting", indir_lighting), 1); // FS
 	s.set_prefix(make_shader_bool_prefix("hemi_lighting",  0), 1); // FS (disabled)
-	s.set_prefix(make_shader_bool_prefix("use_shadow_map", shadow_map_enabled()), 1); // FS
+	s.set_prefix(make_shader_bool_prefix("use_shadow_map", use_smap), 1); // FS
 	s.set_vert_shader("texture_gen.part+draw_mesh");
 	s.set_frag_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+indir_lighting.part+linear_fog.part+detail_normal_map.part+cloud_sphere_shadow.part+draw_mesh");
 	s.begin_shader();
-	if (shadow_map_enabled()) {set_smap_shader_for_all_lights(s);}
+	if (use_smap) {set_smap_shader_for_all_lights(s);}
 	set_indir_lighting_block(s, 0, indir_lighting); // calls setup_scene_bounds()
 	s.setup_fog_scale();
 	setup_dlight_textures(s);

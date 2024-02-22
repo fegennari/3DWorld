@@ -701,7 +701,7 @@ void small_tree_group::draw(bool shadow_only, int reflection_pass) {
 	if (!shadow_only) {s.add_uniform_float("tex_scale_t", 1.0);}
 	s.end_shader();
 
-	// draw leaves
+	// draw leaves; not drawn with the shadow map shader in the shadow pass because it doesn't support leaf wind
 	float const wind_mag(get_plant_leaf_wind_mag(shadow_only));
 
 	if (num_pine_trees > 0) { // pine trees
@@ -732,7 +732,7 @@ void small_tree_group::draw(bool shadow_only, int reflection_pass) {
 			s.end_shader();
 		}
 	}
-	if (!tree_scenery_pld.empty()) {
+	if (!tree_scenery_pld.empty()) { // not drawn in the shadow pass
 		shader_t s;
 		s.begin_untextured_lit_glcolor_shader();
 		tree_scenery_pld.draw_and_clear();
