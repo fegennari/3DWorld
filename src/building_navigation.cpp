@@ -549,12 +549,13 @@ public:
 		for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(c.d[d][0], c.d[d][1]);}
 	}
 	static bool maybe_shorten_path(point const &p1, point const &p2, point &p, vect_cube_t const &keepout) {
-		float const t1(get_closest_pt_on_line_t(p1, p, p2));
-		if (t1 <= 0.0 || t1 >= 1.0) return 0; // closest point not on line
-		point const cand(p + get_closest_pt_on_line_t(p1, p, p2)*(p2 - p));
-		if (check_line_int_xy(keepout, p1, cand) || check_line_int_xy(keepout, cand, p2)) return 0; // bad point
-		p = cand;
-		return 1;
+		float const t(get_closest_pt_on_line_t(p1, p, p2));
+		if (t <= 0.0 || t >= 1.0) return 0; // closest point not on line
+		point cand(p + t*(p2 - p));
+		if (!check_line_int_xy(keepout, p1, cand) && !check_line_int_xy(keepout, cand, p2)) {p = cand; return 1;} // good point
+		cand = p + (0.5*t)*(p2 - p); // try the halfway point
+		if (!check_line_int_xy(keepout, p1, cand) && !check_line_int_xy(keepout, cand, p2)) {p = cand; return 1;} // good point
+		return 0; // bad point
 	}
 	static bool maybe_shorten_either_path(point const &p1, point const &p2, point &p, vect_cube_t const &keepout) {
 		if (maybe_shorten_path(p1, p2, p, keepout)) return 1;
