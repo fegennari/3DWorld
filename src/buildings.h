@@ -2019,7 +2019,7 @@ private:
 	void add_exterior_ac_pipes(rand_gen_t rgen);
 	void add_padlocks(rand_gen_t rgen);
 	bool add_padlock_to_door     (unsigned door_ix, rand_gen_t &rgen);
-	bool remove_padlock_from_door(unsigned door_ix);
+	bool remove_padlock_from_door(unsigned door_ix, point const &remove_pos);
 	vector3d get_parked_car_size() const;
 	void add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 		unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z);

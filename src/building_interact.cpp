@@ -546,7 +546,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 	else { // interior door
 		door_t &door(interior->doors[door_ix]);
 		if (!player_can_open_door(door)) return 0; // locked/blocked
-		if (door.is_padlocked() && !door.open) {remove_padlock_from_door(door_ix);}
+		if (door.is_padlocked() && !door.open) {remove_padlock_from_door(door_ix, closest_to);}
 		if (door.locked && !player_has_room_key()) {door.locked = 0;} // don't lock door when closing, to prevent the player from locking themselves in a room
 		toggle_door_state(door_ix, 1, 1, closest_to); // toggle state if interior door; player_in_this_building=1, by_player=1, at player pos
 		//interior->room_geom->modified_by_player = 1; // should door state always be preserved?

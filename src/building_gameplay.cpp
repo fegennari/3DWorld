@@ -206,7 +206,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_POOL_TABLE] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 400.0, 250.0, "pool table");
 	bldg_obj_types[TYPE_POOL_LAD  ] = bldg_obj_type_t(0, 0, 1, 0, 1, 1, 0, 200.0, 35.0,  "pool ladder");
 	bldg_obj_types[TYPE_BAR_STOOL ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 100.0, 40.0,  "bar stool");
-	bldg_obj_types[TYPE_PADLOCK   ] = bldg_obj_type_t(0, 0, 0, 0, 1, 1, 0, 10.0,  0.2,   "lock");
+	bldg_obj_types[TYPE_PADLOCK   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 10.0,  0.2,   "padlock");
 	bldg_obj_types[TYPE_CASHREG   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 1000,  200,   "cash register");
 	bldg_obj_types[TYPE_WFOUNTAIN ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 200,   80,    "water fountain");
 	// animals; not room objects
@@ -1357,6 +1357,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			if (i->type == TYPE_MIRROR  && i->is_open())                  continue; // can't take mirror/medicine cabinet until it's closed
 			if (i->type == TYPE_LIGHT   && !i->is_visible())              continue; // can't take light attached to a ceiling fan as a separate object
 			if (i->type == TYPE_MWAVE   && (i->flags & RO_FLAG_NONEMPTY)) continue; // can't take a microwave with something inside it
+			if (i->type == TYPE_PADLOCK && i->is_active())                continue; // padlock in locked onto a door, can't take
 
 			if (i->type == TYPE_SHELFRACK && i->obj_expanded()) { // shelf rack is already expanded, can no longer select this object
 				// check the back of the shelf rack to make sure the player can't take an object through it

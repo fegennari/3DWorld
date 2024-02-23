@@ -3931,25 +3931,33 @@ bool building_t::add_padlock_to_door(unsigned door_ix, rand_gen_t &rgen) {
 		room_t const &room(get_room(room_id));
 		unsigned const floor_ix(room.get_floor_containing_zval(lock.z1(), floor_spacing));
 		if (!room.has_stairs_on_floor(floor_ix) && !(floor_ix == 0 && is_room_adjacent_to_ext_door(room)) && count_num_int_doors(room) == 1) continue;
-		objs.emplace_back(lock, TYPE_PADLOCK, ((room_id < 0) ? 0 : room_id), door.dim, d, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, color);
+		objs.emplace_back(lock, TYPE_PADLOCK, ((room_id < 0) ? 0 : room_id), door.dim, d, (RO_FLAG_NOCOLL | RO_FLAG_IS_ACTIVE), 1.0, SHAPE_CUBE, color); // starts attached
 	} // for d
 	interior->room_geom->invalidate_model_geom();
 	return 1;
 }
-bool building_t::remove_padlock_from_door(unsigned door_ix) {
+bool building_t::remove_padlock_from_door(unsigned door_ix, point const &remove_pos) {
 	if (!has_room_geom() || !building_obj_model_loader.is_model_valid(OBJ_MODEL_PADLOCK)) return 0;
 	door_t &door(get_door(door_ix));
 	if (!door.is_padlocked()) return 0; // no padlock
 	//assert(!door.open); // too strong?
 	door.locked = 0; // unlocked
+	bool const dim(door.dim);
+	float const center(door.get_center_dim(dim));
 	vect_room_object_t &objs(interior->room_geom->objs);
 	assert(door.obj_ix >= 0 && unsigned(door.obj_ix+1) < objs.size()); // must be space for two locks
 
 	for (unsigned d = 0; d < 2; ++d) {
 		room_object_t &obj(objs[door.obj_ix + d]);
 		assert(obj.type == TYPE_PADLOCK);
-		obj.remove();
-	}
+		bool const keep(((remove_pos[dim] - center)*(obj.get_center_dim(dim) - center)) > 0.0); // keep if it's on the side that was opened
+
+		if (keep) {
+			obj.flags &= ~RO_FLAG_IS_ACTIVE; // no longer attached
+			obj.translate_dim(2, (door.z1() - obj.z1())); // move to the floor at the base of the door
+		}
+		else {obj.remove();}
+	} // for d
 	interior->room_geom->invalidate_model_geom();
 	return 1;
 }
