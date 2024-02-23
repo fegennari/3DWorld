@@ -863,7 +863,7 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) { // or ladder
 void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 	if (!is_house || !has_room_geom()) return; // houses only for now
 	if (rgen.rand_bool()) return; // only add balconies to 50% of houses
-	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), door_width(get_doorway_width());
 	float const min_depth(max(0.5f*floor_spacing, 2.5f*get_scaled_player_radius()/(1.0f - BALCONY_PILLAR_SCALE))); // make sure the player can fit around the pillars
 	float const balcony_depth(min_depth*rgen.rand_uniform(1.0, 1.2)); // constant per house
 	float const room_min_z2(ground_floor_z1 + 1.5*floor_spacing); // > 1 floor
@@ -2199,6 +2199,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			set_cube_zvals(wall, floor_z, stair.z2()); // top of floor below to top of landing
 			wall.d[dim][!dir] = i->d[dim][dir]; // against landing
 			wall.d[dim][ dir] = i->d[dim][dir] + (dir ? 1.0 : -1.0)*wall_thickness; // extend out by thickness
+			wall.expand_in_dim(!dim, 0.05*wall_thickness); // expand slightly to prevent Z-fighting with side of stair and end of railing
 			objs.emplace_back(wall, TYPE_STAIR_WALL, 0, dim, dir, 0);
 			// add stairs in !dim
 			pos = inner_edge;

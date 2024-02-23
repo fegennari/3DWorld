@@ -1871,7 +1871,7 @@ cylinder_3dw get_railing_cylinder(room_object_t const &c) {
 }
 void building_room_geom_t::add_railing(room_object_t const &c) {
 	cylinder_3dw const railing(get_railing_cylinder(c));
-	bool const is_u_stairs(c.flags & (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI)), is_top_railing(c.flags & RO_FLAG_TOS);
+	bool const is_u_stairs(c.flags & (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI)), is_top_railing(c.flags & RO_FLAG_TOS), is_L_seg(c.state_flags > 0); // L-railings have num_stairs set
 	bool const draw_ends(!(c.flags & RO_FLAG_ADJ_BOT)), is_exterior(c.is_exterior());
 	float const pole_radius(0.75*railing.r1), length(c.get_length()), height(get_railing_height(c));
 	unsigned const num_floors(c.item_flags + 1);
@@ -1886,9 +1886,10 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 			float shift_len(pole_radius);
 			if (!is_top_railing) {max_eq(shift_len, 0.01f*length);}
 			pt[c.dim] += ((c.dir ^ bool(d)) ? 1.0 : -1.0)*shift_len; // shift slightly inward toward the center
-			float const hscale((d && !is_top_railing) ? 1.25 : 1.0); // shorten for lower end, which rests on the step (unless top railing)
+			float const hscale((d && !is_top_railing && !is_L_seg) ? 1.25 : 1.0); // shorten for lower end, which rests on the step (unless top railing or L-segment)
 			point const p1(pt - vector3d(0, 0, hscale*height)), p2(pt - vector3d(0, 0, (is_top_railing ? 0.0 : num_floors*0.02*(d ? 1.0 : -1.0)*height)));
-			mat.add_cylin_to_verts(p1, p2, pole_radius, pole_radius, c.color, 0, 0); // no top or bottom
+			bool const draw_bot(is_L_seg && d == 1); // only draw bottom of L-shaped stairs railing upper end (needed for landing)
+			mat.add_cylin_to_verts(p1, p2, pole_radius, pole_radius, c.color, draw_bot, 0); // no top
 		}
 	}
 	if (!is_u_stairs && c.is_open()) { // add balusters
