@@ -903,7 +903,18 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 				balcony.d[dim][ dir] += (dir ? 1.0 : -1.0)*balcony_depth; // extend outward from the house
 				if (has_bcube_int(balcony, avoid)) continue; // blocked
 				if (check_cube_intersect_non_main_part(balcony)) continue; // porch roof, porch support, and chimney, etc.
+				bool bad_pos(0);
 
+				if (room->has_stairs_on_floor(floor_ix)) { // check for stairs blocking balcony access
+					cube_t test_cube(balcony);
+					test_cube.d[dim][!dir] -= (dir ? 1.0 : -1.0)*door_width; // move into the interior
+					set_wall_width(test_cube, balcony.get_center_dim(!dim), wall_thickness, !dim); // center of the balcony in long dim
+
+					for (stairwell_t const &s : interior->stairwells) {
+						if (s.intersects(test_cube)) {bad_pos = 1; break;}
+					}
+					if (bad_pos) continue;
+				}
 				if (real_num_parts > 1) { // check if adjacent to the second part (may block a window or clip through a windowsill)
 					cube_t const &other_part(parts[(room->part_id == 0) ? 1 : 0]);
 					cube_t test_cube(balcony);
@@ -915,7 +926,6 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 				if (!exterior_flag.is_all_zeros() && exterior_flag.intersects(balcony)) continue; // flag placed in the way, no balcony
 				cube_t balcony_ext_down(balcony), balcony_ext_out(balcony);
 				balcony_ext_down.z1() = ground_floor_z1; // extend down to the ground
-				bool bad_pos(0);
 
 				for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // check for any intersecting parts (likely below this one, for stacked parts)
 					if ((p - parts.begin()) != room->part_id && p->intersects_no_adj(balcony_ext_down)) {bad_pos = 1; break;}
