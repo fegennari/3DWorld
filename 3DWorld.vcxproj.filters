@@ -1527,6 +1527,9 @@
     <None Include="shaders\csm_layers_tc.geom">
       <Filter>Shaders\geom</Filter>
     </None>
+    <None Include="shaders\shadow_map_csm_xlate_scale.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">

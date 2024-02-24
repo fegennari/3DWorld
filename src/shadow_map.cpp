@@ -198,9 +198,7 @@ public:
 		if (shadow_objs.empty() && movable_cids.empty()) return; // no dynamic objects
 		//timer_t timer("Add Draw Dynamic");
 		shader_t shader;
-		shader.set_vert_shader("vertex_xlate_scale");
-		shader.set_frag_shader("empty_shader");
-		shader.begin_shader();
+		shader.begin_shadow_map_shader(0, 1); // use_alpha_mask=0, enable_xlate_scale=1
 		int const shader_loc(shader.get_uniform_loc("xlate_scale"));
 		assert(shader_loc >= 0);
 		bind_draw_sphere_vbo(0, 0); // no tex coords or normals

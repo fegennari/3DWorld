@@ -1065,7 +1065,7 @@ void shader_t::begin_color_only_shader(colorRGBA const &color) {
 bool is_csm_active();
 void shader_csm_render_setup(shader_t &s);
 
-void shader_t::begin_shadow_map_shader(bool use_alpha_mask) {
+void shader_t::begin_shadow_map_shader(bool use_alpha_mask, bool enable_xlate_scale) {
 	bool const use_csm(is_csm_active());
 
 	if (use_alpha_mask) {
@@ -1083,11 +1083,11 @@ void shader_t::begin_shadow_map_shader(bool use_alpha_mask) {
 	}
 	else {
 		if (use_csm) {
-			set_vert_shader("shadow_map_csm");
+			set_vert_shader(enable_xlate_scale ? "shadow_map_csm_xlate_scale" : "shadow_map_csm");
 			set_geom_shader("csm_layers");
 		}
 		else {
-			set_vert_shader("shadow_map");
+			set_vert_shader(enable_xlate_scale ? "vertex_xlate_scale" : "shadow_map");
 		}
 		set_frag_shader("empty_shader");
 		begin_shader();

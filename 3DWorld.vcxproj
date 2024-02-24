@@ -1228,6 +1228,7 @@
     <None Include="shaders\shadow_map.vert" />
     <None Include="shaders\shadow_map_csm.vert" />
     <None Include="shaders\shadow_map_csm_tc.vert" />
+    <None Include="shaders\shadow_map_csm_xlate_scale.vert" />
     <None Include="shaders\ship_draw.frag" />
     <None Include="shaders\ship_draw.vert" />
     <None Include="shaders\ship_shields.frag" />
