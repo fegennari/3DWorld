@@ -965,7 +965,7 @@ void power_pole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist
 		if (shadow_only) continue; // skip wires for shadow pass since they don't show up reliably
 		bool const is_offset(center[!d] != base[!d]);
 		float const sep_dist(0.5*get_power_pole_offset()), offset_sign(is_offset ? -1.0 : 1.0);
-		float const bot_wire_zval(base.z + 0.75*pole_height), bot_wire_pos(base[!d] + offset_sign*sep_dist), thick_wire_delta_z(0.07*pole_height);
+		float const bot_wire_zval(base.z + 0.75*pole_height), bot_wire_pos(base[!d] + offset_sign*sep_dist), thick_wire_delta_z(0.05*pole_height);
 
 		if (!at_line_end[d]) { // no wires at end pole
 			cube_t wires_bcube(cbar);
@@ -995,7 +995,7 @@ void power_pole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist
 				if (n < 3) {pw.z -= vwire_spacing;}
 			}
 			// draw cable TV repeater/junction box
-			float const box_hlen(2.0*vwire_spacing), box_radius(0.6*vwire_spacing);
+			float const box_hlen(1.8*vwire_spacing), box_radius(0.55*vwire_spacing);
 			pw.z  -= (box_radius + cable_wire_radius); // just touching the bottom of the wire
 			pw[d] -= (0.2 + 0.6*fract(12345*bcube.x1() + 54321*bcube.y1()))*pole_spacing[d]; // random spacing
 			point epts[2] = {pw, pw};
