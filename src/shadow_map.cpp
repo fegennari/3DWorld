@@ -300,14 +300,16 @@ float const cascade_plane_dscales[NUM_CSM_CASCADES] = {0.03, 0.1, 0.3, 1.0};
 
 float get_cascade_plane_dscale(unsigned cascade_ix) {
 	assert(cascade_ix < NUM_CSM_CASCADES);
-	if (cascade_ix == NUM_CSM_CASCADES-1) return 1.0;
 	float dscale(cascade_plane_dscales[cascade_ix]);
 	if (world_mode == WMODE_GROUND) {dscale *= min(1.0f, (X_SCENE_SIZE + Y_SCENE_SIZE)/camera_pdu.far_);}
 	return dscale;
 }
+float get_cascade_plane_dscale_last_at_1(unsigned cascade_ix) {
+	return ((cascade_ix == NUM_CSM_CASCADES-1) ? 1.0 : get_cascade_plane_dscale(cascade_ix));
+}
 void set_csm_near_far(pos_dir_up &frustum, unsigned cascade_ix) {
-	if (cascade_ix > 0) {frustum.near_ = frustum.far_*get_cascade_plane_dscale(cascade_ix-1);}
-	frustum.far_ *= get_cascade_plane_dscale(cascade_ix);
+	if (cascade_ix > 0) {frustum.near_ = frustum.far_*get_cascade_plane_dscale_last_at_1(cascade_ix-1);}
+	frustum.far_ *= get_cascade_plane_dscale_last_at_1(cascade_ix);
 }
 
 bool smap_data_t::set_smap_shader_for_light(shader_t &s, int light, xform_matrix const *const mvm) const {
@@ -320,17 +322,13 @@ bool smap_data_t::set_smap_shader_for_light(shader_t &s, int light, xform_matrix
 	s.add_uniform_float(append_ix(sm_scale_str, light, 0), (light_is_valid ? 1.0 : 0.0));
 
 	if (is_csm) {
-		// this part only needs to be done only once per light, but we have at most two lights, so it should be okay
-		float const far_plane(camera_pdu.far_);
-		s.add_uniform_float("zfar", far_plane);
+		// cascade_plane_distances only needs to be done only once per light, but we have at most two lights, so it should be okay
 		assert(cascade_matrices.size() == NUM_CSM_CASCADES);
 
 		for (unsigned i = 0; i < NUM_CSM_CASCADES; ++i) {
 			string cpd_str("cascade_plane_distances"), smap_matrix_str("smap_matrix"), matrix_str(append_ix(smap_matrix_str, light, 0));
-			s.add_uniform_float(append_ix(cpd_str, i, 1), far_plane*get_cascade_plane_dscale(i));
-			xform_matrix tm(cascade_matrices[i]);
-			//if (mvm) {tm *= (*mvm) * glm::affineInverse((glm::mat4)fgGetMVM());} // ???
-			s.add_uniform_matrix_4x4(append_ix(matrix_str, i, 1), tm.get_ptr(), 0);
+			s.add_uniform_float(append_ix(cpd_str, i, 1), camera_pdu.far_*get_cascade_plane_dscale(i));
+			s.add_uniform_matrix_4x4(append_ix(matrix_str, i, 1), cascade_matrices[i].get_ptr(), 0);
 		}
 	}
 	else {
