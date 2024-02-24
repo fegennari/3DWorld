@@ -1060,7 +1060,8 @@ public:
 		add_tile_blocks(city_obj_placer.parking_lots, tile_to_block_map, TYPE_PARK_LOT); // need to do this later, after gen_tile_blocks()
 		add_tile_blocks(city_obj_placer.driveways,    tile_to_block_map, TYPE_DRIVEWAY);
 		tile_to_block_map.clear(); // no longer needed
-		city_obj_placer.move_and_connect_streetlights(*this);
+		city_obj_placer.finalize_streetlights_and_power(*this, plot_colliders);
+		for (auto i = plot_colliders.begin(); i != plot_colliders.end(); ++i) {sort(i->begin(), i->end(), [](cube_t const &a, cube_t const &b) {return (a.x1() < b.x1());});}
 		have_plot_dividers |= !city_obj_placer.has_plot_dividers();
 	}
 	void add_streetlights() {
@@ -1068,12 +1069,14 @@ public:
 		streetlights.reserve(4*plots.size()); // one on each side of each plot
 		// spacing from light pos to plot edge, relative to plot size (placed just outside the plot, so spacing is negative)
 		float const b(-(SIDEWALK_WIDTH*city_params.road_width - 0.5f*streetlight_ns::get_streetlight_pole_radius())/city_params.road_spacing), a(1.0 - b);
+		assert(plot_colliders.size() == plots.size());
 
 		for (auto i = plots.begin(); i != plots.end(); ++i) {
-			streetlights.emplace_back(point((a*i->x1() + b*i->x2()), (0.75*i->y1() + 0.25*i->y2()), i->z2()), -plus_x); // left   edge one   quarter  up
-			streetlights.emplace_back(point((a*i->x2() + b*i->x1()), (0.25*i->y1() + 0.75*i->y2()), i->z2()),  plus_x); // right  edge three quarters up
-			streetlights.emplace_back(point((0.25*i->x1() + 0.75*i->x2()), (a*i->y1() + b*i->y2()), i->z2()), -plus_y); // bottom edge three quarters right
-			streetlights.emplace_back(point((0.75*i->x1() + 0.25*i->x2()), (a*i->y2() + b*i->y1()), i->z2()),  plus_y); // top    edge one   quarter  right
+			unsigned const plot_ix(i - plots.begin());
+			streetlights.emplace_back(point((a*i->x1() + b*i->x2()), (0.75*i->y1() + 0.25*i->y2()), i->z2()), -plus_x, 0, plot_ix); // left   edge one   quarter  up
+			streetlights.emplace_back(point((a*i->x2() + b*i->x1()), (0.25*i->y1() + 0.75*i->y2()), i->z2()),  plus_x, 0, plot_ix); // right  edge three quarters up
+			streetlights.emplace_back(point((0.25*i->x1() + 0.75*i->x2()), (a*i->y1() + b*i->y2()), i->z2()), -plus_y, 0, plot_ix); // bottom edge three quarters right
+			streetlights.emplace_back(point((0.75*i->x1() + 0.25*i->x2()), (a*i->y2() + b*i->y1()), i->z2()),  plus_y, 0, plot_ix); // top    edge one   quarter  right
 		}
 		sort_streetlights_by_yx();
 	}
@@ -1094,7 +1097,7 @@ public:
 				if (city_obj_placer.subdivide_plot_for_residential(*i, roads, plot_subdiv_sz, cur_global_plot_ix, city_id, zones)) continue;
 			}
 			zones.emplace_back(*i, 0.0, i->is_park, is_residential, 0, 0, cur_global_plot_ix, city_id, max_floors); // cube, zval, park, res, sdir, capacity, ppix, cix, max_floors
-		} // for i
+		}
 		vector3d const city_radius(0.5*bcube.get_size());
 		point const city_center(bcube.get_cube_center());
 
@@ -2998,8 +3001,8 @@ public:
 		}
 		if (!cities_bcube.is_all_zeros()) {set_buildings_pos_range(cities_bcube);}
 		road_gen.connect_all_cities(heightmap, xsize, ysize, city_params.road_width, city_params.road_spacing);
-		road_gen.add_streetlights();
 		road_gen.gen_tile_blocks();
+		road_gen.add_streetlights();
 		car_manager.init_cars(city_params.num_cars);
 		init_city_spectate_manager(car_manager, ped_manager);
 	}

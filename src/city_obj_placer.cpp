@@ -1194,7 +1194,6 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	if (have_cars) {add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);}
 	add_objs_on_buildings(city_id);
 	place_birds(rgen); // after placing other objects
-	for (auto i = plot_colliders.begin(); i != plot_colliders.end(); ++i) {sort(i->begin(), i->end(), cube_by_x1());}
 	bench_groups   .create_groups(benches,   all_objs_bcube);
 	planter_groups .create_groups(planters,  all_objs_bcube);
 	trashcan_groups.create_groups(trashcans, all_objs_bcube);
@@ -1332,7 +1331,7 @@ void city_obj_placer_t::move_to_not_intersect_driveway(point &pos, float radius,
 		break; // maybe we should check for an adjacent driveway, but that would be rare and moving could result in oscillation
 	}
 }
-void city_obj_placer_t::move_and_connect_streetlights(streetlights_t &sl) {
+void city_obj_placer_t::finalize_streetlights_and_power(streetlights_t &sl, vector<vect_cube_t> &plot_colliders) {
 	for (auto s = sl.streetlights.begin(); s != sl.streetlights.end(); ++s) {
 		if (!driveways.empty()) { // move to avoid driveways
 			bool const dim(s->dir.y == 0.0); // direction to move in
@@ -1342,6 +1341,14 @@ void city_obj_placer_t::move_and_connect_streetlights(streetlights_t &sl) {
 			point top(s->get_lpos());
 			top.z += 1.05f*streetlight_ns::light_radius*city_params.road_width; // top of light
 			connect_power_to_point(top, 0); // near_power_pole=0 because it may be too far away
+		}
+		if (!s->on_bridge_or_tunnel) {
+			assert(s->plot_ix < plot_colliders.size());
+			cube_t collider;
+			collider.set_from_point(s->pos);
+			collider.expand_by_xy(streetlight_ns::get_streetlight_pole_radius());
+			collider.z2() += streetlight_ns::get_streetlight_height();
+			plot_colliders[s->plot_ix].push_back(collider);
 		}
 	} // for s
 }

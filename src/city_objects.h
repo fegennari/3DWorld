@@ -387,9 +387,6 @@ private:
 	float plot_subdiv_sz=0.0;
 	bool has_residential_plots=0;
 	
-	struct cube_by_x1 {
-		bool operator()(cube_t const &a, cube_t const &b) const {return (a.x1() < b.x1());}
-	};
 	bool gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, unsigned plot_ix, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t &rgen);
 	void add_cars_to_driveways(vector<car_t> &cars, vector<road_plot_t> const &plots, vector<vect_cube_t> &plot_colliders, unsigned city_id, rand_gen_t &rgen);
 	void place_trees_in_plot(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> &tree_pos, rand_gen_t &rgen,
@@ -417,7 +414,7 @@ public:
 	void set_plot_subdiv_sz(float sz) {plot_subdiv_sz = sz;}
 	void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars,
 		vector<road_t> const &roads, vector<road_isec_t> isecs[3], unsigned city_id, bool have_cars, bool is_residential, bool have_streetlights);
-	void move_and_connect_streetlights(streetlights_t &sl);
+	void finalize_streetlights_and_power(streetlights_t &sl, vector<vect_cube_t> &plot_colliders);
 	static bool subdivide_plot_for_residential(cube_t const &plot, vector<road_t> const &roads,
 		float plot_subdiv_sz, unsigned parent_plot_ix, unsigned city_ix, vect_city_zone_t &sub_plots);
 	void draw_detail_objects(draw_state_t &dstate, bool shadow_only);

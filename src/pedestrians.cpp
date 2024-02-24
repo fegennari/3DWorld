@@ -1644,8 +1644,8 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	ensure_outlined_polygons();
 	s.set_cur_color(CYAN);
 
-	for (auto i = avoid.begin(); i != avoid.end(); ++i) { // draw avoid cubes
-		cube_t c(*i);
+	for (cube_t const &i : avoid) { // draw avoid cubes
+		cube_t c(i);
 		max_eq(c.z2(), (c.z1() + radius)); // make sure it's nonzero area
 		draw_simple_cube(c);
 	}
