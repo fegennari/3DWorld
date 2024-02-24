@@ -621,7 +621,7 @@ point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_pl
 				}
 				dest_pos    = next_plot_bcube.closest_pt(pos_adj);
 				debug_state = 3;
-				// check if this is an invalid pos
+				// check if this is an invalid pos; the only case we handle here is streetlights on the destination side of the road
 				pedestrian_t dest_ped(*this);
 				dest_ped.pos = dest_pos;
 				cube_t coll_cube;
@@ -961,11 +961,11 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		if (dest_pos != pos) {
 			bool update_path(0);
 
-			if (next_follow_player) { // update every frame
+			if (next_follow_player || (target_valid() && dist_xy_less_than(pos, target_pos, radius))) { // update every frame
 				update_path = 1;
 			}
 			else if (dist_less_than(pos, player_pos, 1000.0*radius)) { // nearby pedestrian - higher update rate
-				update_path = (((frame_counter + ssn) & 15) == 0 || (target_valid() && dist_xy_less_than(pos, target_pos, radius)));
+				update_path = (((frame_counter + ssn) & 15) == 0);
 			}
 			else { // distant pedestrian - lower update rate
 				update_path = (((frame_counter + ssn) & 63) == 0);
