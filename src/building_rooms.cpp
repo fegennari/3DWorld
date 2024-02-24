@@ -2326,7 +2326,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 			for (unsigned d = 0; d < 2; ++d) { // sides of stairs
 				for (unsigned s = 0; s < 2; ++s) { // segs
-					bool const rdim(dim ^ s), rdir(dirs[s]);
+					bool const rdim(dim ^ bool(s)), rdir(dirs[s]);
 					cube_t railing(segs[s]);
 					set_wall_width(railing, segs[s].d[!rdim][d], railing_hw, !rdim);
 					objs.emplace_back(railing, TYPE_RAILING, 0, rdim, rdir, RO_FLAG_OPEN, 1.0, SHAPE_CUBE, railing_color); // with balusters
@@ -2337,7 +2337,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			unsigned const railing_flags(RO_FLAG_OPEN | RO_FLAG_HAS_EXTRA | RO_FLAG_TOS); // make taller, with balusters
 
 			for (unsigned d = 0; d < 2; ++d) {
-				bool const rdim(dim ^ d), rdir(dirs[d] ^ d);
+				bool const rdim(dim ^ bool(d)), rdir(dirs[d] ^ bool(d));
 				cube_t railing(landing);
 				set_cube_zvals(railing, landing.z2(), railing_z2);
 				set_wall_width(railing, landing.d[rdim][rdir], railing_hw, rdim);
@@ -2351,7 +2351,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			// upper end next to landing and lower end; vertical poles are only needed for one end, except for the top floor
 			for (unsigned d = 0; d < 2; ++d) {
 				set_wall_width(railing, i->d[dim][d], railing_hw, dim);
-				unsigned const flags(RO_FLAG_TOS | ((d ^ dir ^ 1) ? 0 : RO_FLAG_OPEN)); // balusters on one side
+				unsigned const flags(RO_FLAG_TOS | ((bool(d) ^ dir ^ 1) ? 0 : RO_FLAG_OPEN)); // balusters on one side
 				objs.emplace_back(railing, TYPE_RAILING, 0, !dim, d, flags, 1.0, SHAPE_CUBE, railing_color);
 			}
 			// long edge
