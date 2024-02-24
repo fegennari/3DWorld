@@ -199,8 +199,9 @@ bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest,
 	int const coll_ret(check_buildings_ped_coll(pos, bcube_radius, detail_radius, plot, building_id, &coll_cube));
 
 	if (coll_ret) {
-		if (coll_ret == 1 && coll_bldg_ix) {*coll_bldg_ix = building_id;} // only update when coll_ret==1 (intersects a part, not a fence or detail object)
-		if (!has_dest_bldg || building_id != dest_bldg || coll_ret > 1) return 0; // collided with the wrong building or the fence/detail object
+		if (coll_ret > 1) return 0; // collided with a non-building: fence or other detail object
+		if (coll_bldg_ix) {*coll_bldg_ix = building_id;}
+		if (!has_dest_bldg || building_id != dest_bldg) return 0; // collided with the wrong building
 		float const enter_radius(0.25*radius);
 		if (!get_building_bcube(dest_bldg).contains_pt_xy_exp(pos, enter_radius)) return 1; // collided with dest building, but not yet entered
 		if (!check_buildings_ped_coll(pos, enter_radius, 2.0*enter_radius, plot, building_id, nullptr)) return 1; // test this building at a smaller radius to make sure we've entered
@@ -963,7 +964,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			if (next_follow_player) { // update every frame
 				update_path = 1;
 			}
-			else if (dist_less_than(pos, get_camera_pos(), 1000.0*radius)) { // nearby pedestrian - higher update rate
+			else if (dist_less_than(pos, player_pos, 1000.0*radius)) { // nearby pedestrian - higher update rate
 				update_path = (((frame_counter + ssn) & 15) == 0 || (target_valid() && dist_xy_less_than(pos, target_pos, radius)));
 			}
 			else { // distant pedestrian - lower update rate
@@ -1085,7 +1086,7 @@ void pedestrian_t::register_at_dest() {
 }
 
 bool person_base_t::is_close_to_player() const { // for debug printouts, etc.
-	return dist_less_than((pos + get_tiled_terrain_model_xlate()), get_camera_pos(), 4.0*radius);
+	return dist_less_than(pos, get_player_pos_bs(), 4.0*radius);
 }
 
 
