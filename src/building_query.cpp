@@ -1634,7 +1634,7 @@ void expand_convex_polygon_xy(vect_point &points, point const &center, float exp
 	}
 }
 
-// Note: xy_radius == 0.0 is a point test; xy_radius > 0.0 an approx vert cylinder contains test; xy_radius < 0.0 is an intersection test;
+// Note: xy_radius == 0.0 is a point test; xy_radius > 0.0 is an intersection test;
 // attic and basement queries only work with points; the xy_radius != 0 and coll_cube cases are only used with pedestrians
 // return value: 0=no cont, 1=part, 2=attic, 3=ext basement, 4=roof access, 5=detail
 int building_t::check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points,
@@ -1651,7 +1651,7 @@ int building_t::check_point_or_cylin_contained(point const &pos, float xy_radius
 	}
 	if (inc_ext_basement && has_pool() && interior->pool.contains_pt(pr)) return 3; // in the pool
 
-	if (xy_radius > 0.0 || bcube.contains_pt(pos)) { // check parts
+	if (bcube.contains_pt_exp_xy_only(pos, xy_radius)) { // check parts
 		if (inc_attic && point_in_attic(pr)) return 2;
 
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
@@ -1669,7 +1669,7 @@ int building_t::check_point_or_cylin_contained(point const &pos, float xy_radius
 				if (!point_in_polygon_2d(pr.x, pr.y, points.data(), points.size())) continue; // XY plane test for top surface
 			}
 			else { // cube
-				if (!i->contains_pt_exp_xy_only(pr, xy_radius)) continue;
+				if (!i->contains_pt_xy_exp(pr, xy_radius)) continue;
 			}
 			if (coll_cube) {*coll_cube = *i;} // approximate for cylinder
 			return 1;
