@@ -1122,10 +1122,13 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 		unsigned const types[3] = {TYPE_PEN, TYPE_PENCIL, TYPE_MARKER}, type(types[rgen.rand()%3]);
 		bool const dim(!c.dim); // always opposite orient of the drawer
 		float const length(min(1.7f*drawer_dz, 0.9f*sz[dim])), diameter(((type == TYPE_MARKER) ? 0.08 : 0.036)*length);
-		obj = room_object_t(drawer, type, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN);
-		obj.color = ((obj.type == TYPE_MARKER) ? marker_colors[rgen.rand()&7] : ((obj.type == TYPE_PEN) ? pen_colors[rgen.rand()&3] : pencil_colors[rgen.rand()&1]));
-		obj.z2()  = obj.z1() + diameter;
-		set_rand_pos_for_sz(obj, dim, length, diameter, rgen);
+
+		if (diameter < min(sz.z, sz[dim])) { // should always be true, unless something got broken (such as calling this on closed drawers)
+			obj = room_object_t(drawer, type, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN);
+			obj.color = ((obj.type == TYPE_MARKER) ? marker_colors[rgen.rand()&7] : ((obj.type == TYPE_PEN) ? pen_colors[rgen.rand()&3] : pencil_colors[rgen.rand()&1]));
+			obj.z2()  = obj.z1() + diameter;
+			set_rand_pos_for_sz(obj, dim, length, diameter, rgen);
+		}
 		break;
 	}
 	case TYPE_BOOK: // book
