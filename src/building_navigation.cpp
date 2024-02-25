@@ -6,6 +6,7 @@
 #include "buildings.h"
 #include "city.h" // for person_t
 #include "profiler.h"
+#include "nav_grid.h"
 #include <queue>
 
 
@@ -46,131 +47,197 @@ bool check_line_int_xy(vect_cube_t const &c, point const &p1, point const &p2) {
 	return 0;
 }
 
-class cube_nav_grid {
-	float radius=0.0;
-	cube_t bcube, grid_bcube;
-	unsigned num[2] = {};
-	float   step[2] = {};
-	bool invalid=0;
-	vector<uint8_t> nodes; // num[0] x num[1]; 0=blocked, 1=open
-	vect_cube_t blockers_exp;
+/*static*/ bool cube_nav_grid::pt_contained_xy(point const &pt, vect_cube_t const &cubes) {
+	for (cube_t const &c : cubes) {
+		if (c.contains_pt_xy(pt)) return 1;
+	}
+	return 0;
+}
+void cube_nav_grid::get_grid_ix_fp(point p, float gxy[2]) const {
+	grid_bcube.clamp_pt_xy(p);
+	for (unsigned d = 0; d < 2; ++d) {gxy[d] = (p[d] - grid_bcube.d[d][0])/step[d];}
+}
+float cube_nav_grid::get_distance(unsigned x1, unsigned y1, unsigned x2, unsigned y2) const {
+	float const dx(float(x2) - float(x1)), dy(float(y2) - float(y1));
+	return sqrt(dx*dx + dy*dy);
+}
+bool cube_nav_grid::find_open_node_closest_to(point const &p, point const &dest, unsigned &nx, unsigned &ny) const {
+	if (!bcube.contains_pt_xy(p)) return 0; // outside the grid valid area; error?
+	float gxy[2]; // grid index, with partial offset
+	get_grid_ix_fp(p, gxy);
+	float dmin_sq(0.0);
+	bool found(0);
 
-	struct ix_pair_t {
-		unsigned x, y;
-		ix_pair_t(unsigned x_, unsigned y_) : x(x_), y(y_) {}
-		bool operator<(ix_pair_t const &p) const {return ((y == p.y) ? (x < p.x) : (y < p.y));} // needed for priority_queue
-	};
-	struct a_star_node_state_t {
-		int came_from[2] = {-1,-1};
-		unsigned xy[2] = {0,0};
-		float g_score=0.0, f_score=0.0;
-		void set(unsigned from_x, unsigned from_y, unsigned x, unsigned y) {came_from[0] = from_x; came_from[1] = from_y; xy[0] = x; xy[1] = y;}
-	};
-	static bool pt_contained_xy(point const &pt, vect_cube_t const &cubes) {
-		for (cube_t const &c : cubes) {
-			if (c.contains_pt_xy(pt)) return 1;
+	for (unsigned y = 0; y < 2; ++y) { // visit points in all directions < SQRT2*radius from p
+		for (unsigned x = 0; x < 2; ++x) {
+			unsigned const yi(y ? unsigned(ceil(gxy[1])) : unsigned(floor(gxy[1])));
+			unsigned const xi(x ? unsigned(ceil(gxy[0])) : unsigned(floor(gxy[0])));
+			if (!are_ixs_valid(xi, yi)) continue; // invalid, skip; error/can't happen?
+			if (!get_node_val (xi, yi)) continue; // blocked, skip
+			float const dsq(p2p_dist_xy_sq(dest, get_grid_pt(xi, yi))); // choose dir closest to dest to avoid backtracking
+			if (!found || dsq < dmin_sq) {found = 1; dmin_sq = dsq; nx = xi; ny = yi;} // keep if closer
 		}
-		return 0;
-	}
-	bool    are_ixs_valid(unsigned x, unsigned y) const {return (x < num[0] && y < num[1]);} // negative numbers will wrap around and still fail
-	unsigned get_node_ix (unsigned x, unsigned y) const {assert(are_ixs_valid(x, y)); return (x + y* num[0]);}
-	point    get_grid_pt (unsigned x, unsigned y, float zval) const {return point((grid_bcube.x1() + x*step[0]), (grid_bcube.y1() + y*step[1]), zval);}
-	point    get_grid_pt (unsigned x, unsigned y) const {return get_grid_pt(x, y, grid_bcube.z1());}
-	uint8_t  get_node_val(unsigned x, unsigned y) const {return nodes[get_node_ix(x, y)];}
+	} // for y
+	return found;
+}
+bool cube_nav_grid::check_line_intersect(point const &p1, point const &p2, float radius) const {
+	// zvals are ignored - effectively 2D; otherwise could call line_intersect_cubes()
+	cube_t const check_cube(p1, p2);
 
-	void get_grid_ix_fp(point p, float gxy[2]) const {
-		grid_bcube.clamp_pt_xy(p);
-		for (unsigned d = 0; d < 2; ++d) {gxy[d] = (p[d] - grid_bcube.d[d][0])/step[d];}
-	}
-	float get_distance(unsigned x1, unsigned y1, unsigned x2, unsigned y2) const {
-		float const dx(float(x2) - float(x1)), dy(float(y2) - float(y1));
-		return sqrt(dx*dx + dy*dy);
-	}
-	bool find_open_node_closest_to(point const &p, point const &dest, unsigned &nx, unsigned &ny) const {
-		if (!bcube.contains_pt_xy(p)) return 0; // outside the grid valid area; error?
-		float gxy[2]; // grid index, with partial offset
-		get_grid_ix_fp(p, gxy);
-		float dmin_sq(0.0);
-		bool found(0);
+	// check if vertical cylinder with this radius swept from p1 to p2 intersects the unexpanded cube; assumes cube is large relative to radius
+	for (cube_t const &c : blockers_exp) {
+		if (!c.intersects_xy(check_cube) || !check_line_clip_xy(p1, p2, c.d)) continue; // no intersection
+		cube_t c_non_exp(c);
+		c_non_exp.expand_by_xy(-radius); // shrink radius back off
+		if (check_line_clip_xy(p1, p2, c_non_exp.d)) return 1;
+		vector3d v(cross_product((p2 - p1), plus_z)); // tangent vector to the person's cylinder
+		v *= radius/v.mag();
+		if (check_line_clip_xy(p1+v, p2+v, c_non_exp.d)) return 1;
+		if (check_line_clip_xy(p1-v, p2-v, c_non_exp.d)) return 1;
+	} // for c
+	return 0; // no intersection
+}
+void cube_nav_grid::make_region_walkable(cube_t const &region) {
+	float lo[2], hi[2];
+	get_grid_ix_fp(region.get_llc(), lo);
+	get_grid_ix_fp(region.get_urc(), hi);
+	unsigned const x1(round_fp(lo[0])), y1(round_fp(lo[1])), x2(round_fp(hi[0])), y2(round_fp(hi[1]));
 
-		for (unsigned y = 0; y < 2; ++y) { // visit points in all directions < SQRT2*radius from p
-			for (unsigned x = 0; x < 2; ++x) {
-				unsigned const yi(y ? unsigned(ceil(gxy[1])) : unsigned(floor(gxy[1])));
-				unsigned const xi(x ? unsigned(ceil(gxy[0])) : unsigned(floor(gxy[0])));
-				if (!are_ixs_valid(xi, yi)) continue; // invalid, skip; error/can't happen?
-				if (!get_node_val (xi, yi)) continue; // blocked, skip
-				float const dsq(p2p_dist_xy_sq(dest, get_grid_pt(xi, yi))); // choose dir closest to dest to avoid backtracking
-				if (!found || dsq < dmin_sq) {found = 1; dmin_sq = dsq; nx = xi; ny = yi;} // keep if closer
-			}
-		} // for y
-		return found;
+	for (unsigned y = y1; y <= y2; ++y) {
+		for (unsigned x = x1; x <= x2; ++x) {nodes[get_node_ix(x, y)] = 1;}
 	}
-	bool check_line_intersect(point const &p1, point const &p2, float radius) const {
-		// zvals are ignored - effectively 2D; otherwise could call line_intersect_cubes()
-		cube_t const check_cube(p1, p2);
+}
+void cube_nav_grid::build(cube_t const &bcube_, vect_cube_t const &blockers, float stairs_extend, float radius_) {
+	invalid    = 0; // reset, in case build() was called on a nonempty but invalid cube_nav_grid
+	radius     = radius_;
+	bcube      = bcube_;
+	grid_bcube = bcube;
+	// determine grid size and allocate vectors
+	float const spacing(SQRT2*radius); // can't be further than the test diameter or we'll miss blockers in the gap; use sqrt(2) to make spheres diagonally tangential
+	grid_bcube.expand_by_xy(-radius);
+	point const size(grid_bcube.get_size());
+	if (min(size.x, size.y) <= 2.0*spacing) return; // too small (error?)
 
-		// check if vertical cylinder with this radius swept from p1 to p2 intersects the unexpanded cube; assumes cube is large relative to radius
+	for (unsigned d = 0; d < 2; ++d) {
+		num [d] = unsigned(ceil(size[d]/spacing));
+		step[d] = size[d]/(num[d] - 1);
+	}
+	nodes.clear(); // in case we're rebuilding, have to zero initialize below
+	nodes.resize(num[0]*num[1], 0);
+	//cout << TXT(blockers.size()) << TXT(num[0]) << TXT(num[1]) << TXT(nodes.size()) << endl;
+	// determine open nodes; edges are implicitly from adjacent 1 nodes
+	blockers_exp = blockers;
+	resize_cubes_xy(blockers_exp, radius);
+	vect_cube_t row_blockers;
+
+	for (unsigned y = 0; y < num[1]; ++y) {
+		float const yval(grid_bcube.y1() + y*step[1]);
+		row_blockers.clear();
+
 		for (cube_t const &c : blockers_exp) {
-			if (!c.intersects_xy(check_cube) || !check_line_clip_xy(p1, p2, c.d)) continue; // no intersection
-			cube_t c_non_exp(c);
-			c_non_exp.expand_by_xy(-radius); // shrink radius back off
-			if (check_line_clip_xy(p1, p2, c_non_exp.d)) return 1;
-			vector3d v(cross_product((p2 - p1), plus_z)); // tangent vector to the person's cylinder
-			v *= radius/v.mag();
-			if (check_line_clip_xy(p1+v, p2+v, c_non_exp.d)) return 1;
-			if (check_line_clip_xy(p1-v, p2-v, c_non_exp.d)) return 1;
-		} // for c
-		return 0; // no intersection
-	}
-	void make_region_walkable(cube_t const &region) {
-		float lo[2], hi[2];
-		get_grid_ix_fp(region.get_llc(), lo);
-		get_grid_ix_fp(region.get_urc(), hi);
-		unsigned const x1(round_fp(lo[0])), y1(round_fp(lo[1])), x2(round_fp(hi[0])), y2(round_fp(hi[1]));
-
-		for (unsigned y = y1; y <= y2; ++y) {
-			for (unsigned x = x1; x <= x2; ++x) {nodes[get_node_ix(x, y)] = 1;}
+			if (c.y1() < yval && c.y2() > yval) {row_blockers.push_back(c);} // include if it spans yval
 		}
+		for (unsigned x = 0; x < num[0]; ++x) {
+			if (!pt_contained_xy(get_grid_pt(x, y), row_blockers)) {nodes[get_node_ix(x, y)] = 1;}
+		}
+	} // for y
+}
+bool cube_nav_grid::find_path(point const &p1, point const &p2, ai_path_t &path) const {
+	assert(is_built());
+	if (nodes.empty()) return 0; // not built or too small/empty
+	//highres_timer_t timer("Find Path"); // ~1.3ms max
+	assert(p1.z == p2.z); // must be horizontal
+	unsigned nx1(0), ny1(0), nx2(0), ny2(0);
+	if (!find_open_node_closest_to(p1, p2, nx1, ny1) || !find_open_node_closest_to(p2, p1, nx2, ny2)) return 0;
+	// does it make sense to use A* rather than Dijkstra? maybe not because paths will generally be short compared to the number of total nodes
+	unsigned start_ix(get_node_ix(nx1, ny1)), end_ix(get_node_ix(nx2, ny2));
+
+	if (start_ix == end_ix) { // short path case; probably shouldn't be calling this function if there's a simple path from p1 to p2
+		path.add(get_grid_pt(nx1, ny1, p1.z)); // add the single point
+		return 1;
 	}
+	vector<a_star_node_state_t> state(nodes.size()); // dense vector; unordered_map seems to be slower
+	vector<uint8_t> open(nodes.size(), 0), closed(nodes.size(), 0); // tentative/already evaluated nodes
+	std::priority_queue<pair<float, ix_pair_t> > open_queue;
+	a_star_node_state_t &start(state[start_ix]);
+	start.g_score  = 0.0;
+	start.f_score  = get_distance(nx1, ny1, nx2, ny2); // estimated total cost from start to end
+	open[start_ix] = 1;
+	open_queue.push(make_pair(-start.f_score, ix_pair_t(nx1, ny1)));
+
+	while (!open_queue.empty()) {
+		ix_pair_t const cur(open_queue.top().second);
+		unsigned const cur_ix(get_node_ix(cur.x, cur.y));
+		open_queue.pop();
+		closed[cur_ix] = 1;
+		open  [cur_ix] = 0;
+
+		for (int dy = -1; dy <= 1; ++dy) { // check 3x3 grid except center
+			for (int dx = -1; dx <= 1; ++dx) {
+				if (dx == 0 && dy == 0) continue; // skip self
+				unsigned const new_x(cur.x + dx), new_y(cur.y + dy); // may wrap around to 2^32
+				if (!are_ixs_valid(new_x, new_y)) continue; // off the grid
+				unsigned const new_ix(get_node_ix(new_x, new_y));
+				if (closed[new_ix]) continue; // already closed (duplicate)
+				if (!nodes[new_ix]) continue; // blocked
+				a_star_node_state_t &sn(state[new_ix]);
+				float const new_g_score(state[cur_ix].g_score + get_distance(cur.x, cur.y, new_x, new_y));
+				if (!open[new_ix]) {open[new_ix] = 1;}
+				else if (new_g_score >= sn.g_score) continue; // not better
+				sn.set(cur.x, cur.y, new_x, new_y);
+
+				if (new_ix == end_ix) { // done, reconstruct path (in reverse)
+					assert(!path.empty()); // p1 should have been added previously
+					unsigned const rev_start_ix(path.size());
+					path.add(get_grid_pt(nx2, ny2, p1.z)); // last point, added first
+					unsigned path_ix(cur_ix), prev_x(new_x), prev_y(new_y);
+					int prev_dx(0), prev_dy(0); // starts at an invalid value so that the first point is always added
+
+					while (path_ix != start_ix) {
+						assert(path_ix < state.size());
+						a_star_node_state_t &sp(state[path_ix]);
+						int const xn(sp.came_from[0]), yn(sp.came_from[1]);
+						assert(xn >= 0 && yn >= 0);
+						assert(xn != (int)prev_x || yn != (int)prev_y); // must have a delta
+						point const path_pt(get_grid_pt(xn, yn, p1.z));
+						// smooth path by removing colinear points and merging unblocked segments
+						int dx(xn - int(prev_x)), dy(yn - int(prev_y));
+						if (dx == prev_dx && dy == prev_dy) {path.back() = path_pt;} // same angle, extend previous point
+						else {path.add(path_pt);} // add new point
+						path_ix = get_node_ix(xn, yn);
+						prev_x = xn; prev_y = yn; prev_dx = dx; prev_dy = dy;
+					} // end while()
+					path.add(get_grid_pt(nx1, ny1, p1.z)); // first point, added last
+					reverse(path.begin()+rev_start_ix, path.end());
+					// run another pass to remove unnecessary points
+					path.push_back(p2); // temporary end point
+
+					while (1) { // iteratively remove points until no more can be removed
+						unsigned const orig_sz(path.size());
+
+						for (unsigned i = rev_start_ix; i+1 < path.size(); ++i) { // inefficient, but simple
+							if (!check_line_intersect(path[i-1], path[i+1], radius)) {path.erase(path.begin() + i); --i;}
+						}
+						if (path.size() == orig_sz) break; // no points removed - done
+					} // end while
+					path.pop_back(); // remove p2
+					return 1; // success
+				}
+				sn.g_score = new_g_score;
+				sn.f_score = sn.g_score + get_distance(new_x, new_y, nx2, ny2);
+				open_queue.push(make_pair(-sn.f_score, ix_pair_t(new_x, new_y)));
+			} // for dx
+		} // for dy
+	} // end while()
+	return 0; // failed - no path from room1 to room2
+}
+
+class building_cube_nav_grid : public cube_nav_grid {
 public:
-	bool is_built() const {return !bcube.is_all_zeros();} // can't test on !nodes.empty() in case the room is too small to have any nodes
-	bool is_valid() const {return (!invalid && is_built());}
-	void invalidate() {invalid = 1;}
-
-	void build(cube_t const &bcube_, vect_cube_t const &blockers, vector<door_stack_t> const &doors, vector<stairwell_t> const &stairwells, float stairs_extend, float radius_) {
-		invalid    = 0; // reset, in case build() was called on a nonempty but invalid cube_nav_grid
-		radius     = radius_;
-		bcube      = bcube_;
-		grid_bcube = bcube;
-		// determine grid size and allocate vectors
-		float const spacing(SQRT2*radius); // can't be further than the test diameter or we'll miss blockers in the gap; use sqrt(2) to make spheres diagonally tangential
-		grid_bcube.expand_by_xy(-radius);
-		point const size(grid_bcube.get_size());
-		if (min(size.x, size.y) <= 2.0*spacing) return; // too small (error?)
-
-		for (unsigned d = 0; d < 2; ++d) {
-			num [d] = unsigned(ceil(size[d]/spacing));
-			step[d] = size[d]/(num[d] - 1);
-		}
-		nodes.clear(); // in case we're rebuilding, have to zero initialize below
-		nodes.resize(num[0]*num[1], 0);
-		//cout << TXT(blockers.size()) << TXT(num[0]) << TXT(num[1]) << TXT(nodes.size()) << endl;
-		// determine open nodes; edges are implicitly from adjacent 1 nodes
-		blockers_exp = blockers;
-		resize_cubes_xy(blockers_exp, radius);
-		vect_cube_t row_blockers;
-
-		for (unsigned y = 0; y < num[1]; ++y) {
-			float const yval(grid_bcube.y1() + y*step[1]);
-			row_blockers.clear();
-
-			for (cube_t const &c : blockers_exp) {
-				if (c.y1() < yval && c.y2() > yval) {row_blockers.push_back(c);} // include if it spans yval
-			}
-			for (unsigned x = 0; x < num[0]; ++x) {
-				if (!pt_contained_xy(get_grid_pt(x, y), row_blockers)) {nodes[get_node_ix(x, y)] = 1;}
-			}
-		} // for y
+	void build_for_building(cube_t const &bcube_, vect_cube_t const &blockers, vector<door_stack_t> const &doors,
+		vector<stairwell_t> const &stairwells, float stairs_extend, float radius_)
+	{
+		build(bcube_, blockers, stairs_extend, radius_);
 		// flag all nodes in doorways as walkable to ensure the graph is connected, even if it means people will clip through the door frame;
 		// other solutions involve aligning doors with the grid (too difficult/restrictive) or reducing spacing to doorway_width/(2*radius) (too slow)
 		for (door_stack_t const &d : doors) {
@@ -199,96 +266,7 @@ public:
 			}
 		}
 	}
-	bool find_path(point const &p1, point const &p2, ai_path_t &path) const {
-		assert(is_built());
-		if (nodes.empty()) return 0; // not built or too small/empty
-		//highres_timer_t timer("Find Path"); // ~1.3ms max
-		assert(p1.z == p2.z); // must be horizontal
-		unsigned nx1(0), ny1(0), nx2(0), ny2(0);
-		if (!find_open_node_closest_to(p1, p2, nx1, ny1) || !find_open_node_closest_to(p2, p1, nx2, ny2)) return 0;
-		// does it make sense to use A* rather than Dijkstra? maybe not because paths will generally be short compared to the number of total nodes
-		unsigned start_ix(get_node_ix(nx1, ny1)), end_ix(get_node_ix(nx2, ny2));
-
-		if (start_ix == end_ix) { // short path case; probably shouldn't be calling this function if there's a simple path from p1 to p2
-			path.add(get_grid_pt(nx1, ny1, p1.z)); // add the single point
-			return 1;
-		}
-		vector<a_star_node_state_t> state(nodes.size()); // dense vector; unordered_map seems to be slower
-		vector<uint8_t> open(nodes.size(), 0), closed(nodes.size(), 0); // tentative/already evaluated nodes
-		std::priority_queue<pair<float, ix_pair_t> > open_queue;
-		a_star_node_state_t &start(state[start_ix]);
-		start.g_score  = 0.0;
-		start.f_score  = get_distance(nx1, ny1, nx2, ny2); // estimated total cost from start to end
-		open[start_ix] = 1;
-		open_queue.push(make_pair(-start.f_score, ix_pair_t(nx1, ny1)));
-
-		while (!open_queue.empty()) {
-			ix_pair_t const cur(open_queue.top().second);
-			unsigned const cur_ix(get_node_ix(cur.x, cur.y));
-			open_queue.pop();
-			closed[cur_ix] = 1;
-			open  [cur_ix] = 0;
-
-			for (int dy = -1; dy <= 1; ++dy) { // check 3x3 grid except center
-				for (int dx = -1; dx <= 1; ++dx) {
-					if (dx == 0 && dy == 0) continue; // skip self
-					unsigned const new_x(cur.x + dx), new_y(cur.y + dy); // may wrap around to 2^32
-					if (!are_ixs_valid(new_x, new_y)) continue; // off the grid
-					unsigned const new_ix(get_node_ix(new_x, new_y));
-					if (closed[new_ix]) continue; // already closed (duplicate)
-					if (!nodes[new_ix]) continue; // blocked
-					a_star_node_state_t &sn(state[new_ix]);
-					float const new_g_score(state[cur_ix].g_score + get_distance(cur.x, cur.y, new_x, new_y));
-					if (!open[new_ix]) {open[new_ix] = 1;}
-					else if (new_g_score >= sn.g_score) continue; // not better
-					sn.set(cur.x, cur.y, new_x, new_y);
-
-					if (new_ix == end_ix) { // done, reconstruct path (in reverse)
-						assert(!path.empty()); // p1 should have been added previously
-						unsigned const rev_start_ix(path.size());
-						path.add(get_grid_pt(nx2, ny2, p1.z)); // last point, added first
-						unsigned path_ix(cur_ix), prev_x(new_x), prev_y(new_y);
-						int prev_dx(0), prev_dy(0); // starts at an invalid value so that the first point is always added
-
-						while (path_ix != start_ix) {
-							assert(path_ix < state.size());
-							a_star_node_state_t &sp(state[path_ix]);
-							int const xn(sp.came_from[0]), yn(sp.came_from[1]);
-							assert(xn >= 0 && yn >= 0);
-							assert(xn != (int)prev_x || yn != (int)prev_y); // must have a delta
-							point const path_pt(get_grid_pt(xn, yn, p1.z));
-							// smooth path by removing colinear points and merging unblocked segments
-							int dx(xn - int(prev_x)), dy(yn - int(prev_y));
-							if (dx == prev_dx && dy == prev_dy) {path.back() = path_pt;} // same angle, extend previous point
-							else {path.add(path_pt);} // add new point
-							path_ix = get_node_ix(xn, yn);
-							prev_x = xn; prev_y = yn; prev_dx = dx; prev_dy = dy;
-						} // end while()
-						path.add(get_grid_pt(nx1, ny1, p1.z)); // first point, added last
-						reverse(path.begin()+rev_start_ix, path.end());
-						// run another pass to remove unnecessary points
-						path.push_back(p2); // temporary end point
-
-						while (1) { // iteratively remove points until no more can be removed
-							unsigned const orig_sz(path.size());
-
-							for (unsigned i = rev_start_ix; i+1 < path.size(); ++i) { // inefficient, but simple
-								if (!check_line_intersect(path[i-1], path[i+1], radius)) {path.erase(path.begin() + i); --i;}
-							}
-							if (path.size() == orig_sz) break; // no points removed - done
-						} // end while
-						path.pop_back(); // remove p2
-						return 1; // success
-					}
-					sn.g_score = new_g_score;
-					sn.f_score = sn.g_score + get_distance(new_x, new_y, nx2, ny2);
-					open_queue.push(make_pair(-sn.f_score, ix_pair_t(new_x, new_y)));
-				} // for dx
-			} // for dy
-		} // end while()
-		return 0; // failed - no path from room1 to room2
-	}
-};
+}; // building_cube_nav_grid
 
 // Note: this should go into building_t/buildings.h at some point, but is temporarily here
 class building_nav_graph_t {
@@ -321,7 +299,7 @@ class building_nav_graph_t {
 	float stairs_extend=0;
 	bool has_pg_ramp=0;
 	vector<node_t> nodes;
-	mutable vector<cube_nav_grid> nav_grids; // for use with backrooms; cached during path finding
+	mutable vector<building_cube_nav_grid> nav_grids; // for use with backrooms; cached during path finding
 	node_t       &get_node(unsigned room)       {assert(room < nodes.size()); return nodes[room];}
 	node_t const &get_node(unsigned room) const {assert(room < nodes.size()); return nodes[room];}
 
@@ -658,7 +636,7 @@ public:
 			unsigned const num_floors(round_fp(walk_area.dz()/floor_spacing)), floor_ix(floor((p1.z - walk_area.z1())/floor_spacing));
 			assert(num_floors > 0 && floor_ix < num_floors);
 			if (nav_grids.empty()) {nav_grids.resize(num_floors);} else {assert(nav_grids.size() == num_floors);}
-			cube_nav_grid &nav_grid(nav_grids[floor_ix]);
+			building_cube_nav_grid &nav_grid(nav_grids[floor_ix]);
 
 			if (!nav_grid.is_valid()) { // build once and cache
 				//highres_timer_t timer("Build Nav Grid");
@@ -675,7 +653,7 @@ public:
 				}
 				// Note: doorway width is 2.38x coll radius
 				float const grid_radius(get_ped_coll_radius()); // use conservative person radius so that we can reuse across people
-				nav_grid.build(walk_area_this_floor, blockers, building.interior->door_stacks, building.interior->stairwells, stairs_extend, grid_radius);
+				nav_grid.build_for_building(walk_area_this_floor, blockers, building.interior->door_stacks, building.interior->stairwells, stairs_extend, grid_radius);
 				//nav_grid.create_debug_objs(building.interior->room_geom->objs); // for debugging; modifies building, which should be const
 				//building.interior->room_geom->invalidate_small_geom();
 			}

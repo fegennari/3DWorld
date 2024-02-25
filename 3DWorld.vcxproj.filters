@@ -707,6 +707,9 @@
     <ClInclude Include="src\building_animals.h">
       <Filter>Source Files\City</Filter>
     </ClInclude>
+    <ClInclude Include="src\nav_grid.h">
+      <Filter>Source Files\City</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="icon1.ico">
