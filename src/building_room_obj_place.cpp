@@ -868,6 +868,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 		bed_sz[ dim] = 0.01f*vspace*(sizes[size_ix][1] + 8.0f); // length (mattress + headboard + footboard)
 		bed_sz[!dim] = 0.01f*vspace*(sizes[size_ix][0] + 4.0f); // width  (mattress + small gaps)
 		if (room_bounds.dx() < 1.5*bed_sz.x || room_bounds.dy() < 1.5*bed_sz.y) continue; // room is too small for a bed of this size
+		bool const always_against_wall(room_bounds.dx() < 2.0*bed_sz.x || room_bounds.dy() < 2.0*bed_sz.y); // if room is narrow
 		bed_sz.z = 0.3*vspace*rgen.rand_uniform(1.0, 1.2); // height
 		c.z2()   = zval + bed_sz.z;
 
@@ -877,7 +878,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 			if (bool(d) == dim && n < 5) { // in the first few iterations, try to place the head of the bed against the wall (maybe not for exterior wall facing window?)
 				c.d[d][0] = ((first_head_dir ^ bool(n&1)) ? min_val : max_val);
 			}
-			else if (bool(d) != dim && rgen.rand_bool()) { // try to place the bed against the wall sometimes
+			else if (bool(d) != dim && (always_against_wall || rgen.rand_bool())) { // try to place the bed against the wall sometimes
 				c.d[d][0] = ((first_wall_dir ^ bool(n&1)) ? (min_val - 0.25*vspace) : (max_val + 0.25*vspace));
 			}
 			else {
