@@ -390,6 +390,7 @@ bool check_obj_dir_dist(point const &closest_to, vector3d const &in_dir, cube_t 
 }
 
 bool can_open_bathroom_stall_or_shower(room_object_t const &stall, point const &pos, vector3d const &from_dir) {
+	if (stall.is_broken()) return 0; // broken, can't open
 	// Note: since there currently aren't any objects the player can push/pull in bathrooms, we don't need to check if the door is blocked from opening; may need to revisit later
 	bool dim(0), dir(0); // dim/dir that door is on
 	if      (stall.type == TYPE_STALL ) {dim = stall.dim; dir = !stall.dir;} // bathroom stall
@@ -480,7 +481,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 					keep = 1; // closet door can be opened
 				}
 				else if (!player_in_closet) {
-					if      (i->type == TYPE_TOILET || i->type == TYPE_URINAL) {keep = 1;} // toilet/urinal can be flushed
+					if      ((i->type == TYPE_TOILET || i->type == TYPE_URINAL) && !i->is_broken()) {keep = 1;} // toilet/urinal can be flushed unless broken
 					else if (i->type == TYPE_STALL && i->shape == SHAPE_CUBE && can_open_bathroom_stall_or_shower(*i, closest_to, in_dir)) {keep = 1;} // bathroom stall can be opened
 					else if (i->type == TYPE_MIRROR && i->is_house())  {keep = 1;} // medicine cabinet
 					else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub

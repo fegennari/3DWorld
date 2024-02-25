@@ -400,7 +400,7 @@ void building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std
 	objs.back().obj_id = register_sign_text(text);
 }
 
-void add_hallway_sign(vect_room_object_t &objs, cube_t const &sign, string const &text, colorRGBA const &color, unsigned room_id, bool dim, bool dir, bool add_frame) {
+void add_sign_outside_door(vect_room_object_t &objs, cube_t const &sign, string const &text, colorRGBA const &color, unsigned room_id, bool dim, bool dir, bool add_frame) {
 	// Note: room_id is for the sign's room, not the hallway, though this doesn't seem to be a problem
 	float const sign_light_amt(1.0); // assume well lit since it's in the hallway, not in the room that the sign is attached to
 	unsigned const flags(RO_FLAG_NOCOLL | (add_frame ? RO_FLAG_HAS_EXTRA : 0));
@@ -432,7 +432,7 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 			test_cube.translate_dim(i->dim, side_sign*0.1*wall_thickness); // move out in front of the current wall to avoid colliding with it (in case of T-junction)
 			if (has_bcube_int(test_cube, interior->walls[!i->dim])) continue; // check for intersections with orthogonal walls; needed for inside corner offices
 		}
-		add_hallway_sign(interior->room_geom->objs, sign, text, text_color, room_id, i->dim, side, !dark_mode); // add_frame=!dark_mode
+		add_sign_outside_door(interior->room_geom->objs, sign, text, text_color, room_id, i->dim, side, !dark_mode); // add_frame=!dark_mode
 	} // for i
 }
 void building_t::add_office_door_sign(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
@@ -446,6 +446,15 @@ void building_t::add_door_sign_remove_existing(std::string const &text, room_t c
 	add_door_sign(text, room, zval, room_id, tot_light_amt);
 }
 
+void building_t::add_out_or_order_sign(cube_t const &door_bc, bool dim, bool dir, unsigned room_id, float tot_light_amt) {
+	float const door_height(door_bc.dz()), door_width(door_bc.get_sz_dim(!dim)), z1(door_bc.z1() + 0.5*door_height), door_pos(door_bc.d[dim][dir]);
+	cube_t sign;
+	set_cube_zvals(sign, z1, z1+0.15*door_height);
+	set_wall_width(sign, door_bc.get_center_dim(!dim), 0.2*door_width, !dim);
+	sign.d[dim][!dir] = door_pos; // flush with the door
+	sign.d[dim][ dir] = door_pos + (dir ? 1.0 : -1.0)*0.1*get_wall_thickness(); // extend outward
+	add_sign_outside_door(interior->room_geom->objs, sign, "OUT OF\nORDER", BLACK, room_id, dim, dir, 0); // add_frame=0
+}
 void building_t::make_door_out_or_order(room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned door_stack_ix) {
 	assert(interior && door_stack_ix < interior->door_stacks.size());
 	door_stack_t const &ds(interior->door_stacks[door_stack_ix]);
@@ -457,14 +466,7 @@ void building_t::make_door_out_or_order(room_t const &room, float zval, unsigned
 		door.set_locked_unlockable();
 		// add an out of order sign
 		bool const dim(door.dim), dir(room.get_center_dim(dim) < door.get_center_dim(dim));
-		cube_t const door_bc(door.get_true_bcube());
-		float const door_height(door.dz()), door_width(door.get_width()), z1(zval + 0.5*door_height), door_pos(door_bc.d[dim][dir]);
-		cube_t sign;
-		set_cube_zvals(sign, z1, z1+0.15*door_height);
-		set_wall_width(sign, door.get_center_dim(!dim), 0.2*door_width, !dim);
-		sign.d[dim][!dir] = door_pos; // flush with the door
-		sign.d[dim][ dir] = door_pos + (dir ? 1.0 : -1.0)*0.1*get_wall_thickness(); // extend outward
-		add_hallway_sign(interior->room_geom->objs, sign, "OUT OF\nORDER", BLACK, room_id, dim, dir, 0); // add_frame=0
+		add_out_or_order_sign(door.get_true_bcube(), dim, dir, room_id, tot_light_amt);
 		break; // done
 	} // for dix
 }

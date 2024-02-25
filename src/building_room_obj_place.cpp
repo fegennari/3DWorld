@@ -1394,8 +1394,16 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			if (interior->is_cube_close_to_doorway(stall, room, 0.0, 1)) continue; // skip if close to a door (for rooms with doors at both ends); inc_open=1
 			if (!check_cube_within_part_sides(stall)) continue; // outside the building
 			bool const is_open(rgen.rand_bool()); // 50% chance of stall door being open
-			objs.emplace_back(toilet, TYPE_TOILET, room_id, br_dim, !dir, 0, tot_light_amt);
-			objs.emplace_back(stall,  TYPE_STALL,  room_id, br_dim,  dir, (is_open ? RO_FLAG_OPEN : 0), tot_light_amt, SHAPE_CUBE, stall_color);
+			bool const out_of_order(!is_open && rgen.rand_float() < 0.2);
+			unsigned const flags(out_of_order ? RO_FLAG_BROKEN : 0); // toilet can't be flushed and door can't be opened if out of order
+			objs.emplace_back(toilet, TYPE_TOILET, room_id, br_dim, !dir, flags, tot_light_amt);
+			objs.emplace_back(stall,  TYPE_STALL,  room_id, br_dim,  dir, (flags | (is_open ? RO_FLAG_OPEN : 0)), tot_light_amt, SHAPE_CUBE, stall_color);
+
+			if (out_of_order) { // add out-of-order sign
+				cube_t stall_clipped(stall);
+				stall_clipped.z2() -= 0.33*stall.dz(); // make it shorter; really only need the stall door, but the dim dimension size isn't used anyway
+				add_out_or_order_sign(stall_clipped, br_dim, !dir, room_id, tot_light_amt);
+			}
 			float const tp_length(0.18*theight), wall_pos(toilet.get_center_dim(br_dim));
 			cube_t stall_inner(stall);
 			stall_inner.expand_in_dim(!br_dim, -0.0125*stall.dz()); // subtract off stall wall thickness

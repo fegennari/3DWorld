@@ -1985,6 +1985,7 @@ private:
 	void add_door_sign       (std::string const &text, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool no_check_adj_walls=0);
 	void add_door_sign_remove_existing(std::string const &text, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_office_door_sign(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
+	void add_out_or_order_sign(cube_t const &door_bc, bool dim, bool dir, unsigned room_id, float tot_light_amt);
 	void make_door_out_or_order(room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned door_stack_ix);
 	bool add_kitchen_objs    (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool allow_adj_ext_door);
 	bool add_livingroom_objs (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);

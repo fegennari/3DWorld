@@ -615,7 +615,7 @@ bool check_ramp_collision(room_object_t const &c, point &pos, point const &p_las
 	return 1;
 }
 
-unsigned get_stall_cubes(room_object_t const &c, cube_t sides[3]) {
+unsigned get_stall_cubes(room_object_t const &c, cube_t sides[3]) { // {side, side, door}
 	sides[0] = sides[1] = sides[2] = c;
 	float const width(c.get_width());
 	sides[0].d[!c.dim][1] -= 0.95*width;
