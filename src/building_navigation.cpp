@@ -53,6 +53,11 @@ bool check_line_int_xy(vect_cube_t const &c, point const &p1, point const &p2) {
 	}
 	return 0;
 }
+unsigned cube_nav_grid::get_node_ix(point p) const {
+	float gxy[2]; // grid index, with partial offset
+	get_grid_ix_fp(p, gxy);
+	return get_node_ix(round_fp(gxy[0]), round_fp(gxy[1]));
+}
 void cube_nav_grid::get_grid_ix_fp(point p, float gxy[2]) const {
 	grid_bcube.clamp_pt_xy(p);
 	for (unsigned d = 0; d < 2; ++d) {gxy[d] = (p[d] - grid_bcube.d[d][0])/step[d];}
@@ -97,17 +102,21 @@ bool cube_nav_grid::check_line_intersect(point const &p1, point const &p2, float
 	} // for c
 	return 0; // no intersection
 }
-void cube_nav_grid::make_region_walkable(cube_t const &region) {
+void cube_nav_grid::get_region_xy_bounds(cube_t const &region, unsigned &x1, unsigned &x2, unsigned &y1, unsigned &y2) const { // bounds are inclusive
 	float lo[2], hi[2];
 	get_grid_ix_fp(region.get_llc(), lo);
 	get_grid_ix_fp(region.get_urc(), hi);
-	unsigned const x1(round_fp(lo[0])), y1(round_fp(lo[1])), x2(round_fp(hi[0])), y2(round_fp(hi[1]));
+	x1 = round_fp(lo[0]); y1 = round_fp(lo[1]); x2 = round_fp(hi[0]); y2 = round_fp(hi[1]);
+}
+void cube_nav_grid::make_region_walkable(cube_t const &region) {
+	unsigned x1, y1, x2, y2;
+	get_region_xy_bounds(region, x1, x2, y1, y2);
 
 	for (unsigned y = y1; y <= y2; ++y) {
 		for (unsigned x = x1; x <= x2; ++x) {nodes[get_node_ix(x, y)] = 1;}
 	}
 }
-void cube_nav_grid::build(cube_t const &bcube_, vect_cube_t const &blockers, float stairs_extend, float radius_) {
+void cube_nav_grid::build(cube_t const &bcube_, vect_cube_t const &blockers, float radius_) {
 	invalid    = 0; // reset, in case build() was called on a nonempty but invalid cube_nav_grid
 	radius     = radius_;
 	bcube      = bcube_;
@@ -237,7 +246,7 @@ public:
 	void build_for_building(cube_t const &bcube_, vect_cube_t const &blockers, vector<door_stack_t> const &doors,
 		vector<stairwell_t> const &stairwells, float stairs_extend, float radius_)
 	{
-		build(bcube_, blockers, stairs_extend, radius_);
+		build(bcube_, blockers, radius_);
 		// flag all nodes in doorways as walkable to ensure the graph is connected, even if it means people will clip through the door frame;
 		// other solutions involve aligning doors with the grid (too difficult/restrictive) or reducing spacing to doorway_width/(2*radius) (too slow)
 		for (door_stack_t const &d : doors) {

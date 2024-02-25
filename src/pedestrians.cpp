@@ -3,6 +3,8 @@
 // 12/6/18
 #include "city.h"
 #include "shaders.h"
+#include "nav_grid.h"
+#include "profiler.h"
 #include <fstream>
 
 float const CROSS_SPEED_MULT     = 1.8; // extra speed multiplier when crossing the road
@@ -30,6 +32,7 @@ bool ai_follow_player();
 void get_dead_players_in_building(vector<dead_person_t> &dead_players, building_t const &building); // from building_gameplay.cpp
 bool check_city_building_line_coll_bs_any(point const &p1, point const &p2);
 int check_buildings_ped_coll(point const &pos, float bcube_radius, float detail_radius, unsigned plot_id, unsigned &building_id, cube_t *coll_cube);
+bool check_building_point_or_cylin_contained(point const &pos, float radius, unsigned building_id);
 bool check_line_int_xy(vect_cube_t const &c, point const &p1, point const &p2);
 void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool alert_other_zombies=0, bool high_priority=0, float gain=1.0, float pitch=1.0);
 int register_ai_player_coll(uint8_t &has_key, float height);
@@ -88,6 +91,46 @@ person_name_gen_t person_name_gen;
 
 string gen_random_first_name(rand_gen_t &rgen) {return person_name_gen.gen_random_first_name(rgen);} // for use in naming other entities
 string gen_random_full_name (rand_gen_t &rgen) {return person_name_gen.gen_name(rgen.rand(), rgen.rand_bool(), 1, 1);} // first and last names, random gender
+
+class city_cube_nav_grid : public cube_nav_grid {
+public:
+	void build_for_city(cube_t const &bcube_, vect_cube_t const &blockers, float radius_) {
+		//highres_timer_t timer("build_city_grid");
+		vect_cube_t non_building_blockers;
+		vect_cube_with_ix_t buildings;
+		
+		for (cube_t const &c : blockers) {
+			int const building_id(get_building_bcube_contains_pos(c.get_cube_center()));
+			if (building_id < 0) {non_building_blockers.push_back(c);} // not a building
+			else {buildings.emplace_back(c, building_id);} // building
+		}
+		// Note: can call treat_bcube_as_vcylin(), though small vertical cylinders may still be a single cube
+		build(bcube_, non_building_blockers, radius_);
+		float const zval(bcube.z1() + radius); // make sure it's actually inside the building
+		
+		for (cube_with_ix_t const &b : buildings) { // add buildings to the grid
+			unsigned x1, y1, x2, y2;
+			get_region_xy_bounds(b, x1, x2, y1, y2);
+
+			for (unsigned y = y1; y <= y2; ++y) {
+				for (unsigned x = x1; x <= x2; ++x) {
+					nodes[get_node_ix(x, y)] &= !check_building_point_or_cylin_contained(get_grid_pt(x, y, zval), radius, b.ix);
+				}
+			}
+		}
+	}
+	void debug_draw(shader_t &s) const {
+		s.set_cur_color(RED);
+
+		for (unsigned y = 0; y < num[1]; ++y) {
+			for (unsigned x = 0; x < num[0]; ++x) {
+				if (!nodes[get_node_ix(x, y)]) continue; // blocked
+				cube_t c; c.set_from_sphere((get_grid_pt(x, y) + vector3d(0.0, 0.0, radius)), 0.5*radius);
+				draw_simple_cube(c);
+			}
+		}
+	}
+}; // building_cube_nav_grid
 
 string person_base_t::get_name() const {
 	return person_name_gen.gen_name(ssn, is_female, 1, 1); // use ssn as name rand gen seed; include both first and last name
@@ -1671,6 +1714,11 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 		lookahead.expand_by_xy(get_coll_radius());
 		set_cube_zvals(lookahead, get_z1(), get_z2());
 		draw_colored_cube(lookahead, BROWN, s);
+	}
+	if (display_mode & 0x10) { // debugging of nav grid
+		city_cube_nav_grid nav_grid;
+		nav_grid.build_for_city(plot_bcube, avoid, radius/*get_coll_radius()*/);
+		nav_grid.debug_draw(s);
 	}
 	set_fill_mode(); // reset
 	draw_verts(line_pts, GL_LINES);
