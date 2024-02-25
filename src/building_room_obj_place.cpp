@@ -3906,14 +3906,21 @@ void building_t::try_place_light_on_wall(cube_t const &light, room_t const &room
 	} // for n
 }
 
-bool building_t::add_padlock_to_door(unsigned door_ix, rand_gen_t &rgen) {
-	if (!has_room_geom() || !building_obj_model_loader.is_model_valid(OBJ_MODEL_PADLOCK)) return 0;
+bool building_t::add_padlock_to_door(unsigned door_ix, unsigned lock_color_mask, rand_gen_t &rgen) {
+	if (lock_color_mask == 0 || !has_room_geom() || !building_obj_model_loader.is_model_valid(OBJ_MODEL_PADLOCK)) return 0;
 	door_t &door(get_door(door_ix));
 	if (door.is_padlocked() || door.open) return 0; // already has a padlock, or door is not closed
 	assert(door.obj_ix < 0); // not yet assigned
 	vect_room_object_t &objs(interior->room_geom->objs);
 	door.obj_ix = objs.size();
-	unsigned const color_ix(rgen.rand() % NUM_LOCK_COLORS);
+	// select a lock from the colors available from keys found in this building
+	static vector<unsigned> avail_colors;
+	avail_colors.clear();
+
+	for (unsigned n = 0; n < NUM_LOCK_COLORS; ++n) {
+		if (lock_color_mask & (1 << n)) {avail_colors.push_back(n);}
+	}
+	unsigned const color_ix(avail_colors[rgen.rand() % avail_colors.size()]);
 	door.set_padlock_color_ix(color_ix); // padlocked
 	cube_t const door_bc(door.get_true_bcube());
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_PADLOCK)); // D, W, H

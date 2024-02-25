@@ -15,6 +15,7 @@ void get_balcony_pillars(room_object_t const &c, float ground_floor_z1, cube_t p
 void expand_convex_polygon_xy(vect_point &points, point const &center, float expand);
 bool is_pool_tile_floor(room_object_t const &obj);
 void invalidate_tile_smap_in_region(cube_t const &region, bool repeat_next_frame=0);
+void get_obj_drawers_or_doors(room_object_t const &obj, vect_cube_t &drawers, room_object_t &drawers_part, float &drawer_extend);
 
 
 unsigned light_ix_assign_t::get_ix_for_light(cube_t const &c, bool walls_not_shared) {
@@ -1199,11 +1200,39 @@ void building_t::add_exterior_ac_pipes(rand_gen_t rgen) {
 
 void building_t::add_padlocks(rand_gen_t rgen) {
 	if (!is_house) return; // houses only for now, to avoid adding too many locks
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_PADLOCK)) return; // no model
 	assert(has_room_geom());
+	// determine which color of keys we have hidden in drawers, so that we don't place a padlock that can't be opened;
+	// this doesn't guarantee we can open it because the key may be behind the door, but it's a good check anyway
+	unsigned key_color_mask(0);
+	room_object_t drawers_part;
+	vect_cube_t drawers;
+	float drawer_extend(0.0); // unused
+
+	for (room_object_t const &obj : interior->room_geom->objs) { // iterate over all objects; buttons and stairs haven't been placed yet
+		if (obj.type != TYPE_DRESSER && obj.type != TYPE_NIGHTSTAND && (obj.type != TYPE_DESK || !obj.desk_has_drawers())) continue; // item doesn't have drawers
+		room_object_t obj_drawers_open(obj);
+		obj_drawers_open.drawer_flags = ~uint16_t(0); // make all drawers open so that we get the correct drawers bounds
+		get_obj_drawers_or_doors(obj_drawers_open, drawers, drawers_part, drawer_extend);
+
+		for (unsigned dix = 0; dix < drawers.size(); ++dix) {
+			unsigned sel_item_ix(0);
+			float stack_z1(0.0);
+
+			for (unsigned item_ix = 0; item_ix < 16; ++item_ix) { // take the *last* item in the drawer first, which will be the top item if stacked
+				room_object_t const item(interior->room_geom->get_item_in_drawer(drawers_part, drawers[dix], dix, item_ix, stack_z1));
+				if (item.type == TYPE_NONE) break; // no more items
+				if (item.type != TYPE_KEY ) continue;
+				assert(item.obj_id < NUM_LOCK_COLORS);
+				key_color_mask |= (1 << item.obj_id);
+			}
+		} // for dix
+	} // for i
+	if (key_color_mask == 0) return; // no keys, so no padlocks
 
 	for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) {
-		if (!d->locked || d->open || rgen.rand_bool()) continue;
-		add_padlock_to_door((d - interior->doors.begin()), rgen);
+		if (d->open || !d->locked || rgen.rand_bool()) continue;
+		add_padlock_to_door((d - interior->doors.begin()), key_color_mask, rgen);
 	}
 }
 

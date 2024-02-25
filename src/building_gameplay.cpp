@@ -1380,8 +1380,34 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 	return closest_obj_id;
 }
 
-bool is_counter(room_object_t const &obj) {return (obj.type == TYPE_COUNTER || obj.type == TYPE_KSINK);}
+bool is_counter   (room_object_t const &obj) {return (obj.type == TYPE_COUNTER || obj.type == TYPE_KSINK);}
+bool obj_has_doors(room_object_t const &obj) {return (is_counter(obj) || obj.type == TYPE_CABINET);}
 
+void get_obj_drawers_or_doors(room_object_t const &obj, vect_cube_t &drawers, room_object_t &drawers_part, float &drawer_extend) {
+	// Note: this is a messy solution and must match the drawing code, but it's unclear how else we can get the location of the drawers
+	if (obj_has_doors(obj)) {
+		get_cabinet_or_counter_doors(obj, drawers, drawers); // combine doors and drawers together; will sort them out later
+		drawers_part  = obj; // need to at least copy the IDs and flags
+		drawer_extend = (obj.dir ? 1.0 : -1.0)*0.8*obj.get_depth(); // used for cabinet drawers
+	}
+	else if (obj.type == TYPE_FCABINET) {
+		drawers_part  = obj;
+		drawer_extend = get_filing_cabinet_drawers(obj, drawers);
+	}
+	else {
+		if (obj.type == TYPE_DESK) {
+			drawers_part = get_desk_drawers_part(obj);
+			bool const side(obj.obj_id & 1);
+			drawers_part.d[!obj.dim][side] -= (side ? 1.0 : -1.0)*0.85*get_tc_leg_width(obj, 0.06);
+		}
+		else {
+			assert(obj.type == TYPE_DRESSER || obj.type == TYPE_NIGHTSTAND);
+			drawers_part = get_dresser_middle(obj);
+			drawers_part.expand_in_dim(!obj.dim, -0.5*get_tc_leg_width(obj, 0.10));
+		}
+		drawer_extend = get_drawer_cubes(drawers_part, drawers, 0, 1); // front_only=0, inside_only=1
+	}
+}
 bool building_room_geom_t::open_nearest_drawer(building_t &building, point const &at_pos, vector3d const &in_dir, float range, bool pickup_item, bool check_only) {
 	int closest_obj_id(-1);
 	float dmin_sq(0.0);
@@ -1391,7 +1417,8 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		bool const is_counter_type(is_counter(*i) || i->type == TYPE_CABINET);
 		// drawers that can be opened or picked from
-		bool const has_drawers(i->type == TYPE_DRESSER || i->type == TYPE_NIGHTSTAND || i->type == TYPE_DESK || i->type == TYPE_COUNTER || i->type == TYPE_FCABINET);
+		bool const has_drawers(i->type == TYPE_DRESSER || i->type == TYPE_NIGHTSTAND || i->type == TYPE_COUNTER ||
+			i->type == TYPE_FCABINET || (i->type == TYPE_DESK && i->desk_has_drawers()));
 		if (!(has_drawers || (!pickup_item && is_counter_type))) continue; // || doors that can be opened (no item pickup)
 		cube_t bcube(*i);
 		float &front_face(bcube.d[i->dim][i->dir]);
@@ -1410,32 +1437,9 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	room_object_t &obj(objs[closest_obj_id]);
 	room_object_t drawers_part;
 	vect_cube_t drawers; // or doors
-	bool const has_doors(is_counter(obj) || obj.type == TYPE_CABINET);
+	bool const has_doors(obj_has_doors(obj));
 	float drawer_extend(0.0); // signed, for drawers only
-
-	// Note: this is a messy solution and must match the drawing code, but it's unclear how else we can get the location of the drawers
-	if (has_doors) {
-		get_cabinet_or_counter_doors(obj, drawers, drawers); // combine doors and drawers together; will sort them out later
-		drawers_part  = obj; // need to at least copy the IDs and flags
-		drawer_extend = (obj.dir ? 1.0 : -1.0)*0.8*obj.get_depth(); // used for cabinet drawers
-	}
-	else if (obj.type == TYPE_FCABINET) {
-		drawers_part  = obj;
-		drawer_extend = get_filing_cabinet_drawers(obj, drawers);
-	}
-	else {
-		if (obj.type == TYPE_DESK) {
-			if (!obj.desk_has_drawers()) return 0; // no drawers for this desk
-			drawers_part = get_desk_drawers_part(obj);
-			bool const side(obj.obj_id & 1);
-			drawers_part.d[!obj.dim][side] -= (side ? 1.0 : -1.0)*0.85*get_tc_leg_width(obj, 0.06);
-		}
-		else {
-			drawers_part = get_dresser_middle(obj);
-			drawers_part.expand_in_dim(!obj.dim, -0.5*get_tc_leg_width(obj, 0.10));
-		}
-		drawer_extend = get_drawer_cubes(drawers_part, drawers, 0, 1); // front_only=0, inside_only=1
-	}
+	get_obj_drawers_or_doors(obj, drawers, drawers_part, drawer_extend);
 	dmin_sq = 0.0;
 	int closest_drawer_id(-1);
 
