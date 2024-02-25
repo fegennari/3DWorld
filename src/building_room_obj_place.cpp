@@ -1484,6 +1484,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 
 	if (rgen.rand_float() < 0.1) { // make this door/room out of order 10% of the time
 		make_door_out_or_order(room, zval, room_id, tot_light_amt, br_door_stack_ix);
+		room.has_out_of_order = 1; // flag if any floor is out of order
 	}
 	return 1;
 }

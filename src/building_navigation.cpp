@@ -1265,7 +1265,9 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		if (room_sel < 2 && special_rooms[room_sel] >= 0) {cand_room = special_rooms[room_sel];} else {cand_room = (rgen.rand() % interior->rooms.size());}
 		if (cand_room == (unsigned)loc.room_ix) continue;
 		room_t const &room(get_room(cand_room));
-		if (room.is_hallway) continue; // don't select a hallway
+		if (room.is_hallway      ) continue; // don't select a hallway
+		if (room.has_out_of_order) continue; // don't select a bathroom that may be out of order (not tracked per-floor)
+		// what about rooms were all doors are locked? this isn't easy to check for; it will be a surprise for the player if the person is a zombie
 		bool const is_retail(room.is_retail());
 		// allow targeting the top floor of a retail room as the path construction will route to the lowest level
 		float const bot_floor_z(room.z1()), top_ceil_z((room.is_single_floor && !is_retail) ? (bot_floor_z + floor_spacing) : room.z2()); // approximate
