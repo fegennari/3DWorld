@@ -67,7 +67,7 @@ float cube_nav_grid::get_distance(unsigned x1, unsigned y1, unsigned x2, unsigne
 	return sqrt(dx*dx + dy*dy);
 }
 bool cube_nav_grid::find_open_node_closest_to(point const &p, point const &dest, unsigned &nx, unsigned &ny) const {
-	if (!bcube.contains_pt_xy(p)) return 0; // outside the grid valid area; error?
+	if (!bcube.contains_pt_xy_inclusive(p)) return 0; // outside the grid valid area; error?
 	float gxy[2]; // grid index, with partial offset
 	get_grid_ix_fp(p, gxy);
 	float dmin_sq(0.0);
@@ -165,6 +165,7 @@ bool cube_nav_grid::find_path(point const &p1, point const &p2, ai_path_t &path)
 		path.add(get_grid_pt(nx1, ny1, p1.z)); // add the single point
 		return 1;
 	}
+	if (path.empty()) {path.push_back(p1);} // will assert otherwise
 	vector<a_star_node_state_t> state(nodes.size()); // dense vector; unordered_map seems to be slower
 	vector<uint8_t> open(nodes.size(), 0), closed(nodes.size(), 0); // tentative/already evaluated nodes
 	std::priority_queue<pair<float, ix_pair_t> > open_queue;
@@ -196,7 +197,7 @@ bool cube_nav_grid::find_path(point const &p1, point const &p2, ai_path_t &path)
 				sn.set(cur.x, cur.y, new_x, new_y);
 
 				if (new_ix == end_ix) { // done, reconstruct path (in reverse)
-					assert(!path.empty()); // p1 should have been added previously
+					assert(!path.empty()); // p1 should have been added by the caller
 					unsigned const rev_start_ix(path.size());
 					path.add(get_grid_pt(nx2, ny2, p1.z)); // last point, added first
 					unsigned path_ix(cur_ix), prev_x(new_x), prev_y(new_y);

@@ -108,7 +108,8 @@ public:
 		build(bcube_, non_building_blockers, radius_);
 		float const zval(bcube.z1() + radius); // make sure it's actually inside the building
 		
-		for (cube_with_ix_t const &b : buildings) { // add buildings to the grid
+		// add buildings to the grid; this is insufficient because they're not added to blockers_exp, so we can take a shortcut path through them
+		for (cube_with_ix_t const &b : buildings) {
 			unsigned x1, y1, x2, y2;
 			get_region_xy_bounds(b, x1, x2, y1, y2);
 
@@ -1638,7 +1639,7 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	get_avoid_cubes(ped_mgr, colliders, plot_bcube, next_plot_bcube, dest_pos, avoid, in_illegal_area);
 	cube_t union_plot_bcube(plot_bcube);
 	union_plot_bcube.union_with_cube(next_plot_bcube);
-	vector<point> path;
+	ai_path_t path;
 	unsigned const ret(path_finder.run(pos, dest_pos, union_plot_bcube, PATH_GAP_FACTOR*radius, dest_pos)); // 0=failed, 1=valid path, 2=init contained, 3=straight path (no coll)
 	bool const at_dest_plot(plot == dest_plot), complete(path_finder.found_complete_path());
 	colorRGBA line_color(at_dest_plot ? RED : YELLOW); // paths
@@ -1649,7 +1650,7 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 		path.push_back(dest_pos);
 		if (!at_dest_plot) {line_color = ORANGE; node_color = (safe_to_cross ? GREEN : RED);} // straight line
 	}
-	else if (ret != 0) {path = path_finder.get_best_path();} // found a path
+	else if (ret != 0) {vector_add_to(path_finder.get_best_path(), path);} // found a path
 	vector<vert_color> line_pts;
 	shader_t s;
 	s.begin_color_only_shader();
@@ -1719,6 +1720,22 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 		city_cube_nav_grid nav_grid;
 		nav_grid.build_for_city(plot_bcube, avoid, radius/*get_coll_radius()*/);
 		nav_grid.debug_draw(s);
+		point plot_dest(orig_dest_pos);
+		plot_bcube.clamp_pt_xy(plot_dest);
+		path.clear();
+		path.push_back(pos);
+		bool const success(nav_grid.find_path(pos, plot_dest, path));
+		colorRGBA const color(success ? PURPLE : BLACK);
+		path.push_back(plot_dest);
+		set_fill_mode(); // reset
+		begin_ped_sphere_draw(s, color, in_sphere_draw, 0);
+		for (point const &p : path) {draw_sphere_vbo(p, 0.75*radius, 16, 0);}
+		end_sphere_draw(in_sphere_draw);
+
+		for (auto p = path.begin()+1; p != path.end(); ++p) {
+			line_pts.emplace_back(*(p-1), color);
+			line_pts.emplace_back(*p,     color);
+		}
 	}
 	set_fill_mode(); // reset
 	draw_verts(line_pts, GL_LINES);
