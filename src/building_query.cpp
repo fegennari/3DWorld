@@ -699,6 +699,11 @@ cube_t get_true_room_obj_bcube(room_object_t const &c) { // for collisions, etc.
 		c_ext.z2() += 0.5*c_ext.dz(); // extend the top upward to block the player from walking onto the railing
 		return c_ext;
 	}
+	if (c.type == TYPE_RAILING) { // only works for straight (non-sloped) top railings
+		cube_t c_ext(c);
+		c_ext.z2() = c.z1() + get_railing_height(c);
+		return c_ext;
+	}
 	if (c.type == TYPE_SHELVES) {return get_shelves_no_bot_gap(c);}
 	return c; // default cube case
 }
@@ -1148,10 +1153,11 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 	// Note: no collision check with expanded_objs
 	for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with
 		// ignore blockers and railings, but allow more than c->no_coll()
-		if (c == self || c->type == TYPE_BLOCKER || c->type == TYPE_RAILING || c->type == TYPE_PAPER || c->type == TYPE_PEN || c->type == TYPE_PENCIL ||
+		if (c == self || c->type == TYPE_BLOCKER || c->type == TYPE_PAPER || c->type == TYPE_PEN || c->type == TYPE_PENCIL ||
 			c->type == TYPE_BOTTLE || c->type == TYPE_FLOORING || c->type == TYPE_SIGN || c->type == TYPE_WBOARD || c->type == TYPE_WALL_TRIM ||
 			c->type == TYPE_DRAIN || c->type == TYPE_CRACK || c->type == TYPE_SWITCH || c->type == TYPE_BREAKER || c->type == TYPE_OUTLET || c->type == TYPE_VENT ||
 			c->type == TYPE_WIND_SILL || c->type == TYPE_TEESHIRT || c->type == TYPE_PANTS || c->type == TYPE_BLANKET || c->type == TYPE_FOLD_SHIRT) continue;
+		if (c->type == TYPE_RAILING && (!(c->flags & RO_FLAG_TOS) || !c->is_open())) continue; // only railings at the top of stairs (non-sloped) with balusters have collisions
 		if (c->type == TYPE_POOL_TILE && c->no_coll()) continue;
 		cube_t const bc(get_true_room_obj_bcube(*c));
 		if (!sphere_cube_intersect(pos, radius, bc)) continue; // no intersection (optimization)
