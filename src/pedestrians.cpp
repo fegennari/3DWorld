@@ -98,20 +98,25 @@ class city_cube_nav_grid : public cube_nav_grid {
 
 	virtual bool check_line_intersect(point const &p1, point const &p2, float radius) const {
 		if (cube_nav_grid::check_line_intersect(p1, p2, radius)) return 1;
+		if (buildings.empty() || p1 == p2) return 0;
+		// since we don't have a building cylinder intersection funtion, offset the line by radius to both sides and test them both
+		vector3d const dir((p2 - p1).get_norm()), delta(radius*cross_product(dir, plus_z));
+		point const p1s[2] = {p1-delta, p1+delta}, p2s[2] = {p2-delta, p2+delta};
 
 		for (cube_with_ix_t const &b : buildings) { // check buildings; here we can't use radius, so it won't be exact
 			if ((int)b.ix == dest_building) continue; // exclude the dest building
-			if (b.line_intersects(p1, p2) && check_line_coll_building(p1, p2, b.ix)) return 1;
+
+			for (unsigned d = 0; d < 2; ++d) {
+				if (b.line_intersects(p1s[d], p2s[d]) && check_line_coll_building(p1s[d], p2s[d], b.ix)) return 1;
+			}
 		}
 		return 0;
 	}
 public:
 	// problems with this approach:
-	// * building line test is not using radius and may get too close to the building
 	// * dest buildings and cars are not excluded, so we won't be able to reach them
 	// * dest pos may be too close to a power pole, lamp post, etc. and not reachable
 	// * narrow sidewalk space between the road and residential yards will be even more narrow, with only 2-3 "lanes" for people to walk in
-	// * narrow paths between buildings with no unblocked grids won't be usable
 	// * need a way to cache this per-plot to make it faster
 	void build_for_city(cube_t const &bcube_, vect_cube_t const &blockers, float radius_) {
 		//highres_timer_t timer("build_city_grid");
