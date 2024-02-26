@@ -1232,7 +1232,7 @@ struct breaker_zone_t {
 
 struct stairs_landing_base_t : public cube_t {
 	bool dim=0, dir=0, bend_dir=0, roof_access=0, stack_conn=0, in_ext_basement=0, against_wall[2]={};
-	stairs_shape shape;
+	stairs_shape shape=SHAPE_STRAIGHT;
 
 	stairs_landing_base_t() {}
 	stairs_landing_base_t(cube_t const &c, bool dim_, bool dir_, bool roof_access_, stairs_shape shape_, bool sc=0, bool ieb=0) :
