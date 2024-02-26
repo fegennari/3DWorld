@@ -398,7 +398,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	}
 	// place benches in parks and non-residential areas
 	if (!is_residential || plot.is_park) {
-		float const bench_radius(0.3 * car_length), bench_spacing(max(bench_radius, min_obj_spacing));
+		float const bench_radius(0.3 * car_length), bench_spacing(max(bench_radius, 1.5f*min_obj_spacing)); // add a bit of extra space
 
 		for (unsigned n = 0; n < city_params.max_benches_per_plot; ++n) {
 			point pos;
@@ -413,7 +413,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				}
 			}
 			bench_t const bench(pos, bench_radius, bench_dim, bench_dir);
-			if (plot.is_park && check_path_coll_xy(bench.bcube, ppaths, paths_start)) continue; // check path collision
+			if (plot.is_park && check_path_coll_xy(bench.bcube, ppaths, paths_start)) continue; // check park path collision
 			bench_groups.add_obj(bench, benches);
 			colliders.push_back(bench.bcube);
 			blockers.back() = bench.bcube; // update blocker since bench is non-square
@@ -536,7 +536,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			float const height(2.0*radius*(model_sz.z/(0.5*(model_sz.x + model_sz.y)))); // assumes square, sz.x == sz.y
 			fountain_t const fountain(pos, radius, height, rgen.rand()); // random model_select
 			
-			if (!plot.is_park || !check_path_coll_xy(fountain.bcube, ppaths, paths_start)) { // check path collision
+			if (!plot.is_park || !check_path_coll_xy(fountain.bcube, ppaths, paths_start)) { // check park path collision
 				fountain_groups.add_obj(fountain, fountains);
 				add_cube_to_colliders_and_blockers(fountain.bcube, colliders, blockers);
 			}
@@ -609,7 +609,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			set_cube_zvals(pole, base_pt.z, (base_pt.z + height));
 			for (unsigned d = 0; d < 2; ++d) {set_wall_width(pole, base_pt[d], pradius, d);}
 
-			if (!plot.is_park || !check_path_coll_xy(pole, ppaths, paths_start)) { // check path collision
+			if (!plot.is_park || !check_path_coll_xy(pole, ppaths, paths_start)) { // check park path collision
 				bool dim(0), dir(0); // facing dir
 				get_closest_dim_dir_xy(pole, plot, dim, dir); // face the closest plot edge
 				flag_groups.add_obj(create_flag(dim, dir, base_pt, height, length), flags);
