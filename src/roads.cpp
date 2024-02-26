@@ -654,6 +654,18 @@ bool road_isec_t::check_sphere_coll(point const &pos, float radius, cube_t &coll
 	return 0;
 }
 
+void road_isec_t::add_stoplight_bcubes_in_region(cube_t const &region, vect_cube_t &bcubes) const {
+	//if (has_stopsign) {} // not handled here
+	if (!has_stoplight) return; // no stoplights
+	if (!intersects_xy(region)) return;
+
+	for (unsigned n = 0; n < 4; ++n) {
+		if (!(conn & (1 << n))) continue; // no road in this dir
+		cube_t const sl_cube(get_stoplight_cube(n));
+		if (sl_cube.intersects_xy(region)) {bcubes.push_back(sl_cube);}
+	}
+}
+
 bool road_isec_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, float dist, vector3d *cnorm) const {
 	//if (has_stopsign) {} // not handled here
 	if (!has_stoplight) return 0; // no stoplights

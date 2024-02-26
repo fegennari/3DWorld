@@ -540,6 +540,7 @@ struct road_isec_t : public cube_t {
 	float get_stop_sign_height  () const {return 0.075*(dx() + dy());}
 	float get_street_sign_height() const {return SIGN_STOPSIGN_HEIGHT*get_stop_sign_height();}
 	bool check_sphere_coll(point const &pos, float radius, cube_t &coll_cube) const;
+	void add_stoplight_bcubes_in_region(cube_t const &region, vect_cube_t &bcubes) const;
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, float dist, vector3d *cnorm) const;
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
 	void draw_stoplights_and_street_signs(road_draw_state_t &dstate, vector<road_t> const &roads, unsigned cur_city, bool shadow_only) const;

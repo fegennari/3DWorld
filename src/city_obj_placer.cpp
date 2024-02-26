@@ -17,6 +17,7 @@ void add_flags_for_city(unsigned city_id, vector<city_flag_t> &flags);
 city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, float length, int flag_id=-1);
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
 float get_inner_sidewalk_width();
+cube_t get_plot_coll_region(cube_t const &plot_bcube);
 void play_hum_sound(point const &pos, float gain, float pitch);
 
 bool are_birds_enabled() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_BIRD_ANIM);}
@@ -1067,7 +1068,7 @@ void city_obj_placer_t::place_objects_in_isec(road_isec_t const &isec, bool is_r
 	}
 }
 
-void city_obj_placer_t::add_stop_sign_plot_colliders(vector<road_plot_t> const &plots, vector<vect_cube_t> &plot_colliders) const {
+void city_obj_placer_t::add_ssign_and_slight_plot_colliders(vector<road_plot_t> const &plots, vector<road_isec_t> const isecs[3], vector<vect_cube_t> &plot_colliders) const {
 	assert(plots.size() == plot_colliders.size());
 	float const bcube_expand(2.0*get_sidewalk_width()); // include sidewalk stop signs in their associated plots
 
@@ -1077,6 +1078,13 @@ void city_obj_placer_t::add_stop_sign_plot_colliders(vector<road_plot_t> const &
 
 		for (unsigned i = 0; i < plots.size(); ++i) { // linear iteration; stop signs are added to isecs, not plots; seems to be only 0.05ms per call
 			if (plots[i].intersects_xy(bcube_ext)) {plot_colliders[i].push_back(s.bcube); break;}
+		}
+	}
+	for (unsigned n = 0; n < 3; ++n) { // {2-way, 3-way, 4-way}
+		for (road_isec_t const &isec : isecs[n]) {
+			for (unsigned i = 0; i < plots.size(); ++i) { // another linear iteration, for the same reason
+				isec.add_stoplight_bcubes_in_region(get_plot_coll_region(plots[i]), plot_colliders[i]);
+			}
 		}
 	}
 }
@@ -1189,7 +1197,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 			place_objects_in_isec(isec, is_residential, rgen);
 		}
 	}
-	add_stop_sign_plot_colliders(plots, plot_colliders);
+	add_ssign_and_slight_plot_colliders(plots, isecs, plot_colliders);
 	connect_power_to_buildings(plots);
 	if (have_cars) {add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);}
 	add_objs_on_buildings(city_id);

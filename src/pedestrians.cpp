@@ -218,7 +218,7 @@ bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_p
 
 bool pedestrian_t::check_road_coll(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, cube_t &coll_cube) const {
 	// Note: streetlights and stoplights now sit on the edges between sidewalks and roads, so they contribute to collisions in both of these areas;
-	// this step can only be skipped if the player is inside a plot, and neither on the sidewalk or in the road
+	// this step can only be skipped if the pedestrian is inside a plot, and neither on the sidewalk or in the road
 	if (!in_the_road && plot_bcube.contains_pt_xy(pos)) return 0;
 	float const expand((get_sidewalk_width() - get_sidewalk_walkable_area()) + radius); // max dist from plot edge where a collision can occur
 	cube_t pbce(plot_bcube), npbce(next_plot_bcube);
@@ -226,7 +226,7 @@ bool pedestrian_t::check_road_coll(ped_manager_t const &ped_mgr, cube_t const &p
 	npbce.expand_by_xy(expand);
 	if ((!pbce.contains_pt_xy(pos)) && (!npbce.contains_pt_xy(pos))) return 0; // ped is too far from the edge of the road to collide with streetlights or stoplights
 	if (ped_mgr.check_isec_sphere_coll       (*this, coll_cube)) return 1;
-	if (ped_mgr.check_streetlight_sphere_coll(*this, coll_cube)) return 1;
+	if (ped_mgr.check_streetlight_sphere_coll(*this, coll_cube)) return 1; // Note: now handled by plot_colliders/avoid cubes when inside a plot, but not when in the road
 	return 0;
 }
 
@@ -715,7 +715,7 @@ void add_and_expand_ped_avoid_cube(cube_t const &c, vect_cube_t &avoid, float ex
 	ac.expand_by_xy(expand*((c.dz() < 0.67*height) ? 0.5 : 1.0)); // reduce expand value for short objects that will only collide with our legs
 	if (ac.intersects_xy(region)) {avoid.push_back(ac);} // skip power poles and streetlights completely outside the plot
 }
-cube_t get_avoid_region(cube_t const &plot_bcube) {
+cube_t get_plot_coll_region(cube_t const &plot_bcube) {
 	cube_t region(plot_bcube);
 	region.expand_by_xy(get_sidewalk_width());
 	return region;
@@ -729,7 +729,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	road_plot_t const &cur_plot(ped_mgr.get_city_plot_for_peds(city, plot));
 	bool const is_home_plot(plot == dest_plot); // plot contains our destination
 	if (is_home_plot && !follow_player) {assert(plot_bcube == next_plot_bcube);} // doesn't hold when following the player?
-	cube_t const region(get_avoid_region(cur_plot));
+	cube_t const region(get_plot_coll_region(cur_plot));
 	bool keep_cur_dest(0);
 
 	if (cur_plot.is_residential_not_park()) { // apply special restrictions when walking through a residential block
@@ -828,7 +828,7 @@ bool pedestrian_t::check_path_blocked(ped_manager_t &ped_mgr, point const &dest,
 	avoid.clear();
 	if (check_buildings) {get_building_bcubes(check_area, avoid);}
 	road_plot_t const &cur_plot(ped_mgr.get_city_plot_for_peds(city, plot));
-	cube_t const region(get_avoid_region(cur_plot));
+	cube_t const region(get_plot_coll_region(cur_plot));
 	point const test_pts[2] = {pos, dest};
 	int plots_to_test   [2] = {-1,  -1  };
 
