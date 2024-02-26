@@ -230,16 +230,19 @@ bool pedestrian_t::check_road_coll(ped_manager_t const &ped_mgr, cube_t const &p
 	return 0;
 }
 
+float get_ped_coll_rscale_for_obj(cube_t const &c, float height) {
+	return ((c.dz() < 0.67*height) ? 0.5 : 1.0); // reduce expand value for short objects that will only collide with our legs
+}
 // all tall, thin, and square footprint colliders happen to be vertical cylinders (trees, power poles, streetlights, flags, etc.)
 bool treat_bcube_as_vcylin(cube_t const &c, float height) {
 	float const dx(c.dx()), dy(c.dy()), dz(c.dz());
 	return (dz > height && dx < height && dy < height && fabs(dx - dy) < 0.05*min(dx, dy));
 }
 bool check_collider_coll(cube_t const &c, point const &pos, float radius, float height) {
-	if (!sphere_cube_intersect_xy(pos, radius, c)) return 0;
-	if (!treat_bcube_as_vcylin(c, height))         return 1;
-	float const r_sum(radius + 0.25*(c.dx() + c.dy()));
-	return dist_xy_less_than(pos, c.get_cube_center(), r_sum);
+	float const cradius(radius*get_ped_coll_rscale_for_obj(c, height));
+	if (!sphere_cube_intersect_xy(pos, cradius, c)) return 0;
+	if (!treat_bcube_as_vcylin(c, height))          return 1;
+	return dist_xy_less_than(pos, c.get_cube_center(), (cradius + 0.25*(c.dx() + c.dy())));
 }
 bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest, cube_t &coll_cube, ped_manager_t const *const ped_mgr, int *coll_bldg_ix) const {
 	if (in_the_road) return 1; // not in a plot, no collision detection needed
@@ -712,7 +715,7 @@ bool pedestrian_t::choose_alt_next_plot(ped_manager_t const &ped_mgr) {
 
 void add_and_expand_ped_avoid_cube(cube_t const &c, vect_cube_t &avoid, float expand, float height, cube_t const &region) {
 	cube_t ac(c);
-	ac.expand_by_xy(expand*((c.dz() < 0.67*height) ? 0.5 : 1.0)); // reduce expand value for short objects that will only collide with our legs
+	ac.expand_by_xy(expand*get_ped_coll_rscale_for_obj(c, height));
 	if (ac.intersects_xy(region)) {avoid.push_back(ac);} // skip power poles and streetlights completely outside the plot
 }
 cube_t get_plot_coll_region(cube_t const &plot_bcube) {
