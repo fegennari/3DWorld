@@ -1994,7 +1994,7 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 	else {lg_cubes.push_back(c);}
 }
 
-// collision query used for rats, snakes, and insects: p1 and p2 are line end points; radius applies in X and Y, hheight is half height and applies in +/- z
+// interior collision query used for rats, snakes, and insects: p1 and p2 are line end points; radius applies in X and Y, hheight is half height and applies in +/- z
 // note that for_spider is used with insects, not spiders, but it's named this way because it's passed into nested calls that use this variable name
 // return value: 0=no coll, 1=d0 wall, 2=d1 wall, 3=closed door d0, 4=closed door d1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object, 10=closet, 11=cabinet
 int building_t::check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight, bool for_spider) const {

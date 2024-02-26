@@ -93,18 +93,30 @@ string gen_random_first_name(rand_gen_t &rgen) {return person_name_gen.gen_rando
 string gen_random_full_name (rand_gen_t &rgen) {return person_name_gen.gen_name(rgen.rand(), rgen.rand_bool(), 1, 1);} // first and last names, random gender
 
 class city_cube_nav_grid : public cube_nav_grid {
+	vect_cube_with_ix_t buildings;
+	int dest_building=-1;
+
+	virtual bool check_line_intersect(point const &p1, point const &p2, float radius) const {
+		if (cube_nav_grid::check_line_intersect(p1, p2, radius)) return 1;
+
+		for (cube_with_ix_t const &b : buildings) { // check buildings; here we can't use radius, so it won't be exact
+			if ((int)b.ix == dest_building) continue; // exclude the dest building
+			if (b.line_intersects(p1, p2) && check_line_coll_building(p1, p2, b.ix)) return 1;
+		}
+		return 0;
+	}
 public:
 	// problems with this approach:
-	// * path shortening will not occur inside the bcube of non-cube buildings, which will make paths stairstepped
+	// * building line test is not using radius and may get too close to the building
 	// * dest buildings and cars are not excluded, so we won't be able to reach them
 	// * dest pos may be too close to a power pole, lamp post, etc. and not reachable
-	// * narrow sidelwalk space between the road and residential yards will be even more narrow, with only 2-3 "lanes" for people to walk in
+	// * narrow sidewalk space between the road and residential yards will be even more narrow, with only 2-3 "lanes" for people to walk in
 	// * narrow paths between buildings with no unblocked grids won't be usable
 	// * need a way to cache this per-plot to make it faster
 	void build_for_city(cube_t const &bcube_, vect_cube_t const &blockers, float radius_) {
 		//highres_timer_t timer("build_city_grid");
 		vect_cube_t non_building_blockers;
-		vect_cube_with_ix_t buildings;
+		buildings.clear();
 		
 		for (cube_t const &c : blockers) {
 			if (!bcube_.intersects_xy(c)) continue; // outside the plot
@@ -116,7 +128,7 @@ public:
 		build(bcube_, non_building_blockers, radius_, 0, 1); // add_edge_pad=0, no_blocker_expand=1 (blockers are already expanded)
 		float const zval(bcube.z1() + radius); // make sure it's actually inside the building
 		
-		// add buildings to the grid; this is insufficient because they're not added to blockers_exp, so we can take a shortcut path through them
+		// add buildings to the grid and fill them sparsely; will also be included in check_line_intersect()
 		for (cube_with_ix_t const &b : buildings) {
 			unsigned x1, y1, x2, y2;
 			get_region_xy_bounds(b, x1, x2, y1, y2);
@@ -127,7 +139,14 @@ public:
 				}
 			}
 		}
-		vector_add_to(buildings, blockers_exp); // building bcubes are needed for line intersection tests for path shortening, but do not directly contribute to the grid
+	}
+	bool find_path(point const &p1, point const &p2, ai_path_t &path, int dest_building_) {
+		dest_building = dest_building_;
+
+		if (dest_building >= 0) {
+			// TODO: exclude this building from the grid somehow, or shorten the path to it
+		}
+		return cube_nav_grid::find_path(p1, p2, path);
 	}
 	void debug_draw(shader_t &s) const {
 		s.set_cur_color(RED);
@@ -1749,9 +1768,11 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 		plot_bcube.clamp_pt_xy(plot_dest);
 		path.clear();
 		path.push_back(pos);
-		bool const success(nav_grid.find_path(pos, plot_dest, path));
+		bool const success(nav_grid.find_path(pos, plot_dest, path, (has_dest_bldg ? (int)dest_bldg : -1)));
 		colorRGBA const color(success ? PURPLE : BLACK);
 		path.push_back(plot_dest);
+		path.push_back(orig_dest_pos);
+		for (point &p : path) {p.z += 0.1*radius;} // shift up slightly so that it's not overlapping the other path nodes/lines
 		set_fill_mode(); // reset
 		begin_ped_sphere_draw(s, color, in_sphere_draw, 0);
 		for (point const &p : path) {draw_sphere_vbo(p, sphere_radius, NDIV, 0);}

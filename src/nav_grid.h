@@ -36,10 +36,11 @@ protected:
 	void get_grid_ix_fp(point p, float gxy[2]) const;
 	float get_distance(unsigned x1, unsigned y1, unsigned x2, unsigned y2) const;
 	bool find_open_node_closest_to(point const &p, point const &dest, unsigned &nx, unsigned &ny) const;
-	bool check_line_intersect(point const &p1, point const &p2, float radius) const;
+	virtual bool check_line_intersect(point const &p1, point const &p2, float radius) const;
 	void get_region_xy_bounds(cube_t const &region, unsigned &x1, unsigned &x2, unsigned &y1, unsigned &y2) const;
 	void make_region_walkable(cube_t const &region);
 public:
+	virtual ~cube_nav_grid() {}
 	bool is_built() const {return !bcube.is_all_zeros();} // can't test on !nodes.empty() in case the room is too small to have any nodes
 	bool is_valid() const {return (!invalid && is_built());}
 	void invalidate() {invalid = 1;}

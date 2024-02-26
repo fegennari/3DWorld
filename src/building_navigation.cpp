@@ -89,7 +89,7 @@ bool cube_nav_grid::check_line_intersect(point const &p1, point const &p2, float
 	// zvals are ignored - effectively 2D; otherwise could call line_intersect_cubes()
 	cube_t const check_cube(p1, p2);
 
-	// check if vertical cylinder with this radius swept from p1 to p2 intersects the unexpanded cube; assumes cube is large relative to radius
+	// check if vertical cylinder with this radius swept from p1 to p2 intersects an unexpanded cube; assumes cube is large relative to radius
 	for (cube_t const &c : blockers_exp) {
 		if (!c.intersects_xy(check_cube) || !check_line_clip_xy(p1, p2, c.d)) continue; // no intersection
 		cube_t c_non_exp(c);
