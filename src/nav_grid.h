@@ -43,6 +43,6 @@ public:
 	bool is_built() const {return !bcube.is_all_zeros();} // can't test on !nodes.empty() in case the room is too small to have any nodes
 	bool is_valid() const {return (!invalid && is_built());}
 	void invalidate() {invalid = 1;}
-	void build(cube_t const &bcube_, vect_cube_t const &blockers, float radius_);
+	void build(cube_t const &bcube_, vect_cube_t const &blockers, float radius_, bool add_edge_pad, bool no_blocker_expand);
 	bool find_path(point const &p1, point const &p2, ai_path_t &path) const;
 };

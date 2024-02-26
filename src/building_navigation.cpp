@@ -116,14 +116,14 @@ void cube_nav_grid::make_region_walkable(cube_t const &region) {
 		for (unsigned x = x1; x <= x2; ++x) {nodes[get_node_ix(x, y)] = 1;}
 	}
 }
-void cube_nav_grid::build(cube_t const &bcube_, vect_cube_t const &blockers, float radius_) {
+void cube_nav_grid::build(cube_t const &bcube_, vect_cube_t const &blockers, float radius_, bool add_edge_pad, bool no_blocker_expand) {
 	invalid    = 0; // reset, in case build() was called on a nonempty but invalid cube_nav_grid
 	radius     = radius_;
 	bcube      = bcube_;
 	grid_bcube = bcube;
 	// determine grid size and allocate vectors
 	float const spacing(SQRT2*radius); // can't be further than the test diameter or we'll miss blockers in the gap; use sqrt(2) to make spheres diagonally tangential
-	grid_bcube.expand_by_xy(-radius);
+	if (add_edge_pad) {grid_bcube.expand_by_xy(-radius);} // entity must fit fully inside the grid if add_edge_pad=1
 	point const size(grid_bcube.get_size());
 	if (min(size.x, size.y) <= 2.0*spacing) return; // too small (error?)
 
@@ -136,7 +136,7 @@ void cube_nav_grid::build(cube_t const &bcube_, vect_cube_t const &blockers, flo
 	//cout << TXT(blockers.size()) << TXT(num[0]) << TXT(num[1]) << TXT(nodes.size()) << endl;
 	// determine open nodes; edges are implicitly from adjacent 1 nodes
 	blockers_exp = blockers;
-	resize_cubes_xy(blockers_exp, radius);
+	if (!no_blocker_expand) {resize_cubes_xy(blockers_exp, radius);}
 	vect_cube_t row_blockers;
 
 	for (unsigned y = 0; y < num[1]; ++y) {
@@ -247,7 +247,7 @@ public:
 	void build_for_building(cube_t const &bcube_, vect_cube_t const &blockers, vector<door_stack_t> const &doors,
 		vector<stairwell_t> const &stairwells, float stairs_extend, float radius_)
 	{
-		build(bcube_, blockers, radius_);
+		build(bcube_, blockers, radius_, 1, 0); // add_edge_pad=1, no_blocker_expand=0
 		// flag all nodes in doorways as walkable to ensure the graph is connected, even if it means people will clip through the door frame;
 		// other solutions involve aligning doors with the grid (too difficult/restrictive) or reducing spacing to doorway_width/(2*radius) (too slow)
 		for (door_stack_t const &d : doors) {

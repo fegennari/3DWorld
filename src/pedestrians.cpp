@@ -94,18 +94,26 @@ string gen_random_full_name (rand_gen_t &rgen) {return person_name_gen.gen_name(
 
 class city_cube_nav_grid : public cube_nav_grid {
 public:
+	// problems with this approach:
+	// * path shortening will not occur inside the bcube of non-cube buildings, which will make paths stairstepped
+	// * dest buildings and cars are not excluded, so we won't be able to reach them
+	// * dest pos may be too close to a power pole, lamp post, etc. and not reachable
+	// * narrow sidelwalk space between the road and residential yards will be even more narrow, with only 2-3 "lanes" for people to walk in
+	// * narrow paths between buildings with no unblocked grids won't be usable
+	// * need a way to cache this per-plot to make it faster
 	void build_for_city(cube_t const &bcube_, vect_cube_t const &blockers, float radius_) {
 		//highres_timer_t timer("build_city_grid");
 		vect_cube_t non_building_blockers;
 		vect_cube_with_ix_t buildings;
 		
 		for (cube_t const &c : blockers) {
+			if (!bcube_.intersects_xy(c)) continue; // outside the plot
 			int const building_id(get_building_bcube_contains_pos(c.get_cube_center()));
 			if (building_id < 0) {non_building_blockers.push_back(c);} // not a building
 			else {buildings.emplace_back(c, building_id);} // building
 		}
 		// Note: can call treat_bcube_as_vcylin(), though small vertical cylinders may still be a single cube
-		build(bcube_, non_building_blockers, radius_);
+		build(bcube_, non_building_blockers, radius_, 0, 1); // add_edge_pad=0, no_blocker_expand=1 (blockers are already expanded)
 		float const zval(bcube.z1() + radius); // make sure it's actually inside the building
 		
 		// add buildings to the grid; this is insufficient because they're not added to blockers_exp, so we can take a shortcut path through them
@@ -119,6 +127,7 @@ public:
 				}
 			}
 		}
+		vector_add_to(buildings, blockers_exp); // building bcubes are needed for line intersection tests for path shortening, but do not directly contribute to the grid
 	}
 	void debug_draw(shader_t &s) const {
 		s.set_cur_color(RED);
