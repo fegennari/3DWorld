@@ -1050,9 +1050,10 @@ void apply_floor_vel_thresh(vector3d &velocity, vector3d const &cnorm) {
 }
 
 bool check_ball_kick(room_object_t &ball, vector3d &velocity, point &new_center, point const &p_pos, float pz1, float pz2, float pradius) {
-	point const center(ball.get_cube_center()), ppos(p_pos.x, p_pos.y, center.z); // use zval of object (Z range was checked above)
-	float const radius(ball.get_radius()), r_sum(radius + pradius);
-	if (ball.z2() < pz1 || ball.z1() > pz2 || !dist_xy_less_than(ppos, center, r_sum)) return 0; // no collision
+	if (ball.z2() < pz1 || ball.z1() > pz2) return 0; // no collision
+	point const center(ball.get_cube_center()), ppos(p_pos.x, p_pos.y, center.z); // use zval of object (Z range was checked earlier)
+	float const r_sum(ball.get_radius() + pradius);
+	if (!dist_xy_less_than(ppos, center, r_sum)) return 0; // no collision
 	vector3d const dir((center - ppos).get_norm());
 	new_center = (center + (1.05*r_sum - p2p_dist_xy(ppos, center))*dir); // move so that it no longer collides with a bit of tolerance
 	velocity.x = KICK_VELOCITY*dir.x; velocity.y = KICK_VELOCITY*dir.y; // keep existing velocity.z
@@ -1091,7 +1092,7 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 			}
 		}
 		else if (can_kick) { // treat collision as a kick
-			kicked = check_ball_kick(ball, velocity, new_center, p->pos, p->get_z1(), p->get_z2(), 0.6*p->get_width());
+			kicked |= check_ball_kick(ball, velocity, new_center, p->pos, p->get_z1(), p->get_z2(), 0.6*p->get_width());
 		}
 	} // for p
 	if (kicked) {
