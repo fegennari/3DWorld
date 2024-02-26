@@ -818,7 +818,7 @@ class path_finder_t {
 	vector<uint8_t> used;
 	path_t path_stack[MAX_PATH_DEPTH];
 	float gap=0.0;
-	point pos, dest;
+	point pos, dest, prev_target_pos;
 	cube_t plot_bcube;
 	path_t cur_path, best_path, partial_path;
 	bool debug=0;
@@ -834,7 +834,7 @@ public:
 	bool found_complete_path() const {return (!best_path.empty());}
 	bool found_path() const {return (found_complete_path() || !partial_path.empty());}
 	bool find_best_path();
-	unsigned run(point const &pos_, point const &dest_, cube_t const &plot_bcube_, float gap_, point &new_dest);
+	unsigned run(point const &pos_, point const &dest_, point const &prev_target_pos_, cube_t const &plot_bcube_, float gap_, point &new_dest);
 };
 
 class ped_manager_t { // pedestrians

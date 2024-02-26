@@ -449,15 +449,16 @@ bool path_finder_t::add_pts_around_cube_xy(path_t &path, path_t const &cur_path,
 	ec.expand_by_xy(gap); // expand cubes in x and y
 	point const corners [4] = {point( c.x1(),  c.y1(), p->z), point( c.x1(),  c.y2(), p->z), point( c.x2(),  c.y2(), p->z), point( c.x2(),  c.y1(), p->z)}; // CW
 	point const ecorners[4] = {point(ec.x1(), ec.y1(), p->z), point(ec.x1(), ec.y2(), p->z), point(ec.x2(), ec.y2(), p->z), point(ec.x2(), ec.y1(), p->z)}; // CW; expanded cube
-	vector3d const delta((n - *p).get_norm());
+	vector3d const delta((n - *p).get_norm()); // path vector
 	// find the two closest corners to the left and right
 	float min_dp1(0.0), min_dp2(0.0);
 	unsigned cix1(4), cix2(4); // start at invalid values
 
 	for (unsigned i = 0; i < 4; ++i) {
-		vector3d const delta2(corners[i] - *p); // unexpanded corners
-		float dp(dot_product_xy(delta, delta2)/delta2.mag());
+		vector3d const delta2(corners[i] - *p); // unexpanded corners - vector from corner to current point
+		float dp(dot_product_xy(delta, delta2)/delta2.mag()); // dot product between path vector and vector to corner
 		//if (any_cube_contains_pt_xy(avoid, corners[i])) {dp += 1.0;} // blocked by another avoid cube - increase the cost to prefer the other corner
+		if (prev_target_pos != all_zeros && prev_target_pos == ecorners[i]) {dp -= 0.1;} // small preference for the previous point for consistency; does this help?
 		bool const turn_dir(cross_product_xy(delta, delta2) < 0.0);
 		unsigned &cand_ix(turn_dir ? cix1 : cix2);
 		float &cand_dp(turn_dir ? min_dp1 : min_dp2);
@@ -565,9 +566,9 @@ bool path_finder_t::find_best_path() {
 
 // Note: avoid must be non-overlapping and should be non-adjacent; even better if cubes are separated enough that peds can pass between them (> 2*ped radius)
 // return values: 0=failed, 1=valid path, 2=init contained, 3=straight path (no collisions)
-unsigned path_finder_t::run(point const &pos_, point const &dest_, cube_t const &plot_bcube_, float gap_, point &new_dest) {
+unsigned path_finder_t::run(point const &pos_, point const &dest_, point const &prev_target_pos_, cube_t const &plot_bcube_, float gap_, point &new_dest) {
 	if (!line_int_cubes_xy(pos_, dest_, avoid)) return 3; // no work to be done, leave dest as it is
-	pos = pos_; dest = dest_; plot_bcube = plot_bcube_; gap = gap_;
+	pos = pos_; dest = dest_; prev_target_pos = prev_target_pos_; plot_bcube = plot_bcube_; gap = gap_;
 	//if (any_cube_contains_pt_xy(avoid, dest)) return 0; // invalid dest pos - ignore for now and let path finding deal with it when we get to that pos
 	unsigned next_pt_ix(1); // default: point after pos
 
@@ -904,11 +905,11 @@ void pedestrian_t::run_path_finding(ped_manager_t &ped_mgr, cube_t const &plot_b
 	bool in_illegal_area(0);
 	vect_cube_t &avoid(ped_mgr.path_finder.get_avoid_vector());
 	get_avoid_cubes(ped_mgr, colliders, plot_bcube, next_plot_bcube, dest_pos, avoid, in_illegal_area);
-	target_pos = all_zeros;
 	cube_t union_plot_bcube(plot_bcube);
 	union_plot_bcube.union_with_cube(next_plot_bcube); // this is the area the ped is constrained to (both plots + road in between)
 	// run path finding between pos and dest_pos using avoid cubes
-	if (ped_mgr.path_finder.run(pos, dest_pos, union_plot_bcube, PATH_GAP_FACTOR*radius, dest_pos)) {target_pos = dest_pos;}
+	if (ped_mgr.path_finder.run(pos, dest_pos, target_pos, union_plot_bcube, PATH_GAP_FACTOR*radius, dest_pos)) {target_pos = dest_pos;}
+	else {target_pos = all_zeros;} // no valid target
 
 	if (in_illegal_area && !follow_player && !ped_mgr.path_finder.found_complete_path()) { // stuck in a residential plot where we shouldn't be, and no path out
 		clear_current_dest(); // choose new dest
@@ -1640,7 +1641,8 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	cube_t union_plot_bcube(plot_bcube);
 	union_plot_bcube.union_with_cube(next_plot_bcube);
 	ai_path_t path;
-	unsigned const ret(path_finder.run(pos, dest_pos, union_plot_bcube, PATH_GAP_FACTOR*radius, dest_pos)); // 0=failed, 1=valid path, 2=init contained, 3=straight path (no coll)
+	// ret: 0=failed, 1=valid path, 2=init contained, 3=straight path (no coll)
+	unsigned const ret(path_finder.run(pos, dest_pos, target_pos, union_plot_bcube, PATH_GAP_FACTOR*radius, dest_pos));
 	bool const at_dest_plot(plot == dest_plot), complete(path_finder.found_complete_path());
 	colorRGBA line_color(at_dest_plot ? RED : YELLOW); // paths
 	colorRGBA node_color(complete ? YELLOW : ORANGE);
@@ -1654,6 +1656,8 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	vector<vert_color> line_pts;
 	shader_t s;
 	s.begin_color_only_shader();
+	float const sphere_radius(0.75*radius);
+	unsigned const NDIV = 16;
 	bool in_sphere_draw(0);
 	begin_ped_sphere_draw(s, node_color, in_sphere_draw, 0);
 
@@ -1665,19 +1669,19 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	}
 	else if (ret == 2) { // show segment from current pos to edge of building/car
 		assert(!path.empty());
-		if (!dist_less_than(path[0], player_pos, CAMERA_RADIUS)) {draw_sphere_vbo(path[0], radius, 16, 0);}
+		if (!dist_less_than(path[0], player_pos, CAMERA_RADIUS)) {draw_sphere_vbo(path[0], sphere_radius, NDIV, 0);}
 		line_pts.emplace_back(pos,     BLUE);
 		line_pts.emplace_back(path[0], BLUE);
 	}
 	for (auto p = path.begin(); p+1 < path.end(); ++p) { // iterate over line segments, skip last point
 		point const &n(*(p+1));
-		if (!dist_less_than(n, player_pos, CAMERA_RADIUS)) {draw_sphere_vbo(n, radius, 16, 0);}
+		if (!dist_less_than(n, player_pos, CAMERA_RADIUS)) {draw_sphere_vbo(n, sphere_radius, NDIV, 0);}
 		line_pts.emplace_back(*p, line_color);
 		line_pts.emplace_back(n,  line_color);
 	}
 	if (at_dest_plot && (has_dest_car || !complete)) { // show destination when in dest plot with incomplete path or car
 		s.set_cur_color(PURPLE);
-		if (!dist_less_than(orig_dest_pos, player_pos, CAMERA_RADIUS)) {draw_sphere_vbo(orig_dest_pos, 1.5*radius, 16, 0);}
+		if (!dist_less_than(orig_dest_pos, player_pos, CAMERA_RADIUS)) {draw_sphere_vbo(orig_dest_pos, 1.5*radius, NDIV, 0);}
 	}
 	end_sphere_draw(in_sphere_draw);
 
@@ -1729,7 +1733,7 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 		path.push_back(plot_dest);
 		set_fill_mode(); // reset
 		begin_ped_sphere_draw(s, color, in_sphere_draw, 0);
-		for (point const &p : path) {draw_sphere_vbo(p, 0.75*radius, 16, 0);}
+		for (point const &p : path) {draw_sphere_vbo(p, sphere_radius, NDIV, 0);}
 		end_sphere_draw(in_sphere_draw);
 
 		for (auto p = path.begin()+1; p != path.end(); ++p) {
