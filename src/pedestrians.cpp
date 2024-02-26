@@ -710,9 +710,15 @@ bool pedestrian_t::choose_alt_next_plot(ped_manager_t const &ped_mgr) {
 	return 1; // success
 }
 
-void add_and_expand_ped_avoid_cube(cube_t const &c, vect_cube_t &avoid, float expand, float height) {
-	avoid.push_back(c);
-	avoid.back().expand_by_xy(expand*((c.dz() < 0.67*height) ? 0.5 : 1.0)); // reduce expand value for short objects that will only collide with our legs
+void add_and_expand_ped_avoid_cube(cube_t const &c, vect_cube_t &avoid, float expand, float height, cube_t const &region) {
+	cube_t ac(c);
+	ac.expand_by_xy(expand*((c.dz() < 0.67*height) ? 0.5 : 1.0)); // reduce expand value for short objects that will only collide with our legs
+	if (ac.intersects_xy(region)) {avoid.push_back(ac);} // skip power poles and streetlights completely outside the plot
+}
+cube_t get_avoid_region(cube_t const &plot_bcube) {
+	cube_t region(plot_bcube);
+	region.expand_by_xy(get_sidewalk_width());
+	return region;
 }
 
 void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t const &colliders,
@@ -723,6 +729,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	road_plot_t const &cur_plot(ped_mgr.get_city_plot_for_peds(city, plot));
 	bool const is_home_plot(plot == dest_plot); // plot contains our destination
 	if (is_home_plot && !follow_player) {assert(plot_bcube == next_plot_bcube);} // doesn't hold when following the player?
+	cube_t const region(get_avoid_region(cur_plot));
 	bool keep_cur_dest(0);
 
 	if (cur_plot.is_residential_not_park()) { // apply special restrictions when walking through a residential block
@@ -790,7 +797,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 
 			for (auto i = colliders.begin(); i != colliders.end(); ++i) {
 				// exclude any cubes contained in the plot, since they're redundant; maybe shouldn't do this if pos is inside avoid_area?
-				if (!avoid_area.contains_cube_xy_exp(*i, expand)) {add_and_expand_ped_avoid_cube(*i, avoid, expand, height);}
+				if (!avoid_area.contains_cube_xy_exp(*i, expand)) {add_and_expand_ped_avoid_cube(*i, avoid, expand, height, region);}
 			}
 			return; // done
 		}
@@ -809,7 +816,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 
 	for (auto i = colliders.begin(); i != colliders.end(); ++i) { // check colliders for this plot
 		if (is_home_plot && has_dest_car && i->contains_pt_xy(dest_pos)) continue; // exclude our dest car, we do want to collide with it
-		add_and_expand_ped_avoid_cube(*i, avoid, expand, height);
+		add_and_expand_ped_avoid_cube(*i, avoid, expand, height, region);
 	}
 }
 
@@ -821,6 +828,7 @@ bool pedestrian_t::check_path_blocked(ped_manager_t &ped_mgr, point const &dest,
 	avoid.clear();
 	if (check_buildings) {get_building_bcubes(check_area, avoid);}
 	road_plot_t const &cur_plot(ped_mgr.get_city_plot_for_peds(city, plot));
+	cube_t const region(get_avoid_region(cur_plot));
 	point const test_pts[2] = {pos, dest};
 	int plots_to_test   [2] = {-1,  -1  };
 
@@ -835,7 +843,8 @@ bool pedestrian_t::check_path_blocked(ped_manager_t &ped_mgr, point const &dest,
 			if (follow_player) {clear_current_dest();} // clear dest in case it's no longer reachable from this plot (next_plot is not adjacent)
 		}
 		if (d == 1 && plots_to_test[0] == plots_to_test[1]) continue; // don't need to test the second plot if it's the same as the first
-		for (cube_t const &c : ped_mgr.get_colliders_for_plot(city, plots_to_test[d])) {add_and_expand_ped_avoid_cube(c, avoid, expand, height);} // check plot colliders
+		vect_cube_t const &colliders(ped_mgr.get_colliders_for_plot(city, plots_to_test[d]));
+		for (cube_t const &c : colliders) {add_and_expand_ped_avoid_cube(c, avoid, expand, height, region);} // check plot colliders
 	}
 	if (!in_the_road) { // include collider bcubes for cars parked in house driveways
 		ped_mgr.get_parked_car_bcubes_for_plot(check_area, city, avoid);

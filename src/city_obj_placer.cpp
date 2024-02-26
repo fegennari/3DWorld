@@ -1075,7 +1075,7 @@ void city_obj_placer_t::add_stop_sign_plot_colliders(vector<road_plot_t> const &
 		cube_t bcube_ext(s.bcube);
 		bcube_ext.expand_by_xy(bcube_expand);
 
-		for (unsigned i = 0; i < plots.size(); ++i) { // linear iteration; seems to be only 0.05ms per call
+		for (unsigned i = 0; i < plots.size(); ++i) { // linear iteration; stop signs are added to isecs, not plots; seems to be only 0.05ms per call
 			if (plots[i].intersects_xy(bcube_ext)) {plot_colliders[i].push_back(s.bcube); break;}
 		}
 	}
@@ -1342,14 +1342,13 @@ void city_obj_placer_t::finalize_streetlights_and_power(streetlights_t &sl, vect
 			top.z += 1.05f*streetlight_ns::light_radius*city_params.road_width; // top of light
 			connect_power_to_point(top, 0); // near_power_pole=0 because it may be too far away
 		}
-		if (!s->on_bridge_or_tunnel) {
-			assert(s->plot_ix < plot_colliders.size());
-			cube_t collider;
-			collider.set_from_point(s->pos);
-			collider.expand_by_xy(streetlight_ns::get_streetlight_pole_radius());
-			collider.z2() += streetlight_ns::get_streetlight_height();
-			plot_colliders[s->plot_ix].push_back(collider);
-		}
+		if (s->on_bridge_or_tunnel) continue; // not inside a plot
+		assert(s->plot_ix < plot_colliders.size());
+		cube_t collider;
+		collider.set_from_point(s->pos);
+		collider.expand_by_xy(streetlight_ns::get_streetlight_pole_radius());
+		collider.z2() += streetlight_ns::get_streetlight_height();
+		plot_colliders[s->plot_ix].push_back(collider);
 	} // for s
 }
 
