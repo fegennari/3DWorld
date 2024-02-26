@@ -71,6 +71,7 @@ extern lightning_t l_strike;
 extern coll_obj_group coll_objects;
 
 void set_indir_color(shader_t &s);
+bool is_csm_active();
 
 
 bool enable_rotate_trees() {return (rotate_trees && world_mode == WMODE_INF_TERRAIN);}
@@ -161,7 +162,7 @@ struct render_tree_branches_to_texture_t : public render_tree_to_texture_t {
 		s.set_cur_color(WHITE); // branch color will be applied to the billboard later
 		select_texture(get_tree_type().bark_tex);
 		tree_data_t::pre_branch_draw(s, 0);
-		cur_tree->draw_branches(s, 0.0, 0);
+		cur_tree->draw_branches(0.0, 0);
 		tree_data_t::post_branch_draw(0);
 		s.disable();
 	}
@@ -307,12 +308,12 @@ bool tree_cont_t::check_cube_int(cube_t const &c) const {
 }
 
 
-void tree_cont_t::draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_renderer,
+int tree_cont_t::draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_renderer,
 	bool draw_branches, bool draw_leaves, bool shadow_only, bool reflection_pass, vector3d const &xlate)
 {
 	assert(draw_branches != draw_leaves); // must enable exactly one
-	if (!all_bcube.is_zero_area() && !camera_pdu.cube_visible(all_bcube + xlate)) return; // VFC
-	int const wsoff_loc(shadow_only ? -1 : s.get_uniform_loc("world_space_offset")); // not needed in shadow mode
+	if (!all_bcube.is_zero_area() && !camera_pdu.cube_visible(all_bcube + xlate)) return -1; // VFC
+	int const wsoff_loc(shadow_only ? (is_csm_active() ? s.get_uniform_loc("xlate_scale") : -1) : s.get_uniform_loc("world_space_offset")); // not needed in non-CSM shadow mode
 	bool const tt_shadow_mode(world_mode == WMODE_INF_TERRAIN && shadow_only);
 
 	if (draw_branches) {
@@ -362,6 +363,7 @@ void tree_cont_t::draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_r
 			for (int i = 0; i < num_to_update; ++i) {to_update_leaves[i]->update_leaf_orients_wind();}
 		}
 	}
+	return wsoff_loc;
 }
 
 
@@ -481,10 +483,11 @@ void tree_cont_t::draw(bool shadow_only, bool reflection_pass) {
 
 	// draw branches
 	shader_t bs;
-	if (shadow_only) {bs.begin_shadow_map_shader();}
+	if (shadow_only) {bs.begin_shadow_map_shader(0, 1);} // use_alpha_mask=0, enable_xlate_scale=1
 	else {set_tree_branch_shader(bs, 1, 1, 1);} // direct_lighting=1, dlights=1, smap=1
-	draw_branches_and_leaves(bs, lod_renderer, 1, 0, shadow_only, reflection_pass, zero_vector);
-	if (!shadow_only) {bs.add_uniform_vector4d("world_space_offset", vector4d());} // reset
+	int const wsoff_loc(draw_branches_and_leaves(bs, lod_renderer, 1, 0, shadow_only, reflection_pass, zero_vector));
+	if (!shadow_only) {bs.set_uniform_vector4d(wsoff_loc, vector4d());} // reset
+	else              {bs.set_uniform_vector4d(wsoff_loc, vector4d(0.0, 0.0, 0.0, 1.0));} // needed for CSMs
 	bs.end_shader();
 }
 
@@ -958,7 +961,8 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 	if (shadow_only) {
 		if (ground_mode && !is_over_mesh()) return;
 		pre_transform(tree_xlate);
-		td.draw_branches(s, (ground_mode ? (wind_enabled ? last_size_scale : 0.0) : 1.0), 1, 1); // draw branches (untextured), low_detail=1, shadow_pass=1
+		if (wsoff_loc >= 0) {s.set_uniform_vector4d(wsoff_loc, vector4d((tree_xlate - get_camera_coord_space_xlate()), 1.0));} // needed for CSMs; no support for rotate; scale=1.0
+		td.draw_branches((ground_mode ? (wind_enabled ? last_size_scale : 0.0) : 1.0), 1, 1); // draw branches (untextured), low_detail=1, shadow_pass=1
 		post_transform();
 		return;
 	}
@@ -986,7 +990,7 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 	float const rot_angle(pre_transform(tree_xlate));
 	s.set_cur_color(bcolor);
 	s.set_uniform_vector4d(wsoff_loc, vector4d((tree_xlate - get_camera_coord_space_xlate()), rot_angle));
-	td.draw_branches(s, size_scale, reflection_pass);
+	td.draw_branches(size_scale, reflection_pass);
 	post_transform();
 }
 
@@ -1126,7 +1130,7 @@ void tree_data_t::ensure_branch_vbo() {
 }
 
 
-void tree_data_t::draw_branches(shader_t &s, float size_scale, bool force_low_detail, bool shadow_pass) {
+void tree_data_t::draw_branches(float size_scale, bool force_low_detail, bool shadow_pass) {
 
 	unsigned const num((size_scale == 0.0) ? num_branch_quads : min(num_branch_quads, max((num_branch_quads/40), unsigned(1.5*num_branch_quads*size_scale*get_size_scale_mult())))); // branch LOD
 	bool low_detail(force_low_detail || (size_scale > 0.0 && size_scale < 2.0));

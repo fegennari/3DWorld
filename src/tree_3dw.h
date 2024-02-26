@@ -241,7 +241,7 @@ public:
 	void draw_leaf_quads_from_vbo(unsigned max_leaves) const;
 	void draw_leaves_shadow_only(float size_scale);
 	void ensure_branch_vbo();
-	void draw_branches(shader_t &s, float size_scale, bool force_low_detail, bool shadow_pass=0);
+	void draw_branches(float size_scale, bool force_low_detail, bool shadow_pass=0);
 	void ensure_leaf_vbo();
 	void draw_leaves(float size_scale);
 	tree_bb_tex_t const &get_render_leaf_texture  () const {return render_leaf_texture  ;}
@@ -408,7 +408,7 @@ public:
 	void remove_cobjs();
 	bool check_sphere_coll(point &center, float radius) const;
 	bool check_cube_int(cube_t const &c) const;
-	void draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves,
+	int draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves,
 		bool shadow_only, bool reflection_pass, vector3d const &xlate);
 	static void pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shadow_only=0, bool use_fs_smap=0, bool enable_smap=1, bool enable_dlights=1);
 	static void post_leaf_draw(shader_t &shader, bool shadow_only);

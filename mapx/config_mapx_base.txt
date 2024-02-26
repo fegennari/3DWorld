@@ -86,6 +86,8 @@ scene_size 10.0 10.0 5.0 # about 300 feet
 
 include config_resolution.txt
 shadow_map_sz 4096
+#shadow_map_sz 2048
+enable_ground_csm 0
 
 smoke_bounds -7.45 -0.05  -5.45 0.15  -0.3  2.2
 smoke_bounds -7.45  7.45   0.05 5.95  -0.3  2.2
