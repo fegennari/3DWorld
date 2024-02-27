@@ -95,6 +95,7 @@ string gen_random_full_name (rand_gen_t &rgen) {return person_name_gen.gen_name(
 class city_cube_nav_grid : public cube_nav_grid {
 	vect_cube_with_ix_t buildings;
 	int dest_building=-1;
+	uint8_t const node_bix_start=2; // 0=unblocked, 1=non-building blocked, 2-254=building blocked, 255=reserved
 
 	virtual bool check_line_intersect(point const &p1, point const &p2, float radius) const {
 		if (cube_nav_grid::check_line_intersect(p1, p2, radius)) return 1;
@@ -114,8 +115,7 @@ class city_cube_nav_grid : public cube_nav_grid {
 	}
 public:
 	// problems with this approach:
-	// * dest buildings and cars are not excluded, so we won't be able to reach them
-	// * dest pos may be too close to a power pole, lamp post, etc. and not reachable
+	// * dest cars are not excluded, so we won't be able to reach them
 	// * narrow sidewalk space between the road and residential yards will be even more narrow, with only 2-3 "lanes" for people to walk in
 	// * need a way to cache this per-plot to make it faster
 	void build_for_city(cube_t const &bcube_, vect_cube_t const &blockers, float radius_) {
@@ -129,36 +129,67 @@ public:
 			if (building_id < 0) {non_building_blockers.push_back(c);} // not a building
 			else {buildings.emplace_back(c, building_id);} // building
 		}
+		assert(buildings.size() < 254 - node_bix_start); // must fit in uint8_t with some reserved values
 		// Note: can call treat_bcube_as_vcylin(), though small vertical cylinders may still be a single cube
 		build(bcube_, non_building_blockers, radius_, 0, 1); // add_edge_pad=0, no_blocker_expand=1 (blockers are already expanded)
 		float const zval(bcube.z1() + radius); // make sure it's actually inside the building
 		
 		// add buildings to the grid and fill them sparsely; will also be included in check_line_intersect()
-		for (cube_with_ix_t const &b : buildings) {
+		for (unsigned i = 0; i < buildings.size(); ++i) {
+			cube_with_ix_t const &b(buildings[i]);
 			unsigned x1, y1, x2, y2;
 			get_region_xy_bounds(b, x1, x2, y1, y2);
 
 			for (unsigned y = y1; y <= y2; ++y) {
 				for (unsigned x = x1; x <= x2; ++x) {
-					nodes[get_node_ix(x, y)] &= !check_building_point_or_cylin_contained(get_grid_pt(x, y, zval), radius, b.ix);
+					uint8_t &val(nodes[get_node_ix(x, y)]);
+					if (val > 0) continue; // already blocked
+					if (check_building_point_or_cylin_contained(get_grid_pt(x, y, zval), radius, b.ix)) {val = i + node_bix_start;} // store index into buildings vector
 				}
 			}
-		}
+		} // for b
 	}
 	bool find_path(point const &p1, point const &p2, ai_path_t &path, int dest_building_) {
+		assert(exclude_val == 255);
 		dest_building = dest_building_;
 
-		if (dest_building >= 0) {
-			// TODO: exclude this building from the grid somehow, or shorten the path to it
+		// Note: this logic isn't needed yet because the dest building won't be passed in as blockers, but this will be needed when the nav grid is cached
+		if (dest_building >= 0) { // exclude this building from the grid if it's found
+			for (unsigned i = 0; i < buildings.size(); ++i) {
+				if ((int)buildings[i].ix == dest_building) {exclude_val = i; break;} // get index into buildings vector
+			}
 		}
-		return cube_nav_grid::find_path(p1, p2, path);
+		// p1 should be at a valid node, but p2 may be blocked by a power pole, streetlight, etc.
+		point p2b(p2);
+		bool dim(0), on_edge(1), valid(1);
+		if      (p2.x == bcube.x1() || p2.x == bcube.x2()) {dim = 1;} // step in Y
+		else if (p2.y == bcube.y1() || p2.y == bcube.y2()) {dim = 0;} // step in X
+		else {on_edge = 0;}
+		unsigned nx(0), ny(0); // unused
+
+		if (on_edge && !find_open_node_closest_to(p2, p2, nx, ny)) { // try nearby nodes using dim and dir
+			unsigned const search_dist = 4; // should be large enough to step past small blockers
+			bool const init_dir(p2[dim] < bcube.get_center_dim(dim)); // must be consistent and unbiased; prefer the center of the grid
+			valid = 0;
+
+			for (unsigned dist = 1; dist <= search_dist && !valid; ++dist) {
+				for (unsigned D = 0; D < 2; ++D) {
+					point cand(p2);
+					cand[dim] += ((bool(D) ^ init_dir) ? 1.0 : -1.0)*dist*step[dim];
+					if (find_open_node_closest_to(cand, cand, nx, ny)) {p2b = cand; valid = 1; break;}
+				}
+			} // for dist
+		}
+		bool const ret(valid && cube_nav_grid::find_path(p1, p2b, path));
+		exclude_val = 255; // restore to unset
+		return ret;
 	}
 	void debug_draw(shader_t &s) const {
 		s.set_cur_color(RED);
 
 		for (unsigned y = 0; y < num[1]; ++y) {
 			for (unsigned x = 0; x < num[0]; ++x) {
-				if (!nodes[get_node_ix(x, y)]) continue; // blocked
+				if (nodes[get_node_ix(x, y)] > 0) continue; // blocked
 				cube_t c; c.set_from_sphere((get_grid_pt(x, y) + vector3d(0.0, 0.0, radius)), 0.5*radius);
 				draw_simple_cube(c);
 			}
@@ -1672,7 +1703,7 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	cube_t plot_bcube, next_plot_bcube;
 	get_plot_bcubes_inc_sidewalks(ped_mgr, plot_bcube, next_plot_bcube);
 	point const player_pos(get_player_pos_bs());
-	point const orig_dest_pos(follow_player ? player_pos : get_dest_pos(plot_bcube, next_plot_bcube, ped_mgr, debug_state));
+	point const orig_dest_pos(follow_player ? point(player_pos.x, player_pos.y, pos.z) : get_dest_pos(plot_bcube, next_plot_bcube, ped_mgr, debug_state));
 	point dest_pos(orig_dest_pos);
 	if (dest_pos == pos) return; // no path, nothing to draw
 	vect_cube_t dbg_cubes;

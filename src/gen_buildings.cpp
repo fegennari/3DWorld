@@ -4042,7 +4042,7 @@ public:
 	bool check_line_coll_building(point const &p1, point const &p2, unsigned building_id) const { // Note: not thread safe due to static points
 		assert(building_id < buildings.size());
 		float t_new(1.0);
-		return buildings[building_id].check_line_coll(p1, p2, t_new, 0, 1);
+		return buildings[building_id].check_line_coll(p1, p2, t_new, 0, 1, 1); // occlusion_only=0, ret_any_pt=1, no_coll_pt=1
 	}
 	bool check_sphere_coll_building(point const &pos, float radius, bool xy_only, unsigned building_id) const {
 		assert(building_id < buildings.size());

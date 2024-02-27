@@ -78,7 +78,7 @@ bool cube_nav_grid::find_open_node_closest_to(point const &p, point const &dest,
 			unsigned const yi(y ? unsigned(ceil(gxy[1])) : unsigned(floor(gxy[1])));
 			unsigned const xi(x ? unsigned(ceil(gxy[0])) : unsigned(floor(gxy[0])));
 			if (!are_ixs_valid(xi, yi)) continue; // invalid, skip; error/can't happen?
-			if (!get_node_val (xi, yi)) continue; // blocked, skip
+			if ( is_blocked   (xi, yi)) continue; // blocked, skip
 			float const dsq(p2p_dist_xy_sq(dest, get_grid_pt(xi, yi))); // choose dir closest to dest to avoid backtracking
 			if (!found || dsq < dmin_sq) {found = 1; dmin_sq = dsq; nx = xi; ny = yi;} // keep if closer
 		}
@@ -113,7 +113,7 @@ void cube_nav_grid::make_region_walkable(cube_t const &region) {
 	get_region_xy_bounds(region, x1, x2, y1, y2);
 
 	for (unsigned y = y1; y <= y2; ++y) {
-		for (unsigned x = x1; x <= x2; ++x) {nodes[get_node_ix(x, y)] = 1;}
+		for (unsigned x = x1; x <= x2; ++x) {nodes[get_node_ix(x, y)] = 0;}
 	}
 }
 void cube_nav_grid::build(cube_t const &bcube_, vect_cube_t const &blockers, float radius_, bool add_edge_pad, bool no_blocker_expand) {
@@ -132,9 +132,9 @@ void cube_nav_grid::build(cube_t const &bcube_, vect_cube_t const &blockers, flo
 		step[d] = size[d]/(num[d] - 1);
 	}
 	nodes.clear(); // in case we're rebuilding, have to zero initialize below
-	nodes.resize(num[0]*num[1], 0);
+	nodes.resize(num[0]*num[1], 0); // starts unblocked
 	//cout << TXT(blockers.size()) << TXT(num[0]) << TXT(num[1]) << TXT(nodes.size()) << endl;
-	// determine open nodes; edges are implicitly from adjacent 1 nodes
+	// determine open nodes; edges are implicitly from adjacent 0 nodes
 	blockers_exp = blockers;
 	if (!no_blocker_expand) {resize_cubes_xy(blockers_exp, radius);}
 	vect_cube_t row_blockers;
@@ -147,7 +147,7 @@ void cube_nav_grid::build(cube_t const &bcube_, vect_cube_t const &blockers, flo
 			if (c.y1() < yval && c.y2() > yval) {row_blockers.push_back(c);} // include if it spans yval
 		}
 		for (unsigned x = 0; x < num[0]; ++x) {
-			if (!pt_contained_xy(get_grid_pt(x, y), row_blockers)) {nodes[get_node_ix(x, y)] = 1;}
+			if (pt_contained_xy(get_grid_pt(x, y), row_blockers)) {nodes[get_node_ix(x, y)] = 1;} // mark blocked
 		}
 	} // for y
 }
@@ -188,8 +188,8 @@ bool cube_nav_grid::find_path(point const &p1, point const &p2, ai_path_t &path)
 				unsigned const new_x(cur.x + dx), new_y(cur.y + dy); // may wrap around to 2^32
 				if (!are_ixs_valid(new_x, new_y)) continue; // off the grid
 				unsigned const new_ix(get_node_ix(new_x, new_y));
-				if (closed[new_ix]) continue; // already closed (duplicate)
-				if (!nodes[new_ix]) continue; // blocked
+				if (          closed[new_ix] ) continue; // already closed (duplicate)
+				if (is_blocked(nodes[new_ix])) continue; // blocked
 				a_star_node_state_t &sn(state[new_ix]);
 				float const new_g_score(state[cur_ix].g_score + get_distance(cur.x, cur.y, new_x, new_y));
 				if (!open[new_ix]) {open[new_ix] = 1;}
@@ -270,7 +270,7 @@ public:
 	void create_debug_objs(vector<room_object_t> &objs) const {
 		for (unsigned y = 0; y < num[1]; ++y) {
 			for (unsigned x = 0; x < num[0]; ++x) {
-				if (!nodes[get_node_ix(x, y)]) continue; // blocked
+				if (is_blocked(x, y)) continue; // blocked
 				cube_t c; c.set_from_sphere((get_grid_pt(x, y) + vector3d(0.0, 0.0, radius)), radius);
 				objs.emplace_back(c, TYPE_DBG_SHAPE, 0, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_BACKROOM), 1.0, SHAPE_SPHERE, RED); // room_id=0
 			}

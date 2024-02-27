@@ -12,7 +12,8 @@ protected:
 	unsigned num[2] = {};
 	float   step[2] = {};
 	bool invalid=0;
-	vector<uint8_t> nodes; // num[0] x num[1]; 0=blocked, 1=open
+	uint8_t exclude_val=255; // set to a large value
+	vector<uint8_t> nodes; // num[0] x num[1]; 0=open, >0=blocked
 	vect_cube_t blockers_exp;
 
 	struct ix_pair_t {
@@ -33,6 +34,8 @@ protected:
 	point    get_grid_pt (unsigned x, unsigned y) const {return get_grid_pt(x, y, grid_bcube.z1());}
 	uint8_t  get_node_val(unsigned x, unsigned y) const {return nodes[get_node_ix(x, y)];}
 	unsigned get_node_ix(point p) const;
+	bool is_blocked(uint8_t val)            const {return (val > 0 && val != exclude_val);}
+	bool is_blocked(unsigned x, unsigned y) const {return is_blocked(get_node_val(x, y));}
 	void get_grid_ix_fp(point p, float gxy[2]) const;
 	float get_distance(unsigned x1, unsigned y1, unsigned x2, unsigned y2) const;
 	bool find_open_node_closest_to(point const &p, point const &dest, unsigned &nx, unsigned &ny) const;
