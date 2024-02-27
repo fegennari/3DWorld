@@ -2464,22 +2464,27 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	}
 	bool const player_in_this_building(cur_player_building_loc.building_ix == person.cur_bldg); // basement door only counts if the player is in this building
 	bool const might_have_closed_door(global_building_params.open_door_prob < 1.0 || (player_in_this_building && is_house && has_basement()));
+	bool const check_for_closed_doors(global_building_params.ai_opens_doors == 2 && might_have_closed_door);
 
-	if (interior->door_state_updated || (global_building_params.ai_opens_doors == 2 && might_have_closed_door)) {
-		cube_t sc; sc.set_from_sphere(new_pos, person.radius); // sphere bounding cube
+	if (interior->door_state_updated || check_for_closed_doors) {
+		cube_t sc; sc.set_from_sphere(new_pos, coll_dist); // sphere bounding cube
 
 		for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) { // can be slow, but not as slow as iterating over doors
 			if (new_pos.z < i->z1() || new_pos.z > i->z2()) continue; // wrong part/floor
-			if (!i->intersects(sc)) continue; // no intersection with door
-			if (!i->get_true_bcube().line_intersects(person.pos, person.target_pos)) continue; // check if path goes through door, to allow for "glancing blows" when pushed or turning
+			cube_t const dcc(i->get_clearance_bcube()); // only when approaching from the side the door opens to?
+			if (!dcc.intersects(sc)) continue; // no intersection with door
+			if (!dcc.line_intersects(person.pos, person.target_pos)) continue; // check if path goes through door, to allow for "glancing blows" when pushed or turning
 			assert(i->first_door_ix < interior->doors.size());
 
 			for (unsigned dix = i->first_door_ix; dix < interior->doors.size(); ++dix) {
 				door_t const &door(interior->doors[dix]);
 				if (!i->is_same_stack(door)) break; // moved to a different stack, done
 				if (door.z1() > person.pos.z || door.z2() < person.pos.z) continue; // wrong floor
-				if (door.open) continue; // doors tend to block the AI, don't collide with them unless they're closed
-
+				
+				if (door.open) { // doors tend to block the AI, don't collide with them unless they're closed
+					if (door.open_amt < 1.0) {new_pos = person.pos;} // wait here until the door is fully open
+					continue;
+				}
 				if (global_building_params.ai_opens_doors && !door.is_locked_or_blocked(person.has_key)) { // can open the door
 					toggle_door_state(dix, player_in_this_building, 0, person.pos); // by_player=0
 				}
