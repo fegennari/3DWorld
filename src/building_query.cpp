@@ -1429,7 +1429,7 @@ bool line_int_polygon_sides(point const &p1, point const &p2, cube_t const &bcub
 			for (unsigned e = 0; e < 2; ++e) {quad_pts[ix++].assign(p.x, p.y, bcube.d[2][d^e]);}
 		}
 		float tmin(0.0);
-		if (line_poly_intersect(p1, p2, quad_pts, 4, get_poly_norm(quad_pts), tmin) && tmin < t) {t = tmin; hit = 1;} // Note: untested
+		if (line_poly_intersect(p1, p2, quad_pts, 4, get_poly_norm(quad_pts), tmin) && tmin < t) {t = tmin; hit = 1;}
 	} // for S
 	return hit;
 }
@@ -1472,29 +1472,35 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t,
 			else {
 				float const radius(0.5*(occlusion_only ? min(csz.x, csz.y) : max(csz.x, csz.y))); // use conservative radius unless this is an occlusion query
 				point const cp1(cc.x, cc.y, i->z1()), cp2(cc.x, cc.y, i->z2());
-				if (!line_int_cylinder(p1r, p2r, cp1, cp2, radius, radius, 1, tmin) || tmin > t) continue; // conservative for non-occlusion rays
+				if (p1r.z > i->z1() && p1r.z < i->z2() && dist_xy_less_than(cp1, p1r, radius)) {tmin = 0.0;} // p1 inside the cylinder
+				else if (!line_int_cylinder(p1r, p2r, cp1, cp2, radius, radius, 1, tmin) || tmin >= t) continue; // conservative for non-occlusion rays
 
-				if (!occlusion_only && csz.x != csz.y) { // ellipse
+				if (!occlusion_only && csz.x != csz.y) { // ellipse; approximate
 					vector3d const delta(p2r - p1r);
 					float const rx_inv_sq(1.0/(0.25*csz.x*csz.x)), ry_inv_sq(1.0/(0.25*csz.y*csz.y));
 					float t_step(0.1*max(csz.x, csz.y)/delta.mag());
 
 					for (unsigned n = 0; n < 10; ++n) { // use an interative approach
-						if (point_in_ellipse_risq((p1r + tmin*delta), cc, rx_inv_sq, ry_inv_sq)) {hit = 1; tmin -= t_step;} else {tmin += t_step;}
+						point const p(p1r + tmin*delta);
+						if (point_in_ellipse_risq(p, cc, rx_inv_sq, ry_inv_sq)) {hit = 1; tmin -= t_step;} else {tmin += t_step;}
 						if (hit) {t_step *= 0.5;} // converge on hit point
+						float const dx(p.x - cc.x), dy(p.y - cc.y);
 					}
 					if (!hit) continue; // not actually a hit
 				} // end ellipse case
-				t = tmin; hit = 1;
+				if (tmin < t) {t = tmin; hit = 1;} // re-check tmin in case it increased above t in the iterations above
 			}
 		}
 		else if (!is_cube()) {
 			vect_point const &points(get_part_ext_verts(i - parts.begin()));
-			float const tz((i->z2() - p1r.z)/(p2r.z - p1r.z)); // t value at zval = top of cube
 
-			if (tz >= 0.0 && tz < t) {
-				float const xval(p1r.x + tz*(p2r.x - p1r.x)), yval(p1r.y + tz*(p2r.y - p1r.y));
-				if (point_in_polygon_2d(xval, yval, points.data(), points.size())) {t = tz; hit = 1;} // XY plane test for vertical lines and top surface
+			if (p1r.z != p2r.z) { // test vertical lines and top surface
+				float const tz((i->z2() - p1r.z)/(p2r.z - p1r.z)); // t value at zval = top of cube
+
+				if (tz >= 0.0 && tz < t) {
+					float const xval(p1r.x + tz*(p2r.x - p1r.x)), yval(p1r.y + tz*(p2r.y - p1r.y));
+					if (point_in_polygon_2d(xval, yval, points.data(), points.size())) {t = tz; hit = 1;} // XY plane test
+				}
 			}
 			if (!vert && line_int_polygon_sides(p1r, p2r, *i, points, t)) {hit = 1;} // test building sides
 		}
