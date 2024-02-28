@@ -9,7 +9,6 @@
 #include "profiler.h"
 #include "openal_wrap.h"
 
-unsigned const MAX_ROOM_GEOM_GEN_PER_FRAME = 1;
 
 unsigned room_geom_mem(0);
 quad_batch_draw candle_qbd;
@@ -1696,10 +1695,11 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	}
 	if (update_clocks) {update_dynamic_draw_data();}
 	check_invalid_draw_data();
+
 	// generate vertex data in the shadow pass or if we haven't hit our generation limit; must be consistent for static and small geom
 	// Note that the distance cutoff for mats_static and mats_small is different, so we generally won't be creating them both
 	// unless the player just appeared by this building, or we need to update the geometry; in either case this is higher priority and we want to update both
-	if (shadow_only || num_geom_this_frame < MAX_ROOM_GEOM_GEN_PER_FRAME) {
+	if (shadow_only || num_geom_this_frame < max(global_building_params.max_room_geom_gen_per_frame, 1U)) {
 		if (!mats_static.valid) { // create static materials if needed
 			create_obj_model_insts(building);
 			create_static_vbos(building);

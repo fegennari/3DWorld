@@ -173,6 +173,7 @@ void building_params_t::init_kw_maps() {
 	kwmu.add("max_shadow_maps", max_shadow_maps);
 	kwmu.add("max_ext_basement_hall_branches", max_ext_basement_hall_branches);
 	kwmu.add("max_ext_basement_room_depth",    max_ext_basement_room_depth);
+	kwmu.add("max_room_geom_gen_per_frame",    max_room_geom_gen_per_frame);
 	kwmb.add("add_office_backroom_basements",  add_office_br_basements);
 	kwmf.add("ao_factor", ao_factor);
 	kwmf.add("sec_extra_spacing", sec_extra_spacing);
