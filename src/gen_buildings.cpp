@@ -3487,6 +3487,13 @@ public:
 				if (reflection_pass && !ref_pass_water && !not_mirror) {draw_player_model(s, xlate, 0);} // shadow_only=0
 				reset_interior_lighting_and_end_shader(s);
 			}
+			if (!ref_pass_interior && have_buildings_ext_paint()) { // draw spraypaint/markers on building exterior walls/windows, if needed
+				glDisable(GL_CULL_FACE);
+				setup_building_draw_shader(s, DEF_CITY_MIN_ALPHA, 1, 1, 0); // alpha test, enable_indir=1, force_tsl=1, use_texgen=0
+				draw_buildings_ext_paint(s);
+				reset_interior_lighting_and_end_shader(s);
+				glEnable(GL_CULL_FACE);
+			}
 			if (!reflection_pass && player_in_ext_basement()) {player_building->draw_water(xlate);}
 
 			if (!ref_pass_interior && bbd.has_ext_geom()) { // skip for interior room reflections
@@ -3511,12 +3518,6 @@ public:
 				holes_shader.end_shader();
 			}
 			glDisable(GL_CULL_FACE);
-
-			if (!ref_pass_interior && have_buildings_ext_paint()) { // draw spraypaint/markers on building exterior, if needed
-				setup_building_draw_shader(s, DEF_CITY_MIN_ALPHA, 1, 1, 0); // alpha test, enable_indir=1, force_tsl=1, use_texgen=0
-				draw_buildings_ext_paint(s);
-				reset_interior_lighting_and_end_shader(s);
-			}
 		} // end draw_interior
 		draw_candle_flames();
 

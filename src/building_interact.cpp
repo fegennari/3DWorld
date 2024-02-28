@@ -919,7 +919,7 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 	if (door.open) { // was closed and now open
 		notify_door_fully_closed_state(door);
 		cube_t door_exp(door);
-		door_exp.expand_in_dim(door.dim, 0.5*get_wall_thickness()); // make sure decals are included
+		door_exp.expand_in_dim(door.dim, 0.6*get_wall_thickness()); // make sure decals are included
 		remove_paint_in_cube(door_exp); // remove any paint that was over the closed door
 	}
 }

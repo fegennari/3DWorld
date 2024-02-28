@@ -2355,6 +2355,7 @@ void paint_draw_t::draw_paint(shader_t &s) const {
 	if (!have_sp && m_qbd.empty()) return; // nothing to do
 	glDepthMask(GL_FALSE); // disable depth write
 	enable_blend();
+	select_texture(FLAT_NMAP_TEX, 5); // no normal map
 
 	if (have_sp) {
 		select_texture(BLUR_CENT_TEX); // spraypaint - smooth alpha blended edges

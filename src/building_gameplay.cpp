@@ -2073,8 +2073,6 @@ vector3d get_normal_for_ray_cube_int_xy(point const &p, cube_t const &c, float t
 	return n;
 }
 
-// decals
-
 class paint_manager_t : public paint_draw_t { // for paint on exterior walls/windows, viewed from inside the building
 	building_t const *paint_bldg = nullptr;
 public:
@@ -2118,25 +2116,6 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	if (line_int_cubes_get_t(pos, pos2, interior->floors  , tmin, target)) {normal =  plus_z;}
 	if (line_int_cubes_get_t(pos, pos2, interior->ceilings, tmin, target)) {normal = -plus_z;}
 	
-	// include exterior walls; okay to add spraypaint and markers over windows
-	cube_t const part(get_part_containing_pt(pos));
-	float tmin0(0.0), tmax0(1.0);
-	bool exterior_wall(0);
-
-	if (get_line_clip(pos, pos2, part.d, tmin0, tmax0) && tmax0 < tmin) { // part edge is the closest intersection point
-		// check other parts to see if ray continues into them; if not, it exited the building; this implementation isn't perfect but should be close enough
-		point const cand_p_int(pos + tmax0*(pos2 - pos));
-		bool found(0);
-
-		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
-			if (*p == part || !p->contains_pt_exp(cand_p_int, tolerance)) continue; // ray does not continue into this new part
-			if (check_line_clip(cand_p_int, pos2, p->d)) {found = 1; break;} // ray continues into this part
-		}
-		if (!found) { // ray has exited the building
-			vector3d const n(-get_normal_for_ray_cube_int_xy(cand_p_int, part, tolerance)); // negate the normal because we're looking for the exit point from the cube
-			if (n != zero_vector) {tmin = tmax0; normal = n; target = part; exterior_wall = 1;}
-		}
-	}
 	// check closed interior doors
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 		if (i->open_amt > 0.0) continue;
@@ -2186,15 +2165,15 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 			tmin = tmin0; normal = n; target = c;
 		}
 	} // for i
-	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
+	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) { // check elevators
 		float tmin0(tmin);
 		if (!line_int_cube_get_t(pos, pos2, *i, tmin0)) continue;
 		if (i->contains_pt(pos)) {walls_blocked = 1; continue;} // can't spraypaint the outside of the elevator when standing inside it
 		vector3d const n(get_normal_for_ray_cube_int_xy((pos + tmin0*(pos2 - pos)), *i, tolerance)); // should always return a valid normal
 		if (n[i->dim] == (i->dir ? 1.0 : -1.0)) {walls_blocked = 1; continue;} // skip elevator opening, even if not currently open
 		tmin = tmin0; normal = n; target = *i;
-	}
-	for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
+	} // for i
+	for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) { // check stairs
 		if (!i->is_u_shape() && !i->has_walled_sides()) continue; // no walls, skip
 		// expand by wall half-width; see building_t::add_stairs_and_elevators()
 		cube_t c(*i);
@@ -2213,8 +2192,27 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		}
 		else {assert(0);} // unsupported stairs type
 		tmin = tmin0; normal = n; target = c;
+	} // for i
+	// check exterior walls; must be done last; okay to add spraypaint and markers over windows
+	cube_t const part(get_part_containing_pt(pos));
+	float tmin0(0.0), tmax0(1.0);
+	bool exterior_wall(0);
+
+	if (get_line_clip(pos, pos2, part.d, tmin0, tmax0) && tmax0 < tmin) { // part edge is the closest intersection point
+		// check other parts to see if ray continues into them; if not, it exited the building; this implementation isn't perfect but should be close enough
+		point const cand_p_int(pos + tmax0*(pos2 - pos));
+		bool found(0);
+
+		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+			if (*p == part || !p->contains_pt_exp(cand_p_int, tolerance)) continue; // ray does not continue into this new part
+			if (check_line_clip(cand_p_int, pos2, p->d)) {found = 1; break;} // ray continues into this part
+		}
+		if (!found) { // ray has exited the building
+			vector3d const n(-get_normal_for_ray_cube_int_xy(cand_p_int, part, tolerance)); // negate the normal because we're looking for the exit point from the cube
+			if (n != zero_vector) {tmin = tmax0; normal = n; target = part; exterior_wall = 1;}
+		}
 	}
-	if (normal == zero_vector) return 0; // no walls, ceilings, floors, etc. hit
+	if (normal == zero_vector)            return 0; // no walls, ceilings, floors, etc. hit
 	if (walls_blocked && normal.z == 0.0) return 0; // can't spraypaint walls through elevator, stairs, etc.
 	point p_int(pos + tmin*(pos2 - pos));
 	if (check_line_intersect_doors(pos, p_int, 1))       return 0; // blocked by door, no spraypaint; can't add spraypaint over door in case door is opened; inc_open=1
@@ -2243,7 +2241,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	quad_batch_draw &qbd(interior->room_geom->decal_manager.paint_draw[exterior_wall].get_paint_qbd(is_marker, emissive_color_id));
 	qbd.add_quad_dirs(p_int, dx, radius*dir2, paint_color, normal); // add interior/exterior paint
 	
-	if (exterior_wall) { // add exterior paint only
+	if (exterior_wall) { // add exterior paint only; will be drawn after building interior, but without iterior lighting, so it will be darker
 		ext_paint_manager.get_paint_qbd_for_bldg(this, is_marker, emissive_color_id).add_quad_dirs(p_int, dx, radius*dir2, paint_color, normal);
 	}
 	static double next_sound_time(0.0);
