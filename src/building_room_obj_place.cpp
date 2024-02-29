@@ -1391,9 +1391,14 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			stall.z2() = stall.z1() + floor_spacing - floor_thickness; // set stall height to room height
 			stall.expand_in_dim(!br_dim, 0.5*stall_width);
 			stall.d[br_dim][ dir] = wall_pos; // + wall_thickness?
-			stall.d[br_dim][!dir] = wall_pos + dir_sign*stall_depth;
+			stall.d[br_dim][!dir] = wall_pos + dir_sign*stall_depth; // extend the front outward from the wall
 			if (interior->is_cube_close_to_doorway(stall, room, 0.0, 1)) continue; // skip if close to a door (for rooms with doors at both ends); inc_open=1
-			if (!check_cube_within_part_sides(stall)) continue; // outside the building
+
+			if (!is_cube()) {
+				cube_t stall_exp(stall);
+				stall_exp.d[br_dim][!dir] += dir_sign*1.0*get_scaled_player_radius(); // make sure the player can fit
+				if (!check_cube_within_part_sides(stall_exp)) continue; // outside the building
+			}
 			bool const is_open(rgen.rand_bool()); // 50% chance of stall door being open
 			bool const out_of_order(!is_open && rgen.rand_float() < 0.2);
 			unsigned const flags(out_of_order ? RO_FLAG_BROKEN : 0); // toilet can't be flushed and door can't be opened if out of order
