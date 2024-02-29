@@ -3329,7 +3329,7 @@ cube_t building_t::get_light_switch_bounds(float floor_zval, float wall_edge, fl
 	return c;
 }
 void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool is_ground_floor, bool is_basement) {
-	float const wall_thickness(get_wall_thickness()), switch_hwidth(0.5*wall_thickness), min_wall_spacing(switch_hwidth + 2.0*wall_thickness);
+	float const wall_thickness(get_wall_thickness()), switch_hwidth(0.5*wall_thickness);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 8.0*switch_hwidth) return; // room is too small; shouldn't happen
 	float const ceil_zval(zval + get_floor_ceil_gap());
@@ -3339,6 +3339,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 	unsigned const objs_end(objs.size());
 	bool const first_side(rgen.rand_bool());
 	vect_door_stack_t ext_doors; // not really door stacks, but we can fill in the data to treat them as such
+	unsigned garage_door_mask(0);
 
 	if (is_ground_floor) { // handle exterior doors
 		cube_t room_exp(room);
@@ -3349,6 +3350,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 			if (!d->is_exterior_door() || d->type == tquad_with_ix_t::TYPE_RDOOR) continue;
 			cube_t bc(d->get_bcube());
 			if (!room_exp.contains_pt(bc.get_cube_center())) continue;
+			if (d->type == tquad_with_ix_t::TYPE_GDOOR) {garage_door_mask |= (1 << ext_doors.size());}
 			bool const dim(bc.dy() < bc.dx());
 			bc.expand_in_dim(dim, 0.4*wall_thickness); // expand slightly to make it nonzero area
 			ext_doors.emplace_back(door_t(bc, dim, 0), 0); // dir=0, first_door_ix=0 because it's unused
@@ -3363,8 +3365,12 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 			if (!is_house && room.is_ext_basement() && room_bounds.contains_cube_xy(*i)) continue; // skip interior backrooms doors
 			// check for windows if (real_num_parts > 1)? is it actually possible for doors to be within far_spacing of a window?
 			bool const dim(i->dim), dir(i->get_center_dim(dim) > room.get_center_dim(dim));
-			float const dir_sign(dir ? -1.0 : 1.0), door_width(i->get_width()), near_spacing(0.25*door_width), far_spacing(1.25*door_width); // off to side of door when open
+			float const dir_sign(dir ? -1.0 : 1.0), door_width(i->get_width());
 			assert(door_width > 0.0);
+			bool const is_gdoor(ei == 0 && (garage_door_mask & (1 << (i - cands.begin()))));
+			float const nom_width(is_gdoor ? 0.25*get_doorway_width() : door_width); // use small door width for garage doors
+			float const near_spacing(0.25*nom_width), far_spacing(1.25*nom_width); // off to side of door when open
+			float const min_wall_spacing(switch_hwidth + (is_gdoor ? 0.5 : 2.0)*wall_thickness); // reduced spacing for garage doors
 			cube_t const &wall_bounds(ei ? room_bounds : room); // exterior door should use the original room, not room_bounds
 			bool done(0);
 
@@ -3376,9 +3382,9 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 					if (wall_pos < room_bounds.d[!dim][0] + min_wall_spacing || wall_pos > room_bounds.d[!dim][1] - min_wall_spacing) continue; // too close to the adjacent wall
 					cube_t c(get_light_switch_bounds(zval, wall_bounds.d[dim][dir], wall_pos, dim, dir)), c_test(c); // should have enough thickness for pool tile
 					c_test.d[dim][!dir] += dir_sign*wall_thickness; // expand out more so that it's guaranteed to intersect appliances placed near the wall
-					if (overlaps_other_room_obj(c_test, objs_start))          continue;
-					if (is_obj_placement_blocked(c, room, (ei==1), 1))        continue; // inc_open_doors=1/check_open_dir=1 for inside, to avoid placing behind an open door
-					if (!check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the switch is on a wall
+					if (overlaps_other_room_obj(c_test, objs_start))                continue;
+					if (!is_gdoor && is_obj_placement_blocked(c, room, (ei==1), 1)) continue; // inc_open_doors=1/check_open_dir=1 for inside, to avoid placing behind an open door
+					if (!check_if_placed_on_interior_wall(c, room, dim, dir))       continue; // ensure the switch is on a wall
 					// if is_basement, and this is an exterior wall, use a non-recessed light switch? but the basement ext wall will never have a doorway; next to basement stairs?
 					unsigned flags(RO_FLAG_NOCOLL);
 
