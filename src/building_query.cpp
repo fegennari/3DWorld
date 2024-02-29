@@ -153,6 +153,7 @@ bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expan
 
 bool do_sphere_coll_polygon_sides(point &pos, cube_t const &part, float radius, bool interior_coll, vector<point> const &points, vector3d *cnorm) {
 	point quad_pts[4]; // quads
+	bool coll(0);
 
 	for (unsigned S = 0; S < points.size(); ++S) { // generate vertex data quads
 		for (unsigned d = 0, ix = 0; d < 2; ++d) {
@@ -165,9 +166,10 @@ bool do_sphere_coll_polygon_sides(point &pos, cube_t const &part, float radius, 
 		if (!sphere_poly_intersect(quad_pts, 4, pos, normal, rdist, radius)) continue;
 		pos += normal*(radius - rdist);
 		if (cnorm) {*cnorm = normal;}
-		return 1;
+		if (!interior_coll) return 1; // interior coll must test against all sides
+		coll = 1;
 	} // for S
-	return 0;
+	return coll;
 }
 
 // called for players and butterfiles
@@ -291,7 +293,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 			else {
 				if (!i->contains_pt(query_pt)) continue; // not interior to this part
 
-				if (!is_cube() && zval > i->z1() && zval < i->z2()) { // non-cube shaped building, in Z bounds, clamp_part is conservative
+				if (!allow_outside_building && !is_cube() && zval > i->z1() && zval < i->z2()) { // non-cube shaped building, in Z bounds, clamp_part is conservative
 					//if (use_cylinder_coll()) {}
 					vect_point const &points(get_part_ext_verts(i - parts.begin()));
 					point const p_last2_bs(p_last2 - xlate);
