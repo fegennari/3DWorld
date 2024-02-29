@@ -226,6 +226,7 @@ public:
 
 	void init() {
 		if (!tid_to_slot_ix.empty()) return; // already inited
+		// register all textures that will be used here, before we get into the OMP parallel block
 		unsigned const num_special_tids = 7;
 		int const special_tids[num_special_tids] = {WHITE_TEX, NO_SHADOW_WHITE_TEX, SHADOW_ONLY_TEX, FENCE_TEX, PANELING_TEX, TILE_TEX, WOOD_TEX}; // for elevators, etc.
 		tid_to_slot_ix.push_back(0); // untextured case
@@ -243,8 +244,10 @@ public:
 		register_tid(building_texture_mgr.get_solarp_tid());
 		register_tid(building_texture_mgr.get_concrete_tid());
 		register_tid(building_texture_mgr.get_met_plate_tid());
+		register_tid(building_texture_mgr.get_mplate_nm_tid());
 		register_tid(building_texture_mgr.get_met_roof_tid());
 		register_tid(building_texture_mgr.get_tile_floor_tid());
+		register_tid(building_texture_mgr.get_tile_floor_nm_tid());
 		register_tid(get_plywood_tid()); // for attics
 		register_tid(FONT_TEXTURE_ID); // for roof signs
 		for (unsigned i = 0; i < num_special_tids; ++i) {register_tid(special_tids[i]);}

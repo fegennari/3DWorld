@@ -338,6 +338,7 @@ int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y, i
 	if (tid >= 0) {assert((unsigned)tid < textures.size()); return tid;}
 	//timer_t timer("Load Texture " + name);
 	// try to load/add the texture directly from a file: assume it's RGB with wrap and mipmaps
+	assert(omp_get_thread_num_3dw() == 0); // must be serial
 	tid = textures.size();
 	bool const do_compress(allow_compress && def_tex_compress && !is_normal_map);
 	// type format width height wrap_mir ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0 [normal_map=0]]]]]
