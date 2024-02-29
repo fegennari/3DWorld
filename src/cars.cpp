@@ -342,7 +342,7 @@ bool car_t::front_intersects_car(car_t const &c) const {
 }
 
 void car_t::honk_horn_if_close() const {
-	if (map_mode) return; // no honking in overhead map mode
+	if (map_mode || camera_in_building) return; // no honking in overhead map mode or when the player is inside a building
 	point const pos(get_center()), pos_cs(pos + get_tiled_terrain_model_xlate());
 	
 	if (dist_less_than(pos_cs, get_camera_pos(), 1.0*city_params.road_spacing)) {
