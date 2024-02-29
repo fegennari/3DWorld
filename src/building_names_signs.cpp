@@ -318,7 +318,7 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 	float const sign_height(4.0*sign_hwidth/(name.size() + 2)), sign_depth(0.025*sign_height);
 	colorRGBA const color(choose_sign_color(rgen, emissive));
 	float sign_z1(part_zmax);
-	if (!add_connector) {sign_z1 -= 1.2*sign_depth;} // shift down slightly to ensure some ext wall adjacency in case there's no roof wall
+	if (!add_connector) {sign_z1 -= get_fc_thickness();} // shift down slightly to ensure some ext wall adjacency in case there's no roof wall; not enough to Z-clip on top floor
 	cube_t sign;
 	set_cube_zvals(sign, sign_z1, (sign_z1 + sign_height));
 	set_wall_width(sign, center_pos, sign_hwidth, !dim);
