@@ -1480,10 +1480,25 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		}
 	} // for dir
 	room.assign_to((mens_room ? RTYPE_MENS : RTYPE_WOMENS), floor);
+	
+	// make sure doors start closed and unlocked; should only be needed for non-cube buildings?
+	if (!is_cube()) {
+		for (door_stack_t const &ds : get_doorways_for_room(room, zval)) {
+			assert(ds.first_door_ix < interior->doors.size());
+
+			for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
+				door_t &door(interior->doors[dix]);
+				if (!ds.is_same_stack(door)) break; // moved to a different stack, done
+				if (door.z1() > zval || door.z2() < zval) continue; // wrong floor
+				door.open   = 0;
+				door.locked = 0;
+			}
+		} // for ds
+	}
 	// add a sign outside the bathroom door
 	add_door_sign((mens_room ? "Men" : "Women"), room, zval, room_id, tot_light_amt, 1); // no_check_adj_walls=1
 
-	if (rgen.rand_float() < 0.1) { // make this door/room out of order 10% of the time
+	if (is_cube() && rgen.rand_float() < 0.1) { // make this door/room out of order 10% of the time; only for cube buildings (others need the connectivity)
 		make_door_out_or_order(room, zval, room_id, tot_light_amt, br_door_stack_ix);
 		room.has_out_of_order = 1; // flag if any floor is out of order
 	}
