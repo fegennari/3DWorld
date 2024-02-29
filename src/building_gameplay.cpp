@@ -751,7 +751,7 @@ public:
 		
 		if (!obj.has_dstate()) { // not a droppable/throwable item(ball)
 			if (!obj.can_use()) return 0; // should never get here?
-			if (obj.type == TYPE_CANDLE && carried.back().get_remaining_capacity_ratio() > 0.0) {carried.back().flags ^= RO_FLAG_LIT;} // toggle candle light
+			if (obj.type == TYPE_CANDLE && player_in_water != 2 && carried.back().get_remaining_capacity_ratio() > 0.0) {carried.back().flags ^= RO_FLAG_LIT;} // toggle candle light
 			return 1;
 		}
 		remove_last_item(); // drop the item - remove it from our inventory
@@ -923,6 +923,7 @@ public:
 				if ((frame_counter % 10) == 0) {obj.use_count += 10.0*elapsed_time;} // special logic for integer incrementing
 				min_eq(obj.use_count, get_room_obj_type(obj).capacity); // use_count can't be > capacity
 				if (obj.get_remaining_capacity_ratio() <= 0.0) {obj.flags &= ~RO_FLAG_LIT;} // goes out when used up
+				if (player_in_water == 2) {obj.flags &= ~RO_FLAG_LIT;} // goes out under water
 			}
 		}
 		if (!in_building_gameplay_mode()) return;
