@@ -135,7 +135,7 @@ bool vert_opt_flags[3] = {0}; // {enable, full_opt, verbose}
 
 
 extern bool clear_landscape_vbo, use_dense_voxels, tree_4th_branches, model_calc_tan_vect, water_is_lava, use_grass_tess, def_tex_compress, ship_cube_map_reflection;
-extern bool flashlight_on, player_wait_respawn;
+extern bool flashlight_on, player_wait_respawn, camera_in_building;
 extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display, mesh_freq_filter, show_waypoints, last_inventory_frame;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST, mesh_gen_mode, mesh_gen_shape, map_drag_x, map_drag_y, player_in_water;
 extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, DYNAMIC_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz;
@@ -1258,7 +1258,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 	case '4': // toggle occlusion culling / tiled terrain/voxel/mesh detail normal maps
 		display_mode ^= 0x08;   show_bool_option_change("Occlusion Culling", (display_mode & 0x08)); break;
 	case '5': // walk on snow/ship shadows/reflections/debugging
-		display_mode ^= 0x10;   show_bool_option_change("Debug Mode", (display_mode & 0x10)); break;
+		display_mode ^= 0x10;   show_bool_option_change((camera_in_building ? "Indirect Lighting" : "Debug Mode"), (display_mode & 0x10)); break;
 	case '6': // toggle water reflections, bump maps, bloom, and map view lighting/shadows
 		display_mode ^= 0x20;   break;
 	case '7': // toggle snow accumulation, clouds, and universe mode multithreading
