@@ -2471,9 +2471,12 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 
 		for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) { // can be slow, but not as slow as iterating over doors
 			if (new_pos.z < i->z1() || new_pos.z > i->z2()) continue; // wrong part/floor
-			cube_t const dcc(i->get_open_door_path_bcube());
-			if (!dcc.intersects(sc)) continue; // no intersection with door
-			if (!dcc.line_intersects(person.pos, person.target_pos)) continue; // check if path goes through door, to allow for "glancing blows" when pushed or turning
+			if (!i->get_open_door_path_bcube().intersects(sc)) continue; // no intersection with door
+			cube_t const dbc(i->get_true_bcube());
+
+			if (!dbc.line_intersects(person.pos, person.target_pos)) { // check if path goes through door, to allow for "glancing blows" when pushed or turning
+				if (person.path.empty() || !dbc.line_intersects(person.target_pos, person.path.back())) continue; // check next path point as well
+			}
 			assert(i->first_door_ix < interior->doors.size());
 
 			for (unsigned dix = i->first_door_ix; dix < interior->doors.size(); ++dix) {
