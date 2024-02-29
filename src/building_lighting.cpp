@@ -1293,9 +1293,12 @@ bool check_cube_visible_through_cut(vect_cube_t const &cuts, cube_t const &light
 		point const pts[4] = {point(s.x1(), s.y1(), z), point(s.x2(), s.y1(), z), point(s.x2(), s.y2(), z), point(s.x1(), s.y2(), z)};
 
 		for (unsigned n = 0; n < 4; ++n) { // check if the ray through any corner of the gap hits the light bcube
-			vector3d const dir((pts[n] - camera_bs).get_norm());
+			vector3d const delta(pts[n] - camera_bs);
+			float const corner_dist(delta.mag());
+			vector3d const dir(delta/corner_dist);
 			if (!line_intersect_sphere(camera_bs, dir, lpos, light_radius)) continue; // test bsphere
-			if (light_bounds.line_intersects(camera_bs, (camera_bs + dir*light_dist))) return 1; // test bounds
+			float const ray_len(max(light_dist, 1.1f*corner_dist)); // make sure the ray projects past the corner of the cut to the floor above or below
+			if (light_bounds.line_intersects(camera_bs, (camera_bs + dir*ray_len))) return 1; // test bounds
 		}
 	} // for s
 	return 0;
