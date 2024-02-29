@@ -3588,7 +3588,8 @@ public:
 				if (no_depth_write) {glDepthMask(GL_FALSE);} // disable depth writing
 
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
-					if (!g->bcube.closest_dist_less_than(camera_xlated, draw_dist)) continue; // too far; used exterior bcube
+					if (single_tile && (*i)->use_smap_this_frame) {} // not drawn in main/nonshadow pass, so must be drawn here
+					else if (!g->bcube.closest_dist_less_than(camera_xlated, draw_dist)) continue; // too far; uses exterior bcube
 					if (!building_grid_visible(xlate, g->bcube)) continue; // VFC; use exterior bcube
 					if (!try_bind_tile_smap_at_point((g->bcube.get_cube_center() + xlate), city_shader)) continue; // no shadow maps - not drawn in this pass
 					unsigned const tile_id(g - (*i)->grid_by_tile.begin());
