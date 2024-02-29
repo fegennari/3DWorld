@@ -811,7 +811,6 @@ void change_tree_mode() {
 }
 
 void switch_weapon_mode() {
-
 	if (sstates == NULL || game_mode != GAME_MODE_FPS) return;
 	++sstates[CAMERA_ID].wmode;
 	sstates[CAMERA_ID].verify_wmode();
@@ -820,8 +819,7 @@ void switch_weapon_mode() {
 }
 
 void toggle_camera_mode() {
-
-	camera_mode   = !camera_mode;
+	camera_mode   = (camera_mode == 0);
 	camera_reset  = 1;
 	camera_change = 1;
 	if (camera_mode == 1) {camera_invincible = 1;} // in air (else on ground)
@@ -831,7 +829,6 @@ void update_precip_rate_verbose(float val) {
 	update_precip_rate(val);
 	cout << ((val > 1.0) ? "increase" : "decrease") << " precip to " << obj_groups[coll_id[PRECIP]].max_objs << endl;
 }
-
 void show_bool_option_change(string const &name, bool new_val) {
 	print_text_onscreen((name + (new_val ? " ON" : " OFF")), WHITE, 1.0, 1.0*TICKS_PER_SECOND);
 }
@@ -839,6 +836,9 @@ void show_speed() {
 	ostringstream oss;
 	oss << "Player Speed " << get_player_speed_mult() << "x";
 	print_text_onscreen(oss.str(), WHITE, 1.0, 1.0*TICKS_PER_SECOND);
+}
+void show_text_prompt() {
+	print_text_onscreen("Text Prompt", WHITE, 1.0, 2.0*TICKS_PER_SECOND);
 }
 
 void print_texture_stats();
@@ -867,7 +867,7 @@ void next_game_mode() {
 // key repeat is only enabled for movement keys wasd
 void keyboard_proc(unsigned char key, int x, int y) {
 
-    switch (key) { // available: O, sometimes Z
+    switch (key) { // available: sometimes O, sometimes Z
 	case 0x1B: // ESC key (27)
 		quit_3dworld();
 		break;
@@ -988,7 +988,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		reset_camera_pos();
 		break;
 
-	case 'P':
+	case 'P': // voxel add/remove toggle
 		voxel_add_remove ^= 1;
 		break;
 
@@ -1042,6 +1042,9 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		break;
 	case 'u': // toggle timing profiler
 		toggle_timing_profiler(); // show_bool_option_change()?
+		break;
+	case 'O': // text prompt (for future use)
+		show_text_prompt();
 		break;
 
 	case '=': // increase temp
