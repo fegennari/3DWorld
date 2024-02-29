@@ -450,8 +450,10 @@ std::string const room_names[NUM_RTYPES] =
 	 "Swimming Pool Room", "Security Room", "Backrooms", "Retail", "Elevator"};
 // short room names for elevator buttons (should be <= 8 characters)
 std::string const room_names_short[NUM_RTYPES] =
-{"", "Hall", "Stairs", "Office", "Bath", "Bed", "Kitchen", "Living", "Dining", "Study", "Entry", "Library", "Storage", "Garage", "Shed", "Lobby", "Laundry", "Card", "Play", "Art",
-"Utility", "Garage", "Ramp", "Attic", "Bed", "", "Server", "Pool", "Swim", "Security", "Basement", "Retail", "Elevator"};
+	{"", "Hall", "Stairs", "Office", "Bath", "Men", "Women", "Bed", "Kitchen", "Living",
+	"Dining", "Study", "Entry", "Library", "Storage", "Garage", "Shed", "Lobby", "Laundry", "Card",
+	"Play", "Art", "Utility", "Garage", "Ramp", "Attic", "Bed", "", "Server", "Pool",
+	"Swim", "Security", "Basement", "Retail", "Elevator"};
 
 enum {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES, SHAPE_RAMP, SHAPE_L}; // stairs shapes; SHAPE_L is unused
 typedef uint8_t stairs_shape;
