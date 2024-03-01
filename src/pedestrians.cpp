@@ -943,17 +943,21 @@ void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, 
 
 			// check for crossing the side (not end) of the driveway this frame; use next pos assuming we're not stopped
 			if (dw_extend.contains_pt_xy(pos)) {
-				// would this deadlock if the car and ped are waiting on each other?
+				// would this deadlock if the car and ped are waiting on each other? yes, seems like it can
 				dw.driveway->mark_ped_this_frame(); // flag the driveway as blocked so that cars don't pull into it
 			}
 			else if (dw_wider.contains_pt_xy(pos) && dw_extend.contains_pt_xy(pos + 1.5f*fticks*dir*speed)) {
 				car_base_t const *const car(ped_mgr.find_car_using_driveway(city, dw));
 
-				if (car != nullptr && !car->is_parked()) { // car using this driveway, not parked (though there shouldn't be any parked cars returned, car should be null if parked)
+				if (car != nullptr && !car->is_parked() /*&& !car->is_stopped()*/ /*&& !car->is_sleeping()*/) { // stopped may be too strong, and can't query sleeping
+					// car using this driveway, not parked (though there shouldn't be any parked cars returned, car should be null if parked), and not stopped/sleeping?
 					cube_t query_cube(dw.driveway->extend_across_road());
 
-					if (car->dest_driveway == (int)dw.dix && car->dim != ddim) { // car turning/entering driveway
-						query_cube.d[!ddim][!car->dir] -= 1.0*(car->dir ? 1.0 : -1.0)*city_params.road_width; // extend for car lead distance
+					// do path prediction if we're not a zombie and haven't been waiting too long (to avoid deadlock)
+					if (!is_zombie && get_wait_time_secs() < 10.0) {
+						if (car->dest_driveway == (int)dw.dix && car->dim != ddim) { // car turning/entering driveway
+							query_cube.d[!ddim][!car->dir] -= 1.0*(car->dir ? 1.0 : -1.0)*city_params.road_width; // extend for car lead distance
+						}
 					}
 					if (query_cube.intersects_xy(car->bcube)) { // car entering or leaving driveway
 						//if (city_single_cube_visible_check(pos, car->bcube) {} // we could check this, but it's generally always true
