@@ -433,7 +433,8 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 	if (mode == 0) { // if the player is in the closet, only the closet door can be opened
 		for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 			if (player_in_closet && !i->is_closet_door())         continue; // only allow the player to open closet doors when in the closet
-			if (i->z1() > closest_to.z || i->z2() < closest_to.z) continue; // wrong floor, skip
+			float const door_z2(i->z2() + (i->on_stairs ? 0.25*floor_spacing : 0.0)); // increase height when on stairs; needed for steep basement stairs
+			if (i->z1() > closest_to.z || door_z2 < closest_to.z) continue; // wrong floor, skip
 			point const center(i->get_cube_center());
 			float const dist_sq(p2p_dist_sq(closest_to, center));
 			if (found_item && dist_sq >= closest_dist_sq) continue; // not the closest
