@@ -345,13 +345,16 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			float const min_dim_sz(min(p->dx(), p->dy()));
 			bool const is_office(!is_house);
 
-			if (min_dim_sz > 2.0*min_wall_len) { // large cylinder
+			if (min_dim_sz > 2.0*min_wall_len) { // large cylinder or N-gon
 				// create a pie slice split for cylindrical parts; since we can only add X or Y walls, place one of each that crosses the entire part
 				point const center(p->xc(), p->yc(), p->z1());
 				bool const clip_to_ext_walls(!use_cylinder_coll()); // if this building isn't a full cylinder, we may need to clip the walls shorter
 				vector<point> const &points(get_part_ext_verts(part_id));
 				// if the part is on the small side, only add a single wall; choose randomly; maybe should add the shorter wall if asymmetric?
 				bool const only_one_wall(min_dim_sz < 3.0*min_wall_len);
+				unsigned const N((flat_side_amt == 0.0) ? num_sides : 4); // assume worst case of flat side making a right angle
+				float const corner_angle((N-2)*PI/N);
+				float const end_pullback(1.5*(wall_half_thick + get_trim_thickness())/tan(0.5*corner_angle));
 				unsigned skip_dim(only_one_wall ? rgen.rand_bool() : 2);
 
 				for (unsigned d = 0; d < 2; ++d) {
@@ -371,7 +374,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 							} // for p
 						} // for e
 					}
-					wall.expand_in_dim(!d, -(clip_to_ext_walls ? 0.75 : 0.25)*wall_half_thick); // shrink slightly to avoid clipping through the exterior wall
+					wall.expand_in_dim(!d, -end_pullback); // shrink slightly to avoid clipping through the exterior wall
 					assert(wall.is_strictly_normalized());
 
 					// cut two doorways in each wall if there's space
