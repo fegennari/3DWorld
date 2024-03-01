@@ -36,7 +36,7 @@ extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable
 extern bool teleport_to_screenshot, enable_dlight_bcubes, can_do_building_action, mirror_in_ext_basement;
 extern unsigned room_mirror_ref_tid;
 extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2, building_action_key, player_in_elevator;
-extern float CAMERA_RADIUS, fticks, NEAR_CLIP, FAR_CLIP;
+extern float CAMERA_RADIUS, fticks, FAR_CLIP;
 extern colorRGB cur_ambient, cur_diffuse;
 extern point sun_pos, pre_smap_player_pos, actual_player_pos;
 extern vector<light_source> dl_sources;

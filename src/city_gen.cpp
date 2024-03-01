@@ -23,7 +23,7 @@ point pre_smap_player_pos(all_zeros), actual_player_pos(all_zeros); // Note: pre
 extern bool enable_dlight_shadows, dl_smap_enabled, flashlight_on, camera_in_building, have_indir_smoke_tex, disable_city_shadow_maps;
 extern int rand_gen_index, display_mode, animate2, draw_model, player_in_basement;
 extern unsigned shadow_map_sz, cur_display_iter;
-extern float cobj_z_bias, rain_wetness;
+extern float cobj_z_bias, rain_wetness, NEAR_CLIP;
 extern building_params_t global_building_params;
 extern vector<light_source> dl_sources;
 
@@ -1310,13 +1310,15 @@ public:
 			// however, they would need to apply to all tiles, including city plots and curved road segments, which makes it difficult;
 			// also, we would have to adjust the height of pedestrians, fire hydrants, etc.
 			bool const use_road_normal_maps(rain_wetness > 0.0); // use dirt normal map texture for rain effects
+			// if the player is just above the basement, then skip drawing the plot to avoid the plane clipping through the player's near plane
+			bool const player_near_basement(player_in_basement || (camera_in_building && !plots.empty() && camera_pos.z < plots.front().z2() + NEAR_CLIP));
 
 			for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
 				if (!dstate.check_cube_visible(b->bcube)) continue; // VFC/too far
 				dstate.begin_tile(b->bcube.get_cube_center());
 
-				// if the player is in the basement, don't draw the plot over the basement stairs; the player can't see any of this anyway
-				if (!player_in_basement || is_connector_road) {
+				// if the player is in or near the basement, don't draw the plot over the basement stairs; the player can't see any of this anyway
+				if (!player_near_basement || is_connector_road) {
 					if (is_residential) { // draw all plots with grass, using the park materials
 						dstate.draw_city_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PARK, 1); // draw_all=1
 					}
