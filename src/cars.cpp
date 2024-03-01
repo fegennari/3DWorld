@@ -211,7 +211,7 @@ void car_t::person_in_the_way(bool is_player, bool at_stopsign) {
 	static rand_gen_t rgen;
 	bool const is_zombie(in_building_gameplay_mode() && !is_player);
 	// honk less often for zombies since they're often in the road; honk less often at stop signs because peds don't predict stop sign logic as well as traffic lights
-	unsigned const rgen_mod_val(is_zombie ? 16 : ((at_stopsign && !is_player) ? 8 : 4));
+	unsigned const rgen_mod_val(is_player ? 2 : (is_zombie ? 24 : (at_stopsign ? 12 : 8)));
 	if ((rgen.rand() % rgen_mod_val) == 0) {honk_horn_if_close_and_fast();}
 	decelerate_fast(); // must be after honk logic
 }
