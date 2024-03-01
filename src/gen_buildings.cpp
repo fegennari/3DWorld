@@ -36,7 +36,7 @@ extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable
 extern bool teleport_to_screenshot, enable_dlight_bcubes, can_do_building_action, mirror_in_ext_basement;
 extern unsigned room_mirror_ref_tid;
 extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2, building_action_key, player_in_elevator;
-extern float CAMERA_RADIUS, fticks, FAR_CLIP;
+extern float CAMERA_RADIUS, fticks, NEAR_CLIP, FAR_CLIP;
 extern colorRGB cur_ambient, cur_diffuse;
 extern point sun_pos, pre_smap_player_pos, actual_player_pos;
 extern vector<light_source> dl_sources;
@@ -2297,11 +2297,14 @@ void draw_basement_entrance_cap(cube_t const &c, float z) {
 }
 void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
 	if (!interior || !has_basement()) return;
-	float const zval(get_basement().z2()), z(zval + BASEMENT_ENTRANCE_SCALE*get_floor_thickness());
+	float const zval(get_basement().z2()), camera_z(get_camera_pos().z);
+	if (camera_z < zval) return;
+	float const z(zval + BASEMENT_ENTRANCE_SCALE*get_floor_thickness()); // offset is required to prevent Z-fighting
 	s.set_cur_color(ALPHA0); // fully transparent
 	select_texture(WHITE_TEX);
 	enable_blend();
 	glEnable(GL_CULL_FACE);
+	glEnable(GL_DEPTH_CLAMP);
 
 	for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
 		if (i->z1() < zval && !i->in_ext_basement) {draw_basement_entrance_cap(*i, z);} // draw if this is a basement stairwell (not extended basement stairs)
@@ -2309,6 +2312,7 @@ void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
 	if (has_pg_ramp() && !interior->ignore_ramp_placement) { // add opening for the ramp onto the ground floor
 		draw_basement_entrance_cap(interior->pg_ramp, z);
 	}
+	setup_depth_clamp(); // restore
 	glDisable(GL_CULL_FACE);
 	disable_blend();
 }
@@ -3342,8 +3346,9 @@ public:
 						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
 						if (reflection_pass) continue; // don't execute the code below
 						if (display_mode & 0x20) {b.debug_people_in_building(s);} // debug visualization
+						float const basement_z_adj(2.0*BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness()); // adjust to prevent problems when camera is close to the plane
 						this_frame_camera_in_building = 1;
-						this_frame_player_in_basement =   b.check_player_in_basement(camera_xlated - vector3d(0.0, 0.0, BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness())); // set once
+						this_frame_player_in_basement =   b.check_player_in_basement(camera_xlated - basement_z_adj*plus_z); // set once
 						this_frame_player_in_attic    =  (b.point_in_attic(camera_xlated) ? (b.has_attic_window ? 1 : 2) : 0);
 						this_frame_player_in_water    =   b.point_in_water_area(camera_xlated, 1); // full_room_height=1
 						if (this_frame_player_in_water && b.point_in_water_area(camera_xlated, 0)) {this_frame_player_in_water = 2;} // full_room_height=0; test for underwater
