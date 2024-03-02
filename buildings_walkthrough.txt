@@ -1,0 +1,64 @@
+* Video Demo:
+Pre-work:
+- Use 64-bit build to avoid memory error
+- Enable pedestrians, building people, and cars
+Run setup:
+- Pre-load zombies
+- Pre-load sun/moon pos
+- Disable framerate
+- Leave mouse look enabled?
+
+- House walkthrough
+	- Spider, rat, cockroaches, files
+	- Take books from shelves, make a stack, open them
+	- Kitchen: light, snake, sink, drawers + spider jump, doors, microwave?, dishwasher, stove burners
+	- Bathroom mirror, medicine cabinet, sink water, shower, tub water, toilet, TP pull, TP take, TP on floor
+	- Show people opening doors
+	- Fish tank and lava lamp
+	- Use stairs, Locked door, Kick and throw ball
+	- Rotate and take picture then frame in hall
+	- Push a bed, take sheets, pillow, and mattress
+	- Flashlight, duct tape, spraypaint, in drawers
+	- Ceiling fan in far room
+	- Closet with light and clothes
+	- Attic + indir lighting
+	- L-shaped stairs in other house
+	- Garage with car
+- Exterior stairs, Balcony, Fire escape
+- Basement Indir lighting
+- Pool table
+- Office walkthrough
+	- Retail area - take from shelves
+	- Take and open boxes
+	- Take and light candle, toggle lights
+	- Use stairs down to parking garage - with cars and pipes - enable indir lighting
+	- Use elevator up, show people using elevator
+	- Take, use, and drop fire extinguisher
+	- Show security room, server room, utility room, bathroom, and office(s)
+	- Backrooms with colored lights and water, go to second submerged floor
+- Show wireframe mode
+- Remove terrain and grass to show underground area
+- Extended basement with stairs
+- Swimming pool underground (building in the back), with clock
+- Cubicles with rotating chair (in large building that was slow)
+- Residential city
+	- Fly over houses
+	- Block car for honk
+	- Walk into house
+	- People passing each other and player
+	- Zombie mode
+- Commercial city
+	- City birds
+	- Walk into building and non-cube building
+	- Walk in park
+	- Rooftop helipad, AC units, skylight
+	- Helicopter, with shadow '\' key
+- Bridge/Tunnels (with cars)
+- Overhead map mode showing cars
+- Map teleport over water then back to house to show saved state
+- Tab menu (change sun and moon pos)
+- Night time
+	- City buildings with bloom
+	- Scrolling signs
+	- Car traffic
+	- Bridge with car
