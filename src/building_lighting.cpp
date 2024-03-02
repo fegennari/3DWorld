@@ -1331,7 +1331,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 	point camera_rot(camera_bs);
 	maybe_inv_rotate_point(camera_rot); // rotate camera pos into building space; should use this pos below except with building bcube, occlusion checks, or lpos_rot
-	bool const player_on_attic_stairs(check_attic && player_in_attic && interior->attic_access.contains_pt_xy(camera_rot));
+	// Note: we check (camera_bs.z > attic_access.z1()) rather than player_in_attic because we want to include the case where the player is in the access door
+	bool const player_on_attic_stairs(check_attic && camera_bs.z > attic_access.z1() && attic_access.contains_pt_xy(camera_rot));
 	bool const player_in_pool(camera_in_building && has_pool() && interior->pool.contains_pt(camera_bs));
 	unsigned camera_part(parts.size()); // start at an invalid value
 	bool camera_by_stairs(0), camera_on_stairs(0), camera_by_L_stairs(0), camera_somewhat_by_stairs(0), camera_in_hallway(0), camera_can_see_ext_basement(0);
@@ -1430,7 +1431,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			// set camera_somewhat_by_stairs when camera is in room with stairs, or adjacent to one with stairs
 			if (stairs_or_ramp_visible) {camera_somewhat_by_stairs |= bool(room_or_adj_room_has_stairs(camera_room, camera_rot.z, 1, 1));} // inc_adj_rooms=1, check_door_open=1
 			// if player is by the stairs in a room with all closed doors, it's still possible to see a light shining through a door of the floor above or below
-			camera_in_closed_room = (!camera_by_stairs && all_room_int_doors_closed(room_ix, camera_z));
+			camera_in_closed_room = (!camera_by_stairs && !player_on_attic_stairs && all_room_int_doors_closed(room_ix, camera_z));
 		}
 		else if (point_in_attic(camera_rot)) {
 			if (show_room_name) {lighting_update_text = room_names[RTYPE_ATTIC];}
@@ -1591,6 +1592,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 			else if (light_and_camera_by_L_stairs) {
 				// lights may be visible multiple rooms above or below through the hole in the center of L-shaped stairs
+			}
+			else if (player_on_attic_stairs && floor_is_below) {
+				// lights on floor below may be visible through attic opening
 			}
 			else if (floor_is_above || (floor_is_below && !camera_room_tall)) { // light is on a different floor from the camera
 				bool const parts_are_stacked(camera_part < real_num_parts && (parts[camera_part].z2() <= room.z1() || parts[camera_part].z1() >= room.z2()));
