@@ -1778,6 +1778,10 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 		s.set_cur_color(PURPLE);
 		if (!dist_less_than(orig_dest_pos, player_pos, CAMERA_RADIUS)) {draw_sphere_vbo(orig_dest_pos, 1.5*radius, NDIV, 0);}
 	}
+	if (!complete) { // incomplete path - show dest pos
+		s.set_cur_color(BLACK);
+		draw_sphere_vbo(orig_dest_pos, sphere_radius, NDIV, 0);
+	}
 	end_sphere_draw(in_sphere_draw);
 
 	for (auto i = dbg_cubes.begin(); i != dbg_cubes.end(); ++i) {
@@ -1793,6 +1797,13 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 		draw_simple_cube(c);
 	}
 	if (has_dest_bldg   ) {draw_colored_cube(get_building_bcube(dest_bldg), PURPLE, s);} // draw dest building bcube
+	if (has_dest_car    ) {
+		cube_t dc; dc.set_from_point(dest_car_center);
+		dc.expand_by_xy(0.5*city_params.get_nom_car_size().x);
+		dc.z1()  = get_z1();
+		dc.z2() += 2.0*city_params.road_width; // make it tall enough to see
+		draw_colored_cube(dc, PURPLE, s);
+	}
 	if (collided        ) {draw_colored_cube(get_bcube(), RED, s);} // show marker if collided this frame
 	else if (in_the_road) {draw_colored_cube(get_bcube(), GREEN, s);}
 
