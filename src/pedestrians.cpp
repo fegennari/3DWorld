@@ -560,6 +560,7 @@ void path_finder_t::find_best_path_recur(path_t const &cur_path, unsigned depth)
 	if (cur_path.length >= best_path.length) return; // bound (best path length is set to an upper bound even when not valid)
 	cube_t const bcube(cur_path.calc_bcube());
 	path_t::const_iterator first_int_p(cur_path.end());
+	cube_t cur_avoid;
 	float tmin(1.0);
 	unsigned cix(0);
 
@@ -567,11 +568,15 @@ void path_finder_t::find_best_path_recur(path_t const &cur_path, unsigned depth)
 		if (used[ix]) continue; // done with this cube
 		cube_t const &c(avoid[ix]);
 		if (!c.intersects_xy(bcube)) continue;
+		// avoid cubes should generally not overlap, except for residential plot blockers;
+		// if we see a cube that's centered inside the first cube, and our path already hit the first cube, then ignore this new cube;
+		// this is required for pedestrians to properly walk around the edges of the plot without getting stuck on interior objects such as parked cars
+		if (cix == 0 && !cur_avoid.is_all_zeros() && cur_avoid.contains_pt_xy(c.get_cube_center())) continue;
 
 		for (auto p = cur_path.begin(); p+1 != cur_path.end() && p <= first_int_p; ++p) { // iterate over line segments up to/including first_int_p, skip last point
 			float c_tmin, c_tmax;
 			if (!get_line_clip_xy(*p, *(p+1), c.d, c_tmin, c_tmax)) continue;
-			if (p < first_int_p || c_tmin < tmin) {first_int_p = p; tmin = c_tmin; cix = ix;} // intersection
+			if (p < first_int_p || c_tmin < tmin) {first_int_p = p; tmin = c_tmin; cix = ix; cur_avoid = c;} // intersection
 		}
 	} // for ix
 	if (first_int_p != cur_path.end()) {
@@ -839,6 +844,8 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 			if (avoid_inner.contains_pt_xy(pos)) {in_illegal_area = 1;} // may pick a new destination if path finding fails and not following the player
 			else {avoid_entire_plot = 1;}
 		}
+		if (avoid_entire_plot) {avoid.push_back(avoid_area);} // this is the highest priority, so add it first
+
 		if (!in_the_road) { // include collider bcubes for cars parked in house driveways
 			static vect_cube_t car_bcubes; // reused across calls
 			car_bcubes.clear();
@@ -851,8 +858,6 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 			}
 		}
 		if (avoid_entire_plot) {
-			avoid.push_back(avoid_area); // this is the highest priority
-
 			for (auto i = colliders.begin(); i != colliders.end(); ++i) {
 				// exclude any cubes contained in the plot, since they're redundant; maybe shouldn't do this if pos is inside avoid_area?
 				if (!avoid_area.contains_cube_xy_exp(*i, expand)) {add_and_expand_ped_avoid_cube(*i, avoid, expand, height, region);}
