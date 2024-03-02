@@ -1216,7 +1216,6 @@ void building_t::add_padlocks(rand_gen_t rgen) {
 		get_obj_drawers_or_doors(obj_drawers_open, drawers, drawers_part, drawer_extend);
 
 		for (unsigned dix = 0; dix < drawers.size(); ++dix) {
-			unsigned sel_item_ix(0);
 			float stack_z1(0.0);
 
 			for (unsigned item_ix = 0; item_ix < 16; ++item_ix) { // take the *last* item in the drawer first, which will be the top item if stacked

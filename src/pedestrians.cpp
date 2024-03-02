@@ -129,7 +129,7 @@ public:
 			if (building_id < 0) {non_building_blockers.push_back(c);} // not a building
 			else {buildings.emplace_back(c, building_id);} // building
 		}
-		assert(buildings.size() < 254 - node_bix_start); // must fit in uint8_t with some reserved values
+		assert(buildings.size() < (254U - node_bix_start)); // must fit in uint8_t with some reserved values
 		// Note: can call treat_bcube_as_vcylin(), though small vertical cylinders may still be a single cube
 		build(bcube_, non_building_blockers, radius_, 0, 1); // add_edge_pad=0, no_blocker_expand=1 (blockers are already expanded)
 		float const zval(bcube.z1() + radius); // make sure it's actually inside the building

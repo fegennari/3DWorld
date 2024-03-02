@@ -1486,7 +1486,6 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t,
 						point const p(p1r + tmin*delta);
 						if (point_in_ellipse_risq(p, cc, rx_inv_sq, ry_inv_sq)) {hit = 1; tmin -= t_step;} else {tmin += t_step;}
 						if (hit) {t_step *= 0.5;} // converge on hit point
-						float const dx(p.x - cc.x), dy(p.y - cc.y);
 					}
 					if (!hit) continue; // not actually a hit
 				} // end ellipse case
