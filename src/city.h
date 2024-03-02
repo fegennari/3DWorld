@@ -860,7 +860,7 @@ class ped_manager_t { // pedestrians
 	rand_gen_t rgen;
 	ao_draw_state_t dstate;
 	int selected_ped_ssn=-1;
-	unsigned animation_id=1;
+	unsigned animation_id=1, tot_num_plots=0;
 	bool ped_destroyed=0, need_to_sort_peds=0, prev_choose_zombie=0;
 
 	void assign_ped_model(person_base_t &ped);

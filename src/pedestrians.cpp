@@ -1351,10 +1351,6 @@ void ped_manager_t::maybe_reassign_building_models(building_t &building) {
 	for (person_t &person : building.interior->people) {maybe_reassign_ped_model(person);}
 }
 
-struct ped_by_plot {
-	bool operator()(pedestrian_t const &a, pedestrian_t const &b) const {return (a.plot < b.plot);}
-};
-
 void ped_manager_t::sort_by_city_and_plot() {
 	//timer_t timer("Ped Sort"); // 0.12ms
 	if (peds.empty()) return;
@@ -1362,13 +1358,15 @@ void ped_manager_t::sort_by_city_and_plot() {
 
 	if (first_sort) { // construct by_city
 		sort(peds.begin(), peds.end());
-		unsigned const max_city(peds.back().city), max_plot(peds.back().plot);
-		by_city.resize(max_city + 2); // one per city + terminator
-		need_to_sort_city.resize(max_city+1, 0);
+		tot_num_plots = peds.back().plot + 1; // across all cities
+		unsigned const num_cities(peds.back().city + 1);
+		by_city.resize(num_cities + 1); // one per city + terminator
+		need_to_sort_city.resize(num_cities, 0);
 
-		for (unsigned city = 0, pix = 0; city <= max_city; ++city) {
+		for (unsigned city = 0, pix = 0; city < num_cities; ++city) {
 			while (pix < peds.size() && peds[pix].city == city) {++pix;}
-			unsigned const cur_plot((pix < peds.size()) ? peds[pix].plot : max_plot+1);
+			assert(peds[pix].plot < tot_num_plots); // should be guaranteed by sort
+			unsigned const cur_plot((pix < peds.size()) ? peds[pix].plot : tot_num_plots);
 			by_city[city+1].assign(pix, cur_plot); // next city begins here
 		}
 	}
@@ -1376,14 +1374,14 @@ void ped_manager_t::sort_by_city_and_plot() {
 		for (unsigned city = 0; city+1 < by_city.size(); ++city) {
 			if (!need_to_sort_city[city]) continue;
 			need_to_sort_city[city] = 0;
-			sort((peds.begin() + by_plot[by_city[city].plot_ix]), (peds.begin() + by_plot[by_city[city+1].plot_ix]), ped_by_plot());
+			sort((peds.begin() + by_plot[by_city[city].plot_ix]), (peds.begin() + by_plot[by_city[city+1].plot_ix]),
+				[](pedestrian_t const &a, pedestrian_t const &b) {return (a.plot < b.plot);});
 		}
 	}
 	// construct by_plot
-	unsigned const max_plot(peds.back().plot);
-	by_plot.resize((max_plot + 2), 0); // one per by_plot + terminator
+	by_plot.resize((tot_num_plots + 1), 0); // one per by_plot + terminator
 
-	for (unsigned plot = 0, pix = 0; plot <= max_plot; ++plot) {
+	for (unsigned plot = 0, pix = 0; plot < tot_num_plots; ++plot) {
 		while (pix < peds.size() && peds[pix].plot == plot) {++pix;}
 		by_plot[plot+1] = pix; // next plot begins here
 	}
