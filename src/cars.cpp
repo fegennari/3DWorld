@@ -270,7 +270,7 @@ bool car_t::run_enter_driveway_logic(vector<car_t> const &cars, driveway_t const
 
 	if (turn_dir == TURN_NONE) {
 		if (prev_bcube.intersects_xy(turn_area)) return 0; // not yet turning, and in turn area last frame - too late to turn (likely car was spawned here)
-		if (driveway.has_recent_ped()) return 1; // pedestrian(s) in driveway, wait
+		if (driveway.has_recent_ped() && get_wait_time_secs() < 60.0) return 1; // pedestrian(s) in driveway, wait unless we've already been waiting for > 60s
 		bool const dw_turn_dir(dir ^ driveway.dir ^ driveway.dim); // turn into driveway: 0=left, 1=right
 		// if turning left: check for oncoming cars, wait until clear; only done at start of turn - if a car comes along mid-turn then we can't stop
 		if (!dw_turn_dir && check_for_road_clear_and_wait(cars, driveway, cur_road)) return 1;
