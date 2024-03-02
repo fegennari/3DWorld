@@ -927,7 +927,13 @@ bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t const &ped_mgr, cu
 
 void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, float &delta_dir) {
 	if (in_the_road) {
-		if (!check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube)) {stop(); return;}
+		bool no_crossing_check(0);
+		// if we're a zombie targeting the player, skip the safe crossing check if the player is in our current plot (and not across the street) and we're facing them
+		if (can_target_player(ped_mgr)) {
+			point const player_pos(get_player_pos_bs());
+			no_crossing_check = (plot_bcube.contains_pt_xy(player_pos) && dot_product_ptv(dir, player_pos, pos) > 0.0);
+		}
+		if (!no_crossing_check && !check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube)) {stop(); return;}
 	}
 	else if (city_params.cars_use_driveways && ped_mgr.has_cars_in_city(city)) { // in a plot
 		// check for cars if about to enter a driveway that's in use
@@ -1006,6 +1012,10 @@ void pedestrian_t::get_plot_bcubes_inc_sidewalks(ped_manager_t const &ped_mgr, c
 	next_plot_bcube.expand_by_xy(sidewalk_width);
 }
 
+bool pedestrian_t::can_target_player(ped_manager_t const &ped_mgr) const { // target the player if visible and reachable
+	return (is_zombie && zombies_can_target_player() && ped_mgr.get_city_bcube_for_peds(city).contains_pt_xy(get_player_pos_bs()));
+}
+
 void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir) {
 	if (destroyed)    return; // destroyed
 	if (speed == 0.0) return; // not moving, no update needed
@@ -1024,7 +1034,8 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	move(ped_mgr, plot_bcube, next_plot_bcube, delta_dir);
 
 	if (is_stopped) { // ignore any collisions and just stand there, keeping the same target_pos; will go when path is clear
-		if (get_wait_time_secs() > CROSS_WAIT_TIME && choose_alt_next_plot(ped_mgr)) { // give up and choose another destination if waiting for too long
+		if ((get_wait_time_secs() > CROSS_WAIT_TIME && choose_alt_next_plot(ped_mgr)) || can_target_player(ped_mgr)) {
+			// give up and choose another destination if waiting for too long, or if we're a zombie targeting the player
 			target_pos = all_zeros;
 			go(); // back up or turn so that we don't walk forward into the street? move() should attempt to rotate in place
 		}
@@ -1064,8 +1075,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	else { // no collisions
 		point dest_pos;
 
-		// target the player if visible and reachable
-		if (is_zombie && zombies_can_target_player() && ped_mgr.get_city_bcube_for_peds(city).contains_pt_xy(player_pos)) {
+		if (can_target_player(ped_mgr)) { // target the player if visible and reachable
 			float const view_dist(2.0*city_params.road_spacing); // tile or city block
 
 			if (dist_xy_less_than(pos, player_pos, view_dist) && overlaps_player_in_z(player_pos)) { // if player is close and not on a roof

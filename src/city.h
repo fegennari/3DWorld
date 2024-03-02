@@ -719,6 +719,7 @@ struct pedestrian_t : public person_base_t { // city pedestrian
 	void register_at_dest();
 	void debug_draw(ped_manager_t &ped_mgr) const;
 private:
+	bool can_target_player(ped_manager_t const &ped_mgr) const;
 	void run_path_finding(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vect_cube_t const &colliders, vector3d &dest_pos);
 	void get_plot_bcubes_inc_sidewalks(ped_manager_t const &ped_mgr, cube_t &plot_bcube, cube_t &next_plot_bcube) const;
 };
