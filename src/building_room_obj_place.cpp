@@ -2007,10 +2007,8 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 void building_t::add_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
 	if (!enable_parked_cars() || (rgen.rand()&3) == 0) return; // 75% of garages have cars
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_USED | RO_FLAG_INVIS); // lines not shown
-	bool const dim(room.dx() < room.dy()); // long dim
-	bool dir(0); // set dir so that cars pull into driveways
-	if (street_dir > 0 && bool((street_dir-1)>>1) == dim) {dir = !((street_dir-1)&1);} // use street_dir if it's set and dims agree
-	else {dir = (room.get_center_dim(dim) < bcube.get_center_dim(dim));} // assumes the garage is at an exterior wall and doesn't occupy the entire house width
+	bool dim(0), dir(0); // set dir so that cars pull into driveways
+	get_garage_dim_dir(room, dim, dir);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t space(room); // full room, car will be centered here
 	set_cube_zvals(space, zval, (zval + 0.001*get_window_vspace()));

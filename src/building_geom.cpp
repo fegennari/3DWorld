@@ -112,6 +112,12 @@ void building_t::clip_door_to_interior(tquad_with_ix_t &door) const {
 	for (unsigned n = 0; n < door.npts; ++n) {clip_cube.clamp_pt(door.pts[n]);}
 }
 
+void building_t::get_garage_dim_dir(cube_t const &garage, bool &dim, bool &dir) const { // works with interior or exterior garages
+	dim = (garage.dx() < garage.dy()); // long dim
+	if (street_dir > 0 && bool((street_dir-1)>>1) == dim) {dir = !((street_dir-1)&1);} // use street_dir if it's set and dims agree
+	else {dir = (garage.get_center_dim(dim) < bcube.get_center_dim(dim));} // assumes the garage is at an exterior wall and doesn't occupy the entire house width
+}
+
 int building_t::get_part_ix_containing_pt(point const &pt) const {
 	auto parts_end(get_real_parts_end_inc_sec());
 
