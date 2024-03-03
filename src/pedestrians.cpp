@@ -16,7 +16,7 @@ bool  const FORCE_USE_CROSSWALKS = 0; // more realistic and safe, but causes pro
 bool some_person_has_idle_animation(0);
 
 extern bool tt_fire_button_down, camera_in_building;
-extern int display_mode, game_mode, animate2, frame_counter, camera_surf_collide;
+extern int display_mode, game_mode, camera_mode, animate2, frame_counter, camera_surf_collide;
 extern float fticks, FAR_CLIP;
 extern double camera_zh;
 extern point pre_smap_player_pos, actual_player_pos;
@@ -1888,6 +1888,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	dstate.s.add_uniform_float("min_alpha", global_building_params.people_min_alpha); // set in case alpha test is enabled
 	animation_state_t anim_state(enable_animations, animation_id);
 	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 0.0);} // disable hemispherical lighting normal because the transforms make it incorrect
+	point const camera_bs(get_camera_pos() - xlate);
 	bool in_sphere_draw(0);
 
 	for (unsigned city = 0; city+1 < by_city.size(); ++city) {
@@ -1922,6 +1923,18 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 				}
 			} // for i
 		} // for plot
+		if (!shadow_only && camera_mode == 1 && !camera_in_building) { // add player AO shadow if on the ground and not in a building
+			cube_t const city_bcube(get_city_bcube_for_peds(city));
+
+			if (city_bcube.contains_pt_xy(camera_bs)) { // player in this city
+				if (fabs((camera_bs.z - get_bldg_player_height()) - city_bcube.z2()) < 0.1*CAMERA_RADIUS) { // near the ground level
+					float const ao_radius(1.0*CAMERA_RADIUS), zval(city_bcube.z2() + 0.05*CAMERA_RADIUS);
+					point pao[4];
+					set_z_plane_square_pts(point(camera_bs.x, camera_bs.y, zval), ao_radius, pao);
+					dstate.ao_qbd.add_quad_pts(pao, colorRGBA(0, 0, 0, 0.5), plus_z);
+				}
+			}
+		}
 	} // for city
 	end_sphere_draw(in_sphere_draw);
 	anim_state.clear_animation_id(dstate.s);
@@ -1929,8 +1942,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	pedestrian_t const *selected_ped(nullptr);
 
 	if (tt_fire_button_down && game_mode != GAME_MODE_FPS) {
-		point const p1(get_camera_pos() - xlate), p2(p1 + cview_dir*FAR_CLIP);
-		pedestrian_t const *ped(get_ped_at(p1, p2));
+		pedestrian_t const *ped(get_ped_at(camera_bs, (camera_bs + cview_dir*FAR_CLIP)));
 		selected_ped_ssn = (ped ? ped->ssn : -1); // update and cache for use in later frames
 		if (ped) {dstate.set_label_text(ped->str(), (ped->pos + xlate));} // found
 	}
