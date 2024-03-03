@@ -95,6 +95,7 @@ string gen_random_full_name (rand_gen_t &rgen) {return person_name_gen.gen_name(
 class city_cube_nav_grid : public cube_nav_grid {
 	vect_cube_with_ix_t buildings;
 	int dest_building=-1;
+	unsigned num_blockers=0;
 	uint8_t const node_bix_start=2; // 0=unblocked, 1=non-building blocked, 2-254=building blocked, 255=reserved
 
 	virtual bool check_line_intersect(point const &p1, point const &p2, float radius) const {
@@ -114,14 +115,17 @@ class city_cube_nav_grid : public cube_nav_grid {
 		return 0;
 	}
 public:
+	void check_if_valid(vect_cube_t const &blockers) {
+		if (blockers.size() != num_blockers) {invalidate();} // invalidate if number of blockers changes; maybe should checksum blockers? but they'll change with radius
+	}
 	// problems with this approach:
 	// * dest cars are not excluded, so we won't be able to reach them
 	// * narrow sidewalk space between the road and residential yards will be even more narrow, with only 2-3 "lanes" for people to walk in
-	// * need a way to cache this per-plot to make it faster
 	void build_for_city(cube_t const &bcube_, vect_cube_t const &blockers, float radius_) {
 		//highres_timer_t timer("build_city_grid");
 		vect_cube_t non_building_blockers;
 		buildings.clear();
+		num_blockers = blockers.size(); // cache
 		
 		for (cube_t const &c : blockers) {
 			if (!bcube_.intersects_xy(c)) continue; // outside the plot
@@ -195,7 +199,36 @@ public:
 			}
 		}
 	}
-}; // building_cube_nav_grid
+}; // city_cube_nav_grid
+
+class city_cube_nav_grid_manager {
+	vector<city_cube_nav_grid> plot_grids[2]; // {normal, with blocked interior}
+public:
+	// assumes a constant radius, even though the radius varies slightly between men and women
+	bool find_path(cube_t const &plot_bcube, vect_cube_t const &blockers, float radius, unsigned plot_ix, unsigned num_plots,
+		point const &p1, point const &p2, ai_path_t &path, int dest_building, shader_t *s=nullptr)
+	{
+		assert(plot_ix < num_plots);
+		// assume the plot blocker is first and at least half the area of the plot
+		bool const has_blocked_interior(!blockers.empty() && blockers.front().get_area_xy() > 0.5*plot_bcube.get_area_xy());
+		vector<city_cube_nav_grid> &grids(plot_grids[has_blocked_interior]);
+		if (grids.empty()) {grids.resize(num_plots);}
+		assert(grids.size() == num_plots);
+		city_cube_nav_grid &grid(grids[plot_ix]);
+		grid.check_if_valid(blockers);
+		if (!grid.is_valid()) {grid.build_for_city(plot_bcube, blockers, radius);}
+		if (s != nullptr) {grid.debug_draw(*s);} // debug visualization
+		return grid.find_path(p1, p2, path, dest_building);
+	}
+};
+
+ped_manager_t::ped_manager_t(city_road_gen_t const &road_gen_, car_manager_t const &car_manager_) : road_gen(road_gen_), car_manager(car_manager_) {}
+ped_manager_t::~ped_manager_t() {} // required for city_cube_nav_grid_manager
+
+city_cube_nav_grid_manager &ped_manager_t::get_nav_grid_mgr() {
+	if (!nav_grid_mgr) {nav_grid_mgr.reset(new city_cube_nav_grid_manager);}
+	return *nav_grid_mgr;
+}
 
 string person_base_t::get_name() const {
 	return person_name_gen.gen_name(ssn, is_female, 1, 1); // use ssn as name rand gen seed; include both first and last name
@@ -1825,14 +1858,13 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 		draw_colored_cube(lookahead, BROWN, s);
 	}
 	if (display_mode & 0x10) { // debugging of nav grid
-		city_cube_nav_grid nav_grid;
-		nav_grid.build_for_city(plot_bcube, avoid, radius/*get_coll_radius()*/);
-		nav_grid.debug_draw(s);
 		point plot_dest(orig_dest_pos);
 		plot_bcube.clamp_pt_xy(plot_dest);
 		path.clear();
 		path.push_back(pos);
-		bool const success(nav_grid.find_path(pos, plot_dest, path, (has_dest_bldg ? (int)dest_bldg : -1)));
+		int const bix(has_dest_bldg ? (int)dest_bldg : -1);
+		city_cube_nav_grid_manager &nav_grid_mgr(ped_mgr.get_nav_grid_mgr());
+		bool const success(nav_grid_mgr.find_path(plot_bcube, avoid, radius, plot, ped_mgr.get_tot_num_plots(), pos, plot_dest, path, bix, &s)); // with debug vis
 		colorRGBA const color(success ? PURPLE : BLACK);
 		path.push_back(plot_dest);
 		path.push_back(orig_dest_pos);

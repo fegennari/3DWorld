@@ -840,6 +840,8 @@ public:
 	unsigned run(point const &pos_, point const &dest_, point const &prev_target_pos_, cube_t const &plot_bcube_, float gap_, point &new_dest);
 };
 
+class city_cube_nav_grid_manager;
+
 class ped_manager_t { // pedestrians
 
 	struct city_ixs_t {
@@ -860,6 +862,7 @@ class ped_manager_t { // pedestrians
 	vector<person_t const *> to_draw;
 	rand_gen_t rgen;
 	ao_draw_state_t dstate;
+	unique_ptr<city_cube_nav_grid_manager> nav_grid_mgr;
 	int selected_ped_ssn=-1;
 	unsigned animation_id=1, tot_num_plots=0;
 	bool ped_destroyed=0, need_to_sort_peds=0, prev_choose_zombie=0;
@@ -879,6 +882,12 @@ public:
 	friend class city_spectate_manager_t;
 	// for use in pedestrian_t, mostly for collisions and path finding
 	path_finder_t path_finder;
+
+	ped_manager_t(city_road_gen_t const &road_gen_, car_manager_t const &car_manager_);
+	ped_manager_t (ped_manager_t const &) = delete; // forbidden
+	void operator=(ped_manager_t const &) = delete; // forbidden
+	~ped_manager_t();
+	city_cube_nav_grid_manager &get_nav_grid_mgr();
 	vect_cube_t const &get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const;
 	road_plot_t const &get_city_plot_for_peds(unsigned city_ix, unsigned plot_ix) const;
 	int get_global_plot_id_for_pos(unsigned city_ix, point const &pos) const;
@@ -895,6 +904,7 @@ public:
 	bool check_streetlight_sphere_coll(pedestrian_t const &ped, cube_t &coll_cube) const;
 	bool mark_crosswalk_in_use(pedestrian_t const &ped);
 	bool choose_dest_building_or_parked_car(pedestrian_t &ped);
+	unsigned get_tot_num_plots() const {return tot_num_plots;}
 	unsigned get_next_plot(pedestrian_t &ped, int exclude_plot=-1) const;
 	void move_ped_to_next_plot(pedestrian_t &ped);
 	// cars
@@ -905,8 +915,6 @@ public:
 	bool has_parked_car_on_path(point const &p1, point const &p2, unsigned city) const;
 	void get_parked_car_bcubes_for_plot(cube_t const &plot, unsigned city, vect_cube_t &car_bcubes) const;
 	bool choose_dest_parked_car(unsigned city_id, unsigned &plot_id, unsigned &car_ix, point &car_center);
-public:
-	ped_manager_t(city_road_gen_t const &road_gen_, car_manager_t const &car_manager_) : road_gen(road_gen_), car_manager(car_manager_) {}
 	void next_animation();
 	static float get_ped_radius();
 	void clear() {peds.clear(); by_city.clear();}
