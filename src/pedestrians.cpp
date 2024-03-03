@@ -1859,12 +1859,12 @@ void ped_manager_t::next_animation() {
 	print_text_onscreen(animation_names[animation_id], WHITE, 1.5, 2*TICKS_PER_SECOND, 1);
 }
 
-void set_z_plane_square_pts(point const &center, float radius, point pts[4]) {
+void set_z_plane_rect_pts(point const &center, float rx, float ry, point pts[4]) {
 	for (unsigned n = 0; n < 4; ++n) {
-		point &v(pts[n]);
+		point &v(pts[3-n]); // reverse the direction for correct winding order
 		v = center;
-		v.x += (((n&1)^(n>>1)) ? -radius : radius);
-		v.y += ((n>>1)         ? -radius : radius);
+		v.x += (((n&1)^(n>>1)) ? -rx : rx);
+		v.y += ((n>>1)         ? -ry : ry);
 	}
 }
 

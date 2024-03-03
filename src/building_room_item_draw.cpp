@@ -1659,6 +1659,19 @@ void brg_batch_draw_t::draw_obj_models(shader_t &s, vector3d const &xlate, bool 
 	if (!models_to_draw.empty()) {check_mvm_update();}
 }
 
+float get_ao_shadow(room_object_t const &c) {
+	if (c.type == TYPE_TABLE) {
+		if (c.is_glass_table()) return 0.0; // no shadow
+		return ((c.shape == SHAPE_TALL) ? 0.25 : 0.5); // small/medium shadow
+	}
+	if (c.type == TYPE_BCASE || c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND || c.type == TYPE_COUCH) return 0.75; // dense shadow
+	if (c.type == TYPE_SINK || c.type == TYPE_TOILET || c.type == TYPE_STALL || c.type == TYPE_BAR_STOOL || c.type == TYPE_SHELVES) return 0.25; // light shadow
+	if (c.type == TYPE_BED || c.type == TYPE_CHAIR || c.type == TYPE_DESK || c.type == TYPE_RDESK || c.type == TYPE_OFF_CHAIR ||
+		c.type == TYPE_BENCH || c.type == TYPE_RCHAIR || c.type == TYPE_POOL_TABLE || c.type == TYPE_CASHREG) return 0.5; // medium shadow
+	if (c.type == TYPE_PARK_SPACE && c.is_used()) return 0.75; // parked car
+	return 0.0; // no shadow
+}
+
 // Note: non-const because it creates the VBO; inc_small: 0=large only, 1=large+small, 2=large+small+ext detail, 3=large+small+ext detail+int detail, 4=ext only
 void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, building_t const &building, occlusion_checker_noncity_t &oc,
 	vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
@@ -1886,6 +1899,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
 
 	if (player_in_building && !shadow_only) { // draw water for sinks that are turned on, draw lava lamps, and draw fish in fishtanks
+		float const ao_z_off(0.1*building.get_trim_thickness());
+		static quad_batch_draw ao_qbd;
 		fishtank_manager.next_frame(building);
 		auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
 
@@ -1904,11 +1919,22 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				bool const visible(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate));
 				fishtank_manager.register_fishtank(*i, visible);
 			}
+			float const ao_shadow(get_ao_shadow(*i));
+
+			if (ao_shadow > 0.0) { // add AO shadow quad on the floor below the object
+				if (!is_rotated && !camera_pdu.cube_visible(*i + xlate)) continue; // VFC - may not help much
+				float rscale(0.5 + 0.5*(1.0 - ao_shadow)); // 0.5 will be the size of the object; dense shadow is sharper/smaller radius
+				if (i->type == TYPE_CASHREG || i->type == TYPE_PARK_SPACE) {rscale *= 0.75;} // bcube is larger than it should be for cash registers and parked cars
+				point pts[4];
+				set_z_plane_rect_pts(point(i->xc(), i->yc(), (i->z1() + ao_z_off)), rscale*i->dx(), rscale*i->dy(), pts);
+				ao_qbd.add_quad_pts(pts, colorRGBA(0, 0, 0, ao_shadow), plus_z);
+			}
 		} // for i
 		lava_lamp_draw.draw_and_clear(s);
 		if (!reflection_pass) {lava_lamp_draw.next_frame();}
 		fishtank_manager.end_fishtanks();
 		fishtank_manager.draw_fish(s);
+		draw_and_clear_blur_qbd(ao_qbd);
 	}
 	water_sound_manager.finalize();
 	water_draw.draw_and_clear(s);
