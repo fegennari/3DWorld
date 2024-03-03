@@ -463,16 +463,6 @@ bool comp_car_road_then_pos::operator()(car_t const &c1, car_t const &c2) const 
 	return (c1.bcube.d[c1.dim][c1.dir] < c2.bcube.d[c2.dim][c2.dir]); // compare front end of car (used for collisions)
 }
 
-
-void ao_draw_state_t::draw_ao_qbd() {
-	if (ao_qbd.empty()) return;
-	enable_blend();
-	select_texture(BLUR_CENT_TEX);
-	ao_qbd.draw_and_clear();
-	select_texture(WHITE_TEX); // reset back to default/untextured
-	disable_blend();
-}
-
 void occlusion_checker_t::set_camera(pos_dir_up const &pdu) {
 	if ((display_mode & 0x08) == 0) {state.building_ids.clear(); return;} // testing
 	pos_dir_up near_pdu(pdu);
@@ -505,6 +495,16 @@ void ao_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool s
 		occlusion_checker.set_camera(camera_pdu);
 	}
 }
+void draw_and_clear_blur_qbd(quad_batch_draw &qbd) {
+	if (qbd.empty()) return;
+	enable_blend();
+	glDepthMask(GL_FALSE); // disable depth write
+	select_texture(BLUR_CENT_TEX);
+	qbd.draw_and_clear();
+	select_texture(WHITE_TEX); // reset back to default/untextured
+	glDepthMask(GL_TRUE);
+	disable_blend();
+}
 
 /*static*/ float car_draw_state_t::get_headlight_dist() {return 3.5*city_params.road_width;} // distance headlights will shine
 
@@ -520,7 +520,7 @@ void car_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool 
 
 void car_draw_state_t::draw_unshadowed() {
 	qbds[0].draw_and_clear();
-	draw_ao_qbd();
+	ao_draw_state_t::draw_unshadowed();
 }
 
 void car_draw_state_t::add_car_headlights(vector<car_t> const &cars, vector3d const &xlate_, cube_t &lights_bcube) {

@@ -645,6 +645,8 @@ public:
 	void draw_transmission_line(transmission_line_t const &tline);
 }; // road_draw_state_t
 
+void draw_and_clear_blur_qbd(quad_batch_draw &qbd);
+
 class ao_draw_state_t : public draw_state_t {
 
 protected:
@@ -654,8 +656,7 @@ public:
 	vect_cube_t &get_occluders() {return occlusion_checker.occluders;}
 	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_);
 	bool is_occluded(cube_t const &bcube) const {return (!shadow_only && occlusion_checker.is_occluded(bcube));}
-	void draw_ao_qbd();
-	virtual void draw_unshadowed() {draw_ao_qbd();}
+	virtual void draw_unshadowed() {draw_and_clear_blur_qbd(ao_qbd);}
 };
 
 class car_draw_state_t : public ao_draw_state_t { // and trucks and helicopters
