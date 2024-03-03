@@ -809,7 +809,8 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 					porch = c;
 					porch.z2() = porch.z1() + driveway_dz;
 				}
-				c.z1() += height; // move up
+				//c.z1() += height; // move up
+				c.z1() += floor_spacing; // always one floor high
 				c.z2()  = c.z1() + 0.05*parts[1].dz();
 				parts.push_back(c); // porch roof
 				c.z2() = c.z1();
