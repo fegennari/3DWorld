@@ -202,6 +202,14 @@ void place_tree(point const &pos, float radius, int ttype, vect_cube_t &collider
 	colliders.push_back(bcube);
 	tree_pos.push_back(pos);
 }
+void resize_blockers_for_trees(vect_cube_t &blockers, unsigned six, unsigned eix, float resize_amt) {
+	float const height_thresh(1.5*city_params.get_nom_car_size().z);
+
+	for (auto i = blockers.begin()+six; i != blockers.begin()+eix; ++i) {
+		float const resize_scale((i->dz() < height_thresh) ? 1.0 : 0.5); // reduced shrink for tall objects such as fences and walls since trees may clip through them
+		i->expand_by_xy(resize_scale*resize_amt);
+	}
+}
 
 void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t &blockers,
 	vect_cube_t &colliders, vector<point> &tree_pos, rand_gen_t &rgen, bool is_residential, unsigned buildings_end)
@@ -217,7 +225,7 @@ void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t
 	// shrink non-building blockers (parking lots, driveways, fences, walls, hedges) to allow trees to hang over them; okay if they become denormalized
 	unsigned const input_blockers_end(blockers.size());
 	float const non_buildings_overlap(0.7*radius);
-	for (auto i = blockers.begin()+buildings_end; i != blockers.end(); ++i) {i->expand_by_xy(-non_buildings_overlap);}
+	resize_blockers_for_trees(blockers, buildings_end, input_blockers_end, -non_buildings_overlap);
 	bool const has_planter(!is_residential && !plot.is_park); // only commercial trees
 
 	for (unsigned n = 0; n < num_trees; ++n) {
@@ -245,7 +253,7 @@ void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t
 			place_tree(pos, radius, ttype, colliders, tree_pos, plot.is_park, is_sm_tree, has_planter); // use same tree type
 		} // for n
 	} // for n
-	for (auto i = blockers.begin()+buildings_end; i != blockers.begin()+input_blockers_end; ++i) {i->expand_by_xy(non_buildings_overlap);} // undo initial expand
+	resize_blockers_for_trees(blockers, buildings_end, input_blockers_end, non_buildings_overlap); // undo initial expand
 }
 
 void city_obj_groups_t::clear() {
