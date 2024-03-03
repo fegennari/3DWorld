@@ -11,6 +11,7 @@ const float poisson_table[18] = {
 
 uniform float z_bias          = 0.0;
 uniform float norm_bias_scale = 10.0;
+uniform float shad_bias_scale = 1.0;
 uniform float sm_scale0, sm_scale1;
 
 #ifdef ENABLE_CASCADED_SHADOW_MAPS
@@ -96,7 +97,7 @@ float get_shadow_map_weight(in vec4 pos, in vec3 normal, in float sm_scale, in m
 	//pos.xyz += norm_bias_scale*z_bias*normalize(fg_ModelViewMatrixInverse[3].xyz - pos.xyz); // world space view vector
 #endif // DYNAMIC_SMAP_BIAS
 	vec4 shadow_coord = matrix * pos;
-	shadow_coord.z += -z_bias*shadow_coord.w;
+	shadow_coord.z += -shad_bias_scale*z_bias*shadow_coord.w;
 	// sm_scale==1.0 => use smap; sm_scale==0.0 => return 0.0; sm_scale==-1.0 => return 1.0
 #ifndef NO_SHADOW_PCF
 	float ret = calc_shadow_pcf(sm_tex, shadow_coord);

@@ -53,7 +53,10 @@ void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool
 			s.add_uniform_float("LDIR_FALL_THRESH",  1.5*FLASHLIGHT_BW);
 		}
 	}
-	if (use_smap) {s.add_uniform_float("z_bias", pcf_scale*cobj_z_bias);} // I guess pcf_scale is really a light size scale and should apply to the z-bias as well
+	if (use_smap) {
+		s.add_uniform_float("z_bias", pcf_scale*cobj_z_bias); // I guess pcf_scale is really a light size scale and should apply to the z-bias as well
+		s.add_uniform_float("shad_bias_scale", 0.1); // fix for sun/moon shadows that are too far shifted on buildings
+	}
 }
 
 // use_smap: 0=no, 1=sun/moon + dynamic lights; enable in shader and set shadow map uniforms, 2=dynamic lights only; disable in shader but set shadow map uniforms
