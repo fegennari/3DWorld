@@ -331,26 +331,36 @@ namespace streetlight_ns {
 		return (pos + vector3d(0.0, 0.0, 1.1*height) + 0.4*height*dir);
 	}
 
-	void streetlight_t::draw(draw_state_t &dstate, bool shadow_only, bool is_local_shadow, bool always_on) const { // Note: translate has already been applied as a transform
+	void streetlight_t::draw(road_draw_state_t &dstate, bool shadow_only, bool is_local_shadow, bool always_on) const {
+		// Note: translate has already been applied as a transform
 		float const height(get_streetlight_height());
 		point const center(pos + dstate.xlate + vector3d(0.0, 0.0, 0.5*height));
 		if (shadow_only && is_local_shadow && !dist_less_than(camera_pdu.pos, center, 0.8*camera_pdu.far_)) return;
 		if (!camera_pdu.sphere_visible_test(center, height)) return; // VFC
+		bool const is_on(!shadow_only && is_lit(always_on));
+		point const lpos(get_lpos());
 		float dist_val(0.0);
 
 		if (shadow_only) {dist_val = (is_local_shadow ? 0.12 : 0.06);}
 		else {
+			// draw an emissive circular blur texture area on the ground below the streetlight if it's on but outside our city lights bcube
+			if (is_on && !get_city_lights_bcube().contains_pt_xy(lpos)) {
+				point below_pos(lpos);
+				below_pos.z = pos.z + 0.01*height; // shift up slightly to prevent Z-fighting
+				point pts[4];
+				set_z_plane_square_pts(below_pos, 1.2*city_params.road_width, pts);
+				dstate.qbd_emissive.add_quad_pts(pts, colorRGBA(light_color, 0.25), plus_z);
+			}
 			dist_val = p2p_dist(camera_pdu.pos, center)/dstate.draw_tile_dist;
 			if (dist_val > 0.2) return; // too far
 		}
 		float const pradius(get_streetlight_pole_radius()), lradius(light_radius*city_params.road_width);
 		int const ndiv(shadow_only ? (is_local_shadow ? 4 : 8) : max(4, min(N_SPHERE_DIV, int(0.5/dist_val))));
-		point const top(pos + vector3d(0.0, 0.0, 0.96*height)), lpos(get_lpos()), arm_end(lpos + vector3d(0.0, 0.0, 0.025*height) - 0.06*height*dir);
+		point const top(pos + vector3d(0.0, 0.0, 0.96*height)), arm_end(lpos + vector3d(0.0, 0.0, 0.025*height) - 0.06*height*dir);
 		if (!shadow_only) {dstate.s.set_cur_color(pole_color);}
 		draw_fast_cylinder(pos, pos+vector3d(0.0, 0.0, height), pradius, 0.7*pradius, min(ndiv, 24), 0, 0); // vertical post, untextured, no ends
 		if (dist_val <= 0.12) {draw_fast_cylinder(top, arm_end, 0.5*pradius, 0.4*pradius, min(ndiv, 16), 0, 0);} // untextured, no ends
 		if (shadow_only && is_local_shadow) return; // top part never projects a shadow on a visible object near the ground
-		bool const is_on(is_lit(always_on));
 
 		if (!shadow_only) {
 			if (!is_on && dist_val > 0.15) return; // too far
@@ -408,7 +418,7 @@ namespace streetlight_ns {
 } // streetlight_ns
 
 
-void streetlights_t::draw_streetlights(draw_state_t &dstate, bool shadow_only, bool always_on) const {
+void streetlights_t::draw_streetlights(road_draw_state_t &dstate, bool shadow_only, bool always_on) const {
 	if (streetlights.empty()) return;
 	//timer_t t("Draw Streetlights");
 	select_texture(WHITE_TEX);
@@ -1059,18 +1069,26 @@ void road_draw_state_t::draw_unshadowed() {
 
 void road_draw_state_t::post_draw() {
 	draw_state_t::post_draw();
-	if (qbd_sl.empty()) return; // no stoplights to draw
-	set_std_depth_func_with_eq(); // helps prevent Z-fighting
+	if (qbd_sl.empty() && qbd_emissive.empty()) return;
 	shader_t s;
-
+	
 	if (shadow_only) {s.begin_shadow_map_shader();}
 	else {
-		s.begin_simple_textured_shader(); // Note: no lighting
+		s.begin_simple_textured_shader(); // no lighting
 		road_mat_mgr.set_stoplight_texture();
 	}
-	qbd_sl.draw_and_clear();
+	if (!qbd_sl.empty()) { // have stoplights to draw
+		set_std_depth_func_with_eq(); // helps prevent Z-fighting
+		qbd_sl.draw_and_clear();
+		set_std_depth_func();
+	}
+	if (!qbd_emissive.empty()) { // have streetlight emissive light spots to draw
+		assert(!shadow_only);
+		s.set_color_e(streetlight_ns::light_color);
+		draw_and_clear_blur_qbd(qbd_emissive);
+		s.clear_color_e();
+	}
 	s.end_shader();
-	set_std_depth_func();
 }
 
 void road_draw_state_t::end_cur_tile() {

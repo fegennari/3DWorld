@@ -1859,6 +1859,15 @@ void ped_manager_t::next_animation() {
 	print_text_onscreen(animation_names[animation_id], WHITE, 1.5, 2*TICKS_PER_SECOND, 1);
 }
 
+void set_z_plane_square_pts(point const &center, float radius, point pts[4]) {
+	for (unsigned n = 0; n < 4; ++n) {
+		point &v(pts[n]);
+		v = center;
+		v.x += (((n&1)^(n>>1)) ? -radius : radius);
+		v.y += ((n>>1)         ? -radius : radius);
+	}
+}
+
 void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows) {
 	if (peds.empty()) return;
 	if (is_dlight_shadows && !city_params.car_shadows) return; // use car_shadows as ped_shadows
@@ -1908,13 +1917,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 					float const ao_radius(0.6*ped.radius);
 					float const zval(get_city_plot_for_peds(ped.city, ped.plot).z2() + 0.04*ped.radius); // at the feet
 					point pao[4];
-					
-					for (unsigned n = 0; n < 4; ++n) {
-						point &v(pao[n]);
-						v.x = ped.pos.x + (((n&1)^(n>>1)) ? -ao_radius : ao_radius);
-						v.y = ped.pos.y + ((n>>1)         ? -ao_radius : ao_radius);
-						v.z = zval;
-					}
+					set_z_plane_square_pts(point(ped.pos.x, ped.pos.y, zval), ao_radius, pao);
 					dstate.ao_qbd.add_quad_pts(pao, colorRGBA(0, 0, 0, 0.4), plus_z);
 				}
 			} // for i

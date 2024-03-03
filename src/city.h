@@ -475,7 +475,7 @@ namespace streetlight_ns {
 		bool operator<(streetlight_t const &s) const {return ((pos.y == s.pos.y) ? (pos.x < s.pos.x) : (pos.y < s.pos.y));} // compare y then x
 		bool is_lit(bool always_on) const {return (always_on || is_night(STREETLIGHT_ON_RAND*signed_rand_hash(pos.x + pos.y)));}
 		point get_lpos() const;
-		void draw(draw_state_t &dstate, bool shadow_only, bool is_local_shadow, bool always_on) const;
+		void draw(road_draw_state_t &dstate, bool shadow_only, bool is_local_shadow, bool always_on) const;
 		void add_dlight(vector3d const &xlate, cube_t &lights_bcube, bool always_on) const;
 		bool proc_sphere_coll(point &center, float radius, vector3d const &xlate, vector3d *cnorm) const;
 		bool line_intersect(point const &p1, point const &p2, float &t) const;
@@ -486,7 +486,7 @@ namespace streetlight_ns {
 struct streetlights_t {
 	vector<streetlight_ns::streetlight_t> streetlights;
 
-	void draw_streetlights(draw_state_t &dstate, bool shadow_only, bool always_on) const;
+	void draw_streetlights(road_draw_state_t &dstate, bool shadow_only, bool always_on) const;
 	void add_streetlight_dlights(vector3d const &xlate, cube_t &lights_bcube, bool always_on) const;
 	bool check_streetlight_sphere_coll_xy(point const &center, float radius, cube_t &coll_cube) const;
 	bool proc_streetlight_sphere_coll(point &pos, float radius, vector3d const &xlate, vector3d *cnorm) const;
@@ -607,7 +607,7 @@ struct range_pair_t {
 class road_draw_state_t : public draw_state_t {
 	quad_batch_draw qbd_batched[NUM_RD_TIDS], qbd_bridge;
 public: // used directly by stoplight drawing
-	quad_batch_draw qbd_sl, qbd_untextured; // {stoplight, untextured}; could add qbd_ssign here as well for stop signs
+	quad_batch_draw qbd_sl, qbd_untextured, qbd_emissive; // {stoplight, untextured, streetlight emissive spot}; could add qbd_ssign here as well for stop signs
 	vector<vert_norm_comp_tc_color> text_verts;
 private:
 	float ar=1.0;
@@ -946,6 +946,7 @@ cube_t get_city_bcube(unsigned city_id);
 cube_t get_city_bcube_at_pt(point const &pos);
 float get_sidewalk_width();
 float get_inner_sidewalk_width();
+void set_z_plane_square_pts(point const &center, float radius, point pts[4]);
 // from gen_buildings.cpp
 bool have_city_buildings();
 bool enable_building_people_ai();
