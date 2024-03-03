@@ -1659,16 +1659,21 @@ void brg_batch_draw_t::draw_obj_models(shader_t &s, vector3d const &xlate, bool 
 	if (!models_to_draw.empty()) {check_mvm_update();}
 }
 
-float get_ao_shadow(room_object_t const &c) {
+float get_ao_shadow(room_object_t const &c, bool enable_indir) {
+	// include types that don't contribute to indir lighting; these always contribute AO shadows
+	if (c.type == TYPE_BAR_STOOL || c.type == TYPE_SHELVES) return 0.25; // light shadow
+	if (c.type == TYPE_OFF_CHAIR || c.type == TYPE_BENCH || c.type == TYPE_RCHAIR || c.type == TYPE_CASHREG) return 0.5; // medium shadow
+	if (c.type == TYPE_PARK_SPACE && c.is_used()) return 0.75; // parked car; dense shadow
+	if (enable_indir) return 0.0; // skip objects below because they're already handled by indir lighting
+
 	if (c.type == TYPE_TABLE) {
 		if (c.is_glass_table()) return 0.0; // no shadow
 		return ((c.shape == SHAPE_TALL) ? 0.25 : 0.5); // small/medium shadow
 	}
+	if (c.type == TYPE_BED) {return ((c.taken_level > 2) ? 0.35 : 0.5);} // reduced AO when the mattress has been taken and light gets through the slats
 	if (c.type == TYPE_BCASE || c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND || c.type == TYPE_COUCH) return 0.75; // dense shadow
-	if (c.type == TYPE_SINK || c.type == TYPE_TOILET || c.type == TYPE_STALL || c.type == TYPE_BAR_STOOL || c.type == TYPE_SHELVES) return 0.25; // light shadow
-	if (c.type == TYPE_BED || c.type == TYPE_CHAIR || c.type == TYPE_DESK || c.type == TYPE_RDESK || c.type == TYPE_OFF_CHAIR ||
-		c.type == TYPE_BENCH || c.type == TYPE_RCHAIR || c.type == TYPE_POOL_TABLE || c.type == TYPE_CASHREG) return 0.5; // medium shadow
-	if (c.type == TYPE_PARK_SPACE && c.is_used()) return 0.75; // parked car
+	if (c.type == TYPE_SINK || c.type == TYPE_TOILET || c.type == TYPE_STALL) return 0.25; // light shadow
+	if (c.type == TYPE_CHAIR || c.type == TYPE_DESK || c.type == TYPE_RDESK || c.type == TYPE_POOL_TABLE) return 0.5; // medium shadow
 	return 0.0; // no shadow
 }
 
@@ -1695,10 +1700,11 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (bbd != nullptr) {bbd->set_camera_dir_mask(camera_bs, building.bcube);}
 	brg_batch_draw_t *const bbd_in(bbd); // capture bbd for instance drawing before setting to null if player_in_building
 	if (player_in_building) {bbd = nullptr;} // use immediate drawing when player is in the building because draw order matters for alpha blending
+	bool enable_indir(0);
 
 	if (player_in_building && !shadow_only && !reflection_pass) { // indir lighting auto update logic
 		static bool last_enable_indir(0);
-		bool const enable_indir(enable_building_indir_lighting_no_cib());
+		enable_indir = enable_building_indir_lighting_no_cib();
 		if (enable_indir != last_enable_indir) {invalidate_mats_mask |= 0xFF;} // update all geom when material lighting changes due to indir
 		last_enable_indir = enable_indir;
 	}
@@ -1919,7 +1925,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				bool const visible(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate));
 				fishtank_manager.register_fishtank(*i, visible);
 			}
-			float const ao_shadow(get_ao_shadow(*i));
+			float const ao_shadow(get_ao_shadow(*i, enable_indir));
 
 			if (ao_shadow > 0.0) { // add AO shadow quad on the floor below the object
 				if (!is_rotated && !camera_pdu.cube_visible(*i + xlate)) continue; // VFC - may not help much
