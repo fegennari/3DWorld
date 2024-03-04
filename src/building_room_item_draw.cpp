@@ -38,6 +38,7 @@ void setup_monitor_screen_draw(room_object_t const &monitor, rgeom_mat_t &mat, s
 void add_tv_or_monitor_screen(room_object_t const &c, rgeom_mat_t &mat, std::string const &onscreen_text, rgeom_mat_t *text_mat);
 bool check_clock_time();
 void draw_animated_fish_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, float anim_time, colorRGBA const &color);
+bool have_fish_model();
 
 bool has_key_3d_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 
@@ -1898,13 +1899,16 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				obj_drawn = 1;
 			} // for model_objs
 		}
+	}
+	if (player_in_building_or_doorway) {
 		bool const skip_animals(shadow_only && building.has_retail() && building.get_retail_part().contains_pt(camera_bs));
 		if (!skip_animals) {draw_animals(s, building, oc, xlate, camera_bs, shadow_only, reflection_pass, check_clip_cube);}
 	}
-	if (disable_cull_face) {glEnable(GL_CULL_FACE);}
+	if (disable_cull_face) {glEnable(GL_CULL_FACE);} // re-enable face culling
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
 
-	if (player_in_building && !shadow_only) { // draw water for sinks that are turned on, draw lava lamps, and draw fish in fishtanks
+	if (player_in_building && !shadow_only) { // draw water for sinks that are turned on, lava lamps, fish in fishtanks, and AO shadows
+		bool const draw_fish(have_fish_model());
 		float const ao_z_off(0.1*building.get_trim_thickness());
 		static quad_batch_draw ao_qbd;
 		fishtank_manager.next_frame(building);
@@ -1921,7 +1925,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				if (!(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate))) continue; // VFC
 				lava_lamp_draw.add_lava_lamp(*i, camera_bs);
 			}
-			else if (i->type == TYPE_FISHTANK) {
+			else if (i->type == TYPE_FISHTANK && draw_fish) {
 				bool const visible(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate));
 				fishtank_manager.register_fishtank(*i, visible);
 			}

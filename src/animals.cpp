@@ -42,7 +42,8 @@ class animal_model_loader_t : public model3ds { // currently for fish only
 	model_info_t fish_info, bfly_info[BF_NUM_PARTS];
 
 	model3d &get_model(unsigned id) {
-		assert(id > 0 && id-1 < size()); // Note: id is vector index offset by 1
+		assert(id > 0);
+		assert(id-1 < size()); // Note: id is vector index offset by 1
 		return operator[](id-1);
 	}
 	unsigned load_model(string const &fn, colorRGBA const &def_color=WHITE, int def_tid=-1) {
@@ -141,6 +142,8 @@ bool butterfly_t::type_enabled() {return animal_model_loader.load_butterfly_mode
 
 bool fish_t     ::can_place_in_tile(tile_t const *const tile) {return tile->has_water();}
 bool butterfly_t::can_place_in_tile(tile_t const *const tile) {return (!tile->all_water() && tile->has_grass());} // only spawn over grass
+
+bool have_fish_model() {return fish_t::type_enabled();}
 
 
 void animal_t::gen_dir_vel(rand_gen_t &rgen, float speed) {
