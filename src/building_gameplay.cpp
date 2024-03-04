@@ -2092,6 +2092,12 @@ public:
 paint_manager_t ext_paint_manager;
 bool have_buildings_ext_paint() {return ext_paint_manager.have_paint_for_building();}
 void draw_buildings_ext_paint(shader_t &s) {ext_paint_manager.draw_paint(s);}
+float get_paint_max_radius(bool is_spraypaint) {return (is_spraypaint ? 2.0 : 0.035)*CAMERA_RADIUS;}
+
+float get_paint_radius(point const &source, point const &hit_pos, bool is_spraypaint) { // for spray paint and markers
+	float const max_radius(get_paint_max_radius(is_spraypaint));
+	return (is_spraypaint ? min(max_radius, max(0.05f*max_radius, 0.1f*p2p_dist(source, hit_pos))) : max_radius); // modified version of get_spray_radius()
+}
 
 bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, unsigned emissive_color_id, room_object const obj_type) const { // spraypaint/marker
 	bool const is_spraypaint(obj_type == TYPE_SPRAYCAN), is_marker(obj_type == TYPE_MARKER);
@@ -2099,7 +2105,8 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	// find intersection point and normal; assumes pos is inside the building
 	assert(has_room_geom());
 	float const max_dist((is_spraypaint ? 16.0 : 3.0)*CAMERA_RADIUS), tolerance(0.01*get_wall_thickness());
-	point const pos2(pos + max_dist*dir);
+	vector3d const delta(max_dist*dir);
+	point const pos2(pos + delta);
 	float tmin(1.0);
 	vector3d normal;
 	cube_t target;
@@ -2141,7 +2148,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 			if (line_int_cube_get_t(pos, pos2, *i, tmin)) {target = *i;} // Note: return value is ignored, we only need to update tmin and target; normal should be unchanged
 		}
 		else if (i->type == TYPE_CLOSET && line_int_cube_get_t(pos, pos2, *i, tmin)) {
-			point const cand_p_int(pos + tmin*(pos2 - pos));
+			point const cand_p_int(pos + tmin*delta);
 
 			if (i->is_open()) { // exclude open doors
 				cube_t door(get_open_closet_door(*i));
@@ -2161,7 +2168,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 			float tmin0(tmin);
 			if (!line_int_cube_get_t(pos, pos2, c, tmin0)) continue;
 			if (i->contains_pt(pos)) continue; // inside stall/cubicle, can't paint the exterior
-			vector3d const n(get_normal_for_ray_cube_int_xy((pos + tmin0*(pos2 - pos)), c, tolerance)); // should always return a valid normal
+			vector3d const n(get_normal_for_ray_cube_int_xy((pos + tmin0*delta), c, tolerance)); // should always return a valid normal
 			if (n[i->dim] != 0) {walls_blocked = 1; continue;} // only the side walls count; avoids dealing with open doors
 			tmin = tmin0; normal = n; target = c;
 		}
@@ -2170,7 +2177,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		float tmin0(tmin);
 		if (!line_int_cube_get_t(pos, pos2, *i, tmin0)) continue;
 		if (i->contains_pt(pos)) {walls_blocked = 1; continue;} // can't spraypaint the outside of the elevator when standing inside it
-		vector3d const n(get_normal_for_ray_cube_int_xy((pos + tmin0*(pos2 - pos)), *i, tolerance)); // should always return a valid normal
+		vector3d const n(get_normal_for_ray_cube_int_xy((pos + tmin0*delta), *i, tolerance)); // should always return a valid normal
 		if (n[i->dim] == (i->dir ? 1.0 : -1.0)) {walls_blocked = 1; continue;} // skip elevator opening, even if not currently open
 		tmin = tmin0; normal = n; target = *i;
 	} // for i
@@ -2182,7 +2189,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		float tmin0(tmin);
 		if (!line_int_cube_get_t(pos, pos2, c, tmin0)) continue;
 		if (c.contains_pt(pos)) {walls_blocked = 1; continue;} // can't spraypaint the outside of the stairs when standing inside them
-		vector3d const n(get_normal_for_ray_cube_int_xy((pos + tmin0*(pos2 - pos)), c, tolerance)); // should always return a valid normal
+		vector3d const n(get_normal_for_ray_cube_int_xy((pos + tmin0*delta), c, tolerance)); // should always return a valid normal
 
 		if (i->is_u_shape()) {
 			if (n[i->dim] == (i->dir ? -1.0 : 1.0)) {walls_blocked = 1; continue;} // skip stairs opening
@@ -2194,14 +2201,14 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		else {assert(0);} // unsupported stairs type
 		tmin = tmin0; normal = n; target = c;
 	} // for i
-	// check exterior walls; must be done last; okay to add spraypaint and markers over windows
+	// check exterior walls; must be done last; okay to add spraypaint and markers over windows but not over doors since they can be opened
 	cube_t const part(get_part_containing_pt(pos));
 	float tmin0(0.0), tmax0(1.0);
 	bool exterior_wall(0);
 
 	if (get_line_clip(pos, pos2, part.d, tmin0, tmax0) && tmax0 < tmin) { // part edge is the closest intersection point
 		// check other parts to see if ray continues into them; if not, it exited the building; this implementation isn't perfect but should be close enough
-		point const cand_p_int(pos + tmax0*(pos2 - pos));
+		point const cand_p_int(pos + tmax0*delta);
 		bool found(0);
 
 		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
@@ -2210,16 +2217,24 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		}
 		if (!found) { // ray has exited the building
 			vector3d const n(-get_normal_for_ray_cube_int_xy(cand_p_int, part, tolerance)); // negate the normal because we're looking for the exit point from the cube
-			if (n != zero_vector) {tmin = tmax0; normal = n; target = part; exterior_wall = 1;}
+			
+			if (n != zero_vector) {
+				float const radius(get_paint_radius(pos, cand_p_int, is_spraypaint));
+				bool hit_ext_door(0);
+
+				for (auto const &d : doors) {
+					if (d.get_bcube().contains_pt_exp(cand_p_int, radius)) {hit_ext_door = 1; break;}
+				}
+				if (!hit_ext_door) {tmin = tmax0; normal = n; target = part; exterior_wall = 1;}
+			}
 		}
 	}
 	if (normal == zero_vector)            return 0; // no walls, ceilings, floors, etc. hit
 	if (walls_blocked && normal.z == 0.0) return 0; // can't spraypaint walls through elevator, stairs, etc.
-	point p_int(pos + tmin*(pos2 - pos));
+	point p_int(pos + tmin*delta);
 	if (check_line_intersect_doors(pos, p_int, 1))       return 0; // blocked by door, no spraypaint; can't add spraypaint over door in case door is opened; inc_open=1
 	if (has_pool() && interior->pool.contains_pt(p_int)) return 0; // can't use in the pool
-	float const max_radius((is_spraypaint ? 2.0 : 0.035)*CAMERA_RADIUS);
-	float const dist(p2p_dist(pos, p_int)), radius(is_spraypaint ? min(max_radius, max(0.05f*max_radius, 0.1f*dist)) : max_radius); // modified version of get_spray_radius()
+	float const max_radius(get_paint_max_radius(is_spraypaint)), radius(get_paint_radius(pos, p_int, is_spraypaint));
 	float const alpha((is_spraypaint && radius > 0.5*max_radius) ? (1.0 - (radius - 0.5*max_radius)/max_radius) : 1.0); // 0.5 - 1.0
 	p_int += 0.01*radius*normal; // move slightly away from the surface
 	assert(get_bcube_inc_extensions().contains_pt(p_int));
