@@ -1505,7 +1505,6 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 {
 	tquad_with_ix_t door(4, type); // quad
 	bool const opened(open_amt > 0.0);
-	float const wall_thickness(get_wall_thickness()), floor_thickness(get_floor_thickness());
 	float const pos(c.d[dim][0] + (opened ? 0.0 : pos_adj*(dir ? 1.0 : -1.0))); // move away from wall slightly (not needed if opened)
 	door.pts[0].z = door.pts[1].z = c.z1(); // bottom
 	door.pts[2].z = door.pts[3].z = c.z2(); // top
@@ -1521,6 +1520,7 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 		}
 		else { // rotates to the side
 			bool const check_backroom_walls(interior && interior->has_backrooms && c.z1() < ground_floor_z1 && !get_basement().contains_cube(c));
+			float const wall_thickness(get_wall_thickness()), floor_thickness(get_floor_thickness());
 			float const width(c.get_sz_dim(!dim)), signed_width(width*((dir ^ opens_out) ? 1.0 : -1.0));
 			float const offset(0.005*width*((dir ^ dim) ? 1.0 : -1.0)*open_amt); // move slightly away from the wall to prevent z-fighting
 			for (unsigned i = 0; i < 4; ++i) {door.pts[i][!dim] += offset;}

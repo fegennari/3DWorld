@@ -1333,7 +1333,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		bool dir(0);
 		unsigned ext_flags(flags);
 		colorRGBA const &ext_trim_color(garage_door ? WHITE : door_color); // garage doors are always white
-		float const trim_width((garage_door ? (has_int_garage ? 1.5 : 0.8) : 1.0)*door_trim_width); // thicker interior garage doors, thinner exterior garage doors
+		float const trim_width(garage_door ? 0.016*door.get_sz_dim(!dim) : door_trim_width); // garage door trim is based on width
 
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
 			if (!i->intersects_no_adj(trim)) continue;
