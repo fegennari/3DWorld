@@ -968,35 +968,40 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				if (!assigned_plot.is_all_zeros()) {driveway.intersect_with_cube_xy(assigned_plot);} // clip driveway to the assigned plot, if one was specified
 			}
 		}
-		cube_t door(place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, DOOR_WIDTH_SCALE, 0, 0, rgen));
-
-		if (!is_valid_door_pos(door, 0.5*door_height, door_dim)) { // blocked by stairs or another door - switch door to other side/dim
-			door_dim ^= 1;
-			door_dir  = (two_parts ? ((door_dim == dim) ? dir : dir2) : (door_dir^1)); // if we have a porch/shed/garage, put the door on that side
-			if (door_dim == dim && two_parts && detail_type == 0) {door_dir ^= 1;} // put it on the opposite side so that the second part isn't in the way
-
-			if (door_center != 0.0) { // reclaculate for L-shaped house
-				door_center = door_cube.get_center_dim(!door_dim) + 0.5f*((door_dim == dim) ? dist1 : dist2);
-				door_pos    = door_cube.d[door_dim][!door_dir];
-				door_part   = ((door_dim == dim) ? 0 : 1); // which part the door is connected to
-			}
-			for (unsigned n = 0; n < 4; ++n) { // make 4 attempts at generating a valid interior where this door can be placed; this still fails 32 times
+		cube_t door;
+		bool door_valid(0);
+		unsigned const num_tries = 10;
+		
+		for (unsigned n = 0; n < num_tries; ++n) { // make several attempts at generating a valid interior where this door can be placed; this still fails a few times
+			for (unsigned d = 0; d < 2; ++d) { // try both dims
 				door = place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, DOOR_WIDTH_SCALE, 0, 0, rgen); // keep door_height
-				if (is_valid_door_pos(door, 0.5*door_height, door_dim)) break; // done
-				
-				if (n+1 < 4) { // still invalid, regenerate interior
-					if (has_int_garage) { // must also remove garage, garage door, and driveway
-						assert(doors.size() == 1);
-						driveway.set_to_zeros();
-						doors.pop_back();
-						has_int_garage = 0;
-						interior->garage_room = -1;
-					}
-					gen_interior(rgen, 0);
+				if (is_valid_door_pos(door, 0.5*door_height, door_dim)) {door_valid = 1; break;} // done
+				if (d == 1 && n+1 == num_tries) break; // no more tries available
+				// swap door_dim and calculate new door_dir; this is duplicated from the code above, but not easier to factor out
+				door_dim ^= 1;
+				door_dir  = (two_parts ? ((door_dim == dim) ? dir : dir2) : (door_dir^1)); // if we have a porch/shed/garage, put the door on that side
+				if (door_dim == dim && two_parts && detail_type == 0) {door_dir ^= 1;} // put it on the opposite side so that the second part isn't in the way
+
+				if (door_center != 0.0) { // reclaculate for L-shaped house
+					door_center = door_cube.get_center_dim(!door_dim) + 0.5f*((door_dim == dim) ? dist1 : dist2);
+					door_pos    = door_cube.d[door_dim][!door_dir];
+					door_part   = ((door_dim == dim) ? 0 : 1); // which part the door is connected to
 				}
-			} // for n
-		}
-		if (add_door(door, door_part, door_dim, door_dir, 0)) {floor_ext_door_mask |= 1;}
+			} // for d
+			if (door_valid) break;
+
+			if (n+1 < num_tries) { // still invalid, regenerate interior
+				if (has_int_garage) { // must also remove garage, garage door, and driveway
+					assert(doors.size() == 1);
+					driveway.set_to_zeros();
+					doors.pop_back();
+					has_int_garage = 0;
+					interior->garage_room = -1;
+				}
+				gen_interior(rgen, 0);
+			}
+		} // for n
+		if (/*door_valid &&*/ add_door(door, door_part, door_dim, door_dir, 0)) {floor_ext_door_mask |= 1;} // should we still add a door if it's invalid?
 		if (doors.size() == 2) {swap(doors[0], doors[1]);} // make sure the house door comes before the garage/shed door
 		float const tot_area(parts[0].get_area_xy() + (two_parts ? parts[1].get_area_xy() : 0.0f));
 
