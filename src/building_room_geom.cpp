@@ -1708,7 +1708,7 @@ void building_room_geom_t::add_blinds(room_object_t const &c) {
 
 void building_room_geom_t::add_fireplace(room_object_t const &c, float tscale) {
 	float const dir_sign(c.dir ? -1.0 : 1.0), depth(c.get_depth()), width(c.get_width()), botz(c.z1() + 0.1*c.dz());
-	float const face_pos(c.d[c.dim][!c.dir] - 0.4*dir_sign*depth); // front face pos
+	float const face_pos(c.d[c.dim][!c.dir] - 0.4*dir_sign*depth); // front face pos - extends out from the front
 	cube_t base(c), front(c), bot(c), top(c);
 	base .d[c.dim][!c.dir] = front.d[c.dim][c.dir] = face_pos;
 	top  .d[c.dim][!c.dir] = face_pos + dir_sign*0.02*width;

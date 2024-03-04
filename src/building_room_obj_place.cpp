@@ -999,13 +999,15 @@ bool building_t::maybe_add_fireplace_to_room(rand_gen_t &rgen, room_t const &roo
 	if (!room.contains_cube_xy_exp(fireplace, -0.5*get_wall_thickness())) return 0; // fireplace not in this room; allow fireplace to extend slightly into room walls
 	// the code below should be run at most once per building
 	cube_t fireplace_ext(fireplace);
-	fireplace_ext.d[dim][!dir] = fireplace.d[dim][!dir] + 0.5*depth_signed; // extend out into the room even further for clearance
+	fireplace_ext.d[dim][!dir] = fireplace.d[dim][!dir] + 0.4*depth_signed; // extend out into the room for clearance
 	if (interior->is_blocked_by_stairs_or_elevator(fireplace_ext)) return 0; // blocked by stairs, don't add (would be more correct to relocate stairs) - should no longer fail
+	if (is_cube_close_to_doorway(fireplace_ext, room, 0.0, 1))     return 0; // too close to door
 	fireplace.d[dim][dir] = room.d[dim][dir]; // re-align to room to remove any gap between the fireplace and the exterior wall
 	vect_room_object_t &objs(interior->room_geom->objs);
 	objs.emplace_back(fireplace, TYPE_FPLACE, room_id, dim, dir, 0, tot_light_amt);
+	fireplace_ext.d[dim][!dir] += 0.1*depth_signed; // extend out into the room even further for clearance
 	cube_t blocker(fireplace_ext);
-	blocker.d[dim][ dir] = fireplace.d[dim][!dir]; // flush with the front of the fireplace
+	blocker.d[dim][dir] = fireplace.d[dim][!dir]; // flush with the front of the fireplace
 	objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, dir, RO_FLAG_INVIS);
 	blockers.push_back(fireplace_ext); // add as a blocker if it's not already there
 
