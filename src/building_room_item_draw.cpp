@@ -1909,7 +1909,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 
 	if (player_in_building && !shadow_only) { // draw water for sinks that are turned on, lava lamps, fish in fishtanks, and AO shadows
 		bool const draw_fish(have_fish_model());
-		float const ao_z_off(0.1*building.get_trim_thickness());
+		float const ao_z_off(1.1*building.get_flooring_thick()); // slightly above rugs and flooring
 		static quad_batch_draw ao_qbd;
 		fishtank_manager.next_frame(building);
 		auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators

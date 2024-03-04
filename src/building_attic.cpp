@@ -458,7 +458,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 		for (unsigned d = 0; d < 2; ++d) {rug_center[d] = rgen.rand_uniform(place_area.d[d][0]+rug_hsz[d], place_area.d[d][1]-rug_hsz[d]);}
 		cube_t rug(rug_center);
 		rug.expand_by_xy(rug_hsz);
-		rug.z2() += 0.001*floor_spacing; // set thickness/height
+		rug.z2() += get_rug_thickness(); // set thickness/height
 		bool bad_place(0);
 
 		for (auto i = avoid_cubes.begin(); i != avoid_cubes.begin()+rug_avoid_cubes_end; ++i) { // skip objects that can be placed on rugs

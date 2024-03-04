@@ -194,7 +194,7 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 	int const floor_ix(int((zval - room.z1())/floor_spacing));
 	bool const cylin(((mat_ix + 13*real_num_parts + 5*hallway_dim + 131*floor_ix) % 7) < 4); // varies per-building, per-floor
 	point center;
-	center.z = zval + 0.0012*floor_spacing; // slightly above the floor/rug to avoid z-fighting
+	center.z = zval + 1.1*get_flooring_thick(); // slightly above the flooring/rug to avoid z-fighting
 	unsigned skip_wall(4); // start at an invalid value
 	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval));
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -2011,7 +2011,7 @@ void building_t::add_garage_objs(rand_gen_t rgen, room_t const &room, float zval
 	get_garage_dim_dir(room, dim, dir);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t space(room); // full room, car will be centered here
-	set_cube_zvals(space, zval, (zval + 0.001*get_window_vspace()));
+	set_cube_zvals(space, zval, (zval + get_rug_thickness()));
 	room_object_t pspace(space, TYPE_PARK_SPACE, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, WHITE);
 	pspace.obj_id = (uint16_t)(objs.size() + rgen.rand()); // will be used for the car model and color
 	car_t const car(car_from_parking_space(pspace));
@@ -2295,8 +2295,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 	assert(has_pool());
 	cube_t const place_area(get_walkable_room_bounds(room));
 	indoor_pool_t &pool(interior->pool);
-	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), wall_thickness(get_wall_thickness());
-	float const tile_thickness(get_flooring_thick());
+	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), wall_thickness(get_wall_thickness()), tile_thickness(get_flooring_thick());
 	float const pool_len(pool.get_sz_dim(pool.dim)), pool_depth(pool.dz());
 	float const shallow_depth(0.5*floor_spacing); // about 4 feet
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -3073,7 +3072,7 @@ bool building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval
 	bool const min_dim(room_sz.y < room_sz.x);
 	float const ar(rgen.rand_uniform(0.65, 0.85)), length(min(0.7f*room_sz[min_dim]/ar, room_sz[!min_dim]*rgen.rand_uniform(0.4, 0.7))), width(length*ar);
 	cube_t rug;
-	set_cube_zvals(rug, zval, zval+0.001*get_window_vspace()); // almost flat
+	set_cube_zvals(rug, zval, (zval + get_rug_thickness())); // almost flat
 	vect_room_object_t &objs(interior->room_geom->objs);
 	float sz_scale(1.0);
 

@@ -1568,6 +1568,7 @@ struct building_t : public building_geom_t {
 	float get_attic_beam_depth()const {return 0.08*get_window_vspace();}
 	float get_min_wall_len   () const {return 2.0 *get_window_vspace();}
 	float get_door_shift_dist() const {return 0.01*get_window_vspace();}
+	float get_rug_thickness  () const {return 0.0010*get_window_vspace();}
 	float get_flooring_thick () const {return 0.0012*get_window_vspace();}
 	float get_doorway_width  () const;
 	float get_landing_width  () const {return 1.0*get_doorway_width();} // for L-shaped stairs
