@@ -1463,7 +1463,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	bool last_room_closed(0);
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (camera_in_building) { // handle light emitting objects in the player's building
+		if (camera_near_building) { // handle light emitting objects in the player's building
 			bool was_added(0);
 
 			if (i->type == TYPE_LAVALAMP && i->is_light_on()) { // should we do an occlusion query?

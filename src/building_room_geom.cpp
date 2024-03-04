@@ -4561,7 +4561,7 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 		water.z2() -= 0.1*height; // 90% filled
 		trans_mat.add_cube_to_verts_untextured(water, apply_light_color(c, colorRGBA(0.7, 0.85, 1.0, 0.15)), ~EF_Z2); // top surface
 	}
-	// draw gravel bottom
+	// draw gravel bottom; this won't be in the correct blend order and won't be visible when outside the building looking in
 	cube_t gravel(glass);
 	gravel.z2() = glass.z1() + 0.05*height; // shallow
 	gravel.expand_by_xy(-0.1*glass_thickness); // shrink slightly to prevent Z-fighting

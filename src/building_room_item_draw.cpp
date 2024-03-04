@@ -1909,7 +1909,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (disable_cull_face) {glEnable(GL_CULL_FACE);} // re-enable face culling
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
 
-	if (player_in_building_or_doorway && !shadow_only) { // draw water for sinks that are turned on, lava lamps, fish in fishtanks, and AO shadows
+	// draw water for sinks that are turned on, lava lamps, fish in fishtanks, and AO shadows; these aren't visible when the player is outside looking in through a window
+	if (player_in_building_or_doorway && !shadow_only) {
 		bool const draw_fish(have_fish_model());
 		float const ao_z_off(1.1*building.get_flooring_thick()); // slightly above rugs and flooring
 		static quad_batch_draw ao_qbd;
