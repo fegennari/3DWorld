@@ -339,7 +339,7 @@ namespace streetlight_ns {
 		if (!camera_pdu.sphere_visible_test(center, height)) return; // VFC
 		bool const is_on(!shadow_only && is_lit(always_on));
 		point const lpos(get_lpos());
-		float dist_val(0.0);
+		float camera_dist(0.0), dist_val(0.0);
 
 		if (shadow_only) {dist_val = (is_local_shadow ? 0.12 : 0.06);}
 		else {
@@ -351,7 +351,8 @@ namespace streetlight_ns {
 				set_z_plane_square_pts(below_pos, 1.2*city_params.road_width, pts);
 				dstate.qbd_emissive.add_quad_pts(pts, colorRGBA(light_color, 0.25), plus_z);
 			}
-			dist_val = p2p_dist(camera_pdu.pos, center)/dstate.draw_tile_dist;
+			camera_dist = p2p_dist(camera_pdu.pos, center);
+			dist_val    = camera_dist/dstate.draw_tile_dist;
 			if (dist_val > 0.2) return; // too far
 		}
 		float const pradius(get_streetlight_pole_radius()), lradius(light_radius*city_params.road_width);
@@ -365,8 +366,11 @@ namespace streetlight_ns {
 		if (!shadow_only) {
 			if (!is_on && dist_val > 0.15) return; // too far
 			if (is_on) {dstate.s.set_color_e(light_color);} else {dstate.s.set_cur_color(light_color);} // emissive when lit
-			// streetlight bloom: should be elliptical, disable when viewed from above, use tighter alpha mask
-			//if (is_on && dist_val > 0.05) {dstate.add_light_flare((lpos - vector3d(0.0, 0.0, 0.6*lradius)), zero_vector, light_color, min(1.0f, 10.0f*dist_val), 2.5*lradius);} // non-directional
+			
+			if (is_on && dist_val > 0.01 && (camera_pdu.pos.z - center.z) < 0.5*camera_dist) { // streetlight bloom, drawn if camera is not too high above
+				// should be elliptical, and needs tighter alpha mask
+				dstate.add_light_flare((lpos - 0.6*lradius*plus_z), zero_vector, light_color, min(1.0f, 12.0f*dist_val), 4.0*lradius); // non-directional
+			}
 		}
 		fgPushMatrix();
 		translate_to(lpos);
