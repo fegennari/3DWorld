@@ -3324,14 +3324,17 @@ public:
 							continue;
 						}
 						if (ref_pass_interior) continue; // interior room, don't need to draw windows and exterior doors
-						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist, !reflection_pass); // and draw opened door; update_state if not ref pass
+						// and draw opened door; update_state if not ref pass
+						bool const had_open_door(b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist, !reflection_pass));
 						bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1, 1, 1)); // inc_attic=1, inc_ext_basement=1, inc_roof_acc=1
+						bool const player_in_bldg_bc_or_door(player_in_building_bcube || had_open_door);
 						
 						if (!reflection_pass && (camera_in_this_building || !this_frame_camera_in_building)) { // player in this building, or near but not inside another
 							// disable grass in building part(s) containing the player
 							b.update_grass_exclude_at_pos(camera_xlated, xlate, camera_in_this_building);
 						}
-						if (!reflection_pass && player_in_building_bcube) {b.update_animals(camera_xlated, bi->ix);}
+						if (!reflection_pass && player_in_bldg_bc_or_door) {b.update_animals(camera_xlated, bi->ix);}
+						
 						// Note: if we skip this check and treat all walls/windows as front/containing part, this almost works, but will skip front faces of other buildings
 						if (!camera_in_this_building) { // camera not in building
 							if (ext_basement_conn_visible && animate2) {b.update_player_interact_objects(camera_xlated);} // need to at least update door open/close state
