@@ -901,7 +901,7 @@ struct building_room_geom_t {
 	float obj_scale=1.0;
 	unsigned wall_ps_start=0, buttons_start=0, stairs_start=0, backrooms_start=0; // index of first object of {TYPE_PG_*|TYPE_PSPACE, TYPE_BUTTON, TYPE_STAIR}
 	unsigned init_num_doors=0, init_num_dstacks=0; // required for removing doors added by backrooms generation when room_geom is deleted
-	unsigned pool_ramp_obj_ix=0, pool_stairs_start_ix=0;
+	unsigned pool_ramp_obj_ix=0, pool_stairs_start_ix=0, last_animal_update_frame=0;
 	point tex_origin;
 	colorRGBA wood_color;
 	courtyard_t courtyard;

@@ -1449,7 +1449,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (i->is_visible() && i->is_moving()) {moving_objs.emplace_back(*i, (i - objs.begin() + 1));}
 		}
 	}
-	if (camera_in_building && point_in_building_or_basement_bcube(camera_bs)) { // camera in building interior; matches rat update logic
+	if (has_room_geom() && frame_counter <= (int)interior->room_geom->last_animal_update_frame+1) { // animals were updated this frame or the previous frame
 		if (has_retail() && get_retail_part().contains_pt(camera_bs)) {} // optimization: no dynamic animal shadows in retail area
 		else { // add a base index to each animal group to make all moving objects unique
 			get_animal_shadow_casters(interior->room_geom->rats,    moving_objs, xlate, 10000);

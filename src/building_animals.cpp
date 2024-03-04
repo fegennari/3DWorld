@@ -63,6 +63,7 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix) {
 	update_spiders(camera_bs, building_ix);
 	update_snakes (camera_bs, building_ix);
 	update_insects(camera_bs, building_ix);
+	interior->room_geom->last_animal_update_frame = frame_counter;
 }
 
 template<typename T> void building_t::add_animals_on_floor(T &animals, unsigned building_ix, unsigned num_min, unsigned num_max, float sz_min, float sz_max) const {
