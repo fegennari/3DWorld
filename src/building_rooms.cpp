@@ -49,14 +49,18 @@ bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor_i
 		// run special logic for bedrooms and bathrooms (private rooms) on the first floor of a house
 		if (is_room_adjacent_to_ext_door(room)) return 0; // door to house does not open into a bedroom/bathroom
 		if (skip_conn_check) return 1;
+		bool const is_multi_floor(room.dz() > 1.5*get_window_vspace());
+		bool const has_stairs(is_multi_floor && !interior->stairwells.empty()); // more than one floor and stairs placement didn't fail
 
-		if (room.dz() > 1.5*get_window_vspace()) { // more than one floor
-			if (interior->stairwells.empty()) return 1; // failed to place stairs in this house, maybe because it was too small; I guess we just return 1 here
-			// determine if this room is on the shortest path from an exterior door to the stairs; if so, it can't be a bedroom or bathroom;
+		// check paths if there are stairs or an interior garage; skip for single floor houses since there may be no valid bed/bath placement with these constraints
+		if (is_multi_floor && (has_stairs || has_int_garage)) {
+			// determine if this room is on the shortest path from an exterior door to the stairs or garage; if so, it can't be a bedroom or bathroom;
 			// okay, that's not easy/fast to do, so determine if there is any path from the exterior door to the stairs that doesn't go through this room;
 			// this won't work when there are two paths from the door to the stairs and this room is only on one of the paths, so we could put a BR/BR on both paths
 			int cur_room(-1);
-			vector<unsigned> door_rooms, stairs_rooms;
+			static vector<unsigned> door_rooms, stairs_rooms;
+			door_rooms.clear();
+			stairs_rooms.clear();
 
 			for (unsigned i = 0; i < interior->rooms.size(); ++i) {
 				room_t const &r(interior->rooms[i]);
@@ -65,21 +69,18 @@ bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor_i
 				if (r.has_stairs_on_floor(floor_ix))  {stairs_rooms.push_back(i);}
 				if (is_room_adjacent_to_ext_door(r))  {door_rooms  .push_back(i);}
 			}
-			if (cur_room < 0 || stairs_rooms.empty()) {
+			if (is_multi_floor && stairs_rooms.empty()) {
 				if (!has_missing_stairs) {cout << "Building with missing stairs: " << bcube.str() << endl;}
 				has_missing_stairs = 1;
 			}
 			assert(cur_room >= 0); // must be found
-			if (stairs_rooms.empty()) return 1; // failed to place stairs in this house, but there were basement stairs?
-
-			if (!is_rotated() && is_cube() && !has_complex_floorplan) { // too strong for rotated or non-cube buildings, where door placement can sometimes fail
-				assert(!doors.empty());
-				assert(!door_rooms.empty());
-			}
-			for (auto d = door_rooms.begin(); d != door_rooms.end(); ++d) {
-				for (auto s = stairs_rooms.begin(); s != stairs_rooms.end(); ++s) {
-					if (!are_rooms_connected_without_using_room(*d, *s, cur_room)) return 0;
+			// Note: stairs_rooms can be empty if there are only basement stairs
+			// Note: doors can be empty if door placement failed, which can happen for rotated and non-cube buildings
+			for (unsigned d : door_rooms) {
+				for (unsigned s : stairs_rooms) {
+					if (!are_rooms_connected_without_using_room(d, s, cur_room)) return 0;
 				}
+				if (has_int_garage && !are_rooms_connected_without_using_room(d, interior->garage_room, cur_room)) return 0;
 			}
 		}
 	}
