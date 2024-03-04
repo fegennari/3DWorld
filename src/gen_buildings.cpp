@@ -3402,7 +3402,9 @@ public:
 				setup_stencil_buffer_write();
 				glStencilOpSeparate((swap_front_back ? GL_BACK : GL_FRONT), GL_KEEP, GL_KEEP, GL_KEEP); // ignore front faces
 				glStencilOpSeparate((swap_front_back ? GL_FRONT : GL_BACK), GL_KEEP, GL_KEEP, GL_INCR); // mark stencil on back faces
+				glDepthMask(GL_FALSE);
 				interior_wind_draw.draw(holes_shader, 0, 1); // draw back facing windows; direct_draw_no_vbo=1
+				glDepthMask(GL_TRUE);
 				end_stencil_write();
 				holes_shader.disable();
 			}
