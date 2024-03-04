@@ -46,8 +46,6 @@ void building_t::remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, fl
 	door_t door(c, !xy, open_dir, 1, 0, hinge_side); // open=1, on_stairs=0
 	door.d[!xy][0] = door.d[!xy][1] = c.get_center_dim(!xy); // zero area at wall centerline
 	door.d[ xy][0] = v1; door.d[ xy][1] = v2;
-	// this assumes rooms with primary hallways have bathrooms divided into stalls, which isn't always true
-	if (is_bathroom && !is_house && has_pri_hall()) {door.auto_close = 1;} // office building bathroom doors auto close
 	add_interior_door(door, is_bathroom, make_unlocked, make_closed);
 }
 
@@ -795,7 +793,6 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						door_t door(c, min_dim, d); // copy zvals and wall pos
 						clip_wall_to_ceil_floor(door, fc_thick);
 						door.d[ min_dim][d] = hall_wall_pos[d]; // set to zero area at hallway
-						if (is_bathroom) {door.auto_close = 1;} // bathroom doors auto close
 						for (unsigned e = 0; e < 2; ++e) {door.d[!min_dim][e] = doorway_vals[2*i+e];}
 						add_interior_door(door, is_bathroom);
 					}

@@ -1282,7 +1282,7 @@ struct stairs_place_t : public cube_t { // for extended basements
 };
 
 struct door_base_t : public cube_t {
-	bool dim=0, open_dir=0, hinge_side=0, on_stairs=0, mult_floor_room=0, for_closet=0, auto_close=0;
+	bool dim=0, open_dir=0, hinge_side=0, on_stairs=0, mult_floor_room=0, for_closet=0;
 	// is it useful to store the two rooms in the door/door_stack? this will speed up connectivity searches for navigation and room assignment,
 	// but only for finding the second room connected to a door, because we still need to iterate over all doors;
 	// unfortunately, it's not easy/cheap to assign these values because the room may not even be added until after the door is placed, so we have to go back and set room1/room2 later
@@ -1305,7 +1305,7 @@ struct door_stack_t : public door_base_t {
 	door_stack_t(door_base_t const &db, unsigned fdix) : door_base_t(db), first_door_ix(fdix) {}
 };
 struct door_t : public door_base_t {
-	bool open=0, blocked=0, is_bldg_conn=0;
+	bool open=0, blocked=0, is_bldg_conn=0, auto_close=0;
 	uint8_t locked=0; // 1=regular lock, >= 2=padlock, where color index is locked-2
 	int obj_ix=-1; // for closets, etc.
 	float open_amt=0.0; // 0.0=fully closed, 1.0=fully open

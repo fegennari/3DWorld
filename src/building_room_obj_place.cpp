@@ -1486,20 +1486,19 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	} // for dir
 	room.assign_to((mens_room ? RTYPE_MENS : RTYPE_WOMENS), floor);
 	
-	// make sure doors start closed and unlocked; should only be needed for non-cube buildings?
-	if (!is_cube()) {
-		for (door_stack_t const &ds : get_doorways_for_room(room, zval)) {
-			assert(ds.first_door_ix < interior->doors.size());
+	// make sure doors start closed and unlocked, and flag them as auto_close
+	for (door_stack_t const &ds : get_doorways_for_room(room, zval)) {
+		assert(ds.first_door_ix < interior->doors.size());
 
-			for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
-				door_t &door(interior->doors[dix]);
-				if (!ds.is_same_stack(door)) break; // moved to a different stack, done
-				if (door.z1() > zval || door.z2() < zval) continue; // wrong floor
-				door.open   = 0;
-				door.locked = 0;
-			}
-		} // for ds
-	}
+		for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
+			door_t &door(interior->doors[dix]);
+			if (!ds.is_same_stack(door)) break; // moved to a different stack, done
+			if (door.z1() > zval || door.z2() < zval) continue; // wrong floor
+			door.open   = 0; // only needed for non-cube buildings
+			door.locked = 0; // only needed for non-cube buildings
+			door.auto_close = 1;
+		}
+	} // for ds
 	// add a sign outside the bathroom door
 	add_door_sign((mens_room ? "Men" : "Women"), room, zval, room_id, tot_light_amt, 1); // no_check_adj_walls=1
 
