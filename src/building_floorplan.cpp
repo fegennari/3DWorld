@@ -1158,6 +1158,7 @@ bool building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
 		if (has_basement() && r.part_id == (int)basement_part_ix) continue; // skip basement rooms
 		if (get_part_for_room(r).contains_cube_xy_no_adj(r)) continue; // skip interior rooms
 		if (r.get_room_type(0) != RTYPE_NOTSET) continue; // already assigned
+		if (r.is_single_floor) continue; // no tall ceiling rooms; those should be used for living rooms; likely not needed because these aren't assigned yet
 		bool const dim(street_dir ? pref_street_dim : (r.dx() < r.dy())); // use larger dim unless there's a preference
 		if (r.d[!dim][0] != bcube.d[!dim][0] && r.d[!dim][1] != bcube.d[!dim][1]) continue; // require other dim at either side of the building
 		cube_t room_interior(r);
@@ -2177,6 +2178,8 @@ void building_t::create_two_story_tall_rooms(rand_gen_t &rgen) {
 		room_t &room(*r);
 		if (room.z1() != ground_floor_z1) continue; // ground floor only
 		if (room.has_stairs || room.has_elevator || room.is_hallway || room.is_sec_bldg || room.is_single_floor) continue;
+		unsigned const room_ix(r - interior->rooms.begin());
+		if (has_int_garage && (int)room_ix == interior->garage_room)      continue; // no interior garages
 		if (calc_num_floors(room, floor_spacing, floor_thickness) != 2)   continue; // two story rooms only
 		if (has_attic() && room.contains_cube_xy(interior->attic_access)) continue; // don't make the attic access unreachable
 		if (min(room.dx(), room.dy()) < min_tall_room_sz)                 continue; // room too small
@@ -2201,7 +2204,6 @@ void building_t::create_two_story_tall_rooms(rand_gen_t &rgen) {
 		} // for i
 		if (stack_ixs.size() > 1) { // only need to check if there are multiple connecting doors, since a single door must connect as this room has no stairs
 			// check for connected rooms on the upper floor that would become unreachable if their door was removed
-			unsigned const room_ix(r - interior->rooms.begin());
 			int first_room_ix(-1);
 			bool is_disconnected(0);
 
