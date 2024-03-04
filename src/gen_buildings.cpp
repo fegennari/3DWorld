@@ -2858,8 +2858,12 @@ public:
 			unsigned const bix(b - buildings.begin());
 
 			if (b->enable_driveway_coll()) {
-				if (!b->driveway.is_all_zeros()) {add_to_grid(b->driveway, bix, 1);}
-				if (!b->porch   .is_all_zeros()) {add_to_grid(b->porch,    bix, 1);}
+				if (!b->driveway.is_all_zeros()) {
+					cube_t driveway_ext(b->driveway);
+					driveway_ext.expand_by_xy(0.2*b->get_window_vspace()); // expand so that grass is excluded at the edges; determined experimentally
+					add_to_grid(driveway_ext, bix, 1);
+				}
+				if (!b->porch.is_all_zeros()) {add_to_grid(b->porch, bix, 1);}
 
 				for (auto const &d : b->doors) { // handle steps for exterior doors
 					if (d.type == tquad_with_ix_t::TYPE_GDOOR) continue; // already handled by driveway
