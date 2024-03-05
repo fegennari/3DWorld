@@ -66,27 +66,20 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 {
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR)) {office_chair_model = 0;}
 	float const window_vspacing(get_window_vspace()), room_pad(4.0f*get_wall_thickness()), chair_height(0.4*window_vspacing), dir_sign(dir ? -1.0 : 1.0);
-	float chair_hwidth(0.0), push_out(0.0), min_push_out(0.0);
+	float chair_hwidth(0.0), push_out(0.0);
 	point chair_pos(place_pos); // same starting center and z1
 
 	if (office_chair_model) {
 		chair_hwidth = chair_height*get_radius_for_square_model(OBJ_MODEL_OFFICE_CHAIR);
-		min_push_out = 0.5;
-		push_out     = min_push_out + rgen.rand_uniform(0.0, 0.6); // pushed out a bit so that the arms don't intersect the table top, but can push out more
+		push_out     = 0.5 + rgen.rand_uniform(0.0, 0.6); // pushed out a bit so that the arms don't intersect the table top, but can push out more
 	}
 	else {
 		chair_hwidth = 0.1*window_vspacing; // half width
-		min_push_out = -0.5;
-		push_out     = min_push_out + rgen.rand_uniform(0.0, 1.7); // varible amount of pushed in/out
+		push_out     = -0.5 + rgen.rand_uniform(0.0, 1.7); // varible amount of pushed in/out
 	}
 	chair_pos[dim] += dir_sign*push_out*chair_hwidth;
-	cube_t chair(get_cube_height_radius(chair_pos, chair_hwidth, chair_height));
-	
-	if (!is_valid_placement_for_room(chair, room, blockers, 0, room_pad)) { // check proximity to doors
-		float const max_push_in(dir_sign*(min_push_out - push_out)*chair_hwidth);
-		chair.translate_dim(dim, max_push_in*rgen.rand_uniform(0.5, 1.0)); // push the chair mostly in and try again
-		if (!is_valid_placement_for_room(chair, room, blockers, 0, room_pad)) return 0;
-	}
+	cube_t const chair(get_cube_height_radius(chair_pos, chair_hwidth, chair_height));
+	if (!is_valid_placement_for_room(chair, room, blockers, 0, room_pad)) return 0; // check proximity to doors
 	vect_room_object_t &objs(interior->room_geom->objs);
 
 	if (office_chair_model) {
@@ -122,17 +115,20 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, cube_t const &room, v
 	//if (door_path_checker_t().check_door_path_blocked(table, room, table_pos.z, *this)) return 0; // optional, but we may want to allow this for kitchens and dining rooms
 	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, (is_house ? RO_FLAG_IS_HOUSE : 0), tot_light_amt, (is_round ? SHAPE_CYLIN : SHAPE_CUBE));
 	set_obj_id(objs);
-	unsigned num_added(1); // start with the table
-
 	// place some chairs around the table
-	for (unsigned dim = 0; dim < 2; ++dim) {
-		for (unsigned dir = 0; dir < 2; ++dir) {
-			if (rgen.rand_bool()) continue; // 50% of the time
-			point chair_pos(table_pos); // same starting center and z1
-			chair_pos[dim] += (dir ? -1.0f : 1.0f)*table_sz[dim];
-			num_added += add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, 0); // office_chair_model=0
-		}
-	}
+	unsigned num_added(1); // start with the table
+	bool prev_not_added(0), pri_dim(rgen.rand_bool()), pri_dir(rgen.rand_bool());
+
+	for (unsigned orient = 0; orient < 4; ++orient) {
+		if (prev_not_added) {prev_not_added = 0;} // if the previous chair failed to be added, make sure to try the next orient
+		else if (orient == 3 && num_added == 1) {} // make sure to place a chair if we have none and this is our last orient
+		else if (rgen.rand_bool()) continue; // 50% of the time
+		bool const dim(bool(orient >> 1) ^ pri_dim), dir(bool(orient & 1) ^ pri_dir);
+		point chair_pos(table_pos); // same starting center and z1
+		chair_pos[dim] += (dir ? -1.0f : 1.0f)*table_sz[dim];
+		bool const added(add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, 0)); // office_chair_model=0
+		if (added) {++num_added;} else {prev_not_added = 1;}
+	} // for orient
 	return num_added;
 }
 void building_t::shorten_chairs_in_region(cube_t const &region, unsigned objs_start) {
