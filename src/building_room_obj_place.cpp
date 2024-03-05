@@ -65,7 +65,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 	colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair_model, bool enable_rotation)
 {
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR)) {office_chair_model = 0;}
-	float const window_vspacing(get_window_vspace()), room_pad(4.0f*get_wall_thickness()), chair_height(0.4*window_vspacing);
+	float const window_vspacing(get_window_vspace()), room_pad(4.0f*get_wall_thickness()), chair_height(0.4*window_vspacing), dir_sign(dir ? -1.0 : 1.0);
 	float chair_hwidth(0.0), push_out(0.0), min_push_out(0.0);
 	point chair_pos(place_pos); // same starting center and z1
 
@@ -79,11 +79,11 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 		min_push_out = -0.5;
 		push_out     = min_push_out + rgen.rand_uniform(0.0, 1.7); // varible amount of pushed in/out
 	}
-	chair_pos[dim] += (dir ? -1.0f : 1.0f)*push_out*chair_hwidth;
+	chair_pos[dim] += dir_sign*push_out*chair_hwidth;
 	cube_t chair(get_cube_height_radius(chair_pos, chair_hwidth, chair_height));
 	
 	if (!is_valid_placement_for_room(chair, room, blockers, 0, room_pad)) { // check proximity to doors
-		float const max_push_in((dir ? -1.0f : 1.0f)*(min_push_out - push_out)*chair_hwidth);
+		float const max_push_in(dir_sign*(min_push_out - push_out)*chair_hwidth);
 		chair.translate_dim(dim, max_push_in*rgen.rand_uniform(0.5, 1.0)); // push the chair mostly in and try again
 		if (!is_valid_placement_for_room(chair, room, blockers, 0, room_pad)) return 0;
 	}
@@ -1654,6 +1654,10 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 			} // for i
 			if (bad_place) continue;
 			assert(c.contains_cube(c_min));
+
+			for (auto i = objs.begin()+objs_start; i != objs.begin()+counters_start; ++i) { // remove any chairs blocking the counter doors/drawers
+				if (i->type == TYPE_CHAIR && i->intersects(c)) {i->remove();}
+			}
 			c.d[dim][!dir] = front_pos; // remove front clearance
 			bool const add_backsplash(!is_ext_wall); // only add to interior walls to avoid windows; assuming not in basement
 
