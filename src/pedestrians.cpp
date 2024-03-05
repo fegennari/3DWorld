@@ -218,7 +218,14 @@ public:
 		grid.check_if_valid(blockers);
 		if (!grid.is_valid()) {grid.build_for_city(plot_bcube, blockers, radius);}
 		if (s != nullptr) {grid.debug_draw(*s);} // debug visualization
-		return grid.find_path(p1, p2, path, dest_building);
+		point plot_dest(p2);
+		plot_bcube.clamp_pt_xy(plot_dest); // closest point to our destination within the current plot
+		path.clear();
+		path.push_back(p1); // add the starting point
+		bool const ret(grid.find_path(p1, plot_dest, path, dest_building));
+		path.push_back(plot_dest); // add the point where we exit the plot
+		path.push_back(p2); // add our destination in the adjacent plot
+		return ret;
 	}
 };
 
@@ -1858,16 +1865,10 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 		draw_colored_cube(lookahead, BROWN, s);
 	}
 	if (display_mode & 0x10) { // debugging of nav grid
-		point plot_dest(orig_dest_pos);
-		plot_bcube.clamp_pt_xy(plot_dest);
-		path.clear();
-		path.push_back(pos);
 		int const bix(has_dest_bldg ? (int)dest_bldg : -1);
 		city_cube_nav_grid_manager &nav_grid_mgr(ped_mgr.get_nav_grid_mgr());
-		bool const success(nav_grid_mgr.find_path(plot_bcube, avoid, radius, plot, ped_mgr.get_tot_num_plots(), pos, plot_dest, path, bix, &s)); // with debug vis
+		bool const success(nav_grid_mgr.find_path(plot_bcube, avoid, radius, plot, ped_mgr.get_tot_num_plots(), pos, orig_dest_pos, path, bix, &s)); // with debug vis
 		colorRGBA const color(success ? PURPLE : BLACK);
-		path.push_back(plot_dest);
-		path.push_back(orig_dest_pos);
 		for (point &p : path) {p.z += 0.1*radius;} // shift up slightly so that it's not overlapping the other path nodes/lines
 		set_fill_mode(); // reset
 		begin_ped_sphere_draw(s, color, in_sphere_draw, 0);
