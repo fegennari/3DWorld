@@ -2350,29 +2350,34 @@ bool has_stairs_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, f
 	if (no_check_enter_exit < 2) {pre_test.expand_by_xy(doorway_width);}
 	float const approx_floor_spacing(doorway_width/DOOR_WIDTH_SCALE); // used for L-shaped stairs
 
-	for (auto s = stairs.begin(); s != stairs.end(); ++s) {
-		if (!s->intersects(pre_test)) continue; // early termination test optimization
-		cube_t const tc(get_stairs_bcube_expanded(*s, ((no_check_enter_exit == 2) ? 0.0 : doorway_width), 0.0, doorway_width)); // sides_clearance=0.0
+	for (stairwell_t const &s : stairs) {
+		if (!s.intersects(pre_test)) continue; // early termination test optimization
+		cube_t const tc(get_stairs_bcube_expanded(s, ((no_check_enter_exit == 2) ? 0.0 : doorway_width), 0.0, doorway_width)); // sides_clearance=0.0
 		
 		if (tc.intersects(bcube)) { // intersects core stairs
-			if (!s->is_l_shape()) return 1; // L-shaped stairs are special
-			if (bcube.z2() >= s->z1() + approx_floor_spacing) return 1; // not on the bottom floor - counts as intersection
+			if (!s.is_l_shape()) return 1; // L-shaped stairs are special
+			if (bcube.z2() >= s.z1() + approx_floor_spacing) return 1; // not on the bottom floor - counts as intersection
 			float const landing_width(doorway_width);
-			bool const dirs[2] = {s->dir, s->bend_dir};
+			bool const dirs[2] = {s.dir, s.bend_dir};
 
 			for (unsigned d = 0; d < 2; ++d) { // {lower, upper}
-				bool const dim(s->dim ^ bool(d)), dir2(dirs[!d] ^ bool(d));
+				bool const dim(s.dim ^ bool(d)), dir2(dirs[!d] ^ bool(d));
 				cube_t seg(tc);
-				seg.d[!dim][dir2] = s->d[!dim][!dir2] + (dir2 ? 1.0 : -1.0)*landing_width; // set width
+				seg.d[!dim][dir2] = s.d[!dim][!dir2] + (dir2 ? 1.0 : -1.0)*landing_width; // set width
 				if (seg.intersects(bcube)) return 1;
 			}
 		}
 		// extra check for objects blocking the entrance/exit to the side; this is really only needed for open ends, but helps to avoid squeezing objects behind stairs as well
-		if (no_check_enter_exit || s->is_u_shape()) continue; // U-shaped stairs are only open on one side and generally placed in hallways, so ignore
+		if (no_check_enter_exit || s.is_u_shape()) continue; // U-shaped stairs are only open on one side and generally placed in hallways, so ignore
 		
-		if (s->is_l_shape()) { // L-shaped stairs are special
+		if (s.is_l_shape()) { // L-shaped stairs are special
 			cube_t entrances[2]; // {lower, upper}
-			get_L_stairs_entrances(*s, doorway_width, 1, entrances); // for_placement=0
+			get_L_stairs_entrances(s, doorway_width, 1, entrances); // for_placement=1
+
+			if (bcube.z2() < s.z1() + approx_floor_spacing) { // bottom floor
+				// lower entrance can be smaller - subtract off the width of the second/bend segment
+				entrances[0].d[!s.dim][s.bend_dir] -= (s.bend_dir ? 1.0 : -1.0)*(s.get_width() - doorway_width);
+			}
 			//entrances[0].z2() -= approx_floor_spacing; // lower entrance is not on upper floor; but we don't want to block the path between railing and wall either
 			entrances[1].z1() += approx_floor_spacing; // upper entrance is not on lower floor
 			if (entrances[0].intersects(bcube) || entrances[1].intersects(bcube)) return 1;
@@ -2380,9 +2385,9 @@ bool has_stairs_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, f
 		}
 		for (unsigned e = 0; e < 2; ++e) { // for each end (entrance/exit)
 			cube_t end(tc);
-			end.d[s->dim][!e] = s->d[s->dim][e]; // shrink to the gap between *s and tc
-			if (!s->against_wall[0]) {end.d[!s->dim][0] -= 0.75*doorway_width;}
-			if (!s->against_wall[1]) {end.d[!s->dim][1] += 0.75*doorway_width;}
+			end.d[s.dim][!e] = s.d[s.dim][e]; // shrink to the gap between *s and tc
+			if (!s.against_wall[0]) {end.d[!s.dim][0] -= 0.75*doorway_width;}
+			if (!s.against_wall[1]) {end.d[!s.dim][1] += 0.75*doorway_width;}
 			if (end.intersects(bcube)) return 1; // Note: ignores zval test, which can affect bottom exit and top entrances of non-walled stairs
 		}
 	} // for s
