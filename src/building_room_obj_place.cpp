@@ -1544,21 +1544,7 @@ int building_t::gather_room_placement_blockers(cube_t const &room, unsigned objs
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) { // interior doors
 		add_door_if_blocker(*i, room, door_opens_inward(*i, room), i->open_dir, i->hinge_side, 0, blockers);
 	}
-	float const doorway_width(get_doorway_width());
-
-	for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
-		cube_t tc(*s);
-		// expand only in stairs entrance dim for the first floor (could do the opposite for top floor)
-		bool const first_floor(room.z1() <= s->z1() + get_floor_thickness()); // for these stairs, not for the building
-		if (first_floor) {tc.d[s->dim][!s->dir] += (s->dir ? -1.0 : 1.0);}
-		else {tc.expand_in_dim(s->dim, doorway_width);} // add extra space at both ends of stairs
-		if (tc.intersects(bcube)) {blockers.push_back(tc);}
-	}
-	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
-		cube_t tc(*e);
-		tc.d[e->dim][e->dir] += doorway_width*(e->dir ? 1.0 : -1.0); // add extra space in front of the elevator
-		if (tc.intersects(bcube)) {blockers.push_back(tc);}
-	}
+	// Note: caller must call is_blocked_by_stairs_or_elevator() to handle stairs and elevators
 	return table_blocker_ix;
 }
 
@@ -1653,6 +1639,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 				if (b.d[!dim][0] > c_min.d[!dim][1]) {min_eq(c.d[!dim][1], b.d[!dim][0]);} // clip on hi side
 			} // for i
 			if (bad_place) continue;
+			if (interior->is_blocked_by_stairs_or_elevator(c)) continue; // check stairs
 			assert(c.contains_cube(c_min));
 
 			for (auto i = objs.begin()+objs_start; i != objs.begin()+counters_start; ++i) { // remove any chairs blocking the counter doors/drawers
