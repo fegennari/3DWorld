@@ -1983,7 +1983,11 @@ bool building_t::is_obj_pos_valid(room_object_t const &obj, bool keep_in_room, b
 			else if (is_cube_close_to_door(obj, 0.0, 1, door, door.get_check_dirs(), door.open_dir, allow_block_door)) return 0;
 		} // for dix
 	} // for door_stacks
-	if (check_stairs && has_bcube_int(obj, interior->stairwells)) return 0;
+	if (check_stairs) {
+		cube_t obj_exp(obj);
+		obj_exp.expand_by_xy(0.25*get_wall_thickness()); // add a bit of extra padding to account for the railing thickness extending outside the stairs bcube (approx)
+		if (has_bcube_int(obj_exp, interior->stairwells)) return 0;
+	}
 	if (has_bcube_int(obj, interior->elevators)) return 0;
 	return 1;
 }
