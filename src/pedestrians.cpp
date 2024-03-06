@@ -225,6 +225,7 @@ public:
 		bool const ret(grid.find_path(p1, plot_dest, path, dest_building));
 		path.push_back(plot_dest); // add the point where we exit the plot
 		path.push_back(p2); // add our destination in the adjacent plot
+		path.erase(path.begin()); // remove the starting point, which is no longer needed
 		return ret;
 	}
 };
@@ -1754,6 +1755,10 @@ void draw_colored_cube(cube_t const &c, colorRGBA const &color, shader_t &s) {
 	s.set_cur_color(color);
 	draw_simple_cube(c);
 }
+void add_line(point const &p1, point const &p2, colorRGBA const &color, vector<vert_color> &line_pts) {
+	line_pts.emplace_back(p1, color);
+	line_pts.emplace_back(p2, color);
+}
 
 void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	int debug_state(0);
@@ -1797,20 +1802,17 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	if (ret == 0) { // no path found, show line to dest
 		s.set_cur_color(RED);
 		draw_simple_cube(union_plot_bcube);
-		line_pts.emplace_back(pos,      BROWN);
-		line_pts.emplace_back(dest_pos, BROWN);
+		add_line(pos, dest_pos, BROWN, line_pts);
 	}
 	else if (ret == 2) { // show segment from current pos to edge of building/car
 		assert(!path.empty());
 		if (!dist_less_than(path[0], player_pos, CAMERA_RADIUS)) {draw_sphere_vbo(path[0], sphere_radius, NDIV, 0);}
-		line_pts.emplace_back(pos,     BLUE);
-		line_pts.emplace_back(path[0], BLUE);
+		add_line(pos, path[0], BLUE, line_pts);
 	}
 	for (auto p = path.begin(); p+1 < path.end(); ++p) { // iterate over line segments, skip last point
 		point const &n(*(p+1));
 		if (!dist_less_than(n, player_pos, CAMERA_RADIUS)) {draw_sphere_vbo(n, sphere_radius, NDIV, 0);}
-		line_pts.emplace_back(*p, line_color);
-		line_pts.emplace_back(n,  line_color);
+		add_line(*p, n, line_color, line_pts);
 	}
 	if (at_dest_plot && (has_dest_car || !complete)) { // show destination when in dest plot with incomplete path or car
 		s.set_cur_color(PURPLE);
@@ -1874,11 +1876,8 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 		begin_ped_sphere_draw(s, color, in_sphere_draw, 0);
 		for (point const &p : path) {draw_sphere_vbo(p, sphere_radius, NDIV, 0);}
 		end_sphere_draw(in_sphere_draw);
-
-		for (auto p = path.begin()+1; p != path.end(); ++p) {
-			line_pts.emplace_back(*(p-1), color);
-			line_pts.emplace_back(*p,     color);
-		}
+		for (auto p = path.begin()+1; p != path.end(); ++p) {add_line(*(p-1), *p, color, line_pts);}
+		add_line(pos, path.front(), color, line_pts);
 	}
 	set_fill_mode(); // reset
 	draw_verts(line_pts, GL_LINES);
