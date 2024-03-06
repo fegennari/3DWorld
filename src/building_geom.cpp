@@ -803,7 +803,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				door_part   = ((door_dim == dim) ? 0 : 1); // which part the door is connected to
 				min_eq(door_height, 0.95f*height);
 			}
-			if (detail_type == 1) { // porch
+			if (detail_type == 1) { // porch; parts added will be {porch roof, porch support pillar}
 				float const width(0.05f*(fabs(dist1) + fabs(dist2))); // width of support pillar
 				c.d[!dim][dir2 ] += dist1; // move away from bcube edge
 				c.d[ dim][ dir ] += dist2; // move away from bcube edge

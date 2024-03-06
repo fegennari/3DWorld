@@ -1689,6 +1689,15 @@ int building_t::check_point_or_cylin_contained(point const &pos, float xy_radius
 			return 1;
 		} // for i
 	}
+	if (has_porch()) { // check porch pillar
+		assert(real_num_parts+1U < parts.size()); // must have {porch roof, porch support pillar}
+		cube_t const &porch_pillar(parts[real_num_parts+1]);
+		
+		if (porch_pillar.contains_pt_xy_exp(pr, xy_radius)) {
+			if (coll_cube) {*coll_cube = porch_pillar;}
+			return 1;
+		}
+	}
 	if (inc_roof_acc && !is_house && interior) { // check roof access stairs
 		for (stairwell_t const &s : interior->stairwells) {
 			if (s.roof_access && s.contains_pt_xy(pr) && pr.z > s.z1() && pr.z < s.z2() + get_window_vspace()) return 4;
