@@ -957,7 +957,7 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 				cube_t floor_slab(balcony);
 				floor_slab.z2() = balcony.z1() + 0.12*balcony.dz(); // matches code in get_balcony_cubes()
 				ext_steps.emplace_back(floor_slab, dim, 0, dir, 0, 0, 0, 1); // enclosed, no step dir
-				details.emplace_back(floor_slab, DETAIL_OBJ_SHAD_ONLY);
+				details.emplace_back(floor_slab, DETAIL_OBJ_COLL_SHAD); // for shadows and pedestrian collisions
 
 				if (draw_style == 0 || draw_style == 3) { // add shadow casters for sides
 					cube_t cubes[4]; // {bottom, front, left side, right side}

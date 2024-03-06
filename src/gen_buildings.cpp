@@ -4067,10 +4067,10 @@ public:
 		assert(building_id < buildings.size());
 		return buildings[building_id].check_sphere_coll(pos, radius, xy_only);
 	}
-	bool check_building_point_or_cylin_contained(point const &pos, float radius, unsigned building_id) const {
+	bool check_building_point_or_cylin_contained(point const &pos, float radius, bool inc_details, unsigned building_id) const {
 		static vector<point> points; // reused across calls
 		assert(building_id < buildings.size());
-		return buildings[building_id].check_point_or_cylin_contained(pos, radius, points);
+		return buildings[building_id].check_point_or_cylin_contained(pos, radius, points, 0, 0, 0, inc_details); // attic=0, extb=0, roof=0
 	}
 
 	int get_building_bcube_contains_pos(point const &pos) { // Note: not thread safe due to static points
@@ -4559,8 +4559,8 @@ bool get_building_door_pos_closest_to(unsigned building_id, point const &target_
 bool check_sphere_coll_building(point const &pos, float radius, bool xy_only, unsigned building_id) {
 	return building_creator_city.check_sphere_coll_building(pos, radius, xy_only, building_id);
 }
-bool check_building_point_or_cylin_contained(point const &pos, float radius, unsigned building_id) {
-	return building_creator_city.check_building_point_or_cylin_contained(pos, radius, building_id);
+bool check_building_point_or_cylin_contained(point const &pos, float radius, bool inc_details, unsigned building_id) {
+	return building_creator_city.check_building_point_or_cylin_contained(pos, radius, inc_details, building_id);
 }
 int check_buildings_ped_coll(point const &pos, float bcube_radius, float detail_radius, unsigned plot_id, unsigned &building_id, cube_t *coll_cube) {
 	return building_creator_city.check_ped_coll(pos, bcube_radius, detail_radius, plot_id, building_id, coll_cube);

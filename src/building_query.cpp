@@ -1704,7 +1704,7 @@ int building_t::check_point_or_cylin_contained(point const &pos, float xy_radius
 		}
 	}
 	if (inc_details) {
-		for (auto const &i : details) { // AC unit; what else?
+		for (auto const &i : details) { // AC unit, balcony post, etc.
 			if (i.contains_pt_exp_xy_only(pr, xy_radius)) {
 				if (coll_cube) {*coll_cube = i;}
 				return 5;

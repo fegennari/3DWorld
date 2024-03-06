@@ -12,6 +12,7 @@ float const CROSS_WAIT_TIME      = 60.0; // in seconds
 float const LOOKAHEAD_TICKS      = 2.0*TICKS_PER_SECOND; // 2s
 float const PATH_GAP_FACTOR      = 0.1;
 bool  const FORCE_USE_CROSSWALKS = 0; // more realistic and safe, but causes problems with pedestian collisions
+bool  const AVOID_RES_PRIV_PROP  = 1; // avoid private property in residential plots
 
 bool some_person_has_idle_animation(0);
 
@@ -32,7 +33,7 @@ bool ai_follow_player();
 void get_dead_players_in_building(vector<dead_person_t> &dead_players, building_t const &building); // from building_gameplay.cpp
 bool check_city_building_line_coll_bs_any(point const &p1, point const &p2);
 int check_buildings_ped_coll(point const &pos, float bcube_radius, float detail_radius, unsigned plot_id, unsigned &building_id, cube_t *coll_cube);
-bool check_building_point_or_cylin_contained(point const &pos, float radius, unsigned building_id);
+bool check_building_point_or_cylin_contained(point const &pos, float radius, bool inc_details, unsigned building_id);
 bool check_line_int_xy(vect_cube_t const &c, point const &p1, point const &p2);
 void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool alert_other_zombies=0, bool high_priority=0, float gain=1.0, float pitch=1.0);
 int register_ai_player_coll(uint8_t &has_key, float height);
@@ -148,7 +149,8 @@ public:
 				for (unsigned x = x1; x <= x2; ++x) {
 					uint8_t &val(nodes[get_node_ix(x, y)]);
 					if (val > 0) continue; // already blocked
-					if (check_building_point_or_cylin_contained(get_grid_pt(x, y, zval), radius, b.ix)) {val = i + node_bix_start;} // store index into buildings vector
+					// inc_details=1 (includes fences, AC units, and balcony posts); store index into buildings vector
+					if (check_building_point_or_cylin_contained(get_grid_pt(x, y, zval), radius, 1, b.ix)) {val = i + node_bix_start;}
 				}
 			}
 		} // for b
@@ -836,7 +838,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	cube_t const region(get_plot_coll_region(cur_plot));
 	bool keep_cur_dest(0);
 
-	if (cur_plot.is_residential_not_park()) { // apply special restrictions when walking through a residential block
+	if (AVOID_RES_PRIV_PROP && cur_plot.is_residential_not_park()) { // apply special restrictions when walking through a residential block
 		cube_t const avoid_area(get_avoid_area_for_plot(plot_bcube, radius));
 		bool avoid_entire_plot(0);
 
@@ -1218,7 +1220,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			}
 		}
 		else if (collided) { // static object collision (should be rare if path_finder does a good job), or in_the_road (need this to get around traffic lights, etc.)
-			if (!follow_player) {
+			if (AVOID_RES_PRIV_PROP && !follow_player) {
 				road_plot_t const &cur_plot(ped_mgr.get_city_plot_for_peds(city, plot));
 
 				if (cur_plot.is_residential_not_park()) { // plot has private property
