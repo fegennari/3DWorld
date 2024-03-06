@@ -570,7 +570,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				// on ground floor, try to make this a kitchen; not all houses will have a kitchen with this logic - maybe we need fewer bedrooms?
 				// office buildings can also have kitchens, even on non-ground floors; no tall room kitchens because the cabinets and stove hood have no ceiling to connect to
 				if (!(added_kitchen_mask & floor_mask) && (!is_house || is_entry_floor) && !is_basement && !is_tall_room) {
-					if (added_tc || (is_house && (r+1) == rooms.end())) { // make it a kitchen if it's the last room in a house, even if there's no table
+					// make it a kitchen if it's the last room in a house, even if there's no table or it has stairs
+					if ((added_tc && !has_stairs) || (is_house && (r+1) == rooms.end())) {
 						if (add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_living)) {
 							r->assign_to(RTYPE_KITCHEN, f);
 							added_kitchen_mask |= floor_mask;
