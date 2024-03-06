@@ -1787,7 +1787,7 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 		if (place_model_along_wall(OBJ_MODEL_RCHAIR, TYPE_RCHAIR, room, 0.5, rgen, zval, room_id, tot_light_amt, chair_place_area, objs_start, 1.0)) {
 			if (rgen.rand_bool()) { // add a random rotation half the time
 				assert(chair_ix < objs.size()); // chair must have been placed
-				objs[chair_ix].flags |= RO_FLAG_RAND_ROT; // rotate to face the center of the room rather than having it be random?
+				objs[chair_ix].flags |= RO_FLAG_RAND_ROT; // rotated, but generally facing the center of the room
 				objs[chair_ix].shape  = SHAPE_CYLIN; // make it a cylinder since it no longer fits in a tight cube
 			}
 		}

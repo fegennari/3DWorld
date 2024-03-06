@@ -1056,6 +1056,12 @@ void building_room_geom_t::create_obj_model_insts(building_t const &building) { 
 				float const angle(123.4*i->x1() + 456.7*i->y1() + 567.8*i->z1()); // random rotation angle based on position
 				vector3d const rand_dir(vector3d(sin(angle), cos(angle), 0.0).get_norm());
 				dir = ((dot_product(rand_dir, dir) < 0.0) ? -rand_dir : rand_dir); // random, but facing in the correct general direction
+
+				if (i->type == TYPE_RCHAIR) { // rotate to face the center of the room
+					vector3d const center_dir(building.get_room(i->room_id).get_cube_center() - i->get_cube_center());
+					if (SIGN(dir.x) != SIGN(center_dir.x)) {dir.x *= -1.0;}
+					if (SIGN(dir.y) != SIGN(center_dir.y)) {dir.y *= -1.0;}
+				}
 			}
 			if (building.is_rotated()) {building.do_xy_rotate_normal(dir);}
 			obj_model_insts.emplace_back((i - obj_vect.begin() + obj_id_offset), dir);
