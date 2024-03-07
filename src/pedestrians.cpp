@@ -160,6 +160,7 @@ public:
 		} // for b
 	}
 	bool find_path(point const &p1, point const &p2, ai_path_t &path, int dest_building_) {
+		assert(p1.z == p2.z); // must be horizontal
 		assert(exclude_val == 255);
 		dest_building = dest_building_;
 
@@ -215,6 +216,7 @@ public:
 		point const &p1, point const &p2, ai_path_t &path, int dest_building, shader_t *s=nullptr)
 	{
 		assert(plot_ix < num_plots);
+		assert(p1.z == p2.z); // must be horizontal
 		// assume the plot blocker is first and at least half the area of the plot
 		bool const has_blocked_interior(!blockers.empty() && blockers.front().get_area_xy() > 0.5*plot_bcube.get_area_xy());
 		vector<city_cube_nav_grid> &grids(plot_grids[has_blocked_interior]);
@@ -1150,7 +1152,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 
 					if (!check_path_blocked(ped_mgr, player_pos, check_buildings)) { // check fences, walls, hedges, trees, etc.
 						next_follow_player = 1;
-						dest_pos = player_pos;
+						dest_pos = point(player_pos.x, player_pos.y, pos.z);
 						if (!follow_player) {maybe_play_zombie_sound(pos, ssn);} // moan if newly following the player
 					}
 				}
