@@ -212,7 +212,7 @@ void resize_blockers_for_trees(vect_cube_t &blockers, unsigned six, unsigned eix
 }
 
 void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t &blockers,
-	vect_cube_t &colliders, vector<point> &tree_pos, rand_gen_t &rgen, bool is_residential, unsigned buildings_end)
+	vect_cube_t &colliders, vector<point> &tree_pos, rand_gen_t &rgen, unsigned buildings_end)
 {
 	if (city_params.max_trees_per_plot == 0) return;
 	float const radius(city_params.tree_spacing*city_params.get_nom_car_size().x); // in multiples of car length
@@ -226,7 +226,7 @@ void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t
 	unsigned const input_blockers_end(blockers.size());
 	float const non_buildings_overlap(0.7*radius);
 	resize_blockers_for_trees(blockers, buildings_end, input_blockers_end, -non_buildings_overlap);
-	bool const has_planter(!is_residential && !plot.is_park); // only commercial trees
+	bool const has_planter(plot.is_commercial()); // only commercial trees
 
 	for (unsigned n = 0; n < num_trees; ++n) {
 		bool const is_sm_tree((rgen.rand()%3) == 0); // 33% of the time is a pine/palm tree
@@ -332,15 +332,16 @@ bool check_path_tree_coll(park_path_t const &path, vector<point> const &tree_pos
 
 // Note: blockers are used for placement of objects within this plot; colliders are used for pedestrian AI
 void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders,
-	vector<point> const &tree_pos, rand_gen_t &rgen, bool is_residential, bool have_streetlights)
+	vector<point> const &tree_pos, rand_gen_t &rgen, bool have_streetlights)
 {
+	bool const is_residential(plot.is_residential), is_park(plot.is_park);
 	float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
 	float const min_obj_spacing(get_min_obj_spacing());
 	unsigned const benches_start(benches.size()), trashcans_start(trashcans.size()), substations_start(sstations.size());
 	unsigned const fountains_start(fountains.size()), ppoles_start(ppoles.size()), paths_start(ppaths.size());
 
 	// place paths in parks
-	if (plot.is_park) {
+	if (is_park) {
 		//highres_timer_t timer("Add Park Paths"); // < 1ms
 		unsigned const num_paths(1 + (rgen.rand_float() < 0.67)); // 1-2
 		unsigned const num_path_segs = 100;
@@ -385,7 +386,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		}
 	}
 	// place fire_hydrants if the model has been loaded; don't add fire hydrants in parks
-	if (!plot.is_park && building_obj_model_loader.is_model_valid(OBJ_MODEL_FHYDRANT)) {
+	if (!is_park && building_obj_model_loader.is_model_valid(OBJ_MODEL_FHYDRANT)) {
 		// we want the fire hydrant on the edge of the sidewalk next to the road, not next to the plot; this makes it outside the plot itself
 		float const radius(0.04*car_length), height(0.18*car_length), dist_from_road(-0.5*radius - get_sidewalk_width());
 		point pos(0.0, 0.0, plot.z2()); // XY will be assigned below
@@ -406,7 +407,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		} // for dim
 	}
 	// place benches in parks and non-residential areas
-	if (!is_residential || plot.is_park) {
+	if (!plot.is_residential_not_park()) {
 		float const bench_radius(0.3 * car_length), bench_spacing(max(bench_radius, 1.5f*min_obj_spacing)); // add a bit of extra space
 
 		for (unsigned n = 0; n < city_params.max_benches_per_plot; ++n) {
@@ -422,7 +423,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				}
 			}
 			bench_t const bench(pos, bench_radius, bench_dim, bench_dir);
-			if (plot.is_park && check_path_coll_xy(bench.bcube, ppaths, paths_start)) continue; // check park path collision
+			if (is_park && check_path_coll_xy(bench.bcube, ppaths, paths_start)) continue; // check park path collision
 			bench_groups.add_obj(bench, benches);
 			colliders.push_back(bench.bcube);
 			blockers.back() = bench.bcube; // update blocker since bench is non-square
@@ -430,7 +431,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		} // for n
 	}
 	// place planters; don't add planters in parks or residential areas
-	if (!is_residential && !plot.is_park) {
+	if (plot.is_commercial()) {
 		float const planter_height(0.05*car_length), planter_radius(0.25*car_length);
 
 		for (auto i = tree_pos.begin(); i != tree_pos.end(); ++i) {
@@ -522,7 +523,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		}
 	}
 	// place trashcans next to sidewalks in commercial cities and parks; after substations so that we don't block them
-	if (!is_residential || plot.is_park) {
+	if (!plot.is_residential_not_park()) {
 		float const tc_height(0.18*car_length), tc_radius(0.4*tc_height), dist_from_corner(0.06); // dist from corner relative to plot size
 
 		for (unsigned d = 0; d < 4; ++d) { // try all 4 corners
@@ -536,7 +537,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		} // for d
 	}
 	// place fountains in parks and sometimes in city blocks
-	if ((plot.is_park || (!is_residential && (rgen.rand() & 3) == 0)) && building_obj_model_loader.is_model_valid(OBJ_MODEL_FOUNTAIN)) {
+	if ((is_park || (!is_residential && (rgen.rand() & 3) == 0)) && building_obj_model_loader.is_model_valid(OBJ_MODEL_FOUNTAIN)) {
 		float const radius(0.35 * car_length), spacing(max(1.5f*radius, min_obj_spacing));
 		point pos;
 		
@@ -545,7 +546,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			float const height(2.0*radius*(model_sz.z/(0.5*(model_sz.x + model_sz.y)))); // assumes square, sz.x == sz.y
 			fountain_t const fountain(pos, radius, height, rgen.rand()); // random model_select
 			
-			if (!plot.is_park || !check_path_coll_xy(fountain.bcube, ppaths, paths_start)) { // check park path collision
+			if (!is_park || !check_path_coll_xy(fountain.bcube, ppaths, paths_start)) { // check park path collision
 				fountain_groups.add_obj(fountain, fountains);
 				add_cube_to_colliders_and_blockers(fountain.bcube, colliders, blockers);
 			}
@@ -604,21 +605,21 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		}
 	}
 	// maybe place a flag in a city park
-	if ((!is_residential && rgen.rand_float() < 0.3) || (plot.is_park && rgen.rand_float() < 0.75)) { // 30% of the time for commerical plots, 75% of the time for parks
+	if ((!is_residential && rgen.rand_float() < 0.3) || (is_park && rgen.rand_float() < 0.75)) { // 30% of the time for commerical plots, 75% of the time for parks
 		float const length(0.25*city_params.road_width*rgen.rand_uniform(0.8, 1.25)), pradius(0.05*length);
-		float const height((plot.is_park ? 0.8 : 1.0)*city_params.road_width*rgen.rand_uniform(0.8, 1.25));
-		float const spacing(plot.is_park ? 2.0*pradius : 1.25*length); // parks have low items, so we only need to avoid colliding with the pole; otherwise need to check tall buildings
+		float const height((is_park ? 0.8 : 1.0)*city_params.road_width*rgen.rand_uniform(0.8, 1.25));
+		float const spacing(is_park ? 2.0*pradius : 1.25*length); // parks have low items, so we only need to avoid colliding with the pole; otherwise need to check tall buildings
 		cube_t place_area(plot);
 		place_area.expand_by_xy(-0.5*city_params.road_width); // shrink slightly to keep flags away from power lines
 		point base_pt;
 
-		if (try_place_obj(place_area, blockers, rgen, spacing, 0.0, (plot.is_park ? 5 : 20), base_pt)) { // make up to 5/20 tries
+		if (try_place_obj(place_area, blockers, rgen, spacing, 0.0, (is_park ? 5 : 20), base_pt)) { // make up to 5/20 tries
 			base_pt.z = plot.z2();
 			cube_t pole;
 			set_cube_zvals(pole, base_pt.z, (base_pt.z + height));
 			for (unsigned d = 0; d < 2; ++d) {set_wall_width(pole, base_pt[d], pradius, d);}
 
-			if (!plot.is_park || !check_path_coll_xy(pole, ppaths, paths_start)) { // check park path collision
+			if (!is_park || !check_path_coll_xy(pole, ppaths, paths_start)) { // check park path collision
 				bool dim(0), dir(0); // facing dir
 				get_closest_dim_dir_xy(pole, plot, dim, dir); // face the closest plot edge
 				flag_groups.add_obj(create_flag(dim, dir, base_pt, height, length), flags);
@@ -656,7 +657,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		// place pigeons
 		if (add_pigeons) {
 			// place some random pigeons; use place_radius because pigeon radius hasn't been calculated yet
-			unsigned const count_mod(plot.is_park ? 9 : 5), num_pigeons(rgen.rand() % count_mod); // 0-4, 0-8 for parks
+			unsigned const count_mod(is_park ? 9 : 5), num_pigeons(rgen.rand() % count_mod); // 0-4, 0-8 for parks
 			for (unsigned n = 0; n < num_pigeons; ++n) {pigeon_locs.emplace_back(rand_xy_pt_in_cube(plot, place_radius, rgen), rgen);}
 
 			for (unsigned i = 0; i < pigeon_locs.size(); ++i) {
@@ -1196,8 +1197,8 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 		if (city_params.assign_house_plots && plot_subdiv_sz > 0.0) {
 			place_residential_plot_objects(*i, bcubes, colliders, roads, driveways_start, city_id, detail_rgen); // before placing trees
 		}
-		place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen, is_residential, buildings_end);
-		place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_residential, have_streetlights);
+		place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen, buildings_end);
+		place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, have_streetlights);
 	} // for i
 	for (unsigned n = 0; n < 3; ++n) {
 		for (road_isec_t &isec : isecs[n]) {

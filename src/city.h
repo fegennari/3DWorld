@@ -312,7 +312,8 @@ struct road_plot_t : public cube_t {
 	bool is_residential=0, has_parking=0, is_park=0;
 	road_plot_t(cube_t const &c, uint8_t xpos_, uint8_t ypos_, bool is_res=0) : cube_t(c), xpos(xpos_), ypos(ypos_), is_residential(is_res) {}
 	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, ar, ar);}
-	bool is_residential_not_park() const {return (is_residential && !is_park);}
+	bool is_residential_not_park() const {return ( is_residential && !is_park);}
+	bool is_commercial          () const {return (!is_residential && !is_park);}
 };
 
 struct plot_adj_t {
