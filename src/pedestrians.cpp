@@ -97,13 +97,14 @@ class city_cube_nav_grid : public cube_nav_grid {
 	vect_cube_with_ix_t buildings;
 	int dest_building=-1;
 	unsigned num_blockers=0;
+	float bldg_radius=0.0; // larger radius used for buildings
 	uint8_t const node_bix_start=2; // 0=unblocked, 1=non-building blocked, 2-254=building blocked, 255=reserved
 
 	virtual bool check_line_intersect(point const &p1, point const &p2, float radius) const {
 		if (cube_nav_grid::check_line_intersect(p1, p2, radius)) return 1;
 		if (buildings.empty() || p1 == p2) return 0;
 		// since we don't have a building cylinder intersection funtion, offset the line by radius to both sides and test them both
-		vector3d const dir((p2 - p1).get_norm()), delta(radius*cross_product(dir, plus_z));
+		vector3d const dir((p2 - p1).get_norm()), delta(bldg_radius*cross_product(dir, plus_z));
 		point const p1s[2] = {p1-delta, p1+delta}, p2s[2] = {p2-delta, p2+delta};
 
 		for (cube_with_ix_t const &b : buildings) { // check buildings; here we can't use radius, so it won't be exact
@@ -112,7 +113,7 @@ class city_cube_nav_grid : public cube_nav_grid {
 			for (unsigned d = 0; d < 2; ++d) {
 				if (b.line_intersects(p1s[d], p2s[d]) && check_line_coll_building(p1s[d], p2s[d], b.ix)) return 1;
 			}
-		}
+		} // for b
 		return 0;
 	}
 public:
@@ -137,20 +138,23 @@ public:
 		assert(buildings.size() < (254U - node_bix_start)); // must fit in uint8_t with some reserved values
 		// Note: can call treat_bcube_as_vcylin(), though small vertical cylinders may still be a single cube
 		build(bcube_, non_building_blockers, radius_, 0, 1); // add_edge_pad=0, no_blocker_expand=1 (blockers are already expanded)
+		bldg_radius = 1.5*radius; // use a larger radius since any building collision will cause us to disappear inside the building
 		float const zval(bcube.z1() + radius); // make sure it's actually inside the building
 		
 		// add buildings to the grid and fill them sparsely; will also be included in check_line_intersect()
 		for (unsigned i = 0; i < buildings.size(); ++i) {
 			cube_with_ix_t const &b(buildings[i]);
+			cube_t bounds(b);
+			bounds.expand_by_xy(bldg_radius);
 			unsigned x1, y1, x2, y2;
-			get_region_xy_bounds(b, x1, x2, y1, y2);
+			get_region_xy_bounds(bounds, x1, x2, y1, y2);
 
 			for (unsigned y = y1; y <= y2; ++y) {
 				for (unsigned x = x1; x <= x2; ++x) {
 					uint8_t &val(nodes[get_node_ix(x, y)]);
 					if (val > 0) continue; // already blocked
 					// inc_details=1 (includes fences, AC units, and balcony posts); store index into buildings vector
-					if (check_building_point_or_cylin_contained(get_grid_pt(x, y, zval), radius, 1, b.ix)) {val = i + node_bix_start;}
+					if (check_building_point_or_cylin_contained(get_grid_pt(x, y, zval), bldg_radius, 1, b.ix)) {val = i + node_bix_start;}
 				}
 			}
 		} // for b
@@ -197,7 +201,7 @@ public:
 			for (unsigned x = 0; x < num[0]; ++x) {
 				if (nodes[get_node_ix(x, y)] > 0) continue; // blocked
 				cube_t c; c.set_from_sphere((get_grid_pt(x, y) + vector3d(0.0, 0.0, radius)), 0.5*radius);
-				draw_simple_cube(c);
+				draw_simple_cube(c, 0, 4); // draw Z surfaces only
 			}
 		}
 	}
@@ -355,13 +359,17 @@ bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest,
 	if (coll_ret) {
 		if (coll_ret > 1) return 0; // collided with a non-building: fence or other detail object
 		if (coll_bldg_ix) {*coll_bldg_ix = building_id;}
-		if (!has_dest_bldg || building_id != dest_bldg) return 0; // collided with the wrong building
-		float const enter_radius(0.25*radius);
-		if (!get_building_bcube(dest_bldg).contains_pt_xy_exp(pos, enter_radius)) return 1; // collided with dest building, but not yet entered
-		if (!check_buildings_ped_coll(pos, enter_radius, 2.0*enter_radius, plot, building_id, nullptr)) return 1; // test this building at a smaller radius to make sure we've entered
-		bool const ret(!at_dest);
-		ped_at_dest = 1;
-		return ret; // only valid if we just reached our dest
+		
+		if (has_dest_bldg && building_id == dest_bldg) { // collided with the correct building
+			float const enter_radius(0.25*radius);
+			if (!get_building_bcube(dest_bldg).contains_pt_xy_exp(pos, enter_radius)) return 1; // collided with dest building, but not yet entered
+			if (!check_buildings_ped_coll(pos, enter_radius, 2.0*enter_radius, plot, building_id, nullptr)) return 1; // test building at a smaller radius to make sure we've entered
+			bool const ret(!at_dest);
+			ped_at_dest = 1;
+			return ret; // only valid if we just reached our dest
+		}
+		// collided with the wrong building
+		if (!using_nav_grid) return 0; // ignore collision if using nav grid because this may be a glancing collision; assume the nav grid logic is correct
 	}
 	float const xmin(pos.x - radius), xmax(pos.x + radius), height(get_height());
 
@@ -1039,9 +1047,10 @@ void pedestrian_t::run_path_finding(ped_manager_t &ped_mgr, cube_t const &plot_b
 	bool in_illegal_area(0), avoid_entire_plot(0), found_path(0), full_path(0);
 	vect_cube_t &avoid(ped_mgr.path_finder.get_avoid_vector());
 	get_avoid_cubes(ped_mgr, colliders, plot_bcube, next_plot_bcube, dest_pos, avoid, in_illegal_area, avoid_entire_plot);
+	//using_nav_grid = (avoid_entire_plot || ped_mgr.get_city_plot_for_peds(city, plot).is_commercial());
+	using_nav_grid = (display_mode & 0x10);
 
-	// TODO: should be (avoid_entire_plot || ped_mgr.get_city_plot_for_peds(city, plot).is_commercial())
-	if (display_mode & 0x10) { // use nav grid; partial paths are not possible
+	if (using_nav_grid) { // use nav grid; partial paths are not possible
 		int const bix(has_dest_bldg ? (int)dest_bldg : -1);
 		city_cube_nav_grid_manager &nav_grid_mgr(ped_mgr.get_nav_grid_mgr());
 		found_path = full_path = nav_grid_mgr.find_path(plot_bcube, avoid, radius, plot, ped_mgr.get_tot_num_plots(), pos, dest_pos, ped_mgr.grid_path, bix);
@@ -1114,7 +1123,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		collided = outside_plot = 1; // outside the plot, treat as a collision with the plot bounds, but not if following the player
 	}
 	else if (!is_valid_pos(colliders, at_dest, coll_cube, &ped_mgr, &coll_bldg_ix)) { // collided with a static collider
-		// if we collided with some other building that's not our dest, and we can't the player, then we'll likely get stuck
+		// if we collided with some other building that's not our dest, and we can't target the player, then we'll likely get stuck
 		if (coll_bldg_ix >= 0 && coll_bldg_ix != (int)dest_bldg && !zombies_can_target_player()) {
 			dest_bldg = coll_bldg_ix; // make this building our dest so that we respawn
 			dest_plot = plot;
@@ -1878,7 +1887,7 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 		set_cube_zvals(lookahead, get_z1(), get_z2());
 		draw_colored_cube(lookahead, BROWN, s);
 	}
-	if (display_mode & 0x10) { // debugging of nav grid
+	if (using_nav_grid) { // debugging of nav grid
 		int const bix(has_dest_bldg ? (int)dest_bldg : -1);
 		city_cube_nav_grid_manager &nav_grid_mgr(ped_mgr.get_nav_grid_mgr());
 		bool const success(nav_grid_mgr.find_path(plot_bcube, avoid, radius, plot, ped_mgr.get_tot_num_plots(), pos, orig_dest_pos, path, bix, &s)); // with debug vis
