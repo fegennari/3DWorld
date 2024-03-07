@@ -306,6 +306,12 @@ bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_p
 		ped_mgr.move_ped_to_next_plot(*this);
 		next_plot = ped_mgr.get_next_plot(*this);
 		get_plot_bcubes_inc_sidewalks(ped_mgr, plot_bcube, next_plot_bcube); // update plot bcubes
+		// reset path finding algorithm to the best option for each new plot;
+		// since the nav grid is slower and produces less smooth paths,
+		// only use it as the preferred method in the difficult case where we need to walk through residential areas and avoid walls/fences/hedges,
+		// though we may switch to the nav grid if normal path finding fails (or is incomplete) and we get stuck;
+		// one advantage of the nav grid is that it allows peds to walk closer to non-cube buildings, but this also means they're more likely to clip though sharp corners
+		using_nav_grid = (!AVOID_RES_PRIV_PROP && ped_mgr.get_city_plot_for_peds(city, plot).is_residential_not_park());
 		return 1;
 	}
 	cube_t union_plot_bcube(plot_bcube);
@@ -534,6 +540,7 @@ bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, vect_cube_t const 
 	pos    = rand_xy_pt_on_cube_edge(plot_cube, radius, rgen);
 	pos.z += radius; // place on top of the plot
 	plot   = next_plot = dest_plot = plot_id; // set next_plot and dest_plot as well so that they're valid for the first frame
+	using_nav_grid = 0; // reset to default path finding for each new plot
 	bool temp_at_dest(0); // we don't want to set at_dest from this call
 	cube_t coll_cube; // unused
 	if (!is_valid_pos(colliders, temp_at_dest, coll_cube, nullptr)) return 0; // plot == next_plot; return if failed
@@ -1049,21 +1056,25 @@ void pedestrian_t::run_path_finding(ped_manager_t &ped_mgr, cube_t const &plot_b
 	bool in_illegal_area(0), avoid_entire_plot(0), found_path(0), full_path(0);
 	vect_cube_t &avoid(ped_mgr.path_finder.get_avoid_vector());
 	get_avoid_cubes(ped_mgr, colliders, plot_bcube, next_plot_bcube, dest_pos, avoid, in_illegal_area, avoid_entire_plot);
-	//using_nav_grid = (avoid_entire_plot || ped_mgr.get_city_plot_for_peds(city, plot).is_commercial());
-	using_nav_grid = (display_mode & 0x10);
 
-	if (using_nav_grid) { // use nav grid; partial paths are not possible
-		int const bix(has_dest_bldg ? (int)dest_bldg : -1);
-		city_cube_nav_grid_manager &nav_grid_mgr(ped_mgr.get_nav_grid_mgr());
-		found_path = full_path = nav_grid_mgr.find_path(plot_bcube, avoid, radius, plot, ped_mgr.get_tot_num_plots(), pos, dest_pos, ped_mgr.grid_path, bix);
-		if (found_path) {assert(!ped_mgr.grid_path.empty()); dest_pos = ped_mgr.grid_path.front();}
-	}
-	else { // run path finding between pos and dest_pos using avoid cubes
-		cube_t union_plot_bcube(plot_bcube);
-		union_plot_bcube.union_with_cube(next_plot_bcube); // this is the area the ped is constrained to (both plots + road in between)
-		found_path = ped_mgr.path_finder.run(pos, dest_pos, target_pos, union_plot_bcube, PATH_GAP_FACTOR*radius, dest_pos);
-		full_path  = ped_mgr.path_finder.found_complete_path();
-	}
+	for (unsigned attempt = 0; attempt < 2; ++attempt) { // make two attempts using two different path finding algorithms
+		if (using_nav_grid) { // use nav grid; partial paths are not possible
+			int const bix(has_dest_bldg ? (int)dest_bldg : -1);
+			city_cube_nav_grid_manager &nav_grid_mgr(ped_mgr.get_nav_grid_mgr());
+			found_path = full_path = nav_grid_mgr.find_path(plot_bcube, avoid, radius, plot, ped_mgr.get_tot_num_plots(), pos, dest_pos, ped_mgr.grid_path, bix);
+			if (found_path) {assert(!ped_mgr.grid_path.empty()); dest_pos = ped_mgr.grid_path.front();}
+		}
+		else { // run path finding between pos and dest_pos using avoid cubes
+			cube_t union_plot_bcube(plot_bcube);
+			union_plot_bcube.union_with_cube(next_plot_bcube); // this is the area the ped is constrained to (both plots + road in between)
+			// return values: 0=failed, 1=valid path, 2=init contained, 3=straight path (no collisions)
+			unsigned const ret(ped_mgr.path_finder.run(pos, dest_pos, target_pos, union_plot_bcube, PATH_GAP_FACTOR*radius, dest_pos));
+			found_path = (ret > 0);
+			full_path  = (ret == 3 || ped_mgr.path_finder.found_complete_path());
+		}
+		if (full_path) break; // success
+		if (attempt == 0) {using_nav_grid ^= 1;} // switch path finding algorithm and try again
+	} // for attempt
 	target_pos = (found_path ? dest_pos : all_zeros);
 	// choose new dest if stuck in a residential plot where we shouldn't be, and have no complete path out
 	if (in_illegal_area && !follow_player && !full_path) {clear_current_dest();}
