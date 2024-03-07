@@ -201,7 +201,7 @@ public:
 			for (unsigned x = 0; x < num[0]; ++x) {
 				if (nodes[get_node_ix(x, y)] > 0) continue; // blocked
 				cube_t c; c.set_from_sphere((get_grid_pt(x, y) + vector3d(0.0, 0.0, radius)), 0.5*radius);
-				draw_simple_cube(c, 0, 4); // draw Z surfaces only
+				draw_simple_cube(c, 0, 4, &plus_z); // draw top/Z2 surface only
 			}
 		}
 	}

@@ -1151,8 +1151,8 @@ void pos_dir_up::draw_frustum() const {
 }
 
 
-void draw_simple_cube(cube_t const &c, bool texture, unsigned dim_mask) {
-	draw_cube(c.get_cube_center(), c.dx(), c.dy(), c.dz(), texture, 1.0, 0, nullptr, dim_mask);
+void draw_simple_cube(cube_t const &c, bool texture, unsigned dim_mask, vector3d const *const view_dir) {
+	draw_cube(c.get_cube_center(), c.dx(), c.dy(), c.dz(), texture, 1.0, 0, view_dir, dim_mask);
 }
 
 // need to do something with tex coords for scale
