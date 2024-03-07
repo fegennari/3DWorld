@@ -1164,7 +1164,8 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			if (next_follow_player || (target_valid() && dist_xy_less_than(pos, target_pos, radius))) { // update every frame
 				update_path = 1;
 			}
-			else if (dist_less_than(pos, player_pos, 1000.0*radius)) { // nearby pedestrian - higher update rate
+			// no update mid-path for nav grid unless we collided and possibly moved off the path; optimization, and avoids random path changes
+			else if ((!using_nav_grid || collided) && dist_less_than(pos, player_pos, 1000.0*radius)) { // nearby pedestrian - higher update rate
 				update_path = (((frame_counter + ssn) & 15) == 0);
 			}
 			else { // distant pedestrian - lower update rate

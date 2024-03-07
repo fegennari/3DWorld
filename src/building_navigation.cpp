@@ -130,6 +130,7 @@ void cube_nav_grid::build(cube_t const &bcube_, vect_cube_t const &blockers, flo
 	for (unsigned d = 0; d < 2; ++d) {
 		num [d] = unsigned(ceil(size[d]/spacing));
 		step[d] = size[d]/(num[d] - 1);
+		assert(num[d] < (1<<15)); // limit to a reasonable value that fits in a 16-bit integer
 	}
 	nodes.clear(); // in case we're rebuilding, have to zero initialize below
 	nodes.resize(num[0]*num[1], 0); // starts unblocked

@@ -22,8 +22,8 @@ protected:
 		bool operator<(ix_pair_t const &p) const {return ((y == p.y) ? (x < p.x) : (y < p.y));} // needed for priority_queue
 	};
 	struct a_star_node_state_t {
-		int came_from[2] = {-1,-1};
-		unsigned xy[2] = {0,0};
+		int16_t  came_from[2] = {-1,-1};
+		uint16_t xy       [2] = { 0, 0};
 		float g_score=0.0, f_score=0.0;
 		void set(unsigned from_x, unsigned from_y, unsigned x, unsigned y) {came_from[0] = from_x; came_from[1] = from_y; xy[0] = x; xy[1] = y;}
 	};
