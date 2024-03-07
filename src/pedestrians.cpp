@@ -827,8 +827,8 @@ cube_t get_plot_coll_region(cube_t const &plot_bcube) {
 	return region;
 }
 
-void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t const &colliders,
-	cube_t const &plot_bcube, cube_t const &next_plot_bcube, point &dest_pos, vect_cube_t &avoid, bool &in_illegal_area) const
+void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t const &colliders, cube_t const &plot_bcube,
+	cube_t const &next_plot_bcube, point &dest_pos, vect_cube_t &avoid, bool &in_illegal_area, bool &avoid_entire_plot) const
 {
 	avoid.clear();
 	float const height(get_height()), expand(1.1*radius); // slightly larger than radius to leave some room for floating-point error
@@ -837,10 +837,10 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	if (is_home_plot && !follow_player) {assert(plot_bcube == next_plot_bcube);} // doesn't hold when following the player?
 	cube_t const region(get_plot_coll_region(cur_plot));
 	bool keep_cur_dest(0);
+	avoid_entire_plot = 0;
 
 	if (AVOID_RES_PRIV_PROP && cur_plot.is_residential_not_park()) { // apply special restrictions when walking through a residential block
 		cube_t const avoid_area(get_avoid_area_for_plot(plot_bcube, radius));
-		bool avoid_entire_plot(0);
 
 		if (is_home_plot) {
 			// we can only walk through our own sub-plot; even zombies must obey because otherwise they can get stuck in a back yard with a wall/fence/hedge
@@ -1036,18 +1036,26 @@ void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, 
 }
 
 void pedestrian_t::run_path_finding(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vect_cube_t const &colliders, vector3d &dest_pos) {
-	bool in_illegal_area(0);
+	bool in_illegal_area(0), avoid_entire_plot(0), found_path(0), full_path(0);
 	vect_cube_t &avoid(ped_mgr.path_finder.get_avoid_vector());
-	get_avoid_cubes(ped_mgr, colliders, plot_bcube, next_plot_bcube, dest_pos, avoid, in_illegal_area);
-	cube_t union_plot_bcube(plot_bcube);
-	union_plot_bcube.union_with_cube(next_plot_bcube); // this is the area the ped is constrained to (both plots + road in between)
-	// run path finding between pos and dest_pos using avoid cubes
-	if (ped_mgr.path_finder.run(pos, dest_pos, target_pos, union_plot_bcube, PATH_GAP_FACTOR*radius, dest_pos)) {target_pos = dest_pos;}
-	else {target_pos = all_zeros;} // no valid target
+	get_avoid_cubes(ped_mgr, colliders, plot_bcube, next_plot_bcube, dest_pos, avoid, in_illegal_area, avoid_entire_plot);
 
-	if (in_illegal_area && !follow_player && !ped_mgr.path_finder.found_complete_path()) { // stuck in a residential plot where we shouldn't be, and no path out
-		clear_current_dest(); // choose new dest
+	// TODO: should be (avoid_entire_plot || ped_mgr.get_city_plot_for_peds(city, plot).is_commercial())
+	if (display_mode & 0x10) { // use nav grid; partial paths are not possible
+		int const bix(has_dest_bldg ? (int)dest_bldg : -1);
+		city_cube_nav_grid_manager &nav_grid_mgr(ped_mgr.get_nav_grid_mgr());
+		found_path = full_path = nav_grid_mgr.find_path(plot_bcube, avoid, radius, plot, ped_mgr.get_tot_num_plots(), pos, dest_pos, ped_mgr.grid_path, bix);
+		if (found_path) {assert(!ped_mgr.grid_path.empty()); dest_pos = ped_mgr.grid_path.front();}
 	}
+	else { // run path finding between pos and dest_pos using avoid cubes
+		cube_t union_plot_bcube(plot_bcube);
+		union_plot_bcube.union_with_cube(next_plot_bcube); // this is the area the ped is constrained to (both plots + road in between)
+		found_path = ped_mgr.path_finder.run(pos, dest_pos, target_pos, union_plot_bcube, PATH_GAP_FACTOR*radius, dest_pos);
+		full_path  = ped_mgr.path_finder.found_complete_path();
+	}
+	target_pos = (found_path ? dest_pos : all_zeros);
+	// choose new dest if stuck in a residential plot where we shouldn't be, and have no complete path out
+	if (in_illegal_area && !follow_player && !full_path) {clear_current_dest();}
 }
 
 void pedestrian_t::get_plot_bcubes_inc_sidewalks(ped_manager_t const &ped_mgr, cube_t &plot_bcube, cube_t &next_plot_bcube) const {
@@ -1776,8 +1784,8 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	path_finder_t path_finder(1); // debug=1
 	vect_cube_t const &colliders(ped_mgr.get_colliders_for_plot(city, plot));
 	vect_cube_t &avoid(path_finder.get_avoid_vector());
-	bool in_illegal_area(0);
-	get_avoid_cubes(ped_mgr, colliders, plot_bcube, next_plot_bcube, dest_pos, avoid, in_illegal_area);
+	bool in_illegal_area(0), avoid_entire_plot(0);
+	get_avoid_cubes(ped_mgr, colliders, plot_bcube, next_plot_bcube, dest_pos, avoid, in_illegal_area, avoid_entire_plot);
 	cube_t union_plot_bcube(plot_bcube);
 	union_plot_bcube.union_with_cube(next_plot_bcube);
 	ai_path_t path;
@@ -1831,12 +1839,14 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 		draw_simple_cube(*i);
 	}
 	ensure_outlined_polygons();
-	s.set_cur_color(CYAN);
 
 	for (cube_t const &i : avoid) { // draw avoid cubes
+		bool const is_plot_avoid(avoid_entire_plot && i == avoid.front());
+		s.set_cur_color(is_plot_avoid ? WHITE : CYAN); // show plot avoid bcube as white
 		cube_t c(i);
 		max_eq(c.z2(), (c.z1() + radius)); // make sure it's nonzero area
 		draw_simple_cube(c);
+		if (is_plot_avoid) {s.set_cur_color(CYAN);}
 	}
 	if (has_dest_bldg   ) {draw_colored_cube(get_building_bcube(dest_bldg), PURPLE, s);} // draw dest building bcube
 	if (has_dest_car    ) {

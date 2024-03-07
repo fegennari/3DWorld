@@ -690,7 +690,7 @@ struct pedestrian_t : public person_base_t { // city pedestrian
 	unsigned plot=0, next_plot=0, dest_plot=0, dest_bldg=0; // Note: can probably be made unsigned short later, though these are global plot and building indices
 	unsigned short city=0, colliding_ped=0;
 	unsigned char stuck_count=0;
-	bool collided=0, ped_coll=0, in_the_road=0, at_crosswalk=0, at_dest=0, has_dest_bldg=0, has_dest_car=0, destroyed=0, follow_player=0;
+	bool collided=0, ped_coll=0, in_the_road=0, at_crosswalk=0, at_dest=0, has_dest_bldg=0, has_dest_car=0, destroyed=0, follow_player=0, using_nav_grid=0;
 
 	pedestrian_t(float radius_) : person_base_t(radius_) {}
 	bool operator<(pedestrian_t const &ped) const {return ((city == ped.city) ? (plot < ped.plot) : (city < ped.city));} // currently only compares city + plot
@@ -715,7 +715,7 @@ struct pedestrian_t : public person_base_t { // city pedestrian
 	point get_dest_pos(cube_t const &plot_bcube, cube_t const &next_plot_bcube, ped_manager_t const &ped_mgr, int &debug_state) const;
 	bool choose_alt_next_plot(ped_manager_t const &ped_mgr);
 	void get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t const &colliders, cube_t const &plot_bcube, cube_t const &next_plot_bcube,
-		point &dest_pos, vect_cube_t &avoid, bool &in_illegal_area) const;
+		point &dest_pos, vect_cube_t &avoid, bool &in_illegal_area, bool &avoid_entire_plot) const;
 	bool check_path_blocked(ped_manager_t &ped_mgr, point const &dest, bool check_buildings);
 	void next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir);
 	void register_at_dest();
@@ -883,6 +883,7 @@ public:
 	friend class city_spectate_manager_t;
 	// for use in pedestrian_t, mostly for collisions and path finding
 	path_finder_t path_finder;
+	ai_path_t grid_path;
 
 	ped_manager_t(city_road_gen_t const &road_gen_, car_manager_t const &car_manager_);
 	ped_manager_t (ped_manager_t const &) = delete; // forbidden
