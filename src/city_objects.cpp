@@ -44,6 +44,29 @@ vector3d oriented_city_obj_t::get_orient_dir() const {
 	return orient;
 }
 
+// model_city_obj_t
+
+model_city_obj_t::model_city_obj_t(cube_t const &bcube_, bool dim_, bool dir_) : oriented_city_obj_t(dim_, dir_) {
+	bcube = bcube_;
+	set_bsphere_from_bcube(); // recompute bsphere from bcube
+}
+model_city_obj_t::model_city_obj_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_id) : // can't call get_model_id() virtual, must pass model_id in
+	oriented_city_obj_t(pos_, 0.5*height, dim_, dir_) // radius = 0.5*height
+{
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id)); // D, W, H
+	vector3d expand;
+	expand[ dim] = height*sz.x/sz.z; // depth
+	expand[!dim] = height*sz.y/sz.z; // width
+	expand.z = height;
+	pos.z += 0.5*height; // pos is on the ground, while we want the bsphere to be at the center
+	bcube.set_from_point(pos);
+	bcube.expand_by(0.5*expand);
+}
+void model_city_obj_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
+	building_obj_model_loader.draw_model(dstate.s, pos, bcube, get_orient_dir(), WHITE, dstate.xlate, get_model_id(), shadow_only);
+}
+
 // benches
 
 bench_t::bench_t(point const &pos_, float radius_, bool dim_, bool dir_) : oriented_city_obj_t(pos_, radius_, dim_, dir_) {
@@ -283,19 +306,11 @@ bool fire_hydrant_t::proc_sphere_coll(point &pos_, point const &p_last, float ra
 
 // substations
 
-substation_t::substation_t(cube_t const &bcube_, bool dim_, bool dir_) : oriented_city_obj_t(dim_, dir_) {
-	bcube = bcube_;
-	set_bsphere_from_bcube(); // recompute bsphere from bcube
-}
 /*static*/ void substation_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_scale", 0.0);} // disable hemispherical lighting
 }
 /*static*/ void substation_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_scale", 0.5);} // set hemispherical lighting back to the default
-}
-void substation_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
-	building_obj_model_loader.draw_model(dstate.s, pos, bcube, get_orient_dir(), WHITE, dstate.xlate, OBJ_MODEL_SUBSTATION, shadow_only);
 }
 
 // fountains
@@ -550,18 +565,6 @@ bool swimming_pool_t::proc_sphere_coll(point &pos_, point const &p_last, float r
 	return sphere_cube_int_update_pos(pos_, radius_, bcube_tall, p_last, 0, cnorm);
 }
 
-// pool ladders
-
-pool_ladder_t::pool_ladder_t(cube_t const &bcube_, bool dim_, bool dir_) : oriented_city_obj_t(dim_, dir_) {
-	bcube = bcube_;
-	*(sphere_t *)this = bcube.get_bsphere();
-}
-
-void pool_ladder_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
-	building_obj_model_loader.draw_model(dstate.s, pos, bcube, get_orient_dir(), WHITE, dstate.xlate, OBJ_MODEL_POOL_LAD, shadow_only);
-}
-
 // pool decks
 
 textured_mat_t pool_deck_mats[NUM_POOL_DECK_TYPES] = {
@@ -572,7 +575,7 @@ textured_mat_t pool_deck_mats[NUM_POOL_DECK_TYPES] = {
 pool_deck_t::pool_deck_t(cube_t const &bcube_, unsigned mat_id_, bool dim_, bool dir_) : oriented_city_obj_t(dim_, dir_), mat_id(mat_id_) {
 	mat_id %= NUM_POOL_DECK_TYPES;
 	bcube   = bcube_;
-	*(sphere_t *)this = bcube.get_bsphere();
+	set_bsphere_from_bcube(); // recompute bsphere from bcube
 }
 /*static*/ void pool_deck_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	assert(dstate.pass_ix < NUM_POOL_DECK_TYPES);
@@ -1161,23 +1164,6 @@ manhole_t::manhole_t(point const &pos_, float radius_) : city_obj_t(pos_, radius
 void manhole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	unsigned const ndiv(max(4U, min(32U, unsigned(1.0f*dist_scale*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, pos)))));
 	draw_circle_normal(0.0, radius, ndiv, 0, point(pos.x, pos.y, pos.z+get_height()), -1.0); // draw top surface, invert texture coords
-}
-
-// mailboxes
-
-mailbox_t::mailbox_t(point const &pos_, float height, bool dim_, bool dir_) : oriented_city_obj_t(pos_, 0.5*height, dim_, dir_) { // radius = 0.5*height
-	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_MAILBOX)); // D, W, H
-	vector3d expand;
-	expand[ dim] = height*sz.x/sz.z; // depth
-	expand[!dim] = height*sz.y/sz.z; // width
-	expand.z = height;
-	pos.z += 0.5*height; // pos is on the ground, while we want the bsphere to be at the center
-	bcube.set_from_point(pos);
-	bcube.expand_by(0.5*expand);
-}
-void mailbox_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
-	building_obj_model_loader.draw_model(dstate.s, pos, bcube, get_orient_dir(), WHITE, dstate.xlate, OBJ_MODEL_MAILBOX, shadow_only);
 }
 
 // traffic cones

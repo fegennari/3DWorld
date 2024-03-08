@@ -55,6 +55,14 @@ struct oriented_city_obj_t : public city_obj_t {
 	vector3d get_orient_dir() const;
 };
 
+struct model_city_obj_t : public oriented_city_obj_t {
+	model_city_obj_t(cube_t const &bcube_, bool dim_, bool dir_);
+	model_city_obj_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_id);
+	virtual ~model_city_obj_t() {}
+	virtual unsigned get_model_id() const = 0;
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+};
+
 struct bench_t : public oriented_city_obj_t {
 	bench_t(point const &pos_, float radius_, bool dim_, bool dir_);
 	cube_t get_bird_bcube() const;
@@ -90,11 +98,11 @@ struct fire_hydrant_t : public city_obj_t {
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
-struct substation_t : public oriented_city_obj_t {
-	substation_t(cube_t const &bcube_, bool dim_, bool dir_);
+struct substation_t : public model_city_obj_t {
+	substation_t(cube_t const &bcube_, bool dim_, bool dir_) : model_city_obj_t(bcube_, dim_, dir_) {}
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
-	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+	virtual unsigned get_model_id() const {return OBJ_MODEL_SUBSTATION;}
 };
 
 struct fountain_t : public city_obj_t {
@@ -132,9 +140,9 @@ struct swimming_pool_t : public oriented_city_obj_t { // Note: dim and dir are u
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
-struct pool_ladder_t : public oriented_city_obj_t { // for in-ground pools
-	pool_ladder_t(cube_t const &bcube_, bool dim_, bool dir_);
-	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+struct pool_ladder_t : public model_city_obj_t { // for in-ground pools
+	pool_ladder_t(cube_t const &bcube_, bool dim_, bool dir_) : model_city_obj_t(bcube_, dim_, dir_) {}
+	virtual unsigned get_model_id() const {return OBJ_MODEL_POOL_LAD;}
 };
 
 struct pool_deck_t : public oriented_city_obj_t {
@@ -203,10 +211,20 @@ struct manhole_t : public city_obj_t {
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
 
-struct mailbox_t : public oriented_city_obj_t {
-	mailbox_t(point const &pos_, float height, bool dim_, bool dir_);
+struct mailbox_t : public model_city_obj_t {
+	mailbox_t(point const &pos_, float height, bool dim_, bool dir_) : model_city_obj_t(pos_, height, dim_, dir_, get_model_id()) {}
 	float get_height() const {return 2.0*radius;}
-	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+	virtual unsigned get_model_id() const {return OBJ_MODEL_MAILBOX;}
+};
+
+struct bicycle_t : public model_city_obj_t {
+	bicycle_t(cube_t const &bcube_, bool dim_, bool dir_) : model_city_obj_t(bcube_, dim_, dir_) {}
+	virtual unsigned get_model_id() const {return OBJ_MODEL_BICYCLE;}
+};
+
+struct swingset_t : public model_city_obj_t {
+	swingset_t(cube_t const &bcube_, bool dim_, bool dir_) : model_city_obj_t(bcube_, dim_, dir_) {}
+	virtual unsigned get_model_id() const {return OBJ_MODEL_SWINGSET;}
 };
 
 struct traffic_cone_t : public city_obj_t {
