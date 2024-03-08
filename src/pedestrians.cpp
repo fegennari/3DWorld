@@ -587,8 +587,8 @@ bool path_finder_t::add_pts_around_cube_xy(path_t &path, path_t const &cur_path,
 		//if (any_cube_contains_pt_xy(avoid, corners[i])) {dp += 1.0;} // blocked by another avoid cube - increase the cost to prefer the other corner
 		if (prev_target_pos != all_zeros && prev_target_pos == ecorners[i]) {dp -= 0.1;} // small preference for the previous point for consistency; does this help?
 		bool const turn_dir(cross_product_xy(delta, delta2) < 0.0);
-		unsigned &cand_ix(turn_dir ? cix1 : cix2);
-		float &cand_dp(turn_dir ? min_dp1 : min_dp2);
+		unsigned &cand_ix(turn_dir ? cix1    : cix2   );
+		float &cand_dp   (turn_dir ? min_dp1 : min_dp2);
 		if (cand_ix < 4 && dp >= cand_dp) continue; // not smaller dot product
 		cand_dp = dp;
 		cand_ix = i;
@@ -600,15 +600,23 @@ bool path_finder_t::add_pts_around_cube_xy(path_t &path, path_t const &cur_path,
 	if (!add_pt_to_path(ecorners[dest_cix], path))       return 0; // expanded corner
 
 	if (check_line_clip_xy(n, ecorners[dest_cix], c.d)) { // no path to dest, add another point
-		if (move_dir) {dest_cix = (dest_cix+1)&3;} else {dest_cix = (dest_cix+3)&3;}
+		dest_cix = (dest_cix + (move_dir ? 1 : 3)) & 3;
 		assert(dest_cix != (dir ? cix1 : cix2));
 		if (!add_pt_to_path(ecorners[dest_cix], path)) return 0; // expanded corner
 
 		if (check_line_clip_xy(n, ecorners[dest_cix], c.d)) { // no path to dest, add another point
-			if (move_dir) {dest_cix = (dest_cix+1)&3;} else {dest_cix = (dest_cix+3)&3;}
+			dest_cix = (dest_cix + (move_dir ? 1 : 3)) & 3;
 			if (!add_pt_to_path(ecorners[dest_cix], path)) return 0; // expanded corner
 			//assert(!check_line_clip_xy(n, ecorners[dest_cix], c.d)); // must have a path now
 		}
+	}
+	// check that our next path doesn't intersect a previously seen avoid cube; if so, we've wrapped around in a loop and this path is invalid
+	point const &last_pt(path.back());
+	cube_t const line_bcube(n, last_pt);
+
+	for (unsigned ix = 0; ix < avoid.size(); ++ix) {
+		if (!used[ix]) continue; // haven't seen this cube yet
+		if (avoid[ix].intersects(line_bcube) && avoid[ix].line_intersects(n, last_pt)) return 0;
 	}
 	path.insert(path.end(), p+1, cur_path.end()); // add the suffix, including p+1
 	path.calc_length();
@@ -616,7 +624,7 @@ bool path_finder_t::add_pts_around_cube_xy(path_t &path, path_t const &cur_path,
 }
 
 void path_finder_t::find_best_path_recur(path_t const &cur_path, unsigned depth) {
-	if (depth >= MAX_PATH_DEPTH) return; // depth is too high, fail (stack not allocated)
+	if (depth >= MAX_PATH_DEPTH)             return; // depth is too high, fail (stack not allocated)
 	if (cur_path.length >= best_path.length) return; // bound (best path length is set to an upper bound even when not valid)
 	cube_t const bcube(cur_path.calc_bcube());
 	path_t::const_iterator first_int_p(cur_path.end());
@@ -636,30 +644,42 @@ void path_finder_t::find_best_path_recur(path_t const &cur_path, unsigned depth)
 		for (auto p = cur_path.begin(); p+1 != cur_path.end() && p <= first_int_p; ++p) { // iterate over line segments up to/including first_int_p, skip last point
 			float c_tmin, c_tmax;
 			if (!get_line_clip_xy(*p, *(p+1), c.d, c_tmin, c_tmax)) continue;
-			if (p < first_int_p || c_tmin < tmin) {first_int_p = p; tmin = c_tmin; cix = ix; cur_avoid = c;} // intersection
+			if (p < first_int_p || c_tmin < tmin) {first_int_p = p; tmin = c_tmin; cix = ix; cur_avoid = c;} // find first intersection
 		}
 	} // for ix
-	if (first_int_p != cur_path.end()) {
+	if (first_int_p != cur_path.end()) { // we hit an avoid cube
 		assert(tmin < 1.0);
 		path_t &next_path(path_stack[depth]);
 		assert(!used[cix]);
 		used[cix] = 1; // mark this cube used so that we don't try to intersect it again (and to avoid floating-point errors with line adjacency)
 
+		// try both avoid directions; this can cause an infinite loop when moving toward one side temporarily causes path finding to fail, selecting the other dir
 		for (unsigned d = 0; d < 2; ++d) {
 			if (add_pts_around_cube_xy(next_path, cur_path, first_int_p, avoid[cix], d)) {find_best_path_recur(next_path, depth+1);} // recursive call
 		}
 		assert(used[cix]);
-		used[cix] = 0; // mark cube as unused
-		if (first_int_p == cur_path.begin() || found_complete_path()) return; // path is no good, terminate
+		used[cix] = 0; // mark cube as unused for next branch
+		if (first_int_p == cur_path.begin() || found_complete_path()) return; // path empty, or path is complete, terminate
 		// calculate the length of the partial path; add twice the distance we're short (to the destination) as a penalty
 		float const partial_len(cur_path.calc_length_up_to(first_int_p+1) + 2.0*p2p_dist(*first_int_p, dest));
 		if (partial_len >= partial_path.length) return; // not better
 		partial_path.clear();
 		partial_path.insert(partial_path.end(), cur_path.begin(), first_int_p+1); // record best partial path seen
+		// clip the last segment to avoid cubes to make sure it's valid
+		point const &prev(partial_path[partial_path.size()-2]);
+		point &next(partial_path.back());
+		cube_t const seg_bcube(prev, next);
+		tmin = 1.0;
+
+		for (cube_t const &c : avoid) {
+			float c_tmin, c_tmax;
+			if (c.intersects(seg_bcube) && get_line_clip_xy(prev, next, c.d, c_tmin, c_tmax)) {min_eq(tmin, c_tmin);}
+		}
+		if (tmin < 1.0) {next = prev + tmin*(next - prev);} // clip the segment; partial_len is not updated, but shouldn't change much
 		partial_path.length = partial_len;
 		return;
 	}
-	if (cur_path.length < best_path.length) { // this test almost always succeeds
+	if (cur_path.length < best_path.length) { // no collisions and this path is shortest; this test almost always succeeds
 		best_path = cur_path; // if we got here without returning above, this is the best path seen so far
 		partial_path.clear(); // not using partial_path after this point
 		partial_path.length = 0.0;
