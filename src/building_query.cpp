@@ -441,6 +441,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 			if (part_coll) {part_z2 = i->z2();}
 			had_coll |= part_coll;
 		} // for i
+		if (has_chimney == 2) {had_coll |= sphere_cube_int_update_pos(pos2, radius, (get_fireplace() + xlate), p_last2, xy_only, cnorm_ptr);} // exterior fireplace
 		for (cube_t const &fence : fences) {had_coll |= sphere_cube_int_update_pos(pos2, radius, (fence + xlate), p_last2, xy_only, cnorm_ptr);}
 
 		// Note: driveways are handled elsewhere in the control flow

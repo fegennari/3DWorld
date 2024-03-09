@@ -683,6 +683,7 @@ bool building_t::add_chimney(bool two_parts, bool stacked_parts, bool hipped_roo
 				continue;
 			}
 			parts.push_back(fplace); // Note: invalidates part
+			union_with_coll_bcube(fplace);
 			if (rgen.rand_bool()) {c.d[!dim][0] = fplace.d[!dim][0]; c.d[!dim][1] = fplace.d[!dim][1];} // widen chimney to include entire fireplace (for more modern houses)
 			has_chimney = 2; // flag as exterior chimney
 			break; // done
