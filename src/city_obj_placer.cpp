@@ -727,11 +727,9 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 	unsigned const shrink_dim(rgen.rand_bool()); // mostly arbitrary, could maybe even make this a constant 0
 	float const sz_scale(0.06*city_params.road_width);
 	unsigned const dividers_start(dividers.size()), prev_blockers_end(blockers.size());
-	float const min_pool_spacing_to_plot_edge(0.5*city_params.road_width);
-	colorRGBA const pool_side_colors[5] = {WHITE, WHITE, GRAY, LT_BROWN, LT_BLUE};
 	vect_cube_with_ix_t bcubes; // we need the building index for the get_building_door_pos_closest_to() call
 
-	for (auto i = sub_plots.begin(); i != sub_plots.end(); ++i) {
+	for (auto i = sub_plots.begin(); i != sub_plots.end(); ++i) { // populate each yard
 		// place plot dividers
 		unsigned const type(rgen.rand()%DIV_NUM_TYPES); // use a consistent divider type for all sides of this plot
 		if (type == DIV_CHAINLINK) continue; // chain link fence is not a primary divider - no divider for this plot; also, can't place a swimming pool here because it's not enclosed
@@ -785,7 +783,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		if (!i->is_residential || i->is_park || i->street_dir == 0) continue; // not a residential plot along a road
 		bcubes.clear();
 		if (have_buildings()) {get_building_bcubes(*i, bcubes);}
-		if (bcubes.empty()) continue; // no house, skip adding swimming pool
+		if (bcubes.empty()) continue; // no house, skip adding other yard objects
 		assert(bcubes.size() == 1); // there should be exactly one building/house in this sub-plot
 		cube_with_ix_t const &house(bcubes.front());
 		bool const dim((i->street_dir-1)>>1), dir((i->street_dir-1)&1); // direction to the road
@@ -814,141 +812,12 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			}
 		} // for n
 
-		// place swimming pools; must be placed last due to the continues
-		if (rgen.rand_float() < 0.1) continue; // add pools 90% of the time (since placing them often fails anyway)
-		cube_t back_yard(*i);
-		back_yard.d[dim][dir] = house.d[dim][!dir];
-		cube_t pool_area(back_yard); // limit the pool to the back yard
+		// attempt place swimming pool; often unsuccessful
+		bool const placed_pool(place_swimming_pool(plot, *i, house, dim, dir, shrink_dim, prev_blockers_end, hwidth, translate_dist, blockers, colliders, rgen));
 
-		for (unsigned d = 0; d < 2; ++d) {
-			if (i->d[!dim][d] == plot.d[!dim][d]) {pool_area.d[!dim][d] = house.d[!dim][d];} // adjacent to road - constrain to house projection so that side fence can be placed
+		if (!placed_pool) {
+			// place something else instead, such as a swingset
 		}
-		float const dmin(min(pool_area.dx(), pool_area.dy())); // or should this be based on city_params.road_width?
-		if (dmin < 0.75f*city_params.road_width) continue; // back yard is too small to add a pool
-		bool const above_ground(rgen.rand_bool());
-
-		for (unsigned d = 0; d < 2; ++d) { // keep pools away from the edges of plots; applies to sub-plots on the corners
-			max_eq(pool_area.d[d][0], plot.d[d][0]+min_pool_spacing_to_plot_edge);
-			min_eq(pool_area.d[d][1], plot.d[d][1]-min_pool_spacing_to_plot_edge);
-		}
-		pool_area.expand_by_xy(-0.05*dmin); // small shrink to keep away from walls, fences, and hedges
-		vector3d pool_sz;
-		pool_sz.z = (above_ground ? rgen.rand_uniform(0.08, 0.12)*city_params.road_width : 0.01f*dmin);
-
-		for (unsigned d = 0; d < 2; ++d) {
-			pool_sz[d] = ((above_ground && d == 1) ? pool_sz[0] : rgen.rand_uniform(0.5, 0.7)*dmin); // above_ground_cylin pools have square bcubes
-			pool_area.d[d][1] -= pool_sz[d]; // shrink so that pool_area is where (x1, x2) can be placed
-		}
-		if (!pool_area.is_normalized()) continue; // pool area is too small; this can only happen due to shrink at plot edges
-		point pool_llc;
-		pool_llc.z = i->z2();
-
-		for (unsigned n = 0; n < 20; ++n) { // make some attempts to generate a valid pool location
-			for (unsigned d = 0; d < 2; ++d) {pool_llc[d] = rgen.rand_uniform(pool_area.d[d][0], pool_area.d[d][1]);}
-			cube_t pool(pool_llc, (pool_llc + pool_sz));
-			cube_t tc(pool);
-			tc.expand_by_xy(0.08*dmin);
-			if (is_placement_blocked(tc, blockers, cube_t(), prev_blockers_end)) continue; // intersects some other object
-			float const grayscale(rgen.rand_uniform(0.7, 1.0));
-			float const water_white_comp(rgen.rand_uniform(0.1, 0.3)), extra_green(rgen.rand_uniform(0.2, 0.5)), lightness(rgen.rand_uniform(0.5, 0.8));
-			colorRGBA const color(above_ground ? pool_side_colors[rgen.rand()%5]: colorRGBA(grayscale, grayscale, grayscale));
-			colorRGBA const wcolor(lightness*water_white_comp, lightness*(water_white_comp + extra_green), lightness);
-			
-			// add fences along the sides of the house to separate the back yard from the front yard; if fences can't be added, then don't add the pool either
-			plot_divider_type_t const &fence_pdt(plot_divider_types[DIV_CHAINLINK]);
-			float const fence_hwidth(0.5*sz_scale*fence_pdt.wscale), fence_height(sz_scale*fence_pdt.hscale), fence_z2(i->z1() + fence_height);
-			float const expand(-1.5*sz_scale*plot_divider_types[DIV_HEDGE].wscale); // shrink by widest divider to avoid false intersection with orthogonal dividers
-			cube_t subplot_shrunk(*i);
-			// translate so that fences line up with dividers; inexact if different width dividers are on each side
-			for (unsigned d = 0; d < 2; ++d) {subplot_shrunk.d[shrink_dim][d] += translate_dist[d];}
-			subplot_shrunk.expand_by_xy(-hwidth); // shrink by half width of surrounding dividers
-			divider_t fences[2];
-			bool bad_fence_place(0);
-
-			for (unsigned side = 0; side < 2; ++side) { // left/right
-				bool fence_dim(dim);
-				cube_t fence(subplot_shrunk);
-				fence.z2() = fence_z2;
-
-				if (i->d[!dim][side] == plot.d[!dim][side]) { // at the edge of the plot, wrap the fence around in the back yard instead
-					fence_dim ^= 1;
-					extend_fence_to_house(fence, house, fence_hwidth, fence_height, !dim, side, !dir);
-
-					if (is_placement_blocked(fence, blockers, house, prev_blockers_end, expand, !fence_dim)) {
-						// Note: can't safely move the fence to the middle of the house if it intersects the pooly because it may intersect or block a door
-						if ((house.d[!dim][!side] > pool.d[!dim][side]) ^ side) {bad_fence_place = 1; break;} // fence at back of house does not contain the pool
-						extend_fence_to_house(fence, house, fence_hwidth, fence_height, !dim, !side, !dir); // try the back edge of the house
-						if (is_placement_blocked(fence, blockers, house, prev_blockers_end, expand, !fence_dim)) {bad_fence_place = 1; break;} // blocked by a driveway, etc.
-					}
-				}
-				else { // at the front of the house
-					float const ext_dist(extend_fence_to_house(fence, house, fence_hwidth, fence_height, dim, dir, side));
-
-					// check if front fence position is bad, or fence extension is too long (may block off the porch)
-					if (ext_dist > 0.33*house.get_sz_dim(!dim) || is_placement_blocked(fence, blockers, house, prev_blockers_end, expand, !fence_dim)) {
-						extend_fence_to_house(fence, house, fence_hwidth, fence_height, dim, !dir, side); // try the back edge of the house
-						if (is_placement_blocked(fence, blockers, house, prev_blockers_end, expand, !fence_dim)) {bad_fence_place = 1; break;} // blocked by a driveway, etc.
-					}
-				}
-				fences[side] = divider_t(fence, DIV_CHAINLINK, fence_dim, dir, 0); // Note: dir is unused in divider_t so doesn't have to be set correctly
-			} // for side
-			if (bad_fence_place) continue; // failed to fence off the pool, don't place it here
-			pool_groups.add_obj(swimming_pool_t(pool, color, wcolor, above_ground, dim, dir), pools);
-			unsigned const pre_pool_blockers_end(blockers.size());
-			cube_t pool_collider(pool);
-			pool_collider.z2() += 0.1*city_params.road_width; // extend upward to make a better collider
-			add_cube_to_colliders_and_blockers(pool_collider, colliders, blockers);
-
-			for (unsigned side = 0; side < 2; ++side) {
-				divider_t const &fence(fences[side]);
-				assert(fence.bcube.is_strictly_normalized());
-				divider_groups.add_obj(fence, dividers);
-				add_cube_to_colliders_and_blockers(fence.bcube, colliders, blockers);
-			}
-			if (!above_ground && rgen.rand_float() < 0.8) { // in-ground pool, add pool deck 80% of the time
-				bool had_cand(0);
-
-				for (unsigned d = 0; d < 2 && !had_cand; ++d) { // check for projections in both dims
-					float const deck_height(0.4*pool.dz()), deck_shrink(0.8*deck_height);
-					float const plo(pool.d[d][0]), phi(pool.d[d][1]), hlo(house.d[d][0]), hhi(house.d[d][1]);
-					if (max(plo, hlo) > min(phi, hhi)) continue; // no shared projection in this dim
-					// randomly choose to extend deck to cover both objects or restrict to the shared length
-					float const lo((rgen.rand_bool() ? min(plo, hlo) : max(plo, hlo)) + deck_shrink), hi((rgen.rand_bool() ? max(phi, hhi) : min(phi, hhi)) - deck_shrink);
-					if (hi - lo < 0.25*pool.get_sz_dim(d)) continue; // not enough shared area
-					bool const dir(house.get_center_dim(!d) < pool.get_center_dim(!d)); // dir from house to pool
-					cube_t deck;
-					set_cube_zvals(deck, pool.z1(), (pool.z1() + deck_height)); // lower height than the pool
-					deck.d[ d][0   ] = lo;
-					deck.d[ d][1   ] = hi;
-					deck.d[!d][ dir] = pool .d[!d][!dir];
-					deck.d[!d][!dir] = house.d[!d][ dir];
-					assert(deck.is_strictly_normalized());
-					had_cand = 1; // we have a candidate, even if it was blocked, so there are no more cands to check
-					// check for partial intersections of objects such as trashcans, etc. and skip the deck in that case; allow contained objects to rest on the deck
-					bool valid(1);
-
-					for (auto b = blockers.begin()+prev_blockers_end; b != blockers.begin()+pre_pool_blockers_end; ++b) { // skip pool, pool fence, and house
-						if (*b != house && deck.intersects_xy_no_adj(*b) && !deck.contains_cube_xy(*b)) {valid = 0; break;}
-					}
-					if (!valid) continue;
-					pdeck_groups.add_obj(pool_deck_t(deck, rgen.rand(), d, dir), pdecks);// choose a random material
-					blockers.push_back(deck); // blocker for other objects, but not a collider for people or the player
-				} // for d
-			}
-			if (!above_ground && building_obj_model_loader.is_model_valid(OBJ_MODEL_POOL_LAD)) { // in-ground pool, add pool ladder
-				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_POOL_LAD)); // D, W, H
-				float const height(1.6*sz_scale), hdepth(0.5*height*sz.x/sz.z), hwidth(0.5*height*sz.y/sz.z);
-
-				if (hdepth < 8.0*min(pool.dx(), pool.dy())) { // add if large enough; should be true
-					cube_t ladder;
-					set_cube_zvals(ladder, (pool.z2() - 0.42*height), (pool.z2() + 0.58*height));
-					set_wall_width(ladder, rgen.rand_uniform((pool.d[!dim][0] + 2.0*hdepth), (pool.d[!dim][1] - 2.0*hdepth)), hdepth, !dim); // pos along pool length
-					set_wall_width(ladder, (pool.d[ dim][dir] - (dir ? 1.0 : -1.0)*1.2*hwidth), hwidth, dim); // at pool edge
-					plad_groups.add_obj(pool_ladder_t(ladder, dim, !dir), pladders); // inside the pool, facing the street/house - no placement check or blockers added
-				}
-			}
-			break; // success - done with pool
-		} // for n
 	} // for i (sub_plots)
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_MAILBOX)) {
 		// place mailboxes on residential streets
@@ -981,6 +850,147 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			} // for n
 		} // for dw
 	}
+}
+
+bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t const &yard, cube_t const &house, bool dim, bool dir, bool shrink_dim,
+	unsigned prev_blockers_end, float divider_hwidth, float const translate_dist[2], vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen)
+{
+	if (rgen.rand_float() < 0.1) return 0; // add pools 90% of the time (since placing them often fails anyway)
+	cube_t pool_area(yard);
+	pool_area.d[dim][dir] = house.d[dim][!dir]; // limit the pool to the back yard
+
+	for (unsigned d = 0; d < 2; ++d) {
+		if (yard.d[!dim][d] == plot.d[!dim][d]) {pool_area.d[!dim][d] = house.d[!dim][d];} // adjacent to road - constrain to house projection so that side fence can be placed
+	}
+	float const dmin(min(pool_area.dx(), pool_area.dy())); // or should this be based on city_params.road_width?
+	if (dmin < 0.75f*city_params.road_width) return 0; // back yard is too small to add a pool
+	bool const above_ground(rgen.rand_bool());
+	float const min_pool_spacing_to_plot_edge(0.5*city_params.road_width), sz_scale(0.06*city_params.road_width);
+
+	for (unsigned d = 0; d < 2; ++d) { // keep pools away from the edges of plots; applies to sub-plots on the corners
+		max_eq(pool_area.d[d][0], plot.d[d][0]+min_pool_spacing_to_plot_edge);
+		min_eq(pool_area.d[d][1], plot.d[d][1]-min_pool_spacing_to_plot_edge);
+	}
+	pool_area.expand_by_xy(-0.05*dmin); // small shrink to keep away from walls, fences, and hedges
+	vector3d pool_sz;
+	pool_sz.z = (above_ground ? rgen.rand_uniform(0.08, 0.12)*city_params.road_width : 0.01f*dmin);
+
+	for (unsigned d = 0; d < 2; ++d) {
+		pool_sz[d] = ((above_ground && d == 1) ? pool_sz[0] : rgen.rand_uniform(0.5, 0.7)*dmin); // above_ground_cylin pools have square bcubes
+		pool_area.d[d][1] -= pool_sz[d]; // shrink so that pool_area is where (x1, x2) can be placed
+	}
+	if (!pool_area.is_normalized()) return 0; // pool area is too small; this can only happen due to shrink at plot edges
+	colorRGBA const pool_side_colors[5] = {WHITE, WHITE, GRAY, LT_BROWN, LT_BLUE};
+	point pool_llc;
+	pool_llc.z = yard.z2();
+
+	for (unsigned n = 0; n < 20; ++n) { // make some attempts to generate a valid pool location
+		for (unsigned d = 0; d < 2; ++d) {pool_llc[d] = rgen.rand_uniform(pool_area.d[d][0], pool_area.d[d][1]);}
+		cube_t pool(pool_llc, (pool_llc + pool_sz));
+		cube_t tc(pool);
+		tc.expand_by_xy(0.08*dmin);
+		if (is_placement_blocked(tc, blockers, cube_t(), prev_blockers_end)) continue; // intersects some other object
+		float const grayscale(rgen.rand_uniform(0.7, 1.0));
+		float const water_white_comp(rgen.rand_uniform(0.1, 0.3)), extra_green(rgen.rand_uniform(0.2, 0.5)), lightness(rgen.rand_uniform(0.5, 0.8));
+		colorRGBA const color(above_ground ? pool_side_colors[rgen.rand()%5]: colorRGBA(grayscale, grayscale, grayscale));
+		colorRGBA const wcolor(lightness*water_white_comp, lightness*(water_white_comp + extra_green), lightness);
+
+		// add fences along the sides of the house to separate the back yard from the front yard; if fences can't be added, then don't add the pool either
+		plot_divider_type_t const &fence_pdt(plot_divider_types[DIV_CHAINLINK]);
+		float const fence_hwidth(0.5*sz_scale*fence_pdt.wscale), fence_height(sz_scale*fence_pdt.hscale), fence_z2(yard.z1() + fence_height);
+		float const expand(-1.5*sz_scale*plot_divider_types[DIV_HEDGE].wscale); // shrink by widest divider to avoid false intersection with orthogonal dividers
+		cube_t subplot_shrunk(yard);
+		// translate so that fences line up with dividers; inexact if different width dividers are on each side
+		for (unsigned d = 0; d < 2; ++d) {subplot_shrunk.d[shrink_dim][d] += translate_dist[d];}
+		subplot_shrunk.expand_by_xy(-divider_hwidth); // shrink by half width of surrounding dividers
+		divider_t fences[2];
+		bool bad_fence_place(0);
+
+		for (unsigned side = 0; side < 2; ++side) { // left/right
+			bool fence_dim(dim);
+			cube_t fence(subplot_shrunk);
+			fence.z2() = fence_z2;
+
+			if (yard.d[!dim][side] == plot.d[!dim][side]) { // at the edge of the plot, wrap the fence around in the back yard instead
+				fence_dim ^= 1;
+				extend_fence_to_house(fence, house, fence_hwidth, fence_height, !dim, side, !dir);
+
+				if (is_placement_blocked(fence, blockers, house, prev_blockers_end, expand, !fence_dim)) {
+					// Note: can't safely move the fence to the middle of the house if it intersects the pooly because it may intersect or block a door
+					if ((house.d[!dim][!side] > pool.d[!dim][side]) ^ side) {bad_fence_place = 1; break;} // fence at back of house does not contain the pool
+					extend_fence_to_house(fence, house, fence_hwidth, fence_height, !dim, !side, !dir); // try the back edge of the house
+					if (is_placement_blocked(fence, blockers, house, prev_blockers_end, expand, !fence_dim)) {bad_fence_place = 1; break;} // blocked by a driveway, etc.
+				}
+			}
+			else { // at the front of the house
+				float const ext_dist(extend_fence_to_house(fence, house, fence_hwidth, fence_height, dim, dir, side));
+
+				// check if front fence position is bad, or fence extension is too long (may block off the porch)
+				if (ext_dist > 0.33*house.get_sz_dim(!dim) || is_placement_blocked(fence, blockers, house, prev_blockers_end, expand, !fence_dim)) {
+					extend_fence_to_house(fence, house, fence_hwidth, fence_height, dim, !dir, side); // try the back edge of the house
+					if (is_placement_blocked(fence, blockers, house, prev_blockers_end, expand, !fence_dim)) {bad_fence_place = 1; break;} // blocked by a driveway, etc.
+				}
+			}
+			fences[side] = divider_t(fence, DIV_CHAINLINK, fence_dim, dir, 0); // Note: dir is unused in divider_t so doesn't have to be set correctly
+		} // for side
+		if (bad_fence_place) continue; // failed to fence off the pool, don't place it here
+		pool_groups.add_obj(swimming_pool_t(pool, color, wcolor, above_ground, dim, dir), pools);
+		unsigned const pre_pool_blockers_end(blockers.size());
+		cube_t pool_collider(pool);
+		pool_collider.z2() += 0.1*city_params.road_width; // extend upward to make a better collider
+		add_cube_to_colliders_and_blockers(pool_collider, colliders, blockers);
+
+		for (unsigned side = 0; side < 2; ++side) {
+			divider_t const &fence(fences[side]);
+			assert(fence.bcube.is_strictly_normalized());
+			divider_groups.add_obj(fence, dividers);
+			add_cube_to_colliders_and_blockers(fence.bcube, colliders, blockers);
+		}
+		if (!above_ground && rgen.rand_float() < 0.8) { // in-ground pool, add pool deck 80% of the time
+			bool had_cand(0);
+
+			for (unsigned d = 0; d < 2 && !had_cand; ++d) { // check for projections in both dims
+				float const deck_height(0.4*pool.dz()), deck_shrink(0.8*deck_height);
+				float const plo(pool.d[d][0]), phi(pool.d[d][1]), hlo(house.d[d][0]), hhi(house.d[d][1]);
+				if (max(plo, hlo) > min(phi, hhi)) continue; // no shared projection in this dim
+				// randomly choose to extend deck to cover both objects or restrict to the shared length
+				float const lo((rgen.rand_bool() ? min(plo, hlo) : max(plo, hlo)) + deck_shrink), hi((rgen.rand_bool() ? max(phi, hhi) : min(phi, hhi)) - deck_shrink);
+				if (hi - lo < 0.25*pool.get_sz_dim(d)) continue; // not enough shared area
+				bool const dir(house.get_center_dim(!d) < pool.get_center_dim(!d)); // dir from house to pool
+				cube_t deck;
+				set_cube_zvals(deck, pool.z1(), (pool.z1() + deck_height)); // lower height than the pool
+				deck.d[ d][0   ] = lo;
+				deck.d[ d][1   ] = hi;
+				deck.d[!d][ dir] = pool .d[!d][!dir];
+				deck.d[!d][!dir] = house.d[!d][ dir];
+				assert(deck.is_strictly_normalized());
+				had_cand = 1; // we have a candidate, even if it was blocked, so there are no more cands to check
+				// check for partial intersections of objects such as trashcans, etc. and skip the deck in that case; allow contained objects to rest on the deck
+				bool valid(1);
+
+				for (auto b = blockers.begin()+prev_blockers_end; b != blockers.begin()+pre_pool_blockers_end; ++b) { // skip pool, pool fence, and house
+					if (*b != house && deck.intersects_xy_no_adj(*b) && !deck.contains_cube_xy(*b)) {valid = 0; break;}
+				}
+				if (!valid) continue;
+				pdeck_groups.add_obj(pool_deck_t(deck, rgen.rand(), d, dir), pdecks);// choose a random material
+				blockers.push_back(deck); // blocker for other objects, but not a collider for people or the player
+			} // for d
+		}
+		if (!above_ground && building_obj_model_loader.is_model_valid(OBJ_MODEL_POOL_LAD)) { // in-ground pool, add pool ladder
+			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_POOL_LAD)); // D, W, H
+			float const height(1.6*sz_scale), hdepth(0.5*height*sz.x/sz.z), hwidth(0.5*height*sz.y/sz.z);
+
+			if (hdepth < 8.0*min(pool.dx(), pool.dy())) { // add if large enough; should be true
+				cube_t ladder;
+				set_cube_zvals(ladder, (pool.z2() - 0.42*height), (pool.z2() + 0.58*height));
+				set_wall_width(ladder, rgen.rand_uniform((pool.d[!dim][0] + 2.0*hdepth), (pool.d[!dim][1] - 2.0*hdepth)), hdepth, !dim); // pos along pool length
+				set_wall_width(ladder, (pool.d[ dim][dir] - (dir ? 1.0 : -1.0)*1.2*hwidth), hwidth, dim); // at pool edge
+				plad_groups.add_obj(pool_ladder_t(ladder, dim, !dir), pladders); // inside the pool, facing the street/house - no placement check or blockers added
+			}
+		}
+		return 1; // success - done with pool
+	} // for n
+	return 0; // placement failed
 }
 
 void city_obj_placer_t::place_birds(rand_gen_t &rgen) {
