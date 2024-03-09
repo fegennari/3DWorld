@@ -393,10 +393,12 @@ private:
 	vector<city_flag_t> flags;
 	vector<newsrack_t> newsracks;
 	vector<park_path_t> ppaths;
+	vector<swingset_t> swings;
+	vector<bicycle_t> bikes;
 	// index is last obj in group
 	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, fountain_groups, divider_groups, pool_groups, plad_groups,
 		pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups, stopsign_groups, flag_groups,
-		nrack_groups, ppath_groups;
+		nrack_groups, ppath_groups, swing_groups, bike_groups;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
 	vect_bird_place_t bird_locs;

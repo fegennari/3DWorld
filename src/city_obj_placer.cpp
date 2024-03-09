@@ -815,8 +815,32 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		// attempt place swimming pool; often unsuccessful
 		bool const placed_pool(place_swimming_pool(plot, *i, house, dim, dir, shrink_dim, prev_blockers_end, hwidth, translate_dist, blockers, colliders, rgen));
 
-		if (!placed_pool) {
-			// place something else instead, such as a swingset
+		if (!placed_pool && building_obj_model_loader.is_model_valid(OBJ_MODEL_SWINGSET) && rgen.rand_float() < 0.9) { // 90% of the time
+			// can't place a pool; try a swingset instead
+			cube_t ss_area(*i);
+			ss_area.d[dim][dir] = house.d[dim][!dir]; // limit the swingset to the back yard
+			ss_area.expand_by_xy(-(0.1*city_params.road_width + hwidth)); // add some spacing, including divider width
+			cube_t ss_center_area(ss_area);
+			ss_center_area.expand_by_xy(-0.2*city_params.road_width); // shrink the center placement area
+			float const dx(ss_center_area.dx()), dy(ss_center_area.dy());
+
+			if (dx > 0.0 && dy > 0.0) { // we have enough space
+				float const ss_height(0.2*city_params.road_width);
+
+				for (unsigned n = 0; n < 10; ++n) { // make some attempts to generate a valid swingset location
+					point const ss_pos(rgen.gen_rand_cube_point_xy(ss_center_area, i->z2()));
+					bool dim(0);
+					if      (dx < 0.5*dy) {dim = 0;}
+					else if (dy < 0.5*dx) {dim = 1;}
+					else                  {dim = rgen.rand_bool();}
+					swingset_t const ss(ss_pos, ss_height, dim, rgen.rand_bool()); // random dir, though dir doesn't really matter
+					if (!ss_area.contains_cube_xy(ss.bcube)) continue; // too close to back yard edge
+					if (is_placement_blocked(ss.bcube, blockers, cube_t(), prev_blockers_end)) continue; // intersects some other object
+					swing_groups.add_obj(ss, swings);
+					add_cube_to_colliders_and_blockers(ss.bcube, colliders, blockers);
+					break; // success
+				} // for n
+			}
 		}
 	} // for i (sub_plots)
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_MAILBOX)) {
@@ -881,11 +905,9 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 	}
 	if (!pool_area.is_normalized()) return 0; // pool area is too small; this can only happen due to shrink at plot edges
 	colorRGBA const pool_side_colors[5] = {WHITE, WHITE, GRAY, LT_BROWN, LT_BLUE};
-	point pool_llc;
-	pool_llc.z = yard.z2();
 
 	for (unsigned n = 0; n < 20; ++n) { // make some attempts to generate a valid pool location
-		for (unsigned d = 0; d < 2; ++d) {pool_llc[d] = rgen.rand_uniform(pool_area.d[d][0], pool_area.d[d][1]);}
+		point const pool_llc(rgen.gen_rand_cube_point_xy(pool_area, yard.z2()));
 		cube_t pool(pool_llc, (pool_llc + pool_sz));
 		cube_t tc(pool);
 		tc.expand_by_xy(0.08*dmin);
@@ -1000,6 +1022,7 @@ void city_obj_placer_t::place_birds(rand_gen_t &rgen) {
 	add_objs_top_center(ppoles,    0, 0, 1, unused, bird_locs, rgen);
 	add_objs_top_center(mboxes,    0, 0, 1, unused, bird_locs, rgen);
 	add_objs_top_center(stopsigns, 0, 0, 1, unused, bird_locs, rgen);
+	add_objs_top_center(swings,    0, 0, 1, unused, bird_locs, rgen);
 	// include houses/office buildings and streetlights?
 
 	for (auto i = dividers.begin(); i != dividers.end(); ++i) {
@@ -1153,10 +1176,12 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 void city_obj_placer_t::clear() {
 	parking_lots.clear(); benches.clear(); planters.clear(); trashcans.clear(); fhydrants.clear(); sstations.clear(); fountains.clear(); driveways.clear(); dividers.clear();
 	pools.clear(); pladders.clear(); pdecks.clear(); ppoles.clear(); hcaps.clear(); manholes.clear(); mboxes.clear(); tcones.clear(); pigeons.clear(); birds.clear(); signs.clear();
-	stopsigns.clear(); flags.clear(); ppaths.clear(); bench_groups.clear(); planter_groups.clear(); trashcan_groups.clear(); fhydrant_groups.clear(); sstation_groups.clear();
+	stopsigns.clear(); flags.clear(); ppaths.clear(); swings.clear(); bikes.clear();
+	bench_groups.clear(); planter_groups.clear(); trashcan_groups.clear(); fhydrant_groups.clear(); sstation_groups.clear();
 	fountain_groups.clear(); divider_groups.clear(); pool_groups.clear(); plad_groups.clear(); pdeck_groups.clear(); ppole_groups.clear(); hcap_groups.clear();
 	manhole_groups.clear(); mbox_groups.clear(); tcone_groups.clear(); pigeon_groups.clear(); bird_groups.clear(); sign_groups.clear(); stopsign_groups.clear();
-	flag_groups.clear(); nrack_groups.clear(); ppath_groups.clear(); all_objs_bcube.set_to_zeros();
+	flag_groups.clear(); nrack_groups.clear(); ppath_groups.clear(); swing_groups.clear(); bike_groups.clear();
+	all_objs_bcube.set_to_zeros();
 	num_spaces = filled_spaces = 0;
 }
 
@@ -1238,12 +1263,14 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	flag_groups    .create_groups(flags,     all_objs_bcube);
 	nrack_groups   .create_groups(newsracks, all_objs_bcube);
 	ppath_groups   .create_groups(ppaths,    all_objs_bcube);
+	swing_groups   .create_groups(swings,    all_objs_bcube);
+	bike_groups    .create_groups(bikes,     all_objs_bcube);
 
 	if (0) { // debug info printing
 		cout << TXT(benches.size()) << TXT(planters.size()) << TXT(trashcans.size()) << TXT(fhydrants.size()) << TXT(sstations.size()) << TXT(fountains.size())
 			 << TXT(dividers.size()) << TXT(pools.size()) << TXT(pladders.size()) << TXT(pdecks.size()) << TXT(ppoles.size()) << TXT(hcaps.size()) << TXT(manholes.size())
 			 << TXT(mboxes.size()) << TXT(tcones.size()) << TXT(pigeons.size()) << TXT(birds.size()) << TXT(signs.size()) << TXT(stopsigns.size()) << TXT(flags.size())
-			 << TXT(newsracks.size()) << TXT(ppaths.size()) << endl;
+			 << TXT(newsracks.size()) << TXT(ppaths.size()) << TXT(swings.size()) << TXT(bikes.size()) << endl;
 	}
 	if (add_parking_lots) {
 		cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
@@ -1386,6 +1413,8 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(flags,     flag_groups,     dstate, 0.18, shadow_only, 0); // dist_scale=0.18
 	draw_objects(newsracks, nrack_groups,    dstate, 0.10, shadow_only, 0); // dist_scale=0.10
 	draw_objects(tcones,    tcone_groups,    dstate, 0.08, shadow_only, 1); // dist_scale=0.08, has_immediate_draw=1
+	draw_objects(swings,    swing_groups,    dstate, 0.10, shadow_only, 1); // dist_scale=0.04, has_immediate_draw=1
+	draw_objects(bikes,     bike_groups,     dstate, 0.08, shadow_only, 1); // dist_scale=0.04, has_immediate_draw=1
 	
 	if (!shadow_only) { // unshadowed objects
 		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0); // dist_scale=0.12
@@ -1459,6 +1488,8 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(stopsigns, stopsign_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(flags,     flag_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(newsracks, nrack_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(swings,    swing_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(bikes,     bike_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	// Note: no coll with tree_planters because the tree coll should take care of it; no coll with hcaps, manholes, tcones, pladders, pool decks, pigeons, ppaths, or birds
 	return 0;
 }
@@ -1488,7 +1519,8 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(stopsigns, stopsign_groups, p1, p2, t, ret);
 	check_vector_line_intersect(flags,     flag_groups,     p1, p2, t, ret);
 	check_vector_line_intersect(newsracks, nrack_groups,    p1, p2, t, ret);
-	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, tcones, pladders, pool decks, pigeons, ppaths, or birds; mboxes ignored because they're not simple shapes
+	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, tcones, pladders, pool decks, pigeons, ppaths, or birds;
+	// mboxes, swings, and bikes are ignored because they're not simple shapes
 	return ret;
 }
 
@@ -1568,7 +1600,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 	if (check_city_obj_pt_xy_contains(trashcan_groups, trashcans, pos, obj_ix)) {color = colorRGBA(0.8, 0.6, 0.3, 1.0); return 1;} // tan
 	if (check_city_obj_pt_xy_contains(ppath_groups,    ppaths,    pos, obj_ix))    {color = GRAY; return 1;} // can/should we restrict this to only run when inside a park?
 	if (check_city_obj_pt_xy_contains(fountain_groups, fountains, pos, obj_ix, 1)) {color = GRAY; return 1;} // is_cylin=1
-	// Note: ppoles, hcaps, manholes, mboxes, tcones, pladders, signs, stopsigns, flags, pigeons, and birds are skipped for now
+	// Note: ppoles, hcaps, manholes, mboxes, tcones, pladders, signs, stopsigns, flags, pigeons, birds, swings, and bikes are skipped for now
 	return 0;
 }
 
