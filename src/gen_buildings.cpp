@@ -2516,8 +2516,8 @@ public:
 	building_t       &get_building(unsigned ix)       {assert(ix < buildings.size()); return buildings[ix];} // non-const version; not intended to be used to change geometry
 	cube_t const &get_building_bcube(unsigned ix) const {return get_building(ix).bcube;}
 	
-	bool get_building_door_pos_closest_to(unsigned ix, point const &target_pos, point &door_pos) const {
-		return get_building(ix).get_building_door_pos_closest_to(target_pos, door_pos);
+	bool get_building_door_pos_closest_to(unsigned ix, point const &target_pos, point &door_pos, bool inc_garage_door) const {
+		return get_building(ix).get_building_door_pos_closest_to(target_pos, door_pos, inc_garage_door);
 	}
 	cube_t const &get_bcube() const {return buildings_bcube;}
 	bool is_visible(vector3d const &xlate) const {return (!empty() && camera_pdu.cube_visible(buildings_bcube + xlate));}
@@ -4553,8 +4553,8 @@ cube_t get_building_lights_bcube() {return building_lights_manager.get_lights_bc
 // used for pedestrians in cities
 cube_t get_building_bcube(unsigned building_id) {return building_creator_city.get_building_bcube(building_id);}
 
-bool get_building_door_pos_closest_to(unsigned building_id, point const &target_pos, point &door_pos) { // for city buildings only
-	return building_creator_city.get_building_door_pos_closest_to(building_id, target_pos, door_pos);
+bool get_building_door_pos_closest_to(unsigned building_id, point const &target_pos, point &door_pos, bool inc_garage_door) { // for city buildings only
+	return building_creator_city.get_building_door_pos_closest_to(building_id, target_pos, door_pos, inc_garage_door);
 }
 bool check_sphere_coll_building(point const &pos, float radius, bool xy_only, unsigned building_id) {
 	return building_creator_city.check_sphere_coll_building(pos, radius, xy_only, building_id);

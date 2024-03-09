@@ -804,7 +804,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				trashcan_t const trashcan(pos, tc_radius, tc_height, 1); // is_cylin=1
 				if (is_placement_blocked(trashcan.bcube, blockers, house, prev_blockers_end, 0.0, 0)) continue; // no expand
 				if (check_sphere_coll_building((pos + tc_radius*plus_z), tc_radius, 0, house.ix))     continue; // xy_only=0
-				if (get_building_door_pos_closest_to(house.ix, pos, door_pos) && dist_xy_less_than(pos, door_pos, 3.0*tc_radius)) continue; // too close to door
+				if (get_building_door_pos_closest_to(house.ix, pos, door_pos, 1) && dist_xy_less_than(pos, door_pos, 3.0*tc_radius)) continue; // close to door; inc_garage_door=1
 				trashcan_groups.add_obj(trashcan, trashcans);
 				add_cube_to_colliders_and_blockers(trashcan.bcube, colliders, blockers);
 				break; // success
@@ -825,9 +825,10 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				pos[ dim] = house.d[dim][dir] + (dir ? 1.0 : -1.0)*0.5*rgen.rand_uniform(1.0, 1.2)*bike_width; // place near this wall of the house
 				pos[!dim] = rgen.rand_uniform((house.d[!dim][0] + wall_extend), (house.d[!dim][1] - wall_extend));
 				bicycle_t const bike(pos, bike_height, !dim, rgen.rand_bool()); // random dir, against the wall
-				if (is_placement_blocked(bike.bcube, blockers, house, prev_blockers_end, 0.0, 0))     continue; // no expand
+				if (is_placement_blocked(bike.bcube, blockers, house, blockers.size(), 0.0, 0))       continue; // no expand; check all blockers, inc. trashcan
 				if (!check_sphere_coll_building((pos + 0.5*bike_height*plus_z), radius, 0, house.ix)) continue; // *must* be next to an exterior wall; xy_only=0
-				if (get_building_door_pos_closest_to(house.ix, pos, door_pos) && dist_xy_less_than(pos, door_pos, 1.0*bike_len)) continue; // too close to door
+				// TODO: check ends for collisions with chimneys, AC units, fence gaps, etc.
+				if (get_building_door_pos_closest_to(house.ix, pos, door_pos, 1) && dist_xy_less_than(pos, door_pos, 1.0*bike_len)) continue; // close to door; inc_garage_door=1
 				bike_groups.add_obj(bike, bikes);
 				add_cube_to_colliders_and_blockers(bike.bcube, colliders, blockers);
 				break; // success
@@ -960,7 +961,7 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 				extend_fence_to_house(fence, house, fence_hwidth, fence_height, !dim, side, !dir);
 
 				if (is_placement_blocked(fence, blockers, house, prev_blockers_end, expand, !fence_dim)) {
-					// Note: can't safely move the fence to the middle of the house if it intersects the pooly because it may intersect or block a door
+					// Note: can't safely move the fence to the middle of the house if it intersects the pool because it may intersect or block a door
 					if ((house.d[!dim][!side] > pool.d[!dim][side]) ^ side) {bad_fence_place = 1; break;} // fence at back of house does not contain the pool
 					extend_fence_to_house(fence, house, fence_hwidth, fence_height, !dim, !side, !dir); // try the back edge of the house
 					if (is_placement_blocked(fence, blockers, house, prev_blockers_end, expand, !fence_dim)) {bad_fence_place = 1; break;} // blocked by a driveway, etc.

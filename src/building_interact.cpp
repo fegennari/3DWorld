@@ -339,11 +339,12 @@ bool building_t::point_near_ext_door(point const &pos, float dist) const { // si
 }
 
 // used for pedestrians; pos should be outside the building
-bool building_t::get_building_door_pos_closest_to(point const &target_pos, point &door_pos) const {
+bool building_t::get_building_door_pos_closest_to(point const &target_pos, point &door_pos, bool inc_garage_door) const {
 	float dmin_sq(0.0);
 
 	for (auto d = doors.begin(); d != doors.end(); ++d) {
-		if (d->type == tquad_with_ix_t::TYPE_GDOOR || d->type == tquad_with_ix_t::TYPE_RDOOR) continue; // skip garage and rooftop doors
+		if (d->type == tquad_with_ix_t::TYPE_GDOOR && !inc_garage_door) continue; // skip garage doors
+		if (d->type == tquad_with_ix_t::TYPE_RDOOR) continue; // skip rooftop doors
 		point const center(d->get_bcube().get_cube_center());
 		float const dsq(p2p_dist_xy_sq(target_pos, center)); // ignore zval
 		if (dmin_sq == 0.0 || dsq < dmin_sq) {door_pos = center; dmin_sq = dsq;}

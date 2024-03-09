@@ -1685,7 +1685,7 @@ struct building_t : public building_geom_t {
 	void player_not_near_building() {register_open_ext_door_state(-1);}
 	int find_ext_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const;
 	bool point_near_ext_door(point const &pos, float dist) const;
-	bool get_building_door_pos_closest_to(point const &target_pos, point &door_pos) const;
+	bool get_building_door_pos_closest_to(point const &target_pos, point &door_pos, bool inc_garage_door) const;
 	void get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt_in, bool make_all_front=0) const;
 	void get_ext_wall_verts_no_sec(building_draw_t &bdraw) const;
 	void write_basement_entrance_depth_pass(shader_t &s) const;
@@ -2310,7 +2310,7 @@ void draw_buildings_ext_paint(shader_t &s);
 void subtract_cube_xy(cube_t const &c, cube_t const &r, cube_t *out);
 void accumulate_shared_xy_area(cube_t const &c, cube_t const &sc, float &area);
 bool have_secondary_buildings();
-bool get_building_door_pos_closest_to(unsigned building_id, point const &target_pos, point &door_pos);
+bool get_building_door_pos_closest_to(unsigned building_id, point const &target_pos, point &door_pos, bool inc_garage_door=0);
 bool register_achievement(std::string const &str);
 bool enable_building_indir_lighting_no_cib();
 bool enable_building_indir_lighting();
