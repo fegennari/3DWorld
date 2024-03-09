@@ -508,18 +508,13 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	if (!is_residential && corner_pole_pos != all_zeros && building_obj_model_loader.is_model_valid(OBJ_MODEL_SUBSTATION)) {
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
 		float const ss_height(0.08*city_params.road_width), dist_from_corner(0.12); // distance from corner relative to plot size
-		vector3d const ss_center((1.0 - dist_from_corner)*corner_pole_pos + dist_from_corner*plot.get_cube_center());
-		vector3d const model_sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SUBSTATION));
-		vector3d bcube_exp;
-		bcube_exp[ dim] = 0.5*ss_height*model_sz.x/model_sz.z;
-		bcube_exp[!dim] = 0.5*ss_height*model_sz.y/model_sz.z;
-		cube_t ss_bcube(ss_center, ss_center);
-		ss_bcube.expand_by_xy(bcube_exp);
-		ss_bcube.z2() += ss_height;
-		
-		if (!has_bcube_int_xy(ss_bcube, blockers, max(0.2f*ss_height, min_obj_spacing))) { // skip if intersects a building or parking lot
-			sstation_groups.add_obj(substation_t(ss_bcube, dim, dir), sstations);
-			add_cube_to_colliders_and_blockers(ss_bcube, colliders, blockers);
+		vector3d ss_center((1.0 - dist_from_corner)*corner_pole_pos + dist_from_corner*plot.get_cube_center());
+		ss_center.z -= 0.03*ss_height; // shift down slightly because the wire extends a bit below the base
+		substation_t const ss(ss_center, ss_height, dim, dir);
+
+		if (!has_bcube_int_xy(ss.bcube, blockers, max(0.2f*ss_height, min_obj_spacing))) { // skip if intersects a building or parking lot
+			sstation_groups.add_obj(ss, sstations);
+			add_cube_to_colliders_and_blockers(ss.bcube, colliders, blockers);
 		}
 	}
 	// place trashcans next to sidewalks in commercial cities and parks; after substations so that we don't block them

@@ -99,7 +99,7 @@ struct fire_hydrant_t : public city_obj_t {
 };
 
 struct substation_t : public model_city_obj_t {
-	substation_t(cube_t const &bcube_, bool dim_, bool dir_) : model_city_obj_t(bcube_, dim_, dir_) {}
+	substation_t(point const &pos_, float height, bool dim_, bool dir_) : model_city_obj_t(pos_, height, dim_, dir_, get_model_id()) {}
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	virtual unsigned get_model_id() const {return OBJ_MODEL_SUBSTATION;}
@@ -218,12 +218,12 @@ struct mailbox_t : public model_city_obj_t {
 };
 
 struct bicycle_t : public model_city_obj_t {
-	bicycle_t(cube_t const &bcube_, bool dim_, bool dir_) : model_city_obj_t(bcube_, dim_, dir_) {}
+	bicycle_t(point const &pos_, float height, bool dim_, bool dir_) : model_city_obj_t(pos_, height, dim_, dir_, get_model_id()) {}
 	virtual unsigned get_model_id() const {return OBJ_MODEL_BICYCLE;}
 };
 
 struct swingset_t : public model_city_obj_t {
-	swingset_t(cube_t const &bcube_, bool dim_, bool dir_) : model_city_obj_t(bcube_, dim_, dir_) {}
+	swingset_t(point const &pos_, float height, bool dim_, bool dir_) : model_city_obj_t(pos_, height, dim_, dir_, get_model_id()) {}
 	virtual unsigned get_model_id() const {return OBJ_MODEL_SWINGSET;}
 };
 
