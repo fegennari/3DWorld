@@ -470,56 +470,58 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			auto obj_vect_end((vect_id == 1) ? expanded_objs.end() : objs.end()); // include all objects because blinds are added at the end
 
 			for (auto i = obj_vect.begin(); i != obj_vect_end; ++i) {
-				if (cur_player_building_loc.room_ix >= 0 && i->room_id != cur_player_building_loc.room_ix && i->type != TYPE_BUTTON) continue; // not in the same room as the player
+				room_object const type(i->type);
+				if (cur_player_building_loc.room_ix >= 0 && i->room_id != cur_player_building_loc.room_ix && type != TYPE_BUTTON) continue; // not in the same room as the player
 				if (!active_area.is_all_zeros() && !i->intersects(active_area)) continue; // out of reach for the player
 				// check for objects not in the attic when the player is in the attic and vice versa
-				if (bool(player_in_attic) != i->in_attic() && i->type != TYPE_ATTIC_DOOR) continue;
+				if (bool(player_in_attic) != i->in_attic() && type != TYPE_ATTIC_DOOR) continue;
 				bool keep(0);
-				if (i->type == TYPE_BOX && !i->is_open()) {keep = 1;} // box can only be opened once; check first so that selection works for boxes in closets
-				else if (i->type == TYPE_CLOSET) {
+				if (type == TYPE_BOX && !i->is_open()) {keep = 1;} // box can only be opened once; check first so that selection works for boxes in closets
+				else if (type == TYPE_CLOSET) {
 					if (i->is_small_closet()) continue; // uses regular door now
 					if (in_dir.z > 0.5)       continue; // not looking up at the light
 					keep = 1; // closet door can be opened
 				}
 				else if (!player_in_closet) {
-					if      ((i->type == TYPE_TOILET || i->type == TYPE_URINAL) && !i->is_broken()) {keep = 1;} // toilet/urinal can be flushed unless broken
-					else if (i->type == TYPE_STALL && i->shape == SHAPE_CUBE && can_open_bathroom_stall_or_shower(*i, closest_to, in_dir)) {keep = 1;} // bathroom stall can be opened
-					else if (i->type == TYPE_MIRROR && i->is_house())  {keep = 1;} // medicine cabinet
-					else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub
-					else if (i->is_light_type() || i->type == TYPE_LAVALAMP) {keep = 1;} // room light or lamp
-					else if (i->type == TYPE_FISHTANK && (i->flags & RO_FLAG_ADJ_TOP)) {keep = 1;} // fishtank with a lid and light
-					else if (i->type == TYPE_PICTURE || i->type == TYPE_TPROLL || i->type == TYPE_MWAVE || i->type == TYPE_STOVE ||
-						/*i->type == TYPE_FRIDGE ||*/ i->type == TYPE_TV || i->type == TYPE_MONITOR || i->type == TYPE_BLINDS || i->type == TYPE_SHOWER ||
-						i->type == TYPE_SWITCH || i->type == TYPE_BOOK || i->type == TYPE_BRK_PANEL || i->type == TYPE_BREAKER || i->type == TYPE_ATTIC_DOOR ||
-						i->type == TYPE_OFF_CHAIR || i->type == TYPE_WFOUNTAIN || i->type == TYPE_FALSE_DOOR) {keep = 1;}
-					else if (i->type == TYPE_BUTTON && i->in_elevator() == bool(player_in_elevator)) {keep = 1;} // check for buttons inside/outside elevator
-					else if (i->type == TYPE_PIZZA_BOX && !i->was_expanded()) {keep = 1;} // can't open if on a shelf
+					if      ((type == TYPE_TOILET || type == TYPE_URINAL) && !i->is_broken()) {keep = 1;} // toilet/urinal can be flushed unless broken
+					else if (type == TYPE_STALL && i->shape == SHAPE_CUBE && can_open_bathroom_stall_or_shower(*i, closest_to, in_dir)) {keep = 1;} // bathroom stall can be opened
+					else if (type == TYPE_MIRROR && i->is_house())  {keep = 1;} // medicine cabinet
+					else if (i->is_sink_type() || type == TYPE_TUB) {keep = 1;} // sink/tub
+					else if (i->is_light_type() || type == TYPE_LAVALAMP) {keep = 1;} // room light or lamp
+					else if (type == TYPE_FISHTANK && (i->flags & RO_FLAG_ADJ_TOP)) {keep = 1;} // fishtank with a lid and light
+					else if (type == TYPE_PICTURE || type == TYPE_TPROLL || type == TYPE_MWAVE || type == TYPE_STOVE ||
+						/*type == TYPE_FRIDGE ||*/ type == TYPE_TV || type == TYPE_MONITOR || type == TYPE_BLINDS || type == TYPE_SHOWER ||
+						type == TYPE_SWITCH || type == TYPE_BOOK || type == TYPE_BRK_PANEL || type == TYPE_BREAKER || type == TYPE_ATTIC_DOOR ||
+						type == TYPE_OFF_CHAIR || type == TYPE_WFOUNTAIN || type == TYPE_FALSE_DOOR) {keep = 1;}
+					else if (type == TYPE_BUTTON && i->in_elevator() == bool(player_in_elevator)) {keep = 1;} // check for buttons inside/outside elevator
+					else if (type == TYPE_PIZZA_BOX && !i->was_expanded()) {keep = 1;} // can't open if on a shelf
 					else if (i->is_parked_car() && !i->is_broken()) {keep = 1;} // parked car with unbroken windows
+					else if (!check_only && type == TYPE_SHELFRACK && !i->obj_expanded()) {keep = 1;} // expand shelfrack when action key is actually applied
 				}
-				else if (i->type == TYPE_LIGHT) {keep = 1;} // closet light
+				else if (type == TYPE_LIGHT) {keep = 1;} // closet light
 				if (!keep) continue;
 				cube_t obj_bc(*i), dishwasher;
-				if (i->type == TYPE_KSINK && get_dishwasher_for_ksink(*i, dishwasher) && dishwasher.line_intersects(closest_to, query_ray_end)) {obj_bc = dishwasher;}
-				else if (i->type == TYPE_KSINK || i->type == TYPE_BRSINK) {obj_bc = get_sink_cube(*i);} // the sink itself is actually smaller
+				if (type == TYPE_KSINK && get_dishwasher_for_ksink(*i, dishwasher) && dishwasher.line_intersects(closest_to, query_ray_end)) {obj_bc = dishwasher;}
+				else if (type == TYPE_KSINK || type == TYPE_BRSINK) {obj_bc = get_sink_cube(*i);} // the sink itself is actually smaller
 				// shrink lamps in XY to a cube interior to their building cylinder to make drawers under lamps easier to select
-				else if (i->type == TYPE_LAMP      ) {obj_bc.expand_by(vector3d(-i->dx(), -i->dy(), 0.0)*(0.5*(1.0 - 1.0/SQRT2)));}
-				else if (i->type == TYPE_ATTIC_DOOR) {obj_bc = get_attic_access_door_cube(*i, 1);} // inc_ladder=1, to make it easier to select when in the attic
+				else if (type == TYPE_LAMP      ) {obj_bc.expand_by(vector3d(-i->dx(), -i->dy(), 0.0)*(0.5*(1.0 - 1.0/SQRT2)));}
+				else if (type == TYPE_ATTIC_DOOR) {obj_bc = get_attic_access_door_cube(*i, 1);} // inc_ladder=1, to make it easier to select when in the attic
 				point center;
 
-				if (i->type == TYPE_CLOSET) {
+				if (type == TYPE_CLOSET) {
 					center = i->get_cube_center();
 					center[i->dim] = i->d[i->dim][i->dir]; // use center of door, not center of closet
 				}
 				else {center = obj_bc.closest_pt(closest_to);}
 				if (fabs(center.z - closest_to.z) > 0.7*floor_spacing) continue; // wrong floor
 				// use dmax for closets and open breaker boxes to prioritize objects inside
-				bool const low_priority(i->type == TYPE_CLOSET || (i->type == TYPE_BRK_PANEL && i->is_open()));
+				bool const low_priority(type == TYPE_CLOSET || (type == TYPE_BRK_PANEL && i->is_open()));
 				float const dist_sq(low_priority ? dmax*dmax : p2p_dist_sq(closest_to, center));
 				if (found_item && dist_sq >= closest_dist_sq)          continue; // not the closest
 				if (!obj_bc.closest_dist_less_than(closest_to, dmax))  continue; // too far
 				if (in_dir != zero_vector && !obj_bc.line_intersects(closest_to, query_ray_end)) continue; // player is not pointing at this object
 				// checking for office chair rotation is expensive, so it's done last, just before updating closest
-				if (i->type == TYPE_OFF_CHAIR && !chair_can_be_rotated(*i)) continue;
+				if (type == TYPE_OFF_CHAIR && !chair_can_be_rotated(*i)) continue;
 				closest_dist_sq = dist_sq;
 				obj_ix = (i - obj_vect.begin()) + obj_id_offset;
 				is_obj = found_item = 1;
@@ -830,6 +832,9 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		print_text_onscreen("Door is locked", RED, 1.0, 2.0*TICKS_PER_SECOND, 0);
 		gen_sound_thread_safe_at_player(SOUND_CLICK, 1.0, 0.6);
 		return 0;
+	}
+	else if (obj.type == TYPE_SHELFRACK) { // expand shelfrack
+		interior->room_geom->expand_object(obj, *this);
 	}
 	else if (obj.is_parked_car()) {
 		gen_sound_thread_safe_at_player(SOUND_GLASS);
