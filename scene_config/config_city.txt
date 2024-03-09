@@ -161,7 +161,7 @@ buildings people_min_alpha 0.1 # slightly slower framerate, but improves alpha b
 # MakeHuman models
 #city ped_model ../models/people/makehuman/Katie/Katie.model3d 1 0 0  0 -1 90  1 0.7 1.0  1.0 0  0 3
 
-# Animated models loaded by Assimp
+# Animated models loaded by Assimp; default animation is walk
 city ped_model ../models/people/animated/remy_walking.fbx    0 0 0  0 -1 90  1 1.0  1.0  1.0 0
 city ped_model_add_anim ../models/people/animated/remy_idle_anim.fbx idle
 city ped_model ../models/people/animated/james_walking.fbx   0 0 0  0 -1 90  1 1.0  1.0  1.0 0
