@@ -249,7 +249,7 @@ city fountain_model      ../models/Fountains/fountain3/scene.gltf     0 0 0  -1 
 city fountain_model      ../models/Fountains/fountain4/scene.gltf     0 0 0  -1 -1 0    1 1.0 1.0
 city fountain_model      ../models/Fountains/fountain5/scene.gltf     0 0 0  -1 -1 0    1 1.0 1.0
 #city bicycle_model       ../models/bicycles/vintage_bicycle.glb       0 0 0  -1 -1 0    1 1.0 1.0 # many stickers
-city bicycle_model       ../models/bicycles/bicycle1/scene.gltf       0 0 0  -1 -1 0    1 1.0 1.0 # clean and simple model
+city bicycle_model       ../models/bicycles/bicycle1/scene.gltf       0 0 0  -1 -1 0    1 1.0 4.0 # clean and simple model
 #city swingset_model      ../models/swingsets/swing.glb                0 0 0  -1 -1 0    1 1.0 1.0 # okay, but dirty
 #city swingset_model      ../models/swingsets/swing1/scene.gltf        0 0 0  -1 -1 0    1 1.0 1.0 # okay, simple model
 city swingset_model      ../models/swingsets/swing2/swings.fbx        0 0 0  -1 -1 90   1 1.0 1.0 # okay
