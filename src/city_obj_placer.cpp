@@ -866,7 +866,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			} // for n
 		}
 		// maybe place a bike next to the house or on the porch or deck
-		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_BICYCLE) && rgen.rand_float() < 0.7) { // 70% of the time (not always successful)
+		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_BICYCLE) && rgen.rand_float() < 0.6) { // 60% of the time (not always successful)
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_BICYCLE)); // L, W, H
 			float const bike_height(1.3*sz_scale), bike_len(bike_height*sz.x/sz.z), bike_width(bike_height*sz.y/sz.z), wall_extend(0.5*bike_len);
 
@@ -1467,8 +1467,8 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(flags,     flag_groups,     dstate, 0.18, shadow_only, 0); // dist_scale=0.18
 	draw_objects(newsracks, nrack_groups,    dstate, 0.10, shadow_only, 0); // dist_scale=0.10
 	draw_objects(tcones,    tcone_groups,    dstate, 0.08, shadow_only, 1); // dist_scale=0.08, has_immediate_draw=1
-	draw_objects(swings,    swing_groups,    dstate, 0.10, shadow_only, 1); // dist_scale=0.04, has_immediate_draw=1
-	draw_objects(bikes,     bike_groups,     dstate, 0.08, shadow_only, 1); // dist_scale=0.04, has_immediate_draw=1
+	draw_objects(swings,    swing_groups,    dstate, 0.10, shadow_only, 1); // dist_scale=0.10, has_immediate_draw=1
+	draw_objects(bikes,     bike_groups,     dstate, 0.025,shadow_only, 1); // dist_scale=0.025,has_immediate_draw=1
 	
 	if (!shadow_only) { // unshadowed objects
 		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0); // dist_scale=0.12
