@@ -1305,7 +1305,6 @@ public:
 						dstate.draw_stoplights_and_street_signs(isecs[i], roads, b->ranges[TYPE_ISEC2 + i], city_id, 1);
 					}
 				}
-				dstate.end_cur_tile(); // once for all tiles, since shadows aren't used
 			}
 		}
 		else { // regular draw pass
@@ -1369,6 +1368,7 @@ public:
 			dstate.draw_tunnel(*t, shadow_only);
 			t->draw_streetlights(dstate, shadow_only, 1); // always_on=1
 		}
+		if (shadow_only) {dstate.end_cur_tile();} // once for all tiles, since shadows aren't used
 	}
 	void add_city_lights(vector3d const &xlate, cube_t &lights_bcube) const { // for now, the only light sources added by the road network are city block streetlights
 		add_streetlight_dlights(xlate, lights_bcube, 0);

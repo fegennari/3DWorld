@@ -16,6 +16,8 @@ extern city_params_t city_params;
 
 string gen_random_name(rand_gen_t &rgen, bool for_universe=0); // from Universe_name.cpp
 string gen_random_first_name(rand_gen_t &rgen); // from pedestrians.cpp
+void add_cylin_as_tris(vector<vert_norm_tc_color> &verts, point const ce[2], float r1, float r2, color_wrapper const &cw,
+	unsigned ndiv, unsigned draw_top_bot, float tst=1.0, float tss=1.0, bool swap_ts_tt=0);
 
 class road_name_gen_t {
 	static string get_numbered_street_name(unsigned num) {
@@ -358,9 +360,13 @@ namespace streetlight_ns {
 		float const pradius(get_streetlight_pole_radius()), lradius(light_radius*city_params.road_width);
 		int const ndiv(shadow_only ? (is_local_shadow ? 4 : 8) : max(4, min(N_SPHERE_DIV, int(0.5/dist_val))));
 		point const top(pos + vector3d(0.0, 0.0, 0.96*height)), arm_end(lpos + vector3d(0.0, 0.0, 0.025*height) - 0.06*height*dir);
-		if (!shadow_only) {dstate.s.set_cur_color(pole_color);}
-		draw_fast_cylinder(pos, pos+vector3d(0.0, 0.0, height), pradius, 0.7*pradius, min(ndiv, 24), 0, 0); // vertical post, untextured, no ends
-		if (dist_val <= 0.12) {draw_fast_cylinder(top, arm_end, 0.5*pradius, 0.4*pradius, min(ndiv, 16), 0, 0);} // untextured, no ends
+		point const vpost_ce[2] = {pos, (pos + height*plus_z)};
+		add_cylin_as_tris(dstate.qbd_untextured.verts, vpost_ce, pradius, 0.7*pradius, pole_color, min(ndiv, 24), 0); // untextured, no ends
+
+		if (dist_val <= 0.12) {
+			point const hbar_ce[2] = {top, arm_end};
+			add_cylin_as_tris(dstate.qbd_untextured.verts, hbar_ce, 0.5*pradius, 0.4*pradius, pole_color, min(ndiv, 16), 0); // untextured, no ends
+		}
 		if (shadow_only && is_local_shadow) return; // top part never projects a shadow on a visible object near the ground
 
 		if (!shadow_only) {
