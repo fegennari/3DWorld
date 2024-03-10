@@ -685,12 +685,22 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	}
 }
 
+// this version is for checking against blockers placed in a previous step
 bool is_placement_blocked(cube_t const &cube, vect_cube_t const &blockers, cube_t const &exclude, unsigned prev_blockers_end, float expand=0.0, bool exp_dim=0) {
 	cube_t query_cube(cube);
 	query_cube.expand_in_dim(exp_dim, expand);
 
 	for (auto b = blockers.begin(); b != blockers.begin()+prev_blockers_end; ++b) {
 		if (*b != exclude && b->intersects_xy_no_adj(query_cube)) return 1;
+	}
+	return 0;
+}
+// this version is for checking against blockers placed in the current step
+bool is_placement_blocked_recent(cube_t const &cube, vect_cube_t const &blockers, unsigned blockers_start) {
+	assert(blockers_start <= blockers.size());
+
+	for (auto b = blockers.begin()+blockers_start; b != blockers.end(); ++b) {
+		if (b->intersects_xy_no_adj(cube)) return 1;
 	}
 	return 0;
 }
@@ -726,10 +736,11 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 	if (rgen.rand_bool()) {std::reverse(sub_plots.begin(), sub_plots.end());} // reverse half the time so that we don't prefer a divider in one side or the other
 	unsigned const shrink_dim(rgen.rand_bool()); // mostly arbitrary, could maybe even make this a constant 0
 	float const sz_scale(0.06*city_params.road_width); // about 3 feet
-	unsigned const dividers_start(dividers.size()), prev_blockers_end(blockers.size());
+	unsigned const dividers_start(dividers.size()), prev_blockers_end(blockers.size()); // prev_blockers_end is the end of blockers placed by previous steps for this plot
 	vect_cube_with_ix_t bcubes; // we need the building index for the get_building_door_pos_closest_to() call
 
 	for (auto i = sub_plots.begin(); i != sub_plots.end(); ++i) { // populate each yard
+		unsigned const yard_blockers_start(blockers.size());
 		// place plot dividers
 		float hwidth(0.0), translate_dist[2] = {0.0, 0.0};
 		unsigned const type(rgen.rand()%DIV_NUM_TYPES); // use a consistent divider type for all sides of this plot
@@ -786,6 +797,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		} // end dividers
 
 		// place yard objects
+		// Note: can't check for collisions with fire escapes and balcony support pillars here because they haven't been placed yet
 		if (!i->is_residential || i->is_park || i->street_dir == 0) continue; // not a residential plot along a road
 		bcubes.clear();
 		if (have_buildings()) {get_building_bcubes(*i, bcubes);}
@@ -793,53 +805,6 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		assert(bcubes.size() == 1); // there should be exactly one building/house in this sub-plot
 		cube_with_ix_t const &house(bcubes.front());
 		bool const dim((i->street_dir-1)>>1), dir((i->street_dir-1)&1); // direction to the road
-
-		if (1) { // maybe place a trashcan next to the house
-			float const tc_height(0.18*city_params.get_nom_car_size().x), tc_radius(0.3*tc_height);
-
-			for (unsigned n = 0; n < 20; ++n) { // make some attempts to generate a valid trashcan location
-				bool tc_dim(0), tc_dir(0);
-				unsigned const house_side(rgen.rand() % 3); // any side but the front
-				if (house_side == 0) {tc_dim = dim; tc_dir = !dir;} // put it in the back yard
-				else {tc_dim = !dim; tc_dir = rgen.rand_bool();} // put it on a random side of the house
-				if (tc_radius > 0.25*house.get_sz_dim(!tc_dim)) continue; // house wall is too short - shouldn't happen in the normal case
-				point pos, door_pos;
-				pos.z = i->z2();
-				pos[ tc_dim] = house.d[tc_dim][tc_dir] + (tc_dir ? 1.0 : -1.0)*1.75*tc_radius; // place near this wall of the house
-				pos[!tc_dim] = rgen.rand_uniform((house.d[!tc_dim][0] + tc_radius), (house.d[!tc_dim][1] - tc_radius));
-				trashcan_t const trashcan(pos, tc_radius, tc_height, 1); // is_cylin=1
-				if (is_placement_blocked(trashcan.bcube, blockers, house, prev_blockers_end, 0.0, 0)) continue; // no expand
-				if (check_sphere_coll_building((pos + tc_radius*plus_z), tc_radius, 0, house.ix))     continue; // xy_only=0
-				if (get_building_door_pos_closest_to(house.ix, pos, door_pos, 1) && dist_xy_less_than(pos, door_pos, 3.0*tc_radius)) continue; // close to door; inc_garage_door=1
-				trashcan_groups.add_obj(trashcan, trashcans);
-				add_cube_to_colliders_and_blockers(trashcan.bcube, colliders, blockers);
-				break; // success
-			} // for n
-		}
-
-		// maybe place a bike next to the house or on the porch or deck
-		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_BICYCLE) && rgen.rand_float() < 0.75) { // 75% of the time (not always successful)
-			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_BICYCLE)); // L, W, H
-			float const bike_height(1.3*sz_scale), bike_len(bike_height*sz.x/sz.z), bike_width(bike_height*sz.y/sz.z);
-			float const wall_extend(0.5*bike_len), radius(0.5*max(bike_len, bike_width));
-			
-			for (unsigned n = 0; n < 10; ++n) { // make some attempts to generate a valid bike location
-				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // house wall dim/dir
-				if (bike_len > 0.5*house.get_sz_dim(!dim)) continue; // house wall is too short - shouldn't happen in the normal case
-				point pos, door_pos;
-				pos.z = i->z2();
-				pos[ dim] = house.d[dim][dir] + (dir ? 1.0 : -1.0)*0.5*rgen.rand_uniform(1.0, 1.2)*bike_width; // place near this wall of the house
-				pos[!dim] = rgen.rand_uniform((house.d[!dim][0] + wall_extend), (house.d[!dim][1] - wall_extend));
-				bicycle_t const bike(pos, bike_height, !dim, rgen.rand_bool()); // random dir, against the wall
-				if (is_placement_blocked(bike.bcube, blockers, house, blockers.size(), 0.0, 0))       continue; // no expand; check all blockers, inc. trashcan
-				if (!check_sphere_coll_building((pos + 0.5*bike_height*plus_z), radius, 0, house.ix)) continue; // *must* be next to an exterior wall; xy_only=0
-				// TODO: check ends for collisions with chimneys, AC units, fence gaps, etc.
-				if (get_building_door_pos_closest_to(house.ix, pos, door_pos, 1) && dist_xy_less_than(pos, door_pos, 1.0*bike_len)) continue; // close to door; inc_garage_door=1
-				bike_groups.add_obj(bike, bikes);
-				add_cube_to_colliders_and_blockers(bike.bcube, colliders, blockers);
-				break; // success
-			} // for n
-		}
 
 		// attempt place swimming pool; often unsuccessful
 		bool const placed_pool(add_divider && place_swimming_pool(plot, *i, house, dim, dir, shrink_dim, prev_blockers_end, hwidth, translate_dist, blockers, colliders, rgen));
@@ -870,6 +835,66 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 					break; // success
 				} // for n
 			}
+		}
+		// maybe place a trashcan next to the house
+		if (1) {
+			float const tc_height(0.18*city_params.get_nom_car_size().x), tc_radius(0.3*tc_height);
+
+			for (unsigned n = 0; n < 4; ++n) { // make some attempts to generate a valid trashcan location
+				bool tc_dim(0), tc_dir(0);
+				unsigned const house_side(rgen.rand() % 3); // any side but the front
+				if (house_side == 0) {tc_dim = dim; tc_dir = !dir;} // put it in the back yard
+				else {tc_dim = !dim; tc_dir = rgen.rand_bool();} // put it on a random side of the house
+				if (tc_radius > 0.25*house.get_sz_dim(!tc_dim)) continue; // house wall is too short - shouldn't happen in the normal case
+				float const wall_pos(house.d[tc_dim][tc_dir]);
+				point pos, door_pos;
+				pos.z = i->z2();
+				pos[ tc_dim] = wall_pos + (tc_dir ? 1.0 : -1.0)*1.75*tc_radius; // place near this wall of the house
+				pos[!tc_dim] = rgen.rand_uniform((house.d[!tc_dim][0] + tc_radius), (house.d[!tc_dim][1] - tc_radius));
+				trashcan_t const trashcan(pos, tc_radius, tc_height, 1); // is_cylin=1
+				point const center(pos + tc_radius*plus_z);
+				if (is_placement_blocked(trashcan.bcube, blockers, house, prev_blockers_end))   continue; // check blockers from prev step; no expand
+				if (is_placement_blocked_recent(trashcan.bcube, blockers, yard_blockers_start)) continue; // check prev blockers in this yard
+				if (check_sphere_coll_building(center, tc_radius, 0, house.ix))                 continue; // xy_only=0
+				point p_include(center);
+				p_include[tc_dim] = wall_pos - (tc_dir ? 1.0 : -1.0)*0.25*tc_radius; // slightly inside the wall
+				if (!check_sphere_coll_building(p_include, 0.0, 0, house.ix)) continue; // *must* be next to an exterior wall or fence; radius=0.0, xy_only=0
+				if (get_building_door_pos_closest_to(house.ix, pos, door_pos, 1) && dist_xy_less_than(pos, door_pos, 4.0*tc_radius)) continue; // close to door; inc_garage_door=1
+				trashcan_groups.add_obj(trashcan, trashcans);
+				add_cube_to_colliders_and_blockers(trashcan.bcube, colliders, blockers);
+				break; // success
+			} // for n
+		}
+		// maybe place a bike next to the house or on the porch or deck
+		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_BICYCLE) && rgen.rand_float() < 0.7) { // 70% of the time (not always successful)
+			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_BICYCLE)); // L, W, H
+			float const bike_height(1.3*sz_scale), bike_len(bike_height*sz.x/sz.z), bike_width(bike_height*sz.y/sz.z), wall_extend(0.5*bike_len);
+
+			for (unsigned n = 0; n < 4; ++n) { // make some attempts to generate a valid bike location
+				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // house wall dim/dir
+				if (bike_len > 0.5*house.get_sz_dim(!dim)) continue; // house wall is too short - shouldn't happen in the normal case
+				float const wall_pos(house.d[dim][dir]);
+				point pos, door_pos;
+				pos.z = i->z2();
+				pos[ dim] = wall_pos + (dir ? 1.0 : -1.0)*0.6*bike_width; // place near this wall of the house (with a small gap for the window sill and FP error)
+				pos[!dim] = rgen.rand_uniform((house.d[!dim][0] + wall_extend), (house.d[!dim][1] - wall_extend));
+				bicycle_t const bike(pos, bike_height, !dim, rgen.rand_bool()); // random dir, against the wall
+				if (is_placement_blocked(bike.bcube, blockers, house, prev_blockers_end))   continue; // check blockers from prev step; no expand
+				if (is_placement_blocked_recent(bike.bcube, blockers, yard_blockers_start)) continue; // check prev blockers in this yard
+				point const center(bike.bcube.get_cube_center()); // pos shifted up
+				point p_include(center);
+				p_include[dim] = wall_pos - (dir ? 1.0 : -1.0)*0.2*bike_width; // slightly inside the wall
+				if (!check_sphere_coll_building(p_include, 0.0, 0, house.ix)) continue; // *must* be next to an exterior wall or fence; radius=0.0, xy_only=0
+				point p_exclude[3] = {center, center, center}; // {middle, front, back}
+				for (unsigned d = 0; d < 2; ++d) {p_exclude[d+1][!dim] += (d ? 1.0 : -1.0)*0.5*(bike_len - bike_width);} // front and back
+				bool blocked(0);
+				for (unsigned d = 0; d < 3; ++d) {blocked |= check_sphere_coll_building(p_exclude[d], 0.5*bike_width, 0, house.ix);}
+				if (blocked) continue;
+				if (get_building_door_pos_closest_to(house.ix, pos, door_pos, 1) && dist_xy_less_than(pos, door_pos, 1.0*bike_len)) continue; // close to door; inc_garage_door=1
+				bike_groups.add_obj(bike, bikes);
+				add_cube_to_colliders_and_blockers(bike.bcube, colliders, blockers);
+				break; // success
+			} // for n
 		}
 	} // for i (sub_plots)
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_MAILBOX)) {
