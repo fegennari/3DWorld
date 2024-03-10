@@ -731,53 +731,59 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 
 	for (auto i = sub_plots.begin(); i != sub_plots.end(); ++i) { // populate each yard
 		// place plot dividers
+		float hwidth(0.0), translate_dist[2] = {0.0, 0.0};
 		unsigned const type(rgen.rand()%DIV_NUM_TYPES); // use a consistent divider type for all sides of this plot
-		if (type == DIV_CHAINLINK) continue; // chain link fence is not a primary divider - no divider for this plot; also, can't place a swimming pool here because it's not enclosed
-		// should we remove or move house fences for divided sub-plots? I'm not sure how that would actually be possible at this point; or maybe skip dividers if the house has a fence?
-		plot_divider_type_t const &pdt(plot_divider_types[type]);
-		float const hwidth(0.5*sz_scale*pdt.wscale), z2(i->z1() + sz_scale*pdt.hscale);
-		float const shrink_border(1.5*get_inner_sidewalk_width()); // needed for pedestrians to move along the edge of the plot; slightly larger to prevent collisions
-		float translate_dist[2] = {0.0, 0.0};
-		unsigned const prev_dividers_end(dividers.size());
-		cube_t place_area(plot);
-		place_area.expand_by_xy(-shrink_border);
+		// chain link fence is not a primary divider; also, can't place a swimming pool here because it's not enclosed
+		bool const add_divider(type != DIV_CHAINLINK);
 
-		for (unsigned dim = 0; dim < 2; ++dim) {
-			for (unsigned dir = 0; dir < 2; ++dir) {
-				float const div_pos(i->d[dim][dir]);
-				if (div_pos == plot.d[dim][dir]) continue; // sub-plot is against the plot border, don't need to add a divider
-				bool const back_of_plot(i->d[!dim][0] != plot.d[!dim][0] && i->d[!dim][1] != plot.d[!dim][1]); // back of the plot, opposite the street
-				unsigned const skip_dims(0); // can't make this (back_of_plot ? (1<<(1-dim)) : 0) because the edge may be showing at borders of different divider types
-				cube_t c(*i);
-				c.intersect_with_cube_xy(place_area);
-				c.z2() = z2;
-				set_wall_width(c, div_pos, hwidth, dim); // centered on the edge of the plot
+		if (add_divider) {
+			// should we remove or move house fences for divided sub-plots? I'm not sure how that would actually be possible at this point;
+			// or maybe skip dividers if the house has a fence?
+			plot_divider_type_t const &pdt(plot_divider_types[type]);
+			float const z2(i->z1() + sz_scale*pdt.hscale);
+			float const shrink_border(1.5*get_inner_sidewalk_width()); // needed for pedestrians to move along the edge of the plot; slightly larger to prevent collisions
+			unsigned const prev_dividers_end(dividers.size());
+			cube_t place_area(plot);
+			place_area.expand_by_xy(-shrink_border);
+			hwidth = 0.5*sz_scale*pdt.wscale;
 
-				if (dim == shrink_dim) {
-					translate_dist[dir] = (dir ? -1.0 : 1.0)*hwidth;
-					c.translate_dim(dim, translate_dist[dir]); // move inside the plot so that edges line up
-					// clip to the sides to remove overlap; may not line up with a neighboring divider of a different type/width, but hopefully okay
-					for (unsigned d = 0; d < 2; ++d) {
-						if (c.d[!dim][d] != plot.d[!dim][d]) {c.d[!dim][d] -= (d ? 1.0 : -1.0)*hwidth;}
+			for (unsigned dim = 0; dim < 2; ++dim) {
+				for (unsigned dir = 0; dir < 2; ++dir) {
+					float const div_pos(i->d[dim][dir]);
+					if (div_pos == plot.d[dim][dir]) continue; // sub-plot is against the plot border, don't need to add a divider
+					bool const back_of_plot(i->d[!dim][0] != plot.d[!dim][0] && i->d[!dim][1] != plot.d[!dim][1]); // back of the plot, opposite the street
+					unsigned const skip_dims(0); // can't make this (back_of_plot ? (1<<(1-dim)) : 0) because the edge may be showing at borders of different divider types
+					cube_t c(*i);
+					c.intersect_with_cube_xy(place_area);
+					c.z2() = z2;
+					set_wall_width(c, div_pos, hwidth, dim); // centered on the edge of the plot
+
+					if (dim == shrink_dim) {
+						translate_dist[dir] = (dir ? -1.0 : 1.0)*hwidth;
+						c.translate_dim(dim, translate_dist[dir]); // move inside the plot so that edges line up
+						// clip to the sides to remove overlap; may not line up with a neighboring divider of a different type/width, but hopefully okay
+						for (unsigned d = 0; d < 2; ++d) {
+							if (c.d[!dim][d] != plot.d[!dim][d]) {c.d[!dim][d] -= (d ? 1.0 : -1.0)*hwidth;}
+						}
 					}
-				}
-				else {
-					c.expand_in_dim(!dim, -0.001*hwidth); // fix for z-fighting
-				}
-				if (!back_of_plot) { // check for overlap of other plot dividers to the left and right
-					cube_t test_cube(c);
-					test_cube.expand_by_xy(4.0*hwidth); // expand so that adjacency counts as intersection
-					bool overlaps(0);
-
-					for (auto d = (dividers.begin()+dividers_start); d != (dividers.begin()+prev_dividers_end) && !overlaps; ++d) {
-						overlaps |= (d->dim == bool(dim) && test_cube.contains_pt_xy(d->bcube.get_cube_center()));
+					else {
+						c.expand_in_dim(!dim, -0.001*hwidth); // fix for z-fighting
 					}
-					if (overlaps) continue; // overlaps a previous divider, skip this one
-				}
-				divider_groups.add_obj(divider_t(c, type, dim, dir, skip_dims), dividers);
-				add_cube_to_colliders_and_blockers(c, colliders, blockers);
-			} // for dir
-		} // for dim
+					if (!back_of_plot) { // check for overlap of other plot dividers to the left and right
+						cube_t test_cube(c);
+						test_cube.expand_by_xy(4.0*hwidth); // expand so that adjacency counts as intersection
+						bool overlaps(0);
+
+						for (auto d = (dividers.begin()+dividers_start); d != (dividers.begin()+prev_dividers_end) && !overlaps; ++d) {
+							overlaps |= (d->dim == bool(dim) && test_cube.contains_pt_xy(d->bcube.get_cube_center()));
+						}
+						if (overlaps) continue; // overlaps a previous divider, skip this one
+					}
+					divider_groups.add_obj(divider_t(c, type, dim, dir, skip_dims), dividers);
+					add_cube_to_colliders_and_blockers(c, colliders, blockers);
+				} // for dir
+			} // for dim
+		} // end dividers
 
 		// place yard objects
 		if (!i->is_residential || i->is_park || i->street_dir == 0) continue; // not a residential plot along a road
@@ -836,9 +842,9 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		}
 
 		// attempt place swimming pool; often unsuccessful
-		bool const placed_pool(place_swimming_pool(plot, *i, house, dim, dir, shrink_dim, prev_blockers_end, hwidth, translate_dist, blockers, colliders, rgen));
+		bool const placed_pool(add_divider && place_swimming_pool(plot, *i, house, dim, dir, shrink_dim, prev_blockers_end, hwidth, translate_dist, blockers, colliders, rgen));
 
-		if (!placed_pool && building_obj_model_loader.is_model_valid(OBJ_MODEL_SWINGSET) && rgen.rand_float() < 0.9) { // 90% of the time
+		if (!placed_pool && building_obj_model_loader.is_model_valid(OBJ_MODEL_SWINGSET) && rgen.rand_float() < 0.8) { // 80% of the time
 			// can't place a pool; try a swingset instead
 			cube_t ss_area(*i);
 			ss_area.d[dim][dir] = house.d[dim][!dir]; // limit the swingset to the back yard
