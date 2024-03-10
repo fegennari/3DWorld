@@ -253,7 +253,7 @@ struct model_anim_t {
 	struct animation_t {
 		float ticks_per_sec=25.0, duration=1.0; // duration is in ticks
 		string name;
-		unordered_map<string, anim_data_t> anim_data; // per bone
+		unordered_map<unsigned, anim_data_t> anim_data; // per bone
 		animation_t(string const &name_="") : name(name_) {}
 	};
 	vector<animation_t> animations;
@@ -267,7 +267,7 @@ struct model_anim_t {
 	bool check_anim_wrapped(unsigned anim_id, float old_time, float new_time) const;
 	float get_anim_duration(unsigned anim_id) const;
 private:
-	xform_matrix apply_anim_transform(float anim_time, animation_t const &animation, anim_node_t const &node) const;
+	xform_matrix apply_anim_transform(float anim_time, animation_t const &animation, anim_node_t const &node, unsigned node_ix) const;
 public:
 	void blend_animations_simple(unsigned anim_id1, unsigned anim_id2, float blend_factor, float cur_time1, float cur_time2);
 	void blend_animations(unsigned anim_id1, unsigned anim_id2, float blend_factor, float delta_time, float &cur_time1, float &cur_time2);

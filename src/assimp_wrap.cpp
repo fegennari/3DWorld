@@ -72,8 +72,8 @@ vector3d model_anim_t::calc_interpolated_scale(float anim_time, anim_data_t cons
 	} // for i
 	return A.scale.back().v; // return last frame if we ran off the end (duration was wrong)
 }
-xform_matrix model_anim_t::apply_anim_transform(float anim_time, animation_t const &animation, anim_node_t const &node) const {
-	auto it(animation.anim_data.find(node.name)); // found about half the time
+xform_matrix model_anim_t::apply_anim_transform(float anim_time, animation_t const &animation, anim_node_t const &node, unsigned node_ix) const {
+	auto it(animation.anim_data.find(node_ix)); // found about half the time
 	if (it == animation.anim_data.end()) {return node.transform;} // defaults to node transform
 	anim_data_t const &A(it->second);
 	xform_matrix node_transform(glm::translate(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_position(anim_time, A))));
@@ -84,7 +84,7 @@ xform_matrix model_anim_t::apply_anim_transform(float anim_time, animation_t con
 void model_anim_t::transform_node_hierarchy_recur(float anim_time, animation_t const &animation, unsigned node_ix, xform_matrix const &parent_transform) {
 	assert(node_ix < anim_nodes.size());
 	anim_node_t const &node(anim_nodes[node_ix]);
-	xform_matrix const node_transform(apply_anim_transform(anim_time, animation, node));
+	xform_matrix const node_transform(apply_anim_transform(anim_time, animation, node, node_ix));
 	xform_matrix const global_transform(parent_transform * node_transform);
 
 	if (node.bone_index >= 0) {
@@ -148,8 +148,8 @@ void model_anim_t::get_blended_bone_transforms(float anim_time1, float anim_time
 {
 	assert(node_ix < anim_nodes.size());
 	anim_node_t const &node(anim_nodes[node_ix]);
-	xform_matrix const node_transform1(apply_anim_transform(anim_time1, animation1, node));
-	xform_matrix const node_transform2(apply_anim_transform(anim_time2, animation2, node));
+	xform_matrix const node_transform1(apply_anim_transform(anim_time1, animation1, node, node_ix));
+	xform_matrix const node_transform2(apply_anim_transform(anim_time2, animation2, node, node_ix));
 	// blend two matrices
 	glm::quat const rot0(glm::quat_cast(node_transform1)), rot1(glm::quat_cast(node_transform2));
 	glm::quat const final_rot(glm::slerp(rot0, rot1, blend_factor));
@@ -368,7 +368,7 @@ class file_reader_assimp {
 			aiAnimation const *const animation(scene->mAnimations[a]);
 			aiNodeAnim  const *const node_anim(find_node_anim(animation, node_name));
 			if (!node_anim) continue; // no animation for this node
-			model_anim_t::anim_data_t& A(model_anim.animations[a].anim_data[node_name]);
+			model_anim_t::anim_data_t& A(model_anim.animations[a].anim_data[node_ix]);
 			A.init(node_anim->mNumPositionKeys, node_anim->mNumRotationKeys, node_anim->mNumScalingKeys);
 			
 			for (unsigned i = 0; i < node_anim->mNumPositionKeys; i++) { // position
