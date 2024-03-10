@@ -193,14 +193,14 @@ bool try_place_obj(cube_t const &plot, vect_cube_t &blockers, rand_gen_t &rgen, 
 	}
 	return 0;
 }
-void place_tree(point const &pos, float radius, int ttype, vect_cube_t &colliders, vector<point> &tree_pos, bool allow_bush, bool add_bush, bool is_sm_tree, bool has_planter) {
+void place_tree(point const &pos, float radius, int ttype, vect_cube_t &colliders, vector<point> *tree_pos, bool allow_bush, bool add_bush, bool is_sm_tree, bool has_planter) {
 	tree_placer.add(pos, 0, ttype, allow_bush, add_bush, is_sm_tree); // use same tree type
 	// use 15% of the placement radius for collision (trunk + planter), smaller if no planter
 	cube_t bcube;
 	bcube.set_from_sphere(pos, (has_planter ? 0.15 : 0.05)*radius);
 	bcube.z2() += max(radius, 0.25f*city_params.road_width); // increase cube height; make sure it's taller than people
 	colliders.push_back(bcube);
-	tree_pos.push_back(pos);
+	if (tree_pos != nullptr) {tree_pos->push_back(pos);}
 }
 void resize_blockers_for_trees(vect_cube_t &blockers, unsigned six, unsigned eix, float resize_amt) {
 	float const height_thresh(1.5*city_params.get_nom_car_size().z);
@@ -240,7 +240,7 @@ void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t
 		point pos;
 		if (!try_place_obj(plot, blockers, rgen, (spacing + bldg_extra_radius), (radius - bldg_extra_radius), 10, pos)) continue; // 10 tries per tree, extra spacing for palm trees
 		// size is randomly selected by the tree generator using default values; allow bushes in parks
-		place_tree(pos, radius, ttype, colliders, tree_pos, allow_bush, add_bush, is_sm_tree, has_planter);
+		place_tree(pos, radius, ttype, colliders, &tree_pos, allow_bush, add_bush, is_sm_tree, has_planter);
 		if (plot.is_park) continue; // skip row logic and just place trees randomly throughout the park
 		// now that we're here, try to place more trees at this same distance from the road in a row
 		bool const dim(min((pos.x - plot.x1()), (plot.x2() - pos.x)) < min((pos.y - plot.y1()), (plot.y2() - pos.y)));
@@ -251,7 +251,7 @@ void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t
 			pos[dim] += step;
 			if (pos[dim] < plot.d[dim][0]+radius || pos[dim] > plot.d[dim][1]-radius) break; // outside place area
 			if (!check_pt_and_place_blocker(pos, blockers, (spacing + bldg_extra_radius), (spacing - bldg_extra_radius))) break; // placement failed
-			place_tree(pos, radius, ttype, colliders, tree_pos, allow_bush, add_bush, is_sm_tree, has_planter); // use same tree type
+			place_tree(pos, radius, ttype, colliders, &tree_pos, allow_bush, add_bush, is_sm_tree, has_planter); // use same tree type
 		} // for n
 	} // for n
 	resize_blockers_for_trees(blockers, buildings_end, input_blockers_end, non_buildings_overlap); // undo initial expand
