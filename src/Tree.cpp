@@ -1503,7 +1503,7 @@ bool adjust_tree_zval(point &pos, int size, int type, bool create_bush, tile_t c
 //gen_tree(pos, size, ttype>=0, calc_z, 0, 1);
 //gen_tree(pos, 0, -1, 1, 1, 0);
 void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed, rand_gen_t &rgen,
-	float height_scale, float br_scale_mult, float nl_scale, bool has_4th_branches, bool allow_bushes)
+	float height_scale, float br_scale_mult, float nl_scale, bool has_4th_branches, bool allow_bushes, bool force_bushes)
 {
 	//assert(calc_z || user_placed);
 	tree_center      = pos;
@@ -1532,7 +1532,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 	}
 	else {
 		type = ((ttype < 0) ? rgen.rand() : ttype) % NUM_TREE_TYPES; // maybe should be an error if > NUM_TREE_TYPES
-		bool const create_bush(allow_bushes && rgen.rand_probability(tree_types[type].bush_prob));
+		bool const create_bush(force_bushes ? 1 : (allow_bushes && rgen.rand_probability(tree_types[type].bush_prob)));
 		if (create_bush) {type = (type + 1) % NUM_TREE_TYPES;} // mix up the tree types so that bushes stand out from trees
 		tree_type const &treetype(tree_types[type]);
 		UNROLL_3X(tree_color[i_] = 1.0f + treetype.branch_color_var*color_var[i_];)
@@ -2187,12 +2187,12 @@ void tree_cont_t::add_new_tree(rand_gen_t &rgen, int &ttype) {
 bool tree_placer_t::have_small_trees() const {return (world_mode == WMODE_INF_TERRAIN && !tree_placer.blocks   .empty());}
 bool tree_placer_t::have_decid_trees() const {return (world_mode == WMODE_INF_TERRAIN && !tree_placer.sm_blocks.empty());}
 
-void tree_placer_t::add(point const &pos, float size, int type, bool allow_bush, bool is_sm_tree) {
+void tree_placer_t::add(point const &pos, float size, int type, bool allow_bush, bool add_bush, bool is_sm_tree) {
 	if ((is_sm_tree ? sm_blocks : blocks).empty()) {begin_block(is_sm_tree);} // begin a new block in case user isn't creating the blocks themselves
 	tree_block &block((is_sm_tree ? sm_blocks : blocks).back());
 	if (block.trees.empty()) {block.bcube.set_from_point(pos);} else {block.bcube.union_with_pt(pos);}
 	(is_sm_tree ? sm_bcube : bcube).assign_or_union_with_pt(pos);
-	block.trees.emplace_back(pos, size, type, allow_bush);
+	block.trees.emplace_back(pos, size, type, allow_bush, add_bush);
 }
 
 void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &center, float radius, bool is_square,
@@ -2220,7 +2220,8 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 					int ttype(t->type);
 					if (ttype >= 0) {ttype %= NUM_TREE_TYPES;} // make sure it maps to a valid tree type if specified
 					add_new_tree(rgen, ttype);
-					back().gen_tree(pos, int(t->size), ttype, 1, 1, 0, rgen, 1.0, 1.0, 1.0, tree_4th_branches, t->allow_bush); // Note: can't be user placed + instanced
+					// Note: can't be user placed + instanced
+					back().gen_tree(pos, int(t->size), ttype, 1, 1, 0, rgen, 1.0, 1.0, 1.0, tree_4th_branches, t->allow_bush, t->force_bush);
 				} // for t
 			} // for b
 		}

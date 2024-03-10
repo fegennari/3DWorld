@@ -342,7 +342,7 @@ public:
 	void enable_clip_cube(cube_t const &cc) {clip_cube = cc; use_clip_cube = 1;}
 	void bind_to_td(tree_data_t *td);
 	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed, rand_gen_t &rgen,
-		float height_scale=1.0, float br_scale_mult=1.0, float nl_scale=1.0, bool has_4th_branches=0, bool allow_bushes=1);
+		float height_scale=1.0, float br_scale_mult=1.0, float nl_scale=1.0, bool has_4th_branches=0, bool allow_bushes=1, bool force_bushes=0);
 	void add_tree_collision_objects();
 	void remove_collision_objects();
 	bool check_sphere_coll(point &center, float radius) const;
@@ -447,8 +447,8 @@ struct tree_placer_t {
 		point pos;
 		float size;
 		int type;
-		bool allow_bush;
-		tree_ref(point const &p, float sz, int t, bool ab) : pos(p), size(sz), type(t), allow_bush(ab) {}
+		bool allow_bush, force_bush;
+		tree_ref(point const &p, float sz, int t, bool ab, bool fb) : pos(p), size(sz), type(t), allow_bush(ab), force_bush(fb) {}
 	};
 	struct tree_block {
 		vector<tree_ref> trees;
@@ -461,7 +461,7 @@ struct tree_placer_t {
 	bool have_small_trees() const;
 	bool have_decid_trees() const;
 	void begin_block(bool is_sm_tree) {(is_sm_tree ? sm_blocks : blocks).push_back(tree_block());}
-	void add(point const &pos, float size, int type, bool allow_bush, bool is_sm_tree);
+	void add(point const &pos, float size, int type, bool allow_bush, bool add_bush, bool is_sm_tree);
 	void clear() {blocks.clear(); sm_blocks.clear(); bcube = sm_bcube = cube_t();}
 };
 
