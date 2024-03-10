@@ -1,3 +1,5 @@
+uniform int num_lights=0;
+
 in vec3 normal;
 in vec4 epos;
 

@@ -1,3 +1,4 @@
+uniform int num_lights=0;
 uniform sampler3D ao_tex, shadow_tex;
 
 //in vec3 vpos, eye_norm, normal; // come from bump_map.part.frag and triplanar_bump_map.part.frag
