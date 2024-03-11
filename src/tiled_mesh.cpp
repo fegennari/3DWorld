@@ -959,7 +959,7 @@ void tile_t::setup_shadow_maps(tile_shadow_map_manager &smap_manager, bool clean
 	if (smap_dist_scale < 1.0) { // allocate new shadow maps or change shadow map LOD levels
 		unsigned const max_lod_level(calc_max_smap_lod());
 		float const lod_level_f(min(5.0f*smap_dist_scale, float(max_lod_level))); // clamp to max supported LOD
-		unsigned lod_level(floor(lod_level_f)), lod_level_reduce(floor(lod_level_f - 0.1)); // add hysteresis
+		unsigned lod_level(floor(lod_level_f)), lod_level_reduce(floor(max(0.0f, (lod_level_f - 0.1f)))); // add hysteresis
 		
 		// for very large shadow maps, limit LOD 0 to only the tile containing the camera
 		if (shadow_map_sz >= 8192 && !get_mesh_bcube().contains_pt_xy(get_camera_pos())) {
