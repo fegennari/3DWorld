@@ -866,13 +866,14 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				break; // success
 			} // for n
 		}
-		// maybe place a bike next to the house or on the porch or deck
+		// maybe place a bike next to the house wall or fence;
+		// it would be nice if we could place a bike lying down, but the current model drawing code only supports rotations about the Z axis in the XY plane
 		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_BICYCLE) && rgen.rand_float() < 0.6) { // 60% of the time (not always successful)
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_BICYCLE)); // L, W, H
 			float const bike_height(1.3*sz_scale), bike_len(bike_height*sz.x/sz.z), bike_width(bike_height*sz.y/sz.z), wall_extend(0.5*bike_len);
 
 			for (unsigned n = 0; n < 4; ++n) { // make some attempts to generate a valid bike location
-				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // house wall dim/dir
+				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random house wall dim/dir
 				if (bike_len > 0.5*house.get_sz_dim(!dim)) continue; // house wall is too short - shouldn't happen in the normal case
 				float const wall_pos(house.d[dim][dir]);
 				point pos, door_pos;

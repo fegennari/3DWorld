@@ -40,7 +40,7 @@ bool city_obj_t::proc_sphere_coll(point &pos_, point const &p_last, float radius
 
 vector3d oriented_city_obj_t::get_orient_dir() const {
 	vector3d orient(zero_vector);
-	orient[dim] = (dir ? 1.0 : -1.0);
+	orient[dim] = (dir ? 1.0 : -1.0); // here dim is assumed to be 0=x or 1=y; 2=z has so far not been needed
 	return orient;
 }
 
@@ -61,6 +61,7 @@ model_city_obj_t::model_city_obj_t(point const &pos_, float height, bool dim_, b
 	pos.z += 0.5*height; // pos is on the ground, while we want the bsphere to be at the center
 	bcube.set_from_point(pos);
 	bcube.expand_by(0.5*expand);
+	set_bsphere_from_bcube(); // recompute bsphere from bcube
 }
 void model_city_obj_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
