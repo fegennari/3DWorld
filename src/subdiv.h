@@ -30,7 +30,8 @@ public:
 	void set_pointer_stride(unsigned ndiv_);
 	void free_data();
 	point    **get_points() const {return points;}
-	vector3d **get_norms()  const {return norms; }
+	vector3d **get_norms () const {return norms ;}
+	unsigned get_ndiv    () const {return ndiv  ;}
 };
 
 
