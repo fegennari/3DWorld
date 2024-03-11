@@ -962,6 +962,15 @@ template <typename T> void tri_strip_push(vector<T> &v) {
 }
 
 
+class draw_call_counter {
+	std::string name;
+	unsigned start_num_draw_calls;
+public:
+	draw_call_counter(std::string const &name_) : name(name_), start_num_draw_calls(num_frame_draw_calls) {}
+	~draw_call_counter() {std::cout << name << ": " << (num_frame_draw_calls - start_num_draw_calls) << std::endl;}
+};
+
+
 template<typename T> struct triangle_t {
 
 	T pts[3];
