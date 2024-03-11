@@ -516,8 +516,13 @@ void car_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool 
 	//set_enable_normal_map(use_model3d_bump_maps()); // used only for some car models, and currently doesn't work
 	ao_draw_state_t::pre_draw(xlate_, use_dlights_, shadow_only_);
 	select_texture(WHITE_TEX);
+	last_smap_tile_id_valid = 0;
 }
 
+void car_draw_state_t::post_draw() {
+	qbds[1].draw_and_clear(); // draw any leftover unflushed shadowed geometry using the last shadow map that was bound
+	ao_draw_state_t::post_draw();
+}
 void car_draw_state_t::draw_unshadowed() {
 	qbds[0].draw_and_clear();
 	ao_draw_state_t::draw_unshadowed();
@@ -571,7 +576,14 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 	point const center_xlated(center + xlate);
 	if (!shadow_only && !dist_less_than(camera_pdu.pos, center_xlated, 0.5*draw_tile_dist)) return; // check draw distance, dist_scale=0.5
 	if (!camera_pdu.sphere_visible_test(center_xlated, 0.5f*car.height*CAR_RADIUS_SCALE) || !camera_pdu.cube_visible(car.bcube + xlate)) return;
-	begin_tile(center); // enable shadows
+	uint64_t const tile_id(get_tile_id_containing_point_no_xyoff(center_xlated));
+		
+	if (!last_smap_tile_id_valid || tile_id != last_smap_tile_id) { // new tile shadow map
+		qbds[1].draw_and_clear(); // draw previous shadowed cars with the previous tile's shadow map
+		begin_tile(center); // maybe enable shadows for the new tile
+		last_smap_tile_id = tile_id;
+		last_smap_tile_id_valid = 1;
+	}
 	colorRGBA const &color(car.get_color());
 	float const dist_val(p2p_dist(camera_pdu.pos, center_xlated)/draw_tile_dist);
 	bool const draw_top(dist_val < 0.25 && !car.is_truck), dim(car.dim), dir(car.dir);
@@ -594,7 +606,6 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 		color_wrapper cw(color);
 		draw_cube(qbd, cw, center, pb, 1, (dim^dir)); // bottom (skip_bottom=1)
 		if (draw_top) {draw_cube(qbd, cw, center, pt, 1, (dim^dir));} // top (skip_bottom=1)
-		if (emit_now) {qbds[1].draw_and_clear();} // shadowed (only emit when tile changes?)
 	}
 	if (shadow_only) return; // shadow pass - done
 	if (car.cur_road_type == TYPE_BUILDING) return; // in a building, nothing else to draw

@@ -665,12 +665,15 @@ class car_draw_state_t : public ao_draw_state_t { // and trucks and helicopters
 	quad_batch_draw qbds[2]; // unshadowed, shadowed
 	car_model_loader_t &car_model_loader;
 	helicopter_model_loader_t &helicopter_model_loader;
+	uint64_t last_smap_tile_id=0;
+	bool last_smap_tile_id_valid=0;
 public:
 	car_draw_state_t(car_model_loader_t &car_model_loader_, helicopter_model_loader_t &helicopter_model_loader_) :
 		car_model_loader(car_model_loader_), helicopter_model_loader(helicopter_model_loader_) {}
 	static float get_headlight_dist();
 	colorRGBA get_headlight_color(car_t const &car) const;
 	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_);
+	virtual void post_draw();
 	virtual void draw_unshadowed();
 	void add_car_headlights(vector<car_t> const &cars, vector3d const &xlate_, cube_t &lights_bcube);
 	static void gen_car_pts(car_t const &car, bool include_top, point pb[8], point pt[8]);
