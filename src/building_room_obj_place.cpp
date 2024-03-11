@@ -818,7 +818,7 @@ bool building_t::replace_light_with_ceiling_fan(rand_gen_t &rgen, cube_t const &
 	fan.expand_by_xy(0.5*diameter);
 	fan.z1() -= height;
 	if (!avoid.is_all_zeros() && avoid.intersects(fan)) return 0; // check for closet intersection
-	light.translate_dim(2, -0.9*height); // move near the bottom of the ceiling fan (before invalidating with objs.emplace_back())
+	light.translate_dim(2, -0.895*height); // move near the bottom of the ceiling fan (before invalidating with objs.emplace_back())
 	light.flags |= RO_FLAG_INVIS;   // don't draw the light itself; assume the light is part of the bottom of the fan instead
 	light.flags |= RO_FLAG_HANGING; // don't draw upward facing light
 	unsigned flags(RO_FLAG_NOCOLL);

@@ -1430,7 +1430,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 			(draw_bot || c.dir), (draw_bot || !c.dir), 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv);
 	}
 	// add the label
-	// Note: we could add a bottom sphere to make it a capsule, then translate below the surface in -z to flatten the bottom
+	// Note: we could add a bottom sphere to make it a capsule, then translate below the surface in -z to flatten the bottom; it wouldn't work for hoizontal bottles though
 	body.expand_in_dim(dim1, 0.03*radius); // expand slightly in radius
 	body.expand_in_dim(dim2, 0.03*radius); // expand slightly in radius
 	body.d[dim][c.dir] += dir_sign*0.24*length; body.d[dim][!c.dir] -= dir_sign*0.12*length; // shrink in length
@@ -1848,7 +1848,7 @@ void building_room_geom_t::add_ceiling_fan_light(room_object_t const &fan, room_
 	cube_t light_bcube;
 	light_bcube.set_from_sphere(light.get_cube_center(), 0.035*(fan.dx() + fan.dy()));
 	light_bcube.expand_in_dim(2, -0.4*light_bcube.dz()); // shrink in Z
-	mats_lights.get_material(tp, 0).add_sphere_to_verts(light_bcube, apply_light_color(fan)); // no shadows
+	mats_lights.get_material(tp, 0).add_sphere_to_verts(light_bcube, apply_light_color(fan), 0, plus_z); // no shadows, bottom hemisphere
 }
 
 float get_railing_height(room_object_t const &c) {
@@ -2066,7 +2066,9 @@ void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) {
 		if (!draw_joints[d]) continue;
 		point center(c.get_cube_center());
 		center[dim] = c.d[dim][d]; // move to one end along the cylinder
-		mat.add_sphere_to_verts(center, vector3d(radius, radius, radius), color);
+		vector3d skip_hemi_dir;
+		skip_hemi_dir[dim] = (d ? -1.0 : 1.0); // use the correct hemisphere
+		mat.add_sphere_to_verts(center, vector3d(radius, radius, radius), color, 0, skip_hemi_dir); // low_detail=0
 	}
 }
 
@@ -3225,7 +3227,7 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 }
 
 void add_pipe_with_bend(rgeom_mat_t &mat, colorRGBA const &color, point const &bot_pt, point const &top_pt, point const &bend, unsigned ndiv, float radius, bool draw_ends) {
-	mat.add_sphere_to_verts(bend, vector3d(radius, radius, radius), color, (ndiv == 16)); // round part, low detail if ndiv==16
+	mat.add_sphere_to_verts(bend, vector3d(radius, radius, radius), color, (ndiv == 16), -plus_z); // round part, low detail if ndiv==16, top hemisphere (always bends down)
 	mat.add_cylin_to_verts (bot_pt, bend, radius, radius, color, draw_ends, 0, 0, 0, 1.0, 1.0, 0, ndiv); // vertical
 	mat.add_cylin_to_verts (top_pt, bend, radius, radius, color, draw_ends, 0, 0, 0, 1.0, 1.0, 0, ndiv); // horizontal
 }
