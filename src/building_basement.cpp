@@ -1111,7 +1111,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 					pf.color = color;
 					pf.d[p.dim][0] = wall.d[p.dim][0] - fitting_len;
 					pf.d[p.dim][1] = wall.d[p.dim][1] + fitting_len;
-					expand_cube_except_in_dim(pf, fitting_expand, p.dim); // expand slightly
+					expand_cube_except_in_dim(pf, 0.9*fitting_expand, p.dim); // expand slightly, less than regular fittings to prevent Z-fighting when overlapped near ends
 					objs.push_back(pf);
 				} // for wall
 			} // for type
