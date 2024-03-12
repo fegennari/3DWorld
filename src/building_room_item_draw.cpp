@@ -1940,9 +1940,11 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (player_in_building_or_doorway && !shadow_only) {
 		bool const draw_fish(have_fish_model());
 		float const ao_z_off(1.1*building.get_flooring_thick()); // slightly above rugs and flooring
+		float const ao_zmin(camera_bs.z - 2.0*floor_spacing);
 		static quad_batch_draw ao_qbd;
 		fishtank_manager.next_frame(building);
 		auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
+		point pts[4];
 
 		for (auto i = objs.begin(); i != objs_end; ++i) {
 			if (i->type == TYPE_KSINK || i->type == TYPE_BRSINK) { // TYPE_SINK is handled above
@@ -1959,19 +1961,27 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				bool const visible(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate));
 				fishtank_manager.register_fishtank(*i, visible);
 			}
-			if (i->z1() < camera_bs.z) { // camera not below this object
+			if (i->z1() < camera_bs.z && i->z1() > ao_zmin) { // camera not below or too far above this object
 				float const ao_shadow(get_ao_shadow(*i, enable_indir));
 
 				if (ao_shadow > 0.0) { // add AO shadow quad on the floor below the object
 					if (!is_rotated && !camera_pdu.cube_visible(*i + xlate)) continue; // VFC - may not help much
 					float rscale(0.5 + 0.5*(1.0 - ao_shadow)); // 0.5 will be the size of the object; dense shadow is sharper/smaller radius
 					if (i->type == TYPE_CASHREG || i->type == TYPE_PARK_SPACE) {rscale *= 0.75;} // bcube is larger than it should be for cash registers and parked cars
-					point pts[4];
 					set_z_plane_rect_pts(point(i->xc(), i->yc(), (i->z1() + ao_z_off)), rscale*i->dx(), rscale*i->dy(), pts);
 					ao_qbd.add_quad_pts(pts, colorRGBA(0, 0, 0, ao_shadow), plus_z);
 				}
 			}
 		} // for i
+		for (person_t const &p : building.interior->people) {
+			if (p.is_on_stairs) continue; // AO shadows may look wrong on stairs
+			cube_t const pbc(p.get_bcube());
+			if (pbc.z1() > camera_bs.z || pbc.z1() < ao_zmin) continue; // camera below or too far above, skip
+			if (!is_rotated && !camera_pdu.cube_visible(pbc + xlate)) continue; // VFC - may not help much
+			set_z_plane_rect_pts(point(p.pos.x, p.pos.y, (pbc.z1() + ao_z_off)), 0.4*p.radius, 0.4*p.radius, pts);
+			ao_qbd.add_quad_pts(pts, colorRGBA(0, 0, 0, 0.4), plus_z);
+		}
+		// Note: animals are generally too small to have AO shadows
 		lava_lamp_draw.draw_and_clear(s);
 		if (!reflection_pass) {lava_lamp_draw.next_frame();}
 		fishtank_manager.end_fishtanks();
