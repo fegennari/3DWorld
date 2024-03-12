@@ -313,6 +313,7 @@ class vbo_ring_buffer_t : public vbo_wrap_t {
 public:
 	vbo_ring_buffer_t(unsigned init_size_, bool is_index_=0) : init_size(init_size_), size(init_size), pos(0), is_index(is_index_) {}
 	void clear() {vbo_wrap_t::clear(); size = init_size; pos = 0;}
+	unsigned get_alloced_size() const {return (vbo_valid() ? size : 0);}
 
 	template<typename T> void *add_verts_bind_vbo(vector<T> const &v) {
 		assert(!v.empty());

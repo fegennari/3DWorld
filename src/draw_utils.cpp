@@ -205,6 +205,8 @@ void clear_vbo_ring_buffer() {
 	vbo_ring_buffer[1].clear();
 }
 
+unsigned get_vbo_ring_buffers_size() {return (vbo_ring_buffer[0].get_alloced_size() + vbo_ring_buffer[1].get_alloced_size());}
+
 void const *get_dynamic_vbo_ptr(void const *const verts, unsigned size_bytes) {
 	assert(verts != NULL && size_bytes > 0);
 
@@ -812,13 +814,13 @@ class quad_ix_buffer_t {
 	}
 public:
 	quad_ix_buffer_t() : ivbo_16(0), ivbo_32(0), size_16(0), size_32(0) {}
-	
+	unsigned get_alloced_size() const {return (size_16*sizeof(unsigned short) + size_32*sizeof(unsigned));}
+
 	void free_context() {
 		delete_and_zero_vbo(ivbo_16);
 		delete_and_zero_vbo(ivbo_32);
 		size_16 = size_32 = 0;
 	}
-
 	bool bind_quads_as_tris_ivbo(unsigned num_quad_verts) {
 		assert((num_quad_verts & 3) == 0); // must be a multiple of 4
 		unsigned const num_tri_verts(6*(num_quad_verts/4));
@@ -832,18 +834,12 @@ public:
 			cur_size = max(96U, max(num_tri_verts, 2U*cur_size)); // at least double
 		}
 		assert(num_tri_verts <= cur_size);
-
-		if (use_32_bit) { // use 32-bit verts
-			ensure_quad_ixs<unsigned>(ivbo, cur_size);
-		}
-		else { // use 16-bit verts
-			ensure_quad_ixs<unsigned short>(ivbo, cur_size);
-		}
+		if (use_32_bit) {ensure_quad_ixs<unsigned      >(ivbo, cur_size);} // use 32-bit verts
+		else            {ensure_quad_ixs<unsigned short>(ivbo, cur_size);} // use 16-bit verts
 		assert(ivbo != 0);
 		bind_vbo(ivbo, 1);
 		return use_32_bit;
 	}
-
 	void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert, unsigned num_instances) { // # vertices
 		if (num_quad_verts == 0) return; // nothing to do
 		assert((num_quad_verts & 3) == 0 && (start_quad_vert & 3) == 0); // must be a multiple of 4
@@ -864,6 +860,7 @@ public:
 
 quad_ix_buffer_t quad_ix_buffer; // singleton
 
+unsigned get_quad_ix_buffer_size () {return quad_ix_buffer.get_alloced_size();}
 void clear_quad_ix_buffer_context() {quad_ix_buffer.free_context();}
 void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert, unsigned num_instances) {
 	quad_ix_buffer.draw_quads_as_tris(num_quad_verts, start_quad_vert, num_instances);

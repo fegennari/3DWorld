@@ -2549,6 +2549,8 @@ bool tile_draw_t::can_have_reflection(tile_t const *const tile, tile_set_t &tile
 
 unsigned get_building_models_gpu_mem();
 unsigned get_dlights_smap_gpu_mem();
+unsigned get_vbo_ring_buffers_size();
+unsigned get_quad_ix_buffer_size();
 
 uint64_t tile_draw_t::show_debug_stats(bool calc_mem_only) const {
 	unsigned num_trees(0), num_smaps(0);
@@ -2568,13 +2570,15 @@ uint64_t tile_draw_t::show_debug_stats(bool calc_mem_only) const {
 	unsigned const building_mem(get_buildings_gpu_mem_usage());
 	unsigned const models_mem(get_city_model_gpu_mem() + get_loaded_models_gpu_mem() + get_building_models_gpu_mem());
 	unsigned const frame_buf_mem(13*window_width*window_height); // RGB8 (as 32 bits?) front buffer + RGB8 back buffer + 32-bit depth buffer + 8 bit stencil buffer
+	unsigned const ring_buf_mem(get_vbo_ring_buffers_size()), quad_ix_buf_mem(get_quad_ix_buffer_size()); // these should be small (8/16MB, ~5MB)
 
 	if (vbo) {
 		unsigned const tile_size(get_tile_size());
 		mem += 2ULL*tile_size*(tile_size+1ULL)*sizeof(point);
 		for (unsigned i = 0; i < NUM_LODS; ++i) {mem += 4ULL*(tile_size>>i)*(tile_size>>i)*sizeof(unsigned);} // approximate
 	}
-	uint64_t const tot_mem(mem + dtree_mem + ptree_mem + grass_mem + smap_free_list_mem + dlights_smap_mem + texture_mem + building_mem + models_mem + frame_buf_mem + room_geom_mem);
+	uint64_t const tot_mem(mem + dtree_mem + ptree_mem + grass_mem + smap_free_list_mem + dlights_smap_mem + texture_mem + building_mem + models_mem +
+		frame_buf_mem + room_geom_mem + ring_buf_mem + quad_ix_buf_mem);
 	if (calc_mem_only) return tot_mem;
 
 	cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees drawn: " << num_trees << ", shadow maps: " << num_smaps
