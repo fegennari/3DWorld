@@ -4583,15 +4583,23 @@ void building_room_geom_t::add_lava_lamp(room_object_t const &c) {
 	metal_mat.add_vcylin_to_verts(base_bot, color, 0, 0, 0, 0, 1.0, 0.5); // draw sides
 	metal_mat.add_vcylin_to_verts(base_top, color, 0, 0, 0, 0, 0.5, 1.0); // draw sides
 	metal_mat.add_vcylin_to_verts(top,      color, 0, 1, 0, 0, 0.5, 0.3); // draw sides and top
-	// draw center part top and bottom surfaces
+	// the lava interior part is drawn elsewhere since it's dynamic, but it doesn't cast a shadow, and it's not visible from outside the house through a window;
+	// so draw it here as an inverted truncated cone with a reversed winding order so that it's always behind the interior billboard quad with the magic shader;
+	// it must be drawn twice, first for the shadow map (since emissive materials don't cast shadows), then again with the emissive material for viewing outside the house
+	colorRGBA const lit_color(apply_light_color(c, colorRGBA(1.0, 0.99, 0.8)*(c.is_light_on() ? 1.0 : 0.5)));
+	// draw shadow casting inverted geometry
+	rgeom_mat_t &back_mat(get_untextured_material(1, 0, 1)); // shadowed, small
+	unsigned const ixs1_start(back_mat.indices.size());
+	back_mat.add_vcylin_to_verts(center, lit_color, 1, 1, 0, 0, 1.0, 0.5);
+	reverse(back_mat.indices.begin()+ixs1_start, back_mat.indices.end()); // reverse the winding order to swap which sides are drawn
+	// draw center part emissive inverted geometry; should be drawn over the previous cylinder
 	tid_nm_pair_t tp;
 	tp.emissive = 1.0; // always emissive, to match the shader
-	rgeom_mat_t &mat(get_material(tp, 1, 0, 1));
-	colorRGBA const lit_color(apply_light_color(c, colorRGBA(1.0, 0.99, 0.8)*(c.is_light_on() ? 1.0 : 0.5)));
-	unsigned const vix_start(mat.itri_verts.size());
-	mat.add_vcylin_to_verts(center, lit_color, 1, 1, 0, 1, 1.0, 0.5, 1.0, 1.0, 1); // shadowed, small, no sides, invert top/bottom
+	rgeom_mat_t &mat(get_material(tp, 0, 0, 1)); // unshadowed, small; emissive materials can't cast shadows
+	unsigned const vix_start(mat.itri_verts.size()), ixs2_start(mat.indices.size());
+	mat.add_vcylin_to_verts(center, lit_color, 1, 1, 0, 0, 1.0, 0.5); // draw sides, top, and bottom
+	reverse(mat.indices.begin()+ixs2_start, mat.indices.end()); // reverse the winding order to swap which sides are drawn
 	for (auto i = mat.itri_verts.begin()+vix_start; i != mat.itri_verts.end(); ++i) {i->set_norm(-plus_z);} // normals point down
-	// lava part is drawn elswhere since it's dynamic, but it doesn't cast a shadow
 }
 
 void building_room_geom_t::add_debug_shape(room_object_t const &c) {
