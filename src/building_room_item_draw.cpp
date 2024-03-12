@@ -245,9 +245,10 @@ void rgeom_mat_t::add_sphere_to_verts(point const &center, vector3d const &size,
 	vector<vert_norm_comp_tc> &vncs (cached_vncs [low_detail]);
 	vector<unsigned>          &ixs  (cached_ixs  [low_detail]);
 	bool const draw_hemisphere(skip_hemi_dir != zero_vector);
+	unsigned const ndiv(get_rgeom_sphere_ndiv(low_detail));
 
 	if (verts.empty()) { // not yet created, create and cache verts
-		sd_sphere_d sd(all_zeros, 1.0, get_rgeom_sphere_ndiv(low_detail));
+		sd_sphere_d sd(all_zeros, 1.0, ndiv);
 		sphere_point_norm spn;
 		sd.gen_points_norms(spn);
 		sd.get_quad_points(verts, &ixs);
@@ -266,6 +267,26 @@ void rgeom_mat_t::add_sphere_to_verts(point const &center, vector3d const &size,
 			matrix->apply_to_vector3d(pt); matrix->apply_to_vector3d(normal);
 			itri_verts.emplace_back((pt + center), normal, (tr.x1 + i->t[0]*tscale[0] + ts_add), (tr.y1 + i->t[1]*tscale[1] + tt_add), cw);
 		}
+	}
+	else if (skip_hemi_dir == -plus_z) { // special case optimization when drawing the top surface only, in particular for bottles; assumes ndiv is even
+		// spheres are generated in a circle in the XY plane in the outer loop, and from top to bottom in Z in the inner loop;
+		// to draw the top half we need to draw/include the "equator" plus the first/top half of each circular band
+		unsigned const stride(ndiv+1), t_end(ndiv/2), out_stride(t_end + 1);
+		assert(vncs.size() == stride*stride);
+		unsigned const is(indices.size()), vs(itri_verts.size());
+
+		for (unsigned s = 0; s <= ndiv; ++s) { // XY circular band
+			for (unsigned t = 0; t <= t_end; ++t) { // vertical slices in Z; start in the middle; assumes ndiv is an even number
+				auto const &v(vncs[s*stride + t]);
+				unsigned const ix(itri_verts.size());
+				itri_verts.emplace_back((v.v*size + center), v, (tr.x1 + v.t[0]*tscale[0] + ts_add), (tr.y1 + v.t[1]*tscale[1] + tt_add), cw);
+				if (t == t_end || s == ndiv) continue; // no indices added for last s or t values
+				unsigned const qixs[4] = {ix, ix+out_stride, ix+out_stride+1, ix+1};
+				for (unsigned i = 0; i < 6; ++i) {indices.push_back(qixs[quad_to_tris_ixs[i]]);} // quads (2 triangles)
+			} // for t
+		} // for s
+		assert(indices.back() < itri_verts.size());
+		return;
 	}
 	else { // can use vncs (norm_comps)
 		for (auto i = vncs.begin(); i != vncs.end(); ++i) {
@@ -856,7 +877,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_PIPE:    add_pipe(*i, 1); break; // add_exterior=1
 		case TYPE_WIND_SILL: add_window_sill  (*i); break;
 		case TYPE_EXT_STEP:  add_exterior_step(*i); break;
-		case TYPE_BALCONY: add_balcony(*i, building.ground_floor_z1); break;
+		case TYPE_BALCONY:   add_balcony(*i, building.ground_floor_z1); break;
 		case TYPE_FALSE_DOOR: add_false_door(*i); break;
 		case TYPE_RAILING:   if (i->is_exterior()) {add_railing(*i);}  break; // exterior only
 		case TYPE_DOWNSPOUT: add_downspout(*i); break;
@@ -883,7 +904,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 }
 
 void building_room_geom_t::create_small_static_vbos(building_t const &building) {
-	//highres_timer_t timer("Gen Room Geom Small"); // 7.8ms, slow building at 26,16
+	//highres_timer_t timer("Gen Room Geom Small"); // 7.8ms, slow building at 26,16; up to 36ms on new computer for buildings with large retail areas
 	model_objs.clear(); // currently model_objs are only created for small objects in drawers, so we clear this here
 	add_small_static_objs_to_verts(expanded_objs);
 	add_small_static_objs_to_verts(objs);

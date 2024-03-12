@@ -1417,9 +1417,9 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	vector3d skip_hemi_dir(zero_vector);
 	skip_hemi_dir[dim] = -dir_sign;
 	mat.add_sphere_to_verts(sphere, color, 1, skip_hemi_dir); // low_detail=1
-	mat.add_ortho_cylin_to_verts(body, color, dim, (add_bottom && !c.dir), (add_bottom && c.dir), 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv);
+	mat.add_ortho_cylin_to_verts(body, color, dim, (add_bottom && !c.dir), (add_bottom && c.dir), 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv); // bottom
 	// draw neck of bottle as a truncated cone; draw as two sided if empty
-	mat.add_ortho_cylin_to_verts(neck, color, dim, 0, 0, is_empty, 0, (c.dir ? 0.85 : 1.0), (c.dir ? 1.0 : 0.85), 1.0, 1.0, 0, bottle_ndiv);
+	mat.add_ortho_cylin_to_verts(neck, color, dim, 0, 0, is_empty, 0, (c.dir ? 0.85 : 1.0), (c.dir ? 1.0 : 0.85), 1.0, 1.0, 0, bottle_ndiv); // neck
 
 	if (!is_empty) { // draw cap if nonempty
 		bool const draw_bot(c.was_expanded() && !(c.flags & RO_FLAG_ON_SRACK));
