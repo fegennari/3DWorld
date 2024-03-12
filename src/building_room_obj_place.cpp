@@ -729,19 +729,20 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 			placed_lamp = 1;
 		}
 	}
-	if (!placed_lamp && rgen.rand_bool()) { // place a lava lamp on a dresser or nightstand
+	if (!placed_lamp && rgen.rand_float() < 0.75) { // attempt to place a lava lamp on a dresser or nightstand 75% of the time
 		float const height(0.15*window_vspacing), radius(0.135*height);
 		bool const on_dresser(rgen.rand() & 3); // dresser 75% of the time
 
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 			if (i->type != (on_dresser ? TYPE_DRESSER : TYPE_NIGHTSTAND)) continue; // not a dresser or nightstand
-			if (i->flags & RO_FLAG_ADJ_TOP)         continue; // don't add a lava lamp if there's a mirror on it
-			if (min(i->dx(), i->dy()) < 3.0*radius) continue; // too small to place a lava lamp on
-			cube_t const llamp(place_cylin_object(rgen, *i, radius, height, 1.0*radius));
+			cube_t place_area(*i);
+			if (i->flags & RO_FLAG_ADJ_TOP) {place_area.d[i->dim][!i->dir] = i->get_center_dim(i->dim);} // shrink place area to exclude the mirror
+			if (min(place_area.dx(), place_area.dy()) < 3.0*radius) continue; // too small to place a lava lamp on
+			cube_t const llamp(place_cylin_object(rgen, place_area, radius, height, 1.0*radius));
 			i->flags |= RO_FLAG_ADJ_TOP; // flag this object as having something on it
 			objs.emplace_back(llamp, TYPE_LAVALAMP, room_id, i->dim, i->dir, (RO_FLAG_NOCOLL | RO_FLAG_LIT), tot_light_amt, SHAPE_CYLIN, LT_GRAY); // on by default
 			placed_lamp = 1; // counts as a lamp
-			break;
+			break; // must break here as we've invalidated the iterator i
 		} // for i
 	}
 	if (min(room_bounds.dx(), room_bounds.dy()) > 2.5*window_vspacing && max(room_bounds.dx(), room_bounds.dy()) > 3.0*window_vspacing) {
