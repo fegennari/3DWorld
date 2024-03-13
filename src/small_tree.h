@@ -11,10 +11,10 @@ enum {TREE_NONE = -1, T_PINE, T_DECID, T_TDECID, T_BUSH, T_PALM, T_SH_PINE, NUM_
 
 class small_tree { // size = 112
 
-	short type; // 0 = pine, 1 = decidious, 2 = tall, 3 = bush, 4 = palm, 5 = short pine
-	short inst_id; // for instancing
-	int vbo_mgr_ix; // high detail
-	float height, width, r_angle, rx, ry;
+	short type=-1; // -1 = unset, 0 = pine, 1 = decidious, 2 = tall, 3 = bush, 4 = palm, 5 = short pine
+	short inst_id=-1; // for instancing
+	int vbo_mgr_ix=-1; // high detail
+	float height=0.0, width=0.0, r_angle=0.0, rx=0.0, ry=0.0;
 	point pos;
 	colorRGB leaf_color, bark_color;
 	cylinder_3dw trunk_cylin;
@@ -29,7 +29,7 @@ class small_tree { // size = 112
 	std::shared_ptr<palm_verts_t> palm_verts; // for palm trees only
 
 public:
-	small_tree() : type(-1), inst_id(-1), height(0.0), width(0.0), r_angle(0.0), rx(0.0), ry(0.0) {init();}
+	small_tree() {init();}
 	small_tree(point const &p, unsigned instance_id);
 	small_tree(point const &p, float h, float w, int t, bool calc_z, rand_gen_t &rgen, bool allow_rotation=0);
 	void init() {coll_id[0] = coll_id[1] = -1; clear_vbo_mgr_ix();}
@@ -88,9 +88,9 @@ struct small_tree_group : public vector<small_tree> {
 	vbo_wrap_t trunk_pts_vbo;
 	vector<point> inst_pts;
 	rand_gen_t rgen;
-	bool generated, instanced;
-	unsigned num_pine_trees, num_palm_trees, num_trunk_pts, palm_vbo_mem;
-	float max_tree_radius;
+	bool generated=0, instanced=0;
+	unsigned num_pine_trees=0, num_palm_trees=0, num_trunk_pts=0, palm_vbo_mem=0;
+	float max_tree_radius=0.0;
 	point last_cpos;
 	cube_t all_bcube;
 
@@ -102,9 +102,7 @@ struct small_tree_group : public vector<small_tree> {
 		bool operator<(tree_inst_t const &i) const {return (id < i.id);}
 	};
 	vector<tree_inst_t> tree_insts[2]; // pine trees, palm trees
-	
-	small_tree_group() : generated(0), instanced(0), num_pine_trees(0), num_palm_trees(0), num_trunk_pts(0), palm_vbo_mem(0), max_tree_radius(0.0), last_cpos(all_zeros)
-	{all_bcube.set_to_zeros();}
+
 	void enable_instanced() {instanced |= ((num_pine_trees + num_palm_trees) == size());} // only if all are pine/palm trees
 	void sort_by_type() {stable_sort(begin(), end());}
 	void sort_by_dist_to_camera();

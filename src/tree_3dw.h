@@ -34,11 +34,10 @@ class tree_lod_render_t {
 
 	vector<entry_t> leaf_vect, branch_vect;
 	bool enabled;
-
 public:
-	int leaf_opacity_loc, branch_opacity_loc;
+	int leaf_opacity_loc=-1, branch_opacity_loc=-1;
 
-	tree_lod_render_t(bool enabled_) : enabled(enabled_), leaf_opacity_loc(-1), branch_opacity_loc(-1) {}
+	tree_lod_render_t(bool enabled_) : enabled(enabled_) {}
 	void set_enabled(bool enabled_) {enabled = enabled_;} // to be called before use, not during rendering
 	bool is_enabled()   const {return enabled;}
 	bool has_leaves()   const {return !leaf_vect.empty();}
@@ -57,67 +56,47 @@ public:
 	void render_billboards(shader_t &s, bool render_branches) const;
 };
 
-
 struct tree_leaf { // size = 64
-
-	short lcolor; // -1000 to 1000
-	unsigned char lred, lgreen;
+	short lcolor=0; // -1000 to 1000
+	unsigned char lred=0, lgreen=0;
 	vector3d norm;
 	point pts[4];
 
-	tree_leaf() : lcolor(0), lred(0), lgreen(0) {}
 	void create_init_color(rand_gen_t &rgen);
 	colorRGB calc_leaf_color(colorRGBA const &leaf_color, colorRGBA const &base_color) const;
 	point get_center() const {return 0.25*(pts[0] + pts[1] + pts[2] + pts[3]);} // average of all 4 leaf points
 };
 
-
-inline bool comp_leaf(const tree_leaf &A, const tree_leaf &B) {
-	return (A.pts[0].mag_sq() < B.pts[0].mag_sq());
-}
-
+inline bool comp_leaf(const tree_leaf &A, const tree_leaf &B) {return (A.pts[0].mag_sq() < B.pts[0].mag_sq());}
 
 struct draw_cylin : public cylinder_3dw { // size = 35 (36)
+	unsigned char level=0;
+	unsigned short branch_id=0;
 
-	unsigned char level;
-	unsigned short branch_id;
-
-	draw_cylin() : level(0), branch_id(0) {}
 	unsigned get_num_div() const {return (N_CYL_SIDES >> 1) - ((level - 1) << 2);} // 0:20 1:16 2:12 3:8 4:4
 	bool can_merge(draw_cylin const &c) const {return (level == c.level && branch_id == c.branch_id);}
 };
 
-
 struct tree_cylin : public draw_cylin { // size = 55 (56)
-
-	float length, deg_rotate;
+	float length=0.0, deg_rotate=0.0;
 	vector3d rotate;
-
-	tree_cylin() : length(0.0f), deg_rotate(0.0f) {}
 
 	void assign_params(unsigned char lev, unsigned short bid, float r1_, float r2_, float len, float drot) {
 		level = lev; branch_id = bid; r1 = r1_; r2 = r2_; length = len; deg_rotate = drot;
 	}
 };
 
-
 struct tree_branch { // size = 12
+	tree_cylin *cylin=nullptr;
+	float total_length=0.0;
+	short num_cylins=0, num_branches=0;
 
-	tree_cylin *cylin;
-	float total_length;
-	short num_cylins, num_branches;
-
-	tree_branch() : cylin(nullptr), total_length(0.0f), num_cylins(0), num_branches(0) {}
 	void clear_num() {num_cylins = num_branches = 0;}
 };
 
-
 struct tree_xform_t {
-
-	float last_deg_rotate, sin_term, cos_term;
+	float last_deg_rotate=0.0, sin_term=0.0, cos_term=1.0;
 	point re_matrix;
-
-	tree_xform_t() : last_deg_rotate(0.0), sin_term(0.0), cos_term(1.0) {}
 
 	void setup_rotate(vector3d &rotate, float rotate_start, float temp_deg) {
 		float const angle(rotate_start/TO_DEG + temp_deg);
@@ -137,16 +116,16 @@ class tree_builder_t : public tree_xform_t {
 	static vector<tree_branch>   branch_cache;
 	static vector<tree_branch *> branch_ptr_cache;
 
-	tree_branch base, roots, *branches_34[2], **branches;
-	int base_num_cylins, root_num_cylins, ncib, num_1_branches, num_big_branches_min, num_big_branches_max;
-	int num_2_branches_min, num_2_branches_max, num_34_branches[2], num_3_branches_min, num_3_branches_max;
-	int tree_slimness, tree_wideness, base_break_off;
-	float base_radius, base_length_min, base_length_max, base_curveness, num_leaves_per_occ;
-	float branch_curveness, branch_upwardness, branch_distribution, branch_1_distribution, num_cylin_factor, base_cylin_factor;
-	float branch_1_var, branch_1_rad_var, branch_1_start, branch_2_var, branch_2_rad_var, branch_2_start, branch_4_max_radius, rotate_factor;
-	float angle_rotate, branch_min_angle, branch_max_angle, branch_4_length, leaf_acc;
-	float max_2_angle_rotate, max_3_angle_rotate;  //max angle to rotate 3rd order branches around from the 2nd order branch
-	cube_t const *clip_cube;
+	tree_branch base, roots, *branches_34[2]={}, **branches=nullptr;
+	int base_num_cylins=0, root_num_cylins=0, ncib=0, num_1_branches=0, num_big_branches_min=0, num_big_branches_max=0;
+	int num_2_branches_min=0, num_2_branches_max=0, num_34_branches[2]={}, num_3_branches_min=0, num_3_branches_max=0;
+	int tree_slimness=0, tree_wideness=0, base_break_off=0;
+	float base_radius=0, base_length_min=0, base_length_max=0, base_curveness=0, num_leaves_per_occ=0;
+	float branch_curveness=0, branch_upwardness=0, branch_distribution=0, branch_1_distribution=0, num_cylin_factor=0, base_cylin_factor=0;
+	float branch_1_var=0, branch_1_rad_var=0, branch_1_start=0, branch_2_var=0, branch_2_rad_var=0, branch_2_start=0, branch_4_max_radius=0, rotate_factor=0;
+	float angle_rotate=0, branch_min_angle=0, branch_max_angle=0, branch_4_length=0, leaf_acc=0;
+	float max_2_angle_rotate=0, max_3_angle_rotate=0;  //max angle to rotate 3rd order branches around from the 2nd order branch
+	cube_t const *clip_cube=nullptr;
 	rand_gen_t &rgen;
 
 	float gen_bc_size(float branch_var);
@@ -163,14 +142,7 @@ class tree_builder_t : public tree_xform_t {
 	void add_leaves_to_cylin(unsigned cylin_ix, int tree_type, float rel_leaf_size, float deadness, vector<tree_leaf> &leaves);
 
 public:
-	tree_builder_t(cube_t const *clip_cube_, rand_gen_t &rgen_) :
-		branches(NULL), base_num_cylins(0), root_num_cylins(0), ncib(0), num_1_branches(0), num_big_branches_min(0), num_big_branches_max(0),
-		num_2_branches_min(0), num_2_branches_max(0), num_3_branches_min(0), num_3_branches_max(0), tree_slimness(0), tree_wideness(0), base_break_off(0),
-		base_radius(0), base_length_min(0), base_length_max(0), base_curveness(0), num_leaves_per_occ(0),
-		branch_curveness(0), branch_upwardness(0), branch_distribution(0), branch_1_distribution(0), num_cylin_factor(0), base_cylin_factor(0),
-		branch_1_var(0), branch_1_rad_var(0), branch_1_start(0), branch_2_var(0), branch_2_rad_var(0), branch_2_start(0), branch_4_max_radius(0), rotate_factor(0),
-		angle_rotate(0), branch_min_angle(0), branch_max_angle(0), branch_4_length(0), leaf_acc(0), max_2_angle_rotate(0), max_3_angle_rotate(0), clip_cube(clip_cube_), rgen(rgen_)
-	{num_34_branches[0] = num_34_branches[1] = 0; branches_34[0] = branches_34[1] = nullptr;}
+	tree_builder_t(cube_t const *clip_cube_, rand_gen_t &rgen_) : clip_cube(clip_cube_), rgen(rgen_) {}
 	float create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color,
 		float height_scale, float br_scale, float nl_scale, float bbo_scale, bool has_4th_branches, bool create_bush);
 	void create_all_cylins_and_leaves(vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves,
@@ -195,29 +167,26 @@ class tree_data_t {
 	typedef vert_norm_comp_tc branch_vert_type_t;
 
 	indexed_vbo_manager_t branch_manager;
-	unsigned leaf_vbo, num_branch_quads, num_unique_pts, branch_index_bytes;
-	int tree_type;
-	colorRGBA base_color, leaf_color;
+	unsigned leaf_vbo=0, num_branch_quads=0, num_unique_pts=0, branch_index_bytes=0;
+	int tree_type=-1;
+	colorRGBA base_color=WHITE, leaf_color=WHITE;
 	vector<leaf_vert_type_t> leaf_data;
 	vector<draw_cylin> all_cylins;
 	vector<tree_leaf> leaves;
 	tree_bb_tex_t render_leaf_texture, render_branch_texture;
-	int last_update_frame;
-	unsigned leaf_change_start, leaf_change_end;
-	bool reset_leaves, has_4th_branches;
+	int last_update_frame=0;
+	unsigned leaf_change_start=0, leaf_change_end=0;
+	bool reset_leaves=0, has_4th_branches=0;
 
 	void clear_vbo_ixs();
 	template<typename branch_index_t> void create_branch_vbo();
 
 public:
-	float base_radius, sphere_radius, sphere_center_zoff, br_scale, b_tex_scale;
-	float lr_z_cent, lr_x, lr_y, lr_z, br_x, br_y, br_z; // bounding cylinder data for leaves and branches
+	float base_radius=0, sphere_radius=0, sphere_center_zoff=0, br_scale=1.0, b_tex_scale=1.0;
+	float lr_z_cent=0, lr_x=0, lr_y=0, lr_z=0, br_x=0, br_y=0, br_z=0; // bounding cylinder data for leaves and branches
 	cube_t leaves_bcube, branches_bcube;
 
-	tree_data_t() : leaf_vbo(0), num_branch_quads(0), num_unique_pts(0), branch_index_bytes(0), tree_type(-1), base_color(WHITE), leaf_color(WHITE),
-		render_leaf_texture(TREE_BILLBOARD_MULTISAMPLE), render_branch_texture(TREE_BILLBOARD_MULTISAMPLE), last_update_frame(0),
-		leaf_change_start(0), leaf_change_end(0), reset_leaves(0), has_4th_branches(0), base_radius(0.0), sphere_radius(0.0), sphere_center_zoff(0.0),
-		br_scale(1.0), b_tex_scale(1.0), lr_z_cent(0.0), lr_x(0.0), lr_y(0.0), lr_z(0.0), br_x(0.0), br_y(0.0), br_z(0.0) {}
+	tree_data_t() : render_leaf_texture(TREE_BILLBOARD_MULTISAMPLE), render_branch_texture(TREE_BILLBOARD_MULTISAMPLE) {}
 	vector<draw_cylin> const &get_all_cylins() const {return all_cylins;}
 	vector<tree_leaf>  const &get_leaves    () const {return leaves;}
 	vector<tree_leaf>        &get_leaves    ()       {return leaves;}
@@ -267,8 +236,8 @@ public:
 
 
 struct fire_damage_t : public sphere_t {
-	float damage;
-	fire_damage_t() : damage(0.0) {}
+	float damage=0.0;
+	fire_damage_t() {}
 	fire_damage_t(point const &pos_, float radius_, float damage_) : sphere_t(pos_, radius_), damage(damage_) {}
 };
 
@@ -276,9 +245,8 @@ class tree_fire_t {
 
 	struct tree_fire_elem_t : public fire_elem_t {
 		point pos;
-		float branch_bradius;
-		unsigned sleep_time;
-		tree_fire_elem_t () : pos(all_zeros), branch_bradius(0.0), sleep_time(0) {}
+		float branch_bradius=0.0;
+		unsigned sleep_time=0;
 	};
 	vector<draw_cylin> const &branches;
 	vector<tree_fire_elem_t> fires; // active fires, one per branch
@@ -301,19 +269,19 @@ public:
 
 class tree {
 
-	tree_data_t priv_tree_data; // by pointer?
-	tree_data_t *tree_data; // by index?
+	tree_data_t priv_tree_data;
+	tree_data_t *tree_data=nullptr;
 	void make_private_tdata_copy();
 	tree_data_t const &tdata() const {return (tree_data ? *tree_data : priv_tree_data);}
 	tree_data_t       &tdata()       {return (tree_data ? *tree_data : priv_tree_data);}
 	bool td_is_private() const {return (tree_data == NULL);}
 
-	int type, created; // should type be a member of tree_data_t?
-	unsigned leaf_burn_ix;
-	bool no_delete, not_visible, leaf_orients_valid, enable_leaf_wind, use_clip_cube;
+	int type=-1, created=0; // should type be a member of tree_data_t?
+	unsigned leaf_burn_ix=0;
+	bool no_delete=0, not_visible=0, leaf_orients_valid=0, enable_leaf_wind=0, use_clip_cube=0;
 	point tree_center;
-	float damage, damage_scale, last_size_scale, tree_nl_scale;
-	colorRGBA tree_color;
+	float damage=0, damage_scale=0, last_size_scale=0, tree_nl_scale=1.0;
+	colorRGBA tree_color=WHITE;
 	vector<int> branch_cobjs, leaf_cobjs;
 	cube_t clip_cube;
 	std::shared_ptr<tree_fire_t> tree_fire;
@@ -337,8 +305,7 @@ class tree {
 	void post_transform() const;
 
 public:
-	tree(bool en_lw=1) : tree_data(NULL), type(-1), created(0), leaf_burn_ix(0), no_delete(0), not_visible(0), leaf_orients_valid(0),
-	  enable_leaf_wind(en_lw), use_clip_cube(0), tree_center(all_zeros), damage(0.0), damage_scale(0.0), last_size_scale(0.0), tree_nl_scale(1.0), tree_color(WHITE), clip_cube(all_zeros) {}
+	tree(bool en_lw=1) : enable_leaf_wind(en_lw) {}
 	void enable_clip_cube(cube_t const &cc) {clip_cube = cc; use_clip_cube = 1;}
 	void bind_to_td(tree_data_t *td);
 	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed, rand_gen_t &rgen,
@@ -381,12 +348,9 @@ public:
 
 
 class tree_data_manager_t : public vector<tree_data_t> {
-
-	float last_tree_scale;
-	int last_rgi;
-
+	float last_tree_scale=1.0;
+	int last_rgi=0;
 public:
-	tree_data_manager_t() : last_tree_scale(1.0), last_rgi(0) {}
 	void ensure_init();
 	void clear_context();
 	void on_leaf_color_change();
@@ -400,10 +364,10 @@ class tree_cont_t : public vector<tree> {
 	vector<pair<float, unsigned>> sorted;
 	vector<tree *> to_update_leaves;
 	cube_t all_bcube;
-	bool generated;
+	bool generated=0;
 
 public:
-	tree_cont_t(tree_data_manager_t &tds) : shared_tree_data(tds), generated(0) {all_bcube.set_to_zeros();}
+	tree_cont_t(tree_data_manager_t &tds) : shared_tree_data(tds) {}
 	bool was_generated() const {return generated;}
 	void remove_cobjs();
 	bool check_sphere_coll(point &center, float radius) const;
@@ -453,7 +417,6 @@ struct tree_placer_t {
 	struct tree_block {
 		vector<tree_ref> trees;
 		cube_t bcube;
-		tree_block() : bcube(all_zeros) {}
 	};
 	vector<tree_block> blocks, sm_blocks;
 	cube_t bcube, sm_bcube;
