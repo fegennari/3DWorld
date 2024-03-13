@@ -1481,9 +1481,20 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		cube_t c_test(drawer);
 		if (is_door) {c_test.d[obj.dim][obj.dir] += (obj.dir ? 1.0 : -1.0)*drawer.get_sz_dim(!obj.dim);} // expand outward by the width of the door
 		else         {c_test.d[obj.dim][obj.dir] += drawer_extend;} // drawer
-		if (cube_intersects_moved_obj(c_test, closest_obj_id)) return 0; // blocked, can't open; ignore this object
-		if (check_only) return 1;
 		unsigned const flag_bit(1U << (unsigned)closest_drawer_id);
+
+		if (!(obj.drawer_flags & flag_bit)) { // closed - check if door/drawer can open
+			if (cube_intersects_moved_obj(c_test, closest_obj_id)) return 0; // blocked, can't open; ignore this object
+
+			if (obj.was_moved()) { // object was moved, check if the door/drawer is now blocked
+				for (auto i = objs.begin(); i != objs_end; ++i) {
+					if (i->no_coll() || i->type == TYPE_BLOCKER) continue; // skip non-collidable or our own drawer blocker that was added
+					if ((i - objs.begin()) == closest_obj_id)    continue; // skip self
+					if (i->intersects(c_test)) {cout << int(i->type) << endl; return 0;} // blocked; should we call get_true_room_obj_bcube()?
+				}
+			}
+		}
+		if (check_only) return 1;
 		obj.drawer_flags ^= flag_bit; // toggle flag bit for selected drawer
 
 		if ((obj.drawer_flags & flag_bit) && !(obj.state_flags & flag_bit)) { // first opening of this drawer

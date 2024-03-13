@@ -1491,7 +1491,7 @@ bool building_t::check_cube_contained_in_part(cube_t const &c) const {
 bool building_room_geom_t::cube_intersects_moved_obj(cube_t const &c, int ignore_obj_id) const {
 	for (auto i = moved_obj_ids.begin(); i != moved_obj_ids.end(); ++i) {
 		assert(*i < objs.size());
-		if (int(*i) != ignore_obj_id && objs[*i].intersects(c)) return 1; // intersects a moved object
+		if (int(*i) != ignore_obj_id && objs[*i].intersects(c)) return 1; // intersects a moved object; assumes object is collidable
 	}
 	return 0;
 }
