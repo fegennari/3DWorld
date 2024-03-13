@@ -193,8 +193,10 @@ bool try_place_obj(cube_t const &plot, vect_cube_t &blockers, rand_gen_t &rgen, 
 	}
 	return 0;
 }
-void place_tree(point const &pos, float radius, int ttype, vect_cube_t &colliders, vector<point> *tree_pos, bool allow_bush, bool add_bush, bool is_sm_tree, bool has_planter) {
-	tree_placer.add(pos, 0, ttype, allow_bush, add_bush, is_sm_tree); // use same tree type
+void place_tree(point const &pos, float radius, int ttype, vect_cube_t &colliders, vector<point> *tree_pos,
+	bool allow_bush, bool add_bush, bool is_sm_tree, bool has_planter, float custom_size=0.0)
+{
+	tree_placer.add(pos, custom_size, ttype, allow_bush, add_bush, is_sm_tree); // use same tree type
 	// use 15% of the placement radius for collision (trunk + planter), smaller if no planter
 	cube_t bcube;
 	bcube.set_from_sphere(pos, (has_planter ? 0.15 : 0.05)*radius);

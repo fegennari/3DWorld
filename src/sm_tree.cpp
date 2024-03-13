@@ -459,7 +459,8 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 						add_tree(small_tree(pos, num_insts_per_type[ttype].select_inst(rgen)));
 					}
 					else {
-						float const height(tsize*rand_tree_height(rgen));
+						float height(tsize*rand_tree_height(rgen));
+						if (t->size > 0.0) {height *= t->size;} // treat size as a size scale
 						add_tree(small_tree(pos, height, height*rand_tree_width(rgen), ttype, 0, rgen, 1)); // allow_rotation=1
 					}
 				} // for t
