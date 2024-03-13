@@ -459,6 +459,8 @@ struct tape_manager_t {
 	}
 };
 
+bool phone_is_ringing() {return phone_manager.is_phone_ringing();}
+
 tape_manager_t tape_manager;
 
 unsigned const NUM_ACHIEVEMENTS = 16;

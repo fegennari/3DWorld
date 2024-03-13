@@ -29,6 +29,7 @@ bool in_building_gameplay_mode();
 void apply_building_gravity(float &vz, float dt_ticks);
 void apply_fc_cube_max_merge_xy(vect_cube_t &cubes);
 void register_fly_attract(bool no_msg);
+bool phone_is_ringing();
 template<typename T> bool line_int_cubes_exp(point const &p1, point const &p2, vector<T> const &cubes, vector3d const &expand, cube_t const &line_bcube);
 
 
@@ -299,6 +300,7 @@ void building_t::update_rats(point const &camera_bs, unsigned building_ix) {
 	add_animals_on_floor(rats, building_ix, global_building_params.num_rats_min, global_building_params.num_rats_max,
 		global_building_params.rat_size_min, global_building_params.rat_size_max);
 	// update rats
+	unsigned const min_attack_rats(phone_is_ringing() ? 1 : global_building_params.min_attack_rats); // rats always attack when a phone is ringing
 	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
 	unsigned num_near_player(0);
 	point rat_alert_pos;
@@ -306,10 +308,10 @@ void building_t::update_rats(point const &camera_bs, unsigned building_ix) {
 	for (rat_t &rat : rats) { // must be done before sorting
 		rat.move(timestep, rat.is_facing_dest());
 		num_near_player += rat.near_player;
-		if (num_near_player == global_building_params.min_attack_rats) {rat_alert_pos = rat.pos;}
+		if (num_near_player == min_attack_rats) {rat_alert_pos = rat.pos;}
 	}
 	static bool prev_can_attack_player(0);
-	bool const can_attack_player(num_near_player >= global_building_params.min_attack_rats);
+	bool const can_attack_player(num_near_player >= min_attack_rats);
 	
 	if (can_attack_player && !prev_can_attack_player) { // play sound on first attack
 		gen_sound_thread_safe(SOUND_RAT_SQUEAK, local_to_camera_space(rat_alert_pos), 1.0, 1.2); // high pitch
