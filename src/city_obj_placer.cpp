@@ -19,6 +19,7 @@ void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
 float get_inner_sidewalk_width();
 cube_t get_plot_coll_region(cube_t const &plot_bcube);
 void play_hum_sound(point const &pos, float gain, float pitch);
+bool enable_instanced_pine_trees();
 
 bool are_birds_enabled() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_BIRD_ANIM);}
 
@@ -814,20 +815,20 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		bool const sdim((i->street_dir-1)>>1), sdir((i->street_dir-1)&1); // direction to the road
 
 		// place short pine trees by the front
-		if (0) { // unfortunately, we can't customize the size of instanced pine trees, so this can't be enabled yet
-			unsigned const num_trees(4);
+		if (!enable_instanced_pine_trees()) { // unfortunately, we can't customize the size of instanced pine trees, so this can't be enabled yet
+			unsigned const num_trees(rgen.rand() % 5); // 0-4
 
 			for (unsigned n = 0; n < num_trees; ++n) {
 				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random house wall dim/dir
 				float const wall_pos(house.d[dim][dir]);
-				float const tree_scale(rgen.rand_uniform(0.3, 0.4)), radius(4.0*sz_scale*tree_scale);
+				float const tree_scale(rgen.rand_uniform(0.2, 0.3)), radius(4.5*sz_scale*tree_scale);
 				point pos;
 				pos.z = i->z2();
 				pos[ dim] = wall_pos + (dir ? 1.0 : -1.0)*1.5*radius; // place near this wall of the house
 				pos[!dim] = rgen.rand_uniform(house.d[!dim][0], house.d[!dim][1]); // on the corner is okay
 				cube_t tree_bc; tree_bc.set_from_point(pos);
 				tree_bc.expand_by_xy(radius);
-				tree_bc.z2() += 4.0*radius; // just a guess
+				tree_bc.z2() += 3.0*radius; // just a guess
 				point const center(pos + radius*plus_z);
 				if (is_placement_blocked(tree_bc, blockers, house, prev_blockers_end))   continue; // check blockers from prev step; no expand
 				if (is_placement_blocked_recent(tree_bc, blockers, yard_blockers_start)) continue; // check prev blockers in this yard
@@ -836,7 +837,8 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				p_include[dim] = wall_pos - (dir ? 1.0 : -1.0)*0.25*radius; // slightly inside the wall
 				if (!check_sphere_coll_building(p_include, 0.0, 0, house.ix)) continue; // *must* be next to an exterior wall or fence; radius=0.0, xy_only=0
 				if (check_close_to_door(pos, 4.0*radius, house.ix))           continue;
-				place_tree(pos, radius, 1, colliders, nullptr, 0, 0, 1, 0, tree_scale); // tree_pos=nullptr, ttype=1, allow_bush=0, add_bush=0, is_sm_tree=1, has_planter=0
+				int const ttype(0); // 0=pine, 1=short pine, 2=palm
+				place_tree(pos, radius, ttype, colliders, nullptr, 0, 0, 1, 0, tree_scale); // tree_pos=nullptr, allow_bush=0, add_bush=0, is_sm_tree=1, has_planter=0
 			} // for n
 		}
 
