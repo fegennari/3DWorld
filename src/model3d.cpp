@@ -382,10 +382,8 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize_lod_blocks(unsigned n
 
 
 template<unsigned N> struct vert_to_tri_t {
+	unsigned t[N] = {0}, n=0; // if this vertex is used in more than N triangles we give up and never remove it
 
-	unsigned t[N] = {0}, n; // if this vertex is used in more than N triangles we give up and never remove it
-
-	vert_to_tri_t() : n(0) {}
 	void add(unsigned ix) {if (n < N) {t[n] = ix;} ++n;} // only add if it fits, but always increment n
 	void remove(unsigned tix) {assert(tix < min(n, N)); t[tix] = t[n-1]; --n;} // move last element to position tix
 	unsigned get_first_index_ix(unsigned tix) const {assert(tix < min(n, N)); return 3*t[tix];} // multiply by 3 to convert from triangle to index
@@ -393,7 +391,6 @@ template<unsigned N> struct vert_to_tri_t {
 };
 
 struct merge_entry_t {
-
 	unsigned vix;
 	float val;
 
@@ -442,7 +439,6 @@ template<typename T> void indexed_vntc_vect_t<T>::simplify(vector<unsigned> &out
 		assert(indices[i] < num_verts);
 		vert_to_tri[indices[i]].add(i);
 	}
-
 	// determine which verts/edges can be removed
 	std::priority_queue<merge_entry_t> merge_queue; // of vertices
 
@@ -477,7 +473,6 @@ template<typename T> void indexed_vntc_vect_t<T>::simplify(vector<unsigned> &out
 		float const val(normal_sum.mag()/normal_sum.count);
 		merge_queue.push(merge_entry_t(i, val));
 	}
-
 	// mapping from orig vertex to collapsed (new) vertex
 	unsigned const cand_verts(merge_queue.size());
 	vertex_remap_t remap(num_verts);
@@ -872,9 +867,9 @@ template<typename T> float indexed_vntc_vect_t<T>::calc_area(unsigned npts) {
 
 
 struct shared_vertex_t {
-	unsigned ai, bi;
-	bool shared;
-	shared_vertex_t() : ai(0), bi(0), shared(0) {}
+	unsigned ai=0, bi=0;
+	bool shared=0;
+	shared_vertex_t() {}
 	shared_vertex_t(unsigned ai_, unsigned bi_) : ai(ai_), bi(bi_), shared(1) {}
 };
 
@@ -1210,11 +1205,11 @@ template<typename T> void geometry_t<T>::get_polygons(get_polygon_args_t &args) 
 
 template<typename T> cube_t geometry_t<T>::get_bcube() const {
 
-	cube_t bcube(all_zeros_cube); // will return this if empty
+	cube_t bcube; // will return this if empty
 
 	if (!triangles.empty()) {
 		bcube = triangles.get_bcube();
-		if (!quads.empty()) bcube.union_with_cube(quads.get_bcube());
+		if (!quads.empty()) {bcube.union_with_cube(quads.get_bcube());}
 	}
 	else if (!quads.empty()) {
 		bcube = quads.get_bcube();
@@ -1232,7 +1227,7 @@ template<typename T> void geometry_t<T>::clear() {
 template<typename T> void geometry_t<T>::get_stats(model3d_stats_t &stats) const {
 	
 	stats.tris  += triangles.num_verts()/3;
-	stats.quads += quads.num_verts()/4;
+	stats.quads += quads    .num_verts()/4;
 	triangles.get_stats(stats);
 	quads    .get_stats(stats);
 }
@@ -1654,9 +1649,9 @@ void calc_bounds(cube_t const &c, int bounds[2][2], float spacing) {
 
 
 struct float_plus_dir {
-	float f;
-	bool d;
-	float_plus_dir() : f(0.0f), d(0) {}
+	float f=0.0;
+	bool d=0;
+	float_plus_dir() {}
 	float_plus_dir(float f_, bool d_) : f(f_), d(d_) {}
 	bool operator<(float_plus_dir const &fd) const {return ((f == fd.f) ? (d < fd.d) : (f < fd.f));}
 };
@@ -2593,7 +2588,7 @@ bool model3d::read_from_disk(string const &fn) { // as model3d file; Note: trans
 		cerr << "Error opening model3d file for read: " << fn << endl;
 		return 0;
 	}
-	clear(); // ???
+	clear(); // may not be needed
 	unsigned const magic_number_comp(read_uint(in));
 
 	if (magic_number_comp != MAGIC_NUMBER) {
@@ -2614,7 +2609,6 @@ bool model3d::read_from_disk(string const &fn) { // as model3d file; Note: trans
 		mat_map[m->name] = (m - materials.begin());
 	}
 	//simplify_indices(0.1); // TESTING
-	//if (fn == "model_data/fish/fishOBJ.model3d") {write_as_obj_file(fn + ".obj");} // TESTING
 	return in.good();
 }
 

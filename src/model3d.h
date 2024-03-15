@@ -82,12 +82,12 @@ struct geom_xform_t { // should be packed, can read/write as POD
 struct model3d_xform_t : public geom_xform_t, public rotation_t { // should be packed, can read/write as POD
 
 	base_mat_t material;
-	int group_cobjs_level;
-	float voxel_spacing;
+	int group_cobjs_level=0;
+	float voxel_spacing=0.0;
 	cube_t bcube_xf;
 
-	model3d_xform_t(vector3d const &tv_=zero_vector, float scale_=1.0) : geom_xform_t(tv_, scale_), group_cobjs_level(0.0), voxel_spacing(0.0), bcube_xf(all_zeros) {}
-	model3d_xform_t(geom_xform_t const &xf) : geom_xform_t(xf), group_cobjs_level(0.0), voxel_spacing(0.0), bcube_xf(all_zeros) {}
+	model3d_xform_t(vector3d const &tv_=zero_vector, float scale_=1.0) : geom_xform_t(tv_, scale_) {}
+	model3d_xform_t(geom_xform_t const &xf) : geom_xform_t(xf) {}
 	cube_t get_xformed_cube(cube_t const &cube) const;
 	cube_t const &get_xformed_bcube(cube_t const &bcube);
 	void clear_bcube() {bcube_xf.set_to_zeros();}
@@ -129,7 +129,7 @@ struct poly_header_t {
 	int mat_id;
 	vector3d n;
 
-	poly_header_t(int mat_id_=-1, unsigned obj_id_=0) : npts(0), obj_id(obj_id_), mat_id(mat_id_), n(zero_vector) {}
+	poly_header_t(int mat_id_=-1, unsigned obj_id_=0) : npts(0), obj_id(obj_id_), mat_id(mat_id_) {}
 };
 
 struct poly_data_block {
@@ -138,17 +138,15 @@ struct poly_data_block {
 };
 
 struct model3d_stats_t {
-	unsigned verts, quads, tris, blocks, mats, transforms;
-	model3d_stats_t() : verts(0), quads(0), tris(0), blocks(0), mats(0), transforms(0) {}
+	unsigned verts=0, quads=0, tris=0, blocks=0, mats=0, transforms=0;
 	void print() const;
 };
 
 // for computing vertex normals from face normals
 struct counted_normal : public vector3d { // size = 16
+	unsigned count=0;
 
-	unsigned count;
-
-	counted_normal() : vector3d(zero_vector), count(0) {}
+	counted_normal() {}
 	counted_normal(vector3d const &n) : vector3d(n), count(1) {}
 	void add_normal(vector3d const &n) {*this += n; ++count;}
 	bool is_valid() const {return (count > 0);}
@@ -156,10 +154,9 @@ struct counted_normal : public vector3d { // size = 16
 
 // unused
 struct weighted_normal : public vector3d { // size = 16
+	float weight=0.0;
 
-	float weight;
-
-	weighted_normal() : vector3d(zero_vector), weight(0.0) {}
+	weighted_normal() {}
 	weighted_normal(vector3d const &n, float w=1.0) : vector3d(w*n), weight(w) {}
 	void add_normal(vector3d const &n, float w=1.0) {*this += w*n; weight += w;}
 	void add_normal(vector3d const &n, point const *const poly_pts, unsigned npts) {add_normal(n, polygon_area(poly_pts, npts));}
@@ -168,13 +165,12 @@ struct weighted_normal : public vector3d { // size = 16
 
 //template<typename T> class vertex_map_t : public unordered_map<T, unsigned, hash_by_bytes<T>> {
 template<typename T> class vertex_map_t : public map<T, unsigned> {
-
-	int last_mat_id;
-	unsigned last_obj_id;
-	bool average_normals;
+	int last_mat_id=-1;
+	unsigned last_obj_id=0;
+	bool average_normals=0;
 
 public:
-	vertex_map_t(bool average_normals_=0) : last_mat_id(-1), last_obj_id(0), average_normals(average_normals_) {}
+	vertex_map_t(bool average_normals_=0) : average_normals(average_normals_) {}
 	bool get_average_normals() const {return average_normals;}
 	
 	void check_for_clear(int mat_id) {
@@ -192,8 +188,8 @@ typedef vertex_map_t<vert_norm_tc_tan> vntct_map_t;
 struct get_polygon_args_t {
 	vector<coll_tquad> &polygons;
 	colorRGBA color;
-	bool quads_only;
-	unsigned lod_level;
+	bool quads_only=0;
+	unsigned lod_level=0;
 
 	get_polygon_args_t(vector<coll_tquad> &polygons_, colorRGBA const &color_, bool quads_only_=0, unsigned lod_level_=0)
 		: polygons(polygons_), color(color_), quads_only(quads_only_), lod_level(lod_level_) {}
@@ -281,7 +277,7 @@ public:
 template<typename T> class vntc_vect_t : public vector<T>, public indexed_vao_manager_with_shadow_t {
 
 protected:
-	bool has_tangents, finalized;
+	bool has_tangents=0, finalized=0;
 	sphere_t bsphere;
 	cube_t bcube;
 public:
@@ -289,7 +285,7 @@ public:
 	using vector<T>::size;
 	unsigned obj_id;
 
-	vntc_vect_t(unsigned obj_id_=0) : has_tangents(0), finalized(0), obj_id(obj_id_) {bcube.set_to_zeros();}
+	vntc_vect_t(unsigned obj_id_=0) : obj_id(obj_id_) {bcube.set_to_zeros();}
 	void clear();
 	void make_private_copy() {vbo = ivbo = 0;} // Note: to be called *only* after a deep copy
 	void calc_bounding_volumes();
@@ -306,7 +302,6 @@ public:
 
 
 template<typename T> class indexed_vntc_vect_t : public vntc_vect_t<T> {
-
 public:
 	typedef unsigned index_type_t;
 	vector<unsigned> indices; // needs to be public for merging operation
@@ -317,17 +312,17 @@ private:
 	float avg_area_per_tri, amin, amax;
 
 	struct geom_block_t {
-		unsigned start_ix, num;
+		unsigned start_ix=0, num=0;
 		cube_t bcube;
-		geom_block_t() : start_ix(0), num(0) {}
+		geom_block_t() {}
 		geom_block_t(unsigned s, unsigned n, cube_t const &bc) : start_ix(s), num(n), bcube(bc) {}
 	};
 	vector<geom_block_t> blocks;
 
 	struct lod_block_t {
-		unsigned start_ix, num;
-		float tri_area;
-		lod_block_t() : start_ix(0), num(0), tri_area(0.0) {}
+		unsigned start_ix=0, num=0;
+		float tri_area=0.0;
+		lod_block_t() {}
 		lod_block_t(unsigned s, unsigned n, float a) : start_ix(s), num(n), tri_area(a) {}
 		unsigned get_end_ix() const {return (start_ix + num);}
 	};
@@ -480,30 +475,25 @@ public:
 
 struct material_params_t { // Warning: changing this struct will invalidate the model3d file format
 
-	colorRGB ka, kd, ks, ke, tf;
-	float ns, ni, alpha, tr;
-	unsigned illum;
-	bool skip, is_used, no_blend, unused_field; // unused bool to pad the struct
-
-	material_params_t() : ka(WHITE), kd(WHITE), ks(BLACK), ke(BLACK), tf(WHITE), ns(1.0), ni(1.0),
-		alpha(1.0), tr(0.0), illum(2), skip(0), is_used(0), no_blend(0), unused_field(0) {}
+	colorRGB ka=WHITE, kd=WHITE, ks=BLACK, ke=BLACK, tf=WHITE;
+	float ns=1.0, ni=1.0, alpha=1.0, tr=0.0;
+	unsigned illum=2;
+	bool skip=0, is_used=0, no_blend=0, unused_field=0; // unused bool to pad the struct
 }; // must be padded
 
 
 struct material_t : public material_params_t {
 
-	bool might_have_alpha_comp, tcs_checked;
-	int a_tid, d_tid, s_tid, ns_tid, alpha_tid, bump_tid, refl_tid; // ambient, diffuse, specular, shininess, transparency, normal, reflection (unused)
-	float draw_order_score, avg_area_per_tri, tot_tri_area;
-	float metalness; // < 0 disables; should go into material_params_t, but that would invalidate the model3d file format
+	bool might_have_alpha_comp=0, tcs_checked=0;
+	int a_tid=-1, d_tid=-1, s_tid=-1, ns_tid=-1, alpha_tid=-1, bump_tid=-1, refl_tid=-1; // ambient, diffuse, specular, shininess, transparency, normal, reflection (unused)
+	float draw_order_score=0.0, avg_area_per_tri=0.0, tot_tri_area=0.0;
+	float metalness=-1.0; // < 0 disables; should go into material_params_t, but that would invalidate the model3d file format
 	string name, filename;
 
 	geometry_t<vert_norm_tc> geom;
 	geometry_t<vert_norm_tc_tan> geom_tan;
 
-	material_t(string const &name_=string(), string const &fn=string())
-		: might_have_alpha_comp(0), tcs_checked(0), a_tid(-1), d_tid(-1), s_tid(-1), ns_tid(-1), alpha_tid(-1), bump_tid(-1), refl_tid(-1),
-		draw_order_score(0.0), avg_area_per_tri(0.0), tot_tri_area(0.0), metalness(-1.0), name(name_), filename(fn) {}
+	material_t(string const &name_="", string const &fn="") : name(name_), filename(fn) {}
 	bool empty() const {return (geom.empty() && geom_tan.empty());}
 	mesh_bone_data_t &get_bone_data_for_last_added_tri_mesh();
 	unsigned add_triangles(vector<vert_norm_tc> const &verts, vector<unsigned> const &indices, bool add_new_block); // Note: no quads or tangents
@@ -540,7 +530,6 @@ struct voxel_params_t; // forward declaration
 class voxel_manager; // forward declaration
 
 class model3d {
-
 	// read/write options
 	string filename;
 	int recalc_normals=0, group_cobjs_level=0;
@@ -701,7 +690,6 @@ protected:
 
 
 struct model3ds : public deque<model3d> {
-
 	texture_manager tmgr;
 
 	void clear();
@@ -721,7 +709,6 @@ struct model3ds : public deque<model3d> {
 
 
 class model_from_file_t {
-
 	string rel_path;
 protected:
 	model3d &model;
