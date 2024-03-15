@@ -299,8 +299,8 @@ void building_t::update_rats(point const &camera_bs, unsigned building_ix) {
 	//timer_t timer("Update Rats"); // multi-part: 1.1ms, open door 1.7ms; office building 1.7ms
 	add_animals_on_floor(rats, building_ix, global_building_params.num_rats_min, global_building_params.num_rats_max,
 		global_building_params.rat_size_min, global_building_params.rat_size_max);
-	// update rats
-	unsigned const min_attack_rats(phone_is_ringing() ? 1 : global_building_params.min_attack_rats); // rats always attack when a phone is ringing
+	// update rats; rats always attack when the player is dead or a phone is ringing
+	unsigned const min_attack_rats((player_wait_respawn || phone_is_ringing()) ? 1 : global_building_params.min_attack_rats);
 	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
 	unsigned num_near_player(0);
 	point rat_alert_pos;
@@ -313,7 +313,7 @@ void building_t::update_rats(point const &camera_bs, unsigned building_ix) {
 	static bool prev_can_attack_player(0);
 	bool const can_attack_player(num_near_player >= min_attack_rats);
 	
-	if (can_attack_player && !prev_can_attack_player) { // play sound on first attack
+	if (can_attack_player && !prev_can_attack_player && !player_wait_respawn) { // play sound on first attack if player is alive
 		gen_sound_thread_safe(SOUND_RAT_SQUEAK, local_to_camera_space(rat_alert_pos), 1.0, 1.2); // high pitch
 	}
 	prev_can_attack_player = can_attack_player;
