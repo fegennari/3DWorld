@@ -9,12 +9,13 @@
 enum {TREE_NONE = -1, T_PINE, T_DECID, T_TDECID, T_BUSH, T_PALM, T_SH_PINE, NUM_ST_TYPES};
 
 
-class small_tree { // size = 112
+class small_tree { // size = 116
 
 	short type=-1; // -1 = unset, 0 = pine, 1 = decidious, 2 = tall, 3 = bush, 4 = palm, 5 = short pine
 	short inst_id=-1; // for instancing
 	int vbo_mgr_ix=-1; // high detail
 	float height=0.0, width=0.0, r_angle=0.0, rx=0.0, ry=0.0;
+	float branch_xy_scale=1.0; // should only be se to a value != 1.0 for pine trees
 	point pos;
 	colorRGB leaf_color, bark_color;
 	cylinder_3dw trunk_cylin;
@@ -31,7 +32,7 @@ class small_tree { // size = 112
 public:
 	small_tree() {init();}
 	small_tree(point const &p, unsigned instance_id);
-	small_tree(point const &p, float h, float w, int t, bool calc_z, rand_gen_t &rgen, bool allow_rotation=0);
+	small_tree(point const &p, float h, float w, int t, bool calc_z, rand_gen_t &rgen, bool allow_rotation=0, float bxys=1.0);
 	void init() {coll_id[0] = coll_id[1] = -1; clear_vbo_mgr_ix();}
 	void setup_rotation(rand_gen_t &rgen);
 	vector3d get_rot_dir() const;
@@ -66,8 +67,9 @@ public:
 	bool is_pine_tree() const {return (type == T_PINE || type == T_SH_PINE);}
 	unsigned get_inst_id() const {assert(inst_id >= 0); return inst_id;}
 	float get_pine_tree_radius() const;
-	float get_radius() const {return (is_pine_tree() ? get_pine_tree_radius() : width);} // approximate
+	float get_radius() const {return (is_pine_tree() ? branch_xy_scale*get_pine_tree_radius() : width);} // approximate
 	float get_zmax() const;
+	float get_xy_radius() const {return max(1.5*branch_xy_scale*width, 0.5*height);}
 	float get_trunk_bsphere_radius() const {return (trunk_cylin.r1 + 0.5*((r_angle == 0.0) ? fabs(trunk_cylin.p1.z - trunk_cylin.p2.z) : trunk_cylin.get_length()));}
 	void write_to_cobj_file(std::ostream &out) const;
 

@@ -409,10 +409,10 @@ struct tree_placer_t {
 
 	struct tree_ref {
 		point pos;
-		float size;
+		float size, pine_xy_sz;
 		int type;
 		bool allow_bush, force_bush;
-		tree_ref(point const &p, float sz, int t, bool ab, bool fb) : pos(p), size(sz), type(t), allow_bush(ab), force_bush(fb) {}
+		tree_ref(point const &p, float sz, float pxysz, int t, bool ab, bool fb) : pos(p), size(sz), pine_xy_sz(pxysz), type(t), allow_bush(ab), force_bush(fb) {}
 	};
 	struct tree_block {
 		vector<tree_ref> trees;
@@ -424,7 +424,7 @@ struct tree_placer_t {
 	bool have_small_trees() const;
 	bool have_decid_trees() const;
 	void begin_block(bool is_sm_tree) {(is_sm_tree ? sm_blocks : blocks).push_back(tree_block());}
-	void add(point const &pos, float size, int type, bool allow_bush, bool add_bush, bool is_sm_tree);
+	void add(point const &pos, float size, int type, bool allow_bush, bool add_bush, bool is_sm_tree, float pine_xy_sz=1.0);
 	void clear() {blocks.clear(); sm_blocks.clear(); bcube = sm_bcube = cube_t();}
 };
 

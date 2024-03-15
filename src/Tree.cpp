@@ -2187,12 +2187,12 @@ void tree_cont_t::add_new_tree(rand_gen_t &rgen, int &ttype) {
 bool tree_placer_t::have_small_trees() const {return (world_mode == WMODE_INF_TERRAIN && !tree_placer.blocks   .empty());}
 bool tree_placer_t::have_decid_trees() const {return (world_mode == WMODE_INF_TERRAIN && !tree_placer.sm_blocks.empty());}
 
-void tree_placer_t::add(point const &pos, float size, int type, bool allow_bush, bool add_bush, bool is_sm_tree) {
+void tree_placer_t::add(point const &pos, float size, int type, bool allow_bush, bool add_bush, bool is_sm_tree, float pine_xy_sz) {
 	if ((is_sm_tree ? sm_blocks : blocks).empty()) {begin_block(is_sm_tree);} // begin a new block in case user isn't creating the blocks themselves
 	tree_block &block((is_sm_tree ? sm_blocks : blocks).back());
 	if (block.trees.empty()) {block.bcube.set_from_point(pos);} else {block.bcube.union_with_pt(pos);}
 	(is_sm_tree ? sm_bcube : bcube).assign_or_union_with_pt(pos);
-	block.trees.emplace_back(pos, size, type, allow_bush, add_bush);
+	block.trees.emplace_back(pos, size, pine_xy_sz, type, allow_bush, add_bush);
 }
 
 void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &center, float radius, bool is_square,

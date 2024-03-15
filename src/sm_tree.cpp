@@ -461,7 +461,7 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 					else {
 						float height(tsize*rand_tree_height(rgen));
 						if (t->size > 0.0) {height *= t->size;} // treat size as a size scale
-						add_tree(small_tree(pos, height, height*rand_tree_width(rgen), ttype, 0, rgen, 1)); // allow_rotation=1
+						add_tree(small_tree(pos, height, height*rand_tree_width(rgen), ttype, 0, rgen, 1, t->pine_xy_sz)); // allow_rotation=1
 					}
 				} // for t
 			} // for b
@@ -758,11 +758,11 @@ small_tree::small_tree(point const &p, unsigned instance_id) {
 }
 
 
-small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z, rand_gen_t &rgen, bool allow_rotation) :
-	type(t), inst_id(-1), height(h), width(w), r_angle(0.0), rx(0.0), ry(0.0), pos(p)
+small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z, rand_gen_t &rgen, bool allow_rotation, float bxys) :
+	type(t), inst_id(-1), height(h), width(w), branch_xy_scale(bxys), pos(p)
 {
-	height *= tree_height_scale*sm_tree_scale;
 	init();
+	height    *= tree_height_scale*sm_tree_scale;
 	bark_color = stt[type].bc;
 	if (!is_pine_tree()) {UNROLL_3X(bark_color[i_] = min(1.0, bark_color[i_]*(0.85 + 0.3f*rgen.randd()));)} // gen bark color for decid trees
 	if (calc_z) {pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1) - 0.1*height;}
@@ -841,7 +841,7 @@ void small_tree::add_cobjs(cobj_params &cp, cobj_params &cp_trunk) {
 	case T_SH_PINE: // short pine tree
 		// Note2: smaller than the actual pine tree render at the base so that it's easier for the player to walk under pine trees
 		// Note2: could use the actual pine tree branch polygons, but that may be too conservative and too slow
-		coll_id[1] = add_coll_cylinder((pos + ((type == T_PINE) ? 0.35*dirh : all_zeros)), (pos + dirh), get_pine_tree_radius(), 0.0, cp, -1, 1);
+		coll_id[1] = add_coll_cylinder((pos + ((type == T_PINE) ? 0.35*dirh : all_zeros)), (pos + dirh), get_radius(), 0.0, cp, -1, 1);
 		break;
 	case T_DECID: // decidious tree
 		coll_id[1] = add_coll_sphere((pos + 0.75*dirh), 1.3*width, cp, -1, 1);
@@ -880,7 +880,7 @@ void small_tree::remove_cobjs() {
 
 
 void small_tree::add_bounds_to_bcube(cube_t &bcube) const {
-	bcube.assign_or_union_with_sphere(trunk_cylin.get_center(), max(1.5*width, 0.5*height)); // approximate/conservative
+	bcube.assign_or_union_with_sphere(trunk_cylin.get_center(), get_xy_radius()); // approximate/conservative
 }
 
 
@@ -896,7 +896,7 @@ bool small_tree::line_intersect(point const &p1, point const &p2, float *t) cons
 
 	if (!is_pine_tree()) return 0; // Note: can work on other tree types such as palms, but it's more complex
 	vector3d const dirh(get_rot_dir()*height);
-	cylinder_3dw const cylins[2] = {trunk_cylin, cylinder_3dw((pos + ((type == T_PINE) ? 0.35*dirh : all_zeros)), (pos + dirh), get_pine_tree_radius(), 0.0)};
+	cylinder_3dw const cylins[2] = {trunk_cylin, cylinder_3dw((pos + ((type == T_PINE) ? 0.35*dirh : all_zeros)), (pos + dirh), get_radius(), 0.0)};
 	bool coll(0);
 	
 	for (unsigned i = 0; i < 2; ++i) {
@@ -951,7 +951,7 @@ void small_tree::calc_palm_tree_points() {
 }
 
 
-float small_tree::get_pine_tree_radius() const {
+float small_tree::get_pine_tree_radius() const { // Note: doesn't include branch_xy_scale
 	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height/(tree_height_scale*sm_tree_scale));
 	return 0.35*pine_tree_radius_scale*(height0 + 0.03/tree_scale);
 }
@@ -982,10 +982,10 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 
 			for (unsigned k = 0; k < N_PT_RINGS; ++k) {
 				float const theta(TWO_PI*(3.3*j + k/(float)N_PT_RINGS) + theta0 + 0.5*rgen.signed_rand_float());
-				float const zz(z + 0.4*sz*rgen.signed_rand_float());
-				add_rotated_quad_pts(points, ix, theta, zz, center, sz, sz, sz, rd_scale*rd*sz); // bounds are (sz, sz, rd*sz+z)
+				float const zz(z + 0.4*sz*rgen.signed_rand_float()), xy_sz(branch_xy_scale*sz); // reducing xy_sz makes tree tall+thin with more vertical branches
+				add_rotated_quad_pts(points, ix, theta, zz, center, xy_sz, xy_sz, xy_sz, rd_scale*rd*sz); // bounds are (xy_sz, xy_sz, rd*sz+z)
 			}
-		}
+		} // for j
 		if (update_mode) {
 			assert(vbo_mgr_ix >= 0);
 			vbo_manager.update_range(points, PINE_TREE_NPTS, leaf_color, vbo_mgr_ix, vbo_mgr_ix+1);
@@ -1016,7 +1016,6 @@ float small_tree::get_zmax() const {return max((pos.z + height), trunk_cylin.p2.
 
 
 void small_tree::add_trunk_as_line(vector<point> &points) const {
-
 	float const hval(is_pine_tree() ? 1.0 : 0.75);
 	points.push_back(pos);
 	points.push_back(pos + get_rot_dir()*(hval*height*((stt[type].w2 == 0.0) ? 0.7 : 1.0))); // slightly shorter for distant pine trees
@@ -1024,7 +1023,6 @@ void small_tree::add_trunk_as_line(vector<point> &points) const {
 
 
 void small_tree::draw_pine(vbo_vnc_block_manager_t const &vbo_manager, unsigned num_instances) const { // 30 quads per tree
-
 	assert(is_pine_tree());
 	assert(vbo_mgr_ix >= 0);
 	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1, num_instances); // use glDrawElementsIndirect()?
@@ -1037,10 +1035,10 @@ bool small_tree::are_leaves_visible(vector3d const &xlate) const {
 		return sphere_in_camera_view((trunk_cylin.p2 - 0.2*width*get_rot_dir() + xlate), (0.3*height + 0.2*width), 2);
 	}
 	else if (r_angle == 0.0) { // vertical trunk - common case
-		return camera_pdu.sphere_visible_test((pos + vector3d(0.0, 0.0, 0.5*height) + xlate), max(1.5*width, 0.5*height));
+		return camera_pdu.sphere_visible_test((pos + vector3d(0.0, 0.0, 0.5*height) + xlate), get_xy_radius());
 	}
 	else {
-		return camera_pdu.sphere_visible_test((pos + 0.5*height*get_rot_dir() + xlate), max(1.5*width, 0.5*height));
+		return camera_pdu.sphere_visible_test((pos + 0.5*height*get_rot_dir() + xlate), get_xy_radius());
 	}
 }
 

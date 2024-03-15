@@ -195,9 +195,9 @@ bool try_place_obj(cube_t const &plot, vect_cube_t &blockers, rand_gen_t &rgen, 
 	return 0;
 }
 void place_tree(point const &pos, float radius, int ttype, vect_cube_t &colliders, vector<point> *tree_pos,
-	bool allow_bush, bool add_bush, bool is_sm_tree, bool has_planter, float custom_size=0.0)
+	bool allow_bush, bool add_bush, bool is_sm_tree, bool has_planter, float custom_size=0.0, float pine_xy_sz=1.0)
 {
-	tree_placer.add(pos, custom_size, ttype, allow_bush, add_bush, is_sm_tree); // use same tree type
+	tree_placer.add(pos, custom_size, ttype, allow_bush, add_bush, is_sm_tree, pine_xy_sz); // use same tree type
 	// use 15% of the placement radius for collision (trunk + planter), smaller if no planter
 	cube_t bcube;
 	bcube.set_from_sphere(pos, (has_planter ? 0.15 : 0.05)*radius);
@@ -814,34 +814,6 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		cube_with_ix_t const &house(bcubes.front());
 		bool const sdim((i->street_dir-1)>>1), sdir((i->street_dir-1)&1); // direction to the road
 
-		// place short pine trees by the front
-		if (!enable_instanced_pine_trees()) { // unfortunately, we can't customize the size of instanced pine trees, so this can't be enabled yet
-			unsigned const num_trees(rgen.rand() % 5); // 0-4
-
-			for (unsigned n = 0; n < num_trees; ++n) {
-				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random house wall dim/dir
-				float const wall_pos(house.d[dim][dir]);
-				float const tree_scale(rgen.rand_uniform(0.2, 0.3)), radius(4.5*sz_scale*tree_scale);
-				point pos;
-				pos.z = i->z2();
-				pos[ dim] = wall_pos + (dir ? 1.0 : -1.0)*1.5*radius; // place near this wall of the house
-				pos[!dim] = rgen.rand_uniform(house.d[!dim][0], house.d[!dim][1]); // on the corner is okay
-				cube_t tree_bc; tree_bc.set_from_point(pos);
-				tree_bc.expand_by_xy(radius);
-				tree_bc.z2() += 3.0*radius; // just a guess
-				point const center(pos + radius*plus_z);
-				if (is_placement_blocked(tree_bc, blockers, house, prev_blockers_end))   continue; // check blockers from prev step; no expand
-				if (is_placement_blocked_recent(tree_bc, blockers, yard_blockers_start)) continue; // check prev blockers in this yard
-				if (check_sphere_coll_building(center, radius, 0, house.ix))             continue; // xy_only=0
-				point p_include(center);
-				p_include[dim] = wall_pos - (dir ? 1.0 : -1.0)*0.25*radius; // slightly inside the wall
-				if (!check_sphere_coll_building(p_include, 0.0, 0, house.ix)) continue; // *must* be next to an exterior wall or fence; radius=0.0, xy_only=0
-				if (check_close_to_door(pos, 4.0*radius, house.ix))           continue;
-				int const ttype(0); // 0=pine, 1=short pine, 2=palm
-				place_tree(pos, radius, ttype, colliders, nullptr, 0, 0, 1, 0, tree_scale); // tree_pos=nullptr, allow_bush=0, add_bush=0, is_sm_tree=1, has_planter=0
-			} // for n
-		}
-
 		// attempt place swimming pool; often unsuccessful
 		bool const placed_pool(add_divider && place_swimming_pool(plot, *i, house, sdim, sdir, shrink_dim, prev_blockers_end, hwidth, translate_dist, blockers, colliders, rgen));
 
@@ -871,6 +843,36 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 					break; // success
 				} // for n
 			}
+		}
+		// place short pine trees by the front
+		if (!enable_instanced_pine_trees()) {
+			unsigned const num_trees(rgen.rand() % 5); // 0-4
+			float const pine_xy_sz = 0.5; // narrow
+
+			for (unsigned n = 0; n < num_trees; ++n) {
+				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random house wall dim/dir
+				float const wall_pos(house.d[dim][dir]);
+				float const tree_scale(rgen.rand_uniform(0.25, 0.3)), radius(3.0*sz_scale*tree_scale);
+				point pos;
+				pos.z = i->z2();
+				pos[ dim] = wall_pos + (dir ? 1.0 : -1.0)*1.5*radius; // place near this wall of the house
+				pos[!dim] = rgen.rand_uniform(house.d[!dim][0], house.d[!dim][1]); // on the corner is okay
+				cube_t tree_bc; tree_bc.set_from_point(pos);
+				tree_bc.expand_by_xy(radius);
+				tree_bc.z2() += 3.0*radius; // just a guess
+				point const center(pos + radius*plus_z);
+				if (is_placement_blocked(tree_bc, blockers, house, prev_blockers_end))   continue; // check blockers from prev step; no expand
+				if (is_placement_blocked_recent(tree_bc, blockers, yard_blockers_start)) continue; // check prev blockers in this yard
+				if (check_sphere_coll_building(center, radius, 0, house.ix))             continue; // xy_only=0
+				point p_include(center);
+				p_include[dim] = wall_pos - (dir ? 1.0 : -1.0)*0.25*radius; // slightly inside the wall
+				if (!check_sphere_coll_building(p_include, 0.0, 0, house.ix)) continue; // *must* be next to an exterior wall or fence; radius=0.0, xy_only=0
+				if (check_close_to_door(pos, 4.0*radius, house.ix))           continue;
+				// Note: we can't test objects such as balconies and fire escapes, so we might end up with a pine tree intersecting them
+				int const ttype(0); // 0=pine, 1=short pine, 2=palm
+				place_tree(pos, radius, ttype, colliders, nullptr, 0, 0, 1, 0, tree_scale, pine_xy_sz); // tree_pos=nullptr, allow_bush=0, add_bush=0, is_sm_tree=1, has_planter=0
+				blockers.push_back(tree_bc); // includes branches
+			} // for n
 		}
 		// maybe place a trashcan next to the house
 		if (1) {
