@@ -12,8 +12,8 @@ float const SKELETAL_ANIM_TIME_CONST = 32.0; // maybe should rework these consta
 
 enum {ANIM_ID_NONE=0, ANIM_ID_WALK, ANIM_ID_BHOP, ANIM_ID_FLIP, ANIM_ID_TWIRL, ANIM_ID_MARCH, ANIM_ID_ALIEN, ANIM_ID_RAT, ANIM_ID_SPIDER, ANIM_ID_SKELETAL, ANIM_ID_HCOPTER};
 // Note: MODEL_ANIM_STAIRS is for future use when walking up and down stairs; MODEL_ANIM_ATTACK is for future use with zombies
-enum {MODEL_ANIM_WALK=0, MODEL_ANIM_IDLE, MODEL_ANIM_STAIRS, MODEL_ANIM_ATTACK, NUM_MODEL_ANIMS};
-string const animation_names[NUM_MODEL_ANIMS] = {"walking", "idle", "stairs", "attack"};
+enum {MODEL_ANIM_WALK=0, MODEL_ANIM_IDLE, MODEL_ANIM_STAIRS_UP, MODEL_ANIM_STAIRS_DOWN, MODEL_ANIM_ATTACK, NUM_MODEL_ANIMS};
+string const animation_names[NUM_MODEL_ANIMS] = {"walking", "idle", "stairs_up", "stairs_down", "attack"};
 
 struct animation_state_t {
 	bool enabled=0, fixed_anim_speed=0;

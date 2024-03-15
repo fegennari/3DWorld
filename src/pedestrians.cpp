@@ -2151,8 +2151,18 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 		if (anim_state) { // calculate/update animation data
 			// only consider the person as idle if there's an idle animation;
 			// otherwise will always use walk animation, which is assumed to exist, but anim_time won't be updated while idle
-			bool const is_idle  (ped.is_waiting_or_stopped() && ped_model_loader.get_model(ped.model_id).has_animation("idle"  ));
-			bool const on_stairs(ped.is_on_stairs            && ped_model_loader.get_model(ped.model_id).has_animation("stairs")); // for building people
+			unsigned non_idle_anim(MODEL_ANIM_WALK);
+			bool const is_idle(ped.is_waiting_or_stopped() && ped_model_loader.get_model(ped.model_id).has_animation(animation_names[MODEL_ANIM_IDLE]));
+
+			if (ped.is_on_stairs) {
+				if      (ped.target_pos.z < ped.pos.z) {
+					if (ped_model_loader.get_model(ped.model_id).has_animation(animation_names[MODEL_ANIM_STAIRS_DOWN])) {non_idle_anim = MODEL_ANIM_STAIRS_DOWN;}
+				}
+				else if (ped.target_pos.z > ped.pos.z) {
+					if (ped_model_loader.get_model(ped.model_id).has_animation(animation_names[MODEL_ANIM_STAIRS_UP  ])) {non_idle_anim = MODEL_ANIM_STAIRS_UP  ;}
+				}
+				// else on a landing - use walk animation?
+			}
 			// we need to know if there are idle animations for light/shadow updates in building_t::add_room_lights(),
 			// where we don't have access to ped_model_loader, so the only solution I can come up with is using a global variable
 			some_person_has_idle_animation |= is_idle;
@@ -2164,8 +2174,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 				// just after a state change we have state_change_elapsed == 0 and want blend_factor = 1.0 to select the previous animation
 				if (state_change_elapsed < blend_time_ticks) {blend_factor = 1.0 - state_change_elapsed/blend_time_ticks;}
 			}
-			// we really should have a way to blend between walk and stairs animations, if there was a way to predict the transition
-			unsigned const non_idle_anim(on_stairs ? MODEL_ANIM_STAIRS : MODEL_ANIM_WALK);
+			// Note: we really should have a way to blend between walk and stairs animations, if there was a way to predict the transition
 			anim_state->anim_time     = (is_idle ? ped.get_idle_anim_time() : ped.anim_time); // if is_idle, we still need to advance the animation time
 			anim_state->model_anim_id = (is_idle ? MODEL_ANIM_IDLE : non_idle_anim);
 			anim_state->blend_factor  = blend_factor;
