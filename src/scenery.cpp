@@ -742,7 +742,7 @@ colorRGBA plant_base::get_plant_color(vector3d const &xlate) const {
 }
 
 
-int s_plant::create(int x, int y, int use_xy, float minz, vbo_vnc_block_manager_t &vbo_manager, vector<vert_norm_comp> &pts) {
+int s_plant::create(int x, int y, int use_xy, float minz) {
 
 	vbo_mgr_ix = -1;
 	int const ret(plant_base::create(x, y, use_xy, minz));
@@ -751,13 +751,11 @@ int s_plant::create(int x, int y, int use_xy, float minz, vbo_vnc_block_manager_
 	else          {type = rand2() % NUM_LAND_PLANT_TYPES;} // land plant
 	radius = rand_uniform2(0.0025, 0.0045)/tree_scale;
 	height = rand_uniform2(0.2, 0.4)/tree_scale + 0.025;
-	gen_points(vbo_manager, pts);
 	return 1;
 }
 
-void s_plant::create2(point const &pos_, float height_, float radius_, int type_, int calc_z, vbo_vnc_block_manager_t &vbo_manager, vector<vert_norm_comp> &pts) {
+void s_plant::create2(point const &pos_, float height_, float radius_, int type_, int calc_z) {
 	create_no_verts(pos_, height_, radius_, type_, calc_z);
-	gen_points(vbo_manager, pts);
 }
 
 void s_plant::create_no_verts(point const &pos_, float height_, float radius_, int type_, int calc_z, bool land_plants_only) {
@@ -918,16 +916,16 @@ void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, boo
 	float const wind_scale(berries.empty() ? (is_water_plant() ? 5.0 : 1.0) : 0.0); // no wind if this plant type has berries
 	bool const set_color(!shadow_only && (is_water_plant() || burn_amt > 0.0));
 	if (set_color) {state.set_color_scale(s, get_plant_color(xlate));}
-	if (shadowed) {state.set_normal_scale(s, 0.0);}
+	if (shadowed ) {state.set_normal_scale(s, 0.0);}
 	state.set_wind_scale(s, wind_scale);
 	select_texture((draw_model == 0) ? get_leaf_tid() : WHITE_TEX); // could pre-bind textures and select using shader int, but probably won't improve performance
 	assert(vbo_mgr_ix >= 0);
 	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
 	if (set_color) {state.set_color_scale(s, WHITE);}
-	if (shadowed) {state.set_normal_scale(s, 1.0);}
+	if (shadowed ) {state.set_normal_scale(s, 1.0);}
 }
 
-void s_plant::draw_berries(shader_t &s, vector3d const &xlate) const {
+void s_plant::draw_berries(shader_t &s, vector3d const &xlate) const { // drawn using instancing
 
 	if (berries.empty() || burn_amt > 0.5) return;
 	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
@@ -1240,7 +1238,7 @@ void scenery_group::do_rock_damage(point const &pos, float radius, float damage)
 void scenery_group::add_plant(point const &pos, float height, float radius, int type, int calc_z) {
 	assert(height > 0.0 && radius > 0.0);
 	plants.push_back(s_plant());
-	plants.back().create2(pos, height, radius, type, calc_z, plant_vbo_manager, temp_pts);
+	plants.back().create2(pos, height, radius, type, calc_z);
 }
 void scenery_group::add_leafy_plant(point const &pos, float radius, int type, int calc_z) {
 	assert(radius > 0.0);
@@ -1278,7 +1276,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 			}
 			else if (veg && rand2()%100 < 35) { // Note: numbers below were based on 30% plants but we now have 35% plants
 				s_plant plant; // 35%
-				if (plant.create(j, i, 1, min_plant_z, plant_vbo_manager, temp_pts)) {
+				if (plant.create(j, i, 1, min_plant_z)) {
 					if (!check_valid_scenery_pos(plant)) continue;
 					plants.push_back(plant);
 					plant.add_bounds_to_bcube(all_bcube);
@@ -1337,6 +1335,7 @@ void scenery_group::post_gen_setup(tree_cont_t const &trees) {
 		leafy_vbo_manager.clear();
 		add_sphere_quads(sphere_verts, nullptr, all_zeros, 1.0, 16, use_tri_strip,  0.5, 1.0, 0.125, 1.0); // only emit the textured top part of the sphere + the 'stem'
 		if (use_tri_strip) {leafy_vbo_manager.set_prim_type(GL_TRIANGLE_STRIP);}
+		sort(plants.begin(), plants.end()); // sort by type, before creating VBO data
 		unsigned num_lp_leaves(0);
 		for (auto const &p : leafy_plants) {num_lp_leaves += p.num_leaves();}
 		leafy_vbo_manager.reserve_pts(num_lp_leaves*sphere_verts.size());
@@ -1348,7 +1347,8 @@ void scenery_group::post_gen_setup(tree_cont_t const &trees) {
 		rock_vbo_manager.reserve_pts(tot_num_verts);
 		for (auto &r : surface_rocks) {r.gen_points(rock_vbo_manager);}
 	}
-	sort(plants.begin(), plants.end()); // sort by type
+	sort(plants.begin(), plants.end()); // sort by type, before creating VBO data
+	for (s_plant &plant : plants) {plant.gen_points(plant_vbo_manager, temp_pts);}
 	if (!voxel_rocks.empty()) {voxel_rock_manager.build_models(VOX_ROCK_NUM_LOD);}
 		
 	for (auto &r : voxel_rocks) {

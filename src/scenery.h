@@ -167,6 +167,7 @@ struct plant_base : public burnable_scenery_obj { // size = 32
 	int vbo_mgr_ix;
 
 	plant_base() : vbo_mgr_ix(-1) {}
+	bool operator<(plant_base const &p) const {return (type < p.type);}
 	int create(int x, int y, int use_xy, float minz);
 	void next_frame();
 	colorRGBA get_plant_color(vector3d const &xlate) const;
@@ -195,12 +196,11 @@ public:
 	virtual float get_bsphere_radius() const {return 0.5f*(height + radius);}
 	point get_top_pt() const {return pos + point(0.0, 0.0, height);}
 	bool is_water_plant() const;
-	bool operator<(s_plant const &p) const {return (type < p.type);}
 	colorRGBA const &get_leaf_color() const;
 	colorRGBA const &get_stem_color() const;
 	int get_leaf_tid() const;
-	int create(int x, int y, int use_xy, float minz, vbo_vnc_block_manager_t &vbo_manager, vector<vert_norm_comp> &pts);
-	void create2(point const &pos_, float height_, float radius_, int type_, int calc_z, vbo_vnc_block_manager_t &vbo_manager, vector<vert_norm_comp> &pts);
+	int create(int x, int y, int use_xy, float minz);
+	void create2(point const &pos_, float height_, float radius_, int type_, int calc_z);
 	void create_no_verts(point const &pos_, float height_, float radius_, int type_, int calc_z=0, bool land_plants_only=0);
 	void add_cobjs();
 	bool check_sphere_coll(point &center, float sphere_radius) const;
