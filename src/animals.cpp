@@ -556,10 +556,13 @@ void bird_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) const
 	float const dist(p2p_dist(pos_, get_camera_pos()));
 	float const alpha(CLIP_TO_01(2000.0f*radius/dist - 2.0f)); // 1.0 under half clip distance, after that linear falloff to zero
 	if (alpha < 0.01) return;
-	if (!s.is_setup()) {s.begin_color_only_shader();}
+	
+	if (!s.is_setup()) {
+		s.begin_color_only_shader();
+		bind_draw_sphere_vbo(0, 0); // no textures or normals
+	}
 	s.set_cur_color(colorRGBA(color, alpha));
 	int const ndiv(get_ndiv(pos_));
-	bind_draw_sphere_vbo(0, 0); // no textures or normals
 	fgPushMatrix();
 	translate_to(pos_);
 	rotate_to_plus_x(dir);
@@ -578,7 +581,6 @@ void bird_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) const
 		fgPopMatrix();
 	}
 	fgPopMatrix();
-	bind_vbo(0);
 }
 
 void butterfly_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) const {
@@ -676,6 +678,7 @@ template<typename A> void animal_group_t<A>::draw_animals(shader_t &s, tile_t co
 	if (!debug_animal_draw() && !camera_pdu.cube_visible(bcube + get_camera_coord_space_xlate())) return;
 	bool first_draw(1);
 	for (auto i = this->begin(); i != this->end(); ++i) {i->draw(s, tile, first_draw);}
+	bind_vbo(0); // needed for birds, okay for others
 }
 
 // explicit instantiations
