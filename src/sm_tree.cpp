@@ -1025,7 +1025,7 @@ void small_tree::add_trunk_as_line(vector<point> &points) const {
 void small_tree::draw_pine(vbo_vnc_block_manager_t const &vbo_manager, unsigned num_instances) const { // 30 quads per tree
 	assert(is_pine_tree());
 	assert(vbo_mgr_ix >= 0);
-	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1, num_instances); // use glDrawElementsIndirect()?
+	vbo_manager.render_single(vbo_mgr_ix, num_instances); // use glDrawElementsIndirect()?
 }
 
 

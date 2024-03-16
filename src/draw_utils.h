@@ -192,7 +192,8 @@ public:
 	}
 	unsigned get_fill_start(unsigned npts, unsigned six) const;
 	void fill_pts_from(typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color, unsigned six);
-	void render_range(unsigned six, unsigned eix, unsigned num_instances=1) const;
+	void render_range (unsigned six, unsigned eix, unsigned num_instances=1) const;
+	void render_single(unsigned ix, unsigned num_instances=1) const {render_range(ix, ix+1, num_instances);}
 	void render_all(unsigned num_instances=1) const {if (has_data()) {render_range(0, offsets.size()-1, num_instances);}}
 	bool upload();
 	void update_range(typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color, unsigned six, unsigned eix);

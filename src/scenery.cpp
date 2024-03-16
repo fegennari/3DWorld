@@ -419,7 +419,7 @@ void surface_rock::draw(float sscale, bool shadow_only, bool reflection_pass,
 	uniform_scale(scale*get_size_scale(dist, scale_val));
 	rotate_into_plus_z(dir);
 	assert(vbo_mgr_ix >= 0);
-	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
+	vbo_manager.render_single(vbo_mgr_ix);
 	fgPopMatrix();
 }
 
@@ -439,7 +439,6 @@ bool surface_rock::update_zvals(int x1, int y1, int x2, int y2, vbo_vnt_block_ma
 }
 
 void surface_rock::destroy() {
-
 	if (surface) {surface->dec_ref();}
 	vbo_mgr_ix = -1;
 	surface    = NULL;
@@ -920,7 +919,7 @@ void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, boo
 	state.set_wind_scale(s, wind_scale);
 	select_texture((draw_model == 0) ? get_leaf_tid() : WHITE_TEX); // could pre-bind textures and select using shader int, but probably won't improve performance
 	assert(vbo_mgr_ix >= 0);
-	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
+	vbo_manager.render_single(vbo_mgr_ix);
 	if (set_color) {state.set_color_scale(s, WHITE);}
 	if (shadowed ) {state.set_normal_scale(s, 1.0);}
 }
@@ -1056,7 +1055,7 @@ void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pas
 	if (delta_z != 0.0) {fgPushMatrix(); fgTranslate(0, 0, delta_z);} // not the cleanest or most efficient solution, but much simpler than updating the VBO data
 	if (motion_amt > 0.0) {state.set_wind_add(s, 0.005*motion_amt);}
 	if (is_underwater) {state.set_wind_scale(s, 5.0*LEAFY_PLANT_WIND);}
-	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
+	vbo_manager.render_single(vbo_mgr_ix);
 	if (motion_amt > 0.0) {state.set_wind_add(s, 0.0);} // restore orig value
 	if (is_underwater) {state.set_wind_scale(s, LEAFY_PLANT_WIND);}
 	if (delta_z != 0.0) {fgPopMatrix();}
