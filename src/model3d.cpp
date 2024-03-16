@@ -2009,7 +2009,6 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 	}
 	bool check_lod(force_lod);
 	point center(all_zeros);
-	float max_area_per_tri(0.0);
 	float const lod_thresh(1.0E6*model_mat_lod_thresh*model_lod_mult*lod_scale);
 
 	if ((world_mode == WMODE_INF_TERRAIN || use_model_lod_blocks) && !is_shadow_pass) { // setup LOD/distance culling
@@ -2022,9 +2021,6 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 		check_lod |= (is_scaled || !bcube_rot.contains_pt(camera_pdu.pos));
 		if (check_lod) {center = bcube_rot.get_cube_center();}
 	}
-	if (check_lod) {
-		for (auto m = materials.begin(); m != materials.end(); ++m) {max_eq(max_area_per_tri, m->avg_area_per_tri);}
-	}
 	// render all materials (opaque then transparent)
 	for (unsigned pass = 0; pass < (is_z_prepass ? 1U : 2U); ++pass) { // opaque, transparent
 		if (!(trans_op_mask & (1<<pass))) continue; // wrong opaque vs. transparent pass
@@ -2033,12 +2029,12 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 			material_t const &mat(materials[i]);
 
 			if (mat.is_partial_transparent() == (pass != 0) && (bmap_pass_mask & (1 << unsigned(mat.use_bump_map())))) {
-				if (check_lod && mat.avg_area_per_tri > 0.0 && mat.avg_area_per_tri < max_area_per_tri) { // don't cull the material with the largest triangle area
+				if (check_lod && mat.avg_area_per_tri > 0.0 && !mat.no_lod_cull) {
 					if ((fixed_lod_dist ? fixed_lod_dist : p2p_dist(camera_pdu.pos, center)) > lod_thresh*mat.avg_area_per_tri) continue; // LOD/dist culling
 				}
 				to_draw.push_back(make_pair(mat.draw_order_score, i));
 			}
-		}
+		} // for i
 		sort(to_draw.begin(), to_draw.end());
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
@@ -2526,6 +2522,10 @@ void model3d::get_all_mat_lib_fns(set<string> &mat_lib_fns) const {
 void model3d::compute_area_per_tri() {
 #pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < (int)materials.size(); ++i) {materials[i].compute_area_per_tri();}
+
+	float max_area_per_tri(0.0);
+	for (material_t const &m : materials) {max_eq(max_area_per_tri, m.avg_area_per_tri);}
+	for (material_t &m : materials) {m.no_lod_cull = (m.avg_area_per_tri == max_area_per_tri);} // material with max area per tri is never culled
 }
 
 void model3d::get_stats(model3d_stats_t &stats) const {

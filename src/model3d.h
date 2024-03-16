@@ -484,7 +484,7 @@ struct material_params_t { // Warning: changing this struct will invalidate the 
 
 struct material_t : public material_params_t {
 
-	bool might_have_alpha_comp=0, tcs_checked=0;
+	bool might_have_alpha_comp=0, tcs_checked=0, no_lod_cull=0;
 	int a_tid=-1, d_tid=-1, s_tid=-1, ns_tid=-1, alpha_tid=-1, bump_tid=-1, refl_tid=-1; // ambient, diffuse, specular, shininess, transparency, normal, reflection (unused)
 	float draw_order_score=0.0, avg_area_per_tri=0.0, tot_tri_area=0.0;
 	float metalness=-1.0; // < 0 disables; should go into material_params_t, but that would invalidate the model3d file format
