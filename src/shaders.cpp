@@ -1282,6 +1282,7 @@ void compute_shader_comp_t::read_float_vals(vector<float> &vals, bool is_last, b
 	assert(is_running);
 	is_running = 0;
 	vals.resize(xsize*ysize*zsize);
+	glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
 	glGetTexImage((is_3d() ? GL_TEXTURE_3D : GL_TEXTURE_2D), 0, GL_RED, GL_FLOAT, &vals.front());
 
 	if (xsize != xsize_req || ysize != ysize_req || zsize != zsize_req) { // need to copy a smaller sub-range from a larger texture
