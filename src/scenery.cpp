@@ -1398,7 +1398,12 @@ void scenery_group::draw_opaque_objects(shader_t &s, shader_t &vrs, bool shadow_
 		surface_rocks[i].draw(sscale, shadow_only, reflection_pass, xlate, scale_val, rock_vbo_manager);
 	}
 	rock_vbo_manager.end_render();
-	draw_scenery_vector(rocks, sscale, shadow_only, reflection_pass, xlate, scale_val);
+
+	if (!rocks.empty()) {
+		begin_sphere_draw(1); // textured=1
+		draw_scenery_vector(rocks, sscale, shadow_only, reflection_pass, xlate, scale_val);
+		end_sphere_draw();
+	}
 	draw_scenery_vector(logs,   sscale, shadow_only, reflection_pass, xlate, scale_val);
 	draw_scenery_vector(stumps, sscale, shadow_only, reflection_pass, xlate, scale_val);
 	if (!shadow_only) {select_texture(WOOD_TEX);} // plant stems use wood texture
