@@ -175,11 +175,11 @@ void update_tiled_grass_colors() {grass_tile_manager.clear();} // regenerate gra
 
 class tiled_terrain_hmap_manager_t : public terrain_hmap_manager_t {
 
-	tile_t *cur_tile;
+	tile_t *cur_tile=nullptr;
 	bool modified[3][3];
 
 public:
-	tiled_terrain_hmap_manager_t() : cur_tile(NULL) {clear_modified();}
+	tiled_terrain_hmap_manager_t() {clear_modified();}
 	void clear_modified() {for (unsigned i = 0; i < 3; ++i) {UNROLL_3X(modified[i][i_] = 0;)}}
 
 	void apply_brush(tex_mod_map_manager_t::hmap_brush_t brush, tile_t *tile, bool cache) { // Note: brush is copied and may be modified
@@ -267,16 +267,10 @@ bool write_default_hmap_modmap() {
 
 // *** tile_t ***
 
-tile_t::tile_t() : x1(0), y1(0), x2(0), y2(0), wx1(0), wy1(0), wx2(0), wy2(0),
-	last_occluded_frame(0), weight_tid(0), height_tid(0), normal_tid(0), shadow_tid(0), size(0), stride(0), zvsize(0), base_tsize(0), gen_tsize(0), smap_lod_level(0),
-	radius(0), mzmin(0), mzmax(0), mesh_dz(0), ptzmax(0), dtzmax(0), trmax(0), xstart(0), ystart(0), min_normal_z(0.0), deltax(0.0), deltay(0.0),
-	sun_shadows_invalid(1), moon_shadows_invalid(1), recalc_tree_grass_weights(1), mesh_height_invalid(0), in_queue(0), last_occluded(0), has_any_grass(0),
-	is_distant(0), no_trees(0), just_cleared(0), has_tunnel(0), decid_trees(tree_data_manager) {}
+tile_t::tile_t() : decid_trees(tree_data_manager) {}
 
-tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_tid(0), height_tid(0), normal_tid(0), shadow_tid(0),
-	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), smap_lod_level(0), mesh_dz(0.0), trmax(0.0), min_normal_z(0.0), deltax(DX_VAL), deltay(DY_VAL),
-	sun_shadows_invalid(1), moon_shadows_invalid(1), recalc_tree_grass_weights(1), mesh_height_invalid(0), in_queue(0), last_occluded(0), has_any_grass(0),
-	is_distant(0), no_trees(0), just_cleared(0), has_tunnel(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
+tile_t::tile_t(unsigned size_, int x, int y) : size(size_), stride(size+1), zvsize(stride+1),
+	deltax(DX_VAL), deltay(DY_VAL), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
 {
 	assert(size > 0);
 	x1 = x*size;
@@ -2157,7 +2151,7 @@ void lightning_strike_t::end_draw() const {
 // *** tile_draw_t ***
 
 
-tile_draw_t::tile_draw_t() : buildings_valid(0), tiles_gen_prev_frame(0), terrain_zmin(0.0), lod_renderer(USE_TREE_BILLBOARDS) {
+tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS) {
 	assert(MESH_X_SIZE == MESH_Y_SIZE && X_SCENE_SIZE == Y_SCENE_SIZE);
 }
 
