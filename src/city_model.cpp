@@ -299,23 +299,20 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	bool const disable_cull_face_this_obj(/*!is_shadow_pass &&*/ model_file.two_sided && glIsEnabled(GL_CULL_FACE));
 	if (disable_cull_face_this_obj) {glDisable(GL_CULL_FACE);}
 
-	if (skip_mat_mask > 0) { // draw select materials
-		for (unsigned i = 0; i < model.num_materials(); ++i) {
-			if (skip_mat_mask & (1<<i)) continue; // skip this material
-			model.render_material(s, i, is_shadow_pass, 0, 2, 0, nullptr, 1); // no_set_min_alpha=1
-		}
-	}
-	else if (!force_high_detail && (low_detail || is_shadow_pass)) { // low detail pass, normal maps disabled
+	if (!force_high_detail && (low_detail || is_shadow_pass)) { // low detail pass, normal maps disabled
 		if (!is_shadow_pass && use_model3d_bump_maps()) {model3d::bind_default_flat_normal_map();} // still need to set the default here in case the shader is using it
 		// combine shadow materials into a single VBO and draw with one call when is_shadow_pass==1? this is complex and may not yield a significant improvement
-		for (auto i = model_file.shadow_mat_ids.begin(); i != model_file.shadow_mat_ids.end(); ++i) {model.render_material(s, *i, is_shadow_pass, 0, 2, 0, nullptr, 1);}
+		for (auto i = model_file.shadow_mat_ids.begin(); i != model_file.shadow_mat_ids.end(); ++i) {
+			if (skip_mat_mask & (1<<*i)) continue; // skip this material
+			model.render_material(s, *i, is_shadow_pass, 0, 2, 0, nullptr, 1);
+		}
 	}
 	else { // draw all materials
 		float lod_mult(model_file.lod_mult); // should model_file.lod_mult always be multiplied by sz_scale?
 		if (!is_shadow_pass && model_file.lod_mult == 0.0) {lod_mult = 400.0*sz_scale;} // auto select lod_mult
 		float const fixed_lod_dist((is_shadow_pass && !force_high_detail) ? 10.0 : 0.0);
 		model.render_materials(s, is_shadow_pass, 0, 0, 2, 3, 3, model.get_unbound_material(), rotation_t(),
-			nullptr, nullptr, is_shadow_pass, lod_mult, fixed_lod_dist, 0, 1, 1); // enable_alpha_mask=2 (both), is_scaled=1, no_set_min_alpha=1
+			nullptr, nullptr, is_shadow_pass, lod_mult, fixed_lod_dist, 0, 1, 1, skip_mat_mask); // enable_alpha_mask=2 (both), is_scaled=1, no_set_min_alpha=1
 	}
 	if (disable_cull_face_this_obj) {glEnable(GL_CULL_FACE);} // restore previous value
 	fgPopMatrix();

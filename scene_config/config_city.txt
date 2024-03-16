@@ -133,7 +133,7 @@ enable_hcopter_shadows 0
 # helicopter_model: filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult blade_mat_id [shadow_mat_ids]
 city helicopter_model ../models/helicopters/Helicopter_ka27/ka27.model3d 1 0 5   0 0  90  1 2.5 1.0   1   # always white, materials are {body, prop blade}; centered
 city helicopter_model ../models/helicopters/helicopter3/helicopter.glb   0 0 5   0 0  90  1 2.0 1.0   2   # looks good; materials are {legs, body, rotor, ?, seats}; centered
-city helicopter_model ../models/helicopters/mh_6_little_bird_japan.glb   0 0 5   0 0  90  1 2.0 1.0   1   # looks good; materials are {interior, rotor, exterior}; centered
+city helicopter_model ../models/helicopters/mh_6_little_bird_japan.glb   0 0 5   0 0  90  1 2.0 60.0  1   # looks good; materials are {interior, rotor, exterior}; centered
 #city helicopter_model ../models/helicopters/Helicopter/md500.3DS         1 0 0   0 0  90  0 2.0 1.0  -1 0 # always white, no separate blade material (not rotated about center), material 0 for shadows
 #city helicopter_model ../models/helicopters/helicopter2/Helecopter.fbx   0 0 0   0 0 270  1 2.0 1.0  -1   # looks good, but doesn't rotate; materials are {interior, exterior}
 #city helicopter_model ../models/helicopters/MD-500/scene.gltf            0 0 0   0 0  90  1 2.0 1.0   0   # doesn't rotate; materials are {exterior, interior}

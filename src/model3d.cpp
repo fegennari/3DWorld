@@ -1983,9 +1983,9 @@ bool cull_front_faces(int reflection_pass) {
 	return ((reflection_pass == 1) ^ invert_model3d_faces);
 }
 
-void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, int enable_alpha_mask,
-	unsigned bmap_pass_mask, int trans_op_mask, base_mat_t const &unbound_mat, rotation_t const &rot, point const *const xlate,
-	xform_matrix const *const mvm, bool force_lod, float model_lod_mult, float fixed_lod_dist, bool skip_cull_face, bool is_scaled, bool no_set_min_alpha)
+void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, int enable_alpha_mask, unsigned bmap_pass_mask,
+	int trans_op_mask, base_mat_t const &unbound_mat, rotation_t const &rot, point const *const xlate, xform_matrix const *const mvm, bool force_lod,
+	float model_lod_mult, float fixed_lod_dist, bool skip_cull_face, bool is_scaled, bool no_set_min_alpha, unsigned skip_mat_mask)
 {
 	bool const is_normal_pass(!is_shadow_pass && !is_z_prepass), is_bmap_pass((bmap_pass_mask & 2) != 0);
 	if (is_normal_pass) {smap_data[rot].set_for_all_lights(shader, mvm);} // choose correct shadow map based on rotation
@@ -1994,9 +1994,8 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 		if (cull_front_faces(reflection_pass)) {glCullFace(GL_FRONT);}
 		glEnable(GL_CULL_FACE);
 	}
-
-	// render geom that was not bound to a material
-	if ((bmap_pass_mask & 1) && unbound_mat.color.alpha > 0.0 && (trans_op_mask & 1) && !unbound_geom.empty()) { // enabled, not in bump map only pass; assume opaque
+	// render geom that was not bound to a material; skip if skip_mat_mask was set since this material is non-indexable
+	if ((bmap_pass_mask & 1) && unbound_mat.color.alpha > 0.0 && (trans_op_mask & 1) && !unbound_geom.empty() && skip_mat_mask == 0) { // not in bump map only pass; assume opaque
 		if (is_normal_pass) { // cur_ub_tid texture shouldn't have an alpha mask, so we don't need to use it in the shadow pass
 			assert(unbound_mat.tid >= 0);
 			select_texture(unbound_mat.tid);
@@ -2026,6 +2025,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 		if (!(trans_op_mask & (1<<pass))) continue; // wrong opaque vs. transparent pass
 
 		for (unsigned i = 0; i < materials.size(); ++i) {
+			if (skip_mat_mask & (1<<i)) continue; // skip this material
 			material_t const &mat(materials[i]);
 
 			if (mat.is_partial_transparent() == (pass != 0) && (bmap_pass_mask & (1 << unsigned(mat.use_bump_map())))) {
@@ -2041,7 +2041,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 			materials[to_draw[i].second].render(shader, tmgr, unbound_mat.tid, is_shadow_pass, is_z_prepass, enable_alpha_mask, is_bmap_pass, xlate, no_set_min_alpha);
 		}
 		to_draw.clear();
-	}
+	} // for pass
 	if (group_back_face_cull && reflection_pass != 2 && !skip_cull_face) { // okay enable culling if is_shadow_pass on some scenes
 		if (cull_front_faces(reflection_pass)) {glCullFace(GL_BACK);} // restore the default
 		glDisable(GL_CULL_FACE);
