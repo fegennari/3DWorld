@@ -166,7 +166,7 @@ public:
 		unsigned char ao, sh;
 		tree_map_val() : ao(255), sh(255) {}
 	};
-
+	mutable bool vis_ref_call=0; // cached visited flag for tile_draw_t::can_have_reflection_recur()
 private:
 	int x1, y1, x2, y2, wx1, wy1, wx2, wy2, last_occluded_frame;
 	unsigned weight_tid, height_tid, normal_tid, shadow_tid;
@@ -428,7 +428,6 @@ public:
 class tile_draw_t : public indexed_vbo_manager_t {
 
 	typedef unordered_map<tile_xy_pair, unique_ptr<tile_t>, hash_tile_xy_pair> tile_map;
-	typedef unordered_set<tile_xy_pair, hash_tile_xy_pair> tile_set_t;
 	typedef vector<pair<float, tile_t *> > draw_vect_t;
 
 	tile_map tiles;
@@ -445,6 +444,7 @@ class tile_draw_t : public indexed_vbo_manager_t {
 	crack_ibuf_t crack_ibuf;
 	tile_shadow_map_manager smap_manager;
 	vector<pair<float, tile_xy_pair>> shadow_recomp_queue;
+	vect_cube_t occluder_cubes;
 
 	struct occluder_pts_t {
 		point cube_pts[4];
@@ -470,8 +470,8 @@ private:
 	static void shared_shader_lighting_setup(shader_t &s, unsigned lighting_shader);
 	static void lighting_with_cloud_shadows_setup(shader_t &s, unsigned lighting_shader, bool cloud_shadows);
 	void setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, bool enable_shadow_map) const;
-	bool can_have_reflection_recur(tile_t const *const tile, point const corners[3], tile_set_t &tile_set, unsigned dim_ix);
-	bool can_have_reflection(tile_t const *const tile, tile_set_t &tile_set);
+	bool can_have_reflection_recur(tile_t const *const tile, point const corners[3], unsigned dim_ix);
+	bool can_have_reflection(tile_t const *const tile);
 public:
 	uint64_t show_debug_stats(bool calc_mem_only) const;
 	void pre_draw();

@@ -2495,7 +2495,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 }
 
 
-bool tile_draw_t::can_have_reflection_recur(tile_t const *const tile, point const corners[3], tile_set_t &tile_set, unsigned dim_ix) {
+bool tile_draw_t::can_have_reflection_recur(tile_t const *const tile, point const corners[3], unsigned dim_ix) {
 
 	point const camera(get_camera_pos());
 	cube_t bcube(tile->get_bcube());
@@ -2512,7 +2512,9 @@ bool tile_draw_t::can_have_reflection_recur(tile_t const *const tile, point cons
 			if (water_plane_z + z_over_xy*p2p_dist_xy(corners[2], closest_pt) < corners[2].z) return 1;
 		}
 	}
-	if (!tile_set.insert(tile->get_tile_xy_pair()).second) return 0; // already seen
+	if (tile->vis_ref_call) return 0; // already seen
+	tile->vis_ref_call = 1;
+	bool ret(0);
 		
 	for (unsigned d = 0; d < 2; ++d) {
 		int delta[2] = {0,0};
@@ -2521,20 +2523,21 @@ bool tile_draw_t::can_have_reflection_recur(tile_t const *const tile, point cons
 		else                                {continue;}
 		tile_t const *const adj(get_tile_from_xy(tile->get_tile_xy_pair(delta[0], delta[1])));
 		if (!adj || !adj->is_visible()) continue;
-		if (can_have_reflection_recur(adj, corners, tile_set, d)) return 1;
+		if (can_have_reflection_recur(adj, corners, d)) {ret = 1; break;}
 	}
-	return 0;
+	tile->vis_ref_call = 0;
+	return ret;
 }
 
 
-bool tile_draw_t::can_have_reflection(tile_t const *const tile, tile_set_t &tile_set) {
+bool tile_draw_t::can_have_reflection(tile_t const *const tile) {
 
-	if (tile->all_water()) return 0;
-	if (tile->has_water()) return 1;
+	if (!is_water_enabled()) return 0;
+	if (tile->all_water  ()) return 0;
+	if (tile->has_water  ()) return 1;
 	// return 1 if the camera's tile contains water?
-	point const camera(get_camera_pos());
 	cube_t bcube(tile->get_bcube());
-	point const center(bcube.get_cube_center());
+	point const camera(get_camera_pos()), center(bcube.get_cube_center());
 	point corners[3]; // {x, y, closest}
 
 	for (unsigned d = 0; d < 2; ++d) {
@@ -2544,7 +2547,7 @@ bool tile_draw_t::can_have_reflection(tile_t const *const tile, tile_set_t &tile
 	}
 	corners[2]   = bcube.closest_pt(camera);
 	corners[2].z = tile->get_zmax();
-	return can_have_reflection_recur(tile, corners, tile_set, 2);
+	return can_have_reflection_recur(tile, corners, 2);
 }
 
 
@@ -2707,7 +2710,6 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 
 	// determine potential occluders
 	point const camera(get_camera_pos());
-	static vect_cube_t occluder_cubes;
 	occluder_cubes.clear();
 	if (!building_occluder.is_all_zeros()) {occluder_cubes.push_back(building_occluder);}
 
@@ -2722,8 +2724,7 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 		float const dist(tile->get_rel_dist_to_camera());
 		if (dist > DRAW_DIST_TILES || !tile->is_visible()) continue;
 		if (tile->was_last_occluded()) continue; // occluded in the shadow pass
-		tile_set_t tile_set;
-		if (reflection_pass == 1 && !can_have_reflection(tile, tile_set)) continue; // check for water plane Z reflections only
+		if (reflection_pass == 1 && !can_have_reflection(tile)) continue; // check for water plane Z reflections only
 		if (!occluder_cubes.empty() && check_cube_occluded(tile->get_bcube(), occluder_cubes, camera)) continue; // building wall/floor/ceiling occlusion
 
 		if (!occluders.empty() && !tile->was_last_unoccluded()) {
@@ -2735,10 +2736,7 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 			for (auto j = occluders.begin(); j != occluders.end(); ++j) {
 				if (j->tile == tile) continue; // no self-occlusion
 				bool intersected(0); // will always be true for the camera's current tile
-
-				for (unsigned d = 0; d < 4 && !intersected; ++d) {
-					intersected |= check_line_clip(tile_os.cube_pts[d], camera, j->bcube.d);
-				}
+				for (unsigned d = 0; d < 4 && !intersected; ++d) {intersected |= check_line_clip(tile_os.cube_pts[d], camera, j->bcube.d);}
 				if (intersected) {occluder_ixs.push_back(j - occluders.begin());}
 			} // for j
 			for (unsigned t = 0; t < 16; ++t) {
