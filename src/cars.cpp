@@ -683,7 +683,7 @@ void car_draw_state_t::draw_helicopter(helicopter_t const &h, bool shadow_only) 
 	if (h.blade_rot != 0.0 && model.blade_mat_id >= 0) { // separate blades from the rest of the model for custom rotation
 		blade_mat_mask = ~(1 << model.blade_mat_id); // skip all but prop blades material
 
-		if ((h.bcube + xlate).closest_dist_less_than(camera_pdu.pos, 0.25*draw_tile_dist)) { // skip drawing blades if distant
+		if (shadow_only || (h.bcube + xlate).closest_dist_less_than(camera_pdu.pos, 0.25*draw_tile_dist)) { // skip drawing blades if distant
 			vector3d dir(h.dir);
 			rotate_vector3d(plus_z, h.blade_rot, dir);
 			helicopter_model_loader.draw_model(s, center, h.bcube, dir, WHITE, xlate, h.model_id, shadow_only, 0, nullptr, blade_mat_mask); // draw prop blades only
