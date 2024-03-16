@@ -193,10 +193,10 @@ city sink_model   ../models/interiors/simple_sink.model3d       1 0 0   0  0 90 
 city tub_model    ../models/interiors/bathtub.model3d           1 0 0  -1 -1 90  1 1.0 1.0  2
 city fridge_model ../models/interiors/fridge/Fridge.model3d     1 0 0  -1 -1 90  1 1.0 1.0  0 1 2 3 4 5
 city stove_model  ../models/interiors/stove/DB_Apps&Tech_04_13.model3d  1 1 0  0 -1 90  1 1.0 4.0  # reverse_winding=1 # two sided, first material is partially reversed winding
-city tv_model    "../models/interiors/SmartTV/Smart TV.model3d" 1 0 0  -1 0 90  1 1.0 1.0 # materials are {glass screen, plastic body, logo + metal + leg, object, rubber feet}
-city couch_model  ../models/interiors/couch/OBJ.model3d         1 0 0  0 -1 90  1 1.0 1.0
-city office_chair_model ../models/interiors/chairs/Free3d_office_chair1/Office_chair.model3d  1 0 0  0 -1 90  1 1.0 1.0
-city lamp_model   ../models/interiors/lamp1.model3d             1 0 0  2 -1 0   1 1.0 1.0  0 # only draw the first material a-wire for the shadow pass
+city tv_model    "../models/interiors/SmartTV/Smart TV.model3d" 1 0 0  -1 0 90  1 1.0 1E-5 # materials are {glass screen, plastic body, logo + metal + leg, object, rubber feet}
+city couch_model  ../models/interiors/couch/OBJ.model3d         1 0 0  0 -1 90  1 1.0 5E-6
+city office_chair_model ../models/interiors/chairs/Free3d_office_chair1/Office_chair.model3d  1 0 0  0 -1 90  1 1.0 1.25E-5
+city lamp_model   ../models/interiors/lamp1.model3d             1 0 0  2 -1 0   1 1.0 0.4  0 # only draw the first material a-wire for the shadow pass
 city washer_model ../models/interiors/washer/Washing_machine_MODEL_obj.model3d  0 0 0  0 -1 90  1 1.0 1.0
 city dryer_model  ../models/interiors/dryer/Dryer.model3d       0 1 0  0 -1 0   0 1.0 1.0  # reverse_winding=64 # two sided, but only part of the 6th material is reversed
 city key_model    ../models/interiors/singlkey.model3d          0 0 0  0 -1 0   2 1.0 1.0 # swap X and Z
@@ -240,10 +240,10 @@ city plant_model ../models/potted_plants/mediterranean_medium/scene.gltf      0 
 # filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [shadow_mat_ids]
 # city objects
 city fire_hydrant_model  ../models/fire_hydrant/Fire_Hydrant.model3d  1 0 0   0 -1 0    1 1.0 1.0 # uses custom color
-city substation_model    ../models/substation/SubstationBig.model3d   0 0 0  -1 -1 0    1 1.0 1.0
+city substation_model    ../models/substation/SubstationBig.model3d   0 0 0  -1 -1 0    1 1.0 0.01
 city mailbox_model       ../models/us_mailbox/mailbox.model3d         0 0 0  -1 -1 90   1 1.0 1.0
 city umbrella_model      ../models/umbrella/UmbrellaOpen.model3d      0 0 0   0 -1 270  0 1.0 1.0
-city flag_model          ../models/WallFlag.model3d                   0 1 0   1 -1 270  1 1.0 1.0
+city flag_model          ../models/WallFlag.model3d                   0 1 0   1 -1 270  1 1.0 1E-3
 city pigeon_model        ../models/pigeon/pigeon3.model3d             0 0 0   0 -1 90   1 1.0 1.0
 city fountain_model      ../models/Fountains/fountain3/scene.gltf     0 0 0  -1 -1 0    1 1.0 1.0
 city fountain_model      ../models/Fountains/fountain4/scene.gltf     0 0 0  -1 -1 0    1 1.0 1.0

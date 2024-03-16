@@ -1262,7 +1262,7 @@ void material_t::compute_area_per_tri() {
 	if (avg_area_per_tri > 0) return; // already computed
 	unsigned tris(0);
 	tot_tri_area = 0;
-	geom.calc_area(tot_tri_area, tris);
+	geom    .calc_area(tot_tri_area, tris);
 	geom_tan.calc_area(tot_tri_area, tris);
 	if (tris > 0) {avg_area_per_tri = alpha*tot_tri_area/tris;}
 	//cout << "name: " << name << " " << TXT(tris) << TXT(tot_tri_area) << TXT(alpha) << "value: " << (1.0E6*avg_area_per_tri) << endl;

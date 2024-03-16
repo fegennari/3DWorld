@@ -308,7 +308,8 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 		}
 	}
 	else { // draw all materials
-		float lod_mult(model_file.lod_mult); // should model_file.lod_mult always be multiplied by sz_scale?
+		// should model_file.lod_mult always be multiplied by sz_scale? this would make the config file values more consistent, but requires a lot of manual updating
+		float lod_mult(model_file.lod_mult);
 		if (!is_shadow_pass && model_file.lod_mult == 0.0) {lod_mult = 400.0*sz_scale;} // auto select lod_mult
 		float const fixed_lod_dist((is_shadow_pass && !force_high_detail) ? 10.0 : 0.0);
 		model.render_materials(s, is_shadow_pass, 0, 0, 2, 3, 3, model.get_unbound_material(), rotation_t(),
