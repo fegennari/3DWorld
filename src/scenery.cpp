@@ -1412,7 +1412,9 @@ void scenery_group::draw_opaque_objects(shader_t &s, shader_t &vrs, bool shadow_
 	if (!shadow_only && !plants.empty()) { // no berry shadows
 		select_texture(WHITE_TEX); // berries are untextured
 		s.set_specular(0.9, 80.0);
+		begin_sphere_draw(0); // textured=0
 		for (unsigned i = 0; i < plants.size(); ++i) {plants[i].draw_berries(s, xlate);}
+		end_sphere_draw();
 		s.clear_specular();
 	}
 	if (draw_pld) {tree_scenery_pld.draw_and_clear();}
