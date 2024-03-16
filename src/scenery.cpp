@@ -892,6 +892,12 @@ void s_plant::shader_state_t::set_wind_add(shader_t &s, float w_add) {
 	s.set_uniform_float(wind_add_loc, w_add);
 }
 
+void texture_binder_t::do_bind(int tid) {
+	if (tid == cur_tid) return; // already bound
+	select_texture(tid);
+	cur_tid = tid;
+}
+
 void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, bool reflection_pass, vector3d const &xlate, shader_state_t &state) const {
 
 	if (burn_amt == 1.0) return;
@@ -904,7 +910,7 @@ void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, boo
 	if (set_color) {state.set_color_scale(s, get_plant_color(xlate));}
 	if (shadowed ) {state.set_normal_scale(s, 0.0);}
 	state.set_wind_scale(s, wind_scale);
-	select_texture((draw_model == 0) ? get_leaf_tid() : WHITE_TEX); // could pre-bind textures and select using shader int, but probably won't improve performance
+	state.texture_binder.do_bind((draw_model == 0) ? get_leaf_tid() : WHITE_TEX);
 	assert(vbo_mgr_ix >= 0);
 	vbo_manager.render_single(vbo_mgr_ix);
 	if (set_color) {state.set_color_scale(s, WHITE);}
@@ -1030,14 +1036,14 @@ int leafy_plant::get_tid() const {
 	return tids[type];
 }
 
-void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pass, vector3d const &xlate, s_plant::shader_state_t &state, vbo_vnt_block_manager_t &vbo_manager) const {
+void leafy_plant::draw_leaves(shader_t &s, bool shadow_only, bool reflection_pass, vector3d const &xlate, shader_state_t &state, vbo_vnt_block_manager_t &vbo_manager) const {
 	
 	if (burn_amt == 1.0) return;
 	if (!is_visible(shadow_only, radius, xlate))  return;
 	if (reflection_pass && pos.z < water_plane_z) return;
 	(shadow_only ? WHITE : get_plant_color(xlate)).set_for_cur_shader(); // no underwater case yet
 	bool const is_underwater(pos.z < water_plane_z);
-	select_texture(get_tid());
+	state.texture_binder.do_bind(get_tid());
 	assert(vbo_mgr_ix >= 0);
 	if (delta_z != 0.0) {fgPushMatrix(); fgTranslate(0, 0, delta_z);} // not the cleanest or most efficient solution, but much simpler than updating the VBO data
 	if (motion_amt > 0.0) {state.set_wind_add(s, 0.005*motion_amt);}
@@ -1352,7 +1358,7 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 	bool const do_update(!shadow_only && !reflection_pass && world_mode == WMODE_GROUND);
 	s.set_specular(0.25, 20.0); // a small amount of specular
 	s.add_uniform_float("wind_zscale", 2.0);
-	s_plant::shader_state_t state;
+	plant_base::shader_state_t state;
 
 	if (!plants.empty()) {
 		plant_vbo_manager.upload();
