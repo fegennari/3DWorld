@@ -52,8 +52,6 @@ public:
 	unsigned get_num_verts() const;
 	void add_cobjs();
 	void draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val, vbo_vnt_block_manager_t &vbo_manager) const;
-	void update_points_vbo(vbo_vnt_block_manager_t &vbo_manager);
-	bool update_zvals(int x1, int y1, int x2, int y2, vbo_vnt_block_manager_t &vbo_manager);
 	void destroy();
 };
 

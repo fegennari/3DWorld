@@ -413,6 +413,8 @@ void surface_rock::draw(float sscale, bool shadow_only, bool reflection_pass,
 		tree_scenery_pld.add_textured_pt(pos+xlate, color, ROCK_SPHERE_TEX);
 		return;
 	}
+	// Note: rock size scales with distance so that it shrinks to zero area rather than popping in and out;
+	// this means that we can't store the final points in the VBO vertex data and must apply a transform here
 	color.set_for_cur_shader();
 	fgPushMatrix();
 	translate_to(pos);
@@ -421,21 +423,6 @@ void surface_rock::draw(float sscale, bool shadow_only, bool reflection_pass,
 	assert(vbo_mgr_ix >= 0);
 	vbo_manager.render_single(vbo_mgr_ix);
 	fgPopMatrix();
-}
-
-void surface_rock::update_points_vbo(vbo_vnt_block_manager_t &vbo_manager) {
-
-	assert(vbo_mgr_ix >= 0);
-	vector<vert_norm_tc> points;
-	surface->sd.get_quad_points(points);
-	vbo_manager.update_range(points, WHITE, vbo_mgr_ix, vbo_mgr_ix+1); // color is unused
-}
-
-bool surface_rock::update_zvals(int x1, int y1, int x2, int y2, vbo_vnt_block_manager_t &vbo_manager) {
-
-	if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return 0;
-	if (vbo_mgr_ix >= 0) {update_points_vbo(vbo_manager);}
-	return 1;
 }
 
 void surface_rock::destroy() {
@@ -1223,7 +1210,7 @@ bool scenery_group::update_zvals(int x1, int y1, int x2, int y2) { // inefficien
 	update_scenery_zvals_vector(stumps,        x1, y1, x2, y2, updated);
 	update_scenery_zvals_vector(plants,        x1, y1, x2, y2, updated, plant_vbo_manager);
 	update_scenery_zvals_vector(leafy_plants,  x1, y1, x2, y2, updated, leafy_vbo_manager);
-	update_scenery_zvals_vector(surface_rocks, x1, y1, x2, y2, updated, rock_vbo_manager);
+	update_scenery_zvals_vector(surface_rocks, x1, y1, x2, y2, updated); // rock_vbo_manager not updated (pos is applied to the MVM), so not passed into the call
 	return updated;
 }
 
