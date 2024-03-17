@@ -1200,19 +1200,29 @@ void building_t::add_exterior_ac_pipes(rand_gen_t rgen) {
 	} // for i
 }
 
+struct key_info_t {
+	float zval;
+	unsigned color, room_id;
+	bool ground_floor;
+	key_info_t(float z, unsigned c, unsigned r, bool gf) : zval(z), color(c), room_id(r), ground_floor(gf) {}
+};
+
 void building_t::add_padlocks(rand_gen_t rgen) {
-	if (!is_house) return; // houses only for now, to avoid adding too many locks
+	if (!is_house) return; // houses only for now, to avoid adding too many locks; locked rooms in office buildings are usually not blocking access to other rooms
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_PADLOCK)) return; // no model
 	assert(has_room_geom());
 	// determine which color of keys we have hidden in drawers, so that we don't place a padlock that can't be opened;
 	// this doesn't guarantee we can open it because the key may be behind the door, but it's a good check anyway
-	unsigned key_color_mask(0);
+	float const floor_spacing(get_window_vspace());
+	unsigned const num_rooms(interior->rooms.size()), room_exclude(num_rooms); // no room_exclude
 	room_object_t drawers_part;
 	vect_cube_t drawers;
+	vector<key_info_t> key_infos;
 	float drawer_extend(0.0); // unused
 
 	for (room_object_t const &obj : interior->room_geom->objs) { // iterate over all objects; buttons and stairs haven't been placed yet
 		if (obj.type != TYPE_DRESSER && obj.type != TYPE_NIGHTSTAND && (obj.type != TYPE_DESK || !obj.desk_has_drawers())) continue; // item doesn't have drawers
+		if (obj.in_attic() || !bcube.contains_cube(obj)) continue; // skip if in the attic or extended basement, since it may be too difficult to reach
 		room_object_t obj_drawers_open(obj);
 		obj_drawers_open.drawer_flags = ~uint16_t(0); // make all drawers open so that we get the correct drawers bounds
 		get_obj_drawers_or_doors(obj_drawers_open, drawers, drawers_part, drawer_extend);
@@ -1225,16 +1235,56 @@ void building_t::add_padlocks(rand_gen_t rgen) {
 				if (item.type == TYPE_NONE) break; // no more items
 				if (item.type != TYPE_KEY ) continue;
 				assert(item.obj_id < NUM_LOCK_COLORS);
-				key_color_mask |= (1 << item.obj_id);
+				float const zval(item.zc());
+				//unsigned const floor_ix(get_room(item.room_id).get_floor_containing_zval(zval, floor_spacing));
+				bool const ground_floor(zval > ground_floor_z1 && zval < (ground_floor_z1 + floor_spacing));
+				key_infos.emplace_back(zval, item.obj_id, item.room_id, ground_floor);
 			}
 		} // for dix
 	} // for i
-	if (key_color_mask == 0) return; // no keys, so no padlocks
-
+	if (key_infos.empty()) { // no keys, so no padlocks; happens maybe 20% of the time, likely for smaller houses
+		for (auto &d : interior->doors) {d.locked = 0;} // make all doors unlocked, since there is no key
+		return;
+	}
 	for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) {
 		if (d->open || !d->locked || rgen.rand_bool()) continue;
-		add_padlock_to_door((d - interior->doors.begin()), key_color_mask, rgen);
-	}
+		unsigned const door_ix(d - interior->doors.begin());
+		unsigned key_color_mask(0);
+
+		// filter color mask to only those colors reachable from an exterior door (ground floor) or stairs/elevator without using this door
+		for (key_info_t const &k : key_infos) {
+			unsigned const mask_bit(1 << k.color);
+			if (key_color_mask & mask_bit) continue; // already available (from a previous key)
+			bool found_path(0);
+
+			for (unsigned r = 0; r < num_rooms; ++r) {
+				room_t const &room(interior->rooms[r]);
+				if (room.is_sec_bldg) continue; // skip exterior garages and sheds
+				if (room.z1() > k.zval || room.z2() < k.zval) continue; // room does not span the floor the key is on
+
+				if (k.ground_floor) { // entrances are all exterior doors, including garage doors
+					if (!is_room_adjacent_to_ext_door(room)) continue;
+				}
+				else { // entrances are all stairs and elevators that reach this floor
+					unsigned const floor_ix(room.get_floor_containing_zval(k.zval, floor_spacing));
+					
+					if (!room.has_stairs_on_floor(floor_ix)) { // no stairs
+						// check for elevators; currently houses have no elevators, but this may be needed later; ignores elevator floors that are skipped (tall retail)
+						bool has_elevator(0);
+
+						for (elevator_t const &e : interior->elevators) {
+							if (e.intersects(room)) {has_elevator = 1; break;} // assumes that the elevator actually opens into this room
+						}
+						if (!has_elevator) continue; // not a source
+					}
+				}
+				// check reachability without using this door
+				if (r == k.room_id || are_rooms_connected_without_using_room_or_door(r, k.room_id, room_exclude, door_ix, k.zval)) {found_path = 1; break;}
+			} // for r
+			if (found_path) {key_color_mask |= mask_bit;} // key is available
+		} // for k
+		add_padlock_to_door(door_ix, key_color_mask, rgen);
+	} // for d
 }
 
 void building_t::add_extra_obj_slots() {
