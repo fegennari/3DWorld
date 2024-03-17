@@ -63,6 +63,12 @@ struct model_city_obj_t : public oriented_city_obj_t {
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
 
+struct multi_model_city_obj_t : public model_city_obj_t {
+	unsigned full_model_id=0;
+	multi_model_city_obj_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_id, unsigned model_select);
+	virtual unsigned get_model_id() const {return full_model_id;}
+};
+
 struct bench_t : public oriented_city_obj_t {
 	bench_t(point const &pos_, float radius_, bool dim_, bool dir_);
 	cube_t get_bird_bcube() const;
@@ -105,13 +111,10 @@ struct substation_t : public model_city_obj_t {
 	virtual unsigned get_model_id() const {return OBJ_MODEL_SUBSTATION;}
 };
 
-struct fountain_t : public city_obj_t {
-	unsigned model_select=0;
-
-	fountain_t(point const &pos_, float radius_, float height, unsigned model_select_);
+struct fountain_t : public multi_model_city_obj_t {
+	fountain_t(point const &pos_, float height, unsigned model_select) : multi_model_city_obj_t(pos_, height, 0, 0, OBJ_MODEL_FOUNTAIN, model_select) {} // dim=0, dir=0
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
-	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
@@ -227,9 +230,9 @@ struct swingset_t : public model_city_obj_t {
 	virtual unsigned get_model_id() const {return OBJ_MODEL_SWINGSET;}
 };
 
-struct potted_plant_t : public model_city_obj_t {
-	potted_plant_t(point const &pos_, float height, bool dim_, bool dir_) : model_city_obj_t(pos_, height, dim_, dir_, get_model_id()) {}
-	virtual unsigned get_model_id() const {return OBJ_MODEL_PLANT;}
+struct potted_plant_t : public multi_model_city_obj_t {
+	potted_plant_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_select) :
+		multi_model_city_obj_t(pos_, height, dim_, dir_, OBJ_MODEL_PLANT, model_select) {}
 };
 
 struct traffic_cone_t : public city_obj_t {

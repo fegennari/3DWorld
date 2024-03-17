@@ -68,6 +68,9 @@ void model_city_obj_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float 
 	building_obj_model_loader.draw_model(dstate.s, pos, bcube, get_orient_dir(), WHITE, dstate.xlate, get_model_id(), shadow_only);
 }
 
+multi_model_city_obj_t::multi_model_city_obj_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_id, unsigned model_select) :
+	model_city_obj_t(pos_, height, dim_, dir_, model_id), full_model_id(model_id + (model_select << 8)) {}
+
 // benches
 
 bench_t::bench_t(point const &pos_, float radius_, bool dim_, bool dir_) : oriented_city_obj_t(pos_, radius_, dim_, dir_) {
@@ -316,25 +319,15 @@ bool fire_hydrant_t::proc_sphere_coll(point &pos_, point const &p_last, float ra
 
 // fountains
 
-fountain_t::fountain_t(point const &pos_, float radius_, float height, unsigned model_select_) : city_obj_t(pos_, radius_), model_select(model_select_) {
-	bcube.set_from_point(pos);
-	bcube.expand_by_xy(radius);
-	bcube.z2() += height;
-	pos.z += 0.5*height;
-}
 /*static*/ void fountain_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_scale", 0.0);} // disable hemispherical lighting
 }
 /*static*/ void fountain_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_scale", 0.5);} // set hemispherical lighting back to the default
 }
-void fountain_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
-	unsigned const model_id(OBJ_MODEL_FOUNTAIN + (model_select << 8)); // model_select selects sub-model if more than one are loaded
-	building_obj_model_loader.draw_model(dstate.s, pos, bcube, plus_x, WHITE, dstate.xlate, model_id, shadow_only); // XY symmetric, so dir=plus_x
-}
 bool fountain_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
-	return sphere_city_obj_cylin_coll(pos, radius, pos_, p_last, radius_, xlate, cnorm);
+	float const coll_radius(0.25*(bcube.dx() + bcube.dy())); // assume square-ish
+	return sphere_city_obj_cylin_coll(pos, coll_radius, pos_, p_last, radius_, xlate, cnorm);
 }
 
 // plot dividers
