@@ -1213,7 +1213,7 @@ void building_t::add_padlocks(rand_gen_t rgen) {
 	assert(has_room_geom());
 	// determine which color of keys we have hidden in drawers, so that we don't place a padlock that can't be opened;
 	// this doesn't guarantee we can open it because the key may be behind the door, but it's a good check anyway
-	float const floor_spacing(get_window_vspace());
+	float const floor_spacing(get_window_vspace()), ground_floor_ceil(ground_floor_z1 + floor_spacing);
 	unsigned const num_rooms(interior->rooms.size()), room_exclude(num_rooms); // no room_exclude
 	room_object_t drawers_part;
 	vect_cube_t drawers;
@@ -1236,8 +1236,7 @@ void building_t::add_padlocks(rand_gen_t rgen) {
 				if (item.type != TYPE_KEY ) continue;
 				assert(item.obj_id < NUM_LOCK_COLORS);
 				float const zval(item.zc());
-				//unsigned const floor_ix(get_room(item.room_id).get_floor_containing_zval(zval, floor_spacing));
-				bool const ground_floor(zval > ground_floor_z1 && zval < (ground_floor_z1 + floor_spacing));
+				bool const ground_floor(zval > ground_floor_z1 && zval < ground_floor_ceil);
 				key_infos.emplace_back(zval, item.obj_id, item.room_id, ground_floor);
 			}
 		} // for dix
@@ -1251,13 +1250,38 @@ void building_t::add_padlocks(rand_gen_t rgen) {
 		unsigned const door_ix(d - interior->doors.begin());
 		unsigned key_color_mask(0);
 
-		// filter color mask to only those colors reachable from an exterior door (ground floor) or stairs/elevator without using this door
-		for (key_info_t const &k : key_infos) {
+		// filter color mask to only those colors reachable from an exterior door (ground floor) or stairs/elevator without using this door;
+		// this doesn't handle the case where a pair of keys + padlocks interlock in a way that can't be opened
+		for (key_info_t k : key_infos) {
 			unsigned const mask_bit(1 << k.color);
 			if (key_color_mask & mask_bit) continue; // already available (from a previous key)
 			bool found_path(0);
 
-			for (unsigned r = 0; r < num_rooms; ++r) {
+			if (k.zval < d->z1() || k.zval > d->z2()) { // key and door on different floors
+				float const door_zc(d->zc());
+				// the only way a key can be blocked by a locked door on a different floor is when the door blocks the path from an exterior door to the stairs
+				// this is ignoring elevators, which shouldn't be in houses
+				if (door_zc > ground_floor_z1 && door_zc < ground_floor_ceil && !interior->stairwells.empty()) { // ground floor door, and have stairs
+					// find Z-range that includes the ground floor door and the key location, but clipped to one floor above/below to handle stacked parts
+					float const zmin(min(door_zc, max(door_zc-floor_spacing, k.zval))), zmax(max(door_zc, min(door_zc+floor_spacing, k.zval)));
+
+					for (stairwell_t const &s : interior->stairwells) {
+						if (s.z1() > zmin || s.z2() < zmax) continue; // doesn't span the correct set of floors
+						point const center(s.xc(), s.yc(), door_zc);
+
+						for (unsigned r = 0; r < num_rooms; ++r) { // find room containg stairs
+							if (!interior->rooms[r].contains_pt(center)) continue; // wrong room
+							k.room_id = r; // this is our new target room for reachability
+							k.zval    = door_zc;
+							k.ground_floor = 1;
+							break;
+						}
+						break;
+					} // for s
+				}
+				else {found_path = 1;} // not blocked
+			}
+			for (unsigned r = 0; r < num_rooms && !found_path; ++r) {
 				room_t const &room(interior->rooms[r]);
 				if (room.is_sec_bldg) continue; // skip exterior garages and sheds
 				if (room.z1() > k.zval || room.z2() < k.zval) continue; // room does not span the floor the key is on
@@ -1279,7 +1303,7 @@ void building_t::add_padlocks(rand_gen_t rgen) {
 					}
 				}
 				// check reachability without using this door
-				if (r == k.room_id || are_rooms_connected_without_using_room_or_door(r, k.room_id, room_exclude, door_ix, k.zval)) {found_path = 1; break;}
+				found_path |= (r == k.room_id || are_rooms_connected_without_using_room_or_door(r, k.room_id, room_exclude, door_ix, k.zval));
 			} // for r
 			if (found_path) {key_color_mask |= mask_bit;} // key is available
 		} // for k
