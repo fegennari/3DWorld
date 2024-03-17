@@ -966,25 +966,30 @@ unsigned building_t::count_connected_room_components() {
 }
 
 // Note: this is somewhat slow, should we build and use the nav graph? maybe not since this is only called for room assiggnment on the first floor of houses
-bool building_t::are_rooms_connected_without_using_room(unsigned room1, unsigned room2, unsigned room_exclude) const {
+// Note: pass in room_exclude=num_rooms for no excluded room
+// Note: door_exclude is optional; -1 disables this check; door_ex_zval must be specified when door_exclude >= 0
+bool building_t::are_rooms_connected_without_using_room_or_door(unsigned room1, unsigned room2, unsigned room_exclude, int door_exclude, float door_ex_zval) const {
 	unsigned const num_rooms(interior->rooms.size());
 	assert(room1 < num_rooms && room2 < num_rooms);
-	assert(room_exclude != room1 && room_exclude != room2 && room_exclude < num_rooms);
+	assert(room_exclude != room1 && room_exclude != room2);
 	if (room1 == room2) return 1;
 	float const wall_width(get_wall_thickness());
 	bool const use_bit_mask(num_rooms <= 64); // almost always true
 	static vector<unsigned> pend; // reused across calls
-	pend.clear();
-	pend.push_back(room1);
 	static vector<uint8_t> seen; // reused across calls
 	uint64_t seen_mask(0);
+	pend.clear();
+	pend.push_back(room1);
 
-	if (use_bit_mask) {seen_mask |= ((1ULL << room1) | (1ULL << room_exclude));}
+	if (use_bit_mask) {
+		seen_mask |= (1ULL << room1);
+		if (room_exclude < num_rooms) {seen_mask |= (1ULL << room_exclude);}
+	}
 	else { // must use seen vector
 		seen.clear();
 		seen.resize(num_rooms, 0);
-		seen[room1       ] = 1;
-		seen[room_exclude] = 1; // mark as seen so that we won't visit it
+		seen[room1] = 1;
+		if (room_exclude < num_rooms) {seen[room_exclude] = 1;} // mark as seen so that we won't visit it
 	}
 	while (!pend.empty()) { // flood fill - maybe A* is better, but that's a lot of work
 		unsigned const cur(pend.back());
@@ -992,9 +997,21 @@ bool building_t::are_rooms_connected_without_using_room(unsigned room1, unsigned
 		cube_t room(interior->rooms[cur]);
 		room.expand_by_xy(wall_width); // to include adjacent doors
 
-		for (auto d = interior->door_stacks.begin(); d != interior->door_stacks.end(); ++d) {
-			if (!room.intersects_no_adj(*d)) continue; // door not adjacent to this room
-			cube_t dc(*d);
+		for (door_stack_t const &ds : interior->door_stacks) {
+			if (!room.intersects_no_adj(ds)) continue; // door not adjacent to this room
+			
+			if (door_exclude >= 0 && door_exclude >= (int)ds.first_door_ix) { // check if this door is excluded
+				bool is_excluded(0);
+				assert(ds.first_door_ix < interior->doors.size());
+
+				for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
+					door_t const &door(interior->doors[dix]);
+					if (!ds.is_same_stack(door)) break; // moved to a different stack, done
+					if ((int)dix == door_exclude && door.z1() < door_ex_zval && door.z2() > door_ex_zval) {is_excluded = 1; break;}
+				}
+				if (is_excluded) continue;
+			}
+			cube_t dc(ds);
 			dc.expand_by_xy(wall_width); // to include adjacent rooms
 
 			for (unsigned r = 0; r < num_rooms; ++r) {

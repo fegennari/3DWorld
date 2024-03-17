@@ -2221,7 +2221,7 @@ void building_t::create_two_story_tall_rooms(rand_gen_t &rgen) {
 				}
 				assert(ds_room_ix >= 0); // adj room must be found
 				if (first_room_ix < 0) {first_room_ix = ds_room_ix;} // use the first room as a reference
-				else if (!are_rooms_connected_without_using_room(first_room_ix, ds_room_ix, room_ix)) {is_disconnected = 1; break;}
+				else if (!are_rooms_connected_without_using_room_or_door(first_room_ix, ds_room_ix, room_ix)) {is_disconnected = 1; break;}
 			} // for i
 			if (is_disconnected) continue;
 		}

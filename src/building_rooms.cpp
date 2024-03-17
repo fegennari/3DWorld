@@ -78,9 +78,9 @@ bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor_i
 			// Note: doors can be empty if door placement failed, which can happen for rotated and non-cube buildings
 			for (unsigned d : door_rooms) {
 				for (unsigned s : stairs_rooms) {
-					if (!are_rooms_connected_without_using_room(d, s, cur_room)) return 0;
+					if (!are_rooms_connected_without_using_room_or_door(d, s, cur_room)) return 0;
 				}
-				if (has_int_garage && !are_rooms_connected_without_using_room(d, interior->garage_room, cur_room)) return 0;
+				if (has_int_garage && !are_rooms_connected_without_using_room_or_door(d, interior->garage_room, cur_room)) return 0;
 			}
 		}
 	}

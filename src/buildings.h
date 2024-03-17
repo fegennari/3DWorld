@@ -1736,7 +1736,7 @@ struct building_t : public building_geom_t {
 	void add_signs(vector<sign_t> &signs) const;
 	void add_flags(vector<city_flag_t> &flags);
 	void update_stats(building_stats_t &s) const;
-	bool are_rooms_connected_without_using_room(unsigned room1, unsigned room2, unsigned room_exclude) const;
+	bool are_rooms_connected_without_using_room_or_door(unsigned room1, unsigned room2, unsigned room_exclude, int door_exclude=-1, float door_ex_zval=0.0) const;
 	bool is_room_adjacent_to_ext_door(cube_t const &room, bool front_door_only=0) const;
 	bool cube_int_ext_door(cube_t const &c) const;
 	room_t const &get_room(unsigned room_ix) const {assert(interior); return interior->get_room(room_ix);}
