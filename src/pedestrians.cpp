@@ -2176,7 +2176,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 			}
 			// Note: we really should have a way to blend between walk and stairs animations, if there was a way to predict the transition
 			anim_state->anim_time     = (is_idle ? ped.get_idle_anim_time() : ped.anim_time); // if is_idle, we still need to advance the animation time
-			anim_state->model_anim_id = (is_idle ? MODEL_ANIM_IDLE : non_idle_anim);
+			anim_state->model_anim_id = (is_idle ? (unsigned)MODEL_ANIM_IDLE : non_idle_anim);
 			anim_state->blend_factor  = blend_factor;
 			anim_state->fixed_anim_speed = is_idle; // idle anim plays at normal speed, not zombie walking speed
 			
@@ -2184,7 +2184,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 				// blend animations between walking and idle states using opposite is_idle logic;
 				// since anim_time won't increase in this state, add the elapsed time to it
 				anim_state->anim_time2     = ((!is_idle) ? ped.get_idle_anim_time() : ped.anim_time) + state_change_elapsed*ped.speed;
-				anim_state->model_anim_id2 = ((!is_idle) ? MODEL_ANIM_IDLE : non_idle_anim);
+				anim_state->model_anim_id2 = ((!is_idle) ? (unsigned)MODEL_ANIM_IDLE : non_idle_anim);
 			}
 			if (is_idle != ped.prev_was_idle) { // update mutable temp state for animations
 				ped.prev_was_idle = is_idle;

@@ -273,7 +273,6 @@ void rgeom_mat_t::add_sphere_to_verts(point const &center, vector3d const &size,
 		// to draw the top half we need to draw/include the "equator" plus the first/top half of each circular band
 		unsigned const stride(ndiv+1), t_end(ndiv/2), out_stride(t_end + 1);
 		assert(vncs.size() == stride*stride);
-		unsigned const is(indices.size()), vs(itri_verts.size());
 
 		for (unsigned s = 0; s <= ndiv; ++s) { // XY circular band
 			for (unsigned t = 0; t <= t_end; ++t) { // vertical slices in Z; start in the middle; assumes ndiv is an even number
