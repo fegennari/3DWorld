@@ -147,9 +147,9 @@ void building_t::get_doorways_for_room(cube_t const &room, float zval, vect_door
 	if (!all_floors) {set_cube_zvals(room_exp, (zval + floor_thickness), (zval + get_window_vspace() - floor_thickness));} // clip to z-range of this floor
 	doorways.clear();
 
-	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
-		if (i->on_stairs || i->for_closet) continue; // skip basement and closet doors
-		if (i->intersects_no_adj(room_exp)) {doorways.push_back(*i);}
+	for (door_stack_t const &ds : interior->door_stacks) {
+		if (ds.not_a_room_separator()) continue; // not a real doorway into the room
+		if (ds.intersects_no_adj(room_exp)) {doorways.push_back(ds);}
 	}
 }
 vect_door_stack_t &building_t::get_doorways_for_room(cube_t const &room, float zval, bool all_floors) const { // interior doorways; not thread safe

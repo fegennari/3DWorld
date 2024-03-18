@@ -1009,6 +1009,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 					// this should add one door and one door stack
 					assert(door.d[!dim][0] > wall.d[!dim][0] && door.d[!dim][1] < wall.d[!dim][1]);
 					remove_section_from_cube_and_add_door(wall, wall2, door.d[!dim][0], door.d[!dim][1], !dim, open_dir, 0, make_unlocked, make_closed); // is_bathroom=0
+					interior->door_stacks.back().in_backrooms = interior->doors.back().in_backrooms = 1;
 					walls_to_add.push_back(wall2); // keep high side as it won't be used with any other doors
 					// add a blocker so that no ceiling lights are placed in the path of this door
 					cube_t blocker(door);
@@ -1443,7 +1444,8 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 		unsigned const is_building_conn(r.hallway_dim ? 2 : 1);
 		// skip one end in hallway_dim and make the other end (bordering the other building) thinner to avoid Z-fighting but still cast shadows
 		interior->place_exterior_room(r, r, get_fc_thickness(), wall_thickness, P, basement_part_ix, 0, r.is_hallway, is_building_conn, r.hallway_dim, r.connect_dir);
-		unsigned const conn_door_ix(b.interior->doors.size()); // index of door that will be added to the other building, and separates the two buildings
+		// index of door that will be added to the other building, and separates the two buildings
+		unsigned const conn_door_ix(b.interior->doors.size()), conn_ds_ix(b.interior->door_stacks.size());
 		// place doors at each end
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			building_t *door_dest(buildings[bool(dir) ^ r.connect_dir ^ 1]); // add door to the building whose room it connects to
@@ -1451,7 +1453,7 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 			// subtract door from walls of each building
 			for (unsigned bix = 0; bix < 2; ++bix) {subtract_cube_from_cubes(door, buildings[bix]->interior->walls[r.hallway_dim]);}
 		} // for dir
-		b.interior->doors[conn_door_ix].is_bldg_conn = 1;
+		b.interior->doors[conn_door_ix].is_bldg_conn = b.interior->door_stacks[conn_ds_ix].is_bldg_conn = 1;
 		cube_t ext_bcube(r);
 		ext_bcube.d[r.hallway_dim][r.connect_dir] = r.conn_bcube.d[r.hallway_dim][r.connect_dir]; // extend to cover the entire width of the adjacent hallway in the other building
 

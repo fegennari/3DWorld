@@ -913,7 +913,7 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 		if (is_room_adjacent_to_ext_door(c)) {ng.mark_exit(r);}
 
 		for (door_stack_t const &ds : interior->door_stacks) {
-			if (ds.on_stairs || ds.for_closet) continue; // skip basement and closet doors
+			if (ds.not_a_room_separator()) continue; // only using doors between two rooms
 			// we should only add this door if it's on the same floor as our graph, but that doesn't work because the graph is shared across all floors,
 			// so instead we'll have to record the door index and check the correct door during path finding; it's not valid to test door open/locked state here
 			if (!c.intersects_no_adj(ds)) continue; // door not adjacent to this room
@@ -999,7 +999,7 @@ bool building_t::are_rooms_connected_without_using_room_or_door(unsigned room1, 
 		room.expand_by_xy(wall_width); // to include adjacent doors
 
 		for (door_stack_t const &ds : interior->door_stacks) {
-			if (ds.for_closet) continue; // not a real door
+			if (ds.not_a_room_separator())   continue; // not a real door between two rooms
 			if (!room.intersects_no_adj(ds)) continue; // door not adjacent to this room
 			
 			if (door_exclude >= 0 && door_exclude >= (int)ds.first_door_ix) { // check if this door is excluded
