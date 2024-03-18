@@ -2410,7 +2410,7 @@ float building_t::get_doorway_width() const {
 	if (interior) {width = interior->get_doorway_width();}
 	return (width ? width : DOOR_WIDTH_SCALE*get_door_height()); // calculate from window spacing/door height if there's no interior or no interior doors
 }
-bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin, bool elevators_only, int no_check_enter_exit) const { // and ramps
+bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin, bool elevators_only, int no_check_enter_exit) const { // and ramps, and extb conn rooms/doors
 	cube_t tc(c);
 	tc.expand_by_xy(dmin); // no pad in z
 	float const doorway_width(get_doorway_width()); // Note: can return zero
@@ -2428,6 +2428,13 @@ bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, floa
 		else                        {ramp_ext.z2() -= 0.5*doorway_width;}
 		ramp_ext.d[dim][dir] += (dir ? 1.0 : -1.0)*pg_ramp.get_sz_dim(!dim); // clear space in front of the ramp equal to its width
 		if (ramp_ext.intersects(tc)) return 1;
+	}
+	if (conn_info != nullptr) { // include extended basement connector doors here because they aren't accounted for in the regular doors check
+		for (auto const &c : conn_info->conn) {
+			for (auto const &room : c.rooms) {
+				if (room.intersects(tc)) return 1;
+			}
+		}
 	}
 	return 0;
 }
