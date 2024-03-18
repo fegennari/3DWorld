@@ -1880,23 +1880,26 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	cube_t room_bounds(get_walkable_room_bounds(room)), crate_bounds(room_bounds);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const num_crates(4 + (rgen.rand() % (is_house ? (is_basement ? 12 : 5) : 30))); // 4-33 for offices, 4-8 for houses, 4-16 for house basements
+	vector<unsigned> ds_ixs;
 	vect_cube_t exclude;
 	cube_t test_cube(room);
 	set_cube_zvals(test_cube, zval, zval+wall_thickness); // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
-	unsigned num_placed(0), num_doors(0);
+	unsigned num_placed(0);
 
-	// first pass to count the number of doors in this room
-	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
-		num_doors += is_cube_close_to_door(test_cube, 0.0, 0, *i, 2); // check both dirs
+	// first pass to record the doors in this room
+	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) { // check both dirs
+		if ((i->no_room_conn() || i->is_connected_to_room(room_id)) && is_cube_close_to_door(test_cube, 0.0, 0, *i, 2)) {
+			ds_ixs.push_back(i - interior->door_stacks.begin());
+		}
 	}
-	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
-		if (!is_cube_close_to_door(test_cube, 0.0, 0, *i, 2)) continue; // wrong room; check both dirs
-		exclude.push_back(*i);
-		exclude.back().expand_in_dim( i->dim, 0.6*room.get_sz_dim(i->dim));
+	for (unsigned dsix : ds_ixs) {
+		door_stack_t const &ds(interior->door_stacks[dsix]);
+		exclude.push_back(ds);
+		exclude.back().expand_in_dim( ds.dim, 0.6*room.get_sz_dim(ds.dim));
 		// if there are multiple doors (houses only?), expand the exclude area more in the other dimension to make sure there's a path between doors
-		float const path_expand(((num_doors > 1) ? min(1.2f*i->get_width(), 0.3f*room.get_sz_dim(!i->dim)) : 0.0));
-		exclude.back().expand_in_dim(!i->dim, path_expand);
-		exclude.back().union_with_cube(i->get_open_door_bcube_for_room(room)); // include open door
+		float const path_expand(((ds_ixs.size() > 1) ? min(1.2f*ds.get_width(), 0.3f*room.get_sz_dim(!ds.dim)) : 0.0));
+		exclude.back().expand_in_dim(!ds.dim, path_expand);
+		exclude.back().union_with_cube(ds.get_open_door_bcube_for_room(room)); // include open door
 	}
 	// add shelves on walls (avoiding any door(s)), and have crates avoid them
 	for (unsigned dim = 0; dim < 2; ++dim) {
