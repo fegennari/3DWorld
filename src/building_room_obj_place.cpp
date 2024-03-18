@@ -3196,6 +3196,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 				// translate by half wall thickness if not interior hallway or office wall
 				if (!(room.inc_half_walls() && classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT)) {c.translate_dim(dim, (dir ? 1.0 : -1.0)*0.5*wall_thickness);}
 				float const room_len(room.get_sz_dim(!dim));
+				if (room_len < 1.0*floor_height) continue; // wall too short for a whiteboard
 				c.expand_in_dim(!dim, -0.2*room_len); // xy_space
 				float const wb_len(c.get_sz_dim(!dim)), wb_max_len(3.0*floor_height);
 				if (wb_len > wb_max_len) {c.expand_in_dim(!dim, -0.5*(wb_len - wb_max_len));} // shrink to max length if needed
