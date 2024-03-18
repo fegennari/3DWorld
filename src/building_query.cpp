@@ -1023,8 +1023,8 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	set_cube_zvals(room_exp, (floor_zval + floor_thickness), (floor_zval + floor_spacing - floor_thickness)); // clip to z-range of this floor
 
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
-		if (i->on_stairs) continue; // skip basement door
-		if (!i->intersects(room_exp)) continue; // wrong room
+		if (i->on_stairs || i->for_closet) continue; // skip basement and closet doors
+		if (!i->intersects(room_exp))      continue; // wrong room
 		assert(i->first_door_ix < interior->doors.size());
 
 		for (unsigned dix = i->first_door_ix; dix < interior->doors.size(); ++dix) {

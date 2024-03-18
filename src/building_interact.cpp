@@ -896,9 +896,9 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 	door_t &door(interior->doors[door_ix]);
 	door.toggle_open_state(/*by_player*/player_in_this_building); // allow partial open/animated door if player is in this building
 	// we changed the door state, but navigation should adapt to this, except for doors on stairs (which are special)
-	if (door.on_stairs) {invalidate_nav_graph();} // any in-progress paths may have people walking to and stopping at closed/locked doors
-	interior->door_state_updated = 1; // required for AI navigation logic to adjust to this change
-	if (has_room_geom()) {interior->room_geom->invalidate_mats_mask |= (1 << MAT_TYPE_DOORS);} // need to recreate doors VBO
+	if ( door.on_stairs ) {invalidate_nav_graph();} // any in-progress paths may have people walking to and stopping at closed/locked doors
+	if (!door.for_closet) {interior->door_state_updated = 1;} // required for AI navigation logic to adjust to this change
+	if (has_room_geom() ) {interior->room_geom->invalidate_mats_mask |= (1 << MAT_TYPE_DOORS);} // need to recreate doors VBO
 	check_for_water_splash(cube_bot_center(door), 2.0); // big splash
 
 	if (player_in_this_building || by_player) { // is it really safe to call this from the AI thread?

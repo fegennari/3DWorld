@@ -2195,7 +2195,7 @@ void building_t::create_two_story_tall_rooms(rand_gen_t &rgen) {
 
 		for (unsigned i = 0; i < door_stacks.size(); ++i) {
 			door_stack_t &ds(door_stacks[i]);
-			if (ds.on_stairs) continue; // skip basement door
+			if (ds.on_stairs || ds.for_closet) continue; // skip basement and closet doors
 			if (ds.z1() > upper_floor_zval_thresh || !ds.intersects(room_exp)) continue; // door not connected to this room
 			ds.mult_floor_room = 1; // counts as multi-floor (for drawing top edge), even if not extending to upper floor
 			assert(ds.first_door_ix < idoors.size());

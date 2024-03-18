@@ -1754,9 +1754,11 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 					if (i->open || !door_opens_inward(*i, room)) continue; // if the door is already open, or opens in the other direction, it can't be blocked
 				}
 				bool const inc_open(0), check_dirs(i->get_check_dirs());
-				if (is_cube_close_to_door(moved_obj, 0.0, inc_open, *i, check_dirs))              {i->blocked = 1; interior->door_state_updated = 1;} // newly blocked, either dir
-				else if (i->blocked && is_cube_close_to_door(obj, 0.0, inc_open, *i, check_dirs)) {i->blocked = 0; interior->door_state_updated = 1;} // newly unblocked, either dir
-			}
+				if (is_cube_close_to_door(moved_obj, 0.0, inc_open, *i, check_dirs))              {i->blocked = 1;} // newly blocked  , either dir
+				else if (i->blocked && is_cube_close_to_door(obj, 0.0, inc_open, *i, check_dirs)) {i->blocked = 0;} // newly unblocked, either dir
+				else {continue;}
+				if (!i->for_closet) {interior->door_state_updated = 1;} // trigger AI update if this is a door between rooms
+			} // for i
 			// update this object
 			obj = moved_obj; // keep this placement
 			if (!keep_in_room) {assign_correct_room_to_object(obj);}

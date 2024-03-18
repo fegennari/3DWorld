@@ -912,16 +912,17 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 		c.expand_by_xy(wall_width); // to include adjacent doors
 		if (is_room_adjacent_to_ext_door(c)) {ng.mark_exit(r);}
 
-		for (auto d = interior->door_stacks.begin(); d != interior->door_stacks.end(); ++d) {
+		for (door_stack_t const &ds : interior->door_stacks) {
+			if (ds.on_stairs || ds.for_closet) continue; // skip basement and closet doors
 			// we should only add this door if it's on the same floor as our graph, but that doesn't work because the graph is shared across all floors,
 			// so instead we'll have to record the door index and check the correct door during path finding; it's not valid to test door open/locked state here
-			if (!c.intersects_no_adj(*d)) continue; // door not adjacent to this room
-			cube_t dc(*d);
+			if (!c.intersects_no_adj(ds)) continue; // door not adjacent to this room
+			cube_t dc(ds);
 			dc.expand_by_xy(wall_width); // to include adjacent rooms
-			assert(d->first_door_ix < interior->doors.size());
+			assert(ds.first_door_ix < interior->doors.size());
 
 			for (unsigned r2 = r+1; r2 < num_rooms; ++r2) { // check rooms with higher index (since graph is bidirectional)
-				if (dc.intersects_no_adj(interior->rooms[r2])) {ng.connect_rooms(r, r2, d->first_door_ix, *d); break;}
+				if (dc.intersects_no_adj(interior->rooms[r2])) {ng.connect_rooms(r, r2, ds.first_door_ix, ds); break;}
 			}
 		} // for d
 		for (unsigned s = 0; s < num_stairs; ++s) { // stairs
@@ -994,10 +995,11 @@ bool building_t::are_rooms_connected_without_using_room_or_door(unsigned room1, 
 	while (!pend.empty()) { // flood fill - maybe A* is better, but that's a lot of work
 		unsigned const cur(pend.back());
 		pend.pop_back();
-		cube_t room(interior->rooms[cur]);
+		cube_t room(get_room(cur));
 		room.expand_by_xy(wall_width); // to include adjacent doors
 
 		for (door_stack_t const &ds : interior->door_stacks) {
+			if (ds.for_closet) continue; // not a real door
 			if (!room.intersects_no_adj(ds)) continue; // door not adjacent to this room
 			
 			if (door_exclude >= 0 && door_exclude >= (int)ds.first_door_ix) { // check if this door is excluded
