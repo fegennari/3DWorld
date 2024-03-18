@@ -914,16 +914,11 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 
 		for (door_stack_t const &ds : interior->door_stacks) {
 			if (ds.not_a_room_separator()) continue; // only using doors between two rooms
+			if (!c.intersects_no_adj(ds))  continue; // door not adjacent to this room
 			// we should only add this door if it's on the same floor as our graph, but that doesn't work because the graph is shared across all floors,
 			// so instead we'll have to record the door index and check the correct door during path finding; it's not valid to test door open/locked state here
-			if (!c.intersects_no_adj(ds)) continue; // door not adjacent to this room
-			cube_t dc(ds);
-			dc.expand_by_xy(wall_width); // to include adjacent rooms
-			assert(ds.first_door_ix < interior->doors.size());
-
-			for (unsigned r2 = r+1; r2 < num_rooms; ++r2) { // check rooms with higher index (since graph is bidirectional)
-				if (dc.intersects_no_adj(interior->rooms[r2])) {ng.connect_rooms(r, r2, ds.first_door_ix, ds); break;}
-			}
+			unsigned const r2(ds.get_conn_room(r));
+			if (r2 > r) {ng.connect_rooms(r, r2, ds.first_door_ix, ds);} // check rooms with higher index (since graph is bidirectional)
 		} // for d
 		for (unsigned s = 0; s < num_stairs; ++s) { // stairs
 			stairwell_t const &stairwell(interior->stairwells[s]);
@@ -1013,15 +1008,11 @@ bool building_t::are_rooms_connected_without_using_room_or_door(unsigned room1, 
 				}
 				if (is_excluded) continue;
 			}
-			cube_t dc(ds);
-			dc.expand_by_xy(wall_width); // to include adjacent rooms
-
-			for (unsigned r = 0; r < num_rooms; ++r) {
-				if ((use_bit_mask ? (seen_mask & (1ULL << r)) : seen[r]) || !dc.intersects_no_adj(interior->rooms[r])) continue;
-				if (r == room2) return 1; // found, done
-				pend.push_back(r);
-				if (use_bit_mask) {seen_mask |= (1ULL << r);} else {seen[r] = 1;}
-			}
+			unsigned const r(ds.get_conn_room(cur));
+			if (use_bit_mask ? (seen_mask & (1ULL << r)) : seen[r]) continue;
+			if ((int)r == room2) return 1; // found, done
+			pend.push_back(r);
+			if (use_bit_mask) {seen_mask |= (1ULL << r);} else {seen[r] = 1;}
 		} // for d
 	} // end while()
 	return 0; // room2 not found

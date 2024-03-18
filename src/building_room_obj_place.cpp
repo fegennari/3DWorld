@@ -149,7 +149,7 @@ void building_t::get_doorways_for_room(cube_t const &room, float zval, vect_door
 
 	for (door_stack_t const &ds : interior->door_stacks) {
 		if (ds.not_a_room_separator()) continue; // not a real doorway into the room
-		if (ds.intersects_no_adj(room_exp)) {doorways.push_back(ds);}
+		if (ds.intersects_no_adj(room_exp)) {doorways.push_back(ds);} // Note: can't use ds.get_conn_room() because this is called before it's filled in
 	}
 }
 vect_door_stack_t &building_t::get_doorways_for_room(cube_t const &room, float zval, bool all_floors) const { // interior doorways; not thread safe
@@ -3511,6 +3511,12 @@ cube_t door_base_t::get_open_door_bcube_for_room(cube_t const &room) const {
 	cube_t bcube(get_true_bcube());
 	if (door_opens_inward(*this, room)) {bcube.d[!dim][dir] += (dir ? 1.0 : -1.0)*get_width();} // include door fully open position
 	return bcube;
+}
+unsigned door_base_t::get_conn_room(unsigned room_id) const {
+	if (room_id == conn_room[0]) return conn_room[1];
+	if (room_id == conn_room[1]) return conn_room[0];
+	assert(0); // invalid room
+	return room_id;
 }
 
 bool building_t::add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool check_for_ducts) {

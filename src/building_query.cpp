@@ -1032,11 +1032,8 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 			if (!i->is_same_stack(door)) break; // moved to a different stack, done
 			if (door.z1() > pos.z || door.z2() < pos.z) continue; // wrong floor
 			if (door.open_amt == 0.0) continue; // fully closed
-			// check adjacent room; Note: usually windowless rooms are connected to office building hallways
-			point pos2(door.get_cube_center());
-			bool const dir(pos2[door.dim] < room.get_center_dim(door.dim));
-			pos2[door.dim] += (dir ? -1.0 : 1.0)*expand_val; // move point into adjacent room
-			if (!check_pos_in_unlit_room_recur(pos2, rooms_visited)) return 0; // if adjacent room is lit, return false
+			// check adjacent room; since we're passing in room_id, we can reuse pos; Note: usually windowless rooms are connected to office building hallways
+			if (!check_pos_in_unlit_room_recur(pos, rooms_visited, i->get_conn_room(room_id))) return 0; // if adjacent room is lit, return false
 		} // for dix
 	} // for i
 	if (room.has_stairs && room.is_ext_basement()) {

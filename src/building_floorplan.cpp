@@ -2167,6 +2167,45 @@ bool building_t::clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out,
 	return 1;
 }
 
+void building_interior_t::assign_door_conn_rooms(unsigned start_ds_ix) {
+	assert(start_ds_ix < door_stacks.size());
+
+	for (auto d = door_stacks.begin()+start_ds_ix; d != door_stacks.end(); ++d) {
+		if (d->for_closet || d->in_backrooms) continue; // excluded
+		unsigned const dsix(d - door_stacks.begin());
+		unsigned rooms_start(0), rooms_end(rooms.size());
+
+		if (ext_basement_door_stack_ix >= 0) { // if we have an extended basement, determine whether or not this door is part of it and split the room range (optimization)
+			if      (dsix < ext_basement_door_stack_ix) {rooms_end   = ext_basement_hallway_room_id;} // main building door can skip extended basement rooms
+			else if (dsix > ext_basement_door_stack_ix) {rooms_start = ext_basement_hallway_room_id;} // extended basement door can skip main building rooms
+			assert(rooms_start < rooms_end && rooms_end <= rooms.size());
+		}
+		point const door_center(d->get_cube_center());
+		float const test_pt_shift(0.5*d->get_width());
+		assert(d->first_door_ix < doors.size());
+
+		for (unsigned s = 0; s < 2; ++s) { // for each side of the door
+			point test_pt(door_center);
+			if (d->on_stairs) {test_pt.z += (s ? d->dz() : 0.0);} // stairs door, test below and above
+			else {test_pt[d->dim] += (s ? 1.0 : -1.0)*test_pt_shift;} // normal door, test front and back
+			int ds_room_ix(-1);
+
+			for (unsigned r = rooms_start; r < rooms_end; ++r) {
+				if (rooms[r].contains_pt(test_pt)) {ds_room_ix = r; break;}
+			}
+			assert(ds_room_ix >= 0); // adj room must be found
+			d->conn_room[s] = ds_room_ix;
+		} // for s
+		assert(d->conn_room[0] != d->conn_room[1]); // can't be connected to the same room on both sides
+
+		for (unsigned dix = d->first_door_ix; dix < doors.size(); ++dix) {
+			door_t &door(doors[dix]);
+			if (!d->is_same_stack(door)) break; // moved to a different stack, done
+			for (unsigned n = 0; n < 2; ++n) {door.conn_room[n] = d->conn_room[n];} // copy rooms to doors
+		}
+	} // for i
+}
+
 void building_t::create_two_story_tall_rooms(rand_gen_t &rgen) {
 	if (!is_house || !interior)     return; // houses only, for now
 	if (interior->rooms.size() < 6) return; // not enough rooms
@@ -2207,22 +2246,11 @@ void building_t::create_two_story_tall_rooms(rand_gen_t &rgen) {
 			int first_room_ix(-1);
 			bool is_disconnected(0);
 
-			for (unsigned six : stack_ixs) {
-				// find room connecting to the other side of this door stack, and check its connectivity to other rooms
-				door_stack_t const &ds(door_stacks[six]);
-				cube_t test_cube(ds);
-				test_cube.expand_by_xy(wall_thickness);
-				test_cube.expand_in_dim(2, -fc_thick); // shrink in Z to avoid getting rooms on other floors (though that may not be possible)
-				int ds_room_ix(-1);
-
-				for (auto r2 = interior->rooms.begin(); r2 != interior->rooms.end(); ++r2) {
-					if (r2 == r) continue; // skip self
-					if (r2->intersects(test_cube)) {ds_room_ix = (r2 - interior->rooms.begin()); break;}
-				}
-				assert(ds_room_ix >= 0); // adj room must be found
+			for (unsigned six : stack_ixs) { // check connectivity to other rooms connecting to the other side of this door stack
+				unsigned const ds_room_ix(door_stacks[six].get_conn_room(room_ix));
 				if (first_room_ix < 0) {first_room_ix = ds_room_ix;} // use the first room as a reference
 				else if (!are_rooms_connected_without_using_room_or_door(first_room_ix, ds_room_ix, room_ix)) {is_disconnected = 1; break;}
-			} // for i
+			}
 			if (is_disconnected) continue;
 		}
 		// replace doors with walls on upper floors

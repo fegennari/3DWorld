@@ -1462,6 +1462,7 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 			buildings[bix]->interior->basement_ext_bcube.union_with_cube(ext_bcube);
 		}
 	} // for r
+	interior->assign_door_conn_rooms(ds_start); // assign room connections to any doors that were added
 	for (unsigned bix = 0; bix < 2; ++bix) {buildings[bix]->interior->remove_excess_capacity();} // optional optimization
 }
 
