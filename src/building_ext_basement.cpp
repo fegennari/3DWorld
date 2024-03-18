@@ -597,6 +597,7 @@ void building_t::end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_
 }
 
 void building_t::add_false_door_to_extb_hallway_if_needed(room_t const &room, float zval, unsigned room_id) {
+	if (room.is_ext_basement_conn()) return; // don't add a door to the end that connects to the adjacent building's extended basement
 	assert(has_room_geom());
 	bool const dim(room.dx() < room.dy()); // long dim
 	float const door_width(get_doorway_width()), wall_thickness(get_wall_thickness()), expand_val(2.0*wall_thickness);
@@ -1433,19 +1434,17 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 		} // for r2
 	} // for r1
 	if (Padd.rooms.empty()) return; // failed to connect
+	unsigned const ds_start(interior->door_stacks.size());
 	building_t *const buildings[2] = {this, &b};
 
 	for (unsigned bix = 0; bix < 2; ++bix) {
 		if (!buildings[bix]->interior->conn_info) {buildings[bix]->interior->conn_info.reset(new building_conn_info_t);}
 	}
 	for (auto const &r : Padd.rooms) { // add any new rooms from above
-		// examples: (-0.9, -8.8), (2.1, -5.7), (2.47, -6.2), (8.96, -9.6), (5.02, -8.5), (-3.9, -8.13), (-1.94, -6.1)
-		//if (fabs(r.x1()) < 10.0 && fabs(r.y1()) < 10.0) {cout << r.str() << endl;}
 		unsigned const is_building_conn(r.hallway_dim ? 2 : 1);
 		// skip one end in hallway_dim and make the other end (bordering the other building) thinner to avoid Z-fighting but still cast shadows
 		interior->place_exterior_room(r, r, get_fc_thickness(), wall_thickness, P, basement_part_ix, 0, r.is_hallway, is_building_conn, r.hallway_dim, r.connect_dir);
-		// index of door that will be added to the other building, and separates the two buildings
-		unsigned const conn_door_ix(b.interior->doors.size()), conn_ds_ix(b.interior->door_stacks.size());
+		unsigned const conn_door_ix(b.interior->doors.size()); // index of door that will be added to the other building, and separates the two buildings
 		// place doors at each end
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			building_t *door_dest(buildings[bool(dir) ^ r.connect_dir ^ 1]); // add door to the building whose room it connects to
@@ -1453,7 +1452,7 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 			// subtract door from walls of each building
 			for (unsigned bix = 0; bix < 2; ++bix) {subtract_cube_from_cubes(door, buildings[bix]->interior->walls[r.hallway_dim]);}
 		} // for dir
-		b.interior->doors[conn_door_ix].is_bldg_conn = b.interior->door_stacks[conn_ds_ix].is_bldg_conn = 1;
+		b.interior->doors.back().is_bldg_conn = b.interior->door_stacks.back().is_bldg_conn = 1; // door added to the other building, and separates the two buildings
 		cube_t ext_bcube(r);
 		ext_bcube.d[r.hallway_dim][r.connect_dir] = r.conn_bcube.d[r.hallway_dim][r.connect_dir]; // extend to cover the entire width of the adjacent hallway in the other building
 
