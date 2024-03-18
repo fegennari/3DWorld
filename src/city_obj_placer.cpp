@@ -730,6 +730,19 @@ bool check_close_to_door(point const &pos, float min_dist, unsigned building_ix)
 	point door_pos;
 	return (get_building_door_pos_closest_to(building_ix, pos, door_pos, 1) && dist_xy_less_than(pos, door_pos, min_dist)); // close to door; inc_garage_door=1
 }
+bool check_valid_house_obj_place(point const &pos, float height, float radius, float wall_pos, bool dim, bool dir, cube_t const &bcube,
+	cube_with_ix_t const &house, vect_cube_t const &blockers, unsigned prev_blockers_end, unsigned yard_blockers_start)
+{
+	point const center(pos + 0.5*height*plus_z);
+	if (is_placement_blocked(bcube, blockers, house, prev_blockers_end))   return 0; // check blockers from prev step; no expand
+	if (is_placement_blocked_recent(bcube, blockers, yard_blockers_start)) return 0; // check prev blockers in this yard
+	if (check_sphere_coll_building(center, radius, 0, house.ix))           return 0; // xy_only=0
+	point p_include(center);
+	p_include[dim] = wall_pos - (dir ? 1.0 : -1.0)*0.25*radius; // slightly inside the wall
+	if (!check_sphere_coll_building(p_include, 0.0, 0, house.ix)) return 0; // *must* be next to an exterior wall or fence; radius=0.0, xy_only=0
+	if (check_close_to_door(pos, 4.0*radius, house.ix))           return 0;
+	return 1;
+}
 
 void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders,
 	vector<road_t> const &roads, unsigned driveways_start, unsigned city_ix, rand_gen_t &rgen)
@@ -859,14 +872,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				cube_t tree_bc; tree_bc.set_from_point(pos);
 				tree_bc.expand_by_xy(radius);
 				tree_bc.z2() += 3.0*radius; // just a guess
-				point const center(pos + radius*plus_z);
-				if (is_placement_blocked(tree_bc, blockers, house, prev_blockers_end))   continue; // check blockers from prev step; no expand
-				if (is_placement_blocked_recent(tree_bc, blockers, yard_blockers_start)) continue; // check prev blockers in this yard
-				if (check_sphere_coll_building(center, radius, 0, house.ix))             continue; // xy_only=0
-				point p_include(center);
-				p_include[dim] = wall_pos - (dir ? 1.0 : -1.0)*0.25*radius; // slightly inside the wall
-				if (!check_sphere_coll_building(p_include, 0.0, 0, house.ix)) continue; // *must* be next to an exterior wall or fence; radius=0.0, xy_only=0
-				if (check_close_to_door(pos, 4.0*radius, house.ix))           continue;
+				if (!check_valid_house_obj_place(pos, radius, radius, wall_pos, dim, dir, tree_bc, house, blockers, prev_blockers_end, yard_blockers_start)) continue;
 				// Note: we can't test objects such as balconies and fire escapes, so we might end up with a pine tree intersecting them
 				int const ttype(0); // 0=pine, 1=short pine, 2=palm
 				place_tree(pos, radius, ttype, colliders, nullptr, 0, 0, 1, 0, tree_scale, pine_xy_sz); // tree_pos=nullptr, allow_bush=0, add_bush=0, is_sm_tree=1, has_planter=0
@@ -889,14 +895,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				pos[ dim] = wall_pos + (dir ? 1.0 : -1.0)*1.75*radius; // place near this wall of the house
 				pos[!dim] = rgen.rand_uniform((house.d[!dim][0] + radius), (house.d[!dim][1] - radius));
 				trashcan_t const trashcan(pos, radius, tc_height, 1); // is_cylin=1
-				point const center(pos + radius*plus_z);
-				if (is_placement_blocked(trashcan.bcube, blockers, house, prev_blockers_end))   continue; // check blockers from prev step; no expand
-				if (is_placement_blocked_recent(trashcan.bcube, blockers, yard_blockers_start)) continue; // check prev blockers in this yard
-				if (check_sphere_coll_building(center, radius, 0, house.ix))                    continue; // xy_only=0
-				point p_include(center);
-				p_include[dim] = wall_pos - (dir ? 1.0 : -1.0)*0.25*radius; // slightly inside the wall
-				if (!check_sphere_coll_building(p_include, 0.0, 0, house.ix)) continue; // *must* be next to an exterior wall or fence; radius=0.0, xy_only=0
-				if (check_close_to_door(pos, 4.0*radius, house.ix))           continue;
+				if (!check_valid_house_obj_place(pos, tc_height, radius, wall_pos, dim, dir, trashcan.bcube, house, blockers, prev_blockers_end, yard_blockers_start)) continue;
 				trashcan_groups.add_obj(trashcan, trashcans);
 				add_cube_to_colliders_and_blockers(trashcan.bcube, colliders, blockers);
 				break; // success
@@ -923,6 +922,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				point p_include(center);
 				p_include[dim] = wall_pos - (dir ? 1.0 : -1.0)*0.2*bike_width; // slightly inside the wall
 				if (!check_sphere_coll_building(p_include, 0.0, 0, house.ix)) continue; // *must* be next to an exterior wall or fence; radius=0.0, xy_only=0
+				// bikes aren't sphere-ish, so can't call check_valid_house_obj_place(); instead we check three points in the front, middle, and back
 				point p_exclude[3] = {center, center, center}; // {middle, front, back}
 				for (unsigned d = 0; d < 2; ++d) {p_exclude[d+1][!dim] += (d ? 1.0 : -1.0)*0.5*(bike_len - bike_width);} // front and back
 				bool blocked(0);
@@ -936,10 +936,24 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		}
 		// maybe place potted plants next to the house
 		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_PLANT)) {
-			unsigned const num_plants(rgen.rand() % 5); // 0-4
+			unsigned const num_plants(rgen.rand() % 9); // 0-8
 
-			for (unsigned n = 0; n < num_plants; ++n) {
-				// TODO: add to plants/plant_groups
+			for (unsigned n = 0; n < num_plants; ++n) { // make one attempt per plant
+				float const plant_height(sz_scale*rgen.rand_uniform(0.8, 1.25));
+				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random house wall dim/dir
+				float const wall_pos(house.d[dim][dir]);
+				point pos;
+				pos.z = i->z2();
+				pos[ dim] = wall_pos; // place at the house wall - will move away from the wall once we know the radius
+				pos[!dim] = rgen.rand_uniform(house.d[!dim][0], house.d[!dim][1]); // on the corner is okay
+				potted_plant_t plant(pos, plant_height, rgen.rand_bool(), rgen.rand_bool(), rgen.rand()); // random dim/dir
+				float const radius(0.5*plant.bcube.get_sz_dim(dim)); // only care about size in the dim facing the wall
+				float const xlate((dir ? 1.0 : -1.0)*1.2*radius);
+				plant.pos[dim] += xlate;
+				plant.bcube.translate_dim(dim, xlate);
+				if (!check_valid_house_obj_place(plant.pos, 0.0, radius, wall_pos, dim, dir, plant.bcube, house, blockers, prev_blockers_end, yard_blockers_start)) continue;
+				plant_groups.add_obj(plant, plants);
+				add_cube_to_colliders_and_blockers(plant.bcube, colliders, blockers);
 			} // for n
 		}
 	} // for i (sub_plots)
