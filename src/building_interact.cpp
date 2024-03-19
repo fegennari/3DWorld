@@ -1859,9 +1859,14 @@ bool trace_ray_through_cubes(vect_cube_t const &cubes, point const &p1, point co
 	return 0; // ray has exited the cubes
 }
 bool building_t::check_line_intersect_doors(point const &p1, point const &p2, bool inc_open) const {
+	// is it more efficient to iterate over interior->door_stacks? only if inc_open=0 (the common case)?
+	float const zmin(min(p1.z, p2.z)), zmax(max(p1.z, p2.z));
+
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
+		if (!inc_open && i->open)             continue; // check only closed doors
+		if (i->z1() > zmax || i->z2() < zmin) continue; // check Z-range
+
 		if (i->open) {
-			if (!inc_open) continue; // check only closed doors
 			cube_t door_bounds(*i);
 			door_bounds.expand_by_xy(i->get_width());
 			if (!door_bounds.line_intersects(p1, p2)) continue; // check intersection with rough/conservative door bounds (optimization)
@@ -1870,7 +1875,7 @@ bool building_t::check_line_intersect_doors(point const &p1, point const &p2, bo
 			float t(0.0); // unused
 			if (line_poly_intersect(p1, p2, door.pts, door.npts, door.get_norm(), t)) return 1;
 		}
-		else if (i->get_true_bcube().line_intersects(p1, p2)) return 1;
+		else if (i->get_true_bcube().line_intersects(p1, p2)) return 1; // test line bcube?
 	} // for i
 	return 0;
 }
