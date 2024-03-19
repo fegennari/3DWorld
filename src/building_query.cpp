@@ -1088,24 +1088,22 @@ bool building_t::are_rooms_connected(room_t const &r1, room_t const &r2, float z
 bool building_t::all_room_int_doors_closed(unsigned room_ix, float zval) const {
 	if (has_complex_floorplan) return 0; // not supported, as there may be missing walls
 	room_t const &room(get_room(room_ix));
-	if (!is_house && room.is_hallway)                 return 0; // office hallways can connect to other hallways with no doors
-	if (room.is_parking() || room.is_backrooms())     return 0; // these cases are excluded because they have interior doors or ramps
-	if (room.is_retail())                             return 0; // retail doesn't work because objects may be visible through stairs (similar to office hallway)
+	if (!is_house && room.is_hallway)             return 0; // office hallways can connect to other hallways with no doors
+	if (room.is_parking() || room.is_backrooms()) return 0; // these cases are excluded because they have interior doors or ramps
+	if (room.is_retail())                         return 0; // retail doesn't work because objects may be visible through stairs (similar to office hallway)
 	min_eq(zval, room.z2()); max_eq(zval, room.z1()); // clamp to room bounds - is this needed?
 	if (room.has_stairs_on_floor(room.get_floor_containing_zval(zval, get_window_vspace()))) return 0; // might be visible through stairs
-	cube_t tc(room);
-	tc.expand_by_xy(2.0*get_wall_thickness()); // expand so that doors overlap
 	// if the room is a single floor, check doors within the full Z span; otherwise, only consider doors overlapping zval
 	float const z1(room.is_single_floor ? room.z1() : zval), z2(room.is_single_floor ? room.z2() : zval);
 
 	for (auto const &ds : interior->door_stacks) {
-		if (!tc.contains_cube(ds)) continue;
+		if (!ds.is_connected_to_room(room_ix)) continue;
 		assert(ds.first_door_ix < interior->doors.size());
 
 		for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
 			door_t const &door(interior->doors[dix]);
 			if (!ds.is_same_stack(door)) break; // moved to a different stack, done
-			if (door.z1() < z2 && door.z2() > z1 && door.open_amt > 0.0 && tc.contains_cube(door)) return 0;
+			if (door.z1() < z2 && door.z2() > z1 && door.open_amt > 0.0) return 0;
 		}
 	} // for ds
 	return 1;
