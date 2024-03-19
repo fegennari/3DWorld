@@ -514,7 +514,8 @@ void building_t::add_office_pillars(rand_gen_t rgen, room_t const &room, float z
 	pillar.set_from_point(point(room.xc(), room.yc(), zval));
 	pillar.z2() += get_floor_ceil_gap();
 	pillar.expand_by_xy(1.8*get_wall_thickness());
-	if (has_bcube_int(pillar, lights)) return; // really should all the pillar, then the lights, but this is easier (and usually doesn't fail)
+	if (!check_cube_within_part_sides(pillar)) return; // handle non-cube buildings
+	if (has_bcube_int(pillar, lights))         return; // really should all the pillar, then the lights, but this is easier (and usually doesn't fail)
 	interior->room_geom->objs.emplace_back(pillar, TYPE_PG_WALL, room_id, 0, 0); // TYPE_PG_WALL is okay since there are no windows so pillar is interior
 	blockers.push_back(pillar);
 }
@@ -3142,6 +3143,7 @@ int building_t::check_valid_picture_placement(room_t const &room, cube_t const &
 	if (is_cube_close_to_doorway(tc, room, 0.0, inc_open)) return 0; // bad placement
 	// Note: it's not legal to guard the below check with (room.has_stairs || room.has_elevator) because room.has_stairs may not be set for stack connector stairs that split a wall
 	if (interior->is_blocked_by_stairs_or_elevator(tc, 4.0*wall_thickness)) return 0; // check stairs and elevators
+	if (!check_cube_within_part_sides(tc)) return 0; // handle non-cube buildings
 	if (!inc_open && !room.is_hallway && is_cube_close_to_doorway(tc, room, 0.0, 1)) return 2; // success, but could be better (doors never open into hallway)
 
 	if (has_complex_floorplan && c.z1() > ground_floor_z1) { // check for office building whiteboards placed on room sides that aren't true walls; skip basements
