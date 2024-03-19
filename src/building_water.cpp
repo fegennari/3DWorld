@@ -208,15 +208,15 @@ bool building_t::water_visible_to_player() const {
 		// check if pool is visible through a doorway
 		cube_t pool_surface(interior->pool);
 		pool_surface.z1() = interior->water_zval;
-		vect_door_stack_t &doorways(get_doorways_for_room(room, room.z1()));
 
-		for (door_stack_t const &ds : doorways) {
+		for (door_stack_t const &ds : interior->door_stacks) {
+			if (!ds.is_connected_to_room(interior->pool.room_ix)) continue;
 			assert(ds.num_doors == 1); // must be a single door
 			door_t const &door(get_door(ds.first_door_ix));
 			if (door.open_amt == 0) continue; // fully closed
 			if (!is_rot_cube_visible(door.get_true_bcube(), xlate)) continue;
 			if (is_cube_visible_through_door(camera_bs, pool_surface, door)) return 1;
-		}
+		} // for ds
 	}
 	return 0;
 }

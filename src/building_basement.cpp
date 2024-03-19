@@ -66,12 +66,12 @@ unsigned building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, flo
 	}
 	else { // select corners furthest from the door (back wall)
 		first_dim = (room.dy() < room.dx()); // face the shorter dim for office buildings so that we can place longer rows
-		vect_door_stack_t const &doorways(get_doorways_for_room(room, zval));
 
-		for (auto i = doorways.begin(); i != doorways.end(); ++i) {
-			bool const dir(room.get_center_dim(i->dim) < i->get_center_dim(i->dim));
-			(i->dim ? first_ydir : first_xdir) = !dir; // opposite the door
-			//first_dim = i->dim; // place against back wall; too restrictive?
+		for (door_stack_t const &ds : interior->door_stacks) {
+			if (!ds.is_connected_to_room(room_id)) continue;
+			bool const dir(room.get_center_dim(ds.dim) < ds.get_center_dim(ds.dim));
+			(ds.dim ? first_ydir : first_xdir) = !dir; // opposite the door
+			//first_dim = ds.dim; // place against back wall; too restrictive?
 		}
 	}
 	for (unsigned n = 0; n < 5; ++n) { // make 5 attempts to place a water heater - one in each corner and 1 along a random wall for variety
