@@ -1347,7 +1347,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 
 			for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
 				if (i->dim == br_dim) continue; // door in wrong dim
-				if (!is_cube_close_to_door(c, 0.0, 0, *i, 2)) continue; // check both dirs
+				if (!i->is_connected_to_room(room_id) || !is_cube_close_to_door(c, 0.0, 0, *i, 2)) continue; // check both dirs
 				sink_side = side; sink_side_set = 1;
 				place_area.d[!br_dim][side] += (sink_side ? -1.0 : 1.0)*(i->get_sz_dim(br_dim) - 0.25*swidth); // add sink clearance for the door to close
 				br_door = *i;
@@ -1486,7 +1486,8 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	room.assign_to((mens_room ? RTYPE_MENS : RTYPE_WOMENS), floor);
 	
 	// make sure doors start closed and unlocked, and flag them as auto_close
-	for (door_stack_t const &ds : get_doorways_for_room(room, zval)) {
+	for (door_stack_t const &ds : interior->door_stacks) {
+		if (!ds.is_connected_to_room(room_id)) continue;
 		assert(ds.first_door_ix < interior->doors.size());
 
 		for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
