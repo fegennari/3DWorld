@@ -1333,7 +1333,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	unsigned camera_part(parts.size()); // start at an invalid value
 	bool camera_by_stairs(0), camera_on_stairs(0), camera_by_L_stairs(0), camera_somewhat_by_stairs(0), camera_in_hallway(0), camera_can_see_ext_basement(0);
 	bool camera_near_building(camera_in_building), check_ramp(0), stairs_or_ramp_visible(0), camera_room_tall(0), camera_in_closed_room(0);
-	float camera_z(camera_bs.z);
+	float camera_z(camera_bs.z), up_light_zmin(camera_bs.z);
 	// if player is in the pool, increase camera zval to the top of the pool so that lights in the room above are within a single floor and not culled
 	if (player_in_pool) {camera_z = interior->pool.z2();}
 	int camera_room(-1);
@@ -1364,6 +1364,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			camera_in_hallway = room.is_hallway;
 			check_ramp        = (has_pg_ramp() && !interior->ignore_ramp_placement);
 			camera_room_tall  = (room.is_single_floor && camera_bs.z > room.z1() + window_vspacing);
+			if (room.is_single_floor) {up_light_zmin = max(camera_bs.z-window_vspacing, room.z1());} // player can see upward lights on walls when in a tall ceiling room
 			if (show_room_name) {lighting_update_text = room_names[room_type];}
 
 			// stairs and ramps only allow light to pass if visible to the player
@@ -1463,12 +1464,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			bool was_added(0);
 
 			if (i->type == TYPE_LAVALAMP && i->is_light_on()) { // should we do an occlusion query?
-				if (int((camera_bs.z - ground_floor_z1)/window_vspacing) != int((i->zc() - ground_floor_z1)/window_vspacing)) continue; // different floor
+				if (camera_room_tall && camera_room == (int)i->room_id) {} // special case for player in a tall room - skip the continue case below
+				else if (int((camera_bs.z - ground_floor_z1)/window_vspacing) != int((i->zc() - ground_floor_z1)/window_vspacing)) continue; // different floor
 				if (!add_dlight_if_visible(i->get_cube_center(), 10.0*i->get_radius(), colorRGBA(1.0, 0.75, 0.25), xlate, lights_bcube)) continue;
 				was_added = 1;
 			}
 			else if (i->type == TYPE_FISHTANK && i->is_light_on()) { // should we do an occlusion query?
-				if (int((camera_bs.z - ground_floor_z1)/window_vspacing) != int((i->zc() - ground_floor_z1)/window_vspacing)) continue; // different floor
+				if (camera_room_tall && camera_room == (int)i->room_id) {} // special case for player in a tall room - skip the continue case below
+				else if (int((camera_bs.z - ground_floor_z1)/window_vspacing) != int((i->zc() - ground_floor_z1)/window_vspacing)) continue; // different floor
 				if (!add_dlight_if_visible(cube_top_center(*i), 1.25*(i->dx() + i->dy()), colorRGBA(0.8, 0.9, 1.0), xlate, lights_bcube, -plus_z, 0.3)) continue; // pointed downward
 				was_added = 1;
 			}
@@ -1850,7 +1853,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		setup_light_for_building_interior(dl_sources.back(), *i, clipped_bc_rot, force_smap_update, shadow_caster_hash);
 		
 		// add upward pointing light (sideways for wall lights); only when player is near/inside a building (optimization); not for lights hanging on ceiling fans
-		if (camera_near_building && (is_lamp || wall_light || lpos_rot.z > camera_bs.z) && !i->is_hanging()) {
+		if (camera_near_building && (is_lamp || wall_light || lpos_rot.z > up_light_zmin) && !i->is_hanging()) {
 			cube_t light_bc2(clipped_bc);
 
 			if (is_in_elevator) {
