@@ -1844,8 +1844,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 		}
 		if (!force_smap_update && interior->last_active_door_ix >= 0) { // check for door opening or closing; since this is player controlled, there should be at most one
-			assert((unsigned)interior->last_active_door_ix < interior->doors.size());
-			door_t const &door(interior->doors[interior->last_active_door_ix]);
+			door_t const &door(interior->get_door(interior->last_active_door_ix));
 			force_smap_update |= (door.is_partially_open() && clipped_bc.intersects(door));
 		}
 		// end dynamic shadows check

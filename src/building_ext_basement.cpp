@@ -325,8 +325,7 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 			for (door_stack_t &ds : interior->door_stacks) {
 				if (!ds.intersects(room_exp)) continue; // door not connected to this room
 				ds.mult_floor_room = 1; // counts as multi-floor (for drawing top edge)
-				assert(ds.first_door_ix < interior->doors.size());
-				interior->doors[ds.first_door_ix].mult_floor_room = 1;
+				interior->get_door(ds.first_door_ix).mult_floor_room = 1;
 				cube_t wall(ds);
 				set_wall_width(wall, ds.get_center_dim(ds.dim), 0.5*wall_thickness, ds.dim);
 				set_cube_zvals(wall, ds.z2(), (room.z2() - fc_thickness));

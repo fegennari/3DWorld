@@ -1768,29 +1768,23 @@ void building_t::get_basement_ext_wall_verts(building_draw_t &bdraw) const {
 	unsigned dim_mask(3); // XY
 	cube_t const &basement(get_basement());
 
-	if (has_basement_door) {
-		// find basement door and remove a section of wall around it; can't use stencil test associated with ext_side_qv_range
+	if (has_basement_door) { // remove a section of wall around the basement door; can't use stencil test associated with ext_side_qv_range
 		assert(interior);
+		door_t const &door(interior->get_ext_basement_door());
+		unsigned const this_face(1 << (2*door.dim + door.open_dir + 3));
+		dim_mask |= this_face; // skip this face for the full basement call below
 
-		for (auto const &door : interior->doors) { // check all exterior doors
-			if (door.z1() >= ground_floor_z1)    continue; // not a basement door
-			if (basement.contains_cube_xy(door)) continue; // not the door separating the basement from the exterior basement
-			unsigned const this_face(1 << (2*door.dim + door.open_dir + 3));
-			dim_mask |= this_face; // skip this face for the full basement call below
-
-			for (unsigned d = 0; d < 2; ++d) {
-				cube_t side(basement);
-				side.d[!door.dim][!d] = door.d[!door.dim][d];
-				bdraw.add_section(*this, 0, side, tp, WHITE, ~(this_face | 4), 0, 0, 1, 0); // single face, always white
-			}
-			if (door.z2() < basement.z2()) { // door shorter than basement; can happen with multi-level parking garages
-				cube_t top(basement);
-				for (unsigned d = 0; d < 2; ++d) {top.d[!door.dim][d] = door.d[!door.dim][d];} // same range as door in !door.dim
-				top.z1() = door.z2();
-				bdraw.add_section(*this, 0, top, tp, WHITE, ~(this_face | 4), 0, 0, 1, 0); // single face, always white
-			}
-			break; // the first door should be the one connecting the basement to the extended basement
-		} // for doors
+		for (unsigned d = 0; d < 2; ++d) {
+			cube_t side(basement);
+			side.d[!door.dim][!d] = door.d[!door.dim][d];
+			bdraw.add_section(*this, 0, side, tp, WHITE, ~(this_face | 4), 0, 0, 1, 0); // single face, always white
+		}
+		if (door.z2() < basement.z2()) { // door shorter than basement; can happen with multi-level parking garages
+			cube_t top(basement);
+			for (unsigned d = 0; d < 2; ++d) {top.d[!door.dim][d] = door.d[!door.dim][d];} // same range as door in !door.dim
+			top.z1() = door.z2();
+			bdraw.add_section(*this, 0, top, tp, WHITE, ~(this_face | 4), 0, 0, 1, 0); // single face, always white
+		}
 	}
 	bdraw.add_section(*this, 0, basement, tp, WHITE, dim_mask, 0, 0, 1, 0); // XY, always white
 }

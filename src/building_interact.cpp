@@ -892,8 +892,8 @@ bool building_t::adjust_blinds_state(unsigned obj_ix) {
 }
 
 void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, point const &actor_pos) { // called by the player or AI
-	assert(interior && door_ix < interior->doors.size());
-	door_t &door(interior->doors[door_ix]);
+	assert(interior);
+	door_t &door(interior->get_door(door_ix));
 	door.toggle_open_state(/*by_player*/player_in_this_building); // allow partial open/animated door if player is in this building
 	// we changed the door state, but navigation should adapt to this, except for doors on stairs (which are special)
 	if ( door.on_stairs ) {invalidate_nav_graph();} // any in-progress paths may have people walking to and stopping at closed/locked doors
