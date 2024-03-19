@@ -2176,8 +2176,8 @@ void building_interior_t::assign_door_conn_rooms(unsigned start_ds_ix) {
 		unsigned rooms_start(0), rooms_end(rooms.size());
 
 		if (ext_basement_door_stack_ix >= 0) { // if we have an extended basement, determine whether or not this door is part of it and split the room range (optimization)
-			if      (dsix < ext_basement_door_stack_ix) {rooms_end   = ext_basement_hallway_room_id;} // main building door can skip extended basement rooms
-			else if (dsix > ext_basement_door_stack_ix) {rooms_start = ext_basement_hallway_room_id;} // extended basement door can skip main building rooms
+			if      ((int)dsix < ext_basement_door_stack_ix) {rooms_end   = ext_basement_hallway_room_id;} // main building door can skip extended basement rooms
+			else if ((int)dsix > ext_basement_door_stack_ix) {rooms_start = ext_basement_hallway_room_id;} // extended basement door can skip main building rooms
 			assert(rooms_start < rooms_end && rooms_end <= rooms.size());
 		}
 		point const door_center(d->get_cube_center());

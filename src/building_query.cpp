@@ -1063,15 +1063,16 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 }
 
 bool building_t::are_rooms_connected(room_t const &r1, room_t const &r2, float zval, bool check_door_open) const {
-	cube_t tc1(r1), tc2(r2);
 	float const expand(2.0*get_wall_thickness()); // expand so that adjacent rooms and doors overlap
+	cube_t tc1(r1), tc2(r2);
 	tc1.expand_by_xy(expand);
-	tc2.expand_by_xy(expand);
 	if (!tc1.intersects(tc2)) return 0; // rooms not adjacent
+	tc2.expand_by_xy(expand);
 	tc1.intersect_with_cube(tc2); // shared wall area
 
 	for (auto const &ds : interior->door_stacks) {
-		if (!tc1.contains_cube(ds)) continue;
+		if (ds.not_a_room_separator()) continue;
+		if (!tc1.contains_cube(ds))    continue;
 		if (!check_door_open) return 1; // if there's a door stack, there must be a connecting door
 		assert(ds.first_door_ix < interior->doors.size());
 
@@ -1082,10 +1083,6 @@ bool building_t::are_rooms_connected(room_t const &r1, room_t const &r2, float z
 		}
 	} // for ds
 	return 0;
-}
-bool building_t::are_rooms_connected(unsigned room_ix1, unsigned room_ix2, float zval, bool check_door_open) const {
-	if (room_ix1 == room_ix2) return 1; // error?
-	return are_rooms_connected(get_room(room_ix1), get_room(room_ix2), zval, check_door_open);
 }
 
 bool building_t::all_room_int_doors_closed(unsigned room_ix, float zval) const {

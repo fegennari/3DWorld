@@ -1118,12 +1118,8 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, room_
 
 	if (!use_first_floor && lpos.z - room.z1() > 1.5*floor_spacing) { // light above the ground floor
 		// check if adjacent to a tall room, in which case we also need to lower the ray origin
-		cube_t cr(room);
-		cr.expand_by_xy(2.0*wall_thickness);
-
 		for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-			if (!r->is_single_floor || !r->intersects_no_adj(cr)) continue;
-			if (!are_rooms_connected(room, *r, (room.z1() + 0.5*floor_spacing), 0)) continue; // check_door_open=0
+			if (!r->is_single_floor || !are_rooms_connected(room, *r, (room.z1() + 0.5*floor_spacing), 0)) continue; // check_door_open=0
 			use_first_floor = 1;
 			break;
 		}

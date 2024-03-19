@@ -2645,13 +2645,9 @@ int building_t::room_or_adj_room_has_stairs(int room_ix, float zval, bool inc_ad
 	unsigned floor_ix(room.get_floor_containing_zval(max(zval, room.z1()), get_window_vspace())); // clamp zval to the room
 	if (room.has_stairs_on_floor(floor_ix)) return 1;
 	if (!inc_adj_rooms) return 0;
-	cube_t cr(room);
-	cr.expand_by_xy(2.0*get_wall_thickness());
 
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-		if (!r->has_stairs_on_floor(floor_ix) || !r->intersects_no_adj(cr)) continue;
-		if (!are_rooms_connected(room, *r, zval, check_door_open))          continue;
-		return 2;
+		if (r->has_stairs_on_floor(floor_ix) && are_rooms_connected(room, *r, zval, check_door_open)) return 2;
 	}
 	return 0;
 }
