@@ -1469,7 +1469,6 @@ unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool 
 	float const grass_thresh(get_grass_thresh_pad());
 	point const camera(get_camera_pos());
 	if (get_min_dist_to_pt(camera) > grass_thresh) return 0; // too far away to draw
-	//highres_timer_t timer("Draw Grass"); // 0.075
 	pre_draw_grass_flowers(s, use_cloud_shadows);
 	bind_texture_tu(weight_tid, 3);
 	unsigned const grass_block_dim(get_grass_block_dim());
@@ -3237,8 +3236,8 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 
 	if (reflection_pass)    return; // no grass reflections (yet)
 	if (player_in_basement) return; // grass can sometimes appear in a building basement, so disable it when the player is in the basement
+	//highres_timer_t timer("Draw Grass"); // 0.13/0.38ms
 	bool const use_cloud_shadows(GRASS_CLOUD_SHADOWS && cloud_shadows_enabled());
-	vector<vector<vector2d> > insts[NUM_GRASS_LODS];
 	unsigned num_grass_drawn(0), num_flowers_drawn(0);
 	if (use_grass_tess && !check_for_tess_shader()) {use_grass_tess = 0;} // disable tess - not supported
 
@@ -3284,7 +3283,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 				if (!tile->has_grass()) continue;
 				if (tile->using_shadow_maps() != (spass == 0)) continue;
 				if ((tile->get_dist_to_camera_in_tiles(0) > 0.5*tt_grass_scale_factor) != (int)wpass) continue; // xyz dist
-				num_grass_drawn += tile->draw_grass(s, insts, use_cloud_shadows, enable_tess, lt_loc);
+				num_grass_drawn += tile->draw_grass(s, grass_insts, use_cloud_shadows, enable_tess, lt_loc);
 			}
 			disable_instancing_for_shader_loc(lt_loc);
 			grass_tile_manager.end_draw();

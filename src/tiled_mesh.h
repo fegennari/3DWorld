@@ -438,6 +438,7 @@ class tile_draw_t : public indexed_vbo_manager_t {
 	tile_shadow_map_manager smap_manager;
 	vector<pair<float, tile_xy_pair>> shadow_recomp_queue;
 	vect_cube_t occluder_cubes;
+	vector<vector<vector2d> > grass_insts[NUM_GRASS_LODS];
 
 	struct occluder_pts_t {
 		point cube_pts[4];
