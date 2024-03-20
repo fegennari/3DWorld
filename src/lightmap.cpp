@@ -889,16 +889,16 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 	bool const cur_dlights_empty(dl_sources.empty());
 	if (cur_dlights_empty && last_dlights_empty && dl_tid != 0 && elem_tid != 0 && gb_tid != 0) return; // no updates
 	last_dlights_empty = cur_dlights_empty;
-	//highres_timer_t timer("Dlight Texture Upload");
+	//highres_timer_t timer("Dlight Texture Upload"); // 0.083ms
 
 	// step 1: the light sources themselves
 	unsigned const max_dlights           = 1024;
 	unsigned const base_floats_per_light = 12; // XYZ pos, radius, RGBA color, XYZ dir/pos2, beamwidth
 	unsigned const max_floats_per_light  = base_floats_per_light + 1; // add one for shadow map index
 	//unsigned const max_floats_per_light      = base_floats_per_light + dl_smap_enabled;
-	unsigned const ysz((max_floats_per_light+3)/4); // round up to nearest multiple of 4
-	unsigned const data_sz(max_dlights*(4*ysz));
-	vector<float> dl_data(data_sz, 0);
+	unsigned const ysz((max_floats_per_light+3)/4), stride(4*ysz); // round up to nearest multiple of 4
+	static vector<float> dl_data;
+	dl_data.resize(max_dlights*stride, 0.0); // 16k floats / 64KB data
 	float *dl_data_ptr(dl_data.data());
 	if (dl_sources.size() > max_dlights) {cerr << "Warning: Exceeded max lights of " << max_dlights << endl;}
 	unsigned const ndl(min(max_dlights, (unsigned)dl_sources.size()));
@@ -909,7 +909,7 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 
 	for (unsigned i = 0; i < ndl; ++i) {
 		bool const line_light(dl_sources[i].is_line_light());
-		float *data(dl_data_ptr + 4*i*ysz); // stride is texel RGBA
+		float *data(dl_data_ptr + i*stride); // stride is texel RGBA
 		dl_sources[i].pack_to_floatv(data); // {center,radius, color, dir,beamwidth}
 		UNROLL_3X(data[i_] = (data[i_] - poff[i_])*pscale[i_];) // scale pos to [0,1] range
 		UNROLL_3X(data[i_+4] *= 0.1;) // scale color down
@@ -917,7 +917,7 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 		data[3] *= radius_scale;
 		has_spotlights  |= dl_sources[i].is_directional();
 		has_line_lights |= line_light;
-	}
+	} // for i
 	if (dl_tid == 0) {
 		setup_2d_texture(dl_tid);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, ysz, max_dlights, 0, GL_RGBA, GL_FLOAT, dl_data_ptr);
@@ -926,11 +926,12 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 		bind_2d_texture(dl_tid);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ysz, ndl, GL_RGBA, GL_FLOAT, dl_data_ptr);
 	}
+	std::fill(dl_data.begin(), dl_data.begin()+ndl*stride, 0.0); // zero fill the data
 
 	// step 1b: optionally setup dlights bcubes texture
 	if (enable_dlight_bcubes) {
-		unsigned const bc_data_sz(6*max_dlights); // we need 2 RGB values to store 6 bcube floats
-		vector<float> dl_bc_data(bc_data_sz, 0);
+		static vector<float> dl_bc_data;
+		dl_bc_data.resize(6*max_dlights, 0.0); // we need 2 RGB values to store 6 bcube floats; 6k floats / 24KB data
 		float *bc_data_ptr(dl_bc_data.data());
 
 		for (unsigned i = 0; i < ndl; ++i) {
@@ -938,9 +939,7 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 			float *data(bc_data_ptr + 6*i); // stride is texel RGB, encoded as {x1, y1, z1, x2, y2, z2}
 
 			for (unsigned dir = 0; dir < 2; ++dir) {
-				for (unsigned dim = 0; dim < 3; ++dim) {
-					*(data++) = (bcube.d[dim][dir] - poff[dim])*pscale[dim]; // scale to [0,1] range
-				}
+				for (unsigned dim = 0; dim < 3; ++dim) {*(data++) = (bcube.d[dim][dir] - poff[dim])*pscale[dim];} // scale to [0,1] range
 			}
 		}
 		if (dl_bc_tid == 0) {
@@ -951,6 +950,7 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 			bind_2d_texture(dl_bc_tid);
 			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 2, ndl, GL_RGB, GL_FLOAT, bc_data_ptr);
 		}
+		std::fill(dl_bc_data.begin(), dl_bc_data.begin()+ndl*6, 0.0); // zero fill the data
 	}
 
 	// step 2: grid bag entries
@@ -964,8 +964,8 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 	elem_data.clear();
 	gb_data.resize(gbx*gby, 0);
 
-	for (unsigned y = 0; y < gby && elem_data.size() < max_gb_entries; ++y) {
-		for (unsigned x = 0; x < gbx && elem_data.size() < max_gb_entries; ++x) {
+	for (unsigned y = 0; y < gby; ++y) {
+		for (unsigned x = 0; x < gbx; ++x) {
 			unsigned const gb_ix(x + y*gbx); // {start, end, unused}
 			gb_data[gb_ix] = elem_data.size(); // 24 low bits = start_ix
 			if (!ldynamic_enabled[gb_ix]) continue; // no lights for this grid
@@ -982,8 +982,10 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 			unsigned const num_ix(elem_data.size() - gb_data[gb_ix]);
 			assert(num_ix < (1<<8));
 			gb_data[gb_ix] += (num_ix << 24); // 8 high bits = num_ix
-		}
-	}
+			if (elem_data.size() >= max_gb_entries) break;
+		} // for x
+		if (elem_data.size() >= max_gb_entries) break;
+	} // for y
 	if (elem_data.size() > 0.9*max_gb_entries) {
 		if (elem_data.size() >= max_gb_entries && num_warnings < 100) {
 			std::cerr << "Warning: Exceeded max # indexes (" << max_gb_entries << ") in dynamic light texture upload" << endl;
