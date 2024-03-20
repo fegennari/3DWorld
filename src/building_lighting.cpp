@@ -1443,7 +1443,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	}
 	if (camera_near_building) { // build moving objects vector
 		for (auto i = objs.begin(); i != objs_end; ++i) {
-			if (i->is_visible() && i->is_moving()) {moving_objs.emplace_back(*i, (i - objs.begin() + 1));}
+			if (i->is_moving() && i->is_visible()) {moving_objs.emplace_back(*i, (i - objs.begin() + 1));}
 		}
 	}
 	if (has_room_geom() && frame_counter <= (int)interior->room_geom->last_animal_update_frame+1) { // animals were updated this frame or the previous frame

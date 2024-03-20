@@ -3037,8 +3037,8 @@ public:
 	static bool check_tile_smap(bool shadow_only) {
 		return (!shadow_only && world_mode == WMODE_INF_TERRAIN && shadow_map_enabled());
 	}
-	static bool building_grid_visible(vector3d const &xlate, cube_t const &grid_bcube) {
-		return camera_pdu.sphere_and_cube_visible_test((grid_bcube.get_cube_center() + xlate), grid_bcube.get_bsphere_radius(), (grid_bcube + xlate));
+	static bool building_grid_visible(vector3d const &xlate, cube_t const &grid_bcube, pos_dir_up const &pdu=camera_pdu) {
+		return pdu.sphere_and_cube_visible_test((grid_bcube.get_cube_center() + xlate), grid_bcube.get_bsphere_radius(), (grid_bcube + xlate));
 	}
 
 	void add_interior_lights(vector3d const &xlate, cube_t &lights_bcube, bool sec_camera_mode) { // Note: non const because this caches light bcubes
@@ -3263,7 +3263,7 @@ public:
 					if (is_first_tile && !reflection_pass) {oc.set_camera(camera_pdu);} // setup occlusion culling on the first visible tile
 					if (!ref_pass_interior) {bbd.next_tile(g->bcube);} // only needed for exterior geom; always uses main/exterior bcube
 					is_first_tile = 0;
-					
+
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t &b((*i)->get_building(bi->ix));
 						if (!b.interior) continue; // no interior, skip
@@ -4169,12 +4169,12 @@ public:
 		
 		for (auto g = grid.begin(); g != grid.end(); ++g) {
 			if (g->bc_ixs.empty()) continue;
-			if (!building_grid_visible(state.xlate, g->bcube)) continue; // VFC; use exterior bcube
+			if (!building_grid_visible(state.xlate, g->bcube, pdu)) continue; // VFC; use exterior bcube; pass in our custom pdu with lowered near clip plane
 			
 			for (auto b = g->bc_ixs.begin(); b != g->bc_ixs.end(); ++b) {
 				if ((int)b->ix == state.exclude_bix) continue; // excluded
 				cube_t const c(*b + state.xlate); // check far clipping plane first because that's more likely to reject buildings
-				// if player's inside this building, skip occlusion so that objects are visible through windows
+				// if player is inside this building, skip occlusion so that objects are visible through windows
 				if (state.skip_cont_camera && !(player_in_basement || player_in_attic) && c.contains_pt(pdu.pos) && get_building(b->ix).has_windows()) continue;
 				if (dist_less_than(pdu.pos, c.closest_pt(pdu.pos), pdu.far_) && pdu.cube_visible(c)) {state.building_ids.push_back(*b);}
 			}
@@ -4186,6 +4186,7 @@ public:
 		for (auto b = state.building_ids.begin(); b != state.building_ids.end(); ++b) {
 			if ((int)b->ix == state.exclude_bix) continue;
 			if (get_region(pos_bs, b->d) & get_region(pts[0], b->d)) continue; // line outside - early reject optimization
+			if (!b->line_intersects(pos_bs, pts[0])) continue; // early reject optimization
 			building_t const &building(get_building(b->ix));
 			bool occluded(1);
 
