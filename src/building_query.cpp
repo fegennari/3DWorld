@@ -1057,6 +1057,14 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	return 1;
 }
 
+bool building_t::is_room_windowless(room_t const &room) const { // or interior
+	if (room.z2() <= ground_floor_z1)         return 1; // basement, no windows
+	if (!bcube.contains_cube_xy_no_adj(room)) return 0; // adjacent to bcube, may have windows
+	cube_t const part(get_part_for_room(room));
+	if (part.contains_cube_xy_no_adj(room))   return 1; // interior to its part, no windows
+	return (room.ext_sides == 0); // maybe we should check this just after the basement test?
+}
+
 bool building_t::are_rooms_connected(room_t const &r1, room_t const &r2, float zval, bool check_door_open) const {
 	float const expand(2.0*get_wall_thickness()); // expand so that adjacent rooms and doors overlap
 	cube_t tc1(r1), tc2(r2);
