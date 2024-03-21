@@ -913,8 +913,8 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 		if (is_room_adjacent_to_ext_door(c)) {ng.mark_exit(r);}
 
 		for (door_stack_t const &ds : interior->door_stacks) {
-			if (ds.not_a_room_separator()) continue; // only using doors between two rooms
-			if (!c.intersects_no_adj(ds))  continue; // door not adjacent to this room
+			if (ds.not_a_room_separator())   continue; // only using doors between two rooms
+			if (!ds.is_connected_to_room(r)) continue; // door not connected to this room
 			// we should only add this door if it's on the same floor as our graph, but that doesn't work because the graph is shared across all floors,
 			// so instead we'll have to record the door index and check the correct door during path finding; it's not valid to test door open/locked state here
 			unsigned const r2(ds.get_conn_room(r));
@@ -990,12 +990,11 @@ bool building_t::are_rooms_connected_without_using_room_or_door(unsigned room1, 
 	while (!pend.empty()) { // flood fill - maybe A* is better, but that's a lot of work
 		unsigned const cur(pend.back());
 		pend.pop_back();
-		cube_t room(get_room(cur));
-		room.expand_by_xy(wall_width); // to include adjacent doors
+		cube_t const &room(get_room(cur));
 
 		for (door_stack_t const &ds : interior->door_stacks) {
-			if (ds.not_a_room_separator())   continue; // not a real door between two rooms
-			if (!room.intersects_no_adj(ds)) continue; // door not adjacent to this room
+			if ( ds.not_a_room_separator())    continue; // not a real door between two rooms
+			if (!ds.is_connected_to_room(cur)) continue;
 			
 			if (door_exclude >= 0 && door_exclude >= (int)ds.first_door_ix) { // check if this door is excluded
 				bool is_excluded(0);

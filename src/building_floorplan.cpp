@@ -2226,16 +2226,14 @@ void building_t::create_two_story_tall_rooms(rand_gen_t &rgen) {
 		
 		// gather list of all connected doors on the upper floor
 		float const upper_floor_zval_thresh(room.z1() + 1.5*floor_spacing); // anything above this is definitely on the second floor
-		cube_t room_exp(room);
-		room_exp.expand_by_xy(wall_thickness);
 		vect_door_stack_t &door_stacks(interior->door_stacks);
 		vect_door_t &idoors(interior->doors);
 		vector<unsigned> stack_ixs;
 
 		for (unsigned i = 0; i < door_stacks.size(); ++i) {
 			door_stack_t &ds(door_stacks[i]);
-			if (ds.not_a_room_separator()) continue; // skip basement and closet doors
-			if (ds.z1() > upper_floor_zval_thresh || !ds.intersects(room_exp)) continue; // door not connected to this room
+			if ( ds.not_a_room_separator())        continue; // skip basement and closet doors
+			if (!ds.is_connected_to_room(room_ix)) continue;
 			ds.mult_floor_room = 1; // counts as multi-floor (for drawing top edge), even if not extending to upper floor
 			assert(ds.first_door_ix < idoors.size());
 			idoors[ds.first_door_ix].mult_floor_room = 1;

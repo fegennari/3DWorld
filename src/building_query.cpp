@@ -1015,16 +1015,11 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 		return 0; // lit by a room light, including one in a closet (Note that closets are only in house bedrooms, which should always have windows anyway)
 	}
 	rooms_visited.insert(room_id); // mark this room as visited before making recursive calls
-	// check for a light path through a series of open doors
-	float const floor_thickness(get_floor_thickness()), wall_thickness(get_wall_thickness());
-	float const expand_val(1.1*wall_thickness), floor_zval(room.z1() + floor_ix*floor_spacing);
-	cube_t room_exp(room);
-	room_exp.expand_by_xy(expand_val);
-	set_cube_zvals(room_exp, (floor_zval + floor_thickness), (floor_zval + floor_spacing - floor_thickness)); // clip to z-range of this floor
 
+	// check for a light path through a series of open doors
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
-		if (i->not_a_room_separator()) continue; // skip non room separating doors
-		if (!i->intersects(room_exp) ) continue; // wrong room
+		if ( i->not_a_room_separator())        continue; // skip non room separating doors
+		if (!i->is_connected_to_room(room_id)) continue;
 		assert(i->first_door_ix < interior->doors.size());
 
 		for (unsigned dix = i->first_door_ix; dix < interior->doors.size(); ++dix) {
@@ -1048,7 +1043,7 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	// check for light through connected office building hallways
 	if (!is_house && room.is_hallway && !room.is_ext_basement()) {
 		cube_t test_cube(room);
-		test_cube.expand_by_xy(0.5*wall_thickness); // include adjacency, but don't expand enough to go through a wall
+		test_cube.expand_by_xy(0.5*get_wall_thickness()); // include adjacency, but don't expand enough to go through a wall
 		unsigned const rooms_end((interior->ext_basement_hallway_room_id >= 0) ? interior->ext_basement_hallway_room_id : interior->rooms.size());
 
 		for (unsigned r = 0; r < rooms_end; ++r) {

@@ -3519,8 +3519,10 @@ cube_t door_base_t::get_open_door_bcube_for_room(cube_t const &room) const {
 	return bcube;
 }
 unsigned door_base_t::get_conn_room(unsigned room_id) const {
+	assert(!no_room_conn());
 	if (room_id == conn_room[0]) return conn_room[1];
 	if (room_id == conn_room[1]) return conn_room[0];
+	cout << TXT(room_id) << TXT(conn_room[0]) << TXT(conn_room[1]) << TXT(str()) << endl; // TESTING
 	assert(0); // invalid room
 	return room_id;
 }
