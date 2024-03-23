@@ -969,7 +969,6 @@ bool building_t::are_rooms_connected_without_using_room_or_door(unsigned room1, 
 	assert(room1 < num_rooms && room2 < num_rooms);
 	assert(room_exclude != room1 && room_exclude != room2);
 	if (room1 == room2) return 1;
-	float const wall_width(get_wall_thickness());
 	bool const use_bit_mask(num_rooms <= 64); // almost always true
 	static vector<unsigned> pend; // reused across calls
 	static vector<uint8_t> seen; // reused across calls
@@ -990,7 +989,6 @@ bool building_t::are_rooms_connected_without_using_room_or_door(unsigned room1, 
 	while (!pend.empty()) { // flood fill - maybe A* is better, but that's a lot of work
 		unsigned const cur(pend.back());
 		pend.pop_back();
-		cube_t const &room(get_room(cur));
 
 		for (door_stack_t const &ds : interior->door_stacks) {
 			if ( ds.not_a_room_separator())    continue; // not a real door between two rooms
@@ -1009,7 +1007,7 @@ bool building_t::are_rooms_connected_without_using_room_or_door(unsigned room1, 
 			}
 			unsigned const r(ds.get_conn_room(cur));
 			if (use_bit_mask ? (seen_mask & (1ULL << r)) : seen[r]) continue;
-			if ((int)r == room2) return 1; // found, done
+			if (r == room2) return 1; // found, done
 			pend.push_back(r);
 			if (use_bit_mask) {seen_mask |= (1ULL << r);} else {seen[r] = 1;}
 		} // for d
