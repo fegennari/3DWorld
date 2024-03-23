@@ -584,7 +584,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 
 					if (!has_bcube_int_xy(test_cube, blockers, max(0.1f*nr_width, min_obj_spacing))) { // skip if intersects a building or parking lot, with padding
 						nrack_groups.add_obj(newsrack, newsracks);
-						add_cube_to_colliders_and_blockers(test_cube, colliders, blockers);
+						colliders.push_back(newsrack.bcube); // no clearance
+						blockers .push_back(test_cube); // includes clearance
 					}
 				} // for n
 			} // for dir
