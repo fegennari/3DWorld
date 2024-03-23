@@ -236,6 +236,11 @@ public:
 		path.erase(path.begin()); // remove the starting point, which is no longer needed
 		return ret;
 	}
+	void invalidate_nav_grid(unsigned plot_ix) { // not needed, because cars entering or leaving driveways will trigger invalidate() when blocker count changes?
+		for (unsigned g = 0; g < 2; ++g) { // check both grids
+			if (plot_ix < plot_grids[g].size()) {plot_grids[g][plot_ix].invalidate();}
+		}
+	}
 };
 
 ped_manager_t::ped_manager_t(city_road_gen_t const &road_gen_, car_manager_t const &car_manager_) : road_gen(road_gen_), car_manager(car_manager_) {}
@@ -873,6 +878,9 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	bool const is_home_plot(plot == dest_plot); // plot contains our destination
 	if (is_home_plot && !follow_player) {assert(plot_bcube == next_plot_bcube);} // doesn't hold when following the player?
 	cube_t const region(get_plot_coll_region(cur_plot));
+	static vect_cube_t car_bcubes; // reused across calls
+	car_bcubes.clear();
+	if (!in_the_road) {ped_mgr.get_parked_car_bcubes_for_plot(plot_bcube, city, car_bcubes);} // get collider bcubes for cars parked in house driveways
 	bool keep_cur_dest(0);
 	avoid_entire_plot = 0;
 
@@ -924,20 +932,13 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 			if (avoid_inner.contains_pt_xy(pos)) {in_illegal_area = 1;} // may pick a new destination if path finding fails and not following the player
 			else {avoid_entire_plot = 1;}
 		}
-		if (avoid_entire_plot) {avoid.push_back(avoid_area);} // this is the highest priority, so add it first
-
-		if (!in_the_road) { // include collider bcubes for cars parked in house driveways
-			static vect_cube_t car_bcubes; // reused across calls
-			car_bcubes.clear();
-			ped_mgr.get_parked_car_bcubes_for_plot(plot_bcube, city, car_bcubes);
-
-			for (auto i = car_bcubes.begin(); i != car_bcubes.end(); ++i) {
-				i->expand_by_xy(0.75*radius); // use smaller collision radius
-				if (avoid_entire_plot && avoid_area.contains_cube_xy(*i)) continue; // contained within the plot cube we're avoiding
-				avoid.push_back(*i);
-			}
-		}
 		if (avoid_entire_plot) {
+			avoid.push_back(avoid_area); // this is the highest priority, so add it first
+
+			for (auto i = car_bcubes.begin(); i != car_bcubes.end(); ++i) { // include collider bcubes for cars parked in house driveways
+				i->expand_by_xy(0.75*radius); // use smaller collision radius
+				if (!avoid_area.contains_cube_xy(*i)) {avoid.push_back(*i);}
+			}
 			for (auto i = colliders.begin(); i != colliders.end(); ++i) {
 				// exclude any cubes contained in the plot, since they're redundant; maybe shouldn't do this if pos is inside avoid_area?
 				if (!avoid_area.contains_cube_xy_exp(*i, expand)) {add_and_expand_ped_avoid_cube(*i, avoid, expand, height, region);}
@@ -957,6 +958,10 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	//remove_cube_if_contains_pt_xy(avoid, pos); // init coll cases (for example from previous dest_bldg) are handled by path_finder_t
 	if (is_home_plot && has_dest_bldg) {remove_cube_if_contains_pt_xy(avoid, dest_pos);} // exclude our dest building, we do want to collide with it
 
+	for (auto i = car_bcubes.begin(); i != car_bcubes.end(); ++i) { // include collider bcubes for cars parked in house driveways
+		i->expand_by_xy(0.75*radius); // use smaller collision radius
+		avoid.push_back(*i);
+	}
 	for (auto i = colliders.begin(); i != colliders.end(); ++i) { // check colliders for this plot
 		if (is_home_plot && has_dest_car && i->contains_pt_xy(dest_pos)) continue; // exclude our dest car, we do want to collide with it
 		add_and_expand_ped_avoid_cube(*i, avoid, expand, height, region);
@@ -989,9 +994,7 @@ bool pedestrian_t::check_path_blocked(ped_manager_t &ped_mgr, point const &dest,
 		vect_cube_t const &colliders(ped_mgr.get_colliders_for_plot(city, plots_to_test[d]));
 		for (cube_t const &c : colliders) {add_and_expand_ped_avoid_cube(c, avoid, expand, height, region);} // check plot colliders
 	}
-	if (!in_the_road) { // include collider bcubes for cars parked in house driveways
-		ped_mgr.get_parked_car_bcubes_for_plot(check_area, city, avoid);
-	}
+	if (!in_the_road) {ped_mgr.get_parked_car_bcubes_for_plot(check_area, city, avoid);} // include collider bcubes for cars parked in house driveways
 	return check_line_int_xy(avoid, pos, dest);
 }
 
