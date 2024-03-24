@@ -104,7 +104,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t plot, vector<car_t> &ca
 					car.set_bcube(pos, nom_car_size);
 					cars.push_back(car);
 					if ((rgen.rand()&7) == 0) {cars.back().dir ^= 1;} // pack backwards 1/8 of the time
-					used_spaces[row*park.num_rows + col] = 1;
+					used_spaces[row*park.row_sz + col] = 1;
 					++filled_spaces;
 					has_parking = 1;
 				}
@@ -115,23 +115,32 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t plot, vector<car_t> &ca
 		} // for row
 		// generate colliders for each group of used parking space columns
 		cube_t cur_cube(park); // set zvals, etc.
+		unsigned row_min(park.num_rows), row_max(0);
 		bool inside(0);
 
-		for (unsigned col = 0; col <= park.row_sz; ++col) {
-			// mark this space as blocked if any spaces in the row are blocked; this avoids creating diagonally adjacent colliders that cause dead ends and confuse path finding
+		for (unsigned col = 0; col <= park.row_sz; ++col) { // one extra iteration
+			// mark space as blocked if any spaces in the row are blocked; avoids creating diagonally adjacent colliders that cause dead ends and confuse path finding
 			bool blocked(0);
-			for (unsigned row = 0; col < park.row_sz && row < park.num_rows; ++row) {blocked |= (used_spaces[row*park.num_rows + col] != 0);}
 
+			if (col < park.row_sz) { // not a valid column
+				for (unsigned row = 0; row < park.num_rows; ++row) {
+					if (used_spaces[row*park.row_sz + col] == 0) continue; // no car
+					blocked = 1;
+					min_eq(row_min, row);
+					max_eq(row_max, row);
+				}
+			}
 			if (!inside && blocked) { // start a new segment
 				cur_cube.d[!car_dim][0] = corner_pos[!car_dim] + col*dw;
 				inside = 1;
 			}
 			else if (inside && !blocked) { // end the current segment
 				cur_cube.d[!car_dim][1] = corner_pos[!car_dim] + col*dw;
+				cur_cube.d[ car_dim][0] = corner_pos[ car_dim] +  row_min   *dr; // set row span for range of cars
+				cur_cube.d[ car_dim][1] = corner_pos[ car_dim] + (row_max+1)*dr;
 				cur_cube.normalize();
-				//assert(park.contains_cube(cur_cube)); // can fail due to floating-point precision
 				colliders.push_back(cur_cube);
-				inside = 0;
+				row_min = park.num_rows; row_max = 0; inside = 0;
 			}
 		} // for col
 	} // for c
