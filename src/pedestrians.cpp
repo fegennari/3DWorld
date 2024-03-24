@@ -122,7 +122,7 @@ public:
 		if (blockers.size() != num_blockers) {invalidate();} // invalidate if number of blockers changes; maybe should checksum blockers?
 	}
 	// Note: narrow sidewalk space between the road and residential yards will be even more narrow, with only 2-3 "lanes" for people to walk in
-	void build_for_city(cube_t const &bcube_, vect_cube_t const &blockers, float radius_, bool has_parking_lots) {
+	void build_for_city(cube_t const &bcube_, vect_cube_t const &blockers, float radius_) {
 		//highres_timer_t timer("build_city_grid"); // ~0.1ms
 		vect_cube_t non_building_blockers;
 		non_building_blockers.reserve(blockers.size());
@@ -134,20 +134,6 @@ public:
 			int const building_id(get_building_bcube_contains_pos(c.get_cube_center()));
 			if (building_id < 0) {non_building_blockers.push_back(c);} // not a building
 			else {buildings.emplace_back(c, building_id);} // building
-		}
-		if (has_parking_lots) { // optimization: remove parked cars contained inside blocked off parking spaces
-			vect_cube_t keep_blockers;
-			keep_blockers.reserve(non_building_blockers.size());
-
-			for (auto i = non_building_blockers.begin(); i != non_building_blockers.end(); ++i) {
-				bool covered(0);
-				
-				for (auto j = non_building_blockers.begin(); j != non_building_blockers.end(); ++j) {
-					if (j != i && j->contains_cube_xy(*i)) {covered = 1; break;}
-				}
-				if (!covered) {keep_blockers.push_back(*i);}
-			}
-			keep_blockers.swap(non_building_blockers);
 		}
 		assert(buildings.size() < (254U - node_bix_start)); // must fit in uint8_t with some reserved values
 		// Note: can call treat_bcube_as_vcylin(), though small vertical cylinders may still be a single cube
@@ -228,7 +214,7 @@ class city_cube_nav_grid_manager {
 	vector<city_cube_nav_grid> plot_grids[2][2]; // {normal, with blocked interior} x {male, female}
 public:
 	// assumes a constant radius, even though the radius varies slightly between men and women
-	bool find_path(cube_t const &plot_bcube, vect_cube_t const &blockers, float radius, bool is_female, unsigned plot_ix, unsigned city_ix,
+	bool find_path(cube_t const &plot_bcube, vect_cube_t const &blockers, float radius, bool is_female, unsigned plot_ix,
 		point const &p1, point const &p2, ped_manager_t &ped_mgr, int dest_building, shader_t *s=nullptr)
 	{
 		unsigned const num_plots(ped_mgr.get_tot_num_plots());
@@ -236,13 +222,12 @@ public:
 		assert(p1.z == p2.z); // must be horizontal
 		// assume the plot blocker is first and at least half the area of the plot
 		bool const has_blocked_interior(!blockers.empty() && blockers.front().get_area_xy() > 0.5*plot_bcube.get_area_xy());
-		bool const has_parking_lots(city_params.num_cars > 0 && ped_mgr.get_city_plot_for_peds(city_ix, plot_ix).is_commercial());
 		vector<city_cube_nav_grid> &grids(plot_grids[has_blocked_interior][is_female]);
 		if (grids.empty()) {grids.resize(num_plots);}
 		assert(grids.size() == num_plots);
 		city_cube_nav_grid &grid(grids[plot_ix]);
 		grid.check_if_valid(blockers);
-		if (!grid.is_valid()) {grid.build_for_city(plot_bcube, blockers, radius, has_parking_lots);}
+		if (!grid.is_valid()) {grid.build_for_city(plot_bcube, blockers, radius);}
 		if (s != nullptr) {grid.debug_draw(*s);} // debug visualization
 		point plot_dest(p2);
 		plot_bcube.clamp_pt_xy(plot_dest); // closest point to our destination within the current plot
@@ -1115,7 +1100,7 @@ void pedestrian_t::run_path_finding(ped_manager_t &ped_mgr, cube_t const &plot_b
 		if (using_nav_grid) { // use nav grid; partial paths are not possible
 			int const bix(has_dest_bldg ? (int)dest_bldg : -1);
 			city_cube_nav_grid_manager &nav_grid_mgr(ped_mgr.get_nav_grid_mgr());
-			found_path = full_path = nav_grid_mgr.find_path(plot_bcube, avoid, radius, is_female, plot, city, pos, dest_pos, ped_mgr, bix);
+			found_path = full_path = nav_grid_mgr.find_path(plot_bcube, avoid, radius, is_female, plot, pos, dest_pos, ped_mgr, bix);
 			if (found_path) {assert(!ped_mgr.grid_path.empty()); dest_pos = ped_mgr.grid_path.front();}
 		}
 		else { // run path finding between pos and dest_pos using avoid cubes
@@ -1959,7 +1944,7 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	if (using_nav_grid) { // debugging of nav grid
 		int const bix(has_dest_bldg ? (int)dest_bldg : -1);
 		city_cube_nav_grid_manager &nav_grid_mgr(ped_mgr.get_nav_grid_mgr());
-		bool const success(nav_grid_mgr.find_path(plot_bcube, avoid, radius, is_female, plot, city, pos, orig_dest_pos, ped_mgr, bix, &s)); // with debug vis
+		bool const success(nav_grid_mgr.find_path(plot_bcube, avoid, radius, is_female, plot, pos, orig_dest_pos, ped_mgr, bix, &s)); // with debug vis
 		colorRGBA const color(success ? PURPLE : BLACK);
 		for (point &p : path) {p.z += 0.1*radius;} // shift up slightly so that it's not overlapping the other path nodes/lines
 		set_fill_mode(); // reset
