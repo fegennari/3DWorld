@@ -155,6 +155,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 100
 	colorRGBA const &get_color() const;
 	unsigned get_unique_id() const {return (unsigned(1000000.0*max_speed) + color_id + (model_id<<8));} // not guaranteed to be unique, but pretty close
 	void apply_scale(float scale);
+	void set_correct_len_width_from_model(vector3d const &model_sz);
 	void destroy();
 	float get_min_sep_dist_to_car(car_t const &c, bool add_one_car_len=0) const;
 	string str() const;

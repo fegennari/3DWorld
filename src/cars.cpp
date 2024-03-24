@@ -65,6 +65,11 @@ void car_t::apply_scale(float scale) {
 	bcube.x1() = pos.x - scale*sz.x; bcube.x2() = pos.x + scale*sz.x;
 	bcube.y1() = pos.y - scale*sz.y; bcube.y2() = pos.y + scale*sz.y;
 }
+void car_t::set_correct_len_width_from_model(vector3d const &model_sz) {
+	float const scale(height / model_sz.z); // scale based on fixed height, since this is what we used to get the wheels at ground level
+	bcube.expand_in_dim( dim, 0.5*(scale*model_sz.x - get_length())); // resize length
+	bcube.expand_in_dim(!dim, 0.5*(scale*model_sz.y - get_width ())); // resize width
+}
 
 void car_t::destroy() { // Note: not calling create_explosion(), so no chain reactions
 	point const pos(get_center() + get_tiled_terrain_model_xlate());
@@ -760,6 +765,7 @@ void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rg
 			}
 			fixed_color = model.fixed_color_id;
 			if (apply_scale) {car.apply_scale(model.scale);}
+			car.set_correct_len_width_from_model(car_model_loader.get_model_world_space_size(car.model_id));
 			break; // done
 		} // for n
 	}

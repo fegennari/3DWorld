@@ -964,8 +964,19 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	}
 	for (auto i = colliders.begin(); i != colliders.end(); ++i) { // check colliders for this plot
 		if (is_home_plot && has_dest_car && i->contains_pt_xy(dest_pos)) continue; // exclude our dest car, we do want to collide with it
+
+		if (!car_bcubes.empty()) { // cars placed in driveways are redundant, but may have the wrong size; remove them if there's a matching car_bcube
+			cube_t test_cube(*i);
+			test_cube.expand_by(-0.1*i->get_size()); // shrink a bit in case the placed size was a bit larger than the actual car
+			bool contained(0);
+
+			for (cube_t const &c : car_bcubes) {
+				if (c.contains_cube(test_cube)) {contained = 1; break;}
+			}
+			if (contained) continue;
+		}
 		add_and_expand_ped_avoid_cube(*i, avoid, expand, height, region);
-	}
+	} // for i
 }
 
 // used for zombie path finding
