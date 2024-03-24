@@ -165,8 +165,7 @@ public:
 		assert(exclude_val == 255);
 		dest_building = dest_building_;
 
-		// Note: this logic isn't needed yet because the dest building won't be passed in as blockers, but this will be needed when the nav grid is cached
-		if (dest_building >= 0) { // exclude this building from the grid if it's found
+		if (dest_building >= 0) { // exclude this building from the grid if it's found; doesn't help with dest parked cars
 			for (unsigned i = 0; i < buildings.size(); ++i) {
 				if ((int)buildings[i].ix == dest_building) {exclude_val = i; break;} // get index into buildings vector
 			}
@@ -964,11 +963,12 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	if (is_home_plot && has_dest_bldg) {remove_cube_if_contains_pt_xy(avoid, dest_pos);} // exclude our dest building, we do want to collide with it
 
 	for (auto i = car_bcubes.begin(); i != car_bcubes.end(); ++i) { // include collider bcubes for cars parked in house driveways
+		if (is_home_plot && has_dest_car && i->contains_pt_xy(dest_pos)) continue; // exclude our dest car, we do want to collide with it
 		i->expand_by_xy(0.75*radius); // use smaller collision radius
 		avoid.push_back(*i);
 	}
 	for (auto i = colliders.begin(); i != colliders.end(); ++i) { // check colliders for this plot
-		if (is_home_plot && has_dest_car && i->contains_pt_xy(dest_pos)) continue; // exclude our dest car, we do want to collide with it
+		if (is_home_plot && has_dest_car && i->contains_pt_xy(dest_pos)) continue; // exclude our dest car (or its parking lot), we do want to collide with it
 
 		if (!car_bcubes.empty()) { // cars placed in driveways are redundant, but may have the wrong size; remove them if there's a matching car_bcube
 			cube_t test_cube(*i);
