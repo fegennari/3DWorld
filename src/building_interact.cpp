@@ -1073,7 +1073,7 @@ void apply_building_gravity(float &vz, float dt_ticks) {
 }
 void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point const &player_pos, float player_z1, bool player_is_moving) {
 	room_object_t &ball(*ball_it);
-	assert(ball.type == TYPE_LG_BALL); // currently, only large balls have has_dstate()
+	assert(is_ball_type(ball.type)); // currently, only balls have has_dstate()
 	assert(ball.obj_id < interior->room_geom->obj_dstate.size());
 	float const player_radius(get_scaled_player_radius()), player_z2(player_pos.z), radius(ball.get_radius());
 	float const fc_thick(get_fc_thickness()), fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
@@ -2015,7 +2015,7 @@ room_obj_dstate_t &building_room_geom_t::get_dstate(room_object_t const &obj) {
 }
 
 bool is_blocking_obj_on_top_surface(room_object_t const &obj) { // objects on tables, counters, desks, etc.
-	return (obj.type == TYPE_PLANT || obj.type == TYPE_KEYBOARD || obj.type == TYPE_BOTTLE || obj.type == TYPE_MWAVE || obj.type == TYPE_LG_BALL ||
+	return (obj.type == TYPE_PLANT || obj.type == TYPE_KEYBOARD || obj.type == TYPE_BOTTLE || obj.type == TYPE_MWAVE || is_ball_type(obj.type) ||
 		obj.type == TYPE_PLATE || obj.type == TYPE_LAPTOP || obj.type == TYPE_PAN || obj.type == TYPE_VASE || obj.type == TYPE_URN || obj.type == TYPE_MONITOR ||
 		obj.type == TYPE_LAMP || obj.type == TYPE_CUP || obj.type == TYPE_TOASTER || obj.type == TYPE_SILVER || obj.type == TYPE_PIZZA_BOX || obj.type == TYPE_PLANT_MODEL);
 }

@@ -1997,6 +1997,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		//unsigned room_id(building.get_room_containing_pt(obj_pos));
 		//if (room_id >= 0) {player_held_object.room_id = room_id;} // is this necessary?
 		if (player_held_object.type == TYPE_LG_BALL) {draw_lg_ball_in_building(player_held_object, s);} // the only supported dynamic object type
+		//else if (player_held_object.type == TYPE_POOL_BALL) {} // future work
 		else if (player_held_object.can_use()) {draw_interactive_player_obj(player_held_object, s, xlate);}
 		else {assert(0);}
 	}

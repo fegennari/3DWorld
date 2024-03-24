@@ -1718,8 +1718,8 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 
 			for (auto i = objs.begin(); i != objs_end && !bad_placement; ++i) {
 				if (i == objs.begin() + closest_obj_id)      continue; // skip self
-				if (i->no_coll() || i->type == TYPE_BLOCKER) continue; // skip non-colliding objects and blockers that add clearance between objects as these won't block this object
-				if (obj.type == TYPE_BED && i->type == TYPE_LG_BALL) continue; // ignore ball on/under bed
+				if (i->no_coll() || i->type == TYPE_BLOCKER) continue; // skip non-coll objects and blockers that add clearance between objects as these won't block this obj
+				if (obj.type == TYPE_BED && is_ball_type(i->type)) continue; // ignore ball on/under bed
 				
 				if (i->is_open() && i->is_small_closet()) { // check open closet door collision
 					cube_t cubes[5]; // front left, left side, front right, right side, door

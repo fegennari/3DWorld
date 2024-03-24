@@ -118,6 +118,7 @@ struct ball_type_t {
 };
 enum {BALL_TYPE_SOCCER=0, BALL_TYPE_BASKET, BALL_TYPE_SOFT, BALL_TYPE_TENNIS, BALL_TYPE_BEACH, NUM_BALL_TYPES};
 
+// name tex_fname nm_fname radius density value weight can_kick hurts_zombie breaks_glass spec shine
 ball_type_t const ball_types[NUM_BALL_TYPES] = {
 	ball_type_t("soccer ball", "balls/soccer_ball_diffuse.png", "balls/soccer_ball_normal.png", 4.4, 0.50, 12.0, 0.90, 1, 1, 1, 0.4, 60.0),
 	ball_type_t("basketball",  "balls/basketball.png",          "",                             4.7, 0.50, 15.0, 1.38, 1, 1, 1, 0.2, 40.0),
@@ -125,6 +126,7 @@ ball_type_t const ball_types[NUM_BALL_TYPES] = {
 	ball_type_t("tennis ball", "balls/tennis_ball.jpg",         "",                             1.3, 0.75,  2.0, 0.13, 0, 1, 0, 0.0,  0.0), // "balls/tennis_ball_bump.jpg" bad format
 	ball_type_t("beach ball",  "balls/beachball.jpg",           "",                            10.0, 0.01, 10.0, 0.10, 1, 0, 0, 0.5, 80.0)
 };
+ball_type_t const pool_ball_type("pool ball", "balls/pool_balls.png", "",                     1.125, 1.70,  2.0, 0.37, 0, 1, 1, 0.9, 100.0);
 
 class light_ix_assign_t {
 	vector<pair<point2d<float>, unsigned>> cur;
@@ -440,7 +442,8 @@ enum {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_
 	  RTYPE_SWIM, RTYPE_SECURITY, RTYPE_BACKROOMS, RTYPE_RETAIL, RTYPE_ELEVATOR, NUM_RTYPES};
 typedef uint8_t room_type;
 
-inline bool is_bathroom(room_type const rtype) {return (rtype == RTYPE_BATH || rtype == RTYPE_MENS || rtype == RTYPE_WOMENS);}
+inline bool is_bathroom (room_type   const rtype) {return (rtype == RTYPE_BATH || rtype == RTYPE_MENS || rtype == RTYPE_WOMENS);}
+inline bool is_ball_type(room_object const type ) {return (type == TYPE_LG_BALL || type == TYPE_POOL_BALL);}
 
 // full room names for UI display
 std::string const room_names[NUM_RTYPES] =
@@ -636,15 +639,15 @@ struct room_object_t : public oriented_cube_t { // size=64
 	int get_paper_tid() const;
 	int get_food_box_tid() const;
 	std::string const &get_food_box_name() const;
-	int get_model_id () const;
+	int get_model_id() const;
 	void set_as_bottle(unsigned rand_id, unsigned max_type=NUM_BOTTLE_TYPES-1, bool no_empty=0, unsigned exclude_mask=0);
 	void remove() {type = TYPE_BLOCKER; flags = (RO_FLAG_NOCOLL | RO_FLAG_INVIS);} // replace it with an invisible blocker that won't collide with anything
 	colorRGBA get_color() const;
 	colorRGBA get_model_color() const;
 	vector3d get_dir() const {vector3d v(zero_vector); v[dim] = (dir ? 1.0 : -1.0); return v;}
 	rand_gen_t create_rgen() const;
-	ball_type_t const &get_ball_type() const {assert(type == TYPE_LG_BALL); return ball_types[item_flags % NUM_BALL_TYPES];}
-};
+	ball_type_t const &get_ball_type() const;
+}; // room_object_t
 typedef vector<room_object_t> vect_room_object_t;
 
 inline void set_obj_id(vect_room_object_t &objs) {objs.back().obj_id = (uint16_t)objs.size();}

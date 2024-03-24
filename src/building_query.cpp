@@ -1575,7 +1575,7 @@ public:
 				if (obj.type != TYPE_PIPE && min(obj.dx(), obj.dy()) < sz_thresh) continue; // too small; exclude pipes
 				if (obj.type == TYPE_BOOK || obj.type == TYPE_PLANT || obj.type == TYPE_RAILING || obj.type == TYPE_BOTTLE || obj.type == TYPE_PAPER ||
 					obj.type == TYPE_PAINTCAN || obj.type == TYPE_WBOARD || obj.type == TYPE_DRAIN || obj.type == TYPE_PLATE || obj.type == TYPE_LBASKET ||
-					obj.type == TYPE_LAMP || obj.type == TYPE_CUP || obj.type == TYPE_LAPTOP || obj.type == TYPE_LG_BALL || obj.type == TYPE_PAN ||
+					obj.type == TYPE_LAMP || obj.type == TYPE_CUP || obj.type == TYPE_LAPTOP || is_ball_type(obj.type) || obj.type == TYPE_PAN ||
 					obj.type == TYPE_PG_BEAM || obj.type == TYPE_PLANT_MODEL) continue;
 				if (z1 > obj.z2() || z2 < obj.z1()) continue; // zval test
 
@@ -2274,8 +2274,8 @@ bool handle_vcylin_vcylin_int(point &p1, point const &p2, float rsum) {
 bool handle_dynamic_room_objs_coll(vect_room_object_t::const_iterator begin, vect_room_object_t::const_iterator end, point &pos, float radius, float z2) {
 	for (auto c = begin; c != end; ++c) {
 		if (c->no_coll() || !c->has_dstate()) continue; // Note: no test of player_coll flag
-		assert(c->type == TYPE_LG_BALL); // currently, only large balls have has_dstate()
 		if (pos.z > c->z2() || z2 < c->z1())  continue; // different floors
+		assert(is_ball_type(c->type)); // currently, only balls have has_dstate()
 		// treat the ball as a vertical cylinder because it's too complex to find the collision point of a vertical cylinder with a sphere
 		point const center(c->get_cube_center());
 		if (handle_vcylin_vcylin_int(pos, center, (radius + c->get_radius()))) return 1; // early exit on first hit

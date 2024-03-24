@@ -140,6 +140,12 @@ rand_gen_t room_object_t::create_rgen() const {
 	rgen.rand_mix(); // optional, but improves randomness
 	return rgen;
 }
+ball_type_t const &room_object_t::get_ball_type() const {
+	if (type == TYPE_LG_BALL  ) {return ball_types[item_flags % NUM_BALL_TYPES];}
+	if (type == TYPE_POOL_BALL) {return pool_ball_type;}
+	assert(0);
+	return pool_ball_type; // never gets here
+}
 
 void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_object_t &objects) {
 	rand_gen_t rgen(c.create_rgen());

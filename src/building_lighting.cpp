@@ -280,7 +280,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 		if (c->is_exterior())          continue; // interior objects only
 		// skip other object types that are too small, not cube shaped, or not interior
 		if (c->type == TYPE_WALL_TRIM || c->type == TYPE_BOOK || c->type == TYPE_CRACK || c->type == TYPE_PLANT || c->type == TYPE_RAILING || c->type == TYPE_SHELVES ||
-			c->type == TYPE_BOTTLE || c->type == TYPE_PEN || c->type == TYPE_PENCIL || c->type == TYPE_LG_BALL || c->type == TYPE_HANGER_ROD || c->type == TYPE_DRAIN ||
+			c->type == TYPE_BOTTLE || c->type == TYPE_PEN || c->type == TYPE_PENCIL || is_ball_type(c->type) || c->type == TYPE_HANGER_ROD || c->type == TYPE_DRAIN ||
 			c->type == TYPE_MONEY || c->type == TYPE_PHONE || c->type == TYPE_TPROLL || c->type == TYPE_SPRAYCAN || c->type == TYPE_MARKER || c->type == TYPE_BUTTON ||
 			c->type == TYPE_SWITCH || c->type == TYPE_TAPE || c->type == TYPE_OUTLET || c->type == TYPE_PARK_SPACE || c->type == TYPE_RAMP || c->type == TYPE_PIPE ||
 			c->type == TYPE_VENT || c->type == TYPE_BREAKER || c->type == TYPE_KEY || c->type == TYPE_HANGER || c->type == TYPE_FESCAPE || c->type == TYPE_CUP ||

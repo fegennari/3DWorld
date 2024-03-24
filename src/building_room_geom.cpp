@@ -3373,6 +3373,11 @@ void building_room_geom_t::add_server(room_object_t const &c) {
 	add_obj_with_front_texture(c, "interiors/server_rack.png", get_server_color(), 1); // small=1
 }
 
+void get_pool_ball_rot_matrix(room_object_t const &c, xform_matrix &rot_matrix) {
+	rand_gen_t rgen(c.create_rgen());
+	rot_matrix  = get_rotation_matrix(plus_x, TWO_PI*rgen.rand_float()); // random rotation about the numbered face
+	rot_matrix *= get_rotation_matrix(rgen.signed_rand_vector_spherical().get_norm(), TWO_PI*rgen.rand_float()); // random rotation about random axis
+}
 void building_room_geom_t::add_pool_ball(room_object_t const &c) {
 	// the texture atlas is 3 across by 6 high: {1,2,3}, {4,5,6}, {7,8,9}, {10,11,23}, {13,14,15}, {cue, stripe, crown}
 	unsigned const number(c.item_flags); // starts from 0; cue ball is 15
@@ -3380,16 +3385,16 @@ void building_room_geom_t::add_pool_ball(room_object_t const &c) {
 	unsigned const num_rows(6), num_cols(3);
 	unsigned const row_ix(num_rows - (number/num_cols) - 1), col_ix(number % num_cols); // rows are in inverted order
 	float const row_height(1.0/num_rows), col_width(1.0/num_cols), border(0.01);
-	float const tx1(col_ix*col_width), tx2(tx1 + col_width), ty1(row_ix*row_height), ty2(ty1 + row_height);
+	float const tx1(col_ix*col_width), tx2(tx1 + col_width), ty1(row_ix*row_height), ty2(ty1 + row_height), radius(c.get_radius());
 	tex_range_t const tr(tx1+border, ty1+border, tx2-border, ty2-border);
-	tid_nm_pair_t tex(get_texture_by_name("balls/pool_balls.png"), 1.0, 1); // shadowed
-	tex.set_specular(0.9, 100.0);
+	ball_type_t const &bt(pool_ball_type);
+	tid_nm_pair_t tex(get_texture_by_name(bt.tex_fname), 1.0, 1); // shadowed
+	tex.set_specular(bt.spec, bt.shine);
 	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // shadowed, small
-	// apply a random initial rotation
-	rand_gen_t rgen(c.create_rgen());
-	xform_matrix rot_matrix(get_rotation_matrix(plus_x, TWO_PI*rgen.rand_float())); // random rotation about the numbered face
-	rot_matrix *= get_rotation_matrix(rgen.signed_rand_vector_spherical().get_norm(), TWO_PI*rgen.rand_float()); // random rotation about random axis
-	float const radius(c.get_radius());
+	// calculate rotation matrix
+	xform_matrix rot_matrix;
+	if (c.has_dstate()) {rot_matrix = get_dstate(c).rot_matrix;} // custom rotation matrix
+	else {get_pool_ball_rot_matrix(c, rot_matrix);} // random initial rotation
 	mat.add_sphere_to_verts(c.get_cube_center(), vector3d(radius, radius, radius), c.color, 1, zero_vector, tr, &rot_matrix); // low_detail=1; no apply_light_color()
 }
 void building_room_geom_t::add_pool_cue(room_object_t const &c) {
@@ -4265,8 +4270,8 @@ void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot
 	}
 }
 
-int get_lg_ball_tid   (room_object_t const &c) {return get_texture_by_name(c.get_ball_type().tex_fname  );}
-int get_lg_ball_nm_tid(room_object_t const &c) {return get_texture_by_name(c.get_ball_type().nm_fname, 1);}
+int get_ball_tid   (room_object_t const &c) {return get_texture_by_name(c.get_ball_type().tex_fname  );}
+int get_ball_nm_tid(room_object_t const &c) {return get_texture_by_name(c.get_ball_type().nm_fname, 1);}
 
 xform_matrix get_player_cview_rot_matrix() {
 	float const angle(atan2(cview_dir.y, cview_dir.x)); // angle of camera view in XY plane, for rotating about Z
@@ -4278,7 +4283,7 @@ void apply_thin_plastic_effect(room_object_t const &c, tid_nm_pair_t &tex) {
 }
 tid_nm_pair_t get_ball_tex_params(room_object_t const &c, bool shadowed) {
 	ball_type_t const &bt(c.get_ball_type());
-	tid_nm_pair_t tex(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0, 0.0, 0.0, shadowed);
+	tid_nm_pair_t tex(get_ball_tid(c), get_ball_nm_tid(c), 0.0, 0.0, 0.0, 0.0, shadowed);
 	tex.set_specular(bt.spec, bt.shine);
 	//if (c.item_flags == BALL_TYPE_BEACH) {apply_thin_plastic_effect(c, tex);} // doesn't look right in rooms with windows where light_amt > 0 when the lights are off
 	return tex;
@@ -4646,7 +4651,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_MWAVE:    return GRAY;
 	case TYPE_SHOWER:   return colorRGBA(WHITE, 0.25); // partially transparent - does this actually work?
 	case TYPE_BLINDS:   return texture_color(get_blinds_tid()).modulate_with(color);
-	case TYPE_LG_BALL:  return texture_color(get_lg_ball_tid(*this));
+	case TYPE_LG_BALL:  return texture_color(get_ball_tid(*this));
 	case TYPE_HANGER_ROD:return get_textured_wood_color();
 	case TYPE_MONEY:    return texture_color(get_money_tid());
 	case TYPE_PHONE:    return color*0.5; // 50% case color, 50% black
@@ -4669,7 +4674,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_POOL_TILE: return texture_color(get_pool_tile_params(*this).get_tid());
 	case TYPE_FOOD_BOX:  return texture_color(get_food_box_tid());
 	case TYPE_FISHTANK:  return table_glass_color; // glass
-	//case TYPE_POOL_BALL: return ???; // uses a texture atlas, so unclear what color to use here; use white by default
+	//case TYPE_POOL_BALL: return ???; // texture_color(get_ball_tid(*this))? uses a texture atlas, so unclear what color to use here; use white by default
 	//case TYPE_CHIMNEY:  return texture_color(get_material().side_tex); // should modulate with texture color, but we don't have it here
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
 	}
