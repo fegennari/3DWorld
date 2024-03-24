@@ -66,9 +66,12 @@ void car_t::apply_scale(float scale) {
 	bcube.y1() = pos.y - scale*sz.y; bcube.y2() = pos.y + scale*sz.y;
 }
 void car_t::set_correct_len_width_from_model(vector3d const &model_sz) {
-	float const scale(height / model_sz.z); // scale based on fixed height, since this is what we used to get the wheels at ground level
+	float const scale(bcube.get_size().sum() / model_sz.sum()); // same scaling as in city_model_loader_t::draw_model()
+	float const new_height(scale*model_sz.z);
+	bcube.translate_dim(2, 0.5*(new_height - height)); // shift slightly so that the tires are still on the road
 	bcube.expand_in_dim( dim, 0.5*(scale*model_sz.x - get_length())); // resize length
 	bcube.expand_in_dim(!dim, 0.5*(scale*model_sz.y - get_width ())); // resize width
+	height = new_height;
 }
 
 void car_t::destroy() { // Note: not calling create_explosion(), so no chain reactions
@@ -336,7 +339,7 @@ bool car_t::exit_driveway_to_road(vector<car_t> const &cars, driveway_t const &d
 	return 0;
 }
 
-point car_base_t::get_front(float dval) const {
+point car_base_t::get_front(float dval) const { // not correct when mid-turn
 	point car_front(get_center());
 	car_front[dim] += (dir ? dval : -dval)*get_length(); // half length
 	return car_front;
@@ -540,9 +543,11 @@ void car_draw_state_t::add_car_headlights(vector<car_t> const &cars, vector3d co
 
 /*static*/ void car_draw_state_t::gen_car_pts(car_t const &car, bool include_top, point pb[8], point pt[8]) {
 	point const center(car.get_center());
-	cube_t const &c(car.bcube);
-	float const z1(center.z - 0.5*car.height), z2(center.z + 0.5*car.height), zmid(center.z + (include_top ? 0.1 : 0.5)*car.height), length(car.get_length());
+	cube_t c(car.bcube);
+	float const z1(center.z - 0.5*car.height), z2(center.z + 0.5*car.height), length(car.get_length());
+	float const zmid(center.z + (car.is_truck ? 0.5 : 0.1)*car.height); // cars are lower to the ground than trucks
 	bool const dim(car.dim), dir(car.dir);
+	c.expand_in_dim(!dim, -0.05*car.get_width()); // slightly narrower to account for side mirrors
 	set_cube_pts(c, z1, zmid, dim, dir, pb); // bottom
 
 	if (include_top) {
@@ -581,6 +586,11 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 	point const center_xlated(center + xlate);
 	if (!shadow_only && !dist_less_than(camera_pdu.pos, center_xlated, 0.5*draw_tile_dist)) return; // check draw distance, dist_scale=0.5
 	if (!camera_pdu.sphere_visible_test(center_xlated, 0.5f*car.height*CAR_RADIUS_SCALE) || !camera_pdu.cube_visible(car.bcube + xlate)) return;
+	float const dist_val(p2p_dist(camera_pdu.pos, center_xlated)/draw_tile_dist);
+	bool const draw_model(car_model_loader.num_models() > 0 &&
+		(is_dlight_shadows ? dist_less_than(pre_smap_player_pos, center, 0.05*draw_tile_dist) : (shadow_only || dist_val < 0.05)) &&
+		car_model_loader.is_model_valid(car.model_id));
+	if (draw_model && is_occluded(car.bcube)) return; // only check occlusion for expensive car models
 	uint64_t const tile_id(get_tile_id_containing_point_no_xyoff(center_xlated));
 		
 	if (!last_smap_tile_id_valid || tile_id != last_smap_tile_id) { // new tile shadow map
@@ -589,26 +599,21 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 		last_smap_tile_id = tile_id;
 		last_smap_tile_id_valid = 1;
 	}
-	colorRGBA const &color(car.get_color());
-	float const dist_val(p2p_dist(camera_pdu.pos, center_xlated)/draw_tile_dist);
-	bool const draw_top(dist_val < 0.25 && !car.is_truck), dim(car.dim), dir(car.dir);
-	bool const draw_model(car_model_loader.num_models() > 0 &&
-		(is_dlight_shadows ? dist_less_than(pre_smap_player_pos, center, 0.05*draw_tile_dist) : (shadow_only || dist_val < 0.05)));
+	bool const draw_top(dist_val < 0.25 && !car.is_truck && !draw_model), dim(car.dim), dir(car.dir);
 	float const sign((dim^dir) ? -1.0 : 1.0);
 	point pb[8], pt[8]; // bottom and top sections
 	gen_car_pts(car, draw_top, pb, pt);
 
-	if (draw_model && car_model_loader.is_model_valid(car.model_id)) {
-		if (is_occluded(car.bcube)) return; // only check occlusion for expensive car models
+	if (draw_model) {
 		vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 		bool const low_detail(!shadow_only && dist_val > 0.035);
 		cube_t non_rot_bcube(car.bcube);
 		set_wall_width(non_rot_bcube, car.bcube.zc(), 0.5*car.height, 2);
-		car_model_loader.draw_model(s, center, non_rot_bcube, front_n, color, xlate, car.model_id, shadow_only, low_detail);
+		car_model_loader.draw_model(s, center, non_rot_bcube, front_n, car.get_color(), xlate, car.model_id, shadow_only, low_detail);
 	}
 	else { // draw simple 1-2 cube model
 		quad_batch_draw &qbd(qbds[emit_now]);
-		color_wrapper cw(color);
+		color_wrapper cw(car.get_color());
 		draw_cube(qbd, cw, center, pb, 1, (dim^dir)); // bottom (skip_bottom=1)
 		if (draw_top) {draw_cube(qbd, cw, center, pt, 1, (dim^dir));} // top (skip_bottom=1)
 	}
@@ -627,11 +632,6 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 			v   += center;
 			v.z += 0.06*car.height; // shift up slightly to avoid z-fighting; needs to be a bit higher for driveways
 		}
-		/*if (!car.headlights_on()) { // daytime, adjust shadow to match sun pos
-			vector3d const sun_dir(0.5*length*(center - get_sun_pos()).get_norm());
-			vector3d const offset(sun_dir.x, sun_dir.y, 0.0);
-			for (unsigned i = 0; i < 4; ++i) {pao[i] += offset;} // problems: double shadows, non-flat surfaces, buildings, texture coords/back in center, non-rectangular
-		}*/
 		ao_qbd.add_quad_pts(pao, colorRGBA(0, 0, 0, 0.9), plus_z);
 	}
 	if (dist_val > 0.3)  return; // to far - no lights to draw
@@ -647,7 +647,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 
 		for (unsigned d = 0; d < 2; ++d) { // L, R
 			unsigned const lr(d ^ lr_xor ^ 1);
-			point const pos((lr ? 0.2 : 0.8)*(hv1*pb[0] + hv2*pb[4]) + (lr ? 0.8 : 0.2)*(hv1*pb[1] + hv2*pb[5]));
+			point const pos((lr ? 0.1 : 0.9)*(hv1*pb[0] + hv2*pb[4]) + (lr ? 0.9 : 0.1)*(hv1*pb[1] + hv2*pb[5]));
 			add_light_flare(pos, front_n, hl_color, 2.0, 0.65*car.height); // pb 0,1,4,5
 		}
 	}
@@ -756,16 +756,18 @@ void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rg
 			if (FORCE_MODEL_ID >= 0) {car.model_id = (unsigned char)FORCE_MODEL_ID;}
 			else {car.model_id = ((num_models > 1) ? (local_rgen.rand() % num_models) : 0);}
 			city_model_t const &model(car_model_loader.get_model(car.model_id));
-			bool apply_scale(1);
 			
 			// if there are multiple models to choose from, and this car is in a garage, try for a model that's not scaled up (the truck) (what about driveways?)
 			if (FORCE_MODEL_ID < 0 && is_in_garage && model.scale > 1.0) {
 				if (num_models > 1 && n+1 < 20) continue; // try a different model
-				apply_scale = 0; // don't scale the model because it may not fit; instead, add a small truck
+				// don't scale the model because it may not fit; instead, add a small truck if we can't place a car
+			}
+			else {
+				car.apply_scale(model.scale);
+				// set correct bcube that matches the model; needed for pedestrians; can't modify cars in garages
+				if (!is_in_garage) {car.set_correct_len_width_from_model(car_model_loader.get_model_world_space_size(car.model_id));}
 			}
 			fixed_color = model.fixed_color_id;
-			if (apply_scale) {car.apply_scale(model.scale);}
-			car.set_correct_len_width_from_model(car_model_loader.get_model_world_space_size(car.model_id));
 			break; // done
 		} // for n
 	}
