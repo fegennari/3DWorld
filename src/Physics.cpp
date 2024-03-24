@@ -824,7 +824,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		if (!(flags & XY_STOPPED)) {
 			for (unsigned d = 0; d < 2; ++d) {
 				if (fabs(air_factor*vtot[d]) > fabs(velocity[d]) || ((vtot[d] < 0) != (velocity[d] < 0))) {
-					velocity[d] = (1.0f - air_factor)*velocity[d] + air_factor*vtot[d];
+					velocity[d] = (1.0f - air_factor)*velocity[d] + air_factor*vtot[d]; // Note: air drag should scale with velocity^2 - this is not physically correct!
 				}
 				if (collided && iter == 0 && !(flags | IN_WATER)) { // apply static friction
 					bool const stopped(friction >= 2.0*STICK_THRESHOLD || fabs(velocity[d]) <= friction);

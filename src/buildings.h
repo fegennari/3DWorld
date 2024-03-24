@@ -402,7 +402,7 @@ struct vertex_range_t { // size=12
 };
 
 struct draw_range_t {
-	// intended for building interiors, which don't have many materials; may need to increase MAX_DRAW_BLOCKS later
+	// intended for building interiors, which don't have many materials; may need to increase MAX_DRAW_BLOCKS later; max used value appears to be 6 vrq and 2 vrt
 	vertex_range_t vrq[MAX_DRAW_BLOCKS]; // quad     verts
 	vertex_range_t vrt[MAX_DRAW_BLOCKS]; // triangle verts
 };
