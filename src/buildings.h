@@ -111,22 +111,24 @@ bottle_params_t const bottle_params[NUM_BOTTLE_TYPES] = {
 
 struct ball_type_t {
 	std::string name, tex_fname, nm_fname;
-	float radius, density, value, weight, spec, shine; // radius in inches, value in dollars, weight in pounds
+	float radius, density, value, weight, spec, shine, elastic, friction; // radius in inches, value in dollars, weight in pounds
 	bool can_kick, hurts_zombie, breaks_glass;
-	ball_type_t(std::string const &name_, std::string const &fn, std::string const &nm, float r, float d, float v, float w, bool ck, bool hz, bool bg, float spec_, float shine_) :
-		name(name_), tex_fname(fn), nm_fname(nm), radius(r), density(d), value(v), weight(w), spec(spec_), shine(shine_), can_kick(ck), hurts_zombie(hz), breaks_glass(bg) {}
+	ball_type_t(std::string const &name_, std::string const &fn, std::string const &nm, float r, float d, float v, float w, bool ck, bool hz, bool bg,
+		float spec_, float shine_, float e, float f) :
+		name(name_), tex_fname(fn), nm_fname(nm), radius(r), density(d), value(v), weight(w), spec(spec_), shine(shine_),
+		elastic(e), friction(f), can_kick(ck), hurts_zombie(hz), breaks_glass(bg) {}
 };
 enum {BALL_TYPE_SOCCER=0, BALL_TYPE_BASKET, BALL_TYPE_SOFT, BALL_TYPE_TENNIS, BALL_TYPE_BEACH, NUM_BALL_TYPES};
 
-// name tex_fname nm_fname radius density value weight can_kick hurts_zombie breaks_glass spec shine
+// name tex_fname nm_fname radius density value weight can_kick hurts_zombie breaks_glass spec shine elastic friction
 ball_type_t const ball_types[NUM_BALL_TYPES] = {
-	ball_type_t("soccer ball", "balls/soccer_ball_diffuse.png", "balls/soccer_ball_normal.png", 4.4, 0.50, 12.0, 0.90, 1, 1, 1, 0.4, 60.0),
-	ball_type_t("basketball",  "balls/basketball.png",          "",                             4.7, 0.50, 15.0, 1.38, 1, 1, 1, 0.2, 40.0),
-	ball_type_t("softball",    "balls/softball.jpg",            "",                             1.9, 1.20,  5.0, 0.40, 0, 1, 1, 0.1, 20.0), // "balls/softball_bump.jpg"    bad format
-	ball_type_t("tennis ball", "balls/tennis_ball.jpg",         "",                             1.3, 0.75,  2.0, 0.13, 0, 1, 0, 0.0,  0.0), // "balls/tennis_ball_bump.jpg" bad format
-	ball_type_t("beach ball",  "balls/beachball.jpg",           "",                            10.0, 0.01, 10.0, 0.10, 1, 0, 0, 0.5, 80.0)
+	ball_type_t("soccer ball", "balls/soccer_ball_diffuse.png", "balls/soccer_ball_normal.png", 4.4, 0.50, 12.0, 0.90, 1, 1, 1, 0.4, 60.0, 1.0, 1.0),
+	ball_type_t("basketball",  "balls/basketball.png",          "",                             4.7, 0.50, 15.0, 1.38, 1, 1, 1, 0.2, 40.0, 1.0, 1.0),
+	ball_type_t("softball",    "balls/softball.jpg",            "",                             1.9, 1.20,  5.0, 0.40, 0, 1, 1, 0.1, 20.0, 0.8, 1.0), // balls/softball_bump.jpg    bad format
+	ball_type_t("tennis ball", "balls/tennis_ball.jpg",         "",                             1.3, 0.75,  2.0, 0.13, 0, 1, 0, 0.0,  0.0, 1.0, 2.0), // balls/tennis_ball_bump.jpg bad format
+	ball_type_t("beach ball",  "balls/beachball.jpg",           "",                            10.0, 0.01, 10.0, 0.10, 1, 0, 0, 0.5, 80.0, 0.8, 1.0)
 };
-ball_type_t const pool_ball_type("pool ball", "balls/pool_balls.png", "",                     1.125, 1.70,  2.0, 0.37, 0, 1, 1, 0.9, 100.0);
+ball_type_t const pool_ball_type("pool ball", "balls/pool_balls.png", "",                     1.125, 1.70,  2.0, 0.37, 0, 1, 1, 0.9, 100.0,0.5, 2.5);
 
 class light_ix_assign_t {
 	vector<pair<point2d<float>, unsigned>> cur;
