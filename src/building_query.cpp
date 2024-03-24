@@ -1572,11 +1572,20 @@ public:
 		if (building.has_room_geom()) {
 			for (room_object_t const &obj : building.interior->room_geom->objs) { // add room objects
 				if (obj.flags & RO_FLAG_INVIS) continue;
-				if (obj.type != TYPE_PIPE && min(obj.dx(), obj.dy()) < sz_thresh) continue; // too small; exclude pipes
-				if (obj.type == TYPE_BOOK || obj.type == TYPE_PLANT || obj.type == TYPE_RAILING || obj.type == TYPE_BOTTLE || obj.type == TYPE_PAPER ||
-					obj.type == TYPE_PAINTCAN || obj.type == TYPE_WBOARD || obj.type == TYPE_DRAIN || obj.type == TYPE_PLATE || obj.type == TYPE_LBASKET ||
-					obj.type == TYPE_LAMP || obj.type == TYPE_CUP || obj.type == TYPE_LAPTOP || is_ball_type(obj.type) || obj.type == TYPE_PAN ||
-					obj.type == TYPE_PG_BEAM || obj.type == TYPE_PLANT_MODEL) continue;
+				room_object const type(obj.type);
+				if (type != TYPE_PIPE && min(obj.dx(), obj.dy()) < sz_thresh) continue; // too small; exclude pipes
+				if (type == TYPE_BOOK || type == TYPE_PLANT || type == TYPE_RAILING || type == TYPE_BOTTLE || type == TYPE_PAPER || type == TYPE_PAINTCAN ||
+					type == TYPE_WBOARD || type == TYPE_DRAIN || type == TYPE_PLATE || type == TYPE_LBASKET || type == TYPE_LAMP || type == TYPE_CUP || type == TYPE_LAPTOP ||
+					is_ball_type(type) || type == TYPE_PAN || type == TYPE_PG_BEAM || type == TYPE_PLANT_MODEL || type == TYPE_PICTURE || type == TYPE_WINDOW ||
+					type == TYPE_SIGN || type == TYPE_WALL_TRIM || type == TYPE_BLINDS || type == TYPE_PEN || type == TYPE_PENCIL || type == TYPE_HANGER_ROD ||
+					type == TYPE_MONEY || type == TYPE_PHONE || type == TYPE_TPROLL || type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BUTTON ||
+					type == TYPE_CRACK || type == TYPE_SWITCH || type == TYPE_TAPE || type == TYPE_OUTLET || type == TYPE_CURB || type == TYPE_BRK_PANEL || type == TYPE_VENT ||
+					type == TYPE_BREAKER || type == TYPE_DUCT || type == TYPE_TOY || type == TYPE_VASE || type == TYPE_URN || type == TYPE_STAPLER || type == TYPE_WIND_SILL ||
+					type == TYPE_SPRINKLER || type == TYPE_FEXT_MOUNT || type == TYPE_FEXT_SIGN || type == TYPE_PIZZA_TOP || type == TYPE_TEESHIRT || type == TYPE_PANTS ||
+					type == TYPE_DBG_SHAPE || type == TYPE_POOL_CUE || type == TYPE_WALL_MOUNT || type == TYPE_FALSE_DOOR || type == TYPE_FLASHLIGHT || type == TYPE_CANDLE ||
+					type == TYPE_CAMERA || type == TYPE_CLOCK || type == TYPE_DOWNSPOUT || type == TYPE_CHIM_CAP || type == TYPE_FOOD_BOX || type == TYPE_LADDER ||
+					type == TYPE_LAVALAMP || type == TYPE_POOL_LAD || type == TYPE_PADLOCK || type == TYPE_KEY || type == TYPE_HANGER || type == TYPE_CLOTHES ||
+					type == TYPE_WALL_LAMP || type == TYPE_SILVER || type == TYPE_TOY_MODEL || type == TYPE_CEIL_FAN || type == TYPE_FOLD_SHIRT) continue;
 				if (z1 > obj.z2() || z2 < obj.z1()) continue; // zval test
 
 				if (obj.type == TYPE_PARK_SPACE) {
