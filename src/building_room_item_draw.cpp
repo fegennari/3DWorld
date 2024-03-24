@@ -1128,7 +1128,8 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building, point
 			}
 			if (!i->is_dynamic()) continue; // only dynamic objects
 			switch (i->type) {
-			case TYPE_LG_BALL: add_lg_ball(*i); break;
+			case TYPE_LG_BALL  : add_lg_ball  (*i); break;
+			case TYPE_POOL_BALL: add_pool_ball(*i); break;
 			default: assert(0); // not a supported dynamic object type
 			}
 		} // for i
@@ -1996,8 +1997,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		player_held_object.translate(obj_pos - player_held_object.get_cube_center());
 		//unsigned room_id(building.get_room_containing_pt(obj_pos));
 		//if (room_id >= 0) {player_held_object.room_id = room_id;} // is this necessary?
-		if (player_held_object.type == TYPE_LG_BALL) {draw_lg_ball_in_building(player_held_object, s);} // the only supported dynamic object type
-		//else if (player_held_object.type == TYPE_POOL_BALL) {} // future work
+		if (is_ball_type(player_held_object.type)) {draw_ball_in_building(player_held_object, s);} // the only supported dynamic object type
 		else if (player_held_object.can_use()) {draw_interactive_player_obj(player_held_object, s, xlate);}
 		else {assert(0);}
 	}

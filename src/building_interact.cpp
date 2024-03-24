@@ -1081,7 +1081,7 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 	vector3d &velocity(dstate.velocity);
 	ball_type_t const &bt(ball.get_ball_type());
 	point const center(ball.get_cube_center());
-	bool const was_dynamic(ball.is_dynamic()), is_moving_fast(velocity.mag() > 0.5*KICK_VELOCITY), can_kick(bt.can_kick);
+	bool const was_dynamic(ball.is_dynamic()), is_moving_fast(velocity.mag() > 0.5*KICK_VELOCITY), can_kick(bt.can_kick && !ball.no_coll());
 	bool on_floor(0), kicked(0);
 	point new_center(center);
 
@@ -1128,6 +1128,7 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 				if (f->contains_pt(test_pt)) {on_floor = 1; break;}
 			}
 			if (on_floor) { // moving on the floor, apply surface friction
+				// TODO: per-ball type decelerate (for pool balls)
 				velocity *= (1.0f - min(1.0f, OBJ_DECELERATE*step_sz));
 				if (velocity.mag_sq() < MIN_VELOCITY*MIN_VELOCITY) {velocity = zero_vector;} // zero velocity if stopped
 			}
@@ -1158,6 +1159,7 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 		had_coll   = interior->check_sphere_coll(*this, new_center, center, radius, ball_it, cnorm, hardness, obj_ix, 1); // is_ball=1
 	}
 	if (had_coll) {
+		// TODO: per-ball type bounce (for pool balls)
 		apply_floor_vel_thresh(velocity, cnorm);
 		apply_object_bounce_with_sound(*this, velocity, cnorm, new_center, hardness, on_floor);
 
@@ -1327,7 +1329,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 			//else if (c->type == TYPE_FURNACE) {} // or AC unit?
 			//else if (c->type == TYPE_FRIDGE ) {}
 		}
-		if (c->no_coll() || !c->has_dstate()) continue; // Note: no test of player_coll flag
+		if (!c->has_dstate()) continue; // Note: no test of player_coll flag
 		run_ball_update(c, player_pos, player_z1, player_is_moving);
 	} // for c
 	if (player_in_this_building) { // interactions only run for player building

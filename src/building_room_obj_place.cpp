@@ -14,6 +14,7 @@ extern bldg_obj_type_t bldg_obj_types[];
 bool enable_parked_cars();
 car_t car_from_parking_space(room_object_t const &o);
 void get_stove_burner_locs(room_object_t const &stove, point locs[4]);
+void get_pool_ball_rot_matrix(room_object_t const &c, xform_matrix &rot_matrix);
 float get_cockroach_height_from_radius(float radius);
 colorRGBA get_light_color_temp(float t);
 
@@ -2167,10 +2168,12 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 			centers.push_back(pos);
 			cube_t ball;
 			ball.set_from_sphere(pos, ball_radius);
-			objs.emplace_back(ball, TYPE_POOL_BALL, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SPHERE);
-			objs.back().item_flags = n; // assign ball number
-			set_obj_id(objs);
-			break;
+			objs.emplace_back(ball, TYPE_POOL_BALL, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_DSTATE), tot_light_amt, SHAPE_SPHERE);
+			room_object_t &pball(objs.back());
+			pball.item_flags = n; // assign ball number
+			pball.obj_id     = (uint16_t)interior->room_geom->allocate_dynamic_state(); // allocate a new dynamic state object
+			get_pool_ball_rot_matrix(pball, interior->room_geom->get_dstate(pball).rot_matrix);
+			break; // success
 		} // for n
 	} // for n
 

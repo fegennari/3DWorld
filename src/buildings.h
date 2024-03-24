@@ -1089,7 +1089,7 @@ struct building_room_geom_t {
 	void add_fishtank(room_object_t const &c);
 	void add_lava_lamp(room_object_t const &c);
 	void add_debug_shape(room_object_t const &c);
-	static void draw_lg_ball_in_building   (room_object_t  const &c, shader_t &s);
+	static void draw_ball_in_building(room_object_t  const &c, shader_t &s);
 	void draw_interactive_player_obj(carried_item_t const &c, shader_t &s, vector3d const &xlate);
 	// functions for expanding nested objects
 	void expand_shelves(room_object_t const &c);

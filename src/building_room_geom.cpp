@@ -3378,24 +3378,27 @@ void get_pool_ball_rot_matrix(room_object_t const &c, xform_matrix &rot_matrix) 
 	rot_matrix  = get_rotation_matrix(plus_x, TWO_PI*rgen.rand_float()); // random rotation about the numbered face
 	rot_matrix *= get_rotation_matrix(rgen.signed_rand_vector_spherical().get_norm(), TWO_PI*rgen.rand_float()); // random rotation about random axis
 }
-void building_room_geom_t::add_pool_ball(room_object_t const &c) {
+tex_range_t get_pool_ball_tex_range(room_object_t const &c) {
 	// the texture atlas is 3 across by 6 high: {1,2,3}, {4,5,6}, {7,8,9}, {10,11,23}, {13,14,15}, {cue, stripe, crown}
 	unsigned const number(c.item_flags); // starts from 0; cue ball is 15
 	assert(number < 16);
 	unsigned const num_rows(6), num_cols(3);
 	unsigned const row_ix(num_rows - (number/num_cols) - 1), col_ix(number % num_cols); // rows are in inverted order
 	float const row_height(1.0/num_rows), col_width(1.0/num_cols), border(0.01);
-	float const tx1(col_ix*col_width), tx2(tx1 + col_width), ty1(row_ix*row_height), ty2(ty1 + row_height), radius(c.get_radius());
-	tex_range_t const tr(tx1+border, ty1+border, tx2-border, ty2-border);
+	float const tx1(col_ix*col_width), tx2(tx1 + col_width), ty1(row_ix*row_height), ty2(ty1 + row_height);
+	return tex_range_t(tx1+border, ty1+border, tx2-border, ty2-border);
+}
+void building_room_geom_t::add_pool_ball(room_object_t const &c) {
+	bool const dynamic(c.is_dynamic()); // either small or dynamic
 	ball_type_t const &bt(pool_ball_type);
 	tid_nm_pair_t tex(get_texture_by_name(bt.tex_fname), 1.0, 1); // shadowed
 	tex.set_specular(bt.spec, bt.shine);
-	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // shadowed, small
+	rgeom_mat_t &mat(get_material(tex, 1, dynamic, !dynamic)); // shadowed, small/dynamic
 	// calculate rotation matrix
 	xform_matrix rot_matrix;
 	if (c.has_dstate()) {rot_matrix = get_dstate(c).rot_matrix;} // custom rotation matrix
 	else {get_pool_ball_rot_matrix(c, rot_matrix);} // random initial rotation
-	mat.add_sphere_to_verts(c.get_cube_center(), vector3d(radius, radius, radius), c.color, 1, zero_vector, tr, &rot_matrix); // low_detail=1; no apply_light_color()
+	mat.add_sphere_to_verts(c, c.color, 1, zero_vector, get_pool_ball_tex_range(c), &rot_matrix); // low_detail=1; no apply_light_color()
 }
 void building_room_geom_t::add_pool_cue(room_object_t const &c) {
 	point const center(c.get_cube_center());
@@ -4273,8 +4276,9 @@ void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot
 int get_ball_tid   (room_object_t const &c) {return get_texture_by_name(c.get_ball_type().tex_fname  );}
 int get_ball_nm_tid(room_object_t const &c) {return get_texture_by_name(c.get_ball_type().nm_fname, 1);}
 
-xform_matrix get_player_cview_rot_matrix() {
-	float const angle(atan2(cview_dir.y, cview_dir.x)); // angle of camera view in XY plane, for rotating about Z
+xform_matrix get_player_cview_rot_matrix(bool invert) {
+	float const scale(invert ? -1.0 : 1.0);
+	float const angle(atan2(scale*cview_dir.y, scale*cview_dir.x)); // angle of camera view in XY plane, for rotating about Z
 	return get_rotation_matrix(plus_z, angle);
 }
 
@@ -4296,13 +4300,15 @@ void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
 	// rotate the texture coords using rot_matrix when the ball is rolling
 	mat.add_sphere_to_verts(c, apply_light_color(c), 0, zero_vector, tex_range_t(), (c.has_dstate() ? &get_dstate(c).rot_matrix : nullptr), ts_off, 0.0); // low_detail=0
 }
-/*static*/ void building_room_geom_t::draw_lg_ball_in_building(room_object_t const &c, shader_t &s) {
+/*static*/ void building_room_geom_t::draw_ball_in_building(room_object_t const &c, shader_t &s) {
 	//highres_timer_t timer("Draw Ball"); // 0.105ms
-	xform_matrix const rot_matrix(get_player_cview_rot_matrix());
-	// Note: since we're using indexed triangles now, we can't simply call draw_quad_verts_as_tris(); instead we create temp VBO/IBO; not the most efficient solution, but it should work
+	xform_matrix const rot_matrix(get_player_cview_rot_matrix(c.type == TYPE_POOL_BALL)); // invert for pool ball so that numbers are facing toward the player
+	tex_range_t tr;
+	if (c.type == TYPE_POOL_BALL) {tr = get_pool_ball_tex_range(c);}
+	// Note: since we're using indexed triangles, we can't simply call draw_quad_verts_as_tris(); instead we create temp VBO/IBO; not the most efficient solution, but should work
 	static rgeom_mat_t mat = rgeom_mat_t(tid_nm_pair_t()); // allocated memory is reused across frames; VBO/IBO are recreated every time
 	mat.tex = get_ball_tex_params(c, 0); // shadowed=0
-	mat.add_sphere_to_verts(c, apply_light_color(c), 0, zero_vector, tex_range_t(), &rot_matrix); // low_detail=0
+	mat.add_sphere_to_verts(c, apply_light_color(c), 0, zero_vector, tr, &rot_matrix); // low_detail=0
 	tid_nm_pair_dstate_t state(s);
 	mat.upload_draw_and_clear(state);
 }
