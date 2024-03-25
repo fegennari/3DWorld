@@ -1268,9 +1268,14 @@ float get_combined_stacked_obj_weights(room_object_t const &obj, vect_room_objec
 }
 
 cube_t get_true_obj_bcube(room_object_t const &obj) { // for player object pickup and move
-	if (obj.type == TYPE_PEN || obj.type == TYPE_PENCIL) {
+	if (obj.type == TYPE_PEN || obj.type == TYPE_PENCIL || obj.type == TYPE_POOL_CUE) {
 		cube_t obj_bcube(obj);
 		obj_bcube.expand_in_dim(!obj.dim, obj.get_width());
+		return obj_bcube;
+	}
+	if (is_ball_type(obj.type)) {
+		cube_t obj_bcube(obj);
+		obj_bcube.expand_by(0.25*obj.get_radius()); // make it 25% larger
 		return obj_bcube;
 	}
 	if (obj.type == TYPE_BED) { // do more accurate check with various parts of the bed
@@ -1280,7 +1285,8 @@ cube_t get_true_obj_bcube(room_object_t const &obj) { // for player object picku
 	}
 	if (obj.type == TYPE_POOL_TABLE) {
 		cube_t obj_bcube(obj);
-		obj_bcube.z1() += 0.5*obj.dz(); // only include the top half, so that we can pick up objects such as balls under the pool table
+		obj_bcube.z1() += 0.50*obj.dz(); // only include the top half, so that we can pick up objects such as balls under the pool table
+		obj_bcube.z2() -= 0.05*obj.dz(); // make it slightly shorter so that it's easier to pick up pool balls
 		return obj_bcube;
 	}
 	if (obj.is_obj_model_type()) {
