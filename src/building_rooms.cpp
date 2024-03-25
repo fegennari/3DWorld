@@ -2406,6 +2406,9 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 					if (bool(d) == side) {railing.z1() = z_split + railing_side_dz; flags |= RO_FLAG_ADJ_HI; railing_dir ^= 1;}
 					else                 {railing.z2() = z_split - railing_side_dz; flags |= RO_FLAG_ADJ_LO;}
 				}
+				else {
+					railing.z1() += 0.15*stair_height; // shift up slightly so that the bottom doesn't clip through the bottom stair
+				}
 				objs.emplace_back(railing, TYPE_RAILING, 0, dim, railing_dir, flags, 1.0, SHAPE_CUBE, railing_color);
 			}
 		} // for d
