@@ -4584,4 +4584,5 @@ bool is_pos_in_player_building(point const &pos) { // pos is in global space
 	//return player_building->check_point_or_cylin_contained(pos, 0.0, points);
 	return player_building->check_point_xy_in_part(pos); // don't need to draw if above the building either, since there are no skylights
 }
+cube_t get_cur_basement() {return ((player_building != nullptr && player_building->has_basement()) ? player_building->get_basement() : cube_t());}
 

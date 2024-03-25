@@ -1115,6 +1115,12 @@ void road_draw_state_t::end_cur_tile() {
 	}
 }
 
+struct plot_region_t : public cube_t {
+	tex_range_t tr;
+	plot_region_t(cube_t const &c, tex_range_t const &tr_) : cube_t(c), tr(tr_) {}
+	tex_range_t get_tex_range(float ar) const {return tex_range_t(ar*tr.x1, ar*tr.y1, ar*tr.x2, ar*tr.y2);}
+};
+
 void road_draw_state_t::add_city_quad(road_seg_t  const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool) { // road segment or skirt
 	bool const add_skirt(type_ix == TYPE_ROAD_SKIRT);
 	r.add_road_quad(qbd, color, ar, add_skirt);
@@ -1123,7 +1129,20 @@ void road_draw_state_t::add_city_quad(road_t      const &r, quad_batch_draw &qbd
 	r.add_road_quad(qbd, color, ar/TRACKS_WIDTH);
 }
 void road_draw_state_t::add_city_quad(road_plot_t const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool draw_all) { // plots and parks
-	if (draw_all || (type_ix == TYPE_PARK) == r.is_park) {add_flat_city_quad(r, qbd, color, ar);}
+	if (!draw_all && (type_ix == TYPE_PARK) != r.is_park) return;
+	cube_t const plot_exclude(get_cur_basement());
+		
+	if (plot_exclude.intersects_xy(r)) { // remove the section under the player building's basement
+		float const dx_inv(1.0/r.dx()), dy_inv(1.0/r.dy());
+		vect_cube_t parts;
+		subtract_cube_from_cube((cube_t)r, plot_exclude, parts);
+
+		for (cube_t const &p : parts) {
+			tex_range_t const tr((p.x1() - r.x1())*dx_inv, (p.y1() - r.y1())*dy_inv, (p.x2() - r.x1())*dx_inv, (p.y2() - r.y1())*dy_inv);
+			add_flat_city_quad(plot_region_t(p, tr), qbd, color, ar);
+		}
+	}
+	else {add_flat_city_quad(r, qbd, color, ar);}
 }
 
 void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { // Note: called rarely, so doesn't need to be efficient

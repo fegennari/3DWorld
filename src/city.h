@@ -967,6 +967,7 @@ bool have_city_buildings();
 bool enable_building_people_ai();
 void update_building_ai_state(float delta_dir);
 void get_all_city_helipads(vect_cube_t &helipads);
+cube_t get_cur_basement();
 bool check_city_building_line_coll_bs(point const &p1, point const &p2, point &p_int);
 void update_buildings_zmax_for_line(point const &p1, point const &p2, float radius, float house_extra_zval, float &cur_zmax);
 bool check_sphere_coll_building(point const &pos, float radius, bool xy_only, unsigned building_id);

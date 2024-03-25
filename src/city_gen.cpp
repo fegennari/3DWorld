@@ -1312,21 +1312,24 @@ public:
 			// however, they would need to apply to all tiles, including city plots and curved road segments, which makes it difficult;
 			// also, we would have to adjust the height of pedestrians, fire hydrants, etc.
 			bool const use_road_normal_maps(rain_wetness > 0.0); // use dirt normal map texture for rain effects
-			// if the player is just above the basement, then skip drawing the plot to avoid the plane clipping through the player's near plane
-			bool const player_near_basement(player_in_basement || (camera_in_building && !plots.empty() && camera_pos.z < plots.front().z2() + NEAR_CLIP));
 
 			for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
 				if (!dstate.check_cube_visible(b->bcube)) continue; // VFC/too far
 				dstate.begin_tile(b->bcube.get_cube_center());
 
-				// if the player is in or near the basement, don't draw the plot over the basement stairs; the player can't see any of this anyway
-				if (!player_near_basement || is_connector_road) {
-					if (is_residential) { // draw all plots with grass, using the park materials
-						dstate.draw_city_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PARK, 1); // draw_all=1
-					}
-					else {
-						dstate.draw_city_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PLOT); // concrete
-						dstate.draw_city_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PARK], TYPE_PARK); // grass parks (stored as plots)
+				// if the player is in the basement, don't draw the plot over the basement stairs; the player can't see any of this anyway
+				if (!player_in_basement || is_connector_road) {
+					if (!plots.empty()) { // draw plots if not global connector road network
+						cube_t const plot_exclude(get_cur_basement());
+						if (!plot_exclude.is_all_zeros() && plot_exclude.intersects_xy(b->bcube)) {b->quads[TYPE_PLOT].clear();} // clear and rebuild plot cache
+
+						if (is_residential) { // draw all plots with grass, using the park materials
+							dstate.draw_city_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PARK, 1); // draw_all=1
+						}
+						else {
+							dstate.draw_city_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PLOT); // concrete
+							dstate.draw_city_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PARK], TYPE_PARK); // grass parks (stored as plots)
+						}
 					}
 					if (use_road_normal_maps) {set_road_normal_map();} // set normal maps for roads, parking lots, and driveways
 					dstate.draw_city_region(segs, b->ranges[TYPE_RSEG], b->quads[TYPE_RSEG], TYPE_RSEG); // road segments
