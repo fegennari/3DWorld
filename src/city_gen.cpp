@@ -1189,7 +1189,7 @@ public:
 		ret |= city_obj_placer.line_intersect(p1, p2, t);
 		return ret;
 	}
-	bool check_mesh_disable(point const &pos, float radius) const {
+	bool check_mesh_disable(point const &pos, float radius) const { // Note: pos is in camera space
 		if (tunnels.empty()) return 0;
 		point const query_pos(pos - get_camera_coord_space_xlate());
 		cube_t query_region; query_region.set_from_sphere(query_pos, radius); // actually a cube, not a sphere
@@ -2575,6 +2575,21 @@ public:
 	void get_city_bcubes(vect_cube_t &bcubes) const {
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {bcubes.push_back(r->get_bcube());}
 	}
+	int check_city_contains_overlaps(cube_t const &query) const { // XY only; 0=no intersection, 1=overlaps, 2=contains; ignores global connector RN
+		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
+			if (r->get_bcube().contains_cube_xy(query)) return 2;
+			if (r->get_bcube().intersects_xy   (query)) return 1;
+		}
+		return 0;
+	}
+	bool check_inside_city(point const &pos, float radius) const { // Note: pos is in camera space
+		cube_t query; query.set_from_sphere((pos - get_camera_coord_space_xlate()), radius);
+
+		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
+			if (r->get_bcube().contains_cube_xy(query)) return 1;
+		}
+		return 0;
+	}
 	void get_all_road_bcubes(vect_cube_t &bcubes, bool connector_only) const {
 		global_rn.get_road_bcubes(bcubes); // not sure if this should be included
 		if (connector_only) return;
@@ -3030,6 +3045,7 @@ public:
 	cube_t get_city_bcube(unsigned city_id) const {return road_gen.get_city_bcube(city_id);}
 	cube_t get_city_bcube_at_pt(point const &pos) {return road_gen.get_city_bcube_at_pt(pos);}
 	void get_city_bcubes(vect_cube_t &bcubes) const {road_gen.get_city_bcubes(bcubes);}
+	int check_city_contains_overlaps(cube_t const &query) const {return road_gen.check_city_contains_overlaps(query);}
 	void get_all_road_bcubes(vect_cube_t &bcubes, bool connector_only) const {road_gen.get_all_road_bcubes(bcubes, connector_only);}
 	void get_all_plot_zones(vect_city_zone_t &zones) {road_gen.get_all_plot_zones(zones);} // caches plot_id_offset, so non-const
 
@@ -3060,8 +3076,9 @@ public:
 		ret |= ped_manager.line_intersect_peds(p1x, p2x, t);
 		return ret;
 	}
-	bool choose_pt_in_park(point const &pos, point &park_pos, rand_gen_t &rgen) const {return road_gen.choose_pt_in_park(pos, park_pos, rgen);}
+	bool choose_pt_in_park (point const &pos, point &park_pos, rand_gen_t &rgen) const {return road_gen.choose_pt_in_park(pos, park_pos, rgen);}
 	bool check_mesh_disable(point const &pos, float radius ) const {return road_gen.check_mesh_disable(pos, radius);}
+	bool check_inside_city (point const &pos, float radius ) const {return road_gen.check_inside_city (pos, radius);}
 	bool tile_contains_tunnel (cube_t const &bcube) const {return road_gen.tile_contains_tunnel(bcube);}
 
 	void destroy_in_radius(point const &pos, float radius) {
@@ -3149,6 +3166,7 @@ void gen_city_details() {city_gen.gen_details();} // called after gen_buildings(
 cube_t get_city_bcube(unsigned city_id) {return city_gen.get_city_bcube(city_id);}
 cube_t get_city_bcube_at_pt(point const &pos) {return city_gen.get_city_bcube_at_pt(pos);}
 void get_city_bcubes(vect_cube_t &bcubes) {city_gen.get_city_bcubes(bcubes);}
+int check_city_contains_overlaps(cube_t const &query) {return city_gen.check_city_contains_overlaps(query);}
 void get_city_road_bcubes(vect_cube_t &bcubes, bool connector_only) {city_gen.get_all_road_bcubes(bcubes, connector_only);}
 void get_city_plot_zones(vect_city_zone_t &zones) {city_gen.get_all_plot_zones(zones);}
 void next_city_frame(bool use_threads_2_3) {city_gen.next_frame(use_threads_2_3);}
@@ -3249,6 +3267,10 @@ bool check_valid_scenery_pos(point const &pos, float radius, bool is_tall) {
 bool check_mesh_disable(point const &pos, float radius) { // Note: pos is in global space
 	if (!have_cities()) return 0;
 	return city_gen.check_mesh_disable((pos + get_tt_xlate_val()), radius); // apply xlate for all static objects
+}
+bool check_inside_city(point const &pos, float radius) { // Note: pos is in global space
+	if (!have_cities()) return 0;
+	return city_gen.check_inside_city((pos + get_tt_xlate_val()), radius); // apply xlate for all static objects
 }
 bool choose_pt_in_city_park(point const &pos, point &park_pos, rand_gen_t &rgen) {return city_gen.choose_pt_in_park(pos, park_pos, rgen);}
 bool tile_contains_tunnel(cube_t const &bcube) {return city_gen.tile_contains_tunnel(bcube);}

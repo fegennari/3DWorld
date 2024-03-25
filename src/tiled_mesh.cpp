@@ -91,6 +91,8 @@ void building_gameplay_action_key(int mode, bool mouse_wheel);
 bool player_cant_see_outside_building();
 bool check_cube_occluded(cube_t const &cube, vect_cube_t const &occluders, point const &viewer);
 void get_city_grass_coll_cubes(cube_t const &region, vect_cube_t &out, vect_cube_t &out_bt);
+int check_city_contains_overlaps(cube_t const &query);
+bool check_inside_city(point const &pos, float radius);
 
 
 float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}
@@ -432,6 +434,7 @@ bool setup_height_gen(mesh_xy_grid_cache_t &height_gen, float x0, float y0, floa
 bool tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait) {
 
 	//timer_t timer("Create Zvals");
+	inside_city = check_city_contains_overlaps(get_mesh_bcube_global());
 	if (enable_terrain_env) {update_terrain_params();}
 	zvals.resize(zvsize*zvsize);
 	mzmin =  FAR_DISTANCE;
@@ -1082,20 +1085,23 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 
 			for (unsigned x = 0; x < tsize-DEBUG_TILE_BOUNDS; ++x) {
 				unsigned const ix_val(y*tsize + x), off(4*ix_val);
-
-				if (check_mesh_mask && check_mesh_disable(point(get_xval(x + llc_x)+0.5*DX_VAL, get_yval(y + llc_y)+0.5*DY_VAL, 0.0), HALF_DXY)) {
-					mesh_weight_data[off+0] = mesh_weight_data[off+1] = 255; // set invalid values to flag as transparent
-					mesh_weight_data[off+2] = mesh_weight_data[off+3] = 0;   // make sure grass is disabled
-					has_tunnel = 1; // Note: should be covered by the tile_contains_tunnel(), but we include this case for safety
-					continue;
+				
+				if (check_mesh_mask || inside_city == 1) { // have tunnels, or partially inside a city
+					point const query_pos(get_xval(x + llc_x)+0.5*DX_VAL, get_yval(y + llc_y)+0.5*DY_VAL, 0.0); // global space
+					
+					if ((check_mesh_mask && check_mesh_disable(query_pos, HALF_DXY)) || (inside_city == 1 && check_inside_city(query_pos, HALF_DXY))) {
+						mesh_weight_data[off+0] = mesh_weight_data[off+1] = 255; // set invalid values to flag as transparent
+						mesh_weight_data[off+2] = mesh_weight_data[off+3] = 0;   // make sure grass is disabled
+						has_tunnel = 1; // Note: should be covered by the tile_contains_tunnel(), but we include this case for safety
+						continue;
+					}
 				}
 				float weights[NTEX_DIRT] = {0};
 				unsigned const ix(y*zvsize + x);
 				float const mh00(zvals[ix]), mh01(zvals[ix+1]), mh10(zvals[ix+zvsize]), mh11(zvals[ix+zvsize+1]);
 				float const mhmin(min(min(mh00, mh01), min(mh10, mh11))), mhmax(max(max(mh00, mh01), max(mh10, mh11)));
 				float const rand_offset(rand_vals[y*tsize + x]);
-				float const relh1(relh_adj_tex + (mhmin - zmin)*dz_inv + rand_offset);
-				float const relh2(relh_adj_tex + (mhmax - zmin)*dz_inv + rand_offset);
+				float const relh1(relh_adj_tex + (mhmin - zmin)*dz_inv + rand_offset), relh2(relh_adj_tex + (mhmax - zmin)*dz_inv + rand_offset);
 				get_tids(relh1, k1, k2);
 				get_tids(relh2, k3, k4);
 				bool const same_tid(k1 == k4);
@@ -1884,6 +1890,7 @@ void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned co
 	//timer_t timer("Draw Tile Mesh");
 	// check if the tile was visible in the building mirror reflection but not in normal view (so wasn't setup)
 	//if (get_checkerboard_bit()) return; // checkerboard drawing, for debugging
+	if (inside_city == 2) return; // don't need to draw terrain if fully inside a city, but still need to draw trees, etc.
 	if (!(weight_tid > 0 && height_tid > 0 && normal_tid > 0 && shadow_tid > 0)) return; // textures not yet created
 	fgPushMatrix();
 	vector3d const xlate(get_mesh_xlate());
@@ -1925,6 +1932,7 @@ void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned co
 
 void tile_t::draw_shadow_pass(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1]) { // not const because creates height_tid
 
+	if (inside_city == 2) return; // don't need to draw terrain if fully inside a city
 	ensure_height_tid();
 	fgPushMatrix();
 	translate_to(get_mesh_xlate());

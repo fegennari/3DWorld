@@ -161,7 +161,7 @@ public:
 	};
 	mutable bool vis_ref_call=0; // cached visited flag for tile_draw_t::can_have_reflection_recur()
 private:
-	int x1=0, y1=0, x2=0, y2=0, wx1=0, wy1=0, wx2=0, wy2=0, last_occluded_frame=0;
+	int x1=0, y1=0, x2=0, y2=0, wx1=0, wy1=0, wx2=0, wy2=0, last_occluded_frame=0, inside_city=0; // inside_city: 0=no, 1=partial, 2=fully
 	unsigned weight_tid=0, height_tid=0, normal_tid=0, shadow_tid=0;
 	unsigned size=0, stride=0, zvsize=0, base_tsize=0, gen_tsize=0, smap_lod_level=0;
 	float radius=0, mzmin=0, mzmax=0, mesh_dz=0, ptzmax=0, dtzmax=0, trmax=0, xstart=0, ystart=0, min_normal_z=0, deltax=0, deltay=0;
