@@ -2133,7 +2133,7 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 	float const floor_spacing(get_window_vspace()), sz_in_feet(floor_spacing/8.0), clearance(get_min_front_clearance_inc_people());
 	vector3d const room_sz(room.get_size());
 	vect_room_object_t &objs(interior->room_geom->objs);
-	unsigned const objs_start(objs.size());
+	unsigned const objs_start(objs.size()), pool_table_obj_ix(objs_start);
 	bool const long_dim(room.dx() < room.dy());
 	point const pos(room.xc(), room.yc(), zval); // place in the center of the room
 	cube_t ptable(pos, pos);
@@ -2170,8 +2170,9 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 			ball.set_from_sphere(pos, ball_radius);
 			objs.emplace_back(ball, TYPE_POOL_BALL, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_DSTATE), tot_light_amt, SHAPE_SPHERE);
 			room_object_t &pball(objs.back());
-			pball.item_flags = n; // assign ball number
-			pball.obj_id     = (uint16_t)interior->room_geom->allocate_dynamic_state(); // allocate a new dynamic state object
+			pball.item_flags  = n; // assign ball number
+			pball.obj_id      = (uint16_t)interior->room_geom->allocate_dynamic_state(); // allocate a new dynamic state object
+			pball.state_flags = (uint16_t)pool_table_obj_ix; // encode object index in state_flags
 			get_pool_ball_rot_matrix(pball, interior->room_geom->get_dstate(pball).rot_matrix);
 			break; // success
 		} // for n

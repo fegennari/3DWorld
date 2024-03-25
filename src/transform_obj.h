@@ -75,7 +75,7 @@ public:
 // function prototypes
 xform_matrix const &fgGetMVM();
 xform_matrix const &fgGetPJM();
-void apply_roll_to_matrix(xform_matrix &matrix, point const &pos, point const &lpos, vector3d const &ground_normal, float radius, float a_add, float a_mult);
+void apply_roll_to_matrix(xform_matrix &matrix, point const &pos, point const &lpos, vector3d const &ground_normal, float radius, float a_add=0.0, float a_mult=1.0);
 void apply_obj_mesh_roll(xform_matrix &matrix, point const &pos, point const &lpos, float radius, float a_add=0.0, float a_mult=1.0);
 
 

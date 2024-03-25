@@ -561,7 +561,7 @@ struct oriented_cube_t : public cube_t {
 struct room_object_t : public oriented_cube_t { // size=64
 	uint8_t room_id=0; // for at most 256 rooms per floor
 	uint8_t taken_level=0;
-	uint16_t obj_id=0, drawer_flags=0, item_flags=0, state_flags=0; // Note: state_flags is used for drawer was_opened state and for railing num_stairs
+	uint16_t obj_id=0, drawer_flags=0, item_flags=0, state_flags=0; // Note: state_flags is used for drawer was_opened state, railing num_stairs, and pool balls
 	room_object type=TYPE_NONE; // 8-bit
 	room_obj_shape shape=SHAPE_CUBE; // 8-bit
 	unsigned flags=0;
@@ -2125,6 +2125,7 @@ private:
 	void call_elevator_to_floor(elevator_t &elevator, unsigned floor_ix, bool is_inside_elevator, bool is_up);
 	void call_elevator_to_floor_and_light_nearest_button(elevator_t &elevator, unsigned floor_ix, bool is_inside_elevator, bool is_up);
 	void run_ball_update(vector<room_object_t>::iterator ball_it, point const &player_pos, float player_z1, bool player_is_moving);
+	void update_pool_table(room_object_t &ball);
 	bool get_zval_for_pool_bottom(point const &pos, float &zval) const;
 	bool get_zval_of_floor(point const &pos, float radius, float &zval) const;
 	bool get_zval_for_obj_placement(point const &pos, float radius, float &zval, bool add_z_bias) const;

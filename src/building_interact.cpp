@@ -31,6 +31,7 @@ void refill_thirst();
 colorRGBA get_glow_color(float stime, bool fade);
 void play_hum_sound(point const &pos, float gain, float pitch);
 bool ceiling_fan_is_on(room_object_t &obj, vect_room_object_t const &objs);
+cube_t get_pool_table_top_surface(room_object_t const &c);
 
 // Note: pos is in camera space
 void gen_sound_thread_safe(unsigned id, point const &pos, float gain, float pitch, float gain_scale, bool skip_if_already_playing) {
@@ -1081,8 +1082,25 @@ void apply_building_gravity(float &vz, float dt_ticks) {
 	vz -= OBJ_GRAVITY*dt_ticks; // apply gravitational acceleration
 	max_eq(vz, -TERM_VELOCITY);
 }
+
+void obj_dynamic_to_static(room_object_t &obj, building_interior_t &interior) {
+	obj.flags &= ~RO_FLAG_DYNAMIC; // clear dynamic flag
+	interior.update_dynamic_draw_data(); // remove from dynamic objects and schedule an update
+	interior.room_geom->invalidate_draw_data_for_obj(obj); // add to small static objects
+}
+
 void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point const &player_pos, float player_z1, bool player_is_moving) {
 	room_object_t &ball(*ball_it);
+
+	if (ball.type == TYPE_POOL_BALL && ball.is_dynamic()) { // check of moving on the pool table
+		assert(ball.state_flags < interior->room_geom->objs.size());
+		room_object_t const &pool_table(interior->room_geom->objs[ball.state_flags]);
+
+		if (pool_table.type == TYPE_POOL_TABLE && pool_table.contains_pt(cube_bot_center(ball))) { // ball on pool table
+			update_pool_table(ball);
+			return;
+		}
+	}
 	assert(is_ball_type(ball.type)); // currently, only balls have has_dstate()
 	float const player_radius(get_scaled_player_radius()), player_z2(player_pos.z), radius(ball.get_radius());
 	float const fc_thick(get_fc_thickness()), fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
@@ -1144,9 +1162,7 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 				apply_building_gravity(velocity.z, step_sz);
 			}
 			if (velocity == zero_vector) { // stopped
-				ball.flags &= ~RO_FLAG_DYNAMIC; // clear dynamic flag
-				interior->update_dynamic_draw_data(); // remove from dynamic objects and schedule an update
-				interior->room_geom->invalidate_draw_data_for_obj(ball); // add to small static objects
+				obj_dynamic_to_static(ball, *interior);
 				break; // done
 			}
 			new_center += velocity*step_sz; // move based on velocity
@@ -1227,9 +1243,8 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 				if (point_in_water_area(new_center)) {velocity.z = 0.0;} // remove vertical velocity component if center is underwater
 
 				if (new_center.z == target_zval && velocity.mag_sq() < MIN_VELOCITY*MIN_VELOCITY) { // zero velocity if stopped and no longer rising
-					velocity    = zero_vector;
-					ball.flags &= ~RO_FLAG_DYNAMIC; // clear dynamic flag
-					interior->room_geom->invalidate_small_geom(); // dynamic => static transition
+					velocity = zero_vector;
+					obj_dynamic_to_static(ball, *interior);
 				}
 				static float last_splash_time(0.0);
 
@@ -1260,6 +1275,58 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 	if (cont_bldg != nullptr && cont_bldg != this) { // switched buildings
 		if (cont_bldg->interior->room_geom->add_room_object(ball, *this, 1, velocity)) {ball.remove();} // move ball from this to other_bldg
 	}
+}
+
+void building_t::update_pool_table(room_object_t &ball) {
+	// update velocity
+	room_obj_dstate_t &dstate(interior->room_geom->get_dstate(ball));
+	vector3d &velocity(dstate.velocity);
+	ball_type_t const &bt(ball.get_ball_type());
+	float const fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
+	velocity *= (1.0f - min(1.0f, bt.friction*OBJ_DECELERATE*fticks_stable)); // apply dampening
+	
+	if (velocity.mag_sq() < 0.25*MIN_VELOCITY*MIN_VELOCITY) { // zero velocity if stopped
+		velocity = zero_vector;
+		obj_dynamic_to_static(ball, *interior);
+		return;
+	}
+	// apply movement
+	point const pos(ball.get_cube_center());
+	point new_pos(pos + velocity*fticks_stable); // move based on velocity
+	// check for collisions
+	float const radius(ball.get_radius());
+	room_object_t const &table(interior->room_geom->objs[ball.state_flags]);
+	unsigned const balls_start(ball.state_flags + 1), balls_end(balls_start + 16); // 16 pool balls placed after the pool table
+	auto &objs(interior->room_geom->objs);
+	assert(balls_end <= objs.size());
+	vector3d coll_dir;
+
+	// collision detection with balls
+	for (auto i = objs.begin()+balls_start; i != objs.begin()+balls_end; ++i) {
+		if (i->obj_id == ball.obj_id)  continue; // skip ourself
+		if (i->type != TYPE_POOL_BALL) continue; // ball was taken
+		float const radius2(i->get_radius()), rsum(radius + radius2); // radius2 should be equal to radius
+		point const pos2(i->get_cube_center());
+		if (!dist_less_than(new_pos, pos2, rsum)) continue; // no collision
+		// TODO
+	}
+	// collision detection with table edges
+	cube_t play_area(get_pool_table_top_surface(table));
+	play_area.expand_by_xy(-radius);
+
+	if (!play_area.contains_pt_xy(new_pos)) {
+		point const pre_clamp_pos(new_pos);
+		play_area.clamp_pt_xy(new_pos);
+		coll_dir = (new_pos - pre_clamp_pos).get_norm();
+	}
+	if (coll_dir != zero_vector) {
+		// TODO: apply collision to velocity
+		velocity = coll_dir*velocity.mag();
+	}
+	if (pos == new_pos) return; // no change in pos
+	apply_roll_to_matrix(dstate.rot_matrix, new_pos, pos, plus_z, radius);
+	ball.translate(new_pos - pos);
+	interior->update_dynamic_draw_data();
 }
 
 void building_t::update_player_interact_objects(point const &player_pos) { // Note: player_pos is in building space
