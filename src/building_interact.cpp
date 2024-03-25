@@ -493,7 +493,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 					else if (type == TYPE_PICTURE || type == TYPE_TPROLL || type == TYPE_MWAVE || type == TYPE_STOVE ||
 						/*type == TYPE_FRIDGE ||*/ type == TYPE_TV || type == TYPE_MONITOR || type == TYPE_BLINDS || type == TYPE_SHOWER ||
 						type == TYPE_SWITCH || type == TYPE_BOOK || type == TYPE_BRK_PANEL || type == TYPE_BREAKER || type == TYPE_ATTIC_DOOR ||
-						type == TYPE_OFF_CHAIR || type == TYPE_WFOUNTAIN || type == TYPE_FALSE_DOOR) {keep = 1;}
+						type == TYPE_OFF_CHAIR || type == TYPE_WFOUNTAIN || type == TYPE_FALSE_DOOR || is_ball_type(type)) {keep = 1;}
 					else if (type == TYPE_BUTTON && i->in_elevator() == bool(player_in_elevator)) {keep = 1;} // check for buttons inside/outside elevator
 					else if (type == TYPE_PIZZA_BOX && !i->was_expanded()) {keep = 1;} // can't open if on a shelf
 					else if (i->is_parked_car() && !i->is_broken()) {keep = 1;} // parked car with unbroken windows
@@ -837,6 +837,16 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	else if (obj.type == TYPE_SHELFRACK) { // expand shelfrack
 		interior->room_geom->expand_object(obj, *this);
 	}
+	else if (is_ball_type(obj.type)) { // push the ball
+		room_obj_dstate_t &dstate(interior->room_geom->get_dstate(obj));
+		dstate.velocity.x += 0.5*KICK_VELOCITY*int_dir.x;
+		dstate.velocity.y += 0.5*KICK_VELOCITY*int_dir.y;
+
+		if (!obj.is_dynamic()) { // make it dynamic
+			obj.flags |= RO_FLAG_DYNAMIC;
+			interior->room_geom->invalidate_small_geom();
+		}
+	}
 	else if (obj.is_parked_car()) {
 		gen_sound_thread_safe_at_player(SOUND_GLASS);
 		register_broken_object(obj);
@@ -1074,7 +1084,6 @@ void apply_building_gravity(float &vz, float dt_ticks) {
 void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point const &player_pos, float player_z1, bool player_is_moving) {
 	room_object_t &ball(*ball_it);
 	assert(is_ball_type(ball.type)); // currently, only balls have has_dstate()
-	assert(ball.obj_id < interior->room_geom->obj_dstate.size());
 	float const player_radius(get_scaled_player_radius()), player_z2(player_pos.z), radius(ball.get_radius());
 	float const fc_thick(get_fc_thickness()), fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
 	room_obj_dstate_t &dstate(interior->room_geom->get_dstate(ball));
