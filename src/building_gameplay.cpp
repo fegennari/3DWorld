@@ -32,6 +32,7 @@ extern building_t const *player_building;
 void place_player_at_xy(float xval, float yval);
 void show_key_icon(vector<colorRGBA> const &key_colors);
 void show_flashlight_icon();
+void show_pool_cue_icon();
 bool is_shirt_model(room_object_t const &obj);
 bool is_pants_model(room_object_t const &obj);
 bool player_at_full_health();
@@ -490,7 +491,7 @@ class player_inventory_t { // manages player inventory, health, and other stats
 	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, oxygen, thirst;
 	float prev_player_zval, respawn_time=0.0;
 	unsigned num_doors_unlocked, has_key; // has_key is a bit mask for key colors
-	bool prev_in_building, has_flashlight, is_poisoned, poison_from_spider;
+	bool prev_in_building, has_flashlight, is_poisoned, poison_from_spider, has_pool_cue;
 
 	void register_player_death(unsigned sound_id, string const &why) {
 		player_wait_respawn = 1;
@@ -515,7 +516,7 @@ public:
 		drunkenness   = bladder = bladder_time = prev_player_zval = 0.0;
 		player_health = oxygen = thirst = 1.0; // full health, oxygen, and (anti-)thirst
 		num_doors_unlocked = has_key = 0; // num_doors_unlocked not saved on death, but maybe should be?
-		prev_in_building = has_flashlight = is_poisoned = poison_from_spider = 0;
+		prev_in_building = has_flashlight = is_poisoned = poison_from_spider = has_pool_cue = 0;
 		player_attracts_flies = 0;
 		phone_manager.disable();
 		carried.clear();
@@ -565,6 +566,7 @@ public:
 	bool  player_is_dead () const {return (player_health <= 0.0);}
 	unsigned player_has_key    () const {return has_key;}
 	bool  player_has_flashlight() const {return has_flashlight;}
+	bool  player_has_pool_cue  () const {return has_pool_cue;}
 	bool  player_at_full_health() const {return (player_health == 1.0 && !is_poisoned);}
 	bool  player_is_thirsty    () const {return (thirst < 0.5);}
 	bool  player_holding_lit_candle() const {return (!carried.empty() && carried.back().type == TYPE_CANDLE && carried.back().is_lit());}
@@ -658,6 +660,7 @@ public:
 			thirst = min(1.0f, (thirst + liquid));
 		}
 		if (obj.type == TYPE_FLASHLIGHT) {has_flashlight = 1;} // also goes in inventory
+		if (obj.type == TYPE_POOL_CUE  ) {has_pool_cue   = 1;} // also goes in inventory
 
 		if (obj.type == TYPE_KEY) {
 			has_key |= (1 << obj.obj_id); // mark as having the key and record the color, but it doesn't go into the inventory or contribute to weight or value
@@ -809,7 +812,7 @@ public:
 		tape_manager.clear();
 	}
 	void collect_items(bool keep_interactive) { // called when player exits a building
-		if (!keep_interactive) {has_key = 0;} // key only good for current building; flashlight can be used in all buildings
+		if (!keep_interactive) {has_key = 0;} // key only good for current building; flashlight and pool cue can be used in all buildings
 		phone_manager.disable(); // phones won't ring when taken out of their building, since the player can't switch to them anyway
 		tape_manager.clear();
 		if (carried.empty() && cur_weight == 0.0 && cur_value == 0.0) return; // nothing to add
@@ -895,6 +898,7 @@ public:
 			show_key_icon(key_colors);
 		}
 		if (has_flashlight) {show_flashlight_icon();}
+		if (has_pool_cue  ) {show_pool_cue_icon  ();}
 	}
 	bool apply_fall_damage(float delta_z, float dscale=1.0) {
 		if (!in_building_gameplay_mode()) return 0;
@@ -2541,7 +2545,8 @@ void play_hum_sound(point const &pos, float gain, float pitch) { // pos is in bu
 
 // gameplay logic
 
-unsigned player_has_room_key() {return player_inventory.player_has_key();}
+unsigned player_has_room_key() {return player_inventory.player_has_key     ();}
+bool     player_has_pool_cue() {return player_inventory.player_has_pool_cue();}
 
 bool flashlight_enabled() { // flashlight can't be used in tiled terrain building gameplay mode if the player didn't pick up a flashlight
 	return (world_mode != WMODE_INF_TERRAIN || !in_building_gameplay_mode() || player_inventory.player_has_flashlight());

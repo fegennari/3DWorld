@@ -1064,6 +1064,7 @@ void show_icon_image(string const &fn, float xsize, float ysize, float xpos=0.0,
 		glEnable(GL_DEPTH_TEST);
 	}
 }
-void show_key_icon(vector<colorRGBA> const &key_colors) {show_icon_image("icons/key.png",        1.0, 0.4, 0.0, key_colors);} // rightmost slot
-void show_flashlight_icon()                             {show_icon_image("icons/flashlight.png", 1.0, 1.0, 1.0            );} // one slot to the left
+void show_key_icon(vector<colorRGBA> const &colors) {show_icon_image("icons/key.png",        1.0, 0.4, 0.0, colors);} // rightmost slot
+void show_flashlight_icon()                         {show_icon_image("icons/flashlight.png", 1.0, 1.0, 1.0        );} // one slot  to the left
+void show_pool_cue_icon  ()                         {show_icon_image("icons/pool_cue.png",   1.0, 1.0, 2.0        );} // two slots to the left
 
