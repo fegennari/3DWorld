@@ -1013,11 +1013,11 @@ void draw_inventory() {
 	}
 }
 
-void draw_qbd_with_textured_shader(quad_batch_draw const &qbd, int tid) {
+void draw_qbd_with_textured_shader(quad_batch_draw const &qbd, int tid, float min_alpha=0.0) {
 
 	select_texture(tid);
 	shader_t s;
-	s.begin_simple_textured_shader(); // no lighting
+	s.begin_simple_textured_shader(min_alpha); // no lighting
 	glDisable(GL_DEPTH_TEST);
 	qbd.draw();
 	glEnable(GL_DEPTH_TEST);
@@ -1045,7 +1045,7 @@ void show_icon_image(string const &fn, float xsize, float ysize, float xpos=0.0,
 	quad_batch_draw qbd;
 	point pos((0.52 - 0.05*xpos)*s*ar, 0.52*s, -s);
 	qbd.add_quad_dirs(pos, quad_sz_x*plus_x, quad_sz_y*plus_y, WHITE); // top right; dx and dy are radius values
-	draw_qbd_with_textured_shader(qbd, get_texture_by_name(fn, 0, 0, 0)); // wrap_mir=0 (clamp)
+	draw_qbd_with_textured_shader(qbd, get_texture_by_name(fn, 0, 0, 0), 0.1); // wrap_mir=0 (clamp), min_alpha=0.1
 
 	if (!colors.empty()) { // draw colors as bars in a row below the icon
 		float const pitch(2.2*quad_sz_x/max(colors.size(), size_t(2))), width(0.75*pitch), hheight(0.67*quad_sz_y);
