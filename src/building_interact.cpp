@@ -32,7 +32,6 @@ void refill_thirst();
 colorRGBA get_glow_color(float stime, bool fade);
 void play_hum_sound(point const &pos, float gain, float pitch);
 bool ceiling_fan_is_on(room_object_t &obj, vect_room_object_t const &objs);
-cube_t get_pool_table_top_surface(room_object_t const &c);
 
 // Note: pos is in camera space
 void gen_sound_thread_safe(unsigned id, point const &pos, float gain, float pitch, float gain_scale, bool skip_if_already_playing) {
@@ -1093,8 +1092,11 @@ void obj_dynamic_to_static(room_object_t &obj, building_interior_t &interior) {
 
 void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point const &player_pos, float player_z1, bool player_is_moving) {
 	room_object_t &ball(*ball_it);
+	room_obj_dstate_t &dstate(interior->room_geom->get_dstate(ball));
+	vector3d &velocity(dstate.velocity);
 
-	if (ball.type == TYPE_POOL_BALL && ball.is_dynamic()) { // check of moving on the pool table
+	// TODO: make this work for balls picked up and dropped back onto the table
+	if (ball.type == TYPE_POOL_BALL && ball.is_dynamic() && velocity.z == 0.0) { // check of moving on the pool table in the XY plane
 		assert(ball.state_flags < interior->room_geom->objs.size());
 		room_object_t const &pool_table(interior->room_geom->objs[ball.state_flags]);
 
@@ -1106,8 +1108,6 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 	assert(is_ball_type(ball.type)); // currently, only balls have has_dstate()
 	float const player_radius(get_scaled_player_radius()), player_z2(player_pos.z), radius(ball.get_radius());
 	float const fc_thick(get_fc_thickness()), fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
-	room_obj_dstate_t &dstate(interior->room_geom->get_dstate(ball));
-	vector3d &velocity(dstate.velocity);
 	ball_type_t const &bt(ball.get_ball_type());
 	point const center(ball.get_cube_center());
 	bool const was_dynamic(ball.is_dynamic()), is_moving_fast(velocity.mag() > 0.5*KICK_VELOCITY), can_kick(bt.can_kick && !ball.no_coll());

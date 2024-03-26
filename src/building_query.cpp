@@ -662,6 +662,9 @@ void get_pool_table_cubes(room_object_t const &c, cube_t cubes[5]) { // body + 4
 unsigned check_pool_table_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	cube_t cubes[5]; // body + 4 legs
 	get_pool_table_cubes(c, cubes);
+	// if pos is over the interior, use the top surface zval; otherwise, use z2 and assume an edge collision; could also call subtract_cube_from_cube()
+	cube_t const top(get_pool_table_top_surface(c));
+	if (top.contains_pt_xy(pos)) {cubes[0].z2() = top.z1();}
 	return check_cubes_collision(cubes, 5, pos, p_last, radius, cnorm);
 }
 cube_t get_shelves_no_bot_gap(room_object_t const &c) {

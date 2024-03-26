@@ -37,7 +37,6 @@ int get_canopy_texture();
 colorRGBA get_canopy_base_color(room_object_t const &c);
 void get_water_heater_cubes(room_object_t const &wh, cube_t cubes[2]);
 bool line_int_polygon_sides(point const &p1, point const &p2, cube_t const &bcube, vect_point const &points, float &t);
-cube_t get_pool_table_top_surface(room_object_t const &c);
 void get_pool_table_cubes(room_object_t const &c, cube_t cubes[5]);
 
 bool check_indir_enabled(bool in_basement, bool in_attic) {
