@@ -561,6 +561,17 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 	return 1;
 }
 
+void make_object_dynamic(room_object_t &obj, building_interior_t &interior) {
+	if (obj.is_dynamic()) return; // already dynamic
+	obj.flags |= RO_FLAG_DYNAMIC;
+	interior.room_geom->invalidate_small_geom();
+}
+void obj_dynamic_to_static(room_object_t &obj, building_interior_t &interior) {
+	obj.flags &= ~RO_FLAG_DYNAMIC; // clear dynamic flag
+	interior.update_dynamic_draw_data(); // remove from dynamic objects and schedule an update
+	interior.room_geom->invalidate_draw_data_for_obj(obj); // add to small static objects
+}
+
 bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, point const &query_ray_end, vector3d const &int_dir) {
 	auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));
 	point const sound_origin(obj.xc(), obj.yc(), int_pos.z), local_center(local_to_camera_space(sound_origin)); // generate sound from the player height
@@ -843,11 +854,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		room_obj_dstate_t &dstate(interior->room_geom->get_dstate(obj));
 		dstate.velocity.x += 0.5*KICK_VELOCITY*int_dir.x;
 		dstate.velocity.y += 0.5*KICK_VELOCITY*int_dir.y;
-
-		if (!obj.is_dynamic()) { // make it dynamic
-			obj.flags |= RO_FLAG_DYNAMIC;
-			interior->room_geom->invalidate_small_geom();
-		}
+		make_object_dynamic(obj, *interior);
 	}
 	else if (obj.is_parked_car()) {
 		gen_sound_thread_safe_at_player(SOUND_GLASS);
@@ -1084,12 +1091,6 @@ void apply_building_gravity(float &vz, float dt_ticks) {
 	max_eq(vz, -TERM_VELOCITY);
 }
 
-void obj_dynamic_to_static(room_object_t &obj, building_interior_t &interior) {
-	obj.flags &= ~RO_FLAG_DYNAMIC; // clear dynamic flag
-	interior.update_dynamic_draw_data(); // remove from dynamic objects and schedule an update
-	interior.room_geom->invalidate_draw_data_for_obj(obj); // add to small static objects
-}
-
 void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point const &player_pos, float player_z1, bool player_is_moving) {
 	room_object_t &ball(*ball_it);
 	room_obj_dstate_t &dstate(interior->room_geom->get_dstate(ball));
@@ -1279,6 +1280,26 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 	}
 }
 
+void rotate_vector_xy(vector3d &v, float theta) {
+	float const cos_theta(cos(theta)), sin_theta(sin(theta));
+	v = vector3d((v.x*cos_theta - v.y*sin_theta), (v.x*sin_theta + v.y*cos_theta), v.z);
+}
+void get_pool_table_pockets(room_object_t const &table, cube_t pockets[6]) {
+	bool const dim(table.dim);
+	cube_t const surface(get_pool_table_top_surface(table));
+	float const pocket_sz(table.x2() - surface.x2()); // same width along all sides
+
+	for (unsigned d = 0; d < 2; ++d) { // {left, right} in !dim
+		for (unsigned e = 0; e < 3; ++e) { // {far, end, middle} in dim
+			cube_t pocket(table);
+			pocket.d[!dim][!d] = surface.d[!dim][d];
+			if (e < 2) {pocket.d[dim][!e] = surface.d[dim][e];} // corner pocket
+			else {set_wall_width(pocket, table.get_center_dim(dim), 0.5*pocket_sz, dim);} // middle pocket
+			pockets[3*d + e] = pocket;
+		} // for e
+	} // for d
+}
+
 void building_t::update_pool_table(room_object_t &ball) {
 	// update velocity
 	room_obj_dstate_t &dstate(interior->room_geom->get_dstate(ball));
@@ -1287,7 +1308,7 @@ void building_t::update_pool_table(room_object_t &ball) {
 	float const fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
 	velocity *= (1.0f - min(1.0f, bt.friction*OBJ_DECELERATE*fticks_stable)); // apply dampening
 	
-	if (velocity.mag_sq() < 0.25*MIN_VELOCITY*MIN_VELOCITY) { // zero velocity if stopped
+	if (velocity.mag_sq() < 0.1*MIN_VELOCITY*MIN_VELOCITY) { // zero velocity if stopped
 		velocity = zero_vector;
 		obj_dynamic_to_static(ball, *interior);
 		return;
@@ -1297,21 +1318,49 @@ void building_t::update_pool_table(room_object_t &ball) {
 	point new_pos(pos + velocity*fticks_stable); // move based on velocity
 	// check for collisions
 	float const radius(ball.get_radius());
+	vector3d const v_old(velocity);
 	room_object_t const &table(interior->room_geom->objs[ball.state_flags]);
 	unsigned const balls_start(ball.state_flags + 1), balls_end(balls_start + 16); // 16 pool balls placed after the pool table
 	auto &objs(interior->room_geom->objs);
 	assert(balls_end <= objs.size());
-	vector3d coll_dir;
+	bool hit_ball(0), hit_table(0);
 
-	// collision detection with balls
+	// collision detection with balls; assumes masses are equal, which simplifies the math
 	for (auto i = objs.begin()+balls_start; i != objs.begin()+balls_end; ++i) {
 		if (i->obj_id == ball.obj_id)  continue; // skip ourself
 		if (i->type != TYPE_POOL_BALL) continue; // ball was taken
 		float const radius2(i->get_radius()), rsum(radius + radius2); // radius2 should be equal to radius
 		point const pos2(i->get_cube_center());
 		if (!dist_less_than(new_pos, pos2, rsum)) continue; // no collision
-		// TODO
-	}
+		new_pos = pos; // simplest collision resolution is to move to the previous pos
+		// update velocities
+		// https://www.101computing.net/elastic-collision-in-a-pool-game
+		room_obj_dstate_t &dstate2(interior->room_geom->get_dstate(*i));
+		vector3d &velocity2(dstate2.velocity);
+		vector3d const delta(new_pos - pos);
+		float const theta(atan2(delta.y, delta.x)); // rotate by theta so that v.x is parallel and v.y is perpendicular
+		rotate_vector_xy(velocity , theta);
+		rotate_vector_xy(velocity2, theta);
+		swap(velocity.x, velocity2.x); // v1' = v1*(m1 - m2)/(m1 + m2) + v2*2*m2/(m1 + m2); for m1 == m2, v1' = v2
+		rotate_vector_xy(velocity , -theta);
+		rotate_vector_xy(velocity2, -theta);
+		velocity *= 0.97; velocity2 *= 0.97; // 3% velocity reduction
+		make_object_dynamic(*i, *interior);
+		hit_ball = 1;
+	} // for i
+	// check for pockets before table edges
+	cube_t pockets[6];
+	get_pool_table_pockets(table, pockets);
+	cube_t ball_bc; ball_bc.set_from_sphere(new_pos, radius);
+
+	for (unsigned p = 0; p < 6; ++p) {
+		cube_t const &pocket(pockets[p]);
+		if (!pocket.intersects_xy(ball_bc)) continue;
+		// TODO: make it slowly fall
+		obj_dynamic_to_static(ball, *interior);
+		ball.remove();
+		return;
+	} // for p
 	// collision detection with table edges
 	cube_t play_area(get_pool_table_top_surface(table));
 	play_area.expand_by_xy(-radius);
@@ -1319,11 +1368,13 @@ void building_t::update_pool_table(room_object_t &ball) {
 	if (!play_area.contains_pt_xy(new_pos)) {
 		point const pre_clamp_pos(new_pos);
 		play_area.clamp_pt_xy(new_pos);
-		coll_dir = (new_pos - pre_clamp_pos).get_norm();
+		calc_reflection_angle(velocity, velocity, (new_pos - pre_clamp_pos).get_norm());
+		velocity *= 0.95; // 5% velocity reduction
+		hit_table = 1;
 	}
-	if (coll_dir != zero_vector) {
-		// TODO: apply collision to velocity
-		velocity = coll_dir*velocity.mag();
+	if (hit_ball || hit_table) {
+		float const gain((hit_ball ? 1.0 : 0.2)*2.0*(velocity - v_old).mag()/KICK_VELOCITY);
+		gen_sound_thread_safe(SOUND_KICK_BALL, local_to_camera_space(new_pos), gain, (hit_ball ? 4.0 : 1.5));
 	}
 	if (pos == new_pos) return; // no change in pos
 	apply_roll_to_matrix(dstate.rot_matrix, new_pos, pos, plus_z, radius);
