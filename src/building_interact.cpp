@@ -1282,104 +1282,159 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 
 void rotate_vector_xy(vector3d &v, float theta) {
 	float const cos_theta(cos(theta)), sin_theta(sin(theta));
-	v = vector3d((v.x*cos_theta - v.y*sin_theta), (v.x*sin_theta + v.y*cos_theta), v.z);
+	v.assign((v.x*cos_theta - v.y*sin_theta), (v.x*sin_theta + v.y*cos_theta), v.z);
 }
 void get_pool_table_pockets(room_object_t const &table, cube_t pockets[6]) {
 	bool const dim(table.dim);
-	cube_t const surface(get_pool_table_top_surface(table));
-	float const pocket_sz(table.x2() - surface.x2()); // same width along all sides
+	float const width(table.get_width());
+	cube_t outer(table), inner_s(table), inner_c(table); // get_pool_table_top_surface() uses -0.12
+	outer.expand_by_xy(-0.06*width);
+	inner_s.expand_by_xy(-0.15*width); // slightly smaller
+	inner_c.expand_by_xy(-0.17*width); // slightly larger
+	float const side_pocket_sz(outer.x2() - inner_s.x2()); // same width along all sides
 
 	for (unsigned d = 0; d < 2; ++d) { // {left, right} in !dim
 		for (unsigned e = 0; e < 3; ++e) { // {far, end, middle} in dim
-			cube_t pocket(table);
-			pocket.d[!dim][!d] = surface.d[!dim][d];
-			if (e < 2) {pocket.d[dim][!e] = surface.d[dim][e];} // corner pocket
-			else {set_wall_width(pocket, table.get_center_dim(dim), 0.5*pocket_sz, dim);} // middle pocket
+			cube_t pocket(outer);
+
+			if (e < 2) { // corner pocket
+				pocket.d[!dim][!d] = inner_c.d[!dim][d];
+				pocket.d[ dim][!e] = inner_c.d[ dim][e];
+			}
+			else { // side pocket
+				pocket.d[!dim][!d] = inner_s.d[!dim][d];
+				set_wall_width(pocket, table.get_center_dim(dim), 0.5*side_pocket_sz, dim);
+			}
 			pockets[3*d + e] = pocket;
 		} // for e
 	} // for d
 }
 
+void update_ball_pos(room_object_t &ball, room_obj_dstate_t &dstate, building_interior_t &interior, point const &old_pos, point const &new_pos) {
+	if (new_pos == old_pos) return; // no change in pos
+	apply_roll_to_matrix(dstate.rot_matrix, new_pos, old_pos, plus_z, ball.get_radius());
+	ball.translate(new_pos - old_pos);
+	interior.update_dynamic_draw_data();
+}
 void building_t::update_pool_table(room_object_t &ball) {
+	float const radius(ball.get_radius());
+	room_object_t const &table(interior->room_geom->objs[ball.state_flags]);
+	cube_t play_area(get_pool_table_top_surface(table));
 	// update velocity
+	float const fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
 	room_obj_dstate_t &dstate(interior->room_geom->get_dstate(ball));
 	vector3d &velocity(dstate.velocity);
+	cube_t pockets[6];
+	get_pool_table_pockets(table, pockets);
+
+	if (ball.taken_level == 1) { // moving toward a pocket
+		point const old_pos(ball.get_cube_center());
+
+		for (unsigned p = 0; p < 6; ++p) {
+			cube_t const &pocket(pockets[p]);
+			if (!pocket.contains_pt_xy(old_pos)) continue; // wrong pocket
+			point const center(pocket.xc(), pocket.yc(), old_pos.z);
+			float const move_dist(fticks_stable*velocity.mag());
+			point new_pos;
+			
+			if (dist_less_than(old_pos, center, move_dist)) { // reached the center of the hole
+				new_pos = center;
+				ball.taken_level = 2;
+			}
+			else {new_pos = old_pos + move_dist*(center - old_pos).get_norm();} // move toward the hole
+			update_ball_pos(ball, dstate, *interior, old_pos, new_pos);
+			break;
+		} // for p
+		return;
+	}
+	else if (ball.taken_level == 2) { // falling into a hole
+		ball.translate_dim(2, -0.1*KICK_VELOCITY*fticks_stable); // constant downward velocity
+
+		if (ball.z2() < play_area.z1()) { // fell below the surface of the table, remove it
+			obj_dynamic_to_static(ball, *interior);
+			ball.remove();
+		}
+		else {interior->update_dynamic_draw_data();}
+		return;
+	}
 	ball_type_t const &bt(ball.get_ball_type());
-	float const fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
 	velocity *= (1.0f - min(1.0f, bt.friction*OBJ_DECELERATE*fticks_stable)); // apply dampening
+	float const vmag(velocity.mag());
 	
-	if (velocity.mag_sq() < 0.1*MIN_VELOCITY*MIN_VELOCITY) { // zero velocity if stopped
+	if (vmag < 0.25*MIN_VELOCITY) { // zero velocity if stopped
 		velocity = zero_vector;
 		obj_dynamic_to_static(ball, *interior);
 		return;
 	}
 	// apply movement
-	point const pos(ball.get_cube_center());
-	point new_pos(pos + velocity*fticks_stable); // move based on velocity
+	float const dmax(0.1*radius), dist(vmag*fticks_stable); // limit movement to 10% radius for stability
+	unsigned const num_steps(max(1U, min(100U, unsigned(round_fp(dist/dmax)))));
+	vector3d const step(velocity*fticks_stable/num_steps);
+	point const old_pos(ball.get_cube_center());
 	// check for collisions
-	float const radius(ball.get_radius());
 	vector3d const v_old(velocity);
-	room_object_t const &table(interior->room_geom->objs[ball.state_flags]);
 	unsigned const balls_start(ball.state_flags + 1), balls_end(balls_start + 16); // 16 pool balls placed after the pool table
 	auto &objs(interior->room_geom->objs);
 	assert(balls_end <= objs.size());
-	bool hit_ball(0), hit_table(0);
-
-	// collision detection with balls; assumes masses are equal, which simplifies the math
-	for (auto i = objs.begin()+balls_start; i != objs.begin()+balls_end; ++i) {
-		if (i->obj_id == ball.obj_id)  continue; // skip ourself
-		if (i->type != TYPE_POOL_BALL) continue; // ball was taken
-		float const radius2(i->get_radius()), rsum(radius + radius2); // radius2 should be equal to radius
-		point const pos2(i->get_cube_center());
-		if (!dist_less_than(new_pos, pos2, rsum)) continue; // no collision
-		new_pos = pos; // simplest collision resolution is to move to the previous pos
-		// update velocities
-		// https://www.101computing.net/elastic-collision-in-a-pool-game
-		room_obj_dstate_t &dstate2(interior->room_geom->get_dstate(*i));
-		vector3d &velocity2(dstate2.velocity);
-		vector3d const delta(new_pos - pos);
-		float const theta(atan2(delta.y, delta.x)); // rotate by theta so that v.x is parallel and v.y is perpendicular
-		rotate_vector_xy(velocity , theta);
-		rotate_vector_xy(velocity2, theta);
-		swap(velocity.x, velocity2.x); // v1' = v1*(m1 - m2)/(m1 + m2) + v2*2*m2/(m1 + m2); for m1 == m2, v1' = v2
-		rotate_vector_xy(velocity , -theta);
-		rotate_vector_xy(velocity2, -theta);
-		velocity *= 0.97; velocity2 *= 0.97; // 3% velocity reduction
-		make_object_dynamic(*i, *interior);
-		hit_ball = 1;
-	} // for i
-	// check for pockets before table edges
-	cube_t pockets[6];
-	get_pool_table_pockets(table, pockets);
-	cube_t ball_bc; ball_bc.set_from_sphere(new_pos, radius);
-
-	for (unsigned p = 0; p < 6; ++p) {
-		cube_t const &pocket(pockets[p]);
-		if (!pocket.intersects_xy(ball_bc)) continue;
-		// TODO: make it slowly fall
-		obj_dynamic_to_static(ball, *interior);
-		ball.remove();
-		return;
-	} // for p
-	// collision detection with table edges
-	cube_t play_area(get_pool_table_top_surface(table));
 	play_area.expand_by_xy(-radius);
+	bool hit_ball(0), hit_table(0), hit_pocket(0), in_pocket(0);
+	point pos(old_pos), new_pos(pos);
 
-	if (!play_area.contains_pt_xy(new_pos)) {
-		point const pre_clamp_pos(new_pos);
-		play_area.clamp_pt_xy(new_pos);
-		calc_reflection_angle(velocity, velocity, (new_pos - pre_clamp_pos).get_norm());
-		velocity *= 0.95; // 5% velocity reduction
-		hit_table = 1;
+	for (unsigned n = 0; n < num_steps; ++n) {
+		new_pos += step; // move based on velocity
+
+		// collision detection with balls; assumes masses are equal, which simplifies the math
+		for (auto i = objs.begin()+balls_start; i != objs.begin()+balls_end; ++i) {
+			if (i->obj_id == ball.obj_id)  continue; // skip ourself
+			if (i->type != TYPE_POOL_BALL) continue; // ball was taken
+			float const radius2(i->get_radius()), rsum(radius + radius2); // radius2 should be equal to radius
+			point const pos2(i->get_cube_center());
+			if (!dist_less_than(new_pos, pos2, rsum)) continue; // no collision
+			// update velocities
+			// https://www.101computing.net/elastic-collision-in-a-pool-game
+			room_obj_dstate_t &dstate2(interior->room_geom->get_dstate(*i));
+			vector3d &velocity2(dstate2.velocity);
+			vector3d const delta(new_pos - pos);
+			float const theta(atan2(delta.y, delta.x)); // rotate by theta so that v.x is parallel and v.y is perpendicular
+			rotate_vector_xy(velocity , theta);
+			rotate_vector_xy(velocity2, theta);
+			swap(velocity.x, velocity2.x); // v1' = v1*(m1 - m2)/(m1 + m2) + v2*2*m2/(m1 + m2); for m1 == m2, v1' = v2
+			rotate_vector_xy(velocity , -theta);
+			rotate_vector_xy(velocity2, -theta);
+			velocity *= 0.97; velocity2 *= 0.97; // 3% velocity reduction
+			make_object_dynamic(*i, *interior);
+			new_pos  = pos; // simplest collision resolution is to move to the previous pos
+			hit_ball = 1;
+		} // for i
+		// check for pockets before table edges
+		for (unsigned p = 0; p < 6; ++p) {
+			cube_t const &pocket(pockets[p]);
+			if (!pocket.contains_pt_xy(new_pos)) continue;
+			hit_pocket = 1;
+			cube_t ball_bc; ball_bc.set_from_sphere(new_pos, radius);
+			
+			if (pocket.contains_cube_xy(ball_bc)) {
+				in_pocket = 1;
+				ball.taken_level = 1; // about to fall into the hole
+			}
+			break;
+		} // for p
+		// collision detection with table edges
+		if (!hit_pocket && !play_area.contains_pt_xy(new_pos)) {
+			point const pre_clamp_pos(new_pos);
+			play_area.clamp_pt_xy(new_pos);
+			calc_reflection_angle(velocity, velocity, (new_pos - pre_clamp_pos).get_norm());
+			velocity *= 0.95; // 5% velocity reduction
+			hit_table = 1;
+		}
+		if (hit_ball || hit_table || in_pocket) break; // stop after a collision
+		pos = new_pos;
+	} // for n
+	if (hit_ball || hit_table || in_pocket) {
+		float const gain(in_pocket ? 1.0 : ((hit_ball ? 1.0 : 0.2)*2.0*(velocity - v_old).mag()/KICK_VELOCITY));
+		gen_sound_thread_safe(SOUND_KICK_BALL, local_to_camera_space(new_pos), gain, (in_pocket ? 2.5 : (hit_ball ? 5.0 : 1.5)));
 	}
-	if (hit_ball || hit_table) {
-		float const gain((hit_ball ? 1.0 : 0.2)*2.0*(velocity - v_old).mag()/KICK_VELOCITY);
-		gen_sound_thread_safe(SOUND_KICK_BALL, local_to_camera_space(new_pos), gain, (hit_ball ? 4.0 : 1.5));
-	}
-	if (pos == new_pos) return; // no change in pos
-	apply_roll_to_matrix(dstate.rot_matrix, new_pos, pos, plus_z, radius);
-	ball.translate(new_pos - pos);
-	interior->update_dynamic_draw_data();
+	update_ball_pos(ball, dstate, *interior, old_pos, new_pos);
 }
 
 void building_t::update_player_interact_objects(point const &player_pos) { // Note: player_pos is in building space
