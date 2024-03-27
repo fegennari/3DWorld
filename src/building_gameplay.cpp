@@ -464,11 +464,11 @@ bool phone_is_ringing() {return phone_manager.is_phone_ringing();}
 
 tape_manager_t tape_manager;
 
-unsigned const NUM_ACHIEVEMENTS = 16;
+unsigned const NUM_ACHIEVEMENTS = 17;
 
 class achievement_tracker_t {
 	// Rat Food, Top Secret Document, Mr. Yuck, Zombie Hunter, Royal Flush, Zombie Bashing, One More Drink, Bathroom Reader, TP Artist,
-	// Master Lockpick, Squeaky Clean, Sleep with the Fishes, Splat the Spider, 7 years of bad luck, Tastes Like Chicken, Spam Risk
+	// Master Lockpick, Squeaky Clean, Sleep with the Fishes, Splat the Spider, 7 years of bad luck, Tastes Like Chicken, Spam Risk, Ball in Pocket
 	set<string> achievements;
 	// some way to make this persistent, print these out somewhere, or add small screen icons?
 public:
@@ -606,6 +606,13 @@ public:
 		is_poisoned   = 0;
 		print_text_onscreen("Used Medicine", CYAN, 0.8, 1.5*TICKS_PER_SECOND, 0);
 		gen_sound_thread_safe_at_player(SOUND_GULP, 1.0);
+	}
+	void register_reward(float value) {
+		assert(value > 0.0);
+		std::ostringstream oss;
+		oss << "Reward of $" << value;
+		print_text_onscreen(oss.str(), YELLOW, 1.0, 1.5*TICKS_PER_SECOND, 0);
+		cur_value += value; // doesn't count as damage
 	}
 	void switch_item(bool dir) { // Note: current item is always carried.back()
 		if (carried.size() <= 1) return; // no other item to switch to
@@ -1030,6 +1037,11 @@ bool player_holding_lit_candle() {return player_inventory.player_holding_lit_can
 void refill_thirst() {player_inventory.refill_thirst();}
 void apply_building_fall_damage(float delta_z) {player_inventory.apply_fall_damage(delta_z, 0.5);} // dscale=0.5
 void get_dead_players_in_building(vector<dead_person_t> &dead_players, building_t const &building) {player_inventory.get_dead_players_in_building(dead_players, building);}
+
+void pool_ball_in_pocket() {
+	player_inventory.register_reward(100.0);
+	register_achievement("Ball in Pocket");
+}
 
 void register_building_sound_for_obj(room_object_t const &obj, point const &pos) {
 	float const weight(get_obj_weight(obj)), volume((weight <= 1.0) ? 0.0 : min(1.0f, 0.01f*weight)); // heavier objects make more sound
