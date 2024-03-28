@@ -1653,7 +1653,13 @@ bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t 
 		add_expanded_object(obj);
 	}
 	else {
-		int const obj_id(find_avail_obj_slot());
+		int obj_id(-1);
+
+		if (obj.type == TYPE_POOL_BALL) {
+			unsigned const cand_obj_id(obj.state_flags + obj.item_flags + 1); // find it's place in the pool table
+			if (cand_obj_id < buttons_start && objs[cand_obj_id].type == TYPE_BLOCKER) {obj_id = cand_obj_id;} // slot is available
+		}
+		if (obj_id < 0) {obj_id = find_avail_obj_slot();} // select an ID if not yet assigned
 		if (obj_id < 0) return 0; // no slot found
 		room_object_t &added_obj(get_room_object_by_index(obj_id));
 		added_obj = obj; // overwrite with new object
