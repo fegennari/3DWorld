@@ -1700,7 +1700,18 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 	// determine which object the player may be choosing to move
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (i->no_coll() || i->type == TYPE_BLOCKER) continue; // not interactive
-		if (i->type == TYPE_POOL_TABLE) continue; // don't push pool tables, since it's too easily to accidentally do this when trying to hit a pool ball
+		
+		if (i->type == TYPE_POOL_TABLE) {
+			// don't push pool table if there are balls on it, since it's too easily to accidentally do this when trying to hit a pool ball
+			bool has_ball(0);
+			
+			for (unsigned n = 1; n <= 16; ++n) {
+				auto const bi(i + n);
+				if (bi == objs_end) break;
+				if (bi->type == TYPE_POOL_BALL) {has_ball = 1; break;}
+			}
+			if (has_ball) continue;
+		}
 		cube_t const obj_bcube(get_true_obj_bcube(*i));
 		point p1c(at_pos), p2c(p2);
 		if (!do_line_clip(p1c, p2c, obj_bcube.d)) continue; // test ray intersection vs. bcube
