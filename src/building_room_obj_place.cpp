@@ -2118,7 +2118,7 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 cube_t get_pool_table_top_surface(room_object_t const &c) {
 	cube_t top(c);
 	top.expand_by_xy(-0.12*c.get_width());
-	top.z1() = c.z2() - 0.045*c.dz();
+	top.z1() = c.z2() - 0.046*c.dz();
 	return top;
 }
 bool check_dist_and_add_center(point const &pos, float diameter_xy, vector<point> &centers) {

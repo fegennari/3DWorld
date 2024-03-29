@@ -565,12 +565,13 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 void make_object_dynamic(room_object_t &obj, building_interior_t &interior) {
 	if (obj.is_dynamic()) return; // already dynamic
 	obj.flags |= RO_FLAG_DYNAMIC;
+	interior.update_dynamic_draw_data();
 	interior.room_geom->invalidate_small_geom();
 }
 void obj_dynamic_to_static(room_object_t &obj, building_interior_t &interior) {
 	obj.flags &= ~RO_FLAG_DYNAMIC; // clear dynamic flag
 	interior.update_dynamic_draw_data(); // remove from dynamic objects and schedule an update
-	interior.room_geom->invalidate_draw_data_for_obj(obj); // add to small static objects
+	interior.room_geom->invalidate_small_geom(); // add to small static objects
 }
 
 bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, point const &query_ray_end, vector3d const &int_dir) {
@@ -1366,11 +1367,12 @@ void building_t::update_pool_table(room_object_t &ball) {
 	velocity *= (1.0f - min(1.0f, bt.friction*OBJ_DECELERATE*fticks_stable)); // apply dampening
 	float const vmag(velocity.mag());
 	
-	if (vmag < 0.25*MIN_VELOCITY) { // zero velocity if stopped
+	if (!ball.is_active() && vmag < 0.2*MIN_VELOCITY) { // zero velocity if stopped; skip if collided on the last iteration
 		velocity = zero_vector;
 		obj_dynamic_to_static(ball, *interior);
 		return;
 	}
+	ball.flags &= ~RO_FLAG_IS_ACTIVE; // no longer active, unless collided with again
 	// apply movement
 	float const dmax(0.1*radius), dist(vmag*fticks_stable); // limit movement to 10% radius for stability
 	unsigned const num_steps(max(1U, min(100U, unsigned(round_fp(dist/dmax)))));
@@ -1405,13 +1407,14 @@ void building_t::update_pool_table(room_object_t &ball) {
 			swap(velocity.x, velocity2.x); // v1' = v1*(m1 - m2)/(m1 + m2) + v2*2*m2/(m1 + m2); for m1 == m2, v1' = v2
 			rotate_vector_xy(velocity , -theta);
 			rotate_vector_xy(velocity2, -theta);
-			velocity *= 0.97; velocity2 *= 0.97; // 3% velocity reduction
+			velocity *= 0.98; velocity2 *= 0.98; // 2% velocity reduction
 			make_object_dynamic(*i, *interior);
-			new_pos  = pos; // simplest collision resolution is to move to the previous pos
-			hit_ball = 1;
+			i->flags |= RO_FLAG_IS_ACTIVE; // mark active so that we move it the next frame, even if velocity is small
+			new_pos   = pos; // simplest collision resolution is to move to the previous pos
+			hit_ball  = 1;
 
-			if (dist_less_than(new_pos, pos2, rsum)) { // if still colliding, move it away along the collision direction; can this happen?
-				new_pos = (1.01*rsum - p2p_dist(new_pos, pos2))*(new_pos - pos2).get_norm();
+			if (dist_less_than(new_pos, pos2, 1.01*rsum)) { // if still near colliding, move it away along the collision direction
+				new_pos += (1.02*rsum - p2p_dist(new_pos, pos2))*(new_pos - pos2).get_norm();
 			}
 		} // for i
 		// check for pockets before table edges
@@ -1434,7 +1437,7 @@ void building_t::update_pool_table(room_object_t &ball) {
 			point const pre_clamp_pos(new_pos);
 			play_area.clamp_pt_xy(new_pos);
 			calc_reflection_angle(velocity, velocity, (new_pos - pre_clamp_pos).get_norm());
-			velocity *= 0.95; // 5% velocity reduction
+			velocity *= 0.96; // 4% velocity reduction
 			hit_table = 1;
 		}
 		if (hit_ball || hit_table || in_pocket) break; // stop after a collision
