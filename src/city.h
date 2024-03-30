@@ -583,6 +583,7 @@ struct tunnel_t : public road_connector_t {
 	void calc_top_bot_side_cubes(cube_t cubes[4]) const;
 	bool check_mesh_disable(cube_t const &query_region) const {return (ends[0].intersects_xy(query_region) || ends[1].intersects_xy(query_region));} // check both ends
 	bool proc_sphere_coll(point &center, point const &prev, float sradius, float prev_frame_zval, vector3d const &xlate, vector3d *cnorm) const;
+	float get_end_ext() const;
 	void calc_zvals_and_eext(float &zf, float &zb, float &end_ext) const;
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
 };

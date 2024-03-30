@@ -1002,8 +1002,10 @@ void tunnel_t::calc_top_bot_side_cubes(cube_t cubes[4]) const {
 
 bool tunnel_t::proc_sphere_coll(point &center, point const &prev, float sradius, float prev_frame_zval, vector3d const &xlate, vector3d *cnorm) const {
 	if (proc_streetlight_sphere_coll(center, sradius, xlate, cnorm)) return 1;
-	bool const prev_int(contains_pt_xy(prev - xlate));
-	if (!prev_int && !contains_pt_xy(center - xlate)) return 0; // no x/y containment for road segment (cur or prev)
+	cube_t tunnel_ext(*this); // including ends
+	tunnel_ext.expand_in_dim(dim, get_end_ext());
+	bool const prev_int(tunnel_ext.contains_pt_xy(prev - xlate));
+	if (!prev_int && !tunnel_ext.contains_pt_xy(center - xlate)) return 0; // no x/y containment for road segment (cur or prev)
 	cube_t const c(src_road + xlate);
 	float const zval(get_player_zval(center, c));
 	// Note: we need to use prev_frame_zval for camera collisions because center.z will always start at the mesh zval;
@@ -1015,9 +1017,11 @@ bool tunnel_t::proc_sphere_coll(point &center, point const &prev, float sradius,
 	return 1;
 }
 
+float tunnel_t::get_end_ext() const {return (2.0*(dim ? DY_VAL : DX_VAL));}
+
 void tunnel_t::calc_zvals_and_eext(float &zf, float &zb, float &end_ext) const {
 	zf = ends[0].z1(); zb = ends[1].z1();
-	end_ext = (2.0*(dim ? DY_VAL : DX_VAL));
+	end_ext = get_end_ext();
 	float const dz_ext(end_ext*(zb - zf)/get_length());
 	zf -= dz_ext; zb += dz_ext; // adjust zvals for extension
 }
