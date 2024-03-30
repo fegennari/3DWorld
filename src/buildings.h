@@ -1022,7 +1022,7 @@ struct building_room_geom_t {
 	void add_cubicle(room_object_t const &c, float tscale);
 	void add_window_sill(room_object_t const &c);
 	void add_exterior_step(room_object_t const &c);
-	void add_balcony(room_object_t const &c, float ground_floor_z1);
+	void add_balcony(room_object_t const &c, float ground_floor_z1, bool is_in_city);
 	void add_sign(room_object_t const &c, bool inc_back, bool inc_text, bool exterior_only=0);
 	void add_false_door(room_object_t const &c);
 	void add_counter(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);

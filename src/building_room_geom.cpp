@@ -3655,7 +3655,7 @@ void get_balcony_pillars(room_object_t const &c, float ground_floor_z1, cube_t p
 		pillar[d].d[!c.dim][!d] -= (d ? -1.0 : 1.0)*(width - pillar_width);
 	}
 }
-void building_room_geom_t::add_balcony(room_object_t const &c, float ground_floor_z1) {
+void building_room_geom_t::add_balcony(room_object_t const &c, float ground_floor_z1, bool is_in_city) {
 	bool const shadowed = 1; // doesn't work since exterior?
 	unsigned const skip_face_against_wall(~get_face_mask(c.dim, !c.dir));
 	unsigned const skip_face_sides(get_skip_mask_for_xy(c.dim)); // skip abutting front wall
@@ -3727,10 +3727,11 @@ void building_room_geom_t::add_balcony(room_object_t const &c, float ground_floo
 		rgeom_mat_t &wood_mat(get_wood_material(16.0, shadowed, 0, 0, 1)); // exterior=1
 		cube_t pillar[2];
 		get_balcony_pillars(c, ground_floor_z1, pillar);
+		unsigned const zskip(is_in_city ? EF_Z12 : EF_Z2); // draw the bottom surface if not in a city in case it's on a hill
 
 		for (unsigned d = 0; d < 2; ++d) {
-			wood_mat.add_cube_to_verts(pillar[d], WHITE, zero_vector, (EF_Z12 | EF_Y12), 0); // X sides
-			wood_mat.add_cube_to_verts(pillar[d], WHITE, zero_vector, (EF_Z12 | EF_X12), 1); // Y sides, swap texture to vertical grain orient
+			wood_mat.add_cube_to_verts(pillar[d], WHITE, zero_vector, (zskip | EF_Y12), 0); // X sides
+			wood_mat.add_cube_to_verts(pillar[d], WHITE, zero_vector, (zskip | EF_X12), 1); // Y sides, swap texture to vertical grain orient
 		}
 	}
 }
