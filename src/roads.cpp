@@ -918,6 +918,8 @@ float road_connector_t::get_player_zval(point const &center, cube_t const &c) co
 void road_connector_t::add_streetlights(unsigned num_per_side, bool staggered, float dn_shift_mult, float za, float zb) {
 	streetlights.reserve(2*num_per_side);
 	float const dsz(get_sz_dim(dim)), dnsz(get_sz_dim(!dim)), dn_shift(dn_shift_mult*dnsz);
+	float const dz(-(0.1 + 2.0*get_slope_val())*streetlight_ns::get_streetlight_pole_radius());
+	za += dz; zb += dz; // shift down slightly since we may be on a slope and don't want to leave a gap
 	if (staggered) {num_per_side *= 2;}
 
 	for (unsigned n = 0; n < num_per_side; ++n) {

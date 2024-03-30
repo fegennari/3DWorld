@@ -1362,7 +1362,7 @@ public:
 		}
 		draw_streetlights(dstate, shadow_only, 0);
 			
-		// draw bridges and tunnels; only in connector road network; bridgesand tunnels are sparse/uncommon, so don't need to be batched by blocks
+		// draw bridges and tunnels; only in connector road network; bridges and tunnels are sparse/uncommon, so don't need to be batched by blocks
 		for (auto b = bridges.begin(); b != bridges.end(); ++b) {
 			dstate.draw_bridge(*b, shadow_only);
 			b->draw_streetlights(dstate, shadow_only, 0);
@@ -1371,7 +1371,7 @@ public:
 			dstate.draw_tunnel(*t, shadow_only);
 			t->draw_streetlights(dstate, shadow_only, 1); // always_on=1
 		}
-		if (shadow_only) {dstate.end_cur_tile();} // once for all tiles, since shadows aren't used
+		dstate.end_cur_tile(); // once for all tiles, to draw shadow casters and untextured streetlights
 	}
 	void add_city_lights(vector3d const &xlate, cube_t &lights_bcube) const { // for now, the only light sources added by the road network are city block streetlights
 		add_streetlight_dlights(xlate, lights_bcube, 0);
