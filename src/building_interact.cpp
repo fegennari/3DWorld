@@ -1383,7 +1383,7 @@ void building_t::update_pool_table(room_object_t &ball) {
 	auto &objs(interior->room_geom->objs);
 	assert(balls_end <= objs.size());
 	play_area.expand_by_xy(-radius);
-	bool hit_ball(0), hit_table(0), hit_pocket(0), in_pocket(0);
+	bool hit_ball(0), hit_table(0), in_pocket(0);
 	point pos(old_pos), new_pos(pos);
 
 	for (unsigned n = 0; n < num_steps; ++n) {
@@ -1421,7 +1421,6 @@ void building_t::update_pool_table(room_object_t &ball) {
 		for (unsigned p = 0; p < 6; ++p) {
 			cube_t const &pocket(pockets[p]);
 			if (!pocket.contains_pt_xy(new_pos)) continue;
-			hit_pocket = 1;
 			cube_t ball_bc; ball_bc.set_from_sphere(new_pos, radius);
 			
 			if (pocket.contains_cube_xy(ball_bc)) {
