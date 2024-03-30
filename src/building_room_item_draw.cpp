@@ -642,8 +642,8 @@ void brg_batch_draw_t::clear_ext_tiles() {
 // shadow_only: 0=non-shadow pass, 1=shadow pass, 2=shadow pass with alpha mask texture
 void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int shadow_only, bool reflection_pass, bool exterior_geom) {
 	assert(!(exterior_geom && shadow_only)); // exterior geom shadows are not yet supported
-	if (shadow_only && !en_shadows)  return; // shadows not enabled for this material (picture, whiteboard, rug, etc.)
-	if (shadow_only && tex.emissive) return; // assume this is a light source and shouldn't produce shadows (also applies to bathroom windows, which don't produce shadows)
+	if (shadow_only && !en_shadows)         return; // shadows not enabled for this material (picture, whiteboard, rug, etc.)
+	if (shadow_only && tex.emissive == 1.0) return; // assume this is a light source and shouldn't produce shadows
 	if (reflection_pass && tex.tid == REFLECTION_TEXTURE_ID) return; // don't draw reflections of mirrors as this doesn't work correctly
 	if (num_verts == 0) return; // Note: should only happen when reusing materials and all objects using this material were removed
 	// VFC test for shadow pass on sparse materials that have their bcubes calculated; only really helps with backrooms;
