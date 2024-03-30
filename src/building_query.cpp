@@ -1421,6 +1421,11 @@ point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &build
 	return closest;
 }
 
+bool line_quad_intersect(point const &p1, point const &p2, point const *const pts, float &t) {
+	float tmin(0.0);
+	if (line_poly_intersect(p1, p2, pts, 4, get_poly_norm(pts), tmin) && tmin < t) {t = tmin; return 1;}
+	return 0;
+}
 bool line_int_polygon_sides(point const &p1, point const &p2, cube_t const &bcube, vect_point const &points, float &t) {
 	point quad_pts[4]; // quads
 	bool hit(0);
@@ -1430,8 +1435,7 @@ bool line_int_polygon_sides(point const &p1, point const &p2, cube_t const &bcub
 			point const &p(points[(S+d)%points.size()]);
 			for (unsigned e = 0; e < 2; ++e) {quad_pts[ix++].assign(p.x, p.y, bcube.d[2][d^e]);}
 		}
-		float tmin(0.0);
-		if (line_poly_intersect(p1, p2, quad_pts, 4, get_poly_norm(quad_pts), tmin) && tmin < t) {t = tmin; hit = 1;}
+		hit |= line_quad_intersect(p1, p2, quad_pts, t);
 	} // for S
 	return hit;
 }

@@ -2144,7 +2144,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 		intersect = line_intersect_tiled_mesh(pos, pos2, coll_pos, 1); // check terrain; inc_trees=1
 		point p_int;
 		
-		if (line_intersect_city(pos, pos2, p_int)) { // check city (buildings and cars)
+		if (line_intersect_city(pos, pos2, p_int)) { // check city (buildings, cars, bridges, tunnels, city objects, etc.)
 			if (!intersect || p2p_dist_sq(pos, p_int) < p2p_dist_sq(pos, coll_pos)) { // keep closest intersection point
 				if (damage > 0.0) {destroy_city_in_radius((p_int + vcf*object_types[PROJC].radius), 0.0);} // destroy whatever is at this location
 				coll_pos = p_int;

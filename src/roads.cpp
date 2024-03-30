@@ -18,6 +18,7 @@ string gen_random_name(rand_gen_t &rgen, bool for_universe=0); // from Universe_
 string gen_random_first_name(rand_gen_t &rgen); // from pedestrians.cpp
 void add_cylin_as_tris(vector<vert_norm_tc_color> &verts, point const ce[2], float r1, float r2, color_wrapper const &cw,
 	unsigned ndiv, unsigned draw_top_bot, float tst=1.0, float tss=1.0, bool swap_ts_tt=0);
+bool line_quad_intersect(point const &p1, point const &p2, point const *const pts, float &t);
 
 class road_name_gen_t {
 	static string get_numbered_street_name(unsigned num) {
@@ -987,7 +988,7 @@ cube_t tunnel_t::get_tunnel_bcube() const {
 	return bcube;
 }
 
-void tunnel_t::calc_top_bot_side_cubes(cube_t cubes[4]) const {
+void tunnel_t::calc_top_bot_side_cubes(cube_t cubes[4]) const { // {bottom, top, left, right}
 	float const wall_thick(TUNNEL_WALL_THICK*city_params.road_width), end_ext(2.0*(dim ? DY_VAL : DX_VAL));
 	cube_t tc(*this);
 	tc.d[dim][0] -= end_ext; tc.d[dim][1] += end_ext; // extend to cover the gaps in the mesh
@@ -1031,7 +1032,7 @@ void tunnel_t::calc_zvals_and_eext(float &zf, float &zb, float &end_ext) const {
 bool tunnel_t::line_intersect(point const &p1, point const &p2, float &t) const {
 	cube_t const bcube(get_tunnel_bcube());
 	if (!check_line_clip(p1, p2, bcube.d)) return 0;
-	cube_t cubes[4];
+	cube_t cubes[4]; // {bottom, top, left, right}
 	calc_top_bot_side_cubes(cubes);
 	float const wall_thick(TUNNEL_WALL_THICK*city_params.road_width), width(max(0.5*get_width(), 2.0*(dim ? DX_VAL : DY_VAL)));
 	float zf, zb, end_ext;
@@ -1039,10 +1040,16 @@ bool tunnel_t::line_intersect(point const &p1, point const &p2, float &t) const 
 	bool const d(dim);
 	bool ret(0);
 
-	for (unsigned i = 0; i < 4; ++i) { // check tunnel top, bottom, and sides
-		//cube_t const &c(cubes[i]);
-		//set_cube_pts(c, c.z1()+zf, c.z1()+zb, c.z2()+zf, c.z2()+zb, d, 0, pts); // TODO: tilted cube case
-	}
+	// check tunnel {bottom, top, left, right} as tilted cubes; this really isn't needed since line intersection tests are broken when under the terrain anyway
+	for (unsigned i = 0; i < 4; ++i) {
+		cube_t const &c(cubes[i]);
+		point p[8];
+		draw_state_t::set_cube_pts(c, c.z1()+zf, c.z1()+zb, c.z2()+zf, c.z2()+zb, d, 0, p);
+		if (i == 0) {ret |= line_quad_intersect(p1, p2, p+4, t);} // top
+		if (i == 1) {ret |= line_quad_intersect(p1, p2, p+0, t);} // bottom
+		if (i == 3) {point const pts1[4] = {p[1], p[2], p[6], p[5]}; ret |= line_quad_intersect(p1, p2, pts1, t);} // left
+		if (i == 2) {point const pts2[4] = {p[3], p[0], p[4], p[7]}; ret |= line_quad_intersect(p1, p2, pts2, t);} // right
+	} // for i
 	for (unsigned n = 0; n < 2; ++n) { // check tunnel facades (Note: similar to code in road_draw_state_t::draw_tunnel())
 		cube_t const &tend(ends[n]);
 		cube_t c(tend);
@@ -1330,7 +1337,7 @@ void road_draw_state_t::draw_tunnel(tunnel_t const &tunnel, bool shadow_only) { 
 	float const scale(1.0*city_params.road_width), wall_thick(TUNNEL_WALL_THICK*city_params.road_width), width(max(0.5*tunnel.get_width(), 2.0*(d ? DX_VAL : DY_VAL)));
 	float zf, zb, end_ext;
 	tunnel.calc_zvals_and_eext(zf, zb, end_ext);
-	cube_t cubes[4];
+	cube_t cubes[4]; // {bottom, top, left, right}
 	tunnel.calc_top_bot_side_cubes(cubes);
 	float const tile_sz(d ? MESH_Y_SIZE*DY_VAL : MESH_X_SIZE*DX_VAL), xy1(cubes[0].d[d][0]), xy2(cubes[0].d[d][1]), length(xy2 - xy1);
 	unsigned const num_segs(ceil(length/tile_sz));
