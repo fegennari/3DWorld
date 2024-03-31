@@ -1440,9 +1440,10 @@ void scenery_group::draw_opaque_objects(shader_t &s, shader_t &vrs, bool shadow_
 
 bool scenery_group::setup_voxel_rocks_shader(shader_t &vrs, bool shadow_only) const {
 
-	if (voxel_rocks.empty() || shadow_only)  return 0; // setup not needed
+	if (voxel_rocks.empty() || shadow_only) {return 0;} // setup not needed
 	if (vrs.is_setup()) {vrs.make_current(); return 1;} // already setup
-	bool const v(world_mode == WMODE_GROUND), use_noise_tex(0), use_bmap(0), use_smap(v); // FIXME: no TT shadow maps, fog not setup (not needed?)
+	// Note: no TT shadow maps (probably too slow for TT anyway), fog not setup (not needed?)
+	bool const v(world_mode == WMODE_GROUND), use_noise_tex(0), use_bmap(0), use_smap(v);
 	setup_procedural_shaders(vrs, 0.0, v, v, use_smap, use_bmap, use_noise_tex,
 		global_voxel_params.top_tex_used, global_voxel_params.tex_scale, global_voxel_params.noise_scale, global_voxel_params.tex_mix_saturate);
 	vrs.set_cur_color(WHITE);

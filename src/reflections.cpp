@@ -145,7 +145,7 @@ struct face_draw_params_t { // used for reflection cube maps
 		up_vector  = pdu.upv;
 		camera_pdu = pdu;
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-		//if (combined_gu) {draw_universe_bkg(1, 1);} // FIXME: infinite universe as background with no asteroid dust
+		//if (combined_gu) {draw_universe_bkg(1, 1);} // infinite universe as background with no asteroid dust?
 		coll_objects.cur_draw_stream_id = face_id;
 		vector3d const eye(pdu.pos - 0.001*cview_dir);
 		fgLookAt(eye.x, eye.y, eye.z, pdu.pos.x, pdu.pos.y, pdu.pos.z, up_vector.x, up_vector.y, up_vector.z);
