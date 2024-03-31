@@ -178,7 +178,6 @@ template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, 
 	if (dot_product(n, cp_sum) < 0.0) {n *= -1.0;}
 	static polygon_t new_poly;
 	new_poly.resize(3);
-	new_poly.color = poly.color;
 
 	// triangles can be empty if they're all small fragments that get dropped
 	for (unsigned i = 0; i < triangles.size(); ++i) {

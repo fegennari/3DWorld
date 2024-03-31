@@ -187,12 +187,11 @@ typedef vertex_map_t<vert_norm_tc_tan> vntct_map_t;
 
 struct get_polygon_args_t {
 	vector<coll_tquad> &polygons;
-	colorRGBA color;
 	bool quads_only=0;
 	unsigned lod_level=0;
 
-	get_polygon_args_t(vector<coll_tquad> &polygons_, colorRGBA const &color_, bool quads_only_=0, unsigned lod_level_=0)
-		: polygons(polygons_), color(color_), quads_only(quads_only_), lod_level(lod_level_) {}
+	get_polygon_args_t(vector<coll_tquad> &polygons_, bool quads_only_=0, unsigned lod_level_=0)
+		: polygons(polygons_), quads_only(quads_only_), lod_level(lod_level_) {}
 };
 
 

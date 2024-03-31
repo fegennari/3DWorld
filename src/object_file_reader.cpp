@@ -712,6 +712,7 @@ public:
 			polygon_t poly;
 			vntc_map_t vmap[2]; // {triangles, quads}
 			vntct_map_t vmap_tan[2]; // {triangles, quads}
+			colorRGBA color;
 
 			for (vector<poly_header_t>::const_iterator j = pd.polys.begin(); j != pd.polys.end(); ++j) {
 				poly.resize(j->npts);
@@ -739,9 +740,10 @@ public:
 					}
 					else {tcoord = tc[V.tix];}
 					poly[p] = vert_norm_tc(v[V.vix], normal, tcoord.x, tcoord.y);
-					if (!colors.empty()) {assert(V.vix < colors.size()); poly.color += colors[V.vix];}
+					if (!colors.empty()) {assert(V.vix < colors.size()); color += colors[V.vix];}
 				} // for p
-				if (!colors.empty()) {poly.color = poly.color/j->npts; poly.color.A = 1.0;} // uses average vertex color for each face/polygon, with alpha=1.0
+				if (!colors.empty()) {color = color/j->npts; color.A = 1.0;} // uses average vertex color for each face/polygon, with alpha=1.0
+				// TODO: use color; model3d doesn't support per-vertex colors
 				num_faces += model.add_polygon(poly, vmap, vmap_tan, j->mat_id, j->obj_id);
 				pix += j->npts;
 			} // for j

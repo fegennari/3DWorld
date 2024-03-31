@@ -357,13 +357,11 @@ class cobj_draw_groups {
 		cobj_draw_group() : parent(-1), parent_pos(all_zeros) {}
 		bool empty() const {return ids.empty();}
 	};
-
 	vector<coll_obj> dcobjs;
 	vector<cobj_draw_group> groups;
 
 	cobj_draw_group       &get_group(int group_id)       {assert(group_id >= 0 && group_id < (int)groups.size()); return groups[group_id];}
 	cobj_draw_group const &get_group(int group_id) const {assert(group_id >= 0 && group_id < (int)groups.size()); return groups[group_id];}
-
 public:
 	coll_obj const &get_cobj(unsigned index) const {
 		assert(index < dcobjs.size());
@@ -382,14 +380,10 @@ struct cobj_query_callback {
 };
 
 
-class polygon_t : public vector<vert_norm_tc> {
-
-public:
-	colorRGBA color;
-
-	polygon_t(colorRGBA const &c=ALPHA0) : color(c) {}
-	polygon_t(vector<vert_norm_tc> const &vv, colorRGBA const &c=ALPHA0) : vector<vert_norm_tc>(vv), color(c) {}
-	polygon_t(triangle const &t, colorRGBA const &c=WHITE) : color(c) {from_triangle(t);}
+struct polygon_t : public vector<vert_norm_tc> {
+	polygon_t() {}
+	polygon_t(vector<vert_norm_tc> const &vv) : vector<vert_norm_tc>(vv) {}
+	polygon_t(triangle const &t) {from_triangle(t);}
 	void from_triangle(triangle const &t);
 	bool is_convex() const;
 	bool is_coplanar(float thresh) const;
@@ -400,7 +394,6 @@ public:
 
 
 struct coll_tquad : public tquad_t { // size = 68
-
 	vector3d normal;
 	
 	union {
@@ -408,8 +401,9 @@ struct coll_tquad : public tquad_t { // size = 68
 		color_wrapper color;
 	};
 	coll_tquad() : cid(0) {}
+	coll_tquad(colorRGBA const &c) : color(c) {}
 	coll_tquad(coll_obj const &c);
-	coll_tquad(polygon_t const &p);
+	coll_tquad(polygon_t const &p, colorRGBA const &c=WHITE);
 	coll_tquad(triangle const &t, colorRGBA const &c=WHITE);
 	void update_normal() {get_normal(pts[0], pts[1], pts[2], normal, 1);}
 
@@ -434,10 +428,9 @@ void copy_tquad_to_cobj(coll_tquad const &tquad, coll_obj &cobj);
 
 struct coll_cell { // size = 52
 
-	float zmin, zmax;
+	float zmin=FAR_DISTANCE, zmax=-FAR_DISTANCE;
 	vector<int> cvals;
 
-	coll_cell() : zmin(FAR_DISTANCE), zmax(-FAR_DISTANCE) {}
 	void clear(bool clear_vectors);
 
 	void update_zmm(float zmin_, float zmax_) {

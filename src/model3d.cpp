@@ -809,7 +809,7 @@ template<typename T> void indexed_vntc_vect_t<T>::reserve_for_num_verts(unsigned
 }
 
 template<typename T> void indexed_vntc_vect_t<T>::add_poly(polygon_t const &poly, vertex_map_t<T> &vmap) {
-	for (unsigned i = 0; i < poly.size(); ++i) {add_vertex(poly[i], vmap);} // FIXME: ignores poly color
+	for (unsigned i = 0; i < poly.size(); ++i) {add_vertex(poly[i], vmap);}
 }
 
 template<typename T> void indexed_vntc_vect_t<T>::add_triangle(triangle const &t, vertex_map_t<T> &vmap) {
@@ -887,8 +887,9 @@ template<typename T> void indexed_vntc_vect_t<T>::get_polygons(get_polygon_args_
 	}
 	unsigned const nv(num_verts());
 	if (nv == 0) return;
+	assert(npts ==3 || npts == 4);
 	assert((nv % npts) == 0);
-	polygon_t poly(args.color), quad_poly(args.color);
+	polygon_t poly, quad_poly;
 	poly.resize(npts);
 	quad_poly.resize(4);
 
@@ -984,16 +985,13 @@ template<typename T> void indexed_vntc_vect_t<T>::write_to_obj_file(ostream &out
 // ************ polygon_t ************
 
 void polygon_t::from_triangle(triangle const &t) {
-
 	resize(3);
 	float const tc[2] = {0.0, 0.0}; // all zero?
 	vector3d const normal(t.get_normal());
 	UNROLL_3X(operator[](i_) = vert_norm_tc(t.pts[i_], normal, tc);)
 }
 
-
 bool polygon_t::is_convex() const {
-
 	unsigned const npts((unsigned)size());
 	assert(npts >= 3);
 	if (npts == 3) return 1;
@@ -1007,9 +1005,7 @@ bool polygon_t::is_convex() const {
 	return !(counts[0] && counts[1]);
 }
 
-
 bool polygon_t::is_coplanar(float thresh) const {
-
 	assert(size() >= 3);
 	if (size() == 3 || thresh == 0.0) return 1;
 	vector3d n2;
@@ -1017,18 +1013,14 @@ bool polygon_t::is_coplanar(float thresh) const {
 	return (dot_product(get_planar_normal(), n2) > thresh);
 }
 
-
 vector3d polygon_t::get_planar_normal() const {
-
 	assert(size() >= 3);
 	vector3d norm;
 	get_normal((*this)[0].v, (*this)[1].v, (*this)[2].v, norm, 1);
 	return norm;
 }
 
-
 void polygon_t::from_points(vector<point> const &pts) {
-
 	resize(pts.size());
 	for (unsigned i = 0; i < size(); ++i) {(*this)[i].v = pts[i];}
 }
@@ -1594,13 +1586,10 @@ void model3d::get_polygons(vector<coll_tquad> &polygons, bool quads_only, bool a
 		unsigned const num_copies((!apply_transforms || transforms.empty()) ? 1 : transforms.size());
 		polygons.reserve(num_copies*(quads_only ? stats.quads : (stats.tris + 1.5*stats.quads)));
 	}
-	colorRGBA def_color(WHITE);
-	if (unbound_mat.tid >= 0) {def_color.modulate_with(texture_color(unbound_mat.tid));}
-	get_polygon_args_t args(polygons, def_color, quads_only, lod_level);
+	get_polygon_args_t args(polygons, quads_only, lod_level);
 	unbound_geom.get_polygons(args);
 
 	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
-		args.color = m->get_avg_color(tmgr, unbound_mat.tid);
 		m->geom.get_polygons    (args);
 		m->geom_tan.get_polygons(args);
 	}
@@ -1654,11 +1643,11 @@ template<typename T> unsigned add_polygons_to_voxel_grid(vector<coll_tquad> &pol
 	cont.get_stats(stats);
 	polygons.clear();
 	polygons.reserve(stats.quads);
-	get_polygon_args_t args(polygons, WHITE, 1); // quads_only=1
+	get_polygon_args_t args(polygons, 1); // quads_only=1
 	cont.get_polygons(args);
 	xform_polygons(polygons, xf, 0);
 	
-	for (vector<coll_tquad>::const_iterator i = polygons.begin(); i != polygons.end(); ++i) {
+	for (vector<coll_tquad>::const_iterator i = polygons.begin(); i != polygons.end(); ++i) { // Note: colors are unused
 		assert(i->npts == 4);
 		if (fabs(i->normal.z) < 0.99) continue; // only keep top/bottom cube sides
 		cube_t const bcube(i->get_bcube());
