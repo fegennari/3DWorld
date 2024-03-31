@@ -1115,7 +1115,7 @@ bool building_t::all_room_int_doors_closed(unsigned room_ix, float zval) const {
 	return 1;
 }
 
-// Note: called on basketballs, soccer balls, and particles
+// Note: called on balls and particles
 bool building_interior_t::check_sphere_coll(building_t const &building, point &pos, point const &p_last, float radius,
 	vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix, bool is_ball) const
 {
@@ -1127,7 +1127,7 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 		max_eq(scube.z2(), (p_last.z - radius)); // extend up to touch the bottom of the last position to prevent it from going through the floor in one frame
 
 		for (auto i = floors.begin(); i != floors.end(); ++i) {
-			if (!i->intersects(scube)) continue; // overlap
+			if (!i->intersects(scube) || !i->contains_pt_xy(pos)) continue; // no overlap
 			pos.z = i->z2() + radius; // move to just touch the top of the floor
 			cnorm = plus_z; // collision with top surface of floor
 			had_coll = 1; hardness = 1.0;
