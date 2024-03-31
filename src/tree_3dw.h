@@ -149,15 +149,6 @@ public:
 		int tree_type, float deadness, float br_scale, float nl_scale, bool has_4th_branches, int tree_size);
 };
 
-
-//#define USE_TREE_BB_TEX_ATLAS
-
-#ifdef USE_TREE_BB_TEX_ATLAS
-typedef texture_atlas_t tree_bb_tex_t;
-#else
-typedef texture_pair_t tree_bb_tex_t;
-#endif
-
 bool const TREE_BILLBOARD_MULTISAMPLE = 0;
 
 
@@ -173,7 +164,7 @@ class tree_data_t {
 	vector<leaf_vert_type_t> leaf_data;
 	vector<draw_cylin> all_cylins;
 	vector<tree_leaf> leaves;
-	tree_bb_tex_t render_leaf_texture, render_branch_texture;
+	texture_pair_t render_leaf_texture, render_branch_texture;
 	int last_update_frame=0;
 	unsigned leaf_change_start=0, leaf_change_end=0;
 	bool reset_leaves=0, has_4th_branches=0;
@@ -213,8 +204,8 @@ public:
 	void draw_branches(float size_scale, bool force_low_detail, bool shadow_pass=0);
 	void ensure_leaf_vbo();
 	void draw_leaves(float size_scale);
-	tree_bb_tex_t const &get_render_leaf_texture  () const {return render_leaf_texture  ;}
-	tree_bb_tex_t const &get_render_branch_texture() const {return render_branch_texture;}
+	texture_pair_t const &get_render_leaf_texture  () const {return render_leaf_texture  ;}
+	texture_pair_t const &get_render_branch_texture() const {return render_branch_texture;}
 	bool leaf_draw_setup(bool no_leaf_reset);
 	void check_render_textures();
 	void update_normal_for_leaf(unsigned i);

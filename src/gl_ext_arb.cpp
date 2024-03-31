@@ -361,33 +361,6 @@ void render_to_texture_t::render(texture_pair_t &tpair, float xsize, float ysize
 }
 
 
-void render_to_texture_t::render(texture_atlas_t &atlas, float xsize, float ysize, point const &center, vector3d const &view_dir,
-	colorRGBA const &bkg_color, bool use_depth_buffer, bool mipmap)
-{
-	assert(!(mipmap && atlas.multisample));
-	assert(atlas.nx == 2 && atlas.ny == 1); // for now
-	pre_render(atlas.nx*xsize, atlas.ny*ysize, atlas.nx, atlas.ny, center, view_dir); // setup matrices, etc.
-	atlas.ensure_tid(tsize, mipmap);
-	unsigned fbo_id(0);
-	enable_fbo(fbo_id, atlas.tid, 0, atlas.multisample); // too slow to create and free fbos every time?
-	unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(atlas.nx*tsize, atlas.ny*tsize, atlas.multisample) : 0);
-	set_temp_clear_color(bkg_color, use_depth_buffer); // TODO: can only set a single clear color; should we draw a full quad to set the clear normal?
-	vector3d xlate(2.0*xsize, 0.0, 0.0);
-	rotate_vector3d_by_vr(-plus_z, view_dir, xlate);
-	translate_to(-0.5*xlate);
-
-	for (unsigned d = 0; d < 2; ++d) {
-		draw_geom(d != 0);
-		translate_to(xlate); // shift to next sub-texture region
-	}
-	//if (tpair.multisample) {glBlitFramebuffer(...);} // ???
-	if (use_depth_buffer) {disable_and_free_render_buffer(render_buffer);}
-	free_fbo(fbo_id);
-	if (mipmap) {build_texture_mipmaps(atlas.tid, 2);} // Note: if mipmapping is enabled, we should use a buffer region between the two sub-textures
-	post_render(); // restore state
-}
-
-
 // ***************** SSBOs *****************
 
 // See: https://www.geeks3d.com/20140704/tutorial-introduction-to-opengl-4-3-shader-storage-buffers-objects-ssbo-demo/

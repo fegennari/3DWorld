@@ -142,7 +142,7 @@ struct render_tree_leaves_to_texture_t : public render_tree_to_texture_t {
 		tree_data_t::post_leaf_draw();
 		s.disable();
 	}
-	void render_tree(tree_data_t &t, tree_bb_tex_t &ttex, vector3d const &view_dir=plus_y) {
+	void render_tree(tree_data_t &t, texture_pair_t &ttex, vector3d const &view_dir=plus_y) {
 		if (!shaders[0].is_setup()) {setup_shader("texture_gen.part+tree_leaves_no_lighting", "simple_texture",        0);} // colors
 		if (!shaders[1].is_setup()) {setup_shader("texture_gen.part+tree_leaves_no_lighting", "write_normal_textured", 1);} // normals
 		cur_tree = &t;
@@ -166,7 +166,7 @@ struct render_tree_branches_to_texture_t : public render_tree_to_texture_t {
 		tree_data_t::post_branch_draw(0);
 		s.disable();
 	}
-	void render_tree(tree_data_t &t, tree_bb_tex_t &ttex, vector3d const &view_dir=plus_y) {
+	void render_tree(tree_data_t &t, texture_pair_t &ttex, vector3d const &view_dir=plus_y) {
 		if (!shaders[0].is_setup()) {setup_shader("no_lighting_tex_coord",     "simple_texture",        0);} // colors
 		if (!shaders[1].is_setup()) {setup_shader("tree_branches_no_lighting", "write_normal_textured", 1);} // normals
 		cur_tree = &t;
@@ -871,16 +871,10 @@ void tree::shift_tree(vector3d const &vd) {
 void tree_data_t::check_render_textures() {
 
 	if (!render_leaf_texture.is_valid() && !leaves.empty()) {
-#ifdef USE_TREE_BB_TEX_ATLAS
-		render_leaf_texture.nx = 2;
-#endif
 		render_tree_leaves_to_texture_t renderer(TREE_BILLBOARD_SIZE);
 		renderer.render_tree(*this, render_leaf_texture);
 	}
 	if (!render_branch_texture.is_valid() && !all_cylins.empty()) {
-#ifdef USE_TREE_BB_TEX_ATLAS
-		render_branch_texture.nx = 2;
-#endif
 		render_tree_branches_to_texture_t renderer(TREE_BILLBOARD_SIZE);
 		renderer.render_tree(*this, render_branch_texture);
 	}

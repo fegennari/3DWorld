@@ -336,10 +336,10 @@ void build_texture_mipmaps(unsigned tid, unsigned dim);
 
 struct texture_pair_t {
 
-	unsigned tids[2]; // color, normal
+	unsigned tids[2]={}; // color, normal
 	bool multisample;
 
-	texture_pair_t(bool multisample_=0) : multisample(multisample_) {tids[0] = tids[1] = 0;}
+	texture_pair_t(bool multisample_=0) : multisample(multisample_) {}
 	bool is_valid() const {return (tids[0] > 0 && tids[1] > 0);}
 	void free_context();
 	void bind_texture() const;
@@ -349,14 +349,13 @@ struct texture_pair_t {
 	bool operator< (texture_pair_t const &tp) const {return ((tids[0] == tp.tids[0]) ? (tids[1] < tp.tids[1]) : (tids[0] < tp.tids[0]));}
 };
 
+struct texture_atlas_t { // unused
 
-struct texture_atlas_t {
-
-	unsigned tid, nx, ny;
+	unsigned tid=0, nx=1, ny=1;
 	bool multisample;
 
-	texture_atlas_t(bool multisample_=0) : tid(0), nx(1), ny(1), multisample(multisample_) {}
-	texture_atlas_t(unsigned nx_, unsigned ny_, bool multisample_=0) : tid(0), nx(nx_), ny(ny_), multisample(multisample_) {}
+	texture_atlas_t(bool multisample_=0) : multisample(multisample_) {}
+	texture_atlas_t(unsigned nx_, unsigned ny_, bool multisample_=0) : nx(nx_), ny(ny_), multisample(multisample_) {}
 	bool is_valid() const {return (tid > 0);}
 	void free_context();
 	void bind_texture() const;
@@ -373,13 +372,10 @@ class render_to_texture_t {
 
 	void pre_render(float xsize, float ysize, unsigned nx, unsigned ny, point const &center, vector3d const &view_dir) const;
 	static void post_render();
-
 public:
 	render_to_texture_t(unsigned tsize_) : tsize(tsize_) {}
 	virtual ~render_to_texture_t() {}
 	void render(texture_pair_t &tpair, float xsize, float ysize, point const &center, vector3d const &view_dir,
-		colorRGBA const &bkg_color, bool use_depth_buffer, bool mipmap);
-	void render(texture_atlas_t &atlas, float xsize, float ysize, point const &center, vector3d const &view_dir,
 		colorRGBA const &bkg_color, bool use_depth_buffer, bool mipmap);
 	virtual void draw_geom(bool is_normal_pass) = 0;
 };
