@@ -775,6 +775,8 @@ void stationary_obj::draw_obj(uobj_draw_data &ddata) const {
 		case SO_BLACK_HOLE:
 			ddata.draw_black_hole();
 			break;
+		case SO_ASTEROID:
+			assert(0); // not implemented
 		default:
 			assert(0);
 	}

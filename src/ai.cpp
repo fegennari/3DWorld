@@ -458,7 +458,7 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 							if (sstates != nullptr && i != smiley_id && sstates[i].last_waypoint >= 0) {wps_used.insert(sstates[i].last_waypoint);}
 						}
 #endif
-						// FIXME: skip path waypoints that are in unreachable[1]?
+						// skip path waypoints where unreachable[1].cant_reach(p) is true?
 						curw = next_path_wpt = find_optimal_next_waypoint(curw, goal, wps_used); // can return -1
 
 						for (unsigned i = 0; i < next.size(); ++i) {
@@ -940,7 +940,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 
 			// check if movement was valid
 			pos_dir_up const pdu(get_smiley_pdu(obj.pos, obj.orientation));
-			float const start_cost(using_dest_mark ? 0.0 : get_pos_cost(smiley_id, obj.pos, opos, pdu, radius, step_height, 0));
+			float const start_cost(using_dest_mark ? 0.0 : get_pos_cost(smiley_id, obj.pos, opos, pdu, radius, step_height, 0)); // higher is worse
 		
 			if (start_cost > 0.0) {
 				unsigned const ndirs(16);
@@ -953,7 +953,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 					dir_cost_t const cur(cost, dir, stepv);
 					if (i == 0 || cur < best) best = cur;
 				}
-				if (best.cost > 0.0) {} // FIXME: still not good, what to do?
+				if (best.cost > 0.0) {} // still not good, but we don't want to get stuck, so move anyway
 				obj.pos = opos + step_dist_scale(obj, best.dir)*step_dist;
 			}
 		}
