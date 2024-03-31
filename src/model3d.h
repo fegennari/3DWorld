@@ -598,7 +598,6 @@ public:
 	bool are_textures_loaded() const {return textures_loaded;}
 	void set_has_cobjs() {has_cobjs = 1;}
 	void add_transform(model3d_xform_t const &xf) {transforms.push_back(xf);}
-	unsigned add_triangles(vector<triangle> const &triangles, colorRGBA const &color, int mat_id=-1, unsigned obj_id=0);
 	unsigned add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id=-1, unsigned obj_id=0);
 	void add_triangle(polygon_t const &tri, vntc_map_t &vmap, int mat_id=-1, unsigned obj_id=0);
 	void get_polygons(vector<coll_tquad> &polygons, bool quads_only=0, bool apply_transforms=0, unsigned lod_level=0) const;

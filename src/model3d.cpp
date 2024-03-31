@@ -1534,21 +1534,6 @@ void coll_tquads_from_triangles(vector<triangle> const &triangles, vector<coll_t
 	for (unsigned i = 0; i < triangles.size(); ++i) ppts.push_back(coll_tquad(triangles[i], color));
 }
 
-unsigned model3d::add_triangles(vector<triangle> const &triangles, colorRGBA const &color, int mat_id, unsigned obj_id) {
-
-	// average_normals=1 should turn most of these face normals into vertex normals
-	vntc_map_t  vmap    [2] = {vntc_map_t (1), vntc_map_t (1)};
-	vntct_map_t vmap_tan[2] = {vntct_map_t(1), vntct_map_t(1)};
-	unsigned tot_added(0);
-	polygon_t poly(color);
-
-	for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
-		poly.from_triangle(*i);
-		tot_added += add_polygon(poly, vmap, vmap_tan, mat_id, obj_id);
-	}
-	return tot_added;
-}
-
 unsigned model3d::add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id, unsigned obj_id) {
 	
 	for (unsigned d = 0; d < 2; ++d) {
