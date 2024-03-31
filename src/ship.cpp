@@ -1072,7 +1072,6 @@ void draw_univ_objects() {
 	enable_blend(); // doesn't hurt
 
 	// setup emissive shader, which is used for ship shields and EMP (will be disabled by ship draw shader)
-	//emissive_shader.begin_simple_textured_shader(0.001); // textured, no lighting
 	setup_shield_shader(emissive_shader, 1);
 
 	// draw ubojs

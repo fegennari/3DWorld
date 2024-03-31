@@ -2782,8 +2782,7 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 			fgPushMatrix();
 			set_additive_blend_mode();
 			set_std_depth_func_with_eq();
-			// FIXME: disable alpha testing to avoid artifacts at the shields boundary? but then we have potential alpha sort order problems
-			//ddata.shader->add_uniform_float("min_alpha", -1.0);
+			glDepthMask(GL_FALSE); // disable depth write
 			assert(last_hit <= SHIELDS_TIME);
 			colorRGBA color_alpha(disabled() ? YELLOW : GREEN);
 			color_alpha.alpha = (0.5*last_hit)*min(1.0, 2.5*shields/get_max_shields())/SHIELDS_TIME; // decrease at 40% shields
@@ -2809,8 +2808,9 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 			assert(radius > 0.0);
 			emissive_shader.enable();
 			ddata.set_color(color_alpha);
-			draw_sphere_vbo_back_to_front(all_zeros, ssize, 3*ndiv/2, has_hit_dir); // partial sphere?
+			draw_sphere_vbo_back_to_front(all_zeros, ssize, min(48, 3*ndiv/2), has_hit_dir); // partial sphere?
 			glDisable(GL_CULL_FACE);
+			glDepthMask(GL_TRUE);
 			set_std_depth_func();
 			set_std_blend_mode();
 			ddata.shader->enable();
