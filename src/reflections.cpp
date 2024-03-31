@@ -132,7 +132,7 @@ void restore_matrices_and_clear() {
 }
 
 
-struct face_draw_params_t {
+struct face_draw_params_t { // used for reflection cube maps
 
 	pos_dir_up pdu;
 	unsigned face_id;

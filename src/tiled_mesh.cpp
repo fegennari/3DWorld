@@ -3910,7 +3910,7 @@ void inf_terrain_undo_hmap_mod() {
 	tex_mod_map_manager_t::hmap_brush_t brush;
 	if (!terrain_hmap_manager.pop_last_brush(brush)) return;
 	if (brush.is_flatten_brush()) return; // can't undo this brush since it's lossy
-	// FIXME: won't work if clamping to min/max height occurred when applying the brush the first time
+	// Note: won't work if clamping to min/max height occurred when applying the brush the first time
 	brush.delta = -brush.delta; // invert
 	terrain_hmap_manager.apply_brush(brush, get_tile_for_xy(brush.x, brush.y), 0); // don't cache
 }

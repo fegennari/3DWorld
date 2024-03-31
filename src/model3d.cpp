@@ -2710,7 +2710,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 	}
 	if (any_planar_reflective + any_cube_map_reflective > 1) {
 		cerr << "Error: Cannot mix planar reflections and cube map reflections for model3ds" << endl;
-		exit(1); // FIXME: better/earlier error? make this work?
+		exit(1); // unsupported by shaders, but there are currently no cases that get here/need this
 	}
 	if (!needs_trans_pass && !(trans_op_mask & 1)) return; // transparent only pass, but no transparent materials
 	bool const any_animated(num_models_with_animations > 0), all_animated(num_models_with_animations == size());
