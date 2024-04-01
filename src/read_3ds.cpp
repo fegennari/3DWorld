@@ -423,7 +423,7 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 					assert(face_id < sgroups.size());
 					sgroup = sgroups[face_id];
 				}
-				if (sgroup > 0) {} // TODO: use sgroup
+				if (sgroup > 0) {} // future work
 				point pts[3];
 				get_triangle_pts(*i, verts, pts);
 				vector3d normal(get_poly_norm(pts));

@@ -508,10 +508,9 @@ void draw_sun_moon_stars(bool no_update) {
 }
 
 
-void draw_universe_bkg(bool reflection_mode=0, bool disable_asteroid_dust=0) { // Note: reflection_mode is for tiled terrain only
+void draw_universe_bkg() {
 
 	RESET_TIME;
-
 	// setup sun position and related parameters
 	update_sun_and_moon();
 	point const camera(get_camera_pos()), new_sp(sun_pos.get_norm()), player_pos(get_player_pos());
@@ -530,24 +529,14 @@ void draw_universe_bkg(bool reflection_mode=0, bool disable_asteroid_dust=0) { /
 	rotate_vector3d_by_vr(new_sp, old_sp, camera_r);
 	translate_to(camera_r - player_pos); // shift player_pos to camera pos
 
-	if (reflection_mode) { // setup mirror transform
-		vector3d norm(0.0, 0.0, 1.0); // MZ
-		rotate_vector3d_by_vr(new_sp, old_sp, norm);
-		mirror_about_plane(norm, player_pos); // FIXME: doesn't use water_plane_z, so can't really be correct?
-		//mirror_about_plane(norm, (player_pos + UNIV_NCLIP_SCALE*norm*(water_plane_z - camera.z)));
-		set_player_dir(get_player_dir() - 2*norm*dot_product(get_player_dir(), norm)); // reflect the player view frustum dir
-		set_univ_pdu();
-	}
-
 	// draw universe as background
-	if (!reflection_mode) {config_bkg_color_and_clear(1);}
+	config_bkg_color_and_clear(1);
 	point const camera_pos_orig(camera_pos);
 	camera_pos = player_pos; // trick universe code into thinking the camera is at the player's ship
 	stop_player_ship();
 	if (TIMETEST) PRINT_TIME("0.1");
 	bool const camera_above_clouds(world_mode == WMODE_INF_TERRAIN && camera_pos_orig.z > get_tt_cloud_level());
-	bool const no_stars((is_cloudy || (atmosphere > 0.8 && light_factor >= 0.6)) && !camera_above_clouds);
-	bool const no_asteroid_dust(disable_asteroid_dust || reflection_mode || no_stars);
+	bool const no_stars((is_cloudy || (atmosphere > 0.8 && light_factor >= 0.6)) && !camera_above_clouds), no_asteroid_dust(no_stars);
 	draw_universe(1, 1, 1, (no_stars ? 2 : 0), 0, no_asteroid_dust); // could clip by horizon?
 	if (TIMETEST) PRINT_TIME("0.2");
 	camera_pos = camera_pos_orig;
@@ -565,7 +554,6 @@ void draw_universe_bkg(bool reflection_mode=0, bool disable_asteroid_dust=0) { /
 	// setup background and init for standard mesh draw
 	if (light_factor > 0.4) { // translucent blue for atmosphere
 		colorRGBA color(bkg_color);
-		if (reflection_mode) {color = cur_fog_color;} // make the sky reflection in the background blend with the fog in the foreground
 		color.alpha *= 0.75*atmosphere*min(1.0, (light_factor - 0.4)/0.2);
 		vector<camera_filter> cfs;
 		cfs.push_back(camera_filter(color, 1, -1, 0));
@@ -1004,7 +992,7 @@ void display() {
 			create_reflection_and_portal_textures();
 
 			// draw background
-			if (combined_gu) {draw_universe_bkg(0);} // infinite universe as background
+			if (combined_gu) {draw_universe_bkg();} // infinite universe as background
 			else {
 				draw_sun_moon_stars(0);
 				draw_earth();
@@ -1282,7 +1270,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 		upload_smoke_indir_texture();
 	}
 	if (combined_gu) {
-		draw_universe_bkg(0); // infinite universe as background
+		draw_universe_bkg(); // infinite universe as background
 		check_gl_error(4);
 	}
 	else {

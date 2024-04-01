@@ -31,7 +31,6 @@ void setup_sun_moon_light_pos();
 void do_look_at();
 void draw_sun_moon_stars(bool no_update);
 void draw_sun_flare(int ignore_cobj=-1, float intensity=1.0);
-void draw_universe_bkg(bool reflection_mode=0, bool disable_asteroid_dust=0);
 
 
 bool  enable_all_reflections () {return ((display_mode & 0x10) != 0);}
@@ -145,7 +144,6 @@ struct face_draw_params_t { // used for reflection cube maps
 		up_vector  = pdu.upv;
 		camera_pdu = pdu;
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-		//if (combined_gu) {draw_universe_bkg(1, 1);} // infinite universe as background with no asteroid dust?
 		coll_objects.cur_draw_stream_id = face_id;
 		vector3d const eye(pdu.pos - 0.001*cview_dir);
 		fgLookAt(eye.x, eye.y, eye.z, pdu.pos.x, pdu.pos.y, pdu.pos.z, up_vector.x, up_vector.y, up_vector.z);
@@ -286,7 +284,6 @@ void create_gm_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, 
 	camera_pdu.apply_z_mirror(zval); // setup reflected camera frustum
 	// TODO: use x/y bcube bounds to clip reflected view frustum
 	camera_pdu.near_ = max(camera_pdu.near_, min_camera_dist); // move near clip plane to closest edge of ref plane bcube (optimization)
-	//if (combined_gu) {draw_universe_bkg(1, 1);} // FIXME: infinite universe as background with no asteroid dust
 	pos_dir_up const refl_camera_pdu(camera_pdu);
 	setup_viewport_and_proj_matrix(xsize, ysize);
 	apply_z_mirror(zval); // setup mirror transform
