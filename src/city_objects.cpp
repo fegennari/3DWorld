@@ -261,7 +261,6 @@ void trashcan_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 		}
 	}
 }
-// used for trashcans and fire hydrants
 bool sphere_city_obj_cylin_coll(point const &cpos, float cradius, point &spos, point const &p_last, float sradius, point const &xlate, vector3d *cnorm) {
 	point const pos2(cpos + xlate);
 	float const r_sum(cradius + sradius);
@@ -1158,6 +1157,12 @@ manhole_t::manhole_t(point const &pos_, float radius_) : city_obj_t(pos_, radius
 void manhole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	unsigned const ndiv(max(4U, min(32U, unsigned(1.0f*dist_scale*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, pos)))));
 	draw_circle_normal(0.0, radius, ndiv, 0, point(pos.x, pos.y, pos.z+get_height()), -1.0); // draw top surface, invert texture coords
+}
+
+// trampolines
+
+bool trampoline_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	return sphere_city_obj_cylin_coll(pos, 0.25*(bcube.dx() + bcube.dy()), pos_, p_last, radius_, xlate, cnorm);
 }
 
 // traffic cones
