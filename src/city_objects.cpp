@@ -44,14 +44,26 @@ vector3d oriented_city_obj_t::get_orient_dir() const {
 	return orient;
 }
 
+bool sphere_city_obj_cylin_coll(point const &cpos, float cradius, point &spos, point const &p_last, float sradius, point const &xlate, vector3d *cnorm) {
+	point const pos2(cpos + xlate);
+	float const r_sum(cradius + sradius);
+	if (!dist_less_than(spos, pos2, r_sum)) return 0; // use sphere/vert cylinder instead?
+	// since this is a cylinder, and we're not supposed to stand on top of it, assume collision normal is in the XY plane
+	vector3d const coll_norm(vector3d((spos.x - pos2.x), (spos.y - pos2.y), 0.0).get_norm());
+	spos += coll_norm*(r_sum - p2p_dist(spos, pos2)); // move away from pos2
+	if (cnorm) {*cnorm = coll_norm;}
+	return 1;
+}
+
 // model_city_obj_t
 
 model_city_obj_t::model_city_obj_t(cube_t const &bcube_, bool dim_, bool dir_) : oriented_city_obj_t(dim_, dir_) {
 	bcube = bcube_;
 	set_bsphere_from_bcube(); // recompute bsphere from bcube
 }
-model_city_obj_t::model_city_obj_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_id) : // can't call get_model_id() virtual, must pass model_id in
-	oriented_city_obj_t(pos_, 0.5*height, dim_, dir_) // radius = 0.5*height
+// can't call get_model_id() virtual, must pass model_id in
+model_city_obj_t::model_city_obj_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_id, bool is_cylinder_) :
+	oriented_city_obj_t(pos_, 0.5*height, dim_, dir_), is_cylinder(is_cylinder_) // radius = 0.5*height
 {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id)); // D, W, H
 	vector3d expand;
@@ -67,9 +79,13 @@ void model_city_obj_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float 
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 	building_obj_model_loader.draw_model(dstate.s, pos, bcube, get_orient_dir(), WHITE, dstate.xlate, get_model_id(), shadow_only);
 }
+bool model_city_obj_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	if (!is_cylinder) {return oriented_city_obj_t::proc_sphere_coll(pos_, p_last, radius_, xlate, cnorm);} // use default cube collision
+	return sphere_city_obj_cylin_coll(pos, get_xy_radius(), pos_, p_last, radius_, xlate, cnorm);
+}
 
-multi_model_city_obj_t::multi_model_city_obj_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_id, unsigned model_select) :
-	model_city_obj_t(pos_, height, dim_, dir_, model_id), full_model_id(model_id + (model_select << 8)) {}
+multi_model_city_obj_t::multi_model_city_obj_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_id, unsigned model_select, bool is_cylinder_) :
+	model_city_obj_t(pos_, height, dim_, dir_, model_id, is_cylinder_), full_model_id(model_id + (model_select << 8)) {}
 
 // benches
 
@@ -261,16 +277,6 @@ void trashcan_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 		}
 	}
 }
-bool sphere_city_obj_cylin_coll(point const &cpos, float cradius, point &spos, point const &p_last, float sradius, point const &xlate, vector3d *cnorm) {
-	point const pos2(cpos + xlate);
-	float const r_sum(cradius + sradius);
-	if (!dist_less_than(spos, pos2, r_sum)) return 0; // use sphere/vert cylinder instead?
-	// since this is a cylinder, and we're not supposed to stand on top of it, assume collision normal is in the XY plane
-	vector3d const coll_norm(vector3d((spos.x - pos2.x), (spos.y - pos2.y), 0.0).get_norm());
-	spos += coll_norm*(r_sum - p2p_dist(spos, pos2)); // move away from pos2
-	if (cnorm) {*cnorm = coll_norm;}
-	return 1;
-}
 bool trashcan_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	if (!is_cylin) {return city_obj_t::proc_sphere_coll(pos_, p_last, radius_, xlate, cnorm);} // use base class cube coll for cube trashcans
 	return sphere_city_obj_cylin_coll(pos, get_cylin_radius(), pos_, p_last, radius_, xlate, cnorm);
@@ -323,10 +329,6 @@ bool fire_hydrant_t::proc_sphere_coll(point &pos_, point const &p_last, float ra
 }
 /*static*/ void fountain_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_scale", 0.5);} // set hemispherical lighting back to the default
-}
-bool fountain_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
-	float const coll_radius(0.25*(bcube.dx() + bcube.dy())); // assume square-ish
-	return sphere_city_obj_cylin_coll(pos, coll_radius, pos_, p_last, radius_, xlate, cnorm);
 }
 
 // plot dividers
@@ -1157,12 +1159,6 @@ manhole_t::manhole_t(point const &pos_, float radius_) : city_obj_t(pos_, radius
 void manhole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	unsigned const ndiv(max(4U, min(32U, unsigned(1.0f*dist_scale*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, pos)))));
 	draw_circle_normal(0.0, radius, ndiv, 0, point(pos.x, pos.y, pos.z+get_height()), -1.0); // draw top surface, invert texture coords
-}
-
-// trampolines
-
-bool trampoline_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
-	return sphere_city_obj_cylin_coll(pos, 0.25*(bcube.dx() + bcube.dy()), pos_, p_last, radius_, xlate, cnorm);
 }
 
 // traffic cones

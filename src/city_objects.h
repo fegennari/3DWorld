@@ -56,16 +56,19 @@ struct oriented_city_obj_t : public city_obj_t {
 };
 
 struct model_city_obj_t : public oriented_city_obj_t {
+	bool is_cylinder=0;
 	model_city_obj_t(cube_t const &bcube_, bool dim_, bool dir_);
-	model_city_obj_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_id);
+	model_city_obj_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_id, bool is_cylinder_=0);
 	virtual ~model_city_obj_t() {}
 	virtual unsigned get_model_id() const = 0;
+	float get_xy_radius() const {assert(is_cylinder); return 0.25*(bcube.dx() + bcube.dy());} // assume square-ish
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
 struct multi_model_city_obj_t : public model_city_obj_t {
 	unsigned full_model_id=0;
-	multi_model_city_obj_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_id, unsigned model_select);
+	multi_model_city_obj_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_id, unsigned model_select, bool is_cylinder_=0);
 	virtual unsigned get_model_id() const {return full_model_id;}
 };
 
@@ -112,10 +115,10 @@ struct substation_t : public model_city_obj_t {
 };
 
 struct fountain_t : public multi_model_city_obj_t {
-	fountain_t(point const &pos_, float height, unsigned model_select) : multi_model_city_obj_t(pos_, height, 0, 0, OBJ_MODEL_FOUNTAIN, model_select) {} // dim=0, dir=0
+	fountain_t(point const &pos_, float height, unsigned model_select) :
+		multi_model_city_obj_t(pos_, height, 0, 0, OBJ_MODEL_FOUNTAIN, model_select, 1) {} // dim=0, dir=0, is_cylinder=1
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
-	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
 struct divider_t : public oriented_city_obj_t {
@@ -231,14 +234,13 @@ struct swingset_t : public model_city_obj_t {
 };
 
 struct trampoline_t : public model_city_obj_t {
-	trampoline_t(point const &pos_, float height, bool dim_, bool dir_) : model_city_obj_t(pos_, height, dim_, dir_, get_model_id()) {}
+	trampoline_t(point const &pos_, float height, bool dim_, bool dir_) : model_city_obj_t(pos_, height, dim_, dir_, get_model_id(), 1) {} // is_cylinder=1
 	virtual unsigned get_model_id() const {return OBJ_MODEL_TRAMPOLINE;}
-	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
 struct potted_plant_t : public multi_model_city_obj_t {
 	potted_plant_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_select) :
-		multi_model_city_obj_t(pos_, height, dim_, dir_, OBJ_MODEL_PLANT, model_select) {}
+		multi_model_city_obj_t(pos_, height, dim_, dir_, OBJ_MODEL_PLANT, model_select, 1) {} // is_cylinder=1
 };
 
 struct traffic_cone_t : public city_obj_t {
