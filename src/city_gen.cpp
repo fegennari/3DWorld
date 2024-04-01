@@ -3198,8 +3198,9 @@ void get_city_grass_coll_cubes(cube_t const &region, vect_cube_t &out, vect_cube
 	city_gen.get_grass_coll_cubes(region, out, out_bt);
 }
 bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool inc_cars, vector3d *cnorm, bool check_interior) {
-	if (proc_buildings_sphere_coll(pos, p_last, radius, cnorm, check_interior)) return 1;
-	return city_gen.proc_city_sphere_coll(pos, p_last, radius, prev_frame_zval, inc_cars, cnorm); // Note: no xy_only for cities
+	bool ret(proc_buildings_sphere_coll(pos, p_last, radius, cnorm, check_interior));
+	ret |= city_gen.proc_city_sphere_coll(pos, p_last, radius, prev_frame_zval, inc_cars, cnorm); // always check both
+	return ret;
 }
 bool line_intersect_city(point const &p1, point const &p2, float &t, bool ret_any_pt) {
 	unsigned hit_bix(0); // unused
