@@ -1510,7 +1510,7 @@ void city_obj_placer_t::connect_power_to_buildings(vector<road_plot_t> const &pl
 	for (auto p = ppts.begin(); p != ppts.end(); ++p) {connect_power_to_point(*p, 1);} // near_power_pole=1
 }
 
-void city_obj_placer_t::move_to_not_intersect_driveway(point &pos, float radius, bool dim) const {
+bool city_obj_placer_t::move_to_not_intersect_driveway(point &pos, float radius, bool dim) const {
 	cube_t test_cube;
 	test_cube.set_from_sphere(pos, radius);
 
@@ -1519,14 +1519,17 @@ void city_obj_placer_t::move_to_not_intersect_driveway(point &pos, float radius,
 		if (!d->intersects_xy(test_cube)) continue;
 		bool const dir((d->d[dim][1] - pos[dim]) < (pos[dim] - d->d[dim][0]));
 		pos[dim] = d->d[dim][dir] + (dir ? 1.0 : -1.0)*0.1*city_params.road_width;
-		break; // maybe we should check for an adjacent driveway, but that would be rare and moving could result in oscillation
+		return 1; // maybe we should check for an adjacent driveway, but that would be rare and moving could result in oscillation
 	}
+	return 0;
 }
 void city_obj_placer_t::finalize_streetlights_and_power(streetlights_t &sl, vector<vect_cube_t> &plot_colliders) {
+	bool was_moved(0);
+
 	for (auto s = sl.streetlights.begin(); s != sl.streetlights.end(); ++s) {
 		if (!driveways.empty()) { // move to avoid driveways
 			bool const dim(s->dir.y == 0.0); // direction to move in
-			move_to_not_intersect_driveway(s->pos, 0.25*city_params.road_width, dim);
+			was_moved |= move_to_not_intersect_driveway(s->pos, 0.25*city_params.road_width, dim);
 		}
 		if (!ppoles.empty()) { // connect power
 			point top(s->get_lpos());
@@ -1541,6 +1544,7 @@ void city_obj_placer_t::finalize_streetlights_and_power(streetlights_t &sl, vect
 		collider.z2() += streetlight_ns::get_streetlight_height();
 		plot_colliders[s->plot_ix].push_back(collider);
 	} // for s
+	if (was_moved) {sl.sort_streetlights_by_yx();} // must re-sort if a streetlight was moved
 }
 
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only) {

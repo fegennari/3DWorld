@@ -459,7 +459,7 @@ public:
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
 	bool get_color_at_xy(point const &pos, colorRGBA &color, bool skip_in_road) const;
 	void get_occluders(pos_dir_up const &pdu, vect_cube_t &occluders) const;
-	void move_to_not_intersect_driveway(point &pos, float radius, bool dim) const;
+	bool move_to_not_intersect_driveway(point &pos, float radius, bool dim) const;
 	void next_frame();
 	void play_sounds();
 	int check_path_segment_coll(point const &p1, point const &p2, float radius) const;
