@@ -355,7 +355,7 @@ struct bird_place_t {
 	vector3d orient;
 	bool on_ground=0, in_use=0, use_orient=0;
 
-	bird_place_t(point const &pos_, rand_gen_t &rgen  ) : pos(pos_), on_ground(1), use_orient(0) {set_rand_orient(rgen);} // ground constructor
+	bird_place_t(point const &pos_, rand_gen_t &rgen) : pos(pos_), on_ground(1), use_orient(0) {set_rand_orient(rgen);} // ground constructor
 	bird_place_t(point const &pos_, bool dim, bool dir, bool use_orient_=1) : pos(pos_), on_ground(0), use_orient(use_orient_)
 	{orient[dim] = (dir ? 1.0 : -1.0);} // object constructor
 	void set_rand_orient(rand_gen_t &rgen) {orient = rgen.signed_rand_vector_spherical();}

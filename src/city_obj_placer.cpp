@@ -316,12 +316,19 @@ vect_bird_place_t *select_bird_loc_dest(bool add_pigeons, bool add_birds, vect_b
 	if (add_birds) return &bird_locs;
 	return nullptr;
 }
+template<typename T> void add_bird_loc(T const &obj, vect_bird_place_t &dest, rand_gen_t &rgen) {
+	dest.add_placement_top_center(obj.get_bird_bcube(), rgen);
+}
+template<> void add_bird_loc(mailbox_t const &obj, vect_bird_place_t &dest, rand_gen_t &rgen) {
+	// for mailboxes, start the bird facing toward the road so that it doesn't fly into a house
+	dest.emplace_back(cube_top_center(obj.get_bird_bcube()), obj.dim, obj.dir, 0); // use_orient=0
+}
 template<typename T> void add_objs_top_center(T const &objs, unsigned start_ix, bool add_pigeons, bool add_birds,
 	vect_bird_place_t &pigeon_locs, vect_bird_place_t &bird_locs, rand_gen_t &rgen)
 {
 	for (auto i = objs.begin()+start_ix; i != objs.end(); ++i) {
 		vect_bird_place_t *const dest(select_bird_loc_dest(add_pigeons, add_birds, pigeon_locs, bird_locs, rgen));
-		if (dest != nullptr) {dest->add_placement_top_center(i->get_bird_bcube(), rgen);}
+		if (dest != nullptr) {add_bird_loc(*i, *dest, rgen);}
 	}
 }
 
