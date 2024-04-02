@@ -197,11 +197,8 @@ void small_tree_group::calc_bcube() {
 bool small_tree_group::check_sphere_coll(point &center, float radius) const {
 
 	if (!all_bcube.is_zero_area() && !sphere_cube_intersect(center, radius, all_bcube)) return 0;
-	bool coll(0);
-
-	for (const_iterator i = begin(); i != end(); ++i) {
-		coll |= i->check_sphere_coll(center, radius); // Note: calculates/updates center, so we can't early terminate in case there are multiple collisions
-	}
+	bool coll(0); // Note: calculates/updates center, so we can't early terminate in case there are multiple collisions
+	for (const_iterator i = begin(); i != end(); ++i) {coll |= i->check_sphere_coll(center, radius);}
 	return coll;
 }
 
@@ -888,6 +885,13 @@ void small_tree::add_bounds_to_bcube(cube_t &bcube) const {
 bool small_tree::check_sphere_coll(point &center, float radius) const {
 	if (type == T_BUSH) return 0; // no trunk, not yet handled
 	if (!dist_xy_less_than(center, pos, (radius + trunk_cylin.r1))) return 0; // optimization
+
+	if (center.z > trunk_cylin.p2.z && center.z-radius < trunk_cylin.p2.z) { // short tree
+		if (trunk_cylin.p2.z - trunk_cylin.p1.z < radius) return 0; // too short, can step over
+		cylinder_3dw c_ext(trunk_cylin); // extend cylinder upward so that it intersects
+		c_ext.p2.z += radius;
+		return sphere_vert_cylin_intersect(center, radius, c_ext);
+	}
 	return sphere_vert_cylin_intersect(center, radius, trunk_cylin);
 }
 
