@@ -1860,6 +1860,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			if (obj.z1() > camera_bs.z)    continue; // above the light
 			if (obj.z2() < camera_bs.z - 2.0*floor_spacing) continue; // more than two floors below the light
 		}
+		else if (!building.is_house && !building.has_windows()) { // windowless building
+			if (obj.z1() > camera_bs.z + floor_spacing || obj.z2() < camera_bs.z - 2.0*floor_spacing) continue; // more than one floor of difference
+		}
 		point obj_center(obj.get_cube_center());
 		if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
 		
