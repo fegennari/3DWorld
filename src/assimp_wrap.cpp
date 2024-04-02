@@ -229,7 +229,6 @@ void print_assimp_matrix(aiMatrix4x4 const &m) {aiMatrix4x4_to_xform_matrix(m).p
 
 // For reference, see: https://learnopengl.com/Model-Loading/Model
 // Also: https://github.com/emeiri/ogldev
-// Also: http://www.xphere.me/2019/05/bones-animation-with-openglassimpglm/
 
 class file_reader_assimp {
 	model3d &model;

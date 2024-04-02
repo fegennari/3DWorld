@@ -412,7 +412,7 @@ public:
 			else if (s == "map_aat") {unhandled(s, mat_in);} // toggle antialiasing
 			else if (s == "decal"  ) {unhandled(s, mat_in);} // modifies color
 			else if (s == "disp"   ) {unhandled(s, mat_in);} // displacement
-			// PBR parameters, mostly unsupported, see http://exocortex.com/blog/extending_wavefront_mtl_to_support_pbr
+			// PBR parameters, mostly unsupported
 			else if (s == "metalness" || s == "pm") {
 				// Note: metalness has been added for 3DWorld and is not in the original obj file format;
 				assert(cur_mat);

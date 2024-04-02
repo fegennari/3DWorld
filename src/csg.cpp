@@ -558,7 +558,6 @@ bool csg_cube::subtract_from_cylinder(coll_obj_group &new_cobjs, coll_obj &cobj)
 
 
 // returns 1 if some work is done
-// see http://www.cs.fit.edu/~wds/classes/graphics/Clip/clip/clip.html
 bool csg_cube::subtract_from_polygon(coll_obj_group &new_cobjs, coll_obj const &cobj) const { // subtract ourself from cobjs[index]
 
 	// start by assuming *this intersects cobj.d (should have been tested already)

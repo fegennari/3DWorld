@@ -670,7 +670,6 @@ void free_obj::draw(shader_t &shader, vpc_shader_t &upc_shader) const { // view 
 		transform_and_draw_obj(udd, specular, 1, !partial_shadow);
 
 		if (partial_shadow) { // partially shadowed - draw the sun's light with a stencil pass
-			// http://www.gamasutra.com/features/20021011/lengyel_05.htm
 			shader.reset_subroutine(1, "do_lighting_op", "shadow_only");
 			fgPushMatrix();
 			global_translate(pos);

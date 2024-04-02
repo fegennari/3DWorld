@@ -110,7 +110,6 @@ typedef rand_gen_template_t<rgen_pregen_t> rand_gen_pregen_t;
 
 // based on xxHash
 // see: https://blogs.unity3d.com/2015/01/07/a-primer-on-repeatable-random-numbers/
-// see: https://bitbucket.org/runevision/random-numbers-testing/src/113e3cdaf14ab86d3a03a5b2ed1d178549952bcd/Assets/Implementations/HashFunctions/XXHash.cs?at=default
 inline unsigned RotateLeft(unsigned value, unsigned count) {return (value << count) | (value >> (32 - count));}
 
 inline unsigned xxHash_uint(unsigned buf, unsigned seed=0) {
