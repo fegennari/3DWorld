@@ -95,6 +95,8 @@ void draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shad
 		bool const force_tsl = 0; // helps with hedges and flags, but causes problems with other models
 		cube_t const &lights_bcube(use_building_lights ? get_building_lights_bcube() : get_city_lights_bcube());
 		city_shader_setup(s, lights_bcube, use_dlights, use_smap, (use_bmap && !shadow_only), DEF_CITY_MIN_ALPHA, force_tsl, 0.5);
+		occlusion_checker.set_exclude_camera_building(); // if the player is inside a building, skip occlusion culling
+		occlusion_checker.set_camera(camera_pdu);
 	}
 }
 void draw_state_t::end_draw() {

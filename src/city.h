@@ -424,12 +424,16 @@ struct draw_state_t {
 protected:
 	bool use_smap=0, use_bmap=0, shadow_only=0, use_dlights=0, emit_now=0;
 	point_sprite_drawer_sized light_psd; // for car/traffic lights
+	occlusion_checker_t occlusion_checker;
 	string label_str;
 	point label_pos;
 public:
  	virtual ~draw_state_t() {}
 	void set_enable_normal_map(bool val) {use_bmap = val;}
 	bool normal_maps_enabled() const {return use_bmap;}
+	vect_cube_t &get_occluders() {return occlusion_checker.occluders;}
+	bool is_visible_and_unoccluded(cube_t const &c, float dist_scale=1.0) const {return (check_cube_visible(c, dist_scale) && !is_occluded(c));}
+	bool is_occluded(cube_t const &c) const {return (!shadow_only && occlusion_checker.is_occluded(c));}
 	virtual void draw_unshadowed() {}
 	void begin_tile(point const &pos, bool will_emit_now=0, bool ensure_active=0);
 	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_, bool always_setup_shader);
@@ -651,14 +655,9 @@ public:
 void draw_and_clear_blur_qbd(quad_batch_draw &qbd);
 
 class ao_draw_state_t : public draw_state_t {
-
-protected:
-	occlusion_checker_t occlusion_checker;
 public:
 	quad_batch_draw ao_qbd;
-	vect_cube_t &get_occluders() {return occlusion_checker.occluders;}
 	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_);
-	bool is_occluded(cube_t const &bcube) const {return (!shadow_only && occlusion_checker.is_occluded(bcube));}
 	virtual void draw_unshadowed() {draw_and_clear_blur_qbd(ao_qbd);}
 };
 

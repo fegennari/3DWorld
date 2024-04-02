@@ -76,7 +76,7 @@ model_city_obj_t::model_city_obj_t(point const &pos_, float height, bool dim_, b
 	set_bsphere_from_bcube(); // recompute bsphere from bcube
 }
 void model_city_obj_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
+	if (!dstate.is_visible_and_unoccluded(bcube, dist_scale)) return;
 	building_obj_model_loader.draw_model(dstate.s, pos, bcube, get_orient_dir(), WHITE, dstate.xlate, get_model_id(), shadow_only);
 }
 bool model_city_obj_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
@@ -303,6 +303,7 @@ void fire_hydrant_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float di
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 
 	if (!shadow_only) {
+		if (dstate.is_occluded(bcube)) return;
 		building_obj_model_loader.draw_model(dstate.s, pos, bcube, orient, WHITE, dstate.xlate, OBJ_MODEL_FHYDRANT, shadow_only);
 	}
 	else { // shadow pass: draw as a simple cylinder, untextured, top end only
@@ -1206,7 +1207,7 @@ city_bird_base_t::city_bird_base_t(point const &pos_, float height, vector3d con
 }
 
 void pigeon_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
+	if (!dstate.is_visible_and_unoccluded(bcube, dist_scale)) return;
 	building_obj_model_loader.draw_model(dstate.s, pos, bcube, dir, WHITE, dstate.xlate, OBJ_MODEL_PIGEON, shadow_only);
 }
 
@@ -1374,7 +1375,10 @@ city_flag_t::city_flag_t(cube_t const &flag_bcube_, bool dim_, bool dir_, point 
 	select_texture(def_flag_tid);
 }
 void city_flag_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
+
 	if (draw_as_model) { // need to invert orient for dim=0 because dir applies to the side of the flag, not the direction of the pole
+		if (dstate.is_occluded(bcube)) return;
 		dstate.s.add_uniform_int("two_sided_lighting", 1); // must enable TSL because flags are not a closed volume
 		building_obj_model_loader.draw_model(dstate.s, pos, bcube, get_orient_dir()*(dim ? 1.0 : -1.0), WHITE, dstate.xlate, OBJ_MODEL_FLAG, shadow_only);
 		dstate.s.add_uniform_int("two_sided_lighting", 0);

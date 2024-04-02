@@ -29,7 +29,7 @@ city_bird_t::city_bird_t(point const &pos_, float height_, vector3d const &init_
 }
 
 void city_bird_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	if (dstate.check_cube_visible(bcube, dist_scale)) {
+	if (dstate.is_visible_and_unoccluded(bcube, dist_scale)) {
 		// animations: 0=flying, 1=gliding, 2=landing, 3=standing, 4=takeoff
 		float const model_anim_time(anim_time_scale*anim_time/SKELETAL_ANIM_TIME_CONST); // divide by constant to cancel out multiply in draw_model()
 		animation_state_t anim_state(1, ANIM_ID_SKELETAL, model_anim_time, get_model_anim_id()); // enabled=1
