@@ -255,6 +255,7 @@ template<typename T> static void add_flat_city_quad(T const &r, quad_batch_draw 
 
 struct road_t : public cube_t {
 	unsigned road_ix=0;
+	float bt_lo=0.0, bt_hi=0.0; // start and end pos of bridge or tunnel in dim
 	//unsigned char type; // road, railroad, etc. {RTYPE_ROAD, RTYPE_TRACKS}
 	bool dim=0; // dim the road runs in
 	bool slope=0; // 0: z1 applies to first (lower) point; 1: z1 applies to second (upper) point
@@ -269,6 +270,7 @@ struct road_t : public cube_t {
 	float get_start_z  () const {return (slope ? z2() : z1());}
 	float get_end_z    () const {return (slope ? z1() : z2());}
 	float get_z_adj    () const {return (ROAD_HEIGHT + 0.5*get_slope_val()*(dim ? DY_VAL : DX_VAL));} // account for a half texel of error for sloped roads
+	void register_bridge_or_tunnel(cube_t const &bc, bool is_bridge);
 	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, -ar, (dim ? -1.0 : 1.0), 0, dim);}
 	cube_t const &get_bcube() const {return *this;}
 	cube_t       &get_bcube()       {return *this;}

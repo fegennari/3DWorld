@@ -998,8 +998,8 @@ public:
 			replay_fops.push_back(hq.last_flatten_op);
 				
 			if (!check_only) {
-				if (bridge.make_bridge) {bridges.push_back(bridge); s->has_bridge = 1;}
-				if (tunnel.enabled())   {tunnels.push_back(tunnel); s->has_tunnel = 1;}
+				if (bridge.make_bridge) {bridges.push_back(bridge); s->register_bridge_or_tunnel(bridge, 1);}
+				if (tunnel.enabled())   {tunnels.push_back(tunnel); s->register_bridge_or_tunnel(bridge, 0);}
 				roads.push_back(*s);
 				road_to_city.emplace_back(city1, city2); // Note: city index is specified even for internal (non-terminal) roads
 			}

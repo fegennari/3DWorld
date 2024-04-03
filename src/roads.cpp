@@ -110,12 +110,28 @@ road_t::road_t(point const &s, point const &e, float width, bool dim_, bool slop
 	set_from_points(pts, 4);
 }
 
+void road_t::register_bridge_or_tunnel(cube_t const &bc, bool is_bridge) {
+	(is_bridge ? has_bridge : has_tunnel) = 1;
+	bt_lo = bc.d[dim][0];
+	bt_hi = bc.d[dim][1];
+}
+
 // specialized here for sloped roads (road segments and railroad tracks)
 void road_t::add_road_quad(quad_batch_draw &qbd, colorRGBA const &color, float ar, bool add_skirt) const {
-	if (add_skirt && has_bridge) return; // no skirts under bridges as this looks wrong; tunnel skirts may be unnecessary but look okay
-
 	if (z1() == z2()) {
 		if (!add_skirt) {add_flat_city_quad(*this, qbd, color, ar);} // no skirt for flat roads
+		return;
+	}
+	if (add_skirt && has_bridge) {
+		for (unsigned d = 0; d < 2; ++d) { // split into two sections around the bridge
+			road_t sub_road(*this);
+			sub_road.has_bridge = 0;
+			sub_road.d[dim][!d] = (d ? (bt_hi + 0.25*city_params.road_width) : (bt_lo - 0.25*city_params.road_width));
+			float const len(get_length()), sub_len(sub_road.get_length()), delta_z(dz()*(len - sub_len)/len);
+			if (sub_len <= 0.0) continue; // no segment
+			if (slope ^ d) {sub_road.z1() += delta_z;} else {sub_road.z2() -= delta_z;} // adjust zvals
+			sub_road.add_road_quad(qbd, color, ar, add_skirt);
+		}
 		return;
 	}
 	bool const s(slope ^ dim);
