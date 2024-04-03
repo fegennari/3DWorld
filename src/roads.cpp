@@ -1276,7 +1276,7 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 				if (!shadow_only && dist_val < 0.1) { // use high detail vertical cylinders
 					s.set_cur_color(cables_color);
 					point const &p(conn_pts[e]);
-					draw_fast_cylinder(point(p.x, p.y, cur_zpos), point(p.x, p.y, zval), cable_thick, cable_thick, cable_ndiv, 0); // no ends
+					draw_fast_cylinder(point(p.x, p.y, cur_zpos+0.15*thickness), point(p.x, p.y, zval), cable_thick, cable_thick, cable_ndiv, 0); // no ends
 				}
 				else { // use lower detail cubes; okay for shadow pass
 					cube_t c(conn_pts[e]);
