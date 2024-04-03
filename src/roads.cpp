@@ -1078,6 +1078,15 @@ void road_draw_state_t::draw_city_region_int(quad_batch_draw &cache, unsigned ty
 	} else {qbd_batched[type_ix].add_quads(cache);} // add non-shadow blocks for drawing later
 }
 
+void road_draw_state_t::draw_city_skirt(cube_t const &bcube) {
+	cube_t skirt(bcube);
+	skirt.z1() -= 0.2*city_params.road_width; // extend into the ground
+	draw_cube(qbd_skirt, skirt, WHITE, 1, 16.0, 4); // skip zvals
+	for (auto &v : qbd_skirt.verts) {v.set_norm(-plus_z);} // hack to avoid shadow artifacts: point the normal downward so that there is no light
+	road_mat_mgr.set_texture(TYPE_ROAD_SKIRT);
+	qbd_skirt.draw_and_clear();
+}
+
 void road_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only, bool always_setup_shader) {
 	draw_state_t::pre_draw(xlate_, use_dlights_, shadow_only, always_setup_shader);
 	ar = city_params.get_road_ar();

@@ -614,7 +614,7 @@ struct range_pair_t {
 class road_draw_state_t : public draw_state_t {
 	quad_batch_draw qbd_batched[NUM_RD_TIDS], qbd_bridge;
 public: // used directly by stoplight drawing
-	quad_batch_draw qbd_sl, qbd_untextured, qbd_emissive; // {stoplight, untextured, streetlight emissive spot}; could add qbd_ssign here as well for stop signs
+	quad_batch_draw qbd_sl, qbd_untextured, qbd_emissive, qbd_skirt; // {stoplight, untextured, streetlight emissive spot, skirts}; could add qbd_ssign here for stop signs
 	vector<vert_norm_comp_tc_color> text_verts;
 private:
 	float ar=1.0;
@@ -629,6 +629,7 @@ public:
 	void add_city_quad(road_seg_t  const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool);
 	void add_city_quad(road_t      const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool);
 	void add_city_quad(road_plot_t const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool draw_all);
+	void draw_city_skirt(cube_t const &bcube);
 
 	template<typename T> void add_city_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool) { // generic flat road case
 		add_flat_city_quad(r, qbd, color, ar);
