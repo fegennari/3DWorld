@@ -913,10 +913,16 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 		else if (rand_val < 0.7) { // add teeshirt or jeans on the bed 30% of the time
 			unsigned const type(rgen.rand_bool() ? TYPE_PANTS : TYPE_TEESHIRT);
 			float const length(((type == TYPE_TEESHIRT) ? 0.26 : 0.2)*vspace), width(0.98*length), height(0.002*vspace);
+			float const clearance(get_min_front_clearance_inc_people());
 			cube_t valid_area(mattress);
 			valid_area.d[dim][dir] = pillow.d[dim][!dir]; // don't place under the pillow
-			bool const dim2(rgen.rand_bool()), dir2(rgen.rand_bool()); // choose a random orientation
 			vector3d size(0.5*length, 0.5*width, height);
+			
+			if (valid_area.get_sz_dim(!dim) > 4.0*size[!dim]) { // don't place on the side near a wall if the bed is wide
+				if (bed .d[!dim][0] - room.d[!dim][0] < clearance) {valid_area.d[!dim][0] = bed.get_center_dim(!dim);}
+				if (room.d[!dim][1] - bed .d[!dim][1] < clearance) {valid_area.d[!dim][1] = bed.get_center_dim(!dim);}
+			}
+			bool const dim2(rgen.rand_bool()), dir2(rgen.rand_bool()); // choose a random orientation
 			if (dim2) {std::swap(size.x, size.y);}
 
 			if (valid_area.dx() > 2.0*size.x && valid_area.dy() > 2.0*size.y) {
