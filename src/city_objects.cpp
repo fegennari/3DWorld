@@ -55,6 +55,10 @@ bool sphere_city_obj_cylin_coll(point const &cpos, float cradius, point &spos, p
 	return 1;
 }
 
+void disable_hemi_lighting_pre_post(draw_state_t &dstate, bool shadow_only, bool is_post) {
+	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_scale", (is_post ? 0.5 : 0.0));} // disable or restore
+}
+
 // model_city_obj_t
 
 model_city_obj_t::model_city_obj_t(cube_t const &bcube_, bool dim_, bool dir_) : oriented_city_obj_t(dim_, dir_) {
@@ -292,11 +296,11 @@ fire_hydrant_t::fire_hydrant_t(point const &pos_, float radius_, float height, v
 }
 /*static*/ void fire_hydrant_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {dstate.s.set_cur_color(colorRGBA(1.0, 0.75, 0.0));} // override with custom color since the model color is black
-	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_scale", 0.0);} // disable hemispherical lighting
+	disable_hemi_lighting_pre_post(dstate, shadow_only, 0);
 }
 /*static*/ void fire_hydrant_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {dstate.s.set_cur_color(WHITE);} // restore to default color
-	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_scale", 0.5);} // set hemispherical lighting back to the default
+	disable_hemi_lighting_pre_post(dstate, shadow_only, 1);
 	city_obj_t::post_draw(dstate, shadow_only);
 }
 void fire_hydrant_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const { // Note: qbds are unused
@@ -312,24 +316,6 @@ void fire_hydrant_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float di
 }
 bool fire_hydrant_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	return sphere_city_obj_cylin_coll(pos, cylin_radius, pos_, p_last, radius_, xlate, cnorm);
-}
-
-// substations
-
-/*static*/ void substation_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_scale", 0.0);} // disable hemispherical lighting
-}
-/*static*/ void substation_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_scale", 0.5);} // set hemispherical lighting back to the default
-}
-
-// fountains
-
-/*static*/ void fountain_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_scale", 0.0);} // disable hemispherical lighting
-}
-/*static*/ void fountain_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_scale", 0.5);} // set hemispherical lighting back to the default
 }
 
 // plot dividers
@@ -1373,6 +1359,7 @@ city_flag_t::city_flag_t(cube_t const &flag_bcube_, bool dim_, bool dir_, point 
 	if (shadow_only) return;
 	def_flag_tid = get_texture_by_name("flags/american_flag_indexed.png"); // only if !draw_as_model (which we don't have here)?
 	select_texture(def_flag_tid);
+	disable_hemi_lighting_pre_post(dstate, shadow_only, 0);
 }
 void city_flag_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;

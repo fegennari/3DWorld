@@ -6,6 +6,8 @@
 
 #include "city.h"
 
+void disable_hemi_lighting_pre_post(draw_state_t &dstate, bool shadow_only, bool is_post);
+
 struct textured_mat_t {
 	bool has_alpha_mask=0;
 	int tid=-1, nm_tid=-1;
@@ -62,6 +64,8 @@ struct model_city_obj_t : public oriented_city_obj_t {
 	virtual ~model_city_obj_t() {}
 	virtual unsigned get_model_id() const = 0;
 	float get_xy_radius() const {assert(is_cylinder); return 0.25*(bcube.dx() + bcube.dy());} // assume square-ish
+	static void pre_draw (draw_state_t &dstate, bool shadow_only) {disable_hemi_lighting_pre_post(dstate, shadow_only, 0);}
+	static void post_draw(draw_state_t &dstate, bool shadow_only) {disable_hemi_lighting_pre_post(dstate, shadow_only, 1);}
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
@@ -109,16 +113,12 @@ struct fire_hydrant_t : public city_obj_t {
 
 struct substation_t : public model_city_obj_t {
 	substation_t(point const &pos_, float height, bool dim_, bool dir_) : model_city_obj_t(pos_, height, dim_, dir_, get_model_id()) {}
-	static void pre_draw (draw_state_t &dstate, bool shadow_only);
-	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	virtual unsigned get_model_id() const {return OBJ_MODEL_SUBSTATION;}
 };
 
 struct fountain_t : public multi_model_city_obj_t {
 	fountain_t(point const &pos_, float height, unsigned model_select) :
 		multi_model_city_obj_t(pos_, height, 0, 0, OBJ_MODEL_FOUNTAIN, model_select, 1) {} // dim=0, dir=0, is_cylinder=1
-	static void pre_draw (draw_state_t &dstate, bool shadow_only);
-	static void post_draw(draw_state_t &dstate, bool shadow_only);
 };
 
 struct divider_t : public oriented_city_obj_t {
@@ -258,6 +258,8 @@ struct city_bird_base_t : public city_obj_t {
 
 struct pigeon_t : public city_bird_base_t {
 	pigeon_t(point const &pos_, float height, vector3d const &dir_) : city_bird_base_t(pos_, height, dir_, OBJ_MODEL_PIGEON) {}
+	static void pre_draw (draw_state_t &dstate, bool shadow_only) {disable_hemi_lighting_pre_post(dstate, shadow_only, 0);}
+	static void post_draw(draw_state_t &dstate, bool shadow_only) {disable_hemi_lighting_pre_post(dstate, shadow_only, 1);}
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
 
@@ -322,7 +324,8 @@ struct city_flag_t : public oriented_city_obj_t {
 
 	city_flag_t(cube_t const &flag_bcube_, bool dim_, bool dir_, point const &pole_base_, float pradius, int flag_id_=-1);
 	bool is_horizontal() const {return (flag_bcube.dz() > flag_bcube.get_sz_dim(!dim));}
-	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	static void pre_draw (draw_state_t &dstate, bool shadow_only);
+	static void post_draw(draw_state_t &dstate, bool shadow_only) {disable_hemi_lighting_pre_post(dstate, shadow_only, 1);}
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
