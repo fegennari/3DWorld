@@ -255,7 +255,7 @@ city bicycle_model       ../models/bicycles/bicycle1/scene.gltf       0 0 0  -1 
 #city swingset_model      ../models/swingsets/swing.glb                0 0 0  -1 -1 0    1 1.0 1.0 # okay, but dirty
 #city swingset_model      ../models/swingsets/swing1/scene.gltf        0 0 0  -1 -1 0    1 1.0 1.0 # okay, simple model
 city swingset_model      ../models/swingsets/swing2/swings.fbx        0 0 0  -1 -1 90   1 1.0 1.0 # okay
-city trampoline_model    ../models/trampoline/scene.gltf              0 0 0  -1 -1  0   1 1.0 0.4
+city trampoline_model    ../models/trampoline/trampoline.model3d      0 0 0  -1 -1  0   1 1.0 0.4 # {net, bottom, pad, frame}
 
 # animated bird model
 city model_anim_scale 100.0 # model animations are scaled by 100 for some reason
