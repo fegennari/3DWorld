@@ -129,9 +129,9 @@ void road_t::add_road_quad(quad_batch_draw &qbd, colorRGBA const &color, float a
 			sub_road.d[dim][!d] = (d ? (bt_hi + 0.25*city_params.road_width) : (bt_lo - 0.25*city_params.road_width));
 			float const len(get_length()), sub_len(sub_road.get_length()), delta_z(dz()*(len - sub_len)/len);
 			if (sub_len <= 0.0) continue; // no segment
-			if (slope ^ d) {sub_road.z1() += delta_z;} else {sub_road.z2() -= delta_z;} // adjust zvals
+			if (slope ^ bool(d)) {sub_road.z1() += delta_z;} else {sub_road.z2() -= delta_z;} // adjust zvals
 			sub_road.add_road_quad(qbd, color, ar, add_skirt);
-		}
+		} // for d
 		return;
 	}
 	bool const s(slope ^ dim);

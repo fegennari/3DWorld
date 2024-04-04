@@ -296,7 +296,7 @@ void texture_t::load_raw_bmp(int index, bool allow_diff_width_height, bool allow
 
 	// read texture data
 	if (ncolors == 4 && format != 3) { // add alpha
-		for (unsigned i = 0; i < size; ++i) {
+		for (size_t i = 0; i < size; ++i) {
 			unsigned char buf[4];
 
 			if (fread(buf, 3, 1, file) != 1) {
