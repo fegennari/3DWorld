@@ -1168,12 +1168,11 @@ void road_draw_state_t::add_city_quad(road_t      const &r, quad_batch_draw &qbd
 }
 void road_draw_state_t::add_city_quad(road_plot_t const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool draw_all) { // plots and parks
 	if (!draw_all && (type_ix == TYPE_PARK) != r.is_park) return;
-	cube_t const plot_exclude(get_cur_basement());
-		
-	if (plot_exclude.intersects_xy(r)) { // remove the section under the player building's basement
+	
+	if (!plot_cuts.empty()) {
 		float const dx_inv(1.0/r.dx()), dy_inv(1.0/r.dy());
-		vect_cube_t parts;
-		subtract_cube_from_cube((cube_t)r, plot_exclude, parts);
+		vect_cube_t parts, temp;
+		subtract_cubes_from_cube((cube_t)r, plot_cuts, parts, temp, 1); // zval_mode=1 (ignore zvals)
 
 		for (cube_t const &p : parts) {
 			tex_range_t const tr((p.x1() - r.x1())*dx_inv, (p.y1() - r.y1())*dy_inv, (p.x2() - r.x1())*dx_inv, (p.y2() - r.y1())*dy_inv);

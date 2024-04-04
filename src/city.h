@@ -618,6 +618,7 @@ class road_draw_state_t : public draw_state_t {
 public: // used directly by stoplight drawing
 	quad_batch_draw qbd_sl, qbd_untextured, qbd_emissive, qbd_skirt; // {stoplight, untextured, streetlight emissive spot, skirts}; could add qbd_ssign here for stop signs
 	vector<vert_norm_comp_tc_color> text_verts;
+	vect_cube_t plot_cuts;
 private:
 	float ar=1.0;
 

@@ -1784,6 +1784,12 @@ void city_obj_placer_t::get_occluders(pos_dir_up const &pdu, vect_cube_t &occlud
 	} // for i
 }
 
+void city_obj_placer_t::get_plot_cuts(cube_t const &plot, vect_cube_t &cuts) const {
+	for (swimming_pool_t const &p : pools) {
+		if (!p.above_ground && plot.intersects_xy(p.bcube)) {cuts.push_back(p.bcube);}
+	}
+}
+
 void city_obj_placer_t::play_sounds() {
 	if (ppole_groups.empty()) return;
 	point const camera_bs(get_camera_building_space());
