@@ -1061,7 +1061,7 @@ public:
 	void gen_parking_lots_and_place_objects(vector<car_t> &cars, bool have_cars, bool &have_plot_dividers) {
 		city_obj_placer.clear();
 		city_obj_placer.set_plot_subdiv_sz(get_plot_subdiv_sz());
-		city_obj_placer.gen_parking_and_place_objects(plots, plot_colliders, cars, roads, isecs, city_id, have_cars, is_residential, !streetlights.empty());
+		city_obj_placer.gen_parking_and_place_objects(plots, plot_colliders, cars, roads, isecs, bcube, city_id, have_cars, is_residential, !streetlights.empty());
 		add_tile_blocks(city_obj_placer.parking_lots, tile_to_block_map, TYPE_PARK_LOT); // need to do this later, after gen_tile_blocks()
 		add_tile_blocks(city_obj_placer.driveways,    tile_to_block_map, TYPE_DRIVEWAY);
 		tile_to_block_map.clear(); // no longer needed

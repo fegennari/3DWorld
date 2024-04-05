@@ -439,10 +439,10 @@ private:
 	void place_trees_in_plot(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> &tree_pos, rand_gen_t &rgen, unsigned buildings_end);
 	void place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos,
 		rand_gen_t &rgen, bool have_streetlights);
-	void place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders,
-		vector<road_t> const &roads, unsigned driveways_start, unsigned city_ix, rand_gen_t &rgen);
-	bool place_swimming_pool(road_plot_t const &plot, city_zone_t const &yard, cube_t const &house, bool dim, bool dir, bool shrink_dim,
-		unsigned prev_blockers_end, float divider_hwidth, float const translate_dist[2], vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen);
+	void place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<road_t> const &roads,
+		vect_cube_t const &pool_blockers, unsigned driveways_start, unsigned city_ix, rand_gen_t &rgen);
+	bool place_swimming_pool(road_plot_t const &plot, city_zone_t const &yard, cube_t const &house, bool dim, bool dir, bool shrink_dim, unsigned prev_blockers_end,
+		float divider_hwidth, float const translate_dist[2], vect_cube_t const &pool_blockers, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen);
 	void place_birds(rand_gen_t &rgen);
 	void add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix);
 	void place_signs_in_isec(road_isec_t &isec);
@@ -460,8 +460,8 @@ public:
 	vector<power_pole_t> const &get_power_poles() const {return ppoles;} // used for city connectivity
 	void clear();
 	void set_plot_subdiv_sz(float sz) {plot_subdiv_sz = sz;}
-	void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars,
-		vector<road_t> const &roads, vector<road_isec_t> isecs[3], unsigned city_id, bool have_cars, bool is_residential, bool have_streetlights);
+	void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, vector<road_t> const &roads,
+		vector<road_isec_t> isecs[3], cube_t const &city_bcube, unsigned city_id, bool have_cars, bool is_residential, bool have_streetlights);
 	void finalize_streetlights_and_power(streetlights_t &sl, vector<vect_cube_t> &plot_colliders);
 	static bool subdivide_plot_for_residential(cube_t const &plot, vector<road_t> const &roads,
 		float plot_subdiv_sz, unsigned parent_plot_ix, unsigned city_ix, vect_city_zone_t &sub_plots);

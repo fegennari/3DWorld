@@ -4144,6 +4144,26 @@ public:
 	void get_overlapping_bcubes      (cube_t const &xy_range, vect_cube_with_ix_t &bcubes) const {return query_for_cube(xy_range, bcubes,    0);}
 	void add_house_driveways_for_plot(cube_t const &plot,     vect_cube_t      &driveways) const {return query_for_cube(plot,     driveways, 1);}
 
+	void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcubes) const {
+		if (empty()) return; // nothing to do
+		unsigned ixr[2][2];
+		get_grid_range(city_bcube, ixr);
+
+		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
+			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
+				grid_elem_t const &ge(get_grid_elem(x, y));
+				if (ge.bc_ixs.empty() || !city_bcube.intersects_xy(ge.bcube)) continue;
+
+				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) { // Note: can't test building bcube as this excludes the extended basement
+					if (get_grid_ix(city_bcube.get_llc().max(b->get_llc())) != (y*grid_sz + x)) continue; // add only if in home grid (to avoid duplicates)
+					building_t const &building(get_building(b->ix));
+					if (!building.has_ext_basement() || !building.interior) continue;
+					auto const &rooms(building.interior->rooms);
+					for (auto r = rooms.begin()+building.interior->ext_basement_hallway_room_id; r != rooms.end(); ++r) {bcubes.push_back(*r);}
+				}
+			} // for x
+		} // for y
+	}
 	void get_power_points(cube_t const &xy_range, vector<point> &ppts) const { // similar to above function, but returns points rather than cubes
 		if (empty()) return; // nothing to do
 		unsigned ixr[2][2];
@@ -4530,6 +4550,7 @@ void set_buildings_pos_range(cube_t const &pos_range) {global_building_params.se
 // Note: no xlate applied for any of these four queries below
 void get_building_bcubes(cube_t const &xy_range, vect_cube_with_ix_t &bcubes  ) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);}
 void get_building_bcubes(cube_t const &xy_range, vect_cube_t         &bcubes  ) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);}
+void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcubes) {building_creator_city.get_building_ext_basement_bcubes(city_bcube, bcubes);}
 void get_building_power_points(cube_t const &xy_range, vector<point> &ppts    ) {building_creator_city.get_power_points(xy_range, ppts);}
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways  ) {building_creator_city.add_house_driveways_for_plot(plot, driveways);}
 void add_buildings_exterior_lights(vector3d const &xlate, cube_t &lights_bcube) {building_creator_city.add_exterior_lights(xlate, lights_bcube);}

@@ -4,6 +4,7 @@
 
 #include "city_objects.h"
 #include "tree_3dw.h" // for tree_placer_t
+//#include "profiler.h"
 
 extern unsigned max_unique_trees;
 extern tree_placer_t tree_placer;
@@ -15,6 +16,7 @@ extern textured_mat_t pool_deck_mats[];
 void add_signs_for_city(unsigned city_id, vector<sign_t> &signs);
 void add_flags_for_city(unsigned city_id, vector<city_flag_t> &flags);
 city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, float length, int flag_id=-1);
+void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcubes);
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
 float get_inner_sidewalk_width();
 cube_t get_plot_coll_region(cube_t const &plot_bcube);
@@ -762,8 +764,8 @@ bool check_valid_house_obj_place(point const &pos, float height, float radius, f
 	return 1;
 }
 
-void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders,
-	vector<road_t> const &roads, unsigned driveways_start, unsigned city_ix, rand_gen_t &rgen)
+void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<road_t> const &roads,
+	vect_cube_t const &pool_blockers, unsigned driveways_start, unsigned city_ix, rand_gen_t &rgen)
 {
 	assert(plot_subdiv_sz > 0.0);
 	sub_plots.clear();
@@ -845,7 +847,8 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		bool const sdim((i->street_dir-1)>>1), sdir((i->street_dir-1)&1); // direction to the road
 
 		// attempt place swimming pool; often unsuccessful
-		bool const placed_pool(add_divider && place_swimming_pool(plot, *i, house, sdim, sdir, shrink_dim, prev_blockers_end, hwidth, translate_dist, blockers, colliders, rgen));
+		bool const placed_pool(add_divider && place_swimming_pool(plot, *i, house, sdim, sdir, shrink_dim, prev_blockers_end, hwidth,
+			translate_dist, pool_blockers, blockers, colliders, rgen));
 
 		if (!placed_pool) { // can't place a pool; try a swingset or trampoline instead
 			cube_t place_area(*i);
@@ -1025,10 +1028,10 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 	}
 }
 
-bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t const &yard, cube_t const &house, bool dim, bool dir, bool shrink_dim,
-	unsigned prev_blockers_end, float divider_hwidth, float const translate_dist[2], vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen)
+bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t const &yard, cube_t const &house, bool dim, bool dir, bool shrink_dim, unsigned prev_blockers_end,
+	float divider_hwidth, float const translate_dist[2], vect_cube_t const &pool_blockers, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen)
 {
-	if (rgen.rand_float() < 0.1) return 0; // add pools 90% of the time (since placing them often fails anyway)
+	if (rgen.rand_float() < 0.05) return 0; // add pools 95% of the time (since placing them often fails anyway)
 	cube_t pool_area(yard);
 	pool_area.d[dim][dir] = house.d[dim][!dir]; // limit the pool to the back yard
 
@@ -1037,7 +1040,8 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 	}
 	float const dmin(min(pool_area.dx(), pool_area.dy())); // or should this be based on city_params.road_width?
 	if (dmin < 0.75f*city_params.road_width) return 0; // back yard is too small to add a pool
-	bool const above_ground(rgen.rand_bool());
+	bool const has_blockers(has_bcube_int_xy(pool_area, pool_blockers)); // underground rooms below this yard
+	bool const above_ground(rgen.rand_float() < (has_blockers ? 0.75 : 0.25)); // prefer above ground if there are underground rooms; otherwise, prefer in-ground
 	float const min_pool_spacing_to_plot_edge(0.5*city_params.road_width), sz_scale(0.06*city_params.road_width); // about 3 feet
 
 	for (unsigned d = 0; d < 2; ++d) { // keep pools away from the edges of plots; applies to sub-plots on the corners
@@ -1060,7 +1064,8 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 		cube_t pool(pool_llc, (pool_llc + pool_sz));
 		cube_t tc(pool);
 		tc.expand_by_xy(0.08*dmin);
-		if (is_placement_blocked(tc, blockers, cube_t(), prev_blockers_end)) continue; // intersects some other object
+		if (is_placement_blocked(tc, blockers, cube_t(), prev_blockers_end))      continue; // intersects some other object
+		if (!above_ground && has_blockers && has_bcube_int_xy(tc, pool_blockers)) continue; // blocked by an extended basement room
 		float const grayscale(rgen.rand_uniform(0.7, 1.0));
 		float const water_white_comp(rgen.rand_uniform(0.1, 0.3)), extra_green(rgen.rand_uniform(0.2, 0.5)), lightness(rgen.rand_uniform(0.5, 0.8));
 		colorRGBA const color(above_ground ? pool_side_colors[rgen.rand()%5]: colorRGBA(grayscale, grayscale, grayscale));
@@ -1334,12 +1339,12 @@ void city_obj_placer_t::clear() {
 	num_spaces = filled_spaces = 0;
 }
 
-void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars,
-	vector<road_t> const &roads, vector<road_isec_t> isecs[3], unsigned city_id, bool have_cars, bool is_residential, bool have_streetlights)
+void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, vector<road_t> const &roads,
+	vector<road_isec_t> isecs[3], cube_t const &city_bcube, unsigned city_id, bool have_cars, bool is_residential, bool have_streetlights)
 {
 	// Note: fills in plots.has_parking
-	//timer_t timer("Gen Parking Lots and Place Objects");
-	vect_cube_t bcubes, temp_cubes; // blockers, driveways
+	//highres_timer_t timer("Gen Parking Lots and Place Objects");
+	vect_cube_t bcubes, temp_cubes, pool_blockers; // blockers, driveways, extended basement rooms
 	vector<point> tree_pos;
 	rand_gen_t rgen, detail_rgen;
 	rgen.set_state(city_id, 123);
@@ -1347,6 +1352,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	if (city_params.max_trees_per_plot > 0) {tree_placer.begin_block(0); tree_placer.begin_block(1);} // both small and large trees
 	bool const add_parking_lots(have_cars && !is_residential && city_params.min_park_spaces > 0 && city_params.min_park_rows > 0);
 	float const sidewalk_width(get_sidewalk_width());
+	if (is_residential) {get_building_ext_basement_bcubes(city_bcube, pool_blockers);}
 
 	for (auto i = plots.begin(); i != plots.end(); ++i) { // calculate num_x_plots and num_y_plots; these are used for determining edge power poles
 		max_eq(num_x_plots, i->xpos+1U);
@@ -1374,7 +1380,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 			bcubes.push_back(dw);
 		} // for j
 		if (city_params.assign_house_plots && plot_subdiv_sz > 0.0) {
-			place_residential_plot_objects(*i, bcubes, colliders, roads, driveways_start, city_id, detail_rgen); // before placing trees
+			place_residential_plot_objects(*i, bcubes, colliders, roads, pool_blockers, driveways_start, city_id, detail_rgen); // before placing trees
 		}
 		place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen, buildings_end);
 		place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, have_streetlights);
