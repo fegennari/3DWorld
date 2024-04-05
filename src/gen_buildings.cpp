@@ -4154,7 +4154,8 @@ public:
 				grid_elem_t const &ge(get_grid_elem(x, y));
 				if (ge.bc_ixs.empty() || !city_bcube.intersects_xy(ge.bcube)) continue;
 
-				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) { // Note: can't test building bcube as this excludes the extended basement
+				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
+					//if (!city_bcube.intersects_xy(*b)) continue; // not needed
 					if (get_grid_ix(city_bcube.get_llc().max(b->get_llc())) != (y*grid_sz + x)) continue; // add only if in home grid (to avoid duplicates)
 					building_t const &building(get_building(b->ix));
 					if (!building.has_ext_basement() || !building.interior) continue;

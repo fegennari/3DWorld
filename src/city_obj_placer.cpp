@@ -1040,7 +1040,10 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 	}
 	float const dmin(min(pool_area.dx(), pool_area.dy())); // or should this be based on city_params.road_width?
 	if (dmin < 0.75f*city_params.road_width) return 0; // back yard is too small to add a pool
-	bool const has_blockers(has_bcube_int_xy(pool_area, pool_blockers)); // underground rooms below this yard
+	float const inground_pool_depth(0.17*city_params.road_width);
+	cube_t inground_pool_area(pool_area);
+	inground_pool_area.z1() -= inground_pool_depth;
+	bool const has_blockers(has_bcube_int(inground_pool_area, pool_blockers)); // underground rooms below this yard
 	bool const above_ground(rgen.rand_float() < (has_blockers ? 0.75 : 0.25)); // prefer above ground if there are underground rooms; otherwise, prefer in-ground
 	float const min_pool_spacing_to_plot_edge(0.5*city_params.road_width), sz_scale(0.06*city_params.road_width); // about 3 feet
 
@@ -1064,8 +1067,9 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 		cube_t pool(pool_llc, (pool_llc + pool_sz));
 		cube_t tc(pool);
 		tc.expand_by_xy(0.08*dmin);
-		if (is_placement_blocked(tc, blockers, cube_t(), prev_blockers_end))      continue; // intersects some other object
-		if (!above_ground && has_blockers && has_bcube_int_xy(tc, pool_blockers)) continue; // blocked by an extended basement room
+		if (!above_ground) {tc.z1() -= inground_pool_depth;}
+		if (is_placement_blocked(tc, blockers, cube_t(), prev_blockers_end))   continue; // intersects some other object
+		if (!above_ground && has_blockers && has_bcube_int(tc, pool_blockers)) continue; // blocked by an extended basement room
 		float const grayscale(rgen.rand_uniform(0.7, 1.0));
 		float const water_white_comp(rgen.rand_uniform(0.1, 0.3)), extra_green(rgen.rand_uniform(0.2, 0.5)), lightness(rgen.rand_uniform(0.5, 0.8));
 		colorRGBA const color(above_ground ? pool_side_colors[rgen.rand()%5]: colorRGBA(grayscale, grayscale, grayscale));
@@ -1111,7 +1115,7 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 		} // for side
 		if (bad_fence_place) continue; // failed to fence off the pool, don't place it here
 		cube_t pool_full_height(pool);
-		if (!above_ground) {pool_full_height.z1() -= 0.17*city_params.road_width;} // actual pool extends below the ground
+		if (!above_ground) {pool_full_height.z1() -= inground_pool_depth;} // actual pool extends below the ground
 		pool_groups.add_obj(swimming_pool_t(pool_full_height, color, wcolor, above_ground, dim, dir), pools);
 		unsigned const pre_pool_blockers_end(blockers.size());
 		cube_t pool_collider(pool);
