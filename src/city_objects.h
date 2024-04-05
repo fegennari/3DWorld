@@ -471,9 +471,11 @@ public:
 	bool get_color_at_xy(point const &pos, colorRGBA &color, bool skip_in_road) const;
 	void get_occluders(pos_dir_up const &pdu, vect_cube_t &occluders) const;
 	void get_plot_cuts(cube_t const &plot, vect_cube_t &cuts) const;
+	bool cube_int_underground_obj(cube_t const &c) const;
 	bool move_to_not_intersect_driveway(point &pos, float radius, bool dim) const;
 	void next_frame();
 	void play_sounds();
+	// birds
 	int check_path_segment_coll(point const &p1, point const &p2, float radius) const;
 	bool choose_bird_dest(point const &pos, float radius, unsigned &loc_ix, point &dest_pos, vector3d &dest_dir);
 };

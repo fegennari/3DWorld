@@ -15,7 +15,7 @@ extern building_t const *player_building;
 bool using_hmap_with_detail();
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius);
 float get_ped_coll_radius();
-bool cube_intersect_tunnel(cube_t const &c);
+bool cube_int_underground_obj(cube_t const &c);
 
 
 bool building_t::extend_underground_basement(rand_gen_t rgen) {
@@ -92,7 +92,7 @@ bool building_t::is_basement_room_under_mesh_not_int_bldg(cube_t &room, building
 	assert(!grid_bcube.is_all_zeros()); // must be found
 	assert(grid_bcube.contains_cube_xy(bcube)); // must contain our building
 	if (!grid_bcube.contains_cube_xy(room)) return 0; // outside the grid (tile or city) bcube
-	if (cube_intersect_tunnel       (room)) return 0; // check tunnels
+	if (cube_int_underground_obj    (room)) return 0; // check tunnels, in-ground pools, etc.
 	return 1;
 }
 bool building_t::is_basement_room_placement_valid(cube_t &room, ext_basement_room_params_t &P, bool dim, bool dir, bool *add_end_door, building_t const *exclude) const {

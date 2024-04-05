@@ -1226,6 +1226,9 @@ public:
 		}
 		return 0;
 	}
+	bool cube_int_underground_obj(cube_t const &c) const {
+		return (c.intersects_xy(bcube)) && city_obj_placer.cube_int_underground_obj(c);
+	}
 	bool choose_pt_in_park(point &park_pos, rand_gen_t &rgen) const {
 		if (parks.empty()) return 0;
 		cube_t const &park(parks[rgen.rand() % parks.size()]); // select a random park
@@ -2130,13 +2133,20 @@ public:
 	bool empty() const {return road_networks.empty();}
 	bool has_tunnels() const {return global_rn.has_tunnels();}
 	bool point_in_tunnel(point const &pos) const {return global_rn.point_in_tunnel(pos);}
-	bool cube_intersect_tunnel(cube_t const &c) const {return global_rn.cube_intersect_tunnel(c);}
 	road_network_t const &get_city(unsigned city_ix) const {return road_network_t::get_city(city_ix, road_networks, global_rn);} // call the static function
 	cube_t const &get_city_bcube(unsigned city_ix) const {return get_city(city_ix).get_bcube();}
 	cube_t const &get_city_plot_bcube(unsigned city_ix, unsigned plot_ix) const {return get_city(city_ix).get_plot_bcube(plot_ix);}
 	vect_cube_t const &get_colliders_for_plot(unsigned city_ix, unsigned global_plot_id) const {return get_city(city_ix).get_colliders_for_plot(global_plot_id);}
 	cube_t const &get_car_dest_bcube(car_t const &car, bool isec_only) const {return get_city(car.dest_city).get_car_dest(car, road_networks, global_rn, isec_only);}
 
+	bool cube_int_underground_obj(cube_t const &c) const {
+		if (global_rn.cube_intersect_tunnel(c)) return 1;
+
+		for (road_network_t const &rn : road_networks) {
+			if (rn.cube_int_underground_obj(c)) return 1;
+		}
+		return 0;
+	}
 	cube_t get_city_bcube_for_cars(unsigned city_ix) const {
 		cube_t bcube(get_city_bcube(city_ix));
 		bcube.expand_by_xy(city_params.get_max_car_size().x); // expand by car length to fully include cars that are partially inside connector road intersections
@@ -3108,7 +3118,7 @@ public:
 	bool check_mesh_disable(point const &pos, float radius ) const {return road_gen.check_mesh_disable(pos, radius);}
 	bool check_inside_city (point const &pos, float radius ) const {return road_gen.check_inside_city (pos, radius);}
 	bool tile_contains_tunnel (cube_t const &bcube) const {return road_gen.tile_contains_tunnel(bcube);}
-	bool cube_intersect_tunnel(cube_t const &c    ) const {return road_gen.cube_intersect_tunnel(c);}
+	bool cube_int_underground_obj(cube_t const &c ) const {return road_gen.cube_int_underground_obj(c);}
 
 	void destroy_in_radius(point const &pos, float radius) {
 		car_manager.destroy_cars_in_radius(pos, radius);
@@ -3303,7 +3313,7 @@ bool check_inside_city(point const &pos, float radius) { // Note: pos is in glob
 	if (!have_cities()) return 0;
 	return city_gen.check_inside_city((pos + get_tt_xlate_val()), radius); // apply xlate for all static objects
 }
-bool cube_intersect_tunnel(cube_t const &c) {return city_gen.cube_intersect_tunnel(c);} // Note: cube is in global space
+bool cube_int_underground_obj(cube_t const &c) {return city_gen.cube_int_underground_obj(c);} // Note: cube is in global space
 bool choose_pt_in_city_park(point const &pos, point &park_pos, rand_gen_t &rgen) {return city_gen.choose_pt_in_park(pos, park_pos, rgen);}
 bool tile_contains_tunnel(cube_t const &bcube) {return city_gen.tile_contains_tunnel(bcube);}
 void destroy_city_in_radius(point const &pos, float radius) {city_gen.destroy_in_radius(pos, radius);}
