@@ -1110,7 +1110,9 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 			fences[side] = divider_t(fence, DIV_CHAINLINK, fence_dim, dir, 0); // Note: dir is unused in divider_t so doesn't have to be set correctly
 		} // for side
 		if (bad_fence_place) continue; // failed to fence off the pool, don't place it here
-		pool_groups.add_obj(swimming_pool_t(pool, color, wcolor, above_ground, dim, dir), pools);
+		cube_t pool_full_height(pool);
+		if (!above_ground) {pool_full_height.z1() -= 0.17*city_params.road_width;} // actual pool extends below the ground
+		pool_groups.add_obj(swimming_pool_t(pool_full_height, color, wcolor, above_ground, dim, dir), pools);
 		unsigned const pre_pool_blockers_end(blockers.size());
 		cube_t pool_collider(pool);
 		pool_collider.z2() += 0.1*city_params.road_width; // extend upward to make a better collider

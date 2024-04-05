@@ -453,7 +453,7 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 		else if (dstate.pass_ix == 0) {select_texture(get_texture_by_name("bathroom_tile.jpg"));} // walls and maybe ladder
 		else if (dstate.pass_ix == 1 || dstate.pass_ix == 3) { // water surface
 			select_texture(get_texture_by_name("snow2.jpg"));
-			if (dstate.pass_ix == 3) {enable_blend();} // above ground pool transparent water
+			enable_blend(); // transparent water
 		}
 		else {assert(0);}
 	}
@@ -512,7 +512,7 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 		}
 	}
 	else { // in-ground
-		float const height(bcube.dz()), wall_thick(1.2*height), tscale(0.5/wall_thick);
+		float const height(bcube.dz()), wall_thick(0.1*height), tscale(0.5/wall_thick);
 		cube_t inner(bcube);
 		inner.expand_by_xy(-wall_thick);
 
@@ -523,17 +523,20 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 			sides[1].y1() = sides[2].y2() = sides[3].y2() = inner.y2();
 			sides[2].x2() = inner.x1();
 			sides[3].x1() = inner.x2();
-			for (unsigned d = 0; d < 4; ++d) {dstate.draw_cube(qbds.qbd, sides[d], cw, 1, tscale, ((d > 2) ? 2 : 0));}
+			for (unsigned d = 0; d < 4; ++d) {dstate.draw_cube(qbds.qbd, sides[d], cw, 1, tscale, ((d > 2) ? 2 : 0));} // skip_bottom=1
+			cube_t bottom(bcube);
+			bottom.z2() = bcube.z1() + wall_thick;
+			dstate.draw_cube(qbds.qbd, bottom, cw, 1, tscale, 3); // skip_bottom=1, skip XY, only draw top
 		}
 		else if (dstate.pass_ix == 1) { // draw water surface
-			inner.z2() -= 0.5*height; // reduce water height by 50%; can't make water below the mesh though
-			dstate.draw_cube(qbds.qbd, inner, color_wrapper(wcolor), 1, 0.5*tscale, 3); // draw top water
+			inner.z2() -= 0.05*height; // shift water surface a bit below the top
+			dstate.draw_cube(qbds.qbd, inner, color_wrapper(colorRGBA(wcolor, 0.5)), 1, 0.5*tscale, 3); // draw top water as semi-transparent
 		}
 	}
 }
 /*static*/ void swimming_pool_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {dstate.s.set_cur_color(WHITE);} // restore to default color
-	if (dstate.pass_ix == 3) {disable_blend();} // above ground pool transparent water
+	if (dstate.pass_ix == 1 || dstate.pass_ix == 3) {disable_blend();} // transparent water
 	city_obj_t::post_draw(dstate, shadow_only);
 }
 bool swimming_pool_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
