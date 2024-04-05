@@ -1195,27 +1195,34 @@ public:
 		if (tunnels.empty()) return 0;
 		point const query_pos(pos - get_camera_coord_space_xlate());
 		cube_t query_region; query_region.set_from_sphere(query_pos, radius); // actually a cube, not a sphere
+		if (!bcube.intersects_xy(query_region)) return 0;
 
-		for (auto i = tunnels.begin(); i != tunnels.end(); ++i) {
-			if (i->check_mesh_disable(query_region)) return 1;
+		for (tunnel_t const &t : tunnels) {
+			if (t.check_mesh_disable(query_region)) return 1;
 		}
 		return 0;
 	}
 	bool tile_contains_tunnel(cube_t const &tile_bcube) const { // Note: cube is in global space
-		for (auto i = tunnels.begin(); i != tunnels.end(); ++i) {
-			if (i->intersects_xy(tile_bcube)) return 1;
+		if (tunnels.empty() || !bcube.intersects_xy(tile_bcube)) return 0;
+
+		for (tunnel_t const &t : tunnels) {
+			if (t.intersects_xy(tile_bcube)) return 1;
 		}
 		return 0;
 	}
 	bool point_in_tunnel(point const &pos) const { // Note: pos is in global space
-		for (auto i = tunnels.begin(); i != tunnels.end(); ++i) {
-			if (i->contains_pt(pos)) return 1; // Note: checks z-val
+		if (tunnels.empty() || !bcube.contains_pt_xy(pos)) return 0;
+
+		for (tunnel_t const &t : tunnels) {
+			if (t.contains_pt(pos)) return 1; // Note: checks z-val
 		}
 		return 0;
 	}
 	bool cube_intersect_tunnel(cube_t const &c) const { // Note: cube is in global space
-		for (auto i = tunnels.begin(); i != tunnels.end(); ++i) {
-			if (i->get_tunnel_bcube().intersects(c)) return 1; // use outer bounding cube
+		if (tunnels.empty() || !bcube.intersects_xy(c)) return 0;
+
+		for (tunnel_t const &t : tunnels) {
+			if (t.get_tunnel_bcube().intersects(c)) return 1; // use outer bounding cube
 		}
 		return 0;
 	}
