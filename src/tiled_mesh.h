@@ -401,7 +401,7 @@ public:
 
 	// *** rendering ***
 	void pre_draw(mesh_xy_grid_cache_t &height_gen);
-	void shader_shadow_map_setup(shader_t &s, xform_matrix const *const mvm=nullptr) const;
+	void shader_shadow_map_setup(shader_t &s) const;
 	void bind_and_setup_shadow_map(shader_t &s) const;
 	bool try_bind_shadow_map(shader_t &s, bool check_only) const;
 	void bind_textures() const;
@@ -479,7 +479,6 @@ public:
 private:
 	void draw_tiles(int reflection_pass, bool enable_shadow_map) const;
 	void draw_tiles_shadow_pass(point const &lpos, tile_t const *const tile);
-	bool find_and_bind_any_valid_shadow_map(shader_t &s) const;
 	static void set_noise_tex(shader_t &s, unsigned tu_id);
 	static void set_tree_dither_noise_tex(shader_t &s, unsigned tu_id);
 	static void set_pine_tree_shader(shader_t &s, string const &vs, bool use_texgen=1);
