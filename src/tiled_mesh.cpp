@@ -50,7 +50,7 @@ struct clear_area_t : public cube_t {
 };
 
 
-bool tt_lightning_enabled(0), check_tt_mesh_occlusion(1);
+bool tt_lightning_enabled(0), check_tt_mesh_occlusion(1), shadow_maps_disabled(0);
 unsigned inf_terrain_fire_mode(0); // none, increase height, decrease height
 string read_hmap_modmap_fn, write_hmap_modmap_fn("heightmap.mod");
 hmap_brush_param_t cur_brush_param;
@@ -1794,7 +1794,6 @@ unsigned tile_t::get_lod_level(bool reflection_pass) const {
 	return lod_level;
 }
 
-
 void disable_shadow_maps(shader_t &s) { // Note: uses different TUs compared to bind_default_sun_moon_smap_textures()
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
 		if (!light_valid_and_enabled(l)) continue;
@@ -1806,8 +1805,14 @@ void disable_shadow_maps(shader_t &s) { // Note: uses different TUs compared to 
 void tile_t::shader_shadow_map_setup(shader_t &s) const {
 	// Note: some part of this call is shared across all tiles; however, in the case where more than one smap light is enabled,
 	// the tu_id and enables may alternate between values for each tile, requiring every uniform to be reset per tile anyway
-	if (smap_data.empty()) {disable_shadow_maps(s);} // disable shadow map lookup when shadow map textures are unavailable
-	else {smap_data.set_for_all_lights(s, nullptr);} // no MVM
+	if (smap_data.empty()) { // disable shadow map lookup when shadow map textures are unavailable
+		if (!shadow_maps_disabled) {disable_shadow_maps(s);} // optimization: skip if already disabled (using a global variable)
+		shadow_maps_disabled = 1;
+	}
+	else {
+		smap_data.set_for_all_lights(s, nullptr); // no MVM
+		shadow_maps_disabled = 0;
+	}
 }
 void tile_t::bind_and_setup_shadow_map(shader_t &s) const {
 	if (shadow_map_enabled()) {shader_shadow_map_setup(s);}
@@ -2706,6 +2711,7 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 
 	if (player_cant_see_outside_building()) return; // no need to draw tiles if player in extended basement or parking garage
 	//timer_t timer("TT Draw");
+	shadow_maps_disabled = 0; // reset for this frame
 	to_draw.clear();
 	occluded_tiles.clear();
 
