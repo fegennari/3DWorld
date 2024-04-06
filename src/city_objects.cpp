@@ -512,11 +512,12 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 		}
 	}
 	else { // in-ground
-		float const height(bcube.dz()), wall_thick(0.1*height), tscale(0.5/wall_thick);
+		float const height(bcube.dz()), wall_thick(0.14*height), tscale(0.5/wall_thick);
 		cube_t inner(bcube);
 		inner.expand_by_xy(-wall_thick);
 
 		if (dstate.pass_ix == 0) { // draw walls
+			// draw sides
 			color_wrapper const cw(color);
 			cube_t sides[4] = {bcube, bcube, bcube, bcube}; // {S, N, W center, E center}
 			sides[0].y2() = sides[2].y1() = sides[3].y1() = inner.y1();
@@ -524,12 +525,20 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 			sides[2].x2() = inner.x1();
 			sides[3].x1() = inner.x2();
 			for (unsigned d = 0; d < 4; ++d) {dstate.draw_cube(qbds.qbd, sides[d], cw, 1, tscale, ((d > 2) ? 2 : 0));} // skip_bottom=1
-			cube_t bottom(bcube);
-			bottom.z2() = bcube.z1() + wall_thick;
-			dstate.draw_cube(qbds.qbd, bottom, cw, 1, tscale, 3); // skip_bottom=1, skip XY, only draw top
+			// draw bottom
+			bool const dmax(bcube.dx() < bcube.dy());
+			float const bz1(bcube.z1() + 0.5*wall_thick);
+			point pts[4] = {point(bcube.x1(), bcube.y1(), bz1), point(bcube.x2(), bcube.y1(), bz1), point(bcube.x2(), bcube.y2(), bz1), point(bcube.x1(), bcube.y2(), bz1)};
+			
+			if (sloped) { // draw sloped bottom surface
+				for (unsigned n = 0; n < 4; ++n) {
+					if (pts[n][dmax] == bcube.d[dmax][dir]) {pts[n].z = (bz1 + 0.5*height);}
+				}
+			}
+			qbds.qbd.add_quad_pts(pts, cw, get_poly_norm(pts, 1), tex_range_t(0.0, 0.0, tscale*bcube.dx(), tscale*bcube.dy()));
 		}
 		else if (dstate.pass_ix == 1) { // draw water surface
-			inner.z2() -= 0.05*height; // shift water surface a bit below the top
+			inner.z2() -= 0.06*height; // shift water surface a bit below the top
 			dstate.draw_cube(qbds.qbd, inner, color_wrapper(colorRGBA(wcolor, 0.5)), 1, 0.5*tscale, 3); // draw top water as semi-transparent
 		}
 	}

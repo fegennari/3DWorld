@@ -1116,7 +1116,8 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 		if (bad_fence_place) continue; // failed to fence off the pool, don't place it here
 		cube_t pool_full_height(pool);
 		if (!above_ground) {pool_full_height.z1() -= inground_pool_depth;} // actual pool extends below the ground
-		pool_groups.add_obj(swimming_pool_t(pool_full_height, color, wcolor, above_ground, dim, dir), pools);
+		bool const sloped(!above_ground && rgen.rand_bool()); // 50% of in-ground pools have sloped bottoms
+		pool_groups.add_obj(swimming_pool_t(pool_full_height, color, wcolor, above_ground, sloped, dim, dir), pools);
 		unsigned const pre_pool_blockers_end(blockers.size());
 		cube_t pool_collider(pool);
 		pool_collider.z2() += 0.1*city_params.road_width; // extend upward to make a better collider
@@ -1164,9 +1165,10 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 
 			if (hdepth < 8.0*min(pool.dx(), pool.dy())) { // add if large enough; should be true
 				cube_t ladder;
-				set_cube_zvals(ladder, (pool.z2() - 0.42*height), (pool.z2() + 0.58*height));
+				ladder.z1() = pool.z2() - 0.425*height;
+				ladder.z2() = ladder.z1() + height;
 				set_wall_width(ladder, rgen.rand_uniform((pool.d[!dim][0] + 2.0*hdepth), (pool.d[!dim][1] - 2.0*hdepth)), hdepth, !dim); // pos along pool length
-				set_wall_width(ladder, (pool.d[ dim][dir] - (dir ? 1.0 : -1.0)*1.2*hwidth), hwidth, dim); // at pool edge
+				set_wall_width(ladder, (pool.d[dim][dir] - (dir ? 1.0 : -1.0)*1.15*hwidth), hwidth, dim); // at pool edge
 				plad_groups.add_obj(pool_ladder_t(ladder, dim, !dir), pladders); // inside the pool, facing the street/house - no placement check or blockers added
 			}
 		}
