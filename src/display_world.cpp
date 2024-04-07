@@ -1245,8 +1245,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	if (camera_surf_collide) {check_player_tiled_terrain_collision();}
 	follow_city_actor(); // after collision detection so that it doesn't apply to the actor we're following
 	update_temperature(0);
-	point const camera(get_camera_pos());
-	apply_camera_offsets(camera);
+	apply_camera_offsets(get_camera_pos());
 	compute_brightness();
 	set_global_state();
 	if (b2down) {fire_weapon();}
@@ -1288,7 +1287,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	}
 	//draw_puffy_clouds(0);
 	draw_camera_weapon(0);
-	bool const camera_above_clouds(camera.z > get_tt_cloud_level());
+	bool const camera_above_clouds(get_camera_pos().z > get_tt_cloud_level());
 	draw_cloud_planes(terrain_zmin, 0, !camera_above_clouds, 1); // these two lines could go in either order
 	draw_sun_flare();
 	if (TIMETEST) PRINT_TIME("3.2");

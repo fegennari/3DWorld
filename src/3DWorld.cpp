@@ -396,10 +396,13 @@ void check_xy_offsets() {
 
 	if (camera_view) return;
 	int const mrd(((world_mode == WMODE_INF_TERRAIN) ? 4 : 1)*MAX_RUN_DIST); // increase distance in TT mode to reduce shadow map updates
-	while (xoff >=  mrd) {xoff -= mrd; surface_pos.x -= mrd*DX_VAL;}
-	while (xoff <= -mrd) {xoff += mrd; surface_pos.x += mrd*DX_VAL;}
-	while (yoff >=  mrd) {yoff -= mrd; surface_pos.y -= mrd*DY_VAL;}
-	while (yoff <= -mrd) {yoff += mrd; surface_pos.y += mrd*DY_VAL;}
+	vector3d delta;
+	while (xoff >=  mrd) {xoff -= mrd; delta.x -= mrd*DX_VAL;}
+	while (xoff <= -mrd) {xoff += mrd; delta.x += mrd*DX_VAL;}
+	while (yoff >=  mrd) {yoff -= mrd; delta.y -= mrd*DY_VAL;}
+	while (yoff <= -mrd) {yoff += mrd; delta.y += mrd*DY_VAL;}
+	surface_pos     += delta;
+	camera_last_pos += delta;
 }
 
 
