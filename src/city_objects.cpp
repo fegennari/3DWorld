@@ -962,7 +962,7 @@ void power_pole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist
 		if (shadow_only) continue; // skip wires for shadow pass since they don't show up reliably
 		bool const is_offset(center[!d] != base[!d]);
 		float const sep_dist(0.5*get_power_pole_offset()), offset_sign(is_offset ? -1.0 : 1.0);
-		float const bot_wire_zval(base.z + 0.75*pole_height), bot_wire_pos(base[!d] + offset_sign*sep_dist), thick_wire_delta_z(0.05*pole_height);
+		float const bot_wire_zval(base.z + 0.75*pole_height), bot_wire_pos(base[!d] + offset_sign*sep_dist), thick_wire_delta_z(0.042*pole_height);
 
 		if (!at_line_end[d]) { // no wires at end pole
 			cube_t wires_bcube(cbar);
@@ -1001,7 +1001,7 @@ void power_pole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist
 			rbcube.expand_by(box_radius);
 			
 			if (camera_pdu.cube_visible(rbcube + dstate.xlate)) {
-				unsigned const ndiv(shadow_only ? 8 : max(4U, min(24U, unsigned(0.75f*dmax/p2p_dist(camera_bs, pw)))));
+				unsigned const ndiv(max(4U, min(24U, unsigned(0.75f*dmax/p2p_dist(camera_bs, pw)))));
 				add_cylin_as_tris(s_qbd.verts, epts, box_radius, box_radius, color_wrapper(BKGRAY), ndiv, 3); // draw both ends; specular
 			}
 			drew_wires = 1;
@@ -1055,7 +1055,7 @@ void power_pole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist
 	if (drew_wires && wire_mask == 3 && bcube.closest_dist_less_than(camera_bs, 0.25*dmax)) { // both dims set, connect X and Y wires
 		for (unsigned n = 0; n < 3; ++n) {draw_wire(wire_pts[n], wire_radius, black, m_qbd);}
 	}
-	if (!shadow_only && !wires.empty() && bcube_with_wires.closest_dist_less_than(camera_bs, 0.3*dmax)) {
+	if (!wires.empty() && bcube_with_wires.closest_dist_less_than(camera_bs, 0.3*dmax)) {
 		for (auto &w : wires) { // represents all three wires tied together
 			draw_wire(w.pts, wire_radius, black, m_qbd);
 			// draw vertical wire segment connecting the three, which also represents all three power wires tied together
