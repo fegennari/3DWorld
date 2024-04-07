@@ -2168,7 +2168,7 @@ bool building_t::clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out,
 }
 
 void building_interior_t::assign_door_conn_rooms(unsigned start_ds_ix) {
-	assert(start_ds_ix < door_stacks.size());
+	assert(start_ds_ix <= door_stacks.size());
 
 	for (auto d = door_stacks.begin()+start_ds_ix; d != door_stacks.end(); ++d) {
 		if (d->for_closet || d->in_backrooms) continue; // excluded
