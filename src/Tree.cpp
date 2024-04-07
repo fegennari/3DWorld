@@ -937,7 +937,7 @@ float tree::pre_transform(vector3d const &tree_xlate) const { // returns rotatio
 	// also, ground mode trees often have collisions, dropping leaves, wind, fires, indir lighting, etc. that would be wrong when rotated
 	if (enable_rotate_trees()) {
 		float const xy_mult(1.0/tdata().sphere_radius); // need enough random variation between adjacent trees
-		rot_angle = TWO_PI*fract(xy_mult*tree_xlate.x) + fract(xy_mult*tree_xlate.y); // random angle based on pos
+		rot_angle = TWO_PI*fract(xy_mult*tree_center.x) + fract(xy_mult*tree_center.y); // random angle based on pos
 		fgRotateRadians(rot_angle, 0.0, 0.0, 1.0); // rotate around Z axis
 	}
 	return rot_angle;
