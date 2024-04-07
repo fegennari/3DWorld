@@ -11,6 +11,8 @@ buildings num_place 100000
 buildings place_radius  0.0 # no radius clipping - place in a square
 buildings max_altitude 5.00 # same for all buildings
 buildings add_secondary_buildings 1
+buildings cities_all_bldg_mats 0 # allows smaller brick and block buildings with windows in commercial cities
+buildings small_city_buildings 0 # commercial cities use smaller non-skyscraper buildings with window cutouts
 buildings sec_extra_spacing 0.1
 buildings pos_range -110.0 60.0  -65.0 30.0 # for secondary buildings
 buildings place_radius 80.0 # for secondary buildings

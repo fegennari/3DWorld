@@ -290,7 +290,7 @@ struct building_params_t {
 
 	bool flatten_mesh=0, has_normal_map=0, tex_mirror=0, tex_inv_y=0, tt_only=0, infinite_buildings=0, dome_roof=0, onion_roof=0;
 	bool gen_building_interiors=1, add_city_interiors=0, enable_rotated_room_geom=0, add_secondary_buildings=0, add_office_basements=0, add_office_br_basements=0;
-	bool put_doors_in_corners=0;
+	bool put_doors_in_corners=0, cities_all_bldg_mats=0, small_city_buildings=0;
 	unsigned num_place=0, num_tries=10, cur_prob=1, max_shadow_maps=32, buildings_rand_seed=0, max_ext_basement_hall_branches=4, max_ext_basement_room_depth=4;
 	unsigned max_room_geom_gen_per_frame=1;
 	float ao_factor=0.0, sec_extra_spacing=0.0, player_coll_radius_scale=1.0, interior_view_dist_scale=1.0;
@@ -351,9 +351,7 @@ struct building_params_t {
 		assert(mat_ix < materials.size());
 		return materials[mat_ix];
 	}
-	vector<unsigned> const &get_mat_list(bool city_only, bool non_city_only, bool residential) const {
-		return (residential ? mat_gen_ix_res : (city_only ? mat_gen_ix_city : (non_city_only ? mat_gen_ix_nocity : mat_gen_ix)));
-	}
+	vector<unsigned> const &get_mat_list(bool city_only, bool non_city_only, bool residential) const;
 	unsigned choose_rand_mat(rand_gen_t &rgen, bool city_only, bool non_city_only, bool residential) const;
 	float get_max_house_size() const;
 	void set_pos_range(cube_t const &pos_range);

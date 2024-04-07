@@ -185,6 +185,8 @@ void building_params_t::init_kw_maps() {
 	kwmb.add("tt_only", tt_only);
 	kwmb.add("infinite_buildings", infinite_buildings);
 	kwmb.add("add_secondary_buildings", add_secondary_buildings);
+	kwmb.add("cities_all_bldg_mats",    cities_all_bldg_mats);
+	kwmb.add("small_city_buildings",    small_city_buildings);
 	kwmb.add("add_office_basements",    add_office_basements);
 	kwmb.add("put_doors_in_corners",    put_doors_in_corners);
 	kwmr.add("two_floor_retail_prob",   two_floor_retail_prob, FP_CHECK_01);
@@ -416,13 +418,20 @@ void building_params_t::add_cur_mat() {
 
 	for (unsigned n = 0; n < cur_prob; ++n) { // add more references to this mat for higher probability
 		mat_gen_ix.push_back(mat_ix);
-		(cur_mat.no_city ? mat_gen_ix_nocity : mat_gen_ix_city).push_back(mat_ix);
+		if (cities_all_bldg_mats || ((!cur_mat.no_city) ^ small_city_buildings)) {mat_gen_ix_city.push_back(mat_ix);}
+		if (cur_mat.no_city) {mat_gen_ix_nocity.push_back(mat_ix);}
 		if (cur_mat.house_prob > 0.0) {mat_gen_ix_res.push_back(mat_ix);}
 	}
 	materials.push_back(cur_mat);
 	materials.back().finalize();
 	materials.back().update_range(range_translate);
 	has_normal_map |= cur_mat.has_normal_map();
+}
+vector<unsigned> const &building_params_t::get_mat_list(bool city_only, bool non_city_only, bool residential) const {
+	if (residential  ) return mat_gen_ix_res;
+	if (city_only    ) return mat_gen_ix_city;
+	if (non_city_only) return mat_gen_ix_nocity;
+	return mat_gen_ix; // all materials
 }
 unsigned building_params_t::choose_rand_mat(rand_gen_t &rgen, bool city_only, bool non_city_only, bool residential) const {
 	vector<unsigned> const &mat_ix_list(get_mat_list(city_only, non_city_only, residential));
