@@ -2651,7 +2651,7 @@ public:
 			for (unsigned n = 0; n < params.num_tries; ++n) { // 10 tries to find a non-overlapping building placement
 				unsigned plot_ix(0), city_block_ix(0), pref_dir(0);
 				int city_ix(-1);
-				bool residential(0);
+				bool residential(0), no_residential(0);
 
 				if (use_city_plots) { // select a random plot, if available
 					bool success(0);
@@ -2662,7 +2662,7 @@ public:
 						if (!city_plot_bcubes[plot_ix].is_full()) {success = 1; break;}
 					}
 					if (!success) break; // all candidate plots were full
-					residential = city_plot_bcubes[plot_ix].is_residential;
+					if (city_plot_bcubes[plot_ix].is_residential) {residential = 1;} else {no_residential = 1;}
 					if (residential && params.mat_gen_ix_res.empty()) break; // no residential buildings available, break from n loop (but retry i loop with new plot)
 				}
 				cube_t pos_range;
@@ -2708,7 +2708,10 @@ public:
 					if (is_tile || mat.place_radius == 0.0 || dist_xy_less_than(center, place_center, mat.place_radius)) {keep = 1; break;} // place_radius ignored for tiles
 				}
 				if (!keep) continue; // placement failed, skip
-				b.is_house = (mat.house_prob > 0.0 && (residential || rgen.rand_probability(mat.house_prob))); // force a house if residential and houses are enabled
+
+				if (!no_residential) {
+					b.is_house = (mat.house_prob > 0.0 && (residential || rgen.rand_probability(mat.house_prob))); // force a house if residential and houses are enabled
+				}
 				float const size_scale(b.is_house ? mat.gen_house_size_scale(rgen_sz) : 1.0);
 				
 				for (unsigned d = 0; d < 2; ++d) { // x,y
