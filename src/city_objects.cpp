@@ -81,7 +81,7 @@ model_city_obj_t::model_city_obj_t(point const &pos_, float height, bool dim_, b
 }
 void model_city_obj_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (!dstate.is_visible_and_unoccluded(bcube, dist_scale)) return;
-	building_obj_model_loader.draw_model(dstate.s, pos, bcube, get_orient_dir(), WHITE, dstate.xlate, get_model_id(), shadow_only);
+	building_obj_model_loader.draw_model(dstate.s, pos, bcube, get_orient_dir(), color, dstate.xlate, get_model_id(), shadow_only);
 }
 bool model_city_obj_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	if (!is_cylinder) {return oriented_city_obj_t::proc_sphere_coll(pos_, p_last, radius_, xlate, cnorm);} // use default cube collision
@@ -1158,6 +1158,16 @@ manhole_t::manhole_t(point const &pos_, float radius_) : city_obj_t(pos_, radius
 void manhole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	unsigned const ndiv(max(4U, min(32U, unsigned(1.0f*dist_scale*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, pos)))));
 	draw_circle_normal(0.0, radius, ndiv, 0, point(pos.x, pos.y, pos.z+get_height()), -1.0); // draw top surface, invert texture coords
+}
+
+// trampolines
+
+trampoline_t::trampoline_t(point const &pos_, float height, rand_gen_t &rgen) :
+	model_city_obj_t(pos_, height, rgen.rand_bool(), rgen.rand_bool(), get_model_id(), 1) // random dim and dir; is_cylinder=1
+{
+	unsigned const NUM_COLORS = 5;
+	colorRGBA const colors[NUM_COLORS] = {BLUE, RED, YELLOW, BLUE, GREEN};
+	color = colors[rgen.rand() % NUM_COLORS];
 }
 
 // traffic cones

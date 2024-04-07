@@ -883,7 +883,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 
 					for (unsigned n = 0; n < 10; ++n) { // make some attempts to generate a valid trampoline location
 						point const ss_pos(rgen.gen_rand_cube_point_xy(center_area, i->z2()));
-						trampoline_t const tramp(ss_pos, tramp_height, rgen.rand_bool(), rgen.rand_bool()); // random dim and dir
+						trampoline_t const tramp(ss_pos, tramp_height, rgen);
 						if (!place_area.contains_cube_xy(tramp.bcube)) continue; // too close to back yard edge
 						if (is_placement_blocked(tramp.bcube, blockers, cube_t(), prev_blockers_end)) continue; // intersects some other object
 						tramp_groups.add_obj(tramp, tramps);

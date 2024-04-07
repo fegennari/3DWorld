@@ -58,7 +58,9 @@ struct oriented_city_obj_t : public city_obj_t {
 };
 
 struct model_city_obj_t : public oriented_city_obj_t {
+	colorRGBA color=WHITE;
 	bool is_cylinder=0;
+
 	model_city_obj_t(cube_t const &bcube_, bool dim_, bool dir_);
 	model_city_obj_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_id, bool is_cylinder_=0);
 	virtual ~model_city_obj_t() {}
@@ -234,7 +236,7 @@ struct swingset_t : public model_city_obj_t {
 };
 
 struct trampoline_t : public model_city_obj_t {
-	trampoline_t(point const &pos_, float height, bool dim_, bool dir_) : model_city_obj_t(pos_, height, dim_, dir_, get_model_id(), 1) {} // is_cylinder=1
+	trampoline_t(point const &pos_, float height, rand_gen_t &rgen);
 	virtual unsigned get_model_id() const {return OBJ_MODEL_TRAMPOLINE;}
 };
 
