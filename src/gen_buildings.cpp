@@ -4128,14 +4128,14 @@ public:
 				grid_elem_t const &ge(get_grid_elem(x, y));
 				if (ge.bc_ixs.empty() || !query_cube.intersects_xy(ge.bcube)) continue;
 
-				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
-					if (!query_cube.intersects_xy(*b)) continue;
-					if (get_grid_ix(query_cube.get_llc().max(b->get_llc())) != (y*grid_sz + x)) continue; // add only if in home grid (to avoid duplicates)
-					if      (query_mode == 0) {cubes.push_back(*b);} // return building bcube
+				for (cube_with_ix_t const &b : ge.bc_ixs) {
+					if (!query_cube.intersects_xy(b)) continue;
+					if (get_grid_ix(query_cube.get_llc().max(b.get_llc())) != (y*grid_sz + x)) continue; // add only if in home grid (to avoid duplicates)
+					if      (query_mode == 0) {cubes.push_back(b);} // return building bcube
 					else if (query_mode == 1) { // return house driveways
-						building_t const &B(get_building(b->ix));
+						building_t const &B(get_building(b.ix));
 						// B.city_driveway will be the added driveway; if a valid driveway already connects the garage to the road, it will remain all zeros
-						if (B.maybe_add_house_driveway(query_cube, b->ix) && !B.city_driveway.is_all_zeros()) {cubes.push_back(B.city_driveway);} // ix not set
+						if (B.maybe_add_house_driveway(query_cube, b.ix) && !B.city_driveway.is_all_zeros()) {cubes.push_back(B.city_driveway);} // ix not set
 					}
 					else {assert(0);} // invalid mode/not implemented
 				}
@@ -4147,25 +4147,15 @@ public:
 	void add_house_driveways_for_plot(cube_t const &plot,     vect_cube_t      &driveways) const {return query_for_cube(plot,     driveways, 1);}
 
 	void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcubes) const {
-		if (empty()) return; // nothing to do
-		unsigned ixr[2][2];
-		get_grid_range(city_bcube, ixr);
+		vector<cube_with_ix_t> cand_bldgs;
+		get_overlapping_bcubes(city_bcube, cand_bldgs);
 
-		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
-			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
-				grid_elem_t const &ge(get_grid_elem(x, y));
-				if (ge.bc_ixs.empty() || !city_bcube.intersects_xy(ge.bcube)) continue;
-
-				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
-					//if (!city_bcube.intersects_xy(*b)) continue; // not needed
-					if (get_grid_ix(city_bcube.get_llc().max(b->get_llc())) != (y*grid_sz + x)) continue; // add only if in home grid (to avoid duplicates)
-					building_t const &building(get_building(b->ix));
-					if (!building.has_ext_basement() || !building.interior) continue;
-					auto const &rooms(building.interior->rooms);
-					for (auto r = rooms.begin()+building.interior->ext_basement_hallway_room_id; r != rooms.end(); ++r) {bcubes.push_back(*r);}
-				}
-			} // for x
-		} // for y
+		for (cube_with_ix_t const &b : cand_bldgs) {
+			building_t const &building(get_building(b.ix));
+			if (!building.has_ext_basement() || !building.interior) continue;
+			auto const &rooms(building.interior->rooms);
+			for (auto r = rooms.begin()+building.interior->ext_basement_hallway_room_id; r != rooms.end(); ++r) {bcubes.push_back(*r);}
+		}
 	}
 	void get_power_points(cube_t const &xy_range, vector<point> &ppts) const { // similar to above function, but returns points rather than cubes
 		if (empty()) return; // nothing to do
