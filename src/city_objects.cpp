@@ -8,6 +8,7 @@ extern int animate2;
 extern double camera_zh;
 extern city_params_t city_params;
 extern object_model_loader_t building_obj_model_loader;
+extern building_params_t global_building_params;
 
 unsigned const q2t_ixs[6] = {0,2,1,0,3,2}; // quad => 2 tris
 
@@ -1208,7 +1209,7 @@ pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth) :
 	bcube.z1() -= depth;
 }
 /*static*/ void pond_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	// TODO
+	select_texture(get_texture_by_name("snow2.jpg")); // something better?
 }
 void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	// TODO
@@ -1219,17 +1220,24 @@ bool pond_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, p
 
 // walkways
 
-walkway_t::walkway_t(cube_t const &bcube_, unsigned mat_id_, bool dim_, bool dir_) : oriented_city_obj_t(dim_, dir_), mat_id(mat_id_) {
+walkway_t::walkway_t(cube_t const &bcube_, unsigned mat_ix_, bool dim_, bool dir_) : oriented_city_obj_t(dim_, dir_), mat_ix(mat_ix_) {
 	bcube = bcube_;
 	set_bsphere_from_bcube(); // compute bsphere from bcube
-	texture_color = WHITE; // TODO
-}
-/*static*/ void walkway_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	// TODO: select_texture(); using mat_id
+	auto const &mat(global_building_params.get_material(mat_ix));
+	map_mode_color = texture_color(mat.roof_tex.tid).modulate_with(GRAY); // use the roof because this is what's visible in overhead map mode
 }
 void walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	float const tscale(1.0); // TODO
-	dstate.draw_cube(qbds.qbd, bcube, WHITE, 0, tscale, (1 << dim)); // skip ends
+	auto const &mat(global_building_params.get_material(mat_ix));
+	tid_nm_pair_dstate_t state(dstate.s); // pass this in?
+	mat.side_tex.set_gl(state);
+	colorRGBA const side_color(WHITE); // TODO: get from building
+	float const tsx(mat.side_tex.tscale_x), tsy(mat.side_tex.tscale_y);
+	dstate.draw_cube(qbds.qbd, bcube, side_color, 0, 1.0, ((1 << dim) | 4), 0, 0, 0, tsx, tsx, tsy); // sides; skip ends, top, and bottom
+	qbds.qbd.draw_and_clear(); // must draw here since texture was set dynamically
+	mat.roof_tex.set_gl(state);
+	colorRGBA const roof_color(GRAY); // TODO: get from building
+	dstate.draw_cube(qbds.qbd, bcube, roof_color, 0, mat.roof_tex.tscale_x, 3); // top and bottom; skip ends and sides
+	qbds.qbd.draw_and_clear(); // must draw here since texture was set dynamically
 }
 
 // birds/pigeons

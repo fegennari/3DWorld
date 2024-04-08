@@ -269,11 +269,10 @@ struct pond_t : public city_obj_t {
 };
 
 struct walkway_t : public oriented_city_obj_t {
-	unsigned mat_id; // matches building material
-	colorRGBA texture_color;
+	unsigned mat_ix; // matches building material
+	colorRGBA map_mode_color;
 
-	walkway_t(cube_t const &bcube_, unsigned mat_id_, bool dim_, bool dir_);
-	static void pre_draw (draw_state_t &dstate, bool shadow_only);
+	walkway_t(cube_t const &bcube_, unsigned mat_ix_, bool dim_, bool dir_);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	// no sphere coll since it's above the ground? or use the default cube coll?
 };

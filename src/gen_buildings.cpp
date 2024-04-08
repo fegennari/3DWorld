@@ -48,6 +48,7 @@ extern shader_t reflection_shader;
 void bind_default_sun_moon_smap_textures();
 void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
 cube_t get_building_indir_light_bounds(); // from building_lighting.cpp
+float get_power_pole_height();
 void register_player_not_in_building();
 bool player_holding_lit_candle();
 void parse_universe_name_str_tables();
@@ -4157,6 +4158,112 @@ public:
 			for (auto r = rooms.begin()+building.interior->ext_basement_hallway_room_id; r != rooms.end(); ++r) {bcubes.push_back(*r);}
 		}
 	}
+
+	void get_walkways_for_city(cube_t const &city_bcube, vector<cube_with_ix_t> &walkways) const {
+		//highres_timer_t timer("get_walkways_for_city"); // 0.1ms
+		vector<cube_with_ix_t> cand_bldgs, city_bldgs;
+		get_overlapping_bcubes(city_bcube, cand_bldgs);
+		float max_xy_sz(0.0);
+
+		for (cube_with_ix_t const &b : cand_bldgs) {
+			building_t const &building(get_building(b.ix));
+			if (building.is_house || !building.is_cube() || building.is_rotated()) continue; // walkways not supported for this building
+			city_bldgs.push_back(b);
+			max_eq(max_xy_sz, max(building.bcube.dx(), building.bcube.dy()));
+		}
+		if (city_bldgs.size() < 2) return; // no buildings to connect
+		float const max_walkway_len(1.5*max_xy_sz), road_width(get_road_max_width());
+		rand_gen_t rgen;
+
+		for (auto i1 = city_bldgs.begin(); i1 != city_bldgs.end(); ++i1) {
+			building_t const &b1(get_building(i1->ix));
+			float const min_ww_width(2.0*b1.get_doorway_width()), floor_spacing(b1.get_window_vspace()); // should be the same for all buildings
+			unsigned const min_floors_above_power_pole(unsigned(get_power_pole_height()/floor_spacing) + 1U); // for crossing roads; take the ceil
+			float const walkway_zmin_short(b1.ground_floor_z1 + floor_spacing); // one floor up
+			float const walkway_zmin_long (b1.ground_floor_z1 + min_floors_above_power_pole*floor_spacing); // N floors up
+
+			for (auto i2 = i1+1; i2 != city_bldgs.end(); ++i2) {
+				building_t const &b2(get_building(i2->ix));
+				assert(!b1.bcube.intersects_xy(b2.bcube)); // sanity check
+				assert(b1.ground_floor_z1 == b2.ground_floor_z1); // must be at the same elevation
+				bool connected(0);
+
+				for (unsigned dim = 0; dim < 2; ++dim) { // connection dim
+					bool const dir(b1.bcube.get_center_dim(dim) < b2.bcube.get_center_dim(dim)); // dir of b2 relative to b1: 0=to the left, 1=to the right
+					// first, check that the bcubes have a large enough projection and small enough gap
+					float const lo(max(b1.bcube.d[!dim][0], b2.bcube.d[!dim][0])), hi(min(b1.bcube.d[!dim][1], b2.bcube.d[!dim][1])); // projection range
+					if (hi - lo < min_ww_width)   continue; // projection too small
+					float const length(fabs(b1.bcube.d[dim][dir] - b2.bcube.d[dim][!dir]));
+					if (length > max_walkway_len) continue; // buildings are too far apart
+					// check for other buildings in between that block this walkway
+					cube_t cand;
+					cand.d[ dim][ dir] = b2.bcube.d[dim][!dir];
+					cand.d[ dim][!dir] = b1.bcube.d[dim][ dir];
+					cand.d[!dim][0] = lo; cand.d[!dim][1] = hi;
+					set_cube_zvals(cand, walkway_zmin_short, min(b1.bcube.z2(), b2.bcube.z2()));
+					bool is_blocked(0);
+					
+					for (auto i3 = cand_bldgs.begin(); i3 != cand_bldgs.end(); ++i3) { // Note: uses *all* buildings
+						if (i3->ix == i1->ix || i3->ix == i2->ix || !i3->intersects(cand)) continue;
+
+						for (cube_t const &p3 : get_building(i3->ix).parts) {
+							if (p3.intersects(cand)) {is_blocked = 1; break;}
+						}
+						if (is_blocked) break;
+					}
+					if (is_blocked) continue;
+
+					for (cube_t const &p1 : b1.parts) {
+						for (cube_t const &p2 : b2.parts) {
+							float const lo(max(p1.d[!dim][0], p2.d[!dim][0])), hi(min(p1.d[!dim][1], p2.d[!dim][1])), width(hi - lo); // projection range
+							if (width < min_ww_width)     continue; // projection too small
+							float const length(fabs(p1.d[dim][dir] - p2.d[dim][!dir]));
+							if (length > max_walkway_len) continue; // buildings are too far apart
+							// we can't easily check if the walkway crosses a road since we have neither the roads nor the plots here, so be conservative and check for min length
+							bool const is_long(length > road_width);
+							float const walkway_zmin(is_long ? walkway_zmin_long : walkway_zmin_short);
+							float const z2_min_test(walkway_zmin + 0.5*floor_spacing); // test z2 against center of next floor
+							if (p1.z2() < z2_min_test || p2.z2() < z2_min_test) continue; // too short
+							float const zlo(max(walkway_zmin, max(p1.z1(), p2.z1()))), zhi(min(p1.z2(), p2.z2()));
+							if (zhi - zlo < 0.9*floor_spacing) continue; // no overlap of at least a floor (give or take)
+							cube_t walkway;
+							walkway.d[ dim][ dir] = p2.d[dim][!dir];
+							walkway.d[ dim][!dir] = p1.d[dim][ dir];
+							walkway.d[!dim][0] = lo; walkway.d[!dim][1] = hi;
+							float const target_width(min_ww_width*rgen.rand_uniform(1.0, 2.0));
+							if (width > target_width) {walkway.expand_in_dim(!dim, -0.5*(width - target_width));} // shrink the width if needed
+							set_cube_zvals(walkway, zlo, zhi);
+							unsigned const ww_height(1 + (rgen.rand()%3)); // 1-3
+							float const z2_max(zlo + ww_height*floor_spacing); // limit height
+							
+							if (z2_max < walkway.z2()) { // reduce walkway height
+								unsigned const num_floors_above(round_fp((walkway.z2() - z2_max)/floor_spacing));
+								walkway.z2() = z2_max;
+								
+								if (num_floors_above > 1) { // reduced by at least one floor
+									unsigned const num_floors_raise(rgen.rand() % num_floors_above);
+									if (num_floors_raise > 0) {walkway.translate_dim(2, num_floors_raise*floor_spacing);} // raise it up
+								}
+							}
+							assert(walkway.is_strictly_normalized());
+							// check for other parts blocking the walkway
+							bool ww_blocked(0);
+							for (cube_t const &p1b : b1.parts) {ww_blocked |= (p1b != p1 && p1b.intersects(walkway));}
+							for (cube_t const &p2b : b2.parts) {ww_blocked |= (p2b != p2 && p2b.intersects(walkway));}
+							for (cube_t const &w   : walkways) {ww_blocked |=                 w.intersects(walkway) ;} // check other walkways
+							if (ww_blocked) continue;
+							walkways.emplace_back(walkway, ((b1.mat_ix << 1) + dim)); // encode dim in LSB
+							connected = 1;
+							break; // only need one connection
+						} // for p2
+						if (connected) break;
+					} // for p1
+					if (connected) break;
+				} // for dim
+			} // for i2
+		} // for i1
+	}
+
 	void get_power_points(cube_t const &xy_range, vector<point> &ppts) const { // similar to above function, but returns points rather than cubes
 		if (empty()) return; // nothing to do
 		unsigned ixr[2][2];
@@ -4543,7 +4650,8 @@ void set_buildings_pos_range(cube_t const &pos_range) {global_building_params.se
 // Note: no xlate applied for any of these four queries below
 void get_building_bcubes(cube_t const &xy_range, vect_cube_with_ix_t &bcubes  ) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);}
 void get_building_bcubes(cube_t const &xy_range, vect_cube_t         &bcubes  ) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);}
-void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcubes) {building_creator_city.get_building_ext_basement_bcubes(city_bcube, bcubes);}
+void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcubes  ) {building_creator_city.get_building_ext_basement_bcubes(city_bcube, bcubes);}
+void get_walkways_for_city(cube_t const &city_bcube, vector<cube_with_ix_t> &walkways) {building_creator_city.get_walkways_for_city(city_bcube, walkways);}
 void get_building_power_points(cube_t const &xy_range, vector<point> &ppts    ) {building_creator_city.get_power_points(xy_range, ppts);}
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways  ) {building_creator_city.add_house_driveways_for_plot(plot, driveways);}
 void add_buildings_exterior_lights(vector3d const &xlate, cube_t &lights_bcube) {building_creator_city.add_exterior_lights(xlate, lights_bcube);}

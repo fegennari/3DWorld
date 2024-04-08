@@ -17,6 +17,7 @@ void add_signs_for_city(unsigned city_id, vector<sign_t> &signs);
 void add_flags_for_city(unsigned city_id, vector<city_flag_t> &flags);
 city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, float length, int flag_id=-1);
 void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcubes);
+void get_walkways_for_city(cube_t const &city_bcube, vector<cube_with_ix_t> &walkway_cands);
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
 float get_inner_sidewalk_width();
 cube_t get_plot_coll_region(cube_t const &plot_bcube);
@@ -352,6 +353,7 @@ bool check_path_tree_coll(park_path_t const &path, vector<point> const &tree_pos
 	}
 	return 0;
 }
+float get_power_pole_height() {return 0.9*city_params.road_width;}
 
 // Note: blockers are used for placement of objects within this plot; colliders are used for pedestrian AI
 void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders,
@@ -466,7 +468,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	point corner_pole_pos(all_zeros);
 
 	if ((is_residential && have_city_buildings()) || have_streetlights) {
-		float const road_width(city_params.road_width), pole_radius(0.015*road_width), height(0.9*road_width);
+		float const road_width(city_params.road_width), pole_radius(0.015*road_width), height(get_power_pole_height());
 		float const xspace(plot.dx() + road_width), yspace(plot.dy() + road_width); // == city_params.road_spacing?
 		float const xyspace[2] = {0.5f*xspace, 0.5f*yspace};
 		// we can move in toward the plot center so that they don't block pedestrians, but then they can block driveways;
@@ -1378,6 +1380,18 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	float const sidewalk_width(get_sidewalk_width());
 	if (is_residential) {get_building_ext_basement_bcubes(city_bcube, pool_blockers);}
 
+	if (!is_residential) { // add walkways for commercial city office buildings
+		vector<cube_with_ix_t> walkway_cands;
+		get_walkways_for_city(city_bcube, walkway_cands);
+
+		for (cube_with_ix_t const &c : walkway_cands) {
+			// TODO: check for collisions, or move this code to the end?
+			bool const dim(c.ix & 1), dir(0); // dim is LSB; dir is unused and set to 0
+			unsigned const mat_ix(c.ix >> 1);
+			walkway_groups.add_obj(walkway_t(c, mat_ix, dim, dir), walkways);
+			// not added to colliders since walkways are above pedestrians; what about blockers for other objects such as trees?
+		}
+	}
 	for (auto i = plots.begin(); i != plots.end(); ++i) { // calculate num_x_plots and num_y_plots; these are used for determining edge power poles
 		max_eq(num_x_plots, i->xpos+1U);
 		max_eq(num_y_plots, i->ypos+1U);
@@ -1408,7 +1422,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 		}
 		place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen, buildings_end);
 		place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, have_streetlights);
-	} // for i
+	} // for i (plot)
 	for (unsigned n = 0; n < 3; ++n) {
 		for (road_isec_t &isec : isecs[n]) {
 			place_signs_in_isec(isec); // Note: not a plot, can't use plot colliders
@@ -1607,7 +1621,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(umbrellas, umbrella_groups, dstate, 0.18, shadow_only, 1); // dist_scale=0.18, has_immediate_draw=1
 	draw_objects(bikes,     bike_groups,     dstate, 0.025,shadow_only, 1); // dist_scale=0.025,has_immediate_draw=1
 	draw_objects(plants,    plant_groups,    dstate, 0.05, shadow_only, 1); // dist_scale=0.05, has_immediate_draw=1
-	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 0); // dist_scale=0.25
+	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1); // dist_scale=0.25, has_immediate_draw=1
 	
 	if (!shadow_only) { // non shadow casting objects
 		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0); // dist_scale=0.12
@@ -1744,6 +1758,7 @@ template<typename T> bool check_city_obj_pt_xy_contains(city_obj_groups_t const 
 }
 bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool skip_in_road) const {
 	unsigned obj_ix(0);
+	if (check_city_obj_pt_xy_contains(walkway_groups, walkways, pos, obj_ix, 0)) {color = walkways[obj_ix].map_mode_color; return 1;} // is_cylin=0; first, since these are above
 	if (check_city_obj_pt_xy_contains(bench_groups, benches, pos, obj_ix)) {color = texture_color(FENCE_TEX); return 1;}
 	float const expand(0.15*city_params.road_width), x_test(pos.x + expand); // expand to approx tree diameter
 
@@ -1803,7 +1818,6 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 	if (check_city_obj_pt_xy_contains(tramp_groups,    tramps,    pos, obj_ix, 1)) {color = (BKGRAY*0.75 + tramps[obj_ix].color*0.25); return 1;} // is_cylin=1
 	if (check_city_obj_pt_xy_contains(umbrella_groups, umbrellas, pos, obj_ix, 1)) {color = WHITE; return 1;} // is_cylin=1
 	if (check_city_obj_pt_xy_contains(pond_groups,     ponds,     pos, obj_ix, 1)) {color = BLUE ; return 1;} // is_cylin=1 (sort of)
-	if (check_city_obj_pt_xy_contains(walkway_groups,  walkways,  pos, obj_ix, 0)) {color = walkways[obj_ix].texture_color; return 1;} // is_cylin=0
 	// Note: ppoles, hcaps, manholes, mboxes, tcones, pladders, signs, stopsigns, flags, pigeons, birds, swings, umbrellas, bikes, and plants are skipped for now
 	return 0;
 }
