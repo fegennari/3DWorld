@@ -42,6 +42,7 @@ struct city_obj_t : public sphere_t {
 	bool operator<(city_obj_t const &b) const {return (bcube.x1() < b.bcube.x1());} // sort by bcube x1
 	cube_t const &get_outer_bcube() const {return bcube;}
 	float get_bsphere_radius(bool shadow_only) const {return radius;}
+	float get_overlay_radius() const {return radius;} // for overhead map mode
 	void set_bsphere_from_bcube() {*((sphere_t *)this) = bcube.get_bsphere();}
 	static void pre_draw (draw_state_t &dstate, bool shadow_only) {} // nothing to do
 	static void post_draw(draw_state_t &dstate, bool shadow_only) {} // nothing to do
@@ -65,7 +66,8 @@ struct model_city_obj_t : public oriented_city_obj_t {
 	model_city_obj_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_id, bool is_cylinder_=0);
 	virtual ~model_city_obj_t() {}
 	virtual unsigned get_model_id() const = 0;
-	float get_xy_radius() const {assert(is_cylinder); return 0.25*(bcube.dx() + bcube.dy());} // assume square-ish
+	virtual float get_xy_coll_radius() const {assert(is_cylinder); return 0.25*(bcube.dx() + bcube.dy());} // assume square-ish
+	float get_overlay_radius() const {return model_city_obj_t::get_xy_coll_radius();} // for overhead map mode
 	static void pre_draw (draw_state_t &dstate, bool shadow_only) {disable_hemi_lighting_pre_post(dstate, shadow_only, 0);}
 	static void post_draw(draw_state_t &dstate, bool shadow_only) {disable_hemi_lighting_pre_post(dstate, shadow_only, 1);}
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
@@ -240,9 +242,10 @@ struct trampoline_t : public model_city_obj_t {
 	virtual unsigned get_model_id() const {return OBJ_MODEL_TRAMPOLINE;}
 };
 
-struct umbrella_t : public model_city_obj_t {
+struct umbrella_t : public model_city_obj_t { // large beach umbrella
 	umbrella_t(point const &pos_, float height, bool dim_, bool dir_) : model_city_obj_t(pos_, height, dim_, dir_, get_model_id(), 1) {} // is_cylinder=1
-	virtual unsigned get_model_id() const {return OBJ_MODEL_BIG_UMBRELLA;}
+	virtual unsigned get_model_id   () const {return OBJ_MODEL_BIG_UMBRELLA;}
+	virtual float get_xy_coll_radius() const {return 0.33*model_city_obj_t::get_xy_coll_radius();} // smaller radius because we only collide with the vertical pole
 };
 
 struct potted_plant_t : public multi_model_city_obj_t {

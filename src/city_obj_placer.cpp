@@ -849,18 +849,19 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		// attempt place swimming pool; often unsuccessful
 		bool const placed_pool(add_divider && place_swimming_pool(plot, *i, house, sdim, sdir, shrink_dim, prev_blockers_end, hwidth,
 			translate_dist, pool_blockers, blockers, colliders, rgen));
+		bool const add_umbrella(building_obj_model_loader.is_model_valid(OBJ_MODEL_BIG_UMBRELLA) && rgen.rand_float() < 0.25); // 25% of the time
+		bool placed_obj(placed_pool);
 
-		if (!placed_pool) { // can't place a pool; try a swingset or trampoline instead
+		if (!placed_obj || add_umbrella) { // place other objects
 			cube_t place_area(*i);
 			place_area.d[sdim][sdir] = house.d[sdim][!sdir]; // limit to the back yard
 			place_area.expand_by_xy(-(0.1*city_params.road_width + hwidth)); // add some spacing, including divider width
 			cube_t center_area(place_area);
 			center_area.expand_by_xy(-0.2*city_params.road_width); // shrink the center placement area
 			float const dx(center_area.dx()), dy(center_area.dy());
-			bool placed_obj(0);
 
 			if (dx > 0.0 && dy > 0.0) { // we have enough space
-				if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SWINGSET) && rgen.rand_float() < 0.7) { // 70% of the time
+				if (!placed_obj && building_obj_model_loader.is_model_valid(OBJ_MODEL_SWINGSET) && rgen.rand_float() < 0.7) { // 70% of the time if ther was no pool
 					float const ss_height(0.2*city_params.road_width);
 
 					for (unsigned n = 0; n < 10; ++n) { // make some attempts to generate a valid swingset location
@@ -878,7 +879,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 						break; // success
 					} // for n
 				}
-				if (!placed_obj && building_obj_model_loader.is_model_valid(OBJ_MODEL_TRAMPOLINE)) {
+				if (!placed_obj && building_obj_model_loader.is_model_valid(OBJ_MODEL_TRAMPOLINE)) { // add a trampoline if there was no pool or swingset
 					float const tramp_height(0.18*city_params.road_width);
 
 					for (unsigned n = 0; n < 10; ++n) { // make some attempts to generate a valid trampoline location
@@ -891,8 +892,21 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 						break; // success
 					} // for n
 				}
+				if (add_umbrella) { // maybe place a beach umbrella
+					float const umbrella_height(0.25*city_params.road_width);
+
+					for (unsigned n = 0; n < 10; ++n) { // make some attempts to generate a valid trampoline location
+						point const ss_pos(rgen.gen_rand_cube_point_xy(center_area, i->z2()));
+						umbrella_t const umbrella(ss_pos, umbrella_height, 0, 0); // dim=0, dir=0
+						if (!place_area.contains_cube_xy(umbrella.bcube)) continue; // too close to back yard edge
+						//if (placed_pool && umbrella.bcube.intersects_xy(pools.back().bcube))             continue; // intersects the pool
+						if (is_placement_blocked(umbrella.bcube, blockers, cube_t(), blockers.size())) continue; // intersects some other object; include all objects
+						umbrella_groups.add_obj(umbrella, umbrellas);
+						add_cube_to_colliders_and_blockers(umbrella.bcube, colliders, blockers);
+						break; // success
+					} // for n
+				}
 			}
-			// TODO: umbrellas/TYPE_BIG_UMBRELLA
 		}
 		// place short pine trees by the front
 		if (!enable_instanced_pine_trees()) {
@@ -1585,7 +1599,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(tcones,    tcone_groups,    dstate, 0.08, shadow_only, 1); // dist_scale=0.08, has_immediate_draw=1
 	draw_objects(swings,    swing_groups,    dstate, 0.06, shadow_only, 1); // dist_scale=0.06, has_immediate_draw=1
 	draw_objects(tramps,    tramp_groups,    dstate, 0.10, shadow_only, 1); // dist_scale=0.10, has_immediate_draw=1
-	draw_objects(umbrellas, umbrella_groups, dstate, 0.10, shadow_only, 1); // dist_scale=0.10, has_immediate_draw=1
+	draw_objects(umbrellas, umbrella_groups, dstate, 0.18, shadow_only, 1); // dist_scale=0.18, has_immediate_draw=1
 	draw_objects(bikes,     bike_groups,     dstate, 0.025,shadow_only, 1); // dist_scale=0.025,has_immediate_draw=1
 	draw_objects(plants,    plant_groups,    dstate, 0.05, shadow_only, 1); // dist_scale=0.05, has_immediate_draw=1
 	
@@ -1711,7 +1725,7 @@ template<typename T> bool check_city_obj_pt_xy_contains(city_obj_groups_t const 
 		for (auto b = objs.begin()+start_ix; b != objs.begin()+i->ix; ++b) {
 			if (pos.x < b->bcube.x1()) break; // objects are sorted by x1, none after this can match
 			if (!b->check_point_contains_xy(pos)) continue;
-			if (is_cylin && !dist_xy_less_than(pos, b->pos, b->radius)) continue; // cylinder case
+			if (is_cylin && !dist_xy_less_than(pos, b->pos, b->get_overlay_radius())) continue; // cylinder case
 			obj_ix = (b - objs.begin());
 			return 1;
 		}
@@ -1774,9 +1788,11 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 	}
 	if (check_city_obj_pt_xy_contains(sstation_groups, sstations, pos, obj_ix)) {color = colorRGBA(0.6, 0.8, 0.4, 1.0); return 1;} // light olive
 	if (check_city_obj_pt_xy_contains(trashcan_groups, trashcans, pos, obj_ix)) {color = colorRGBA(0.8, 0.6, 0.3, 1.0); return 1;} // tan
-	if (check_city_obj_pt_xy_contains(ppath_groups,    ppaths,    pos, obj_ix))    {color = GRAY; return 1;} // can/should we restrict this to only run when inside a park?
-	if (check_city_obj_pt_xy_contains(fountain_groups, fountains, pos, obj_ix, 1)) {color = GRAY; return 1;} // is_cylin=1
-	// Note: ppoles, hcaps, manholes, mboxes, tcones, pladders, signs, stopsigns, flags, pigeons, birds, swings, tramps, umbrellas, bikes, and plants are skipped for now
+	if (check_city_obj_pt_xy_contains(ppath_groups,    ppaths,    pos, obj_ix))    {color = GRAY  ; return 1;} // can/should we restrict this to only run when inside a park?
+	if (check_city_obj_pt_xy_contains(fountain_groups, fountains, pos, obj_ix, 1)) {color = GRAY  ; return 1;} // is_cylin=1
+	if (check_city_obj_pt_xy_contains(tramp_groups,    tramps,    pos, obj_ix, 1)) {color = (BKGRAY*0.75 + tramps[obj_ix].color*0.25); return 1;} // is_cylin=1
+	if (check_city_obj_pt_xy_contains(umbrella_groups, umbrellas, pos, obj_ix, 1)) {color = WHITE ; return 1;} // is_cylin=1
+	// Note: ppoles, hcaps, manholes, mboxes, tcones, pladders, signs, stopsigns, flags, pigeons, birds, swings, umbrellas, bikes, and plants are skipped for now
 	return 0;
 }
 

@@ -85,7 +85,7 @@ void model_city_obj_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float 
 }
 bool model_city_obj_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	if (!is_cylinder) {return oriented_city_obj_t::proc_sphere_coll(pos_, p_last, radius_, xlate, cnorm);} // use default cube collision
-	return sphere_city_obj_cylin_coll(pos, get_xy_radius(), pos_, p_last, radius_, xlate, cnorm);
+	return sphere_city_obj_cylin_coll(pos, get_xy_coll_radius(), pos_, p_last, radius_, xlate, cnorm);
 }
 
 multi_model_city_obj_t::multi_model_city_obj_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_id, unsigned model_select, bool is_cylinder_) :
