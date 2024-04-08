@@ -706,7 +706,7 @@ void road_isec_t::add_stoplight_bcubes_in_region(cube_t const &region, vect_cube
 bool road_isec_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, float dist, vector3d *cnorm) const {
 	//if (has_stopsign) {} // not handled here
 	if (!has_stoplight) return 0; // no stoplights
-	if (!sphere_cube_intersect(pos, (radius + dist), (*this + xlate))) return 0;
+	if (!moving_sphere_cube_intersect_xy(pos, p_last, (*this + xlate), dist, radius)) return 0;
 
 	for (unsigned n = 0; n < 4; ++n) {
 		if (!(conn & (1<<n))) continue; // no road in this dir

@@ -944,6 +944,14 @@ bool ellipse_cube_intersect(point const &pos, vector3d const &radius, cube_t con
 	UNROLL_3X(float const r2(radius[i_]*radius[i_]); DMIN_CHECK(i_));
 	return 1;
 }
+bool moving_sphere_cube_intersect_xy(point const &p1, point const &p2, cube_t const &c, float dist, float radius) {
+	if (!sphere_cube_intersect_xy(p1, (radius + dist), c)) return 0;
+	if (dist < 2.0*radius) return 1; // test is close enough
+	if (sphere_cube_intersect_xy(p1, radius, c) || sphere_cube_intersect_xy(p2, radius, c)) return 1;
+	cube_t c_exp(c);
+	c_exp.expand_by_xy(radius);
+	return check_line_clip_xy(p1, p2, c_exp.d); // conservative
+}
 
 
 void cylinder_3dw::calc_bcube(cube_t &bcube) const {

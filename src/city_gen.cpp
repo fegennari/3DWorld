@@ -1148,7 +1148,7 @@ public:
 		get_bcubes_region_coll_xy(tracks,  out,    query_region, xlate);
 	}
 	bool proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float dist, float radius, float prev_frame_zval, vector3d *cnorm) const { // pos in camera space
-		if (!sphere_cube_intersect_xy(pos, (radius + dist), (bcube + xlate))) return 0;
+		if (!moving_sphere_cube_intersect_xy(pos, p_last, (bcube + xlate), dist, radius)) return 0;
 		bool plot_coll(0);
 			
 		if (!plots.empty()) {
