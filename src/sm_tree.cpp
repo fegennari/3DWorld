@@ -877,7 +877,11 @@ void small_tree::remove_cobjs() {
 
 
 void small_tree::add_bounds_to_bcube(cube_t &bcube) const {
-	bcube.assign_or_union_with_sphere(trunk_cylin.get_center(), get_xy_radius()); // approximate/conservative
+	cube_t bc;
+	bc.set_from_point(trunk_cylin.get_center());
+	bc.expand_by_xy(get_xy_radius());
+	bc.z1() = trunk_cylin.p1.z; bc.z2() = trunk_cylin.p2.z;
+	bcube.assign_or_union_with_cube(bc); // approximate/conservative
 }
 
 
