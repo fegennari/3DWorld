@@ -63,7 +63,7 @@ void disable_hemi_lighting_pre_post(draw_state_t &dstate, bool shadow_only, bool
 
 model_city_obj_t::model_city_obj_t(cube_t const &bcube_, bool dim_, bool dir_) : oriented_city_obj_t(dim_, dir_) {
 	bcube = bcube_;
-	set_bsphere_from_bcube(); // recompute bsphere from bcube
+	set_bsphere_from_bcube(); // compute bsphere from bcube
 }
 // can't call get_model_id() virtual, must pass model_id in
 model_city_obj_t::model_city_obj_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_id, bool is_cylinder_) :
@@ -1197,6 +1197,39 @@ void traffic_cone_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float di
 	ce[0].z += 0.5*cone_height;
 	ce[1].z -= 0.2*cone_height;
 	add_cylin_as_tris(qbds.untex_qbd.verts, ce, 1.02*(cone_r1 - 0.5*cone_dr), 1.02*(cone_r2 + 0.2*cone_dr), color_wrapper(WHITE), ndiv, 0); // stripe
+}
+
+// ponds
+
+pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth) : city_obj_t(pos_, max(x_radius, y_radius)) {
+	bcube.set_from_point(pos);
+	bcube.expand_in_dim(0, x_radius);
+	bcube.expand_in_dim(0, y_radius);
+	bcube.z1() -= depth;
+}
+/*static*/ void pond_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
+	// TODO
+}
+void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	// TODO
+}
+bool pond_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	return sphere_city_obj_cylin_coll(pos, radius, pos_, p_last, radius_, xlate, cnorm); // TODO: should be an ellipsoid
+}
+
+// walkways
+
+walkway_t::walkway_t(cube_t const &bcube_, unsigned mat_id_, bool dim_, bool dir_) : oriented_city_obj_t(dim_, dir_), mat_id(mat_id_) {
+	bcube = bcube_;
+	set_bsphere_from_bcube(); // compute bsphere from bcube
+	texture_color = WHITE; // TODO
+}
+/*static*/ void walkway_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
+	// TODO: select_texture(); using mat_id
+}
+void walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	float const tscale(1.0); // TODO
+	dstate.draw_cube(qbds.qbd, bcube, WHITE, 0, tscale, (1 << dim)); // skip ends
 }
 
 // birds/pigeons

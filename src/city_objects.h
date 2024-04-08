@@ -261,6 +261,23 @@ struct traffic_cone_t : public city_obj_t {
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
 
+struct pond_t : public city_obj_t {
+	pond_t(point const &pos_, float x_radius, float y_radius, float depth);
+	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
+};
+
+struct walkway_t : public oriented_city_obj_t {
+	unsigned mat_id; // matches building material
+	colorRGBA texture_color;
+
+	walkway_t(cube_t const &bcube_, unsigned mat_id_, bool dim_, bool dir_);
+	static void pre_draw (draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+	// no sphere coll since it's above the ground? or use the default cube coll?
+};
+
 struct city_bird_base_t : public city_obj_t {
 	vector3d dir;
 	city_bird_base_t(point const &pos_, float height, vector3d const &dir, unsigned model_id);
@@ -427,10 +444,12 @@ private:
 	vector<umbrella_t> umbrellas;
 	vector<bicycle_t> bikes;
 	vector<potted_plant_t> plants;
+	vector<pond_t> ponds;
+	vector<walkway_t> walkways;
 	// index is last obj in group
 	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, fountain_groups, divider_groups, pool_groups, plad_groups,
 		pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups, stopsign_groups, flag_groups,
-		nrack_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, plant_groups;
+		nrack_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, plant_groups, pond_groups, walkway_groups;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
 	vect_bird_place_t bird_locs;
