@@ -476,6 +476,7 @@ private:
 		float dist_scale, bool shadow_only, bool has_immediate_draw=0, bool draw_qbd_as_quads=0, float specular=0.75, float shininess=50.0);
 	bool connect_power_to_point(point const &at_pos, bool near_power_pole);
 	void connect_power_to_buildings(vector<road_plot_t> const &plots);
+	bool check_walkway_coll_xy(point const &pos, float radius) const;
 public:
 	bool has_plot_dividers() const {return !dividers.empty();}
 	bool have_animations  () const {return !birds   .empty();} // only birds are animated

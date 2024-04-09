@@ -226,6 +226,16 @@ void resize_blockers_for_trees(vect_cube_t &blockers, unsigned six, unsigned eix
 	}
 }
 
+bool city_obj_placer_t::check_walkway_coll_xy(point const &pos, float radius) const {
+	cube_t test_cube(pos);
+	test_cube.expand_by_xy(radius);
+
+	for (walkway_t const &w : walkways) {
+		if (w.bcube.intersects_xy(test_cube)) return 1;
+	}
+	return 0;
+}
+
 void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t &blockers,
 	vect_cube_t &colliders, vector<point> &tree_pos, rand_gen_t &rgen, unsigned buildings_end)
 {
@@ -253,8 +263,10 @@ void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t
 		bool const add_bush(0); // not yet supported
 		float const bldg_extra_radius(is_palm ? 0.5f*radius : 0.0f); // palm trees are larger and must be kept away from buildings, but can overlap with other trees
 		float const pine_xy_sz((is_sm_tree && plot.is_park) ? rgen.rand_uniform(0.5, 0.8) : 1.0); // randomly narrower
+		float const coll_radius(spacing + bldg_extra_radius);
 		point pos;
-		if (!try_place_obj(plot, blockers, rgen, (spacing + bldg_extra_radius), (radius - bldg_extra_radius), 10, pos)) continue; // 10 tries per tree, extra spacing for palm trees
+		if (!try_place_obj(plot, blockers, rgen, coll_radius, (radius - bldg_extra_radius), 10, pos)) continue; // 10 tries per tree, extra spacing for palm trees
+		if (check_walkway_coll_xy(pos, coll_radius)) continue; // should be rare; no retry
 		// size is randomly selected by the tree generator using default values; allow bushes in parks
 		place_tree(pos, radius, ttype, colliders, &tree_pos, allow_bush, add_bush, is_sm_tree, has_planter, 0.0, pine_xy_sz);
 		if (plot.is_park) continue; // skip row logic and just place trees randomly throughout the park
@@ -266,7 +278,8 @@ void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t
 		for (; n < city_params.max_trees_per_plot; ++n) {
 			pos[dim] += step;
 			if (pos[dim] < plot.d[dim][0]+radius || pos[dim] > plot.d[dim][1]-radius) break; // outside place area
-			if (!check_pt_and_place_blocker(pos, blockers, (spacing + bldg_extra_radius), (spacing - bldg_extra_radius))) break; // placement failed
+			if (!check_pt_and_place_blocker(pos, blockers, coll_radius, (spacing - bldg_extra_radius))) continue; // placement failed
+			if (check_walkway_coll_xy(pos, coll_radius)) continue; // hit walkway
 			place_tree(pos, radius, ttype, colliders, &tree_pos, allow_bush, add_bush, is_sm_tree, has_planter); // use same tree type
 		} // for n
 	} // for n
@@ -1385,11 +1398,10 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 		get_walkways_for_city(city_bcube, walkway_cands);
 
 		for (cube_with_ix_t const &c : walkway_cands) {
-			// TODO: check for collisions, or move this code to the end?
 			bool const dim(c.ix & 1), dir(0); // dim is LSB; dir is unused and set to 0
 			unsigned const mat_ix(c.ix >> 1);
 			walkway_groups.add_obj(walkway_t(c, mat_ix, dim, dir), walkways);
-			// not added to colliders since walkways are above pedestrians; what about blockers for other objects such as trees?
+			// not added to colliders since walkways are above pedestrians
 		}
 	}
 	for (auto i = plots.begin(); i != plots.end(); ++i) { // calculate num_x_plots and num_y_plots; these are used for determining edge power poles
