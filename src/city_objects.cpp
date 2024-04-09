@@ -62,10 +62,6 @@ void disable_hemi_lighting_pre_post(draw_state_t &dstate, bool shadow_only, bool
 
 // model_city_obj_t
 
-model_city_obj_t::model_city_obj_t(cube_t const &bcube_, bool dim_, bool dir_) : oriented_city_obj_t(dim_, dir_) {
-	bcube = bcube_;
-	set_bsphere_from_bcube(); // compute bsphere from bcube
-}
 // can't call get_model_id() virtual, must pass model_id in
 model_city_obj_t::model_city_obj_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_id, bool is_cylinder_) :
 	oriented_city_obj_t(pos_, 0.5*height, dim_, dir_), is_cylinder(is_cylinder_) // radius = 0.5*height
@@ -102,8 +98,8 @@ bench_t::bench_t(point const &pos_, float radius_, bool dim_, bool dir_) : orien
 }
 cube_t bench_t::get_bird_bcube() const {
 	cube_t top_place(bcube);
-	top_place.expand_in_dim(!dim,  0.1*bcube.get_sz_dim(!dim)); // expand the back outward a bit
-	top_place.expand_in_dim( dim, -0.1*bcube.get_sz_dim( dim)); // shrink a bit to account for the arms extending further to the sides than the back
+	top_place.expand_in_dim(!dim,  0.1*get_width ()); // expand the back outward a bit
+	top_place.expand_in_dim( dim, -0.1*get_length()); // shrink a bit to account for the arms extending further to the sides than the back
 	return top_place;
 }
 /*static*/ void bench_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
@@ -348,7 +344,7 @@ plot_divider_type_t plot_divider_types[DIV_NUM_TYPES] = {
 void divider_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (dstate.pass_ix == DIV_NUM_TYPES && type == DIV_CHAINLINK) { // add chainlink fence posts
 		if (!dstate.check_cube_visible(bcube, 1.5*dist_scale)) return;
-		float const length(bcube.get_sz_dim(!dim)), height(bcube.dz()), thickness(bcube.get_sz_dim(dim));
+		float const length(get_width()), height(bcube.dz()), thickness(get_depth());
 		float const post_hwidth(1.5*thickness), post_width(2.0*post_hwidth), top_width(1.5*thickness);
 		unsigned const num_sections(ceil(0.3*length/height)), num_posts(num_sections + 1);
 		float const post_spacing((length - post_width)/num_sections);
@@ -380,7 +376,7 @@ void divider_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 }
 bool divider_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	cube_t bcube_wide(bcube + xlate);
-	bcube_wide.expand_in_dim(dim, max(0.0f, 0.5f*(0.5f*building_t::get_scaled_player_radius() - bcube.get_sz_dim(dim)))); // make sure it's at least half player radius in thickness
+	bcube_wide.expand_in_dim(dim, max(0.0f, 0.5f*(0.5f*building_t::get_scaled_player_radius() - get_depth()))); // make sure it's at least half player radius in thickness
 	return sphere_cube_int_update_pos(pos_, radius_, bcube_wide, p_last, 0, cnorm);
 }
 
@@ -567,10 +563,8 @@ textured_mat_t pool_deck_mats[NUM_POOL_DECK_TYPES] = {
 	textured_mat_t("roads/concrete.jpg", "",                          0, GRAY,  LT_GRAY )
 };
 
-pool_deck_t::pool_deck_t(cube_t const &bcube_, unsigned mat_id_, bool dim_, bool dir_) : oriented_city_obj_t(dim_, dir_), mat_id(mat_id_) {
+pool_deck_t::pool_deck_t(cube_t const &bcube_, unsigned mat_id_, bool dim_, bool dir_) : oriented_city_obj_t(bcube_, dim_, dir_), mat_id(mat_id_) {
 	mat_id %= NUM_POOL_DECK_TYPES;
-	bcube   = bcube_;
-	set_bsphere_from_bcube(); // recompute bsphere from bcube
 }
 /*static*/ void pool_deck_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	assert(dstate.pass_ix < NUM_POOL_DECK_TYPES);
@@ -582,7 +576,7 @@ pool_deck_t::pool_deck_t(cube_t const &bcube_, unsigned mat_id_, bool dim_, bool
 }
 void pool_deck_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (mat_id != dstate.pass_ix) return; // this type not enabled in this pass
-	dstate.draw_cube(qbds.qbd, bcube, pool_deck_mats[mat_id].color, 1, 1.0/bcube.get_sz_dim(!dim), 0, 0, 0, dim); // skip bottom
+	dstate.draw_cube(qbds.qbd, bcube, pool_deck_mats[mat_id].color, 1, 1.0/get_width(), 0, 0, 0, dim); // skip bottom
 }
 
 // newsracks
@@ -1220,9 +1214,7 @@ bool pond_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, p
 
 // walkways
 
-walkway_t::walkway_t(bldg_walkway_t const &w) : oriented_city_obj_t(w.dim, 0), mat_ix(w.mat_ix) { // dir=0 (unused)
-	bcube = w;
-	set_bsphere_from_bcube(); // compute bsphere from bcube
+walkway_t::walkway_t(bldg_walkway_t const &w) : oriented_city_obj_t(w, w.dim, 0), mat_ix(w.mat_ix) { // dir=0 (unused)
 	auto const &mat(global_building_params.get_material(mat_ix));
 	side_color     = w.side_color;
 	roof_color     = w.roof_color;
@@ -1276,7 +1268,7 @@ sign_t::sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, 
 		unsigned const text_len(text.size());
 		float const width(text_bcube.get_sz_dim(!dim)); // make text area a bit wider to account for the space padding
 		text_bcube.expand_in_dim(!dim, 0.25*(float(text_len)/float(text_len-2) - 1.0)*width);
-		text_bcube.expand_in_dim( dim, 0.1*bcube.get_sz_dim(dim)); // expand outward a bit to reduce Z-fighting; doesn't seem to help much
+		text_bcube.expand_in_dim( dim, 0.1*get_depth()); // expand outward a bit to reduce Z-fighting; doesn't seem to help much
 		vector<vert_norm_tc_color> verts;
 		add_sign_text_verts(text, text_bcube, dim, dir, text_color, verts, 0.0, 0.0, 1); // include_space_chars=1, since we need offsets for all characters
 		assert(verts.size() == 4*text_len);
@@ -1362,7 +1354,7 @@ cube_t stopsign_t::get_bird_bcube() const {
 	if (!shadow_only) {dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA);}
 }
 void stopsign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	float const width(bcube.get_sz_dim(!dim)), thickness(bcube.get_sz_dim(dim)), sign_back(bcube.d[dim][dir] + (dir ? -1.0 : 1.0)*0.1*thickness);
+	float const width(get_width()), thickness(get_depth()), sign_back(bcube.d[dim][dir] + (dir ? -1.0 : 1.0)*0.1*thickness);
 	// draw the octagon with one side textured and the other not, in two passes
 	bool const front_facing(((camera_pdu.pos[dim] - dstate.xlate[dim]) < bcube.d[dim][dir]) ^ dir);
 	unsigned const skip_dims((1 << (1-dim)) | 4); // skip edges and top/bottom
@@ -1490,7 +1482,7 @@ void park_path_t::calc_bcube_bsphere() {
 	bcube.z2() += hwidth; // make sure it's nonzero height
 	set_bsphere_from_bcube();
 }
-/*static*/ void park_path_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
+/*static*/ void park_path_t::pre_draw(draw_state_t &dstate, bool shadow_only) { // Note: not drawn in shadow pass
 	select_texture(get_texture_by_name("roads/concrete.jpg"));
 }
 void park_path_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {

@@ -1613,15 +1613,15 @@ void city_obj_placer_t::finalize_streetlights_and_power(streetlights_t &sl, vect
 
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
 	if (!dstate.check_cube_visible(all_objs_bcube, 1.0)) return; // check bcube, dist_scale=1.0
-	draw_objects(benches,   bench_groups,    dstate, 0.16, shadow_only, 0); // dist_scale=0.16
+	draw_objects(benches,   bench_groups,    dstate, 0.16, shadow_only, 0); // dist_scale=0.16, has_immediate_draw=0
 	draw_objects(fhydrants, fhydrant_groups, dstate, 0.06, shadow_only, 1); // dist_scale=0.06, has_immediate_draw=1
 	draw_objects(sstations, sstation_groups, dstate, 0.15, shadow_only, 1); // dist_scale=0.15, has_immediate_draw=1
 	draw_objects(fountains, fountain_groups, dstate, 0.20, shadow_only, 1); // dist_scale=0.20, has_immediate_draw=1
 	draw_objects(mboxes,    mbox_groups,     dstate, 0.04, shadow_only, 1); // dist_scale=0.04, has_immediate_draw=1
-	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0); // dist_scale=0.20
+	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0); // dist_scale=0.20, has_immediate_draw=0
 	draw_objects(signs,     sign_groups,     dstate, 0.25, shadow_only, 0, 1); // dist_scale=0.25, draw_qbd_as_quads=1
 	draw_objects(flags,     flag_groups,     dstate, 0.18, shadow_only, 1); // dist_scale=0.18, has_immediate_draw=1
-	draw_objects(newsracks, nrack_groups,    dstate, 0.10, shadow_only, 0); // dist_scale=0.10
+	draw_objects(newsracks, nrack_groups,    dstate, 0.10, shadow_only, 0); // dist_scale=0.10, has_immediate_draw=0
 	draw_objects(tcones,    tcone_groups,    dstate, 0.08, shadow_only, 1); // dist_scale=0.08, has_immediate_draw=1
 	draw_objects(swings,    swing_groups,    dstate, 0.06, shadow_only, 1); // dist_scale=0.06, has_immediate_draw=1
 	draw_objects(tramps,    tramp_groups,    dstate, 0.10, shadow_only, 1); // dist_scale=0.10, has_immediate_draw=1
@@ -1631,12 +1631,12 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1); // dist_scale=0.25, has_immediate_draw=1
 	
 	if (!shadow_only) { // non shadow casting objects
-		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0); // dist_scale=0.12
+		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0); // dist_scale=0.12, has_immediate_draw=0
 		draw_objects(manholes, manhole_groups, dstate, 0.07, shadow_only, 1); // dist_scale=0.07, has_immediate_draw=1
 		draw_objects(pigeons,  pigeon_groups,  dstate, 0.03, shadow_only, 1); // dist_scale=0.03, has_immediate_draw=1
 		draw_objects(birds,    bird_groups,    dstate, 0.03, shadow_only, 1); // dist_scale=0.03, has_immediate_draw=1
 		draw_objects(pladders, plad_groups,    dstate, 0.06, shadow_only, 1); // dist_scale=0.06, has_immediate_draw=1
-		draw_objects(ppaths,   ppath_groups,   dstate, 0.25, shadow_only, 0, 1); // dist_scale=0.25, draw_qbd_as_quads=1
+		draw_objects(ppaths,   ppath_groups,   dstate, 0.25, shadow_only, 0, 1); // dist_scale=0.25, has_immediate_draw=0, draw_qbd_as_quads=1
 		draw_objects(ponds,    pond_groups,    dstate, 0.25, shadow_only, 0); // dist_scale=0.25, has_immediate_draw=???
 	}
 	dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // reset back to default after drawing 3D models such as fire hydrants and substations
@@ -1765,8 +1765,9 @@ template<typename T> bool check_city_obj_pt_xy_contains(city_obj_groups_t const 
 }
 bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool skip_in_road) const {
 	unsigned obj_ix(0);
-	if (check_city_obj_pt_xy_contains(walkway_groups, walkways, pos, obj_ix, 0)) {color = walkways[obj_ix].map_mode_color; return 1;} // is_cylin=0; first, since these are above
-	if (check_city_obj_pt_xy_contains(bench_groups, benches, pos, obj_ix)) {color = texture_color(FENCE_TEX); return 1;}
+	// test walkways first, since they're above most other objects; however, they're still not drawn over roads
+	if (check_city_obj_pt_xy_contains(walkway_groups, walkways, pos, obj_ix, 0)) {color = walkways[obj_ix].map_mode_color; return 1;} // is_cylin=0
+	if (check_city_obj_pt_xy_contains(bench_groups,   benches,  pos, obj_ix, 0)) {color = texture_color(FENCE_TEX);        return 1;} // is_cylin=0
 	float const expand(0.15*city_params.road_width), x_test(pos.x + expand); // expand to approx tree diameter
 
 	if (!planter_groups.empty() && planter_groups.get_bcube().contains_pt_xy(pos)) {

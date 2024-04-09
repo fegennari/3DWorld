@@ -38,6 +38,7 @@ struct city_draw_qbds_t {
 struct city_obj_t : public sphere_t {
 	cube_t bcube;
 	city_obj_t() {}
+	city_obj_t(cube_t const &bcube_) : bcube(bcube_) {set_bsphere_from_bcube();}
 	city_obj_t(point const &pos_, float radius_) : sphere_t(pos_, radius_) {}
 	bool operator<(city_obj_t const &b) const {return (bcube.x1() < b.bcube.x1());} // sort by bcube x1
 	cube_t const &get_outer_bcube() const {return bcube;}
@@ -54,7 +55,11 @@ struct city_obj_t : public sphere_t {
 struct oriented_city_obj_t : public city_obj_t {
 	bool dim, dir;
 	oriented_city_obj_t(bool dim_=0, bool dir_=0) : dim(dim_), dir(dir_) {}
+	oriented_city_obj_t(cube_t const &bcube_, bool dim_=0, bool dir_=0) : city_obj_t(bcube_), dim(dim_), dir(dir_) {}
 	oriented_city_obj_t(point const &pos_, float radius_, bool dim_=0, bool dir_=0) : city_obj_t(pos_, radius_), dim(dim_), dir(dir_) {}
+	float get_length() const {return bcube.get_sz_dim( dim);}
+	float get_depth () const {return bcube.get_sz_dim( dim);}
+	float get_width () const {return bcube.get_sz_dim(!dim);}
 	vector3d get_orient_dir() const;
 };
 
@@ -62,7 +67,7 @@ struct model_city_obj_t : public oriented_city_obj_t {
 	colorRGBA color=WHITE;
 	bool is_cylinder=0;
 
-	model_city_obj_t(cube_t const &bcube_, bool dim_, bool dir_);
+	model_city_obj_t(cube_t const &bcube_, bool dim_, bool dir_) : oriented_city_obj_t(bcube_, dim_, dir_) {}
 	model_city_obj_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_id, bool is_cylinder_=0);
 	virtual ~model_city_obj_t() {}
 	virtual unsigned get_model_id() const = 0;
