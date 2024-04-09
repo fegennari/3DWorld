@@ -1215,24 +1215,23 @@ bool pond_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, p
 
 // walkways
 
-walkway_t::walkway_t(bldg_walkway_t const &w) : oriented_city_obj_t(w, w.dim, 0), mat_ix(w.mat_ix) { // dir=0 (unused)
-	auto const &mat(global_building_params.get_material(mat_ix));
-	side_color     = w.side_color;
-	roof_color     = w.roof_color;
-	map_mode_color = texture_color(mat.roof_tex.tid).modulate_with(roof_color); // use the roof because this is what's visible in overhead map mode
+walkway_t::walkway_t(bldg_walkway_t const &w) : oriented_city_obj_t(w, w.dim, 0), walkway_material_t(w) { // dir=0 (unused)
+	// use the roof because this is what's visible in overhead map mode
+	map_mode_color = texture_color(global_building_params.get_material(roof_mat_ix).roof_tex.tid).modulate_with(roof_color);
 }
 /*static*/ void walkway_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {set_flat_normal_map();}
 }
 void walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	auto const &mat(global_building_params.get_material(mat_ix));
+	auto const &side_mat(global_building_params.get_material(side_mat_ix));
 	tid_nm_pair_dstate_t state(dstate.s); // pass this in?
-	mat.side_tex.set_gl(state);
-	float const tsx(mat.side_tex.get_drawn_tscale_x()), tsy(mat.side_tex.get_drawn_tscale_y());
+	side_mat.side_tex.set_gl(state);
+	float const tsx(side_mat.side_tex.get_drawn_tscale_x()), tsy(side_mat.side_tex.get_drawn_tscale_y());
 	dstate.draw_cube(qbds.qbd, bcube, side_color, 0, 1.0, ((1 << dim) | 4), 0, 0, 0, tsx, tsx, tsy); // sides; skip ends, top, and bottom
+	auto const &roof_mat(global_building_params.get_material(roof_mat_ix));
 	qbds.qbd.draw_and_clear(); // must draw here since texture was set dynamically
-	mat.roof_tex.set_gl(state);
-	dstate.draw_cube(qbds.qbd, bcube, roof_color, 0, mat.roof_tex.get_drawn_tscale_x(), 3); // top and bottom; skip ends and sides
+	roof_mat.roof_tex.set_gl(state);
+	dstate.draw_cube(qbds.qbd, bcube, roof_color, 0, roof_mat.roof_tex.get_drawn_tscale_x(), 3); // top and bottom; skip ends and sides
 	qbds.qbd.draw_and_clear(); // must draw here since texture was set dynamically
 }
 

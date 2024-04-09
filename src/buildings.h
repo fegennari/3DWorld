@@ -264,7 +264,7 @@ typedef vector<riser_pos_t> vect_riser_pos_t;
 
 struct building_mat_t : public building_tex_params_t {
 
-	bool no_city=0, add_windows=0, add_wind_lights=0;
+	bool no_city=0, add_windows=0, add_wind_lights=0, no_walkways=0;
 	unsigned min_levels=1, max_levels=1, min_sides=4, max_sides=4;
 	float place_radius=0.0, max_delta_z=0.0, max_rot_angle=0.0, min_level_height=0.0, min_alt=-1000, max_alt=1000, house_prob=0.0, house_scale_min=1.0, house_scale_max=1.0;
 	float split_prob=0.0, cube_prob=1.0, round_prob=0.0, asf_prob=0.0, min_fsa=0.0, max_fsa=0.0, min_asf=0.0, max_asf=0.0;
@@ -2159,12 +2159,15 @@ struct building_draw_utils {
 	static void calc_poly_pts(building_geom_t const &bg, cube_t const &bcube, cube_t const &part, vect_point &pts);
 };
 
-struct bldg_walkway_t : public cube_t {
-	bool dim;
-	unsigned mat_ix;
+struct walkway_material_t {
+	unsigned side_mat_ix, roof_mat_ix; // matches building material
 	colorRGBA side_color, roof_color;
-
-	bldg_walkway_t(cube_t const &c, bool d, unsigned mix, colorRGBA const &sc, colorRGBA const &rc) : cube_t(c), dim(d), mat_ix(mix), side_color(sc), roof_color(rc) {}
+	walkway_material_t(unsigned smix, unsigned rmix, colorRGBA const &sc, colorRGBA const &rc) : side_mat_ix(smix), roof_mat_ix(rmix), side_color(sc), roof_color(rc) {}
+};
+struct bldg_walkway_t : public cube_t, public walkway_material_t {
+	bool dim;
+	bldg_walkway_t(cube_t const &c, bool d, unsigned smix, unsigned rmix, colorRGBA const &sc, colorRGBA const &rc) :
+		cube_t(c), walkway_material_t(smix, rmix, sc, rc), dim(d) {}
 };
 typedef vector<bldg_walkway_t> vect_bldg_walkway_t;
 

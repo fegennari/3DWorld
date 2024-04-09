@@ -4180,7 +4180,7 @@ public:
 			float const min_ww_width(2.0*b1.get_doorway_width()), floor_spacing(b1.get_window_vspace()); // should be the same for all buildings
 			float const bot_z_add(0.25*floor_spacing), power_pole_clearance(1.25*bot_z_add);
 			unsigned const min_floors_above_power_pole(unsigned((pp_height + power_pole_clearance)/floor_spacing) + 1U); // for crossing roads; take ceil
-			float const walkway_zmin_short(b1.ground_floor_z1 + floor_spacing); // one floor up
+			float const walkway_zmin_short(b1.ground_floor_z1 + 2.0*floor_spacing); // two floors up, to account for bot_z_add
 			float const walkway_zmin_long (b1.ground_floor_z1 + min_floors_above_power_pole*floor_spacing); // N floors up
 
 			for (auto i2 = i1+1; i2 != city_bldgs.end(); ++i2) {
@@ -4254,8 +4254,25 @@ public:
 							for (cube_t const &p2b : b2.parts) {ww_blocked |= (p2b != p2 && p2b.intersects(walkway));}
 							for (cube_t const &w   : walkways) {ww_blocked |=                 w.intersects(walkway) ;} // check other walkways
 							if (ww_blocked) continue;
-							building_t const &ww_parent(rgen.rand_bool() ? b1 : b2);
-							walkways.emplace_back(walkway, dim, ww_parent.mat_ix, ww_parent.side_color, ww_parent.roof_color);
+							bool const mat1_valid(!b1.get_material().no_walkways), mat2_valid(!b2.get_material().no_walkways);
+							bool parent_is_b1(0);
+							int side_mat_ix(-1);
+							if (mat1_valid && mat2_valid) {parent_is_b1 = rgen.rand_bool();} // both are value, choose a building randomly
+							else if (mat1_valid) {parent_is_b1 = 1;}
+							else if (mat2_valid) {parent_is_b1 = 0;}
+							else { // neither is valid
+								parent_is_b1 = rgen.rand_bool(); // choose a random building to get the roof and side color from
+
+								if (!global_building_params.mat_gen_ix_city.empty()) { // should always be true?
+									for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to choose a valid walkway material
+										unsigned const mat_ix(global_building_params.choose_rand_mat(rgen, 1, 0, 0)); // city_only=1, non_city_only=0, residential=0
+										if (!global_building_params.get_material(mat_ix).no_walkways) {side_mat_ix = mat_ix; break;}
+									}
+								}
+							}
+							building_t const &ww_parent(parent_is_b1 ? b1 : b2);
+							if (side_mat_ix < 0) {side_mat_ix = ww_parent.mat_ix;} // if side_mat_ix wasn't set above, use the parent building's material
+							walkways.emplace_back(walkway, dim, side_mat_ix, ww_parent.mat_ix, ww_parent.side_color, ww_parent.roof_color);
 							connected = 1;
 							break; // only need one connection
 						} // for p2

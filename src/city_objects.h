@@ -273,9 +273,8 @@ struct pond_t : public city_obj_t {
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
-struct walkway_t : public oriented_city_obj_t {
-	unsigned mat_ix; // matches building material
-	colorRGBA side_color, roof_color, map_mode_color;
+struct walkway_t : public oriented_city_obj_t, public walkway_material_t {
+	colorRGBA map_mode_color;
 
 	walkway_t(bldg_walkway_t const &w);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
