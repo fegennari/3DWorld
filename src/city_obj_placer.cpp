@@ -17,7 +17,7 @@ void add_signs_for_city(unsigned city_id, vector<sign_t> &signs);
 void add_flags_for_city(unsigned city_id, vector<city_flag_t> &flags);
 city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, float length, int flag_id=-1);
 void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcubes);
-void get_walkways_for_city(cube_t const &city_bcube, vector<cube_with_ix_t> &walkway_cands);
+void get_walkways_for_city(cube_t const &city_bcube, vect_bldg_walkway_t &walkway_cands);
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
 float get_inner_sidewalk_width();
 cube_t get_plot_coll_region(cube_t const &plot_bcube);
@@ -1394,15 +1394,10 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	if (is_residential) {get_building_ext_basement_bcubes(city_bcube, pool_blockers);}
 
 	if (!is_residential) { // add walkways for commercial city office buildings
-		vector<cube_with_ix_t> walkway_cands;
+		vect_bldg_walkway_t walkway_cands;
 		get_walkways_for_city(city_bcube, walkway_cands);
-
-		for (cube_with_ix_t const &c : walkway_cands) {
-			bool const dim(c.ix & 1), dir(0); // dim is LSB; dir is unused and set to 0
-			unsigned const mat_ix(c.ix >> 1);
-			walkway_groups.add_obj(walkway_t(c, mat_ix, dim, dir), walkways);
-			// not added to colliders since walkways are above pedestrians
-		}
+		for (bldg_walkway_t const &w : walkway_cands) {walkway_groups.add_obj(walkway_t(w), walkways);}
+		// Note: not added to colliders since walkways are above pedestrians; not added to blockers since walkways are above most objects
 	}
 	for (auto i = plots.begin(); i != plots.end(); ++i) { // calculate num_x_plots and num_y_plots; these are used for determining edge power poles
 		max_eq(num_x_plots, i->xpos+1U);

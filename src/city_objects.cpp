@@ -1220,23 +1220,23 @@ bool pond_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, p
 
 // walkways
 
-walkway_t::walkway_t(cube_t const &bcube_, unsigned mat_ix_, bool dim_, bool dir_) : oriented_city_obj_t(dim_, dir_), mat_ix(mat_ix_) {
-	bcube = bcube_;
+walkway_t::walkway_t(bldg_walkway_t const &w) : oriented_city_obj_t(w.dim, 0), mat_ix(w.mat_ix) { // dir=0 (unused)
+	bcube = w;
 	set_bsphere_from_bcube(); // compute bsphere from bcube
 	auto const &mat(global_building_params.get_material(mat_ix));
-	map_mode_color = texture_color(mat.roof_tex.tid).modulate_with(GRAY); // use the roof because this is what's visible in overhead map mode
+	side_color     = w.side_color;
+	roof_color     = w.roof_color;
+	map_mode_color = texture_color(mat.roof_tex.tid).modulate_with(roof_color); // use the roof because this is what's visible in overhead map mode
 }
 void walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	auto const &mat(global_building_params.get_material(mat_ix));
 	tid_nm_pair_dstate_t state(dstate.s); // pass this in?
 	mat.side_tex.set_gl(state);
-	colorRGBA const side_color(WHITE); // TODO: get from building
-	float const tsx(mat.side_tex.tscale_x), tsy(mat.side_tex.tscale_y);
+	float const tsx(mat.side_tex.get_drawn_tscale_x()), tsy(mat.side_tex.get_drawn_tscale_y());
 	dstate.draw_cube(qbds.qbd, bcube, side_color, 0, 1.0, ((1 << dim) | 4), 0, 0, 0, tsx, tsx, tsy); // sides; skip ends, top, and bottom
 	qbds.qbd.draw_and_clear(); // must draw here since texture was set dynamically
 	mat.roof_tex.set_gl(state);
-	colorRGBA const roof_color(GRAY); // TODO: get from building
-	dstate.draw_cube(qbds.qbd, bcube, roof_color, 0, mat.roof_tex.tscale_x, 3); // top and bottom; skip ends and sides
+	dstate.draw_cube(qbds.qbd, bcube, roof_color, 0, mat.roof_tex.get_drawn_tscale_x(), 3); // top and bottom; skip ends and sides
 	qbds.qbd.draw_and_clear(); // must draw here since texture was set dynamically
 }
 

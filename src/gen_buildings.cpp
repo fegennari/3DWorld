@@ -4159,7 +4159,7 @@ public:
 		}
 	}
 
-	void get_walkways_for_city(cube_t const &city_bcube, vector<cube_with_ix_t> &walkways) const {
+	void get_walkways_for_city(cube_t const &city_bcube, vect_bldg_walkway_t &walkways) const {
 		//highres_timer_t timer("get_walkways_for_city"); // 0.1ms
 		vector<cube_with_ix_t> cand_bldgs, city_bldgs;
 		get_overlapping_bcubes(city_bcube, cand_bldgs);
@@ -4172,13 +4172,14 @@ public:
 			max_eq(max_xy_sz, max(building.bcube.dx(), building.bcube.dy()));
 		}
 		if (city_bldgs.size() < 2) return; // no buildings to connect
-		float const max_walkway_len(1.5*max_xy_sz), road_width(get_road_max_width());
+		float const max_walkway_len(1.5*max_xy_sz), road_width(get_road_max_width()), pp_height(get_power_pole_height());
 		rand_gen_t rgen;
 
 		for (auto i1 = city_bldgs.begin(); i1 != city_bldgs.end(); ++i1) {
 			building_t const &b1(get_building(i1->ix));
 			float const min_ww_width(2.0*b1.get_doorway_width()), floor_spacing(b1.get_window_vspace()); // should be the same for all buildings
-			unsigned const min_floors_above_power_pole(unsigned(get_power_pole_height()/floor_spacing) + 1U); // for crossing roads; take the ceil
+			float const bot_z_add(0.25*floor_spacing), power_pole_clearance(1.25*bot_z_add);
+			unsigned const min_floors_above_power_pole(unsigned((pp_height + power_pole_clearance)/floor_spacing) + 1U); // for crossing roads; take ceil
 			float const walkway_zmin_short(b1.ground_floor_z1 + floor_spacing); // one floor up
 			float const walkway_zmin_long (b1.ground_floor_z1 + min_floors_above_power_pole*floor_spacing); // N floors up
 
@@ -4210,7 +4211,7 @@ public:
 							if (p3.intersects(cand)) {is_blocked = 1; break;}
 						}
 						if (is_blocked) break;
-					}
+					} // for i3
 					if (is_blocked) continue;
 
 					for (cube_t const &p1 : b1.parts) {
@@ -4230,7 +4231,7 @@ public:
 							walkway.d[ dim][ dir] = p2.d[dim][!dir];
 							walkway.d[ dim][!dir] = p1.d[dim][ dir];
 							walkway.d[!dim][0] = lo; walkway.d[!dim][1] = hi;
-							float const target_width(min_ww_width*rgen.rand_uniform(1.0, 2.0));
+							float const target_width(min_ww_width*rgen.rand_uniform(1.25, 2.5));
 							if (width > target_width) {walkway.expand_in_dim(!dim, -0.5*(width - target_width));} // shrink the width if needed
 							set_cube_zvals(walkway, zlo, zhi);
 							unsigned const ww_height(1 + (rgen.rand()%3)); // 1-3
@@ -4245,6 +4246,7 @@ public:
 									if (num_floors_raise > 0) {walkway.translate_dim(2, num_floors_raise*floor_spacing);} // raise it up
 								}
 							}
+							walkway.z1() -= bot_z_add; // add extra space at the bottom for support; can't add to the top in case we're at the top building floor
 							assert(walkway.is_strictly_normalized());
 							// check for other parts blocking the walkway
 							bool ww_blocked(0);
@@ -4252,7 +4254,8 @@ public:
 							for (cube_t const &p2b : b2.parts) {ww_blocked |= (p2b != p2 && p2b.intersects(walkway));}
 							for (cube_t const &w   : walkways) {ww_blocked |=                 w.intersects(walkway) ;} // check other walkways
 							if (ww_blocked) continue;
-							walkways.emplace_back(walkway, ((b1.mat_ix << 1) + dim)); // encode dim in LSB
+							building_t const &ww_parent(rgen.rand_bool() ? b1 : b2);
+							walkways.emplace_back(walkway, dim, ww_parent.mat_ix, ww_parent.side_color, ww_parent.roof_color);
 							connected = 1;
 							break; // only need one connection
 						} // for p2
@@ -4650,8 +4653,8 @@ void set_buildings_pos_range(cube_t const &pos_range) {global_building_params.se
 // Note: no xlate applied for any of these four queries below
 void get_building_bcubes(cube_t const &xy_range, vect_cube_with_ix_t &bcubes  ) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);}
 void get_building_bcubes(cube_t const &xy_range, vect_cube_t         &bcubes  ) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);}
-void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcubes  ) {building_creator_city.get_building_ext_basement_bcubes(city_bcube, bcubes);}
-void get_walkways_for_city(cube_t const &city_bcube, vector<cube_with_ix_t> &walkways) {building_creator_city.get_walkways_for_city(city_bcube, walkways);}
+void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcubes) {building_creator_city.get_building_ext_basement_bcubes(city_bcube, bcubes);}
+void get_walkways_for_city(cube_t const &city_bcube, vect_bldg_walkway_t &walkways ) {building_creator_city.get_walkways_for_city(city_bcube, walkways);}
 void get_building_power_points(cube_t const &xy_range, vector<point> &ppts    ) {building_creator_city.get_power_points(xy_range, ppts);}
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways  ) {building_creator_city.add_house_driveways_for_plot(plot, driveways);}
 void add_buildings_exterior_lights(vector3d const &xlate, cube_t &lights_bcube) {building_creator_city.add_exterior_lights(xlate, lights_bcube);}

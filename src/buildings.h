@@ -2159,6 +2159,15 @@ struct building_draw_utils {
 	static void calc_poly_pts(building_geom_t const &bg, cube_t const &bcube, cube_t const &part, vect_point &pts);
 };
 
+struct bldg_walkway_t : public cube_t {
+	bool dim;
+	unsigned mat_ix;
+	colorRGBA side_color, roof_color;
+
+	bldg_walkway_t(cube_t const &c, bool d, unsigned mix, colorRGBA const &sc, colorRGBA const &rc) : cube_t(c), dim(d), mat_ix(mix), side_color(sc), roof_color(rc) {}
+};
+typedef vector<bldg_walkway_t> vect_bldg_walkway_t;
+
 class city_lights_manager_t {
 protected:
 	cube_t lights_bcube;
