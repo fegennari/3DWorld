@@ -283,6 +283,12 @@ struct walkway_t : public oriented_city_obj_t {
 	// no sphere coll since it's above the ground? or use the default cube coll?
 };
 
+struct pillar_t : public city_obj_t { // for walkway support
+	pillar_t(cube_t const &bcube_) : city_obj_t(bcube_) {}
+	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+};
+
 struct city_bird_base_t : public city_obj_t {
 	vector3d dir;
 	city_bird_base_t(point const &pos_, float height, vector3d const &dir, unsigned model_id);
@@ -451,10 +457,11 @@ private:
 	vector<potted_plant_t> plants;
 	vector<pond_t> ponds;
 	vector<walkway_t> walkways;
+	vector<pillar_t> pillars;
 	// index is last obj in group
 	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, fountain_groups, divider_groups, pool_groups, plad_groups,
 		pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups, stopsign_groups, flag_groups,
-		nrack_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, plant_groups, pond_groups, walkway_groups;
+		nrack_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, plant_groups, pond_groups, walkway_groups, pillar_groups;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
 	vect_bird_place_t bird_locs;

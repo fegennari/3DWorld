@@ -424,6 +424,38 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		}
 		// TODO: place ponds
 	}
+	if (!walkways.empty()) { // place vertical pillars supporting walkways connecting buildings
+		cube_t pillar_area(plot);
+		pillar_area.expand_by_xy(-2.0*sidewalk_width); // don't block sidewalks or nearby areas
+
+		for (walkway_t const &w : walkways) {
+			if (!w.bcube.intersects_xy(plot)) continue;
+			float const length(w.get_length()), width(w.get_width()), height(w.bcube.z1() - plot.z2());
+			if (length < 8.0*width || length < 1.6*height) continue; // too short or too high for a support pillar
+			float const pillar_hlen(0.1*width), pillar_hwid(0.3*width);
+			cube_t pillar;
+			set_wall_width(pillar, w.bcube.get_center_dim(!w.dim), pillar_hwid, !w.dim);
+			float const pos_offset[3] = {0.5, 0.333, 0.667}; // try center and one third from each end
+
+			for (unsigned n = 0; n < 3; ++n) {
+				float len_pos(w.bcube.d[w.dim][0] + pos_offset[n]*length);
+
+				if (n == 0 && len_pos > plot.d[w.dim][0] && len_pos < plot.d[w.dim][1]) { // center point is in the plot; clamp to pillar_area
+					max_eq(len_pos, pillar_area.d[w.dim][0]+pillar_hlen);
+					min_eq(len_pos, pillar_area.d[w.dim][1]-pillar_hlen);
+				}
+				set_wall_width(pillar, len_pos, pillar_hlen, w.dim);
+				if (!pillar_area.contains_cube_xy(pillar)) continue; // not contained in plot interior
+				set_cube_zvals(pillar, plot.z2(), w.bcube.z1());
+				cube_t pillar_exp(pillar);
+				pillar_exp.expand_by_xy(min_obj_spacing);
+				if (has_bcube_int_no_adj(pillar_exp, blockers)) continue; // skip the walkway; what else can this intersect, only parking lots?
+				pillar_groups.add_obj(pillar_t(pillar), pillars);
+				add_cube_to_colliders_and_blockers(pillar, colliders, blockers);
+				break; // success
+			} // for n
+		} // for w
+	}
 	// place fire_hydrants if the model has been loaded; don't add fire hydrants in parks
 	if (!is_park && building_obj_model_loader.is_model_valid(OBJ_MODEL_FHYDRANT)) {
 		// we want the fire hydrant on the edge of the sidewalk next to the road, not next to the plot; this makes it outside the plot itself
@@ -1368,12 +1400,11 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 void city_obj_placer_t::clear() {
 	parking_lots.clear(); benches.clear(); planters.clear(); trashcans.clear(); fhydrants.clear(); sstations.clear(); fountains.clear(); driveways.clear(); dividers.clear();
 	pools.clear(); pladders.clear(); pdecks.clear(); ppoles.clear(); hcaps.clear(); manholes.clear(); mboxes.clear(); tcones.clear(); pigeons.clear(); birds.clear(); signs.clear();
-	stopsigns.clear(); flags.clear(); ppaths.clear(); swings.clear(); tramps.clear(); umbrellas.clear(); bikes.clear(); plants.clear(); ponds.clear(); walkways.clear();
-	bench_groups.clear(); planter_groups.clear(); trashcan_groups.clear(); fhydrant_groups.clear(); sstation_groups.clear();
-	fountain_groups.clear(); divider_groups.clear(); pool_groups.clear(); plad_groups.clear(); pdeck_groups.clear(); ppole_groups.clear(); hcap_groups.clear();
-	manhole_groups.clear(); mbox_groups.clear(); tcone_groups.clear(); pigeon_groups.clear(); bird_groups.clear(); sign_groups.clear(); stopsign_groups.clear();
-	flag_groups.clear(); nrack_groups.clear(); ppath_groups.clear(); swing_groups.clear(); tramp_groups.clear(); umbrella_groups.clear(); bike_groups.clear();
-	plant_groups.clear(); pond_groups.clear(); walkway_groups.clear();
+	stopsigns.clear(); flags.clear(); ppaths.clear(); swings.clear(); tramps.clear(); umbrellas.clear(); bikes.clear(); plants.clear(); ponds.clear(); walkways.clear(); pillars.clear();
+	bench_groups.clear(); planter_groups.clear(); trashcan_groups.clear(); fhydrant_groups.clear(); sstation_groups.clear(); fountain_groups.clear(); divider_groups.clear();
+	pool_groups.clear(); plad_groups.clear(); pdeck_groups.clear(); ppole_groups.clear(); hcap_groups.clear(); manhole_groups.clear(); mbox_groups.clear(); tcone_groups.clear();
+	pigeon_groups.clear(); bird_groups.clear(); sign_groups.clear(); stopsign_groups.clear(); flag_groups.clear(); nrack_groups.clear(); ppath_groups.clear(); swing_groups.clear();
+	tramp_groups.clear(); umbrella_groups.clear(); bike_groups.clear(); plant_groups.clear(); pond_groups.clear(); walkway_groups.clear(); pillar_groups.clear();
 	all_objs_bcube.set_to_zeros();
 	num_spaces = filled_spaces = 0;
 }
@@ -1470,13 +1501,14 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	plant_groups   .create_groups(plants,    all_objs_bcube);
 	pond_groups    .create_groups(ponds,     all_objs_bcube);
 	walkway_groups .create_groups(walkways,  all_objs_bcube);
+	pillar_groups  .create_groups(pillars,   all_objs_bcube);
 
 	if (0) { // debug info printing
 		cout << TXT(benches.size()) << TXT(planters.size()) << TXT(trashcans.size()) << TXT(fhydrants.size()) << TXT(sstations.size()) << TXT(fountains.size())
 			 << TXT(dividers.size()) << TXT(pools.size()) << TXT(pladders.size()) << TXT(pdecks.size()) << TXT(ppoles.size()) << TXT(hcaps.size()) << TXT(manholes.size())
 			 << TXT(mboxes.size()) << TXT(tcones.size()) << TXT(pigeons.size()) << TXT(birds.size()) << TXT(signs.size()) << TXT(stopsigns.size()) << TXT(flags.size())
 			 << TXT(newsracks.size()) << TXT(ppaths.size()) << TXT(swings.size()) << TXT(tramps.size()) << TXT(umbrellas.size()) << TXT(bikes.size()) << TXT(plants.size())
-			 << TXT(ponds.size()) << TXT(walkways.size()) << endl;
+			 << TXT(ponds.size()) << TXT(walkways.size()) << TXT(pillars.size()) << endl;
 	}
 	if (add_parking_lots) {
 		cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
@@ -1629,6 +1661,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(bikes,     bike_groups,     dstate, 0.025,shadow_only, 1); // dist_scale=0.025,has_immediate_draw=1
 	draw_objects(plants,    plant_groups,    dstate, 0.05, shadow_only, 1); // dist_scale=0.05, has_immediate_draw=1
 	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1); // dist_scale=0.25, has_immediate_draw=1
+	draw_objects(pillars,   pillar_groups,   dstate, 0.20, shadow_only, 0); // dist_scale=0.25, has_immediate_draw=0
 	
 	if (!shadow_only) { // non shadow casting objects
 		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0); // dist_scale=0.12, has_immediate_draw=0
@@ -1710,6 +1743,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(plants,    plant_groups,    pos, p_last, radius, xlate, cnorm)) return 1; // optional?
 	if (proc_vector_sphere_coll(ponds,     pond_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(walkways,  walkway_groups,  pos, p_last, radius, xlate, cnorm)) return 1; // optional?
+	if (proc_vector_sphere_coll(pillars,   pillar_groups,   pos, p_last, radius, xlate, cnorm)) return 1;
 	// Note: no coll with tree_planters because the tree coll should take care of it; no coll with hcaps, manholes, tcones, pladders, pool decks, pigeons, ppaths, or birds
 	return 0;
 }
@@ -1740,6 +1774,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(flags,     flag_groups,     p1, p2, t, ret);
 	check_vector_line_intersect(newsracks, nrack_groups,    p1, p2, t, ret);
 	check_vector_line_intersect(walkways,  walkway_groups,  p1, p2, t, ret);
+	check_vector_line_intersect(pillars,   pillar_groups,   p1, p2, t, ret);
 	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, tcones, pladders, pool decks, pigeons, ppaths, or birds;
 	// mboxes, swings, tramps, umbrellas, bikes, plants, and ponds are ignored because they're small or not simple shapes
 	return ret;
@@ -1826,7 +1861,8 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 	if (check_city_obj_pt_xy_contains(tramp_groups,    tramps,    pos, obj_ix, 1)) {color = (BKGRAY*0.75 + tramps[obj_ix].color*0.25); return 1;} // is_cylin=1
 	if (check_city_obj_pt_xy_contains(umbrella_groups, umbrellas, pos, obj_ix, 1)) {color = WHITE; return 1;} // is_cylin=1
 	if (check_city_obj_pt_xy_contains(pond_groups,     ponds,     pos, obj_ix, 1)) {color = BLUE ; return 1;} // is_cylin=1 (sort of)
-	// Note: ppoles, hcaps, manholes, mboxes, tcones, pladders, signs, stopsigns, flags, pigeons, birds, swings, umbrellas, bikes, and plants are skipped for now
+	// Note: ppoles, hcaps, manholes, mboxes, tcones, pladders, signs, stopsigns, flags, pigeons, birds, swings, umbrellas, bikes, and plants are skipped for now;
+	// pillars aren't visible under walkways
 	return 0;
 }
 

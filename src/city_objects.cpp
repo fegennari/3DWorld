@@ -1236,6 +1236,15 @@ void walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 	qbds.qbd.draw_and_clear(); // must draw here since texture was set dynamically
 }
 
+// pillars
+
+/*static*/ void pillar_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {select_texture(get_texture_by_name("roads/concrete.jpg"));}
+}
+void pillar_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	dstate.draw_cube(qbds.qbd, bcube, WHITE, 1, 16.0, 4); // skip top and bottom
+}
+
 // birds/pigeons
 
 // pos is at the feet; ignore dir.z
