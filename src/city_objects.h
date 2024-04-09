@@ -278,6 +278,7 @@ struct walkway_t : public oriented_city_obj_t {
 	colorRGBA side_color, roof_color, map_mode_color;
 
 	walkway_t(bldg_walkway_t const &w);
+	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	// no sphere coll since it's above the ground? or use the default cube coll?
 };

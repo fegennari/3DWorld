@@ -374,7 +374,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 {
 	bool const is_residential(plot.is_residential), is_park(plot.is_park);
 	float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
-	float const min_obj_spacing(get_min_obj_spacing());
+	float const min_obj_spacing(get_min_obj_spacing()), sidewalk_width(get_sidewalk_width());
 	unsigned const benches_start(benches.size()), trashcans_start(trashcans.size()), substations_start(sstations.size());
 	unsigned const fountains_start(fountains.size()), ppoles_start(ppoles.size()), paths_start(ppaths.size());
 
@@ -427,7 +427,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	// place fire_hydrants if the model has been loaded; don't add fire hydrants in parks
 	if (!is_park && building_obj_model_loader.is_model_valid(OBJ_MODEL_FHYDRANT)) {
 		// we want the fire hydrant on the edge of the sidewalk next to the road, not next to the plot; this makes it outside the plot itself
-		float const radius(0.04*car_length), height(0.18*car_length), dist_from_road(-0.5*radius - get_sidewalk_width());
+		float const radius(0.04*car_length), height(0.18*car_length), dist_from_road(-0.5*radius - sidewalk_width);
 		point pos(0.0, 0.0, plot.z2()); // XY will be assigned below
 
 		for (unsigned dim = 0; dim < 2; ++dim) {
@@ -502,7 +502,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			if (i > 0 && !driveways.empty()) {
 				bool const dim(i == 2);
 				float const prev_val(pos[dim]);
-				move_to_not_intersect_driveway(pos, (pole_radius + get_sidewalk_width()), dim);
+				move_to_not_intersect_driveway(pos, (pole_radius + sidewalk_width), dim);
 				wires_offset = prev_val - pos[dim];
 			}
 			point base(pos);
