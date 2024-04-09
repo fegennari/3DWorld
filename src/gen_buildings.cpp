@@ -493,7 +493,7 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 	bool dim(0);
 
 	if (tquad.type == tquad_with_ix_t::TYPE_WALL) { // side/wall
-		tsx = 2.0f*tex.tscale_x; tsy = 2.0f*tex.tscale_y; // adjust for local vs. global space change
+		tsx = tex.get_drawn_tscale_x(); tsy = tex.get_drawn_tscale_y();
 		dim = (tquad.pts[0].x == tquad.pts[1].x);
 		if (world_mode != WMODE_INF_TERRAIN) {tex_off = (dim ? yoff2*DY_VAL : xoff2*DX_VAL);}
 		tex_off -= (dim ? bcube.y1() : bcube.x1()); // normalize to building LLC to keep tex coords small
@@ -944,7 +944,7 @@ public:
 		auto &verts(get_verts(tex, bg.is_pointed)); // bg.is_pointed ? tris : quads
 		vert_norm_comp_tc_color vert;
 		if (bg.is_pointed) {dim_mask &= 3;} // mask off z-dim since pointed objects (antenna) have no horizontal surfaces
-		float const tscale[2] = {2.0f*tex.tscale_x, 2.0f*tex.tscale_y}; // adjust for local vs. global space change
+		float const tscale[2] = {tex.get_drawn_tscale_x(), tex.get_drawn_tscale_y()};
 		bool const apply_ao(!no_ao && global_building_params.ao_factor > 0.0);
 		color_wrapper cw[2];
 		setup_ao_color(color, bg.bcube.z1(), bg.ao_bcz2, cube.z1(), cube.z2(), cw, vert, no_ao);

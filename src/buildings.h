@@ -230,8 +230,10 @@ struct tid_nm_pair_t { // size=32
 	bool operator==(tid_nm_pair_t const &t) const {return (is_compatible(t) && tscale_x == t.tscale_x && tscale_y == t.tscale_y && txoff == t.txoff && tyoff == t.tyoff);}
 	bool operator!=(tid_nm_pair_t const &t) const {return !operator==(t);}
 	int get_nm_tid() const {return ((nm_tid < 0) ? FLAT_NMAP_TEX : nm_tid);}
-	float get_emissive_val () const;
-	colorRGBA get_avg_color() const {return texture_color(tid);}
+	float get_drawn_tscale_x() const {return 2.0f*tscale_x;} // adjust for local vs. global space change
+	float get_drawn_tscale_y() const {return 2.0f*tscale_y;} // adjust for local vs. global space change
+	float get_emissive_val  () const;
+	colorRGBA get_avg_color () const {return texture_color(tid);}
 	tid_nm_pair_t get_scaled_version(float scale) const;
 	static bool bind_reflection_shader();
 	void set_gl(tid_nm_pair_dstate_t &state) const;
