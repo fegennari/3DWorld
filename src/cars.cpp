@@ -1333,7 +1333,7 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 	// player a looping helicopter sound if close and not in a basement, but don't attenuate the gain with dist because it will only be updated at the beginning of each loop
 	if (!player_in_basement && dist_less_than(closest_pos, camera_bs, 0.25f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
 #pragma omp critical(gen_sound)
-		gen_sound(SOUND_HELICOPTER, closest_pos, get_tt_building_sound_gain(), 1.0, 0, zero_vector, 1); // skip_if_already_playing=1
+		gen_sound(SOUND_HELICOPTER, (closest_pos + xlate), get_tt_building_sound_gain(), 1.0, 0, zero_vector, 1); // skip_if_already_playing=1
 	}
 	// show flight path debug lines?
 }
