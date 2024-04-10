@@ -283,9 +283,14 @@ struct walkway_t : public oriented_city_obj_t, public walkway_material_t {
 };
 
 struct pillar_t : public city_obj_t { // for walkway support
-	pillar_t(cube_t const &bcube_) : city_obj_t(bcube_) {}
-	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	bool is_concrete;
+
+	pillar_t(cube_t const &bcube_, bool is_concrete_) : city_obj_t(bcube_), is_concrete(is_concrete_) {}
+	float get_cylin_radius() const {return 0.25*(bcube.dx() + bcube.dy());}
+	static void pre_draw (draw_state_t &dstate, bool shadow_only);
+	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
 struct city_bird_base_t : public city_obj_t {

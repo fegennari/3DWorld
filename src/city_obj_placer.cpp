@@ -432,7 +432,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			if (!w.bcube.intersects_xy(plot)) continue;
 			float const length(w.get_length()), width(w.get_width()), height(w.bcube.z1() - plot.z2());
 			if (length < 8.0*width || length < 1.6*height) continue; // too short or too high for a support pillar
-			float const pillar_hlen(0.1*width), pillar_hwid(0.3*width);
+			bool const is_concrete(height < 0.25*length); // concrete when shorter, steel when taller
+			float const pillar_hlen((is_concrete ? 0.1 : 0.15)*width), pillar_hwid((is_concrete ? 0.3 : 0.15)*width);
 			cube_t pillar;
 			set_wall_width(pillar, w.bcube.get_center_dim(!w.dim), pillar_hwid, !w.dim);
 			float const pos_offset[3] = {0.5, 0.333, 0.667}; // try center and one third from each end
@@ -450,7 +451,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				cube_t pillar_exp(pillar);
 				pillar_exp.expand_by_xy(min_obj_spacing);
 				if (has_bcube_int_no_adj(pillar_exp, blockers)) continue; // skip the walkway; what else can this intersect, only parking lots?
-				pillar_groups.add_obj(pillar_t(pillar), pillars);
+				pillar_groups.add_obj(pillar_t(pillar, is_concrete), pillars);
 				add_cube_to_colliders_and_blockers(pillar, colliders, blockers);
 				break; // success
 			} // for n
@@ -1661,7 +1662,6 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(bikes,     bike_groups,     dstate, 0.025,shadow_only, 1); // dist_scale=0.025,has_immediate_draw=1
 	draw_objects(plants,    plant_groups,    dstate, 0.05, shadow_only, 1); // dist_scale=0.05, has_immediate_draw=1
 	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1); // dist_scale=0.25, has_immediate_draw=1
-	draw_objects(pillars,   pillar_groups,   dstate, 0.20, shadow_only, 0); // dist_scale=0.25, has_immediate_draw=0
 	
 	if (!shadow_only) { // non shadow casting objects
 		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0); // dist_scale=0.12, has_immediate_draw=0
@@ -1674,6 +1674,10 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	}
 	dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // reset back to default after drawing 3D models such as fire hydrants and substations
 	
+	for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {concrete cube, metal cylinder}
+		bool const is_cylin(dstate.pass_ix > 0);
+		draw_objects(pillars, pillar_groups, dstate, 0.20, shadow_only, is_cylin); // dist_scale=0.25, has_immediate_draw=cylinder
+	}
 	for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {cube/city, cylinder/residential}
 		bool const is_cylin(dstate.pass_ix > 0);
 		draw_objects(trashcans, trashcan_groups, dstate, (is_cylin ? 0.08 : 0.10), shadow_only, is_cylin); // has_immediate_draw=cylinder

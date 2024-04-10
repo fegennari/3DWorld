@@ -4180,8 +4180,8 @@ public:
 			float const min_ww_width(2.0*b1.get_doorway_width()), floor_spacing(b1.get_window_vspace()); // should be the same for all buildings
 			float const bot_z_add(0.25*floor_spacing), power_pole_clearance(1.25*bot_z_add);
 			unsigned const min_floors_above_power_pole(unsigned((pp_height + power_pole_clearance)/floor_spacing) + 1U); // for crossing roads; take ceil
-			float const walkway_zmin_short(b1.ground_floor_z1 + 2.0*floor_spacing); // two floors up, to account for bot_z_add
-			float const walkway_zmin_long (b1.ground_floor_z1 + min_floors_above_power_pole*floor_spacing); // N floors up
+			float const walkway_zmin_short(b1.ground_floor_z1 + ((bot_z_add > 0.0) ? 2.0 : 1.0)*floor_spacing); // two floors up, to account for bot_z_add
+			float const walkway_zmin_long (b1.ground_floor_z1 + min_floors_above_power_pole    *floor_spacing); // N floors up
 
 			for (auto i2 = i1+1; i2 != city_bldgs.end(); ++i2) {
 				building_t const &b2(get_building(i2->ix));

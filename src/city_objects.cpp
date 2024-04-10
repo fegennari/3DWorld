@@ -1238,10 +1238,31 @@ void walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 // pillars
 
 /*static*/ void pillar_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {select_texture(get_texture_by_name("roads/concrete.jpg"));}
+	if (shadow_only) {} // nothing to do
+	else if (dstate.pass_ix == 0) {select_texture(get_texture_by_name("roads/concrete.jpg"));} // concrete cube
+	else { // untextured steel cylinder
+		select_texture(WHITE_TEX);
+		dstate.s.set_specular(0.8, 60.0); // specular metal surface
+		dstate.s.set_cur_color(WHITE);
+	}
+}
+/*static*/ void pillar_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	if (shadow_only) {} // nothing to do
+	else if (dstate.pass_ix == 0) {} // concrete cube
+	else {dstate.s.clear_specular();} // untextured steel cylinder
 }
 void pillar_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	dstate.draw_cube(qbds.qbd, bcube, WHITE, 1, 16.0, 4); // skip top and bottom
+	if (is_concrete != (dstate.pass_ix == 0)) return; // wrong pass
+	if (is_concrete) {dstate.draw_cube(qbds.qbd, bcube, WHITE, 1, 16.0, 4);} // skip top and bottom
+	else {
+		unsigned const ndiv(shadow_only ? 8 : max(4U, min(32U, unsigned(2.0f*dist_scale*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, pos)))));
+		float const cylin_radius(get_cylin_radius());
+		draw_fast_cylinder(point(pos.x, pos.y, bcube.z1()), point(pos.x, pos.y, bcube.z2()), cylin_radius, cylin_radius, ndiv, 1, 0); // draw sides only
+	}
+}
+bool pillar_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	if (is_concrete) {return city_obj_t::proc_sphere_coll(pos_, p_last, radius_, xlate, cnorm);} // use base class cube coll for concrete pillars
+	return sphere_city_obj_cylin_coll(point(pos.x, pos.y, bcube.z1()), get_cylin_radius(), pos_, p_last, radius_, xlate, cnorm);
 }
 
 // birds/pigeons
