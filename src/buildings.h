@@ -1398,6 +1398,14 @@ struct building_conn_info_t { // use for buildings with connected rooms (for exa
 	bool point_in_conn_room(point const &pos_bs) const;
 };
 
+struct building_walkway_t {
+	cube_t bcube;
+	bool dim;
+	building_t *conn_bldg;
+
+	building_walkway_t(cube_t const &c, bool dim_, building_t *b) : bcube(c), dim(dim_), conn_bldg(b) {}
+};
+
 
 struct building_interior_t {
 	vect_cube_t floors, ceilings, fc_occluders, exclusion;
@@ -1516,6 +1524,7 @@ struct building_t : public building_geom_t {
 	vector<colored_sphere_t> ext_lights;
 	vector<vect_point> per_part_ext_verts; // only used for non-cube buildings
 	vector<ext_step_t> ext_steps;
+	vector<building_walkway_t> walkways;
 	std::shared_ptr<building_interior_t> interior;
 	std::string name; // company name for office building; family name for house
 	std::string address; // only used for city buildings on roads
@@ -2034,6 +2043,7 @@ private:
 	int choose_air_intake_room() const;
 	int vent_in_attic_test(cube_t const &vent, bool dim) const;
 	void add_exterior_ac_pipes(rand_gen_t rgen);
+	void add_walkway_objects();
 	void add_padlocks(rand_gen_t rgen);
 	bool add_padlock_to_door     (unsigned door_ix, unsigned lock_color_mask, rand_gen_t &rgen);
 	bool remove_padlock_from_door(unsigned door_ix, point const &remove_pos);

@@ -4159,7 +4159,7 @@ public:
 		}
 	}
 
-	void get_walkways_for_city(cube_t const &city_bcube, vect_bldg_walkway_t &walkways) const {
+	void get_walkways_for_city(cube_t const &city_bcube, vect_bldg_walkway_t &walkways) { // non-const because walkways are added to buildings as well
 		//highres_timer_t timer("get_walkways_for_city"); // 0.1ms
 		vector<cube_with_ix_t> cand_bldgs, city_bldgs;
 		get_overlapping_bcubes(city_bcube, cand_bldgs);
@@ -4176,7 +4176,7 @@ public:
 		rand_gen_t rgen;
 
 		for (auto i1 = city_bldgs.begin(); i1 != city_bldgs.end(); ++i1) {
-			building_t const &b1(get_building(i1->ix));
+			building_t &b1(get_building(i1->ix));
 			float const min_ww_width(2.0*b1.get_doorway_width()), floor_spacing(b1.get_window_vspace()); // should be the same for all buildings
 			float const bot_z_add(0.25*floor_spacing), power_pole_clearance(1.25*bot_z_add);
 			unsigned const min_floors_above_power_pole(unsigned((pp_height + power_pole_clearance)/floor_spacing) + 1U); // for crossing roads; take ceil
@@ -4184,7 +4184,7 @@ public:
 			float const walkway_zmin_long (b1.ground_floor_z1 + min_floors_above_power_pole    *floor_spacing); // N floors up
 
 			for (auto i2 = i1+1; i2 != city_bldgs.end(); ++i2) {
-				building_t const &b2(get_building(i2->ix));
+				building_t &b2(get_building(i2->ix));
 				assert(!b1.bcube.intersects_xy(b2.bcube)); // sanity check
 				assert(b1.ground_floor_z1 == b2.ground_floor_z1); // must be at the same elevation
 				bool connected(0);
@@ -4246,6 +4246,7 @@ public:
 									if (num_floors_raise > 0) {walkway.translate_dim(2, num_floors_raise*floor_spacing);} // raise it up
 								}
 							}
+							cube_t const walkway_interior(walkway); // capture before applying bot_z_add
 							walkway.z1() -= bot_z_add; // add extra space at the bottom for support; can't add to the top in case we're at the top building floor
 							assert(walkway.is_strictly_normalized());
 							// check for other parts blocking the walkway
@@ -4274,6 +4275,8 @@ public:
 							if (side_mat_ix < 0) {side_mat_ix = ww_parent.mat_ix;} // if side_mat_ix wasn't set above, use the parent building's material
 							walkways.emplace_back(walkway, dim, side_mat_ix, ww_parent.mat_ix, ww_parent.side_color, ww_parent.roof_color);
 							connected = 1;
+							b1.walkways.emplace_back(walkway_interior, dim, &b2);
+							b2.walkways.emplace_back(walkway_interior, dim, &b1);
 							break; // only need one connection
 						} // for p2
 						if (connected) break;

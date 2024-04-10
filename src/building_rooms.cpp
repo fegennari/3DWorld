@@ -715,6 +715,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		}
 	} // for r (room)
 	if (is_house) {interior->assign_master_bedroom(window_vspacing, floor_thickness);}
+	add_walkway_objects();
 	add_padlocks(rgen);
 
 	if (is_rotated() || !is_cube()) {} // skip for rotated and non-cube buildings, since toilets, etc. may not be placed
@@ -1198,6 +1199,23 @@ void building_t::add_exterior_ac_pipes(rand_gen_t rgen) {
 			break; // done - there should only be one part
 		} // for p
 	} // for i
+}
+
+void building_t::add_walkway_objects() {
+	assert(has_room_geom());
+	float const wall_thickness(get_wall_thickness()), floor_thickness(get_floor_thickness()), floor_spacing(get_window_vspace());
+
+	for (building_walkway_t const &w : walkways) {
+		cube_t room_test(w.bcube);
+		room_test.expand_in_dim(w.dim, wall_thickness);
+
+		for (room_t const &room : interior->rooms) {
+			if (!room.intersects(room_test)) continue; // walkway not connected to this room
+			unsigned const f1(room.get_floor_containing_zval(w.bcube.z1(), floor_spacing)), f2(room.get_floor_containing_zval(w.bcube.z2(), floor_spacing));
+			assert(f1 < f2);
+			// TODO
+		} // for room
+	} // for w
 }
 
 struct key_info_t {
