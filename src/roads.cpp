@@ -6,6 +6,7 @@
 
 float const STREETLIGHT_BEAMWIDTH       = 0.225;
 float const SLIGHT_DIST_TO_CORNER_SCALE = 3.0; // larger is closer to the road surface
+float const BRIDGE_HEIGHT_TO_LEN        = 0.3;
 
 extern bool tt_fire_button_down;
 extern int frame_counter, game_mode, display_mode;
@@ -1182,21 +1183,27 @@ void road_draw_state_t::add_city_quad(road_plot_t const &r, quad_batch_draw &qbd
 	else {add_flat_city_quad(r, qbd, color, ar);}
 }
 
-void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { // Note: called rarely, so doesn't need to be efficient
-	//timer_t timer("Draw Bridge"); // 0.065ms - 0.11ms
-	cube_t bcube(bridge);
+cube_t bridge_t::get_drawn_bcube() const {
+	cube_t bcube(*this);
 	float const scale(1.0*city_params.road_width);
-	bcube.z2() += 2.0*scale; // make it higher
-	unsigned const d(bridge.dim);
 	float const l_expand(2.0*(d ? DY_VAL : DY_VAL)); // slight expand along road dim so that we're sure to cover the entire gap
 	float const w_expand(0.25*scale); // expand width to add space for supports
-	bcube.d[ d][0] -= l_expand; bcube.d[ d][1] += l_expand;
-	bcube.d[!d][0] -= w_expand; bcube.d[!d][1] += w_expand;
-	max_eq(bcube.d[d][0], bridge.src_road.d[d][0]); // clamp to orig road segment length
-	min_eq(bcube.d[d][1], bridge.src_road.d[d][1]);
+	bcube.d[ dim][0] -= l_expand; bcube.d[ dim][1] += l_expand;
+	bcube.d[!dim][0] -= w_expand; bcube.d[!dim][1] += w_expand;
+	max_eq(bcube.d[dim][0], src_road.d[dim][0]); // clamp to orig road segment length
+	min_eq(bcube.d[dim][1], src_road.d[dim][1]);
+	bcube.z2() += BRIDGE_HEIGHT_TO_LEN*bcube.get_sz_dim(dim); // make it higher
+	return bcube; // approximate
+}
+
+void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { // Note: called rarely, so doesn't need to be efficient
+	//timer_t timer("Draw Bridge"); // 0.065ms - 0.11ms
+	cube_t const bcube(bridge.get_drawn_bcube());
 	if (!check_cube_visible(bcube, 1.0)) return; // VFC/too far
+	float const scale(1.0*city_params.road_width), w_expand(0.25*scale);
+	unsigned const d(bridge.dim);
 	point const cpos(camera_pdu.pos - xlate);
-	float const center(bcube.get_center_dim(!d)), len(bcube.get_sz_dim(d));
+	float const center(bcube.get_center_dim(!d)), len(bcube.get_sz_dim(d)), peak_height(BRIDGE_HEIGHT_TO_LEN*len);
 	point p1, p2; // centerline end points
 	p1.z = bridge.get_start_z();
 	p2.z = bridge.get_end_z();
@@ -1221,7 +1228,7 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 
 	for (unsigned n = 0; n <= num_segs; ++n) { // populate zvals and dvals
 		float const t(n*step_sz), v(2.0f*fabs(t - 0.5f)), zpos(p1.z + delta.z*t);
-		zvals[n] = zpos + 0.3f*len*(1.0f - v*v) - 0.5f*scale;
+		zvals[n] = zpos + peak_height*(1.0f - v*v) - 0.5f*scale;
 	}
 	for (unsigned n = 0; n < num_segs; ++n) { // add arches
 		float const zval(zvals[n+1]), next_dval(cur_dval + delta_d);

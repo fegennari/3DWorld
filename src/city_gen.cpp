@@ -1304,6 +1304,7 @@ public:
 	void get_occluders(vect_cube_t &occluders) const {
 		if (bcube.contains_pt_xy(camera_pdu.pos)) {city_obj_placer.get_occluders(camera_pdu, occluders);} // only add if this city contains the camera
 	}
+	vector<bridge_t> const &get_bridges() const {return bridges;}
 	bool have_animations() const {return city_obj_placer.have_animations();}
 	static void set_road_normal_map  () {select_texture(get_texture_by_name("normal_maps/dirt_normal.jpg", 1), 5);}
 	static void reset_road_normal_map() {select_texture(FLAT_NMAP_TEX, 5);}
@@ -2700,6 +2701,8 @@ public:
 	void get_occluders(vect_cube_t &occluders) const {
 		for (road_network_t const &r : road_networks) {r.get_occluders(occluders);}
 	}
+	vector<bridge_t> const &get_bridges() const {return global_rn.get_bridges();}
+
 	bool have_animations() const {
 		for (road_network_t const &r : road_networks) {
 			if (r.have_animations()) return 1;
@@ -2844,7 +2847,7 @@ void car_manager_t::setup_occluders() {
 	dstate.get_occluders().clear();
 	if ((display_mode & 0x08) && !cars.empty()) {road_gen.get_occluders(dstate.get_occluders());}
 }
-
+vector<bridge_t> const &car_manager_t::get_bridges() const {return road_gen.get_bridges();}
 
 struct cmp_light_source_sz_dist {
 	point const &cpos;

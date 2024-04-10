@@ -572,6 +572,7 @@ struct bridge_t : public road_connector_t {
 	bool make_bridge=0;
 
 	bridge_t(road_t const &road) : road_connector_t(road) {}
+	cube_t get_drawn_bcube() const;
 	void add_streetlights() {road_connector_t::add_streetlights(4, 0, 0.05, get_start_z(), get_end_z());} // 4 per side
 	bool proc_sphere_coll(point &center, point const &prev, float sradius, float prev_frame_zval, vector3d const &xlate, vector3d *cnorm) const;
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
@@ -780,6 +781,7 @@ class car_manager_t { // and trucks and helicopters
 	int find_next_car_after_turn(car_t &car);
 	void setup_occluders();
 	vector3d get_helicopter_size(unsigned model_id);
+	vector<bridge_t> const &get_bridges() const;
 	void draw_helicopters(bool shadow_only);
 public:
 	friend class city_spectate_manager_t;

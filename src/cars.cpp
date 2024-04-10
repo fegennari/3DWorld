@@ -1188,6 +1188,7 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 	vector3d const shadow_dir(-get_light_pos().get_norm()); // primary light direction (sun/moon)
 	float dmin_sq(0.0);
 	point closest_pos;
+	vector<bridge_t> const &bridges(get_bridges());
 
 	for (auto i = helicopters.begin(); i != helicopters.end(); ++i) {
 		if (i->state == helicopter_t::STATE_WAIT) { // stopped, assumed on a helipad
@@ -1221,6 +1222,11 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 			i->state     = helicopter_t::STATE_TAKEOFF;
 			i->invalidate_tile_shadow_map(xlate, 0); // update static shadows for this tile to remove the helicopter shadow; resting on roof, no need to compute shadow_offset
 
+			for (bridge_t const &bridge : bridges) {
+				cube_t bbc(bridge.get_drawn_bcube());
+				bbc.expand_by_xy(avoid_dist);
+				if (check_line_clip_xy(p1, p2, bbc.d)) {max_eq(i->fly_zval, (bbc.z2() + min_vert_clearance));}
+			}
 			// check if the flight path intersects another helicopter and increase fly_zval to avoid it
 			for (auto j = helicopters.begin(); j != helicopters.end(); ++j) {
 				if (i == j) continue; // skip self
