@@ -4187,6 +4187,7 @@ public:
 				building_t &b2(get_building(i2->ix));
 				assert(!b1.bcube.intersects_xy(b2.bcube)); // sanity check
 				assert(b1.ground_floor_z1 == b2.ground_floor_z1); // must be at the same elevation
+				if (b2.get_window_vspace() != floor_spacing) continue; // floor spacing differs, can't connect (optional, can instead not connect interiors)
 				bool connected(0);
 
 				for (unsigned dim = 0; dim < 2; ++dim) { // connection dim
