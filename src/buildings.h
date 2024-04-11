@@ -1401,6 +1401,7 @@ struct building_conn_info_t { // use for buildings with connected rooms (for exa
 struct building_walkway_t {
 	cube_t bcube;
 	bool dim;
+	uint8_t has_door=0; // one bit per floor
 	building_t *conn_bldg;
 
 	building_walkway_t(cube_t const &c, bool dim_, building_t *b) : bcube(c), dim(dim_), conn_bldg(b) {}
@@ -2031,6 +2032,7 @@ private:
 	bool add_pool_room_objs  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, light_ix_assign_t &light_ix_assign);
+	bool maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_clock(cube_t const &clock, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool digital);
 	void add_fire_ext        (float height, float radius, float zval, float wall_edge, float pos_along_wall, unsigned room_id, float tot_light_amt, bool dim, bool dir);
 	bool is_contained_in_wall_range(float wall_pos, float cov_lo, float cov_hi, float zval, bool dim) const;
@@ -2043,7 +2045,6 @@ private:
 	int choose_air_intake_room() const;
 	int vent_in_attic_test(cube_t const &vent, bool dim) const;
 	void add_exterior_ac_pipes(rand_gen_t rgen);
-	void add_walkway_objects();
 	void add_padlocks(rand_gen_t rgen);
 	bool add_padlock_to_door     (unsigned door_ix, unsigned lock_color_mask, rand_gen_t &rgen);
 	bool remove_padlock_from_door(unsigned door_ix, point const &remove_pos);

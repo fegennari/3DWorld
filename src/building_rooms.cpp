@@ -458,6 +458,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			bool const is_ground_floor(is_ground_floor_part && (1 << f) & floor_ext_door_mask); // really this is a check for doors on this floor
 			bool const is_entry_floor(is_ground_floor || (is_ground_floor_part && multi_family)); // for placing entry level rooms/objs (fireplace, living, dining, kitchen, etc.)
 			unsigned const objs_start(wall_light ? objs_start_inc_lights : objs.size()); // wall light counts as an object since it must be avoided
+			bool has_walkway(0);
 			rgen.rand_mix();
 			blockers.clear(); // clear for this new room
 
@@ -473,6 +474,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (num_sides > 4 && !is_basement) { // non-cube/triangle building pie slice - add room pillars
 				// these could be added as walls or added for the bottom floor and extend through all levels, though that would require more changes
 				add_office_pillars(rgen, *r, room_center.z, room_id, f, valid_lights, blockers);
+			}
+			if (!walkways.empty()) {
+				has_walkway = maybe_add_walkway_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt);
 			}
 			if (r->no_geom || is_garage_or_shed || is_swim_pool_room) {
 				if (is_garage_or_shed) {
@@ -516,7 +520,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			// place room objects
 			bool const added_living(added_living_mask & floor_mask);
 			bool const allow_br(!is_house || must_be_bathroom || f > 0 || num_floors == 1 || (rgen.rand_float() < 0.33f*(added_living + (added_kitchen_mask&1) + 1))); // bed/bath
-			bool is_office_bathroom(is_room_office_bathroom(*r, room_center.z, f)), has_fireplace(0);
+			bool const is_office_bathroom(!has_walkway && is_room_office_bathroom(*r, room_center.z, f));
+			bool has_fireplace(0);
 			
 			if (has_chimney == 2 && !is_basement && is_entry_floor && !added_fireplace) { // handle fireplaces on the first floor
 				has_fireplace = added_fireplace = maybe_add_fireplace_to_room(rgen, *r, blockers, room_center.z, room_id, tot_light_amt);
@@ -537,7 +542,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 			}
 			// bedroom or bathroom case; need to check first floor even if must_be_bathroom
-			if (!added_obj && allow_br && !is_tall_room && can_be_bedroom_or_bathroom(*r, f)) {
+			if (!added_obj && allow_br && !is_tall_room && !has_walkway && can_be_bedroom_or_bathroom(*r, f)) {
 				// Note: num_bedrooms is summed across all floors, while num_bathrooms is per-floor
 				// Note: min_br is applied to bedrooms, but could be applied to bathrooms in the same way
 				bool const pref_sec_bath(is_house && num_bathrooms == 1 && num_bedrooms > min_br && rooms.size() >= 6 && !must_be_bathroom && !has_fireplace && can_be_bathroom(*r));
@@ -715,7 +720,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		}
 	} // for r (room)
 	if (is_house) {interior->assign_master_bedroom(window_vspacing, floor_thickness);}
-	add_walkway_objects();
 	add_padlocks(rgen);
 
 	if (is_rotated() || !is_cube()) {} // skip for rotated and non-cube buildings, since toilets, etc. may not be placed
@@ -1199,23 +1203,6 @@ void building_t::add_exterior_ac_pipes(rand_gen_t rgen) {
 			break; // done - there should only be one part
 		} // for p
 	} // for i
-}
-
-void building_t::add_walkway_objects() {
-	assert(has_room_geom());
-	float const wall_thickness(get_wall_thickness()), floor_thickness(get_floor_thickness()), floor_spacing(get_window_vspace());
-
-	for (building_walkway_t const &w : walkways) {
-		cube_t room_test(w.bcube);
-		room_test.expand_in_dim(w.dim, wall_thickness);
-
-		for (room_t const &room : interior->rooms) {
-			if (!room.intersects(room_test)) continue; // walkway not connected to this room
-			unsigned const f1(room.get_floor_containing_zval(w.bcube.z1(), floor_spacing)), f2(room.get_floor_containing_zval(w.bcube.z2(), floor_spacing));
-			assert(f1 < f2);
-			// TODO
-		} // for room
-	} // for w
 }
 
 struct key_info_t {

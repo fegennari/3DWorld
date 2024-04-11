@@ -2618,6 +2618,45 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	}
 }
 
+bool building_t::maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
+	assert(has_room_geom());
+	float const wall_thickness(get_wall_thickness()), ceil_zval(zval + get_floor_ceil_gap()), floor_spacing(get_window_vspace());
+	vect_room_object_t &objs(interior->room_geom->objs);
+	bool added(0);
+
+	for (building_walkway_t &w : walkways) {
+		bool const dim(w.dim);
+		cube_t w_ext(w.bcube);
+		w_ext.expand_in_dim(dim, 0.25*wall_thickness); // this will also set the door thickness
+		cube_t test_cube(w_ext);
+		//set_wall_width(test_cube, w.bcube.get_center_dim(!dim), 0.5*wall_thickness, !dim); // narrow strip so that only the room containing the center will include the door
+		if (!room.intersects_xy(test_cube))                    continue; // walkway not connected to this room
+		if (zval < w.bcube.z1() || ceil_zval > w.bcube.z2())   continue; // wrong floor
+		if (w.conn_bldg->get_window_vspace() != floor_spacing) continue; // floors not aligned (shouldn't happen?)
+		unsigned const floor_ix((zval - w.bcube.z1())/floor_spacing), door_mask(1 << floor_ix); // within the walkway
+		assert(floor_ix < 8);
+		if (!room.is_hallway && (w.has_door & door_mask)) continue; // already has a door on this floor; allow multiple doors if this is a hallway
+		cube_t entry(w_ext);
+		entry.intersect_with_cube(room);
+		max_eq(entry.z1(), zval);
+		min_eq(entry.z2(), ceil_zval);
+		float const door_width(get_doorway_width()), entry_width(entry.get_sz_dim(!dim));
+		if (entry_width < 1.2*door_width) continue; // too narrow for a doorway; walkway likele ends at a wall separating rooms
+		bool const dir(room.get_center_dim(dim) < w.bcube.get_center_dim(dim));
+		cube_t door(entry);
+		door.expand_in_dim(!dim, 0.5*(door_width - entry_width)); // shrink to doorway width
+		cube_t blocker(door);
+		blocker.d[dim][!dir] += (dir ? -1.0 : 1.0)*1.2*door_width; // add space in the front for the door to open
+		// skip if blocked by stairs or elevator; maybe the walkway shouldn't be placed here? walkways are added after placing stairs and elevators
+		if (interior->is_blocked_by_stairs_or_elevator(blocker)) continue;
+		objs.emplace_back(door, TYPE_FALSE_DOOR, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt);
+		objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, dir, RO_FLAG_INVIS);
+		w.has_door |= door_mask;
+		added = 1;
+	} // for w
+	return added;
+}
+
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius) {
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_FIRE_EXT)) return 0;
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FIRE_EXT)); // D, W, H
