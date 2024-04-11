@@ -2036,8 +2036,8 @@ private:
 	void add_clock(cube_t const &clock, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool digital);
 	void add_fire_ext        (float height, float radius, float zval, float wall_edge, float pos_along_wall, unsigned room_id, float tot_light_amt, bool dim, bool dir);
 	bool is_contained_in_wall_range(float wall_pos, float cov_lo, float cov_hi, float zval, bool dim) const;
-	void add_pri_hall_objs   (rand_gen_t rgen, rand_gen_t room_rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor_ix);
-	void add_cameras_to_room (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
+	void add_pri_hall_objs   (rand_gen_t rgen, rand_gen_t room_rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor_ix, unsigned objs_start);
+	void add_cameras_to_room (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void assign_attic_type   (rand_gen_t rgen);
 	void add_attic_objects   (rand_gen_t rgen);
 	void add_attic_ductwork  (rand_gen_t rgen, room_object_t const &furnace, vect_cube_t &avoid_cubes);

@@ -2596,7 +2596,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 			}
 		} // for dir
 	}
-	add_cameras_to_room(rgen, room, zval, room_id, 1.0); // tot_light_amt=1.0
+	add_cameras_to_room(rgen, room, zval, room_id, 1.0, objs.size()); // tot_light_amt=1.0
 	//cout << TXT(temp_objs.size()) << endl;
 
 	if (has_tall_retail()) { // add a small wall light at the top of the stairs since the stairwell is extra tall
@@ -2702,7 +2702,9 @@ bool building_t::is_contained_in_wall_range(float wall_pos, float cov_lo, float 
 	}
 	return 0;
 }
-void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor_ix) {
+void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t const &room, float zval,
+	unsigned room_id, float tot_light_amt, unsigned floor_ix, unsigned objs_start)
+{
 	bool const long_dim(room.dx() < room.dy());
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -2796,10 +2798,10 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 			objs.emplace_back(wf, TYPE_WFOUNTAIN, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE);
 		}
 	}
-	add_cameras_to_room(rgen, room, zval, room_id, tot_light_amt);
+	add_cameras_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
 }
 
-void building_t::add_cameras_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
+void building_t::add_cameras_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	// add cameras at each end of the room in the long dim (for hallways, etc.)
 	bool const long_dim(room.dx() < room.dy());
 	float const window_vspacing(get_window_vspace()), ceil_zval(zval + get_floor_ceil_gap()), doorway_width(get_doorway_width());
@@ -2808,6 +2810,7 @@ void building_t::add_cameras_to_room(rand_gen_t &rgen, room_t const &room, float
 	set_cube_zvals(camera, (ceil_zval - height), ceil_zval);
 	cube_t const place_area(get_walkable_room_bounds(room));
 	bool const camera_side(rgen.rand_bool()), is_ground_floor(zval >= ground_floor_z1 && zval < ground_floor_z1 + window_vspacing);
+	vect_room_object_t &objs(interior->room_geom->objs);
 
 	for (unsigned dir = 0; dir < 2; ++dir) {
 		float pos(room.get_center_dim(!long_dim));
@@ -2815,8 +2818,13 @@ void building_t::add_cameras_to_room(rand_gen_t &rgen, room_t const &room, float
 		set_wall_width(camera, pos, 0.5*width, !long_dim);
 		camera.d[long_dim][!dir] = place_area.d[long_dim][!dir] + (dir ? 1.0 : -1.0)*0.25*length; // near the wall
 		camera.d[long_dim][ dir] = camera    .d[long_dim][!dir] + (dir ? 1.0 : -1.0)*     length; // extend away from the wall
-		interior->room_geom->objs.emplace_back(camera, TYPE_CAMERA, room_id, long_dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, WHITE);
-	}
+		bool blocked(0);
+
+		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) { // check if blocked by a walkway false door, etc.
+			if (i->type == TYPE_BLOCKER && i->intersects(camera)) {blocked = 1; break;}
+		}
+		if (!blocked) {objs.emplace_back(camera, TYPE_CAMERA, room_id, long_dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, WHITE);}
+	} // for dir
 }
 
 bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) { // for office buildings
