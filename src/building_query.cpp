@@ -26,6 +26,7 @@ bool is_player_model_female();
 void apply_building_fall_damage(float delta_z);
 bool get_sphere_poly_int_val(point const &sc, float sr, point const *const points, unsigned npoints, vector3d const &normal, float thickness, float &val, vector3d &cnorm);
 float get_player_move_dist();
+float get_door_open_dist();
 
 
 // assumes player is in this building; handles windows and exterior doors but not attics and basements
@@ -1007,6 +1008,10 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	unsigned const floor_ix(room.is_single_floor ? 0 : max(0.0f, (pos.z - room.z1()))/floor_spacing);
 	if (room.has_skylight && pos.z > (room.z2() - floor_spacing)) return 0; // top floor of room with a skylight
 	if (room.has_elevator || (!room.is_ext_basement() && room.has_stairs_on_floor(floor_ix))) return 0; // assume light can come from stairs (not in ext basement) or open elevator
+
+	if (pos.z > ground_floor_z1 && pos.z < ground_floor_z1 + floor_spacing) { // on the ground floor
+		if (is_room_adjacent_to_ext_door(room) && point_near_ext_door(pos, get_door_open_dist())) return 0; // handle windowless office building open exterior doors
+	}
 	// check if all lights are off
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
