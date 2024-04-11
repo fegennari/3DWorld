@@ -309,12 +309,12 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		return; // for now the bounding cube
 	}
 	// generate building levels and splits
-	float const dz(height/num_levels), abs_min_edge_move(0.5*floor_spacing); // same as door width
+	float const dz(height/num_levels), abs_min_edge_move(0.5*floor_spacing), align_dist(0.1*floor_spacing); // dz is same as door width
 	bool const not_too_small(min(bcube.dx(), bcube.dy()) > 4.0*abs_min_edge_move);
 	assert(height > 0.0);
 
 	if (!do_split && not_too_small && (rgen.rand()&3) < (was_cube ? 2 : 3) && !has_windows()) {
-		// oddly shaped multi-sided overlapping sections (50% chance for cube buildings and 75% chance for others);
+		// oddly shaped multi-sided overlapping sections (50% chance for cube buildings and 75% chance for others)
 		point const sz(base.get_size());
 		parts.reserve(num_levels); // at least this many
 
@@ -340,6 +340,17 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				if (!contained) {valid = 1; break;} // success
 			} // for n
 			if (!valid) break; // remove this part and end the building here
+
+			// align the edge with the nearby edges of any previous parts to avoid small jogs that can't fit a room
+			for (unsigned d = 0; d < 2; ++d) {
+				for (unsigned e = 0; e < 2; ++e) {
+					float &edge(bc.d[d][e]);
+
+					for (cube_t const &p : parts) {
+						if (fabs(edge - p.d[d][e]) < align_dist) {edge = p.d[d][e]; break;}
+					}
+				} // for e
+			} // for d
 			if (i == 0 || !is_cube()) {parts.push_back(bc); continue;} // no splitting
 			split_cubes_recur(bc, parts, 0, parts.size()); // split this cube against all previously added cubes and remove overlapping areas
 		} // for i
