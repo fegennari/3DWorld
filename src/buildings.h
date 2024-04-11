@@ -1679,6 +1679,7 @@ struct building_t : public building_geom_t {
 	void setup_courtyard();
 	void gen_room_details(rand_gen_t &rgen, unsigned building_ix);
 	unsigned calc_floor_offset(float zval) const;
+	cube_t get_init_elevator_car(elevator_t const &elevator) const;
 	void add_stairs_and_elevators(rand_gen_t &rgen);
 	int get_ext_door_dir(cube_t const &door_bcube, bool dim) const;
 	void add_sign_by_door(tquad_with_ix_t const &door, bool outside, std::string const &text, colorRGBA const &color, bool emissive);

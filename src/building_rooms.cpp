@@ -2109,11 +2109,18 @@ unsigned get_L_stairs_first_flight_count(stairs_landing_base_t const &s, float l
 	return max(1U, min(num_stairs_add-1, len_ratio));
 }
 
-void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
+cube_t building_t::get_init_elevator_car(elevator_t const &elevator) const {
+	cube_t elevator_car(elevator);
+	// always starts on the ground floor, not the bottom of the basement, unless the elevator is fully below ground
+	if (elevator.z2() > ground_floor_z1) {max_eq(elevator_car.z1(), ground_floor_z1);}
+	elevator_car.z1() += 0.05*get_floor_thickness(); // shift up slightly
+	elevator_car.z2()  = elevator_car.z1() + get_window_vspace(); // one floor of height
+	return elevator_car;
+}
 
+void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), half_thick(0.5*floor_thickness);
-	float const wall_thickness(get_wall_thickness()), elevator_car_z1_add(0.05*floor_thickness), fc_thick_scale(get_elevator_fc_thick_scale());
-	float const stairs_sign_width(1.0*wall_thickness);
+	float const wall_thickness(get_wall_thickness()), fc_thick_scale(get_elevator_fc_thick_scale()), stairs_sign_width(1.0*wall_thickness);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	ostringstream oss; // reused across elevators/floors
 
@@ -2154,7 +2161,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		bool const dim(i->dim), dir(i->dir);
 		// add light
 		i->light_obj_id = objs.size();
-		float const light_zval(max(ground_floor_z1, i->z1()) + elevator_car_z1_add + (1.0 - fc_thick_scale)*window_vspacing); // starts on the ground floor
+		float const light_zval(get_init_elevator_car(*i).z1() + (1.0 - fc_thick_scale)*window_vspacing); // starts on the ground floor
 		cube_t light(point(i->xc(), i->yc(), light_zval));
 		light.z1() -= 0.02*window_vspacing;
 		light.expand_by_xy(0.06*window_vspacing);
@@ -2219,11 +2226,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		} // for f
 		// call buttons for each floor inside the elevator car; first find the panel location for the starting elevator car position;
 		// floor numbers are added in building_room_geom_t::add_elevator();
-		cube_t elevator_car(*i);
-		max_eq(elevator_car.z1(), ground_floor_z1); // always starts on the ground floor, not the bottom of the basement
-		elevator_car.z1() += elevator_car_z1_add;
-		elevator_car.z2()  = elevator_car.z1() + window_vspacing; // currently at the bottom floor
-		cube_t const panel(get_elevator_car_panel(room_object_t(elevator_car, TYPE_ELEVATOR, elevator_id, i->dim, i->dir, 0), fc_thick_scale));
+		cube_t const panel(get_elevator_car_panel(room_object_t(get_init_elevator_car(*i), TYPE_ELEVATOR, elevator_id, i->dim, i->dir, 0), fc_thick_scale));
 		float const dz(panel.dz()), button_spacing(dz/(num_floors + 1)); // add extra spacing on bottom and top of panel
 		float const inner_button_radius(min(button_radius, min(0.35f*button_spacing, 0.25f*panel.get_sz_dim(!i->dim)))); // may need to be smaller
 		point pos;
@@ -2535,13 +2538,9 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		}
 	}
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
-		unsigned const elevator_id(i - interior->elevators.begin()); // used for room_object_t::room_id
-		cube_t elevator_car(*i);
-		max_eq(elevator_car.z1(), ground_floor_z1); // always starts on the ground floor, not the bottom of the basement
-		elevator_car.z1() += elevator_car_z1_add; // to prevent z-fighting when looking at the building from the bottom
-		elevator_car.z2()  = elevator_car.z1() + window_vspacing; // one floor of height
 		i->car_obj_id = objs.size();
-		objs.emplace_back(elevator_car, TYPE_ELEVATOR, elevator_id, i->dim, i->dir, RO_FLAG_DYNAMIC);
+		unsigned const elevator_id(i - interior->elevators.begin()); // used for room_object_t::room_id
+		objs.emplace_back(get_init_elevator_car(*i), TYPE_ELEVATOR, elevator_id, i->dim, i->dir, RO_FLAG_DYNAMIC);
 		objs.back().drawer_flags = (uint16_t)calc_num_floors(*i, window_vspacing, floor_thickness); // store the number of floors in drawer_flags; used for drawing
 		objs.back().item_flags   = (uint16_t)calc_floor_offset(i->z1()); // use correct starting floor index
 	} // for i
