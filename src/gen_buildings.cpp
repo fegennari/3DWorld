@@ -2895,10 +2895,6 @@ public:
 		create_vbos(is_tile);
 	} // end gen()
 
-	struct pt_by_xval {
-		bool operator()(point const &a, point const &b) const {return (a.x < b.x);}
-	};
-
 	void place_building_trees(rand_gen_t &rgen) {
 		if (!has_city_trees()) return;
 		vector<point> placements;
@@ -2907,7 +2903,7 @@ public:
 			if (b->tree_pos != all_zeros) {placements.push_back(b->tree_pos);}
 		}
 		if (placements.empty()) return;
-		sort(placements.begin(), placements.end(), pt_by_xval()); // sort by xval
+		sort(placements.begin(), placements.end(), [](point const &a, point const &b) {return (a.x < b.x);}); // sort by xval
 		float const block_xsize(X_SCENE_SIZE);
 		float cur_xval(0.0);
 		unsigned num_blocks(0);
