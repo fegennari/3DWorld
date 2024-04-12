@@ -1304,6 +1304,7 @@ bool building_t::add_tp_roll(cube_t const &room, unsigned room_id, float tot_lig
 	tp.d[dim][!dir] = tp  .d[dim][dir] + (dir ? -1.0 : 1.0)*diameter; // set the diameter
 	// Note: not checked against other bathroom objects because the toilet is placed first
 	if (check_valid_pos && (!room.contains_cube(tp) || is_obj_placement_blocked(tp, room, 1))) return 0;
+	if (has_small_part && !check_if_placed_on_interior_wall(tp, get_room(room_id), dim, dir))  return 0; // need to check for missing walls
 	interior->room_geom->objs.emplace_back(tp, TYPE_TPROLL, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE);
 	set_obj_id(interior->room_geom->objs);
 	return 1;
