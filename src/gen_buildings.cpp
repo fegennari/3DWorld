@@ -1792,7 +1792,7 @@ void building_t::get_basement_ext_wall_verts(building_draw_t &bdraw) const {
 
 void set_skip_faces_for_nearby_cube_edge(cube_t const &c, cube_t const &C, float dist, bool dim, unsigned &dim_mask) {
 	for (unsigned dir = 0; dir < 2; ++dir) { // skip faces along the edges of the building bcube or along an extended basement exterior facing wall
-		if (fabs(c.d[dim][dir] - C.d[dim][dir]) < dist) {dim_mask |= (1<<(2*(dim)+dir+3));}
+		if (fabs(c.d[dim][dir] - C.d[dim][dir]) < dist) {dim_mask |= (1<<(2*dim+dir+3));}
 	}
 }
 void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
@@ -1830,7 +1830,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 	for (unsigned dim = 0; dim < 2; ++dim) { // Note: can almost pass in (1U << dim) as dim_filt, if it wasn't for door cutouts (2.2M T)
 		for (auto i = interior->walls[dim].begin(); i != interior->walls[dim].end(); ++i) {
 			//unsigned const dim_mask(1 << dim); // doesn't work with office building hallway intersection corners and door frame shadows
-			unsigned dim_mask(3);
+			unsigned dim_mask(3); // XY
 			set_skip_faces_for_nearby_cube_edge(*i, bcube, wall_thickness, !dim, dim_mask); // easy case: skip faces along the edges of the building bcube
 			bool const in_basement(i->z1() < ground_floor_z1);
 			bool const in_ext_basement(in_basement && i >= (interior->walls[dim].begin() + interior->extb_walls_start[dim]));
@@ -1854,6 +1854,27 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 						set_skip_faces_for_nearby_cube_edge(*i, *r, 0.6*wall_thickness, dim, dim_mask); // wall side edges
 					}
 				} // for r
+			}
+			else if (is_cube()) { // disable interior walls at building exteriors for complex floorplan cube buildings
+				auto const parts_end(get_real_parts_end());
+
+				for (auto p = parts.begin(); p != parts_end; ++p) {
+					if (!p->contains_cube(*i)) continue;
+
+					for (unsigned dir = 0; dir < 2; ++dir) { // skip faces along part exteriors
+						if (fabs(i->d[!dim][dir] - p->d[!dim][dir]) > wall_thickness) continue;
+						point test_pt;
+						test_pt.z     = i->z1() + wall_thickness; // ground floor, since this will be the widest point
+						test_pt[ dim] = i->get_center_dim(dim); // wall centerline
+						test_pt[!dim] = p->d[!dim][dir] + (dir ? 1.0 : -1.0)*wall_thickness; // extend slightly away from the exterior wall
+						bool contained(0);
+
+						for (auto p2 = parts.begin(); p2 != parts_end; ++p2) { // only needed if has_small_part?
+							if (p2 != p && p2->contains_pt(test_pt)) {contained = 1; break;}
+						}
+						if (!contained) {dim_mask |= (1<<(2*(!dim)+dir+3));}
+					} // for dir
+				} // for p
 			}
 			if (check_skylight_intersection(*i)) {dim_mask |= 4;} // draw top surface if under skylight
 			colorRGBA const &color(in_basement ? WHITE : wall_color); // basement walls are always white
