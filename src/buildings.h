@@ -1400,11 +1400,11 @@ struct building_conn_info_t { // use for buildings with connected rooms (for exa
 
 struct building_walkway_t {
 	cube_t bcube;
-	bool dim;
+	bool dim, is_owner;
 	uint8_t has_door=0; // one bit per floor
 	building_t *conn_bldg;
 
-	building_walkway_t(cube_t const &c, bool dim_, building_t *b) : bcube(c), dim(dim_), conn_bldg(b) {}
+	building_walkway_t(cube_t const &c, bool dim_, bool owner, building_t *b) : bcube(c), dim(dim_), is_owner(owner), conn_bldg(b) {}
 };
 
 

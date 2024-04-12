@@ -4257,13 +4257,13 @@ public:
 							for (cube_t const &w   : walkways) {ww_blocked |=                 w.intersects(walkway) ;} // check other walkways
 							if (ww_blocked) continue;
 							bool const mat1_valid(!b1.get_material().no_walkways), mat2_valid(!b2.get_material().no_walkways);
-							bool parent_is_b1(0);
+							bool owner_is_b1(0);
 							int side_mat_ix(-1);
-							if (mat1_valid && mat2_valid) {parent_is_b1 = rgen.rand_bool();} // both are value, choose a building randomly
-							else if (mat1_valid) {parent_is_b1 = 1;}
-							else if (mat2_valid) {parent_is_b1 = 0;}
+							if (mat1_valid && mat2_valid) {owner_is_b1 = rgen.rand_bool();} // both are value, choose a building randomly
+							else if (mat1_valid) {owner_is_b1 = 1;}
+							else if (mat2_valid) {owner_is_b1 = 0;}
 							else { // neither is valid
-								parent_is_b1 = rgen.rand_bool(); // choose a random building to get the roof and side color from
+								owner_is_b1 = rgen.rand_bool(); // choose a random building to get the roof and side color from
 
 								if (!global_building_params.mat_gen_ix_city.empty()) { // should always be true?
 									for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to choose a valid walkway material
@@ -4272,12 +4272,12 @@ public:
 									}
 								}
 							}
-							building_t const &ww_parent(parent_is_b1 ? b1 : b2);
-							if (side_mat_ix < 0) {side_mat_ix = ww_parent.mat_ix;} // if side_mat_ix wasn't set above, use the parent building's material
-							walkways.emplace_back(walkway, dim, side_mat_ix, ww_parent.mat_ix, ww_parent.side_color, ww_parent.roof_color);
+							building_t const &ww_owner(owner_is_b1 ? b1 : b2);
+							if (side_mat_ix < 0) {side_mat_ix = ww_owner.mat_ix;} // if side_mat_ix wasn't set above, use the parent building's material
+							walkways.emplace_back(walkway, dim, side_mat_ix, ww_owner.mat_ix, ww_owner.side_color, ww_owner.roof_color);
 							connected = 1;
-							b1.walkways.emplace_back(walkway_interior, dim, &b2);
-							b2.walkways.emplace_back(walkway_interior, dim, &b1);
+							b1.walkways.emplace_back(walkway_interior, dim,  owner_is_b1, &b2);
+							b2.walkways.emplace_back(walkway_interior, dim, !owner_is_b1, &b1);
 							break; // only need one connection
 						} // for p2
 						if (connected) break;
