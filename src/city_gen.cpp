@@ -1264,6 +1264,7 @@ public:
 		// Note: query results are mutually exclusive since there's no overlap, so can early terminate on true
 		if (!bcube.contains_pt_xy(pos)) return 0;
 		if (check_vect_cube_contains_pt_xy(tunnels, pos)) {color = BROWN; return INT_ROAD;}
+		if (city_obj_placer.get_color_at_xy_pre_road(pos, color)) return INT_BUILDING; // walkway
 			
 		for (auto i = bridges.begin(); i != bridges.end(); ++i) {
 			if (i->contains_pt_xy_exp(pos, 1.0*city_params.road_width)) {color = WHITE; return INT_ROAD;}

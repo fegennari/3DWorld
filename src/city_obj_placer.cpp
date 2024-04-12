@@ -1802,11 +1802,14 @@ template<typename T> bool check_city_obj_pt_xy_contains(city_obj_groups_t const 
 	} // for i
 	return 0;
 }
+bool city_obj_placer_t::get_color_at_xy_pre_road(point const &pos, colorRGBA &color) const { // check walkways because they can be over both roads and plots
+	unsigned obj_ix(0);
+	if (check_city_obj_pt_xy_contains(walkway_groups, walkways, pos, obj_ix, 0)) {color = walkways[obj_ix].map_mode_color; return 1;} // is_cylin=0
+	return 0;
+}
 bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool skip_in_road) const {
 	unsigned obj_ix(0);
-	// test walkways first, since they're above most other objects; however, they're still not drawn over roads
-	if (check_city_obj_pt_xy_contains(walkway_groups, walkways, pos, obj_ix, 0)) {color = walkways[obj_ix].map_mode_color; return 1;} // is_cylin=0
-	if (check_city_obj_pt_xy_contains(bench_groups,   benches,  pos, obj_ix, 0)) {color = texture_color(FENCE_TEX);        return 1;} // is_cylin=0
+	if (check_city_obj_pt_xy_contains(bench_groups,   benches,  pos, obj_ix, 0)) {color = texture_color(FENCE_TEX); return 1;} // is_cylin=0
 	float const expand(0.15*city_params.road_width), x_test(pos.x + expand); // expand to approx tree diameter
 
 	if (!planter_groups.empty() && planter_groups.get_bcube().contains_pt_xy(pos)) {

@@ -38,7 +38,7 @@ extern unsigned room_mirror_ref_tid;
 extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2, building_action_key, player_in_elevator;
 extern float CAMERA_RADIUS, fticks, FAR_CLIP;
 extern colorRGB cur_ambient, cur_diffuse;
-extern point sun_pos, pre_smap_player_pos, actual_player_pos;
+extern point pre_smap_player_pos, actual_player_pos;
 extern vector<light_source> dl_sources;
 extern vector<point> enabled_bldg_lights;
 extern tree_placer_t tree_placer;

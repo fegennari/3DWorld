@@ -510,6 +510,7 @@ public:
 	bool proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, vector3d *cnorm) const;
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
 	bool get_color_at_xy(point const &pos, colorRGBA &color, bool skip_in_road) const;
+	bool get_color_at_xy_pre_road(point const &pos, colorRGBA &color) const;
 	void get_occluders(pos_dir_up const &pdu, vect_cube_t &occluders) const;
 	void get_plot_cuts(cube_t const &plot, vect_cube_t &cuts) const;
 	bool cube_int_underground_obj(cube_t const &c) const;
@@ -519,7 +520,7 @@ public:
 	// birds
 	int check_path_segment_coll(point const &p1, point const &p2, float radius) const;
 	bool choose_bird_dest(point const &pos, float radius, unsigned &loc_ix, point &dest_pos, vector3d &dest_dir);
-};
+}; // city_obj_placer_t
 
 float get_power_pole_offset();
 bool check_city_building_line_coll_bs_any(point const &p1, point const &p2);
