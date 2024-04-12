@@ -2320,6 +2320,7 @@ class building_creator_t {
 	cube_t range, buildings_bcube;
 	rand_gen_t rgen, ai_rgen;
 	vect_building_t buildings;
+	vect_bldg_walkway_t all_walkways; // walkways connecting city buildings
 	vector<vector<unsigned>> bix_by_plot; // cached for use with pedestrian collisions
 	// dynamic verts, static exterior verts, windows, window lights, interior walls/ceilings/floors, interior exterior walls
 	building_draw_t building_draw, building_draw_vbo, building_draw_windows, building_draw_wind_lights, building_draw_interior, building_draw_int_ext_walls;
@@ -2885,6 +2886,12 @@ public:
 				 << TXT(s.nrooms) << TXT(s.nceils) << TXT(s.nfloors) << TXT(s.nwalls) << TXT(s.nrgeom) << TXT(s.nobjs) << TXT(s.nverts) << endl;
 		}
 		build_grid_by_tile(is_tile);
+
+		if (city_only) { // connect with walkways here
+			vect_cube_t city_bcubes;
+			get_city_bcubes(city_bcubes);
+			for (cube_t const &c : city_bcubes) {connect_buildings_with_walkways(c);}
+		}
 		create_vbos(is_tile);
 	} // end gen()
 
@@ -4159,8 +4166,7 @@ public:
 		}
 	}
 
-	void get_walkways_for_city(cube_t const &city_bcube, vect_bldg_walkway_t &walkways) { // non-const because walkways are added to buildings as well
-		//highres_timer_t timer("get_walkways_for_city"); // 0.1ms
+	void connect_buildings_with_walkways(cube_t const &city_bcube) {
 		vector<cube_with_ix_t> cand_bldgs, city_bldgs;
 		get_overlapping_bcubes(city_bcube, cand_bldgs);
 		float max_xy_sz(0.0);
@@ -4173,6 +4179,7 @@ public:
 		}
 		if (city_bldgs.size() < 2) return; // no buildings to connect
 		float const max_walkway_len(1.5*max_xy_sz), road_width(get_road_max_width()), pp_height(get_power_pole_height());
+		vect_cube_t blocked; // walkways currently placed for this city
 		rand_gen_t rgen;
 
 		for (auto i1 = city_bldgs.begin(); i1 != city_bldgs.end(); ++i1) {
@@ -4204,7 +4211,7 @@ public:
 					cand.d[!dim][0] = lo; cand.d[!dim][1] = hi;
 					set_cube_zvals(cand, walkway_zmin_short, min(b1.bcube.z2(), b2.bcube.z2()));
 					bool is_blocked(0);
-					
+
 					for (auto i3 = cand_bldgs.begin(); i3 != cand_bldgs.end(); ++i3) { // Note: uses *all* buildings
 						if (i3->ix == i1->ix || i3->ix == i2->ix || !i3->intersects(cand)) continue;
 
@@ -4237,11 +4244,11 @@ public:
 							set_cube_zvals(walkway, zlo, zhi);
 							unsigned const ww_height(1 + (rgen.rand()%3)); // 1-3
 							float const z2_max(zlo + ww_height*floor_spacing); // limit height
-							
+
 							if (z2_max < walkway.z2()) { // reduce walkway height
 								unsigned const num_floors_above(round_fp((walkway.z2() - z2_max)/floor_spacing));
 								walkway.z2() = z2_max;
-								
+
 								if (num_floors_above > 1) { // reduced by at least one floor
 									unsigned const num_floors_raise(rgen.rand() % num_floors_above);
 									if (num_floors_raise > 0) {walkway.translate_dim(2, num_floors_raise*floor_spacing);} // raise it up
@@ -4254,7 +4261,7 @@ public:
 							bool ww_blocked(0);
 							for (cube_t const &p1b : b1.parts) {ww_blocked |= (p1b != p1 && p1b.intersects(walkway));}
 							for (cube_t const &p2b : b2.parts) {ww_blocked |= (p2b != p2 && p2b.intersects(walkway));}
-							for (cube_t const &w   : walkways) {ww_blocked |=                 w.intersects(walkway) ;} // check other walkways
+							for (cube_t const &w   : blocked ) {ww_blocked |=                 w.intersects(walkway) ;} // check other walkways
 							if (ww_blocked) continue;
 							bool const mat1_valid(!b1.get_material().no_walkways), mat2_valid(!b2.get_material().no_walkways);
 							bool owner_is_b1(0);
@@ -4274,7 +4281,8 @@ public:
 							}
 							building_t const &ww_owner(owner_is_b1 ? b1 : b2);
 							if (side_mat_ix < 0) {side_mat_ix = ww_owner.mat_ix;} // if side_mat_ix wasn't set above, use the parent building's material
-							walkways.emplace_back(walkway, dim, side_mat_ix, ww_owner.mat_ix, ww_owner.side_color, ww_owner.roof_color);
+							all_walkways.emplace_back(walkway, dim, side_mat_ix, ww_owner.mat_ix, ww_owner.side_color, ww_owner.roof_color);
+							blocked.push_back(walkway);
 							connected = 1;
 							b1.walkways.emplace_back(walkway_interior, dim,  owner_is_b1, &b2);
 							b2.walkways.emplace_back(walkway_interior, dim, !owner_is_b1, &b1);
@@ -4286,6 +4294,11 @@ public:
 				} // for dim
 			} // for i2
 		} // for i1
+	}
+	void get_walkways_for_city(cube_t const &city_bcube, vect_bldg_walkway_t &walkways) const {
+		for (bldg_walkway_t const &w : all_walkways) {
+			if (city_bcube.contains_cube_xy(w)) {walkways.push_back(w);}
+		}
 	}
 
 	void get_power_points(cube_t const &xy_range, vector<point> &ppts) const { // similar to above function, but returns points rather than cubes
