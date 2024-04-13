@@ -1798,6 +1798,7 @@ void set_skip_faces_for_nearby_cube_edge(cube_t const &c, cube_t const &C, float
 void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 	if (!is_valid() || interior == nullptr) return; // invalid building or no interior
 	building_mat_t const &mat(get_material());
+	auto const parts_end(get_real_parts_end());
 	bdraw.begin_draw_range_capture();
 
 	for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // 600K T
@@ -1815,7 +1816,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 			float const toler(get_floor_thickness());
 			skip_top = 1; // assume it's not
 
-			for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // Note: excludes garages and sheds
+			for (auto p = parts.begin(); p != parts_end; ++p) { // Note: excludes garages and sheds
 				if (!is_basement(p) && p->contains_cube_xy(*i) && fabs(i->z2() - p->z2()) < toler) {skip_top = 0; break;}
 			}
 		}
@@ -1855,9 +1856,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 					}
 				} // for r
 			}
-			else if (is_cube()) { // disable interior walls at building exteriors for complex floorplan cube buildings
-				auto const parts_end(get_real_parts_end());
-
+			if (is_cube() && !in_basement && dim_mask != (1 << dim)) { // disable interior walls at building exteriors for cube buildings if we still have ends enabled
 				for (auto p = parts.begin(); p != parts_end; ++p) {
 					if (!p->contains_cube(*i)) continue;
 
