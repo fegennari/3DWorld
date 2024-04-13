@@ -1799,6 +1799,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 	if (!is_valid() || interior == nullptr) return; // invalid building or no interior
 	building_mat_t const &mat(get_material());
 	auto const parts_end(get_real_parts_end());
+	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thickness(get_fc_thickness());
 	bdraw.begin_draw_range_capture();
 
 	for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // 600K T
@@ -1881,8 +1882,33 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 			if (!is_house && in_ext_basement) {tex = get_concrete_texture();} // office building extended basements
 			else {tex = mat.wall_tex;}
 			bdraw.add_section(*this, 0, *i, tex, color, dim_mask, 1, 0, 1, 0); // no AO; X and/or Y dims only, skip bottom, only draw top if under skylight
+		} // for i
+	} // for dim
+	// add the walkway interiors; these are outside the building and may get culled when outside the view frustum
+	for (building_walkway_t const &w : walkways) {
+		if (!w.is_owner) continue;
+		assert(w.bcube.z1() >= ground_floor_z1); // must be above ground
+		unsigned const bot_floor(round_fp((w.bcube.z1() - ground_floor_z1)/floor_spacing)), top_floor(round_fp((w.bcube.z2() - ground_floor_z1)/floor_spacing));
+		assert(bot_floor < top_floor); // must be at least one floor
+		cube_t ww_floor(w.bcube), ww_ceil(w.bcube);
+
+		for (unsigned f = bot_floor; f < top_floor; ++f) {
+			float const zval(ground_floor_z1 + f*floor_spacing), next_zval(zval + floor_spacing);
+			set_cube_zvals(ww_floor, zval, zval+fc_thickness);
+			set_cube_zvals(ww_ceil,  next_zval-fc_thickness, next_zval);
+			bdraw.add_section(*this, 0, ww_floor, mat.floor_tex, mat.floor_color, 4, 1, 0, 1, 0); // no AO; top only
+			bdraw.add_section(*this, 0, ww_ceil,  mat.ceil_tex,  mat.ceil_color,  4, 0, 1, 1, 0); // no AO; bottom only
 		}
-	}
+		// walls on all 4 sides; walls extend through all floors; unlike normal exterior walls, these are windowless and have thickness
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (unsigned d = 0; d < 2; ++d) {
+				cube_t wall(w.bcube);
+				wall.d[!dim][!d] = w.bcube.d[!dim][d] + (d ? -1.0 : 1.0)*wall_thickness;
+				unsigned const dim_mask((1 << unsigned(!dim)) | (1<<(2*(!dim)+d+3))); // only inside face in dim !w.dim should be visible
+				bdraw.add_section(*this, 0, wall, mat.wall_tex, wall_color, dim_mask, 1, 1, 1, 0); // no AO; skip bottom and top
+			}
+		} // for dim
+	} // for w
 	// Note: stair/elevator landings can probably be drawn in room_geom along with stairs, though I don't think there would be much benefit in doing so
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) { // added per-floor (530K T)
 		unsigned dim_mask(3); // disable faces: 8=x1, 16=x2, 32=y1, 64=y2
@@ -1905,7 +1931,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 		unsigned dim_mask(3); // x and y dims enabled
 		dim_mask |= (1 << (i->get_door_face_id() + 3)); // disable the face for the door opening
 		cube_t shaft(*i);
-		shaft.z2() -= ELEVATOR_Z2_SHIFT*get_fc_thickness()*(i->under_skylight ? 1.0 : 0.25); // avoid clipping through skylights
+		shaft.z2() -= ELEVATOR_Z2_SHIFT*fc_thickness*(i->under_skylight ? 1.0 : 0.25); // avoid clipping through skylights
 		bdraw.add_section(*this, 0, shaft, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0); // outer elevator is textured like the walls
 		cube_t entrance(shaft);
 		entrance.d[dim][!dir] = entrance.d[dim][dir] + (dir ? -1.0f : 1.0f)*spacing; // set correct thickness
