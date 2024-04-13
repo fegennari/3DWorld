@@ -423,7 +423,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			} // for n
 		}
 		// TODO: place ponds
-	}
+	} // end is_park
 	if (!walkways.empty()) { // place vertical pillars supporting walkways connecting buildings
 		cube_t pillar_area(plot);
 		pillar_area.expand_by_xy(-2.0*sidewalk_width); // don't block sidewalks or nearby areas

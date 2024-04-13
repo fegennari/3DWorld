@@ -3221,7 +3221,10 @@ public:
 				float const ddist_scale((*i)->building_draw_windows.empty() ? 0.1 : 1.0), zpp_dist_scale(ddist_scale*z_prepass_dist);
 
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
-					if (reflection_pass ? g->get_vis_bcube().contains_pt_xy(camera_xlated) : g->get_vis_bcube().closest_dist_xy_less_than(camera_xlated, zpp_dist_scale)) {
+					cube_t const &grid_bcube(g->get_vis_bcube());
+
+					if (reflection_pass ? grid_bcube.contains_pt_xy(camera_xlated) : grid_bcube.closest_dist_xy_less_than(camera_xlated, zpp_dist_scale)) {
+						if (!building_grid_visible(xlate, grid_bcube)) continue; // VFC
 						(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()));
 					}
 				}
