@@ -495,6 +495,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 float room_object_t::get_radius() const {
 	if (shape == SHAPE_CYLIN || shape == SHAPE_VERT_TORUS) {return 0.25f*(dx() + dy());} // vertical cylinder or torus: return average of x/y diameter
 	if (shape == SHAPE_SPHERE) {return 0.5*dx();} // sphere, should be the same dx()/dy()/dz() value (but can't assert due to FP precision errors)
+	std::cerr << "Error: get_radius() called on non-cylinder/cube object of type " << int(type) << endl;
 	assert(0); // cubes don't have a radius
 	return 0.0; // never gets here
 }

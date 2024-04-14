@@ -759,7 +759,7 @@ void add_row_of_balls(room_object_t const &c, cube_t const &region, float spacin
 
 	for (unsigned row = 0; row < num_rows; ++row) {
 		if (rgen.rand_float() < 0.75) { // 75% chance
-			room_object_t obj(objc, TYPE_LG_BALL, c.room_id, 0, 0, (flags | RO_FLAG_RAND_ROT), c.light_amt);
+			room_object_t obj(objc, TYPE_LG_BALL, c.room_id, 0, 0, (flags | RO_FLAG_RAND_ROT), c.light_amt, SHAPE_SPHERE);
 			obj.item_flags = btype; // no dstate
 			objects.push_back(obj);
 		}
