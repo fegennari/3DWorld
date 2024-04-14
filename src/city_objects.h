@@ -280,7 +280,7 @@ struct walkway_t : public oriented_city_obj_t, public walkway_material_t {
 	walkway_t(bldg_walkway_t const &w);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
-	// no sphere coll since it's above the ground? or use the default cube coll?
+	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
 struct pillar_t : public city_obj_t { // for walkway support

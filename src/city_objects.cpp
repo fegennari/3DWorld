@@ -1216,6 +1216,7 @@ bool pond_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, p
 // walkways
 
 walkway_t::walkway_t(bldg_walkway_t const &w) : oriented_city_obj_t(w, w.dim, 0), walkway_material_t(w), floor_spacing(w.floor_spacing) { // dir=0 (unused)
+	assert(floor_spacing > 0.0);
 	// use the roof because this is what's visible in overhead map mode
 	map_mode_color = texture_color(global_building_params.get_material(roof_mat_ix).roof_tex.tid).modulate_with(roof_color);
 }
@@ -1233,6 +1234,42 @@ void walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 	roof_mat.roof_tex.set_gl(state);
 	dstate.draw_cube(qbds.qbd, bcube, roof_color, 0, roof_mat.roof_tex.get_drawn_tscale_x(), 3); // top and bottom; skip ends and sides
 	qbds.qbd.draw_and_clear(); // must draw here since texture was set dynamically
+}
+bool walkway_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	cube_t const bc(bcube + xlate);
+	if (!bc.contains_pt_xy_exp(pos_, radius_)) return 0; // include radius so that we can walk from a building roof onto a walkway
+	float const z2(max(pos_.z, p_last.z));
+	if (z2 < bc.z1()) return 0; // below the walkway
+
+	if (z2 > bc.z2()) { // above the walkway
+		float const wwz(bc.z2() + radius_);
+		if (pos_.z > wwz) return 0; // in the air above the walkway
+		pos_.z = wwz;
+		if (cnorm) {*cnorm = plus_z;}
+		return 1; // collision with roof
+	}
+	// else inside the walkway
+	float zval(bc.z2() - floor_spacing*(1.0 - FLOOR_THICK_VAL_WINDOWLESS)); // bottom of upper walkway floor, assuming a windowless (city) office building
+	assert(zval >= bc.z1());
+
+	for (; zval >= bc.z1(); zval -= floor_spacing) {
+		if (zval > z2) continue; // wrong floor
+		float const wwz(zval + radius_);
+		bool const floor_coll(pos_.z < wwz);
+		
+		if (floor_coll) { // collision with floor
+			pos_.z = wwz;
+			if (cnorm) {*cnorm = plus_z;}
+		}
+		cube_t bc_inner(bc);
+		bc_inner.expand_by(-radius_);
+		point const prev(pos_);
+		bc_inner.clamp_pt_xy(pos_);
+		if (pos_ == prev) return floor_coll; // not touching a side
+		if (cnorm) {*cnorm = (pos_ - prev).get_norm();}
+		return 1; // collision with side
+	} // for zval
+	return 0; // shouldn't get here
 }
 
 // pillars

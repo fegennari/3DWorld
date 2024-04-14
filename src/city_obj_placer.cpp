@@ -1736,21 +1736,12 @@ template<typename T> bool proc_vector_sphere_coll(vector<T> const &objs, city_ob
 	return 0;
 }
 bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, vector3d *cnorm) const { // pos in in camera space
-	for (walkway_t const &w : walkways) { // special handling for player walking on/in walkways
-		cube_t const bc(w.bcube + xlate);
-		if (!bc.contains_pt_xy_exp(pos, radius)) continue; // include radius so that we can walk from a building roof onto a walkway
-		float const z2(max(pos.z, p_last.z));
-		if (z2 < bc.z1()) continue; // below the walkway
+	if (!sphere_cube_intersect(pos, (radius + p2p_dist(pos, p_last)), (all_objs_bcube + xlate))) return 0;
 
-		if (z2 > bc.z2()) { // above the walkway
-			float const wwz(bc.z2() + radius);
-			if (pos.z < wwz) {pos.z = wwz; return 1;} // collision
-			continue;
-		}
-		// else inside the walkway
-		// TODO
-	} // for w
-	if (!sphere_cube_intersect(pos, (radius + p2p_dist(pos,p_last)), (all_objs_bcube + xlate))) return 0;
+	// special handling for player walking on/in walkways; we need to handle collisions with the top surface when above, so proc_vector_sphere_coll() can't be used here
+	for (walkway_t const &w : walkways) {
+		if (w.proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1;
+	}
 	if (proc_vector_sphere_coll(benches,   bench_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(trashcans, trashcan_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(fhydrants, fhydrant_groups, pos, p_last, radius, xlate, cnorm)) return 1;
@@ -1770,7 +1761,6 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(bikes,     bike_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(plants,    plant_groups,    pos, p_last, radius, xlate, cnorm)) return 1; // optional?
 	if (proc_vector_sphere_coll(ponds,     pond_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
-	if (proc_vector_sphere_coll(walkways,  walkway_groups,  pos, p_last, radius, xlate, cnorm)) return 1; // optional?
 	if (proc_vector_sphere_coll(pillars,   pillar_groups,   pos, p_last, radius, xlate, cnorm)) return 1;
 	// Note: no coll with tree_planters because the tree coll should take care of it; no coll with hcaps, manholes, tcones, pladders, pool decks, pigeons, ppaths, or birds
 	return 0;
