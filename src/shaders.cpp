@@ -554,7 +554,7 @@ public:
 					// does this need to handle quoted string with spaces?
 					if      (check_strip_wrapper_chars(str, '<',  '>' )) {str = "shaders/" + str;} // strip off the angle brackets (include from shader directory)
 					else if (check_strip_wrapper_chars(str, '\"', '\"')) {} // strip off the quotes (include from local directory)
-					if (str == fname) {cerr << "Error: recusrive include of shader file '" << fname << "'" << endl; return 0;}
+					if (str == fname) {cerr << "Error: recursive include of shader file '" << fname << "'" << endl; return 0;}
 					// load the contents of this shader directly into the file contents of the including shader (inline it)
 					if (!load_shader_file(str, file_contents, all_fns)) {cerr << "Error: Failed to load included shader file '" << str << "'" << endl; return 0;}
 					file_contents += '\n';
