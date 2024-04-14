@@ -17,6 +17,7 @@ using std::string;
 
 bool const ADD_ROOM_SHADOWS        = 1; // for room lights
 bool const DRAW_EXT_REFLECTIONS    = 1; // draw building exteriors in mirror reflections; slower, but looks better; not shadowed
+bool const DRAW_WALKWAY_INTERIORS  = 1;
 float const WIND_LIGHT_ON_RAND     = 0.08;
 unsigned const NO_SHADOW_WHITE_TEX = BLACK_TEX; // alias to differentiate shadowed    vs. unshadowed untextured objects
 unsigned const SHADOW_ONLY_TEX     = RED_TEX;   // alias to differentiate shadow only vs. other      untextured objects
@@ -1885,30 +1886,32 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 		} // for i
 	} // for dim
 	// add the walkway interiors; these are outside the building and may get culled when outside the view frustum
-	for (building_walkway_t const &w : walkways) {
-		if (!w.is_owner) continue;
-		assert(w.bcube.z1() >= ground_floor_z1); // must be above ground
-		unsigned const bot_floor(round_fp((w.bcube.z1() - ground_floor_z1)/floor_spacing)), top_floor(round_fp((w.bcube.z2() - ground_floor_z1)/floor_spacing));
-		assert(bot_floor < top_floor); // must be at least one floor
-		cube_t ww_floor(w.bcube), ww_ceil(w.bcube);
+	if (DRAW_WALKWAY_INTERIORS) {
+		for (building_walkway_t const &w : walkways) {
+			if (!w.is_owner) continue;
+			assert(w.bcube.z1() >= ground_floor_z1); // must be above ground
+			unsigned const bot_floor(round_fp((w.bcube.z1() - ground_floor_z1)/floor_spacing)), top_floor(round_fp((w.bcube.z2() - ground_floor_z1)/floor_spacing));
+			assert(bot_floor < top_floor); // must be at least one floor
+			cube_t ww_floor(w.bcube), ww_ceil(w.bcube);
 
-		for (unsigned f = bot_floor; f < top_floor; ++f) {
-			float const zval(ground_floor_z1 + f*floor_spacing), next_zval(zval + floor_spacing);
-			set_cube_zvals(ww_floor, zval, zval+fc_thickness);
-			set_cube_zvals(ww_ceil,  next_zval-fc_thickness, next_zval);
-			bdraw.add_section(*this, 0, ww_floor, mat.floor_tex, mat.floor_color, 4, 1, 0, 1, 0); // no AO; top only
-			bdraw.add_section(*this, 0, ww_ceil,  mat.ceil_tex,  mat.ceil_color,  4, 0, 1, 1, 0); // no AO; bottom only
-		}
-		// walls on all 4 sides; walls extend through all floors; unlike normal exterior walls, these are windowless and have thickness
-		for (unsigned dim = 0; dim < 2; ++dim) {
-			for (unsigned d = 0; d < 2; ++d) {
-				cube_t wall(w.bcube);
-				wall.d[!dim][!d] = w.bcube.d[!dim][d] + (d ? -1.0 : 1.0)*wall_thickness;
-				unsigned const dim_mask((1 << unsigned(!dim)) | (1<<(2*(!dim)+d+3))); // only inside face in dim !w.dim should be visible
-				bdraw.add_section(*this, 0, wall, mat.wall_tex, wall_color, dim_mask, 1, 1, 1, 0); // no AO; skip bottom and top
+			for (unsigned f = bot_floor; f < top_floor; ++f) {
+				float const zval(ground_floor_z1 + f*floor_spacing), next_zval(zval + floor_spacing);
+				set_cube_zvals(ww_floor, zval, zval+fc_thickness);
+				set_cube_zvals(ww_ceil,  next_zval-fc_thickness, next_zval);
+				bdraw.add_section(*this, 0, ww_floor, mat.floor_tex, mat.floor_color, 4, 1, 0, 1, 0); // no AO; top only
+				bdraw.add_section(*this, 0, ww_ceil,  mat.ceil_tex,  mat.ceil_color,  4, 0, 1, 1, 0); // no AO; bottom only
 			}
-		} // for dim
-	} // for w
+			// walls on all 4 sides; walls extend through all floors; unlike normal exterior walls, these are windowless and have thickness
+			for (unsigned dim = 0; dim < 2; ++dim) {
+				for (unsigned d = 0; d < 2; ++d) {
+					cube_t wall(w.bcube);
+					wall.d[!dim][!d] = w.bcube.d[!dim][d] + (d ? -1.0 : 1.0)*wall_thickness;
+					unsigned const dim_mask((1 << unsigned(!dim)) | (1<<(2*(!dim)+d+3))); // only inside face in dim !w.dim should be visible
+					bdraw.add_section(*this, 0, wall, mat.wall_tex, wall_color, dim_mask, 1, 1, 1, 0); // no AO; skip bottom and top
+				}
+			} // for dim
+		} // for w
+	}
 	// Note: stair/elevator landings can probably be drawn in room_geom along with stairs, though I don't think there would be much benefit in doing so
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) { // added per-floor (530K T)
 		unsigned dim_mask(3); // disable faces: 8=x1, 16=x2, 32=y1, 64=y2
@@ -2388,6 +2391,12 @@ class building_creator_t {
 		void add_building(building_t const &b, unsigned ix) {
 			add_bcube(b.bcube, ix);
 			if (b.has_ext_basement()) {extb_bcube.assign_or_union_with_cube(b.interior->basement_ext_bcube);}
+
+			if (DRAW_WALKWAY_INTERIORS) {
+				for (building_walkway_t const &w : b.walkways) {
+					if (w.is_owner) {bcube.assign_or_union_with_cube(w.bcube);}
+				}
+			}
 		}
 		cube_t const &get_vis_bcube() const {return (player_in_ext_basement() ? extb_bcube : bcube);}
 	};
@@ -2931,13 +2940,12 @@ public:
 			cout << TXT(s.nbuildings) << TXT(s.nparts) << TXT(s.ndetails) << TXT(s.ntquads) << TXT(s.ndoors) << TXT(s.ninterior)
 				 << TXT(s.nrooms) << TXT(s.nceils) << TXT(s.nfloors) << TXT(s.nwalls) << TXT(s.nrgeom) << TXT(s.nobjs) << TXT(s.nverts) << endl;
 		}
-		build_grid_by_tile(is_tile);
-
 		if (city_only) { // connect with walkways here
 			vect_cube_t city_bcubes;
 			get_city_bcubes(city_bcubes);
 			for (cube_t const &c : city_bcubes) {connect_buildings_with_walkways(c);}
 		}
+		build_grid_by_tile(is_tile);
 		create_vbos(is_tile);
 	} // end gen()
 
