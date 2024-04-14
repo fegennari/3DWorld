@@ -1242,9 +1242,16 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 
 void city_obj_placer_t::place_birds(rand_gen_t &rgen) {
 	if (!are_birds_enabled()) return;
+
+	for (power_pole_t const &pp : ppoles) { // must check for walkway clearance
+		cube_t bc_exp(pp.bcube);
+		bc_exp.z2() += 0.5*city_params.road_width; // extend upward
+		bool invalid(0);
+		for (walkway_t const &w : walkways) {invalid |= w.bcube.intersects_xy(bc_exp);}
+		if (!invalid) {add_bird_loc(pp, bird_locs, rgen);}
+	}
 	vect_bird_place_t unused;
 	add_objs_top_center(newsracks, 0, 0, 1, unused, bird_locs, rgen);
-	add_objs_top_center(ppoles,    0, 0, 1, unused, bird_locs, rgen);
 	add_objs_top_center(mboxes,    0, 0, 1, unused, bird_locs, rgen);
 	add_objs_top_center(stopsigns, 0, 0, 1, unused, bird_locs, rgen);
 	add_objs_top_center(swings,    0, 0, 1, unused, bird_locs, rgen);
