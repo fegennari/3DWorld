@@ -550,6 +550,11 @@ public:
 			if (line.size() > 8) { // look for include directive
 				istringstream iss(line);
 				if ((iss >> str) && str == "#include") {
+					// Note: it may help with MSVS syntax highlighting to add "#extension GL_ARB_shading_language_include : enable" to the shader,
+					// though it likely doesn't understand the shaders directory system or ".part" rather than ".vert", ".frag" extensions
+					// alternatively, there appears to be an ARB extension for shader includes:
+					//glNamedStringARB(GL_SHADER_INCLUDE_ARB, -1, "header.glsl", -1, header_str);
+					//glCompileShaderIncludeARB(shader, inc_dirs, _countof(inc_dirs), NULL);
 					if (!(iss >> str)) {cerr << "Error: empty shader include" << endl; return 0;}
 					// does this need to handle quoted string with spaces?
 					if      (check_strip_wrapper_chars(str, '<',  '>' )) {str = "shaders/" + str;} // strip off the angle brackets (include from shader directory)
