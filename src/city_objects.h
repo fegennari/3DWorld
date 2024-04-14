@@ -274,6 +274,7 @@ struct pond_t : public city_obj_t {
 };
 
 struct walkway_t : public oriented_city_obj_t, public walkway_material_t {
+	float floor_spacing;
 	colorRGBA map_mode_color;
 
 	walkway_t(bldg_walkway_t const &w);

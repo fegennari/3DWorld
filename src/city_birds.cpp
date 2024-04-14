@@ -312,7 +312,7 @@ int city_obj_placer_t::check_path_segment_coll(point const &p1, point const &p2,
 
 			for (walkway_t const &w : walkways) { // special handling of walkways so that we don't try to land on power lines just under them
 				cube_t bc_ext(w.bcube);
-				bc_ext.z1() -= 0.5*city_params.road_width; // should be ~floor_spacing (which we don't have), so this should be large enough
+				bc_ext.z1() -= w.floor_spacing; // extend down by one floor
 				if (bc_ext.line_intersects(p1o, p2o)) return 1;
 			}
 			if (check_city_building_line_coll_bs_any(p1o, p2o)) return 2; // doesn't include objects such as building rooftop signs?

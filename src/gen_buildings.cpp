@@ -4334,7 +4334,7 @@ public:
 							}
 							building_t const &ww_owner(owner_is_b1 ? b1 : b2);
 							if (side_mat_ix < 0) {side_mat_ix = ww_owner.mat_ix;} // if side_mat_ix wasn't set above, use the parent building's material
-							all_walkways.emplace_back(walkway, dim, side_mat_ix, ww_owner.mat_ix, ww_owner.side_color, ww_owner.roof_color);
+							all_walkways.emplace_back(walkway, dim, side_mat_ix, ww_owner.mat_ix, ww_owner.side_color, ww_owner.roof_color, floor_spacing);
 							blocked.push_back(walkway);
 							connected = 1;
 							b1.walkways.emplace_back(walkway_interior, dim,  owner_is_b1, &b2);

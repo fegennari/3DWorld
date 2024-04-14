@@ -1215,7 +1215,7 @@ bool pond_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, p
 
 // walkways
 
-walkway_t::walkway_t(bldg_walkway_t const &w) : oriented_city_obj_t(w, w.dim, 0), walkway_material_t(w) { // dir=0 (unused)
+walkway_t::walkway_t(bldg_walkway_t const &w) : oriented_city_obj_t(w, w.dim, 0), walkway_material_t(w), floor_spacing(w.floor_spacing) { // dir=0 (unused)
 	// use the roof because this is what's visible in overhead map mode
 	map_mode_color = texture_color(global_building_params.get_material(roof_mat_ix).roof_tex.tid).modulate_with(roof_color);
 }

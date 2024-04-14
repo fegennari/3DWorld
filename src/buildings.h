@@ -2177,9 +2177,10 @@ struct walkway_material_t {
 	walkway_material_t(unsigned smix, unsigned rmix, colorRGBA const &sc, colorRGBA const &rc) : side_mat_ix(smix), roof_mat_ix(rmix), side_color(sc), roof_color(rc) {}
 };
 struct bldg_walkway_t : public cube_t, public walkway_material_t {
+	float floor_spacing;
 	bool dim;
-	bldg_walkway_t(cube_t const &c, bool d, unsigned smix, unsigned rmix, colorRGBA const &sc, colorRGBA const &rc) :
-		cube_t(c), walkway_material_t(smix, rmix, sc, rc), dim(d) {}
+	bldg_walkway_t(cube_t const &c, bool d, unsigned smix, unsigned rmix, colorRGBA const &sc, colorRGBA const &rc, float fs) :
+		cube_t(c), walkway_material_t(smix, rmix, sc, rc), floor_spacing(fs), dim(d) {}
 };
 typedef vector<bldg_walkway_t> vect_bldg_walkway_t;
 
