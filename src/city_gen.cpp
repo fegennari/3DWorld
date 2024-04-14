@@ -3229,6 +3229,7 @@ unsigned check_city_sphere_coll(point const &pos, float radius, bool exclude_bri
 void get_city_grass_coll_cubes(cube_t const &region, vect_cube_t &out, vect_cube_t &out_bt) { // Note: region and out are in camera space
 	city_gen.get_grass_coll_cubes(region, out, out_bt);
 }
+// primarily used for player collision, but also used for gameplay dynamic cobjs
 bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool inc_cars, vector3d *cnorm, bool check_interior) {
 	bool ret(proc_buildings_sphere_coll(pos, p_last, radius, cnorm, check_interior));
 	if (ret && camera_in_building) return ret; // skip city coll if player in a building

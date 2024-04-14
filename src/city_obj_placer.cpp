@@ -1736,6 +1736,20 @@ template<typename T> bool proc_vector_sphere_coll(vector<T> const &objs, city_ob
 	return 0;
 }
 bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, vector3d *cnorm) const { // pos in in camera space
+	for (walkway_t const &w : walkways) { // special handling for player walking on/in walkways
+		cube_t const bc(w.bcube + xlate);
+		if (!bc.contains_pt_xy_exp(pos, radius)) continue; // include radius so that we can walk from a building roof onto a walkway
+		float const z2(max(pos.z, p_last.z));
+		if (z2 < bc.z1()) continue; // below the walkway
+
+		if (z2 > bc.z2()) { // above the walkway
+			float const wwz(bc.z2() + radius);
+			if (pos.z < wwz) {pos.z = wwz; return 1;} // collision
+			continue;
+		}
+		// else inside the walkway
+		// TODO
+	} // for w
 	if (!sphere_cube_intersect(pos, (radius + p2p_dist(pos,p_last)), (all_objs_bcube + xlate))) return 0;
 	if (proc_vector_sphere_coll(benches,   bench_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(trashcans, trashcan_groups, pos, p_last, radius, xlate, cnorm)) return 1;
