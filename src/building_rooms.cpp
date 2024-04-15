@@ -2557,8 +2557,8 @@ int building_t::get_ext_door_dir(cube_t const &door_bcube, bool dim) const { // 
 
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // find part containing this door so that we can get the correct dir
 		if (is_basement(p)) continue; // skip the basement
-		if (p->z1() != ground_floor_z1 && !have_walkway_ext_door) continue; // not ground floor or walkway
-		if (p->d[!dim][1] < door_bcube.d[!dim][1] || p->d[!dim][0] > door_bcube.d[!dim][0]) {continue;} // not contained in this dim
+		if (p->z1() > door_bcube.z1() || p->z2() < door_bcube.z2()) continue; // Z-range not contained
+		if (p->d[!dim][1] < door_bcube.d[!dim][1] || p->d[!dim][0] > door_bcube.d[!dim][0]) continue; // not contained in this dim
 		if      (fabs(p->d[dim][0] - door_bcube.d[dim][0]) < 0.1*width) return 0;
 		else if (fabs(p->d[dim][1] - door_bcube.d[dim][1]) < 0.1*width) return 1;
 	} // for p

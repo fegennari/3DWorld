@@ -69,11 +69,12 @@ void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float di
 		door_shift = (dir ? 1.0 : -1.0)*get_door_shift_dist();
 	}
 	else {
-		door_shift = bcube.dz(); // start with a large value
+		float const large_val(bcube.dz());
+		door_shift = large_val; // start with a large value
 
 		for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) { // find the part that this door was added to (inc garages and sheds)
-			if (p->z1() != ground_floor_z1) continue; // ground floor only
-			if (is_basement(p))             continue; // skip the basement; probably not needed with the above check
+			if (p->z1() > c.z1() || p->z2() < c.z2()) continue; // Z-range not contained
+			if (is_basement(p)) continue; // skip the basement; probably not needed with the above check
 			float edge_pos(p->d[dim][dir]); // start with bcube edge
 
 			if (!is_cube()) { // find polygon edge
@@ -85,12 +86,15 @@ void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float di
 					if (fabs(p1[dim] - p2[dim]) > toler) continue; // edge not in this dim
 					edge_pos = 0.5*(p1[dim] + p2[dim]);
 					break; // should be only one
-				} // for i
+				}
 			}
 			float const dist(door.pts[0][dim] - edge_pos); // signed
 			if (fabs(dist) < fabs(door_shift)) {door_shift = dist;}
 		} // for p
-		assert(fabs(door_shift) < bcube.dz());
+		if (door_shift == large_val) { // not found
+			std::cerr << TXT(c.str()) << TXT(dim) << TXT(dir) << TXT(real_num_parts) << TXT(is_cube()) << endl;
+			assert(0);
+		}
 	}
 	door_shift *= -(1.0 + dist_mult); // reflect on other side
 	for (unsigned n = 0; n < door.npts; ++n) {door.pts[n][dim] += door_shift;} // move to opposite side of wall

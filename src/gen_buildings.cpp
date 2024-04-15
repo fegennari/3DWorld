@@ -4361,8 +4361,8 @@ public:
 							b2.walkways.emplace_back(walkway_interior, dim, !owner_is_b1, &b1);
 
 							if (ADD_WALKWAY_EXT_DOORS) { // add exterior doors connected to walkways; ignores rooms and walls
-								b1.add_walkway_door(walkway_interior, dim, 1, (P1 - b1.parts.begin()));
-								b2.add_walkway_door(walkway_interior, dim, 0, (P2 - b2.parts.begin()));
+								b1.add_walkway_door(walkway_interior, dim,  dir, (P1 - b1.parts.begin()));
+								b2.add_walkway_door(walkway_interior, dim, !dir, (P2 - b2.parts.begin()));
 							}
 							break; // only need one connection
 						} // for p2
