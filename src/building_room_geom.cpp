@@ -3742,7 +3742,8 @@ void building_room_geom_t::add_false_door(room_object_t const &c) {
 	
 	for (unsigned exterior = 0; exterior < 2; ++exterior) {
 		if (exterior && c.is_interior()) continue; // interior only; no exterior side to this door
-		rgeom_mat_t &fb_mat(get_material(tid_nm_pair_t(get_int_door_tid(), 0.0), 0, 0, 0, 0, exterior)); // unshadowed
+		int const tid((c.flags & RO_FLAG_WALKWAY) ? get_bldg_door_tid() : get_int_door_tid());
+		rgeom_mat_t &fb_mat(get_material(tid_nm_pair_t(tid, 0.0), 0, 0, 0, 0, exterior)); // unshadowed
 		fb_mat.add_cube_to_verts(c, c.color, all_zeros, get_face_mask(c.dim, (c.dir ^ bool(exterior) ^ 1)), !c.dim); // draw only front or back
 		rgeom_mat_t &side_mat(get_untextured_material(0, 0, 0, 0, exterior)); // unshadowed
 		side_mat.add_cube_to_verts_untextured(c, c.color, (get_skip_mask_for_xy(c.dim) | EF_Z1)); // skip front, back, and bottom faces

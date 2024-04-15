@@ -895,7 +895,7 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 	assert(interior);
 	if (interior->nav_graph && !interior->nav_graph->invalid) return; // already built
 	// Note: reallocating the nav_graph will also rebuild the nested nav_grid
-	interior->nav_graph.reset(new building_nav_graph_t(0.5*get_window_vspace())); // set stairs_extend == doorway width
+	interior->nav_graph.reset(new building_nav_graph_t(DOOR_WIDTH_SCALE*get_window_vspace())); // set stairs_extend == doorway width
 	building_nav_graph_t &ng(*interior->nav_graph);
 	float const wall_width(get_wall_thickness()), doorway_width(get_doorway_width());
 	unsigned const num_rooms(interior->rooms.size()), num_stairs(interior->stairwells.size());

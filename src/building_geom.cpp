@@ -595,7 +595,7 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 }
 
 void building_t::add_walkway_door(cube_t const &walkway, bool dim, bool dir, unsigned part_ix) {
-	float const door_width(get_doorway_width()), door_shift(get_door_shift_dist()), floor_spacing(get_window_vspace());
+	float const door_width(get_office_ext_doorway_width()), door_shift(get_door_shift_dist()), floor_spacing(get_window_vspace());
 	float const door_height(get_floor_ceil_gap()); // not using get_door_height() because we want to span the entire height, since there's no interior wall above
 	unsigned const num_floors(round_fp(walkway.dz()/floor_spacing));
 	assert(num_floors > 0);

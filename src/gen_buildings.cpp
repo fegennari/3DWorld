@@ -201,6 +201,7 @@ building_texture_mgr_t building_texture_mgr;
 int get_rect_panel_tid() {return building_texture_mgr.get_gdoor_tid();} // use garage doors
 int get_bath_wind_tid () {return building_texture_mgr.get_bath_wind_tid();}
 int get_int_door_tid  () {return building_texture_mgr.get_hdoor_tid();}
+int get_bldg_door_tid () {return building_texture_mgr.get_bdoor_tid();}
 int get_concrete_tid  () {return building_texture_mgr.get_concrete_tid();}
 
 
@@ -1913,7 +1914,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 					unsigned const dim_mask((1 << unsigned(dim)) | (1<<(2*dim+d+3))); // only inside face in dim !w.dim should be visible
 
 					if (add_ext_door) { // draw half wall to either side of door
-						float const door_hwidth(0.5*get_doorway_width()), center(w.bcube.get_center_dim(!w.dim));
+						float const door_hwidth(0.5*get_office_ext_doorway_width()), center(w.bcube.get_center_dim(!w.dim));
 
 						for (unsigned s = 0; s < 2; ++s) { // {left, right} side
 							cube_t side(wall);

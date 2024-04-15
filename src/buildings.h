@@ -503,6 +503,7 @@ unsigned const RO_FLAG_UNTEXTURED= 0x1000; // for shirts, aliased with RO_FLAG_A
 unsigned const RO_FLAG_FROM_SET  = 0x1000; // for books,  aliased with RO_FLAG_ADJ_BOT
 unsigned const RO_FLAG_HAS_VOL_IX= 0x2000; // for books,  aliased with RO_FLAG_ADJ_TOP
 unsigned const RO_FLAG_FOR_CAR   = 0x1000; // for car blockers, aliased with RO_FLAG_ADJ_BOT
+unsigned const RO_FLAG_WALKWAY   = 0x1000; // for walkway objects (outside of buildings), aliased with RO_FLAG_ADJ_BOT
 // object flags, third byte, for pickup/interact state
 unsigned const RO_FLAG_IN_HALLWAY= 0x010000;
 unsigned const RO_FLAG_IN_ATTIC  = 0x020000;
@@ -1920,7 +1921,8 @@ private:
 	std::string get_name_for_floor(unsigned floor_ix) const;
 	bool add_outdoor_ac_unit(rand_gen_t &rgen);
 	bool add_chimney(bool two_parts, bool stacked_parts, bool hipped_roof[4], float roof_dz[4], unsigned force_dim[2], rand_gen_t &rgen);
-	float get_nominal_doorway_width() const {return 0.5*get_window_vspace();} // constant per-building, but not exactly the same as get_doorway_width()
+	float get_nominal_doorway_width   () const {return DOOR_WIDTH_SCALE*get_window_vspace();} // constant per-building, but not exactly the same as get_doorway_width()
+	float get_office_ext_doorway_width() const {return DOOR_WIDTH_SCALE_OFFICE*get_window_vspace();}
 	float get_min_hallway_width() const;
 	bool can_use_hallway_for_part(unsigned part_id) const;
 	cube_t get_hallway_for_part(cube_t const &part, float &num_hall_windows, float &hall_width, float &room_width) const;
@@ -2333,6 +2335,7 @@ bool do_sphere_coll_polygon_sides(point &pos, cube_t const &part, float radius, 
 int get_rect_panel_tid();
 int get_bath_wind_tid ();
 int get_int_door_tid  ();
+int get_bldg_door_tid ();
 int get_concrete_tid  ();
 int get_plywood_tid   ();
 int get_insulation_tid();
