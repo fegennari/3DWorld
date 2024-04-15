@@ -1269,10 +1269,9 @@ bool walkway_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_
 			pos_.z = wwz;
 			if (cnorm) {*cnorm = plus_z;}
 		}
-		cube_t bc_inner(bc);
-		bc_inner.expand_by(-radius_);
 		point const prev(pos_);
-		bc_inner.clamp_pt_xy(pos_);
+		max_eq(pos_[!dim], bc.d[!dim][0]+radius_); // clamp in !dim
+		min_eq(pos_[!dim], bc.d[!dim][1]-radius_);
 		if (pos_ == prev) return floor_coll; // not touching a side
 		if (cnorm) {*cnorm = (pos_ - prev).get_norm();}
 		return 1; // collision with side

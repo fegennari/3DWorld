@@ -258,10 +258,11 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 		if ((min(pos2.z, p_last2.z) + radius) > ground_floor_z1) {
 			unsigned const floor_ix((zval - ground_floor_z1)/get_window_vspace());
 
-			if (floor_ext_door_mask & (1 << floor_ix)) { // check for exterior doors on this floor
+			if (have_walkway_ext_door || (floor_ext_door_mask & (1 << floor_ix))) { // check for exterior doors on this floor
 				for (auto d = doors.begin(); d != doors.end(); ++d) { // exterior doors
 					if (d->type == tquad_with_ix_t::TYPE_RDOOR) continue; // doesn't apply to roof door
 					cube_t bc(d->get_bcube());
+					if (zval < bc.z1() || zval > bc.z2()) continue; // no Z overlap
 					bool const door_dim(bc.dy() < bc.dx());
 					bc.expand_in_dim( door_dim, 1.1*radius); // expand by radius plus some tolerance in door dim
 					bc.expand_in_dim(!door_dim, -0.5*xy_radius); // shrink slightly in the other dim to prevent the player from clipping through the wall next to the door
