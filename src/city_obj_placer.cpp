@@ -422,7 +422,33 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				} // for N
 			} // for n
 		}
-		// TODO: place ponds
+		if (1) { // place pond(s)
+			float const pond_border(max(2.0f*sidewalk_width, 2.0f*path_hwidth));
+
+			for (unsigned n = 0; n < 100; ++n) { // 100 tries to place a pond
+				float const sz(city_params.road_width*rgen.rand_uniform(0.5, 1.0));
+				vector3d pond_sz; // radius
+				for (unsigned d = 0; d < 2; ++d) {pond_sz[d] = sz*rgen.rand_uniform(1.0, 1.5);}
+				cube_t pond_area(plot);
+				pond_area.expand_by(-pond_sz);
+				if (pond_area.dx() <= 0.0 || pond_area.dy() <= 0.0) continue; // not enough space; shouldn't fail for reasonable road vs. plot sizes
+				point center(0.0, 0.0, plot.z2());
+				for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(pond_area.d[d][0], pond_area.d[d][1]);}
+				cube_t pond(center);
+				pond.expand_by(pond_sz);
+				bool blocked(0);
+
+				for (auto p = ppaths.begin()+paths_start; p != ppaths.end(); ++p) {
+					if (p->check_cube_coll_xy(pond)) {blocked = 1; break;}
+				}
+				if (blocked) break;
+				// TODO: check trees, etc.
+				float const depth(city_params.road_width*rgen.rand_uniform(0.1, 0.5));
+				pond_groups.add_obj(pond_t(center, pond_sz.x, pond_sz.y, depth), ponds);
+				add_cube_to_colliders_and_blockers(pond, colliders, blockers);
+				break; // success
+			} // for n
+		}
 	} // end is_park
 	if (!walkways.empty()) { // place vertical pillars supporting walkways connecting buildings
 		cube_t pillar_area(plot);

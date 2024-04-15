@@ -1200,17 +1200,21 @@ void traffic_cone_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float di
 pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth) : city_obj_t(pos_, max(x_radius, y_radius)) {
 	bcube.set_from_point(pos);
 	bcube.expand_in_dim(0, x_radius);
-	bcube.expand_in_dim(0, y_radius);
+	bcube.expand_in_dim(1, y_radius);
 	bcube.z1() -= depth;
 }
 /*static*/ void pond_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	assert(!shadow_only);
 	select_texture(get_texture_by_name("snow2.jpg")); // something better?
+	//enable_blend(); // TODO: must be drawn after plots
+}
+/*static*/ void pond_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	//disable_blend();
 }
 void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	assert(!shadow_only);
 	unsigned const ndiv(max(4U, min(64U, unsigned(6.0f*dist_scale*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, pos)))));
-	dstate.s.set_cur_color(colorRGBA(WATER_C, 0.5)); // semi-transparent
+	dstate.s.set_cur_color(colorRGBA(0.1, 0.15, 0.4, 0.5)); // semi-transparent
 	fgPushMatrix();
 	translate_to(point(pos.x, pos.y, (bcube.z2() + 0.1*bcube.dz())));
 	fgScale(bcube.dx(), bcube.dy(), 1.0); // set correct aspect ratio
