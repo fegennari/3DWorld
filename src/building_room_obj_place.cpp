@@ -2635,8 +2635,9 @@ bool building_t::maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room
 		if (zval < w.bcube.z1() || ceil_zval > w.bcube.z2())   continue; // wrong floor
 		if (w.conn_bldg->get_window_vspace() != floor_spacing) continue; // floors not aligned (shouldn't happen?)
 		float const door_width(get_office_ext_doorway_width());
+		bool const dir(room.get_center_dim(dim) < w.bcube.get_center_dim(dim));
 
-		if (have_walkway_ext_door) {
+		if (w.has_ext_door(!dir)) {
 			float const center(w.bcube.get_center_dim(!w.dim));
 			if (room.d[!dim][1] < center - 0.5*door_width || room.d[!dim][0] > center + 0.5*door_width) continue; // not overlapping the door (which is centered on the walkway)
 			return 1; // using real exterior doors; don't add false doors; blockers are unnecessary
@@ -2650,7 +2651,6 @@ bool building_t::maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room
 		min_eq(entry.z2(), ceil_zval);
 		float const entry_width(entry.get_sz_dim(!dim));
 		if (entry_width < 1.2*door_width) continue; // too narrow for a doorway; walkway likele ends at a wall separating rooms
-		bool const dir(room.get_center_dim(dim) < w.bcube.get_center_dim(dim));
 		cube_t door(entry);
 		door.expand_in_dim(!dim, 0.5*(door_width - entry_width)); // shrink to doorway width
 		cube_t blocker(door);

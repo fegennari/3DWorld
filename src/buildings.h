@@ -1399,13 +1399,19 @@ struct building_conn_info_t { // use for buildings with connected rooms (for exa
 	bool point_in_conn_room(point const &pos_bs) const;
 };
 
-struct building_walkway_t {
+struct building_walkway_geom_t {
 	cube_t bcube;
-	bool dim, is_owner;
-	uint8_t has_door=0; // one bit per floor
-	building_t *conn_bldg;
+	bool dim;
+	float door_bounds[2][2]={}; // {dir=0, dir=1} x {lo, hi} for exterior doors, one pair per end
+	uint8_t has_door=0; // for false doors; one bit per floor
 
-	building_walkway_t(cube_t const &c, bool dim_, bool owner, building_t *b) : bcube(c), dim(dim_), is_owner(owner), conn_bldg(b) {}
+	building_walkway_geom_t(cube_t const &c, bool dim_) : bcube(c), dim(dim_) {}
+	bool has_ext_door(bool dir) const {return (door_bounds[dir][0] < door_bounds[dir][1]);}
+};
+struct building_walkway_t : public building_walkway_geom_t { // "owned" walkway, one per connected building
+	bool is_owner;
+	building_t *conn_bldg;
+	building_walkway_t(building_walkway_geom_t const &g, bool owner, building_t *b) : building_walkway_geom_t(g), is_owner(owner), conn_bldg(b) {}
 };
 
 
@@ -1651,7 +1657,7 @@ struct building_t : public building_geom_t {
 	void gen_geometry(int rseed1, int rseed2);
 	cube_t place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center, float door_pos,
 		float door_center_shift, float width_scale, bool can_fail, bool opens_up, rand_gen_t &rgen, unsigned floor_ix=0) const;
-	void add_walkway_door(cube_t const &walkway, bool dim, bool dir, unsigned part_ix);
+	bool add_walkway_door(building_walkway_geom_t &walkway, bool dir, unsigned part_ix);
 	void gen_house(cube_t const &base, rand_gen_t &rgen);
 	bool maybe_add_house_driveway(cube_t const &plot, unsigned building_ix) const;
 	bool get_power_point(vector<point> &ppts) const;

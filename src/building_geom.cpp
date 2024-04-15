@@ -594,23 +594,36 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 	return door;
 }
 
-void building_t::add_walkway_door(cube_t const &walkway, bool dim, bool dir, unsigned part_ix) {
+bool building_t::add_walkway_door(building_walkway_geom_t &walkway, bool dir, unsigned part_ix) {
 	float const door_width(get_office_ext_doorway_width()), door_shift(get_door_shift_dist()), floor_spacing(get_window_vspace());
 	float const door_height(get_floor_ceil_gap()); // not using get_door_height() because we want to span the entire height, since there's no interior wall above
-	unsigned const num_floors(round_fp(walkway.dz()/floor_spacing));
+	bool const dim(walkway.dim);
+	cube_t const &wbc(walkway.bcube);
+	unsigned const num_floors(round_fp(wbc.dz()/floor_spacing));
 	assert(num_floors > 0);
-	float zval(walkway.z1() + get_fc_thickness()); // bottom of lowest level door
+	float zval(wbc.z1() + get_fc_thickness()); // bottom of lowest level door
 	cube_t door;
-	set_wall_width(door, walkway.get_center_dim(!dim), 0.5*door_width, !dim);
-	// TODO: skip if blocked by end of wall
-	door.d[dim][!dir] = walkway.d[dim][!dir] + door_shift*(dir ? 1.0 : -1.0); // move slightly away from the building to prevent z-fighting
+	set_wall_width(door, wbc.get_center_dim(!dim), 0.5*door_width, !dim);
+	door.d[dim][!dir] = wbc.d[dim][!dir] + (dir ? 1.0 : -1.0)*door_shift; // move slightly away from the building to prevent z-fighting
 	door.d[dim][ dir] = door.d[dim][!dir]; // make zero size in this dim
 
+	if (interior) { // check for clearance; should this be done per-floor?
+		set_cube_zvals(door, zval, wbc.z2()); // full walkway height
+		cube_t door_exp(door);
+		door_exp.d[dim][!dir] -= (dir ? 1.0 : -1.0)*door_width;
+		if (interior->is_blocked_by_stairs_or_elevator(door_exp)) return 0;
+	
+		for (cube_t const &w : interior->walls[!dim]) { // check wall ends
+			if (w.intersects_no_adj(door_exp)) return 0;
+		}
+	}
 	for (unsigned f = 0; f < num_floors; ++f, zval += floor_spacing) {
 		set_cube_zvals(door, zval, zval+door_height);
 		add_door(door, part_ix, dim, dir, 1, 0, 0, 1); // for_office_building=1, roof_access=0, courtyard=0, for_walkway=1
 	}
+	for (unsigned d = 0; d < 2; ++d) {walkway.door_bounds[!dir][d] = door.d[!dim][d];} // dir is relative to building and opposite walkway, so must be swapped
 	have_walkway_ext_door = 1;
+	return 1; // success
 }
 
 bool building_t::clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const { // use for fences

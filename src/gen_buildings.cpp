@@ -18,7 +18,7 @@ using std::string;
 bool const ADD_ROOM_SHADOWS        = 1; // for room lights
 bool const DRAW_EXT_REFLECTIONS    = 1; // draw building exteriors in mirror reflections; slower, but looks better; not shadowed
 bool const DRAW_WALKWAY_INTERIORS  = 1;
-bool const ADD_WALKWAY_EXT_DOORS   = 0; // requires DRAW_WALKWAY_INTERIORS=1
+bool const ADD_WALKWAY_EXT_DOORS   = 1; // requires DRAW_WALKWAY_INTERIORS=1
 float const WIND_LIGHT_ON_RAND     = 0.08;
 unsigned const NO_SHADOW_WHITE_TEX = BLACK_TEX; // alias to differentiate shadowed    vs. unshadowed untextured objects
 unsigned const SHADOW_ONLY_TEX     = RED_TEX;   // alias to differentiate shadow only vs. other      untextured objects
@@ -1905,20 +1905,17 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 			}
 			// walls on all 4 sides; walls extend through all floors; unlike normal exterior walls, these are windowless and have thickness
 			for (unsigned dim = 0; dim < 2; ++dim) {
-				bool const add_ext_door(ADD_WALKWAY_EXT_DOORS && dim == w.dim);
-				float const wall_thick(add_ext_door ? /*get_door_shift_dist()*/0.5*wall_thickness : wall_thickness); // flush with exterior door? then there's a light gap
-
 				for (unsigned d = 0; d < 2; ++d) { // dir
+					bool const add_ext_door(dim == w.dim && w.has_ext_door(d));
+					float const wall_thick(add_ext_door ? /*get_door_shift_dist()*/0.5*wall_thickness : wall_thickness); // flush with exterior door? then there's a light gap
 					cube_t wall(w.bcube);
 					wall.d[dim][!d] = w.bcube.d[dim][d] + (d ? -1.0 : 1.0)*wall_thick;
 					unsigned const dim_mask((1 << unsigned(dim)) | (1<<(2*dim+d+3))); // only inside face in dim !w.dim should be visible
 
 					if (add_ext_door) { // draw half wall to either side of door
-						float const door_hwidth(0.5*get_office_ext_doorway_width()), center(w.bcube.get_center_dim(!w.dim));
-
 						for (unsigned s = 0; s < 2; ++s) { // {left, right} side
 							cube_t side(wall);
-							side.d[!dim][!s] = center + (s ? 1.0 : -1.0)*door_hwidth;
+							side.d[!dim][!s] = w.door_bounds[d][s];
 							bdraw.add_section(*this, 0, side, mat.wall_tex, wall_color, dim_mask, 1, 1, 1, 0); // no AO; skip bottom and top
 						}
 					}
@@ -4357,14 +4354,15 @@ public:
 							if (side_mat_ix < 0) {side_mat_ix = ww_owner.mat_ix;} // if side_mat_ix wasn't set above, use the parent building's material
 							all_walkways.emplace_back(walkway, dim, side_mat_ix, ww_owner.mat_ix, ww_owner.side_color, ww_owner.roof_color, floor_spacing);
 							blocked.push_back(walkway);
-							connected = 1;
-							b1.walkways.emplace_back(walkway_interior, dim,  owner_is_b1, &b2);
-							b2.walkways.emplace_back(walkway_interior, dim, !owner_is_b1, &b1);
+							building_walkway_geom_t bwg(walkway_interior, dim);
 
 							if (ADD_WALKWAY_EXT_DOORS) { // add exterior doors connected to walkways; ignores rooms and walls
-								b1.add_walkway_door(walkway_interior, dim,  dir, (P1 - b1.parts.begin()));
-								b2.add_walkway_door(walkway_interior, dim, !dir, (P2 - b2.parts.begin()));
+								b1.add_walkway_door(bwg,  dir, (P1 - b1.parts.begin()));
+								b2.add_walkway_door(bwg, !dir, (P2 - b2.parts.begin()));
 							}
+							b1.walkways.emplace_back(bwg,  owner_is_b1, &b2);
+							b2.walkways.emplace_back(bwg, !owner_is_b1, &b1);
+							connected = 1;
 							break; // only need one connection
 						} // for p2
 						if (connected) break;
