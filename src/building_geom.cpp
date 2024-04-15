@@ -594,6 +594,15 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 	return door;
 }
 
+bool building_t::check_walkway_door_clearance(cube_t const &c, bool dim) const {
+	if (interior->is_blocked_by_stairs_or_elevator(c)) return 0;
+
+	// check wall ends; shouldn't need to check the other dim because rooms should be at least a doorway width wide
+	for (cube_t const &w : interior->walls[!dim]) {
+		if (w.intersects_no_adj(c)) return 0;
+	}
+	return 1;
+}
 bool building_t::add_walkway_door(building_walkway_geom_t &walkway, bool dir, unsigned part_ix) {
 	float const door_width(get_office_ext_doorway_width()), door_shift(get_door_shift_dist()), floor_spacing(get_window_vspace());
 	float const door_height(get_floor_ceil_gap()); // not using get_door_height() because we want to span the entire height, since there's no interior wall above
@@ -601,20 +610,36 @@ bool building_t::add_walkway_door(building_walkway_geom_t &walkway, bool dir, un
 	cube_t const &wbc(walkway.bcube);
 	unsigned const num_floors(round_fp(wbc.dz()/floor_spacing));
 	assert(num_floors > 0);
-	float zval(wbc.z1() + get_fc_thickness()); // bottom of lowest level door
+	float const center(wbc.get_center_dim(!dim));
 	cube_t door;
-	set_wall_width(door, wbc.get_center_dim(!dim), 0.5*door_width, !dim);
+	set_wall_width(door, center, 0.5*door_width, !dim);
 	door.d[dim][!dir] = wbc.d[dim][!dir] + (dir ? 1.0 : -1.0)*door_shift; // move slightly away from the building to prevent z-fighting
 	door.d[dim][ dir] = door.d[dim][!dir]; // make zero size in this dim
+	float zval(wbc.z1() + get_fc_thickness()); // bottom of lowest level door
 
 	if (interior) { // check for clearance; should this be done per-floor?
 		set_cube_zvals(door, zval, wbc.z2()); // full walkway height
 		cube_t door_exp(door);
 		door_exp.d[dim][!dir] -= (dir ? 1.0 : -1.0)*door_width;
-		if (interior->is_blocked_by_stairs_or_elevator(door_exp)) return 0;
-	
-		for (cube_t const &w : interior->walls[!dim]) { // check wall ends
-			if (w.intersects_no_adj(door_exp)) return 0;
+		
+		if (!check_walkway_door_clearance(door_exp, dim)) { // blocked, try points to the sides
+			bool sdir(interior->rooms.size() & 1); // start with a pseudo random offset direction
+			float const shift_amt(0.1*door_width);
+			unsigned const num_shifts(0.5*max(0.0f, (wbc.get_sz_dim(!dim) - door_width))/shift_amt); // for each side, rounded down
+			bool success(0);
+
+			for (unsigned n = 0; n < num_shifts && !success; ++n) {
+				for (unsigned d = 0; d < 2; ++d, sdir ^= 1) {
+					float const shift((d ? 1.0 : -1.0)*(n+1)*shift_amt);
+					cube_t cand(door_exp);
+					cand.translate_dim(!dim, shift);
+					if (!check_walkway_door_clearance(cand, dim)) continue; // still bad
+					door.translate_dim(!dim, shift);
+					success = 1;
+					break;
+				} // for d
+			} // for n
+			if (!success) return 0; // no valid door placement
 		}
 	}
 	for (unsigned f = 0; f < num_floors; ++f, zval += floor_spacing) {

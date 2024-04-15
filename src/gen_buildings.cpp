@@ -4253,7 +4253,7 @@ public:
 
 		for (auto i1 = city_bldgs.begin(); i1 != city_bldgs.end(); ++i1) {
 			building_t &b1(get_building(i1->ix));
-			float const min_ww_width(2.0*b1.get_doorway_width()), floor_spacing(b1.get_window_vspace()); // should be the same for all buildings
+			float const min_ww_width(1.5*b1.get_office_ext_doorway_width()), floor_spacing(b1.get_window_vspace()); // should be the same for all buildings
 			float const bot_z_add(0.25*floor_spacing), power_pole_clearance(1.25*bot_z_add);
 			unsigned const min_floors_above_power_pole(unsigned((pp_height + power_pole_clearance)/floor_spacing) + 1U); // for crossing roads; take ceil
 			float const walkway_zmin_short(b1.ground_floor_z1 + ((bot_z_add > 0.0) ? 2.0 : 1.0)*floor_spacing); // two floors up, to account for bot_z_add
@@ -4356,7 +4356,7 @@ public:
 							blocked.push_back(walkway);
 							building_walkway_geom_t bwg(walkway_interior, dim);
 
-							if (ADD_WALKWAY_EXT_DOORS) { // add exterior doors connected to walkways; ignores rooms and walls
+							if (ADD_WALKWAY_EXT_DOORS) { // add exterior doors connected to walkways
 								b1.add_walkway_door(bwg,  dir, (P1 - b1.parts.begin()));
 								b2.add_walkway_door(bwg, !dir, (P2 - b2.parts.begin()));
 							}

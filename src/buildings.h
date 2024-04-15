@@ -1600,6 +1600,8 @@ struct building_t : public building_geom_t {
 	float get_flooring_thick () const {return 0.0012*get_window_vspace();}
 	float get_doorway_width  () const;
 	float get_landing_width  () const {return 1.0*get_doorway_width();} // for L-shaped stairs
+	float get_nominal_doorway_width   () const {return DOOR_WIDTH_SCALE*get_window_vspace();} // constant per-building, but not exactly the same as get_doorway_width()
+	float get_office_ext_doorway_width() const {return DOOR_WIDTH_SCALE_OFFICE*get_window_vspace();}
 	bool is_ground_floor_excluding_retail(float zval) const;
 	float get_ground_floor_z_thresh(bool for_spider) const;
 	void gen_rotation(rand_gen_t &rgen);
@@ -1657,6 +1659,7 @@ struct building_t : public building_geom_t {
 	void gen_geometry(int rseed1, int rseed2);
 	cube_t place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center, float door_pos,
 		float door_center_shift, float width_scale, bool can_fail, bool opens_up, rand_gen_t &rgen, unsigned floor_ix=0) const;
+	bool check_walkway_door_clearance(cube_t const &c, bool dim) const;
 	bool add_walkway_door(building_walkway_geom_t &walkway, bool dir, unsigned part_ix);
 	void gen_house(cube_t const &base, rand_gen_t &rgen);
 	bool maybe_add_house_driveway(cube_t const &plot, unsigned building_ix) const;
@@ -1927,8 +1930,6 @@ private:
 	std::string get_name_for_floor(unsigned floor_ix) const;
 	bool add_outdoor_ac_unit(rand_gen_t &rgen);
 	bool add_chimney(bool two_parts, bool stacked_parts, bool hipped_roof[4], float roof_dz[4], unsigned force_dim[2], rand_gen_t &rgen);
-	float get_nominal_doorway_width   () const {return DOOR_WIDTH_SCALE*get_window_vspace();} // constant per-building, but not exactly the same as get_doorway_width()
-	float get_office_ext_doorway_width() const {return DOOR_WIDTH_SCALE_OFFICE*get_window_vspace();}
 	float get_min_hallway_width() const;
 	bool can_use_hallway_for_part(unsigned part_id) const;
 	cube_t get_hallway_for_part(cube_t const &part, float &num_hall_windows, float &hall_width, float &room_width) const;
