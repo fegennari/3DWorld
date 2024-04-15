@@ -38,7 +38,7 @@ bool building_t::player_can_see_outside() const {
 	if (!player_building->has_windows()) { // no windows
 		// should we check if the door is visible?
 		if (building_has_open_ext_door && !doors.empty()) { // maybe can see out a door
-			if (camera_pos.z < (ground_floor_z1 + floor_spacing)) return 1; // maybe can see out open door on first floor
+			if (have_walkway_ext_door || camera_pos.z < (ground_floor_z1 + floor_spacing)) return 1; // maybe can see out open door on first floor or a walkway
 
 			if (interior) { // check roof access stairs
 				point camera_bot_bs(camera_bs);
