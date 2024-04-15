@@ -45,8 +45,8 @@ colorRGBA get_light_color_temp_range(float tmin, float tmax, rand_gen_t &rgen) {
 bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor_ix, bool skip_conn_check) const { // check room type and existence of exterior door
 	if (room.has_stairs_on_floor(floor_ix) || room.has_elevator || room.is_hallway || room.is_office || room.is_sec_bldg) return 0; // no bed/bath in these cases
 	
-	if (has_ext_door_this_floor(room.z1(), floor_ix)) {
-		// run special logic for bedrooms and bathrooms (private rooms) on the first floor of a house
+	if (maybe_has_ext_door_this_floor(room.z1(), floor_ix)) {
+		// run special logic for bedrooms and bathrooms (private rooms) on the first floor (or office building walkway floor)
 		if (is_room_adjacent_to_ext_door(room)) return 0; // door to house does not open into a bedroom/bathroom
 		if (skip_conn_check) return 1;
 		bool const is_multi_floor(room.dz() > 1.5*get_window_vspace());
@@ -1339,6 +1339,10 @@ void building_t::add_wall_and_door_trim_if_needed() {
 	add_wall_and_door_trim();
 	interior->room_geom->trim_objs.shrink_to_fit();
 }
+bool building_t::maybe_has_ext_door_this_floor(float part_z1, unsigned floor_ix) const {
+	if (have_walkway_ext_door) return 1; // walkway doors can be added to stack parts and ranges of floors, so return true for safety
+	return (part_z1 == ground_floor_z1 && (1 << floor_ix) & floor_ext_door_mask);
+}
 
 void cut_trim_around_doors(vect_tquad_with_ix_t const &doors, vect_cube_t &trim_cubes, float door_expand, bool dim) {
 	for (auto d = doors.begin(); d != doors.end(); ++d) {
@@ -1552,7 +1556,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 						trim.d[d][!dir] = side_pos + (dir ? -1.0 : 1.0)*trim_thickness;
 						trim_cubes.clear();
 						trim_cubes.push_back(trim); // start with entire length
-						if (has_ext_door_this_floor(i->z1(), f)) {cut_trim_around_doors(doors, trim_cubes, (expand_val + wall_thickness), d);} // cut out areas for ext doors
+						if (maybe_has_ext_door_this_floor(i->z1(), f)) {cut_trim_around_doors(doors, trim_cubes, (expand_val + wall_thickness), d);} // cut out areas for ext doors
 						for (cube_t const &c : trim_cubes) {objs.emplace_back(c, TYPE_WALL_TRIM, 0, d, dir, flags, 1.0, SHAPE_CUBE, trim_color);}
 						added = 1;
 						break;
@@ -1597,7 +1601,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 							for (cube_t const &t : trim_parts) {objs.emplace_back(t, TYPE_WALL_TRIM, 0, dim, !dir, flags, 1.0, SHAPE_ANGLED, trim_color);} // ceiling trim
 						}
 					}
-					if (has_ext_door_this_floor(i->z1(), f)) { // cut out areas for ext doors; not for stacked parts
+					if (maybe_has_ext_door_this_floor(i->z1(), f)) { // cut out areas for ext doors
 						cut_trim_around_doors(doors, trim_cubes, (expand_val + wall_thickness), dim);
 					}
 					for (cube_t &c : trim_cubes) {
@@ -2553,7 +2557,7 @@ int building_t::get_ext_door_dir(cube_t const &door_bcube, bool dim) const { // 
 
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // find part containing this door so that we can get the correct dir
 		if (is_basement(p)) continue; // skip the basement
-		if (p->z1() != ground_floor_z1) continue; // not ground floor
+		if (p->z1() != ground_floor_z1 && !have_walkway_ext_door) continue; // not ground floor or walkway
 		if (p->d[!dim][1] < door_bcube.d[!dim][1] || p->d[!dim][0] > door_bcube.d[!dim][0]) {continue;} // not contained in this dim
 		if      (fabs(p->d[dim][0] - door_bcube.d[dim][0]) < 0.1*width) return 0;
 		else if (fabs(p->d[dim][1] - door_bcube.d[dim][1]) < 0.1*width) return 1;

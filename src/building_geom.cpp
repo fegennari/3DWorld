@@ -575,7 +575,7 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 				break;
 			} // for w
 		}
-		door.d[dim][!dir] = door_pos + door_shift*(dir ? 1.0 : -1.0); // move slightly away from the house to prevent z-fighting
+		door.d[dim][!dir] = door_pos + door_shift*(dir ? 1.0 : -1.0); // move slightly away from the building to prevent z-fighting
 		door.d[dim][ dir] = door.d[dim][!dir]; // make zero size in this dim
 		set_wall_width(door, door_center, door_half_width, !dim);
 
@@ -588,6 +588,25 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 		break; // done
 	} // for n
 	return door;
+}
+
+void building_t::add_walkway_door(cube_t const &walkway, bool dim, bool dir, unsigned part_ix) {
+	float const door_width(get_doorway_width()), door_shift(get_door_shift_dist()), floor_spacing(get_window_vspace());
+	float const door_height(get_floor_ceil_gap()); // not using get_door_height() because we want to span the entire height, since there's no interior wall above
+	unsigned const num_floors(round_fp(walkway.dz()/floor_spacing));
+	assert(num_floors > 0);
+	float zval(walkway.z1() + get_fc_thickness()); // bottom of lowest level door
+	cube_t door;
+	set_wall_width(door, walkway.get_center_dim(!dim), 0.5*door_width, !dim);
+	// TODO: skip if blocked by end of wall
+	door.d[dim][!dir] = walkway.d[dim][!dir] + door_shift*(dir ? 1.0 : -1.0); // move slightly away from the building to prevent z-fighting
+	door.d[dim][ dir] = door.d[dim][!dir]; // make zero size in this dim
+
+	for (unsigned f = 0; f < num_floors; ++f, zval += floor_spacing) {
+		set_cube_zvals(door, zval, zval+door_height);
+		add_door(door, part_ix, dim, dir, 1, 0, 0, 1); // for_office_building=1, roof_access=0, courtyard=0, for_walkway=1
+	}
+	have_walkway_ext_door = 1;
 }
 
 bool building_t::clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const { // use for fences
@@ -1590,13 +1609,13 @@ cube_t building_t::get_door_bounding_cube(door_t const &door) const {
 	return door_bcube;
 }
 
-bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_office_building, bool roof_access, bool courtyard) { // exterior doors
+bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_office_building, bool roof_access, bool courtyard, bool for_walkway) { // exterior door
 
 	if (c.is_all_zeros()) return 0;
 	vector3d const sz(c.get_size());
 	assert(sz[dim] == 0.0 && sz[!dim] > 0.0 && sz.z > 0.0);
 	// if it's an office building with two doors already added, make this third door a back metal door
-	unsigned const type(for_office_building ? ((doors.size() == 2 && !courtyard) ?
+	unsigned const type(for_office_building ? ((doors.size() == 2 && !courtyard && !for_walkway) ?
 		(unsigned)tquad_with_ix_t::TYPE_BDOOR2 : (unsigned)tquad_with_ix_t::TYPE_BDOOR) : (unsigned)tquad_with_ix_t::TYPE_HDOOR);
 	doors.push_back(set_door_from_cube(c, dim, dir, type, 1.5*get_door_shift_dist(), 1, 0.0, 0, 0, 0)); // exterior=1, open_amt=0.0, opens_out=0, opens_up=0, swap_sides=0
 	if (!roof_access && part_ix < 4) {door_sides[part_ix] |= 1 << (2*dim + dir);}

@@ -18,6 +18,7 @@ using std::string;
 bool const ADD_ROOM_SHADOWS        = 1; // for room lights
 bool const DRAW_EXT_REFLECTIONS    = 1; // draw building exteriors in mirror reflections; slower, but looks better; not shadowed
 bool const DRAW_WALKWAY_INTERIORS  = 1;
+bool const ADD_WALKWAY_EXT_DOORS   = 0; // requires DRAW_WALKWAY_INTERIORS=1
 float const WIND_LIGHT_ON_RAND     = 0.08;
 unsigned const NO_SHADOW_WHITE_TEX = BLACK_TEX; // alias to differentiate shadowed    vs. unshadowed untextured objects
 unsigned const SHADOW_ONLY_TEX     = RED_TEX;   // alias to differentiate shadow only vs. other      untextured objects
@@ -1903,12 +1904,27 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 			}
 			// walls on all 4 sides; walls extend through all floors; unlike normal exterior walls, these are windowless and have thickness
 			for (unsigned dim = 0; dim < 2; ++dim) {
-				for (unsigned d = 0; d < 2; ++d) {
+				bool const add_ext_door(ADD_WALKWAY_EXT_DOORS && dim == w.dim);
+				float const wall_thick(add_ext_door ? /*get_door_shift_dist()*/0.5*wall_thickness : wall_thickness); // flush with exterior door? then there's a light gap
+
+				for (unsigned d = 0; d < 2; ++d) { // dir
 					cube_t wall(w.bcube);
-					wall.d[!dim][!d] = w.bcube.d[!dim][d] + (d ? -1.0 : 1.0)*wall_thickness;
-					unsigned const dim_mask((1 << unsigned(!dim)) | (1<<(2*(!dim)+d+3))); // only inside face in dim !w.dim should be visible
-					bdraw.add_section(*this, 0, wall, mat.wall_tex, wall_color, dim_mask, 1, 1, 1, 0); // no AO; skip bottom and top
-				}
+					wall.d[dim][!d] = w.bcube.d[dim][d] + (d ? -1.0 : 1.0)*wall_thick;
+					unsigned const dim_mask((1 << unsigned(dim)) | (1<<(2*dim+d+3))); // only inside face in dim !w.dim should be visible
+
+					if (add_ext_door) { // draw half wall to either side of door
+						float const door_hwidth(0.5*get_doorway_width()), center(w.bcube.get_center_dim(!w.dim));
+
+						for (unsigned s = 0; s < 2; ++s) { // {left, right} side
+							cube_t side(wall);
+							side.d[!dim][!s] = center + (s ? 1.0 : -1.0)*door_hwidth;
+							bdraw.add_section(*this, 0, side, mat.wall_tex, wall_color, dim_mask, 1, 1, 1, 0); // no AO; skip bottom and top
+						}
+					}
+					else { // draw full wall
+						bdraw.add_section(*this, 0, wall, mat.wall_tex, wall_color, dim_mask, 1, 1, 1, 0); // no AO; skip bottom and top
+					}
+				} // for d
 			} // for dim
 		} // for w
 	}
@@ -4277,8 +4293,9 @@ public:
 					} // for i3
 					if (is_blocked) continue;
 
-					for (cube_t const &p1 : b1.parts) {
-						for (cube_t const &p2 : b2.parts) {
+					for (auto P1 = b1.parts.begin(); P1 != b1.parts.end(); ++P1) {
+						for (auto P2 = b2.parts.begin(); P2 != b2.parts.end(); ++P2) {
+							cube_t const &p1(*P1), &p2(*P2);
 							float const lo(max(p1.d[!dim][0], p2.d[!dim][0])), hi(min(p1.d[!dim][1], p2.d[!dim][1])), width(hi - lo); // projection range
 							if (width < min_ww_width)     continue; // projection too small
 							float const length(fabs(p1.d[dim][dir] - p2.d[dim][!dir]));
@@ -4297,8 +4314,8 @@ public:
 							float const target_width(min_ww_width*rgen.rand_uniform(1.25, 2.5));
 							if (width > target_width) {walkway.expand_in_dim(!dim, -0.5*(width - target_width));} // shrink the width if needed
 							set_cube_zvals(walkway, zlo, zhi);
-							unsigned const ww_height(1 + (rgen.rand()%3)); // 1-3
-							float const z2_max(zlo + ww_height*floor_spacing); // limit height
+							unsigned num_floors_max(1 + (rgen.rand()%3)); // 1-3 floors
+							float const z2_max(zlo + num_floors_max*floor_spacing); // limit height
 
 							if (z2_max < walkway.z2()) { // reduce walkway height
 								unsigned const num_floors_above(round_fp((walkway.z2() - z2_max)/floor_spacing));
@@ -4309,6 +4326,7 @@ public:
 									if (num_floors_raise > 0) {walkway.translate_dim(2, num_floors_raise*floor_spacing);} // raise it up
 								}
 							}
+							assert(walkway.dz() > 0.0);
 							cube_t const walkway_interior(walkway); // capture before applying bot_z_add
 							walkway.z1() -= bot_z_add; // add extra space at the bottom for support; can't add to the top in case we're at the top building floor
 							assert(walkway.is_strictly_normalized());
@@ -4341,6 +4359,11 @@ public:
 							connected = 1;
 							b1.walkways.emplace_back(walkway_interior, dim,  owner_is_b1, &b2);
 							b2.walkways.emplace_back(walkway_interior, dim, !owner_is_b1, &b1);
+
+							if (ADD_WALKWAY_EXT_DOORS) { // add exterior doors connected to walkways; ignores rooms and walls
+								b1.add_walkway_door(walkway_interior, dim, 1, (P1 - b1.parts.begin()));
+								b2.add_walkway_door(walkway_interior, dim, 0, (P2 - b2.parts.begin()));
+							}
 							break; // only need one connection
 						} // for p2
 						if (connected) break;

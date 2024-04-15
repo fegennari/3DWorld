@@ -1511,7 +1511,7 @@ struct building_t : public building_geom_t {
 	mutable bool has_attic_window=0; // make mutable so that drawing code can update/cache this value
 	bool multi_family=0; // apartments, multi-family house, duplex, etc. - split by floor
 	bool has_int_fplace=0, has_parking_garage=0, has_small_part=0, has_basement_door=0, has_basement_pipes=0, parts_generated=0, is_in_city=0, has_skylight_light=0;
-	bool pri_hall_stairs_to_pg=0;
+	bool pri_hall_stairs_to_pg=0, have_walkway_ext_door=0;
 	mutable bool has_missing_stairs=0; // only used for printing a warning
 	uint8_t retail_floor_levels=0;
 	mutable bool player_visited=0; // for stats tracking
@@ -1561,7 +1561,7 @@ struct building_t : public building_geom_t {
 	bool can_extend_stairs_to_pg(unsigned &stairs_ix) const;
 	bool is_basement(vect_cube_t::const_iterator it) const {return (int(it - parts.begin()) == basement_part_ix);}
 	bool is_pos_in_basement(point const &pos) const {return ((has_basement() && parts[basement_part_ix].contains_pt(pos)) || point_in_extended_basement(pos));}
-	bool has_ext_door_this_floor(float part_z1, unsigned floor_ix) const {return (part_z1 == ground_floor_z1 && (1 << floor_ix) & floor_ext_door_mask);}
+	bool maybe_has_ext_door_this_floor(float part_z1, unsigned floor_ix) const;
 	void get_garage_dim_dir(cube_t const &garage, bool &dim, bool &dir) const;
 	unsigned get_attic_part_ix   () const;
 	room_t const &get_retail_room() const {assert(interior && !interior->rooms.empty()); assert(has_retail()); return interior->rooms.front();} // always the first room
@@ -1650,11 +1650,12 @@ struct building_t : public building_geom_t {
 	void gen_geometry(int rseed1, int rseed2);
 	cube_t place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center, float door_pos,
 		float door_center_shift, float width_scale, bool can_fail, bool opens_up, rand_gen_t &rgen, unsigned floor_ix=0) const;
+	void add_walkway_door(cube_t const &walkway, bool dim, bool dir, unsigned part_ix);
 	void gen_house(cube_t const &base, rand_gen_t &rgen);
 	bool maybe_add_house_driveway(cube_t const &plot, unsigned building_ix) const;
 	bool get_power_point(vector<point> &ppts) const;
 	void add_solar_panels(rand_gen_t &rgen);
-	bool add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_office_building, bool roof_access=0, bool courtyard=0);
+	bool add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_office_building, bool roof_access=0, bool courtyard=0, bool for_walkway=0);
 	float gen_peaked_roof(cube_t const &top_, float peak_height, bool dim, float extend_to, float max_dz, unsigned skip_side_tri);
 	float gen_hipped_roof(cube_t const &top_, float peak_height, float extend_to);
 	float gen_sloped_roof_for_stacked_parts(cube_t const &bot, cube_t const &top);

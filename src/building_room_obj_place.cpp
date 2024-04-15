@@ -2631,10 +2631,15 @@ bool building_t::maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room
 		cube_t w_ext(w.bcube);
 		w_ext.expand_in_dim(dim, door_thickness); // this will also set the door thickness
 		cube_t test_cube(w_ext);
-		//set_wall_width(test_cube, w.bcube.get_center_dim(!dim), 0.5*wall_thickness, !dim); // narrow strip so that only the room containing the center will include the door
 		if (!room.intersects_xy(test_cube))                    continue; // walkway not connected to this room
 		if (zval < w.bcube.z1() || ceil_zval > w.bcube.z2())   continue; // wrong floor
 		if (w.conn_bldg->get_window_vspace() != floor_spacing) continue; // floors not aligned (shouldn't happen?)
+
+		if (have_walkway_ext_door) {
+			float const door_hwidth(0.5*get_doorway_width()), center(w.bcube.get_center_dim(!w.dim));
+			if (room.d[!dim][1] < center - door_hwidth || room.d[!dim][0] > center + door_hwidth) continue; // not overlapping the door (which is centered on the walkway)
+			return 1; // using real exterior doors; don't add false doors; blockers are unnecessary
+		}
 		unsigned const floor_ix((zval - w.bcube.z1())/floor_spacing), door_mask(1 << floor_ix); // within the walkway
 		assert(floor_ix < 8);
 		if (!room.is_hallway && (w.has_door & door_mask)) continue; // already has a door on this floor; allow multiple doors if this is a hallway
