@@ -1680,7 +1680,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 		draw_objects(birds,    bird_groups,    dstate, 0.03, shadow_only, 1); // dist_scale=0.03, has_immediate_draw=1
 		draw_objects(pladders, plad_groups,    dstate, 0.06, shadow_only, 1); // dist_scale=0.06, has_immediate_draw=1
 		draw_objects(ppaths,   ppath_groups,   dstate, 0.25, shadow_only, 0, 1); // dist_scale=0.25, has_immediate_draw=0, draw_qbd_as_quads=1
-		draw_objects(ponds,    pond_groups,    dstate, 0.25, shadow_only, 0); // dist_scale=0.25, has_immediate_draw=???
+		draw_objects(ponds,    pond_groups,    dstate, 0.25, shadow_only, 1); // dist_scale=0.25, has_immediate_draw=1
 	}
 	dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // reset back to default after drawing 3D models such as fire hydrants and substations
 	
