@@ -1809,6 +1809,7 @@ cube_t building_t::get_step_for_ext_door(tquad_with_ix_t const &door) const {
 	return step;
 }
 void building_t::add_ext_door_steps(unsigned ext_objs_start) {
+	if (!is_house) return; // houses only, for now
 	float const floor_spacing(get_window_vspace()), fc_thickness(get_fc_thickness());
 	float const door_shift_dist(2.5*get_door_shift_dist()); // 1x for door shift and 1.5x offset in add_door()
 	colorRGBA const step_color(LT_GRAY);
@@ -1817,7 +1818,7 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 
 	// add step at the base of each exterior door
 	for (auto const &d : doors) {
-		if (d.type == tquad_with_ix_t::TYPE_RDOOR) continue; // skip roof access door
+		if (d.type != tquad_with_ix_t::TYPE_HDOOR) continue; // skip roof access door, garage door, office door, etc.
 		cube_t const c(d.get_bcube());
 		bool const above_ground(c.z1() > ground_floor_z1 + 2.0*fc_thickness);
 		bool const dim(c.dy() < c.dx()), dir(d.get_norm()[dim] > 0.0);
