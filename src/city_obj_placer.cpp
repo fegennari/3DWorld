@@ -1753,7 +1753,10 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 }
 void city_obj_placer_t::draw_transparent_objects(draw_state_t &dstate, bool shadow_only) {
 	if (shadow_only) return; // currently not drawn in the shadow pass
-	draw_objects(ponds, pond_groups, dstate, 0.30, shadow_only, 1); // dist_scale=0.30, has_immediate_draw=1
+
+	for (dstate.pass_ix = 0; dstate.pass_ix < 3; ++dstate.pass_ix) { // {dirt bottom, dark blur, water surface}
+		draw_objects(ponds, pond_groups, dstate, 0.30, shadow_only, 1); // dist_scale=0.30, has_immediate_draw=1
+	}
 }
 
 template<typename T> bool proc_vector_sphere_coll(vector<T> const &objs, city_obj_groups_t const &groups, point &pos,

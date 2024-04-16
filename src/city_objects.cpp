@@ -444,17 +444,32 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 
 // swimming pools
 
+void begin_water_surface_draw() {
+	if (0) {
+		select_texture(WHITE_TEX);
+		select_texture(get_texture_by_name("normal_maps/ocean_water_normal.png", 1), 5);
+	}
+	else {select_texture(get_texture_by_name("snow2.jpg"));}
+	enable_blend(); // transparent water
+}
+void end_water_surface_draw() {
+	if (0) {set_flat_normal_map();}
+	disable_blend();
+}
+
 // passes: 0=in-ground walls, 1=in-ground water, 2=above ground sides, 3=above ground water
 /*static*/ void swimming_pool_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {
 		if      (dstate.pass_ix == 2) {select_texture(WHITE_TEX);} // sides/untextured
 		else if (dstate.pass_ix == 0) {select_texture(get_texture_by_name("bathroom_tile.jpg"));} // walls and maybe ladder
-		else if (dstate.pass_ix == 1 || dstate.pass_ix == 3) { // water surface
-			select_texture(get_texture_by_name("snow2.jpg"));
-			enable_blend(); // transparent water
-		}
+		else if (dstate.pass_ix == 1 || dstate.pass_ix == 3) {begin_water_surface_draw();} // water surface
 		else {assert(0);}
 	}
+}
+/*static*/ void swimming_pool_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {dstate.s.set_cur_color(WHITE);} // restore to default color
+	if (dstate.pass_ix == 1 || dstate.pass_ix == 3) {end_water_surface_draw();} // water surface
+	city_obj_t::post_draw(dstate, shadow_only);
 }
 void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if ((dstate.pass_ix > 1) ^ above_ground)           return; // not drawn in this pass
@@ -540,11 +555,6 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 			dstate.draw_cube(qbds.qbd, inner, color_wrapper(colorRGBA(wcolor, 0.5)), 1, 0.5*tscale, 3); // draw top water as semi-transparent
 		}
 	}
-}
-/*static*/ void swimming_pool_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {dstate.s.set_cur_color(WHITE);} // restore to default color
-	if (dstate.pass_ix == 1 || dstate.pass_ix == 3) {disable_blend();} // transparent water
-	city_obj_t::post_draw(dstate, shadow_only);
 }
 bool swimming_pool_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	if (above_ground) {
@@ -1205,22 +1215,40 @@ pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth) :
 }
 /*static*/ void pond_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	assert(!shadow_only);
-	select_texture(get_texture_by_name("snow2.jpg")); // something better?
-	enable_blend();
-	glDepthMask(GL_FALSE); // disable depth writing
+	if      (dstate.pass_ix == 0) {select_texture(DIRT_TEX);} // dirt below
+	else if (dstate.pass_ix == 1) {select_texture(BLUR_CENT_TEX); enable_blend();} // dark blur
+	else {begin_water_surface_draw();} // water above
+	if (dstate.pass_ix > 0) {glDepthMask(GL_FALSE);} // disable depth writing
 }
 /*static*/ void pond_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	glDepthMask(GL_TRUE);
-	disable_blend();
+	if      (dstate.pass_ix == 0) {} // dirt below
+	else if (dstate.pass_ix == 1) {disable_blend();} // dark blur
+	else {end_water_surface_draw();} // water above
+	if (dstate.pass_ix > 0) {glDepthMask(GL_TRUE);}
 }
 void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	assert(!shadow_only);
 	unsigned const ndiv(max(4U, min(64U, unsigned(6.0f*dist_scale*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, pos)))));
-	dstate.s.set_cur_color(colorRGBA(0.1, 0.15, 0.4, 0.5)); // semi-transparent
+	float tscale(1.0), zval(0.0);
+
+	if (dstate.pass_ix == 0) { // dirt below
+		tscale = 4.0;
+		zval   = 0.005*bcube.dz();
+		dstate.s.set_cur_color(GRAY); // darker
+	}
+	else if (dstate.pass_ix == 1) {
+		zval   = 0.010*bcube.dz();
+		dstate.s.set_cur_color(BLACK);
+	}
+	else { // water above
+		tscale = 2.0;
+		zval   = 0.015*bcube.dz();
+		dstate.s.set_cur_color(colorRGBA(0.1, 0.15, 0.4, 0.5)); // semi-transparent
+	}
 	fgPushMatrix();
-	translate_to(point(pos.x, pos.y, (bcube.z2() + 0.01*bcube.dz())));
+	translate_to(point(pos.x, pos.y, bcube.z2()));
 	fgScale(bcube.dx(), bcube.dy(), 1.0); // set correct aspect ratio
-	draw_circle_normal(0.0, 0.5, ndiv, 0, all_zeros);
+	draw_circle_normal(0.0, 0.5, ndiv, 0, point(0.0, 0.0, zval), tscale, tscale);
 	fgPopMatrix();
 }
 bool pond_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
