@@ -1861,7 +1861,7 @@ bool city_obj_placer_t::get_color_at_xy_pre_road(point const &pos, colorRGBA &co
 }
 bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool skip_in_road) const {
 	unsigned obj_ix(0);
-	if (check_city_obj_pt_xy_contains(bench_groups,   benches,  pos, obj_ix, 0)) {color = texture_color(FENCE_TEX); return 1;} // is_cylin=0
+	if (check_city_obj_pt_xy_contains(bench_groups, benches, pos, obj_ix, 0)) {color = texture_color(FENCE_TEX); return 1;} // is_cylin=0
 	float const expand(0.15*city_params.road_width), x_test(pos.x + expand); // expand to approx tree diameter
 
 	if (!planter_groups.empty() && planter_groups.get_bcube().contains_pt_xy(pos)) {
@@ -1913,13 +1913,18 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 		color = newsracks[obj_ix].color;
 		return 1;
 	}
+	if (!pond_groups.empty() && pond_groups.get_bcube().contains_pt_xy(pos)) {
+		for (pond_t const &pond : ponds) { // sparse enough to iterate over
+			float const xv((pos.x - pond.pos.x)/(0.5*pond.bcube.dx())), yv((pos.y - pond.pos.y)/(0.5*pond.bcube.dy()));
+			if ((xv*xv + yv*yv) < 1.0) {color = BLUE; return 1;} // ellipse collision
+		}
+	}
 	if (check_city_obj_pt_xy_contains(sstation_groups, sstations, pos, obj_ix, 0)) {color = colorRGBA(0.6, 0.8, 0.4, 1.0); return 1;} // light olive
 	if (check_city_obj_pt_xy_contains(trashcan_groups, trashcans, pos, obj_ix, 0)) {color = colorRGBA(0.8, 0.6, 0.3, 1.0); return 1;} // tan
 	if (check_city_obj_pt_xy_contains(ppath_groups,    ppaths,    pos, obj_ix, 0)) {color = GRAY ; return 1;} // can/should we restrict this to only run when inside a park?
 	if (check_city_obj_pt_xy_contains(fountain_groups, fountains, pos, obj_ix, 1)) {color = GRAY ; return 1;} // is_cylin=1
 	if (check_city_obj_pt_xy_contains(tramp_groups,    tramps,    pos, obj_ix, 1)) {color = (BKGRAY*0.75 + tramps[obj_ix].color*0.25); return 1;} // is_cylin=1
 	if (check_city_obj_pt_xy_contains(umbrella_groups, umbrellas, pos, obj_ix, 1)) {color = WHITE; return 1;} // is_cylin=1
-	if (check_city_obj_pt_xy_contains(pond_groups,     ponds,     pos, obj_ix, 1)) {color = BLUE ; return 1;} // is_cylin=1 (sort of)
 	// Note: ppoles, hcaps, manholes, mboxes, tcones, pladders, signs, stopsigns, flags, pigeons, birds, swings, umbrellas, bikes, and plants are skipped for now;
 	// pillars aren't visible under walkways
 	return 0;
