@@ -480,7 +480,7 @@ private:
 	void add_cars_to_driveways(vector<car_t> &cars, vector<road_plot_t> const &plots, vector<vect_cube_t> &plot_colliders, unsigned city_id, rand_gen_t &rgen);
 	void place_trees_in_plot(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> &tree_pos, rand_gen_t &rgen, unsigned buildings_end);
 	void place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos,
-		rand_gen_t &rgen, bool have_streetlights);
+		vect_cube_t const &pond_blockers, rand_gen_t &rgen, bool have_streetlights);
 	void place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<road_t> const &roads,
 		vect_cube_t const &pool_blockers, unsigned driveways_start, unsigned city_ix, rand_gen_t &rgen);
 	bool place_swimming_pool(road_plot_t const &plot, city_zone_t const &yard, cube_t const &house, bool dim, bool dir, bool shrink_dim, unsigned prev_blockers_end,
