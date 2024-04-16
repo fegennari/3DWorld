@@ -1312,7 +1312,11 @@ public:
 
 	void draw(road_draw_state_t &dstate, bool shadow_only, bool is_connector_road) {
 		city_obj_placer.draw_detail_objects(dstate, shadow_only); // always drawn; does its own VFC and distance test
-		if (empty()) return;
+		if (!empty()) {draw_roads_and_plots(dstate, shadow_only, is_connector_road);}
+		dstate.end_cur_tile(); // once for all tiles, to draw shadow casters and untextured streetlights
+		city_obj_placer.draw_transparent_objects(dstate, shadow_only);
+	}
+	void draw_roads_and_plots(road_draw_state_t &dstate, bool shadow_only, bool is_connector_road) {
 		if (!dstate.check_cube_visible(get_bcube_inc_stoplights_and_streetlights(), 1.0)) return; // VFC/too far
 
 		if (shadow_only) {
@@ -1400,7 +1404,6 @@ public:
 			dstate.draw_tunnel(*t, shadow_only);
 			t->draw_streetlights(dstate, shadow_only, 1); // always_on=1
 		}
-		dstate.end_cur_tile(); // once for all tiles, to draw shadow casters and untextured streetlights
 	}
 	void add_city_lights(vector3d const &xlate, cube_t &lights_bcube) const { // for now, the only light sources added by the road network are city block streetlights
 		add_streetlight_dlights(xlate, lights_bcube, 0);
