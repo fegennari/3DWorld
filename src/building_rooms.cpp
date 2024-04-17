@@ -1813,7 +1813,6 @@ cube_t building_t::get_step_for_ext_door(tquad_with_ix_t const &door) const {
 	return step;
 }
 void building_t::add_ext_door_steps(unsigned ext_objs_start) {
-	if (!is_house) return; // houses only, for now
 	float const floor_spacing(get_window_vspace()), fc_thickness(get_fc_thickness());
 	float const door_shift_dist(2.5*get_door_shift_dist()); // 1x for door shift and 1.5x offset in add_door()
 	colorRGBA const step_color(LT_GRAY);
@@ -1822,11 +1821,12 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 
 	// add step at the base of each exterior door
 	for (auto const &d : doors) {
-		if (d.type != tquad_with_ix_t::TYPE_HDOOR) continue; // skip roof access door, garage door, office door, etc.
+		if (d.type == tquad_with_ix_t::TYPE_RDOOR) continue; // skip roof access door
 		cube_t const c(d.get_bcube());
 		bool const above_ground(c.z1() > ground_floor_z1 + 2.0*fc_thickness);
 		bool const dim(c.dy() < c.dx()), dir(d.get_norm()[dim] > 0.0);
 		bool const is_garage(d.type == tquad_with_ix_t::TYPE_GDOOR);
+		if (above_ground &&  d.type != tquad_with_ix_t::TYPE_HDOOR) continue; // only house doors above ground have stairs; office buildings have walkways
 		cube_t step(get_step_for_ext_door(d));
 		step.d[dim][!dir] -= (dir ? 1.0 : -1.0)*door_shift_dist; // shift slightly away from the building to prevent Z-fighting with the exterior wall
 		assert(step.is_strictly_normalized());
@@ -1837,7 +1837,8 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 		objs.emplace_back(step, TYPE_EXT_STEP, 0, dim, !dir, flags, 1.0, shape, step_color);
 		if (above_ground && !is_garage) {to_add_stairs.push_back(obj_ix);} // add steps up to this door
 	} // for d
-	if (to_add_stairs.empty()) return; // done
+	if (to_add_stairs.empty()) return; // no stairs - done
+	if (!is_house) return; // only houses have actual stairs; office buildings have walkways
 	cube_t const &part(parts[0]); // assumes door is on parts[0] (single part)
 	bool const add_step_gaps(objs.size() & 1); // something random-ish per building
 	float const base_step_height(floor_spacing/NUM_STAIRS_PER_FLOOR), head_clearance(0.8*get_floor_ceil_gap()), railing_thickness(0.5*get_wall_thickness());
