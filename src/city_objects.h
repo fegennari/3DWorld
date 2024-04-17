@@ -75,7 +75,7 @@ struct model_city_obj_t : public oriented_city_obj_t {
 	float get_overlay_radius() const {return model_city_obj_t::get_xy_coll_radius();} // for overhead map mode
 	static void pre_draw (draw_state_t &dstate, bool shadow_only) {disable_hemi_lighting_pre_post(dstate, shadow_only, 0);}
 	static void post_draw(draw_state_t &dstate, bool shadow_only) {disable_hemi_lighting_pre_post(dstate, shadow_only, 1);}
-	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only, animation_state_t *anim_state=nullptr) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
@@ -240,6 +240,7 @@ struct bicycle_t : public model_city_obj_t {
 struct swingset_t : public model_city_obj_t {
 	swingset_t(point const &pos_, float height, bool dim_, bool dir_) : model_city_obj_t(pos_, height, dim_, dir_, get_model_id()) {}
 	virtual unsigned get_model_id() const {return OBJ_MODEL_SWINGSET;}
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
 
 struct trampoline_t : public model_city_obj_t {

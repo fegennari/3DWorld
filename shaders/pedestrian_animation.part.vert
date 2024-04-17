@@ -4,7 +4,7 @@ uniform float animation_time     = 0.0;
 uniform float animation_scale    = 1.0;
 uniform float model_delta_height = 0.0;
 uniform int   animation_id       = 0;
-// 0=none, 1=walk, 2=bunny hop, 3=flip, 4=twirl, 5=march, 6=alien walk, 7=rat, 8=spider, 9=bones animation, 10=helicopter rotate
+// 0=none, 1=walk, 2=bunny hop, 3=flip, 4=twirl, 5=march, 6=alien walk, 7=rat, 8=spider, 9=bones animation, 10=helicopter rotate, 11=swingset
 
 #ifdef USE_BONE_ANIMATIONS
 layout(location = 4) in uvec4 bone_ids;
@@ -138,6 +138,12 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, in vec2 tc) {
 			mat3 m      = do_rotation(vec3(0.0, 1.0, 0.0), anim_val);
 			vertex.xyz *= m;
 			normal     *= m; // rotate only, no scale - no inverse transpose needed
+		}
+	}
+	else if (animation_id == 11) { // swingset
+		// y = up/down, x = left/right, z = front/back
+		if (vertex.y < 0.95*model_delta_height && abs(vertex.x) < 0.75*model_delta_height) { // swings part
+			rotate_about(vertex.xyz, normal, 0.975*model_delta_height, vec3(1.0, 0.0, 0.0), 0.25*sin(2.0*anim_val));
 		}
 	}
 	// else error/skip

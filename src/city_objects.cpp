@@ -77,9 +77,9 @@ model_city_obj_t::model_city_obj_t(point const &pos_, float height, bool dim_, b
 	bcube.expand_by(0.5*expand);
 	set_bsphere_from_bcube(); // recompute bsphere from bcube
 }
-void model_city_obj_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+void model_city_obj_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only, animation_state_t *anim_state) const {
 	if (!dstate.is_visible_and_unoccluded(bcube, dist_scale)) return;
-	building_obj_model_loader.draw_model(dstate.s, pos, bcube, get_orient_dir(), color, dstate.xlate, get_model_id(), shadow_only);
+	building_obj_model_loader.draw_model(dstate.s, pos, bcube, get_orient_dir(), color, dstate.xlate, get_model_id(), shadow_only, 0, anim_state);
 }
 bool model_city_obj_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	if (!is_cylinder) {return oriented_city_obj_t::proc_sphere_coll(pos_, p_last, radius_, xlate, cnorm);} // use default cube collision
@@ -88,6 +88,16 @@ bool model_city_obj_t::proc_sphere_coll(point &pos_, point const &p_last, float 
 
 multi_model_city_obj_t::multi_model_city_obj_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_id, unsigned model_select, bool is_cylinder_) :
 	model_city_obj_t(pos_, height, dim_, dir_, model_id, is_cylinder_), full_model_id(model_id + (model_select << 8)) {}
+
+// swingsets
+
+void swingset_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	bool const enable_animations(1); // TODO: when near the player?
+	float const anim_time(0.01*tfticks);
+	animation_state_t anim_state(enable_animations, ANIM_ID_SWINGS, anim_time);
+	model_city_obj_t::draw(dstate, qbds, dist_scale, shadow_only, &anim_state);
+	anim_state.clear_animation_id(dstate.s);
+}
 
 // benches
 
