@@ -1715,6 +1715,10 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 		draw_objects(birds,    bird_groups,    dstate, 0.03, shadow_only, 1); // dist_scale=0.03, has_immediate_draw=1
 		draw_objects(pladders, plad_groups,    dstate, 0.06, shadow_only, 1); // dist_scale=0.06, has_immediate_draw=1
 		draw_objects(ppaths,   ppath_groups,   dstate, 0.25, shadow_only, 0, 1); // dist_scale=0.25, has_immediate_draw=0, draw_qbd_as_quads=1
+
+		for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {dirt bottom, dark blur}
+			draw_objects(ponds, pond_groups, dstate, 0.30, shadow_only, 1); // dist_scale=0.30, has_immediate_draw=1
+		}
 	}
 	dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // reset back to default after drawing 3D models such as fire hydrants and substations
 	
@@ -1753,10 +1757,9 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 }
 void city_obj_placer_t::draw_transparent_objects(draw_state_t &dstate, bool shadow_only) {
 	if (shadow_only) return; // currently not drawn in the shadow pass
-
-	for (dstate.pass_ix = 0; dstate.pass_ix < 3; ++dstate.pass_ix) { // {dirt bottom, dark blur, water surface}
-		draw_objects(ponds, pond_groups, dstate, 0.30, shadow_only, 1); // dist_scale=0.30, has_immediate_draw=1
-	}
+	dstate.pass_ix = 2; // water surface
+	draw_objects(ponds, pond_groups, dstate, 0.30, shadow_only, 1); // dist_scale=0.30, has_immediate_draw=1
+	dstate.pass_ix = 0; // reset back to 0
 }
 
 template<typename T> bool proc_vector_sphere_coll(vector<T> const &objs, city_obj_groups_t const &groups, point &pos,

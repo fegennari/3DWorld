@@ -451,10 +451,12 @@ void begin_water_surface_draw() {
 	}
 	else {select_texture(get_texture_by_name("snow2.jpg"));}
 	enable_blend(); // transparent water
+	glDepthMask(GL_FALSE);
 }
 void end_water_surface_draw() {
 	if (0) {set_flat_normal_map();}
 	disable_blend();
+	glDepthMask(GL_TRUE);
 }
 
 // passes: 0=in-ground walls, 1=in-ground water, 2=above ground sides, 3=above ground water
@@ -1218,37 +1220,56 @@ pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth) :
 	if      (dstate.pass_ix == 0) {select_texture(DIRT_TEX);} // dirt below
 	else if (dstate.pass_ix == 1) {select_texture(BLUR_CENT_TEX); enable_blend();} // dark blur
 	else {begin_water_surface_draw();} // water above
-	if (dstate.pass_ix > 0) {glDepthMask(GL_FALSE);} // disable depth writing
 }
 /*static*/ void pond_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if      (dstate.pass_ix == 0) {} // dirt below
 	else if (dstate.pass_ix == 1) {disable_blend();} // dark blur
 	else {end_water_surface_draw();} // water above
-	if (dstate.pass_ix > 0) {glDepthMask(GL_TRUE);}
 }
 void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	assert(!shadow_only);
-	unsigned const ndiv(max(4U, min(64U, unsigned(6.0f*dist_scale*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, pos)))));
-	float tscale(1.0), zval(0.0);
-
-	if (dstate.pass_ix == 0) { // dirt below
-		tscale = 4.0;
-		zval   = 0.005*bcube.dz();
-		dstate.s.set_cur_color(GRAY); // darker
-	}
-	else if (dstate.pass_ix == 1) {
-		zval   = 0.010*bcube.dz();
-		dstate.s.set_cur_color(BLACK);
-	}
-	else { // water above
-		tscale = 2.0;
-		zval   = 0.015*bcube.dz();
-		dstate.s.set_cur_color(colorRGBA(0.1, 0.15, 0.4, 0.5)); // semi-transparent
-	}
+	float const dist(p2p_dist(dstate.camera_bs, pos)), dz_off(0.00025*dist);
+	unsigned const ndiv(max(4U, min(64U, unsigned(6.0f*dist_scale*dstate.draw_tile_dist/dist))));
 	fgPushMatrix();
 	translate_to(point(pos.x, pos.y, bcube.z2()));
 	fgScale(bcube.dx(), bcube.dy(), 1.0); // set correct aspect ratio
-	draw_circle_normal(0.0, 0.5, ndiv, 0, point(0.0, 0.0, zval), tscale, tscale);
+
+	if (dstate.pass_ix == 0) { // dirt below
+		float const tscale(4.0), bot_radius(0.5*0.5); // half the total radius
+		point const bot_center(point(0.0, 0.0, -bcube.dz()));
+		// bottom
+		dstate.s.set_cur_color(LT_GRAY); // darker
+		draw_circle_normal(0.0, bot_radius, ndiv, 1, bot_center, tscale, tscale); // invert_normals=1
+		// sloped sides
+		point const ce[2] = {bot_center, all_zeros};
+		vector3d v12;
+		vector_point_norm const &vpn(gen_cylinder_data(ce, bot_radius, 0.5, ndiv, v12));
+		static vector<vert_norm_tc_color> verts;
+		verts.resize(2U*(ndiv+1U));
+		float const ndiv_inv(1.0/ndiv);
+		color_wrapper const cw_outer(WHITE), cw_inner(LT_GRAY);
+
+		for (unsigned S = 0; S <= ndiv; ++S) {
+			unsigned const s(S%ndiv), vix(2*S);
+			// Note: normal is facing down, but we don't invert it because we want to disable lighting as shadows are incorrect anyway,
+			// since the pond is under the mesh, which may cast a shadow if it partially overlaps the city even if it's not drawn
+			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]);
+			point const &p1(vpn.p[(s<<1)+0]), &p2(vpn.p[(s<<1)+1]);
+			verts[vix+0].assign(p1, normal, tscale*p1.x, tscale*p1.y, cw_inner.c);
+			verts[vix+1].assign(p2, normal, tscale*p2.x, tscale*p2.y, cw_outer.c);
+		}
+		draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
+	}
+	else if (dstate.pass_ix == 1) {
+		float const tscale(1.0);
+		dstate.s.set_cur_color(BLACK);
+		draw_circle_normal(0.0, 0.5, ndiv, 0, point(0.0, 0.0, dz_off), tscale, tscale);
+	}
+	else { // water above
+		float const tscale(2.0);
+		dstate.s.set_cur_color(colorRGBA(0.3, 0.4, 1.0, 0.33)); // semi-transparent
+		draw_circle_normal(0.0, 0.5, ndiv, 0, point(0.0, 0.0, 2.0*dz_off), tscale, tscale);
+	}
 	fgPopMatrix();
 }
 bool pond_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
