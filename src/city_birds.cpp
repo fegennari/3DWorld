@@ -239,9 +239,11 @@ template<typename T> void city_obj_groups_t::update_obj_pos(vector<T> const &obj
 
 // this is here because only birds are updated each frame
 void city_obj_placer_t::next_frame() {
-	if (!animate2 || birds.empty()) return;
-	float const enable_birds_dist(0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE)); // half the pedestrian AI distance
+	if (!animate2) return;
 	point const camera_bs(get_camera_building_space());
+	for (swingset_t &s : swings) {s.next_frame(camera_bs);}
+	if (birds.empty()) return;
+	float const enable_birds_dist(0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE)); // half the pedestrian AI distance
 	if (!all_objs_bcube.closest_dist_less_than(camera_bs, enable_birds_dist)) return; // too far from the player
 	//highres_timer_t timer("Update Birds");
 	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms

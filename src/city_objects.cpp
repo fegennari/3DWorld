@@ -5,6 +5,7 @@
 #include "city_objects.h"
 
 extern int animate2;
+extern float fticks;
 extern double camera_zh;
 extern city_params_t city_params;
 extern object_model_loader_t building_obj_model_loader;
@@ -92,11 +93,25 @@ multi_model_city_obj_t::multi_model_city_obj_t(point const &pos_, float height, 
 // swingsets
 
 void swingset_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	bool const enable_animations(1); // TODO: when near the player?
-	float const anim_time(0.01*tfticks);
-	animation_state_t anim_state(enable_animations, ANIM_ID_SWINGS, anim_time);
-	model_city_obj_t::draw(dstate, qbds, dist_scale, shadow_only, &anim_state);
-	anim_state.clear_animation_id(dstate.s);
+	if (anim_scale > 0.0) { // animated
+		animation_state_t anim_state(1, ANIM_ID_SWINGS, anim_time); // enable_animations=1
+		dstate.s.add_uniform_float("rotate_amount", anim_scale);
+		model_city_obj_t::draw(dstate, qbds, dist_scale, shadow_only, &anim_state);
+		dstate.s.add_uniform_float("rotate_amount", 1.0); // reset
+		anim_state.clear_animation_id(dstate.s);
+	}
+	else { // static
+		model_city_obj_t::draw(dstate, qbds, dist_scale, shadow_only);
+	}
+}
+void swingset_t::next_frame(point const &camera_bs) {
+	if (bcube.contains_pt_exp(camera_bs, 1.2*CAMERA_RADIUS)) {anim_scale = 1.0;}
+
+	if (anim_scale > 0.01) {
+		anim_time  += 0.0006*fticks;
+		anim_scale *= (1.0f - min(1.0f, 0.0025f*fticks)); // dampen
+	}
+	else {anim_time = anim_scale = 0.0;}
 }
 
 // benches
@@ -1238,7 +1253,7 @@ pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth) :
 }
 void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	assert(!shadow_only);
-	float const dist(p2p_dist(dstate.camera_bs, pos)), dz_off(0.00025*dist);
+	float const dist(p2p_dist(dstate.camera_bs, pos)), dz_off(max(0.0001f*bcube.dz(), 0.00025f*dist));
 	unsigned const ndiv(max(4U, min(64U, unsigned(6.0f*dist_scale*dstate.draw_tile_dist/dist))));
 	fgPushMatrix();
 	translate_to(point(pos.x, pos.y, bcube.z2()));

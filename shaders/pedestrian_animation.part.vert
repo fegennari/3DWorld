@@ -3,6 +3,7 @@ const float PI = 3.14159;
 uniform float animation_time     = 0.0;
 uniform float animation_scale    = 1.0;
 uniform float model_delta_height = 0.0;
+uniform float rotate_amount      = 1.0; // for swings
 uniform int   animation_id       = 0;
 // 0=none, 1=walk, 2=bunny hop, 3=flip, 4=twirl, 5=march, 6=alien walk, 7=rat, 8=spider, 9=bones animation, 10=helicopter rotate, 11=swingset
 
@@ -142,8 +143,11 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, in vec2 tc) {
 	}
 	else if (animation_id == 11) { // swingset
 		// y = up/down, x = left/right, z = front/back
-		if (vertex.y < 0.95*model_delta_height && abs(vertex.x) < 0.75*model_delta_height) { // swings part
-			rotate_about(vertex.xyz, normal, 0.975*model_delta_height, vec3(1.0, 0.0, 0.0), 0.25*sin(2.0*anim_val));
+		float pivot_y = 9.12*model_delta_height;
+
+		if (vertex.y < pivot_y && abs(vertex.x) < 5.0*model_delta_height) { // swings part
+			float angle = 0.5*rotate_amount*((vertex.x < 0.0) ? -1.0 : 1.0)*sin(anim_val); // each side is 180 degrees out of phase
+			rotate_about(vertex.xyz, normal, pivot_y, vec3(1.0, 0.0, 0.0), angle);
 		}
 	}
 	// else error/skip

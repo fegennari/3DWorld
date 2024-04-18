@@ -238,9 +238,12 @@ struct bicycle_t : public model_city_obj_t {
 };
 
 struct swingset_t : public model_city_obj_t {
+	float anim_time=0.0, anim_scale=0.0;
+
 	swingset_t(point const &pos_, float height, bool dim_, bool dir_) : model_city_obj_t(pos_, height, dim_, dir_, get_model_id()) {}
 	virtual unsigned get_model_id() const {return OBJ_MODEL_SWINGSET;}
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+	void next_frame(point const &camera_bs);
 };
 
 struct trampoline_t : public model_city_obj_t {
