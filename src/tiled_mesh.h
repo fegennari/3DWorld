@@ -215,6 +215,7 @@ public:
 	float get_zval(int x, int y) const {assert(!zvals.empty()); assert(x >= 0 && y >= 0 && x < (int)zvsize && y < (int)zvsize); return zvals[y*zvsize + x];}
 	bool has_water() const {return (mzmin < water_plane_z);}
 	bool all_water() const {return (mzmax < water_plane_z);} // get_tile_zmax()? - grass and trees should not be underwater
+	bool is_inside_city() const {return inside_city;}
 	bool can_have_trees() const {return (!no_trees && !is_distant && !all_water());}
 	bool can_have_pine_palm_trees() const;
 	bool can_have_decid_trees    () const;

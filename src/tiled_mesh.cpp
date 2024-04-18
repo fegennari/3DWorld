@@ -66,7 +66,7 @@ extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_m
 extern int player_in_elevator, player_in_attic;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, cloud_height_offset, clouds_per_tile;
 extern float ocean_wave_height, sm_tree_density, tree_density_thresh, atmosphere, cloud_cover, temperature, flower_density, FAR_CLIP, biome_x_offset;
-extern float smap_thresh_scale, tt_grass_scale_factor;
+extern float smap_thresh_scale, tt_grass_scale_factor, pond_max_depth;
 extern double tfticks;
 extern point sun_pos, moon_pos, surface_pos;
 extern vector3d wind;
@@ -93,6 +93,7 @@ bool check_cube_occluded(cube_t const &cube, vect_cube_t const &occluders, point
 void get_city_grass_coll_cubes(cube_t const &region, vect_cube_t &out, vect_cube_t &out_bt);
 int check_city_contains_overlaps(cube_t const &query);
 bool check_inside_city(point const &pos, float radius);
+cube_t get_city_bcube_overlapping(cube_t const &c);
 
 
 float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}
@@ -2836,9 +2837,12 @@ void tile_draw_t::draw_tiles(int reflection_pass, bool enable_shadow_map) const 
 	//if (display_mode & 0x10) {draw_smap_debug_vis();} // TESTING
 }
 
+vector4d vec4_from_cube_xy(cube_t const &c) {return vector4d(c.x1(), c.y1(), c.x2(), c.y2());}
+
 void tile_draw_t::draw_tiles_shadow_pass(point const &lpos, tile_t const *const tile) { // not const because creates height_tid
 
 	//timer_t timer("Draw Shadow Pass");
+	assert(tile != nullptr); // must have a valid dest tile
 	shader_t s;
 	s.set_vert_shader("tiled_mesh_shadow");
 	s.set_frag_shader("color_only");
@@ -2846,10 +2850,19 @@ void tile_draw_t::draw_tiles_shadow_pass(point const &lpos, tile_t const *const 
 	set_tile_xy_vals(s);
 	s.add_uniform_int("height_tex", 12);
 	s.add_uniform_float("delta_z", -0.5*grass_length); // move mesh down by half the grass length so that the bottoms of the grass blades aren't shadowed
+
+	if (pond_max_depth > 0.0 && tile->is_inside_city()) { // exclude city area so that ponds aren't shadowed
+		cube_t const city_bcube(get_city_bcube_overlapping(tile->get_mesh_bcube_global())); // should be nonzero
+		s.add_uniform_vector4d("exclude_box", vec4_from_cube_xy(city_bcube + get_camera_coord_space_xlate())); // global to camera space
+		s.add_uniform_float("exclude_dz", -2.0*pond_max_depth);
+	}
+	else { // no exclude
+		s.add_uniform_vector4d("exclude_box", vector4d());
+		s.add_uniform_float("exclude_dz", 0.0);
+	}
 	s.enable_vnct_atribs(1, 0, 0, 0);
 	glEnable(GL_PRIMITIVE_RESTART);
 	glPrimitiveRestartIndex(PRIMITIVE_RESTART_IX);
-	assert(tile != nullptr);
 	float const recv_dist_sq(p2p_dist_xy_sq(lpos, tile->get_center()));
 	cube_t const shadow_bcube(tile->get_shadow_bcube());
 	bool const inc_adj_smap(get_buildings_max_extent() != zero_vector || get_road_max_len().x > 0.0);
@@ -3196,8 +3209,6 @@ void tile_draw_t::draw_scenery(bool reflection_pass, bool shadow_pass) {
 	s.add_uniform_color("color_scale", WHITE);
 	s.end_shader();
 }
-
-vector4d vec4_from_cube_xy(cube_t const &c) {return vector4d(c.x1(), c.y1(), c.x2(), c.y2());}
 
 void tile_draw_t::setup_grass_flower_shader(shader_t &s, bool enable_wind, bool use_smap, float dist_const_mult) {
 

@@ -2157,9 +2157,15 @@ public:
 		bcube.expand_by_xy(city_params.get_max_car_size().x); // expand by car length to fully include cars that are partially inside connector road intersections
 		return bcube;
 	}
-	cube_t get_city_bcube_at_pt(point const &pos) const {
+	cube_t get_city_bcube_at_pt(point const &pos) const { // skips global_rn
 		for (road_network_t const &rn : road_networks) {
 			if (rn.get_bcube().contains_pt_xy(pos)) return rn.get_bcube();
+		}
+		return cube_t(); // not found
+	}
+	cube_t get_city_bcube_overlapping(cube_t const &c) const { // skips global_rn
+		for (road_network_t const &rn : road_networks) {
+			if (rn.get_bcube().intersects_xy(c)) return rn.get_bcube(); // return the first overlapping cube; assumes c is small and doesn't overlap multiple cities
 		}
 		return cube_t(); // not found
 	}
@@ -3087,9 +3093,10 @@ public:
 		car_manager.add_helicopters(hp_locs);
 		ped_manager.init(city_params.num_peds); // must be after buildings are placed
 	}
-	cube_t get_city_bcube(unsigned city_id) const {return road_gen.get_city_bcube(city_id);}
-	cube_t get_city_bcube_at_pt(point const &pos) {return road_gen.get_city_bcube_at_pt(pos);}
-	void get_city_bcubes(vect_cube_t &bcubes) const {road_gen.get_city_bcubes(bcubes);}
+	cube_t get_city_bcube(unsigned city_id)               const {return road_gen.get_city_bcube(city_id);}
+	cube_t get_city_bcube_at_pt(point const &pos)         const {return road_gen.get_city_bcube_at_pt(pos);}
+	cube_t get_city_bcube_overlapping(cube_t const &c)    const {return road_gen.get_city_bcube_overlapping(c);}
+	void get_city_bcubes(vect_cube_t &bcubes)             const {road_gen.get_city_bcubes(bcubes);}
 	int check_city_contains_overlaps(cube_t const &query) const {return road_gen.check_city_contains_overlaps(query);}
 	void get_all_road_bcubes(vect_cube_t &bcubes, bool connector_only) const {road_gen.get_all_road_bcubes(bcubes, connector_only);}
 	void get_all_plot_zones(vect_city_zone_t &zones) {road_gen.get_all_plot_zones(zones);} // caches plot_id_offset, so non-const
@@ -3211,6 +3218,7 @@ void gen_cities(float *heightmap, unsigned xsize, unsigned ysize) {
 void gen_city_details() {city_gen.gen_details();} // called after gen_buildings()
 cube_t get_city_bcube(unsigned city_id) {return city_gen.get_city_bcube(city_id);}
 cube_t get_city_bcube_at_pt(point const &pos) {return city_gen.get_city_bcube_at_pt(pos);}
+cube_t get_city_bcube_overlapping(cube_t const &c) {return city_gen.get_city_bcube_overlapping(c);}
 void get_city_bcubes(vect_cube_t &bcubes) {city_gen.get_city_bcubes(bcubes);}
 int check_city_contains_overlaps(cube_t const &query) {return city_gen.check_city_contains_overlaps(query);}
 void get_city_road_bcubes(vect_cube_t &bcubes, bool connector_only) {city_gen.get_all_road_bcubes(bcubes, connector_only);}

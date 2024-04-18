@@ -1263,8 +1263,8 @@ void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 		float const tscale(4.0), bot_radius(0.5*0.5); // half the total radius
 		point const bot_center(point(0.0, 0.0, -bcube.dz()));
 		// bottom
-		dstate.s.set_cur_color(LT_GRAY); // darker
-		draw_circle_normal(0.0, bot_radius, ndiv, 1, bot_center, tscale, tscale); // invert_normals=1
+		dstate.s.set_cur_color(GRAY_BLACK); // darker
+		draw_circle_normal(0.0, bot_radius, ndiv, 0, bot_center, tscale, tscale); // invert_normals=0
 		// sloped sides
 		point const ce[2] = {bot_center, all_zeros};
 		vector3d v12;
@@ -1272,16 +1272,14 @@ void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 		static vector<vert_norm_tc_color> verts;
 		verts.resize(2U*(ndiv+1U));
 		float const ndiv_inv(1.0/ndiv);
-		color_wrapper const cw_outer(WHITE), cw_inner(LT_GRAY);
+		color_wrapper const cw_outer(GRAY), cw_inner(GRAY_BLACK);
 
 		for (unsigned S = 0; S <= ndiv; ++S) {
 			unsigned const s(S%ndiv), vix(2*S);
-			// Note: normal is facing down, but we don't invert it because we want to disable lighting as shadows are incorrect anyway,
-			// since the pond is under the mesh, which may cast a shadow if it partially overlaps the city even if it's not drawn
-			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]);
+			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // points down, must negate
 			point const &p1(vpn.p[(s<<1)+0]), &p2(vpn.p[(s<<1)+1]);
-			verts[vix+0].assign(p1, normal, tscale*p1.x, tscale*p1.y, cw_inner.c);
-			verts[vix+1].assign(p2, normal, tscale*p2.x, tscale*p2.y, cw_outer.c);
+			verts[vix+0].assign(p1, -normal, tscale*p1.x, tscale*p1.y, cw_inner.c);
+			verts[vix+1].assign(p2, -normal, tscale*p2.x, tscale*p2.y, cw_outer.c);
 		}
 		draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
 	}
@@ -1292,7 +1290,7 @@ void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 	}
 	else { // water above
 		float const tscale(2.0);
-		dstate.s.set_cur_color(colorRGBA(0.3, 0.4, 1.0, 0.33)); // semi-transparent
+		dstate.s.set_cur_color(colorRGBA(0.2, 0.3, 0.5, 0.5)); // semi-transparent
 		draw_circle_normal(0.0, 0.5, ndiv, 0, point(0.0, 0.0, 2.0*dz_off), tscale, tscale);
 	}
 	fgPopMatrix();

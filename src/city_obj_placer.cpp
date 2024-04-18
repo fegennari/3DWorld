@@ -6,6 +6,8 @@
 #include "tree_3dw.h" // for tree_placer_t
 //#include "profiler.h"
 
+float pond_max_depth(0.0);
+
 extern unsigned max_unique_trees;
 extern tree_placer_t tree_placer;
 extern city_params_t city_params;
@@ -455,6 +457,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				float const depth(city_params.road_width*rgen.rand_uniform(0.1, 0.5));
 				pond_groups.add_obj(pond_t(center, pond_sz.x, pond_sz.y, depth), ponds);
 				add_cube_to_colliders_and_blockers(pond, colliders, blockers);
+				max_eq(pond_max_depth, depth);
 				break; // success
 			} // for n
 		}
