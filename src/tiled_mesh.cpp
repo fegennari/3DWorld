@@ -1935,17 +1935,15 @@ void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned co
 	if (draw_near_water) {draw_water_cap(s, 1);}
 }
 
-void tile_t::draw_shadow_pass(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1]) { // not const because creates height_tid
+void tile_t::draw_shadow_pass(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], int xlate_loc) { // not const because creates height_tid
 
 	if (inside_city == 2) return; // don't need to draw terrain if fully inside a city
 	ensure_height_tid();
-	fgPushMatrix();
-	translate_to(get_mesh_xlate());
+	s.set_uniform_vector3d(xlate_loc, get_mesh_xlate());
 	assert(height_tid > 0);
 	bind_texture_tu(height_tid, 12);
 	draw_mesh_vbo(vbo_mgr, ivbo_ixs, 0); // LOD is always 0
 	bind_vbo(0, 0); // unbind vertex buffer
-	fgPopMatrix();
 }
 
 
@@ -2855,6 +2853,8 @@ void tile_draw_t::draw_tiles_shadow_pass(point const &lpos, tile_t const *const 
 	float const recv_dist_sq(p2p_dist_xy_sq(lpos, tile->get_center()));
 	cube_t const shadow_bcube(tile->get_shadow_bcube());
 	bool const inc_adj_smap(get_buildings_max_extent() != zero_vector || get_road_max_len().x > 0.0);
+	int const xlate_loc(s.get_uniform_loc("translate"));
+	assert(xlate_loc >= 0);
 
 	for (unsigned i = 0; i < to_draw.size(); ++i) {
 		tile_t *const t(to_draw[i].second);
@@ -2862,7 +2862,7 @@ void tile_draw_t::draw_tiles_shadow_pass(point const &lpos, tile_t const *const 
 		if (p2p_dist_xy_sq(lpos, t->get_center()) <= recv_dist_sq || // check if this tile is closer to the light than the recv tile
 		   (inc_adj_smap && t->get_bcube().intersects_xy(shadow_bcube))) // check for tile overlap when buildings/cities are involved
 		{
-			t->draw_shadow_pass(s, *this, ivbo_ixs);
+			t->draw_shadow_pass(s, *this, ivbo_ixs, xlate_loc);
 		}
 	}
 	bind_vbo(0, 1); // unbind index buffer
