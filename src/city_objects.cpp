@@ -4,6 +4,7 @@
 
 #include "city_objects.h"
 
+extern bool player_in_walkway;
 extern int animate2;
 extern float fticks;
 extern double camera_zh;
@@ -1347,6 +1348,7 @@ bool walkway_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_
 
 	for (; zval >= bc.z1(); zval -= floor_spacing) {
 		if (zval > z2) continue; // wrong floor
+		player_in_walkway = 1; // assumes only the player can be here
 		float const wwz(zval + radius_);
 		bool const floor_coll(pos_.z < wwz);
 		
