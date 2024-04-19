@@ -1407,6 +1407,7 @@ struct building_walkway_geom_t {
 
 	building_walkway_geom_t(cube_t const &c, bool dim_) : bcube(c), dim(dim_) {}
 	bool has_ext_door(bool dir) const {return (door_bounds[dir][0] < door_bounds[dir][1]);}
+	float get_length() const {return bcube.get_sz_dim(dim);}
 };
 struct building_walkway_t : public building_walkway_geom_t { // "owned" walkway, one per connected building
 	bool is_owner;

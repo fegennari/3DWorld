@@ -1316,6 +1316,7 @@ walkway_t::walkway_t(bldg_walkway_t const &w) : oriented_city_obj_t(w, w.dim, 0)
 	if (!shadow_only) {set_flat_normal_map();}
 }
 void walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	if (bcube.contains_pt(dstate.camera_bs)) return; // camera inside walkway - don't draw exterior
 	auto const &side_mat(global_building_params.get_material(side_mat_ix));
 	tid_nm_pair_dstate_t state(dstate.s); // pass this in?
 	side_mat.side_tex.set_gl(state);
