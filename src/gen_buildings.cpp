@@ -1906,7 +1906,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 			// walls on all 4 sides; walls extend through all floors; unlike normal exterior walls, these are windowless and have thickness
 			for (unsigned dim = 0; dim < 2; ++dim) {
 				for (unsigned d = 0; d < 2; ++d) { // dir
-					bool const add_ext_door(dim == w.dim && w.has_ext_door(d));
+					bool const add_ext_door(bool(dim) == w.dim && w.has_ext_door(d));
 					float const wall_thick(add_ext_door ? /*get_door_shift_dist()*/0.5*wall_thickness : wall_thickness); // flush with exterior door? then there's a light gap
 					cube_t wall(w.bcube);
 					wall.d[dim][!d] = w.bcube.d[dim][d] + (d ? -1.0 : 1.0)*wall_thick;
@@ -2234,28 +2234,30 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 	clip_door_to_interior(door);
 	bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
 	// draw the opened door
-	building_draw_t open_door_draw;
+	building_draw_t door_draw;
 	vector3d const normal(door.get_norm());
 	bool const opens_outward(!is_house), dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] < 0.0);
-	add_door_verts(door.get_bcube(), open_door_draw, door.type, dim, dir, 1.0, opens_outward, 1, 0); // open_amt=1.0, exterior=1, on_stairs=0
-
-	// draw other exterior doors as closed in case they're visible through the open door
+	add_door_verts(door.get_bcube(), door_draw, door.type, dim, dir, 1.0, opens_outward, 1, 0); // open_amt=1.0, exterior=1, on_stairs=0
+	// draw other exterior doors as closed in case they're visible through the open door; is this needed for pedestrians?
+	get_ext_door_verts(door_draw, pos, door_ix);
+	door_draw.draw(s, 0, 1); // direct_draw_no_vbo=1
+	return 1;
+}
+void building_t::get_ext_door_verts(building_draw_t &bdraw, point const &viewer, int skip_door_ix) const {
 	for (auto d = doors.begin(); d != doors.end(); ++d) {
-		if (int(d - doors.begin()) == door_ix) continue; // skip the open door
+		if (int(d - doors.begin()) == skip_door_ix) continue; // skip this door
 		vector3d const normal2(d->get_norm());
-		if (dot_product_ptv(normal2, pos, d->pts[0]) > 0.0) continue; // facing exterior of door rather than interior, skip
+		if (dot_product_ptv(normal2, viewer, d->pts[0]) > 0.0) continue; // facing exterior of door rather than interior, skip
 		tquad_with_ix_t door_rev(*d);
 		std::swap(door_rev.pts[0], door_rev.pts[1]); // reverse winding order
 		std::swap(door_rev.pts[2], door_rev.pts[3]);
-		draw_building_ext_door(open_door_draw, door_rev, *this);
+		draw_building_ext_door(bdraw, door_rev, *this);
 	}
-	open_door_draw.draw(s, 0, 1); // direct_draw_no_vbo=1
-	return 1;
 }
-bool building_t::get_all_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, vector<point> const &pts, float dist, bool update_state) {
+bool building_t::get_all_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, vector<point> const &pts, float dist) { // for pedestrians
 	for (auto const &p : pts) {
 		// we currently only support drawing one open door, so stop when we find one; future work is to use a bit mask to keep track of which doors are open
-		if (get_nearby_ext_door_verts(bdraw, s, p, dist, update_state)) return 1;
+		if (get_nearby_ext_door_verts(bdraw, s, p, dist, 0)) return 1; // update_state=0
 	}
 	return 0;
 }
@@ -2266,6 +2268,9 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 	maybe_inv_rotate_point(only_cont_pt);
 	building_mat_t const &mat(get_material());
 	cube_t const cont_part(get_part_containing_pt(only_cont_pt)); // part containing the point
+	// complex floorplan buildings can have odd exterior wall geometry where this splitting approach doesn't work well,
+	// but if the building is windowless, then we can at least make the walls all front so that exterior doors are drawn properly
+	if (!mat.add_windows && has_complex_floorplan) {make_all_front = 1;}
 	
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels; include house garage/shed
 		if (is_basement(i)) continue; // skip basement walls because they have no windows
@@ -3390,7 +3395,7 @@ public:
 							cube_t door_test_cube(b.bcube);
 							door_test_cube.expand_by_xy(ped_od);
 							get_pedestrians_in_area(door_test_cube, bi->ix, pts); // is this thread safe?
-							b.get_all_nearby_ext_door_verts(ext_door_draw, s, pts, ped_od, 0); // update_state=0
+							b.get_all_nearby_ext_door_verts(ext_door_draw, s, pts, ped_od);
 						}
 						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
 						if (!camera_near_building && !ext_basement_conn_visible) { // camera not near building or ext basement conn
