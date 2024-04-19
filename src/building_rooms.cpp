@@ -477,7 +477,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				add_office_pillars(rgen, *r, room_center.z, room_id, f, valid_lights, blockers);
 			}
 			if (!walkways.empty()) {
-				has_walkway = maybe_add_walkway_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt);
+				has_walkway = maybe_add_walkway_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, light_ix_assign);
 			}
 			if (r->no_geom || is_garage_or_shed || is_swim_pool_room) {
 				if (is_garage_or_shed) {

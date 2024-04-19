@@ -2044,7 +2044,7 @@ private:
 	bool add_pool_room_objs  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, light_ix_assign_t &light_ix_assign);
-	bool maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
+	bool maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, light_ix_assign_t &light_ix_assign);
 	void add_clock(cube_t const &clock, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool digital);
 	void add_fire_ext        (float height, float radius, float zval, float wall_edge, float pos_along_wall, unsigned room_id, float tot_light_amt, bool dim, bool dir);
 	bool is_contained_in_wall_range(float wall_pos, float cov_lo, float cov_hi, float zval, bool dim) const;
