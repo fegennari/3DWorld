@@ -1011,7 +1011,7 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	if (room.has_skylight && pos.z > (room.z2() - floor_spacing)) return 0; // top floor of room with a skylight
 	if (room.has_elevator || (!room.is_ext_basement() && room.has_stairs_on_floor(floor_ix))) return 0; // assume light can come from stairs (not in ext basement) or open elevator
 
-	if (pos.z > ground_floor_z1 && pos.z < ground_floor_z1 + floor_spacing) { // on the ground floor
+	if (pos.z > ground_floor_z1 && (pos.z < ground_floor_z1 + floor_spacing || !walkways.empty())) { // on the ground floor or have walkways
 		if (is_room_adjacent_to_ext_door(room) && point_near_ext_door(pos, get_door_open_dist())) return 0; // handle windowless office building open exterior doors
 	}
 	// check if all lights are off
