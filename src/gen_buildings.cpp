@@ -1818,7 +1818,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 		bool skip_top(skip_top_of_ceilings());
 
 		if (!skip_top) { // check if this is a top ceiling; needed for light occlusion
-			float const toler(get_floor_thickness());
+			float const toler(floor_thickness);
 			skip_top = 1; // assume it's not
 
 			for (auto p = parts.begin(); p != parts_end; ++p) { // Note: excludes garages and sheds
@@ -1861,7 +1861,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 					}
 				} // for r
 			}
-			if (is_cube() && !in_basement && dim_mask != (1 << dim)) { // disable interior walls at building exteriors for cube buildings if we still have ends enabled
+			if (is_cube() && !in_basement && dim_mask != (1U << dim)) { // disable interior walls at building exteriors for cube buildings if we still have ends enabled
 				for (auto p = parts.begin(); p != parts_end; ++p) {
 					if (!p->contains_cube(*i)) continue;
 

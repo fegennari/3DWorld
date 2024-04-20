@@ -1272,7 +1272,6 @@ void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 		vector_point_norm const &vpn(gen_cylinder_data(ce, bot_radius, 0.5, ndiv, v12));
 		static vector<vert_norm_tc_color> verts;
 		verts.resize(2U*(ndiv+1U));
-		float const ndiv_inv(1.0/ndiv);
 		color_wrapper const cw_outer(GRAY), cw_inner(GRAY_BLACK);
 
 		for (unsigned S = 0; S <= ndiv; ++S) {

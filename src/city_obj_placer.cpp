@@ -437,6 +437,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				for (unsigned d = 0; d < 2; ++d) {pond_sz[d] = sz*rgen.rand_uniform(1.0, 1.5);}
 				cube_t pond_area(plot);
 				pond_area.expand_by(-pond_sz);
+				pond_area.expand_by_xy(-pond_border);
 				if (pond_area.dx() <= 0.0 || pond_area.dy() <= 0.0) continue; // not enough space; shouldn't fail for reasonable road vs. plot sizes
 				point center(0.0, 0.0, plot.z2());
 				for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(pond_area.d[d][0], pond_area.d[d][1]);}
