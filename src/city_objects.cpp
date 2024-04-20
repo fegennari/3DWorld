@@ -1322,16 +1322,20 @@ walkway_t::walkway_t(bldg_walkway_t const &w) : oriented_city_obj_t(w, w.dim, 0)
 	if (!shadow_only) {set_flat_normal_map();}
 }
 void walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	if (bcube.contains_pt(dstate.camera_bs)) return; // camera inside walkway - don't draw exterior
-	auto const &side_mat(global_building_params.get_material(side_mat_ix));
 	tid_nm_pair_dstate_t state(dstate.s); // pass this in?
-	side_mat.side_tex.set_gl(state);
-	float const tsx(side_mat.side_tex.get_drawn_tscale_x()), tsy(side_mat.side_tex.get_drawn_tscale_y());
-	dstate.draw_cube(qbds.qbd, bcube, side_color, 0, 1.0, ((1 << unsigned(dim)) | 4), 0, 0, 0, tsx, tsx, tsy); // sides; skip ends, top, and bottom
-	auto const &roof_mat(global_building_params.get_material(roof_mat_ix));
-	qbds.qbd.draw_and_clear(); // must draw here since texture was set dynamically
-	roof_mat.roof_tex.set_gl(state);
-	dstate.draw_cube(qbds.qbd, bcube, roof_color, 0, roof_mat.roof_tex.get_drawn_tscale_x(), 3); // top and bottom; skip ends and sides
+
+	if (dstate.camera_bs[!dim] < bcube.d[!dim][0] || dstate.camera_bs[!dim] > bcube.d[!dim][1]) { // camera not inside walkway projection - draw sides
+		auto const &side_mat(global_building_params.get_material(side_mat_ix));
+		side_mat.side_tex.set_gl(state);
+		float const tsx(side_mat.side_tex.get_drawn_tscale_x()), tsy(side_mat.side_tex.get_drawn_tscale_y());
+		dstate.draw_cube(qbds.qbd, bcube, side_color, 0, 1.0, ((1 << unsigned(dim)) | 4), 0, 0, 0, tsx, tsx, tsy); // sides; skip ends, top, and bottom
+	}
+	if (dstate.camera_bs.z < bcube.z1() || dstate.camera_bs.z > bcube.z2()) { // camera not inside walkway zvals - draw top and bottom
+		auto const &roof_mat(global_building_params.get_material(roof_mat_ix));
+		qbds.qbd.draw_and_clear(); // must draw here since texture was set dynamically
+		roof_mat.roof_tex.set_gl(state);
+		dstate.draw_cube(qbds.qbd, bcube, roof_color, 0, roof_mat.roof_tex.get_drawn_tscale_x(), 3); // top and bottom; skip ends and sides
+	}
 	qbds.qbd.draw_and_clear(); // must draw here since texture was set dynamically
 }
 bool walkway_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
