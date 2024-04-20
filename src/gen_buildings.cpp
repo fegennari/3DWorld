@@ -2232,6 +2232,7 @@ void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &co
 	if (doors.empty()) return;
 	float const floor_spacing(get_window_vspace());
 	vector3d const xlate(get_camera_coord_space_xlate());
+	auto const parts_end(get_real_parts_end_inc_sec());
 
 	for (auto d = doors.begin(); d != doors.end(); ++d) { // cut a hole for each door
 		if (!camera_pdu.cube_visible(d->get_bcube() + xlate)) continue; // VFC
@@ -2240,13 +2241,32 @@ void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &co
 		cube_t const door_bcube(door.get_bcube());
 		bool contained(0);
 
-		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
+		for (auto i = parts.begin(); i != parts_end; ++i) {
 			if (!i->intersects(door_bcube)) continue;
 			contained = ((draw_parts_mask & (1<<(i-parts.begin()))) != 0);
 			if (contain_pt.z > (door_bcube.z1() + floor_spacing) && !i->contains_pt(contain_pt)) {contained = 0;} // camera in a different part on a floor above the door
 			break;
 		}
 		if (!contained) continue; // part skipped, skip door as well
+
+		if (draw_parts_mask == 0xFFFF) { // windowless case - check for exterior walls blocking the door
+			point const end_pt(door_bcube.get_cube_center());
+
+			for (auto i = parts.begin(); i != parts_end; ++i) {
+				float tmin(0.0), tmax(1.0);
+				if (!get_line_clip(contain_pt, end_pt, i->d, tmin, tmax)) continue; // no intersection
+				float const t(tmax + 0.001); // slightly past the intersection
+				if (t > 1.0) continue; // past the door, skip
+				point const p(contain_pt + t*(end_pt - contain_pt));
+				contained = 0;
+
+				for (auto j = parts.begin(); j != parts_end; ++j) {
+					if (j != i && j->contains_pt(p)) {contained = 1; break;} // inside the building
+				}
+				if (!contained) break; // outside the building
+			} // for i
+			if (!contained) continue;
+		}
 		clip_door_to_interior(door);
 		bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
 	} // for d
