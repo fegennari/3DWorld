@@ -2229,9 +2229,12 @@ void building_t::get_all_drawn_window_verts_as_quads(vect_vnctcc_t &verts) const
 }
 
 void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &contain_pt, unsigned draw_parts_mask) const {
+	if (doors.empty()) return;
 	float const floor_spacing(get_window_vspace());
+	vector3d const xlate(get_camera_coord_space_xlate());
 
 	for (auto d = doors.begin(); d != doors.end(); ++d) { // cut a hole for each door
+		if (!camera_pdu.cube_visible(d->get_bcube() + xlate)) continue; // VFC
 		tquad_with_ix_t door(*d);
 		move_door_to_other_side_of_wall(door, 0.3, 0); // move a bit in front of the normal interior door (0.3 vs. 0.2)
 		cube_t const door_bcube(door.get_bcube());
@@ -2249,7 +2252,7 @@ void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &co
 	} // for d
 }
 
-bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist, bool update_state) { // for exterior doors
+bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, vector3d const &view_dir, float dist, bool update_state, bool only_open) {
 	tquad_with_ix_t door;
 	int const door_ix(find_ext_door_close_to_point(door, pos, dist));
 	if (update_state) {register_open_ext_door_state(door_ix);}
@@ -2263,15 +2266,16 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 	bool const opens_outward(!is_house), dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] < 0.0);
 	add_door_verts(door.get_bcube(), door_draw, door.type, dim, dir, 1.0, opens_outward, 1, 0); // open_amt=1.0, exterior=1, on_stairs=0
 	// draw other exterior doors as closed in case they're visible through the open door; is this needed for pedestrians?
-	get_ext_door_verts(door_draw, pos, door_ix);
+	if (!only_open) {get_ext_door_verts(door_draw, pos, view_dir, door_ix);}
 	door_draw.draw(s, 0, 1); // direct_draw_no_vbo=1
 	return 1;
 }
-void building_t::get_ext_door_verts(building_draw_t &bdraw, point const &viewer, int skip_door_ix) const {
+void building_t::get_ext_door_verts(building_draw_t &bdraw, point const &viewer, vector3d const &view_dir, int skip_door_ix) const {
 	for (auto d = doors.begin(); d != doors.end(); ++d) {
 		if (int(d - doors.begin()) == skip_door_ix) continue; // skip this door
 		vector3d const normal2(d->get_norm());
 		if (dot_product_ptv(normal2, viewer, d->pts[0]) > 0.0) continue; // facing exterior of door rather than interior, skip
+		if (view_dir != zero_vector && dot_product(view_dir, normal2) < 0.0) continue; // not visible
 		tquad_with_ix_t door_rev(*d);
 		std::swap(door_rev.pts[0], door_rev.pts[1]); // reverse winding order
 		std::swap(door_rev.pts[2], door_rev.pts[3]);
@@ -2281,7 +2285,7 @@ void building_t::get_ext_door_verts(building_draw_t &bdraw, point const &viewer,
 bool building_t::get_all_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, vector<point> const &pts, float dist) { // for pedestrians
 	for (auto const &p : pts) {
 		// we currently only support drawing one open door, so stop when we find one; future work is to use a bit mask to keep track of which doors are open
-		if (get_nearby_ext_door_verts(bdraw, s, p, dist, 0)) return 1; // update_state=0
+		if (get_nearby_ext_door_verts(bdraw, s, p, zero_vector, dist, 0, 1)) return 1; // no view_dir, update_state=0, only_open=1
 	}
 	return 0;
 }
@@ -3428,7 +3432,7 @@ public:
 						}
 						if (ref_pass_interior) continue; // interior room, don't need to draw windows and exterior doors
 						// and draw opened door; update_state if not ref pass
-						bool const had_open_door(b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist, !reflection_pass));
+						bool const had_open_door(b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, cview_dir, door_open_dist, !reflection_pass, 0)); // only_open=0
 						bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1, 1, 1)); // inc_attic=1, inc_ext_basement=1, inc_roof_acc=1
 						bool const player_in_bldg_bc_or_door(player_in_building_bcube || had_open_door);
 						
