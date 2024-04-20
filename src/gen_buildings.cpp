@@ -38,7 +38,7 @@ extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable
 extern bool teleport_to_screenshot, enable_dlight_bcubes, can_do_building_action, mirror_in_ext_basement;
 extern unsigned room_mirror_ref_tid;
 extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2, building_action_key, player_in_elevator;
-extern float CAMERA_RADIUS, fticks, FAR_CLIP;
+extern float CAMERA_RADIUS, fticks, NEAR_CLIP, FAR_CLIP;
 extern colorRGB cur_ambient, cur_diffuse;
 extern point pre_smap_player_pos, actual_player_pos;
 extern vector<light_source> dl_sources;
@@ -2322,7 +2322,11 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 	
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels; include house garage/shed
 		if (is_basement(i)) continue; // skip basement walls because they have no windows
-
+		
+		if (building_has_open_ext_door) { // skip drawing wall in front of door if the camera is within NEAR_CLIP of it
+			vector3d const offset(NEAR_CLIP*vector3d(cview_dir.x, cview_dir.y, 0.0));
+			if (i->contains_pt_xy(only_cont_pt) && !i->contains_pt_xy(only_cont_pt + offset)) continue;
+		}
 		if (make_all_front || *i == cont_part || i->contains_pt(only_cont_pt) || // part containing the point
 			are_parts_stacked(*i, cont_part)) // stacked building parts, contained, draw as front in case player can see through stairs
 		{

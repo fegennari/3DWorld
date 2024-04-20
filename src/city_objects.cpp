@@ -1352,7 +1352,7 @@ bool walkway_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_
 		return 1; // collision with roof
 	}
 	// else inside the walkway
-	float zval(bc.z2() - floor_spacing*(1.0 - FLOOR_THICK_VAL_WINDOWLESS)); // bottom of upper walkway floor, assuming a windowless (city) office building
+	float zval(bc.z2() - floor_spacing*(1.0 - 0.5*FLOOR_THICK_VAL_WINDOWLESS)); // bottom of upper walkway floor, assuming a windowless (city) office building
 	assert(zval >= bc.z1());
 
 	for (; zval >= bc.z1(); zval -= floor_spacing) {

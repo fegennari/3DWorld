@@ -604,7 +604,7 @@ bool building_t::check_walkway_door_clearance(cube_t const &c, bool dim) const {
 	return 1;
 }
 bool building_t::add_walkway_door(building_walkway_geom_t &walkway, bool dir, unsigned part_ix) {
-	float const door_width(get_office_ext_doorway_width()), door_shift(get_door_shift_dist()), floor_spacing(get_window_vspace());
+	float const door_width(get_office_ext_doorway_width()), door_shift(0.5*get_door_shift_dist()), floor_spacing(get_window_vspace());
 	float const door_height(get_floor_ceil_gap()); // not using get_door_height() because we want to span the entire height, since there's no interior wall above
 	bool const dim(walkway.dim);
 	cube_t const &wbc(walkway.bcube);
@@ -613,7 +613,7 @@ bool building_t::add_walkway_door(building_walkway_geom_t &walkway, bool dir, un
 	float const center(wbc.get_center_dim(!dim));
 	cube_t door;
 	set_wall_width(door, center, 0.5*door_width, !dim);
-	door.d[dim][!dir] = wbc.d[dim][!dir] + (dir ? 1.0 : -1.0)*door_shift; // move slightly away from the building to prevent z-fighting
+	door.d[dim][!dir] = wbc.d[dim][!dir] + (dir ? 1.0 : -1.0)*door_shift; // move slightly away from the building to prevent z-fighting, less than a regular door
 	door.d[dim][ dir] = door.d[dim][!dir]; // make zero size in this dim
 	float zval(wbc.z1() + get_fc_thickness()); // bottom of lowest level door
 
