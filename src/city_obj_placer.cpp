@@ -425,7 +425,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			} // for n
 		}
 		if (1) { // try to place pond(s)
-			float const pond_border(max(2.0f*sidewalk_width, 2.0f*path_hwidth));
+			float const pond_border(max(sidewalk_width, path_hwidth));
 			vect_cube_t active_pond_blockers;
 
 			for (cube_t const &pb : pond_blockers) {
@@ -449,14 +449,15 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 					if (p->check_cube_coll_xy(pond)) {blocked = 1; break;}
 				}
 				if (blocked) continue;
-
-				for (point const &p : tree_pos) { // check trees; trees on the edge are okay, but we are using a conservative bcube rather than an ellipsoid
-					if (pond.contains_pt_xy(p)) {blocked = 1; break;}
-				}
-				if (blocked) continue;
 				if (has_bcube_int_xy(pond, active_pond_blockers)) continue; // check underground basement rooms
 				float const depth(city_params.road_width*rgen.rand_uniform(0.1, 0.5));
-				pond_groups.add_obj(pond_t(center, pond_sz.x, pond_sz.y, depth), ponds);
+				pond_t const pond_obj(center, pond_sz.x, pond_sz.y, depth);
+
+				for (point const &p : tree_pos) { // check trees; trees on the edge are okay
+					if (pond.contains_pt_xy(p) && pond_obj.point_contains_xy(p)) {blocked = 1; break;}
+				}
+				if (blocked) continue;
+				pond_groups.add_obj(pond_obj, ponds);
 				add_cube_to_colliders_and_blockers(pond, colliders, blockers);
 				max_eq(pond_max_depth, depth);
 				break; // success

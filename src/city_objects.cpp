@@ -1295,14 +1295,20 @@ void pond_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 	}
 	fgPopMatrix();
 }
-bool pond_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
-	point const pos2(pos + xlate);
-	vector3d const delta(pos_ - pos2);
+bool pond_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const { // pos_ is in camera space
+	point const pos_bs(pos_ - xlate);
+	if (!bcube.contains_pt_xy_exp(pos_bs, radius_)) return 0;
+	vector3d const delta(pos_bs - pos);
 	float const xv(delta.x/(radius_ + 0.5*bcube.dx())), yv(delta.y/(radius_ + 0.5*bcube.dy()));
 	if (xv*xv + yv*yv > 1.0) return 0; // dist^2 > 1.0, outside the ellipse
 	pos_ = p_last; // finding the actual intersection point requires solving a quartic equation, so simply revert to the last pos
 	if (cnorm) {*cnorm = vector3d(delta.x, delta.y, 0.0).get_norm();} // assume collision normal is in the XY plane
 	return 1;
+}
+bool pond_t::point_contains_xy(point const &p) const { // p is in global space
+	if (!bcube.contains_pt_xy(p)) return 0;
+	float const xv((p.x - pos.x)/(0.5*bcube.dx())), yv((p.y - pos.y)/(0.5*bcube.dy()));
+	return (xv*xv + yv*yv < 1.0);
 }
 
 // walkways
