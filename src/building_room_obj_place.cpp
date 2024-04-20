@@ -2640,19 +2640,29 @@ bool building_t::maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room
 		if (w.has_ext_door(!dir)) {
 			float const center(w.bcube.get_center_dim(!w.dim));
 			if (room.d[!dim][1] < center - 0.5*door_width || room.d[!dim][0] > center + 0.5*door_width) continue; // not overlapping the door (which is centered on the walkway)
-#if 0 // not currently working because these lights are outside the building, and the building may not even be visible
-			// add ceiling light(s)
-			colorRGBA const color(1.0, 1.0, 0.9); // yellow-ish
-			cube_t light_area(w.bcube);
-			set_cube_zvals(light_area, zval, ceil_zval);
-			point lpos(cube_top_center(light_area));
-			cube_t light(lpos);
-			light.z1() -= 0.02*floor_spacing;
-			light.expand_in_dim( dim, 0.12*floor_spacing);
-			light.expand_in_dim(!dim, 0.06*floor_spacing);
-			objs.emplace_back(light, TYPE_LIGHT, room_id, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR), 0.0, SHAPE_CUBE, color); // dir=0 (unused); not actually in the room
-			objs.back().obj_id = light_ix_assign.get_next_ix();
-#endif
+
+			if (1) { // add ceiling light(s)
+				// not actually drawn because these lights are outside the building, and the building may not even be visible
+				float const length(w.get_length());
+				unsigned const num_lights(0.75*length/floor_spacing);
+				float const light_spacing(length/(num_lights + 1));
+				unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR | RO_FLAG_LIT | RO_FLAG_INVIS);
+				colorRGBA const color(1.0, 1.0, 1.0); // white
+				point lpos;
+				lpos[ dim] = w.bcube.d[dim][0] + light_spacing;
+				lpos[!dim] = w.bcube.get_center_dim(!dim);
+				lpos.z     = ceil_zval - 0.02*floor_spacing;
+				
+				for (unsigned n = 0; n < num_lights; ++n) {
+					cube_t light(lpos);
+					light.z1() -= 0.02*floor_spacing;
+					light.expand_in_dim( dim, 0.12*floor_spacing);
+					light.expand_in_dim(!dim, 0.06*floor_spacing);
+					objs.emplace_back(light, TYPE_LIGHT, room_id, dim, 0, flags, 0.0, SHAPE_CUBE, color); // dir=0 (unused); not actually in the room
+					objs.back().obj_id = light_ix_assign.get_next_ix();
+					lpos[dim] += light_spacing;
+				} // for n
+			}
 			return 1; // using real exterior doors; don't add false doors; blockers are unnecessary
 		}
 		unsigned const floor_ix((zval - w.bcube.z1())/floor_spacing), door_mask(1 << floor_ix); // within the walkway

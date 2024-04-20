@@ -1489,7 +1489,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (is_rotated()) {do_xy_rotate(building_center, lpos_rot);}
 		if (!lights_bcube.contains_pt_xy(lpos_rot)) continue; // not contained within the light volume
 		bool const light_in_basement(lpos.z < ground_floor_z1), is_in_elevator(i->in_elevator()), is_in_closet(i->in_closet());
-		bool const is_in_attic(i->in_attic()), is_in_windowless_attic(is_in_attic && !has_attic_window);
+		bool const is_in_attic(i->in_attic()), is_in_windowless_attic(is_in_attic && !has_attic_window), is_exterior(i->is_exterior());
 		// basement, attic, and elevator lights are only visible when player is in the building;
 		// elevator test is questionable because it can be open on the ground floor of a room with windows in a small office building, but should be good enough
 		if (!camera_in_building && ((light_in_basement && !camera_can_see_ext_basement) || is_in_windowless_attic || is_in_elevator)) continue;
@@ -1654,6 +1654,18 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			assert(light_clip_cube.contains_pt(lpos)); // Note: may not be contained in building bcube
 			light_clip_cube.expand_by_xy(light_bcube_expand);
 		}
+		else if (is_exterior) { // exterior lights are only in walkways
+			assert(!walkways.empty());
+			bool found_ww(0);
+
+			for (building_walkway_t const &w : walkways) {
+				if (!w.bcube.contains_pt(lpos)) continue;
+				light_clip_cube = w.bcube;
+				found_ww = 1;
+				break;
+			}
+			assert(found_ww);
+		}
 		else { // clip to bcube
 			if (is_rotated()) {light_clip_cube = get_rotated_bcube(bcube, 1);} // inv_rotate=1
 			else {light_clip_cube = bcube;}
@@ -1763,7 +1775,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (e.open_amt > 0.0 && e.open_amt < 1.0) {shadow_caster_hash += hash_by_bytes<float>()(e.open_amt);} // update shadows if door is opening or closing
 		}
 		else {
-			if (is_in_attic) {} // nothing else to do?
+			if (is_in_attic || is_exterior) {} // nothing else to do
 			else if (room.is_sec_bldg) {clipped_bc.intersect_with_cube(room);} // secondary buildings only light their single room
 			else {
 				assert(i->obj_id < light_bcubes.size());
@@ -1851,13 +1863,13 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		setup_light_for_building_interior(dl_sources.back(), *i, clipped_bc_rot, force_smap_update, shadow_caster_hash);
 		
 		// add upward pointing light (sideways for wall lights); only when player is near/inside a building (optimization); not for lights hanging on ceiling fans
-		if (camera_near_building && (is_lamp || wall_light || lpos_rot.z > up_light_zmin) && !i->is_hanging()) {
+		if (camera_near_building && (is_lamp || wall_light || lpos_rot.z > up_light_zmin) && !i->is_hanging() && !is_exterior) {
 			cube_t light_bc2(clipped_bc);
 
 			if (is_in_elevator) {
 				light_bc2.intersect_with_cube(get_elevator(i->obj_id)); // clip to elevator to avoid light leaking onto walls outside but near the elevator
 			}
-			else if (!is_in_attic) {
+			else if (!is_in_attic && !is_exterior) {
 				cube_t room_exp(room);
 				room_exp.expand_by(room_xy_expand); // expand slightly so that points exactly on the room bounds and exterior doors are included
 				light_bc2.intersect_with_cube(room_exp); // upward facing light is for this room only
@@ -1899,7 +1911,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				dl_sources.back().set_custom_bcube(light_bc2);
 			}
 			dl_sources.back().disable_shadows();
-		}
+		} // end upward light
 	} // for i (objs)
 	//if (camera_in_building) {cout << num_add << endl;} // TESTING
 
