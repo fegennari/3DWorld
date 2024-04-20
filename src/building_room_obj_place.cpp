@@ -3433,7 +3433,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 	vect_door_stack_t ext_doors; // not really door stacks, but we can fill in the data to treat them as such
 	unsigned garage_door_mask(0);
 
-	if (is_ground_floor) { // handle exterior doors
+	if (is_ground_floor || !walkways.empty()) { // handle exterior doors
 		cube_t room_exp(room);
 		room_exp.expand_by(wall_thickness, wall_thickness, -wall_thickness); // expand in XY and shrink in Z
 		set_cube_zvals(room_exp, zval, ceil_zval); // limit to this floor of the room
@@ -3561,7 +3561,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 		if (!check_cube_within_part_sides(c_exp))              continue; // handle non-cube buildings
 		bool bad_place(0);
 
-		if (is_ground_floor) { // handle exterior doors
+		if (is_ground_floor || !walkways.empty()) { // handle exterior doors
 			for (auto d = doors.begin(); d != doors.end(); ++d) {
 				if (!d->is_exterior_door() || d->type == tquad_with_ix_t::TYPE_RDOOR) continue;
 				cube_t bc(d->get_bcube());
