@@ -3111,7 +3111,7 @@ public:
 						point lpos_clamped(lpos);
 						// include skylight light sources, which are above the building; buildings can't stack vertically, so the light can't belong to a different building
 						if (!b.skylights.empty()) {min_eq(lpos_clamped.z, b.bcube.z2());}
-						bool const camera_in_walkway(b.check_pt_in_walkway(pre_smap_player_pos, 1)); // owned_only=1
+						bool const camera_in_walkway(b.check_pt_in_walkway(pre_smap_player_pos, 1, 0)); // owned_only=1, inc_open_door=0
 						if (!b.point_in_building_or_basement_bcube(lpos_clamped) && !camera_in_walkway) continue; // wrong building
 						(*i)->building_draw_interior.draw_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
 						b.add_split_roof_shadow_quads(ext_parts_draw);
@@ -3198,7 +3198,7 @@ public:
 				if (sec_camera_mode && !camera_in_this_building) continue; // security cameras only show lights in their building
 				// limit room lights to when the player is in a building because we can restrict them to a single floor, otherwise it's too slow
 				if (!camera_in_this_building && !camera_pdu.cube_visible(b.bcube + xlate) &&
-					!b.interior_visible_from_other_building_ext_basement(xlate, 1) && !b.check_pt_in_walkway(camera_bs, 1)) continue; // VFC
+					!b.interior_visible_from_other_building_ext_basement(xlate, 1) && !b.check_pt_in_walkway(camera_bs, 1, 1)) continue; // VFC
 				if (is_first_building) {oc.set_camera(camera_pdu, sec_camera_mode);} // setup occlusion culling on the first visible building; cur_building_only=sec_camera_mode
 				is_first_building = 0;
 				oc.set_exclude_bix(bi->ix);
@@ -3406,13 +3406,14 @@ public:
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t &b((*i)->get_building(bi->ix));
 						if (!b.interior) continue; // no interior, skip
-						bool const player_in_building_bcube(b.bcube.contains_pt_xy(camera_bs) || b.point_in_extended_basement(camera_bs)); // player within building's bcube
+						bool player_in_building_bcube(b.bcube.contains_pt_xy(camera_bs) || b.point_in_extended_basement(camera_bs)); // player within building's bcube
 						if (reflection_pass && !player_in_building_bcube) continue; // not the correct building
 						float const bdist_sq(p2p_dist_sq(camera_bs, b.bcube.closest_pt(camera_bs)));
 						//if (bdist_sq > rgeom_clear_dist_sq) {b.clear_room_geom(); continue;} // too far away - is this useful?
 						if (bdist_sq > rgeom_draw_dist_sq) continue; // too far away
 						bool const ext_basement_conn_visible(b.interior_visible_from_other_building_ext_basement(xlate));
 						bool const debug_draw(0 && b.interior->has_backrooms); // TESTING
+						player_in_building_bcube |= b.check_pt_in_walkway(camera_bs, 1, 1); // owned_only=1, inc_open_door=1
 						if (!debug_draw && !player_in_building_bcube && !ext_basement_conn_visible && !camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
 						b.maybe_gen_chimney_smoke();
 						bool const camera_near_building(player_in_building_bcube || (!b.doors.empty() && b.bcube.contains_pt_xy_exp(camera_bs, door_open_dist)));

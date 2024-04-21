@@ -1660,7 +1660,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 			for (building_walkway_t const &w : walkways) {
 				if (!w.is_owner || !w.bcube.contains_pt(lpos)) continue;
-				if (w.bcube.contains_pt(camera_bs)) {in_camera_walkway = 1;}
+				if (w.get_bcube_inc_open_door().contains_pt(camera_bs)) {in_camera_walkway = 1;}
 				light_clip_cube = w.bcube;
 				found_ww = 1;
 				break;
@@ -1865,7 +1865,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		setup_light_for_building_interior(dl_sources.back(), *i, clipped_bc_rot, force_smap_update, shadow_caster_hash);
 		
 		// add upward pointing light (sideways for wall lights); only when player is near/inside a building (optimization); not for lights hanging on ceiling fans
-		if (camera_near_building && (is_lamp || wall_light || lpos_rot.z > up_light_zmin) && !i->is_hanging() && !is_exterior) {
+		if ((camera_near_building || in_camera_walkway) && (is_lamp || wall_light || lpos_rot.z > up_light_zmin) && !i->is_hanging()) {
 			cube_t light_bc2(clipped_bc);
 
 			if (is_in_elevator) {

@@ -2644,9 +2644,9 @@ bool building_t::maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room
 			if (w.is_owner) { // add ceiling light(s)
 				// not actually drawn because these lights are outside the building, and the building may not even be visible
 				float const length(w.get_length());
-				unsigned const num_lights(0.75*length/floor_spacing);
+				unsigned const num_lights(0.6*length/floor_spacing);
 				float const light_spacing(length/(num_lights + 1));
-				unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR | RO_FLAG_LIT | RO_FLAG_INVIS);
+				unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR | RO_FLAG_LIT);
 				colorRGBA const color(1.0, 1.0, 1.0); // white
 				point lpos;
 				lpos[ dim] = w.bcube.d[dim][0] + light_spacing;
@@ -2657,7 +2657,7 @@ bool building_t::maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room
 					cube_t light(lpos);
 					light.z1() -= 0.02*floor_spacing;
 					light.expand_in_dim( dim, 0.12*floor_spacing);
-					light.expand_in_dim(!dim, 0.06*floor_spacing);
+					light.expand_in_dim(!dim, 0.08*floor_spacing);
 					objs.emplace_back(light, TYPE_LIGHT, room_id, dim, 0, flags, 0.0, SHAPE_CUBE, color); // dir=0 (unused); not actually in the room
 					objs.back().obj_id = light_ix_assign.get_next_ix();
 					lpos[dim] += light_spacing;
