@@ -389,6 +389,8 @@ buildings add_material
 buildings side_color 1.0 1.0 1.0 1.0
 buildings roof_tid roads/asphalt.jpg
 buildings roof_nm_tid -1
+buildings floor_tid carpet/office_carpet1.jpg # nice, even has a normal map, but low contrast with walls
+buildings floor_nm_tid carpet/office_carpet1_nrm.jpg
 
 buildings side_tscale_x 0.75
 buildings side_tscale_y 0.25
@@ -448,6 +450,8 @@ buildings window_yoff 0.02
 buildings no_walkways 0
 buildings side_tid buildings/skyscraper5.jpg
 buildings side_nm_tid buildings/skyscraper5_NRM.jpg
+buildings floor_tid carpet/office_carpet2.jpg # nice, but low contrast with walls
+buildings floor_nm_tid none
 buildings add_material
 
 buildings side_tscale_x 1.65
