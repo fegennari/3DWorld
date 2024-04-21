@@ -711,7 +711,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			manhole_groups.add_obj(manhole_t(pos, radius), manholes); // Note: colliders not needed
 		}
 	}
-	// maybe place a flag in a city park
+	// maybe place a flag in a city commercial plot or a park
 	if ((!is_residential && rgen.rand_float() < 0.3) || (is_park && rgen.rand_float() < 0.75)) { // 30% of the time for commerical plots, 75% of the time for parks
 		float const length(0.25*city_params.road_width*rgen.rand_uniform(0.8, 1.25)), pradius(0.05*length);
 		float const height((is_park ? 0.8 : 1.0)*city_params.road_width*rgen.rand_uniform(0.8, 1.25));
@@ -722,11 +722,12 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 
 		if (try_place_obj(place_area, blockers, rgen, spacing, 0.0, (is_park ? 5 : 20), base_pt)) { // make up to 5/20 tries
 			base_pt.z = plot.z2();
-			cube_t pole;
-			set_cube_zvals(pole, base_pt.z, (base_pt.z + height));
-			for (unsigned d = 0; d < 2; ++d) {set_wall_width(pole, base_pt[d], pradius, d);}
+			cube_t pole(base_pt);
+			pole.expand_by_xy(pradius);
+			pole.z2() += height;
 
-			if (!is_park || !check_path_coll_xy(pole, ppaths, paths_start)) { // check park path collision
+			if (check_walkway_coll_xy(base_pt, length)) {} // skip if collides with or is under a walkway
+			else if (!is_park || !check_path_coll_xy(pole, ppaths, paths_start)) { // check park path collision
 				bool dim(0), dir(0); // facing dir
 				get_closest_dim_dir_xy(pole, plot, dim, dir); // face the closest plot edge
 				flag_groups.add_obj(create_flag(dim, dir, base_pt, height, length), flags);
