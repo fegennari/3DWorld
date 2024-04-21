@@ -113,6 +113,13 @@ bool building_t::check_pt_in_retail_room(point const &p) const {
 	if (!has_retail() || !interior || interior->rooms.empty()) return 0;
 	return get_retail_room().contains_pt(p);
 }
+bool building_t::check_pt_in_walkway(point const &p, bool owned_only) const {
+	for (building_walkway_t const &w : walkways) {
+		if (owned_only && !w.is_owner) continue;
+		if (w.bcube.contains_pt(p)) return 1;
+	}
+	return 0;
+}
 
 bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs) const { // can be called before levels/splits are created
 	// Note: easy cases are handled by check_bcube_overlap_xy() above

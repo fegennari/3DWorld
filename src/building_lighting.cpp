@@ -1537,7 +1537,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		//bool const light_room_is_tall(room.is_single_floor && lpos.z > room.z1() + window_vspacing);
 		// special case for light shining down from above stairs when the player is below
 		bool const light_above_stairs(lpos.z > camera_z && light_room_has_stairs_or_ramp);
-		bool stairs_light(0), player_in_elevator(0), cull_if_not_by_stairs(0);
+		bool stairs_light(0), player_in_elevator(0), cull_if_not_by_stairs(0), in_camera_walkway(0);
 
 		if (is_in_elevator) {
 			elevator_t const &e(get_elevator(i->obj_id));
@@ -1660,6 +1660,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 			for (building_walkway_t const &w : walkways) {
 				if (!w.is_owner || !w.bcube.contains_pt(lpos)) continue;
+				if (w.bcube.contains_pt(camera_bs)) {in_camera_walkway = 1;}
 				light_clip_cube = w.bcube;
 				found_ww = 1;
 				break;
@@ -1824,9 +1825,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool force_smap_update(0);
 
 		// check for dynamic shadows; check the player first; use full light radius
-		if (camera_surf_collide && (camera_in_building || camera_can_see_ext_basement) && dist_less_than(lpos_rot, camera_bs, light_radius)) {
+		if (camera_surf_collide && (camera_in_building || in_camera_walkway || camera_can_see_ext_basement) && dist_less_than(lpos_rot, camera_bs, light_radius)) {
 			bool player_in_this_room(player_on_attic_stairs && (is_in_attic || room.intersects_xy(interior->attic_access))); // ladder case
 			player_in_this_room |= (player_in_pool && is_over_pool); // pool case
+			player_in_this_room |= in_camera_walkway; // walkway case
 
 			if (clipped_bc.contains_pt(camera_rot) || clipped_bc.contains_pt(point(camera_rot.x, camera_rot.y, player_feet_zval)) || player_in_this_room) {
 				// must update shadow maps for the room above if the player is on the stairs or in the same room when there are stairs

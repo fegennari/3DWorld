@@ -3111,12 +3111,14 @@ public:
 						point lpos_clamped(lpos);
 						// include skylight light sources, which are above the building; buildings can't stack vertically, so the light can't belong to a different building
 						if (!b.skylights.empty()) {min_eq(lpos_clamped.z, b.bcube.z2());}
-						if (!b.point_in_building_or_basement_bcube(lpos_clamped)) continue; // wrong building
+						bool const camera_in_walkway(b.check_pt_in_walkway(pre_smap_player_pos, 1)); // owned_only=1
+						if (!b.point_in_building_or_basement_bcube(lpos_clamped) && !camera_in_walkway) continue; // wrong building
 						(*i)->building_draw_interior.draw_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
 						b.add_split_roof_shadow_quads(ext_parts_draw);
 						// no batch draw for shadow pass since textures aren't used; draw everything, since shadow may be cached
 						bool camera_in_this_building(b.check_point_or_cylin_contained(pre_smap_player_pos, 0.0, points, 1, 1, 0)); // inc_attic=1, inc_ext_basement=1, inc_roof_acc=0
 						camera_in_this_building |= b.interior_visible_from_other_building_ext_basement(xlate, 1); // check conn building as well; expand_for_light=1
+						camera_in_this_building |= camera_in_walkway;
 						// generate interior detail objects during the shadow pass when the player is in the building so that it can be done in parallel with small static geom gen
 						// skip drawing small object shadows for secondary camera (security camera) as an optimization
 						int const inc_small(sec_camera_shadow_mode ? 0 : (camera_in_this_building ? 3 : 1));
@@ -3176,7 +3178,7 @@ public:
 
 	void add_interior_lights(vector3d const &xlate, cube_t &lights_bcube, bool sec_camera_mode) { // Note: non const because this caches light bcubes
 		if (!draw_building_interiors || !has_interior_geom) return; // no interior
-		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
+		point const camera(get_camera_pos()), camera_bs(camera - xlate);
 		vector<point> points; // reused temporary
 		vect_cube_with_ix_t ped_bcubes; // reused temporary
 		occlusion_checker_noncity_t oc(*this, 1); // for_light=1
@@ -3192,10 +3194,11 @@ public:
 				building_t &b(get_building(bi->ix));
 				if (!b.has_room_geom()) continue; // no interior room geom, skip
 				if (!lights_bcube.intersects_xy(b.bcube)) continue; // not within light volume (too far from camera)
-				bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1, 1, 0)); // inc_attic=1, inc_ext_basement=1, inc_roof_acc=0
+				bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_bs, 0.0, points, 1, 1, 0)); // inc_attic=1, inc_ext_basement=1, inc_roof_acc=0
 				if (sec_camera_mode && !camera_in_this_building) continue; // security cameras only show lights in their building
 				// limit room lights to when the player is in a building because we can restrict them to a single floor, otherwise it's too slow
-				if (!camera_in_this_building && !camera_pdu.cube_visible(b.bcube + xlate) && !b.interior_visible_from_other_building_ext_basement(xlate, 1)) continue; // VFC
+				if (!camera_in_this_building && !camera_pdu.cube_visible(b.bcube + xlate) &&
+					!b.interior_visible_from_other_building_ext_basement(xlate, 1) && !b.check_pt_in_walkway(camera_bs, 1)) continue; // VFC
 				if (is_first_building) {oc.set_camera(camera_pdu, sec_camera_mode);} // setup occlusion culling on the first visible building; cur_building_only=sec_camera_mode
 				is_first_building = 0;
 				oc.set_exclude_bix(bi->ix);
