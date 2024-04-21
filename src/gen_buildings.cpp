@@ -3271,7 +3271,7 @@ public:
 			create_mirror_reflection_if_needed();
 		}
 		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish(), 6.3ms with building interiors)
-		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
+		point const camera(get_camera_pos()), camera_bs(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map);
 		bool const night(is_night(WIND_LIGHT_ON_RAND)), use_city_dlights(!reflection_pass);
 		bool const ref_pass_house(reflection_pass & REF_PASS_HOUSE), ref_pass_interior(reflection_pass & REF_PASS_INTERIOR);
@@ -3333,7 +3333,7 @@ public:
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
 					cube_t const &grid_bcube(g->get_vis_bcube());
 
-					if (reflection_pass ? grid_bcube.contains_pt_xy(camera_xlated) : grid_bcube.closest_dist_xy_less_than(camera_xlated, zpp_dist_scale)) {
+					if (reflection_pass ? grid_bcube.contains_pt_xy(camera_bs) : grid_bcube.closest_dist_xy_less_than(camera_bs, zpp_dist_scale)) {
 						if (!building_grid_visible(xlate, grid_bcube)) continue; // VFC
 						(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()));
 					}
@@ -3385,8 +3385,8 @@ public:
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 					cube_t const &grid_bcube(g->get_vis_bcube());
 					// for the reflection pass, we only need to look at the grid containing the building with the mirror, which must be the player's building
-					if (reflection_pass && !grid_bcube.contains_pt_xy(camera_xlated)) continue; // not the correct tile
-					float const gdist_sq(p2p_dist_sq(camera_xlated, grid_bcube.closest_pt(camera_xlated)));
+					if (reflection_pass && !grid_bcube.contains_pt_xy(camera_bs)) continue; // not the correct tile
+					float const gdist_sq(p2p_dist_sq(camera_bs, grid_bcube.closest_pt(camera_bs)));
 
 					if (!reflection_pass && gdist_sq > rgeom_clear_dist_sq && g->has_room_geom) { // need to clear room geom
 						//highres_timer_t timer("Clear Room Geom");
@@ -3406,25 +3406,25 @@ public:
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t &b((*i)->get_building(bi->ix));
 						if (!b.interior) continue; // no interior, skip
-						bool const player_in_building_bcube(b.bcube.contains_pt_xy(camera_xlated) || b.point_in_extended_basement(camera_xlated)); // player within building's bcube
+						bool const player_in_building_bcube(b.bcube.contains_pt_xy(camera_bs) || b.point_in_extended_basement(camera_bs)); // player within building's bcube
 						if (reflection_pass && !player_in_building_bcube) continue; // not the correct building
-						float const bdist_sq(p2p_dist_sq(camera_xlated, b.bcube.closest_pt(camera_xlated)));
+						float const bdist_sq(p2p_dist_sq(camera_bs, b.bcube.closest_pt(camera_bs)));
 						//if (bdist_sq > rgeom_clear_dist_sq) {b.clear_room_geom(); continue;} // too far away - is this useful?
 						if (bdist_sq > rgeom_draw_dist_sq) continue; // too far away
 						bool const ext_basement_conn_visible(b.interior_visible_from_other_building_ext_basement(xlate));
 						bool const debug_draw(0 && b.interior->has_backrooms); // TESTING
 						if (!debug_draw && !player_in_building_bcube && !ext_basement_conn_visible && !camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
 						b.maybe_gen_chimney_smoke();
-						bool const camera_near_building(player_in_building_bcube || (!b.doors.empty() && b.bcube.contains_pt_xy_exp(camera_xlated, door_open_dist)));
+						bool const camera_near_building(player_in_building_bcube || (!b.doors.empty() && b.bcube.contains_pt_xy_exp(camera_bs, door_open_dist)));
 						bool cant_see_inside(0);
 
 						if (!debug_draw && !ext_basement_conn_visible) {
 							// check if player is outside a windowless building (city office building); need to account for open doors
 							if (!player_in_building_bcube && !b.has_windows()) {
-								if (!b.point_near_ext_door(camera_xlated, 20.0*door_open_dist)) continue; // too far away (use larger dist for door steps and ext door signs)
+								if (!b.point_near_ext_door(camera_bs, 20.0*door_open_dist)) continue; // too far away (use larger dist for door steps and ext door signs)
 								if (!camera_near_building) {cant_see_inside = 1;} // can see exterior objects, but not interiors
 							}
-							if ((display_mode & 0x08) && !player_in_building_bcube && b.is_entire_building_occluded(camera_xlated, oc))  continue; // check occlusion
+							if ((display_mode & 0x08) && !player_in_building_bcube && b.is_entire_building_occluded(camera_bs, oc))  continue; // check occlusion
 						}
 						// draw interior detail objects if player is in the building (inc ext basement), even if far from the building center
 						unsigned inc_small(bdist_sq < rgeom_sm_draw_dist_sq);
@@ -3437,7 +3437,7 @@ public:
 						g->has_room_geom = 1;
 						if (!draw_interior) continue;
 						// when player is in the building (not attic or ext basement), draw people later so that alpha blending of hair against ext walls and windows works properly
-						if (defer_people_draw_for_player_building && player_in_building_bcube && b.has_people() && b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 0, 0, 0)) {
+						if (defer_people_draw_for_player_building && player_in_building_bcube && b.has_people() && b.check_point_or_cylin_contained(camera_bs, 0.0, points, 0, 0, 0)) {
 							defer_ped_draw_vars.assign(&b, *i, bi->ix);
 						}
 						else {gen_and_draw_people_in_building(ped_draw_vars_t(b, oc, s, xlate, bi->ix, 0, reflection_pass));} // draw people in this building
@@ -3459,19 +3459,19 @@ public:
 						}
 						if (ref_pass_interior) continue; // interior room, don't need to draw windows and exterior doors
 						// and draw opened door; update_state if not ref pass
-						bool const had_open_door(b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, cview_dir, door_open_dist, !reflection_pass, 0)); // only_open=0
-						bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1, 1, 1)); // inc_attic=1, inc_ext_basement=1, inc_roof_acc=1
+						bool const had_open_door(b.get_nearby_ext_door_verts(ext_door_draw, s, camera_bs, cview_dir, door_open_dist, !reflection_pass, 0)); // only_open=0
+						bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_bs, 0.0, points, 1, 1, 1)); // inc_attic=1, inc_ext_basement=1, inc_roof_acc=1
 						bool const player_in_bldg_bc_or_door(player_in_building_bcube || had_open_door);
 						
 						if (!reflection_pass && (camera_in_this_building || !this_frame_camera_in_building)) { // player in this building, or near but not inside another
 							// disable grass in building part(s) containing the player
-							b.update_grass_exclude_at_pos(camera_xlated, xlate, camera_in_this_building);
+							b.update_grass_exclude_at_pos(camera_bs, xlate, camera_in_this_building);
 						}
-						if (!reflection_pass && player_in_bldg_bc_or_door) {b.update_animals(camera_xlated, bi->ix);}
+						if (!reflection_pass && player_in_bldg_bc_or_door) {b.update_animals(camera_bs, bi->ix);}
 						
 						// Note: if we skip this check and treat all walls/windows as front/containing part, this almost works, but will skip front faces of other buildings
 						if (!camera_in_this_building) { // camera not in building
-							if (ext_basement_conn_visible && animate2) {b.update_player_interact_objects(camera_xlated);} // need to at least update door open/close state
+							if (ext_basement_conn_visible && animate2) {b.update_player_interact_objects(camera_bs);} // need to at least update door open/close state
 							continue;
 						}
 						// we should get here for at most one building
@@ -3479,7 +3479,7 @@ public:
 						// neg offset to move windows on the inside of the building's exterior wall;
 						// since there are no basement windows, we should treat the player as being in the part above so that windows are drawn correctly through the basement stairs
 						assert(bcs_ix < int_wall_draw_front.size() && bcs_ix < int_wall_draw_back.size());
-						point pt_ag(camera_xlated);
+						point pt_ag(camera_bs);
 						max_eq(pt_ag.z, (b.ground_floor_z1 + b.get_floor_thickness()));
 						b.get_all_drawn_window_verts(interior_wind_draw, 0, -0.1, &pt_ag);
 						b.get_split_int_window_wall_verts(int_wall_draw_front[bcs_ix], int_wall_draw_back[bcs_ix], pt_ag, 0);
@@ -3489,25 +3489,25 @@ public:
 						if (display_mode & 0x20) {b.debug_people_in_building(s);} // debug visualization
 						float const basement_z_adj(2.0*BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness()); // adjust to prevent problems when camera is close to the plane
 						this_frame_camera_in_building = 1;
-						this_frame_player_in_basement =   b.check_player_in_basement(camera_xlated - basement_z_adj*plus_z); // set once
-						this_frame_player_in_attic    =  (b.point_in_attic(camera_xlated) ? (b.has_attic_window ? 1 : 2) : 0);
-						this_frame_player_in_water    =   b.point_in_water_area(camera_xlated, 1); // full_room_height=1
-						if (this_frame_player_in_water && b.point_in_water_area(camera_xlated, 0)) {this_frame_player_in_water = 2;} // full_room_height=0; test for underwater
+						this_frame_player_in_basement =   b.check_player_in_basement(camera_bs - basement_z_adj*plus_z); // set once
+						this_frame_player_in_attic    =  (b.point_in_attic(camera_bs) ? (b.has_attic_window ? 1 : 2) : 0);
+						this_frame_player_in_water    =   b.point_in_water_area(camera_bs, 1); // full_room_height=1
+						if (this_frame_player_in_water && b.point_in_water_area(camera_bs, 0)) {this_frame_player_in_water = 2;} // full_room_height=0; test for underwater
 						// player can only be in one basement or attic, except for extended basement connector rooms;
 						// be conservative and don't break if the player is in the basement and this building has any connections to other basements
 						can_break_from_loop |= ((this_frame_player_in_basement >= 2 && !b.has_conn_info()) || this_frame_player_in_attic == 2);
 						new_player_building = &b;
-						b.register_player_in_building(camera_xlated, bi->ix); // required for AI following logic
+						b.register_player_in_building(camera_bs, bi->ix); // required for AI following logic
 						if (enable_building_indir_lighting()) {indir_bcs_ix = bcs_ix; indir_bix = bi->ix;} // compute indirect lighting for this building
 						// run any player interaction logic here
-						b.update_security_cameras(camera_xlated);
-						if (toggle_room_light  ) {b.toggle_room_light(camera_xlated);}
-						if (building_action_key) {b.apply_player_action_key(camera_xlated, cview_dir, (building_action_key-1), 0);} // check_only=0
-						else {can_do_building_action = b.apply_player_action_key(camera_xlated, cview_dir, 0, 1);} // mode=0, check_only=1
-						b.player_pickup_object(camera_xlated, cview_dir);
+						b.update_security_cameras(camera_bs);
+						if (toggle_room_light  ) {b.toggle_room_light(camera_bs);}
+						if (building_action_key) {b.apply_player_action_key(camera_bs, cview_dir, (building_action_key-1), 0);} // check_only=0
+						else {can_do_building_action = b.apply_player_action_key(camera_bs, cview_dir, 0, 1);} // mode=0, check_only=1
+						b.player_pickup_object(camera_bs, cview_dir);
 						if (teleport_to_screenshot) {b.maybe_teleport_to_screenshot();}
-						if (animate2) {b.update_player_interact_objects(camera_xlated);} // update dynamic objects if the player is in the building
-						building_occluder = b.get_best_occluder(camera_xlated);
+						if (animate2) {b.update_player_interact_objects(camera_bs);} // update dynamic objects if the player is in the building
+						building_occluder = b.get_best_occluder(camera_bs);
 					} // for bi
 					if (can_break_from_loop) break; // done
 				} // for g
@@ -3528,7 +3528,7 @@ public:
 			reflection_shader.clear();
 
 			// update indir lighting using ray casting
-			if (indir_bcs_ix >= 0 && indir_bix >= 0) {indir_tex_mgr.create_for_building(bcs[indir_bcs_ix]->get_building(indir_bix), indir_bix, camera_xlated);}
+			if (indir_bcs_ix >= 0 && indir_bix >= 0) {indir_tex_mgr.create_for_building(bcs[indir_bcs_ix]->get_building(indir_bix), indir_bix, camera_bs);}
 			else if (!reflection_pass) {end_building_rt_job();}
 			
 			if (draw_interior && have_windows && !ref_pass_interior) { // write to stencil buffer, use stencil test for back facing building walls
@@ -3562,7 +3562,7 @@ public:
 				// this doesn't really work for non-cube buildings though, in particular on near 45 degree edges where the delta_x cancels with the delta_y;
 				// so set special texgen mode so that X and Y are of opposite signs and don't cancel at near 45 degree edges; this fixes cylinders but not 5-6 sides
 				if (player_building != nullptr && player_building->num_sides > 8) { // player in non-cube cylinder-like building
-					player_part = player_building->get_part_containing_pt(camera_xlated);
+					player_part = player_building->get_part_containing_pt(camera_bs);
 				}
 				bool const diag_texgen_mode(!player_part.is_all_zeros());
 				setup_building_draw_shader(s, min_alpha, 1, 1, (diag_texgen_mode ? 2 : 1)); // enable_indir=1, force_tsl=1, use_texgen=1|2
@@ -3741,7 +3741,7 @@ public:
 
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 					if (single_tile && (*i)->use_smap_this_frame) {} // not drawn in main/nonshadow pass, so must be drawn here
-					else if (!g->bcube.closest_dist_less_than(camera_xlated, draw_dist)) continue; // too far; uses exterior bcube
+					else if (!g->bcube.closest_dist_less_than(camera_bs, draw_dist)) continue; // too far; uses exterior bcube
 					if (!building_grid_visible(xlate, g->bcube)) continue; // VFC; use exterior bcube
 					if (!try_bind_tile_smap_at_point((g->bcube.get_cube_center() + xlate), city_shader)) continue; // no shadow maps - not drawn in this pass
 					unsigned const tile_id(g - (*i)->grid_by_tile.begin());
