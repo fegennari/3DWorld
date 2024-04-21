@@ -1315,24 +1315,25 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	if (!has_room_geom()) return; // error?
 	point const camera_bs(camera_pdu.pos - xlate), building_center(bcube.get_cube_center()); // camera in building space
 	if ((display_mode & 0x08) && !camera_in_building && !bcube.contains_pt_xy(camera_bs) && is_entire_building_occluded(camera_bs, oc)) return;
+	// Note: camera_bs is used to test against bcube, lpos_rot, and anything else in global space; camera_rot is used to test against building interior objects
+	point camera_rot(camera_bs); // camera in rotated building space
+	maybe_inv_rotate_point(camera_rot); // rotate camera pos into building space; should use this pos below except with building bcube, occlusion checks, or lpos_rot
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness());
 	float const room_xy_expand(0.75*wall_thickness), player_feet_zval(camera_bs.z - get_bldg_player_height()), ground_floor_z2(ground_floor_z1 + window_vspacing);
 	bool const check_building_people(enable_building_people_ai()), check_attic(camera_in_building && has_attic() && interior->attic_access_open);
-	bool const camera_in_basement(camera_bs.z < ground_floor_z1), camera_in_ext_basement(camera_in_building && point_in_extended_basement_not_basement(camera_bs));
+	bool const camera_in_basement(camera_bs.z < ground_floor_z1), camera_in_ext_basement(camera_in_building && point_in_extended_basement_not_basement(camera_rot));
 	bool const show_room_name(display_mode & 0x20); // debugging, key '6'
 	cube_t const &attic_access(interior->attic_access);
 	vect_cube_t &light_bcubes(interior->room_geom->light_bcubes);
 	vect_room_object_t &objs(interior->room_geom->objs); // non-const, light flags are updated
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
-	point camera_rot(camera_bs);
-	maybe_inv_rotate_point(camera_rot); // rotate camera pos into building space; should use this pos below except with building bcube, occlusion checks, or lpos_rot
 	// Note: we check (camera_bs.z > attic_access.z1()) rather than player_in_attic because we want to include the case where the player is in the access door
 	bool const player_on_attic_stairs(check_attic && camera_bs.z > attic_access.z1() && attic_access.contains_pt_xy(camera_rot));
-	bool const player_in_pool(camera_in_building && has_pool() && interior->pool.contains_pt(camera_bs));
+	bool const player_in_pool(camera_in_building && has_pool() && interior->pool.contains_pt(camera_rot));
 	unsigned camera_part(parts.size()); // start at an invalid value
 	bool camera_by_stairs(0), camera_on_stairs(0), camera_by_L_stairs(0), camera_somewhat_by_stairs(0), camera_in_hallway(0), camera_can_see_ext_basement(0);
 	bool camera_near_building(camera_in_building), check_ramp(0), stairs_or_ramp_visible(0), camera_room_tall(0), camera_in_closed_room(0);
-	float camera_z(camera_bs.z), up_light_zmin(camera_bs.z);
+	float camera_z(camera_bs.z), up_light_zmin(camera_z);
 	// if player is in the pool, increase camera zval to the top of the pool so that lights in the room above are within a single floor and not culled
 	if (player_in_pool) {camera_z = interior->pool.z2();}
 	int camera_room(-1);
@@ -1345,7 +1346,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	if (track_lights) {enabled_bldg_lights.clear();}
 
 	if (camera_in_building) {
-		run_light_motion_detect_logic(camera_bs);
+		run_light_motion_detect_logic(camera_rot);
 
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
 			if (i->contains_pt(camera_rot)) {camera_part = (i - parts.begin()); break;}
@@ -1355,7 +1356,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (room_ix >= 0) {
 			// Note: stairs connecting stacked parts aren't flagged with has_stairs because stairs only connect to the bottom floor, but they're partially handled below
 			room_t const &room(get_room(room_ix));
-			unsigned const camera_floor(room.get_floor_containing_zval(max(camera_rot.z, room.z1()), window_vspacing)); // clamp zval to room range
+			unsigned const camera_floor(room.get_floor_containing_zval(max(camera_bs.z, room.z1()), window_vspacing)); // clamp zval to room range
 			unsigned const room_type(room.get_room_type(camera_floor));
 			assert(room_type < NUM_RTYPES);
 			camera_room       = room_ix;
@@ -1378,7 +1379,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 				if (!s.contains_pt(camera_rot)) { // disable these optimizations if the player is on the stairs
 					float const center_val(s.get_center_dim(s.dim));
-					bool const dir_val((camera_bs[s.dim] < center_val) ^ s.dir);
+					bool const dir_val((camera_rot[s.dim] < center_val) ^ s.dir);
 					
 					if (s.is_u_shape()) { // light may be visible on the back wall of the stairs from the light above or on the edges of the stairs from the light below
 						if (dir_val) continue; // back facing - light not visible
@@ -1401,7 +1402,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			} // for s
 			if (has_pg_ramp()) { // check ramp if player is in the parking garage or the backrooms doorway
 				if (room.contains_pt(interior->pg_ramp.get_cube_center()) ||
-					(has_ext_basement() && interior->get_ext_basement_door().get_clearance_bcube().contains_pt(camera_bs)))
+					(has_ext_basement() && interior->get_ext_basement_door().get_clearance_bcube().contains_pt(camera_rot)))
 				{
 					stair_ramp_cuts.emplace_back(interior->pg_ramp, 3); // both dirs
 				}
@@ -1425,7 +1426,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 			} // for s
 			// set camera_somewhat_by_stairs when camera is in room with stairs, or adjacent to one with stairs
-			if (stairs_or_ramp_visible) {camera_somewhat_by_stairs |= bool(room_or_adj_room_has_stairs(camera_room, camera_rot.z, 1, 1));} // inc_adj_rooms=1, check_door_open=1
+			if (stairs_or_ramp_visible) {camera_somewhat_by_stairs |= bool(room_or_adj_room_has_stairs(camera_room, camera_bs.z, 1, 1));} // inc_adj_rooms=1, check_door_open=1
 			// if player is by the stairs in a room with all closed doors, it's still possible to see a light shining through a door of the floor above or below
 			camera_in_closed_room = (!camera_by_stairs && !player_on_attic_stairs && all_room_int_doors_closed(room_ix, camera_z));
 		}
@@ -1446,7 +1447,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 	}
 	if (has_room_geom() && frame_counter <= (int)interior->room_geom->last_animal_update_frame+1) { // animals were updated this frame or the previous frame
-		if (has_retail() && get_retail_part().contains_pt(camera_bs)) {} // optimization: no dynamic animal shadows in retail area
+		if (has_retail() && get_retail_part().contains_pt(camera_rot)) {} // optimization: no dynamic animal shadows in retail area
 		else { // add a base index to each animal group to make all moving objects unique
 			get_animal_shadow_casters(interior->room_geom->rats,    moving_objs, xlate, 10000);
 			get_animal_shadow_casters(interior->room_geom->spiders, moving_objs, xlate, 20000);
@@ -1485,7 +1486,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (!i->is_light_on() || !i->is_light_type()) continue; // light not on, or not a light or lamp
 		point lpos(i->get_cube_center()); // centered in the light fixture
 		min_eq(lpos.z, (i->z2() - 0.0125f*window_vspacing)); // make sure the light isn't too close to the ceiling (if shifted up to avoid a door intersection)
-		point lpos_rot(lpos);
+		point lpos_rot(lpos); // lpos in global space
 		if (is_rotated()) {do_xy_rotate(building_center, lpos_rot);}
 		if (!lights_bcube.contains_pt_xy(lpos_rot)) continue; // not contained within the light volume
 		bool const light_in_basement(lpos.z < ground_floor_z1), is_in_elevator(i->in_elevator()), is_in_closet(i->in_closet());
@@ -1660,7 +1661,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 			for (building_walkway_t const &w : walkways) {
 				if (!w.is_owner || !w.bcube.contains_pt(lpos)) continue;
-				if (w.get_bcube_inc_open_door().contains_pt(camera_bs)) {in_camera_walkway = 1;}
+				if (w.get_bcube_inc_open_door().contains_pt(camera_rot)) {in_camera_walkway = 1;}
 				light_clip_cube = w.bcube;
 				found_ww = 1;
 				break;
@@ -1694,9 +1695,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			bool maybe_visible(0);
 
 			for (cube_t const &s : cuts) { // check visible stairs/ramps
-				if (s.line_intersects(camera_bs, test_pt)) {maybe_visible = 1; break;} // center visible through gap
+				if (s.line_intersects(camera_rot, test_pt)) {maybe_visible = 1; break;} // center visible through gap
 			}
-			if (!maybe_visible && check_cube_visible_through_cut(cuts, clipped_bc, lpos_rot, camera_bs, cull_radius, floor_is_above)) {maybe_visible = recheck_coll = 1;}
+			if (!maybe_visible && check_cube_visible_through_cut(cuts, clipped_bc, lpos, camera_rot, cull_radius, floor_is_above)) {maybe_visible = recheck_coll = 1;}
 
 			if (!maybe_visible && light_above_stairs) { // check for light shining down the stairs behind or out of view of the player
 				for (cube_t const &s : cuts_above_nonvis) { // compute bcube of light rays through gap to the floor below
