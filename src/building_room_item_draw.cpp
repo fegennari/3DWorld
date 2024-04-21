@@ -1837,6 +1837,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	string onscreen_text;
 	bool const is_rotated(building.is_rotated()), check_occlusion(display_mode & 0x08);
 	bool const check_clip_cube(shadow_only && !is_rotated && !smap_light_clip_cube.is_all_zeros()); // check clip cube for shadow pass; not implemented for rotated buildings
+	bool const skip_interior_objs(!player_in_building_or_doorway && !shadow_only);
 	cube_t const clip_cube_bs(smap_light_clip_cube - xlate);
 	int const camera_room(is_rotated ? -1 : building.get_room_containing_pt(camera_bs)); // skip for rotated buildings; should we use actual_player_pos for shadow_only mode?
 	unsigned last_room_ix(building.interior->rooms.size()), last_floor_ix(0); // start at an invalid value
@@ -1850,8 +1851,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	// draw object models
 	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
 		room_object_t &obj(get_room_object_by_index(i->obj_id));
-		if (!player_in_building && !shadow_only && obj.is_interior()) continue; // don't draw objects in interior rooms if the player is outside the building (useful for office bathrooms)
-		if (check_clip_cube && !clip_cube_bs.intersects(obj))         continue; // shadow map clip cube test: fast and high rejection ratio, do this first
+		if (skip_interior_objs && obj.is_interior())          continue; // don't draw objects in interior rooms if the player is outside the building (useful for office bathrooms)
+		if (check_clip_cube && !clip_cube_bs.intersects(obj)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 
 		if (shadow_only) {
 			if (obj.type == TYPE_CEIL_FAN) continue; // not shadow casting; would shadow its own light
