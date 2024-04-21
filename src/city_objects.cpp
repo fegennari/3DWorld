@@ -1339,12 +1339,14 @@ void walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 	qbds.qbd.draw_and_clear(); // must draw here since texture was set dynamically
 }
 bool walkway_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	// Note: if the player is coming from a building, this code won't be called until pos_ is outside the building bcube,
+	// which can cause a one frame glitch during the transition; when coming from the walkway, the player isn't in the building until they're outside the walkway
 	cube_t const bc(bcube + xlate);
 	if (!bc.contains_pt_xy_exp(pos_, radius_)) return 0; // include radius so that we can walk from a building roof onto a walkway
-	float const z2(max(pos_.z, p_last.z));
-	if (z2 < bc.z1()) return 0; // below the walkway
+	float const pzmax(max(pos_.z, p_last.z));
+	if (pzmax < bc.z1()) return 0; // below the walkway
 
-	if (z2 > bc.z2()) { // above the walkway
+	if (pzmax > bc.z2()) { // above the walkway
 		float const wwz(bc.z2() + radius_);
 		if (pos_.z > wwz) return 0; // in the air above the walkway
 		pos_.z = wwz;
@@ -1352,14 +1354,15 @@ bool walkway_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_
 		return 1; // collision with roof
 	}
 	// else inside the walkway
-	float zval(bc.z2() - floor_spacing*(1.0 - 0.5*FLOOR_THICK_VAL_WINDOWLESS)); // bottom of upper walkway floor, assuming a windowless (city) office building
+	float const fc_thickness(0.5*FLOOR_THICK_VAL_WINDOWLESS*floor_spacing);
+	float zval(bc.z2() - floor_spacing + fc_thickness); // bottom of upper walkway floor, assuming a windowless (city) office building
 	assert(zval >= bc.z1());
 
 	for (; zval >= bc.z1(); zval -= floor_spacing) {
-		if (zval > z2) continue; // wrong floor
+		if (zval > (pzmax + radius_)) continue; // wrong floor - above top of sphere
 		player_in_walkway = 1; // assumes only the player can be here
 		float const wwz(zval + radius_);
-		bool const floor_coll(pos_.z < wwz);
+		bool const floor_coll(pos_.z <= wwz);
 		
 		if (floor_coll) { // collision with floor
 			pos_.z = wwz;
