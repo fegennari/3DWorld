@@ -1659,7 +1659,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			bool found_ww(0);
 
 			for (building_walkway_t const &w : walkways) {
-				if (!w.bcube.contains_pt(lpos)) continue;
+				if (!w.is_owner || !w.bcube.contains_pt(lpos)) continue;
 				light_clip_cube = w.bcube;
 				found_ww = 1;
 				break;
