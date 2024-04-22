@@ -16,6 +16,7 @@ float const CAR_LANE_OFFSET         = 0.15; // in units of road width
 float const CITY_LIGHT_FALLOFF      = 0.2;
 
 
+bool had_building_interior_coll(0);
 vector2d actual_max_road_seg_len;
 city_params_t city_params;
 point pre_smap_player_pos(all_zeros), actual_player_pos(all_zeros); // Note: pre_smap_player_pos can be security cameras, but actual_player_pos is always the player
@@ -3242,8 +3243,9 @@ void get_city_grass_coll_cubes(cube_t const &region, vect_cube_t &out, vect_cube
 }
 // primarily used for player collision, but also used for gameplay dynamic cobjs
 bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool inc_cars, vector3d *cnorm, bool check_interior) {
+	had_building_interior_coll = 0;
 	bool ret(proc_buildings_sphere_coll(pos, p_last, radius, cnorm, check_interior));
-	if (ret && camera_in_building) return ret; // skip city coll if player in a building
+	if (ret && had_building_interior_coll) return ret; // skip city coll if player is in a building
 	ret |= city_gen.proc_city_sphere_coll(pos, p_last, radius, prev_frame_zval, inc_cars, cnorm); // check city as well
 	return ret;
 }

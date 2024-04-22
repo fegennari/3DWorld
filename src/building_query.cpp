@@ -7,7 +7,7 @@
 
 
 extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_in_unlit_room, building_has_open_ext_door, ctrl_key_pressed;
-extern bool player_is_hiding, player_wait_respawn;
+extern bool player_is_hiding, player_wait_respawn, had_building_interior_coll;
 extern int camera_surf_collide, frame_counter, player_in_closet, player_in_elevator, player_in_basement, player_in_attic, player_in_water;
 extern float CAMERA_RADIUS, C_STEP_HEIGHT, NEAR_CLIP, building_bcube_expand;
 extern double camera_zh;
@@ -400,6 +400,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 	else if (is_interior) {
 		point pos2_bs(pos2 - xlate);
 		if (check_sphere_coll_interior(pos2_bs, (p_last2 - xlate), radius, is_in_attic, xy_only, cnorm_ptr)) {pos2 = pos2_bs + xlate; had_coll = 1;}
+		had_building_interior_coll = 1; // required to skip city object collisions
 	}
 	else { // exterior
 		if (allow_outside_building) return 0; // entering an exterior door - no collision with building exterior

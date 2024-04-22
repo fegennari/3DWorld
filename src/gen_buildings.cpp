@@ -4010,8 +4010,7 @@ public:
 				for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
 					grid_elem_t const &ge(get_grid_elem(x, y));
 					if (ge.empty()) continue; // skip empty grid
-					if (!(xy_only ? sphere_cube_intersect_xy(pos, (radius + dist), (ge.bcube + xlate)) :
-						sphere_cube_intersect(pos, (radius + dist), (ge.bcube + xlate)))) continue; // Note: makes little difference
+					if (!sphere_cube_intersect(pos, (radius + dist), (ge.bcube + xlate))) continue; // Note: makes little difference
 
 					// Note: assumes buildings are separated so that only one sphere collision can occur
 					for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
