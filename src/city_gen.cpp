@@ -3003,30 +3003,39 @@ void city_lights_manager_t::finalize_lights(vector<light_source> &lights) { // N
 	prev_had_lights = !lights.empty();
 }
 
+struct sel_smap_light_t {
+	unsigned lix;
+	bool matched_smap_id;
+	sel_smap_light_t(unsigned lix_, bool matched) : lix(lix_), matched_smap_id(matched) {}
+};
 void city_lights_manager_t::setup_shadow_maps(vector<light_source> &light_sources, point const &cpos, unsigned max_smaps, bool sec_camera_mode) {
 	unsigned const num_smaps(min((unsigned)light_sources.size(), min(max_smaps, MAX_DLIGHT_SMAPS)));
 	dl_smap_enabled = 0;
 	if (!enable_dlight_shadows || shadow_map_sz == 0 || num_smaps == 0) return;
 	sort_lights_by_dist_size(light_sources, cpos); // Note: may already be sorted for enabled lights selection, but okay to sort again
 	cmp_light_source_sz_dist sz_cmp(cpos);
-	unsigned num_used(0);
 	unsigned const smap_size(city_params.smap_size); // 0 = use default shadow map resolution
 	// capture player pos in global coordinate space before replacing with light pos so it can be used for LOD during model drawing
-	pre_smap_player_pos = get_camera_building_space(); // player or security camera (or maybe reflected pos in the future)
+	pre_smap_player_pos = cpos; // player or security camera (or maybe reflected pos in the future)
 	if (!sec_camera_mode) {actual_player_pos = pre_smap_player_pos;} // actual_player_pos only applies to the player
 	// Note: if using a dynamic (distance-based) sm_size, need to maintain a pool of different sm resolutions somehow
 	check_gl_error(430);
-
 	// Note: slow to recreate shadow maps every frame, but most city lights are either dynamic (headlights) or include dynamic shadow casters (cars) and need to be updated every frame anyway
 	// Do we want to gradually fade in new shadow maps and fade out old ones? But how do we track which lights are associated with old shadow maps?
 	// Tracking positions won't work for car headlights because they move. We don't have object pointers to track either. And what about lights that are no longer in our list?
-	for (auto i = light_sources.begin(); i != light_sources.end() && num_used < num_smaps; ++i) {
+	vector<sel_smap_light_t> selected;
+
+	for (auto i = light_sources.begin(); i != light_sources.end() && selected.size() < num_smaps; ++i) {
 		if (i->has_no_shadows())       continue; // shadows not enabled for this light
 		if (!i->is_very_directional()) continue; // not a spotlight
 		if (sz_cmp.get_value(*i) < 0.002) break; // light influence is too low, skip even though we have enough shadow maps; can break because sort means all later lights also fail
-		dl_smap_enabled |= i->setup_shadow_map(CITY_LIGHT_FALLOFF, 0, 0, 0, smap_size);
-		++num_used;
+		bool matched_smap_id(0);
+		if (!i->alloc_shadow_map(matched_smap_id, smap_size)) break; // out of shadow maps, done
+		selected.emplace_back((i - light_sources.begin()), matched_smap_id);
 	} // for i
+	// now that all smaps have been allocated, we can create them without worrying about the backing texture array getting resized and overwriting earlier shadow maps
+	for (sel_smap_light_t const &s : selected) {light_sources[s.lix].update_shadow_map(s.matched_smap_id, CITY_LIGHT_FALLOFF);}
+	dl_smap_enabled |= !selected.empty();
 	check_gl_error(431);
 }
 

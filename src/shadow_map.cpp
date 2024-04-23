@@ -601,9 +601,9 @@ void smap_data_t::set_csm_matrices(shader_t &s) const { // send matrices to the 
 // note that we store the light pos and other light-specific data in the shadow map, which means we can't reuse it across lights, but we can reuse the texture
 void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *const bounds, bool use_world_space, bool no_update, bool force_update) {
 
-	// setup render state
+	// setup render state; must update if re-allocated due to texture array resize
 	assert(smap_sz > 0);
-	bool do_update(!no_update && (is_csm || force_update || needs_update(lpos))); // must be called first, because this may indirectly update bounds
+	bool do_update(!is_allocated() || (!no_update && (is_csm || force_update || needs_update(lpos)))); // must be called first, because this may indirectly update bounds
 	xform_matrix camera_mv_matrix; // starts as identity matrix
 	if (!use_world_space) {camera_mv_matrix = fgGetMVM();} // cache the camera modelview matrix before we change it
 	fgPushMatrix();

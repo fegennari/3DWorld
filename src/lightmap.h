@@ -218,6 +218,8 @@ public:
 	void setup_and_bind_smap_texture(shader_t &s, bool &arr_tex_set) const;
 	void write_to_cobj_file(std::ostream &out, bool is_diffuse) const;
 	void draw_light_cone(shader_t &shader, float alpha) const;
+	bool alloc_shadow_map(bool &matched_smap_id, unsigned sm_size=0);
+	void update_shadow_map(bool matched_smap_id, float falloff, bool dynamic_cobj=0, bool outdoor_shadows=0, bool force_update=0);
 	bool setup_shadow_map(float falloff, bool dynamic_cobj=0, bool outdoor_shadows=0, bool force_update=0, unsigned sm_size=0);
 	void release_smap();
 	void invalidate_cached_smap_id(unsigned smap_id) const;

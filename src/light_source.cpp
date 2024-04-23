@@ -314,6 +314,7 @@ void light_source::pack_to_floatv(float *data) const {
 		// the int contains 7 index bits for up to 127 shadow maps + the 8th bit stores is_cube_face
 		*(data++) = float(smap_index + (is_cube_face ? 128 : 0))/255.0f;
 	}
+	else {*(data++) = 0.0f;} // shadow map disabled
 }
 
 void light_source_trig::advance_timestep() {
@@ -443,11 +444,13 @@ public:
 		smd.last_has_dynamic = 1; // force recreation
 		smd.outdoor_shadows  = 0; // reset to default
 		smd.user_smap_id     = user_smap_id; // tag this shadow map with the caller's ID (if provided); if nonzero, this should be a unique value
+		smd.last_lpos        = zero_vector;
 
 		if (size > 0 && smd.smap_sz != size) { // size change - free and reallocate
 			smd.free_gl_state();
 			smd.smap_sz = size;
 		}
+		if (use_tex_array) {assert(*smd.get_layer() == index);}
 		return index + 1; // offset by 1
 	}
 	void free_smap(unsigned index) {
@@ -562,7 +565,6 @@ void light_source::draw_light_cone(shader_t &shader, float alpha) const {
 
 
 bool light_source_trig::is_shadow_map_enabled() const {
-
 	if (!use_smap || no_shadows || shadow_map_sz == 0 || !enable_dlight_shadows) return 0;
 	if (is_line_light())    return 0; // line lights don't support shadow maps
 	if (dir == zero_vector) return 0; // point light: need cube map, skip for now
@@ -572,21 +574,20 @@ bool light_source_trig::is_shadow_map_enabled() const {
 }
 
 bool light_source_trig::check_shadow_map() {
-
 	if (!is_shadow_map_enabled()) return 0;
 	if (!is_enabled())            return 0; // disabled or destroyed
 	bool const force_update(rot_rate != 0.0); // force shadow map update if rotating
 	return setup_shadow_map(LT_DIR_FALLOFF, dynamic_cobj, outdoor_shadows, force_update, sm_size);
 }
 
-bool light_source::setup_shadow_map(float falloff, bool dynamic_cobj, bool outdoor_shadows, bool force_update, unsigned sm_size) {
-
-	bool matched_smap_id(0);
-
+bool light_source::alloc_shadow_map(bool &matched_smap_id, unsigned sm_size) {
 	if (smap_index == 0) {
 		smap_index = get_smap_mgr().new_smap(sm_size, user_smap_id, matched_smap_id);
 		if (smap_index == 0) return 0; // allocation failed (at max)
 	}
+	return 1;
+}
+void light_source::update_shadow_map(bool matched_smap_id, float falloff, bool dynamic_cobj, bool outdoor_shadows, bool force_update) {
 	local_smap_data_t &smap(get_smap_mgr().get(smap_index));
 	smap.pdu = calc_pdu(dynamic_cobj, is_cube_face, falloff); // Note: could cache this in the light source for static lights
 	smap.outdoor_shadows = outdoor_shadows;
@@ -601,6 +602,11 @@ bool light_source::setup_shadow_map(float falloff, bool dynamic_cobj, bool outdo
 	// if matched_smap_id==1, we can skip the shadow map update
 	smap.create_shadow_map_for_light(pos, nullptr, 1, matched_smap_id, force_update); // no bcube, in world space, no texture array (layer=nullptr)
 	smap_light_clip_cube.set_to_zeros();
+}
+bool light_source::setup_shadow_map(float falloff, bool dynamic_cobj, bool outdoor_shadows, bool force_update, unsigned sm_size) {
+	bool matched_smap_id(0);
+	if (!alloc_shadow_map(matched_smap_id, sm_size)) return 0;
+	update_shadow_map(matched_smap_id, falloff, dynamic_cobj, outdoor_shadows, force_update);
 	return 1;
 }
 

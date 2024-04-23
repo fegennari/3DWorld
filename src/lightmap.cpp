@@ -910,11 +910,11 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 	for (unsigned i = 0; i < ndl; ++i) {
 		bool const line_light(dl_sources[i].is_line_light());
 		float *data(dl_data_ptr + i*stride); // stride is texel RGBA
-		dl_sources[i].pack_to_floatv(data); // {center,radius, color, dir,beamwidth}
+		dl_sources[i].pack_to_floatv(data); // {center,radius, color, dir,beamwidth, [smap_index]}
 		UNROLL_3X(data[i_] = (data[i_] - poff[i_])*pscale[i_];) // scale pos to [0,1] range
 		UNROLL_3X(data[i_+4] *= 0.1;) // scale color down
 		if (line_light) {UNROLL_3X(data[i_+8] = (data[i_+8] - poff[i_])*pscale[i_];)} // scale to [0,1] range
-		data[3] *= radius_scale;
+		data[3] *= radius_scale; // radius field
 		has_spotlights  |= dl_sources[i].is_directional();
 		has_line_lights |= line_light;
 	} // for i

@@ -3684,6 +3684,7 @@ public:
 		}
 		// main/batched draw pass
 		ensure_city_lighting_setup(reflection_pass, xlate, is_city_lighting_setup);
+		// Note: indir and dlights are set for ground mode only
 		setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 
 		if (!reflection_pass) { // don't want to do this in the reflection pass
