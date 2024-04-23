@@ -19,7 +19,8 @@ uniform float LT_DIR_FALLOFF_SM = 0.005;
 uniform float LDIR_FALL_THRESH  = 0.0;
 
 #ifdef HAS_DLIGHT_SMAP
-const int MAX_DLIGHT_SMAPS = 128; // must be >= the value used in shadow_map.h (Note: up to ~220 is okay for uniform array, and up to 256+ for UBO)
+// must be >= the value used in shadow_map.h (Note: up to ~220 is okay for uniform array, and up to 256+ for UBO), but real cap is 127 due to bit mask logic
+const int MAX_DLIGHT_SMAPS = 120;
 uniform sampler2DArrayShadow smap_tex_arr_dl;
 //uniform mat4 smap_matrix_dl[MAX_DLIGHT_SMAPS];
 layout (std140, binding = 0) uniform U_smap_matrix_dl {mat4 smap_matrix_dl[MAX_DLIGHT_SMAPS];};

@@ -8,7 +8,7 @@
 unsigned const DEF_LOCAL_SMAP_SZ      = 1024;
 unsigned const LOCAL_SMAP_START_TU_ID = 16;
 unsigned const GLOBAL_SMAP_START_TU_ID= 6; // for ground mode and tiled terrain mode
-unsigned const MAX_DLIGHT_SMAPS       = 128; // must agree with the value used in dynamic_lighting.part
+unsigned const MAX_DLIGHT_SMAPS       = 120; // must agree with the value used in dynamic_lighting.part
 
 
 class smap_texture_array_t {
