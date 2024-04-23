@@ -2224,6 +2224,7 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 	float const height_thresh(get_median_height(tree_density_thresh));
 	unsigned const smod(3.321*XY_MULT_SIZE+1), tree_prob(max(1U, XY_MULT_SIZE/mod_num_trees));
 	unsigned const skip_val(max(1, int(1.0/tree_scale))); // similar to deterministic gen in scenery.cpp
+	bool const allow_bushes(max_unique_trees == 0 || !have_cities()); // allow bushes unless there are cities, because we don't want instanced bushes placed there
 	shared_tree_data.ensure_init();
 	mesh_xy_grid_cache_t density_gen[NUM_TREE_TYPES+1];
 
@@ -2281,7 +2282,7 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 				if (!adjust_tree_zval(pos, 0, ttype, 0, cur_tile)) continue; // create_bush=0
 			}
 			add_new_tree(rgen, ttype);
-			back().gen_tree(pos, 0, ttype, 0, 1, 0, rgen, 1.0, 1.0, 1.0, tree_4th_branches, 1); // allow bushes
+			back().gen_tree(pos, 0, ttype, 0, 1, 0, rgen, 1.0, 1.0, 1.0, tree_4th_branches, allow_bushes);
 		} // for j
 	} // for i
 	calc_bcube();
