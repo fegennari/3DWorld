@@ -1653,7 +1653,7 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 	bool const untextured(obj.flags & RO_FLAG_UNTEXTURED);
 	bool const upside_down((obj.type == TYPE_RAT || obj.type == TYPE_ROACH || obj.type == TYPE_INSECT) && obj.is_broken());
 	if (emissive_first_mat) {s.set_color_e(LAMP_COLOR*0.4);}
-	if (use_low_z_bias    ) {s.add_uniform_float("norm_bias_scale", 5.0);} // half the default value
+	if (use_low_z_bias    ) {s.add_uniform_float("norm_bias_scale", 0.5*DEF_NORM_BIAS_SCALE);} // half the default value
 	// Note: lamps are the most common and therefore most expensive models to draw
 	int const model_id(obj.get_model_id()); // first 8 bits is model ID, last 8 bits is sub-model ID
 	unsigned rot_only_mat_mask(0);
@@ -1675,7 +1675,7 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 	building_obj_model_loader.draw_model(s, obj_center, obj, dir, obj.color, xlate, model_id, shadow_only,
 		0, nullptr, rot_only_mat_mask, untextured, 0, upside_down, emissive_body_mat);
 	if (!shadow_only && obj.type == TYPE_STOVE) {draw_stove_flames(obj, (camera_pdu.pos - xlate), s);} // draw blue burner flame
-	if (use_low_z_bias    ) {s.add_uniform_float("norm_bias_scale", 10.0);} // restore to the defaults
+	if (use_low_z_bias    ) {s.add_uniform_float("norm_bias_scale", DEF_NORM_BIAS_SCALE);} // restore to the defaults
 	if (emissive_first_mat) {s.set_color_e(BLACK);}
 }
 

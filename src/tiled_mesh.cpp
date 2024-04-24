@@ -1818,10 +1818,16 @@ void tile_t::shader_shadow_map_setup(shader_t &s) const {
 void tile_t::bind_and_setup_shadow_map(shader_t &s) const {
 	if (shadow_map_enabled()) {shader_shadow_map_setup(s);}
 }
-bool tile_t::try_bind_shadow_map(shader_t &s, bool check_only) const {
+bool tile_t::try_bind_shadow_map(shader_t &s, bool check_only, unsigned *lod_level) const {
 	if (!shadow_map_enabled() || smap_data.empty()) return 0;
 	if (get_dist_to_camera_in_tiles(1) > SMAP_FADE_THRESH*smap_thresh_scale) return 0; // too far to need smap, even if it exists
 	if (!check_only) {smap_data.set_for_all_lights(s, nullptr);}
+	
+	if (lod_level) { // return lod_level of first enabled shadow map
+		for (unsigned i = 0; i < smap_data.size(); ++i) {
+			if (is_light_enabled(i)) {*lod_level = smap_data[i].lod_level; break;}
+		}
+	}
 	return 1;
 }
 
@@ -3404,9 +3410,9 @@ uint64_t get_tile_id_containing_point_no_xyoff(point const &pos) {
 	return (tp.x + (uint64_t(tp.y) << 32));
 }
 
-bool tile_draw_t::try_bind_tile_smap_at_point(point const &pos, shader_t &s, bool check_only) const {
+bool tile_draw_t::try_bind_tile_smap_at_point(point const &pos, shader_t &s, bool check_only, unsigned *lod_level) const {
 	tile_t const *const tile(get_tile_containing_point(pos));
-	return (tile != nullptr && tile->try_bind_shadow_map(s, check_only));
+	return (tile != nullptr && tile->try_bind_shadow_map(s, check_only, lod_level));
 }
 
 // Note: region should be less than one tile in size
@@ -3602,7 +3608,10 @@ bool check_player_tiled_terrain_collision() {return terrain_tile_draw.check_play
 bool sphere_int_tiled_terrain(point &pos, float radius) {return terrain_tile_draw.check_sphere_collision(pos, radius);}
 bool cube_int_tiled_terrain_trees(cube_t const &c) {return terrain_tile_draw.check_cube_int_trees(c);}
 float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : terrain_tile_draw.get_actual_zmin());}
-bool try_bind_tile_smap_at_point(point const &pos, shader_t &s, bool check_only) {return terrain_tile_draw.try_bind_tile_smap_at_point(pos, s, check_only);}
+
+bool try_bind_tile_smap_at_point(point const &pos, shader_t &s, bool check_only, unsigned *lod_level) {
+	return terrain_tile_draw.try_bind_tile_smap_at_point(pos, s, check_only, lod_level);
+}
 // defer update until tile draw (if called from non-drawing thread); region and pos are in camera space
 void invalidate_tile_smap_in_region(cube_t const &region, bool repeat_next_frame) {tile_smaps_to_clear.emplace_back(region, repeat_next_frame);}
 

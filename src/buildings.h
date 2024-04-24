@@ -35,6 +35,7 @@ float const EXT_BASEMENT_JOIN_DIST = 4.0; // relative to floor spacing
 float const BALCONY_PILLAR_SCALE   = 0.15; // relative to depth
 float const BASEMENT_ENTRANCE_SCALE= 0.33;
 float const SHELF_RACK_HEIGHT_FS   = 0.85*(1.0 - FLOOR_THICK_VAL_OFFICE);
+float const DEF_NORM_BIAS_SCALE    = 10.0; // see shadow_map.part
 
 unsigned const NUM_CHAIR_COLORS = 12;
 unsigned const MAX_BCASE_BOOKS  = 48; // limited by available bit flags
