@@ -50,9 +50,9 @@ point bind_point_t::get_updated_bind_pos() const {
 
 
 // radius == 0.0 is really radius == infinity (no attenuation)
-light_source::light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d, float bw, float ri, bool icf, float nc) :
+light_source::light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d, float bw, float ri, bool icf, float nc, float fc) :
 	dynamic(id), enabled(1), is_cube_face(icf), radius(sz), radius_inv((radius == 0.0) ? 0.0 : 1.0/radius),
-	r_inner(ri), bwidth(bw), near_clip(nc), pos(p), pos2(p2), dir(d.get_norm()), color(c)
+	r_inner(ri), bwidth(bw), near_clip(nc), far_clip(fc), pos(p), pos2(p2), dir(d.get_norm()), color(c)
 {
 	assert(bw > 0.0 && bw <= 1.0);
 	assert(r_inner <= radius);
@@ -521,16 +521,15 @@ pos_dir_up light_source::calc_pdu(bool dynamic_cobj, bool is_cube_face, float fa
 	vector3d cnorm; // unused
 	float nclip(0.001*radius); // min value
 
-	if (near_clip > 0.0) {
-		nclip = max(nclip, near_clip);
-	}
+	if (near_clip > 0.0) {nclip = max(nclip, near_clip);}
 	else if (world_mode == WMODE_GROUND && check_point_contained_tree(pos, cindex, dynamic_cobj)) {
 		// if light is inside a light fixture, move the near clip plane so that the light fixture cobj is outside the view frustum
 		assert(cindex >= 0);
 		point const start_pos(pos + dir*radius);
 		if (coll_objects[cindex].line_int_exact(start_pos, pos, t, cnorm)) {nclip += (1.0 - t)*radius;}
 	}
-	return pos_dir_up(pos, dir, up_dir, angle, nclip, max(radius, nclip+0.01f*radius), 1.0, 1); // force near_clip < far_clip
+	float const fclip((far_clip == 0.0) ? radius : far_clip);
+	return pos_dir_up(pos, dir, up_dir, angle, nclip, max(fclip, nclip+0.01f*radius), 1.0, 1); // force near_clip < far_clip; AR=1.0
 }
 
 void light_source::draw_light_cone(shader_t &shader, float alpha) const {

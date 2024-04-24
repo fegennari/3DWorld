@@ -420,7 +420,9 @@ namespace streetlight_ns {
 		if (!camera_pdu.sphere_visible_test((lpos + xlate), ldist)) return; // VFC
 		min_eq(lights_bcube.z1(), (lpos.z - ldist));
 		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*ldist)); // pointed down - don't extend as far up
-		dl_sources.emplace_back(ldist, lpos, lpos, light_color, 0, -plus_z, STREETLIGHT_BEAMWIDTH); // points down
+		//float const far_clip(1.2*get_streetlight_height()); // slightly beyond the height above the ground - faster, but misses shadows due to incorrect far plane test
+		float const far_clip(0.0); // default radius far clip
+		dl_sources.emplace_back(ldist, lpos, lpos, light_color, 0, -plus_z, STREETLIGHT_BEAMWIDTH, 0.0, 0, 0.0, far_clip); // points down
 		
 		// cache shadow maps if there are no dynamic cars or pedestrians (player doesn't cast a shadow);
 		// if this streetligt is on a bridge or tunnel, there are no pedestrians since they don't go here

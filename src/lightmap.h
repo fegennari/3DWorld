@@ -163,7 +163,7 @@ class light_source { // size = 116
 protected:
 	bool dynamic=0, enabled=0, user_placed=0, is_cube_face=0, is_cube_light=0, no_shadows=0;
 	unsigned smap_index=0, user_smap_id=0, smap_mgr_id=0, cube_eflags=0, num_dlight_rays=0; // smap_index = index of shadow map texture/data
-	float radius=0.0, radius_inv=0.0, r_inner=0.0, bwidth=0.0, near_clip=0.0;
+	float radius=0.0, radius_inv=0.0, r_inner=0.0, bwidth=0.0, near_clip=0.0, far_clip=0.0;
 	point pos, pos2; // point/sphere light: use pos; line/cylinder light: use pos and pos2
 	vector3d dir;
 	colorRGBA color=BLACK;
@@ -174,7 +174,8 @@ protected:
 
 public:
 	light_source() {}
-	light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id=0, vector3d const &d=zero_vector, float bw=1.0, float ri=0.0, bool icf=0, float nc=0.0);
+	light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id=0,
+		vector3d const &d=zero_vector, float bw=1.0, float ri=0.0, bool icf=0, float nc=0.0, float fc=0.0);
 	void mark_is_cube_light(unsigned eflags) {is_cube_light = 1; cube_eflags = eflags;}
 	void set_dynamic_state(point const &pos_, vector3d const &dir_, colorRGBA const &color_, bool enabled_) {pos = pos2 = pos_; dir = dir_; color = color_; enabled = enabled_;}
 	void set_num_dlight_rays(unsigned num) {num_dlight_rays = num;} // zero = use default
