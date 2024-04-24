@@ -495,8 +495,8 @@ bool occlusion_checker_t::is_occluded(cube_t const &c) const {
 	return 0;
 }
 
-void ao_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_) {
-	draw_state_t::pre_draw(xlate_, use_dlights_, shadow_only_, 1); // always_setup_shader=1 (required for model drawing)
+void ao_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_, bool enable_animations) {
+	draw_state_t::pre_draw(xlate_, use_dlights_, shadow_only_, 1, enable_animations); // always_setup_shader=1 (required for model drawing)
 }
 void draw_and_clear_blur_qbd(quad_batch_draw &qbd) {
 	if (qbd.empty()) return;

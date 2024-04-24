@@ -438,7 +438,7 @@ public:
 	bool is_occluded(cube_t const &c) const {return (!shadow_only && occlusion_checker.is_occluded(c));}
 	virtual void draw_unshadowed() {}
 	void begin_tile(point const &pos, bool will_emit_now=0, bool ensure_active=0);
-	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_, bool always_setup_shader);
+	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_, bool always_setup_shader, bool enable_animations=0);
 	void end_draw();
 	virtual void post_draw();
 	void set_untextured_material();
@@ -662,7 +662,7 @@ void draw_and_clear_blur_qbd(quad_batch_draw &qbd);
 class ao_draw_state_t : public draw_state_t {
 public:
 	quad_batch_draw ao_qbd;
-	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_);
+	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_, bool enable_animations=0);
 	virtual void draw_unshadowed() {draw_and_clear_blur_qbd(ao_qbd);}
 };
 
