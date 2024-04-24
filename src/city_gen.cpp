@@ -3028,6 +3028,7 @@ void city_lights_manager_t::setup_shadow_maps(vector<light_source> &light_source
 	// Do we want to gradually fade in new shadow maps and fade out old ones? But how do we track which lights are associated with old shadow maps?
 	// Tracking positions won't work for car headlights because they move. We don't have object pointers to track either. And what about lights that are no longer in our list?
 	vector<sel_smap_light_t> selected;
+	selected.reserve(num_smaps);
 
 	for (auto i = light_sources.begin(); i != light_sources.end() && selected.size() < num_smaps; ++i) {
 		if (i->has_no_shadows())       continue; // shadows not enabled for this light

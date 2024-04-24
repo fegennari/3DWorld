@@ -3732,6 +3732,8 @@ public:
 			//timer_t timer2("Draw Buildings Smap"); // 0.3
 			enable_city_shader(city_shader, use_city_dlights, use_bmap, min_alpha);
 			float const draw_dist(get_tile_smap_dist() + 0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE));
+			int const norm_bias_scale_loc(city_shader.get_uniform_loc("norm_bias_scale"));
+			assert(norm_bias_scale_loc >= 0);
 			// cull back faces to avoid lighting/shadows on inside walls of building interiors;
 			// disable when there are no interiors so that the bottom surfaces of roof overhangs/gutters are drawn
 			if (draw_interior) {glEnable(GL_CULL_FACE);}
@@ -3748,7 +3750,7 @@ public:
 					unsigned lod_level(0);
 					if (!try_bind_tile_smap_at_point((g->bcube.get_cube_center() + xlate), city_shader, 0, &lod_level)) continue; // no shadow maps - not drawn in this pass
 					// increase bias with smap texture LOD to make it constant per texel to avoid artifacts on distant tiles using low resolution smaps
-					city_shader.add_uniform_float("norm_bias_scale", DEF_NORM_BIAS_SCALE*(1.0 + max(0, ((int)lod_level-1))));
+					city_shader.set_uniform_float(norm_bias_scale_loc, DEF_NORM_BIAS_SCALE*(1.0 + max(0, ((int)lod_level-1))));
 					unsigned const tile_id(g - (*i)->grid_by_tile.begin());
 					// Note: we could skip detail materials like trim for tiles that are further, but it's unclear if that would make much difference
 					(*i)->building_draw_vbo.draw_tile(city_shader, tile_id);
@@ -3767,7 +3769,7 @@ public:
 				} // for g
 				if (no_depth_write) {glDepthMask(GL_TRUE);} // re-enable depth writing
 			} // for i
-			city_shader.add_uniform_float("norm_bias_scale", DEF_NORM_BIAS_SCALE); // restore the default
+			city_shader.set_uniform_float(norm_bias_scale_loc, DEF_NORM_BIAS_SCALE); // restore the default
 			if (draw_interior) {glDisable(GL_CULL_FACE);}
 			bbd.draw_obj_models(city_shader, xlate, 0); // shadow_only=0
 			city_shader.end_shader();

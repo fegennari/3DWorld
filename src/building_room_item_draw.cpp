@@ -1378,7 +1378,7 @@ public:
 		qbd.draw_and_clear();
 		s.make_current(); // switch back to the normal shader
 	}
-};
+}; // lava_lamp_draw_t
 
 lava_lamp_draw_t lava_lamp_draw;
 
