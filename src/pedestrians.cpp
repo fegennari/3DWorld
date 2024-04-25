@@ -1978,11 +1978,11 @@ void set_z_plane_rect_pts(point const &center, float rx, float ry, point pts[4])
 void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows) {
 	if (peds.empty()) return;
 	if (is_dlight_shadows && !city_params.car_shadows) return; // use car_shadows as ped_shadows
-	if (shadow_only && !is_dlight_shadows) return; // don't add to precomputed shadow map
+	if (shadow_only && !is_dlight_shadows)             return; // don't add to precomputed shadow map
 	//timer_t timer("Ped Draw"); // ~1ms
 	bool const use_models(ped_model_loader.num_models() > 0), enable_animations(use_models);
 	float const def_draw_dist((use_models ? 500.0 : 2000.0)*get_ped_radius());
-	float const draw_dist(is_dlight_shadows ? 0.8*camera_pdu.far_ : def_draw_dist), draw_dist_sq(draw_dist*draw_dist); // smaller view dist for models
+	float const draw_dist(is_dlight_shadows ? 0.75*camera_pdu.far_ : def_draw_dist), draw_dist_sq(draw_dist*draw_dist); // smaller view dist for models
 	pos_dir_up pdu(camera_pdu); // decrease the far clipping plane for pedestrians
 	pdu.far_     = draw_dist;
 	pdu.pos     -= xlate; // adjust for local translate
@@ -2149,8 +2149,9 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 {
 	float const dist_sq(p2p_dist_sq(pdu.pos, ped.pos));
 	if (dist_sq > draw_dist_sq) return 0; // too far - skip
+	float const height(ped.get_height());
 	if (is_dlight_shadows && !dist_less_than(pre_smap_player_pos, ped.pos, 0.4*def_draw_dist)) return 0; // too far from the player
-	if (is_dlight_shadows && !sphere_in_light_cone_approx(pdu, ped.pos, 0.5*ped.get_height())) return 0;
+	if (is_dlight_shadows && !sphere_in_light_cone_approx   (pdu, ped.pos, 0.5*height       )) return 0;
 
 	if (ped_model_loader.num_models() == 0 || !ped_model_loader.is_model_valid(ped.model_id)) { // no model - draw as sphere
 		if (!pdu.sphere_visible_test(ped.pos, ped.radius)) return 0; // not visible - skip
@@ -2163,12 +2164,16 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 		cube_t const bcube(ped.get_bcube());
 		// Note: the below test uses the bsphere, not the bcube directly, so it will be more accurate even if the model bcube doesn't include the animations;
 		// however, it doesn't use the model bcube itself but rather the height/radius-based person bcube, so it may result in people clipping through objects
-		if (!pdu.sphere_visible_test(bcube.get_cube_center(), 0.5*ped.get_height())) return 0; // not visible - skip
-		if (!ped.in_building && dstate.is_occluded(bcube)) return 0; // only check occlusion for expensive ped models, and for peds outside buildings
+		if (!pdu.sphere_visible_test(bcube.get_cube_center(), 0.5*height)) return 0; // not visible - skip
+		if (!ped.in_building && dstate.is_occluded(bcube))                 return 0; // only check occlusion for expensive ped models, and for peds outside buildings
 		end_sphere_draw(in_sphere_draw);
 		bool const low_detail(!shadow_only && !is_in_building && dist_sq > 0.25*draw_dist_sq); // low detail for non-shadow pass at half draw dist, if not in building
-		
-		if (anim_state) { // calculate/update animation data
+
+		if ((display_mode & 0x10) && !is_in_building && is_dlight_shadows && !dist_less_than(pre_smap_player_pos, ped.pos, 0.25*def_draw_dist)) {
+			if (anim_state) {anim_state->clear_animation_id(s);} // optimization - disable shadow animations when far from the player
+			anim_state = nullptr;
+		}
+		else if (anim_state) { // calculate/update animation data
 			// only consider the person as idle if there's an idle animation;
 			// otherwise will always use walk animation, which is assumed to exist, but anim_time won't be updated while idle
 			unsigned non_idle_anim(MODEL_ANIM_WALK);
@@ -2227,8 +2232,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 		if (!ped.in_building && !ped.is_zombie && is_rain_enabled() && !shadow_only && (ped.ssn & 3) != 0 && building_obj_model_loader.is_model_valid(OBJ_MODEL_UMBRELLA)) {
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_UMBRELLA));
 			float const ped_sz_scale(ped_model_loader.get_model(ped.model_id).scale), radius(0.5*bcube.dz()/ped_sz_scale);
-			point const center(bcube.get_cube_center() + 0.25*radius*dir_horiz);
-			cube_t u_bcube(center, center);
+			cube_t u_bcube(bcube.get_cube_center() + 0.25*radius*dir_horiz);
 			u_bcube.expand_by_xy(radius);
 			u_bcube.z1() -= 0.35*radius;
 			u_bcube.z2() += 0.85*radius;
