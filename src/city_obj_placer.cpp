@@ -1711,7 +1711,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(tramps,    tramp_groups,    dstate, 0.10, shadow_only, 1); // dist_scale=0.10, has_immediate_draw=1
 	draw_objects(umbrellas, umbrella_groups, dstate, 0.18, shadow_only, 1); // dist_scale=0.18, has_immediate_draw=1
 	draw_objects(bikes,     bike_groups,     dstate, 0.025,shadow_only, 1); // dist_scale=0.025,has_immediate_draw=1
-	draw_objects(plants,    plant_groups,    dstate, 0.05, shadow_only, 1); // dist_scale=0.05, has_immediate_draw=1
+	draw_objects(plants,    plant_groups,    dstate, 0.04, shadow_only, 1); // dist_scale=0.05, has_immediate_draw=1
 	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1); // dist_scale=0.25, has_immediate_draw=1
 	
 	if (!shadow_only) { // non shadow casting objects
