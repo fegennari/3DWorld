@@ -397,7 +397,7 @@ void divider_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 	plot_divider_type_t const &pdt(plot_divider_types[dstate.pass_ix]);
 	dstate.draw_cube(qbds.qbd, bcube, color_wrapper(pdt.color), 1, pdt.tscale/bcube.dz(), skip_dims); // skip bottom, scale texture to match the height
 
-	if (!shadow_only && type == DIV_HEDGE && bcube.closest_dist_less_than(dstate.camera_bs, 0.25f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
+	if (!shadow_only && type == DIV_HEDGE && bcube.closest_dist_less_than(dstate.camera_bs, 0.35f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
 		dstate.hedge_draw.add(bcube); // draw detailed leaves for nearby hedges
 	}
 }
@@ -414,8 +414,8 @@ void hedge_draw_t::create(cube_t const &bc) {
 	float const leaf_sz(0.05*sz.z), surf_area(sz.x*sz.y + 2.0f*sz.z*(sz.x + sz.y));
 	float const side_areas[5] = {sz.y*sz.z, sz.y*sz.z, sz.x*sz.z, sz.x*sz.z, sz.x*sz.y};
 	rand_gen_t rgen;
-	quad_batch_draw qbd;
-	qbd.verts.reserve(6*target_num_leaves);
+	vector<vert_norm_comp_tc> verts;
+	verts.reserve(4*target_num_leaves);
 
 	for (unsigned n = 0; n < 5; ++n) { // {+X, -X, +Y, -Y, +Z} sides
 		unsigned const dim(n>>1), dir(n&1), d1((dim+1)%3), d2((dim+2)%3);
@@ -430,12 +430,14 @@ void hedge_draw_t::create(cube_t const &bc) {
 			float const angle(TWO_PI*rgen.rand_float());
 			vector3d tangent;
 			rotate_vector3d(cross_product(normal, plus_x), normal, angle, tangent);
-			vector3d const binormal(cross_product(normal, tangent));
-			qbd.add_quad_dirs(pos, leaf_sz*tangent, leaf_sz*binormal, WHITE, normal);
+			vector3d const binormal(cross_product(normal, tangent)), dx(leaf_sz*tangent), dy(leaf_sz*binormal);
+			point const pts[4] = {(pos - dx - dy), (pos + dx - dy), (pos + dx + dy), (pos - dx + dy)};
+			float const ts [4] = {0.0, 1.0, 1.0, 0.0}, tt[4] = {0.0, 0.0, 1.0, 1.0};
+			for (unsigned i = 0; i < 4; ++i) {verts.emplace_back(pts[i], normal, ts[i], tt[i]);}
 		} // for n
 	} // for s
-	num_verts = qbd.verts.size();
-	create_and_upload(qbd.verts, 0, 1);
+	num_verts = verts.size();
+	create_and_upload(verts, 0, 1);
 }
 void hedge_draw_t::draw_and_clear(shader_t &s) {
 	if (empty()) return;
@@ -457,7 +459,7 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 		if (swap_dims) {fgRotate(90.0, 0.0, 0.0, 1.0);}
 		scale_by(sz_mult*sz); // scale to match the size
 		s.upload_mvm();
-		glDrawArrays(GL_TRIANGLES, 0, num_verts);
+		draw_quads_as_tris(num_verts);
 		++num_frame_draw_calls;
 		fgPopMatrix();
 	} // for c
