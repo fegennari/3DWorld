@@ -287,7 +287,8 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			c->type == TYPE_WALL_LAMP || c->type == TYPE_RCHAIR || c->type == TYPE_SILVER || c->type == TYPE_STAPLER || c->type == TYPE_WIND_SILL ||
 			c->type == TYPE_BALCONY || c->type == TYPE_TOY_MODEL || c->type == TYPE_CEIL_FAN || c->type == TYPE_PLANT_MODEL || c->type == TYPE_POOL_FLOAT ||
 			c->type == TYPE_BENCH || c->type == TYPE_DIV_BOARD || c->type == TYPE_POOL_LAD || c->type == TYPE_FLASHLIGHT || c->type == TYPE_CANDLE || c->type == TYPE_CAMERA ||
-			c->type == TYPE_CLOCK || c->type == TYPE_BAR_STOOL || c->type == TYPE_PADLOCK || c->type == TYPE_CASHREG || c->type == TYPE_WFOUNTAIN) continue;
+			c->type == TYPE_CLOCK || c->type == TYPE_BAR_STOOL || c->type == TYPE_PADLOCK || c->type == TYPE_CASHREG || c->type == TYPE_WFOUNTAIN ||
+			c->type == TYPE_BANANA || c->type == TYPE_BAN_PEEL) continue;
 		bool const is_stairs(c->type == TYPE_STAIR || c->type == TYPE_STAIR_WALL);
 		if (c->z1() > (is_stairs ? stairs_z2 : z2) || c->z2() < (is_stairs ? stairs_z1 : z1)) continue;
 		if (!c->intersects_xy(ext_bcube)) continue;

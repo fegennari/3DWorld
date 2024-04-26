@@ -210,6 +210,8 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_PADLOCK   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 10.0,  0.2,   "padlock");
 	bldg_obj_types[TYPE_CASHREG   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 1000,  200,   "cash register");
 	bldg_obj_types[TYPE_WFOUNTAIN ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 200,   80,    "water fountain");
+	bldg_obj_types[TYPE_BANANA    ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 0.25,  0.3,   "banana");
+	bldg_obj_types[TYPE_BAN_PEEL  ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 0.0,   0.05,  "banana peel");
 	// animals; not room objects
 	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 8.99,  1.0,   "rat"); // can be picked up
 	bldg_obj_types[TYPE_ROACH     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 0.0,   0.01,  "cockroach");

@@ -1920,7 +1920,7 @@ bool room_object_t::is_spider_collidable() const { // include objects on the flo
 			type != TYPE_FISHTANK) return 0;
 	}
 	if (type == TYPE_CEIL_FAN || type == TYPE_OFF_CHAIR || type == TYPE_POOL_LAD || type == TYPE_BAR_STOOL ||
-		type == TYPE_LAVALAMP || type == TYPE_CASHREG || type == TYPE_WFOUNTAIN) return 0; // not a cube
+		type == TYPE_LAVALAMP || type == TYPE_CASHREG || type == TYPE_WFOUNTAIN || type == TYPE_BANANA || type == TYPE_BAN_PEEL) return 0; // not a cube
 	if (type == TYPE_BOOK) return 0; // I guess books don't count, since they're too small to walk on?
 	return 1;
 }
