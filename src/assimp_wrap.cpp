@@ -33,9 +33,23 @@ glm::quat interpolate(glm::quat const &A, glm::quat const &B, float t) {return g
 template<typename T> T calc_interpolated_val(float time, vector<model_anim_t::anim_val_t<T>> const &vals) {
 	unsigned const size(vals.size());
 	assert(size > 0);
-	if (size == 1)           return vals[0].v; // single value, no interpolation
-	if (time < vals[0].time) return vals[0].v; // animation doesn't start at time 0? return first frame
+	if (size == 1)                 return vals.front().v; // single value, no interpolation
+	if (time <= vals.front().time) return vals.front().v; // animation doesn't start at time 0? return first frame
+	if (time >= vals.back ().time) return vals.back ().v;
+	// assume frames are evenly spaced and attempt to calculat the correct position
+	float const tot_time(vals.back().time - vals.front().time);
+	assert(tot_time > 0.0);
+	unsigned const ix((size - 1)*(time/tot_time));
 
+	if (ix+1 < size) {
+		auto const &cur(vals[ix]), &next(vals[ix+1]);
+			
+		if (time >= cur.time && time <= next.time) {
+			float const t((time - cur.time) / (next.time - cur.time));
+			assert(t >= 0.0f && t <= 1.0f);
+			return interpolate(cur.v, next.v, t);
+		}
+	}
 	for (unsigned i = 0; i+1 < size; ++i) {
 		auto const &cur(vals[i]), &next(vals[i+1]);
 		if (time >= next.time) continue; // not yet
@@ -67,7 +81,7 @@ void model_anim_t::transform_node_hierarchy_recur(float anim_time, animation_t c
 	}
 	for (unsigned i : node.children) {transform_node_hierarchy_recur(anim_time, animation, i, global_transform);}
 }
-void model_anim_t::get_bone_transforms(unsigned anim_id, float cur_time) {
+void model_anim_t::get_bone_transforms(unsigned anim_id, float cur_time) { // 0.012ms
 	assert(!animations.empty());
 	static bool had_anim_id_error(0);
 
