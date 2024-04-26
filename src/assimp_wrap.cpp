@@ -27,58 +27,32 @@ unsigned model_anim_t::get_bone_id(string const &bone_name) {
 	bone_name_to_index_map[bone_name] = bone_id;
 	return bone_id;
 }
-vector3d model_anim_t::calc_interpolated_position(float anim_time, anim_data_t const &A) const {
-	assert(!A.pos.empty());
-	if (A.pos.size() == 1)         return A.pos[0].v; // single value, no interpolation
-	if (anim_time < A.pos[0].time) return A.pos[0].v; // animation doesn't start at time 0? return first frame
+vector3d  interpolate(vector3d  const &A, vector3d  const &B, float t) {return A + t*(B - A);}
+glm::quat interpolate(glm::quat const &A, glm::quat const &B, float t) {return glm::normalize(glm::slerp(A, B, t));}
 
-	for (unsigned i = 0; i+1 < A.pos.size(); ++i) {
-		anim_vec3_val_t const &cur(A.pos[i]), &next(A.pos[i+1]);
-		if (anim_time >= next.time) continue; // not yet
-		assert(cur.time < next.time);
-		float const t((anim_time - cur.time) / (next.time - cur.time));
-		assert(t >= 0.0f && t <= 1.0f);
-		return cur.v + t*(next.v - cur.v);
-	} // for i
-	return A.pos.back().v; // return last frame if we ran off the end (duration was wrong)
-}
-glm::quat model_anim_t::calc_interpolated_rotation(float anim_time, anim_data_t const &A) const {
-	assert(!A.rot.empty());
-	if (A.rot.size() == 1)         return A.rot[0].q; // single value, no interpolation
-	if (anim_time < A.rot[0].time) return A.rot[0].q; // animation doesn't start at time 0? return first frame
+template<typename T> T calc_interpolated_val(float time, vector<model_anim_t::anim_val_t<T>> const &vals) {
+	unsigned const size(vals.size());
+	assert(size > 0);
+	if (size == 1)           return vals[0].v; // single value, no interpolation
+	if (time < vals[0].time) return vals[0].v; // animation doesn't start at time 0? return first frame
 
-	for (unsigned i = 0; i+1 < A.rot.size(); ++i) {
-		anim_quat_val_t const &cur(A.rot[i]), &next(A.rot[i+1]);
-		if (anim_time >= next.time) continue; // not yet
+	for (unsigned i = 0; i+1 < size; ++i) {
+		auto const &cur(vals[i]), &next(vals[i+1]);
+		if (time >= next.time) continue; // not yet
 		assert(cur.time < next.time);
-		float const t((anim_time - cur.time) / (next.time - cur.time));
+		float const t((time - cur.time) / (next.time - cur.time));
 		assert(t >= 0.0f && t <= 1.0f);
-		return glm::normalize(glm::slerp(cur.q, next.q, t));
+		return interpolate(cur.v, next.v, t);
 	} // for i
-	return A.rot.back().q; // return last frame if we ran off the end (duration was wrong)
-}
-vector3d model_anim_t::calc_interpolated_scale(float anim_time, anim_data_t const &A) const {
-	assert(!A.scale.empty());
-	if (A.scale.size() == 1)         return A.scale[0].v; // single value, no interpolation
-	if (anim_time < A.scale[0].time) return A.scale[0].v; // animation doesn't start at time 0? return first frame
-
-	for (unsigned i = 0; i+1 < A.scale.size(); ++i) {
-		anim_vec3_val_t const &cur(A.scale[i]), &next(A.scale[i+1]);
-		if (anim_time >= next.time) continue; // not yet
-		assert(cur.time < next.time);
-		float const t((anim_time - cur.time) / (next.time - cur.time));
-		assert(t >= 0.0f && t <= 1.0f);
-		return cur.v + t*(next.v - cur.v);
-	} // for i
-	return A.scale.back().v; // return last frame if we ran off the end (duration was wrong)
+	return vals.back().v; // return last frame if we ran off the end (duration was wrong)
 }
 xform_matrix model_anim_t::apply_anim_transform(float anim_time, animation_t const &animation, anim_node_t const &node) const {
 	auto it(animation.anim_data.find(node.name)); // found about half the time
 	if (it == animation.anim_data.end()) {return node.transform;} // defaults to node transform
 	anim_data_t const &A(it->second);
-	xform_matrix node_transform(glm::translate(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_position(anim_time, A))));
-	node_transform *= glm::toMat4(calc_interpolated_rotation(anim_time, A));
-	if (A.uses_scale) {node_transform *= glm::scale(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_scale(anim_time, A)));} // only scale when needed (rarely)
+	xform_matrix node_transform(glm::translate(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_val(anim_time, A.pos))));
+	node_transform *= glm::toMat4(calc_interpolated_val(anim_time, A.rot));
+	if (A.uses_scale) {node_transform *= glm::scale(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_val(anim_time, A.scale)));} // only scale when needed (rarely)
 	return node_transform;
 }
 void model_anim_t::transform_node_hierarchy_recur(float anim_time, animation_t const &animation, unsigned node_ix, xform_matrix const &parent_transform) {

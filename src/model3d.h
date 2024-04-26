@@ -227,22 +227,15 @@ struct model_anim_t {
 	};
 	vector<anim_node_t> anim_nodes;
 
-	struct anim_base_val_t {
+	template<typename T> struct anim_val_t : public T {
 		float time;
-		anim_base_val_t(float time_=0.0) : time(time_) {}
-	};
-	struct anim_vec3_val_t : public anim_base_val_t {
-		vector3d v;
-		anim_vec3_val_t(float time_, vector3d const &v_) : anim_base_val_t(time_), v(v_) {}
-	};
-	struct anim_quat_val_t : public anim_base_val_t {
-		glm::quat q;
-		anim_quat_val_t(float time_, glm::quat const &q_) : anim_base_val_t(time_), q(q_) {}
+		T v;
+		anim_val_t(float time_, T const &v_) : time(time_), v(v_) {}
 	};
 	struct anim_data_t {
 		bool uses_scale=0;
-		vector<anim_vec3_val_t> pos, scale;
-		vector<anim_quat_val_t> rot;
+		vector<anim_val_t<vector3d>> pos, scale;
+		vector<anim_val_t<glm::quat>> rot;
 		void init(unsigned np, unsigned nr, unsigned ns);
 	};
 	struct animation_t {
