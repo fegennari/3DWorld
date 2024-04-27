@@ -53,8 +53,8 @@ bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room
 }
 
 float get_radius_for_square_model(unsigned model_id) {
-	vector3d const chair_sz(building_obj_model_loader.get_model_world_space_size(model_id));
-	return 0.5f*0.5f*(chair_sz.x + chair_sz.y)/chair_sz.z; // assume square and take average of xsize and ysize
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id));
+	return 0.5f*0.5f*(sz.x + sz.y)/sz.z; // assume square and take average of xsize and ysize
 }
 cube_t place_cylin_object(rand_gen_t rgen, cube_t const &place_on, float radius, float height, float dist_from_edge) {
 	cube_t c;
@@ -3149,6 +3149,21 @@ bool building_t::place_toy_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsi
 	return 1;
 }
 
+bool building_t::place_banana_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid) {
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_BANANA)) return 0;
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_BANANA));
+	float const length(0.083*get_window_vspace()), width(length*sz.y/sz.x), height(length*sz.z/sz.x);
+	if (min(place_on.dx(), place_on.dy()) < 1.1*length) return 0; // surface is too small to place this banana
+	point bsz(0.5*length, 0.5*width, height);
+	bool const dim(rgen.rand_bool());
+	if (dim) {swap(bsz.x, bsz.y);}
+	cube_t bbc;
+	gen_xy_pos_for_cube_obj(bbc, place_on, bsz, height, rgen);
+	if (has_bcube_int(bbc, avoid)) return 0; // only make one attempt
+	interior->room_geom->objs.emplace_back(bbc, TYPE_BANANA, room_id, dim, rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt);
+	return 1;
+}
+
 bool building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	if (!room_object_t::enable_rugs()) return 0; // disabled
 	vector3d const room_sz(room.get_size());
@@ -3799,6 +3814,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 	float const place_plant_prob (is_house ? 1.0 :      (room.is_office ? 0.25 : 0.15)*(sparse_place ? 0.75 : 1.0));
 	float const place_laptop_prob(is_house ? 0.4 :      (room.is_office ? 0.60 : 0.50)*(sparse_place ? 0.80 : 1.0));
 	float const place_pizza_prob (is_house ? 1.0 :      (room.is_office ? 0.30 : 0.15)*(sparse_place ? 0.75 : 1.0));
+	float const place_banana_prob(is_house ? 1.0 :      (room.is_office ? 0.40 : 0.20)*(sparse_place ? 0.50 : 1.0));
 	unsigned const objs_end(objs.size());
 	bool placed_book_on_counter(0);
 
@@ -3809,7 +3825,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 		bool const is_table(obj.type == TYPE_TABLE);
 		bool const is_eating_table(is_table && (room.get_room_type(floor) == RTYPE_KITCHEN || room.get_room_type(floor) == RTYPE_DINING) && rgen.rand_bool());
 		if (is_eating_table && place_eating_items_on_table(rgen, i)) continue; // no other items to place
-		float book_prob(0.0), bottle_prob(0.0), cup_prob(0.0), plant_prob(0.0), laptop_prob(0.0), pizza_prob(0.0), toy_prob(0.0);
+		float book_prob(0.0), bottle_prob(0.0), cup_prob(0.0), plant_prob(0.0), laptop_prob(0.0), pizza_prob(0.0), toy_prob(0.0), banana_prob(0.0);
 		static vect_cube_t avoid; // reuse across buildings
 		avoid.clear();
 
@@ -3820,6 +3836,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			plant_prob  = 0.6*place_plant_prob;
 			laptop_prob = 0.3*place_laptop_prob;
 			pizza_prob  = 0.8*place_pizza_prob;
+			banana_prob = 0.7*place_banana_prob;
 			if (is_house) {toy_prob = 0.5;} // toys are in houses only
 		}
 		else if (obj.type == TYPE_DESK && !(obj.flags & RO_FLAG_ADJ_TOP)) { // desk with no computer monitor
@@ -3829,6 +3846,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			plant_prob  = 0.3*place_plant_prob;
 			laptop_prob = 0.7*place_laptop_prob;
 			pizza_prob  = 0.4*place_pizza_prob;
+			banana_prob = 0.2*place_banana_prob;
 		}
 		else if (obj.type == TYPE_COUNTER && !(obj.flags & RO_FLAG_ADJ_TOP)) { // counter without a microwave
 			book_prob   = (placed_book_on_counter ? 0.0 : 0.5); // only place one book per counter
@@ -3837,6 +3855,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			plant_prob  = 0.10*place_plant_prob;
 			laptop_prob = 0.05*place_laptop_prob;
 			pizza_prob  = 0.50*place_pizza_prob;
+			banana_prob = 0.90*place_banana_prob;
 		}
 		else if ((obj.type == TYPE_DRESSER || obj.type == TYPE_NIGHTSTAND) && !(obj.flags & RO_FLAG_ADJ_TOP)) { // dresser or nightstand with nothing on it yet; no pizza
 			book_prob   = 0.25*place_book_prob;
@@ -3871,7 +3890,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 				if (obj2.type == TYPE_PEN || obj2.type == TYPE_PENCIL) {avoid.push_back(obj2);}
 			}
 		}
-		unsigned const num_obj_types = 6;
+		unsigned const num_obj_types = 7;
 		unsigned const obj_type_start(rgen.rand() % num_obj_types); // select a random starting point to remove bias toward objects checked first
 		bool placed(0);
 
@@ -3881,8 +3900,9 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			case 1: placed = (rgen.rand_probability(cup_prob   ) && place_cup_on_obj   (rgen, surface, room_id, tot_light_amt, avoid)); break;
 			case 2: placed = (rgen.rand_probability(laptop_prob) && place_laptop_on_obj(rgen, surface, room_id, tot_light_amt, avoid, !is_table)); break;
 			case 3: placed = (rgen.rand_probability(pizza_prob ) && place_pizza_on_obj (rgen, surface, room_id, tot_light_amt, avoid)); break;
-			case 4: placed = (!is_basement && rgen.rand_probability(plant_prob) && place_plant_on_obj(rgen, surface, room_id, tot_light_amt, 0.7, avoid)); break; // sz_scale=0.7
-			case 5: placed = (rgen.rand_probability(toy_prob)    && place_toy_on_obj   (rgen, surface, room_id, tot_light_amt, avoid)); break;
+			case 4: placed = (rgen.rand_probability(banana_prob) && place_banana_on_obj(rgen, surface, room_id, tot_light_amt, avoid)); break;
+			case 5: placed = (!is_basement && rgen.rand_probability(plant_prob) && place_plant_on_obj(rgen, surface, room_id, tot_light_amt, 0.7, avoid)); break; // sz_scale=0.7
+			case 6: placed = (rgen.rand_probability(toy_prob)    && place_toy_on_obj   (rgen, surface, room_id, tot_light_amt, avoid)); break;
 			}
 		} // for n
 	} // for i
