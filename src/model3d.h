@@ -220,6 +220,7 @@ struct model_anim_t {
 
 	struct anim_node_t {
 		int bone_index; // cached to avoid bone_name_to_index_map lookup; -1 is no bone
+		mutable bool no_anim_data=0;
 		string name;
 		xform_matrix transform;
 		vector<unsigned> children; // indexes into anim_nodes

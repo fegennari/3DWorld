@@ -61,8 +61,9 @@ template<typename T> T calc_interpolated_val(float time, vector<model_anim_t::an
 	return vals.back().v; // return last frame if we ran off the end (duration was wrong)
 }
 xform_matrix model_anim_t::apply_anim_transform(float anim_time, animation_t const &animation, anim_node_t const &node) const {
+	if (node.no_anim_data) return node.transform; // no animation data; flag is not per-animation, but should still agree across animations
 	auto it(animation.anim_data.find(node.name)); // found about half the time
-	if (it == animation.anim_data.end()) {return node.transform;} // defaults to node transform
+	if (it == animation.anim_data.end()) {node.no_anim_data = 1; return node.transform;} // defaults to node transform
 	anim_data_t const &A(it->second);
 	xform_matrix node_transform(glm::translate(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_val(anim_time, A.pos))));
 	node_transform *= glm::toMat4(calc_interpolated_val(anim_time, A.rot));
