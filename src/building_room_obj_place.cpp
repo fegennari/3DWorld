@@ -787,14 +787,13 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 			valid_area.expand_by_xy(-0.25*window_vspacing); // not too close to a wall to avoid bookcases, dressers, and nightstands
 			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random orientation
 			vector3d size(0.5*length, 0.5*width, height);
-			if (dim) {std::swap(size.x, size.y);}
+			if (dim) {swap(size.x, size.y);}
 
 			if (valid_area.dx() > 2.0*size.x && valid_area.dy() > 2.0*size.y) { // should always be true
 				for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to place the object
-					point const pos(gen_xy_pos_in_area(valid_area, size, rgen, zval));
-					cube_t c(pos);
+					cube_t c(gen_xy_pos_in_area(valid_area, size, rgen, zval));
 					c.expand_by_xy(size);
-					c.z2() += size.z;
+					c.z2() += height;
 					if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
 					colorRGBA const &color((type == TYPE_TEESHIRT) ? TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS] : WHITE); // T-shirts are colored, jeans are always white
 					objs.emplace_back(c, type, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, color);
@@ -1742,6 +1741,26 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 			}
 			is_sink = 0; // sink is in first placed counter only
 		} // for n
+	}
+	if (placed_obj && building_obj_model_loader.is_model_valid(OBJ_MODEL_BAN_PEEL) && rgen.rand_bool()) { // maybe place a banana peel on the floor
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_BAN_PEEL));
+		float const floor_spacing(get_window_vspace()), length(0.07*floor_spacing), width(length*sz.y/sz.x), height(length*sz.z/sz.x);
+		cube_t valid_area(place_area);
+		valid_area.expand_by_xy(-0.25*floor_spacing); // not too close to a wall
+		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random orientation
+		vector3d size(0.5*length, 0.5*width, height);
+		if (dim) {swap(size.x, size.y);}
+
+		if (valid_area.dx() > 2.0*size.x && valid_area.dy() > 2.0*size.y) { // should always be true
+			for (unsigned n = 0; n < 4; ++n) { // make 4 attempts to place the object
+				cube_t c(gen_xy_pos_in_area(valid_area, size, rgen, zval));
+				c.expand_by_xy(size);
+				c.z2() += height;
+				if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
+				objs.emplace_back(c, TYPE_BAN_PEEL, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt);
+				break; // done
+			} // for n
+		}
 	}
 	return placed_obj;
 }
