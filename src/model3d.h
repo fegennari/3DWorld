@@ -589,6 +589,7 @@ public:
 	// creation and query
 	bool empty              () const {return (materials.empty() && unbound_geom.empty());}
 	bool are_textures_loaded() const {return textures_loaded;}
+	string const &get_filename() const {return filename;}
 	void set_has_cobjs() {has_cobjs = 1;}
 	void add_transform(model3d_xform_t const &xf) {transforms.push_back(xf);}
 	unsigned add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id=-1, unsigned obj_id=0);
