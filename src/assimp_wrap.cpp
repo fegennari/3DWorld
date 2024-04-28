@@ -222,7 +222,7 @@ void print_assimp_matrix(aiMatrix4x4 const &m) {aiMatrix4x4_to_xform_matrix(m).p
 class file_reader_assimp {
 	model3d &model;
 	geom_xform_t cur_xf;
-	string model_dir, anim_name;
+	string model_fn, model_dir, anim_name;
 	bool load_animations=0, had_vertex_error=0, had_comp_tex_error=0;
 	unsigned temp_image_ix=0;
 
@@ -247,6 +247,8 @@ class file_reader_assimp {
 				cerr << "Error: Failed to load embedded texture with stb_image" << endl;
 				exit(1); // fatal
 			}
+			//if (model.get_filename() == "../models/interiors/banana_peel.glb" && !t.normal_map) {t.write_to_jpg("embedded_image.jpg");} // TESTING
+			//cout << TXT(model.get_filename()) << TXT(t.name) << TXT(t.width) << TXT(t.height) << endl; // TESTING
 			t.fix_word_alignment(); // untested
 			t.init(); // calls calc_color()
 		} // for i
@@ -258,13 +260,14 @@ class file_reader_assimp {
 		// load only the first texture, as that's all we support
 		aiString fn; // absolute path, not relative to the model file
 		if (mat->GetTexture(type, 0, &fn) != AI_SUCCESS) return -1;
-		char const *const filename(fn.C_Str());
-		aiTexture const *const texture(scene->GetEmbeddedTexture(filename));
-		string full_path(model_dir + filename);
+		char const *const texture_fn(fn.C_Str());
+		aiTexture const *const texture(scene->GetEmbeddedTexture(texture_fn));
+		// embedded texture texture_fn is generally something like "*0", so include the full model filename to make it globally unique
+		string full_path((texture ? model_fn : model_dir) + texture_fn);
 		bool is_temp_image(0);
 
 		// hack: if this is a PSD (Photoshop) file, we don't support reading it, but we can see if the actual file is a JPG (which happens for one model)
-		if (endswith(full_path, ".psd")) {
+		if (!texture && endswith(full_path, ".psd")) {
 			string mod_path(full_path);
 			unsigned const sz(full_path.size());
 			mod_path[sz-3] = 'j';
@@ -279,10 +282,10 @@ class file_reader_assimp {
 				if (check_texture_file_exists(mod_path)) {full_path = mod_path;} // png
 			}
 		}
-		if (texture) {
+		if (texture) { // embedded texture
 			assert(texture->pcData);
 			// try to read from memory
-			// is_alpha_mask=0, verbose=0, invert_alpha=0, wrap=1, mirror=0, force_grayscale=0
+			// is_alpha_mask=0, verbose=0, invert_alpha=0, wrap=1, mirror=0, force_grayscale=0, invert_y=1
 			unsigned const tid(model.tmgr.create_texture(full_path, 0, 0, 0, 1, 0, 0, is_normal_map, 1));
 			texture_t &t(model.tmgr.get_texture(tid));
 			//cout << TXT(width) << TXT(height) << TXT(tid) << TXT(t.is_allocated()) << endl;
@@ -313,13 +316,15 @@ class file_reader_assimp {
 			}
 			model.tmgr.remove_last_texture(); // not using this texture
 			// write as a temporary image file that we can read back in; reuse filename across images
-			full_path = "temp_assimp_embedded_image." + get_file_extension(filename);
+			full_path = "temp_assimp_embedded_image";
+			string const ext(get_file_extension(texture_fn));
+			if (!ext.empty()) {full_path += "." + ext;} // add externsion if present
 			ofstream out(full_path, ios::binary);
 			out.write((const char *)texture->pcData, texture->mWidth);
 			is_temp_image = 1;
 		}
 		else if (!check_texture_file_exists(full_path)) {
-			string const fn(filename);
+			string const &fn(texture_fn);
 			string local_path;
 			bool found(0), try_local(0);
 			if (fn.size() > 3 && (fn[0] >= 'A' && fn[0] <= 'Z') && fn[1] == ':' && (fn[2] == '\\' || fn[2] == '/')) {try_local = 1;} // Windows path?
@@ -538,7 +543,8 @@ public:
 		model(model_), anim_name(anim_name_), load_animations(load_animations_) {}
 
 	bool read(string const &fn, geom_xform_t const &xf, bool recalc_normals, bool verbose) {
-		cur_xf = xf;
+		cur_xf   = xf;
+		model_fn = fn; // needed for embedded texture filename uniquing
 		Assimp::Importer importer;
 		importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false); // required for correct FBX model import
 		// aiProcess_OptimizeMeshes
