@@ -1757,7 +1757,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 				c.expand_by_xy(size);
 				c.z2() += height;
 				if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
-				objs.emplace_back(c, TYPE_BAN_PEEL, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt);
+				objs.emplace_back(c, TYPE_BAN_PEEL, room_id, dim, dir, RO_FLAG_RAND_ROT, tot_light_amt);
 				break; // done
 			} // for n
 		}

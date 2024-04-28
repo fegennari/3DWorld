@@ -921,6 +921,12 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 					continue;
 				}
 			}
+			if (c->type == TYPE_BAN_PEEL) {
+				c_extended.z2() += radius; // increase height
+				if (!sphere_cube_intersect(pos, xy_radius, c_extended)) continue;
+				apply_speed_factor(pos, p_last, 2.0); // player slips; doesn't have much of an effect
+				continue;
+			}
 			if (!sphere_cube_intersect(pos, xy_radius, c_extended)) continue; // optimization
 
 			if (c->type == TYPE_RAILING && !(c->flags & RO_FLAG_IN_POOL)) { // stairs railing, not on a pool
