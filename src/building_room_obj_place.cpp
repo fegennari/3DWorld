@@ -1744,7 +1744,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 	}
 	if (placed_obj && building_obj_model_loader.is_model_valid(OBJ_MODEL_BAN_PEEL) && rgen.rand_bool()) { // maybe place a banana peel on the floor
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_BAN_PEEL));
-		float const floor_spacing(get_window_vspace()), length(0.07*floor_spacing), width(length*sz.y/sz.x), height(length*sz.z/sz.x);
+		float const floor_spacing(get_window_vspace()), length(0.083*floor_spacing), width(length*sz.y/sz.x), height(length*sz.z/sz.x);
 		cube_t valid_area(place_area);
 		valid_area.expand_by_xy(-0.25*floor_spacing); // not too close to a wall
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random orientation
@@ -1757,7 +1757,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 				c.expand_by_xy(size);
 				c.z2() += height;
 				if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
-				objs.emplace_back(c, TYPE_BAN_PEEL, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt);
+				objs.emplace_back(c, TYPE_BAN_PEEL, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt);
 				break; // done
 			} // for n
 		}
