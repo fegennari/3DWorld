@@ -170,8 +170,11 @@ void bench_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scal
 	vector3d const scale(bcube.dx()/bc.dx(), bcube.dy()/bc.dy(), bcube.dz()/bc.dz()); // scale to fit to target cube
 	color_wrapper const cw(WHITE);
 	unsigned const num(shadow_only ? 6U : max(1U, min(6U, unsigned(0.2/dist_val)))); // simple distance-based LOD, in pairs
-	for (unsigned i = 1; i < 2*num; ++i) {dstate.draw_cube(qbds.qbd, ((cubes[i] - c2)*scale + c1), cw, 1);} // skip back
-	point pts[4] = {point(-1.0, -5.0, 5.0), point(-1.0, 5.0, 5.0), point(0.2, 5.0, 1.6), point(0.2, -5.0, 1.6)}; // Note: back not drawn
+	float const tscale(1.0/radius);
+	bool const swap_tc_xy(dim);
+	for (unsigned i = 1; i < 2*num; ++i) {dstate.draw_cube(qbds.qbd, ((cubes[i] - c2)*scale + c1), cw, 1, tscale, 0, 0, 0, swap_tc_xy);} // skip back
+	// now draw the sloped back
+	point pts[4] = {point(-1.0, -5.0, 5.0), point(-1.0, 5.0, 5.0), point(0.2, 5.0, 1.6), point(0.2, -5.0, 1.6)};
 	point f[4], b[4];
 
 	for (unsigned i = 0; i < 4; ++i) {
