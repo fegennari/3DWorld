@@ -228,15 +228,22 @@ struct model_anim_t {
 	};
 	vector<anim_node_t> anim_nodes;
 
-	template<typename T> struct anim_val_t : public T {
-		float time;
+	template<typename T> struct anim_val_t {
+		float time=0.0;
 		T v;
+		anim_val_t() {} // for merged resize()
 		anim_val_t(float time_, T const &v_) : time(time_), v(v_) {}
+	};
+	struct merged_anim_data_t {
+		vector3d pos, scale;
+		glm::quat q;
+		void set(vector3d const &pos_, vector3d const &scale_, glm::quat const &q_) {pos = pos_; scale = scale_; q = q_;}
 	};
 	struct anim_data_t {
 		bool uses_scale=0;
 		vector<anim_val_t<vector3d>> pos, scale;
 		vector<anim_val_t<glm::quat>> rot;
+		vector<anim_val_t<merged_anim_data_t>> merged;
 		void init(unsigned np, unsigned nr, unsigned ns);
 	};
 	struct animation_t {
@@ -262,6 +269,7 @@ public:
 	void blend_animations(unsigned anim_id1, unsigned anim_id2, float blend_factor, float delta_time, float &cur_time1, float &cur_time2);
 	void get_blended_bone_transforms(float anim_time1, float anim_time2, animation_t const &animation1, animation_t const &animation2,
 		unsigned node_ix, xform_matrix const &parent_transform, float blend_factor);
+	void merge_anim_transforms();
 	void merge_from(model_anim_t const &anim);
 	int get_animation_id_by_name(string const &anim_name) const;
 };

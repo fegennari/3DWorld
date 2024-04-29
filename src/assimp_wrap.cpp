@@ -5,7 +5,9 @@
 
 #include "3DWorld.h"
 #include "model3d.h"
+#include "profiler.h"
 
+extern int display_mode;
 extern string assimp_alpha_exclude_str;
 
 string get_base_filename(string const &filename);
@@ -30,13 +32,18 @@ unsigned model_anim_t::get_bone_id(string const &bone_name) {
 vector3d  interpolate(vector3d  const &A, vector3d  const &B, float t) {return A + t*(B - A);}
 glm::quat interpolate(glm::quat const &A, glm::quat const &B, float t) {return glm::normalize(glm::slerp(A, B, t));}
 
+model_anim_t::merged_anim_data_t interpolate(model_anim_t::merged_anim_data_t const &A, model_anim_t::merged_anim_data_t const &B, float t) {
+	model_anim_t::merged_anim_data_t ret;
+	ret.set(interpolate(A.pos, B.pos, t), interpolate(A.scale, B.scale, t), interpolate(A.q, B.q, t));
+	return ret;
+}
 template<typename T> T calc_interpolated_val(float time, vector<model_anim_t::anim_val_t<T>> const &vals) {
 	unsigned const size(vals.size());
 	assert(size > 0);
 	if (size == 1)                 return vals.front().v; // single value, no interpolation
 	if (time <= vals.front().time) return vals.front().v; // animation doesn't start at time 0? return first frame
 	if (time >= vals.back ().time) return vals.back ().v;
-	// assume frames are evenly spaced and attempt to calculat the correct position
+	// assume frames are evenly spaced and attempt to calculate the correct position
 	float const tot_time(vals.back().time - vals.front().time);
 	assert(tot_time > 0.0);
 	unsigned const ix((size - 1)*(time/tot_time));
@@ -65,9 +72,20 @@ xform_matrix model_anim_t::apply_anim_transform(float anim_time, animation_t con
 	auto it(animation.anim_data.find(node.name)); // found about half the time
 	if (it == animation.anim_data.end()) {node.no_anim_data = 1; return node.transform;} // defaults to node transform
 	anim_data_t const &A(it->second);
-	xform_matrix node_transform(glm::translate(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_val(anim_time, A.pos))));
-	node_transform *= glm::toMat4(calc_interpolated_val(anim_time, A.rot));
-	if (A.uses_scale) {node_transform *= glm::scale(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_val(anim_time, A.scale)));} // only scale when needed (rarely)
+	xform_matrix node_transform; // identity
+
+	if (!A.merged.empty()) { // use merged
+		merged_anim_data_t const ret(calc_interpolated_val(anim_time, A.merged));
+		UNROLL_3X(node_transform[3][i_] = ret.pos[i_];);
+		node_transform *= glm::toMat4(ret.q);
+		if (A.uses_scale) {node_transform *= glm::scale(glm::mat4(1.0), vec3_from_vector3d(ret.scale));} // only scale when needed (rarely)
+	}
+	else { // use separate
+		vector3d const translate(calc_interpolated_val(anim_time, A.pos));
+		UNROLL_3X(node_transform[3][i_] = translate[i_];);
+		node_transform *= glm::toMat4(calc_interpolated_val(anim_time, A.rot));
+		if (A.uses_scale) {node_transform *= glm::scale(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_val(anim_time, A.scale)));} // only scale when needed (rarely)
+	}
 	return node_transform;
 }
 void model_anim_t::transform_node_hierarchy_recur(float anim_time, animation_t const &animation, unsigned node_ix, xform_matrix const &parent_transform) {
@@ -82,7 +100,8 @@ void model_anim_t::transform_node_hierarchy_recur(float anim_time, animation_t c
 	}
 	for (unsigned i : node.children) {transform_node_hierarchy_recur(anim_time, animation, i, global_transform);}
 }
-void model_anim_t::get_bone_transforms(unsigned anim_id, float cur_time) { // 0.012ms
+void model_anim_t::get_bone_transforms(unsigned anim_id, float cur_time) {
+	//highres_timer_t timer("get_bone_transforms");  // 0.011ms
 	assert(!animations.empty());
 	static bool had_anim_id_error(0);
 
@@ -151,6 +170,28 @@ void model_anim_t::get_blended_bone_transforms(float anim_time1, float anim_time
 		bone_transforms[node.bone_index] = global_inverse_transform * global_transform * bone_offset_matrices[node.bone_index];
 	}
 	for (unsigned i : node.children) {get_blended_bone_transforms(anim_time1, anim_time2, animation1, animation2, i, global_transform, blend_factor);}
+}
+
+void model_anim_t::merge_anim_transforms() {
+	for (animation_t &A : animations) {
+		for (auto &kv : A.anim_data) {
+			anim_data_t &ad(kv.second);
+			unsigned const sz(ad.pos.size());
+			if (ad.rot.size() != sz || ad.scale.size() != sz) continue; // sizes differ
+			bool differ(0);
+
+			for (unsigned i = 0; i < sz; ++i) {
+				if (ad.pos[i].time != ad.rot[i].time || ad.pos[i].time != ad.scale[i].time) {differ = 1; break;}
+			}
+			if (differ) continue;
+			ad.merged.resize(sz);
+
+			for (unsigned i = 0; i < sz; ++i) {
+				ad.merged[i].time = ad.pos[i].time;
+				ad.merged[i].v.set(ad.pos[i].v, ad.scale[i].v, ad.rot[i].v);
+			}
+		} // for kv
+	} // for A
 }
 
 void model_anim_t::merge_from(model_anim_t const &anim) {
@@ -404,6 +445,7 @@ class file_reader_assimp {
 			model_anim.animations[a].duration = anim->mDuration;
 		} // for a
 		extract_animation_data_recur(scene, scene->mRootNode, model_anim);
+		model_anim.merge_anim_transforms();
 	}
 
 	// Note: unclear if this is actually needed; it seems to do nothing for the models I've tested this on unless bones with no weights are skipped in parse_single_bone()
@@ -448,7 +490,7 @@ class file_reader_assimp {
 		for (unsigned i = 0; i < mesh->mNumVertices; i++) { // process vertices
 			vert_norm_tc &v(verts[i]);
 			assert(mesh->mVertices != nullptr); // vertices are required
-			assert(mesh->mNormals  != nullptr); // we specified normal creation, so these shouldbe non-null
+			assert(mesh->mNormals  != nullptr); // we specified normal creation, so these should be non-null
 			v.v = aiVector3D_to_vector3d(mesh->mVertices[i]); // position
 			v.n = aiVector3D_to_vector3d(mesh->mNormals [i]); // normals
 
