@@ -195,11 +195,13 @@ public:
 	point get_top() const {return point(base.x, base.y, bcube.z2());}
 	void get_wires_conn_pts(point pts[3], bool d) const;
 	void get_top_wires_conn_pts(point pts[3]) const {get_wires_conn_pts(pts, ((dims&1) ? 0 : 1));} // use X if enabled, otherwise Y
+	float get_pole_radius() const {return pole_radius;}
 	float get_bsphere_radius(bool shadow_only) const {return (shadow_only ? radius : bsphere_radius);} // non-shadow pass includes wires bsphere radius
 	cube_t const &get_outer_bcube() const {return bcube_with_wires;}
 	cube_t get_bird_bcube  () const {return get_ped_occluder();} // centered on the pole; same as pedestrians
 	cube_t get_ped_occluder() const;
 	point get_nearest_connection_point(point const &to_pos, bool near_power_pole) const;
+	void get_top_wire_end_pts(point top_wires[2][3][2]) const;
 	point get_transformer_center() const;
 	bool add_wire(point const &p1, point const &p2, bool add_pole);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
@@ -490,6 +492,7 @@ private:
 		vect_cube_t const &pool_blockers, unsigned driveways_start, unsigned city_ix, rand_gen_t &rgen);
 	bool place_swimming_pool(road_plot_t const &plot, city_zone_t const &yard, cube_t const &house, bool dim, bool dir, bool shrink_dim, unsigned prev_blockers_end,
 		float divider_hwidth, float const translate_dist[2], vect_cube_t const &pool_blockers, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen);
+	bool check_bird_walkway_clearance(cube_t const &bc) const;
 	void place_birds(rand_gen_t &rgen);
 	void add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix);
 	void place_signs_in_isec(road_isec_t &isec);

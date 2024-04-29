@@ -1309,14 +1309,20 @@ void city_obj_placer_t::place_birds(rand_gen_t &rgen) {
 	if (!are_birds_enabled()) return;
 
 	for (power_pole_t const &pp : ppoles) { // must check for walkway clearance
-		bool invalid(0);
+		if (check_bird_walkway_clearance(pp.bcube)) {add_bird_loc(pp, bird_locs, rgen);}
+		// add locs to top power lines
+		point top_wires[2][3][2];
+		pp.get_top_wire_end_pts(top_wires);
 		
-		for (walkway_t const &w : walkways) {
-			cube_t bc_exp(w.bcube);
-			bc_exp.z1() -= w.floor_spacing;
-			invalid |= bc_exp.intersects_xy(pp.bcube);
+		for (unsigned d = 0; d < 2; ++d) {
+			unsigned const n(rgen.rand() % 3); // select a random wire
+			point const &A(top_wires[d][n][0]), &B(top_wires[d][n][1]);
+			if (A == B) continue; // no wire
+			float const t(rgen.rand_uniform(0.2, 0.8));
+			point const pos(t*B + (1.0 - t)*A);
+			cube_t c; c.set_from_sphere(pos, pp.get_pole_radius());
+			if (check_bird_walkway_clearance(c)) {bird_locs.emplace_back(pos, !d, rgen.rand_bool());}
 		}
-		if (!invalid) {add_bird_loc(pp, bird_locs, rgen);}
 	} // for pp
 	vect_bird_place_t unused;
 	add_objs_top_center(newsracks, 0, 0, 1, unused, bird_locs, rgen);

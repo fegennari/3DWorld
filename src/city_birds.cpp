@@ -323,6 +323,15 @@ int city_obj_placer_t::check_path_segment_coll(point const &p1, point const &p2,
 	return 0;
 }
 
+bool city_obj_placer_t::check_bird_walkway_clearance(cube_t const &bc) const {
+	for (walkway_t const &w : walkways) {
+		cube_t bc_exp(w.bcube);
+		bc_exp.z1() -= w.floor_spacing; // extend lower edge by one floor for clearance
+		if (bc_exp.intersects_xy(bc)) return 0;
+	}
+	return 1;
+}
+
 void vect_bird_place_t::add_placement(cube_t const &obj, bool dim, bool dir, bool orient_dir, float spacing, rand_gen_t &rgen) {
 	point pos(0.0, 0.0, obj.z2());
 	pos[ dim] = obj.d[dim][dir];

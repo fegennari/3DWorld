@@ -782,6 +782,21 @@ point power_pole_t::get_nearest_connection_point(point const &to_pos, bool near_
 	} // for d
 	return ret;
 }
+void power_pole_t::get_top_wire_end_pts(point top_wires[2][3][2]) const { // {dim, wire_ix, end_ix}
+	float const wire_radius(get_wire_radius());
+
+	for (unsigned d = 0; d < 2; ++d) {
+		if (!has_dim_set(d) || at_line_end[d]) continue; // no wires in this dim
+		point conn_pts[3];
+		get_wires_conn_pts(conn_pts, d);
+
+		for (unsigned n = 0; n < 3; ++n) {
+			conn_pts[n].z += wire_radius; // top of wire
+			top_wires[d][n][0] = top_wires[d][n][1] = conn_pts[n];
+			top_wires[d][n][1][d] -= pole_spacing[d]; // extend to the adjacent pole
+		}
+	} // for d
+}
 point power_pole_t::get_transformer_center() const { // not checking has_transformer()
 	float const pole_height(bcube.dz()), tf_radius(2.0*pole_radius), tf_height(0.1*pole_height), y_sign(at_line_end[1] ? 1.0 : -1.0);
 	point tf_pos(base);
