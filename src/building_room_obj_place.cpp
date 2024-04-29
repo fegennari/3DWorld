@@ -1081,6 +1081,7 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 		if (!check_cube_within_part_sides(c)) continue; // handle non-cube buildings
 		unsigned const flags((type == TYPE_BOX) ? (RO_FLAG_ADJ_LO << orient) : 0); // set wall edge bit for boxes (what about other dim bit if place in room corner?)
 		objs.emplace_back(c, type, room_id, dim, !dir, flags, tot_light_amt, shape, color);
+		if (type == TYPE_TOILET || type == TYPE_SINK || type == TYPE_URINAL || type == TYPE_TUB) {add_bathroom_plumbing(objs.back());}
 		set_obj_id(objs);
 		if (front_clearance > 0.0) {objs.emplace_back(c2, TYPE_BLOCKER, room_id, dim, !dir, RO_FLAG_INVIS);} // add blocker cube to ensure no other object overlaps this space
 		return 1; // done
@@ -1173,6 +1174,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 				c2.expand_in_dim(!dim, 0.4*width); // more padding on the sides
 				if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, room, 0.0, 1)) continue; // bad placement
 				objs.emplace_back(c,  TYPE_TOILET,  room_id, dim, !dir, 0, tot_light_amt);
+				add_bathroom_plumbing(objs.back());
 				objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker cube to ensure no other object overlaps this space
 				placed_obj = placed_toilet = 1; // done
 				added_bathroom_objs_mask  |= PLACED_TOILET;
@@ -1294,6 +1296,50 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 	return placed_obj;
 }
 
+void building_t::add_bathroom_plumbing(room_object_t const &obj) { // only water pipes; drains are added when the plumbing fixture is removed
+	assert(has_room_geom());
+	bool const dim(obj.dim), dir(obj.dir);
+	float const wall_thickness(get_wall_thickness());
+	float pipe_radius(0.12*wall_thickness);
+	unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_LIT); // RO_FLAG_LIT means the pipe casts shadows
+	flags |= (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // cap the exposed end so that the wall and interior aren't visible
+	cube_t pipes[2];
+	point pipe_p1;
+	pipe_p1[!dim] = obj.get_center_dim(!dim); // starts centered
+	pipe_p1[ dim] = obj.d[dim][!dir]; // on the back facing the wall
+
+	if (obj.type == TYPE_TOILET) {
+		pipe_p1.z = obj.z1() + 0.52*obj.dz(); // directly runs to the tank, not on the bottom like most toilets
+		pipes[0].set_from_point(pipe_p1);
+	}
+	else if (obj.type == TYPE_SINK) {
+		float const spacing(0.2*obj.get_width());
+		pipe_p1.z = obj.z1() + 0.78*obj.dz(); // near the top
+		pipe_p1[!dim] -= 0.5*spacing;
+		pipes[0].set_from_point(pipe_p1);
+		pipe_p1[!dim] += 1.0*spacing;
+		pipes[1].set_from_point(pipe_p1);
+	}
+	else if (obj.type == TYPE_URINAL) {
+		pipe_p1.z = obj.z1() + 0.75*obj.dz(); // near the top
+		pipes[0].set_from_point(pipe_p1);
+		pipe_radius *= 1.25; // wider
+	}
+	else if (obj.type == TYPE_TUB) {
+		// not yet handled because a tub can't be taken
+	}
+	else {assert(0);} // not a plumbing fixture
+
+	for (unsigned d = 0; d < 2; ++d) { // this loop invalidates obj
+		cube_t &pipe(pipes[d]);
+		if (pipe.is_all_zeros()) continue;
+		pipe.expand_in_dim( dim, 0.5*wall_thickness); // set length
+		pipe.expand_in_dim(!dim, pipe_radius);
+		pipe.expand_in_dim(2,    pipe_radius);
+		interior->room_geom->objs.emplace_back(pipe, TYPE_PIPE, obj.room_id, dim, 0, flags, obj.light_amt, SHAPE_CYLIN, COPPER_C); // horizontal
+	} // for d
+}
+
 bool building_t::add_tp_roll(cube_t const &room, unsigned room_id, float tot_light_amt, bool dim, bool dir, float length, float zval, float wall_pos, bool check_valid_pos) {
 	float const diameter(length);
 	cube_t tp;
@@ -1410,6 +1456,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			bool const out_of_order(!is_open && rgen.rand_float() < 0.2);
 			unsigned const flags(out_of_order ? RO_FLAG_BROKEN : 0); // toilet can't be flushed and door can't be opened if out of order
 			objs.emplace_back(toilet, TYPE_TOILET, room_id, br_dim, !dir, flags, tot_light_amt);
+			add_bathroom_plumbing(objs.back());
 			objs.emplace_back(stall,  TYPE_STALL,  room_id, br_dim,  dir, (flags | (is_open ? RO_FLAG_OPEN : 0)), tot_light_amt, SHAPE_CUBE, stall_color);
 
 			if (out_of_order) { // add out-of-order sign
@@ -1443,6 +1490,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			if (!check_cube_within_part_sides(sink)) continue; // outside the building
 			if (use_sink_model) {objs.emplace_back(sink, TYPE_SINK,   room_id, br_dim, !dir, 0, tot_light_amt);} // sink 3D model
 			else                {objs.emplace_back(sink, TYPE_BRSINK, room_id, br_dim, !dir, 0, tot_light_amt);} // flat basin sink
+			if (use_sink_model) {add_bathroom_plumbing(objs.back());}
 			// if we started the mirror, but we have a gap with no sink (blocked by a door, etc.), then end the mirror
 			hit_mirror_end |= (n > last_sink_ix+1 && !sinks_bcube.is_all_zeros());
 			if (!hit_mirror_end) {sinks_bcube.assign_or_union_with_cube(sink);}
@@ -1468,6 +1516,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				if (!check_cube_within_part_sides(urinal)) continue; // outside the building
 				objs.emplace_back(sep_wall, TYPE_STALL,  room_id, br_dim, !dir, 0, tot_light_amt, SHAPE_SHORT, stall_color);
 				objs.emplace_back(urinal,   TYPE_URINAL, room_id, br_dim,  dir, 0, tot_light_amt);
+				add_bathroom_plumbing(objs.back());
 			} // for n
 			if (!two_rows) { // skip first wall if adjacent to a stall
 				set_wall_width(sep_wall, (u_pos - 0.5*sink_step), 0.2*wall_thickness, !br_dim);
