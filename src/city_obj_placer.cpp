@@ -194,17 +194,18 @@ void city_obj_placer_t::add_cars_to_driveways(vector<car_t> &cars, vector<road_p
 	} // for i
 }
 
-bool check_pt_and_place_blocker(point const &pos, vect_cube_t &blockers, float radius, float blocker_spacing) {
+bool check_pt_and_place_blocker(point const &pos, vect_cube_t &blockers, float radius, float blocker_spacing, bool add_blocker=1) {
 	cube_t bc(pos);
 	if (has_bcube_int_xy(bc, blockers, radius)) return 0; // intersects a building or parking lot - skip
+	if (!add_blocker) return 1;
 	bc.expand_by_xy(blocker_spacing);
 	blockers.push_back(bc); // prevent trees and benches from being too close to each other
 	return 1;
 }
-bool try_place_obj(cube_t const &plot, vect_cube_t &blockers, rand_gen_t &rgen, float radius, float blocker_spacing, unsigned num_tries, point &pos) {
+bool try_place_obj(cube_t const &plot, vect_cube_t &blockers, rand_gen_t &rgen, float radius, float blocker_spacing, unsigned num_tries, point &pos, bool add_blocker) {
 	for (unsigned t = 0; t < num_tries; ++t) {
 		pos = rand_xy_pt_in_cube(plot, radius, rgen);
-		if (check_pt_and_place_blocker(pos, blockers, radius, blocker_spacing)) return 1; // success
+		if (check_pt_and_place_blocker(pos, blockers, radius, blocker_spacing, add_blocker)) return 1; // success
 	}
 	return 0;
 }
@@ -267,7 +268,7 @@ void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t
 		float const pine_xy_sz((is_sm_tree && plot.is_park) ? rgen.rand_uniform(0.5, 0.8) : 1.0); // randomly narrower
 		float const coll_radius(spacing + bldg_extra_radius);
 		point pos;
-		if (!try_place_obj(plot, blockers, rgen, coll_radius, (radius - bldg_extra_radius), 10, pos)) continue; // 10 tries per tree, extra spacing for palm trees
+		if (!try_place_obj(plot, blockers, rgen, coll_radius, (radius - bldg_extra_radius), 10, pos, 1)) continue; // 10 tries per tree, extra spacing for palm trees
 		if (check_walkway_coll_xy(pos, coll_radius)) continue; // should be rare; no retry
 		// size is randomly selected by the tree generator using default values; allow bushes in parks
 		place_tree(pos, radius, ttype, colliders, &tree_pos, allow_bush, add_bush, is_sm_tree, has_planter, 0.0, pine_xy_sz);
@@ -518,13 +519,30 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			} // for dir
 		} // for dim
 	}
-	// place benches in parks and non-residential areas
+	// place fountains in parks and 25% of the time in city blocks
+	if ((is_park || (!is_residential && (rgen.rand() & 3) == 0)) && building_obj_model_loader.is_model_valid(OBJ_MODEL_FOUNTAIN)) {
+		float const radius(0.35 * car_length), spacing(max(1.5f*radius, min_obj_spacing));
+		cube_t place_area(plot);
+		place_area.expand_by_xy(-sidewalk_width); // not too close to sidewalks
+		point pos;
+
+		if (try_place_obj(place_area, blockers, rgen, (is_park ? 1.0 : 1.5)*radius, spacing, 10, pos, 0)) { // 10 tries
+			float const height(2.0*radius); // seems about right for the current fountain models
+			fountain_t const fountain(pos, height, rgen.rand()); // random model_select
+
+			if (!is_park || !check_path_coll_xy(fountain.bcube, ppaths, paths_start)) { // check park path collision
+				fountain_groups.add_obj(fountain, fountains);
+				// don't place blockers until we've added benches, since we want to allow benches closer to the fountains
+			}
+		}
+	}
+	// place benches in parks and non-residential areas, and next to fountains
 	if (!plot.is_residential_not_park()) {
 		float const bench_radius(0.3 * car_length), bench_spacing(max(bench_radius, 1.5f*min_obj_spacing)); // add a bit of extra space
 
 		for (unsigned n = 0; n < city_params.max_benches_per_plot; ++n) {
 			point pos;
-			if (!try_place_obj(plot, blockers, rgen, bench_spacing, 0.0, 1, pos)) continue; // 1 try
+			if (!try_place_obj(plot, blockers, rgen, bench_spacing, 0.0, 1, pos, 0)) continue; // 1 try
 			bool bench_dim(0), bench_dir(0);
 			float dmin(0.0);
 
@@ -537,10 +555,31 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			bench_t const bench(pos, bench_radius, bench_dim, bench_dir);
 			if (is_park && check_path_coll_xy(bench.bcube, ppaths, paths_start)) continue; // check park path collision
 			bench_groups.add_obj(bench, benches);
-			colliders.push_back(bench.bcube);
-			blockers.back() = bench.bcube; // update blocker since bench is non-square
+			add_cube_to_colliders_and_blockers(bench.bcube, colliders, blockers);
 			blockers.back().expand_in_dim(!bench.dim, 0.25*bench.radius); // add extra padding in front (for seat access) and back (which extends outside bcube)
 		} // for n
+		cube_t place_area(plot);
+		place_area.expand_by_xy(-(bench_radius + sidewalk_width));
+
+		for (auto f = fountains.begin()+fountains_start; f != fountains.end(); ++f) {
+			bool const dim(rgen.rand_bool()); // add benches in a random dir around the fountain
+
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				point pos;
+				pos.z     = plot.z1();
+				pos[ dim] = f->bcube.d[dim][dir] + (dir ? 1.0 : -1.0)*1.5*bench_radius;
+				pos[!dim] = f->bcube.get_center_dim(!dim);
+				if (!place_area.contains_pt_xy(pos) || has_bcube_int_xy(cube_t(pos), blockers, bench_spacing)) continue; // excludes fountains
+				bench_t const bench(pos, bench_radius, !dim, dir); // face toward the fountain
+				if (is_park && check_path_coll_xy(bench.bcube, ppaths, paths_start)) continue; // check park path collision
+				bench_groups.add_obj(bench, benches);
+				add_cube_to_colliders_and_blockers(bench.bcube, colliders, blockers);
+				blockers.back().expand_in_dim(!bench.dim, 0.25*bench.radius); // add extra padding in front (for seat access) and back (which extends outside bcube)
+			} // for dir
+		} // for f
+	}
+	for (auto f = fountains.begin()+fountains_start; f != fountains.end(); ++f) { // now add the fountain blockers
+		add_cube_to_colliders_and_blockers(f->bcube, colliders, blockers);
 	}
 	// place planters; don't add planters in parks or residential areas
 	if (plot.is_commercial()) {
@@ -643,21 +682,6 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			}
 		} // for d
 	}
-	// place fountains in parks and sometimes in city blocks
-	if ((is_park || (!is_residential && (rgen.rand() & 3) == 0)) && building_obj_model_loader.is_model_valid(OBJ_MODEL_FOUNTAIN)) {
-		float const radius(0.35 * car_length), spacing(max(1.5f*radius, min_obj_spacing));
-		point pos;
-		
-		if (try_place_obj(plot, blockers, rgen, radius, spacing, 5, pos)) { // 5 tries
-			float const height(2.0*radius); // seems about right for the current fountain models
-			fountain_t const fountain(pos, height, rgen.rand()); // random model_select
-
-			if (!is_park || !check_path_coll_xy(fountain.bcube, ppaths, paths_start)) { // check park path collision
-				fountain_groups.add_obj(fountain, fountains);
-				add_cube_to_colliders_and_blockers(fountain.bcube, colliders, blockers);
-			}
-		}
-	}
 	// place newsracks along non-residential city streets
 	if (!is_residential) {
 		unsigned const NUM_NR_COLORS = 8;
@@ -720,7 +744,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		place_area.expand_by_xy(-0.5*city_params.road_width); // shrink slightly to keep flags away from power lines
 		point base_pt;
 
-		if (try_place_obj(place_area, blockers, rgen, spacing, 0.0, (is_park ? 5 : 20), base_pt)) { // make up to 5/20 tries
+		if (try_place_obj(place_area, blockers, rgen, spacing, 0.0, (is_park ? 5 : 20), base_pt, 1)) { // make up to 5/20 tries
 			base_pt.z = plot.z2();
 			cube_t pole(base_pt);
 			pole.expand_by_xy(pradius);
