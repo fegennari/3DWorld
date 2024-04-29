@@ -540,7 +540,7 @@ unsigned const REF_PASS_NO_MIRROR= 0x20;
 
 struct bldg_obj_type_t {
 	bool player_coll=0, ai_coll=0, rat_coll=0, pickup=0, attached=0, is_model=0;
-	uint8_t lg_sm=0; // 0=neither (model), 1=large item, 2=small item, 3=split into large and small
+	uint8_t lg_sm=0; // 0=neither (model or detail), 1=large item, 2=small item, 3=split into large and small
 	float value=0.0, weight=0.0;
 	unsigned capacity=0; // for consumable/usable objects
 	std::string name;
@@ -938,6 +938,7 @@ struct building_room_geom_t {
 	void invalidate_small_geom   () {invalidate_mats_mask |= (1 << MAT_TYPE_SMALL  );}
 	void update_text_draw_data   () {invalidate_mats_mask |= (1 << MAT_TYPE_TEXT   );}
 	void invalidate_lights_geom  () {invalidate_mats_mask |= (1 << MAT_TYPE_LIGHTS );} // cache state and apply change later in case this is called from a different thread
+	void invalidate_detail_geom  () {invalidate_mats_mask |= (1 << MAT_TYPE_DETAIL );}
 	void update_dynamic_draw_data() {invalidate_mats_mask |= (1 << MAT_TYPE_DYNAMIC);}
 	void check_invalid_draw_data();
 	void invalidate_draw_data_for_obj(room_object_t const &obj, bool was_taken=0);

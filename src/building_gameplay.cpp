@@ -1648,7 +1648,8 @@ void building_room_geom_t::add_expanded_object(room_object_t const &obj) {
 	expanded_objs.push_back(obj); // not found - in this case we can add a new object
 }
 bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t &building, bool set_obj_id, vector3d const &velocity) {
-	assert(obj.type != TYPE_LIGHT && get_room_obj_type(obj).pickup); // currently must be a pickup object, and not a light
+	assert(obj.type != TYPE_LIGHT); // lights can't be added this way
+	assert(get_room_obj_type(obj).pickup); // currently must be a pickup object
 
 	if (!set_obj_id && obj.was_expanded()) { // if object was expanded, and it's not a dynamic object, use an expanded slot (books, etc.)
 		assert(velocity == zero_vector);

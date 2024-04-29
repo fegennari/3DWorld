@@ -768,6 +768,7 @@ void building_room_geom_t::check_invalid_draw_data() {
 	if (invalidate_mats_mask & (1 << MAT_TYPE_DYNAMIC )) {mats_dynamic .invalidate();} // dynamic objects
 	if (invalidate_mats_mask & (1 << MAT_TYPE_DOORS   )) {mats_doors   .invalidate();}
 	if (invalidate_mats_mask & (1 << MAT_TYPE_LIGHTS  )) {mats_lights  .invalidate();}
+	if (invalidate_mats_mask & (1 << MAT_TYPE_DETAIL  )) {mats_detail  .invalidate();}
 	invalidate_mats_mask = 0; // reset for next frame
 }
 void building_room_geom_t::invalidate_draw_data_for_obj(room_object_t const &obj, bool was_taken) {
@@ -776,9 +777,10 @@ void building_room_geom_t::invalidate_draw_data_for_obj(room_object_t const &obj
 		return;
 	}
 	bldg_obj_type_t const type(was_taken ? get_taken_obj_type(obj) : get_room_obj_type(obj));
-	if (type.lg_sm & 2 )           {invalidate_small_geom ();} // small objects
+	if (type.lg_sm & 2)            {invalidate_small_geom ();} // small objects
 	if (type.lg_sm & 1)            {invalidate_static_geom();} // large objects and 3D models
-	if (type.is_model )            {invalidate_model_geom ();}
+	if (type.is_model )            {invalidate_model_geom ();} // model
+	else if (type.lg_sm == 0)      {invalidate_detail_geom();} // detail object
 	if (obj.type == TYPE_CEIL_FAN) {invalidate_lights_geom();} // invalidate the light on the fan as well
 }
 // Note: called when adding, removing, or moving objects
