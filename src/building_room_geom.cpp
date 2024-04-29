@@ -621,8 +621,16 @@ void building_room_geom_t::add_hanger_rod(room_object_t const &c) { // is_small=
 
 void building_room_geom_t::add_drain_pipe(room_object_t const &c) { // is_small=1
 	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
-	mat.add_vcylin_to_verts(c, apply_light_color(c), 0, 0); // draw sides only
-	mat.add_vert_disk_to_verts(cube_top_center(c), 0.5*c.dx(), 0, BLACK); // draw top as black
+	colorRGBA const color(apply_light_color(c));
+
+	if (c.dir) { // horizontal (urinal)
+		mat.add_ortho_cylin_to_verts(c, color, c.dim, 0, 0); // sides
+		mat.add_ortho_cylin_to_verts(c, BLACK, c.dim, (c.flags & RO_FLAG_ADJ_LO), (c.flags & RO_FLAG_ADJ_HI), 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // end; skip_sides=1
+	}
+	else { // vertical
+		mat.add_vcylin_to_verts(c, color, 0, 0); // draw sides only
+		mat.add_vert_disk_to_verts(cube_top_center(c), 0.5*c.dx(), 0, BLACK); // draw top as black
+	}
 }
 
 void building_room_geom_t::add_key(room_object_t const &c) { // is_small=1

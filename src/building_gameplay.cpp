@@ -1594,12 +1594,33 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 		if (obj.taken_level > 1) {obj.remove();} // take pot - gone
 		else {++obj.taken_level;} // take plant then dirt
 	}
-	else if (obj.type == TYPE_TOILET || obj.type == TYPE_SINK) { // leave a drain in the floor
+	else if (obj.type == TYPE_TOILET || obj.type == TYPE_SINK || obj.type == TYPE_TUB || obj.type == TYPE_URINAL) {
+		// tubs currently can't be removed, but if they could, they would leave drains
+		// leave a drain in the floor and water pipe(s); should this be on the wall instead for sinks?
+		unsigned flags(RO_FLAG_NOCOLL);
+		bool ddim(0), ddir(0); // for drain
 		cube_t drain;
-		drain.set_from_point(cube_bot_center(obj));
-		drain.expand_by_xy(0.065*obj.dz());
-		drain.z2() += 0.02*obj.dz();
-		obj = room_object_t(drain, TYPE_DRAIN, obj.room_id, 0, 0, RO_FLAG_NOCOLL, obj.light_amt, SHAPE_CYLIN, DK_GRAY);
+
+		if (obj.type == TYPE_URINAL) { // drain is on the wall
+			float const radius(0.065*obj.dz());
+			point pipe_p1;
+			pipe_p1.z = obj.z1() + 0.25*obj.dz(); // near the bottom
+			pipe_p1[!obj.dim] = obj.get_center_dim(!obj.dim);
+			pipe_p1[ obj.dim] = obj.d[obj.dim][!obj.dir];
+			drain.set_from_point(pipe_p1);
+			drain.expand_in_dim(obj.dim, 0.05*obj.get_depth()); // set length
+			drain.expand_in_dim(!obj.dim, radius);
+			drain.expand_in_dim(2,        radius);
+			ddim = obj.dim; ddir = 1; // orient similar to pipes
+			flags |= (obj.dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // draw exposed end
+		}
+		else { // drain is on the floor
+			float const radius(((obj.type == TYPE_SINK) ? 0.045 : 0.08)*obj.dz());
+			drain.set_from_point(cube_bot_center(obj));
+			drain.expand_by_xy(radius); // expand by radius
+			drain.z2() += 0.02*obj.dz();
+		}
+		obj = room_object_t(drain, TYPE_DRAIN, obj.room_id, ddim, ddir, flags, obj.light_amt, SHAPE_CYLIN, DK_GRAY); // replace with drain
 		invalidate_draw_data_for_obj(obj);
 	}
 	else if (obj.type == TYPE_TOY) { // take one ring at a time then the base (5 parts)
