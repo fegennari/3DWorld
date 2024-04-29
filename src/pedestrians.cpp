@@ -1982,7 +1982,13 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	//timer_t timer("Ped Draw"); // ~1ms
 	bool const use_models(ped_model_loader.num_models() > 0), enable_animations(use_models);
 	float const def_draw_dist((use_models ? 500.0 : 2000.0)*get_ped_radius());
-	float const draw_dist(is_dlight_shadows ? 0.75*camera_pdu.far_ : def_draw_dist), draw_dist_sq(draw_dist*draw_dist); // smaller view dist for models
+	float draw_dist(def_draw_dist);
+	
+	if (is_dlight_shadows) { // smaller view dist for shadow pass, in particular for car headlights
+		bool const is_streetlight(camera_pdu.dir == -plus_z); // else car headlights
+		draw_dist = (is_streetlight ? 0.75 : 0.5)*camera_pdu.far_;
+	}
+	float const draw_dist_sq(draw_dist*draw_dist);
 	pos_dir_up pdu(camera_pdu); // decrease the far clipping plane for pedestrians
 	pdu.far_     = draw_dist;
 	pdu.pos     -= xlate; // adjust for local translate
@@ -2169,7 +2175,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 		end_sphere_draw(in_sphere_draw);
 		bool const low_detail(!shadow_only && !is_in_building && dist_sq > 0.25*draw_dist_sq); // low detail for non-shadow pass at half draw dist, if not in building
 
-		if ((display_mode & 0x10) && !is_in_building && is_dlight_shadows && !dist_less_than(pre_smap_player_pos, ped.pos, 0.25*def_draw_dist)) {
+		if (!is_in_building && is_dlight_shadows && !dist_less_than(pre_smap_player_pos, ped.pos, 0.3*def_draw_dist)) {
 			if (anim_state) {anim_state->clear_animation_id(s);} // optimization - disable shadow animations when far from the player
 			anim_state = nullptr;
 		}
