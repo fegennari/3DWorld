@@ -1479,18 +1479,6 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 	T::post_draw(dstate, shadow_only);
 }
 
-void city_obj_placer_t::clear() {
-	parking_lots.clear(); benches.clear(); planters.clear(); trashcans.clear(); fhydrants.clear(); sstations.clear(); fountains.clear(); driveways.clear(); dividers.clear();
-	pools.clear(); pladders.clear(); pdecks.clear(); ppoles.clear(); hcaps.clear(); manholes.clear(); mboxes.clear(); tcones.clear(); pigeons.clear(); birds.clear(); signs.clear();
-	stopsigns.clear(); flags.clear(); ppaths.clear(); swings.clear(); tramps.clear(); umbrellas.clear(); bikes.clear(); plants.clear(); ponds.clear(); walkways.clear(); pillars.clear();
-	bench_groups.clear(); planter_groups.clear(); trashcan_groups.clear(); fhydrant_groups.clear(); sstation_groups.clear(); fountain_groups.clear(); divider_groups.clear();
-	pool_groups.clear(); plad_groups.clear(); pdeck_groups.clear(); ppole_groups.clear(); hcap_groups.clear(); manhole_groups.clear(); mbox_groups.clear(); tcone_groups.clear();
-	pigeon_groups.clear(); bird_groups.clear(); sign_groups.clear(); stopsign_groups.clear(); flag_groups.clear(); nrack_groups.clear(); ppath_groups.clear(); swing_groups.clear();
-	tramp_groups.clear(); umbrella_groups.clear(); bike_groups.clear(); plant_groups.clear(); pond_groups.clear(); walkway_groups.clear(); pillar_groups.clear();
-	all_objs_bcube.set_to_zeros();
-	num_spaces = filled_spaces = 0;
-}
-
 void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, vector<road_t> const &roads,
 	vector<road_isec_t> isecs[3], cube_t const &city_bcube, unsigned city_id, bool have_cars, bool is_residential, bool have_streetlights)
 {
@@ -1584,17 +1572,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	pond_groups    .create_groups(ponds,     all_objs_bcube);
 	walkway_groups .create_groups(walkways,  all_objs_bcube);
 	pillar_groups  .create_groups(pillars,   all_objs_bcube);
-
-	if (0) { // debug info printing
-		cout << TXT(benches.size()) << TXT(planters.size()) << TXT(trashcans.size()) << TXT(fhydrants.size()) << TXT(sstations.size()) << TXT(fountains.size())
-			 << TXT(dividers.size()) << TXT(pools.size()) << TXT(pladders.size()) << TXT(pdecks.size()) << TXT(ppoles.size()) << TXT(hcaps.size()) << TXT(manholes.size())
-			 << TXT(mboxes.size()) << TXT(tcones.size()) << TXT(pigeons.size()) << TXT(birds.size()) << TXT(signs.size()) << TXT(stopsigns.size()) << TXT(flags.size())
-			 << TXT(newsracks.size()) << TXT(ppaths.size()) << TXT(swings.size()) << TXT(tramps.size()) << TXT(umbrellas.size()) << TXT(bikes.size()) << TXT(plants.size())
-			 << TXT(ponds.size()) << TXT(walkways.size()) << TXT(pillars.size()) << endl;
-	}
-	if (add_parking_lots) {
-		cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
-	}
+	if (add_parking_lots) {cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << endl;}
 }
 
 void city_obj_placer_t::add_objs_on_buildings(unsigned city_id) {

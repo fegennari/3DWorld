@@ -509,7 +509,6 @@ public:
 	bool have_animations  () const {return !birds   .empty();} // only birds are animated
 	bool has_residential  () const {return has_residential_plots;}
 	vector<power_pole_t> const &get_power_poles() const {return ppoles;} // used for city connectivity
-	void clear();
 	void set_plot_subdiv_sz(float sz) {plot_subdiv_sz = sz;}
 	void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, vector<road_t> const &roads,
 		vector<road_isec_t> isecs[3], cube_t const &city_bcube, unsigned city_id, bool have_cars, bool is_residential, bool have_streetlights);

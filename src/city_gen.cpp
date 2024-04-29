@@ -504,21 +504,6 @@ public:
 		c.z2() += max(stoplight_ns::stoplight_max_height(), streetlight_ns::get_streetlight_height());
 		return c;
 	}
-	void clear() {
-		roads.clear();
-		segs.clear();
-		conn_roads.clear();
-		plots.clear();
-		bridges.clear();
-		tunnels.clear();
-		tracks.clear();
-		track_segs.clear();
-		for (unsigned i = 0; i < 3; ++i) {isecs[i].clear();}
-		streetlights.clear();
-		city_obj_placer.clear();
-		tile_blocks.clear();
-		plot_colliders.clear();
-	}
 	bool gen_road_grid(float road_width, vector2d const &road_spacing) {
 		if (road_width > 0.5*min(road_spacing.x, road_spacing.y)) {
 			cerr << "Error: City road_width should not be set larger than half the road spacing" << endl;
@@ -545,7 +530,7 @@ public:
 			roads.emplace_back(point(bcube.x1(), y, zval), point(bcube.x2(), y, zval), road_width, false, false, roads.size());
 		}
 		unsigned const num_r(roads.size()), num_y(num_r - num_x);
-		if (num_x <= 1 || num_y <= 1) {clear(); return 0;} // not enough space for roads
+		if (num_x <= 1 || num_y <= 1) {roads.clear(); return 0;} // not enough space for roads; this city will be removed
 		bcube.x1() = roads[0      ].x1(); // actual bcube x1 from first x road
 		bcube.x2() = roads[num_x-1].x2(); // actual bcube x2 from last  x road
 		bcube.y1() = roads[num_x  ].y1(); // actual bcube y1 from first y road
@@ -1064,7 +1049,7 @@ public:
 		//cout << "tile_to_block_map: " << tile_to_block_map.size() << ", tile_blocks: " << tile_blocks.size() << endl;
 	}
 	void gen_parking_lots_and_place_objects(vector<car_t> &cars, bool have_cars, bool &have_plot_dividers) {
-		city_obj_placer.clear();
+		city_obj_placer = city_obj_placer_t(); // clear; should be empty anyway, since city_obj_placer is not reused
 		city_obj_placer.set_plot_subdiv_sz(get_plot_subdiv_sz());
 		city_obj_placer.gen_parking_and_place_objects(plots, plot_colliders, cars, roads, isecs, bcube, city_id, have_cars, is_residential, !streetlights.empty());
 		add_tile_blocks(city_obj_placer.parking_lots, tile_to_block_map, TYPE_PARK_LOT); // need to do this later, after gen_tile_blocks()
