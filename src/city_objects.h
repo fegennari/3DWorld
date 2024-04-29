@@ -253,6 +253,11 @@ struct trampoline_t : public model_city_obj_t {
 	virtual unsigned get_model_id() const {return OBJ_MODEL_TRAMPOLINE;}
 };
 
+struct dumpster_t : public model_city_obj_t {
+	dumpster_t(point const &pos_, float height, bool dim_, bool dir_) : model_city_obj_t(pos_, height, dim_, dir_, get_model_id()) {}
+	virtual unsigned get_model_id() const {return OBJ_MODEL_DUMPSTER;}
+};
+
 struct umbrella_t : public model_city_obj_t { // large beach umbrella
 	umbrella_t(point const &pos_, float height, bool dim_, bool dir_) : model_city_obj_t(pos_, height, dim_, dir_, get_model_id(), 1) {} // is_cylinder=1
 	virtual unsigned get_model_id   () const {return OBJ_MODEL_BIG_UMBRELLA;}
@@ -467,6 +472,7 @@ private:
 	vector<trampoline_t> tramps;
 	vector<umbrella_t> umbrellas;
 	vector<bicycle_t> bikes;
+	vector<dumpster_t> dumpsters;
 	vector<potted_plant_t> plants;
 	vector<pond_t> ponds;
 	vector<walkway_t> walkways;
@@ -474,7 +480,7 @@ private:
 	// index is last obj in group
 	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, fountain_groups, divider_groups, pool_groups, plad_groups,
 		pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups, stopsign_groups, flag_groups,
-		nrack_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, plant_groups, pond_groups, walkway_groups, pillar_groups;
+		nrack_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, dumpster_groups, plant_groups, pond_groups, walkway_groups, pillar_groups;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
 	vect_bird_place_t bird_locs;

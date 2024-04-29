@@ -17,7 +17,7 @@ string const model_opt_names[NUM_OBJ_MODELS] =
 "pool_ladder_model", "bar_stool_model", "padlock_model", "cash_register_model", "water_fountain_model", "banana_model", "banana_peel_model",
 /*animal models*/ "rat_model", "roach_model",
 /*city models*/ "fire_hydrant_model", "substation_model", "mailbox_model", "umbrella_model", "pigeon_model", "fountain_model", "bird_animated_model", "flag_model",
-"bicycle_model", "swingset_model", "trampoline_model", "big_umbrella_model"};
+"bicycle_model", "swingset_model", "trampoline_model", "dumpster_model", "big_umbrella_model"};
 
 void city_params_t::init_kw_maps() {
 	kwmu.add("num_cities",     num_cities);

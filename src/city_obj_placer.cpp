@@ -519,6 +519,10 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			} // for dir
 		} // for dim
 	}
+	// place dumpsters in city blocks
+	if (!plot.is_residential_not_park() && building_obj_model_loader.is_model_valid(OBJ_MODEL_DUMPSTER)) {
+		// TODO
+	}
 	// place fountains in parks and 25% of the time in city blocks
 	if ((is_park || (!is_residential && (rgen.rand() & 3) == 0)) && building_obj_model_loader.is_model_valid(OBJ_MODEL_FOUNTAIN)) {
 		float const radius(0.35 * car_length), spacing(max(1.5f*radius, min_obj_spacing));
@@ -1568,6 +1572,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	tramp_groups   .create_groups(tramps,    all_objs_bcube);
 	umbrella_groups.create_groups(umbrellas, all_objs_bcube);
 	bike_groups    .create_groups(bikes,     all_objs_bcube);
+	dumpster_groups.create_groups(dumpsters, all_objs_bcube);
 	plant_groups   .create_groups(plants,    all_objs_bcube);
 	pond_groups    .create_groups(ponds,     all_objs_bcube);
 	walkway_groups .create_groups(walkways,  all_objs_bcube);
@@ -1719,6 +1724,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(tramps,    tramp_groups,    dstate, 0.10, shadow_only, 1); // dist_scale=0.10, has_immediate_draw=1
 	draw_objects(umbrellas, umbrella_groups, dstate, 0.18, shadow_only, 1); // dist_scale=0.18, has_immediate_draw=1
 	draw_objects(bikes,     bike_groups,     dstate, 0.025,shadow_only, 1); // dist_scale=0.025,has_immediate_draw=1
+	draw_objects(dumpsters, dumpster_groups, dstate, 0.20, shadow_only, 1); // dist_scale=0.20, has_immediate_draw=1
 	draw_objects(plants,    plant_groups,    dstate, 0.04, shadow_only, 1); // dist_scale=0.05, has_immediate_draw=1
 	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1); // dist_scale=0.25, has_immediate_draw=1
 	
@@ -1817,6 +1823,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(tramps,    tramp_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(umbrellas, umbrella_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(bikes,     bike_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(dumpsters, dumpster_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(plants,    plant_groups,    pos, p_last, radius, xlate, cnorm)) return 1; // optional?
 	if (proc_vector_sphere_coll(ponds,     pond_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(pillars,   pillar_groups,   pos, p_last, radius, xlate, cnorm)) return 1;
@@ -1851,6 +1858,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(newsracks, nrack_groups,    p1, p2, t, ret);
 	check_vector_line_intersect(walkways,  walkway_groups,  p1, p2, t, ret);
 	check_vector_line_intersect(pillars,   pillar_groups,   p1, p2, t, ret);
+	check_vector_line_intersect(dumpsters, dumpster_groups, p1, p2, t, ret);
 	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, tcones, pladders, pool decks, pigeons, ppaths, or birds;
 	// mboxes, swings, tramps, umbrellas, bikes, plants, and ponds are ignored because they're small or not simple shapes
 	return ret;
@@ -1944,6 +1952,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 	if (check_city_obj_pt_xy_contains(ppath_groups,    ppaths,    pos, obj_ix, 0)) {color = GRAY ; return 1;} // can/should we restrict this to only run when inside a park?
 	if (check_city_obj_pt_xy_contains(fountain_groups, fountains, pos, obj_ix, 1)) {color = GRAY ; return 1;} // is_cylin=1
 	if (check_city_obj_pt_xy_contains(tramp_groups,    tramps,    pos, obj_ix, 1)) {color = (BKGRAY*0.75 + tramps[obj_ix].color*0.25); return 1;} // is_cylin=1
+	if (check_city_obj_pt_xy_contains(dumpster_groups, dumpsters, pos, obj_ix, 0)) {color = colorRGBA(0.1, 0.4, 0.1, 1.0); return 1;} // dark green
 	if (check_city_obj_pt_xy_contains(umbrella_groups, umbrellas, pos, obj_ix, 1)) {color = WHITE; return 1;} // is_cylin=1
 	// Note: ppoles, hcaps, manholes, mboxes, tcones, pladders, signs, stopsigns, flags, pigeons, birds, swings, umbrellas, bikes, and plants are skipped for now;
 	// pillars aren't visible under walkways
