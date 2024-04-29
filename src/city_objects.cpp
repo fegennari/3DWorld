@@ -89,7 +89,7 @@ bool model_city_obj_t::proc_sphere_coll(point &pos_, point const &p_last, float 
 }
 
 multi_model_city_obj_t::multi_model_city_obj_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_id, unsigned model_select, bool is_cylinder_) :
-	model_city_obj_t(pos_, height, dim_, dir_, model_id, is_cylinder_), full_model_id(model_id + (model_select << 8)) {}
+	model_city_obj_t(pos_, height, dim_, dir_, (model_id + (model_select << 8)), is_cylinder_), full_model_id(model_id + (model_select << 8)) {}
 
 // swingsets
 
