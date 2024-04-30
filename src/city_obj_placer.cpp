@@ -371,6 +371,30 @@ bool check_path_tree_coll(park_path_t const &path, vector<point> const &tree_pos
 }
 float get_power_pole_height() {return 0.9*city_params.road_width;}
 
+// this version is for checking against blockers placed in a previous step
+bool is_placement_blocked(cube_t const &cube, vect_cube_t const &blockers, cube_t const &exclude, unsigned prev_blockers_end, float expand=0.0, bool exp_dim=0) {
+	cube_t query_cube(cube);
+	query_cube.expand_in_dim(exp_dim, expand);
+
+	for (auto b = blockers.begin(); b != blockers.begin()+prev_blockers_end; ++b) {
+		if (*b != exclude && b->intersects_xy_no_adj(query_cube)) return 1;
+	}
+	return 0;
+}
+// this version is for checking against blockers placed in the current step
+bool is_placement_blocked_recent(cube_t const &cube, vect_cube_t const &blockers, unsigned blockers_start) {
+	assert(blockers_start <= blockers.size());
+
+	for (auto b = blockers.begin()+blockers_start; b != blockers.end(); ++b) {
+		if (b->intersects_xy_no_adj(cube)) return 1;
+	}
+	return 0;
+}
+bool check_close_to_door(point const &pos, float min_dist, unsigned building_ix) {
+	point door_pos;
+	return (get_building_door_pos_closest_to(building_ix, pos, door_pos, 1) && dist_xy_less_than(pos, door_pos, min_dist)); // close to door; inc_garage_door=1
+}
+
 // Note: blockers are used for placement of objects within this plot; colliders are used for pedestrian AI
 void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders,
 	vector<point> const &tree_pos, vect_cube_t const &pond_blockers, rand_gen_t &rgen, bool have_streetlights)
@@ -520,8 +544,49 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		} // for dim
 	}
 	// place dumpsters in city blocks
-	if (!plot.is_residential_not_park() && building_obj_model_loader.is_model_valid(OBJ_MODEL_DUMPSTER)) {
-		// TODO
+	if (!plot.is_residential_not_park() && have_buildings() && building_obj_model_loader.is_model_valid(OBJ_MODEL_DUMPSTER)) {
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_DUMPSTER)); // W, D, H
+		float const height(0.3*car_length), width(height*sz.y/sz.z), depth(height*sz.x/sz.z);
+		point const center(plot.get_cube_center());
+		vect_cube_with_ix_t bcubes; // we need the building index for the get_building_door_pos_closest_to() call
+		get_building_bcubes(plot, bcubes);
+		
+		for (cube_with_ix_t const &b : bcubes) {
+			if (rgen.rand_float() < 0.1) continue; // skip this building 10% of the time; placements often fail anyway, and usually fail for non-cube buildings
+			// find the bcube side furthest from the road/closest to the plot center
+			bool dim(0), dir(0);
+			float dmin_sq(0.0);
+
+			for (unsigned d = 0; d < 2; ++d) {
+				point edge_center;
+				edge_center[!d] = b.get_center_dim(!d);
+
+				for (unsigned e = 0; e < 2; ++e) {
+					edge_center[d] = b.d[d][e];
+					float const dsq(p2p_dist_xy_sq(edge_center, center));
+					if (dmin_sq == 0.0 || dsq < dmin_sq) {dim = d; dir = e; dmin_sq = dsq;}
+				}
+			} // for d
+			float const lo(b.d[!dim][0] + 0.7*width), hi(b.d[!dim][1] - 0.7*width);
+			if (lo >= hi) continue; // wall too short to place a dumpster
+			float const wall_pos(b.d[dim][dir]);
+			point pos;
+			pos.z     = plot.z1();
+			pos[ dim] = wall_pos + (dir ? 1.0 : -1.0)*0.65*depth; // move away from the wall
+			pos[!dim] = rgen.rand_uniform(lo, hi);
+			dumpster_t const dumpster(pos, height, dim, dir);
+			cube_t check_cube(dumpster.bcube);
+			check_cube.d[dim][dir] += (dir ? 1.0 : -1.0)*2.0*depth; // add extra clearance in front
+			if (is_placement_blocked(check_cube, blockers, b, blockers.size())) continue; // check blockers; no expand
+			point const center(dumpster.bcube.get_cube_center()); // pos shifted up
+			point p_include(center);
+			p_include[dim] = wall_pos - (dir ? 1.0 : -1.0)*1.0*depth; // inside the wall
+			if (!check_sphere_coll_building(p_include, 0.0, 0, b.ix)) continue; // *must* be next to an exterior wall; radius=0.0, xy_only=0
+			if (check_close_to_door(pos, 2.0*width, b.ix))            continue;
+			dumpster_groups.add_obj(dumpster, dumpsters);
+			add_cube_to_colliders_and_blockers(dumpster.bcube, colliders, blockers);
+			blockers.back().d[dim][dir] = check_cube.d[dim][dir]; // include clearance
+		} // for b
 	}
 	// place fountains in parks and 25% of the time in city blocks
 	if ((is_park || (!is_residential && (rgen.rand() & 3) == 0)) && building_obj_model_loader.is_model_valid(OBJ_MODEL_FOUNTAIN)) {
@@ -826,26 +891,6 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	}
 }
 
-// this version is for checking against blockers placed in a previous step
-bool is_placement_blocked(cube_t const &cube, vect_cube_t const &blockers, cube_t const &exclude, unsigned prev_blockers_end, float expand=0.0, bool exp_dim=0) {
-	cube_t query_cube(cube);
-	query_cube.expand_in_dim(exp_dim, expand);
-
-	for (auto b = blockers.begin(); b != blockers.begin()+prev_blockers_end; ++b) {
-		if (*b != exclude && b->intersects_xy_no_adj(query_cube)) return 1;
-	}
-	return 0;
-}
-// this version is for checking against blockers placed in the current step
-bool is_placement_blocked_recent(cube_t const &cube, vect_cube_t const &blockers, unsigned blockers_start) {
-	assert(blockers_start <= blockers.size());
-
-	for (auto b = blockers.begin()+blockers_start; b != blockers.end(); ++b) {
-		if (b->intersects_xy_no_adj(cube)) return 1;
-	}
-	return 0;
-}
-
 // dim=narrow dimension of fence; dir=house front/back dir in dimension dim; side=house left/right side in dimension !dim
 float extend_fence_to_house(cube_t &fence, cube_t const &house, float fence_hwidth, float fence_height, bool dim, bool dir, bool side) {
 	float &fence_end(fence.d[!dim][!side]);
@@ -863,10 +908,6 @@ float extend_fence_to_house(cube_t &fence, cube_t const &house, float fence_hwid
 	fence_end = p_int[!dim];
 	assert(fence.is_strictly_normalized());
 	return dist;
-}
-bool check_close_to_door(point const &pos, float min_dist, unsigned building_ix) {
-	point door_pos;
-	return (get_building_door_pos_closest_to(building_ix, pos, door_pos, 1) && dist_xy_less_than(pos, door_pos, min_dist)); // close to door; inc_garage_door=1
 }
 bool check_valid_house_obj_place(point const &pos, float height, float radius, float wall_pos, bool dim, bool dir, cube_t const &bcube,
 	cube_with_ix_t const &house, vect_cube_t const &blockers, unsigned prev_blockers_end, unsigned yard_blockers_start)
@@ -1724,7 +1765,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(tramps,    tramp_groups,    dstate, 0.10, shadow_only, 1); // dist_scale=0.10, has_immediate_draw=1
 	draw_objects(umbrellas, umbrella_groups, dstate, 0.18, shadow_only, 1); // dist_scale=0.18, has_immediate_draw=1
 	draw_objects(bikes,     bike_groups,     dstate, 0.025,shadow_only, 1); // dist_scale=0.025,has_immediate_draw=1
-	draw_objects(dumpsters, dumpster_groups, dstate, 0.20, shadow_only, 1); // dist_scale=0.20, has_immediate_draw=1
+	draw_objects(dumpsters, dumpster_groups, dstate, 0.15, shadow_only, 1); // dist_scale=0.15, has_immediate_draw=1
 	draw_objects(plants,    plant_groups,    dstate, 0.04, shadow_only, 1); // dist_scale=0.05, has_immediate_draw=1
 	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1); // dist_scale=0.25, has_immediate_draw=1
 	
