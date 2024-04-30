@@ -602,25 +602,55 @@ bool swimming_pool_t::proc_sphere_coll(point &pos_, point const &p_last, float r
 
 // pool decks
 
-textured_mat_t pool_deck_mats[NUM_POOL_DECK_TYPES] = {
-	textured_mat_t("fence.jpg",          "normal_maps/fence_NRM.jpg", 0, WHITE, LT_BROWN),
-	textured_mat_t("roads/concrete.jpg", "",                          0, GRAY,  LT_GRAY )
+textured_mat_t pool_deck_mats[NUM_POOL_DECK_PASSES] = {
+	textured_mat_t("fence.jpg",          "normal_maps/fence_NRM.jpg",    0, WHITE, LT_BROWN),
+	textured_mat_t("roads/concrete.jpg", "",                             0, GRAY,  LT_GRAY ),
+	textured_mat_t("shingles.jpg",       "normal_maps/shingles_NRM.jpg", 0, WHITE, GRAY    ), // roof
+	textured_mat_t("wood.jpg",           "normal_maps/wood_NRM.jpg",     0, WHITE, BROWN   ), // pillars
 };
 
-pool_deck_t::pool_deck_t(cube_t const &bcube_, unsigned mat_id_, bool dim_, bool dir_) : oriented_city_obj_t(bcube_, dim_, dir_), mat_id(mat_id_) {
-	mat_id %= NUM_POOL_DECK_TYPES;
+pool_deck_t::pool_deck_t(cube_t const &base_, cube_t const &roof_, unsigned mat_id_, bool dim_, bool dir_) : // dim/dir is facing yard
+	oriented_city_obj_t(base_, dim_, dir_), mat_id(mat_id_ % NUM_POOL_DECK_TYPES), base(base_), roof(roof_)
+{
+	if (roof.is_all_zeros()) return; // no roof
+	bcube.union_with_cube(roof);
+	set_bsphere_from_bcube(); // update
 }
 /*static*/ void pool_deck_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	assert(dstate.pass_ix < NUM_POOL_DECK_TYPES);
+	assert(dstate.pass_ix < NUM_POOL_DECK_PASSES);
 	pool_deck_mats[dstate.pass_ix].pre_draw(shadow_only);
 }
 /*static*/ void pool_deck_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	assert(dstate.pass_ix < NUM_POOL_DECK_TYPES);
+	assert(dstate.pass_ix < NUM_POOL_DECK_PASSES);
 	pool_deck_mats[dstate.pass_ix].post_draw(shadow_only);
 }
 void pool_deck_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	if (mat_id != dstate.pass_ix) return; // this type not enabled in this pass
-	dstate.draw_cube(qbds.qbd, bcube, pool_deck_mats[mat_id].color, 1, 1.0/get_width(), 0, 0, 0, dim); // skip bottom
+	if (dstate.pass_ix < NUM_POOL_DECK_TYPES) { // draw the deck
+		if (mat_id != dstate.pass_ix) return; // this type not enabled in this pass
+		dstate.draw_cube(qbds.qbd, base, pool_deck_mats[mat_id].color, 1, 1.0/get_width(), 0, 0, 0, !dim); // skip bottom; what about the side against the house?
+	}
+	else if (dstate.pass_ix == NUM_POOL_DECK_TYPES) { // draw the roof; TODO: sloped downward in dim/dir
+		if (!has_roof()) return; // no roof
+		dstate.draw_cube(qbds.qbd, roof, pool_deck_mats[mat_id].color, 0, 4.0/get_width(), 0, 0, dir, dim); // draw all sides
+	}
+	else if (dstate.pass_ix == NUM_POOL_DECK_TYPES+1) { // draw the support pillars
+		if (!has_roof()) return; // no roof
+		if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.5*dist_scale*dstate.draw_tile_dist)) return; // too far
+		float const width(get_width());
+		unsigned const num_pillars(max(2U, unsigned(0.5*width/get_depth())));
+		float const pillar_width(2.8*roof.dz()), pillar_hwidth(0.5*pillar_width), pillar_edge_gap(0.1*pillar_width);
+		float const span(width - pillar_width - 2.0*pillar_edge_gap), spacing(span/(num_pillars - 1)), roof_height(roof.z1() - base.z2());
+		cube_t pillar(bcube);
+		set_cube_zvals(pillar, base.z2(), roof.z1());
+		pillar.d[dim][!dir] = bcube.d[dim][dir] - (dir ? 1.0 : -1.0)*pillar_width;
+		pillar.translate_dim(dim, -pillar_edge_gap); // shift slightly toward the house
+
+		for (unsigned n = 0; n < num_pillars; ++n) { // TODO: no pillar blocking pool ladder
+			set_wall_width(pillar, (bcube.d[!dim][0] + pillar_hwidth + pillar_edge_gap + n*spacing), pillar_hwidth, !dim);
+			dstate.draw_cube(qbds.qbd, pillar, pool_deck_mats[mat_id].color, 1, 4.0/roof_height, 4, 0, 0, 1); // skip top and bottom; swap tc x/y
+		}
+	}
+	else {assert(0);}
 }
 
 // newsracks

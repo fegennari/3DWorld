@@ -28,6 +28,7 @@ struct plot_divider_type_t : public textured_mat_t {
 };
 enum {DIV_WALL=0, DIV_FENCE, DIV_HEDGE, DIV_CHAINLINK, DIV_NUM_TYPES}; // types of plot dividers, with end terminator
 enum {POOL_DECK_WOOD=0, POOL_DECK_CONCRETE, NUM_POOL_DECK_TYPES};
+unsigned const NUM_POOL_DECK_PASSES(NUM_POOL_DECK_TYPES + 2); // {deck types}, roof, pillars
 
 struct city_draw_qbds_t {
 	quad_batch_draw qbd, untex_qbd, untex_spec_qbd, emissive_qbd;
@@ -162,7 +163,10 @@ struct pool_ladder_t : public model_city_obj_t { // for in-ground pools
 
 struct pool_deck_t : public oriented_city_obj_t {
 	unsigned mat_id;
-	pool_deck_t(cube_t const &bcube_, unsigned tid_, bool dim_, bool dir_);
+	cube_t base, roof;
+
+	pool_deck_t(cube_t const &base_, cube_t const &roof_, unsigned mat_id_, bool dim_, bool dir_);
+	bool has_roof() const {return !roof.is_all_zeros();}
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;

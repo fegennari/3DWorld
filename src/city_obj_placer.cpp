@@ -1328,8 +1328,18 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 					if (*b != house && deck.intersects_xy_no_adj(*b) && !deck.contains_cube_xy(*b)) {valid = 0; break;}
 				}
 				if (!valid) continue;
-				pdeck_groups.add_obj(pool_deck_t(deck, rgen.rand(), d, dir), pdecks);// choose a random material
-				blockers.push_back(deck); // blocker for other objects, but not a collider for people or the player
+				cube_t roof;
+				
+				if (1) { // TODO: check for balconies and other blockers; but balconies aren't placed yet, so they need to check for pool decks?
+					roof = deck;
+					roof.z2() += 0.177*city_params.road_width; // shift upward
+					roof.z1()  = roof.z2() - 0.02*roof.dz();
+					max_eq(roof.d[d][0], house.d[d][0]); // clip to range of house; TODO: use actual part
+					min_eq(roof.d[d][1], house.d[d][1]);
+					assert(roof.is_strictly_normalized());
+				}
+				pdeck_groups.add_obj(pool_deck_t(deck, roof, rgen.rand(), !d, dir), pdecks);// choose a random material
+				blockers.push_back(pdecks.back().bcube); // blocker for other objects, but not a collider for people or the player
 			} // for d
 		}
 		if (!above_ground && building_obj_model_loader.is_model_valid(OBJ_MODEL_POOL_LAD)) { // in-ground pool, add pool ladder
@@ -1806,10 +1816,9 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 		if (dstate.pass_ix == DIV_CHAINLINK && shadow_only) continue; // chainlink fence not drawn in the shadow pass
 		draw_objects(dividers, divider_groups, dstate, 0.2, shadow_only, 0); // dist_scale=0.2
 	}
-	if (!shadow_only) {
-		for (dstate.pass_ix = 0; dstate.pass_ix < NUM_POOL_DECK_TYPES; ++dstate.pass_ix) { // {wood, concrete}
-			draw_objects(pdecks, pdeck_groups, dstate, 0.26, shadow_only, 0); // dist_scale=0.3
-		}
+	for (dstate.pass_ix = 0; dstate.pass_ix < NUM_POOL_DECK_PASSES; ++dstate.pass_ix) { // {wood, concrete, roof, pillars}
+		if (shadow_only && dstate.pass_ix < NUM_POOL_DECK_TYPES) continue; // decks don't cast shadows, but the roof and pillars do
+		draw_objects(pdecks, pdeck_groups, dstate, 0.26, shadow_only, 0); // dist_scale=0.3
 	}
 	for (dstate.pass_ix = 0; dstate.pass_ix < 3; ++dstate.pass_ix) { // {sign front, sign back + pole, 4-way sign}
 		draw_objects(stopsigns, stopsign_groups, dstate, 0.1, shadow_only, 0); // dist_scale=0.1
@@ -1974,7 +1983,8 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 	}
 	if (check_city_obj_pt_xy_contains(pdeck_groups, pdecks, pos, obj_ix)) {
 		assert(obj_ix < pdecks.size());
-		color = pool_deck_mats[pdecks[obj_ix].mat_id].get_avg_color();
+		if (pdecks[obj_ix].has_roof()) {color = pool_deck_mats[NUM_POOL_DECK_TYPES  ].get_avg_color();} // roof visible
+		else                           {color = pool_deck_mats[pdecks[obj_ix].mat_id].get_avg_color();} // deck visible
 		return 1;
 	}
 	if (!skip_in_road && check_city_obj_pt_xy_contains(nrack_groups, newsracks, pos, obj_ix)) { // now placed in roads
