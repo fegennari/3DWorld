@@ -89,7 +89,7 @@ bool city_bird_t::check_for_mid_flight_coll(float dir_dp, city_obj_placer_t &pla
 }
 
 // timestep is in ticks
-void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed, bool &bird_moved, city_obj_placer_t &placer, rand_gen_t &rgen) {
+void city_bird_t::next_frame(float timestep, float delta_dir, point const &camera_bs, bool &tile_changed, bool &bird_moved, city_obj_placer_t &placer, rand_gen_t &rgen) {
 	// update state
 	uint8_t const prev_state(state);
 	float const new_anim_time(anim_time + timestep);
@@ -136,7 +136,7 @@ void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed
 	if (state != prev_state) {anim_time = 0.0;} // reset animation time on state change
 	else {anim_time = new_anim_time;}
 
-	if (state == BIRD_STATE_STANDING || state == BIRD_STATE_LANDING || pos == dest) {
+	if (state == BIRD_STATE_STANDING || state == BIRD_STATE_LANDING || pos == dest) { // stationary
 		if (dest_dir != zero_vector) { // maybe update direction to match intended direction of our new destination
 			float const dp(dot_product(dir, dest_dir));
 
@@ -214,6 +214,11 @@ void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed
 		bcube         += (pos - bcube.get_cube_center()); // translate bcube to match - keep it centered on pos
 		tile_changed  |= (get_tile_id_containing_point_no_xyoff(pos) != get_tile_id_containing_point_no_xyoff(prev_frame_pos));
 		bird_moved     = 1;
+		
+		if (pos.z > camera_bs.z && dist_xy_less_than(pos, camera_bs, 4.0*CAMERA_RADIUS) && tfticks > next_poop_time) {
+			// TODO: poop on the player
+			next_poop_time = tfticks + rgen.rand_uniform(2.0, 5.0)*TICKS_PER_SECOND; // wait 2-5s before pooping again
+		}
 	}
 }
 
@@ -249,7 +254,7 @@ void city_obj_placer_t::next_frame() {
 	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
 	float const delta_dir(0.1*(1.0 - pow(0.7f, fticks))); // controls bird turning rate
 	bool tile_changed(0), bird_moved(0);
-	for (city_bird_t &bird : birds) {bird.next_frame(timestep, delta_dir, tile_changed, bird_moved, *this, bird_rgen);}
+	for (city_bird_t &bird : birds) {bird.next_frame(timestep, delta_dir, camera_bs, tile_changed, bird_moved, *this, bird_rgen);}
 	
 	if (tile_changed) { // update bird_groups; is there a more efficient way than rebuilding bird_groups each frame?
 		bird_groups.rebuild(birds, all_objs_bcube);

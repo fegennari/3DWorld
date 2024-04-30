@@ -330,7 +330,7 @@ class city_bird_t : public city_bird_base_t {
 	bool hit_min_alt=0;
 	uint8_t state=0;
 	unsigned loc_ix=0;
-	float height=0.0, anim_time=0.0, takeoff_time=0.0, start_end_zmax=0.0;
+	float height=0.0, anim_time=0.0, takeoff_time=0.0, start_end_zmax=0.0, next_poop_time=0.0;
 	vector3d velocity, dest_dir;
 	point dest, prev_frame_pos;
 	colorRGBA color;
@@ -346,7 +346,7 @@ public:
 	city_bird_t(point const &pos_, float height_, vector3d const &init_dir, colorRGBA const &color_, unsigned loc_ix_, rand_gen_t &rgen);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
-	void next_frame(float timestep, float delta_dir, bool &tile_changed, bool &bird_moved, city_obj_placer_t &placer, rand_gen_t &rgen);
+	void next_frame(float timestep, float delta_dir, point const &camera_bs, bool &tile_changed, bool &bird_moved, city_obj_placer_t &placer, rand_gen_t &rgen);
 	bool dest_valid() const {return (dest != zero_vector);}
 };
 
