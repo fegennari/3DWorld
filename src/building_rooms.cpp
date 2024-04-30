@@ -817,6 +817,7 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) { // or ladder
 				if (has_bcube_int_no_adj(fe_bc, parts))              continue; // check for intersection with other parts, in particular the chimney and fireplace
 				if (has_driveway() && fe_bc.intersects_xy(driveway)) continue; // skip if intersects driveway or garage
 				if (cube_int_ext_door(fe_bc_exp))                    continue; // check exterior doors
+				if (!deck_bounds.is_all_zeros() && fe_bc.intersects_xy(deck_bounds)) continue; // check deck
 				interior->room_geom->objs.emplace_back(fe_bc, TYPE_FESCAPE, 0, dim, dir, RO_FLAG_EXTERIOR, 1.0, SHAPE_CUBE, BLACK); // room_id=0
 				details.emplace_back(fe_bc, DETAIL_OBJ_COLLIDER);
 				union_with_coll_bcube(fe_bc);
@@ -860,6 +861,7 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) { // or ladder
 				if (has_driveway() && bc.intersects_xy(driveway)) continue; // skip if intersects driveway or garage
 				if (cube_int_ext_door(bc_exp))                    continue; // check exterior doors
 				if (has_bcube_int(bc_exp, details))               continue; // check details; outdoor AC units can intersect
+				if (!deck_bounds.is_all_zeros() && bc.intersects_xy(deck_bounds)) continue; // check deck
 				interior->room_geom->objs.emplace_back(bc, TYPE_LADDER, 0, dim, dir, RO_FLAG_EXTERIOR, 1.0, SHAPE_CUBE, GRAY); // room_id=0
 				union_with_coll_bcube(bc);
 				ladder = bc;
@@ -884,6 +886,7 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 	vect_cube_t avoid;
 	if (!objs.empty() && (objs.back().type == TYPE_FESCAPE || objs.back().type == TYPE_LADDER)) {avoid.push_back(objs.back());} // avoid fire escape or ladder
 	if (has_driveway()) {avoid.push_back(driveway);}
+	if (!deck_bounds  .is_all_zeros()) {avoid.push_back(deck_bounds  );}
 	if (!city_driveway.is_all_zeros()) {avoid.push_back(city_driveway);}
 
 	// find suitable rooms for balconies; since room walls will never intersect windows, we can make the balcony the same width to avoid intersecting windows
