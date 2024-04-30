@@ -111,7 +111,7 @@ float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-F
 float water_h_off(0.0), water_h_off_rel(0.0), perspective_fovy(0.0), perspective_nclip(0.0), read_mesh_zmm(0.0), indir_light_exp(1.0), cloud_height_offset(0.0);
 float snow_depth(0.0), snow_random(0.0), cobj_z_bias(DEF_Z_BIAS), init_temperature(DEF_TEMPERATURE), indir_vert_offset(0.25), sm_tree_density(1.0), fog_dist_scale(1.0);
 float CAMERA_RADIUS(DEF_CAMERA_RADIUS), C_STEP_HEIGHT(0.6), waypoint_sz_thresh(1.0), model3d_alpha_thresh(0.9), model3d_texture_anisotropy(1.0), dist_to_fire_sq(0.0);
-float ocean_wave_height(DEF_OCEAN_WAVE_HEIGHT), tree_density_thresh(0.55), model_auto_tc_scale(0.0), model_triplanar_tc_scale(0.0);
+float ocean_wave_height(DEF_OCEAN_WAVE_HEIGHT), tree_density_thresh(0.55), model_auto_tc_scale(0.0), model_triplanar_tc_scale(0.0), precip_dist_scale(1.0);
 float custom_glaciate_exp(0.0), tree_type_rand_zone(0.0), jump_height(1.0), force_czmin(0.0), force_czmax(0.0), smap_thresh_scale(1.0), dlight_intensity_scale(1.0);
 float model_mat_lod_thresh(5.0), clouds_per_tile(0.5), def_atmosphere(1.0), def_vegetation(1.0), ocean_depth_opacity_mult(1.0), erode_amount(1.0), ambient_scale(1.0);
 float model_hemi_lighting_scale(0.5), pine_tree_radius_scale(1.0), sunlight_brightness(1.0), moonlight_brightness(1.0), sm_tree_scale(1.0);
@@ -2266,6 +2266,7 @@ int load_config(string const &config_file) {
 	//if (read_heightmap && dynamic_mesh_scroll) cout << "Warning: read_heightmap and dynamic_mesh_scroll are currently incompatible options as the heightmap does not scroll." << endl;
 	DISABLE_WATER = INIT_DISABLE_WATER;
 	XY_MULT_SIZE  = MESH_X_SIZE*MESH_Y_SIZE; // for bmp_to_chars() allocation
+	precip_dist_scale = CAMERA_RADIUS/DEF_CAMERA_RADIUS;
 	if (!bmp_file_to_binary_array(md_fname, mesh_draw    )) {error = 1;}
 	if (!bmp_file_to_binary_array(we_fname, water_enabled)) {error = 1;}
 	if (!bmp_file_to_binary_array(fw_fname, flower_weight)) {error = 1;}
