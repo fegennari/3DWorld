@@ -313,7 +313,7 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 			s.set_prefix("#define SMOKE_ENABLED", d);
 		}
 		if (volume_lighting && use_smap) {s.set_prefix("#define SMOKE_SHADOW_MAP", 1);} // FS
-		if (smoke_dlights) {s.set_prefix("#define SMOKE_DLIGHTS", 1);} // FS - TESTING
+		if (smoke_dlights) {s.set_prefix("#define SMOKE_DLIGHTS", 1);} // FS
 
 		if (use_smoke_noise()) {
 			s.set_prefix("#define SMOKE_NOISE",   1); // FS

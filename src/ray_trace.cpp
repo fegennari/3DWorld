@@ -333,7 +333,7 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 	}
 	point p_end(p2);
 	if ( coll) {p2 = cpos;}
-	if (keep_beams && p1 != p2) {beams.push_back(beam3d(!coll, 1, p1, p2, color, 0.1*weight));} // testing
+	if (keep_beams && p1 != p2) {beams.push_back(beam3d(!coll, 1, p1, p2, color, 0.1*weight));} // TESTING
 	if (!coll) return; // more efficient to do this up here and let a reverse ray from the sky light this path
 
 	// walk from p1 to p2, adding light to all lightmap cells encountered

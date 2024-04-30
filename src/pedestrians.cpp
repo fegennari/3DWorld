@@ -1424,7 +1424,7 @@ void ped_manager_t::init(unsigned num_city) {
 			peds.push_back(ped);
 		}
 	} // for n
-	cout << "City Pedestrians: " << peds.size() << endl; // testing
+	cout << "City Pedestrians: " << peds.size() << endl; // TESTING
 	sort_by_city_and_plot();
 }
 

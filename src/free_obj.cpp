@@ -699,7 +699,7 @@ void free_obj::draw(shader_t &shader, vpc_shader_t &upc_shader) const { // view 
 			set_std_blend_mode();
 			shader.reset_subroutine(1, "do_lighting_op", "normal_lighting");
 
-			if (display_mode & 0x10) { // testing
+			if (display_mode & 0x10) { // TESTING
 				set_emissive_color(colorRGBA(GREEN, 0.25), udd.shader);
 				fgPushMatrix();
 				global_translate(pos);
