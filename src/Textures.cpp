@@ -789,7 +789,6 @@ void texture_t::fix_word_alignment() {
 	//if (ncolors == 3) {write_to_jpg("textures\\"+name);} // auto-update of resized textures
 }
 
-
 void texture_t::add_alpha_channel() {
 
 	if (ncolors == 4) return; // alread has an alpha channel
@@ -808,6 +807,18 @@ void texture_t::add_alpha_channel() {
 	data = new_data;
 }
 
+void texture_t::expand_grayscale_to_rgb() {
+
+	if (is_16_bit_gray) return; // 16-bit RGBA not supported; error?
+	if (ncolors != 1  ) return; // not grayscale
+	assert(is_allocated());
+	unsigned const npixels(num_pixels());
+	ncolors = 3; // make RGBA
+	unsigned char *new_data(new unsigned char[num_bytes()]);
+	for (unsigned i = 0; i < npixels; ++i) {UNROLL_3X(new_data[3*i+i_] = data[i];);}
+	free_data();
+	data = new_data;
+}
 
 void texture_t::resize(int new_w, int new_h) { // Note: not thread safe
 
@@ -831,7 +842,6 @@ void texture_t::resize(int new_w, int new_h) { // Note: not thread safe
 	height = new_h;
 }
 
-
 bool texture_t::try_compact_to_lum() {
 
 	if (!CHECK_FOR_LUM || ncolors != 3) return 0;
@@ -842,7 +852,7 @@ bool texture_t::try_compact_to_lum() {
 	for (unsigned i = 0; i < npixels && is_lum; ++i) {is_lum &= (data[3*i+1] == data[3*i] && data[3*i+2] == data[3*i]);}
 	if (!is_lum) return 0;
 	// RGB equal, make it a single color (luminance) channel
-	ncolors = 1; // add alpha channel
+	ncolors = 1; // make luminance
 	unsigned char *new_data(new unsigned char[num_bytes()]);
 	for (unsigned i = 0; i < npixels; ++i) {new_data[i] = data[3*i];}
 	free_data();

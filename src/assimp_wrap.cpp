@@ -276,6 +276,11 @@ class file_reader_assimp {
 	vector<texture_load_work_item_t> to_load;
 	set<unsigned> unique_tids;
 
+	static void init_texture(texture_t &t) { // called on internal texture formats; what about external textures, do we need expand_grayscale_to_rgb()?
+		t.expand_grayscale_to_rgb();
+		t.fix_word_alignment(); // untested
+		t.init(); // calls calc_color()
+	}
 	void load_embedded_textures() {
 		timer_t timer("Load Embedded Textures", !to_load.empty()); // 1.57s (0.55s) avg across 5 people and 5 zombie models
 
@@ -288,10 +293,9 @@ class file_reader_assimp {
 				cerr << "Error: Failed to load embedded texture with stb_image" << endl;
 				exit(1); // fatal
 			}
-			//if (model.get_filename() == "../models/interiors/banana_peel.glb" && !t.normal_map) {t.write_to_jpg("embedded_image.jpg");} // TESTING
-			//cout << TXT(model.get_filename()) << TXT(t.name) << TXT(t.width) << TXT(t.height) << endl; // TESTING
-			t.fix_word_alignment(); // untested
-			t.init(); // calls calc_color()
+			//if (model.get_filename() == "../models/dumpster.glb" && !t.normal_map && t.ncolors == 3) {t.write_to_jpg("embedded_image.jpg");} // TESTING
+			//cout << "*** " << TXT(model.get_filename()) << TXT(t.name) << TXT(t.width) << TXT(t.height) << TXT(t.ncolors) << endl; // TESTING
+			init_texture(t);
 		} // for i
 		to_load.clear();
 	}
@@ -346,7 +350,7 @@ class file_reader_assimp {
 					tdata[4*i+2] = texture->pcData[i].b;
 					tdata[4*i+3] = texture->pcData[i].a;
 				}
-				t.init(); // calls calc_color()
+				init_texture(t);
 				return tid; // done
 			}
 			// else texture stored compressed

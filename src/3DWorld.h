@@ -1102,6 +1102,7 @@ public:
 	void do_invert_y();
 	void fix_word_alignment();
 	void add_alpha_channel();
+	void expand_grayscale_to_rgb();
 	void resize(int new_w, int new_h);
 	bool try_compact_to_lum();
 	void make_normal_map();
