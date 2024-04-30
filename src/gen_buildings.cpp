@@ -2642,6 +2642,7 @@ public:
 	bool get_building_door_pos_closest_to(unsigned ix, point const &target_pos, point &door_pos, bool inc_garage_door) const {
 		return get_building(ix).get_building_door_pos_closest_to(target_pos, door_pos, inc_garage_door);
 	}
+	cube_t register_deck_and_get_part_bounds(unsigned ix, cube_t const &deck) {return get_building(ix).register_deck_and_get_part_bounds(deck);}
 	cube_t const &get_bcube() const {return buildings_bcube;}
 	bool is_visible(vector3d const &xlate) const {return (!empty() && camera_pdu.cube_visible(buildings_bcube + xlate));}
 	bool is_single_tile() const {return (grid_by_tile.size() == 1);}
@@ -4855,6 +4856,9 @@ cube_t get_building_bcube(unsigned building_id) {return building_creator_city.ge
 
 bool get_building_door_pos_closest_to(unsigned building_id, point const &target_pos, point &door_pos, bool inc_garage_door) { // for city buildings only
 	return building_creator_city.get_building_door_pos_closest_to(building_id, target_pos, door_pos, inc_garage_door);
+}
+cube_t register_deck_and_get_part_bounds(unsigned building_id, cube_t const &deck) {
+	return building_creator_city.register_deck_and_get_part_bounds(building_id, deck);
 }
 bool check_sphere_coll_building(point const &pos, float radius, bool xy_only, unsigned building_id) {
 	return building_creator_city.check_sphere_coll_building(pos, radius, xy_only, building_id);

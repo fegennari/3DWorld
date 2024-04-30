@@ -339,7 +339,6 @@ bool building_t::point_near_ext_door(point const &pos, float dist) const { // si
 	}
 	return 0;
 }
-
 // used for pedestrians; pos should be outside the building
 bool building_t::get_building_door_pos_closest_to(point const &target_pos, point &door_pos, bool inc_garage_door) const {
 	float dmin_sq(0.0);

@@ -192,7 +192,7 @@ void draw_state_t::draw_cube(quad_batch_draw &qbd, color_wrapper const &cw, poin
 	}
 }
 void draw_state_t::draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrapper const &cw, bool skip_bottom, float tscale,
-	unsigned skip_dims, bool mirror_x, bool mirror_y, bool swap_tc_xy, float tscale_x, float tscale_y, float tscale_z) const
+	unsigned skip_dims, bool mirror_x, bool mirror_y, bool swap_tc_xy, float tscale_x, float tscale_y, float tscale_z, bool skip_top) const
 {
 	point p[8];
 	set_cube_pts(c, 0, 0, p);
@@ -211,8 +211,13 @@ void draw_state_t::draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrappe
 	if (!(skip_dims & 4)) { // Z
 		if (mirror_x) {tr_top.mirror_x();}
 		if (mirror_y) {tr_top.mirror_y();}
-		if (cview_dir.z > 0.0) {qbd.add_quad_pts(p+4, cw,  plus_z, tr_top);} // top
-		else if (!skip_bottom) {qbd.add_quad_pts(p+0, cw, -plus_z, tr_top);} // bottom - not always drawn
+
+		if (cview_dir.z > 0.0) {
+			if (!skip_top   ) {qbd.add_quad_pts(p+4, cw,  plus_z, tr_top);} // top
+		}
+		else {
+			if (!skip_bottom) {qbd.add_quad_pts(p+0, cw, -plus_z, tr_top);} // bottom - not always drawn
+		}
 	}
 	if (!(skip_dims & 1)) { // X
 		if (mirror_x) {tr_front.mirror_x();}

@@ -1201,8 +1201,9 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 	}
 }
 
-bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t const &yard, cube_t const &house, bool dim, bool dir, bool shrink_dim, unsigned prev_blockers_end,
-	float divider_hwidth, float const translate_dist[2], vect_cube_t const &pool_blockers, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen)
+bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t const &yard, cube_with_ix_t const &house,
+	bool dim, bool dir, bool shrink_dim, unsigned prev_blockers_end, float divider_hwidth, float const translate_dist[2],
+	vect_cube_t const &pool_blockers, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen)
 {
 	if (rgen.rand_float() < 0.05) return 0; // add pools 95% of the time (since placing them often fails anyway)
 	cube_t pool_area(yard);
@@ -1295,6 +1296,7 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 		cube_t pool_collider(pool);
 		pool_collider.z2() += 0.1*city_params.road_width; // extend upward to make a better collider
 		add_cube_to_colliders_and_blockers(pool_collider, colliders, blockers);
+		bool added_deck(0);
 
 		for (unsigned side = 0; side < 2; ++side) {
 			divider_t const &fence(fences[side]);
@@ -1328,18 +1330,28 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 					if (*b != house && deck.intersects_xy_no_adj(*b) && !deck.contains_cube_xy(*b)) {valid = 0; break;}
 				}
 				if (!valid) continue;
+				float const roof_height(0.181*city_params.road_width);
 				cube_t roof;
 				
-				if (1) { // TODO: check for balconies and other blockers; but balconies aren't placed yet, so they need to check for pool decks?
-					roof = deck;
-					roof.z2() += 0.177*city_params.road_width; // shift upward
-					roof.z1()  = roof.z2() - 0.02*roof.dz();
-					max_eq(roof.d[d][0], house.d[d][0]); // clip to range of house; TODO: use actual part
-					min_eq(roof.d[d][1], house.d[d][1]);
-					assert(roof.is_strictly_normalized());
+				if (deck.get_sz_dim(!d) > 0.8*roof_height) { // add if wide enough
+					cube_t deck_with_roof(deck);
+					deck_with_roof.z2() += roof_height; // extend upward
+					cube_t const part_bounds(register_deck_and_get_part_bounds(house.ix, deck_with_roof));
+					
+					if (part_bounds.is_strictly_normalized()) { // valid house part edge; this only fails for one house
+						roof = deck;
+						roof.z2() = deck_with_roof.z2();
+						roof.z1() = roof.z2() - 0.035*roof.dz();
+						max_eq(roof.d[d][0], part_bounds.d[d][0]); // clip to range of house part(s)
+						min_eq(roof.d[d][1], part_bounds.d[d][1]);
+						assert(roof.is_strictly_normalized());
+						if (roof.get_sz_dim(d) < 2.0*roof_height) {roof.set_to_zeros();} // disable if roof it too short
+					}
 				}
 				pdeck_groups.add_obj(pool_deck_t(deck, roof, rgen.rand(), !d, dir), pdecks);// choose a random material
 				blockers.push_back(pdecks.back().bcube); // blocker for other objects, but not a collider for people or the player
+				added_deck = 1;
+				break; // only needed in one dim
 			} // for d
 		}
 		if (!above_ground && building_obj_model_loader.is_model_valid(OBJ_MODEL_POOL_LAD)) { // in-ground pool, add pool ladder
@@ -1353,6 +1365,7 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 				set_wall_width(ladder, rgen.rand_uniform((pool.d[!dim][0] + 2.0*hdepth), (pool.d[!dim][1] - 2.0*hdepth)), hdepth, !dim); // pos along pool length
 				set_wall_width(ladder, (pool.d[dim][dir] - (dir ? 1.0 : -1.0)*1.15*hwidth), hwidth, dim); // at pool edge
 				plad_groups.add_obj(pool_ladder_t(ladder, dim, !dir), pladders); // inside the pool, facing the street/house - no placement check or blockers added
+				if (added_deck) {pdecks.back().ladder = ladder;} // record the ladder pos to avoid placing pillars there
 			}
 		}
 		return 1; // success - done with pool

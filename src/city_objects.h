@@ -163,7 +163,7 @@ struct pool_ladder_t : public model_city_obj_t { // for in-ground pools
 
 struct pool_deck_t : public oriented_city_obj_t {
 	unsigned mat_id;
-	cube_t base, roof;
+	cube_t base, roof, ladder;
 
 	pool_deck_t(cube_t const &base_, cube_t const &roof_, unsigned mat_id_, bool dim_, bool dir_);
 	bool has_roof() const {return !roof.is_all_zeros();}
@@ -500,7 +500,7 @@ private:
 		vect_cube_t const &pond_blockers, rand_gen_t &rgen, bool have_streetlights);
 	void place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<road_t> const &roads,
 		vect_cube_t const &pool_blockers, unsigned driveways_start, unsigned city_ix, rand_gen_t &rgen);
-	bool place_swimming_pool(road_plot_t const &plot, city_zone_t const &yard, cube_t const &house, bool dim, bool dir, bool shrink_dim, unsigned prev_blockers_end,
+	bool place_swimming_pool(road_plot_t const &plot, city_zone_t const &yard, cube_with_ix_t const &house, bool dim, bool dir, bool shrink_dim, unsigned prev_blockers_end,
 		float divider_hwidth, float const translate_dist[2], vect_cube_t const &pool_blockers, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen);
 	bool check_bird_walkway_clearance(cube_t const &bc) const;
 	void place_birds(rand_gen_t &rgen);

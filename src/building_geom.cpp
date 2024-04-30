@@ -1903,6 +1903,19 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 	if (!doors.empty()) {floor_ext_door_mask |= 1;} // I suppose courtyard doors count here
 }
 
+cube_t building_t::register_deck_and_get_part_bounds(cube_t const &deck) {
+	assert(deck_bounds.is_all_zeros()); // can only have one deck
+	deck_bounds = deck;
+	cube_t deck_exp(deck), part_bounds;
+	deck_exp.expand_by(get_wall_thickness()); // find nearby parts that don't quite overlap; maybe checking for adjacency is close enough?
+
+	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // should garages and sheds count?
+		if (i->z1() != ground_floor_z1) continue; // not ground floor
+		if (i->intersects_xy(deck)) {part_bounds.assign_or_union_with_cube(*i);}
+	}
+	return part_bounds;
+}
+
 void building_t::place_roof_ac_units(unsigned num, float sz_scale, cube_t const &bounds, vect_cube_t const &avoid, rand_gen_t &rgen) {
 
 	if (num == 0) return;

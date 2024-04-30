@@ -454,7 +454,7 @@ public:
 	void draw_cube(quad_batch_draw &qbd, color_wrapper const &cw, point const &center, point const p[8], bool skip_bottom,
 		bool invert_normals=0, float tscale=0.0, unsigned skip_dims=0) const;
 	void draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrapper const &cw, bool skip_bottom=0, float tscale=0.0, unsigned skip_dims=0,
-		bool mirror_x=0, bool mirror_y=0, bool swap_tc_xy=0, float tscale_x=1.0, float tscale_y=1.0, float tscale_z=1.0) const;
+		bool mirror_x=0, bool mirror_y=0, bool swap_tc_xy=0, float tscale_x=1.0, float tscale_y=1.0, float tscale_z=1.0, bool skip_top=0) const;
 	bool add_light_flare(point const &flare_pos, vector3d const &n, colorRGBA const &color, float alpha, float radius);
 	void set_label_text(string const &str, point const &pos) {label_str = str; label_pos = pos;}
 	void show_label_text();
