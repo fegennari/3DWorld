@@ -163,13 +163,16 @@ struct pool_ladder_t : public model_city_obj_t { // for in-ground pools
 
 struct pool_deck_t : public oriented_city_obj_t {
 	unsigned mat_id;
-	cube_t base, roof, ladder;
+	cube_t base, roof;
+	vect_cube_t pillars;
 
 	pool_deck_t(cube_t const &base_, cube_t const &roof_, unsigned mat_id_, bool dim_, bool dir_);
+	void calc_pillars(cube_t const &ladder);
 	bool has_roof() const {return !roof.is_all_zeros();}
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
 class power_pole_t : public city_obj_t {

@@ -616,6 +616,26 @@ pool_deck_t::pool_deck_t(cube_t const &base_, cube_t const &roof_, unsigned mat_
 	bcube.union_with_cube(roof);
 	set_bsphere_from_bcube(); // update
 }
+void pool_deck_t::calc_pillars(cube_t const &ladder) {
+	if (!has_roof())      return; // no roof
+	if (!pillars.empty()) return; // already calculated
+	float const roof_width(roof.get_sz_dim(!dim)), roof_height(roof.z1() - base.z2());
+	unsigned const num_pillars(2U + unsigned(0.5*roof_width/roof_height));
+	float const pillar_width(1.8*roof.dz()), pillar_hwidth(0.5*pillar_width), pillar_edge_gap(0.1*pillar_width);
+	float const span(roof_width - pillar_width - 2.0*pillar_edge_gap), spacing(span/(num_pillars - 1));
+	cube_t pillar(roof), avoid(ladder);
+	set_cube_zvals(pillar, base.z2(), roof.z1());
+	pillar.d[dim][!dir] = roof.d[dim][dir] - (dir ? 1.0 : -1.0)*pillar_width;
+	pillar.translate_dim(dim, -(dir ? 1.0 : -1.0)*pillar_edge_gap); // shift slightly toward the house
+	if (!ladder.is_all_zeros()) {avoid.expand_by_xy(1.0*pillar_width);}
+	pillars.reserve(num_pillars);
+
+	for (unsigned n = 0; n < num_pillars; ++n) { // TODO: no pillar blocking pool ladder
+		set_wall_width(pillar, (roof.d[!dim][0] + pillar_hwidth + pillar_edge_gap + n*spacing), pillar_hwidth, !dim);
+		if (!avoid.is_all_zeros() && pillar.intersects(avoid)) continue; // skip if close to the ladder
+		pillars.push_back(pillar);
+	}
+}
 /*static*/ void pool_deck_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	assert(dstate.pass_ix < NUM_POOL_DECK_PASSES);
 	pool_deck_mats[dstate.pass_ix].pre_draw(shadow_only);
@@ -637,24 +657,17 @@ void pool_deck_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 		if (!has_roof()) return; // no roof
 		if (!shadow_only && !roof.closest_dist_less_than(dstate.camera_bs, 0.3*dist_scale*dstate.draw_tile_dist)) return; // too far
 		// Note: roof side against the house is drawn in case it's visible, but it's between floors and not visible from inside the house
-		dstate.draw_cube(qbds.qbd, roof, pool_deck_mats[mat_id].color, 0, 4.0/get_depth(), 0, 0, dir, dim, 1.0, 1.0, 1.0, 1); // skip_top=1
-		float const roof_width(roof.get_sz_dim(!dim)), roof_height(roof.z1() - base.z2());
-		unsigned const num_pillars(2U + unsigned(0.5*roof_width/roof_height));
-		float const pillar_width(1.8*roof.dz()), pillar_hwidth(0.5*pillar_width), pillar_edge_gap(0.1*pillar_width);
-		float const span(roof_width - pillar_width - 2.0*pillar_edge_gap), spacing(span/(num_pillars - 1));
-		cube_t pillar(roof), avoid(ladder);
-		set_cube_zvals(pillar, base.z2(), roof.z1());
-		pillar.d[dim][!dir] = roof.d[dim][dir] - (dir ? 1.0 : -1.0)*pillar_width;
-		pillar.translate_dim(dim, -(dir ? 1.0 : -1.0)*pillar_edge_gap); // shift slightly toward the house
-		if (!ladder.is_all_zeros()) {avoid.expand_by_xy(1.0*pillar_width);}
-
-		for (unsigned n = 0; n < num_pillars; ++n) { // TODO: no pillar blocking pool ladder
-			set_wall_width(pillar, (roof.d[!dim][0] + pillar_hwidth + pillar_edge_gap + n*spacing), pillar_hwidth, !dim);
-			if (pillar.intersects(avoid)) continue; // skip if close to the ladder
-			dstate.draw_cube(qbds.qbd, pillar, pool_deck_mats[mat_id].color, 1, 4.0/roof_height, 4, 0, 0, 1); // skip top and bottom; swap tc x/y
-		}
+		dstate.draw_cube(qbds.qbd, roof, pool_deck_mats[mat_id].color, 0, 4.0/get_depth(), 0, 0, dir, dim, 1.0, 1.0, 1.0, 1); // roof sides and bottom; skip_top=1
+		float const tscale(4.0/(roof.z1() - base.z2()));
+		for (cube_t const &pillar : pillars) {dstate.draw_cube(qbds.qbd, pillar, pool_deck_mats[mat_id].color, 1, tscale, 4, 0, 0, 1);} // skip top/bot; swap tc x/y
 	}
 	else {assert(0);}
+}
+bool pool_deck_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	if (pillars.empty() || !sphere_cube_intersect(pos_, radius_, (bcube + xlate))) return 0;
+	bool coll(0);
+	for (cube_t const &pillar : pillars) {coll |= sphere_cube_int_update_pos(pos_, radius_, (pillar + xlate), p_last, 0, cnorm);}
+	return coll;
 }
 
 // newsracks

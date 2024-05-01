@@ -1293,7 +1293,7 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 		bool const sloped(!above_ground && rgen.rand_bool()); // 50% of in-ground pools have sloped bottoms
 		pool_groups.add_obj(swimming_pool_t(pool_full_height, color, wcolor, above_ground, sloped, dim, dir), pools);
 		unsigned const pre_pool_blockers_end(blockers.size());
-		cube_t pool_collider(pool);
+		cube_t pool_collider(pool), ladder;
 		pool_collider.z2() += 0.1*city_params.road_width; // extend upward to make a better collider
 		add_cube_to_colliders_and_blockers(pool_collider, colliders, blockers);
 		bool added_deck(0);
@@ -1359,14 +1359,17 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 			float const height(1.6*sz_scale), hdepth(0.5*height*sz.x/sz.z), hwidth(0.5*height*sz.y/sz.z);
 
 			if (hdepth < 8.0*min(pool.dx(), pool.dy())) { // add if large enough; should be true
-				cube_t ladder;
 				ladder.z1() = pool.z2() - 0.425*height;
 				ladder.z2() = ladder.z1() + height;
 				set_wall_width(ladder, rgen.rand_uniform((pool.d[!dim][0] + 2.0*hdepth), (pool.d[!dim][1] - 2.0*hdepth)), hdepth, !dim); // pos along pool length
 				set_wall_width(ladder, (pool.d[dim][dir] - (dir ? 1.0 : -1.0)*1.15*hwidth), hwidth, dim); // at pool edge
 				plad_groups.add_obj(pool_ladder_t(ladder, dim, !dir), pladders); // inside the pool, facing the street/house - no placement check or blockers added
-				if (added_deck) {pdecks.back().ladder = ladder;} // record the ladder pos to avoid placing pillars there
 			}
+		}
+		if (added_deck) {
+			pool_deck_t &pdeck(pdecks.back());
+			pdeck.calc_pillars(ladder); // pass in the ladder pos to avoid placing pillars there
+			vector_add_to(pdeck.pillars, colliders); // include pillars for AI collisions
 		}
 		return 1; // success - done with pool
 	} // for n
@@ -1890,7 +1893,8 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(plants,    plant_groups,    pos, p_last, radius, xlate, cnorm)) return 1; // optional?
 	if (proc_vector_sphere_coll(ponds,     pond_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(pillars,   pillar_groups,   pos, p_last, radius, xlate, cnorm)) return 1;
-	// Note: no coll with tree_planters because the tree coll should take care of it; no coll with hcaps, manholes, tcones, pladders, pool decks, pigeons, ppaths, or birds
+	if (proc_vector_sphere_coll(pdecks,    pdeck_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
+	// Note: no coll with tree_planters because the tree coll should take care of it; no coll with hcaps, manholes, tcones, pladders, pigeons, ppaths, or birds
 	return 0;
 }
 
