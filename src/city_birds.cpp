@@ -3,6 +3,7 @@
 // 09/21/23
 
 #include "city_objects.h"
+#include "openal_wrap.h"
 //#include "profiler.h"
 
 float const BIRD_ACCEL       = 0.00025;
@@ -13,13 +14,82 @@ float const BIRD_MAX_ALT_RES = 0.8; // above destination; in multiples of road w
 float const BIRD_MAX_ALT_COM = 1.8; // above destination; in multiples of road width; for commercial  cities
 float const anim_time_scale(1.25/TICKS_PER_SECOND);
 
+extern bool camera_in_building;
 extern int animate2, frame_counter;
 extern float fticks;
 extern double tfticks;
+extern vector3d wind;
 extern city_params_t city_params;
 extern object_model_loader_t building_obj_model_loader;
 
 enum {BIRD_STATE_FLYING=0, BIRD_STATE_GLIDING, BIRD_STATE_LANDING, BIRD_STATE_STANDING, BIRD_STATE_TAKEOFF, NUM_BIRD_STATES};
+
+
+void bird_poop_manager_t::next_frame() {
+	if (poops.empty()) return;
+	assert(!city_bounds.is_all_zeros()); // must call init() first
+	float const z_ground(city_bounds.z2());
+	float const fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
+	float const gravity  = 0.0002; // unsigned magnitude
+	float const term_vel = 0.1;
+
+	for (poop_t &p : poops) { // what about wind?
+		assert(p.radius > 0.0);
+		p.vel.z -= gravity*fticks_stable; // apply gravitational acceleration
+		max_eq(p.vel.z, -term_vel);
+		p.pos += fticks_stable*p.vel;
+
+		if (p.pos.z < z_ground || !city_bounds.contains_pt_xy(p.pos)) { // outside city bounds
+			if (p.pos.z < z_ground) { // leave a splat
+				point const spos(p.pos.x, p.pos.y, (z_ground + 0.25*p.radius)); // slightly above the ground
+				splats.emplace_back(spos, 3.2*p.radius, rgen.signed_rand_vector_spherical_xy_norm());
+				if (splats.size() > 40) {remove_oldest_splat();} // limit the max number of splats to 40
+				gen_sound_thread_safe(SOUND_SM_SPLAT, (spos + get_camera_coord_space_xlate()));
+			}
+			p.radius = 0.0; // will be removed below
+		}
+	} // for p
+	poops.erase(std::remove_if(poops.begin(), poops.end(), [](poop_t const &p) {return (p.radius == 0.0);}), poops.end());
+}
+void bird_poop_manager_t::remove_oldest_splat() {
+	if (splats.empty()) return; // error?
+	float tmin(0.0);
+	unsigned oldest(0);
+
+	for (auto s = splats.begin(); s != splats.end(); ++s) {
+		if (tmin == 0.0 || s->time < tmin) {tmin = s->time; oldest = (s - splats.begin());}
+	}
+	swap(splats[oldest], splats.back());
+	splats.pop_back();
+}
+void bird_poop_manager_t::draw(shader_t &s, vector3d const &xlate) {
+	if (poops.empty() && splats.empty()) return;
+	set_flat_normal_map();
+	s.set_cur_color(WHITE);
+
+	if (!poops.empty()) {
+		select_texture(WHITE_TEX);
+		begin_sphere_draw(0); // textured=0
+		unsigned const ndiv = 16;
+
+		for (poop_t const &p : poops) {
+			if (!camera_pdu.sphere_visible_test((p.pos + xlate), p.radius)) continue; // no distance check since poop should be dropped above the player
+			draw_sphere_vbo(p.pos, p.radius, ndiv, 0); // textured=0
+		}
+		end_sphere_draw();
+	}
+	for (splat_t const &s : splats) {
+		point const pos_cs(s.pos + xlate);
+		if (!dist_less_than(camera_pdu.pos, pos_cs, 400.0*s.radius) || !camera_pdu.sphere_visible_test(pos_cs, s.radius)) continue;
+		s.add_quad(splat_qbd);
+	}
+	if (!splat_qbd.empty()) {
+		select_texture(get_texture_by_name("splatter.png"));
+		s.add_uniform_float("min_alpha", 0.9); // background color is black, so doesn't blend properly
+		splat_qbd.draw_and_clear();
+		s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // reset
+	}
+}
 
 
 city_bird_t::city_bird_t(point const &pos_, float height_, vector3d const &init_dir, colorRGBA const &color_, unsigned loc_ix_, rand_gen_t &rgen) :
@@ -215,8 +285,9 @@ void city_bird_t::next_frame(float timestep, float delta_dir, point const &camer
 		tile_changed  |= (get_tile_id_containing_point_no_xyoff(pos) != get_tile_id_containing_point_no_xyoff(prev_frame_pos));
 		bird_moved     = 1;
 		
-		if (pos.z > camera_bs.z && dist_xy_less_than(pos, camera_bs, 4.0*CAMERA_RADIUS) && tfticks > next_poop_time) {
-			// TODO: poop on the player
+		// poop on the player if above and the player is in the open
+		if (!camera_in_building && pos.z > camera_bs.z && dist_xy_less_than(pos, camera_bs, 4.0*CAMERA_RADIUS) && tfticks > next_poop_time) {
+			placer.add_bird_poop(pos, 0.2*radius);
 			next_poop_time = tfticks + rgen.rand_uniform(2.0, 5.0)*TICKS_PER_SECOND; // wait 2-5s before pooping again
 		}
 	}
@@ -262,6 +333,7 @@ void city_obj_placer_t::next_frame() {
 	else if (bird_moved) { // incrementally update group bcubes and all_objs_bcube
 		bird_groups.update_obj_pos(birds, all_objs_bcube);
 	}
+	bird_poop_manager.next_frame();
 }
 
 bool city_obj_placer_t::choose_bird_dest(point const &pos, float radius, unsigned &loc_ix, point &dest_pos, vector3d &dest_dir) {

@@ -1376,8 +1376,9 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 	return 0; // placement failed
 }
 
-void city_obj_placer_t::place_birds(rand_gen_t &rgen) {
+void city_obj_placer_t::place_birds(cube_t const &city_bcube, rand_gen_t &rgen) {
 	if (!are_birds_enabled()) return;
+	bird_poop_manager.init(city_bcube);
 
 	for (power_pole_t const &pp : ppoles) { // must check for walkway clearance
 		if (check_bird_walkway_clearance(pp.bcube)) {add_bird_loc(pp, bird_locs, rgen);}
@@ -1612,7 +1613,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	connect_power_to_buildings(plots);
 	if (have_cars) {add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);}
 	add_objs_on_buildings(city_id);
-	place_birds(rgen); // after placing other objects
+	place_birds(city_bcube, rgen); // after placing other objects
 	bench_groups   .create_groups(benches,   all_objs_bcube);
 	planter_groups .create_groups(planters,  all_objs_bcube);
 	trashcan_groups.create_groups(trashcans, all_objs_bcube);
@@ -1840,6 +1841,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 		draw_objects(stopsigns, stopsign_groups, dstate, 0.1, shadow_only, 0); // dist_scale=0.1
 	}
 	dstate.pass_ix = 0; // reset back to 0
+	bird_poop_manager.draw(dstate.s, dstate.xlate);
 }
 void city_obj_placer_t::draw_transparent_objects(draw_state_t &dstate, bool shadow_only) {
 	if (shadow_only) return; // currently not drawn in the shadow pass

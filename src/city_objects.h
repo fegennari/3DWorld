@@ -435,6 +435,31 @@ struct vect_bird_place_t : public vector<bird_place_t> {
 	void add_placement_top_center(cube_t const &obj, rand_gen_t &rgen);
 };
 
+class bird_poop_manager_t {
+	struct poop_t : public sphere_t {
+		vector3d vel;
+		poop_t(point const &pos_, float radius_) : sphere_t(pos_, radius_) {}
+	};
+	struct splat_t : public sphere_t {
+		float time;
+		vector3d dir;
+		splat_t(point const &pos_, float radius_, vector3d const &dir_) : sphere_t(pos_, radius_), time(tfticks), dir(dir_) {}	
+		void add_quad(quad_batch_draw &qbd) const {qbd.add_quad_dirs(pos, radius*dir, radius*cross_product(dir, plus_z), WHITE, plus_z);}
+	};
+	vector<poop_t > poops;
+	vector<splat_t> splats;
+	cube_t city_bounds;
+	quad_batch_draw splat_qbd;
+	rand_gen_t rgen;
+
+	void remove_oldest_splat();
+public:
+	void init(cube_t const &city_bounds_) {city_bounds = city_bounds_;}
+	void add(point const &pos, float radius) {poops.emplace_back(pos, radius);}
+	void next_frame();
+	void draw(shader_t &s, vector3d const &xlate);
+};
+
 class city_obj_groups_t : public vector<cube_with_ix_t> {
 	map<uint64_t, vector<unsigned>> by_tile;
 	cube_t bcube;
@@ -488,6 +513,7 @@ private:
 	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, fountain_groups, divider_groups, pool_groups, plad_groups,
 		pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups, stopsign_groups, flag_groups,
 		nrack_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, dumpster_groups, plant_groups, pond_groups, walkway_groups, pillar_groups;
+	bird_poop_manager_t bird_poop_manager;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
 	vect_bird_place_t bird_locs;
@@ -506,7 +532,7 @@ private:
 	bool place_swimming_pool(road_plot_t const &plot, city_zone_t const &yard, cube_with_ix_t const &house, bool dim, bool dir, bool shrink_dim, unsigned prev_blockers_end,
 		float divider_hwidth, float const translate_dist[2], vect_cube_t const &pool_blockers, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen);
 	bool check_bird_walkway_clearance(cube_t const &bc) const;
-	void place_birds(rand_gen_t &rgen);
+	void place_birds(cube_t const &city_bcube, rand_gen_t &rgen);
 	void add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix);
 	void place_signs_in_isec(road_isec_t &isec);
 	void place_objects_in_isec(road_isec_t const &isec, bool is_residential, rand_gen_t &rgen);
@@ -543,6 +569,7 @@ public:
 	// birds
 	int check_path_segment_coll(point const &p1, point const &p2, float radius) const;
 	bool choose_bird_dest(point const &pos, float radius, unsigned &loc_ix, point &dest_pos, vector3d &dest_dir);
+	void add_bird_poop(point const &pos, float radius) {bird_poop_manager.add(pos, radius);}
 }; // city_obj_placer_t
 
 float get_power_pole_offset();
