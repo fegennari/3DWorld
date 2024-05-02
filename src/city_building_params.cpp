@@ -216,11 +216,12 @@ void building_params_t::init_kw_maps() {
 	kwmf.add("min_altitude",  cur_mat.min_alt);
 	kwmf.add("max_altitude",  cur_mat.max_alt);
 	kwmf.add("max_rot_angle", cur_mat.max_rot_angle);
-	kwmb.add("dome_roof",  dome_roof);
-	kwmb.add("onion_roof", onion_roof);
-	kwmb.add("no_city",    cur_mat.no_city);
-	kwmb.add("no_walkways",cur_mat.no_walkways);
-	kwmr.add("house_prob", cur_mat.house_prob, FP_CHECK_01);
+	kwmb.add("dome_roof",   dome_roof);
+	kwmb.add("onion_roof",  onion_roof);
+	kwmb.add("no_city",     cur_mat.no_city);
+	kwmb.add("no_walkways", cur_mat.no_walkways);
+	kwmb.add("is_apartment",cur_mat.is_apartment);
+	kwmr.add("house_prob",  cur_mat.house_prob, FP_CHECK_01);
 	// material textures / colors
 	kwmb.add("texture_mirror", tex_mirror);
 	kwmb.add("texture_inv_y",  tex_inv_y);

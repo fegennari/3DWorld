@@ -126,6 +126,7 @@ buildings house_ceil_specular  0.15 60.0
 buildings house_floor_specular 0.10 50.0
 
 # brick buildings
+buildings is_apartment 0 # set the default
 buildings house_prob 0.67 # 67%
 buildings house_scale_range 0.45 0.8
 buildings no_city 1 # not used in cities
@@ -144,7 +145,7 @@ buildings side_tscale 4.0
 buildings side_tid bricks_tan.png
 buildings side_nm_tid normal_maps/bricks_tan_norm.png
 buildings roof_tscale 8.0
-buildings roof_tid buildings/roof_shingles.jpg
+buildings roof_tid    buildings/roof_shingles.jpg
 buildings roof_nm_tid buildings/roof_shingles_nrm.jpg
 buildings roof_color 0.2 0.2 0.2 1.0
 buildings roof_color_grayscale_rand 0.4
@@ -228,7 +229,7 @@ buildings add_material
 #buildings side_nm_tid none
 #buildings add_material
 # wood siding material
-#buildings side_tid buildings/wood_siding.jpg
+#buildings side_tid    buildings/wood_siding.jpg
 #buildings side_nm_tid buildings/wood_siding_normal.jpg
 #buildings house_floor_tscale 64.0
 #buildings house_floor_tid paneling.png
@@ -286,14 +287,14 @@ buildings window_color 0.5 0.5 0.5 1.0 # gray
 
 # corrugated metal building
 buildings no_city     0 # used in cities
-buildings no_walkways 1
 buildings add_windows 0 # metal/glass/concrete/skyscraper buildings already have windows
+buildings no_walkways 1
 buildings add_window_lights 1
 buildings window_xscale 20.0
 buildings window_yscale 15.0
 buildings window_xoff 0.0
 buildings window_yoff -0.05
-buildings side_tid buildings/metal_building.jpg
+buildings side_tid    buildings/metal_building.jpg
 buildings side_nm_tid buildings/metal_building_NRM.jpg
 buildings side_tscale_x 4.0
 buildings side_tscale_y 5.0
@@ -325,9 +326,10 @@ buildings min_alt_step_factor 0.8
 buildings max_alt_step_factor 0.9
 buildings alt_step_factor_prob 0.3
 
-buildings no_walkways 1
-buildings side_tid buildings/apartment_windows.jpg # high quality
+buildings side_tid    buildings/apartment_windows.jpg # high quality
 buildings side_nm_tid buildings/apartment_windows_NRM.jpg
+buildings is_apartment 1
+buildings no_walkways  1
 buildings add_window_lights 1
 buildings window_xscale 9.0
 buildings window_yscale 18.2
@@ -340,6 +342,7 @@ buildings roof_tid mossy_rock.jpg
 buildings roof_nm_tid -1
 buildings side_color 1.0 0.8 0.6 1.0
 buildings add_material
+buildings is_apartment 0
 
 buildings roof_tscale 8.0
 buildings roof_tid stucco.jpg
@@ -348,7 +351,7 @@ buildings roof_nm_tid normal_maps/stucco_NRM.jpg
 /*
 buildings no_walkways 0
 buildings texture_mirror 1 # mirror rather than wrap to fix misalignment
-buildings side_tid buildings/office_windows.jpg # nice but misaligned
+buildings side_tid    buildings/office_windows.jpg # nice but misaligned
 buildings side_nm_tid buildings/office_windows_NRM.jpg
 buildings texture_mirror 0 # revert to wrap mode
 buildings side_color 0.5 0.5 0.5 1.0
@@ -358,10 +361,10 @@ buildings side_tscale_y 2.7
 buildings add_material
 */
 
-buildings no_walkways 0
-buildings side_tid buildings/office_windows2.jpg # looks a bit odd
+buildings side_tid    buildings/office_windows2.jpg # looks a bit odd
 buildings side_nm_tid buildings/office_windows2_NRM.jpg
 buildings add_window_lights 1
+buildings no_walkways 0
 buildings window_xscale 30.0
 buildings window_yscale 12.0
 buildings window_xoff 0.1
@@ -372,10 +375,10 @@ buildings side_tscale_x 2.0
 buildings side_tscale_y 3.0
 buildings add_material
 
-buildings no_walkways 1
-buildings side_tid buildings/office_windows3.jpg # high quality
+buildings side_tid    buildings/office_windows3.jpg # high quality
 buildings side_nm_tid buildings/office_windows3_NRM.jpg
 buildings add_window_lights 1
+buildings no_walkways 1
 buildings window_xscale 20.0
 buildings window_yscale 13.8
 buildings window_xoff 0.25
@@ -394,100 +397,104 @@ buildings floor_nm_tid carpet/office_carpet1_nrm.jpg
 
 buildings side_tscale_x 0.75
 buildings side_tscale_y 0.25
-buildings add_window_lights 1
 buildings window_xscale 11.25
 buildings window_yscale 10.5
 buildings window_xoff 0.25
 buildings window_yoff 0.2
-buildings no_walkways 0
-buildings side_tid buildings/skyscraper1.jpg
+buildings side_tid    buildings/skyscraper1.jpg
 buildings side_nm_tid buildings/skyscraper1_NRM.jpg
+buildings add_window_lights 1
+buildings no_walkways 0
 buildings add_material
 
 buildings side_tscale_x 1.75
 buildings side_tscale_y 0.5
-buildings add_window_lights 1
 buildings window_xscale 10.5
 buildings window_yscale 15.5
 buildings window_xoff 0.0
 buildings window_yoff 0.4
-buildings no_walkways 1
-buildings side_tid buildings/skyscraper2.jpg
+buildings side_tid    buildings/skyscraper2.jpg
 buildings side_nm_tid buildings/skyscraper4_NRM.jpg
+buildings add_window_lights 1
+buildings is_apartment 1
+buildings no_walkways  1
 buildings add_material
+buildings is_apartment 0
 
 buildings side_tscale_x 1.4
 buildings side_tscale_y 0.4
-buildings add_window_lights 1
 buildings window_xscale 14.0
 buildings window_yscale 16.8
 buildings window_xoff 0.1
 buildings window_yoff 0.02
-buildings no_walkways 1
-buildings side_tid buildings/skyscraper3.jpg
+buildings side_tid    buildings/skyscraper3.jpg
 buildings side_nm_tid buildings/skyscraper4_NRM.jpg
+buildings add_window_lights 1
+buildings is_apartment 1
+buildings no_walkways  1
 buildings add_material
+buildings is_apartment 0
 
 buildings side_tscale_x 1.5
 buildings side_tscale_y 0.5
-buildings add_window_lights 1
 buildings window_xscale 12.0
 buildings window_yscale 10.0
 buildings window_xoff 0.0
 buildings window_yoff 0.35
-buildings no_walkways 0
-buildings side_tid buildings/skyscraper4.jpg
+buildings side_tid    buildings/skyscraper4.jpg
 buildings side_nm_tid buildings/skyscraper4_NRM.jpg
+buildings add_window_lights 1
+buildings no_walkways 0
 buildings add_material
 
 buildings side_tscale_x 1.0
 buildings side_tscale_y 0.3
-buildings add_window_lights 1
 buildings window_xscale 7.0
 buildings window_yscale 10.8
 buildings window_xoff 0.0
 buildings window_yoff 0.02
-buildings no_walkways 0
-buildings side_tid buildings/skyscraper5.jpg
+buildings side_tid    buildings/skyscraper5.jpg
 buildings side_nm_tid buildings/skyscraper5_NRM.jpg
 buildings floor_tid carpet/office_carpet2.jpg # nice, but low contrast with walls
 buildings floor_nm_tid none
+buildings add_window_lights 1
+buildings no_walkways 0
 buildings add_material
 
 buildings side_tscale_x 1.65
 buildings side_tscale_y 0.5
-buildings add_window_lights 1
 buildings window_xscale 8.25
 buildings window_yscale 13.5
 buildings window_xoff 0.3
 buildings window_yoff 0.22
-buildings no_walkways 1
-buildings side_tid buildings/skyscraper6.jpg
+buildings side_tid    buildings/skyscraper6.jpg
 buildings side_nm_tid buildings/skyscraper6_NRM.jpg
+buildings add_window_lights 1
+buildings no_walkways 1
 buildings add_material
 
 buildings side_tscale_x 0.87
 buildings side_tscale_y 0.25
-buildings add_window_lights 1
 buildings window_xscale 17.4
 buildings window_yscale 11.25
 buildings window_xoff 0.22
 buildings window_yoff 0.425
-buildings no_walkways 0
-buildings side_tid buildings/skyscraper7.jpg
+buildings side_tid    buildings/skyscraper7.jpg
 buildings side_nm_tid buildings/skyscraper7_NRM.jpg
+buildings add_window_lights 1
+buildings no_walkways 0
 buildings add_material
 
 buildings side_tscale_x 0.87
 buildings side_tscale_y 0.25
-buildings add_window_lights 1
 buildings window_xscale 8.7
 buildings window_yscale 16.0
 buildings window_xoff 0.0
 buildings window_yoff 0.4
-buildings no_walkways 1
-buildings side_tid buildings/skyscraper8.jpg
+buildings side_tid    buildings/skyscraper8.jpg
 buildings side_nm_tid buildings/skyscraper8_NRM.jpg
+buildings add_window_lights 1
+buildings no_walkways 1
 buildings add_material
 buildings window_yoff 0
 

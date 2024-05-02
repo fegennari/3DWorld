@@ -265,7 +265,7 @@ typedef vector<riser_pos_t> vect_riser_pos_t;
 
 struct building_mat_t : public building_tex_params_t {
 
-	bool no_city=0, add_windows=0, add_wind_lights=0, no_walkways=0;
+	bool no_city=0, add_windows=0, add_wind_lights=0, no_walkways=0, is_apartment=0;
 	unsigned min_levels=1, max_levels=1, min_sides=4, max_sides=4;
 	float place_radius=0.0, max_delta_z=0.0, max_rot_angle=0.0, min_level_height=0.0, min_alt=-1000, max_alt=1000, house_prob=0.0, house_scale_min=1.0, house_scale_max=1.0;
 	float split_prob=0.0, cube_prob=1.0, round_prob=0.0, asf_prob=0.0, min_fsa=0.0, max_fsa=0.0, min_asf=0.0, max_asf=0.0;
