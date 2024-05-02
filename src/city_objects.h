@@ -354,14 +354,14 @@ public:
 };
 
 struct sign_t : public oriented_city_obj_t {
-	bool two_sided, emissive, small, scrolling;
+	bool two_sided, emissive, small, scrolling, free_standing;
 	colorRGBA bkg_color, text_color;
-	cube_t connector, text_bcube;
+	cube_t connector, frame_bcube, text_bcube;
 	string text;
 	vector<float> char_pos; // used for scrolling while drawing
 
 	sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, colorRGBA const &bc, colorRGBA const &tc,
-		bool two_sided_=0, bool emissive_=0, bool small_=0, bool scrolling_=0);
+		bool two_sided_=0, bool emissive_=0, bool small_=0, bool scrolling_=0, bool fs=0, cube_t const &conn=cube_t());
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;

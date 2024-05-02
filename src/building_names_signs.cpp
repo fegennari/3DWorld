@@ -268,7 +268,7 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 		sign.d[dim][!dir] = porch.d[dim][dir]; // back face
 		sign.d[dim][ dir] = sign.d[dim][!dir] + (dir ? 1.0 : -1.0)*sign_depth; // front face
 		assert(sign.is_strictly_normalized());
-		signs.emplace_back(sign, dim, dir, to_string(get_street_house_number()), WHITE, BLACK, 0, 0, 1); // twp_sided=0, emissive=0, small=1
+		signs.emplace_back(sign, dim, dir, to_string(get_street_house_number()), WHITE, BLACK, 0, 0, 1); // two_sided=0, emissive=0, small=1
 		return;
 	}
 	if (name.empty())  return; // no company name; shouldn't get here
@@ -329,17 +329,17 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 			if (i->z2() == part_zmax && i->intersects_xy_no_adj(sign)) {bad_place = 1; break;}
 		}
 		if (bad_place) continue; // Note: intentionally skips the break below
-		signs.emplace_back(sign, dim, dir, name, WHITE, color, two_sided, emissive, 0, scrolling); // small=0
+		cube_t conn;
 
 		if (add_connector) {
-			cube_t conn(sign);
+			conn = sign;
 			conn.z2() = sign.z1() + 0.01*sign_height;
 			conn.expand_in_dim(!dim, -0.94*sign_hwidth);
 			conn.d[dim][!dir] = wpos - (dir ? 1.0 : -1.0)*(4.0*sign_depth + get_wall_thickness());
 			conn.d[dim][ dir] = wpos;
 			assert(conn.is_strictly_normalized());
-			signs.back().connector = conn;
 		}
+		signs.emplace_back(sign, dim, dir, name, WHITE, color, two_sided, emissive, 0, scrolling, 0, conn); // small=0, free_standing=0
 		if (sign_both_sides) break; // one side only - done
 	} // for d
 }

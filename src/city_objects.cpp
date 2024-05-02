@@ -1498,14 +1498,15 @@ void pigeon_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sca
 // signs (for buildings)
 
 sign_t::sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, colorRGBA const &bc, colorRGBA const &tc,
-	bool two_sided_, bool emissive_, bool small_, bool scrolling_) :
-	oriented_city_obj_t(dim_, dir_), two_sided(two_sided_), emissive(emissive_), small(small_), scrolling(scrolling_), bkg_color(bc), text_color(tc)
+	bool two_sided_, bool emissive_, bool small_, bool scrolling_, bool fs, cube_t const &conn) :
+	oriented_city_obj_t(dim_, dir_), two_sided(two_sided_), emissive(emissive_), small(small_), scrolling(scrolling_),
+	free_standing(fs), bkg_color(bc), text_color(tc), connector(conn)
 {
 	assert(!text_.empty());
-	bcube  = text_bcube = bcube_;
-	pos    = bcube.get_cube_center();
-	radius = bcube.get_bsphere_radius();
-	text   = (scrolling ? " "+text_+" " : text_); // pad with space on both sides if scrolling
+	bcube = frame_bcube = text_bcube = bcube_; // excludes connector
+	if (free_standing && !connector.is_all_zeros()) {bcube.union_with_cube(connector);}
+	set_bsphere_from_bcube(); // recompute bsphere from bcube
+	text  = (scrolling ? " "+text_+" " : text_); // pad with space on both sides if scrolling
 
 	if (scrolling) { // precompute text character offsets for scrolling effect
 		unsigned const text_len(text.size());
@@ -1533,13 +1534,14 @@ sign_t::sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, 
 void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (small && shadow_only) return; // small signs have no shadows
 	float const dmax(dist_scale*dstate.draw_tile_dist);
-	if (small && !bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dmax)) return; // half view dist
-	dstate.draw_cube(qbds.untex_qbd, bcube, bkg_color); // untextured, matte back
+	if (small && !bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dmax)) return; // 40% view dist
+	dstate.draw_cube(qbds.untex_qbd, frame_bcube, bkg_color); // untextured, matte back
 
 	if (!connector.is_all_zeros()) { // draw connector; is this needed for the shadow pass?
 		dstate.draw_cube(qbds.untex_qbd, connector, LT_GRAY); // untextured, matte
 	}
-	if (shadow_only) return; // no text in shadow pass
+	if (free_standing) {} // connector is the base and sign bcube is the top
+	if (shadow_only) return; // no text or images in shadow pass
 	if (!(emissive && is_night()) && !bcube.closest_dist_less_than(dstate.camera_bs, 0.9*(small ? 0.4 : 1.0)*dmax)) return; // too far to see the text in daytime
 
 	if (scrolling && animate2) { // at the moment we can only scroll in integer characters, 4 per second
@@ -1564,7 +1566,7 @@ void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 }
 void sign_t::draw_text(draw_state_t &dstate, city_draw_qbds_t &qbds, string const &text_to_draw, float first_char_clip_val, float last_char_clip_val) const {
 	quad_batch_draw &qbd((emissive /*&& is_night()*/) ? qbds.emissive_qbd : qbds.qbd);
-	bool const front_facing(((camera_pdu.pos[dim] - dstate.xlate[dim]) < bcube.d[dim][dir]) ^ dir);
+	bool const front_facing(((camera_pdu.pos[dim] - dstate.xlate[dim]) < text_bcube.d[dim][dir]) ^ dir);
 	if (front_facing  ) {add_sign_text_verts(text_to_draw, text_bcube, dim,  dir, text_color, qbd.verts, first_char_clip_val, last_char_clip_val);} // draw the front side text
 	else if (two_sided) {add_sign_text_verts(text_to_draw, text_bcube, dim, !dir, text_color, qbd.verts, first_char_clip_val, last_char_clip_val);} // draw the back  side text
 }

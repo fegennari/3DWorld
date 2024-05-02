@@ -1612,7 +1612,6 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	add_ssign_and_slight_plot_colliders(plots, isecs, plot_colliders);
 	connect_power_to_buildings(plots);
 	if (have_cars) {add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);}
-	//add_objs_on_buildings(city_id, plots, blockers, plot_colliders);
 	place_birds(city_bcube, rgen); // after placing other objects
 	bench_groups   .create_groups(benches,   all_objs_bcube);
 	planter_groups .create_groups(planters,  all_objs_bcube);
@@ -1655,7 +1654,19 @@ void city_obj_placer_t::add_objs_on_buildings(road_plot_t const &plot, vect_cube
 	add_city_building_signs(plot, signs_to_add);
 	add_city_building_flags(plot, flags_to_add);
 	for (city_flag_t const &flag : flags_to_add) {flag_groups.add_obj(flag, flags);}
-	for (sign_t      const &sign : signs_to_add) {sign_groups.add_obj(sign, signs);}
+	cube_t plot_inner(plot);
+	plot_inner.expand_by_xy(-get_sidewalk_width());
+
+	for (sign_t const &sign : signs_to_add) {
+		if (sign.free_standing) { // sign on the ground, not on the building
+			cube_t bcube_ext(sign.bcube);
+			bcube_ext.expand_in_dim(sign.dim, 1.0*sign.bcube.get_sz_dim(!sign.dim)); // expand by sign width
+			if (has_bcube_int(bcube_ext, blockers))       continue; // blocked, skip
+			if (!plot_inner.contains_cube_xy(sign.bcube)) continue; // must stay inside the plot center
+			add_cube_to_colliders_and_blockers(sign.bcube, colliders, blockers);
+		}
+		sign_groups.add_obj(sign, signs);
+	} // for sign
 }
 
 /*static*/ bool city_obj_placer_t::subdivide_plot_for_residential(cube_t const &plot, vector<road_t> const &roads,
@@ -2022,8 +2033,9 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 	if (check_city_obj_pt_xy_contains(tramp_groups,    tramps,    pos, obj_ix, 1)) {color = (BKGRAY*0.75 + tramps[obj_ix].color*0.25); return 1;} // is_cylin=1
 	if (check_city_obj_pt_xy_contains(dumpster_groups, dumpsters, pos, obj_ix, 0)) {color = colorRGBA(0.1, 0.4, 0.1, 1.0); return 1;} // dark green
 	if (check_city_obj_pt_xy_contains(umbrella_groups, umbrellas, pos, obj_ix, 1)) {color = WHITE; return 1;} // is_cylin=1
-	// Note: ppoles, hcaps, manholes, mboxes, tcones, pladders, signs, stopsigns, flags, pigeons, birds, swings, umbrellas, bikes, and plants are skipped for now;
-	// pillars aren't visible under walkways
+	// Note: ppoles, hcaps, manholes, mboxes, tcones, pladders, stopsigns, flags, pigeons, birds, swings, umbrellas, bikes, and plants are skipped for now;
+	// pillars aren't visible under walkways;
+	// free standing signs can be added, but they're small and expensive to iterate over and won't contribute much
 	return 0;
 }
 
