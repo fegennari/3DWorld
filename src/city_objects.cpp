@@ -1507,6 +1507,7 @@ sign_t::sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, 
 	if (free_standing && !connector.is_all_zeros()) {bcube.union_with_cube(connector);}
 	set_bsphere_from_bcube(); // recompute bsphere from bcube
 	text  = (scrolling ? " "+text_+" " : text_); // pad with space on both sides if scrolling
+	if (is_hospital_sign()) {text_bcube.z2() -= 0.75*text_bcube.dz();} // top 75% is hospital image and bottom 25% is hospital text
 
 	if (scrolling) { // precompute text character offsets for scrolling effect
 		unsigned const text_len(text.size());
@@ -1542,6 +1543,17 @@ void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 	}
 	if (free_standing) {} // connector is the base and sign bcube is the top
 	if (shadow_only) return; // no text or images in shadow pass
+
+	if (is_hospital_sign() && bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dmax)) { // special case for hospital
+		select_texture(get_texture_by_name("roads/hospital_sign.png"));
+		cube_t top_part(frame_bcube);
+		top_part.z1() = text_bcube.z2(); // above the text
+		top_part.expand_in_dim(dim, 0.1*frame_bcube.get_sz_dim(dim)); // expand slightly to prevent Z-fighting
+		static quad_batch_draw temp_qbd;
+		dstate.draw_cube(temp_qbd, top_part, WHITE, 1, 0.0, (dim ? 5 : 6)); // only draw faces in <dim>
+		temp_qbd.draw_and_clear();
+		text_drawer::bind_font_texture(); // restore
+	}
 	if (!(emissive && is_night()) && !bcube.closest_dist_less_than(dstate.camera_bs, 0.9*(small ? 0.4 : 1.0)*dmax)) return; // too far to see the text in daytime
 
 	if (scrolling && animate2) { // at the moment we can only scroll in integer characters, 4 per second

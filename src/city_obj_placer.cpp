@@ -1793,7 +1793,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(fountains, fountain_groups, dstate, 0.20, shadow_only, 1); // dist_scale=0.20, has_immediate_draw=1
 	draw_objects(mboxes,    mbox_groups,     dstate, 0.04, shadow_only, 1); // dist_scale=0.04, has_immediate_draw=1
 	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0); // dist_scale=0.20, has_immediate_draw=0
-	draw_objects(signs,     sign_groups,     dstate, 0.25, shadow_only, 0, 1); // dist_scale=0.25, draw_qbd_as_quads=1
+	draw_objects(signs,     sign_groups,     dstate, 0.25, shadow_only, 1, 1); // dist_scale=0.25, has_immediate_draw=1, draw_qbd_as_quads=1
 	draw_objects(flags,     flag_groups,     dstate, 0.18, shadow_only, 1); // dist_scale=0.18, has_immediate_draw=1
 	draw_objects(newsracks, nrack_groups,    dstate, 0.10, shadow_only, 0); // dist_scale=0.10, has_immediate_draw=0
 	draw_objects(tcones,    tcone_groups,    dstate, 0.08, shadow_only, 1); // dist_scale=0.08, has_immediate_draw=1

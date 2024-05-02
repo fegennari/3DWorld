@@ -271,6 +271,30 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 		signs.emplace_back(sign, dim, dir, to_string(get_street_house_number()), WHITE, BLACK, 0, 0, 1); // two_sided=0, emissive=0, small=1
 		return;
 	}
+	if (btype == BTYPE_HOSPITAL) { // add hospital signs at front entrance(s)
+		float const z1_thresh(ground_floor_z1 + get_floor_thickness());
+
+		for (auto d = doors.begin(); d != doors.end(); ++d) {
+			if (has_courtyard && (d+1) == doors.end())  break; // courtyard door is not an exit
+			if (d->type != tquad_with_ix_t::TYPE_BDOOR) continue; // roof or back door
+			cube_t const bc(d->get_bcube());
+			if (bc.z1() > z1_thresh) continue; // walkway door
+			bool const dim(bc.dy() < bc.dx()), dir((mat_ix + doors.size()) & 1);
+			float const door_height(bc.dz()), sign_height(1.25*door_height), sign_width(0.5*sign_height), sign_thick(0.1*sign_width);
+			vector3d const normal(d->get_norm()); // points away from the building
+			vector3d const side_dir((dir ? 1.0 : -1.0)*cross_product(normal, plus_z));
+			cube_t sign;
+			set_cube_zvals(sign, (ground_floor_z1 + 0.25*sign_height), (ground_floor_z1 + sign_height));
+			set_wall_width(sign, (bc.get_center_dim( dim) + 1.5*door_height*normal  [ dim]), 0.5*sign_width,  dim);
+			set_wall_width(sign, (bc.get_center_dim(!dim) + 1.0*door_height*side_dir[!dim]), 0.5*sign_thick, !dim);
+			cube_t base(sign);
+			set_cube_zvals(base, ground_floor_z1, sign.z1());
+			base.expand_in_dim( dim, -0.25*sign_width);
+			base.expand_in_dim(!dim, -0.25*sign_thick);
+			// two_sided=1, emissive=0, small=0, scrolling=0, free_standing=1
+			signs.emplace_back(sign, !dim, dir, "Hospital", colorRGBA(0.0, 0.25, 0.5), WHITE, 1, 0, 0, 0, 1, base);
+		} // for d
+	} // end hospital
 	if (name.empty())  return; // no company name; shouldn't get here
 	if (num_sides & 1) return; // odd number of sides, may not be able to place a sign correctly (but maybe we can check this with a collision test with conn?)
 	if (half_offset || flat_side_amt != 0.0 || alt_step_factor != 0.0 || start_angle != 0.0) return; // not a shape that's guanrateed to reach the bcube edge
