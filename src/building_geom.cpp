@@ -1903,10 +1903,11 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 			for (unsigned n = 0; n < 4 && !placed; ++n) {
 				bool const dim(n>>1), dir(n&1);
 				if (part.d[dim][dir] == parts_bcube.d[dim][dir] || part.d[dim][!dir] != parts_bcube.d[dim][!dir]) continue; // find a side on the interior
+				unsigned const door_ix(doors.size());
 				placed = add_door(place_door(part, dim, dir, door_height, 0.0, 0.0, 0.0, wscale, 1, 0, rgen), part_ix, dim, dir, 1, 0, 1); // centered, courtyard
+				if (placed) {courtyard_door_ix = int8_t(door_ix);}
 			}
 		} // for b
-		has_courtyard_door |= placed;
 	}
 	if (!doors.empty()) {floor_ext_door_mask |= 1;} // I suppose courtyard doors count here
 }

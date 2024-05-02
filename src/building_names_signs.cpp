@@ -231,7 +231,7 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 			float const z1_max(ground_floor_z1 + 0.5*get_window_vspace());
 
 			for (auto d = doors.begin(); d != doors.end(); ++d) {
-				if (has_courtyard && (d+1) == doors.end())  break; // courtyard door is not an exit
+				if (int(d - doors.begin()) == courtyard_door_ix) break; // courtyard door is not an exit
 				if (d->type != tquad_with_ix_t::TYPE_BDOOR) continue; // office front doors only (not back door, roof, etc.)
 				if (d->get_bcube().z1() > z1_max)           continue; // skip elevated walkway doors
 				add_sign_by_door(*d, 1, name, sign_color, 0); // outside name plate sign, not emissive
@@ -241,8 +241,8 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 		colorRGBA const exit_color(rgen.rand_bool() ? RED : GREEN);
 
 		for (auto d = doors.begin(); d != doors.end(); ++d) {
-			if (has_courtyard && (d+1) == doors.end()) break; // courtyard door is not an exit
-			if (!d->is_building_door())                continue; // roof door, etc.
+			if (int(d - doors.begin()) == courtyard_door_ix) break; // courtyard door is not an exit
+			if (!d->is_building_door()) continue; // roof door, etc.
 			add_sign_by_door(*d, 0, "Exit", exit_color, 1); // inside exit sign, emissive
 		}
 	}
@@ -275,7 +275,7 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 		float const z1_thresh(ground_floor_z1 + get_floor_thickness());
 
 		for (auto d = doors.begin(); d != doors.end(); ++d) {
-			if (has_courtyard && (d+1) == doors.end())  break; // courtyard door is not an exit
+			if (int(d - doors.begin()) == courtyard_door_ix) break; // courtyard door is not an exit
 			if (d->type != tquad_with_ix_t::TYPE_BDOOR) continue; // roof or back door
 			cube_t const bc(d->get_bcube());
 			if (bc.z1() > z1_thresh) continue; // walkway door

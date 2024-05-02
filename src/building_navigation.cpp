@@ -1066,7 +1066,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 	point sound_pos;
 
 	if ((global_building_params.ai_target_player || cur_player_building_loc.same_room_floor(loc)) && can_target_player(person)) {
-		if (has_courtyard_door && interior->room_geom->courtyard.room_ix >= 0 && point_in_courtyard(cur_player_building_loc.pos)) {
+		if (courtyard_door_ix >= 0 && interior->room_geom->courtyard.room_ix >= 0 && point_in_courtyard(cur_player_building_loc.pos)) {
 			// player in courtyard; currently never gets here because we can't target the player in this case
 			select_person_dest_in_room(person, rgen, get_room(interior->room_geom->courtyard.room_ix)); // target room connected to courtyard
 		}

@@ -1526,13 +1526,14 @@ struct building_t : public building_geom_t {
 	uint8_t city_ix=0; // supports up to 256 cities
 	uint8_t floor_ext_door_mask=0; // used for multi-family houses
 	building_type_t btype=BTYPE_UNSET;
-	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_courtyard_door=0, has_complex_floorplan=0, has_helipad=0, has_ac=0;
+	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_complex_floorplan=0, has_helipad=0, has_ac=0;
 	mutable bool has_attic_window=0; // make mutable so that drawing code can update/cache this value
 	bool multi_family=0; // apartments, multi-family house, duplex, etc. - split by floor
 	bool has_int_fplace=0, has_parking_garage=0, has_small_part=0, has_basement_door=0, has_basement_pipes=0, parts_generated=0, is_in_city=0, has_skylight_light=0;
 	bool pri_hall_stairs_to_pg=0, have_walkway_ext_door=0;
 	mutable bool has_missing_stairs=0; // only used for printing a warning
 	uint8_t retail_floor_levels=0;
+	int8_t courtyard_door_ix=-1;
 	mutable bool player_visited=0; // for stats tracking
 	colorRGBA side_color=WHITE, roof_color=WHITE, detail_color=BLACK, door_color=WHITE, wall_color=WHITE;
 	cube_t bcube, coll_bcube, pri_hall, driveway, porch, assigned_plot, exterior_flag, ladder, deck_bounds;

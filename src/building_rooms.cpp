@@ -133,20 +133,15 @@ void building_t::setup_courtyard() {
 		if (p->y1() > bcube.yc()) {courtyard.y2() = p->y1();}
 	} // for p
 	assert(courtyard.is_strictly_normalized());
-	if (!has_courtyard_door) return; // return here with courtyard.door_ix and courtyard.room_ix left as -1
-	// find courtyard door
-	cube_t door_bc;
-	unsigned num_doors(0), num_rooms(0);
-
-	for (auto d = doors.begin(); d != doors.end(); ++d) { // check exterior doors; likely the last one, unless there's a roof exit door
-		cube_t bc(d->get_bcube());
-		bool const dim(bc.dy() < bc.dx());
-		bc.expand_in_dim(dim, get_wall_thickness());
-		if (bc.intersects(courtyard)) {courtyard.door_ix = int16_t(d - doors.begin()); door_bc = bc; ++num_doors;}
-	}
-	assert(num_doors == 1);
-
+	if (courtyard_door_ix < 0) return; // no couryard door; return here with courtyard.door_ix and courtyard.room_ix left as -1
+	assert(unsigned(courtyard_door_ix) < doors.size());
+	courtyard.door_ix = courtyard_door_ix;
+	cube_t door_bc(doors[courtyard_door_ix].get_bcube());
+	bool const dim(door_bc.dy() < door_bc.dx());
+	door_bc.expand_in_dim(dim, get_wall_thickness());
 	// find courtyard room
+	unsigned num_rooms(0);
+	
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
 		if (r->intersects(door_bc)) {courtyard.room_ix = int16_t(r - interior->rooms.begin()); ++num_rooms;}
 	}
