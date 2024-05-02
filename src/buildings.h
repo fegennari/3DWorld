@@ -412,7 +412,12 @@ struct draw_range_t {
 	vertex_range_t vrt[MAX_DRAW_BLOCKS]; // triangle verts
 };
 
-enum {
+// building types/functions
+enum {BTYPE_UNSET=0, BTYPE_HOUSE, BTYPE_MULT_FAM, BTYPE_OFFICE, BTYPE_APARTMENT, BTYPE_HOSPITAL, NUM_BUILDING_TYPES};
+std::string const btype_names[NUM_BUILDING_TYPES] = {"", "House", "Multi-Family House", "Office", "Apartment", "Hospital"};
+typedef uint8_t building_type_t;
+
+enum { // room object types
 	TYPE_NONE=0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_STAIR_WALL, TYPE_ELEVATOR, TYPE_LIGHT, TYPE_RUG, TYPE_PICTURE, TYPE_WBOARD,
 	TYPE_BOOK, TYPE_BCASE, TYPE_TCAN, TYPE_DESK, TYPE_BED, TYPE_WINDOW, TYPE_BLOCKER, TYPE_COLLIDER, TYPE_CUBICLE, TYPE_STALL,
 	TYPE_SIGN, TYPE_COUNTER, TYPE_CABINET, TYPE_KSINK, TYPE_BRSINK, TYPE_PLANT, TYPE_DRESSER, TYPE_NIGHTSTAND, TYPE_FLOORING, TYPE_CLOSET,
@@ -436,9 +441,11 @@ enum {
 	NUM_ROBJ_TYPES};
 typedef uint8_t room_object;
 
+// room object shapes
 enum {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_SPHERE, SHAPE_STAIRS_U, SHAPE_STAIRS_L, SHAPE_TALL, SHAPE_SHORT, SHAPE_ANGLED, SHAPE_VERT_TORUS}; // room object shapes
 typedef uint8_t room_obj_shape;
 
+// room types
 enum {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_MENS, RTYPE_WOMENS, RTYPE_BED, RTYPE_KITCHEN, RTYPE_LIVING,
 	  RTYPE_DINING, RTYPE_STUDY, RTYPE_ENTRY, RTYPE_LIBRARY, RTYPE_STORAGE, RTYPE_GARAGE, RTYPE_SHED, RTYPE_LOBBY, RTYPE_LAUNDRY, RTYPE_CARD,
 	  RTYPE_PLAY, RTYPE_ART, RTYPE_UTILITY, RTYPE_PARKING, RTYPE_RAMP_EXIT, RTYPE_ATTIC, RTYPE_MASTER_BED, RTYPE_UNFINISHED, RTYPE_SERVER, RTYPE_POOL,
@@ -1518,6 +1525,7 @@ struct building_t : public building_geom_t {
 	uint8_t has_chimney=0; // 0=none, 1=interior, 2=exterior with fireplace
 	uint8_t city_ix=0; // supports up to 256 cities
 	uint8_t floor_ext_door_mask=0; // used for multi-family houses
+	building_type_t btype=BTYPE_UNSET;
 	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_courtyard_door=0, has_complex_floorplan=0, has_helipad=0, has_ac=0;
 	mutable bool has_attic_window=0; // make mutable so that drawing code can update/cache this value
 	bool multi_family=0; // apartments, multi-family house, duplex, etc. - split by floor

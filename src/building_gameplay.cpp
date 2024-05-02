@@ -1224,11 +1224,12 @@ void building_t::register_player_change_floor(unsigned old_floor, unsigned new_f
 }
 void building_t::register_player_enter_building() const {
 	//print_building_manifest(); // for debugging
-	//print_building_stats(); // for debugging
+	//print_building_stats   (); // for debugging
 
 	if (!name.empty()) {
 		string str("Entering " + name); // Re-Entering if player_visited?
 		if (is_house) {str += " Residence";}
+		str += "\nType: " + btype_names[btype];
 		if (!address.empty()) {str += "\n" + address;} // add address on a second line if known
 		if (interior && !interior->people.empty()) {str += "\nPopulation " + std::to_string(interior->people.size());}
 		print_entering_building(str);

@@ -36,7 +36,9 @@ namespace pixel_city {
 	}
 }
 
-string choose_business_name(rand_gen_t rgen) {
+string choose_business_name(rand_gen_t rgen, building_type_t btype) {
+	if (btype == BTYPE_APARTMENT) {return gen_random_name(rgen) + " Apartments";}
+	if (btype == BTYPE_HOSPITAL ) {return gen_random_name(rgen) + " Hospital"  ;}
 	if (rgen.rand_bool()) {return pixel_city::gen_company_name(rgen);}
 	int const v(rgen.rand()%10);
 
@@ -46,7 +48,7 @@ string choose_business_name(rand_gen_t rgen) {
 		return name;
 	}
 	string const base(gen_random_name(rgen));
-	switch (v) {
+	switch (v) { // select a random suffix format
 	case 1: return base;
 	case 2: return base + (rgen.rand_bool() ? " Co" : " Company");
 	case 3: return base + " Inc";
@@ -62,7 +64,7 @@ string choose_business_name(rand_gen_t rgen) {
 }
 
 void building_t::assign_name(rand_gen_t &rgen) {
-	name = (is_house ? choose_family_name(rgen) : choose_business_name(rgen));
+	name = (is_house ? choose_family_name(rgen) : choose_business_name(rgen, btype));
 }
 string building_t::get_name_for_floor(unsigned floor_ix) const {
 	if (!multi_family) return name;

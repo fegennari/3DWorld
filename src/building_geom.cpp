@@ -239,6 +239,13 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	ao_bcz2         = bcube.z2(); // capture z2 before union with roof and detail geometry (which increases building height)
 	ground_floor_z1 = bcube.z1(); // record before adding basement
 	wall_color      = mat.wall_color; // start with default wall color
+
+	if (btype == BTYPE_UNSET) { // building type not customized
+		if (is_house)              {btype = BTYPE_HOUSE    ;} // may be flatted as BTYPE_MULT_FAM in gen_house()
+		else if (mat.is_apartment) {btype = BTYPE_APARTMENT;}
+		else if ((rseed1&15) == 0) {btype = BTYPE_HOSPITAL ;} // 1/16 the time
+		else                       {btype = BTYPE_OFFICE   ;} // office is the default for non-residential buildings
+	}
 	assign_name(rgen);
 	
 	if (is_house) {
@@ -1014,6 +1021,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		num_floors = calc_num_floors(parts[0], floor_spacing, get_floor_thickness());
 		// make it a multi-family house if it's a single large part with at least three floors
 		multi_family = (num_floors > 2 && parts[0].dx()*parts[0].dy() > 50.0*floor_spacing*floor_spacing);
+		if (multi_family) {btype = BTYPE_MULT_FAM;}
 		maybe_add_basement(rgen);
 
 		if (gen_door) { // have exterior doors and windows
