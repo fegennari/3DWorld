@@ -80,8 +80,6 @@ string building_t::get_name_for_floor(unsigned floor_ix) const {
 
 void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize,
 	vector3d const &column_dir, vector3d const &line_dir, bool use_quads=0, bool include_space_chars=0);
-void add_city_building_signs(cube_t const &city_bcube, vector<sign_t> &signs);
-void add_city_building_flags(cube_t const &city_bcube, vector<city_flag_t> &flags);
 
 class sign_helper_t {
 	map<string, unsigned> txt_to_id;
@@ -196,15 +194,6 @@ void add_sign_text_verts_both_sides(string const &text, cube_t const &sign, bool
 
 void add_room_obj_sign_text_verts(room_object_t const &c, colorRGBA const &color, vector<vert_norm_comp_tc_color> &verts_out) {
 	add_sign_text_verts(sign_helper.get_text(c.obj_id), c, c.dim, c.dir, color, verts_out);
-}
-
-// Note: this is messy because city bcube comes from city_gen.cpp, but city buildings come from gen_buildings.cpp, neither of which has the struct definition of sign_t;
-// so we need several layers of function wrappers to gather together all the pieces of data needed to add signs in this file, which includes the various required headers
-void add_signs_for_city(unsigned city_id, vector<sign_t> &signs) {
-	add_city_building_signs(get_city_bcube(city_id), signs);
-}
-void add_flags_for_city(unsigned city_id, vector<city_flag_t> &flags) {
-	add_city_building_flags(get_city_bcube(city_id), flags);
 }
 
 void building_t::set_rgen_state_for_building(rand_gen_t &rgen) const {

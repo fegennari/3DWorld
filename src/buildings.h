@@ -2309,6 +2309,8 @@ void get_city_plot_zones(vect_city_zone_t &zones);
 void get_city_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state);
 bool check_city_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t const &state);
 bool city_single_cube_visible_check(point const &pos, cube_t const &c);
+void add_city_building_signs(cube_t const &region_bcube, vector<sign_t     > &signs);
+void add_city_building_flags(cube_t const &region_bcube, vector<city_flag_t> &flags);
 cube_t get_building_lights_bcube();
 cube_t get_grid_bcube_for_building(building_t const &b);
 unsigned get_street_dir(cube_t const &inner, cube_t const &outer);

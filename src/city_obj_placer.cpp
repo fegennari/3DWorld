@@ -15,8 +15,6 @@ extern object_model_loader_t building_obj_model_loader;
 extern plot_divider_type_t plot_divider_types[];
 extern textured_mat_t pool_deck_mats[];
 
-void add_signs_for_city(unsigned city_id, vector<sign_t> &signs);
-void add_flags_for_city(unsigned city_id, vector<city_flag_t> &flags);
 city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, float length, int flag_id=-1);
 void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcubes);
 void get_walkways_for_city(cube_t const &city_bcube, vect_bldg_walkway_t &walkway_cands);
@@ -1483,18 +1481,19 @@ void city_obj_placer_t::place_objects_in_isec(road_isec_t const &isec, bool is_r
 	}
 }
 
+void add_to_plot_colliders(cube_t const &bcube, float bcube_expand, vector<road_plot_t> const &plots, vector<vect_cube_t> &plot_colliders) {
+	cube_t bcube_ext(bcube);
+	bcube_ext.expand_by_xy(bcube_expand);
+
+	for (unsigned i = 0; i < plots.size(); ++i) { // linear iteration; stop signs are added to isecs, not plots; seems to be only 0.05ms per call
+		if (plots[i].intersects_xy(bcube_ext)) {plot_colliders[i].push_back(bcube); return;}
+	}
+}
 void city_obj_placer_t::add_ssign_and_slight_plot_colliders(vector<road_plot_t> const &plots, vector<road_isec_t> const isecs[3], vector<vect_cube_t> &plot_colliders) const {
 	assert(plots.size() == plot_colliders.size());
 	float const bcube_expand(2.0*get_sidewalk_width()); // include sidewalk stop signs in their associated plots
+	for (stopsign_t const &s : stopsigns) {add_to_plot_colliders(s.bcube, bcube_expand, plots, plot_colliders);}
 
-	for (stopsign_t const &s : stopsigns) {
-		cube_t bcube_ext(s.bcube);
-		bcube_ext.expand_by_xy(bcube_expand);
-
-		for (unsigned i = 0; i < plots.size(); ++i) { // linear iteration; stop signs are added to isecs, not plots; seems to be only 0.05ms per call
-			if (plots[i].intersects_xy(bcube_ext)) {plot_colliders[i].push_back(s.bcube); break;}
-		}
-	}
 	for (unsigned n = 0; n < 3; ++n) { // {2-way, 3-way, 4-way}
 		for (road_isec_t const &isec : isecs[n]) {
 			for (unsigned i = 0; i < plots.size(); ++i) { // another linear iteration, for the same reason
@@ -1556,7 +1555,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 {
 	// Note: fills in plots.has_parking
 	//highres_timer_t timer("Gen Parking Lots and Place Objects");
-	vect_cube_t bcubes, temp_cubes, underground_blockers; // blockers, driveways, extended basement rooms
+	vect_cube_t blockers, temp_cubes, underground_blockers; // blockers, driveways, extended basement rooms
 	vector<point> tree_pos;
 	rand_gen_t rgen, detail_rgen;
 	rgen.set_state(city_id, 123);
@@ -1578,12 +1577,12 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	}
 	for (auto i = plots.begin(); i != plots.end(); ++i) {
 		tree_pos.clear();
-		bcubes.clear();
-		get_building_bcubes(*i, bcubes);
-		size_t const plot_id(i - plots.begin()), buildings_end(bcubes.size());
+		blockers.clear();
+		get_building_bcubes(*i, blockers);
+		size_t const plot_id(i - plots.begin()), buildings_end(blockers.size());
 		assert(plot_id < plot_colliders.size());
 		vect_cube_t &colliders(plot_colliders[plot_id]); // used for pedestrians
-		if (add_parking_lots && !i->is_park) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, plot_id, bcubes, colliders, rgen);}
+		if (add_parking_lots && !i->is_park) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, plot_id, blockers, colliders, rgen);}
 		unsigned const driveways_start(driveways.size());
 		if (is_residential) {add_house_driveways(*i, temp_cubes, detail_rgen, plot_id);}
 
@@ -1595,13 +1594,14 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 				if      (dw.d[d][0] == i->d[d][0]) {dw.d[d][0] -= sidewalk_width;}
 				else if (dw.d[d][1] == i->d[d][1]) {dw.d[d][1] += sidewalk_width;}
 			}
-			bcubes.push_back(dw);
+			blockers.push_back(dw);
 		} // for j
 		if (city_params.assign_house_plots && plot_subdiv_sz > 0.0) {
-			place_residential_plot_objects(*i, bcubes, colliders, roads, underground_blockers, driveways_start, city_id, detail_rgen); // before placing trees
+			place_residential_plot_objects(*i, blockers, colliders, roads, underground_blockers, driveways_start, city_id, detail_rgen); // before placing trees
 		}
-		place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen, buildings_end);
-		place_detail_objects(*i, bcubes, colliders, tree_pos, underground_blockers, detail_rgen, have_streetlights);
+		place_trees_in_plot (*i, blockers, colliders, tree_pos, detail_rgen, buildings_end);
+		place_detail_objects(*i, blockers, colliders, tree_pos, underground_blockers, detail_rgen, have_streetlights);
+		add_objs_on_buildings(*i, blockers, colliders);
 	} // for i (plot)
 	for (unsigned n = 0; n < 3; ++n) {
 		for (road_isec_t &isec : isecs[n]) {
@@ -1612,7 +1612,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	add_ssign_and_slight_plot_colliders(plots, isecs, plot_colliders);
 	connect_power_to_buildings(plots);
 	if (have_cars) {add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);}
-	add_objs_on_buildings(city_id);
+	//add_objs_on_buildings(city_id, plots, blockers, plot_colliders);
 	place_birds(city_bcube, rgen); // after placing other objects
 	bench_groups   .create_groups(benches,   all_objs_bcube);
 	planter_groups .create_groups(planters,  all_objs_bcube);
@@ -1648,16 +1648,14 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	if (add_parking_lots) {cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << endl;}
 }
 
-void city_obj_placer_t::add_objs_on_buildings(unsigned city_id) {
+void city_obj_placer_t::add_objs_on_buildings(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders) { // and signs on the ground near building doors
 	// add signs and flags attached to buildings; note that some signs and flags may have already been added at this point
-	vector<sign_t> signs_to_add;
+	vector<sign_t     > signs_to_add;
 	vector<city_flag_t> flags_to_add;
-	add_signs_for_city(city_id, signs_to_add);
-	add_flags_for_city(city_id, flags_to_add);
-	signs.reserve(signs.size() + signs_to_add.size());
-	flags.reserve(flags.size() + flags_to_add.size());
-	for (sign_t      const &sign : signs_to_add) {sign_groups.add_obj(sign, signs);}
+	add_city_building_signs(plot, signs_to_add);
+	add_city_building_flags(plot, flags_to_add);
 	for (city_flag_t const &flag : flags_to_add) {flag_groups.add_obj(flag, flags);}
+	for (sign_t      const &sign : signs_to_add) {sign_groups.add_obj(sign, signs);}
 }
 
 /*static*/ bool city_obj_placer_t::subdivide_plot_for_residential(cube_t const &plot, vector<road_t> const &roads,
