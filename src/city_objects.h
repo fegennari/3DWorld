@@ -438,7 +438,7 @@ struct vect_bird_place_t : public vector<bird_place_t> {
 class bird_poop_manager_t {
 	struct poop_t : public sphere_t {
 		vector3d vel;
-		poop_t(point const &pos_, float radius_) : sphere_t(pos_, radius_) {}
+		poop_t(point const &pos_, float radius_, vector3d const &init_vel) : sphere_t(pos_, radius_), vel(init_vel) {}
 	};
 	struct splat_t : public sphere_t {
 		float time;
@@ -455,7 +455,7 @@ class bird_poop_manager_t {
 	void remove_oldest_splat();
 public:
 	void init(cube_t const &city_bounds_) {city_bounds = city_bounds_;}
-	void add(point const &pos, float radius) {poops.emplace_back(pos, radius);}
+	void add(point const &pos, float radius, vector3d const &init_vel) {poops.emplace_back(pos, radius, init_vel);}
 	void next_frame();
 	void draw(shader_t &s, vector3d const &xlate);
 };
@@ -569,7 +569,7 @@ public:
 	// birds
 	int check_path_segment_coll(point const &p1, point const &p2, float radius) const;
 	bool choose_bird_dest(point const &pos, float radius, unsigned &loc_ix, point &dest_pos, vector3d &dest_dir);
-	void add_bird_poop(point const &pos, float radius) {bird_poop_manager.add(pos, radius);}
+	void add_bird_poop(point const &pos, float radius, vector3d const &init_vel) {bird_poop_manager.add(pos, radius, init_vel);}
 }; // city_obj_placer_t
 
 float get_power_pole_offset();
