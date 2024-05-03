@@ -242,7 +242,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 
 	if (btype == BTYPE_UNSET) { // building type not customized
 		if (is_house)              {btype = BTYPE_HOUSE    ;} // may be flatted as BTYPE_MULT_FAM in gen_house()
-		else if (mat.is_apartment) {btype = BTYPE_APARTMENT;}
+		else if (mat.is_apartment) {btype = ((rseed1 & 1) ? BTYPE_HOTEL : BTYPE_APARTMENT);}
 		else if ((rseed1&15) == 0) {btype = BTYPE_HOSPITAL ;} // 1/16 the time; should hospitals only be assigned to cube buildings?
 		else                       {btype = BTYPE_OFFICE   ;} // office is the default for non-residential buildings
 	}

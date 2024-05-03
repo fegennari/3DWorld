@@ -38,6 +38,7 @@ namespace pixel_city {
 
 string choose_business_name(rand_gen_t rgen, building_type_t btype) {
 	if (btype == BTYPE_APARTMENT) {return gen_random_name(rgen) + " Apartments";}
+	if (btype == BTYPE_HOTEL    ) {return gen_random_name(rgen) + " Hotel"     ;}
 	if (btype == BTYPE_HOSPITAL ) {return gen_random_name(rgen) + " Hospital"  ;}
 	if (rgen.rand_bool()) {return pixel_city::gen_company_name(rgen);}
 	int const v(rgen.rand()%10);

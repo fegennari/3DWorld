@@ -413,8 +413,8 @@ struct draw_range_t {
 };
 
 // building types/functions
-enum {BTYPE_UNSET=0, BTYPE_HOUSE, BTYPE_MULT_FAM, BTYPE_OFFICE, BTYPE_APARTMENT, BTYPE_HOSPITAL, NUM_BUILDING_TYPES};
-std::string const btype_names[NUM_BUILDING_TYPES] = {"", "House", "Multi-Family House", "Office", "Apartment", "Hospital"};
+enum {BTYPE_UNSET=0, BTYPE_HOUSE, BTYPE_MULT_FAM, BTYPE_OFFICE, BTYPE_APARTMENT, BTYPE_HOTEL, BTYPE_HOSPITAL, NUM_BUILDING_TYPES};
+std::string const btype_names[NUM_BUILDING_TYPES] = {"", "House", "Multi-Family House", "Office", "Apartment", "Hotel", "Hospital"};
 typedef uint8_t building_type_t;
 
 enum { // room object types
