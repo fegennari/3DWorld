@@ -65,9 +65,9 @@ void bird_poop_manager_t::remove_oldest_splat() {
 void bird_poop_manager_t::draw(shader_t &s, vector3d const &xlate) {
 	if (poops.empty() && splats.empty()) return;
 	set_flat_normal_map();
-	s.set_cur_color(WHITE);
 
 	if (!poops.empty()) {
+		s.set_cur_color(WHITE);
 		select_texture(WHITE_TEX);
 		begin_sphere_draw(0); // textured=0
 		unsigned const ndiv = 16;
@@ -78,14 +78,18 @@ void bird_poop_manager_t::draw(shader_t &s, vector3d const &xlate) {
 		}
 		end_sphere_draw();
 	}
+	cube_t splat_range;
+
 	for (splat_t const &s : splats) {
 		point const pos_cs(s.pos + xlate);
 		if (!dist_less_than(camera_pdu.pos, pos_cs, 400.0*s.radius) || !camera_pdu.sphere_visible_test(pos_cs, s.radius)) continue;
 		s.add_quad(splat_qbd);
+		splat_range.assign_or_union_with_pt(s.pos);
 	}
 	if (!splat_qbd.empty()) {
 		select_texture(get_texture_by_name("splatter.png"));
 		s.add_uniform_float("min_alpha", 0.9); // background color is black, so doesn't blend properly
+		try_bind_tile_smap_at_point((splat_range.get_cube_center() + xlate), s); // view dist is low, so assume all splats are in the same tile
 		splat_qbd.draw_and_clear();
 		s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // reset
 	}

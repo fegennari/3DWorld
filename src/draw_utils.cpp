@@ -437,7 +437,7 @@ void quad_batch_draw::add_quad_pts_vert_norms(point const pts[4], vector3d const
 void quad_batch_draw::add_quad_dirs(point const &pos, vector3d const &dx, vector3d const &dy,
 	colorRGBA const &c, vector3d const &n, tex_range_t const &tr)
 {
-	color_wrapper cw; cw.set_c4(c);
+	color_wrapper cw(c);
 
 	if (tr.clip_quad) { // clip point to tex coords
 		vector3d const dx1((1.0 - 2.0*tr.x1)*dx), dy1((1.0 - 2.0*tr.y1)*dy), dx2((-1.0 + 2.0*tr.x2)*dx), dy2((-1.0 + 2.0*tr.y2)*dy);

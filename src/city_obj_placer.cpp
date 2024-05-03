@@ -1858,7 +1858,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 		draw_objects(stopsigns, stopsign_groups, dstate, 0.1, shadow_only, 0); // dist_scale=0.1
 	}
 	dstate.pass_ix = 0; // reset back to 0
-	bird_poop_manager.draw(dstate.s, dstate.xlate);
+	if (!shadow_only) {bird_poop_manager.draw(dstate.s, dstate.xlate);}
 }
 void city_obj_placer_t::draw_transparent_objects(draw_state_t &dstate, bool shadow_only) {
 	if (shadow_only) return; // currently not drawn in the shadow pass
