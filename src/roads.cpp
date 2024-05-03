@@ -15,7 +15,6 @@ extern vector<light_source> dl_sources;
 extern city_params_t city_params;
 
 
-string gen_random_name(rand_gen_t &rgen, bool for_universe=0); // from Universe_name.cpp
 string gen_random_first_name(rand_gen_t &rgen); // from pedestrians.cpp
 void add_cylin_as_tris(vector<vert_norm_tc_color> &verts, point const ce[2], float r1, float r2, color_wrapper const &cw,
 	unsigned ndiv, unsigned draw_top_bot, float tst=1.0, float tss=1.0, bool swap_ts_tt=0);
@@ -35,9 +34,9 @@ class road_name_gen_t {
 		return (dim ? (dir ? "North" : "South") : (dir ? "East" : "West"));
 	}
 	static string select_road_name(rand_gen_t &rgen) { // use either a randomly generated name or a person's first name
-		if (rgen.rand_bool()) {return gen_random_name(rgen);}
+		if (rgen.rand_bool()) {return gen_random_name(rgen, 4);}
 		string const name(gen_random_first_name(rgen));
-		return ((name.size() < 4) ? gen_random_name(rgen) : name); // 2-3 letter names look bad on signs (too stretched)
+		return ((name.size() < 4) ? gen_random_name(rgen, 4) : name); // 2-3 letter names look bad on signs (too stretched)
 	}
 	string gen_name_int(road_t const &road, unsigned city_ix) const {
 		if (road.is_all_zeros()) { // city connector road; only city_ix is used

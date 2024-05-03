@@ -98,15 +98,21 @@ void parse_universe_name_str_tables() {
 	}
 }
 
-string gen_random_name(rand_gen_t &rgen, bool for_universe) {
+string gen_random_name(rand_gen_t &rgen, unsigned min_len, bool for_universe) {
 	parse_universe_name_str_tables();
-	return (for_universe ? name_gen_universe : name_gen_city).gen_name(rgen);
+	string name;
+
+	for (unsigned n = 0; n < 100; ++n) {
+		name = (for_universe ? name_gen_universe : name_gen_city).gen_name(rgen);
+		if (name.size() >= min_len) break;
+	}
+	return name;
 }
 
 extern rand_gen_t global_rand_gen;
 
 void named_obj::gen_name(s_object const &sobj) {
-	name = gen_random_name(global_rand_gen, 1); // for_universe=1
+	name = gen_random_name(global_rand_gen, 0, 1); // min_len=0, for_universe=1
 	lookup_given_name(sobj); // already named, overwrite the old value (but need to preserve random number generator state)
 	//cout << name << "  ";
 }

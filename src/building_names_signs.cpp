@@ -9,7 +9,6 @@ using std::string;
 
 // names
 
-string gen_random_name(rand_gen_t &rgen, bool for_universe=0); // from Universe_name.cpp
 string gen_random_full_name(rand_gen_t &rgen); // from pedestrians.cpp
 
 string choose_family_name(rand_gen_t rgen) { // Note: deep copying so as not to update the state of the rgen that was passed in
@@ -37,9 +36,9 @@ namespace pixel_city {
 }
 
 string choose_business_name(rand_gen_t rgen, building_type_t btype) {
-	if (btype == BTYPE_APARTMENT) {return gen_random_name(rgen) + " Apartments";}
-	if (btype == BTYPE_HOTEL    ) {return gen_random_name(rgen) + " Hotel"     ;}
-	if (btype == BTYPE_HOSPITAL ) {return gen_random_name(rgen) + " Hospital"  ;}
+	if (btype == BTYPE_APARTMENT) {return gen_random_name(rgen, 4) + " Apartments";}
+	if (btype == BTYPE_HOTEL    ) {return gen_random_name(rgen, 4) + " Hotel"     ;}
+	if (btype == BTYPE_HOSPITAL ) {return gen_random_name(rgen, 4) + " Hospital"  ;}
 	if (rgen.rand_bool()) {return pixel_city::gen_company_name(rgen);}
 	int const v(rgen.rand()%10);
 
@@ -48,7 +47,7 @@ string choose_business_name(rand_gen_t rgen, building_type_t btype) {
 		for (unsigned n = 0; n < 3; ++n) {name.push_back('A' + rand()%26);}
 		return name;
 	}
-	string const base(gen_random_name(rgen));
+	string const base(gen_random_name(rgen, 4));
 	switch (v) { // select a random suffix format
 	case 1: return base;
 	case 2: return base + (rgen.rand_bool() ? " Co" : " Company");
