@@ -1399,8 +1399,14 @@ void city_obj_placer_t::place_birds(cube_t const &city_bcube, rand_gen_t &rgen) 
 	add_objs_top_center(mboxes,    0, 0, 1, unused, bird_locs, rgen);
 	add_objs_top_center(stopsigns, 0, 0, 1, unused, bird_locs, rgen);
 	add_objs_top_center(swings,    0, 0, 1, unused, bird_locs, rgen);
-	// include houses/office buildings and streetlights?
 
+	for (sign_t const &sign : signs) {
+		if (sign.small) continue; // skip small signs above doors
+		if (!sign.free_standing) continue; // only free standing signs, since signs on building roofs are ver far from the player and too close to buildings
+		vect_bird_place_t *const dest(select_bird_loc_dest(0, 1, unused, bird_locs, rgen));
+		if (dest != nullptr) {add_bird_loc(sign, *dest, rgen);}
+	}
+	// include houses/office buildings and streetlights?
 	for (auto i = dividers.begin(); i != dividers.end(); ++i) {
 		if (rgen.rand() & 3) continue; // only add one in 4, since there are so many
 		bird_locs.add_placement_centerline(i->get_bird_bcube(), i->dim, rgen.rand_bool(), rgen); // place somewhere along the divider with random dir
