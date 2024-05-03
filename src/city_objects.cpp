@@ -1539,7 +1539,7 @@ void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 	dstate.draw_cube(qbds.untex_qbd, frame_bcube, bkg_color); // untextured, matte back
 
 	if (!connector.is_all_zeros()) { // draw connector; is this needed for the shadow pass?
-		dstate.draw_cube(qbds.untex_qbd, connector, LT_GRAY); // untextured, matte
+		dstate.draw_cube(qbds.untex_qbd, connector, LT_GRAY, 0, 0.0, (free_standing ? 4 : 0)); // untextured, matte; skip top and bottom if free standing
 	}
 	if (free_standing) {} // connector is the base and sign bcube is the top
 	if (shadow_only) return; // no text or images in shadow pass

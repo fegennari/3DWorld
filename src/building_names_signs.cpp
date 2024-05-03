@@ -279,20 +279,27 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 			if (d->type != tquad_with_ix_t::TYPE_BDOOR) continue; // roof or back door
 			cube_t const bc(d->get_bcube());
 			if (bc.z1() > z1_thresh) continue; // walkway door
-			bool const dim(bc.dy() < bc.dx()), dir((mat_ix + doors.size()) & 1);
+			bool const dim(bc.dy() < bc.dx()), pref_dir((mat_ix + doors.size()) & 1); // initial/primary dir
 			float const door_height(bc.dz()), sign_height(1.25*door_height), sign_width(0.5*sign_height), sign_thick(0.1*sign_width);
 			vector3d const normal(d->get_norm()); // points away from the building
-			vector3d const side_dir((dir ? 1.0 : -1.0)*cross_product(normal, plus_z));
 			cube_t sign;
 			set_cube_zvals(sign, (ground_floor_z1 + 0.25*sign_height), (ground_floor_z1 + sign_height));
-			set_wall_width(sign, (bc.get_center_dim( dim) + 1.5*door_height*normal  [ dim]), 0.5*sign_width,  dim);
-			set_wall_width(sign, (bc.get_center_dim(!dim) + 1.0*door_height*side_dir[!dim]), 0.5*sign_thick, !dim);
-			cube_t base(sign);
-			set_cube_zvals(base, ground_floor_z1, sign.z1());
-			base.expand_in_dim( dim, -0.25*sign_width);
-			base.expand_in_dim(!dim, -0.25*sign_thick);
-			// two_sided=1, emissive=0, small=0, scrolling=0, free_standing=1
-			signs.emplace_back(sign, !dim, dir, "Hospital", colorRGBA(0.0, 0.25, 0.5), WHITE, 1, 0, 0, 0, 1, base);
+			set_wall_width(sign, (bc.get_center_dim(dim) + 1.5*door_height*normal[dim]), 0.5*sign_width, dim);
+			static int sign_id(0);
+
+			for (unsigned e = 0; e < 2; ++e) {
+				bool const dir(pref_dir ^ e);
+				vector3d const side_dir((dir ? 1.0 : -1.0)*cross_product(normal, plus_z));
+				set_wall_width(sign, (bc.get_center_dim(!dim) + 1.0*door_height*side_dir[!dim]), 0.5*sign_thick, !dim);
+				cube_t base(sign);
+				set_cube_zvals(base, ground_floor_z1, sign.z1());
+				base.expand_in_dim( dim, -0.25*sign_width);
+				base.expand_in_dim(!dim, -0.25*sign_thick);
+				// two_sided=1, emissive=0, small=0, scrolling=0, free_standing=1
+				signs.emplace_back(sign, !dim, dir, "Hospital", colorRGBA(0.0, 0.25, 0.5), WHITE, 1, 0, 0, 0, 1, base);
+				signs.back().sign_id = sign_id; // make this pair unique
+			} // for e
+			++sign_id;
 		} // for d
 	} // end hospital
 	if (name.empty())  return; // no company name; shouldn't get here

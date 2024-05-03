@@ -1658,9 +1658,11 @@ void city_obj_placer_t::add_objs_on_buildings(road_plot_t const &plot, vect_cube
 	plot_inner.expand_by_xy(-get_sidewalk_width());
 
 	for (sign_t const &sign : signs_to_add) {
+		if (sign.sign_id >= 0 && !signs.empty() && sign.sign_id == signs.back().sign_id) continue; // already added a sign for this group
+
 		if (sign.free_standing) { // sign on the ground, not on the building
 			cube_t bcube_ext(sign.bcube);
-			bcube_ext.expand_in_dim(sign.dim, 1.0*sign.bcube.get_sz_dim(!sign.dim)); // expand by sign width
+			bcube_ext.expand_in_dim(sign.dim, 0.5*sign.bcube.get_sz_dim(!sign.dim)); // expand by half the sign width
 			if (has_bcube_int(bcube_ext, blockers))       continue; // blocked, skip
 			if (!plot_inner.contains_cube_xy(sign.bcube)) continue; // must stay inside the plot center
 			add_cube_to_colliders_and_blockers(sign.bcube, colliders, blockers);

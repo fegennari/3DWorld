@@ -355,6 +355,7 @@ public:
 
 struct sign_t : public oriented_city_obj_t {
 	bool two_sided, emissive, small, scrolling, free_standing;
+	int sign_id=-1; // >= 0 means this is one of multiple alternatives
 	colorRGBA bkg_color, text_color;
 	cube_t connector, frame_bcube, text_bcube;
 	string text;
