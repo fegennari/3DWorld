@@ -396,6 +396,7 @@ namespace streetlight_ns {
 				dstate.add_light_flare((lpos - 0.6*lradius*plus_z), zero_vector, light_color, min(1.0f, 12.0f*dist_val), 4.0*lradius); // non-directional
 			}
 		}
+		if (!shadow_only && dist_val < 0.05) {try_bind_tile_smap_at_point(center, dstate.s);} // bind the correct shadow map when near the player
 		fgPushMatrix();
 		translate_to(lpos);
 		scale_by(lradius*vector3d(1.0+fabs(dir.x), 1.0+fabs(dir.y), 1.0)); // scale 2x in dir
