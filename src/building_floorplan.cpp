@@ -420,7 +420,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		else if (use_hallway) {
 			// building with rectangular slice (no adjacent exterior walls at this level), generate rows of offices
 			// Note: we could probably make these unsigned, but I want to avoid unepected negative numbers in the math;
-			if (btype == BTYPE_APARTMENT || btype == BTYPE_HOTEL) {} // TODO: use a different floorplan for apartments and hotels
+			bool const apt_or_hotel(is_apt_or_hotel()); // use a different floorplan for apartments and hotels
 			int const num_windows   (num_windows_per_side[!min_dim]);
 			int const num_windows_od(num_windows_per_side[ min_dim]); // other dim, for use in hallway width calculation
 			int windows_per_room((num_windows >= 7 && num_windows_od >= 7) ? 2 : 1); // 1-2 windows per room (only assign 2 windows if we can get into the secondary hallway case below)
@@ -431,7 +431,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				++windows_per_room;
 				room_len = wind_hspacing*windows_per_room;
 			}
-			bool const partial_room((num_windows % windows_per_room) != 0); // an odd number of windows leaves a small room at the end
+			bool const partial_room((num_windows % windows_per_room) != 0 && !apt_or_hotel); // an odd number of windows leaves a small room at the end
 			bool const is_ground_floor(is_ground_floor_excluding_retail(p->z1()));
 			float const hwall_extend(0.5f*(room_len - doorway_width - wall_thick));
 			float const wall_pos(p->d[!min_dim][0] + room_len); // pos of first wall separating first from second rooms
@@ -439,13 +439,14 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			hall = get_hallway_for_part(*p, num_hall_windows, hall_width, room_width);
 			float const *hall_wall_pos(hall.d[min_dim]);
 			unsigned const doors_start(interior->doors.size());
-			int const num_rooms((num_windows+windows_per_room-1)/windows_per_room); // round up
+			int const num_rooms((apt_or_hotel ? num_windows : (num_windows+windows_per_room-1))/windows_per_room); // round down for apts/hotels, otherwise round down
 			assert(num_rooms >= 0 && num_rooms < 1000); // sanity check
 			auto &room_walls(interior->walls[!min_dim]), &hall_walls(interior->walls[min_dim]);
 			if (hallway_dim == 2) {hallway_dim = !min_dim;} // cache in building for later use, only for first part (ground floor)
 			vector<unsigned> utility_room_cands, special_room_cands;
 			
-			if (num_windows_od >= 7 && num_rooms >= 4) { // at least 7 windows (3 on each side of hallway)
+			// add secondary or ring hallways if there are at least 7 windows (3 on each side of hallway); not for apartments and hotels
+			if (!apt_or_hotel && num_windows_od >= 7 && num_rooms >= 4) {
 				float const min_hall_width(1.5f*doorway_width), max_hall_width(2.5f*doorway_width);
 				float const sh_width(max(min(0.4f*hall_width, max_hall_width), min_hall_width)), hspace(window_hspacing[!min_dim]);
 				float const ring_hall_room_depth(0.5f*(room_width - sh_width)); // for inner and outer rows of rooms
@@ -741,6 +742,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			} // end multiple hallways case
 
 			else { // single main hallway
+				// Note: these reserves may be unnecessary now that buildings commonly have stacked parts and basements
 				room_walls.reserve(2*(num_rooms-1));
 				hall_walls.reserve(2*(num_rooms+1));
 				cube_t rwall(*p); // copy from part; shared zvals, but X/Y will be overwritten per wall
@@ -762,10 +764,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				} // for i
 				for (unsigned s = 0; s < 2; ++s) { // add half length hall walls at each end of the hallway
 					cube_t hwall(rwall); // copy to get correct zvals
-					float const hwall_len((partial_room && s == 1) ? doorway_width : hwall_extend); // hwall for partial room at end is only length doorway_width
+					float const adj_door_val(doorway_vals[s ? (2*num_rooms-2) : 1]);
 					hwall.d[!min_dim][ s] = place_area.d[!min_dim][s]; // end at the wall
-					hwall.d[!min_dim][!s] = hwall.d[!min_dim][s] + (s ? -1.0f : 1.0f)*hwall_len; // end at first doorway
-					doorway_vals[s*(2*num_rooms-1)] = hwall.d[!min_dim][!s];
+					hwall.d[!min_dim][!s] = doorway_vals[s ? (2*num_rooms-1) : 0] = adj_door_val + (s ? 1.0f : -1.0f)*doorway_width; // end at first doorway
 
 					for (unsigned d = 0; d < 2; ++d) {
 						set_wall_width(hwall, hall_wall_pos[d], wall_half_thick, min_dim);
@@ -781,26 +782,27 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 
 				for (int i = 0; i < num_rooms; ++i) {
 					// Note: it would probably be simpler to create one wall and cut doorways into it like what's done in the secondary hallways case above
-					float const next_pos(min(wall_end, (pos + room_len))); // clamp to end of building to last row handle partial room)
+					float const next_pos((i == num_rooms-1) ? wall_end : (pos + room_len)); // handle different size of last room; must end exactly at the building edge
 
 					for (unsigned d = 0; d < 2; ++d) { // left, right sides of hallway
 						cube_t c(*p); // copy zvals and exterior wall pos
 						c.d[ min_dim][!d] = hall_wall_pos[d];
 						c.d[!min_dim][ 0] = pos;
 						c.d[!min_dim][ 1] = next_pos;
-						add_room(c, part_id, 1, 0, 1); // office or bathroom; no utility rooms for now
-						bool const is_bathroom(i == num_rooms/2);
+						add_room(c, part_id, 1, 0, 1); // office or bathroom; no utility rooms for now since these rooms tend to be large
+						bool const is_bathroom(i == num_rooms/2 && !apt_or_hotel);
 						if (is_bathroom) {rooms.back().assign_all_to(RTYPE_BATH);} // assign the middle room to be a bathroom
 						door_t door(c, min_dim, d); // copy zvals and wall pos
 						clip_wall_to_ceil_floor(door, fc_thick);
-						door.d[ min_dim][d] = hall_wall_pos[d]; // set to zero area at hallway
+						door.d[min_dim][d] = hall_wall_pos[d]; // set to zero area at hallway
 						for (unsigned e = 0; e < 2; ++e) {door.d[!min_dim][e] = doorway_vals[2*i+e];}
 						add_interior_door(door, is_bathroom);
-					}
+						if (apt_or_hotel) {divide_last_room_into_apt_or_hotel(i, num_rooms, num_windows, windows_per_room, min_dim, d);}
+					} // for d
 					pos = next_pos;
 				} // for i
 			} // end single main hallway case
-			add_room(hall, part_id, 3, 1, 0); // add hallway as room with 3 lights
+			add_room(hall, part_id, 3, 1, 0); // add hallway as room with 3+ lights
 			if (is_ground_floor || pri_hall.is_all_zeros()) {pri_hall = hall;} // assign to primary hallway if on first floor and hasn't yet been assigned
 			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();} // don't split any walls added up to this point
 
@@ -1132,6 +1134,32 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 	else if (has_basement()) {interior->furnace_type = FTYPE_BASEMENT;} // basement only: place furnace in basement (at least if it's a house)
 	// else no furnace
 } // end gen_interior_int()
+
+void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsigned hall_num_rooms,
+	unsigned tot_num_windows, unsigned windows_per_room, bool hall_dim, bool hall_dir) // hall_dim is also window dim
+{
+	assert(hall_num_rooms  > 0 && room_row_ix < hall_num_rooms);
+	assert(tot_num_windows > 0 && windows_per_room > 0 && windows_per_room <= tot_num_windows);
+	assert(is_apt_or_hotel());
+	bool at_lo_end(room_row_ix == 0), at_hi_end(room_row_ix == hall_num_rooms-1);
+	unsigned num_windows(tot_num_windows/windows_per_room);
+	assert(num_windows > 0);
+	if (btype == BTYPE_APARTMENT && num_windows == 1) {btype = BTYPE_HOTEL;} // too small for apartment; need at least two windows for an apartment
+	if (at_hi_end) {num_windows += (tot_num_windows % windows_per_room);} // last room is larger with more windows; hopefully only one more
+	bool const is_hotel(btype == BTYPE_HOTEL);//, is_apt(btype == BTYPE_APARTMENT);
+	// the current room and door stack are the last ones that were added; note that adding new rooms or doors below will invalidate these references
+	assert(!interior->rooms.empty());
+	assert(!interior->door_stacks.empty());
+	room_t &room(interior->rooms.back());
+	door_stack_t const &ds(interior->door_stacks.back());
+	// + 1 bedroom for hotel, 1-2 bedrooms for apartment; must have at least one window
+	// + 1 living room for apartment; optional living room for hotel; must have at least one window and must connect to door, so must span entire room depth
+	// 1 bathroom
+	// 1 kitchen for apartment
+	// TODO
+	room.is_office = 0;
+	room.assign_all_to(is_hotel ? RTYPE_BED : RTYPE_LIVING); // a good start for the main room connected to the door
+}
 
 bool building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
 	if (interior == nullptr) return 0;

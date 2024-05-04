@@ -1574,6 +1574,8 @@ struct building_t : public building_geom_t {
 	bool has_people   () const {return (interior && !interior->people.empty());}
 	bool has_retail   () const {return (retail_floor_levels > 0);}
 	bool has_tall_retail() const {return (retail_floor_levels > 1);}
+	bool is_apt_or_hotel() const {return (btype == BTYPE_APARTMENT || btype == BTYPE_HOTEL);}
+	bool is_residential () const {return (is_house || is_apt_or_hotel());}
 	bool is_retail_part(cube_t const &part) const {return (has_retail() && part.z1() == ground_floor_z1);}
 	bool skip_top_of_ceilings() const {return (roof_type == ROOF_TYPE_FLAT || !is_house || has_attic());}
 	bool enable_driveway_coll() const {return !is_rotated();} // no collision with rotated driveways/porches for now
@@ -1695,6 +1697,7 @@ struct building_t : public building_geom_t {
 	float get_hspacing_for_part(cube_t const &part, bool dim) const;
 	bool interior_enabled() const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
+	void divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsigned hall_num_rooms, unsigned tot_num_windows, unsigned windows_per_room, bool hall_dim, bool hall_dir);
 	bool maybe_assign_interior_garage(bool &gdim, bool &gdir);
 	void add_parking_garage_ramp(rand_gen_t &rgen);
 	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,
@@ -2023,7 +2026,7 @@ private:
 	bool create_office_cubicles(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_office_pillars(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t const &lights, vect_cube_t &blockers);
 	bool check_valid_closet_placement(cube_t const &c, room_t const &room, unsigned objs_start, unsigned bed_ix, float min_bed_space=0.0) const;
-	bool add_bedroom_objs    (rand_gen_t rgen, room_t &room, vect_cube_t const &blockers, colorRGBA const &chair_color, float zval, unsigned room_id, unsigned floor,
+	bool add_bedroom_objs    (rand_gen_t rgen, room_t &room, vect_cube_t &blockers, colorRGBA const &chair_color, float zval, unsigned room_id, unsigned floor,
 		float tot_light_amt, unsigned objs_start, bool room_is_lit, bool is_basement, bool force, light_ix_assign_t &light_ix_assign);
 	bool replace_light_with_ceiling_fan(rand_gen_t &rgen, cube_t const &room, cube_t const &avoid, unsigned room_id, float tot_light_amt, unsigned light_obj_ix);
 	bool add_bed_to_room     (rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, unsigned floor, bool force);

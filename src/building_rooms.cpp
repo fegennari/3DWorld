@@ -167,8 +167,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	unsigned tot_num_rooms(0), num_bathrooms(0), num_bedrooms(0), num_storage_rooms(0);
 	for (auto r = rooms.begin(); r != rooms.end(); ++r) {tot_num_rooms += calc_num_floors_room(*r, window_vspacing, floor_thickness);}
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
+	bool const residential(is_residential());
 	float const extra_bathroom_prob((is_house ? 2.0 : 1.0)*0.02*min((int(tot_num_rooms) - 4), 20));
-	room_obj_shape const light_shape(is_house ? SHAPE_CYLIN : SHAPE_CUBE);
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
 	unsigned added_kitchen_mask(0), added_living_mask(0), added_bath_mask(0); // per-floor
 	unsigned added_bathroom_objs_mask(0);
@@ -205,6 +205,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	}
 	for (auto r = rooms.begin(); r != rooms.end(); ++r) {
 		bool const is_basement(has_basement() && r->part_id == (int)basement_part_ix); // includes extended basement and parking garage
+		bool const residential_room(is_house || (residential && !r->is_hallway && !is_basement));
 		float light_amt(is_basement ? 0.0f : window_vspacing*r->get_light_amt()); // exterior light: multiply perimeter/area by window spacing to make unitless; none for basement rooms
 		if (!is_house && r->is_hallway) {light_amt *= 2.0;} // double the light in office building hallways because they often connect to other lit hallways
 		float const floor_height(r->is_single_floor ? r->dz() : window_vspacing); // secondary buildings are always one floor
@@ -213,6 +214,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		point room_center(r->get_cube_center());
 
 		// determine light pos and size for this stack of rooms
+		room_obj_shape const light_shape(residential_room ? SHAPE_CYLIN : SHAPE_CUBE);
 		float const dx(r->dx()), dy(r->dy());
 		bool const room_dim(dx < dy); // longer room dim
 		room_type const init_rtype_f0(r->get_room_type(0));
@@ -274,7 +276,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		// select light color for this room
 		colorRGBA color;
 		if (r->is_ext_basement_conn()) {color = RED;}
-		else if (is_house)          {color = get_light_color_temp(0.4);} // house - yellowish
+		else if (residential_room)  {color = get_light_color_temp(0.4);} // house - yellowish
 		else if (is_parking_garage) {color = get_light_color_temp_range(0.2, 0.5, rgen);} // parking garage - yellow-white
 		else if (is_backrooms)      {color = get_light_color_temp_range(0.2, 0.4, rgen);} // backrooms - yellow-white
 		else if (r->is_office)      {color = get_light_color_temp(0.6);} // office - blueish
@@ -545,7 +547,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				float const bedroom_prob(pref_sec_bath ? 0.25 : 0.75), bathroom_prob((pref_sec_bath ? 2.0 : 1.0)*extra_bathroom_prob);
 				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it;
 				// houses only, and must have a window (exterior wall)
-				if (is_house && !must_be_bathroom && !is_basement && ((f > 0 && !added_bedroom) || rgen.rand_float() < bedroom_prob)) {
+				if (residential_room && !must_be_bathroom && !is_basement && (init_rtype_f0 == RTYPE_BED || (f > 0 && !added_bedroom) || rgen.rand_float() < bedroom_prob)) {
 					// if haven't added a bedroom, force if last floor of last room (excluding the extended basement)
 					bool const force(!added_bedroom && f+1 == num_floors && (r+1 == rooms.end() || (r+1)->is_ext_basement()));
 					added_obj = can_place_onto = added_bedroom = is_bedroom =
@@ -559,6 +561,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement, added_bathroom_objs_mask); // add bathroom
 					if (is_bathroom) {r->assign_to(RTYPE_BATH, f);}
 				}
+			}
+			if (init_rtype_f0 == RTYPE_LIVING) { // assigned apartment living room
+				is_living = added_obj = add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 			}
 			if (!added_obj && r->is_office) { // add cubicles if this is a large office
 				added_obj = no_whiteboard = create_office_cubicles(rgen, *r, room_center.z, room_id, tot_light_amt);
@@ -595,7 +600,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (added_obj && !has_stairs_this_floor) {r->assign_to((is_house ? (room_type)RTYPE_STUDY : (room_type)RTYPE_OFFICE), f);} // or other room type - may overwrite below
 			}
 			// Note: added_obj is not set to 1 below this point
-			if (is_house && (added_tc || added_desk) && !is_kitchen && is_entry_floor) { // don't add second living room unless we added a kitchen and have enough rooms
+			if (is_house && !is_living && (added_tc || added_desk) && !is_kitchen && is_entry_floor) {
+				// don't add second living room unless we added a kitchen and have enough rooms
 				if ((!added_living && !r->has_center_stairs && rooms.size() >= 8 && (added_kitchen_mask || rgen.rand_bool())) || is_room_an_exit(*r, room_id, room_center.z)) {
 					// add a living room on the ground floor if it has a table or desk but isn't a kitchen
 					if (add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {
