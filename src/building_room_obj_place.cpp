@@ -2811,11 +2811,12 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 
 	// place ground floor/lobby objects
 	if (floor_ix == 0 && room.z1() == ground_floor_z1) {
-		// lobby reception desks
-		float const desk_width(0.9*window_vspacing);
+		// add lobby reception desks
+		float const nom_desk_width(0.9*window_vspacing), doorway_width(get_doorway_width()), hall_width(room.get_sz_dim(!long_dim));
 		
-		if (room.get_sz_dim(!long_dim) > (desk_width + 1.6*get_doorway_width())) { // hallway is wide enough for a reception desk
-			float const centerline(room.get_center_dim(!long_dim)), desk_depth(0.6*desk_width);
+		if (hall_width > (nom_desk_width + 1.6*doorway_width)) { // hallway is wide enough for a reception desk
+			float const desk_width(min(nom_desk_width, 0.5f*(hall_width - doorway_width))); // shrink to make sure there's a doorway width on each side
+			float const centerline(room.get_center_dim(!long_dim)), desk_depth(0.6*nom_desk_width);
 			cube_t desk;
 			set_cube_zvals(desk, zval, zval+0.32*window_vspacing);
 			set_wall_width(desk, centerline, 0.5*desk_width, !long_dim);
