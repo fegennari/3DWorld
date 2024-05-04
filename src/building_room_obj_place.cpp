@@ -448,7 +448,7 @@ bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, flo
 	bool const long_dim(room.dx() < room.dy());
 	float const rlength(room_bounds.get_sz_dim(long_dim)), rwidth(room_bounds.get_sz_dim(!long_dim)), midpoint(room_bounds.get_center_dim(!long_dim));
 	if (rwidth < 2.5*floor_spacing || rlength < 3.5*floor_spacing) return 0; // not large enough
-	unsigned const num_cubes(round_fp(rlength/(rgen.rand_uniform(0.75, 0.9)*floor_spacing))); // >= 4
+	unsigned const num_cubes(round_fp(rlength/(rgen.rand_uniform(0.8, 0.9)*floor_spacing))); // >= 4
 	float const cube_width(rlength/num_cubes), cube_depth(cube_width*rgen.rand_uniform(0.8, 1.2)); // not quite square
 	bool const add_middle_col(rwidth > 4.0*cube_depth + 2.0*get_doorway_width()); // enough to fit 4 rows of cubes and 2 hallways in between
 	uint16_t const bldg_id(uint16_t(mat_ix + interior->rooms.size())); // some value that's per-building
