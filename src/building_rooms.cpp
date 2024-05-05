@@ -539,6 +539,28 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					added_obj = no_whiteboard = no_plants = add_security_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 			}
+			if (is_apt_or_hotel() && !r->is_hallway && !r->is_office && !is_basement && init_rtype_f0 != RTYPE_NOTSET) {
+				// handle pre-assigned apartment or hotel rooms
+				if (init_rtype_f0 == RTYPE_LIVING) { // assigned apartment living room
+					added_tc = can_place_onto = add_table_and_chairs(rgen, *r, blockers, room_id, room_center, chair_color, 0.1, tot_light_amt);
+					add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start); // return value ignored
+					is_living = 1;
+				}
+				else if (init_rtype_f0 == RTYPE_BED) { // assigned bedroom
+					can_place_onto |= add_bedroom_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_lit, 0, 1, light_ix_assign);
+					added_bedroom = is_bedroom = 1;
+				}
+				else if (init_rtype_f0 == RTYPE_BATH) { // assigned bathroom
+					add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement, added_bathroom_objs_mask); // return value ignored
+					is_bathroom = added_bathroom = 1;
+				}
+				else if (init_rtype_f0 == RTYPE_KITCHEN) { // assigned apartment kitchen
+					add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, 0); // allow_adj_ext_door=0; return value ignored
+					is_kitchen = 1;
+				}
+				else {cout << TXTi(init_rtype_f0) << endl; assert(0);} // unsupported room type
+				added_obj = 1; // assume something was added above, and don't place any other furniture or try to assign to another room type
+			}
 			// bedroom or bathroom case; need to check first floor even if must_be_bathroom
 			if (!added_obj && allow_br && !is_tall_room && !has_walkway && can_be_bedroom_or_bathroom(*r, f)) {
 				// Note: num_bedrooms is summed across all floors, while num_bathrooms is per-floor
@@ -547,7 +569,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				float const bedroom_prob(pref_sec_bath ? 0.25 : 0.75), bathroom_prob((pref_sec_bath ? 2.0 : 1.0)*extra_bathroom_prob);
 				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it;
 				// houses only, and must have a window (exterior wall)
-				if (residential_room && !must_be_bathroom && !is_basement && (init_rtype_f0 == RTYPE_BED || (f > 0 && !added_bedroom) || rgen.rand_float() < bedroom_prob)) {
+				if (is_house && !must_be_bathroom && !is_basement && (init_rtype_f0 == RTYPE_BED || (f > 0 && !added_bedroom) || rgen.rand_float() < bedroom_prob)) {
 					// if haven't added a bedroom, force if last floor of last room (excluding the extended basement)
 					bool const force(!added_bedroom && f+1 == num_floors && (r+1 == rooms.end() || (r+1)->is_ext_basement()));
 					added_obj = can_place_onto = added_bedroom = is_bedroom =
@@ -562,9 +584,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					if (is_bathroom) {r->assign_to(RTYPE_BATH, f);}
 				}
 			}
-			if (init_rtype_f0 == RTYPE_LIVING) { // assigned apartment living room
-				is_living = added_obj = add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
-			}
 			if (!added_obj && r->is_office) { // add cubicles if this is a large office
 				added_obj = no_whiteboard = create_office_cubicles(rgen, *r, room_center.z, room_id, tot_light_amt);
 			}
@@ -575,7 +594,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (num_tcs > 0) {added_tc = added_obj = can_place_onto = 1; num_chairs = num_tcs - 1;}
 				// on ground floor, try to make this a kitchen; not all houses will have a kitchen with this logic - maybe we need fewer bedrooms?
 				// office buildings can also have kitchens, even on non-ground floors; no tall room kitchens because the cabinets and stove hood have no ceiling to connect to
-				if (!(added_kitchen_mask & floor_mask) && (!is_house || is_entry_floor) && !is_basement && !is_tall_room) {
+				if (!(added_kitchen_mask & floor_mask) && (!residential || is_entry_floor) && !is_basement && !is_tall_room) {
 					// make it a kitchen if it's the last room in a house, even if there's no table or it has stairs
 					if ((added_tc && !has_stairs) || (is_house && (r+1) == rooms.end())) {
 						if (add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_living)) {
@@ -725,6 +744,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	add_padlocks(rgen);
 
 	if (is_rotated() || !is_cube()) {} // skip for rotated and non-cube buildings, since toilets, etc. may not be placed
+	else if (is_apt_or_hotel()) {} // not yet added - suppress warnings
 	else if (num_bathrooms == 0) { // can happen, but very rare
 		cout << "no bathroom in building " << bcube.xc() << " " << bcube.yc() << endl;
 		if (cand_bathroom < rooms.size()) {cout << "cand bathroom was at " << rooms[cand_bathroom].str() << endl;}
