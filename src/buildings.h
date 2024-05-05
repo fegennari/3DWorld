@@ -1065,6 +1065,7 @@ struct building_room_geom_t {
 	void add_mwave(room_object_t const &c);
 	void add_mirror(room_object_t const &c);
 	rgeom_mat_t &get_shower_tile_mat(room_object_t const &c, float tscale, colorRGBA &color);
+	void draw_shower_head(room_object_t const &shower, float radius, float wall_pos, float extent_amt, bool head_dim);
 	void add_shower(room_object_t const &c, float tscale);
 	void add_shower_tub(room_object_t const &c, tid_nm_pair_t const &wall_tex, float tscale);
 	void add_bottle(room_object_t const &c, bool add_bottom=0);
