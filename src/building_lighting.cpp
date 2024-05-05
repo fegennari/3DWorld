@@ -288,7 +288,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			c->type == TYPE_BALCONY || c->type == TYPE_TOY_MODEL || c->type == TYPE_CEIL_FAN || c->type == TYPE_PLANT_MODEL || c->type == TYPE_POOL_FLOAT ||
 			c->type == TYPE_BENCH || c->type == TYPE_DIV_BOARD || c->type == TYPE_POOL_LAD || c->type == TYPE_FLASHLIGHT || c->type == TYPE_CANDLE || c->type == TYPE_CAMERA ||
 			c->type == TYPE_CLOCK || c->type == TYPE_BAR_STOOL || c->type == TYPE_PADLOCK || c->type == TYPE_CASHREG || c->type == TYPE_WFOUNTAIN ||
-			c->type == TYPE_BANANA || c->type == TYPE_BAN_PEEL || c->type == TYPE_SHOWERTUB) continue;
+			c->type == TYPE_BANANA || c->type == TYPE_BAN_PEEL) continue;
 		bool const is_stairs(c->type == TYPE_STAIR || c->type == TYPE_STAIR_WALL);
 		if (c->z1() > (is_stairs ? stairs_z2 : z2) || c->z2() < (is_stairs ? stairs_z1 : z1)) continue;
 		if (!c->intersects_xy(ext_bcube)) continue;
@@ -417,6 +417,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			else if (c->type == TYPE_MONITOR || c->type == TYPE_TV) {bc.expand_in_dim(dim, -0.3*bc.get_sz_dim(dim));} // reduce thickness
 			else if (c->type == TYPE_BRSINK) {bc.z1() += 0.60*bc.dz();}
 			else if (c->type == TYPE_ATTIC_DOOR) {bc = get_attic_access_door_cube(*c, 0);} // inc_ladder=0: includes door but not ladder
+			else if (c->type == TYPE_SHOWERTUB ) {bc = get_shower_tub_wall(*c);}
 			cc.emplace_back(bc, color);
 		}
 	} // for c

@@ -1283,6 +1283,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 				if (place_shower_tub) { // add the tub part as well
 					bool const wall_dir(hdim ? ydir : xdir);
 					objs.back().flags |= (wall_dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // set flag to indicate which side is the wall for adding the shower head
+					objs.back().color  = (is_basement ? WHITE : wall_color); // color of the end wall
 					cube_t tub(c);
 					tub.z2() = c.z1() + tub_height;
 					tub.d[!dim][!wall_dir] -= (wall_dir ? -1.0 : 1.0)*wall_thick; // shrink off the wall

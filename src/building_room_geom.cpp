@@ -1404,17 +1404,23 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 	} // for d
 }
 
-void building_room_geom_t::add_shower_tub(room_object_t const &c, tid_nm_pair_t const &wall_tex, colorRGBA const &wall_color, float tscale) {
+cube_t get_shower_tub_wall(room_object_t const &c) {
+	bool const shower_dir(c.flags & RO_FLAG_ADJ_HI); // adjacent wall
+	float const width(c.get_width()), tub_len(width/1.05), wall_thick(width - tub_len);
+	cube_t wall(c);
+	wall.d[!c.dim][shower_dir] = c.d[!c.dim][!shower_dir] + (shower_dir ? 1.0 : -1.0)*wall_thick; // inner wall pos
+	return wall;
+}
+void building_room_geom_t::add_shower_tub(room_object_t const &c, tid_nm_pair_t const &wall_tex, float tscale) {
 	// draw end wall
 	bool const shower_dir(c.flags & RO_FLAG_ADJ_HI); // adjacent wall
-	float const width(c.get_width()), tub_len(width/1.05), wall_thick(width - tub_len), height(c.dz());
-	float const inner_wall_pos(c.d[!c.dim][!shower_dir] + (shower_dir ? 1.0 : -1.0)*wall_thick);
-	cube_t wall(c);
-	wall.d[!c.dim][shower_dir] = inner_wall_pos;
+	float const width(c.get_width()), height(c.dz());
+	cube_t const wall(get_shower_tub_wall(c));
 	rgeom_mat_t &wall_mat(get_material(get_scaled_wall_tex(wall_tex), 1));
-	wall_mat.add_cube_to_verts(wall, wall_color, tex_origin, (EF_Z12 | ~get_face_mask(c.dim, !c.dir) | ~get_face_mask(!c.dim, shower_dir))); // draw front and outside
+	wall_mat.add_cube_to_verts(wall, apply_light_color(c), tex_origin, (EF_Z12 | ~get_face_mask(c.dim, !c.dir) | ~get_face_mask(!c.dim, shower_dir))); // draw front and outside
 	// draw tile on 3 sides
-	float const tile_thickness(0.05*wall_thick); // nonzero to avoid Z-fighing with room walls
+	float const tile_thickness(0.05*wall.get_sz_dim(!c.dim)); // nonzero to avoid Z-fighing with room walls
+	float const inner_wall_pos(wall.d[!c.dim][shower_dir]);
 	colorRGBA tile_color;
 	rgeom_mat_t &tile_mat(get_shower_tile_mat(c, tscale, tile_color));
 	cube_t tiled_area(c); // must extend entier Z-range and behind the tub since the inside face of the wall isn't drawn

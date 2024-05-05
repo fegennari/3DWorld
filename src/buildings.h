@@ -1066,7 +1066,7 @@ struct building_room_geom_t {
 	void add_mirror(room_object_t const &c);
 	rgeom_mat_t &get_shower_tile_mat(room_object_t const &c, float tscale, colorRGBA &color);
 	void add_shower(room_object_t const &c, float tscale);
-	void add_shower_tub(room_object_t const &c, tid_nm_pair_t const &wall_tex, colorRGBA const &wall_color, float tscale);
+	void add_shower_tub(room_object_t const &c, tid_nm_pair_t const &wall_tex, float tscale);
 	void add_bottle(room_object_t const &c, bool add_bottom=0);
 	void add_vase(room_object_t const &c);
 	void add_paper(room_object_t const &c);
@@ -2332,6 +2332,7 @@ float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_
 void get_bench_cubes(room_object_t const &c, cube_t cubes[3]);
 void get_diving_board_cubes(room_object_t const &c, cube_t cubes[2]);
 unsigned get_shelf_rack_cubes(room_object_t const &c, cube_t &back, cube_t &top, cube_t sides[2], cube_t shelves[5]);
+cube_t get_shower_tub_wall(room_object_t const &c);
 cube_t get_open_closet_door(room_object_t const &obj);
 cube_t get_pool_table_top_surface(room_object_t const &c);
 void get_cabinet_or_counter_doors(room_object_t const &c, vect_cube_t &doors, vect_cube_t &drawers);
