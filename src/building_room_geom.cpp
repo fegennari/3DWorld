@@ -35,9 +35,10 @@ unsigned get_rgeom_sphere_ndiv(bool low_detail);
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // draw only these faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
 unsigned get_skip_mask_for_xy(bool dim) {return (dim ? EF_Y12 : EF_X12);} // skip these faces
 tid_nm_pair_t get_tex_auto_nm(int tid, float tscale=1.0, bool shadowed=1) {return tid_nm_pair_t(tid, get_normal_map_for_bldg_tid(tid), tscale, tscale, 0.0, 0.0, shadowed);}
-int get_counter_tid() {return get_texture_by_name("marble2.jpg");}
-int get_blinds_tid () {return get_texture_by_name("interiors/blinds.jpg", 0, 0, 1, 8.0);} // use high aniso
-int get_money_tid  () {return get_texture_by_name("interiors/dollar20.jpg");}
+int get_counter_tid  () {return get_texture_by_name("marble2.jpg");}
+int get_blinds_tid   () {return get_texture_by_name("interiors/blinds.jpg",    0, 0, 1, 8.0);} // use high aniso
+int get_blinds_nm_tid() {return get_texture_by_name("interiors/blinds_hn.jpg", 1, 0, 1, 8.0);} // use high aniso
+int get_money_tid    () {return get_texture_by_name("interiors/dollar20.jpg");}
 
 struct pool_texture_params_t {
 	string fn, nm_fn;
@@ -1441,14 +1442,32 @@ void building_room_geom_t::add_shower_tub(room_object_t const &c, tid_nm_pair_t 
 	float const crod_radius(0.04*radius);
 	cube_t crod;
 	set_wall_width(crod, (c.z1() + 0.9*height), crod_radius, 2);
-	set_wall_width(crod, (c.d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*2.0*crod_radius), crod_radius, c.dim);
+	set_wall_width(crod, (c.d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*1.2*crod_radius), crod_radius, c.dim);
 	crod.d[!c.dim][ shower_dir] = c.d[!c.dim][shower_dir]; // room wall
 	crod.d[!c.dim][!shower_dir] = inner_wall_pos; // shower wall
-	assert(crod.is_strictly_normalized());
 	rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed, specular metal
 	metal_mat.add_ortho_cylin_to_verts(crod, apply_light_color(c, LT_GRAY), !c.dim, 0, 0); // sides only, no ends
-	// draw curtains
-	// TODO
+	// draw curtains using blinds texture
+	float const curtain_width((c.is_open() ? 0.15 : 0.45)*width);
+	cube_t curtains(c);
+	curtains.z1() += 0.1*height;
+	curtains.z2()  = crod.z2() + 0.5*crod_radius;
+	curtains.d[c.dim][ c.dir] += (c.dim ? -1.0 : 1.0)*1.0*crod_radius; // outer
+	curtains.d[c.dim][!c.dir]  = crod.d[c.dim][c.dir]; // inner
+	curtains.d[!c.dim][!shower_dir] = inner_wall_pos; // shower wall
+	float const curtains_tscale(0.2/curtain_width);
+	tid_nm_pair_t const curtains_tex(get_blinds_tid(), get_blinds_nm_tid(), (c.dim ? curtains_tscale : 0.0), (c.dim ? 0.0 : curtains_tscale));
+	rgeom_mat_t &curtains_mat(get_material(curtains_tex, 1));
+	colorRGBA const curtains_color(apply_light_color(c, WHITE));
+
+	for (unsigned oi = 0; oi < 2; ++oi) { // {outer, inner}
+		for (unsigned d = 0; d < 2; ++d) { // each side
+			cube_t curtain(curtains);
+			curtain.d[!c.dim][!d] = curtains.d[!c.dim][d] + (d ? -1.0 : 1.0)*curtain_width;
+			curtains_mat.add_cube_to_verts(curtain, curtains_color, all_zeros, 0, c.dim);
+		}
+		if (oi == 0) {curtains.translate_dim(c.dim, (c.dim ? 1.0 : -1.0)*(2.0*crod_radius + curtains.get_sz_dim(c.dim)));} // translate to inside of curtain rod
+	} // for oi
 }
 
 void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
@@ -1755,10 +1774,10 @@ void building_room_geom_t::add_blinds(room_object_t const &c) {
 	colorRGBA const color(c.color); // room color not applied as it looks wrong when viewed from outside the building
 	// fit the texture to the cube; blinds have a fixed number of slats that compress when they are shortened
 	// should these be partially transparent/backlit like bathroom windows? I guess not, most blinds are plastic or wood rather than material
-	int const blinds_tid(get_blinds_tid()), nm_tid(get_texture_by_name("interiors/blinds_hn.jpg", 1, 0, 1, 8.0)); // use high aniso
+	int const blinds_tid(get_blinds_tid());
 	float tx(vertical ? 1.0/c.dz() : 0.0), ty(vertical ? 0.5/c.get_width() : 0.0);
 	if (c.dim) {swap(tx, ty);}
-	tid_nm_pair_t const tex(blinds_tid, nm_tid, tx, ty);
+	tid_nm_pair_t const tex(blinds_tid, get_blinds_nm_tid(), tx, ty);
 	rgeom_mat_t &mat(get_material(tex, 1));
 	unsigned df1(~get_skip_mask_for_xy(!c.dim)), df2(~EF_Z12);
 	if (vertical) {swap(df1, df2);} // swap sides vs. top/bottom

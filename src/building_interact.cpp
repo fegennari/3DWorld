@@ -492,7 +492,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 					else if (i->is_light_type() || type == TYPE_LAVALAMP) {keep = 1;} // room light or lamp
 					else if (type == TYPE_FISHTANK && (i->flags & RO_FLAG_ADJ_TOP)) {keep = 1;} // fishtank with a lid and light
 					else if (type == TYPE_PICTURE || type == TYPE_TPROLL || type == TYPE_MWAVE || type == TYPE_STOVE || /*type == TYPE_FRIDGE ||*/
-						type == TYPE_TV || type == TYPE_MONITOR || type == TYPE_BLINDS || type == TYPE_SHOWER || /*type == TYPE_SHOWERTUB ||*/ type == TYPE_SWITCH ||
+						type == TYPE_TV || type == TYPE_MONITOR || type == TYPE_BLINDS || type == TYPE_SHOWER || type == TYPE_SHOWERTUB || type == TYPE_SWITCH ||
 						type == TYPE_BOOK || type == TYPE_BRK_PANEL || type == TYPE_BREAKER || type == TYPE_ATTIC_DOOR || type == TYPE_OFF_CHAIR ||
 						type == TYPE_WFOUNTAIN || type == TYPE_FALSE_DOOR || type == TYPE_LG_BALL) {keep = 1;}
 					else if (type == TYPE_BUTTON && i->in_elevator() == bool(player_in_elevator)) {keep = 1;} // check for buttons inside/outside elevator
@@ -509,6 +509,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				// shrink lamps in XY to a cube interior to their building cylinder to make drawers under lamps easier to select
 				else if (type == TYPE_LAMP      ) {obj_bc.expand_by(vector3d(-i->dx(), -i->dy(), 0.0)*(0.5*(1.0 - 1.0/SQRT2)));}
 				else if (type == TYPE_ATTIC_DOOR) {obj_bc = get_attic_access_door_cube(*i, 1);} // inc_ladder=1, to make it easier to select when in the attic
+				else if (type == TYPE_SHOWERTUB ) {obj_bc.z1() += 0.4*i->dz();} // use upper part so that tub can be interacted with as well
 				point center;
 
 				if (type == TYPE_CLOSET) {
@@ -772,7 +773,12 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			}
 		}
 	}
-	//else if (obj.type == TYPE_SHOWERTUB) {} // open/close curtains?
+	else if (obj.type == TYPE_SHOWERTUB) { // open/close curtains
+		obj.flags ^= RO_FLAG_OPEN; // toggle open/close
+		gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.5, 1.5);
+		sound_scale      = 0.4;
+		update_draw_data = 1;
+	}
 	else if (obj.type == TYPE_BOX) {
 		if (!check_for_water_splash(sound_origin, 0.6)) {gen_sound_thread_safe_at_player(SOUND_OBJ_FALL, 0.5);}
 		obj.flags       |= RO_FLAG_OPEN; // mark as open

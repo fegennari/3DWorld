@@ -1228,7 +1228,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 		float shower_dx(0.0), shower_dy(0.0), wall_thick(0.0);
 		bool hdim(0); // handle dim/long dim
 		// use a shower + tub combo for basements due to glass drawing artifacts, and for arpartments and hotels with small bathrooms; requires tub model
-		bool const place_shower_tub((is_basement || is_apt_or_hotel()) && building_obj_model_loader.is_model_valid(OBJ_MODEL_TUB));
+		bool const place_shower_tub((is_basement || is_apt_or_hotel() || rgen.rand_float() < 0.25) && building_obj_model_loader.is_model_valid(OBJ_MODEL_TUB));
 		float const shower_height(place_shower_tub ? get_floor_ceil_gap() : 0.8*floor_spacing), tub_height(tub_height_factor*floor_spacing);
 
 		if (place_shower_tub) {
@@ -1282,7 +1282,8 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 
 				if (place_shower_tub) { // add the tub part as well
 					bool const wall_dir(hdim ? ydir : xdir);
-					objs.back().flags |= (wall_dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // set flag to indicate which side is the wall for adding the shower head
+					// set flag to indicate which side is the wall for adding the shower head, and make open by default
+					objs.back().flags |= (wall_dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO) | RO_FLAG_OPEN;
 					objs.back().color  = (is_basement ? WHITE : wall_color); // color of the end wall
 					cube_t tub(c);
 					tub.z2() = c.z1() + tub_height;
