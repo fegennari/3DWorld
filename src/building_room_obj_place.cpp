@@ -2815,16 +2815,17 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 	unsigned room_id, float tot_light_amt, unsigned floor_ix, unsigned objs_start)
 {
 	bool const long_dim(room.dx() < room.dy());
-	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), hall_width(room.get_sz_dim(!long_dim));
+	float const hall_side_clearance(max(get_doorway_width(), get_min_front_clearance_inc_people())); // front clearance is generally slightly larger
 	vect_room_object_t &objs(interior->room_geom->objs);
 
 	// place ground floor/lobby objects
 	if (floor_ix == 0 && room.z1() == ground_floor_z1) {
 		// add lobby reception desks
-		float const nom_desk_width(0.9*window_vspacing), doorway_width(get_doorway_width()), hall_width(room.get_sz_dim(!long_dim));
+		float const nom_desk_width(0.9*window_vspacing);
 		
-		if (hall_width > (nom_desk_width + 1.6*doorway_width)) { // hallway is wide enough for a reception desk
-			float const desk_width(min(nom_desk_width, 0.5f*(hall_width - doorway_width))); // shrink to make sure there's a doorway width on each side
+		if (hall_width > (nom_desk_width + 1.6*hall_side_clearance)) { // hallway is wide enough for a reception desk
+			float const desk_width(min(nom_desk_width, 0.5f*(hall_width - hall_side_clearance))); // shrink to make sure there's clearance on each side
 			float const centerline(room.get_center_dim(!long_dim)), desk_depth(0.6*nom_desk_width);
 			cube_t desk;
 			set_cube_zvals(desk, zval, zval+0.32*window_vspacing);
@@ -2832,7 +2833,8 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 
 			for (unsigned dir = 0; dir < 2; ++dir) { // add a reception desk at each entrance
 				float const hall_len(room.get_sz_dim(long_dim)), hall_start(room.d[long_dim][dir]), dir_sign(dir ? -1.0 : 1.0);
-				float const val1(hall_start + max(0.1f*hall_len, window_vspacing)*dir_sign), val2(hall_start + 0.3*hall_len*dir_sign); // range of reasonable desk placements along the hall
+				// range of reasonable desk placements along the hall
+				float const val1(hall_start + max(0.1f*hall_len, window_vspacing)*dir_sign), val2(hall_start + 0.3*hall_len*dir_sign);
 
 				for (unsigned n = 0; n < 10; ++n) { // try to find the closest valid placement to the door, make 10 random attempts
 					float const val(rgen.rand_uniform(min(val1, val2), max(val1, val2)));
@@ -2894,18 +2896,31 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 		}
 	}
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_WFOUNTAIN)) { // add a water fountain to the center of the hall (likely between stairs and elevator)
+		float used_space_center(0.0); // calculate occupied hallway width near water fountain, assuming the first stairwell and elevator are in the primary hallway
+		if (!interior->stairwells.empty()) {max_eq(used_space_center, interior->stairwells.front().get_width());}
+		if (!interior->elevators .empty()) {max_eq(used_space_center, interior->elevators .front().get_width());}
 		bool const dim(!long_dim), dir(!pri_dir); // opposite of fire extinguisher so as not to overlap
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_WFOUNTAIN)); // D, W, H
 		float const height(0.25*window_vspacing), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
-		float const z1(zval+0.15*window_vspacing), wall_pos(room.d[dim][dir] + (dir ? -1.0 : 1.0)*0.5*wall_thickness);
-		cube_t wf;
-		set_wall_width(wf, room.get_center_dim(!dim), hwidth, !dim);
+		float const side_space(0.5*(hall_width - used_space_center));
 
-		if (is_contained_in_wall_range(wall_pos, wf.d[!dim][0], wf.d[!dim][1], z1, dim)) { // shouldn't need to check anything else?
-			set_cube_zvals(wf, z1, z1+height);
-			wf.d[dim][ dir] = wall_pos;
-			wf.d[dim][!dir] = wall_pos - (dir ? 1.0 : -1.0)*depth;
-			objs.emplace_back(wf, TYPE_WFOUNTAIN, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE);
+		if (side_space - depth > hall_side_clearance) { // add if there's enough clearance for people to pass by
+			float const z1(zval+0.15*window_vspacing), wall_pos(room.d[dim][dir] + (dir ? -1.0 : 1.0)*0.5*wall_thickness);
+			float const hall_center(room.get_center_dim(!dim)), pref_offset((room_rgen.rand_bool() ? 1.0 : -1.0)*0.8*window_vspacing);
+			float const test_offsets[3] = {0.0, pref_offset, -pref_offset};
+
+			for (unsigned n = 0; n < 3; ++n) { // try center plus one offset in each direction (in case there's a central door or hallway)
+				cube_t wf;
+				set_wall_width(wf, (hall_center + test_offsets[n]), hwidth, !dim);
+
+				if (is_contained_in_wall_range(wall_pos, wf.d[!dim][0], wf.d[!dim][1], z1, dim)) { // shouldn't need to check anything else?
+					set_cube_zvals(wf, z1, z1+height);
+					wf.d[dim][ dir] = wall_pos;
+					wf.d[dim][!dir] = wall_pos - (dir ? 1.0 : -1.0)*depth;
+					objs.emplace_back(wf, TYPE_WFOUNTAIN, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE);
+					break;
+				}
+			} // for n
 		}
 	}
 	add_cameras_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
