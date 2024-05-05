@@ -396,7 +396,7 @@ bool can_open_bathroom_stall_or_shower(room_object_t const &stall, point const &
 	// Note: since there currently aren't any objects the player can push/pull in bathrooms, we don't need to check if the door is blocked from opening; may need to revisit later
 	bool dim(0), dir(0); // dim/dir that door is on
 	if      (stall.type == TYPE_STALL ) {dim = stall.dim; dir = !stall.dir;} // bathroom stall
-	else if (stall.type == TYPE_SHOWER) { // show stall
+	else if (stall.type == TYPE_SHOWER) { // shower stall; TYPE_SHOWERTUB can't be opened
 		dim = (stall.dx() < stall.dy());
 		dir = !(dim ? stall.dir : stall.dim); // xdir=stall.dim, ydir=stall.dir
 	}
@@ -491,10 +491,10 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 					else if (i->is_sink_type() || type == TYPE_TUB) {keep = 1;} // sink/tub
 					else if (i->is_light_type() || type == TYPE_LAVALAMP) {keep = 1;} // room light or lamp
 					else if (type == TYPE_FISHTANK && (i->flags & RO_FLAG_ADJ_TOP)) {keep = 1;} // fishtank with a lid and light
-					else if (type == TYPE_PICTURE || type == TYPE_TPROLL || type == TYPE_MWAVE || type == TYPE_STOVE ||
-						/*type == TYPE_FRIDGE ||*/ type == TYPE_TV || type == TYPE_MONITOR || type == TYPE_BLINDS || type == TYPE_SHOWER ||
-						type == TYPE_SWITCH || type == TYPE_BOOK || type == TYPE_BRK_PANEL || type == TYPE_BREAKER || type == TYPE_ATTIC_DOOR ||
-						type == TYPE_OFF_CHAIR || type == TYPE_WFOUNTAIN || type == TYPE_FALSE_DOOR || type == TYPE_LG_BALL) {keep = 1;}
+					else if (type == TYPE_PICTURE || type == TYPE_TPROLL || type == TYPE_MWAVE || type == TYPE_STOVE || /*type == TYPE_FRIDGE ||*/
+						type == TYPE_TV || type == TYPE_MONITOR || type == TYPE_BLINDS || type == TYPE_SHOWER || /*type == TYPE_SHOWERTUB ||*/ type == TYPE_SWITCH ||
+						type == TYPE_BOOK || type == TYPE_BRK_PANEL || type == TYPE_BREAKER || type == TYPE_ATTIC_DOOR || type == TYPE_OFF_CHAIR ||
+						type == TYPE_WFOUNTAIN || type == TYPE_FALSE_DOOR || type == TYPE_LG_BALL) {keep = 1;}
 					else if (type == TYPE_BUTTON && i->in_elevator() == bool(player_in_elevator)) {keep = 1;} // check for buttons inside/outside elevator
 					else if (type == TYPE_PIZZA_BOX && !i->was_expanded()) {keep = 1;} // can't open if on a shelf
 					else if (i->is_parked_car() && !i->is_broken()) {keep = 1;} // parked car with unbroken windows
@@ -772,6 +772,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			}
 		}
 	}
+	//else if (obj.type == TYPE_SHOWERTUB) {} // open/close curtains?
 	else if (obj.type == TYPE_BOX) {
 		if (!check_for_water_splash(sound_origin, 0.6)) {gen_sound_thread_safe_at_player(SOUND_OBJ_FALL, 0.5);}
 		obj.flags       |= RO_FLAG_OPEN; // mark as open
