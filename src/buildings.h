@@ -1204,7 +1204,8 @@ unsigned const NUM_RTYPE_SLOTS = 6; // enough for houses; hard max is 8
 inline unsigned wrap_room_floor(unsigned floor) {return min(floor, NUM_RTYPE_SLOTS-1U);}
 
 struct room_t : public cube_t { // size=64
-	bool has_center_stairs=0, no_geom=0, is_hallway=0, is_office=0, is_sec_bldg=0, unpowered=0, has_mirror=0, has_skylight=0, is_single_floor=0, has_out_of_order=0;
+	bool has_center_stairs=0, no_geom=0, is_hallway=0, is_office=0, office_floorplan=0, is_sec_bldg=0, unpowered=0;
+	bool has_mirror=0, has_skylight=0, is_single_floor=0, has_out_of_order=0;
 	uint8_t has_stairs=0; // per-floor bit mask; always set to 255 for stairs that span the entire room
 	uint8_t has_elevator=0; // number of elevators, usually either 0 or 1
 	uint8_t interior=0; // 0=not interior (has windows), 1=interior, 2=extended basement, {3,4}=extended basement connector, dim=interior-3
@@ -1226,7 +1227,7 @@ struct room_t : public cube_t { // size=64
 	bool is_garage_or_shed  (unsigned floor) const {return (is_sec_bldg || get_room_type(floor) == RTYPE_GARAGE || get_room_type(floor) == RTYPE_SHED);}
 	bool is_ext_basement     () const {return (interior >= 2);}
 	bool is_ext_basement_conn() const {return (interior >= 3);}
-	bool inc_half_walls      () const {return (is_hallway || is_office || is_ext_basement());} // hallway, office, or extended basement
+	bool inc_half_walls      () const {return (is_hallway || office_floorplan || is_ext_basement());} // hallway, office, or extended basement
 	bool is_parking          () const {return (get_room_type(0) == RTYPE_PARKING  );}
 	bool is_backrooms        () const {return (get_room_type(0) == RTYPE_BACKROOMS);}
 	bool is_retail           () const {return (get_room_type(0) == RTYPE_RETAIL   );}

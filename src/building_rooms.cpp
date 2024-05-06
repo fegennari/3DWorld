@@ -2695,7 +2695,7 @@ void building_t::add_doorbell_lamp_and_porch_items(tquad_with_ix_t const &door, 
 
 room_t::room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool is_office_, bool is_sec_bldg_) :
 	cube_t(c), no_geom(is_hallway_), // no geom in hallways
-	is_hallway(is_hallway_), is_office(is_office_), is_sec_bldg(is_sec_bldg_), // secondary buildings are always a single floor
+	is_hallway(is_hallway_), is_office(is_office_), office_floorplan(is_office_), is_sec_bldg(is_sec_bldg_), // secondary buildings are always a single floor
 	is_single_floor(is_sec_bldg), part_id(p), num_lights(nl)
 {
 	if      (is_sec_bldg) {assign_all_to(RTYPE_GARAGE);} // or RTYPE_SHED - will be set later

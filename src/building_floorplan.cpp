@@ -1157,7 +1157,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 	// 1 bathroom
 	// 1 kitchen for apartment
 	// TODO
-	room.is_office = 0;
+	room.is_office = 0; // but room.office_floorplan remains 1
 	room.assign_all_to(is_hotel ? RTYPE_BED : RTYPE_LIVING); // a good start for the main room connected to the door
 }
 
