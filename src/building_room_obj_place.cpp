@@ -2978,11 +2978,25 @@ void building_t::add_cameras_to_room(rand_gen_t &rgen, room_t const &room, float
 	vect_room_object_t &objs(interior->room_geom->objs);
 
 	for (unsigned dir = 0; dir < 2; ++dir) {
+		float const wall_pos(place_area.d[long_dim][!dir]), signed_len((dir ? 1.0 : -1.0)*length);
 		float pos(room.get_center_dim(!long_dim));
-		if (is_ground_floor) {pos += 0.65*doorway_width*((bool(dir) ^ camera_side) ? 1.0 : -1.0);} // place off to the side on ground floor to avoid blocking doorway and exit sign
+		bool offset(is_ground_floor);
+		
+		if (!walkways.empty() && !offset) { // check for walkway doors
+			float const check_radius(width + get_wall_thickness());
+			point test_pt;
+			test_pt[ long_dim] = wall_pos;
+			test_pt[!long_dim] = pos;
+			test_pt.z = 0.5*(zval + ceil_zval);
+
+			for (auto const &door : doors) {
+				if (door.get_bcube().contains_pt_exp(test_pt, check_radius)) {offset = 1; break;}
+			}
+		}
+		if (offset) {pos += 0.65*doorway_width*((bool(dir) ^ camera_side) ? 1.0 : -1.0);} // place off to the side to avoid blocking doorway and exit sign
 		set_wall_width(camera, pos, 0.5*width, !long_dim);
-		camera.d[long_dim][!dir] = place_area.d[long_dim][!dir] + (dir ? 1.0 : -1.0)*0.25*length; // near the wall
-		camera.d[long_dim][ dir] = camera    .d[long_dim][!dir] + (dir ? 1.0 : -1.0)*     length; // extend away from the wall
+		camera.d[long_dim][!dir] = wall_pos + 0.25*signed_len; // near the wall
+		camera.d[long_dim][ dir] = wall_pos + 1.25*signed_len; // extend away from the wall
 		bool blocked(0);
 
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) { // check if blocked by a walkway false door, etc.
