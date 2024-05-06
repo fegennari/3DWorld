@@ -265,12 +265,13 @@ typedef vector<riser_pos_t> vect_riser_pos_t;
 
 struct building_mat_t : public building_tex_params_t {
 
-	bool no_city=0, add_windows=0, add_wind_lights=0, no_walkways=0, is_apartment=0;
+	bool no_city=0, add_windows=0, add_wind_lights=0, no_walkways=0;
 	unsigned min_levels=1, max_levels=1, min_sides=4, max_sides=4;
 	float place_radius=0.0, max_delta_z=0.0, max_rot_angle=0.0, min_level_height=0.0, min_alt=-1000, max_alt=1000, house_prob=0.0, house_scale_min=1.0, house_scale_max=1.0;
 	float split_prob=0.0, cube_prob=1.0, round_prob=0.0, asf_prob=0.0, min_fsa=0.0, max_fsa=0.0, min_asf=0.0, max_asf=0.0;
 	float wind_xscale=1.0, wind_yscale=1.0, wind_xoff=0.0, wind_yoff=0.0;
 	float floor_spacing=0.0, floorplan_wind_xscale=0.0; // these are derived values
+	float apartment_prob=0.0;
 	cube_t pos_range, prev_pos_range, sz_range; // pos_range z is unused?
 	color_range_t side_color, roof_color; // exterior
 	colorRGBA window_color=GRAY, wall_color=WHITE, ceil_color=WHITE, floor_color=LT_GRAY, house_ceil_color=WHITE, house_floor_color=WHITE;

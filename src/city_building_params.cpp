@@ -220,8 +220,8 @@ void building_params_t::init_kw_maps() {
 	kwmb.add("onion_roof",  onion_roof);
 	kwmb.add("no_city",     cur_mat.no_city);
 	kwmb.add("no_walkways", cur_mat.no_walkways);
-	kwmb.add("is_apartment",cur_mat.is_apartment);
 	kwmr.add("house_prob",  cur_mat.house_prob, FP_CHECK_01);
+	kwmr.add("apartment_prob", cur_mat.apartment_prob, FP_CHECK_01);
 	// material textures / colors
 	kwmb.add("texture_mirror", tex_mirror);
 	kwmb.add("texture_inv_y",  tex_inv_y);

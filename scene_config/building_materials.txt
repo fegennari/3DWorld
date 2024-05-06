@@ -126,10 +126,10 @@ buildings house_ceil_specular  0.15 60.0
 buildings house_floor_specular 0.10 50.0
 
 # brick buildings
-buildings is_apartment 0 # set the default
-buildings house_prob 0.67 # 67%
+buildings apartment_prob 0.0
+buildings house_prob     0.67 # 67%
 buildings house_scale_range 0.45 0.8
-buildings no_city 1 # not used in cities
+buildings no_city     1 # not used in cities
 buildings add_windows 1 # brick/block buildings need windows
 buildings add_window_lights 1
 buildings window_xscale 7.2
@@ -218,6 +218,7 @@ buildings side_color 0.4 0.4 0.4 1.0
 buildings add_material
 buildings side_color 0.6 0.3 0.2 1.0
 buildings add_material
+buildings apartment_prob 0.0
 
 # siding materials
 # disabled for now because they change building layout and don't mix well with brick buildings
@@ -328,8 +329,8 @@ buildings alt_step_factor_prob 0.3
 
 buildings side_tid    buildings/apartment_windows.jpg # high quality
 buildings side_nm_tid buildings/apartment_windows_NRM.jpg
-buildings is_apartment 1
-buildings no_walkways  1
+buildings apartment_prob 1.0
+buildings no_walkways    1
 buildings add_window_lights 1
 buildings window_xscale 9.0
 buildings window_yscale 18.2
@@ -342,7 +343,7 @@ buildings roof_tid mossy_rock.jpg
 buildings roof_nm_tid -1
 buildings side_color 1.0 0.8 0.6 1.0
 buildings add_material
-buildings is_apartment 0
+buildings apartment_prob 0.0
 
 buildings roof_tscale 8.0
 buildings roof_tid stucco.jpg
@@ -416,10 +417,10 @@ buildings window_yoff 0.4
 buildings side_tid    buildings/skyscraper2.jpg
 buildings side_nm_tid buildings/skyscraper4_NRM.jpg
 buildings add_window_lights 1
-buildings is_apartment 1
-buildings no_walkways  1
+buildings apartment_prob 1.0
+buildings no_walkways 1
 buildings add_material
-buildings is_apartment 0
+buildings apartment_prob 0.0
 
 buildings side_tscale_x 1.4
 buildings side_tscale_y 0.4
@@ -430,10 +431,10 @@ buildings window_yoff 0.02
 buildings side_tid    buildings/skyscraper3.jpg
 buildings side_nm_tid buildings/skyscraper4_NRM.jpg
 buildings add_window_lights 1
-buildings is_apartment 1
-buildings no_walkways  1
+buildings apartment_prob 1.0
+buildings no_walkways 1
 buildings add_material
-buildings is_apartment 0
+buildings apartment_prob 0.0
 
 buildings side_tscale_x 1.5
 buildings side_tscale_y 0.5
