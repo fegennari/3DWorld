@@ -671,7 +671,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 			set_cube_zvals(mirror, dresser.z2(), (dresser.z2() + 1.4*dresser.get_height()));
 			mirror.d[mirror.dim][mirror.dir] -= (mirror.dir ? 1.0 : -1.0)*0.9*dresser.get_length(); // push it toward the back
 			mirror.expand_in_dim(!mirror.dim, -0.02*mirror.get_width()); // shrink slightly
-			if (is_house) {mirror.flags |= RO_FLAG_IS_HOUSE;} // flag as in a house for reflections logic
+			if (is_residential()) {mirror.flags |= RO_FLAG_IS_HOUSE;} // flag as in a house for reflections logic; should always be true?
 			//mirror .flags |= RO_FLAG_NOCOLL; // leave this unset so that light switches aren't blocked, etc.
 			dresser.flags |= RO_FLAG_ADJ_TOP; // flag the dresser as having an item on it so that we don't add something else that blocks or intersects the mirror
 			objs.push_back(mirror);
@@ -1333,7 +1333,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 
 			if (!overlaps_other_room_obj(mirror, objs_start, 0, &sink_obj_ix)) { // check_all=0; skip sink + blocker
 				// this mirror is actually 3D, so we enable collision detection; treat as a house even if it's in an office building
-				unsigned flags(RO_FLAG_IS_HOUSE);
+				unsigned flags(RO_FLAG_IS_HOUSE); // Note: not necessarily a house
 				if (count_ext_walls_for_room(room, mirror.z1()) == 1) {flags |= RO_FLAG_INTERIOR;} // flag as interior if windows are opaque glass blocks
 				objs.emplace_back(mirror, TYPE_MIRROR, room_id, sink.dim, sink.dir, flags, tot_light_amt);
 				set_obj_id(objs); // for crack texture selection/orient
