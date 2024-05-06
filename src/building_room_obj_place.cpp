@@ -896,7 +896,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 		// prefer not to block the path between doors in the first half of iterations
 		if (n < 10 && door_path_checker.check_door_path_blocked(c, room, zval, *this)) continue;
 		bool const dir((room_bounds.d[dim][1] - c.d[dim][1]) < (c.d[dim][0] - room_bounds.d[dim][0])); // head of the bed is closer to the wall
-		objs.emplace_back(c, TYPE_BED, room_id, dim, dir, 0, tot_light_amt);
+		objs.emplace_back(c, TYPE_BED, room_id, dim, dir, (is_house ? RO_FLAG_IS_HOUSE : 0), tot_light_amt);
 		set_obj_id(objs);
 		room_object_t &bed(objs.back());
 		// use white color if a texture is assigned that's not close to white

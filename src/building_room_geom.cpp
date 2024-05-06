@@ -3110,7 +3110,7 @@ void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color, point
 }
 
 bool bed_is_wide       (room_object_t const &c) {return (c.get_width() > 0.7*c.get_length());}
-bool bed_has_posts     (room_object_t const &c) {return (bed_is_wide   (c) && (c.obj_id & 1 ));} // no posts for twin beds
+bool bed_has_posts     (room_object_t const &c) {return (bed_is_wide   (c) && (c.obj_id & 1 ) && c.is_house());} // no posts for twin beds or hotel/apartment beds
 bool bed_has_canopy    (room_object_t const &c) {return (bed_has_posts (c) && (c.obj_id & 2 ));}
 bool bed_has_canopy_mat(room_object_t const &c) {return (bed_has_canopy(c) && (c.obj_id & 12) != 0);} // 75% of the time
 int get_canopy_texture() {return get_texture_by_name("fabrics/wool.jpg");}
