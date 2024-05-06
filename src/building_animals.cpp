@@ -1044,7 +1044,8 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 
 	if (!is_pos_inside_building(spider.pos, radius, radius)) {
 		spider.end_jump();
-		spider.pos = spider.last_pos; // restore previous pos before collision
+		spider.pos    = spider.last_pos; // restore previous pos before collision
+		spider.on_web = 0;
 
 		if (!is_pos_inside_building(spider.pos, radius, radius)) { // still not valid
 			if (spider.last_valid_pos == all_zeros) { // bad spawn pos - retry
