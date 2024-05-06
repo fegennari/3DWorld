@@ -883,10 +883,22 @@ public:
 }; // end building_nav_graph_t
 
 cube_t building_t::get_walkable_room_bounds(room_t const &room) const {
-	cube_t c(room);
-	// Note: regular house rooms start and end at the walls;
+	// regular house rooms start and end at the walls;
 	// offices, hallways, and extended basement rooms tile exactly and include half the walls, so we have to subtract those back off
-	if (room.inc_half_walls()) {c.expand_by_xy(-0.5*get_wall_thickness());}
+	if (!room.inc_half_walls()) return room;
+	cube_t c(room);
+	float const half_wall_thick(0.5*get_wall_thickness());
+
+	if (room.is_hallway || room.office_floorplan) { // office building room; only shrink interior walls
+		assert(room.part_id < parts.size());
+		cube_t const &part(parts[room.part_id]);
+
+		for (unsigned d = 0; d < 2; ++d) {
+			if (room.d[d][0] > part.d[d][0]) {c.d[d][0] += half_wall_thick;}
+			if (room.d[d][1] < part.d[d][1]) {c.d[d][1] -= half_wall_thick;}
+		}
+	}
+	else {c.expand_by_xy(-half_wall_thick);} // shrink on all sides; not exact, but we don't know which walls are interior vs. exterior
 	return c;
 }
 
