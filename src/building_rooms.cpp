@@ -1395,7 +1395,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	// ceiling trim disabled for large office buildings with outside corners because there's a lot of trim to add, and outside corners don't join correctly;
 	// ceiling trim also disabled for non-houses (all office buildings), because it doesn't really work with acoustic paneling
 	bool const has_outside_corners(!is_house && !pri_hall.is_all_zeros()), has_ceil_trim(!has_outside_corners && is_house);
-	colorRGBA const &trim_color(is_house ? WHITE : DK_GRAY);
+	colorRGBA const trim_color(get_trim_color());
 	vect_room_object_t &objs(interior->room_geom->trim_objs);
 	vect_cube_t trim_cubes, trim_parts;
 	cube_t trim_exclude;
@@ -1674,7 +1674,7 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 	// Note: depth must be small to avoid object intersections; this applies to the windowsill as well
 	float const window_trim_width(0.75*get_wall_thickness()), window_trim_depth(1.0*trim_thickness), windowsill_depth(1.0*trim_thickness);
 	float const floor_spacing(get_window_vspace()), window_offset(get_door_shift_dist());
-	colorRGBA const &trim_color(is_house ? WHITE : DK_GRAY);
+	colorRGBA const trim_color(get_trim_color());
 	colorRGBA const &frame_color(get_material().window_color);
 	vect_room_object_t &trim_objs(interior->room_geom->trim_objs), &objs(interior->room_geom->objs);
 	static vect_vnctcc_t wall_quad_verts;

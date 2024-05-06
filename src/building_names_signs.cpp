@@ -288,7 +288,7 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 			static int sign_id(0);
 
 			for (unsigned e = 0; e < 2; ++e) {
-				bool const dir(pref_dir ^ e);
+				bool const dir(pref_dir ^ bool(e));
 				vector3d const side_dir((dir ? 1.0 : -1.0)*cross_product(normal, plus_z));
 				set_wall_width(sign, (bc.get_center_dim(!dim) + 1.0*door_height*side_dir[!dim]), 0.5*sign_thick, !dim);
 				cube_t base(sign);

@@ -1038,7 +1038,7 @@ struct building_room_geom_t {
 	void add_false_door(room_object_t const &c);
 	void add_counter(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);
 	void add_cabinet(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);
-	void add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, bool inc_lg, bool inc_sm);
+	void add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, colorRGBA const &trim_color, bool inc_lg, bool inc_sm);
 	void add_hanger_rod(room_object_t const &c);
 	void add_drain_pipe(room_object_t const &c);
 	void add_key(room_object_t const &c);
@@ -1148,7 +1148,7 @@ private:
 	void create_text_vbos();
 	void create_detail_vbos(building_t const &building);
 	void add_nested_objs_to_verts(vect_room_object_t const &objs_to_add);
-	void add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add, bool inc_text=0);
+	void add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add, colorRGBA const &trim_color, bool inc_text=0);
 	void create_obj_model_insts(building_t const &building);
 	void create_lights_vbos(building_t const &building);
 	void create_dynamic_vbos(building_t const &building, point const &camera_bs, vector3d const &xlate, bool play_clock_tick);
@@ -1728,6 +1728,7 @@ struct building_t : public building_geom_t {
 	tid_nm_pair_t get_attic_texture() const;
 	colorRGBA get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_pair_t &tex) const;
 	colorRGBA get_ceil_tex_and_color (cube_t const &ceil_cube,  tid_nm_pair_t &tex) const;
+	colorRGBA get_trim_color() const {return (is_house ? WHITE : DK_GRAY);}
 	void get_all_drawn_exterior_verts(building_draw_t &bdraw);
 	void get_detail_shadow_casters   (building_draw_t &bdraw);
 	void get_all_drawn_ext_wall_verts(building_draw_t &bdraw);

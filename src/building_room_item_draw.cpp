@@ -868,7 +868,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_DRESSER: case TYPE_NIGHTSTAND: add_dresser(*i, tscale, 1, 0); break;
 		case TYPE_DRESS_MIR: add_dresser_mirror(*i, tscale); break;
 		case TYPE_FLOORING:add_flooring(*i, tscale); break;
-		case TYPE_CLOSET:  add_closet  (*i, wall_tex, 1, 0); break;
+		case TYPE_CLOSET:  add_closet  (*i, wall_tex, building.get_trim_color(), 1, 0); break;
 		case TYPE_MIRROR:  add_mirror  (*i); break;
 		case TYPE_SHOWER:  add_shower  (*i, tscale); break;
 		case TYPE_SHOWERTUB: add_shower_tub(*i, wall_tex, tscale); break; // white basement walls
@@ -908,15 +908,15 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 void building_room_geom_t::create_small_static_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Small"); // 7.8ms, slow building at 26,16; up to 36ms on new computer for buildings with large retail areas
 	model_objs.clear(); // currently model_objs are only created for small objects in drawers, so we clear this here
-	add_small_static_objs_to_verts(expanded_objs);
-	add_small_static_objs_to_verts(objs);
+	add_small_static_objs_to_verts(expanded_objs, building.get_trim_color());
+	add_small_static_objs_to_verts(objs,          building.get_trim_color());
 	add_attic_interior_and_rafters(building, 2.0/obj_scale, 0); // only if there's an attic; detail_pass=0
 }
 
 void building_room_geom_t::add_nested_objs_to_verts(vect_room_object_t const &objs_to_add) {
 	vector_add_to(objs_to_add, pending_objs); // nested objects are added at the end so that small and text materials are thread safe
 }
-void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add, bool inc_text) {
+void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add, colorRGBA const &trim_color, bool inc_text) {
 	if (objs_to_add.empty()) return; // don't add untextured material, otherwise we may fail the (num_verts > 0) assert
 	float const tscale(2.0/obj_scale);
 
@@ -934,7 +934,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_DRESSER: case TYPE_NIGHTSTAND: add_dresser(c, tscale, 0, 1); break;
 		case TYPE_TCAN:      add_trashcan (c); break;
 		case TYPE_SIGN:      add_sign     (c, 1, inc_text); break; // sm, maybe text
-		case TYPE_CLOSET:    add_closet   (c, tid_nm_pair_t(), 0, 1); break; // add closet wall trim and interior objects, don't need wall_tex
+		case TYPE_CLOSET:    add_closet   (c, tid_nm_pair_t(), trim_color, 0, 1); break; // add closet wall trim and interior objects, don't need wall_tex
 		case TYPE_RAILING:   if (!c.is_exterior()) {add_railing(c);}  break; // interior only
 		case TYPE_PLANT:     add_potted_plant(c, 0, 1); break; // plant only
 		case TYPE_CRATE:     add_crate    (c); break; // not small but only added to windowless rooms
@@ -1770,7 +1770,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			if (create_small) {create_small_static_vbos(building);}
 			if (create_text ) {create_text_vbos        ();}
 		}
-		add_small_static_objs_to_verts(pending_objs, create_text);
+		add_small_static_objs_to_verts(pending_objs, building.get_trim_color(), create_text);
 		pending_objs.clear();
 
 		// upload VBO data serially

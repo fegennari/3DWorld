@@ -468,7 +468,8 @@ void add_quad_to_mat(rgeom_mat_t &mat, point const pts[4], float const ts[4], fl
 	for (unsigned n = 0; n < 4; ++n) {mat.quad_verts.emplace_back(pts[n], normal, ts[n], tt[n], cw);}
 }
 
-void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, bool inc_lg, bool inc_sm) { // no lighting scale, houses only
+// no lighting scale, houses/apartments/hotel rooms only
+void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, colorRGBA const &trim_color, bool inc_lg, bool inc_sm) {
 	bool const open(c.is_open()), use_small_door(c.is_small_closet()), draw_interior(open || player_in_closet);
 	float const wall_thick(get_closet_wall_thickness(c)), trim_hwidth(0.3*wall_thick);
 	cube_t cubes[5];
@@ -557,7 +558,6 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 	if (inc_sm) { // add wall trim for each side of the closet door
 		float const height(c.dz()), window_vspacing(height*(1.0 + FLOOR_THICK_VAL_HOUSE));
 		float const trim_height(0.04*window_vspacing), trim_thickness(0.1*WALL_THICK_VAL*window_vspacing), trim_plus_wall_thick(trim_thickness + wall_thick);
-		colorRGBA const trim_color(WHITE); // assume trim is white
 		bool const draw_interior_trim(1 || draw_interior); // always enable so that we don't have to regenerate small geom when closet doors are opened or closed
 
 		for (unsigned is_side = 0; is_side < 2; ++is_side) { // front wall, side wall
@@ -897,7 +897,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	if (c.obj_expanded()) return; // shelves have already been expanded, don't need to create contained objects below
 	vect_room_object_t &objects(get_temp_objects());
 	get_shelf_objects(c, shelves, num_shelves, objects);
-	add_small_static_objs_to_verts(objects, 1); // inc_text=1
+	add_small_static_objs_to_verts(objects, WHITE, 1); // trim_color=WHITE (unused), inc_text=1
 }
 
 // returns num_shelves; all cubes passed in should start as zeros
@@ -961,7 +961,7 @@ void building_room_geom_t::add_rack(room_object_t const &c, bool add_rack, bool 
 		if (c.obj_expanded()) return; // already been expanded, don't need to create contained objects below
 		vect_room_object_t &objects(get_temp_objects());
 		get_shelfrack_objects(c, objects);
-		add_small_static_objs_to_verts(objects, 1); // inc_text=1
+		add_small_static_objs_to_verts(objects, WHITE, 1); // trim_color=WHITE(unused), inc_text=1
 	}
 }
 
