@@ -621,6 +621,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 			c.d[dim][!dir] -= signed_front_clearance; // subtract off front clearance
 			assert(c.is_strictly_normalized());
 			unsigned flags(0);
+			if (is_house) {flags |= RO_FLAG_IS_HOUSE;}
 			if (c.d[!dim][0] == room_bounds.d[!dim][0]) {flags |= RO_FLAG_ADJ_LO;}
 			if (c.d[!dim][1] == room_bounds.d[!dim][1]) {flags |= RO_FLAG_ADJ_HI;}
 			//if ((rgen.rand() % 10) == 0) {flags |= RO_FLAG_OPEN;} // 10% chance of open closet; unclear if this adds any value, but it works

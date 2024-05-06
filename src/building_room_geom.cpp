@@ -596,8 +596,8 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 				btrim.z2() = c.z1() + trim_height;
 				get_untextured_material(0, 0, 1).add_cube_to_verts_untextured(btrim, trim_color, skip_faces); // is_small, untextured, no shadows; both interior and exterior
 				set_cube_zvals(trim, c.z2()-trim_height, c.z2());
-				// ceiling trim, missing end caps; exterior only
-				add_wall_trim(room_object_t(trim, TYPE_WALL_TRIM, c.room_id, trim_dim, trim_dir, trim_flags, 1.0, SHAPE_ANGLED, trim_color), 1);
+				// ceiling trim for house closets, missing end caps; exterior only
+				if (c.is_house()) {add_wall_trim(room_object_t(trim, TYPE_WALL_TRIM, c.room_id, trim_dim, trim_dir, trim_flags, 1.0, SHAPE_ANGLED, trim_color), 1);}
 
 				if (!is_side && !use_small_door) { // draw vertical door frame on either side of the door; small doors have their own trim added elsewhere
 					set_cube_zvals(trim, c.z1(), c.z2()); // full z height
