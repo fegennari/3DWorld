@@ -38,7 +38,6 @@ void setup_monitor_screen_draw(room_object_t const &monitor, rgeom_mat_t &mat, s
 void add_tv_or_monitor_screen(room_object_t const &c, rgeom_mat_t &mat, std::string const &onscreen_text, rgeom_mat_t *text_mat);
 bool check_clock_time();
 void draw_animated_fish_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, float anim_time, colorRGBA const &color);
-float get_door_open_dist();
 bool have_fish_model();
 
 bool has_key_3d_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}

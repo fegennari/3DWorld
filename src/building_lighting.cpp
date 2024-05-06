@@ -1316,6 +1316,19 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 {
 	if (!has_room_geom()) return; // error?
 	point const camera_bs(camera_pdu.pos - xlate), building_center(bcube.get_cube_center()); // camera in building space
+	bool walkway_only(0);
+
+	if (!camera_in_building && !has_windows() && !point_near_ext_door(camera_bs, get_door_open_dist())) { // interior lights not visible
+		bool above_skylight(0);
+
+		for (cube_with_ix_t &sl : skylights) {
+			if (camera_bs.z > sl.z2()) {above_skylight = 1; break;}
+		}
+		if (!above_skylight) {
+			if (check_pt_in_walkway(camera_bs, 1, 1)) {walkway_only = 1;} // player in walkway
+			else return; // no lights visible
+		}
+	}
 	if ((display_mode & 0x08) && !camera_in_building && !bcube.contains_pt_xy(camera_bs) && is_entire_building_occluded(camera_bs, oc)) return;
 	// Note: camera_bs is used to test against bcube, lpos_rot, and anything else in global space; camera_rot is used to test against building interior objects
 	point camera_rot(camera_bs); // camera in rotated building space
@@ -1493,6 +1506,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (!lights_bcube.contains_pt_xy(lpos_rot)) continue; // not contained within the light volume
 		bool const light_in_basement(lpos.z < ground_floor_z1), is_in_elevator(i->in_elevator()), is_in_closet(i->in_closet());
 		bool const is_in_attic(i->in_attic()), is_in_windowless_attic(is_in_attic && !has_attic_window), is_exterior(i->is_exterior());
+		if (walkway_only && !is_exterior) continue;
 		// basement, attic, and elevator lights are only visible when player is in the building;
 		// elevator test is questionable because it can be open on the ground floor of a room with windows in a small office building, but should be good enough
 		if (!camera_in_building && ((light_in_basement && !camera_can_see_ext_basement) || is_in_windowless_attic || is_in_elevator)) continue;
@@ -1530,6 +1544,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (!is_house && floor_is_above && !in_ext_basement &&  camera_in_ext_basement && camera_z < get_basement().z1()) continue; // player in lower level extb, light  not in extb
 		if (floor_is_below && !floor_below_region.is_all_zeros() && !floor_below_region.contains_pt_xy(lpos)) continue; // check floor_below_region
 		if (floor_is_above && !floor_above_region.is_all_zeros() && !floor_above_region.contains_pt_xy(lpos)) continue; // check floor_below_region
+		if (is_exterior && (floor_is_below || floor_is_above)) continue; // different floor of walkway - not visible
 		cube_t const &room_part(get_part_for_room(room));
 		bool const camera_in_room_part_xy(room_part.contains_pt_xy(camera_rot)), in_camera_room((int)i->room_id == camera_room);
 		bool const camera_room_same_part(room.part_id == camera_part || (is_house && camera_in_room_part_xy)); // treat stacked house parts as the same
@@ -1657,7 +1672,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			assert(light_clip_cube.contains_pt(lpos)); // Note: may not be contained in building bcube
 			light_clip_cube.expand_by_xy(light_bcube_expand);
 		}
-		else if (is_exterior) { // exterior lights are only in walkways
+		else if (is_exterior) { // exterior lights are only in walkways and are only visible when the player is inside
 			assert(!walkways.empty());
 			bool found_ww(0);
 

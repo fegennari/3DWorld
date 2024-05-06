@@ -2399,6 +2399,7 @@ bool player_cant_see_outside_building();
 bool player_take_damage(float damage_scale, int poison_type=0, uint8_t *has_key=nullptr);
 float get_bldg_player_height();
 cube_t get_stairs_bcube_expanded(stairwell_t const &s, float ends_clearance, float sides_clearance, float doorway_width);
+float get_door_open_dist();
 // functions in building_room_obj_expand.cc
 point gen_xy_pos_in_area(cube_t const &S, vector3d const &sz, rand_gen_t &rgen, float zval=0.0);
 point gen_xy_pos_in_area(cube_t const &S, float radius, rand_gen_t &rgen, float zval=0.0);

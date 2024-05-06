@@ -26,7 +26,6 @@ bool is_player_model_female();
 void apply_building_fall_damage(float delta_z);
 bool get_sphere_poly_int_val(point const &sc, float sr, point const *const points, unsigned npoints, vector3d const &normal, float thickness, float &val, vector3d &cnorm);
 float get_player_move_dist();
-float get_door_open_dist();
 
 
 // assumes player is in this building; handles windows and exterior doors but not attics and basements
