@@ -958,7 +958,10 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 		// not cube walls, skip exterior
 	}
 	else { // check exterior walls; exterior doors are ignored for now (meaning the spider can walk on them)
-		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
+		float const wall_thickness(get_wall_thickness());
+		auto const parts_end(get_real_parts_end_inc_sec());
+
+		for (auto i = parts.begin(); i != parts_end; ++i) {
 			for (unsigned dim = 0; dim < 2; ++dim) {
 				for (unsigned dir = 0; dir < 2; ++dir) {
 					cube_t cube(*i);
@@ -975,11 +978,27 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 						
 						if (door.open && door.z1() < tc.z2() && door.z2() > tc.z1()) { // open door that overlaps spider zval
 							cube_t wall_cut(door);
-							wall_cut.expand_in_dim(door.dim, get_wall_thickness());
+							wall_cut.expand_in_dim(door.dim, wall_thickness);
 							subtract_cube_from_cubes(wall_cut, cubes, nullptr, 1); // clip_in_z=1
 						}
 					}
-					for (cube_t const &c : cubes) {surface_orienter.register_cube(c);}
+					for (cube_t const &c : cubes) {
+						if (has_complex_floorplan && spider.pos.z > ground_floor_z1) { // handle intersecting parts
+							// it's not easy to clip this wall to the other parts,  so instead we'll project the spider pos to the other side of the wall
+							// and see if it's outside the building; if so, it's a true exterior wall
+							if (c.z1() <= spider.pos.z && c.z2() >= spider.pos.z && c.d[!dim][0] <= spider.pos[!dim] && c.d[!dim][1] >= spider.pos[!dim]) {
+								point proj_pos(spider.pos);
+								proj_pos[dim] = i->d[dim][dir] + (dir ? 1.0 : -1.0)*wall_thickness;
+								bool contained(0);
+
+								for (auto j = parts.begin(); j != parts_end; ++j) {
+									if (j != i && j->contains_pt(proj_pos)) {contained = 1; break;}
+								}
+								if (contained) continue; // not a true wall, skip
+							}
+						}
+						surface_orienter.register_cube(c);
+					} // for c
 				} // for dir
 			} // for dim
 		} // for i
