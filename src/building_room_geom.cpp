@@ -1264,25 +1264,54 @@ rgeom_mat_t &building_room_geom_t::get_shower_tile_mat(room_object_t const &c, f
 	return get_material(tex, 0); // no shadows
 }
 void building_room_geom_t::draw_shower_head(room_object_t const &shower, float radius, float wall_pos, float extent_amt, bool head_dim) {
+	float const shower_height(shower.dz()), center_pos(shower.get_center_dim(!head_dim));
 	point start_pos, end_pos, base_pos, head_pos;
-	start_pos.z = shower.z1() + 0.85*shower.dz();
+	start_pos.z = shower.z1() + 0.85*shower_height;
 	start_pos[ head_dim] = wall_pos;
-	start_pos[!head_dim] = shower.get_center_dim(!head_dim);
+	start_pos[!head_dim] = center_pos;
 	base_pos = start_pos;
 	base_pos[head_dim]  += extent_amt; // move out from the wall
 	end_pos  = base_pos;
 	end_pos [head_dim]  += 0.25*extent_amt; // move out from the wall a bit more
 	head_pos = base_pos;
-	head_pos.z -= 0.05*shower.dz();
-	head_pos[ head_dim] += 1.5*extent_amt;
+	head_pos.z -= 0.05*shower_height;
+	base_pos.z += 0.012*radius;
+	base_pos[head_dim] += 0.02*extent_amt;
+	head_pos[head_dim] += 1.5*extent_amt;
 	colorRGBA const color(apply_light_color(shower, LT_GRAY));
 	rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed, specular metal
-	metal_mat.add_cylin_to_verts(base_pos,  head_pos, 0.02*radius, 0.10*radius, color, 0, 0); // draw sides only
+	metal_mat.add_cylin_to_verts(base_pos,  head_pos, 0.01*radius, 0.07*radius, color, 0, 0); // shower head; draw sides only
 	metal_mat.add_cylin_to_verts(start_pos, end_pos,  0.02*radius, 0.02*radius, color, 0, 1); // pipe into wall; draw exposed end
+	// draw water control handles/knobs
+	point knob_pos;
+	knob_pos[head_dim] = wall_pos;
+	knob_pos.z = shower.z1() + 0.55*shower_height;
+
+	if (shower.obj_id & 8) { // single control
+		knob_pos[!head_dim] = center_pos;
+		point knob_end(knob_pos);
+		knob_end[head_dim] += 0.3*extent_amt; // move out slightly
+		metal_mat.add_cylin_to_verts(knob_pos, knob_end, 0.12*radius, 0.12*radius, color, 0, 1); // plate; draw exposed end
+		knob_end[head_dim] += 1.25*extent_amt; // move out more
+		metal_mat.add_cylin_to_verts(knob_pos, knob_end, 0.04*radius, 0.03*radius, color, 0, 1); // knob; draw exposed end
+		knob_end[head_dim] -= 0.4*extent_amt; // move back a bit
+		point handle_end(knob_end);
+		handle_end.z -= 0.12*radius; // points downward
+		metal_mat.add_cylin_to_verts(knob_end, handle_end, 0.02*radius, 0.015*radius, color, 0, 1); // draw exposed end
+	}
+	else { // separate hot/cold
+		for (unsigned d = 0; d < 2; ++d) { // left/right | hot/cold
+			knob_pos[!head_dim] = center_pos + (d ? 1.0 : -1.0)*0.13*radius;
+			point knob_end(knob_pos);
+			knob_end[head_dim] += 1.5*extent_amt; // move out from the wall
+			metal_mat.add_cylin_to_verts(knob_pos, knob_end, 0.04*radius, 0.03*radius, color, 0, 1); // draw exposed end
+		}
+	}
+	// draw shower head nozzles using a custom texture
 	tid_nm_pair_t tex(get_texture_by_name("interiors/pegboard.png"), 1.0, 1); // shadowed
 	tex.set_specular_color(WHITE, 0.8, 60.0);
 	rgeom_mat_t &head_mat(get_material(tex, 1)); // shadowed
-	head_mat.add_cylin_to_verts(base_pos,  head_pos, 0.02*radius, 0.10*radius, color, 0, 1, 0, 0, 1.0, 0.5, 1); // skip_sides=1; draw top/end only
+	head_mat.add_cylin_to_verts(base_pos, head_pos, 0.01*radius, 0.07*radius, color, 0, 1, 0, 0, 1.0, 0.5, 1); // skip_sides=1; draw top/end only
 }
 
 void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
@@ -1424,7 +1453,7 @@ void building_room_geom_t::add_shower_tub(room_object_t const &c, tid_nm_pair_t 
 	float const width(c.get_width()), height(c.dz());
 	cube_t const wall(get_shower_tub_wall(c));
 	rgeom_mat_t &wall_mat(get_material(get_scaled_wall_tex(wall_tex), 1));
-	wall_mat.add_cube_to_verts(wall, apply_light_color(c), tex_origin, (EF_Z12 | ~get_face_mask(c.dim, !c.dir) | ~get_face_mask(!c.dim, shower_dir))); // draw front and outside
+	wall_mat.add_cube_to_verts(wall, c.color, tex_origin, (EF_Z12 | ~get_face_mask(c.dim, !c.dir) | ~get_face_mask(!c.dim, shower_dir))); // draw front and outside
 	// draw tile on 3 sides
 	float const tile_thickness(0.05*wall.get_sz_dim(!c.dim)); // nonzero to avoid Z-fighing with room walls
 	float const inner_wall_pos(wall.d[!c.dim][shower_dir]);
@@ -1436,23 +1465,23 @@ void building_room_geom_t::add_shower_tub(room_object_t const &c, tid_nm_pair_t 
 	tiled_area.d[ c.dim][     !c.dir] += (     c.dir ?  1.0 : -1.0)*tile_thickness;
 	tile_mat.add_cube_to_verts(tiled_area, tile_color, zero_vector, (EF_Z12 | ~get_face_mask(c.dim, c.dir)), 0, 0, 0, 1); // inverted; skip top, bottom, and front
 	// draw shower head
-	float const depth(c.get_depth()), radius(0.6*depth), wall_pos(c.d[!c.dim][shower_dir]), extent_amt((shower_dir ? -1.0 : 1.0)*0.05*depth);
-	draw_shower_head(c, radius, wall_pos, extent_amt, !c.dim);
+	float const depth(c.get_depth()), wall_pos(c.d[!c.dim][shower_dir]), extent_amt((shower_dir ? -1.0 : 1.0)*0.05*depth);
+	draw_shower_head(c, depth, wall_pos, extent_amt, !c.dim);
 	// draw curtain rod
-	float const crod_radius(0.04*radius);
+	float const crod_radius(0.025*depth);
 	cube_t crod;
 	set_wall_width(crod, (c.z1() + 0.9*height), crod_radius, 2);
 	set_wall_width(crod, (c.d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*1.2*crod_radius), crod_radius, c.dim);
 	crod.d[!c.dim][ shower_dir] = c.d[!c.dim][shower_dir]; // room wall
 	crod.d[!c.dim][!shower_dir] = inner_wall_pos; // shower wall
 	rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed, specular metal
-	metal_mat.add_ortho_cylin_to_verts(crod, apply_light_color(c, LT_GRAY), !c.dim, 0, 0); // sides only, no ends
+	metal_mat.add_ortho_cylin_to_verts(crod, apply_light_color(c, GRAY_BLACK), !c.dim, 0, 0); // sides only, no ends
 	// draw curtains using blinds texture
 	float const curtain_width((c.is_open() ? 0.15 : 0.45)*width);
 	cube_t curtains(c);
 	curtains.z1() += 0.1*height;
 	curtains.z2()  = crod.z2() + 0.5*crod_radius;
-	curtains.d[c.dim][ c.dir] += (c.dim ? -1.0 : 1.0)*1.0*crod_radius; // outer
+	curtains.d[c.dim][ c.dir] += (c.dir ? 1.0 : -1.0)*1.0*crod_radius; // outer
 	curtains.d[c.dim][!c.dir]  = crod.d[c.dim][c.dir]; // inner
 	curtains.d[!c.dim][!shower_dir] = inner_wall_pos; // shower wall
 	float const curtains_tscale(0.2/curtain_width);
@@ -1464,9 +1493,9 @@ void building_room_geom_t::add_shower_tub(room_object_t const &c, tid_nm_pair_t 
 		for (unsigned d = 0; d < 2; ++d) { // each side
 			cube_t curtain(curtains);
 			curtain.d[!c.dim][!d] = curtains.d[!c.dim][d] + (d ? -1.0 : 1.0)*curtain_width;
-			curtains_mat.add_cube_to_verts(curtain, curtains_color, all_zeros, 0, c.dim);
+			curtains_mat.add_cube_to_verts(curtain, curtains_color, all_zeros, EF_Z1, c.dim); // skip bottom edge
 		}
-		if (oi == 0) {curtains.translate_dim(c.dim, (c.dim ? 1.0 : -1.0)*(2.0*crod_radius + curtains.get_sz_dim(c.dim)));} // translate to inside of curtain rod
+		if (oi == 0) {curtains.translate_dim(c.dim, (c.dir ? -1.0 : 1.0)*(2.0*crod_radius + curtains.get_sz_dim(c.dim)));} // translate to inside of curtain rod
 	} // for oi
 }
 
