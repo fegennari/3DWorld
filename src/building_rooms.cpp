@@ -539,7 +539,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					added_obj = no_whiteboard = no_plants = add_security_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 			}
-			bool is_apt_or_hotel_room(is_apt_or_hotel() && !r->is_hallway && !r->is_office && !is_basement && init_rtype_f0 != RTYPE_NOTSET);
+			bool is_apt_or_hotel_room(is_apt_or_hotel() && r->office_floorplan && !r->is_hallway && !r->is_office && !is_basement && init_rtype_f0 != RTYPE_NOTSET);
 
 			if (is_apt_or_hotel_room || r->is_office) { // check if this room is adjacent to an exterior/walkway door, and if so, make it a lounge
 				cube_t room_this_floor(*r);
@@ -571,7 +571,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, 0); // allow_adj_ext_door=0; return value ignored
 					is_kitchen = 1;
 				}
-				else {cout << TXTi(init_rtype_f0) << endl; assert(0);} // unsupported room type
+				else if (init_rtype_f0 == RTYPE_LOBBY) { // lobby is similar to lounge (can we get here?)
+					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start); // return value ignored
+				}
+				else {cout << TXT(r->str()) << TXTi(init_rtype_f0) << endl; assert(0);} // unsupported room type
 				added_obj = 1; // assume something was added above, and don't place any other furniture or try to assign to another room type
 			}
 			// bedroom or bathroom case; need to check first floor even if must_be_bathroom
