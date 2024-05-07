@@ -47,7 +47,7 @@ bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor_i
 	
 	if (maybe_has_ext_door_this_floor(room.z1(), floor_ix)) {
 		// run special logic for bedrooms and bathrooms (private rooms) on the first floor (or office building walkway floor)
-		if (is_room_adjacent_to_ext_door(room)) return 0; // door to house does not open into a bedroom/bathroom
+		if (is_room_adjacent_to_ext_door(room)) return 0; // exterior door does not open into a bedroom/bathroom
 		if (skip_conn_check) return 1;
 		bool const is_multi_floor(room.dz() > 1.5*get_window_vspace());
 		bool const has_stairs(is_multi_floor && !interior->stairwells.empty()); // more than one floor and stairs placement didn't fail
@@ -541,7 +541,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			if (is_apt_or_hotel() && !r->is_hallway && !r->is_office && !is_basement && init_rtype_f0 != RTYPE_NOTSET) {
 				// handle pre-assigned apartment or hotel rooms
-				if (init_rtype_f0 == RTYPE_LIVING) { // assigned apartment living room
+				cube_t room_this_floor(*r);
+				set_cube_zvals(room_this_floor, z, (z + floor_height));
+
+				if (is_room_adjacent_to_ext_door(room_this_floor)) { // connected to walkway door - make this an office? or a hallway?
+					can_place_onto = added_desk = add_office_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_basement);
+					r->assign_to(RTYPE_OFFICE, f);
+				}
+				else if (init_rtype_f0 == RTYPE_LIVING) { // assigned apartment living room
 					added_tc = can_place_onto = add_table_and_chairs(rgen, *r, blockers, room_id, room_center, chair_color, 0.1, tot_light_amt);
 					add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start); // return value ignored
 					is_living = 1;
@@ -922,8 +929,7 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 		unsigned const room_id(room - interior->rooms.begin());
 		room_type const rtype(room->get_room_type(floor_ix));
 		if (is_bathroom(rtype)) continue; // no bathroom balconies as that would be weird
-		assert(room->part_id < parts.size());
-		cube_t const &part(parts[room->part_id]);
+		cube_t const &part(get_part_for_room(*room));
 		bool added(0);
 
 		for (unsigned dim = 0; dim < 2 && !added; ++dim) {

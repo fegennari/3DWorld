@@ -2318,7 +2318,7 @@ void building_t::create_two_story_tall_rooms(rand_gen_t &rgen) {
 		}
 		// extend any wall adjacent to a shorter (single story) part upward by the floor thickness to fill the gap
 		if (real_num_parts > 1) {
-			cube_t const &part(parts[room.part_id]);
+			cube_t const &part(get_part_for_room(room));
 
 			for (unsigned dim = 0; dim < 2; ++dim) {
 				for (unsigned dir = 0; dir < 2; ++dir) {

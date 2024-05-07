@@ -890,8 +890,7 @@ cube_t building_t::get_walkable_room_bounds(room_t const &room) const {
 	float const half_wall_thick(0.5*get_wall_thickness());
 
 	if (room.is_hallway || room.office_floorplan) { // office building room; only shrink interior walls
-		assert(room.part_id < parts.size());
-		cube_t const &part(parts[room.part_id]);
+		cube_t const &part(get_part_for_room(room));
 
 		for (unsigned d = 0; d < 2; ++d) {
 			if (room.d[d][0] > part.d[d][0]) {c.d[d][0] += half_wall_thick;}
