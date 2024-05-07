@@ -539,16 +539,22 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					added_obj = no_whiteboard = no_plants = add_security_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 			}
-			if (is_apt_or_hotel() && !r->is_hallway && !r->is_office && !is_basement && init_rtype_f0 != RTYPE_NOTSET) {
-				// handle pre-assigned apartment or hotel rooms
+			bool is_apt_or_hotel_room(is_apt_or_hotel() && !r->is_hallway && !r->is_office && !is_basement && init_rtype_f0 != RTYPE_NOTSET);
+
+			if (is_apt_or_hotel_room || r->is_office) { // check if this room is adjacent to an exterior/walkway door, and if so, make it a lounge
 				cube_t room_this_floor(*r);
 				set_cube_zvals(room_this_floor, z, (z + floor_height));
 
-				if (is_room_adjacent_to_ext_door(room_this_floor)) { // connected to walkway door - make this an office? or a hallway?
-					can_place_onto = added_desk = add_office_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_basement);
-					r->assign_to(RTYPE_OFFICE, f);
+				if (is_room_adjacent_to_ext_door(room_this_floor)) { // connected to walkway door - make this a lounge
+					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start); // return value ignored
+					r->assign_to(RTYPE_LOUNGE, f);
+					added_obj = 1;
+					is_apt_or_hotel_room = 0;
 				}
-				else if (init_rtype_f0 == RTYPE_LIVING) { // assigned apartment living room
+			}
+			if (is_apt_or_hotel_room) {
+				// handle pre-assigned apartment or hotel rooms
+				if (init_rtype_f0 == RTYPE_LIVING) { // assigned apartment living room
 					added_tc = can_place_onto = add_table_and_chairs(rgen, *r, blockers, room_id, room_center, chair_color, 0.1, tot_light_amt);
 					add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start); // return value ignored
 					is_living = 1;

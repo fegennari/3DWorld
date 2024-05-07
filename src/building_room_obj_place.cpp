@@ -522,6 +522,32 @@ void building_t::add_office_pillars(rand_gen_t rgen, room_t const &room, float z
 	blockers.push_back(pillar);
 }
 
+void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	// reception desk? rug?, fishtank?, bench?, fridge?, lamp? ceiling fan? water fountain?
+	// FIXME: doesn't seem to work
+	add_table_and_chairs(rgen, room, vect_cube_t(), room_id, room.get_cube_center(), WHITE, 0.1, tot_light_amt, 0); // add table only; max_chairs=0
+	// place 1-3 couch(es) along a wall
+	unsigned const counts[4] = {1, 2, 2, 3}; // 2 couchs is more common
+	add_couches_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, counts);
+	// place 0-3 bar stools
+	cube_t const place_area(get_walkable_room_bounds(room)); // right against the wall
+	unsigned const num_stools(rgen.rand() & 3);
+
+	for (unsigned n = 0; n < num_stools; ++n) {
+		place_model_along_wall(OBJ_MODEL_BAR_STOOL, TYPE_BAR_STOOL, room, 0.4, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 4, 0);
+	}
+	// add a TV on the wall (not on a table)
+	// TODO: flush with wall
+	float const tv_zval(zval + 0.25*get_window_vspace());
+	place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, room, 0.5, rgen, tv_zval, room_id, tot_light_amt, place_area, objs_start, 4.0, 4, 1, BKGRAY, 0, RO_FLAG_HANGING);
+	// place 1-2 bookcases
+	unsigned const num_bookcases(1 + (rgen.rand() & 1));
+	for (unsigned n = 0; n < num_bookcases; ++n) {add_bookcase_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, 0);} // is_basement=0
+	// add 1-4 plants
+	unsigned const num_plants(1 + (rgen.rand() & 3));
+	add_plants_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, num_plants);
+}
+
 bool building_t::check_valid_closet_placement(cube_t const &c, room_t const &room, unsigned objs_start, unsigned bed_ix, float min_bed_space) const {
 	if (min_bed_space > 0.0) {
 		room_object_t const &bed(interior->room_geom->get_room_object_by_index(bed_ix));
@@ -2241,6 +2267,18 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 	return 0; // failed
 }
 
+void building_t::add_couches_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned const counts[4]) {
+	unsigned const num_couches(counts[rgen.rand() & 3]);
+	if (num_couches == 0) return;
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by(-0.25*get_wall_thickness()); // common spacing to wall
+	colorRGBA const color(get_couch_color(rgen)); // make the colors match if there's more than one couch
+
+	for (unsigned n = 0; n < num_couches; ++n) {
+		place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, room, 0.40, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 4, 0, color);
+	}
+}
+
 cube_t get_pool_table_top_surface(room_object_t const &c) {
 	cube_t top(c);
 	top.expand_by_xy(-0.12*c.get_width());
@@ -2376,17 +2414,7 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 	
 	// maybe place couch(es) along a wall
 	unsigned const counts[4] = {0, 1, 1, 2}; // one couch is more common
-	unsigned const num_couches(counts[rgen.rand() & 3]);
-
-	if (num_couches > 0) {
-		cube_t place_area(get_walkable_room_bounds(room));
-		place_area.expand_by(-0.25*get_wall_thickness()); // common spacing to wall
-		colorRGBA const color(get_couch_color(rgen)); // make the colors match if there's more than one couch
-
-		for (unsigned n = 0; n < num_couches; ++n) {
-			place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, room, 0.40, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 4, 0, color);
-		}
-	}
+	add_couches_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, counts);
 	// place a mini bar?
 	// place two bar stools
 	unsigned const bs_id(objs.size());
