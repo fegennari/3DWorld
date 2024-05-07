@@ -1870,7 +1870,6 @@ private:
 	bool check_and_handle_dynamic_obj_coll(point &pos, point const &cur_obj_pos, float radius,
 		float z1, float z2, point const &camera_bs, bool for_spider, bool skip_player=0) const;
 	bool get_begin_end_room_objs_on_ground_floor(float zval, bool for_spider, vect_room_object_t::const_iterator &b, vect_room_object_t::const_iterator &e) const;
-
 public:
 	int get_room_containing_pt(point const &pt) const;
 	unsigned get_attic_room_id() const;
@@ -1880,10 +1879,10 @@ public:
 	void update_security_cameras(point const &camera_bs);
 	bool place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval, unsigned room_id,
 		float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0, bool add_door_clearance=0, unsigned pref_orient=4,
-		bool pref_centered=0, colorRGBA const &color=WHITE, bool not_at_window=0, room_obj_shape shape=SHAPE_CUBE, float side_clearance=0.0);
+		bool pref_centered=0, colorRGBA const &color=WHITE, bool not_at_window=0, room_obj_shape shape=SHAPE_CUBE, float side_clearance=0.0, unsigned extra_flags=0);
 	bool place_model_along_wall(unsigned model_id, room_object type, room_t const &room, float height, rand_gen_t &rgen,
 		float zval, unsigned room_id, float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0,
-		unsigned pref_orient=4, bool pref_centered=0, colorRGBA const &color=WHITE, bool not_at_window=0);
+		unsigned pref_orient=4, bool pref_centered=0, colorRGBA const &color=WHITE, bool not_at_window=0, unsigned extra_flags=0);
 	int check_valid_picture_placement(room_t const &room, cube_t const &c, float width, float zval, bool dim, bool dir, unsigned objs_start) const;
 	void update_player_interact_objects(point const &player_pos);
 	void update_creepy_sounds(point const &player_pos) const;
@@ -2020,7 +2019,7 @@ private:
 	bool add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
 		colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair_model=0, bool enable_rotation=0);
 	unsigned add_table_and_chairs(rand_gen_t rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
-		point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt);
+		point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, unsigned max_chairs=4);
 	void shorten_chairs_in_region(cube_t const &region, unsigned objs_start);
 	void add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool check_last_obj);
 	bool add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement);

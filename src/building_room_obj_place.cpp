@@ -97,7 +97,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 
 // Note: must be first placed objects; returns the number of total objects added (table + optional chairs)
 unsigned building_t::add_table_and_chairs(rand_gen_t rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
-	point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt)
+	point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, unsigned max_chairs)
 {
 	float const window_vspacing(get_window_vspace()), room_pad(max(4.0f*get_wall_thickness(), get_min_front_clearance_inc_people()));
 	vector3d const room_sz(room.get_size());
@@ -116,21 +116,22 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, cube_t const &room, v
 	//if (door_path_checker_t().check_door_path_blocked(table, room, table_pos.z, *this)) return 0; // optional, but we may want to allow this for kitchens and dining rooms
 	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, (is_house ? RO_FLAG_IS_HOUSE : 0), tot_light_amt, (is_round ? SHAPE_CYLIN : SHAPE_CUBE));
 	set_obj_id(objs);
-	// place some chairs around the table
-	unsigned num_added(1); // start with the table
+	// maybe place some chairs around the table
+	unsigned num_chairs(0);
 	bool prev_not_added(0), pri_dim(rgen.rand_bool()), pri_dir(rgen.rand_bool());
 
 	for (unsigned orient = 0; orient < 4; ++orient) {
+		if (num_chairs == max_chairs) break; // done
 		if (prev_not_added) {prev_not_added = 0;} // if the previous chair failed to be added, make sure to try the next orient
-		else if (orient == 3 && num_added == 1) {} // make sure to place a chair if we have none and this is our last orient
+		else if (orient == 3 && num_chairs == 0) {} // make sure to place a chair if we have none and this is our last orient
 		else if (rgen.rand_bool()) continue; // 50% of the time
 		bool const dim(bool(orient >> 1) ^ pri_dim), dir(bool(orient & 1) ^ pri_dir);
 		point chair_pos(table_pos); // same starting center and z1
 		chair_pos[dim] += (dir ? -1.0f : 1.0f)*table_sz[dim];
 		bool const added(add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, 0)); // office_chair_model=0
-		if (added) {++num_added;} else {prev_not_added = 1;}
+		if (added) {++num_chairs;} else {prev_not_added = 1;}
 	} // for orient
-	return num_added;
+	return num_chairs + 1; // add 1 for the table
 }
 void building_t::shorten_chairs_in_region(cube_t const &region, unsigned objs_start) {
 	for (auto i = interior->room_geom->objs.begin() + objs_start; i != interior->room_geom->objs.end(); ++i) {
@@ -1041,7 +1042,7 @@ bool building_t::maybe_add_fireplace_to_room(rand_gen_t &rgen, room_t const &roo
 
 bool building_t::place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval,
 	unsigned room_id, float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance, bool add_door_clearance,
-	unsigned pref_orient, bool pref_centered, colorRGBA const &color, bool not_at_window, room_obj_shape shape, float side_clearance)
+	unsigned pref_orient, bool pref_centered, colorRGBA const &color, bool not_at_window, room_obj_shape shape, float side_clearance, unsigned extra_flags)
 {
 	float const hwidth(0.5*height*sz_scale.y/sz_scale.z), depth(height*sz_scale.x/sz_scale.z);
 	float const min_space(max(2.8f*hwidth, 2.1f*(max(hwidth, 0.5f*depth) + get_scaled_player_radius()))); // make sure the player can get around the object
@@ -1089,7 +1090,8 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 			if (is_cube_close_to_doorway(c3, room, 0.0, 0)) continue; // bad placement
 		}
 		if (!check_cube_within_part_sides(c)) continue; // handle non-cube buildings
-		unsigned const flags((type == TYPE_BOX) ? (RO_FLAG_ADJ_LO << orient) : 0); // set wall edge bit for boxes (what about other dim bit if place in room corner?)
+		unsigned flags(extra_flags);
+		if (type == TYPE_BOX) {flags |= (RO_FLAG_ADJ_LO << orient);} // set wall edge bit for boxes (what about other dim bit if place in room corner?)
 		objs.emplace_back(c, type, room_id, dim, !dir, flags, tot_light_amt, shape, color);
 		if (type == TYPE_TOILET || type == TYPE_SINK || type == TYPE_URINAL || type == TYPE_TUB) {add_bathroom_plumbing(objs.back());}
 		set_obj_id(objs);
@@ -1099,12 +1101,12 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 	return 0; // failed
 }
 bool building_t::place_model_along_wall(unsigned model_id, room_object type, room_t const &room, float height, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
-	cube_t const &place_area, unsigned objs_start, float front_clearance, unsigned pref_orient, bool pref_centered, colorRGBA const &color, bool not_at_window)
+	cube_t const &place_area, unsigned objs_start, float front_clearance, unsigned pref_orient, bool pref_centered, colorRGBA const &color, bool not_at_window, unsigned extra_flags)
 {
 	if (!building_obj_model_loader.is_model_valid(model_id)) return 0; // don't have a model of this type
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id)); // D, W, H
 	return place_obj_along_wall(type, room, height*get_window_vspace(), sz, rgen, zval, room_id, tot_light_amt,
-		place_area, objs_start, front_clearance, 0, pref_orient, pref_centered, color, not_at_window);
+		place_area, objs_start, front_clearance, 0, pref_orient, pref_centered, color, not_at_window, SHAPE_CUBE, 0.0, extra_flags);
 }
 
 float building_t::add_flooring(room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned flooring_type) {

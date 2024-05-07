@@ -158,7 +158,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	setup_courtyard();
 	//highres_timer_t timer("Gen Room Details");
 	// Note: people move from room to room, so using their current positions for room object generation is both nondeterministic and unnecessary
-	vect_cube_t blockers, valid_lights, segs; // blockers are used for fireplaces
+	vect_cube_t blockers, valid_lights, segs; // blockers are used for fireplaces and office pillars
 	vect_room_object_t &objs(interior->room_geom->objs);
 	vector<room_t> &rooms(interior->rooms);
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
