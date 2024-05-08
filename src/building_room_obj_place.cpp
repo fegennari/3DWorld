@@ -522,10 +522,13 @@ void building_t::add_office_pillars(rand_gen_t rgen, room_t const &room, float z
 	blockers.push_back(pillar);
 }
 
+void offset_hanging_tv(room_object_t &obj) {
+	if (obj.is_hanging()) {obj.translate_dim(obj.dim, (obj.dir ? -1.0 : 1.0)*0.28*obj.get_depth());} // translate to the wall to account for the missing stand
+}
 void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	// reception desk? rug?, fishtank?, bench?, fridge?, lamp? ceiling fan? water fountain?
-	// FIXME: doesn't seem to work
-	add_table_and_chairs(rgen, room, vect_cube_t(), room_id, room.get_cube_center(), WHITE, 0.1, tot_light_amt, 0); // add table only; max_chairs=0
+	point const table_pos(room.xc(), room.yc(), zval); // approximate; can be placed 10% away from the room center
+	add_table_and_chairs(rgen, room, vect_cube_t(), room_id, table_pos, WHITE, 0.1, tot_light_amt, 0); // add table only; max_chairs=0
 	// place 1-3 couch(es) along a wall
 	unsigned const counts[4] = {1, 2, 2, 3}; // 2 couchs is more common
 	add_couches_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, counts);
@@ -537,9 +540,13 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 		place_model_along_wall(OBJ_MODEL_BAR_STOOL, TYPE_BAR_STOOL, room, 0.4, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 4, 0);
 	}
 	// add a TV on the wall (not on a table)
-	// TODO: flush with wall
-	float const tv_zval(zval + 0.25*get_window_vspace());
-	place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, room, 0.5, rgen, tv_zval, room_id, tot_light_amt, place_area, objs_start, 4.0, 4, 1, BKGRAY, 0, RO_FLAG_HANGING);
+	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const tv_obj_ix(objs.size());
+	float const tv_zval(zval + 0.3*get_window_vspace());
+	
+	if (place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, room, 0.5, rgen, tv_zval, room_id, tot_light_amt, place_area, objs_start, 4.0, 4, 1, BKGRAY, 0, RO_FLAG_HANGING)) {
+		offset_hanging_tv(objs[tv_obj_ix]);
+	}
 	// place 1-2 bookcases
 	unsigned const num_bookcases(1 + (rgen.rand() & 1));
 	for (unsigned n = 0; n < num_bookcases; ++n) {add_bookcase_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, 0);} // is_basement=0
@@ -3185,6 +3192,7 @@ bool building_t::add_security_room_objs(rand_gen_t rgen, room_t const &room, flo
 					if (is_obj_placement_blocked(tv, room, 1)) continue;
 					//if (overlaps_other_room_obj(tv, objs_start)) continue; // not needed since there are no objects placed first?
 					objs.emplace_back(tv, TYPE_MONITOR, room_id, dim, !dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), tot_light_amt, SHAPE_SHORT, BLACK); // monitors are shorter than TVs
+					offset_hanging_tv(objs.back());
 					set_obj_id(objs);
 					objs.back().obj_id &= ~1; // on by default; strip off LSB
 				} // for row
