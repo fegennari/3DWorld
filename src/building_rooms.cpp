@@ -546,7 +546,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				set_cube_zvals(room_this_floor, z, (z + floor_height));
 
 				if (is_room_adjacent_to_ext_door(room_this_floor)) { // connected to walkway door - make this a lounge
-					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start); // return value ignored
+					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 					r->assign_to(RTYPE_LOUNGE, f);
 					added_obj = 1;
 					is_apt_or_hotel_room = 0;
@@ -693,7 +693,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 			if (room_type_was_not_set) { // attempt to assign it with an optional room type
 				if (is_ground_floor && is_room_adjacent_to_ext_door(*r)) { // entryway/lobby if on ground floor, has exterior door, and unassigned
-					r->assign_to((is_house ? (room_type)RTYPE_ENTRY : (room_type)RTYPE_LOBBY), f); // office building lobby can have a whiteboard - is that okay?
+					if (is_house) {
+						r->assign_to(RTYPE_ENTRY, f); // entryway; even if at the back door?
+					}
+					else { // office; office building lobby can have a whiteboard - is that okay?
+						// front door = lobby, back door = lounge, but both cases have lounge objects
+						r->assign_to((is_room_adjacent_to_ext_door(*r, 1) ? (room_type)RTYPE_LOBBY : (room_type)RTYPE_LOUNGE), f);
+						if (!is_house) {add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
+					}
 				}
 				else if (!is_house) {r->assign_to(RTYPE_OFFICE, f);} // any unset room in an office building is an office
 				// else house
