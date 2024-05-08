@@ -1923,9 +1923,16 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				} // for ab
 			}
 			set_cube_zvals(cand, cand_z1, cand_z2);
+			// check if any previously placed stairs span these zvals; since rooms are generally horizontally connected on each floor, there's a valid existing path
+			bool have_spanning_stairs(0);
+
+			for (stairwell_t const &s: interior->stairwells) {
+				if (s.z1() <= cand_z1 && s.z2() >= cand_z2) {have_spanning_stairs = 1; break;}
+			}
+			unsigned const cur_num_iters(have_spanning_stairs ? num_iters/2 : num_iters); // fewer iterations and no compact/cut stairs if we have existing spanning stairs
 
 			// iterations: 0-19: place in pri hallway, 20-39: place anywhere, 40-159: shrink size, 150-179: compact stairs, 180-199: allow cut walls
-			for (unsigned n = 0; n < num_iters && !cand_is_valid; ++n) { // make 200 tries to add stairs
+			for (unsigned n = 0; n < cur_num_iters && !cand_is_valid; ++n) { // make up to 200 tries to add stairs
 				cube_t place_region((n < 2*iter_mult_factor) ? pref_shared : shared); // use preferred shared area from primary hallway for first 20 iterations
 
 				if (n >= 4*iter_mult_factor && n < 16*iter_mult_factor && (n%iter_mult_factor) == 0) { // decrease stairs size slightly every 10 iterations, 12 times
@@ -1956,7 +1963,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				if (too_small) continue;
 				assert(place_region.contains_cube_xy(cand));
 				// clipped walls don't look right in some cases and may block hallways and rooms, use as a last resort; disable for houses since basement is optional anyway
-				bool const allow_clip_walls(n > 180 && !is_house);
+				bool const allow_clip_walls(n >= 180 && !is_house);
 				bool const pri_hall_stairs(is_basement && !is_house && has_pri_hall() && pri_hall.z1() == ground_floor_z1 && dim == (hallway_dim == 1));
 
 				if (pri_hall_stairs) { // basement stairs placed in a first floor office building primary hallway should face the door
