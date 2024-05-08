@@ -2724,7 +2724,7 @@ void room_t::assign_all_to(room_type rt, bool locked) {
 	if (locked) {rtype_locked = 0xFF;} // room type is locked on all floors
 }
 void room_t::assign_to(room_type rt, unsigned floor, bool locked) {
-	// room types are only tracked up to the 4th floor, and every floor above that has the same type as the 4th floor; good enough for houses at least
+	// room types are only tracked up to the 6th floor, and every floor above that has the same type as the 6th floor; good enough for houses at least
 	floor = wrap_room_floor(floor);
 	// assign unless already set to a bathroom, unless we're refining the bathroom type to men's or women's
 	if (is_bathroom(rtype[floor]) && !is_bathroom(rt)) return;

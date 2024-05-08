@@ -435,10 +435,16 @@ void building_t::create_per_part_ext_verts() {
 void building_t::finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cubes) { // for office buildings
 	if (coll_bcube.is_all_zeros()) {coll_bcube = bcube;} // calculate if it hasn't been calculated yet
 	if (global_building_params.add_office_basements) {maybe_add_basement(rgen);}
-	assert(parts.size() < 256);
+	assert(parts.size() > 0 && parts.size() < 256);
 	real_num_parts = uint8_t(parts.size()); // no parts can be added after this point
 	create_per_part_ext_verts();
 	parts_generated = 1;
+
+	// apartments and hotels must have a primary hallway; if we can't add a hallway to the first/bottom part, then make it an office instead
+	if (is_apt_or_hotel() && !can_use_hallway_for_part(0)) {
+		btype = BTYPE_OFFICE;
+		assign_name(rgen); // re-assign a name
+	}
 	gen_interior(rgen, has_overlapping_cubes);
 
 	if (global_building_params.windows_enabled() && global_building_params.add_office_br_basements && !has_complex_floorplan) { // skip complex floorplan buildings
