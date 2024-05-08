@@ -527,30 +527,35 @@ void offset_hanging_tv(room_object_t &obj) {
 	if (obj.is_hanging()) {obj.translate_dim(obj.dim, (obj.dir ? -1.0 : 1.0)*0.28*obj.get_depth());} // translate to the wall to account for the missing stand
 }
 void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	// reception desk? rug?, fishtank?, bench?, fridge?, lamp? ceiling fan? water fountain?
+	// fridge? ceiling fan? water fountain?
+	cube_t const room_area(get_walkable_room_bounds(room)); // right against the wall
+	cube_t place_area(room_area);
+	place_area.expand_by(-0.25*get_wall_thickness()); // common spacing to wall
 	point const table_pos(room.xc(), room.yc(), zval); // approximate; can be placed 10% away from the room center
 	add_table_and_chairs(rgen, room, vect_cube_t(), room_id, table_pos, WHITE, 0.1, tot_light_amt, 0); // add table only; max_chairs=0
 	// place 1-3 couch(es) along a wall
-	unsigned const counts[4] = {1, 2, 2, 3}; // 2 couchs is more common
+	unsigned const counts[4] = {1, 2, 2, 3}; // 2 couches is more common
 	add_couches_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, counts);
-	// place 0-3 bar stools
-	cube_t const place_area(get_walkable_room_bounds(room)); // right against the wall
-	unsigned const num_stools(rgen.rand() & 3);
-
-	for (unsigned n = 0; n < num_stools; ++n) {
-		place_model_along_wall(OBJ_MODEL_BAR_STOOL, TYPE_BAR_STOOL, room, 0.4, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 4, 0);
-	}
 	// add a TV on the wall (not on a table)
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const tv_obj_ix(objs.size());
 	float const tv_zval(zval + 0.3*get_window_vspace());
 	
-	if (place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, room, 0.5, rgen, tv_zval, room_id, tot_light_amt, place_area, objs_start, 4.0, 4, 1, BKGRAY, 0, RO_FLAG_HANGING)) {
+	if (place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, room, 0.5, rgen, tv_zval, room_id, tot_light_amt, room_area, objs_start, 4.0, 4, 1, BKGRAY, 0, RO_FLAG_HANGING)) {
 		offset_hanging_tv(objs[tv_obj_ix]);
+		assert(objs.back().type == TYPE_BLOCKER);
+		objs.back().z1() = zval; // extend blocker down to the floor so that we don't place objects such as fishtanks under the TV
 	}
 	// place 1-2 bookcases
 	unsigned const num_bookcases(1 + (rgen.rand() & 1));
 	for (unsigned n = 0; n < num_bookcases; ++n) {add_bookcase_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, 0);} // is_basement=0
+	if (is_residential()) {add_fishtank_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);}
+	// place 0-3 bar stools
+	unsigned const num_stools(rgen.rand() & 3);
+
+	for (unsigned n = 0; n < num_stools; ++n) {
+		place_model_along_wall(OBJ_MODEL_BAR_STOOL, TYPE_BAR_STOOL, room, 0.4, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 4, 0);
+	}
 	// add 1-4 plants
 	unsigned const num_plants(1 + (rgen.rand() & 3));
 	add_plants_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, num_plants);
@@ -1901,6 +1906,39 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 	return placed_obj;
 }
 
+bool building_t::add_fishtank_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &place_area) {
+	vect_room_object_t &objs(interior->room_geom->objs);
+	// first add a tall table
+	float const floor_spacing(get_window_vspace());
+	float const table_height(rgen.rand_uniform(0.22, 0.24)*floor_spacing);
+	vector3d const fc_sz_scale(rgen.rand_uniform(0.7, 0.8), rgen.rand_uniform(1.6, 1.8), 1.0); // depth, width, height
+	unsigned const table_obj_ix(objs.size());
+	// not_at_a_window=1
+	if (!place_obj_along_wall(TYPE_TABLE, room, table_height, fc_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.5, 1, 4, 0, WHITE, 1)) return 0;
+	// then add the fishtank
+	float const tank_height(rgen.rand_uniform(0.22, 0.24)*floor_spacing);
+	assert(table_obj_ix < objs.size());
+	room_object_t &table(objs[table_obj_ix]); // table was placed first, then a blocker
+	table.shape  = SHAPE_SHORT;
+	table.flags |= RO_FLAG_ADJ_TOP; // flag table as having something on it
+	cube_t tank(table);
+	tank.expand_by_xy(-0.1*min(table.dx(), table.dy()));
+	set_cube_zvals(tank, table.z2(), (table.z2() + tank_height));
+	cube_t test_cube(tank);
+	test_cube.z1() += 0.1*tank.dz(); // shift up so that it doesn't intersect the table
+	// check if fishtank overlaps and object, but not the table; can this happen? maybe if in front of a picture or TV?
+	if (overlaps_other_room_obj(test_cube, objs_start)) return 0; // should we remove the table or leave it there?
+	unsigned flags(RO_FLAG_NOCOLL);
+
+	if (rgen.rand_float() < 0.80) { // add a lid 80% of the time
+		flags |= RO_FLAG_ADJ_TOP;
+		if (rgen.rand_float() < 0.85) {flags |= RO_FLAG_LIT;} // light is on 85% of the time
+	}
+	objs.emplace_back(tank, TYPE_FISHTANK, room_id, table.dim, table.dir, flags, tot_light_amt);
+	set_obj_id(objs);
+	return 1;
+}
+
 colorRGBA get_couch_color(rand_gen_t &rgen) {
 	unsigned const NUM_COLORS = 8;
 	colorRGBA const colors[NUM_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, LT_BROWN, BROWN, DK_BROWN};
@@ -1959,32 +1997,7 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 		}
 	}
 	if ((rgen.rand()%3) == 0) { // add fishtank on a tall table 33% of the time
-		// first add the table
-		float const floor_spacing(get_window_vspace());
-		float const table_height(rgen.rand_uniform(0.22, 0.24)*floor_spacing);
-		vector3d const fc_sz_scale(rgen.rand_uniform(0.7, 0.8), rgen.rand_uniform(1.6, 1.8), 1.0); // depth, width, height
-		unsigned const table_obj_ix(objs.size());
-
-		// not_at_a_window=1
-		if (place_obj_along_wall(TYPE_TABLE, room, table_height, fc_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.5, 1, 4, 0, WHITE, 1)) {
-			// then add the fishtank
-			float const tank_height(rgen.rand_uniform(0.22, 0.24)*floor_spacing);
-			assert(table_obj_ix < objs.size());
-			room_object_t &table(objs[table_obj_ix]); // table was placed first, then a blocker
-			table.shape  = SHAPE_SHORT;
-			table.flags |= RO_FLAG_ADJ_TOP; // flag table as having something on it
-			cube_t tank(table);
-			tank.expand_by_xy(-0.1*min(table.dx(), table.dy()));
-			set_cube_zvals(tank, table.z2(), (table.z2() + tank_height));
-			unsigned flags(RO_FLAG_NOCOLL);
-			
-			if (rgen.rand_float() < 0.80) { // add a lid 80% of the time
-				flags |= RO_FLAG_ADJ_TOP;
-				if (rgen.rand_float() < 0.85) {flags |= RO_FLAG_LIT;} // light is on 85% of the time
-			}
-			objs.emplace_back(tank, TYPE_FISHTANK, room_id, table.dim, table.dir, flags, tot_light_amt);
-			set_obj_id(objs);
-		}
+		add_fishtank_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);
 	}
 	if (room.is_single_floor && objs_start > 0) {replace_light_with_ceiling_fan(rgen, room, cube_t(), room_id, tot_light_amt, objs_start-1);} // light is prev placed object
 	return 1;
