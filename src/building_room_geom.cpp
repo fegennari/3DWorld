@@ -4287,7 +4287,9 @@ float get_tub_water_level(room_object_t const &c) {
 	return min(0.84f, 0.21f*c.item_flags);
 }
 void building_room_geom_t::add_tub_outer(room_object_t const &c) {
-	get_untextured_material(1).add_cube_to_verts_untextured(c, c.color, EF_Z12); // shadowed, no top/bottom faces; no apply_light_color()
+	unsigned skip_faces(EF_Z12);
+	if (c.flags & (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI)) {skip_faces = get_face_mask(c.dim, c.dir);} // shower+tub combo, draw front face only
+	get_untextured_material(1).add_cube_to_verts_untextured(c, c.color, skip_faces); // shadowed, no top/bottom faces; no apply_light_color()
 	float const water_level(get_tub_water_level(c));
 	if (water_level <= 0.0) return; // no water
 	cube_t water_area(c);

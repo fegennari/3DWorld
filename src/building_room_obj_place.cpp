@@ -1126,7 +1126,7 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 		unsigned flags(extra_flags);
 		if (type == TYPE_BOX) {flags |= (RO_FLAG_ADJ_LO << orient);} // set wall edge bit for boxes (what about other dim bit if place in room corner?)
 		objs.emplace_back(c, type, room_id, dim, !dir, flags, tot_light_amt, shape, color);
-		if (type == TYPE_TOILET || type == TYPE_SINK || type == TYPE_URINAL || type == TYPE_TUB) {add_bathroom_plumbing(objs.back());}
+		if (type == TYPE_TOILET || type == TYPE_SINK || type == TYPE_URINAL || type == TYPE_TUB || type == TYPE_SHOWERTUB) {add_bathroom_plumbing(objs.back());}
 		set_obj_id(objs);
 		if (front_clearance > 0.0) {objs.emplace_back(c2, TYPE_BLOCKER, room_id, dim, !dir, RO_FLAG_INVIS);} // add blocker cube to ensure no other object overlaps this space
 		return 1; // done
@@ -1320,12 +1320,14 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 				if (place_shower_tub) { // add the tub part as well
 					bool const wall_dir(hdim ? ydir : xdir);
 					// set flag to indicate which side is the wall for adding the shower head, and make open by default
-					objs.back().flags |= (wall_dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO) | RO_FLAG_OPEN;
+					unsigned const lo_hi_flag(wall_dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO);
+					objs.back().flags |= lo_hi_flag | RO_FLAG_OPEN;
 					objs.back().color  = (is_basement ? WHITE : wall_color); // color of the end wall
 					cube_t tub(c);
 					tub.z2() = c.z1() + tub_height;
 					tub.d[!dim][!wall_dir] -= (wall_dir ? -1.0 : 1.0)*wall_thick; // shrink off the wall
-					objs.emplace_back(tub, TYPE_TUB, room_id, dim, dir, 0, tot_light_amt);
+					tub.translate_dim(dim, (dir ? 1.0 : -1.0)*0.1*get_trim_thickness()); // shift away from the wall slightly to prevent Z-fighting
+					objs.emplace_back(tub, TYPE_TUB, room_id, dim, dir, lo_hi_flag, tot_light_amt);
 					added_bathroom_objs_mask |= PLACED_TUB;
 					no_tub = 1;
 				}
@@ -1408,8 +1410,8 @@ void building_t::add_bathroom_plumbing(room_object_t const &obj) { // only water
 		pipes[0].set_from_point(pipe_p1);
 		pipe_radius *= 1.25; // wider
 	}
-	else if (obj.type == TYPE_TUB) {
-		// not yet handled because a tub can't be taken
+	else if (obj.type == TYPE_TUB || obj.type == TYPE_SHOWERTUB) {
+		// not yet handled because a tub/shower+tub can't be taken
 	}
 	else {assert(0);} // not a plumbing fixture
 
