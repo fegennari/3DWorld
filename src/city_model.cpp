@@ -267,14 +267,18 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 		anim_state->set_animation_id_and_time(s, has_bone_animations, anim_speed);
 
 		if (has_bone_animations) {
-			float const speed_mult(SKELETAL_ANIM_TIME_CONST*anim_speed);
+			int const anim_id(anim_state->get_anim_id_for_setup_bone_transforms());
+			float const speed_mult(SKELETAL_ANIM_TIME_CONST*anim_speed), anim_time(speed_mult*anim_state->anim_time);
 
 			if (anim_state->blend_factor > 0.0) { // enable animation blending
-				model.setup_bone_transforms_blended(s, speed_mult*anim_state->anim_time, speed_mult*anim_state->anim_time2, anim_state->blend_factor,
-					anim_state->get_anim_id_for_setup_bone_transforms(), anim_state->get_anim_id2_for_setup_bone_transforms());
+				model.setup_bone_transforms_blended(s, anim_time, speed_mult*anim_state->anim_time2,
+					anim_state->blend_factor, anim_id, anim_state->get_anim_id2_for_setup_bone_transforms());
+			}
+			else if (anim_state->cached) { // single cached animation
+				model.setup_bone_transforms_cached(*anim_state->cached, s, anim_time, anim_id);
 			}
 			else { // single animation
-				model.setup_bone_transforms(s, speed_mult*anim_state->anim_time, anim_state->get_anim_id_for_setup_bone_transforms());
+				model.setup_bone_transforms(s, anim_time, anim_id);
 			}
 		}
 		else {

@@ -680,13 +680,15 @@ public:
 	unsigned num_animations() const {return model_anim_data.animations.size();}
 	bool has_animations    () const {return (num_animations() > 0);}
 	void setup_bone_transforms(shader_t &shader, float anim_time, int anim_id=-1);
+	void setup_bone_transforms_cached(bone_transform_data_t &cached, shader_t &shader, float anim_time, int anim_id=-1);
 	void setup_bone_transforms_blended(shader_t &shader, float anim_time1, float anim_time2, float blend_factor, int anim_id1=-1, int anim_id2=-1);
 	bool check_anim_wrapped(unsigned anim_id, float old_time, float new_time) const;
 	float get_anim_duration(unsigned anim_id) const;
 	void merge_animation_from(model3d const &anim_model) {model_anim_data.merge_from(anim_model.model_anim_data);}
 protected:
 	unsigned get_anim_id(shader_t &shader, string const &prop_name, int anim_id=-1) const;
-	void add_bone_transforms_to_shader(shader_t &shader) const;
+	void add_bone_transforms_to_shader(shader_t &shader, vector<xform_matrix> const &bone_transforms) const;
+	void add_bone_transforms_to_shader(shader_t &shader) const {add_bone_transforms_to_shader(shader, model_anim_data.bone_transforms);}
 };
 
 

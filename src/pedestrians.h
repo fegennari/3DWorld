@@ -4,6 +4,7 @@
 #pragma once
 
 #include "3DWorld.h"
+#include "transform_obj.h" // for bone_transform_data_t
 
 float const PED_WIDTH_SCALE  = 0.5; // ratio of collision radius to model radius (x/y)
 float const PED_HEIGHT_SCALE = 2.5; // ratio of collision radius to model height (z)
@@ -30,6 +31,7 @@ struct person_base_t : public waiting_obj_t {
 	// temp state used for animations/drawing
 	mutable bool prev_was_idle=0;
 	mutable float last_anim_state_change_time=0.0;
+	mutable bone_transform_data_t cached_bone_transforms;
 
 	person_base_t(float radius_) : radius(radius_) {}
 	std::string get_name() const;

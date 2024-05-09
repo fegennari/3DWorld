@@ -649,12 +649,29 @@ unsigned model3d::get_anim_id(shader_t &shader, string const &prop_name, int ani
 	}
 	return anim_id;
 }
+void model3d::setup_bone_transforms_cached(bone_transform_data_t &cached, shader_t &shader, float anim_time, int anim_id) {
+	if (!has_animations()) return;
+
+	if (cached.anim_id == anim_id && cached.anim_time == anim_time) {
+		assert(cached.transforms.size() == model_anim_data.bone_transforms.size());
+		add_bone_transforms_to_shader(shader, cached.transforms);
+	}
+	else {
+		setup_bone_transforms(shader, anim_time, anim_id);
+		unsigned const orig_sz(model_anim_data.bone_transforms.size());
+		cached.transforms.swap(model_anim_data.bone_transforms);
+		cached.anim_id   = anim_id;
+		cached.anim_time = anim_time;
+		model_anim_data.bone_transforms.resize(orig_sz); // must be the correct size
+	}
+}
 void model3d::setup_bone_transforms(shader_t &shader, float anim_time, int anim_id) {
 	if (!has_animations()) return;
 	//highres_timer_t timer("Setup Bone Transforms"); // 0.021ms
 	model_anim_data.get_bone_transforms(get_anim_id(shader, "animation_name", anim_id), anim_time);
 	add_bone_transforms_to_shader(shader);
 }
+// do we need a cached version of this one as well?
 void model3d::setup_bone_transforms_blended(shader_t &shader, float anim_time1, float anim_time2, float blend_factor, int anim_id1, int anim_id2) {
 	if (!has_animations()) return;
 	//highres_timer_t timer("Setup Bone Transforms Blend");
@@ -678,9 +695,9 @@ float model3d::get_anim_duration(unsigned anim_id) const { // in seconds
 	assert(has_animations());
 	return model_anim_data.get_anim_duration(anim_id);
 }
-void model3d::add_bone_transforms_to_shader(shader_t &shader) const {
+void model3d::add_bone_transforms_to_shader(shader_t &shader, vector<xform_matrix> const &bone_transforms) const {
 	unsigned const MAX_MODEL_BONES = 200; // must agree with shader code
-	unsigned num_bones(model_anim_data.bone_transforms.size());
+	unsigned num_bones(bone_transforms.size());
 	assert(num_bones > 0);
 
 	if (num_bones > MAX_MODEL_BONES) {
@@ -688,7 +705,7 @@ void model3d::add_bone_transforms_to_shader(shader_t &shader) const {
 		assert(0); // or return? or ignore some bones?
 		num_bones = MAX_MODEL_BONES;
 	}
-	if (!shader.add_uniform_matrix_4x4("bones", model_anim_data.bone_transforms[0].get_ptr(), 0, num_bones)) { // transpose=0
+	if (!shader.add_uniform_matrix_4x4("bones", bone_transforms[0].get_ptr(), 0, num_bones)) { // transpose=0
 		//assert(0); // too strong, as this can trigger when debugging and when using a shader that was setup before the model was loaded
 	}
 }

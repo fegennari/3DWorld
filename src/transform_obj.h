@@ -94,3 +94,10 @@ public:
 	bool     empty() const {return inst_xforms.empty();}
 };
 
+struct bone_transform_data_t {
+	int anim_id=-2; // -2 is unset/invalid
+	float anim_time=0.0;
+	vector<xform_matrix> transforms;
+	void clear() {anim_id = -2; anim_time = 0.0; clear_container(transforms);} // and free the memory
+};
+

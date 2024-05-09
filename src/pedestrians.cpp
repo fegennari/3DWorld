@@ -1999,6 +1999,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	dstate.pre_draw(xlate, use_dlights, shadow_only, enable_animations);
 	dstate.s.add_uniform_float("min_alpha", global_building_params.people_min_alpha); // set in case alpha test is enabled
 	animation_state_t anim_state(enable_animations, animation_id);
+	anim_state.cache_animations = is_night(STREETLIGHT_ON_RAND); // cache animations when shadows need to be drawn
 	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 0.0);} // disable hemispherical lighting normal because the transforms make it incorrect
 	point const camera_bs(get_camera_pos() - xlate);
 	bool in_sphere_draw(0);
@@ -2127,6 +2128,7 @@ void ped_manager_t::draw_people_in_building(vector<person_t> const &people, ped_
 	if (!pdv.shadow_only && pdv.building.get_bcube_inc_extensions().contains_pt(pdu.pos)) {sort(to_draw.begin(), to_draw.end(), cmp_ped_dist_to_pos(pdu.pos));}
 	animation_state_t anim_state(enable_building_people_ai(), animation_id);
 	bool in_sphere_draw(0);
+	// animations for building peds aren't cached; should they be? only if the player is in the building?
 	for (person_t const *p : to_draw) {draw_ped(*p, pdv.s, pdu, pdv.xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, pdv.shadow_only, pdv.shadow_only, &anim_state, 1);}
 	end_sphere_draw(in_sphere_draw);
 	anim_state.clear_animation_id(pdv.s); // make sure to leave animations disabled so that they don't apply to buildings and dead players
@@ -2153,7 +2155,11 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 	bool &in_sphere_draw, bool shadow_only, bool is_dlight_shadows, animation_state_t *anim_state, bool is_in_building)
 {
 	float const dist_sq(p2p_dist_sq(pdu.pos, ped.pos));
-	if (dist_sq > draw_dist_sq) return 0; // too far - skip
+	
+	if (dist_sq > draw_dist_sq) { // too far - skip
+		if (!shadow_only) {ped.cached_bone_transforms.clear();} // cleanup
+		return 0;
+	}
 	float const height(ped.get_height());
 	if (is_dlight_shadows && !dist_less_than(pre_smap_player_pos, ped.pos, 0.4*def_draw_dist)) return 0; // too far from the player
 	if (is_dlight_shadows && !sphere_in_light_cone_approx   (pdu, ped.pos, 0.5*height       )) return 0;
@@ -2205,9 +2211,9 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 				if (state_change_elapsed < blend_time_ticks) {blend_factor = 1.0 - state_change_elapsed/blend_time_ticks;}
 			}
 			// Note: we really should have a way to blend between walk and stairs animations, if there was a way to predict the transition
-			anim_state->anim_time     = (is_idle ? ped.get_idle_anim_time() : ped.anim_time); // if is_idle, we still need to advance the animation time
-			anim_state->model_anim_id = (is_idle ? (unsigned)MODEL_ANIM_IDLE : non_idle_anim);
-			anim_state->blend_factor  = blend_factor;
+			anim_state->anim_time        = (is_idle ? ped.get_idle_anim_time() : ped.anim_time); // if is_idle, we still need to advance the animation time
+			anim_state->model_anim_id    = (is_idle ? (unsigned)MODEL_ANIM_IDLE : non_idle_anim);
+			anim_state->blend_factor     = blend_factor;
 			anim_state->fixed_anim_speed = is_idle; // idle anim plays at normal speed, not zombie walking speed
 			
 			if (blend_factor > 0.0) {
@@ -2221,6 +2227,9 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 				ped.last_anim_state_change_time = tfticks;
 			}
 		}
+		// maybe cache transforms and reuse for shadow passes and main draw pass
+		if (anim_state && anim_state->cache_animations) {anim_state->cached = &ped.cached_bone_transforms;}
+		else {ped.cached_bone_transforms.clear();}
 		vector3d dir_horiz(ped.dir);
 		dir_horiz.z = 0.0; // always face a horizontal direction, even if walking on a slope
 		dir_horiz.normalize();

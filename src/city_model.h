@@ -17,9 +17,10 @@ enum {MODEL_ANIM_WALK=0, MODEL_ANIM_IDLE, MODEL_ANIM_STAIRS_UP, MODEL_ANIM_STAIR
 string const animation_names[NUM_MODEL_ANIMS] = {"walking", "idle", "stairs_up", "stairs_down", "attack"};
 
 struct animation_state_t {
-	bool enabled=0, fixed_anim_speed=0;
+	bool enabled=0, fixed_anim_speed=0, cache_animations=0;
 	unsigned anim_id=0, model_anim_id=0, model_anim_id2=0;
 	float anim_time=0.0, anim_time2=0.0, blend_factor=0.0;
+	bone_transform_data_t *cached=nullptr;
 
 	animation_state_t(bool enabled_=0, unsigned anim_id_=ANIM_ID_NONE, float anim_time_=0.0, unsigned model_anim_id_=MODEL_ANIM_WALK) :
 		enabled(enabled_), anim_id(anim_id_), model_anim_id(model_anim_id_), model_anim_id2(model_anim_id_), anim_time(anim_time_) {}
