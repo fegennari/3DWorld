@@ -1028,7 +1028,7 @@ bool sphere_cube_int_update_pos(point &pos, float radius, cube_t const &cube, po
 
 #define TEST_CLIP_T(reg, va, vb, vd, vc) \
 	if (region3 & (reg)) { \
-		assert((vd) != 0.0); /* this assertion may be removed as an optimization */ \
+		/*assert((vd) != 0.0); this assertion may be removed as an optimization or if it fails due to FP error */ \
 		float const t(((va) - (vb))/(vd)); \
 		if ((vc) > 0.0) {if (t > tmin) tmin = t;} else {if (t < tmax) tmax = t;} \
 		if (tmin >= tmax) return 0; \
