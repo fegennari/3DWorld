@@ -173,12 +173,14 @@ colorRGBA get_table_color(room_object_t const &c) {
 	}
 }
 void building_room_geom_t::add_table(room_object_t const &c, float tscale, float top_dz, float leg_width) { // 6 quads for top + 4 quads per leg = 22 quads = 88 verts
+	float const dz(c.dz());
+	min_eq(top_dz, get_tc_leg_width(c, leg_width)/dz); // reduce the top thickness of tall tables
 	cube_t top(c), legs_bcube(c);
 
 	if (c.shape == SHAPE_CYLIN) { // round table
 		bool const marble(c.obj_id & 1); // 50% marble top with metal base; else wood
 		vector3d const size(c.get_size());
-		top.z1()       += (1.0 - top_dz)*c.dz();
+		top.z1()       += (1.0 - top_dz)*dz;
 		legs_bcube.z2() = top.z1();
 		legs_bcube.expand_by_xy(-0.46*size);
 		colorRGBA const top_color(marble ? apply_light_color(c, LT_GRAY) : apply_wood_light_color(c)), base_color(marble ? BLACK : top_color);
@@ -187,7 +189,7 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 		rgeom_mat_t &base_mat(marble ? get_metal_material(1) : get_wood_material(tscale)); // shadowed=1, dynamic=0, small=0
 		base_mat.add_vcylin_to_verts(legs_bcube, base_color, 1, 1, 0, 0, 1.0, 1.0, 1.0); // support
 		cube_t feet(c);
-		feet.z2() = c.z1() + 0.1*c.dz();
+		feet.z2() = c.z1() + 0.1*dz;
 		feet.expand_by_xy(-0.2*size);
 
 		for (unsigned d = 0; d < 2; ++d) { // add crossed feet
@@ -200,7 +202,7 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 		assert(c.shape == SHAPE_CUBE || c.shape == SHAPE_SHORT);
 		// Note: glass table top and legs won't quite match the geometry used for collision detection and queries, but it's probably close enough
 		bool const glass(c.is_glass_table()); // 50% glass top with metal base; only in houses; not dressers/desks
-		top.z1()       += (1.0 - (glass ? 0.25 : 1.0)*top_dz)*c.dz(); // glass tables have a thinner top
+		top.z1()       += (1.0 - (glass ? 0.25 : 1.0)*top_dz)*dz; // glass tables have a thinner top
 		legs_bcube.z2() = top.z1();
 
 		if (glass) {

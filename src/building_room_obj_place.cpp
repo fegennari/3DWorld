@@ -63,16 +63,22 @@ cube_t place_cylin_object(rand_gen_t rgen, cube_t const &place_on, float radius,
 }
 
 bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
-	colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair_model, bool enable_rotation)
+	colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair, bool enable_rotation, bool bar_stool)
 {
-	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR)) {office_chair_model = 0;}
+	assert(!(office_chair && bar_stool)); // can't ask for both
+	office_chair &= building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR);
+	bar_stool    &= building_obj_model_loader.is_model_valid(OBJ_MODEL_BAR_STOOL   );
 	float const window_vspacing(get_window_vspace()), room_pad(4.0f*get_wall_thickness()), chair_height(0.4*window_vspacing), dir_sign(dir ? -1.0 : 1.0);
 	float chair_hwidth(0.0), push_out(0.0);
 	point chair_pos(place_pos); // same starting center and z1
 
-	if (office_chair_model) {
+	if (office_chair) {
 		chair_hwidth = chair_height*get_radius_for_square_model(OBJ_MODEL_OFFICE_CHAIR);
 		push_out     = 0.5 + rgen.rand_uniform(0.0, 0.6); // pushed out a bit so that the arms don't intersect the table top, but can push out more
+	}
+	else if (bar_stool) {
+		chair_hwidth = chair_height*get_radius_for_square_model(OBJ_MODEL_BAR_STOOL);
+		push_out     = 0.25 + rgen.rand_uniform(0.0, 0.6);
 	}
 	else {
 		chair_hwidth = 0.1*window_vspacing; // half width
@@ -83,11 +89,14 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 	if (!is_valid_placement_for_room(chair, room, blockers, 0, room_pad)) return 0; // check proximity to doors
 	vect_room_object_t &objs(interior->room_geom->objs);
 
-	if (office_chair_model) {
+	if (office_chair) {
 		unsigned const flags(enable_rotation ? RO_FLAG_RAND_ROT : 0);
 		float lum(chair_color.get_luminance()); // calculate grayscale luminance
 		if (lum > 0.5) {lum = 1.0 - lum;} // not white; clamp to [0.0, 0.5] range
 		objs.emplace_back(chair, TYPE_OFF_CHAIR, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, colorRGBA(lum, lum, lum));
+	}
+	else if (bar_stool) {
+		objs.emplace_back(chair, TYPE_BAR_STOOL, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE);
 	}
 	else {
 		objs.emplace_back(chair, TYPE_CHAIR, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE, chair_color);
@@ -97,40 +106,60 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 
 // Note: must be first placed objects; returns the number of total objects added (table + optional chairs)
 unsigned building_t::add_table_and_chairs(rand_gen_t rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
-	point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, unsigned max_chairs)
+	point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, unsigned max_chairs, bool use_tall_table)
 {
+	bool const use_bar_stools(use_tall_table);
+	float const table_rscale(use_tall_table ? 0.12 : 0.18), table_hscale(use_tall_table ? 0.35 : 0.2);
 	float const window_vspacing(get_window_vspace()), room_pad(max(4.0f*get_wall_thickness(), get_min_front_clearance_inc_people()));
 	vector3d const room_sz(room.get_size());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	point table_pos(place_pos);
 	vector3d table_sz;
-	for (unsigned d = 0; d < 2; ++d) {table_sz [d]  = 0.18*window_vspacing*(1.0 + rgen.rand_float());} // half size relative to window_vspacing
+	for (unsigned d = 0; d < 2; ++d) {table_sz [d]  = table_rscale*window_vspacing*(1.0 + rgen.rand_float());} // half size relative to window_vspacing
 	for (unsigned d = 0; d < 2; ++d) {table_pos[d] += rand_place_off*room_sz[d]*rgen.rand_uniform(-1.0, 1.0);} // near the center of the room
 	bool const is_round((rgen.rand()&3) == 0); // 25% of the time
 	if (is_round) {table_sz.x = table_sz.y = 0.6f*(table_sz.x + table_sz.y);} // round tables must have square bcubes for now (no oval tables yet); make radius slightly larger
 	point llc(table_pos - table_sz), urc(table_pos + table_sz);
 	llc.z = table_pos.z; // bottom
-	urc.z = table_pos.z + rgen.rand_uniform(0.20, 0.22)*window_vspacing; // top
+	urc.z = table_pos.z + table_hscale*rgen.rand_uniform(1.0, 1.1)*window_vspacing; // top
 	cube_t table(llc, urc);
 	if (!is_valid_placement_for_room(table, room, blockers, 0, room_pad)) return 0; // check proximity to doors and collision with blockers
 	//if (door_path_checker_t().check_door_path_blocked(table, room, table_pos.z, *this)) return 0; // optional, but we may want to allow this for kitchens and dining rooms
 	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, (is_house ? RO_FLAG_IS_HOUSE : 0), tot_light_amt, (is_round ? SHAPE_CYLIN : SHAPE_CUBE));
 	set_obj_id(objs);
+	if (max_chairs == 0) return 1; // table only
 	// maybe place some chairs around the table
 	unsigned num_chairs(0);
 	bool prev_not_added(0), pri_dim(rgen.rand_bool()), pri_dir(rgen.rand_bool());
 
-	for (unsigned orient = 0; orient < 4; ++orient) {
-		if (num_chairs == max_chairs) break; // done
-		if (prev_not_added) {prev_not_added = 0;} // if the previous chair failed to be added, make sure to try the next orient
-		else if (orient == 3 && num_chairs == 0) {} // make sure to place a chair if we have none and this is our last orient
-		else if (rgen.rand_bool()) continue; // 50% of the time
-		bool const dim(bool(orient >> 1) ^ pri_dim), dir(bool(orient & 1) ^ pri_dir);
-		point chair_pos(table_pos); // same starting center and z1
-		chair_pos[dim] += (dir ? -1.0f : 1.0f)*table_sz[dim];
-		bool const added(add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, 0)); // office_chair_model=0
-		if (added) {++num_chairs;} else {prev_not_added = 1;}
-	} // for orient
+	if (use_tall_table) { // use bar stools
+		for (unsigned d = 0; d < 2; ++d) {
+			bool const dim(pri_dim ^ bool(d));
+
+			for (unsigned e = 0; e < 2; ++e) {
+				bool const dir(pri_dir ^ bool(e)); // does pri_dir actually matter here?
+				if (num_chairs == max_chairs) break; // done
+				point chair_pos(table_pos); // same starting center and z1
+				chair_pos[dim] += (dir ? -1.0f : 1.0f)*table_sz[dim];
+				bool const added(add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, 0, 0, use_bar_stools)); // office_chair=0
+				if (added) {++num_chairs;}
+			}
+			if (num_chairs > 0) break; // done
+		} // for d
+	}
+	else {
+		for (unsigned orient = 0; orient < 4; ++orient) {
+			if (num_chairs == max_chairs) break; // done
+			if (prev_not_added) {prev_not_added = 0;} // if the previous chair failed to be added, make sure to try the next orient
+			else if (orient == 3 && num_chairs == 0) {} // make sure to place a chair if we have none and this is our last orient
+			else if (rgen.rand_bool()) continue; // 50% of the time
+			bool const dim(bool(orient >> 1) ^ pri_dim), dir(bool(orient & 1) ^ pri_dir);
+			point chair_pos(table_pos); // same starting center and z1
+			chair_pos[dim] += (dir ? -1.0f : 1.0f)*table_sz[dim];
+			bool const added(add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, 0)); // office_chair=0
+			if (added) {++num_chairs;} else {prev_not_added = 1;}
+		} // for orient
+	} // use chairs
 	return num_chairs + 1; // add 1 for the table
 }
 void building_t::shorten_chairs_in_region(cube_t const &region, unsigned objs_start) {
@@ -400,8 +429,8 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			chair_pos[dim]  = c.d[dim][!dir];
 			chair_pos[!dim] = pos + rgen.rand_uniform(-0.1, 0.1)*width; // slightly misaligned
 			// use office chair models when the desk has a computer monitor; now that occlusion culling works well, it's okay to have a ton of these in office buildings
-			bool const office_chair_model(add_computer /*&& is_house*/);
-			add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, office_chair_model);
+			bool const office_chair(add_computer /*&& is_house*/);
+			add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, office_chair);
 		}
 		return 1; // done/success
 	} // for n
@@ -532,7 +561,9 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 	cube_t place_area(room_area);
 	place_area.expand_by(-0.25*get_wall_thickness()); // common spacing to wall
 	point const table_pos(room.xc(), room.yc(), zval); // approximate; can be placed 10% away from the room center
-	add_table_and_chairs(rgen, room, vect_cube_t(), room_id, table_pos, WHITE, 0.1, tot_light_amt, 0); // add table only; max_chairs=0
+	bool const use_tall_table(rgen.rand_float() < 0.75); // 75% of the time
+	unsigned const max_chairs(use_tall_table ? 2 : 0); // only add chairs (bar stools) to tall tables
+	add_table_and_chairs(rgen, room, vect_cube_t(), room_id, table_pos, WHITE, 0.1, tot_light_amt, max_chairs, use_tall_table); // add table
 	// place 1-3 couch(es) along a wall
 	unsigned const counts[4] = {1, 2, 2, 3}; // 2 couches is more common
 	add_couches_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, counts);
@@ -551,7 +582,7 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 	for (unsigned n = 0; n < num_bookcases; ++n) {add_bookcase_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, 0);} // is_basement=0
 	if (is_residential()) {add_fishtank_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);}
 	// place 0-3 bar stools
-	unsigned const num_stools(rgen.rand() & 3);
+	unsigned const num_stools((rgen.rand() & 3) + !use_tall_table);
 
 	for (unsigned n = 0; n < num_stools; ++n) {
 		place_model_along_wall(OBJ_MODEL_BAR_STOOL, TYPE_BAR_STOOL, room, 0.4, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 4, 0);

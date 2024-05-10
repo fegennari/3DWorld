@@ -2017,9 +2017,9 @@ private:
 	vect_door_stack_t &get_doorways_for_room(cube_t const &room, float zval, bool all_floors=0) const;
 	bool is_room_an_exit(cube_t const &room, int room_ix, float zval) const;
 	bool add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
-		colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair_model=0, bool enable_rotation=0);
-	unsigned add_table_and_chairs(rand_gen_t rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
-		point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, unsigned max_chairs=4);
+		colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair=0, bool enable_rotation=0, bool bar_stool=0);
+	unsigned add_table_and_chairs(rand_gen_t rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
+		colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, unsigned max_chairs=4, bool use_tall_table=0);
 	void shorten_chairs_in_region(cube_t const &region, unsigned objs_start);
 	void add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool check_last_obj);
 	bool add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement);
