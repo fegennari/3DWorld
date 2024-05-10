@@ -556,7 +556,6 @@ void offset_hanging_tv(room_object_t &obj) {
 	if (obj.is_hanging()) {obj.translate_dim(obj.dim, (obj.dir ? -1.0 : 1.0)*0.28*obj.get_depth());} // translate to the wall to account for the missing stand
 }
 void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	// fridge? ceiling fan? water fountain?
 	cube_t const room_area(get_walkable_room_bounds(room)); // right against the wall
 	cube_t place_area(room_area);
 	place_area.expand_by(-0.25*get_wall_thickness()); // common spacing to wall
@@ -581,6 +580,7 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 	unsigned const num_bookcases(1 + (rgen.rand() & 1));
 	for (unsigned n = 0; n < num_bookcases; ++n) {add_bookcase_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, 0);} // is_basement=0
 	if (is_residential()) {add_fishtank_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);}
+	place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, room, 0.75, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.2, 4, 0, WHITE, 1); // not at window
 	// place 0-3 bar stools
 	unsigned const num_stools((rgen.rand() & 3) + !use_tall_table);
 
