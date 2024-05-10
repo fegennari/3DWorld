@@ -1438,6 +1438,7 @@ void ped_manager_t::assign_ped_model(person_base_t &ped) { // Note: non-const, m
 	ped.radius   *= model.scale;
 	ped.is_female = is_female_model(model);
 	ped.is_zombie = model.is_zombie;
+	ped.cached_bone_transforms.clear(); // only valid per-model
 	assert(ped.radius > 0.0); // no zero/negative model scales
 }
 void ped_manager_t::maybe_reassign_ped_model(person_base_t &ped) {
@@ -2294,7 +2295,9 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 		prev_player_pos   = actual_player_pos;
 		player_anim_time += fticks*city_params.ped_speed;
 	}
+	static bone_transform_data_t cached_player_transforms;
 	animation_state_t anim_state(enable_animations, animation_id);
+	anim_state.cached = &cached_player_transforms;
 	float const player_eye_height(get_player_eye_height()), player_height(player_eye_height/EYE_HEIGHT_RATIO), player_radius(player_height/PED_HEIGHT_SCALE);
 	point const pos(actual_player_pos + vector3d(0.0, 0.0, (player_radius - player_eye_height)));
 	vector3d const dir_horiz(vector3d(cview_dir.x, cview_dir.y, 0.0).get_norm()); // always face a horizontal direction, even if walking on a slope
