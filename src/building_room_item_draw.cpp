@@ -1841,7 +1841,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	bool const check_clip_cube(shadow_only && !is_rotated && !smap_light_clip_cube.is_all_zeros()); // check clip cube for shadow pass; not implemented for rotated buildings
 	bool const skip_interior_objs(!player_in_building_or_doorway && !shadow_only);
 	cube_t const clip_cube_bs(smap_light_clip_cube - xlate);
-	int const camera_room(is_rotated ? -1 : building.get_room_containing_pt(camera_bs)); // skip for rotated buildings; should we use actual_player_pos for shadow_only mode?
+	// skip for rotated buildings and reflection pass, since reflected pos may be in a different room; should we use actual_player_pos for shadow_only mode?
+	int const camera_room((is_rotated || reflection_pass) ? -1 : building.get_room_containing_pt(camera_bs));
 	unsigned last_room_ix(building.interior->rooms.size()), last_floor_ix(0); // start at an invalid value
 	bool camera_in_closed_room(0), last_room_closed(0), obj_drawn(0);
 
