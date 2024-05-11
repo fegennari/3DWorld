@@ -4733,7 +4733,11 @@ void building_room_geom_t::add_lava_lamp(room_object_t const &c) {
 
 void building_room_geom_t::add_debug_shape(room_object_t const &c) {
 	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
-	if      (c.shape == SHAPE_CUBE  ) {mat.add_cube_to_verts_untextured(c, c.color);} // all faces
+
+	if (c.shape == SHAPE_CUBE) {
+		mat.add_cube_to_verts_untextured(c, c.color); // all faces
+		mat.add_cube_to_verts(c, c.color, all_zeros, 0, 0, 0, 0, 1); // all faces, inner
+	}
 	else if (c.shape == SHAPE_CYLIN ) {mat.add_vcylin_to_verts(c, c.color, 1, 1);} // draw top and bottom
 	else if (c.shape == SHAPE_SPHERE) {mat.add_sphere_to_verts(c, c.color, 1);} // low_detail=1
 	else {assert(0);} // unsupported shape

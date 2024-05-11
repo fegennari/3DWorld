@@ -1163,6 +1163,7 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 		unsigned flags(extra_flags);
 		if (type == TYPE_BOX) {flags |= (RO_FLAG_ADJ_LO << orient);} // set wall edge bit for boxes (what about other dim bit if place in room corner?)
 		objs.emplace_back(c, type, room_id, dim, !dir, flags, tot_light_amt, shape, color);
+		//if (type == TYPE_BAR_STOOL) {objs.emplace_back(c, TYPE_DBG_SHAPE, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, RED);} // TESTING
 		if (type == TYPE_TOILET || type == TYPE_SINK || type == TYPE_URINAL || type == TYPE_TUB || type == TYPE_SHOWERTUB) {add_bathroom_plumbing(objs.back());}
 		set_obj_id(objs);
 		if (front_clearance > 0.0) {objs.emplace_back(c2, TYPE_BLOCKER, room_id, dim, !dir, RO_FLAG_INVIS);} // add blocker cube to ensure no other object overlaps this space
