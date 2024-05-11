@@ -1152,13 +1152,34 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 	assert(!interior->door_stacks.empty());
 	room_t &room(interior->rooms.back());
 	door_stack_t const &ds(interior->door_stacks.back());
-	// + 1 bedroom for hotel, 1-2 bedrooms for apartment; must have at least one window
-	// + 1 living room for apartment; optional living room for hotel; must have at least one window and must connect to door, so must span entire room depth
-	// 1 bathroom
-	// 1 kitchen for apartment
-	// TODO
+	//float const door_width(ds.get_width());
+	float const wall_thickness(get_wall_thickness()), door_to_wall_min_space(2.0*wall_thickness);
 	room.is_office = 0; // but room.office_floorplan remains 1
-	room.assign_all_to(is_hotel ? RTYPE_BED : RTYPE_LIVING); // a good start for the main room connected to the door
+
+	if (btype == BTYPE_HOTEL) {
+#if 0
+		// TODO: divide into entryway or living room by door, bedroom by window, and bathroom
+		// divide room in short dim; side by window becomes bedroom, divide other side, part connected to door is living room/entryway, other part is bathroom
+		float const bed_lb_split_pos(room.get_center_dim(!hall_dim));
+		bool const split_door_side(ds.get_center_dim(hall_dim) < room.get_center_dim(hall_dim)); // door goes to living room, which is larger
+		float const liv_bath_split_pos(ds.d[hall_dim][split_door_side] + (split_door_side ? 1.0 : -1.0)*door_to_wall_min_space);
+		cube_t bed(room), lb(room);
+		bed.d[!hall_dim][!hall_dir] = lb.d[!hall_dim][hall_dir] = bed_lb_split_pos;
+		cube_t living(lb), bath(lb);
+		bath.d[hall_dim][!split_door_side] = living.d[hall_dim][split_door_side] = liv_bath_split_pos;
+#else
+		room.assign_all_to(RTYPE_BED); // a good start for the main room connected to the door
+#endif
+	}
+	else if (btype == BTYPE_APARTMENT) {
+		// TODO
+		// 1-2 bedrooms; must have at least one window in each
+		// living room; should have at least one window and must connect to door, so must span entire room depth?
+		// bathroom
+		// kitchen
+		room.assign_all_to(RTYPE_LIVING); // a good start for the main room connected to the door
+	}
+	else {assert(0);} // unsupported building type
 }
 
 bool building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
