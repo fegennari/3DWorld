@@ -1926,8 +1926,8 @@ bool room_object_t::is_spider_collidable() const { // include objects on the flo
 			type != TYPE_LAPTOP && type != TYPE_MONITOR && type != TYPE_CLOTHES && type != TYPE_TOASTER && type != TYPE_CABINET &&
 			type != TYPE_FISHTANK) return 0;
 	}
-	if (type == TYPE_CEIL_FAN || type == TYPE_OFF_CHAIR || type == TYPE_POOL_LAD || type == TYPE_BAR_STOOL ||
-		type == TYPE_LAVALAMP || type == TYPE_CASHREG || type == TYPE_WFOUNTAIN || type == TYPE_BANANA || type == TYPE_BAN_PEEL) return 0; // not a cube
+	// these objects are ignored by spiders and will be walked through; ceiling fan is probably okay because it connects to the ceiling with a small cylinder
+	if (type == TYPE_CEIL_FAN || type == TYPE_BANANA || type == TYPE_BAN_PEEL) return 0; // not a cube
 	if (type == TYPE_BOOK) return 0; // I guess books don't count, since they're too small to walk on?
 	return 1;
 }
@@ -1991,18 +1991,21 @@ void get_approx_car_cubes(room_object_t const &cb, cube_t cubes[5]) {
 
 // for spiders; lg_cubes and sm_cubes are currently handled the same
 void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, vect_cube_t &lg_cubes, vect_cube_t &sm_cubes, vect_cube_t &non_cubes) const {
+	room_object const type(c.type);
 	if (c.is_round()) {non_cubes.push_back(c);}
-	else if (c.type == TYPE_RAILING || c.type == TYPE_SHELVES || c.type == TYPE_RAMP || c.type == TYPE_BALCONY || c.type == TYPE_POOL_LAD) {
+	else if (type == TYPE_RAILING || type == TYPE_SHELVES || type == TYPE_RAMP || type == TYPE_BALCONY || type == TYPE_POOL_LAD || type == TYPE_OFF_CHAIR ||
+		type == TYPE_BAR_STOOL || type == TYPE_LAVALAMP || type == TYPE_CASHREG || type == TYPE_WFOUNTAIN || type == TYPE_COUCH)
+	{
 		non_cubes.push_back(c); // non-cubes
 		// allow walking on the floor above a parking garage ramp if there's no cutout; shrink ramp bcube to the ceiling of the top floor of the parking garage
-		if (c.type == TYPE_RAMP && interior->ignore_ramp_placement && c.z2() >= ground_floor_z1) {non_cubes.back().z2() -= get_floor_thickness();}
+		if (type == TYPE_RAMP && interior->ignore_ramp_placement && c.z2() >= ground_floor_z1) {non_cubes.back().z2() -= get_floor_thickness();}
 	}
-	else if (c.type == TYPE_CLOSET && (c.is_open() || c.contains_pt(pos))) {
+	else if (type == TYPE_CLOSET && (c.is_open() || c.contains_pt(pos))) {
 		cube_t cubes[5];
 		get_closet_cubes(c, cubes, 1); // get cubes for walls and door; for_collision=1
 		lg_cubes.insert(lg_cubes.end(), cubes, (cubes + get_closet_num_coll_cubes(c)));
 	}
-	else if (c.type == TYPE_BED) {
+	else if (type == TYPE_BED) {
 		cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
 		get_bed_cubes(c, cubes);
 		cubes[3].z1() = cubes[0].z1(); // extend mattress downward to include the frame
@@ -2018,36 +2021,36 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		sm_cubes.insert(sm_cubes.end(), cubes+1, cubes+5); // skip table top; legs are small
 		sm_cubes.insert(lg_cubes.end(), cubes+5, cubes+num); // middle, drawers, and back
 	}
-	else if (c.type == TYPE_CHAIR) {
+	else if (type == TYPE_CHAIR) {
 		cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
 		get_chair_cubes(c, cubes);
 		lg_cubes.insert(lg_cubes.end(), cubes, cubes+2); // seat, back
 		get_tc_leg_cubes(cubes[2], 0.15, 1, leg_cubes); // width=0.15
 		sm_cubes.insert(sm_cubes.end(), leg_cubes, leg_cubes+4); // legs are small
 	}
-	else if (c.type == TYPE_POOL_TABLE) {
+	else if (type == TYPE_POOL_TABLE) {
 		cube_t cubes[5]; // body + 4 legs
 		get_pool_table_cubes(c, cubes);
 		lg_cubes.insert(lg_cubes.end(), cubes, cubes+5); // are the legs lg_cubes or sm_cubes? they're larger than table legs
 	}
-	else if (c.type == TYPE_TUB) {
+	else if (type == TYPE_TUB) {
 		cube_t cubes[5]; // bottom, front, back, 2 sides
 		get_tub_cubes(c, cubes);
 		lg_cubes.insert(lg_cubes.end(), cubes, cubes+5);
 	}
-	else if (c.type == TYPE_STOVE) {
+	else if (type == TYPE_STOVE) {
 		cube_t body(c), top(c);
 		body.z2() = top.z1() = c.z2() - 0.22*c.dz();
 		top.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.94*c.get_depth();
 		lg_cubes.push_back(body);
 		lg_cubes.push_back(top); // or sm_cubes?
 	}
-	else if (c.type == TYPE_SHELFRACK) {
+	else if (type == TYPE_SHELFRACK) {
 		cube_t cubes[9];
 		unsigned const num(get_all_shelf_rack_cubes(c, cubes));
 		lg_cubes.insert(lg_cubes.end(), cubes, cubes+num);
 	}
-	else if (c.type == TYPE_ATTIC_DOOR) {lg_cubes.push_back(get_true_room_obj_bcube(c));}
+	else if (type == TYPE_ATTIC_DOOR) {lg_cubes.push_back(get_true_room_obj_bcube(c));}
 	// otherwise, treat as a large object; this includes: TYPE_BCASE, TYPE_KSINK (with dishwasher), TYPE_COUCH, TYPE_COLLIDER (cars)
 	else {lg_cubes.push_back(c);}
 }
