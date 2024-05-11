@@ -707,6 +707,53 @@ unsigned check_shelf_rack_collision(room_object_t const &c, point &pos, point co
 	return check_cubes_collision(cubes, get_all_shelf_rack_cubes(c, cubes), pos, p_last, radius, cnorm);
 }
 
+unsigned get_couch_cubes(room_object_t const &c, cube_t cubes[4]) { // bottom, back, arm, arm; excludes pillows and blanket
+	bool const dir2(c.dim ^ c.dir);
+	float const height(c.dz()), depth(c.get_depth()), width(c.get_width());
+	cube_t c_clip(c);
+	c_clip.d[!c.dim][dir2] -= (dir2 ? 1.0 : -1.0)*0.025*width; // subtract off the blanket on the right side
+	cube_t bot(c_clip), arms(c_clip);
+	bot.expand_in_dim(!c.dim, -0.1*width); // shrink off arms
+	cube_t back(bot);
+	bot .z2() -= 0.48*height;
+	bot .z1() += 0.05*height;
+	arms.z2() -= 0.32*height;
+	back.z1()  = bot.z2();
+	back.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.65*depth;
+	cubes[0] = bot;
+	cubes[1] = back;
+
+	for (unsigned d = 0; d < 2; ++d) {
+		cube_t arm(arms);
+		arm.d[!c.dim][!d] = back.d[!c.dim][d];
+		cubes[d+2] = arm;
+	}
+	return 4;
+}
+unsigned check_couch_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+	cube_t cubes[4];
+	return check_cubes_collision(cubes, get_couch_cubes(c, cubes), pos, p_last, radius, cnorm);
+}
+
+unsigned get_cashreg_cubes(room_object_t const &c, cube_t cubes[2]) { // main, screen
+	cube_t const bc(get_true_room_obj_bcube(c));
+	bool const dir2(c.dim ^ c.dir);
+	float const width(bc.get_sz_dim(!c.dim)), length(bc.get_sz_dim(c.dim));
+	cube_t body(bc), screen(bc);
+	body.z2() = screen.z1() = c.z1() + 0.7*c.dz();
+	screen.d[ c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*0.395*length; // black screen side
+	screen.d[ c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*0.36*length;  // shorter rectangle side
+	screen.d[!c.dim][ dir2 ] -= (dir2  ? 1.0 : -1.0)*0.47*width;   // subtract off space in front of screen
+	screen.d[!c.dim][!dir2 ] += (dir2  ? 1.0 : -1.0)*0.26*width;   // subtract off space behind of screen
+	cubes[0] = body;
+	cubes[1] = screen; // conservative
+	return 2;
+}
+unsigned check_cashreg_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+	cube_t cubes[2];
+	return check_cubes_collision(cubes, get_cashreg_cubes(c, cubes), pos, p_last, radius, cnorm);
+}
+
 bool maybe_inside_room_object(room_object_t const &obj, point const &pos, float radius) {
 	return ((obj.is_open() && sphere_cube_intersect(pos, radius, obj)) || obj.contains_pt(pos));
 }
@@ -724,6 +771,11 @@ cube_t get_true_room_obj_bcube(room_object_t const &c) { // for collisions, etc.
 	if (c.type == TYPE_RAILING) { // only works for straight (non-sloped) top railings
 		cube_t c_ext(c);
 		c_ext.z2() = c.z1() + get_railing_height(c);
+		return c_ext;
+	}
+	if (c.type == TYPE_CASHREG) {
+		cube_t c_ext(c);
+		c_ext.expand_in_dim(!c.dim, -0.25*c.get_width()); // object bcube is twice the size it should be; subtract this off
 		return c_ext;
 	}
 	if (c.type == TYPE_SHOWERTUB) {return get_shower_tub_wall   (c);} // only the end wall is a collider; the tub handles the bottom (what about curtains?)
@@ -1235,6 +1287,8 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			else if (c->type == TYPE_BALCONY) {had_coll |= (unsigned)check_balcony_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_POOL_TABLE) {coll_ret |= check_pool_table_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_SHELFRACK ) {coll_ret |= check_shelf_rack_collision(*c, pos, p_last, radius, &cnorm);}
+			else if (c->type == TYPE_COUCH     ) {coll_ret |= check_couch_collision     (*c, pos, p_last, radius, &cnorm);}
+			else if (c->type == TYPE_CASHREG   ) {coll_ret |= check_cashreg_collision   (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_STALL  && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_stall_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_SHOWER && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_shower_collision(*c, pos, p_last, radius, &cnorm);}
 			else {coll_ret |= (unsigned)sphere_cube_int_update_pos(pos, radius, bc, p_last, 0, &cnorm);} // skip_z=0
@@ -1993,10 +2047,10 @@ void get_approx_car_cubes(room_object_t const &cb, cube_t cubes[5]) {
 void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, vect_cube_t &lg_cubes, vect_cube_t &sm_cubes, vect_cube_t &non_cubes) const {
 	room_object const type(c.type);
 	if (c.is_round()) {non_cubes.push_back(c);}
-	else if (type == TYPE_RAILING || type == TYPE_SHELVES || type == TYPE_RAMP || type == TYPE_BALCONY || type == TYPE_POOL_LAD || type == TYPE_OFF_CHAIR ||
-		type == TYPE_BAR_STOOL || type == TYPE_LAVALAMP || type == TYPE_CASHREG || type == TYPE_WFOUNTAIN || type == TYPE_COUCH)
+	else if (type == TYPE_RAILING || type == TYPE_SHELVES || type == TYPE_RAMP || type == TYPE_BALCONY || type == TYPE_POOL_LAD ||
+		type == TYPE_OFF_CHAIR || type == TYPE_BAR_STOOL || type == TYPE_LAVALAMP || type == TYPE_WFOUNTAIN)
 	{
-		non_cubes.push_back(c); // non-cubes
+		non_cubes.push_back(c); // non-cubes; bar stools are close, should they be included?
 		// allow walking on the floor above a parking garage ramp if there's no cutout; shrink ramp bcube to the ceiling of the top floor of the parking garage
 		if (type == TYPE_RAMP && interior->ignore_ramp_placement && c.z2() >= ground_floor_z1) {non_cubes.back().z2() -= get_floor_thickness();}
 	}
@@ -2047,8 +2101,17 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 	}
 	else if (type == TYPE_SHELFRACK) {
 		cube_t cubes[9];
-		unsigned const num(get_all_shelf_rack_cubes(c, cubes));
-		lg_cubes.insert(lg_cubes.end(), cubes, cubes+num);
+		lg_cubes.insert(lg_cubes.end(), cubes, cubes+get_all_shelf_rack_cubes(c, cubes));
+	}
+	else if (type == TYPE_COUCH) {
+		cube_t cubes[4]; // bottom, back, arm, arm
+		lg_cubes.insert(lg_cubes.end(), cubes, cubes+get_couch_cubes(c, cubes));
+	}
+	else if (type == TYPE_CASHREG) {
+		cube_t cubes[2]; // body, screen
+		get_cashreg_cubes(c, cubes);
+		lg_cubes .push_back(cubes[0]); // walk on the body
+		non_cubes.push_back(cubes[1]); // avoid the screen
 	}
 	else if (type == TYPE_ATTIC_DOOR) {lg_cubes.push_back(get_true_room_obj_bcube(c));}
 	// otherwise, treat as a large object; this includes: TYPE_BCASE, TYPE_KSINK (with dishwasher), TYPE_COUCH, TYPE_COLLIDER (cars)
