@@ -1348,6 +1348,7 @@ struct door_t : public door_base_t {
 	void set_locked_unlockable() {locked = MAX_LOCK_INDEX;}; // use a lock for which there is no matching color key
 	unsigned get_padlock_color_ix() const {assert(is_padlocked()); assert(locked < MAX_LOCK_INDEX); return (locked - 2);}
 	void toggle_open_state(bool allow_partial_open=0);
+	void make_auto_close() {auto_close = 1; open = 0; open_amt = 0.0;}
 	void make_fully_open_or_closed() {open_amt = (open ? 1.0 : 0.0);}
 	bool next_frame();
 };

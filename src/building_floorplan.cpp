@@ -1162,6 +1162,9 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 	room.is_office = 0; // but room.office_floorplan remains 1
 
 	if (btype == BTYPE_HOTEL) {
+		// make sure doors auto close
+		assert(ds.first_door_ix < interior->doors.size());
+		for (auto d = interior->doors.begin()+ds.first_door_ix; d != interior->doors.end(); ++d) {d->make_auto_close();}
 		// divide into entryway or living room by door, bedroom by window, and bathroom
 		// divide room in short dim; side by window becomes bedroom, divide other side, part connected to door is living room/entryway, other part is bathroom
 		float const bed_lb_split_pos(room.get_center_dim(!hall_dim));

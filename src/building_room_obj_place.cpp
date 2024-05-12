@@ -1675,9 +1675,8 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			door_t &door(interior->doors[dix]);
 			if (!ds.is_same_stack(door)) break; // moved to a different stack, done
 			if (door.z1() > zval || door.z2() < zval) continue; // wrong floor
-			door.open   = 0; // only needed for non-cube buildings
 			door.locked = 0; // only needed for non-cube buildings
-			door.auto_close = 1;
+			door.make_auto_close();
 		}
 	} // for ds
 	// add a sign outside the bathroom door
