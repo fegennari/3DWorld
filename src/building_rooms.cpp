@@ -171,7 +171,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	float const extra_bathroom_prob((is_house ? 2.0 : 1.0)*0.02*min((int(tot_num_rooms) - 4), 20));
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
 	unsigned added_kitchen_mask(0), added_living_mask(0), added_bath_mask(0); // per-floor
-	unsigned added_bathroom_objs_mask(0);
+	unsigned added_bathroom_objs_mask(0), numbered_rooms_seen(0);
 	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0), added_pool_room(0);
 	light_ix_assign_t light_ix_assign;
 	interior->create_fc_occluders(); // not really part of room geom, but needed for generating and drawing room geom, so we create them here
@@ -266,7 +266,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		r->light_intensity = light_val*light_val/r->get_area_xy(); // average for room, unitless; light surface area divided by room surface area with some fudge constant
 		cube_t light;
 		set_light_xy(light, room_center, light_size, room_dim, light_shape);
-		bool added_bathroom(0);
+		bool added_bathroom(0), is_numbered_room(0);
 		float z(r->z1());
 		if (!r->interior) {r->interior = (is_basement || is_room_windowless(*r));} // AKA windowless; calculate if not already set
 		// make chair colors consistent for each part by using a few variables for a hash
@@ -558,7 +558,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (init_rtype_f0 == RTYPE_LIVING) { // assigned apartment living room
 					added_tc = can_place_onto = add_table_and_chairs(rgen, *r, blockers, room_id, room_center, chair_color, 0.1, tot_light_amt);
 					add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start); // return value ignored
-					is_living = 1;
+					unsigned room_num(100*(f+1) + numbered_rooms_seen);
+					add_door_sign(std::to_string(room_num), *r, room_center.z, room_id, tot_light_amt); // Note: sign text is always unique
+					is_living = is_numbered_room = 1;
 				}
 				else if (init_rtype_f0 == RTYPE_BED) { // assigned bedroom
 					can_place_onto |= add_bedroom_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_lit, 0, 1, light_ix_assign);
@@ -758,7 +760,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (has_stairs_this_floor && r->get_room_type(f) == RTYPE_NOTSET) {r->assign_to(RTYPE_STAIRS, f);} // default to stairs if not set above
 			if (is_bathroom) {added_bath_mask |= floor_mask;}
 		} // for f (floor)
-		if (added_bathroom) {++num_bathrooms;}
+		if (added_bathroom  ) {++num_bathrooms      ;}
+		if (is_numbered_room) {++numbered_rooms_seen;}
 
 		if (r->interior) { // tag objects as interior if room is interior
 			for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
