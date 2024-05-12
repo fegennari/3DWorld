@@ -545,7 +545,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				cube_t room_this_floor(*r);
 				set_cube_zvals(room_this_floor, z, (z + floor_height));
 
-				if (is_room_adjacent_to_ext_door(room_this_floor)) { // connected to walkway door - make this a lounge
+				if (is_room_adjacent_to_ext_door(room_this_floor)) { // connected to walkway door
+					// make this a lounge; but if this is a sub-room of an apartment or hotel room, then shouldn't we remove the walls and make the entire unit a lounge?
 					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 					r->assign_to(RTYPE_LOUNGE, f);
 					added_obj = 1;
