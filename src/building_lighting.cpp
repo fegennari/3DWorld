@@ -38,6 +38,8 @@ colorRGBA get_canopy_base_color(room_object_t const &c);
 void get_water_heater_cubes(room_object_t const &wh, cube_t cubes[2]);
 bool line_int_polygon_sides(point const &p1, point const &p2, cube_t const &bcube, vect_point const &points, float &t);
 void get_pool_table_cubes(room_object_t const &c, cube_t cubes[5]);
+unsigned get_couch_cubes(room_object_t const &c, cube_t cubes[4]);
+unsigned get_cashreg_cubes(room_object_t const &c, cube_t cubes[2]);;
 
 bool check_indir_enabled(bool in_basement, bool in_attic) {
 	if (in_basement) return INDIR_BASEMENT_EN;
@@ -287,8 +289,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			c->type == TYPE_WALL_LAMP || c->type == TYPE_RCHAIR || c->type == TYPE_SILVER || c->type == TYPE_STAPLER || c->type == TYPE_WIND_SILL ||
 			c->type == TYPE_BALCONY || c->type == TYPE_TOY_MODEL || c->type == TYPE_CEIL_FAN || c->type == TYPE_PLANT_MODEL || c->type == TYPE_POOL_FLOAT ||
 			c->type == TYPE_BENCH || c->type == TYPE_DIV_BOARD || c->type == TYPE_POOL_LAD || c->type == TYPE_FLASHLIGHT || c->type == TYPE_CANDLE || c->type == TYPE_CAMERA ||
-			c->type == TYPE_CLOCK || c->type == TYPE_BAR_STOOL || c->type == TYPE_PADLOCK || c->type == TYPE_CASHREG || c->type == TYPE_WFOUNTAIN ||
-			c->type == TYPE_BANANA || c->type == TYPE_BAN_PEEL) continue;
+			c->type == TYPE_CLOCK || c->type == TYPE_BAR_STOOL || c->type == TYPE_PADLOCK || c->type == TYPE_WFOUNTAIN || c->type == TYPE_BANANA || c->type == TYPE_BAN_PEEL) continue;
 		bool const is_stairs(c->type == TYPE_STAIR || c->type == TYPE_STAIR_WALL);
 		if (c->z1() > (is_stairs ? stairs_z2 : z2) || c->z2() < (is_stairs ? stairs_z1 : z1)) continue;
 		if (!c->intersects_xy(ext_bcube)) continue;
@@ -383,19 +384,21 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			if (!top     .is_all_zeros()) {cc.emplace_back(top, color);}
 			if (!sides[0].is_all_zeros()) {add_colored_cubes(sides, 2, color, cc);}
 		}
+		else if (c->type == TYPE_COUCH) {
+			cube_t cubes[4]; // bottom, back, arm, arm
+			unsigned const num_cubes(get_couch_cubes(*c, cubes));
+			for (unsigned n = 0; n < num_cubes; ++n) {cc.emplace_back(cubes[n], color);}
+		}
+		else if (c->type == TYPE_CASHREG) {
+			cube_t cubes[2]; // body, screen
+			get_cashreg_cubes(*c, cubes);
+			cc.emplace_back(cubes[0], color); // only add the body
+		}
 		else { // single cube
 			cube_t bc(*c); // handle 3D models that don't fill the entire cube
 			bool const dim(c->dim), dir(c->dir);
 
-			if (c->type == TYPE_COUCH) {
-				bc.z2() -= 0.5*bc.dz(); // bottom
-				cube_t top(*c);
-				top.z1() = bc.z2();
-				top.d[dim][dir] += (dir ? -1.0 : 1.0)*0.6*bc.get_sz_dim(dim); // reduce thickness
-				top.expand_in_dim(!dim, -0.1*c->get_sz_dim(!dim));
-				cc.emplace_back(top, color);
-			}
-			else if (c->type == TYPE_TUB) {
+			if (c->type == TYPE_TUB) {
 				bc.z2() -= 0.9*bc.dz(); // bottom
 				cube_t top(*c);
 				top.z1() = bc.z2();
