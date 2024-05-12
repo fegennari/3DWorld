@@ -516,7 +516,7 @@ unsigned const RO_FLAG_WALKWAY   = 0x1000; // for walkway objects (outside of bu
 // object flags, third byte, for pickup/interact state
 unsigned const RO_FLAG_IN_HALLWAY= 0x010000;
 unsigned const RO_FLAG_IN_ATTIC  = 0x020000;
-unsigned const RO_FLAG_HAS_EXTRA = 0x040000; // used for counter backsplash, exterior wall trim, desks with computer monitors and keyboards, and books on glass tables
+unsigned const RO_FLAG_HAS_EXTRA = 0x040000; // used for counter backsplash, exterior wall trim, desks with computer monitors and keyboards, books on glass tables, and hotel closets
 unsigned const RO_FLAG_EXTERIOR  = 0x080000; // for signs, window trim, etc.
 unsigned const RO_FLAG_EXPANDED  = 0x100000; // for shelves, closets, boxes, and mirrors
 unsigned const RO_FLAG_WAS_EXP   = 0x200000; // for objects in/on shelves, closets, drawers, cabinets, shelfracks, and books

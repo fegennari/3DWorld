@@ -155,13 +155,14 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 	float const depth(interior.get_sz_dim(c.dim)), box_sz(0.25*depth), window_vspacing(c.dz()*(1.0 + FLOOR_THICK_VAL_HOUSE));
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 	unsigned const num_boxes((rgen.rand()%3) + (rgen.rand()%4)); // 0-5
+	bool const is_hotel(c.flags & RO_FLAG_HAS_EXTRA);
 	vect_cube_t &cubes(get_temp_cubes());
 	add_boxes_to_space(c, objects, interior, cubes, rgen, num_boxes, box_sz, 0.8*box_sz, 1.5*box_sz, 0, flags); // allow_crates=0
 
 	if (!c.is_small_closet()) { // larger closets have more random items
 		vector3d sz;
 
-		if (rgen.rand_bool()) { // maybe add a safe
+		if (is_hotel || rgen.rand_bool()) { // maybe add a safe; always add for hotels
 			float const sheight(0.15*window_vspacing*rgen.rand_uniform(1.0, 1.2)), swidth(1.0*sheight), sdepth(min(1.1f*sheight, 0.67f*depth));
 			sz[c.dim] = 0.5*sdepth; sz[!c.dim] = 0.5*swidth; sz.z = sheight;
 			add_obj_to_closet(c, interior, objects, cubes, rgen, sz, TYPE_SAFE, flags, SHAPE_CUBE, colorRGBA(0.7, 0.7, 0.7, 1.0), 1); // against_back=1
@@ -169,17 +170,17 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 		if (rgen.rand_bool()) { // maybe add a lamp in the closet
 			try_add_lamp(interior, window_vspacing, c.room_id, flags, c.light_amt, cubes, objects, rgen);
 		}
-		if (rgen.rand_bool()) { // maybe add an old computer in the closet
+		if (!is_hotel && rgen.rand_bool()) { // maybe add an old computer in the closet
 			float const height(0.21*window_vspacing*rgen.rand_uniform(1.0, 1.2)), cheight(0.75*height), cwidth(0.44*cheight), cdepth(0.9*cheight);
 			sz[c.dim] = 0.5*cdepth; sz[!c.dim] = 0.5*cwidth; sz.z = cheight;
 			add_obj_to_closet(c, interior, objects, cubes, rgen, sz, TYPE_COMPUTER, (flags | RO_FLAG_BROKEN));
 		}
-		if (rgen.rand_bool()) { // maybe add a keyboard in the closet
+		if (!is_hotel && rgen.rand_bool()) { // maybe add a keyboard in the closet
 			float const kbd_hwidth(0.12*window_vspacing), kbd_depth(0.6*kbd_hwidth), kbd_height(0.06*kbd_hwidth);
 			sz[c.dim] = 0.5*kbd_depth; sz[!c.dim] = kbd_hwidth; sz.z = kbd_height;
 			add_obj_to_closet(c, interior, objects, cubes, rgen, sz, TYPE_KEYBOARD, flags);
 		}
-		if (rgen.rand_bool()) { // maybe add a paint can in the closet
+		if (!is_hotel && rgen.rand_bool()) { // maybe add a paint can in the closet
 			float const height(0.64*0.2*window_vspacing), radius(0.28*0.2*window_vspacing);
 			sz.assign(radius, radius, height);
 			add_obj_to_closet(c, interior, objects, cubes, rgen, sz, TYPE_PAINTCAN, flags, SHAPE_CYLIN);

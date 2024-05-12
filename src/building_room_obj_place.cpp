@@ -696,6 +696,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 			if (is_house) {flags |= RO_FLAG_IS_HOUSE;}
 			if (c.d[!dim][0] == room_bounds.d[!dim][0]) {flags |= RO_FLAG_ADJ_LO;}
 			if (c.d[!dim][1] == room_bounds.d[!dim][1]) {flags |= RO_FLAG_ADJ_HI;}
+			if (btype == BTYPE_HOTEL) {flags |= RO_FLAG_HAS_EXTRA;} // flag so that the closet has a safe
 			//if ((rgen.rand() % 10) == 0) {flags |= RO_FLAG_OPEN;} // 10% chance of open closet; unclear if this adds any value, but it works
 			closet_obj_id = objs.size();
 			objs.emplace_back(c, TYPE_CLOSET, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CUBE, wall_color); // closet door is always white; sides should match interior walls
@@ -849,7 +850,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 	} // for i
 	if (rgen.rand_float() < 0.3) {add_laundry_basket(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);} // try to place a laundry basket 25% of the time
 
-	if (rgen.rand_probability(global_building_params.ball_prob)) { // maybe add a ball to the room
+	if (btype != BTYPE_HOTEL && rgen.rand_probability(global_building_params.ball_prob)) { // maybe add a ball to the room if not a hotel
 		add_ball_to_room(rgen, room, place_area, zval, room_id, tot_light_amt, objs_start);
 	}
 	cube_t const avoid(placed_closet ? objs[closet_obj_id] : cube_t()); // avoid intersecting the closet, since it meets the ceiling
@@ -1298,8 +1299,8 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			}
 		}
 	}
-	// try to add a shower; 50% chance if on first floor; not in basements (due to drawing artifacts)
-	if (add_shower_tub && (floor > 0 || rgen.rand_bool())) {
+	// try to add a shower; 50% chance if on first floor of a house; not in basements (due to drawing artifacts)
+	if (add_shower_tub && (is_apt_or_hotel() || floor > 0 || rgen.rand_bool())) {
 		float shower_dx(0.0), shower_dy(0.0), wall_thick(0.0);
 		bool hdim(0); // handle dim/long dim
 		// use a shower + tub combo for basements due to glass drawing artifacts, and for arpartments and hotels with small bathrooms; requires tub model
@@ -2028,7 +2029,7 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 			}
 		}
 	}
-	if ((rgen.rand()%3) == 0) { // add fishtank on a tall table 33% of the time
+	if ((is_house || btype == BTYPE_APARTMENT) && (rgen.rand()%3) == 0) { // add fishtank on a tall table 33% of the time
 		add_fishtank_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);
 	}
 	if (room.is_single_floor && objs_start > 0) {replace_light_with_ceiling_fan(rgen, room, cube_t(), room_id, tot_light_amt, objs_start-1);} // light is prev placed object
