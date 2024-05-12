@@ -11,7 +11,7 @@ unsigned const MAX_OFFICE_UTILITY_ROOMS = 1;
 extern building_params_t global_building_params;
 
 
-void building_t::add_interior_door(door_t &door, bool is_bathroom, bool make_unlocked, bool make_closed) {
+void building_t::add_interior_door(door_t &door, bool is_bathroom, bool make_unlocked, bool make_closed) { // add door stack + doors
 	assert(interior);
 	interior->door_stacks.emplace_back(door, interior->doors.size());
 	if (door.on_stairs) {add_interior_door_for_floor(door, is_bathroom, make_unlocked); return;} // add a single door across all floors
@@ -42,7 +42,7 @@ void building_t::remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, fl
 	bool const hinge_side(xy ^ open_dir ^ (v1-c.d[xy][0] < c.d[xy][1]-v1) ^ 1); // put the hinge on the side closer to the end of the wall
 	c2 = c; // clone first cube
 	c.d[xy][1] = v1; c2.d[xy][0] = v2; // c=low side, c2=high side
-	// add a door
+	// add a door stack and doors
 	door_t door(c, !xy, open_dir, 1, 0, hinge_side); // open=1, on_stairs=0
 	door.d[!xy][0] = door.d[!xy][1] = c.get_center_dim(!xy); // zero area at wall centerline
 	door.d[ xy][0] = v1; door.d[ xy][1] = v2;
@@ -797,7 +797,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						door.d[min_dim][d] = hall_wall_pos[d]; // set to zero area at hallway
 						for (unsigned e = 0; e < 2; ++e) {door.d[!min_dim][e] = doorway_vals[2*i+e];}
 						add_interior_door(door, is_bathroom);
-						if (apt_or_hotel) {divide_last_room_into_apt_or_hotel(i, num_rooms, num_windows, windows_per_room, min_dim, d);}
+						if (apt_or_hotel) {divide_last_room_into_apt_or_hotel(i, num_rooms, num_windows, windows_per_room, !min_dim, d);}
 					} // for d
 					pos = next_pos;
 				} // for i
@@ -1138,38 +1138,60 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsigned hall_num_rooms,
 	unsigned tot_num_windows, unsigned windows_per_room, bool hall_dim, bool hall_dir) // hall_dim is also window dim
 {
+	assert(interior);
 	assert(hall_num_rooms  > 0 && room_row_ix < hall_num_rooms);
 	assert(tot_num_windows > 0 && windows_per_room > 0 && windows_per_room <= tot_num_windows);
 	assert(is_apt_or_hotel());
-	bool at_lo_end(room_row_ix == 0), at_hi_end(room_row_ix == hall_num_rooms-1);
+	bool /*at_lo_end(room_row_ix == 0),*/ at_hi_end(room_row_ix == hall_num_rooms-1);
 	unsigned num_windows(tot_num_windows/windows_per_room);
 	assert(num_windows > 0);
 	if (btype == BTYPE_APARTMENT && num_windows == 1) {btype = BTYPE_HOTEL;} // too small for apartment; need at least two windows for an apartment
 	if (at_hi_end) {num_windows += (tot_num_windows % windows_per_room);} // last room is larger with more windows; hopefully only one more
 	bool const is_hotel(btype == BTYPE_HOTEL);//, is_apt(btype == BTYPE_APARTMENT);
+	vector<room_t> &rooms(interior->rooms);
 	// the current room and door stack are the last ones that were added; note that adding new rooms or doors below will invalidate these references
-	assert(!interior->rooms.empty());
+	assert(!rooms.empty());
 	assert(!interior->door_stacks.empty());
-	room_t &room(interior->rooms.back());
+	room_t &room(rooms.back());
 	door_stack_t const &ds(interior->door_stacks.back());
-	//float const door_width(ds.get_width());
-	float const wall_thickness(get_wall_thickness()), door_to_wall_min_space(2.0*wall_thickness);
+	unsigned const part_id(room.part_id);
+	float const door_width(ds.get_width()), door_hwidth(0.5*door_width); // newly added doors will be this width as well
+	float const wall_thickness(get_wall_thickness()), wall_half_thick(0.5*wall_thickness), door_to_wall_min_space(2.0*wall_thickness);
+	float const fc_thick(get_fc_thickness());
+	vect_cube_t &hall_para_walls(interior->walls[!hall_dim]), &hall_perp_walls(interior->walls[hall_dim]);
 	room.is_office = 0; // but room.office_floorplan remains 1
 
 	if (btype == BTYPE_HOTEL) {
-#if 0
-		// TODO: divide into entryway or living room by door, bedroom by window, and bathroom
+		// divide into entryway or living room by door, bedroom by window, and bathroom
 		// divide room in short dim; side by window becomes bedroom, divide other side, part connected to door is living room/entryway, other part is bathroom
 		float const bed_lb_split_pos(room.get_center_dim(!hall_dim));
 		bool const split_door_side(ds.get_center_dim(hall_dim) < room.get_center_dim(hall_dim)); // door goes to living room, which is larger
 		float const liv_bath_split_pos(ds.d[hall_dim][split_door_side] + (split_door_side ? 1.0 : -1.0)*door_to_wall_min_space);
+		// add new rooms; rooms tile exactly and have no space for walls
 		cube_t bed(room), lb(room);
 		bed.d[!hall_dim][!hall_dir] = lb.d[!hall_dim][hall_dir] = bed_lb_split_pos;
 		cube_t living(lb), bath(lb);
 		bath.d[hall_dim][!split_door_side] = living.d[hall_dim][split_door_side] = liv_bath_split_pos;
-#else
-		room.assign_all_to(RTYPE_BED); // a good start for the main room connected to the door
-#endif
+		room.copy_from(bed); // ext_sides doesn't change
+		room.assign_all_to(RTYPE_BED);
+		unsigned const living_rid(add_room(living, part_id)), bath_rid(add_room(bath, part_id));
+		room_t &living_room(get_room(living_rid)), &bathroom(get_room(bath_rid));
+		living_room.assign_all_to(RTYPE_LIVING);
+		bathroom   .assign_all_to(RTYPE_BATH  );
+		living_room.office_floorplan = bathroom.office_floorplan = 1;
+		// add interior walls and doors
+		float const bed_center(living.get_center_dim(hall_dim)), bath_center(bath.get_center_dim(!hall_dim));
+		cube_t bed_wall(bed), bath_wall(bath);
+		clip_wall_to_ceil_floor(bed_wall,  fc_thick);
+		clip_wall_to_ceil_floor(bath_wall, fc_thick);
+		set_wall_width(bed_wall,  bed_lb_split_pos,   wall_half_thick, !hall_dim);
+		set_wall_width(bath_wall, liv_bath_split_pos, wall_half_thick,  hall_dim);
+		if (bed_wall .get_sz_dim( hall_dim) <= door_width) {cout << "bedroom too small: "  << bed .str() << endl;} // error?
+		else {insert_door_in_wall_and_add_seg(bed_wall,  bed_center -door_hwidth, bed_center +door_hwidth,  hall_dim, hall_dir);} // opens into bedroom
+		if (bath_wall.get_sz_dim(!hall_dim) <= door_width) {cout << "bathroom too small: " << bath.str() << endl;} // error?
+		else {insert_door_in_wall_and_add_seg(bath_wall, bath_center-door_hwidth, bath_center+door_hwidth, !hall_dim, split_door_side, 0, 1);} // opens into bathroom
+		hall_para_walls.push_back(bed_wall );
+		hall_perp_walls.push_back(bath_wall);
 	}
 	else if (btype == BTYPE_APARTMENT) {
 		// TODO

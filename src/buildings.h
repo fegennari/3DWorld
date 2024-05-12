@@ -1459,6 +1459,7 @@ struct building_interior_t {
 	~building_interior_t();
 	float get_doorway_width() const;
 	room_t const &get_room(unsigned room_ix) const {assert(room_ix < rooms.size()); return rooms[room_ix];}
+	room_t       &get_room(unsigned room_ix)       {assert(room_ix < rooms.size()); return rooms[room_ix];}
 	door_t const &get_door(unsigned door_ix) const {assert(door_ix < doors.size()); return doors[door_ix];}
 	door_t       &get_door(unsigned door_ix)       {assert(door_ix < doors.size()); return doors[door_ix];}
 	bool is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin=0.0f, bool inc_open=0, bool check_open_dir=0) const;
@@ -1798,6 +1799,7 @@ struct building_t : public building_geom_t {
 	bool is_room_adjacent_to_ext_door(cube_t const &room, bool front_door_only=0) const;
 	bool cube_int_ext_door(cube_t const &c) const;
 	room_t const &get_room(unsigned room_ix) const {assert(interior); return interior->get_room(room_ix);}
+	room_t       &get_room(unsigned room_ix)       {assert(interior); return interior->get_room(room_ix);}
 	door_t const &get_door(unsigned door_ix) const {assert(interior); return interior->get_door(door_ix);}
 	door_t       &get_door(unsigned door_ix)       {assert(interior); return interior->get_door(door_ix);}
 	point get_center_of_room(unsigned room_ix) const {return get_room(room_ix).get_cube_center();}
@@ -2160,7 +2162,7 @@ private:
 	void add_interior_door(door_t &door, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0);
 	void add_interior_door_for_floor(door_t &door, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0);
 	void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0);
-	void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir, bool keep_high_side, bool is_bathroom=0);
+	void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir, bool keep_high_side=0, bool is_bathroom=0);
 	void reverse_door_hinges_if_needed();
 	void ensure_doors_to_room_are_closed(room_t const &room, unsigned doors_start, bool ensure_locked=0);
 	unsigned get_floor_for_zval(float zval) const {return unsigned((zval - get_bcube_z1_inc_ext_basement())/get_window_vspace());}
