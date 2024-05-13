@@ -95,7 +95,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_MIRROR    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 40.0,  15.0,  "mirror");
 	bldg_obj_types[TYPE_SHELVES   ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 0.0,   0.0,   "shelves");
 	bldg_obj_types[TYPE_KEYBOARD  ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 15.0,  2.0,   "keyboard");
-	bldg_obj_types[TYPE_SHOWER    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 0.0,   0.0,   "shower");
+	bldg_obj_types[TYPE_SHOWER    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 0.0,   0.0,   "shower"); // technically large + small, but only large objects are dynamically updated
 	bldg_obj_types[TYPE_RDESK     ] = bldg_obj_type_t(1, 1, 1, 0, 0, 0, 1, 800.0, 300.0, "reception desk");
 	bldg_obj_types[TYPE_BOTTLE    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 1.0,   1.0,   "bottle", 1); // single use
 	bldg_obj_types[TYPE_WINE_RACK ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 3, 75.0,  40.0,  "wine rack");
@@ -173,7 +173,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CHECKOUT  ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1,  0.0,  300.0, "checkout counter");
 	bldg_obj_types[TYPE_FISHTANK  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 100.0, 160.0, "fish tank");
 	bldg_obj_types[TYPE_LAVALAMP  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 30.0,  3.0,   "lava lamp");
-	bldg_obj_types[TYPE_SHOWERTUB ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1,  0.0,  0.0,   "shower"); // this is the shower part of a shower+tub combo
+	bldg_obj_types[TYPE_SHOWERTUB ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1,  0.0,  0.0,   "shower"); // this is the shower part of a shower+tub combo; technically large and small
 	bldg_obj_types[TYPE_DBG_SHAPE ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 1,  0.0,  0.0,   "debug shape"); // small (optimization)
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models

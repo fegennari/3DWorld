@@ -867,10 +867,10 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_DRESSER: case TYPE_NIGHTSTAND: add_dresser(*i, tscale, 1, 0); break;
 		case TYPE_DRESS_MIR: add_dresser_mirror(*i, tscale); break;
 		case TYPE_FLOORING:add_flooring(*i, tscale); break;
-		case TYPE_CLOSET:  add_closet  (*i, wall_tex, building.get_trim_color(), 1, 0); break;
+		case TYPE_CLOSET:  add_closet  (*i, wall_tex, building.get_trim_color(), 1, 0); break; // inc_lg=1, inc_sm=0
 		case TYPE_MIRROR:  add_mirror  (*i); break;
-		case TYPE_SHOWER:  add_shower  (*i, tscale); break;
-		case TYPE_SHOWERTUB: add_shower_tub(*i, wall_tex, tscale); break; // white basement walls
+		case TYPE_SHOWER:  add_shower  (*i, tscale, 1, 0); break; // inc_lg=1, inc_sm=0
+		case TYPE_SHOWERTUB: add_shower_tub(*i, wall_tex, building.get_trim_color(), tscale, 1, 0); break; // inc_lg=1, inc_sm=0
 		case TYPE_BLINDS:  add_blinds  (*i); break;
 		case TYPE_FPLACE:  add_fireplace(*i, tscale); break;
 		case TYPE_FCABINET: add_filing_cabinet(*i, 1, 0); break; // lg
@@ -933,7 +933,9 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_DRESSER: case TYPE_NIGHTSTAND: add_dresser(c, tscale, 0, 1); break;
 		case TYPE_TCAN:      add_trashcan (c); break;
 		case TYPE_SIGN:      add_sign     (c, 1, inc_text); break; // sm, maybe text
-		case TYPE_CLOSET:    add_closet   (c, tid_nm_pair_t(), trim_color, 0, 1); break; // add closet wall trim and interior objects, don't need wall_tex
+		case TYPE_CLOSET:    add_closet   (c, tid_nm_pair_t(), trim_color, 0, 1); break; // add closet wall trim and interior objects, don't need wall_tex; inc_lg=0, inc_sm=1
+		case TYPE_SHOWER:    add_shower   (c, tscale, 0, 1); break; // inc_lg=0, inc_sm=1
+		case TYPE_SHOWERTUB: add_shower_tub(c, tid_nm_pair_t(), trim_color, tscale, 0, 1); break; // don't need wall_tex; inc_lg=0, inc_sm=1
 		case TYPE_RAILING:   if (!c.is_exterior()) {add_railing(c);}  break; // interior only
 		case TYPE_PLANT:     add_potted_plant(c, 0, 1); break; // plant only
 		case TYPE_CRATE:     add_crate    (c); break; // not small but only added to windowless rooms
