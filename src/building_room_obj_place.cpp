@@ -86,7 +86,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 	}
 	chair_pos[dim] += dir_sign*push_out*chair_hwidth;
 	cube_t const chair(get_cube_height_radius(chair_pos, chair_hwidth, chair_height));
-	if (!is_valid_placement_for_room(chair, room, blockers, 0, room_pad)) return 0; // check proximity to doors
+	if (!is_valid_placement_for_room(chair, room, blockers, 1, room_pad)) return 0; // check proximity to doors; inc_open_doors=1
 	vect_room_object_t &objs(interior->room_geom->objs);
 
 	if (office_chair) {
