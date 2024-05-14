@@ -1417,8 +1417,9 @@ colorRGBA building_t::get_ceil_tex_and_color(cube_t const &ceil_cube, tid_nm_pai
 		return WHITE; // basement walls are always white
 	}
 	// normal ceiling texture
-	tex =  (is_house ? mat.house_ceil_tex   : mat.ceil_tex  );
-	return (is_house ? mat.house_ceil_color : mat.ceil_color);
+	bool const residential(is_residential()); // apartments and hotels use house ceiling textures and colors
+	tex =  (residential ? mat.house_ceil_tex   : mat.ceil_tex  );
+	return (residential ? mat.house_ceil_color : mat.ceil_color);
 }
 
 void draw_building_ext_door(building_draw_t &bdraw, tquad_with_ix_t const &door, building_t const &b) {
@@ -1829,8 +1830,8 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 		colorRGBA const color(get_ceil_tex_and_color(*i, tex));
 		bdraw.add_section(*this, 0, *i, tex, color, 4, 0, skip_top, 1, 0); // no AO; Z dim only
 	} // for i
-	// minor optimization: don't need shadows for ceilings because lights only point down; assumes ceil_tex is only used for ceilings; not true for all houses
-	if (!is_house) {bdraw.set_no_shadows_for_tex(mat.ceil_tex);}
+	// minor optimization: don't need shadows for ceilings because lights only point down; assumes ceil_tex is only used for ceilings; not true for all houses/apts/hotels
+	if (!is_residential()) {bdraw.set_no_shadows_for_tex(mat.ceil_tex);}
 	float const wall_thickness(get_wall_thickness()), extb_wall_thresh(1.1*wall_thickness); // extb_wall_thresh uses wall thickness + tolerance
 
 	for (unsigned dim = 0; dim < 2; ++dim) { // Note: can almost pass in (1U << dim) as dim_filt, if it wasn't for door cutouts (2.2M T)
@@ -1903,7 +1904,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 				set_cube_zvals(ww_floor, zval, zval+fc_thickness);
 				set_cube_zvals(ww_ceil,  next_zval-fc_thickness, next_zval);
 				bdraw.add_section(*this, 0, ww_floor, mat.floor_tex, mat.floor_color, 4, 1, 0, 1, 0); // no AO; top only
-				bdraw.add_section(*this, 0, ww_ceil,  mat.ceil_tex,  mat.ceil_color,  4, 0, 1, 1, 0); // no AO; bottom only
+				bdraw.add_section(*this, 0, ww_ceil,  mat.ceil_tex,  mat.ceil_color,  4, 0, 1, 1, 0); // no AO; bottom only; applies to apartments and hotels as well
 			}
 			// walls on all 4 sides; walls extend through all floors; unlike normal exterior walls, these are windowless and have thickness
 			for (unsigned dim = 0; dim < 2; ++dim) {
