@@ -559,17 +559,44 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 	cube_t const room_area(get_walkable_room_bounds(room)); // right against the wall
 	cube_t place_area(room_area);
 	place_area.expand_by(-0.25*get_wall_thickness()); // common spacing to wall
-	point const table_pos(room.xc(), room.yc(), zval); // approximate; can be placed 10% away from the room center
-	bool const use_tall_table(rgen.rand_float() < 0.75); // 75% of the time
-	unsigned const max_chairs(use_tall_table ? 2 : 0); // only add chairs (bar stools) to tall tables
-	add_table_and_chairs(rgen, room, vect_cube_t(), room_id, table_pos, WHITE, 0.1, tot_light_amt, max_chairs, use_tall_table); // add table
+	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const room_objs_start(objs.size());
+	bool const add_tall_table(rgen.rand_float() < 0.75); // 75% of the time
+
+	if (add_tall_table) { // add tall table with two bar stools
+		point const table_pos(room.xc(), room.yc(), zval); // approximate; can be placed 10% away from the room center
+		add_table_and_chairs(rgen, room, vect_cube_t(), room_id, table_pos, WHITE, 0.1, tot_light_amt, 2, add_tall_table);
+	}
 	// place 1-3 couch(es) along a wall
+	unsigned const couches_start(objs.size());
 	unsigned const counts[4] = {1, 2, 2, 3}; // 2 couches is more common
 	add_couches_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, counts);
+	unsigned const couches_end(objs.size());
+	float const window_vspacing(get_window_vspace());
+
+	if (couches_start < couches_end) { // at least one couch was placed; add tables in front of couches
+		vect_cube_t blockers;
+
+		for (unsigned i = room_objs_start; i < couches_end; ++i) {
+			room_object_t const &c(objs[i]);
+			if (c.type != TYPE_BLOCKER) {blockers.push_back(c);} // add real objects, not blocker padding in front of couches
+		}
+		for (unsigned i = couches_start; i < couches_end; ++i) {
+			room_object_t const &c(objs[i]);
+			if (c.type != TYPE_COUCH) continue; // skip blockers
+			cube_t table(c);
+			table.z2() = zval + 0.18*rgen.rand_uniform(1.0, 1.1)*window_vspacing; // top
+			table.translate_dim( c.dim, (c.dir ? 1.0 : -1.0)*1.1*c.get_depth());
+			if (!is_valid_placement_for_room(table, room, blockers, 0)) continue; // check proximity to doors and collision with blockers
+			table.expand_in_dim(!c.dim, -0.25*c.get_width()); // shrink table length
+			table.expand_in_dim( c.dim, -0.20*c.get_depth()); // shrink table width
+			objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, 0, tot_light_amt, SHAPE_CUBE);
+			set_obj_id(objs);
+		}
+	}
 	// add a TV on the wall (not on a table)
-	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const tv_obj_ix(objs.size());
-	float const tv_zval(zval + 0.3*get_window_vspace());
+	float const tv_zval(zval + 0.3*window_vspacing);
 	
 	if (place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, room, 0.5, rgen, tv_zval, room_id, tot_light_amt, room_area, objs_start, 4.0, 4, 1, BKGRAY, 0, RO_FLAG_HANGING)) {
 		offset_hanging_tv(objs[tv_obj_ix]);
@@ -581,8 +608,8 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 	for (unsigned n = 0; n < num_bookcases; ++n) {add_bookcase_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, 0);} // is_basement=0
 	if (is_residential()) {add_fishtank_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);}
 	place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, room, 0.75, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.2, 4, 0, WHITE, 1); // not at window
-	// place 0-3 bar stools
-	unsigned const num_stools((rgen.rand() & 3) + !use_tall_table);
+	// place 0-3 bar stools; fewer if there's already a table
+	unsigned const num_stools((rgen.rand() & 3) + !add_tall_table);
 
 	for (unsigned n = 0; n < num_stools; ++n) {
 		place_model_along_wall(OBJ_MODEL_BAR_STOOL, TYPE_BAR_STOOL, room, 0.4, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 4, 0);
