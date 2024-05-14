@@ -1165,7 +1165,7 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
 		set_wall_width(c, center, hwidth, !dim);
 
-		if (not_at_window && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) {
+		if (not_at_window && has_windows() && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) {
 			cube_t const part(get_part_for_room(room));
 			float const hspacing(get_hspacing_for_part(part, !dim)), border(get_window_h_border());
 			// assume object is no larger than 2x window size and check left, right, and center positions
