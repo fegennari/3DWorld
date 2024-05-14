@@ -1198,7 +1198,7 @@ float building_t::add_flooring(room_t const &room, float &zval, unsigned room_id
 }
 
 bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt,
-	unsigned objs_start, unsigned floor, bool is_basement, unsigned &added_bathroom_objs_mask)
+	unsigned objs_start, unsigned floor, bool is_basement, bool add_shower_tub, unsigned &added_bathroom_objs_mask)
 {
 	// Note: zval passed by reference
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
@@ -1232,7 +1232,6 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 		}
 	}
 	float const tub_height_factor(0.2); // in units of floor spacing
-	bool const add_shower_tub(is_residential()); // residential buildings have showers and/or tubs; office buildings have only toilets and sinks
 	bool placed_obj(0), placed_toilet(0), no_tub(0);
 	
 	// place toilet first because it's in the corner out of the way and higher priority

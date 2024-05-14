@@ -1182,7 +1182,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		unsigned const living_rid(add_room(living, part_id)), bath_rid(add_room(bath, part_id));
 		room_t &living_room(get_room(living_rid)), &bathroom(get_room(bath_rid));
 		living_room.assign_all_to(RTYPE_LIVING);
-		bathroom   .assign_all_to(RTYPE_BATH  );
+		bathroom   .assign_all_to(RTYPE_BATH  ); // bathroom should be added last
 		living_room.office_floorplan = bathroom.office_floorplan = 1;
 		// add interior walls and doors
 		float const bed_center(living.get_center_dim(hall_dim)), bath_center(bath.get_center_dim(!hall_dim));
