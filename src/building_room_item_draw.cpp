@@ -1730,7 +1730,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	bool const draw_int_detail_objs(inc_small >= 3 && !shadow_only);
 	// update clocks if moved to next second; only applies to the player's building
 	bool const update_clocks(player_in_building && inc_small >= 2 && !shadow_only && !reflection_pass && have_clock && check_clock_time());
-	bool const player_in_building_or_doorway(player_in_building || building.point_near_ext_door(camera_bs, get_door_open_dist()));
+	bool const player_in_doorway(building.point_near_ext_door(camera_bs, get_door_open_dist()));
+	bool const player_in_building_or_doorway(player_in_building || player_in_doorway);
 	if (bbd != nullptr) {bbd->set_camera_dir_mask(camera_bs, building.bcube);}
 	brg_batch_draw_t *const bbd_in(bbd); // capture bbd for instance drawing before setting to null if player_in_building
 	if (player_in_building_or_doorway) {bbd = nullptr;} // use immediate drawing when player is in the building because draw order matters for alpha blending
@@ -1947,11 +1948,11 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 
 	// draw water for sinks that are turned on, lava lamps, fish in fishtanks, and AO shadows; these aren't visible when the player is outside looking in through a window
 	if (player_in_building_or_doorway && !shadow_only) {
-		bool const draw_fish(have_fish_model());
+		bool const draw_fish(have_fish_model() && (player_in_doorway || building.point_in_building_or_basement_bcube(camera_bs)));
 		float const ao_z_off(1.1*building.get_flooring_thick()); // slightly above rugs and flooring
 		float const ao_zmin(camera_bs.z - 2.0*floor_spacing);
 		static quad_batch_draw ao_qbd;
-		fishtank_manager.next_frame(building);
+		if (draw_fish) {fishtank_manager.next_frame(building);}
 		auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
 		point pts[4];
 
