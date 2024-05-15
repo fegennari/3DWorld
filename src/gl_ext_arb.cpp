@@ -24,8 +24,8 @@ void init_glew() {
 		exit(1);
 	}
 #endif
-	if (!glewIsSupported("GL_VERSION_3_3")) {
-		std::cerr << "Error: GL version 3.3 not found" << endl;
+	if (!glewIsSupported("GL_VERSION_4_5")) {
+		std::cerr << "Error: GL version 4.5 not found" << endl;
 		exit(1);
 	}
 }
