@@ -1159,7 +1159,8 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 	float const door_width(ds.get_width()), door_hwidth(0.5*door_width); // newly added doors will be this width as well
 	float const wall_thickness(get_wall_thickness()), wall_half_thick(0.5*wall_thickness), door_to_wall_min_space(2.0*wall_thickness);
 	float const fc_thick(get_fc_thickness()), window_vspacing(get_window_vspace());
-	bool const lg_door_side(ds.get_center_dim(hall_dim) < room.get_center_dim(hall_dim)); // more space on this side of door
+	float const door_center(ds.get_center_dim(hall_dim)), room_center(room.get_center_dim(hall_dim));
+	bool const lg_door_side(door_center < room_center); // more space on this side of door
 	vect_cube_t &hall_para_walls(interior->walls[!hall_dim]), &hall_perp_walls(interior->walls[hall_dim]);
 	bool make_three_room(btype == BTYPE_HOTEL);
 	if (btype == BTYPE_APARTMENT && num_windows < 3) {make_three_room = 1;} // small apartments only have space for three rooms
@@ -1202,12 +1203,51 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		hall_perp_walls.push_back(bath_wall);
 	}
 	else if (btype == BTYPE_APARTMENT) {
-		// TODO
-		// 1-2 bedrooms; must have at least one window in each
-		// living room; should have at least one window and must connect to door, so must span entire room depth?
+		// entryway connected to front door, or could be living room if much longer in hallway dim
+		// bedroom; must have at least one window
+		// living room; should have at least one window
 		// bathroom
 		// kitchen
-		room.assign_all_to(RTYPE_LIVING); // a good start for the main room connected to the door
+		float const front_back_split_pos(room.get_center_dim(!hall_dim) + (hall_dir ? -1.0 : 1.0)*0.1*room.get_sz_dim(!hall_dim)); // bed+living are slightly larger
+		float const living_bed_split_pos(room_center);
+		float const entry_door_space_signed((lg_door_side ? 1.0 : -1.0)*(0.5*door_width + door_to_wall_min_space));
+		float kitchen_split_pos(ds.d[hall_dim][ lg_door_side] + entry_door_space_signed);
+		float bath_split_pos   (ds.d[hall_dim][!lg_door_side] - entry_door_space_signed);
+		float const shift(entry_door_space_signed * min(0.5f, 0.5f*fabs(door_center - room_center)/door_width)); // move split closer to the center of the room
+		kitchen_split_pos += shift;
+		bath_split_pos    += shift;
+		// add new rooms; rooms tile exactly and have no space for walls
+		cube_t const room_area(room);
+		cube_t bed(room), living(room), bath(room), kitchen(room), entry(room);
+		bed.d[!hall_dim][!hall_dir] = living.d[!hall_dim][!hall_dir] = /* window side */
+			bath.d[!hall_dim][hall_dir] = kitchen.d[!hall_dim][hall_dir] = entry.d[!hall_dim][hall_dir] = front_back_split_pos; // entry side
+		living .d[hall_dim][!lg_door_side] = bed  .d[hall_dim][ lg_door_side] = living_bed_split_pos; // living room should be larger, or equal size
+		kitchen.d[hall_dim][!lg_door_side] = entry.d[hall_dim][ lg_door_side] = kitchen_split_pos;
+		bath   .d[hall_dim][ lg_door_side] = entry.d[hall_dim][!lg_door_side] = bath_split_pos;
+		room.copy_from(bed); // TODO: update ext_sides
+		room.assign_all_to(RTYPE_BED);
+		unsigned const living_rid(add_room(living, part_id)), bath_rid(add_room(bath, part_id)), kitchen_rid(add_room(kitchen, part_id)), entry_rid(add_room(entry, part_id));
+		room_t &living_room(get_room(living_rid)), &bathroom(get_room(bath_rid)), &kitchen_room(get_room(kitchen_rid)), &entry_room(get_room(entry_rid));
+		living_room .assign_all_to(RTYPE_LIVING );
+		bathroom    .assign_all_to(RTYPE_BATH   ); // bathroom should be added last
+		kitchen_room.assign_all_to(RTYPE_KITCHEN);
+		entry_room  .assign_all_to(RTYPE_ENTRY  );
+		entry_room.is_entry = 1;
+		// add interior walls and doors
+		cube_t fb_wall(room_area), lb_wall(bed), ke_wall(kitchen), be_wall(bath); // front-back, living room-bedroom, kitchen-entryway, bathroom-entryway
+		clip_wall_to_ceil_floor(fb_wall, fc_thick);
+		clip_wall_to_ceil_floor(lb_wall, fc_thick);
+		clip_wall_to_ceil_floor(ke_wall, fc_thick);
+		clip_wall_to_ceil_floor(be_wall, fc_thick);
+		set_wall_width(fb_wall, front_back_split_pos, wall_half_thick, !hall_dim);
+		set_wall_width(lb_wall, living_bed_split_pos, wall_half_thick,  hall_dim);
+		set_wall_width(ke_wall, kitchen_split_pos,    wall_half_thick,  hall_dim);
+		set_wall_width(be_wall, bath_split_pos,       wall_half_thick,  hall_dim);
+		// TODO: add doors
+		hall_para_walls.push_back(fb_wall );
+		hall_perp_walls.push_back(lb_wall);
+		hall_perp_walls.push_back(ke_wall);
+		hall_perp_walls.push_back(be_wall);
 	}
 	else {assert(0);} // unsupported building type
 

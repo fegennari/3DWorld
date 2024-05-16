@@ -3039,7 +3039,7 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 			for (unsigned n = 0; n < 20; ++n) { // make 20 attempts at placing a fire extinguisher
 				float const val(room_rgen.rand_uniform(wall_pos_lo, wall_pos_hi)), cov_lo(val - min_clearance), cov_hi(val + min_clearance);
 
-				if (is_contained_in_wall_range(wall_pos, cov_lo, cov_hi, zval, dim)) { // shouldn't need to check anything else?
+				if (is_contained_in_wall_range(wall_pos, cov_lo, cov_hi, (zval + 0.5*window_vspacing), dim)) { // shouldn't need to check anything else?
 					add_fire_ext(fe_height, fe_radius, zval, wall_pos, val, room_id, tot_light_amt, dim, dir);
 					break; // done/success
 				}
