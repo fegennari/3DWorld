@@ -172,6 +172,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
 	unsigned added_kitchen_mask(0), added_living_mask(0), added_bath_mask(0); // per-floor
 	unsigned added_bathroom_objs_mask(0), numbered_rooms_seen(0);
+	uint8_t last_unit_id(0);
 	uint64_t has_walkway_on_floor(0);
 	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0), added_pool_room(0);
 	light_ix_assign_t light_ix_assign;
@@ -441,7 +442,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 				objs.emplace_back(light_obj);
 			} // for l
-			if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
+			if (is_lit) {r->lit_by_floor |= (1ULL << (f&31));} // flag this floor as being lit (for up to 32 floors)
 
 			if (is_backrooms) {
 				room_object_t const ref_light(light, TYPE_LIGHT, room_id, room_dim, 0, (flags | RO_FLAG_NOCOLL), light_amt, light_shape, color);
@@ -542,8 +543,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			bool is_apt_or_hotel_room(is_apt_or_hotel() && r->office_floorplan && !r->is_hallway && !r->is_office && !is_basement && init_rtype_f0 != RTYPE_NOTSET);
 			bool const not_private_room(has_walkway_on_floor & floor_mask); // current unit has an intersecting walkway and is not private
-			// bathroom is always the last room per apartment/hotel unit; reset has_walkway_on_floor for this floor when we see it, even if bathroom is overridden
-			if (is_apt_or_hotel_room && init_rtype_f0 == RTYPE_BATH) {has_walkway_on_floor &= ~floor_mask;}
+			// reset has_walkway_on_floor for this floor when we move to a new apartment/hotel unit
+			if (r->unit_id != last_unit_id) {has_walkway_on_floor &= ~floor_mask; last_unit_id = r->unit_id;}
 
 			if (is_apt_or_hotel_room || r->is_office) { // check if this room is adjacent to an exterior/walkway door, and if so, make it a lounge
 				cube_t room_this_floor(*r);
@@ -567,7 +568,29 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					added_tc = can_place_onto = add_table_and_chairs(rgen, *r, blockers, room_id, room_center, chair_color, 0.1, tot_light_amt);
 					add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start); // return value ignored
 					is_living = is_numbered_room = 1;
+				}
+				else if (init_rtype_f0 == RTYPE_BED) { // assigned bedroom
+					can_place_onto |= add_bedroom_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_lit, 0, 1, light_ix_assign);
+					added_bedroom = is_bedroom = 1;
+				}
+				else if (init_rtype_f0 == RTYPE_BATH) { // assigned bathroom
+					bool const add_shower_tub(!not_private_room);
+					add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement, add_shower_tub, added_bathroom_objs_mask); // return ignored
+					is_bathroom = added_bathroom = 1;
+				}
+				else if (init_rtype_f0 == RTYPE_KITCHEN) { // assigned apartment kitchen
+					add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, 0); // allow_adj_ext_door=0; return value ignored
+					is_kitchen = 1;
+				}
+				else if (init_rtype_f0 == RTYPE_LOBBY) { // lobby is similar to lounge (can we get here?)
+					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start); // return value ignored
+				}
+				else if (init_rtype_f0 == RTYPE_ENTRY) { // entryway
+					// TODO: too small, no objects for now
+				}
+				else {cout << TXT(r->str()) << TXTi(init_rtype_f0) << endl; assert(0);} // unsupported room type
 
+				if (r->is_entry) { // this is the room that has the front entry door connected to the hallway
 					if (not_private_room) { // doors should not auto close
 						vect_door_stack_t const &doorways(get_doorways_for_room(*r, room_center.z));
 						assert(!doorways.empty());
@@ -586,23 +609,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						add_door_sign(std::to_string(room_num), *r, room_center.z, room_id, tot_light_amt); // Note: sign text is always unique
 					}
 				}
-				else if (init_rtype_f0 == RTYPE_BED) { // assigned bedroom
-					can_place_onto |= add_bedroom_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_lit, 0, 1, light_ix_assign);
-					added_bedroom = is_bedroom = 1;
-				}
-				else if (init_rtype_f0 == RTYPE_BATH) { // assigned bathroom
-					bool const add_shower_tub(!not_private_room);
-					add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement, add_shower_tub, added_bathroom_objs_mask); // return ignored
-					is_bathroom = added_bathroom = 1;
-				}
-				else if (init_rtype_f0 == RTYPE_KITCHEN) { // assigned apartment kitchen
-					add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, 0); // allow_adj_ext_door=0; return value ignored
-					is_kitchen = 1;
-				}
-				else if (init_rtype_f0 == RTYPE_LOBBY) { // lobby is similar to lounge (can we get here?)
-					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start); // return value ignored
-				}
-				else {cout << TXT(r->str()) << TXTi(init_rtype_f0) << endl; assert(0);} // unsupported room type
 				added_obj = 1; // assume something was added above, and don't place any other furniture or try to assign to another room type
 			}
 			// bedroom or bathroom case; need to check first floor even if must_be_bathroom

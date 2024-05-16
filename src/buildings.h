@@ -1200,19 +1200,20 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 	void move_closest_in_dir_to_front(float zval, bool dir);
 };
 
-unsigned const NUM_RTYPE_SLOTS = 6; // enough for houses; hard max is 8
+unsigned const NUM_RTYPE_SLOTS = 8; // enough for houses; hard max is 8
 inline unsigned wrap_room_floor(unsigned floor) {return min(floor, NUM_RTYPE_SLOTS-1U);}
 
-struct room_t : public cube_t { // size=64
+struct room_t : public cube_t { // size=60
 	bool has_center_stairs=0, no_geom=0, is_hallway=0, is_office=0, office_floorplan=0, is_sec_bldg=0, unpowered=0;
-	bool has_mirror=0, has_skylight=0, is_single_floor=0, has_out_of_order=0;
+	bool has_mirror=0, has_skylight=0, is_single_floor=0, has_out_of_order=0, is_entry=0;
 	uint8_t has_stairs=0; // per-floor bit mask; always set to 255 for stairs that span the entire room
 	uint8_t has_elevator=0; // number of elevators, usually either 0 or 1
 	uint8_t interior=0; // 0=not interior (has windows), 1=interior, 2=extended basement, {3,4}=extended basement connector, dim=interior-3
 	uint8_t ext_sides=0; // sides that have exteriors, and likely windows (bits for x1, x2, y1, y2)
 	uint8_t part_id=0, num_lights=0, rtype_locked=0;
+	uint8_t unit_id=0; // for apartments and hotels
 	room_type rtype[NUM_RTYPE_SLOTS]; // this applies to the first few floors because some rooms can have variable per-floor assignment
-	uint64_t lit_by_floor=0;
+	uint32_t lit_by_floor=0; // used for AI placement; 32 floor is enough for most buildings
 	float light_intensity=0.0; // due to room lights, if turned on
 
 	room_t() {assign_all_to(RTYPE_NOTSET, 0);} // locked=0
@@ -1222,7 +1223,7 @@ struct room_t : public cube_t { // size=64
 	void assign_to(room_type rt, unsigned floor, bool locked=0); // unlocked by default
 	room_type get_room_type (unsigned floor) const {return rtype[wrap_room_floor(floor)];}
 	bool is_rtype_locked    (unsigned floor) const {return (rtype_locked & (1 << wrap_room_floor(floor)));}
-	bool is_lit_on_floor    (unsigned floor) const {return (lit_by_floor & (1ULL << (floor&63)));}
+	bool is_lit_on_floor    (unsigned floor) const {return (lit_by_floor & (1ULL << (floor&31)));}
 	bool has_stairs_on_floor(unsigned floor) const {return (has_center_stairs || (has_stairs & (1U << min(floor, 7U))));} // floors >= 7 are treated as the top floor
 	bool is_garage_or_shed  (unsigned floor) const {return (is_sec_bldg || get_room_type(floor) == RTYPE_GARAGE || get_room_type(floor) == RTYPE_SHED);}
 	bool is_ext_basement     () const {return (interior >= 2);}
@@ -1532,6 +1533,7 @@ struct building_t : public building_geom_t {
 	uint8_t has_chimney=0; // 0=none, 1=interior, 2=exterior with fireplace
 	uint8_t city_ix=0; // supports up to 256 cities
 	uint8_t floor_ext_door_mask=0; // used for multi-family houses
+	uint8_t next_unit_id=1; // for apartments and hotels
 	building_type_t btype=BTYPE_UNSET;
 	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_complex_floorplan=0, has_helipad=0, has_ac=0;
 	mutable bool has_attic_window=0; // make mutable so that drawing code can update/cache this value

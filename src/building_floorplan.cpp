@@ -1147,6 +1147,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 	assert(!rooms.empty());
 	assert(!interior->door_stacks.empty());
 	room_t &room(rooms.back());
+	unsigned const new_rooms_start(rooms.size());
 	//if (is_room_adjacent_to_ext_door(room)) {} // can't check, walkway hasn't been added yet
 	door_stack_t const &ds(interior->door_stacks.back());
 	bool /*at_lo_end(room_row_ix == 0),*/ at_hi_end(room_row_ix == hall_num_rooms-1);
@@ -1162,28 +1163,28 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 	bool make_three_room(btype == BTYPE_HOTEL);
 	if (btype == BTYPE_APARTMENT && num_windows < 3) {make_three_room = 1;} // small apartments only have space for three rooms
 	room.is_office = 0; // but room.office_floorplan remains 1
+	// make sure doors auto close
+	assert(ds.first_door_ix < interior->doors.size());
+	for (auto d = interior->doors.begin()+ds.first_door_ix; d != interior->doors.end(); ++d) {d->make_auto_close();}
+	bool const lg_door_side(ds.get_center_dim(hall_dim) < room.get_center_dim(hall_dim)); // more space on this side of door
 
 	if (make_three_room) {
-		// make sure doors auto close
-		assert(ds.first_door_ix < interior->doors.size());
-		for (auto d = interior->doors.begin()+ds.first_door_ix; d != interior->doors.end(); ++d) {d->make_auto_close();}
 		// divide into entryway or living room by door, bedroom by window, and bathroom
 		// divide room in short dim; side by window becomes bedroom, divide other side, part connected to door is living room/entryway, other part is bathroom
 		float const bed_lb_split_pos(room.get_center_dim(!hall_dim));
-		bool const split_door_side(ds.get_center_dim(hall_dim) < room.get_center_dim(hall_dim)); // door goes to living room, which is larger
-		float const liv_bath_split_pos(ds.d[hall_dim][split_door_side] + (split_door_side ? 1.0 : -1.0)*door_to_wall_min_space);
+		float const liv_bath_split_pos(ds.d[hall_dim][lg_door_side] + (lg_door_side ? 1.0 : -1.0)*door_to_wall_min_space); // door goes to living room, which is larger
 		// add new rooms; rooms tile exactly and have no space for walls
 		cube_t bed(room), lb(room);
 		bed.d[!hall_dim][!hall_dir] = lb.d[!hall_dim][hall_dir] = bed_lb_split_pos;
 		cube_t living(lb), bath(lb);
-		bath.d[hall_dim][!split_door_side] = living.d[hall_dim][split_door_side] = liv_bath_split_pos;
+		bath.d[hall_dim][!lg_door_side] = living.d[hall_dim][lg_door_side] = liv_bath_split_pos;
 		room.copy_from(bed); // ext_sides doesn't change
 		room.assign_all_to(RTYPE_BED);
 		unsigned const living_rid(add_room(living, part_id)), bath_rid(add_room(bath, part_id));
 		room_t &living_room(get_room(living_rid)), &bathroom(get_room(bath_rid));
 		living_room.assign_all_to(RTYPE_LIVING);
 		bathroom   .assign_all_to(RTYPE_BATH  ); // bathroom should be added last
-		living_room.office_floorplan = bathroom.office_floorplan = 1;
+		living_room.is_entry = 1;
 		// add interior walls and doors
 		float const bed_center(living.get_center_dim(hall_dim)), bath_center(bath.get_center_dim(!hall_dim));
 		cube_t bed_wall(bed), bath_wall(bath);
@@ -1194,7 +1195,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		if (bed_wall .get_sz_dim( hall_dim) <= door_width) {cout << "bedroom too small: "  << bed .str() << endl;} // error?
 		else {insert_door_in_wall_and_add_seg(bed_wall,  bed_center -door_hwidth, bed_center +door_hwidth,  hall_dim, hall_dir);} // opens into bedroom
 		if (bath_wall.get_sz_dim(!hall_dim) <= door_width) {cout << "bathroom too small: " << bath.str() << endl;} // error?
-		else {insert_door_in_wall_and_add_seg(bath_wall, bath_center-door_hwidth, bath_center+door_hwidth, !hall_dim, split_door_side, 0, 1);} // opens into bathroom
+		else {insert_door_in_wall_and_add_seg(bath_wall, bath_center-door_hwidth, bath_center+door_hwidth, !hall_dim, lg_door_side, 0, 1);} // opens into bathroom
 		hall_para_walls.push_back(bed_wall );
 		hall_perp_walls.push_back(bath_wall);
 	}
@@ -1207,6 +1208,12 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		room.assign_all_to(RTYPE_LIVING); // a good start for the main room connected to the door
 	}
 	else {assert(0);} // unsupported building type
+
+	for (auto r = rooms.begin()+new_rooms_start; r != rooms.end(); ++r) {
+		r->office_floorplan = 1;
+		r->unit_id = next_unit_id;
+	}
+	++next_unit_id;
 }
 
 bool building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
