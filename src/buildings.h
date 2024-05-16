@@ -1203,7 +1203,7 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 unsigned const NUM_RTYPE_SLOTS = 8; // enough for houses; hard max is 8
 inline unsigned wrap_room_floor(unsigned floor) {return min(floor, NUM_RTYPE_SLOTS-1U);}
 
-struct room_t : public cube_t { // size=60
+struct room_t : public cube_t { // size=60; can be reduced to 52 by turning 8 of these booleans into uint8_t flags
 	bool has_center_stairs=0, no_geom=0, is_hallway=0, is_office=0, office_floorplan=0, is_sec_bldg=0, unpowered=0;
 	bool has_mirror=0, has_skylight=0, is_single_floor=0, has_out_of_order=0, is_entry=0;
 	uint8_t has_stairs=0; // per-floor bit mask; always set to 255 for stairs that span the entire room

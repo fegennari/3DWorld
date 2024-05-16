@@ -162,7 +162,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	vector<room_t> &rooms(interior->rooms);
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
-	float const light_thick(0.025*window_vspacing), def_light_size(0.1*window_vspacing);
+	float const light_thick(0.025*window_vspacing), def_light_size(0.1*window_vspacing), doorway_width(get_doorway_width());
 	interior->room_geom->obj_scale = window_vspacing; // used to scale room object textures
 	unsigned tot_num_rooms(0), num_bathrooms(0), num_bedrooms(0), num_storage_rooms(0);
 	for (auto r = rooms.begin(); r != rooms.end(); ++r) {tot_num_rooms += calc_num_floors_room(*r, window_vspacing, floor_thickness);}
@@ -173,7 +173,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	unsigned added_kitchen_mask(0), added_living_mask(0), added_bath_mask(0); // per-floor
 	unsigned added_bathroom_objs_mask(0), numbered_rooms_seen(0);
 	uint8_t last_unit_id(0);
-	uint64_t has_walkway_on_floor(0);
+	uint64_t is_public_on_floor(0); // 64 bit masks
 	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0), added_pool_room(0);
 	light_ix_assign_t light_ix_assign;
 	interior->create_fc_occluders(); // not really part of room geom, but needed for generating and drawing room geom, so we create them here
@@ -271,6 +271,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool added_bathroom(0), is_numbered_room(0);
 		float z(r->z1());
 		if (!r->interior) {r->interior = (is_basement || is_room_windowless(*r));} // AKA windowless; calculate if not already set
+		// reset is_public_on_floor when we move to a new apartment/hotel unit
+		if (r->unit_id != last_unit_id) {is_public_on_floor = 0; last_unit_id = r->unit_id;}
 		// make chair colors consistent for each part by using a few variables for a hash
 		colorRGBA chair_color(chair_colors[(13*r->part_id + 123*tot_num_rooms + 617*mat_ix + 1367*num_floors) % NUM_CHAIR_COLORS]);
 		light_ix_assign.next_room();
@@ -542,23 +544,30 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 			}
 			bool is_apt_or_hotel_room(is_apt_or_hotel() && r->office_floorplan && !r->is_hallway && !r->is_office && !is_basement && init_rtype_f0 != RTYPE_NOTSET);
-			bool const not_private_room(has_walkway_on_floor & floor_mask); // current unit has an intersecting walkway and is not private
-			// reset has_walkway_on_floor for this floor when we move to a new apartment/hotel unit
-			if (r->unit_id != last_unit_id) {has_walkway_on_floor &= ~floor_mask; last_unit_id = r->unit_id;}
+			bool const not_private_room(is_public_on_floor & floor_mask); // current unit has an intersecting walkway and is not private
 
 			if (is_apt_or_hotel_room || r->is_office) { // check if this room is adjacent to an exterior/walkway door, and if so, make it a lounge
 				cube_t room_this_floor(*r);
 				set_cube_zvals(room_this_floor, z, (z + floor_height));
+				bool make_public(0);
 
-				if (is_room_adjacent_to_ext_door(room_this_floor)) { // connected to walkway door
+				if (has_walkway && is_room_adjacent_to_ext_door(room_this_floor)) { // connected to walkway door
 					// make this a lounge; but if this is a sub-room of an apartment or hotel room, then shouldn't we remove the walls and make the entire unit a lounge?
 					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 					r->assign_to(RTYPE_LOUNGE, f);
-					added_obj = 1;
+					added_obj = make_public = 1;
+				}
+				else { // check for stairs in this room
+					room_this_floor.expand_in_dim(2, -fc_thick); // floor to ceiling
 
-					if (is_apt_or_hotel_room && (init_rtype_f0 == RTYPE_BED || init_rtype_f0 == RTYPE_LIVING || init_rtype_f0 == RTYPE_KITCHEN)) {
-						has_walkway_on_floor |= floor_mask; // if this was an apartment or hotel room, then flag this floor as being non-residential for this unit
+					for (stairwell_t const &s : interior->stairwells) {
+						cube_t tc(s);
+						tc.expand_in_dim(s.dim, doorway_width); // add extra space at both ends of stairs
+						if (tc.intersects(room_this_floor)) {make_public = 1; break;}
 					}
+				}
+				if (make_public) {
+					if (is_apt_or_hotel_room) {is_public_on_floor |= floor_mask;} // if was an apt or hotel room, then flag this floor as being non-residential for this unit
 					is_apt_or_hotel_room = 0;
 				}
 			}
@@ -591,7 +600,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				else {cout << TXT(r->str()) << TXTi(init_rtype_f0) << endl; assert(0);} // unsupported room type
 
 				if (r->is_entry) { // this is the room that has the front entry door connected to the hallway
-					if (not_private_room) { // doors should not auto close
+					if (!not_private_room) { // no number if this is a public room connected to a walkway
+						unsigned room_num(100*(f+1) + numbered_rooms_seen);
+						add_door_sign(std::to_string(room_num), *r, room_center.z, room_id, tot_light_amt); // Note: sign text is always unique
+					}
+					else if (btype == BTYPE_HOTEL) { // hotel doors should not auto close
 						vect_door_stack_t const &doorways(get_doorways_for_room(*r, room_center.z));
 						assert(!doorways.empty());
 						door_stack_t const &ds(doorways.front()); // choose the first/front door
@@ -603,10 +616,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 							if (door.z1() > room_center.z || door.z2() < room_center.z) continue; // wrong floor
 							door.auto_close = 0;
 						}
-					}
-					else { // no number if this is a public room connected to a walkway
-						unsigned room_num(100*(f+1) + numbered_rooms_seen);
-						add_door_sign(std::to_string(room_num), *r, room_center.z, room_id, tot_light_amt); // Note: sign text is always unique
 					}
 				}
 				added_obj = 1; // assume something was added above, and don't place any other furniture or try to assign to another room type

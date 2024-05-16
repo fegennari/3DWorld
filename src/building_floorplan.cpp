@@ -1147,7 +1147,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 	assert(!rooms.empty());
 	assert(!interior->door_stacks.empty());
 	room_t &room(rooms.back());
-	unsigned const new_rooms_start(rooms.size());
+	unsigned const new_rooms_start(rooms.size()-1); // including current room
 	//if (is_room_adjacent_to_ext_door(room)) {} // can't check, walkway hasn't been added yet
 	door_stack_t const &ds(interior->door_stacks.back());
 	bool /*at_lo_end(room_row_ix == 0),*/ at_hi_end(room_row_ix == hall_num_rooms-1);
@@ -1159,15 +1159,17 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 	float const door_width(ds.get_width()), door_hwidth(0.5*door_width); // newly added doors will be this width as well
 	float const wall_thickness(get_wall_thickness()), wall_half_thick(0.5*wall_thickness), door_to_wall_min_space(2.0*wall_thickness);
 	float const fc_thick(get_fc_thickness()), window_vspacing(get_window_vspace());
+	bool const lg_door_side(ds.get_center_dim(hall_dim) < room.get_center_dim(hall_dim)); // more space on this side of door
 	vect_cube_t &hall_para_walls(interior->walls[!hall_dim]), &hall_perp_walls(interior->walls[hall_dim]);
 	bool make_three_room(btype == BTYPE_HOTEL);
 	if (btype == BTYPE_APARTMENT && num_windows < 3) {make_three_room = 1;} // small apartments only have space for three rooms
 	room.is_office = 0; // but room.office_floorplan remains 1
-	// make sure doors auto close
 	assert(ds.first_door_ix < interior->doors.size());
-	for (auto d = interior->doors.begin()+ds.first_door_ix; d != interior->doors.end(); ++d) {d->make_auto_close();}
-	bool const lg_door_side(ds.get_center_dim(hall_dim) < room.get_center_dim(hall_dim)); // more space on this side of door
 
+	// make sure hotel room doors auto close and apartment doors start closed
+	for (auto d = interior->doors.begin()+ds.first_door_ix; d != interior->doors.end(); ++d) {
+		if (is_hotel) {d->make_auto_close();} else {d->open = 0; d->open_amt = 0.0;}
+	}
 	if (make_three_room) {
 		// divide into entryway or living room by door, bedroom by window, and bathroom
 		// divide room in short dim; side by window becomes bedroom, divide other side, part connected to door is living room/entryway, other part is bathroom
