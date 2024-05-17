@@ -588,6 +588,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					is_bathroom = added_bathroom = 1;
 				}
 				else if (init_rtype_f0 == RTYPE_KITCHEN) { // assigned apartment kitchen
+					added_tc = can_place_onto = add_table_and_chairs(rgen, *r, blockers, room_id, room_center, chair_color, 0.1, tot_light_amt);
 					add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, 0); // allow_adj_ext_door=0; return value ignored
 					is_kitchen = 1;
 				}
@@ -595,7 +596,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start); // return value ignored
 				}
 				else if (init_rtype_f0 == RTYPE_ENTRY) { // entryway
-					// TODO: too small, no objects for now
+					// TODO: too small, no objects for now other than trashcan and pictures
 				}
 				else {cout << TXT(r->str()) << TXTi(init_rtype_f0) << endl; assert(0);} // unsupported room type
 

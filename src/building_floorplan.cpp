@@ -35,7 +35,9 @@ void building_t::add_interior_door_for_floor(door_t &door, bool is_bathroom, boo
 	interior->doors.push_back(door);
 }
 
-void building_t::remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir, bool is_bathroom, bool make_unlocked, bool make_closed) {
+void building_t::remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy,
+	bool open_dir, bool is_bathroom, bool make_unlocked, bool make_closed)
+{
 	// remove a section from this cube; c is input+output cube, c2 is other output cube
 	assert(v1 < v2);
 	assert(v1 > c.d[xy][0] && v2 < c.d[xy][1]); // v1/v2 must be interior values for cube
@@ -49,9 +51,11 @@ void building_t::remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, fl
 	add_interior_door(door, is_bathroom, make_unlocked, make_closed);
 }
 
-void building_t::insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir, bool keep_high_side, bool is_bathroom) {
+void building_t::insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim,
+	bool open_dir, bool keep_high_side, bool is_bathroom, bool make_unlocked, bool make_closed)
+{
 	cube_t wall2;
-	remove_section_from_cube_and_add_door(wall, wall2, v1, v2, dim, open_dir, is_bathroom);
+	remove_section_from_cube_and_add_door(wall, wall2, v1, v2, dim, open_dir, is_bathroom, make_unlocked, make_closed);
 	if (keep_high_side) {swap(wall, wall2);} // swap left and right
 	interior->walls[!dim].push_back(wall2);
 }
@@ -1188,7 +1192,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		living_room.assign_all_to(RTYPE_LIVING);
 		bathroom   .assign_all_to(RTYPE_BATH  ); // bathroom should be added last
 		living_room.is_entry = 1;
-		// add interior walls and doors
+		// add interior walls and doors; all doors are unlocked
 		float const bed_center(living.get_center_dim(hall_dim)), bath_center(bath.get_center_dim(!hall_dim));
 		cube_t bed_wall(bed), bath_wall(bath);
 		clip_wall_to_ceil_floor(bed_wall,  fc_thick);
@@ -1196,16 +1200,16 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		set_wall_width(bed_wall,  bed_lb_split_pos,   wall_half_thick, !hall_dim);
 		set_wall_width(bath_wall, liv_bath_split_pos, wall_half_thick,  hall_dim);
 		if (bed_wall .get_sz_dim( hall_dim) <= door_width) {cout << "bedroom too small: "  << bed .str() << endl;} // error?
-		else {insert_door_in_wall_and_add_seg(bed_wall,  bed_center -door_hwidth, bed_center +door_hwidth,  hall_dim, hall_dir);} // opens into bedroom
+		else {insert_door_in_wall_and_add_seg(bed_wall,  bed_center -door_hwidth, bed_center +door_hwidth,  hall_dim, hall_dir,     0, 0, 1);} // opens into bedroom
 		if (bath_wall.get_sz_dim(!hall_dim) <= door_width) {cout << "bathroom too small: " << bath.str() << endl;} // error?
-		else {insert_door_in_wall_and_add_seg(bath_wall, bath_center-door_hwidth, bath_center+door_hwidth, !hall_dim, lg_door_side, 0, 1);} // opens into bathroom
+		else {insert_door_in_wall_and_add_seg(bath_wall, bath_center-door_hwidth, bath_center+door_hwidth, !hall_dim, lg_door_side, 0, 1, 1);} // opens into bathroom
 		hall_para_walls.push_back(bed_wall );
 		hall_perp_walls.push_back(bath_wall);
 	}
 	else if (btype == BTYPE_APARTMENT) {
 		// entryway connected to front door, or could be living room if much longer in hallway dim
 		// bedroom; must have at least one window
-		// living room; should have at least one window
+		// living room; must have at least one window
 		// bathroom
 		// kitchen
 		float const front_back_split_pos(room.get_center_dim(!hall_dim) + (hall_dir ? -1.0 : 1.0)*0.1*room.get_sz_dim(!hall_dim)); // bed+living are slightly larger
@@ -1233,7 +1237,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		kitchen_room.assign_all_to(RTYPE_KITCHEN);
 		entry_room  .assign_all_to(RTYPE_ENTRY  );
 		entry_room.is_entry = 1;
-		// add interior walls and doors
+		// add interior walls
 		cube_t fb_wall(room_area), lb_wall(bed), ke_wall(kitchen), be_wall(bath); // front-back, living room-bedroom, kitchen-entryway, bathroom-entryway
 		clip_wall_to_ceil_floor(fb_wall, fc_thick);
 		clip_wall_to_ceil_floor(lb_wall, fc_thick);
@@ -1243,8 +1247,28 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		set_wall_width(lb_wall, living_bed_split_pos, wall_half_thick,  hall_dim);
 		set_wall_width(ke_wall, kitchen_split_pos,    wall_half_thick,  hall_dim);
 		set_wall_width(be_wall, bath_split_pos,       wall_half_thick,  hall_dim);
-		// TODO: add doors
-		hall_para_walls.push_back(fb_wall );
+		// add doors; all are unlocked
+		float const front_center  (ke_wall.get_center_dim(!hall_dim)), back_center(lb_wall.get_center_dim(!hall_dim));
+		float const kitchen_center(kitchen.get_center_dim( hall_dim)), bath_center(bath   .get_center_dim( hall_dim));
+		float const le_lo(min(kitchen_split_pos, living_bed_split_pos)), le_hi(max(kitchen_split_pos, living_bed_split_pos));
+		float const be_lo(min(bath_split_pos,    living_bed_split_pos)), be_hi(max(bath_split_pos,    living_bed_split_pos));
+		// TODO: randomly add one of two bathroom doors
+		insert_door_in_wall_and_add_seg(lb_wall, back_center -door_hwidth, back_center +door_hwidth, !hall_dim, !lg_door_side, 0, 0, 1); // opens into bedroom
+		insert_door_in_wall_and_add_seg(ke_wall, front_center-door_hwidth, front_center+door_hwidth, !hall_dim,  lg_door_side, 0, 0, 1); // opens into kitchen
+		insert_door_in_wall_and_add_seg(be_wall, front_center-door_hwidth, front_center+door_hwidth, !hall_dim, !lg_door_side, 0, 1, 1); // opens into bathroom
+		bool const keep_high_side(!lg_door_side);
+		insert_door_in_wall_and_add_seg(fb_wall, kitchen_center-door_hwidth, kitchen_center+door_hwidth, hall_dim, hall_dir,  keep_high_side, 0, 1); // opens into living room
+
+		if (le_hi - le_lo > 1.4*door_width) { // have space for entryway-living room door
+			float const le_center(0.5*(le_lo + le_hi));
+			insert_door_in_wall_and_add_seg(fb_wall, le_center-door_hwidth, le_center+door_hwidth, hall_dim, hall_dir,  keep_high_side, 0, 1); // opens into living room
+		}
+		if (be_hi - be_lo > 1.4*door_width) { // have space for entryway-bedroom room door
+			float const be_center(0.5*(be_lo + be_hi));
+			insert_door_in_wall_and_add_seg(fb_wall, be_center-door_hwidth, be_center+door_hwidth, hall_dim, hall_dir,  keep_high_side, 0, 1); // opens into bedroom
+		}
+		insert_door_in_wall_and_add_seg(fb_wall, bath_center-door_hwidth, bath_center+door_hwidth, hall_dim, hall_dir, !keep_high_side, 0, 1); // opens into bathroom
+		hall_para_walls.push_back(fb_wall);
 		hall_perp_walls.push_back(lb_wall);
 		hall_perp_walls.push_back(ke_wall);
 		hall_perp_walls.push_back(be_wall);

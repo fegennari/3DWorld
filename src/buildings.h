@@ -2164,8 +2164,10 @@ private:
 	void register_open_ext_door_state(int door_ix);
 	void add_interior_door(door_t &door, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0);
 	void add_interior_door_for_floor(door_t &door, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0);
-	void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0);
-	void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir, bool keep_high_side=0, bool is_bathroom=0);
+	void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy,
+		bool open_dir, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0);
+	void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir,
+		bool keep_high_side=0, bool is_bathroom=0, bool make_unlocked=0, bool make_closed=0);
 	void reverse_door_hinges_if_needed();
 	void ensure_doors_to_room_are_closed(room_t const &room, unsigned doors_start, bool ensure_locked=0);
 	unsigned get_floor_for_zval(float zval) const {return unsigned((zval - get_bcube_z1_inc_ext_basement())/get_window_vspace());}
