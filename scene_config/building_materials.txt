@@ -126,7 +126,7 @@ buildings house_ceil_specular  0.15 60.0
 buildings house_floor_specular 0.10 50.0
 
 # brick buildings
-buildings apartment_prob 0.0
+buildings apartment_prob 0.25
 buildings house_prob     0.67 # 67%
 buildings house_scale_range 0.45 0.8
 buildings no_city     1 # not used in cities
