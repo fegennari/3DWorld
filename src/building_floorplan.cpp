@@ -444,6 +444,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			float const *hall_wall_pos(hall.d[min_dim]);
 			unsigned const doors_start(interior->doors.size());
 			int const num_rooms((apt_or_hotel ? num_windows : (num_windows+windows_per_room-1))/windows_per_room); // round down for apts/hotels, otherwise round down
+			int const windows_per_side_od((num_windows_od - round_fp(num_hall_windows))/2); // of hallway
 			assert(num_rooms >= 0 && num_rooms < 1000); // sanity check
 			auto &room_walls(interior->walls[!min_dim]), &hall_walls(interior->walls[min_dim]);
 			if (hallway_dim == 2) {hallway_dim = !min_dim;} // cache in building for later use, only for first part (ground floor)
@@ -623,7 +624,6 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				else { // secondary hallways with rooms on each side
 					float const sh_len(room_width);
 					int const num_sec_halls(num_rooms/2); // round down if odd
-					int const windows_per_side_od((num_windows_od - round_fp(num_hall_windows))/2); // of hallway
 					int windows_per_room_od((windows_per_side_od & 1) ? 1 : 2), rooms_per_side(0); // rooms along each sec hall
 					float room_sub_width(0.0);
 
@@ -801,7 +801,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						door.d[min_dim][d] = hall_wall_pos[d]; // set to zero area at hallway
 						for (unsigned e = 0; e < 2; ++e) {door.d[!min_dim][e] = doorway_vals[2*i+e];}
 						add_interior_door(door, is_bathroom);
-						if (apt_or_hotel) {divide_last_room_into_apt_or_hotel(i, num_rooms, num_windows, windows_per_room, !min_dim, d, rgen);}
+						if (apt_or_hotel) {divide_last_room_into_apt_or_hotel(i, num_rooms, num_windows, windows_per_room, windows_per_side_od, !min_dim, d, rgen);}
 					} // for d
 					pos = next_pos;
 				} // for i
@@ -1140,7 +1140,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 } // end gen_interior_int()
 
 void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsigned hall_num_rooms, unsigned tot_num_windows,
-	unsigned windows_per_room, bool hall_dim, bool hall_dir, rand_gen_t &rgen) // hall_dim is also window dim
+	unsigned windows_per_room, unsigned windows_per_room_side, bool hall_dim, bool hall_dir, rand_gen_t &rgen) // hall_dim is also window dim
 {
 	assert(interior);
 	assert(hall_num_rooms  > 0 && room_row_ix < hall_num_rooms);
@@ -1154,7 +1154,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 	unsigned const new_rooms_start(rooms.size()-1); // including current room
 	//if (is_room_adjacent_to_ext_door(room)) {} // can't check, walkway hasn't been added yet
 	door_stack_t const &ds(interior->door_stacks.back());
-	bool /*at_lo_end(room_row_ix == 0),*/ at_hi_end(room_row_ix == hall_num_rooms-1);
+	bool at_lo_end(room_row_ix == 0), at_hi_end(room_row_ix == hall_num_rooms-1);
 	unsigned num_windows(windows_per_room);
 	if (btype == BTYPE_APARTMENT && num_windows == 1) {btype = BTYPE_HOTEL;} // too small for apartment; need at least two windows for an apartment
 	if (at_hi_end) {num_windows += (tot_num_windows % windows_per_room);} // last room is larger with more windows; hopefully only one more
@@ -1177,8 +1177,13 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 	if (make_three_room) { // 3 rooms
 		// divide into entryway or living room by door, bedroom by window, and bathroom
 		// divide room in short dim; side by window becomes bedroom, divide other side, part connected to door is living room/entryway, other part is bathroom
-		float const bed_lb_split_pos(room.get_center_dim(!hall_dim));
+		float bed_lb_split_pos(room.get_center_dim(!hall_dim));
 		float const liv_bath_split_pos(ds.d[hall_dim][lg_door_side] + (lg_door_side ? 1.0 : -1.0)*door_to_wall_min_space); // door goes to living room, which is larger
+
+		if (has_windows() && (at_lo_end || at_hi_end) && windows_per_room_side > 1 && (windows_per_room_side & 1)) { // shift bed_lb_split_pos to prevent window intersection
+			float const window_h_space(room.get_sz_dim(!hall_dim)/windows_per_room_side);
+			bed_lb_split_pos += (hall_dir ? -1.0 : 1.0)*0.5*(1.0 - get_window_h_border())*window_h_space; // shift near edge of window frame
+		}
 		// add new rooms; rooms tile exactly and have no space for walls
 		cube_t bed(room), lb(room);
 		bed.d[!hall_dim][!hall_dir] = lb.d[!hall_dim][hall_dir] = bed_lb_split_pos;
@@ -1211,14 +1216,26 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		// living room; must have at least one window
 		// bathroom
 		// kitchen
-		float const front_back_split_pos(room.get_center_dim(!hall_dim) + (hall_dir ? -1.0 : 1.0)*0.1*room.get_sz_dim(!hall_dim)); // bed+living are slightly larger
-		float const living_bed_split_pos(room_center);
+		float front_back_split_pos(room.get_center_dim(!hall_dim) + (hall_dir ? -1.0 : 1.0)*0.1*room.get_sz_dim(!hall_dim)); // bed+living are slightly larger
+		float living_bed_split_pos(room_center);
 		float const entry_door_space_signed((lg_door_side ? 1.0 : -1.0)*(0.5*door_width + door_to_wall_min_space));
 		float kitchen_split_pos(ds.d[hall_dim][ lg_door_side] + entry_door_space_signed);
 		float bath_split_pos   (ds.d[hall_dim][!lg_door_side] - entry_door_space_signed);
 		float const shift(entry_door_space_signed * min(0.5f, 0.5f*fabs(door_center - room_center)/door_width)); // move split closer to the center of the room
 		kitchen_split_pos += shift;
 		bath_split_pos    += shift;
+
+		if (has_windows()) { // prevent walls from intersecting windows
+			if (num_windows & 1) { // odd number of windows; shift living_bed_split_pos to not intersect a window
+				float const window_h_space(room.get_sz_dim(hall_dim)/num_windows);
+				living_bed_split_pos += (lg_door_side ? -1.0 : 1.0)*0.5*(1.0 - get_window_h_border())*window_h_space; // shift near edge of bedroom window frame
+			}
+			if (at_lo_end || at_hi_end) { // check side windows
+				cube_t const &part(parts[part_id]);
+				float const window_hspacing(part.get_sz_dim(!hall_dim)/get_num_windows_on_side(part.d[!hall_dim][0], part.d[!hall_dim][1]));
+				front_back_split_pos = shift_val_to_not_intersect_window(part, front_back_split_pos, window_hspacing, get_window_h_border(), !hall_dim);
+			}
+		}
 		// add new rooms; rooms tile exactly and have no space for walls
 		cube_t const room_area(room);
 		cube_t bed(room), living(room), bath(room), kitchen(room), entry(room);
@@ -1258,11 +1275,11 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		if (!conn_bed_to_bath) {insert_door_in_wall_and_add_seg(be_wall, front_center-door_hwidth, front_center+door_hwidth, !hall_dim, !lg_door_side, 0, 1, 1);}
 		insert_door_in_wall_and_add_seg(fb_wall, kitchen_center-door_hwidth, kitchen_center+door_hwidth, hall_dim, hall_dir,  keep_high_side, 0, 1); // opens into living room
 
-		if (le_hi - le_lo > 1.4*door_width) { // have space for entryway-living room door
+		if (le_hi - le_lo > 1.2*door_width) { // have space for entryway-living room door
 			float const le_center(0.5*(le_lo + le_hi));
 			insert_door_in_wall_and_add_seg(fb_wall, le_center-door_hwidth, le_center+door_hwidth, hall_dim, hall_dir,  keep_high_side, 0, 1); // opens into living room
 		}
-		if (be_hi - be_lo > 1.4*door_width) { // have space for entryway-bedroom room door
+		if (be_hi - be_lo > 1.2*door_width) { // have space for entryway-bedroom room door
 			float const be_center(0.5*(be_lo + be_hi));
 			insert_door_in_wall_and_add_seg(fb_wall, be_center-door_hwidth, be_center+door_hwidth, hall_dim, hall_dir,  keep_high_side, 0, 1); // opens into bedroom
 		}
