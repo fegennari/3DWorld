@@ -211,6 +211,7 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 		if (find_mirror_in_room((room_ix & 255), xlate, 1)) return 1; // same_room=1
 	} // for r
 	if (camera_room_ix < 0) return 0; // camera not in a room
+	if (all_room_int_doors_closed(camera_room_ix, camera_bs.z)) return 0; // camera in room with doors closed, no other mirrors are visible
 	room_t const &camera_room(get_room(camera_room_ix));
 	cube_t search_area(camera_room);
 	search_area.expand_by_xy(2.0*get_wall_thickness()); // expand so that it overlaps adjacent rooms
@@ -219,15 +220,21 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
 		unsigned const room_ix(r - interior->rooms.begin());
 		if ((int)room_ix == camera_room_ix) continue;
-		if (!r->intersects(search_area))    continue; // wrong room
 
-		if (camera_room.is_hallway) { // special optimization logic for hallways (generally for office buildings, but can apply to houses as well)
-			cube_t r_exp(*r);
-			bool const short_dim(camera_room.dy() < camera_room.dx());
-			r_exp.expand_by_xy(camera_room.get_sz_dim(short_dim));
-			if (!r_exp.contains_pt(camera_bs)) continue; // camera not within the hallway across from the room
+		if (camera_room.is_apt_or_hotel_room() && r->unit_id == camera_room.unit_id) { // same apartment or hotel room unit
+			if (all_room_int_doors_closed(room_ix, camera_bs.z)) return 0; // in room with doors closed, not visible
 		}
-		if (!are_rooms_connected(*r, camera_room, camera_bs.z, 1)) continue; // no door, or door is fully closed check_open=1
+		else {
+			if (!r->intersects(search_area)) continue; // wrong room
+
+			if (camera_room.is_hallway) { // special optimization logic for hallways (generally for office buildings, but can apply to houses as well)
+				cube_t r_exp(*r);
+				bool const short_dim(camera_room.dy() < camera_room.dx());
+				r_exp.expand_by_xy(camera_room.get_sz_dim(short_dim));
+				if (!r_exp.contains_pt(camera_bs)) continue; // camera not within the hallway across from the room
+			}
+			if (!are_rooms_connected(*r, camera_room, camera_bs.z, 1)) continue; // no door, or door is fully closed check_open=1
+		}
 		if (find_mirror_in_room((room_ix & 255), xlate, 0)) return 1; // same_room=0
 	} // for r
 	return 0; // not found
