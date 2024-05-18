@@ -1144,6 +1144,15 @@ bool building_t::maybe_add_fireplace_to_room(rand_gen_t &rgen, room_t const &roo
 	return 1;
 }
 
+bool building_t::check_if_against_window(cube_t const &c, room_t const &room, bool dim, bool dir) const {
+	if (!has_windows() || classify_room_wall(room, c.zc(), dim, dir, 0) != ROOM_WALL_EXT) return 0;
+	cube_t const part(get_part_for_room(room));
+	float const hspacing(get_hspacing_for_part(part, !dim)), border(get_window_h_border());
+	// assume object is no larger than 2x window size and check left, right, and center positions
+	return (is_val_inside_window(part, !dim, c.d[!dim][0], hspacing, border) ||
+		    is_val_inside_window(part, !dim, c.d[!dim][1], hspacing, border) ||
+		    is_val_inside_window(part, !dim, c.get_center_dim(!dim), hspacing, border));
+}
 bool building_t::place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval,
 	unsigned room_id, float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance, bool add_door_clearance,
 	unsigned pref_orient, bool pref_centered, colorRGBA const &color, bool not_at_window, room_obj_shape shape, float side_clearance, unsigned extra_flags)
@@ -1170,15 +1179,7 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 		c.d[dim][ dir] = place_area.d[dim][dir];
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
 		set_wall_width(c, center, hwidth, !dim);
-
-		if (not_at_window && has_windows() && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) {
-			cube_t const part(get_part_for_room(room));
-			float const hspacing(get_hspacing_for_part(part, !dim)), border(get_window_h_border());
-			// assume object is no larger than 2x window size and check left, right, and center positions
-			if (is_val_inside_window(part, !dim, c.d[!dim][0], hspacing, border) ||
-				is_val_inside_window(part, !dim, c.d[!dim][1], hspacing, border) ||
-				is_val_inside_window(part, !dim, c.get_center_dim(!dim), hspacing, border)) continue;
-		}
+		if (not_at_window && check_if_against_window(c, room, dim, dir)) continue;
 		cube_t c2(c), c3(c); // used for collision tests
 		c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
 		cube_t c2b(c2);
@@ -1786,12 +1787,15 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 				cube_t hood(stove);
 				set_cube_zvals(hood, z_top-height, z_top);
 				hood.d[stove.dim][stove.dir] = stove.d[stove.dim][!stove.dir] + (stove.dir ? 1.0 : -1.0)*depth;
-				objs.emplace_back(hood, TYPE_HOOD, room_id, stove.dim, stove.dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, LT_GRAY);
+
+				if (!check_if_against_window(hood, room, stove.dim, !stove.dir)) { // don't place hoods against windows
+					objs.emplace_back(hood, TYPE_HOOD, room_id, stove.dim, stove.dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, LT_GRAY);
 				
-				if (has_attic()) { // add rooftop vent above the hood; should be close to the edge of the house in many cases
-					float const attic_floor_zval(get_attic_part().z2()), vent_radius(0.075*(width + depth)); // kitchen can be in a part below the one with the attic
-					point const vent_bot_center(hood.xc(), hood.yc(), attic_floor_zval);
-					add_attic_roof_vent(vent_bot_center, vent_radius, room_id, 1.0); // light_amt=1.0; room_id is for the kitchen because there's no attic room
+					if (has_attic()) { // add rooftop vent above the hood; should be close to the edge of the house in many cases
+						float const attic_floor_zval(get_attic_part().z2()), vent_radius(0.075*(width + depth)); // kitchen can be in a part below the one with the attic
+						point const vent_bot_center(hood.xc(), hood.yc(), attic_floor_zval);
+						add_attic_roof_vent(vent_bot_center, vent_radius, room_id, 1.0); // light_amt=1.0; room_id is for the kitchen because there's no attic room
+					}
 				}
 			}
 			if (!rgen.rand_bool()) { // maybe add a pan on one of the stove burners
