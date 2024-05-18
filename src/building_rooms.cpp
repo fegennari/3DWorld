@@ -543,7 +543,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					added_obj = no_whiteboard = no_plants = add_security_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 			}
-			bool is_apt_or_hotel_room(is_apt_or_hotel() && r->office_floorplan && !r->is_hallway && !r->is_office && !is_basement && init_rtype_f0 != RTYPE_NOTSET);
+			bool is_apt_or_hotel_room(r->is_apt_or_hotel_room());
 			bool const not_private_room(is_public_on_floor & floor_mask); // current unit has an intersecting walkway and is not private
 
 			if (is_apt_or_hotel_room || r->is_office) { // check if this room is adjacent to an exterior/walkway door, and if so, make it a lounge

@@ -1840,7 +1840,8 @@ bool building_t::check_cube_intersect_walls(cube_t const &c) const {
 	return 0;
 }
 
-bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, float pad, int dim, bool check_walls) const {
+bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, float pad, int dim, bool check_walls, bool check_private_rooms) const {
+	assert(interior);
 	// check if any previously placed walls intersect this cand stairs/elevator; we really only need to check the walls from <part> and *p though
 	if (interior->is_blocked_by_stairs_or_elevator(c, pad)) return 0;
 	if (check_walls && check_cube_intersect_walls(c))       return 0;
@@ -1866,6 +1867,11 @@ bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, float pad, 
 			set_cube_zvals(blocked, ground_floor_z1, (ground_floor_z1 + floor_spacing)); // clip to ground floor
 			blocked.intersect_with_cube_xy(pri_hall);
 			if (blocked.intersects(c)) return 0;
+		}
+	}
+	if (check_private_rooms && is_apt_or_hotel()) {
+		for (room_t const &r : interior->rooms) {
+			if (r.is_apt_or_hotel_room() && r.intersects(c)) return 0;
 		}
 	}
 	return 1;
@@ -1970,6 +1976,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 	float const doorway_width(get_nominal_doorway_width()), stairs_len(4.0*doorway_width);
 	bool const is_basement(has_basement() && part == get_basement()), use_basement_stairs(is_basement && is_house); // office basement has regular stairs
 	bool const is_retail(is_retail_part(part));
+	bool const check_private_rooms = 0; // this could go either way; which is worse - an unconnected stacked part, or public stairs in a hotel room or apartment?
 	// use fewer iterations on tiled buildings to reduce the frame spikes when new tiles are generated
 	unsigned const iter_mult_factor(global_building_params.gen_inf_buildings() ? 1 : 10), num_iters(20*iter_mult_factor);
 	unsigned const num_floors(is_retail ? 1 : calc_num_floors(part, window_vspacing, floor_thickness)); // retail area is always one floor
@@ -2034,7 +2041,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 						else                       {ext_cube.d[dim][1] += stairs_pad;} // add padding on exit side
 						if (!shared.contains_cube_xy(ext_cube)) continue; // test for space to enter and exit
 						if (has_bcube_int(ext_cube, interior->exclusion)) continue; // bad placement
-						if (!is_valid_stairs_elevator_placement(ext_cube, stairs_pad, s.dim)) continue; // bad placement
+						if (!is_valid_stairs_elevator_placement(ext_cube, stairs_pad, s.dim, 0, check_private_rooms)) continue; // bad placement
 						s.extends_below = (ab == 0);
 						cand = s; dim = s.dim; stairs_dir = s.dir; sshape = s.shape; // copy fields from these stairs and extend down
 						stack_conn    = 0; // not stacked - extended main stairs
@@ -2125,7 +2132,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 
 				for (unsigned d = 0; d < 2; ++d) {
 					if (has_bcube_int(cand_test[d], interior->exclusion)) {bad_place = 1; break;} // bad placement
-					if (!is_valid_stairs_elevator_placement(cand_test[d], stairs_pad, dim, !allow_clip_walls)) {bad_place = 1; break;} // bad placement
+					if (!is_valid_stairs_elevator_placement(cand_test[d], stairs_pad, dim, !allow_clip_walls, check_private_rooms)) {bad_place = 1; break;} // bad placement
 					// what about stairs intersecting bathrooms when allow_clip_walls=1? I've seen that happen once
 					if (is_cube()) continue;
 					// handle non-cube building; need to check both parts above and below, so clip our test cube to each part
@@ -2244,7 +2251,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				orig_adj_elevator = adj;
 				adj.set_from_point(bcube.get_llc());
 			}
-			bool const is_valid(is_valid_stairs_elevator_placement(cand_test, doorway_width, e->dim, !allow_clip_walls));
+			bool const is_valid(is_valid_stairs_elevator_placement(cand_test, doorway_width, e->dim, !allow_clip_walls, 1)); // check_private_rooms=1
 			if (e->adj_elevator_ix >= 0) {interior->elevators[e->adj_elevator_ix].copy_from(orig_adj_elevator);} // restore original pos
 			if (!is_valid)                                     continue; // bad placement
 			if (!check_cube_within_part_sides(cand_test))      continue; // bad placement; do we need to check for clearance?
