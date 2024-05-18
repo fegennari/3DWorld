@@ -1840,7 +1840,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	water_sound_manager_t water_sound_manager(camera_bs);
 	rgeom_mat_t monitor_screens_mat, onscreen_text_mat=rgeom_mat_t(tid_nm_pair_t(FONT_TEXTURE_ID));
 	string onscreen_text;
-	bool const is_rotated(building.is_rotated()), check_occlusion(display_mode & 0x08);
+	bool const is_rotated(building.is_rotated()), is_residential(building.is_residential()), check_occlusion(display_mode & 0x08);
 	bool const check_clip_cube(shadow_only && !is_rotated && !smap_light_clip_cube.is_all_zeros()); // check clip cube for shadow pass; not implemented for rotated buildings
 	bool const skip_interior_objs(!player_in_building_or_doorway && !shadow_only);
 	cube_t const clip_cube_bs(smap_light_clip_cube - xlate);
@@ -1857,7 +1857,11 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	// draw object models
 	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
 		room_object_t &obj(get_room_object_by_index(i->obj_id));
-		if (skip_interior_objs && obj.is_interior())          continue; // don't draw objects in interior rooms if the player is outside the building (useful for office bathrooms)
+		
+		if (skip_interior_objs && obj.is_interior()) { // don't draw objects in interior rooms if the player is outside the building (useful for office bathrooms)
+			// draw interior objects in residential buildings, such as plumbing fixtures visible through open interior bathroom doors, but not if in basement
+			if (!is_residential || obj.z1() < building.ground_floor_z1) continue;
+		}
 		if (check_clip_cube && !clip_cube_bs.intersects(obj)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 
 		if (shadow_only) {
