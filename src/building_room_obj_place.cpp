@@ -650,24 +650,30 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 	float const doorway_width(get_doorway_width()), front_clearance(max(0.6f*doorway_width, get_min_front_clearance_inc_people()));
 
 	if (btype == BTYPE_HOTEL) { // maybe add a second bed
+		unsigned const sec_bed_obj_ix(objs.size());
 		cube_t bed_exp(bed);
 		bed_exp.expand_by_xy(front_clearance); // add space around the bed so that two beds aren't placed too close together
 		blockers.push_back(bed_exp);
-		add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt, floor, 0); // force=0
+		
+		if (add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt, floor, 0)) { // force=0
+			assert(sec_bed_obj_ix < objs.size());
+			room_object_t &bed2(objs[sec_bed_obj_ix]);
+			bed2.obj_id = bed.obj_id; // set second bed to the same obj_id as first bed so that they have the same style
+			bed2.color  = bed.color ;
+		}
 		blockers.pop_back(); // remove the bed
 	}
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
 	place_area.expand_by(-get_trim_thickness()); // shrink to leave a small gap
 	// closet
-	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness());
+	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), window_h_border(get_window_h_border());
 	float const closet_min_depth(0.65*doorway_width), closet_min_width(1.5*doorway_width), min_dist_to_wall(1.0*doorway_width), min_bed_space(front_clearance);
-	float const window_h_border(get_window_h_border());
 	unsigned const first_corner(rgen.rand() & 3);
 	bool const first_dim(rgen.rand_bool());
 	cube_t const part(get_part_for_room(room));
 	bool placed_closet(0), placed_lamp(0);
 	unsigned closet_obj_id(0);
-	bool chk_windows[2][2] = {0}; // precompute which walls are exterior and can have windows, {dim}x{dir}
+	bool chk_windows[2][2] = {}; // precompute which walls are exterior and can have windows, {dim}x{dir}
 
 	if (!is_basement && has_windows()) { // are bedrooms ever placed in the basement?
 		for (unsigned d = 0; d < 4; ++d) {chk_windows[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);}

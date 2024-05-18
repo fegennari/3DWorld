@@ -801,7 +801,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						door.d[min_dim][d] = hall_wall_pos[d]; // set to zero area at hallway
 						for (unsigned e = 0; e < 2; ++e) {door.d[!min_dim][e] = doorway_vals[2*i+e];}
 						add_interior_door(door, is_bathroom);
-						if (apt_or_hotel) {divide_last_room_into_apt_or_hotel(i, num_rooms, num_windows, windows_per_room, !min_dim, d);}
+						if (apt_or_hotel) {divide_last_room_into_apt_or_hotel(i, num_rooms, num_windows, windows_per_room, !min_dim, d, rgen);}
 					} // for d
 					pos = next_pos;
 				} // for i
@@ -1139,8 +1139,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 	// else no furnace
 } // end gen_interior_int()
 
-void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsigned hall_num_rooms,
-	unsigned tot_num_windows, unsigned windows_per_room, bool hall_dim, bool hall_dir) // hall_dim is also window dim
+void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsigned hall_num_rooms, unsigned tot_num_windows,
+	unsigned windows_per_room, bool hall_dim, bool hall_dir, rand_gen_t &rgen) // hall_dim is also window dim
 {
 	assert(interior);
 	assert(hall_num_rooms  > 0 && room_row_ix < hall_num_rooms);
@@ -1161,8 +1161,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 	bool const is_hotel(btype == BTYPE_HOTEL);//, is_apt(btype == BTYPE_APARTMENT);
 	unsigned const part_id(room.part_id);
 	float const door_width(ds.get_width()), door_hwidth(0.5*door_width); // newly added doors will be this width as well
-	float const wall_thickness(get_wall_thickness()), wall_half_thick(0.5*wall_thickness), door_to_wall_min_space(2.0*wall_thickness);
-	float const fc_thick(get_fc_thickness()), window_vspacing(get_window_vspace());
+	float const wall_thickness(get_wall_thickness()), wall_half_thick(0.5*wall_thickness), door_to_wall_min_space(2.0*wall_thickness), fc_thick(get_fc_thickness());
 	float const door_center(ds.get_center_dim(hall_dim)), room_center(room.get_center_dim(hall_dim));
 	bool const lg_door_side(door_center < room_center); // more space on this side of door
 	vect_cube_t &hall_para_walls(interior->walls[!hall_dim]), &hall_perp_walls(interior->walls[hall_dim]);
@@ -1175,7 +1174,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 	for (auto d = interior->doors.begin()+ds.first_door_ix; d != interior->doors.end(); ++d) {
 		if (is_hotel) {d->make_auto_close();} else {d->open = 0; d->open_amt = 0.0;}
 	}
-	if (make_three_room) {
+	if (make_three_room) { // 3 rooms
 		// divide into entryway or living room by door, bedroom by window, and bathroom
 		// divide room in short dim; side by window becomes bedroom, divide other side, part connected to door is living room/entryway, other part is bathroom
 		float const bed_lb_split_pos(room.get_center_dim(!hall_dim));
@@ -1206,7 +1205,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		hall_para_walls.push_back(bed_wall );
 		hall_perp_walls.push_back(bath_wall);
 	}
-	else if (btype == BTYPE_APARTMENT) {
+	else if (btype == BTYPE_APARTMENT) { // 5 rooms
 		// entryway connected to front door, or could be living room if much longer in hallway dim
 		// bedroom; must have at least one window
 		// living room; must have at least one window
@@ -1252,11 +1251,11 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		float const kitchen_center(kitchen.get_center_dim( hall_dim)), bath_center(bath   .get_center_dim( hall_dim));
 		float const le_lo(min(kitchen_split_pos, living_bed_split_pos)), le_hi(max(kitchen_split_pos, living_bed_split_pos));
 		float const be_lo(min(bath_split_pos,    living_bed_split_pos)), be_hi(max(bath_split_pos,    living_bed_split_pos));
-		// TODO: randomly add one of two bathroom doors
+		bool const keep_high_side(!lg_door_side), conn_bed_to_bath(rgen.rand_bool()); // randomly add one of two bathroom doors
 		insert_door_in_wall_and_add_seg(lb_wall, back_center -door_hwidth, back_center +door_hwidth, !hall_dim, !lg_door_side, 0, 0, 1); // opens into bedroom
 		insert_door_in_wall_and_add_seg(ke_wall, front_center-door_hwidth, front_center+door_hwidth, !hall_dim,  lg_door_side, 0, 0, 1); // opens into kitchen
-		insert_door_in_wall_and_add_seg(be_wall, front_center-door_hwidth, front_center+door_hwidth, !hall_dim, !lg_door_side, 0, 1, 1); // opens into bathroom
-		bool const keep_high_side(!lg_door_side);
+		// entry-bathroom door is optional; opens into bathroom
+		if (!conn_bed_to_bath) {insert_door_in_wall_and_add_seg(be_wall, front_center-door_hwidth, front_center+door_hwidth, !hall_dim, !lg_door_side, 0, 1, 1);}
 		insert_door_in_wall_and_add_seg(fb_wall, kitchen_center-door_hwidth, kitchen_center+door_hwidth, hall_dim, hall_dir,  keep_high_side, 0, 1); // opens into living room
 
 		if (le_hi - le_lo > 1.4*door_width) { // have space for entryway-living room door
@@ -1267,7 +1266,8 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 			float const be_center(0.5*(be_lo + be_hi));
 			insert_door_in_wall_and_add_seg(fb_wall, be_center-door_hwidth, be_center+door_hwidth, hall_dim, hall_dir,  keep_high_side, 0, 1); // opens into bedroom
 		}
-		insert_door_in_wall_and_add_seg(fb_wall, bath_center-door_hwidth, bath_center+door_hwidth, hall_dim, hall_dir, !keep_high_side, 0, 1); // opens into bathroom
+		// bedroom-bathroom door is optional; opens into bathroom
+		if (conn_bed_to_bath) {insert_door_in_wall_and_add_seg(fb_wall, bath_center-door_hwidth, bath_center+door_hwidth, hall_dim, hall_dir, !keep_high_side, 0, 1);}
 		hall_para_walls.push_back(fb_wall);
 		hall_perp_walls.push_back(lb_wall);
 		hall_perp_walls.push_back(ke_wall);
