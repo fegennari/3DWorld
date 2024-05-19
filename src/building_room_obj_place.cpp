@@ -1154,8 +1154,8 @@ bool building_t::check_if_against_window(cube_t const &c, room_t const &room, bo
 		    is_val_inside_window(part, !dim, c.get_center_dim(!dim), hspacing, border));
 }
 bool building_t::place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval,
-	unsigned room_id, float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance, bool add_door_clearance,
-	unsigned pref_orient, bool pref_centered, colorRGBA const &color, bool not_at_window, room_obj_shape shape, float side_clearance, unsigned extra_flags)
+	unsigned room_id, float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance, bool add_door_clearance, unsigned pref_orient,
+	bool pref_centered, colorRGBA const &color, bool not_at_window, room_obj_shape shape, float side_clearance, unsigned extra_flags, bool not_ext_wall)
 {
 	float const hwidth(0.5*height*sz_scale.y/sz_scale.z), depth(height*sz_scale.x/sz_scale.z);
 	float const min_space(max(2.8f*hwidth, 2.1f*(max(hwidth, 0.5f*depth) + get_scaled_player_radius()))); // make sure the player can get around the object
@@ -1179,6 +1179,7 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 		c.d[dim][ dir] = place_area.d[dim][dir];
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
 		set_wall_width(c, center, hwidth, !dim);
+		if (not_ext_wall  && classify_room_wall(room, c.zc(), dim, dir, 0) == ROOM_WALL_EXT) continue;
 		if (not_at_window && check_if_against_window(c, room, dim, dir)) continue;
 		cube_t c2(c), c3(c); // used for collision tests
 		c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
@@ -2005,7 +2006,8 @@ bool building_t::add_fishtank_to_room(rand_gen_t &rgen, room_t const &room, floa
 	vector3d const fc_sz_scale(rgen.rand_uniform(0.7, 0.8), rgen.rand_uniform(1.6, 1.8), 1.0); // depth, width, height
 	unsigned const table_obj_ix(objs.size());
 	// not_at_a_window=1
-	if (!place_obj_along_wall(TYPE_TABLE, room, table_height, fc_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.5, 1, 4, 0, WHITE, 1)) return 0;
+	if (!place_obj_along_wall(TYPE_TABLE, room, table_height, fc_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start,
+		0.5, 1, 4, 0, WHITE, 0, SHAPE_CUBE, 0.0, 0, 1)) return 0; // not_ext_wall=1
 	// then add the fishtank
 	float const tank_height(rgen.rand_uniform(0.22, 0.24)*floor_spacing);
 	assert(table_obj_ix < objs.size());
