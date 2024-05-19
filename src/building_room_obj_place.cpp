@@ -1830,8 +1830,9 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 		}
 	}	
 	if (residential && placed_obj) { // if we have at least a fridge or stove, try to add countertops
-		float const vspace(get_window_vspace()), height(0.345*vspace), depth(0.74*height), min_hwidth(0.6*height), floor_thickness(get_floor_thickness());
-		float const min_clearance(get_min_front_clearance_inc_people()), front_clearance(max(0.6f*height, min_clearance));
+		float const vspace(get_window_vspace()), height(0.345*vspace), depth(0.74*height), floor_thickness(get_floor_thickness());
+		float const min_clearance(get_min_front_clearance_inc_people());
+		float min_hwidth(0.6*height), front_clearance(max(0.6f*height, min_clearance));
 		cube_t cabinet_area(room_bounds);
 		cabinet_area.expand_by(-0.05*wall_thickness); // smaller gap than place_area; this is needed to prevent z-fighting with exterior walls
 		if (min(cabinet_area.dx(), cabinet_area.dy()) < 4.0*min_hwidth) return placed_obj; // no space for cabinets, room is too small
@@ -1843,14 +1844,19 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 		int const table_blocker_ix(gather_room_placement_blockers(cabinet_area, objs_start, blockers, 1, 1)); // inc_open_doors=1, ignore_chairs=1
 		bool const have_toaster(building_obj_model_loader.is_model_valid(OBJ_MODEL_TOASTER));
 		vector3d const toaster_sz(have_toaster ? building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOASTER) : zero_vector); // L, D, H
-		bool is_sink(1), placed_mwave(0), placed_toaster(0);
+		bool is_sink(1), placed_mwave(0), placed_toaster(0), had_counter(0);
 		cube_t mwave, toaster;
 
-		for (unsigned n = 0; n < 50; ++n) { // 50 attempts
+		for (unsigned n = 0; n < (had_counter ? 50 : 60); ++n) { // 50 attempts, plus an extra 10 if no counters were placed
 			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
 			bool const is_ext_wall(classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT); // assumes not in basement
 			// only consider exterior walls in the first 20 attempts to prioritize these so that we don't have splits visible through windows; also places kitchen sinks near windows
 			if (n < 20 && !is_ext_wall) continue;
+
+			if (n > 30 && !had_counter) { // reduce min width and clearance for later iterations if no counters were placed
+				min_hwidth      -= 0.01*height;
+				front_clearance -= 0.01*height;
+			}
 			float const center(rgen.rand_uniform(cabinet_area.d[!dim][0]+min_hwidth, cabinet_area.d[!dim][1]-min_hwidth)); // random position
 			float const dir_sign(dir ? -1.0 : 1.0), wall_pos(cabinet_area.d[dim][dir]), front_pos(wall_pos + dir_sign*depth);
 			c.d[ dim][ dir] = wall_pos;
@@ -1889,6 +1895,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 			unsigned const cabinet_id(objs.size());
 			objs.emplace_back(c, (is_sink ? TYPE_KSINK : TYPE_COUNTER), room_id, dim, !dir, 0, tot_light_amt);
 			set_obj_id(objs);
+			had_counter = 1;
 			
 			if (add_backsplash) {
 				objs.back().flags |= (RO_FLAG_ADJ_BOT | RO_FLAG_HAS_EXTRA); // flag back as having a back backsplash
