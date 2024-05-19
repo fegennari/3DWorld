@@ -4131,7 +4131,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			laptop_prob = 0.3*place_laptop_prob;
 			pizza_prob  = 0.8*place_pizza_prob;
 			banana_prob = 0.7*place_banana_prob;
-			if (is_residential()) {toy_prob = 0.5;} // toys are in residential only
+			if (is_house || btype == BTYPE_APARTMENT) {toy_prob = 0.5;} // toys are in houses and apartments only
 		}
 		else if (obj.type == TYPE_DESK && !(obj.flags & RO_FLAG_ADJ_TOP)) { // desk with no computer monitor
 			book_prob   = 0.8*place_book_prob;
