@@ -1336,124 +1336,136 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			}
 		}
 	}
-	// try to add a shower; 50% chance if on first floor of a house; not in basements (due to drawing artifacts)
-	if (add_shower_tub && (is_apt_or_hotel() || floor > 0 || rgen.rand_bool())) {
-		float shower_dx(0.0), shower_dy(0.0), wall_thick(0.0);
-		bool hdim(0); // handle dim/long dim
-		// use a shower + tub combo for basements due to glass drawing artifacts, and for arpartments and hotels with small bathrooms; requires tub model
-		bool const place_shower_tub((is_basement || is_apt_or_hotel() || rgen.rand_float() < 0.25) && building_obj_model_loader.is_model_valid(OBJ_MODEL_TUB));
-		float const shower_height(place_shower_tub ? get_floor_ceil_gap() : 0.8*floor_spacing), tub_height(tub_height_factor*floor_spacing);
+	unsigned const pre_shower_tub_sink_ix(objs.size());
 
-		if (place_shower_tub) {
-			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TUB)); // D, W, H
-			hdim       = rgen.rand_bool();
-			shower_dx  = tub_height*(sz.y/sz.z); // width
-			shower_dy  = tub_height*(sz.x/sz.z); // depth
-			wall_thick = 0.05*shower_dx;
-			shower_dx += wall_thick;
-			if (hdim) {swap(shower_dx, shower_dy);}
-		}
-		else {
-			for (unsigned d = 0; d < 2; ++d) {(d ? shower_dy : shower_dx) = rgen.rand_uniform(0.4, 0.5)*floor_spacing;}
-			hdim = (shower_dx < shower_dy); // larger dim, must match handle/door drawing code
-		}
-		unsigned const first_corner(rgen.rand() & 3);
-		bool placed_shower(0), is_ext_wall[2][2] = {0};
+	for (unsigned n = 0; n < 20; ++n) { // 20 tries to add a tub/shower and sink
+		unsigned bathroom_objs_mask(0);
+
+		// try to add a shower; 50% chance if on first floor of a house; not in basements (due to drawing artifacts)
+		if (add_shower_tub && (is_apt_or_hotel() || floor > 0 || rgen.rand_bool())) {
+			float shower_dx(0.0), shower_dy(0.0), wall_thick(0.0);
+			bool hdim(0); // handle dim/long dim
+			// use a shower + tub combo for basements due to glass drawing artifacts, and for arpartments and hotels with small bathrooms; requires tub model
+			bool const place_shower_tub((is_basement || is_apt_or_hotel() || rgen.rand_float() < 0.25) && building_obj_model_loader.is_model_valid(OBJ_MODEL_TUB));
+			float const shower_height(place_shower_tub ? get_floor_ceil_gap() : 0.8*floor_spacing), tub_height(tub_height_factor*floor_spacing);
+
+			if (place_shower_tub) {
+				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TUB)); // D, W, H
+				hdim       = rgen.rand_bool();
+				shower_dx  = tub_height*(sz.y/sz.z); // width
+				shower_dy  = tub_height*(sz.x/sz.z); // depth
+				wall_thick = 0.05*shower_dx;
+				shower_dx += wall_thick;
+				if (hdim) {swap(shower_dx, shower_dy);}
+			}
+			else {
+				for (unsigned d = 0; d < 2; ++d) {(d ? shower_dy : shower_dx) = rgen.rand_uniform(0.4, 0.5)*floor_spacing;}
+				hdim = (shower_dx < shower_dy); // larger dim, must match handle/door drawing code
+			}
+			unsigned const first_corner(rgen.rand() & 3);
+			bool placed_shower(0), is_ext_wall[2][2] = {0};
 		
-		if (!is_basement && has_windows()) { // precompute which walls are exterior, {dim}x{dir}; basement walls are not considered exterior because there are no windows
-			for (unsigned d = 0; d < 4; ++d) {is_ext_wall[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);}
+			if (!is_basement && has_windows()) { // precompute which walls are exterior, {dim}x{dir}; basement walls are not considered exterior because there are no windows
+				for (unsigned d = 0; d < 4; ++d) {is_ext_wall[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);}
+			}
+			for (unsigned ar = 0; ar < 2; ++ar) { // try both aspect ratios/door sides
+				for (unsigned n = 0; n < 4; ++n) { // try 4 room corners
+					unsigned const corner_ix((first_corner + n)&3);
+					bool const xdir(corner_ix&1), ydir(corner_ix>>1), dirs[2] = {xdir, ydir};
+					point const corner(room_bounds.d[0][xdir], room_bounds.d[1][ydir], zval); // flush against the wall
+					cube_t c(corner, corner);
+					c.d[0][!xdir] += (xdir ? -1.0 : 1.0)*shower_dx;
+					c.d[1][!ydir] += (ydir ? -1.0 : 1.0)*shower_dy;
+					c.z2() += shower_height; // set height
+					bool is_bad(0);
+
+					for (unsigned d = 0; d < 2; ++d) { // check for window intersection
+						// Update: exterior walls aren't drawn in the correct order for glass alpha blend, so skip any exterior walls
+						if (is_ext_wall[!d][dirs[!d]] /*&& is_val_inside_window(part, d, c.d[d][!dirs[d]], get_hspacing_for_part(part, d), get_window_h_border())*/) {is_bad = 1; break;}
+					}
+					if (is_bad) continue;
+					cube_t c2(c); // used for placement tests
+
+					if (place_shower_tub) {
+						// anything?
+					}
+					else { // shower: extend out by door width on the side that opens, and a small amount on the other side
+						c2.d[0][!xdir] += (xdir ? -1.0 : 1.0)*((!hdim) ? 1.1*shower_dy : 0.2*shower_dx);
+						c2.d[1][!ydir] += (ydir ? -1.0 : 1.0)*(  hdim  ? 1.1*shower_dx : 0.2*shower_dy);
+					}
+					if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, room, 0.0, 1)) continue; // bad placement
+					bool const dim(place_shower_tub ? !hdim : xdir), dir(place_shower_tub ? !(hdim ? xdir : ydir) : ydir); // different encodings
+					objs.emplace_back(c, (place_shower_tub ? TYPE_SHOWERTUB : TYPE_SHOWER), room_id, dim, dir, 0, tot_light_amt);
+					set_obj_id(objs); // selects tile texture/color
+
+					if (place_shower_tub) { // add the tub part as well
+						bool const wall_dir(hdim ? ydir : xdir);
+						// set flag to indicate which side is the wall for adding the shower head, and make open by default
+						unsigned const lo_hi_flag(wall_dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO);
+						objs.back().flags |= lo_hi_flag | RO_FLAG_OPEN;
+						objs.back().color  = (is_basement ? WHITE : wall_color); // color of the end wall
+						cube_t tub(c);
+						tub.z2() = c.z1() + tub_height;
+						tub.d[!dim][!wall_dir] -= (wall_dir ? -1.0 : 1.0)*wall_thick; // shrink off the wall
+						tub.translate_dim(dim, (dir ? 1.0 : -1.0)*0.1*get_trim_thickness()); // shift away from the wall slightly to prevent Z-fighting
+						objs.emplace_back(tub, TYPE_TUB, room_id, dim, dir, lo_hi_flag, tot_light_amt);
+						bathroom_objs_mask |= PLACED_TUB;
+						no_tub = 1;
+					}
+					objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker cube to ensure no other object overlaps this space
+					placed_obj = placed_shower = 1;
+					bathroom_objs_mask  |= PLACED_SHOWER;
+					break; // done
+				} // for n
+				if (placed_shower) break; // done
+				swap(shower_dx, shower_dy); // try the other aspect ratio
+				hdim ^= 1;
+			} // for ar
 		}
-		for (unsigned ar = 0; ar < 2; ++ar) { // try both aspect ratios/door sides
-			for (unsigned n = 0; n < 4; ++n) { // try 4 room corners
-				unsigned const corner_ix((first_corner + n)&3);
-				bool const xdir(corner_ix&1), ydir(corner_ix>>1), dirs[2] = {xdir, ydir};
-				point const corner(room_bounds.d[0][xdir], room_bounds.d[1][ydir], zval); // flush against the wall
-				cube_t c(corner, corner);
-				c.d[0][!xdir] += (xdir ? -1.0 : 1.0)*shower_dx;
-				c.d[1][!ydir] += (ydir ? -1.0 : 1.0)*shower_dy;
-				c.z2() += shower_height; // set height
-				bool is_bad(0);
-
-				for (unsigned d = 0; d < 2; ++d) { // check for window intersection
-					// Update: exterior walls aren't drawn in the correct order for glass alpha blend, so skip any exterior walls
-					if (is_ext_wall[!d][dirs[!d]] /*&& is_val_inside_window(part, d, c.d[d][!dirs[d]], get_hspacing_for_part(part, d), get_window_h_border())*/) {is_bad = 1; break;}
-				}
-				if (is_bad) continue;
-				cube_t c2(c); // used for placement tests
-
-				if (place_shower_tub) {
-					// anything?
-				}
-				else { // shower: extend out by door width on the side that opens, and a small amount on the other side
-					c2.d[0][!xdir] += (xdir ? -1.0 : 1.0)*((!hdim) ? 1.1*shower_dy : 0.2*shower_dx);
-					c2.d[1][!ydir] += (ydir ? -1.0 : 1.0)*(  hdim  ? 1.1*shower_dx : 0.2*shower_dy);
-				}
-				if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, room, 0.0, 1)) continue; // bad placement
-				bool const dim(place_shower_tub ? !hdim : xdir), dir(place_shower_tub ? !(hdim ? xdir : ydir) : ydir); // different encodings
-				objs.emplace_back(c, (place_shower_tub ? TYPE_SHOWERTUB : TYPE_SHOWER), room_id, dim, dir, 0, tot_light_amt);
-				set_obj_id(objs); // selects tile texture/color
-
-				if (place_shower_tub) { // add the tub part as well
-					bool const wall_dir(hdim ? ydir : xdir);
-					// set flag to indicate which side is the wall for adding the shower head, and make open by default
-					unsigned const lo_hi_flag(wall_dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO);
-					objs.back().flags |= lo_hi_flag | RO_FLAG_OPEN;
-					objs.back().color  = (is_basement ? WHITE : wall_color); // color of the end wall
-					cube_t tub(c);
-					tub.z2() = c.z1() + tub_height;
-					tub.d[!dim][!wall_dir] -= (wall_dir ? -1.0 : 1.0)*wall_thick; // shrink off the wall
-					tub.translate_dim(dim, (dir ? 1.0 : -1.0)*0.1*get_trim_thickness()); // shift away from the wall slightly to prevent Z-fighting
-					objs.emplace_back(tub, TYPE_TUB, room_id, dim, dir, lo_hi_flag, tot_light_amt);
-					added_bathroom_objs_mask |= PLACED_TUB;
-					no_tub = 1;
-				}
-				objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker cube to ensure no other object overlaps this space
-				placed_obj = placed_shower = 1;
-				added_bathroom_objs_mask  |= PLACED_SHOWER;
-				break; // done
-			} // for n
-			if (placed_shower) break; // done
-			swap(shower_dx, shower_dy); // try the other aspect ratio
-			hdim ^= 1;
-		} // for ar
-	}
-	// place a tub, but not in office buildings; placed before the sink because it's the largest and the most limited in valid locations
-	if (!no_tub && add_shower_tub && (!is_basement || rgen.rand_bool())) { // 50% of the time if in the basement
-		cube_t place_area_tub(room_bounds);
-		place_area_tub.expand_by(-get_trim_thickness()); // just enough to prevent z-fighting and intersecting the wall trim
+		// place a tub, but not in office buildings; placed before the sink because it's the largest and the most limited in valid locations
+		if (!no_tub && add_shower_tub && (!is_basement || rgen.rand_bool())) { // 50% of the time if in the basement
+			cube_t place_area_tub(room_bounds);
+			place_area_tub.expand_by(-get_trim_thickness()); // just enough to prevent z-fighting and intersecting the wall trim
 		
-		if (place_model_along_wall(OBJ_MODEL_TUB, TYPE_TUB, room, tub_height_factor, rgen, zval, room_id, tot_light_amt, place_area_tub, objs_start, 0.4)) {
-			placed_obj = 1;
-			added_bathroom_objs_mask |= PLACED_TUB;
-		}
-	}
-	unsigned const sink_obj_ix(objs.size());
-
-	if (place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6)) {
-		placed_obj = 1;
-		added_bathroom_objs_mask |= PLACED_SINK;
-		assert(sink_obj_ix < objs.size());
-		room_object_t const &sink(objs[sink_obj_ix]); // sink, not blocker
-		
-		if (point_in_water_area(sink.get_cube_center())) {} // no medicine cabinet, because the reflection system doesn't support both a mirror and water reflection
-		else if (is_basement || classify_room_wall(room, zval, sink.dim, !sink.dir, 0) != ROOM_WALL_EXT) { // interior wall only
-			// add a mirror/medicine cabinet above the sink; could later make into medicine cabinet
-			cube_t mirror(sink); // start with the sink left and right position
-			mirror.expand_in_dim(!sink.dim, 0.1*mirror.get_sz_dim(!sink.dim)); // make slightly wider
-			set_cube_zvals(mirror, sink.z2(), sink.z2()+0.3*floor_spacing);
-			mirror.d[sink.dim][!sink.dir] = room_bounds.d[sink.dim][!sink.dir];
-			mirror.d[sink.dim][ sink.dir] = mirror.d[sink.dim][!sink.dir] + (sink.dir ? 1.0 : -1.0)*1.0*wall_thickness; // thickness
-
-			if (!overlaps_other_room_obj(mirror, objs_start, 0, &sink_obj_ix)) { // check_all=0; skip sink + blocker
-				// this mirror is actually 3D, so we enable collision detection; treat as a house even if it's in an office building
-				unsigned flags(RO_FLAG_IS_HOUSE); // Note: not necessarily a house
-				if (count_ext_walls_for_room(room, mirror.z1()) == 1) {flags |= RO_FLAG_INTERIOR;} // flag as interior if windows are opaque glass blocks
-				objs.emplace_back(mirror, TYPE_MIRROR, room_id, sink.dim, sink.dir, flags, tot_light_amt);
-				set_obj_id(objs); // for crack texture selection/orient
-				room.has_mirror = 1;
+			if (place_model_along_wall(OBJ_MODEL_TUB, TYPE_TUB, room, tub_height_factor, rgen, zval, room_id, tot_light_amt, place_area_tub, objs_start, 0.4)) {
+				placed_obj = 1;
+				bathroom_objs_mask |= PLACED_TUB;
 			}
 		}
-	}
+		unsigned const sink_obj_ix(objs.size());
+
+		if (place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6)) {
+			placed_obj = 1;
+			bathroom_objs_mask |= PLACED_SINK;
+			assert(sink_obj_ix < objs.size());
+			room_object_t const &sink(objs[sink_obj_ix]); // sink, not blocker
+		
+			if (point_in_water_area(sink.get_cube_center())) {} // no medicine cabinet, because the reflection system doesn't support both a mirror and water reflection
+			else if (is_basement || classify_room_wall(room, zval, sink.dim, !sink.dir, 0) != ROOM_WALL_EXT) { // interior wall only
+				// add a mirror/medicine cabinet above the sink; could later make into medicine cabinet
+				cube_t mirror(sink); // start with the sink left and right position
+				mirror.expand_in_dim(!sink.dim, 0.1*mirror.get_sz_dim(!sink.dim)); // make slightly wider
+				set_cube_zvals(mirror, sink.z2(), sink.z2()+0.3*floor_spacing);
+				mirror.d[sink.dim][!sink.dir] = room_bounds.d[sink.dim][!sink.dir];
+				mirror.d[sink.dim][ sink.dir] = mirror.d[sink.dim][!sink.dir] + (sink.dir ? 1.0 : -1.0)*1.0*wall_thickness; // thickness
+
+				if (!overlaps_other_room_obj(mirror, objs_start, 0, &sink_obj_ix)) { // check_all=0; skip sink + blocker
+					// this mirror is actually 3D, so we enable collision detection; treat as a house even if it's in an office building
+					unsigned flags(RO_FLAG_IS_HOUSE); // Note: not necessarily a house
+					if (count_ext_walls_for_room(room, mirror.z1()) == 1) {flags |= RO_FLAG_INTERIOR;} // flag as interior if windows are opaque glass blocks
+					objs.emplace_back(mirror, TYPE_MIRROR, room_id, sink.dim, sink.dir, flags, tot_light_amt);
+					set_obj_id(objs); // for crack texture selection/orient
+					room.has_mirror = 1;
+				}
+			}
+		}
+		else if (n+1 < 20) { // not the last try, rip up and retry
+			objs.resize(pre_shower_tub_sink_ix);
+			continue;
+		}
+		added_bathroom_objs_mask |= bathroom_objs_mask;
+		break;
+	} // for n
 	return placed_obj;
 }
 
