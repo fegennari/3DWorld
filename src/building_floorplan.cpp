@@ -1186,12 +1186,13 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 			float const window_h_space(room.get_sz_dim(!hall_dim)/windows_per_room_side);
 			bed_lb_split_pos += (hall_dir ? -1.0 : 1.0)*0.5*(1.0 - get_window_h_border())*window_h_space; // shift near edge of window frame
 		}
-		// add new rooms, most to least private; rooms tile exactly and have no space for walls
+		// add new rooms; rooms tile exactly and have no space for walls
 		cube_t bed(room), lb(room);
 		bed.d[!hall_dim][!hall_dir] = lb.d[!hall_dim][hall_dir] = bed_lb_split_pos;
 		cube_t living(lb), bath(lb);
 		bath.d[hall_dim][!lg_door_side] = living.d[hall_dim][lg_door_side] = liv_bath_split_pos;
 		room.copy_from(living); // ext_sides doesn't change
+		calc_room_ext_sides(room); // update since ext_sides may have changed
 		room.assign_all_to(RTYPE_LIVING); // public first
 		room.is_entry = 1;
 		unsigned const bed_rid(add_room(bed, part_id)), bath_rid(add_room(bath, part_id));
@@ -1245,15 +1246,15 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		living .d[hall_dim][!lg_door_side] = bed  .d[hall_dim][ lg_door_side] = living_bed_split_pos; // living room should be larger, or equal size
 		kitchen.d[hall_dim][!lg_door_side] = entry.d[hall_dim][ lg_door_side] = kitchen_split_pos;
 		bath   .d[hall_dim][ lg_door_side] = entry.d[hall_dim][!lg_door_side] = bath_split_pos;
-		room.copy_from(living);
+		room.copy_from(entry);
 		calc_room_ext_sides(room); // update since ext_sides may have changed
-		room.assign_all_to(RTYPE_LIVING); // public first
-		unsigned const bed_rid(add_room(bed, part_id)), bath_rid(add_room(bath, part_id)), kitchen_rid(add_room(kitchen, part_id)), entry_rid(add_room(entry, part_id));
+		room.assign_all_to(RTYPE_ENTRY);
+		room.is_entry = 1;
+		unsigned const bed_rid(add_room(bed, part_id)), bath_rid(add_room(bath, part_id)), kitchen_rid(add_room(kitchen, part_id)), living_rid(add_room(living, part_id));
 		get_room(bed_rid    ).assign_all_to(RTYPE_BED    );
 		get_room(bath_rid   ).assign_all_to(RTYPE_BATH   );
 		get_room(kitchen_rid).assign_all_to(RTYPE_KITCHEN);
-		get_room(entry_rid  ).assign_all_to(RTYPE_ENTRY  );
-		get_room(entry_rid  ).is_entry = 1;
+		get_room(living_rid ).assign_all_to(RTYPE_LIVING );
 		// add interior walls
 		cube_t fb_wall(room_area), lb_wall(bed), ke_wall(kitchen), be_wall(bath); // front-back, living room-bedroom, kitchen-entryway, bathroom-entryway
 		clip_wall_to_ceil_floor(fb_wall, fc_thick);

@@ -287,7 +287,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		else if (r->is_office)      {color = get_light_color_temp(0.6);} // office - blueish
 		else if (r->is_hallway)     {color = get_light_color_temp(0.6);} // office building hallway - blueish
 		else                        {color = get_light_color_temp(0.5);} // small office - white
-
+		
 		// place objects on each floor for this room
 		for (unsigned f = 0; f < num_floors; ++f, z += floor_height) {
 			float const floor_zval(z + fc_thick);
@@ -544,8 +544,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					added_obj = no_whiteboard = no_plants = add_security_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 			}
-			bool is_apt_or_hotel_room(r->is_apt_or_hotel_room());
-			bool const not_private_room(is_public_on_floor & floor_mask); // current unit has an intersecting walkway and is not private
+			bool const is_apt_or_hotel_room(r->is_apt_or_hotel_room());
 
 			if (is_apt_or_hotel_room || r->is_office) { // check if this room is adjacent to an exterior/walkway door, and if so, make it a lounge
 				cube_t room_this_floor(*r);
@@ -558,16 +557,22 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					r->assign_to(RTYPE_LOUNGE, f);
 					added_obj = make_public = 1;
 				}
-				else { // check for stairs in this room
-					room_this_floor.expand_in_dim(2, -fc_thick); // floor to ceiling
-					room_this_floor.expand_by_xy(-wall_thickness); // subtract off walls to avoid including stairs in adjacent rooms
-					if (has_stairs_bcube_int(room_this_floor, interior->stairwells, doorway_width, 1)) {make_public = 1;} // no_check_enter_exit=1 (check with no expand)
+				else if (r->is_entry) { // calculate full unit bounds and check for any stairs or exterior doors so that we can flag as public
+					cube_t unit_bounds(*r);
+					for (auto r2 = r+1; r2 != rooms.end() && r2->unit_id == r->unit_id; ++r2) {unit_bounds.union_with_cube(*r2);}
+					set_cube_zvals(unit_bounds, z, (z + floor_height));
+					
+					if (!walkways.empty() && is_room_adjacent_to_ext_door(unit_bounds)) {make_public = 1;}
+					else { // check for stairs in this room
+						unit_bounds.expand_in_dim(2, -fc_thick); // floor to ceiling
+						unit_bounds.expand_by_xy(-wall_thickness); // subtract off walls to avoid including stairs in adjacent rooms
+						if (has_stairs_bcube_int(unit_bounds, interior->stairwells, doorway_width, 1)) {make_public = 1;} // no_check_enter_exit=1 (check with no expand)
+					}
 				}
-				if (make_public) {
-					if (is_apt_or_hotel_room) {is_public_on_floor |= floor_mask;} // if was an apt or hotel room, then flag this floor as being non-residential for this unit
-					is_apt_or_hotel_room = 0;
-				}
+				if (make_public && is_apt_or_hotel_room) {is_public_on_floor |= floor_mask;} // if was an apt or hotel room, flag this floor as being non-res for this unit
 			}
+			bool const not_private_room(is_public_on_floor & floor_mask); // current unit has an intersecting walkway or stairs and is not private
+
 			if (is_apt_or_hotel_room) {
 				// handle pre-assigned apartment or hotel rooms
 				if (init_rtype_f0 == RTYPE_BATH) { // assigned bathroom; can be public or private
