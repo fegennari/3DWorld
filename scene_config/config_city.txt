@@ -47,7 +47,7 @@ buildings rat_size_max 0.20 # length relative to floor spacing
 # building spiders
 buildings num_spiders_min 3
 buildings num_spiders_max 5
-buildings spider_drawer_prob 0.04
+buildings spider_drawer_prob 0.02
 buildings spider_speed 0.0003
 buildings spider_size_min 0.08 # length relative to floor spacing
 buildings spider_size_max 0.15 # length relative to floor spacing
