@@ -445,7 +445,7 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 		bool const side(room_center[i->dim] < i->get_center_dim(i->dim)), shift_dir(room_center[!i->dim] < part_center[!i->dim]);
 		float const door_width(i->get_width()), side_sign(side ? 1.0 : -1.0);
 		cube_t sign(*i);
-		set_cube_zvals(sign, zval+0.54*floor_spacing, zval+0.59*floor_spacing); // high enough that it's not blocked by filing cabinets
+		set_cube_zvals(sign, zval+0.55*floor_spacing, zval+0.6*floor_spacing); // high enough that it's not blocked by filing cabinets
 		sign.translate_dim(!i->dim, (shift_dir ? -1.0 : 1.0)*0.8*door_width);
 		sign.expand_in_dim(!i->dim, -(0.45 - 0.03*min((unsigned)text.size(), 6U))*door_width); // shrink a bit
 		sign.translate_dim( i->dim, side_sign*0.5*wall_thickness); // move to outside wall
