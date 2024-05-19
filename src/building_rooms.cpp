@@ -570,27 +570,30 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			if (is_apt_or_hotel_room) {
 				// handle pre-assigned apartment or hotel rooms
-				if (init_rtype_f0 == RTYPE_LIVING) { // assigned apartment living room
+				if (init_rtype_f0 == RTYPE_BATH) { // assigned bathroom; can be public or private
+					bool const add_shower_tub(!not_private_room);
+					add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement, add_shower_tub, added_bathroom_objs_mask); // return ignored
+					is_bathroom = added_bathroom = 1;
+				}
+				else if (init_rtype_f0 == RTYPE_LIVING) { // assigned apartment living room, or lounge-like public area
 					added_tc = can_place_onto = add_table_and_chairs(rgen, *r, blockers, room_id, room_center, chair_color, 0.1, tot_light_amt);
 					add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start); // return value ignored
 					is_living = is_numbered_room = 1;
+				}
+				else if (init_rtype_f0 == RTYPE_LOBBY) { // lobby is similar to lounge (can we get here?)
+					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start); // return value ignored
+				}
+				else if (not_private_room) { // make it an office
+					can_place_onto = added_desk = add_office_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_basement);
 				}
 				else if (init_rtype_f0 == RTYPE_BED) { // assigned bedroom
 					can_place_onto |= add_bedroom_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_lit, 0, 1, light_ix_assign);
 					added_bedroom = is_bedroom = 1;
 				}
-				else if (init_rtype_f0 == RTYPE_BATH) { // assigned bathroom
-					bool const add_shower_tub(!not_private_room);
-					add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement, add_shower_tub, added_bathroom_objs_mask); // return ignored
-					is_bathroom = added_bathroom = 1;
-				}
 				else if (init_rtype_f0 == RTYPE_KITCHEN) { // assigned apartment kitchen
 					added_tc = can_place_onto = add_table_and_chairs(rgen, *r, blockers, room_id, room_center, chair_color, 0.1, tot_light_amt);
 					add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, 0); // allow_adj_ext_door=0; return value ignored
 					is_kitchen = 1;
-				}
-				else if (init_rtype_f0 == RTYPE_LOBBY) { // lobby is similar to lounge (can we get here?)
-					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start); // return value ignored
 				}
 				else if (init_rtype_f0 == RTYPE_ENTRY) { // entryway
 					// TODO: too small, no objects for now other than trashcan and pictures

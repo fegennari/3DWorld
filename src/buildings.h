@@ -2010,6 +2010,7 @@ private:
 	bool is_valid_stairs_elevator_placement(cube_t const &c, float pad, int dim=2, bool check_walls=1, bool check_private_rooms=0) const;
 	bool clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out, vect_cube_t &temp) const;
 	void add_ceiling_cube_no_skylights(cube_t const &c);
+	void calc_room_ext_sides(room_t &room) const;
 	unsigned add_room(cube_t const &room, unsigned part_id, unsigned num_lights=1, bool is_hallway=0, bool is_office=0, bool is_sec_bldg=0);
 	void add_or_extend_elevator(elevator_t const &elevator, bool add);
 	void remove_intersecting_roof_cubes(cube_t const &c);

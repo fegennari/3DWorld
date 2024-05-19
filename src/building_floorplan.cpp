@@ -1186,18 +1186,17 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 			float const window_h_space(room.get_sz_dim(!hall_dim)/windows_per_room_side);
 			bed_lb_split_pos += (hall_dir ? -1.0 : 1.0)*0.5*(1.0 - get_window_h_border())*window_h_space; // shift near edge of window frame
 		}
-		// add new rooms; rooms tile exactly and have no space for walls
+		// add new rooms, most to least private; rooms tile exactly and have no space for walls
 		cube_t bed(room), lb(room);
 		bed.d[!hall_dim][!hall_dir] = lb.d[!hall_dim][hall_dir] = bed_lb_split_pos;
 		cube_t living(lb), bath(lb);
 		bath.d[hall_dim][!lg_door_side] = living.d[hall_dim][lg_door_side] = liv_bath_split_pos;
-		room.copy_from(bed); // ext_sides doesn't change
-		room.assign_all_to(RTYPE_BED);
-		unsigned const living_rid(add_room(living, part_id)), bath_rid(add_room(bath, part_id));
-		room_t &living_room(get_room(living_rid)), &bathroom(get_room(bath_rid));
-		living_room.assign_all_to(RTYPE_LIVING);
-		bathroom   .assign_all_to(RTYPE_BATH  ); // bathroom should be added last
-		living_room.is_entry = 1;
+		room.copy_from(living); // ext_sides doesn't change
+		room.assign_all_to(RTYPE_LIVING); // public first
+		room.is_entry = 1;
+		unsigned const bed_rid(add_room(bed, part_id)), bath_rid(add_room(bath, part_id));
+		get_room(bed_rid ).assign_all_to(RTYPE_BED );
+		get_room(bath_rid).assign_all_to(RTYPE_BATH);
 		// add interior walls and doors; all doors are unlocked
 		float const bed_center(living.get_center_dim(hall_dim)), bath_center(bath.get_center_dim(!hall_dim));
 		cube_t bed_wall(bed), bath_wall(bath);
@@ -1246,15 +1245,15 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		living .d[hall_dim][!lg_door_side] = bed  .d[hall_dim][ lg_door_side] = living_bed_split_pos; // living room should be larger, or equal size
 		kitchen.d[hall_dim][!lg_door_side] = entry.d[hall_dim][ lg_door_side] = kitchen_split_pos;
 		bath   .d[hall_dim][ lg_door_side] = entry.d[hall_dim][!lg_door_side] = bath_split_pos;
-		room.copy_from(bed); // TODO: update ext_sides
-		room.assign_all_to(RTYPE_BED);
-		unsigned const living_rid(add_room(living, part_id)), bath_rid(add_room(bath, part_id)), kitchen_rid(add_room(kitchen, part_id)), entry_rid(add_room(entry, part_id));
-		room_t &living_room(get_room(living_rid)), &bathroom(get_room(bath_rid)), &kitchen_room(get_room(kitchen_rid)), &entry_room(get_room(entry_rid));
-		living_room .assign_all_to(RTYPE_LIVING );
-		bathroom    .assign_all_to(RTYPE_BATH   ); // bathroom should be added last
-		kitchen_room.assign_all_to(RTYPE_KITCHEN);
-		entry_room  .assign_all_to(RTYPE_ENTRY  );
-		entry_room.is_entry = 1;
+		room.copy_from(living);
+		calc_room_ext_sides(room); // update since ext_sides may have changed
+		room.assign_all_to(RTYPE_LIVING); // public first
+		unsigned const bed_rid(add_room(bed, part_id)), bath_rid(add_room(bath, part_id)), kitchen_rid(add_room(kitchen, part_id)), entry_rid(add_room(entry, part_id));
+		get_room(bed_rid    ).assign_all_to(RTYPE_BED    );
+		get_room(bath_rid   ).assign_all_to(RTYPE_BATH   );
+		get_room(kitchen_rid).assign_all_to(RTYPE_KITCHEN);
+		get_room(entry_rid  ).assign_all_to(RTYPE_ENTRY  );
+		get_room(entry_rid  ).is_entry = 1;
 		// add interior walls
 		cube_t fb_wall(room_area), lb_wall(bed), ke_wall(kitchen), be_wall(bath); // front-back, living room-bedroom, kitchen-entryway, bathroom-entryway
 		clip_wall_to_ceil_floor(fb_wall, fc_thick);
@@ -2504,11 +2503,9 @@ void building_t::create_two_story_tall_rooms(rand_gen_t &rgen) {
 	} // for room
 }
 
-unsigned building_t::add_room(cube_t const &room, unsigned part_id, unsigned num_lights, bool is_hallway, bool is_office, bool is_sec_bldg) {
-	assert(interior);
-	assert(room.is_strictly_normalized());
-	room_t r(room, part_id, num_lights, is_hallway, is_office, is_sec_bldg);
-	cube_t const &part(parts[part_id]);
+void building_t::calc_room_ext_sides(room_t &room) const {
+	cube_t const &part(parts[room.part_id]);
+	room.ext_sides = 0;
 
 	for (unsigned d = 0; d < 4; ++d) { // find exterior sides
 		bool const dim(d>>1), dir(d&1);
@@ -2521,9 +2518,15 @@ unsigned building_t::add_room(cube_t const &room, unsigned part_id, unsigned num
 			if (p->z1() >= room.z2() || p->z2() <= room.z1()) continue; // no z overlap (wrong stack)
 			if (p->d[!dim][0] > room.d[!dim][0] || p->d[!dim][1] < room.d[!dim][1]) continue; // wall not contained
 			if (room.z2() <= p->z2()) {is_exterior = 0; break;} // this part covers the wall in z (assuming no overhangs), so wall is interior split between parts (not exterior)
-		} // for p
-		if (is_exterior) {r.ext_sides |= (1 << d);}
+		}
+		if (is_exterior) {room.ext_sides |= (1 << d);}
 	} // for d
+}
+unsigned building_t::add_room(cube_t const &room, unsigned part_id, unsigned num_lights, bool is_hallway, bool is_office, bool is_sec_bldg) {
+	assert(interior);
+	assert(room.is_strictly_normalized());
+	room_t r(room, part_id, num_lights, is_hallway, is_office, is_sec_bldg);
+	calc_room_ext_sides(r);
 	if (check_skylight_intersection(room)) {r.has_skylight = 1;}
 	unsigned const room_id(interior->rooms.size());
 	interior->rooms.push_back(r);
