@@ -3534,7 +3534,8 @@ public:
 			if (indir_bcs_ix >= 0 && indir_bix >= 0) {indir_tex_mgr.create_for_building(bcs[indir_bcs_ix]->get_building(indir_bix), indir_bix, camera_bs);}
 			else if (!reflection_pass) {end_building_rt_job();}
 			
-			if (draw_interior && have_windows && !ref_pass_interior) { // write to stencil buffer, use stencil test for back facing building walls
+			if (draw_interior && !interior_wind_draw.empty() && !ref_pass_interior) {
+				// draw interior windows to cut out holes; write to stencil buffer, use stencil test for back facing building walls
 				enable_holes_shader(holes_shader);
 				setup_stencil_buffer_write();
 				glStencilOpSeparate((swap_front_back ? GL_BACK : GL_FRONT), GL_KEEP, GL_KEEP, GL_KEEP); // ignore front faces
@@ -3696,11 +3697,10 @@ public:
 		glCullFace(swap_front_back ? GL_FRONT : GL_BACK);
 		if (!ext_door_draw.empty()) {glDisable(GL_DEPTH_CLAMP);} // if an exterior door was drawn, make sure we don't clamp the walls over the holes
 
-		if (1/*!reflection_pass*/) { // draw front faces of buildings; nearby shadowed buildings will be drawn later
-			for (unsigned ix = 0; ix < max_draw_ix; ++ix) {
-				for (auto i = bcs.begin(); i != bcs.end(); ++i) {
-					if (!(*i)->use_smap_this_frame) {(*i)->building_draw_vbo.draw_block(s, ix, 0);}
-				}
+		// draw front faces of buildings, even in the reflection pass; nearby shadowed buildings will be drawn later
+		for (unsigned ix = 0; ix < max_draw_ix; ++ix) {
+			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
+				if (!(*i)->use_smap_this_frame) {(*i)->building_draw_vbo.draw_block(s, ix, 0);}
 			}
 		}
 		set_std_depth_func_with_eq();

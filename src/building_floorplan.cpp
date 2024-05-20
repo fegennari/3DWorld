@@ -200,7 +200,7 @@ bool building_t::interior_enabled() const {
 	if (!global_building_params.windows_enabled())      return 0; // no windows, can't assign floors and generate interior
 	if (!is_cube() && has_complex_floorplan)            return 0; // not handling non-cube buildings with complex floorplans here
 	// skip buildings with windows baked into textures
-	if (!global_building_params.add_city_interiors && !get_material().add_windows) return 0; // not a building type that has generated windows
+	if (!global_building_params.add_city_interiors && !has_windows()) return 0; // not a building type that has generated windows
 	return 1;
 }
 
