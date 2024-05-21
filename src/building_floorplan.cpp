@@ -1182,7 +1182,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		float bed_lb_split_pos(room.get_center_dim(!hall_dim));
 		float const liv_bath_split_pos(ds.d[hall_dim][lg_door_side] + (lg_door_side ? 1.0 : -1.0)*door_to_wall_min_space); // door goes to living room, which is larger
 
-		if (has_windows() && (at_lo_end || at_hi_end) && windows_per_room_side > 1 && (windows_per_room_side & 1)) { // shift bed_lb_split_pos to prevent window intersection
+		if (has_int_windows() && (at_lo_end || at_hi_end) && windows_per_room_side > 1 && (windows_per_room_side & 1)) { // shift bed_lb_split_pos to prevent window intersection
 			float const window_h_space(room.get_sz_dim(!hall_dim)/windows_per_room_side);
 			bed_lb_split_pos += (hall_dir ? -1.0 : 1.0)*0.5*(1.0 - get_window_h_border())*window_h_space; // shift near edge of window frame
 		}
@@ -1227,7 +1227,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		kitchen_split_pos += shift;
 		bath_split_pos    += shift;
 
-		if (has_windows()) { // prevent walls from intersecting windows
+		if (has_int_windows()) { // prevent walls from intersecting windows
 			if (num_windows & 1) { // odd number of windows; shift living_bed_split_pos to not intersect a window
 				float const window_h_space(room.get_sz_dim(hall_dim)/num_windows);
 				living_bed_split_pos += (lg_door_side ? -1.0 : 1.0)*0.5*(1.0 - get_window_h_border())*window_h_space; // shift near edge of bedroom window frame

@@ -675,7 +675,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 	unsigned closet_obj_id(0);
 	bool chk_windows[2][2] = {}; // precompute which walls are exterior and can have windows, {dim}x{dir}
 
-	if (!is_basement && has_windows()) { // are bedrooms ever placed in the basement?
+	if (!is_basement && has_int_windows()) { // are bedrooms ever placed in the basement?
 		for (unsigned d = 0; d < 4; ++d) {chk_windows[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);}
 	}
 	for (unsigned n = 0; n < 4 && !placed_closet; ++n) { // try 4 room corners
@@ -1145,7 +1145,7 @@ bool building_t::maybe_add_fireplace_to_room(rand_gen_t &rgen, room_t const &roo
 }
 
 bool building_t::check_if_against_window(cube_t const &c, room_t const &room, bool dim, bool dir) const {
-	if (!has_windows() || classify_room_wall(room, c.zc(), dim, dir, 0) != ROOM_WALL_EXT) return 0;
+	if (!has_int_windows() || classify_room_wall(room, c.zc(), dim, dir, 0) != ROOM_WALL_EXT) return 0;
 	cube_t const part(get_part_for_room(room));
 	float const hspacing(get_hspacing_for_part(part, !dim)), border(get_window_h_border());
 	// assume object is no larger than 2x window size and check left, right, and center positions
@@ -1309,7 +1309,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 				cube_t const part(get_part_for_room(room));
 
 				// if this wall has windows and bathroom has multiple exterior walls (which means it has non-glass block windows), don't place a TP roll
-				if (is_basement || !has_windows() || classify_room_wall(room, zval, !dim, tp_dir, 0) != ROOM_WALL_EXT ||
+				if (is_basement || !has_int_windows() || classify_room_wall(room, zval, !dim, tp_dir, 0) != ROOM_WALL_EXT ||
 					!is_val_inside_window(part, dim, far_edge_pos, get_hspacing_for_part(part, dim), get_window_h_border()) || count_ext_walls_for_room(room, zval) <= 1)
 				{
 					add_tp_roll(room_bounds, room_id, tot_light_amt, !dim, tp_dir, length, (c.z1() + 0.7*height), wall_pos);
@@ -1325,7 +1325,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 				room_object_t const &toilet(objs.back()); // okay if this is the blocker
 				
 				// Note: not calling is_val_inside_window() here because I don't have a test case for that and it may not even be possible to get here when the toilet is next to a window
-				if (is_basement || !has_windows() || classify_room_wall(room, zval, toilet.dim, !toilet.dir, 0) != ROOM_WALL_EXT) { // check for possible windows
+				if (is_basement || !has_int_windows() || classify_room_wall(room, zval, toilet.dim, !toilet.dir, 0) != ROOM_WALL_EXT) { // check for possible windows
 					bool place_dir(rgen.rand_bool()); // pick a random starting side
 
 					for (unsigned d = 0; d < 2; ++d) {
@@ -1366,7 +1366,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			unsigned const first_corner(rgen.rand() & 3);
 			bool placed_shower(0), is_ext_wall[2][2] = {0};
 		
-			if (!is_basement && has_windows()) { // precompute which walls are exterior, {dim}x{dir}; basement walls are not considered exterior because there are no windows
+			if (!is_basement && has_int_windows()) { // precompute which walls are exterior, {dim}x{dir}; basement walls are not considered exterior because there are no windows
 				for (unsigned d = 0; d < 4; ++d) {is_ext_wall[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);}
 			}
 			for (unsigned ar = 0; ar < 2; ++ar) { // try both aspect ratios/door sides
@@ -2186,7 +2186,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 				room_wall.d[dim][!dir] = room.d[dim][dir]; // shrink room to zero width along this wall
 				if (is_room_adjacent_to_ext_door(room_wall)) continue;
 			}
-			else if (is_house && !is_basement && has_windows() && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) {
+			else if (is_house && !is_basement && has_int_windows() && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) {
 				// don't place shelves against exterior house walls in case there are windows
 				cube_t const part(get_part_for_room(room));
 				float const h_spacing(get_hspacing_for_part(part, !dim));
@@ -3581,7 +3581,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 	if (room.get_room_type(0) == RTYPE_STORAGE) return 0; // no pictures or whiteboards in storage rooms (always first floor)
 	cube_t const &part(get_part_for_room(room));
 	float const floor_height(get_window_vspace()), wall_thickness(get_wall_thickness());
-	bool const no_ext_walls(!is_basement && (has_windows() || !is_cube())); // don't place on ext walls with windows or non-square orients
+	bool const no_ext_walls(!is_basement && (has_int_windows() || !is_cube())); // don't place on ext walls with windows or non-square orients
 	vect_room_object_t &objs(interior->room_geom->objs);
 	bool was_hung(0);
 
@@ -3864,7 +3864,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 		c.d[dim][!dir] = wall_face + dir_sign*plate_thickness; // expand out a bit
 		set_wall_width(c, wall_pos, plate_hwidth, !dim);
 
-		if (!is_basement && has_windows() && is_exterior_wall) { // check for window intersection
+		if (!is_basement && has_int_windows() && is_exterior_wall) { // check for window intersection
 			cube_t const part(get_part_for_room(room));
 			float const window_hspacing(get_hspacing_for_part(part, !dim)), window_h_border(get_window_h_border());
 			// expand by the width of the window trim, plus some padded wall plate width, then check to the left and right;

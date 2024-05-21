@@ -2069,16 +2069,10 @@ template void building_t::add_door_verts(cube_t const &D, building_room_geom_t &
 	bool opens_out, bool exterior, bool on_stairs, bool hinge_side, bool is_bldg_conn, bool draw_top_edge) const;
 
 // Note: this is actually the geometry of walls that have windows, not the windows themselves
-void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale, point const *const only_cont_pt_in, bool no_skylights) const {
-
+void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale,
+	point const *const only_cont_pt_in, bool no_skylights, bool draw_int_windows) const
+{
 	if (!is_valid()) return; // invalid building
-	point only_cont_pt;
-
-	if (only_cont_pt_in) {
-		only_cont_pt = *only_cont_pt_in;
-		maybe_inv_rotate_point(only_cont_pt);
-	}
-	building_mat_t const &mat(get_material());
 
 	if (!no_skylights && !lights_pass) { // draw skylight glass
 		for (cube_t const &skylight : skylights) {
@@ -2091,9 +2085,19 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			bdraw.add_cube(*this, glass, tp, colorRGBA(WHITE, 0.1), 0, 4, 0, 0, 0); // top and bottom only, untextured
 		} // for skylight
 	}
+	point only_cont_pt;
+
+	if (only_cont_pt_in) {
+		only_cont_pt = *only_cont_pt_in;
+		maybe_inv_rotate_point(only_cont_pt);
+	}
+	building_mat_t const &mat(get_material());
+	bool const draw_windows(draw_int_windows ? has_int_windows() : has_windows());
+
 	// Note: city office buildings don't have add_windows set because windows don't align with their interior rooms/floors,
-	// which means the player currently can't see into or out of the building
-	if (!global_building_params.windows_enabled() || (lights_pass ? !mat.add_wind_lights : !mat.add_windows)) { // no windows for this material (set in building_materials.txt)
+	// which means the player currently can't see into or out of the building; but we can still cut out window holes on the interior side
+	if (!global_building_params.windows_enabled() || (lights_pass ? !mat.add_wind_lights : !draw_windows)) {
+		// no windows for this material (set in building_materials.txt)
 		if (only_cont_pt_in) {cut_holes_for_ext_doors(bdraw, only_cont_pt, 0xFFFF);} // still need to draw holes for doors
 		return;
 	}
@@ -2107,7 +2111,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		float const tint(0.2*fract(100.0f*(bcube.x1() + bcube.y1())));
 		color = colorRGBA((1.0 - tint), (1.0 - tint), (0.8 + tint), 1.0);
 	} else {color = mat.window_color;}
-	int const clip_windows(mat.add_windows ? (is_house ? 2 : 1) : 0);
+	int const clip_windows(draw_windows ? (is_house ? 2 : 1) : 0);
 	float const floor_spacing(get_window_vspace());
 	float const gf_door_ztop(doors.empty() ? 0.0f : (EXACT_MULT_FLOOR_HEIGHT ? (ground_floor_z1 + floor_spacing) : doors.front().pts[2].z));
 	unsigned draw_parts_mask(0);
@@ -2222,10 +2226,10 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	if (only_cont_pt_in) {cut_holes_for_ext_doors(bdraw, only_cont_pt, draw_parts_mask);}
 }
 
-void building_t::get_all_drawn_window_verts_as_quads(vect_vnctcc_t &verts) const {
+void building_t::get_all_drawn_window_verts_as_quads(vect_vnctcc_t &verts) const { // for interior drawing
 	building_draw_t bdraw; // should this be a static variable?
-	get_all_drawn_window_verts(bdraw, 0, 1.0, nullptr, 1); // no_skylights=1
-	bdraw.get_all_mat_verts(verts, 0); // combine quad verts across materials (should only be one)
+	get_all_drawn_window_verts(bdraw, 0, 1.0, nullptr, 1, 1); // lights_pass=0, no_skylights=1, draw_int_windows=1
+	bdraw.get_all_mat_verts(verts, 0); // triangles=0; combine quad verts across materials (should only be one)
 	assert((verts.size() & 3) == 0); // must be a multiple of 4
 }
 
@@ -3484,7 +3488,7 @@ public:
 						assert(bcs_ix < int_wall_draw_front.size() && bcs_ix < int_wall_draw_back.size());
 						point pt_ag(camera_bs);
 						max_eq(pt_ag.z, (b.ground_floor_z1 + b.get_floor_thickness()));
-						b.get_all_drawn_window_verts(interior_wind_draw, 0, -0.1, &pt_ag);
+						b.get_all_drawn_window_verts(interior_wind_draw, 0, -0.1, &pt_ag, 0, 1); // lights_pass=0, no_skylights=0, draw_int_windows=1
 						b.get_split_int_window_wall_verts(int_wall_draw_front[bcs_ix], int_wall_draw_back[bcs_ix], pt_ag, 0);
 						building_cont_player    = &b; // there can be only one
 						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
@@ -3842,7 +3846,7 @@ public:
 		set_std_blend_mode();
 	}
 
-	void get_all_window_verts(building_draw_t &bdraw, bool light_pass) {
+	void get_all_window_verts(building_draw_t &bdraw, bool light_pass) { // for exterior drawing
 		bdraw.clear();
 
 		for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty

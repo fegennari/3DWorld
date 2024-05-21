@@ -493,7 +493,7 @@ void building_mat_t::finalize() { // compute and cache spacing values
 	float tx(get_window_tx()), ty(get_window_ty());
 	if (global_building_params.max_fp_wind_yscale > 0.0) {min_eq(ty, global_building_params.max_fp_wind_yscale*global_building_params.get_window_ty());}
 	if (global_building_params.max_fp_wind_xscale > 0.0) {min_eq(tx, global_building_params.max_fp_wind_xscale*global_building_params.get_window_tx());}
-	floor_spacing = 1.0/(2.0*ty);
+	floor_spacing         = 1.0/(2.0*ty);
 	floorplan_wind_xscale = 2.0f*tx;
 }
 

@@ -13,6 +13,7 @@
 
 bool const EXACT_MULT_FLOOR_HEIGHT = 1;
 bool const ENABLE_MIRROR_REFLECTIONS = 1;
+bool const DRAW_CITY_INT_WINDOWS   = 0; // not yet working; requires having different window x/y size/space/offset values for interior vs. exterior windows
 unsigned const MAX_CYLIN_SIDES     = 36;
 unsigned const MAX_DRAW_BLOCKS     = 8; // for building interiors only; currently have floor, ceiling, walls, and doors
 unsigned const NUM_STAIRS_PER_FLOOR= 12;
@@ -1606,7 +1607,8 @@ struct building_t : public building_geom_t {
 	colorRGBA get_avg_roof_color  () const {return roof_color  .modulate_with(get_material().roof_tex.get_avg_color());}
 	colorRGBA get_avg_detail_color() const {return detail_color.modulate_with(get_material().roof_tex.get_avg_color());}
 	building_mat_t const &get_material() const;
-	bool has_windows() const {return get_material().add_windows;}
+	bool has_windows         () const {return get_material().add_windows;}
+	bool has_int_windows     () const {return (DRAW_CITY_INT_WINDOWS || has_windows());}
 	float get_floor_thick_val() const {return (is_house ? FLOOR_THICK_VAL_HOUSE : (has_windows() ? FLOOR_THICK_VAL_OFFICE : FLOOR_THICK_VAL_WINDOWLESS));}
 	float get_elevator_fc_thick_scale() const {return 1.005*0.5*get_floor_thick_val();}
 	float get_window_vspace  () const {return get_material().get_floor_spacing();}
@@ -1740,7 +1742,8 @@ struct building_t : public building_geom_t {
 	void get_all_drawn_ext_wall_verts(building_draw_t &bdraw);
 	void get_basement_ext_wall_verts (building_draw_t &bdraw) const;
 	void get_all_drawn_interior_verts(building_draw_t &bdraw);
-	void get_all_drawn_window_verts  (building_draw_t &bdraw, bool lights_pass=0, float offset_scale=1.0, point const *const only_cont_pt_in=nullptr, bool no_skylights=0) const;
+	void get_all_drawn_window_verts  (building_draw_t &bdraw, bool lights_pass=0, float offset_scale=1.0,
+		point const *const only_cont_pt_in=nullptr, bool no_skylights=0, bool draw_int_windows=0) const;
 	void get_all_drawn_window_verts_as_quads(vect_vnctcc_t &verts) const;
 	bool get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, vector3d const &view_dir, float dist, bool update_state, bool only_open);
 	void get_ext_door_verts(building_draw_t &bdraw, point const &viewer, vector3d const &view_dir, int skip_door_ix) const;

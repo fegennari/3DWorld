@@ -196,7 +196,7 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t
 	if (t == 1.0) { // no intersection with bvh
 		cpos = p2;
 		if (!hit) return 0;
-		if (rgen && p2.z > ground_floor_z1 && has_windows() && rgen->rand_bool()) return 0; // 50% chance of exiting through a window
+		if (rgen && p2.z > ground_floor_z1 && has_int_windows() && rgen->rand_bool()) return 0; // 50% chance of exiting through a window
 		return 1;
 	}
 	cpos = p1 + (p2 - p1)*t;
@@ -914,7 +914,7 @@ void building_t::get_lights_with_priorities(point const &target, cube_t const &v
 bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i, cube_t &c, float &tx1, float &tx2, float &tz1, float &tz2) {
 	auto const &v0(wall_quad_verts[i]);
 	c = cube_t(v0.v);
-	tx1 = v0.t[0]; tx2 = tx1; tz1 = v0.t[1]; tz2 = tz1; // tex coord ranges (xy, z); should generally be whole integers
+	tx1 = tx2 = v0.t[0]; tz1 = tz2 = v0.t[1]; // tex coord ranges (xy, z); should generally be whole integers
 
 	for (unsigned j = 1; j < 4; ++j) {
 		auto const &vj(wall_quad_verts[i + j]);
@@ -932,7 +932,7 @@ bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i,
 
 void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: ix encodes 2*dim+dir
 	windows.clear();
-	if (!has_windows() || is_rotated()) return; // no windows; rotated buildings not handled
+	if (!has_int_windows() || is_rotated()) return; // no windows; rotated buildings not handled
 	float const window_h_border(WINDOW_BORDER_MULT*get_window_h_border()), window_v_border(WINDOW_BORDER_MULT*get_window_v_border()); // (0, 1) range
 	vect_room_object_t blinds;
 
@@ -1321,7 +1321,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	point const camera_bs(camera_pdu.pos - xlate), building_center(bcube.get_cube_center()); // camera in building space
 	bool walkway_only(0);
 
-	if (!camera_in_building && !has_windows() && !point_near_ext_door(camera_bs, get_door_open_dist())) { // interior lights not visible
+	if (!camera_in_building && !has_int_windows() && !point_near_ext_door(camera_bs, get_door_open_dist())) { // interior lights not visible
 		bool above_skylight(0);
 
 		for (cube_with_ix_t &sl : skylights) {

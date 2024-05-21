@@ -109,7 +109,7 @@ void create_mirror_reflection_if_needed() {
 	}
 	if (!is_mirror(cur_room_mirror)) return; // not enabled
 	bool const interior_room(cur_room_mirror.is_interior()), is_house(cur_room_mirror.is_house()), is_open(cur_room_mirror.is_open());
-	bool const can_see_out_windows(is_house && !interior_room && player_building->has_windows()); // assumes mirror is not facing the doorway to a room with a window
+	bool const can_see_out_windows(is_house && !interior_room && player_building->has_int_windows()); // assumes mirror is not facing the doorway to a room with a window
 	bool const is_extb(player_building->point_in_extended_basement_not_basement(cur_room_mirror.get_cube_center()));
 	bool const dim(cur_room_mirror.dim ^ is_open), dir(is_open ? 1 : cur_room_mirror.dir); // always opens in +dir
 	cube_t const mirror_surface(get_mirror_surface(cur_room_mirror));

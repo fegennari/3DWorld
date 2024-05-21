@@ -34,7 +34,7 @@ bool building_t::player_can_see_outside() const {
 	point const camera_pos(get_camera_pos()), camera_bs(camera_pos - xlate);
 	float const floor_spacing(get_window_vspace());
 
-	if (!player_building->has_windows()) { // no windows
+	if (!player_building->has_int_windows()) { // no windows
 		// should we check if the door is visible?
 		if (building_has_open_ext_door && !doors.empty()) { // maybe can see out a door
 			if (have_walkway_ext_door || camera_pos.z < (ground_floor_z1 + floor_spacing)) return 1; // maybe can see out open door on first floor or a walkway
@@ -1075,9 +1075,9 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	if (room_id < 0) return 0; // not in a room
 	if (rooms_visited.find(room_id) != rooms_visited.end()) return 1; // already visited, return true
 	room_t const &room(get_room(room_id));
-	if (!room.interior && has_windows()) return 0; // room has windows and may be lit from outside; what about a room with an open exterior door?
+	if (!room.interior && has_int_windows()) return 0; // room has windows and may be lit from outside; what about a room with an open exterior door?
 	// Note: we can't easily check the connected building here, so assume it's lit; this doesn't fix the case where the conn room is in the other building
-	if ( room.is_ext_basement_conn   ()) return 0; // be safe/conservative and treat rooms connected to two buildings as potentially lit
+	if ( room.is_ext_basement_conn       ()) return 0; // be safe/conservative and treat rooms connected to two buildings as potentially lit
 	float const floor_spacing(get_window_vspace());
 	if (room.is_backrooms() && room.dz() > 1.5*floor_spacing)     return 0; // multi-floor backrooms: assume lit as this is too difficult to determine
 	unsigned const floor_ix(room.is_single_floor ? 0 : max(0.0f, (pos.z - room.z1()))/floor_spacing);
