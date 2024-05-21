@@ -581,9 +581,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					is_bathroom = added_bathroom = 1;
 				}
 				else if (init_rtype_f0 == RTYPE_LIVING) { // assigned apartment living room, or lounge-like public area
-					added_tc = can_place_onto = add_table_and_chairs(rgen, *r, blockers, room_id, room_center, chair_color, 0.1, tot_light_amt);
-					add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start); // return value ignored
-					is_living = is_numbered_room = 1;
+					added_tc  = can_place_onto = add_table_and_chairs(rgen, *r, blockers, room_id, room_center, chair_color, 0.1, tot_light_amt);
+					is_living = add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 				else if (init_rtype_f0 == RTYPE_LOBBY) { // lobby is similar to lounge (can we get here?)
 					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start); // return value ignored
@@ -600,8 +599,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, 0); // allow_adj_ext_door=0; return value ignored
 					is_kitchen = 1;
 				}
+				else if (init_rtype_f0 == RTYPE_COMMON) { // common room
+					is_living = add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start); // similar to living room, but without a table
+				}
 				else if (init_rtype_f0 == RTYPE_ENTRY) { // entryway
-					// TODO: too small, no objects for now other than trashcan and pictures
+					// too small to place anything larger than a rug, trashcan, or pictures
 				}
 				else {cout << TXT(r->str()) << TXTi(init_rtype_f0) << endl; assert(0);} // unsupported room type
 
@@ -623,6 +625,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 							door.auto_close = 0;
 						}
 					}
+					is_numbered_room = 1; // increments room number even if not numbered (so that numbers are consistent across floors)
 				}
 				added_obj = 1; // assume something was added above, and don't place any other furniture or try to assign to another room type
 			}

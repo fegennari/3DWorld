@@ -1177,7 +1177,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		if (is_hotel) {d->make_auto_close();} else {d->open = 0; d->open_amt = 0.0;}
 	}
 	if (make_three_room) { // 3 rooms
-		// divide into entryway or living room by door, bedroom by window, and bathroom
+		// divide into entryway/living room by door, bedroom by window, and bathroom
 		// divide room in short dim; side by window becomes bedroom, divide other side, part connected to door is living room/entryway, other part is bathroom
 		float bed_lb_split_pos(room.get_center_dim(!hall_dim));
 		float const liv_bath_split_pos(ds.d[hall_dim][lg_door_side] + (lg_door_side ? 1.0 : -1.0)*door_to_wall_min_space); // door goes to living room, which is larger
@@ -1193,7 +1193,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		bath.d[hall_dim][!lg_door_side] = living.d[hall_dim][lg_door_side] = liv_bath_split_pos;
 		room.copy_from(living); // ext_sides doesn't change
 		calc_room_ext_sides(room); // update since ext_sides may have changed
-		room.assign_all_to(RTYPE_LIVING); // public first
+		room.assign_all_to(is_hotel ? RTYPE_COMMON : RTYPE_LIVING); // public first; common room is similar to living room but without the table
 		room.is_entry = 1;
 		unsigned const bed_rid(add_room(bed, part_id)), bath_rid(add_room(bath, part_id));
 		get_room(bed_rid ).assign_all_to(RTYPE_BED );
