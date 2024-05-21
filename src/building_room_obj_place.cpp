@@ -1378,13 +1378,17 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 					c.d[0][!xdir] += (xdir ? -1.0 : 1.0)*shower_dx;
 					c.d[1][!ydir] += (ydir ? -1.0 : 1.0)*shower_dy;
 					c.z2() += shower_height; // set height
-					bool is_bad(0);
 
-					for (unsigned d = 0; d < 2; ++d) { // check for window intersection
-						// Update: exterior walls aren't drawn in the correct order for glass alpha blend, so skip any exterior walls
-						if (is_ext_wall[!d][dirs[!d]] /*&& is_val_inside_window(part, d, c.d[d][!dirs[d]], get_hspacing_for_part(part, d), get_window_h_border())*/) {is_bad = 1; break;}
+					if (!place_shower_tub || has_int_windows()) {
+						// exterior walls aren't drawn in the correct order for shower glass alpha blend, so skip any exterior walls;
+						// also don't place shower tubs near windows; assume they're long enough to always overlap a window when placed on an exterior wall
+						bool is_bad(0);
+
+						for (unsigned d = 0; d < 2; ++d) { // check for window intersection
+							if (is_ext_wall[!d][dirs[!d]]) {is_bad = 1; break;}
+						}
+						if (is_bad) continue;
 					}
-					if (is_bad) continue;
 					cube_t c2(c); // used for placement tests
 
 					if (place_shower_tub) {
