@@ -1185,6 +1185,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 	if (make_three_room) { // 3 rooms
 		// divide into entryway/living room by door, bedroom by window, and bathroom
 		// divide room in short dim; side by window becomes bedroom, divide other side, part connected to door is living room/entryway, other part is bathroom
+		bool const no_div_wall_or_door(is_hotel && rgen.rand_float() < 0.75); // 75% of the time; should this be consistent per building?
 		float bed_lb_split_pos(room.get_center_dim(!hall_dim));
 		float liv_bath_split_pos(ds.d[hall_dim][lg_door_side] + (lg_door_side ? 1.0 : -1.0)*door_to_wall_min_space); // door goes to living room, which is larger
 		if (lg_door_side) {max_eq(liv_bath_split_pos, room_center);} else {min_eq(liv_bath_split_pos, room_center);} // large side must be at least half the room width
@@ -1202,18 +1203,30 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		calc_room_ext_sides(room); // update since ext_sides may have changed
 		room.assign_all_to(is_hotel ? RTYPE_COMMON : RTYPE_LIVING); // public first; common room is similar to living room but without the table
 		room.is_entry = 1;
-		unsigned const bed_rid(add_room(bed, part_id)), bath_rid(add_room(bath, part_id));
+		unsigned const living_rid(new_rooms_start), bed_rid(add_room(bed, part_id)), bath_rid(add_room(bath, part_id));
 		get_room(bed_rid ).assign_all_to(RTYPE_BED );
 		get_room(bath_rid).assign_all_to(RTYPE_BATH);
 		// add interior walls and doors; all doors are unlocked
-		float const bed_center(living.get_center_dim(hall_dim)), bath_center(bath.get_center_dim(!hall_dim));
-		cube_t bed_wall(bed), bath_wall(bath);
+		float const living_center(living.get_center_dim(hall_dim)), bath_center(bath.get_center_dim(!hall_dim));
+		cube_t bed_wall(bed), bath_wall(bath); // if no_div_wall_or_door=1, bedroom wall only borders the bathroom
 		clip_wall_to_ceil_floor(bed_wall,  fc_thick);
 		clip_wall_to_ceil_floor(bath_wall, fc_thick);
 		set_wall_width(bed_wall,  bed_lb_split_pos,   wall_half_thick, !hall_dim);
 		set_wall_width(bath_wall, liv_bath_split_pos, wall_half_thick,  hall_dim);
-		if (bed_wall .get_sz_dim( hall_dim) <= door_width) {cout << "bedroom too small: "  << bed .str() << endl;} // error?
-		else {insert_door_in_wall_and_add_seg(bed_wall,  bed_center -door_hwidth, bed_center +door_hwidth,  hall_dim, hall_dir,     0, 0, 1);} // opens into bedroom
+
+		if (no_div_wall_or_door) { // make this an open wall
+			cube_t open_wall(bed_wall);
+			// split the bedroom wall at the living room/bathroom boundary, with half a wall width of overlap to fill the gap
+			bed_wall .d[ hall_dim][!lg_door_side] = open_wall.d[hall_dim][lg_door_side] = liv_bath_split_pos + (lg_door_side ? -1.0 : 1.0)*0.5*wall_thickness;
+			bath_wall.d[!hall_dim][hall_dir] += (hall_dir ? 1.0 : -1.0)*0.5*wall_thickness; // half a wall width of overlap to fill the gap
+			interior->open_walls.push_back(open_wall);
+			get_room(bed_rid   ).mark_open_wall(!hall_dim, !hall_dir);
+			get_room(living_rid).mark_open_wall(!hall_dim,  hall_dir);
+		}
+		else { // add living room to bedroom door
+			if (bed_wall.get_sz_dim( hall_dim) <= door_width) {cout << "bedroom too small: " << bed .str() << endl;} // error?
+			else {insert_door_in_wall_and_add_seg(bed_wall, living_center-door_hwidth, living_center+door_hwidth, hall_dim, hall_dir, 0, 0, 1);} // opens into bedroom
+		}
 		if (bath_wall.get_sz_dim(!hall_dim) <= door_width) {cout << "bathroom too small: " << bath.str() << endl;} // error?
 		else {insert_door_in_wall_and_add_seg(bath_wall, bath_center-door_hwidth, bath_center+door_hwidth, !hall_dim, lg_door_side, 0, 1, 1);} // opens into bathroom
 		hall_para_walls.push_back(bed_wall );

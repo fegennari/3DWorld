@@ -1440,7 +1440,7 @@ struct building_walkway_t : public building_walkway_geom_t { // "owned" walkway,
 
 
 struct building_interior_t {
-	vect_cube_t floors, ceilings, fc_occluders, exclusion;
+	vect_cube_t floors, ceilings, fc_occluders, exclusion, open_walls;
 	vect_cube_t walls[2]; // walls are split by dim, which is the separating dimension of the wall
 	vect_stairwell_t stairwells;
 	vector<door_t> doors;
