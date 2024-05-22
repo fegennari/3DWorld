@@ -412,7 +412,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			else {
 				add_room(*p, part_id, 1, 0, is_office); // add entire part as a room; num_lights will be calculated later
 			}
-		}
+		} // end non-cube room
 		else if (!is_house && is_basement_part && min(psz.x, psz.y) > 5.0*car_sz.x && max(psz.x, psz.y) > 12.0*car_sz.y) { // make this a parking garage
 			add_room(*p, part_id, 1); // add entire part as a room; num_lights will be calculated later
 			rooms.back().assign_all_to(RTYPE_PARKING); // make it a parking garage
@@ -453,7 +453,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			vector<unsigned> utility_room_cands, special_room_cands;
 			
 			// add secondary or ring hallways if there are at least 7 windows (3 on each side of hallway); not for apartments and hotels
-			if (!apt_or_hotel && num_windows_od >= 7 && num_rooms >= 4) {
+			bool const has_sec_hallways(!apt_or_hotel && num_windows_od >= 7 && num_rooms >= 4);
+
+			if (has_sec_hallways) {
 				float const min_hall_width(1.5f*doorway_width), max_hall_width(2.5f*doorway_width);
 				float const sh_width(max(min(0.4f*hall_width, max_hall_width), min_hall_width)), hspace(window_hspacing[!min_dim]);
 				float const ring_hall_room_depth(0.5f*(room_width - sh_width)); // for inner and outer rows of rooms
@@ -491,6 +493,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						c_hall.d[ min_dim][!d] = hall_wall_pos[d];
 						unsigned const num_lights(min(6U, max(2U, unsigned(0.5*s_hall.get_sz_dim(!min_dim)/s_hall.get_sz_dim(min_dim)))));
 						add_room(s_hall, part_id, num_lights, 1, 0); // add sec hallway as room with several lights
+						rooms.back().mark_open_wall(min_dim, !d); // adjacent to connector hallways
 						interior->exclusion.push_back(s_hall); // excluded from placing stairs and elevators
 
 						// walls along sec hallway
@@ -521,6 +524,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 							c_hall.d[!min_dim][!e] = offset_inner;
 							unsigned const num_lights2((c_hall.get_sz_dim(min_dim) > 0.25*s_hall.get_sz_dim(!min_dim)) ? 2 : 1); // 2 lights if it's long enough
 							add_room(c_hall, part_id, num_lights2, 1, 0); // add conn hallway as room
+							rooms.back().mark_open_wall_dim(min_dim); // adjacent to primary and secondary hallway on each side
 							cube_t exclude(c_hall);
 							exclude.d[min_dim][!d] += dsign*doorway_width; // expand out a bit into the main hallway to ensure there's space to enter this hallway
 							interior->exclusion.push_back(exclude); // excluded from placing stairs and elevators
@@ -689,6 +693,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 								s_hall.d[!min_dim][ 0] = hall_start_pos;
 								s_hall.d[!min_dim][ 1] = hall_end_pos;
 								add_room(s_hall, part_id, 2, 1, 0); // add sec hallway as room with 2 lights (could use more lights if longer?)
+								rooms.back().mark_open_wall(min_dim, !d); // adjacent to main hallway on this side
 								cube_t exclude(s_hall);
 								exclude.d[min_dim][!d] += dsign*doorway_width; // expand out a bit into the main hallway to ensure there's space to enter this hallway
 								interior->exclusion.push_back(exclude); // excluded from placing stairs and elevators
@@ -808,7 +813,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					pos = next_pos;
 				} // for i
 			} // end single main hallway case
-			add_room(hall, part_id, 3, 1, 0); // add hallway as room with 3+ lights
+			add_room(hall, part_id, 3, 1, 0); // add primary hallway as room with 3+ lights
+			if (has_sec_hallways) {rooms.back().mark_open_wall_dim(min_dim);} // flag primary hallway as open on sides if there are secondary hallways
 			if (is_ground_floor || pri_hall.is_all_zeros()) {pri_hall = hall;} // assign to primary hallway if on first floor and hasn't yet been assigned
 			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();} // don't split any walls added up to this point
 

@@ -1895,7 +1895,18 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			else if (!is_in_attic && !is_exterior) {
 				cube_t room_exp(get_walkable_room_bounds(room));
 				room_exp.expand_by(room_xy_expand); // expand slightly so that points exactly on the room bounds and exterior doors are included
-				light_bc2.intersect_with_cube(room_exp); // upward facing light is for this room only
+
+				if (room.open_wall_mask && !room.is_hallway) { // don't clamp on open wall sides, except for hallways
+					for (unsigned d = 0; d < 2; ++d) {
+						if (!room.has_open_wall(d, 0)) {max_eq(light_bc2.d[d][0], room_exp.d[d][0]);} // clamp lo
+						if (!room.has_open_wall(d, 1)) {min_eq(light_bc2.d[d][1], room_exp.d[d][1]);} // clamp hi
+					}
+					max_eq(light_bc2.z1(), room_exp.z1());
+					min_eq(light_bc2.z2(), room_exp.z2()); // not needed?
+				}
+				else {
+					light_bc2.intersect_with_cube(room_exp); // upward facing light is for this room only
+				}
 				min_eq(light_bc2.z2(), (ceil_z + fc_thick)); // doesn't reach higher than the ceiling of this room
 			}
 			if (is_rotated()) {light_bc2 = get_rotated_bcube(light_bc2);}

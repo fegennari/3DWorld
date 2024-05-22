@@ -271,7 +271,7 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 		}
 		return;
 	}
-	for (unsigned r = zone.room_start; r < zone.room_end; ++r) {interior->rooms[r].unpowered = !is_on;} // update room unpowered flags; not yet used, but they may be later
+	//for (unsigned r = zone.room_start; r < zone.room_end; ++r) {interior->rooms[r].unpowered = !is_on;} // update room unpowered flags
 	bool updated(0);
 	auto objs_start(interior->room_geom->objs.begin());
 	auto objs_end  (interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators

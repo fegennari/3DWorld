@@ -4028,7 +4028,7 @@ bool building_t::add_ceil_vent_to_room(rand_gen_t rgen, room_t const &room, floa
 }
 
 bool building_t::check_if_placed_on_interior_wall(cube_t const &c, room_t const &room, bool dim, bool dir) const {
-	if (!has_small_part && (is_house || !room.is_hallway)) return 1; // check not needed in this case, any non-door location is a wall
+	if (!has_small_part && !room.has_open_wall(dim, dir)) return 1; // check not needed, any non-door location is a wall
 	float const wall_thickness(get_wall_thickness()), wall_face(c.d[dim][dir]);
 	cube_t test_cube(c);
 	test_cube.d[dim][0] = test_cube.d[dim][1] = wall_face - (dir ? -1.0 : 1.0)*0.5*wall_thickness; // move inward

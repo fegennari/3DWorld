@@ -939,10 +939,10 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 			}
 			if (room.intersects_no_adj(stairwell)) {ng.connect_stairs(r, s, stairwell, doorway_width);}
 		}
-		if (!is_house && room.is_hallway && !room.is_ext_basement()) { // check for connected hallways in office buildings
+		if (room.open_wall_mask || (has_complex_floorplan && !room.is_ext_basement())) { // check for connected hallways in office buildings, or open wall rooms
 			for (unsigned r2 = r+1; r2 < num_rooms; ++r2) { // check rooms with higher index (since graph is bidirectional)
 				room_t const &room2(interior->rooms[r2]);
-				if (!room2.is_hallway || room2.z1() != room.z1() || !room2.intersects(c)) continue; // not a connected hallway
+				if (!room2.open_wall_mask || room2.z1() != room.z1() || !room2.intersects(c)) continue; // not a connected hallway
 				cube_t conn_cube(c);
 				conn_cube.intersect_with_cube(room2);
 				ng.connect_rooms(r, r2, -1, conn_cube);

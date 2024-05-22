@@ -1205,7 +1205,7 @@ unsigned const NUM_RTYPE_SLOTS = 8; // enough for houses; hard max is 8
 inline unsigned wrap_room_floor(unsigned floor) {return min(floor, NUM_RTYPE_SLOTS-1U);}
 
 struct room_t : public cube_t { // size=60; can be reduced to 52 by turning 8 of these booleans into uint8_t flags
-	bool has_center_stairs=0, no_geom=0, is_hallway=0, is_office=0, office_floorplan=0, is_sec_bldg=0, unpowered=0;
+	bool has_center_stairs=0, no_geom=0, is_hallway=0, is_office=0, office_floorplan=0, is_sec_bldg=0;
 	bool has_mirror=0, has_skylight=0, is_single_floor=0, has_out_of_order=0, is_entry=0;
 	uint8_t has_stairs=0; // per-floor bit mask; always set to 255 for stairs that span the entire room
 	uint8_t has_elevator=0; // number of elevators, usually either 0 or 1
@@ -1213,6 +1213,7 @@ struct room_t : public cube_t { // size=60; can be reduced to 52 by turning 8 of
 	uint8_t ext_sides=0; // sides that have exteriors, and likely windows (bits for x1, x2, y1, y2)
 	uint8_t part_id=0, num_lights=0, rtype_locked=0;
 	uint8_t unit_id=0; // for apartments and hotels
+	uint8_t open_wall_mask=0; // {dim x dir}
 	room_type rtype[NUM_RTYPE_SLOTS]; // this applies to the first few floors because some rooms can have variable per-floor assignment
 	uint32_t lit_by_floor=0; // used for AI placement; 32 floor is enough for most buildings
 	float light_intensity=0.0; // due to room lights, if turned on
@@ -1222,6 +1223,9 @@ struct room_t : public cube_t { // size=60; can be reduced to 52 by turning 8 of
 	room_t(room_t const &r, cube_t const &c) : room_t(r) {copy_from(c);} // sub-room
 	void assign_all_to(room_type rt, bool locked=1); // locked by default
 	void assign_to(room_type rt, unsigned floor, bool locked=0); // unlocked by default
+	void mark_open_wall     (bool dim, bool dir) {open_wall_mask |= (1 << (2*dim + dir));}
+	void mark_open_wall_dim (bool dim          ) {open_wall_mask |= (1 << 2*dim) | (1 << (2*dim + 1));} // both dirs for this dim
+	bool has_open_wall      (bool dim, bool dir) const {return (open_wall_mask & (1 << (2*dim + dir)));}
 	room_type get_room_type (unsigned floor) const {return rtype[wrap_room_floor(floor)];}
 	bool is_rtype_locked    (unsigned floor) const {return (rtype_locked & (1 << wrap_room_floor(floor)));}
 	bool is_lit_on_floor    (unsigned floor) const {return (lit_by_floor & (1ULL << (floor&31)));}
