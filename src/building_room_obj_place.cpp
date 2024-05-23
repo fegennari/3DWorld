@@ -3329,6 +3329,7 @@ void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_
 	book.set_from_point(point(center.x, center.y, place_on.z2()));
 	book.expand_by(book_scale);
 	book.z2() += thickness;
+	book.intersect_with_cube(get_walkable_room_bounds(get_room(room_id))); // clip to room bounds
 	vect_room_object_t &objs(interior->room_geom->objs);
 
 	// check if there's anything in the way; only handling pens and pencils here; paper is ignored, and larger objects should already be handled
@@ -3396,6 +3397,7 @@ bool building_t::place_laptop_on_obj(rand_gen_t &rgen, room_object_t const &plac
 	point const llc(center.x, center.y, place_on.z2());
 	cube_t laptop(llc, (llc + sz));
 	if (has_bcube_int(laptop, avoid)) return 0; // only make one attempt
+	if (!get_walkable_room_bounds(get_room(room_id)).contains_cube(laptop)) return 0; // may clip through a wall
 	interior->room_geom->objs.emplace_back(laptop, TYPE_LAPTOP, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt); // Note: invalidates place_on reference
 	return 1;
 }
