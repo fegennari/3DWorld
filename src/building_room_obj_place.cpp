@@ -644,7 +644,8 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 	if (room.interior) return 0;
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const bed_obj_ix(objs.size()); // if placed, it will be this index
-	if (!add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt, floor, force)) return 0; // it's only a bedroom if there's bed
+	int bed_size_ix(-1); // unset
+	if (!add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt, floor, force, bed_size_ix)) return 0; // it's only a bedroom if there's bed
 	assert(bed_obj_ix < objs.size());
 	room_object_t const bed(objs[bed_obj_ix]); // deep copy so that we don't need to worry about invalidating the reference below
 	float const doorway_width(get_doorway_width()), front_clearance(max(0.6f*doorway_width, get_min_front_clearance_inc_people()));
@@ -655,7 +656,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 		bed_exp.expand_by_xy(front_clearance); // add space around the bed so that two beds aren't placed too close together
 		blockers.push_back(bed_exp);
 		
-		if (add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt, floor, 0)) { // force=0
+		if (add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt, floor, 0, bed_size_ix)) { // force=0
 			assert(sec_bed_obj_ix < objs.size());
 			room_object_t &bed2(objs[sec_bed_obj_ix]);
 			bed2.obj_id = bed.obj_id; // set second bed to the same obj_id as first bed so that they have the same style
@@ -946,7 +947,9 @@ bool building_t::replace_light_with_ceiling_fan(rand_gen_t &rgen, cube_t const &
 }
 
 // Note: must be first placed object
-bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, unsigned floor, bool force) {
+bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval,
+	unsigned room_id, float tot_light_amt, unsigned floor, bool force, int &bed_size_ix)
+{
 	unsigned const NUM_COLORS = 8;
 	colorRGBA const colors[NUM_COLORS] = {WHITE, WHITE, WHITE, LT_BLUE, LT_BLUE, PINK, PINK, LT_GREEN}; // color of the sheets
 	cube_t room_bounds(get_walkable_room_bounds(room));
@@ -977,7 +980,9 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 
 	for (unsigned n = 0; n < (force ? 100U : 40U); ++n) { // make 40 attempts to place a bed (100 if forced)
 		float const sizes[6][2] = {{38, 75}, {38, 80}, {53, 75}, {60, 80}, {76, 80}, {72, 84}}; // twin, twin XL, full, queen, king, cal king
-		unsigned const size_ix((room_width < 0.9*vspace) ? (rgen.rand() % 6) : (2 + (rgen.rand() % 4))); // only add twin beds to narrow rooms
+		unsigned size_ix(0);
+		if (bed_size_ix >= 0) {size_ix = bed_size_ix;} // size was selected by the caller (to match pairs of beds in the same room)
+		else {size_ix = ((room_width < 0.9*vspace) ? (rgen.rand() % 6) : (2 + (rgen.rand() % 4)));} // select a random size; only add twin beds to narrow rooms
 		bed_sz[ dim] = 0.01f*vspace*(sizes[size_ix][1] + 8.0f); // length (mattress + headboard + footboard)
 		bed_sz[!dim] = 0.01f*vspace*(sizes[size_ix][0] + 4.0f); // width  (mattress + small gaps)
 		if (room_bounds.dx() < 1.5*bed_sz.x || room_bounds.dy() < 1.5*bed_sz.y) continue; // room is too small for a bed of this size
@@ -1048,6 +1053,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 				objs.emplace_back(c, type, room_id, dim2, dir2, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, color);
 			}
 		}
+		bed_size_ix = size_ix;
 		return 1; // done/success
 	} // for n
 	return 0;
