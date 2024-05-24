@@ -3547,6 +3547,7 @@ int building_t::check_valid_picture_placement(room_t const &room, cube_t const &
 	//keepout.z1() = zval; // extend to the floor
 	keepout.z1() -= 0.1*c.dz(); // more padding on the bottom
 	keepout.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
+	keepout.d[dim][ dir] -= (dir ? -1.0 : 1.0)*0.5*wall_thickness; // move into wall to capture thin objects such as wall vents
 	keepout.expand_in_dim(!dim, side_clearance); // make sure there's space for the frame
 	if (overlaps_other_room_obj(keepout, objs_start, 1))   return 0; // check_all=1, to include outlets, vents, etc.
 	bool const inc_open(!is_house && !room.is_office);
