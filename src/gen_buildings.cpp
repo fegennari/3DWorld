@@ -3491,7 +3491,7 @@ public:
 						b.get_all_drawn_window_verts(interior_wind_draw, 0, -0.1, &pt_ag, 0, 1); // lights_pass=0, no_skylights=0, draw_int_windows=1
 						b.get_split_int_window_wall_verts(int_wall_draw_front[bcs_ix], int_wall_draw_back[bcs_ix], pt_ag, 0);
 						building_cont_player    = &b; // there can be only one
-						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
+						if (!interior_wind_draw.empty() && !ref_pass_interior) {per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;} // only if there are drawn windows
 						if (reflection_pass) continue; // don't execute the code below
 						if (display_mode & 0x20) {b.debug_people_in_building(s);} // debug visualization
 						float const basement_z_adj(2.0*BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness()); // adjust to prevent problems when camera is close to the plane
