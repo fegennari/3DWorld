@@ -1159,6 +1159,12 @@ bool building_t::are_rooms_connected(room_t const &r1, room_t const &r2, float z
 	cube_t tc1(r1), tc2(r2);
 	tc1.expand_by_xy(expand);
 	if (!tc1.intersects(tc2)) return 0; // rooms not adjacent
+
+	if (r1.open_wall_mask && r2.open_wall_mask) { // check open walls
+		for (cube_t const &w : interior->open_walls) {
+			if (w.intersects(r1) && w.intersects(r2)) return 1;
+		}
+	}
 	tc2.expand_by_xy(expand);
 	tc1.intersect_with_cube(tc2); // shared wall area
 

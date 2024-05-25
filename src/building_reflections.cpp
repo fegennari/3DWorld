@@ -216,7 +216,7 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 	cube_t search_area(camera_room);
 	search_area.expand_by_xy(2.0*get_wall_thickness()); // expand so that it overlaps adjacent rooms
 
-	// not found, look for an adjacent room or connecting hallway
+	// not found, look for an adjacent room or connecting hallway; what about mirrors visible from more than one room away?
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
 		unsigned const room_ix(r - interior->rooms.begin());
 		if ((int)room_ix == camera_room_ix) continue;
