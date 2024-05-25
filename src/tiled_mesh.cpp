@@ -94,6 +94,7 @@ void get_city_grass_coll_cubes(cube_t const &region, vect_cube_t &out, vect_cube
 int check_city_contains_overlaps(cube_t const &query);
 bool check_inside_city(point const &pos, float radius);
 cube_t get_city_bcube_overlapping(cube_t const &c);
+void show_gpu_mem_info();
 
 
 float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}
@@ -2602,6 +2603,7 @@ uint64_t tile_draw_t::show_debug_stats(bool calc_mem_only) const {
 		<< ", grass MB: " << in_mb(grass_mem) << ", smap MB: " << in_mb(smap_mem) << ", smap free list MB: " << in_mb(smap_free_list_mem)
 		<< ", dlights smap mem MB: " << in_mb(dlights_smap_mem) << ", frame buf MB: " << in_mb(frame_buf_mem) << ", texture MB: " << in_mb(texture_mem)
 		<< ", building MB: " << in_mb(building_mem) << ", room_geom MB: " << in_mb(room_geom_mem) << ", model MB: " << in_mb(models_mem) << endl;
+	//show_gpu_mem_info(); // shows total and available video memory
 	return tot_mem;
 }
 
