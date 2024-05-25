@@ -1478,20 +1478,20 @@ void building_room_geom_t::add_shower_tub(room_object_t const &c, tid_nm_pair_t 
 		tiled_area.d[ c.dim][     !c.dir] += (     c.dir ?  1.0 : -1.0)*tile_thickness;
 		tile_mat.add_cube_to_verts(tiled_area, tile_color, zero_vector, (EF_Z12 | ~get_face_mask(c.dim, c.dir)), 0, 0, 0, 1); // inverted; skip top, bottom, and front
 		// draw curtains using blinds texture
-		float const curtain_width((c.is_open() ? 0.15 : 0.45)*width);
 		cube_t curtains(c);
 		curtains.z1() += 0.1*height;
 		curtains.z2()  = crod.z2() + 0.5*crod_radius;
 		curtains.d[c.dim][ c.dir] += (c.dir ? 1.0 : -1.0)*1.0*crod_radius; // outer
 		curtains.d[c.dim][!c.dir]  = crod.d[c.dim][c.dir]; // inner
 		curtains.d[!c.dim][!shower_dir] = inner_wall_pos; // shower wall
-		float const curtains_tscale(0.2/curtain_width);
-		tid_nm_pair_t const curtains_tex(get_blinds_tid(), get_blinds_nm_tid(), (c.dim ? curtains_tscale : 0.0), (c.dim ? 0.0 : curtains_tscale));
+		tid_nm_pair_t const curtains_tex(get_blinds_tid(), get_blinds_nm_tid(), 0.0, 0.0);
 		rgeom_mat_t &curtains_mat(get_material(curtains_tex, 1));
 		colorRGBA const curtains_color(apply_light_color(c, WHITE));
 
 		for (unsigned oi = 0; oi < 2; ++oi) { // {outer, inner}
 			for (unsigned d = 0; d < 2; ++d) { // each side
+				float const curtain_width(((d ? !c.is_active() : c.is_open()) ? 0.15 : 0.45)*width); // uses two different flags for low vs. high sides
+				(c.dim ? curtains_mat.tex.tscale_x : curtains_mat.tex.tscale_y) = 0.2/curtain_width; // okay to set since tscale isn't used as a key
 				cube_t curtain(curtains);
 				curtain.d[!c.dim][!d] = curtains.d[!c.dim][d] + (d ? -1.0 : 1.0)*curtain_width;
 				curtains_mat.add_cube_to_verts(curtain, curtains_color, all_zeros, EF_Z1, c.dim); // skip bottom edge
