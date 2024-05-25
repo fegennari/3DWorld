@@ -671,7 +671,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 	float const closet_min_depth(0.65*doorway_width), closet_min_width(1.5*doorway_width), min_dist_to_wall(1.0*doorway_width), min_bed_space(front_clearance);
 	unsigned const first_corner(rgen.rand() & 3);
 	bool const first_dim(rgen.rand_bool());
-	cube_t const part(get_part_for_room(room));
+	cube_t const &part(get_part_for_room(room));
 	bool placed_closet(0), placed_lamp(0);
 	unsigned closet_obj_id(0);
 	bool chk_windows[2][2] = {}; // precompute which walls are exterior and can have windows, {dim}x{dir}
@@ -1152,7 +1152,7 @@ bool building_t::maybe_add_fireplace_to_room(rand_gen_t &rgen, room_t const &roo
 
 bool building_t::check_if_against_window(cube_t const &c, room_t const &room, bool dim, bool dir) const {
 	if (!has_int_windows() || classify_room_wall(room, c.zc(), dim, dir, 0) != ROOM_WALL_EXT) return 0;
-	cube_t const part(get_part_for_room(room));
+	cube_t const &part(get_part_for_room(room));
 	float const hspacing(get_hspacing_for_part(part, !dim)), border(get_window_h_border());
 	// assume object is no larger than 2x window size and check left, right, and center positions
 	return (is_val_inside_window(part, !dim, c.d[!dim][0], hspacing, border) ||
@@ -1312,7 +1312,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 				// try to place a roll of toilet paper on the adjacent wall
 				bool const tp_dir(dim ? xdir : ydir);
 				float const length(0.18*height), wall_pos(c.get_center_dim(dim)), far_edge_pos(wall_pos + (dir ? -1.0 : 1.0)*0.5*length);
-				cube_t const part(get_part_for_room(room));
+				cube_t const &part(get_part_for_room(room));
 
 				// if this wall has windows and bathroom has multiple exterior walls (which means it has non-glass block windows), don't place a TP roll
 				if (is_basement || !has_int_windows() || classify_room_wall(room, zval, !dim, tp_dir, 0) != ROOM_WALL_EXT ||
@@ -2198,7 +2198,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 			}
 			else if (is_house && !is_basement && has_int_windows() && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) {
 				// don't place shelves against exterior house walls in case there are windows
-				cube_t const part(get_part_for_room(room));
+				cube_t const &part(get_part_for_room(room));
 				float const h_spacing(get_hspacing_for_part(part, !dim));
 				if (room_bounds.get_sz_dim(!dim) - 2.0*shelf_depth > h_spacing) continue; // shelf width is larger than spacing - likely to intersect a window, don't test center pt
 				if (is_val_inside_window(part, !dim, room_bounds.get_center_dim(!dim), h_spacing, get_window_h_border())) continue;
@@ -3878,7 +3878,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 		set_wall_width(c, wall_pos, plate_hwidth, !dim);
 
 		if (!is_basement && has_int_windows() && is_exterior_wall) { // check for window intersection
-			cube_t const part(get_part_for_room(room));
+			cube_t const &part(get_part_for_room(room));
 			float const window_hspacing(get_hspacing_for_part(part, !dim)), window_h_border(get_window_h_border());
 			// expand by the width of the window trim, plus some padded wall plate width, then check to the left and right;
 			// 2*xy_expand should be smaller than a window so we can't have a window fit in between the left and right sides

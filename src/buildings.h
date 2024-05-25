@@ -2166,7 +2166,7 @@ private:
 	void clip_ray_to_walls(point const &p1, point &p2, vect_cube_t const walls[2]) const;
 	void refine_light_bcube(point const &lpos, float light_radius, room_t const &room, cube_t &light_bcube, bool is_parking_garage) const;
 	cube_t get_rotated_bcube(cube_t const &c, bool inv_rotate=0) const;
-	cube_t get_part_for_room(room_t const &room) const {assert(room.part_id < parts.size()); return parts[room.part_id];}
+	cube_t const &get_part_for_room(room_t const &room) const {assert(room.part_id < parts.size()); return parts[room.part_id];}
 	bool are_parts_stacked(cube_t const &p1, cube_t const &p2) const;
 	room_type get_room_type_and_floor(int room_id, float zval, unsigned &floor_ix) const;
 	void add_window_coverings(cube_t const &window, bool dim, bool dir);

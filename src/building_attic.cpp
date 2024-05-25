@@ -242,7 +242,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	avoid_cubes.push_back(avoid);
 
 	// add light(s)
-	cube_t const part(get_part_for_room(room)); // Note: assumes attic is a single part
+	cube_t const &part(get_part_for_room(room)); // Note: assumes attic is a single part
 	bool const long_dim(part.dx() < part.dy());
 	float const floor_spacing(get_window_vspace()), beam_depth(get_attic_beam_depth()), z_floor(interior->attic_access.z2());
 	float const sep_dist(part.get_sz_dim(long_dim) - part.get_sz_dim(!long_dim)), attic_height(interior_z2 - z_floor), light_radius(0.03*attic_height);

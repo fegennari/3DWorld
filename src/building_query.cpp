@@ -1149,7 +1149,7 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 bool building_t::is_room_windowless(room_t const &room) const { // or interior
 	if (room.z2() <= ground_floor_z1)         return 1; // basement, no windows
 	if (!bcube.contains_cube_xy_no_adj(room)) return 0; // adjacent to bcube, may have windows
-	cube_t const part(get_part_for_room(room));
+	cube_t const &part(get_part_for_room(room));
 	if (part.contains_cube_xy_no_adj(room))   return 1; // interior to its part, no windows
 	return (room.ext_sides == 0); // maybe we should check this just after the basement test?
 }
