@@ -575,7 +575,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 			if (is_apt_or_hotel_room) {
 				// handle pre-assigned apartment or hotel rooms
-				if (init_rtype_f0 == RTYPE_BATH) { // assigned bathroom; can be public or private
+				if (added_obj) {} // added a lounge above; nothing else to do
+				else if (init_rtype_f0 == RTYPE_BATH) { // assigned bathroom; can be public or private
 					bool const add_shower_tub(!not_private_room);
 					add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement, add_shower_tub, added_bathroom_objs_mask); // return ignored
 					is_bathroom = added_bathroom = 1;
