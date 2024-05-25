@@ -645,7 +645,8 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const bed_obj_ix(objs.size()); // if placed, it will be this index
 	int bed_size_ix(-1); // unset
-	if (!add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt, floor, force, bed_size_ix)) return 0; // it's only a bedroom if there's bed
+	room_object_t other_bed; // unset
+	if (!add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt, floor, force, bed_size_ix, other_bed)) return 0; // it's only a bedroom if there's bed
 	assert(bed_obj_ix < objs.size());
 	room_object_t const bed(objs[bed_obj_ix]); // deep copy so that we don't need to worry about invalidating the reference below
 	float const doorway_width(get_doorway_width()), front_clearance(max(0.6f*doorway_width, get_min_front_clearance_inc_people()));
@@ -656,7 +657,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 		bed_exp.expand_by_xy(front_clearance); // add space around the bed so that two beds aren't placed too close together
 		blockers.push_back(bed_exp);
 		
-		if (add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt, floor, 0, bed_size_ix)) { // force=0
+		if (add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt, floor, 0, bed_size_ix, bed)) { // force=0; pass in the first bed as other_bed
 			assert(sec_bed_obj_ix < objs.size());
 			room_object_t &bed2(objs[sec_bed_obj_ix]);
 			bed2.obj_id = bed.obj_id; // set second bed to the same obj_id as first bed so that they have the same style
@@ -948,13 +949,14 @@ bool building_t::replace_light_with_ceiling_fan(rand_gen_t &rgen, cube_t const &
 
 // Note: must be first placed object
 bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval,
-	unsigned room_id, float tot_light_amt, unsigned floor, bool force, int &bed_size_ix)
+	unsigned room_id, float tot_light_amt, unsigned floor, bool force, int &bed_size_ix, room_object_t const &other_bed)
 {
 	unsigned const NUM_COLORS = 8;
 	colorRGBA const colors[NUM_COLORS] = {WHITE, WHITE, WHITE, LT_BLUE, LT_BLUE, PINK, PINK, LT_GREEN}; // color of the sheets
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace()), wall_thick(get_wall_thickness());
-	bool const dim(room_bounds.dx() < room_bounds.dy()); // longer dim
+	bool const is_hotel(btype == BTYPE_HOTEL), long_dim(room_bounds.dx() < room_bounds.dy());
+	bool const dim((is_hotel && room.get_sz_dim(!long_dim) > 0.8*vspace) ? !long_dim : long_dim); // bed in long room dim, unless in a large hotel room (with 2 beds)
 	vector3d expand, bed_sz;
 	expand[ dim] = -wall_thick; // small amount of space
 	expand[!dim] = -0.3f*vspace; // leave at least some space between the bed and the wall
@@ -972,7 +974,11 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 		if (room_len < 1.1*vspace || room_width < 0.6*vspace) return 0; // room is too small to fit a bed
 		if (room_len > 4.5*vspace || room_width > 3.5*vspace) return 0; // room is too large to be a bedroom
 	}
-	bool const first_head_dir(rgen.rand_bool()), first_wall_dir(rgen.rand_bool());
+	bool first_head_dir(0);
+	// place hotel room bed head by an exterior wall so that both beds can be placed there without blocking a door
+	if (is_hotel) {first_head_dir = (room.get_center_dim(dim) < get_part_for_room(room).get_center_dim(dim));}
+	else {first_head_dir = rgen.rand_bool();}
+	bool const first_wall_dir(rgen.rand_bool()), have_other_bed(other_bed.type == TYPE_BED);
 	door_path_checker_t door_path_checker;
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t c;
@@ -987,14 +993,16 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 		bed_sz[!dim] = 0.01f*vspace*(sizes[size_ix][0] + 4.0f); // width  (mattress + small gaps)
 		if (room_bounds.dx() < 1.5*bed_sz.x || room_bounds.dy() < 1.5*bed_sz.y) continue; // room is too small for a bed of this size
 		bool const always_against_wall(room_bounds.dx() < 2.0*bed_sz.x || room_bounds.dy() < 2.0*bed_sz.y); // if room is narrow
-		bed_sz.z = 0.3*vspace*rgen.rand_uniform(1.0, 1.2); // height
+		bed_sz.z = (have_other_bed ? other_bed.dz() : 0.3*vspace*rgen.rand_uniform(1.0, 1.2)); // height
 		c.z2()   = zval + bed_sz.z;
 
 		for (unsigned d = 0; d < 2; ++d) {
 			float const min_val(room_bounds.d[d][0]), max_val(room_bounds.d[d][1] - bed_sz[d]);
 
 			if (bool(d) == dim && n < 5) { // in the first few iterations, try to place the head of the bed against the wall (maybe not for exterior wall facing window?)
-				c.d[d][0] = ((first_head_dir ^ bool(n&1)) ? min_val : max_val);
+				// if there was another bed, use the same wall/dir (head_dir == !bed_dir); otherwise, alternate head_dir
+				bool const head_dir((have_other_bed && other_bed.dim == dim) ? !other_bed.dir : (first_head_dir ^ bool(n&1)));
+				c.d[d][0] = (head_dir ? min_val : max_val);
 			}
 			else if (bool(d) != dim && (always_against_wall || rgen.rand_bool())) { // try to place the bed against the wall sometimes
 				c.d[d][0] = ((first_wall_dir ^ bool(n&1)) ? (min_val - 0.25*vspace) : (max_val + 0.25*vspace));
@@ -1007,7 +1015,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 		if (!is_valid_placement_for_room(c, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
 		// prefer not to block the path between doors in the first half of iterations
 		if (n < 10 && door_path_checker.check_door_path_blocked(c, room, zval, *this)) continue;
-		bool const dir((room_bounds.d[dim][1] - c.d[dim][1]) < (c.d[dim][0] - room_bounds.d[dim][0])); // head of the bed is closer to the wall
+		bool const dir((room_bounds.d[dim][1] - c.d[dim][1]) < (c.d[dim][0] - room_bounds.d[dim][0])); // head of the bed is closer to the wall; opposite first_head_dir
 		objs.emplace_back(c, TYPE_BED, room_id, dim, dir, (is_house ? RO_FLAG_IS_HOUSE : 0), tot_light_amt);
 		set_obj_id(objs);
 		room_object_t &bed(objs.back());
