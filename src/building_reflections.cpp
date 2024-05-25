@@ -222,7 +222,7 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 		if ((int)room_ix == camera_room_ix) continue;
 
 		if (camera_room.is_apt_or_hotel_room() && r->unit_id == camera_room.unit_id) { // same apartment or hotel room unit
-			if (all_room_int_doors_closed(room_ix, camera_bs.z)) return 0; // in room with doors closed, not visible
+			if (all_room_int_doors_closed(room_ix, camera_bs.z)) continue; // in room with doors closed, not visible
 		}
 		else {
 			if (!r->intersects(search_area)) continue; // wrong room
