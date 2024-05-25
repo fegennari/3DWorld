@@ -273,6 +273,7 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 	}
 	if (btype == BTYPE_HOSPITAL) { // add hospital signs at front entrance(s)
 		float const z1_thresh(ground_floor_z1 + get_floor_thickness());
+		bool added_emergency(0);
 
 		for (auto d = doors.begin(); d != doors.end(); ++d) {
 			if (int(d - doors.begin()) == courtyard_door_ix) break; // courtyard door is not an exit
@@ -287,7 +288,7 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 			set_wall_width(sign, (bc.get_center_dim(dim) + 1.5*door_height*normal[dim]), 0.5*sign_width, dim);
 			static int sign_id(0);
 
-			for (unsigned e = 0; e < 2; ++e) {
+			for (unsigned e = 0; e < 2; ++e) { // left and right of the door
 				bool const dir(pref_dir ^ bool(e));
 				vector3d const side_dir((dir ? 1.0 : -1.0)*cross_product(normal, plus_z));
 				set_wall_width(sign, (bc.get_center_dim(!dim) + 1.0*door_height*side_dir[!dim]), 0.5*sign_thick, !dim);
@@ -300,6 +301,19 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 				signs.back().sign_id = sign_id; // make this pair unique
 			} // for e
 			++sign_id;
+
+			if (!added_emergency) { // add red emergency sign centered above the first door
+				bool const dir(normal[dim] > 0.0);
+				float const floor_spacing(get_window_vspace()), sign_z1(ground_floor_z1 + 1.1*floor_spacing), half_thick(0.01*floor_spacing);
+				set_cube_zvals(sign, sign_z1, (sign_z1 + 0.14*floor_spacing));
+
+				if (parts.front().z2() > sign.z2()) { // assume door is on first part and check for height; should always be true, since parts are > 1 floor
+					set_wall_width(sign, (bc.get_center_dim( dim) + half_thick*normal[dim]), half_thick, dim); // thickness
+					set_wall_width(sign,  bc.get_center_dim(!dim), 0.35*floor_spacing, !dim); // width
+					signs.emplace_back(sign, dim, dir, "Emergency", RED, WHITE, 0, 1, 1); // two_sided=0, emissive=1, small=1
+					added_emergency = 1;
+				}
+			}
 		} // for d
 	} // end hospital
 	if (name.empty())  return; // no company name; shouldn't get here

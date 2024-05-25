@@ -1536,8 +1536,19 @@ void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 	if (small && shadow_only) return; // small signs have no shadows
 	float const dmax(dist_scale*dstate.draw_tile_dist);
 	if (small && !bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dmax)) return; // 40% view dist
-	dstate.draw_cube(qbds.untex_qbd, frame_bcube, bkg_color); // untextured, matte back
+	static quad_batch_draw temp_qbd;
 
+	if (emissive && bkg_color == RED) { // special case for emissive emergency room sign
+		dstate.draw_cube(temp_qbd, frame_bcube, bkg_color); // untextured, matte back
+		select_texture(WHITE_TEX);
+		dstate.s.add_uniform_float("emissive_scale", 1.0); // 100% emissive
+		temp_qbd.draw_and_clear();
+		dstate.s.add_uniform_float("emissive_scale", 0.0); // reset
+		text_drawer::bind_font_texture(); // restore
+	}
+	else {
+		dstate.draw_cube(qbds.untex_qbd, frame_bcube, bkg_color); // untextured, matte back
+	}
 	if (!connector.is_all_zeros()) { // draw connector; is this needed for the shadow pass?
 		dstate.draw_cube(qbds.untex_qbd, connector, LT_GRAY, 0, 0.0, (free_standing ? 4 : 0)); // untextured, matte; skip top and bottom if free standing
 	}
@@ -1549,7 +1560,6 @@ void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 		cube_t top_part(frame_bcube);
 		top_part.z1() = text_bcube.z2(); // above the text
 		top_part.expand_in_dim(dim, 0.1*frame_bcube.get_sz_dim(dim)); // expand slightly to prevent Z-fighting
-		static quad_batch_draw temp_qbd;
 		dstate.draw_cube(temp_qbd, top_part, WHITE, 1, 0.0, (dim ? 5 : 6)); // only draw faces in <dim>
 		temp_qbd.draw_and_clear();
 		text_drawer::bind_font_texture(); // restore
