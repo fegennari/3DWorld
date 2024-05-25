@@ -1125,15 +1125,20 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	}
 	// check for light through connected office building hallways, open wall rooms, or adjacent/wall-less complex floorplan building rooms
 	if (room.open_wall_mask || (has_complex_floorplan && !room.is_ext_basement())) {
-		cube_t test_cube(room);
-		if (room.is_hallway) {test_cube.expand_by_xy(0.5*get_wall_thickness());} // include adjacency for hallways, but don't expand enough to go through a wall
+		float const room_exp(0.5*get_wall_thickness());
+		cube_t test_cube(room); // include adjacency, but don't expand enough to go through a wall
+
+		for (unsigned d = 0; d < 2; ++d) {
+			if (room.has_open_wall(d, 0)) {test_cube.d[d][0] -= room_exp;} // lo edge
+			if (room.has_open_wall(d, 1)) {test_cube.d[d][1] += room_exp;} // hi edge
+		}
 		set_cube_zvals(test_cube, pos.z-0.1*floor_spacing, pos.z+floor_spacing); // clip to narrow Z-range
 		unsigned const rooms_end((interior->ext_basement_hallway_room_id >= 0) ? interior->ext_basement_hallway_room_id : interior->rooms.size());
 
 		for (unsigned r = 0; r < rooms_end; ++r) {
 			if ((int)r == room_id) continue; // same room, skip
 			room_t const &room2(interior->rooms[r]);
-			if (!(room2.open_wall_mask || has_complex_floorplan) || !room2.intersects(test_cube)) continue;
+			if (!(room2.open_wall_mask || has_complex_floorplan) || !room2.intersects_no_adj(test_cube)) continue;
 			point const center(room2.get_cube_center());
 			if (!check_pos_in_unlit_room_recur(point(center.x, center.y, pos.z), rooms_visited, r)) return 0; // if adjacent room is lit, return false; room_id is known
 		}
