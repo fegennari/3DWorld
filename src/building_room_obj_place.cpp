@@ -1993,6 +1993,28 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 			}
 			is_sink = 0; // sink is in first placed counter only
 		} // for n
+		if (had_counter && rgen.rand_float() < 0.75) { // maybe place an island near the room center
+			room_object_t const &sink(objs[counters_start]); // first counter is the kitchen sink
+			bool const dim(sink.dim);
+
+			if (cabinet_area.get_sz_dim(dim) > 6.0*depth) { // kitchen is wide enough
+				float const wall_spacing(2.6*depth);
+				cube_t island(sink);
+				island.translate_dim(dim, (sink.dir ? 1.0 : -1.0)*3.0*depth);
+				max_eq(island.d[!dim][0], cabinet_area.d[!dim][0]+wall_spacing);
+				min_eq(island.d[!dim][1], cabinet_area.d[!dim][1]-wall_spacing);
+				
+				if (island.get_sz_dim(!dim) > depth && cabinet_area.contains_cube(island) &&
+					!has_bcube_int(island, blockers) && !interior->is_blocked_by_stairs_or_elevator(island))
+				{
+					for (auto i = objs.begin()+objs_start; i != objs.begin()+counters_start; ++i) { // remove any chairs intersecting the island
+						if (i->type == TYPE_CHAIR && i->intersects(island)) {i->remove();}
+					}
+					objs.emplace_back(island, TYPE_COUNTER, room_id, dim, !sink.dir, 0, tot_light_amt); // faces opposite the sink
+					set_obj_id(objs);
+				}
+			}
+		}
 	}
 	if (placed_obj && building_obj_model_loader.is_model_valid(OBJ_MODEL_BAN_PEEL) && rgen.rand_bool()) { // maybe place a banana peel on the floor
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_BAN_PEEL));
@@ -3340,11 +3362,13 @@ void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_
 	cube_t book;
 	vector3d book_scale(book_sz*rgen.rand_uniform(0.8, 1.2), book_sz*rgen.rand_uniform(0.8, 1.2), 0.0);
 	float const thickness(book_sz*rgen.rand_uniform(0.1, 0.3));
+	cube_t const room_bounds(get_walkable_room_bounds(get_room(room_id)));
+	assert(room_bounds.contains_pt(center));
 	book_scale[dim] *= 0.8; // slightly smaller in this dim
 	book.set_from_point(point(center.x, center.y, place_on.z2()));
 	book.expand_by(book_scale);
 	book.z2() += thickness;
-	book.intersect_with_cube(get_walkable_room_bounds(get_room(room_id))); // clip to room bounds
+	book.intersect_with_cube(room_bounds); // clip to room bounds
 	vect_room_object_t &objs(interior->room_geom->objs);
 
 	// check if there's anything in the way; only handling pens and pencils here; paper is ignored, and larger objects should already be handled

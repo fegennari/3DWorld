@@ -4054,8 +4054,8 @@ float get_cabinet_doors(room_object_t const &c, vect_cube_t &doors, vect_cube_t 
 	if (c.flags & RO_FLAG_ADJ_HI) {front.d[!c.dim][1] -= cab_depth;}
 	float const cab_width(front.get_sz_dim(!c.dim));
 	if (cab_width < 0.0) return 0.0; // this seems to happen on occasion; maybe it's a bug, or maybe the random size parameters can lead to bad values; either way, skip it
-	float door_width(0.75*door_height), door_spacing(1.2*door_width);
-	unsigned const num_doors(min((unsigned)floor(cab_width/door_spacing), 16U)); // cap to 16 as this is how many door open bits we have to work with
+	float door_width(0.8*door_height), door_spacing(1.2*door_width);
+	unsigned const num_doors(min((unsigned)round_fp(cab_width/door_spacing), 16U)); // cap to 16 as this is how many door open bits we have to work with
 	if (num_doors == 0) return 0.0; // is this possible?
 	door_spacing = cab_width/num_doors;
 	bool const add_drawers(c.type == TYPE_COUNTER && num_doors <= 8); // limit to 16 total doors + drawers; counter does not include the section with the sink

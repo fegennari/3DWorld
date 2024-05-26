@@ -320,7 +320,7 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 
 	for (unsigned n = 0; n < num_plates; ++n) {
 		cube_t plate;
-		gen_xy_pos_for_round_obj(plate, interior, plate_radius, plate_height, 1.1*plate_radius, rgen, 1); // place_at_z1=1
+		gen_xy_pos_for_round_obj(plate, interior, plate_radius, plate_height, 1.2*plate_radius, rgen, 1); // place_at_z1=1
 		room_object_t obj(plate, TYPE_PLATE, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN);
 		if (!add_if_not_intersecting(obj, expanded_objs, cubes)) continue; // can't place the bottom plate
 		unsigned const stack_height(1 + (rgen.rand()%5)); // 1-6
