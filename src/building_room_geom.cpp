@@ -168,7 +168,7 @@ colorRGBA get_table_color(room_object_t const &c) {
 		return (marble ? texture_color(MARBLE_TEX) : get_textured_wood_color()); // ignore the black legs of marble tables
 	}
 	else { // rectangular or short table
-		bool const glass((c.flags & RO_FLAG_IS_HOUSE) && (c.obj_id & 1));
+		bool const glass(c.is_house() && (c.obj_id & 1));
 		return (glass ? table_glass_color : get_textured_wood_color()); // ignore the black legs of glass tables
 	}
 }
@@ -381,10 +381,9 @@ void building_room_geom_t::add_drawers(room_object_t const &c, float tscale, vec
 }
 
 void building_room_geom_t::draw_mirror_surface(room_object_t const &c, cube_t const &mirror, bool dim, bool dir, bool shadowed) {
-	tid_nm_pair_t tp(REFLECTION_TEXTURE_ID, 0.0, shadowed);
-	if (ENABLE_MIRROR_REFLECTIONS) {tp.emissive = 1.0;}
 	unsigned const skip_faces(get_face_mask(dim, dir));
-	get_material(tp, shadowed).add_cube_to_verts(mirror, WHITE, zero_vector, skip_faces, !dim); // draw only the front face; use dim/dir rather than from c
+	// draw only the front face; use dim/dir rather than from c; doesn't need to be emissive
+	get_material(tid_nm_pair_t(REFLECTION_TEXTURE_ID, 0.0, shadowed), shadowed).add_cube_to_verts(mirror, WHITE, zero_vector, skip_faces, !dim);
 
 	if (c.is_broken()) {
 		cube_t crack(mirror);
@@ -1223,7 +1222,7 @@ cube_t get_mirror_surface(room_object_t const &c) {
 	return mirror;
 }
 void building_room_geom_t::add_mirror(room_object_t const &c) {
-	bool const shadowed(c.is_house()); // medicine cabinets in houses cast shadows
+	bool const shadowed(c.get_sz_dim(c.dim) > 0.05*c.dz()); // medicine cabinets cast shadows
 	colorRGBA const side_color(apply_light_color(c));
 
 	if (c.is_open()) { // open medicine cabinet

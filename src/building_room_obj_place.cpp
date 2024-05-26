@@ -429,7 +429,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			chair_pos[dim]  = c.d[dim][!dir];
 			chair_pos[!dim] = pos + rgen.rand_uniform(-0.1, 0.1)*width; // slightly misaligned
 			// use office chair models when the desk has a computer monitor; now that occlusion culling works well, it's okay to have a ton of these in office buildings
-			bool const office_chair(add_computer /*&& is_house*/);
+			bool const office_chair(add_computer);
 			add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, office_chair);
 		}
 		return 1; // done/success
@@ -3597,7 +3597,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 	
 	if (!is_house && !room.is_office) {
 		if (room.is_hallway) return 0; // no pictures or whiteboards in office building hallways (what about rooms with stairs?)
-		// room in a commercial building - add whiteboard when there is a full wall to use
+		// room in a commercial building or hotel/apartment - add whiteboard/picture when there is a full wall to use
 	}
 	if (room.is_sec_bldg) return 0; // no pictures in secondary buildings
 	if (room.get_room_type(0) == RTYPE_STORAGE) return 0; // no pictures or whiteboards in storage rooms (always first floor)
