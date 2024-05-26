@@ -2141,7 +2141,7 @@ private:
 	void place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor, bool is_basement);
 	bool can_be_bedroom_or_bathroom(room_t const &room, unsigned floor_ix, bool skip_conn_check=0) const;
 	bool can_be_bathroom(room_t const &room) const;
-	bool find_mirror_in_room(unsigned room_id, vector3d const &xlate, bool same_room) const;
+	bool find_mirror_in_room(unsigned room_id, vector3d const &xlate, float &dmin_sq, bool same_room) const;
 	bool find_mirror_needing_reflection(vector3d const &xlate) const;
 	int find_main_roof_tquad_ix(rand_gen_t &rgen, bool skip_if_has_other_obj) const;
 	void add_chimney_cap(rand_gen_t &rgen);

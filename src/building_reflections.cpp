@@ -149,14 +149,12 @@ bool building_t::is_cube_face_visible_from_pt(cube_t const &c, point const &p, u
 	return 0;
 }
 
-bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, bool same_room) const { // in view of the player
+bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, float &dmin_sq, bool same_room) const { // in view of the player
 	assert(has_room_geom());
 	point camera_bs(camera_pdu.pos - xlate);
 	maybe_inv_rotate_point(camera_bs); // rotate camera pos into building space
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 	float const camera_z1(camera_bs.z - CAMERA_RADIUS), camera_z2(camera_bs.z + CAMERA_RADIUS);
-	float dmin_sq(0.0);
-	bool found(0);
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // see if that room contains a mirror
 		if (i->room_id != room_id || !is_mirror(*i))      continue; // wrong room, or not a mirror
@@ -168,7 +166,7 @@ bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, bo
 		point const center(i->get_cube_center());
 		float const dsq(p2p_dist_sq(camera_bs, center));
 		
-		if (!found || dsq < dmin_sq) {
+		if (dmin_sq == 0.0 || dsq < dmin_sq) {
 			room_t const &room(get_room(room_id));
 
 			if (room.is_backrooms()) { // backrooms bathroom mirror
@@ -186,12 +184,11 @@ bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, bo
 				if (found_closed_door) continue;
 			}
 			dmin_sq = dsq;
-			found   = 1;
 			cur_room_mirror        = *i;
 			mirror_in_ext_basement = room.is_ext_basement();
 		}
 	} // for i
-	return found;
+	return (dmin_sq > 0.0);
 }
 
 bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
@@ -201,6 +198,7 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 	vector<point> points;
 	if (!check_point_or_cylin_contained(camera_bs, 0.0, points, 0, 1, 0)) return 0; // camera not in the building; inc_attic=0, inc_ext_basement=1, inc_roof_acc=0
 	int camera_room_ix(-1);
+	float dmin_sq(0.0);
 	
 	// find room containing the camera; note that this applies to the entire backrooms, since it's one room
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
@@ -208,15 +206,16 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 		unsigned const room_ix(r - interior->rooms.begin());
 		camera_room_ix = room_ix;
 		if (!r->has_mirror) continue; // no mirror in this room stack
-		if (find_mirror_in_room((room_ix & 255), xlate, 1)) return 1; // same_room=1
+		if (find_mirror_in_room((room_ix & 255), xlate, dmin_sq, 1)) return 1; // same_room=1
 	} // for r
 	if (camera_room_ix < 0) return 0; // camera not in a room
 	if (all_room_int_doors_closed(camera_room_ix, camera_bs.z)) return 0; // camera in room with doors closed, no other mirrors are visible
 	room_t const &camera_room(get_room(camera_room_ix));
 	cube_t search_area(camera_room);
 	search_area.expand_by_xy(2.0*get_wall_thickness()); // expand so that it overlaps adjacent rooms
+	bool found(0);
 
-	// not found, look for an adjacent room or connecting hallway; what about mirrors visible from more than one room away?
+	// not found, look for an adjacent room or connecting hallway and select closest mirror; what about mirrors visible from more than one room away?
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
 		unsigned const room_ix(r - interior->rooms.begin());
 		if ((int)room_ix == camera_room_ix) continue;
@@ -235,9 +234,9 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 			}
 			if (!are_rooms_connected(*r, camera_room, camera_bs.z, 1)) continue; // no door, or door is fully closed check_open=1
 		}
-		if (find_mirror_in_room((room_ix & 255), xlate, 0)) return 1; // same_room=0
+		found |= find_mirror_in_room((room_ix & 255), xlate, dmin_sq, 0); // same_room=0
 	} // for r
-	return 0; // not found
+	return found; // not found
 }
 
 /*static*/ bool tid_nm_pair_t::bind_reflection_shader() {
