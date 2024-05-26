@@ -1169,7 +1169,7 @@ bool building_t::check_if_against_window(cube_t const &c, room_t const &room, bo
 }
 bool building_t::place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval,
 	unsigned room_id, float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance, bool add_door_clearance, unsigned pref_orient,
-	bool pref_centered, colorRGBA const &color, bool not_at_window, room_obj_shape shape, float side_clearance, unsigned extra_flags, bool not_ext_wall)
+	bool pref_centered, colorRGBA const &color, bool not_at_window, room_obj_shape shape, float side_clearance, unsigned extra_flags, bool not_ext_wall, bool force_pref)
 {
 	float const hwidth(0.5*height*sz_scale.y/sz_scale.z), depth(height*sz_scale.x/sz_scale.z);
 	float const min_space(max(2.8f*hwidth, 2.1f*(max(hwidth, 0.5f*depth) + get_scaled_player_radius()))); // make sure the player can get around the object
@@ -1183,7 +1183,7 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 	bool center_tried[4] = {};
 
 	for (unsigned n = 0; n < 25; ++n) { // make 25 attempts to place the object
-		bool const use_pref(pref_orient < 4 && n < 10); // use pref orient for first 10 tries
+		bool const use_pref(pref_orient < 4 && (force_pref || n < 10)); // use pref orient for first 10 tries unless force_pref=1
 		bool const dim((force_dim < 2) ? force_dim : (use_pref ? (pref_orient >> 1) : rgen.rand_bool())); // choose a random wall unless forced
 		bool const dir(use_pref ? !(pref_orient & 1) : rgen.rand_bool()); // dir is inverted for the model, so we invert pref dir as well
 		unsigned const orient(2*dim + dir);
@@ -1225,13 +1225,15 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 	} // for n
 	return 0; // failed
 }
-bool building_t::place_model_along_wall(unsigned model_id, room_object type, room_t const &room, float height, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
-	cube_t const &place_area, unsigned objs_start, float front_clearance, unsigned pref_orient, bool pref_centered, colorRGBA const &color, bool not_at_window, unsigned extra_flags)
+bool building_t::place_model_along_wall(unsigned model_id, room_object type, room_t const &room, float height, rand_gen_t &rgen, float zval, unsigned room_id,
+	float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance, unsigned pref_orient, bool pref_centered, colorRGBA const &color,
+	bool not_at_window, unsigned extra_flags, bool force_pref)
 {
+	if (place_area.is_all_zeros()) return 0;
 	if (!building_obj_model_loader.is_model_valid(model_id)) return 0; // don't have a model of this type
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id)); // D, W, H
-	return place_obj_along_wall(type, room, height*get_window_vspace(), sz, rgen, zval, room_id, tot_light_amt,
-		place_area, objs_start, front_clearance, 0, pref_orient, pref_centered, color, not_at_window, SHAPE_CUBE, 0.0, extra_flags);
+	return place_obj_along_wall(type, room, height*get_window_vspace(), sz, rgen, zval, room_id, tot_light_amt, place_area,
+		objs_start, front_clearance, 0, pref_orient, pref_centered, color, not_at_window, SHAPE_CUBE, 0.0, extra_flags, 0, force_pref);
 }
 
 float building_t::add_flooring(room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned flooring_type) {
@@ -2081,7 +2083,7 @@ colorRGBA get_couch_color(rand_gen_t &rgen) {
 bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	if (!is_residential() || room.is_hallway || room.is_sec_bldg || room.is_office) return 0; // these can't be living rooms
 	float const wall_thickness(get_wall_thickness());
-	cube_t place_area(get_walkable_room_bounds(room));
+	cube_t place_area(get_walkable_room_bounds(room)), tv_pref_area;
 	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall
 	vect_room_object_t &objs(interior->room_geom->objs);
 	bool placed_couch(0), placed_tv(0);
@@ -2090,13 +2092,20 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 	unsigned tv_pref_orient(4), couch_ix(objs.size()), tv_ix(0);
 	
 	if (place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, room, 0.40, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.67, 4, 1, color)) { // pref centered
+		room_object_t const &couch(objs[couch_ix]);
+		float const tv_overlap(0.5*couch.get_length());
 		placed_couch   = 1;
-		tv_pref_orient = (2*objs[couch_ix].dim + !objs[couch_ix].dir); // TV should be across from couch
+		tv_pref_orient = (2*couch.dim + !couch.dir); // TV should be across from couch
+		tv_pref_area   = place_area;
+		max_eq(tv_pref_area.d[!couch.dim][0], couch.d[!couch.dim][0]-tv_overlap);
+		min_eq(tv_pref_area.d[!couch.dim][1], couch.d[!couch.dim][1]+tv_overlap);
 	}
 	tv_ix = objs.size();
 
-	// place TV: pref centered; maybe should set not_at_window=1, but that seems too restrictive
-	if (place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 4.0, tv_pref_orient, 1, BKGRAY, 0)) {
+	// place TV: first attempt to place across from the couch, then prefer centered; maybe should set not_at_window=1, but that seems too restrictive
+	if (place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, room, 0.45, rgen, zval, room_id, tot_light_amt, tv_pref_area, objs_start, 4.0, tv_pref_orient, 1, BKGRAY, 0, 0, 1) ||
+		place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area,   objs_start, 4.0, tv_pref_orient, 1, BKGRAY, 0, 0, 0))
+	{
 		placed_tv = 1;
 		// add a small table to place the TV on so that it's off the floor and not blocked as much by tables and chairs
 		room_object_t &tv(objs[tv_ix]);
