@@ -1281,7 +1281,7 @@ public:
 			if (check_vect_cube_contains_pt_xy(isecs[0], pos)) {color = GRAY; return INT_ROAD;} // 2-way intersections
 		}
 		if (check_tile_group_contains_pt_xy(city_obj_placer.parking_lots, pos, TYPE_PARK_LOT)) {color = DK_GRAY; return INT_PARKING;}
-		if (check_tile_group_contains_pt_xy(city_obj_placer.driveways,    pos, TYPE_DRIVEWAY)) {color = LT_GRAY; return INT_PARKING;}
+		if (check_tile_group_contains_pt_xy(city_obj_placer.driveways,    pos, TYPE_DRIVEWAY)) {color = (is_residential ? LT_GRAY : colorRGBA(0.4, 0.4, 0.4)); return INT_PARKING;}
 		if (city_obj_placer.get_color_at_xy(pos, color, 1)) {return INT_PLOT;} // hit a detail object, but still in a plot; skip objects in roads such as fire hydrants
 			
 		if (!plots.empty()) { // inside a city and not over a road - must be over a plot or park
@@ -1939,8 +1939,10 @@ private:
 		return nullptr; // not found, caller can error check
 	}
 	bool select_avail_driveway(car_t &car, rand_gen_t &rgen) const { // consider destination driveways, since these are easier to handle than parking lots
-		if (city_obj_placer.driveways.empty()) return 0; // not a residential city
-			
+		// here we skip driveways that are commercial city parking lot entrances (even though it works) because cars shouldn't stop there;
+		// ideally, we should select a free parking space and navigate to it, though this is much more complex and has some failure conditions
+		if (!is_residential || city_obj_placer.driveways.empty()) return 0; // not a residential city
+		
 		for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to find a valid driveway
 			unsigned const dix(rgen.rand()%city_obj_placer.driveways.size());
 			driveway_t const &driveway(get_driveway(dix));

@@ -27,13 +27,15 @@ bool enable_instanced_pine_trees();
 bool are_birds_enabled() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_BIRD_ANIM);}
 
 
-bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, unsigned plot_ix,
+bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vector<car_t> &cars, unsigned city_id, unsigned plot_ix,
 	vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t &rgen)
 {
 	vector3d const nom_car_size(city_params.get_nom_car_size()); // {length, width, height}
 	float const space_width(PARK_SPACE_WIDTH *nom_car_size.y); // add 50% extra space between cars
 	float const space_len  (PARK_SPACE_LENGTH*nom_car_size.x); // space for car + gap for cars to drive through
 	float const pad_dist   (max(1.0f*nom_car_size.x, get_min_obj_spacing())); // one car length or min building spacing
+	float const sidewalk_width(get_sidewalk_width());
+	cube_t plot(full_plot); // plot shrunk by padding
 	plot.expand_by_xy(-pad_dist);
 	if (bcubes.empty()) return 0; // shouldn't happen, unless buildings are disabled; skip to avoid perf problems with an entire plot of parking lot
 	unsigned const buildings_end(bcubes.size()), first_corner(rgen.rand()&3); // 0-3
@@ -68,15 +70,27 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t plot, vector<car_t> &ca
 		}
 		cand = park;
 		// try to add more rows of parking spaces
+		// the space between rows is too small for cars to drive, but this is really limited by the tiling of the parking lot texture
 		for (; plot.contains_cube_xy(cand); ++cand.num_rows, cand.d[car_dim][!rdir] += dr) {
 			if (has_bcube_int_xy(cand, bcubes, pad_dist)) break; // intersects a building - done
 			park = cand; // success: increase parking lot to this size
 		}
 		assert(park.row_sz >= city_params.min_park_spaces && park.num_rows >= city_params.min_park_rows);
 		assert(park.dx() > 0.0 && park.dy() > 0.0);
+
+		if (1) { // add driveways connecting to parking lot
+			float const back_of_lot(park.d[car_dim][!car_dir]);
+			bool const dw_dir(plot.get_center_dim(!car_dim) < park.get_center_dim(!car_dim)); // connect to road on closer side
+			cube_t driveway(park);
+			driveway.d[ car_dim][ car_dir] = back_of_lot;
+			driveway.d[ car_dim][!car_dir] = back_of_lot + (car_dir ? -1.0 : 1.0)*1.25*space_width;
+			driveway.d[!car_dim][  dw_dir] = full_plot.d[!car_dim][dw_dir] + (dw_dir ? 1.0 : -1.0)*sidewalk_width; // extend to the road, with a small gap for the curb
+			driveways.emplace_back(driveway, !car_dim, dw_dir, plot_ix);
+			bcubes.push_back(driveway); // add to list of blocker bcubes
+		}
 		car.cur_seg = (unsigned short)parking_lots.size(); // store parking lot index in cur_seg
 		parking_lots.push_back(park);
-		bcubes.push_back(park); // add to list of blocker bcubes so that no later parking lots overlap this one
+		bcubes.push_back(park); // add to list of blocker bcubes so that no later parking lots or other city objects overlap this one
 		//parking_lots.back().expand_by_xy(0.5*pad_dist); // re-add half the padding for drawing (breaks texture coord alignment)
 		unsigned const nspaces(park.row_sz*park.num_rows);
 		num_spaces += nspaces;
@@ -1617,7 +1631,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	}
 	add_ssign_and_slight_plot_colliders(plots, isecs, plot_colliders);
 	connect_power_to_buildings(plots);
-	if (have_cars) {add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);}
+	if (have_cars && is_residential) {add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);}
 	place_birds(city_bcube, rgen); // after placing other objects
 	bench_groups   .create_groups(benches,   all_objs_bcube);
 	planter_groups .create_groups(planters,  all_objs_bcube);
