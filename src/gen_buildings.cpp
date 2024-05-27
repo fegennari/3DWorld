@@ -1082,7 +1082,8 @@ public:
 					EMIT_VERTEX(); // 1 !j
 					float const offset((j ? 1.0 : -1.0)*offset_val);
 
-					if (((i == 2) ? seg.ilo : seg.dlo) == 0.0 && (door_sides & (1 << (2*n + j)))) { // clip zval to exclude door z-range (except for top segment)
+					if (((i == 2) ? seg.ilo : seg.dlo) == 0.0 && (door_sides & (1 << (2*n + j)))) {
+						// clip zval to exclude door z-range (except for top segment); doesn't work with walkway doors
 						for (unsigned k = ix; k < ix+4; ++k) {
 							auto &v(verts[k]);
 							float const delta(door_ztop - v.v.z);
@@ -2160,7 +2161,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 				}
 			}
 			unsigned const part_ix(i - parts.begin());
-			unsigned const dsides((part_ix < 4 && mat.add_windows) ? door_sides[part_ix] : 0); // skip windows on sides with doors, but only for buildings with windows
+			unsigned const dsides((part_ix < 4 && draw_windows) ? door_sides[part_ix] : 0); // skip windows on sides with doors, but only for buildings with windows
 			bdraw.add_section(*this, 1, part, tex, color, 3, 0, 0, 1, clip_windows, door_ztop, dsides, offset_scale, 0, clamp_cube); // XY, no_ao=1
 			draw_parts_mask |= (1 << part_ix);
 
@@ -2323,7 +2324,7 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 	cube_t const cont_part(get_part_containing_pt(only_cont_pt)); // part containing the point
 	// complex floorplan buildings can have odd exterior wall geometry where this splitting approach doesn't work well,
 	// but if the building is windowless, then we can at least make the walls all front so that exterior doors are drawn properly
-	if (!mat.add_windows && has_complex_floorplan) {make_all_front = 1;}
+	if (has_complex_floorplan && !has_int_windows()) {make_all_front = 1;}
 	
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels; include house garage/shed
 		if (is_basement(i)) continue; // skip basement walls because they have no windows
