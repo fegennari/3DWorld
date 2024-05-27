@@ -686,6 +686,7 @@ bool has_int_obstacle_or_parallel_wall(cube_t const &c, vect_cube_t const &obsta
 bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_riser_pos_t const &risers, vect_cube_t &pipe_cubes,
 	unsigned room_id, unsigned num_floors, unsigned objs_start, float tot_light_amt, float ceil_zval, rand_gen_t &rgen, unsigned pipe_type, bool allow_place_fail)
 {
+	//highres_timer_t timer("add_basement_pipes");
 	assert(pipe_type < NUM_PIPE_TYPES);
 	if (risers.empty()) return 0; // can happen for hot water pipes when there are no hot water fixtures
 	float const FITTING_LEN(1.2), FITTING_RADIUS(1.1); // relative to radius
@@ -786,8 +787,10 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		mp[d].z     = pipe_zval;
 	}
 	// shift pipe until it clears all obstacles
-	float const step_dist(2.0*r_main), step_area(bcube.get_sz_dim(!dim)); // step by pipe radius
-	unsigned const max_steps(step_area/step_dist);
+	float step_dist(2.0*r_main);
+	float const step_area(bcube.get_sz_dim(!dim)); // step by pipe radius
+	unsigned const max_steps(max(1U, min(unsigned(step_area/step_dist), 100U))); // limit to 100 steps
+	step_dist = step_area/max_steps;
 	bool success(0);
 
 	for (unsigned n = 0; n < max_steps; ++n) {
@@ -822,11 +825,16 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			min_eq(riser_min, r.pos[dim]);
 			max_eq(riser_max, r.pos[dim]);
 		}
+		if (risers.size() >= 10) { // optimization for many risers case to avoid long quadratic runtime: clip off an additional 5% from each end
+			float const extra_clip(0.05*(riser_max - riser_min));
+			riser_min += extra_clip;
+			riser_max -= extra_clip;
+		}
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			risers_sub.clear();
 			// try to remove risers at each end recursively until successful
 			for (riser_pos_t const &r : risers) {
-				if (r.pos[dim] != (dir ? riser_max : riser_min)) {risers_sub.push_back(r);}
+				if (dir ? (r.pos[dim] < riser_max) : (r.pos[dim] > riser_min)) {risers_sub.push_back(r);}
 			}
 			if (risers_sub.empty()) continue;
 			assert(risers_sub.size() < risers.size());
@@ -1394,7 +1402,8 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, vect_riser_pos_t &cold_water, vect_riser_pos_t &hot_water, rand_gen_t &rgen) const {
 	cube_t const &basement(get_basement());
 	float const merge_dist = 4.0; // merge two pipes if their combined radius is within this distance
-	float const floor_spacing(get_window_vspace()), base_pipe_radius(0.01*floor_spacing), base_pipe_area(base_pipe_radius*base_pipe_radius);
+	// use reduced pipe radius for apartments and hotels since they have so many plumbing fixtures
+	float const floor_spacing(get_window_vspace()), base_pipe_radius((is_apt_or_hotel() ? 0.008 : 0.01)*floor_spacing), base_pipe_area(base_pipe_radius*base_pipe_radius);
 	float const merge_dist_sq(merge_dist*merge_dist), max_radius(0.4*get_wall_thickness()), ceil_zval(basement.z2() - get_fc_thickness());
 	vector<room_object_t> water_heaters;
 	bool const inc_basement_wheaters = 1;
@@ -1420,7 +1429,7 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 		// see if we can merge this sewer riser into an existing nearby riser
 		for (auto &r : sewer) {
 			float const p_area(r.radius*r.radius), sum_area(p_area + base_pipe_area);
-			if (!dist_xy_less_than(r.pos, pos, merge_dist_sq*sum_area)) continue;
+			if (p2p_dist_xy_sq(r.pos, pos) > merge_dist_sq*sum_area) continue;
 			r.pos      = (p_area*r.pos + base_pipe_area*pos)/sum_area; // merged position is weighted average area
 			r.radius   = get_merged_pipe_radius(r.radius, base_pipe_radius, 3.0); // cubic
 			r.has_hot |= hot_cold_obj;
