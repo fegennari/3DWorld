@@ -1751,7 +1751,7 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 	float const trim_thickness(get_trim_thickness()), ext_wall_toler(0.01*trim_thickness); // required to prevent z-fighting when AA is disabled
 	float const window_h_border(WINDOW_BORDER_MULT*get_window_h_border()), window_v_border(WINDOW_BORDER_MULT*get_window_v_border()); // (0, 1) range
 	// Note: depth must be small to avoid object intersections; this applies to the windowsill as well
-	float const window_trim_width(0.75*get_wall_thickness()), window_trim_depth(1.0*trim_thickness), windowsill_depth(1.0*trim_thickness);
+	float const window_trim_width(get_wind_trim_thick()), window_trim_depth(1.0*trim_thickness), windowsill_depth(1.0*trim_thickness);
 	float const floor_spacing(get_window_vspace()), window_offset(get_door_shift_dist());
 	building_mat_t const &mat(get_material());
 	colorRGBA const trim_color(get_trim_color());

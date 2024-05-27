@@ -1619,8 +1619,9 @@ struct building_t : public building_geom_t {
 	float get_floor_thickness() const {return get_floor_thick_val()*get_window_vspace();}
 	float get_fc_thickness   () const {return 0.5*get_floor_thickness();} // floor/ceiling thickness
 	float get_wall_thickness () const {return WALL_THICK_VAL*get_window_vspace();}
-	float get_trim_thickness () const {return 0.1*get_wall_thickness();}
-	float get_trim_height    () const {return 0.04*get_window_vspace();}
+	float get_wind_trim_thick() const {return 0.75*get_wall_thickness();}
+	float get_trim_thickness () const {return 0.1 *get_wall_thickness();}
+	float get_trim_height    () const {return 0.04*get_window_vspace ();}
 	float get_floor_ceil_gap () const {return (get_window_vspace() - get_floor_thickness());}
 	float get_door_height    () const {return 0.95f*get_floor_ceil_gap();} // set height based on window spacing, 95% of ceiling height (may be too large)
 	float get_office_bldg_door_height() const {return 1.06*get_door_height();} // a bit taller

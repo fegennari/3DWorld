@@ -1190,7 +1190,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 
 		if (has_int_windows() && (at_lo_end || at_hi_end) && windows_per_room_side > 1 && (windows_per_room_side & 1)) { // shift bed_lb_split_pos to prevent window intersection
 			float const window_h_space(room.get_sz_dim(!hall_dim)/windows_per_room_side);
-			bed_lb_split_pos += (hall_dir ? -1.0 : 1.0)*0.5*(1.0 - get_window_h_border())*window_h_space; // shift near edge of window frame
+			bed_lb_split_pos += (hall_dir ? -1.0 : 1.0)*(0.5*(1.0 - get_window_h_border())*window_h_space + get_wind_trim_thick()); // shift near edge of window frame
 		}
 		// add new rooms; rooms tile exactly and have no space for walls
 		cube_t bed(room), lb(room);
@@ -1279,7 +1279,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		if (has_int_windows()) { // prevent walls from intersecting windows
 			if (num_windows & 1) { // odd number of windows; shift living_bed_split_pos to not intersect a window
 				float const window_h_space(room.get_sz_dim(hall_dim)/num_windows);
-				living_bed_split_pos += (lg_door_side ? -1.0 : 1.0)*0.5*(1.0 - get_window_h_border())*window_h_space; // shift near edge of bedroom window frame
+				living_bed_split_pos += (lg_door_side ? -1.0 : 1.0)*(0.5*(1.0 - get_window_h_border())*window_h_space + get_wind_trim_thick()); // shift near edge of bedroom window frame
 			}
 			if (at_lo_end || at_hi_end) { // check side windows
 				cube_t const &part(parts[part_id]);
