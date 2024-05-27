@@ -214,9 +214,15 @@ public:
 		// Note: assumes unscaled mesh (mesh_scale == 1)
 		int const x1(floor((cube.x1() + X_SCENE_SIZE)*DX_VAL_INV)), y1(floor((cube.y1() + Y_SCENE_SIZE)*DY_VAL_INV));
 		int const x2(ceil ((cube.x2() + X_SCENE_SIZE)*DX_VAL_INV)), y2(ceil ((cube.y2() + Y_SCENE_SIZE)*DY_VAL_INV));
-		int cx1(x1), cy1(y1), cx2(x2+1), cy2(y2+1); // Note: cx2 and cy2 are one past the end; this is needed for proper mirror clamping and empty range early termination optimization
-		if (!clamp_xy(cx1, cy1, 0.0, 0.0, 0) || !clamp_xy(cx2, cy2, 0.0, 0.0, 0)) return; // off the texture, skip
-		assert(cx1 >= 0 && cy1 >= 0 && cx1 <= cx2 && cy1 <= cy2);
+		int cx1(x1), cy1(y1), cx2(x2+1), cy2(y2+1); // Note: cx2/cy2 are one past the end; this is needed for proper mirror clamping and empty range early termination optimization
+		bool const allow_wrap(0); // while this mostly works with buildings, it ruins roads and can cause mesh seams
+		if (!clamp_xy(cx1, cy1, 0.0, 0.0, allow_wrap) || !clamp_xy(cx2, cy2, 0.0, 0.0, allow_wrap)) return; // off the texture, skip
+		
+		if (allow_wrap) { // handle swapping due to X/Y mirroring
+			if (cx2 < cx1) {swap(cx1, cx2);}
+			if (cy2 < cy1) {swap(cy1, cy2);}
+		}
+		else {assert(cx1 >= 0 && cy1 >= 0 && cx1 <= cx2 && cy1 <= cy2);}
 		if (cx1 == cx2 || cy1 == cy2) return; // empty range optimization
 		point const center(cube.get_cube_center());
 		float xc((center.x + X_SCENE_SIZE)*DX_VAL_INV + 0.5), yc((center.y + Y_SCENE_SIZE)*DY_VAL_INV + 0.5); // convert from real to index space
