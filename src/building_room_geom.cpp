@@ -4214,7 +4214,10 @@ void building_room_geom_t::add_window(room_object_t const &c, float tscale) { //
 	tid_nm_pair_t tex(get_bath_wind_tid(), 0.0); // fit texture to the window front/back faces
 	if (c.is_light_on()) {tex.emissive = 0.33;} // one third emissive
 	get_material(tex, 0, 0, 0, 0, 0).add_cube_to_verts(window, c.color, c.get_llc(), get_face_mask(c.dim, !c.dir)); // interior face, no apply_light_color()
-	get_material(tex, 0, 0, 0, 0, 1).add_cube_to_verts(window, c.color, c.get_llc(), get_face_mask(c.dim,  c.dir)); // exterior face, no apply_light_color()
+
+	if (c.flags & RO_FLAG_HAS_EXTRA) { // only draw exterior for buildings with exterior windows
+		get_material(tex, 0, 0, 0, 0, 1).add_cube_to_verts(window, c.color, c.get_llc(), get_face_mask(c.dim,  c.dir)); // exterior face, no apply_light_color()
+	}
 }
 
 colorRGBA const &get_outlet_or_switch_box_color(room_object_t const &c) {return (c.is_hanging() ? GRAY : c.color);} // should be silver metal
