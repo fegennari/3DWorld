@@ -49,12 +49,12 @@ bool building_t::extend_underground_basement(rand_gen_t rgen) {
 	return 0;
 }
 
-float query_min_height(cube_t const &c, float stop_at) {
+float query_min_height(cube_t const &c, float stop_at) { // c_in is in global building space
 	float hmin(FLT_MAX);
 
-	if (using_tiled_terrain_hmap_tex() && !using_hmap_with_detail()) { // optimized flow when using heightmap texture
-		float x1((c.x1() + X_SCENE_SIZE)*DX_VAL_INV + 0.5 + xoff2), x2((c.x2() + X_SCENE_SIZE)*DX_VAL_INV + 0.5 + xoff2);
-		float y1((c.y1() + Y_SCENE_SIZE)*DY_VAL_INV + 0.5 + yoff2), y2((c.y2() + Y_SCENE_SIZE)*DY_VAL_INV + 0.5 + yoff2);
+	if (using_tiled_terrain_hmap_tex() && !using_hmap_with_detail()) { // optimized flow when using heightmap texture; not adding xoff2/yoff2
+		float x1((c.x1() + X_SCENE_SIZE)*DX_VAL_INV + 0.5), x2((c.x2() + X_SCENE_SIZE)*DX_VAL_INV + 0.5);
+		float y1((c.y1() + Y_SCENE_SIZE)*DY_VAL_INV + 0.5), y2((c.y2() + Y_SCENE_SIZE)*DY_VAL_INV + 0.5);
 
 		for (float y = y1-0.5; y < y2+0.5; y += 0.5) {
 			for (float x = x1-0.5; x < x2+0.5; x += 0.5) {
@@ -65,10 +65,12 @@ float query_min_height(cube_t const &c, float stop_at) {
 	}
 	else { // we don't have the float heightmap here, so we have to do an expensive get_exact_zval() for each grid point
 		float const x_step(0.5*DX_VAL), y_step(0.5*DY_VAL);
+		cube_t c2(c);
+		c2 += vector3d(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0); // cancel out xoff2/yoff2 translate
 
-		for (float y = c.y1()-y_step; y < c.y2()+y_step; y += y_step) {
-			for (float x = c.x1()-x_step; x < c.x2()+x_step; x += x_step) {
-				min_eq(hmin, get_exact_zval(min(x, c.x2()), min(y, c.y2()))); // check every grid point with the X/Y range
+		for (float y = c2.y1()-y_step; y < c2.y2()+y_step; y += y_step) {
+			for (float x = c2.x1()-x_step; x < c2.x2()+x_step; x += x_step) {
+				min_eq(hmin, get_exact_zval(min(x, c2.x2()), min(y, c2.y2()))); // check every grid point with the X/Y range
 				if (hmin < stop_at) return hmin;
 			}
 		}
