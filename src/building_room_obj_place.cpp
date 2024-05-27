@@ -3807,7 +3807,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 	vect_door_stack_t ext_doors; // not really door stacks, but we can fill in the data to treat them as such
 	unsigned garage_door_mask(0);
 
-	if (is_ground_floor || !walkways.empty()) { // handle exterior doors
+	if (is_ground_floor || (!walkways.empty() && !DRAW_CITY_INT_WINDOWS)) { // handle exterior doors on the ground floor, and walkway doors if there are no windows
 		cube_t room_exp(room);
 		room_exp.expand_by(wall_thickness, wall_thickness, -wall_thickness); // expand in XY and shrink in Z
 		set_cube_zvals(room_exp, zval, ceil_zval); // limit to this floor of the room
@@ -3829,7 +3829,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 
 		for (auto i = cands.begin(); i != cands.end() && num_ls < max_ls; ++i) {
 			if (!is_house && room.is_ext_basement() && room_bounds.contains_cube_xy(*i)) continue; // skip interior backrooms doors
-			// check for windows if (real_num_parts > 1)? is it actually possible for doors to be within far_spacing of a window?
+			// check for windows if (real_num_parts > 1)? is it actually possible for doors to be within far_spacing of a window? yes, for office building walkways
 			bool const dim(i->dim), dir(i->get_center_dim(dim) > room.get_center_dim(dim));
 			float const dir_sign(dir ? -1.0 : 1.0), door_width(i->get_width());
 			assert(door_width > 0.0);

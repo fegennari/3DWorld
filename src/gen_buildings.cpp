@@ -2105,9 +2105,16 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	int const window_tid(building_texture_mgr.get_window_tid());
 	if (window_tid < 0) return; // not allocated - error?
 	if (mat.wind_xscale == 0.0 || mat.wind_yscale == 0.0) return; // no windows for this material?
-	tid_nm_pair_t tex(window_tid, -1, mat.get_window_tx(), mat.get_window_ty(), mat.wind_xoff, -mat.wind_yoff); // Note: wind_yoff is negated
+	tid_nm_pair_t tex;
 	colorRGBA color;
 
+	if (draw_int_windows && !has_windows()) { // calculate interior window spacing that aligns with actual floor spacing
+		float const window_tx(0.5*mat.floorplan_wind_xscale), window_ty(0.5/get_window_vspace());
+		tex = tid_nm_pair_t(window_tid, -1, window_tx, window_ty);
+	}
+	else {
+		tex = tid_nm_pair_t(window_tid, -1, mat.get_window_tx(), mat.get_window_ty(), mat.wind_xoff, -mat.wind_yoff); // Note: wind_yoff is negated
+	}
 	if (lights_pass) { // slight yellow-blue tinting using bcube x1/y1 as a hash
 		float const tint(0.2*fract(100.0f*(bcube.x1() + bcube.y1())));
 		color = colorRGBA((1.0 - tint), (1.0 - tint), (0.8 + tint), 1.0);
@@ -4329,7 +4336,8 @@ public:
 		for (auto i1 = city_bldgs.begin(); i1 != city_bldgs.end(); ++i1) {
 			building_t &b1(get_building(i1->ix));
 			float const min_ww_width(1.5*b1.get_office_ext_doorway_width()), floor_spacing(b1.get_window_vspace()); // should be the same for all buildings
-			float const bot_z_add(0.25*floor_spacing), power_pole_clearance(1.25*bot_z_add);
+			float const bot_z_add((DRAW_CITY_INT_WINDOWS ? 0.125 : 0.25)*floor_spacing); // reduce if there are interior windows so that we don't see inside the walkway bottom
+			float const power_pole_clearance(1.25*bot_z_add);
 			unsigned const min_floors_above_power_pole(unsigned((pp_height + power_pole_clearance)/floor_spacing) + 1U); // for crossing roads; take ceil
 			float const walkway_zmin_short(b1.ground_floor_z1 + ((bot_z_add > 0.0) ? 2.0 : 1.0)*floor_spacing); // two floors up, to account for bot_z_add
 			float const walkway_zmin_long (b1.ground_floor_z1 + min_floors_above_power_pole    *floor_spacing); // N floors up

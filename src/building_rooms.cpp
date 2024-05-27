@@ -1796,6 +1796,19 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 				float const low_edge(c.d[!dim][0] + (xy - tx1)*window_width);
 				window.d[!dim][0] = low_edge + border_xy;
 				window.d[!dim][1] = low_edge + window_width - border_xy;
+				
+				// check for windows over walkway doors; these aren't clipped from the exterior window verts, and we don't want to add their frames
+				if (!walkways.empty()) {
+					cube_t window_exp(window);
+					window_exp.expand_by_xy(window_trim_width);
+					bool exclude(0);
+
+					for (tquad_with_ix_t const &d : doors) { // exterior doors
+						if (!d.is_exterior_door() || d.type == tquad_with_ix_t::TYPE_RDOOR) continue;
+						if (window_exp.intersects(d.get_bcube())) {exclude = 1; break;}
+					}
+					if (exclude) continue;
+				}
 				if (add_coverings && !is_attic) {add_window_coverings(window, dim, dir);}
 
 				if (add_ext_sills && !is_attic) {
