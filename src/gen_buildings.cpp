@@ -3293,7 +3293,7 @@ public:
 		point const camera(get_camera_pos()), camera_bs(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map);
 		bool const night(is_night(WIND_LIGHT_ON_RAND)), use_city_dlights(!reflection_pass);
-		bool const ref_pass_house(reflection_pass & REF_PASS_HOUSE), ref_pass_interior(reflection_pass & REF_PASS_INTERIOR);
+		bool const ref_pass_int_only(reflection_pass & REF_PASS_INT_ONLY), ref_pass_interior(reflection_pass & REF_PASS_INTERIOR); // REF_PASS_HOUSE is no longer used here
 		bool const ref_pass_water(reflection_pass & REF_PASS_WATER), ref_pass_extb(reflection_pass & REF_PASS_EXTB);
 		bool const not_mirror(reflection_pass & REF_PASS_NO_MIRROR), swap_front_back(reflection_pass && !not_mirror); // for mirror reflection, but not security cameras
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
@@ -3696,7 +3696,7 @@ public:
 
 		// everything after this point is part of the building exteriors and uses city lights rather than building room lights;
 		// when the player is in the extended basement we still need to draw the exterior wall and door
-		if ((reflection_pass && (!DRAW_EXT_REFLECTIONS || !ref_pass_house)) || player_cant_see_outside_building()) {
+		if ((reflection_pass && (!DRAW_EXT_REFLECTIONS || ref_pass_int_only)) || player_cant_see_outside_building()) {
 			// early exit for player fully in basement or attic, or house reflections, if enabled
 			fgPopMatrix();
 			enable_dlight_bcubes = 0;

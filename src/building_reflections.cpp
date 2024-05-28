@@ -35,10 +35,11 @@ void draw_scene_for_building_reflection(unsigned &ref_tid, unsigned dim, bool di
 	bool is_house, bool interior_room, bool draw_exterior, bool is_extb, bool is_water, cube_t const &mirror)
 {
 	int reflection_pass(REF_PASS_ENABLED);
-	if (is_house     ) {reflection_pass |= REF_PASS_HOUSE   ;}
-	if (interior_room) {reflection_pass |= REF_PASS_INTERIOR;}
-	if (is_water     ) {reflection_pass |= REF_PASS_WATER   ;}
-	if (is_extb      ) {reflection_pass |= REF_PASS_EXTB    ;}
+	if ( is_house     ) {reflection_pass |= REF_PASS_HOUSE   ;} // unused
+	if ( interior_room) {reflection_pass |= REF_PASS_INTERIOR;}
+	if ( is_water     ) {reflection_pass |= REF_PASS_WATER   ;}
+	if ( is_extb      ) {reflection_pass |= REF_PASS_EXTB    ;}
+	if (!draw_exterior) {reflection_pass |= REF_PASS_INT_ONLY;}
 	unsigned const txsize(window_width), tysize(window_height); // full resolution
 	vector3d const xlate(get_tiled_terrain_model_xlate());
 	float const reflect_plane_xf(reflect_plane + xlate[dim]), reflect_sign(dir ? -1.0 : 1.0);
@@ -109,7 +110,8 @@ void create_mirror_reflection_if_needed() {
 	}
 	if (!is_mirror(cur_room_mirror)) return; // not enabled
 	bool const interior_room(cur_room_mirror.is_interior()), is_house(cur_room_mirror.is_house()), is_open(cur_room_mirror.is_open());
-	bool const can_see_out_windows(is_house && !interior_room && player_building->has_int_windows()); // assumes mirror is not facing the doorway to a room with a window
+	// assumes mirror is not facing the doorway to a room with a window; assumes cube-shaped office buildings always use opaque glass block windows
+	bool const can_see_out_windows((is_house || !player_building->is_cube()) && !interior_room && player_building->has_int_windows());
 	bool const is_extb(player_building->point_in_extended_basement_not_basement(cur_room_mirror.get_cube_center()));
 	bool const dim(cur_room_mirror.dim ^ is_open), dir(is_open ? 1 : cur_room_mirror.dir); // always opens in +dir
 	cube_t const mirror_surface(get_mirror_surface(cur_room_mirror));
