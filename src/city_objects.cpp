@@ -38,6 +38,11 @@ void textured_mat_t::post_draw(bool shadow_only) {
 }
 
 
+void city_obj_t::set_bcube_from_vcylin(point const &base, float height, float xy_radius) {
+	bcube.set_from_point(base);
+	bcube.expand_by_xy(xy_radius);
+	bcube.z2() += height;
+}
 bool city_obj_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	return sphere_cube_int_update_pos(pos_, radius_, (bcube + xlate), p_last, 0, cnorm);
 }
@@ -198,9 +203,7 @@ void bench_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scal
 // tree planters
 
 tree_planter_t::tree_planter_t(point const &pos_, float radius_, float height) : city_obj_t(pos_, radius_) {
-	bcube.set_from_point(pos);
-	bcube.expand_by_xy(radius);
-	bcube.z2() += height;
+	set_bcube_from_vcylin(pos, height, radius);
 }
 /*static*/ void tree_planter_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {select_texture((dstate.pass_ix == 0) ? (int)DIRT_TEX : get_texture_by_name("roads/sidewalk.jpg"));}
@@ -235,9 +238,7 @@ void tree_planter_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float di
 // trashcans
 
 trashcan_t::trashcan_t(point const &pos_, float radius_, float height, bool is_cylin_) : city_obj_t(pos_, radius_), is_cylin(is_cylin_) {
-	bcube.set_from_point(pos);
-	bcube.expand_by_xy(radius);
-	bcube.z2() += height;
+	set_bcube_from_vcylin(pos, height, radius);
 	set_bsphere_from_bcube(); // recompute bsphere from bcube
 }
 /*static*/ void trashcan_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
@@ -1220,9 +1221,7 @@ bool transmission_line_t::cube_intersect_xy(cube_t const &c) const {
 
 hcap_space_t::hcap_space_t(point const &pos_, float radius_, bool dim_, bool dir_) : oriented_city_obj_t(pos_, radius_, dim_, dir_) {
 	assert(radius > 0.0);
-	bcube.set_from_point(pos);
-	bcube.expand_by_xy(radius);
-	bcube.z2() += 0.01*radius; // make nonzero height
+	set_bcube_from_vcylin(pos, 0.01*radius, radius); // make nonzero height
 }
 /*static*/ void hcap_space_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	assert(!shadow_only); // not drawn in the shadow pass
@@ -1247,9 +1246,7 @@ hcap_with_dist_t::hcap_with_dist_t(hcap_space_t const &hs, cube_t const &plot, v
 // manholes
 
 manhole_t::manhole_t(point const &pos_, float radius_) : city_obj_t(pos_, radius_) {
-	bcube.set_from_point(pos);
-	bcube.expand_by_xy(radius);
-	bcube.z2() += get_height();
+	set_bcube_from_vcylin(pos, get_height(), radius);
 }
 /*static*/ void manhole_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	assert(!shadow_only); // not drawn in the shadow pass
@@ -1274,10 +1271,8 @@ trampoline_t::trampoline_t(point const &pos_, float height, rand_gen_t &rgen) :
 // traffic cones
 
 traffic_cone_t::traffic_cone_t(point const &pos_, float radius_) : city_obj_t(pos_, radius_) {
+	set_bcube_from_vcylin(pos, 2.0*radius, 0.67*radius);
 	pos.z += radius; // move to the center
-	bcube.set_from_point(pos);
-	bcube.expand_by_xy(0.67*radius);
-	set_cube_zvals(bcube, pos.z-radius, pos.z+radius);
 }
 /*static*/ void traffic_cone_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	dstate.s.add_uniform_int("two_sided_lighting", 1);
@@ -1483,9 +1478,7 @@ city_bird_base_t::city_bird_base_t(point const &pos_, float height, vector3d con
 {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id)); // D, W, H
 	float const hheight(0.5*height), xy_radius(hheight*sz.xy_mag()/sz.z); // assume model can be rotated in XY and take the max bounds
-	bcube.set_from_point(pos);
-	bcube.expand_by_xy(xy_radius);
-	bcube.z2() += height;
+	set_bcube_from_vcylin(pos, height, xy_radius);
 	radius = hheight*sz.mag()/sz.z; // max diagonal
 	pos.z += hheight; // pos is on the ground, while we want the bsphere to be at the center
 }
