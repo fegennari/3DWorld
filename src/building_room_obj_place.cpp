@@ -598,7 +598,7 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 	unsigned const tv_obj_ix(objs.size());
 	float const tv_zval(zval + 0.3*window_vspacing);
 	
-	if (place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, room, 0.5, rgen, tv_zval, room_id, tot_light_amt, room_area, objs_start, 4.0, 4, 1, BKGRAY, 0, RO_FLAG_HANGING)) {
+	if (place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, room, 0.5, rgen, tv_zval, room_id, tot_light_amt, room_area, objs_start, 4.0, 4, 1, BKGRAY, 1, RO_FLAG_HANGING)) {
 		offset_hanging_tv(objs[tv_obj_ix]);
 		assert(objs.back().type == TYPE_BLOCKER);
 		objs.back().z1() = zval; // extend blocker down to the floor so that we don't place objects such as fishtanks under the TV
