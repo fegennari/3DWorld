@@ -1708,6 +1708,7 @@ void city_flag_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 	if (tid != def_flag_tid) {
 		select_texture(tid);
 		qbds.qbd.draw_and_clear(); // flush verts with this texture
+		select_texture(def_flag_tid); // restore default flag texture
 	}
 	if (pole_radius == 0.0) return; // no pole to draw
 	// draw the pole
