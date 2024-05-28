@@ -1914,17 +1914,22 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 					float const wall_thick(add_ext_door ? /*get_door_shift_dist()*/0.5*wall_thickness : wall_thickness); // flush with exterior door? then there's a light gap
 					cube_t wall(w.bcube);
 					wall.d[dim][!d] = w.bcube.d[dim][d] + (d ? -1.0 : 1.0)*wall_thick;
-					unsigned dim_mask((1 << unsigned(dim)) | (1<<(2*dim+d+3))); // only inside face in dim !w.dim should be visible
+					unsigned const base_dim_mask(1 << unsigned(dim));
+					unsigned dim_mask(base_dim_mask | (1<<(2*dim+d+3))); // only inside face in dim !w.dim should be visible
 
-					if (add_ext_door) { // draw half wall to either side of door
-						for (unsigned s = 0; s < 2; ++s) { // {left, right} side
-							cube_t side(wall);
-							side.d[!dim][!s] = w.door_bounds[d][s];
-							bdraw.add_section(*this, 0, side, mat.wall_tex, wall_color, dim_mask, 1, 1, 1, 0); // no AO; skip bottom and top
+					if (is_end_dim) { // draw ends
+						//if (has_int_windows()) {dim_mask = base_dim_mask;} // draw opposite of ends to block unwanted interior windows; but then we can get narrow strips
+
+						if (add_ext_door) { // draw half wall to either side of door
+							for (unsigned s = 0; s < 2; ++s) { // {left, right} side
+								cube_t side(wall);
+								side.d[!dim][!s] = w.door_bounds[d][s];
+								bdraw.add_section(*this, 0, side, mat.wall_tex, wall_color, dim_mask, 1, 1, 1, 0); // no AO; skip bottom and top
+							}
 						}
-					}
-					else if (is_end_dim) { // draw full wall
-						bdraw.add_section(*this, 0, wall, mat.wall_tex, wall_color, dim_mask, 1, 1, 1, 0); // no AO; skip bottom and top
+						else { // draw full wall
+							bdraw.add_section(*this, 0, wall, mat.wall_tex, wall_color, dim_mask, 1, 1, 1, 0); // no AO; skip bottom and top
+						}
 					}
 					else { // draw sides with (real) cutouts for windows
 						cube_t bot(wall), top(wall);

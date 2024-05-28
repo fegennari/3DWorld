@@ -1749,7 +1749,7 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 	if (!has_int_windows()) return; // no windows
 	if (!is_cube())         return; // cube-shaped buildings only
 	bool const add_ext_trim(has_windows());
-	float const trim_thickness(get_trim_thickness()), ext_wall_toler(0.01*trim_thickness); // required to prevent z-fighting when AA is disabled
+	float const wall_thickness(get_wall_thickness()), trim_thickness(get_trim_thickness()), ext_wall_toler(0.01*trim_thickness); // prevents z-fighting when AA is disabled
 	float const window_h_border(WINDOW_BORDER_MULT*get_window_h_border()), window_v_border(WINDOW_BORDER_MULT*get_window_v_border()); // (0, 1) range
 	// Note: depth must be small to avoid object intersections; this applies to the windowsill as well
 	float const window_trim_width(get_wind_trim_thick()), window_trim_depth(1.0*trim_thickness), windowsill_depth(1.0*trim_thickness);
@@ -1764,6 +1764,7 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 	rand_gen_t rgen;
 	rgen.set_state(wall_quad_verts.size(), interior->rooms.size());
 	rgen.rand_mix();
+	vect_cube_t trims;
 	
 	if (add_ext_sills && (!add_ext_trim || !rgen.rand_bool())) { // add exterior window sills 50% of the time, but only if add_ext_trim=1
 		add_ext_sills = 0;
@@ -1797,22 +1798,43 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 				float const low_edge(c.d[!dim][0] + (xy - tx1)*window_width);
 				window.d[!dim][0] = low_edge + border_xy;
 				window.d[!dim][1] = low_edge + window_width - border_xy;
+				bool at_walkway(0);
+				cube_t exclude;
 				
 				// check for windows over walkway doors; these aren't clipped from the exterior window verts, and we don't want to add their frames
 				if (!walkways.empty()) {
 					cube_t window_exp(window);
 					window_exp.expand_by_xy(window_trim_width);
-					bool exclude(0);
 
 					for (tquad_with_ix_t const &d : doors) { // exterior doors
 						if (!d.is_exterior_door() || d.type == tquad_with_ix_t::TYPE_RDOOR) continue;
-						if (window_exp.intersects(d.get_bcube())) {exclude = 1; break;}
+						cube_t const door_bc(d.get_bcube());
+						if (!window_exp.intersects(door_bc)) continue;
+						at_walkway = 1;
+						exclude    = door_bc;
+						exclude.expand_in_dim(dim, wall_thickness); // make sure it clips the trim
+						break;
 					}
-					if (exclude) continue;
+					for (building_walkway_t const &w : walkways) { // add extra vertical trim to cover the ends of walkway walls
+						if (w.dim != dim || !w.bcube.intersects(window_exp)) continue;
+						
+						for (unsigned d = 0; d < 2; ++d) { // left/right of walkway
+							float const edge(w.bcube.d[!dim][d] - (d ? 1.0 : -1.0)*0.5*wall_thickness); // centered in walkway wall, which is shifted toward the interior
+							if (edge < window.d[!dim][0]-window_trim_width || edge > window.d[!dim][1]+window_trim_width) continue;
+							// extra trim isn't needed for glass block bathroom walls
+							bool is_split(0);
+							int const room_id(get_room_id_for_window(window, dim, dir, is_split));
+							unsigned floor_ix(0);
+							if (!is_split && is_bathroom(get_room_type_and_floor(room_id, window.zc(), floor_ix))) continue;
+							cube_t trim(window);
+							set_wall_width(trim, edge, 0.5*max(window_trim_width, 1.1f*wall_thickness), !dim);
+							trim_objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
+						}
+					} // for w
 				}
-				if (add_coverings && !is_attic) {add_window_coverings(window, dim, dir);}
+				if (add_coverings && !is_attic && !at_walkway) {add_window_coverings(window, dim, dir);}
 
-				if (add_ext_sills && !is_attic) {
+				if (add_ext_sills && !is_attic && !at_walkway) {
 					cube_t sill(window);
 					sill.z1() -= 0.04*window_height;
 					sill.z2()  = sill.z1() + 0.035*window_height;
@@ -1835,12 +1857,25 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 				bot.expand_in_dim(!dim, side_trim_width);
 				// interior trim
 				unsigned const trim_start(trim_objs.size());
-				trim_objs.emplace_back(top, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
-				trim_objs.emplace_back(bot, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
+				cube_t const tb_trims[2] = {top, bot};
 
+				for (unsigned tb = 0; tb < 2; ++tb) {
+					if (!exclude.is_all_zeros()) { // remove walkway door
+						trims.clear();
+						trims.push_back(tb_trims[tb]);
+						subtract_cube_from_cubes(exclude, trims);
+
+						for (cube_t const &trim : trims) {
+							if (trim.get_sz_dim(!dim) < window_trim_width) continue; // too short, skip
+							trim_objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
+						}
+					}
+					else {trim_objs.emplace_back(tb_trims[tb], TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);}
+				} // for tb
 				for (unsigned s = 0; s < 2; ++s) { // left/right sides
 					side.d[!dim][ s] = window.d[!dim][s] - (s ? -1.0 : 1.0)*side_trim_width;
 					side.d[!dim][!s] = window.d[!dim][s];
+					if (side.intersects(exclude)) continue; // skip if intersects walkway door
 					trim_objs.emplace_back(side, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
 				}
 				if (add_ext_trim) { // exterior trim
@@ -1891,7 +1926,6 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 	} // for i
 	if (is_house && add_ext_trim && add_trim && rgen.rand_float() < 0.2) { // add exterior house wall first floor trim
 		float const zval(ground_floor_z1 + floor_spacing), width(4.0*window_trim_depth);
-		vect_cube_t trims;
 
 		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
 			if ((p->z2() - ground_floor_z1) < 1.5*floor_spacing) continue; // single story, skip
