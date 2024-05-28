@@ -1520,7 +1520,8 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		bool dir(0);
 		unsigned ext_flags(flags);
 		colorRGBA const &ext_trim_color(garage_door ? WHITE : door_color); // garage doors are always white
-		float const trim_width(garage_door ? 0.016*door.get_sz_dim(!dim) : door_trim_width); // garage door trim is based on width
+		float trim_width(garage_door ? 0.016*door.get_sz_dim(!dim) : door_trim_width); // garage door trim is based on width
+		if (door.zc() > ground_floor_z1 + window_vspacing) {trim_width *= 1.1;} // slight additional inward expand for walkway doors to remove wall slivers
 
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
 			if (!i->intersects_no_adj(trim)) continue;
@@ -1542,7 +1543,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			trim.d[dim][dir] -= (dir ? -1.0 : 1.0)*door_trim_offset; // move to the same offset for door
 			ext_flags |= (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO);
 			break;
-		}
+		} // for i
 		unsigned const side_trim_flags(ext_flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP);
 
 		// add side trim; we could split this into interior vs. exterior geom, but there's no static assignment that works for both open and closed doors,
