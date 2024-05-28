@@ -1621,6 +1621,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	colorRGBA const stall_colors[NUM_STALL_COLORS] = {colorRGBA(0.75, 1.0, 0.9, 1.0), colorRGBA(0.7, 0.8, 1.0), WHITE, DK_GRAY}; // blue-green, light blue
 	colorRGBA const stall_color(stall_colors[interior->doors.size() % NUM_STALL_COLORS]); // random, but constant for each building
 	vect_room_object_t &objs(interior->room_geom->objs);
+	room_object_t mirrors[2]; // candidate mirrors for each dir
 
 	for (unsigned dir = 0; dir < 2; ++dir) { // each side of the wall
 		if (!two_rows && dir == (unsigned)skip_stalls_side) continue; // no stalls/sinks on this side
@@ -1718,22 +1719,22 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			}
 		}
 		if (!sinks_bcube.is_all_zeros()) { // add a long mirror above the sink
-			if (!ENABLE_MIRROR_REFLECTIONS || dir != (unsigned)skip_stalls_side) { // don't add mirrors to both sides if reflections are enabled
-				cube_t mirror(sinks_bcube);
-				mirror.expand_in_dim(!br_dim, -0.25*wall_thickness); // slightly smaller
-				mirror.d[br_dim][ dir] = wall_pos;
-				mirror.d[br_dim][!dir] = wall_pos + dir_sign*0.1*wall_thickness;
-				mirror.z1() = sinks_bcube.z2() + 0.25*floor_thickness;
-				mirror.z2() = zval + 0.9*floor_spacing - floor_thickness;
-
-				if (mirror.is_strictly_normalized()) {
-					objs.emplace_back(mirror, TYPE_MIRROR, room_id, br_dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);
-					set_obj_id(objs); // for crack texture selection/orient
-					room.has_mirror = 1;
-				}
-			}
+			cube_t mirror(sinks_bcube);
+			mirror.expand_in_dim(!br_dim, -0.25*wall_thickness); // slightly smaller
+			mirror.d[br_dim][ dir] = wall_pos;
+			mirror.d[br_dim][!dir] = wall_pos + dir_sign*0.1*wall_thickness;
+			mirror.z1() = sinks_bcube.z2() + 0.25*floor_thickness;
+			mirror.z2() = zval + 0.9*floor_spacing - floor_thickness;
+			if (mirror.is_strictly_normalized()) {mirrors[dir] = room_object_t(mirror, TYPE_MIRROR, room_id, br_dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);}
 		}
 	} // for dir
+	for (unsigned d = 0; d < 2; ++d) { // each candidate mirror
+		if (mirrors[d].is_all_zeros()) continue;
+		if (ENABLE_MIRROR_REFLECTIONS && d == (unsigned)skip_stalls_side && !mirrors[!d].is_all_zeros()) continue; // select a single side if reflections are enabled
+		objs.push_back(mirrors[d]);
+		set_obj_id(objs); // for crack texture selection/orient
+		room.has_mirror = 1;
+	}
 	room.assign_to((mens_room ? RTYPE_MENS : RTYPE_WOMENS), floor);
 	
 	// make sure doors start closed and unlocked, and flag them as auto_close
