@@ -567,6 +567,12 @@ bool sphere_in_light_cone_approx(pos_dir_up const &pdu, point const &center, flo
 	float const dist(p2p_dist(pdu.pos, center)), radius_at_dist(dist*pdu.sterm), rmod(radius_at_dist + radius);
 	return pt_line_dist_less_than(center, pdu.pos, (pdu.pos + pdu.dir), rmod);
 }
+bool is_police_car(car_model_loader_t const &car_model_loader, car_t const &car) {
+	return 0; // TESTING
+	// the best we can do is to search for the string 'police' in the filename
+	string const &fn(car_model_loader.get_model(car.model_id).fn);
+	return (fn.find("Police") != string::npos || fn.find("police") != string::npos);
+}
 
 void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // Note: all quads
 	if (car.destroyed) return;
@@ -668,6 +674,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 			}
 		}
 	}
+	//if (is_police_car(car_model_loader, car)) {} // draw police car flashing lights
 }
 
 void car_draw_state_t::draw_helicopter(helicopter_t const &h, bool shadow_only) {
@@ -694,21 +701,37 @@ void car_draw_state_t::draw_helicopter(helicopter_t const &h, bool shadow_only) 
 }
 
 void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube) {
-	if (!car.headlights_on()) return;
+	bool const headlights_on(car.headlights_on()), is_police(is_police_car(car_model_loader, car));
+	if (!headlights_on && !is_police) return;
 	float const headlight_dist(get_headlight_dist());
 	cube_t bcube(car.bcube);
 	bcube.expand_by(headlight_dist);
 	if (!lights_bcube.contains_cube_xy(bcube))   return; // not contained within the light volume
 	if (!camera_pdu.cube_visible(bcube + xlate)) return; // VFC
-	float const sign((car.dim^car.dir) ? -1.0 : 1.0);
+	min_eq(lights_bcube.z1(), bcube.z1());
+	max_eq(lights_bcube.z2(), bcube.z2());
+
+	if (is_police) { // add police car flashing lights
+		for (unsigned d = 0; d < 2; ++d) { // L, R
+			point pos;
+			pos[ car.dim] = car.bcube.get_center_dim(car.dim);
+			pos[!car.dim] = 0.75*car.bcube.d[!car.dim][d] + 0.25*car.bcube.d[!car.dim][!d]; // to the sides
+			pos.z = car.bcube.z2() - 0.05*car.bcube.dz(); // top
+			vector3d const light_dir(zero_vector);
+			float const lights_bw(1.0);
+			colorRGBA const color((d ^ (car.dim ^ car.dir)) ? RED : BLUE);
+			dl_sources.push_back(light_source(headlight_dist, pos, pos, color, 1, light_dir, lights_bw));
+			dl_sources.back().disable_shadows(); // disable shadows for now
+		}
+	}
+	if (!headlights_on) return;
+	float const sign((car.dim ^ car.dir) ? -1.0 : 1.0);
 	point pb[8], pt[8]; // bottom and top sections
 	gen_car_pts(car, 0, pb, pt); // draw_top=0
 	vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 	vector3d const dir((0.5*front_n - 0.5*plus_z).get_norm()); // point slightly down
 	colorRGBA const color(get_headlight_color(car));
 	float const beamwidth = 0.08;
-	min_eq(lights_bcube.z1(), bcube.z1());
-	max_eq(lights_bcube.z2(), bcube.z2());
 
 	if (!dist_less_than((car.get_center() + xlate), camera_pdu.pos, 2.0*headlight_dist)) { // single merged headlight when far away
 		point const pos(0.5*(0.2*pb[0] + 0.8*pb[4] + 0.2*pb[1] + 0.8*pb[5]));
