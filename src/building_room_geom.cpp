@@ -1493,7 +1493,7 @@ void building_room_geom_t::add_shower_tub(room_object_t const &c, tid_nm_pair_t 
 				(c.dim ? curtains_mat.tex.tscale_x : curtains_mat.tex.tscale_y) = 0.2/curtain_width; // okay to set since tscale isn't used as a key
 				cube_t curtain(curtains);
 				curtain.d[!c.dim][!d] = curtains.d[!c.dim][d] + (d ? -1.0 : 1.0)*curtain_width;
-				curtains_mat.add_cube_to_verts(curtain, curtains_color, all_zeros, EF_Z1, c.dim); // skip bottom edge
+				curtains_mat.add_cube_to_verts(curtain, curtains_color, curtain.get_llc(), EF_Z1, c.dim); // skip bottom edge
 			}
 			if (oi == 0) {curtains.translate_dim(c.dim, (c.dir ? -1.0 : 1.0)*(2.0*crod_radius + curtains.get_sz_dim(c.dim)));} // translate to inside of curtain rod
 		} // for oi
