@@ -644,6 +644,7 @@ struct player_height_mgr_t {
 player_height_mgr_t player_height_mgr;
 
 double get_player_height() {return player_height_mgr.cur_height;} // control key = crouch
+float  get_crouch_amt   () {return (1.0 - get_player_height()/camera_zh)/0.75;}
 void force_player_height(double height) {assert(height >= 0.0); player_height_mgr.cur_height = height;} // for building attic forced crouch
 
 // This function is called whenever the mouse is pressed or released

@@ -36,6 +36,7 @@ bool check_building_point_or_cylin_contained(point const &pos, float radius, boo
 bool check_line_int_xy(vect_cube_t const &c, point const &p1, point const &p2);
 void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool alert_other_zombies=0, bool high_priority=0, float gain=1.0, float pitch=1.0);
 int register_ai_player_coll(uint8_t &has_key, float height);
+float get_crouch_amt();
 
 bool zombies_can_target_player() {return (camera_surf_collide && !camera_in_building && ai_follow_player());}
 point get_player_pos_bs       () {return (get_camera_pos() - get_camera_coord_space_xlate());}
@@ -2272,7 +2273,7 @@ bool ped_manager_t::is_player_model_female() {
 }
 
 void draw_player_as_sphere() {
-	point const player_pos(actual_player_pos - vector3d(0.0, 0.0, 0.5f*camera_zh)); // shift to center of player height; ignore crouching for now
+	point const player_pos(actual_player_pos - vector3d(0.0, 0.0, 0.5f*camera_zh)); // shift to center of player height; follows height change due to crouching
 	draw_sphere_vbo(player_pos, 0.5f*CAMERA_RADIUS, N_SPHERE_DIV, 0); // use a smaller radius
 }
 void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only) {
@@ -2287,17 +2288,6 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 		if (shadow_only) {draw_player_as_sphere();} // sphere is only used for shadows
 		return;
 	}
-	bool const enable_animations(camera_surf_collide); // animate when walking but not when flying
-	static float player_anim_time(0.0);
-	static point prev_player_pos;
-	
-	if (enable_animations && p2p_dist_xy(actual_player_pos, prev_player_pos) > 0.01*CAMERA_RADIUS) { // don't include minor differences related to turning in place
-		prev_player_pos   = actual_player_pos;
-		player_anim_time += fticks*city_params.ped_speed;
-	}
-	static bone_transform_data_t cached_player_transforms;
-	animation_state_t anim_state(enable_animations, animation_id);
-	anim_state.cached = &cached_player_transforms;
 	float const player_eye_height(get_player_eye_height()), player_height(player_eye_height/EYE_HEIGHT_RATIO), player_radius(player_height/PED_HEIGHT_SCALE);
 	point const pos(actual_player_pos + vector3d(0.0, 0.0, (player_radius - player_eye_height)));
 	vector3d const dir_horiz(vector3d(cview_dir.x, cview_dir.y, 0.0).get_norm()); // always face a horizontal direction, even if walking on a slope
@@ -2306,7 +2296,28 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 	bcube.z1() = pos.z - player_radius;
 	bcube.z2() = bcube.z1() + player_height*model.scale; // respect the model's scale; however, the player does seem a bit shorter than other people with the same model
 	if (shadow_only && !smap_light_clip_cube.is_all_zeros() && !smap_light_clip_cube.intersects(bcube + xlate)) return; // shadow map clip cube test
-	anim_state.anim_time = player_anim_time;
+	// setup animations
+	bool const enable_animations(camera_surf_collide); // animate when walking but not when flying
+	static float player_anim_time(0.0);
+	static point prev_player_pos;
+	
+	if (enable_animations && p2p_dist_xy(actual_player_pos, prev_player_pos) > 0.01*CAMERA_RADIUS) { // don't include minor differences related to turning in place
+		prev_player_pos   = actual_player_pos;
+		player_anim_time += fticks*city_params.ped_speed;
+	}
+	float const crouch_amt(get_crouch_amt());
+	static bone_transform_data_t cached_player_transforms;
+	animation_state_t anim_state(enable_animations, animation_id, player_anim_time, MODEL_ANIM_WALK);
+
+	if (enable_animations && model.has_animation(animation_names[MODEL_ANIM_CROUCH])) { // handle crouching
+		if (crouch_amt == 1.0) {anim_state.model_anim_id = MODEL_ANIM_CROUCH;} // full crouch
+		else { // mixed walk/crouch
+			anim_state.blend_factor   = 1.0 - crouch_amt;
+			anim_state.anim_time2     = player_anim_time; // ???
+			anim_state.model_anim_id2 = MODEL_ANIM_CROUCH;
+		}
+	}
+	anim_state.cached = &cached_player_transforms;
 	ped_model_loader.draw_model(s, pos, bcube, dir_horiz, ALPHA0, xlate, model_id, shadow_only, 0, &anim_state);
 	s.upload_mvm(); // not sure if this is needed
 	anim_state.clear_animation_id(s); // make sure to leave animations disabled so that they don't apply to buildings
