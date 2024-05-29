@@ -1268,6 +1268,20 @@ trampoline_t::trampoline_t(point const &pos_, float height, rand_gen_t &rgen) :
 	color = colors[rgen.rand() % NUM_COLORS];
 }
 
+// flowers
+
+flower_t::flower_t(point const &base, float height, float xy_radius, bool dim_, bool dir_) : oriented_city_obj_t(dim_, dir_) {
+	pos    = point(base.x, base.y, base.z+0.5*height);
+	radius = max(0.5f*height, xy_radius);
+	set_bcube_from_vcylin(base, height, xy_radius);
+}
+/*static*/ void flower_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
+	select_texture(get_texture_by_name("sunflower.jpg"));
+}
+void flower_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	// TODO
+}
+
 // traffic cones
 
 traffic_cone_t::traffic_cone_t(point const &pos_, float radius_) : city_obj_t(pos_, radius_) {

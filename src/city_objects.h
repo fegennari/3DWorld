@@ -277,6 +277,13 @@ struct potted_plant_t : public multi_model_city_obj_t {
 		multi_model_city_obj_t(pos_, height, dim_, dir_, OBJ_MODEL_PLANT, model_select, 1) {} // is_cylinder=1
 };
 
+struct flower_t : public oriented_city_obj_t {
+	//unsigned type; // currently only sunflowers are supported
+	flower_t(point const &base, float height, float xy_radius, bool dim_, bool dir_);
+	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+};
+
 struct traffic_cone_t : public city_obj_t {
 	traffic_cone_t(point const &pos_, float radius_);
 	float get_height() const {return 2.0*radius;}
@@ -509,13 +516,14 @@ private:
 	vector<bicycle_t> bikes;
 	vector<dumpster_t> dumpsters;
 	vector<potted_plant_t> plants;
+	vector<flower_t> flowers;
 	vector<pond_t> ponds;
 	vector<walkway_t> walkways;
 	vector<pillar_t> pillars;
 	// index is last obj in group
 	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, fountain_groups, divider_groups, pool_groups, plad_groups,
 		pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups, stopsign_groups, flag_groups,
-		nrack_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, dumpster_groups, plant_groups, pond_groups, walkway_groups, pillar_groups;
+		nrack_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, dumpster_groups, plant_groups, flower_groups, pond_groups, walkway_groups, pillar_groups;
 	bird_poop_manager_t bird_poop_manager;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
