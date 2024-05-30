@@ -2309,10 +2309,10 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 	static bone_transform_data_t cached_player_transforms;
 	animation_state_t anim_state(enable_animations, animation_id, player_anim_time, MODEL_ANIM_WALK);
 
-	if (enable_animations && model.has_animation(animation_names[MODEL_ANIM_CROUCH])) { // handle crouching
+	if (enable_animations && crouch_amt > 0.0 && model.has_animation(animation_names[MODEL_ANIM_CROUCH])) { // handle crouching
 		if (crouch_amt == 1.0) {anim_state.model_anim_id = MODEL_ANIM_CROUCH;} // full crouch
 		else { // mixed walk/crouch
-			anim_state.blend_factor   = 1.0 - crouch_amt;
+			anim_state.blend_factor   = crouch_amt;
 			anim_state.anim_time2     = player_anim_time; // ???
 			anim_state.model_anim_id2 = MODEL_ANIM_CROUCH;
 		}
