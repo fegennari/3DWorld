@@ -1933,7 +1933,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					light_bc2.d[i->dim][!i->dir] = i->d[i->dim][!i->dir] + (i->dir ? -1.0 : 1.0)*0.5*wall_thickness;
 				}
 				else { // ceiling light
-					sec_lpos.z -= 2.0*i->dz(); // shift down
+					sec_lpos.z -= wall_thickness; // shift down somewhat; use a constant that works with recessed lights at doorways
 					dl_sources.emplace_back(sec_light_radius, sec_lpos, sec_lpos, color, 0, plus_z, 0.5); // hemisphere that points up
 				}
 			}

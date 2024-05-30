@@ -225,7 +225,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_unfinished    (init_rtype_f0 == RTYPE_UNFINISHED); //  // unfinished room, for example in a non-cube shaped office building
 		bool const is_swim_pool_room(init_rtype_f0 == RTYPE_SWIM); // room with a swimming pool
 		bool const is_retail_room   (init_rtype_f0 == RTYPE_RETAIL);
-		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(r->is_backrooms());
+		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(r->is_backrooms()), is_apt_or_hotel_room(r->is_apt_or_hotel_room());
 		float light_density(0.0), light_size(def_light_size); // default size for houses
 		unsigned const room_objs_start(objs.size());
 		unsigned nx(1), ny(1); // number of lights in X and Y for this room
@@ -257,13 +257,16 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		else if (r->is_single_floor) {
 			light_size *= sqrt(r->dz()/window_vspacing); // larger lights for taller rooms
 		}
+		else if (is_apt_or_hotel_room) { // apartments and hotel rooms are generally smaller and can have smaller lights
+			light_size *= ((init_rtype_f0 == RTYPE_BATH) ? 0.6 : 0.8); // bathroom light is even smaller
+		}
 		if (light_density > 0.0) { // uniform 2D grid of lights
 			nx = max(1U, unsigned(light_density*dx/window_vspacing));
 			ny = max(1U, unsigned(light_density*dy/window_vspacing));
 		}
 		if (r->is_sec_bldg) {
 			if    (has_garage) {r->assign_all_to(RTYPE_GARAGE);}
-			else if (has_shed) {r->assign_all_to(RTYPE_SHED);}
+			else if (has_shed) {r->assign_all_to(RTYPE_SHED  );}
 		}
 		float const light_val(22.0*light_size);
 		r->light_intensity = light_val*light_val/r->get_area_xy(); // average for room, unitless; light surface area divided by room surface area with some fudge constant
@@ -544,8 +547,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					added_obj = no_whiteboard = no_plants = add_security_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 			}
-			bool const is_apt_or_hotel_room(r->is_apt_or_hotel_room());
-
 			if (is_apt_or_hotel_room || r->is_office) { // check if this room is adjacent to an exterior/walkway door, and if so, make it a lounge
 				cube_t room_this_floor(*r);
 				set_cube_zvals(room_this_floor, z, (z + floor_height));
