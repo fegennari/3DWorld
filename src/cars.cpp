@@ -10,6 +10,7 @@
 #include <cfloat> // for FLT_MAX
 
 bool const DYNAMIC_HELICOPTERS = 1;
+bool const POLICE_LIGHT_SHADOW = 1;
 float const MIN_CAR_STOP_SEP   = 0.25; // in units of car lengths
 
 extern bool tt_fire_button_down, enable_hcopter_shadows, city_action_key, camera_in_building;
@@ -568,7 +569,6 @@ bool sphere_in_light_cone_approx(pos_dir_up const &pdu, point const &center, flo
 	return pt_line_dist_less_than(center, pdu.pos, (pdu.pos + pdu.dir), rmod);
 }
 bool is_police_car(car_model_loader_t const &car_model_loader, car_t const &car) {
-	return 0; // TESTING
 	// the best we can do is to search for the string 'police' in the filename
 	string const &fn(car_model_loader.get_model(car.model_id).fn);
 	return (fn.find("Police") != string::npos || fn.find("police") != string::npos);
@@ -701,30 +701,46 @@ void car_draw_state_t::draw_helicopter(helicopter_t const &h, bool shadow_only) 
 }
 
 void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube) {
-	bool const headlights_on(car.headlights_on()), is_police(is_police_car(car_model_loader, car));
-	if (!headlights_on && !is_police) return;
-	float const headlight_dist(get_headlight_dist());
-	cube_t bcube(car.bcube);
-	bcube.expand_by(headlight_dist);
-	if (!lights_bcube.contains_cube_xy(bcube))   return; // not contained within the light volume
-	if (!camera_pdu.cube_visible(bcube + xlate)) return; // VFC
-	min_eq(lights_bcube.z1(), bcube.z1());
-	max_eq(lights_bcube.z2(), bcube.z2());
+	if (!(car.get_unique_id() & 3) && !car.is_parked() && is_police_car(car_model_loader, car)) { // add flashing lights for 25% of police cars
+		float const flash_cycle(fract(3.0*((animate2 ? tfticks/TICKS_PER_SECOND : 0.0) + 100.0*car.max_speed))); // different per car
 
-	if (is_police) { // add police car flashing lights
 		for (unsigned d = 0; d < 2; ++d) { // L, R
+			if (d ? !(flash_cycle < 0.25) : !(flash_cycle > 0.5 && flash_cycle < 0.75)) continue; // 25% duty cycle for each light in opposite patterns
 			point pos;
-			pos[ car.dim] = car.bcube.get_center_dim(car.dim);
-			pos[!car.dim] = 0.75*car.bcube.d[!car.dim][d] + 0.25*car.bcube.d[!car.dim][!d]; // to the sides
-			pos.z = car.bcube.z2() - 0.05*car.bcube.dz(); // top
-			vector3d const light_dir(zero_vector);
-			float const lights_bw(1.0);
-			colorRGBA const color((d ^ (car.dim ^ car.dir)) ? RED : BLUE);
-			dl_sources.push_back(light_source(headlight_dist, pos, pos, color, 1, light_dir, lights_bw));
-			dl_sources.back().disable_shadows(); // disable shadows for now
-		}
+			pos[ car.dim] = 0.45*car.bcube.d[ car.dim][car.dir] + 0.55*car.bcube.d[ car.dim][!car.dir]; // slightly toward the back
+			pos[!car.dim] = 0.72*car.bcube.d[!car.dim][d      ] + 0.28*car.bcube.d[!car.dim][!d      ]; // to the sides
+			pos.z = car.bcube.z2() + 0.15*car.bcube.dz(); // top; high enough to not self shadow too much
+			float const light_dist(0.8*get_headlight_dist());
+			cube_t pl_bcube(pos);
+			pl_bcube.expand_by(light_dist);
+			if (!lights_bcube.contains_cube_xy(pl_bcube))   continue; // not contained within the light volume
+			if (!camera_pdu.cube_visible(pl_bcube + xlate)) continue; // VFC
+			min_eq(lights_bcube.z1(), pl_bcube.z1());
+			max_eq(lights_bcube.z2(), pl_bcube.z2());
+			colorRGBA const color((d ^ (car.dim ^ car.dir)) ? RED : BLUE); // red on right, blue on left (opposite of most police cars)
+
+			if (POLICE_LIGHT_SHADOW) { // shadowed
+				for (unsigned bf = 0; bf < 2; ++bf) { // back, front
+					vector3d light_dir;
+					light_dir[car.dim] = ((car.dir ^ bf) ? 1.0 : -1.0);
+					dl_sources.push_back(light_source(light_dist, pos, pos, color, 1, light_dir, 0.3));
+				}
+			}
+			else { // omnidirectional unshadowed
+				dl_sources.push_back(light_source(light_dist, pos, pos, color, 1, zero_vector, 1.0));
+				dl_sources.back().disable_shadows(); // disable shadows for now
+			}
+		} // for d
 	}
-	if (!headlights_on) return;
+	if (!car.headlights_on()) return;
+	float const headlight_dist(get_headlight_dist());
+	cube_t hl_bcube(car.bcube);
+	hl_bcube.expand_by(headlight_dist);
+	hl_bcube.d[car.dim][!car.dir] = car.bcube.d[car.dim][car.dir]; // in front of the car only
+	if (!lights_bcube.contains_cube_xy(hl_bcube))   return; // not contained within the light volume
+	if (!camera_pdu.cube_visible(hl_bcube + xlate)) return; // VFC
+	min_eq(lights_bcube.z1(), hl_bcube.z1());
+	max_eq(lights_bcube.z2(), hl_bcube.z2());
 	float const sign((car.dim ^ car.dir) ? -1.0 : 1.0);
 	point pb[8], pt[8]; // bottom and top sections
 	gen_car_pts(car, 0, pb, pt); // draw_top=0
