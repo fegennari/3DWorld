@@ -216,6 +216,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		unsigned const min_br(multi_family ? num_floors : 1); // multi-family house requires one per floor; can apply to both bedrooms and bathrooms
 		point room_center(r->get_cube_center());
 
+		if (r->is_sec_bldg) {
+			if    (has_garage) {r->assign_all_to(RTYPE_GARAGE);}
+			else if (has_shed) {r->assign_all_to(RTYPE_SHED  );}
+		}
 		// determine light pos and size for this stack of rooms
 		room_obj_shape const light_shape(residential_room ? SHAPE_CYLIN : SHAPE_CUBE);
 		float const dx(r->dx()), dy(r->dy());
@@ -263,10 +267,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		if (light_density > 0.0) { // uniform 2D grid of lights
 			nx = max(1U, unsigned(light_density*dx/window_vspacing));
 			ny = max(1U, unsigned(light_density*dy/window_vspacing));
-		}
-		if (r->is_sec_bldg) {
-			if    (has_garage) {r->assign_all_to(RTYPE_GARAGE);}
-			else if (has_shed) {r->assign_all_to(RTYPE_SHED  );}
 		}
 		float const light_val(22.0*light_size);
 		r->light_intensity = light_val*light_val/r->get_area_xy(); // average for room, unitless; light surface area divided by room surface area with some fudge constant
