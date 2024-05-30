@@ -350,6 +350,9 @@ vector3d get_cloud_offset(float rel_vel_scale) {
 // not a plane, but a spherical section
 void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil, bool draw_floor) {
 
+	static float prev_terrain_zmin(0.0);
+	bool const use_cached_tzmin(terrain_zmin == 0.0);
+	if (use_cached_tzmin) {terrain_zmin = prev_terrain_zmin;} else {prev_terrain_zmin = terrain_zmin;} // use prev value when terrain_zmin == 0.0
 	shader_t s;
 	float const size(camera_pdu.far_);
 	assert(size > 0.0);
@@ -375,11 +378,10 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 	vector3d const offset(get_cloud_offset(1.0));
 	colorRGBA const cloud_color(get_cloud_color());
 
-	if (animate2) {
+	if (animate2 && !reflection_pass && !use_cached_tzmin) {
 		cloud_wind_pos.x -= fticks*wind.x;
 		cloud_wind_pos.y -= fticks*wind.y;
 	}
-
 	// draw a static textured upper cloud layer
 	glDepthMask(GL_FALSE);
 
@@ -402,7 +404,6 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 		disable_blend();
 		s.end_shader();
 	}
-
 	// draw clouds
 	if ((display_mode & 0x40) == 0) { // on by default
 		setup_tt_fog_pre(s);

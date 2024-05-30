@@ -3357,10 +3357,10 @@ void tile_draw_t::draw_animals(bool reflection_pass) {
 	disable_blend(); // for distance fog
 }
 
-void tile_draw_t::draw_tile_clouds(bool reflection_pass) { // 0.15ms
+void tile_draw_t::draw_tile_clouds(bool reflection_pass) { // reflection_pass is unused
 
 	if (!clouds_enabled() || atmosphere < 0.5) return; // only for high atmosphere
-	//timer_t timer("Draw Clouds");
+	//timer_t timer("Draw Clouds"); // 0.15ms on old computer
 	to_draw_clouds.clear();
 	unsigned num(0);
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {num += i->second->update_tile_clouds();}

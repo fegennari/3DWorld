@@ -94,6 +94,7 @@ void draw_scene_for_building_reflection(unsigned &ref_tid, unsigned dim, bool di
 	camera_pos = old_camera_pos;
 	camera_pdu = old_camera_pdu; // restore camera_pdu
 	clip_plane = vector4d(); // reset to disable
+	if (draw_exterior) {draw_cloud_planes(0.0, 0, 1, 1);} // redraw cloud planes since they got overwritten; terrain_zmin=0 (use prev)
 }
 
 void create_mirror_reflection_if_needed() {
