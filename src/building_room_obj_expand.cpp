@@ -365,10 +365,10 @@ void building_room_geom_t::expand_med_cab(room_object_t const &c) { // aka house
 	// add medicine bottle
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 	float const wall_thickness(get_med_cab_wall_thickness(c));
-	float const height(0.33*c.dz()*rgen.rand_uniform(0.75, 1.0)), radius(0.35*c.get_sz_dim(c.dim)*rgen.rand_uniform(0.75, 1.0));
 	cube_t interior(c), bottle;
 	interior.expand_by(-wall_thickness);
 	if (rgen.rand_bool()) {interior.z1() += 0.5*(interior.dz() + wall_thickness);} // place on middle shelf half the time
+	float const height(0.33*c.dz()*rgen.rand_uniform(0.75, 1.0)), radius(0.4*interior.get_sz_dim(c.dim)*rgen.rand_uniform(0.75, 1.0));
 	gen_xy_pos_for_round_obj(bottle, interior, radius, height, 1.1*radius, rgen, 1); // place_at_z1=1
 	room_object_t obj(bottle, TYPE_BOTTLE, c.room_id, 0, 0, flags, c.light_amt, SHAPE_CYLIN); // vertical
 	obj.set_as_bottle(BOTTLE_TYPE_MEDS, BOTTLE_TYPE_MEDS, 1); // medicine, no_empty=1
