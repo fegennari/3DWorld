@@ -1989,7 +1989,7 @@ private:
 		float door_width, bool dim, bool dir, bool is_end_room, unsigned depth, bool const add_doors[2], rand_gen_t &rgen);
 	void end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_bcube, ext_basement_room_params_t &P,
 		float door_width, bool dim, bool dir, unsigned depth, rand_gen_t &rgen);
-	void add_false_door_to_extb_hallway_if_needed(room_t const &room, float zval, unsigned room_id);
+	void add_false_door_to_extb_room_if_needed(room_t const &room, float zval, unsigned room_id);
 	building_t *get_conn_bldg_for_pt(point const &p, float radius=0.0) const;
 	building_t *get_bldg_containing_pt(point const &p);
 	bool is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist, bool expand_for_light=0) const;

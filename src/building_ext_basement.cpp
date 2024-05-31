@@ -599,7 +599,11 @@ void building_t::end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_
 	room.clip_hallway_to_conn_bcube(dim); // else clip
 }
 
-void building_t::add_false_door_to_extb_hallway_if_needed(room_t const &room, float zval, unsigned room_id) {
+void building_t::add_false_door_to_extb_room_if_needed(room_t const &room, float zval, unsigned room_id) {
+	if (!room.is_hallway) {
+		float const dx(room.dx()), dy(room.dy());
+		if (min(dx, dy) > 0.25*max(dx, dy)) return; // not high aspect ratio
+	}
 	if (room.is_ext_basement_conn()) return; // don't add a door to the end that connects to the adjacent building's extended basement
 	assert(has_room_geom());
 	bool const dim(room.dx() < room.dy()); // long dim
@@ -625,6 +629,12 @@ void building_t::add_false_door_to_extb_hallway_if_needed(room_t const &room, fl
 		set_wall_width(door, room.get_center_dim(!dim), 0.5*door_width, !dim);
 		set_wall_width(door, (room.d[dim][dir] + (dir ? -1.0 : 1.0)*0.5*wall_thickness), 2.0*get_trim_thickness(), dim);
 		interior->room_geom->objs.emplace_back(door, TYPE_FALSE_DOOR, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, WHITE);
+		
+		if (!room.is_hallway) { // add door blocker
+			cube_t blocker(door);
+			blocker.d[dim][!dir] = room.d[dim][dir] + (dir ? -1.0 : 1.0)*door_width; // add clearance
+			interior->room_geom->objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, dir, RO_FLAG_INVIS);
+		}
 	} // for dir
 }
 
