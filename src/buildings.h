@@ -1248,7 +1248,7 @@ struct room_t : public cube_t { // size=60; can be reduced to 52 by turning 8 of
 struct extb_room_t : public cube_t { // extended basement room candidate
 	cube_t conn_bcube;
 	bool is_hallway, has_stairs, hallway_dim, connect_dir; // Note: hallway_dim and connect_dir only used for connecting between two buildings
-	extb_room_t(cube_t const &c, bool is_hallway_, bool has_stairs_=0, bool dim=0, bool dir=0) :
+	extb_room_t(cube_t const &c, bool is_hallway_=0, bool has_stairs_=0, bool dim=0, bool dir=0) :
 		cube_t(c), is_hallway(is_hallway_), has_stairs(has_stairs_), hallway_dim(dim), connect_dir(dir) {}
 	void clip_hallway_to_conn_bcube(bool dim);
 };

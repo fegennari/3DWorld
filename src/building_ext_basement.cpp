@@ -471,7 +471,7 @@ bool building_t::add_ext_basement_rooms_recur(extb_room_t &parent_room, ext_base
 			float const conn_edge(parent_room.d[dim][dir]), room_pos(rgen.rand_uniform(pos_lo, pos_hi));
 			float const room_length(rgen.rand_uniform(min_length, max_length));
 			float const room_width(max(1.5f*door_width, rgen.rand_uniform(min_width_scale, max_width_scale)*parent_width));
-			extb_room_t room(parent_room); // sets correct zvals
+			extb_room_t room((cube_t)parent_room); // copy bcube but not flags; sets correct zvals
 			room.d[dim][!dir] = conn_edge;
 			room.d[dim][ dir] = conn_edge + (dir ? 1.0 : -1.0)*room_length;
 			set_wall_width(room, room_pos, 0.5*room_width, !dim);
