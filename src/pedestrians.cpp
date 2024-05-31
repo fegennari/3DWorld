@@ -2289,7 +2289,8 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 		return;
 	}
 	float const player_eye_height(get_player_eye_height()), player_height(player_eye_height/EYE_HEIGHT_RATIO), player_radius(player_height/PED_HEIGHT_SCALE);
-	point const pos(actual_player_pos + vector3d(0.0, 0.0, (player_radius - player_eye_height)));
+	point pos(actual_player_pos);
+	pos.z += (player_radius - player_eye_height);
 	vector3d const dir_horiz(vector3d(cview_dir.x, cview_dir.y, 0.0).get_norm()); // always face a horizontal direction, even if walking on a slope
 	cube_t bcube;
 	bcube.set_from_sphere(pos, PED_WIDTH_SCALE*player_radius);
@@ -2297,7 +2298,7 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 	bcube.z2() = bcube.z1() + player_height*model.scale; // respect the model's scale; however, the player does seem a bit shorter than other people with the same model
 	if (shadow_only && !smap_light_clip_cube.is_all_zeros() && !smap_light_clip_cube.intersects(bcube + xlate)) return; // shadow map clip cube test
 	// setup animations
-	bool const enable_animations(camera_surf_collide); // animate when walking but not when flying
+	bool const enable_animations(camera_surf_collide); // animate when walking but not when flying; we fly in T-pose, of course
 	static float player_anim_time(0.0);
 	static point prev_player_pos;
 	
@@ -2312,12 +2313,18 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 	if (enable_animations && crouch_amt > 0.0 && model.has_animation(animation_names[MODEL_ANIM_CROUCH])) { // handle crouching
 		if (crouch_amt == 1.0) {anim_state.model_anim_id = MODEL_ANIM_CROUCH;} // full crouch
 		else { // mixed walk/crouch
-			anim_state.blend_factor   = crouch_amt;
-			anim_state.anim_time2     = player_anim_time; // ???
-			anim_state.model_anim_id2 = MODEL_ANIM_CROUCH;
+			anim_state.blend_factor = crouch_amt;
+			anim_state.anim_time2   = player_anim_time; // ???
 		}
+		anim_state.model_anim_id2 = MODEL_ANIM_CROUCH;
+		// adjust for original non-crouch camera height since the animation accounts for the model height change
+		float const height_adj(camera_zh - get_player_height());
+		pos.z += height_adj;
+		bcube.translate_dim(2, height_adj);
 	}
-	anim_state.cached = &cached_player_transforms;
+	else { // animation caching doesn't support animation blending, so only use in the non-crouched state
+		anim_state.cached = &cached_player_transforms;
+	}
 	ped_model_loader.draw_model(s, pos, bcube, dir_horiz, ALPHA0, xlate, model_id, shadow_only, 0, &anim_state);
 	s.upload_mvm(); // not sure if this is needed
 	anim_state.clear_animation_id(s); // make sure to leave animations disabled so that they don't apply to buildings

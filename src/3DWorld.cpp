@@ -636,7 +636,7 @@ struct player_height_mgr_t {
 			if (cur_height == camera_zh) return; // already fully up
 			adj_val = 1.0;
 		}
-		cur_height += adj_val*camera_zh*10.0*(fticks/TICKS_PER_SECOND); // 100ms for complete transition
+		cur_height += adj_val*camera_zh*5.0*(fticks/TICKS_PER_SECOND); // 200ms for complete transition
 		cur_height  = max(0.25*camera_zh, min(camera_zh, cur_height)); // clamp to valid range, 25% to 100% height
 	}
 };
