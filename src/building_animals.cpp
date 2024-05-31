@@ -1353,7 +1353,7 @@ void building_t::update_snake(snake_t &snake, point const &camera_bs, float time
 	maybe_bite_and_poison_player((head_pos + center_dz), camera_bs, snake.dir, 2.0*snake.radius, 0.5, (snake.has_rattle ? 2 : 1), rgen); // 0.5 damage, poison if has a rattle
 }
 
-void get_xy_dir_to_closest_cube_edge(point const &pos, cube_t const &c, vector3d &dir) {
+void get_xy_dir_to_closest_cube_edge(point const &pos, cube_t const &c, vector3d &dir) { // for pos outside c
 	float const dx1(fabs(c.x1() - pos.x)), dx2(fabs(c.x2() - pos.x)), dy1(fabs(c.y1() - pos.y)), dy2(fabs(c.y2() - pos.y));
 	float dmin(0.0);
 	if (1         ) {dmin = dx1; dir = -plus_x;}
@@ -1364,7 +1364,7 @@ void get_xy_dir_to_closest_cube_edge(point const &pos, cube_t const &c, vector3d
 
 // applies to snakes and flies
 // return values: 0=no coll, 1=outside building, 2=static object, 3=dynamic object, 4=ourself (for snakes)
-// coll_dir points in the direction of the collision, opposite the collision normal
+// coll_dir points in the direction of the collision, opposite the collision normal / the direction we want to move to avoid a collision (new pos - old pos)
 int building_t::check_for_animal_coll(building_animal_t const &A, float hheight, float z_center_offset, bool on_floor_only, bool skip_player,
 	point const &camera_bs, float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const
 {
@@ -1522,7 +1522,7 @@ void building_t::update_fly(insect_t &fly, point const &camera_bs, float timeste
 
 	if (((frame_counter + fly.id) % update_freq) == 0) { // run collision/update logic every few frames
 		vector3d const lookahead(fly.dir*(2.0*radius));
-		vector3d coll_dir; // collision normal; points from the collider in the XY plane
+		vector3d coll_dir; // opposite the collision normal; points toward the collider in the XY plane
 		// coll_type: 0=no coll, 1=outside building, 2=static object, 3=dynamic object; z_center_offset=0.0, on_floor_only=0
 		int const ret(check_for_animal_coll(fly, hheight, 0.0, 0, target_player, camera_bs, timestep, pos, (pos + lookahead), coll_dir));
 	
@@ -1534,14 +1534,20 @@ void building_t::update_fly(insect_t &fly, point const &camera_bs, float timeste
 				// land on the object? we need to get the object index first (if a room object) and check that it's a cube; or only land on walls?
 				// we would also need to change the fly's up vector from +z to align to a vertical surface, similar to how spiders are drawn
 			}
-			fly.pos = fly.last_pos; // move back to a point where we didn't collide (assuming update is frequent enough)
-			fly.dir = rgen.signed_rand_vector_norm();
-			if (dot_product(fly.dir, coll_dir) > 0.0) {fly.dir.negate();}
+			if (ret == 3) { // dynamic object, such as the player
+				//fly.pos -= radius*fticks*coll_dir; // push away slowly, rather than spinning in place
+				fly.dir = -coll_dir; // fly away
+			}
+			else { // static object
+				fly.pos = fly.last_pos; // move back to a point where we didn't collide (assuming update is frequent enough)
+				fly.dir = rgen.signed_rand_vector_norm();
+				if (dot_product(fly.dir, coll_dir) > 0.0) {fly.dir.negate();} // don't fly toward the collider
+			}
 			fly.delta_dir = zero_vector; // reset delta_dir on coll
 			return;
 		}
 		if (rgen.rand_float() < 0.25) { // every 4 updates send out a longer range collision query
-			if (check_for_animal_coll(fly, hheight, 0.0, 0, target_player, camera_bs, timestep, pos, (pos + 8.0*lookahead), coll_dir)) {
+			if (check_for_animal_coll(fly, hheight, 0.0, 0, target_player, camera_bs, timestep, pos, (pos + 8.0*lookahead), coll_dir)) { // Note: coll_dir is unused
 				fly.delta_dir *= 0.9f; // reduce direction change
 				fly.dir       += 0.25*rgen.signed_rand_vector_norm(); // adjust direction
 				fly.dir.normalize();
