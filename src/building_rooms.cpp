@@ -1460,7 +1460,12 @@ void cut_trim_around_doors(vect_tquad_with_ix_t const &doors, vect_cube_t &trim_
 }
 void clip_trim_cube(cube_t const &trim, cube_t const &trim_exclude, vect_cube_t &trim_cubes) {
 	trim_cubes.clear();
-	if (!trim_exclude.is_all_zeros() && trim_exclude.intersects(trim)) {subtract_cube_from_cube(trim, trim_exclude, trim_cubes);}
+
+	if (!trim_exclude.is_all_zeros() && trim_exclude.intersects(trim)) {
+		subtract_cube_from_cube(trim, trim_exclude, trim_cubes);
+		// sometimes we can get degenerate cubes that will assert when added as trim, so remove them here
+		trim_cubes.erase(std::remove_if(trim_cubes.begin(), trim_cubes.end(), [](cube_t const &c) {return !c.is_strictly_normalized();}), trim_cubes.end());
+	}
 	else {trim_cubes.push_back(trim);}
 }
 
@@ -1630,6 +1635,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 					if (ext_dirs[dir]) continue; // skip
 					cube_t ceil_trim(trim);
 					ceil_trim.d[dim][!dir] = w->d[dim][dir];
+					assert(ceil_trim.is_strictly_normalized());
 					clip_trim_cube(ceil_trim, trim_exclude, trim_parts);
 					for (cube_t const &t : trim_parts) {objs.emplace_back(t, TYPE_WALL_TRIM, 0, dim, dir, flags, 1.0, SHAPE_ANGLED, trim_color);} // ceiling trim
 				}
