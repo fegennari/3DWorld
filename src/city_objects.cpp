@@ -448,7 +448,7 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 	if (!vbo_valid()) {create(to_draw.front());}
 	select_texture(get_texture_by_name("pine2.jpg"));
 	enable_blend(); // slightly smoother, but a bit of background shows through
-	s.add_uniform_float("min_alpha", 0.5);
+	s.add_uniform_float("min_alpha", 0.9);
 	s.add_uniform_int("two_sided_lighting", 1);
 	pre_render();
 	vector3d const sz_mult(bcube.get_size().inverse());
