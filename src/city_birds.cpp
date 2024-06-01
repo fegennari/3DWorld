@@ -290,7 +290,7 @@ void city_bird_t::next_frame(float timestep, float delta_dir, point const &camer
 		bird_moved     = 1;
 		
 		// poop on the player if above and the player is in the open
-		if (!camera_in_building && pos.z > camera_bs.z && dist_xy_less_than(pos, camera_bs, 4.0*CAMERA_RADIUS) && tfticks > next_poop_time) {
+		if (!camera_in_building && pos.z > camera_bs.z && dist_xy_less_than(pos, camera_bs, 2.0*CAMERA_RADIUS) && tfticks > next_poop_time) {
 			placer.add_bird_poop(pos, 0.18*radius, (velocity + 0.001*wind)); // use bird's initial velocity and add a small amount of wind; should wind apply acceleration?
 			next_poop_time = tfticks + rgen.rand_uniform(2.0, 5.0)*TICKS_PER_SECOND; // wait 2-5s before pooping again
 		}
