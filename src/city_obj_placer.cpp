@@ -8,6 +8,7 @@
 
 float pond_max_depth(0.0);
 
+extern bool enable_model3d_custom_mipmaps;
 extern unsigned max_unique_trees;
 extern tree_placer_t tree_placer;
 extern city_params_t city_params;
@@ -1176,8 +1177,46 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				add_cube_to_colliders_and_blockers(plant.bcube, colliders, blockers);
 			} // for n
 		}
-		// maybe place some flowers
-		// TODO
+		// maybe place some flowers around the house
+		// hack to enable custom alpha mipmaps for the flower model
+		bool const orig_enable_model3d_custom_mipmaps(enable_model3d_custom_mipmaps);
+		enable_model3d_custom_mipmaps = 1;
+		bool const have_flowers(building_obj_model_loader.is_model_valid(OBJ_MODEL_FLOWER));
+		enable_model3d_custom_mipmaps = orig_enable_model3d_custom_mipmaps;
+
+		if (have_flowers) {
+			unsigned const num_flower_groups(rgen.rand() % 4); // 0-3
+
+			for (unsigned n = 0; n < num_flower_groups; ++n) { // make one attempt per flower
+				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random house wall dim/dir for all flowers in this group
+				float const wall_pos(house.d[dim][dir]), flower_height(sz_scale*rgen.rand_uniform(0.75, 1.2));
+				point pos;
+				pos.z = i->z2();
+				pos[ dim] = wall_pos; // place at the house wall - will move away from the wall once we know the radius
+				pos[!dim] = rgen.rand_uniform(house.d[!dim][0], house.d[!dim][1]); // on the corner is okay
+				unsigned const model_select(rgen.rand());
+				flower_t flower(pos, flower_height, rgen.rand_bool(), rgen.rand_bool(), model_select); // random dim/dir
+				float const radius(0.5*flower.bcube.get_sz_dim(dim)); // only care about size in the dim facing the wall
+				float const row_spacing(1.25*flower.bcube.get_sz_dim(!dim));
+				flower.translate_dim(dim, (dir ? 1.0 : -1.0)*1.25*radius);
+				if (!check_valid_house_obj_place(flower.pos, 0.0, radius, wall_pos, dim, dir, flower.bcube, house, blockers, prev_blockers_end, yard_blockers_start)) continue;
+				flower_groups.add_obj(flower, flowers);
+				add_cube_to_colliders_and_blockers(flower.bcube, colliders, blockers);
+				if (rgen.rand_bool()) continue; // single flower
+
+				// create a row of flowers extending to the left and right of this one
+				for (unsigned pdir = 0; pdir < 2; ++pdir) {
+					for (unsigned m = 0; m < 4; ++m) {
+						point pos2(flower.pos.x, flower.pos.y, pos.z);
+						pos2[!dim] += (pdir ? 1.0 : -1.0)*(m+1)*row_spacing;
+						flower_t const flower2(pos2, flower_height, rgen.rand_bool(), rgen.rand_bool(), model_select); // random dim/dir
+						if (!check_valid_house_obj_place(flower2.pos, 0.0, radius, wall_pos, dim, dir, flower2.bcube, house, blockers, prev_blockers_end, yard_blockers_start)) break;
+						flower_groups.add_obj(flower2, flowers);
+						add_cube_to_colliders_and_blockers(flower2.bcube, colliders, blockers);
+					}
+				} // for pdir
+			} // for n
+		}
 	} // for i (sub_plots)
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_MAILBOX)) {
 		// place mailboxes on residential streets
@@ -1825,7 +1864,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(bikes,     bike_groups,     dstate, 0.025,shadow_only, 1); // dist_scale=0.025,has_immediate_draw=1
 	draw_objects(dumpsters, dumpster_groups, dstate, 0.15, shadow_only, 1); // dist_scale=0.15, has_immediate_draw=1
 	draw_objects(plants,    plant_groups,    dstate, 0.04, shadow_only, 1); // dist_scale=0.05, has_immediate_draw=1
-	draw_objects(flowers,   flower_groups,   dstate, 0.06, shadow_only, 1); // dist_scale=0.06, has_immediate_draw=0
+	draw_objects(flowers,   flower_groups,   dstate, 0.06, shadow_only, 1); // dist_scale=0.06, has_immediate_draw=1
 	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1); // dist_scale=0.25, has_immediate_draw=1
 	
 	if (!shadow_only) { // non shadow casting objects

@@ -279,11 +279,9 @@ struct potted_plant_t : public multi_model_city_obj_t {
 		multi_model_city_obj_t(pos_, height, dim_, dir_, OBJ_MODEL_PLANT, model_select, 1) {} // is_cylinder=1
 };
 
-struct flower_t : public oriented_city_obj_t {
-	//unsigned type; // currently only sunflowers are supported
-	flower_t(point const &base, float height, float xy_radius, bool dim_, bool dir_);
-	static void pre_draw(draw_state_t &dstate, bool shadow_only);
-	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+struct flower_t : public multi_model_city_obj_t {
+	flower_t(point const &pos_, float height, bool dim_, bool dir_, unsigned model_select) :
+		multi_model_city_obj_t(pos_, height, dim_, dir_, OBJ_MODEL_FLOWER, model_select, 1) {min_alpha = 0.5;} // is_cylinder=1
 };
 
 struct traffic_cone_t : public city_obj_t {
