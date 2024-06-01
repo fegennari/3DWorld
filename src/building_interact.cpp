@@ -48,29 +48,29 @@ void gen_sound_thread_safe(unsigned id, point const &pos, float gain, float pitc
 
 float get_radius_for_room_light(room_object_t const &obj);
 
-bool is_motion_detected(point const &activator, cube_t const &light, cube_t const &room, float floor_spacing) {
-	return (room.contains_pt(activator) && activator.z < light.z1() && activator.z > (light.z2() - floor_spacing));
+bool is_motion_detected(point const &activator, cube_t const &light, cube_t const &room, float fc_gap) {
+	return (room.contains_pt(activator) && activator.z < light.z1() && activator.z > (light.z2() - fc_gap));
 }
 
 void building_t::run_light_motion_detect_logic(point const &camera_bs) {
 	if (!animate2)             return;
 	if (is_house || !interior) return; // office buildings only
 	if (player_in_elevator)    return; // skip so that we don't have a lot of clicking when lights switch on due to AIs while passing floors
-	float const floor_spacing(get_window_vspace());
+	float const floor_spacing(get_window_vspace()), fc_gap(get_floor_ceil_gap());
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 		if (i->type != TYPE_LIGHT || !i->is_active() || !i->is_powered()) continue; // not a light, unpowered, or not motion activated
 		assert(i->room_id < interior->rooms.size());
 		room_t const &room(interior->rooms[i->room_id]);
-		bool const is_player(is_motion_detected(camera_bs, *i, room, floor_spacing));
+		bool const is_player(is_motion_detected(camera_bs, *i, room, fc_gap));
 		bool activated(is_player);
 		float &off_time(i->light_amt); // store auto off time in the light_amt field
 
 		for (auto p = interior->people.begin(); p != interior->people.end() && !activated; ++p) {
 			if (p->is_waiting_or_stopped()) continue; // skip if stopped/waiting
 			if (fabs(p->pos.z - camera_bs.z) > 0.75*floor_spacing) continue; // player is on a different floor, skip (too many clicking sounds)
-			activated |= is_motion_detected(p->pos, *i, room, floor_spacing);
+			activated |= is_motion_detected(p->pos, *i, room, fc_gap);
 		}
 		if (activated) {
 			off_time = tfticks + 10.0*TICKS_PER_SECOND; // automatically turn off 10s since last activation
