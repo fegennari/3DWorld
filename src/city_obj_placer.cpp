@@ -1162,18 +1162,15 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			unsigned const num_plants(rgen.rand() % 9); // 0-8
 
 			for (unsigned n = 0; n < num_plants; ++n) { // make one attempt per plant
-				float const plant_height(sz_scale*rgen.rand_uniform(0.8, 1.25));
 				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random house wall dim/dir
-				float const wall_pos(house.d[dim][dir]);
+				float const wall_pos(house.d[dim][dir]), plant_height(sz_scale*rgen.rand_uniform(0.8, 1.25));
 				point pos;
 				pos.z = i->z2();
 				pos[ dim] = wall_pos; // place at the house wall - will move away from the wall once we know the radius
 				pos[!dim] = rgen.rand_uniform(house.d[!dim][0], house.d[!dim][1]); // on the corner is okay
-				potted_plant_t plant(pos, plant_height, rgen.rand_bool(), rgen.rand_bool(), rgen.rand()); // random dim/dir
+				potted_plant_t plant(pos, plant_height, rgen.rand_bool(), rgen.rand_bool(), rgen.rand()); // random dim/dir/model
 				float const radius(0.5*plant.bcube.get_sz_dim(dim)); // only care about size in the dim facing the wall
-				float const xlate((dir ? 1.0 : -1.0)*1.2*radius);
-				plant.pos[dim] += xlate;
-				plant.bcube.translate_dim(dim, xlate);
+				plant.translate_dim(dim, (dir ? 1.0 : -1.0)*1.2*radius);
 				if (!check_valid_house_obj_place(plant.pos, 0.0, radius, wall_pos, dim, dir, plant.bcube, house, blockers, prev_blockers_end, yard_blockers_start)) continue;
 				plant_groups.add_obj(plant, plants);
 				add_cube_to_colliders_and_blockers(plant.bcube, colliders, blockers);

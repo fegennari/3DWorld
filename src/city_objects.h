@@ -52,6 +52,7 @@ struct city_obj_t : public sphere_t {
 	cube_t get_bird_bcube() const {return bcube;}
 	bool check_point_contains_xy(point const &p) const {return bcube.contains_pt_xy(p);}
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const; // default bcube coll, can override in derived class
+	void translate_dim(unsigned dim, float v) {pos[dim] += v; bcube.translate_dim(dim, v);}
 };
 
 struct oriented_city_obj_t : public city_obj_t {
