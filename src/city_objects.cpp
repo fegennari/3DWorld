@@ -86,7 +86,9 @@ model_city_obj_t::model_city_obj_t(point const &pos_, float height, bool dim_, b
 }
 void model_city_obj_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only, animation_state_t *anim_state) const {
 	if (!dstate.is_visible_and_unoccluded(bcube, dist_scale)) return;
+	if (min_alpha > 0.0) {dstate.s.add_uniform_float("min_alpha", 0.9);}
 	building_obj_model_loader.draw_model(dstate.s, pos, bcube, get_orient_dir(), color, dstate.xlate, get_model_id(), shadow_only, 0, anim_state);
+	if (min_alpha > 0.0) {dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA);} // restore to the default
 }
 bool model_city_obj_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	if (!is_cylinder) {return oriented_city_obj_t::proc_sphere_coll(pos_, p_last, radius_, xlate, cnorm);} // use default cube collision

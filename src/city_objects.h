@@ -67,6 +67,7 @@ struct oriented_city_obj_t : public city_obj_t {
 
 struct model_city_obj_t : public oriented_city_obj_t {
 	colorRGBA color=WHITE;
+	float min_alpha=0.0;
 	bool is_cylinder=0;
 
 	model_city_obj_t(cube_t const &bcube_, bool dim_, bool dir_) : oriented_city_obj_t(bcube_, dim_, dir_) {}
