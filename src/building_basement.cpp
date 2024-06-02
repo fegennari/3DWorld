@@ -1419,7 +1419,8 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 		}
 		if (i.z1() < ground_floor_z1) continue; // object in the house basement; unclear how to handle it here
 		// Note: the dishwasher is always next to the kitchen sink and uses the same water connections
-		bool const hot_cold_obj (i.type == TYPE_SINK || i.type == TYPE_TUB || i.type == TYPE_SHOWER || i.type == TYPE_BRSINK || i.type == TYPE_KSINK || i.type == TYPE_WASHER);
+		bool const hot_cold_obj (i.type == TYPE_SINK || i.type == TYPE_BRSINK || i.type == TYPE_KSINK || i.type == TYPE_TUB ||
+			i.type == TYPE_SHOWER || i.type == TYPE_SHOWERTUB || i.type == TYPE_WASHER);
 		bool const cold_only_obj(i.type == TYPE_TOILET || i.type == TYPE_URINAL || i.type == TYPE_DRAIN);
 		if (!hot_cold_obj && !cold_only_obj) continue;
 		point pos(i.xc(), i.yc(), ceil_zval);
