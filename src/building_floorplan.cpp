@@ -800,6 +800,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						c.d[ min_dim][!d] = hall_wall_pos[d];
 						c.d[!min_dim][ 0] = pos;
 						c.d[!min_dim][ 1] = next_pos;
+						// apartments and hotels have utility rooms on the first floor, but not on corner/end units
+						if (apt_or_hotel && i > 0 && i+1 < num_rooms) {utility_room_cands.push_back(rooms.size());}
 						add_room(c, part_id, 1, 0, 1); // office or bathroom; no utility rooms for now since these rooms tend to be large
 						bool const is_bathroom(i == num_rooms/2 && !apt_or_hotel);
 						if (is_bathroom) {rooms.back().assign_all_to(RTYPE_BATH);} // assign the middle room to be a bathroom
@@ -835,6 +837,10 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					room.assign_to(room_type, 0, 1); // assign this room on floor 0; locked=1
 					bool const ensure_locked(0); // probably should be locked, but unlocked makes these rooms easier to explore
 					ensure_doors_to_room_are_closed(room, doors_start, ensure_locked);
+
+					if (room.is_apt_or_hotel_room()) { // make other rooms in this unit the same type; should be RTYPE_UTILITY
+						for (auto r = rooms.begin()+room_ix+1; r != rooms.end() && r->unit_id == room.unit_id; ++r) {r->assign_to(room_type, 0, 1);} // locked=1
+					}
 					room_ix = room_cands.back();
 					room_cands.pop_back(); // remove this room from consideration
 				} // for n
