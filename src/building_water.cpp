@@ -181,17 +181,19 @@ cube_t building_t::get_water_cube(bool full_room_height) const {
 	else {water.z2() = interior->water_zval;}
 	return water;
 }
-bool building_t::water_visible_to_player() const {
+bool building_t::water_visible_to_player() const { // applies to backrooms and pool water, which should be mutually exclusive
 	if (!has_water()) return 0;
 	vector3d const xlate(get_tiled_terrain_model_xlate());
 	point const camera_bs(camera_pdu.pos - xlate);
-	if (point_in_water_area(camera_bs)) return 1; // definitely visible
+	if (point_in_water_area(camera_bs))                      return 1; // definitely visible
+	if (!is_rot_cube_visible(get_water_cube(), xlate))       return 0;
+	if (this != player_building && has_pool())               return 1; // pool viewed from a connected building; conservative, but this case should be rare
 	if (!point_in_extended_basement_not_basement(camera_bs)) return 0;
-	float const floor_spacing(get_window_vspace()), floor_below(get_floor_below_water_level()), floor_above(floor_below + floor_spacing);
-	if (camera_bs.z > floor_above + floor_spacing)     return 0; // player not on the floor with water or the floor above (in case water is visible through stairs)
-	if (!is_rot_cube_visible(get_water_cube(), xlate)) return 0;
 
 	if (interior->has_backrooms) { // backrooms water
+		float const floor_spacing(get_window_vspace()), floor_below(get_floor_below_water_level()), floor_above(floor_below + floor_spacing);
+		if (camera_bs.z > floor_above + floor_spacing) return 0; // player not on the floor with water or the floor above (in case water is visible through stairs)
+
 		for (stairwell_t const &s : interior->stairwells) { // check stairs visibility; stairs should be straight
 			if (s.z1() > interior->water_zval) continue; // above the water level
 			if (s.z2() < floor_above)          continue; // stairs don't go up to the floor the player is on

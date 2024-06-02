@@ -3329,6 +3329,7 @@ public:
 		vector<building_t *> buildings_with_cars;
 		vector<point> pts;
 		static brg_batch_draw_t bbd; // allocated memory is reused across building interiors
+		building_t const *vis_conn_bldg=nullptr; // non-player building visible through extended basement connector room
 		bool const defer_people_draw_for_player_building(global_building_params.people_min_alpha > 0.0);
 
 		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
@@ -3492,6 +3493,7 @@ public:
 						// Note: if we skip this check and treat all walls/windows as front/containing part, this almost works, but will skip front faces of other buildings
 						if (!camera_in_this_building) { // camera not in building
 							if (ext_basement_conn_visible && animate2) {b.update_player_interact_objects(camera_bs);} // need to at least update door open/close state
+							if (ext_basement_conn_visible && !reflection_pass) {vis_conn_bldg = &b;} // for now we only support one visible connected building
 							continue;
 						}
 						// we should get here for at most one building
@@ -3666,8 +3668,10 @@ public:
 				reset_interior_lighting_and_end_shader(s);
 				glEnable(GL_CULL_FACE);
 			}
-			if (!reflection_pass && player_in_ext_basement()) {player_building->draw_water(xlate);}
-
+			if (!reflection_pass && player_in_ext_basement()) {
+				player_building->draw_water(xlate);
+				if (vis_conn_bldg) {vis_conn_bldg->draw_water(xlate);} // check any visible building as well
+			}
 			if (!ref_pass_interior && bbd.has_ext_geom()) { // skip for interior room reflections
 				glDisable(GL_CULL_FACE);
 				ensure_city_lighting_setup(reflection_pass, xlate, is_city_lighting_setup); // needed for dlights to work

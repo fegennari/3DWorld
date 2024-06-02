@@ -98,7 +98,7 @@ void draw_scene_for_building_reflection(unsigned &ref_tid, unsigned dim, bool di
 }
 
 void create_mirror_reflection_if_needed() {
-	if (player_building == nullptr) return;
+	if (player_building == nullptr) return; // what about pool visible from connected building extended basement?
 	
 	if (player_building->water_visible_to_player()) { // draw water plane reflection
 		if (get_camera_pos().z < player_building->interior->water_zval + player_building->get_window_vspace()) { // only if the player is on the same floor as the water
