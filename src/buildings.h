@@ -1933,6 +1933,7 @@ public:
 	cube_t get_step_for_ext_door(tquad_with_ix_t const &door) const;
 	bool interior_visible_from_other_building_ext_basement(vector3d const &xlate, bool expand_for_light=0) const;
 	void try_connect_ext_basement_to_building(building_t &b);
+	void finalize_extb_conn_rooms(unsigned ds_start);
 	template<typename T> void add_door_verts(cube_t const &D, T &drawer, uint8_t door_type, bool dim, bool dir, float open_amt, bool opens_out, bool exterior,
 		bool on_stairs=0, bool hinge_side=0, bool is_bldg_conn=0, bool draw_top_edge=0) const;
 	tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj,
@@ -1981,6 +1982,7 @@ private:
 	bool is_basement_room_placement_valid(cube_t &room, ext_basement_room_params_t &P, bool dim, bool dir, bool *add_end_door=nullptr, building_t const *exclude=nullptr) const;
 	bool add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &door_bcube, cube_t const &basement, bool wall_dim, bool wall_dir, float length_mult);
 	void maybe_assign_extb_room_as_swimming(rand_gen_t &rgen);
+	void add_wall_section_above_pool_room_door(door_stack_t &ds, room_t const &room);
 	unsigned setup_multi_floor_room(extb_room_t &room, door_t const &door, bool wall_dim, bool wall_dir, rand_gen_t &rgen);
 	bool add_ext_basement_rooms_recur(extb_room_t &parent_room, ext_basement_room_params_t &P, float door_width, bool dim, unsigned depth, rand_gen_t &rgen);
 	bool max_expand_underground_room(cube_t &room, bool dim, bool dir, rand_gen_t &rgen) const;

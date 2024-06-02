@@ -328,13 +328,8 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 
 			for (door_stack_t &ds : interior->door_stacks) {
 				if (!ds.intersects(room_exp)) continue; // door not connected to this room
-				ds.mult_floor_room = 1; // counts as multi-floor (for drawing top edge)
-				interior->get_door(ds.first_door_ix).mult_floor_room = 1;
-				cube_t wall(ds);
-				set_wall_width(wall, ds.get_center_dim(ds.dim), 0.5*wall_thickness, ds.dim);
-				set_cube_zvals(wall, ds.z2(), (room.z2() - fc_thickness));
-				interior->walls[ds.dim].push_back(wall);
-			} // for ds
+				add_wall_section_above_pool_room_door(ds, room);
+			}
 		}
 	}
 	assert(room.is_strictly_normalized());
@@ -382,6 +377,17 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 	room.assign_to(RTYPE_SWIM, 0);
 	if (rgen.rand_float() < 0.75) {interior->water_zval = pool.z2() - 0.05*pool_depth;} // add water to the pool 75% of the time
 	min_eq(interior->basement_ext_bcube.z1(), pool_bottom); // is this a good idea? it certainly makes other logic easier
+}
+
+void building_t::add_wall_section_above_pool_room_door(door_stack_t &ds, room_t const &room) {
+	float const ceil_zval(room.z2() - get_fc_thickness());
+	if (ds.z2() >= ceil_zval) return; // no gap above door
+	ds.mult_floor_room = 1; // counts as multi-floor (for drawing top edge)
+	interior->get_door(ds.first_door_ix).mult_floor_room = 1;
+	cube_t wall(ds);
+	set_wall_width(wall, ds.get_center_dim(ds.dim), 0.5*get_wall_thickness(), ds.dim);
+	set_cube_zvals(wall, ds.z2(), ceil_zval);
+	interior->walls[ds.dim].push_back(wall);
 }
 
 unsigned building_t::setup_multi_floor_room(extb_room_t &room, door_t const &door, bool wall_dim, bool wall_dir, rand_gen_t &rgen) {
@@ -1447,10 +1453,11 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 		} // for r2
 	} // for r1
 	if (Padd.rooms.empty()) return; // failed to connect
-	unsigned const ds_start(interior->door_stacks.size());
+	unsigned ds_start[2] = {};
 	building_t *const buildings[2] = {this, &b};
 
 	for (unsigned bix = 0; bix < 2; ++bix) {
+		ds_start[bix] = buildings[bix]->interior->door_stacks.size();
 		if (!buildings[bix]->interior->conn_info) {buildings[bix]->interior->conn_info.reset(new building_conn_info_t);}
 	}
 	for (auto const &r : Padd.rooms) { // add any new rooms from above
@@ -1458,6 +1465,7 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 		// skip one end in hallway_dim and make the other end (bordering the other building) thinner to avoid Z-fighting but still cast shadows
 		interior->place_exterior_room(r, r, get_fc_thickness(), wall_thickness, P, basement_part_ix, 0, r.is_hallway, is_building_conn, r.hallway_dim, r.connect_dir);
 		unsigned const conn_door_ix(b.interior->doors.size()); // index of door that will be added to the other building, and separates the two buildings
+		
 		// place doors at each end
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			building_t *door_dest(buildings[bool(dir) ^ r.connect_dir ^ 1]); // add door to the building whose room it connects to
@@ -1475,8 +1483,27 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 			buildings[bix]->interior->basement_ext_bcube.union_with_cube(ext_bcube);
 		}
 	} // for r
+	for (unsigned bix = 0; bix < 2; ++bix) {buildings[bix]->finalize_extb_conn_rooms(ds_start[bix]);}
+}
+
+void building_t::finalize_extb_conn_rooms(unsigned ds_start) {
+	assert(interior);
 	interior->assign_door_conn_rooms(ds_start); // assign room connections to any doors that were added
-	for (unsigned bix = 0; bix < 2; ++bix) {buildings[bix]->interior->remove_excess_capacity();} // optional optimization
+
+	if (has_pool()) { // check for tall pool rooms and add extra wall segments above the door
+		int const room_ix(interior->pool.room_ix);
+		room_t const &pool_room(get_room(room_ix));
+
+		if (pool_room.dz() > get_window_vspace()) { // tall pool room
+			for (auto d = interior->door_stacks.begin()+ds_start; d != interior->door_stacks.end(); ++d) {
+				for (unsigned s = 0; s < 2; ++s) { // for each side of the door
+					if ((int)d->conn_room[s] != room_ix) continue; // not the pool room
+					add_wall_section_above_pool_room_door(*d, pool_room);
+				}
+			}
+		}
+	}
+	interior->remove_excess_capacity(); // optional optimization
 }
 
 void try_join_house_ext_basements(vect_building_t &buildings) {

@@ -2426,13 +2426,17 @@ void building_interior_t::assign_door_conn_rooms(unsigned start_ds_ix) {
 				if (rooms[r].contains_pt(test_pt)) {ds_room_ix = r; break;}
 			}
 			if (ds_room_ix == -1) { // adj room not found
-				// can only happen with complex floorplan buildings where a wall ends exactly at a doorway so that neither room contains the point
-				test_pt[!d->dim] = d->d[!d->dim][0]; // choose edge of door rather than center
-
-				for (unsigned r = rooms_start; r < rooms_end; ++r) {
-					if (rooms[r].contains_pt(test_pt)) {ds_room_ix = r; break;}
+				if (d->is_bldg_conn) { // door connecting adjacent building with no room for this building on the other side
+					ds_room_ix = 0; // set to 0 and hope it's unused; this can't be the first room, so the assert below won't fail
 				}
-				assert(ds_room_ix >= 0);
+				else { // can only happen with complex floorplan buildings where a wall ends exactly at a doorway so that neither room contains the point
+					test_pt[!d->dim] = d->d[!d->dim][0]; // choose edge of door rather than center
+
+					for (unsigned r = rooms_start; r < rooms_end; ++r) {
+						if (rooms[r].contains_pt(test_pt)) {ds_room_ix = r; break;}
+					}
+					assert(ds_room_ix >= 0);
+				}
 			}
 			d->conn_room[s] = ds_room_ix;
 		} // for s
