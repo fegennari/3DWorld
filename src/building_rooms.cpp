@@ -1460,12 +1460,7 @@ void cut_trim_around_doors(vect_tquad_with_ix_t const &doors, vect_cube_t &trim_
 }
 void clip_trim_cube(cube_t const &trim, cube_t const &trim_exclude, vect_cube_t &trim_cubes) {
 	trim_cubes.clear();
-
-	if (!trim_exclude.is_all_zeros() && trim_exclude.intersects(trim)) {
-		subtract_cube_from_cube(trim, trim_exclude, trim_cubes);
-		// sometimes we can get degenerate cubes that will assert when added as trim, so remove them here
-		trim_cubes.erase(std::remove_if(trim_cubes.begin(), trim_cubes.end(), [](cube_t const &c) {return !c.is_strictly_normalized();}), trim_cubes.end());
-	}
+	if (!trim_exclude.is_all_zeros() && trim_exclude.intersects_no_adj(trim)) {subtract_cube_from_cube(trim, trim_exclude, trim_cubes);}
 	else {trim_cubes.push_back(trim);}
 }
 
