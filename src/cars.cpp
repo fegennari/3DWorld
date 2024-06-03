@@ -722,7 +722,7 @@ void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube
 			if (POLICE_LIGHT_SHADOW) { // shadowed
 				for (unsigned bf = 0; bf < 2; ++bf) { // back, front
 					vector3d light_dir;
-					light_dir[car.dim] = ((car.dir ^ bf) ? 1.0 : -1.0);
+					light_dir[car.dim] = ((car.dir ^ bool(bf)) ? 1.0 : -1.0);
 					dl_sources.push_back(light_source(light_dist, pos, pos, color, 1, light_dir, 0.3));
 				}
 			}

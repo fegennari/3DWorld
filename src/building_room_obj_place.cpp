@@ -1869,7 +1869,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 		bool is_sink(1), placed_mwave(0), placed_toaster(0), had_counter(0);
 		cube_t mwave, toaster;
 
-		for (unsigned n = 0; n < (had_counter ? 50 : 60); ++n) { // 50 attempts, plus an extra 10 if no counters were placed
+		for (unsigned n = 0; n < (had_counter ? 50U : 60U); ++n) { // 50 attempts, plus an extra 10 if no counters were placed
 			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
 			if (room.has_open_wall(dim, dir)) continue; // don't place against open walls
 			bool const is_ext_wall(classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT); // assumes not in basement
