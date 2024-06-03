@@ -237,6 +237,7 @@ bool building_t::add_office_utility_objs(rand_gen_t rgen, room_t const &room, fl
 			float const conn_height(c.z1() + rgen.rand_uniform(0.25, 0.75)*c.dz());
 
 			for (unsigned f = furnaces_start; f < furnaces_end; ++f) {
+				if (objs[f].type == TYPE_BLOCKER) continue; // skip blockers
 				cube_t conn;
 				if (!connect_furnace_to_breaker_panel(objs[f], c, dim, dir, conn_height, conn)) continue;
 				if (is_obj_placement_blocked(conn, room, 1) || overlaps_other_room_obj(conn, objs_start, 0, &furnaces_start)) continue; // check water heaters only
@@ -267,6 +268,10 @@ bool building_t::add_furnace_to_room(rand_gen_t &rgen, room_t const &room, float
 		if (zval > ground_floor_z1 && check_if_against_window(furnace, room, dim, !dir)) continue; // can fail for apartment and hotel utility rooms
 		unsigned const flags((is_house ? RO_FLAG_IS_HOUSE : 0) | RO_FLAG_INTERIOR);
 		interior->room_geom->objs.emplace_back(furnace, TYPE_FURNACE, room_id, dim, dir, flags, tot_light_amt);
+		// add a blocker for clearance to avoid placing two furnaces together at a utility room corner
+		cube_t blocker(test_cube);
+		blocker.d[dim][!dir] = furnace.d[dim][dir];
+		interior->room_geom->objs.emplace_back(blocker, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS);
 		// no room for exhaust vent, so I guess it's inside the intake vent at the top
 		return 1; // success/done
 	} // for n
