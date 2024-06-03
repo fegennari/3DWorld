@@ -1340,6 +1340,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	float const room_xy_expand(0.75*wall_thickness), player_feet_zval(camera_bs.z - get_bldg_player_height()), ground_floor_z2(ground_floor_z1 + window_vspacing);
 	bool const check_building_people(enable_building_people_ai()), check_attic(camera_in_building && has_attic() && interior->attic_access_open);
 	bool const camera_in_basement(camera_bs.z < ground_floor_z1), camera_in_ext_basement(camera_in_building && point_in_extended_basement_not_basement(camera_rot));
+	bool const has_u_shaped_pri_stairs(!interior->stairwells.empty() && interior->stairwells.front().is_u_shape());
 	bool const show_room_name(display_mode & 0x20); // debugging, key '6'
 	cube_t const &attic_access(interior->attic_access);
 	vect_cube_t &light_bcubes(interior->room_geom->light_bcubes);
@@ -1530,6 +1531,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		if (in_ext_basement && camera_feet_above_basement)      continue; // light  in extended basement, and camera not in basement or on basement stairs
 		if (camera_in_ext_basement && !light_vis_from_basement) continue; // camera in extended basement, and light  not in basement
+		// if the player is in the parking garage, retail lights aren't visible through U-shaped stairs
+		if (camera_in_basement && !camera_on_stairs && room.is_retail() && has_u_shaped_pri_stairs) continue;
 		//if (is_light_occluded(lpos_rot, camera_bs))  continue; // too strong a test in general, but may be useful for selecting high importance lights
 		//if (!camera_in_building && i->is_interior()) continue; // skip interior lights when camera is outside the building: makes little difference, not worth the trouble
 		bool const is_lamp(i->type == TYPE_LAMP), is_single_floor(room.is_single_floor || is_in_elevator), wall_light(i->flags & RO_FLAG_ADJ_HI);
