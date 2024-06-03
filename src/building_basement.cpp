@@ -699,20 +699,22 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	//highres_timer_t timer("add_basement_pipes");
 	assert(pipe_type < NUM_PIPE_TYPES);
 	if (risers.empty()) return 0; // can happen for hot water pipes when there are no hot water fixtures
+	float const max_pipe_radius_mult[NUM_PIPE_TYPES] = {0.75, 0.25, 0.2, 0.15}; // sewer, cold water, hot water, gas; in muptiples of wall thickness
 	float const FITTING_LEN(1.2), FITTING_RADIUS(1.1); // relative to radius
 	bool const is_hot_water(pipe_type == PIPE_TYPE_HW), is_closed_loop(is_hot_water), add_insul(is_hot_water);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	assert(objs_start <= objs.size());
 	cube_t const &basement(get_basement());
-	float const r_main(get_merged_risers_radius(risers, (is_closed_loop ? 0 : 2))); // exclude incoming water from hot water heaters for hot water pipes
+	float r_main(get_merged_risers_radius(risers, (is_closed_loop ? 0 : 2))); // exclude incoming water from hot water heaters for hot water pipes
 	if (r_main == 0.0) return 0; // hot water heater but no hot water pipes?
 	float const insul_thickness(0.4), min_insum_len(4.0); // both relative to pipe radius
 	float const window_vspacing(get_window_vspace()), fc_thickness(get_fc_thickness()), wall_thickness(get_wall_thickness());
 	float const pipe_zval(ceil_zval   - FITTING_RADIUS*r_main); // includes clearance for fittings vs. beams (and lights - mostly)
 	float const pipe_min_z1(pipe_zval - FITTING_RADIUS*r_main);
 	float const align_dist(2.0*wall_thickness); // align pipes within this range (in particular sinks and stall toilets)
-	float const radius_factor(add_insul ? 1.0+insul_thickness : 1.0);
+	float const radius_factor(add_insul ? 1.0+insul_thickness : 1.0), max_pipe_radius(max_pipe_radius_mult[pipe_type]*wall_thickness);
 	float const r_main_spacing(radius_factor*r_main); // include insulation thickness for hot water pipes
+	min_eq(r_main, max_pipe_radius); // limit pipe radius; even with these limits, we can still have hot water and cold water clipping through each other with enough flow
 	assert(pipe_zval > bcube.z1());
 	vector<pipe_t> pipes, fittings;
 	cube_t pipe_end_bcube;
@@ -904,6 +906,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			++num_keep;
 		} // for ix
 		if (num_keep == 0) continue; // no valid connections for this row
+		min_eq(radius, 0.8f*max_pipe_radius); // a bit smaller than r_main
 
 		// we can skip adding a connector if short and under the main pipe
 		if (range_max - range_min > r_main) {
@@ -1149,7 +1152,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 
 		for (pipe_t const &p : pipes) {
 			if (!p.connected || p.outside_pg || p.type == PIPE_RISER) continue; // unconnected, outside, or drain, skip
-			float const min_len(min_insum_len*p.radius), radius_exp(insul_thickness*p.radius);
+			float const min_len(min_insum_len*p.radius), radius_exp(min(insul_thickness*p.radius, 0.2f*max_pipe_radius));
 			if (p.get_length() < min_len) continue; // length is too short
 			cube_t const pbc(p.get_bcube());
 			insulation.clear();
@@ -1414,7 +1417,7 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 	float const merge_dist = 4.0; // merge two pipes if their combined radius is within this distance
 	// use reduced pipe radius for apartments and hotels since they have so many plumbing fixtures
 	float const floor_spacing(get_window_vspace()), base_pipe_radius((is_apt_or_hotel() ? 0.008 : 0.01)*floor_spacing), base_pipe_area(base_pipe_radius*base_pipe_radius);
-	float const merge_dist_sq(merge_dist*merge_dist), max_radius(0.4*get_wall_thickness()), ceil_zval(basement.z2() - get_fc_thickness());
+	float const merge_dist_sq(merge_dist*merge_dist), max_radius(0.3*get_wall_thickness()), ceil_zval(basement.z2() - get_fc_thickness());
 	vector<room_object_t> water_heaters;
 	bool const inc_basement_wheaters = 1;
 
@@ -1470,7 +1473,7 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 		hot_water.emplace_back((s.pos - delta), hot_radius, 1, 1); // shift in opposite dir; has_hot=1, flow_dir=1/in
 	} // for sewer
 	if (!water_heaters.empty() && !hot_water.empty()) { // add connections for water heaters if there are hot water pipes
-		float const radius_hot(get_merged_risers_radius(hot_water)); // this is the radius of the main hot water supply
+		float const radius_hot(get_merged_risers_radius(hot_water)); // this is the radius of the main hot water supply; not limited to max
 		float const per_wh_radius(radius_hot*pow(1.0/water_heaters.size(), 1/4.0)); // distribute evenly among the water heaters using the same merge exponent
 
 		for (room_object_t const &wh : water_heaters) {
