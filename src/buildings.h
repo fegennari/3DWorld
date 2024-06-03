@@ -468,7 +468,7 @@ std::string const room_names_short[NUM_RTYPES] =
 	{"", "Hall", "Stairs", "Office", "Bath", "Men", "Women", "Bed", "Kitchen", "Living",
 	"Dining", "Study", "Entry", "Library", "Storage", "Garage", "Shed", "Lobby", "Laundry", "Card",
 	"Play", "Art", "Utility", "Garage", "Ramp", "Attic", "Bed", "", "Server", "Pool",
-	"Swim", "Security", "Basement", "Retail", "Elevator"};
+	"Swim", "Security", "Lounge", "Common", "Basement", "Retail", "Elevator"};
 
 enum {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES, SHAPE_RAMP, SHAPE_L}; // stairs shapes; SHAPE_L is unused
 typedef uint8_t stairs_shape;
@@ -1256,8 +1256,9 @@ typedef vector<extb_room_t> vect_extb_room_t;
 
 struct breaker_zone_t {
 	unsigned rtype, room_start=0, room_end=0;
-	breaker_zone_t() : rtype(RTYPE_NOTSET) {} // invalud room
-	breaker_zone_t(unsigned t, unsigned s, unsigned e) : rtype(t), room_start(s), room_end(e) {}
+	int pri_room=-1;
+	breaker_zone_t() : rtype(RTYPE_NOTSET) {} // invalid room
+	breaker_zone_t(unsigned t, unsigned s, unsigned e, int pr) : rtype(t), room_start(s), room_end(e), pri_room(pr) {}
 	bool invalid() const {return (rtype != RTYPE_ELEVATOR && room_start == room_end);}
 };
 

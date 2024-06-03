@@ -413,14 +413,24 @@ void building_room_geom_t::expand_breaker_panel(room_object_t const &c, building
 			else {continue;} // else middle column; no space to add a label
 			cube_t label(breaker);
 			label.translate_dim(!c.dim, label_xlate*breaker_dc);
-			string const &label_text(room_names_short[zone.rtype]);
+			string label_text(room_names_short[zone.rtype]);
 			if (label_text.empty()) continue;
+
+			// special breaker labeling for apartments and hotels;
+			// normal residential rooms (to re-label) are before RTYPE_STORAGE and special rooms such as RTYPE_UTILITY (keep the label) are after
+			if (building.is_apt_or_hotel() && zone.rtype < RTYPE_STORAGE && zone.pri_room >= 0) {
+				room_t const &pri_room(building.get_room(zone.pri_room));
+
+				if (pri_room.is_apt_or_hotel_room()) { // Note: pri_room.unit_id does *not* match the room number on the hallway sign
+					label_text = string(building.is_hotel() ? "Rooms" : "Apts") + " " + std::to_string(obj.obj_id);
+				}
+			}
 			label.d[c.dim][!c.dir] = label.d[c.dim][c.dir] + dir_sign*0.05*thickness;
 			label.expand_in_dim(!c.dim, -0.2*breaker_dc); // small shrink
 			label.expand_in_dim(2,      -0.2*breaker_dr); // small shrink
 			expanded_objs.emplace_back(label, TYPE_SIGN, c.room_id, c.dim, !c.dir, RO_FLAG_NOCOLL, c.light_amt, SHAPE_CUBE, BLACK);
 			expanded_objs.back().obj_id = register_sign_text(label_text);
-		}
+		} // for r
 	} // for C
 	invalidate_small_geom();
 }
