@@ -1732,7 +1732,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	bool const update_clocks(player_in_building && inc_small >= 2 && !shadow_only && !reflection_pass && have_clock && check_clock_time());
 	bool const player_in_doorway(building.point_near_ext_door(camera_bs, get_door_open_dist()));
 	bool const player_in_building_or_doorway(player_in_building || player_in_doorway);
-	if (bbd != nullptr) {bbd->set_camera_dir_mask(camera_bs, building.bcube);}
+	if (bbd != nullptr) {bbd->set_camera_dir_mask(camera_bs, ((camera_bs.z < building.ground_floor_z1) ? building.get_bcube_inc_extensions() : building.bcube));}
 	brg_batch_draw_t *const bbd_in(bbd); // capture bbd for instance drawing before setting to null if player_in_building
 	if (player_in_building_or_doorway) {bbd = nullptr;} // use immediate drawing when player is in the building because draw order matters for alpha blending
 	bool enable_indir(0);
