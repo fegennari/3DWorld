@@ -802,7 +802,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						c.d[!min_dim][ 1] = next_pos;
 						// apartments and hotels have utility rooms on the first floor, but not on corner/end units
 						if (apt_or_hotel && i > 0 && i+1 < num_rooms) {utility_room_cands.push_back(rooms.size());}
-						add_room(c, part_id, 1, 0, 1); // office or bathroom; no utility rooms for now since these rooms tend to be large
+						add_room(c, part_id, 1, 0, 1); // office or bathroom; no utility rooms for now (except for apartments or hotels) since these rooms tend to be large
 						bool const is_bathroom(i == num_rooms/2 && !apt_or_hotel);
 						if (is_bathroom) {rooms.back().assign_all_to(RTYPE_BATH);} // assign the middle room to be a bathroom
 						door_t door(c, min_dim, d); // copy zvals and wall pos

@@ -242,7 +242,8 @@ bool building_t::add_office_utility_objs(rand_gen_t rgen, room_t const &room, fl
 			break; // done
 		} // for n
 	}
-	add_door_sign("Utility", room, zval, room_id, tot_light_amt);
+	// don't add signs for interior utility rooms in apartments and hotels
+	if (!room.is_apt_or_hotel_room() || room.is_entry) {add_door_sign("Utility", room, zval, room_id, tot_light_amt);}
 	return 1;
 }
 

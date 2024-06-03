@@ -742,13 +742,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (can_place_onto) { // an object was placed (table, desk, counter, etc.), maybe add a book or bottle on top of it
 				place_objects_onto_surfaces(rgen, *r, room_id, tot_light_amt, objs_start, f, is_basement);
 			}
-			if (residential_room) { // place house/apartment/hotel-specific items
-				if (!is_bathroom && !is_kitchen && !is_utility && rgen.rand_float() < (is_basement ? 0.25 : 0.8)) {
+			if (residential_room && !is_utility) { // place house/apartment/hotel-specific items
+				if (!is_bathroom && !is_kitchen && rgen.rand_float() < (is_basement ? 0.25 : 0.8)) {
 					// place bookcase 80% of the time, but not in bathrooms, kitchens, or utlity rooms
 					rand_gen_t rgen2(rgen); // copy so that rgen isn't updated in the call below
 					add_bookcase_to_room(rgen2, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement);
 				}
-				if (!has_stairs && (rgen.rand()&3) <= (added_tc ? 0 : 2) && !is_kitchen) { // maybe add a rug, 25% of the time if there's a table and 75% of the time otherwise
+				// maybe add a rug, 25% of the time if there's a table and 75% of the time otherwise
+				if (!has_stairs && (rgen.rand()&3) <= (added_tc ? 0 : 2) && !is_kitchen) {
 					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 			}

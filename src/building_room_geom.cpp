@@ -3459,7 +3459,6 @@ void narrow_furnace_intake(cube_t &duct, room_object_t const &c) {
 	duct.expand_in_dim(!c.dim, -0.05*c.get_width()); // shrink slightly
 }
 void building_room_geom_t::add_furnace(room_object_t const &c) {
-	colorRGBA const duct_color(apply_light_color(c, DUCT_COLOR));
 	room_object_t main_unit(c);
 	room_object_t base(c); // base area below the furnace that connects to the ducts
 	main_unit.z1() = base.z2() = c.z1() + 0.167*c.dz();
@@ -3469,7 +3468,7 @@ void building_room_geom_t::add_furnace(room_object_t const &c) {
 	base.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*expand_amt; // shift slightly outward in the front
 	base.dir    = 1; // encoding for vertical
 	base.flags |= RO_FLAG_ADJ_BOT; // skip bottom face; top face is slightly visible through expanded edges
-	add_duct(base);
+	add_duct(base); // duct under the furnace
 
 	if (c.in_attic()) {
 		// add ductwork on the top ... somewhere?
