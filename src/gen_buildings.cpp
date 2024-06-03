@@ -3454,9 +3454,11 @@ public:
 						else if (inc_small && bdist_sq < rgeom_int_detail_dist_sq) {inc_small = 3;} // include interior and exterior detail objects
 						else if (inc_small && bdist_sq < rgeom_ext_detail_dist_sq) {inc_small = 2;} // include exterior detail objects
 						if (debug_draw) {inc_small = 3;} // TESTING
-						b.gen_and_draw_room_geom(&bbd, s, amask_shader, oc, xlate, bi->ix, 0, reflection_pass, inc_small, (debug_draw || player_in_building_bcube)); // shadow_only=0
+						bool const player_in_bldg(debug_draw || player_in_building_bcube);
+						b.gen_and_draw_room_geom(&bbd, s, amask_shader, oc, xlate, bi->ix, 0, reflection_pass, inc_small, player_in_bldg, ext_basement_conn_visible); // shadow_only=0
 						g->has_room_geom = 1;
 						if (!draw_interior) continue;
+						
 						// when player is in the building (not attic or ext basement), draw people later so that alpha blending of hair against ext walls and windows works properly
 						if (defer_people_draw_for_player_building && player_in_building_bcube && b.has_people() && b.check_point_or_cylin_contained(camera_bs, 0.0, points, 0, 0, 0)) {
 							defer_ped_draw_vars.assign(&b, *i, bi->ix);

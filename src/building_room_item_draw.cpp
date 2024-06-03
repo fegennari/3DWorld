@@ -1561,8 +1561,8 @@ void building_t::draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	//glDisable(GL_CULL_FACE);
 	//s.set_cur_color(colorRGBA(1.0, 0.0, 0.0, 0.5)); // for use with debug visualization
 }
-void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, occlusion_checker_noncity_t &oc,
-	vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
+void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, occlusion_checker_noncity_t &oc, vector3d const &xlate,
+	unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building, bool ext_basement_conn_visible)
 {
 	if (!interior) return;
 	if (!global_building_params.enable_rotated_room_geom && is_rotated()) return; // rotated buildings: need to fix texture coords, room object collisions, mirrors, etc.
@@ -1574,7 +1574,11 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shad
 		for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {
 			if (camera_pdu.cube_visible(*p + xlate)) {any_part_visible = 1; break;}
 		}
-		if (!any_part_visible && !point_in_attic(camera_pdu.pos - xlate)) { // check the attic
+		// check the extended basement bcube if visible through a connecting room
+		any_part_visible |= (ext_basement_conn_visible && has_ext_basement() && camera_pdu.cube_visible(interior->basement_ext_bcube + xlate));
+		any_part_visible |= point_in_attic(camera_pdu.pos - xlate); // check the attic
+
+		if (!any_part_visible) {
 			// exterior geometry such as roof vents and chimney caps may still be visible even if no parts are visible, so draw them
 			if (is_house && !reflection_pass && has_room_geom()) {interior->room_geom->mats_exterior.draw(bbd, s, 0, 0, 1);}
 			return;
