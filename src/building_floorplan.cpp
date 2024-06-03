@@ -1170,22 +1170,21 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 	door_stack_t const &ds(interior->door_stacks.back());
 	bool at_lo_end(room_row_ix == 0), at_hi_end(room_row_ix == hall_num_rooms-1);
 	unsigned num_windows(windows_per_room);
-	if (btype == BTYPE_APARTMENT && num_windows == 1) {btype = BTYPE_HOTEL;} // too small for apartment; need at least two windows for an apartment
+	if (is_apartment() && num_windows == 1) {btype = BTYPE_HOTEL;} // too small for apartment; need at least two windows for an apartment
 	if (at_hi_end) {num_windows += (tot_num_windows % windows_per_room);} // last room is larger with more windows; hopefully only one more
-	bool const is_hotel(btype == BTYPE_HOTEL);
 	unsigned const part_id(room.part_id);
 	float const door_width(ds.get_width()), door_hwidth(0.5*door_width); // newly added doors will be this width as well
 	float const wall_thickness(get_wall_thickness()), wall_half_thick(0.5*wall_thickness), door_to_wall_min_space(2.0*wall_thickness), fc_thick(get_fc_thickness());
 	float const door_center(ds.get_center_dim(hall_dim)), room_center(room.get_center_dim(hall_dim));
 	bool const lg_door_side(door_center < room_center); // more space on this side of door
 	vect_cube_t &hall_para_walls(interior->walls[!hall_dim]), &hall_perp_walls(interior->walls[hall_dim]);
-	bool make_small_apt(btype == BTYPE_APARTMENT && num_windows < 3), make_three_room(is_hotel);
+	bool make_small_apt(is_apartment() && num_windows < 3), make_three_room(is_hotel());
 	room.is_office = 0; // but room.office_floorplan remains 1
 	assert(ds.first_door_ix < interior->doors.size());
 
 	// make sure hotel room doors auto close and apartment doors start closed
 	for (auto d = interior->doors.begin()+ds.first_door_ix; d != interior->doors.end(); ++d) {
-		if (is_hotel) {d->make_auto_close();} else {d->open = 0; d->open_amt = 0.0;}
+		if (is_hotel()) {d->make_auto_close();} else {d->open = 0; d->open_amt = 0.0;}
 	}
 	if (make_three_room || make_small_apt) { // 3-4 rooms (hotel or small apartment)
 		// divide into entryway/living room by door, bedroom by window, and bathroom
@@ -1205,13 +1204,13 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		bath.d[hall_dim][!lg_door_side] = living.d[hall_dim][lg_door_side] = liv_bath_split_pos;
 		room.copy_from(living); // ext_sides doesn't change
 		calc_room_ext_sides(room); // update since ext_sides may have changed
-		room.assign_all_to(is_hotel ? RTYPE_COMMON : RTYPE_LIVING); // public first; common room is similar to living room but without the table
+		room.assign_all_to(is_hotel() ? RTYPE_COMMON : RTYPE_LIVING); // public first; common room is similar to living room but without the table
 		room.is_entry = 1;
 		unsigned const living_rid(new_rooms_start), bed_rid(add_room(bed, part_id)), bath_rid(add_room(bath, part_id));
 		get_room(bed_rid ).assign_all_to(RTYPE_BED);
 		get_room(bath_rid).assign_all_to(make_small_apt ? RTYPE_KITCHEN : RTYPE_BATH); // small apartment uses a kitchen rather than a bathroom for this room
 		// add interior walls and doors; all doors are unlocked
-		bool const no_div_wall_or_door(is_hotel && rgen.rand_float() < 0.75); // open wall 75% of the time; should this be consistent per building?
+		bool const no_div_wall_or_door(is_hotel() && rgen.rand_float() < 0.75); // open wall 75% of the time; should this be consistent per building?
 		float const living_center(living.get_center_dim(hall_dim));
 		float bath_center(bath.get_center_dim(!hall_dim));
 		cube_t bed_wall(bed), bath_wall(bath); // if no_div_wall_or_door=1, bedroom wall only borders the bathroom
@@ -1267,7 +1266,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 			hall_perp_walls.push_back(bath_wall);
 		}
 	}
-	else if (btype == BTYPE_APARTMENT) { // 5 rooms (apartment)
+	else if (is_apartment()) { // 5 rooms (apartment)
 		// entryway connected to front door, or could be living room if much longer in hallway dim
 		// bedroom; must have at least one window
 		// living room; must have at least one window

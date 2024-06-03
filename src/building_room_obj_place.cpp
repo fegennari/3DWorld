@@ -651,7 +651,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 	room_object_t const bed(objs[bed_obj_ix]); // deep copy so that we don't need to worry about invalidating the reference below
 	float const doorway_width(get_doorway_width()), front_clearance(max(0.6f*doorway_width, get_min_front_clearance_inc_people()));
 
-	if (btype == BTYPE_HOTEL) { // maybe add a second bed
+	if (is_hotel()) { // maybe add a second bed
 		unsigned const sec_bed_obj_ix(objs.size());
 		cube_t bed_exp(bed);
 		bed_exp.expand_by_xy(front_clearance); // add space around the bed so that two beds aren't placed too close together
@@ -731,7 +731,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 			if (is_house) {flags |= RO_FLAG_IS_HOUSE;}
 			if (c.d[!dim][0] == room_bounds.d[!dim][0]) {flags |= RO_FLAG_ADJ_LO;}
 			if (c.d[!dim][1] == room_bounds.d[!dim][1]) {flags |= RO_FLAG_ADJ_HI;}
-			if (btype == BTYPE_HOTEL) {flags |= RO_FLAG_HAS_EXTRA;} // flag so that the closet has a safe
+			if (is_hotel()) {flags |= RO_FLAG_HAS_EXTRA;} // flag so that the closet has a safe
 			//if ((rgen.rand() % 10) == 0) {flags |= RO_FLAG_OPEN;} // 10% chance of open closet; unclear if this adds any value, but it works
 			closet_obj_id = objs.size();
 			objs.emplace_back(c, TYPE_CLOSET, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CUBE, wall_color); // closet door is always white; sides should match interior walls
@@ -955,8 +955,8 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 	colorRGBA const colors[NUM_COLORS] = {WHITE, WHITE, WHITE, LT_BLUE, LT_BLUE, PINK, PINK, LT_GREEN}; // color of the sheets
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace()), wall_thick(get_wall_thickness());
-	bool const is_hotel(btype == BTYPE_HOTEL), long_dim(room_bounds.dx() < room_bounds.dy());
-	bool const dim((is_hotel && room.get_sz_dim(!long_dim) > 0.8*vspace) ? !long_dim : long_dim); // bed in long room dim, unless in a large hotel room (with 2 beds)
+	bool const long_dim(room_bounds.dx() < room_bounds.dy());
+	bool const dim((is_hotel() && room.get_sz_dim(!long_dim) > 0.8*vspace) ? !long_dim : long_dim); // bed in long room dim, unless in a large hotel room (with 2 beds)
 	vector3d expand, bed_sz;
 	expand[ dim] = -wall_thick; // small amount of space
 	expand[!dim] = -0.3f*vspace; // leave at least some space between the bed and the wall
@@ -976,7 +976,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 	}
 	bool first_head_dir(0);
 	// place hotel room bed head by an exterior wall so that both beds can be placed there without blocking a door
-	if (is_hotel) {first_head_dir = (room.get_center_dim(dim) < get_part_for_room(room).get_center_dim(dim));}
+	if (is_hotel()) {first_head_dir = (room.get_center_dim(dim) < get_part_for_room(room).get_center_dim(dim));}
 	else {first_head_dir = rgen.rand_bool();}
 	bool const first_wall_dir(rgen.rand_bool()), have_other_bed(other_bed.type == TYPE_BED);
 	door_path_checker_t door_path_checker;
@@ -2140,7 +2140,7 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 			}
 		}
 	}
-	if ((is_house || btype == BTYPE_APARTMENT) && (rgen.rand()%3) == 0) { // add fishtank on a tall table 33% of the time
+	if ((is_house || is_apartment()) && (rgen.rand()%3) == 0) { // add fishtank on a tall table 33% of the time
 		add_fishtank_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);
 	}
 	if (room.is_single_floor && objs_start > 0) {replace_light_with_ceiling_fan(rgen, room, cube_t(), room_id, tot_light_amt, objs_start-1);} // light is prev placed object
@@ -4187,7 +4187,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			laptop_prob = 0.3*place_laptop_prob;
 			pizza_prob  = 0.8*place_pizza_prob;
 			banana_prob = 0.7*place_banana_prob;
-			if (is_house || btype == BTYPE_APARTMENT) {toy_prob = 0.5;} // toys are in houses and apartments only
+			if (is_house || is_apartment()) {toy_prob = 0.5;} // toys are in houses and apartments only
 		}
 		else if (obj.type == TYPE_DESK && !(obj.flags & RO_FLAG_ADJ_TOP)) { // desk with no computer monitor
 			book_prob   = 0.8*place_book_prob;

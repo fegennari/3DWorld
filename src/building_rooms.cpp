@@ -625,7 +625,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						unsigned room_num(100*(f+1) + numbered_rooms_seen);
 						add_door_sign(std::to_string(room_num), *r, room_center.z, room_id, tot_light_amt); // Note: sign text is always unique
 					}
-					else if (btype == BTYPE_HOTEL) { // hotel doors should not auto close
+					else if (is_hotel()) { // hotel doors should not auto close
 						vect_door_stack_t const &doorways(get_doorways_for_room(*r, room_center.z));
 						assert(!doorways.empty());
 						door_stack_t const &ds(doorways.front()); // choose the first/front door

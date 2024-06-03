@@ -1590,7 +1590,9 @@ struct building_t : public building_geom_t {
 	bool has_people   () const {return (interior && !interior->people.empty());}
 	bool has_retail   () const {return (retail_floor_levels > 0);}
 	bool has_tall_retail() const {return (retail_floor_levels > 1);}
-	bool is_apt_or_hotel() const {return (btype == BTYPE_APARTMENT || btype == BTYPE_HOTEL);}
+	bool is_apartment   () const {return (btype == BTYPE_APARTMENT);}
+	bool is_hotel       () const {return (btype == BTYPE_HOTEL);}
+	bool is_apt_or_hotel() const {return (is_apartment() || is_hotel());}
 	bool is_residential () const {return (is_house || is_apt_or_hotel());}
 	bool is_retail_part(cube_t const &part) const {return (has_retail() && part.z1() == ground_floor_z1);}
 	bool skip_top_of_ceilings() const {return (roof_type == ROOF_TYPE_FLAT || !is_house || has_attic());}
