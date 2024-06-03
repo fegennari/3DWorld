@@ -796,7 +796,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				added_basement_utility = is_utility = no_plants = add_basement_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				if (added_basement_utility) {r->assign_to(RTYPE_UTILITY, f);}
 			}
-			if (!is_bathroom && !is_bedroom && !is_kitchen && !is_storage && !no_plants && !is_basement) { // add potted plants to some room types
+			if (!is_bathroom && !is_bedroom && !is_kitchen && !is_storage && !is_utility && !no_plants && !is_basement) { // add potted plants to some room types
 				// 0-2 for living/dining rooms, 50% chance for houses, 25% (first floor) / 10% (other floors) chance for offices
 				unsigned const num(is_house ? (rgen.rand() % ((is_living || is_dining) ? 3 : 2)) : ((rgen.rand()%((f == 0) ? 4 : 10)) == 0));
 				if (num > 0) {add_plants_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, num);}
@@ -809,7 +809,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				else          {add_wall_vent_to_room(rgen, *r, floor_zval, room_id, objs_start, is_utility);} // office building vents
 			}
 			// pictures and whiteboards must not be placed behind anything, excluding trashcans; so we add them here
-			bool const can_hang((is_house || !(is_bathroom || is_kitchen || no_whiteboard)) && !is_storage); // no whiteboards in office bathrooms or kitchens
+			bool const can_hang((is_house || !(is_bathroom || is_kitchen || no_whiteboard)) && !is_storage && !is_utility); // no whiteboards in office bathrooms or kitchens
 			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement));
 
 			if (is_bathroom || is_kitchen || rgen.rand_float() < 0.8) { // 80% of the time, always in bathrooms and kitchens
