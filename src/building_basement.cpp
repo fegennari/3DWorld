@@ -700,7 +700,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	assert(pipe_type < NUM_PIPE_TYPES);
 	if (risers.empty()) return 0; // can happen for hot water pipes when there are no hot water fixtures
 	float const max_pipe_radius_mult[NUM_PIPE_TYPES] = {0.75, 0.25, 0.2, 0.15}; // sewer, cold water, hot water, gas; in muptiples of wall thickness
-	float const FITTING_LEN(1.2), FITTING_RADIUS(1.1); // relative to radius
+	float const FITTING_LEN(1.25), FITTING_RADIUS(1.1); // relative to radius
 	bool const is_hot_water(pipe_type == PIPE_TYPE_HW), is_closed_loop(is_hot_water), add_insul(is_hot_water);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	assert(objs_start <= objs.size());
@@ -1090,7 +1090,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		// add pipe fittings around ends and joins; only fittings have flat and round ends because raw pipe ends should never be exposed;
 		// note that we may not need fittings at T-junctions for hot water pipes, but then we would need to cap the ends
 		if (p.type == PIPE_RISER) continue; // not for vertical drain pipes, since they're so short and mostly hidden above the connector pipes
-		float const fitting_len(FITTING_LEN*p.radius), fitting_expand((FITTING_RADIUS - 1.0)*p.radius);
+		float const fitting_len(FITTING_LEN*r_main), fitting_expand((FITTING_RADIUS - 1.0)*p.radius); // fitting len based on main pipe radius
 
 		for (unsigned d = 0; d < 2; ++d) {
 			if ((p.type == PIPE_CONN || p.type == PIPE_MAIN) && !(p.end_flags & (1<<d))) continue; // already have fittings added from connecting pipes
@@ -1119,6 +1119,14 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 				}
 			}
 		} // for d
+		if (p.type == PIPE_CONN && pipe.d[p.dim][0] < centerline-fitting_len && pipe.d[p.dim][1] > centerline+fitting_len) { // crosses through main pipe, add fitting
+			room_object_t pf(pipe);
+			pf.flags |= RO_FLAG_NOCOLL;
+			pf.color  = fittings_color;
+			set_wall_width(pf, centerline, fitting_len, p.dim);
+			expand_cube_except_in_dim(pf, fitting_expand, p.dim); // expand slightly
+			objs.push_back(pf);
+		}
 		if (p.dim < 2 && !add_insul) { // horizontal pipes only; no fittings on insulated pipes as insulation is flush with the walls
 			float const min_ext(2.0*fitting_len);
 			colorRGBA const color(LT_GRAY); // different from fittings color
