@@ -99,6 +99,7 @@ unsigned building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, flo
 		c_exp.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.25*radius; // add more keepout in front where the controls are
 		c_exp.intersect_with_cube(room); // don't pick up objects on the other side of the wall
 		if (overlaps_other_room_obj(c_exp, objs_start)) continue; // check existing objects, in particular storage room boxes that will have already been placed
+		if (zval > ground_floor_z1 && check_if_against_window(c, room, dim, dir)) continue; // can fail for apartment and hotel utility rooms
 		unsigned const flags((is_house ? RO_FLAG_IS_HOUSE : 0) | RO_FLAG_INTERIOR);
 		objs.emplace_back(c, TYPE_WHEATER, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CYLIN);
 		unsigned num_added(1);
@@ -230,6 +231,7 @@ bool building_t::add_office_utility_objs(rand_gen_t rgen, room_t const &room, fl
 			test_cube.d[dim][!dir] += dir_sign*2.0*bp_hwidth; // add a width worth of clearance in the front so that the door can be opened
 			test_cube.z2() = ceil_zval; // extend up to ceiling to ensure space for the conduit
 			if (is_obj_placement_blocked(test_cube, room, 1) || overlaps_other_room_obj(test_cube, objs_start)) continue;
+			if (zval > ground_floor_z1 && check_if_against_window(c, room, dim, dir)) continue; // can fail for apartment and hotel utility rooms
 			add_breaker_panel(rgen, c, ceil_zval, dim, dir, room_id, tot_light_amt);
 			// connect furnaces on the same wall to the breaker box
 			float const conn_height(c.z1() + rgen.rand_uniform(0.25, 0.75)*c.dz());
@@ -262,6 +264,7 @@ bool building_t::add_furnace_to_room(rand_gen_t &rgen, room_t const &room, float
 		test_cube.d[dim][dir] += (dir ? 1.0 : -1.0)*0.5*furnace.get_sz_dim(dim); // add clearance in front
 		if (zval < ground_floor_z1) {test_cube.z2() = zval + get_floor_ceil_gap();} // basement furnace; extend to the ceiling to make sure there's space for the vent
 		if (is_obj_placement_blocked(test_cube, room, 1) || overlaps_other_room_obj(test_cube, objs_start)) continue;
+		if (zval > ground_floor_z1 && check_if_against_window(furnace, room, dim, !dir)) continue; // can fail for apartment and hotel utility rooms
 		unsigned const flags((is_house ? RO_FLAG_IS_HOUSE : 0) | RO_FLAG_INTERIOR);
 		interior->room_geom->objs.emplace_back(furnace, TYPE_FURNACE, room_id, dim, dir, flags, tot_light_amt);
 		// no room for exhaust vent, so I guess it's inside the intake vent at the top
