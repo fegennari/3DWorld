@@ -704,6 +704,7 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 	
 	//RESET_TIME;
 	if (name.empty()) return 0; // none selected
+	//if (has_extension("GL_NV_mesh_shader")) {} // future work; use with glDrawMeshTasksNV()
 	assert(type < NUM_SHADER_TYPES);
 	string const lookup_name(name + prepend_string[type]);
 	ix_valid_t &ixv(shader_manager.get_shader_by_name(lookup_name, type));
