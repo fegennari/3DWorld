@@ -74,7 +74,8 @@ unsigned building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, flo
 			//first_dim = ds.dim; // place against back wall; too restrictive?
 		}
 	}
-	for (unsigned n = 0; n < 5; ++n) { // make 5 attempts to place a water heater - one in each corner and 1 along a random wall for variety
+	// make 5 attempts to place a water heater - one in each corner and 1 along a random wall for variety; 20 attempts for office buildings/apartments/hotels
+	for (unsigned n = 0; n < (is_house ? 5 : 20); ++n) {
 		bool dim(0), dir(0), xdir(0), ydir(0);
 
 		if (n < 4) { // corner
@@ -201,7 +202,7 @@ bool building_t::add_office_utility_objs(rand_gen_t rgen, room_t const &room, fl
 	zval       = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE); // add concreate and move the effective floor up
 	objs_start = interior->room_geom->objs.size(); // exclude this from collision checks
 	unsigned const num_water_heaters(add_water_heaters(rgen, room, zval, room_id, tot_light_amt, objs_start));
-	if (num_water_heaters == 0) return 0;
+	if (num_water_heaters == 0 && !is_apt_or_hotel()) return 0; // apartments and hotels have utility rooms even if there's no water heater
 	// add one furnace per water heater
 	auto &objs(interior->room_geom->objs);
 	unsigned const furnaces_start(objs.size());

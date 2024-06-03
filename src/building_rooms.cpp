@@ -536,7 +536,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				added_obj = is_bathroom = added_bathroom = no_whiteboard =
 					add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement, 0, added_bathroom_objs_mask); // add_shower_tub=0
 			}
-			else if (!is_house && f == 0) { // office building special pre-assigned first floor rooms; can be in a stacked part
+			else if (!residential && f == 0) { // office building special pre-assigned first floor rooms; can be in a stacked part
 				if (init_rtype_f0 == RTYPE_UTILITY) {
 					added_obj = no_whiteboard = no_plants = is_utility = add_office_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
@@ -597,6 +597,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				else if (rtype == RTYPE_LOBBY) { // lobby is similar to lounge (can we get here?)
 					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start); // return value ignored
 				}
+				else if (rtype == RTYPE_UTILITY) {
+					is_utility = add_office_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+				}
 				else if (not_private_room) { // make it an office
 					can_place_onto = added_desk = add_office_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_basement);
 				}
@@ -614,9 +617,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 				else if (rtype == RTYPE_ENTRY) { // entryway
 					// too small to place anything larger than a rug, trashcan, or pictures
-				}
-				else if (rtype == RTYPE_UTILITY) {
-					is_utility = add_office_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 				else {cout << TXT(r->str()) << TXTi(rtype) << endl; assert(0);} // unsupported room type
 
@@ -749,7 +749,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					add_bookcase_to_room(rgen2, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement);
 				}
 				// maybe add a rug, 25% of the time if there's a table and 75% of the time otherwise
-				if (!has_stairs && (rgen.rand()&3) <= (added_tc ? 0 : 2) && !is_kitchen) {
+				if (!has_stairs && !not_private_room && (rgen.rand()&3) <= (added_tc ? 0 : 2) && !is_kitchen) {
 					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 			}
