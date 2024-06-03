@@ -1694,7 +1694,8 @@ int get_flooring_texture(room_object_t const &c) {
 	return -1; // shouldn't get here
 }
 void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
-	get_material(tid_nm_pair_t(get_flooring_texture(c), 0.8*tscale)).add_cube_to_verts(c, apply_light_color(c), tex_origin, ~EF_Z2); // top face only, unshadowed
+	colorRGBA const color(c.is_open() ? c.color : apply_light_color(c)); // open wall rooms are not colored by room lights as this can create seams in the floor lighting
+	get_material(tid_nm_pair_t(get_flooring_texture(c), 0.8*tscale)).add_cube_to_verts(c, color, tex_origin, ~EF_Z2); // top face only, unshadowed
 }
 
 tquad_t get_ramp_tquad(room_object_t const &c) { // Note: normal is for the bottom surface

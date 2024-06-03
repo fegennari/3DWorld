@@ -1248,7 +1248,9 @@ float building_t::add_flooring(room_t const &room, float &zval, unsigned room_id
 	}
 	set_cube_zvals(flooring, zval, new_zval);
 	tot_light_amt = 0.5*tot_light_amt + 0.5; // brighten flooring so that lights shining through doors and flashlights look better
-	interior->room_geom->objs.emplace_back(flooring, TYPE_FLOORING, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, WHITE, flooring_type);
+	unsigned flags(RO_FLAG_NOCOLL);
+	if (room.open_wall_mask) {flags |= RO_FLAG_OPEN;} // flag flooring as "open" so that color is not adjusted by room light
+	interior->room_geom->objs.emplace_back(flooring, TYPE_FLOORING, room_id, 0, 0, flags, tot_light_amt, SHAPE_CUBE, WHITE, flooring_type);
 	return new_zval;
 }
 
