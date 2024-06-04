@@ -691,7 +691,7 @@ void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
 	if (c.taken_level == 0) { // draw the roll if not taken
 		float const tscale(1.0/c.get_width()); // texture fits width of roll exactly; doesn't look great on the rool ends though
 		rgeom_mat_t &mat(get_material(tid_nm_pair_t(WHITE_TEX, get_toilet_paper_nm_id(), tscale, tscale, 0.0, 0.0, 1), 1, 0, 1)); // shadowed, small
-		colorRGBA const tp_color(apply_light_color(c));
+		colorRGBA const tp_color(blend_color(c.color, apply_light_color(c), 0.5, 0.0)); // 50% mix
 		float const radius(0.5*c.dz()), rod_shrink(-0.7*radius), roll_shrink(0.75*rod_shrink*fract(123.456*c.obj_id)); // randomly partially empty (25-100%)
 		cube_t roll(c);
 		roll.expand_in_dim(c.dim, roll_shrink);
@@ -1694,7 +1694,8 @@ int get_flooring_texture(room_object_t const &c) {
 	return -1; // shouldn't get here
 }
 void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
-	colorRGBA const color(c.is_open() ? c.color : apply_light_color(c)); // open wall rooms are not colored by room lights as this can create seams in the floor lighting
+	// open wall rooms are not colored by room lights as this can create seams in the floor lighting
+	colorRGBA const color(c.is_open() ? c.color : blend_color(c.color, apply_light_color(c), 0.5, 0.0)); // 50% mix
 	get_material(tid_nm_pair_t(get_flooring_texture(c), 0.8*tscale)).add_cube_to_verts(c, color, tex_origin, ~EF_Z2); // top face only, unshadowed
 }
 
@@ -4422,7 +4423,7 @@ xform_matrix get_player_cview_rot_matrix(bool invert) {
 }
 
 void apply_thin_plastic_effect(room_object_t const &c, tid_nm_pair_t &tex) {
-	tex.emissive = min(0.5f, 2.0f*c.light_amt); // make slightly emissive to fake light transmission
+	tex.emissive = min(0.25f, 1.0f*c.light_amt); // make slightly emissive to fake light transmission
 }
 tid_nm_pair_t get_ball_tex_params(room_object_t const &c, bool shadowed) {
 	ball_type_t const &bt(c.get_ball_type());
@@ -4523,7 +4524,14 @@ void building_room_geom_t::add_pool_float(room_object_t const &c) {
 	tid_nm_pair_t tex(-1, 1.0, 1);
 	tex.set_specular(0.6, 80.0);
 	apply_thin_plastic_effect(c, tex);
-	get_material(tex, 1, 0, 1, (alpha < 1.0)).add_vert_torus_to_verts(c.get_cube_center(), ri, ro, colorRGBA(c.color, alpha), 1.0, 0); // shadowed, small
+	rgeom_mat_t &mat(get_material(tex, 1, 0, 1, (alpha < 1.0)));
+	unsigned const verts_start(mat.itri_verts.size());
+	mat.add_vert_torus_to_verts(c.get_cube_center(), ri, ro, colorRGBA(c.color, alpha), 1.0, 0); // shadowed, small
+	
+	for (auto v = mat.itri_verts.begin()+verts_start; v != mat.itri_verts.end(); ++v) {
+		float const nz(v->n[2]/127.0);
+		if (nz < 0.0) {v->n[2] = char(-127.0*nz);} // invert normal.z if needed to point up toward the light
+	}
 }
 
 void get_bench_cubes(room_object_t const &c, cube_t cubes[3]) { // seat, lo side, hi side
