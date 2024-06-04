@@ -339,8 +339,8 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	beam.z1()    += beam_delta_z; // shift the bottom up to the ceiling
 	vect_cube_t obstacles, obstacles_exp, obstacles_ps, wall_parts, temp;
 	// get obstacles for walls with and without clearance; maybe later add entrance/exit ramps, etc.
-	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles, 0.0); // without clearance, for beams
-	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles_exp, 0.9*window_vspacing); // with clearance in front, for walls and pillars
+	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles,         wall_thickness ); // with small clearance in front, for beams and pipes
+	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles_exp, 0.9*window_vspacing); // with more  clearance in front, for walls and pillars
 
 	if (has_ext_basement()) { // everything should avoid the extended basement door
 		door_t const &eb_door(interior->get_ext_basement_door());
