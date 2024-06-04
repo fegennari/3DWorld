@@ -854,8 +854,24 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		} // for dir
 		return 0;
 	}
-	else {
-		UNROLL_2X(mp[i_][!dim] = centerline;) // else use the centerline, even though it's invalid; rare, and I don't have a non-house example where it looks wrong
+	else { // somewhat rare failure case; can lead to intersections between hot water and cold water pipes
+		float cur_pos(centerline);
+		UNROLL_2X(mp[i_][!dim] = centerline;); // else use the centerline, even though it's invalid
+		// must still avoid stairs and elevators
+		cube_t c(pipe_t(mp[0], mp[1], r_main_spacing, dim, PIPE_MAIN, 3).get_bcube());
+		vect_cube_t avoid;
+		vector_add_to(interior->stairwells, avoid);
+		vector_add_to(interior->elevators,  avoid);
+
+		for (cube_t &a : avoid) {
+			a.expand_by_xy(0.25*wall_thickness); // account for stairs walls
+			if (!c.intersects(a)) continue;
+			bool const move_dir(a.get_center_dim(!dim) < c.get_center_dim(!dim));
+			float const new_pos(a.d[!dim][move_dir] + (move_dir ? 1.0 : -1.0)*r_main_spacing), move_amt(new_pos - cur_pos);
+			c.translate_dim(!dim, move_amt);
+			UNROLL_2X(mp[i_][!dim] += move_amt;);
+			cur_pos = new_pos;
+		} // for a
 	}
 	mp[0][dim] = bcube.d[dim][1]; mp[1][dim] = bcube.d[dim][0]; // make dim range denormalized; will recalculate below with correct range
 	bool const d(!dim);
