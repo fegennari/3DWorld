@@ -1592,12 +1592,15 @@ building_t *building_conn_info_t::get_bldg_containing_pt(building_t &parent, poi
 	return nullptr;
 }
 bool building_conn_info_t::is_visible_through_conn(building_t const &parent, building_t const &target, vector3d const &xlate, float view_dist, bool expand_for_light) const {
+	float const min_dist(target.get_wall_thickness());
+
 	for (conn_pt_t const &c : conn) {
 		if (c.b != &target) continue; // skip wrong building
 
 		for (conn_room_t const &room : c.rooms) {
 			cube_t room_cs(room + xlate);
 			if (!room_cs.closest_dist_less_than(camera_pdu.pos, view_dist)) continue; // too far away
+			if ( room_cs.closest_dist_less_than(camera_pdu.pos, min_dist )) return 1; // in doorway
 			if (expand_for_light) {room_cs.expand_by(view_dist);} // increase the bounds in case room is behind the player but light cast from it is visible
 			if (!camera_pdu.cube_visible(room_cs)) continue;
 			if (!expand_for_light) return 1; // can't ignore closed doors for room objects because they we may not draw the door itself

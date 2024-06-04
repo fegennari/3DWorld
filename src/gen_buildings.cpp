@@ -3280,14 +3280,15 @@ public:
 			return;
 		}
 		bind_default_sun_moon_smap_textures(); // bind default sun/moon smap textures
-		building_t const *new_player_building(nullptr);
+		building_t const *new_player_building (nullptr);
+		static building_t const *vis_conn_bldg(nullptr); // non-player building visible through extended basement connector room
 
 		if (!reflection_pass) {
 			// Note: creating the reflection or security camera image here will also overwrite anything that was previously drawn such as clouds and the Ferris wheel,
 			// which may look wrong if a window is visible in the same frame as a mirror
 			update_security_camera_image();
 			setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass
-			create_mirror_reflection_if_needed();
+			create_mirror_reflection_if_needed(vis_conn_bldg);
 		}
 		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish(), 6.3ms with building interiors)
 		point const camera(get_camera_pos()), camera_bs(camera - xlate);
@@ -3329,8 +3330,8 @@ public:
 		vector<building_t *> buildings_with_cars;
 		vector<point> pts;
 		static brg_batch_draw_t bbd; // allocated memory is reused across building interiors
-		building_t const *vis_conn_bldg=nullptr; // non-player building visible through extended basement connector room
 		bool const defer_people_draw_for_player_building(global_building_params.people_min_alpha > 0.0);
+		vis_conn_bldg = nullptr;
 
 		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
 		if (have_interior) {
@@ -3426,12 +3427,12 @@ public:
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t &b((*i)->get_building(bi->ix));
 						if (!b.interior) continue; // no interior, skip
-						bool player_in_building_bcube(b.bcube.contains_pt_xy(camera_bs) || b.point_in_extended_basement(camera_bs)); // player within building's bcube
-						if (reflection_pass && !player_in_building_bcube) continue; // not the correct building
 						float const bdist_sq(p2p_dist_sq(camera_bs, b.bcube.closest_pt(camera_bs)));
 						//if (bdist_sq > rgeom_clear_dist_sq) {b.clear_room_geom(); continue;} // too far away - is this useful?
 						if (bdist_sq > rgeom_draw_dist_sq) continue; // too far away
+						bool player_in_building_bcube(b.bcube.contains_pt_xy(camera_bs) || b.point_in_extended_basement(camera_bs)); // player within building's bcube
 						bool const ext_basement_conn_visible(b.interior_visible_from_other_building_ext_basement(xlate));
+						if (reflection_pass && !player_in_building_bcube && !ext_basement_conn_visible) continue; // not the correct building
 						bool const debug_draw(0 && b.interior->has_backrooms); // TESTING
 						player_in_building_bcube |= b.check_pt_in_walkway(camera_bs, 1, 1); // owned_only=1, inc_open_door=1
 						if (!debug_draw && !player_in_building_bcube && !ext_basement_conn_visible && !camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC

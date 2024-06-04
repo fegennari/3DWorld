@@ -97,28 +97,34 @@ void draw_scene_for_building_reflection(unsigned &ref_tid, unsigned dim, bool di
 	if (draw_exterior) {draw_cloud_planes(0.0, 0, 1, 1);} // redraw cloud planes since they got overwritten; terrain_zmin=0 (use prev)
 }
 
-void create_mirror_reflection_if_needed() {
-	if (player_building == nullptr) return; // what about pool visible from connected building extended basement?
+void create_mirror_reflection_if_needed(building_t const *vis_conn_bldg) {
+	building_t const *buildings[2] = {player_building, vis_conn_bldg};
+
+	for (unsigned n = 0; n < 2; ++n) { // check player building, then visible connected building
+		building_t const *bldg(buildings[n]);
+		if (bldg == nullptr) continue;
 	
-	if (player_building->water_visible_to_player()) { // draw water plane reflection
-		if (get_camera_pos().z < player_building->interior->water_zval + player_building->get_window_vspace()) { // only if the player is on the same floor as the water
-			cube_t water_cube(player_building->get_water_cube(0));
-			water_cube.z1() = water_cube.z2(); // top surface only
-			mirror_in_ext_basement = 1; // required when extended basement goes outside the building's tile
-			draw_scene_for_building_reflection(room_mirror_ref_tid, 2, 1, water_cube.z2(), 0, 1, 0, 1, 1, water_cube); // +z, not house, interior, basement, no exterior
-			return;
+		if (bldg->water_visible_to_player()) { // draw water plane reflection
+			if (get_camera_pos().z < bldg->interior->water_zval + bldg->get_window_vspace()) { // only if the player is on the same floor as the water
+				cube_t water_cube(bldg->get_water_cube(0));
+				water_cube.z1() = water_cube.z2(); // top surface only
+				mirror_in_ext_basement = 1; // required when extended basement goes outside the building's tile
+				draw_scene_for_building_reflection(room_mirror_ref_tid, 2, 1, water_cube.z2(), 0, 1, 0, 1, 1, water_cube); // +z, not house, interior, basement, no exterior
+				return;
+			}
 		}
-	}
-	if (!is_mirror(cur_room_mirror)) return; // not enabled
-	bool const interior_room(cur_room_mirror.is_interior()), is_house(cur_room_mirror.is_house()), is_open(cur_room_mirror.is_open());
-	// assumes mirror is not facing the doorway to a room with a window; assumes cube-shaped office buildings always use opaque glass block windows
-	bool const can_see_out_windows((is_house || !player_building->is_cube()) && !interior_room && player_building->has_int_windows());
-	bool const is_extb(player_building->point_in_extended_basement_not_basement(cur_room_mirror.get_cube_center()));
-	bool const dim(cur_room_mirror.dim ^ is_open), dir(is_open ? 1 : cur_room_mirror.dir); // always opens in +dir
-	cube_t const mirror_surface(get_mirror_surface(cur_room_mirror));
-	float const reflect_plane(is_open ? mirror_surface.d[dim][1] : cur_room_mirror.d[dim][dir]);
-	draw_scene_for_building_reflection(room_mirror_ref_tid, dim, dir, reflect_plane, is_house, interior_room, can_see_out_windows, is_extb, 0, mirror_surface);
-	cur_room_mirror = room_object_t(); // reset for next frame
+		if (!is_mirror(cur_room_mirror)) continue; // not enabled
+		bool const interior_room(cur_room_mirror.is_interior()), is_house(cur_room_mirror.is_house()), is_open(cur_room_mirror.is_open());
+		// assumes mirror is not facing the doorway to a room with a window; assumes cube-shaped office buildings always use opaque glass block windows
+		bool const can_see_out_windows((is_house || !bldg->is_cube()) && !interior_room && bldg->has_int_windows());
+		bool const is_extb(bldg->point_in_extended_basement_not_basement(cur_room_mirror.get_cube_center()));
+		bool const dim(cur_room_mirror.dim ^ is_open), dir(is_open ? 1 : cur_room_mirror.dir); // always opens in +dir
+		cube_t const mirror_surface(get_mirror_surface(cur_room_mirror));
+		float const reflect_plane(is_open ? mirror_surface.d[dim][1] : cur_room_mirror.d[dim][dir]);
+		draw_scene_for_building_reflection(room_mirror_ref_tid, dim, dir, reflect_plane, is_house, interior_room, can_see_out_windows, is_extb, 0, mirror_surface);
+		cur_room_mirror = room_object_t(); // reset for next frame
+		return;
+	} // for n
 }
 
 bool building_t::line_intersect_walls(point const &p1, point const &p2, bool same_room) const {

@@ -2452,7 +2452,7 @@ void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only);
 void gen_and_draw_people_in_building(ped_draw_vars_t const &pdv);
 vector3d get_nom_car_size();
 bool car_can_fit(cube_t const &c);
-void create_mirror_reflection_if_needed();
+void create_mirror_reflection_if_needed(building_t const *vis_conn_bldg);
 void draw_city_roads(int trans_op_mask, vector3d const &xlate);
 void get_closest_dim_dir_xy(cube_t const &inner, cube_t const &outer, bool &dim, bool &dir);
 bool check_city_tline_cube_intersect_xy(cube_t const &c);

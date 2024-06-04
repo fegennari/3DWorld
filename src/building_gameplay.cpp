@@ -1241,7 +1241,7 @@ void building_t::register_player_enter_building() const {
 void building_t::register_player_exit_building(bool entered_another_building) const {
 	// only collect items in gameplay mode where there's a risk the player can lose them; otherwise, let the player carry items between buildings
 	if (!entered_another_building) {player_inventory.collect_items(!in_building_gameplay_mode());} // only when not in a building
-	clear_building_water_splashes();
+	clear_building_water_splashes(); // what if player exits through a connected extended basement room and the splashes are still visible?
 }
 
 bool is_obj_in_or_on_obj(room_object_t const &parent, room_object_t const &child) {
