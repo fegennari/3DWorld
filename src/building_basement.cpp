@@ -692,6 +692,25 @@ bool has_int_obstacle_or_parallel_wall(cube_t const &c, vect_cube_t const &obsta
 	}
 	return 0;
 }
+void add_pass_through_fittings(room_object_t const &pipe, vect_cube_t const &walls, float fitting_len,
+	float fitting_expand, unsigned dim, colorRGBA const &color, vect_room_object_t &objs)
+{
+	float const min_ext(2.0*fitting_len);
+
+	for (cube_t const &wall : walls) {
+		if (!wall.intersects(pipe)) continue;
+		if (wall.d[dim][0] < pipe.d[dim][0] - min_ext || wall.d[dim][1] > pipe.d[dim][1] + min_ext) continue; // no space for fitting
+		room_object_t pf(pipe);
+		pf.flags = (RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // draw both ends as flat
+		pf.color = color;
+		pf.d[dim][0] = wall.d[dim][0] - fitting_len;
+		pf.d[dim][1] = wall.d[dim][1] + fitting_len;
+		expand_cube_except_in_dim(pf, 0.9*fitting_expand, dim); // expand slightly, less than regular fittings to prevent Z-fighting when overlapped near ends
+		objs.push_back(pf);
+	} // for wall
+}
+
+float const FITTING_LEN(1.25), FITTING_RADIUS(1.1); // relative to radius
 
 bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_riser_pos_t const &risers, vect_cube_t &pipe_cubes,
 	unsigned room_id, unsigned num_floors, unsigned objs_start, float tot_light_amt, float ceil_zval, rand_gen_t &rgen, unsigned pipe_type, bool allow_place_fail)
@@ -700,7 +719,6 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	assert(pipe_type < NUM_PIPE_TYPES);
 	if (risers.empty()) return 0; // can happen for hot water pipes when there are no hot water fixtures
 	float const max_pipe_radius_mult[NUM_PIPE_TYPES] = {0.75, 0.25, 0.2, 0.15}; // sewer, cold water, hot water, gas; in muptiples of wall thickness
-	float const FITTING_LEN(1.25), FITTING_RADIUS(1.1); // relative to radius
 	bool const is_hot_water(pipe_type == PIPE_TYPE_HW), is_closed_loop(is_hot_water), add_insul(is_hot_water);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	assert(objs_start <= objs.size());
@@ -1144,22 +1162,9 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			objs.push_back(pf);
 		}
 		if (p.dim < 2 && !add_insul) { // horizontal pipes only; no fittings on insulated pipes as insulation is flush with the walls
-			float const min_ext(2.0*fitting_len);
-			colorRGBA const color(LT_GRAY); // different from fittings color
-
-			for (unsigned type = 0; type < 2; ++type) { // walls, beams
-				for (cube_t const &wall : (type ? beams : walls)) { // basement walls, parking garage walls, parking garage pillars, and beams
-					if (!wall.intersects(pipe)) continue;
-					if (wall.d[p.dim][0] < pipe.d[p.dim][0] - min_ext || wall.d[p.dim][1] > pipe.d[p.dim][1] + min_ext) continue; // no space for fitting
-					room_object_t pf(pipe);
-					pf.flags = (RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // draw both ends as flat
-					pf.color = color;
-					pf.d[p.dim][0] = wall.d[p.dim][0] - fitting_len;
-					pf.d[p.dim][1] = wall.d[p.dim][1] + fitting_len;
-					expand_cube_except_in_dim(pf, 0.9*fitting_expand, p.dim); // expand slightly, less than regular fittings to prevent Z-fighting when overlapped near ends
-					objs.push_back(pf);
-				} // for wall
-			} // for type
+			// basement walls, parking garage walls, parking garage pillars, and beams
+			add_pass_through_fittings(pipe, walls, fitting_len, fitting_expand, p.dim, LT_GRAY, objs); // different from fittings color
+			add_pass_through_fittings(pipe, beams, fitting_len, fitting_expand, p.dim, LT_GRAY, objs);
 		}
 	} // for p
 	for (pipe_t const &p : fittings) {
@@ -1254,7 +1259,8 @@ int add_sprinkler_pipe(building_t const &b, point const &p1, float end_val, floa
 	if (ret == 0) return 0; // failed to place a pipe at any length
 	bool const is_partial(ret == 2);
 	// encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
-	objs.emplace_back(h_pipe, TYPE_PIPE, room_id, dim, 0, pipe_flags, tot_light_amt, SHAPE_CYLIN, pcolor); // add to pipe_cubes?
+	room_object_t const pipe(h_pipe, TYPE_PIPE, room_id, dim, 0, pipe_flags, tot_light_amt, SHAPE_CYLIN, pcolor); // add to pipe_cubes?
+	objs.push_back(pipe);
 	float const conn_thickness(0.2*radius), conn_max_length(3.2*radius);
 
 	for (unsigned d = 0; d < 2; ++d) { // add connector segments
@@ -1311,6 +1317,9 @@ int add_sprinkler_pipe(building_t const &b, point const &p1, float end_val, floa
 			add_hanging_pipe_bracket(h_pipe, len_pos, ceiling_zval, dim, room_id, tot_light_amt, objs_start+1, objs, obstacles, walls);
 		}
 	}
+	// add fittings at parking garage walls and pillars; only added to the top floor because walls haven't yet been added to the lower levels
+	float const fitting_len(FITTING_LEN*radius), fitting_expand((FITTING_RADIUS - 1.0)*radius);
+	add_pass_through_fittings(pipe, walls, fitting_len, fitting_expand, dim, ccolor, objs);
 	return ret;
 }
 void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes,
