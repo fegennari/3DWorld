@@ -932,7 +932,7 @@ bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i,
 
 void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: ix encodes 2*dim+dir
 	windows.clear();
-	if (!has_int_windows() || is_rotated()) return; // no windows; rotated buildings not handled
+	if (!has_int_windows() || is_rotated() || !is_cube()) return; // no windows; rotated and non-cube buildings are not handled
 	float const window_h_border(WINDOW_BORDER_MULT*get_window_h_border()), window_v_border(WINDOW_BORDER_MULT*get_window_v_border()); // (0, 1) range
 	vect_room_object_t blinds;
 
