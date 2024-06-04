@@ -1896,8 +1896,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				light_bc2.intersect_with_cube(get_elevator(i->obj_id)); // clip to elevator to avoid light leaking onto walls outside but near the elevator
 			}
 			else if (!is_in_attic && !is_exterior) {
+				// expand slightly so that points exactly on the room bounds and exterior doors are included; not for backrooms because it already contains the wall width
 				cube_t room_exp(get_walkable_room_bounds(room));
-				room_exp.expand_by(room_xy_expand); // expand slightly so that points exactly on the room bounds and exterior doors are included
+				if (!room.is_backrooms()) {room_exp.expand_by(room_xy_expand);}
 
 				if (room.open_wall_mask && !room.is_hallway) { // don't clamp on open wall sides, except for hallways
 					for (unsigned d = 0; d < 2; ++d) {
