@@ -286,6 +286,20 @@ vector3d building_t::get_parked_car_size() const {
 	return get_window_vspace()*vector3d(1.67, 0.73, 0.45); // no cars, use size relative to building floor spacing
 }
 
+void add_pg_obstacles(vect_room_object_t const &objs, unsigned objs_start, unsigned objs_end, vect_cube_t &walls, vect_cube_t &beams, vect_cube_t &obstacles) {
+	assert(objs_start <= objs_end);
+
+	for (auto i = objs.begin()+objs_start; i != objs.begin()+objs_end; ++i) {
+		if (i->type == TYPE_PG_WALL) {walls.push_back(*i);} // wall
+		else if (i->type == TYPE_PG_PILLAR) { // pillar
+			walls    .push_back(*i); // included in walls
+			obstacles.push_back(*i); // pillars also count as obstacles
+		}
+		else if (i->type == TYPE_PG_BEAM) {beams    .push_back(*i);} // ceiling beam
+		//else if (i->type == TYPE_RAMP   ) {obstacles.push_back(*i);} // ramps are obstacles for pipes, but they're already added
+	} // for i
+}
+
 void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 	unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z)
 {
@@ -565,17 +579,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		// avoid intersecting lights, pillars, walls, stairs, elevators, and ramps;
 		// note that lights haven't been added yet though, but they're placed on beams, so we can avoid beams instead
 		vect_cube_t walls, beams;
-
-		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
-			if (i->type == TYPE_PG_WALL) {walls.push_back(*i);} // wall
-			else if (i->type == TYPE_PG_PILLAR) { // pillar
-				walls    .push_back(*i); // included in walls
-				obstacles.push_back(*i); // pillars also count as obstacles
-				obstacles.back().z1() = room.z1(); // extend down to all floors so that these work with sprinkler pipes on a lower floor
-			}
-			else if (i->type == TYPE_PG_BEAM) {beams    .push_back(*i);} // ceiling beam
-			else if (i->type == TYPE_RAMP   ) {obstacles.push_back(*i);} // ramps are obstacles for pipes
-		} // for i
+		add_pg_obstacles(objs, objs_start, objs.size(), walls, beams, obstacles);
 		add_basement_electrical(obstacles, walls, beams, room_id, pipe_light_amt, rgen);
 		// get pipe ends (risers) coming in through the ceiling
 		vect_riser_pos_t sewer, cold_water, hot_water, gas_pipes;
@@ -598,7 +602,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		for (auto i = objs.begin()+interior->room_geom->wall_ps_start; i < objs.begin()+objs_start; ++i) {
 			if (i->type == TYPE_LIGHT && room.contains_cube(*i)) {obstacles.push_back(*i);}
 		}
-		add_sprinkler_pipes(obstacles, walls, beams, pipe_cubes, room_id, num_floors, pipe_light_amt, rgen);
+		add_sprinkler_pipes(obstacles, walls, beams, pipe_cubes, room_id, num_floors, objs_start, pipe_light_amt, rgen);
 	}
 }
 
@@ -1317,13 +1321,13 @@ int add_sprinkler_pipe(building_t const &b, point const &p1, float end_val, floa
 			add_hanging_pipe_bracket(h_pipe, len_pos, ceiling_zval, dim, room_id, tot_light_amt, objs_start+1, objs, obstacles, walls);
 		}
 	}
-	// add fittings at parking garage walls and pillars; only added to the top floor because walls haven't yet been added to the lower levels
+	// add fittings at parking garage walls and pillars
 	float const fitting_len(FITTING_LEN*radius), fitting_expand((FITTING_RADIUS - 1.0)*radius);
 	add_pass_through_fittings(pipe, walls, fitting_len, fitting_expand, dim, ccolor, objs);
 	return ret;
 }
 void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes,
-		unsigned room_id, unsigned num_floors, float tot_light_amt, rand_gen_t &rgen)
+		unsigned room_id, unsigned num_floors, unsigned objs_start, float tot_light_amt, rand_gen_t &rgen)
 {
 	// add red sprinkler system pipe
 	float const floor_spacing(get_window_vspace()), fc_thickness(get_fc_thickness());
@@ -1379,19 +1383,27 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 		float const ceil_gap(max(0.25f*fc_thickness, 0.05f*get_floor_ceil_gap())); // make enough room for both flange + bolts and ceiling beams
 
 		for (unsigned f = 0; f < num_floors; ++f) {
+			bool const lf(f+1 < num_floors);
+			vect_cube_t walls2, beams2, obstacles2;
+
+			if (lf) { // query walls/beams/obstacles added to lower floors in previous PG placement steps
+				obstacles2 = obstacles; // copy existing obstacles, since the stairs, elevators, ramps, etc. that aren't objects or per-floor are needed
+				add_pg_obstacles(objs, interior->room_geom->wall_ps_start, objs_start, walls2, beams2, obstacles2);
+			}
+			vect_cube_t const &walls_(lf ? walls2 : walls), &beams_(lf ? beams2 : beams), &obstacles_(lf ? obstacles2 : obstacles);
 			float const ceiling_zval(basement.z1() + (f+1)*floor_spacing - fc_thickness);
 			point p1(center); // vertical pipe center
 			// place below the ceiling so that fittings just touch beams rather than clipping through them; however, pipes may still clip through lights placed on beams
 			p1.z = ceiling_zval - ceil_gap - h_pipe_radius - conn_thickness;
 			unsigned const pipe_obj_ix(objs.size());
 			float const wpos(basement.d[dim][!dir]); // extend to the opposite wall
-			int const ret(add_sprinkler_pipe(*this, p1, wpos, h_pipe_radius, dim, dir, obstacles, walls, beams, pipe_cubes,
+			int const ret(add_sprinkler_pipe(*this, p1, wpos, h_pipe_radius, dim, dir, obstacles_, walls_, beams_, pipe_cubes,
 				interior->pg_ramp, ceiling_zval, room_id, tot_light_amt, objs, pcolor, ccolor, 0)); // sprinklers=0
 			
 			if (ret == 0) { // failed to place
 				// try to run horizontal pipe in the opposite dim, but don't connect branch lines because the pipe may be too close to the wall and the code would be messy
 				bool const other_dir(basement.get_center_dim(!dim) < p1[!dim]);
-				add_sprinkler_pipe(*this, p1, basement.d[!dim][!other_dir], h_pipe_radius, !dim, other_dir, obstacles, walls, beams, pipe_cubes,
+				add_sprinkler_pipe(*this, p1, basement.d[!dim][!other_dir], h_pipe_radius, !dim, other_dir, obstacles_, walls_, beams_, pipe_cubes,
 					interior->pg_ramp, ceiling_zval, room_id, tot_light_amt, objs, pcolor, ccolor, 0); // sprinklers=0
 				continue;
 			}
@@ -1410,7 +1422,7 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 
 				for (unsigned d = 0; d < 2; ++d) { // extend to either side of the pipe
 					float const wpos2(basement.d[!dim][!d]); // extend to the opposite wall
-					added |= add_sprinkler_pipe(*this, p1, wpos2, conn_radius, !dim, d, obstacles, walls, beams, pipe_cubes,
+					added |= add_sprinkler_pipe(*this, p1, wpos2, conn_radius, !dim, d, obstacles_, walls_, beams_, pipe_cubes,
 						interior->pg_ramp, ceiling_zval, room_id, tot_light_amt, objs, pcolor, ccolor, (inverted_sprinklers ? 1 : 2)); // add sprinklers
 				}
 				if (added) { // if conn was added in either dir, add a connector segment

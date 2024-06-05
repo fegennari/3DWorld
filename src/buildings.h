@@ -2120,7 +2120,7 @@ private:
 	bool add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_riser_pos_t const &risers, vect_cube_t &pipe_cubes,
 		unsigned room_id, unsigned num_floors, unsigned objs_start, float tot_light_amt, float ceil_zval, rand_gen_t &rgen, unsigned pipe_type, bool allow_place_fail=0);
 	void add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes,
-		unsigned room_id, unsigned num_floors, float tot_light_amt, rand_gen_t &rgen);
+		unsigned room_id, unsigned num_floors, unsigned objs_start, float tot_light_amt, rand_gen_t &rgen);
 	void get_pipe_basement_water_connections(vect_riser_pos_t &sewer, vect_riser_pos_t &cold_water, vect_riser_pos_t &hot_water, rand_gen_t &rgen) const;
 	void get_pipe_basement_gas_connections  (vect_riser_pos_t &pipes) const;
 	void add_basement_electrical(vect_cube_t &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, int room_id, float tot_light_amt, rand_gen_t &rgen);
