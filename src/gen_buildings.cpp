@@ -3542,6 +3542,11 @@ public:
 			set_std_depth_func(); // restore
 			glDisable(GL_CULL_FACE);
 
+			if (!reflection_pass && this_frame_camera_in_building && camera_surf_collide) { // draw lower part of player model
+				glDisable(GL_DEPTH_CLAMP);
+				draw_player_model(s, xlate, 0);
+				setup_depth_clamp(); // restore
+			}
 			if (!reflection_pass) { // update once; non-interior buildings (such as city buildings) won't update this
 				camera_in_building = this_frame_camera_in_building;
 				player_in_basement = this_frame_player_in_basement;
