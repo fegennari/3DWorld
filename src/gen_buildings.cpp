@@ -3542,7 +3542,8 @@ public:
 			set_std_depth_func(); // restore
 			glDisable(GL_CULL_FACE);
 
-			if (!reflection_pass && this_frame_camera_in_building && camera_surf_collide) { // draw lower part of player model
+			// draw lower part of player model if not flying; doesn't work well when crouching
+			if (!reflection_pass && this_frame_camera_in_building && camera_surf_collide && global_building_params.show_player_model) {
 				glDisable(GL_DEPTH_CLAMP);
 				draw_player_model(s, xlate, 0);
 				setup_depth_clamp(); // restore

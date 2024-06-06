@@ -20,6 +20,7 @@ buildings place_radius 80.0 # for secondary buildings
 buildings max_rot_angle 0.0 # terrain flatten doesn't work well for rotated buildings because it uses their unrotated bbox
 include building_materials.txt
 buildings tt_only 1
+buildings show_player_model 0 # works, but we can see down the neck and the shoulders are clipped off
 
 # building AI logic
 buildings ai_opens_doors      2 # AI can open closed building doors rather than stopping at them: 0=don't open doors, 1=only open if player closed door after path selection; 2=always open doors
