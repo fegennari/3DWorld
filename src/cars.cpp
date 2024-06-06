@@ -350,14 +350,16 @@ bool car_t::front_intersects_car(car_t const &c) const {
 	return (c.bcube.contains_pt(get_front(0.25)) || c.bcube.contains_pt(get_front(0.5))); // check front-middle and very front
 }
 
-void car_t::honk_horn_if_close() const {
-	if (map_mode || camera_in_building) return; // no honking in overhead map mode or when the player is inside a building
-	point const pos(get_center()), pos_cs(pos + get_tiled_terrain_model_xlate());
-	
-	if (dist_less_than(pos_cs, get_camera_pos(), 1.0*city_params.road_spacing)) {
+void play_car_sound_if_close(point const &pos, int sound_id) {
+	if (map_mode || camera_in_building) return; // no sound in overhead map mode or when the player is inside a building
+
+	if (dist_less_than((pos + get_tiled_terrain_model_xlate()), get_camera_pos(), 1.0*city_params.road_spacing)) {
 #pragma omp critical(gen_sound)
-		gen_sound(SOUND_HORN, pos);
+		gen_sound(sound_id, pos, 1.0, 1.0, 0, zero_vector, 1); // skip if already playing
 	}
+}
+void car_t::honk_horn_if_close() const {
+	play_car_sound_if_close(get_center(), SOUND_HORN);
 }
 void car_t::honk_horn_if_close_and_fast() const {
 	if (cur_speed > 0.25*max_speed) {honk_horn_if_close();}
@@ -573,6 +575,9 @@ bool is_police_car(car_model_loader_t const &car_model_loader, car_t const &car)
 	string const &fn(car_model_loader.get_model(car.model_id).fn);
 	return (fn.find("Police") != string::npos || fn.find("police") != string::npos);
 }
+bool is_active_police_car(car_model_loader_t const &car_model_loader, car_t const &car, unsigned active_mod) {
+	return (!(car.get_unique_id() % active_mod) && !car.is_parked() && is_police_car(car_model_loader, car));
+}
 
 void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // Note: all quads
 	if (car.destroyed) return;
@@ -701,7 +706,7 @@ void car_draw_state_t::draw_helicopter(helicopter_t const &h, bool shadow_only) 
 }
 
 void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube) {
-	if (!(car.get_unique_id() & 3) && !car.is_parked() && is_police_car(car_model_loader, car)) { // add flashing lights for 25% of police cars
+	if (is_active_police_car(car_model_loader, car, 4)) { // add flashing lights for 25% of police cars
 		float const flash_cycle(fract(3.0*((animate2 ? tfticks/TICKS_PER_SECOND : 0.0) + 100.0*car.max_speed))); // different per car
 
 		for (unsigned d = 0; d < 2; ++d) { // L, R
@@ -1116,6 +1121,7 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 		if (i->entering_city) {entering_city.push_back(cix);} // record for use in collision detection
 		if (!i->stopped_at_light && i->is_almost_stopped() && i->in_isect()) {get_car_isec(*i).stoplight.mark_blocked(i->dim, i->dir);} // blocking intersection
 		register_car_at_city(*i);
+		if (is_active_police_car(car_model_loader, *i, 8)) {play_car_sound_if_close(i->get_center(), SOUND_POLICE);} // only 1 in 8 cars
 	} // for i
 	if (!saw_parked && !car_blocks.empty()) {car_blocks.back().first_parked = cars.size();} // no parked cars in final city
 	car_blocks.emplace_back(cars.size(), 0); // add terminator
@@ -1370,7 +1376,7 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 		} // end moving case
 	} // for i
 	// player a looping helicopter sound if close and not in a basement, but don't attenuate the gain with dist because it will only be updated at the beginning of each loop
-	if (!player_in_basement && closest_pos != all_zeros && dist_less_than(closest_pos, camera_bs, 0.25f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
+	if (!map_mode && !player_in_basement && closest_pos != all_zeros && dist_less_than(closest_pos, camera_bs, 0.25f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
 #pragma omp critical(gen_sound)
 		gen_sound(SOUND_HELICOPTER, (closest_pos + xlate), get_tt_building_sound_gain(), 1.0, 0, zero_vector, 1); // skip_if_already_playing=1
 	}
