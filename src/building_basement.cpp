@@ -587,14 +587,14 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		vect_cube_t pipe_cubes;
 		// hang sewer pipes under the ceiling beams; hang water pipes from the ceiling, above sewer pipes and through the beams
 		float const ceil_zval(beam.z1()), water_ceil_zval(beam.z2());
-		add_basement_pipes(obstacles, walls, beams, sewer,      pipe_cubes, room_id, num_floors, objs_start, pipe_light_amt, ceil_zval,      rgen, PIPE_TYPE_SEWER); // sewer
+		add_basement_pipes(obstacles, walls, beams, sewer,      pipe_cubes, room_id, num_floors, objs_start, pipe_light_amt, ceil_zval,      rgen, PIPE_TYPE_SEWER, 0); // sewer
 		add_to_and_clear(pipe_cubes, obstacles); // add sewer pipes to obstacles
-		add_basement_pipes(obstacles, walls, beams, cold_water, pipe_cubes, room_id, num_floors, objs_start, pipe_light_amt, water_ceil_zval, rgen, PIPE_TYPE_CW  ); // cold water
+		add_basement_pipes(obstacles, walls, beams, cold_water, pipe_cubes, room_id, num_floors, objs_start, pipe_light_amt, water_ceil_zval, rgen, PIPE_TYPE_CW,   0); // cold water
 		add_to_and_clear(pipe_cubes, obstacles); // add cold water pipes to obstacles
-		add_basement_pipes(obstacles, walls, beams, hot_water,  pipe_cubes, room_id, num_floors, objs_start, pipe_light_amt, water_ceil_zval, rgen, PIPE_TYPE_HW  ); // hot water
+		add_basement_pipes(obstacles, walls, beams, hot_water,  pipe_cubes, room_id, num_floors, objs_start, pipe_light_amt, water_ceil_zval, rgen, PIPE_TYPE_HW,   1); // hot water
 		add_to_and_clear(pipe_cubes, obstacles); // add hot water pipes to obstacles
 		get_pipe_basement_gas_connections(gas_pipes);
-		add_basement_pipes(obstacles, walls, beams, gas_pipes,  pipe_cubes, room_id, num_floors, objs_start, pipe_light_amt, water_ceil_zval, rgen, PIPE_TYPE_GAS, 1); // gas
+		add_basement_pipes(obstacles, walls, beams, gas_pipes,  pipe_cubes, room_id, num_floors, objs_start, pipe_light_amt, water_ceil_zval, rgen, PIPE_TYPE_GAS,  1); // gas
 		add_to_and_clear(pipe_cubes, obstacles); // add gas pipes to obstacles
 
 		// if there are multiple parking garage floors, lights have already been added on the floor(s) below; add them as occluders for sprinkler pipes;
