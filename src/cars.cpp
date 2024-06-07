@@ -578,18 +578,19 @@ bool is_police_car(car_model_loader_t const &car_model_loader, car_t const &car)
 bool is_active_police_car(car_model_loader_t const &car_model_loader, car_t const &car, unsigned active_mod) {
 	return (!(car.get_unique_id() % active_mod) && !car.is_parked() && is_police_car(car_model_loader, car));
 }
-bool get_police_car_flashing_light(car_model_loader_t const &car_model_loader, car_t const &car, point &lpos, colorRGBA &color) {
+int get_police_car_flashing_light(car_model_loader_t const &car_model_loader, car_t const &car, vector3d front_n, point &lpos, colorRGBA &color) {
 	if (!is_active_police_car(car_model_loader, car, 4)) return 0; // add flashing lights for 25% of police cars
 	float const flash_cycle(fract(3.0*((animate2 ? tfticks/TICKS_PER_SECOND : 0.0) + 100.0*car.max_speed))); // different per car
 
 	for (unsigned d = 0; d < 2; ++d) { // L, R
 		if (d ? !(flash_cycle < 0.25) : !(flash_cycle > 0.5 && flash_cycle < 0.75)) continue; // 25% duty cycle for each light in opposite patterns
 		lpos = car.get_center();
-		lpos[ car.dim] += (car.dir ? -1.0 : 1.0)*0.06*car.get_length(); // slightly toward the back
-		lpos[!car.dim] += (!d      ? -1.0 : 1.0)*0.21*car.get_width (); // to the sides
+		if (front_n == zero_vector) {front_n[car.dim] = (car.dir ? 1.0 : -1.0);} // approximate - correct for straight roads
+		lpos  -= front_n*0.06*car.get_length(); // slightly toward the back
+		lpos  += cross_product(front_n, plus_z).get_norm()*((d ^ car.dim ^ car.dir) ? 1.0 : -1.0)*0.21*car.get_width(); // to the sides
 		lpos.z = car.bcube.z2() + 0.15*car.bcube.dz(); // top; high enough to not self shadow too much
 		color  = ((d ^ (car.dim ^ car.dir)) ? RED : BLUE); // red on right, blue on left (opposite of most police cars)
-		return 1;
+		return d+1;
 	} // for d
 	return 0;
 }
@@ -696,18 +697,25 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 	}
 	point lpos;
 	colorRGBA lcolor;
+	int const ret(get_police_car_flashing_light(car_model_loader, car, front_n, lpos, lcolor));
 
-	if (get_police_car_flashing_light(car_model_loader, car, lpos, lcolor)) {
+	if (ret) {
+		bool const side(ret - 1);
 		float const radius(0.1*car.get_width());
-		vector3d front_offset, side_offset;
-		front_offset[ car.dim] = 0.3*radius;
-		side_offset [!car.dim] = 0.6*radius;
+		vector3d const front_offset(front_n*0.3*radius);
+		vector3d const side_offset(cross_product(front_n, plus_z).get_norm()*sign*(side ? 1.0 : -1.0)*0.6*radius);
 		lpos.z -= 0.7*radius;
 
 		for (unsigned d = 0; d < 2; ++d) { // for each side of light bar
 			vector3d const delta((d ? 1.0 : -1.0)*front_offset), normal(delta.get_norm());
 			for (unsigned n = 0; n < 4; ++n) {add_light_flare((lpos + delta + (n - 1.5)*side_offset), normal, lcolor, 1.0, radius);} // 4 segments
 		}
+		if (lpos.z + xlate.z < camera_pdu.pos.z) { // lights on the top
+			for (unsigned n = 0; n < 4; ++n) {add_light_flare((lpos + 0.2*radius*plus_z + (n - 1.5)*side_offset), plus_z, lcolor, 1.0, radius);} // 4 segments
+		}
+		// light on the end
+		point const end_pos(lpos + 2.0*side_offset);
+		add_light_flare(end_pos, side_offset.get_norm(), lcolor, 1.0, radius);
 	}
 }
 
@@ -738,7 +746,7 @@ void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube
 	point lpos;
 	colorRGBA lcolor;
 
-	if (get_police_car_flashing_light(car_model_loader, car, lpos, lcolor)) {
+	if (get_police_car_flashing_light(car_model_loader, car, zero_vector, lpos, lcolor)) {
 		float const light_dist(0.8*get_headlight_dist());
 		cube_t pl_bcube(lpos);
 		pl_bcube.expand_by(light_dist);
