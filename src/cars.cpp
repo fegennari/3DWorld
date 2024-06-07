@@ -575,11 +575,20 @@ bool is_police_car(car_model_loader_t const &car_model_loader, car_t const &car)
 	string const &fn(car_model_loader.get_model(car.model_id).fn);
 	return (fn.find("Police") != string::npos || fn.find("police") != string::npos);
 }
-bool is_active_police_car(car_model_loader_t const &car_model_loader, car_t const &car, unsigned active_mod) {
-	return (!(car.get_unique_id() % active_mod) && !car.is_parked() && is_police_car(car_model_loader, car));
+bool is_ambulance(car_model_loader_t const &car_model_loader, car_t const &car) {
+	string const &fn(car_model_loader.get_model(car.model_id).fn);
+	return (fn.find("Ambulance") != string::npos || fn.find("ambulance") != string::npos);
 }
+bool is_active_emergency_vehicle(car_model_loader_t const &car_model_loader, car_t const &car, bool lights, bool siren) {
+	assert(lights != siren); // exactly one
+	unsigned const active_mod(lights ? 4 : 8); // lights 25% of the time, sirens 12.5% of the time
+	if ((car.get_unique_id() % active_mod) || car.is_parked()) return 0;
+	// currently, both police cars and ambulances have sirens, but only police cars have flashing lights
+	return (is_police_car(car_model_loader, car) || (siren && is_ambulance(car_model_loader, car)));
+}
+// what about ambulances?
 int get_police_car_flashing_light(car_model_loader_t const &car_model_loader, car_t const &car, vector3d front_n, point &lpos, colorRGBA &color) {
-	if (!is_active_police_car(car_model_loader, car, 4)) return 0; // add flashing lights for 25% of police cars
+	if (!is_active_emergency_vehicle(car_model_loader, car, 1, 0)) return 0; // lights=1, siren=0
 	float const flash_cycle(fract(3.0*((animate2 ? tfticks/TICKS_PER_SECOND : 0.0) + 100.0*car.max_speed))); // different per car
 
 	for (unsigned d = 0; d < 2; ++d) { // L, R
@@ -699,7 +708,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 	colorRGBA lcolor;
 	int const ret(get_police_car_flashing_light(car_model_loader, car, front_n, lpos, lcolor));
 
-	if (ret) {
+	if (ret) { // what about ambulances?
 		bool const side(ret - 1);
 		float const radius(0.1*car.get_width());
 		vector3d const front_offset(front_n*0.3*radius);
@@ -1152,7 +1161,7 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 		if (i->entering_city) {entering_city.push_back(cix);} // record for use in collision detection
 		if (!i->stopped_at_light && i->is_almost_stopped() && i->in_isect()) {get_car_isec(*i).stoplight.mark_blocked(i->dim, i->dir);} // blocking intersection
 		register_car_at_city(*i);
-		if (is_active_police_car(car_model_loader, *i, 8)) {play_car_sound_if_close(i->get_center(), SOUND_POLICE);} // only 1 in 8 cars
+		if (is_active_emergency_vehicle(car_model_loader, *i, 0, 1)) {play_car_sound_if_close(i->get_center(), SOUND_POLICE);} // lights=0, siren=1
 	} // for i
 	if (!saw_parked && !car_blocks.empty()) {car_blocks.back().first_parked = cars.size();} // no parked cars in final city
 	car_blocks.emplace_back(cars.size(), 0); // add terminator
