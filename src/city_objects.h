@@ -545,7 +545,7 @@ private:
 	bool check_bird_walkway_clearance(cube_t const &bc) const;
 	void place_birds(cube_t const &city_bcube, rand_gen_t &rgen);
 	void add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix);
-	void place_signs_in_isec(road_isec_t &isec);
+	void place_stopsigns_in_isec(road_isec_t &isec);
 	void place_objects_in_isec(road_isec_t const &isec, bool is_residential, rand_gen_t &rgen);
 	void add_ssign_and_slight_plot_colliders(vector<road_plot_t> const &plots, vector<road_isec_t> const isecs[3], vector<vect_cube_t> &plot_colliders) const;
 	void add_objs_on_buildings(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders);

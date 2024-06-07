@@ -1497,7 +1497,7 @@ void city_obj_placer_t::add_house_driveways(road_plot_t const &plot, vect_cube_t
 	}
 }
 
-void city_obj_placer_t::place_signs_in_isec(road_isec_t &isec) {
+void city_obj_placer_t::place_stopsigns_in_isec(road_isec_t &isec) {
 	if (isec.has_stoplight) return; // can't have both a stoplight and a stopsign
 	if (isec.num_conn == 2) return; // skip for 2-way intersections (bends)
 	float const height(isec.get_stop_sign_height()), width(0.3*height);
@@ -1663,7 +1663,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	} // for i (plot)
 	for (unsigned n = 0; n < 3; ++n) {
 		for (road_isec_t &isec : isecs[n]) {
-			place_signs_in_isec(isec); // Note: not a plot, can't use plot colliders
+			place_stopsigns_in_isec(isec); // Note: not a plot, can't use plot colliders
 			place_objects_in_isec(isec, is_residential, rgen);
 		}
 	}
