@@ -1484,6 +1484,7 @@ bool building_room_geom_t::expand_object(room_object_t &c, building_t const &bui
 	case TYPE_CABINET: case TYPE_COUNTER: case TYPE_KSINK: expand_cabinet(c); break;
 	case TYPE_MIRROR:    expand_med_cab(c); break;
 	case TYPE_BRK_PANEL: expand_breaker_panel(c, building); break;
+	//case TYPE_TCAN:      expand_trashcan(c); break;
 	default: assert(0); // not a supported expand type
 	}
 	if (c.type == TYPE_CLOSET) {maybe_spawn_spider_in_drawer(c, c, 0, building.get_window_vspace(), 1);} // spawn spider when first opened

@@ -257,6 +257,14 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 		if (!avoid.is_all_zeros() && c.intersects_xy(avoid)) continue; // bad placement
 		if (is_obj_placement_blocked(c, room, !room.is_hallway) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
 		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, 0, tot_light_amt, (cylin ? SHAPE_CYLIN : SHAPE_CUBE), tcan_colors[rgen.rand()%NUM_TCAN_COLORS]);
+
+		if ((is_house || zval < ground_floor_z1 + 2.0*floor_spacing) && rgen.rand_bool()) { // add trash to the trashcan; not on upper floors of office buildings
+			// TODO: add multiple trash objects?
+			float const trash_radius(min(0.6*radius, 0.25*height));
+			cube_t trash;
+			trash.set_from_sphere((center + trash_radius*plus_z), trash_radius);
+			objs.emplace_back(trash, TYPE_TRASH, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SPHERE);
+		}
 		return; // done
 	} // for n
 }

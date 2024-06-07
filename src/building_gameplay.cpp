@@ -1338,6 +1338,12 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			point p1c(at_pos), p2c(p2);
 			if (!do_line_clip(p1c, p2c, obj_bcube.d)) continue; // test ray intersection vs. bcube
 			float dsq(p2p_dist(at_pos, p1c)); // use closest intersection point
+
+			// check trash in trashcan; if found, set dist closer than the trashcan
+			if (i->type == TYPE_TRASH && in_dir.z < -0.75 && vect_id == 0 && closest_obj_id >= 0) {
+				room_object_t const &cur_closest(objs[closest_obj_id]);
+				if (cur_closest.type == TYPE_TCAN && cur_closest.contains_pt(i->get_cube_center())) {dsq = 0.9*dmin_sq;}
+			}
 			if (dmin_sq > 0.0 && dsq > dmin_sq)       continue; // not the closest
 			if (obj_bcube.contains_pt(at_pos))        continue; // skip when the player is standing inside a plant, etc.
 			if (player_in_elevator && !i->in_elevator() && !i->is_dynamic()) continue; // can't take an elevator call button from inside the elevator
@@ -1651,6 +1657,13 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 		cube_t bc(old_obj);
 		bc.z2() += building.get_wall_thickness();
 		building.remove_paint_in_cube(bc);
+	}
+	if (old_obj.type == TYPE_TCAN) {
+		for (unsigned i = obj_id+1; i < objs.size(); ++i) {
+			room_object_t &c(objs[i]);
+			if (c.type != TYPE_TRASH || !old_obj.contains_pt(c.get_cube_center())) break; // no more trash
+			c.remove(); // remove trash as well
+		}
 	}
 	if (is_light) {invalidate_lights_geom();}
 	update_draw_state_for_room_object(old_obj, building, 1);

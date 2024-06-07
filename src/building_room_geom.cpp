@@ -4762,6 +4762,8 @@ void building_room_geom_t::add_lava_lamp(room_object_t const &c) {
 
 void building_room_geom_t::add_trash(room_object_t const &c) {
 	// TODO: maybe a ball of wrinkled paper; could be based on obj_id
+	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
+	mat.add_sphere_to_verts(c, apply_light_color(c)); // placeholder sphere
 }
 
 void building_room_geom_t::add_debug_shape(room_object_t const &c) {
