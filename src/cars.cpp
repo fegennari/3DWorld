@@ -845,9 +845,9 @@ void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rg
 		car_model_loader.get_model(car.model_id).custom_color = car_model_loader.get_avg_color(car.model_id); // precompute and cache; may require loading models here
 		car.color_id = 255; // special 'use model file custom color' value
 	}
-	if      (fixed_color == -2) {car.color_id = 255;} // special 'use model file custom color' value; custom_color should already be set
+	else if (fixed_color == -2) {car.color_id = 255;} // special 'use model file custom color' value; custom_color should already be set
 	else if (fixed_color == -1) {car.color_id = (local_rgen.rand() % NUM_CAR_COLORS);} // choose a random color
-	else {car.color_id = fixed_color;} // use this specific fixed color
+	else                        {car.color_id = fixed_color;} // use this specific fixed color
 	assert(car.is_valid());
 }
 void car_manager_t::finalize_cars() {
