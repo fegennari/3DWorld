@@ -315,6 +315,7 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 				}
 			}
 		} // for d
+		// what about placing hospital signs with arrows at intersections?
 	} // end hospital
 	if (name.empty())  return; // no company name; shouldn't get here
 	if (num_sides & 1) return; // odd number of sides, may not be able to place a sign correctly (but maybe we can check this with a collision test with conn?)

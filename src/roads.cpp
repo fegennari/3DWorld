@@ -924,6 +924,7 @@ void road_isec_t::draw_stoplights_and_street_signs(road_draw_state_t &dstate, ve
 				add_sign_text_verts(ext,       sign_ext,  dim, text_dir, WHITE, dstate.text_verts); // smaller text
 				//add_sign_text_verts(name, sign, dim, text_dir, WHITE, dstate.text_verts); // single font size text
 			}
+			// what about adding hospital signs with arrows for commercial cities if there's a hospital nearby? how do we determine this?
 		} // end street sign
 	} // for n
 }
