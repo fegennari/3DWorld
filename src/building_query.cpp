@@ -1686,7 +1686,7 @@ public:
 					type == TYPE_DBG_SHAPE || type == TYPE_POOL_CUE || type == TYPE_WALL_MOUNT || type == TYPE_FALSE_DOOR || type == TYPE_FLASHLIGHT || type == TYPE_CANDLE ||
 					type == TYPE_CAMERA || type == TYPE_CLOCK || type == TYPE_DOWNSPOUT || type == TYPE_CHIM_CAP || type == TYPE_FOOD_BOX || type == TYPE_LADDER ||
 					type == TYPE_LAVALAMP || type == TYPE_POOL_LAD || type == TYPE_PADLOCK || type == TYPE_KEY || type == TYPE_HANGER || type == TYPE_CLOTHES ||
-					type == TYPE_WALL_LAMP || type == TYPE_SILVER || type == TYPE_TOY_MODEL || type == TYPE_CEIL_FAN || type == TYPE_FOLD_SHIRT) continue;
+					type == TYPE_WALL_LAMP || type == TYPE_SILVER || type == TYPE_TOY_MODEL || type == TYPE_CEIL_FAN || type == TYPE_FOLD_SHIRT || type == TYPE_TRASH) continue;
 				if (z1 > obj.z2() || z2 < obj.z1()) continue; // zval test
 
 				if (obj.type == TYPE_PARK_SPACE) {

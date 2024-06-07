@@ -4760,6 +4760,10 @@ void building_room_geom_t::add_lava_lamp(room_object_t const &c) {
 	for (auto i = mat.itri_verts.begin()+vix_start; i != mat.itri_verts.end(); ++i) {i->set_norm(-plus_z);} // normals point down
 }
 
+void building_room_geom_t::add_trash(room_object_t const &c) {
+	// TODO: maybe a ball of wrinkled paper; could be based on obj_id
+}
+
 void building_room_geom_t::add_debug_shape(room_object_t const &c) {
 	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
 
