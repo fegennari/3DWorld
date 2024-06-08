@@ -273,24 +273,24 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 	static vect_cube_t temp; // used across calls for subtracting holes
 		
 	for (auto c = objs.begin(); c != objs.end(); ++c) { // Note: ignores expanded objects (including shelf rack objects)
-		if (!c->is_visible())          continue;
-		if (c->type  == TYPE_ELEVATOR) continue; // elevator cars/internals can move so should not contribute to lighting
-		if (c->type  == TYPE_SHOWER  ) continue; // transparent
-		if (c->type  == TYPE_BLOCKER || c->type == TYPE_COLLIDER) continue; // blockers and colliders are not drawn
-		if (c->shape == SHAPE_ANGLED)  continue; // sloped objects such as parking garage and pool ramps aren't cubes
-		if (c->is_exterior())          continue; // interior objects only
+		room_object const type(c->type);
+		if (!c->is_visible())         continue;
+		if (type  == TYPE_ELEVATOR)   continue; // elevator cars/internals can move so should not contribute to lighting
+		if (type  == TYPE_SHOWER  )   continue; // transparent
+		if (type  == TYPE_BLOCKER || type == TYPE_COLLIDER) continue; // blockers and colliders are not drawn
+		if (c->shape == SHAPE_ANGLED) continue; // sloped objects such as parking garage and pool ramps aren't cubes
+		if (c->is_exterior())         continue; // interior objects only
 		// skip other object types that are too small, not cube shaped, or not interior
-		if (c->type == TYPE_WALL_TRIM || c->type == TYPE_BOOK || c->type == TYPE_CRACK || c->type == TYPE_PLANT || c->type == TYPE_RAILING || c->type == TYPE_SHELVES ||
-			c->type == TYPE_BOTTLE || c->type == TYPE_PEN || c->type == TYPE_PENCIL || is_ball_type(c->type) || c->type == TYPE_HANGER_ROD || c->type == TYPE_DRAIN ||
-			c->type == TYPE_MONEY || c->type == TYPE_PHONE || c->type == TYPE_TPROLL || c->type == TYPE_SPRAYCAN || c->type == TYPE_MARKER || c->type == TYPE_BUTTON ||
-			c->type == TYPE_SWITCH || c->type == TYPE_TAPE || c->type == TYPE_OUTLET || c->type == TYPE_PARK_SPACE || c->type == TYPE_RAMP || c->type == TYPE_PIPE ||
-			c->type == TYPE_VENT || c->type == TYPE_BREAKER || c->type == TYPE_KEY || c->type == TYPE_HANGER || c->type == TYPE_FESCAPE || c->type == TYPE_CUP ||
-			c->type == TYPE_CLOTHES || c->type == TYPE_LAMP || c->type == TYPE_OFF_CHAIR || c->type == TYPE_LIGHT || c->type == TYPE_SIGN || c->type == TYPE_PAPER ||
-			c->type == TYPE_WALL_LAMP || c->type == TYPE_RCHAIR || c->type == TYPE_SILVER || c->type == TYPE_STAPLER || c->type == TYPE_WIND_SILL ||
-			c->type == TYPE_BALCONY || c->type == TYPE_TOY_MODEL || c->type == TYPE_CEIL_FAN || c->type == TYPE_PLANT_MODEL || c->type == TYPE_POOL_FLOAT ||
-			c->type == TYPE_BENCH || c->type == TYPE_DIV_BOARD || c->type == TYPE_POOL_LAD || c->type == TYPE_FLASHLIGHT || c->type == TYPE_CANDLE || c->type == TYPE_CAMERA ||
-			c->type == TYPE_CLOCK || c->type == TYPE_BAR_STOOL || c->type == TYPE_PADLOCK || c->type == TYPE_WFOUNTAIN || c->type == TYPE_BANANA || c->type == TYPE_BAN_PEEL) continue;
-		bool const is_stairs(c->type == TYPE_STAIR || c->type == TYPE_STAIR_WALL);
+		if (type == TYPE_WALL_TRIM || type == TYPE_BOOK || type == TYPE_CRACK || type == TYPE_PLANT || type == TYPE_RAILING || type == TYPE_SHELVES || type == TYPE_BOTTLE ||
+			type == TYPE_PEN || type == TYPE_PENCIL || is_ball_type(type) || type == TYPE_HANGER_ROD || type == TYPE_DRAIN || type == TYPE_MONEY || type == TYPE_PHONE ||
+			type == TYPE_TPROLL || type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BUTTON || type == TYPE_SWITCH || type == TYPE_TAPE || type == TYPE_OUTLET ||
+			type == TYPE_PARK_SPACE || type == TYPE_RAMP || type == TYPE_PIPE || type == TYPE_VENT || type == TYPE_BREAKER || type == TYPE_KEY || type == TYPE_HANGER ||
+			type == TYPE_FESCAPE || type == TYPE_CUP || type == TYPE_CLOTHES || type == TYPE_LAMP || type == TYPE_OFF_CHAIR || type == TYPE_LIGHT || type == TYPE_SIGN ||
+			type == TYPE_PAPER || type == TYPE_WALL_LAMP || type == TYPE_RCHAIR || type == TYPE_SILVER || type == TYPE_STAPLER || type == TYPE_WIND_SILL || type == TYPE_BALCONY ||
+			type == TYPE_TOY_MODEL || type == TYPE_CEIL_FAN || type == TYPE_PLANT_MODEL || type == TYPE_POOL_FLOAT || type == TYPE_BENCH || type == TYPE_DIV_BOARD ||
+			type == TYPE_POOL_LAD || type == TYPE_FLASHLIGHT || type == TYPE_CANDLE || type == TYPE_CAMERA || type == TYPE_CLOCK || type == TYPE_BAR_STOOL || type == TYPE_PADLOCK ||
+			type == TYPE_WFOUNTAIN || type == TYPE_BANANA || type == TYPE_BAN_PEEL) continue;
+		bool const is_stairs(type == TYPE_STAIR || type == TYPE_STAIR_WALL);
 		if (c->z1() > (is_stairs ? stairs_z2 : z2) || c->z2() < (is_stairs ? stairs_z1 : z1)) continue;
 		if (!c->intersects_xy(ext_bcube)) continue;
 		colorRGBA const color(c->get_color());
@@ -298,7 +298,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 		if (c->is_round()) {
 			cube_t inner_cube(*c);
 
-			if (c->type == TYPE_WHEATER) { // {tank, pipes}
+			if (type == TYPE_WHEATER) { // {tank, pipes}
 				cube_t cubes[2];
 				get_water_heater_cubes(*c, cubes);
 				cc.emplace_back(cubes[1], color); // add pipes directly
@@ -307,16 +307,16 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			float const shrink(c->get_radius()*(1.0 - 1.0/SQRT2));
 			inner_cube.expand_by_xy(-shrink); // shrink to inscribed cube in XY
 			if (c->shape == SHAPE_SPHERE) {inner_cube.expand_in_dim(2, -shrink);} // shrink in Z as well
-			if (c->type  == TYPE_TABLE  ) {inner_cube.z1() += 0.88*c->dz();} // top of table
+			if (   type  == TYPE_TABLE  ) {inner_cube.z1() += 0.88*c->dz();} // top of table
 			cc.emplace_back(inner_cube, color);
 		}
-		else if (c->type == TYPE_CLOSET) { // Note: lighting cubes and indir lighting are *not* updated when closet doors are opened and closed
+		else if (type == TYPE_CLOSET) { // Note: lighting cubes and indir lighting are *not* updated when closet doors are opened and closed
 			cube_t cubes[5];
 			get_closet_cubes(*c, cubes, 1); // for_collision=1
 			if (!c->is_small_closet() && c->is_open()) {cubes[4].set_to_zeros();} // ignore open doors of large closets
 			add_colored_cubes(cubes, 5, color, cc); // include door, whether closed or open
 		}
-		else if (c->type == TYPE_BED) { // Note: posts are not included
+		else if (type == TYPE_BED) { // Note: posts are not included
 			colorRGBA const wood_color(get_textured_wood_color()), sheets_color(c->color.modulate_with(texture_color(c->get_sheet_tid())));
 			cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
 			get_bed_cubes(*c, cubes);
@@ -332,13 +332,13 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			get_tc_leg_cubes(cubes[5], 0.04, 0, cubes); // head_width=0.04; cubes[5] is not overwritten
 			add_colored_cubes(cubes, 4, wood_color, cc); // legs
 		}
-		else if (c->type == TYPE_DESK || c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND || c->type == TYPE_TABLE) { // objects with legs
+		else if (type == TYPE_DESK || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_TABLE) { // objects with legs
 			if (c->is_glass_table()) continue; // skip glass table (transparent with thin legs)
 			cube_t cubes[7];
 			unsigned const num(get_table_like_object_cubes(*c, cubes));
 			add_colored_cubes(cubes, num, color, cc);
 		}
-		else if (c->type == TYPE_CHAIR) {
+		else if (type == TYPE_CHAIR) {
 			colorRGBA const wood_color(get_textured_wood_color());
 			cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
 			get_chair_cubes(*c, cubes);
@@ -347,8 +347,8 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			get_tc_leg_cubes(cubes[2], 0.15, 1, leg_cubes); // width=0.15
 			add_colored_cubes(leg_cubes, 4, wood_color, cc);
 		}
-		else if (c->type == TYPE_CUBICLE || (c->type == TYPE_STALL && c->shape != SHAPE_SHORT)) { // cubicle or bathroom stall - hollow
-			bool const is_stall(c->type != TYPE_CUBICLE);
+		else if (type == TYPE_CUBICLE || (type == TYPE_STALL && c->shape != SHAPE_SHORT)) { // cubicle or bathroom stall - hollow
+			bool const is_stall(type != TYPE_CUBICLE);
 			cube_t sides(*c);
 			float const dz(c->dz());
 			
@@ -368,7 +368,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 				cc.emplace_back(temp[n], color);
 			}
 		}
-		else if (c->type == TYPE_POOL_TABLE) {
+		else if (type == TYPE_POOL_TABLE) {
 			cube_t const top(get_pool_table_top_surface(*c));
 			cube_t cubes[5]; // body + 4 legs
 			get_pool_table_cubes(*c, cubes);
@@ -376,7 +376,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			for (unsigned n = 0; n < 5; ++n) {cc.emplace_back(cubes[n], BROWN);} // body and legs are brown
 			cc.emplace_back(top, GREEN); // top surface is green
 		}
-		else if (c->type == TYPE_SHELFRACK) {
+		else if (type == TYPE_SHELFRACK) {
 			cube_t back, top, sides[2], shelves[5];
 			unsigned const num_shelves(get_shelf_rack_cubes(*c, back, top, sides, shelves));
 			cc.emplace_back(back, color*0.67);
@@ -384,12 +384,12 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			if (!top     .is_all_zeros()) {cc.emplace_back(top, color);}
 			if (!sides[0].is_all_zeros()) {add_colored_cubes(sides, 2, color, cc);}
 		}
-		else if (c->type == TYPE_COUCH) {
+		else if (type == TYPE_COUCH) {
 			cube_t cubes[4]; // bottom, back, arm, arm
 			unsigned const num_cubes(get_couch_cubes(*c, cubes));
 			for (unsigned n = 0; n < num_cubes; ++n) {cc.emplace_back(cubes[n], color);}
 		}
-		else if (c->type == TYPE_CASHREG) {
+		else if (type == TYPE_CASHREG) {
 			cube_t cubes[2]; // body, screen
 			get_cashreg_cubes(*c, cubes);
 			cc.emplace_back(cubes[0], color); // only add the body
@@ -398,7 +398,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			cube_t bc(*c); // handle 3D models that don't fill the entire cube
 			bool const dim(c->dim), dir(c->dir);
 
-			if (c->type == TYPE_TUB) {
+			if (type == TYPE_TUB) {
 				bc.z2() -= 0.9*bc.dz(); // bottom
 				cube_t top(*c);
 				top.z1() = bc.z2();
@@ -409,18 +409,18 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 				assert(temp.size() == 4); // -y, +y, -x, +x
 				add_colored_cubes(temp, color, ext_bcube, cc);
 			}
-			else if (c->type == TYPE_HOOD) {
+			else if (type == TYPE_HOOD) {
 				bc.expand_in_dim(!dim, 0.25*c->get_sz_dim(!dim)); // shrink width
 				bc.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.25*c->get_sz_dim(dim); // shift front in
 				bc.z2() += 0.25*bc.dz(); // shift bottom up
 			}
-			else if (c->type == TYPE_STOVE ) {bc.z2() -= 0.20*bc.dz();}
-			else if (c->type == TYPE_TOILET) {bc.z2() -= 0.33*bc.dz();}
-			else if (c->type == TYPE_SINK  ) {bc.z2() -= 0.20*bc.dz(); bc.z1() += 0.65*bc.dz();}
-			else if (c->type == TYPE_MONITOR || c->type == TYPE_TV) {bc.expand_in_dim(dim, -0.3*bc.get_sz_dim(dim));} // reduce thickness
-			else if (c->type == TYPE_BRSINK) {bc.z1() += 0.60*bc.dz();}
-			else if (c->type == TYPE_ATTIC_DOOR) {bc = get_attic_access_door_cube(*c, 0);} // inc_ladder=0: includes door but not ladder
-			else if (c->type == TYPE_SHOWERTUB ) {bc = get_shower_tub_wall(*c);}
+			else if (type == TYPE_STOVE ) {bc.z2() -= 0.20*bc.dz();}
+			else if (type == TYPE_TOILET) {bc.z2() -= 0.33*bc.dz();}
+			else if (type == TYPE_SINK  ) {bc.z2() -= 0.20*bc.dz(); bc.z1() += 0.65*bc.dz();}
+			else if (type == TYPE_MONITOR || type == TYPE_TV) {bc.expand_in_dim(dim, -0.3*bc.get_sz_dim(dim));} // reduce thickness
+			else if (type == TYPE_BRSINK) {bc.z1() += 0.60*bc.dz();}
+			else if (type == TYPE_ATTIC_DOOR) {bc = get_attic_access_door_cube(*c, 0);} // inc_ladder=0: includes door but not ladder
+			else if (type == TYPE_SHOWERTUB ) {bc = get_shower_tub_wall(*c);}
 			cc.emplace_back(bc, color);
 		}
 	} // for c

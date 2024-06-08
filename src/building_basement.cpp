@@ -75,7 +75,7 @@ unsigned building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, flo
 		}
 	}
 	// make 5 attempts to place a water heater - one in each corner and 1 along a random wall for variety; 20 attempts for office buildings/apartments/hotels
-	for (unsigned n = 0; n < (is_house ? 5 : 20); ++n) {
+	for (unsigned n = 0; n < (is_house ? 5U : 20U); ++n) {
 		bool dim(0), dir(0), xdir(0), ydir(0);
 
 		if (n < 4) { // corner
