@@ -341,6 +341,20 @@ void rgeom_mat_t::add_contained_vert_torus_to_verts(cube_t const &c, colorRGBA c
 	assert(r_inner > 0.0 && r_outer > 0.0); // cube must be wider than it is tall
 	add_vert_torus_to_verts(c.get_cube_center(), r_inner, r_outer, color, tscale, low_detail);
 }
+void rgeom_mat_t::add_ortho_torus_to_verts(point const &center, float r_inner, float r_outer, unsigned dim, colorRGBA const &color, float tscale, bool low_detail) {
+	assert(dim < 3);
+	unsigned const verts_start(itri_verts.size()), ixs_start(indices.size());
+	add_vert_torus_to_verts(all_zeros, r_inner, r_outer, color, tscale, low_detail);
+	
+	if (dim < 2) { // swap X or Y with Z
+		for (auto i = itri_verts.begin()+verts_start; i != itri_verts.end(); ++i) {
+			std::swap(i->v[dim], i->v[2]);
+			std::swap(i->n[dim], i->n[2]);
+		}
+		reverse(indices.begin()+ixs_start, indices.end()); // reverse winding order
+	}
+	for (auto i = itri_verts.begin()+verts_start; i != itri_verts.end(); ++i) {i->v += center;}
+}
 
 void rgeom_mat_t::add_triangle_to_verts(point const v[3], colorRGBA const &color, bool two_sided, float tscale) {
 	color_wrapper cw(color);
