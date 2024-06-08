@@ -877,7 +877,8 @@ void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube
 	vector3d const dir((0.5*front_n - 0.5*plus_z).get_norm()); // point slightly down
 	colorRGBA const color(get_headlight_color(car));
 	vector3d const zoff(car.is_ambulance ? 0.12*car.bcube.dz()*plus_z : zero_vector);
-	point const p1(0.2*pb[0] + 0.8*pb[4]), p2(0.2*pb[1] + 0.8*pb[5]);
+	float const hv1(car.is_truck ? 0.8 : 0.2), hv2(1.0 - hv1); // headlights and tail lights; blend from bottom to top
+	point const p1(hv1*pb[0] + hv2*pb[4]), p2(hv1*pb[1] + hv2*pb[5]);
 	float const beamwidth = 0.08;
 
 	if (!dist_less_than((car.get_center() + xlate), camera_pdu.pos, 2.0*headlight_dist)) { // single merged headlight when far away
