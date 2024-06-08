@@ -577,7 +577,7 @@ bool is_active_emergency_vehicle(car_model_loader_t const &car_model_loader, car
 	return (!(car.get_unique_id() % active_mod) && !car.is_parked());
 }
 float get_flash_cycle(car_t const &car) {
-	return fract(3.0*((animate2 ? tfticks/TICKS_PER_SECOND : 0.0) + 100.0*car.max_speed)); // different per car
+	return fract((car.is_police ? 3.0 : 1.5)*((animate2 ? tfticks/TICKS_PER_SECOND : 0.0) + 100.0*car.max_speed)); // different per car
 }
 vector3d get_car_front_dir(car_t const &car, vector3d const &front_n) {
 	vector3d dir(front_n);
@@ -602,6 +602,52 @@ int get_police_car_flashing_light(car_model_loader_t const &car_model_loader, ca
 		return d+1;
 	} // for d
 	return 0;
+}
+unsigned get_ambulance_flashing_lights(car_model_loader_t const &car_model_loader, car_t const &car, vector3d const &front_n, point lpos[4], vector3d ldir[4]) {
+	if (!car.is_ambulance || !is_active_emergency_vehicle(car_model_loader, car, 1, 0)) return 0; // lights=1, siren=0
+	float const flash_cycle(get_flash_cycle(car)), length(car.get_length()), width(car.get_width()), height(car.bcube.dz());
+	vector3d const front_dir(get_car_front_dir(car, front_n)), side_dir(get_car_side_dir(car, front_dir, 0));
+	vector3d const front_delta(front_dir*length), side_delta(side_dir*width);
+	unsigned const cycle_ix(unsigned(floor(14.0*flash_cycle)));
+
+	for (unsigned n = 0; n < 4; ++n) { // 4 lights on at once
+		// 0=top middle, 1=top left, 2=top right, 3=front left, 4=front right, 5=back top middle, 6=back top left, 7=back top right
+		// 8=left front, 9=left back, 10=left bottom, 11=right front, 12=right back, 13=right bottom
+		unsigned const lix((cycle_ix + 3*n) % 14);
+		point &pos(lpos[n]);
+		vector3d &dir(ldir[n]);
+		pos = car.get_center();
+		if      (lix == 1 || lix == 3 || lix == 6) {pos -= 0.34*side_delta;} // left  front/back
+		else if (lix == 2 || lix == 4 || lix == 7) {pos += 0.34*side_delta;} // right front/back
+		else if (lix == 8 || lix == 11) {pos += 0.12 *front_delta;} // side toward front
+		else if (lix == 9 || lix == 12) {pos -= 0.415*front_delta;} // side toward back
+		else if (lix == 10|| lix == 13) {pos -= 0.335*front_delta;} // side lower
+
+		if (lix <= 4) { // front lights
+			dir  = front_dir;
+			pos += 0.18*front_delta; // toward the front
+			if (lix <= 2) {pos.z += 0.37*height;} // upper
+			else          {pos.z += 0.30*height;} // lower
+		}
+		else if (lix <= 7) { // back lights
+			dir    = -front_dir;
+			pos   += -0.48*front_delta; // at the back
+			pos.z += 0.35*height; // upper
+		}
+		else if (lix <= 10) { // left lights
+			dir  = -side_dir;
+			pos -= 0.48*side_delta;
+			if (lix <= 9) {pos.z += 0.325*height;} // top
+			else {pos.z -= 0.02*height;} // bottom
+		}
+		else if (lix <= 13) { // right lights
+			dir  = side_dir;
+			pos += 0.48*side_delta;
+			if (lix <= 12) {pos.z += 0.325*height;} // top
+			else {pos.z -= 0.02*height;} // bottom
+		}
+	} // for n
+	return 4;
 }
 
 void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // Note: all quads
@@ -713,7 +759,8 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 			}
 		}
 	}
-	point lpos;
+	point lpos, alpos[4];
+	vector3d aldir[4];
 	colorRGBA lcolor;
 	int const ret(get_police_car_flashing_light(car_model_loader, car, front_n, lpos, lcolor));
 
@@ -734,6 +781,10 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 		// light on the end
 		point const end_pos(lpos + 2.0*side_offset);
 		add_light_flare(end_pos, side_offset.get_norm(), lcolor, 1.0, radius);
+	}
+	else {
+		unsigned const num(get_ambulance_flashing_lights(car_model_loader, car, front_n, alpos, aldir));
+		for (unsigned n = 0; n < num; ++n) {add_light_flare(alpos[n], aldir[n], RED, 1.0, 0.2*car.get_width());} // always red
 	}
 }
 
@@ -761,7 +812,8 @@ void car_draw_state_t::draw_helicopter(helicopter_t const &h, bool shadow_only) 
 }
 
 void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube) const {
-	point lpos;
+	point lpos, alpos[4];
+	vector3d aldir[4];
 	colorRGBA lcolor;
 
 	if (get_police_car_flashing_light(car_model_loader, car, zero_vector, lpos, lcolor)) {
@@ -785,6 +837,29 @@ void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube
 				dl_sources.back().disable_shadows(); // disable shadows for now
 			}
 		}
+	}
+	else {
+		unsigned const num(get_ambulance_flashing_lights(car_model_loader, car, zero_vector, alpos, aldir));
+
+		for (unsigned n = 0; n < num; ++n) {
+			lpos = alpos[n];
+			float const light_dist(0.5*get_headlight_dist());
+			cube_t pl_bcube(lpos);
+			pl_bcube.expand_by(light_dist);
+
+			if (lights_bcube.contains_cube_xy(pl_bcube) && camera_pdu.cube_visible(pl_bcube + xlate)) {
+				min_eq(lights_bcube.z1(), pl_bcube.z1());
+				max_eq(lights_bcube.z2(), pl_bcube.z2());
+
+				if (POLICE_LIGHT_SHADOW) { // shadowed
+					dl_sources.emplace_back(light_dist, lpos, lpos, RED, 1, aldir[n], 0.35);
+				}
+				else { // omnidirectional unshadowed
+					dl_sources.emplace_back(light_dist, lpos, lpos, RED, 1, aldir[n], 0.5); // hemisphere
+					dl_sources.back().disable_shadows(); // disable shadows for now
+				}
+			}
+		} // for n
 	}
 	if (!car.headlights_on()) return;
 	float const headlight_dist(get_headlight_dist());

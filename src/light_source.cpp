@@ -143,6 +143,7 @@ cylinder_3dw light_source::calc_bounding_cylin(float sqrt_thresh, bool clip_to_s
 	float const rad(radius*(1.0 - sqrt_thresh));
 	if (is_line_light()) {return cylinder_3dw(pos, pos2, rad, rad);}
 	assert(is_very_directional()); // not for use with point lights or spotlights larger than a hemisphere
+	assert(dir != zero_vector);
 	point pos2(pos + dir*rad);
 	float end_radius((1.0 - sqrt_thresh)*calc_cylin_end_radius(falloff));
 
