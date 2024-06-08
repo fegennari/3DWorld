@@ -570,33 +570,33 @@ bool sphere_in_light_cone_approx(pos_dir_up const &pdu, point const &center, flo
 	float const dist(p2p_dist(pdu.pos, center)), radius_at_dist(dist*pdu.sterm), rmod(radius_at_dist + radius);
 	return pt_line_dist_less_than(center, pdu.pos, (pdu.pos + pdu.dir), rmod);
 }
-bool is_police_car(car_model_loader_t const &car_model_loader, car_t const &car) {
-	// the best we can do is to search for the string 'police' in the filename
-	string const &fn(car_model_loader.get_model(car.model_id).fn);
-	return (fn.find("Police") != string::npos || fn.find("police") != string::npos);
-}
-bool is_ambulance(car_model_loader_t const &car_model_loader, car_t const &car) {
-	string const &fn(car_model_loader.get_model(car.model_id).fn);
-	return (fn.find("Ambulance") != string::npos || fn.find("ambulance") != string::npos);
-}
 bool is_active_emergency_vehicle(car_model_loader_t const &car_model_loader, car_t const &car, bool lights, bool siren) {
 	assert(lights != siren); // exactly one
+	if (!car.is_police && !car.is_ambulance) return 0;
 	unsigned const active_mod(lights ? 4 : 8); // lights 25% of the time, sirens 12.5% of the time
-	if ((car.get_unique_id() % active_mod) || car.is_parked()) return 0;
-	// currently, both police cars and ambulances have sirens, but only police cars have flashing lights
-	return (is_police_car(car_model_loader, car) || (siren && is_ambulance(car_model_loader, car)));
+	return (!(car.get_unique_id() % active_mod) && !car.is_parked());
 }
-// what about ambulances?
-int get_police_car_flashing_light(car_model_loader_t const &car_model_loader, car_t const &car, vector3d front_n, point &lpos, colorRGBA &color) {
-	if (!is_active_emergency_vehicle(car_model_loader, car, 1, 0)) return 0; // lights=1, siren=0
-	float const flash_cycle(fract(3.0*((animate2 ? tfticks/TICKS_PER_SECOND : 0.0) + 100.0*car.max_speed))); // different per car
+float get_flash_cycle(car_t const &car) {
+	return fract(3.0*((animate2 ? tfticks/TICKS_PER_SECOND : 0.0) + 100.0*car.max_speed)); // different per car
+}
+vector3d get_car_front_dir(car_t const &car, vector3d const &front_n) {
+	vector3d dir(front_n);
+	if (front_n == zero_vector) {dir[car.dim] = (car.dir ? 1.0 : -1.0);} // approximate - correct for straight roads
+	return dir;
+}
+vector3d get_car_side_dir(car_t const &car, vector3d const &front_dir, bool left_right) {
+	return cross_product(front_dir, plus_z).get_norm()*((left_right ^ car.dim ^ car.dir) ? 1.0 : -1.0);
+}
+int get_police_car_flashing_light(car_model_loader_t const &car_model_loader, car_t const &car, vector3d const &front_n, point &lpos, colorRGBA &color) {
+	if (!car.is_police || !is_active_emergency_vehicle(car_model_loader, car, 1, 0)) return 0; // lights=1, siren=0
+	float const flash_cycle(get_flash_cycle(car));
 
 	for (unsigned d = 0; d < 2; ++d) { // L, R
 		if (d ? !(flash_cycle < 0.25) : !(flash_cycle > 0.5 && flash_cycle < 0.75)) continue; // 25% duty cycle for each light in opposite patterns
-		lpos = car.get_center();
-		if (front_n == zero_vector) {front_n[car.dim] = (car.dir ? 1.0 : -1.0);} // approximate - correct for straight roads
-		lpos  -= front_n*0.06*car.get_length(); // slightly toward the back
-		lpos  += cross_product(front_n, plus_z).get_norm()*((d ^ car.dim ^ car.dir) ? 1.0 : -1.0)*0.21*car.get_width(); // to the sides
+		vector3d const front_dir(get_car_front_dir(car, front_n)), side_dir(get_car_side_dir(car, front_dir, d));
+		lpos   = car.get_center();
+		lpos  -= front_dir*0.06*car.get_length(); // slightly toward the back
+		lpos  += side_dir *0.21*car.get_width (); // to the sides
 		lpos.z = car.bcube.z2() + 0.15*car.bcube.dz(); // top; high enough to not self shadow too much
 		color  = ((d ^ (car.dim ^ car.dir)) ? RED : BLUE); // red on right, blue on left (opposite of most police cars)
 		return d+1;
@@ -675,17 +675,21 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 
 	if (headlights_on && dist_val < 0.3) { // night time headlights
 		colorRGBA const hl_color(get_headlight_color(car));
+		float const c1(car.is_ambulance ? 0.22 : 0.1), c2(1.0 - c1);
 
 		for (unsigned d = 0; d < 2; ++d) { // L, R
 			unsigned const lr(d ^ lr_xor ^ 1);
-			point const pos((lr ? 0.1 : 0.9)*(hv1*pb[0] + hv2*pb[4]) + (lr ? 0.9 : 0.1)*(hv1*pb[1] + hv2*pb[5]));
+			point pos((lr ? c1 : c2)*(hv1*pb[0] + hv2*pb[4]) + (lr ? c2 : c1)*(hv1*pb[1] + hv2*pb[5]));
+			if (car.is_ambulance) {pos.z += 0.12*car.bcube.dz();} // shift upward
 			add_light_flare(pos, front_n, hl_color, 2.0, 0.65*car.height); // pb 0,1,4,5
 		}
 	}
 	if ((brake_lights_on || headlights_on || car.in_reverse) && dist_val < 0.2) { // brake/tail/backup lights
+		float const bv1((car.is_truck || car.is_ambulance) ? 0.15 : 0.2), bv2(1.0 - bv1);
+
 		for (unsigned d = 0; d < 2; ++d) { // L, R
 			unsigned const lr(d ^ lr_xor);
-			point const pos((lr ? 0.2 : 0.8)*(hv1*pb[2] + hv2*pb[6]) + (lr ? 0.8 : 0.2)*(hv1*pb[3] + hv2*pb[7]));
+			point const pos((lr ? bv1 : bv2)*(hv1*pb[2] + hv2*pb[6]) + (lr ? bv2 : bv1)*(hv1*pb[3] + hv2*pb[7]));
 			colorRGBA const bl_color(car.in_reverse ? colorRGBA(1.0, 0.9, 0.7, 1.0) : colorRGBA(1.0, 0.1, 0.05, 1.0)); // yellow-white/near red; pb 2,3,6,7
 			add_light_flare(pos, -front_n, bl_color, (brake_lights_on ? 1.0 : 0.5), 0.5*car.height);
 		}
@@ -699,7 +703,12 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 			vector3d const side_n(cross_product((pb[6] - pb[2]), (pb[1] - pb[2])).get_norm()*sign*(tdir ? 1.0 : -1.0));
 
 			for (unsigned d = 0; d < 2; ++d) { // B, F
-				point const pos(sv1*pb[tdir ? (d ? 1 : 2) : (d ? 0 : 3)] + sv2*pb[tdir ? (d ? 5 : 6) : (d ? 4 : 7)]);
+				point pos(sv1*pb[tdir ? (d ? 1 : 2) : (d ? 0 : 3)] + sv2*pb[tdir ? (d ? 5 : 6) : (d ? 4 : 7)]);
+				
+				if (car.is_ambulance && d == 1) { // ambulance cab is slightly shorter and narrower
+					pos -= (tdir ? 1.0 : -1.0)*0.06*car.get_width()*side_n; // move inward
+					pos.z += 0.12*car.bcube.dz(); // shift upward
+				}
 				add_light_flare(pos, (side_n + (d ? 1.0 : -1.0)*front_n).get_norm(), colorRGBA(1.0, 0.75, 0.0, 1.0), 1.5, 0.3*car.height); // normal points out 45 degrees
 			}
 		}
@@ -708,7 +717,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 	colorRGBA lcolor;
 	int const ret(get_police_car_flashing_light(car_model_loader, car, front_n, lpos, lcolor));
 
-	if (ret) { // what about ambulances?
+	if (ret) {
 		bool const side(ret - 1);
 		float const radius(0.1*car.get_width());
 		vector3d const front_offset(front_n*0.3*radius);
@@ -751,7 +760,7 @@ void car_draw_state_t::draw_helicopter(helicopter_t const &h, bool shadow_only) 
 	helicopter_model_loader.draw_model(s, center, h.bcube, h.dir, WHITE, xlate, h.model_id, shadow_only, 0, nullptr, blade_mat_mask); // low_detail=0, no animations
 }
 
-void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube) {
+void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube) const {
 	point lpos;
 	colorRGBA lcolor;
 
@@ -768,11 +777,11 @@ void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube
 				for (unsigned bf = 0; bf < 2; ++bf) { // back, front
 					vector3d light_dir;
 					light_dir[car.dim] = ((car.dir ^ bool(bf)) ? 1.0 : -1.0);
-					dl_sources.push_back(light_source(light_dist, lpos, lpos, lcolor, 1, light_dir, 0.3));
+					dl_sources.emplace_back(light_dist, lpos, lpos, lcolor, 1, light_dir, 0.3);
 				}
 			}
 			else { // omnidirectional unshadowed
-				dl_sources.push_back(light_source(light_dist, lpos, lpos, lcolor, 1, zero_vector, 1.0));
+				dl_sources.emplace_back(light_dist, lpos, lpos, lcolor, 1, zero_vector, 1.0);
 				dl_sources.back().disable_shadows(); // disable shadows for now
 			}
 		}
@@ -792,16 +801,20 @@ void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube
 	vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 	vector3d const dir((0.5*front_n - 0.5*plus_z).get_norm()); // point slightly down
 	colorRGBA const color(get_headlight_color(car));
+	vector3d const zoff(car.is_ambulance ? 0.12*car.bcube.dz()*plus_z : zero_vector);
+	point const p1(0.2*pb[0] + 0.8*pb[4]), p2(0.2*pb[1] + 0.8*pb[5]);
 	float const beamwidth = 0.08;
 
 	if (!dist_less_than((car.get_center() + xlate), camera_pdu.pos, 2.0*headlight_dist)) { // single merged headlight when far away
-		point const pos(0.5*(0.2*pb[0] + 0.8*pb[4] + 0.2*pb[1] + 0.8*pb[5]));
-		dl_sources.push_back(light_source(headlight_dist, pos, pos, color*1.333, 1, dir, 1.2*beamwidth));
+		point const pos(0.5*(p1 + p2) + zoff);
+		dl_sources.emplace_back(headlight_dist, pos, pos, color*1.333, 1, dir, 1.2*beamwidth);
 	}
 	else { // two separate left/right headlights
+		float const c1(car.is_ambulance ? 0.22 : 0.1), c2(1.0 - c1);
+
 		for (unsigned d = 0; d < 2; ++d) { // L, R
-			point const pos((d ? 0.2 : 0.8)*(0.2*pb[0] + 0.8*pb[4]) + (d ? 0.8 : 0.2)*(0.2*pb[1] + 0.8*pb[5]));
-			dl_sources.push_back(light_source(headlight_dist, pos, pos, color, 1, dir, beamwidth)); // share shadow maps between headlights?
+			point const pos((d ? c1 : c2)*p1 + (d ? c2 : c1)*p2 + zoff);
+			dl_sources.emplace_back(headlight_dist, pos, pos, color, 1, dir, beamwidth); // share shadow maps between headlights?
 		}
 	}
 }
@@ -836,7 +849,7 @@ void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rg
 			else {car.model_id = ((num_models > 1) ? (local_rgen.rand() % num_models) : 0);}
 			city_model_t const &model(car_model_loader.get_model(car.model_id));
 			
-			// if there are multiple models to choose from, and this car is in a garage, try for a model that's not scaled up (the truck) (what about driveways?)
+			// if there are multiple models to choose from, and this car is in a garage, try for a model that's not scaled up (truck or ambulance) (what about driveways?)
 			if (FORCE_MODEL_ID < 0 && is_in_garage && model.scale > 1.0) {
 				if (num_models > 1 && n+1 < 20) continue; // try a different model
 				// don't scale the model because it may not fit; instead, add a small truck if we can't place a car
@@ -857,6 +870,10 @@ void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rg
 	else if (fixed_color == -2) {car.color_id = 255;} // special 'use model file custom color' value; custom_color should already be set
 	else if (fixed_color == -1) {car.color_id = (local_rgen.rand() % NUM_CAR_COLORS);} // choose a random color
 	else                        {car.color_id = fixed_color;} // use this specific fixed color
+	// the best we can do is to search for the string 'police' and 'ambulance' in the filename
+	string const &fn(car_model_loader.get_model(car.model_id).fn);
+	if      (fn.find("Police"   ) != string::npos || fn.find("police"   ) != string::npos) {car.is_police    = 1;}
+	else if (fn.find("Ambulance") != string::npos || fn.find("ambulance") != string::npos) {car.is_ambulance = 1;}
 	assert(car.is_valid());
 }
 void car_manager_t::finalize_cars() {
