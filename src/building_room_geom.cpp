@@ -2268,6 +2268,36 @@ void building_room_geom_t::add_sprinkler(room_object_t const &c) { // vertical s
 	mat.add_vcylin_to_verts(top, metal_color,          1,      1,     0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // draw ends
 }
 
+void building_room_geom_t::add_valve(room_object_t const &c) {
+	// Note: we don't know which direction the pipe is in, so the valve handle must be symmetric
+	unsigned const dim(c.dir ? 2 : unsigned(c.dim)); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
+	float const radius(0.5*c.get_sz_dim((dim+1)%3));
+	colorRGBA const color(apply_light_color(c));
+	colorRGBA const spec_color(is_known_metal_color(c.color) ? c.color : WHITE); // special case metals
+	unsigned const ndiv(N_CYL_SIDES);
+	tid_nm_pair_t tex(WHITE_TEX, 1.0, 1); // custom specular color, shadowed
+	tex.set_specular_color(spec_color, 0.8, 60.0);
+	rgeom_mat_t &mat(get_material(tex, 1, 0, 2)); // detail object
+	// draw the outer handle
+	float const r_inner(0.15*radius), r_outer(radius - r_inner), r_bar(0.10*radius), r_shaft(0.09*radius);
+	point const center(c.get_cube_center());
+	mat.add_ortho_torus_to_verts(center, r_inner, r_outer, dim, color);
+	// draw horizontal and vertical bars
+	unsigned const dims[2] = {(dim+1)%3, (dim+2)%3};
+	cube_t bar;
+	set_wall_width(bar, center[dim], r_bar, dim);
+	
+	for (unsigned d = 0; d < 2; ++d) {
+		set_wall_width(bar, center[dims[ d]], r_bar,   dims[ d]);
+		set_wall_width(bar, center[dims[!d]], r_outer, dims[!d]);
+		mat.add_ortho_cylin_to_verts(bar, color, dims[!d], 0, 0); // draw sides only
+	}
+	// draw the shaft
+	cube_t shaft(c);
+	for (unsigned d = 0; d < 2; ++d) {set_wall_width(shaft, center[dims[d]], r_shaft, dims[d]);}
+	get_metal_material(1, 0, 2).add_ortho_cylin_to_verts(shaft, apply_light_color(c, WHITE), dim, 1, 1); // draw sides and ends
+}
+
 void building_room_geom_t::add_curb(room_object_t const &c) {
 	float const tscale(1.0/c.get_length());
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), tscale, 1), 1, 0, 2)); // shadowed, detail object

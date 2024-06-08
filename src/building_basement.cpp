@@ -1329,7 +1329,7 @@ int add_sprinkler_pipe(building_t const &b, point const &p1, float end_val, floa
 void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes,
 		unsigned room_id, unsigned num_floors, unsigned objs_start, float tot_light_amt, rand_gen_t &rgen)
 {
-	// add red sprinkler system pipe
+	// add vertical red sprinkler system pipe
 	float const floor_spacing(get_window_vspace()), fc_thickness(get_fc_thickness());
 	float const sp_radius(1.2*get_wall_thickness()), spacing(2.0*sp_radius), flange_expand(0.3*sp_radius);
 	float const bolt_dist(sp_radius + 0.5*flange_expand), bolt_radius(0.32*flange_expand), bolt_height(0.1*fc_thickness);
@@ -1377,7 +1377,22 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 				objs.emplace_back(bolt, TYPE_PIPE, room_id, 0, 1, (flags | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CYLIN, pcolor);
 			} // for m
 		} // for f
-
+		// add valves on each floor
+		for (unsigned f = 0; f < num_floors; ++f) {
+			float const z(basement.z1() + (f + 0.55)*floor_spacing), valve_radius(1.5*sp_radius);
+			point center(c.xc(), c.yc(), z);
+			center[dim] += (dir ? -1.0 : 1.0)*1.5*sp_radius;
+			cube_t valve(center);
+			valve.expand_in_dim(2,        valve_radius);
+			valve.expand_in_dim(!dim,     valve_radius);
+			valve.expand_in_dim( dim, 0.4*valve_radius);
+			objs.emplace_back(valve, TYPE_VALVE, room_id, dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, pcolor);
+			// add a brass band around the pipe where the valve connects
+			cube_t band(c);
+			band.expand_by_xy(0.1*sp_radius);
+			set_cube_zvals(band, z-0.5*valve_radius, z+0.5*valve_radius);
+			objs.emplace_back(band, TYPE_PIPE, room_id, 0, 1, (RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, BRASS_C);
+		} // for f
 		// attempt to run horizontal pipes across the basement ceiling
 		float const h_pipe_radius(0.5*sp_radius), conn_thickness(0.2*h_pipe_radius);
 		float const ceil_gap(max(0.25f*fc_thickness, 0.05f*get_floor_ceil_gap())); // make enough room for both flange + bolts and ceiling beams

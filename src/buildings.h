@@ -432,7 +432,7 @@ enum { // room object types
 	TYPE_FEXT_MOUNT, TYPE_FEXT_SIGN, TYPE_PIZZA_BOX, TYPE_PIZZA_TOP, TYPE_TEESHIRT, TYPE_PANTS, TYPE_BLANKET, TYPE_SERVER, TYPE_EXT_STEP, TYPE_DBG_SHAPE,
 	TYPE_POOL_BALL, TYPE_POOL_CUE, TYPE_WALL_MOUNT, TYPE_POOL_TILE, TYPE_POOL_FLOAT, TYPE_BENCH, TYPE_DIV_BOARD, TYPE_FALSE_DOOR, TYPE_FLASHLIGHT, TYPE_CANDLE,
 	TYPE_CAMERA, TYPE_CLOCK, TYPE_DOWNSPOUT, TYPE_SHELFRACK, TYPE_CHIM_CAP, TYPE_FOOD_BOX, TYPE_SAFE, TYPE_LADDER, TYPE_CHECKOUT, TYPE_FISHTANK,
-	TYPE_LAVALAMP, TYPE_SHOWERTUB, TYPE_TRASH,
+	TYPE_LAVALAMP, TYPE_SHOWERTUB, TYPE_TRASH, TYPE_VALVE,
 	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_WALL_LAMP, TYPE_CUP, TYPE_TOASTER,
@@ -987,6 +987,7 @@ struct building_room_geom_t {
 	void add_pg_ramp(room_object_t const &c, float tscale);
 	void add_pipe(room_object_t const &c, bool add_exterior);
 	void add_sprinkler(room_object_t const &c);
+	void add_valve(room_object_t const &c);
 	void add_duct(room_object_t const &c);
 	void add_curb(room_object_t const &c);
 	void add_chimney(room_object_t const &c, tid_nm_pair_t const &tex);

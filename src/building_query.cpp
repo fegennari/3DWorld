@@ -1679,7 +1679,7 @@ public:
 					type == TYPE_WBOARD || type == TYPE_DRAIN || type == TYPE_PLATE || type == TYPE_LBASKET || type == TYPE_LAMP || type == TYPE_CUP || type == TYPE_LAPTOP ||
 					is_ball_type(type) || type == TYPE_PAN || type == TYPE_PG_BEAM || type == TYPE_PLANT_MODEL || type == TYPE_PICTURE || type == TYPE_WINDOW ||
 					type == TYPE_SIGN || type == TYPE_WALL_TRIM || type == TYPE_BLINDS || type == TYPE_PEN || type == TYPE_PENCIL || type == TYPE_HANGER_ROD ||
-					type == TYPE_MONEY || type == TYPE_PHONE || type == TYPE_TPROLL || type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BUTTON ||
+					type == TYPE_MONEY || type == TYPE_PHONE || type == TYPE_TPROLL || type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BUTTON || type == TYPE_VALVE ||
 					type == TYPE_CRACK || type == TYPE_SWITCH || type == TYPE_TAPE || type == TYPE_OUTLET || type == TYPE_CURB || type == TYPE_BRK_PANEL || type == TYPE_VENT ||
 					type == TYPE_BREAKER || type == TYPE_DUCT || type == TYPE_TOY || type == TYPE_VASE || type == TYPE_URN || type == TYPE_STAPLER || type == TYPE_WIND_SILL ||
 					type == TYPE_SPRINKLER || type == TYPE_FEXT_MOUNT || type == TYPE_FEXT_SIGN || type == TYPE_PIZZA_TOP || type == TYPE_TEESHIRT || type == TYPE_PANTS ||
