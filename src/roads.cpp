@@ -541,6 +541,7 @@ void road_isec_t::init_ssign_state(car_t const &car, ssign_state_t &ss, bool is_
 	ss.turn_dir     = car.turn_dir;
 	ss.dest_orient  = get_dest_orient_for_car_in_isec(car, is_entering);
 	ss.is_truck     = car.is_truck;
+	ss.is_emergency = car.is_emergency;
 	ss.in_use       = 1;
 }
 void road_isec_t::notify_waiting_car(car_t const &car) const { // can be called every frame, when waiting or in the intersection
@@ -612,15 +613,21 @@ bool check_paths_cross(ssign_state_t const &ss, unsigned ss_cur_orient, unsigned
 	if (ss.turn_dir == TURN_LEFT  || turn_dir == TURN_LEFT ) return 1; // otherwise, must cross if either is making a left turn
 	return ((unsigned(ss.dest_orient)>>1) != (dest_orient>>1)); // both cars going straight; they cross if their dims are different
 }
+void update_arrive_frame(int &arrive_frame, bool is_emergency) {
+	if (is_emergency) {arrive_frame -= 60*TICKS_PER_SECOND;} // emergency vehicles have priority over non-emergency vehicles; subtract 60s from their arrive frame
+}
 bool road_isec_t::can_go_now(car_t const &car) const {
 	if (has_stopsign) { // run stop sign logic
-		if (!car.stopped_for_ssign) return 0; // must stop at stop sign first
-		bool const allow_rolling_stop(bool(car.model_id & 1) ^ bool(car.color_id & 1) ^ car.dim ^ car.dir); // random-ish, but consistent for each car + stopsign pair
-		if (!allow_rolling_stop && car.get_wait_time_secs() < 0.25) return 0; // must wait a quarter second before going
+		if (!car.is_emergency) { // emergency vehicles don't need to stop at stop signs
+			if (!car.stopped_for_ssign) return 0; // must stop at stop sign first
+			bool const allow_rolling_stop(bool(car.model_id & 1) ^ bool(car.color_id & 1) ^ car.dim ^ car.dir); // random-ish, but consistent for each car + stopsign pair
+			if (!allow_rolling_stop && car.get_wait_time_secs() < 0.25) return 0; // must wait a quarter second before going
+		}
 		// run logic to check other cars at other stop signs or in the intersection
 		unsigned const cur_orient(car.get_orient_in_isec()), dest_orient(get_dest_orient_for_car_in_isec(car, 1)); // is_entering=1
 		assert(conn & (1<<cur_orient));
-		int const arrive_frame(ssign_state[cur_orient].waiting.arrive_frame);
+		int arrive_frame(ssign_state[cur_orient].waiting.arrive_frame);
+		update_arrive_frame(arrive_frame, car.is_emergency);
 
 		for (unsigned n = 0; n < 4; ++n) { // test each intersection connection
 			if (!(conn & (1<<n))) continue; // no connection in this orient, skip
@@ -628,13 +635,16 @@ bool road_isec_t::can_go_now(car_t const &car) const {
 			ssign_state_pair_t const &ss(ssign_state[n]);
 			// check entering and waiting slots; if another car is waiting, check for earlier arrival time; if tied, use the orient as a tie breaker
 			if (ss.entering.in_use && check_paths_cross(ss.entering, n, cur_orient, dest_orient, car.turn_dir, car.is_truck)) return 0;
-			if (ss.waiting .in_use && (ss.waiting.arrive_frame < arrive_frame || (ss.waiting.arrive_frame == arrive_frame && n < cur_orient)) &&
+			int waiting_arrive_trame(ss.waiting.arrive_frame);
+			update_arrive_frame(waiting_arrive_trame, ss.waiting.is_emergency);
+			if (ss.waiting .in_use && (waiting_arrive_trame < arrive_frame || (waiting_arrive_trame == arrive_frame && n < cur_orient)) &&
 				check_paths_cross(ss.waiting, n, cur_orient, dest_orient, car.turn_dir, car.is_truck)) return 0;
 		} // for n
 		return 1;
 	}
 	if (!has_stoplight) return 1;
-	if (!can_go_based_on_light   (car)) return 0;
+	// emergency vehicles can run red lights; can this cause collisions? usually the vehicle is stuck behind another one stopped at the light
+	if (!car.is_emergency && !can_go_based_on_light(car)) return 0;
 	if (stoplight.check_int_clear(car)) return 1;
 	if ((frame_counter&15) == 0) {car.honk_horn_if_close_and_fast();} // honk every so often
 	return 0; // intersection not clear

@@ -571,10 +571,11 @@ bool sphere_in_light_cone_approx(pos_dir_up const &pdu, point const &center, flo
 	return pt_line_dist_less_than(center, pdu.pos, (pdu.pos + pdu.dir), rmod);
 }
 bool is_active_emergency_vehicle(car_model_loader_t const &car_model_loader, car_t const &car, bool lights, bool siren) {
-	assert(lights != siren); // exactly one
+	assert(lights || siren); // at least one
 	if (!car.is_police && !car.is_ambulance) return 0;
+	if (car.is_parked()) return 0;
 	unsigned const active_mod(lights ? 4 : 8); // lights 25% of the time, sirens 12.5% of the time
-	return (!(car.get_unique_id() % active_mod) && !car.is_parked());
+	return !(car.get_unique_id() % active_mod);
 }
 float get_flash_cycle(car_t const &car) {
 	return fract((car.is_police ? 3.0 : 1.5)*((animate2 ? tfticks/TICKS_PER_SECOND : 0.0) + 100.0*car.max_speed)); // different per car
@@ -950,6 +951,7 @@ void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rg
 	string const &fn(car_model_loader.get_model(car.model_id).fn);
 	if      (fn.find("Police"   ) != string::npos || fn.find("police"   ) != string::npos) {car.is_police    = 1;}
 	else if (fn.find("Ambulance") != string::npos || fn.find("ambulance") != string::npos) {car.is_ambulance = 1;}
+	car.is_emergency = is_active_emergency_vehicle(car_model_loader, car, 1, 1); // both lights and siren
 	assert(car.is_valid());
 }
 void car_manager_t::finalize_cars() {
