@@ -1336,6 +1336,7 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 	bool const inverted_sprinklers(room_id & 1); // random-ish
 	colorRGBA const pcolor(RED), ccolor(BRASS_C); // pipe and connector colors
 	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const sprinker_pipes_start(objs.size());
 	cube_t const &basement(get_basement());
 	cube_t c;
 	set_cube_zvals(c, (basement.z1() + fc_thickness), (basement.z2() - fc_thickness));
@@ -1396,6 +1397,7 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 		// attempt to run horizontal pipes across the basement ceiling
 		float const h_pipe_radius(0.5*sp_radius), conn_thickness(0.2*h_pipe_radius);
 		float const ceil_gap(max(0.25f*fc_thickness, 0.05f*get_floor_ceil_gap())); // make enough room for both flange + bolts and ceiling beams
+		bool place_failed(0);
 
 		for (unsigned f = 0; f < num_floors; ++f) {
 			bool const lf(f+1 < num_floors);
@@ -1416,6 +1418,7 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 				interior->pg_ramp, ceiling_zval, room_id, tot_light_amt, objs, pcolor, ccolor, 0)); // sprinklers=0
 			
 			if (ret == 0) { // failed to place
+				if (n < 50) {place_failed = 1; break;} // failed; retry with a different vertical pipe placement
 				// try to run horizontal pipe in the opposite dim, but don't connect branch lines because the pipe may be too close to the wall and the code would be messy
 				bool const other_dir(basement.get_center_dim(!dim) < p1[!dim]);
 				add_sprinkler_pipe(*this, p1, basement.d[!dim][!other_dir], h_pipe_radius, !dim, other_dir, obstacles_, walls_, beams_, pipe_cubes,
@@ -1466,6 +1469,10 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 				}
 			}
 		} // for f
+		if (place_failed) { // placement of secondary pipes failed; remove all sprinkler pipes and retry
+			objs.resize(sprinker_pipes_start);
+			continue;
+		}
 		break; // done
 	} // for n
 }
