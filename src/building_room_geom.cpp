@@ -2284,6 +2284,7 @@ void building_room_geom_t::add_valve(room_object_t const &c) {
 	mat.add_ortho_torus_to_verts(center, r_inner, r_outer, dim, color);
 	// draw horizontal and vertical bars
 	unsigned const dims[2] = {(dim+1)%3, (dim+2)%3};
+	unsigned const verts_start(mat.itri_verts.size());
 	cube_t bar;
 	set_wall_width(bar, center[dim], r_bar, dim);
 	
@@ -2292,6 +2293,11 @@ void building_room_geom_t::add_valve(room_object_t const &c) {
 		set_wall_width(bar, center[dims[!d]], r_outer, dims[!d]);
 		mat.add_ortho_cylin_to_verts(bar, color, dims[!d], 0, 0); // draw sides only
 	}
+	// rotate a random-ish amount
+	float const rot_angle((c.x1() + c.y1() + c.z1())/radius);
+	vector3d rot_axis;
+	rot_axis[dim] = 1.0;
+	rotate_verts(mat.itri_verts, rot_axis, rot_angle, center, verts_start);
 	// draw the shaft
 	cube_t shaft(c);
 	for (unsigned d = 0; d < 2; ++d) {set_wall_width(shaft, center[dims[d]], r_shaft, dims[d]);}
