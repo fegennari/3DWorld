@@ -4797,9 +4797,20 @@ void building_room_geom_t::add_lava_lamp(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_trash(room_object_t const &c) {
-	// TODO: maybe a ball of wrinkled paper; could be based on obj_id
+	// add a ball of wrinkled paper; could be based on obj_id
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
-	mat.add_sphere_to_verts(c, apply_light_color(c)); // placeholder sphere
+	unsigned const verts_start(mat.itri_verts.size());
+	mat.add_sphere_to_verts(c, apply_light_color(c), 1); // initial sphere; low_detail=1
+	// add some random variation to each sphere vertex to crumple the paper;
+	// this would be better with face normals than vertex normals, but we don't support that here
+	point const center(c.get_cube_center());
+	float const radius(c.get_radius());
+	rand_gen_t rgen(c.create_rgen());
+
+	for (auto i = mat.itri_verts.begin()+verts_start; i != mat.itri_verts.end(); ++i) {
+		i->v += rgen.signed_rand_vector(0.2*radius); // should be good enough, and faster than signed_rand_vector_spherical()
+		i->set_norm((i->v - center).get_norm());
+	}
 }
 
 void building_room_geom_t::add_debug_shape(room_object_t const &c) {

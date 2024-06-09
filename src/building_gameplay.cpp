@@ -1345,8 +1345,8 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 				room_object_t const &cur_closest(objs[closest_obj_id]);
 				if (cur_closest.type == TYPE_TCAN && cur_closest.contains_pt(i->get_cube_center())) {dsq = 0.9*dmin_sq;}
 			}
-			if (dmin_sq > 0.0 && dsq > dmin_sq)       continue; // not the closest
-			if (obj_bcube.contains_pt(at_pos))        continue; // skip when the player is standing inside a plant, etc.
+			if (dmin_sq > 0.0 && dsq > dmin_sq) continue; // not the closest
+			if (obj_bcube.contains_pt(at_pos))  continue; // skip when the player is standing inside a plant, etc.
 			if (player_in_elevator && !i->in_elevator() && !i->is_dynamic()) continue; // can't take an elevator call button from inside the elevator
 		
 			if (obj_bcube == *i) { // check non-cube shapes, but only when get_true_obj_bcube() didn't return a custom cube
@@ -1660,10 +1660,11 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 		building.remove_paint_in_cube(bc);
 	}
 	if (old_obj.type == TYPE_TCAN) {
-		for (unsigned i = obj_id+1; i < objs.size(); ++i) {
+		unsigned const ix_end(min(size_t(obj_id+11U), objs.size())); // support for up to 10 trash items
+
+		for (unsigned i = obj_id+1; i < ix_end; ++i) {
 			room_object_t &c(objs[i]);
-			if (c.type != TYPE_TRASH || !old_obj.contains_pt(c.get_cube_center())) break; // no more trash
-			c.remove(); // remove trash as well
+			if (c.type == TYPE_TRASH && old_obj.contains_pt(c.get_cube_center())) {c.remove();} // remove trash as well
 		}
 	}
 	if (is_light) {invalidate_lights_geom();}

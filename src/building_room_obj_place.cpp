@@ -256,14 +256,28 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 		cube_t const c(get_cube_height_radius(center, radius, height));
 		if (!avoid.is_all_zeros() && c.intersects_xy(avoid)) continue; // bad placement
 		if (is_obj_placement_blocked(c, room, !room.is_hallway) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
-		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, 0, tot_light_amt, (cylin ? SHAPE_CYLIN : SHAPE_CUBE), tcan_colors[rgen.rand()%NUM_TCAN_COLORS]);
+		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, 0, tot_light_amt, (cylin ? SHAPE_CYLIN : SHAPE_CUBE), tcan_colors[rgen.rand() % NUM_TCAN_COLORS]);
 
-		if ((is_house || zval < ground_floor_z1 + 2.0*floor_spacing) && rgen.rand_bool()) { // add trash to the trashcan; not on upper floors of office buildings
-			// TODO: add multiple trash objects?
-			float const trash_radius(min(0.6*radius, 0.25*height));
-			cube_t trash;
-			trash.set_from_sphere((center + trash_radius*plus_z), trash_radius);
-			objs.emplace_back(trash, TYPE_TRASH, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SPHERE);
+		if (is_house || zval < ground_floor_z1 + 2.0*floor_spacing) { // add trash to the trashcan; not on upper floors of office buildings
+			unsigned const NUM_TRASH_COLORS = 8;
+			colorRGBA const trash_colors[NUM_TRASH_COLORS] = {WHITE, WHITE, WHITE, WHITE, cream, vlt_yellow, LT_GRAY, colorRGBA(0.8, 0.6, 0.4)};
+			unsigned const trash_start(objs.size());
+			unsigned const num_objs(rgen.rand() & 3); // 0-3
+			float cur_zval(center.z);
+
+			for (unsigned n = 0; n < num_objs; ++n) {
+				float const trash_radius(min(0.5*radius, 0.2*height)*rgen.rand_uniform(0.8, 1.2)*(1.0 + 0.1*n));
+				point trash_center(center.x, center.y, cur_zval+trash_radius);
+				if (trash_center.z + 0.5*trash_radius > c.z2()) break;
+				if (n > 0) {trash_center += rgen.signed_rand_vector_spherical_xy(0.4*trash_radius);}
+				cube_t trash;
+				trash.set_from_sphere(trash_center, trash_radius);
+				colorRGBA const color(trash_colors[rgen.rand() % NUM_TRASH_COLORS]);
+				objs.emplace_back(trash, TYPE_TRASH, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SPHERE, color);
+				set_obj_id(objs);
+				cur_zval += 1.5*trash_radius; // overlap a bit
+			} // for n
+			reverse(objs.begin()+trash_start, objs.end()); // ordered top down, in the order the player must take the trash
 		}
 		return; // done
 	} // for n
