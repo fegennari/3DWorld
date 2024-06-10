@@ -258,6 +258,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		else if (is_swim_pool_room) {
 			light_density = 0.4;
 		}
+		else if (is_ext_basement && !is_house) {
+			light_density = 0.3;
+		}
 		else if (r->is_single_floor) {
 			light_size *= sqrt(r->dz()/window_vspacing); // larger lights for taller rooms
 		}
