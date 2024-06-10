@@ -546,9 +546,9 @@ private:
 	void place_birds(cube_t const &city_bcube, rand_gen_t &rgen);
 	void add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix);
 	void place_stopsigns_in_isec(road_isec_t &isec);
-	void place_objects_in_isec(road_isec_t const &isec, bool is_residential, rand_gen_t &rgen);
+	void place_objects_in_isec(road_isec_t &isec, bool is_residential, vector<point> const &hospital_signs, rand_gen_t &rgen);
 	void add_ssign_and_slight_plot_colliders(vector<road_plot_t> const &plots, vector<road_isec_t> const isecs[3], vector<vect_cube_t> &plot_colliders) const;
-	void add_objs_on_buildings(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders);
+	void add_objs_on_buildings(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> &hospital_signs);
 	template<typename T> void draw_objects(vector<T> const &objs, city_obj_groups_t const &groups, draw_state_t &dstate,
 		float dist_scale, bool shadow_only, bool has_immediate_draw=0, bool draw_qbd_as_quads=0, float specular=0.75, float shininess=50.0);
 	bool connect_power_to_point(point const &at_pos, bool near_power_pole);

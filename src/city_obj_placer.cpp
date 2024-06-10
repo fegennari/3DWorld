@@ -1511,7 +1511,7 @@ void city_obj_placer_t::place_stopsigns_in_isec(road_isec_t &isec) {
 	} // for n
 }
 
-void city_obj_placer_t::place_objects_in_isec(road_isec_t const &isec, bool is_residential, rand_gen_t &rgen) {
+void city_obj_placer_t::place_objects_in_isec(road_isec_t &isec, bool is_residential, vector<point> const &hospital_signs, rand_gen_t &rgen) {
 	if (/*!is_residential &&*/ isec.num_conn == 2) { // bend in road at city corner
 		// place some traffic cones
 		float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
@@ -1524,10 +1524,10 @@ void city_obj_placer_t::place_objects_in_isec(road_isec_t const &isec, bool is_r
 		for (unsigned A = 0; A < 360; A += 9) {
 			float const angle(TO_RADIANS*A), dx(sin(angle)), dy(cos(angle));
 			// filter out positions blocked by roads connected to this intersection, including cones along axes
-			if (dx <  0.2 && (isec.conn & 1)) continue; // -x
-			if (dx > -0.2 && (isec.conn & 2)) continue; // +x
-			if (dy <  0.2 && (isec.conn & 4)) continue; // -y
-			if (dy > -0.2 && (isec.conn & 8)) continue; // +y
+			if (dx <  0.2 && (isec.conn & 1)) continue; // -x/W
+			if (dx > -0.2 && (isec.conn & 2)) continue; // +x/E
+			if (dy <  0.2 && (isec.conn & 4)) continue; // -y/S
+			if (dy > -0.2 && (isec.conn & 8)) continue; // +y/N
 			point pos(center);
 			pos.x += place_radius*dx;
 			pos.y += place_radius*dy;
@@ -1536,6 +1536,28 @@ void city_obj_placer_t::place_objects_in_isec(road_isec_t const &isec, bool is_r
 			// Note: colliders not needed since people normally don't walk here (through zombies can chase the player here);
 			// also, colliders don't work anyway because these cones are in the intersection, which counts as the road, not a plot
 		} // for angle
+	}
+	if (!is_residential) { // maybe add hospital signs; only consider the hospital closest to the center of the intersection
+		point const center(isec.get_cube_center());
+		float const dmin(2.0*city_params.road_spacing);
+		float dmin_sq(dmin*dmin);
+		point closest_hospital;
+
+		for (point const &pos : hospital_signs) {
+			float const dxa(fabs(center.x - pos.x)), dya(fabs(center.y - pos.y));
+			if (dxa > city_params.road_spacing && dya > city_params.road_spacing) continue; // not along either road
+			float const dsq(dxa*dxa + dya*dya);
+			if (dsq < dmin_sq) {closest_hospital = pos; dmin_sq = dsq;}
+		}
+		if (closest_hospital != all_zeros) {
+			float const dx(center.x - closest_hospital.x), dy(center.y - closest_hospital.y), dxa(fabs(dx)), dya(fabs(dy));
+			bool const dim(dxa < dya), dir(dim ? (dy > 0.0) : (dx > 0.0)); // turn direction is in the dim that's further
+			// dim=1, dir=1: hospital to N; W right arrow, E left  arrow
+			// dim=1, dir=0: hospital to S; W left  arrow, E right arrow
+			// dim=0, dir=1: hospital to E; N right arrow, S left  arrow
+			// dim=0, dir=0: hospital to W; N left  arrow, S right arrow
+			isec.hospital_dir |= ((1<<dir) << (dim ? 0 : 6)) | ((1<<(!dir)) << (dim ? 2 : 4));
+		}
 	}
 }
 
@@ -1614,7 +1636,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	// Note: fills in plots.has_parking
 	//highres_timer_t timer("Gen Parking Lots and Place Objects");
 	vect_cube_t blockers, temp_cubes, underground_blockers; // blockers, driveways, extended basement rooms
-	vector<point> tree_pos;
+	vector<point> tree_pos, hospital_signs;
 	rand_gen_t rgen, detail_rgen;
 	rgen.set_state(city_id, 123);
 	detail_rgen.set_state(3145739*(city_id+1), 1572869*(city_id+1));
@@ -1657,14 +1679,14 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 		if (city_params.assign_house_plots && plot_subdiv_sz > 0.0) {
 			place_residential_plot_objects(*i, blockers, colliders, roads, underground_blockers, driveways_start, city_id, detail_rgen); // before placing trees
 		}
-		place_trees_in_plot (*i, blockers, colliders, tree_pos, detail_rgen, buildings_end);
-		place_detail_objects(*i, blockers, colliders, tree_pos, underground_blockers, detail_rgen, have_streetlights);
-		add_objs_on_buildings(*i, blockers, colliders);
+		place_trees_in_plot  (*i, blockers, colliders, tree_pos, detail_rgen, buildings_end);
+		place_detail_objects (*i, blockers, colliders, tree_pos, underground_blockers, detail_rgen, have_streetlights);
+		add_objs_on_buildings(*i, blockers, colliders, hospital_signs);
 	} // for i (plot)
 	for (unsigned n = 0; n < 3; ++n) {
 		for (road_isec_t &isec : isecs[n]) {
 			place_stopsigns_in_isec(isec); // Note: not a plot, can't use plot colliders
-			place_objects_in_isec(isec, is_residential, rgen);
+			place_objects_in_isec(isec, is_residential, hospital_signs, rgen);
 		}
 	}
 	add_ssign_and_slight_plot_colliders(plots, isecs, plot_colliders);
@@ -1706,7 +1728,8 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	if (add_parking_lots) {cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << endl;}
 }
 
-void city_obj_placer_t::add_objs_on_buildings(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders) { // and signs on the ground near building doors
+// also adds signs on the ground near building doors
+void city_obj_placer_t::add_objs_on_buildings(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> &hospital_signs) {
 	// add signs and flags attached to buildings; note that some signs and flags may have already been added at this point
 	vector<sign_t     > signs_to_add;
 	vector<city_flag_t> flags_to_add;
@@ -1727,6 +1750,7 @@ void city_obj_placer_t::add_objs_on_buildings(road_plot_t const &plot, vect_cube
 			add_cube_to_colliders_and_blockers(sign.bcube, colliders, blockers);
 		}
 		sign_groups.add_obj(sign, signs);
+		if (sign.text == "Hospital" || sign.text == "Emergency") {hospital_signs.push_back(sign.pos);}
 	} // for sign
 }
 
