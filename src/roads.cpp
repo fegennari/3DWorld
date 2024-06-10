@@ -895,10 +895,9 @@ void road_isec_t::draw_stoplights_and_street_signs(road_draw_state_t &dstate, ve
 			// draw green sign cube
 			assert(sc.is_strictly_normalized());
 			cube_t sign(sc); // start with extended (pole) stoplight or stop sign cube
-			sign.z1() = sc.z2() - 0.7*sz; // high up
-			sign.z2() = sc.z2() - 0.1*sz;
-			sign.d[ dim][dir  ] -= (dir ? 1.0 : -1.0)*0.8*sc.get_sz_dim(dim); // shrink
-			sign.d[!dim][ side]  = sign.d[!dim][!side]; // flush with the side of the stoplight body or stop sign pole
+			set_cube_zvals(sign, sc.z2()-0.7*sz, sc.z2()-0.1*sz); // high up
+			sign.d[ dim][ dir ] -= (dir ? 1.0 : -1.0)*0.8*sc.get_sz_dim(dim); // shrink
+			sign.d[!dim][ side]  = sc.d[!dim][!side]; // flush with the side of the stoplight body or stop sign pole
 			sign.d[!dim][!side] += 5.0*side_len; // extend into the road
 			dstate.draw_cube(dstate.qbd_untextured, sign, colorRGBA(0.0, 0.6, 0.0, 1.0));
 
@@ -924,15 +923,29 @@ void road_isec_t::draw_stoplights_and_street_signs(road_draw_state_t &dstate, ve
 				cube_t sign_main(sign), sign_ext(sign);
 				bool const ext_dir(text_dir ^ dim);
 				float const signed_sz(ext_dir ? sz : -sz);
-				sign_main.d[!dim][ ext_dir] -= 0.8*signed_sz;
-				sign_ext .d[!dim][!ext_dir] += 4.2*signed_sz;
-				sign_ext .d[!dim][ ext_dir] -= 0.2*signed_sz;
+				sign_main.d[!dim][ ext_dir] -= 1.0*signed_sz; // leave space for extension
+				sign_ext .d[!dim][!ext_dir] += 4.0*signed_sz; // leave space for street name (full size is 5.0x)
+				sign_ext .d[!dim][ ext_dir] -= 0.4*signed_sz; // gap to pole
 				sign_ext.z1() += 0.15*sz; // upper part / smaller text
 				add_sign_text_verts(road_name, sign_main, dim, text_dir, WHITE, dstate.text_verts);
 				add_sign_text_verts(ext,       sign_ext,  dim, text_dir, WHITE, dstate.text_verts); // smaller text
 				//add_sign_text_verts(name, sign, dim, text_dir, WHITE, dstate.text_verts); // single font size text
 			}
-			// what about adding hospital signs with arrows for commercial cities if there's a hospital nearby? how do we determine this?
+			if (hospital_dir & (3 << 2*n)) { // maybe draw hospital sign on the stoplight pole
+				point sign_center;
+				sign_center[ dim] = sc.d[dim][!dir] + (dir ? -1.0 : 1.0)*0.02*sz;
+				sign_center[!dim] = sc.get_center_dim(!dim);
+				sign_center.z     = sc.z2() - 0.85*sz;
+				vector3d const normal(vector_from_dim_dir(dim, !dir)), dx(0.5*sz*vector_from_dim_dir(!dim, !side)), dy(0.8*sz*plus_z);
+
+				if (!shadow_only && dot_product((camera_pdu.pos - (sign_center + dstate.xlate)), normal) > 0.0) { // front facing non-shadow
+					bool const arrow_dir(hospital_dir & (2 << 2*n)); // check upper bit
+					dstate.qbd_hospital.add_quad_dirs(sign_center, (arrow_dir ? -dx : dx), dy, WHITE, normal);
+				}
+				else { // back facing or shadow pass
+					dstate.qbd_untextured.add_quad_dirs(sign_center, dx, dy, GRAY, -normal);
+				}
+			}
 		} // end street sign
 	} // for n
 }
@@ -1152,6 +1165,14 @@ void road_draw_state_t::post_draw() {
 }
 
 void road_draw_state_t::end_cur_tile() {
+	if (!qbd_hospital.empty()) { // draw hospital signs
+		select_texture(get_texture_by_name("roads/hospital_arrow.png"));
+		s.add_uniform_float("min_alpha", 0.9);
+		enable_blend();
+		qbd_hospital.draw_and_clear();
+		disable_blend();
+		s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA);
+	}
 	if (!shadow_only && !qbd_untextured.empty()) {select_texture(WHITE_TEX);}
 	qbd_untextured.draw_and_clear();
 	

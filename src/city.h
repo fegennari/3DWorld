@@ -515,6 +515,7 @@ struct ssign_state_pair_t {
 struct road_isec_t : public cube_t {
 	bool has_stoplight=0, has_stopsign=0;
 	unsigned char num_conn, conn; // connected roads in {-x, +x, -y, +y} = {W, E, S, N} facing = car traveling {E, W, N, S}
+	unsigned char hospital_dir=0; // 8 bit flags in dim pairs for each side
 	short conn_to_city;
 	short rix_xy[4], conn_ix[4]; // road/segment index: pos=cur city road, neg=global road; always segment ix
 	stoplight_ns::stoplight_t stoplight; // Note: not always needed, maybe should be by pointer/index?
@@ -617,7 +618,8 @@ struct range_pair_t {
 class road_draw_state_t : public draw_state_t {
 	quad_batch_draw qbd_batched[NUM_RD_TIDS], qbd_bridge;
 public: // used directly by stoplight drawing
-	quad_batch_draw qbd_sl, qbd_untextured, qbd_emissive, qbd_skirt; // {stoplight, untextured, streetlight emissive spot, skirts}; could add qbd_ssign here for stop signs
+	// {stoplight, untextured, streetlight emissive spot, road skirts, hospital sign}; could add qbd_ssign here for stop signs
+	quad_batch_draw qbd_sl, qbd_untextured, qbd_emissive, qbd_skirt, qbd_hospital;
 	vector<vert_norm_comp_tc_color> text_verts;
 	vect_cube_t plot_cuts;
 private:
