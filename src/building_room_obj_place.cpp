@@ -4175,7 +4175,9 @@ bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_ob
 	return added_obj;
 }
 
-void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor, bool is_basement) {
+void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt,
+	unsigned objs_start, unsigned floor, bool is_basement, bool not_private)
+{
 	if (room.is_hallway) return; // no objects placed in hallways, but there shouldn't be any surfaces either (except for reception desk?)
 	vect_room_object_t &objs(interior->room_geom->objs);
 	assert(objs.size() > objs_start);
@@ -4211,7 +4213,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			laptop_prob = 0.3*place_laptop_prob;
 			pizza_prob  = 0.8*place_pizza_prob;
 			banana_prob = 0.7*place_banana_prob;
-			if (is_house || is_apartment()) {toy_prob = 0.5;} // toys are in houses and apartments only
+			if (is_house || (is_apartment() && !not_private)) {toy_prob = 0.5;} // toys are in houses and private apartments rooms only
 		}
 		else if (obj.type == TYPE_DESK && !(obj.flags & RO_FLAG_ADJ_TOP)) { // desk with no computer monitor
 			book_prob   = 0.8*place_book_prob;
