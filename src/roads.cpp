@@ -842,8 +842,7 @@ void road_isec_t::draw_stoplights_and_street_signs(road_draw_state_t &dstate, ve
 						p[0][!dim] = p[1][!dim] = p[2][!dim] = p[3][!dim] = c.d[!dim][!i] + 0.01*(i ? -sz : sz);
 						p[0][dim] = p[3][dim] = c.d[dim][0]; p[1][dim] = p[2][dim] = c.d[dim][1];
 						p[0].z = p[1].z = c.z1(); p[2].z = p[3].z = c.z2();
-						vector3d normal(zero_vector);
-						normal[!dim] = (i ? -1.0 : 1.0);
+						vector3d const normal(vector_from_dim_dir(!dim, !i));
 						point const cw_center(0.25*(p[0] + p[1] + p[2] + p[3]));
 						vector3d const cw_cview_dir(camera_pdu.pos - (cw_center + dstate.xlate));
 						float dp(dot_product(normal, cw_cview_dir));
@@ -861,8 +860,7 @@ void road_isec_t::draw_stoplights_and_street_signs(road_draw_state_t &dstate, ve
 				} // for i
 			} // end crosswalk signal
 			if (!shadow_only && dist_val < 0.1) { // draw light decals when not in the shadow pass
-				vector3d normal(zero_vector);
-				normal[dim] = (dir ? -1.0 : 1.0);
+				vector3d const normal(vector_from_dim_dir(dim, !dir));
 				
 				if (dot_product(normal, cview_dir) > 0.0) { // only draw lights if front facing
 					// draw straight/line turn light

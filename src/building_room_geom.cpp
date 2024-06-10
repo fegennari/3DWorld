@@ -2616,8 +2616,7 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 		float const angle(0.2f*(fract(PI*c.obj_id + 1.61803f*c.item_flags) - 0.5f)); // random rotation based on obj_id and item flags
 		point rotate_pt(c.get_cube_center());
 		rotate_pt.z += 0.45*c.dz(); // rotate about a point near the top of the picture
-		vector3d normal(zero_vector);
-		normal[c.dim] = (c.dir ? -1.0 : 1.0);
+		vector3d const normal(vector_from_dim_dir(c.dim, !c.dir));
 		rotate_verts(picture_mat.quad_verts, normal, angle, rotate_pt, picture_qv_start);
 		rotate_verts(frame_mat  .quad_verts, normal, angle, rotate_pt, frame_qv_start  );
 	}

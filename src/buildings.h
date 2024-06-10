@@ -2339,6 +2339,12 @@ struct cube_by_sz { // sort cube by size in dim descending
 	bool operator()(cube_t const &a, cube_t const &b) const {return (b.get_sz_dim(dim) < a.get_sz_dim(dim));}
 };
 
+inline vector3d vector_from_dim_dir(bool dim, bool dir) {
+	vector3d v;
+	v[dim] = (dir ? 1.0 : -1.0);
+	return v;
+}
+
 inline point get_camera_building_space() {return (get_camera_pos() - get_tiled_terrain_model_xlate());}
 inline void set_cube_zvals(cube_t &c, float z1, float z2) {c.z1() = z1; c.z2() = z2;}
 inline float get_tc_leg_width(cube_t const &c, float width) {return 0.5f*width*(c.dx() + c.dy());} // make legs square

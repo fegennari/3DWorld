@@ -174,8 +174,7 @@ void building_room_geom_t::add_clock(room_object_t const &c, bool add_dynamic) {
 		else {
 			get_untextured_material(1, 0, 1).add_ortho_cylin_to_verts(c, apply_light_color(c), c.dim, 0, 0); // shadowed, small; draw sides only
 			rgeom_mat_t& face_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/clock_face.png")), 1, 0, 1)); // shadows, small
-			vector3d face_dir;
-			face_dir[c.dim] = (c.dir ? 1.0 : -1.0);
+			vector3d const face_dir(vector_from_dim_dir(c.dim, c.dir));
 			bool const swap_txy(1), inv_ts(c.dir ^ c.dim), inv_tt(c.dir ^ c.dim ^ 1);
 			face_mat.add_disk_to_verts(center, radius, face_dir, WHITE, swap_txy, inv_ts, inv_tt); // always white
 		}
