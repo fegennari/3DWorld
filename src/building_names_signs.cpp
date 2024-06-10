@@ -302,13 +302,14 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 			} // for e
 			++sign_id;
 
-			if (!added_emergency) { // add red emergency sign centered above the first door
+			if (!added_emergency) { // add red emergency sign centered above the first door; the back may be visible through a window on the floor above
 				bool const dir(normal[dim] > 0.0);
 				float const floor_spacing(get_window_vspace()), sign_z1(ground_floor_z1 + 1.1*floor_spacing), half_thick(0.01*floor_spacing);
 				set_cube_zvals(sign, sign_z1, (sign_z1 + 0.14*floor_spacing));
 
 				if (parts.front().z2() > sign.z2()) { // assume door is on first part and check for height; should always be true, since parts are > 1 floor
-					set_wall_width(sign, (bc.get_center_dim( dim) + half_thick*normal[dim]), half_thick, dim); // thickness
+					// translate from front of door nearly to building wall
+					set_wall_width(sign, (bc.get_center_dim( dim) + (half_thick - 0.45*get_wall_thickness())*normal[dim]), half_thick, dim); // thickness
 					set_wall_width(sign,  bc.get_center_dim(!dim), 0.35*floor_spacing, !dim); // width
 					signs.emplace_back(sign, dim, dir, "Emergency", RED, WHITE, 0, 1, 1); // two_sided=0, emissive=1, small=1
 					added_emergency = 1;
@@ -426,6 +427,7 @@ void building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std
 	float const sign_width(0.8*text.size()*c.dz()), shrink(0.5f*(width - sign_width));
 	c.expand_in_dim(!dim, -shrink);
 	if (!outside) {dir ^= 1; c.translate_dim(dim, (dir ? 1.0 : -1.0)*0.1*height);} // move inside the building
+	else {c.translate_dim(dim, (dir ? -1.0 : 1.0)*0.45*get_wall_thickness());} // translate from front of door nearly to building wall
 	c.d[dim][dir] += (dir ? 1.0 : -1.0)*0.01*height; // front face
 
 	if (outside) {
