@@ -366,7 +366,7 @@ void car_t::honk_horn_if_close_and_fast() const {
 }
 
 void car_t::on_alternate_turn_dir(rand_gen_t &rgen) {
-	honk_horn_if_close();
+	honk_horn_if_close(); // honk in frustration at waiting this long
 	// 25% chance of choosing a new destination rather than driving in circles; will be in current city
 	if (dest_driveway < 0 && (rgen.rand()&3) == 0) {dest_valid = 0;}
 }
@@ -424,7 +424,7 @@ bool car_t::check_collision(car_t &c, road_gen_base_t const &road_gen) {
 		if (!to_stop) return 0;
 		to_stop->decelerate_fast(); // attempt to prevent one car from T-boning the other
 		to_stop->bcube = to_stop->prev_bcube;
-		to_stop->honk_horn_if_close_and_fast();
+		if (!is_emergency) {to_stop->honk_horn_if_close_and_fast();} // don't honk at emergency vehicles
 		return 1;
 	}
 	if (dir != c.dir) return 0; // traveling on opposite sides of the road
@@ -450,7 +450,7 @@ bool car_t::check_collision(car_t &c, road_gen_base_t const &road_gen) {
 		//if (cmove.bcube == cmove.prev_bcube) {return 1;} // collided, but not safe to move the car (init pos or second collision)
 		if (cmove.bcube != cmove.prev_bcube) { // try resetting to last frame's position
 			cmove.bcube  = cmove.prev_bcube; // restore prev frame's pos
-			//cmove.honk_horn_if_close_and_fast();
+			//if (!is_emergency) {cmove.honk_horn_if_close_and_fast();}
 			return 1; // done
 		}
 		else { // keep the car from moving outside its current segment (init collision case)
