@@ -1679,6 +1679,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		// check visibility of bcube of light sphere clipped to building bcube; this excludes lights behind the camera and improves shadow map assignment quality
 		cube_t sphere_bc, light_clip_cube; // in building space, unrotated
 		sphere_bc.set_from_sphere(lpos, cull_radius);
+		bool light_in_walkway(0);
 
 		if (light_in_basement) { // clip to basement + ext basement
 			light_clip_cube = get_basement();
@@ -1687,18 +1688,17 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			assert(light_clip_cube.contains_pt(lpos)); // Note: may not be contained in building bcube
 			light_clip_cube.expand_by_xy(light_bcube_expand);
 		}
-		else if (is_exterior) { // exterior lights are only in walkways and are only visible when the player is inside
+		else if (is_exterior) { // exterior lights are only in walkways and are only visible when the player is inside or in a connected room
 			assert(!walkways.empty());
-			bool found_ww(0);
 
 			for (building_walkway_t const &w : walkways) {
 				if (!w.is_owner || !w.bcube.contains_pt(lpos)) continue;
 				if (w.get_bcube_inc_open_door().contains_pt(camera_rot)) {in_camera_walkway = 1;}
 				light_clip_cube = w.bcube;
-				found_ww = 1;
+				light_in_walkway = 1;
 				break;
 			}
-			assert(found_ww);
+			assert(light_in_walkway);
 		}
 		else { // clip to bcube
 			if (is_rotated()) {light_clip_cube = get_rotated_bcube(bcube, 1);} // inv_rotate=1
@@ -1830,7 +1830,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				clipped_bc.y1() = light_bcube.y1(); clipped_bc.y2() = light_bcube.y2();
 				clipped_bc.expand_by_xy(light_bcube_expand);
 			}
-			clipped_bc.expand_by_xy(room_xy_expand); // expand so that offset exterior doors are properly handled
+			// expand so that offset exterior doors are properly handled, but less for walkway lights
+			clipped_bc.expand_by_xy((light_in_walkway ? 0.1 : ((lpos.z > ground_floor_z1 + window_vspacing) ? 0.65 : 1.0))*room_xy_expand);
 			clipped_bc.intersect_with_cube(sphere_bc); // clip to original light sphere, which still applies (only need to expand at building exterior)
 		}
 		if (!clipped_bc.contains_pt(lpos)) {
