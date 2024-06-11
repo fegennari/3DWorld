@@ -1003,7 +1003,13 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 			} // for dim
 		} // for i
 	}
-	if (obj_avoid.had_coll) {spider.end_jump();}
+	if (obj_avoid.had_coll) {
+		if (spider.on_web) {
+			// TODO: handle this somehow? currently the spider is likely to get stuck; if coll is ignored, spider will clip through the object;
+			// should the spider climb the web instead? treat the avoid object as a cube? move in a random horizontal direction? jump? this case is rare and difficult to test
+		}
+		spider.end_jump();
+	}
 	float const delta_dir(min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep))));
 
 	if (!surface_orienter.align_to_surfaces(spider, delta_dir, camera_bs, rgen)) { // not on a surface

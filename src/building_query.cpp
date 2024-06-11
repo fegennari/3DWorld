@@ -2126,6 +2126,9 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		lg_cubes .push_back(cubes[0]); // walk on the body
 		non_cubes.push_back(cubes[1]); // avoid the screen
 	}
+	else if (type == TYPE_CUBICLE) {
+		//non_cubes.push_back(c); // using the colliders around the cubicles somewhat works
+	}
 	else if (type == TYPE_ATTIC_DOOR) {lg_cubes.push_back(get_true_room_obj_bcube(c));}
 	// otherwise, treat as a large object; this includes: TYPE_BCASE, TYPE_KSINK (with dishwasher), TYPE_COUCH, TYPE_COLLIDER (cars)
 	else {lg_cubes.push_back(c);}
