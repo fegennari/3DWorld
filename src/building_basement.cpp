@@ -1347,7 +1347,9 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 		set_wall_width(c, rgen.rand_uniform(basement.d[!dim][0]+spacing, basement.d[!dim][1]-spacing), sp_radius, !dim);
 		c.d[dim][ dir] = basement.d[dim][dir] + (dir ? -1.0 : 1.0)*flange_expand; // against the wall (with space for the flange)
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*2.0*sp_radius;
-		if (has_bcube_int(c, obstacles) || has_bcube_int(c, walls) || has_bcube_int(c, beams) || has_bcube_int(c, pipe_cubes)) continue; // include walls and beams
+		cube_t c2(c);
+		c2.expand_in_dim(!dim, 0.5*sp_radius); // add a bit of extra space to the sides for the flanges and valves
+		if (has_bcube_int(c2, obstacles) || has_bcube_int(c2, walls) || has_bcube_int(c2, beams) || has_bcube_int(c2, pipe_cubes)) continue; // include walls and beams
 		// skip if the pipe aligns with a pillar because we won't be able to place a horizontal sprinkler pipe
 		bool is_blocked(0);
 		
@@ -1388,6 +1390,7 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 			valve.expand_in_dim(2,        valve_radius);
 			valve.expand_in_dim(!dim,     valve_radius);
 			valve.expand_in_dim( dim, 0.4*valve_radius);
+			if (has_bcube_int(valve, obstacles) || has_bcube_int(valve, walls)) continue; // check for pillars, etc.; should be rare
 			objs.emplace_back(valve, TYPE_VALVE, room_id, dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, pcolor);
 			// add a brass band around the pipe where the valve connects
 			cube_t band(c);
