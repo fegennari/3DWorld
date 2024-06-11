@@ -1831,7 +1831,7 @@ float building_t::gen_sloped_roof_for_stacked_parts(cube_t const &bot, cube_t co
 
 void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office buildings
 
-	if (use_cylinder_coll())                 return; // can't place doors on curved building sides
+	if (num_sides > 8)                       return; // can't place doors on curved building sides
 	if (!is_cube() && has_complex_floorplan) return; // this case isn't handled either
 	assert(!parts.empty());
 	float const door_height(get_office_bldg_door_height()), wscale(DOOR_WIDTH_SCALE_OFFICE); // a bit taller and a lot wider than house doors

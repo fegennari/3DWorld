@@ -1755,7 +1755,7 @@ struct building_t : public building_geom_t {
 	void get_basement_ext_wall_verts (building_draw_t &bdraw) const;
 	void get_all_drawn_interior_verts(building_draw_t &bdraw);
 	void get_all_drawn_window_verts  (building_draw_t &bdraw, bool lights_pass=0, float offset_scale=1.0,
-		point const *const only_cont_pt_in=nullptr, bool no_skylights=0, bool draw_int_windows=0) const;
+		point const *only_cont_pt_in=nullptr, bool no_skylights=0, bool draw_int_windows=0) const;
 	void get_all_drawn_window_verts_as_quads(vect_vnctcc_t &verts) const;
 	bool get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, vector3d const &view_dir, float dist, bool update_state, bool only_open);
 	void get_ext_door_verts(building_draw_t &bdraw, point const &viewer, vector3d const &view_dir, int skip_door_ix) const;

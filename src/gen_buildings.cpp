@@ -2076,9 +2076,10 @@ template void building_t::add_door_verts(cube_t const &D, building_room_geom_t &
 
 // Note: this is actually the geometry of walls that have windows, not the windows themselves
 void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale,
-	point const *const only_cont_pt_in, bool no_skylights, bool draw_int_windows) const
+	point const *only_cont_pt_in, bool no_skylights, bool draw_int_windows) const
 {
 	if (!is_valid()) return; // invalid building
+	if (!is_cube()) {only_cont_pt_in = nullptr;} // not needed for current non-cube buildings (optimization)
 
 	if (!no_skylights && !lights_pass) { // draw skylight glass
 		for (cube_t const &skylight : skylights) {
@@ -2178,6 +2179,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			draw_parts_mask |= (1 << part_ix);
 
 			// add ground floor windows next to doors
+			if (!is_cube())  continue; // below logic is only correct for cube-shaped buildings; other shapes are generally convex anyway
 			if (dsides == 0) continue; // no doors
 			float const space(0.25*floor_spacing), toler(0.1*floor_spacing);
 
