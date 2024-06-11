@@ -2168,7 +2168,7 @@ private:
 	unsigned count_num_int_doors(room_t const &room) const;
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
-	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, unsigned part_id, vector3d *cnorm) const;
+	bool test_coll_with_sides(point &pos, point const &p_last, float radius, vector3d const &xlate, cube_t const &part, unsigned part_id, vector3d *cnorm) const;
 	void gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ext_bcube) const;
 	void get_lights_with_priorities(point const &target, cube_t const &valid_area, vector<pair<float, unsigned>> &lights_to_sort) const;
 	void get_all_windows(vect_cube_with_ix_t &windows) const;

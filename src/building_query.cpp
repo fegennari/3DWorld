@@ -186,24 +186,26 @@ bool do_sphere_coll_polygon_sides(point &pos, cube_t const &part, float radius, 
 }
 
 // called for players and butterfiles
-bool building_t::test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, unsigned part_id, vector3d *cnorm) const {
+bool building_t::test_coll_with_sides(point &pos, point const &p_last, float radius, vector3d const &xlate, cube_t const &part, unsigned part_id, vector3d *cnorm) const {
 
 	vect_point const &points(get_part_ext_verts(part_id));
 	unsigned const num_steps(max(1U, min(100U, (unsigned)ceil(2.0*p2p_dist_xy(pos, p_last)/radius))));
 	vector3d const step_delta((pos - p_last)/num_steps);
-	pos = p_last;
+	pos = p_last - xlate;
 
 	// if the player is moving too quickly, the intersection with a side polygon may be missed, which allows the player to travel through the building;
 	// so we split the test into multiple smaller sphere collision steps
 	for (unsigned step = 0; step < num_steps; ++step) {
 		pos += step_delta;
-		if (do_sphere_coll_polygon_sides(pos, part, radius, 0, points, cnorm)) return 1; // interior_coll=0
+		if (do_sphere_coll_polygon_sides(pos, part, radius, 0, points, cnorm)) {pos += xlate; return 1;} // interior_coll=0
 	}
 	if (max(pos.z, p_last.z) > part.z2() && point_in_polygon_2d(pos.x, pos.y, points.data(), num_sides)) { // test top plane (sphere on top of polygon?)
 		pos.z = part.z2() + radius; // make sure it doesn't intersect the roof
+		pos  += xlate;
 		if (cnorm) {*cnorm = plus_z;}
 		return 1;
 	}
+	pos += xlate;
 	return 0;
 }
 
@@ -438,11 +440,11 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 					part_coll = 1;
 				}
 				else {
-					part_coll |= test_coll_with_sides(pos2, p_last2, radius, part_bc, part_id, cnorm_ptr); // use polygon collision test
+					part_coll |= test_coll_with_sides(pos2, p_last2, radius, xlate, part_bc, part_id, cnorm_ptr); // use polygon collision test
 				}
 			}
 			else if (num_sides != 4) { // triangle, hexagon, octagon, etc.
-				part_coll |= test_coll_with_sides(pos2, p_last2, radius, part_bc, part_id, cnorm_ptr);
+				part_coll |= test_coll_with_sides(pos2, p_last2, radius, xlate, part_bc, part_id, cnorm_ptr);
 			}
 			else if (!xy_only && part_bc.contains_pt_xy_exp(pos2, radius) && p_last2.z > (i->z2() + xlate.z)) { // on top of building
 				pos2.z = i->z2() + xlate.z + radius;
