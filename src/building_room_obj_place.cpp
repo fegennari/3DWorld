@@ -2638,7 +2638,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 	assert(has_pool());
 	cube_t const place_area(get_walkable_room_bounds(room));
 	indoor_pool_t &pool(interior->pool);
-	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), wall_thickness(get_wall_thickness()), tile_thickness(get_flooring_thick());
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), tile_thickness(get_flooring_thick());
 	float const pool_len(pool.get_sz_dim(pool.dim)), pool_depth(pool.dz());
 	float const shallow_depth(0.5*floor_spacing); // about 4 feet
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -2652,15 +2652,6 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 			side.d[dim][ dir] += (dir ? 1.0 : -1.0)*tile_thickness;
 			expand_to_nonzero_area(side, tile_thickness, dim);
 			objs.emplace_back(side, TYPE_POOL_TILE, room_id, dim, dir, RO_FLAG_ADJ_LO); // flag RO_FLAG_ADJ_LO for being inside the pool
-			// add ledge around the pool as wall trim
-			cube_t ledge(side);
-			ledge.z1()  = side.z2() - 0.025*floor_spacing; // half the default gap between the water surface and the top edge of the pool
-			ledge.z2() += trim_thickness;
-			ledge.d[dim][ dir] += (dir ? 1.0 : -1.0)*wall_thickness; // away from the pool
-			ledge.d[dim][!dir] -= (dir ? 1.0 : -1.0)*trim_thickness; // toward the pool
-			if (dim == 0) {ledge.expand_in_dim(!dim, (wall_thickness + 0.5*trim_thickness));} // fill in the corners; only needed for one dim, since they would overlap
-			else          {ledge.expand_in_dim(!dim, -trim_thickness);} // remove the overlap
-			interior->room_geom->trim_objs.emplace_back(ledge, TYPE_WALL_TRIM, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0, SHAPE_TALL, WHITE); // draw all faces
 		} // for dir
 	} // for dim
 	// add tile to the bottom of the pool

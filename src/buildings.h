@@ -914,7 +914,7 @@ struct courtyard_t : public cube_t {
 
 struct building_room_geom_t {
 
-	bool has_elevators=0, has_pictures=0, has_garage_car=0, modified_by_player=0, trim_was_added=0, have_clock=0;
+	bool has_elevators=0, has_pictures=0, has_garage_car=0, modified_by_player=0, have_clock=0;
 	unsigned char num_pic_tids=0, invalidate_mats_mask=0;
 	float obj_scale=1.0;
 	unsigned wall_ps_start=0, buttons_start=0, stairs_start=0, backrooms_start=0; // index of first object of {TYPE_PG_*|TYPE_PSPACE, TYPE_BUTTON, TYPE_STAIR}
@@ -2163,6 +2163,7 @@ private:
 	void add_wall_and_door_trim_if_needed();
 	void add_wall_and_door_trim();
 	void add_window_trim_and_coverings(bool add_trim, bool add_blinds, bool add_ext_sills=0);
+	void add_pool_trim();
 	void add_ext_door_steps(unsigned ext_objs_start);
 	unsigned count_num_int_doors(room_t const &room) const;
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs) const;

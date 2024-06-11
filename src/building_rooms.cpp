@@ -1453,8 +1453,7 @@ void building_t::add_extra_obj_slots() {
 
 void building_t::add_wall_and_door_trim_if_needed() {
 	if (!has_room_geom() || (interior->walls[0].empty() && interior->walls[1].empty())) return; // no interior or walls
-	if (interior->room_geom->trim_was_added) return; // trim already generated
-	interior->room_geom->trim_was_added = 1;
+	if (!interior->room_geom->trim_objs.empty()) return; // trim already generated
 	add_wall_and_door_trim();
 	interior->room_geom->trim_objs.shrink_to_fit();
 }
@@ -1761,6 +1760,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	} // for i
 	if (!is_cube() || is_rotated()) return; // window trim is not yet working for non-cube and rotated buildings
 	add_window_trim_and_coverings(1, 0, 0); // add_trim=1, add_coverings=0, add_ext_sills=0
+	if (has_pool()) {add_pool_trim();}
 }
 
 void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings, bool add_ext_sills) {
@@ -1834,22 +1834,24 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 						exclude.expand_in_dim(dim, wall_thickness); // make sure it clips the trim
 						break;
 					}
-					for (building_walkway_t const &w : walkways) { // add extra vertical trim to cover the ends of walkway walls
-						if (w.dim != dim || !w.bcube.intersects(window_exp)) continue;
+					if (add_trim) { // add extra vertical trim to cover the ends of walkway walls
+						for (building_walkway_t const &w : walkways) {
+							if (w.dim != dim || !w.bcube.intersects(window_exp)) continue;
 						
-						for (unsigned d = 0; d < 2; ++d) { // left/right of walkway
-							float const edge(w.bcube.d[!dim][d] - (d ? 1.0 : -1.0)*0.5*wall_thickness); // centered in walkway wall, which is shifted toward the interior
-							if (edge < window.d[!dim][0]-window_trim_width || edge > window.d[!dim][1]+window_trim_width) continue;
-							// extra trim isn't needed for glass block bathroom walls
-							bool is_split(0);
-							int const room_id(get_room_id_for_window(window, dim, dir, is_split));
-							unsigned floor_ix(0);
-							if (!is_split && is_bathroom(get_room_type_and_floor(room_id, window.zc(), floor_ix))) continue;
-							cube_t trim(window);
-							set_wall_width(trim, edge, 0.5*max(window_trim_width, 1.1f*wall_thickness), !dim);
-							trim_objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
-						}
-					} // for w
+							for (unsigned d = 0; d < 2; ++d) { // left/right of walkway
+								float const edge(w.bcube.d[!dim][d] - (d ? 1.0 : -1.0)*0.5*wall_thickness); // centered in walkway wall, which is shifted toward the interior
+								if (edge < window.d[!dim][0]-window_trim_width || edge > window.d[!dim][1]+window_trim_width) continue;
+								// extra trim isn't needed for glass block bathroom walls
+								bool is_split(0);
+								int const room_id(get_room_id_for_window(window, dim, dir, is_split));
+								unsigned floor_ix(0);
+								if (!is_split && is_bathroom(get_room_type_and_floor(room_id, window.zc(), floor_ix))) continue;
+								cube_t trim(window);
+								set_wall_width(trim, edge, 0.5*max(window_trim_width, 1.1f*wall_thickness), !dim);
+								trim_objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
+							}
+						} // for w
+					}
 				}
 				if (add_coverings && !is_attic && !at_walkway) {add_window_coverings(window, dim, dir);}
 
@@ -1973,6 +1975,25 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 			} // for dim
 		} // for p
 	}
+}
+
+void building_t::add_pool_trim() { // add ledge around the pool as wall trim
+	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), wall_thickness(get_wall_thickness());
+	indoor_pool_t &pool(interior->pool);
+
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			cube_t ledge(pool);
+			ledge.d[dim][!dir] = pool.d[dim][dir]; // shrink to zero area
+			ledge.z1()  = ledge.z2() - 0.025*floor_spacing; // half the default gap between the water surface and the top edge of the pool
+			ledge.z2() += trim_thickness;
+			ledge.d[dim][ dir] += (dir ? 1.0 : -1.0)*wall_thickness; // away from the pool
+			ledge.d[dim][!dir] -= (dir ? 1.0 : -1.0)*trim_thickness; // toward the pool
+			if (dim == 0) {ledge.expand_in_dim(!dim,  wall_thickness);} // fill in the corners; only needed for one dim, since they would overlap
+			else          {ledge.expand_in_dim(!dim, -trim_thickness);} // remove the overlap
+			interior->room_geom->trim_objs.emplace_back(ledge, TYPE_WALL_TRIM, pool.room_ix, dim, dir, RO_FLAG_NOCOLL, 1.0, SHAPE_TALL, WHITE); // draw all faces
+		} // for dir
+	} // for dim
 }
 
 cube_t building_t::get_step_for_ext_door(tquad_with_ix_t const &door) const {
