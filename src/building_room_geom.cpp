@@ -688,36 +688,49 @@ void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
 		add_vert_roll_to_material(c, mat);
 		return;
 	}
+	float const height(c.get_height()), radius(0.5*height), side_clearance(c.get_depth() - height);
+	cube_t full_roll(c);
+	full_roll.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*side_clearance;
+
 	if (c.taken_level == 0) { // draw the roll if not taken
 		float const tscale(1.0/c.get_width()); // texture fits width of roll exactly; doesn't look great on the rool ends though
 		rgeom_mat_t &mat(get_material(tid_nm_pair_t(WHITE_TEX, get_toilet_paper_nm_id(), tscale, tscale, 0.0, 0.0, 1), 1, 0, 1)); // shadowed, small
 		colorRGBA const tp_color(blend_color(c.color, apply_light_color(c), 0.5, 0.0)); // 50% mix
-		float const radius(0.5*c.dz()), rod_shrink(-0.7*radius), roll_shrink(0.75*rod_shrink*fract(123.456*c.obj_id)); // randomly partially empty (25-100%)
-		cube_t roll(c);
+		float const rod_shrink(-0.7*radius), roll_shrink(0.75*rod_shrink*fract(123.456*c.obj_id)); // randomly partially empty (25-100%)
+		cube_t roll(full_roll);
 		roll.expand_in_dim(c.dim, roll_shrink);
 		roll.expand_in_dim(2,     roll_shrink); // z
 		mat.add_ortho_cylin_to_verts(roll, tp_color, !c.dim, 1, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 24, 0.0, 1); // c.dim applies to the wall; the roll is oriented perpendicular; ndiv=24
 		cube_t square(roll); // hanging square of TP
 		set_cube_zvals(square, c.z1(), c.zc()); // starts at the centerline (tangent) and extends to the bottom
-		if (c.is_hanging()) {square.z1() -= 3.0*c.dz();} // player has pulled it down lower
+		if (c.is_hanging()) {square.z1() -= 3.0*height;} // player has pulled it down lower
 		square.d[c.dim][c.dir] = square.d[c.dim][!c.dir]; // shrink to zero thickness at outer edge
 		mat.add_cube_to_verts(square, tp_color, all_zeros, ~get_skip_mask_for_xy(c.dim), !c.dim); // only draw front/back faces
 	}
-	float const radius(0.5*c.dz()), rod_shrink(-0.7*radius), length(c.get_width());
+	float const rod_shrink(-0.7*radius), length(c.get_width());
 	// draw the holder attached to the wall
 	rgeom_mat_t &holder_mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small=1
 	colorRGBA const holder_color(apply_light_color(c, GRAY));
-	cube_t rod(c), plate(c);
+	cube_t rod(full_roll), bar(c);
 	rod.expand_in_dim( c.dim, rod_shrink);
 	rod.expand_in_dim( 2,     rod_shrink); // z
 	rod.expand_in_dim(!c.dim, 0.05*length); // will go slightly outside the bounds of c
 	float const rod_end(rod.d[!c.dim][0]); // arbitrarily choose lower end
-	plate.expand_in_dim(2, -0.65*radius); // z
-	plate.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.6*radius;
-	plate.d[!c.dim][0] = rod_end - 0.08*length; // set thickness; will go slightly outside the bounds of c
-	plate.d[!c.dim][1] = rod_end;
-	holder_mat.add_ortho_cylin_to_verts(rod, holder_color, !c.dim, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 24); // ndiv=24
-	holder_mat.add_cube_to_verts_untextured(plate, holder_color, ~get_face_mask(c.dim, c.dir)); // skip the face against the wall
+	bar.expand_in_dim(2, -0.65*radius); // z
+	bar.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.6*radius;
+	bar.d[!c.dim][0] = rod_end - 0.08*length; // set thickness; will go slightly outside the bounds of c
+	bar.d[!c.dim][1] = rod_end;
+	unsigned const wall_face(~get_face_mask(c.dim, c.dir));
+	holder_mat.add_ortho_cylin_to_verts    (rod, holder_color, !c.dim, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 24); // ndiv=24
+	holder_mat.add_cube_to_verts_untextured(bar, holder_color, wall_face); // skip the face against the wall
+
+	if (side_clearance > 0.0) { // add mounting plate
+		cube_t plate(c);
+		plate.d[c.dim][!c.dir] = c.d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*0.75*side_clearance; // set plate thickness
+		plate.d[!c.dim][0] = bar.d[!c.dim][0]; // flush with the bar
+		plate.expand_in_dim(2, -0.2*height); // shrink in Z
+		holder_mat.add_cube_to_verts_untextured(plate, holder_color, wall_face); // skip the face against the wall
+	}
 }
 void building_room_geom_t::add_tape(room_object_t const &c) { // is_small=1
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1));

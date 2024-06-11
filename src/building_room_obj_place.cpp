@@ -1564,7 +1564,7 @@ bool building_t::add_tp_roll(cube_t const &room, unsigned room_id, float tot_lig
 	set_cube_zvals(tp, zval, (zval + diameter));
 	set_wall_width(tp, wall_pos, 0.5*length, !dim); // set length
 	tp.d[dim][ dir] = room.d[dim][dir]; // against the wall
-	tp.d[dim][!dir] = tp  .d[dim][dir] + (dir ? -1.0 : 1.0)*diameter; // set the diameter
+	tp.d[dim][!dir] = tp  .d[dim][dir] + (dir ? -1.0 : 1.0)*1.1*diameter; // set the diameter with a bit of extra space for clearance
 	// Note: not checked against other bathroom objects because the toilet is placed first
 	if (check_valid_pos && (!room.contains_cube(tp) || is_obj_placement_blocked(tp, room, 1))) return 0;
 	if (has_small_part && !check_if_placed_on_interior_wall(tp, get_room(room_id), dim, dir))  return 0; // need to check for missing walls
