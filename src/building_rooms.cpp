@@ -553,7 +553,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					add_false_door_to_extb_room_if_needed(*r, room_center.z, room_id);
 				}
 			}
-			if (is_apt_or_hotel_room || r->is_office) { // check if this room is adjacent to an exterior/walkway door, and if so, make it a lounge
+			// check if this room is adjacent to an exterior/walkway door, and if so, make it a lounge
+			if (is_apt_or_hotel_room || r->is_office || (has_walkway && r->get_room_type(f) == RTYPE_NOTSET)) {
 				cube_t room_this_floor(*r);
 				set_cube_zvals(room_this_floor, z, (z + floor_height));
 				bool make_public(0);
