@@ -1803,7 +1803,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			assert(car.contains_pt(lpos));
 			cube_t clip_cube(car); // light is constrained to the elevator car
 			clip_cube.expand_in_dim(!e.dim, 0.1*room_xy_expand); // expand sides to include walls adjacent to elevator (enough to account for FP error)
-			if (e.open_amt > 0.0) {clip_cube.d[e.dim][e.dir] += (e.dir ? 1.0 : -1.0)*light_radius;} // allow light to extend outside open elevator door
+			// allow light to extend outside open elevator door; full light radius if closed, a small amount to lit the interior edge of each floor when closed
+			float const light_extend((e.open_amt > 0.0) ? light_radius : 0.1*room_xy_expand);
+			clip_cube.d[e.dim][e.dir] += (e.dir ? 1.0 : -1.0)*light_extend;
 			clipped_bc.intersect_with_cube(clip_cube); // Note: clipped_bc is likely contained in clip_cube and could be replaced with it
 			if (e.may_be_moving()) {hash_mix_point(e.get_llc(), shadow_caster_hash);} // make sure to update shadows if elevator or its doors are potentially moving
 			if (e.open_amt > 0.0 && e.open_amt < 1.0) {shadow_caster_hash += hash_by_bytes<float>()(e.open_amt);} // update shadows if door is opening or closing
