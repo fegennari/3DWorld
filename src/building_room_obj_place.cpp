@@ -90,6 +90,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 	vect_room_object_t &objs(interior->room_geom->objs);
 
 	if (office_chair) {
+		if (fabs(chair.d[dim][!dir] - room.d[dim][!dir]) < 1.25*get_min_front_clearance_inc_people()) return 0; // too close to wall/room too narrow
 		unsigned const flags(enable_rotation ? RO_FLAG_RAND_ROT : 0);
 		float lum(chair_color.get_luminance()); // calculate grayscale luminance
 		if (lum > 0.5) {lum = 1.0 - lum;} // not white; clamp to [0.0, 0.5] range
