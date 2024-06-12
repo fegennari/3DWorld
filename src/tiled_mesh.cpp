@@ -59,6 +59,7 @@ vector<clear_area_t> tile_smaps_to_clear;
 
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp, tt_triplanar_tex, use_grass_tess;
 extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava, tt_fire_button_down, flashlight_on, camera_in_building, rotate_trees;
+extern bool player_in_int_elevator;
 extern unsigned grass_density, max_unique_trees, shadow_map_sz, erosion_iters_tt, num_rnd_grass_blocks, tiled_terrain_gen_heightmap_sz;
 extern unsigned num_birds_per_tile, num_fish_per_tile, num_bflies_per_tile, room_geom_mem;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees, window_width, window_height, player_in_basement;
@@ -2800,7 +2801,8 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 		if (pine_trees_enabled ()) {draw_pine_trees (reflection_pass);}
 		if (decid_trees_enabled()) {draw_decid_trees(reflection_pass);}
 	
-		if (player_in_basement < 2 && player_in_attic < 2) { // vegetation/scenery/animals not visible when player is fully inside the basement or windowless attic
+		// vegetation/scenery/animals not visible when player is fully inside the basement, windowless attic, or closed elevator
+		if (player_in_basement < 2 && player_in_attic < 2 && player_in_elevator < 2) {
 			if (scenery_enabled    ()) {draw_scenery    (reflection_pass);}
 			if (is_grass_enabled   ()) {draw_grass      (reflection_pass);}
 			if (ENABLE_ANIMALS)        {draw_animals    (reflection_pass);}
@@ -3555,7 +3557,7 @@ void draw_tiled_terrain(int reflection_pass) {
 	//RESET_TIME;
 	// skip terrain draw if the player is in a closed elevator so that we don't see the terrain when crossing the ground;
 	// but the terrain may be visible through tw window through the crack between the doors, though this isn't too much of an issue
-	if (player_in_elevator >= 2) return;
+	if (player_in_elevator >= 2 && player_in_int_elevator) return;
 	bool const disable_dclamp(enable_depth_clamp &&  camera_in_building && !reflection_pass   ); // helps with terrain covering basement stairs entrance
 	bool const enable_dclamp(!enable_depth_clamp && !camera_in_building && camera_surf_collide); // helps prevent camera clipping through the terrain
 	if (disable_dclamp) {glDisable(GL_DEPTH_CLAMP);}

@@ -7,7 +7,7 @@
 
 
 extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_in_unlit_room, building_has_open_ext_door, ctrl_key_pressed;
-extern bool player_is_hiding, player_wait_respawn, had_building_interior_coll;
+extern bool player_is_hiding, player_wait_respawn, had_building_interior_coll, player_in_int_elevator;
 extern int camera_surf_collide, frame_counter, player_in_closet, player_in_elevator, player_in_basement, player_in_attic, player_in_water;
 extern float CAMERA_RADIUS, C_STEP_HEIGHT, NEAR_CLIP, building_bcube_expand;
 extern double camera_zh;
@@ -909,7 +909,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				
 				if (ecoll) {
 					// 3 if moving, 2 if doors are closed, otherwise 1; used to avoid drawing terrain as we pass through it when the elevator enters or leaves the basement
-					player_in_elevator = ((elevator.open_amt == 0.0) ? (elevator.is_moving ? 3 : 2) : 1);
+					player_in_elevator     = ((elevator.open_amt == 0.0) ? (elevator.is_moving ? 3 : 2) : 1);
+					player_in_int_elevator = elevator.interior_room;
 					had_coll = 1;
 				}
 				continue;

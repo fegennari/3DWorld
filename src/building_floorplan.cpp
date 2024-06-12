@@ -1489,7 +1489,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			if (interior->elevators.empty()) {interior->elevator_dir = rgen.rand_bool();}
 			float const center_shift(0.125*hall_len*(interior->elevator_dir ? -1.0 : 1.0)), ehwidth(0.5*ewidth);
 			center[long_dim] += center_shift; // make elevator off-center
-			elevator_t elevator(room, (interior->rooms.size()-1), long_dim, rgen.rand_bool(), 0); // elevator shaft
+			elevator_t elevator(room, (interior->rooms.size()-1), long_dim, rgen.rand_bool(), 0, 1); // elevator shaft; at_edge=0, interior_room=1 (considered interior-enough)
 			for (unsigned d = 0; d < 2; ++d) {set_wall_width(elevator, center[d], ehwidth, d);}
 
 			if (num_elevators == 1) {add_or_extend_elevator(elevator, 1);} // single elevator
@@ -1576,8 +1576,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 							// check room interior edge for intersection with windows
 							if (wtype_x == ROOM_WALL_EXT && is_val_inside_window(part, 0, xval, window_hspacing[0], window_border)) continue;
 							if (wtype_y == ROOM_WALL_EXT && is_val_inside_window(part, 1, yval, window_hspacing[1], window_border)) continue;
-							bool const dim(rgen.rand_bool());
-							elevator_t elevator(room, stairs_room, dim, !(dim ? y : x), (wtype_x == ROOM_WALL_EXT || wtype_y == ROOM_WALL_EXT)); // elevator shaft
+							bool const dim(rgen.rand_bool()), at_edge(wtype_x == ROOM_WALL_EXT || wtype_y == ROOM_WALL_EXT);
+							elevator_t elevator(room, stairs_room, dim, !(dim ? y : x), at_edge, room.interior); // elevator shaft
 							elevator.d[0][!x] = xval;
 							elevator.d[1][!y] = yval;
 							// shrink to leave a small gap between the outer wall to prevent z-fighting
