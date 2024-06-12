@@ -19,6 +19,7 @@ bool do_line_clip_xy(point &v1, point &v2, float const d[3][2]);
 float get_power_pole_offset() {return 0.045*city_params.road_width;}
 unsigned get_building_models_gpu_mem() {return building_obj_model_loader.get_gpu_mem();}
 void set_flat_normal_map() {select_texture(FLAT_NMAP_TEX, 5);}
+int get_solarp_tid();
 
 
 void textured_mat_t::pre_draw(bool shadow_only) {
@@ -1472,6 +1473,49 @@ void pillar_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sca
 bool pillar_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	if (is_concrete) {return city_obj_t::proc_sphere_coll(pos_, p_last, radius_, xlate, cnorm);} // use base class cube coll for concrete pillars
 	return sphere_city_obj_cylin_coll(point(pos.x, pos.y, bcube.z1()), get_cylin_radius(), pos_, p_last, radius_, xlate, cnorm);
+}
+
+// parking lot solar roofs
+
+parking_solar_t::parking_solar_t(cube_t const &c, bool dim_, bool dir_) : oriented_city_obj_t(c, dim_, dir_) {
+	set_bsphere_from_bcube();
+}
+/*static*/ void parking_solar_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {select_texture(get_solarp_tid());}
+}
+void parking_solar_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	// draw sloped solar panel
+	float const height(bcube.dz());
+	cube_t panel(bcube); // TODO: placeholder, should be sloped
+	panel.z1() = bcube.z2() - 0.05*height;
+	dstate.draw_cube(qbds.qbd,       panel, WHITE,   1, 1.0/height, 3); // top surface only
+	dstate.draw_cube(qbds.untex_qbd, panel, LT_GRAY, 0, 0.0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1); // skip_top=1
+	// draw 4 untextured metal legs
+	cube_t legs[4];
+	get_legs(legs);
+	for (unsigned n = 0; n < 4; ++n) {dstate.draw_cube(qbds.untex_qbd, legs[n], LT_GRAY, 0, 0.0, 4);} // skip top and bottom
+}
+bool parking_solar_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	cube_t legs[4];
+	get_legs(legs);
+
+	for (unsigned n = 0; n < 4; ++n) {
+		if (sphere_cube_int_update_pos(pos_, radius_, (legs[n] + xlate), p_last, 0, cnorm)) return 1;
+	}
+	return 0;
+}
+void parking_solar_t::get_legs(cube_t legs[4]) const { // TODO: more than 4 legs for long parking lots?
+	cube_t inner(bcube), outer(bcube);
+	inner.expand_by(-0.05*bcube.dz());
+	outer.expand_by(-0.01*bcube.dz());
+
+	for (unsigned n = 0; n < 4; ++n) {
+		bool const xd(n & 1), yd(n >> 1);
+		cube_t leg(outer);
+		leg.d[0][!xd] = inner.d[0][xd];
+		leg.d[1][!yd] = inner.d[1][yd];
+		legs[n] = leg;
+	} // for n
 }
 
 // birds/pigeons

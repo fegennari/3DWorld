@@ -204,6 +204,7 @@ int get_bath_wind_tid () {return building_texture_mgr.get_bath_wind_tid();}
 int get_int_door_tid  () {return building_texture_mgr.get_hdoor_tid();}
 int get_bldg_door_tid () {return building_texture_mgr.get_bdoor_tid();}
 int get_concrete_tid  () {return building_texture_mgr.get_concrete_tid();}
+int get_solarp_tid    () {return building_texture_mgr.get_solarp_tid();}
 
 
 class texture_id_mapper_t {

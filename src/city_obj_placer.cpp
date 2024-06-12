@@ -89,6 +89,16 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 			driveways.emplace_back(driveway, !car_dim, dw_dir, plot_ix);
 			bcubes.push_back(driveway); // add to list of blocker bcubes
 		}
+		if (rgen.rand_bool()) { // add solar roofs over parking lots
+			cube_t roof_bc(park);
+			roof_bc.z2() += 3.2*nom_car_size.z;
+			roof_bc.expand_by_xy(0.05*roof_bc.dz()); // legs are outside of the parking area
+			parking_solar_t const ps(roof_bc, car_dim, rgen.rand_bool()); // random dir
+			p_solar_groups.add_obj(ps, p_solars);
+			cube_t legs[4];
+			ps.get_legs(legs);
+			for (unsigned n = 0; n < 4; ++n) {colliders.push_back(legs[n]);} // add legs to colliders but not blockers
+		}
 		car.cur_seg = (unsigned short)parking_lots.size(); // store parking lot index in cur_seg
 		parking_lots.push_back(park);
 		bcubes.push_back(park); // add to list of blocker bcubes so that no later parking lots or other city objects overlap this one
@@ -1725,6 +1735,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	pond_groups    .create_groups(ponds,     all_objs_bcube);
 	walkway_groups .create_groups(walkways,  all_objs_bcube);
 	pillar_groups  .create_groups(pillars,   all_objs_bcube);
+	p_solar_groups .create_groups(p_solars,  all_objs_bcube);
 	if (add_parking_lots) {cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << endl;}
 }
 
@@ -1890,6 +1901,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(plants,    plant_groups,    dstate, 0.04, shadow_only, 1); // dist_scale=0.05, has_immediate_draw=1
 	draw_objects(flowers,   flower_groups,   dstate, 0.06, shadow_only, 1); // dist_scale=0.06, has_immediate_draw=1
 	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1); // dist_scale=0.25, has_immediate_draw=1
+	draw_objects(p_solars,  p_solar_groups,  dstate, 0.20, shadow_only, 0); // dist_scale=0.20, has_immediate_draw=0
 	
 	if (!shadow_only) { // non shadow casting objects
 		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0); // dist_scale=0.12, has_immediate_draw=0
@@ -1991,6 +2003,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(ponds,     pond_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(pillars,   pillar_groups,   pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(pdecks,    pdeck_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(p_solars,  p_solar_groups,  pos, p_last, radius, xlate, cnorm)) return 1;
 	// Note: no coll with tree_planters because the tree coll should take care of it; no coll with hcaps, manholes, tcones, flowers, pladders, pigeons, ppaths, or birds
 	return 0;
 }
@@ -2024,7 +2037,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(pillars,   pillar_groups,   p1, p2, t, ret);
 	check_vector_line_intersect(dumpsters, dumpster_groups, p1, p2, t, ret);
 	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, tcones, flowers, pladders, pool decks, pigeons, ppaths, or birds;
-	// mboxes, swings, tramps, umbrellas, bikes, plants, and ponds are ignored because they're small or not simple shapes
+	// mboxes, swings, tramps, umbrellas, bikes, plants, ponds, and p_solars are ignored because they're small or not simple shapes
 	return ret;
 }
 
@@ -2049,6 +2062,7 @@ template<typename T> bool check_city_obj_pt_xy_contains(city_obj_groups_t const 
 bool city_obj_placer_t::get_color_at_xy_pre_road(point const &pos, colorRGBA &color) const { // check walkways because they can be over both roads and plots
 	unsigned obj_ix(0);
 	if (check_city_obj_pt_xy_contains(walkway_groups, walkways, pos, obj_ix, 0)) {color = walkways[obj_ix].map_mode_color; return 1;} // is_cylin=0
+	if (check_city_obj_pt_xy_contains(p_solar_groups, p_solars, pos, obj_ix, 0)) {color = LT_BLUE; return 1;} // placed over parking lots
 	return 0;
 }
 bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool skip_in_road) const {

@@ -322,6 +322,14 @@ struct pillar_t : public city_obj_t { // for walkway support
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
+struct parking_solar_t : public oriented_city_obj_t {
+	parking_solar_t(cube_t const &c, bool dim_, bool dir_);
+	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
+	void get_legs(cube_t legs[4]) const;
+};
+
 struct city_bird_base_t : public city_obj_t {
 	vector3d dir;
 	city_bird_base_t(point const &pos_, float height, vector3d const &dir, unsigned model_id);
@@ -520,10 +528,12 @@ private:
 	vector<pond_t> ponds;
 	vector<walkway_t> walkways;
 	vector<pillar_t> pillars;
+	vector<parking_solar_t> p_solars;
 	// index is last obj in group
 	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, fountain_groups, divider_groups, pool_groups, plad_groups,
 		pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups, stopsign_groups, flag_groups,
-		nrack_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, dumpster_groups, plant_groups, flower_groups, pond_groups, walkway_groups, pillar_groups;
+		nrack_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, dumpster_groups, plant_groups, flower_groups, pond_groups, walkway_groups,
+		pillar_groups, p_solar_groups;
 	bird_poop_manager_t bird_poop_manager;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
