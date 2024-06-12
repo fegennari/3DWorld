@@ -1067,6 +1067,17 @@ bool building_t::check_cube_intersect_non_main_part(cube_t const &c) const {
 	return 0;
 }
 
+bool building_t::point_in_elevator(point const &pos, bool check_elevator_car) const {
+	if (!interior || (check_elevator_car && !has_room_geom())) return 0;
+
+	for (elevator_t const &e : interior->elevators) {
+		if (!e.contains_pt(pos)) continue;
+		if (check_elevator_car && !interior->get_elevator_car(e).contains_pt(pos)) continue;
+		return 1;
+	}
+	return 0;
+}
+
 bool building_t::check_pos_in_unlit_room(point const &pos) const {
 	if (!interior) return 0; // error?
 	set<unsigned> rooms_visited;

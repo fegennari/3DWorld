@@ -1672,6 +1672,7 @@ struct building_t : public building_geom_t {
 	bool check_sphere_coll_inner(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm=nullptr, bool check_interior=0) const;
 	bool check_sphere_coll_interior(point &pos, point const &p_last, float radius, bool is_in_attic, bool xy_only, vector3d *cnorm) const;
 	bool check_cube_intersect_non_main_part(cube_t const &c) const;
+	bool point_in_elevator(point const &pos, bool check_elevator_car) const;
 	bool check_pos_in_unlit_room(point const &pos) const;
 	bool check_pos_in_unlit_room_recur(point const &pos, std::set<unsigned> &rooms_visited, int known_room_id=-1) const;
 	bool is_room_windowless(room_t const &room) const;

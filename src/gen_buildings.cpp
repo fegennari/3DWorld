@@ -3520,6 +3520,11 @@ public:
 						this_frame_player_in_attic    =  (b.point_in_attic(camera_bs) ? (b.has_attic_window ? 1 : 2) : 0);
 						this_frame_player_in_water    =   b.point_in_water_area(camera_bs, 1); // full_room_height=1
 						if (this_frame_player_in_water && b.point_in_water_area(camera_bs, 0)) {this_frame_player_in_water = 2;} // full_room_height=0; test for underwater
+						
+						if (!camera_surf_collide) { // handle player clipping/flying into or out of an elevator
+							if (!b.point_in_elevator(camera_bs, 1)) {player_in_elevator = 0;} // check_elevator_car=1
+							else {max_eq(player_in_elevator, 1);} // at least in an elevator
+						}
 						// player can only be in one basement or attic, except for extended basement connector rooms;
 						// be conservative and don't break if the player is in the basement and this building has any connections to other basements
 						can_break_from_loop |= ((this_frame_player_in_basement >= 2 && !b.has_conn_info()) || this_frame_player_in_attic == 2);
