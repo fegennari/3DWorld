@@ -2079,8 +2079,7 @@ void building_room_geom_t::add_downspout(room_object_t const &c) {
 	rgeom_mat_t &mat(get_metal_material(0, 0, 0, 1)); // unshadowed, exterior
 	unsigned const wall_skip_faces(~get_face_mask(c.dim, !c.dir));
 	float const width(c.get_width()), depth(c.get_depth());
-	vector3d rot_axis;
-	rot_axis[!c.dim] = ((c.dir ^ c.dim) ? -1.0 : 1.0);
+	vector3d const rot_axis(vector_from_dim_dir(!c.dim, (c.dir ^ c.dim ^ 1)));
 	cube_t top_v(c), top_h(c), vert(c), bot(c);
 	top_h.z2() = c.z2() - 0.75*width;
 	top_h.z1() = top_h.z2() - depth;
@@ -2308,9 +2307,7 @@ void building_room_geom_t::add_valve(room_object_t const &c) {
 	}
 	// rotate a random-ish amount
 	float const rot_angle((c.x1() + c.y1() + c.z1())/radius);
-	vector3d rot_axis;
-	rot_axis[dim] = 1.0;
-	rotate_verts(mat.itri_verts, rot_axis, rot_angle, center, verts_start);
+	rotate_verts(mat.itri_verts, vector_from_dim_dir(dim, 1), rot_angle, center, verts_start);
 	// draw the shaft
 	cube_t shaft(c);
 	for (unsigned d = 0; d < 2; ++d) {set_wall_width(shaft, center[dims[d]], r_shaft, dims[d]);}
@@ -2690,8 +2687,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	shrink[c.dim] = shrink[upright ? 2 : !c.dim] = -indent;
 	pages.expand_by(shrink);
 	spine.d[c.dim][c.dir] = pages.d[c.dim][!c.dir];
-	vector3d axis, tilt_about(c.get_urc()), zrot_about(c.get_cube_center());
-	axis[c.dim] = 1.0; // along book width
+	vector3d const axis(vector_from_dim_dir(c.dim, 1)), tilt_about(c.get_urc()), zrot_about(c.get_cube_center()); // axis along book width
 	tilt_angle *= (c.dim ? -1.0 : 1.0);
 	colorRGBA const color(apply_light_color(c));
 	// skip top face, bottom face if not tilted, thickness dim if upright
@@ -4289,8 +4285,7 @@ void building_room_geom_t::add_switch(room_object_t const &c, bool draw_detail_p
 		rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
 		unsigned const qv_start(mat.quad_verts.size());
 		mat.add_cube_to_verts_untextured(rocker, c.color, (~get_face_mask(c.dim, c.dir) | EF_Z1)); // skip bottom face and face that's against the wall
-		vector3d rot_axis(zero_vector);
-		rot_axis[!c.dim] = ((c.dir ^ c.is_open()) ? 1.0 : -1.0);
+		vector3d const rot_axis(vector_from_dim_dir(!c.dim, (c.dir ^ c.is_open())));
 		rotate_verts(mat.quad_verts, rot_axis, 0.015*PI, plate.get_cube_center(), qv_start); // rotate rocker slightly about base plate center; could be optimized by caching
 	}
 }
@@ -4307,7 +4302,7 @@ void building_room_geom_t::add_breaker(room_object_t const &c) {
 	mat.add_cube_to_verts_untextured(plate, apply_light_color(c), skip_faces);
 	unsigned const qv_start(mat.quad_verts.size());
 	mat.add_cube_to_verts_untextured(rocker, apply_light_color(c, WHITE), skip_faces);
-	vector3d const rot_axis(0.0, 0.0, (c.is_open() ? 1.0 : -1.0));
+	vector3d const rot_axis(0.0, 0.0, (c.is_open() ? 1.0 : -1.0)); // Z
 	rotate_verts(mat.quad_verts, rot_axis, 0.12*PI, plate.get_cube_center(), qv_start); // rotate rocker slightly about base plate center
 }
 

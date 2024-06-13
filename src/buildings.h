@@ -548,6 +548,12 @@ unsigned const REF_PASS_EXTB     = 0x10;
 unsigned const REF_PASS_NO_MIRROR= 0x20;
 unsigned const REF_PASS_INT_ONLY = 0x40;
 
+inline vector3d vector_from_dim_dir(bool dim, bool dir) {
+	vector3d v;
+	v[dim] = (dir ? 1.0 : -1.0);
+	return v;
+}
+
 struct bldg_obj_type_t {
 	bool player_coll=0, ai_coll=0, rat_coll=0, pickup=0, attached=0, is_model=0;
 	uint8_t lg_sm=0; // 0=neither (model or detail), 1=large item, 2=small item, 3=split into large and small
@@ -658,7 +664,7 @@ struct room_object_t : public oriented_cube_t { // size=64
 	void remove() {type = TYPE_BLOCKER; flags = (RO_FLAG_NOCOLL | RO_FLAG_INVIS);} // replace it with an invisible blocker that won't collide with anything
 	colorRGBA get_color() const;
 	colorRGBA get_model_color() const;
-	vector3d get_dir() const {vector3d v(zero_vector); v[dim] = (dir ? 1.0 : -1.0); return v;}
+	vector3d get_dir() const {return vector_from_dim_dir(dim, dir);}
 	rand_gen_t create_rgen() const;
 	ball_type_t const &get_ball_type() const;
 }; // room_object_t
@@ -2341,12 +2347,6 @@ struct cube_by_sz { // sort cube by size in dim descending
 	cube_by_sz(bool dim_) : dim(dim_) {}
 	bool operator()(cube_t const &a, cube_t const &b) const {return (b.get_sz_dim(dim) < a.get_sz_dim(dim));}
 };
-
-inline vector3d vector_from_dim_dir(bool dim, bool dir) {
-	vector3d v;
-	v[dim] = (dir ? 1.0 : -1.0);
-	return v;
-}
 
 inline point get_camera_building_space() {return (get_camera_pos() - get_tiled_terrain_model_xlate());}
 inline void set_cube_zvals(cube_t &c, float z1, float z2) {c.z1() = z1; c.z2() = z2;}
