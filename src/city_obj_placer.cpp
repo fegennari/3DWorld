@@ -1566,7 +1566,7 @@ void city_obj_placer_t::place_objects_in_isec(road_isec_t &isec, bool is_residen
 			// dim=1, dir=0: hospital to S; W left  arrow, E right arrow
 			// dim=0, dir=1: hospital to E; N right arrow, S left  arrow
 			// dim=0, dir=0: hospital to W; N left  arrow, S right arrow
-			isec.hospital_dir |= ((1<<dir) << (dim ? 0 : 6)) | ((1<<(!dir)) << (dim ? 2 : 4));
+			isec.hospital_dir |= ((1<<unsigned(dir)) << (dim ? 0 : 6)) | ((1<<unsigned(!dir)) << (dim ? 2 : 4));
 		}
 	}
 }
