@@ -525,9 +525,8 @@ void car_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool 
 	last_smap_tile_id_valid = 0;
 }
 
-void car_draw_state_t::post_draw() {
+void car_draw_state_t::draw_remaining_cars() {
 	qbds[1].draw_and_clear(); // draw any leftover unflushed shadowed geometry using the last shadow map that was bound
-	ao_draw_state_t::post_draw();
 }
 void car_draw_state_t::draw_unshadowed() {
 	qbds[0].draw_and_clear();
@@ -1556,6 +1555,7 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 				dstate.draw_car(car, is_dlight_shadows);
 			}
 		} // for cb
+		dstate.draw_remaining_cars(); // draw cars from last shadow tile
 		if (!is_dlight_shadows) {draw_helicopters(shadow_only);} // draw helicopters in the normal draw pass
 		if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 1.0);} // restore shader uniform
 		dstate.post_draw();

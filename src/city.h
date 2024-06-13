@@ -681,8 +681,8 @@ public:
 	static float get_headlight_dist();
 	colorRGBA get_headlight_color(car_t const &car) const;
 	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_);
-	virtual void post_draw();
 	virtual void draw_unshadowed();
+	void draw_remaining_cars();
 	void add_car_headlights(vector<car_t> const &cars, vector3d const &xlate_, cube_t &lights_bcube);
 	static void gen_car_pts(car_t const &car, bool include_top, point pb[8], point pt[8]);
 	void draw_car(car_t const &car, bool is_dlight_shadows);
