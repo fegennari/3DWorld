@@ -69,28 +69,33 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 	office_chair &= building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR);
 	bar_stool    &= building_obj_model_loader.is_model_valid(OBJ_MODEL_BAR_STOOL   );
 	float const window_vspacing(get_window_vspace()), room_pad(4.0f*get_wall_thickness()), chair_height(0.4*window_vspacing), dir_sign(dir ? -1.0 : 1.0);
-	float chair_hwidth(0.0), push_out(0.0);
+	float chair_hwidth(0.0), min_push_out(0.0), max_push_out(0.0);
 	point chair_pos(place_pos); // same starting center and z1
 
 	if (office_chair) {
 		chair_hwidth = chair_height*get_radius_for_square_model(OBJ_MODEL_OFFICE_CHAIR);
-		push_out     = 0.5 + rgen.rand_uniform(0.0, 0.6); // pushed out a bit so that the arms don't intersect the table top, but can push out more
+		min_push_out = 0.5; // pushed out a bit so that the arms don't intersect the table top, but can push out more
+		max_push_out = 1.1;
 	}
 	else if (bar_stool) {
 		chair_hwidth = chair_height*get_radius_for_square_model(OBJ_MODEL_BAR_STOOL);
-		push_out     = 0.25 + rgen.rand_uniform(0.0, 0.6);
+		min_push_out = 0.25;
+		max_push_out = 0.85;
 	}
 	else {
 		chair_hwidth = 0.1*window_vspacing; // half width
-		push_out     = -0.5 + rgen.rand_uniform(0.0, 1.7); // varible amount of pushed in/out
+		min_push_out = -0.5; // varible amount of pushed in/out
+		max_push_out = 1.2;
 	}
-	chair_pos[dim] += dir_sign*push_out*chair_hwidth;
+	float const min_wall_dist(fabs(place_pos[dim] - room.d[dim][!dir]) - 1.33*get_min_front_clearance_inc_people());
+	min_eq(max_push_out, (min_wall_dist - chair_hwidth)/chair_hwidth);
+	if (min_push_out >= max_push_out) return 0; // not enough space
+	chair_pos[dim] += dir_sign*rgen.rand_uniform(min_push_out, max_push_out)*chair_hwidth;
 	cube_t const chair(get_cube_height_radius(chair_pos, chair_hwidth, chair_height));
 	if (!is_valid_placement_for_room(chair, room, blockers, 1, room_pad)) return 0; // check proximity to doors; inc_open_doors=1
 	vect_room_object_t &objs(interior->room_geom->objs);
 
 	if (office_chair) {
-		if (fabs(chair.d[dim][!dir] - room.d[dim][!dir]) < 1.25*get_min_front_clearance_inc_people()) return 0; // too close to wall/room too narrow
 		unsigned const flags(enable_rotation ? RO_FLAG_RAND_ROT : 0);
 		float lum(chair_color.get_luminance()); // calculate grayscale luminance
 		if (lum > 0.5) {lum = 1.0 - lum;} // not white; clamp to [0.0, 0.5] range
