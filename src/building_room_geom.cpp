@@ -2291,9 +2291,11 @@ void building_room_geom_t::add_valve(room_object_t const &c) {
 	tex.set_specular_color(spec_color, 0.8, 60.0);
 	rgeom_mat_t &mat(get_material(tex, 1, 0, 2)); // detail object
 	// draw the outer handle
-	float const r_inner(0.15*radius), r_outer(radius - r_inner), r_bar(0.10*radius), r_shaft(0.09*radius);
+	float const r_inner(0.12*radius), r_outer(radius - r_inner), r_bar(0.075*radius), r_shaft(0.1*radius);
 	point const center(c.get_cube_center());
 	mat.add_ortho_torus_to_verts(center, r_inner, r_outer, dim, color);
+	// draw inner sphere for handle
+	mat.add_sphere_to_verts(center, 0.2*radius, color, 1); // low_detail=1
 	// draw horizontal and vertical bars
 	unsigned const dims[2] = {(dim+1)%3, (dim+2)%3};
 	unsigned const verts_start(mat.itri_verts.size());
