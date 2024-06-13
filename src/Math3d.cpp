@@ -1307,7 +1307,8 @@ template<typename T> void rotate_vector3d_multi(pointT<T> const &vrot, double an
 }
 
 template<typename T> void rotate_verts(vector<T> &verts, vector3d const &axis, float angle, vector3d const &about, unsigned start) {
-	assert(start < verts.size()); // nonempty range
+	if (start == verts.size()) return; // empty range
+	assert(start < verts.size()); // check for valid range
 	if (angle == 0.0) return;
 	CREATE_ROT_MATRIX(axis, angle);
 
@@ -1323,6 +1324,7 @@ template<typename T> void rotate_verts(vector<T> &verts, vector3d const &axis, f
 }
 
 template void rotate_verts(vector<vert_norm_comp_tc_color> &verts, vector3d const &axis, float angle, vector3d const &about, unsigned start); // used for building room geom
+template void rotate_verts(vector<vert_norm_tc_color     > &verts, vector3d const &axis, float angle, vector3d const &about, unsigned start); // used for parking lot solar roofs
 
 
 // vrot must be normalized

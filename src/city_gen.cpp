@@ -191,13 +191,13 @@ void draw_state_t::draw_cube(quad_batch_draw &qbd, color_wrapper const &cw, poin
 		else                                     {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, cw, -right_n, tr_right);} // right
 	}
 }
-void draw_state_t::draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrapper const &cw, bool skip_bottom, float tscale,
-	unsigned skip_dims, bool mirror_x, bool mirror_y, bool swap_tc_xy, float tscale_x, float tscale_y, float tscale_z, bool skip_top) const
+void draw_state_t::draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrapper const &cw, bool skip_bottom, float tscale, unsigned skip_dims,
+	bool mirror_x, bool mirror_y, bool swap_tc_xy, float tscale_x, float tscale_y, float tscale_z, bool skip_top, bool no_cull) const
 {
 	point p[8];
 	set_cube_pts(c, 0, 0, p);
 	//draw_cube(qbd, cw, c.get_cube_center(), p, skip_bottom, 0, tscale, skip_dims); // customized for axis aligned cube below
-	vector3d const cview_dir(camera_bs - c.get_cube_center());
+	vector3d const cview_dir(no_cull ? zero_vector : (camera_bs - c.get_cube_center()));
 	tex_range_t tr_top, tr_front, tr_right;
 	if (swap_tc_xy) {tr_top.swap_xy = tr_front.swap_xy = tr_right.swap_xy = 1;}
 
@@ -212,24 +212,24 @@ void draw_state_t::draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrappe
 		if (mirror_x) {tr_top.mirror_x();}
 		if (mirror_y) {tr_top.mirror_y();}
 
-		if (cview_dir.z > 0.0) {
-			if (!skip_top   ) {qbd.add_quad_pts(p+4, cw,  plus_z, tr_top);} // top
+		if (cview_dir.z >= 0.0) {
+			if (!skip_top   ) {qbd.add_quad_pts(p+4, cw,  plus_z, tr_top);} // top - not always drawn
 		}
-		else {
+		if (cview_dir.z <= 0.0) {
 			if (!skip_bottom) {qbd.add_quad_pts(p+0, cw, -plus_z, tr_top);} // bottom - not always drawn
 		}
 	}
 	if (!(skip_dims & 1)) { // X
 		if (mirror_x) {tr_front.mirror_x();}
 		if (mirror_y) {tr_front.mirror_y();}
-		if (cview_dir.x < 0.0) {point const pts[4] = {p[0], p[1], p[5], p[4]}; qbd.add_quad_pts(pts, cw, -plus_x, tr_front);} // back
-		else                   {point const pts[4] = {p[2], p[3], p[7], p[6]}; qbd.add_quad_pts(pts, cw,  plus_x, tr_front);} // front
+		if (cview_dir.x <= 0.0) {point const pts[4] = {p[0], p[1], p[5], p[4]}; qbd.add_quad_pts(pts, cw, -plus_x, tr_front);} // back
+		if (cview_dir.x >= 0.0) {point const pts[4] = {p[2], p[3], p[7], p[6]}; qbd.add_quad_pts(pts, cw,  plus_x, tr_front);} // front
 	}
 	if (!(skip_dims & 2)) { // Y
 		if (mirror_x) {tr_right.mirror_x();}
 		if (mirror_y) {tr_right.mirror_y();}
-		if (cview_dir.y < 0.0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, cw, -plus_y, tr_right);} // left
-		else                   {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, cw,  plus_y, tr_right);} // right
+		if (cview_dir.y <= 0.0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, cw, -plus_y, tr_right);} // left
+		if (cview_dir.y >= 0.0) {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, cw,  plus_y, tr_right);} // right
 	}
 }
 bool draw_state_t::add_light_flare(point const &flare_pos, vector3d const &n, colorRGBA const &color, float alpha, float radius) {

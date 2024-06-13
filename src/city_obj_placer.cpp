@@ -89,15 +89,21 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 			driveways.emplace_back(driveway, !car_dim, dw_dir, plot_ix);
 			bcubes.push_back(driveway); // add to list of blocker bcubes
 		}
-		if (rgen.rand_bool()) { // add solar roofs over parking lots
+		if (rgen.rand_float() < 0.4) { // add solar roofs over parking lots 40% of the time
 			cube_t roof_bc(park);
-			roof_bc.z2() += 3.2*nom_car_size.z;
-			roof_bc.expand_by_xy(0.05*roof_bc.dz()); // legs are outside of the parking area
-			parking_solar_t const ps(roof_bc, car_dim, rgen.rand_bool()); // random dir
+			roof_bc.z1()  = plot.z2();
+			roof_bc.z2() += 5.0*nom_car_size.z;
+			roof_bc.expand_by_xy(0.06*roof_bc.dz()); // legs are outside of the parking area
+			bool const panel_dir(car_dim ? 1 : rgen.rand_bool()); // if north/south, face south (northern hemisphere); if east/west, choose a random dir
+			parking_solar_t const ps(roof_bc, car_dim, panel_dir);
 			p_solar_groups.add_obj(ps, p_solars);
 			cube_t legs[4];
 			ps.get_legs(legs);
 			for (unsigned n = 0; n < 4; ++n) {colliders.push_back(legs[n]);} // add legs to colliders but not blockers
+			cube_t blocker(roof_bc);
+			blocker.z1() += 0.5*roof_bc.dz(); // top half
+			blocker.expand_by_xy(0.5*nom_car_size.x); // add tree clearance
+			bcubes.push_back(blocker); // required for trees
 		}
 		car.cur_seg = (unsigned short)parking_lots.size(); // store parking lot index in cur_seg
 		parking_lots.push_back(park);
@@ -1901,7 +1907,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(plants,    plant_groups,    dstate, 0.04, shadow_only, 1); // dist_scale=0.05, has_immediate_draw=1
 	draw_objects(flowers,   flower_groups,   dstate, 0.06, shadow_only, 1); // dist_scale=0.06, has_immediate_draw=1
 	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1); // dist_scale=0.25, has_immediate_draw=1
-	draw_objects(p_solars,  p_solar_groups,  dstate, 0.20, shadow_only, 0); // dist_scale=0.20, has_immediate_draw=0
+	draw_objects(p_solars,  p_solar_groups,  dstate, 0.40, shadow_only, 0); // dist_scale=0.20, has_immediate_draw=0
 	
 	if (!shadow_only) { // non shadow casting objects
 		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0); // dist_scale=0.12, has_immediate_draw=0
