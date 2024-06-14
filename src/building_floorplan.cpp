@@ -1746,7 +1746,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	} // for f
 	bool has_roof_access(0);
 
-	if (must_add_stairs && has_stairs && !is_house && roof_type == ROOF_TYPE_FLAT && !has_helipad) { // add roof access for stairs
+	if (must_add_stairs && has_stairs && !is_house && roof_type == ROOF_TYPE_FLAT) { // add roof access for stairs
 		bool const is_sloped(sshape != SHAPE_U);
 		cube_t box(stairs_cut);
 		if (!is_sloped) {box.expand_by_xy(fc_thick);}
@@ -1756,7 +1756,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		check_box.d[stairs_dim][stairs_dir] += (stairs_dir ? 1.0 : -1.0)*doorway_width; // expand at stairs exit to ensure clearance
 
 		// check for overlap with other parts or skylights (should we check in front?)
-		if (!has_bcube_int_no_adj(check_box, parts) && !check_skylight_intersection(check_box)) {
+		if (!has_bcube_int_no_adj(check_box, parts) && !check_skylight_intersection(check_box) && (!has_helipad || !get_helipad_bcube().intersects_xy(check_box))) {
 			float const zc(z - fc_thick);
 			cube_t to_add[4]; // only one cut / 4 cubes (-y, +y, -x, +x)
 			subtract_cube_xy(part, stairs_cut, to_add);
@@ -2595,7 +2595,7 @@ unsigned building_t::add_room(cube_t const &room, unsigned part_id, unsigned num
 void building_t::add_or_extend_elevator(elevator_t const &elevator, bool add) {
 	assert(interior);
 	if (add) {interior->elevators.push_back(elevator);}
-	if (is_house || roof_type != ROOF_TYPE_FLAT || has_helipad) return; // sloped roof, not flat, can't add elevator cap
+	if (is_house || roof_type != ROOF_TYPE_FLAT) return; // sloped roof, not flat, can't add elevator cap
 	float const window_vspacing(get_window_vspace());
 	cube_t ecap(elevator);
 	ecap.z1()  = elevator.z2();
@@ -2611,6 +2611,7 @@ void building_t::add_or_extend_elevator(elevator_t const &elevator, bool add) {
 		if (add) {interior->elevators.back().under_skylight = 1;}
 		return;
 	}
+	if (has_helipad && get_helipad_bcube().intersects_xy(ecap)) return; // check for helipad intersection
 	remove_intersecting_roof_cubes(ecap);
 	details.emplace_back(ecap, ROOF_OBJ_ECAP);
 	max_eq(bcube.z2(), ecap.z2()); // extend bcube z2 to contain ecap
