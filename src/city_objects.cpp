@@ -634,7 +634,7 @@ void pool_deck_t::calc_pillars(cube_t const &ladder) {
 	if (!ladder.is_all_zeros()) {avoid.expand_by_xy(1.0*pillar_width);}
 	pillars.reserve(num_pillars);
 
-	for (unsigned n = 0; n < num_pillars; ++n) { // TODO: no pillar blocking pool ladder
+	for (unsigned n = 0; n < num_pillars; ++n) {
 		set_wall_width(pillar, (roof.d[!dim][0] + pillar_hwidth + pillar_edge_gap + n*spacing), pillar_hwidth, !dim);
 		if (!avoid.is_all_zeros() && pillar.intersects(avoid)) continue; // skip if close to the ladder
 		pillars.push_back(pillar);
@@ -1477,7 +1477,7 @@ bool pillar_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_,
 
 // parking lot solar roofs
 
-parking_solar_t::parking_solar_t(cube_t const &c, bool dim_, bool dir_) : oriented_city_obj_t(c, dim_, dir_) {
+parking_solar_t::parking_solar_t(cube_t const &c, bool dim_, bool dir_, unsigned ns, unsigned nr) : oriented_city_obj_t(c, dim_, dir_), num_spaces(ns), num_rows(nr) {
 	set_bsphere_from_bcube();
 }
 /*static*/ void parking_solar_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
@@ -1504,34 +1504,45 @@ void parking_solar_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 	rotate_verts(qbds.qbd.verts,       axis, angle, about, vs1);
 	rotate_verts(qbds.untex_qbd.verts, axis, angle, about, vs2);
 	// draw 4 untextured metal legs
-	cube_t legs[4];
-	get_legs(legs);
-	for (unsigned n = 0; n < 4; ++n) {dstate.draw_cube(qbds.untex_qbd, legs[n], WHITE, 0, 0.0, 4);} // skip top and bottom
+	for (cube_t const &leg : get_legs()) {dstate.draw_cube(qbds.untex_qbd, leg, WHITE, 0, 0.0, 4);} // skip top and bottom
 }
 bool parking_solar_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
-	cube_t legs[4];
-	get_legs(legs);
-
-	for (unsigned n = 0; n < 4; ++n) {
-		if (sphere_cube_int_update_pos(pos_, radius_, (legs[n] + xlate), p_last, 0, cnorm)) return 1;
+	for (cube_t const &leg : get_legs()) {
+		if (sphere_cube_int_update_pos(pos_, radius_, (leg + xlate), p_last, 0, cnorm)) return 1;
 	}
 	return 0;
 }
-void parking_solar_t::get_legs(cube_t legs[4]) const { // TODO: more than 4 legs for long parking lots?
-	float const height(bcube.dz());
+vect_cube_t const &parking_solar_t::get_legs() const {
+	float const height(bcube.dz()), border(0.01*height), leg_width(0.05*height), leg_hwidth(0.5*leg_width);
 	cube_t inner(bcube), outer(bcube);
-	inner.expand_by_xy(-0.06*height);
-	outer.expand_by_xy(-0.02*height);
+	inner.expand_in_dim( dim, -(leg_width  + border));
+	inner.expand_in_dim(!dim, -(leg_hwidth + border));
+	outer.expand_by_xy(-border);
+	outer.z2() -= 0.025*height; // end mid-roof
+	unsigned spans_per_side(1), spaces_per_leg(num_spaces);
 
-	for (unsigned n = 0; n < 4; ++n) {
-		bool const xd(n & 1), yd(n >> 1);
-		cube_t leg(outer);
-		leg.z2() -= 0.025*height; // end mid-roof
-		leg.d[0][!xd] = inner.d[0][xd];
-		leg.d[1][!yd] = inner.d[1][yd];
-		if ((dim ? yd : xd) ^ dir) {leg.z2() -= 0.25*bcube.dz();} // shorter sloped side
-		legs[n] = leg;
-	} // for n
+	while (spaces_per_leg > 8 && (spaces_per_leg & 1) == 0) {
+		spans_per_side *= 2; // double the number of spans
+		spaces_per_leg /= 2; // halve the number of spaces per leg
+	}
+	while (spaces_per_leg > 12 && (spaces_per_leg % 3) == 0) {
+		spans_per_side *= 3;
+		spaces_per_leg /= 3;
+	}
+	float const step(inner.get_sz_dim(!dim)/spans_per_side);
+	static vect_cube_t legs; // reused across calls
+	legs.clear();
+
+	for (unsigned side = 0; side < 2; ++side) {
+		for (unsigned i = 0; i <= spans_per_side; ++i) {
+			cube_t leg(outer);
+			leg.d[dim][!side] = inner.d[dim][side];
+			set_wall_width(leg, (inner.d[!dim][0] + i*step), leg_hwidth, !dim);
+			if (side ^ dir) {leg.z2() -= 0.25*bcube.dz();} // shorter sloped side
+			legs.push_back(leg);
+		} // for i
+	} // for side
+	return legs;
 }
 
 // birds/pigeons

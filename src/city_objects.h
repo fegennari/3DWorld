@@ -323,11 +323,12 @@ struct pillar_t : public city_obj_t { // for walkway support
 };
 
 struct parking_solar_t : public oriented_city_obj_t {
-	parking_solar_t(cube_t const &c, bool dim_, bool dir_);
+	unsigned num_spaces, num_rows;
+	parking_solar_t(cube_t const &c, bool dim_, bool dir_, unsigned ns, unsigned nr);
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
-	void get_legs(cube_t legs[4]) const;
+	vect_cube_t const &get_legs() const;
 };
 
 struct city_bird_base_t : public city_obj_t {

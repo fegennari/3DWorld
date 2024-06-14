@@ -95,11 +95,9 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 			roof_bc.z2() += 5.0*nom_car_size.z;
 			roof_bc.expand_by_xy(0.06*roof_bc.dz()); // legs are outside of the parking area
 			bool const panel_dir(car_dim ? 1 : rgen.rand_bool()); // if north/south, face south (northern hemisphere); if east/west, choose a random dir
-			parking_solar_t const ps(roof_bc, car_dim, panel_dir);
+			parking_solar_t const ps(roof_bc, car_dim, panel_dir, park.row_sz, park.num_rows);
 			p_solar_groups.add_obj(ps, p_solars);
-			cube_t legs[4];
-			ps.get_legs(legs);
-			for (unsigned n = 0; n < 4; ++n) {colliders.push_back(legs[n]);} // add legs to colliders but not blockers
+			vector_add_to(ps.get_legs(), colliders); // add legs to colliders but not blockers
 			cube_t blocker(roof_bc);
 			blocker.z1() += 0.5*roof_bc.dz(); // top half
 			blocker.expand_by_xy(0.5*nom_car_size.x); // add tree clearance
