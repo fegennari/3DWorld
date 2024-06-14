@@ -1030,6 +1030,10 @@ bool car_manager_t::proc_sphere_coll(point &pos, point const &p_last, float radi
 			if (cars[c].proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1;
 		}
 	} // for cb
+	for (helicopter_t const &h : helicopters) { // check helicopters, for player on helipad
+		if (h.state == helicopter_t::STATE_FLY) continue; // optimization; what about STATE_TAKEOFF and STATE_LAND?
+		if (sphere_cube_int_update_pos(pos, radius, (h.bcube + xlate), p_last, 0, cnorm)) return 1; // approximate/conservative
+	}
 	return 0;
 }
 
