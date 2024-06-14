@@ -327,7 +327,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					has_stairs = 1;
 				} // for s
 			}
-			int light_obj_ix(-1);
 			unsigned num_lights(r->num_lights), flags(0);
 			float const light_z2(z + floor_height - fc_thick + light_delta_z);
 
@@ -423,7 +422,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					}
 				}
 				if (!wall_light) {try_place_light_on_ceiling(light, *r, room_dim, fc_thick, 1, 1, 1, 1, lcheck_start_ix, valid_lights, rgen);} // allow_rot=1, allow_mult=1
-				if (!valid_lights.empty()) {light_obj_ix = objs.size();} // this will be the index of the light to be added later
 			}
 			rand_gen_t rgen_lights(rgen); // copy state so that we don't modify rgen
 			unsigned const objs_start_inc_lights(objs.size());
@@ -719,13 +717,16 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			if (is_house && added_tc && num_chairs > 0 && !is_living && !is_kitchen) { // room with table and chair that's not a kitchen
 				if (is_entry_floor) { // dining room, must be on the ground floor or an entry floor
-					if (light_obj_ix >= 0) { // handle dining room light (assume there is only one): extend downward and make it a sphere
-						assert((unsigned)light_obj_ix < objs.size());
-						room_object_t &light(objs[light_obj_ix]);
+					for (unsigned ix = objs_start_inc_lights; ix < objs_start; ++ix) { // handle dining room light(s): extend downward and make it a sphere
+						assert(ix < objs.size());
+						room_object_t &light(objs[ix]);
+						cube_t light_exp(light);
+						light_exp.expand_by_xy(doorway_width + 0.5*wall_thickness);
+						if (!r->contains_cube_xy(light_exp)) continue; // light too close to door, skip; can't recess spherical lights
 						light.shape = SHAPE_SPHERE;
 						light.z2() += 0.5f*light.dz();
 						light.z1() -= 0.22f*(light.dx() + light.dy());
-					}
+					} // for ix
 					if (!added_dining) {add_diningroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);} // only one room is the primary dining room
 					r->assign_to(RTYPE_DINING, f);
 					is_dining = added_dining = 1;
