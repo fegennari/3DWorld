@@ -465,8 +465,25 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 		if (!xy_only) { // don't need to check details and roof in xy_only mode because they're contained in the XY footprint of the parts (except balconies and stairs)
 			for (auto const &i : details) {
 				if (i.type == DETAIL_OBJ_SHAD_ONLY) continue; // not a collider
-				had_coll |= sphere_cube_int_update_pos(pos2, radius, (i + xlate), p_last2, xy_only, cnorm_ptr); // treat as cubes
-			}
+
+				if (i.type == ROOF_OBJ_WTOWER && pos2.z < i.z1() + 0.25*i.dz()) { // below custom water tower collision
+					if (!sphere_cube_intersect(pos2, radius, (i + xlate))) continue;
+					float const hwidth(0.25*(i.dx() + i.dy()));
+					cube_t inner(i);
+					inner.expand_by_xy(-0.1*hwidth);
+
+					for (unsigned n = 0; n < 4; ++n) {
+						bool const xd(n & 1), yd(n >> 1);
+						cube_t leg(i);
+						leg.d[0][!xd] = inner.d[0][xd];
+						leg.d[1][!yd] = inner.d[1][yd];
+						had_coll |= sphere_cube_int_update_pos(pos2, radius, (leg + xlate), p_last2, xy_only, cnorm_ptr);
+					}
+					cylinder_3dw const cylin(point(i.xc(), i.yc(), i.z1())+xlate, point(i.xc(), i.yc(), i.z2())+xlate, 0.1*hwidth, 0.1*hwidth);
+					had_coll |= sphere_vert_cylin_intersect(pos2, radius, cylin, cnorm_ptr);
+				}
+				else {had_coll |= sphere_cube_int_update_pos(pos2, radius, (i + xlate), p_last2, xy_only, cnorm_ptr);} // treat as cubes
+			} // for i
 			for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
 				point const pos_xlate(pos2 - xlate);
 
