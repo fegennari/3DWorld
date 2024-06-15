@@ -405,6 +405,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 	}
 	else { // exterior
 		if (allow_outside_building) return 0; // entering an exterior door - no collision with building exterior
+		float const r_bias(0.5*get_window_vspace()); // enough to allow some falling but not pick up the floor below
 
 		for (auto i = parts.begin(); i != parts.end(); ++i) {
 			if (xy_only) {
@@ -414,10 +415,11 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 					if (has_complex_floorplan) {continue;} else {break;}
 				}
 			}
-			if (!xy_only && ((pos2.z + radius < i->z1() + xlate.z) || (pos2.z - radius > i->z2() + xlate.z))) continue; // test z overlap
-			if (radius == 0.0 && !(xy_only ? i->contains_pt_xy(pos2) : i->contains_pt(pos2))) continue; // no intersection; ignores p_last
-			unsigned const part_id(i - parts.begin());
+			float const zval(max(pos2.z, p_last2.z));
 			cube_t const part_bc(*i + xlate);
+			if (!xy_only && ((zval + radius < part_bc.z1()) || (zval - radius - r_bias > part_bc.z2()))) continue; // test z overlap
+			if (radius == 0.0 && !(xy_only ? part_bc.contains_pt_xy(pos2) : part_bc.contains_pt(point(pos2.x, pos2.y, zval)))) continue; // no intersection; ignores p_last
+			unsigned const part_id(i - parts.begin());
 			bool part_coll(0);
 
 			if (use_cylinder_coll()) {
