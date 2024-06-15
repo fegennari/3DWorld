@@ -979,7 +979,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				else {continue;} // under the ramp: no collision
 			} // end ramp case
 			cube_t c_extended(get_true_room_obj_bcube(*c));
-			if (c->type == TYPE_STAIR || c->type == TYPE_ATTIC_DOOR) {c_extended.z1() -= camera_height;} // handle the player's head for stairs and attic doors
+			// handle the player's head for stairs and attic doors; only applied to bottom floor of stairs to avoid getting stuck on steep stairs that span multiple floors
+			if ((c->type == TYPE_STAIR && (c->flags & RO_FLAG_ADJ_BOT)) || c->type == TYPE_ATTIC_DOOR) {c_extended.z1() -= camera_height;}
 
 			if (c->type == TYPE_DIV_BOARD && c_extended.contains_pt_xy(pos)) {
 				// diving boards are special because the player can walk on them across different floor heights

@@ -2454,6 +2454,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
 		if (i->for_elevator || i->for_ramp) continue; // for elevator or ramp, not stairs
 		unsigned const num_stairs(i->get_num_stairs());
+		unsigned const stair_flags((i->floor == 1) ? RO_FLAG_ADJ_BOT : 0); // tag first floor of stairs as RO_FLAG_ADJ_BOT for proper player collisions
 		float const stair_dz(window_vspacing/(num_stairs+1)), stair_height(stair_dz + floor_thickness), stair_z1h(0.4f*stair_height);
 		bool const dim(i->dim), dir(i->dir), has_side_walls(i->has_walled_sides() || i->is_u_shape());
 		bool const has_wall_both_sides(i->against_wall[0] && i->against_wall[1]); // ext basement stairs
@@ -2473,7 +2474,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				stair.d[dim][!dir] = pos; stair.d[dim][dir] = pos + step_len;
 				set_cube_zvals(stair, max(stairs_zmin, z+stair_z1h), z+stair_height); // don't go below the floor (Note: z1 was (z + 0.5f*half_thick))
 				assert(stair.z1() < stair.z2());
-				objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir, flags); // Note: room_id=0, not tracked, unused
+				objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir, (flags | stair_flags)); // Note: room_id=0, not tracked, unused
 			} // for n
 		}
 		else if (i->is_u_shape()) { // U-shaped stairs
@@ -2491,7 +2492,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				bool const is_rev(n >= num_stairs/2), stairs_dir(dir^is_rev);
 				stair.d[dim][!stairs_dir] = pos; stair.d[dim][stairs_dir] = pos + step_len;
 				set_cube_zvals(stair, max(floor_z, z), z+stair_height);
-				objs.emplace_back(stair, TYPE_STAIR, 0, dim, side^is_rev); // Note: room_id=0, not tracked, unused
+				objs.emplace_back(stair, TYPE_STAIR, 0, dim, side^is_rev, stair_flags); // Note: room_id=0, not tracked, unused
 				objs.back().shape = SHAPE_STAIRS_U;
 			} // for n
 		}
@@ -2511,12 +2512,12 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				stair.d[dim][!dir] = pos; stair.d[dim][dir] = pos + step_len;
 				set_cube_zvals(stair, max(stairs_zmin, z+stair_z1h), z+stair_height); // don't go below the floor
 				assert(stair.z1() < stair.z2());
-				objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir, 0);
+				objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir, stair_flags);
 			}
 			// add landing
 			stair.d[dim][!dir] = pos; stair.d[dim][dir] = i->d[dim][dir]; // extend to the end
 			set_cube_zvals(stair, z+stair_z1h, z+stair_height);
-			objs.emplace_back(stair, TYPE_STAIR, 0, !dim, !dir, 0); // place in !dim but use first dir, so that player coll is enabled since we don't have a wall here
+			objs.emplace_back(stair, TYPE_STAIR, 0, !dim, !dir, stair_flags); // place in !dim but use first dir, so that player coll is enabled since we don't have a wall here
 			objs.back().shape = SHAPE_STAIRS_L; // only the landing needs a tag because it can be entered from right angle sides
 			landing = stair;
 			z += stair_dz;
@@ -2534,7 +2535,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			for (unsigned n = 0; n < num_stairs2; ++n, z += stair_dz, pos += step_len) {
 				stair.d[!dim][!dir2] = pos; stair.d[!dim][dir2] = pos + step_len;
 				set_cube_zvals(stair, z+stair_z1h, z+stair_height);
-				objs.emplace_back(stair, TYPE_STAIR, 0, !dim, dir2, 0);
+				objs.emplace_back(stair, TYPE_STAIR, 0, !dim, dir2, stair_flags);
 			}
 		}
 		else {assert(0);}
