@@ -2174,13 +2174,14 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 				bool const door_dir((c.d[door_dim][0] - top.d[door_dim][0]) < (top.d[door_dim][1] - c.d[door_dim][1])); // closer to building center/further from roof edge
 				float const door_height(get_door_height()), center(c.get_center_dim(!door_dim));
 				float const wall_pos(c.d[door_dim][door_dir] + (door_dir ? 1.0 : -1.0)*0.02*door_width); // move slightly away from the wall
+				float const lr_offset(((door_dim ^ door_dir) ? 1.0 : -1.0)*0.5*door_width);
 				max_eq(height, 1.1f*door_height);
 				tquad_t door(4);
 				for (unsigned n = 0; n < 4; ++n) {door.pts[n][door_dim] = wall_pos;}
 				door.pts[0].z = door.pts[1].z = c.z1(); // bottom
 				door.pts[2].z = door.pts[3].z = c.z1() + door_height; // top
-				door.pts[0][!door_dim] = door.pts[3][!door_dim] = center - 0.5*door_width; // left  side
-				door.pts[1][!door_dim] = door.pts[2][!door_dim] = center + 0.5*door_width; // right side
+				door.pts[0][!door_dim] = door.pts[3][!door_dim] = center - lr_offset; // left  side
+				door.pts[1][!door_dim] = door.pts[2][!door_dim] = center + lr_offset; // right side
 				roof_tquads.emplace_back(door, (unsigned)tquad_with_ix_t::TYPE_RDOOR2);
 			}
 		}
