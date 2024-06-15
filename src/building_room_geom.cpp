@@ -2286,7 +2286,6 @@ void building_room_geom_t::add_valve(room_object_t const &c) {
 	float const radius(0.5*c.get_sz_dim((dim+1)%3));
 	colorRGBA const color(apply_light_color(c));
 	colorRGBA const spec_color(is_known_metal_color(c.color) ? c.color : WHITE); // special case metals
-	unsigned const ndiv(N_CYL_SIDES);
 	tid_nm_pair_t tex(WHITE_TEX, 1.0, 1); // custom specular color, shadowed
 	tex.set_specular_color(spec_color, 0.8, 60.0);
 	rgeom_mat_t &mat(get_material(tex, 1, 0, 2)); // detail object
