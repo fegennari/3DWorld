@@ -2107,7 +2107,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	float const helipad_radius(2.0*window_vspacing);
 	bool const can_have_hp_or_sl(flat_roof && num_sides >= 4 && flat_side_amt == 0.0 && !is_house);
 	has_helipad = (can_have_hp_or_sl && min(tsz.x, tsz.y) > (is_cube() ? 3.2 : 4.0)*helipad_radius && bcube.dz() > 8.0*window_vspacing && (rgen.rand() % 12) == 0);
-	cube_t avoid_bcube;
+	cube_t avoid_bcube, door_blocker;
 
 	if (has_helipad) { // add helipad
 		tquad_t helipad(4); // quad
@@ -2124,7 +2124,13 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	else if (can_have_hp_or_sl && is_cube() && interior_enabled()) {
 		maybe_add_skylight(rgen);
 	}
-	unsigned const num_blocks((flat_roof && skylights.empty()) ? (rgen.rand() % 9) : 0); // 0-8; 0 if there are roof quads (houses, etc.)
+	bool const add_rooftop_door(!is_cube() && has_complex_floorplan /*&& has_helipad*/); // add if there's no interior/stairs to the roof
+	unsigned num_blocks(0);
+	
+	if (flat_roof && skylights.empty()) { // no roof blocks if there are roof quads (houses, etc.) or skylights
+		num_blocks = (rgen.rand() % 9); // 0-8
+		if (add_rooftop_door) {max_eq(num_blocks, 1U);} // at least one for the door
+	}
 	bool const add_antenna((flat_roof || roof_type == ROOF_TYPE_SLOPE) && !has_helipad && skylights.empty() && rgen.rand_bool());
 	bool const add_water_tower(flat_roof && !has_helipad && !add_antenna && skylights.empty() && (tsz.x < 2.0*tsz.y && tsz.y < 2.0*tsz.x) && rgen.rand_bool());
 	unsigned const num_details(num_blocks + num_ac_units + 4*add_walls + add_antenna + add_water_tower);
@@ -2159,14 +2165,15 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 			c.set_from_point(point(rgen.rand_uniform(bounds.x1(), bounds.x2()), rgen.rand_uniform(bounds.y1(), bounds.y2()), top.z2()));
 			c.expand_by_xy(vector3d(xy_sz*rgen.rand_uniform(0.01, 0.07), xy_sz*rgen.rand_uniform(0.01, 0.07), 0.0));
 			if (!bounds.contains_cube_xy(c)) continue; // not contained
-			if (!avoid_bcube.is_all_zeros() && c.intersects_xy(avoid_bcube))        continue; // bad placement
+			if (!avoid_bcube .is_all_zeros() && c.intersects_xy(avoid_bcube ))      continue; // bad placement
+			if (!door_blocker.is_all_zeros() && c.intersects_xy(door_blocker))      continue; // bad placement
 			if (!is_cube() && !check_part_contains_cube_xy(top, parts.size()-1, c)) continue; // not contained in roof
 			placed = 1;
 			break;
 		} // for n
 		if (!placed) break; // failed, exit loop
 
-		if (num_blocks == 1) { // single block case - make it tall and add a door (that the player can't open)
+		if (add_rooftop_door && i == 0) { // make the first block tall and add a door (that the player can't open)
 			float const door_width(get_doorway_width());
 
 			if (min(c.dx(), c.dy()) > 1.5*door_width) { // block is large enough to place a door
@@ -2183,6 +2190,8 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 				door.pts[0][!door_dim] = door.pts[3][!door_dim] = center - lr_offset; // left  side
 				door.pts[1][!door_dim] = door.pts[2][!door_dim] = center + lr_offset; // right side
 				roof_tquads.emplace_back(door, (unsigned)tquad_with_ix_t::TYPE_RDOOR2);
+				door_blocker = door.get_bcube();
+				door_blocker.d[door_dim][door_dir] += (door_dir ? 1.0 : -1.0)*1.2*get_doorway_width(); // add door clearance
 			}
 		}
 		c.z2() += height; // z2
@@ -2199,7 +2208,8 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	if (num_ac_units > 0) {
 		vect_cube_t ac_avoid;
 		for (cube_t const &s : skylights) {ac_avoid.push_back(s); ac_avoid.back().expand_in_dim(2, 0.25*window_vspacing);} // avoid skylights
-		if (!avoid_bcube.is_all_zeros())  {ac_avoid.push_back(avoid_bcube);}
+		if (!avoid_bcube .is_all_zeros())  {ac_avoid.push_back(avoid_bcube );}
+		if (!door_blocker.is_all_zeros())  {ac_avoid.push_back(door_blocker);}
 		place_roof_ac_units(num_ac_units, xy_sz*rgen.rand_uniform(0.012, 0.02), bounds, ac_avoid, rgen);
 	}
 	if (add_walls) {
