@@ -172,7 +172,7 @@ public:
 	int get_hdoor_tid    () {return ensure_tid(hdoor_tid,     "white_door.jpg");} // house door
 	int get_odoor_tid    () {return ensure_tid(odoor_tid,     "buildings/office_door.jpg");} // office door (low resolution); unused
 	int get_bdoor_tid    () {return ensure_tid(bdoor_tid,     "buildings/building_door.jpg");} // metal + glass building door
-	int get_bdoor2_tid   () {return ensure_tid(bdoor2_tid,    "buildings/metal_door.jpg");} // metal building door; unused
+	int get_bdoor2_tid   () {return ensure_tid(bdoor2_tid,    "buildings/metal_door.jpg");} // metal building door
 	int get_gdoor_tid    () {return ensure_tid(gdoor_tid,     "buildings/garage_door.jpg");} // garage door
 	int get_ac_unit_tid1 () {return ensure_tid(ac_unit_tid1,  "buildings/AC_unit1.jpg");} // AC unit (should this be a <d> loop?)
 	int get_ac_unit_tid2 () {return ensure_tid(ac_unit_tid2,  "buildings/AC_unit2.jpg");} // AC unit
