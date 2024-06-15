@@ -2456,7 +2456,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		unsigned const num_stairs(i->get_num_stairs());
 		unsigned const stair_flags((i->floor == 1) ? RO_FLAG_ADJ_BOT : 0); // tag first floor of stairs as RO_FLAG_ADJ_BOT for proper player collisions
 		float const stair_dz(window_vspacing/(num_stairs+1)), stair_height(stair_dz + floor_thickness), stair_z1h(0.4f*stair_height);
-		bool const dim(i->dim), dir(i->dir), has_side_walls(i->has_walled_sides() || i->is_u_shape());
+		bool const dim(i->dim), dir(i->dir), is_U(i->is_u_shape()), has_side_walls(i->has_walled_sides() || is_U);
 		bool const has_wall_both_sides(i->against_wall[0] && i->against_wall[1]); // ext basement stairs
 		bool const side(dir); // for U-shaped stairs; for now this needs to be consistent for the entire stairwell, can't use rgen.rand_bool()
 		// Note: stairs always start at floor_thickness above the landing z1, ignoring landing z2/height
@@ -2477,7 +2477,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir, (flags | stair_flags)); // Note: room_id=0, not tracked, unused
 			} // for n
 		}
-		else if (i->is_u_shape()) { // U-shaped stairs
+		else if (is_U) { // U-shaped stairs
 			float const mid(i->get_center_dim(!dim));
 			stair.d[!dim][side] = mid;
 			step_len *= 2.0;
@@ -2550,10 +2550,10 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		set_wall_width(wall, i->d[dim][dir], wall_hw, dim);
 		float walls_extend_to(0.0);
 
-		if ((i->shape == SHAPE_WALLED && !(i->against_wall[0] || i->against_wall[1]) && (!i->stack_conn || !i->is_at_top)) || i->is_u_shape()) {
+		if ((i->shape == SHAPE_WALLED && !(i->against_wall[0] || i->against_wall[1]) && (!i->stack_conn || !i->is_at_top)) || is_U) {
 			objs.emplace_back(wall, TYPE_STAIR_WALL, 0, dim, dir); // add wall at back/end of stairs
 
-			if (i->not_an_exit && i->is_u_shape()) { // blocked U-shaped stairs
+			if (i->not_an_exit && is_U) { // blocked U-shaped stairs
 				cube_t front_wall(*i);
 				front_wall.z2() -= floor_thickness;
 				front_wall.z1()  = floor_z - 0.5*floor_thickness;
@@ -2584,7 +2584,8 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				// we can't just skip this face for exterior walls because it may be visible through a window
 				if (i->against_wall[d]) {wall_upper.d[!dim][d] += (d ? 1.0 : -1.0)*0.9*wall_thickness;}
 			}
-			objs.emplace_back(wall_upper, TYPE_STAIR_WALL, 0, dim, dir); // add wall at back/end of stairs
+			// add wall at back/end of stairs; hanging in case the bottom surface is visible
+			objs.emplace_back(wall_upper, TYPE_STAIR_WALL, 0, dim, dir, RO_FLAG_HANGING);
 		}
 		wall.d[dim][!dir] = i->d[dim][!dir];
 
@@ -2613,7 +2614,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 					railing.translate_dim(!dim, (d ? -1.0 : 1.0)*2.0*wall_hw); // shift railing inside of walls
 					railing.expand_in_dim( dim, -(i->roof_access ? 2.0 : 1.0)*wall_hw); // shrink slightly to avoid clipping through an end wall
 				}
-				if (i->is_u_shape()) { // adjust railing height/angle to match stairs
+				if (is_U) { // adjust railing height/angle to match stairs
 					flags |= RO_FLAG_HAS_EXTRA; // make it taller
 					float const z_split(railing.zc());
 					if (bool(d) == side) {railing.z1() = z_split + railing_side_dz; flags |= RO_FLAG_ADJ_HI; railing_dir ^= 1;}
@@ -2625,7 +2626,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				objs.emplace_back(railing, TYPE_RAILING, 0, dim, railing_dir, flags, 1.0, SHAPE_CUBE, railing_color);
 			}
 		} // for d
-		if (i->has_railing && i->is_u_shape()) { // add a railing for the back wall of U-shaped stairs
+		if (i->has_railing && is_U) { // add a railing for the back wall of U-shaped stairs
 			float const railing_zc(wall_bottom + 0.819*window_vspacing); // determined experimentally
 			cube_t railing(*i);
 			set_wall_width(railing, (i->d[dim][dir] + (dir ? -1.0 : 1.0)*2.0*wall_hw), wall_hw, dim);
