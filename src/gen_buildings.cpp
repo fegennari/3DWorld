@@ -4522,10 +4522,14 @@ public:
 			for (auto b = g->bc_ixs.begin(); b != g->bc_ixs.end(); ++b) {
 				if ((int)b->ix == state.exclude_bix) continue; // excluded
 				cube_t const c(*b + state.xlate); // check far clipping plane first because that's more likely to reject buildings
+				
 				// if player is inside this building, skip occlusion so that objects are visible through windows
-				if (state.skip_cont_camera && !(player_in_basement || player_in_attic) && c.contains_pt(pdu.pos) && get_building(b->ix).has_windows()) continue;
+				if (state.skip_cont_camera && !(player_in_basement || player_in_attic) && c.contains_pt(pdu.pos)) {
+					building_t const &bldg(get_building(b->ix));
+					if (bldg.has_int_windows() || bldg.point_near_ext_door((state.pos - state.xlate), get_door_open_dist())) continue;
+				}
 				if (dist_less_than(pdu.pos, c.closest_pt(pdu.pos), pdu.far_) && pdu.cube_visible(c)) {state.building_ids.push_back(*b);}
-			}
+			} // for b
 		} // for g
 	}
 	bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t const &state) const { // pts are in building space
