@@ -2112,14 +2112,21 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 						else         {ext_cube.z1() += window_vspacing + floor_thickness; ext_cube.z2() += window_vspacing - floor_thickness;} // move to upper part
 						if (bool(ab) ^ stairs_dir) {ext_cube.d[dim][0] -= stairs_pad;} // add padding on exit side
 						else                       {ext_cube.d[dim][1] += stairs_pad;} // add padding on exit side
-						if (!shared.contains_cube_xy(ext_cube)) continue; // test for space to enter and exit
+						if (!shared.contains_cube_xy(ext_cube))           continue; // test for space to enter and exit
 						if (has_bcube_int(ext_cube, interior->exclusion)) continue; // bad placement
-						if (!is_valid_stairs_elevator_placement(ext_cube, stairs_pad, s.dim, 0, check_private_rooms)) continue; // bad placement
+						bool const allow_clip_walls(0); // clipping walls rarely helps and tends to create some strange stairs
+						if (!is_valid_stairs_elevator_placement(ext_cube, stairs_pad, s.dim, !allow_clip_walls, check_private_rooms)) continue; // bad placement
 						s.extends_below = (ab == 0);
 						cand = s; dim = s.dim; stairs_dir = s.dir; sshape = s.shape; // copy fields from these stairs and extend down
 						stack_conn    = 0; // not stacked - extended main stairs
 						cand_is_valid = 1;
 						find_and_merge_with_landing(interior->landings, s, sshape, 1); // num_floors=1
+						
+						if (allow_clip_walls) { // Note: conservative and not well tested, but this case is likely to be disabled anyway
+							cube_t clip_cube(cand);
+							if (ab) {clip_cube.z2() += window_vspacing;} else {clip_cube.z1() -= window_vspacing;}
+							for (unsigned d = 0; d < 2; ++d) {subtract_cube_from_cubes(clip_cube, interior->walls[d], nullptr, 1);}
+						}
 					} // for s
 				} // for ab
 			}
@@ -2200,6 +2207,9 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					if (bad_place) continue;
 					if (pref_dir == 1) {stairs_dir = 0;} else if (pref_dir == 2) {stairs_dir = 1;} // pref agrees for all doors of both rooms
 				}
+				assert(cand.is_strictly_normalized());
+				cand.expand_in_dim(dim, -stairs_pad); // subtract off padding
+				if (!cand.is_strictly_normalized()) continue; // not enough space, likely because the player radius/front clearance is too large
 				cand_test[ stairs_dir].d[dim][0] += stairs_pad; // subtract off padding on one side
 				cand_test[!stairs_dir].d[dim][1] -= stairs_pad; // subtract off padding on one side
 
@@ -2224,9 +2234,6 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 						for (unsigned d = 0; d < 2; ++d) {wall_clipped |= subtract_cube_from_cubes(cand_test[e], interior->walls[d], nullptr, 1);} // clip_in_z=1
 					}
 				}
-				assert(cand.is_strictly_normalized());
-				cand.expand_in_dim(dim, -stairs_pad); // subtract off padding
-				if (!cand.is_strictly_normalized()) continue; // not enough space, likely because the player radius/front clearance is too large
 				// add walls around stairs if room walls were clipped or this is the basement; otherwise, make stairs straight with railings;
 				// basement stairs only have walls on the bottom floor, so we set is_at_top=0; skip basement back stairs wall to prevent the player from getting stuck
 				sshape        = (use_basement_stairs ? (stairs_shape)SHAPE_WALLED_SIDES : (wall_clipped ? (stairs_shape)SHAPE_WALLED : (stairs_shape)SHAPE_STRAIGHT));
