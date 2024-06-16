@@ -1589,7 +1589,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		if (d->type == tquad_with_ix_t::TYPE_HDOOR || d->is_building_door() || garage_door) { // add trim at top of exterior door, houses and office buildings
 			set_cube_zvals(trim, door.z2()-0.03*door.dz(), door.z2()); // ends at top of door texture; see logic in clip_door_to_interior()
 		}
-		if (d->is_building_door()) { // different logic for building doors
+		if (d->is_building_door() && trim.z1() < ground_floor_z1) { // different logic for building ground floor (non-walkway) doors
 			ext_flags = flags; // unlike hdoors, need to draw the back face to hide the gap betweeen ceiling and floor above
 			trim.d[dim][dir] += (dir ? -1.0 : 1.0)*0.2*door_trim_offset; // minor shift back toward building to prevent z-fighting
 		}
