@@ -1620,7 +1620,7 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 			if (!exterior) { // interior
 				bool const has_moved_objs(has_room_geom() && !interior->room_geom->moved_obj_ids.empty());
 				bool const in_ext_basement(point_in_extended_basement_not_basement(c.get_cube_center()));
-				float const shift(0.07*signed_width*open_amt);
+				float const shift(0.07*signed_width*open_amt), doorway_width(get_doorway_width());
 				unsigned max_angle(75); // in degrees
 
 				for (; max_angle > 0; max_angle -= 15) { // try to open door as much as 75 degrees in steps of 15 degrees
@@ -1638,6 +1638,16 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 					if (interior->is_blocked_by_stairs_or_elevator(test_bcube, 0.0, 0, 1)) continue; // hits stairs or elevator; dmin=0, elevators_only=0, no_check_enter_exit=1
 					if (check_backroom_walls && interior->room_geom->cube_int_backrooms_walls(walls_test_bcube)) continue;
 					
+					if (have_walkway_ext_door) { // check if too close to a walkway exit door or its exit sign
+						bool close_to_exit(0);
+
+						for (tquad_with_ix_t const &d : doors) {
+							cube_t c(d.get_bcube());
+							c.expand_in_dim((c.dy() < c.dx()), doorway_width);
+							if (c.intersects(test_bcube)) {close_to_exit = 1; break;}
+						}
+						if (close_to_exit) continue;
+					}
 					// check if the player moved an object that would block this door
 					if (has_moved_objs) {
 						cube_t union_cube(test_bcube);
