@@ -2993,7 +2993,8 @@ bool building_t::maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room
 			if (w.is_owner) { // add ceiling light(s)
 				// not actually drawn because these lights are outside the building, and the building may not even be visible
 				float const length(w.get_length());
-				unsigned const num_lights(0.6*length/floor_spacing);
+				if (length < 0.4*floor_spacing) return 1; // too short for a light; shouldn't happen
+				unsigned const num_lights(max(1U, unsigned(0.6*length/floor_spacing)));
 				float const light_spacing(length/(num_lights + 1));
 				unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR | RO_FLAG_LIT);
 				colorRGBA const color(1.0, 1.0, 1.0); // white
