@@ -1995,6 +1995,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	pdu.pos     -= xlate; // adjust for local translate
 	dstate.xlate = xlate;
 	dstate.set_enable_normal_map(use_models && use_model3d_bump_maps());
+	setup_occluders();
 	fgPushMatrix();
 	translate_to(xlate);
 	if (enable_animations) {enable_animations_for_shader(dstate.s);} // called before pre_draw()

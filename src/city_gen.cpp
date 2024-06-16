@@ -2913,6 +2913,10 @@ bool ped_manager_t::check_streetlight_sphere_coll(pedestrian_t const &ped, cube_
 int ped_manager_t::get_road_ix_for_ped_crossing(pedestrian_t const &ped, bool road_dim) const { // returns -1 on failure (ped not in the road)
 	return road_gen.get_city(ped.city).get_nearby_road_ix(ped.pos, road_dim);
 }
+void ped_manager_t::setup_occluders() {
+	dstate.get_occluders().clear();
+	if ((display_mode & 0x08) && !peds.empty()) {road_gen.get_occluders(dstate.get_occluders());}
+}
 
 // path finding
 bool ped_manager_t::choose_dest_building_or_parked_car(pedestrian_t &ped) { // modifies rgen, non-const
