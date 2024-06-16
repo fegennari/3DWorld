@@ -888,17 +888,21 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				// create a wall to split up this room
 				// what about allowing adjacent rooms not separated by a wall?
 				// this would work for connected public rooms (living, dining, kitchen), but would limit our ability to later assign these rooms as bed, bath, etc.
-				float wall_pos(0.0);
+				float wall_pos(0.0), min_dist_param(0.25);
 				bool pos_valid(0);
 				cube_t wall, wall2; // copy from cube; shared zvals, but X/Y will be overwritten per wall
 
-				for (unsigned num = 0; num < 20; ++num) { // 20 tries to choose a wall pos that's not inside a window
-					wall_pos = cube_rand_side_pos(c, wall_dim, 0.25, min_dist_abs, rgen, 0); // for_door=0
+				for (unsigned num = 0; num < 20; ++num) { // 20 tries to choose a wall pos that's not inside a window or skylight
+					wall_pos = cube_rand_side_pos(c, wall_dim, min_dist_param, min_dist_abs, rgen, 0); // for_door=0
 					if (on_edge && is_val_inside_window(*p, wall_dim, wall_pos, window_hspacing[wall_dim], window_border)) continue; // try a new wall_pos
 					if (c.bad_pos(wall_pos, wall_dim)) continue; // intersects doorway from prev wall, try a new wall_pos
 					wall = c;
 					create_wall(wall, wall_dim, wall_pos, fc_thick, wall_half_thick, wall_edge_spacing);
-					if (has_bcube_int_xy(wall, part_skylights)) continue; // check for skylight intersection
+					
+					if (has_bcube_int_xy(wall, part_skylights)) { // check for skylight intersection
+						if (num >= 10 && min_dist_param > 0.1) {min_dist_param -= 0.05;} // allow walls further from the center to avoid the skylight
+						continue;
+					}
 					pos_valid = 1;
 					break; // done, keep wall_pos
 				} // for num
