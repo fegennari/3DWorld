@@ -1175,7 +1175,7 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building, point
 void building_room_geom_t::create_door_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Doors"); // 0.1ms
 	vector<door_t> const &doors(building.interior->doors);
-	uint8_t const door_type(building.is_house ? (uint8_t)tquad_with_ix_t::TYPE_HDOOR : (uint8_t)tquad_with_ix_t::TYPE_ODOOR);
+	uint8_t const door_type(building.is_residential() ? (uint8_t)tquad_with_ix_t::TYPE_HDOOR : (uint8_t)tquad_with_ix_t::TYPE_ODOOR);
 
 	for (auto i = doors.begin(); i != doors.end(); ++i) { // interior doors; opens_out=0, exterior=0
 		building.add_door_verts(*i, *this, door_type, i->dim, i->open_dir, i->open_amt, 0, 0, i->on_stairs, i->hinge_side, i->is_bldg_conn, i->mult_floor_room);

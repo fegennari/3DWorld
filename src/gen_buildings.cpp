@@ -159,7 +159,7 @@ void building_geom_t::do_xy_rotate_normal_inv(point &n) const {::do_xy_rotate_no
 
 
 class building_texture_mgr_t {
-	int window_tid=-1, hdoor_tid=-1, odoor_tid=-1, bdoor_tid=-1, bdoor2_tid=-1, gdoor_tid=-1, ac_unit_tid1=-1, ac_unit_tid2=-1, bath_wind_tid=-1, helipad_tex=-1,
+	int window_tid=-1, hdoor_tid=-1, odoor_tid=-1, bdoor_tid=-1, bdoor2_tid=-1, gdoor_tid=-1, mdoor_tid=-1, ac_unit_tid1=-1, ac_unit_tid2=-1, bath_wind_tid=-1, helipad_tex=-1,
 		solarp_tex=-1, concrete_tex=-1, met_plate_tex=-1, mplate_nm_tex=-1, met_roof_tex=-1, tile_floor_tex=-1, tile_floor_nm_tex=-1, duct_tid=-1, vent_tid=-1;
 
 	int ensure_tid(int &tid, const char *name, bool is_normal_map=0) {
@@ -170,10 +170,11 @@ class building_texture_mgr_t {
 public:
 	int get_window_tid   () const {return window_tid;}
 	int get_hdoor_tid    () {return ensure_tid(hdoor_tid,     "white_door.jpg");} // house door
-	int get_odoor_tid    () {return ensure_tid(odoor_tid,     "buildings/office_door.jpg");} // office door (low resolution); unused
+	int get_odoor_tid    () {return ensure_tid(odoor_tid,     "buildings/office_door.jpg");} // office door
 	int get_bdoor_tid    () {return ensure_tid(bdoor_tid,     "buildings/building_door.jpg");} // metal + glass building door
 	int get_bdoor2_tid   () {return ensure_tid(bdoor2_tid,    "buildings/metal_door.jpg");} // metal building door
 	int get_gdoor_tid    () {return ensure_tid(gdoor_tid,     "buildings/garage_door.jpg");} // garage door
+	int get_mdoor_tid    () {return ensure_tid(mdoor_tid,     "buildings/modern_door.jpg");} // unused; for future use, maybe with house exterior doors
 	int get_ac_unit_tid1 () {return ensure_tid(ac_unit_tid1,  "buildings/AC_unit1.jpg");} // AC unit (should this be a <d> loop?)
 	int get_ac_unit_tid2 () {return ensure_tid(ac_unit_tid2,  "buildings/AC_unit2.jpg");} // AC unit
 	int get_duct_tid     () {return ensure_tid(duct_tid,      "interiors/duct.jpg");} // duct
@@ -195,7 +196,7 @@ public:
 		window_tid = BLDG_WINDOW_TEX;
 		return 1;
 	}
-	bool is_door_tid(int tid) const {return (tid >= 0 && (tid == hdoor_tid || tid == odoor_tid || tid == bdoor_tid || tid == bdoor2_tid || tid == gdoor_tid));}
+	bool is_door_tid(int tid) const {return (tid >= 0 && (tid == hdoor_tid || tid == odoor_tid || tid == bdoor_tid || tid == bdoor2_tid || tid == gdoor_tid || tid == mdoor_tid));}
 };
 building_texture_mgr_t building_texture_mgr;
 
@@ -238,10 +239,11 @@ public:
 		tid_to_slot_ix.push_back(0); // untextured case
 		register_tid(building_texture_mgr.get_window_tid());
 		register_tid(building_texture_mgr.get_hdoor_tid());
-		//register_tid(building_texture_mgr.get_odoor_tid()); // enable when this door type is used
+		register_tid(building_texture_mgr.get_odoor_tid());
 		register_tid(building_texture_mgr.get_bdoor_tid());
 		register_tid(building_texture_mgr.get_bdoor2_tid());
 		register_tid(building_texture_mgr.get_gdoor_tid());
+		//register_tid(building_texture_mgr.get_mdoor_tid()); // enable when this door type is used
 		register_tid(building_texture_mgr.get_ac_unit_tid1());
 		register_tid(building_texture_mgr.get_ac_unit_tid2());
 		register_tid(building_texture_mgr.get_duct_tid());
@@ -1343,12 +1345,12 @@ public:
 int get_building_door_tid(unsigned type) { // exterior doors, and interior doors of limited types
 	switch(type) {
 	case tquad_with_ix_t::TYPE_HDOOR : return building_texture_mgr.get_hdoor_tid ();
-	//case tquad_with_ix_t::TYPE_ODOOR : return building_texture_mgr.get_odoor_tid (); // enable when this texture is ready
-	case tquad_with_ix_t::TYPE_ODOOR : return building_texture_mgr.get_hdoor_tid ();
+	case tquad_with_ix_t::TYPE_ODOOR : return building_texture_mgr.get_odoor_tid ();
 	case tquad_with_ix_t::TYPE_RDOOR : return building_texture_mgr.get_bdoor2_tid();
 	case tquad_with_ix_t::TYPE_BDOOR : return building_texture_mgr.get_bdoor_tid ();
 	case tquad_with_ix_t::TYPE_BDOOR2: return building_texture_mgr.get_bdoor2_tid();
 	case tquad_with_ix_t::TYPE_GDOOR : return building_texture_mgr.get_gdoor_tid ();
+	//case tquad_with_ix_t::TYPE_MDOOR : return building_texture_mgr.get_mdoor_tid ();
 	default: assert(0);
 	}
 	return -1; // never gets here
