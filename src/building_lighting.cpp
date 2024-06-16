@@ -805,17 +805,30 @@ public:
 			VA.z1() = building_z1 + target_floor*floor_spacing;
 			VA.z2() = VA.z1() + floor_spacing;
 
-			if (in_ext_basement && b.has_pool()) { // check if light source room has a pool, and include the pool in our valid area
-				room_t const &pool_room(b.get_room(b.interior->pool.room_ix));
+			// handle multi-floor rooms; this is only called once when enabling indir lighting,
+			// so it will handle starting in a tall room, but it won't work if the player walks into a tall room later;
+			// but, since the front door generally opens into the living room, which is often the tall room, it will work in many cases
+			if (in_ext_basement) {
+				if (b.has_pool()) { // check if light source room has a pool, and include the pool in our valid area
+					room_t const &pool_room(b.get_room(b.interior->pool.room_ix));
 
-				if (pool_room.contains_pt(target) || b.interior->pool.contains_pt(target)) {
-					min_eq(VA.z1(), b.interior->pool.z1()); // bottom of the pool
-					max_eq(VA.z2(), pool_room.z2()); // ceiling above the pool
+					if (pool_room.contains_pt(target) || b.interior->pool.contains_pt(target)) {
+						min_eq(VA.z1(), b.interior->pool.z1()); // bottom of the pool
+						max_eq(VA.z2(), pool_room.z2()); // ceiling above the pool
+					}
 				}
 			}
-			if (b.has_tall_retail()) { // handle lights on tall retail ceilings
+			else if (b.has_tall_retail()) { // handle lights on tall retail ceilings
 				cube_t const &retail_room(b.get_retail_part());
 				if (retail_room.contains_pt(target)) {max_eq(VA.z2(), retail_room.z2());} // use ceiling of retail part
+			}
+			else if (target.z > b.ground_floor_z1) { // not in the basement - check for tall rooms
+				int const target_room(b.get_room_containing_pt(target));
+				
+				if (target_room >= 0) {
+					room_t const &room(b.get_room(target_room));
+					if (room.is_single_floor) {max_eq(VA.z2(), room.z2());} // include room height
+				}
 			}
 		}
 		return VA;
