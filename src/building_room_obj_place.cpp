@@ -597,8 +597,8 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 	place_area.expand_by(-0.25*get_wall_thickness()); // common spacing to wall
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const room_objs_start(objs.size());
-	bool const add_tall_table(!is_lobby && rgen.rand_float() < 0.75); // 75% of the time if a lounge
 	float const window_vspacing(get_window_vspace());
+	bool const add_tall_table(!is_lobby && min(place_area.dx(), place_area.dy()) > 1.6*window_vspacing && rgen.rand_float() < 0.75); // 75% of the time if a lounge
 	vect_cube_t blockers;
 	add_lounge_blockers(objs, objs_start, blockers); // add any previously places tables, chairs, etc.
 
