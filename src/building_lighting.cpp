@@ -26,6 +26,7 @@ extern double tfticks;
 extern colorRGB cur_ambient, cur_diffuse;
 extern std::string lighting_update_text;
 extern vector<light_source> dl_sources;
+extern building_t const *player_building;
 
 bool enable_building_people_ai();
 bool check_cube_occluded(cube_t const &cube, vect_cube_t const &occluders, point const &viewer);
@@ -1342,6 +1343,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		if (!above_skylight) {
 			if (check_pt_in_walkway(camera_bs, 1, 1)) {walkway_only = 1;} // player in walkway
+			else if (has_int_windows() && player_building != nullptr && is_connected_with_walkway(*player_building, camera_bs.z)) {walkway_only = 1;}
 			else return; // no lights visible
 		}
 	}
@@ -1498,7 +1500,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	bool last_room_closed(0);
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (camera_near_building) { // handle light emitting objects in the player's building
+		if (camera_near_building && !walkway_only) { // handle light emitting objects in the player's building
 			bool was_added(0);
 
 			if (i->type == TYPE_LAVALAMP && i->is_light_on()) { // should we do an occlusion query?
@@ -1983,7 +1985,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			dl_sources.back().disable_shadows();
 		} // end upward light
 	} // for i (objs)
-	//if (camera_in_building) {cout << num_add << endl;} // TESTING
+	//if (camera_in_building) {cout << name << ": " << num_add << endl;} // TESTING
 
 	// add skylight lights
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}

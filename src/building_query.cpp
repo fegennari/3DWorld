@@ -119,6 +119,13 @@ bool building_t::check_pt_in_walkway(point const &p, bool owned_only, bool inc_o
 	}
 	return 0;
 }
+bool building_t::is_connected_with_walkway(building_t const &target, float zval) const {
+	for (building_walkway_t const &w : walkways) {
+		if (zval != 0.0 && zval < w.bcube.z1() || zval > w.bcube.z2()) continue; // apply zval filter
+		if (w.conn_bldg == &target) return 1;
+	}
+	return 0;
+}
 
 cube_t building_walkway_t::get_bcube_inc_open_door() const {
 	cube_t bc(bcube);

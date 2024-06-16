@@ -1664,6 +1664,7 @@ struct building_t : public building_geom_t {
 	bool check_pt_within_part_sides(point const &p) const;
 	bool check_pt_in_retail_room(point const &p) const;
 	bool check_pt_in_walkway(point const &p, bool owned_only, bool inc_open_door) const;
+	bool is_connected_with_walkway(building_t const &target, float zval=0.0) const;
 	vect_cube_t::const_iterator get_real_parts_end() const {return (parts.begin() + real_num_parts);}
 	vect_cube_t::const_iterator get_real_parts_end_inc_sec() const {return (get_real_parts_end() + has_sec_bldg());}
 	vect_point const &get_part_ext_verts(unsigned part_id) const {assert(part_id < per_part_ext_verts.size()); return per_part_ext_verts[part_id];}
