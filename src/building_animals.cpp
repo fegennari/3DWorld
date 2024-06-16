@@ -935,9 +935,9 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 
 	for (auto i = b; i != e; ++i) {
 		if (i->z1() > tc.z2()) continue; // object is too high
-		if (spider.on_web && i->type == TYPE_LIGHT && i->shape == SHAPE_CUBE) continue; // ignore cube lights if on a web to avoid getting stuck
-		if (i->z2() < tc.z1() && !(i->type == TYPE_DESK && i->shape == SHAPE_TALL)) continue; // sigh, tall desks are special
-		if (!tc.intersects_xy((i->type == TYPE_CLOSET) ? get_true_room_obj_bcube(*i) : (cube_t)*i)) continue; // no intersection with this object
+		if (spider.on_web && spider.web_dir == 0 && i->type == TYPE_LIGHT && i->shape == SHAPE_CUBE) continue; // ignore cube lights if descending on a web to avoid getting stuck
+		if (i->z2() < tc.z1() && !(i->type == TYPE_DESK && i->shape == SHAPE_TALL))                  continue; // sigh, tall desks are special
+		if (!tc.intersects_xy((i->type == TYPE_CLOSET) ? get_true_room_obj_bcube(*i) : (cube_t)*i))  continue; // no intersection with this object
 		if (!i->is_spider_collidable()) continue;
 		if (i->get_max_dim_sz() < spider.radius) continue; // too small, skip
 		get_room_obj_cubes(*i, spider.pos, cubes, cubes, avoid); // climb on large and small objects and avoid non-cube objects
@@ -1004,23 +1004,25 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 		} // for i
 	}
 	if (obj_avoid.had_coll) {
-		if (spider.on_web) {
-			// TODO: handle this somehow? currently the spider is likely to get stuck; if coll is ignored, spider will clip through the object;
-			// should the spider climb the web instead? treat the avoid object as a cube? move in a random horizontal direction? jump? this case is rare and difficult to test
+		if (spider.on_web && spider.web_dir == 0) { // collided with un unwalkable object while descending on a web
+			// if coll is ignored, spider will clip through the object; if spider stops descending, it will get stuck; so instead climb back up the web
+			spider.web_dir = 1;
 		}
 		spider.end_jump();
 	}
 	float const delta_dir(min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep))));
 
 	if (!surface_orienter.align_to_surfaces(spider, delta_dir, camera_bs, rgen)) { // not on a surface
-		if (!spider.is_jumping()) { // if jumping, we continue the jump; otherwise, drop to a surface below
+		if (!spider.is_jumping()) { // if jumping, we continue the jump; otherwise, drop to a surface below using a web
 			if (!spider.on_web) {
 				spider.web_start_zval = max(spider.pos.z, spider.last_pos.z) + spider.get_xy_radius();
-				spider.on_web = 1;
+				spider.on_web         = 1;
+				spider.web_dir        = 0; // descending
 			}
+			float const dz_sign(spider.web_dir ? 1.0 : -1.0);
 			spider.pos    = spider.last_pos;
-			spider.dir    = (delta_dir*-plus_z + (1.0 - delta_dir)*spider.dir).get_norm(); // slowly reorient to -z
-			spider.pos.z -= 0.5*timestep*spider.speed; // drop at half speed
+			spider.dir    = ((delta_dir*dz_sign)*plus_z + (1.0 - delta_dir)*spider.dir).get_norm(); // slowly reorient to +/- z
+			spider.pos.z += 0.5*dz_sign*timestep*spider.speed; // drop at half speed
 			orthogonalize_dir(spider.upv, spider.dir, spider.upv, 1);
 		}
 	}
@@ -1088,7 +1090,7 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 	if (had_coll) {spider.end_jump();}
 
 	// regenerate dir if collided and not on a web, or if dir is somehow bad
-	if ((had_coll && !spider.on_web) || spider.dir.mag() < 0.5) {spider.choose_new_dir(rgen);}
+	if ((had_coll && !spider.on_web) || spider.dir.mag_sq() < 0.25) {spider.choose_new_dir(rgen);}
 	else if ((float)tfticks > spider.update_time) { // direction change or sleep
 		if (spider.on_web) {
 			spider.update_time = (float)tfticks + 1.0*TICKS_PER_SECOND; // wait another 1s before updating
