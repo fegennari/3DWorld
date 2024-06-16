@@ -512,7 +512,7 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 	vector3d normal(tquad.get_norm());
 	if (do_rotate) {bg.do_xy_rotate_normal(normal);}
 	vert.set_norm(normal);
-	invert_tc_x ^= (tquad.type == tquad_with_ix_t::TYPE_IDOOR2 || tquad.type == tquad_with_ix_t::TYPE_ODOOR2); // interior/office door, back face
+	invert_tc_x ^= tquad.is_inside_face(); // invert interior/office door, inner/back face
 
 	for (unsigned i = 0; i < tquad.npts; ++i) {
 		vert.v = tquad.pts[i];
@@ -535,8 +535,8 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 		else if (tquad.is_exterior_door() || tquad.type == tquad_with_ix_t::TYPE_HELIPAD || tquad.type == tquad_with_ix_t::TYPE_SOLAR) { // textured from (0,0) to (1,1)
 			vert.t[0] = float((i == 1 || i == 2) ^ invert_tc_x);
 			vert.t[1] = float((i == 2 || i == 3));
-			if      (tquad.type == tquad_with_ix_t::TYPE_SOLAR ) {vert.t[0] *= 4.0; vert.t[1] *= 4.0;} // 4 reptitions in each dimension
-			else if (tquad.type == tquad_with_ix_t::TYPE_RDOOR2) {vert.t[0] *= 0.5;} // only one half of the door
+			if      (tquad.type == tquad_with_ix_t::TYPE_SOLAR) {vert.t[0] *= 4.0; vert.t[1] *= 4.0;} // 4 reptitions in each dimension
+			else if (tquad.is_rooftop_door()) {vert.t[0] *= ((tquad.type == tquad_with_ix_t::TYPE_RDOOR) ? 0.51 : 0.5);} // only draw half of the door
 		}
 		else if (tquad.is_interior_door()) { // interior door textured/stretched in Y
 			vert.t[0]  = tex.tscale_x*((i == 1 || i == 2) ^ invert_tc_x);
@@ -1345,7 +1345,7 @@ int get_building_door_tid(unsigned type) { // exterior doors, and interior doors
 	case tquad_with_ix_t::TYPE_HDOOR : return building_texture_mgr.get_hdoor_tid ();
 	//case tquad_with_ix_t::TYPE_ODOOR : return building_texture_mgr.get_odoor_tid (); // enable when this texture is ready
 	case tquad_with_ix_t::TYPE_ODOOR : return building_texture_mgr.get_hdoor_tid ();
-	case tquad_with_ix_t::TYPE_RDOOR : return building_texture_mgr.get_hdoor_tid ();
+	case tquad_with_ix_t::TYPE_RDOOR : return building_texture_mgr.get_bdoor2_tid();
 	case tquad_with_ix_t::TYPE_BDOOR : return building_texture_mgr.get_bdoor_tid ();
 	case tquad_with_ix_t::TYPE_BDOOR2: return building_texture_mgr.get_bdoor2_tid();
 	case tquad_with_ix_t::TYPE_GDOOR : return building_texture_mgr.get_gdoor_tid ();
@@ -2016,10 +2016,12 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer, uint8_t door_type, bool dim, bool dir, float open_amt,
 	bool opens_out, bool exterior, bool on_stairs, bool hinge_side, bool is_bldg_conn, bool draw_top_edge) const
 {
-	int const type(tquad_with_ix_t::TYPE_IDOOR); // always use interior door type, even for exterior door, because we're drawing it in 3D inside the building
+	bool const is_rooftop_door(door_type == tquad_with_ix_t::TYPE_RDOOR);
+	int type(tquad_with_ix_t::TYPE_IDOOR); // use interior door type, even for exterior door, because we're drawing it in 3D inside the building
+	if (is_rooftop_door) {type = door_type;} // roof door is special because we only draw half of the texture when open
 	bool const opened(open_amt > 0.0), opens_up(door_type == tquad_with_ix_t::TYPE_GDOOR);
 	// exclude the frame on open interior doors
-	bool const exclude_frame((door_type == tquad_with_ix_t::TYPE_HDOOR || door_type == tquad_with_ix_t::TYPE_ODOOR) && (!exterior || opened));
+	bool const exclude_frame((door_type == tquad_with_ix_t::TYPE_HDOOR || door_type == tquad_with_ix_t::TYPE_ODOOR || is_rooftop_door) && (!exterior || opened));
 	unsigned const num_edges(opens_up ? 4 : 2);
 	int const tid(get_building_door_tid(door_type));
 	float const half_thickness(opens_up ? 0.01*D.dz() : 0.5*DOOR_THICK_TO_WIDTH*D.get_sz_dim(!dim));
@@ -2048,10 +2050,11 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 				door_edges[e].pts[2*d+1] = door_side.pts[ixs[e][ d]];
 				door_edges[e].pts[2*d+0] = door_side.pts[ixs[e][!d]];
 			}
-			if (d == 1) { // back face
+			if (d == 1) { // back face of house/office door
 				swap(door_side.pts[0], door_side.pts[1]);
 				swap(door_side.pts[2], door_side.pts[3]);
-				door_side.type = (is_house ? (unsigned)tquad_with_ix_t::TYPE_IDOOR2 : (unsigned)tquad_with_ix_t::TYPE_ODOOR2); // back side of house/office door
+				door_side.type = (is_house ? (unsigned)tquad_with_ix_t::TYPE_IDOOR_IN :
+					(is_rooftop_door ? (unsigned)tquad_with_ix_t::TYPE_RDOOR_IN : (unsigned)tquad_with_ix_t::TYPE_ODOOR_IN));
 			}
 			drawer.add_tquad(*this, door_side, bcube, tp, color, (int_other_side && !opened), exclude_frame, 0); // invert_tc_x=xxx, no_tc=0
 		} // for d
