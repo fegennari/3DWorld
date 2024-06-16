@@ -2246,7 +2246,8 @@ void building_t::add_window_blinds(cube_t const &window, bool dim, bool dir, uns
 void building_t::add_bathroom_window(cube_t const &window, bool dim, bool dir, unsigned room_id, unsigned floor) { // frosted window blocks, for houses or office buildings
 	if (!has_int_windows()) return; // no interior (or exterior) drawn windows
 	room_t const &room(get_room(room_id));
-	if (count_ext_walls_for_room(room, window.z1()) != 1) return; // looks odd to have window block walls at the corner of a building, so only enable this for single exterior walls
+	// exterior looks odd to have window block walls at the corner of a building, so only enable this for single exterior walls, or when there are no exterior windows
+	if (has_windows() && count_ext_walls_for_room(room, window.z1()) != 1) return;
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t c(window);
 	c.translate_dim(dim, (dir ? 1.0 : -1.0)*0.5*get_trim_thickness()); // half the previous translate to prevent Z-fighting in mirror reflections
