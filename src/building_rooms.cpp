@@ -1460,7 +1460,13 @@ void building_t::add_wall_and_door_trim_if_needed() {
 	interior->room_geom->trim_objs.shrink_to_fit();
 }
 bool building_t::maybe_has_ext_door_this_floor(float part_z1, unsigned floor_ix) const {
-	if (have_walkway_ext_door) return 1; // walkway doors can be added to stack parts and ranges of floors, so return true for safety
+	if (have_walkway_ext_door) { // walkway doors can be added to stack parts and ranges of floors
+		float const floor_spacing(get_window_vspace()), fz1(part_z1 + floor_ix*floor_spacing), fz2(fz1 + floor_spacing);
+
+		for (tquad_with_ix_t const &d : doors) {
+			if (d.pts[0].z > fz1 && d.pts[0].z < fz2) return 1; // door is on this floor
+		}
+	}
 	return (part_z1 == ground_floor_z1 && (1 << floor_ix) & floor_ext_door_mask);
 }
 
