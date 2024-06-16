@@ -1334,7 +1334,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	point const camera_bs(camera_pdu.pos - xlate), building_center(bcube.get_cube_center()); // camera in building space
 	bool walkway_only(0);
 
-	if (!camera_in_building && !has_int_windows() && !point_near_ext_door(camera_bs, get_door_open_dist())) { // interior lights not visible
+	if (!camera_in_building && !has_windows() && !point_near_ext_door(camera_bs, get_door_open_dist())) { // interior lights not visible
 		bool above_skylight(0);
 
 		for (cube_with_ix_t &sl : skylights) {
