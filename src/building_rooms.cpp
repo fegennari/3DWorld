@@ -559,7 +559,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 				if (has_walkway && is_room_adjacent_to_ext_door(room_this_floor)) { // connected to walkway door
 					// make this a lounge; but if this is a sub-room of an apartment or hotel room, then shouldn't we remove the walls and make the entire unit a lounge?
-					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, 0); // is_lobby=0
 					r->assign_to(RTYPE_LOUNGE, f);
 					added_obj = make_public = 1;
 				}
@@ -597,7 +597,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					is_living = add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 				else if (rtype == RTYPE_LOBBY) { // lobby is similar to lounge (can we get here?)
-					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start); // return value ignored
+					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, 1); // is_lobby=1; return value ignored
 				}
 				else if (rtype == RTYPE_UTILITY) {
 					is_utility = add_office_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
@@ -771,8 +771,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					}
 					else { // office; office building lobby can have a whiteboard - is that okay?
 						// front door = lobby, back door = lounge, but both cases have lounge objects
-						r->assign_to((is_room_adjacent_to_ext_door(*r, 1) ? (room_type)RTYPE_LOBBY : (room_type)RTYPE_LOUNGE), f);
-						if (!is_house) {add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
+						bool const is_lobby(is_room_adjacent_to_ext_door(*r, 1));
+						r->assign_to((is_lobby ? (room_type)RTYPE_LOBBY : (room_type)RTYPE_LOUNGE), f);
+						if (!is_house) {add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_lobby);}
 					}
 				}
 				else if (!is_house) {r->assign_to(RTYPE_OFFICE, f);} // any unset room in an office building is an office
