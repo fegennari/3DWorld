@@ -1298,8 +1298,8 @@ public:
 		for (auto i = roads.begin(); i != roads.end(); ++i) {if (i->intersects(c)) return 1;}
 		return 0;
 	}
-	void get_occluders(vect_cube_t &occluders) const {
-		if (bcube.contains_pt_xy(camera_pdu.pos)) {city_obj_placer.get_occluders(camera_pdu, occluders);} // only add if this city contains the camera
+	void get_occluders(vect_cube_t &occluders, vector3d const &xlate) const {
+		if (bcube.contains_pt_xy(camera_pdu.pos - xlate)) {city_obj_placer.get_occluders(camera_pdu, xlate, occluders);} // only add if this city contains the camera
 	}
 	vector<bridge_t> const &get_bridges() const {return bridges;}
 	bool have_animations() const {return city_obj_placer.have_animations();}
@@ -2707,7 +2707,7 @@ public:
 		for (road_network_t const &r : road_networks) {r.add_city_lights(xlate, lights_bcube);}
 	}
 	void get_occluders(vect_cube_t &occluders) const {
-		for (road_network_t const &r : road_networks) {r.get_occluders(occluders);}
+		for (road_network_t const &r : road_networks) {r.get_occluders(occluders, dstate.xlate);}
 	}
 	vector<bridge_t> const &get_bridges() const {return global_rn.get_bridges();}
 

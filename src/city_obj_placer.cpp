@@ -2143,20 +2143,22 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 	return 0;
 }
 
-void city_obj_placer_t::get_occluders(pos_dir_up const &pdu, vect_cube_t &occluders) const {
+void city_obj_placer_t::get_occluders(pos_dir_up const &pdu, vector3d const &xlate, vect_cube_t &occluders) const {
 	if (dividers.empty()) return; // dividers are currently the only occluders
 	float const dmax(0.25f*(X_SCENE_SIZE + Y_SCENE_SIZE)); // set far clipping plane to 1/4 a tile (currently 2.0)
 	unsigned start_ix(0);
 
 	for (auto i = divider_groups.begin(); i != divider_groups.end(); start_ix = i->ix, ++i) { // no divider_groups.get_bcube() test here?
-		if (!dist_less_than(pdu.pos, i->closest_pt(pdu.pos), dmax) || !pdu.cube_visible(*i)) continue;
+		cube_t const gbc(*i + xlate);
+		if (!dist_less_than(pdu.pos, gbc.closest_pt(pdu.pos), dmax) || !pdu.cube_visible(gbc)) continue;
 		assert(start_ix <= i->ix && i->ix <= dividers.size());
 
 		for (auto d = dividers.begin()+start_ix; d != dividers.begin()+i->ix; ++d) {
 			assert(d->type < DIV_NUM_TYPES);
 			if (!plot_divider_types[d->type].is_occluder) continue; // skip
-			if (d->bcube.z1() > pdu.pos.z || d->bcube.z2() < pdu.pos.z) continue; // z-range does not include the camera
-			if (dist_less_than(pdu.pos, d->bcube.closest_pt(pdu.pos), dmax) && pdu.cube_visible(d->bcube)) {occluders.push_back(d->bcube);}
+			cube_t const bc(d->bcube + xlate);
+			if (bc.z1() > pdu.pos.z || bc.z2() < pdu.pos.z) continue; // z-range does not include the camera
+			if (dist_less_than(pdu.pos, bc.closest_pt(pdu.pos), dmax) && pdu.cube_visible(bc)) {occluders.push_back(bc);}
 		}
 	} // for i
 }
