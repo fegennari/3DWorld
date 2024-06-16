@@ -916,7 +916,7 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 				if (door.open) { // how to handle open doors? they're not cubes; avoid them entirely? use their bcubes?
 					cube_t door_bcube(get_door_bounding_cube(door));
 					bool const dir(door.get_check_dirs()); // side of the door frame the door opens to
-					door_bcube.d[!door.dim][!dir] += (dir ? 1.0 : -1.0)*spider.radius; // shift edge away from door frame to allow spider to walk on inside of the frame
+					door_bcube.d[!door.dim][!dir] += (dir ? 1.0 : -1.0)*2.0*spider.radius; // shift edge away from door frame to allow spider to walk on inside of the frame
 				
 					if (tc.intersects(door_bcube)) {
 						obj_avoid.register_avoid_cube(door_bcube);
@@ -925,7 +925,7 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 					}
 				}
 				else if (tc.intersects(door)) {surface_orienter.register_cube(door);} // closed door
-			}
+			} // for dix
 		} // for door_stacks
 	}
 	// check interior objects
@@ -1007,6 +1007,8 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 		if (spider.on_web && spider.web_dir == 0) { // collided with un unwalkable object while descending on a web
 			// if coll is ignored, spider will clip through the object; if spider stops descending, it will get stuck; so instead climb back up the web
 			spider.web_dir = 1;
+			// if pointing nearly straight down, add some randomness to the XY component so that we can turn around
+			if (spider.dir.z < -0.95) {spider.dir += rgen.signed_rand_vector_xy(0.25); spider.dir.normalize();}
 		}
 		spider.end_jump();
 	}
