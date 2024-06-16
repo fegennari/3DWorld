@@ -18,7 +18,6 @@ using std::string;
 bool const ADD_ROOM_SHADOWS        = 1; // for room lights
 bool const DRAW_EXT_REFLECTIONS    = 1; // draw building exteriors in mirror reflections; slower, but looks better; not shadowed
 bool const DRAW_WALKWAY_INTERIORS  = 1;
-bool const ADD_WALKWAY_EXT_DOORS   = 1; // requires DRAW_WALKWAY_INTERIORS=1
 float const WIND_LIGHT_ON_RAND     = 0.08;
 unsigned const NO_SHADOW_WHITE_TEX = BLACK_TEX; // alias to differentiate shadowed    vs. unshadowed untextured objects
 unsigned const SHADOW_ONLY_TEX     = RED_TEX;   // alias to differentiate shadow only vs. other      untextured objects

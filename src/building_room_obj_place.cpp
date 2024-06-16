@@ -2984,7 +2984,9 @@ bool building_t::maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room
 		float const door_width(get_office_ext_doorway_width());
 		bool const dir(room.get_center_dim(dim) < w.bcube.get_center_dim(dim));
 
-		if (w.has_ext_door(!dir)) {
+		if (ADD_WALKWAY_EXT_DOORS) {
+			if (!w.has_ext_door(!dir))               continue; // no exterior door on this walkway
+			if (!is_room_adjacent_to_ext_door(room)) continue; // not the room connected to the walkway
 			float const center(w.bcube.get_center_dim(!w.dim));
 			if (room.d[!dim][1] < center - 0.5*door_width || room.d[!dim][0] > center + 0.5*door_width) continue; // not overlapping the door (which is centered on the walkway)
 

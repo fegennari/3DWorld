@@ -14,6 +14,7 @@
 bool const EXACT_MULT_FLOOR_HEIGHT = 1;
 bool const ENABLE_MIRROR_REFLECTIONS = 1;
 bool const DRAW_CITY_INT_WINDOWS   = 1; // not yet working; requires having different window x/y size/space/offset values for interior vs. exterior windows
+bool const ADD_WALKWAY_EXT_DOORS   = 1; // requires DRAW_WALKWAY_INTERIORS=1 in gen_buildings.cpp
 unsigned const MAX_CYLIN_SIDES     = 36;
 unsigned const MAX_DRAW_BLOCKS     = 8; // for building interiors only; currently have floor, ceiling, walls, and doors
 unsigned const NUM_STAIRS_PER_FLOOR= 12;
