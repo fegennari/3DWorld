@@ -587,9 +587,16 @@ void add_lounge_blockers(vect_room_object_t const &objs, unsigned objs_start, ve
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 		if (i->no_coll() || i->type == TYPE_BLOCKER) continue; // skip pictures, outlets, blocker padding in front of couches, etc.
 		blockers.push_back(*i); // add any previously places tables, chairs, etc.
-		// add extra padding around tables so that the player and AI can walk
-		if (i->type == TYPE_TABLE) {blockers.back().expand_by_xy(2.1*building_t::get_scaled_player_radius());}
 	}
+}
+cube_t get_table_blocker(vect_room_object_t const &objs, unsigned objs_start) {
+	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+		if (i->type != TYPE_TABLE) continue;
+		cube_t table_blocker(*i);
+		table_blocker.expand_by_xy(2.05*building_t::get_scaled_player_radius());
+		return table_blocker; // there should only be one
+	}
+	return cube_t();
 }
 void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_lobby) {
 	cube_t const room_area(get_walkable_room_bounds(room)); // right against the wall
@@ -598,15 +605,18 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const room_objs_start(objs.size());
 	float const window_vspacing(get_window_vspace());
-	bool const add_tall_table(!is_lobby && min(place_area.dx(), place_area.dy()) > 1.6*window_vspacing && rgen.rand_float() < 0.75); // 75% of the time if a lounge
 	vect_cube_t blockers;
 	add_lounge_blockers(objs, objs_start, blockers); // add any previously places tables, chairs, etc.
+	bool const add_tall_table(!is_lobby && min(place_area.dx(), place_area.dy()) > 1.4*window_vspacing && rgen.rand_float() < 0.75); // 75% of the time if a lounge
 
 	if (add_tall_table) { // add tall table with two bar stools
 		point const table_pos(room.xc(), room.yc(), zval); // approximate; can be placed 10% away from the room center
 		add_table_and_chairs(rgen, room, blockers, room_id, table_pos, WHITE, 0.1, tot_light_amt, 2, add_tall_table);
 	}
-	if (min(room.dx(), room.dy()) > 2.0*window_vspacing) { // place 1-3 couch(es) along a wall if the room is large enough
+	cube_t const table_blocker(get_table_blocker(objs, objs_start));
+	if (!table_blocker.is_all_zeros()) {objs.emplace_back(table_blocker, TYPE_BLOCKER, room_id);} // add as an actual blocker for placement of chairs, fridge, etc.
+
+	if (min(room.dx(), room.dy()) > 1.5*window_vspacing) { // place 1-3 couch(es) along a wall if the room is large enough
 		unsigned const couches_start(objs.size());
 		unsigned const counts[4] = {1, 2, 2, 3}; // 2 couches is more common
 		add_couches_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, counts);
@@ -614,6 +624,7 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 
 		if (couches_start < couches_end) { // at least one couch was placed; add tables in front of couches
 			add_lounge_blockers(objs, room_objs_start, blockers);
+			if (!table_blocker.is_all_zeros()) {blockers.push_back(table_blocker);}
 
 			for (unsigned i = couches_start; i < couches_end; ++i) {
 				room_object_t const &c(objs[i]);
