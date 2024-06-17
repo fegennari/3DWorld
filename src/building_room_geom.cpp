@@ -3915,6 +3915,12 @@ void building_room_geom_t::add_balcony(room_object_t const &c, float ground_floo
 }
 
 void building_room_geom_t::add_false_door(room_object_t const &c) {
+	if ((c.flags & RO_FLAG_WALKWAY) && c.is_interior()) { // interior walkway door decal
+		rgeom_mat_t &fb_mat(get_material(tid_nm_pair_t(get_bldg_door_tid(), 0.0), 0, 0, 0, 0, 1)); // unshadowed, exterior
+		fb_mat.add_cube_to_verts(c, c.color, all_zeros, get_face_mask(c.dim, c.dir), !c.dim); // draw only exterior face
+		// no sides, since they may be visible through an interior window
+		return;
+	}
 	cube_t sides[2] = {c, c}; // {interior, exterior}
 	sides[0].d[c.dim][!c.dir] = sides[1].d[c.dim][c.dir] = c.get_center_dim(c.dim);
 	

@@ -2977,7 +2977,8 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	}
 }
 
-// add objects to rooms connected to walkways, since the walkways themselves aren't actual rooms (and aren't inside the building bcube)
+// add objects to rooms connected to walkways, since the walkways themselves aren't actual rooms (and aren't inside the building bcube);
+// returns true if there's a real door connecting the walkway with this room
 bool building_t::maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, light_ix_assign_t &light_ix_assign) {
 	assert(has_room_geom());
 	float const wall_thickness(get_wall_thickness()), ceil_zval(zval + get_floor_ceil_gap()), floor_spacing(get_window_vspace()), door_thickness(0.25*wall_thickness);
@@ -2995,8 +2996,7 @@ bool building_t::maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room
 		float const door_width(get_office_ext_doorway_width());
 		bool const dir(room.get_center_dim(dim) < w.bcube.get_center_dim(dim));
 
-		if (ADD_WALKWAY_EXT_DOORS) {
-			if (!w.has_ext_door(!dir))               continue; // no exterior door on this walkway
+		if (w.has_ext_door(!dir)) { // has real exterior door
 			if (!is_room_adjacent_to_ext_door(room)) continue; // not the room connected to the walkway
 			float const center(w.bcube.get_center_dim(!w.dim));
 			if (room.d[!dim][1] < center - 0.5*door_width || room.d[!dim][0] > center + 0.5*door_width) continue; // not overlapping the door (which is centered on the walkway)
@@ -3024,7 +3024,8 @@ bool building_t::maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room
 					lpos[dim] += light_spacing;
 				} // for n
 			}
-			return 1; // using real exterior doors; don't add false doors; blockers are unnecessary
+			added = 1; // using real exterior doors; don't add false doors; blockers are unnecessary
+			continue;
 		}
 		unsigned const floor_ix((zval - w.bcube.z1())/floor_spacing), door_mask(1 << floor_ix); // within the walkway
 		assert(floor_ix < 8);
@@ -3034,18 +3035,26 @@ bool building_t::maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room
 		max_eq(entry.z1(), zval);
 		min_eq(entry.z2(), ceil_zval);
 		float const entry_width(entry.get_sz_dim(!dim));
-		if (entry_width < 1.2*door_width) continue; // too narrow for a doorway; walkway likele ends at a wall separating rooms
+		if (entry_width < 1.2*door_width) continue; // too narrow for a doorway; walkway likely ends at a wall separating rooms
 		cube_t door(entry);
 		door.expand_in_dim(!dim, 0.5*(door_width - entry_width)); // shrink to doorway width
 		cube_t blocker(door);
 		blocker.d[dim][!dir] += (dir ? -1.0 : 1.0)*1.2*door_width; // add space in the front for the door to open
+		
 		// skip if blocked by stairs or elevator; maybe the walkway shouldn't be placed here? walkways are added after placing stairs and elevators
-		if (interior->is_blocked_by_stairs_or_elevator(blocker)) continue;
-		door.d[dim][dir] -= (dir ? -1.0 : 1.0)*(wall_thickness + door_thickness); // extend into walkway on the other side of this room so that it's visible from walkway
-		objs.emplace_back(door, TYPE_FALSE_DOOR, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_WALKWAY), tot_light_amt);
-		objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, dir, RO_FLAG_INVIS);
+		if (interior->is_blocked_by_stairs_or_elevator(blocker)) {
+			if (!ADD_WALKWAY_EXT_DOORS) continue; // choose a different door pos
+			// if we get here, that means we couldn't add a real door and we can't add a two sided fake door;
+			// but a walkway that leads to nowhere is no good, so create a single sided door that exists only in the walkway
+			door.d[dim][dir] -= (dir ? -1.0 : 1.0)*(wall_thickness + 0.1*door_thickness); // extend into walkway, enough to prevent Z-fighting
+			objs.emplace_back(door, TYPE_FALSE_DOOR, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_WALKWAY | RO_FLAG_INTERIOR), tot_light_amt);
+		}
+		else {
+			door.d[dim][dir] -= (dir ? -1.0 : 1.0)*(wall_thickness + door_thickness); // extend into walkway on the other side of this room so that it's visible from walkway
+			objs.emplace_back(door, TYPE_FALSE_DOOR, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_WALKWAY), tot_light_amt);
+			objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, dir, RO_FLAG_INVIS); // prevent objects from blocking the door from inside the building
+		}
 		w.has_door |= door_mask;
-		added = 1;
 	} // for w
 	return added;
 }

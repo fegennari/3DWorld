@@ -494,12 +494,13 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 					else if (type == TYPE_PICTURE || type == TYPE_TPROLL || type == TYPE_MWAVE || type == TYPE_STOVE || /*type == TYPE_FRIDGE ||*/
 						type == TYPE_TV || type == TYPE_MONITOR || type == TYPE_BLINDS || type == TYPE_SHOWER || type == TYPE_SHOWERTUB || type == TYPE_SWITCH ||
 						type == TYPE_BOOK || type == TYPE_BRK_PANEL || type == TYPE_BREAKER || type == TYPE_ATTIC_DOOR || type == TYPE_OFF_CHAIR ||
-						type == TYPE_WFOUNTAIN || type == TYPE_FALSE_DOOR || type == TYPE_LG_BALL) {keep = 1;}
+						type == TYPE_WFOUNTAIN || type == TYPE_LG_BALL) {keep = 1;}
 					else if (type == TYPE_BUTTON && i->in_elevator() == bool(player_in_elevator)) {keep = 1;} // check for buttons inside/outside elevator
 					else if (type == TYPE_PIZZA_BOX && !i->was_expanded()) {keep = 1;} // can't open if on a shelf
 					else if (i->is_parked_car() && !i->is_broken()) {keep = 1;} // parked car with unbroken windows
 					else if (!check_only && type == TYPE_SHELFRACK && !i->obj_expanded()) {keep = 1;} // expand shelfrack when action key is actually applied
 					else if (type == TYPE_POOL_BALL && player_has_pool_cue()) {keep = 1;} // can only push pool ball if holding a pool cue
+					else if (type == TYPE_FALSE_DOOR && !((i->flags & RO_FLAG_WALKWAY) && i->is_interior())) {keep = 1;} // skip walkway only decal doors
 				}
 				else if (type == TYPE_LIGHT) {keep = 1;} // closet light
 				if (!keep) continue;
