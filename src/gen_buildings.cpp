@@ -383,12 +383,12 @@ void setup_building_lights(vector3d const &xlate, bool sec_camera_mode=0) {
 void set_interior_lighting(shader_t &s, bool have_indir) {
 	float const light_scale(0.5), light_change_amt(fticks/(2.0f*TICKS_PER_SECOND));
 	float const target_blscale((player_in_basement || player_in_attic) ? 0.0 : (player_in_walkway ? 2.0 : 1.0));
-	static float blscale(1.0); // indir/ambient lighting slowly transitions when entering or leaving the basement
+	static float blscale(1.0); // indir/ambient lighting slowly transitions when entering or leaving the basement or walkway
 	if      (blscale > target_blscale) {blscale = max(target_blscale, (blscale - light_change_amt));} // decrease
 	else if (blscale < target_blscale) {blscale = min(target_blscale, (blscale + light_change_amt));} // increase
 	float ambient_scale(0.5f*(1.0f + blscale)*light_scale); // brighter ambient
-	float diffuse_scale(0.2f*blscale*light_scale); // reduce diffuse and specular lighting for sun/moon
-	float hemi_scale(0.2f*blscale*light_scale); // reduced hemispherical lighting
+	float diffuse_scale(0.2f        *blscale *light_scale); // reduce diffuse and specular lighting for sun/moon
+	float hemi_scale(   0.2f        *blscale *light_scale); // reduced hemispherical lighting
 
 	if (have_indir || player_in_dark_room()) { // using indir lighting, or player in a closed closet/windowless room with the light off
 		s.add_uniform_float("SHADOW_LEAKAGE", 0.0); // no light leakage
