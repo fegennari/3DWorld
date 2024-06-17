@@ -3458,7 +3458,7 @@ public:
 								if (!b.point_near_ext_door(camera_bs, 20.0*door_open_dist)) continue; // too far away (use larger dist for door steps and ext door signs)
 								if (!camera_near_building) {cant_see_inside = 1;} // can see exterior objects, but not interiors
 							}
-							if ((display_mode & 0x08) && !player_in_building_bcube && b.is_entire_building_occluded(camera_bs, oc))  continue; // check occlusion
+							else if ((display_mode & 0x08) && !player_in_building_bcube && b.is_entire_building_occluded(camera_bs, oc)) continue; // check occlusion
 						}
 						// draw interior detail objects if player is in the building (inc ext basement), even if far from the building center
 						unsigned inc_small(bdist_sq < rgeom_sm_draw_dist_sq);

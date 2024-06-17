@@ -2396,8 +2396,8 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 		}
 	}
 	else if (viewer.z < bcube.z2()) { // player not in a building and not above this building
-		if (is_rotated())      return 0; // not implemented yet - c is not an axis aligned cube in global coordinate space
-		if (oc.is_occluded(c)) return 1; // check other buildings
+		if (is_rotated())                       return 0; // not implemented yet - c is not an axis aligned cube in global coordinate space
+		if (has_windows() && oc.is_occluded(c)) return 1; // check other buildings; not needed for windowless buildings since they shouldn't be drawn (and wrong for walkways)
 	}
 	if (!c_is_building_part && viewer.z > ground_floor_ceiling && is_cube()) {
 		// player above first floor of this building; check if object is occluded by a roof; we don't check bcube.z2() becase a lower part roof may be an occluder
