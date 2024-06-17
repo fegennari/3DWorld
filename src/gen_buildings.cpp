@@ -2401,6 +2401,7 @@ void building_t::get_ext_wall_verts_no_sec(building_draw_t &bdraw) const { // us
 		if (p->z1() < ground_floor_z1) continue; // not needed for basement and extended basement
 		unsigned const part_ix(p - parts.begin());
 		unsigned dim_mask(3); // start with XY only
+		bool draw_any(0);
 
 		for (unsigned d = 0; d < 4; ++d) { // 4 sides of this part
 			bool skip_this_side(p->d[d>>1][d&1] == bcube.d[d>>1][d&1]); // exterior wall is on the edge of the bcube and can't shadow anything
@@ -2410,8 +2411,11 @@ void building_t::get_ext_wall_verts_no_sec(building_draw_t &bdraw) const { // us
 			// and buildings generally won't have two doors on adjacent interior sides
 			if (part_ix < 4) {skip_this_side |= bool(door_sides[part_ix] & (1<<d));} // only check base parts
 			if (skip_this_side) {dim_mask |= (1<<(d+3));} // disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2
+			else {draw_any = 1;}
 		} // for d
-		bdraw.add_section(*this, 1, *p, mat.side_tex, side_color, dim_mask, 0, 0, 1, 0);
+		if (!draw_any) continue; // nothing to draw (optimization)
+		// Note: this can cause shadows over walkway doors for buildings with walkways connecting to recessed part edges, which is rare
+		bdraw.add_section(*this, 1, *p, mat.side_tex, side_color, dim_mask, 0, 0, 1, 0); // Note: ignores windows and door cutouts
 	} // for p
 }
 
