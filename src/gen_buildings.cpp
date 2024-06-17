@@ -1899,7 +1899,8 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 	} // for dim
 	// add the walkway interiors; these are outside the building and may get culled when outside the view frustum
 	if (DRAW_WALKWAY_INTERIORS) {
-		for (building_walkway_t const &w : walkways) {
+		for (building_walkway_t &w : walkways) {
+			w.windows.clear(); // in case this gets called multiple times on the same walkway
 			if (!w.is_owner) continue;
 			assert(w.bcube.z1() >= ground_floor_z1); // must be above ground
 			float const length(w.get_length());
@@ -1939,26 +1940,36 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 						}
 					}
 					else { // draw sides with (real) cutouts for windows
-						cube_t bot(wall), top(wall);
-
-						for (unsigned f = bot_floor; f < top_floor; ++f) { // add top and bottom strips for each floor
-							float const zval(ground_floor_z1 + f*floor_spacing), next_zval(zval + floor_spacing);
-							set_cube_zvals(bot, zval, zval+0.30*floor_spacing);
-							set_cube_zvals(top, next_zval -0.15*floor_spacing, next_zval);
-							bdraw.add_section(*this, 0, bot, mat.wall_tex, wall_color, (dim_mask | 4), 1, 0, 1, 0); // no AO; skip bottom
-							bdraw.add_section(*this, 0, top, mat.wall_tex, wall_color, (dim_mask | 4), 0, 1, 1, 0); // no AO; skip top
-						}
 						unsigned num_segs(length/floor_spacing);
 						if (!(num_segs & 1)) {++num_segs;} // must be odd
-						float const seg_len(length/num_segs);
+						float const seg_len(length/num_segs), first_seg_end(wall.d[!dim][0] + seg_len);
 						cube_t seg(wall);
-						seg.d[!dim][1] = seg.d[!dim][0] + seg_len; // first wall segment
+						seg.d[!dim][1] = first_seg_end;
 						dim_mask |= (1 << unsigned(!dim)); // draw edges
 
 						for (unsigned n = 0; n < num_segs; n += 2) { // alternate seg - window - seg
 							bdraw.add_section(*this, 0, seg, mat.wall_tex, wall_color, dim_mask, 1, 1, 1, 0); // no AO; skip bottom and top
 							seg.translate_dim(!dim, 2.0*seg_len);
-						} // for n
+						}
+						for (unsigned f = bot_floor; f < top_floor; ++f) { // add top and bottom strips for each floor
+							float const zval(ground_floor_z1 + f*floor_spacing), next_zval(zval + floor_spacing);
+							float const wz1(zval+0.30*floor_spacing), wz2(next_zval -0.15*floor_spacing);
+							cube_t bot(wall), top(wall);
+							set_cube_zvals(bot, zval, wz1);
+							set_cube_zvals(top, wz2,  next_zval);
+							bdraw.add_section(*this, 0, bot, mat.wall_tex, wall_color, (dim_mask | 4), 1, 0, 1, 0); // no AO; skip bottom
+							bdraw.add_section(*this, 0, top, mat.wall_tex, wall_color, (dim_mask | 4), 0, 1, 1, 0); // no AO; skip top
+							// add windows
+							cube_with_ix_t window(wall, (2*dim + d));
+							set_cube_zvals(window, wz1, wz2);
+							window.d[!dim][0] = first_seg_end;
+							window.d[!dim][1] = first_seg_end + seg_len;
+
+							for (unsigned n = 0; n < num_segs/2; ++n) {
+								w.windows.push_back(window);
+								window.translate_dim(!dim, 2.0*seg_len);
+							}
+						} // for f
 					}
 				} // for d
 			} // for dim

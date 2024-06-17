@@ -1771,6 +1771,42 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	if (has_pool()) {add_pool_trim();}
 }
 
+void add_window_trim(cube_t const &window, cube_t const &exclude, colorRGBA const &color, float tb_width, float side_width, float extra_depth,
+	bool dim, bool dir, unsigned flags, vect_room_object_t &trim_objs, vect_cube_t &trims)
+{
+	cube_t top(window), bot(window), side(window);
+	top.z1()  = window.z2();
+	top.z2() += tb_width;
+	bot.z2()  = window.z1();
+	bot.z1() -= tb_width;
+	bot.d[dim][!dir] += (dir ? -1.0 : 1.0)*extra_depth; // shift out further for windowsill
+	top.expand_in_dim(!dim, side_width);
+	bot.expand_in_dim(!dim, side_width);
+	// interior trim
+	unsigned const trim_start(trim_objs.size());
+	cube_t const tb_trims[2] = {top, bot};
+
+	for (unsigned tb = 0; tb < 2; ++tb) {
+		if (!exclude.is_all_zeros()) { // remove walkway door
+			trims.clear();
+			trims.push_back(tb_trims[tb]);
+			subtract_cube_from_cubes(exclude, trims);
+
+			for (cube_t const &trim : trims) {
+				if (trim.get_sz_dim(!dim) < tb_width) continue; // too short, skip
+				trim_objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, flags, 1.0, SHAPE_TALL, color);
+			}
+		}
+		else {trim_objs.emplace_back(tb_trims[tb], TYPE_WALL_TRIM, 0, dim, dir, flags, 1.0, SHAPE_TALL, color);}
+	} // for tb
+	for (unsigned s = 0; s < 2; ++s) { // left/right sides
+		side.d[!dim][ s] = window.d[!dim][s] - (s ? -1.0 : 1.0)*side_width;
+		side.d[!dim][!s] = window.d[!dim][s];
+		if (side.intersects(exclude)) continue; // skip if intersects walkway door
+		trim_objs.emplace_back(side, TYPE_WALL_TRIM, 0, dim, dir, flags, 1.0, SHAPE_TALL, color);
+	}
+}
+
 void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings, bool add_ext_sills) {
 	assert(add_trim || add_coverings || add_ext_sills);
 	if (!has_int_windows()) return; // no windows
@@ -1780,7 +1816,7 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 	float const window_h_border(WINDOW_BORDER_MULT*get_window_h_border()), window_v_border(WINDOW_BORDER_MULT*get_window_v_border()); // (0, 1) range
 	// Note: depth must be small to avoid object intersections; this applies to the windowsill as well
 	float const window_trim_width(get_wind_trim_thick()), window_trim_depth(1.0*trim_thickness), windowsill_depth(1.0*trim_thickness);
-	float const floor_spacing(get_window_vspace()), window_offset(get_door_shift_dist());
+	float const floor_spacing(get_window_vspace()), window_offset(get_door_shift_dist()), extra_depth(windowsill_depth - window_trim_depth);
 	building_mat_t const &mat(get_material());
 	colorRGBA const trim_color(get_trim_color());
 	colorRGBA const &frame_color(mat.window_color);
@@ -1874,39 +1910,11 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 				}
 				if (!add_trim) continue;
 				// add window trim
+				unsigned const trim_start(trim_objs.size());
 				float const window_ar(window.get_sz_dim(!dim)/window.dz());
 				float const side_trim_width(window_trim_width*((window_ar > 1.5) ? (window_ar - 0.5) : 1.0)); // widen for very wide windows to cover holes at stretched edges
-				cube_t top(window), bot(window), side(window);
-				top.z1()  = window.z2();
-				top.z2() += window_trim_width;
-				bot.z2()  = window.z1();
-				bot.z1() -= window_trim_width;
-				bot.d[dim][!dir] += dscale*(windowsill_depth - window_trim_depth); // shift out further for windowsill
-				top.expand_in_dim(!dim, side_trim_width);
-				bot.expand_in_dim(!dim, side_trim_width);
-				// interior trim
-				unsigned const trim_start(trim_objs.size());
-				cube_t const tb_trims[2] = {top, bot};
+				add_window_trim(window, exclude, trim_color, window_trim_width, side_trim_width, extra_depth, dim, dir, ext_flags, trim_objs, trims);
 
-				for (unsigned tb = 0; tb < 2; ++tb) {
-					if (!exclude.is_all_zeros()) { // remove walkway door
-						trims.clear();
-						trims.push_back(tb_trims[tb]);
-						subtract_cube_from_cubes(exclude, trims);
-
-						for (cube_t const &trim : trims) {
-							if (trim.get_sz_dim(!dim) < window_trim_width) continue; // too short, skip
-							trim_objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
-						}
-					}
-					else {trim_objs.emplace_back(tb_trims[tb], TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);}
-				} // for tb
-				for (unsigned s = 0; s < 2; ++s) { // left/right sides
-					side.d[!dim][ s] = window.d[!dim][s] - (s ? -1.0 : 1.0)*side_trim_width;
-					side.d[!dim][!s] = window.d[!dim][s];
-					if (side.intersects(exclude)) continue; // skip if intersects walkway door
-					trim_objs.emplace_back(side, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
-				}
 				if (add_ext_trim) { // exterior trim
 					unsigned const trim_end(trim_objs.size());
 				
@@ -1953,6 +1961,19 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 			} // for xy
 		} // for z
 	} // for i
+	if (add_trim) { // add walkway window trim
+		for (building_walkway_t const &ww : walkways) {
+			for (cube_with_ix_t const &w : ww.windows) {
+				bool const dim(w.ix >> 1), dir(w.ix & 1);
+				unsigned const ext_flags(RO_FLAG_NOCOLL | (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO));
+				cube_t window(w); // shrink/grow to prevent Z-fighting
+				window.expand_in_dim( dim,  trim_thickness); // thickness
+				window.expand_in_dim(!dim, -trim_thickness);
+				window.expand_in_dim(2,    -trim_thickness);
+				add_window_trim(window, cube_t(), trim_color, window_trim_width, window_trim_width, extra_depth, dim, dir, ext_flags, trim_objs, trims);
+			} // for w
+		} // for ww
+	}
 	if (is_house && add_ext_trim && add_trim && rgen.rand_float() < 0.2) { // add exterior house wall first floor trim
 		float const zval(ground_floor_z1 + floor_spacing), width(4.0*window_trim_depth);
 

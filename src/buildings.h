@@ -1448,6 +1448,8 @@ struct building_walkway_geom_t {
 struct building_walkway_t : public building_walkway_geom_t { // "owned" walkway, one per connected building
 	bool is_owner;
 	building_t *conn_bldg;
+	vect_cube_with_ix_t windows;
+
 	building_walkway_t(building_walkway_geom_t const &g, bool owner, building_t *b) : building_walkway_geom_t(g), is_owner(owner), conn_bldg(b) {}
 	cube_t get_bcube_inc_open_door() const;
 };
