@@ -513,7 +513,8 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 	vector3d normal(tquad.get_norm());
 	if (do_rotate) {bg.do_xy_rotate_normal(normal);}
 	vert.set_norm(normal);
-	invert_tc_x ^= tquad.is_inside_face(); // invert interior/office door, inner/back face
+	invert_tc_x   ^= tquad.is_inside_face(); // invert interior/office door, inner/back face
+	exclude_frame &= (tquad.is_interior_door() || tquad.is_exterior_door());
 
 	for (unsigned i = 0; i < tquad.npts; ++i) {
 		vert.v = tquad.pts[i];
@@ -537,7 +538,10 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 			vert.t[0] = float((i == 1 || i == 2) ^ invert_tc_x);
 			vert.t[1] = float((i == 2 || i == 3));
 			if      (tquad.type == tquad_with_ix_t::TYPE_SOLAR) {vert.t[0] *= 4.0; vert.t[1] *= 4.0;} // 4 reptitions in each dimension
-			else if (tquad.is_rooftop_door()) {vert.t[0] *= ((tquad.type == tquad_with_ix_t::TYPE_RDOOR) ? 0.51 : 0.5);} // only draw half of the door
+			else if (tquad.is_rooftop_door()) { // only draw half of the door for rooftop doors; slightly more to pick up the frame if closed
+				vert.t[0] *= ((!exclude_frame && tquad.type == tquad_with_ix_t::TYPE_RDOOR) ? 0.52 : 0.5);
+				if (exclude_frame) {vert.t[1] *= 0.97;} // trim off the top door frame
+			}
 		}
 		else if (tquad.is_interior_door()) { // interior door textured/stretched in Y
 			vert.t[0]  = tex.tscale_x*((i == 1 || i == 2) ^ invert_tc_x);
@@ -546,7 +550,7 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 		}
 		else if (tquad.type == tquad_with_ix_t::TYPE_TRIM) {} // untextured - no tex coords
 		else {assert(0);}
-		if (exclude_frame && (tquad.is_interior_door() || tquad.is_exterior_door())) {vert.t[0] = DOOR_FRAME_WIDTH + (1.0 - 2.0*DOOR_FRAME_WIDTH)*vert.t[0];}
+		if (exclude_frame) {vert.t[0] = DOOR_FRAME_WIDTH + (1.0 - 2.0*DOOR_FRAME_WIDTH)*vert.t[0];}
 		if (do_rotate) {bg.do_xy_rotate(center, vert.v);}
 		if (swap_tc_xy) {swap(vert.t[0], vert.t[1]);}
 		verts.push_back(vert);
@@ -2051,7 +2055,7 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 				door_edges[e].pts[2*d+1] = door_side.pts[ixs[e][ d]];
 				door_edges[e].pts[2*d+0] = door_side.pts[ixs[e][!d]];
 			}
-			if (d == 1) { // back face of house/office door
+			if (d == 1) { // back/inside face of house/office door
 				swap(door_side.pts[0], door_side.pts[1]);
 				swap(door_side.pts[2], door_side.pts[3]);
 				door_side.type = (is_house ? (unsigned)tquad_with_ix_t::TYPE_IDOOR_IN :
