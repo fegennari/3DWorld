@@ -1967,7 +1967,7 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 				bool const dim(w.ix >> 1), dir(w.ix & 1);
 				unsigned const ext_flags(RO_FLAG_NOCOLL | (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO));
 				cube_t window(w); // shrink/grow to prevent Z-fighting
-				window.expand_in_dim( dim,  trim_thickness); // thickness
+				window.d[dim][!dir] += (dir ? -1.0 : 1.0)*trim_thickness; // increase thickness
 				window.expand_in_dim(!dim, -trim_thickness);
 				window.expand_in_dim(2,    -trim_thickness);
 				add_window_trim(window, cube_t(), trim_color, window_trim_width, window_trim_width, extra_depth, dim, dir, ext_flags, trim_objs, trims);
