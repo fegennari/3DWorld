@@ -1716,7 +1716,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			for (building_walkway_t const &w : walkways) {
 				if (!w.is_owner || !w.bcube.contains_pt(lpos)) continue;
 				if (w.bcube_inc_rooms.contains_pt(camera_rot)) {in_camera_walkway = 1;} // camera in or near the walkway
-				light_clip_cube = w.bcube;
+				light_clip_cube  = w.bcube;
 				light_in_walkway = 1;
 				break;
 			}
@@ -1874,14 +1874,18 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		// handle light hitting open office building doors by expanding outward
 		if (!is_house && !light_in_basement && !light_in_walkway && !doors.empty()) {
 			bool const ground_floor(lpos.z < ground_floor_z1 + window_vspacing);
+			// if this light is in a room connected to a walkway door, use the part containing the room rather than the building bcube;
+			// that way a walkway connnecting to a recessed door (part edge inside bcube) will have a door that's properly lit
+			bool const maybe_walkway(!ground_floor && check_pt_in_or_near_walkway(lpos, 0, 0, 1) && is_room_adjacent_to_ext_door(room));
+			cube_t const &test_cube(maybe_walkway ? parts[room.part_id] : bcube);
 
 			for (unsigned d = 0; d < 2; ++d) {
 				// full expand is applied to the first floor only and not walkways because shadows from exterior walls are missing on walkway floors and walls;
 				// walkways are expanded slightly so that the inside face of the walkway door is lit
-				if (clipped_bc.d[d][0] < bcube.d[d][0]) {
+				if (clipped_bc.d[d][0] < test_cube.d[d][0]) {
 					if (ground_floor) {clipped_bc.d[d][0] = sphere_bc.d[d][0];} else {clipped_bc.d[d][0] -= 0.25*wall_thickness;}
 				}
-				if (clipped_bc.d[d][1] > bcube.d[d][1]) {
+				if (clipped_bc.d[d][1] > test_cube.d[d][1]) {
 					if (ground_floor) {clipped_bc.d[d][1] = sphere_bc.d[d][1];} else {clipped_bc.d[d][1] += 0.25*wall_thickness;}
 				}
 			} // for d

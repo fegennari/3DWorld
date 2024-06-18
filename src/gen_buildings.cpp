@@ -41,6 +41,7 @@ extern int rand_gen_index, display_mode, window_width, window_height, camera_sur
 extern float CAMERA_RADIUS, fticks, NEAR_CLIP, FAR_CLIP;
 extern colorRGB cur_ambient, cur_diffuse;
 extern point pre_smap_player_pos, actual_player_pos;
+extern cube_t smap_light_clip_cube;
 extern vector<light_source> dl_sources;
 extern vector<point> enabled_bldg_lights;
 extern tree_placer_t tree_placer;
@@ -2406,6 +2407,7 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 
 void building_t::get_ext_wall_verts_no_sec(building_draw_t &bdraw) const { // used for blocking room shadows between parts
 	if (real_num_parts == 1) return; // one part, light can't leak
+	float const clip_cube_dist_thresh(2.0*get_wall_thickness());
 	building_mat_t const &mat(get_material());
 
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
@@ -2415,7 +2417,11 @@ void building_t::get_ext_wall_verts_no_sec(building_draw_t &bdraw) const { // us
 		bool draw_any(0);
 
 		for (unsigned d = 0; d < 4; ++d) { // 4 sides of this part
-			bool skip_this_side(p->d[d>>1][d&1] == bcube.d[d>>1][d&1]); // exterior wall is on the edge of the bcube and can't shadow anything
+			bool const dim(d >> 1), dir(d & 1);
+			float const side_pos(p->d[dim][dir]);
+			bool skip_this_side(side_pos == bcube.d[dim][dir]); // exterior wall is on the edge of the bcube and can't shadow anything
+			// skip drawing of walls on sides that are already clipped by the light; optimization, and helps with drawing of inner faces of walkway exterior doors
+			if (!smap_light_clip_cube.is_all_zeros()) {skip_this_side |= (fabs(side_pos - smap_light_clip_cube.d[dim][dir]) < clip_cube_dist_thresh);}
 			// houses and building courtyards can have exterior doors not along the bcube that aren't handled by the above case;
 			// drawing the wall containing this door in the shadow map will cause lighting artifacts, so skip this wall;
 			// it should be okay because we only need one of two walls intersecting an interior->exterior->interior light ray to suppress it,
@@ -2945,6 +2951,7 @@ public:
 			}
 		} // for i
 		if (buildings.capacity() > 2*buildings.size()) {buildings.shrink_to_fit();}
+		// after this point buildings should no longer be resized and their pointers can be used without worrying about invalidation, at least within this buildings block
 		bix_by_x1 cmp_x1(buildings);
 		for (auto i = bix_by_plot.begin(); i != bix_by_plot.end(); ++i) {sort(i->begin(), i->end(), cmp_x1);}
 		if (!is_tile) {timer.end();} // use a single timer for tile mode
