@@ -112,10 +112,13 @@ bool building_t::check_pt_in_retail_room(point const &p) const {
 	if (!has_retail() || !interior || interior->rooms.empty()) return 0;
 	return get_retail_room().contains_pt(p);
 }
-bool building_t::check_pt_in_walkway(point const &p, bool owned_only, bool inc_open_door) const {
+bool building_t::check_pt_in_or_near_walkway(point const &p, bool owned_only, bool inc_open_door, bool inc_conn_room) const {
 	for (building_walkway_t const &w : walkways) {
 		if (owned_only && !w.is_owner) continue;
+		if (p.z < w.bcube.z1() || p.z > w.bcube.z2()) continue; // no Z overlap
 		if ((inc_open_door ? w.get_bcube_inc_open_door() : w.bcube).contains_pt(p)) return 1;
+		// check adjacent rooms if connected, walkway is visible through windows, and pos is off the ends of the walkways; forms a dog bone shape
+		if (inc_conn_room && has_int_windows() && (p[w.dim] < w.bcube.d[w.dim][0] || p[w.dim] > w.bcube.d[w.dim][1]) && w.bcube_inc_rooms.contains_pt(p)) return 1;
 	}
 	return 0;
 }

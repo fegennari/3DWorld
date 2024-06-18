@@ -1449,8 +1449,9 @@ struct building_walkway_t : public building_walkway_geom_t { // "owned" walkway,
 	bool is_owner;
 	building_t *conn_bldg;
 	vect_cube_with_ix_t windows;
+	cube_t bcube_inc_rooms;
 
-	building_walkway_t(building_walkway_geom_t const &g, bool owner, building_t *b) : building_walkway_geom_t(g), is_owner(owner), conn_bldg(b) {}
+	building_walkway_t(building_walkway_geom_t const &g, bool owner, building_t *b) : building_walkway_geom_t(g), is_owner(owner), conn_bldg(b) {bcube_inc_rooms = bcube;}
 	cube_t get_bcube_inc_open_door() const;
 };
 
@@ -1665,7 +1666,7 @@ struct building_t : public building_geom_t {
 	bool check_cube_within_part_sides(cube_t const &c) const;
 	bool check_pt_within_part_sides(point const &p) const;
 	bool check_pt_in_retail_room(point const &p) const;
-	bool check_pt_in_walkway(point const &p, bool owned_only, bool inc_open_door) const;
+	bool check_pt_in_or_near_walkway(point const &p, bool owned_only, bool inc_open_door, bool inc_conn_room) const;
 	bool is_connected_with_walkway(building_t const &target, float zval=0.0) const;
 	vect_cube_t::const_iterator get_real_parts_end() const {return (parts.begin() + real_num_parts);}
 	vect_cube_t::const_iterator get_real_parts_end_inc_sec() const {return (get_real_parts_end() + has_sec_bldg());}

@@ -1342,7 +1342,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (camera_bs.z > sl.z2()) {above_skylight = 1; break;}
 		}
 		if (!above_skylight) {
-			if (check_pt_in_walkway(camera_bs, 1, 1)) {walkway_only = 1;} // player in walkway
+			if (check_pt_in_or_near_walkway(camera_bs, 1, 1, 1)) {walkway_only = 1;} // player in or near walkway
 			else if (has_int_windows() && player_building != nullptr && is_connected_with_walkway(*player_building, camera_bs.z)) {walkway_only = 1;}
 			else return; // no lights visible
 		}
@@ -1715,7 +1715,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 			for (building_walkway_t const &w : walkways) {
 				if (!w.is_owner || !w.bcube.contains_pt(lpos)) continue;
-				if (w.get_bcube_inc_open_door().contains_pt(camera_rot)) {in_camera_walkway = 1;}
+				if (w.bcube_inc_rooms.contains_pt(camera_rot)) {in_camera_walkway = 1;} // camera in or near the walkway
 				light_clip_cube = w.bcube;
 				light_in_walkway = 1;
 				break;
