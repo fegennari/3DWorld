@@ -944,19 +944,19 @@ bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i,
 	return 1;
 }
 
+// get windows used as indir lighting sources
 void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: ix encodes 2*dim+dir
 	windows.clear();
 	if (!has_int_windows() || is_rotated() || !is_cube()) return; // no windows; rotated and non-cube buildings are not handled
 	float const window_h_border(WINDOW_BORDER_MULT*get_window_h_border()), window_v_border(WINDOW_BORDER_MULT*get_window_v_border()); // (0, 1) range
+	float const wall_thickness(get_wall_thickness());
 	vect_room_object_t blinds;
 
 	if (is_house && has_room_geom()) { // find all bedroom blinds and use them to partially block windows
-		float const width_expand(get_wall_thickness());
-
 		for (room_object_t const &c : interior->room_geom->objs) {
 			if (c.type != TYPE_BLINDS) continue;
 			blinds.push_back(c);
-			blinds.back().expand_in_dim(c.dim, width_expand); // make sure the intersect the windows
+			blinds.back().expand_in_dim(c.dim, wall_thickness); // make sure the intersect the windows
 		}
 	}
 	static vect_vnctcc_t wall_quad_verts;
@@ -995,9 +995,28 @@ void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: 
 						else      {min_eq(window.d[!dim][1], b.d[!dim][0]);} // right side
 					}
 				} // for b
-				bool const is_blocked(window.dz() <= 0.0 || window.get_sz_dim(!dim) <= 0.0);
-				windows.emplace_back(window, (4*is_blocked + 2*dim + dir)); // Note: must include blocked window for seen cache to work
-			}
+				bool is_blocked(window.dz() <= 0.0 || window.get_sz_dim(!dim) <= 0.0);
+				cube_t window_clipped(window);
+
+				if (!is_blocked && !walkways.empty()) {
+					// check for windows blocked by walkways and clip them, even though some light could come through if not blocked by a door
+					float const wz(window.zc()), wpos(window_clipped.d[dim][dir]);
+					float &wlo(window_clipped.d[!dim][0]), &whi(window_clipped.d[!dim][1]);
+					assert(wlo < whi);
+
+					for (building_walkway_t const &w : walkways) {
+						if (wz < w.bcube.z1() || wz > w.bcube.z2()) continue; // no Z overlap
+						if (wpos < w.bcube.d[dim][0] - wall_thickness || wpos > w.bcube.d[dim][1] + wall_thickness) continue; // wrong wall
+						float const blo(w.bcube.d[!dim][0]), bhi(w.bcube.d[!dim][1]);
+						if (whi <= blo || wlo >= bhi) continue; // no overlap
+						if (wlo >= blo && whi <= bhi) {is_blocked = 1; break;} // fully contained
+						if      (wlo > blo && wlo < bhi) {wlo = bhi;} // clip low  edge
+						else if (whi > blo && whi < bhi) {whi = blo;} // clip high edge
+						assert(wlo < whi);
+					} // for w
+				}
+				windows.emplace_back(window_clipped, (4*is_blocked + 2*dim + dir)); // Note: must include blocked window for seen cache to work
+			} // for xy
 		} // for z
 	} // for i
 	if (get_light_pos().z > 0.0) { // if primary light (sun/moon) is above the horizon, add skylight indir lighting
