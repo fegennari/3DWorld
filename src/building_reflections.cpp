@@ -160,8 +160,7 @@ bool building_t::is_cube_face_visible_from_pt(cube_t const &c, point const &p, u
 
 bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, float &dmin_sq, bool same_room) const { // in view of the player
 	assert(has_room_geom());
-	point camera_bs(camera_pdu.pos - xlate);
-	maybe_inv_rotate_point(camera_bs); // rotate camera pos into building space
+	point const camera_bs(get_inv_rot_pos(camera_pdu.pos - xlate)); // rotate camera pos into building space
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 	float const camera_z1(camera_bs.z - CAMERA_RADIUS), camera_z2(camera_bs.z + CAMERA_RADIUS);
 

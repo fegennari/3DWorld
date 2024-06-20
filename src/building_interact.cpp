@@ -95,9 +95,7 @@ bool building_t::toggle_room_light(point const &closest_to, bool sound_from_clos
 	bool const in_attic(known_in_attic || point_in_attic(closest_to));
 
 	if (room_id < 0 && !in_attic) { // caller has not provided a valid room_id, so determine it now
-		point query_pt(closest_to);
-		if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), query_pt);}
-		room_id = get_room_containing_pt(query_pt);
+		room_id = get_room_containing_pt(get_inv_rot_pos(closest_to));
 		if (room_id < 0) return 0; // closest_to is not contained in a room of this building
 	}
 	bool const ignore_floor(in_attic || get_room(room_id).is_single_floor);
@@ -311,8 +309,7 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 // used for drawing open doors
 int building_t::find_ext_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const {
 	if (doors.empty()) return -1;
-	point query_pt(pos);
-	if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), query_pt);}
+	point const query_pt(get_inv_rot_pos(pos));
 	int const room_id(get_room_containing_pt(query_pt));
 	cube_t room_exp;
 
@@ -331,8 +328,7 @@ int building_t::find_ext_door_close_to_point(tquad_with_ix_t &door, point const 
 }
 bool building_t::point_near_ext_door(point const &pos, float dist) const { // simplified version of above function
 	if (doors.empty()) return 0;
-	point query_pt(pos);
-	if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), query_pt);}
+	point const query_pt(get_inv_rot_pos(pos));
 
 	for (auto d = doors.begin(); d != doors.end(); ++d) {
 		if (d->get_bcube().contains_pt_exp(query_pt, dist)) return 1;
@@ -1475,8 +1471,8 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 	
 	if (player_in_this_building) {
 		last_player_pos = player_pos;
-		maybe_inv_rotate_point(camera_rot); // rotate camera pos into building space; should we use camera_rot elsewhere below?
-		player_room_ix = get_room_containing_pt(camera_rot);
+		camera_rot      = get_inv_rot_pos(camera_rot); // rotate camera pos into building space; should we use camera_rot elsewhere below?
+		player_room_ix  = get_room_containing_pt(camera_rot);
 		if (player_in_elevator >= 3) {hum_amt = 0.2; hum_freq = 100.0;} // moving elevator sound
 	}
 	// update dynamic objects; run for current and connected buildings

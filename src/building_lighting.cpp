@@ -1368,8 +1368,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	}
 	else if ((display_mode & 0x08) && !camera_in_building && !bcube.contains_pt_xy(camera_bs) && is_entire_building_occluded(camera_bs, oc)) return;
 	// Note: camera_bs is used to test against bcube, lpos_rot, and anything else in global space; camera_rot is used to test against building interior objects
-	point camera_rot(camera_bs); // camera in rotated building space
-	maybe_inv_rotate_point(camera_rot); // rotate camera pos into building space; should use this pos below except with building bcube, occlusion checks, or lpos_rot
+	point const camera_rot(get_inv_rot_pos(camera_bs)); // rotate camera into building space; use this pos below except with building bcube, occlusion checks, or lpos_rot
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness());
 	float const room_xy_expand(0.75*wall_thickness), player_feet_zval(camera_bs.z - get_bldg_player_height()), ground_floor_z2(ground_floor_z1 + window_vspacing);
 	bool const check_building_people(enable_building_people_ai()), check_attic(camera_in_building && has_attic() && interior->attic_access_open);

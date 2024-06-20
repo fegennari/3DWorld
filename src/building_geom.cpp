@@ -26,7 +26,6 @@ void building_t::set_z_range(float z1, float z2) {
 building_mat_t const &building_t::get_material() const {return global_building_params.get_material(mat_ix);}
 
 void building_t::gen_rotation(rand_gen_t &rgen) {
-
 	float const max_rot_angle(get_material().max_rot_angle);
 	if (max_rot_angle == 0.0) return;
 	float const rot_angle(rgen.rand_uniform(0.0, TO_RADIANS*max_rot_angle)); // max_rot_angle is specified in degrees
@@ -35,6 +34,12 @@ void building_t::gen_rotation(rand_gen_t &rgen) {
 	parts.clear();
 	parts.push_back(bcube); // this is the actual building base
 	set_bcube_from_rotated_cube(parts.back());
+}
+point building_t::get_inv_rot_pos(point const &pos) const {
+	if (!is_rotated()) return pos;
+	point pos_rot(pos);
+	do_xy_rotate_inv(bcube.get_cube_center(), pos_rot);
+	return pos_rot;
 }
 
 void building_t::set_bcube_from_rotated_cube(cube_t const &bc) {

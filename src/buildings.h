@@ -1656,7 +1656,7 @@ struct building_t : public building_geom_t {
 	bool is_ground_floor_excluding_retail(float zval) const;
 	float get_ground_floor_z_thresh(bool for_spider) const;
 	void gen_rotation(rand_gen_t &rgen);
-	void maybe_inv_rotate_point(point &p) const {if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), p);}} // inverse rotate - negate the sine term
+	point get_inv_rot_pos(point const &pos) const;
 	void maybe_inv_rotate_pos_dir(point &pos, vector3d &dir) const;
 	void set_z_range(float z1, float z2);
 	bool check_part_contains_pt_xy(cube_t const &part, unsigned part_id, point const &pt) const;

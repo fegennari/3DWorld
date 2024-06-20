@@ -2245,7 +2245,7 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 		float max_vis_zval(ground_floor_z1);
 		if (!shadow_only) {max_vis_zval += floor_spacing;} // player on first floor?
 		if (viewer.z > max_vis_zval) return;
-		maybe_inv_rotate_point(viewer); // not needed because there are no cars in rotated buildings?
+		viewer = get_inv_rot_pos(viewer); // not needed because there are no cars in rotated buildings?
 		vect_cube_t occluders; // should this be split out per PG level?
 
 		// start at walls, since parking spaces are added after those; breaking is incorrect for multiple PG levels
@@ -2318,8 +2318,7 @@ void building_t::debug_people_in_building(shader_t &s) const {
 bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occlusion_checker_noncity_t &oc, bool reflection_pass, bool c_is_building_part) const {
 	if (!interior) return 0; // could probably make this an assert
 	//highres_timer_t timer("Check Object Occlusion"); // 0.001ms
-	point viewer(viewer_in);
-	maybe_inv_rotate_point(viewer); // rotate viewer pos into building space
+	point const viewer(get_inv_rot_pos(viewer_in)); // rotate viewer pos into building space
 	bool const player_in_building(reflection_pass || point_in_building_or_basement_bcube(viewer)); // if reflection pass, assume the player is in this building
 	bool const targ_in_basement(c.z2() <= ground_floor_z1);
 	float const floor_spacing(get_window_vspace()), ground_floor_ceiling(ground_floor_z1 + floor_spacing);

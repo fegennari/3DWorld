@@ -1806,8 +1806,7 @@ int building_t::check_point_or_cylin_contained(point const &pos, float xy_radius
 	bool inc_attic, bool inc_ext_basement, bool inc_roof_acc, bool inc_details, cube_t *coll_cube) const
 {
 	if (coll_cube) {assert(!inc_attic && !inc_ext_basement && !inc_roof_acc);} // not supported
-	point pr(pos);
-	maybe_inv_rotate_point(pr);
+	point const pr(get_inv_rot_pos(pos));
 
 	if (inc_ext_basement && point_in_extended_basement_not_basement(pr)) { // extended basement is not rotated
 		// this check must be accurate; since the extended basement is sparse, we need to check every extended basement room
@@ -1873,8 +1872,7 @@ int building_t::check_point_or_cylin_contained(point const &pos, float xy_radius
 
 bool building_t::check_point_xy_in_part(point const &pos) const { // simpler/faster version of check_point_or_cylin_contained() with no z check
 	if (!bcube.contains_pt_xy(pos)) return 0; // no intersection (bcube does not need to be rotated)
-	point pr(pos);
-	maybe_inv_rotate_point(pr);
+	point const pr(get_inv_rot_pos(pos));
 
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
 		if (i->contains_pt_xy(pr)) return 1;
@@ -2531,8 +2529,7 @@ bool building_t::is_cube_contained_in_parts(cube_t const &c) const {
 
 // returns: 0=not in basement, 1=on basement stairs, 2=fully in basement, 3=in extended basement
 int building_t::check_player_in_basement(point const &pos) const {
-	point pos_rot(pos);
-	maybe_inv_rotate_point(pos_rot); // rotate pos into building space
+	point const pos_rot(get_inv_rot_pos(pos)); // rotate pos into building space
 	if (!is_pos_in_basement(pos_rot))                     return 0;
 	if (point_in_extended_basement_not_basement(pos_rot)) return 3;
 	

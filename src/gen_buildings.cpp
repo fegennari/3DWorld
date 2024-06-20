@@ -2114,12 +2114,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			bdraw.add_cube(*this, glass, tp, colorRGBA(WHITE, 0.1), 0, 4, 0, 0, 0); // top and bottom only, untextured
 		} // for skylight
 	}
-	point only_cont_pt;
-
-	if (only_cont_pt_in) {
-		only_cont_pt = *only_cont_pt_in;
-		maybe_inv_rotate_point(only_cont_pt);
-	}
+	point const only_cont_pt(only_cont_pt_in ? get_inv_rot_pos(*only_cont_pt_in) : all_zeros);
 	building_mat_t const &mat(get_material());
 	bool const draw_windows(draw_int_windows ? has_int_windows() : has_windows());
 
@@ -2354,8 +2349,7 @@ bool building_t::get_all_nearby_ext_door_verts(building_draw_t &bdraw, shader_t 
 
 void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt_in, bool make_all_front) const {
 	if (!is_valid()) return; // invalid building
-	point only_cont_pt(only_cont_pt_in);
-	maybe_inv_rotate_point(only_cont_pt);
+	point const only_cont_pt(get_inv_rot_pos(only_cont_pt_in));
 	building_mat_t const &mat(get_material());
 	cube_t const cont_part(get_part_containing_pt(only_cont_pt)); // part containing the point
 	// complex floorplan buildings can have odd exterior wall geometry where this splitting approach doesn't work well,
