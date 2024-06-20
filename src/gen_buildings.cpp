@@ -3147,6 +3147,7 @@ public:
 		vector<point> points; // reused temporary
 		static building_draw_t ext_parts_draw; // roof and exterior walls; reused across calls
 		bool const sec_camera_mode(pre_smap_player_pos != actual_player_pos); // hack to determine if this is the shadow for a security camera light
+		bool is_house(0);
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			if (interior_shadow_maps) { // draw interior shadow maps
@@ -3180,6 +3181,7 @@ public:
 						if (!basement_light) {b.get_ext_wall_verts_no_sec(ext_parts_draw);} // add exterior walls to prevent light leaking between adjacent parts, if not basement
 						else if (b.has_ext_basement()) {b.get_basement_ext_wall_verts(ext_parts_draw);} // draw basement exterior walls to block light from entering ext basement
 						b.draw_cars_in_building(s, xlate, 1, 1); // player_in_building=1, shadow_only=1
+						is_house |= b.is_house;
 						bool const viewer_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
 						bool const add_player_shadow(camera_surf_collide && camera_in_this_building && viewer_close && !sec_camera_mode &&
 							(actual_player_pos.z - get_bldg_player_height()) < lpos.z);
@@ -3215,10 +3217,12 @@ public:
 				//(*i)->building_draw_vbo.draw(s, 1); // less CPU time but more GPU work, in general seems to be slower
 			}
 		} // for i
-		if ( interior_shadow_maps) {glDisable(GL_CULL_FACE);} // need to draw back faces of exterior parts to handle shadows on blinds
+		// need to draw back faces of exterior parts to handle shadows on blinds; only needed for houses, and causes problems with walkway doors
+		bool const enable_back_faces(interior_shadow_maps && is_house);
+		if ( enable_back_faces) {glDisable(GL_CULL_FACE);}
 		ext_parts_draw.draw(s, 1, 1); // shadow_only=1, direct_draw_no_vbo=1
 		ext_parts_draw.clear();
-		if (!interior_shadow_maps) {glDisable(GL_CULL_FACE);}
+		if (!enable_back_faces) {glDisable(GL_CULL_FACE);}
 		s.end_shader();
 		fgPopMatrix();
 	}
