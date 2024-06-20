@@ -899,7 +899,7 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 	}
 	cube_t const tc(surface_orienter.get_check_cube());
 
-	if (!in_attic) { // check doors
+	if (!in_attic) { // check interior doors
 		for (auto const &ds : interior->door_stacks) {
 			if (ds.z1() > tc.z2() || ds.z2() < tc.z1()) continue; // wrong floor for this stack/part
 			// calculate door bounds for bcube test, assuming it's open
@@ -957,15 +957,17 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 	else if (!is_cube()) {
 		// not cube walls, skip exterior
 	}
-	else { // check exterior walls; exterior doors are ignored for now (meaning the spider can walk on them)
-		float const wall_thickness(get_wall_thickness());
+	else { // check exterior walls; the spider can walk on them, but only if they're closed
+		float const wall_thickness(get_wall_thickness()), open_door_dist(get_door_open_dist());
 		auto const parts_end(get_real_parts_end_inc_sec());
+		point const query_pt(get_inv_rot_pos(camera_bs)); // for open exterior door tests
 
 		for (auto i = parts.begin(); i != parts_end; ++i) {
 			for (unsigned dim = 0; dim < 2; ++dim) {
 				for (unsigned dir = 0; dir < 2; ++dir) {
 					cube_t cube(*i);
 					cube.d[dim][!dir] = i->d[dim][dir] + (dir ? -1.0 : 1.0)*trim_thickness; // shrink to trim thickness
+					if (!cube.intersects(tc)) continue; // optimization
 					cubes.clear();
 					cubes.push_back(cube); // start with entire length
 
@@ -983,8 +985,10 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 						}
 					}
 					for (cube_t const &c : cubes) {
+						if (!c.intersects(tc)) continue; // optimization
+
 						if (has_complex_floorplan && spider.pos.z > ground_floor_z1) { // handle intersecting parts
-							// it's not easy to clip this wall to the other parts,  so instead we'll project the spider pos to the other side of the wall
+							// it's not easy to clip this wall to the other parts, so instead we'll project the spider pos to the other side of the wall
 							// and see if it's outside the building; if so, it's a true exterior wall
 							if (c.z1() <= spider.pos.z && c.z2() >= spider.pos.z && c.d[!dim][0] <= spider.pos[!dim] && c.d[!dim][1] >= spider.pos[!dim]) {
 								point proj_pos(spider.pos);
@@ -997,7 +1001,16 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 								if (contained) continue; // not a true wall, skip
 							}
 						}
-						surface_orienter.register_cube(c);
+						// check for open exterior doors
+						bool on_open_door(0);
+
+						for (tquad_with_ix_t const &door : doors) {
+							cube_t door_bc(door.get_bcube());
+							if (!door_bc.contains_pt_exp(query_pt, open_door_dist)) continue; // not open
+							door_bc.expand_in_dim(dim, spider.radius);
+							if (door_bc.intersects(tc)) {on_open_door = 1; break;}
+						}
+						if (!on_open_door) {surface_orienter.register_cube(c);}
 					} // for c
 				} // for dir
 			} // for dim
