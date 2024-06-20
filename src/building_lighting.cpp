@@ -1732,7 +1732,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		else if (is_exterior) { // exterior lights are only in walkways and are only visible when the player is inside or in a connected room
 			assert(!walkways.empty());
 
-			for (building_walkway_t const &w : walkways) {
+			for (building_walkway_t const &w : walkways) { // Note: walkways shouldn't be added to rotated buildings
 				if (!w.is_owner || !w.bcube.contains_pt(lpos)) continue;
 				if (w.bcube_inc_rooms.contains_pt(camera_rot)) {in_camera_walkway = 1;} // camera in or near the walkway
 				light_clip_cube  = w.bcube;
@@ -1740,6 +1740,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				break;
 			}
 			assert(light_in_walkway);
+		}
+		else if (room.is_sec_bldg) { // secondary buildings only light their single room and the exterior door
+			light_clip_cube = room;
+			light_clip_cube.expand_by_xy(wall_thickness); // needed for garage door
 		}
 		else { // clip to bcube
 			if (is_rotated()) {light_clip_cube = get_rotated_bcube(bcube, 1);} // inv_rotate=1
@@ -1852,8 +1856,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (e.open_amt > 0.0 && e.open_amt < 1.0) {shadow_caster_hash += hash_by_bytes<float>()(e.open_amt);} // update shadows if door is opening or closing
 		}
 		else {
-			if (is_in_attic || is_exterior) {} // nothing else to do
-			else if (room.is_sec_bldg) {clipped_bc.intersect_with_cube(room);} // secondary buildings only light their single room
+			if (is_in_attic || is_exterior || room.is_sec_bldg) {} // nothing else to do
 			else {
 				assert(i->obj_id < light_bcubes.size());
 				cube_t &light_bcube(light_bcubes[i->obj_id]);
