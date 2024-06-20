@@ -2101,12 +2101,15 @@ void get_approx_car_cubes(room_object_t const &cb, cube_t cubes[5]) {
 void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, vect_cube_t &lg_cubes, vect_cube_t &sm_cubes, vect_cube_t &non_cubes) const {
 	room_object const type(c.type);
 	if (c.is_round()) {non_cubes.push_back(c);}
-	else if (type == TYPE_RAILING || type == TYPE_SHELVES || type == TYPE_RAMP || type == TYPE_BALCONY || type == TYPE_POOL_LAD ||
+	else if (type == TYPE_RAILING || type == TYPE_RAMP || type == TYPE_BALCONY || type == TYPE_POOL_LAD ||
 		type == TYPE_OFF_CHAIR || type == TYPE_BAR_STOOL || type == TYPE_LAVALAMP || type == TYPE_WFOUNTAIN)
 	{
 		non_cubes.push_back(c); // non-cubes; bar stools are close, should they be included?
 		// allow walking on the floor above a parking garage ramp if there's no cutout; shrink ramp bcube to the ceiling of the top floor of the parking garage
 		if (type == TYPE_RAMP && interior->ignore_ramp_placement && c.z2() >= ground_floor_z1) {non_cubes.back().z2() -= get_floor_thickness();}
+	}
+	else if (type == TYPE_SHELVES) {
+		non_cubes.push_back(get_shelves_no_bot_gap(c)); // allow spiders to crawl under shelves
 	}
 	else if (type == TYPE_CLOSET && (c.is_open() || c.contains_pt(pos))) {
 		cube_t cubes[5];
