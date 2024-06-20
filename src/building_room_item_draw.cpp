@@ -1363,10 +1363,11 @@ class lava_lamp_draw_t {
 	float dmin_sq=0.0, cur_time=0.0;
 	quad_batch_draw qbd;
 public:
-	void add_lava_lamp(room_object_t const &obj, point const &camera_bs) {
+	void add_lava_lamp(room_object_t const &obj, point const &camera_bs, building_t const &building) {
 		// Note: must match code in building_room_geom_t::add_lava_lamp()
 		float const radius(obj.get_radius()), r_top(0.5*radius), height(obj.dz());
-		point const center(obj.get_cube_center());
+		point center(obj.get_cube_center());
+		if (building.is_rotated()) {building.do_xy_rotate(building.bcube.get_cube_center(), center);}
 		vector3d const vdir((camera_bs - center).get_norm()), vside(cross_product(vdir, plus_z).get_norm());
 		point pts[4] = {(center - radius*vside), (center + radius*vside), (center + r_top*vside), (center - r_top*vside)};
 		pts[0].z = pts[1].z = obj.z1() + 0.42 *height; // z1
@@ -1993,7 +1994,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			}
 			else if (i->type == TYPE_LAVALAMP) {
 				if (!(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate))) continue; // VFC
-				lava_lamp_draw.add_lava_lamp(*i, camera_bs);
+				lava_lamp_draw.add_lava_lamp(*i, camera_bs, building);
 			}
 			else if (i->type == TYPE_FISHTANK && draw_fish) {
 				bool const visible(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate));
