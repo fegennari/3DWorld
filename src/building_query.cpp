@@ -1230,6 +1230,7 @@ bool building_t::are_rooms_connected(room_t const &r1, room_t const &r2, float z
 bool building_t::all_room_int_doors_closed(unsigned room_ix, float zval) const {
 	if (has_complex_floorplan) return 0; // not supported, as there may be missing walls
 	room_t const &room(get_room(room_ix));
+	if (room.is_sec_bldg)                         return 0; // garages and sheds don't count because objects can be seen through the windows
 	if (room.open_wall_mask)                      return 0; // office hallways and open wall rooms can connect to other hallways with no doors
 	if (room.is_parking() || room.is_backrooms()) return 0; // these cases are excluded because they have interior doors or ramps
 	if (room.is_retail())                         return 0; // retail doesn't work because objects may be visible through stairs (similar to office hallway)

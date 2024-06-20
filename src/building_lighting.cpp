@@ -1628,8 +1628,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				last_room_closed = all_room_int_doors_closed(i->room_id, lpos.z);
 				last_room_ix     = i->room_id;
 			}
-			// if either the camera or the light are in different rooms with closed doors, on the same floor (not separated by stairs), then the light isn't visible
-			if ((last_room_closed || camera_in_closed_room) && i->room_id != camera_room) continue;
+			// if either the camera or the light are in different rooms with closed doors,
+			// on the same floor (not separated by stairs) of the same part (not visible across windows), then the light isn't visible
+			if ((last_room_closed || camera_in_closed_room) && i->room_id != camera_room && (room.part_id == camera_part || !has_windows())) continue;
 		}
 		if (!player_in_elevator) { // none of the below culling applies when the player is in the elevator
 			// if the light is in the basement and the camera isn't, it's not visible unless the player is by the stairs

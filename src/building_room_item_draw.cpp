@@ -1862,10 +1862,11 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	string onscreen_text;
 	bool const is_rotated(building.is_rotated()), is_residential(building.is_residential()), check_occlusion(display_mode & 0x08);
 	bool const check_clip_cube(shadow_only && !is_rotated && !smap_light_clip_cube.is_all_zeros()); // check clip cube for shadow pass; not implemented for rotated buildings
-	bool const skip_interior_objs(!player_in_building_or_doorway && !shadow_only);
+	bool const skip_interior_objs(!player_in_building_or_doorway && !shadow_only), has_windows(building.has_windows());
 	cube_t const clip_cube_bs(smap_light_clip_cube - xlate);
 	// skip for rotated buildings and reflection pass, since reflected pos may be in a different room; should we use actual_player_pos for shadow_only mode?
 	int const camera_room((is_rotated || reflection_pass) ? -1 : building.get_room_containing_pt(camera_bs));
+	int camera_part(-1);
 	unsigned last_room_ix(building.interior->rooms.size()), last_floor_ix(0); // start at an invalid value
 	bool camera_in_closed_room(0), last_room_closed(0), obj_drawn(0);
 
@@ -1873,6 +1874,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		room_t const &room(building.get_room(camera_room));
 		unsigned const camera_floor(room.get_floor_containing_zval(max(camera_bs.z, room.z1()), floor_spacing)); // clamp zval to room range
 		camera_in_closed_room = (!room.has_stairs_on_floor(camera_floor) && building.all_room_int_doors_closed(camera_room, camera_bs.z));
+		camera_part           = room.part_id;
 	}
 	// draw object models
 	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
@@ -1891,7 +1893,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			if (obj.z1() > camera_bs.z)    continue; // above the light
 			if (obj.z2() < camera_bs.z - 2.0*floor_spacing) continue; // more than two floors below the light
 		}
-		else if (!building.is_house && !building.has_windows()) { // windowless building
+		else if (!building.is_house && !has_windows) { // windowless building
 			if (obj.z1() > camera_bs.z + floor_spacing || obj.z2() < camera_bs.z - 2.0*floor_spacing) continue; // more than one floor of difference
 		}
 		point obj_center(obj.get_cube_center());
@@ -1906,15 +1908,17 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (check_occlusion && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
 
 		if (camera_room >= 0) {
-			unsigned const floor_ix(building.get_room(obj.room_id).get_floor_containing_zval(obj.zc(), floor_spacing));
+			room_t const &room(building.get_room(obj.room_id));
+			unsigned const floor_ix(room.get_floor_containing_zval(obj.zc(), floor_spacing));
 
 			if (obj.room_id != last_room_ix || floor_ix != last_floor_ix) { // new room or new floor
 				last_room_closed = building.all_room_int_doors_closed(obj.room_id, obj.zc());
 				last_room_ix     = obj.room_id;
 				last_floor_ix    = floor_ix;
 			}
-			// if either the camera or the object are in different rooms with closed doors, on the same floor (not separated by stairs), then the object isn't visible
-			if ((last_room_closed || camera_in_closed_room) && obj.room_id != camera_room) continue;
+			// if either the camera or the object are in different rooms with closed doors,
+			// on the same floor (not separated by stairs) of the same part (not visible across windows), then the object isn't visible
+			if ((last_room_closed || camera_in_closed_room) && obj.room_id != camera_room && (room.part_id == camera_part || !has_windows)) continue;
 		}
 		apply_room_obj_rotate(obj, *i, objs); // Note: may modify obj by clearing flags and inst by updating dir
 		
