@@ -1908,7 +1908,14 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 					sill.expand_in_dim(!dim, 0.050*window_height);
 					sill.d[dim][!dir] -= dscale*window_offset; // flush with exterior wall to avoid clipping through interior
 					sill.d[dim][ dir] -= dscale*0.06*window_height; // extend out from the wall
-					objs.emplace_back(sill, TYPE_WIND_SILL, 0, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR), 1.0, SHAPE_CUBE, frame_color);
+					bool blocked(0);
+
+					if (has_porch() && porch.intersects_xy(sill)) { // check for window sills blocked by porch roof
+						for (tquad_with_ix_t const &tq : roof_tquads) {
+							if (tq.get_bcube().intersects(sill)) {blocked = 1; break;}
+						}
+					}
+					if (!blocked) {objs.emplace_back(sill, TYPE_WIND_SILL, 0, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR), 1.0, SHAPE_CUBE, frame_color);}
 				}
 				if (!add_trim) continue;
 				// add window trim
