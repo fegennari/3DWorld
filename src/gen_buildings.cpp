@@ -2443,22 +2443,26 @@ void building_t::get_walkway_end_verts(building_draw_t &bdraw, point const &pos)
 		float const wall_thickness(get_wall_thickness());
 		cube_t wall_cube(w.bcube);
 		wall_cube.d[w.dim][0] = wall_cube.d[w.dim][1] = w.bcube.d[w.dim][dir] - (dir ? 1.0 : -1.0)*0.5*wall_thickness; // shrink to zero width near the wall
+		cube_t wall_cube_exp(wall_cube);
+		wall_cube_exp.expand_in_dim(w.dim, wall_thickness);
 		static vect_cube_t cubes;
 		cubes.clear();
 		cubes.push_back(wall_cube);
 		tid_nm_pair_t tp; // untextured
 		
 		for (unsigned b = 0; b < 2; ++b) { // check doors for both buildings
+			if (!(b ? w.conn_bldg->bcube : bcube).intersects(wall_cube_exp)) continue; // wrong building
+
 			for (tquad_with_ix_t const &door : (b ? w.conn_bldg->doors : doors)) { // check for open door
 				cube_t const door_bc(door.get_bcube());
 				if (door_bc.z2() < pos.z || door_bc.z1() > pos.z) continue; // wrong floor
+				if (!door_bc.intersects(wall_cube_exp)) continue; // wrong door
+				if (!door_bc.contains_pt_exp(pre_smap_player_pos, get_door_open_dist())) continue; // skip closed door
 				cube_t door_bc_exp(door_bc);
 				door_bc_exp.expand_in_dim(w.dim, wall_thickness);
-				if (!door_bc_exp.intersects(wall_cube)) continue; // wrong door
-				if (!door_bc.contains_pt_exp(pre_smap_player_pos, get_door_open_dist())) continue; // skip closed door
-				cubes.clear();
 				swap_cube_dims(wall_cube,   w.dim, 2); // swap so that subtract can be done in the XY plane
 				swap_cube_dims(door_bc_exp, w.dim, 2);
+				cubes.clear();
 				subtract_cube_from_cube(wall_cube, door_bc_exp, cubes);
 				for (cube_t &c : cubes) {swap_cube_dims(c, w.dim, 2);} // swap back
 				// draw open side doors
