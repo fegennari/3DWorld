@@ -18,7 +18,7 @@ float const ATTIC_LIGHT_RADIUS_SCALE = 2.0; // larger radius in attic, since spa
 
 vector<point> enabled_bldg_lights;
 
-extern bool camera_in_building, some_person_has_idle_animation;
+extern bool camera_in_building, player_in_walkway, some_person_has_idle_animation;
 extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2, frame_counter, building_action_key, player_in_basement, player_in_elevator, player_in_attic;
 extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
 extern float indir_light_exp, fticks;
@@ -1899,12 +1899,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			vect_cube_t const &cuts(floor_is_above ? cuts_above : cuts_below);
 			if (!check_cube_visible_through_cut(cuts, clipped_bc, lpos_rot, camera_bs, cull_radius, floor_is_above)) continue;
 		}
+		bool maybe_walkway(0);
+
 		// handle light hitting open office building doors by expanding outward
 		if (!is_house && !light_in_basement && !light_in_walkway && !doors.empty()) {
 			// if this light is in a room connected to a walkway door, use the part containing the room rather than the building bcube;
 			// that way a walkway connnecting to a recessed door (part edge inside bcube) will have a door that's properly lit
 			bool const ground_floor(lpos.z < ground_floor_z1 + window_vspacing);
-			bool const maybe_walkway(!ground_floor && check_pt_in_or_near_walkway(lpos, 0, 0, 1) && is_room_adjacent_to_ext_door(room));
+			maybe_walkway = (!ground_floor && check_pt_in_or_near_walkway(lpos, 0, 0, 1) && is_room_adjacent_to_ext_door(room));
 			cube_t const &test_cube(maybe_walkway ? parts[room.part_id] : bcube);
 
 			for (unsigned d = 0; d < 2; ++d) {
@@ -1924,7 +1926,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool force_smap_update(0);
 
 		// check for dynamic shadows; check the player first; use full light radius
-		if (camera_surf_collide && (camera_in_building || in_camera_walkway || camera_can_see_ext_basement) && dist_less_than(lpos_rot, camera_bs, light_radius)) {
+		if (camera_surf_collide && (camera_in_building || in_camera_walkway || (player_in_walkway && maybe_walkway) || camera_can_see_ext_basement) &&
+			dist_less_than(lpos_rot, camera_bs, light_radius))
+		{
 			bool player_in_this_room(player_on_attic_stairs && (is_in_attic || room.intersects_xy(interior->attic_access))); // ladder case
 			player_in_this_room |= (player_in_pool && is_over_pool); // pool case
 			player_in_this_room |= in_camera_walkway; // walkway case
