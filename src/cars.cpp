@@ -13,7 +13,7 @@ bool const DYNAMIC_HELICOPTERS = 1;
 bool const POLICE_LIGHT_SHADOW = 1;
 float const MIN_CAR_STOP_SEP   = 0.25; // in units of car lengths
 
-extern bool tt_fire_button_down, enable_hcopter_shadows, city_action_key, camera_in_building;
+extern bool tt_fire_button_down, enable_hcopter_shadows, city_action_key, camera_in_building, player_in_walkway;
 extern int display_mode, game_mode, map_mode, animate2, player_in_basement, player_in_closet, player_in_attic, camera_surf_collide;
 extern float fticks, FAR_CLIP;
 extern point pre_smap_player_pos;
@@ -1357,7 +1357,8 @@ void helicopter_t::invalidate_tile_shadow_map(vector3d const &shadow_offset, boo
 }
 
 float get_tt_building_sound_gain() { // quieter when the player is in a building/closet/attic; no sound in basement
-	return (player_in_basement ? 0.0 : (camera_in_building ? ((player_in_attic || player_in_closet) ? 0.25 : 0.5) : 1.0));
+	if (player_in_walkway) return 0.5;
+	return (player_in_basement ? 0.0 : (camera_in_building ? ((player_in_attic || player_in_closet) ? 0.2 : 0.4) : 1.0));
 }
 
 void car_manager_t::helicopters_next_frame(float car_speed) {
