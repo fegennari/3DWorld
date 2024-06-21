@@ -1352,18 +1352,22 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 {
 	if (!has_room_geom()) return; // error?
 	point const camera_bs(camera_pdu.pos - xlate), building_center(bcube.get_cube_center()); // camera in building space
-	bool walkway_only(0);
+	bool walkway_only(0), same_floor_only(0), same_or_adj_floor_only(0);
 
-	if (!camera_in_building && !has_windows() && !point_near_ext_door(camera_bs, get_door_open_dist())) { // interior lights not visible
+	if (!camera_in_building && !has_windows()) { // can't see interior through windows
 		bool above_skylight(0);
 
 		for (cube_with_ix_t &sl : skylights) {
 			if (camera_bs.z > sl.z2()) {above_skylight = 1; break;}
 		}
 		if (!above_skylight) {
-			if (check_pt_in_or_near_walkway(camera_bs, 1, 1, 1)) {walkway_only = 1;} // player in or near walkway
-			else if (has_int_windows() && player_building != nullptr && is_connected_with_walkway(*player_building, camera_bs.z)) {walkway_only = 1;}
-			else return; // no lights visible
+			if (!point_near_ext_door(camera_bs, get_door_open_dist())) { // interior lights not visible
+				if (check_pt_in_or_near_walkway(camera_bs, 1, 1, 1)) {walkway_only = 1;} // player in or near walkway
+				else if (has_int_windows() && player_building != nullptr && is_connected_with_walkway(*player_building, camera_bs.z)) {walkway_only = 1;}
+				else return; // no lights visible
+			}
+			// ground floor door may have stairs visible and includes floor above and below; walkway only includes the current floor
+			((camera_bs.z < ground_floor_z1 + get_window_vspace()) ? same_or_adj_floor_only : same_floor_only) = 1;
 		}
 	}
 	else if ((display_mode & 0x08) && !camera_in_building && !bcube.contains_pt_xy(camera_bs) && is_entire_building_occluded(camera_bs, oc)) return;
@@ -1594,7 +1598,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		else                           {ceil_z = (level_z + window_vspacing - fc_thick);} // normal room light
 		float const floor_below_zval(floor_z - window_vspacing), ceil_above_zval(ceil_z + window_vspacing);
 		// Note: we use level_z rather than floor_z for floor_is_above test so that it agrees with the threshold logic for player_in_basement
-		bool const floor_is_above((camera_z < level_z) && !is_single_floor), floor_is_below(camera_z > (ceil_z + fc_thick)); // check floor_ix transition points
+		bool const floor_is_above((camera_z < level_z) && !is_single_floor), floor_is_below(camera_z > ceil_z+fc_thick); // check floor_ix transition points
+		if (same_floor_only && (floor_is_above || floor_is_below)) continue;
+		if (same_or_adj_floor_only && (camera_z < level_z-window_vspacing || camera_z > ceil_z+fc_thick+window_vspacing)) continue;
 		if (!is_house && floor_is_below &&  in_ext_basement && !camera_in_ext_basement && lpos.z   < get_basement().z1()) continue; // light  in lower level extb, player not in extb
 		if (!is_house && floor_is_above && !in_ext_basement &&  camera_in_ext_basement && camera_z < get_basement().z1()) continue; // player in lower level extb, light  not in extb
 		if (floor_is_below && !floor_below_region.is_all_zeros() && !floor_below_region.contains_pt_xy(lpos)) continue; // check floor_below_region
