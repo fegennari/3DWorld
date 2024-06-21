@@ -1781,6 +1781,7 @@ struct building_t : public building_geom_t {
 	cube_t register_deck_and_get_part_bounds(cube_t const &deck);
 	void get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt_in, bool make_all_front=0) const;
 	void get_ext_wall_verts_no_sec(building_draw_t &bdraw) const;
+	void get_walkway_end_verts(building_draw_t &bdraw, point const &pos) const;
 	void write_basement_entrance_depth_pass(shader_t &s) const;
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, bool sec_camera_mode,
 		occlusion_checker_noncity_t &oc, vect_cube_with_ix_t &ped_bcubes, cube_t &lights_bcube);

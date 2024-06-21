@@ -1895,22 +1895,16 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		// handle light hitting open office building doors by expanding outward
 		if (!is_house && !light_in_basement && !light_in_walkway && !doors.empty()) {
-			bool const ground_floor(lpos.z < ground_floor_z1 + window_vspacing);
 			// if this light is in a room connected to a walkway door, use the part containing the room rather than the building bcube;
 			// that way a walkway connnecting to a recessed door (part edge inside bcube) will have a door that's properly lit
+			bool const ground_floor(lpos.z < ground_floor_z1 + window_vspacing);
 			bool const maybe_walkway(!ground_floor && check_pt_in_or_near_walkway(lpos, 0, 0, 1) && is_room_adjacent_to_ext_door(room));
 			cube_t const &test_cube(maybe_walkway ? parts[room.part_id] : bcube);
 
 			for (unsigned d = 0; d < 2; ++d) {
-				// full expand is applied to the first floor only and not walkways because shadows from exterior walls are missing on walkway floors and walls;
-				// walkways are expanded slightly so that the inside face of the walkway door is lit
-				if (clipped_bc.d[d][0] < test_cube.d[d][0]) {
-					if (ground_floor) {clipped_bc.d[d][0] = sphere_bc.d[d][0];} else {clipped_bc.d[d][0] -= 0.25*wall_thickness;}
-				}
-				if (clipped_bc.d[d][1] > test_cube.d[d][1]) {
-					if (ground_floor) {clipped_bc.d[d][1] = sphere_bc.d[d][1];} else {clipped_bc.d[d][1] += 0.25*wall_thickness;}
-				}
-			} // for d
+				if (clipped_bc.d[d][0] < test_cube.d[d][0]) {clipped_bc.d[d][0] = sphere_bc.d[d][0];}
+				if (clipped_bc.d[d][1] > test_cube.d[d][1]) {clipped_bc.d[d][1] = sphere_bc.d[d][1];}
+			}
 		}
 		if (!is_rot_cube_visible(clipped_bc, xlate, 1)) continue; // VFC - post clip; inc_mirror_reflections=1
 		if ((display_mode & 0x08) && !clipped_bc.contains_pt(camera_rot) && check_obj_occluded(clipped_bc, camera_bs, oc, 0)) continue; // occlusion culling (expensive)

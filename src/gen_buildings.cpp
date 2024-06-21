@@ -2430,6 +2430,51 @@ void building_t::get_ext_wall_verts_no_sec(building_draw_t &bdraw) const { // us
 	} // for p
 }
 
+void swap_cube_dims(cube_t &c, unsigned d1, unsigned d2) {
+	for (unsigned d = 0; d < 2; ++d) {swap(c.d[d1][d], c.d[d2][d]);}
+}
+void building_t::get_walkway_end_verts(building_draw_t &bdraw, point const &pos) const {
+	float const room_exp(2.0*get_window_vspace());
+
+	for (building_walkway_t const &w : walkways) {
+		if (w.bcube.contains_pt(pos)) return; // light inside walkway - end shadow not needed
+		if (!w.bcube_inc_rooms.contains_pt_exp_xy_only(pos, room_exp)) continue; // expand to include nearby lights
+		bool const dir(w.bcube.get_center_dim(w.dim) < pos[w.dim]);
+		float const wall_thickness(get_wall_thickness());
+		cube_t wall_cube(w.bcube);
+		wall_cube.d[w.dim][0] = wall_cube.d[w.dim][1] = w.bcube.d[w.dim][dir] - (dir ? 1.0 : -1.0)*0.5*wall_thickness; // shrink to zero width near the wall
+		static vect_cube_t cubes;
+		cubes.clear();
+		cubes.push_back(wall_cube);
+		tid_nm_pair_t tp; // untextured
+		
+		for (tquad_with_ix_t const &door : doors) { // check for open door
+			cube_t const door_bc(door.get_bcube());
+			if (door_bc.z2() < pos.z || door_bc.z1() > pos.z) continue; // wrong floor
+			cube_t door_bc_exp(door_bc);
+			door_bc_exp.expand_in_dim(w.dim, wall_thickness);
+			if (!door_bc_exp.intersects(wall_cube)) continue; // wrong door
+			if (!door_bc.contains_pt_exp(pre_smap_player_pos, get_door_open_dist())) continue; // skip closed door
+			cubes.clear();
+			swap_cube_dims(wall_cube,   w.dim, 2); // swap so that subtract can be done in the XY plane
+			swap_cube_dims(door_bc_exp, w.dim, 2);
+			subtract_cube_from_cube(wall_cube, door_bc_exp, cubes);
+			for (cube_t &c : cubes) {swap_cube_dims(c, w.dim, 2);} // swap back
+			// draw open side doors
+			float const door_width(door_bc.get_sz_dim(!w.dim)), door_hwidth(0.5*door_width);
+			cube_t door_side(door_bc);
+			door_side.d[w.dim][!dir] -= (dir ? 1.0 : -1.0)*door_hwidth; // extend into walkway
+
+			for (unsigned d = 0; d < 2; ++d) { // left, right doors
+				set_wall_width(door_side, door_bc.d[!w.dim][d], 0.8*wall_thickness, !w.dim);
+				bdraw.add_cube(*this, door_side, tp, BLACK, 0, 3); // draw all sides
+			}
+		} // for door
+		for (cube_t const &c : cubes) {bdraw.add_cube(*this, c, tp, BLACK, 0, (1 << w.dim));} // draw ends
+		bdraw.add_cube(*this, w.bcube, tp, BLACK, 0, (1 << (!w.dim))); // draw sides of walkway to prevent light leaks from diagonal/adjacent rooms
+	} // for w
+}
+
 void building_t::add_split_roof_shadow_quads(building_draw_t &bdraw) const {
 	if (!interior || is_house || real_num_parts == 1) return; // no a stacked case
 	float const light_zval(get_camera_pos().z); // light pos is stored in camera_pos during the shadow pass
@@ -3174,6 +3219,7 @@ public:
 						bool const basement_light(lpos.z < b.ground_floor_z1);
 						if (!basement_light) {b.get_ext_wall_verts_no_sec(ext_parts_draw);} // add exterior walls to prevent light leaking between adjacent parts, if not basement
 						else if (b.has_ext_basement()) {b.get_basement_ext_wall_verts(ext_parts_draw);} // draw basement exterior walls to block light from entering ext basement
+						if (!basement_light) {b.get_walkway_end_verts(ext_parts_draw, lpos);}
 						b.draw_cars_in_building(s, xlate, 1, 1); // player_in_building=1, shadow_only=1
 						is_house |= b.is_house;
 						bool const viewer_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space

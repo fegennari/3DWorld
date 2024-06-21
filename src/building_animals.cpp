@@ -958,7 +958,7 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 		// not cube walls, skip exterior
 	}
 	else { // check exterior walls; the spider can walk on them, but only if they're closed
-		float const wall_thickness(get_wall_thickness()), open_door_dist(get_door_open_dist());
+		float const wall_thickness(get_wall_thickness()), door_open_dist(get_door_open_dist());
 		auto const parts_end(get_real_parts_end_inc_sec());
 		point const query_pt(get_inv_rot_pos(camera_bs)); // for open exterior door tests
 
@@ -1006,7 +1006,7 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 
 						for (tquad_with_ix_t const &door : doors) {
 							cube_t door_bc(door.get_bcube());
-							if (!door_bc.contains_pt_exp(query_pt, open_door_dist)) continue; // not open
+							if (!door_bc.contains_pt_exp(query_pt, door_open_dist)) continue; // not open
 							door_bc.expand_in_dim(dim, spider.radius);
 							if (door_bc.intersects(tc)) {on_open_door = 1; break;}
 						}
