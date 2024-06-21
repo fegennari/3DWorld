@@ -2448,28 +2448,30 @@ void building_t::get_walkway_end_verts(building_draw_t &bdraw, point const &pos)
 		cubes.push_back(wall_cube);
 		tid_nm_pair_t tp; // untextured
 		
-		for (tquad_with_ix_t const &door : doors) { // check for open door
-			cube_t const door_bc(door.get_bcube());
-			if (door_bc.z2() < pos.z || door_bc.z1() > pos.z) continue; // wrong floor
-			cube_t door_bc_exp(door_bc);
-			door_bc_exp.expand_in_dim(w.dim, wall_thickness);
-			if (!door_bc_exp.intersects(wall_cube)) continue; // wrong door
-			if (!door_bc.contains_pt_exp(pre_smap_player_pos, get_door_open_dist())) continue; // skip closed door
-			cubes.clear();
-			swap_cube_dims(wall_cube,   w.dim, 2); // swap so that subtract can be done in the XY plane
-			swap_cube_dims(door_bc_exp, w.dim, 2);
-			subtract_cube_from_cube(wall_cube, door_bc_exp, cubes);
-			for (cube_t &c : cubes) {swap_cube_dims(c, w.dim, 2);} // swap back
-			// draw open side doors
-			float const door_width(door_bc.get_sz_dim(!w.dim)), door_hwidth(0.5*door_width);
-			cube_t door_side(door_bc);
-			door_side.d[w.dim][!dir] -= (dir ? 1.0 : -1.0)*door_hwidth; // extend into walkway
+		for (unsigned b = 0; b < 2; ++b) { // check doors for both buildings
+			for (tquad_with_ix_t const &door : (b ? w.conn_bldg->doors : doors)) { // check for open door
+				cube_t const door_bc(door.get_bcube());
+				if (door_bc.z2() < pos.z || door_bc.z1() > pos.z) continue; // wrong floor
+				cube_t door_bc_exp(door_bc);
+				door_bc_exp.expand_in_dim(w.dim, wall_thickness);
+				if (!door_bc_exp.intersects(wall_cube)) continue; // wrong door
+				if (!door_bc.contains_pt_exp(pre_smap_player_pos, get_door_open_dist())) continue; // skip closed door
+				cubes.clear();
+				swap_cube_dims(wall_cube,   w.dim, 2); // swap so that subtract can be done in the XY plane
+				swap_cube_dims(door_bc_exp, w.dim, 2);
+				subtract_cube_from_cube(wall_cube, door_bc_exp, cubes);
+				for (cube_t &c : cubes) {swap_cube_dims(c, w.dim, 2);} // swap back
+				// draw open side doors
+				float const door_width(door_bc.get_sz_dim(!w.dim)), door_hwidth(0.5*door_width);
+				cube_t door_side(door_bc);
+				door_side.d[w.dim][!dir] -= (dir ? 1.0 : -1.0)*door_hwidth; // extend into walkway
 
-			for (unsigned d = 0; d < 2; ++d) { // left, right doors
-				set_wall_width(door_side, door_bc.d[!w.dim][d], 0.8*wall_thickness, !w.dim);
-				bdraw.add_cube(*this, door_side, tp, BLACK, 0, 3); // draw all sides
-			}
-		} // for door
+				for (unsigned d = 0; d < 2; ++d) { // left, right doors
+					set_wall_width(door_side, door_bc.d[!w.dim][d], 0.8*wall_thickness, !w.dim);
+					bdraw.add_cube(*this, door_side, tp, BLACK, 0, 3); // draw all sides
+				}
+			} // for door
+		} // for b
 		for (cube_t const &c : cubes) {bdraw.add_cube(*this, c, tp, BLACK, 0, (1 << w.dim));} // draw ends
 		bdraw.add_cube(*this, w.bcube, tp, BLACK, 0, (1 << (!w.dim))); // draw sides of walkway to prevent light leaks from diagonal/adjacent rooms
 	} // for w
