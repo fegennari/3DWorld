@@ -1659,15 +1659,16 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	float const sidewalk_width(get_sidewalk_width());
 	get_building_ext_basement_bcubes(city_bcube, underground_blockers); // used for inground swimming pools and ponds in parks
 
-	if (!is_residential) { // add walkways for commercial city office buildings
+	for (auto i = plots.begin(); i != plots.end(); ++i) { // calculate num_x_plots and num_y_plots; these are used for determining edge power poles
+		max_eq(num_x_plots, i->xpos+1U);
+		max_eq(num_y_plots, i->ypos+1U);
+	}
+	if (!is_residential) { // commercial city office buildings; add walkways and monorail
 		vect_bldg_walkway_t walkway_cands;
 		get_walkways_for_city(city_bcube, walkway_cands);
 		for (bldg_walkway_t const &w : walkway_cands) {walkway_groups.add_obj(walkway_t(w), walkways);}
 		// Note: not added to colliders since walkways are above pedestrians; not added to blockers since walkways are above most objects
-	}
-	for (auto i = plots.begin(); i != plots.end(); ++i) { // calculate num_x_plots and num_y_plots; these are used for determining edge power poles
-		max_eq(num_x_plots, i->xpos+1U);
-		max_eq(num_y_plots, i->ypos+1U);
+		add_monorail(city_bcube, rgen);
 	}
 	for (auto i = plots.begin(); i != plots.end(); ++i) {
 		tree_pos.clear();
@@ -1740,6 +1741,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	walkway_groups .create_groups(walkways,  all_objs_bcube);
 	pillar_groups  .create_groups(pillars,   all_objs_bcube);
 	p_solar_groups .create_groups(p_solars,  all_objs_bcube);
+	if (monorail.valid) {all_objs_bcube.assign_or_union_with_cube(monorail.bcube);}
 	if (add_parking_lots) {cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << endl;}
 }
 
@@ -1885,6 +1887,33 @@ void city_obj_placer_t::finalize_streetlights_and_power(streetlights_t &sl, vect
 	if (was_moved) {sl.sort_streetlights_by_yx();} // must re-sort if a streetlight was moved
 }
 
+void city_obj_placer_t::add_monorail(cube_t const &city_bcube, rand_gen_t rgen) {
+	return; // TODO: remove when monorails are completed to enable them
+	if (walkways.empty()) return; // only add a monorail if this city has walkways
+	bool const dim(city_bcube.dx() < city_bcube.dy()); // use longer dim
+	unsigned const num_plots_wide(dim ? num_x_plots : num_y_plots); // num plots in !dim
+	float centerline(city_bcube.get_center_dim(!dim)); // monorail is centered over the road by default
+	float const road_width(city_params.road_width);
+
+	if (num_plots_wide & 1) { // odd number of plots - monorail is off-center
+		centerline += (rgen.rand_bool() ? 1.0 : -1.0)*0.5*(city_bcube.get_sz_dim(!dim) - road_width)/num_plots_wide; // shift half a plot to a random side
+	}
+	cube_t track_bc(city_bcube);
+	track_bc.expand_in_dim(dim, -road_width); // shrink ends
+	set_wall_width(track_bc, centerline, 0.4*road_width, !dim);
+	cube_t clearance_area(track_bc);
+	clearance_area.expand_by_xy(0.5*road_width);
+	float ww_z1(city_bcube.z2() + 1.5*get_power_pole_height());
+	
+	for (walkway_t const &w : walkways) {
+		if (w.bcube.intersects_xy(clearance_area)) {max_eq(ww_z1, w.bcube.z2());} // make sure monorail is above all walkways
+	}
+	ww_z1 += 1.0*road_width;
+	set_cube_zvals(track_bc, ww_z1, (ww_z1 + 0.4*road_width));
+	monorail = monorail_t(track_bc, dim);
+	// TODO: connect nearby buildings to the monorail with walkways using city_id and city_bcube
+}
+
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
 	if (!dstate.check_cube_visible(all_objs_bcube, 1.0)) return; // check bcube, dist_scale=1.0
 	draw_objects(benches,   bench_groups,    dstate, 0.16, shadow_only, 0); // dist_scale=0.16, has_immediate_draw=0
@@ -1953,6 +1982,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	}
 	dstate.pass_ix = 0; // reset back to 0
 	if (!shadow_only) {bird_poop_manager.draw(dstate.s, dstate.xlate);}
+	monorail.draw(dstate, *this, shadow_only);
 }
 void city_obj_placer_t::draw_transparent_objects(draw_state_t &dstate, bool shadow_only) {
 	if (shadow_only) return; // currently not drawn in the shadow pass
@@ -2008,6 +2038,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(pillars,   pillar_groups,   pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(pdecks,    pdeck_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(p_solars,  p_solar_groups,  pos, p_last, radius, xlate, cnorm)) return 1;
+	if (monorail.proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1;
 	// Note: no coll with tree_planters because the tree coll should take care of it; no coll with hcaps, manholes, tcones, flowers, pladders, pigeons, ppaths, or birds
 	return 0;
 }
@@ -2041,7 +2072,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(pillars,   pillar_groups,   p1, p2, t, ret);
 	check_vector_line_intersect(dumpsters, dumpster_groups, p1, p2, t, ret);
 	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, tcones, flowers, pladders, pool decks, pigeons, ppaths, or birds;
-	// mboxes, swings, tramps, umbrellas, bikes, plants, ponds, and p_solars are ignored because they're small or not simple shapes
+	// mboxes, swings, tramps, umbrellas, bikes, plants, ponds, p_solars, and momorail are ignored because they're small or not simple shapes
 	return ret;
 }
 
@@ -2064,6 +2095,7 @@ template<typename T> bool check_city_obj_pt_xy_contains(city_obj_groups_t const 
 	return 0;
 }
 bool city_obj_placer_t::get_color_at_xy_pre_road(point const &pos, colorRGBA &color) const { // check walkways because they can be over both roads and plots
+	if (monorail.valid && monorail.track_bcube.contains_pt_xy(pos)) {color = WHITE; return 1;}
 	unsigned obj_ix(0);
 	if (check_city_obj_pt_xy_contains(walkway_groups, walkways, pos, obj_ix, 0)) {color = walkways[obj_ix].map_mode_color; return 1;} // is_cylin=0
 	if (check_city_obj_pt_xy_contains(p_solar_groups, p_solars, pos, obj_ix, 0)) {color = LT_BLUE; return 1;} // placed over parking lots

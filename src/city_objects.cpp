@@ -1872,4 +1872,24 @@ bool park_path_t::check_point_contains_xy(point const &p) const {
 	return check_cube_coll_xy(c);
 }
 
+// monorail
+
+monorail_t::monorail_t(cube_t const &c, bool dim_) : valid(1), dim(dim_) {
+	bcube = track_bcube = c;
+	// TODO: larger bcube
+	set_bsphere_from_bcube();
+}
+void monorail_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_only) const {
+	float const dist_scale = 1.0; // ???
+	if (!valid || !dstate.check_cube_visible(bcube, dist_scale)) return; // VFC/distance culling
+	dstate.draw_cube(qbds.untex_qbd, bcube, GRAY); // TODO: placeholder
+	dstate.set_untextured_material();
+	qbds.untex_qbd.draw_and_clear();
+	dstate.unset_untextured_material();
+}
+bool monorail_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	if (!valid) return 0;
+	return sphere_cube_int_update_pos(pos_, radius_, (track_bcube + xlate), p_last, 0, cnorm); // TODO: placeholder
+}
+
 
