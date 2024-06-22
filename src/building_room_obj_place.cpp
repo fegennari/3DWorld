@@ -2991,10 +2991,9 @@ bool building_t::maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room
 		cube_t w_ext(w.bcube);
 		w_ext.expand_in_dim(dim, door_thickness); // this will also set the door thickness
 		cube_t test_cube(w_ext);
-		assert(w.conn_bldg != nullptr);
-		if (!room.intersects_xy(test_cube))                    continue; // walkway not connected to this room
-		if (zval < w.bcube.z1() || ceil_zval > w.bcube.z2())   continue; // wrong floor
-		if (w.conn_bldg->get_window_vspace() != floor_spacing) continue; // floors not aligned (shouldn't happen?)
+		if (!room.intersects_xy(test_cube))                  continue; // walkway not connected to this room
+		if (zval < w.bcube.z1() || ceil_zval > w.bcube.z2()) continue; // wrong floor
+		if (w.conn_bldg != nullptr && w.conn_bldg->get_window_vspace() != floor_spacing) continue; // floors not aligned (shouldn't happen?)
 		float const door_width(get_office_ext_doorway_width());
 		bool const dir(room.get_center_dim(dim) < w.bcube.get_center_dim(dim)), has_door(w.has_ext_door(!dir));
 		if (has_door && !is_room_adjacent_to_ext_door(room)) continue; // not the room connected to the walkway
@@ -3002,8 +3001,10 @@ bool building_t::maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room
 		// (and possibly other rooms bordering the walkway); applies to both rooms, even if there is no door
 		w.bcube_inc_rooms.union_with_cube_xy(room);
 
-		for (building_walkway_t &w2 : w.conn_bldg->walkways) { // update our neighbor's copy of the walkway as well
-			if (w2.bcube == w.bcube) {w2.bcube_inc_rooms.union_with_cube_xy(room); break;}
+		if (w.conn_bldg != nullptr) { // update our neighbor's copy of the walkway as well
+			for (building_walkway_t &w2 : w.conn_bldg->walkways) {
+				if (w2.bcube == w.bcube) {w2.bcube_inc_rooms.union_with_cube_xy(room); break;}
+			}
 		}
 		if (has_door) { // has real exterior door
 			float const center(w.bcube.get_center_dim(!w.dim));

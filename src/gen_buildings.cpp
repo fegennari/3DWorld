@@ -2451,6 +2451,7 @@ void building_t::get_walkway_end_verts(building_draw_t &bdraw, point const &pos)
 		tid_nm_pair_t tp; // untextured
 		
 		for (unsigned b = 0; b < 2; ++b) { // check doors for both buildings
+			if (b && w.conn_bldg == nullptr) continue; // no connected building
 			if (!(b ? w.conn_bldg->bcube : bcube).intersects(wall_cube_exp)) continue; // wrong building
 
 			for (tquad_with_ix_t const &door : (b ? w.conn_bldg->doors : doors)) { // check for open door
