@@ -124,7 +124,7 @@ bool building_t::check_pt_in_or_near_walkway(point const &p, bool owned_only, bo
 }
 bool building_t::is_connected_with_walkway(building_t const &target, float zval) const {
 	for (building_walkway_t const &w : walkways) {
-		if (zval != 0.0 && zval < w.bcube.z1() || zval > w.bcube.z2()) continue; // apply zval filter
+		if (zval != 0.0 && (zval < w.bcube.z1() || zval > w.bcube.z2())) continue; // apply zval filter
 		if (w.conn_bldg == &target) return 1;
 	}
 	return 0;

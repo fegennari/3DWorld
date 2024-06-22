@@ -1785,7 +1785,6 @@ void add_window_trim(cube_t const &window, cube_t const &exclude, colorRGBA cons
 	top.expand_in_dim(!dim, side_width);
 	bot.expand_in_dim(!dim, side_width);
 	// interior trim
-	unsigned const trim_start(trim_objs.size());
 	cube_t const tb_trims[2] = {top, bot};
 
 	for (unsigned tb = 0; tb < 2; ++tb) {
