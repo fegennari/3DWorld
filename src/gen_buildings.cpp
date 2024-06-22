@@ -2476,8 +2476,8 @@ void building_t::get_walkway_end_verts(building_draw_t &bdraw, point const &pos)
 				}
 			} // for door
 		} // for b
-		for (cube_t const &c : cubes) {bdraw.add_cube(*this, c, tp, BLACK, 0, (1 << w.dim));} // draw ends
-		bdraw.add_cube(*this, w.bcube, tp, BLACK, 0, (1 << (!w.dim))); // draw sides of walkway to prevent light leaks from diagonal/adjacent rooms
+		for (cube_t const &c : cubes) {bdraw.add_cube(*this, c, tp, BLACK, 0, (1 << unsigned(w.dim)));} // draw ends
+		bdraw.add_cube(*this, w.bcube, tp, BLACK, 0, (1 << unsigned(!w.dim))); // draw sides of walkway to prevent light leaks from diagonal/adjacent rooms
 	} // for w
 }
 

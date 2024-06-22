@@ -1538,9 +1538,9 @@ vect_cube_t const &parking_solar_t::get_legs() const {
 			cube_t leg(outer);
 			leg.d[dim][!side] = inner.d[dim][side];
 			set_wall_width(leg, (inner.d[!dim][0] + i*step), leg_hwidth, !dim);
-			if (side ^ dir) {leg.z2() -= 0.25*bcube.dz();} // shorter sloped side
+			if (bool(side) ^ dir) {leg.z2() -= 0.25*bcube.dz();} // shorter sloped side
 			legs.push_back(leg);
-		} // for i
+		}
 	} // for side
 	return legs;
 }
