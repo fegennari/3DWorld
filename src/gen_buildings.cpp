@@ -4574,6 +4574,70 @@ public:
 			if (city_bcube.contains_cube_xy(w)) {walkways.push_back(w);}
 		}
 	}
+private:
+	struct walkway_cand_t {
+		cube_t bcube;
+		unsigned bix, pix;
+		bool dir;
+		walkway_cand_t(cube_t const &bc, unsigned b, unsigned p, bool d) : bcube(bc), bix(b), pix(p), dir(d) {}
+	};
+public:
+	bool connect_buildings_to_monorail(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube) {
+		vector<cube_with_ix_t> cand_bldgs, city_bldgs;
+		float const max_xy_sz(get_walkway_buildings_and_max_sz(city_bcube, cand_bldgs, city_bldgs)), max_walkway_len(1.5*max_xy_sz);
+		if (city_bldgs.size() < 2) return 0; // not enough buildings
+		bool const conn_dim(!m_dim);
+		float const centerline(m_bcube.get_center_dim(conn_dim));
+		cube_t conn_area(m_bcube);
+		conn_area.expand_by_xy(max_walkway_len);
+		cube_t all_conn_bc;
+		vector<walkway_cand_t> cands;
+
+		for (auto i = city_bldgs.begin(); i != city_bldgs.end(); ++i) {
+			building_t &b(get_building(i->ix));
+			assert(!b.bcube.intersects_xy(m_bcube)); // sanity check
+			if (!b.bcube.intersects_xy(conn_area)) continue; // too far from monorail
+			float const min_ww_width(1.5*b.get_office_ext_doorway_width()), floor_spacing(b.get_window_vspace()); // should be the same for all buildings
+			if (b.bcube.z2() - floor_spacing < m_bcube.z1()) continue; // too short to connect to monorail
+
+			for (auto P = b.parts.begin(); P != b.parts.end(); ++P) {
+				cube_t const &p(*P);
+				if (!p.intersects_xy(conn_area))           continue; // too far from monorail
+				if (p.z2() - floor_spacing < m_bcube.z1()) continue; // too short to connect to monorail
+				bool const dir(centerline < p.get_center_dim(conn_dim));
+				cube_t conn_area(p);
+				conn_area.d[conn_dim][!dir] = m_bcube.d[conn_dim][dir]; // connect to monorail
+				// clamp to shared range in the monorail dim; really should not change the part width since the monorail should run the entire length of the city
+				max_eq(conn_area.d[!conn_dim][0], m_bcube.d[!conn_dim][0]);
+				min_eq(conn_area.d[!conn_dim][1], m_bcube.d[!conn_dim][1]);
+				float const width(conn_area.get_sz_dim(!conn_dim));
+				if (width < min_ww_width) continue; // too narrow
+				float const target_width(min_ww_width*rgen.rand_uniform(1.25, 2.5));
+				if (width > target_width) {conn_area.expand_in_dim(!conn_dim, -0.5*(width - target_width));} // shrink the width if needed
+				unsigned const floor_ix(floor(m_bcube.z1() - p.z1())); // round down
+				conn_area.z1() = p.z1() + floor_ix*floor_spacing;
+				conn_area.z2() = conn_area.z1() + floor_spacing; // one floor in height
+				if (check_if_blocked_by_building(conn_area, city_bldgs, i->ix, i->ix)) continue;
+				if (b.cube_int_parts_no_sec(conn_area)) continue; // intersects another part
+				cands.emplace_back(conn_area, i->ix, (P - b.parts.begin()), dir);
+			} // for p
+		} // for i
+		if (cands.size() < 2) return 0; // need at least two connected buildings
+		if (all_conn_bc.get_sz_dim(m_dim) < 0.5*m_bcube.get_sz_dim(m_dim)) return 0; // less than half the length is connected: fail
+		for (unsigned d = 0; d < 2; ++d) {m_bcube.d[m_dim][d] = all_conn_bc.d[m_dim][d];} // clip to shared connection sub-length
+		m_bcube.expand_in_dim(m_dim, 2.0*m_bcube.get_sz_dim(conn_dim)); // extend by twice the track width
+		
+		for (walkway_cand_t const &cand : cands) { // actually add walkways
+			building_t &b(get_building(cand.bix));
+			int side_mat_ix(choose_rand_walkway_side_mat_ix(rgen));
+			if (side_mat_ix < 0) {side_mat_ix = b.mat_ix;} // if side_mat_ix wasn't set above, use the building's material
+			all_walkways.emplace_back(cand.bcube, conn_dim, side_mat_ix, b.mat_ix, b.side_color, b.roof_color, b.get_window_vspace());
+			building_walkway_geom_t bwg(cand.bcube, conn_dim);
+			if (ADD_WALKWAY_EXT_DOORS) {b.add_walkway_door(bwg, cand.dir, cand.pix);}
+			b.walkways.emplace_back(bwg, 1, nullptr); // owned, no conn_bldg
+		}
+		return 1; // success
+	}
 
 	void get_power_points(cube_t const &xy_range, vector<point> &ppts) const { // similar to above function, but returns points rather than cubes
 		if (empty()) return; // nothing to do
@@ -4972,6 +5036,9 @@ void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways  ) 
 void add_buildings_exterior_lights(vector3d const &xlate, cube_t &lights_bcube) {building_creator_city.add_exterior_lights(xlate, lights_bcube);}
 float get_max_house_size() {return global_building_params.get_max_house_size();}
 
+bool connect_buildings_to_monorail(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube) {
+	return building_creator_city.connect_buildings_to_monorail(m_bcube, m_dim, city_bcube);
+}
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube, bool sec_camera_mode) {
 	//highres_timer_t timer("Add building interior lights"); // 0.97/0.37
 	building_creator     .add_interior_lights(xlate, lights_bcube, sec_camera_mode);

@@ -20,6 +20,7 @@ city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, 
 void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcubes);
 void get_walkways_for_city(cube_t const &city_bcube, vect_bldg_walkway_t &walkway_cands);
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
+bool connect_buildings_to_monorail(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube);
 float get_inner_sidewalk_width();
 cube_t get_plot_coll_region(cube_t const &plot_bcube);
 void play_hum_sound(point const &pos, float gain, float pitch);
@@ -1910,8 +1911,10 @@ void city_obj_placer_t::add_monorail(cube_t const &city_bcube, rand_gen_t rgen) 
 	}
 	ww_z1 += 1.0*road_width;
 	set_cube_zvals(track_bc, ww_z1, (ww_z1 + 0.4*road_width));
-	monorail = monorail_t(track_bc, dim);
-	// TODO: connect nearby buildings to the monorail with walkways using city_id and city_bcube
+	
+	if (connect_buildings_to_monorail(track_bc, dim, city_bcube)) {
+		monorail = monorail_t(track_bc, dim); // only add monorail if it can connect to buildings
+	}
 }
 
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
