@@ -313,7 +313,8 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 		cube_t tc(c);
 		tc.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance; // increase space to add clearance
 		if (is_obj_placement_blocked(tc, room, 1) || overlaps_other_room_obj(tc, objs_start)) continue; // bad placement
-		objs.emplace_back(c, TYPE_BCASE, room_id, dim, !dir, 0, tot_light_amt); // Note: dir faces into the room, not the wall
+		unsigned const flags(room.has_open_wall(dim, dir) ? RO_FLAG_OPEN : 0); // flag as open if along an open wall so that the back is drawn
+		objs.emplace_back(c, TYPE_BCASE, room_id, dim, !dir, flags, tot_light_amt); // Note: dir faces into the room, not the wall
 		set_obj_id(objs);
 		return 1; // done/success
 	} // for n

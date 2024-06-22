@@ -2446,7 +2446,9 @@ bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, cube_t const
 	}
 	for (cube_t const &w : open_walls) { // open walls count as doorways, even though there's no door
 		cube_t wall_exp(w);
-		wall_exp.expand_in_dim((w.dy() < w.dx()), door_width);
+		bool const dim(w.dy() < w.dx());
+		wall_exp.expand_in_dim( dim,      door_width); // expand outward
+		wall_exp.expand_in_dim(!dim, 0.05*door_width); // extend a bit to avoid placing objects right on the edge
 		if (wall_exp.intersects(c)) return 1;
 	}
 	return 0;
