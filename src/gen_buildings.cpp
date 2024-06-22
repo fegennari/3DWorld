@@ -4425,8 +4425,9 @@ public:
 		}
 	}
 
-	void connect_buildings_with_walkways(cube_t const &city_bcube) {
-		vector<cube_with_ix_t> cand_bldgs, city_bldgs;
+	// walkways
+private:
+	float get_walkway_buildings_and_max_sz(cube_t const &city_bcube, vector<cube_with_ix_t> &cand_bldgs, vector<cube_with_ix_t> &city_bldgs) {
 		get_overlapping_bcubes(city_bcube, cand_bldgs);
 		float max_xy_sz(0.0);
 
@@ -4436,6 +4437,27 @@ public:
 			city_bldgs.push_back(b);
 			max_eq(max_xy_sz, max(building.bcube.dx(), building.bcube.dy()));
 		}
+		return max_xy_sz;
+	}
+	bool check_if_blocked_by_building(cube_t const &cand, vect_cube_with_ix_t const &cand_bldgs, unsigned bix1, unsigned bix2) const {
+		for (cube_with_ix_t const &b : cand_bldgs) {
+			if (b.ix != bix1 && b.ix != bix2 && b.intersects(cand) && get_building(b.ix).cube_int_parts_no_sec(cand)) return 1;
+		}
+		return 0;
+	}
+	int choose_rand_walkway_side_mat_ix(rand_gen_t &rgen) const {
+		if (global_building_params.mat_gen_ix_city.empty()) return -1; // should never fail?
+
+		for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to choose a valid walkway material
+			unsigned const mat_ix(global_building_params.choose_rand_mat(rgen, 1, 0, 0)); // city_only=1, non_city_only=0, residential=0
+			if (!global_building_params.get_material(mat_ix).no_walkways) return mat_ix;
+		}
+		return -1; // not found
+	}
+public:
+	void connect_buildings_with_walkways(cube_t const &city_bcube) {
+		vector<cube_with_ix_t> cand_bldgs, city_bldgs;
+		float const max_xy_sz(get_walkway_buildings_and_max_sz(city_bcube, cand_bldgs, city_bldgs));
 		if (city_bldgs.size() < 2) return; // no buildings to connect
 		float const max_walkway_len(1.5*max_xy_sz), road_width(get_road_max_width()), pp_height(get_power_pole_height());
 		vect_cube_t blocked; // walkways currently placed for this city
@@ -4449,6 +4471,7 @@ public:
 			unsigned const min_floors_above_power_pole(unsigned((pp_height + power_pole_clearance)/floor_spacing) + 1U); // for crossing roads; take ceil
 			float const walkway_zmin_short(b1.ground_floor_z1 + ((bot_z_add > 0.0) ? 2.0 : 1.0)*floor_spacing); // two floors up, to account for bot_z_add
 			float const walkway_zmin_long (b1.ground_floor_z1 + min_floors_above_power_pole    *floor_spacing); // N floors up
+			float const edge_pad(0.25*b1.get_wall_thickness());
 
 			for (auto i2 = i1+1; i2 != city_bldgs.end(); ++i2) {
 				building_t &b2(get_building(i2->ix));
@@ -4460,7 +4483,7 @@ public:
 				for (unsigned dim = 0; dim < 2; ++dim) { // connection dim
 					bool const dir(b1.bcube.get_center_dim(dim) < b2.bcube.get_center_dim(dim)); // dir of b2 relative to b1: 0=to the left, 1=to the right
 					// first, check that the bcubes have a large enough projection and small enough gap
-					float const lo(max(b1.bcube.d[!dim][0], b2.bcube.d[!dim][0])), hi(min(b1.bcube.d[!dim][1], b2.bcube.d[!dim][1])); // projection range
+					float const lo(max(b1.bcube.d[!dim][0], b2.bcube.d[!dim][0]) + edge_pad), hi(min(b1.bcube.d[!dim][1], b2.bcube.d[!dim][1]) - edge_pad); // projection range
 					if (hi - lo < min_ww_width)   continue; // projection too small
 					float const length(fabs(b1.bcube.d[dim][dir] - b2.bcube.d[dim][!dir]));
 					if (length > max_walkway_len) continue; // buildings are too far apart
@@ -4470,22 +4493,12 @@ public:
 					cand.d[ dim][!dir] = b1.bcube.d[dim][ dir];
 					cand.d[!dim][0] = lo; cand.d[!dim][1] = hi;
 					set_cube_zvals(cand, walkway_zmin_short, min(b1.bcube.z2(), b2.bcube.z2()));
-					bool is_blocked(0);
-
-					for (auto i3 = cand_bldgs.begin(); i3 != cand_bldgs.end(); ++i3) { // Note: uses *all* buildings
-						if (i3->ix == i1->ix || i3->ix == i2->ix || !i3->intersects(cand)) continue;
-
-						for (cube_t const &p3 : get_building(i3->ix).parts) {
-							if (p3.intersects(cand)) {is_blocked = 1; break;}
-						}
-						if (is_blocked) break;
-					} // for i3
-					if (is_blocked) continue;
+					if (check_if_blocked_by_building(cand, cand_bldgs, i1->ix, i2->ix)) continue; // Note: uses *all* buildings
 
 					for (auto P1 = b1.parts.begin(); P1 != b1.parts.end(); ++P1) {
 						for (auto P2 = b2.parts.begin(); P2 != b2.parts.end(); ++P2) {
 							cube_t const &p1(*P1), &p2(*P2);
-							float const lo(max(p1.d[!dim][0], p2.d[!dim][0])), hi(min(p1.d[!dim][1], p2.d[!dim][1])), width(hi - lo); // projection range
+							float const lo(max(p1.d[!dim][0], p2.d[!dim][0]) + edge_pad), hi(min(p1.d[!dim][1], p2.d[!dim][1]) - edge_pad), width(hi - lo); // projection range
 							if (width < min_ww_width)     continue; // projection too small
 							float const length(fabs(p1.d[dim][dir] - p2.d[dim][!dir]));
 							if (length > max_walkway_len) continue; // buildings are too far apart
@@ -4519,11 +4532,10 @@ public:
 							cube_t const walkway_interior(walkway); // capture before applying bot_z_add
 							walkway.z1() -= bot_z_add; // add extra space at the bottom for support; can't add to the top in case we're at the top building floor
 							assert(walkway.is_strictly_normalized());
-							// check for other parts blocking the walkway
+							// check for other parts or walkways blocking the walkway
+							if (b1.cube_int_parts_no_sec(walkway) || b2.cube_int_parts_no_sec(walkway)) continue;
 							bool ww_blocked(0);
-							for (cube_t const &p1b : b1.parts) {ww_blocked |= (p1b != p1 && p1b.intersects(walkway));}
-							for (cube_t const &p2b : b2.parts) {ww_blocked |= (p2b != p2 && p2b.intersects(walkway));}
-							for (cube_t const &w   : blocked ) {ww_blocked |=                 w.intersects(walkway) ;} // check other walkways
+							for (cube_t const &w : blocked) {ww_blocked |= w.intersects(walkway);} // check other walkways
 							if (ww_blocked) continue;
 							bool const mat1_valid(!b1.get_material().no_walkways), mat2_valid(!b2.get_material().no_walkways);
 							bool owner_is_b1(0);
@@ -4533,13 +4545,7 @@ public:
 							else if (mat2_valid) {owner_is_b1 = 0;}
 							else { // neither is valid
 								owner_is_b1 = rgen.rand_bool(); // choose a random building to get the roof and side color from
-
-								if (!global_building_params.mat_gen_ix_city.empty()) { // should always be true?
-									for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to choose a valid walkway material
-										unsigned const mat_ix(global_building_params.choose_rand_mat(rgen, 1, 0, 0)); // city_only=1, non_city_only=0, residential=0
-										if (!global_building_params.get_material(mat_ix).no_walkways) {side_mat_ix = mat_ix; break;}
-									}
-								}
+								side_mat_ix = choose_rand_walkway_side_mat_ix(rgen);
 							}
 							building_t const &ww_owner(owner_is_b1 ? b1 : b2);
 							if (side_mat_ix < 0) {side_mat_ix = ww_owner.mat_ix;} // if side_mat_ix wasn't set above, use the parent building's material
