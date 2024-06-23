@@ -410,6 +410,7 @@ unsigned building_t::setup_multi_floor_room(extb_room_t &room, door_t const &doo
 	door_avoid.union_with_cube(door.get_open_door_path_bcube()); // make sure it's path is clear as well
 	vect_cube_t avoid, cf_to_add;
 	avoid.push_back(door_avoid);
+	//for (door_stack_t const &ds : interior->door_stacks) {if (ds.intersects(room)) {avoid.push_back(ds.get_open_door_path_bcube());}} // doors not yet placed
 	stairs_shape const sshape(SHAPE_STRAIGHT);
 	float const door_width(door.get_width()), stairs_hwidth(0.6*door_width), stairs_hlen(rgen.rand_uniform(2.0, 3.0)*stairs_hwidth), wall_spacing(1.0*door_width);
 	float z(room.z1() + floor_spacing); // move to next floor
@@ -1005,6 +1006,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 							cube_t door_test_cube(wall);
 							door_test_cube.expand_in_dim(!dim, door_min_spacing);
 							if (has_bcube_int(door_test_cube, all_doors)) continue; // check all doors, even ones on other walls in case there are two overlapping doors
+							if (room.has_stairs && interior->is_blocked_by_stairs_or_elevator(door_test_cube)) continue; // check for stairs; doesn't check open path
 							doors_to_add.push_back(door_cand);
 							all_doors   .push_back(door_cand);
 							connected.insert(ix_pair); // mark these two space groups as being connected
@@ -1021,7 +1023,8 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 					bool open_dir(rgen.rand_bool());
 					cube_t open_area(door);
 					open_area.d[dim][open_dir] += (open_dir ? 1.0 : -1.0)*doorway_width;
-					if (has_bcube_int(open_area, door_keepout)) {open_dir ^= 1;} // swap the open direction; hopefully we don't block a different door now
+					// swap the open direction if blocked by another door or stairs; hopefully we don't block a different door now
+					if (has_bcube_int(open_area, door_keepout) || (room.has_stairs && interior->is_blocked_by_stairs_or_elevator(open_area))) {open_dir ^= 1;}
 					// cut the doorway into the wall and add the door
 					cube_t wall2;
 					bool const make_unlocked = 1; // makes exploring easier
