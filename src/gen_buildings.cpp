@@ -4443,7 +4443,10 @@ private:
 	}
 	bool check_if_blocked_by_building(cube_t const &cand, vect_cube_with_ix_t const &city_bldgs, unsigned bix1, unsigned bix2) const {
 		for (cube_with_ix_t const &b : city_bldgs) {
-			if (b.ix != bix1 && b.ix != bix2 && b.intersects(cand) && get_building(b.ix).cube_int_parts_no_sec(cand)) return 1;
+			if (b.ix == bix1 || b.ix == bix2 || !b.intersects_xy(cand)) continue;
+			building_t const &building(get_building(b.ix));
+			if (b.z2() > cand.z1() && building.cube_int_parts_no_sec(cand)) return 1;
+			if (building.has_helipad && building.get_helipad_bcube().intersects_xy(cand)) return 1; // check for crossing above helipad as well
 		}
 		return 0;
 	}
