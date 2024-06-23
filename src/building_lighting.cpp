@@ -1883,7 +1883,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				clipped_bc.expand_by_xy(light_bcube_expand);
 			}
 			// expand so that offset exterior doors are properly handled, but less for walkway lights
-			clipped_bc.expand_by_xy((light_in_walkway ? 0.1 : ((lpos.z > ground_floor_z1 + window_vspacing) ? 0.65 : 1.0))*room_xy_expand);
+			bool const is_upper_floor(!room.is_single_floor && lpos.z > ground_floor_z1 + window_vspacing);
+			clipped_bc.expand_by_xy((light_in_walkway ? 0.1 : (is_upper_floor ? 0.65 : 1.0))*room_xy_expand);
 			clipped_bc.intersect_with_cube(sphere_bc); // clip to original light sphere, which still applies (only need to expand at building exterior)
 		}
 		if (!clipped_bc.contains_pt(lpos)) {
@@ -1977,7 +1978,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			else if (!is_in_attic && !is_exterior) {
 				// expand slightly so that points exactly on the room bounds and exterior doors are included; not for backrooms because it already contains the wall width
 				cube_t room_exp(get_walkable_room_bounds(room));
-				if (!room.is_backrooms()) {room_exp.expand_by(room_xy_expand);}
+				room_exp.expand_by((room.is_backrooms() ? 0.1 : 1.0)*room_xy_expand); // smaller expand for backrooms
 
 				if (room.open_wall_mask && !room.is_hallway) { // don't clamp on open wall sides, except for hallways
 					for (unsigned d = 0; d < 2; ++d) {
