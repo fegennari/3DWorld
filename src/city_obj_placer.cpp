@@ -1893,8 +1893,8 @@ void city_obj_placer_t::finalize_streetlights_and_power(streetlights_t &sl, vect
 }
 
 bool city_obj_placer_t::add_monorail(cube_t const &city_bcube, vect_bldg_walkway_t const &walkway_cands, rand_gen_t rgen) {
-	return 0; // TODO: remove when monorails are completed to enable them
-	if (walkway_cands.empty()) return 0; // only add a monorail if this city has walkways
+	if (!city_params.add_monorails) return 0;
+	if (walkway_cands.empty())      return 0; // only add a monorail if this city has walkways
 	bool const dim(city_bcube.dx() < city_bcube.dy()); // use longer dim
 	unsigned const num_plots_wide(dim ? num_x_plots : num_y_plots); // num plots in !dim
 	float centerline(city_bcube.get_center_dim(!dim)); // monorail is centered over the road by default

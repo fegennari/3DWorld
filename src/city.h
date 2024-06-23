@@ -59,7 +59,7 @@ struct city_params_t {
 	float residential_probability=0.0, model_anim_scale=1.0;
 	unsigned make_4_way_ints=0; // 0=all 3-way intersections; 1=allow 4-way; 2=all connector roads must have at least a 4-way on one end; 3=only 4-way (no straight roads)
 	unsigned add_tlines=2; // 0=never, 1=always, 2=only when there are no secondary buildings
-	bool assign_house_plots=0, new_city_conn_road_alg=0;
+	bool assign_house_plots=0, new_city_conn_road_alg=0, add_monorails=0;
 	// cars
 	unsigned num_cars=0;
 	float car_speed=0.0, traffic_balance_val=0.5, new_city_prob=1.0, max_car_scale=1.0;

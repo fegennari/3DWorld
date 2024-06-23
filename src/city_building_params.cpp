@@ -40,6 +40,7 @@ void city_params_t::init_kw_maps() {
 	kwmr.add("max_track_slope",  max_track_slope,  FP_CHECK_POS);
 	kwmr.add("model_anim_scale", model_anim_scale, FP_CHECK_POS);
 	kwmr.add("residential_probability", residential_probability, FP_CHECK_01);
+	kwmb.add("add_monorails", add_monorails);
 	// cars
 	kwmu.add("num_cars", num_cars);
 	kwmb.add("enable_car_path_finding", enable_car_path_finding);
