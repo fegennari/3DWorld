@@ -4427,20 +4427,20 @@ public:
 
 	// walkways
 private:
-	float get_walkway_buildings_and_max_sz(cube_t const &city_bcube, vector<cube_with_ix_t> &cand_bldgs, vector<cube_with_ix_t> &city_bldgs) {
-		get_overlapping_bcubes(city_bcube, cand_bldgs);
+	float get_walkway_buildings_and_max_sz(cube_t const &city_bcube, vector<cube_with_ix_t> &city_bldgs, vector<cube_with_ix_t> &ww_bldgs) {
+		get_overlapping_bcubes(city_bcube, city_bldgs);
 		float max_xy_sz(0.0);
 
-		for (cube_with_ix_t const &b : cand_bldgs) {
+		for (cube_with_ix_t const &b : city_bldgs) {
 			building_t const &building(get_building(b.ix));
 			if (building.is_house || !building.is_cube() || building.is_rotated()) continue; // walkways not supported for this building
-			city_bldgs.push_back(b);
+			ww_bldgs.push_back(b);
 			max_eq(max_xy_sz, max(building.bcube.dx(), building.bcube.dy()));
 		}
 		return max_xy_sz;
 	}
-	bool check_if_blocked_by_building(cube_t const &cand, vect_cube_with_ix_t const &cand_bldgs, unsigned bix1, unsigned bix2) const {
-		for (cube_with_ix_t const &b : cand_bldgs) {
+	bool check_if_blocked_by_building(cube_t const &cand, vect_cube_with_ix_t const &city_bldgs, unsigned bix1, unsigned bix2) const {
+		for (cube_with_ix_t const &b : city_bldgs) {
 			if (b.ix != bix1 && b.ix != bix2 && b.intersects(cand) && get_building(b.ix).cube_int_parts_no_sec(cand)) return 1;
 		}
 		return 0;
@@ -4456,14 +4456,14 @@ private:
 	}
 public:
 	void connect_buildings_with_walkways(cube_t const &city_bcube) {
-		vector<cube_with_ix_t> cand_bldgs, city_bldgs;
-		float const max_xy_sz(get_walkway_buildings_and_max_sz(city_bcube, cand_bldgs, city_bldgs));
-		if (city_bldgs.size() < 2) return; // no buildings to connect
+		vector<cube_with_ix_t> city_bldgs, ww_bldgs;
+		float const max_xy_sz(get_walkway_buildings_and_max_sz(city_bcube, city_bldgs, ww_bldgs));
+		if (ww_bldgs.size() < 2) return; // no buildings to connect
 		float const max_walkway_len(1.5*max_xy_sz), road_width(get_road_max_width()), pp_height(get_power_pole_height());
 		vect_cube_t blocked; // walkways currently placed for this city
 		rand_gen_t rgen;
 
-		for (auto i1 = city_bldgs.begin(); i1 != city_bldgs.end(); ++i1) {
+		for (auto i1 = ww_bldgs.begin(); i1 != ww_bldgs.end(); ++i1) {
 			building_t &b1(get_building(i1->ix));
 			float const min_ww_width(1.5*b1.get_office_ext_doorway_width()), floor_spacing(b1.get_window_vspace()); // should be the same for all buildings
 			float const bot_z_add((DRAW_CITY_INT_WINDOWS ? 0.125 : 0.25)*floor_spacing); // reduce if there are interior windows so that we don't see inside the walkway bottom
@@ -4473,7 +4473,7 @@ public:
 			float const walkway_zmin_long (b1.ground_floor_z1 + min_floors_above_power_pole    *floor_spacing); // N floors up
 			float const edge_pad(0.25*b1.get_wall_thickness());
 
-			for (auto i2 = i1+1; i2 != city_bldgs.end(); ++i2) {
+			for (auto i2 = i1+1; i2 != ww_bldgs.end(); ++i2) {
 				building_t &b2(get_building(i2->ix));
 				assert(!b1.bcube.intersects_xy(b2.bcube)); // sanity check
 				assert(b1.ground_floor_z1 == b2.ground_floor_z1); // must be at the same elevation
@@ -4493,7 +4493,7 @@ public:
 					cand.d[ dim][!dir] = b1.bcube.d[dim][ dir];
 					cand.d[!dim][0] = lo; cand.d[!dim][1] = hi;
 					set_cube_zvals(cand, walkway_zmin_short, min(b1.bcube.z2(), b2.bcube.z2()));
-					if (check_if_blocked_by_building(cand, cand_bldgs, i1->ix, i2->ix)) continue; // Note: uses *all* buildings
+					if (check_if_blocked_by_building(cand, city_bldgs, i1->ix, i2->ix)) continue; // Note: uses *all* buildings
 
 					for (auto P1 = b1.parts.begin(); P1 != b1.parts.end(); ++P1) {
 						for (auto P2 = b2.parts.begin(); P2 != b2.parts.end(); ++P2) {
@@ -4583,9 +4583,9 @@ private:
 	};
 public:
 	bool connect_buildings_to_monorail(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube) {
-		vector<cube_with_ix_t> cand_bldgs, city_bldgs;
-		float const max_xy_sz(get_walkway_buildings_and_max_sz(city_bcube, cand_bldgs, city_bldgs)), max_walkway_len(1.5*max_xy_sz);
-		if (city_bldgs.size() < 2) return 0; // not enough buildings
+		vector<cube_with_ix_t> city_bldgs, ww_bldgs;
+		float const max_xy_sz(get_walkway_buildings_and_max_sz(city_bcube, city_bldgs, ww_bldgs)), max_walkway_len(1.5*max_xy_sz);
+		if (ww_bldgs.size() < 2) return 0; // not enough buildings
 		bool const conn_dim(!m_dim);
 		float const centerline(m_bcube.get_center_dim(conn_dim));
 		cube_t conn_area(m_bcube);
@@ -4593,20 +4593,22 @@ public:
 		cube_t all_conn_bc;
 		vector<walkway_cand_t> cands;
 
-		for (auto i = city_bldgs.begin(); i != city_bldgs.end(); ++i) {
+		for (auto i = ww_bldgs.begin(); i != ww_bldgs.end(); ++i) {
 			building_t &b(get_building(i->ix));
 			assert(!b.bcube.intersects_xy(m_bcube)); // sanity check
 			if (!b.bcube.intersects_xy(conn_area)) continue; // too far from monorail
 			float const min_ww_width(1.5*b.get_office_ext_doorway_width()), floor_spacing(b.get_window_vspace()); // should be the same for all buildings
-			if (b.bcube.z2() - floor_spacing < m_bcube.z1()) continue; // too short to connect to monorail
+			if (b.bcube.z2() < m_bcube.z2()) continue; // too short to connect to monorail
 
 			for (auto P = b.parts.begin(); P != b.parts.end(); ++P) {
 				cube_t const &p(*P);
-				if (!p.intersects_xy(conn_area))           continue; // too far from monorail
-				if (p.z2() - floor_spacing < m_bcube.z1()) continue; // too short to connect to monorail
+				if (!p.intersects_xy(conn_area)) continue; // too far from monorail
+				if (p.z2() < m_bcube.z2())       continue; // too short to connect to monorail
+				if (p.z1() > m_bcube.z1())       continue; // starts above monorail
 				bool const dir(centerline < p.get_center_dim(conn_dim));
 				cube_t conn_area(p);
-				conn_area.d[conn_dim][!dir] = m_bcube.d[conn_dim][dir]; // connect to monorail
+				conn_area.d[conn_dim][ dir] = p      .d[conn_dim][!dir]; // flush with part
+				conn_area.d[conn_dim][!dir] = m_bcube.d[conn_dim][ dir]; // connect to monorail
 				// clamp to shared range in the monorail dim; really should not change the part width since the monorail should run the entire length of the city
 				max_eq(conn_area.d[!conn_dim][0], m_bcube.d[!conn_dim][0]);
 				min_eq(conn_area.d[!conn_dim][1], m_bcube.d[!conn_dim][1]);
@@ -4614,14 +4616,20 @@ public:
 				if (width < min_ww_width) continue; // too narrow
 				float const target_width(min_ww_width*rgen.rand_uniform(1.25, 2.5));
 				if (width > target_width) {conn_area.expand_in_dim(!conn_dim, -0.5*(width - target_width));} // shrink the width if needed
-				unsigned const floor_ix(floor(m_bcube.z1() - p.z1())); // round down
+				unsigned const floor_ix(ceil((m_bcube.z1() - p.z1())/floor_spacing)); // round up
 				conn_area.z1() = p.z1() + floor_ix*floor_spacing;
-				conn_area.z2() = conn_area.z1() + floor_spacing; // one floor in height
-				if (check_if_blocked_by_building(conn_area, city_bldgs, i->ix, i->ix)) continue;
+				conn_area.z2() = conn_area.z1()  + floor_spacing; // one floor in height
+				if (conn_area.z2() > p.z2()) continue; // too high
+				//cout << TXT(conn_dim) << TXT(dir) << TXT(m_bcube.str()) << TXT(p.str()) << TXT(conn_area.str()) << endl; // TESTING
+				assert(conn_area.is_strictly_normalized());
+				if (check_if_blocked_by_building(conn_area, city_bldgs, i->ix, i->ix)) continue; // Note: uses *all* buildings
 				if (b.cube_int_parts_no_sec(conn_area)) continue; // intersects another part
 				cands.emplace_back(conn_area, i->ix, (P - b.parts.begin()), dir);
+				all_conn_bc.assign_or_union_with_cube(conn_area);
+				break; // only connect the first valid part
 			} // for p
 		} // for i
+		cout << TXT(ww_bldgs.size()) << TXT(cands.size()) << endl; // TESTING
 		if (cands.size() < 2) return 0; // need at least two connected buildings
 		if (all_conn_bc.get_sz_dim(m_dim) < 0.5*m_bcube.get_sz_dim(m_dim)) return 0; // less than half the length is connected: fail
 		for (unsigned d = 0; d < 2; ++d) {m_bcube.d[m_dim][d] = all_conn_bc.d[m_dim][d];} // clip to shared connection sub-length

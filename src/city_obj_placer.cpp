@@ -1667,9 +1667,13 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	if (!is_residential) { // commercial city office buildings; add walkways and monorail
 		vect_bldg_walkway_t walkway_cands;
 		get_walkways_for_city(city_bcube, walkway_cands);
-		for (bldg_walkway_t const &w : walkway_cands) {walkway_groups.add_obj(walkway_t(w), walkways);}
 		// Note: not added to colliders since walkways are above pedestrians; not added to blockers since walkways are above most objects
-		add_monorail(city_bcube, rgen);
+		
+		if (add_monorail(city_bcube, walkway_cands, rgen)) {
+			walkway_cands.clear();
+			get_walkways_for_city(city_bcube, walkway_cands); // query walkways again, this time including monorails
+		}
+		for (bldg_walkway_t const &w : walkway_cands) {walkway_groups.add_obj(walkway_t(w), walkways);}
 	}
 	for (auto i = plots.begin(); i != plots.end(); ++i) {
 		tree_pos.clear();
@@ -1888,9 +1892,9 @@ void city_obj_placer_t::finalize_streetlights_and_power(streetlights_t &sl, vect
 	if (was_moved) {sl.sort_streetlights_by_yx();} // must re-sort if a streetlight was moved
 }
 
-void city_obj_placer_t::add_monorail(cube_t const &city_bcube, rand_gen_t rgen) {
-	return; // TODO: remove when monorails are completed to enable them
-	if (walkways.empty()) return; // only add a monorail if this city has walkways
+bool city_obj_placer_t::add_monorail(cube_t const &city_bcube, vect_bldg_walkway_t const &walkway_cands, rand_gen_t rgen) {
+	return 0; // TODO: remove when monorails are completed to enable them
+	if (walkway_cands.empty()) return 0; // only add a monorail if this city has walkways
 	bool const dim(city_bcube.dx() < city_bcube.dy()); // use longer dim
 	unsigned const num_plots_wide(dim ? num_x_plots : num_y_plots); // num plots in !dim
 	float centerline(city_bcube.get_center_dim(!dim)); // monorail is centered over the road by default
@@ -1906,15 +1910,15 @@ void city_obj_placer_t::add_monorail(cube_t const &city_bcube, rand_gen_t rgen) 
 	clearance_area.expand_by_xy(0.5*road_width);
 	float ww_z1(city_bcube.z2() + 1.5*get_power_pole_height());
 	
-	for (walkway_t const &w : walkways) {
-		if (w.bcube.intersects_xy(clearance_area)) {max_eq(ww_z1, w.bcube.z2());} // make sure monorail is above all walkways
+	for (bldg_walkway_t const &w : walkway_cands) {
+		if (w.intersects_xy(clearance_area)) {max_eq(ww_z1, w.z2());} // make sure monorail is above all walkways
 	}
-	ww_z1 += 1.0*road_width;
+	ww_z1 += 0.5*road_width;
 	set_cube_zvals(track_bc, ww_z1, (ww_z1 + 0.4*road_width));
 	
-	if (connect_buildings_to_monorail(track_bc, dim, city_bcube)) {
-		monorail = monorail_t(track_bc, dim); // only add monorail if it can connect to buildings
-	}
+	if (!connect_buildings_to_monorail(track_bc, dim, city_bcube)) return 0;
+	monorail = monorail_t(track_bc, dim); // only add monorail if it can connect to buildings
+	return 1;
 }
 
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
