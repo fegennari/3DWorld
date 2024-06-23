@@ -2533,7 +2533,7 @@ void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
 
 class building_creator_t {
 
-	bool use_smap_this_frame=0, has_interior_geom=0, is_city=0;
+	bool use_smap_this_frame=0, has_interior_geom=0, is_city=0, vbos_created=0;
 	unsigned grid_sz=1, gpu_mem_usage=0;
 	vector3d range_sz, range_sz_inv, max_extent;
 	cube_t range, buildings_bcube;
@@ -3118,7 +3118,7 @@ public:
 			for (cube_t const &c : city_bcubes) {connect_buildings_with_walkways(c);}
 		}
 		build_grid_by_tile(is_tile);
-		create_vbos(is_tile);
+		if (!city_only) {create_vbos(is_tile);} // city VBOs are created later, after monorails are added
 	} // end gen()
 
 	void place_building_trees(rand_gen_t &rgen) {
@@ -4066,16 +4066,18 @@ public:
 		gpu_mem_usage += (num_everts + num_iverts)*sizeof(vert_norm_comp_tc_color);
 		if (!is_tile) {cout << "Building V: " << num_everts << ", T: " << num_etris << ", interior V: " << num_iverts << ", T: " << num_itris << ", mem: " << gpu_mem_usage << endl;}
 	}
-	void create_vbos(bool is_tile) {
+	void create_vbos(bool is_tile=0) {
+		if (vbos_created) return; // already created
+		vbos_created = 1;
 		building_texture_mgr.check_windows_texture();
 		tid_mapper.init();
 		timer_t timer("Create Building VBOs", !is_tile);
 		get_all_drawn_verts(is_tile);
 		update_mem_usage(is_tile);
-		building_draw_vbo.upload_to_vbos();
-		building_draw_windows.upload_to_vbos();
-		building_draw_wind_lights.upload_to_vbos(); // Note: may be empty if not night time
-		building_draw_interior.upload_to_vbos();
+		building_draw_vbo          .upload_to_vbos();
+		building_draw_windows      .upload_to_vbos();
+		building_draw_wind_lights  .upload_to_vbos(); // Note: may be empty if not night time
+		building_draw_interior     .upload_to_vbos();
 		building_draw_int_ext_walls.upload_to_vbos();
 	}
 	void ensure_interior_geom_vbos() { // only for is_tile case
@@ -4598,15 +4600,16 @@ public:
 			assert(!b.bcube.intersects_xy(m_bcube)); // sanity check
 			if (!b.bcube.intersects_xy(conn_area)) continue; // too far from monorail
 			float const min_ww_width(1.5*b.get_office_ext_doorway_width()), floor_spacing(b.get_window_vspace()); // should be the same for all buildings
-			if (b.bcube.z2() < m_bcube.z2()) continue; // too short to connect to monorail
+			if (b.bcube.z2() < m_bcube.z1() + floor_spacing) continue; // too short to connect to monorail
 
 			for (auto P = b.parts.begin(); P != b.parts.end(); ++P) {
 				cube_t const &p(*P);
-				if (!p.intersects_xy(conn_area)) continue; // too far from monorail
-				if (p.z2() < m_bcube.z2())       continue; // too short to connect to monorail
-				if (p.z1() > m_bcube.z1())       continue; // starts above monorail
+				if (!p.intersects_xy(conn_area))           continue; // too far from monorail
+				if (p.z2() < m_bcube.z1() + floor_spacing) continue; // too short to connect to monorail
+				if (p.z1() > m_bcube.z1())                 continue; // starts above monorail
 				bool const dir(centerline < p.get_center_dim(conn_dim));
 				cube_t conn_area(p);
+				conn_area.expand_in_dim(!conn_dim, -0.25*b.get_wall_thickness()); // shrink slightly to prevent Z-fighting with inside edges of parts
 				conn_area.d[conn_dim][ dir] = p      .d[conn_dim][!dir]; // flush with part
 				conn_area.d[conn_dim][!dir] = m_bcube.d[conn_dim][ dir]; // connect to monorail
 				// clamp to shared range in the monorail dim; really should not change the part width since the monorail should run the entire length of the city
@@ -4641,7 +4644,7 @@ public:
 			if (side_mat_ix < 0) {side_mat_ix = b.mat_ix;} // if side_mat_ix wasn't set above, use the building's material
 			all_walkways.emplace_back(cand.bcube, conn_dim, side_mat_ix, b.mat_ix, b.side_color, b.roof_color, b.get_window_vspace());
 			building_walkway_geom_t bwg(cand.bcube, conn_dim);
-			if (ADD_WALKWAY_EXT_DOORS) {b.add_walkway_door(bwg, cand.dir, cand.pix);}
+			if (ADD_WALKWAY_EXT_DOORS) {b.add_walkway_door(bwg, !cand.dir, cand.pix);}
 			b.walkways.emplace_back(bwg, 1, nullptr); // owned, no conn_bldg
 		}
 		return 1; // success
@@ -4930,11 +4933,12 @@ void gen_buildings() {
 		building_creator_city.gen(global_building_params, 1, 0, 0, 1); // city buildings
 		global_building_params.restore_prev_pos_range(); // hack to undo clip to city bounds to allow buildings to extend further out
 		if (global_building_params.add_secondary_buildings) {building_creator.gen(global_building_params, 0, 1, 0, 1);} // non-city secondary buildings
-	} else {building_creator.gen (global_building_params, 0, 0, 0, 1);} // mixed buildings
+	} else {building_creator .gen(global_building_params, 0, 0, 0, 1);} // mixed/non-city buildings
 }
 void draw_buildings(int shadow_only, int reflection_pass, vector3d const &xlate) {
 	//if (!building_tiles.empty()) {cout << "Building Tiles: " << building_tiles.size() << " Tiled Buildings: " << building_tiles.get_tot_num_buildings() << endl;} // debugging
 	if (world_mode != WMODE_INF_TERRAIN) {building_tiles.clear();}
+	building_creator_city.create_vbos(); // create VBOs for city buildings (after adding monorails, etc.), if needed
 	vector<building_creator_t *> bcs;
 	// don't draw city buildings for interior shadows
 	bool const draw_city(world_mode == WMODE_INF_TERRAIN && (shadow_only != 2 || !interior_shadow_maps || global_building_params.add_city_interiors));
