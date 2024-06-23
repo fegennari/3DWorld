@@ -1874,6 +1874,30 @@ bool park_path_t::check_point_contains_xy(point const &p) const {
 
 // monorail
 
+void draw_long_cube(cube_t const &c, colorRGBA const &color, draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale,
+	bool shadow_only=0, bool skip_bottom=0, float tscale=0.0, unsigned skip_dims=0)
+{
+	bool const dim(c.dx() < c.dy()); // longer dim; only supports splitting in one dim
+	float const tile_sz(dim ? MESH_Y_SIZE*DY_VAL : MESH_X_SIZE*DX_VAL), length(c.get_sz_dim(dim));
+	unsigned const num_segs(shadow_only ? 1U : unsigned(ceil(length/tile_sz)));
+	float const step_len(length/num_segs);
+	cube_t c2(c);
+
+	for (unsigned s = 0; s < num_segs; ++s) { // split into segments, one per tile shadow map
+		bool const beg(s == 0), end(s+1 == num_segs);
+		c2.d[dim][1] = (end ? c.d[dim][1] : (c2.d[dim][0] + step_len));
+
+		if (num_segs == 1 || dstate.check_cube_visible(c2, dist_scale)) { // VFC
+			unsigned skip_dims_seg(skip_dims);
+			if (!(beg && dstate.camera_bs[dim] < c2.d[dim][0]) && !(end && dstate.camera_bs[dim] > c2.d[dim][1])) {skip_dims_seg |= (1 << dim);} // skip interior seg ends
+			dstate.begin_tile(c2.get_cube_center(), 1);
+			dstate.draw_cube(qbd, c2, color, skip_bottom, tscale, skip_dims_seg);
+			qbd.draw_and_clear();
+		}
+		c2.d[dim][0] += step_len;
+	} // for s
+}
+
 monorail_t::monorail_t(cube_t const &c, bool dim_) : valid(1), dim(dim_) {
 	bcube = track_bcube = c;
 	// TODO: larger bcube
@@ -1882,9 +1906,8 @@ monorail_t::monorail_t(cube_t const &c, bool dim_) : valid(1), dim(dim_) {
 void monorail_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_only) const {
 	float const dist_scale = 1.0; // ???
 	if (!valid || !dstate.check_cube_visible(bcube, dist_scale)) return; // VFC/distance culling
-	dstate.draw_cube(qbds.untex_qbd, bcube, GRAY); // TODO: placeholder
 	dstate.set_untextured_material();
-	qbds.untex_qbd.draw_and_clear();
+	draw_long_cube(bcube, GRAY, dstate, qbds.untex_qbd, dist_scale, shadow_only); // TODO: placeholder
 	dstate.unset_untextured_material();
 }
 bool monorail_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
