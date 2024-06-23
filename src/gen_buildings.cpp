@@ -4620,19 +4620,27 @@ public:
 				min_eq(conn_area.d[!conn_dim][1], m_bcube.d[!conn_dim][1]);
 				float const width(conn_area.get_sz_dim(!conn_dim));
 				if (width < min_ww_width) continue; // too narrow
-				float const target_width(min_ww_width*rgen.rand_uniform(1.25, 2.5));
-				if (width > target_width) {conn_area.expand_in_dim(!conn_dim, -0.5*(width - target_width));} // shrink the width if needed
 				unsigned const floor_ix(ceil((m_bcube.z1() - p.z1())/floor_spacing)); // round up
 				conn_area.z1() = p.z1() + floor_ix*floor_spacing;
 				conn_area.z2() = conn_area.z1()  + floor_spacing; // one floor in height
 				if (conn_area.z2() > p.z2()) continue; // too high
-				//cout << TXT(conn_dim) << TXT(dir) << TXT(m_bcube.str()) << TXT(p.str()) << TXT(conn_area.str()) << endl; // TESTING
+				float const target_width(min_ww_width*rgen.rand_uniform(1.25, 2.5)), space_to_sides(0.5*(width - target_width));
+				if (space_to_sides > 0.0) {conn_area.expand_in_dim(!conn_dim, -space_to_sides);} // shrink the width if needed
 				assert(conn_area.is_strictly_normalized());
-				if (check_if_blocked_by_building(conn_area, city_bldgs, i->ix, i->ix)) continue; // Note: uses *all* buildings
-				if (b.cube_int_parts_no_sec(conn_area)) continue; // intersects another part
-				cands.emplace_back(conn_area, i->ix, (P - b.parts.begin()), dir);
-				all_conn_bc.assign_or_union_with_cube(conn_area);
-				break; // only connect the first valid part
+				// first try placing centered on the part; if there's extra space to the sides, and centered fails, then try to a random side, then the other side
+				float const first_xlate((rgen.rand_bool() ? 1.0 : -1.0)*space_to_sides), xlate_vals[3] = {0.0, first_xlate, -2.0*first_xlate};
+				bool success(0);
+
+				for (unsigned n = 0; n < ((space_to_sides > 0.0) ? 3 : 1); ++n) {
+					conn_area.translate_dim(!conn_dim, xlate_vals[n]);
+					if (check_if_blocked_by_building(conn_area, city_bldgs, i->ix, i->ix)) continue; // Note: uses *all* buildings
+					if (b.cube_int_parts_no_sec(conn_area)) continue; // intersects another part
+					cands.emplace_back(conn_area, i->ix, (P - b.parts.begin()), dir);
+					all_conn_bc.assign_or_union_with_cube(conn_area);
+					success = 1;
+					break;
+				} // for n
+				if (success) break; // only connect the first valid part
 			} // for p
 		} // for i
 		cout << TXT(ww_bldgs.size()) << TXT(cands.size()) << endl; // TESTING
