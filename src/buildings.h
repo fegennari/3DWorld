@@ -1881,6 +1881,7 @@ public:
 	void update_snakes (point const &camera_bs, unsigned building_ix);
 	void update_insects(point const &camera_bs, unsigned building_ix);
 	void get_objs_at_or_below_ground_floor(vect_room_object_t &ret, bool for_spider) const;
+	bool begin_fish_draw() const;
 private:
 	// animals
 	point gen_animal_floor_pos(float radius, bool place_in_attic, bool not_player_visible, bool pref_dark_room, bool not_by_ext_door, rand_gen_t &rgen) const;
