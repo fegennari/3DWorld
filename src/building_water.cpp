@@ -97,13 +97,17 @@ building_splash_manager_t building_splash_manager;
 void clear_building_water_splashes() {
 	building_splash_manager.clear();
 }
+bool add_water_splash(point const &pos, float radius, float size) { // Note: pos is in building space
+	if (player_building == nullptr) return 0; // shouldn't happen?
+	cube_t const bounds(player_building->calc_splash_bounds(pos));
+	if (bounds == cube_t()) return 0; // shouldn't happen?
+	building_splash_manager.add_splash(pos, radius, size, bounds);
+	return 1;
+}
 // Note: player steps call this function directly; all others go through building_t::check_for_water_splash()
 void register_building_water_splash(point const &pos, float size, bool alert_zombies) { // Note: pos is in camera space
-	if (player_building == nullptr) return; // shouldn't happen?
 	point const pos_bs(pos - get_tiled_terrain_model_xlate());
-	cube_t const bounds(player_building->calc_splash_bounds(pos_bs));
-	if (bounds == cube_t()) return; // shouldn't happen?
-	building_splash_manager.add_splash(pos_bs, 0.5*CAMERA_RADIUS, size, bounds);
+	if (!add_water_splash(pos_bs, 0.5*CAMERA_RADIUS, size)) return; // shouldn't happen?
 	if (alert_zombies) {register_building_sound(pos_bs, 0.5*size);} // alert zombies; convert pos to building space
 #pragma omp critical(gen_sound)
 	gen_sound_random_var(SOUND_SPLASH2, pos, 0.3*size, 0.9);

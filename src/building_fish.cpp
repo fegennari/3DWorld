@@ -6,9 +6,10 @@
 #include "buildings.h"
 #include "city_model.h" // for animation_state_t
 
-extern int animate2;
+extern int animate2, frame_counter;
 extern float fticks;
 
+bool add_water_splash(point const &pos, float radius, float size);
 void draw_animated_fish_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, float anim_time, colorRGBA const &color);
 
 
@@ -16,6 +17,7 @@ class fish_manager_t {
 	struct fish_t {
 		float radius=0.0, mspeed=0.0, tspeed=0.0; // movement speed and tail speed
 		unsigned id=0;
+		int next_splash_frame=0;
 		point pos; // p_last?
 		vector3d dir, target_dir; // Note: fish only rotated about Z and remains in the XY plane
 		colorRGBA color=WHITE;
@@ -24,6 +26,11 @@ class fish_manager_t {
 			anim_state.anim_time = 0.5*tspeed*anim_time; // tail moves twice per second
 			if (anim_state.enabled) {anim_state.set_animation_id_and_time(s, 0, 1.0);}
 			draw_animated_fish_model(s, pos, radius, dir, anim_state.anim_time, color);
+		}
+		bool can_splash(rand_gen_t &rgen) {
+			if (frame_counter < next_splash_frame) return 0;
+			next_splash_frame = frame_counter + (rgen.rand() % (2*TICKS_PER_SECOND)); // once every 2s on average
+			return 1;
 		}
 	};
 
@@ -150,8 +157,12 @@ class fish_manager_t {
 	public:
 		void next_frame() {
 			// TODO: handle player interaction
-			// TODO: splashes
 			fish_cont_t::next_frame();
+
+			for (fish_t &f : fish) { // handle water splashes
+				if (f.pos.z < valid_area.z2() - 2.0*f.radius) continue; // too low to splash
+				if (f.can_splash(rgen)) {add_water_splash(f.pos, 2.0*f.radius, 0.25);}
+			}
 		}
 	}; // player_int_fish_cont_t
 
