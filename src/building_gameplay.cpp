@@ -2553,7 +2553,8 @@ public:
 		schedule_next_sound();
 	}
 	void next_frame(building_t const &building, point const &player_pos) { // player_pos is in building space
-		if (NUM_SOUNDS == 0) return; // no sounds enabled
+		if (NUM_SOUNDS == 0)          return; // no sounds enabled
+		if (player_in_water >= 2)     return; // skip if player underwater
 		time_to_next_sound -= fticks;
 		if (time_to_next_sound > 0.0) return; // not yet
 		bool const gen_new_pos(sound_pos == all_zeros || rgen.rand_bool());
