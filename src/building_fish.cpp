@@ -169,9 +169,7 @@ class fish_manager_t {
 	class swimming_pool_t : public player_int_fish_cont_t {
 		//indoor_pool_t const &pool;
 	public:
-		void init(indoor_pool_t const &pool, float water_zval, int rseed) {
-			cube_t water_bcube(pool);
-			water_bcube.z2() = water_zval;
+		void init(indoor_pool_t const &pool, cube_t const &water_bcube, int rseed) {
 			fish_cont_t::init(pool, water_bcube, rseed, 1, 4); // 1-4 fish
 			float const max_fish_radius(0.05*min(min(pool.dx(), pool.dy()), pool.dz()));
 			populate(max_fish_radius, 0.003);
@@ -241,8 +239,8 @@ public:
 		}
 		++fishtank_ix;
 	}
-	void register_swimming_pool(indoor_pool_t const &pool, float water_zval, int rseed) {
-		if (swimming_pool.empty()) {swimming_pool.init(pool, water_zval, rseed);}
+	void register_swimming_pool(indoor_pool_t const &pool, cube_t const &water_bcube, int rseed) {
+		if (swimming_pool.empty()) {swimming_pool.init(pool, water_bcube, rseed);}
 	}
 	void register_flooded_basement(cube_t const &water_bc, float floor_spacing, vect_cube_t const &obstacles, int rseed) {
 		if (flooded_basement.empty()) {flooded_basement.init(water_bc, floor_spacing, obstacles, rseed);}
@@ -280,12 +278,22 @@ bool building_t::begin_fish_draw() const { // returns true of pool or basement w
 	if (!water_visible_to_player()) return 0;
 	// handle underwater fish in pools and basements
 	int const rseed(interior->rooms.size());
-	if (has_pool()) {fish_manager.register_swimming_pool(interior->pool, interior->water_zval, rseed);}
+	
+	if (has_pool()) {
+		float const tile_thickness(get_flooring_thick());
+		cube_t water_bcube(interior->pool);
+		water_bcube.z1() += tile_thickness; // subtract off tile width on bottom
+		water_bcube.z2()  = interior->water_zval; // water level is below the top of the pool
+		water_bcube.expand_by_xy(-tile_thickness); // subtract off tile width on sides
+		fish_manager.register_swimming_pool(interior->pool, water_bcube, rseed);
+	}
 	else if (has_ext_basement()) { // flooded backrooms basement
 		vect_cube_t obstacles;
 		// TODO: backrooms walls, doors, stairs, larger objects, etc.
 		cube_t water_bcube(get_water_cube());
+		water_bcube.z1() += get_fc_thickness();
 		min_eq(water_bcube.z2(), water_bcube.z1() + get_floor_ceil_gap()); // constraint to the lowest level
+		if (water_bcube.z2() <= water_bcube.z1()) return 0; // shouldn't happen?
 		fish_manager.register_flooded_basement(water_bcube, get_window_vspace(), obstacles, rseed);
 	}
 	return 1;
