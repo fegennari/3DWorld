@@ -649,7 +649,7 @@ unsigned check_diving_board_collision(room_object_t const &c, point &pos, point 
 	return check_cubes_collision(cubes, 2, pos, p_last, radius, cnorm);
 }
 
-bool check_ramp_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) { // p_last is unused
+bool check_ramp_collision(room_object_t const &c, point &pos, float radius, vector3d *cnorm) {
 	if (!sphere_cube_intersect(pos, radius, c)) return 0;
 	bool const is_pg_ramp(c.type == TYPE_RAMP);
 	float const thickness(is_pg_ramp ? RAMP_THICKNESS_SCALE*c.dz() : 0.0), half_thickness(0.5*thickness);
@@ -1339,7 +1339,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			else if (c->type == TYPE_BCASE  ) {coll_ret |= check_bookcase_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_BENCH  ) {coll_ret |= check_bench_collision   (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_DIV_BOARD) {coll_ret |= check_diving_board_collision   (*c, pos, p_last, radius, &cnorm);}
-			else if (c->is_sloped_ramp()    ) {coll_ret |= (unsigned)check_ramp_collision   (*c, pos, p_last, radius, &cnorm);}
+			else if (c->is_sloped_ramp()    ) {coll_ret |= (unsigned)check_ramp_collision   (*c, pos,         radius, &cnorm);} // p_last is unused
 			else if (c->type == TYPE_BALCONY) {had_coll |= (unsigned)check_balcony_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_POOL_TABLE) {coll_ret |= check_pool_table_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_SHELFRACK ) {coll_ret |= check_shelf_rack_collision(*c, pos, p_last, radius, &cnorm);}

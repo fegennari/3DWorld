@@ -9,6 +9,7 @@
 extern int animate2, frame_counter;
 extern float fticks;
 
+bool check_ramp_collision(room_object_t const &c, point &pos, float radius, vector3d *cnorm);
 bool add_water_splash(point const &pos, float radius, float size);
 void draw_animated_fish_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, float anim_time, colorRGBA const &color);
 
@@ -153,7 +154,9 @@ class fish_manager_t {
 		}
 	}; // fishtank_t
 
-	class player_int_fish_cont_t : public fish_cont_t {
+	class area_fish_cont_t : public fish_cont_t {
+	protected:
+		vect_cube_t obstacles;
 	public:
 		void next_frame() {
 			// TODO: handle player interaction
@@ -164,39 +167,46 @@ class fish_manager_t {
 				if (f.can_splash(rgen)) {add_water_splash(f.pos, 2.0*f.radius, 0.25);}
 			}
 		}
+		virtual bool check_fish_coll(point const &pos, float radius, unsigned id, point &coll_pos) const {
+			if (fish_cont_t::check_fish_coll(pos, radius, id, coll_pos)) return 1;
+
+			for (cube_t const &c : obstacles) {
+				if (sphere_cube_intersect(pos, 1.5*radius, c)) {coll_pos = c.get_cube_center(); return 1;} // extra radius for clearance
+			}
+			return 0;
+		}
 	}; // player_int_fish_cont_t
 
-	class swimming_pool_t : public player_int_fish_cont_t {
+	class swimming_pool_t : public area_fish_cont_t {
 		//indoor_pool_t const &pool;
+		room_object_t pool_ramp;
 	public:
-		void init(indoor_pool_t const &pool, cube_t const &water_bcube, int rseed) {
-			fish_cont_t::init(pool, water_bcube, rseed, 1, 4); // 1-4 fish
+		void init(indoor_pool_t const &pool, room_object_t const &pool_ramp_, cube_t const &water_bcube, vect_cube_t const &obstacles_, int rseed) {
+			obstacles = obstacles_;
+			pool_ramp = pool_ramp_;
+			fish_cont_t::init(pool, water_bcube, rseed, 10, 40); // 1-4 fish FIXME
 			float const max_fish_radius(0.05*min(min(pool.dx(), pool.dy()), pool.dz()));
 			populate(max_fish_radius, 0.003);
 		}
 		virtual bool check_fish_coll(point const &pos, float radius, unsigned id, point &coll_pos) const {
-			if (fish_cont_t::check_fish_coll(pos, radius, id, coll_pos)) return 1;
-			// TODO: handle slope, stairs, railings, and ladder
+			if (area_fish_cont_t::check_fish_coll(pos, radius, id, coll_pos)) return 1;
+			point cpos(pos); // since we can't modify pos
+			
+			if (!pool_ramp.is_all_zeros() && check_ramp_collision(pool_ramp, cpos, radius, nullptr)) { // check pool ramp
+				coll_pos = pos - radius*plus_z; // collision is always below
+				return 1;
+			}
 			return 0;
 		}
 	}; // swimming_pool_t
 
-	class flooded_basement_t : public player_int_fish_cont_t {
-		vect_cube_t obstacles;
+	class flooded_basement_t : public area_fish_cont_t {
 	public:
 		void init(cube_t const &water_bc, float floor_spacing, vect_cube_t const &obstacles_, int rseed) {
 			obstacles = obstacles_;
 			fish_cont_t::init(water_bc, water_bc, rseed, 10, 20); // 10-20 fish
 			float const max_fish_radius(0.25*min(bcube.dz(), 0.25f*floor_spacing));
 			populate(max_fish_radius, 0.004);
-		}
-		virtual bool check_fish_coll(point const &pos, float radius, unsigned id, point &coll_pos) const {
-			if (fish_cont_t::check_fish_coll(pos, radius, id, coll_pos)) return 1;
-
-			for (cube_t const &c : obstacles) {
-				if (sphere_cube_intersect(pos, radius, c)) {coll_pos = c.get_cube_center(); return 1;}
-			}
-			return 0;
 		}
 	}; // flooded_basement_t
 
@@ -239,8 +249,8 @@ public:
 		}
 		++fishtank_ix;
 	}
-	void register_swimming_pool(indoor_pool_t const &pool, cube_t const &water_bcube, int rseed) {
-		if (swimming_pool.empty()) {swimming_pool.init(pool, water_bcube, rseed);}
+	void register_swimming_pool(indoor_pool_t const &pool, room_object_t const &pool_ramp, cube_t const &water_bcube, vect_cube_t const &obstacles, int rseed) {
+		if (swimming_pool.empty()) {swimming_pool.init(pool, pool_ramp, water_bcube, obstacles, rseed);}
 	}
 	void register_flooded_basement(cube_t const &water_bc, float floor_spacing, vect_cube_t const &obstacles, int rseed) {
 		if (flooded_basement.empty()) {flooded_basement.init(water_bc, floor_spacing, obstacles, rseed);}
@@ -278,6 +288,7 @@ bool building_t::begin_fish_draw() const { // returns true of pool or basement w
 	if (!water_visible_to_player()) return 0;
 	// handle underwater fish in pools and basements
 	int const rseed(interior->rooms.size());
+	vect_cube_t obstacles;
 	
 	if (has_pool()) {
 		float const tile_thickness(get_flooring_thick());
@@ -285,10 +296,31 @@ bool building_t::begin_fish_draw() const { // returns true of pool or basement w
 		water_bcube.z1() += tile_thickness; // subtract off tile width on bottom
 		water_bcube.z2()  = interior->water_zval; // water level is below the top of the pool
 		water_bcube.expand_by_xy(-tile_thickness); // subtract off tile width on sides
-		fish_manager.register_swimming_pool(interior->pool, water_bcube, rseed);
+		room_object_t pool_ramp;
+
+		if (has_room_geom()) { // should always be true
+			vect_room_object_t const &objs(interior->room_geom->objs);
+			unsigned const ramp_ix(interior->room_geom->pool_ramp_obj_ix), upper_ix(ramp_ix + 1), ladder_ix(ramp_ix + 3); // {ramp, upper, diving board, ladder}
+			unsigned const stairs_ix(interior->room_geom->pool_stairs_start_ix);
+			
+			if (ramp_ix > 0) { // add ramp, upper part, and pool ladder
+				assert(ramp_ix < objs.size());
+				if (objs[ramp_ix].type == TYPE_POOL_TILE) {pool_ramp = objs[ramp_ix];}
+				if (upper_ix  < objs.size() && objs[upper_ix ].type == TYPE_POOL_TILE) {obstacles.push_back(objs[upper_ix ]);}
+				if (ladder_ix < objs.size() && objs[ladder_ix].type == TYPE_POOL_LAD ) {obstacles.push_back(objs[ladder_ix]);}
+			}
+			if (stairs_ix > 0) { // has stairs; should always be true
+				assert(stairs_ix < objs.size());
+
+				for (auto i = objs.begin()+stairs_ix; i != objs.end(); ++i) { // add stairs and railings as obstacles
+					if (i->type != TYPE_STAIR && i->type != TYPE_RAILING) break; // done
+					obstacles.push_back(*i);
+				}
+			}
+		}
+		fish_manager.register_swimming_pool(interior->pool, pool_ramp, water_bcube, obstacles, rseed);
 	}
 	else if (has_ext_basement()) { // flooded backrooms basement
-		vect_cube_t obstacles;
 		// TODO: backrooms walls, doors, stairs, larger objects, etc.
 		cube_t water_bcube(get_water_cube());
 		water_bcube.z1() += get_fc_thickness();

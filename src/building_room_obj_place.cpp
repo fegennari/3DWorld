@@ -2726,7 +2726,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 		upper   .d[pool.dim][!pool.dir] = slope.d[pool.dim][ pool.dir];
 		deep_end.d[pool.dim][ pool.dir] = slope.d[pool.dim][!pool.dir];
 		objs.emplace_back(slope, TYPE_POOL_TILE, room_id, pool.dim, pool.dir, (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_BOT), 1.0, SHAPE_ANGLED);
-		objs.emplace_back(upper, TYPE_POOL_TILE, room_id, pool.dim, pool.dir, (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_BOT));
+		objs.emplace_back(upper, TYPE_POOL_TILE, room_id, pool.dim, pool.dir, (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_BOT)); // bottom of shallow end
 	}
 	unsigned const objs_start(objs.size()); // we can start here, since the pool tile objects placed above don't collide with other placed objects
 	cube_t ladder;
