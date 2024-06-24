@@ -242,11 +242,13 @@ public:
 	}
 	void draw_fish(shader_t &s, bool inc_pools_and_fb) const {
 		if (empty() || (!inc_pools_and_fb && fishtanks.empty())) return;
+		glDisable(GL_CULL_FACE); // fix for looking through the fish's mouth
 		animation_state_t anim_state(1, ANIM_ID_FISH_TAIL); // enabled=1; animation_scale and model_delta_height are not set or used
 		for (fishtank_t const &f : fishtanks) {f.draw(s, anim_state, anim_time);}
 		if (inc_pools_and_fb) {swimming_pool    .draw(s, anim_state, anim_time);}
 		if (inc_pools_and_fb) {flooded_basement .draw(s, anim_state, anim_time);}
 		anim_state.clear_animation_id(s); // clear animations
+		glEnable(GL_CULL_FACE);
 	}
 }; // fish_manager_t
 
