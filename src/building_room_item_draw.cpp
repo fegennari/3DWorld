@@ -1403,39 +1403,45 @@ public:
 
 lava_lamp_draw_t lava_lamp_draw;
 
-// fish in fishtanks are handled here rather than as building animals since they're only drawn and not interactive
-class fishtank_manager_t {
+// fish in buildings are handled here rather than as building animals since they're only drawn and not interactive
+class fish_manager_t {
 	struct fish_t {
-		float radius=0.0, speed=0.0;
+		float radius=0.0, mspeed=0.0, tspeed=0.0; // movement speed and tail speed
 		unsigned id=0;
 		point pos;
 		vector3d dir, target_dir;
 		colorRGBA color=WHITE;
 
 		void draw(shader_t &s, float anim_time) const {
-			draw_animated_fish_model(s, pos, radius, dir, 300.0*speed*anim_time, color);
+			draw_animated_fish_model(s, pos, radius, dir, 0.5*tspeed*anim_time, color); // tail moves twice per second
 		}
 	};
-	class fishtank_t {
+
+	class fish_cont_t {
+	protected:
 		cube_t bcube;
-		vector<fish_t> fish;
 		rand_gen_t rgen;
+		vector<fish_t> fish;
 	public:
-		unsigned obj_id=0; // used as a unique identifier
-		bool present=0, visible=0;
-		
-		fishtank_t(room_object_t const &obj) : bcube(obj), obj_id(obj.obj_id) {
-			rgen.set_state(obj.room_id+1, obj.obj_id+1);
-			rgen.rand_mix();
-			unsigned const num_fish(1 + (rgen.rand()&3)); // 1-4
-			fish.resize(num_fish);
-			float const max_fish_radius(0.125*(1.0 + 1.0/num_fish)*bcube.min_len()); // more fish = smaller size
+		~fish_cont_t() {}
+		bool empty() const {return fish.empty();}
+		void clear() {fish.clear(); bcube.set_to_zeros();}
+
+		void init(cube_t const &bcube_, int rseed, unsigned min_num, unsigned max_num) {
+			bcube = bcube_;
+			rgen.set_state(rseed+1, rseed+1);
+			for (unsigned n = 0; n < 2; ++n) {rgen.rand_mix();}
+			fish.resize(rgen.rand_uniform_uint(min_num, max_num));
+		}
+		void populate(float max_fish_radius, float speed_mult) {
+			assert(max_fish_radius > 0.0);
 			unsigned id(0);
 
 			for (fish_t &f : fish) {
 				f.radius = max_fish_radius*rgen.rand_uniform(0.67, 1.0);
 				f.dir    = assign_fish_dir();
-				f.speed  = 0.00004*rgen.rand_uniform(0.8, 1.2);
+				f.tspeed = rgen.rand_uniform(0.8, 1.2)/TICKS_PER_SECOND;
+				f.mspeed = speed_mult*f.tspeed; // movement speed is also modulated by the tail animation speed
 				f.id     = id++;
 				for (unsigned d = 0; d < 3; ++d) {f.color[d] *= rgen.rand_uniform(0.8, 1.0);} // slight color variation
 				cube_t const valid_area(get_valid_area(1.05*f.radius)); // slightly larger radius so that we don't start out intersecting
@@ -1447,14 +1453,7 @@ class fishtank_manager_t {
 				}
 			} // for f
 		}
-		void update_object(room_object_t const &obj) { // handle movement when the table is pushed
-			if (obj == bcube) return; // no update
-			vector3d const delta(obj.get_llc() - bcube.get_llc());
-			bcube = obj;
-			for (fish_t &f : fish) {f.pos += delta;}
-		}
 		void next_frame() {
-			present = visible = 0; // mark as not present or visible until it's seen
 			if (!animate2) return;
 			float const delta_dir(0.6*(1.0 - pow(0.7f, fticks)));
 
@@ -1469,28 +1468,27 @@ class fishtank_manager_t {
 				cube_t const valid_area(get_valid_area(f.radius));
 				point const prev_pos(f.pos);
 				assert(valid_area.contains_pt(prev_pos));
-				f.pos += f.speed*f.dir*fticks;
+				f.pos += f.mspeed*f.dir*fticks;
 				vector3d coll_dir; // fish => target
 				point coll_pos;
 				
-				if (!valid_area.contains_pt(f.pos)) { // hit the tank edge
+				if (!valid_area.contains_pt(f.pos)) { // hit the container edge
 					coll_dir = valid_area.closest_side_dir(prev_pos);
 				}
-				else if (check_fish_coll(f.pos, 0.7*f.radius, f.id, coll_pos)) { // hit another fish (use a smaller radius)
+				else if (check_fish_coll(f.pos, 0.7*f.radius, f.id, coll_pos)) { // hit another fish or a collider (use a smaller radius)
 					coll_dir = (coll_pos - f.pos).get_norm();
 				}
 				if (coll_dir != zero_vector) {
-					f.pos = prev_pos;
+					f.pos        = prev_pos;
 					f.target_dir = assign_fish_dir();
 					if (dot_product(f.target_dir, coll_dir) > 0.0) {f.target_dir.negate();}
 				}
 			} // for f
 		}
 		void draw(shader_t &s, float anim_time) const {
-			if (!visible) return;
 			for (fish_t const &f : fish) {f.draw(s, anim_time);}
 		}
-	private:
+	protected:
 		vector3d assign_fish_dir() {
 			return (rgen.signed_rand_vector_xy() * bcube.get_size() * vector3d(1.0, 1.0, 0.6)).get_norm(); // match the aspect ratio of the aquarium, smaller in Z
 		}
@@ -1501,7 +1499,7 @@ class fishtank_manager_t {
 			assert(va.is_strictly_normalized());
 			return va;
 		}
-		bool check_fish_coll(point const &pos, float radius, unsigned id, point &coll_pos) const {
+		virtual bool check_fish_coll(point const &pos, float radius, unsigned id, point &coll_pos) const { // default fish-fish collision check
 			for (fish_t const &f : fish) {
 				if (f.radius == 0.0) continue; // not yet setup
 				if (f.id >= id     ) continue; // skip ourself and higher ID fish
@@ -1509,19 +1507,97 @@ class fishtank_manager_t {
 			} // for f
 			return 0;
 		}
-	};
+	}; // fish_cont_t
+
+	class fishtank_t : public fish_cont_t {
+	public:
+		unsigned obj_id=0; // used as a unique identifier
+		bool present=0, visible=0;
+
+		fishtank_t(room_object_t const &obj) : obj_id(obj.obj_id) {
+			init(obj, obj_id, 1, 4); // 1-4 fish
+			float const max_fish_radius(0.125*(1.0 + 1.0/fish.size())*bcube.min_len()); // more fish = smaller size
+			populate(max_fish_radius, 0.0016);
+		}
+		void next_frame() {
+			present = visible = 0; // mark as not present or visible until it's seen
+			fish_cont_t::next_frame();
+		}
+		void update_object(room_object_t const &obj) { // handle movement when the table is pushed
+			if (obj == bcube) return; // no update
+			vector3d const delta(obj.get_llc() - bcube.get_llc());
+			bcube = obj;
+			for (fish_t &f : fish) {f.pos += delta;}
+		}
+		void draw(shader_t &s, float anim_time) const {
+			if (visible) {fish_cont_t::draw(s, anim_time);}
+		}
+	}; // fishtank_t
+
+	// TODO: lighting - since this shader doesn't support dlights, at least multiply the fish color by the nearest light color
+	class player_int_fish_cont_t : public fish_cont_t {
+	public:
+		void next_frame() {
+			// TODO: handle player interaction
+			// TODO: splashes
+			fish_cont_t::next_frame();
+		}
+	}; // player_int_fish_cont_t
+
+	class swimming_pool_t : public player_int_fish_cont_t {
+		//indoor_pool_t const &pool;
+	public:
+		void init(indoor_pool_t const &pool, int rseed) {
+			fish_cont_t::init(pool, rseed, 1, 4); // 1-4 fish
+			float const max_fish_radius(0.05*min(min(pool.dx(), pool.dy()), pool.dz()));
+			populate(max_fish_radius, 0.003);
+		}
+		virtual bool check_fish_coll(point const &pos, float radius, unsigned id, point &coll_pos) const {
+			if (fish_cont_t::check_fish_coll(pos, radius, id, coll_pos)) return 1;
+			// TODO: handle slope, stairs, railings, and ladder
+			return 0;
+		}
+	}; // swimming_pool_t
+
+	class flooded_basement_t : public player_int_fish_cont_t {
+		vect_cube_t obstacles;
+	public:
+		void init(cube_t const &water_bc, float floor_spacing, vect_cube_t const &obstacles_, int rseed) {
+			obstacles = obstacles_;
+			fish_cont_t::init(water_bc, rseed, 10, 20); // 10-20 fish
+			float const max_fish_radius(0.25*min(bcube.dz(), 0.25f*floor_spacing));
+			populate(max_fish_radius, 0.004);
+		}
+		virtual bool check_fish_coll(point const &pos, float radius, unsigned id, point &coll_pos) const {
+			if (fish_cont_t::check_fish_coll(pos, radius, id, coll_pos)) return 1;
+			// TODO: handle obstacles
+			return 0;
+		}
+	}; // flooded_basement_t
+
 	vector<fishtank_t> fishtanks;
+	swimming_pool_t swimming_pool;
+	flooded_basement_t flooded_basement;
 	building_t const *prev_building=nullptr;
 	unsigned fishtank_ix=0;
 	float anim_time=0.0;
 public:
+	bool empty() const {return (fishtanks.empty() && swimming_pool.empty() && flooded_basement.empty());}
+
+	void clear() {
+		fishtanks       .clear();
+		swimming_pool   .clear();
+		flooded_basement.clear();
+	}
 	void next_frame(building_t const &building) {
 		if (&building != prev_building) { // new building
-			fishtanks.clear();
+			clear();
 			prev_building = &building;
 			anim_time     = 0.0; // reset
 		}
 		for (fishtank_t &ft : fishtanks) {ft.next_frame();}
+		swimming_pool   .next_frame();
+		flooded_basement.next_frame();
 		if (animate2) {anim_time += fticks;}
 		fishtank_ix = 0;
 	}
@@ -1538,19 +1614,27 @@ public:
 		}
 		++fishtank_ix;
 	}
-	void end_fishtanks() { // remove any fishtanks that are no longer present
+	void register_swimming_pool(indoor_pool_t const &pool, int rseed) {
+		if (swimming_pool.empty()) {swimming_pool.init(pool, rseed);}
+	}
+	void register_flooded_basement(cube_t const &water_bc, float floor_spacing, vect_cube_t const &obstacles, int rseed) {
+		if (flooded_basement.empty()) {flooded_basement.init(water_bc, floor_spacing, obstacles, rseed);}
+	}
+	void end_objs() { // remove any fishtanks that are no longer present
 		fishtanks.erase(remove_if(fishtanks.begin(), fishtanks.end(), [](fishtank_t const &ft) {return !ft.present;}), fishtanks.end());
 		assert(fishtank_ix == fishtanks.size());
 	}
-	void draw_fish(shader_t &s) const {
-		if (fishtanks.empty()) return;
+	void draw_fish(shader_t &s, bool inc_pools_and_fb) const {
+		if (empty() || (!inc_pools_and_fb && fishtanks.empty())) return;
 		shader_t fish_shader;
 		for (fishtank_t const &ft : fishtanks) {ft.draw(fish_shader, anim_time);}
+		if (inc_pools_and_fb) {swimming_pool   .draw(fish_shader, anim_time);}
+		if (inc_pools_and_fb) {flooded_basement.draw(fish_shader, anim_time);}
 		s.make_current(); // switch back to the normal shader
 	}
-};
+}; // fish_manager_t
 
-fishtank_manager_t fishtank_manager;
+fish_manager_t fish_manager;
 
 int room_object_t::get_model_id() const { // Note: first 8 bits is model ID, last 8 bits is sub-model ID
 	assert(type >= TYPE_TOILET);
@@ -1977,11 +2061,25 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 
 	// draw water for sinks that are turned on, lava lamps, fish in fishtanks, and AO shadows; these aren't visible when the player is outside looking in through a window
 	if (player_in_building_or_doorway && !shadow_only) {
-		bool const draw_fish(have_fish_model() && (player_in_doorway || building.point_in_building_or_basement_bcube(camera_bs)));
+		bool const draw_fish(!reflection_pass && have_fish_model() && (player_in_doorway || building.point_in_building_or_basement_bcube(camera_bs)));
 		float const ao_z_off(1.1*building.get_flooring_thick()); // slightly above rugs and flooring
 		float const ao_zmin(camera_bs.z - 2.0*floor_spacing);
 		static quad_batch_draw ao_qbd;
-		if (draw_fish) {fishtank_manager.next_frame(building);}
+		bool inc_pools_and_fb(0);
+		
+		if (draw_fish) {
+			fish_manager.next_frame(building);
+
+			if (building.water_visible_to_player()) { // handle underwater fish in pools and basements
+				int const rseed(building.interior->rooms.size());
+				if (building.has_pool()) {fish_manager.register_swimming_pool(building.interior->pool, rseed);}
+				else if (building.has_ext_basement()) { // flooded backrooms basement
+					vect_cube_t obstacles; // TODO: backrooms walls, floors, doors, stairs, larger objects, etc.
+					fish_manager.register_flooded_basement(building.get_water_cube(), floor_spacing, obstacles, rseed);
+				}
+				inc_pools_and_fb = 1;
+			}
+		}
 		auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
 		point pts[4];
 
@@ -1998,7 +2096,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			}
 			else if (i->type == TYPE_FISHTANK && draw_fish) {
 				bool const visible(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate));
-				fishtank_manager.register_fishtank(*i, visible);
+				fish_manager.register_fishtank(*i, visible);
 			}
 			if (i->z1() < camera_bs.z && i->z1() > ao_zmin) { // camera not below or too far above this object
 				float const ao_shadow(get_ao_shadow(*i, enable_indir));
@@ -2027,8 +2125,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		// Note: animals are generally too small to have AO shadows
 		lava_lamp_draw.draw_and_clear(s);
 		if (!reflection_pass) {lava_lamp_draw.next_frame();}
-		fishtank_manager.end_fishtanks();
-		fishtank_manager.draw_fish(s);
+		fish_manager.end_objs();
+		fish_manager.draw_fish(s, inc_pools_and_fb);
 		draw_and_clear_blur_qbd(ao_qbd);
 	}
 	water_sound_manager.finalize();
