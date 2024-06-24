@@ -1409,7 +1409,7 @@ class fish_manager_t {
 		float radius=0.0, mspeed=0.0, tspeed=0.0; // movement speed and tail speed
 		unsigned id=0;
 		point pos;
-		vector3d dir, target_dir;
+		vector3d dir, target_dir; // Note: fish only rotated about Z and remains in the XY plane
 		colorRGBA color=WHITE;
 
 		void draw(shader_t &s, animation_state_t &anim_state, float anim_time) const {
@@ -1421,7 +1421,7 @@ class fish_manager_t {
 
 	class fish_cont_t {
 	protected:
-		cube_t bcube;
+		cube_t bcube, valid_area;
 		rand_gen_t rgen;
 		vector<fish_t> fish;
 	public:
@@ -1429,8 +1429,9 @@ class fish_manager_t {
 		bool empty() const {return fish.empty();}
 		void clear() {fish.clear(); bcube.set_to_zeros();}
 
-		void init(cube_t const &bcube_, int rseed, unsigned min_num, unsigned max_num) {
-			bcube = bcube_;
+		void init(cube_t const &bcube_, cube_t const &valid_area_, int rseed, unsigned min_num, unsigned max_num) {
+			bcube      = bcube_;
+			valid_area = valid_area_;
 			rgen.set_state(rseed+1, rseed+1);
 			for (unsigned n = 0; n < 2; ++n) {rgen.rand_mix();}
 			fish.resize(rgen.rand_uniform_uint(min_num, max_num));
@@ -1492,12 +1493,11 @@ class fish_manager_t {
 		}
 	protected:
 		vector3d assign_fish_dir() {
-			return (rgen.signed_rand_vector_xy() * bcube.get_size() * vector3d(1.0, 1.0, 0.6)).get_norm(); // match the aspect ratio of the aquarium, smaller in Z
+			return (rgen.signed_rand_vector_spherical() * bcube.get_size() * vector3d(1.0, 1.0, 0.5)).get_norm(); // match the aspect ratio of the container, smaller in Z
 		}
-		cube_t get_valid_area(float pad=0.0) const {
-			cube_t va(bcube);
-			va.expand_by(-bcube.get_size() * vector3d(0.02, 0.02, 0.1)); // slightly smaller in each dim, somewhat more in Z
-			if (pad > 0.0) {va.expand_by(-pad);}
+		cube_t get_valid_area(float pad) const {
+			cube_t va(valid_area);
+			va.expand_by(-pad);
 			assert(va.is_strictly_normalized());
 			return va;
 		}
@@ -1517,7 +1517,9 @@ class fish_manager_t {
 		bool present=0, visible=0;
 
 		fishtank_t(room_object_t const &obj) : obj_id(obj.obj_id) {
-			init(obj, obj_id, 1, 4); // 1-4 fish
+			cube_t tank_inner(obj);
+			tank_inner.expand_by(-vector3d(0.04, 0.04, 0.1)*obj.get_height()); // subtract off the glass and some area from the top and bottom
+			init(obj, tank_inner, obj_id, 1, 4); // 1-4 fish
 			float const max_fish_radius(0.125*(1.0 + 1.0/fish.size())*bcube.min_len()); // more fish = smaller size
 			populate(max_fish_radius, 0.0016);
 		}
@@ -1536,7 +1538,6 @@ class fish_manager_t {
 		}
 	}; // fishtank_t
 
-	// TODO: lighting - since this shader doesn't support dlights, at least multiply the fish color by the nearest light color
 	class player_int_fish_cont_t : public fish_cont_t {
 	public:
 		void next_frame() {
@@ -1549,8 +1550,10 @@ class fish_manager_t {
 	class swimming_pool_t : public player_int_fish_cont_t {
 		//indoor_pool_t const &pool;
 	public:
-		void init(indoor_pool_t const &pool, int rseed) {
-			fish_cont_t::init(pool, rseed, 1, 4); // 1-4 fish
+		void init(indoor_pool_t const &pool, float water_zval, int rseed) {
+			cube_t water_bcube(pool);
+			water_bcube.z2() = water_zval;
+			fish_cont_t::init(pool, water_bcube, rseed, 1, 4); // 1-4 fish
 			float const max_fish_radius(0.05*min(min(pool.dx(), pool.dy()), pool.dz()));
 			populate(max_fish_radius, 0.003);
 		}
@@ -1566,7 +1569,7 @@ class fish_manager_t {
 	public:
 		void init(cube_t const &water_bc, float floor_spacing, vect_cube_t const &obstacles_, int rseed) {
 			obstacles = obstacles_;
-			fish_cont_t::init(water_bc, rseed, 10, 20); // 10-20 fish
+			fish_cont_t::init(water_bc, water_bc, rseed, 10, 20); // 10-20 fish
 			float const max_fish_radius(0.25*min(bcube.dz(), 0.25f*floor_spacing));
 			populate(max_fish_radius, 0.004);
 		}
@@ -1616,8 +1619,8 @@ public:
 		}
 		++fishtank_ix;
 	}
-	void register_swimming_pool(indoor_pool_t const &pool, int rseed) {
-		if (swimming_pool.empty()) {swimming_pool.init(pool, rseed);}
+	void register_swimming_pool(indoor_pool_t const &pool, float water_zval, int rseed) {
+		if (swimming_pool.empty()) {swimming_pool.init(pool, water_zval, rseed);}
 	}
 	void register_flooded_basement(cube_t const &water_bc, float floor_spacing, vect_cube_t const &obstacles, int rseed) {
 		if (flooded_basement.empty()) {flooded_basement.init(water_bc, floor_spacing, obstacles, rseed);}
@@ -2074,10 +2077,12 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 
 			if (building.water_visible_to_player()) { // handle underwater fish in pools and basements
 				int const rseed(building.interior->rooms.size());
-				if (building.has_pool()) {fish_manager.register_swimming_pool(building.interior->pool, rseed);}
+				if (building.has_pool()) {fish_manager.register_swimming_pool(building.interior->pool, building.interior->water_zval, rseed);}
 				else if (building.has_ext_basement()) { // flooded backrooms basement
-					vect_cube_t obstacles; // TODO: backrooms walls, floors, doors, stairs, larger objects, etc.
-					fish_manager.register_flooded_basement(building.get_water_cube(), floor_spacing, obstacles, rseed);
+					vect_cube_t obstacles; // TODO: backrooms walls, doors, stairs, larger objects, etc.
+					cube_t water_bcube(building.get_water_cube());
+					min_eq(water_bcube.z2(), water_bcube.z1() + building.get_floor_ceil_gap()); // constraint to the lowest level
+					fish_manager.register_flooded_basement(water_bcube, floor_spacing, obstacles, rseed);
 				}
 				inc_pools_and_fb = 1;
 			}
