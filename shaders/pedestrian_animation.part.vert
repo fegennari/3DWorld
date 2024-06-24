@@ -5,7 +5,7 @@ uniform float animation_scale    = 1.0;
 uniform float model_delta_height = 0.0;
 uniform float rotate_amount      = 1.0; // for swings
 uniform int   animation_id       = 0;
-// 0=none, 1=walk, 2=bunny hop, 3=flip, 4=twirl, 5=march, 6=alien walk, 7=rat, 8=spider, 9=bones animation, 10=helicopter rotate, 11=swingset
+// 0=none, 1=walk, 2=bunny hop, 3=flip, 4=twirl, 5=march, 6=alien walk, 7=rat, 8=spider, 9=bones animation, 10=helicopter rotate, 11=swingset, 12=fish tail
 
 #ifdef USE_BONE_ANIMATIONS
 layout(location = 4) in uvec4 bone_ids;
@@ -149,6 +149,16 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, in vec2 tc) {
 			float angle = 0.5*rotate_amount*((vertex.x < 0.0) ? -1.0 : 1.0)*sin(anim_val); // each side is 180 degrees out of phase
 			rotate_about(vertex.xyz, normal, pivot_y, vec3(1.0, 0.0, 0.0), angle);
 		}
+	}
+	else if (animation_id == 12) { // fish tail
+		vec3 axis   = vec3(0.7, 0.0, 0.7); // vertical axis of rotation, fish model is oriented 45 degrees upward
+		vec3 center = vec3(3.15, -1.36, 0.24); // center of the model, determined experimentally (close to bcube center)
+		float val   = 0.8*sin(40.0*animation_time);
+		float rot   = clamp((vertex.x - 0.3), 0.0, 1.0)*val;
+		vertex.xyz -= center; // rotate about this point
+		vertex.xyz *= do_rotation(axis, rot);
+		normal     *= do_rotation(axis, rot);
+		vertex.xyz += center;
 	}
 	// else error/skip
 }

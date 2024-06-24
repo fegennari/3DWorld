@@ -519,7 +519,7 @@ int animal_t::get_ndiv(point const &pos_) const {
 }
 
 void draw_animated_fish_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, float anim_time, colorRGBA const &color) {
-	if (!s.is_setup()) {
+	if (!s.is_setup()) { // shader not setup; not needed if using lighting shader for fish in buildings
 		s.set_vert_shader("fish_animate");
 		s.set_frag_shader("simple_texture");
 		s.begin_shader();

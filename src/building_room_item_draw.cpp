@@ -1412,8 +1412,10 @@ class fish_manager_t {
 		vector3d dir, target_dir;
 		colorRGBA color=WHITE;
 
-		void draw(shader_t &s, float anim_time) const {
-			draw_animated_fish_model(s, pos, radius, dir, 0.5*tspeed*anim_time, color); // tail moves twice per second
+		void draw(shader_t &s, animation_state_t &anim_state, float anim_time) const {
+			anim_state.anim_time = 0.5*tspeed*anim_time; // tail moves twice per second
+			if (anim_state.enabled) {anim_state.set_animation_id_and_time(s, 0, 1.0);}
+			draw_animated_fish_model(s, pos, radius, dir, anim_state.anim_time, color);
 		}
 	};
 
@@ -1485,8 +1487,8 @@ class fish_manager_t {
 				}
 			} // for f
 		}
-		void draw(shader_t &s, float anim_time) const {
-			for (fish_t const &f : fish) {f.draw(s, anim_time);}
+		void draw(shader_t &s, animation_state_t &anim_state, float anim_time) const {
+			for (fish_t const &f : fish) {f.draw(s, anim_state, anim_time);}
 		}
 	protected:
 		vector3d assign_fish_dir() {
@@ -1529,8 +1531,8 @@ class fish_manager_t {
 			bcube = obj;
 			for (fish_t &f : fish) {f.pos += delta;}
 		}
-		void draw(shader_t &s, float anim_time) const {
-			if (visible) {fish_cont_t::draw(s, anim_time);}
+		void draw(shader_t &s, animation_state_t &anim_state, float anim_time) const {
+			if (visible) {fish_cont_t::draw(s, anim_state, anim_time);}
 		}
 	}; // fishtank_t
 
@@ -1626,11 +1628,11 @@ public:
 	}
 	void draw_fish(shader_t &s, bool inc_pools_and_fb) const {
 		if (empty() || (!inc_pools_and_fb && fishtanks.empty())) return;
-		shader_t fish_shader;
-		for (fishtank_t const &ft : fishtanks) {ft.draw(fish_shader, anim_time);}
-		if (inc_pools_and_fb) {swimming_pool   .draw(fish_shader, anim_time);}
-		if (inc_pools_and_fb) {flooded_basement.draw(fish_shader, anim_time);}
-		s.make_current(); // switch back to the normal shader
+		animation_state_t anim_state(1, ANIM_ID_FISH_TAIL); // enabled=1; animation_scale and model_delta_height are not set or used
+		for (fishtank_t const &f : fishtanks) {f.draw(s, anim_state, anim_time);}
+		if (inc_pools_and_fb) {swimming_pool    .draw(s, anim_state, anim_time);}
+		if (inc_pools_and_fb) {flooded_basement .draw(s, anim_state, anim_time);}
+		anim_state.clear_animation_id(s); // clear animations
 	}
 }; // fish_manager_t
 
