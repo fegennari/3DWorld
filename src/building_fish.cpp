@@ -396,6 +396,7 @@ bool building_t::begin_fish_draw() const { // returns true of pool or basement w
 		water_bcube.z1() += get_fc_thickness();
 		min_eq(water_bcube.z2(), water_bcube.z1() + get_floor_ceil_gap()); // constraint to the lowest level
 		if (water_bcube.z2() <= water_bcube.z1()) return 0; // shouldn't happen?
+		if (get_camera_pos().z > water_bcube.z2() + get_window_vspace()) return 0; // player on the floor above the water, fish likely not visible
 		water_bcube.expand_by_xy(-get_wall_thickness()); // subtract off exterior walls
 
 		if (!fish_manager.has_flooded_basement()) { // not yet setup
