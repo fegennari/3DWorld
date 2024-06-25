@@ -166,12 +166,13 @@ class fish_manager_t {
 		vect_cube_t obstacles;
 	public:
 		void next_frame() {
+			vector3d const xlate(get_camera_coord_space_xlate());
 			// TODO: handle player interaction
 			fish_cont_t::next_frame();
 
-			for (fish_t &f : fish) { // handle water splashes
+			for (fish_t &f : fish) { // handle water splashes if fish is visible
 				if (f.pos.z < valid_area.z2() - 2.0*f.radius) continue; // too low to splash
-				if (f.can_splash(rgen)) {add_water_splash(f.pos, 2.0*f.radius, 0.25);}
+				if (f.can_splash(rgen) && camera_pdu.sphere_visible_test((f.pos + xlate), f.radius)) {add_water_splash(f.pos, 2.0*f.radius, 0.25);}
 			}
 		}
 		virtual bool check_fish_coll(point const &pos, float radius, unsigned id, point &coll_pos) const {
@@ -181,6 +182,13 @@ class fish_manager_t {
 				if (sphere_cube_intersect(pos, 1.8*radius, c)) {coll_pos = c.get_cube_center(); return 1;} // extra radius for clearance
 			}
 			return 0;
+		}
+		void draw(shader_t &s, animation_state_t &anim_state, float anim_time) const { // override fish_cont_t::draw() to include VFC
+			vector3d const xlate(get_camera_coord_space_xlate());
+
+			for (fish_t const &f : fish) {
+				if (camera_pdu.sphere_visible_test((f.pos + xlate), f.radius)) {f.draw(s, anim_state, anim_time);} // VFC, assuming non-rotated building
+			}
 		}
 	}; // player_int_fish_cont_t
 
