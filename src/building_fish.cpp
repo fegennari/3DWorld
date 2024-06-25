@@ -7,7 +7,7 @@
 #include "city_model.h" // for animation_state_t
 //#include "profiler.h"
 
-extern int animate2, frame_counter;
+extern int animate2, frame_counter, player_in_water;
 extern float fticks;
 
 bool check_ramp_collision(room_object_t const &c, point &pos, float radius, vector3d *cnorm);
@@ -34,6 +34,7 @@ class fish_manager_t {
 			next_splash_frame = frame_counter + (rgen.rand() % (2*TICKS_PER_SECOND)); // once every 2s on average
 			return 1;
 		}
+		bool has_target() const {return (target_dir != zero_vector);}
 	};
 
 	class fish_cont_t {
@@ -84,7 +85,7 @@ class fish_manager_t {
 			float const delta_dir(0.6*(1.0 - pow(0.7f, fticks)));
 
 			for (fish_t &f : fish) {
-				if (f.target_dir != zero_vector) { // fish is turning in place
+				if (f.has_target()) { // fish is turning in place
 					f.dir = delta_dir*f.target_dir + (1.0 - delta_dir)*f.dir;
 					if (f.dir == zero_vector) {f.dir = assign_fish_dir();} // error?
 					else {f.dir.normalize();}
@@ -129,7 +130,7 @@ class fish_manager_t {
 				if (f.radius == 0.0) continue; // not yet setup
 				if (f.id >= id     ) continue; // skip ourself and higher ID fish
 				if (dist_less_than(pos, f.pos, (radius + f.radius))) {coll_pos = f.pos; return 1;}
-			} // for f
+			}
 			return 0;
 		}
 	}; // fish_cont_t
@@ -164,15 +165,27 @@ class fish_manager_t {
 	class area_fish_cont_t : public fish_cont_t {
 	protected:
 		vect_cube_t obstacles;
+		bool test_line_of_sight=0;
 	public:
 		void next_frame() {
 			vector3d const xlate(get_camera_coord_space_xlate());
-			// TODO: handle player interaction
 			fish_cont_t::next_frame();
 
 			for (fish_t &f : fish) { // handle water splashes if fish is visible
 				if (f.pos.z < valid_area.z2() - 2.0*f.radius) continue; // too low to splash
 				if (f.can_splash(rgen) && camera_pdu.sphere_visible_test((f.pos + xlate), f.radius)) {add_water_splash(f.pos, 2.0*f.radius, 0.25);}
+			}
+			if (player_in_water) { // handle player interaction
+				point const camera_bs(get_camera_pos() - xlate);
+
+				for (fish_t &f : fish) {
+					if (f.has_target()) continue; // skip if recently collided
+					if (!dist_xy_less_than(camera_bs, f.pos, 4.0*(CAMERA_RADIUS + f.radius))) continue; // not close enough
+					point const test_pt(camera_bs.x, camera_bs.y, f.pos.z); // at fish zval
+					if (dot_product_ptv(f.dir, test_pt, f.pos) < 0.0) continue; // moving away from the player
+					if (test_line_of_sight && line_int_cubes(test_pt, f.pos, obstacles, cube_t(camera_bs, f.pos))) continue; // not visible
+					f.target_dir = (f.pos - test_pt).get_norm(); // move away from the player
+				}
 			}
 		}
 		virtual bool check_fish_coll(point const &pos, float radius, unsigned id, point &coll_pos) const {
@@ -222,6 +235,7 @@ class fish_manager_t {
 			obstacles = obstacles_;
 			present   = 1;
 			fixed_obstacles_end_ix = obstacles.size();
+			test_line_of_sight     = 1;
 			fish_cont_t::init(water_bc, water_bc, rseed, 100, 200); // 10-20 fish
 			float const max_fish_radius(0.25*min(bcube.dz(), 0.25f*floor_spacing));
 			populate(max_fish_radius, 0.004);
