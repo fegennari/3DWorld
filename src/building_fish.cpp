@@ -15,23 +15,28 @@ bool add_water_splash(point const &pos, float radius, float size);
 void draw_animated_fish_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, float anim_time, colorRGBA const &color);
 
 
+int get_future_frame(float min_secs, float max_secs, rand_gen_t &rgen) {
+	float const secs((min_secs == max_secs) ? min_secs : rgen.rand_uniform(min_secs, max_secs));
+	return (frame_counter + round_fp(secs*TICKS_PER_SECOND));
+}
+
 class fish_manager_t {
 	struct fish_t {
-		float radius=0.0, mspeed=0.0, tspeed=0.0; // movement speed and tail speed
+		float radius=0.0, mspeed=0.0, tspeed=0.0, speed_mult=1.0; // movement speed and tail speed
 		unsigned id=0;
-		int next_splash_frame=0;
+		int next_splash_frame=0, next_turn_frame=0, next_speed_frame=0, next_alert_frame=0;
 		point pos; // p_last?
 		vector3d dir, target_dir; // Note: fish only rotated about Z and remains in the XY plane
 		colorRGBA color=WHITE;
 
 		void draw(shader_t &s, animation_state_t &anim_state, float anim_time) const {
-			anim_state.anim_time = 0.5*tspeed*anim_time; // tail moves twice per second
+			anim_state.anim_time = 0.5*sqrt(speed_mult)*tspeed*anim_time; // tail nominally moves twice per second
 			if (anim_state.enabled) {anim_state.set_animation_id_and_time(s, 0, 1.0);}
 			draw_animated_fish_model(s, pos, radius, dir, anim_state.anim_time, color);
 		}
 		bool can_splash(rand_gen_t &rgen) {
 			if (frame_counter < next_splash_frame) return 0;
-			next_splash_frame = frame_counter + (rgen.rand() % (2*TICKS_PER_SECOND)); // once every 2s on average
+			next_splash_frame = get_future_frame(1.0, 3.0, rgen); // once every 2s on average
 			return 1;
 		}
 		bool has_target() const {return (target_dir != zero_vector);}
@@ -80,7 +85,7 @@ class fish_manager_t {
 				}
 			} // for f
 		}
-		void next_frame() {
+		void next_frame(float speed_mult_max) {
 			if (!animate2) return;
 			float const delta_dir(0.6*(1.0 - pow(0.7f, fticks)));
 
@@ -95,7 +100,7 @@ class fish_manager_t {
 				cube_t const valid_area(get_valid_area(f.radius));
 				point const prev_pos(f.pos);
 				assert(valid_area.contains_pt(prev_pos));
-				f.pos += f.mspeed*f.dir*fticks;
+				f.pos += (f.mspeed*f.speed_mult*fticks)*f.dir;
 				vector3d coll_dir; // fish => target
 				point coll_pos;
 
@@ -109,15 +114,28 @@ class fish_manager_t {
 					f.pos        = prev_pos;
 					f.target_dir = assign_fish_dir();
 					if (dot_product(f.target_dir, coll_dir) > 0.0) {f.target_dir.negate();}
+					f.next_alert_frame = get_future_frame(1.0, 2.0, rgen); // ignore the player for a bit
 				}
+				else { // no collision
+					if (frame_counter >= f.next_turn_frame) { // time to turn
+						f.target_dir      = assign_fish_dir();
+						f.next_turn_frame = get_future_frame(10.0, 30.0, rgen);
+					}
+					if (frame_counter >= f.next_speed_frame) { // time to change speed
+						f.speed_mult      += rgen.rand_uniform(-0.5, 0.5);
+						f.next_speed_frame = get_future_frame(5.0, 10.0, rgen);
+					}
+				}
+				f.speed_mult = max(0.5f, min(speed_mult_max, f.speed_mult)); // clamp to a reasonable range
 			} // for f
 		}
 		void draw(shader_t &s, animation_state_t &anim_state, float anim_time) const {
 			for (fish_t const &f : fish) {f.draw(s, anim_state, anim_time);}
 		}
 	protected:
-		vector3d assign_fish_dir() {
-			return (rgen.signed_rand_vector_spherical() * bcube.get_size() * vector3d(1.0, 1.0, 0.5)).get_norm(); // match the aspect ratio of the container, smaller in Z
+		vector3d assign_fish_dir() { // match the aspect ratio of the container, smaller in Z, but limit zval aspect ratio to 10%
+			vector3d const sz(bcube.get_size()), dir_weight(sz.x, sz.y, 0.5*max(sz.z, 0.1f*max(sz.x, sz.y)));
+			return (rgen.signed_rand_vector_spherical() * dir_weight).get_norm();
 		}
 		cube_t get_valid_area(float pad) const {
 			cube_t va(valid_area);
@@ -149,7 +167,7 @@ class fish_manager_t {
 		}
 		void next_frame() {
 			present = visible = 0; // mark as not present or visible until it's seen
-			fish_cont_t::next_frame();
+			fish_cont_t::next_frame(1.5); // speed_mult_max=1.5
 		}
 		void update_object(room_object_t const &obj) { // handle movement when the table is pushed
 			if (obj == bcube) return; // no update
@@ -169,7 +187,7 @@ class fish_manager_t {
 	public:
 		void next_frame() {
 			vector3d const xlate(get_camera_coord_space_xlate());
-			fish_cont_t::next_frame();
+			fish_cont_t::next_frame(3.0); // speed_mult_max=3.0
 
 			for (fish_t &f : fish) { // handle water splashes if fish is visible
 				if (f.pos.z < valid_area.z2() - 2.0*f.radius) continue; // too low to splash
@@ -180,12 +198,15 @@ class fish_manager_t {
 
 				for (fish_t &f : fish) {
 					if (f.has_target()) continue; // skip if recently collided
-					if (!dist_xy_less_than(camera_bs, f.pos, 4.0*(CAMERA_RADIUS + f.radius))) continue; // not close enough
+					if (frame_counter < f.next_alert_frame) continue; // distracted by a collision; required to avoid getting stuck against a wall
+					float const alert_radius(4.0*(CAMERA_RADIUS + f.radius));
+					if (!dist_xy_less_than(camera_bs, f.pos, alert_radius)) continue; // not close enough
 					point const test_pt(camera_bs.x, camera_bs.y, f.pos.z); // at fish zval
 					if (dot_product_ptv(f.dir, test_pt, f.pos) < 0.0) continue; // moving away from the player
 					if (test_line_of_sight && line_int_cubes(test_pt, f.pos, obstacles, cube_t(camera_bs, f.pos))) continue; // not visible
 					f.target_dir = (f.pos - test_pt).get_norm(); // move away from the player
-				}
+					max_eq(f.speed_mult, 5.0f*(1.2f - p2p_dist_xy(test_pt, f.pos)/alert_radius)); // higher speed
+				} // for f
 			}
 		}
 		virtual bool check_fish_coll(point const &pos, float radius, unsigned id, point &coll_pos) const {
@@ -236,7 +257,7 @@ class fish_manager_t {
 			present   = 1;
 			fixed_obstacles_end_ix = obstacles.size();
 			test_line_of_sight     = 1;
-			fish_cont_t::init(water_bc, water_bc, rseed, 100, 200); // 10-20 fish
+			fish_cont_t::init(water_bc, water_bc, rseed, 10, 20); // 10-20 fish
 			float const max_fish_radius(0.25*min(bcube.dz(), 0.25f*floor_spacing));
 			populate(max_fish_radius, 0.004);
 		}
@@ -375,6 +396,7 @@ bool building_t::begin_fish_draw() const { // returns true of pool or basement w
 		water_bcube.z1() += get_fc_thickness();
 		min_eq(water_bcube.z2(), water_bcube.z1() + get_floor_ceil_gap()); // constraint to the lowest level
 		if (water_bcube.z2() <= water_bcube.z1()) return 0; // shouldn't happen?
+		water_bcube.expand_by_xy(-get_wall_thickness()); // subtract off exterior walls
 
 		if (!fish_manager.has_flooded_basement()) { // not yet setup
 			for (stairwell_t const &s : interior->stairwells) { // add stairs
