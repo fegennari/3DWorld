@@ -631,7 +631,7 @@ bool building_t::add_walkway_door(building_walkway_geom_t &walkway, bool dir, un
 	float const center(wbc.get_center_dim(!dim));
 	cube_t door;
 	set_wall_width(door, center, 0.5*door_width, !dim);
-	door.d[dim][!dir] = wbc.d[dim][!dir] + (dir ? 1.0 : -1.0)*door_shift; // move away from the building to prevent z-fighting
+	door.d[dim][!dir] = wbc .d[dim][!dir] + (dir ? 1.0 : -1.0)*door_shift; // move away from the building to prevent z-fighting
 	door.d[dim][ dir] = door.d[dim][!dir]; // make zero size in this dim
 	float zval(wbc.z1() + get_fc_thickness()); // bottom of lowest level door
 

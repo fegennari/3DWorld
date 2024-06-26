@@ -1380,10 +1380,11 @@ bool pond_t::point_contains_xy(point const &p) const { // p is in global space
 
 // walkways
 
-walkway_t::walkway_t(bldg_walkway_t const &w) : oriented_city_obj_t(w, w.dim, 0), walkway_material_t(w), floor_spacing(w.floor_spacing) { // dir=0 (unused)
+walkway_t::walkway_t(bldg_walkway_t const &w) : oriented_city_obj_t(w, w.dim, 0), walkway_base_t(w) { // dir=0 (unused)
 	assert(floor_spacing > 0.0);
 	// use the roof because this is what's visible in overhead map mode
 	map_mode_color = texture_color(global_building_params.get_material(roof_mat_ix).roof_tex.tid).modulate_with(roof_color);
+	for (unsigned d = 0; d < 2; ++d) {open_ends[d] = w.open_ends[d];}
 }
 /*static*/ void walkway_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {set_flat_normal_map();}
@@ -1889,7 +1890,7 @@ void draw_long_cube(cube_t const &c, colorRGBA const &color, draw_state_t &dstat
 
 		if (num_segs == 1 || dstate.check_cube_visible(c2, dist_scale)) { // VFC
 			unsigned skip_dims_seg(skip_dims);
-			if (!(beg && dstate.camera_bs[dim] < c2.d[dim][0]) && !(end && dstate.camera_bs[dim] > c2.d[dim][1])) {skip_dims_seg |= (1 << dim);} // skip interior seg ends
+			if (!(beg && dstate.camera_bs[dim] < c2.d[dim][0]) && !(end && dstate.camera_bs[dim] > c2.d[dim][1])) {skip_dims_seg |= (1 << unsigned(dim));} // skip int seg ends
 			dstate.begin_tile(c2.get_cube_center(), 1);
 			dstate.draw_cube(qbd, c2, color, skip_bottom, tscale, skip_dims_seg);
 			qbd.draw_and_clear();
@@ -1898,7 +1899,9 @@ void draw_long_cube(cube_t const &c, colorRGBA const &color, draw_state_t &dstat
 	} // for s
 }
 
-monorail_t::monorail_t(cube_t const &c, bool dim_) : valid(1), dim(dim_) {
+void monorail_t::init(cube_t const &c, bool dim_) {
+	valid = 1;
+	dim   = dim_;
 	bcube = track_bcube = c;
 	// TODO: larger bcube
 	set_bsphere_from_bcube();
@@ -1908,11 +1911,41 @@ void monorail_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_
 	if (!valid || !dstate.check_cube_visible(bcube, dist_scale)) return; // VFC/distance culling
 	dstate.set_untextured_material();
 	draw_long_cube(bcube, GRAY, dstate, qbds.untex_qbd, dist_scale, shadow_only); // TODO: placeholder
+
+#if 0 // debugging
+	for (cube_with_ix_t const &conn : ww_conns) {
+		cube_t entrance(conn);
+		entrance.expand_in_dim(!dim, 0.1*bcube.dz()); // expand in walkway entrance dim
+		dstate.draw_cube(qbds.untex_qbd, entrance, RED);
+	}
+	qbds.untex_qbd.draw_and_clear();
+#endif
 	dstate.unset_untextured_material();
 }
 bool monorail_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	if (!valid) return 0;
-	return sphere_cube_int_update_pos(pos_, radius_, (track_bcube + xlate), p_last, 0, cnorm); // TODO: placeholder
+	float const zval(max(pos_.z, p_last.z));
+	cube_t const bc_cs(bcube + xlate);
+
+	if (zval > bc_cs.z2()) { // above the monorail - walk on bcube
+		if (bc_cs.contains_pt_xy(pos_)) {
+			max_eq(pos_.z, (bc_cs.z2() + radius_));
+			return 1;
+		}
+		return 0;
+	}
+	point const test_pt(point(pos_.x, pos_.y, zval) - xlate);
+	float const entrance_ext(0.5*bcube.get_sz_dim(!dim)); // placeholder until side walls are added
+
+	for (cube_with_ix_t const &conn : ww_conns) {
+		//bool const dir(conn.ix & 1);
+		cube_t entrance(conn);
+		entrance.expand_in_dim(!dim, entrance_ext); // expand in walkway entrance dim
+		if (!entrance.contains_pt(test_pt)) continue;
+		// TODO: handle entrance - coll with floor/stairs/ramp/etc.
+		return 0;
+	} // for conn
+	return sphere_cube_int_update_pos(pos_, radius_, (track_bcube + xlate), p_last, 0, cnorm); // exterior coll
 }
 
 

@@ -20,7 +20,7 @@ city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, 
 void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcubes);
 void get_walkways_for_city(cube_t const &city_bcube, vect_bldg_walkway_t &walkway_cands);
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
-bool connect_buildings_to_monorail(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube);
+bool connect_buildings_to_monorail(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube, vect_cube_with_ix_t &ww_conns);
 float get_inner_sidewalk_width();
 cube_t get_plot_coll_region(cube_t const &plot_bcube);
 void play_hum_sound(point const &pos, float gain, float pitch);
@@ -1915,9 +1915,8 @@ bool city_obj_placer_t::add_monorail(cube_t const &city_bcube, vect_bldg_walkway
 	}
 	ww_z1 += 0.5*road_width;
 	set_cube_zvals(track_bc, ww_z1, (ww_z1 + 0.4*road_width));
-	
-	if (!connect_buildings_to_monorail(track_bc, dim, city_bcube)) return 0;
-	monorail = monorail_t(track_bc, dim); // only add monorail if it can connect to buildings
+	if (!connect_buildings_to_monorail(track_bc, dim, city_bcube, monorail.ww_conns)) return 0;
+	monorail.init(track_bc, dim); // only add monorail if it can connect to buildings
 	return 1;
 }
 
@@ -2017,6 +2016,7 @@ template<typename T> bool proc_vector_sphere_coll(vector<T> const &objs, city_ob
 }
 bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, vector3d *cnorm) const { // pos in in camera space
 	if (!sphere_cube_intersect(pos, (radius + p2p_dist(pos, p_last)), (all_objs_bcube + xlate))) return 0;
+	if (monorail.proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1; // must be before walkways
 
 	// special handling for player walking on/in walkways; we need to handle collisions with the top surface when above, so proc_vector_sphere_coll() can't be used here
 	for (walkway_t const &w : walkways) {
@@ -2045,7 +2045,6 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(pillars,   pillar_groups,   pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(pdecks,    pdeck_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(p_solars,  p_solar_groups,  pos, p_last, radius, xlate, cnorm)) return 1;
-	if (monorail.proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1;
 	// Note: no coll with tree_planters because the tree coll should take care of it; no coll with hcaps, manholes, tcones, flowers, pladders, pigeons, ppaths, or birds
 	return 0;
 }

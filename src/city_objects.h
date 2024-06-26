@@ -301,8 +301,7 @@ struct pond_t : public city_obj_t {
 	bool point_contains_xy(point const &p) const;
 };
 
-struct walkway_t : public oriented_city_obj_t, public walkway_material_t {
-	float floor_spacing;
+struct walkway_t : public oriented_city_obj_t, public walkway_base_t {
 	colorRGBA map_mode_color;
 
 	walkway_t(bldg_walkway_t const &w);
@@ -440,9 +439,10 @@ struct park_path_t : public city_obj_t {
 struct monorail_t : public city_obj_t {
 	bool valid=0, dim=0; // but no dir
 	cube_t track_bcube;
+	vect_cube_with_ix_t ww_conns; // connection points to building walkways; ix envodes 2*dim + dir
 
 	monorail_t() {}
-	monorail_t(cube_t const &c, bool dim_);
+	void init(cube_t const &c, bool dim_);
 	// Note: no pre_draw() and post_draw() because there can be only one
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;

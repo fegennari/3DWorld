@@ -1920,6 +1920,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 			for (unsigned dim = 0; dim < 2; ++dim) {
 				for (unsigned d = 0; d < 2; ++d) { // dir
 					bool const is_end_dim(bool(dim) == w.dim), add_ext_door(is_end_dim && w.has_ext_door(d));
+					if (is_end_dim && w.open_ends[d]) continue; // no wall (or door) at this end
 					float const wall_thick(add_ext_door ? /*get_door_shift_dist()*/0.5*wall_thickness : wall_thickness); // flush with exterior door? then there's a light gap
 					cube_t wall(w.bcube);
 					wall.d[dim][!d] = w.bcube.d[dim][d] + (d ? -1.0 : 1.0)*wall_thick;
@@ -4587,7 +4588,7 @@ private:
 		walkway_cand_t(cube_t const &bc, unsigned b, unsigned p, bool d) : bcube(bc), bix(b), pix(p), dir(d) {}
 	};
 public:
-	bool connect_buildings_to_monorail(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube) {
+	bool connect_buildings_to_monorail(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube, vect_cube_with_ix_t &ww_conns) {
 		vector<cube_with_ix_t> city_bldgs, ww_bldgs;
 		float const max_xy_sz(get_walkway_buildings_and_max_sz(city_bcube, city_bldgs, ww_bldgs)), max_walkway_len(1.5*max_xy_sz);
 		if (ww_bldgs.size() < 2) return 0; // not enough buildings
@@ -4628,10 +4629,10 @@ public:
 				if (space_to_sides > 0.0) {conn_area.expand_in_dim(!conn_dim, -space_to_sides);} // shrink the width if needed
 				assert(conn_area.is_strictly_normalized());
 				// first try placing centered on the part; if there's extra space to the sides, and centered fails, then try to a random side, then the other side
-				float const first_xlate((rgen.rand_bool() ? 1.0 : -1.0)*space_to_sides), xlate_vals[3] = {0.0, first_xlate, -2.0*first_xlate};
+				float const first_xlate((rgen.rand_bool() ? 1.0 : -1.0)*space_to_sides), xlate_vals[3] = {0.0f, first_xlate, -2.0f*first_xlate};
 				bool success(0);
 
-				for (unsigned n = 0; n < ((space_to_sides > 0.0) ? 3 : 1); ++n) {
+				for (unsigned n = 0; n < ((space_to_sides > 0.0) ? 3U : 1U); ++n) {
 					conn_area.translate_dim(!conn_dim, xlate_vals[n]);
 					if (check_if_blocked_by_building(conn_area, city_bldgs, i->ix, i->ix)) continue; // Note: uses *all* buildings
 					if (b.cube_int_parts_no_sec(conn_area)) continue; // intersects another part
@@ -4648,6 +4649,7 @@ public:
 		if (all_conn_bc.get_sz_dim(m_dim) < 0.5*m_bcube.get_sz_dim(m_dim)) return 0; // less than half the length is connected: fail
 		for (unsigned d = 0; d < 2; ++d) {m_bcube.d[m_dim][d] = all_conn_bc.d[m_dim][d];} // clip to shared connection sub-length
 		m_bcube.expand_in_dim(m_dim, 2.0*m_bcube.get_sz_dim(conn_dim)); // extend by twice the track width
+		ww_conns.reserve(cands.size());
 		
 		for (walkway_cand_t const &cand : cands) { // actually add walkways
 			building_t &b(get_building(cand.bix));
@@ -4657,7 +4659,11 @@ public:
 			building_walkway_geom_t bwg(cand.bcube, conn_dim);
 			if (ADD_WALKWAY_EXT_DOORS) {b.add_walkway_door(bwg, !cand.dir, cand.pix);}
 			b.walkways.emplace_back(bwg, 1, nullptr); // owned, no conn_bldg
-		}
+			b.walkways.back().open_ends[!cand.dir] = all_walkways.back().open_ends[!cand.dir] = 1; // flag end connected to monorail as open
+			cube_t conn(cand.bcube);
+			conn.d[conn_dim][cand.dir] = conn.d[conn_dim][!cand.dir];
+			ww_conns.emplace_back(conn, (2*unsigned(conn_dim) + unsigned(!cand.dir)));
+		} // for cand
 		return 1; // success
 	}
 
@@ -5059,8 +5065,8 @@ void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways  ) 
 void add_buildings_exterior_lights(vector3d const &xlate, cube_t &lights_bcube) {building_creator_city.add_exterior_lights(xlate, lights_bcube);}
 float get_max_house_size() {return global_building_params.get_max_house_size();}
 
-bool connect_buildings_to_monorail(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube) {
-	return building_creator_city.connect_buildings_to_monorail(m_bcube, m_dim, city_bcube);
+bool connect_buildings_to_monorail(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube, vect_cube_with_ix_t &ww_conns) {
+	return building_creator_city.connect_buildings_to_monorail(m_bcube, m_dim, city_bcube, ww_conns);
 }
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube, bool sec_camera_mode) {
 	//highres_timer_t timer("Add building interior lights"); // 0.97/0.37
