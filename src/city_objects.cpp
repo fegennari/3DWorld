@@ -1912,7 +1912,7 @@ void monorail_t::init(cube_t const &c, bool dim_) {
 	bot = bcube;
 	top = center;
 	cube_t nonbot(bcube);
-	bot.z2() = nonbot.z1() = bcube.z1() + 0.1*height;
+	bot.z2() = nonbot.z1() = bcube.z1() + 0.085*height;
 	top.z1() = bcube.z2() - 0.05*height;
 	entrances.reserve(ww_conns.size());
 

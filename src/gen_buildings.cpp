@@ -4595,6 +4595,7 @@ public:
 		conn_area.expand_by_xy(max_walkway_len);
 		cube_t all_conn_bc;
 		vector<walkway_cand_t> cands;
+		float ww_zmin(m_bcube.z2());
 
 		for (auto i = ww_bldgs.begin(); i != ww_bldgs.end(); ++i) {
 			building_t &b(get_building(i->ix));
@@ -4641,7 +4642,7 @@ public:
 				if (success) break; // only connect the first valid part
 			} // for p
 		} // for i
-		cout << TXT(ww_bldgs.size()) << TXT(cands.size()) << endl; // TESTING
+		//cout << TXT(ww_bldgs.size()) << TXT(cands.size()) << endl; // TESTING
 		if (cands.size() < 2) return 0; // need at least two connected buildings
 		if (all_conn_bc.get_sz_dim(m_dim) < 0.5*m_bcube.get_sz_dim(m_dim)) return 0; // less than half the length is connected: fail
 		for (unsigned d = 0; d < 2; ++d) {m_bcube.d[m_dim][d] = all_conn_bc.d[m_dim][d];} // clip to shared connection sub-length
@@ -4660,7 +4661,9 @@ public:
 			cube_t conn(cand.bcube);
 			conn.d[conn_dim][cand.dir] = conn.d[conn_dim][!cand.dir];
 			ww_conns.emplace_back(conn, (2*unsigned(conn_dim) + unsigned(!cand.dir)));
+			min_eq(ww_zmin, cand.bcube.z1());
 		} // for cand
+		m_bcube.translate_dim(2, (ww_zmin - m_bcube.z1() - 0.05*m_bcube.dz())); // translate to the bottom of the lowest walkway; walkways are often all the same zval
 		return 1; // success
 	}
 
