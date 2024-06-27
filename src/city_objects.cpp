@@ -1954,26 +1954,26 @@ void monorail_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_
 }
 bool monorail_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	if (!valid) return 0;
-	float const zval(max(pos_.z, p_last.z));
-	cube_t const top_cs(top + xlate), bot_cs(bot + xlate);
+	float const zval(max(pos_.z, p_last.z)), top_z2(top.z2() + xlate.z), bot_z2(bot.z2() + xlate.z);
+	cube_t const bc_cs(bcube + xlate);
 	bool ret(0);
 
-	if (zval > top_cs.z2()) { // above the monorail - walk on the top glass
-		if (bcube.contains_pt_xy(pos_)) {
-			max_eq(pos_.z, (top_cs.z2() + radius_));
+	if (zval > top_z2) { // above the monorail - walk on the top glass
+		if (bc_cs.contains_pt_xy(pos_)) {
+			max_eq(pos_.z, (top_z2 + radius_));
 			return 1;
 		}
 		return 0;
 	}
-	if (zval > bot_cs.z2()) { // above the bottom
-		if (bcube.contains_pt_xy(pos_)) {
-			max_eq(pos_.z, (bot_cs.z2() + radius_));
+	if (zval > bot_z2) { // above the bottom
+		if (bc_cs.contains_pt_xy_exp(pos_, radius_)) { // expand by radius so that the player can step up from a walkway
+			max_eq(pos_.z, (bot_z2 + radius_));
 			ret = 1;
 		}
 	}
 	for (cube_t const &c : sides) {ret |= sphere_cube_int_update_pos(pos_, radius_, (c + xlate), p_last, 0, cnorm);}
 	if (ret) return 1;
-	return sphere_cube_int_update_pos(pos_, radius_, (track_bcube + xlate), p_last, 0, cnorm); // exterior coll
+	return sphere_cube_int_update_pos(pos_, radius_, bc_cs, p_last, 0, cnorm); // exterior coll
 }
 
 
