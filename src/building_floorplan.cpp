@@ -1991,14 +1991,19 @@ template<typename T> void subtract_cubes_from_cube(cube_t const &c, vector<T> co
 template void subtract_cubes_from_cube(cube_t const &c, vector<cube_t>         const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode); // explicit instantiation
 template void subtract_cubes_from_cube(cube_t const &c, vector<stairs_place_t> const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode); // explicit instantiation
 
-template<typename T> bool subtract_cube_from_cubes(cube_t const &s, vector<T> &cubes, vect_cube_t *holes, bool clip_in_z, bool include_adj) {
+template<typename T> bool subtract_cube_from_cubes(cube_t const &s, vector<T> &cubes, vect_cube_t *holes, bool clip_in_z, bool include_adj, bool no_z_test) {
 	unsigned iter_end(cubes.size()); // capture size before splitting
 	bool was_clipped(0);
 
 	for (unsigned i = 0; i < iter_end; ++i) {
 		T const &c(cubes[i]);
-		if (!(include_adj ? c.intersects(s) : c.intersects_no_adj(s))) continue; // keep it
-		
+
+		if (no_z_test) {
+			if (!(include_adj ? c.intersects_xy(s) : c.intersects_xy_no_adj(s))) continue; // keep it
+		}
+		else {
+			if (!(include_adj ? c.intersects(s) : c.intersects_no_adj(s))) continue; // keep it
+		}
 		if (holes) {
 			cube_t hole(c); // always a cube
 			hole.intersect_with_cube(s);
@@ -2029,8 +2034,8 @@ template<typename T> bool subtract_cube_from_cubes(cube_t const &s, vector<T> &c
 	} // for i
 	return was_clipped;
 }
-template bool subtract_cube_from_cubes(cube_t const &s, vector<cube_t>         &cubes, vect_cube_t *holes, bool clip_in_z, bool include_adj);
-template bool subtract_cube_from_cubes(cube_t const &s, vector<cube_with_ix_t> &cubes, vect_cube_t *holes, bool clip_in_z, bool include_adj);
+template bool subtract_cube_from_cubes(cube_t const &s, vector<cube_t>         &cubes, vect_cube_t *holes, bool clip_in_z, bool include_adj, bool no_z_test);
+template bool subtract_cube_from_cubes(cube_t const &s, vector<cube_with_ix_t> &cubes, vect_cube_t *holes, bool clip_in_z, bool include_adj, bool no_z_test);
 
 template<typename T> void subtract_cubes_from_cubes(T const &sub, vect_cube_t &cubes) {
 	for (auto i = sub.begin(); i != sub.end(); ++i) {subtract_cube_from_cubes(*i, cubes);}
