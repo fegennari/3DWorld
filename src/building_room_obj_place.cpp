@@ -3006,35 +3006,33 @@ bool building_t::maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room
 				if (w2.bcube == w.bcube) {w2.bcube_inc_rooms.union_with_cube_xy(room); break;}
 			}
 		}
+		if (ADD_WALKWAY_EXT_DOORS && w.is_owner) { // add ceiling light(s) if interior may be accessible (even if no door) and we're the owner
+			float const length(w.get_length());
+
+			if (length > 0.4*floor_spacing) { // not too short for a light; should always get here
+				unsigned const num_lights(max(1U, unsigned(0.6*length/floor_spacing)));
+				float const light_spacing(length/(num_lights + 1));
+				unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR | RO_FLAG_LIT);
+				colorRGBA const color(1.0, 1.0, 1.0); // white
+				point lpos;
+				lpos[ dim] = w.bcube.d[dim][0] + light_spacing;
+				lpos[!dim] = w.bcube.get_center_dim(!dim);
+				lpos.z     = ceil_zval - 0.02*floor_spacing;
+
+				for (unsigned n = 0; n < num_lights; ++n) {
+					cube_t light(lpos);
+					light.z1() -= 0.02*floor_spacing;
+					light.expand_in_dim( dim, 0.12*floor_spacing);
+					light.expand_in_dim(!dim, 0.08*floor_spacing);
+					objs.emplace_back(light, TYPE_LIGHT, room_id, dim, 0, flags, 0.0, SHAPE_CUBE, color); // dir=0 (unused); not actually in the room
+					objs.back().obj_id = light_ix_assign.get_next_ix();
+					lpos[dim] += light_spacing;
+				} // for n
+			}
+		}
 		if (has_door) { // has real exterior door
 			float const center(w.bcube.get_center_dim(!w.dim));
 			if (room.d[!dim][1] < center - 0.5*door_width || room.d[!dim][0] > center + 0.5*door_width) continue; // not overlapping the door (which is centered on the walkway)
-
-			if (w.is_owner) { // add ceiling light(s)
-				// not actually drawn because these lights are outside the building, and the building may not even be visible
-				float const length(w.get_length());
-				
-				if (length > 0.4*floor_spacing) { // not too short for a light; should always get here
-					unsigned const num_lights(max(1U, unsigned(0.6*length/floor_spacing)));
-					float const light_spacing(length/(num_lights + 1));
-					unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR | RO_FLAG_LIT);
-					colorRGBA const color(1.0, 1.0, 1.0); // white
-					point lpos;
-					lpos[ dim] = w.bcube.d[dim][0] + light_spacing;
-					lpos[!dim] = w.bcube.get_center_dim(!dim);
-					lpos.z     = ceil_zval - 0.02*floor_spacing;
-				
-					for (unsigned n = 0; n < num_lights; ++n) {
-						cube_t light(lpos);
-						light.z1() -= 0.02*floor_spacing;
-						light.expand_in_dim( dim, 0.12*floor_spacing);
-						light.expand_in_dim(!dim, 0.08*floor_spacing);
-						objs.emplace_back(light, TYPE_LIGHT, room_id, dim, 0, flags, 0.0, SHAPE_CUBE, color); // dir=0 (unused); not actually in the room
-						objs.back().obj_id = light_ix_assign.get_next_ix();
-						lpos[dim] += light_spacing;
-					} // for n
-				}
-			}
 			added = 1; // using real exterior doors; don't add false doors; blockers are unnecessary
 			continue;
 		}
