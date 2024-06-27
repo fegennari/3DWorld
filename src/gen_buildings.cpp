@@ -2431,9 +2431,6 @@ void building_t::get_ext_wall_verts_no_sec(building_draw_t &bdraw) const { // us
 	} // for p
 }
 
-void swap_cube_dims(cube_t &c, unsigned d1, unsigned d2) {
-	for (unsigned d = 0; d < 2; ++d) {swap(c.d[d1][d], c.d[d2][d]);}
-}
 void building_t::get_walkway_end_verts(building_draw_t &bdraw, point const &pos) const {
 	float const room_exp(2.0*get_window_vspace());
 

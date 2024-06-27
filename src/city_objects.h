@@ -438,8 +438,9 @@ struct park_path_t : public city_obj_t {
 
 struct monorail_t : public city_obj_t {
 	bool valid=0, dim=0; // but no dir
-	cube_t track_bcube;
+	cube_t track_bcube, bot, top;
 	vect_cube_with_ix_t ww_conns; // connection points to building walkways; ix envodes 2*dim + dir
+	vect_cube_t entrances, sides;
 
 	monorail_t() {}
 	void init(cube_t const &c, bool dim_);

@@ -1875,6 +1875,7 @@ bool park_path_t::check_point_contains_xy(point const &p) const {
 
 // monorail
 
+// TODO: one qbd per tile for batched drawing?
 void draw_long_cube(cube_t const &c, colorRGBA const &color, draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale,
 	bool shadow_only=0, bool skip_bottom=0, float tscale=0.0, unsigned skip_dims=0)
 {
@@ -1903,48 +1904,75 @@ void monorail_t::init(cube_t const &c, bool dim_) {
 	valid = 1;
 	dim   = dim_;
 	bcube = track_bcube = c;
-	// TODO: larger bcube
+	// TODO: larger bcube/smaller track_bcube
 	set_bsphere_from_bcube();
+	float const height(bcube.dz()), width(bcube.get_sz_dim(!dim)), wall_width(0.05*width), entrance_ext(1.1*wall_width);
+	cube_t center(bcube);
+	center.expand_in_dim(!dim, -wall_width);
+	bot = bcube;
+	top = center;
+	cube_t nonbot(bcube);
+	bot.z2() = nonbot.z1() = bcube.z1() + 0.1*height;
+	top.z1() = bcube.z2() - 0.05*height;
+	entrances.reserve(ww_conns.size());
+
+	for (unsigned d = 0; d < 2; ++d) { // add sides, which will be cut by entrances
+		cube_t side(nonbot);
+		side.d[!dim][!d] = bcube.d[!dim][d] + (d ? -1.0 : 1.0)*wall_width;
+		swap_cube_dims(side, !dim, 2); // swap so that subtract can be done in the XY plane
+		sides.push_back(side);
+	}
+	for (cube_with_ix_t const &conn : ww_conns) {
+		cube_t entrance(conn);
+		entrance.expand_in_dim(!dim, entrance_ext); // expand in walkway entrance dim
+		entrance.z2() -= 0.6*FLOOR_THICK_VAL_OFFICE*conn.dz(); // lower the ceiling slightly
+		entrance.expand_in_dim(dim, -0.1*conn.get_sz_dim(dim)); // shrink sides
+		entrances.push_back(entrance);
+		swap_cube_dims(entrance, !dim, 2);
+		subtract_cube_from_cubes(entrance, sides);
+	}
+	for (cube_t &c : sides) {swap_cube_dims(c, !dim, 2);} // swap dims back
+
+	for (unsigned d = 0; d < 2; ++d) { // add ends
+		cube_t end(center);
+		end.z1() = nonbot.z1();
+		end.d[dim][!d] = bcube.d[dim][d] + (d ? -1.0 : 1.0)*wall_width;
+		sides.push_back(end); // TODO: no drawing of !dim edges
+	}
 }
 void monorail_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_only) const {
 	float const dist_scale = 1.0; // ???
 	if (!valid || !dstate.check_cube_visible(bcube, dist_scale)) return; // VFC/distance culling
 	dstate.set_untextured_material();
-	draw_long_cube(bcube, GRAY, dstate, qbds.untex_qbd, dist_scale, shadow_only); // TODO: placeholder
-
-#if 0 // debugging
-	for (cube_with_ix_t const &conn : ww_conns) {
-		cube_t entrance(conn);
-		entrance.expand_in_dim(!dim, 0.1*bcube.dz()); // expand in walkway entrance dim
-		dstate.draw_cube(qbds.untex_qbd, entrance, RED);
-	}
-	qbds.untex_qbd.draw_and_clear();
-#endif
+	colorRGBA const ext_color(GRAY);
+	for (cube_t const &c : sides) {draw_long_cube(c, ext_color, dstate, qbds.untex_qbd, dist_scale, shadow_only, 0);} // skip_bottom=0 (needed for top wall above entrances)
+	draw_long_cube(bot, ext_color, dstate, qbds.untex_qbd, dist_scale, shadow_only); // draw all sides
+	enable_blend();
+	if (!shadow_only) {draw_long_cube(top, colorRGBA(1.0, 1.0, 1.0, 0.25), dstate, qbds.untex_qbd, dist_scale, shadow_only, 0, 0.0, 3);} // transparent; Z only; drawn last
+	disable_blend();
 	dstate.unset_untextured_material();
 }
 bool monorail_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	if (!valid) return 0;
 	float const zval(max(pos_.z, p_last.z));
-	cube_t const bc_cs(bcube + xlate);
+	cube_t const top_cs(top + xlate), bot_cs(bot + xlate);
+	bool ret(0);
 
-	if (zval > bc_cs.z2()) { // above the monorail - walk on bcube
-		if (bc_cs.contains_pt_xy(pos_)) {
-			max_eq(pos_.z, (bc_cs.z2() + radius_));
+	if (zval > top_cs.z2()) { // above the monorail - walk on the top glass
+		if (bcube.contains_pt_xy(pos_)) {
+			max_eq(pos_.z, (top_cs.z2() + radius_));
 			return 1;
 		}
 		return 0;
 	}
-	point const test_pt(point(pos_.x, pos_.y, zval) - xlate);
-	float const entrance_ext(0.5*bcube.get_sz_dim(!dim)); // placeholder until side walls are added
-
-	for (cube_with_ix_t const &conn : ww_conns) {
-		//bool const dir(conn.ix & 1);
-		cube_t entrance(conn);
-		entrance.expand_in_dim(!dim, entrance_ext); // expand in walkway entrance dim
-		if (!entrance.contains_pt(test_pt)) continue;
-		// TODO: handle entrance - coll with floor/stairs/ramp/etc.
-		return 0;
-	} // for conn
+	if (zval > bot_cs.z2()) { // above the bottom
+		if (bcube.contains_pt_xy(pos_)) {
+			max_eq(pos_.z, (bot_cs.z2() + radius_));
+			ret = 1;
+		}
+	}
+	for (cube_t const &c : sides) {ret |= sphere_cube_int_update_pos(pos_, radius_, (c + xlate), p_last, 0, cnorm);}
+	if (ret) return 1;
 	return sphere_cube_int_update_pos(pos_, radius_, (track_bcube + xlate), p_last, 0, cnorm); // exterior coll
 }
 

@@ -2352,6 +2352,9 @@ template<typename T> cube_t get_cube_height_radius(point const &center, T radius
 	c.z2() += height;
 	return c;
 }
+inline void swap_cube_dims(cube_t &c, unsigned d1, unsigned d2) {
+	for (unsigned d = 0; d < 2; ++d) {swap(c.d[d1][d], c.d[d2][d]);}
+}
 
 struct cube_by_sz { // sort cube by size in dim descending
 	bool dim;
