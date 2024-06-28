@@ -115,6 +115,7 @@ bool building_t::check_pt_in_retail_room(point const &p) const {
 bool building_t::check_pt_in_or_near_walkway(point const &p, bool owned_only, bool inc_open_door, bool inc_conn_room) const {
 	for (building_walkway_t const &w : walkways) {
 		if (owned_only && !w.is_owner) continue;
+		if (inc_open_door && !w.monorail_conn.is_all_zeros() && w.monorail_conn.contains_pt(p)) return 1; // monorail walkway connection
 		if (p.z < w.bcube.z1() || p.z > w.bcube.z2()) continue; // no Z overlap
 		if ((inc_open_door ? w.get_bcube_inc_open_door() : w.bcube).contains_pt(p)) return 1;
 		// check adjacent rooms if connected, walkway is visible through windows, and pos is off the ends of the walkways; forms a dog bone shape
