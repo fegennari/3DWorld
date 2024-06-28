@@ -2407,7 +2407,7 @@ bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t co
 	if (c.z2() < door.z1() || c.z1() > door.z2()) return 0;
 	bool const dim(door.dy() < door.dx());
 	float const width(door.get_sz_dim(!dim)), height(width/DOOR_WIDTH_SCALE); // door may be a stack, can't use dz(), calculate height from width
-	float const trim_width(0.5*WALL_THICK_VAL*height);
+	float const trim_width(0.5*WALL_THICK_VAL*height); // width of door trim in both dims (half wall width)
 	// we don't know how much the door is open and in which direction, so expand by door width in both dirs to be conservative
 	float const keepout(inc_open ? width : trim_width);
 	float const lo_edge(door.d[!dim][0] - ((check_dirs == 1) ? trim_width : keepout)), hi_edge(door.d[!dim][1] + ((check_dirs == 0) ? trim_width : keepout));
@@ -2415,8 +2415,8 @@ bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t co
 	float dmin_lo(dmin), dmin_hi(dmin);
 	
 	if (!allow_block_door) { // max with door width so that door has space to open, in dirs where the door can open
-		if (open_dirs != 1) {max_eq(dmin_lo, width);}
-		if (open_dirs != 0) {max_eq(dmin_hi, width);}
+		if (open_dirs != 1) {max_eq(dmin_lo, width+trim_width);}
+		if (open_dirs != 0) {max_eq(dmin_hi, width+trim_width);}
 	}
 	return (c.d[dim][0] < door.d[dim][1]+dmin_hi && c.d[dim][1] > door.d[dim][0]-dmin_lo); // within min_dist
 }
