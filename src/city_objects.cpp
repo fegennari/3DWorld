@@ -1881,7 +1881,7 @@ void draw_long_cube(cube_t const &c, colorRGBA const &color, draw_state_t &dstat
 {
 	bool const dim(c.dx() < c.dy()); // longer dim; only supports splitting in one dim
 	float const tile_sz(dim ? MESH_Y_SIZE*DY_VAL : MESH_X_SIZE*DX_VAL), length(c.get_sz_dim(dim));
-	unsigned const num_segs(shadow_only ? 1U : unsigned(ceil(length/tile_sz)));
+	unsigned const num_segs(shadow_only ? 1U : unsigned(ceil(2.0*length/tile_sz)));
 	float const step_len(length/num_segs);
 	cube_t c2(c);
 
@@ -1941,14 +1941,19 @@ void monorail_t::init(cube_t const &c, bool dim_) {
 	}
 }
 void monorail_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_only) const {
-	float const dist_scale = 1.0; // ???
+	float const dist_scale = 0.7;
 	if (!valid || !dstate.check_cube_visible(bcube, dist_scale)) return; // VFC/distance culling
 	dstate.set_untextured_material();
 	colorRGBA const ext_color(GRAY);
 	for (cube_t const &c : sides) {draw_long_cube(c, ext_color, dstate, qbds.untex_qbd, dist_scale, shadow_only, 0);} // skip_bottom=0 (needed for top wall above entrances)
 	draw_long_cube(bot, ext_color, dstate, qbds.untex_qbd, dist_scale, shadow_only); // draw all sides
 	enable_blend();
-	if (!shadow_only) {draw_long_cube(top, colorRGBA(1.0, 1.0, 1.0, 0.25), dstate, qbds.untex_qbd, dist_scale, shadow_only, 0, 0.0, 3);} // transparent; Z only; drawn last
+
+	if (!shadow_only) { // transparent; Z only; drawn last
+		glDepthMask(GL_FALSE); // disable depth writing so that terrain and grass are drawn over the glass
+		draw_long_cube(top, colorRGBA(1.0, 1.0, 1.0, 0.25), dstate, qbds.untex_qbd, dist_scale, shadow_only, 0, 0.0, 3);
+		glDepthMask(GL_TRUE);
+	}
 	disable_blend();
 	dstate.unset_untextured_material();
 }
