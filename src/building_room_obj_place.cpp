@@ -1518,13 +1518,17 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			if (point_in_water_area(sink.get_cube_center())) {} // no medicine cabinet, because the reflection system doesn't support both a mirror and water reflection
 			else if (is_basement || classify_room_wall(room, zval, sink.dim, !sink.dir, 0) != ROOM_WALL_EXT) { // interior wall only
 				// add a mirror/medicine cabinet above the sink; could later make into medicine cabinet
+				float const mirror_expand(0.1*sink.get_sz_dim(!sink.dim));
 				cube_t mirror(sink); // start with the sink left and right position
-				mirror.expand_in_dim(!sink.dim, 0.1*mirror.get_sz_dim(!sink.dim)); // make slightly wider
+				mirror.expand_in_dim(!sink.dim, mirror_expand); // make slightly wider
 				set_cube_zvals(mirror, sink.z2(), sink.z2()+0.3*floor_spacing);
 				mirror.d[sink.dim][!sink.dir] = room_bounds.d[sink.dim][!sink.dir];
 				mirror.d[sink.dim][ sink.dir] = mirror.d[sink.dim][!sink.dir] + (sink.dir ? 1.0 : -1.0)*1.0*wall_thickness; // thickness
 
 				if (!overlaps_other_room_obj(mirror, objs_start, 0, &sink_obj_ix)) { // check_all=0; skip sink + blocker
+					if (interior->is_cube_close_to_doorway(mirror, room, 0.0, 1, 1)) { // check doorways as well, since mirror is wider thank sink
+						mirror.expand_in_dim(!sink.dim, -mirror_expand); // undo expand and try for a narrow mirror
+					}
 					// this mirror is actually 3D, so we enable collision detection; treat as a house even if it's in an office building
 					unsigned flags(RO_FLAG_IS_HOUSE); // Note: not necessarily a house
 					if (count_ext_walls_for_room(room, mirror.z1()) == 1) {flags |= RO_FLAG_INTERIOR;} // flag as interior if windows are opaque glass blocks
