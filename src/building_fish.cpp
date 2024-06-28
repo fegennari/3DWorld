@@ -352,7 +352,6 @@ void end_fish_draw(shader_t &s, bool inc_pools_and_fb) {
 
 bool building_t::begin_fish_draw() const { // returns true of pool or basement water is visible
 	assert(interior);
-	bool inc_pools_and_fb(0);
 	fish_manager.next_frame(*this);
 	if (!water_visible_to_player()) return 0;
 	// handle underwater fish in pools and basements
