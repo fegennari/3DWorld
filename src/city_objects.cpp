@@ -1875,8 +1875,21 @@ bool park_path_t::check_point_contains_xy(point const &p) const {
 
 // monorail
 
-// TODO: one qbd per tile for batched drawing?
-void draw_long_cube(cube_t const &c, colorRGBA const &color, draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale,
+
+class tile_drawer_t {
+	uint64_t last_tile_id=0;
+public:
+	void next_cube(cube_t const &c, draw_state_t &dstate, quad_batch_draw &qbd) {
+		unsigned const tile_id(get_tile_id_containing_point_no_xyoff(c.get_cube_center()));
+		if (tile_id == last_tile_id) return;
+		qbd.draw_and_clear();
+		dstate.begin_tile(c.get_cube_center(), 1);
+		last_tile_id = tile_id;
+	}
+	void end_draw(quad_batch_draw &qbd) {qbd.draw_and_clear();}
+};
+
+void draw_long_cube(cube_t const &c, colorRGBA const &color, draw_state_t &dstate, quad_batch_draw &qbd, tile_drawer_t &td, float dist_scale,
 	bool shadow_only=0, bool skip_bottom=0, float tscale=0.0, unsigned skip_dims=0)
 {
 	bool const dim(c.dx() < c.dy()); // longer dim; only supports splitting in one dim
@@ -1892,9 +1905,8 @@ void draw_long_cube(cube_t const &c, colorRGBA const &color, draw_state_t &dstat
 		if (num_segs == 1 || dstate.check_cube_visible(c2, dist_scale)) { // VFC
 			unsigned skip_dims_seg(skip_dims);
 			if (!(beg && dstate.camera_bs[dim] < c2.d[dim][0]) && !(end && dstate.camera_bs[dim] > c2.d[dim][1])) {skip_dims_seg |= (1 << unsigned(dim));} // skip int seg ends
-			dstate.begin_tile(c2.get_cube_center(), 1);
+			td.next_cube(c2, dstate, qbd);
 			dstate.draw_cube(qbd, c2, color, skip_bottom, tscale, skip_dims_seg);
-			qbd.draw_and_clear();
 		}
 		c2.d[dim][0] += step_len;
 	} // for s
@@ -1937,21 +1949,30 @@ void monorail_t::init(cube_t const &c, bool dim_) {
 		cube_t end(center);
 		end.z1() = nonbot.z1();
 		end.d[dim][!d] = bcube.d[dim][d] + (d ? -1.0 : 1.0)*wall_width;
-		sides.push_back(end); // TODO: no drawing of !dim edges
+		sides.push_back(end);
 	}
 }
 void monorail_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_only) const {
 	float const dist_scale = 0.7;
 	if (!valid || !dstate.check_cube_visible(bcube, dist_scale)) return; // VFC/distance culling
+	tile_drawer_t td;
 	dstate.set_untextured_material();
 	colorRGBA const ext_color(GRAY);
-	for (cube_t const &c : sides) {draw_long_cube(c, ext_color, dstate, qbds.untex_qbd, dist_scale, shadow_only, 0);} // skip_bottom=0 (needed for top wall above entrances)
-	draw_long_cube(bot, ext_color, dstate, qbds.untex_qbd, dist_scale, shadow_only); // draw all sides
+	
+	for (cube_t const &c : sides) {
+		bool const skip_bottom(c.z1() == bot.z2());
+		unsigned skip_dims(0);
+		if (c.d[!dim][0] == top.d[!dim][0] && c.d[!dim][1] == top.d[!dim][1]) {skip_dims|= (1 << unsigned(!dim));} // don't need to draw sides of ends
+		draw_long_cube(c, ext_color, dstate, qbds.untex_qbd, td, dist_scale, shadow_only, skip_bottom, 0.0, skip_dims);
+	}
+	draw_long_cube(bot, ext_color, dstate, qbds.untex_qbd, td, dist_scale, shadow_only); // draw all sides
+	td.end_draw(qbds.untex_qbd);
 	enable_blend();
 
 	if (!shadow_only) { // transparent; Z only; drawn last
 		glDepthMask(GL_FALSE); // disable depth writing so that terrain and grass are drawn over the glass
-		draw_long_cube(top, colorRGBA(1.0, 1.0, 1.0, 0.25), dstate, qbds.untex_qbd, dist_scale, shadow_only, 0, 0.0, 3);
+		draw_long_cube(top, colorRGBA(1.0, 1.0, 1.0, 0.25), dstate, qbds.untex_qbd, td, dist_scale, shadow_only, 0, 0.0, 3);
+		td.end_draw(qbds.untex_qbd);
 		glDepthMask(GL_TRUE);
 	}
 	disable_blend();

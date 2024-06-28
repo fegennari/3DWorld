@@ -3408,11 +3408,14 @@ tile_t *tile_draw_t::get_tile_from_xy(tile_xy_pair const &tp) const {
 	tile_map::const_iterator it(tiles.find(tp));
 	return ((it != tiles.end()) ? it->second.get() : nullptr);
 }
+tile_xy_pair get_tile_pair_at_point(point const &pos) {
+	return tile_xy_pair(round_fp(0.5f*(pos.x - (xoff - xoff2)*DX_VAL)/X_SCENE_SIZE), round_fp(0.5f*(pos.y - (yoff - yoff2)*DY_VAL)/Y_SCENE_SIZE));
+}
 tile_t *tile_draw_t::get_tile_containing_point(point const &pos) const {
-	return get_tile_from_xy(tile_xy_pair(round_fp(0.5f*(pos.x - (xoff - xoff2)*DX_VAL)/X_SCENE_SIZE), round_fp(0.5f*(pos.y - (yoff - yoff2)*DY_VAL)/Y_SCENE_SIZE)));
+	return get_tile_from_xy(get_tile_pair_at_point(pos));
 }
 uint64_t get_tile_id_containing_point(point const &pos) {
-	tile_xy_pair const tp(round_fp(0.5f*(pos.x - (xoff - xoff2)*DX_VAL)/X_SCENE_SIZE), round_fp(0.5f*(pos.y - (yoff - yoff2)*DY_VAL)/Y_SCENE_SIZE));
+	tile_xy_pair const tp(get_tile_pair_at_point(pos));
 	return (tp.x + (uint64_t(tp.y) << 32));
 }
 uint64_t get_tile_id_containing_point_no_xyoff(point const &pos) {
