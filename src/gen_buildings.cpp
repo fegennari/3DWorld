@@ -4470,7 +4470,7 @@ public:
 
 		for (auto i1 = ww_bldgs.begin(); i1 != ww_bldgs.end(); ++i1) {
 			building_t &b1(get_building(i1->ix));
-			float const min_ww_width(1.5*b1.get_office_ext_doorway_width()), floor_spacing(b1.get_window_vspace()); // should be the same for all buildings
+			float const min_ww_width(2.0*b1.get_office_ext_doorway_width()), floor_spacing(b1.get_window_vspace()); // should be the same for all buildings
 			float const bot_z_add((DRAW_CITY_INT_WINDOWS ? 0.125 : 0.25)*floor_spacing); // reduce if there are interior windows so that we don't see inside the walkway bottom
 			float const power_pole_clearance(1.25*bot_z_add);
 			unsigned const min_floors_above_power_pole(unsigned((pp_height + power_pole_clearance)/floor_spacing) + 1U); // for crossing roads; take ceil
@@ -4518,7 +4518,7 @@ public:
 							walkway.d[ dim][ dir] = p2.d[dim][!dir];
 							walkway.d[ dim][!dir] = p1.d[dim][ dir];
 							walkway.d[!dim][0] = lo; walkway.d[!dim][1] = hi;
-							float const target_width(min_ww_width*rgen.rand_uniform(1.25, 2.5));
+							float const target_width(min_ww_width*rgen.rand_uniform(1.0, 1.8));
 							if (width > target_width) {walkway.expand_in_dim(!dim, -0.5*(width - target_width));} // shrink the width if needed
 							set_cube_zvals(walkway, zlo, zhi);
 							unsigned num_floors_max(1 + (rgen.rand()%3)); // 1-3 floors
@@ -4603,7 +4603,7 @@ public:
 			building_t &b(get_building(i->ix));
 			assert(!b.bcube.intersects_xy(m_bcube)); // sanity check
 			if (!b.bcube.intersects_xy(conn_area)) continue; // too far from monorail
-			float const min_ww_width(1.5*b.get_office_ext_doorway_width()), floor_spacing(b.get_window_vspace()); // should be the same for all buildings
+			float const min_ww_width(2.0*b.get_office_ext_doorway_width()), floor_spacing(b.get_window_vspace()); // should be the same for all buildings
 			if (b.bcube.z2() < m_bcube.z1() + floor_spacing) continue; // too short to connect to monorail
 
 			for (auto P = b.parts.begin(); P != b.parts.end(); ++P) {
@@ -4625,7 +4625,7 @@ public:
 				conn_area.z1() = p.z1() + floor_ix*floor_spacing;
 				conn_area.z2() = conn_area.z1()  + floor_spacing; // one floor in height
 				if (conn_area.z2() > p.z2()) continue; // too high
-				float const target_width(min_ww_width*rgen.rand_uniform(1.25, 2.5)), space_to_sides(0.5*(width - target_width));
+				float const target_width(min_ww_width*rgen.rand_uniform(1.0, 1.8)), space_to_sides(0.5*(width - target_width));
 				if (space_to_sides > 0.0) {conn_area.expand_in_dim(!conn_dim, -space_to_sides);} // shrink the width if needed
 				assert(conn_area.is_strictly_normalized());
 				// first try placing centered on the part; if there's extra space to the sides, and centered fails, then try to a random side, then the other side
