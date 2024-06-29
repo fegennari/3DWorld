@@ -1937,8 +1937,8 @@ void monorail_t::init(cube_t const &c, bool dim_) {
 	for (cube_with_ix_t const &conn : ww_conns) {
 		cube_t entrance(conn);
 		entrance.expand_in_dim(!dim, entrance_ext); // expand in walkway entrance dim
-		entrance.z2() -= 0.6*FLOOR_THICK_VAL_OFFICE*conn.dz(); // lower the ceiling slightly
-		entrance.expand_in_dim(dim, -0.1*conn.get_sz_dim(dim)); // shrink sides
+		entrance.expand_in_dim( dim, -0.1*conn.get_sz_dim(dim)); // shrink sides
+		entrance.expand_in_dim(2,    -0.55*FLOOR_THICK_VAL_OFFICE*conn.dz()); // lower the ceiling and raise the floor slightly
 		entrances.push_back(entrance);
 		swap_cube_dims(entrance, !dim, 2);
 		subtract_cube_from_cubes(entrance, sides);
@@ -1970,6 +1970,7 @@ void monorail_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_
 		for (cube_with_ix_t const &conn : ww_conns) {
 			bool const dir(conn.ix & 1);
 			float const conn_zfloor(conn.z1() + 0.5*FLOOR_THICK_VAL_OFFICE*conn.dz());
+			if (bot.z2() <= conn_zfloor) continue; // sloping down rather than up when entering monorail
 			cube_t ramp(conn);
 			ramp.d[!dim][!dir] += (dir ? -1.0 : 1.0)*0.1*conn.dz(); // extend into walkway
 			ramp.expand_in_dim(dim, -0.1*conn.get_sz_dim(dim)); // shrink sides, same as entrances
