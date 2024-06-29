@@ -2144,8 +2144,8 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		color = colorRGBA((1.0 - tint), (1.0 - tint), (0.8 + tint), 1.0);
 	} else {color = mat.window_color;}
 	int const clip_windows(draw_windows ? (is_house ? 2 : 1) : 0);
-	float const floor_spacing(get_window_vspace());
-	float const gf_door_ztop(doors.empty() ? 0.0f : (EXACT_MULT_FLOOR_HEIGHT ? (ground_floor_z1 + floor_spacing) : doors.front().pts[2].z));
+	float const floor_spacing(get_window_vspace()), first_floor_z1(ground_floor_z1 + floor_spacing);
+	float const gf_door_ztop(doors.empty() ? 0.0f : (EXACT_MULT_FLOOR_HEIGHT ? first_floor_z1 : doors.front().pts[2].z));
 	unsigned draw_parts_mask(0);
 	bool room_with_stairs(0);
 	cube_t cont_part; // part containing the point
@@ -2191,8 +2191,8 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 					if (skip || clamp_cube == nullptr) continue; // skip if adj in neither dim, always skip (but could check chained adj case)
 				}
 			}
-			unsigned const part_ix(i - parts.begin());
-			unsigned const dsides((part_ix < 4 && draw_windows) ? door_sides[part_ix] : 0); // skip windows on sides with doors, but only for buildings with windows
+			// skip windows on sides with doors, but only for buildings with windows
+			unsigned const part_ix(i - parts.begin()), dsides((part_ix < 4 && draw_windows && i->z1() == ground_floor_z1) ? door_sides[part_ix] : 0);
 			bdraw.add_section(*this, 1, part, tex, color, 3, 0, 0, 1, clip_windows, door_ztop, dsides, offset_scale, 0, clamp_cube); // XY, no_ao=1
 			draw_parts_mask |= (1 << part_ix);
 
@@ -2215,6 +2215,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 
 					for (auto d = doors.begin(); d != doors.end(); ++d) {
 						cube_t const c(d->get_bcube());
+						if (c.z1() > first_floor_z1)  continue; // not ground floor door; walkway door
 						if ((c.dy() < c.dx()) != dim) continue; // wrong dim
 						if (c.d[dim][0]-toler > wall_pos || c.d[dim][1]+toler < wall_pos) continue; // door not on this wall
 						float const door_lo(c.d[!dim][0]), door_hi(c.d[!dim][1]);
@@ -2241,6 +2242,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 						float const wall_len(c.get_sz_dim(!dim));
 						if (wall_len < 0.5*window_spacing) continue; // wall too small to add here
 						c.z2() = door_ztop;
+						assert(c.is_strictly_normalized());
 						tid_nm_pair_t tex2(tex);
 						tex2.tscale_x = 0.5f*round_fp(wall_len/window_spacing)/wall_len;
 						tex2.txoff    = -2.0*tex2.tscale_x*c.d[!dim][0];
