@@ -1878,15 +1878,19 @@ bool park_path_t::check_point_contains_xy(point const &p) const {
 
 class tile_drawer_t {
 	uint64_t last_tile_id=0;
+	bool tile_was_set=0;
 public:
 	void next_cube(cube_t const &c, draw_state_t &dstate, quad_batch_draw &qbd) {
 		unsigned const tile_id(get_tile_id_containing_point_no_xyoff(c.get_cube_center()));
-		if (tile_id == last_tile_id) return;
+		if (tile_was_set && tile_id == last_tile_id) return;
 		qbd.draw_and_clear();
 		dstate.begin_tile(c.get_cube_center(), 1);
 		last_tile_id = tile_id;
 	}
-	void end_draw(quad_batch_draw &qbd) {qbd.draw_and_clear();}
+	void end_draw(quad_batch_draw &qbd) {
+		qbd.draw_and_clear();
+		tile_was_set = 0;
+	}
 };
 
 void draw_long_cube(cube_t const &c, colorRGBA const &color, draw_state_t &dstate, quad_batch_draw &qbd, tile_drawer_t &td, float dist_scale,
