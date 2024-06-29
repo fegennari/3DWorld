@@ -1958,6 +1958,7 @@ void monorail_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_
 	tile_drawer_t td;
 	dstate.set_untextured_material();
 	colorRGBA const ext_color(GRAY);
+	bool const player_above_floor(dstate.camera_bs.z > bcube.z1());
 	
 	for (cube_t const &c : sides) {
 		bool const skip_bottom(c.z1() == bot.z2());
@@ -1965,17 +1966,37 @@ void monorail_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_
 		if (c.d[!dim][0] == top.d[!dim][0] && c.d[!dim][1] == top.d[!dim][1]) {skip_dims|= (1 << unsigned(!dim));} // don't need to draw sides of ends
 		draw_long_cube(c, ext_color, dstate, qbds.untex_qbd, td, dist_scale, shadow_only, skip_bottom, 0.0, skip_dims);
 	}
+	if (player_above_floor) { // draw ramps if player is above the floor
+		for (cube_with_ix_t const &conn : ww_conns) {
+			bool const dir(conn.ix & 1);
+			float const conn_zfloor(conn.z1() + 0.5*FLOOR_THICK_VAL_OFFICE*conn.dz());
+			cube_t ramp(conn);
+			ramp.d[!dim][!dir] += (dir ? -1.0 : 1.0)*0.1*conn.dz(); // extend into walkway
+			ramp.expand_in_dim(dim, -0.1*conn.get_sz_dim(dim)); // shrink sides, same as entrances
+			set_cube_zvals(ramp, min(conn_zfloor, bot.z2()), max(conn_zfloor, bot.z2()));
+			if (!dstate.check_cube_visible(bcube, 0.1*dist_scale)) continue;
+			point pts[4];
+			for (unsigned d = 0; d < 2; ++d) {pts[2*d][dim] = pts[2*d+1][dim] = ramp.d[dim][d];} // sides of ramp
+			pts[0][!dim] = pts[3][!dim] = ramp.d[!dim][!dir];
+			pts[1][!dim] = pts[2][!dim] = ramp.d[!dim][ dir];
+			pts[0].z = pts[3].z = ramp.z1();
+			pts[1].z = pts[2].z = ramp.z2();
+			vector3d const normal(((dim ^ dir) ? 1.0 : -1.0)*cross_product(pts[0]-pts[1], pts[3]-pts[0]).get_norm());
+			qbds.untex_qbd.add_quad_pts(pts, GRAY, normal);
+			td.next_cube(ramp, dstate, qbds.untex_qbd);
+		} // for conn
+	}
 	draw_long_cube(bot, ext_color, dstate, qbds.untex_qbd, td, dist_scale, shadow_only); // draw all sides
 	td.end_draw(qbds.untex_qbd);
-	enable_blend();
 
-	if (!shadow_only) { // transparent; Z only; drawn last
+	if (!shadow_only && player_above_floor) { // draw roof if player is above the floor; transparent; Z only; drawn last
+		enable_blend();
 		glDepthMask(GL_FALSE); // disable depth writing so that terrain and grass are drawn over the glass
 		draw_long_cube(top, colorRGBA(1.0, 1.0, 1.0, 0.25), dstate, qbds.untex_qbd, td, dist_scale, shadow_only, 0, 0.0, 3);
 		td.end_draw(qbds.untex_qbd);
 		glDepthMask(GL_TRUE);
+		disable_blend();
 	}
-	disable_blend();
 	dstate.unset_untextured_material();
 }
 bool monorail_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
