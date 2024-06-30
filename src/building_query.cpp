@@ -116,7 +116,7 @@ bool building_t::check_pt_in_or_near_walkway(point const &p, bool owned_only, bo
 	for (building_walkway_t const &w : walkways) {
 		if (owned_only && !w.is_owner) continue;
 		
-		if (inc_open_door && !w.monorail_conn.is_all_zeros()) { // test monorail walkway connection
+		if (inc_open_door && w.has_monorail_conn()) { // test monorail walkway connection
 			cube_t vis_area(w.monorail_conn);
 			vis_area.expand_in_dim(w.dim, (player_in_walkway ? 2.0 : 0.1)*w.get_length()); // extend to include other nearby walkways
 			if (vis_area.contains_pt(p)) return 1; // player in nearby monorail area or opposing walkway

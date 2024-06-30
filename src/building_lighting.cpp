@@ -1616,7 +1616,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		//bool const light_room_is_tall(room.is_single_floor && lpos.z > room.z1() + window_vspacing);
 		// special case for light shining down from above stairs when the player is below
 		bool const light_above_stairs(lpos.z > camera_z && light_room_has_stairs_or_ramp);
-		bool stairs_light(0), player_in_elevator(0), cull_if_not_by_stairs(0), in_camera_walkway(0);
+		bool stairs_light(0), player_in_elevator(0), cull_if_not_by_stairs(0), in_camera_walkway(0), in_walkway_near_camera(0);
 
 		if (is_in_elevator) {
 			elevator_t const &e(get_elevator(i->obj_id));
@@ -1740,7 +1740,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 			for (building_walkway_t const &w : walkways) { // Note: walkways shouldn't be added to rotated buildings
 				if (!w.is_owner || !w.bcube.contains_pt(lpos)) continue;
-				if (w.bcube_inc_rooms.contains_pt(camera_rot)) {in_camera_walkway = 1;} // camera in or near the walkway
+				if (w.bcube_inc_rooms.contains_pt(camera_rot)) {in_camera_walkway = in_walkway_near_camera = 1;} // camera in or near the walkway
+				else if (w.has_monorail_conn() && w.monorail_conn.contains_pt(camera_rot)) {in_walkway_near_camera = 1;} // camera in monorail near the walkway
 				light_clip_cube  = w.bcube;
 				light_in_walkway = 1;
 				break;
@@ -1969,7 +1970,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		setup_light_for_building_interior(dl_sources.back(), *i, clipped_bc_rot, force_smap_update, shadow_caster_hash);
 		
 		// add upward pointing light (sideways for wall lights); only when player is near/inside a building (optimization); not for lights hanging on ceiling fans
-		if ((camera_near_building || in_camera_walkway) && (is_lamp || wall_light || lpos_rot.z > up_light_zmin) && !i->is_hanging()) {
+		if ((camera_near_building || in_walkway_near_camera) && (is_lamp || wall_light || lpos_rot.z > up_light_zmin) && !i->is_hanging()) {
 			cube_t light_bc2(clipped_bc);
 
 			if (is_in_elevator) {

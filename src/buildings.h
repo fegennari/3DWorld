@@ -1453,6 +1453,7 @@ struct building_walkway_t : public building_walkway_geom_t { // "owned" walkway,
 
 	building_walkway_t(building_walkway_geom_t const &g, bool owner, building_t *b) : building_walkway_geom_t(g), is_owner(owner), conn_bldg(b) {bcube_inc_rooms = bcube;}
 	cube_t get_bcube_inc_open_door() const;
+	bool has_monorail_conn() const {return !monorail_conn.is_all_zeros();}
 };
 
 
