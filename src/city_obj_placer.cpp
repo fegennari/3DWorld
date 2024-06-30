@@ -2025,12 +2025,13 @@ template<typename T> bool proc_vector_sphere_coll(vector<T> const &objs, city_ob
 }
 bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, vector3d *cnorm) const { // pos in in camera space
 	if (!sphere_cube_intersect(pos, (radius + p2p_dist(pos, p_last)), (all_objs_bcube + xlate))) return 0;
-	if (monorail.proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1; // must be before walkways
+	bool const monorail_coll(monorail.proc_sphere_coll(pos, p_last, radius, xlate, cnorm)); // must be before walkways
 
 	// special handling for player walking on/in walkways; we need to handle collisions with the top surface when above, so proc_vector_sphere_coll() can't be used here
 	for (walkway_t const &w : walkways) {
 		if (w.proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1;
 	}
+	if (monorail_coll) return 1;
 	if (proc_vector_sphere_coll(benches,   bench_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(trashcans, trashcan_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(fhydrants, fhydrant_groups, pos, p_last, radius, xlate, cnorm)) return 1;
