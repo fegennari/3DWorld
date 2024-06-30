@@ -613,7 +613,7 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 }
 
 bool building_t::check_walkway_door_clearance(cube_t const &c, bool dim) const {
-	if (interior->is_blocked_by_stairs_or_elevator(c)) return 0;
+	if (interior->is_blocked_by_stairs_or_elevator(c, 0.0, 0, 2)) return 0; // dmin=0.0, elevators_only=0, no_check_enter_exit=2
 
 	// check wall ends; shouldn't need to check the other dim because rooms should be at least a doorway width wide
 	for (cube_t const &w : interior->walls[!dim]) {
@@ -636,9 +636,11 @@ bool building_t::add_walkway_door(building_walkway_geom_t &walkway, bool dir, un
 	float zval(wbc.z1() + get_fc_thickness()); // bottom of lowest level door
 
 	if (interior) { // check for clearance; should this be done per-floor?
+		// walkway doors don't have a full door width of front clearance since they open outward and are also split in half
+		float const front_clearance(max(0.5f*door_width, get_min_front_clearance_inc_people()));
 		set_cube_zvals(door, zval, wbc.z2()); // full walkway height
 		cube_t door_exp(door);
-		door_exp.d[dim][!dir] -= (dir ? 1.0 : -1.0)*door_width;
+		door_exp.d[dim][!dir] -= (dir ? 1.0 : -1.0)*front_clearance;
 		
 		if (!check_walkway_door_clearance(door_exp, dim)) { // blocked, try points to the sides
 			bool sdir(interior->rooms.size() & 1); // start with a pseudo random offset direction
