@@ -1416,7 +1416,7 @@ bool walkway_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_
 
 	if (pzmax > bc.z2()) { // above the walkway
 		float const wwz(bc.z2() + radius_);
-		if (pos_.z > wwz) return 0; // in the air above the walkway
+		if (pzmax > wwz) return 0; // in the air above the walkway
 		pos_.z = wwz;
 		if (cnorm) {*cnorm = plus_z;}
 		return 1; // collision with roof
