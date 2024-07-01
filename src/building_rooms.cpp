@@ -1893,8 +1893,11 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 								if (!is_split && is_bathroom(get_room_type_and_floor(room_id, window.zc(), floor_ix))) continue;
 								cube_t trim(window);
 								set_wall_width(trim, edge, 0.5*max(window_trim_width, 1.1f*wall_thickness), !dim);
+								max_eq(trim.d[!dim][0], window.d[!dim][0]); // clamp to window bounds
+								min_eq(trim.d[!dim][1], window.d[!dim][1]);
+								if (!trim.is_strictly_normalized()) continue;
 								trim_objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
-							}
+							} // for d
 						} // for w
 					}
 				}
