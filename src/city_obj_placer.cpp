@@ -533,7 +533,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		for (walkway_t const &w : walkways) {
 			if (!w.bcube.intersects_xy(plot)) continue;
 			float const length(w.get_length()), width(w.get_width()), height(w.bcube.z1() - plot.z2());
-			if (length < 8.0*width || length < 1.6*height) continue; // too short or too high for a support pillar
+			bool const to_monorail(w.open_ends[0] || w.open_ends[1]);
+			if (!to_monorail && (length < 8.0*width || length < 1.6*height)) continue; // too short or too high for a support pillar; monorail walkways are always supported
 			bool const is_concrete(height < 0.25*length); // concrete when shorter, steel when taller
 			float const pillar_hlen((is_concrete ? 0.1 : 0.15)*width), pillar_hwid((is_concrete ? 0.3 : 0.15)*width);
 			cube_t pillar;
@@ -553,6 +554,9 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				cube_t pillar_exp(pillar);
 				pillar_exp.expand_by_xy(min_obj_spacing);
 				if (has_bcube_int_no_adj(pillar_exp, blockers)) continue; // skip the walkway; what else can this intersect, only parking lots?
+				bool blocked(0);
+				for (walkway_t const &w2 : walkways) {blocked |= (w2.bcube != w.bcube && w2.bcube.intersects(pillar_exp));}
+				if (blocked) continue; // blocked by another walkway below
 				pillar_groups.add_obj(pillar_t(pillar, is_concrete), pillars);
 				add_cube_to_colliders_and_blockers(pillar, colliders, blockers);
 				break; // success
