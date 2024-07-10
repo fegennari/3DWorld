@@ -98,7 +98,7 @@ cube_t get_city_bcube_overlapping(cube_t const &c);
 void show_gpu_mem_info();
 
 
-float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}
+float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius()*(is_cloudy ? 0.25 : 1.0);} // lower fog distance when rainy/cloudy
 float get_draw_tile_dist  () {return DRAW_DIST_TILES*get_scaled_tile_radius();}
 float get_grass_thresh    () {return GRASS_THRESH*tt_grass_scale_factor*get_tile_width();}
 float get_grass_blend_dist() {return tt_grass_scale_factor/GRASS_DIST_SLOPE;}
