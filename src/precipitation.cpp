@@ -18,14 +18,17 @@ extern vector3d wind;
 
 
 bool is_pos_in_player_building(point const &pos);
+cube_t get_city_bcube_at_pt(point const &pos);
+float get_road_height();
 
 template <unsigned VERTS_PER_PRIM> class precip_manager_t {
 protected:
 	typedef vert_wrap_t vert_type_t;
 	vector<vert_type_t> verts;
 	rand_gen_t rgen; // modified in update logic
+	vector3d xlate;
 	float prev_zmin=0.0, cur_zmin=0.0, prev_zmax=0.0, cur_zmax=0.0, precip_dist=0.0;
-	bool check_water_coll=1, check_mesh_coll=1, check_cobj_coll=1;
+	bool check_water_coll=1, check_mesh_coll=1, check_cobj_coll=1, in_city=0;
 public:
 	virtual ~precip_manager_t() {}
 	void clear () {verts.clear();}
@@ -33,15 +36,26 @@ public:
 	size_t size() const {return verts.size();}
 	virtual float get_zmin() const {return ((world_mode == WMODE_GROUND) ? zbottom : get_tiled_terrain_water_level());}
 	virtual float get_zmax() const {return get_cloud_zmax();}
-	virtual size_t get_num_precip() {return 700*get_precip_rate();} // similar to precip max objects
+	virtual size_t get_num_precip() {return size_t(700)*get_precip_rate();} // similar to precip max objects
 	bool in_range(point const &pos) const {return dist_xy_less_than(pos, get_camera_pos(), precip_dist);}
 	vector3d get_velocity(float vz) const {return fticks*(0.02*wind + vector3d(0.0, 0.0, vz));}
 	
 	void pre_update() {
+		in_city  = 0;
+		xlate    = zero_vector;
 		cur_zmin = get_zmin();
 		cur_zmax = get_zmax();
 		if (cur_zmin >= cur_zmax) {clear(); return;} // invalid range (water particles with no water?)
 
+		if (world_mode == WMODE_INF_TERRAIN) { // check for player in city
+			xlate = get_camera_coord_space_xlate();
+			cube_t const city_bcube(get_city_bcube_at_pt(get_camera_pos() - xlate));
+
+			if (!city_bcube.is_all_zeros()) {
+				in_city  = 1;
+				cur_zmin = city_bcube.z1() + get_road_height();
+			}
+		}
 		// if zmin or zmax changes by more than some amount, then clear and regen point z-values so that rain/snow stays uniformly spaced in z
 		if (fabs(prev_zmin - cur_zmin) > 0.05f*(get_zmax() - cur_zmin) || fabs(prev_zmax - cur_zmax) > 0.25f*(get_zmax() - cur_zmin)) {
 			clear();
@@ -99,13 +113,15 @@ public:
 			}
 		}
 		else if (world_mode == WMODE_INF_TERRAIN) {
-			if (camera_in_building && is_pos_in_player_building(bot_pos)) return 0;
-		}
+			if (camera_in_building && is_pos_in_player_building(bot_pos - xlate)) return 0;
+			if (splashes != nullptr && in_city && bot_pos.z < cur_zmin) {maybe_add_rain_splash(pos, bot_pos, cur_zmin, *splashes, 0, 0, 0);} // splash on city surface
+		} // else universe/invalid
 		return 1;
 	}
 	void check_pos(point &pos, point const &bot_pos, deque<sphere_t> *splashes=nullptr) {
 		if (pos == all_zeros) { // initial location
 			vector3d const bot_delta(bot_pos - pos);
+			
 			for (unsigned attempt = 0; attempt < 16; ++attempt) { // make 16 attempts at choosing a valid starting z-value
 				pos = gen_pt(rgen.rand_uniform(cur_zmin, cur_zmax));
 				if (is_bot_pos_valid(pos, pos+bot_delta, nullptr)) break;
@@ -219,7 +235,7 @@ class uw_particle_manager_t : public precip_manager_t<1> { // underwater particl
 
 	virtual float get_zmin() const  {return max(terrain_zmin,  (get_camera_pos().z - WATER_PART_DIST));}
 	virtual float get_zmax() const  {return min(water_plane_z, (get_camera_pos().z + WATER_PART_DIST));}
-	virtual size_t get_num_precip() {return 150*get_precip_rate();}
+	virtual size_t get_num_precip() {return size_t(150)*get_precip_rate();}
 public:
 	uw_particle_manager_t() {check_water_coll = 0;}
 
