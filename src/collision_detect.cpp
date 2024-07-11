@@ -26,9 +26,9 @@ coll_obj_group coll_objects;
 cobj_groups_t cobj_groups;
 cobj_draw_groups cdraw_groups;
 
-extern bool lm_alloc, has_snow, player_wait_respawn;
+extern bool lm_alloc, has_snow, player_wait_respawn, camera_in_building, player_on_house_stairs;
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
-extern int camera_in_air, mesh_scale_change, camera_invincible, camera_flight, num_smileys, iticks, frame_counter, player_in_water;
+extern int camera_in_air, mesh_scale_change, camera_invincible, camera_flight, num_smileys, iticks, frame_counter, player_in_water, player_in_basement;
 extern unsigned snow_coverage_resolution;
 extern float TIMESTEP, temperature, zmin, base_gravity, ftick, tstep, zbottom, ztop, water_plane_z, fticks, jump_height, NEAR_CLIP;
 extern double camera_zh, tfticks;
@@ -1711,7 +1711,11 @@ void play_camera_footstep_sound() { // tiled terrain mode
 	last_pos = pos;
 	fs_time  = tfticks;
 	if (player_in_water) {register_building_water_splash(pos, 1.0, 1);} // water splash; alert_zombies=1
-	else {gen_sound_random_var(SOUND_SNOW_STEP, pos, 0.05, 1.25);} // normal footstep
+	//else if (player_in_water       ) {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_splash.wav"), pos, 0.2);}
+	else if (!camera_in_building   ) {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_grass.wav" ), pos, 0.2);}
+	else if (player_in_basement > 1) {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_knock2.wav"), pos, 0.2);}
+	else if (player_on_house_stairs) {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_hollow.wav"), pos, 0.2);}
+	else {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_knock.wav"), pos, 0.2);} // was SOUND_SNOW_STEP with pitch=1.25
 }
 
 

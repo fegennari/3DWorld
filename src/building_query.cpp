@@ -7,7 +7,7 @@
 
 
 extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_in_unlit_room, building_has_open_ext_door, ctrl_key_pressed;
-extern bool player_is_hiding, player_wait_respawn, had_building_interior_coll, player_in_int_elevator, player_in_walkway;
+extern bool player_is_hiding, player_wait_respawn, had_building_interior_coll, player_in_int_elevator, player_in_walkway, player_on_house_stairs;
 extern int camera_surf_collide, frame_counter, player_in_closet, player_in_elevator, player_in_basement, player_in_attic, player_in_water;
 extern float CAMERA_RADIUS, C_STEP_HEIGHT, NEAR_CLIP, building_bcube_expand;
 extern double camera_zh;
@@ -1089,8 +1089,9 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 	}
 	// not sure where this belongs, but the closet hiding logic is in this function, so I guess it goes here? player must be inside the building to see a windowless room anyway;
 	// assume room is lit if the player is on the stairs; required for handling stairs cut into walls where the stairs pass through a room not marked as having stairs
-	player_in_unlit_room = (!on_stairs && check_pos_in_unlit_room(pos));
-	prev_camera_height   = camera_height; // update for this frame
+	player_in_unlit_room   = (!on_stairs && check_pos_in_unlit_room(pos));
+	player_on_house_stairs = (on_stairs && is_house);
+	prev_camera_height     = camera_height; // update for this frame
 	if (had_coll && !player_in_water && pos.z < p_last.z) {apply_building_fall_damage(p_last.z - pos.z);}
 	return had_coll; // will generally always be true due to floors
 }
