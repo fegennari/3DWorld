@@ -1944,9 +1944,27 @@ void monorail_t::init(cube_t const &c, bool dim_) {
 		entrance.expand_in_dim( dim, -0.1*conn.get_sz_dim(dim)); // shrink sides
 		entrance.expand_in_dim(2,    -0.55*FLOOR_THICK_VAL_OFFICE*conn.dz()); // lower the ceiling and raise the floor slightly
 		entrances.push_back(entrance);
-		swap_cube_dims(entrance, !dim, 2);
-		subtract_cube_from_cubes(entrance, sides);
-	}
+		cube_t sub(entrance);
+		swap_cube_dims(sub, !dim, 2);
+		subtract_cube_from_cubes(sub, sides);
+		float const max_step_height(0.08*conn.dz()); // should be about the same for all conns
+		float const dz(entrance.z1() - bot.z2());
+		if (dz < max_step_height) continue; // no steps needed
+		unsigned const num_steps(ceil(dz/max_step_height));
+		bool const dir(!(conn.ix & 1)); // dir relative to monorail, not building
+		float const step_height(dz/(num_steps+1)), step_len((dir ? -1.0 : 1.0)*1.25*step_height), wall_pos(center.d[!dim][dir]);
+		cube_t step(entrance);
+		set_cube_zvals(step, bot.z2(), entrance.z1());
+		step.d[!dim][ dir] = wall_pos; // starts at inner wall
+		step.d[!dim][!dir] = wall_pos + step_len;
+
+		for (unsigned n = 0; n < num_steps; ++n) {
+			step.z2() -= step_height;
+			assert(step.is_strictly_normalized());
+			steps.push_back(step);
+			step.translate_dim(!dim, step_len);
+		}
+	} // for conn
 	for (cube_t &c : sides) {swap_cube_dims(c, !dim, 2);} // swap dims back
 
 	for (unsigned d = 0; d < 2; ++d) { // add ends
@@ -1970,8 +1988,8 @@ void monorail_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_
 		if (c.d[!dim][0] == top.d[!dim][0] && c.d[!dim][1] == top.d[!dim][1]) {skip_dims|= (1 << unsigned(!dim));} // don't need to draw sides of ends
 		draw_long_cube(c, ext_color, dstate, qbds.untex_qbd, td, dist_scale, shadow_only, skip_bottom, 0.0, skip_dims);
 	}
-	if (player_above_floor) { // draw ramps if player is above the floor
-		for (cube_with_ix_t const &conn : ww_conns) {
+	if (player_above_floor) { // draw ramps and steps if player is above the floor
+		for (cube_with_ix_t const &conn : ww_conns) { // ramps
 			bool const dir(conn.ix & 1);
 			float const conn_zfloor(conn.z1() + 0.5*FLOOR_THICK_VAL_OFFICE*conn.dz());
 			if (bot.z2() <= conn_zfloor) continue; // sloping down rather than up when entering monorail
@@ -1979,7 +1997,7 @@ void monorail_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_
 			ramp.d[!dim][!dir] += (dir ? -1.0 : 1.0)*0.1*conn.dz(); // extend into walkway
 			ramp.expand_in_dim(dim, -0.1*conn.get_sz_dim(dim)); // shrink sides, same as entrances
 			set_cube_zvals(ramp, min(conn_zfloor, bot.z2()), max(conn_zfloor, bot.z2()));
-			if (!dstate.check_cube_visible(bcube, 0.1*dist_scale)) continue;
+			if (!dstate.check_cube_visible(ramp, 0.1*dist_scale)) continue;
 			point pts[4];
 			for (unsigned d = 0; d < 2; ++d) {pts[2*d][dim] = pts[2*d+1][dim] = ramp.d[dim][d];} // sides of ramp
 			pts[0][!dim] = pts[3][!dim] = ramp.d[!dim][!dir];
@@ -1990,6 +2008,11 @@ void monorail_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_
 			qbds.untex_qbd.add_quad_pts(pts, GRAY, normal);
 			td.next_cube(ramp, dstate, qbds.untex_qbd);
 		} // for conn
+		for (cube_t const &c : steps) {
+			if (!dstate.check_cube_visible(c, 0.25*dist_scale)) continue;
+			td.next_cube(c, dstate, qbds.untex_qbd);
+			dstate.draw_cube(qbds.untex_qbd, c, ext_color, 1, 1.0); // skip_bottom=1, tscale=1.0
+		}
 	}
 	draw_long_cube(bot, ext_color, dstate, qbds.untex_qbd, td, dist_scale, shadow_only); // draw all sides
 	td.end_draw(qbds.untex_qbd);
@@ -2032,6 +2055,21 @@ bool monorail_t::proc_sphere_coll(point &pos_, point const &p_last, float radius
 		}
 		else {ret |= sphere_cube_int_update_pos(pos_, radius_, c, p_last, 0, cnorm);}
 	} // for side
+	for (cube_t const &s : steps) {
+		cube_t const c(s + xlate);
+		float const step_up_z(c.z2() + radius_);
+
+		if (step_up_z > zval) { // can step up onto stair
+			if (pos_[dim] > c.d[dim][0] && pos_[dim] < c.d[dim][1]) { // within stairs range
+				if (pos_[!dim] > c.d[!dim][0]-radius_ && pos_[!dim] < c.d[!dim][1]+radius_) { // intersecting stair
+					pos_.z = step_up_z; // step up onto stair
+					ret    = 1;
+					continue;
+				}
+			}
+		}
+		ret |= sphere_cube_int_update_pos(pos_, radius_, c, p_last, 0, cnorm);
+	} // for s
 	if (ret) return 1;
 	return sphere_cube_int_update_pos(pos_, radius_, bc_cs, p_last, 0, cnorm); // exterior coll
 }
