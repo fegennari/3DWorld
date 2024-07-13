@@ -3461,7 +3461,23 @@ public:
 			// otherwise, we would need to switch between two different shaders every time we come across a building with people in it; not very clean, but seems to work
 			bool const enable_animations(global_building_params.enable_people_ai && draw_interior);
 			if (enable_animations) {enable_animations_for_shader(s);}
+			float water_damage(0.0);
+
+			if (camera_in_building && player_building != nullptr && (camera_bs.z - get_bldg_player_height()) < player_building->ground_floor_z1) { // entering or in basement
+				point const center(player_building->bcube.get_cube_center());
+				float const rand_val(fract((center.x + center.y + center.z)/player_building->get_window_vspace()));
+				water_damage = max(0.0f, (rand_val - 0.5f)); // 50% of buildings have up to 50% water damage
+			}
+			if (water_damage > 0.0) {s.set_prefix("#define ENABLE_WATER_DAMAGE", 1);} // FS
 			setup_building_draw_shader(s, min_alpha, 1, 0, 0); // enable_indir=1, force_tsl=0, use_texgen=0
+			
+			if (water_damage > 0.0) {
+				bind_texture_tu(get_noise_tex_3d(64, 1), 11); // grayscale noise
+				s.add_uniform_int("wet_noise_tex", 11);
+				s.add_uniform_float("wet_effect",   water_damage);
+				s.add_uniform_float("puddle_scale", 0.5);
+				s.add_uniform_float("water_damage_zmax", player_building->ground_floor_z1); // water damage is only in the basement
+			}
 			vector<point> points; // reused temporary
 			bbd.clear_obj_models();
 			int indir_bcs_ix(-1), indir_bix(-1);

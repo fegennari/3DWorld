@@ -22,7 +22,9 @@ uniform float cube_bb[6], sphere_radius;
 uniform float depth_trans_bias, clip_plane_z, ripple_time, rain_intensity, reflectivity, snow_cov_amt;
 uniform float reflect_plane_ztop, reflect_plane_zbot;
 uniform float winding_normal_sign = 1.0;
-uniform float cube_map_reflect_mipmap_level = 0;
+uniform float cube_map_reflect_mipmap_level = 0.0;
+uniform float puddle_scale = 0.04;
+uniform float water_damage_zmax = 0.0;
 uniform int cube_map_texture_size = 0;
 uniform vec4 emission = vec4(0,0,0,1);
 uniform bool two_sided_lighting = true;
@@ -191,12 +193,11 @@ float get_water_snow_coverage() {
 }
 
 float get_puddle_val(in float wetness) {
-
 	float wet_val = 0.0;
 	float freq    = 1.0;
 
 	for (int i = 0; i < 4; ++i) {
-		wet_val += texture(wet_noise_tex, 0.04*freq*vpos).r/freq;
+		wet_val += texture(wet_noise_tex, puddle_scale*freq*vpos).r/freq;
 		freq    *= 2.0;
 	}
 	return sqrt(min(1.0, 8.0*wetness))*min(1.0, pow((wetness + max(wet_val, 0.6) - 0.6), 8.0));
@@ -307,13 +308,24 @@ void main()
 	}
 #endif // ENABLE_PUDDLES
 
+#ifdef ENABLE_WATER_DAMAGE
+	if (wetness > 0.0 && wetness < 1.0 && vpos.z < water_damage_zmax) { // add water damage similar to puddles
+		wetness       = get_puddle_val(wetness);
+		reflectivity2 = wetness;
+	}
+#endif // ENABLE_WATER_DAMAGE
+
 #ifdef USE_WINDING_RULE_FOR_NORMAL
 	float normal_sign  = winding_normal_sign*((!two_sided_lighting || gl_FrontFacing) ? 1.0 : -1.0); // two-sided lighting
 #else
 	float normal_sign  = ((!two_sided_lighting || (dot(eye_norm, epos.xyz) < 0.0)) ? 1.0 : -1.0); // two-sided lighting
 #endif
 	vec3 normal_s      = normal_sign*normal;
+#ifdef ENABLE_WATER_DAMAGE
+	float wet_surf_val = wetness; // all surfaces are wet
+#else
 	float wet_surf_val = wetness*max(normal.z, 0.0); // only +z surfaces are wet; doesn't apply to spec shininess though
+#endif
 	vec4 base_color    = mix(1.0, 0.25, wet_surf_val)*gl_Color; // unlit material color (albedo)
 	base_color.rgb    *= texel.rgb; // maybe gamma correction is wrong when the texture is added this way? but it's not actually used in any scenes
 	vec3 lit_color     = emission.rgb*texel.rgb + emissive_scale*base_color.rgb;
