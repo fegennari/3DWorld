@@ -1394,7 +1394,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			bind_texture_tu(tmgr.get_texture(bump_tid).get_tid(), 5);
 		}
 		else if (is_bmap_pass) {
-			if (enable_bump_map()) {model3d::bind_default_flat_normal_map();} // use default normal map in this case instead of leaving it unbound, or bound to the previous material
+			if (enable_bump_map()) {bind_default_flat_normal_map();} // use default normal map in this case instead of leaving it unbound, or bound to the previous material
 			shader.add_uniform_float("bump_map_mag", 0.0); // disable bump map, including TBN matrix transform of eye_pos and light_dir; needed when there are no TCs or tangent vectors
 			bmap_disabled = 1;
 		}

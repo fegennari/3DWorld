@@ -304,7 +304,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	if (disable_cull_face_this_obj) {glDisable(GL_CULL_FACE);}
 
 	if (!force_high_detail && (low_detail || is_shadow_pass)) { // low detail pass, normal maps disabled
-		if (!is_shadow_pass && use_model3d_bump_maps()) {model3d::bind_default_flat_normal_map();} // still need to set the default here in case the shader is using it
+		if (!is_shadow_pass && use_model3d_bump_maps()) {bind_default_flat_normal_map();} // still need to set the default here in case the shader is using it
 		// combine shadow materials into a single VBO and draw with one call when is_shadow_pass==1? this is complex and may not yield a significant improvement
 		for (auto i = model_file.shadow_mat_ids.begin(); i != model_file.shadow_mat_ids.end(); ++i) {
 			if (skip_mat_mask & (1<<*i)) continue; // skip this material

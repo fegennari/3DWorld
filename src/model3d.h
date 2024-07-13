@@ -622,7 +622,6 @@ public:
 	void calc_tangent_vectors();
 	void simplify_indices(float reduce_target);
 	void reverse_winding_order(uint64_t mats_mask=~uint64_t(0));
-	static void bind_default_flat_normal_map() {select_texture(FLAT_NMAP_TEX, 5);}
 	void set_sky_lighting_file(string const &fn, float weight, unsigned sz[3]);
 	void set_occlusion_cube(cube_t const &cube) {occlusion_cube = cube;}
 	void fit_to_scene();
@@ -723,7 +722,6 @@ public:
 	int get_texture(string const &fn, bool is_alpha_mask, bool verbose, bool invert_alpha=0, bool wrap=1, bool mirror=0, bool force_grayscale=0);
 	void check_and_bind(int &tid, string const &tfn, bool is_alpha_mask, bool verbose, bool invert_alpha=0, bool wrap=1, bool mirror=0);
 };
-
 
 template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, float coplanar_thresh, bool allow_quads=1);
 

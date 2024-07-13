@@ -109,7 +109,7 @@ void tid_nm_pair_t::set_gl(tid_nm_pair_dstate_t &state) const {
 void tid_nm_pair_t::unset_gl(tid_nm_pair_dstate_t &state) const {
 	if (tid == REFLECTION_TEXTURE_ID && room_mirror_ref_tid != 0) {state.s.make_current(); return;}
 	bool const has_normal_map(get_nm_tid() != FLAT_NMAP_TEX);
-	if (has_normal_map) {select_texture(FLAT_NMAP_TEX, 5);} // reset back to flat normal map
+	if (has_normal_map) {bind_default_flat_normal_map();} // reset back to flat normal map
 	if (get_emissive_val() > 0.0) {state.s.add_uniform_float("emissive_scale", 0.0);} // disable emissive
 	if (shininess          > 0  ) {state.s.clear_specular();} // clear specular
 }

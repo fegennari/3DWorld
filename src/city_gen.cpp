@@ -1304,7 +1304,7 @@ public:
 	vector<bridge_t> const &get_bridges() const {return bridges;}
 	bool have_animations() const {return city_obj_placer.have_animations();}
 	static void set_road_normal_map  () {select_texture(get_texture_by_name("normal_maps/dirt_normal.jpg", 1), 5);}
-	static void reset_road_normal_map() {select_texture(FLAT_NMAP_TEX, 5);}
+	static void reset_road_normal_map() {bind_default_flat_normal_map();} // no normal map
 
 	void draw(road_draw_state_t &dstate, bool shadow_only, bool is_connector_road) {
 		city_obj_placer.draw_detail_objects(dstate, shadow_only); // always drawn; does its own VFC and distance test
@@ -2728,7 +2728,7 @@ public:
 
 			if (1 || have_plot_dividers) { // enable normal maps for fences and walls; also applies to tunnels and power poles
 				dstate.set_enable_normal_map(1);
-				select_texture(FLAT_NMAP_TEX, 5); // set flat normal map texture as the default
+				bind_default_flat_normal_map(); // set flat normal map texture as the default
 			}
 			if (have_animations()) {enable_animations_for_shader(dstate.s);}
 			dstate.pre_draw(xlate, use_dlights, shadow_only, 1); // always_setup_shader=1

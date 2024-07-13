@@ -18,7 +18,6 @@ bool do_line_clip_xy(point &v1, point &v2, float const d[3][2]);
 
 float get_power_pole_offset() {return 0.045*city_params.road_width;}
 unsigned get_building_models_gpu_mem() {return building_obj_model_loader.get_gpu_mem();}
-void set_flat_normal_map() {select_texture(FLAT_NMAP_TEX, 5);}
 int get_solarp_tid();
 
 
@@ -35,7 +34,7 @@ void textured_mat_t::pre_draw(bool shadow_only) {
 	if (nm_tid >= 0) {select_texture(nm_tid, 5);} // bind normal map if it was specified
 }
 void textured_mat_t::post_draw(bool shadow_only) {
-	if (!shadow_only && nm_tid >= 0) {set_flat_normal_map();} // restore default flat normal map
+	if (!shadow_only && nm_tid >= 0) {bind_default_flat_normal_map();} // restore default flat normal map
 }
 
 
@@ -144,7 +143,7 @@ cube_t bench_t::get_bird_bcube() const {
 	}
 }
 /*static*/ void bench_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {set_flat_normal_map();}
+	if (!shadow_only) {bind_default_flat_normal_map();}
 }
 void bench_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	cube_t bcube_with_back(bcube);
@@ -254,7 +253,7 @@ trashcan_t::trashcan_t(point const &pos_, float radius_, float height, bool is_c
 	}
 }
 /*static*/ void trashcan_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only && dstate.pass_ix > 0) {set_flat_normal_map();} // restore to default for cylindrical trashcan
+	if (!shadow_only && dstate.pass_ix > 0) {bind_default_flat_normal_map();} // restore to default for cylindrical trashcan
 	city_obj_t::post_draw(dstate, shadow_only);
 }
 void trashcan_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
@@ -489,7 +488,7 @@ void begin_water_surface_draw() {
 	glDepthMask(GL_FALSE);
 }
 void end_water_surface_draw() {
-	if (0) {set_flat_normal_map();}
+	if (0) {bind_default_flat_normal_map();}
 	disable_blend();
 	glDepthMask(GL_TRUE);
 }
@@ -874,7 +873,7 @@ bool power_pole_t::add_wire(point const &p1, point const &p2, bool add_pole) { /
 	select_texture(get_texture_by_name("normal_maps/wood_NRM.jpg", 1), 5);
 }
 /*static*/ void power_pole_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {set_flat_normal_map();} // restore to default
+	if (!shadow_only) {bind_default_flat_normal_map();} // restore to default
 	city_obj_t::post_draw(dstate, shadow_only);
 }
 
@@ -1387,7 +1386,7 @@ walkway_t::walkway_t(bldg_walkway_t const &w) : oriented_city_obj_t(w, w.dim, 0)
 	for (unsigned d = 0; d < 2; ++d) {open_ends[d] = w.open_ends[d];}
 }
 /*static*/ void walkway_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {set_flat_normal_map();}
+	if (!shadow_only) {bind_default_flat_normal_map();}
 }
 void walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	tid_nm_pair_dstate_t state(dstate.s); // pass this in?

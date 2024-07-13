@@ -561,7 +561,7 @@ void building_room_geom_t::draw_animals(shader_t &s, building_t const &building,
 			rat_drawn = 1;
 		} // for rat
 		anim_state.clear_animation_id(s); // clear animations
-		model3d::bind_default_flat_normal_map();
+		bind_default_flat_normal_map();
 		if (rat_drawn) {check_mvm_update();} // needed after popping model transform matrix
 	} // end rats drawing
 	spider_draw.draw(spiders, s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);

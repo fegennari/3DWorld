@@ -64,7 +64,7 @@ void bird_poop_manager_t::remove_oldest_splat() {
 }
 void bird_poop_manager_t::draw(shader_t &s, vector3d const &xlate) {
 	if (poops.empty() && splats.empty()) return;
-	set_flat_normal_map();
+	bind_default_flat_normal_map();
 
 	if (!poops.empty()) {
 		s.set_cur_color(WHITE);
@@ -123,7 +123,7 @@ void city_bird_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 /*static*/ void city_bird_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	animation_state_t anim_state(1); // enabled=1
 	anim_state.clear_animation_id(dstate.s); // clear animations
-	model3d::bind_default_flat_normal_map();
+	bind_default_flat_normal_map();
 }
 
 bool city_bird_t::is_close_to_player() const {

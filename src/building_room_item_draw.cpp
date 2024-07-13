@@ -1917,7 +1917,7 @@ void draw_billboards(quad_batch_draw &qbd, int tid, bool no_depth_write=1, bool 
 	if (no_depth_write) {glDepthMask(GL_FALSE);} // disable depth write
 	if (do_blend) {enable_blend();}
 	select_texture(tid);
-	select_texture(FLAT_NMAP_TEX, 5); // no normal map
+	bind_default_flat_normal_map(); // no normal map
 	qbd.draw_and_clear();
 	if (do_blend) {disable_blend();}
 	if (no_depth_write) {glDepthMask(GL_TRUE);}
@@ -1976,7 +1976,7 @@ void particle_manager_t::draw(shader_t &s, vector3d const &xlate) { // non-const
 		// Note: can probably use instanced drawing here
 		s.add_uniform_float("ambient_scale", 0.5);
 		select_texture(WHITE_TEX);
-		select_texture(FLAT_NMAP_TEX, 5); // no normal map
+		bind_default_flat_normal_map(); // no normal map
 		s.set_cur_color(colorRGBA(0.6, 0.8, 1.0)); // blue-green tinted
 		begin_sphere_draw(0); // untextured
 		for (sphere_t const &b : bubbles) {draw_sphere_vbo(b.pos, b.radius, N_SPHERE_DIV, 0);} // textured=0
@@ -2326,7 +2326,7 @@ void paint_draw_t::draw_paint(shader_t &s) const {
 	if (!have_sp && m_qbd.empty()) return; // nothing to do
 	glDepthMask(GL_FALSE); // disable depth write
 	enable_blend();
-	select_texture(FLAT_NMAP_TEX, 5); // no normal map
+	bind_default_flat_normal_map(); // no normal map
 
 	if (have_sp) {
 		select_texture(BLUR_CENT_TEX); // spraypaint - smooth alpha blended edges
@@ -2372,7 +2372,7 @@ void building_decal_manager_t::draw_building_interior_decals(shader_t &s, bool p
 		select_texture(WHITE_TEX);
 		select_texture(get_toilet_paper_nm_id(), 5); // apply normal map
 		tp_qbd.draw(); // use a VBO for this if the player leaves the building and then comes back?
-		select_texture(FLAT_NMAP_TEX, 5); // no normal map
+		bind_default_flat_normal_map(); // no normal map
 		glEnable(GL_CULL_FACE);
 	}
 	if (!tape_qbd.empty() || !pend_tape_qbd.empty()) { // tape lines: single sided so that lighting works, both sides drawn independently

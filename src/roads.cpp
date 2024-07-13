@@ -1453,7 +1453,7 @@ void road_draw_state_t::draw_tunnel(tunnel_t const &tunnel, bool shadow_only) { 
 		draw_cube(qbd, c, cw_concrete, 0, tscale); // skip_bottom=0 in case there are overhangs due to steep cliffs
 		qbd.draw_and_clear();
 	} // for n
-	if (!shadow_only) {select_texture(FLAT_NMAP_TEX, 5);} // restore flat normal map
+	if (!shadow_only) {bind_default_flat_normal_map();} // restore flat normal map
 }
 
 void road_draw_state_t::draw_stoplights_and_street_signs(vector<road_isec_t> const &isecs, vector<road_t> const &roads, range_pair_t const &rp, unsigned cur_city, bool shadow_only) {
