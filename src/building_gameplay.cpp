@@ -956,7 +956,7 @@ public:
 				
 				if (player_building != nullptr) { // leave a dead player body floating on the water
 					cube_t water_cube(player_building->get_water_cube());
-					water_cube.expand_by_xy(-0.5*(2.0*CAMERA_RADIUS + camera_zh)); // shrink by player half height so as not to clip outside the water
+					water_cube.expand_by_xy(-(CAMERA_RADIUS + 0.5*camera_zh)); // shrink by player half height so as not to clip outside the water
 					point player_pos(get_camera_building_space());
 					water_cube.clamp_pt_xy(player_pos);
 					player_pos.z = water_cube.z2() - 0.1*CAMERA_RADIUS; // slightly below the water surface

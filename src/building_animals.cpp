@@ -1671,7 +1671,7 @@ void building_t::update_roach(insect_t &roach, point const &camera_bs, float tim
 	// Note: no need to check for dynamic object collisions since we can likely just go under them
 	int room_id(-1);
 	float const floor_spacing(get_window_vspace()), scare_dist(0.9*floor_spacing);
-	point const camera_bot(camera_bs.x, camera_bs.y, camera_bs.z-CAMERA_RADIUS-camera_zh);
+	point const camera_bot(camera_bs.x, camera_bs.y, camera_bs.z-get_bldg_player_height());
 	point run_from;
 	
 	if (!roach.no_scare) { // run scare logic; similar to building_t::scare_rat()
