@@ -8,7 +8,7 @@
 
 float pond_max_depth(0.0);
 
-extern bool enable_model3d_custom_mipmaps;
+extern bool enable_model3d_custom_mipmaps, player_in_monorail;
 extern unsigned max_unique_trees;
 extern tree_placer_t tree_placer;
 extern city_params_t city_params;
@@ -2030,6 +2030,7 @@ template<typename T> bool proc_vector_sphere_coll(vector<T> const &objs, city_ob
 bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, vector3d *cnorm) const { // pos in in camera space
 	if (!sphere_cube_intersect(pos, (radius + p2p_dist(pos, p_last)), (all_objs_bcube + xlate))) return 0;
 	bool const monorail_coll(monorail.proc_sphere_coll(pos, p_last, radius, xlate, cnorm)); // must be before walkways
+	player_in_monorail |= monorail_coll;
 
 	// special handling for player walking on/in walkways; we need to handle collisions with the top surface when above, so proc_vector_sphere_coll() can't be used here
 	for (walkway_t const &w : walkways) {

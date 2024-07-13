@@ -23,7 +23,7 @@ unsigned const NO_SHADOW_WHITE_TEX = BLACK_TEX; // alias to differentiate shadow
 unsigned const SHADOW_ONLY_TEX     = RED_TEX;   // alias to differentiate shadow only vs. other      untextured objects
 
 bool camera_in_building(0), interior_shadow_maps(0), player_is_hiding(0), player_in_unlit_room(0), player_in_walkway(0), player_in_int_elevator(0), player_on_house_stairs(0);
-bool building_has_open_ext_door(0), sec_camera_shadow_mode(0);
+bool building_has_open_ext_door(0), sec_camera_shadow_mode(0), player_in_monorail(0);
 int player_in_basement(0); // 0=no, 1=below ground level, 2=in basement and not on stairs, 3=in extended basement
 int player_in_closet  (0); // uses flags RO_FLAG_IN_CLOSET (player in closet), RO_FLAG_LIT (closet light is on), RO_FLAG_OPEN (closet door is open)
 int player_in_water   (0); // 0=no, 1=standing in water, 2=head underwater
@@ -3795,7 +3795,6 @@ public:
 			glDisable(GL_CULL_FACE);
 		} // end draw_interior
 		draw_candle_flames();
-		player_in_walkway = 0; // reset for next iteration
 
 		// everything after this point is part of the building exteriors and uses city lights rather than building room lights;
 		// when the player is in the extended basement we still need to draw the exterior wall and door
