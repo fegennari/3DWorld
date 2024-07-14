@@ -21,7 +21,7 @@ vector2d actual_max_road_seg_len;
 city_params_t city_params;
 point pre_smap_player_pos(all_zeros), actual_player_pos(all_zeros); // Note: pre_smap_player_pos can be security cameras, but actual_player_pos is always the player
 
-extern bool enable_dlight_shadows, dl_smap_enabled, flashlight_on, camera_in_building, have_indir_smoke_tex, disable_city_shadow_maps, player_in_walkway, player_in_monorail;
+extern bool enable_dlight_shadows, dl_smap_enabled, flashlight_on, camera_in_building, have_indir_smoke_tex, disable_city_shadow_maps, player_in_walkway, player_in_skyway;
 extern int rand_gen_index, display_mode, animate2, draw_model, player_in_basement;
 extern unsigned shadow_map_sz, cur_display_iter;
 extern float cobj_z_bias, rain_wetness, NEAR_CLIP;
@@ -3255,7 +3255,7 @@ void get_city_grass_coll_cubes(cube_t const &region, vect_cube_t &out, vect_cube
 }
 // primarily used for player collision (typically check_interior=1), but also used for gameplay dynamic cobjs
 bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool inc_cars, vector3d *cnorm, bool check_interior) {
-	if (check_interior) {player_in_walkway = player_in_monorail = 0;} // reset for next iteration if this is the player
+	if (check_interior) {player_in_walkway = player_in_skyway = 0;} // reset for next iteration if this is the player
 	had_building_interior_coll = 0;
 	bool ret(proc_buildings_sphere_coll(pos, p_last, radius, cnorm, check_interior));
 	if (ret && had_building_interior_coll) return ret; // skip city coll if player is in a building

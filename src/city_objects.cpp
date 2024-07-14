@@ -1873,7 +1873,7 @@ bool park_path_t::check_point_contains_xy(point const &p) const {
 	return check_cube_coll_xy(c);
 }
 
-// monorail
+// skyway
 
 
 class tile_drawer_t {
@@ -1916,7 +1916,7 @@ void draw_long_cube(cube_t const &c, colorRGBA const &color, draw_state_t &dstat
 	} // for s
 }
 
-void monorail_t::init(cube_t const &c, bool dim_) {
+void skyway_t::init(cube_t const &c, bool dim_) {
 	valid = 1;
 	dim   = dim_;
 	bcube = track_bcube = c;
@@ -1952,7 +1952,7 @@ void monorail_t::init(cube_t const &c, bool dim_) {
 		float const dz(entrance.z1() - bot.z2());
 		if (dz < max_step_height) continue; // no steps needed
 		unsigned const num_steps(ceil(dz/max_step_height));
-		bool const dir(!(conn.ix & 1)); // dir relative to monorail, not building
+		bool const dir(!(conn.ix & 1)); // dir relative to skyway, not building
 		float const step_height(dz/(num_steps+1)), step_len((dir ? -1.0 : 1.0)*1.25*step_height), wall_pos(center.d[!dim][dir]);
 		cube_t step(entrance);
 		set_cube_zvals(step, bot.z2(), entrance.z1());
@@ -1976,7 +1976,7 @@ void monorail_t::init(cube_t const &c, bool dim_) {
 	}
 }
 
-void monorail_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_only) const {
+void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_only) const {
 	float const dist_scale = 0.7;
 	if (!valid || !dstate.check_cube_visible(bcube, dist_scale)) return; // VFC/distance culling
 	tile_drawer_t td;
@@ -2007,7 +2007,7 @@ void monorail_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_
 		for (cube_with_ix_t const &conn : ww_conns) { // ramps
 			bool const dir(conn.ix & 1);
 			float const conn_zfloor(conn.z1() + 0.5*FLOOR_THICK_VAL_OFFICE*conn.dz());
-			if (bot.z2() <= conn_zfloor) continue; // sloping down rather than up when entering monorail
+			if (bot.z2() <= conn_zfloor) continue; // sloping down rather than up when entering skyway
 			cube_t ramp(conn);
 			ramp.d[!dim][!dir] += (dir ? -1.0 : 1.0)*0.1*conn.dz(); // extend into walkway
 			ramp.expand_in_dim(dim, -0.1*conn.get_sz_dim(dim)); // shrink sides, same as entrances
@@ -2059,14 +2059,14 @@ void monorail_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_
 	dstate.unset_untextured_material();
 }
 
-bool monorail_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+bool skyway_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	if (!valid) return 0;
 	cube_t const bc_cs(bcube + xlate);
 	if (!bc_cs.contains_pt_xy_exp(pos_, radius_)) return 0; // expand by radius so that the player can step up from a walkway
 	float const zval(max(pos_.z, p_last.z)), top_z2(top.z2() + xlate.z), bot_z2(bot.z2() + xlate.z);
 	bool ret(0);
 
-	if (zval > top_z2) { // above the monorail - walk on the top glass
+	if (zval > top_z2) { // above the skyway - walk on the top glass
 		if (bc_cs.contains_pt_xy_exp(pos_, 0.1*radius_)) { // expand slightly for a bit of overhang so that player doesn't fall inside a walkway
 			max_eq(pos_.z, (top_z2 + radius_));
 			return 1;

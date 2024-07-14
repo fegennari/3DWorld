@@ -1449,11 +1449,11 @@ struct building_walkway_t : public building_walkway_geom_t { // "owned" walkway,
 	bool is_owner, open_ends[2]={};
 	building_t *conn_bldg;
 	vect_cube_with_ix_t windows;
-	cube_t bcube_inc_rooms, monorail_conn;
+	cube_t bcube_inc_rooms, skyway_conn;
 
 	building_walkway_t(building_walkway_geom_t const &g, bool owner, building_t *b) : building_walkway_geom_t(g), is_owner(owner), conn_bldg(b) {bcube_inc_rooms = bcube;}
 	cube_t get_bcube_inc_open_door() const;
-	bool has_monorail_conn() const {return !monorail_conn.is_all_zeros();}
+	bool has_skyway_conn() const {return !skyway_conn.is_all_zeros();}
 };
 
 

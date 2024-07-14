@@ -8,7 +8,7 @@
 
 float pond_max_depth(0.0);
 
-extern bool enable_model3d_custom_mipmaps, player_in_monorail;
+extern bool enable_model3d_custom_mipmaps, player_in_skyway;
 extern unsigned max_unique_trees;
 extern tree_placer_t tree_placer;
 extern city_params_t city_params;
@@ -20,7 +20,7 @@ city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, 
 void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcubes);
 void get_walkways_for_city(cube_t const &city_bcube, vect_bldg_walkway_t &walkway_cands);
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
-bool connect_buildings_to_monorail(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube, vect_cube_with_ix_t &ww_conns);
+bool connect_buildings_to_skyway(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube, vect_cube_with_ix_t &ww_conns);
 float get_inner_sidewalk_width();
 cube_t get_plot_coll_region(cube_t const &plot_bcube);
 void play_hum_sound(point const &pos, float gain, float pitch);
@@ -93,8 +93,8 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 		if (rgen.rand_float() < 0.4) { // add solar roofs over parking lots 40% of the time
 			bool blocked(0);
 
-			if (monorail.valid) { // check for monorail blocking solar panels
-				cube_t blocked_area(monorail.bcube);
+			if (skyway.valid) { // check for skyway blocking solar panels
+				cube_t blocked_area(skyway.bcube);
 				blocked_area.expand_by_xy(0.5*city_params.road_width);
 				blocked = blocked_area.intersects_xy(park);
 			}
@@ -533,8 +533,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		for (walkway_t const &w : walkways) {
 			if (!w.bcube.intersects_xy(plot)) continue;
 			float const length(w.get_length()), width(w.get_width()), height(w.bcube.z1() - plot.z2());
-			bool const to_monorail(w.open_ends[0] || w.open_ends[1]);
-			if (!to_monorail && (length < 8.0*width || length < 1.6*height)) continue; // too short or too high for a support pillar; monorail walkways are always supported
+			bool const to_skyway(w.open_ends[0] || w.open_ends[1]);
+			if (!to_skyway && (length < 8.0*width || length < 1.6*height)) continue; // too short or too high for a support pillar; skyway walkways are always supported
 			bool const is_concrete(height < 0.25*length); // concrete when shorter, steel when taller
 			float const pillar_hlen((is_concrete ? 0.1 : 0.15)*width), pillar_hwid((is_concrete ? 0.3 : 0.15)*width);
 			cube_t pillar;
@@ -1677,14 +1677,14 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 		max_eq(num_x_plots, i->xpos+1U);
 		max_eq(num_y_plots, i->ypos+1U);
 	}
-	if (!is_residential) { // commercial city office buildings; add walkways and monorail
+	if (!is_residential) { // commercial city office buildings; add walkways and skyway
 		vect_bldg_walkway_t walkway_cands;
 		get_walkways_for_city(city_bcube, walkway_cands);
 		// Note: not added to colliders since walkways are above pedestrians; not added to blockers since walkways are above most objects
 		
-		if (add_monorail(city_bcube, walkway_cands, rgen)) {
+		if (add_skyway(city_bcube, walkway_cands, rgen)) {
 			walkway_cands.clear();
-			get_walkways_for_city(city_bcube, walkway_cands); // query walkways again, this time including monorails
+			get_walkways_for_city(city_bcube, walkway_cands); // query walkways again, this time including skyways
 		}
 		for (bldg_walkway_t const &w : walkway_cands) {walkway_groups.add_obj(walkway_t(w), walkways);}
 	}
@@ -1759,7 +1759,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	walkway_groups .create_groups(walkways,  all_objs_bcube);
 	pillar_groups  .create_groups(pillars,   all_objs_bcube);
 	p_solar_groups .create_groups(p_solars,  all_objs_bcube);
-	if (monorail.valid) {all_objs_bcube.assign_or_union_with_cube(monorail.bcube);}
+	if (skyway.valid) {all_objs_bcube.assign_or_union_with_cube(skyway.bcube);}
 	if (add_parking_lots) {cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << endl;}
 }
 
@@ -1905,15 +1905,15 @@ void city_obj_placer_t::finalize_streetlights_and_power(streetlights_t &sl, vect
 	if (was_moved) {sl.sort_streetlights_by_yx();} // must re-sort if a streetlight was moved
 }
 
-bool city_obj_placer_t::add_monorail(cube_t const &city_bcube, vect_bldg_walkway_t const &walkway_cands, rand_gen_t rgen) {
-	if (!city_params.add_monorails) return 0;
-	if (walkway_cands.empty())      return 0; // only add a monorail if this city has walkways
+bool city_obj_placer_t::add_skyway(cube_t const &city_bcube, vect_bldg_walkway_t const &walkway_cands, rand_gen_t rgen) {
+	if (!city_params.add_skyways) return 0;
+	if (walkway_cands.empty())    return 0; // only add a skyway if this city has walkways
 	bool const dim(city_bcube.dx() < city_bcube.dy()); // use longer dim
 	unsigned const num_plots_wide(dim ? num_x_plots : num_y_plots); // num plots in !dim
-	float centerline(city_bcube.get_center_dim(!dim)); // monorail is centered over the road by default
+	float centerline(city_bcube.get_center_dim(!dim)); // skyway is centered over the road by default
 	float const road_width(city_params.road_width);
 
-	if (num_plots_wide & 1) { // odd number of plots - monorail is off-center
+	if (num_plots_wide & 1) { // odd number of plots - skyway is off-center
 		centerline += (rgen.rand_bool() ? 1.0 : -1.0)*0.5*(city_bcube.get_sz_dim(!dim) - road_width)/num_plots_wide; // shift half a plot to a random side
 	}
 	cube_t track_bc(city_bcube);
@@ -1924,12 +1924,12 @@ bool city_obj_placer_t::add_monorail(cube_t const &city_bcube, vect_bldg_walkway
 	float ww_z1(city_bcube.z2() + 1.5*get_power_pole_height());
 	
 	for (bldg_walkway_t const &w : walkway_cands) {
-		if (w.intersects_xy(clearance_area)) {max_eq(ww_z1, w.z2());} // make sure monorail is above all walkways
+		if (w.intersects_xy(clearance_area)) {max_eq(ww_z1, w.z2());} // make sure skyway is above all walkways
 	}
 	ww_z1 += 0.5*road_width;
 	set_cube_zvals(track_bc, ww_z1, (ww_z1 + 0.4*road_width));
-	if (!connect_buildings_to_monorail(track_bc, dim, city_bcube, monorail.ww_conns)) return 0;
-	monorail.init(track_bc, dim); // only add monorail if it can connect to buildings
+	if (!connect_buildings_to_skyway(track_bc, dim, city_bcube, skyway.ww_conns)) return 0;
+	skyway.init(track_bc, dim); // only add skyway if it can connect to buildings
 	return 1;
 }
 
@@ -2001,7 +2001,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	}
 	dstate.pass_ix = 0; // reset back to 0
 	if (!shadow_only) {bird_poop_manager.draw(dstate.s, dstate.xlate);}
-	monorail.draw(dstate, *this, shadow_only);
+	skyway.draw(dstate, *this, shadow_only);
 }
 void city_obj_placer_t::draw_transparent_objects(draw_state_t &dstate, bool shadow_only) {
 	if (shadow_only) return; // currently not drawn in the shadow pass
@@ -2029,14 +2029,14 @@ template<typename T> bool proc_vector_sphere_coll(vector<T> const &objs, city_ob
 }
 bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, vector3d *cnorm) const { // pos in in camera space
 	if (!sphere_cube_intersect(pos, (radius + p2p_dist(pos, p_last)), (all_objs_bcube + xlate))) return 0;
-	bool const monorail_coll(monorail.proc_sphere_coll(pos, p_last, radius, xlate, cnorm)); // must be before walkways
-	player_in_monorail |= monorail_coll;
+	bool const skyway_coll(skyway.proc_sphere_coll(pos, p_last, radius, xlate, cnorm)); // must be before walkways
+	player_in_skyway |= skyway_coll;
 
 	// special handling for player walking on/in walkways; we need to handle collisions with the top surface when above, so proc_vector_sphere_coll() can't be used here
 	for (walkway_t const &w : walkways) {
 		if (w.proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1;
 	}
-	if (monorail_coll) return 1;
+	if (skyway_coll) return 1;
 	if (proc_vector_sphere_coll(benches,   bench_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(trashcans, trashcan_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(fhydrants, fhydrant_groups, pos, p_last, radius, xlate, cnorm)) return 1;
@@ -2116,7 +2116,7 @@ template<typename T> bool check_city_obj_pt_xy_contains(city_obj_groups_t const 
 	return 0;
 }
 bool city_obj_placer_t::get_color_at_xy_pre_road(point const &pos, colorRGBA &color) const { // check walkways because they can be over both roads and plots
-	if (monorail.valid && monorail.track_bcube.contains_pt_xy(pos)) {color = WHITE; return 1;}
+	if (skyway.valid && skyway.track_bcube.contains_pt_xy(pos)) {color = WHITE; return 1;}
 	unsigned obj_ix(0);
 	if (check_city_obj_pt_xy_contains(walkway_groups, walkways, pos, obj_ix, 0)) {color = walkways[obj_ix].map_mode_color; return 1;} // is_cylin=0
 	if (check_city_obj_pt_xy_contains(p_solar_groups, p_solars, pos, obj_ix, 0)) {color = LT_BLUE; return 1;} // placed over parking lots

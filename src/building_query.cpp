@@ -116,10 +116,10 @@ bool building_t::check_pt_in_or_near_walkway(point const &p, bool owned_only, bo
 	for (building_walkway_t const &w : walkways) {
 		if (owned_only && !w.is_owner) continue;
 		
-		if (inc_open_door && w.has_monorail_conn()) { // test monorail walkway connection
-			cube_t vis_area(w.monorail_conn);
+		if (inc_open_door && w.has_skyway_conn()) { // test skyway walkway connection
+			cube_t vis_area(w.skyway_conn);
 			vis_area.expand_in_dim(w.dim, (player_in_walkway ? 2.0 : 0.1)*w.get_length()); // extend to include other nearby walkways
-			if (vis_area.contains_pt(p)) return 1; // player in nearby monorail area or opposing walkway
+			if (vis_area.contains_pt(p)) return 1; // player in nearby skyway area or opposing walkway
 		}
 		if (p.z < w.bcube.z1() || p.z > w.bcube.z2()) continue; // no Z overlap
 		if ((inc_open_door ? w.get_bcube_inc_open_door() : w.bcube).contains_pt(p)) return 1;

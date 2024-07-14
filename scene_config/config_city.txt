@@ -100,7 +100,7 @@ city min_park_rows 1
 city min_park_density 0.0
 city max_park_density 0.8
 city max_benches_per_plot 15
-city add_monorails 0
+city add_skyways 1
 
 no_subdiv_model 1
 merge_model_objects 1 # optimization for large instance counts

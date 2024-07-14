@@ -1741,7 +1741,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			for (building_walkway_t const &w : walkways) { // Note: walkways shouldn't be added to rotated buildings
 				if (!w.is_owner || !w.bcube.contains_pt(lpos)) continue;
 				if (w.bcube_inc_rooms.contains_pt(camera_rot)) {in_camera_walkway = in_walkway_near_camera = 1;} // camera in or near the walkway
-				else if (w.has_monorail_conn() && w.monorail_conn.contains_pt(camera_rot)) {in_walkway_near_camera = 1;} // camera in monorail near the walkway
+				else if (w.has_skyway_conn() && w.skyway_conn.contains_pt(camera_rot)) {in_walkway_near_camera = 1;} // camera in skyway near the walkway
 				light_clip_cube  = w.bcube;
 				light_in_walkway = 1;
 				break;

@@ -436,13 +436,13 @@ struct park_path_t : public city_obj_t {
 	bool check_point_contains_xy(point const &p) const;
 };
 
-struct monorail_t : public city_obj_t {
+struct skyway_t : public city_obj_t {
 	bool valid=0, dim=0; // but no dir
 	cube_t track_bcube, bot, top;
 	vect_cube_with_ix_t ww_conns; // connection points to building walkways; ix envodes 2*dim + dir
 	vect_cube_t entrances, sides, steps;
 
-	monorail_t() {}
+	skyway_t() {}
 	void init(cube_t const &c, bool dim_);
 	// Note: no pre_draw() and post_draw() because there can be only one
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_only) const;
@@ -547,7 +547,7 @@ private:
 		pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups, stopsign_groups, flag_groups,
 		nrack_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, dumpster_groups, plant_groups, flower_groups, pond_groups, walkway_groups,
 		pillar_groups, p_solar_groups;
-	monorail_t monorail; // optional
+	skyway_t skyway; // optional
 	bird_poop_manager_t bird_poop_manager;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
@@ -586,7 +586,7 @@ public:
 	void set_plot_subdiv_sz(float sz) {plot_subdiv_sz = sz;}
 	void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, vector<road_t> const &roads,
 		vector<road_isec_t> isecs[3], cube_t const &city_bcube, unsigned city_id, bool have_cars, bool is_residential, bool have_streetlights);
-	bool add_monorail(cube_t const &city_bcube, vect_bldg_walkway_t const &walkway_cands, rand_gen_t rgen);
+	bool add_skyway(cube_t const &city_bcube, vect_bldg_walkway_t const &walkway_cands, rand_gen_t rgen);
 	void finalize_streetlights_and_power(streetlights_t &sl, vector<vect_cube_t> &plot_colliders);
 	static bool subdivide_plot_for_residential(cube_t const &plot, vector<road_t> const &roads,
 		float plot_subdiv_sz, unsigned parent_plot_ix, unsigned city_ix, vect_city_zone_t &sub_plots);

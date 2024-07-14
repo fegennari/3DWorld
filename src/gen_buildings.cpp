@@ -23,7 +23,7 @@ unsigned const NO_SHADOW_WHITE_TEX = BLACK_TEX; // alias to differentiate shadow
 unsigned const SHADOW_ONLY_TEX     = RED_TEX;   // alias to differentiate shadow only vs. other      untextured objects
 
 bool camera_in_building(0), interior_shadow_maps(0), player_is_hiding(0), player_in_unlit_room(0), player_in_walkway(0), player_in_int_elevator(0), player_on_house_stairs(0);
-bool building_has_open_ext_door(0), sec_camera_shadow_mode(0), player_in_monorail(0);
+bool building_has_open_ext_door(0), sec_camera_shadow_mode(0), player_in_skyway(0);
 int player_in_basement(0); // 0=no, 1=below ground level, 2=in basement and not on stairs, 3=in extended basement
 int player_in_closet  (0); // uses flags RO_FLAG_IN_CLOSET (player in closet), RO_FLAG_LIT (closet light is on), RO_FLAG_OPEN (closet door is open)
 int player_in_water   (0); // 0=no, 1=standing in water, 2=head underwater
@@ -3129,7 +3129,7 @@ public:
 			for (cube_t const &c : city_bcubes) {connect_buildings_with_walkways(c);}
 		}
 		build_grid_by_tile(is_tile);
-		if (!city_only) {create_vbos(is_tile);} // city VBOs are created later, after monorails are added
+		if (!city_only) {create_vbos(is_tile);} // city VBOs are created later, after skyways are added
 	} // end gen()
 
 	void place_building_trees(rand_gen_t &rgen) {
@@ -4609,7 +4609,7 @@ private:
 		walkway_cand_t(cube_t const &bc, unsigned b, unsigned p, bool d) : bcube(bc), bix(b), pix(p), dir(d) {}
 	};
 public:
-	bool connect_buildings_to_monorail(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube, vect_cube_with_ix_t &ww_conns) {
+	bool connect_buildings_to_skyway(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube, vect_cube_with_ix_t &ww_conns) {
 		vector<cube_with_ix_t> city_bldgs, ww_bldgs;
 		float const max_xy_sz(get_walkway_buildings_and_max_sz(city_bcube, city_bldgs, ww_bldgs)), max_walkway_len(1.5*max_xy_sz);
 		if (ww_bldgs.size() < 2) return 0; // not enough buildings
@@ -4624,21 +4624,21 @@ public:
 		for (auto i = ww_bldgs.begin(); i != ww_bldgs.end(); ++i) {
 			building_t &b(get_building(i->ix));
 			assert(!b.bcube.intersects_xy(m_bcube)); // sanity check
-			if (!b.bcube.intersects_xy(conn_area)) continue; // too far from monorail
+			if (!b.bcube.intersects_xy(conn_area)) continue; // too far from skyway
 			float const min_ww_width(2.0*b.get_office_ext_doorway_width()), floor_spacing(b.get_window_vspace()); // should be the same for all buildings
-			if (b.bcube.z2() < m_bcube.z1() + floor_spacing) continue; // too short to connect to monorail
+			if (b.bcube.z2() < m_bcube.z1() + floor_spacing) continue; // too short to connect to skyway
 
 			for (auto P = b.parts.begin(); P != b.parts.end(); ++P) {
 				cube_t const &p(*P);
-				if (!p.intersects_xy(conn_area))           continue; // too far from monorail
-				if (p.z2() < m_bcube.z1() + floor_spacing) continue; // too short to connect to monorail
-				if (p.z1() > m_bcube.z1())                 continue; // starts above monorail
+				if (!p.intersects_xy(conn_area))           continue; // too far from skyway
+				if (p.z2() < m_bcube.z1() + floor_spacing) continue; // too short to connect to skyway
+				if (p.z1() > m_bcube.z1())                 continue; // starts above skyway
 				bool const dir(centerline < p.get_center_dim(conn_dim));
 				cube_t conn_area(p);
 				conn_area.expand_in_dim(!conn_dim, -0.25*b.get_wall_thickness()); // shrink slightly to prevent Z-fighting with inside edges of parts
 				conn_area.d[conn_dim][ dir] = p      .d[conn_dim][!dir]; // flush with part
-				conn_area.d[conn_dim][!dir] = m_bcube.d[conn_dim][ dir]; // connect to monorail
-				// clamp to shared range in the monorail dim; really should not change the part width since the monorail should run the entire length of the city
+				conn_area.d[conn_dim][!dir] = m_bcube.d[conn_dim][ dir]; // connect to skyway
+				// clamp to shared range in the skyway dim; really should not change the part width since the skyway should run the entire length of the city
 				max_eq(conn_area.d[!conn_dim][0], m_bcube.d[!conn_dim][0]);
 				min_eq(conn_area.d[!conn_dim][1], m_bcube.d[!conn_dim][1]);
 				float const width(conn_area.get_sz_dim(!conn_dim));
@@ -4683,11 +4683,11 @@ public:
 			building_walkway_geom_t bwg(cand.bcube, conn_dim);
 			if (ADD_WALKWAY_EXT_DOORS) {b.add_walkway_door(bwg, !cand.dir, cand.pix);}
 			b.walkways.emplace_back(bwg, 1, nullptr); // owned, no conn_bldg
-			b.walkways.back().open_ends[!cand.dir] = all_walkways.back().open_ends[!cand.dir] = 1; // flag end connected to monorail as open
-			cube_t monorail_conn(m_bcube);
-			max_eq(monorail_conn.d[m_dim][0], cand.bcube.d[m_dim][0]-ww_conn_width);
-			min_eq(monorail_conn.d[m_dim][1], cand.bcube.d[m_dim][1]+ww_conn_width);
-			b.walkways.back().monorail_conn = monorail_conn;
+			b.walkways.back().open_ends[!cand.dir] = all_walkways.back().open_ends[!cand.dir] = 1; // flag end connected to skyway as open
+			cube_t skyway_conn(m_bcube);
+			max_eq(skyway_conn.d[m_dim][0], cand.bcube.d[m_dim][0]-ww_conn_width);
+			min_eq(skyway_conn.d[m_dim][1], cand.bcube.d[m_dim][1]+ww_conn_width);
+			b.walkways.back().skyway_conn = skyway_conn;
 			cube_t conn(cand.bcube);
 			conn.d[conn_dim][cand.dir] = conn.d[conn_dim][!cand.dir];
 			ww_conns.emplace_back(conn, (2*unsigned(conn_dim) + unsigned(!cand.dir)));
@@ -4983,7 +4983,7 @@ void gen_buildings() {
 void draw_buildings(int shadow_only, int reflection_pass, vector3d const &xlate) {
 	//if (!building_tiles.empty()) {cout << "Building Tiles: " << building_tiles.size() << " Tiled Buildings: " << building_tiles.get_tot_num_buildings() << endl;} // debugging
 	if (world_mode != WMODE_INF_TERRAIN) {building_tiles.clear();}
-	building_creator_city.create_vbos(); // create VBOs for city buildings (after adding monorails, etc.), if needed
+	building_creator_city.create_vbos(); // create VBOs for city buildings (after adding skyways, etc.), if needed
 	vector<building_creator_t *> bcs;
 	// don't draw city buildings for interior shadows
 	bool const draw_city(world_mode == WMODE_INF_TERRAIN && (shadow_only != 2 || !interior_shadow_maps || global_building_params.add_city_interiors));
@@ -5094,8 +5094,8 @@ void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways  ) 
 void add_buildings_exterior_lights(vector3d const &xlate, cube_t &lights_bcube) {building_creator_city.add_exterior_lights(xlate, lights_bcube);}
 float get_max_house_size() {return global_building_params.get_max_house_size();}
 
-bool connect_buildings_to_monorail(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube, vect_cube_with_ix_t &ww_conns) {
-	return building_creator_city.connect_buildings_to_monorail(m_bcube, m_dim, city_bcube, ww_conns);
+bool connect_buildings_to_skyway(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube, vect_cube_with_ix_t &ww_conns) {
+	return building_creator_city.connect_buildings_to_skyway(m_bcube, m_dim, city_bcube, ww_conns);
 }
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube, bool sec_camera_mode) {
 	//highres_timer_t timer("Add building interior lights"); // 0.97/0.37
