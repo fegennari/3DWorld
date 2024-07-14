@@ -1696,7 +1696,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		// this is expensive: only enable for the main draw pass and skip for buildings the player isn't in
 		else if (inc_small >= 2 && (player_in_building || !camera_in_building)) {
 			// without the special shader these won't look correct when drawn through windows
-			if (!amask_shader.is_setup()) {setup_building_draw_shader(amask_shader, 0.9, 1, 1, 0);} // min_alpha=0.9, enable_indir=1, force_tsl=1, use_texgen=0
+			if (!amask_shader.is_setup()) {setup_building_draw_shader(amask_shader, 0.9, 1, 1, 0);} // min_alpha=0.9, enable_indir=1, force_tsl=1, use_texgen=0, water_damage=0.0
 			else {amask_shader.make_current();}
 			mats_amask.draw(nullptr, amask_shader, 0, 0); // no brg_batch_draw
 			s.make_current(); // switch back to the normal shader
@@ -2129,7 +2129,7 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 	
 	if (!s.is_setup()) { // caller didn't set up the shader
 		if (shadow_only) {s.begin_shadow_map_shader();} // this path should be unused
-		else {setup_building_draw_shader(s, 0.0, 1, 0, 0);} // min_alpha=0.0, enable_indir=1, force_tsl=0, use_texgen=0
+		else {setup_building_draw_shader(s, 0.0, 1, 0, 0);} // min_alpha=0.0, enable_indir=1, force_tsl=0, use_texgen=0, water_damage=0.0
 	}
 	for (auto &car : cars_to_draw) {draw_car_in_pspace(car, s, xlate, shadow_only);}
 	check_mvm_update(); // needed after popping model transform matrix

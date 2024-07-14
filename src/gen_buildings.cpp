@@ -60,6 +60,7 @@ void add_sign_text_verts_both_sides(string const &text, cube_t const &sign, bool
 void draw_candle_flames();
 void update_security_camera_image();
 void get_pedestrians_in_area(cube_t const &area, int building_ix, vector<point> &pts);
+void setup_puddles_texture(shader_t &s);
 
 float get_door_open_dist   () {return 3.5*CAMERA_RADIUS;}
 bool player_in_ext_basement() {return (player_in_basement == 3 && player_building != nullptr);}
@@ -423,16 +424,26 @@ void setup_building_draw_shader_post(shader_t &s, bool have_indir) {
 	set_interior_lighting(s, have_indir);
 	if (have_indir) {indir_tex_mgr.setup_for_building(s);}
 }
-void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, int use_texgen) { // for building interiors
+void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, int use_texgen, float water_damage) { // for building interiors
 	float const pcf_scale = 0.2;
 	// disable indir if the player is in a closed closet
 	bool const have_indir(enable_indir && have_building_indir_lighting() && !(player_in_closet && !(player_in_closet & RO_FLAG_OPEN)));
 	int const use_bmap(global_building_params.has_normal_map), interior_use_smaps(ADD_ROOM_SHADOWS ? 2 : 1); // dynamic light smaps only
 	cube_t const lights_bcube(building_lights_manager.get_lights_bcube());
+	if (player_building == nullptr) {water_damage = 0.0;} // water damage only applies if the player is in a building; this can fail on the exterior walls pass
 	if (have_indir) {s.set_prefix("#define ENABLE_OUTSIDE_INDIR_RANGE", 1);} // FS
+	if (water_damage > 0.0) {s.set_prefix("#define ENABLE_WATER_DAMAGE", 1);} // FS
 	s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1); // FS; improves room lighting (better light distribution vs. framerate trade-off)
 	city_shader_setup(s, lights_bcube, 1, interior_use_smaps, use_bmap, min_alpha, force_tsl, pcf_scale, use_texgen, have_indir, 0); // use_dlights=1, is_outside=0
 	setup_building_draw_shader_post(s, have_indir);
+
+	if (water_damage > 0.0) {
+		// Note: applies to basements only; needed for player building, but interiors are drawn by tile, and the other building basements aren't visible anyway
+		setup_puddles_texture(s);
+		s.add_uniform_float("wet_effect",   water_damage);
+		s.add_uniform_float("puddle_scale", 0.5);
+		s.add_uniform_float("water_damage_zmax", player_building->ground_floor_z1); // water damage is only in the basement
+	}
 }
 
 
@@ -3407,6 +3418,7 @@ public:
 		enable_dlight_bcubes  = 1; // using light bcubes is both faster and more correct when shadow maps are not enabled
 		fgPushMatrix();
 		translate_to(xlate);
+		float water_damage(0.0);
 		building_draw_t interior_wind_draw, ext_door_draw;
 		vector<building_draw_t> int_wall_draw_front, int_wall_draw_back;
 		vector<vertex_range_t> per_bcs_exclude;
@@ -3461,23 +3473,13 @@ public:
 			// otherwise, we would need to switch between two different shaders every time we come across a building with people in it; not very clean, but seems to work
 			bool const enable_animations(global_building_params.enable_people_ai && draw_interior);
 			if (enable_animations) {enable_animations_for_shader(s);}
-			float water_damage(0.0);
 
 			if (camera_in_building && player_building != nullptr && (camera_bs.z - get_bldg_player_height()) < player_building->ground_floor_z1) { // entering or in basement
 				point const center(player_building->bcube.get_cube_center());
 				float const rand_val(fract((center.x + center.y + center.z)/player_building->get_window_vspace()));
 				water_damage = max(0.0f, (rand_val - 0.5f)); // 50% of buildings have up to 50% water damage
 			}
-			if (water_damage > 0.0) {s.set_prefix("#define ENABLE_WATER_DAMAGE", 1);} // FS
-			setup_building_draw_shader(s, min_alpha, 1, 0, 0); // enable_indir=1, force_tsl=0, use_texgen=0
-			
-			if (water_damage > 0.0) {
-				bind_texture_tu(get_noise_tex_3d(64, 1), 11); // grayscale noise
-				s.add_uniform_int("wet_noise_tex", 11);
-				s.add_uniform_float("wet_effect",   water_damage);
-				s.add_uniform_float("puddle_scale", 0.5);
-				s.add_uniform_float("water_damage_zmax", player_building->ground_floor_z1); // water damage is only in the basement
-			}
+			setup_building_draw_shader(s, min_alpha, 1, 0, 0, water_damage); // enable_indir=1, force_tsl=0, use_texgen=0
 			vector<point> points; // reused temporary
 			bbd.clear_obj_models();
 			int indir_bcs_ix(-1), indir_bix(-1);
@@ -3703,7 +3705,8 @@ public:
 					player_part = player_building->get_part_containing_pt(camera_bs);
 				}
 				bool const diag_texgen_mode(!player_part.is_all_zeros());
-				setup_building_draw_shader(s, min_alpha, 1, 1, (diag_texgen_mode ? 2 : 1)); // enable_indir=1, force_tsl=1, use_texgen=1|2
+				// water damage is needed here as well to apply to exterior basement walls
+				setup_building_draw_shader(s, min_alpha, 1, 1, (diag_texgen_mode ? 2 : 1), water_damage); // enable_indir=1, force_tsl=1, use_texgen=1|2
 				glEnable(GL_CULL_FACE);
 				glCullFace(swap_front_back ? GL_BACK : GL_FRONT); // draw back faces
 
@@ -3755,7 +3758,7 @@ public:
 					// this is required for drawing objects such as the underside of roof overhangs and roof doors and their covers
 					int const tex_filt_mode(ext_door_draw.empty() ? 2 : 3);
 					bool const enable_indir(camera_in_building); // need to enable indir lighting when drawing the back sides of exterior doors
-					setup_building_draw_shader(s, min_alpha, enable_indir, 1, 0); // force_tsl=1, use_texgen=0
+					setup_building_draw_shader(s, min_alpha, enable_indir, 1, 0); // force_tsl=1, use_texgen=0, water_damage=0.0
 					for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(s, 0, 0, tex_filt_mode);}
 					reset_interior_lighting_and_end_shader(s);
 				}
@@ -3765,7 +3768,7 @@ public:
 			// draw people in the player's building here with alpha mask enabled
 			if (defer_ped_draw_vars.valid() || (reflection_pass && !ref_pass_water)) {
 				if (global_building_params.enable_people_ai) {enable_animations_for_shader(s);}
-				setup_building_draw_shader(s, global_building_params.people_min_alpha, 1, 0, 0); // enable_indir=1, force_tsl=0, use_texgen=0
+				setup_building_draw_shader(s, global_building_params.people_min_alpha, 1, 0, 0); // enable_indir=1, force_tsl=0, use_texgen=0, water_damage=0.0
 
 				if (defer_ped_draw_vars.valid()) {
 					occlusion_checker_noncity_t oc(*defer_ped_draw_vars.bc);
@@ -3778,7 +3781,7 @@ public:
 			}
 			if (!ref_pass_interior && have_buildings_ext_paint()) { // draw spraypaint/markers on building exterior walls/windows, if needed
 				glDisable(GL_CULL_FACE);
-				setup_building_draw_shader(s, DEF_CITY_MIN_ALPHA, 1, 1, 0); // alpha test, enable_indir=1, force_tsl=1, use_texgen=0
+				setup_building_draw_shader(s, DEF_CITY_MIN_ALPHA, 1, 1, 0); // alpha test, enable_indir=1, force_tsl=1, use_texgen=0, water_damage=0.0
 				draw_buildings_ext_paint(s);
 				reset_interior_lighting_and_end_shader(s);
 				glEnable(GL_CULL_FACE);

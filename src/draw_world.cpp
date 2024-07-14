@@ -349,6 +349,11 @@ unsigned get_sky_zval_texture() {
 
 void invalidate_snow_coverage() {free_texture(sky_zval_tid);}
 
+void setup_puddles_texture(shader_t &s) {
+	bind_texture_tu(get_noise_tex_3d(64, 1), 11); // grayscale noise
+	s.add_uniform_int("wet_noise_tex", 11);
+}
+
 
 // texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7: shadow map,
 //                     8: specular map, 9: depth map/future gloss map (unused), 10: burn mask/sky_zval, 11: noise, 12: landscape texture/blue noise,
@@ -459,14 +464,11 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 		s.add_uniform_float("reflect_plane_zbot", bcube.d[2][0]);
 		s.add_uniform_float("reflect_plane_ztop", bcube.d[2][1]);
 	}
-	if (enable_puddles) {
-		bind_texture_tu(get_noise_tex_3d(64, 1), 11); // grayscale noise
-		s.add_uniform_int("wet_noise_tex", 11);
-	}
 	if (use_wet_mask || is_snowy || enable_sky_occlusion) {
 		bind_texture_tu(get_sky_zval_texture(), 10);
 		s.add_uniform_int("sky_zval_tex", 10);
 	}
+	if (enable_puddles) {setup_puddles_texture(s);}
 	// simple zval-based ambient occlusion, similar to shadow map; not as good as precomputed indirect lighting
 	if (enable_sky_occlusion) {s.add_uniform_float("sky_occlude_scale", sky_occlude_scale);}
 	// need to handle wet/outside vs. dry/inside surfaces differently, so the caller must either set is_outside properly or override wet and snow values
