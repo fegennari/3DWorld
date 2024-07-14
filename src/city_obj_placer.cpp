@@ -1916,10 +1916,10 @@ bool city_obj_placer_t::add_skyway(cube_t const &city_bcube, vect_bldg_walkway_t
 	if (num_plots_wide & 1) { // odd number of plots - skyway is off-center
 		centerline += (rgen.rand_bool() ? 1.0 : -1.0)*0.5*(city_bcube.get_sz_dim(!dim) - road_width)/num_plots_wide; // shift half a plot to a random side
 	}
-	cube_t track_bc(city_bcube);
-	track_bc.expand_in_dim(dim, -road_width); // shrink ends
-	set_wall_width(track_bc, centerline, 0.4*road_width, !dim);
-	cube_t clearance_area(track_bc);
+	cube_t skyway_bc(city_bcube);
+	skyway_bc.expand_in_dim(dim, -road_width); // shrink ends
+	set_wall_width(skyway_bc, centerline, 0.4*road_width, !dim);
+	cube_t clearance_area(skyway_bc);
 	clearance_area.expand_by_xy(0.5*road_width);
 	float ww_z1(city_bcube.z2() + 1.5*get_power_pole_height());
 	
@@ -1927,9 +1927,9 @@ bool city_obj_placer_t::add_skyway(cube_t const &city_bcube, vect_bldg_walkway_t
 		if (w.intersects_xy(clearance_area)) {max_eq(ww_z1, w.z2());} // make sure skyway is above all walkways
 	}
 	ww_z1 += 0.5*road_width;
-	set_cube_zvals(track_bc, ww_z1, (ww_z1 + 0.4*road_width));
-	if (!connect_buildings_to_skyway(track_bc, dim, city_bcube, skyway.ww_conns)) return 0;
-	skyway.init(track_bc, dim); // only add skyway if it can connect to buildings
+	set_cube_zvals(skyway_bc, ww_z1, (ww_z1 + 0.4*road_width));
+	if (!connect_buildings_to_skyway(skyway_bc, dim, city_bcube, skyway.ww_conns)) return 0;
+	skyway.init(skyway_bc, dim); // only add skyway if it can connect to buildings
 	return 1;
 }
 
@@ -2116,7 +2116,7 @@ template<typename T> bool check_city_obj_pt_xy_contains(city_obj_groups_t const 
 	return 0;
 }
 bool city_obj_placer_t::get_color_at_xy_pre_road(point const &pos, colorRGBA &color) const { // check walkways because they can be over both roads and plots
-	if (skyway.valid && skyway.track_bcube.contains_pt_xy(pos)) {color = WHITE; return 1;}
+	if (skyway.valid && skyway.bcube.contains_pt_xy(pos)) {color = WHITE; return 1;}
 	unsigned obj_ix(0);
 	if (check_city_obj_pt_xy_contains(walkway_groups, walkways, pos, obj_ix, 0)) {color = walkways[obj_ix].map_mode_color; return 1;} // is_cylin=0
 	if (check_city_obj_pt_xy_contains(p_solar_groups, p_solars, pos, obj_ix, 0)) {color = LT_BLUE; return 1;} // placed over parking lots

@@ -23,7 +23,7 @@ unsigned const NO_SHADOW_WHITE_TEX = BLACK_TEX; // alias to differentiate shadow
 unsigned const SHADOW_ONLY_TEX     = RED_TEX;   // alias to differentiate shadow only vs. other      untextured objects
 
 bool camera_in_building(0), interior_shadow_maps(0), player_is_hiding(0), player_in_unlit_room(0), player_in_walkway(0), player_in_int_elevator(0), player_on_house_stairs(0);
-bool building_has_open_ext_door(0), sec_camera_shadow_mode(0), player_in_skyway(0);
+bool building_has_open_ext_door(0), sec_camera_shadow_mode(0), player_in_skyway(0), player_on_moving_ww(0);
 int player_in_basement(0); // 0=no, 1=below ground level, 2=in basement and not on stairs, 3=in extended basement
 int player_in_closet  (0); // uses flags RO_FLAG_IN_CLOSET (player in closet), RO_FLAG_LIT (closet light is on), RO_FLAG_OPEN (closet door is open)
 int player_in_water   (0); // 0=no, 1=standing in water, 2=head underwater
@@ -4676,7 +4676,7 @@ public:
 		if (all_conn_bc.get_sz_dim(m_dim) < 0.5*m_bcube.get_sz_dim(m_dim)) return 0; // less than half the length is connected: fail
 		float const ww_conn_width(2.0*m_bcube.get_sz_dim(conn_dim));
 		for (unsigned d = 0; d < 2; ++d) {m_bcube.d[m_dim][d] = all_conn_bc.d[m_dim][d];} // clip to shared connection sub-length
-		m_bcube.expand_in_dim(m_dim, 2.0*m_bcube.get_sz_dim(conn_dim)); // extend by twice the track width
+		m_bcube.expand_in_dim(m_dim, 0.25*m_bcube.get_sz_dim(conn_dim)); // extend slightly
 		m_bcube.translate_dim(2, (ww_zmin - m_bcube.z1() - 0.05*m_bcube.dz())); // translate to the bottom of the lowest walkway; walkways are often all the same zval
 		ww_conns.reserve(cands.size());
 		

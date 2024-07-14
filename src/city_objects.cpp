@@ -4,8 +4,8 @@
 
 #include "city_objects.h"
 
-extern bool player_in_walkway;
-extern int animate2;
+extern bool player_in_walkway, player_on_moving_ww;
+extern int animate2, frame_counter;
 extern float fticks;
 extern double camera_zh;
 extern city_params_t city_params;
@@ -1874,8 +1874,8 @@ bool park_path_t::check_point_contains_xy(point const &p) const {
 	return check_cube_coll_xy(c);
 }
 
-// skyway
 
+// moving_walkway_t
 
 class tile_drawer_t {
 	uint64_t last_tile_id=0;
@@ -1917,11 +1917,34 @@ void draw_long_cube(cube_t const &c, colorRGBA const &color, draw_state_t &dstat
 	} // for s
 }
 
+void moving_walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, tile_drawer_t &td, bool shadow_only) const {
+	float const dist_scale = 0.5;
+	// TODO
+	draw_long_cube(*this, GRAY_BLACK, dstate, qbds.untex_qbd, td, dist_scale, shadow_only, 1, 0, 0.0); // skip_bottom=1
+}
+bool moving_walkway_t::proc_sphere_coll(point &pos, point const &p_last, float radius, point const &xlate, vector3d *cnorm) const {
+	cube_t const bc(*this + xlate);
+	if (!bc.contains_pt_xy(pos)) return 0; // not on walkway
+	float const zval(max(pos.z, p_last.z));
+	if (zval + radius < bc.z1()) return 0; // below walkway
+	pos.z = bc.z2() + radius;
+	
+	if (active && animate2) {
+		if (frame_counter > last_update_frame) { // move at most once per frame
+			pos[dim] += (dir ? 1.0 : -1.0)*fticks*speed;
+			last_update_frame = frame_counter;
+		}
+		player_on_moving_ww = 1;
+	}
+	return 1;
+}
+
+// skyway_t
+
 void skyway_t::init(cube_t const &c, bool dim_) {
 	valid = 1;
 	dim   = dim_;
-	bcube = track_bcube = c;
-	// TODO: larger bcube/smaller track_bcube
+	bcube = c;
 	set_bsphere_from_bcube();
 	float const height(bcube.dz()), width(bcube.get_sz_dim(!dim)), wall_width(0.05*width), entrance_ext(1.1*wall_width);
 	cube_t center(bcube);
@@ -1975,6 +1998,19 @@ void skyway_t::init(cube_t const &c, bool dim_) {
 		end.d[dim][!d] = bcube.d[dim][d] + (d ? -1.0 : 1.0)*wall_width;
 		sides.push_back(end);
 	}
+	// add moving walkways
+	// TODO: remove sections around walkway entrances
+	float const ww_hwidth(0.1*width), ww_height(0.01*width), ww_end_gap(0.75*width), centerline(bot.get_center_dim(!dim));
+	float const speed = 0.01;
+	cube_t ww_area(bot);
+	set_cube_zvals(ww_area, bot.z2(), bot.z2()+ww_height);
+	ww_area.expand_in_dim(dim, -ww_end_gap);
+
+	for (unsigned d = 0; d < 2; ++d) {
+		cube_t ww(ww_area);
+		set_wall_width(ww, (centerline + (d ? -1.0 : 1.0)*1.05*ww_hwidth), ww_hwidth, !dim);
+		mwws.emplace_back(ww, dim, d, speed);
+	}
 }
 
 void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_only) const {
@@ -2011,6 +2047,9 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 	}
 	td.end_draw(qbds.qbd);
 	dstate.set_untextured_material();
+	for (moving_walkway_t const &mww : mwws) {mww.draw(dstate, qbds, td, shadow_only);} // untextured and shadowed geom is drawn here
+	td.end_draw(qbds.untex_qbd);
+	//qbds.qbd.draw_and_clear();
 
 	if (player_above_floor) { // draw ramps if player is above the floor
 		for (cube_with_ix_t const &conn : ww_conns) { // ramps
@@ -2086,6 +2125,7 @@ bool skyway_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_,
 	}
 	if (zval > bot_z2) { // above the bottom
 		max_eq(pos_.z, (bot_z2 + radius_));
+		for (moving_walkway_t const &mww : mwws) {mww.proc_sphere_coll(pos_, p_last, radius_, xlate, cnorm);}
 		ret = 1;
 	}
 	for (cube_t const &side : sides) {

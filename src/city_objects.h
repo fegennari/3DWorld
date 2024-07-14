@@ -436,11 +436,24 @@ struct park_path_t : public city_obj_t {
 	bool check_point_contains_xy(point const &p) const;
 };
 
+class tile_drawer_t;
+
+struct moving_walkway_t : public cube_t {
+	bool dim, dir, active=1;
+	float speed; // sped is always positive; dir is movement dir
+	mutable int last_update_frame=0;
+
+	moving_walkway_t(cube_t const &c, bool dim_, bool dir_, float speed_=0.0) : cube_t(c), dim(dim_), dir(dir_), speed(speed_) {}
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, tile_drawer_t &td, bool shadow_only) const;
+	bool proc_sphere_coll(point &pos, point const &p_last, float radius, point const &xlate, vector3d *cnorm) const;
+};
+
 struct skyway_t : public city_obj_t {
 	bool valid=0, dim=0; // but no dir
-	cube_t track_bcube, bot, top;
+	cube_t bot, top;
 	vect_cube_with_ix_t ww_conns; // connection points to building walkways; ix envodes 2*dim + dir
 	vect_cube_t entrances, sides, steps;
+	vector<moving_walkway_t> mwws;
 
 	skyway_t() {}
 	void init(cube_t const &c, bool dim_);
