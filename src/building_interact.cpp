@@ -122,6 +122,26 @@ bool building_t::toggle_room_light(point const &closest_to, bool sound_from_clos
 	toggle_light_object(light, (sound_from_closest_to ? closest_to : light.get_cube_center()));
 	return 1;
 }
+bool building_t::toggle_walkway_lights(point const &pos) {
+	for (building_walkway_t const &w : walkways) {
+		if (!w.is_owner || !w.bcube.contains_pt(pos)) continue;
+		vect_room_object_t &objs(interior->room_geom->objs);
+		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+		bool found(0);
+
+		for (auto i = objs.begin(); i != objs_end; ++i) { // toggle all walkway lights for this floor
+			if (i->type != TYPE_LIGHT)      continue; // not a light
+			if (!w.bcube.contains_cube(*i)) continue; // not in the walkway
+			if (get_floor_for_zval(i->z1()) != get_floor_for_zval(pos.z)) continue; // wrong floor
+			i->toggle_lit_state(); // Note: doesn't update indir lighting
+			//register_indir_lighting_state_change(i - objs.begin()); // no indir from walkway lights
+			if (!found) {register_light_state_change(*i, pos);} // update on first light found
+			found = 1;
+		}
+		return found; // can only be in one walkway
+	} // for walkways
+	return 0;
+}
 
 void building_t::toggle_light_object(room_object_t const &light, point const &sound_pos) { // called by the player
 	assert(has_room_geom());

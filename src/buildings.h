@@ -1788,6 +1788,7 @@ struct building_t : public building_geom_t {
 		occlusion_checker_noncity_t &oc, vect_cube_with_ix_t &ped_bcubes, cube_t &lights_bcube);
 	void run_light_motion_detect_logic(point const &camera_bs);
 	bool toggle_room_light(point const &closest_to, bool sound_from_closest_to=0, int room_id=-1, bool inc_lamps=1, bool closet_light=0, bool known_in_attic=0);
+	bool toggle_walkway_lights(point const &pos);
 	void toggle_light_object(room_object_t const &light, point const &sound_pos);
 	void register_light_state_change(room_object_t const &light, point const &sound_pos, bool is_lamp=0);
 	void toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned num_zones);

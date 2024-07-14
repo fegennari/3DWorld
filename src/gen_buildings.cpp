@@ -3537,7 +3537,11 @@ public:
 						bool const ext_basement_conn_visible(b.interior_visible_from_other_building_ext_basement(xlate));
 						if (reflection_pass && !player_in_building_bcube && !ext_basement_conn_visible) continue; // not the correct building
 						bool const debug_draw(0 && b.interior->has_backrooms); // TESTING
-						player_in_building_bcube |= b.check_pt_in_or_near_walkway(camera_bs, 1, 1, 1); // owned_only=1, inc_open_door=1, inc_conn_room=1
+						
+						if (b.check_pt_in_or_near_walkway(camera_bs, 1, 1, 1)) { // owned_only=1, inc_open_door=1, inc_conn_room=1
+							if (toggle_room_light) {b.toggle_walkway_lights(camera_bs);}
+							player_in_building_bcube = 1; // walkways count as in building bcube
+						}
 						if (!debug_draw && !player_in_building_bcube && !ext_basement_conn_visible && !camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
 						b.maybe_gen_chimney_smoke();
 						bool const camera_near_building(player_in_building_bcube || (!b.doors.empty() && b.bcube.contains_pt_xy_exp(camera_bs, door_open_dist)));
