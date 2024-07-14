@@ -1924,9 +1924,10 @@ void monorail_t::init(cube_t const &c, bool dim_) {
 	set_bsphere_from_bcube();
 	float const height(bcube.dz()), width(bcube.get_sz_dim(!dim)), wall_width(0.05*width), entrance_ext(1.1*wall_width);
 	cube_t center(bcube);
-	center.expand_in_dim(!dim, -wall_width);
+	center.expand_in_dim(!dim, -wall_width); // subtract off side walls
 	bot = bcube;
 	top = center;
+	top.expand_in_dim(dim, -wall_width); // subtract off end walls
 	cube_t nonbot(bcube);
 	bot.z2() = nonbot.z1() = bcube.z1() + 0.085*height;
 	top.z1() = bcube.z2() - 0.05*height;
@@ -2024,7 +2025,30 @@ void monorail_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_
 		} // for conn
 		td.end_draw(qbds.untex_qbd);
 	}
-	if (!shadow_only && player_above_floor) { // draw roof if player is above the floor; transparent; Z only; drawn last
+	if (!shadow_only && player_above_floor) { // draw roof if player is above the floor
+		// draw window frames/dividers; untextured black, so grouping into tiles for shadows isn't needed and they can all be batched together
+		float const width(top.get_sz_dim(!dim)), frame_width(0.75*top.dz()), length(top.get_sz_dim(dim) - frame_width), max_panel_len(1.5*width);
+		cube_t top_exp(top);
+		top_exp.expand_in_dim(2, 0.25*frame_width); // extends outside the glass
+		assert(qbds.untex_qbd.empty());
+
+		for (unsigned dir = 0; dir < 2; ++dir) { // sides
+			cube_t frame(top_exp);
+			frame.d[!dim][!dir] = frame.d[!dim][dir] + (dir ? -1.0 : 1.0)*frame_width;
+			dstate.draw_cube(qbds.untex_qbd, frame, BLACK, 0, 0.0, (1 << unsigned(dim))); // skip ends
+		}
+		unsigned const num_panels(ceil(length/max_panel_len));
+		float const panel_len(length/num_panels);
+		cube_t frame(top_exp);
+		frame.d[dim][1] = frame.d[dim][0] + frame_width;
+		frame.expand_in_dim(!dim, -frame_width); // meets the edge frame
+
+		for (unsigned n = 0; n <= num_panels; ++n) {
+			dstate.draw_cube(qbds.untex_qbd, frame, BLACK, 0, 0.0, (1 << unsigned(!dim))); // skip ends
+			frame.translate_dim(dim, panel_len);
+		}
+		qbds.untex_qbd.draw_and_clear();
+		// draw transparent top glass panel; Z only; drawn last
 		enable_blend();
 		glDepthMask(GL_FALSE); // disable depth writing so that terrain and grass are drawn over the glass
 		draw_long_cube(top, colorRGBA(1.0, 1.0, 1.0, 0.25), dstate, qbds.untex_qbd, td, dist_scale, shadow_only, 0, 0.0, 3);
@@ -2043,7 +2067,7 @@ bool monorail_t::proc_sphere_coll(point &pos_, point const &p_last, float radius
 	bool ret(0);
 
 	if (zval > top_z2) { // above the monorail - walk on the top glass
-		if (bc_cs.contains_pt_xy(pos_)) {
+		if (bc_cs.contains_pt_xy_exp(pos_, 0.1*radius_)) { // expand slightly for a bit of overhang so that player doesn't fall inside a walkway
 			max_eq(pos_.z, (top_z2 + radius_));
 			return 1;
 		}
