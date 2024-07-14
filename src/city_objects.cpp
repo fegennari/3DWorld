@@ -20,6 +20,7 @@ float get_power_pole_offset() {return 0.045*city_params.road_width;}
 unsigned get_building_models_gpu_mem() {return building_obj_model_loader.get_gpu_mem();}
 int get_solarp_tid();
 int get_concrete_tid();
+void set_tile_floor_texture();
 
 
 void textured_mat_t::pre_draw(bool shadow_only) {
@@ -1894,7 +1895,7 @@ public:
 };
 
 void draw_long_cube(cube_t const &c, colorRGBA const &color, draw_state_t &dstate, quad_batch_draw &qbd, tile_drawer_t &td, float dist_scale,
-	bool shadow_only=0, bool skip_bottom=0, float tscale=0.0, unsigned skip_dims=0)
+	bool shadow_only=0, bool skip_bottom=0, bool skip_top=0, float tscale=0.0, unsigned skip_dims=0)
 {
 	bool const dim(c.dx() < c.dy()); // longer dim; only supports splitting in one dim
 	float const tile_sz(dim ? MESH_Y_SIZE*DY_VAL : MESH_X_SIZE*DX_VAL), length(c.get_sz_dim(dim));
@@ -1910,7 +1911,7 @@ void draw_long_cube(cube_t const &c, colorRGBA const &color, draw_state_t &dstat
 			unsigned skip_dims_seg(skip_dims);
 			if (!(beg && dstate.camera_bs[dim] < c2.d[dim][0]) && !(end && dstate.camera_bs[dim] > c2.d[dim][1])) {skip_dims_seg |= (1 << unsigned(dim));} // skip int seg ends
 			td.next_cube(c2, dstate, qbd);
-			dstate.draw_cube(qbd, c2, color, skip_bottom, tscale, skip_dims_seg);
+			dstate.draw_cube(qbd, c2, color, skip_bottom, tscale, skip_dims_seg, 0, 0, 0, 1.0, 1.0, 1.0, skip_top);
 		}
 		c2.d[dim][0] += step_len;
 	} // for s
@@ -1990,7 +1991,7 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 		bool const skip_bottom(c.z1() == bot.z2());
 		unsigned skip_dims(0);
 		if (c.d[!dim][0] == top.d[!dim][0] && c.d[!dim][1] == top.d[!dim][1]) {skip_dims|= (1 << unsigned(!dim));} // don't need to draw sides of ends
-		draw_long_cube(c, ext_color, dstate, qbds.qbd, td, dist_scale, shadow_only, skip_bottom, tscale, skip_dims);
+		draw_long_cube(c, ext_color, dstate, qbds.qbd, td, dist_scale, shadow_only, skip_bottom, 0, tscale, skip_dims);
 	}
 	if (player_above_floor) { // draw steps if player is above the floor
 		for (cube_t const &c : steps) {
@@ -1999,7 +2000,15 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 			dstate.draw_cube(qbds.qbd, c, ext_color, 1, tscale); // skip_bottom=1
 		}
 	}
-	draw_long_cube(bot, ext_color, dstate, qbds.qbd, td, dist_scale, shadow_only, 0, tscale); // draw all sides
+	if (shadow_only) {
+		draw_long_cube(bot, ext_color, dstate, qbds.qbd, td, dist_scale, shadow_only, 0, 0, tscale); // draw all sides
+	}
+	else {
+		draw_long_cube(bot, ext_color, dstate, qbds.qbd, td, dist_scale, shadow_only, 0, 1, tscale); // draw all sides except for top
+		td.end_draw(qbds.qbd);
+		set_tile_floor_texture();
+		draw_long_cube(bot, GRAY, dstate, qbds.qbd, td, dist_scale, shadow_only, 1, 0, 4.0, 3); // draw top only
+	}
 	td.end_draw(qbds.qbd);
 	dstate.set_untextured_material();
 
@@ -2025,7 +2034,7 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 		} // for conn
 		td.end_draw(qbds.untex_qbd);
 	}
-	if (!shadow_only && player_above_floor) { // draw roof if player is above the floor
+	if (player_above_floor) { // draw roof if player is above the floor
 		// draw window frames/dividers; untextured black, so grouping into tiles for shadows isn't needed and they can all be batched together
 		float const width(top.get_sz_dim(!dim)), frame_width(0.75*top.dz()), length(top.get_sz_dim(dim) - frame_width), max_panel_len(1.5*width);
 		cube_t top_exp(top);
@@ -2048,13 +2057,15 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 			frame.translate_dim(dim, panel_len);
 		}
 		qbds.untex_qbd.draw_and_clear();
-		// draw transparent top glass panel; Z only; drawn last
-		enable_blend();
-		glDepthMask(GL_FALSE); // disable depth writing so that terrain and grass are drawn over the glass
-		draw_long_cube(top, colorRGBA(1.0, 1.0, 1.0, 0.25), dstate, qbds.untex_qbd, td, dist_scale, shadow_only, 0, 0.0, 3);
-		td.end_draw(qbds.untex_qbd);
-		glDepthMask(GL_TRUE);
-		disable_blend();
+		
+		if (!shadow_only) { // draw transparent top glass panel; Z only; drawn last
+			enable_blend();
+			glDepthMask(GL_FALSE); // disable depth writing so that terrain and grass are drawn over the glass
+			draw_long_cube(top, colorRGBA(1.0, 1.0, 1.0, 0.25), dstate, qbds.untex_qbd, td, dist_scale, shadow_only, 0, 0, 0.0, 3);
+			td.end_draw(qbds.untex_qbd);
+			glDepthMask(GL_TRUE);
+			disable_blend();
+		}
 	}
 	dstate.unset_untextured_material();
 }

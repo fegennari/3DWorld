@@ -208,6 +208,11 @@ int get_bldg_door_tid () {return building_texture_mgr.get_bdoor_tid();}
 int get_concrete_tid  () {return building_texture_mgr.get_concrete_tid();}
 int get_solarp_tid    () {return building_texture_mgr.get_solarp_tid();}
 
+void set_tile_floor_texture() {
+	select_texture(building_texture_mgr.get_tile_floor_tid   ());
+	select_texture(building_texture_mgr.get_tile_floor_nm_tid(), 5);
+}
+
 
 class texture_id_mapper_t {
 	vector<unsigned> tid_to_slot_ix;
