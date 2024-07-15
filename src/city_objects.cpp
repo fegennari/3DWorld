@@ -2009,7 +2009,7 @@ void skyway_t::init(cube_t const &c, bool dim_) {
 	for (unsigned d = 0; d < 2; ++d) {
 		cube_t ww(ww_area);
 		set_wall_width(ww, (centerline + (d ? -1.0 : 1.0)*1.05*ww_hwidth), ww_hwidth, !dim);
-		mwws.emplace_back(ww, dim, d, speed);
+		mwws.emplace_back(ww, dim, (d ^ dim), speed);
 	}
 }
 
