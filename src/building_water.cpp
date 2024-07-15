@@ -272,7 +272,10 @@ void building_t::draw_water(vector3d const &xlate) const {
 		colorRGBA const base_color(is_lit ? WHITE : DK_GRAY);
 		float const orig_water_plane_z(water_plane_z);
 		water_plane_z = interior->water_zval;
+		fgPushMatrix();
+		translate_to(-xlate); // drawn in camera space, not building space
 		draw_underwater_particles(water_z1, base_color);
+		fgPopMatrix();
 		water_plane_z = orig_water_plane_z;
 		return;
 	}

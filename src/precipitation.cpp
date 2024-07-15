@@ -28,7 +28,7 @@ protected:
 	rand_gen_t rgen; // modified in update logic
 	vector3d xlate;
 	float prev_zmin=0.0, cur_zmin=0.0, prev_zmax=0.0, cur_zmax=0.0, precip_dist=0.0;
-	bool check_water_coll=1, check_mesh_coll=1, check_cobj_coll=1, in_city=0;
+	bool check_water_coll=1, check_mesh_coll=1, check_cobj_coll=1, is_interior=0, in_city=0;
 public:
 	virtual ~precip_manager_t() {}
 	void clear () {verts.clear();}
@@ -47,13 +47,16 @@ public:
 		cur_zmax = get_zmax();
 		if (cur_zmin >= cur_zmax) {clear(); return;} // invalid range (water particles with no water?)
 
-		if (world_mode == WMODE_INF_TERRAIN) { // check for player in city
+		if (world_mode == WMODE_INF_TERRAIN) {
 			xlate = get_camera_coord_space_xlate();
-			cube_t const city_bcube(get_city_bcube_at_pt(get_camera_pos() - xlate));
 
-			if (!city_bcube.is_all_zeros()) {
-				in_city  = 1;
-				cur_zmin = city_bcube.z1() + get_road_height();
+			if (!is_interior) { // check for player in city
+				cube_t const city_bcube(get_city_bcube_at_pt(get_camera_pos() - xlate));
+
+				if (!city_bcube.is_all_zeros()) {
+					in_city  = 1;
+					cur_zmin = city_bcube.z1() + get_road_height();
+				}
 			}
 		}
 		// if zmin or zmax changes by more than some amount, then clear and regen point z-values so that rain/snow stays uniformly spaced in z
@@ -112,7 +115,7 @@ public:
 				return 0;
 			}
 		}
-		else if (world_mode == WMODE_INF_TERRAIN) {
+		else if (world_mode == WMODE_INF_TERRAIN && !is_interior) {
 			if (camera_in_building && is_pos_in_player_building(bot_pos - xlate)) return 0;
 			if (splashes != nullptr && in_city && bot_pos.z < cur_zmin) {maybe_add_rain_splash(pos, bot_pos, cur_zmin, *splashes, 0, 0, 0);} // splash on city surface
 		} // else universe/invalid
@@ -237,7 +240,7 @@ class uw_particle_manager_t : public precip_manager_t<1> { // underwater particl
 	virtual float get_zmax() const  {return min(water_plane_z, (get_camera_pos().z + WATER_PART_DIST));}
 	virtual size_t get_num_precip() {return size_t(150)*get_precip_rate();}
 public:
-	uw_particle_manager_t() {check_water_coll = 0;}
+	uw_particle_manager_t() {check_water_coll = 0; is_interior = 1;}
 
 	void update(float terrain_zmin_, colorRGBA base_color=WHITE) {
 		terrain_zmin = terrain_zmin_;

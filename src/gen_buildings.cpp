@@ -3202,7 +3202,7 @@ public:
 	static void multi_draw_shadow(vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		//timer_t timer("Draw Buildings Shadow");
 		fgPushMatrix();
-		translate_to(xlate);
+		translate_to(xlate); // drawn in building space
 		shader_t s, amask_shader, person_shader;
 		s.begin_shadow_map_shader();
 		glEnable(GL_CULL_FACE); // slightly faster for interior shadow maps
