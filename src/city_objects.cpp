@@ -1907,7 +1907,7 @@ void draw_long_cube(cube_t const &c, colorRGBA const &color, draw_state_t &dstat
 		bool const beg(s == 0), end(s+1 == num_segs);
 		c2.d[dim][1] = (end ? c.d[dim][1] : (c2.d[dim][0] + step_len));
 
-		if (num_segs == 1 || dstate.check_cube_visible(c2, dist_scale)) { // VFC
+		if (dstate.check_cube_visible(c2, dist_scale)) { // VFC
 			unsigned skip_dims_seg(skip_dims);
 			if (!(beg && dstate.camera_bs[dim] < c2.d[dim][0]) && !(end && dstate.camera_bs[dim] > c2.d[dim][1])) {skip_dims_seg |= (1 << unsigned(dim));} // skip int seg ends
 			td.next_cube(c2, dstate, qbd);
@@ -1917,26 +1917,55 @@ void draw_long_cube(cube_t const &c, colorRGBA const &color, draw_state_t &dstat
 	} // for s
 }
 
+moving_walkway_t::moving_walkway_t(cube_t const &c, bool dim_, bool dir_, float speed_) : cube_t(c), dim(dim_), dir(dir_), speed(speed_) {
+	float const side_width(0.08*c.get_sz_dim(!dim));
+	track = c;
+	track.z2() = c.z1() + 0.05*c.dz();
+	track.expand_in_dim(dim, -0.5*side_width); // slight shrink
+
+	for (unsigned d = 0; d < 2; ++d) {
+		sides[d] = c;
+		sides[d].d[!dim][!d] = track.d[!dim][d] = c.d[!dim][d] + (d ? -1.0 : 1.0)*side_width;
+	}
+}
 void moving_walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, tile_drawer_t &td, bool shadow_only) const {
 	float const dist_scale = 0.5;
-	// TODO
-	draw_long_cube(*this, GRAY_BLACK, dstate, qbds.untex_qbd, td, dist_scale, shadow_only, 1, 0, 0.0); // skip_bottom=1
+	float const tscale = 0.0;
+	draw_long_cube(track, GRAY_BLACK, dstate, qbds.untex_qbd, td, dist_scale, shadow_only, 1, 0, tscale); // track; skip_bottom=1, skip_top=0
+	float const height(dz()), railing_thick(0.04*height), side_width(sides[0].get_sz_dim(!dim)), railing_shrink(0.15*side_width);
+
+	for (unsigned d = 0; d < 2; ++d) { // sides + railings
+		cube_t railing(sides[d]);
+		railing.z1() += 0.8*height;
+		railing.z2() += railing_thick;
+		railing.expand_in_dim( dim,  railing_thick );
+		railing.expand_in_dim(!dim, -railing_shrink);
+		draw_long_cube(railing,  BKGRAY,  dstate, qbds.untex_qbd, td, 0.3*dist_scale, shadow_only, 0); // near black, skip_bottom=0
+		draw_long_cube(sides[d], LT_GRAY, dstate, qbds.untex_qbd, td, 0.5*dist_scale, shadow_only, 1); // skip_bottom=1
+	} // for d
 }
 bool moving_walkway_t::proc_sphere_coll(point &pos, point const &p_last, float radius, point const &xlate, vector3d *cnorm) const {
 	cube_t const bc(*this + xlate);
-	if (!bc.contains_pt_xy(pos)) return 0; // not on walkway
+	if (!bc.contains_pt_xy_exp(pos, radius)) return 0; // not on/near walkway
 	float const zval(max(pos.z, p_last.z));
 	if (zval + radius < bc.z1()) return 0; // below walkway
-	pos.z = bc.z2() + radius;
+	cube_t const track_xf(track + xlate);
+	bool ret(0);
+
+	if (track_xf.contains_pt_xy(pos)) { // on track
+		pos.z = track_xf.z2() + radius;
 	
-	if (active && animate2) {
-		if (frame_counter > last_update_frame) { // move at most once per frame
-			pos[dim] += (dir ? 1.0 : -1.0)*fticks*speed;
-			last_update_frame = frame_counter;
+		if (active && animate2) {
+			if (frame_counter > last_update_frame) { // move at most once per frame
+				pos[dim] += (dir ? 1.0 : -1.0)*fticks*speed;
+				last_update_frame = frame_counter;
+			}
+			player_on_moving_ww = 1;
 		}
-		player_on_moving_ww = 1;
+		ret = 1;
 	}
-	return 1;
+	for (unsigned d = 0; d < 2; ++d) {ret |= sphere_cube_int_update_pos(pos, radius, (sides[d] + xlate), p_last, 0, cnorm);} // check sides
+	return ret;
 }
 
 // skyway_t
@@ -1999,7 +2028,7 @@ void skyway_t::init(cube_t const &c, bool dim_) {
 		sides.push_back(end);
 	}
 	// add moving walkways
-	float const ww_hwidth(0.1*width), ww_height(0.01*width), ww_end_gap(0.75*width), centerline(bot.get_center_dim(!dim));
+	float const ww_hwidth(0.12*width), ww_height(0.8*ww_hwidth), ww_end_gap(0.75*width), centerline(bot.get_center_dim(!dim));
 	float const speed = 0.01;
 	cube_t ww_area(bot);
 	set_cube_zvals(ww_area, bot.z2(), bot.z2()+ww_height);
@@ -2018,7 +2047,7 @@ void skyway_t::init(cube_t const &c, bool dim_) {
 		if (ww.get_sz_dim(dim) < 0.5*width) continue; // too short
 
 		for (unsigned d = 0; d < 2; ++d) {
-			set_wall_width(ww, (centerline + (d ? -1.0 : 1.0)*1.05*ww_hwidth), ww_hwidth, !dim);
+			set_wall_width(ww, (centerline + (d ? -1.0 : 1.0)*1.02*ww_hwidth), ww_hwidth, !dim);
 			mwws.emplace_back(ww, dim, (d ^ dim), speed);
 		}
 	}
