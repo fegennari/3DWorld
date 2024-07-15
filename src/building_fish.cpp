@@ -336,6 +336,7 @@ public:
 		if (inc_pools_and_fb) {swimming_pool    .draw(s, anim_state, anim_time);}
 		if (inc_pools_and_fb) {flooded_basement .draw(s, anim_state, anim_time);}
 		anim_state.clear_animation_id(s); // clear animations
+		check_mvm_update();
 		glEnable(GL_CULL_FACE);
 	}
 }; // fish_manager_t
