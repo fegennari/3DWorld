@@ -4614,7 +4614,7 @@ private:
 		walkway_cand_t(cube_t const &bc, unsigned b, unsigned p, bool d) : bcube(bc), bix(b), pix(p), dir(d) {}
 	};
 public:
-	bool connect_buildings_to_skyway(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube, vect_cube_with_ix_t &ww_conns) {
+	bool connect_buildings_to_skyway(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube, vector<skyway_conn_t> &ww_conns) {
 		vector<cube_with_ix_t> city_bldgs, ww_bldgs;
 		float const max_xy_sz(get_walkway_buildings_and_max_sz(city_bcube, city_bldgs, ww_bldgs)), max_walkway_len(1.5*max_xy_sz);
 		if (ww_bldgs.size() < 2) return 0; // not enough buildings
@@ -4695,7 +4695,7 @@ public:
 			b.walkways.back().skyway_conn = skyway_conn;
 			cube_t conn(cand.bcube);
 			conn.d[conn_dim][cand.dir] = conn.d[conn_dim][!cand.dir];
-			ww_conns.emplace_back(conn, (2*unsigned(conn_dim) + unsigned(!cand.dir)));
+			ww_conns.emplace_back(conn, conn_dim, !cand.dir, &b);
 		} // for cand
 		return 1; // success
 	}
@@ -5099,7 +5099,7 @@ void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways  ) 
 void add_buildings_exterior_lights(vector3d const &xlate, cube_t &lights_bcube) {building_creator_city.add_exterior_lights(xlate, lights_bcube);}
 float get_max_house_size() {return global_building_params.get_max_house_size();}
 
-bool connect_buildings_to_skyway(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube, vect_cube_with_ix_t &ww_conns) {
+bool connect_buildings_to_skyway(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube, vector<skyway_conn_t> &ww_conns) {
 	return building_creator_city.connect_buildings_to_skyway(m_bcube, m_dim, city_bcube, ww_conns);
 }
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube, bool sec_camera_mode) {

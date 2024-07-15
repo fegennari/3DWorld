@@ -1963,7 +1963,7 @@ void skyway_t::init(cube_t const &c, bool dim_) {
 		swap_cube_dims(side, !dim, 2); // swap so that subtract can be done in the XY plane
 		sides.push_back(side);
 	}
-	for (cube_with_ix_t const &conn : ww_conns) {
+	for (skyway_conn_t const &conn : ww_conns) {
 		cube_t entrance(conn);
 		entrance.expand_in_dim(!dim, entrance_ext); // expand in walkway entrance dim
 		entrance.expand_in_dim( dim, -0.1*conn.get_sz_dim(dim)); // shrink sides
@@ -1976,7 +1976,7 @@ void skyway_t::init(cube_t const &c, bool dim_) {
 		float const dz(entrance.z1() - bot.z2());
 		if (dz < max_step_height) continue; // no steps needed
 		unsigned const num_steps(ceil(dz/max_step_height));
-		bool const dir(!(conn.ix & 1)); // dir relative to skyway, not building
+		bool const dir(!conn.dir); // dir relative to skyway, not building
 		float const step_height(dz/(num_steps+1)), step_len((dir ? -1.0 : 1.0)*1.25*step_height), wall_pos(center.d[!dim][dir]);
 		cube_t step(entrance);
 		set_cube_zvals(step, bot.z2(), entrance.z1());
@@ -1999,18 +1999,30 @@ void skyway_t::init(cube_t const &c, bool dim_) {
 		sides.push_back(end);
 	}
 	// add moving walkways
-	// TODO: remove sections around walkway entrances
 	float const ww_hwidth(0.1*width), ww_height(0.01*width), ww_end_gap(0.75*width), centerline(bot.get_center_dim(!dim));
 	float const speed = 0.01;
 	cube_t ww_area(bot);
 	set_cube_zvals(ww_area, bot.z2(), bot.z2()+ww_height);
 	ww_area.expand_in_dim(dim, -ww_end_gap);
+	// remove sections around walkway entrances
+	vect_cube_t mww_segs;
+	mww_segs.push_back(ww_area);
 
-	for (unsigned d = 0; d < 2; ++d) {
-		cube_t ww(ww_area);
-		set_wall_width(ww, (centerline + (d ? -1.0 : 1.0)*1.05*ww_hwidth), ww_hwidth, !dim);
-		mwws.emplace_back(ww, dim, (d ^ dim), speed);
+	for (skyway_conn_t const &conn : ww_conns) {
+		cube_t sub(bcube);
+		float const mww_gap(conn.building ? 2.0*conn.building->get_doorway_width() : 0.75*conn.get_sz_dim(dim));
+		set_wall_width(sub, conn.get_center_dim(dim), 0.5*mww_gap, dim);
+		subtract_cube_from_cubes(sub, mww_segs);
 	}
+	for (cube_t ww : mww_segs) {
+		if (ww.get_sz_dim(dim) < 0.5*width) continue; // too short
+
+		for (unsigned d = 0; d < 2; ++d) {
+			set_wall_width(ww, (centerline + (d ? -1.0 : 1.0)*1.05*ww_hwidth), ww_hwidth, !dim);
+			mwws.emplace_back(ww, dim, (d ^ dim), speed);
+		}
+	}
+	// TODO: add lights
 }
 
 void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_only) const {
@@ -2051,9 +2063,9 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 	td.end_draw(qbds.untex_qbd);
 	//qbds.qbd.draw_and_clear();
 
-	if (player_above_floor) { // draw ramps if player is above the floor
-		for (cube_with_ix_t const &conn : ww_conns) { // ramps
-			bool const dir(conn.ix & 1);
+	if (player_above_floor) { // draw ramps and roof if player is above the floor
+		for (skyway_conn_t const &conn : ww_conns) { // ramps
+			bool const dir(conn.dir);
 			float const conn_zfloor(conn.z1() + 0.5*FLOOR_THICK_VAL_OFFICE*conn.dz());
 			if (bot.z2() <= conn_zfloor) continue; // sloping down rather than up when entering skyway
 			cube_t ramp(conn);
@@ -2072,8 +2084,6 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 			td.next_cube(ramp, dstate, qbds.untex_qbd); // untextured
 		} // for conn
 		td.end_draw(qbds.untex_qbd);
-	}
-	if (player_above_floor) { // draw roof if player is above the floor
 		// draw window frames/dividers; untextured black, so grouping into tiles for shadows isn't needed and they can all be batched together
 		float const width(top.get_sz_dim(!dim)), frame_width(0.75*top.dz()), length(top.get_sz_dim(dim) - frame_width), max_panel_len(1.5*width);
 		cube_t top_exp(top);

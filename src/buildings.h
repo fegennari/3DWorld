@@ -1456,6 +1456,12 @@ struct building_walkway_t : public building_walkway_geom_t { // "owned" walkway,
 	bool has_skyway_conn() const {return !skyway_conn.is_all_zeros();}
 };
 
+struct skyway_conn_t : public cube_t {
+	bool dim, dir;
+	building_t const *const building;
+	skyway_conn_t(cube_t const &c, bool dim_, bool dir_, building_t const *b) : cube_t(c), dim(dim_), dir(dir_), building(b) {}
+};
+
 
 struct building_interior_t {
 	vect_cube_t floors, ceilings, fc_occluders, exclusion, open_walls;
