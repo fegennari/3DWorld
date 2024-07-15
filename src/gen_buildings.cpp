@@ -4674,7 +4674,7 @@ public:
 		} // for i
 		if (cands.size() < 2) return 0; // need at least two connected buildings
 		if (all_conn_bc.get_sz_dim(m_dim) < 0.5*m_bcube.get_sz_dim(m_dim)) return 0; // less than half the length is connected: fail
-		float const ww_conn_width(2.0*m_bcube.get_sz_dim(conn_dim));
+		float const ww_conn_width(2.5*m_bcube.get_sz_dim(conn_dim));
 		for (unsigned d = 0; d < 2; ++d) {m_bcube.d[m_dim][d] = all_conn_bc.d[m_dim][d];} // clip to shared connection sub-length
 		m_bcube.expand_in_dim(m_dim, 0.25*m_bcube.get_sz_dim(conn_dim)); // extend slightly
 		m_bcube.translate_dim(2, (ww_zmin - m_bcube.z1() - 0.05*m_bcube.dz())); // translate to the bottom of the lowest walkway; walkways are often all the same zval
