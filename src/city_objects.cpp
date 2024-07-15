@@ -2220,4 +2220,20 @@ bool skyway_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_,
 	return sphere_cube_int_update_pos(pos_, radius_, bc_cs, p_last, 0, cnorm); // exterior coll
 }
 
+void skyway_t::get_building_signs(vector<sign_t> &signs) const {
+	float const sign_height(0.06*bcube.dz()), sign_hwidth(4.0*sign_height), sign_depth(0.2*sign_height);
+
+	for (skyway_conn_t const &conn : ww_conns) { // ramps
+		if (!conn.building || conn.building->name.empty()) continue; // no name, no sign
+		bool const dir(!conn.dir); // dir relative to skyway, not building
+		float const wall_pos(top.d[!dim][dir]); // inner wall of skyway
+		cube_t sign(conn);
+		set_cube_zvals(sign, conn.z2(), conn.z2()+sign_height);
+		sign.d[!dim][ dir] = wall_pos;
+		sign.d[!dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*sign_depth;
+		set_wall_width(sign, conn.get_center_dim(dim), sign_hwidth, dim);
+		signs.emplace_back(sign, !dim, !dir, conn.building->name, WHITE, BLACK, 0, 0, 1); // two_sided=0, emissive=0, small=1
+	} // for conn
+}
+
 

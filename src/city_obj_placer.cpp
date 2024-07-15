@@ -1930,6 +1930,9 @@ bool city_obj_placer_t::add_skyway(cube_t const &city_bcube, vect_bldg_walkway_t
 	set_cube_zvals(skyway_bc, ww_z1, (ww_z1 + 0.4*road_width));
 	if (!connect_buildings_to_skyway(skyway_bc, dim, city_bcube, skyway.ww_conns)) return 0;
 	skyway.init(skyway_bc, dim); // only add skyway if it can connect to buildings
+	vector<sign_t> skyway_signs;
+	skyway.get_building_signs(skyway_signs);
+	for (sign_t const &sign : skyway_signs) {sign_groups.add_obj(sign, signs);}
 	return 1;
 }
 
