@@ -452,10 +452,12 @@ struct moving_walkway_t : public cube_t {
 
 struct skyway_t : public city_obj_t {
 	bool valid=0, dim=0; // but no dir
+	unsigned num_roof_panels=1;
 	cube_t bot, top;
 	vector<skyway_conn_t> ww_conns; // connection points to building walkways; ix envodes 2*dim + dir
 	vect_cube_t entrances, sides, steps;
 	vector<moving_walkway_t> mwws;
+	vector<point> light_pos;
 
 	skyway_t() {}
 	void init(cube_t const &c, bool dim_);
@@ -463,6 +465,7 @@ struct skyway_t : public city_obj_t {
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 	void get_building_signs(vector<sign_t> &signs) const;
+	void add_lights(vector3d const &xlate, cube_t &lights_bcube) const;
 };
 
 struct bird_place_t {
@@ -608,6 +611,7 @@ public:
 		float plot_subdiv_sz, unsigned parent_plot_ix, unsigned city_ix, vect_city_zone_t &sub_plots);
 	void draw_detail_objects(draw_state_t &dstate, bool shadow_only);
 	void draw_transparent_objects(draw_state_t &dstate, bool shadow_only);
+	void add_lights(vector3d const &xlate, cube_t &lights_bcube) const;
 	bool proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, vector3d *cnorm) const;
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
 	bool get_color_at_xy(point const &pos, colorRGBA &color, bool skip_in_road) const;

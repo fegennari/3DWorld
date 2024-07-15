@@ -2013,6 +2013,10 @@ void city_obj_placer_t::draw_transparent_objects(draw_state_t &dstate, bool shad
 	dstate.pass_ix = 0; // reset back to 0
 }
 
+void city_obj_placer_t::add_lights(vector3d const &xlate, cube_t &lights_bcube) const {
+	skyway.add_lights(xlate, lights_bcube);
+}
+
 template<typename T> bool proc_vector_sphere_coll(vector<T> const &objs, city_obj_groups_t const &groups, point &pos,
 	point const &p_last, float radius, vector3d const &xlate, vector3d *cnorm)
 {

@@ -2065,10 +2065,20 @@ void skyway_t::init(cube_t const &c, bool dim_) {
 
 		for (unsigned d = 0; d < 2; ++d) {
 			set_wall_width(ww, (centerline + (d ? -1.0 : 1.0)*1.02*ww_hwidth), ww_hwidth, !dim);
-			mwws.emplace_back(ww, dim, (d ^ dim), speed);
+			mwws.emplace_back(ww, dim, (bool(d) ^ dim), speed);
 		}
 	}
-	// TODO: add lights
+	// divide roof into panels and add lights
+	float const length(top.get_sz_dim(dim)), max_panel_len(1.5*width);
+	num_roof_panels = ceil(length/max_panel_len);
+	float const light_radius(0.04*bcube.dz()), light_zval(top.z2() + light_radius), panel_len(length/num_roof_panels);
+
+	for (unsigned n = 0; n < num_roof_panels; ++n) {
+		point lpos(0.0, 0.0, light_zval);
+		lpos[!dim] = top.get_center_dim(!dim);
+		lpos[ dim] = top.d[dim][0] + (n + 0.5)*panel_len;
+		light_pos.push_back(lpos);
+	}
 }
 
 void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_only) const {
@@ -2116,7 +2126,7 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 		qbds.qbd.draw_and_clear();
 		select_texture(WHITE_TEX);
 	}
-	if (player_above_floor) { // draw ramps and roof if player is above the floor
+	if (player_above_floor) { // draw ramps, lights, and roof if player is above the floor
 		for (skyway_conn_t const &conn : ww_conns) { // ramps
 			bool const dir(conn.dir);
 			float const conn_zfloor(conn.z1() + 0.5*FLOOR_THICK_VAL_OFFICE*conn.dz());
@@ -2137,8 +2147,27 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 			td.next_cube(ramp, dstate, qbds.untex_qbd); // untextured
 		} // for conn
 		td.end_draw(qbds.untex_qbd);
+		
+		if (!light_pos.empty()) { // add ceiling lights
+			bool const is_on = 1; // TODO: based on is_night(), not per-light
+			bind_draw_sphere_vbo(0, 1); // untextured
+			dstate.s.set_cur_color(WHITE);
+			if (is_on) {dstate.s.set_color_e(WHITE);}
+
+			for (point const &lpos : light_pos) { // draw light fixtures
+				float const light_radius(lpos.z - top.z2()); // for the light fixture itself
+				assert(light_radius > 0.0);
+				cube_t light_bc; light_bc.set_from_sphere(lpos, light_radius);
+				if (!dstate.check_cube_visible(light_bc, 0.1*dist_scale)) continue;
+				// TODO: bind smap if !is_on?
+				unsigned const ndiv(16); // TODO: dynamic
+				draw_sphere_vbo(lpos, light_radius, ndiv, 0); // textured=0
+			}
+			if (is_on) {dstate.s.clear_color_e();}
+			bind_vbo(0);
+		}
 		// draw window frames/dividers; untextured black, so grouping into tiles for shadows isn't needed and they can all be batched together
-		float const width(top.get_sz_dim(!dim)), frame_width(0.75*top.dz()), length(top.get_sz_dim(dim) - frame_width), max_panel_len(1.5*width);
+		float const frame_width(0.75*top.dz());
 		cube_t top_exp(top);
 		top_exp.expand_in_dim(2, 0.25*frame_width); // extends outside the glass
 		assert(qbds.untex_qbd.empty());
@@ -2148,13 +2177,12 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 			frame.d[!dim][!dir] = frame.d[!dim][dir] + (dir ? -1.0 : 1.0)*frame_width;
 			dstate.draw_cube(qbds.untex_qbd, frame, BLACK, 0, 0.0, (1 << unsigned(dim))); // skip ends
 		}
-		unsigned const num_panels(ceil(length/max_panel_len));
-		float const panel_len(length/num_panels);
+		float const panel_len((top.get_sz_dim(dim) - frame_width)/num_roof_panels);
 		cube_t frame(top_exp);
 		frame.d[dim][1] = frame.d[dim][0] + frame_width;
 		frame.expand_in_dim(!dim, -frame_width); // meets the edge frame
 
-		for (unsigned n = 0; n <= num_panels; ++n) {
+		for (unsigned n = 0; n <= num_roof_panels; ++n) {
 			dstate.draw_cube(qbds.untex_qbd, frame, BLACK, 0, 0.0, (1 << unsigned(!dim))); // skip ends
 			frame.translate_dim(dim, panel_len);
 		}
@@ -2234,6 +2262,15 @@ void skyway_t::get_building_signs(vector<sign_t> &signs) const {
 		set_wall_width(sign, conn.get_center_dim(dim), sign_hwidth, dim);
 		signs.emplace_back(sign, !dim, !dir, conn.building->name, WHITE, BLACK, 0, 0, 1); // two_sided=0, emissive=0, small=1
 	} // for conn
+}
+
+void skyway_t::add_lights(vector3d const &xlate, cube_t &lights_bcube) const {
+	bool const always_on = 0;
+	if (!always_on && !is_night()) return;
+
+	for (point const &lpos : light_pos) { // add each light, treated as a streetlight
+		streetlight_ns::streetlight_t(lpos, -plus_z).add_dlight(xlate, lights_bcube, always_on);
+	}
 }
 
 

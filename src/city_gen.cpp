@@ -1406,6 +1406,7 @@ public:
 		add_streetlight_dlights(xlate, lights_bcube, 0);
 		for (auto b = bridges.begin(); b != bridges.end(); ++b) {b->add_streetlight_dlights(xlate, lights_bcube, 0);}
 		for (auto t = tunnels.begin(); t != tunnels.end(); ++t) {t->add_streetlight_dlights(xlate, lights_bcube, 1);} // always_on=1
+		city_obj_placer.add_lights(xlate, lights_bcube);
 	}
 
 	// cars/peds
