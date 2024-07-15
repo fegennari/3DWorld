@@ -1895,7 +1895,7 @@ public:
 };
 
 void draw_long_cube(cube_t const &c, colorRGBA const &color, draw_state_t &dstate, quad_batch_draw &qbd, tile_drawer_t &td, float dist_scale,
-	bool shadow_only=0, bool skip_bottom=0, bool skip_top=0, float tscale=0.0, unsigned skip_dims=0)
+	bool shadow_only=0, bool skip_bottom=0, bool skip_top=0, float tscale=0.0, unsigned skip_dims=0, bool swap_tc_xy=0, float tex_tyoff=0.0)
 {
 	bool const dim(c.dx() < c.dy()); // longer dim; only supports splitting in one dim
 	float const tile_sz(dim ? MESH_Y_SIZE*DY_VAL : MESH_X_SIZE*DX_VAL), length(c.get_sz_dim(dim));
@@ -1911,7 +1911,13 @@ void draw_long_cube(cube_t const &c, colorRGBA const &color, draw_state_t &dstat
 			unsigned skip_dims_seg(skip_dims);
 			if (!(beg && dstate.camera_bs[dim] < c2.d[dim][0]) && !(end && dstate.camera_bs[dim] > c2.d[dim][1])) {skip_dims_seg |= (1 << unsigned(dim));} // skip int seg ends
 			td.next_cube(c2, dstate, qbd);
-			dstate.draw_cube(qbd, c2, color, skip_bottom, tscale, skip_dims_seg, 0, 0, 0, 1.0, 1.0, 1.0, skip_top);
+			unsigned const verts_start(qbd.verts.size());
+			dstate.draw_cube(qbd, c2, color, skip_bottom, tscale, skip_dims_seg, 0, 0, swap_tc_xy, 1.0, 1.0, 1.0, skip_top);
+
+			if (tex_tyoff != 0.0) {
+				tex_tyoff *= tscale;
+				for (auto v = qbd.verts.begin()+verts_start; v != qbd.verts.end(); ++v) {v->t[1] += tex_tyoff;}
+			}
 		}
 		c2.d[dim][0] += step_len;
 	} // for s
@@ -1928,21 +1934,32 @@ moving_walkway_t::moving_walkway_t(cube_t const &c, bool dim_, bool dir_, float 
 		sides[d].d[!dim][!d] = track.d[!dim][d] = c.d[!dim][d] + (d ? -1.0 : 1.0)*side_width;
 	}
 }
-void moving_walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, tile_drawer_t &td, bool shadow_only) const {
+void moving_walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, tile_drawer_t &td, bool shadow_only, bool draw_track, bool draw_sides) const {
 	float const dist_scale = 0.5;
-	float const tscale = 0.0;
-	draw_long_cube(track, GRAY_BLACK, dstate, qbds.untex_qbd, td, dist_scale, shadow_only, 1, 0, tscale); // track; skip_bottom=1, skip_top=0
-	float const height(dz()), railing_thick(0.04*height), side_width(sides[0].get_sz_dim(!dim)), railing_shrink(0.15*side_width);
 
-	for (unsigned d = 0; d < 2; ++d) { // sides + railings
-		cube_t railing(sides[d]);
-		railing.z1() += 0.8*height;
-		railing.z2() += railing_thick;
-		railing.expand_in_dim( dim,  railing_thick );
-		railing.expand_in_dim(!dim, -railing_shrink);
-		draw_long_cube(railing,  BKGRAY,  dstate, qbds.untex_qbd, td, 0.3*dist_scale, shadow_only, 0); // near black, skip_bottom=0
-		draw_long_cube(sides[d], LT_GRAY, dstate, qbds.untex_qbd, td, 0.5*dist_scale, shadow_only, 1); // skip_bottom=1
-	} // for d
+	if (draw_track) { // track
+		float const tscale(1.0/track.get_sz_dim(!dim)); // scale to fit track width
+		float const tex_tyoff(speed*move_time*(dir ? -1.0 : 1.0));
+		draw_long_cube(track, WHITE, dstate, qbds.qbd, td, dist_scale, shadow_only, 1, 0, tscale, 0, dim, tex_tyoff); // skip_bottom=1, skip_top=0
+		
+		if (active && animate2 && !shadow_only) {
+			move_time += fticks;
+			if (move_time > 600.0*TICKS_PER_SECOND) {move_time = 0.0;} // reset every 10 min. to avoid precision problems
+		}
+	}
+	if (draw_sides) { // sides and railings
+		float const height(dz()), railing_thick(0.04*height), side_width(sides[0].get_sz_dim(!dim)), railing_shrink(0.15*side_width);
+
+		for (unsigned d = 0; d < 2; ++d) { // sides + railings
+			cube_t railing(sides[d]);
+			railing.z1() += 0.8*height;
+			railing.z2() += railing_thick;
+			railing.expand_in_dim( dim,  railing_thick );
+			railing.expand_in_dim(!dim, -railing_shrink);
+			draw_long_cube(railing,  BKGRAY,  dstate, qbds.untex_qbd, td, 0.3*dist_scale, shadow_only, 0); // near black, skip_bottom=0
+			draw_long_cube(sides[d], LT_GRAY, dstate, qbds.untex_qbd, td, 0.5*dist_scale, shadow_only, 1); // skip_bottom=1
+		} // for d
+	}
 }
 bool moving_walkway_t::proc_sphere_coll(point &pos, point const &p_last, float radius, point const &xlate, vector3d *cnorm) const {
 	cube_t const bc(*this + xlate);
@@ -2029,7 +2046,7 @@ void skyway_t::init(cube_t const &c, bool dim_) {
 	}
 	// add moving walkways
 	float const ww_hwidth(0.12*width), ww_height(0.8*ww_hwidth), ww_end_gap(0.75*width), centerline(bot.get_center_dim(!dim));
-	float const speed = 0.01;
+	float const speed = 0.005;
 	cube_t ww_area(bot);
 	set_cube_zvals(ww_area, bot.z2(), bot.z2()+ww_height);
 	ww_area.expand_in_dim(dim, -ww_end_gap);
@@ -2057,6 +2074,7 @@ void skyway_t::init(cube_t const &c, bool dim_) {
 void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_only) const {
 	float const dist_scale = 0.7;
 	if (!valid || !dstate.check_cube_visible(bcube, dist_scale)) return; // VFC/distance culling
+	//highres_timer_t timer("Draw Skyway"); // ~0.1ms when up close
 	tile_drawer_t td;
 	if (!shadow_only) {select_texture(get_concrete_tid());}
 	bind_default_flat_normal_map();
@@ -2087,11 +2105,17 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 		draw_long_cube(bot, GRAY, dstate, qbds.qbd, td, dist_scale, shadow_only, 1, 0, 4.0, 3); // draw top only
 	}
 	td.end_draw(qbds.qbd);
+	// draw moving walkway sides as untextured
 	dstate.set_untextured_material();
-	for (moving_walkway_t const &mww : mwws) {mww.draw(dstate, qbds, td, shadow_only);} // untextured and shadowed geom is drawn here
+	for (moving_walkway_t const &mww : mwws) {mww.draw(dstate, qbds, td, shadow_only, 0, 1);} // draw_track=0, draw_sides=1
 	td.end_draw(qbds.untex_qbd);
-	//qbds.qbd.draw_and_clear();
-
+	
+	if (!shadow_only) { // draw moving walkway moving textured tracks; not needed for the shadow pass
+		select_texture(get_texture_by_name("interiors/walkway_track.png", 1, 0, 1, 8.0));
+		for (moving_walkway_t const &mww : mwws) {mww.draw(dstate, qbds, td, shadow_only, 1, 0);} // draw_track=1, draw_sides=0
+		qbds.qbd.draw_and_clear();
+		select_texture(WHITE_TEX);
+	}
 	if (player_above_floor) { // draw ramps and roof if player is above the floor
 		for (skyway_conn_t const &conn : ww_conns) { // ramps
 			bool const dir(conn.dir);

@@ -442,10 +442,11 @@ struct moving_walkway_t : public cube_t {
 	bool dim, dir, active=1;
 	float speed; // sped is always positive; dir is movement dir
 	mutable int last_update_frame=0;
+	mutable float move_time=0.0;
 	cube_t track, sides[2];
 
 	moving_walkway_t(cube_t const &c, bool dim_, bool dir_, float speed_=0.0);
-	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, tile_drawer_t &td, bool shadow_only) const;
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, tile_drawer_t &td, bool shadow_only, bool draw_track, bool draw_sides) const;
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, point const &xlate, vector3d *cnorm) const;
 };
 
