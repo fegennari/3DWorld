@@ -2071,7 +2071,7 @@ void skyway_t::init(cube_t const &c, bool dim_) {
 	// divide roof into panels and add lights
 	float const length(top.get_sz_dim(dim)), max_panel_len(1.5*width);
 	num_roof_panels = ceil(length/max_panel_len);
-	float const light_radius(0.04*bcube.dz()), light_zval(top.z2() + light_radius), panel_len(length/num_roof_panels);
+	float const light_dz(0.02*bcube.dz()), light_zval(top.z1() - light_dz), panel_len(length/num_roof_panels);
 
 	for (unsigned n = 0; n < num_roof_panels; ++n) {
 		point lpos(0.0, 0.0, light_zval);
@@ -2115,6 +2115,7 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 		draw_long_cube(bot, GRAY, dstate, qbds.qbd, td, dist_scale, shadow_only, 1, 0, 4.0, 3); // draw top only
 	}
 	td.end_draw(qbds.qbd);
+	if (!player_above_floor) return; // skip the remainder of the non-visible interior items
 	// draw moving walkway sides as untextured
 	dstate.set_untextured_material();
 	for (moving_walkway_t const &mww : mwws) {mww.draw(dstate, qbds, td, shadow_only, 0, 1);} // draw_track=0, draw_sides=1
@@ -2126,76 +2127,75 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 		qbds.qbd.draw_and_clear();
 		select_texture(WHITE_TEX);
 	}
-	if (player_above_floor) { // draw ramps, lights, and roof if player is above the floor
-		for (skyway_conn_t const &conn : ww_conns) { // ramps
-			bool const dir(conn.dir);
-			float const conn_zfloor(conn.z1() + 0.5*FLOOR_THICK_VAL_OFFICE*conn.dz());
-			if (bot.z2() <= conn_zfloor) continue; // sloping down rather than up when entering skyway
-			cube_t ramp(conn);
-			ramp.d[!dim][!dir] += (dir ? -1.0 : 1.0)*0.1*conn.dz(); // extend into walkway
-			ramp.expand_in_dim(dim, -0.1*conn.get_sz_dim(dim)); // shrink sides, same as entrances
-			set_cube_zvals(ramp, min(conn_zfloor, bot.z2()), max(conn_zfloor, bot.z2()));
-			if (!dstate.check_cube_visible(ramp, 0.1*dist_scale)) continue;
-			point pts[4];
-			for (unsigned d = 0; d < 2; ++d) {pts[2*d][dim] = pts[2*d+1][dim] = ramp.d[dim][d];} // sides of ramp
-			pts[0][!dim] = pts[3][!dim] = ramp.d[!dim][!dir];
-			pts[1][!dim] = pts[2][!dim] = ramp.d[!dim][ dir];
-			pts[0].z = pts[3].z = ramp.z1();
-			pts[1].z = pts[2].z = ramp.z2();
-			vector3d const normal(((dim ^ dir) ? 1.0 : -1.0)*cross_product(pts[0]-pts[1], pts[3]-pts[0]).get_norm());
-			qbds.untex_qbd.add_quad_pts(pts, GRAY, normal);
-			td.next_cube(ramp, dstate, qbds.untex_qbd); // untextured
-		} // for conn
-		td.end_draw(qbds.untex_qbd);
+	// draw ramps, lights, and roof
+	for (skyway_conn_t const &conn : ww_conns) { // ramps
+		bool const dir(conn.dir);
+		float const conn_zfloor(conn.z1() + 0.5*FLOOR_THICK_VAL_OFFICE*conn.dz());
+		if (bot.z2() <= conn_zfloor) continue; // sloping down rather than up when entering skyway
+		cube_t ramp(conn);
+		ramp.d[!dim][!dir] += (dir ? -1.0 : 1.0)*0.1*conn.dz(); // extend into walkway
+		ramp.expand_in_dim(dim, -0.1*conn.get_sz_dim(dim)); // shrink sides, same as entrances
+		set_cube_zvals(ramp, min(conn_zfloor, bot.z2()), max(conn_zfloor, bot.z2()));
+		if (!dstate.check_cube_visible(ramp, 0.1*dist_scale)) continue;
+		point pts[4];
+		for (unsigned d = 0; d < 2; ++d) {pts[2*d][dim] = pts[2*d+1][dim] = ramp.d[dim][d];} // sides of ramp
+		pts[0][!dim] = pts[3][!dim] = ramp.d[!dim][!dir];
+		pts[1][!dim] = pts[2][!dim] = ramp.d[!dim][ dir];
+		pts[0].z = pts[3].z = ramp.z1();
+		pts[1].z = pts[2].z = ramp.z2();
+		vector3d const normal(((dim ^ dir) ? 1.0 : -1.0)*cross_product(pts[0]-pts[1], pts[3]-pts[0]).get_norm());
+		qbds.untex_qbd.add_quad_pts(pts, GRAY, normal);
+		td.next_cube(ramp, dstate, qbds.untex_qbd); // untextured
+	} // for conn
+	td.end_draw(qbds.untex_qbd);
 		
-		if (!light_pos.empty()) { // add ceiling lights
-			bool const is_on = 1; // TODO: based on is_night(), not per-light
-			bind_draw_sphere_vbo(0, 1); // untextured
-			dstate.s.set_cur_color(WHITE);
-			if (is_on) {dstate.s.set_color_e(WHITE);}
+	if (!light_pos.empty()) { // add ceiling lights
+		bool const is_on(are_lights_on());
+		dstate.s.set_cur_color(WHITE);
+		if (is_on) {dstate.s.set_color_e(WHITE);}
 
-			for (point const &lpos : light_pos) { // draw light fixtures
-				float const light_radius(lpos.z - top.z2()); // for the light fixture itself
-				assert(light_radius > 0.0);
-				cube_t light_bc; light_bc.set_from_sphere(lpos, light_radius);
-				if (!dstate.check_cube_visible(light_bc, 0.1*dist_scale)) continue;
-				// TODO: bind smap if !is_on?
-				unsigned const ndiv(16); // TODO: dynamic
-				draw_sphere_vbo(lpos, light_radius, ndiv, 0); // textured=0
-			}
-			if (is_on) {dstate.s.clear_color_e();}
-			bind_vbo(0);
-		}
-		// draw window frames/dividers; untextured black, so grouping into tiles for shadows isn't needed and they can all be batched together
-		float const frame_width(0.75*top.dz());
-		cube_t top_exp(top);
-		top_exp.expand_in_dim(2, 0.25*frame_width); // extends outside the glass
-		assert(qbds.untex_qbd.empty());
+		for (point const &lpos : light_pos) { // draw light fixtures
+			float const light_height(top.z1() - lpos.z), light_radius(4.0*light_height); // for the light fixture itself
+			assert(light_height > 0.0);
+			cube_t light_bc;
+			light_bc.set_from_sphere(lpos, light_radius);
+			set_cube_zvals(light_bc, lpos.z, top.z1()+0.1*light_height); // top slightly inside the glass to preventZ-fighting
+			if (!dstate.check_cube_visible(light_bc, 0.12*dist_scale)) continue;
+			if (!is_on && !shadow_only) {dstate.begin_tile(lpos, 1);}
+			unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(12.0f/p2p_dist(dstate.camera_bs, lpos)))));
+			draw_fast_cylinder(point(lpos.x, lpos.y, light_bc.z1()), point(lpos.x, lpos.y, light_bc.z2()), light_radius, light_radius, ndiv, 0, 1); // untextured, draw ends
+		} // for lpos
+		if (is_on) {dstate.s.clear_color_e();}
+	}
+	// draw window frames/dividers; untextured black, so grouping into tiles for shadows isn't needed and they can all be batched together
+	float const frame_width(0.75*top.dz());
+	cube_t top_exp(top);
+	top_exp.expand_in_dim(2, 0.25*frame_width); // extends outside the glass
+	assert(qbds.untex_qbd.empty());
 
-		for (unsigned dir = 0; dir < 2; ++dir) { // sides
-			cube_t frame(top_exp);
-			frame.d[!dim][!dir] = frame.d[!dim][dir] + (dir ? -1.0 : 1.0)*frame_width;
-			dstate.draw_cube(qbds.untex_qbd, frame, BLACK, 0, 0.0, (1 << unsigned(dim))); // skip ends
-		}
-		float const panel_len((top.get_sz_dim(dim) - frame_width)/num_roof_panels);
+	for (unsigned dir = 0; dir < 2; ++dir) { // sides
 		cube_t frame(top_exp);
-		frame.d[dim][1] = frame.d[dim][0] + frame_width;
-		frame.expand_in_dim(!dim, -frame_width); // meets the edge frame
+		frame.d[!dim][!dir] = frame.d[!dim][dir] + (dir ? -1.0 : 1.0)*frame_width;
+		dstate.draw_cube(qbds.untex_qbd, frame, BLACK, 0, 0.0, (1 << unsigned(dim))); // skip ends
+	}
+	float const panel_len((top.get_sz_dim(dim) - frame_width)/num_roof_panels);
+	cube_t frame(top_exp);
+	frame.d[dim][1] = frame.d[dim][0] + frame_width;
+	frame.expand_in_dim(!dim, -frame_width); // meets the edge frame
 
-		for (unsigned n = 0; n <= num_roof_panels; ++n) {
-			dstate.draw_cube(qbds.untex_qbd, frame, BLACK, 0, 0.0, (1 << unsigned(!dim))); // skip ends
-			frame.translate_dim(dim, panel_len);
-		}
-		qbds.untex_qbd.draw_and_clear();
+	for (unsigned n = 0; n <= num_roof_panels; ++n) {
+		dstate.draw_cube(qbds.untex_qbd, frame, BLACK, 0, 0.0, (1 << unsigned(!dim))); // skip ends
+		frame.translate_dim(dim, panel_len);
+	}
+	qbds.untex_qbd.draw_and_clear();
 		
-		if (!shadow_only) { // draw transparent top glass panel; Z only; drawn last
-			enable_blend();
-			glDepthMask(GL_FALSE); // disable depth writing so that terrain and grass are drawn over the glass
-			draw_long_cube(top, colorRGBA(1.0, 1.0, 1.0, 0.25), dstate, qbds.untex_qbd, td, dist_scale, shadow_only, 0, 0, 0.0, 3);
-			td.end_draw(qbds.untex_qbd);
-			glDepthMask(GL_TRUE);
-			disable_blend();
-		}
+	if (!shadow_only) { // draw transparent top glass panel; Z only; drawn last
+		enable_blend();
+		glDepthMask(GL_FALSE); // disable depth writing so that terrain and grass are drawn over the glass
+		draw_long_cube(top, colorRGBA(1.0, 1.0, 1.0, 0.25), dstate, qbds.untex_qbd, td, dist_scale, shadow_only, 0, 0, 0.0, 3);
+		td.end_draw(qbds.untex_qbd);
+		glDepthMask(GL_TRUE);
+		disable_blend();
 	}
 	dstate.unset_untextured_material();
 }
@@ -2260,16 +2260,19 @@ void skyway_t::get_building_signs(vector<sign_t> &signs) const {
 		sign.d[!dim][ dir] = wall_pos;
 		sign.d[!dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*sign_depth;
 		set_wall_width(sign, conn.get_center_dim(dim), sign_hwidth, dim);
-		signs.emplace_back(sign, !dim, !dir, conn.building->name, WHITE, BLACK, 0, 0, 1); // two_sided=0, emissive=0, small=1
+		signs.emplace_back(sign, !dim, !dir, conn.building->name, WHITE, BLACK, 0, 0, 1, 0, 0, 1); // two_sided=0, emissive=0, small=1, scrolling=0, fs=0, in_skyway=1
 	} // for conn
 }
 
-void skyway_t::add_lights(vector3d const &xlate, cube_t &lights_bcube) const {
+bool skyway_t::are_lights_on() const {
 	bool const always_on = 0;
-	if (!always_on && !is_night()) return;
+	return (always_on || is_night(0.15)); // adjust to turn on earlier
+}
+void skyway_t::add_lights(vector3d const &xlate, cube_t &lights_bcube) const {
+	if (!are_lights_on()) return;
 
 	for (point const &lpos : light_pos) { // add each light, treated as a streetlight
-		streetlight_ns::streetlight_t(lpos, -plus_z).add_dlight(xlate, lights_bcube, always_on);
+		streetlight_ns::streetlight_t(lpos, -plus_z).add_dlight(xlate, lights_bcube, 1); // always_on=1 since the check is above and all lights come on at one time
 	}
 }
 

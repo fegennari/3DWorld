@@ -465,6 +465,7 @@ struct skyway_t : public city_obj_t {
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 	void get_building_signs(vector<sign_t> &signs) const;
+	bool are_lights_on() const;
 	void add_lights(vector3d const &xlate, cube_t &lights_bcube) const;
 };
 
