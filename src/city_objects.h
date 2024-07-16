@@ -452,13 +452,17 @@ struct moving_walkway_t : public cube_t {
 };
 
 struct skyway_t : public city_obj_t {
+	struct roof_light_t : public point {
+		mutable bool cached_smap=0;
+		roof_light_t(point const &p) : point(p) {}
+	};
 	bool valid=0, dim=0; // but no dir
 	unsigned num_roof_panels=1;
 	cube_t bot, top;
 	vector<skyway_conn_t> ww_conns; // connection points to building walkways; ix envodes 2*dim + dir
 	vect_cube_t entrances, sides, steps;
 	vector<moving_walkway_t> mwws;
-	vector<point> light_pos;
+	vector<roof_light_t> lights;
 
 	skyway_t() {}
 	void init(cube_t const &c, bool dim_);

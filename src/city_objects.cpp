@@ -3,6 +3,7 @@
 // 08/14/21
 
 #include "city_objects.h"
+#include "lightmap.h" // for light_source
 
 extern bool player_in_walkway, player_on_moving_ww;
 extern int animate2, frame_counter;
@@ -11,6 +12,7 @@ extern double camera_zh;
 extern city_params_t city_params;
 extern object_model_loader_t building_obj_model_loader;
 extern building_params_t global_building_params;
+extern vector<light_source> dl_sources;
 
 unsigned const q2t_ixs[6] = {0,2,1,0,3,2}; // quad => 2 tris
 
@@ -2150,12 +2152,13 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 	} // for conn
 	td.end_draw(qbds.untex_qbd);
 		
-	if (!light_pos.empty()) { // add ceiling lights
+	if (!lights.empty()) { // add ceiling lights
 		bool const is_on(are_lights_on());
 		dstate.s.set_cur_color(WHITE);
 		if (is_on) {dstate.s.set_color_e(WHITE);}
 
-		for (point const &lpos : light_pos) { // draw light fixtures
+		for (roof_light_t const &lpos : lights) { // draw light fixtures
+			if (shadow_only && lpos.x == camera_pdu.pos.x && lpos.y == camera_pdu.pos.y) continue; // no self-shadows (zval differs)
 			float const light_height(top.z1() - lpos.z), light_radius(4.0*light_height); // for the light fixture itself
 			assert(light_height > 0.0);
 			cube_t light_bc;
@@ -2271,11 +2274,21 @@ bool skyway_t::are_lights_on() const {
 	return (always_on || is_night(0.15)); // adjust to turn on earlier
 }
 void skyway_t::add_lights(vector3d const &xlate, cube_t &lights_bcube) const {
-	if (!are_lights_on()) return;
+	if (lights.empty() || !are_lights_on())        return;
+	if (get_camera_pos().z < bcube.z1() + xlate.z) return; // lights not visible from under skyway
+	float const ldist(4.0*bcube.get_sz_dim(!dim)), light_dz(0.5*bcube.dz());
+	colorRGBA const light_color(1.0, 0.95, 0.9, 1.0);
 
-	for (point const &lpos : light_pos) { // add each light, treated as a streetlight
-		streetlight_ns::streetlight_t(lpos, -plus_z).add_dlight(xlate, lights_bcube, 1); // always_on=1 since the check is above and all lights come on at one time
-	}
+	for (roof_light_t const &light : lights) {
+		if (!lights_bcube.contains_pt_xy(light)) continue; // not contained within the light volume
+		point const lpos(light.x, light.y, light.z+light_dz); // make higher to produce better shadows
+		if (!camera_pdu.sphere_visible_test((lpos + xlate), ldist)) continue; // VFC
+		min_eq(lights_bcube.z1(), lpos.z-ldist);
+		max_eq(lights_bcube.z2(), lpos.z); // pointed down
+		dl_sources.emplace_back(ldist, lpos, lpos, light_color, 0, -plus_z, 0.35); // points down
+		if (light.cached_smap) {dl_sources.back().assign_smap_id(uintptr_t(&light)/sizeof(void *));} // cache shadow map on second frame
+		light.cached_smap = 1;
+	} // for lpos
 }
 
 
