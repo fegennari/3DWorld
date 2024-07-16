@@ -414,8 +414,8 @@ namespace streetlight_ns {
 
 	void streetlight_t::add_dlight(vector3d const &xlate, cube_t &lights_bcube, bool always_on) const {
 		if (!is_lit(always_on)) return;
-		float const ldist(light_dist*city_params.road_width);
 		if (!lights_bcube.contains_pt_xy(pos)) return; // not contained within the light volume
+		float const ldist(light_dist*city_params.road_width);
 		point const lpos(get_lpos());
 		if (!camera_pdu.sphere_visible_test((lpos + xlate), ldist)) return; // VFC
 		min_eq(lights_bcube.z1(), (lpos.z - ldist));

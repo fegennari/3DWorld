@@ -193,6 +193,7 @@ public:
 	float get_dir_intensity(vector3d const &obj_dir) const;
 	void get_bounds(cube_t &bcube, int bnds[3][2], float sqrt_thresh, bool clip_to_scene_bcube=0, vector3d const &bounds_offset=zero_vector) const;
 	void set_custom_bcube(cube_t const c) {custom_bcube = c;}
+	bool has_custom_bcube() const {return !custom_bcube.is_all_zeros();}
 	cube_t calc_bcube(bool add_pad=0, float sqrt_thresh=0.0, bool clip_to_scene_bcube=0, float falloff=0.0) const;
 	cylinder_3dw calc_bounding_cylin( float sqrt_thresh=0.0, bool clip_to_scene_bcube=0, float falloff=0.0) const;
 	pos_dir_up calc_pdu(bool dynamic_cobj, bool is_cube_face, float falloff) const;

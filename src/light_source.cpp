@@ -107,7 +107,7 @@ cube_t light_source::calc_bcube(bool add_pad, float sqrt_thresh, bool clip_to_sc
 		if (add_pad) {bcube2.expand_by(vector3d(DX_VAL, DY_VAL, DZ_VAL));} // add one grid unit
 		bcube.intersect_with_cube(bcube2);
 	}
-	if (!custom_bcube.is_all_zeros()) {
+	if (has_custom_bcube()) {
 		//assert(bcube.contains_cube(custom_bcube)); // too strong?
 		assert(bcube.intersects(custom_bcube));
 		bcube.intersect_with_cube(custom_bcube);
