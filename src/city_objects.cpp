@@ -2023,7 +2023,7 @@ void skyway_t::init(cube_t const &c, bool dim_) {
 		if (dz < max_step_height) continue; // no steps needed
 		unsigned const num_steps(ceil(dz/max_step_height));
 		bool const dir(!conn.dir); // dir relative to skyway, not building
-		float const step_height(dz/(num_steps+1)), step_len((dir ? -1.0 : 1.0)*1.25*step_height), wall_pos(center.d[!dim][dir]);
+		float const step_height(dz/(num_steps+1)), step_len((dir ? -1.0 : 1.0)*1.2*step_height), wall_pos(center.d[!dim][dir]);
 		cube_t step(entrance);
 		set_cube_zvals(step, bot.z2(), entrance.z1());
 		step.d[!dim][ dir] = wall_pos; // starts at inner wall
@@ -2045,7 +2045,7 @@ void skyway_t::init(cube_t const &c, bool dim_) {
 		sides.push_back(end);
 	}
 	// add moving walkways
-	float const ww_hwidth(0.12*width), ww_height(0.8*ww_hwidth), ww_end_gap(0.75*width), centerline(bot.get_center_dim(!dim));
+	float const ww_hwidth(0.11*width), ww_height(0.8*ww_hwidth), ww_end_gap(0.75*width), centerline(bot.get_center_dim(!dim));
 	float const speed = 0.005;
 	cube_t ww_area(bot);
 	set_cube_zvals(ww_area, bot.z2(), bot.z2()+ww_height);
@@ -2233,11 +2233,11 @@ bool skyway_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_,
 		cube_t const c(s + xlate);
 		float const step_up_z(c.z2() + radius_);
 
-		if (step_up_z > zval) { // can step up onto stair
+		if (step_up_z + 0.1*radius_ > zval) { // can step up onto stair (with a bit of hysteresis)
 			if (pos_[dim] > c.d[dim][0] && pos_[dim] < c.d[dim][1]) { // within stairs range
 				if (pos_[!dim] > c.d[!dim][0]-radius_ && pos_[!dim] < c.d[!dim][1]+radius_) { // intersecting stair
-					pos_.z = step_up_z; // step up onto stair
-					ret    = 1;
+					max_eq(pos_.z, step_up_z); // step up onto stair
+					ret = 1;
 					continue;
 				}
 			}
