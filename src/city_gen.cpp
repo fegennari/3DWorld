@@ -16,12 +16,12 @@ float const CAR_LANE_OFFSET         = 0.15; // in units of road width
 float const CITY_LIGHT_FALLOFF      = 0.2;
 
 
-bool had_building_interior_coll(0);
+bool had_building_interior_coll(0), city_lights_custom_bcube(0);
 vector2d actual_max_road_seg_len;
 city_params_t city_params;
 point pre_smap_player_pos(all_zeros), actual_player_pos(all_zeros); // Note: pre_smap_player_pos can be security cameras, but actual_player_pos is always the player
 
-extern bool enable_dlight_shadows, dl_smap_enabled, flashlight_on, camera_in_building, have_indir_smoke_tex, disable_city_shadow_maps;
+extern bool enable_dlight_shadows, dl_smap_enabled, enable_dlight_bcubes, flashlight_on, camera_in_building, have_indir_smoke_tex, disable_city_shadow_maps;
 extern bool player_in_walkway, player_in_skyway, player_on_moving_ww;
 extern int rand_gen_index, display_mode, animate2, draw_model, player_in_basement;
 extern unsigned shadow_map_sz, cur_display_iter;
@@ -2733,12 +2733,14 @@ public:
 				bind_default_flat_normal_map(); // set flat normal map texture as the default
 			}
 			if (have_animations()) {enable_animations_for_shader(dstate.s);}
+			if (!shadow_only) {enable_dlight_bcubes |= city_lights_custom_bcube;}
 			dstate.pre_draw(xlate, use_dlights, shadow_only, 1); // always_setup_shader=1
 			assert(dstate.s.is_setup());
 			for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->draw(dstate, shadow_only, 0);}
 			global_rn.draw(dstate, shadow_only, 1); // connector road may have bridges, and therefore needs shadows
 			draw_transmission_lines();
 			dstate.post_draw();
+			if (!shadow_only) {enable_dlight_bcubes = 0;}
 			set_std_depth_func();
 			fgPopMatrix();
 		}
@@ -3191,6 +3193,7 @@ public:
 		if (world_mode != WMODE_INF_TERRAIN) return; // TT only
 		if (prev_city_lights_setup_frame == cur_display_iter) return; // already called this frame
 		prev_city_lights_setup_frame = cur_display_iter;
+		city_lights_custom_bcube     = 0;
 		//timer_t timer("City Dlights Setup");
 		float const light_radius(1.0*light_radius_scale*get_tile_smap_dist()); // distance from the camera where headlights and streetlights are drawn
 		if (!begin_lights_setup(xlate, light_radius, dl_sources)) return;

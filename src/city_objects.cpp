@@ -5,7 +5,7 @@
 #include "city_objects.h"
 #include "lightmap.h" // for light_source
 
-extern bool player_in_walkway, player_on_moving_ww;
+extern bool player_in_walkway, player_on_moving_ww, city_lights_custom_bcube;
 extern int animate2, frame_counter;
 extern float fticks;
 extern double camera_zh;
@@ -2286,8 +2286,12 @@ void skyway_t::add_lights(vector3d const &xlate, cube_t &lights_bcube) const {
 		min_eq(lights_bcube.z1(), lpos.z-ldist);
 		max_eq(lights_bcube.z2(), lpos.z); // pointed down
 		dl_sources.emplace_back(ldist, lpos, lpos, light_color, 0, -plus_z, 0.35); // points down
+		cube_t clip_cube(bcube);
+		clip_cube.z2() = lpos.z; // extend to cover the top glass surface
+		dl_sources.back().set_custom_bcube(clip_cube); // don't light surrounding buildings or walkways
 		if (light.cached_smap) {dl_sources.back().assign_smap_id(uintptr_t(&light)/sizeof(void *));} // cache shadow map on second frame
 		light.cached_smap = 1;
+		city_lights_custom_bcube = 1;
 	} // for lpos
 }
 
