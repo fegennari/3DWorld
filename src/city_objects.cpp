@@ -1568,9 +1568,9 @@ void pigeon_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sca
 // signs (for buildings)
 
 sign_t::sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, colorRGBA const &bc, colorRGBA const &tc,
-	bool two_sided_, bool emissive_, bool small_, bool scrolling_, bool fs, cube_t const &conn) :
+	bool two_sided_, bool emissive_, bool small_, bool scrolling_, bool fs, bool in_skyway_, cube_t const &conn) :
 	oriented_city_obj_t(dim_, dir_), two_sided(two_sided_), emissive(emissive_), small(small_), scrolling(scrolling_),
-	free_standing(fs), bkg_color(bc), text_color(tc), connector(conn)
+	free_standing(fs), in_skyway(in_skyway_), bkg_color(bc), text_color(tc), connector(conn)
 {
 	assert(!text_.empty());
 	bcube = frame_bcube = text_bcube = bcube_; // excludes connector
@@ -1604,6 +1604,7 @@ sign_t::sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, 
 }
 void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (small && shadow_only) return; // small signs have no shadows
+	if (in_skyway && dstate.camera_bs.z < draw_zmin) return; // camera below the skyway
 	float const dmax(dist_scale*dstate.draw_tile_dist);
 	if (small && !bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dmax)) return; // 40% view dist
 	static quad_batch_draw temp_qbd;
@@ -2077,14 +2078,14 @@ void skyway_t::init(cube_t const &c, bool dim_) {
 		point lpos(0.0, 0.0, light_zval);
 		lpos[!dim] = top.get_center_dim(!dim);
 		lpos[ dim] = top.d[dim][0] + (n + 0.5)*panel_len;
-		light_pos.push_back(lpos);
+		lights.emplace_back(lpos);
 	}
 }
 
 void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_only) const {
 	float const dist_scale = 0.7;
 	if (!valid || !dstate.check_cube_visible(bcube, dist_scale)) return; // VFC/distance culling
-	//highres_timer_t timer("Draw Skyway"); // ~0.1ms when up close
+	//highres_timer_t timer("Draw Skyway"); // 0.03ms below, 0.08ms above, 0.09ms inside, 0.02ms at night (n shadows)
 	tile_drawer_t td;
 	if (!shadow_only) {select_texture(get_concrete_tid());}
 	bind_default_flat_normal_map();
@@ -2261,6 +2262,7 @@ void skyway_t::get_building_signs(vector<sign_t> &signs) const {
 		sign.d[!dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*sign_depth;
 		set_wall_width(sign, conn.get_center_dim(dim), sign_hwidth, dim);
 		signs.emplace_back(sign, !dim, !dir, conn.building->name, WHITE, BLACK, 0, 0, 1, 0, 0, 1); // two_sided=0, emissive=0, small=1, scrolling=0, fs=0, in_skyway=1
+		signs.back().draw_zmin = bcube.z1(); // skip draw if camera is below the bottom of the skyway
 	} // for conn
 }
 

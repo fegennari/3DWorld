@@ -297,7 +297,7 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 				base.expand_in_dim( dim, -0.25*sign_width);
 				base.expand_in_dim(!dim, -0.25*sign_thick);
 				// two_sided=1, emissive=0, small=0, scrolling=0, free_standing=1
-				signs.emplace_back(sign, !dim, dir, "Hospital", colorRGBA(0.0, 0.25, 0.5), WHITE, 1, 0, 0, 0, 1, base);
+				signs.emplace_back(sign, !dim, dir, "Hospital", colorRGBA(0.0, 0.25, 0.5), WHITE, 1, 0, 0, 0, 1, 0, base);
 				signs.back().sign_id = sign_id; // make this pair unique
 			} // for e
 			++sign_id;
@@ -386,7 +386,7 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 			conn.d[dim][ dir] = wpos;
 			assert(conn.is_strictly_normalized());
 		}
-		signs.emplace_back(sign, dim, dir, name, WHITE, color, two_sided, emissive, 0, scrolling, 0, conn); // small=0, free_standing=0
+		signs.emplace_back(sign, dim, dir, name, WHITE, color, two_sided, emissive, 0, scrolling, 0, 0, conn); // small=0, free_standing=0, in_skyway=0
 		if (sign_both_sides) break; // one side only - done
 	} // for d
 }
