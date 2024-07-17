@@ -2265,15 +2265,17 @@ bool can_place_on_object(room_object_t const &obj, point const &pos, float radiu
 }
 
 bool building_t::get_zval_for_pool_bottom(point const &pos, float &zval) const {
-	if (!has_pool     ()) return 0;
-	if (!has_room_geom()) return 0; // if the room geom hasn't been generated yet, we can't determine pool depth, so just ignore the pool
+	if (!has_pool()) return 0;
 	indoor_pool_t const &pool(interior->pool);
 	if (!pool.contains_pt_xy(pos)) return 0;
 	room_t const &pool_room(get_room(pool.room_ix));
 	if (pos.z > pool_room.z2() || pos.z < pool.z1()) return 0;
+	zval = pool.z1(); // start on the bottom of the pool
+	// if the room geom hasn't been generated yet, we can't determine pool depth;
+	// but we still need this for AI updates, so return the bottom of the pool ignoring the stairs and ramp
+	if (!has_room_geom()) return 1;
 	vect_room_object_t const &objs(interior->room_geom->objs);
 	unsigned const pr_ix(interior->room_geom->pool_ramp_obj_ix), ps_six(interior->room_geom->pool_stairs_start_ix);
-	zval = pool.z1(); // start on the bottom of the pool
 
 	if (pr_ix > 0) { // pool has a ramp on the bottom
 		assert(pr_ix+1 < objs.size()); // must have ramp and upper surface

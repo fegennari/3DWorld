@@ -2449,7 +2449,8 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		}
 	}
 	if (!point_in_building_or_basement_bcube(new_pos)) { // person must be inside the building
-		cout << TXT(new_pos.str()) << TXT(bcube.str()) << TXT(interior->basement_ext_bcube.str()) << endl;
+		cout << TXT(new_pos.str()) << TXT(person.pos.str()) << TXT(bcube.str()) << TXT(interior->basement_ext_bcube.str())
+			 << TXT(person.on_stairs()) << TXT(max_dist) << TXT(person.dir.str()) << TXT(prev_in_pool) << TXT(person.in_pool) << endl;
 		assert(0);
 	}
 	// don't do collision detection while on stairs because it doesn't work properly; just let people walk through each other
