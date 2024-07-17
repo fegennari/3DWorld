@@ -2116,6 +2116,7 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 		td.end_draw(qbds.qbd);
 		set_tile_floor_texture();
 		draw_long_cube(bot, GRAY, dstate, qbds.qbd, td, dist_scale, shadow_only, 1, 0, 4.0, 3); // draw top only
+		bind_default_flat_normal_map();
 	}
 	td.end_draw(qbds.qbd);
 	if (!player_above_floor) return; // skip the remainder of the non-visible interior items
