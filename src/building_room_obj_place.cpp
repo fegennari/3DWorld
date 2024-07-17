@@ -272,7 +272,8 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 			float cur_zval(center.z);
 
 			for (unsigned n = 0; n < num_objs; ++n) {
-				float const trash_radius(min(0.5*radius, 0.2*height)*rgen.rand_uniform(0.8, 1.2)*(1.0 + 0.1*n));
+				float trash_radius(min(0.5*radius, 0.2*height)*rgen.rand_uniform(0.8, 1.2)*(1.0 + 0.1*n));
+				min_eq(trash_radius, 0.033f*floor_spacing); // limit to a reasonable size
 				point trash_center(center.x, center.y, cur_zval+trash_radius);
 				if (trash_center.z + 0.5*trash_radius > c.z2()) break;
 				if (n > 0) {trash_center += rgen.signed_rand_vector_spherical_xy(0.4*trash_radius);}
