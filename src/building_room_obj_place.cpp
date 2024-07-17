@@ -2808,9 +2808,13 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 				float float_zval(center.z);
 				if (get_zval_for_pool_bottom(center, float_zval)) {pfloat.translate_dim(2, (float_zval - center.z));}
 			}
-			if (overlaps_other_room_obj(pfloat, objs_start)) continue; // if placement falls, leave it out; should only collide with another float
+			if (overlaps_other_room_obj(pfloat, objs_start))         continue; // if placement falls, leave it out; should only collide with another float
 			if (!ladder.is_all_zeros() && pfloat.intersects(ladder)) continue; // check the pool ladder
-			objs.emplace_back(pfloat, TYPE_POOL_FLOAT, room_id, 0, 0, 0, tot_light_amt, SHAPE_VERT_TORUS, float_colors[rgen.rand() % NUM_FLOAT_COLORS]);
+			bool const deflated(!pool_has_water);
+			unsigned flags(0);
+			if (deflated) {flags |= RO_FLAG_BROKEN; pfloat.z2() -= 0.9*pfloat.dz();}
+			colorRGBA const &color(float_colors[rgen.rand() % NUM_FLOAT_COLORS]);
+			objs.emplace_back(pfloat, TYPE_POOL_FLOAT, room_id, 0, 0, flags, tot_light_amt, (deflated ? SHAPE_CYLIN : SHAPE_VERT_TORUS), color);
 		} // for n
 	}
 	if (pool_len > 2.0*floor_spacing) { // add beach ball(s) if pool is large enough

@@ -4570,18 +4570,23 @@ void building_room_geom_t::add_pan(room_object_t const &c) { // is_small=1
 void building_room_geom_t::add_pool_float(room_object_t const &c) {
 	// make the float transparent and/or two sided lighting? same with beach balls;
 	// the problem is that it's drawn before water and doesn't blend, and is also drawn as part of static objects rather than small objects
-	float const ri(0.5*c.dz()), ro(c.get_radius() - ri), alpha(1.0); // inner hole radius is (ro - ri)
+	bool const deflated(c.is_broken());
+	float const ri(0.5*c.dz()*(deflated ? 10.0 : 1.0)), ro(c.get_radius() - ri); // inner hole radius is (ro - ri)
+	float const alpha(1.0); // making transparent looks better, but doesn't blend well with other objects
 	assert(ro > 0.0);
 	tid_nm_pair_t tex(-1, 1.0, 1);
 	tex.set_specular(0.6, 80.0);
-	apply_thin_plastic_effect(c, tex);
+	if (!deflated) {apply_thin_plastic_effect(c, tex);}
 	rgeom_mat_t &mat(get_material(tex, 1, 0, 1, (alpha < 1.0)));
 	unsigned const verts_start(mat.itri_verts.size());
 	mat.add_vert_torus_to_verts(c.get_cube_center(), ri, ro, colorRGBA(c.color, alpha), 1.0, 0); // shadowed, small
 	
 	for (auto v = mat.itri_verts.begin()+verts_start; v != mat.itri_verts.end(); ++v) {
-		float const nz(v->n[2]/127.0);
-		if (nz < 0.0) {v->n[2] = char(-127.0*nz);} // invert normal.z if needed to point up toward the light
+		if (deflated) {v->v.z = c.z1() + 0.1*(v->v.z - c.z1());} // flatten to 10% height
+		else {
+			float const nz(v->n[2]/127.0);
+			if (nz < 0.0) {v->n[2] = char(-127.0*nz);} // invert normal.z if needed to point up toward the light
+		}
 	}
 }
 

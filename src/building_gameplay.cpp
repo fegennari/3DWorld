@@ -275,6 +275,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	if (obj.type == TYPE_ROACH    && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0,   0.0, 0.01, "dead cockroach");} // same stats as live cockroach
 	if (obj.type == TYPE_FIRE_EXT && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,  20.0, 10.0, "empty fire extinguisher");}
 	if (obj.type == TYPE_CANDLE   && obj.is_used   ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   0.5,  0.4, "used candle");}
+	if (obj.type == TYPE_POOL_FLOAT&&obj.is_broken ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   5.0,  1.0, "deflated pool float");} // half value, no player coll
 
 	if (obj.type == TYPE_INSECT) { // unused
 		bool const is_fly(obj.is_hanging());
