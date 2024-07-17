@@ -631,7 +631,8 @@ void building_room_geom_t::add_drain_pipe(room_object_t const &c) { // is_small=
 	}
 	else { // vertical
 		mat.add_vcylin_to_verts(c, color, 0, 0); // draw sides only
-		mat.add_vert_disk_to_verts(cube_top_center(c), 0.5*c.dx(), 0, BLACK); // draw top as black
+		if (!(c.flags & RO_FLAG_IN_POOL)) {mat.add_vert_disk_to_verts(cube_top_center(c), 0.5*c.dx(), 0, BLACK);} // draw top as black
+		else {get_material(tid_nm_pair_t(MANHOLE_TEX, 0.0), 0, 0, 1).add_vcylin_to_verts(c, WHITE, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1);} // top only, unshadowed, small
 	}
 }
 
