@@ -2734,13 +2734,14 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 		objs.emplace_back(upper, TYPE_POOL_TILE, room_id, pool.dim, pool.dir, (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_BOT)); // bottom of shallow end
 	}
 	// add a pool drain at the deep end
+	float const drain_radius(min(0.025*pool_len, 0.08*floor_spacing));
 	point drain_center;
 	drain_center[!pool.dim] = pool.get_center_dim(!pool.dim);
-	drain_center[ pool.dim] = pool.d[pool.dim][!pool.dir] + (pool.dir ? 1.0 : -1.0)*0.1*pool_len; // at deep end
+	drain_center[ pool.dim] = pool.d[pool.dim][!pool.dir] + (pool.dir ? 1.0 : -1.0)*5.0*drain_radius; // at deep end
 	cube_t drain;
-	drain.set_from_sphere(drain_center, min(0.05*pool_len, 0.08*floor_spacing));
-	set_cube_zvals(drain, pool.z1(), pool.z1()+0.01*floor_spacing);
-	objs.emplace_back(drain, TYPE_DRAIN, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_IN_POOL), tot_light_amt, SHAPE_CYLIN, GRAY);
+	drain.set_from_sphere(drain_center, drain_radius);
+	set_cube_zvals(drain, pool.z1(), pool.z1()+0.08*drain_radius);
+	objs.emplace_back(drain, TYPE_DRAIN, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_IN_POOL), tot_light_amt, SHAPE_CYLIN, LT_GRAY);
 
 	unsigned const objs_start(objs.size()); // we can start here, since the pool tile objects placed above don't collide with other placed objects
 	cube_t ladder;

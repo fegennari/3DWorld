@@ -1053,6 +1053,7 @@ struct building_room_geom_t {
 	void add_cabinet(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);
 	void add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, colorRGBA const &trim_color, bool inc_lg, bool inc_sm);
 	void add_hanger_rod(room_object_t const &c);
+	void add_drain_cover(cube_t const &c, colorRGBA const &color);
 	void add_drain_pipe(room_object_t const &c);
 	void add_key(room_object_t const &c);
 	void add_money(room_object_t const &c);

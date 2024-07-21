@@ -621,6 +621,13 @@ void building_room_geom_t::add_hanger_rod(room_object_t const &c) { // is_small=
 	get_wood_material(1.0, 1, 0, 1).add_ortho_cylin_to_verts(c, LT_GRAY, !c.dim, 0, 0, 0, 0, 1.0, 1.0, 0.25, 1.0, 0, 16, 0.0, 1); // 16 sides, swap_txy=1
 }
 
+void building_room_geom_t::add_drain_cover(cube_t const &c, colorRGBA const &color) {
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(MANHOLE_TEX, 0.0), 0, 0, 1));
+	unsigned const ix_start(mat.itri_verts.size());
+	mat.add_vcylin_to_verts(c, color, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // top only, unshadowed, small
+	for (auto i = mat.itri_verts.begin()+ix_start; i != mat.itri_verts.end(); ++i) {i->t[1] = 1.0 - i->t[1];} // mirror texture in Y to invert backwards text
+}
+
 void building_room_geom_t::add_drain_pipe(room_object_t const &c) { // is_small=1
 	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
 	colorRGBA const color(apply_light_color(c));
@@ -632,7 +639,7 @@ void building_room_geom_t::add_drain_pipe(room_object_t const &c) { // is_small=
 	else { // vertical
 		mat.add_vcylin_to_verts(c, color, 0, 0); // draw sides only
 		if (!(c.flags & RO_FLAG_IN_POOL)) {mat.add_vert_disk_to_verts(cube_top_center(c), 0.5*c.dx(), 0, BLACK);} // draw top as black
-		else {get_material(tid_nm_pair_t(MANHOLE_TEX, 0.0), 0, 0, 1).add_vcylin_to_verts(c, WHITE, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1);} // top only, unshadowed, small
+		else {add_drain_cover(c, color);}
 	}
 }
 
@@ -1456,7 +1463,7 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale, bool
 		drain.set_from_point(bottom.get_cube_center());
 		set_cube_zvals(drain, bottom.z2(), (bottom.z2() + 0.05*bottom.dz())); // very small height
 		drain.expand_by_xy(0.06*radius); // set radius
-		get_material(tid_nm_pair_t(MANHOLE_TEX, 0.0), 0, 0, 1).add_vcylin_to_verts(drain, metal_color, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // draw top only, unshadowed, small
+		add_drain_cover(drain, metal_color);
 	}
 }
 
