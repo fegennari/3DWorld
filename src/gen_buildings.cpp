@@ -436,7 +436,7 @@ void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir,
 	int const use_bmap(global_building_params.has_normal_map), interior_use_smaps(ADD_ROOM_SHADOWS ? 2 : 1); // dynamic light smaps only
 	cube_t const lights_bcube(building_lights_manager.get_lights_bcube());
 	if (player_building == nullptr) {water_damage = 0.0;} // water damage only applies if the player is in a building; this can fail on the exterior walls pass
-	if (have_indir) {s.set_prefix("#define ENABLE_OUTSIDE_INDIR_RANGE", 1);} // FS
+	if (have_indir) {s.set_prefix("#define ENABLE_OUTSIDE_INDIR_RANGE",  1);} // FS
 	if (water_damage > 0.0) {s.set_prefix("#define ENABLE_WATER_DAMAGE", 1);} // FS
 	s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1); // FS; improves room lighting (better light distribution vs. framerate trade-off)
 	city_shader_setup(s, lights_bcube, 1, interior_use_smaps, use_bmap, min_alpha, force_tsl, pcf_scale, use_texgen, have_indir, 0); // use_dlights=1, is_outside=0
@@ -3479,10 +3479,15 @@ public:
 			bool const enable_animations(global_building_params.enable_people_ai && draw_interior);
 			if (enable_animations) {enable_animations_for_shader(s);}
 
-			if (camera_in_building && player_building != nullptr && (camera_bs.z - get_bldg_player_height()) < player_building->ground_floor_z1) { // entering or in basement
-				point const center(player_building->bcube.get_cube_center());
-				float const rand_val(fract((center.x + center.y + center.z)/player_building->get_window_vspace()));
-				water_damage = max(0.0f, (rand_val - 0.5f)); // 50% of buildings have up to 50% water damage
+			if (camera_in_building && player_building != nullptr) {
+				if (camera_bs.z < player_building->ground_floor_z1 || player_building->point_on_basement_stairs(camera_bs)) { // entering or in basement
+					point const center(player_building->bcube.get_cube_center());
+					float const floor_spacing(player_building->get_window_vspace()), rand_val(fract((center.x + center.y + center.z)/floor_spacing));
+					water_damage = max(0.0f, (rand_val - 0.5f)); // 50% of buildings have up to 50% water damage
+					float const player_feet_zval(camera_bs.z - get_bldg_player_height());
+					// incremental transition when entering/exiting the basement
+					water_damage *= CLIP_TO_01(1.25f*(player_building->ground_floor_z1 + player_building->get_fc_thickness() - player_feet_zval)/floor_spacing);
+				}
 			}
 			setup_building_draw_shader(s, min_alpha, 1, 0, 0, water_damage); // enable_indir=1, force_tsl=0, use_texgen=0
 			vector<point> points; // reused temporary
