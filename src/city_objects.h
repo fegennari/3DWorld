@@ -631,7 +631,7 @@ public:
 	// birds
 	int check_path_segment_coll(point const &p1, point const &p2, float radius) const;
 	bool choose_bird_dest(point const &pos, float radius, unsigned &loc_ix, point &dest_pos, vector3d &dest_dir);
-	void add_bird_poop(point const &pos, float radius, vector3d const &init_vel) {bird_poop_manager.add(pos, radius, init_vel);}
+	void add_bird_poop(point const &pos, float radius, vector3d const &init_vel);
 }; // city_obj_placer_t
 
 float get_power_pole_offset();

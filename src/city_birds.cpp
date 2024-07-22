@@ -377,6 +377,7 @@ bool city_obj_placer_t::choose_bird_dest(point const &pos, float radius, unsigne
 	} // for n
 	return 0; // failed, try again next frame or next animation cycle
 }
+
 // returns: 0=no coll, 1=city object coll, 2=building coll
 int city_obj_placer_t::check_path_segment_coll(point const &p1, point const &p2, float radius) const {
 	float t(0.0); // unused
@@ -398,19 +399,38 @@ int city_obj_placer_t::check_path_segment_coll(point const &p1, point const &p2,
 				bc_ext.z1() -= w.floor_spacing; // extend down by one floor
 				if (bc_ext.line_intersects(p1o, p2o)) return 1;
 			}
+			if (skyway.valid) { // check skyway intersection
+				cube_t bc_ext(skyway.bcube);
+				bc_ext.z1() -= 0.5*skyway.bcube.dz(); // extend down by half height
+				if (bc_ext.line_intersects(p1o, p2o)) return 1;
+			}
 			if (check_city_building_line_coll_bs_any(p1o, p2o)) return 2; // doesn't include objects such as building rooftop signs?
 		} // for n
 	}
 	return 0;
 }
 
-bool city_obj_placer_t::check_bird_walkway_clearance(cube_t const &bc) const {
+bool city_obj_placer_t::check_bird_walkway_clearance(cube_t const &bc) const { // and skyway
 	for (walkway_t const &w : walkways) {
-		cube_t bc_exp(w.bcube);
-		bc_exp.z1() -= w.floor_spacing; // extend lower edge by one floor for clearance
-		if (bc_exp.intersects_xy(bc)) return 0;
+		cube_t bc_ext(w.bcube);
+		bc_ext.z1() -= w.floor_spacing; // extend lower edge by one floor for clearance
+		if (bc_ext.intersects_xy(bc)) return 0;
+	}
+	if (skyway.valid) { // check skyway intersection
+		cube_t bc_ext(skyway.bcube);
+		bc_ext.z1() -= 0.5*skyway.bcube.dz(); // extend down by half height
+		if (bc_ext.intersects_xy(bc)) return 0;
 	}
 	return 1;
+}
+
+void city_obj_placer_t::add_bird_poop(point const &pos, float radius, vector3d const &init_vel) {
+	if (skyway.valid && pos.z > skyway.bcube.z1() && skyway.bcube.contains_pt_xy(pos)) return; // don't poop over skyway
+
+	for (walkway_t const &w : walkways) {
+		if (pos.z > w.bcube.z1() && w.bcube.contains_pt_xy(pos)) return; // don't poop over walkways
+	}
+	bird_poop_manager.add(pos, radius, init_vel);
 }
 
 void vect_bird_place_t::add_placement(cube_t const &obj, bool dim, bool dir, bool orient_dir, float spacing, rand_gen_t &rgen) {
