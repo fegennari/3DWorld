@@ -2094,12 +2094,14 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 	colorRGBA const ext_color(LT_GRAY);
 	bool const player_above_floor(dstate.camera_bs.z > bcube.z1());
 	float const centerline(bcube.get_center_dim(!dim));
+	float const side_shift(shadow_only ? 0.1*(top.x1() - bcube.x1()) : 0.0); // shrink by 10% of wall width in the shadow pass
 	float const tscale = 16.0;
 	
-	for (cube_t const &c : sides) {
-		bool const skip_bottom(c.z1() == bot.z2());
+	for (cube_t c : sides) {
+		bool const skip_bottom(c.z1() == bot.z2()), is_end(c.d[!dim][0] == top.d[!dim][0] && c.d[!dim][1] == top.d[!dim][1]);
 		unsigned skip_dims(0);
-		if (c.d[!dim][0] == top.d[!dim][0] && c.d[!dim][1] == top.d[!dim][1]) {skip_dims|= (1 << unsigned(!dim));} // don't need to draw sides of ends
+		if (is_end) {skip_dims|= (1 << unsigned(!dim));} // don't need to draw sides of ends
+		if (shadow_only) {c.expand_in_dim(!dim, (is_end ? 1.0 : -1.0)*side_shift);} // shrink walls slightly to prevent shadow acne
 		draw_long_cube(c, ext_color, dstate, qbds.qbd, td, dist_scale, shadow_only, skip_bottom, 0, tscale, skip_dims);
 	}
 	if (player_above_floor) { // draw steps if player is above the floor
@@ -2133,27 +2135,29 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 		select_texture(WHITE_TEX);
 	}
 	// draw ramps, entryway frames, lights, and roof
-	for (skyway_conn_t const &conn : ww_conns) { // ramps
-		bool const dir(conn.dir);
-		float const conn_zfloor(conn.z1() + 0.5*FLOOR_THICK_VAL_OFFICE*conn.dz());
-		if (bot.z2() <= conn_zfloor) continue; // sloping down rather than up when entering skyway
-		cube_t ramp(conn);
-		ramp.d[!dim][!dir] += (dir ? -1.0 : 1.0)*0.1*conn.dz(); // extend into walkway
-		ramp.expand_in_dim(dim, -0.1*conn.get_sz_dim(dim)); // shrink sides, same as entrances
-		set_cube_zvals(ramp, min(conn_zfloor, bot.z2()), max(conn_zfloor, bot.z2()));
-		if (!dstate.check_cube_visible(ramp, 0.1*dist_scale)) continue;
-		point pts[4];
-		for (unsigned d = 0; d < 2; ++d) {pts[2*d][dim] = pts[2*d+1][dim] = ramp.d[dim][d];} // sides of ramp
-		pts[0][!dim] = pts[3][!dim] = ramp.d[!dim][!dir];
-		pts[1][!dim] = pts[2][!dim] = ramp.d[!dim][ dir];
-		pts[0].z = pts[3].z = ramp.z1();
-		pts[1].z = pts[2].z = ramp.z2();
-		vector3d const normal(((dim ^ dir) ? 1.0 : -1.0)*cross_product(pts[0]-pts[1], pts[3]-pts[0]).get_norm());
-		qbds.untex_qbd.add_quad_pts(pts, GRAY, normal);
-		td.next_cube(ramp, dstate, qbds.untex_qbd); // untextured
-	} // for conn
+	if (!shadow_only) {
+		for (skyway_conn_t const &conn : ww_conns) { // ramps
+			bool const dir(conn.dir);
+			float const conn_zfloor(conn.z1() + 0.5*FLOOR_THICK_VAL_OFFICE*conn.dz());
+			if (bot.z2() <= conn_zfloor) continue; // sloping down rather than up when entering skyway
+			cube_t ramp(conn);
+			ramp.d[!dim][!dir] += (dir ? -1.0 : 1.0)*0.1*conn.dz(); // extend into walkway
+			ramp.expand_in_dim(dim, -0.1*conn.get_sz_dim(dim)); // shrink sides, same as entrances
+			set_cube_zvals(ramp, min(conn_zfloor, bot.z2()), max(conn_zfloor, bot.z2()));
+			if (!dstate.check_cube_visible(ramp, 0.1*dist_scale)) continue;
+			point pts[4];
+			for (unsigned d = 0; d < 2; ++d) {pts[2*d][dim] = pts[2*d+1][dim] = ramp.d[dim][d];} // sides of ramp
+			pts[0][!dim] = pts[3][!dim] = ramp.d[!dim][!dir];
+			pts[1][!dim] = pts[2][!dim] = ramp.d[!dim][ dir];
+			pts[0].z = pts[3].z = ramp.z1();
+			pts[1].z = pts[2].z = ramp.z2();
+			vector3d const normal(((dim ^ dir) ? 1.0 : -1.0)*cross_product(pts[0]-pts[1], pts[3]-pts[0]).get_norm());
+			qbds.untex_qbd.add_quad_pts(pts, GRAY, normal);
+			td.next_cube(ramp, dstate, qbds.untex_qbd); // untextured
+		} // for conn
+	}
 	for (cube_t const &entrance : entrances) { // entrance frames
-		float const ecl(entrance.get_center_dim(!dim)), ewidth(entrance.get_sz_dim(!dim)), wwidth(0.4*ewidth), thickness(0.05*ewidth);
+		float const ecl(entrance.get_center_dim(!dim)), ewidth(entrance.get_sz_dim(!dim)), wwidth(0.25*ewidth), thickness(0.05*ewidth);
 		bool const dir(ecl > centerline);
 		cube_t e(entrance);
 		if (bot.z2() < e.z1()) {e.d[!dim][dir] = ecl;} // raised walkway with stairs: frame ends at center of wall to avoid drawing its exterior under the bottom of the walkway
@@ -2167,6 +2171,7 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 		etop.z1()  = esides.z2() = entrance.z2() - thickness;
 		td.next_cube(e, dstate, qbds.untex_qbd);
 		dstate.draw_cube(qbds.untex_qbd, etop, WHITE); // skip_bottom=0
+		if (shadow_only) continue; // skip sides in shadow pass; top is needed to cover gap between shrunk walls
 
 		for (unsigned d = 0; d < 2; ++d) { // sides
 			cube_t eside(esides);
@@ -2204,7 +2209,8 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 	for (unsigned dir = 0; dir < 2; ++dir) { // sides
 		cube_t frame(top_exp);
 		frame.d[!dim][!dir] = frame.d[!dim][dir] + (dir ? -1.0 : 1.0)*frame_width;
-		dstate.draw_cube(qbds.untex_qbd, frame, BLACK, 0, 0.0, (1 << unsigned(dim))); // skip ends
+		if (shadow_only) {frame.d[!dim][dir] -= (dir ? -1.0 : 1.0)*side_shift;} // shift to cover the gap between the side
+		dstate.draw_cube(qbds.untex_qbd, frame, BLACK); // draw all sides
 	}
 	float const panel_len((top.get_sz_dim(dim) - frame_width)/num_roof_panels);
 	cube_t frame(top_exp);
