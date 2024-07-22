@@ -2552,6 +2552,17 @@ int building_t::check_player_in_basement(point const &pos) const {
 	return 2; // player in basement but not on stairs or ramp
 }
 
+bool building_t::point_on_basement_stairs(point const &pos_bs) const {
+	if (interior == nullptr) return 0;
+	if (fabs(pos_bs.z - ground_floor_z1) > get_window_vspace()) return 0; // above first floor or below first floor of basement
+
+	for (stairwell_t const &s : interior->stairwells) {
+		if (s.z1() > ground_floor_z1 || s.z2() < ground_floor_z1) continue; // not extending to basement
+		if (s.contains_pt(pos_bs)) return 1;
+	}
+	return 0;
+}
+
 bool building_t::is_obj_above_ramp(cube_t const &c) const {
 	assert(interior);
 	if (!has_pg_ramp()) return 0;

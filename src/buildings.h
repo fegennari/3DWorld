@@ -1954,6 +1954,7 @@ public:
 	bool point_in_building_or_basement_bcube(point const &pos) const {return (bcube.contains_pt(pos) || point_in_extended_basement(pos));}
 	bool point_in_extb_conn_room(point const &pos_bs) const;
 	bool point_in_courtyard(point const &pos_bs) const;
+	bool point_on_basement_stairs(point const &pos_bs) const;
 	float get_bcube_z1_inc_ext_basement() const {return (has_ext_basement() ? min(bcube.z1(), interior->basement_ext_bcube.z1()) : bcube.z1());}
 	unsigned get_ext_basement_floor_ix(float zval) const;
 	void get_pgbr_wall_ix_for_pos(point const &pos, index_pair_t &start, index_pair_t &end) const;
