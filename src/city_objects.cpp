@@ -2014,7 +2014,7 @@ void skyway_t::init(cube_t const &c, bool dim_) {
 	}
 	for (skyway_conn_t const &conn : ww_conns) {
 		cube_t entrance(conn);
-		entrance.expand_in_dim(!dim, entrance_ext); // expand in walkway entrance dim
+		entrance.d[!dim][conn.dir] = center.d[!dim][!conn.dir];
 		entrance.expand_in_dim( dim, -0.1*conn.get_sz_dim(dim)); // shrink sides
 		entrance.expand_in_dim(2,    -0.55*FLOOR_THICK_VAL_OFFICE*conn.dz()); // lower the ceiling and raise the floor slightly
 		entrances.push_back(entrance);
@@ -2093,7 +2093,8 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 	bind_default_flat_normal_map();
 	colorRGBA const ext_color(LT_GRAY);
 	bool const player_above_floor(dstate.camera_bs.z > bcube.z1());
-	float const tscale(16.0);
+	float const centerline(bcube.get_center_dim(!dim));
+	float const tscale = 16.0;
 	
 	for (cube_t const &c : sides) {
 		bool const skip_bottom(c.z1() == bot.z2());
@@ -2105,7 +2106,7 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 		for (cube_t const &c : steps) {
 			if (!dstate.check_cube_visible(c, 0.25*dist_scale)) continue;
 			td.next_cube(c, dstate, qbds.qbd);
-			dstate.draw_cube(qbds.qbd, c, ext_color, 1, tscale); // skip_bottom=1
+			dstate.draw_cube(qbds.qbd, c, WHITE, 1, tscale); // skip_bottom=1
 		}
 	}
 	if (shadow_only) {
@@ -2131,7 +2132,7 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 		qbds.qbd.draw_and_clear();
 		select_texture(WHITE_TEX);
 	}
-	// draw ramps, lights, and roof
+	// draw ramps, entryway frames, lights, and roof
 	for (skyway_conn_t const &conn : ww_conns) { // ramps
 		bool const dir(conn.dir);
 		float const conn_zfloor(conn.z1() + 0.5*FLOOR_THICK_VAL_OFFICE*conn.dz());
@@ -2151,6 +2152,28 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 		qbds.untex_qbd.add_quad_pts(pts, GRAY, normal);
 		td.next_cube(ramp, dstate, qbds.untex_qbd); // untextured
 	} // for conn
+	for (cube_t const &entrance : entrances) { // entrance frames
+		float const ecl(entrance.get_center_dim(!dim)), ewidth(entrance.get_sz_dim(!dim)), wwidth(0.4*ewidth), thickness(0.05*ewidth);
+		bool const dir(ecl > centerline);
+		cube_t e(entrance);
+		if (bot.z2() < e.z1()) {e.d[!dim][dir] = ecl;} // raised walkway with stairs: frame ends at center of wall to avoid drawing its exterior under the bottom of the walkway
+		else {e.d[!dim][dir] -= (dir ? -1.0 : 1.0)*thickness;} // flush stairs: extend to cover inside of wall (on walkway side)
+		e.d[!dim][!dir] += (dir ? -1.0 : 1.0)*thickness; // extend outward
+		e.expand_in_dim( dim, wwidth   );
+		e.z2() += wwidth;
+		min_eq(e.z1(), bot.z2()); // extends to the floor if needed
+		if (!dstate.check_cube_visible(e, 0.1*dist_scale)) continue;
+		cube_t etop(e), esides(e);
+		etop.z1()  = esides.z2() = entrance.z2() - thickness;
+		td.next_cube(e, dstate, qbds.untex_qbd);
+		dstate.draw_cube(qbds.untex_qbd, etop, WHITE); // skip_bottom=0
+
+		for (unsigned d = 0; d < 2; ++d) { // sides
+			cube_t eside(esides);
+			eside.d[dim][!d] = eside.d[dim][d] + (d ? -1.0 : 1.0)*(wwidth + 2.0*thickness);
+			dstate.draw_cube(qbds.untex_qbd, eside, WHITE, 1, 0.0, 4); // skip_bottom=1, skip dim Z
+		}
+	} // for e
 	td.end_draw(qbds.untex_qbd);
 		
 	if (!lights.empty()) { // add ceiling lights
@@ -2260,8 +2283,9 @@ void skyway_t::get_building_signs(vector<sign_t> &signs) const {
 		if (!conn.building || conn.building->name.empty()) continue; // no name, no sign
 		bool const dir(!conn.dir); // dir relative to skyway, not building
 		float const wall_pos(top.d[!dim][dir]); // inner wall of skyway
+		float const sign_z1(conn.z2() + 0.5*sign_height);
 		cube_t sign(conn);
-		set_cube_zvals(sign, conn.z2(), conn.z2()+sign_height);
+		set_cube_zvals(sign, sign_z1, sign_z1+sign_height);
 		sign.d[!dim][ dir] = wall_pos;
 		sign.d[!dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*sign_depth;
 		set_wall_width(sign, conn.get_center_dim(dim), sign_hwidth, dim);
