@@ -309,8 +309,8 @@ void main()
 #endif // ENABLE_PUDDLES
 
 #ifdef ENABLE_WATER_DAMAGE
-	if (wetness > 0.0 && wetness < 1.0 && vpos.z < water_damage_zmax) { // add water damage similar to puddles
-		wetness       = get_puddle_val(wetness);
+	if (wetness > 0.0) { // add water damage similar to puddles
+		wetness       = ((vpos.z < water_damage_zmax) ? get_puddle_val(wetness) : 0.0);
 		reflectivity2 = wetness;
 	}
 #endif // ENABLE_WATER_DAMAGE
