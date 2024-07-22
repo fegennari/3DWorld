@@ -25,6 +25,10 @@ uniform float winding_normal_sign = 1.0;
 uniform float cube_map_reflect_mipmap_level = 0.0;
 uniform float puddle_scale = 0.04;
 uniform float water_damage_zmax = 0.0;
+uniform float crack_scale  = 1.0;
+uniform float crack_sharp  = 100.0;
+uniform float crack_weight = 0.0;
+uniform float crack_zmax   = 0.0;
 uniform int cube_map_texture_size = 0;
 uniform vec4 emission = vec4(0,0,0,1);
 uniform bool two_sided_lighting = true;
@@ -203,6 +207,18 @@ float get_puddle_val(in float wetness) {
 	return sqrt(min(1.0, 8.0*wetness))*min(1.0, pow((wetness + max(wet_val, 0.6) - 0.6), 8.0));
 }
 
+float get_crack_factor() {
+	float val  = 0.0;
+	float freq = 1.0;
+
+	for (int i = 0; i < 4; ++i) {
+		val  += texture(wet_noise_tex, crack_scale*freq*vpos).r/freq;
+		freq *= 2.0;
+	}
+	return min(1.0, crack_sharp*crack_scale*abs(val - 1.0));
+	//return ((abs(val - 1.0) < 0.02) ? 0.0 : 1.0);
+}
+
 // returns {fresnel_term, reflect_weight}
 vec2 get_reflect_weight(in vec3 view_dir, in vec3 ws_normal, in float reflectivity2, in float refract_ix) {
 	float fresnel = get_fresnel_reflection(view_dir, ws_normal, 1.0, refract_ix);
@@ -315,6 +331,15 @@ void main()
 	}
 #endif // ENABLE_WATER_DAMAGE
 
+#ifdef ADD_CRACKS
+	// not on ceilings since they may be wood; what about floors/carpets?
+	if (crack_weight > 0.0 && vpos.z < crack_zmax && normal.z > -0.5) {
+		float color_scale = mix(1.0, get_crack_factor(), crack_weight);
+		texel.rgb *= color_scale;
+		wetness   *= color_scale;
+	}
+#endif // ADD_CRACKS
+
 #ifdef USE_WINDING_RULE_FOR_NORMAL
 	float normal_sign  = winding_normal_sign*((!two_sided_lighting || gl_FrontFacing) ? 1.0 : -1.0); // two-sided lighting
 #else
@@ -338,7 +363,7 @@ void main()
 		texel          = mix(texel, vec4(0.9, 0.9, 1.0, 1.0), snow_amt);
 		alpha          = mix(alpha, 1.0, snow_amt);
 	}
-#endif
+#endif // ENABLE_SNOW_COVERAGE
 #ifdef ENABLE_EMISSIVE_MAP
 	lit_color     += texture(emissive_map, tc);
 #endif
