@@ -2039,6 +2039,30 @@ void skyway_t::init(cube_t const &c, bool dim_) {
 			step.translate_dim(!dim, step_len);
 		}
 	} // for conn
+	// cut windows into long sides
+	float const window_z1(center.z1() + 0.2*height), window_z2(window_z1 + 0.25*height);
+	float const window_spacing(0.8*width), window_hwidth(0.3*window_spacing);
+	vect_cube_t cut_sides, side_parts;
+
+	for (cube_t &c : sides) {
+		if (c.d[!dim][0] > window_z1 || c.d[!dim][1] < window_z2) {cut_sides.push_back(c); continue;} // not tall enough to split; note that dim is still swapped
+		float const len(c.get_sz_dim(dim));
+		if (len <= 2.0*window_spacing) {cut_sides.push_back(c); continue;} // not long enough to split
+		unsigned const num_splits(len/window_spacing);
+		float const split_len(len/num_splits);
+		cube_t window(c); // !dim and Z are swapped
+		window.d[!dim][0] = window_z1;
+		window.d[!dim][1] = window_z2;
+		side_parts.clear();
+		side_parts.push_back(c);
+
+		for (unsigned n = 1; n < num_splits; ++n) { // add a window between each split point
+			set_wall_width(window, (c.d[dim][0] + n*split_len), window_hwidth, dim);
+			subtract_cube_from_cubes(window, side_parts);
+		}
+		vector_add_to(side_parts, cut_sides);
+	} // for c
+	sides.swap(cut_sides);
 	for (cube_t &c : sides) {swap_cube_dims(c, !dim, 2);} // swap dims back
 
 	for (unsigned d = 0; d < 2; ++d) { // add ends
