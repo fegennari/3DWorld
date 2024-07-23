@@ -55,7 +55,7 @@ struct city_obj_t : public sphere_t {
 	void translate_dim(unsigned dim, float v) {pos[dim] += v; bcube.translate_dim(dim, v);}
 };
 
-struct oriented_city_obj_t : public city_obj_t {
+struct oriented_city_obj_t : public city_obj_t { // could almost use oriented_cube_t
 	bool dim, dir;
 	oriented_city_obj_t(bool dim_=0, bool dir_=0) : dim(dim_), dir(dir_) {}
 	oriented_city_obj_t(cube_t const &bcube_, bool dim_=0, bool dir_=0) : city_obj_t(bcube_), dim(dim_), dir(dir_) {}

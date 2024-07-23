@@ -571,8 +571,8 @@ struct bldg_obj_type_t {
 };
 
 struct oriented_cube_t : public cube_t {
-	bool dim, dir;
-	oriented_cube_t() : dim(0), dir(0) {}
+	bool dim=0, dir=0;
+	oriented_cube_t() {}
 	oriented_cube_t(cube_t const &c, bool dim_, bool dir_) : cube_t(c), dim(dim_), dir(dir_) {}
 	float get_length() const {return get_sz_dim( dim);}
 	float get_width () const {return get_sz_dim(!dim);}
@@ -1275,13 +1275,13 @@ struct breaker_zone_t {
 	bool invalid() const {return (rtype != RTYPE_ELEVATOR && room_start == room_end);}
 };
 
-struct stairs_landing_base_t : public cube_t {
-	bool dim=0, dir=0, bend_dir=0, roof_access=0, stack_conn=0, in_ext_basement=0, against_wall[2]={};
+struct stairs_landing_base_t : public oriented_cube_t {
+	bool bend_dir=0, roof_access=0, stack_conn=0, in_ext_basement=0, against_wall[2]={};
 	stairs_shape shape=SHAPE_STRAIGHT;
 
 	stairs_landing_base_t() {}
 	stairs_landing_base_t(cube_t const &c, bool dim_, bool dir_, bool roof_access_, stairs_shape shape_, bool sc=0, bool ieb=0) :
-		cube_t(c), dim(dim_), dir(dir_), roof_access(roof_access_), stack_conn(sc), in_ext_basement(ieb), shape(shape_) {}
+		oriented_cube_t(c, dim_, dir_), roof_access(roof_access_), stack_conn(sc), in_ext_basement(ieb), shape(shape_) {}
 	void set_against_wall(bool const val[2]) {against_wall[0] = val[0]; against_wall[1] = val[1];}
 	bool is_u_shape        () const {return (shape == SHAPE_U);}
 	bool is_l_shape        () const {return (shape == SHAPE_L);}
@@ -1289,8 +1289,6 @@ struct stairs_landing_base_t : public cube_t {
 	bool has_walled_sides  () const {return (shape == SHAPE_WALLED || shape == SHAPE_WALLED_SIDES);}
 	unsigned get_face_id   () const {return (2*dim + dir);}
 	unsigned get_num_stairs() const {return (is_u_shape() ? NUM_STAIRS_PER_FLOOR_U : (is_l_shape() ? NUM_STAIRS_PER_FLOOR_L : NUM_STAIRS_PER_FLOOR));}
-	float get_length       () const {return get_sz_dim( dim);}
-	float get_width        () const {return get_sz_dim(!dim);}
 	float get_step_length  () const {return get_length()/get_num_stairs();}
 	float get_retail_landing_width(float floor_spacing) const {return 0.5*min(get_length(), floor_spacing);}
 };
@@ -1321,6 +1319,12 @@ typedef vector<stairwell_t> vect_stairwell_t;
 struct stairs_place_t : public cube_t { // for extended basements
 	bool dim, dir, add_railing;
 	stairs_place_t(cube_t const &c, bool dim_, bool dir_, bool add_railing_) : cube_t(c), dim(dim_), dir(dir_), add_railing(add_railing_) {}
+};
+
+struct escalator_t : public oriented_cube_t { // Note: not yet used
+	bool move_dir=0; // dir points upward
+	escalator_t() {}
+	escalator_t(cube_t const &c, bool dim_, bool dir_, bool mdir) : oriented_cube_t(c, dim_, dir_), move_dir(mdir) {}
 };
 
 struct door_base_t : public cube_t {
@@ -1473,6 +1477,7 @@ struct building_interior_t {
 	vector<landing_t> landings; // for stairs and elevators
 	vector<room_t> rooms;
 	vector<elevator_t> elevators;
+	//vector<escalator_t> escalators;
 	vector<person_t> people;
 	std::unique_ptr<building_room_geom_t> room_geom;
 	std::unique_ptr<building_nav_graph_t> nav_graph;

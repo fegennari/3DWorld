@@ -114,7 +114,7 @@ struct road_gen_base_t {
  	virtual ~road_gen_base_t() {}
 };
 
-struct car_base_t { // the part needed for the pedestrian interface (size = 48)
+struct car_base_t { // the part needed for the pedestrian interface (size = 48); could use oriented_cube_t
 	cube_t bcube;
 	bool dim=0, dir=0, stopped_at_light=0, stopped_for_ssign=0; // Note: stopped_at_light also applies to stopped at stop sign
 	uint8_t cur_road_type=TYPE_RSEG, turn_dir=TURN_NONE;
