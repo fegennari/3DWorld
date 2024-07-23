@@ -2251,7 +2251,7 @@ void gen_crate_sz(vector3d &sz, rand_gen_t &rgen, float window_vspacing) {
 	for (unsigned d = 0; d < 3; ++d) {sz[d] = 0.06*window_vspacing*(1.0 + ((d == 2) ? 1.2 : 2.0)*rgen.rand_float());} // slightly more variation in XY
 }
 
-bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
+bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement, bool has_stairs) {
 	bool const is_garage_or_shed(room.is_garage_or_shed(0)), is_int_garage(room.get_room_type(0) == RTYPE_GARAGE);
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), floor_thickness(get_floor_thickness());
 	float const ceil_zval(zval + window_vspacing - floor_thickness), shelf_depth((is_house ? (is_basement ? 0.18 : 0.15) : 0.2)*window_vspacing);
@@ -2373,7 +2373,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		if (++num_placed == num_crates) break; // we're done
 	} // for n
 	// add office building storage room sign, in a hallway, basement, etc.
-	if (!is_house /*&& !is_basement*/) {add_door_sign("Storage", room, zval, room_id, tot_light_amt);}
+	if (!is_house /*&& !is_basement*/) {add_door_sign((has_stairs ? "Stairs" : "Storage"), room, zval, room_id, tot_light_amt);}
 	return 1; // it's always a storage room, even if it's empty
 }
 

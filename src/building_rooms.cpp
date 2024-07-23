@@ -493,7 +493,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						add_garage_objs(rgen, *r, room_center.z, room_id, tot_light_amt);
 					}
 					// is there enough clearance between shelves and a car parked in the garage? there seems to be in all the cases I've seen
-					add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement);
+					add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement, has_stairs);
 				}
 				if (is_swim_pool_room) {
 					assert(is_ext_basement); // for now, only in extended basements
@@ -696,7 +696,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			// if we haven't added any objects yet, and this room is an interior office on the first floor or basement, make it a storage room 50% of the time; at most 4x
 			if (!added_obj && num_storage_rooms <= 4 && (is_basement || (r->is_office && r->interior && f == 0 /*&& r->z1() == ground_floor_z1*/)) && rgen.rand_bool()) {
-				added_obj = no_whiteboard = is_storage = add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement);
+				added_obj = no_whiteboard = is_storage = add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement, has_stairs);
 				if (added_obj) {r->assign_to(RTYPE_STORAGE, f); ++num_storage_rooms;}
 			}
 			if (!added_obj && (!is_basement || rgen.rand_bool())) { // try to place a desk if there's no table, bed, etc.
@@ -788,7 +788,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					added_laundry = 1;
 				}
 				else if (!added_obj && !has_fireplace) { // unassigned empty room - make it a storage room
-					add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement);
+					add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement, has_stairs);
 					r->assign_to(RTYPE_STORAGE, f);
 					is_storage = 1; // mark it as a storage room whether or not we've added anything to it
 				}
