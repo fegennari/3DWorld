@@ -853,11 +853,13 @@ struct paint_draw_t {
 };
 struct building_decal_manager_t {
 	paint_draw_t paint_draw[2]; // {interior, exterior}
-	quad_batch_draw blood_qbd[2], tp_qbd, pend_tape_qbd, glass_qbd, burn_qbd; // blood_qbd: {red human blood, bug guts}
+	quad_batch_draw blood_qbd[2], tp_qbd, pend_tape_qbd, glass_qbd, burn_qbd; // blood_qbd: {red human blood, bug guts or stains}
 	tape_quad_batch_draw tape_qbd; // for tape, but not pend_tape because it hasn't been placed yet
+	rand_gen_t rgen;
 
 	void commit_pend_tape_qbd();
 	void add_burn_spot(point const &pos, float radius);
+	void add_blood_or_stain(point const &pos, float radius, colorRGBA const &color, bool is_blood);
 	void draw_building_interior_decals(shader_t &s, bool player_in_building, bool shadow_only) const;
 };
 

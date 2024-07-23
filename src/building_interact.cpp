@@ -1776,14 +1776,6 @@ void building_t::register_spark_floor_hit(point const &pos) {
 	} // for i
 }
 
-void building_decal_manager_t::add_burn_spot(point const &pos, float radius) {
-	// if there are too many existing spots, remove the first (oldest) one; this can be slow, but shouldn't happen very often
-	unsigned const max_spots = 100;
-	unsigned const num_spots(burn_qbd.verts.size()/6); // 6 verts/2 triangles per quad
-	if (num_spots >= max_spots) {burn_qbd.verts.erase(burn_qbd.verts.begin(), (burn_qbd.verts.begin() + 6*(num_spots - max_spots + 1)));}
-	burn_qbd.add_quad_dirs(pos, -plus_x*radius, plus_y*radius, BLACK); // -x!
-}
-
 // elevators
 
 bool building_interior_t::update_elevators(building_t const &building, point const &player_pos) { // Note: player_pos is in building space

@@ -1460,6 +1460,7 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shad
 		interior->room_geom->init_num_dstacks = interior->door_stacks.size();
 		rand_gen_t rgen;
 		rgen.set_state(building_ix, parts.size()); // set to something canonical per building
+		interior->room_geom->decal_manager.rgen = rgen; // copy rgen for use with decals
 		gen_room_details(rgen, building_ix); // generate so that we can draw it
 		assert(has_room_geom());
 	}
@@ -2354,6 +2355,17 @@ void paint_draw_t::clear() {
 void building_decal_manager_t::commit_pend_tape_qbd() {
 	pend_tape_qbd.add_quads(tape_qbd);
 	pend_tape_qbd.clear();
+}
+void building_decal_manager_t::add_burn_spot(point const &pos, float radius) {
+	// if there are too many existing spots, remove the first (oldest) one; this can be slow, but shouldn't happen very often
+	unsigned const max_spots = 100;
+	unsigned const num_spots(burn_qbd.verts.size()/6); // 6 verts/2 triangles per quad
+	if (num_spots >= max_spots) {burn_qbd.verts.erase(burn_qbd.verts.begin(), (burn_qbd.verts.begin() + 6*(num_spots - max_spots + 1)));}
+	burn_qbd.add_quad_dirs(pos, -plus_x*radius, plus_y*radius, BLACK); // -x!
+}
+void building_decal_manager_t::add_blood_or_stain(point const &pos, float radius, colorRGBA const &color, bool is_blood) {
+	tex_range_t const tex_range(tex_range_t::from_atlas((rgen.rand()&1), (rgen.rand()&1), 2, 2)); // 2x2 texture atlas
+	blood_qbd[!is_blood].add_quad_dirs(pos, -plus_x*radius, plus_y*radius, color, plus_z, tex_range); // -x!
 }
 void building_decal_manager_t::draw_building_interior_decals(shader_t &s, bool player_in_building, bool shadow_only) const {
 	if (shadow_only) { // shadow pass, draw tape only

@@ -2430,9 +2430,8 @@ void building_t::add_blood_decal(point const &pos, float radius, colorRGBA const
 	assert(has_room_geom());
 	float zval(pos.z);
 	if (!get_zval_of_floor(pos, radius, zval)) return; // no suitable floor found
-	tex_range_t const tex_range(tex_range_t::from_atlas((rand()&1), (rand()&1), 2, 2)); // 2x2 texture atlas
-	// Note: bloor is never cleared and will continue to accumulate in the current building
-	interior->room_geom->decal_manager.blood_qbd[!is_blood].add_quad_dirs(point(pos.x, pos.y, zval), -plus_x*radius, plus_y*radius, color, plus_z, tex_range); // -x!
+	// Note: blood is never cleared and will continue to accumulate in the current building
+	interior->room_geom->decal_manager.add_blood_or_stain(point(pos.x, pos.y, zval), radius, color, is_blood);
 	interior->room_geom->modified_by_player = 1; // make sure blood stays in this building
 	player_inventory.record_damage_done(is_blood ? 100.0 : 1.0); // blood is a mess to clean up; bug guts less so (though damage will be reset on player death anyway)
 }
