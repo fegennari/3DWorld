@@ -441,9 +441,6 @@ class road_network_t : public streetlights_t { // AKA city center
 	vector<city_id_pair_t> road_to_city; // indexed by road ID
 	vector<vector<unsigned>> city_to_seg; // maps city_id to set of road segments connecting to that city
 
-	struct cmp_by_tile { // not the most efficient solution, but no memory overhead
-		bool operator()(cube_t const &a, cube_t const &b) const {return (get_tile_id_for_cube(a) < get_tile_id_for_cube(b));}
-	};
 	struct tile_block_t { // collection of road parts for a given tile
 		range_pair_t ranges[NUM_RD_TYPES]; // {plot, seg, isec2, isec3, isec4, park_lot, tracks, park, driveway, road_skirt, building}
 		quad_batch_draw quads[NUM_RD_TYPES];

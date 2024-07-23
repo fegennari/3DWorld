@@ -2071,6 +2071,7 @@ void skyway_t::init(cube_t const &c, bool dim_) {
 		end.d[dim][!d] = bcube.d[dim][d] + (d ? -1.0 : 1.0)*wall_width;
 		sides.push_back(end);
 	}
+	sort(sides.begin(), sides.end(), cmp_by_tile()); // optimization for drawing
 	// add moving walkways
 	float const ww_hwidth(0.11*width), ww_height(0.8*ww_hwidth), ww_end_gap(0.75*width), centerline(bot.get_center_dim(!dim));
 	float const speed = 0.005;
