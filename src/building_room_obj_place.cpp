@@ -3867,18 +3867,17 @@ void building_t::add_stains_to_room(rand_gen_t rgen, room_t const &room, float z
 	if (num_stains == 0) return;
 	float const window_vspacing(get_window_vspace()), flooring_thick(get_flooring_thick());
 	cube_t const place_area(get_walkable_room_bounds(room));
-	float const height(flooring_thick), radius(0.2*window_vspacing*rgen.rand_uniform(0.5, 1.0));
+	float const height(1.5*flooring_thick), radius(0.2*window_vspacing*rgen.rand_uniform(0.5, 1.0));
 	if (radius > 0.25*min(place_area.dx(), place_area.dy())) return; // room is too small
-	zval += 1.5*flooring_thick; // place above flooring
 
 	for (unsigned n = 0; n < num_stains; ++n) {
 		point const pos(gen_xy_pos_in_area(place_area, radius, rgen, zval));
 		cube_t const c(get_cube_height_radius(pos, radius, height));
-		if (overlaps_other_room_obj(c, objs_start) && !is_obj_placement_blocked(c, room, 0)) continue; // for now, just make one random attempt
+		if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 0)) continue; // for now, just make one random attempt
 		colorRGBA color(BLACK); // color.B = 0.0
 		color.R = rgen.rand_uniform(0.0, 0.5);
 		color.G = rgen.rand_uniform(0.0, 0.5);
-		interior->room_geom->decal_manager.add_blood_or_stain(point(pos.x, pos.y, zval), radius, color, 0); // is_blood=0
+		interior->room_geom->decal_manager.add_blood_or_stain(point(pos.x, pos.y, zval+height), radius, color, 0); // is_blood=0
 	} // for n
 }
 
