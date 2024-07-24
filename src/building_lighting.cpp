@@ -1322,6 +1322,7 @@ bool check_cube_visible_through_cut(vect_cube_t const &cuts, cube_t const &light
 	float const light_dist(p2p_dist(camera_bs, lpos)); // upper bound on line length
 
 	for (cube_t const &s : cuts) { // check visible stairs/ramps
+		if (!light_bounds.intersects_xy(s)) continue; // light does not reach the cut
 		float const z(floor_is_above ? s.z2() : s.z1());
 		point const pts[4] = {point(s.x1(), s.y1(), z), point(s.x2(), s.y1(), z), point(s.x2(), s.y2(), z), point(s.x1(), s.y2(), z)};
 
@@ -1619,9 +1620,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool const is_over_pool(has_pool() && (int)i->room_id == interior->pool.room_ix);
 		bool const light_and_camera_by_L_stairs((in_camera_room || (int)i->room_id == L_stairs_room) && has_stairs_this_floor && camera_by_L_stairs);
 		//bool const light_room_is_tall(room.is_single_floor && lpos.z > room.z1() + window_vspacing);
-		// special case for light shining down from above stairs when the player is below
-		bool const light_above_stairs(lpos.z > camera_z && light_room_has_stairs_or_ramp);
+		// special case for light shining down from above stairs or ramp when the player is below
+		bool const light_above_stairs(lpos.z > camera_z && light_room_has_stairs_or_ramp); // or ramp
 		bool stairs_light(0), player_in_elevator(0), cull_if_not_by_stairs(0), in_camera_walkway(0), in_walkway_near_camera(0);
+		//if (!light_above_stairs && camera_in_basement && !light_in_basement) {cull_if_not_by_stairs = 1;} // light may not be visible from basement; check not needed?
 
 		if (is_in_elevator) {
 			elevator_t const &e(get_elevator(i->obj_id));
