@@ -1557,9 +1557,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		point lpos_rot(lpos); // lpos in global space
 		if (is_rotated()) {do_xy_rotate(building_center, lpos_rot);}
 		if (!lights_bcube.contains_pt_xy(lpos_rot)) continue; // not contained within the light volume
-		bool const light_in_basement(lpos.z < ground_floor_z1), is_in_elevator(i->in_elevator()), is_in_closet(i->in_closet());
 		bool const is_in_attic(i->in_attic()), is_in_windowless_attic(is_in_attic && !has_attic_window), is_exterior(i->is_exterior());
 		if (walkway_only && !is_exterior) continue;
+		bool const light_in_basement(lpos.z < ground_floor_z1), is_in_elevator(i->in_elevator()), is_in_closet(i->in_closet());
 		// basement, attic, and elevator lights are only visible when player is in the building;
 		// elevator test is questionable because it can be open on the ground floor of a room with windows in a small office building, but should be good enough
 		if (!camera_in_building && ((light_in_basement && !camera_can_see_ext_basement) || is_in_windowless_attic || is_in_elevator)) continue;
