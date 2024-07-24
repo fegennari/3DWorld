@@ -2364,7 +2364,8 @@ void building_decal_manager_t::add_burn_spot(point const &pos, float radius) {
 	burn_qbd.add_quad_dirs(pos, -plus_x*radius, plus_y*radius, BLACK); // -x!
 }
 void building_decal_manager_t::add_blood_or_stain(point const &pos, float radius, colorRGBA const &color, bool is_blood) {
-	tex_range_t const tex_range(tex_range_t::from_atlas((rgen.rand()&1), (rgen.rand()&1), 2, 2)); // 2x2 texture atlas
+	tex_range_t tex_range(tex_range_t::from_atlas((rgen.rand()&1), (rgen.rand()&1), 2, 2)); // 2x2 texture atlas
+	tex_range.swap_xy = rgen.rand_bool();
 	blood_qbd[!is_blood].add_quad_dirs(pos, -plus_x*radius, plus_y*radius, color, plus_z, tex_range); // -x!
 }
 void building_decal_manager_t::draw_building_interior_decals(shader_t &s, bool player_in_building, bool shadow_only) const {
