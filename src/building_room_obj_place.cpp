@@ -3860,24 +3860,59 @@ void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zv
 	} // for n
 }
 
+colorRGBA get_stain_color(rand_gen_t &rgen) {
+	colorRGBA color(BLACK); // color.B = 0.0
+	color.R = rgen.rand_uniform(0.0, 0.5);
+	color.G = rgen.rand_uniform(0.0, 0.5);
+	return color;
+}
 void building_t::add_stains_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	assert(has_room_geom());
-	unsigned const max_stains((room.is_backrooms() ? 20 : (room.is_parking() ? 10 : 2))); // 2 for regular rooms, 20 for backrooms, and 10 for parking garages
-	unsigned const num_stains(rgen.rand() % (max_stains+1));
-	if (num_stains == 0) return;
+	bool const backrooms(room.is_backrooms()), parking_garage(room.is_parking());
+	unsigned const max_stains((backrooms ? 20 : (parking_garage ? 10 : 2))); // 2 for regular rooms, 20 for backrooms, and 10 for parking garages
+	unsigned const num_floor_stains(rgen.rand() % (max_stains+1));
+	unsigned const num_wall_stains((backrooms || parking_garage) ? 0 : (rgen.rand() % (2*max_stains+1))); // no backrooms or parking garage wall stains - no interior walls
+	if (num_floor_stains == 0 && num_wall_stains == 0) return;
 	float const window_vspacing(get_window_vspace()), flooring_thick(get_flooring_thick());
 	cube_t const place_area(get_walkable_room_bounds(room));
-	float const height(1.5*flooring_thick), radius(0.2*window_vspacing*rgen.rand_uniform(0.5, 1.0));
-	if (radius > 0.25*min(place_area.dx(), place_area.dy())) return; // room is too small
+	float const height(1.5*flooring_thick), rmax(0.2*window_vspacing);
+	if (rmax > 0.25*min(place_area.dx(), place_area.dy())) return; // room is too small
 
-	for (unsigned n = 0; n < num_stains; ++n) {
+	// stains on the floor
+	for (unsigned n = 0; n < num_floor_stains; ++n) {
+		float const radius(rmax*rgen.rand_uniform(0.5, 1.0));
 		point const pos(gen_xy_pos_in_area(place_area, radius, rgen, zval));
 		cube_t const c(get_cube_height_radius(pos, radius, height));
 		if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 0)) continue; // for now, just make one random attempt
-		colorRGBA color(BLACK); // color.B = 0.0
-		color.R = rgen.rand_uniform(0.0, 0.5);
-		color.G = rgen.rand_uniform(0.0, 0.5);
-		interior->room_geom->decal_manager.add_blood_or_stain(point(pos.x, pos.y, zval+height), radius, color, 0); // is_blood=0
+		interior->room_geom->decal_manager.add_blood_or_stain(point(pos.x, pos.y, zval+height), radius, get_stain_color(rgen), 0); // is_blood=0
+	}
+	// stains on the walls
+	if (num_wall_stains == 0) return;
+	float const fc_gap(get_floor_ceil_gap()), wall_thickness(get_wall_thickness());
+	if (rmax > 0.3*fc_gap) return; // room is not tall enough (should not happen)
+	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval));
+
+	for (unsigned n = 0; n < num_wall_stains; ++n) {
+		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
+		if (classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) continue; // stains don't blend against exterior walls
+		float const radius(rmax*rgen.rand_uniform(0.5, 1.0)), min_wall_spacing(1.2*radius);
+		point pos;
+		pos[ dim] = place_area.d[dim][dir] + (dir ? -1.0 : 1.0)*height;
+		pos[!dim] = rgen.rand_uniform((place_area.d[!dim][0] + min_wall_spacing), (place_area.d[!dim][1] - min_wall_spacing));
+		pos.z     = rgen.rand_uniform(zval+min_wall_spacing, zval+0.75*fc_gap-min_wall_spacing); // not too high
+		cube_t c; c.set_from_sphere(pos, radius);
+		c.d[dim][ dir] = place_area.d[dim][dir];
+		c.d[dim][!dir] = pos[dim];
+		c.expand_in_dim(dim, 0.5*wall_thickness); // required to intersect doors
+		if (overlaps_other_room_obj(c, objs_start, 1))     continue; // check for things like closets; check_all=1 to include blinds
+		if (interior->is_blocked_by_stairs_or_elevator(c)) continue; // check stairs and elevators
+		bool bad_place(0);
+
+		for (auto const &d : doorways) {
+			if (d.get_true_bcube().intersects(c)) {bad_place = 1; break;}
+		}
+		if (bad_place) continue;
+		interior->room_geom->decal_manager.add_blood_or_stain(pos, radius, get_stain_color(rgen), 0, dim, !dir); // is_blood=0
 	} // for n
 }
 

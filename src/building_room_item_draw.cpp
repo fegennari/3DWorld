@@ -2363,10 +2363,16 @@ void building_decal_manager_t::add_burn_spot(point const &pos, float radius) {
 	if (num_spots >= max_spots) {burn_qbd.verts.erase(burn_qbd.verts.begin(), (burn_qbd.verts.begin() + 6*(num_spots - max_spots + 1)));}
 	burn_qbd.add_quad_dirs(pos, -plus_x*radius, plus_y*radius, BLACK); // -x!
 }
-void building_decal_manager_t::add_blood_or_stain(point const &pos, float radius, colorRGBA const &color, bool is_blood) {
+void building_decal_manager_t::add_blood_or_stain(point const &pos, float radius, colorRGBA const &color, bool is_blood, unsigned dim, bool dir) {
+	assert(dim <= 2);
 	tex_range_t tex_range(tex_range_t::from_atlas((rgen.rand()&1), (rgen.rand()&1), 2, 2)); // 2x2 texture atlas
 	tex_range.swap_xy = rgen.rand_bool();
-	blood_qbd[!is_blood].add_quad_dirs(pos, -plus_x*radius, plus_y*radius, color, plus_z, tex_range); // -x!
+	vector3d ds, dt, dn;
+	dn[dim] = (dir ? 1.0 : -1.0);
+	ds[(dim+1)%3] = -1.0;
+	dt[(dim+2)%3] =  1.0;
+	if (!dir) {swap(ds, dt);} // use correct winding order
+	blood_qbd[!is_blood].add_quad_dirs(pos, ds*radius, dt*radius, color, dn, tex_range); // -x!
 }
 void building_decal_manager_t::draw_building_interior_decals(shader_t &s, bool player_in_building, bool shadow_only) const {
 	if (shadow_only) { // shadow pass, draw tape only

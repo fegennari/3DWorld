@@ -859,7 +859,7 @@ struct building_decal_manager_t {
 
 	void commit_pend_tape_qbd();
 	void add_burn_spot(point const &pos, float radius);
-	void add_blood_or_stain(point const &pos, float radius, colorRGBA const &color, bool is_blood);
+	void add_blood_or_stain(point const &pos, float radius, colorRGBA const &color, bool is_blood=0, unsigned dim=2, bool dir=1);
 	void draw_building_interior_decals(shader_t &s, bool player_in_building, bool shadow_only) const;
 };
 

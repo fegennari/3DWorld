@@ -2302,7 +2302,7 @@ bool building_t::get_zval_of_floor(point const &pos, float radius, float &zval) 
 
 	for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // blood can only be placed on floors
 		if (pos.z < i->z2() || pos.z > (i->z2() + floor_spacing) || !i->contains_cube_xy(cur_bcube)) continue; // wrong floor, or not contained
-		zval = (i->z2() + 0.0015*floor_spacing); // slightly above rugs (0.0015 vs. 0.001) and flooring (0.0015 vs. 0.0012)
+		zval = (i->z2() + 1.5*get_flooring_thick()); // slightly above rugs and flooring
 		return 1;
 	}
 	return 0; // no suitable floor found
