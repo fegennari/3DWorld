@@ -1395,6 +1395,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	vect_cube_t cuts_above, cuts_below, cuts_above_nonvis; // only used when player is in the building
 	vect_cube_with_ix_t moving_objs;
 	cube_t floor_above_region, floor_below_region; // filters for lights on the floors above/below based on stairs
+	bool saw_open_stairs(0);
 	ped_bcubes.clear();
 	bool const track_lights(0 && camera_in_building && !sec_camera_mode && animate2); // used for debugging
 	bool const camera_above_ground_floor(camera_z > ground_floor_z2), camera_feet_above_basement(player_feet_zval >= ground_floor_z1);
@@ -1459,9 +1460,13 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 							floor_above_region.assign_or_union_with_cube(vis_region);
 						}
 					}
+					else {saw_open_stairs = 1;}
 				}
 				stair_ramp_cuts.emplace_back(s, cut_mask);
 			} // for s
+			// some parking garages may have open stairs connecting to the floor above; a light may be visible through these even if there are also walled or U-shaped stairs
+			if (saw_open_stairs) {floor_above_region.set_to_zeros(); floor_below_region.set_to_zeros();}
+
 			if (has_pg_ramp()) { // check ramp if player is in the parking garage or the backrooms doorway
 				if (room.contains_pt(interior->pg_ramp.get_cube_center()) ||
 					(has_ext_basement() && interior->get_ext_basement_door().get_clearance_bcube().contains_pt(camera_rot)))
