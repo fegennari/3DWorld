@@ -205,6 +205,7 @@ int get_rect_panel_tid() {return building_texture_mgr.get_gdoor_tid();} // use g
 int get_bath_wind_tid () {return building_texture_mgr.get_bath_wind_tid();}
 int get_int_door_tid  () {return building_texture_mgr.get_hdoor_tid();}
 int get_bldg_door_tid () {return building_texture_mgr.get_bdoor_tid();}
+int get_off_door_tid  () {return building_texture_mgr.get_odoor_tid();}
 int get_concrete_tid  () {return building_texture_mgr.get_concrete_tid();}
 int get_solarp_tid    () {return building_texture_mgr.get_solarp_tid();}
 

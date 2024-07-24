@@ -635,7 +635,9 @@ void building_t::add_false_door_to_extb_room_if_needed(room_t const &room, float
 		set_cube_zvals(door, zval, (zval + get_door_height()));
 		set_wall_width(door, room.get_center_dim(!dim), 0.5*door_width, !dim);
 		set_wall_width(door, (room.d[dim][dir] + (dir ? -1.0 : 1.0)*0.5*wall_thickness), 2.0*get_trim_thickness(), dim);
-		interior->room_geom->objs.emplace_back(door, TYPE_FALSE_DOOR, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, WHITE);
+		unsigned flags(RO_FLAG_NOCOLL);
+		if (is_house) {flags |= RO_FLAG_IS_HOUSE;}
+		interior->room_geom->objs.emplace_back(door, TYPE_FALSE_DOOR, room_id, dim, dir, flags, 1.0, SHAPE_CUBE, WHITE);
 		
 		if (!room.is_hallway) { // add door blocker
 			cube_t blocker(door);

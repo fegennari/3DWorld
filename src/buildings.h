@@ -510,7 +510,7 @@ unsigned const RO_FLAG_ADJ_LO  = 0x0400; // for kitchen counters/closets/door tr
 unsigned const RO_FLAG_ADJ_HI  = 0x0800; // for kitchen counters/closets/door trim/blinds/railings
 unsigned const RO_FLAG_ADJ_BOT = 0x1000; // for door trim/railings/ext steps/etc.
 unsigned const RO_FLAG_ADJ_TOP = 0x2000; // for door trim/railings
-unsigned const RO_FLAG_IS_HOUSE= 0x4000; // used for mirror reflections, shelves, tables, desks, beds, and closets
+unsigned const RO_FLAG_IS_HOUSE= 0x4000; // used for mirror reflections, shelves, tables, desks, beds, closets, and false doors
 unsigned const RO_FLAG_RAND_ROT= 0x8000; // random rotation; used for office chairs, papers, pictures, cups, and balls
 unsigned const RO_FLAG_UNTEXTURED= 0x1000; // for shirts, aliased with RO_FLAG_ADJ_BOT
 unsigned const RO_FLAG_FROM_SET  = 0x1000; // for books,  aliased with RO_FLAG_ADJ_BOT
@@ -2444,6 +2444,7 @@ bool do_sphere_coll_polygon_sides(point &pos, cube_t const &part, float radius, 
 int get_rect_panel_tid();
 int get_bath_wind_tid ();
 int get_int_door_tid  ();
+int get_off_door_tid  ();
 int get_bldg_door_tid ();
 int get_concrete_tid  ();
 int get_plywood_tid   ();
