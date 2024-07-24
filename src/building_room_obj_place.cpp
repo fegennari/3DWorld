@@ -3860,9 +3860,10 @@ void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zv
 	} // for n
 }
 
-void building_t::add_stains_to_room(rand_gen_t  rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+void building_t::add_stains_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	assert(has_room_geom());
-	unsigned const num_stains(rgen.rand() % 3); // 0-2
+	unsigned const max_stains((room.is_backrooms() ? 20 : (room.is_parking() ? 10 : 2))); // 2 for regular rooms, 20 for backrooms, and 10 for parking garages
+	unsigned const num_stains(rgen.rand() % (max_stains+1));
 	if (num_stains == 0) return;
 	float const window_vspacing(get_window_vspace()), flooring_thick(get_flooring_thick());
 	cube_t const place_area(get_walkable_room_bounds(room));

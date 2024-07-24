@@ -450,6 +450,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				objs.emplace_back(light_obj);
 			} // for l
 			if (is_lit) {r->lit_by_floor |= (1ULL << (f&31));} // flag this floor as being lit (for up to 32 floors)
+			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
+			if (is_lit) {tot_light_amt += r->light_intensity;}
+			if (is_backrooms || is_parking_garage) {add_stains_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, floor_objs_start);}
 
 			if (is_backrooms) {
 				room_object_t const ref_light(light, TYPE_LIGHT, room_id, room_dim, 0, (flags | RO_FLAG_NOCOLL), light_amt, light_shape, color);
@@ -458,8 +461,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			if (is_parking_garage || is_retail_room) continue; // generated above, done; no outlets or light switches
 			if (is_unfinished) continue; // no objects for now; if adding objects later, need to make sure they stay inside the building bounds
-			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
-			if (is_lit) {tot_light_amt += r->light_intensity;}
 			uint64_t const floor_mask(uint64_t(1) << f);
 			bool const is_garage_or_shed(r->is_garage_or_shed(f));
 			bool const is_ground_floor_part(!is_basement && r->z1() <= ground_floor_z1);
@@ -511,7 +512,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					add_pri_hall_objs(rgen, room_rgen, *r, room_center.z, room_id, tot_light_amt, f, objs_start);
 					if (is_ground_floor) {r->assign_to(RTYPE_LOBBY, f);} // first floor primary hallway, make it the lobby
 				}
-				if (is_basement) {add_stains_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
+				if (is_basement && !is_swim_pool_room) {add_stains_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
 				if (has_stairs_this_floor && r->get_room_type(f) == RTYPE_NOTSET) {r->assign_to(RTYPE_STAIRS, f);}
 				continue; // no other geometry for this room
 			}
