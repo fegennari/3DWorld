@@ -3493,8 +3493,7 @@ public:
 					float const water_rand_val(fract((center.x + center.y + center.z)/floor_spacing)), crack_rand_val(fract(1.5*(center.x + center.y + center.z)/floor_spacing));
 					float const player_feet_zval(camera_bs.z - get_bldg_player_height());
 					water_damage = max(0.0f, (water_rand_val - 0.5f)); // 50% of buildings have up to 50% water damage
-					crack_damage = max(0.0f, (crack_rand_val - 0.5f)); // 50% of buildings have cracks
-					crack_damage = ((crack_damage > 0.0) ? 1.0 : 0.0); // for now cracks are binary
+					crack_damage = ((crack_rand_val < 0.4) ? 1.0 : 0.0); // for now cracks are binary and appear in 40% of buildings
 					// incremental transition when entering/exiting the basement
 					float const damage_weight(CLIP_TO_01(1.25f*(player_building->ground_floor_z1 + player_building->get_fc_thickness() - player_feet_zval)/floor_spacing));
 					water_damage *= damage_weight;
