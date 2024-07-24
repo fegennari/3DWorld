@@ -1096,7 +1096,7 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 					get_balcony_cubes(balcony_obj, cubes);
 					for (unsigned n = 1; n < 4; ++n) {details.emplace_back(cubes[n], DETAIL_OBJ_SHAD_ONLY);} // skip bottom, which was added above
 				}
-				// add door connecting to the house if possible
+				// add door connecting to the house if possible, and if there are windows
 				if (has_windows()) { // find a space between two windows
 					float const door_width(get_doorway_width()), door_hwidth(0.5*door_width), edge_pad(2.0*wall_thickness);
 					float const window_hspacing(get_hspacing_for_part(part, !dim)), window_h_border(get_window_h_border());
@@ -1131,7 +1131,9 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 							}
 							if (!blocked) {cands.push_back(door);}
 						} // for n
-						if (!cands.empty()) {
+						if (!cands.empty()) { // have a valid door location
+							// it's too late in the control flow to add real exterior doors like we have for exterior stairs in multi-family houses;
+							// the best we can do is to add a false door that's locked and can't be used by the player; this way we don't need to handle player on balcony either
 							cube_t const &door(cands[rgen.rand() % cands.size()]);
 							objs.emplace_back(door, TYPE_FALSE_DOOR, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, door_color);
 						}
