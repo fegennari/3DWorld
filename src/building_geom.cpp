@@ -2209,6 +2209,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 				roof_tquads.emplace_back(door, (unsigned)tquad_with_ix_t::TYPE_RDOOR2);
 				door_blocker = door.get_bcube();
 				door_blocker.d[door_dim][door_dir] += (door_dir ? 1.0 : -1.0)*1.2*get_doorway_width(); // add door clearance
+				has_fake_roof_door = 1;
 			}
 		}
 		c.z2() += height; // z2
