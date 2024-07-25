@@ -1675,7 +1675,15 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					if (!is_cube()) { // check for stairs outside or too close to building walls
 						cube_t stairs_ext(cutout);
 						stairs_ext.expand_in_dim(stairs_dim, doorway_width);
-						if (!check_cube_within_part_sides(stairs_ext)) continue; // outside building
+						
+						if (!check_cube_within_part_sides(stairs_ext)) { // outside building
+							// try to move toward building center/away from exterior
+							bool const move_dir(cutout.get_center_dim(!stairs_dim) < bcube.get_center_dim(!stairs_dim));
+							float const move_amt((move_dir ? 1.0 : -1.0)*0.2*room.get_sz_dim(!stairs_dim));
+							cutout    .translate_dim(!stairs_dim, move_amt);
+							stairs_ext.translate_dim(!stairs_dim, move_amt);
+							if (is_cube_close_to_doorway(cutout, room) || !check_cube_within_part_sides(stairs_ext)) continue; // still bad, skip this room
+						}
 					}
 					if (!is_house && against_wall) {sshape = SHAPE_WALLED_SIDES;} // add wall between room and office stairs if against a room wall
 					if (interior->landings.empty()) {interior->landings.reserve(num_floors-1);}
