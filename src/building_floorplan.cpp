@@ -403,7 +403,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					
 					// assign one floor of this room as a bathroom unless there are only a few floors; should guarantee each building has at least one bathroom
 					if (r <= num_floors) {
-						unsigned const floor_ix(rgen.rand() % min(num_floors, NUM_RTYPE_SLOTS-1)); // not too high a floor so that slot clamp occurs
+						unsigned const floors_end(min(num_floors, NUM_RTYPE_SLOTS-1)); // not too high a floor so that slot clamp occurs
+						unsigned const floors_start((floors_end < 3) ? 0 : 1); // skip first floor to avoid ext doors (which haven't been placed yet), unless 1-2 floors
+						unsigned floor_ix(floors_start + (rgen.rand() % (floors_end - floors_start)));
 						if (!(br_floors_used & (1<<floor_ix))) {interior->rooms.back().assign_to(RTYPE_BATH, floor_ix);}
 						br_floors_used |= (1<<floor_ix); // at most one bathroom per floor
 					}
