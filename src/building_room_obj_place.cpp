@@ -1625,21 +1625,29 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		//slength = (has_parking_garage ? (tlength + 2.0*wall_thickness) : 0.32*floor_spacing); // align sink drain to toilets for parking garage pipes?
 	}
 	float stall_width(2.0*twidth), sink_spacing(1.75*swidth);
-	bool br_dim(room.dy() < room.dx()), sink_side(0), sink_side_set(0); // br_dim is the smaller dim
+	bool br_dim(room.dy() < room.dx()), sink_side(0), sink_side_set(0), mens_room(0); // br_dim is the smaller dim
 	cube_t place_area(room), br_door;
 	place_area.expand_by(-0.5*wall_thickness);
 	unsigned br_door_stack_ix(0);
 
 	// determine men's room vs. women's room
 	point const part_center(get_part_for_room(room).get_cube_center()), room_center(room.get_cube_center());
-	bool mens_room((part_center.x < room_center.x) ^ (part_center.y < room_center.y)), has_second_bathroom(0);
+	mens_room = ((part_center.x < room_center.x) ^ (part_center.y < room_center.y));
 
-	// if there are two bathrooms (one on each side of the building), assign a gender to each side; if only one, alternate gender per floor
-	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-		if (r->part_id != room.part_id || &(*r) == &room) continue; // different part or same room
-		if (is_room_office_bathroom(*r, zval, floor)) {has_second_bathroom = 1; break;}
+	if (!is_cube()) { // alternate between men's and women's restrooms
+		if (interior->mens_count < interior->womens_count) {mens_room = 1;}
+		if (interior->mens_count > interior->womens_count) {mens_room = 0;}
 	}
-	if (!has_second_bathroom) {mens_room ^= (floor & 1);}
+	else {
+		bool has_second_bathroom(0);
+
+		// if there are two bathrooms (one on each side of the building), assign a gender to each side; if only one, alternate gender per floor
+		for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+			if (r->part_id != room.part_id || &(*r) == &room) continue; // different part or same room
+			if (is_room_office_bathroom(*r, zval, floor)) {has_second_bathroom = 1; break;}
+		}
+		if (!has_second_bathroom) {mens_room ^= (floor & 1);}
+	}
 	bool const add_urinals(mens_room && building_obj_model_loader.is_model_valid(OBJ_MODEL_URINAL));
 
 	if (add_urinals) { // use urinal model
@@ -1681,6 +1689,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	colorRGBA const stall_color(stall_colors[interior->doors.size() % NUM_STALL_COLORS]); // random, but constant for each building
 	vect_room_object_t &objs(interior->room_geom->objs);
 	room_object_t mirrors[2]; // candidate mirrors for each dir
+	++(mens_room ? interior->mens_count : interior->womens_count);
 
 	for (unsigned dir = 0; dir < 2; ++dir) { // each side of the wall
 		if (!two_rows && dir == (unsigned)skip_stalls_side) continue; // no stalls/sinks on this side
