@@ -2125,7 +2125,6 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	point const *only_cont_pt_in, bool no_skylights, bool draw_int_windows) const
 {
 	if (!is_valid()) return; // invalid building
-	if (!is_cube()) {only_cont_pt_in = nullptr;} // not needed for current non-cube buildings (optimization)
 
 	if (!no_skylights && !lights_pass) { // draw skylight glass
 		for (cube_t const &skylight : skylights) {
@@ -2139,6 +2138,8 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		} // for skylight
 	}
 	point const only_cont_pt(only_cont_pt_in ? get_inv_rot_pos(*only_cont_pt_in) : all_zeros);
+	bool const cut_door_holes(only_cont_pt_in != nullptr); // needed even for non-cube buildings, so capture before clearing
+	if (!is_cube()) {only_cont_pt_in = nullptr;} // not needed for current non-cube buildings (optimization)
 	building_mat_t const &mat(get_material());
 	bool const draw_windows(draw_int_windows ? has_int_windows() : has_windows());
 
@@ -2146,7 +2147,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	// which means the player currently can't see into or out of the building; but we can still cut out window holes on the interior side
 	if (!global_building_params.windows_enabled() || (lights_pass ? !mat.add_wind_lights : !draw_windows)) {
 		// no windows for this material (set in building_materials.txt)
-		if (only_cont_pt_in) {cut_holes_for_ext_doors(bdraw, only_cont_pt, 0xFFFF);} // still need to draw holes for doors
+		if (cut_door_holes) {cut_holes_for_ext_doors(bdraw, only_cont_pt, 0xFFFF);} // still need to draw holes for doors
 		return;
 	}
 	int const window_tid(building_texture_mgr.get_window_tid());
@@ -2281,7 +2282,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	if (bdraw.temp_tquads.empty()) {has_attic_window = 0;}
 	for (tquad_with_ix_t const &window : bdraw.temp_tquads) {bdraw.add_tquad(*this, window, bcube, tex, color);}
 	// if camera is inside this building, cut out holes so that the exterior doors show through
-	if (only_cont_pt_in) {cut_holes_for_ext_doors(bdraw, only_cont_pt, draw_parts_mask);}
+	if (cut_door_holes) {cut_holes_for_ext_doors(bdraw, only_cont_pt, draw_parts_mask);}
 }
 
 void building_t::get_all_drawn_window_verts_as_quads(vect_vnctcc_t &verts) const { // for interior drawing
