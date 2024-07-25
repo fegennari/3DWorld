@@ -2704,8 +2704,9 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	unsigned const spine_mask(is_open ? 0 : ~get_face_mask(c.dim, !c.dir)); // spine is drawn as part of the small faces when open
 	unsigned const skip_faces(extra_skip_faces | ((tilt_angle == 0.0) ? EF_Z1 : 0) | sides_mask);
 
-	if (z_rot_angle == 0.0 && c.rotates() && (c.obj_id%3) == 0) { // books placed on tables/desks are sometimes randomly rotated a bit
-		z_rot_angle = (PI/12.0)*(fract(123.456*c.obj_id) - 0.5);
+	if (z_rot_angle == 0.0 && c.rotates() && (c.obj_id%3) == 0) { // books placed on tables/desks are sometimes randomly rotated a bit, more when on the floor
+		bool const on_floor(c.flags & RO_FLAG_ON_FLOOR);
+		z_rot_angle = (on_floor ? PI : PI/12.0)*(fract(123.456*c.obj_id) - 0.5);
 	}
 	if ((draw_cover_as_small ? inc_sm : inc_lg) && !is_open) { // draw large faces: outside faces of covers and spine; not for open books
 		rgeom_mat_t &mat(get_untextured_material(shadowed, 0, draw_cover_as_small));

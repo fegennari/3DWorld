@@ -290,6 +290,18 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 	} // for n
 }
 
+cube_t get_book_bcube(rand_gen_t &rgen, point const &pos, float floor_spacing, bool dim, bool dir) {
+	float const book_sz(0.07*floor_spacing);
+	vector3d book_scale(book_sz*rgen.rand_uniform(0.8, 1.2), book_sz*rgen.rand_uniform(0.8, 1.2), 0.0);
+	float const thickness(book_sz*rgen.rand_uniform(0.1, 0.3));
+	book_scale[dim] *= 0.8; // slightly smaller in this dim
+	cube_t book;
+	book.set_from_point(pos);
+	book.expand_by(book_scale);
+	book.z2() += thickness;
+	return book;
+}
+
 // Note: no blockers, but does check existing objects
 bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
 	cube_t room_bounds(get_walkable_room_bounds(room));
@@ -317,6 +329,31 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 		unsigned const flags(room.has_open_wall(dim, dir) ? RO_FLAG_OPEN : 0); // flag as open if along an open wall so that the back is drawn
 		objs.emplace_back(c, TYPE_BCASE, room_id, dim, !dir, flags, tot_light_amt); // Note: dir faces into the room, not the wall
 		set_obj_id(objs);
+
+		if (is_basement) { // maybe add scattered books on the floor
+			unsigned const num_books(rgen.rand() % 16); // 0-15, but many will fail to be placed
+			
+			if (num_books > 0) {
+				float const place_dist(1.0*height);
+				point const center(c.get_cube_center());
+				cube_t place_area;
+				place_area.set_from_sphere(center, place_dist); // zvals are ignored
+				place_area.intersect_with_cube(room_bounds);
+
+				for (unsigned n = 0; n < num_books; ++n) {
+					point const pos(gen_xy_pos_in_area(place_area, 0.05*vspace, rgen, zval));
+					if (!dist_xy_less_than(pos, center, place_dist)) continue;
+					bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
+					cube_t const book(get_book_bcube(rgen, pos, vspace, dim, dir));
+					float const dx(book.dx()), dy(book.dy()), exp(0.5*sqrt(dx*dx + dy*dy)); // book is randomly rotated, to expand to capture all bcubes
+					cube_t const bc(pos.x-exp, pos.x+exp, pos.y-exp, pos.y+exp, book.z1(), book.z2());
+					if (!room_bounds.contains_cube_xy(bc) || is_obj_placement_blocked(bc, room, 1) || overlaps_other_room_obj(bc, objs_start, 1)) continue;
+					colorRGBA const color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
+					objs.emplace_back(book, TYPE_BOOK, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT | RO_FLAG_ON_FLOOR), tot_light_amt, SHAPE_CUBE, color);
+					set_obj_id(objs);
+				} // for n
+			}
+		}
 		return 1; // done/success
 	} // for n
 	return 0; // not placed
@@ -3460,18 +3497,11 @@ bool building_t::add_security_room_objs(rand_gen_t rgen, room_t const &room, flo
 void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, unsigned objs_start, bool use_dim_dir) {
 	point center(place_on.get_cube_center());
 	for (unsigned d = 0; d < 2; ++d) {center[d] += 0.1*place_on.get_sz_dim(d)*rgen.rand_uniform(-1.0, 1.0);} // add a slight random shift
-	float const book_sz(0.07*get_window_vspace());
-	// book is randomly oriented for tables and rotated 90 degrees from desk orient
-	bool const dim(use_dim_dir ? !place_on.dim : rgen.rand_bool()), dir(use_dim_dir ? (place_on.dir^place_on.dim) : rgen.rand_bool());
-	cube_t book;
-	vector3d book_scale(book_sz*rgen.rand_uniform(0.8, 1.2), book_sz*rgen.rand_uniform(0.8, 1.2), 0.0);
-	float const thickness(book_sz*rgen.rand_uniform(0.1, 0.3));
 	cube_t const room_bounds(get_walkable_room_bounds(get_room(room_id)));
 	assert(room_bounds.contains_pt(center));
-	book_scale[dim] *= 0.8; // slightly smaller in this dim
-	book.set_from_point(point(center.x, center.y, place_on.z2()));
-	book.expand_by(book_scale);
-	book.z2() += thickness;
+	// book is randomly oriented for tables and rotated 90 degrees from desk orient
+	bool const dim(use_dim_dir ? !place_on.dim : rgen.rand_bool()), dir(use_dim_dir ? (place_on.dir^place_on.dim) : rgen.rand_bool());
+	cube_t book(get_book_bcube(rgen, point(center.x, center.y, place_on.z2()), get_window_vspace(), dim, dir));
 	book.intersect_with_cube(room_bounds); // clip to room bounds
 	vect_room_object_t &objs(interior->room_geom->objs);
 
@@ -3479,7 +3509,7 @@ void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 		if (i->type != TYPE_PEN && i->type != TYPE_PENCIL) continue;
 		if (!i->intersects(book)) continue;
-		set_cube_zvals(book, i->z2(), i->z2()+thickness); // place book on top of object; maybe the book should be tilted?
+		set_cube_zvals(book, i->z2(), i->z2()+book.dz()); // place book on top of object; maybe the book should be tilted?
 	}
 	colorRGBA const color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
 	unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT);
