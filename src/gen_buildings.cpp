@@ -2050,16 +2050,6 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 		// add inside surface of attic access hole; could be draw as room geom if needed
 		bdraw.add_section(*this, 0, interior->attic_access, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
 	}
-	// Note: not yet implemeted because these buildings typically don't have interiors
-	if (0 && has_fake_roof_door) { // add interior for first roof block - the one with the door
-		for (roof_obj_t const &ro : details) {
-			if (ro.type != ROOF_OBJ_BLOCK) continue;
-			cube_t inner(ro);
-			inner.expand_by(-0.25*get_wall_thickness()); // prevent Z-fighting and draw over interior of roof block
-			bdraw.add_section(*this, 0, inner, mat.wall_tex, mat.wall_color, 7, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // draw all sides, and invert normals
-			break; // done
-		} // for ro
-	}
 	// Note: interior doors are drawn as part of room_geom
 	bdraw.end_draw_range_capture(interior->draw_range); // 80MB, 394MB, 836ms
 }
