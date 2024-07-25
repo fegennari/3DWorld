@@ -1628,8 +1628,17 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 								cube_t cand(cutout);
 								// add small gap to prevent z-fighting and FP accuracy asserts
 								float const shift((cand.d[dim][dir] - room.d[dim][dir]) - (dir ? -1.0 : 1.0)*wall_thickness); // negative if dir==1
-								cand.d[dim][0] -= shift; cand.d[dim][1] -= shift; // close the gap - flush with the wall
-								if (!is_cube_close_to_doorway(cand, room)) {cutout = cand; stairs_against_wall[dir] = 1; break;} // keep if it's good
+								cand.translate_dim(dim, -shift); // close the gap - flush with the wall
+								if (is_cube_close_to_doorway(cand, room)) continue;
+
+								if (!is_cube()) { // check for stairs outside or too close to building walls
+									cube_t stairs_ext(cand);
+									stairs_ext.expand_in_dim(stairs_dim, doorway_width);
+									if (!check_cube_within_part_sides(stairs_ext)) continue; // outside building
+								}
+								cutout = cand;
+								stairs_against_wall[dir] = 1;
+								break; // keep if it's good
 							} // for d
 						}
 					} // for dim
