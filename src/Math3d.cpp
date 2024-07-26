@@ -1322,6 +1322,16 @@ template<typename T> void rotate_verts(vector<T> &verts, vector3d const &axis, f
 		v->set_norm(normal_out); // normalize not needed?
 	}
 }
+void rotate_verts(point *verts, unsigned num_verts, vector3d const &axis, float angle, vector3d const &about) {
+	if (num_verts == 0 || angle == 0.0) return;
+	CREATE_ROT_MATRIX(axis, angle);
+
+	for (unsigned i = 0; i < num_verts; ++i) {
+		point const vin(verts[i] - about); // have to cache this
+		matrix_mult(vin, verts[i], m); // rotate the point about <about>
+		verts[i] += about;
+	}
+}
 
 template void rotate_verts(vector<vert_norm_comp_tc_color> &verts, vector3d const &axis, float angle, vector3d const &about, unsigned start); // used for building room geom
 template void rotate_verts(vector<vert_norm_tc_color     > &verts, vector3d const &axis, float angle, vector3d const &about, unsigned start); // used for parking lot solar roofs
