@@ -131,7 +131,7 @@ void skyway_t::init(cube_t const &c, bool dim_) {
 	dim   = dim_;
 	bcube = c;
 	set_bsphere_from_bcube();
-	float const height(bcube.dz()), width(bcube.get_sz_dim(!dim)), wall_width(0.05*width), entrance_ext(1.1*wall_width);
+	float const height(bcube.dz()), width(bcube.get_sz_dim(!dim)), wall_width(0.05*width);
 	cube_t center(bcube);
 	center.expand_in_dim(!dim, -wall_width); // subtract off side walls
 	bot = bcube;
