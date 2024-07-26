@@ -521,7 +521,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			bool const must_be_bathroom(room_id == cand_bathroom && (multi_family ? !(added_bath_mask & floor_mask) : (num_bathrooms == 0)));
 			bool const is_tall_room(r->is_single_floor && r->dz() > 1.5*window_vspacing);
 			bool added_tc(0), added_desk(0), added_obj(0), can_place_onto(0), no_whiteboard(0);
-			bool is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0), is_dining(0), is_storage(0), is_utility(0), no_plants(0), is_play_art(0);
+			bool is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0), is_dining(0), is_storage(0), is_utility(0), no_plants(0), is_play_art(0), is_library(0);
 			unsigned num_chairs(0);
 			// unset room type if not locked on this floor during floorplanning; required to generate determinstic room geom
 			if (!r->is_rtype_locked(f)) {r->assign_to(RTYPE_NOTSET, f);}
@@ -735,7 +735,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 				else if (!added_library && add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement)) { // add library, at most one
 					r->assign_to(RTYPE_LIBRARY, f);
-					added_library = 1;
+					added_library = is_library = 1;
 				}
 			}
 			if (!is_house && !added_obj && has_stairs_this_floor) { // office building "office" with stairs and no furniture
@@ -744,13 +744,16 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			if (!is_house && r->is_office && !no_whiteboard && (rgen.rand() % (pri_hall.is_all_zeros() ? 30U : max(50U, (unsigned)interior->rooms.size()))) == 0) {
 				// office, no cubicles or bathroom - try to make it a library (in rare cases)
-				if (add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement)) {r->assign_to(RTYPE_LIBRARY, f);}
+				if (add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement)) {
+					r->assign_to(RTYPE_LIBRARY, f);
+					added_library = is_library = 1;
+				}
 			}
 			if (can_place_onto) { // an object was placed (table, desk, counter, etc.), maybe add a book or bottle on top of it
 				place_objects_onto_surfaces(rgen, *r, room_id, tot_light_amt, objs_start, f, is_basement, not_private_room);
 			}
 			if (residential_room && !is_utility) { // place house/apartment/hotel-specific items
-				if (!is_bathroom && !is_kitchen && rgen.rand_float() < (is_basement ? 0.25 : 0.8)) {
+				if (!is_bathroom && !is_kitchen && !is_library && rgen.rand_float() < (is_basement ? 0.25 : 0.8)) {
 					// place bookcase 80% of the time, but not in bathrooms, kitchens, or utlity rooms
 					rand_gen_t rgen2(rgen); // copy so that rgen isn't updated in the call below
 					add_bookcase_to_room(rgen2, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement);

@@ -2510,6 +2510,14 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 	vector3d const place_area_sz(place_area.get_size());
 	vect_room_object_t &objs(interior->room_geom->objs);
 
+	// check for bookcase and add blocker, since it's possible to have both a bookcase and laundry objects placed in the same room
+	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+		if (i->type != TYPE_BCASE) continue;
+		cube_t blocker(*i);
+		blocker.d[i->dim][i->dir] += (i->dir ? 1.0 : -1.0)*2.0*i->get_depth();
+		objs.emplace_back(blocker, TYPE_BLOCKER, room_id, i->dim, i->dir, RO_FLAG_INVIS); // add blocker cube
+		break; // there should only be one, and we've invalidated the reference
+	}
 	for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place washer and dryer along the same wall
 		unsigned const washer_ix(objs.size());
 		bool const placed_washer(place_model_along_wall(OBJ_MODEL_WASHER, TYPE_WASHER, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8));

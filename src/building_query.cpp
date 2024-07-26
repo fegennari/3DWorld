@@ -1941,7 +1941,8 @@ bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start, b
 		if ((check_all || !i->no_coll() || i->type == TYPE_SWITCH || i->type == TYPE_OUTLET || i->type == TYPE_VENT || i->type == TYPE_PIPE ||
 			i->type == TYPE_FALSE_DOOR || i->type == TYPE_FISHTANK) && i->intersects(c)) return 1;
 		if (i->type == TYPE_DESK && i->shape == SHAPE_TALL && i->intersects_xy_no_adj(c) && c.intersects_no_adj(get_desk_top_back(*i))) return 1; // check tall desk back
-	}
+		if (i->type == TYPE_BOOK && (i->flags & RO_FLAG_ON_FLOOR) && i->intersects(c))   return 1; // books on floors count
+	} // for i
 	return 0;
 }
 // Note: for dynamic player object placement and book opening; includes expanded_objs but not blockers
