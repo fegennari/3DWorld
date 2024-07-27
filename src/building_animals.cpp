@@ -354,7 +354,7 @@ bool can_hide_under(room_object_t const &c, cube_t &hide_area) {
 		hide_area = get_dresser_middle(c);
 		return 1;
 	}
-	else if (c.type == TYPE_CHAIR) {
+	else if (c.type == TYPE_CHAIR && !c.is_on_floor()) { // skip fallen over chairs
 		cube_t cubes[3]; // seat, back, legs_bcube
 		get_chair_cubes(c, cubes);
 		hide_area = cubes[0]; // seat

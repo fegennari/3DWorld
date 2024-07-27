@@ -528,7 +528,7 @@ unsigned const RO_FLAG_ROTATING  = 0x400000; // for office chairs and clothes on
 unsigned const RO_FLAG_IN_CLOSET = 0x800000; // for closet lights and light switches
 unsigned const RO_FLAG_ON_SRACK  = 0x800000; // on shelf rack; aliased with RO_FLAG_IN_CLOSET
 unsigned const RO_FLAG_NONEMPTY  = 0x040000; // for microwaves,  aliased with RO_FLAG_HAS_EXTRA
-unsigned const RO_FLAG_ON_FLOOR  = 0x800000; // for books, etc., aliased with RO_FLAG_IN_CLOSET
+unsigned const RO_FLAG_ON_FLOOR  = 0x800000; // for books, fallen objects, etc., aliased with RO_FLAG_IN_CLOSET
 unsigned const RO_FLAG_BROKEN2   = 0x040000; // for lights that are completely broken, aliased with RO_FLAG_HAS_EXTRA and RO_FLAG_NONEMPTY
 // object flags, fourth byte
 unsigned const RO_FLAG_DYNAMIC  = 0x01000000; // dynamic object (balls, elevators, etc.)
@@ -626,6 +626,7 @@ struct room_object_t : public oriented_cube_t { // size=64
 	bool in_attic   () const {return  (flags & RO_FLAG_IN_ATTIC);}
 	bool is_exterior() const {return  (flags & RO_FLAG_EXTERIOR);}
 	bool rotates    () const {return  (flags & RO_FLAG_RAND_ROT);}
+	bool is_on_floor() const {return  (flags & RO_FLAG_ON_FLOOR);}
 	bool is_light_type() const {return (type == TYPE_LIGHT || (type == TYPE_LAMP && !was_expanded() && !in_attic()));} // light, or lamp not in closet
 	bool is_sink_type () const {return (type == TYPE_SINK || type == TYPE_KSINK || type == TYPE_BRSINK);}
 	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_ROBJ_TYPES);}
@@ -981,7 +982,8 @@ struct building_room_geom_t {
 	vect_room_object_t::const_iterator get_stairs_start   () const {return (objs.begin() + stairs_start );} // excludes stairs
 	bool cube_int_backrooms_walls(cube_t const &c) const;
 	// Note: these functions are all for drawing objects / adding them to the vertex list
-	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width, bool recessed, float tscale, bool use_metal_mat=0, bool draw_tops=0, float frame_height=0.0);
+	void add_tc_legs(cube_t const &c, room_object_t const &obj, colorRGBA const &color, float width, bool recessed, float tscale,
+		bool use_metal_mat=0, bool draw_tops=0, float frame_height=0.0);
 	void add_table(room_object_t const &c, float tscale, float top_dz, float leg_width);
 	void add_chair(room_object_t const &c, float tscale);
 	void add_dresser(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);

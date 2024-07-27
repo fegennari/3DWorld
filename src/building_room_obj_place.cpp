@@ -17,6 +17,7 @@ void get_stove_burner_locs(room_object_t const &stove, point locs[4]);
 void get_pool_ball_rot_matrix(room_object_t const &c, xform_matrix &rot_matrix);
 float get_cockroach_height_from_radius(float radius);
 colorRGBA get_light_color_temp(float t);
+void rotate_obj_cube(cube_t &c, cube_t const &bc, bool in_dim, bool dir);
 
 
 class door_path_checker_t {
@@ -82,7 +83,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 		min_push_out = 0.25;
 		max_push_out = 0.85;
 	}
-	else {
+	else { // normal wooden chair
 		chair_hwidth = 0.1*window_vspacing; // half width
 		min_push_out = -0.5; // varible amount of pushed in/out
 		max_push_out = 1.2;
@@ -91,7 +92,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 	min_eq(max_push_out, (min_wall_dist - chair_hwidth)/chair_hwidth);
 	if (min_push_out >= max_push_out) return 0; // not enough space
 	chair_pos[dim] += dir_sign*rgen.rand_uniform(min_push_out, max_push_out)*chair_hwidth;
-	cube_t const chair(get_cube_height_radius(chair_pos, chair_hwidth, chair_height));
+	cube_t chair(get_cube_height_radius(chair_pos, chair_hwidth, chair_height));
 	if (!is_valid_placement_for_room(chair, room, blockers, 1, room_pad)) return 0; // check proximity to doors; inc_open_doors=1
 	vect_room_object_t &objs(interior->room_geom->objs);
 
@@ -105,7 +106,20 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 		objs.emplace_back(chair, TYPE_BAR_STOOL, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE);
 	}
 	else {
-		objs.emplace_back(chair, TYPE_CHAIR, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE, chair_color);
+		unsigned flags(0);
+
+		if (place_pos.z < ground_floor_z1 && rgen.rand_float() < 0.4) { // fallen basement chair 40% of the time
+			// rotate 90 degrees about back legs bottom, tilting backwards
+			float const sz_change(chair_height - 2.0*chair_hwidth);
+			cube_t new_chair(chair);
+			rotate_obj_cube(new_chair, chair, dim, dir);
+
+			if (is_valid_placement_for_room(new_chair, room, blockers, 1, room_pad)) { // has space to fall
+				chair  = new_chair;
+				flags |= RO_FLAG_ON_FLOOR;
+			}
+		}
+		objs.emplace_back(chair, TYPE_CHAIR, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, chair_color);
 	}
 	return 1;
 }
