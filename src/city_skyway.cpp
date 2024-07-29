@@ -176,8 +176,8 @@ void skyway_t::init(cube_t const &c, bool dim_) {
 		}
 	} // for conn
 	// cut windows into long sides
-	float const window_z1(center.z1() + 0.2*height), window_z2(window_z1 + 0.25*height);
-	float const window_spacing(0.8*width), window_hwidth(0.3*window_spacing);
+	window_z1 = (center.z1() + 0.2*height);
+	float const window_z2(window_z1 + 0.25*height), window_spacing(0.8*width), window_hwidth(0.3*window_spacing);
 	vect_cube_t cut_sides, side_parts;
 
 	for (cube_t &c : sides) {
@@ -441,6 +441,12 @@ bool skyway_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_,
 	} // for s
 	if (ret) return 1;
 	return sphere_cube_int_update_pos(pos_, radius_, bc_cs, p_last, 0, cnorm); // exterior coll
+}
+
+cube_t skyway_t::get_floor_occluder() const {
+	cube_t occluder(bcube); // or start with bot
+	occluder.z2() = window_z1; // walls occlude zvals below window_z1
+	return occluder;
 }
 
 void skyway_t::get_building_signs(vector<sign_t> &signs) const {

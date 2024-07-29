@@ -8,7 +8,7 @@
 
 float pond_max_depth(0.0);
 
-extern bool enable_model3d_custom_mipmaps, player_in_skyway;
+extern bool enable_model3d_custom_mipmaps, player_in_walkway, player_in_skyway;
 extern unsigned max_unique_trees;
 extern tree_placer_t tree_placer;
 extern city_params_t city_params;
@@ -2204,7 +2204,15 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 }
 
 void city_obj_placer_t::get_occluders(pos_dir_up const &pdu, vector3d const &xlate, vect_cube_t &occluders) const {
-	if (dividers.empty()) return; // dividers are currently the only occluders
+	if (player_in_skyway && skyway.valid) {
+		if ((skyway.bcube + xlate).contains_pt(pdu.pos)) {occluders.push_back(skyway.get_floor_occluder() + xlate);} // should always be valid?
+	}
+	if (player_in_walkway) {
+		for (walkway_t const &w : walkways) {
+			if ((w.bcube + xlate).contains_pt(pdu.pos)) {occluders.push_back(w.get_floor_occluder() + xlate); break;} // can be only one
+		}
+	}
+	if (dividers.empty()) return; // dividers are currently the only other occluders
 	float const dmax(0.25f*(X_SCENE_SIZE + Y_SCENE_SIZE)); // set far clipping plane to 1/4 a tile (currently 2.0)
 	unsigned start_ix(0);
 

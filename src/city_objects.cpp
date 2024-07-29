@@ -1445,6 +1445,12 @@ bool walkway_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_
 	} // for zval
 	return 0; // shouldn't get here
 }
+cube_t walkway_t::get_floor_occluder() const {
+	// conservative: assumes player is on the bottom floor rather than an upper floor, since the actual floor is difficult to determine
+	cube_t occluder(bcube);
+	occluder.z2() = bcube.z1() + 0.3*floor_spacing; // matches bottom window zval calculation in building_t::get_all_drawn_interior_verts()
+	return occluder;
+}
 
 // pillars
 

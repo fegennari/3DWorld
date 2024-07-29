@@ -308,6 +308,7 @@ struct walkway_t : public oriented_city_obj_t, public walkway_base_t {
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
+	cube_t get_floor_occluder() const;
 };
 
 struct pillar_t : public city_obj_t { // for walkway support
@@ -458,6 +459,7 @@ struct skyway_t : public city_obj_t {
 	};
 	bool valid=0, dim=0; // but no dir
 	unsigned num_roof_panels=1;
+	float window_z1=0.0;
 	cube_t bot, top;
 	vector<skyway_conn_t> ww_conns; // connection points to building walkways; ix envodes 2*dim + dir
 	vect_cube_t entrances, sides, steps;
@@ -469,6 +471,7 @@ struct skyway_t : public city_obj_t {
 	// Note: no pre_draw() and post_draw() because there can be only one
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
+	cube_t get_floor_occluder() const;
 	void get_building_signs(vector<sign_t> &signs) const;
 	bool are_lights_on() const;
 	void add_lights(vector3d const &xlate, cube_t &lights_bcube) const;
