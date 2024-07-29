@@ -145,7 +145,9 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, cube_t const &room, v
 	cube_t table(llc, urc);
 	if (!is_valid_placement_for_room(table, room, blockers, 0, room_pad)) return 0; // check proximity to doors and collision with blockers
 	//if (door_path_checker_t().check_door_path_blocked(table, room, table_pos.z, *this)) return 0; // optional, but we may want to allow this for kitchens and dining rooms
-	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, (is_house ? RO_FLAG_IS_HOUSE : 0), tot_light_amt, (is_round ? SHAPE_CYLIN : SHAPE_CUBE));
+	unsigned flags(is_house ? RO_FLAG_IS_HOUSE : 0);
+	if (place_pos.z < ground_floor_z1 && (rgen.rand_float() < 0.5)) {flags |= RO_FLAG_BROKEN;} // basements can have broken glass tables 50% of the time
+	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, flags, tot_light_amt, (is_round ? SHAPE_CYLIN : SHAPE_CUBE));
 	set_obj_id(objs);
 	if (max_chairs == 0) return 1; // table only
 	// maybe place some chairs around the table
@@ -4375,6 +4377,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 	// see if we can place objects on any room object top surfaces
 	for (unsigned i = objs_start; i < objs_end; ++i) { // can't iterate over objs because we modify it
 		room_object_t const &obj(objs[i]);
+		if (obj.is_on_floor()) continue; // can't place on fallen over object
 		// add place settings to kitchen and dining room tables 50% of the time
 		bool const is_table(obj.type == TYPE_TABLE);
 		bool const is_eating_table(is_table && (room.get_room_type(floor) == RTYPE_KITCHEN || room.get_room_type(floor) == RTYPE_DINING) && rgen.rand_bool());

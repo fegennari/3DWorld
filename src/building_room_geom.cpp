@@ -79,10 +79,11 @@ bool is_pool_tile_floor(room_object_t const &obj) {
 	return (pt_type == POOL_TILE_FLOOR);
 }
 
-int get_crack_tid(room_object_t const &obj, bool alpha=0) {
+// alpha: 0=apply as grayscale decal; 1=apply as alpha with opaque center (mirror); 2=apply as alpha with transparent center (glass)
+int get_crack_tid(room_object_t const &obj, int alpha=0) {
 	return get_texture_by_name(((5*obj.obj_id + 7*obj.room_id) & 1) ?
-		(alpha ? "interiors/cracked_glass2_alpha.jpg" : "interiors/cracked_glass2.jpg") :
-		(alpha ? "interiors/cracked_glass_alpha.jpg"  : "interiors/cracked_glass.jpg" ), 0, 0, 1, 0.0, 1, 1, (alpha ? 4 : 3));
+		((alpha == 2) ? "interiors/cracked_glass2_alpha_th.jpg" : (alpha ? "interiors/cracked_glass2_alpha.jpg" : "interiors/cracked_glass2.jpg")) :
+		(alpha ? "interiors/cracked_glass_alpha.jpg"  : "interiors/cracked_glass.jpg"), 0, 0, 1, 0.0, 1, 1, (alpha ? 4 : 3));
 }
 int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
 int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "interiors/crate2.jpg" : "interiors/crate.jpg");}
@@ -230,15 +231,26 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 		assert(c.shape == SHAPE_CUBE || c.shape == SHAPE_SHORT);
 		// Note: glass table top and legs won't quite match the geometry used for collision detection and queries, but it's probably close enough
 		bool const glass(c.is_glass_table()); // 50% glass top with metal base; only in houses; not dressers/desks
-		top.z1()       += (1.0 - (glass ? 0.25 : 1.0)*top_dz)*dz; // glass tables have a thinner top
-		legs_bcube.z2() = top.z1();
+		top       .z1() += (1.0 - (glass ? 0.25 : 1.0)*top_dz)*dz; // glass tables have a thinner top
+		legs_bcube.z2()  = top.z1();
 
 		if (glass) {
 			legs_bcube.expand_by_xy(-0.05*min(c.dx(), c.dy())); // inset the legs
-			colorRGBA const top_color(apply_light_color(c, table_glass_color));
-			rgeom_mat_t &mat(get_untextured_material(0, 0, 0, 1)); // no shadows + transparent
-			mat.add_cube_to_verts_untextured(top, top_color); // all faces drawn
 			add_tc_legs(legs_bcube, c, BLACK, 0.5*leg_width, 0, tscale, glass, glass, 1.0*top.dz()); // use_metal_mat=1, draw_tops=1, frame_height=nonzero
+
+			if (c.taken_level == 0) { // draw glass top surface if not taken
+				rgeom_mat_t &mat(get_untextured_material(0, 0, 0, 1)); // no shadows + transparent
+				colorRGBA const top_color(apply_light_color(c, table_glass_color));
+				mat.add_cube_to_verts_untextured(top, top_color); // all faces drawn
+
+				if (c.is_broken()) { // glass is cracked
+					cube_t crack(top);
+					crack.z1()  = top.z2();
+					crack.z2() += 0.1*top.dz(); // move up to prevent z-fighting
+					rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crack_tid(c, 2), 0.0, 0, true), 0, 0, 0, 1)); // alpha=2, unshadowed, transparent=1
+					mat.add_cube_to_verts(crack, colorRGBA(top_color, 1.0), top.get_llc(), ~EF_Z2, c.dim, (c.obj_id&1), (c.obj_id&2)); // top only; X/Y mirror based on obj_id
+				}
+			}
 		}
 		else { // wood
 			colorRGBA const color(apply_wood_light_color(c));
@@ -4430,7 +4442,7 @@ void building_room_geom_t::add_sink_water(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_crack(room_object_t const &c) { // in window? (TV and computer monitor cracks are drawn below)
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crack_tid(c), 0.0, 0), 0, 0, 1)); // unshadowed, small
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crack_tid(c), 0.0, 0, true), 0, 0, 1)); // unshadowed, small, transparent
 	mat.add_cube_to_verts(c, apply_light_color(c), all_zeros, get_face_mask(c.dim, c.dir), !c.dim, (c.obj_id&1), (c.obj_id&2)); // X/Y mirror based on obj_id
 }
 
@@ -4461,7 +4473,7 @@ void add_tv_or_monitor_screen(room_object_t const &c, rgeom_mat_t &mat, std::str
 void building_room_geom_t::add_tv_picture(room_object_t const &c) {
 	if (c.is_broken()) { // draw cracks for broken screen
 		unsigned skip_faces(get_face_mask(c.dim, c.dir)); // only the face oriented outward
-		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crack_tid(c), 0.0)));
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crack_tid(c), 0.0, 0, true))); // unshadowed, transparent
 		mat.add_cube_to_verts(get_tv_screen(c), apply_light_color(c, WHITE), c.get_llc(), skip_faces, !c.dim, (c.obj_id&1), (c.obj_id&2)); // X/Y mirror based on obj_id
 		return;
 	}
