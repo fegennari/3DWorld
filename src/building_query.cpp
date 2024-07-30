@@ -581,7 +581,7 @@ unsigned check_bed_collision(room_object_t const &c, point &pos, point const &p_
 	if (c.taken_level > 0) {--num_to_check;} // skip pillows
 	if (c.taken_level > 2) {--num_to_check;} // skip mattress
 	unsigned coll_ret(check_cubes_collision(cubes, num_to_check, pos, p_last, radius, cnorm));
-	get_tc_leg_cubes(cubes[5], 0.04, 0, cubes); // head_width=0.04; cubes[5] is not overwritten
+	get_tc_leg_cubes(cubes[5], c, 0.04, 0, cubes); // head_width=0.04; cubes[5] is not overwritten
 	coll_ret |= (check_cubes_collision(cubes, 4, pos, p_last, radius, cnorm) << 5); // check legs
 	return coll_ret;
 }
@@ -708,7 +708,7 @@ void get_pool_table_cubes(room_object_t const &c, cube_t cubes[5]) { // body + 4
 	cube_t legs_bcube(c);
 	legs_bcube.z2() -= 0.48*c.dz();
 	legs_bcube.expand_by_xy(-0.13*c.get_width()); // legs are recessed a bit, but not quite centered; should be close enough
-	get_tc_leg_cubes(legs_bcube, 0.11, 0, cubes+1);  // legs are cubes[1]:cubes[4]
+	get_tc_leg_cubes(legs_bcube, c, 0.11, 0, cubes+1);  // legs are cubes[1]:cubes[4]
 	cubes[0] = c;
 	cubes[0].z1() = cubes[1].z2(); // body starts at the top of the legs
 }
@@ -2129,7 +2129,7 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		get_bed_cubes(c, cubes);
 		cubes[3].z1() = cubes[0].z1(); // extend mattress downward to include the frame
 		lg_cubes.insert(lg_cubes.end(), cubes+1, cubes+5); // head, foot, mattress (+ frame), pillow (or should pillow be small?)
-		get_tc_leg_cubes(cubes[5], 0.04, 0, cubes); // head_width=0.04; cubes[5] is not overwritten
+		get_tc_leg_cubes(cubes[5], c, 0.04, 0, cubes); // head_width=0.04; cubes[5] is not overwritten
 		sm_cubes.insert(sm_cubes.end(), cubes, cubes+4); // legs are small
 	}
 	else if (can_use_table_coll(c)) { // objects with legs
@@ -2144,7 +2144,7 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
 		get_chair_cubes(c, cubes);
 		lg_cubes.insert(lg_cubes.end(), cubes, cubes+2); // seat, back
-		get_tc_leg_cubes(cubes[2], 0.15, 1, leg_cubes); // width=0.15
+		get_tc_leg_cubes(cubes[2], c, 0.15, 1, leg_cubes); // width=0.15
 		sm_cubes.insert(sm_cubes.end(), leg_cubes, leg_cubes+4); // legs are small
 	}
 	else if (type == TYPE_POOL_TABLE) {
@@ -2310,7 +2310,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 				cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
 				get_bed_cubes(*c, cubes);
 				if (line_int_cube_exp(p1, p2, cubes[0], expand)) return 9; // check bed frame (in case p1.z is high enough)
-				get_tc_leg_cubes(cubes[5], 0.04, 0, cubes); // head_width=0.04; cubes[5] is not overwritten
+				get_tc_leg_cubes(cubes[5], *c, 0.04, 0, cubes); // head_width=0.04; cubes[5] is not overwritten
 				if (line_int_cubes_exp(p1, p2, cubes, 4, expand)) return 9; // check legs
 			}
 			else if (can_use_table_coll(*c)) { // objects with legs
@@ -2322,7 +2322,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 				cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
 				get_chair_cubes(*c, cubes);
 				if (line_int_cube_exp(p1, p2, cubes[0], expand)) return 9; // check seat
-				get_tc_leg_cubes(cubes[2], 0.15, 1, leg_cubes); // width=0.15
+				get_tc_leg_cubes(cubes[2], *c, 0.15, 1, leg_cubes); // width=0.15
 				if (line_int_cubes_exp(p1, p2, leg_cubes, 4, expand)) return 9; // check legs
 			}
 			else if (c->type == TYPE_BCASE) {

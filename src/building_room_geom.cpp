@@ -128,19 +128,10 @@ void get_tc_leg_cubes_abs_width(cube_t const &c, float leg_width, bool recessed,
 		} // for x
 	} // for y
 }
-void get_tc_leg_cubes(cube_t const &c, float width, bool recessed, cube_t cubes[4]) {
+void get_tc_leg_cubes(cube_t const &c, room_object_t const &obj, float width, bool recessed, cube_t cubes[4]) {
 	get_tc_leg_cubes_abs_width(c, get_tc_leg_width(c, width), recessed, cubes);
-}
-void building_room_geom_t::add_tc_legs(cube_t const &c, room_object_t const &obj, colorRGBA const &color,
-	float width, bool recessed, float tscale, bool use_metal_mat, bool draw_tops, float frame_height)
-{
-	rgeom_mat_t &mat(use_metal_mat ? get_metal_material(1) : get_wood_material(tscale)); // shadowed=1, dynamic=0, small=0
-	cube_t cubes[4];
-	get_tc_leg_cubes(c, width, recessed, cubes);
-	unsigned skip_faces(draw_tops ? EF_Z1 : EF_Z12);
 
 	if (obj.is_on_floor()) { // handle legs of fallen over furniture
-		assert(frame_height == 0.0); // not supported
 		point const center(c.get_cube_center());
 		float const scale(c.dz()/c.get_sz_dim(obj.dim));
 
@@ -150,6 +141,18 @@ void building_room_geom_t::add_tc_legs(cube_t const &c, room_object_t const &obj
 			for (unsigned d = 0; d < 2; ++d) {cubes[i].d[2][d] *= scale; cubes[i].d[obj.dim][d] /= scale;}
 			cubes[i] += center;
 		}
+	}
+}
+void building_room_geom_t::add_tc_legs(cube_t const &c, room_object_t const &obj, colorRGBA const &color,
+	float width, bool recessed, float tscale, bool use_metal_mat, bool draw_tops, float frame_height)
+{
+	rgeom_mat_t &mat(use_metal_mat ? get_metal_material(1) : get_wood_material(tscale)); // shadowed=1, dynamic=0, small=0
+	cube_t cubes[4];
+	get_tc_leg_cubes(c, obj, width, recessed, cubes);
+	unsigned skip_faces(draw_tops ? EF_Z1 : EF_Z12);
+
+	if (obj.is_on_floor()) { // handle legs of fallen over furniture
+		assert(frame_height == 0.0); // not supported
 		skip_faces = 0; // leg ends may be visible; conservative
 	}
 	point const llc(c.get_llc());
@@ -186,7 +189,7 @@ void get_table_cubes(room_object_t const &c, cube_t cubes[5]) {
 	top.z1() += (is_desk ? 0.85 : (is_dns ? 0.12 : 0.88))*c.dz();
 	legs_bcube.z2() = top.z1();
 	cubes[0] = top;
-	get_tc_leg_cubes(legs_bcube, (is_desk ? 0.06 : (is_dns ? 0.10 : 0.08)), 1, (cubes+1)); // legs are inexact for glass tables
+	get_tc_leg_cubes(legs_bcube, c, (is_desk ? 0.06 : (is_dns ? 0.10 : 0.08)), 1, (cubes+1)); // legs are inexact for glass tables
 }
 
 colorRGBA const table_glass_color(0.7, 1.0, 0.85, 0.25); // greenish tint, semi transparent
