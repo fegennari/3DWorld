@@ -639,6 +639,7 @@ unsigned check_tub_collision(room_object_t const &c, point &pos, point const &p_
 	return check_cubes_collision(cubes, 5, pos, p_last, radius, cnorm);
 }
 unsigned check_bookcase_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+	if (c.is_on_floor()) return sphere_cube_int_update_pos(pos, radius, c, p_last, 0, cnorm); // fallen over
 	cube_t top, middle, back, lr[2];
 	get_bookcase_cubes(c, top, middle, back, lr);
 	cube_t const cubes[3] = {middle, lr[0], lr[1]}; // ignore top and back since they should be contained in middle
@@ -2325,7 +2326,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 				get_tc_leg_cubes(cubes[2], *c, 0.15, 1, leg_cubes); // width=0.15
 				if (line_int_cubes_exp(p1, p2, leg_cubes, 4, expand)) return 9; // check legs
 			}
-			else if (c->type == TYPE_BCASE) {
+			else if (c->type == TYPE_BCASE && !c->is_on_floor()) { // treat as a cube if fallen over
 				cube_t top, middle, back, lr[2];
 				get_bookcase_cubes(*c, top, middle, back, lr);
 				cube_t const all_cubes[5] = {top, middle, back, lr[0], lr[1]}; // probably don't need to check the top and back, but okay to do so

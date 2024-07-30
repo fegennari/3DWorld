@@ -110,7 +110,6 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 
 		if (place_pos.z < ground_floor_z1 && rgen.rand_float() < 0.4) { // fallen basement chair 40% of the time
 			// rotate 90 degrees about back legs bottom, tilting backwards
-			float const sz_change(chair_height - 2.0*chair_hwidth);
 			cube_t new_chair(chair);
 			rotate_obj_cube(new_chair, chair, dim, dir);
 
@@ -342,12 +341,24 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 		cube_t tc(c);
 		tc.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance; // increase space to add clearance
 		if (is_obj_placement_blocked(tc, room, 1) || overlaps_other_room_obj(tc, objs_start)) continue; // bad placement
-		unsigned const flags(room.has_open_wall(dim, dir) ? RO_FLAG_OPEN : 0); // flag as open if along an open wall so that the back is drawn
+		unsigned flags(room.has_open_wall(dim, dir) ? RO_FLAG_OPEN : 0); // flag as open if along an open wall so that the back is drawn
+
+		if (is_basement && rgen.rand_float() < 0.40) { // fallen bookcase 40% of the time
+			// rotate 90 degrees about front edge, tilting forward
+			cube_t cand(c);
+			rotate_obj_cube(cand, c, dim, dir);
+
+			if (!is_obj_placement_blocked(cand, room, 1) && !overlaps_other_room_obj(cand, objs_start)) { // has space to fall
+				c     = cand;
+				flags = RO_FLAG_ON_FLOOR; // and clear RO_FLAG_OPEN flag
+			}
+		}
 		objs.emplace_back(c, TYPE_BCASE, room_id, dim, !dir, flags, tot_light_amt); // Note: dir faces into the room, not the wall
 		set_obj_id(objs);
 
 		if (is_basement) { // maybe add scattered books on the floor
-			unsigned const num_books(rgen.rand() % 16); // 0-15, but many will fail to be placed
+			unsigned num_books(rgen.rand() % 16); // 0-15, but many will fail to be placed
+			if (flags & RO_FLAG_ON_FLOOR) {num_books = max(4U, 2U*num_books);} // more books on floor if bookcase has fallen over
 			
 			if (num_books > 0) {
 				float const place_dist(1.0*height);

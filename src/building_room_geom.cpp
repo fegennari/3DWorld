@@ -2943,8 +2943,15 @@ void building_room_geom_t::add_bcase_book(room_object_t const &c, cube_t const &
 void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, bool inc_text, float tscale,
 	bool no_shelves, float sides_scale, point const *const use_this_tex_origin, vect_room_object_t *books)
 {
+	bool const fallen(c.is_on_floor());
+	if (fallen && !inc_lg) return;
 	colorRGBA const color(apply_wood_light_color(c));
 	point const tex_origin(use_this_tex_origin ? *use_this_tex_origin : c.get_llc());
+
+	if (fallen) { // fallen bookcase; only draw back and sides, and no books
+		get_wood_material(tscale).add_cube_to_verts(c, color, tex_origin, EF_Z1); // skip bottom surface
+		return;
+	}
 	bool const draw_back_face(c.was_moved() || c.is_open()); // draw back face if moved or placed near an open wall
 	unsigned const skip_faces(draw_back_face ? 0 : ~get_face_mask(c.dim, !c.dir)); // skip back face, unless moved by the player and no longer against the wall
 	unsigned const skip_faces_shelves(skip_faces | get_skip_mask_for_xy(!c.dim)); // skip back face and sides
