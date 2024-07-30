@@ -827,9 +827,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (is_bathroom || is_kitchen || rgen.rand_float() < 0.8) { // 80% of the time, always in bathrooms and kitchens
 				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, (was_hung && !is_house)); // no trashcans on same wall as office whiteboard
 			}
-			if (is_bedroom || is_living || is_dining || is_play_art) {
-				add_floor_clutter_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
-			}
+			if (is_bedroom || is_living || is_dining || is_play_art) {add_floor_clutter_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
+			else if (is_basement) {add_basement_clutter_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
+
 			if (is_house && !(is_bathroom || is_kitchen || is_storage) && rgen.rand_float() < ((f > 0) ? 0.15 : 0.25)) {
 				unsigned const max_num(is_bedroom ? 1 : 2);
 				add_boxes_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, max_num); // place boxes in this room
