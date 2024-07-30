@@ -140,7 +140,7 @@ void buildings_file_err(string const &str, int &error) {
 	error = 1;
 }
 
-int building_params_t::read_building_texture(FILE *fp, string const &str, bool is_normal_map, int &error, bool check_filename) {
+int building_params_t::read_building_texture(FILE *fp, string const &str, bool is_normal_map, int &error, bool check_filename, bool *no_cracks) {
 	char strc[MAX_CHARS] = {0};
 	if (!read_str(fp, strc)) {buildings_file_err(str, error);}
 
@@ -148,7 +148,9 @@ int building_params_t::read_building_texture(FILE *fp, string const &str, bool i
 		std::cerr << "Warning: Skipping texture '" << strc << "' that can't be loaded" << endl;
 		return -1; // texture filename doesn't exist
 	}
-	int const ret(get_texture_by_name(std::string(strc), is_normal_map, tex_inv_y, get_wrap_mir()));
+	string const name(strc);
+	int const ret(get_texture_by_name(name, is_normal_map, tex_inv_y, get_wrap_mir()));
+	if (no_cracks != nullptr) {*no_cracks = (ret >= 0 && name.find("carpet") != string::npos);} // carpet floor textures have no cracks
 	//cout << "texture filename: " << str << ", ID: " << ret << endl;
 	return ret;
 }
@@ -318,6 +320,7 @@ void building_params_t::init_kw_maps() {
 	kwmb.add("gen_building_interiors",   gen_building_interiors);
 	kwmb.add("enable_rotated_room_geom", enable_rotated_room_geom);
 }
+
 bool building_params_t::parse_buildings_option(FILE *fp) {
 
 	char strc[MAX_CHARS] = {0};
@@ -376,15 +379,15 @@ bool building_params_t::parse_buildings_option(FILE *fp) {
 	// interiors
 	else if (str == "wall_tid"    ) {cur_mat.wall_tex.tid     = read_building_texture(fp, str, 0, read_error);}
 	else if (str == "wall_nm_tid" ) {cur_mat.wall_tex.nm_tid  = read_building_texture(fp, str, 1, read_error);}
-	else if (str == "floor_tid"   ) {cur_mat.floor_tex.tid    = read_building_texture(fp, str, 0, read_error);}
+	else if (str == "floor_tid"   ) {cur_mat.floor_tex.tid    = read_building_texture(fp, str, 0, read_error, 0, &cur_mat.floor_tex.no_cracks);}
 	else if (str == "floor_nm_tid") {cur_mat.floor_tex.nm_tid = read_building_texture(fp, str, 1, read_error);}
 	else if (str == "ceil_tid"    ) {cur_mat.ceil_tex.tid     = read_building_texture(fp, str, 0, read_error);}
 	else if (str == "ceil_nm_tid" ) {cur_mat.ceil_tex.nm_tid  = read_building_texture(fp, str, 1, read_error);}
-	else if (str == "house_floor_tid"   ) {cur_mat.house_floor_tex.tid    = read_building_texture(fp, str, 0, read_error);}
+	else if (str == "house_floor_tid"   ) {cur_mat.house_floor_tex.tid    = read_building_texture(fp, str, 0, read_error, 0, &cur_mat.house_floor_tex.no_cracks);}
 	else if (str == "house_floor_nm_tid") {cur_mat.house_floor_tex.nm_tid = read_building_texture(fp, str, 1, read_error);}
 	else if (str == "house_ceil_tid"    ) {cur_mat.house_ceil_tex.tid     = read_building_texture(fp, str, 0, read_error);}
 	else if (str == "house_ceil_nm_tid" ) {cur_mat.house_ceil_tex.nm_tid  = read_building_texture(fp, str, 1, read_error);}
-	else if (str == "basement_floor_tid"   ) {cur_mat.basement_floor_tex.tid    = read_building_texture(fp, str, 0, read_error);}
+	else if (str == "basement_floor_tid") {cur_mat.basement_floor_tex.tid = read_building_texture(fp, str, 0, read_error, 0, &cur_mat.basement_floor_tex.no_cracks);}
 	else if (str == "basement_floor_nm_tid") {cur_mat.basement_floor_tex.nm_tid = read_building_texture(fp, str, 1, read_error);}
 	// specular
 	else if (str == "side_specular" ) {read_building_mat_specular(fp, str, cur_mat.side_tex,  read_error);}
@@ -415,7 +418,6 @@ bool building_params_t::parse_buildings_option(FILE *fp) {
 	}
 	return !read_error;
 }
-
 
 void building_params_t::add_cur_mat() {
 	unsigned const mat_ix(materials.size());

@@ -106,6 +106,7 @@ void tid_nm_pair_t::set_gl(tid_nm_pair_dstate_t &state) const {
 	float const e_val(get_emissive_val());
 	if (e_val     > 0.0) {state.s.add_uniform_float("emissive_scale", e_val);} // enable emissive
 	if (shininess > 0  ) {state.s.set_specular_color(spec_color.get_c3(), shininess);} // colored specular
+	if (no_cracks && state.crack_weight > 0.0) {state.s.add_uniform_float("crack_weight", 0.0);}
 }
 void tid_nm_pair_t::unset_gl(tid_nm_pair_dstate_t &state) const {
 	if (tid == REFLECTION_TEXTURE_ID && room_mirror_ref_tid != 0) {state.s.make_current(); return;}
@@ -113,6 +114,7 @@ void tid_nm_pair_t::unset_gl(tid_nm_pair_dstate_t &state) const {
 	if (has_normal_map) {bind_default_flat_normal_map();} // reset back to flat normal map
 	if (get_emissive_val() > 0.0) {state.s.add_uniform_float("emissive_scale", 0.0);} // disable emissive
 	if (shininess          > 0  ) {state.s.clear_specular();} // clear specular
+	if (no_cracks && state.crack_weight > 0.0) {state.s.add_uniform_float("crack_weight", state.crack_weight);} // restore original value
 }
 void tid_nm_pair_t::toggle_transparent_windows_mode() { // hack
 	if      (tid == BLDG_WINDOW_TEX    ) {tid = BLDG_WIND_TRANS_TEX;}
@@ -1344,8 +1346,8 @@ public:
 			i->draw_all_geom(state, shadow_only, direct_draw_no_vbo, (use_exclude ? exclude : nullptr));
 		}
 	}
-	void draw_tile(shader_t &s, unsigned tile_id, bool shadow_only=0) {
-		tid_nm_pair_dstate_t state(s);
+	void draw_tile(shader_t &s, unsigned tile_id, bool shadow_only=0, float crack_weight=0.0) {
+		tid_nm_pair_dstate_t state(s, 0, crack_weight); // no_set_texture=0
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_geom_tile(state, tile_id, shadow_only);}
 	}
 	void draw_block(shader_t &s, unsigned ix, bool shadow_only, vertex_range_t const *const exclude=nullptr) {
@@ -3535,7 +3537,6 @@ public:
 					float const gdist_sq(p2p_dist_sq(camera_bs, grid_bcube.closest_pt(camera_bs)));
 
 					if (!reflection_pass && gdist_sq > rgeom_clear_dist_sq && g->has_room_geom) { // need to clear room geom
-						//highres_timer_t timer("Clear Room Geom");
 						for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {(*i)->get_building(bi->ix).clear_room_geom();}
 						g->has_room_geom = 0;
 					}
@@ -3543,7 +3544,7 @@ public:
 					if (!building_grid_visible(xlate, grid_bcube)) continue; // VFC
 					if (is_first_tile) {(*i)->ensure_interior_geom_vbos();} // we need the interior geom at this point, even if it's the reflection pass
 					if (crack_damage > 0.0) {s.add_uniform_float("crack_weight", crack_damage);} // crack damage for interior
-					(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()));
+					(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()), 0, crack_damage); // shadow_only=0
 					// iterate over nearby buildings in this tile and draw interior room geom, generating it if needed
 					if (gdist_sq > rgeom_draw_dist_sq) continue; // too far
 					if (crack_damage > 0.0) {s.add_uniform_float("crack_weight", 0.0);} // no crack damage for room objects

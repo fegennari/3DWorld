@@ -199,9 +199,10 @@ typedef vector<city_zone_t> vect_city_zone_t;
 struct tid_nm_pair_dstate_t {
 	shader_t &s;
 	int bmm_loc=-1;
-	float bump_map_mag=1.0;
-	bool no_set_texture;
-	tid_nm_pair_dstate_t(shader_t &s_, bool no_set_texture_=0) : s(s_), no_set_texture(no_set_texture_) {}
+	float bump_map_mag=1.0, crack_weight=0.0;
+	bool no_set_texture=0;
+
+	tid_nm_pair_dstate_t(shader_t &s_, bool no_set_texture_=0, float crack_weight_=0.0) : s(s_), crack_weight(crack_weight_), no_set_texture(no_set_texture_) {}
 	void set_for_shader(float new_bump_map_mag);
 	~tid_nm_pair_dstate_t();
 };
@@ -212,9 +213,10 @@ struct tid_nm_pair_t { // size=32
 	float tscale_x=1.0, tscale_y=1.0, txoff=0.0, tyoff=0.0, emissive=0.0;
 	color_wrapper spec_color;
 	unsigned char shininess=0; // Note: spec_mag is divided by 255.0
-	bool shadowed=0; // Note: doesn't directly affect rendering, only used for uniquing/operator==()
+	bool shadowed   =0; // Note: doesn't directly affect rendering, only used for uniquing/operator==()
 	bool shadow_only=0;
 	bool transparent=0; // used to draw batched alpha blended materials last
+	bool no_cracks  =0; // for basement crack effects
 
 	tid_nm_pair_t() {}
 	tid_nm_pair_t(int tid_, float txy=1.0, bool shadowed_=0, bool transparent_=0) : tid(tid_), nm_tid(FLAT_NMAP_TEX),
@@ -239,7 +241,7 @@ struct tid_nm_pair_t { // size=32
 	colorRGBA get_avg_color () const {return texture_color(tid);}
 	tid_nm_pair_t get_scaled_version(float scale) const;
 	static bool bind_reflection_shader();
-	void set_gl(tid_nm_pair_dstate_t &state) const;
+	void   set_gl(tid_nm_pair_dstate_t &state) const;
 	void unset_gl(tid_nm_pair_dstate_t &state) const;
 	void toggle_transparent_windows_mode();
 };
@@ -364,7 +366,7 @@ struct building_params_t {
 	void restore_prev_pos_range();
 private:
 	void init_kw_maps();
-	int read_building_texture(FILE *fp, std::string const &str, bool is_normal_map, int &error, bool check_filename=0);
+	int read_building_texture(FILE *fp, std::string const &str, bool is_normal_map, int &error, bool check_filename=0, bool *no_cracks=nullptr);
 	void read_texture_and_add_if_valid(FILE *fp, std::string const &str, int &error, vector<unsigned> &tids);
 };
 
