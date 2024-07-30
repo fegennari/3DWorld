@@ -1308,6 +1308,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 		if (c->type == TYPE_POOL_TILE && c->no_coll()) continue;
 		cube_t const bc(get_true_room_obj_bcube(*c));
 		if (!sphere_cube_intersect(pos, radius, bc)) continue; // no intersection (optimization)
+		if (is_ball && c->type == TYPE_BOOK && c->dz() < 0.2*radius) continue; // large ball vs. small book on the floor: unstable, skip
 		unsigned coll_ret(0);
 		// add special handling for things like elevators and cubicles? right now these are only in office buildings, where there are no dynamic objects
 
