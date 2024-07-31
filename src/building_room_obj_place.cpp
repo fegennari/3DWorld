@@ -3783,7 +3783,8 @@ int building_t::check_valid_picture_placement(room_t const &room, cube_t const &
 	cube_t tc(c), keepout(c);
 	tc.expand_in_dim(!dim, 0.1*width); // expand slightly to account for frame
 	//keepout.z1() = zval; // extend to the floor
-	keepout.z1() -= 0.1*c.dz(); // more padding on the bottom
+	keepout.z1() -= 0.10*c.dz(); // more padding on the bottom
+	keepout.z2() += 0.05*c.dz(); // small padding on the top for the frame
 	keepout.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
 	keepout.d[dim][ dir] -= (dir ? -1.0 : 1.0)*0.5*wall_thickness; // move into wall to capture thin objects such as wall vents
 	keepout.expand_in_dim(!dim, side_clearance); // make sure there's space for the frame
