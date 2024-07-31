@@ -57,9 +57,9 @@ float get_radius_for_square_model(unsigned model_id) {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id));
 	return 0.5f*0.5f*(sz.x + sz.y)/sz.z; // assume square and take average of xsize and ysize
 }
-cube_t place_cylin_object(rand_gen_t rgen, cube_t const &place_on, float radius, float height, float dist_from_edge) {
+cube_t place_cylin_object(rand_gen_t rgen, cube_t const &place_on, float radius, float height, float dist_from_edge, bool place_at_z1=0) {
 	cube_t c;
-	gen_xy_pos_for_round_obj(c, place_on, radius, height, dist_from_edge, rgen); // place at dist_from_edge from edge
+	gen_xy_pos_for_round_obj(c, place_on, radius, height, dist_from_edge, rgen, place_at_z1); // place at dist_from_edge from edge
 	return c;
 }
 
@@ -2509,7 +2509,39 @@ void building_t::add_floor_clutter_objs(rand_gen_t rgen, room_t const &room, flo
 }
 
 void building_t::add_basement_clutter_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	// TODO: empty bottles, etc.
+	if (rgen.rand_float() > 0.35) return; // 35% of rooms have bottles on the floor
+	unsigned const num_bottles((rgen.rand() % 10) + 1); // 1-10
+	float const window_vspacing(get_window_vspace());
+	vect_room_object_t &objs(interior->room_geom->objs);
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by(-get_trim_thickness()); // add some extra padding
+	place_area.z1() = zval;
+	vect_cube_t bottles;
+	
+	for (unsigned n = 0; n < num_bottles; ++n) {
+		float const height(window_vspacing*rgen.rand_uniform(0.075, 0.12)), radius(window_vspacing*rgen.rand_uniform(0.012, 0.018));
+		if (min(place_area.dx(), place_area.dy()) < 6.0*radius) return; // room is too small to place this bottle; shouldn't get here
+		cube_t bottle(place_cylin_object(rgen, place_area, radius, height, 2.0*radius, 1)), bc(bottle); // place_at_z1=1
+		unsigned flags(RO_FLAG_NOCOLL);
+		bool dim(0), dir(0);
+
+		if (rgen.rand_float() < 0.75) { // make the bottle fallen over 75% of the time
+			dim = rgen.rand_bool();
+			dir = rgen.rand_bool();
+			float const delta(height - 2.0*radius), xy_shift((dir ? 1.0 : -1.0)*delta);
+			bottle.z2() -= delta;
+			bottle.d[dim][dir] += xy_shift;
+			bc.translate_dim(dim, 0.5*xy_shift); // recenter
+			bc.expand_by_xy(delta); // account for any rotation
+			if (!place_area.contains_cube_xy(bc)) continue;
+			flags |= RO_FLAG_RAND_ROT; // rotate into a random orientation
+		}
+		if (is_obj_placement_blocked(bc, room, 1) || overlaps_other_room_obj(bc, objs_start) || has_bcube_int(bottle, bottles)) continue; // bad placement
+		bottles.push_back(bc);
+		objs.emplace_back(bottle, TYPE_BOTTLE, room_id, dim, dir, flags, tot_light_amt, SHAPE_CYLIN);
+		objs.back().set_as_bottle(rgen.rand()); // all bottle types
+		objs.back().obj_id |= 192; // always empty - set both empty bits
+	} // for n
 }
 
 void building_t::add_laundry_basket(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t place_area) {
