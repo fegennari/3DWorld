@@ -605,9 +605,10 @@ unsigned check_table_collision(room_object_t const &c, point &pos, point const &
 	return check_cubes_collision(cubes, num, pos, p_last, radius, cnorm);
 }
 unsigned check_chair_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
-	cube_t cubes[3]; // seat, back, legs_bcube
+	cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
 	get_chair_cubes(c, cubes);
-	return check_cubes_collision(cubes, 3, pos, p_last, radius, cnorm);
+	get_tc_leg_cubes(cubes[2], c, CHAIR_LEG_WIDTH, 1, leg_cubes);
+	return (check_cubes_collision(cubes, 2, pos, p_last, radius, cnorm) | check_cubes_collision(leg_cubes, 4, pos, p_last, radius, cnorm));
 }
 
 float get_tub_water_level(room_object_t const &c);
