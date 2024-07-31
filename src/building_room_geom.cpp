@@ -1615,21 +1615,26 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	neck.d[dim][!c.dir] = cap.d[dim][c.dir] = c.d[dim][!c.dir] - dir_sign*0.08*length; // set cap thickness
 	cap.expand_in_dim(dim1, -0.006*sz[dim1]); // slightly larger radius than narrow end of neck
 	cap.expand_in_dim(dim2, -0.006*sz[dim2]); // slightly larger radius than narrow end of neck
+	float const rot_angle(c.rotates() ? (0.1*c.obj_id + PI*color.R) : 0.0);
 	// draw as a sphere
+	unsigned const verts_start(mat.itri_verts.size());
 	vector3d skip_hemi_dir(zero_vector);
 	skip_hemi_dir[dim] = -dir_sign;
 	mat.add_sphere_to_verts(sphere, color, 1, skip_hemi_dir); // low_detail=1
 	mat.add_ortho_cylin_to_verts(body, color, dim, (add_bottom && !c.dir), (add_bottom && c.dir), 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv); // bottom
 	// draw neck of bottle as a truncated cone; draw as two sided if empty
 	mat.add_ortho_cylin_to_verts(neck, color, dim, 0, 0, is_empty, 0, (c.dir ? 0.85 : 1.0), (c.dir ? 1.0 : 0.85), 1.0, 1.0, 0, bottle_ndiv); // neck
+	if (rot_angle != 0.0) {rotate_verts(mat.itri_verts, plus_z, rot_angle, c.get_cube_center(), verts_start);}
 
 	if (!is_empty) { // draw cap if nonempty
 		bool const draw_bot(c.was_expanded() && !(c.flags & RO_FLAG_ON_SRACK));
 		tid_nm_pair_t cap_tex(-1, 1.0, 0); // unshadowed
 		cap_tex.set_specular_color(cap_spec_colors[cap_color_ix], 0.8, 80.0);
 		rgeom_mat_t &cap_mat(get_material(cap_tex, 0, 0, 1)); // inc_shadows=0, dynamic=0, small=1
+		unsigned const cap_verts_start(cap_mat.itri_verts.size());
 		cap_mat.add_ortho_cylin_to_verts(cap, apply_light_color(c, cap_colors[cap_color_ix]), dim,
 			(draw_bot || c.dir), (draw_bot || !c.dir), 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv);
+		if (rot_angle != 0.0) {rotate_verts(cap_mat.itri_verts, plus_z, rot_angle, c.get_cube_center(), cap_verts_start);}
 	}
 	// add the label
 	// Note: we could add a bottom sphere to make it a capsule, then translate below the surface in -z to flatten the bottom; it wouldn't work for hoizontal bottles though
@@ -1641,7 +1646,9 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	float const tscale_add(0.123*c.obj_id); // add a pseudo-random rotation to the label texture
 	string const &texture_fn(bp.texture_fn); // select the custom label texture for each bottle type
 	rgeom_mat_t &label_mat(get_material(tid_nm_pair_t(texture_fn.empty() ? -1 : get_texture_by_name(texture_fn)), 0, 0, 1)); // unshadowed
+	unsigned const label_verts_start(label_mat.itri_verts.size());
 	label_mat.add_ortho_cylin_to_verts(body, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, tscale, 1.0, 0, bottle_ndiv, tscale_add); // draw label
+	if (rot_angle != 0.0) {rotate_verts(label_mat.itri_verts, plus_z, rot_angle, c.get_cube_center(), label_verts_start);}
 }
 
 // functions reused from snake drawing
