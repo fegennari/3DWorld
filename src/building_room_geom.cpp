@@ -285,7 +285,7 @@ void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 
 	get_material(tid_nm_pair_t(MARBLE_TEX, 1.2*tscale), 1).add_cube_to_verts(cubes[0], apply_light_color(c), c.get_llc()); // seat; all faces drawn
 	colorRGBA const color(apply_wood_light_color(c));
 	get_wood_material(tscale).add_cube_to_verts(cubes[1], color, c.get_llc(), EF_Z1); // back; skip bottom face
-	add_tc_legs(cubes[2], c, color, 0.15, 1, tscale); // legs
+	add_tc_legs(cubes[2], c, color, CHAIR_LEG_WIDTH, 1, tscale); // legs
 }
 
 room_object_t get_dresser_middle(room_object_t const &c) {

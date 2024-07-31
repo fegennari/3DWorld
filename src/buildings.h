@@ -36,6 +36,8 @@ float const DOOR_FRAME_WIDTH       = 0.07; // for door texture, relative to door
 float const EXT_BASEMENT_JOIN_DIST = 4.0; // relative to floor spacing
 float const BALCONY_PILLAR_SCALE   = 0.15; // relative to depth
 float const BASEMENT_ENTRANCE_SCALE= 0.33;
+float const CHAIR_LEG_WIDTH        = 0.15; // relative to chair width
+float const BED_HEAD_WIDTH         = 0.04; // headboard width; relative to bed width
 float const SHELF_RACK_HEIGHT_FS   = 0.85*(1.0 - FLOOR_THICK_VAL_OFFICE);
 float const DEF_NORM_BIAS_SCALE    = 10.0; // see shadow_map.part
 
