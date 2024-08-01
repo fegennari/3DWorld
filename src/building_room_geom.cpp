@@ -1615,7 +1615,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	neck.d[dim][!c.dir] = cap.d[dim][c.dir] = c.d[dim][!c.dir] - dir_sign*0.08*length; // set cap thickness
 	cap.expand_in_dim(dim1, -0.006*sz[dim1]); // slightly larger radius than narrow end of neck
 	cap.expand_in_dim(dim2, -0.006*sz[dim2]); // slightly larger radius than narrow end of neck
-	float const rot_angle(c.rotates() ? (0.1*c.obj_id + PI*color.R) : 0.0);
+	float const rot_angle(c.rotates() ? (0.1*c.obj_id + PI*c.color.R + 2.0*PI*c.color.G) : 0.0);
 	// draw as a sphere
 	unsigned const verts_start(mat.itri_verts.size());
 	vector3d skip_hemi_dir(zero_vector);
