@@ -1297,6 +1297,11 @@ cube_t get_true_obj_bcube(room_object_t const &obj) { // for player object picku
 		obj_bcube.expand_in_dim(!obj.dim, obj.get_width());
 		return obj_bcube;
 	}
+	if (obj.type == TYPE_BOTTLE && obj.rotates()) { // rotated bottle on floor; drawing doesn't perfectly match the bcube, so increase the size a bit
+		cube_t obj_bcube(obj);
+		obj_bcube.expand_by_xy(0.5*obj.min_len()); // expand by half radius
+		return obj_bcube;
+	}
 	if (is_ball_type(obj.type)) {
 		cube_t obj_bcube(obj);
 		obj_bcube.expand_by(0.25*obj.get_radius()); // make it 25% larger
