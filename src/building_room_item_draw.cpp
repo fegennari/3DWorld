@@ -244,7 +244,6 @@ void rgeom_mat_t::add_sphere_to_verts(point const &center, vector3d const &size,
 	vector<vert_norm_tc>      &verts(cached_verts[low_detail]);
 	vector<vert_norm_comp_tc> &vncs (cached_vncs [low_detail]);
 	vector<unsigned>          &ixs  (cached_ixs  [low_detail]);
-	bool const draw_hemisphere(skip_hemi_dir != zero_vector);
 	unsigned const ndiv(get_rgeom_sphere_ndiv(low_detail));
 
 	if (verts.empty()) { // not yet created, create and cache verts
@@ -268,16 +267,23 @@ void rgeom_mat_t::add_sphere_to_verts(point const &center, vector3d const &size,
 			itri_verts.emplace_back((pt + center), normal, (tr.x1 + i->t[0]*tscale[0] + ts_add), (tr.y1 + i->t[1]*tscale[1] + tt_add), cw);
 		}
 	}
-	else if (skip_hemi_dir == -plus_z) { // special case optimization when drawing the top surface only, in particular for bottles; assumes ndiv is even
+	else if (skip_hemi_dir != zero_vector) { // only draw one hemisphere; assumes skip_hemi_dir is along a primary {x, y, z} axis
 		// spheres are generated in a circle in the XY plane in the outer loop, and from top to bottom in Z in the inner loop;
 		// to draw the top half we need to draw/include the "equator" plus the first/top half of each circular band
-		unsigned const stride(ndiv+1), t_end(ndiv/2), out_stride(t_end + 1);
+		unsigned const stride(ndiv+1), t_end(ndiv/2), out_stride(t_end + 1), indices_start(indices.size());
+		bool const inv_hemi(skip_hemi_dir == plus_x || skip_hemi_dir == plus_y || skip_hemi_dir == plus_z);
+		bool const swap_x(skip_hemi_dir == plus_x || skip_hemi_dir == -plus_x), swap_y(skip_hemi_dir == plus_y || skip_hemi_dir == -plus_y);
 		assert(vncs.size() == stride*stride);
 
 		for (unsigned s = 0; s <= ndiv; ++s) { // XY circular band
 			for (unsigned t = 0; t <= t_end; ++t) { // vertical slices in Z; start in the middle; assumes ndiv is an even number
-				auto const &v(vncs[s*stride + t]);
+				auto v(vncs[s*stride + t]); // deep copy
 				unsigned const ix(itri_verts.size());
+				// rotate into correct orientation by swapping coordinates and mirroring; must apply to both the vertex and the normal
+				if (inv_hemi) {v.v.z = -v.v.z; v.n[2] = 255 - v.n[2];}
+				if (swap_x  ) {std::swap(v.v.x, v.v.z); std::swap(v.n[0], v.n[2]);}
+				if (swap_y  ) {std::swap(v.v.y, v.v.z); std::swap(v.n[1], v.n[2]);}
+				if (swap_x || swap_y) {v.v.z = -v.v.z; v.n[2] = 255 - v.n[2];}
 				itri_verts.emplace_back((v.v*size + center), v, (tr.x1 + v.t[0]*tscale[0] + ts_add), (tr.y1 + v.t[1]*tscale[1] + tt_add), cw);
 				if (t == t_end || s == ndiv) continue; // no indices added for last s or t values
 				unsigned const qixs[4] = {ix, ix+out_stride, ix+out_stride+1, ix+1};
@@ -285,6 +291,7 @@ void rgeom_mat_t::add_sphere_to_verts(point const &center, vector3d const &size,
 			} // for t
 		} // for s
 		assert(indices.back() < itri_verts.size());
+		if (inv_hemi) {std::reverse(indices.begin()+indices_start, indices.end());} // set correct winding order
 		return;
 	}
 	else { // can use vncs (norm_comps)
@@ -293,13 +300,9 @@ void rgeom_mat_t::add_sphere_to_verts(point const &center, vector3d const &size,
 		}
 	}
 	for (auto i = ixs.begin(); i != ixs.end(); i += 4) { // indices are for quads, but we want triangles, so expand them
-		if (draw_hemisphere) { // only draw one hemisphere; can drop some verts as well, but that's difficult
-			vector3d const face_normal(verts[*(i+0)].n + verts[*(i+1)].n + verts[*(i+2)].n); // use one triangle, no need to normalize
-			if (dot_product(face_normal, skip_hemi_dir) > 0.0) continue; // skip this face/quad (optimization)
-		}
 		indices.push_back(*(i+0) + ioff); indices.push_back(*(i+1) + ioff); indices.push_back(*(i+2) + ioff);
 		indices.push_back(*(i+3) + ioff); indices.push_back(*(i+0) + ioff); indices.push_back(*(i+2) + ioff);
-	} // for i
+	}
 	assert(indices.back() < itri_verts.size());
 }
 
