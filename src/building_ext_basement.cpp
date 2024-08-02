@@ -1179,7 +1179,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 			unsigned const floor_ix(0); // pass this in, or always zero?
 			unsigned added_bathroom_objs_mask(0); // unused
 			objs_added = no_boxes = add_bathroom_objs(rgen, sub_room, floor_zval, room_id, tot_light_amt, sub_objs_start, floor_ix, 1, 0, added_bathroom_objs_mask); // is_basement=1
-			room.has_mirror |= sub_room.has_mirror;
+			if (sub_room.get_has_mirror()) {room.set_has_mirror();}
 		}
 		// 2 or more rooms
 		else if (rgen.rand_bool()) { // add furnace

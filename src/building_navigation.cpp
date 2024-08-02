@@ -889,7 +889,7 @@ cube_t building_t::get_walkable_room_bounds(room_t const &room) const {
 	cube_t c(room);
 	float const half_wall_thick(0.5*get_wall_thickness());
 
-	if (room.is_hallway || room.office_floorplan) { // office building room; only shrink interior walls
+	if (room.is_hallway || room.get_office_floorplan()) { // office building room; only shrink interior walls
 		cube_t const &part(get_part_for_room(room));
 
 		for (unsigned d = 0; d < 2; ++d) {
@@ -1272,8 +1272,8 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		if (room_sel < 2 && special_rooms[room_sel] >= 0) {cand_room = special_rooms[room_sel];} else {cand_room = (rgen.rand() % interior->rooms.size());}
 		if (cand_room == (unsigned)loc.room_ix) continue;
 		room_t const &room(get_room(cand_room));
-		if (room.is_hallway      ) continue; // don't select a hallway
-		if (room.has_out_of_order) continue; // don't select a bathroom that may be out of order (not tracked per-floor)
+		if (room.is_hallway            ) continue; // don't select a hallway
+		if (room.get_has_out_of_order()) continue; // don't select a bathroom that may be out of order (not tracked per-floor)
 		// what about rooms were all doors are locked? this isn't easy to check for; it will be a surprise for the player if the person is a zombie
 		bool const is_retail(room.is_retail());
 		// allow targeting the top floor of a retail room as the path construction will route to the lowest level

@@ -898,7 +898,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 			dresser.flags |= RO_FLAG_ADJ_TOP; // flag the dresser as having an item on it so that we don't add something else that blocks or intersects the mirror
 			objs.push_back(mirror);
 			set_obj_id(objs); // for crack texture selection/orient
-			room.has_mirror = 1;
+			room.set_has_mirror();
 		}
 	}
 	// nightstand
@@ -1597,7 +1597,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 					if (count_ext_walls_for_room(room, mirror.z1()) == 1) {flags |= RO_FLAG_INTERIOR;} // flag as interior if windows are opaque glass blocks
 					objs.emplace_back(mirror, TYPE_MIRROR, room_id, sink.dim, sink.dir, flags, tot_light_amt);
 					set_obj_id(objs); // for crack texture selection/orient
-					room.has_mirror = 1;
+					room.set_has_mirror();
 				}
 			}
 		}
@@ -1863,7 +1863,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		if (ENABLE_MIRROR_REFLECTIONS && d == (unsigned)skip_stalls_side && !mirrors[!d].is_all_zeros()) continue; // select a single side if reflections are enabled
 		objs.push_back(mirrors[d]);
 		set_obj_id(objs); // for crack texture selection/orient
-		room.has_mirror = 1;
+		room.set_has_mirror();
 	}
 	room.assign_to((mens_room ? RTYPE_MENS : RTYPE_WOMENS), floor);
 	
@@ -1885,7 +1885,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 
 	if (is_cube() && rgen.rand_float() < 0.1) { // make this door/room out of order 10% of the time; only for cube buildings (others need the connectivity)
 		make_door_out_or_order(room, zval, room_id, tot_light_amt, br_door_stack_ix);
-		room.has_out_of_order = 1; // flag if any floor is out of order
+		room.set_has_out_of_order(); // flag if any floor is out of order
 	}
 	return 1;
 }

@@ -213,7 +213,7 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 		if (!r->contains_pt(camera_bs)) continue; // not the room the camera is in
 		unsigned const room_ix(r - interior->rooms.begin());
 		camera_room_ix = room_ix;
-		if (!r->has_mirror) continue; // no mirror in this room stack
+		if (!r->get_has_mirror()) continue; // no mirror in this room stack
 		if (find_mirror_in_room((room_ix & 255), xlate, dmin_sq, 1)) return 1; // same_room=1
 	} // for r
 	if (camera_room_ix < 0) return 0; // camera not in a room

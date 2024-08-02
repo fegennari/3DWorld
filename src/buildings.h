@@ -1229,9 +1229,17 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 unsigned const NUM_RTYPE_SLOTS = 8; // enough for houses; hard max is 8 so that a uint8_t bit mask can be used
 inline unsigned wrap_room_floor(unsigned floor) {return min(floor, NUM_RTYPE_SLOTS-1U);}
 
-struct room_t : public cube_t { // size=64; can be reduced by turning some of these booleans into uint8_t flags
-	bool has_center_stairs=0, no_geom=0, is_hallway=0, is_office=0, office_floorplan=0, is_sec_bldg=0, has_skylight=0, is_single_floor=0, is_entry=0; // set during floorplanning
-	bool has_mirror=0, has_out_of_order=0; // set during object placement
+// room flags
+unsigned const ROOM_FLAG_CSTAIRS  = 0x01; // has center stairs
+unsigned const ROOM_FLAG_OFF_FP   = 0x02; // has office building floorplan
+unsigned const ROOM_FLAG_SKYLIGHT = 0x04; // has a ceiling skylight
+unsigned const ROOM_FLAG_IS_ENTRY = 0x08; // is unit entryway room
+unsigned const ROOM_FLAG_MIRROR   = 0x10; // contains a mirror
+unsigned const ROOM_FLAG_HAS_OOO  = 0x20; // has out-of-order sign
+
+struct room_t : public cube_t { // size=56
+	bool no_geom=0, is_hallway=0, is_office=0, is_sec_bldg=0, is_single_floor=0;
+	uint8_t flags=0;
 	uint8_t has_stairs=0; // per-floor bit mask; always set to 255 for stairs that span the entire room
 	uint8_t has_elevator=0; // number of elevators, usually either 0 or 1
 	uint8_t interior=0; // 0=not interior (has windows), 1=interior, 2=extended basement, {3,4}=extended basement connector, dim=interior-3
@@ -1255,11 +1263,11 @@ struct room_t : public cube_t { // size=64; can be reduced by turning some of th
 	room_type get_room_type (unsigned floor) const {return rtype[wrap_room_floor(floor)];}
 	bool is_rtype_locked    (unsigned floor) const {return (rtype_locked & (1 << wrap_room_floor(floor)));}
 	bool is_lit_on_floor    (unsigned floor) const {return (lit_by_floor & (1ULL << (floor&31)));}
-	bool has_stairs_on_floor(unsigned floor) const {return (has_center_stairs || (has_stairs & (1U << min(floor, 7U))));} // floors >= 7 are treated as the top floor
+	bool has_stairs_on_floor(unsigned floor) const {return (get_has_center_stairs() || (has_stairs & (1U << min(floor, 7U))));} // floors >= 7 are treated as the top floor
 	bool is_garage_or_shed  (unsigned floor) const {return (is_sec_bldg || get_room_type(floor) == RTYPE_GARAGE || get_room_type(floor) == RTYPE_SHED);}
 	bool is_ext_basement     () const {return (interior >= 2);}
 	bool is_ext_basement_conn() const {return (interior >= 3);}
-	bool inc_half_walls      () const {return (is_hallway || office_floorplan || is_ext_basement());} // hallway, office, or extended basement
+	bool inc_half_walls      () const {return (is_hallway || get_office_floorplan() || is_ext_basement());} // hallway, office, or extended basement
 	bool is_parking          () const {return (get_room_type(0) == RTYPE_PARKING  );}
 	bool is_backrooms        () const {return (get_room_type(0) == RTYPE_BACKROOMS);}
 	bool is_retail           () const {return (get_room_type(0) == RTYPE_RETAIL   );}
@@ -1269,6 +1277,19 @@ struct room_t : public cube_t { // size=64; can be reduced by turning some of th
 	float get_light_amt() const;
 	unsigned get_floor_containing_zval(float zval, float floor_spacing) const {return (is_single_floor ? 0 : unsigned((zval - z1())/floor_spacing));}
 	room_type get_room_type_for_zval  (float zval, float floor_spacing) const {return get_room_type(get_floor_containing_zval(zval, floor_spacing));}
+
+	void set_has_center_stairs() {flags |= ROOM_FLAG_CSTAIRS ;}
+	void set_office_floorplan () {flags |= ROOM_FLAG_OFF_FP  ;}
+	void set_has_skylight     () {flags |= ROOM_FLAG_SKYLIGHT;}
+	void set_is_entryway      () {flags |= ROOM_FLAG_IS_ENTRY;}
+	void set_has_mirror       () {flags |= ROOM_FLAG_MIRROR  ;}
+	void set_has_out_of_order () {flags |= ROOM_FLAG_HAS_OOO ;}
+	bool get_has_center_stairs() const {return (flags & ROOM_FLAG_CSTAIRS );}
+	bool get_office_floorplan () const {return (flags & ROOM_FLAG_OFF_FP  );}
+	bool get_has_skylight     () const {return (flags & ROOM_FLAG_SKYLIGHT);}
+	bool get_is_entryway      () const {return (flags & ROOM_FLAG_IS_ENTRY);}
+	bool get_has_mirror       () const {return (flags & ROOM_FLAG_MIRROR  );}
+	bool get_has_out_of_order () const {return (flags & ROOM_FLAG_HAS_OOO );}
 }; // room_t
 
 struct extb_room_t : public cube_t { // extended basement room candidate

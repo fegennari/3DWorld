@@ -1211,7 +1211,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		room.copy_from(living); // ext_sides doesn't change
 		calc_room_ext_sides(room); // update since ext_sides may have changed
 		room.assign_all_to(is_hotel() ? RTYPE_COMMON : RTYPE_LIVING); // public first; common room is similar to living room but without the table
-		room.is_entry = 1;
+		room.set_is_entryway();
 		unsigned const living_rid(new_rooms_start), bed_rid(add_room(bed, part_id)), bath_rid(add_room(bath, part_id));
 		get_room(bed_rid ).assign_all_to(RTYPE_BED);
 		get_room(bath_rid).assign_all_to(make_small_apt ? RTYPE_KITCHEN : RTYPE_BATH); // small apartment uses a kitchen rather than a bathroom for this room
@@ -1309,7 +1309,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		room.copy_from(entry);
 		calc_room_ext_sides(room); // update since ext_sides may have changed
 		room.assign_all_to(RTYPE_ENTRY);
-		room.is_entry = 1;
+		room.set_is_entryway();
 		unsigned const bed_rid(add_room(bed, part_id)), bath_rid(add_room(bath, part_id)), kitchen_rid(add_room(kitchen, part_id)), living_rid(add_room(living, part_id));
 		get_room(bed_rid    ).assign_all_to(RTYPE_BED    );
 		get_room(bath_rid   ).assign_all_to(RTYPE_BATH   );
@@ -1355,7 +1355,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 	else {assert(0);} // unsupported building type
 
 	for (auto r = rooms.begin()+new_rooms_start; r != rooms.end(); ++r) {
-		r->office_floorplan = 1;
+		r->set_office_floorplan();
 		r->unit_id = next_unit_id;
 	}
 	++next_unit_id;
@@ -1525,7 +1525,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			stairs.expand_in_dim(dim, -0.5*shrink); // centered in the hallway
 		}
 		room.has_stairs = 255; // stairs on all floors
-		room.has_center_stairs = 1;
+		room.set_has_center_stairs();
 		stairs_cut = stairs;
 		stairs_dim = long_dim;
 	}
@@ -1692,7 +1692,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					assert(cutout.is_strictly_normalized());
 					stairs_cut      = cutout;
 					room.has_stairs = 255; // stairs on all floors
-					if (!against_wall) {room.has_center_stairs = 1;}
+					if (!against_wall) {room.set_has_center_stairs();}
 					if (use_hallway || !pri_hall.is_all_zeros()) {room.no_geom = 1;} // no geom in an office with stairs for buildings with hallways
 				}
 				break; // success - done
@@ -2621,7 +2621,7 @@ unsigned building_t::add_room(cube_t const &room, unsigned part_id, unsigned num
 	assert(room.is_strictly_normalized());
 	room_t r(room, part_id, num_lights, is_hallway, is_office, is_sec_bldg);
 	calc_room_ext_sides(r);
-	if (check_skylight_intersection(room)) {r.has_skylight = 1;}
+	if (check_skylight_intersection(room)) {r.set_has_skylight();}
 	unsigned const room_id(interior->rooms.size());
 	interior->rooms.push_back(r);
 	return room_id;

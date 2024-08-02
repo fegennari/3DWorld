@@ -246,7 +246,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			float const room_size(min(dx, dy)); // normalized to hallway width
 			light_size = max(0.06f*room_size, 0.67f*def_light_size);
 		}
-		else if (r->is_office || r->has_skylight) { // more lights for large offices; light size varies by office size; parking garages are handled later
+		else if (r->is_office || r->get_has_skylight()) { // more lights for large offices; light size varies by office size; parking garages are handled later
 			light_density = 0.5;
 			float const room_size(dx + dy); // normalized to office size
 			light_size = max(0.015f*room_size, 0.67f*def_light_size);
@@ -570,7 +570,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					r->assign_to(RTYPE_LOUNGE, f);
 					added_obj = make_public = 1;
 				}
-				else if (r->is_entry) { // calculate full unit bounds and check for any stairs or exterior doors so that we can flag as public
+				else if (r->get_is_entryway()) { // calculate full unit bounds and check for any stairs or exterior doors so that we can flag as public
 					cube_t unit_bounds(*r);
 					for (auto r2 = r+1; r2 != rooms.end() && r2->unit_id == r->unit_id; ++r2) {unit_bounds.union_with_cube(*r2);}
 					set_cube_zvals(unit_bounds, z, (z + floor_height));
@@ -629,7 +629,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 				else {cout << TXT(r->str()) << TXTi(rtype) << endl; assert(0);} // unsupported room type
 
-				if (r->is_entry) { // this is the room that has the front entry door connected to the hallway
+				if (r->get_is_entryway()) { // this is the room that has the front entry door connected to the hallway
 					if (!not_private_room) { // no number if this is a public room connected to a walkway
 						unsigned room_num(100*(f+1) + numbered_rooms_seen);
 						add_door_sign(std::to_string(room_num), *r, room_center.z, room_id, tot_light_amt); // Note: sign text is always unique
@@ -712,7 +712,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			// Note: added_obj is not set to 1 below this point
 			if (is_house && !is_living && (added_tc || added_desk) && !is_kitchen && is_entry_floor) {
 				// don't add second living room unless we added a kitchen and have enough rooms
-				if ((!added_living && !r->has_center_stairs && rooms.size() >= 8 && (added_kitchen_mask || rgen.rand_bool())) || is_room_an_exit(*r, room_id, room_center.z)) {
+				if ((!added_living && !r->get_has_center_stairs() && rooms.size() >= 8 && (added_kitchen_mask || rgen.rand_bool())) || is_room_an_exit(*r, room_id, room_center.z)) {
 					// add a living room on the ground floor if it has a table or desk but isn't a kitchen
 					if (add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {
 						is_living = 1;
@@ -2923,9 +2923,9 @@ void building_t::add_doorbell_lamp_and_porch_items(tquad_with_ix_t const &door, 
 
 room_t::room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool is_office_, bool is_sec_bldg_) :
 	cube_t(c), no_geom(is_hallway_), // no geom in hallways
-	is_hallway(is_hallway_), is_office(is_office_), office_floorplan(is_office_), is_sec_bldg(is_sec_bldg_), // secondary buildings are always a single floor
-	is_single_floor(is_sec_bldg), part_id(p), num_lights(nl)
+	is_hallway(is_hallway_), is_office(is_office_), is_sec_bldg(is_sec_bldg_), is_single_floor(is_sec_bldg), part_id(p), num_lights(nl) // sec buildings always a single floor
 {
+	if (is_office_) {set_office_floorplan();}
 	if      (is_sec_bldg) {assign_all_to(RTYPE_GARAGE);} // or RTYPE_SHED - will be set later
 	else if (is_hallway)  {assign_all_to(RTYPE_HALL  );}
 	else if (is_office)   {assign_all_to(RTYPE_OFFICE);}
@@ -2960,7 +2960,7 @@ void room_t::init_pre_populate(bool is_first_pass) {
 			if (!(floors_pre_assigned & (1 << f))) {rtype[f] = RTYPE_NOTSET;}
 		}
 	} // for f
-	has_mirror   = has_out_of_order = 0;
+	flags &= ~(ROOM_FLAG_MIRROR | ROOM_FLAG_HAS_OOO); // clear mirror and out_of_order flags set by object placement
 	lit_by_floor = 0; // reset
 }
 

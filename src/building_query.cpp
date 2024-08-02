@@ -1134,7 +1134,7 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	float const floor_spacing(get_window_vspace());
 	if (room.is_backrooms() && room.dz() > 1.5*floor_spacing)     return 0; // multi-floor backrooms: assume lit as this is too difficult to determine
 	unsigned const floor_ix(room.is_single_floor ? 0 : max(0.0f, (pos.z - room.z1()))/floor_spacing);
-	if (room.has_skylight && pos.z > (room.z2() - floor_spacing)) return 0; // top floor of room with a skylight
+	if (room.get_has_skylight() && pos.z > (room.z2() - floor_spacing)) return 0; // top floor of room with a skylight
 	if (room.has_elevator || (!room.is_ext_basement() && room.has_stairs_on_floor(floor_ix))) return 0; // assume light can come from stairs (not in ext basement) or open elevator
 
 	if (pos.z > ground_floor_z1 && (pos.z < ground_floor_z1 + floor_spacing || !walkways.empty())) { // on the ground floor or have walkways

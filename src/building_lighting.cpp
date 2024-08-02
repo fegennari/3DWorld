@@ -1959,7 +1959,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (!force_smap_update) {
 			bool check_dynamic_shadows(camera_near_building);
 			// handle people visible through skylights when player is above and light is on the top floor of a room with a skylight
-			check_dynamic_shadows |= (room.has_skylight && camera_bs.z > lpos.z && lpos.z > (room.z2() - 0.5*window_vspacing));
+			check_dynamic_shadows |= (room.get_has_skylight() && camera_bs.z > lpos.z && lpos.z > (room.z2() - 0.5*window_vspacing));
 			
 			if (check_dynamic_shadows) {
 				float const dshadow_radius((is_in_attic ? 1.0 : 0.8)*light_radius); // use full light radius for attics since they're more open
@@ -2064,7 +2064,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			bool room_has_stairs(0);
 
 			for (room_t const &room : interior->rooms) {
-				if (room.has_skylight && room.intersects(sl)) {
+				if (room.get_has_skylight() && room.intersects(sl)) {
 					lit_area.union_with_cube_xy(room);
 					unsigned const num_floors(calc_num_floors_room(room, window_vspacing, 2.0*fc_thick));
 					room_has_stairs |= room.has_stairs_on_floor(num_floors - 1); // check for stairs on top floor
