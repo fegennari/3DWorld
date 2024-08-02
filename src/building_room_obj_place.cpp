@@ -2556,6 +2556,16 @@ void building_t::add_basement_clutter_objs(rand_gen_t rgen, room_t const &room, 
 			set_obj_id(objs);
 		} // for n
 	}
+	if (rgen.rand_float() < 0.65) { // add broken glass on the floor 65% of the time; often fails to be placed
+		float const glass_zval(zval + 1.1*get_flooring_thick()); // slightly above the flooring/rug to avoid z-fighting
+		float const radius(rgen.rand_uniform(0.08, 0.12)*min(floor_spacing, min_place_sz));
+		cube_t const bc(place_cylin_object(rgen, place_area, radius, 0.1*radius, 1.5*radius, 1)); // place_at_z1=1
+		
+		if (!is_obj_placement_blocked(bc, room, 1) && !overlaps_other_room_obj(bc, objs_start) && !has_bcube_int(bc, avoid)) {
+			avoid.push_back(bc);
+			add_broken_glass_decal(point(bc.xc(), bc.yc(), glass_zval), radius, rgen);
+		}
+	}
 }
 
 void building_t::add_laundry_basket(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t place_area) {

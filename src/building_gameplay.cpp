@@ -2447,9 +2447,13 @@ void building_t::add_broken_glass_to_floor(point const &pos, float radius) {
 	float zval(pos.z);
 	if (!get_zval_of_floor(pos, radius, zval)) return; // no suitable floor found
 	static rand_gen_t rgen;
+	add_broken_glass_decal(point(pos.x, pos.y, zval), radius, rgen);
+}
+void building_t::add_broken_glass_decal(point const &pos, float radius, rand_gen_t &rgen) {
+	assert(has_room_geom());
 	float const angle(TWO_PI*rgen.rand_float()); // use a random rotation
 	vector3d const v1(sin(angle), cos(angle), 0.0), v2(cross_product(v1, plus_z));
-	interior->room_geom->decal_manager.glass_qbd.add_quad_dirs(point(pos.x, pos.y, zval), v1*radius, v2*radius, WHITE, plus_z); // Note: never cleared
+	interior->room_geom->decal_manager.glass_qbd.add_quad_dirs(pos, v1*radius, v2*radius, WHITE, plus_z); // Note: never cleared
 }
 
 // sound/audio tracking

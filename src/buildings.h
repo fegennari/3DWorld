@@ -2259,6 +2259,7 @@ private:
 	void register_player_death(point const &camera_bs);
 	void add_blood_decal(point const &pos, float radius, colorRGBA const &color=WHITE);
 	void add_broken_glass_to_floor(point const &pos, float radius);
+	void add_broken_glass_decal(point const &pos, float radius, rand_gen_t &rgen);
 	void play_tape_sound(point const &sound_pos, float sound_gain, bool tape_break) const;
 	bool is_obj_above_ramp(cube_t const &c) const;
 	bool is_room_above_ramp(cube_t const &room, float zval) const;
