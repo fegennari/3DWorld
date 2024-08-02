@@ -889,6 +889,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		assert(!obj.is_broken());
 		obj.flags  |= RO_FLAG_BROKEN;
 		sound_scale = 1.0; // loud sound, but no update of draw data
+		interior->room_geom->modified_by_player = 1;
 	}
 	else {assert(0);} // unhandled type
 	if (update_draw_data) {interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);}
