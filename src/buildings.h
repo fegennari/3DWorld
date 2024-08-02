@@ -1226,12 +1226,12 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 	void move_closest_in_dir_to_front(float zval, bool dir);
 };
 
-unsigned const NUM_RTYPE_SLOTS = 8; // enough for houses; hard max is 8
+unsigned const NUM_RTYPE_SLOTS = 8; // enough for houses; hard max is 8 so that a uint8_t bit mask can be used
 inline unsigned wrap_room_floor(unsigned floor) {return min(floor, NUM_RTYPE_SLOTS-1U);}
 
-struct room_t : public cube_t { // size=60; can be reduced to 52 by turning 8 of these booleans into uint8_t flags
-	bool has_center_stairs=0, no_geom=0, is_hallway=0, is_office=0, office_floorplan=0, is_sec_bldg=0;
-	bool has_mirror=0, has_skylight=0, is_single_floor=0, has_out_of_order=0, is_entry=0;
+struct room_t : public cube_t { // size=64; can be reduced by turning some of these booleans into uint8_t flags
+	bool has_center_stairs=0, no_geom=0, is_hallway=0, is_office=0, office_floorplan=0, is_sec_bldg=0, has_skylight=0, is_single_floor=0, is_entry=0; // set during floorplanning
+	bool has_mirror=0, has_out_of_order=0; // set during object placement
 	uint8_t has_stairs=0; // per-floor bit mask; always set to 255 for stairs that span the entire room
 	uint8_t has_elevator=0; // number of elevators, usually either 0 or 1
 	uint8_t interior=0; // 0=not interior (has windows), 1=interior, 2=extended basement, {3,4}=extended basement connector, dim=interior-3
@@ -1239,6 +1239,7 @@ struct room_t : public cube_t { // size=60; can be reduced to 52 by turning 8 of
 	uint8_t part_id=0, num_lights=0, rtype_locked=0;
 	uint8_t unit_id=0; // for apartments and hotels
 	uint8_t open_wall_mask=0; // {dim x dir}
+	uint8_t floors_pre_assigned=0; // one per NUM_RTYPE_SLOTS
 	room_type rtype[NUM_RTYPE_SLOTS]; // this applies to the first few floors because some rooms can have variable per-floor assignment
 	uint32_t lit_by_floor=0; // used for AI placement; 32 floor is enough for most buildings
 	float light_intensity=0.0; // due to room lights, if turned on
@@ -1264,6 +1265,7 @@ struct room_t : public cube_t { // size=60; can be reduced to 52 by turning 8 of
 	bool is_retail           () const {return (get_room_type(0) == RTYPE_RETAIL   );}
 	bool is_apt_or_hotel_room() const {return (unit_id > 0);}
 	bool has_room_of_type(room_type type) const;
+	void init_pre_populate(bool is_first_pass);
 	float get_light_amt() const;
 	unsigned get_floor_containing_zval(float zval, float floor_spacing) const {return (is_single_floor ? 0 : unsigned((zval - z1())/floor_spacing));}
 	room_type get_room_type_for_zval  (float zval, float floor_spacing) const {return get_room_type(get_floor_containing_zval(zval, floor_spacing));}
@@ -1498,6 +1500,7 @@ struct building_interior_t {
 	cube_t basement_ext_bcube;
 	draw_range_t draw_range;
 	unsigned extb_walls_start[2] = {0,0};
+	unsigned gen_room_details_pass=0;
 	int garage_room=-1, ext_basement_hallway_room_id=-1, ext_basement_door_stack_ix=-1, last_active_door_ix=-1, security_room_ix=-1;
 	uint8_t furnace_type=FTYPE_NONE, attic_type=ATTIC_TYPE_RAFTERS;
 	bool door_state_updated=0, is_unconnected=0, ignore_ramp_placement=0, placed_people=0, elevators_disabled=0, attic_access_open=0, has_backrooms=0, elevator_dir=0;

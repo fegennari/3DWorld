@@ -166,7 +166,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	float const light_thick(0.025*window_vspacing), def_light_size(0.1*window_vspacing), doorway_width(get_doorway_width());
 	interior->room_geom->obj_scale = window_vspacing; // used to scale room object textures
 	unsigned tot_num_rooms(0), num_bathrooms(0), num_bedrooms(0), num_storage_rooms(0);
-	for (auto r = rooms.begin(); r != rooms.end(); ++r) {tot_num_rooms += calc_num_floors_room(*r, window_vspacing, floor_thickness);}
+	
+	for (auto r = rooms.begin(); r != rooms.end(); ++r) {
+		tot_num_rooms += calc_num_floors_room(*r, window_vspacing, floor_thickness);
+		r->init_pre_populate(interior->gen_room_details_pass == 0);
+	}
+	++interior->gen_room_details_pass;
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
 	bool const residential(is_residential());
 	float const extra_bathroom_prob((is_house ? 2.0 : 1.0)*0.02*min((int(tot_num_rooms) - 4), 20));
@@ -2925,7 +2930,6 @@ room_t::room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool 
 	else if (is_hallway)  {assign_all_to(RTYPE_HALL  );}
 	else if (is_office)   {assign_all_to(RTYPE_OFFICE);}
 	else if (has_stairs)  {assign_all_to(RTYPE_STAIRS);} // not really correct since has_stairs is now a per-floor bit flag, but this will likely be overwritten later anyway
-	else                  {assign_all_to(RTYPE_NOTSET, 0);} // locked=0
 }
 void room_t::assign_all_to(room_type rt, bool locked) {
 	for (unsigned n = 0; n < NUM_RTYPE_SLOTS; ++n) {rtype[n] = rt;}
@@ -2944,5 +2948,19 @@ bool room_t::has_room_of_type(room_type type) const {
 		if (rtype[n] == type) return 1;
 	}
 	return 0;
+}
+void room_t::init_pre_populate(bool is_first_pass) {
+	if (is_first_pass) {assert(floors_pre_assigned == 0);}
+
+	for (unsigned f = 0; f < NUM_RTYPE_SLOTS; ++f) {
+		if (is_first_pass) { // check if pre-assigned during floorplanning
+			if (rtype[f] != RTYPE_NOTSET) {floors_pre_assigned |= (1 << f);}
+		}
+		else { // repeat pass - reset room assignments if not pre-assigned during floorplanning
+			if (!(floors_pre_assigned & (1 << f))) {rtype[f] = RTYPE_NOTSET;}
+		}
+	} // for f
+	has_mirror   = has_out_of_order = 0;
+	lit_by_floor = 0; // reset
 }
 
