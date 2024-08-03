@@ -1497,8 +1497,9 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 	for (room_object_t const &i : interior->room_geom->objs) { // check all objects placed so far
 		if (i.type == TYPE_WHEATER) { // water heaters are special because they take cold water and return hot water
 			// maybe skip if in the basement, since this must connect directly to pipes rather than through a riser;
-			// this can happen for houses (which don't have parking garages or pipes), but currently not for office buildings
-			if (!inc_basement_wheaters && i.z1() < ground_floor_z1) continue;
+			// this can happen for houses (which don't have parking garages or pipes), but currently not for office buildings;
+			// also skip water heaters in the extended basement (not inside basement)
+			if (i.z1() < ground_floor_z1 && (!inc_basement_wheaters || !basement.intersects(i))) continue;
 			water_heaters.push_back(i);
 			continue;
 		}
@@ -1703,17 +1704,18 @@ void building_t::add_basement_electrical_house(rand_gen_t &rgen) {
 	assert(has_room_geom());
 	float const tot_light_amt = 1.0; // ???
 	float const obj_expand(0.5*get_wall_thickness());
+	cube_t const &basement(get_basement());
 	vect_cube_t obstacles, walls;
 
 	for (unsigned d = 0; d < 2; ++d) { // add basement walls
 		for (cube_t const &wall : interior->walls[d]) {
-			if (wall.zc() < ground_floor_z1) {walls.push_back(wall);}
+			if (wall.zc() < ground_floor_z1 && basement.intersects(wall)) {walls.push_back(wall);}
 		}
 	}
 	// add basement objects; include them all, since it's not perf critical; we haven't added objects such as trim yet;
 	// what about blocking the breaker box with something, is that possible?
 	for (room_object_t const &c : interior->room_geom->objs) {
-		if (c.z1() < ground_floor_z1) {obstacles.push_back(c); obstacles.back().expand_by(obj_expand);} // with some clearance
+		if (c.z1() < ground_floor_z1 && basement.intersects(c)) {obstacles.push_back(c); obstacles.back().expand_by(obj_expand);} // with some clearance
 	}
 	vector_add_to(interior->stairwells, obstacles); // add stairs; what about open doors?
 	vector_add_to(interior->elevators,  obstacles); // there probably are none, but it doesn't hurt to add them
@@ -1748,14 +1750,14 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 	}
 	for (unsigned d = 0; d < 2; ++d) { // add all basement walls
 		for (cube_t &wall : interior->walls[d]) {
-			if (wall.z1() >= ground_floor_z1) continue; // not in the basement
+			if (wall.z1() >= ground_floor_z1 || !basement.intersects(wall)) continue; // not in the basement
 			walls.push_back(wall);
 			walls.back().expand_by_xy(trim_thickness); // include the trim
 		}
 	}
 	// Note: elevators/buttons/stairs haven't been placed at this point, so iterate over all objects
 	for (room_object_t const &i : interior->room_geom->objs) {
-		if (i.z1() >= ground_floor_z1) continue; // not in the basement
+		if (i.z1() >= ground_floor_z1 || !basement.intersects(i)) continue; // not in the basement
 		bool const no_blocking(i.type == TYPE_PICTURE || i.type == TYPE_WBOARD || i.type == TYPE_OUTLET || i.type == TYPE_SWITCH);
 		// Note: bottles and trash on the floor counts, though it would be better to add pipes first and floor clutter later
 		// Note: TYPE_PIPE (vertical electrical conduits from outlets) may block pipes from running horizontally along walls
@@ -1801,7 +1803,7 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 		obstacles.push_back(door_bcube);
 	} // for doors
 	for (stairwell_t const &s : interior->stairwells) { // add stairwells (basement stairs); there should be no elevators
-		if (s.z1() >= ground_floor_z1) continue; // not in the basement
+		if (s.z1() >= ground_floor_z1 || !basement.intersects(s)) continue; // not in the basement
 		obstacles.push_back(s);
 	}
 	unsigned const objs_start(interior->room_geom->objs.size()); // no other basement objects added here that would interfere with pipes
