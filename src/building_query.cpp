@@ -2037,7 +2037,7 @@ public:
 };
 cached_room_objs_t cached_room_objs;
 
-bool room_object_t::is_floor_collidable() const {return bldg_obj_types[type].rat_coll;}
+bool room_object_t::is_floor_collidable() const {return (bldg_obj_types[type].rat_coll || is_floor_clutter());}
 
 bool room_object_t::is_spider_collidable() const { // include objects on the floor, walls, and ceilings
 	if (!is_floor_collidable()) { // below are the exceptions: objects that are not floor collidable but spiders can walk on
@@ -2111,7 +2111,7 @@ void get_approx_car_cubes(room_object_t const &cb, cube_t cubes[5]) {
 // for spiders; lg_cubes and sm_cubes are currently handled the same
 void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, vect_cube_t &lg_cubes, vect_cube_t &sm_cubes, vect_cube_t &non_cubes) const {
 	room_object const type(c.type);
-	if (c.is_round()) {non_cubes.push_back(c);}
+	if (c.is_round() || c.is_floor_clutter()) {non_cubes.push_back(c);}
 	else if (type == TYPE_RAILING || type == TYPE_RAMP || type == TYPE_BALCONY || type == TYPE_POOL_LAD ||
 		type == TYPE_OFF_CHAIR || type == TYPE_BAR_STOOL || type == TYPE_LAVALAMP || type == TYPE_WFOUNTAIN)
 	{

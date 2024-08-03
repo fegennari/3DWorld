@@ -2522,7 +2522,7 @@ void building_t::add_basement_clutter_objs(rand_gen_t rgen, room_t const &room, 
 			float const height(floor_spacing*rgen.rand_uniform(0.075, 0.12)), radius(floor_spacing*rgen.rand_uniform(0.012, 0.018));
 			if (min_place_sz < 6.0*radius) return; // room is too small to place this bottle; shouldn't get here
 			cube_t bottle(place_cylin_object(rgen, place_area, radius, height, max(2.0f*radius, height), 1)), bc(bottle); // place_at_z1=1
-			unsigned flags(RO_FLAG_NOCOLL);
+			unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_ON_FLOOR);
 			bool dim(0), dir(0);
 
 			if (rgen.rand_float() < 0.75) { // make the bottle fallen over 75% of the time
@@ -2552,7 +2552,7 @@ void building_t::add_basement_clutter_objs(rand_gen_t rgen, room_t const &room, 
 			if (is_obj_placement_blocked(trash, room, 1) || overlaps_other_room_obj(trash, objs_start) || has_bcube_int(trash, avoid)) continue; // bad placement
 			avoid.push_back(trash);
 			colorRGBA const color(trash_colors[rgen.rand() % NUM_TRASH_COLORS]);
-			objs.emplace_back(trash, TYPE_TRASH, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SPHERE, color);
+			objs.emplace_back(trash, TYPE_TRASH, room_id, rgen.rand_bool(), rgen.rand_bool(), (RO_FLAG_NOCOLL | RO_FLAG_ON_FLOOR), tot_light_amt, SHAPE_SPHERE, color);
 			set_obj_id(objs);
 		} // for n
 	}
