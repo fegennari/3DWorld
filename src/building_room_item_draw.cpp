@@ -1181,8 +1181,11 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 	vector<door_t> const &doors(building.interior->doors);
 	uint8_t const door_type(building.is_residential() ? (uint8_t)tquad_with_ix_t::TYPE_HDOOR : (uint8_t)tquad_with_ix_t::TYPE_ODOOR);
 
-	for (auto i = doors.begin(); i != doors.end(); ++i) { // interior doors; opens_out=0, exterior=0
-		building.add_door_verts(*i, *this, door_type, i->dim, i->open_dir, i->open_amt, 0, 0, i->on_stairs, i->hinge_side, i->is_bldg_conn, i->mult_floor_room);
+	for (door_t const &d : doors) { // interior doors; opens_out=0, exterior=0
+		building.add_door_verts(d, *this, door_type, d.dim, d.open_dir, d.open_amt, 0, 0, d.on_stairs, d.hinge_side, d.is_bldg_conn, d.mult_floor_room);
+	}
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_DOOR_HANDLE)) { // add door handle models
+		//for (door_t const &d : doors) {} // TODO
 	}
 	mats_doors.create_vbos(building);
 }
