@@ -7,10 +7,10 @@
 
 using std::string;
 
-unsigned const TEX0_S_ATTR       = 0;
-unsigned const TEX0_T_ATTR       = 1;
-unsigned const TANGENT_ATTR      = 2;
-unsigned const NUM_SHADER_TYPES  = 6;
+unsigned const TEX0_S_ATTR  = 0;
+unsigned const TEX0_T_ATTR  = 1;
+unsigned const TANGENT_ATTR = 2;
+enum {SHADER_TYPE_VERT=0, SHADER_TYPE_FRAG, SHADER_TYPE_GEOM, SHADER_TYPE_TESC, SHADER_TYPE_TESE, SHADER_TYPE_COMP, NUM_SHADER_TYPES};
 
 #define make_shader_bool_prefix(name, val) ((val) ? ("const bool " name " = true;") : ("const bool " name " = false;"))
 

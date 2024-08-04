@@ -465,10 +465,10 @@ void shader_t::set_material(base_mat_t const &mat) {
 
 
 struct program_t {
-	unsigned p, sixs[NUM_SHADER_TYPES] = {0};
-	bool valid;
+	unsigned p=0, sixs[NUM_SHADER_TYPES] = {0};
+	bool valid=0;
 
-	program_t() : p(0), valid(0) {}
+	program_t() {}
 	program_t(unsigned p_, unsigned sixs_[NUM_SHADER_TYPES]) : p(p_), valid(1) {}
 };
 
@@ -488,9 +488,9 @@ public:
 
 
 struct ix_valid_t {
-	unsigned ix;
-	bool valid;
-	ix_valid_t() : ix(0), valid(0) {}
+	unsigned ix=0;
+	bool valid=0;
+	ix_valid_t() {}
 	ix_valid_t(unsigned const ix_) : ix(ix_), valid(1) {}
 };
 
