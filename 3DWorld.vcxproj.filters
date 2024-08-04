@@ -1539,6 +1539,9 @@
     <None Include="shaders\shadow_map_csm_xlate_scale.vert">
       <Filter>Shaders\vert</Filter>
     </None>
+    <None Include="shaders\caustics_overlay.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">

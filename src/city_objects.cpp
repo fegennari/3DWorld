@@ -496,36 +496,36 @@ void end_water_surface_draw() {
 
 // passes: 0=in-ground walls, 1=in-ground water, 2=above ground sides, 3=above ground water
 /*static*/ void swimming_pool_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {
-		if      (dstate.pass_ix == 2) {select_texture(WHITE_TEX);} // sides/untextured
-		else if (dstate.pass_ix == 0) {select_texture(get_texture_by_name("bathroom_tile.jpg"));} // walls and maybe ladder
-		else if (dstate.pass_ix == 1 || dstate.pass_ix == 3) {begin_water_surface_draw();} // water surface
-		else {assert(0);}
-	}
+	if (shadow_only) {} // nothing
+	else if (dstate.pass_ix == 2) {select_texture(WHITE_TEX);} // sides/untextured
+	else if (dstate.pass_ix == 0) {select_texture(get_texture_by_name("bathroom_tile.jpg"));} // walls and maybe ladder
+	else if (dstate.pass_ix == 1 || dstate.pass_ix == 3) {begin_water_surface_draw();} // water surface
+	else if (dstate.pass_ix == 4) {} // caustics pass - handled by the caller
+	else {assert(0);}
 }
 /*static*/ void swimming_pool_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {dstate.s.set_cur_color(WHITE);} // restore to default color
+	if (!shadow_only && dstate.pass_ix != 4) {dstate.s.set_cur_color(WHITE);} // restore to default color
 	if (dstate.pass_ix == 1 || dstate.pass_ix == 3) {end_water_surface_draw();} // water surface
 	city_obj_t::post_draw(dstate, shadow_only);
 }
 void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	if ((dstate.pass_ix > 1) ^ above_ground)           return; // not drawn in this pass
-	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
+	bool const caustics_pass(dstate.pass_ix == 4);
+	if (((dstate.pass_ix > 1) ^ above_ground) && !caustics_pass) return; // not drawn in this pass
+	if (!dstate.check_cube_visible(bcube, dist_scale))           return;
 
 	if (above_ground) { // cylindrical; bcube should be square in XY
 		point const camera_bs(dstate.camera_bs);
 		float const radius(get_radius()), xc(bcube.xc()), yc(bcube.yc()), dscale(dist_scale*dstate.draw_tile_dist), height(bcube.dz());
 		float const water_zval(bcube.z2() - 0.1f*height), inner_bottom(bcube.z1() + 0.04f*height);
 		unsigned const ndiv(shadow_only ? 24 : max(4U, min(64U, unsigned(6.0f*dscale/p2p_dist(camera_bs, pos)))));
+		point const orig_cpos(camera_pos);
+		camera_pos = dstate.camera_bs; // required for proper two sided cylinder normals
 
 		if (dstate.pass_ix == 2) { // draw sides, bottom, and maybe ladder
-			point const orig_cpos(camera_pos);
-			camera_pos = dstate.camera_bs; // required for proper two sided cylinder normals
 			dstate.s.set_cur_color(color);
 			draw_fast_cylinder(point(xc, yc, bcube.z1()), point(xc, yc, bcube.z2()), radius, radius, ndiv, 0, 0, 1); // untextured, no ends; two sided lighting
 			dstate.s.set_cur_color(color*0.4); // darker due to light atten
 			draw_circle_normal(0.0, radius, ndiv, 0, point(xc, yc, inner_bottom)); // draw bottom, shifted slightly up
-			camera_pos = orig_cpos;
 
 			if (bcube.closest_dist_less_than(camera_bs, 0.5*dscale)) { // draw ladder
 				unsigned const num_steps = 5;
@@ -562,23 +562,37 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 		}
 		else if (!shadow_only && dstate.pass_ix == 3) { // draw water surface; not for the shadow pass
 			dstate.s.set_cur_color(colorRGBA(wcolor, 0.5)); // semi-transparent
-			draw_circle_normal(0.0, radius, ndiv, 0, point(xc, yc, (bcube.z2() - 0.1f*height))); // shift slightly below the top
+			draw_circle_normal(0.0, radius, ndiv, 0, point(xc, yc, water_zval)); // shift slightly below the top
 		}
+		else if (dstate.pass_ix == 4) { // draw sides and bottom caustics
+			float const tscale = 2.0;
+			draw_circle_normal(0.0, radius, ndiv, 0, point(xc, yc, inner_bottom), tscale, tscale); // draw bottom, shifted slightly up
+			glEnable(GL_CULL_FACE); // inner surface only
+			glCullFace(GL_FRONT);
+			draw_fast_cylinder(point(xc, yc, inner_bottom), point(xc, yc, water_zval), radius, radius, ndiv, 1, 0, 1, nullptr, 0.3, 0.0, nullptr, 0, 6.0); // textured, sides
+			glCullFace(GL_BACK);
+			glDisable(GL_CULL_FACE);
+		}
+		camera_pos = orig_cpos;
 	}
 	else { // in-ground
-		float const height(bcube.dz()), wall_thick(0.14*height), tscale(0.5/wall_thick);
+		float const height(bcube.dz()), wall_thick(0.14*height), tscale((caustics_pass ? 0.1 : 0.5)/wall_thick), water_level_drop(0.06*height);
 		cube_t inner(bcube);
 		inner.expand_by_xy(-wall_thick);
 
-		if (dstate.pass_ix == 0) { // draw walls
+		if (dstate.pass_ix == 0 || dstate.pass_ix == 4) { // draw walls or caustics
 			// draw sides
-			color_wrapper const cw(color);
+			color_wrapper const cw(caustics_pass ? WHITE : color);
 			cube_t sides[4] = {bcube, bcube, bcube, bcube}; // {S, N, W center, E center}
 			sides[0].y2() = sides[2].y1() = sides[3].y1() = inner.y1();
 			sides[1].y1() = sides[2].y2() = sides[3].y2() = inner.y2();
 			sides[2].x2() = inner.x1();
 			sides[3].x1() = inner.x2();
-			for (unsigned d = 0; d < 4; ++d) {dstate.draw_cube(qbds.qbd, sides[d], cw, 1, tscale, ((d > 2) ? 2 : 0));} // skip_bottom=1
+			
+			for (unsigned d = 0; d < 4; ++d) {
+				if (caustics_pass) {sides[d].z2() -= water_level_drop;} // clip to water level
+				dstate.draw_cube(qbds.qbd, sides[d], cw, 1, tscale, ((d > 2) ? 2 : 0)); // skip_bottom=1
+			}
 			// draw bottom
 			bool const dmax(bcube.dx() < bcube.dy());
 			float const bz1(bcube.z1() + 0.5*wall_thick);
@@ -592,7 +606,7 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 			qbds.qbd.add_quad_pts(pts, cw, get_poly_norm(pts, 1), tex_range_t(0.0, 0.0, tscale*bcube.dx(), tscale*bcube.dy()));
 		}
 		else if (dstate.pass_ix == 1) { // draw water surface
-			inner.z2() -= 0.06*height; // shift water surface a bit below the top
+			inner.z2() -= water_level_drop; // shift water surface a bit below the top
 			dstate.draw_cube(qbds.qbd, inner, color_wrapper(colorRGBA(wcolor, 0.5)), 1, 0.5*tscale, 3); // draw top water as semi-transparent
 		}
 	}

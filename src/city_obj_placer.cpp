@@ -9,7 +9,9 @@
 float pond_max_depth(0.0);
 
 extern bool enable_model3d_custom_mipmaps, player_in_walkway, player_in_skyway;
+extern int display_mode;
 extern unsigned max_unique_trees;
+extern colorRGBA sun_color;
 extern tree_placer_t tree_placer;
 extern city_params_t city_params;
 extern object_model_loader_t building_obj_model_loader;
@@ -1989,6 +1991,41 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 		if (shadow_only && dstate.pass_ix <= 1) continue; // only above ground pools are drawn in the shadow pass; water surface is drawn to prevent light leaks, but maybe should extend z1 lower
 		float const dist_scales[4] = {0.1, 0.5, 0.3, 0.5};
 		draw_objects(pools, pool_groups, dstate, dist_scales[dstate.pass_ix], shadow_only, (dstate.pass_ix > 1)); // final 2 passes use immediate draw rather than qbd
+	}
+	if (!shadow_only && light_factor > 0.5 && !pools.empty()) { // pool underwater caustics pass
+		cube_t draw_region(all_objs_bcube);
+		draw_region.expand_by(0.1*dstate.draw_tile_dist);
+
+		if (draw_region.contains_pt(dstate.camera_bs)) { // camera in or near this city
+			draw_state_t dstate2; // create a new draw state for a new shader
+			dstate2.copy_from(dstate);
+			dstate2.pass_ix = 4;
+			shader_t &s(dstate2.s);
+			s.setup_enabled_lights(1, (1 << SHADER_TYPE_FRAG)); // sun only, fragment shader
+			s.set_prefix(make_shader_bool_prefix("use_shadow_map", 1), SHADER_TYPE_FRAG); // shadow maps always enabled, use fragment shader
+			s.set_vert_shader("per_pixel_lighting");
+			s.set_frag_shader("ads_lighting.part*+shadow_map.part*+caustics_overlay");
+			s.begin_shader();
+			select_texture(WATER_CAUSTIC_TEX);
+			s.add_uniform_int  ("caustic_tex", 0);
+			s.add_uniform_float("time", tfticks);
+			//s.add_uniform_color("color_scale", sun_color*(2.0*(light_factor - 0.5))); // intensity scales with sun position; not needed, due to dot product in shader
+			s.set_cur_color(WHITE); // not needed?
+			setup_tile_shader_shadow_map(s);
+			glPolygonOffset(-1.0, -1.0); // useful for avoiding z-fighting
+			glEnable(GL_POLYGON_OFFSET_FILL);
+			enable_blend();
+			set_additive_blend_mode();
+			set_std_depth_func_with_eq(); // <=
+			glDepthMask(GL_FALSE); // disable depth writing
+			draw_objects(pools, pool_groups, dstate2, 0.1, shadow_only, 1); // has_immediate_draw=1
+			glDepthMask(GL_TRUE);
+			set_std_depth_func(); // <
+			set_std_blend_mode();
+			disable_blend();
+			glDisable(GL_POLYGON_OFFSET_FILL);
+			if (dstate.s.is_setup()) {dstate.s.enable();}
+		}
 	}
 	// Note: not the most efficient solution, as it required processing blocks and binding shadow maps multiple times
 	for (dstate.pass_ix = 0; dstate.pass_ix <= DIV_NUM_TYPES; ++dstate.pass_ix) { // {wall, fence, hedge, chainlink fence, chainlink fence posts}

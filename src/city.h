@@ -431,6 +431,7 @@ protected:
 	point label_pos;
 public:
  	virtual ~draw_state_t() {}
+	void copy_from(draw_state_t &d) {xlate = d.xlate; camera_bs = d.camera_bs; draw_tile_dist = d.draw_tile_dist; use_smap = d.use_smap; shadow_only = d.shadow_only;}
 	void set_enable_normal_map(bool val) {use_bmap = val;}
 	bool normal_maps_enabled() const {return use_bmap;}
 	vect_cube_t &get_occluders() {return occlusion_checker.occluders;}

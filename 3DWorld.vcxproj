@@ -1108,6 +1108,7 @@
     <None Include="shaders\building_water.vert" />
     <None Include="shaders\bump_map.part.frag" />
     <None Include="shaders\bump_map.part.vert" />
+    <None Include="shaders\caustics_overlay.frag" />
     <None Include="shaders\circular_portal.frag" />
     <None Include="shaders\clouds.frag" />
     <None Include="shaders\clouds.vert" />
