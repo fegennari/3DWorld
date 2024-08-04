@@ -40,6 +40,7 @@ float const CHAIR_LEG_WIDTH        = 0.15; // relative to chair width
 float const BED_HEAD_WIDTH         = 0.04; // headboard width; relative to bed width
 float const SHELF_RACK_HEIGHT_FS   = 0.85*(1.0 - FLOOR_THICK_VAL_OFFICE);
 float const DEF_NORM_BIAS_SCALE    = 10.0; // see shadow_map.part
+float const CITY_BIAS_SCALE        = 0.1;
 
 unsigned const NUM_CHAIR_COLORS = 12;
 unsigned const MAX_BCASE_BOOKS  = 48; // limited by available bit flags

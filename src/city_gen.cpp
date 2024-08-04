@@ -57,7 +57,7 @@ void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool
 	}
 	if (use_smap) {
 		s.add_uniform_float("z_bias", pcf_scale*cobj_z_bias); // I guess pcf_scale is really a light size scale and should apply to the z-bias as well
-		s.add_uniform_float("shad_bias_scale", 0.1); // fix for sun/moon shadows that are too far shifted on buildings
+		s.add_uniform_float("shad_bias_scale", CITY_BIAS_SCALE); // fix for sun/moon shadows that are too far shifted on buildings
 	}
 }
 

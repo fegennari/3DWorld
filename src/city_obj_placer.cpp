@@ -1987,12 +1987,12 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 			draw_objects(planters, planter_groups, dstate, 0.1, shadow_only, 0); // dist_scale=0.1
 		}
 	}
-	for (dstate.pass_ix = 0; dstate.pass_ix < 4; ++dstate.pass_ix) { // {in-ground walls, in-ground water, above ground sides, above ground water}
-		if (shadow_only && dstate.pass_ix <= 1) continue; // only above ground pools are drawn in the shadow pass; water surface is drawn to prevent light leaks, but maybe should extend z1 lower
+	for (dstate.pass_ix = 0; dstate.pass_ix < 4; ++dstate.pass_ix) { // {0=in-ground walls, 1=in-ground water, 2=above ground sides, 3=above ground water}
+		if (shadow_only && dstate.pass_ix != 2) continue; // only above ground pools are drawn in the shadow pass
 		float const dist_scales[4] = {0.1, 0.5, 0.3, 0.5};
 		draw_objects(pools, pool_groups, dstate, dist_scales[dstate.pass_ix], shadow_only, (dstate.pass_ix > 1)); // final 2 passes use immediate draw rather than qbd
 	}
-	if (!shadow_only && light_factor > 0.5 && !pools.empty()) { // pool underwater caustics pass
+	if (!shadow_only && light_factor > 0.5 && !pools.empty()) { // 4=pool underwater caustics pass
 		cube_t draw_region(all_objs_bcube);
 		draw_region.expand_by(0.1*dstate.draw_tile_dist);
 
@@ -2009,7 +2009,8 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 			select_texture(WATER_CAUSTIC_TEX);
 			s.add_uniform_int  ("caustic_tex", 0);
 			s.add_uniform_float("time", tfticks);
-			//s.add_uniform_color("color_scale", sun_color*(2.0*(light_factor - 0.5))); // intensity scales with sun position; not needed, due to dot product in shader
+			s.add_uniform_float("shad_bias_scale", CITY_BIAS_SCALE);
+			s.add_uniform_color("color_scale", sun_color);
 			s.set_cur_color(WHITE); // not needed?
 			setup_tile_shader_shadow_map(s);
 			glPolygonOffset(-1.0, -1.0); // useful for avoiding z-fighting
@@ -2018,13 +2019,13 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 			set_additive_blend_mode();
 			set_std_depth_func_with_eq(); // <=
 			glDepthMask(GL_FALSE); // disable depth writing
-			draw_objects(pools, pool_groups, dstate2, 0.1, shadow_only, 1); // has_immediate_draw=1
+			draw_objects(pools, pool_groups, dstate2, 0.075, shadow_only, 1); // has_immediate_draw=1
 			glDepthMask(GL_TRUE);
 			set_std_depth_func(); // <
 			set_std_blend_mode();
 			disable_blend();
 			glDisable(GL_POLYGON_OFFSET_FILL);
-			if (dstate.s.is_setup()) {dstate.s.enable();}
+			if (dstate.s.is_setup()) {dstate.s.enable();} // enable(), not make_current(), because we may need to update the MVM for some reason
 		}
 	}
 	// Note: not the most efficient solution, as it required processing blocks and binding shadow maps multiple times

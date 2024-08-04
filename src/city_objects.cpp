@@ -6,7 +6,7 @@
 #include "lightmap.h" // for light_source
 
 extern bool player_in_walkway;
-extern int animate2;
+extern int animate2, display_mode;
 extern float fticks;
 extern double camera_zh;
 extern city_params_t city_params;
@@ -524,9 +524,11 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 		if (dstate.pass_ix == 2) { // draw sides, bottom, and maybe ladder
 			dstate.s.set_cur_color(color);
 			draw_fast_cylinder(point(xc, yc, bcube.z1()), point(xc, yc, bcube.z2()), radius, radius, ndiv, 0, 0, 1); // untextured, no ends; two sided lighting
-			dstate.s.set_cur_color(color*0.4); // darker due to light atten
-			draw_circle_normal(0.0, radius, ndiv, 0, point(xc, yc, inner_bottom)); // draw bottom, shifted slightly up
 
+			if (!shadow_only) { // draw bottom, shifted slightly up
+				dstate.s.set_cur_color(color*0.4); // darker due to light atten
+				draw_circle_normal(0.0, radius, ndiv, 0, point(xc, yc, inner_bottom));
+			}
 			if (bcube.closest_dist_less_than(camera_bs, 0.5*dscale)) { // draw ladder
 				unsigned const num_steps = 5;
 				color_wrapper const step_color(LT_GRAY);
@@ -565,8 +567,13 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 			draw_circle_normal(0.0, radius, ndiv, 0, point(xc, yc, water_zval)); // shift slightly below the top
 		}
 		else if (dstate.pass_ix == 4) { // draw sides and bottom caustics
+			assert(!shadow_only);
 			float const tscale = 2.0;
-			draw_circle_normal(0.0, radius, ndiv, 0, point(xc, yc, inner_bottom), tscale, tscale); // draw bottom, shifted slightly up
+			int const bias_loc(dstate.s.get_uniform_loc("shad_bias_scale"));
+			assert(bias_loc >= 0);
+			dstate.s.set_uniform_float(bias_loc, 0.0); // disable - not needed, and looks slighlty better without this
+			draw_circle_normal(0.0, 0.999*radius, ndiv, 0, point(xc, yc, inner_bottom), tscale, tscale); // draw bottom, shifted slightly up, and slightly smaller to avoid clipping
+			dstate.s.set_uniform_float(bias_loc, CITY_BIAS_SCALE); // restore the default
 			glEnable(GL_CULL_FACE); // inner surface only
 			glCullFace(GL_FRONT);
 			draw_fast_cylinder(point(xc, yc, inner_bottom), point(xc, yc, water_zval), radius, radius, ndiv, 1, 0, 1, nullptr, 0.3, 0.0, nullptr, 0, 6.0); // textured, sides
