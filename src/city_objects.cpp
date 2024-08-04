@@ -515,13 +515,17 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 	if (above_ground) { // cylindrical; bcube should be square in XY
 		point const camera_bs(dstate.camera_bs);
 		float const radius(get_radius()), xc(bcube.xc()), yc(bcube.yc()), dscale(dist_scale*dstate.draw_tile_dist), height(bcube.dz());
+		float const water_zval(bcube.z2() - 0.1f*height), inner_bottom(bcube.z1() + 0.04f*height);
 		unsigned const ndiv(shadow_only ? 24 : max(4U, min(64U, unsigned(6.0f*dscale/p2p_dist(camera_bs, pos)))));
 
-		if (dstate.pass_ix == 2) { // draw sides, and maybe ladder
+		if (dstate.pass_ix == 2) { // draw sides, bottom, and maybe ladder
+			point const orig_cpos(camera_pos);
+			camera_pos = dstate.camera_bs; // required for proper two sided cylinder normals
 			dstate.s.set_cur_color(color);
-			draw_fast_cylinder(point(xc, yc, bcube.z1()), point(xc, yc, bcube.z2()), radius, radius, ndiv, 0, 0); // untextured, no ends; ideally we should have two sided lighting
+			draw_fast_cylinder(point(xc, yc, bcube.z1()), point(xc, yc, bcube.z2()), radius, radius, ndiv, 0, 0, 1); // untextured, no ends; two sided lighting
 			dstate.s.set_cur_color(color*0.4); // darker due to light atten
-			draw_circle_normal(0.0, radius, ndiv, 0, point(xc, yc, (bcube.z1() + 0.04f*height))); // draw bottom, shifted slightly up
+			draw_circle_normal(0.0, radius, ndiv, 0, point(xc, yc, inner_bottom)); // draw bottom, shifted slightly up
+			camera_pos = orig_cpos;
 
 			if (bcube.closest_dist_less_than(camera_bs, 0.5*dscale)) { // draw ladder
 				unsigned const num_steps = 5;
