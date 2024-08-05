@@ -1550,13 +1550,20 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 		float const per_wh_radius(radius_hot*pow(1.0/water_heaters.size(), 1/4.0)); // distribute evenly among the water heaters using the same merge exponent
 
 		for (room_object_t const &wh : water_heaters) {
+			float const radius(wh.get_radius()), shift_val(WHEATER_PIPE_SPACING*radius);
+			point center(wh.xc(), wh.yc(), ceil_zval);
+			vector3d wh_shift_dir(shift_dir);
+
 			if (wh.z1() < ground_floor_z1) { // house basement water heater
 				// should this connect directly? what if vent or other pipe is in the way? how to match pipe radius?
 			}
-			float const shift_val(0.75*wh.get_radius());
-			point const center(wh.xc(), wh.yc(), ceil_zval);
-			cold_water.emplace_back((center + shift_val*shift_dir), per_wh_radius, 0, 1); // has_hot=0, flow_dir=1/in
-			hot_water .emplace_back((center - shift_val*shift_dir), per_wh_radius, 1, 0); // has_hot=1, flow_dir=0/out
+			else { // office building first floor water heater: use exact location where bent over pipes meet the floor
+				center[wh.dim] += (wh.dir ? 1.0 : -1.0)*radius*WHEATER_PIPE_H_DIST;
+				wh_shift_dir[ wh.dim] = 0.0;
+				wh_shift_dir[!wh.dim] = ((shift_dir[!wh.dim] < 0.0) ? -1.0 : 1.0);
+			}
+			cold_water.emplace_back((center + shift_val*wh_shift_dir), per_wh_radius, 0, 1); // has_hot=0, flow_dir=1/in
+			hot_water .emplace_back((center - shift_val*wh_shift_dir), per_wh_radius, 1, 0); // has_hot=1, flow_dir=0/out
 		} // for wh
 	}
 	if (!is_house) { // add pipes for office building rooftop water tower, if present; unclear if we ever get here

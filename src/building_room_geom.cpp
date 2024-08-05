@@ -3491,7 +3491,7 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 
 	for (unsigned d = 0; d < 2; ++d) {
 		point pt(c.xc(), c.yc(), 0.0); // zval will be set below
-		pt[!c.dim] += (d ? 1.0 : -1.0)*0.65*radius;
+		pt[!c.dim] += (d ? 1.0 : -1.0)*WHEATER_PIPE_SPACING*radius;
 		pipes[d].set_from_sphere(pt, pipe_radius);
 		set_cube_zvals(pipes[d], top_z, c.z2());
 	}
@@ -3525,7 +3525,7 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 		cube_t &pipe(pipes[d]);
 
 		if (!is_house) { // bend office building water pipes back down into the floor since routing is in the basement
-			float const bend_zval(pipe.zc()), pipe_len(0.92*radius);
+			float const bend_zval(pipe.zc()), pipe_len(WHEATER_PIPE_H_DIST*radius);
 			pipe.z2() = bend_zval; // shorten; no longer reaches the ceiling
 			cube_t v_pipe(pipe);
 			v_pipe.z1() = c.z1(); // down to the floor

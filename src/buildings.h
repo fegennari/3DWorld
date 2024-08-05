@@ -39,6 +39,8 @@ float const BASEMENT_ENTRANCE_SCALE= 0.33;
 float const CHAIR_LEG_WIDTH        = 0.15; // relative to chair width
 float const BED_HEAD_WIDTH         = 0.04; // headboard width; relative to bed width
 float const SHELF_RACK_HEIGHT_FS   = 0.85*(1.0 - FLOOR_THICK_VAL_OFFICE);
+float const WHEATER_PIPE_SPACING   = 0.65; // relative to radius
+float const WHEATER_PIPE_H_DIST    = 0.92; // relative to radius
 float const DEF_NORM_BIAS_SCALE    = 10.0; // see shadow_map.part
 float const CITY_BIAS_SCALE        = 0.1;
 
