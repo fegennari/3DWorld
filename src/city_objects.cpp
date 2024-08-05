@@ -512,11 +512,11 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 	bool const caustics_pass(dstate.pass_ix == 4);
 	if (((dstate.pass_ix > 1) ^ above_ground) && !caustics_pass) return; // not drawn in this pass
 	if (!dstate.check_cube_visible(bcube, dist_scale))           return;
+	float const water_zval(get_water_zval());
 
 	if (above_ground) { // cylindrical; bcube should be square in XY
 		point const camera_bs(dstate.camera_bs);
-		float const radius(get_radius()), xc(bcube.xc()), yc(bcube.yc()), dscale(dist_scale*dstate.draw_tile_dist), height(bcube.dz());
-		float const water_zval(bcube.z2() - 0.1f*height), inner_bottom(bcube.z1() + 0.04f*height);
+		float const radius(get_radius()), xc(bcube.xc()), yc(bcube.yc()), dscale(dist_scale*dstate.draw_tile_dist), height(bcube.dz()), inner_bottom(bcube.z1() + 0.04f*height);
 		unsigned const ndiv(shadow_only ? 24 : max(4U, min(64U, unsigned(6.0f*dscale/p2p_dist(camera_bs, pos)))));
 		point const orig_cpos(camera_pos);
 		camera_pos = dstate.camera_bs; // required for proper two sided cylinder normals
@@ -583,7 +583,7 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 		camera_pos = orig_cpos;
 	}
 	else { // in-ground
-		float const height(bcube.dz()), wall_thick(0.14*height), tscale((caustics_pass ? 0.1 : 0.5)/wall_thick), water_level_drop(0.06*height);
+		float const height(bcube.dz()), wall_thick(0.14*height), tscale((caustics_pass ? 0.1 : 0.5)/wall_thick);
 		cube_t inner(bcube);
 		inner.expand_by_xy(-wall_thick);
 
@@ -597,7 +597,7 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 			sides[3].x1() = inner.x2();
 			
 			for (unsigned d = 0; d < 4; ++d) {
-				if (caustics_pass) {sides[d].z2() -= water_level_drop;} // clip to water level
+				if (caustics_pass) {sides[d].z2() = water_zval;} // clip to water level
 				dstate.draw_cube(qbds.qbd, sides[d], cw, 1, tscale, ((d > 2) ? 2 : 0)); // skip_bottom=1
 			}
 			// draw bottom
@@ -613,7 +613,7 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 			qbds.qbd.add_quad_pts(pts, cw, get_poly_norm(pts, 1), tex_range_t(0.0, 0.0, tscale*bcube.dx(), tscale*bcube.dy()));
 		}
 		else if (dstate.pass_ix == 1) { // draw water surface
-			inner.z2() -= water_level_drop; // shift water surface a bit below the top
+			inner.z2() = water_zval; // shift water surface a bit below the top
 			dstate.draw_cube(qbds.qbd, inner, color_wrapper(colorRGBA(wcolor, 0.5)), 1, 0.5*tscale, 3); // draw top water as semi-transparent
 		}
 	}
@@ -627,6 +627,14 @@ bool swimming_pool_t::proc_sphere_coll(point &pos_, point const &p_last, float r
 	cube_t bcube_tall(bcube + xlate);
 	bcube_tall.z2() += CAMERA_RADIUS + camera_zh; // extend upward so that player collision detection works better
 	return sphere_cube_int_update_pos(pos_, radius_, bcube_tall, p_last, 0, cnorm);
+}
+bool swimming_pool_t::update_depth_if_underwater(point const &p, float &depth) const {
+	if (!bcube.contains_pt(p)) return 0;
+	float const water_zval(get_water_zval());
+	if (p.z >= water_zval)     return 0;
+	if (above_ground && !dist_xy_less_than(p, pos, get_radius())) return 0; // check circle containment
+	depth = (water_zval - pos.z);
+	return 1;
 }
 
 // pool decks
@@ -1401,6 +1409,11 @@ bool pond_t::point_contains_xy(point const &p) const { // p is in global space
 	if (!bcube.contains_pt_xy(p)) return 0;
 	float const xv((p.x - pos.x)/(0.5*bcube.dx())), yv((p.y - pos.y)/(0.5*bcube.dy()));
 	return (xv*xv + yv*yv < 1.0);
+}
+bool pond_t::update_depth_if_underwater(point const &p, float &depth) const {
+	if (p.z <= bcube.z1() || p.z > bcube.z2() || !point_contains_xy(p)) return 0;
+	depth = (bcube.z2() - p.z);
+	return 1;
 }
 
 // walkways

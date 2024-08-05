@@ -1078,6 +1078,9 @@ public:
 		}
 		sort_streetlights_by_yx();
 	}
+	bool update_depth_if_underwater(point const &pos, float &depth) const { // Note: pos is in building space
+		return city_obj_placer.update_depth_if_underwater(pos, depth);
+	}
 	void get_road_bcubes(vect_cube_t &bcubes) const {
 		get_all_bcubes(roads,  bcubes);
 		get_all_bcubes(tracks, bcubes);
@@ -2636,6 +2639,14 @@ public:
 		}
 		return 0;
 	}
+	bool update_depth_if_underwater(point const &pos, float &depth) const { // Note: pos is in camera space
+		point const pos_bs(pos - get_camera_coord_space_xlate());
+
+		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
+			if (r->update_depth_if_underwater(pos_bs, depth)) return 1;
+		}
+		return 0;
+	}
 	void get_all_road_bcubes(vect_cube_t &bcubes, bool connector_only) const {
 		global_rn.get_road_bcubes(bcubes); // not sure if this should be included
 		if (connector_only) return;
@@ -3111,6 +3122,7 @@ public:
 	cube_t get_city_bcube_overlapping(cube_t const &c)    const {return road_gen.get_city_bcube_overlapping(c);}
 	void get_city_bcubes(vect_cube_t &bcubes)             const {road_gen.get_city_bcubes(bcubes);}
 	int check_city_contains_overlaps(cube_t const &query) const {return road_gen.check_city_contains_overlaps(query);}
+	bool update_depth_if_underwater(point const &pos, float &depth) const {return road_gen.update_depth_if_underwater(pos, depth);}
 	void get_all_road_bcubes(vect_cube_t &bcubes, bool connector_only) const {road_gen.get_all_road_bcubes(bcubes, connector_only);}
 	void get_all_plot_zones(vect_city_zone_t &zones) {road_gen.get_all_plot_zones(zones);} // caches plot_id_offset, so non-const
 
@@ -3235,6 +3247,7 @@ cube_t get_city_bcube_at_pt(point const &pos) {return city_gen.get_city_bcube_at
 cube_t get_city_bcube_overlapping(cube_t const &c) {return city_gen.get_city_bcube_overlapping(c);}
 void get_city_bcubes(vect_cube_t &bcubes) {city_gen.get_city_bcubes(bcubes);}
 int check_city_contains_overlaps(cube_t const &query) {return city_gen.check_city_contains_overlaps(query);}
+bool update_depth_if_underwater(point const &pos, float &depth) {return city_gen.update_depth_if_underwater(pos, depth);}
 void get_city_road_bcubes(vect_cube_t &bcubes, bool connector_only) {city_gen.get_all_road_bcubes(bcubes, connector_only);}
 void get_city_plot_zones(vect_city_zone_t &zones) {city_gen.get_all_plot_zones(zones);}
 void next_city_frame(bool use_threads_2_3) {city_gen.next_frame(use_threads_2_3);}

@@ -2281,6 +2281,19 @@ bool city_obj_placer_t::cube_int_underground_obj(cube_t const &c) const { // Not
 	return 0;
 }
 
+bool city_obj_placer_t::update_depth_if_underwater(point const &pos, float &depth) const {
+	if (!all_objs_bcube.contains_pt(pos)) return 0;
+
+	// both pools and ponds are non-overlapping in XY, so if we find an intersection, we can stop and return the depth
+	for (swimming_pool_t const &p : pools) { // not many pools, don't need to use pool_groups
+		if (p.update_depth_if_underwater(pos, depth)) return 1;
+	}
+	for (pond_t const &p : ponds) {
+		if (p.update_depth_if_underwater(pos, depth)) return 1;
+	}
+	return 0;
+}
+
 void city_obj_placer_t::play_sounds() {
 	if (ppole_groups.empty()) return;
 	point const camera_bs(get_camera_building_space());

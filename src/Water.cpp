@@ -114,6 +114,7 @@ void init_water_springs(int nws);
 void process_water_springs();
 void add_waves();
 void update_accumulation(int xpos, int ypos);
+bool update_depth_if_underwater(point const &pos, float &depth);
 
 void add_hole_in_landscape_texture(int xpos, int ypos, float blend);
 void setup_mesh_and_water_shader(shader_t &s, bool use_detail_normal_map, bool is_water);
@@ -1663,8 +1664,12 @@ bool is_underwater(point const &pos, int check_bottom, float *depth) { // or und
 	if (DISABLE_WATER || !(display_mode & 0x04)) return 0; // water disabled
 
 	if (world_mode == WMODE_INF_TERRAIN) {
-		if (depth) {*depth = max(0.0f, (water_plane_z - pos.z));}
-		return (pos.z < water_plane_z);
+		if (pos.z < water_plane_z) {
+			if (depth) {*depth = water_plane_z - pos.z;}
+			return 1;
+		}
+		if (check_bottom && depth && update_depth_if_underwater(pos, *depth)) return 1; // check for player in city swimming pools and ponds
+		return 0;
 	}
 	assert(water_matrix && mesh_height);
 	if (!is_over_mesh(pos) || pos.z < zmin || pos.z > max_water_height) return 0;
