@@ -1944,14 +1944,15 @@ bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, float pad, 
 	if (is_cube_close_to_doorway(c, cube_t(), pad, 1))      return 0; // check for open doors to avoid having the stairs intersect an open door
 	if (check_skylight_intersection(c))                     return 0;
 
-	if (dim <= 1 && pad > 0.0) { // dim was specified; check if containing rooms have space on either side for the player to walk
+	if (dim <= 1 && pad > 0.0) { // dim was specified (not AI placement); check if containing rooms have space on either side for the player to walk
 		for (room_t const &r : interior->rooms) {
-			if (!r.contains_cube_xy_overlaps_z(c)) continue; // stairs not contained in this room
+			if (r.is_ext_basement()) break; // no need to check extended basement rooms
+			if (!r.contains_cube_xy_overlaps_z(c)) continue; // stairs/elevator not contained in this room
 			if (max((c.d[!dim][0] - r.d[!dim][0]), (r.d[!dim][1] - c.d[!dim][1])) < pad) return 0;
 		}
 	}
 	if (!is_house && has_pri_hall()) { // office building with primary hallway
-		// add extra padding around exterior doors to avoid blocking them with stairs
+		// add extra padding around exterior doors to avoid blocking them with stairs/elevator
 		float const floor_spacing(get_window_vspace()), door_width(DOOR_WIDTH_SCALE_OFFICE*get_office_bldg_door_height());
 		point end_pt;
 		end_pt[!hallway_dim] = pri_hall.get_center_dim(!hallway_dim); // assumes door is centered in the hallway
@@ -1967,6 +1968,7 @@ bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, float pad, 
 	}
 	if (check_private_rooms && is_apt_or_hotel()) {
 		for (room_t const &r : interior->rooms) {
+			if (r.is_ext_basement()) break; // no need to check extended basement rooms
 			if (r.is_apt_or_hotel_room() && r.intersects(c)) return 0;
 		}
 	}
