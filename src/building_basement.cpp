@@ -1488,7 +1488,8 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 	cube_t const &basement(get_basement());
 	float const merge_dist = 4.0; // merge two pipes if their combined radius is within this distance
 	// use reduced pipe radius for apartments and hotels since they have so many plumbing fixtures
-	float const floor_spacing(get_window_vspace()), base_pipe_radius((is_apt_or_hotel() ? 0.008 : 0.01)*floor_spacing), base_pipe_area(base_pipe_radius*base_pipe_radius);
+	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness());
+	float const base_pipe_radius((is_apt_or_hotel() ? 0.008 : 0.01)*floor_spacing), base_pipe_area(base_pipe_radius*base_pipe_radius);
 	float const merge_dist_sq(merge_dist*merge_dist), max_radius(0.3*get_wall_thickness()), ceil_zval(basement.z2() - get_fc_thickness());
 	vector<room_object_t> water_heaters;
 	bool const inc_basement_wheaters = 1;
@@ -1525,8 +1526,31 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 		} // for p
 		if (!merged) {sewer.emplace_back(pos, base_pipe_radius, hot_cold_obj, 0);} // create a new riser; flow_dir=0/out
 	} // for i
-	for (riser_pos_t &s : sewer) {min_eq(s.radius, max_radius);} // clamp radius to a reasonable value after all merges
+	for (riser_pos_t &s : sewer) {
+		min_eq(s.radius, max_radius); // clamp radius to a reasonable value after all merges
+		// try to find a nearby interior wall on the ground floor to route the riser to
+		if (!basement.contains_pt_xy(s.pos)) continue; // outside the basement; riser not drawn anyway
+		float dmin(0.5*floor_spacing); // max movement distance
+		// if we're close to the basement wall, then leave pos unchanged; we don't want to move to the basement wall and have it half inside the basement
+		for (unsigned d = 0; d < 2; ++d) {min_eq(dmin, min((basement.d[d][1] - s.pos[d]), (s.pos[d] - basement.d[d][0])));}
+		vector3d best_delta;
 
+		for (unsigned d = 0; d < 2; ++d) { // find nearby interior walls; d is the wall separating dim
+			float const lo(s.pos[!d] - s.radius), hi(s.pos[!d] + s.radius);
+
+			for (cube_t const &w : interior->walls[d]) {
+				if (w.z1() > ground_floor_z1 + floor_thickness || w.z2() < ground_floor_z1 - floor_thickness) continue; // not on the ground floor
+				if (w.d[!d][0] > lo || w.d[!d][1] < hi) continue; // riser not contained in wall length
+				float const center(w.get_center_dim(d)), delta(center - s.pos[d]), dist(fabs(delta));
+				if (dist > dmin) continue;
+				dmin = dist;
+				best_delta[!d] = 0.0;
+				best_delta[ d] = delta;
+			}
+		} // for d
+		s.pos += best_delta;
+		assert(basement.contains_pt_xy(s.pos));
+	} // for s
 	// generate hot and cold water pipes
 	// choose a shift direction 45 degrees diagonally in the XY plane to avoid collisions with sewer pipes placed in either dim
 	vector3d const shift_dir(vector3d((rgen.rand_bool() ? -1.0 : 1.0), (rgen.rand_bool() ? -1.0 : 1.0), 0.0).get_norm());
