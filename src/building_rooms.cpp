@@ -2930,6 +2930,7 @@ room_t::room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool 
 	else if (is_hallway)  {assign_all_to(RTYPE_HALL  );}
 	else if (is_office)   {assign_all_to(RTYPE_OFFICE);}
 	else if (has_stairs)  {assign_all_to(RTYPE_STAIRS);} // not really correct since has_stairs is now a per-floor bit flag, but this will likely be overwritten later anyway
+	else                  {assign_all_to(RTYPE_NOTSET, 0);}
 }
 void room_t::assign_all_to(room_type rt, bool locked) {
 	for (unsigned n = 0; n < NUM_RTYPE_SLOTS; ++n) {rtype[n] = rt;}
