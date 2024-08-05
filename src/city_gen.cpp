@@ -1382,11 +1382,11 @@ public:
 				}
 				dstate.end_cur_tile();
 			} // for b
-			if (!is_connector_road) { // draw exterior edges (skirts) of city to cover the gap above the terrain
-				// it's okay to draw under connector roads, and these are vertical and generally have no light or shadows
-				dstate.draw_city_skirt(bcube);
-			}
 		} // end !shadow_only
+		if (!is_connector_road) { // draw exterior edges (skirts) of city to cover the gap above the terrain
+			// it's okay to draw under connector roads, and these are vertical and generally have no light or shadows
+			dstate.draw_city_skirt(bcube, shadow_only);
+		}
 		draw_streetlights(dstate, shadow_only, 0);
 			
 		// draw bridges and tunnels; only in connector road network; bridges and tunnels are sparse/uncommon, so don't need to be batched by blocks

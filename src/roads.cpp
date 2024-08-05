@@ -10,7 +10,8 @@ float const BRIDGE_HEIGHT_TO_LEN        = 0.3;
 
 extern bool tt_fire_button_down;
 extern int frame_counter, game_mode, display_mode;
-extern float fticks, FAR_CLIP;
+extern float fticks, FAR_CLIP, light_factor;
+extern point sun_pos;
 extern vector<light_source> dl_sources;
 extern city_params_t city_params;
 
@@ -1119,12 +1120,22 @@ void road_draw_state_t::draw_city_region_int(quad_batch_draw &cache, unsigned ty
 	} else {qbd_batched[type_ix].add_quads(cache);} // add non-shadow blocks for drawing later
 }
 
-void road_draw_state_t::draw_city_skirt(cube_t const &bcube) {
-	cube_t skirt(bcube);
-	skirt.z1() -= 0.2*city_params.road_width; // extend into the ground
-	draw_cube(qbd_skirt, skirt, WHITE, 1, 16.0, 4); // skip zvals
-	for (auto &v : qbd_skirt.verts) {v.set_norm(-plus_z);} // hack to avoid shadow artifacts: point the normal downward so that there is no light
-	road_mat_mgr.set_texture(TYPE_ROAD_SKIRT);
+void road_draw_state_t::draw_city_skirt(cube_t const &bcube, bool shadow_only) {
+	if (shadow_only) {
+		if (light_factor <= 0.4)     return; // no sun, skirt not needed
+		if (sun_pos.z >= bcube.z1()) return; // sun above city, skirt not needed
+		cube_t skirt(bcube);
+		skirt.z1() = sun_pos.z - FAR_CLIP; // Note: unclear why FAR_CLIP is needed for low light angle, but it works
+		select_texture(WHITE_TEX);
+		draw_cube(qbd_skirt, skirt, WHITE, 1, 0.0, 4); // skip zvals
+	}
+	else {
+		cube_t skirt(bcube);
+		skirt.z1() -= 0.2*city_params.road_width; // extend into the ground
+		draw_cube(qbd_skirt, skirt, WHITE, 1, 16.0, 4); // skip zvals
+		for (auto &v : qbd_skirt.verts) {v.set_norm(-plus_z);} // hack to avoid shadow artifacts: point the normal downward so that there is no light
+		road_mat_mgr.set_texture(TYPE_ROAD_SKIRT);
+	}
 	qbd_skirt.draw_and_clear();
 }
 

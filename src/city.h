@@ -636,7 +636,7 @@ public:
 	void add_city_quad(road_seg_t  const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool);
 	void add_city_quad(road_t      const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool);
 	void add_city_quad(road_plot_t const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool draw_all);
-	void draw_city_skirt(cube_t const &bcube);
+	void draw_city_skirt(cube_t const &bcube, bool shadow_only);
 
 	template<typename T> void add_city_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool) { // generic flat road case
 		add_flat_city_quad(r, qbd, color, ar);
