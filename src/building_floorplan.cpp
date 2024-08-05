@@ -2140,8 +2140,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 						set_cube_zvals(ext_cube, cand_z1, cand_z2);
 						if (ab == 0) {ext_cube.z1() += floor_thickness; ext_cube.z2() -= floor_thickness;} // shrink to lower part
 						else         {ext_cube.z1() += window_vspacing + floor_thickness; ext_cube.z2() += window_vspacing - floor_thickness;} // move to upper part
-						if (bool(ab) ^ stairs_dir) {ext_cube.d[dim][0] -= stairs_pad;} // add padding on exit side
-						else                       {ext_cube.d[dim][1] += stairs_pad;} // add padding on exit side
+						if (bool(ab) ^ s.dir) {ext_cube.d[s.dim][0] -= stairs_pad;} // add padding on exit side
+						else                  {ext_cube.d[s.dim][1] += stairs_pad;} // add padding on exit side
 						if (!shared.contains_cube_xy(ext_cube))           continue; // test for space to enter and exit
 						if (has_bcube_int(ext_cube, interior->exclusion)) continue; // bad placement
 						bool const allow_clip_walls(0); // clipping walls rarely helps and tends to create some strange stairs
