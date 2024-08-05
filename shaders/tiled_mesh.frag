@@ -121,6 +121,7 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 			color.rgb  *= mix(1.0, value, cweight);
 #else // compute caustics using two noise texture lookups
 			vec3  cval    = 4.0*mix(texture(caustic_tex, tc2).rgb, texture(caustic_tex, (tc2 + vec2(0.3, 0.6))).rgb, ntime);
+			//cval         *= sqrt(2.0 - 2.0*abs(ntime - 0.5)); // maybe not needed?
 			color.rgb    *= mix(vec3(1.0), cval, cweight);
 #endif
 		}

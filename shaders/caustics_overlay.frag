@@ -12,6 +12,7 @@ void main() {
 	vec2 tc_s    = tc_scale*tc;
 	float ntime  = 2.0*abs(fract(0.005*time) - 0.5);
 	vec4 color   = color_scale*mix(texture(caustic_tex, tc_s), texture(caustic_tex, (tc_s + vec2(0.3, 0.6))), ntime);
+	//color.rgb   *= sqrt(2.0 - 2.0*abs(ntime - 0.5)); // maybe not needed if additive blending is enabled
 	vec4 lpos    = fg_LightSource[0].position;
 	color.rgb   *= max(0.0, dot(normalize(lpos.xyz), normal));
 	if (smap_scale > 0.0) {color.rgb *= mix(1.0, get_shadow_map_weight_light0(epos, normal), smap_scale);}
