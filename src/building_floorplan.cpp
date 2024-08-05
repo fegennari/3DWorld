@@ -528,7 +528,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 							add_room(c_hall, part_id, num_lights2, 1, 0); // add conn hallway as room
 							rooms.back().mark_open_wall_dim(min_dim); // adjacent to primary and secondary hallway on each side
 							cube_t exclude(c_hall);
-							exclude.d[min_dim][!d] += dsign*doorway_width; // expand out a bit into the main hallway to ensure there's space to enter this hallway
+							exclude.d[min_dim][!d] += 1.25*dsign*doorway_width; // expand out into the main hallway to ensure there's space to enter this hallway
 							interior->exclusion.push_back(exclude); // excluded from placing stairs and elevators
 
 							for (unsigned side = 0; side < 2; ++side) { // add walls along connector hallway
@@ -697,7 +697,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 								add_room(s_hall, part_id, 2, 1, 0); // add sec hallway as room with 2 lights (could use more lights if longer?)
 								rooms.back().mark_open_wall(min_dim, !d); // adjacent to main hallway on this side
 								cube_t exclude(s_hall);
-								exclude.d[min_dim][!d] += dsign*doorway_width; // expand out a bit into the main hallway to ensure there's space to enter this hallway
+								exclude.d[min_dim][!d] += 1.25*dsign*doorway_width; // expand out into the main hallway to ensure there's space to enter this hallway
 								interior->exclusion.push_back(exclude); // excluded from placing stairs and elevators
 								
 								for (unsigned dir = 0; dir < 2; ++dir) { // add walls between hall and rooms on each side
