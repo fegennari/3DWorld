@@ -1454,11 +1454,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 						floor_below_region.assign_or_union_with_cube(vis_region);
 					}
 					else if (s.has_walled_sides()) {
-						if (!dir_val) {cut_mask = 2;} // floor below not visible on this side of stairs
-						else { // floor above only visible from one side of stairs
+						if (!dir_val) { // facing updards stairs
+							cut_mask = 2; // floor below not visible
 							cube_t vis_region(bcube); // start with full building bcube
 							vis_region.d[s.dim][!s.dir] = center_val;
-							floor_above_region.assign_or_union_with_cube(vis_region);
+							floor_above_region.assign_or_union_with_cube(vis_region); // floor above may be visible
 						}
 					}
 					else {saw_open_stairs = 1;}
@@ -1609,8 +1609,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (same_or_adj_floor_only && (camera_z < level_z-window_vspacing || camera_z > ceil_z+fc_thick+window_vspacing)) continue;
 		if (!is_house && floor_is_below &&  in_ext_basement && !camera_in_ext_basement && lpos.z   < get_basement().z1()) continue; // light  in lower level extb, player not in extb
 		if (!is_house && floor_is_above && !in_ext_basement &&  camera_in_ext_basement && camera_z < get_basement().z1()) continue; // player in lower level extb, light  not in extb
-		if (floor_is_below && !floor_below_region.is_all_zeros() && !floor_below_region.contains_pt_xy(lpos)) continue; // check floor_below_region
-		if (floor_is_above && !floor_above_region.is_all_zeros() && !floor_above_region.contains_pt_xy(lpos)) continue; // check floor_below_region
+		if (!camera_on_stairs && floor_is_below && !floor_below_region.is_all_zeros() && !floor_below_region.contains_pt_xy(lpos)) continue; // check floor_below_region
+		if (!camera_on_stairs && floor_is_above && !floor_above_region.is_all_zeros() && !floor_above_region.contains_pt_xy(lpos)) continue; // check floor_below_region
 		if (is_exterior && (floor_is_below || floor_is_above)) continue; // different floor of walkway - not visible
 		cube_t const &room_part(get_part_for_room(room));
 		bool const camera_in_room_part_xy(room_part.contains_pt_xy(camera_rot)), in_camera_room((int)i->room_id == camera_room);
