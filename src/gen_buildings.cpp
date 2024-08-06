@@ -410,6 +410,9 @@ void set_interior_lighting(shader_t &s, bool have_indir) {
 		ambient_scale = ((!have_indir && player_in_dark_room()) ? 0.1 : 0.0); // no ambient for indir; slight ambient for closed closet/windowless room with light off
 		diffuse_scale = hemi_scale = 0.0; // no diffuse or hemispherical from sun/moon
 	}
+	else if (player_in_basement) {
+		s.add_uniform_float("SHADOW_LEAKAGE", 0.0); // make basements darker and avoid lights leaking through parking garage ceilings
+	}
 	s.add_uniform_float("diffuse_scale",       diffuse_scale);
 	s.add_uniform_float("ambient_scale",       ambient_scale);
 	s.add_uniform_float("hemi_lighting_scale", hemi_scale);
