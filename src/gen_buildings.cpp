@@ -626,10 +626,13 @@ class building_draw_t {
 			if (vstart == vend)                  return; // empty range - no verts for this tile
 			if (shadow_only && no_shadows)       return; // no shadows on this material
 			if (!shadow_only && tex.shadow_only) return; // material is only drawn in the shadow pass
+			int depth_write_disabled(0);
 			
 			if (tex.tid == FONT_TEXTURE_ID) {
 				if (shadow_only) return; // no shadows for text
 				enable_blend();
+				glGetIntegerv(GL_DEPTH_WRITEMASK, &depth_write_disabled);
+				if (depth_write_disabled) {glDepthMask(GL_FALSE);} // disable depth writing if it was enabled
 			}
 			if (!shadow_only) {tex.set_gl(state);}
 			assert(vao_mgr.vbo_valid());
@@ -644,7 +647,10 @@ class building_draw_t {
 				glDrawArrays(GL_TRIANGLES, (vstart.tix + tri_vbo_off), (vend.tix - vstart.tix));
 				++num_frame_draw_calls;
 			}
-			if (tex.tid == FONT_TEXTURE_ID) {disable_blend();}
+			if (tex.tid == FONT_TEXTURE_ID) {
+				if (depth_write_disabled) {glDepthMask(GL_TRUE);} // re-enable depth writing if needed
+				disable_blend();
+			}
 			if (!shadow_only) {tex.unset_gl(state);}
 			vao_manager_t::post_render();
 		}
@@ -799,7 +805,7 @@ public:
 	int      get_to_draw_ix_if_exists(tid_nm_pair_t const &tex) const {return tid_mapper.get_slot_ix_if_exists(tex.tid);} // returns -1 if not found
 	unsigned get_num_verts (tid_nm_pair_t const &tex, bool quads_or_tris=0) {return get_verts(tex, quads_or_tris).size    ();}
 	unsigned get_cap_verts (tid_nm_pair_t const &tex, bool quads_or_tris=0) {return get_verts(tex, quads_or_tris).capacity();}
-	vect_vnctcc_t &get_text_verts() {return get_verts(tid_nm_pair_t(FONT_TEXTURE_ID));} // quads
+	vect_vnctcc_t &get_text_verts() {return get_verts(tid_nm_pair_t(FONT_TEXTURE_ID, 1.0, false, true));} // quads, unshadowed, transparent
 
 	void print_stats() const {
 		for (draw_block_t const &b : to_draw) {
