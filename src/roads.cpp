@@ -1122,6 +1122,8 @@ void road_draw_state_t::draw_city_region_int(quad_batch_draw &cache, unsigned ty
 
 void road_draw_state_t::draw_city_skirt(cube_t const &bcube, bool shadow_only) {
 	if (shadow_only) {
+		// only the sun is enabled when below the horizon, not the moon; add a skirt around the city to block the sun that passes under the terrain
+		// maybe it would be sufficient to add the ambient light and set diffuse to zero, but that would require global lighting changes
 		if (light_factor <= 0.4)     return; // no sun, skirt not needed
 		if (sun_pos.z >= bcube.z1()) return; // sun above city, skirt not needed
 		cube_t skirt(bcube);
