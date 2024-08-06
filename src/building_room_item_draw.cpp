@@ -1180,12 +1180,12 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Doors"); // 0.1ms
 	vector<door_t> const &doors(building.interior->doors);
 	uint8_t const door_type(building.is_residential() ? (uint8_t)tquad_with_ix_t::TYPE_HDOOR : (uint8_t)tquad_with_ix_t::TYPE_ODOOR);
+	bool const have_door_handle_model(building_obj_model_loader.is_model_valid(OBJ_MODEL_DOOR_HANDLE));
 
 	for (door_t const &d : doors) { // interior doors; opens_out=0, exterior=0
-		building.add_door_verts(d, *this, door_type, d.dim, d.open_dir, d.open_amt, 0, 0, d.on_stairs, d.hinge_side, d.is_bldg_conn, d.mult_floor_room);
-	}
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_DOOR_HANDLE)) { // add door handle models
-		//for (door_t const &d : doors) {} // TODO
+		building.add_door_verts(d, *this, door_type, d.dim, d.open_dir, d.open_amt, 0, 0, d.on_stairs, d.hinge_side, d.is_bldg_conn, d.mult_floor_room); // opens_out=0, exterior=0
+		if (have_door_handle_model) {}// TODO: add model, maybe to obj_model_insts
+		//else {add_door_handle(d);}
 	}
 	mats_doors.create_vbos(building);
 }

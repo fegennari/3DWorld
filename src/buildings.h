@@ -100,6 +100,7 @@ class brg_batch_draw_t;
 typedef vector<vert_norm_comp_tc_color> vect_vnctcc_t;
 struct sign_t;
 struct city_flag_t;
+struct door_t;
 typedef vector<point> vect_point;
 
 struct bottle_params_t {
@@ -1185,6 +1186,7 @@ private:
 	void create_lights_vbos(building_t const &building);
 	void create_dynamic_vbos(building_t const &building, point const &camera_bs, vector3d const &xlate, bool play_clock_tick);
 	void create_door_vbos(building_t const &building);
+	void add_door_handle(door_t const &door);
 	static void add_closet_objects(room_object_t const &c, vect_room_object_t &objects);
 	static unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]);
 	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vect_room_object_t &objects);

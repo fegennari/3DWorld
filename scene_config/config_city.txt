@@ -230,7 +230,7 @@ city water_fountain_model  ../models/interiors/drinking_fountain/scene.gltf 0 0 
 city banana_model       ../models/interiors/banana.glb            0 0 0  0 0 0  0 1.0 1.0
 city banana_peel_model  ../models/interiors/banana_peel.glb       0 0 0  0 0 0  1 1.0 1.0 # ../models/interiors/banana_peel2.glb is too brown
 #city toy_model          ../models/interiors/toys/Stacking_Toy.model3d 0 0 0  0 -1 90   1 1.0 1.0  reverse_winding=1 # two sided; center white part has wrong winding order
-#city door_handle_model  ../models/interiors/banana_peel.fbx       0 0 0  0 0 0  1 1.0 1.0
+#city door_handle_model  ../models/interiors/door_handle.fbx       0 0 0  0 0 270  1 1.0 1.0
 
 # closet objects
 #city hanger_model  ../models/interiors/clothes_hanger.model3d                       0 0 0  0 0 0  1 1.0 1.0

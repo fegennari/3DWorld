@@ -32,6 +32,7 @@ string const &gen_book_title(unsigned rand_id, string *author, unsigned split_le
 void add_floor_number(unsigned floor_ix, unsigned floor_offset, bool has_parking_garage, ostringstream &oss);
 unsigned get_rgeom_sphere_ndiv(bool low_detail);
 void rotate_verts(point *verts, unsigned num_verts, vector3d const &axis, float angle, vector3d const &about);
+void rotate_xy(point &pt, point const &origin, float angle);
 
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // draw only these faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
 unsigned get_skip_mask_for_xy(bool dim) {return (dim ? EF_Y12 : EF_X12);} // skip these faces
@@ -4901,6 +4902,45 @@ void building_room_geom_t::add_trash(room_object_t const &c) {
 	for (auto i = mat.itri_verts.begin()+verts_start; i != mat.itri_verts.end(); ++i) {
 		i->v += rgen.signed_rand_vector(0.2*radius); // should be good enough, and faster than signed_rand_vector_spherical()
 		i->set_norm((i->v - center).get_norm());
+	}
+}
+
+void building_room_geom_t::add_door_handle(door_t const &door) {
+	bool const dim(door.dim), dir(dim ^ door.open_dir ^ door.hinge_side ^ 1);
+	float const width(door.get_width()), height(door.dz()), thickness(door.get_thickness());
+	cube_t const bc(door.get_true_bcube());
+	cube_t base(bc);
+	base.z1() += 0.44*height;
+	base.z2() -= 0.45*height;
+	base.expand_in_dim(dim, 0.25*thickness);
+	float const handle_pos(door.get_center_dim(!dim) + (dir ? -1.0 : 1.0)*0.438*width);
+	set_wall_width(base, handle_pos, 0.032*width, !dim);
+	tid_nm_pair_t tex(-1, 1.0, 1); // untextured, shadowed
+	tex.set_specular_color(WHITE, 0.7, 60.0); // metal
+	rgeom_mat_t &mat(mats_doors.get_material(tex, 1)); // untextured, shadowed
+	unsigned const qv_start(mat.quad_verts.size());
+	mat.add_cube_to_verts_untextured(base, GRAY); // all faces
+
+	for (unsigned side = 0; side < 2; ++side) { // add handles to each side
+		// TODO: draw as two cubes to mats_doors
+	} // for side
+	if (door.open_amt > 0.0) { // rotate around door pivot point
+		float const signed_width(width*(dir ? 1.0 : -1.0)), shift(0.07*signed_width*door.open_amt);
+		unsigned max_angle(75); // in degrees
+		// TODO: pass max_angle in?
+		float const angle((max_angle + 90.0)*door.open_amt); // can be positive or negative
+		// similar to rotate_and_shift_door()
+		float const rot_angle(-float(angle)*TO_RADIANS*(door.hinge_side ? -1.0 : 1.0));
+		point pivot(bc.get_cube_center());
+		pivot[!dim] = bc.d[!dim][dir];
+
+		for (auto v = mat.quad_verts.begin()+qv_start; v != mat.quad_verts.end(); ++v) {
+			rotate_xy(v->v, pivot, rot_angle);
+			v->v[dim] += shift;
+			vector3d normal(v->get_norm());
+			rotate_xy(normal, pivot, rot_angle);
+			v->set_norm(normal); // normalize not needed
+		}
 	}
 }
 
