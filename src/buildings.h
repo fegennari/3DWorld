@@ -938,6 +938,10 @@ struct courtyard_t : public cube_t {
 	int16_t room_ix=-1, door_ix=-1; // starts as <unset>
 };
 
+struct door_rotation_t {
+	float angle=0.0, shift=0.0;
+};
+
 struct building_room_geom_t {
 
 	bool has_elevators=0, has_pictures=0, has_garage_car=0, modified_by_player=0, have_clock=0;
@@ -1186,7 +1190,7 @@ private:
 	void create_lights_vbos(building_t const &building);
 	void create_dynamic_vbos(building_t const &building, point const &camera_bs, vector3d const &xlate, bool play_clock_tick);
 	void create_door_vbos(building_t const &building);
-	void add_door_handle(door_t const &door);
+	void add_door_handle(door_t const &door, door_rotation_t const &drot);
 	static void add_closet_objects(room_object_t const &c, vect_room_object_t &objects);
 	static unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]);
 	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vect_room_object_t &objects);
@@ -2015,10 +2019,10 @@ public:
 	bool interior_visible_from_other_building_ext_basement(vector3d const &xlate, bool expand_for_light=0) const;
 	void try_connect_ext_basement_to_building(building_t &b);
 	void finalize_extb_conn_rooms(unsigned ds_start);
-	template<typename T> void add_door_verts(cube_t const &D, T &drawer, uint8_t door_type, bool dim, bool dir, float open_amt, bool opens_out, bool exterior,
-		bool on_stairs=0, bool hinge_side=0, bool is_bldg_conn=0, bool draw_top_edge=0) const;
-	tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj,
-		bool exterior, float open_amt, bool opens_out, bool opens_up, bool swap_sides, bool is_bldg_conn=0) const;
+	template<typename T> void add_door_verts(cube_t const &D, T &drawer, door_rotation_t &drot, uint8_t door_type, bool dim, bool dir,
+		float open_amt, bool opens_out, bool exterior, bool on_stairs=0, bool hinge_side=0, bool is_bldg_conn=0, bool draw_top_edge=0) const;
+	tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj, bool exterior,
+		float open_amt, bool opens_out, bool opens_up, bool swap_sides, bool is_bldg_conn, door_rotation_t &drot) const;
 	tquad_with_ix_t set_interior_door_from_cube(door_t const &door) const;
 	cube_t get_door_bounding_cube(door_t const &door) const;
 	cube_t get_attic_access_door_avoid() const;

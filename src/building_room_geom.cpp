@@ -4905,7 +4905,7 @@ void building_room_geom_t::add_trash(room_object_t const &c) {
 	}
 }
 
-void building_room_geom_t::add_door_handle(door_t const &door) {
+void building_room_geom_t::add_door_handle(door_t const &door, door_rotation_t const &drot) {
 	bool const dim(door.dim), dir(dim ^ door.open_dir ^ door.hinge_side ^ 1);
 	float const width(door.get_width()), height(door.dz()), thickness(door.get_thickness());
 	cube_t const bc(door.get_true_bcube());
@@ -4925,18 +4925,15 @@ void building_room_geom_t::add_door_handle(door_t const &door) {
 		// TODO: draw as two cubes to mats_doors
 	} // for side
 	if (door.open_amt > 0.0) { // rotate around door pivot point
-		float const signed_width(width*(dir ? 1.0 : -1.0)), shift(0.07*signed_width*door.open_amt);
 		unsigned max_angle(75); // in degrees
-		// TODO: pass max_angle in?
-		float const angle((max_angle + 90.0)*door.open_amt); // can be positive or negative
 		// similar to rotate_and_shift_door()
-		float const rot_angle(-float(angle)*TO_RADIANS*(door.hinge_side ? -1.0 : 1.0));
+		float const rot_angle(-float(drot.angle)*TO_RADIANS*(door.hinge_side ? -1.0 : 1.0));
 		point pivot(bc.get_cube_center());
 		pivot[!dim] = bc.d[!dim][dir];
 
 		for (auto v = mat.quad_verts.begin()+qv_start; v != mat.quad_verts.end(); ++v) {
 			rotate_xy(v->v, pivot, rot_angle);
-			v->v[dim] += shift;
+			v->v[dim] += drot.shift;
 			vector3d normal(v->get_norm());
 			rotate_xy(normal, pivot, rot_angle);
 			v->set_norm(normal); // normalize not needed
