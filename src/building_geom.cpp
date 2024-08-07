@@ -1561,12 +1561,6 @@ void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses
 	}
 }
 
-void rotate_xy(point &pt, point const &origin, float angle) {
-	float const xv(pt.x - origin.x), yv(pt.y - origin.y), sin_term(sin(angle)), cos_term(cos(angle));
-	pt.x = cos_term*xv - sin_term*yv + origin.x;
-	pt.y = cos_term*yv + sin_term*xv + origin.y;
-}
-
 void building_t::maybe_inv_rotate_pos_dir(point &pos, vector3d &dir) const {
 	if (is_rotated()) {
 		do_xy_rotate_inv(bcube.get_cube_center(), pos);
@@ -1592,8 +1586,8 @@ bool building_room_geom_t::cube_intersects_moved_obj(cube_t const &c, int ignore
 }
 
 void rotate_and_shift_door(tquad_with_ix_t &door, float angle, float shift, bool dim, bool swap_sides) {
-	float const rot_angle(-float(angle)*TO_RADIANS*(swap_sides ? -1.0 : 1.0));
-	for (unsigned i = 1; i < 3; ++i) {rotate_xy(door.pts[i], door.pts[0], rot_angle);}
+	float const rot_angle(-float(angle)*TO_RADIANS*(swap_sides ? -1.0 : 1.0)), sin_term(sin(rot_angle)), cos_term(cos(rot_angle));
+	for (unsigned i = 1; i < 3; ++i) {do_xy_rotate(sin_term, cos_term, door.pts[0], door.pts[i]);}
 	UNROLL_4X(door.pts[i_][dim] += shift;);
 }
 tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj, bool exterior,

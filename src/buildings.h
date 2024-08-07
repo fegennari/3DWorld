@@ -2551,6 +2551,8 @@ void get_closest_dim_dir_xy(cube_t const &inner, cube_t const &outer, bool &dim,
 bool check_city_tline_cube_intersect_xy(cube_t const &c);
 inline uint64_t get_tile_id_for_cube(cube_t const &c) {return get_tile_id_containing_point_no_xyoff(c.get_cube_center());}
 std::string gen_random_name(rand_gen_t &rgen, unsigned min_len=0, bool for_universe=0); // from Universe_name.cpp
+void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos);
+void do_xy_rotate_normal(float rot_sin, float rot_cos, point &pos);
 
 struct cmp_by_tile { // not the most efficient solution, but no memory overhead
 	bool operator()(cube_t const &a, cube_t const &b) const {return (get_tile_id_for_cube(a) < get_tile_id_for_cube(b));}

@@ -32,7 +32,6 @@ string const &gen_book_title(unsigned rand_id, string *author, unsigned split_le
 void add_floor_number(unsigned floor_ix, unsigned floor_offset, bool has_parking_garage, ostringstream &oss);
 unsigned get_rgeom_sphere_ndiv(bool low_detail);
 void rotate_verts(point *verts, unsigned num_verts, vector3d const &axis, float angle, vector3d const &about);
-void rotate_xy(point &pt, point const &origin, float angle);
 
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // draw only these faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
 unsigned get_skip_mask_for_xy(bool dim) {return (dim ? EF_Y12 : EF_X12);} // skip these faces
@@ -4913,8 +4912,8 @@ void building_room_geom_t::add_door_handle(door_t const &door, door_rotation_t c
 	base.z1() += 0.44*height;
 	base.z2() -= 0.45*height;
 	base.expand_in_dim(dim, 0.25*thickness);
-	float const handle_pos(door.get_center_dim(!dim) + (dir ? -1.0 : 1.0)*0.438*width);
-	set_wall_width(base, handle_pos, 0.032*width, !dim);
+	float const handle_pos(door.get_center_dim(!dim) + (dir ? -1.0 : 1.0)*0.439*width);
+	set_wall_width(base, handle_pos, 0.035*width, !dim);
 	tid_nm_pair_t tex(-1, 1.0, 1); // untextured, shadowed
 	tex.set_specular_color(WHITE, 0.7, 60.0); // metal
 	rgeom_mat_t &mat(mats_doors.get_material(tex, 1)); // untextured, shadowed
@@ -4928,14 +4927,15 @@ void building_room_geom_t::add_door_handle(door_t const &door, door_rotation_t c
 		unsigned max_angle(75); // in degrees
 		// similar to rotate_and_shift_door()
 		float const rot_angle(-float(drot.angle)*TO_RADIANS*(door.hinge_side ? -1.0 : 1.0));
+		float const sin_term(sin(rot_angle)), cos_term(cos(rot_angle));
 		point pivot(bc.get_cube_center());
 		pivot[!dim] = bc.d[!dim][dir];
 
 		for (auto v = mat.quad_verts.begin()+qv_start; v != mat.quad_verts.end(); ++v) {
-			rotate_xy(v->v, pivot, rot_angle);
+			do_xy_rotate(sin_term, cos_term, pivot, v->v);
 			v->v[dim] += drot.shift;
 			vector3d normal(v->get_norm());
-			rotate_xy(normal, pivot, rot_angle);
+			do_xy_rotate_normal(sin_term, cos_term, normal);
 			v->set_norm(normal); // normalize not needed
 		}
 	}
