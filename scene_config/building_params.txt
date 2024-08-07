@@ -26,6 +26,7 @@ buildings max_ext_basement_room_depth 4
 buildings max_room_geom_gen_per_frame 10 # >= 1; 1 is smoothest framerate but slower updating
 buildings add_office_backroom_basements 1
 buildings put_doors_in_corners 0 # more representative of real buildings, but changes a lot of buildings and doesn't always work
+buildings add_door_handles 0
 
 buildings min_altitude 0.05 # slightly above sea level
 buildings max_altitude 4.00 # same for all buildings

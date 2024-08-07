@@ -1185,8 +1185,9 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 	for (door_t const &d : doors) { // interior doors; opens_out=0, exterior=0
 		door_rotation_t drot;
 		building.add_door_verts(d, *this, drot, door_type, d.dim, d.open_dir, d.open_amt, 0, 0, d.on_stairs, d.hinge_side, d.is_bldg_conn, d.mult_floor_room); // opens_out=0, exterior=0
-		if (have_door_handle_model) {}// TODO: add model, maybe to obj_model_insts
-		//else {add_door_handle(d, drot);}
+		if (!global_building_params.add_door_handles) continue;
+		if (have_door_handle_model) {} // TODO: add model, maybe to obj_model_insts
+		else {add_door_handle(d, drot, building.is_house);}
 	}
 	mats_doors.create_vbos(building);
 }

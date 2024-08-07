@@ -4904,25 +4904,40 @@ void building_room_geom_t::add_trash(room_object_t const &c) {
 	}
 }
 
-void building_room_geom_t::add_door_handle(door_t const &door, door_rotation_t const &drot) {
-	bool const dim(door.dim), dir(dim ^ door.open_dir ^ door.hinge_side ^ 1);
-	float const width(door.get_width()), height(door.dz()), thickness(door.get_thickness());
+void building_room_geom_t::add_door_handle(door_t const &door, door_rotation_t const &drot, bool is_house) {
+	// should the door handle be different (more rounded) for office doors compared to house doors?
+	bool const dim(door.dim), dir(dim ^ door.open_dir ^ door.hinge_side ^ 1); // dir=0: handle on right; dir=1: handle on left
+	float const width(door.get_width()), height(door.dz()), thickness(door.get_thickness()), dsign(dir ? -1.0 : 1.0);
+	float const shaft_radius(0.33*thickness), handle_hwidth((is_house ? 1.33 : 1.1)*shaft_radius);
+	float const handle_len((is_house ? 7.5 : 10.5)*handle_hwidth), handle_depth(0.7*handle_hwidth);
 	cube_t const bc(door.get_true_bcube());
 	cube_t base(bc);
 	base.z1() += 0.44*height;
-	base.z2() -= 0.45*height;
+	base.z2() -= (is_house ? 0.45 : 0.49)*height;
 	base.expand_in_dim(dim, 0.25*thickness);
-	float const handle_pos(door.get_center_dim(!dim) + (dir ? -1.0 : 1.0)*0.439*width);
-	set_wall_width(base, handle_pos, 0.035*width, !dim);
+	float const handle_pos(door.get_center_dim(!dim) + dsign*(is_house ? 0.435 : 0.442)*width);
+	set_wall_width(base, handle_pos, (is_house ? 0.035 : 0.038)*width, !dim);
+	cube_t shaft(base);
+	set_wall_width(shaft, (base.z1() + (is_house ? 0.64 : 0.76)*base.dz()), shaft_radius, 2);
+	set_wall_width(shaft, base.get_center_dim(!dim), shaft_radius, !dim);
+	shaft.expand_in_dim(dim, 0.1*thickness);
+	cube_t handle(shaft);
+	set_wall_width(handle, shaft.zc(), handle_hwidth, 2);
+	handle.d[!dim][!dir] += dsign*(handle_hwidth - shaft_radius);
+	handle.d[!dim][ dir] -= dsign*(handle_len    - shaft_radius);
 	tid_nm_pair_t tex(-1, 1.0, 1); // untextured, shadowed
 	tex.set_specular_color(WHITE, 0.7, 60.0); // metal
 	rgeom_mat_t &mat(mats_doors.get_material(tex, 1)); // untextured, shadowed
 	unsigned const qv_start(mat.quad_verts.size());
-	mat.add_cube_to_verts_untextured(base, GRAY); // all faces
+	colorRGBA const color(GRAY);
+	mat.add_cube_to_verts_untextured(base,  color); // all faces
+	mat.add_cube_to_verts_untextured(shaft, color, get_skip_mask_for_xy(dim)); // skip ends
 
 	for (unsigned side = 0; side < 2; ++side) { // add handles to each side
-		// TODO: draw as two cubes to mats_doors
-	} // for side
+		handle.d[dim][!side] = shaft.d[dim][side];
+		handle.d[dim][ side] = shaft.d[dim][side] + (side ? 1.0 : -1.0)*handle_depth;
+		mat.add_cube_to_verts_untextured(handle, color); // all faces
+	}
 	if (door.open_amt > 0.0) { // rotate around door pivot point
 		unsigned max_angle(75); // in degrees
 		// similar to rotate_and_shift_door()
