@@ -872,6 +872,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 				cube_t cubes[5];
 				get_closet_cubes(closet, cubes);
 				door_t door(cubes[4], dim, !dir, 0); // open=0
+				door.d[dim][0] = door.d[dim][1] = door.get_center_dim(dim); // shrink to zero width
 				door.for_closet = 1; // flag so that we don't try to add a light switch by this door, etc.
 				add_interior_door(door, 0, 1, 1); // is_bathroom=0, make_unlocked=1, make_closed=1
 				interior->doors.back().obj_ix = closet_obj_id;
