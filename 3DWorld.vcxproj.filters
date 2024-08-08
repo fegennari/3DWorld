@@ -1010,12 +1010,6 @@
     <None Include="shaders\clouds.vert">
       <Filter>Shaders\vert</Filter>
     </None>
-    <None Include="shaders\fog_only.frag">
-      <Filter>Shaders\frag</Filter>
-    </None>
-    <None Include="shaders\fog_only.vert">
-      <Filter>Shaders\vert</Filter>
-    </None>
     <None Include="shaders\asteroid.frag">
       <Filter>Shaders\frag</Filter>
     </None>
@@ -1156,12 +1150,6 @@
     </None>
     <None Include="shaders\sphere_shadow_casters.part.frag">
       <Filter>Shaders\frag</Filter>
-    </None>
-    <None Include="shaders\fog_epos_only.frag">
-      <Filter>Shaders\frag</Filter>
-    </None>
-    <None Include="shaders\fog_epos_only.vert">
-      <Filter>Shaders\vert</Filter>
     </None>
     <None Include="shaders\black_body_burn.part.frag">
       <Filter>Shaders\frag</Filter>
