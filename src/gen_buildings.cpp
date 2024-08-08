@@ -3865,7 +3865,8 @@ public:
 		// main/batched draw pass
 		ensure_city_lighting_setup(reflection_pass, xlate, is_city_lighting_setup);
 		// Note: indir and dlights are set for ground mode only
-		setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
+		bool const keep_alpha = 1; // required for fog on windows
+		setup_smoke_shaders(s, min_alpha, 0, keep_alpha, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 
 		if (!reflection_pass) { // don't want to do this in the reflection pass
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw.init_draw_frame();}
