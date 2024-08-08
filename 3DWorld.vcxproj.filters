@@ -1530,6 +1530,9 @@
     <None Include="shaders\caustics_overlay.frag">
       <Filter>Shaders\frag</Filter>
     </None>
+    <None Include="shaders\no_lighting_tc_fog.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">

@@ -1160,7 +1160,12 @@ void road_draw_state_t::post_draw() {
 	
 	if (shadow_only) {s.begin_shadow_map_shader();}
 	else {
-		s.begin_simple_textured_shader(); // no lighting
+		s.set_vert_shader("no_lighting_tc_fog");
+		s.set_frag_shader("linear_fog.part+textured_with_fog");
+		s.begin_shader();
+		s.add_uniform_float("min_alpha", 0.0);
+		s.add_uniform_int("tex0", 0);
+		s.setup_fog_scale();
 		road_mat_mgr.set_stoplight_texture();
 	}
 	if (!qbd_sl.empty()) { // have stoplights to draw

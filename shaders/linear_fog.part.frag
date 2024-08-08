@@ -31,10 +31,10 @@ float get_custom_fog_scale_epos(in vec4 epos) {
 	return get_custom_fog_scale((fg_ModelViewMatrixInverse * epos).z);
 }
 
-#else
+#else // !USE_NONUNIFORM_FOG
 float get_custom_fog_scale(in float vert_z)   {return 1.0;}
 float get_custom_fog_scale_epos(in vec4 epos) {return 1.0;}
-#endif
+#endif // USE_NONUNIFORM_FOG
 
 // linear/quadratic fog
 vec4 apply_fog_ffc(in vec4 color, in float ffc, in vec4 fog_color) {

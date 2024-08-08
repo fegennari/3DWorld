@@ -2001,6 +2001,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 			dstate2.copy_from(dstate);
 			dstate2.pass_ix = 4;
 			shader_t &s(dstate2.s);
+			// Note: this shader doesn't support fog, but caustics should only be drawn when close to the player
 			s.setup_enabled_lights(1, (1 << SHADER_TYPE_FRAG)); // sun only, fragment shader
 			s.set_prefix(make_shader_bool_prefix("use_shadow_map", 1), SHADER_TYPE_FRAG); // shadow maps always enabled, use fragment shader
 			s.set_vert_shader("per_pixel_lighting");
