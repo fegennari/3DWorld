@@ -4904,7 +4904,7 @@ void building_room_geom_t::add_trash(room_object_t const &c) {
 	}
 }
 
-void building_room_geom_t::add_door_handle(door_t const &door, door_rotation_t const &drot, bool is_house) {
+void building_room_geom_t::add_door_handle(door_t const &door, door_rotation_t const &drot, colorRGBA const &color, bool is_house) {
 	// should the door handle be different (more rounded) for office doors compared to house doors?
 	bool const dim(door.dim), dir(dim ^ door.open_dir ^ door.hinge_side ^ 1); // dir=0: handle on right; dir=1: handle on left
 	float const width(door.get_width()), height(door.dz()), thickness(door.get_thickness()), dsign(dir ? -1.0 : 1.0);
@@ -4926,10 +4926,9 @@ void building_room_geom_t::add_door_handle(door_t const &door, door_rotation_t c
 	handle.d[!dim][!dir] += dsign*(handle_hwidth - shaft_radius);
 	handle.d[!dim][ dir] -= dsign*(handle_len    - shaft_radius);
 	tid_nm_pair_t tex(-1, 1.0, 1); // untextured, shadowed
-	tex.set_specular_color(WHITE, 0.7, 60.0); // metal
+	tex.set_specular_color(((color == BRASS_C) ? BRASS_C : WHITE), 0.7, 60.0); // metal
 	rgeom_mat_t &mat(mats_doors.get_material(tex, 1)); // untextured, shadowed
 	unsigned const qv_start(mat.quad_verts.size());
-	colorRGBA const color(GRAY);
 	mat.add_cube_to_verts_untextured(base,  color); // all faces
 	mat.add_cube_to_verts_untextured(shaft, color, get_skip_mask_for_xy(dim)); // skip ends
 

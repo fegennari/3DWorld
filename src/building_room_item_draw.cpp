@@ -1180,14 +1180,20 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Doors"); // 0.1ms
 	vector<door_t> const &doors(building.interior->doors);
 	uint8_t const door_type(building.is_residential() ? (uint8_t)tquad_with_ix_t::TYPE_HDOOR : (uint8_t)tquad_with_ix_t::TYPE_ODOOR);
-	bool const have_door_handle_model(building_obj_model_loader.is_model_valid(OBJ_MODEL_DOOR_HANDLE));
+	bool const have_door_handle_model(global_building_params.add_door_handles && building_obj_model_loader.is_model_valid(OBJ_MODEL_DOOR_HANDLE));
+	colorRGBA handle_color(WHITE);
 
+	if (global_building_params.add_door_handles) { // select a random handle color per building, consistent across all doors
+		colorRGBA const house_handle_colors [3] = {LT_GRAY, GRAY, BRASS_C};
+		colorRGBA const office_handle_colors[3] = {GRAY, DK_GRAY, BLACK};
+		handle_color = (building.is_house ? house_handle_colors : office_handle_colors)[(doors.size() + building.interior->rooms.size() + building.mat_ix) % 3];
+	}
 	for (door_t const &d : doors) { // interior doors; opens_out=0, exterior=0
 		door_rotation_t drot;
 		building.add_door_verts(d, *this, drot, door_type, d.dim, d.open_dir, d.open_amt, 0, 0, d.on_stairs, d.hinge_side, d.is_bldg_conn, d.mult_floor_room); // opens_out=0, exterior=0
 		if (!global_building_params.add_door_handles) continue;
 		if (have_door_handle_model) {} // TODO: add model, maybe to obj_model_insts
-		else {add_door_handle(d, drot, building.is_house);}
+		else {add_door_handle(d, drot, handle_color, building.is_house);}
 	}
 	mats_doors.create_vbos(building);
 }
