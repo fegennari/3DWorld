@@ -623,6 +623,7 @@ void set_inf_terrain_fog(bool underwater, float zmin2) {
 		blend_color(fog_color, cloud_color, bkg_color, 0.375, 1); // weighted more towards bkg_color
 		if (water_is_lava) {blend_color(fog_color, fog_color, colorRGBA(1.0, 0.2, 0.0, 1.0), 0.75, 0);} // add slight red-orange color
 		fog_dist = get_inf_terrain_fog_dist();
+		if (player_in_basement == 3) {fog_color = GRAY_BLACK;} // dark gray fog in extended basements
 	}
 	setup_linear_fog(fog_color, fog_dist); // under water/ice
 	fog_enabled = 1;
