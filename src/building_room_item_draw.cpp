@@ -662,6 +662,7 @@ void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int s
 	if (shadow_only && !en_shadows)         return; // shadows not enabled for this material (picture, whiteboard, rug, etc.)
 	if (shadow_only && tex.emissive == 1.0) return; // assume this is a light source and shouldn't produce shadows
 	if (reflection_pass && tex.tid == REFLECTION_TEXTURE_ID) return; // don't draw reflections of mirrors as this doesn't work correctly
+	if (bbd != nullptr  && tex.tid == REFLECTION_TEXTURE_ID) return; // only draw mirror reflections for player building (which has a null bbd)
 	if (num_verts == 0) return; // Note: should only happen when reusing materials and all objects using this material were removed
 	// VFC test for shadow pass on sparse materials that have their bcubes calculated; only really helps with backrooms;
 	// here we don't add xlate to bcube because it's the location of a light source that's already in building space, not camera space
