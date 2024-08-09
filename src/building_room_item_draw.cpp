@@ -777,10 +777,9 @@ void building_room_geom_t::check_invalid_draw_data() {
 		mats_text .invalidate(); // Note: for now text is assigned to type MAT_TYPE_SMALL since it's always drawn with small objects
 	}
 	if (invalidate_mats_mask & (1 << MAT_TYPE_STATIC )) { // large objects and 3D models
-		mats_static  .invalidate();
+		mats_static  .invalidate(); // obj_model_insts will also be recreated
 		mats_alpha   .invalidate();
 		mats_exterior.invalidate(); // not needed since this is immutable?
-		obj_model_insts.clear();
 	}
 	//if (invalidate_mats_mask & (1 << MAT_TYPE_TEXT  )) {mats_text    .invalidate();} // text objects
 	if (invalidate_mats_mask & (1 << MAT_TYPE_DYNAMIC )) {mats_dynamic .invalidate();} // dynamic objects
@@ -1085,6 +1084,12 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 
 void building_room_geom_t::create_obj_model_insts(building_t const &building) { // handle drawing of 3D models
 	//highres_timer_t timer("Gen Room Model Insts");
+	map<unsigned, vector3d> saved_office_chair_dirs;
+
+	for (obj_model_inst_t const &i : obj_model_insts) { // save any office chair rotations from chairs the player spun
+		if (i.dir.x == 0.0 || i.dir.y == 0.0) continue; // axis aligned, not random rotation
+		if (get_room_object_by_index(i.obj_id).type == TYPE_OFF_CHAIR) {saved_office_chair_dirs[i.obj_id] = i.dir;}
+	}
 	obj_model_insts.clear();
 
 	for (unsigned vect_id = 0; vect_id < 2; ++vect_id) {
@@ -1109,7 +1114,13 @@ void building_room_geom_t::create_obj_model_insts(building_t const &building) { 
 				}
 			}
 			if (building.is_rotated()) {building.do_xy_rotate_normal(dir);}
-			obj_model_insts.emplace_back((i - obj_vect.begin() + obj_id_offset), dir);
+			unsigned const obj_id(i - obj_vect.begin() + obj_id_offset);
+			obj_model_insts.emplace_back(obj_id, dir);
+
+			if (i->type == TYPE_OFF_CHAIR) { // apply saved office chair rotations
+				auto it(saved_office_chair_dirs.find(obj_id));
+				if (it != saved_office_chair_dirs.end()) {obj_model_insts.back().dir = it->second;}
+			}
 			//get_untextured_material().add_cube_to_verts_untextured(*i, WHITE); // for debugging of model bcubes
 		} // for i
 	} // for vect_id
