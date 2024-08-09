@@ -36,6 +36,7 @@ shadow_map_sz 8192
 #moon_theta 0.3
 ambient_scale 0.5
 sunlight_brightness 2.0
+tiled_terrain_fog_density 1.0 # (0.0, 1.0]
 
 ntrees 100 # most of the trees are generated city trees, so this has little effect
 tree_size 0.2

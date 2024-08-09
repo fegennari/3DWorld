@@ -67,7 +67,7 @@ extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_m
 extern int player_in_elevator, player_in_attic;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, cloud_height_offset, clouds_per_tile;
 extern float ocean_wave_height, sm_tree_density, tree_density_thresh, atmosphere, cloud_cover, temperature, flower_density, FAR_CLIP, biome_x_offset;
-extern float smap_thresh_scale, tt_grass_scale_factor, pond_max_depth;
+extern float smap_thresh_scale, tt_grass_scale_factor, pond_max_depth, tt_fog_density;
 extern double tfticks;
 extern point sun_pos, moon_pos, surface_pos;
 extern vector3d wind;
@@ -99,7 +99,7 @@ void show_gpu_mem_info();
 
 
 // lower fog distance when rainy/cloudy; very low when player is in the extended basement
-float get_tt_fog_scale    () {return ((player_in_basement == 3) ? 0.01 : (is_cloudy ? 0.25 : 1.0));}
+float get_tt_fog_scale    () {return tt_fog_density*((player_in_basement == 3) ? 0.01 : (is_cloudy ? 0.25 : 1.0));}
 float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius()*get_tt_fog_scale();}
 float get_draw_tile_dist  () {return DRAW_DIST_TILES*get_scaled_tile_radius();}
 float get_grass_thresh    () {return GRASS_THRESH*tt_grass_scale_factor*get_tile_width();}

@@ -114,7 +114,7 @@ float CAMERA_RADIUS(DEF_CAMERA_RADIUS), C_STEP_HEIGHT(0.6), waypoint_sz_thresh(1
 float ocean_wave_height(DEF_OCEAN_WAVE_HEIGHT), tree_density_thresh(0.55), model_auto_tc_scale(0.0), model_triplanar_tc_scale(0.0), precip_dist_scale(1.0);
 float custom_glaciate_exp(0.0), tree_type_rand_zone(0.0), jump_height(1.0), force_czmin(0.0), force_czmax(0.0), smap_thresh_scale(1.0), dlight_intensity_scale(1.0);
 float model_mat_lod_thresh(5.0), clouds_per_tile(0.5), def_atmosphere(1.0), def_vegetation(1.0), ocean_depth_opacity_mult(1.0), erode_amount(1.0), ambient_scale(1.0);
-float model_hemi_lighting_scale(0.5), pine_tree_radius_scale(1.0), sunlight_brightness(1.0), moonlight_brightness(1.0), sm_tree_scale(1.0);
+float model_hemi_lighting_scale(0.5), pine_tree_radius_scale(1.0), sunlight_brightness(1.0), moonlight_brightness(1.0), sm_tree_scale(1.0), tt_fog_density(1.0);
 float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0, 1.0, 1.0}, first_ray_weight[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0, 1.0, 1.0};
 double camera_zh(0.0);
 point mesh_origin(all_zeros), camera_pos(all_zeros), cube_map_center(all_zeros);
@@ -1958,6 +1958,7 @@ int load_config(string const &config_file) {
 	kwmf.add("pine_tree_radius_scale", pine_tree_radius_scale);
 	kwmf.add("sunlight_brightness", sunlight_brightness);
 	kwmf.add("moonlight_brightness", moonlight_brightness);
+	kwmf.add("tiled_terrain_fog_density", tt_fog_density); // (0.0, 1.0]
 
 	kwmf.add("hmap_plat_bot",    hmap_params.plat_bot);
 	kwmf.add("hmap_plat_height", hmap_params.plat_h);
