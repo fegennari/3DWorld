@@ -511,7 +511,9 @@ void end_water_surface_draw() {
 void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	bool const caustics_pass(dstate.pass_ix == 4);
 	if (((dstate.pass_ix > 1) ^ above_ground) && !caustics_pass) return; // not drawn in this pass
-	if (!dstate.check_cube_visible(bcube, dist_scale))           return;
+	float cull_dist_scale(dist_scale);
+	if (caustics_pass) {min_eq(cull_dist_scale, 0.75f*get_inf_terrain_fog_dist()/dstate.draw_tile_dist);} // cull caustics at 75% fog scale since they don't have fog enabled
+	if (!dstate.check_cube_visible(bcube, cull_dist_scale))      return;
 	float const water_zval(get_water_zval());
 
 	if (above_ground) { // cylindrical; bcube should be square in XY

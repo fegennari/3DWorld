@@ -249,7 +249,8 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 
 /*static*/ bool tid_nm_pair_t::bind_reflection_shader() {
 	if (room_mirror_ref_tid == 0) {select_texture(WHITE_TEX); return 0;}
-	// use a custom shader that uses screen coordinates to clip the texture to the mirror bounds; inefficient (wastes texels), but simple
+	// use a custom shader that uses screen coordinates to clip the texture to the mirror bounds; inefficient (wastes texels), but simple;
+	// this shader doesn't support fog, which means it may be visible through the fog, in particular in basements when FOG_FADE_TO_TRANSPARENT, but this isn't a big problem
 	bind_2d_texture(room_mirror_ref_tid);
 
 	if (reflection_shader.is_setup()) {reflection_shader.make_current();}
