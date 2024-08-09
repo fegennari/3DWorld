@@ -2451,6 +2451,7 @@ void get_table_cubes (room_object_t const &c, cube_t cubes[5]);
 unsigned get_table_like_object_cubes(room_object_t const &c, cube_t cubes[7]);
 void get_chair_cubes (room_object_t const &c, cube_t cubes[3]);
 void get_tc_leg_cubes(cube_t const &c, room_object_t const &obj, float width, bool recessed, cube_t cubes[4]);
+void get_reception_desk_cubes(room_object_t const &c, cube_t cubes[3]);
 void get_bookcase_cubes(room_object_t const &c, cube_t &top, cube_t &middle, cube_t &back, cube_t lr[2], bool no_shelves=0, float sides_scale=1.0);
 float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only, bool inside_only);
 void get_bench_cubes(room_object_t const &c, cube_t cubes[3]);

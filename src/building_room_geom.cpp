@@ -3192,10 +3192,20 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale, bool i
 	}
 }
 
-void building_room_geom_t::add_reception_desk(room_object_t const &c, float tscale) {
-	vector3d const sz(c.get_size());
-	float const top_z1(c.z1() + 0.94*sz.z), depth(sz[c.dim]), width(sz[!c.dim]), overhang(0.04*depth), lr_width(0.2*width), cutlen(depth - lr_width);
+void get_reception_desk_cubes(room_object_t const &c, cube_t cubes[3]) { // excludes overhang but includes top
+	float const depth(c.get_depth()), width(c.get_width()), overhang(0.04*depth), lr_width(0.2*width), cutlen(depth - lr_width);
 	assert(width > depth && cutlen > 0.0);
+	cube_t base(c);
+	base.expand_by_xy(-overhang);
+	cube_t front(base), left(base), right(base);
+	front.d[ c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*cutlen;
+	left .d[!c.dim][1] -= (width - lr_width);
+	right.d[!c.dim][0] += (width - lr_width);
+	left .d[ c.dim][c.dir] = right.d[ c.dim][c.dir] = front.d[ c.dim][!c.dir];
+	cubes[0] = front; cubes[1] = left; cubes[2] = right;
+}
+void building_room_geom_t::add_reception_desk(room_object_t const &c, float tscale) {
+	float const top_z1(c.z1() + 0.94*c.dz()), overhang(0.02*c.get_depth());
 	colorRGBA const color(apply_light_color(c));
 	// wood paneling sides
 	tid_nm_pair_t paneling(get_tex_auto_nm(PANELING_TEX, 4.0f*tscale));
@@ -3203,14 +3213,10 @@ void building_room_geom_t::add_reception_desk(room_object_t const &c, float tsca
 	rgeom_mat_t &side_mat(get_material(paneling, 1)); // with shadows
 	point const tex_origin(c.get_llc());
 	unsigned const lr_dim_mask(~get_face_mask(c.dim, c.dir));
-	cube_t base(c);
-	base.z2() = top_z1;
-	base.expand_by_xy(-overhang);
-	cube_t front(base), left(base), right(base);
-	front.d[ c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*cutlen;
-	left .d[!c.dim][1] -= (width - lr_width);
-	right.d[!c.dim][0] += (width - lr_width);
-	left .d[ c.dim][c.dir] = right.d[ c.dim][c.dir] = front.d[ c.dim][!c.dir];
+	cube_t cubes[3];
+	get_reception_desk_cubes(c, cubes);
+	for (unsigned i = 0; i < 3; ++i) {cubes[i].z2() = top_z1;} // remove the top surface
+	cube_t const &front(cubes[0]), &left(cubes[1]), &right(cubes[2]);
 	side_mat.add_cube_to_verts(front, color, tex_origin,  EF_Z2,                0, 0, 0, 0, 1); // z_dim_uses_ty=1
 	side_mat.add_cube_to_verts(left,  color, tex_origin, (EF_Z2 | lr_dim_mask), 0, 0, 0, 0, 1); // skip top face, z_dim_uses_ty=1
 	side_mat.add_cube_to_verts(right, color, tex_origin, (EF_Z2 | lr_dim_mask), 0, 0, 0, 0, 1); // skip top face, z_dim_uses_ty=1

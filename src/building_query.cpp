@@ -604,6 +604,11 @@ unsigned check_table_collision(room_object_t const &c, point &pos, point const &
 	unsigned const num(get_table_like_object_cubes(c, cubes));
 	return check_cubes_collision(cubes, num, pos, p_last, radius, cnorm);
 }
+unsigned check_rdesk_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+	cube_t cubes[3];
+	get_reception_desk_cubes(c, cubes);
+	return check_cubes_collision(cubes, 3, pos, p_last, radius, cnorm);
+}
 unsigned check_chair_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
 	get_chair_cubes(c, cubes);
@@ -1062,6 +1067,9 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			else if (c->type == TYPE_BALCONY) {
 				had_coll |= check_balcony_collision(*c, pos, p_last, xy_radius, cnorm);
 			}
+			else if (c->type == TYPE_RDESK) {
+				had_coll |= check_rdesk_collision(*c, pos, p_last, xy_radius, cnorm);
+			}
 			else if (sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 0, cnorm)) { // assume it's a cube; skip_z=0
 				if (c->type == TYPE_TOILET || (c->type == TYPE_URINAL && !is_player_model_female())) {player_near_toilet = 1;} // females can't use urinals
 				had_coll = 1;
@@ -1344,6 +1352,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			if      (c->type == TYPE_CLOSET ) {coll_ret |= check_closet_collision(*c, pos, p_last, radius, &cnorm);} // special case to handle closet interiors
 			else if (c->type == TYPE_BED    ) {coll_ret |= check_bed_collision   (*c, pos, p_last, radius, &cnorm);}
 			else if (can_use_table_coll(*c) ) {coll_ret |= check_table_collision (*c, pos, p_last, radius, &cnorm);}
+			else if (c->type == TYPE_RDESK  ) {coll_ret |= check_rdesk_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_CHAIR  ) {coll_ret |= check_chair_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_TUB    ) {coll_ret |= check_tub_collision   (*c, pos, p_last, radius, &cnorm, is_ball);}
 			else if (c->type == TYPE_BCASE  ) {coll_ret |= check_bookcase_collision(*c, pos, p_last, radius, &cnorm);}
@@ -2143,6 +2152,11 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		sm_cubes.insert(sm_cubes.end(), cubes+1, cubes+5); // skip table top; legs are small
 		sm_cubes.insert(lg_cubes.end(), cubes+5, cubes+num); // middle, drawers, and back
 	}
+	else if (type == TYPE_RDESK) {
+		cube_t cubes[3];
+		get_reception_desk_cubes(c, cubes);
+		lg_cubes.insert(lg_cubes.end(), cubes, cubes+3);
+	}
 	else if (type == TYPE_CHAIR) {
 		cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
 		get_chair_cubes(c, cubes);
@@ -2320,6 +2334,11 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 				cube_t cubes[7];
 				unsigned const num(get_table_like_object_cubes(*c, cubes));
 				if (line_int_cubes_exp(p1, p2, cubes, num, expand)) return 9;
+			}
+			else if (c->type == TYPE_RDESK) {
+				cube_t cubes[3];
+				get_reception_desk_cubes(*c, cubes);
+				if (line_int_cubes_exp(p1, p2, cubes, 3, expand)) return 9;
 			}
 			else if (c->type == TYPE_CHAIR) {
 				cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube

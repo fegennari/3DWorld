@@ -339,6 +339,11 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			unsigned const num(get_table_like_object_cubes(*c, cubes));
 			add_colored_cubes(cubes, num, color, cc);
 		}
+		else if (type == TYPE_RDESK) {
+			cube_t cubes[3];
+			get_reception_desk_cubes(*c, cubes);
+			add_colored_cubes(cubes, 3, color, cc);
+		}
 		else if (type == TYPE_CHAIR) {
 			colorRGBA const wood_color(get_textured_wood_color());
 			cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
