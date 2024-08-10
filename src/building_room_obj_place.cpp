@@ -4146,9 +4146,9 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 					if (wall_pos < room_bounds.d[!dim][0] + min_wall_spacing || wall_pos > room_bounds.d[!dim][1] - min_wall_spacing) continue; // too close to the adjacent wall
 					cube_t c(get_light_switch_bounds(zval, wall_bounds.d[dim][dir], wall_pos, dim, dir)), c_test(c); // should have enough thickness for pool tile
 					c_test.d[dim][!dir] += dir_sign*wall_thickness; // expand out more so that it's guaranteed to intersect appliances placed near the wall
-					if (overlaps_other_room_obj(c_test, objs_start))                continue;
-					if (!is_gdoor && is_obj_placement_blocked(c, room, (ei==1), 1)) continue; // inc_open_doors=1/check_open_dir=1 for inside, to avoid placing behind an open door
-					if (!check_if_placed_on_interior_wall(c, room, dim, dir))       continue; // ensure the switch is on a wall
+					if (overlaps_other_room_obj(c_test, objs_start))                     continue;
+					if (!is_gdoor && is_obj_placement_blocked(c_test, room, (ei==1), 1)) continue; // inc_open_doors=1/check_open_dir=1 for inside, to avoid placing behind open door
+					if (!check_if_placed_on_interior_wall(c, room, dim, dir))            continue; // ensure the switch is on a wall
 					// if is_basement, and this is an exterior wall, use a non-recessed light switch? but the basement ext wall will never have a doorway; next to basement stairs?
 					unsigned flags(RO_FLAG_NOCOLL);
 
