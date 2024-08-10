@@ -1432,21 +1432,25 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 			had_coll |= sphere_cube_int_update_pos(pos, radius, *i, p_last, 1, cnorm); // skip_z=1 (handled by zval test above)
 		}
 	}
-	for (auto e = elevators.begin(); e != elevators.end(); ++e) {
-		if (obj_z < e->z1() || obj_z > e->z2()) continue; // wrong part/floor
+	for (elevator_t const &e : elevators) {
+		if (obj_z < e.z1() || obj_z > e.z2()) continue; // wrong part/floor
 
-		if (room_geom && (e->open_amt > 0.75 || e->contains_pt(point(pos.x, pos.y, obj_z)))) { // elevator is mostly open, can enter || already inside elevator
-			room_object_t const &obj(get_elevator_car(*e)); // elevator car for this elevator
+		if (room_geom && (e.open_amt > 0.75 || e.contains_pt(point(pos.x, pos.y, obj_z)))) { // elevator is mostly open, can enter || already inside elevator
+			room_object_t const &obj(get_elevator_car(e)); // elevator car for this elevator
 
 			if (obj_z > obj.z1() && obj_z < obj.z2()) { // same floor as elevator car - can enter it; otherwise can't enter elevator shaft
 				cube_t cubes[5];
-				unsigned const num_cubes(e->get_coll_cubes(cubes));
+				unsigned const num_cubes(e.get_coll_cubes(cubes));
 				for (unsigned n = 0; n < num_cubes; ++n) {had_coll |= sphere_cube_int_update_pos(pos, radius, cubes[n], p_last, 1, cnorm);} // skip_z=1
 				continue; // done with elevator
 			}
 		}
-		had_coll |= sphere_cube_int_update_pos(pos, radius, *e, p_last, 1, cnorm); // handle as a single blocking cube; skip_z=1
+		had_coll |= sphere_cube_int_update_pos(pos, radius, e, p_last, 1, cnorm); // handle as a single blocking cube; skip_z=1
 	} // for e
+	for (escalator_t const &e : escalators) {
+		if (obj_z < e.z1() || obj_z > e.z2()) continue; // wrong part/floor
+		// TODO_ESCALATOR: something custom
+	}
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
 		had_coll |= check_door_coll(building, *i, pos, p_last, radius, obj_z, check_open_doors, cnorm);
 	}
@@ -1474,11 +1478,13 @@ bool building_interior_t::line_coll(building_t const &building, point const &p1,
 	had_coll |= get_line_clip_update_t(p1, p2, ceilings, t);
 	for (unsigned d = 0; d < 2; ++d) {had_coll |= get_line_clip_update_t(p1, p2, walls[d], t);}
 
-	for (auto e = elevators.begin(); e != elevators.end(); ++e) {
+	for (elevator_t const &e : elevators) {
 		cube_t cubes[5];
-		unsigned const num_cubes(e->get_coll_cubes(cubes));
+		unsigned const num_cubes(e.get_coll_cubes(cubes));
 		for (unsigned n = 0; n < num_cubes; ++n) {had_coll |= get_line_clip_update_t(p1, p2, cubes[n], t);}
 	}
+	for (escalator_t const &e : escalators) {had_coll |= get_line_clip_update_t(p1, p2, e, t);} // use escalator bcube, for now
+
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
 		if (i->open) {
 			cube_t door_bounds(*i);
@@ -1543,7 +1549,8 @@ point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &build
 		update_closest_pt(ceilings, pos, closest, pad_dist, dmin_sq);
 	}
 	for (unsigned d = 0; d < 2; ++d) {update_closest_pt(walls[d], pos, closest, pad_dist, dmin_sq);}
-	for (auto e = elevators.begin(); e != elevators.end(); ++e) {update_closest_pt(*e, pos, closest, pad_dist, dmin_sq);} // ignores open elevator doors
+	for (elevator_t const &e : elevators) {update_closest_pt(e, pos, closest, pad_dist, dmin_sq);} // ignores open elevator doors
+	// Note: escalators are ignored for now
 
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
 		if (i->open) {} // handle open doors? - closest point on extruded polygon
@@ -2205,7 +2212,7 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 
 // interior collision query used for rats, snakes, and insects: p1 and p2 are line end points; radius applies in X and Y, hheight is half height and applies in +/- z
 // note that for_spider is used with insects, not spiders, but it's named this way because it's passed into nested calls that use this variable name
-// return value: 0=no coll, 1=d0 wall, 2=d1 wall, 3=closed door d0, 4=closed door d1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object, 10=closet, 11=cabinet
+// return value: 0=no coll, 1=d0 wall, 2=d1 wall, 3=closed door d0, 4=closed door d1, 5=open door, 6=stairs, 7=elevator/escalator, 8=exterior wall, 9=room object, 10=closet, 11=cabinet
 int building_t::check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight, bool for_spider) const {
 	assert(interior != nullptr);
 	float const trim_thickness(get_trim_thickness()), zmin(min(p1.z, p2.z));
@@ -2249,7 +2256,8 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 			}
 		}
 	} // for s
-	if (line_int_cubes_exp(p1, p2, interior->elevators, expand, line_bcube)) return 7; // collide with entire elevator
+	if (line_int_cubes_exp(p1, p2, interior->elevators,  expand, line_bcube)) return 7; // collide with entire elevator
+	if (line_int_cubes_exp(p1, p2, interior->escalators, expand, line_bcube)) return 7; // collide with entire escalator
 	
 	// check exterior walls
 	if (point_in_attic(p1) && point_in_attic(p2)) {} // both points in attic, no need to check exterior walls
@@ -2415,7 +2423,7 @@ bool building_t::check_line_of_sight_large_objs(point const &p1, point const &p2
 			if (!door.open && line_bcube.intersects(door_bcube) && door_bcube.line_intersects(p1, p2)) return 0;
 		}
 	} // for door_stacks
-	if (line_int_cubes(p1, p2, interior->elevators, line_bcube)) return 0; // check elevators only because stairs aren't solid visual blockers
+	if (line_int_cubes(p1, p2, interior->elevators, line_bcube)) return 0; // check elevators only because stairs and escalators aren't solid visual blockers
 
 	// check exterior walls if there are multiple non-basement parts; skip for extended basement because this logic doesn't work and only interior walls are needed;
 	// this is simpler than ray_cast_exterior_walls()
@@ -2677,8 +2685,8 @@ void building_t::print_building_manifest() const { // Note: skips expanded_objs
 	if (interior) {
 		unsigned const walls(interior->walls[0].size() + interior->walls[1].size()), rooms(interior->rooms.size());
 		unsigned const floors(interior->floors.size()), ceilings(interior->ceilings.size()), door_stacks(interior->door_stacks.size());
-		unsigned const doors(interior->doors.size()), stairs(interior->stairwells.size()), elevators(interior->elevators.size());
-		cout << TXT(walls) << TXT(rooms) << TXT(floors) << TXT(ceilings) << TXT(door_stacks) << TXT(doors) << TXT(stairs) << TXT(elevators);
+		unsigned const doors(interior->doors.size()), stairs(interior->stairwells.size()), elevators(interior->elevators.size()), escalators(interior->escalators.size());
+		cout << TXT(walls) << TXT(rooms) << TXT(floors) << TXT(ceilings) << TXT(door_stacks) << TXT(doors) << TXT(stairs) << TXT(elevators) << TXT(escalators);
 	}
 	if (has_room_geom()) {
 		unsigned const objects(interior->room_geom->objs.size()), models(interior->room_geom->obj_model_insts.size());

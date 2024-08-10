@@ -883,7 +883,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		cube_t c(pipe_t(mp[0], mp[1], r_main_spacing, dim, PIPE_MAIN, 3).get_bcube());
 		vect_cube_t avoid;
 		vector_add_to(interior->stairwells, avoid);
-		vector_add_to(interior->elevators,  avoid);
+		vector_add_to(interior->elevators,  avoid); // add elevators, but escalators won't be in the basement
 
 		for (cube_t &a : avoid) {
 			a.expand_by_xy(0.25*wall_thickness); // account for stairs walls

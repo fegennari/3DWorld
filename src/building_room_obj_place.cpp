@@ -3043,7 +3043,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	//vect_room_object_t temp_objs;
 	
 	for (unsigned n = 0; n < nrows; ++n) { // n+1 aisles
-		if (skip_middle_row && n == nrows/2) continue; // skip middle aisle rack to allow direct access to central stairs and elevator
+		if (skip_middle_row && n == nrows/2) continue; // skip middle aisle rack to allow direct access to central stairs and elevator/escalator
 		float const rack_lo(room.d[!dim][0] + aisle_width + n*aisle_spacing);
 		rack.d[!dim][0] = rack_lo;
 		rack.d[!dim][1] = rack_lo + rack_width;
@@ -3091,11 +3091,17 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 			}
 		} // for r
 	} // for n
-	if (!doors.empty()) { // add checkout counter
+	if (has_tall_retail()) {
+		// TODO_ESCALATOR: maybe add a pair of escalators
+	}
+	if (!doors.empty()) { // add checkout counters
 		// find union of primary stairs and central elevators, which forms the other bounds of our checkout counter
 		cube_t blocked(room.get_cube_center()); // block off the center
 
 		for (auto const &e : interior->elevators) {
+			if (e.intersects(room)) {blocked.union_with_cube(e);}
+		}
+		for (auto const &e : interior->escalators) {
 			if (e.intersects(room)) {blocked.union_with_cube(e);}
 		}
 		for (auto const &s : interior->stairwells) {
@@ -4559,9 +4565,10 @@ template<typename T> bool any_cube_contains(cube_t const &cube, T const &cubes) 
 bool building_t::is_light_placement_valid(cube_t const &light, room_t const &room, float pad) const {
 	cube_t light_ext(light);
 	light_ext.expand_by_xy(pad);
-	if (!room.contains_cube(light_ext))            return 0; // room too small?
-	if (has_bcube_int(light, interior->elevators)) return 0;
-	if (!check_cube_within_part_sides(light))      return 0; // handle non-cube buildings
+	if (!room.contains_cube(light_ext))             return 0; // room too small?
+	if (has_bcube_int(light, interior->elevators )) return 0;
+	if (has_bcube_int(light, interior->escalators)) return 0; // conservative; is this needed?
+	if (!check_cube_within_part_sides(light))       return 0; // handle non-cube buildings
 	unsigned const pg_wall_start(interior->room_geom->wall_ps_start);
 
 	// check for intersection with low pipes such as sprinkler pipes that have been previously placed; only works for top level of parking garage; skip for backrooms

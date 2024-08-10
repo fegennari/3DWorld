@@ -911,6 +911,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		default: break;
 		} // end switch
 	} // for i
+	for (escalator_t const &e : building.interior->escalators) {add_escalator(e, building.get_window_vspace(), 1, 0);} // draw_static=1, draw_dynamic=0
 	add_skylights_details(building);
 	for (room_object_t &rug : rugs) {add_rug(rug);} // rugs are added last so that alpha blending of their edges works
 	// Note: verts are temporary, but cubes are needed for things such as collision detection with the player and ray queries for indir lighting
@@ -1169,21 +1170,22 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building, point
 			}
 		} // for i
 	}
-	for (auto e = building.interior->elevators.begin(); e != building.interior->elevators.end(); ++e) {
-		assert(e->car_obj_id < objs.size());
-		assert(e->button_id_start < e->button_id_end && e->button_id_end <= objs.size());
+	for (elevator_t const &e : building.interior->elevators) {
+		assert(e.car_obj_id < objs.size());
+		assert(e.button_id_start < e.button_id_end && e.button_id_end <= objs.size());
 		float const fc_thick_scale(building.get_elevator_fc_thick_scale());
-		add_elevator_doors(*e, fc_thick_scale); // add dynamic elevator doors
+		add_elevator_doors(e, fc_thick_scale); // add dynamic elevator doors
 		// draw elevator car for this elevator
-		add_elevator(objs[e->car_obj_id], *e, 2.0/obj_scale, fc_thick_scale, building.calc_floor_offset(e->z1()),
+		add_elevator(objs[e.car_obj_id], e, 2.0/obj_scale, fc_thick_scale, building.calc_floor_offset(e.z1()),
 			building.get_window_vspace(), building.has_parking_garage, !building.interior->elevators_disabled);
 
-		for (auto j = objs.begin() + e->button_id_start; j != objs.begin() + e->button_id_end; ++j) {
+		for (auto j = objs.begin() + e.button_id_start; j != objs.begin() + e.button_id_end; ++j) {
 			if (j->type == TYPE_BLOCKER) continue; // button was removed?
 			assert(j->type == TYPE_BUTTON);
 			if (j->in_elevator()) {add_button(*j);} // add button as a dynamic object if it's inside the elevator
 		}
 	} // for e
+	for (escalator_t const &e : building.interior->escalators) {add_escalator(e, building.get_window_vspace(), 0, 1);} // draw_static=0, draw_dynamic=1
 	mats_dynamic.create_vbos(building);
 }
 

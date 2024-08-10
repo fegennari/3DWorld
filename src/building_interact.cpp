@@ -2215,7 +2215,7 @@ bool building_t::is_obj_pos_valid(room_object_t const &obj, bool keep_in_room, b
 		obj_exp.expand_by_xy(0.25*get_wall_thickness()); // add a bit of extra padding to account for the railing thickness extending outside the stairs bcube (approx)
 		if (has_bcube_int(obj_exp, interior->stairwells)) return 0;
 	}
-	if (has_bcube_int(obj, interior->elevators)) return 0;
+	if (has_bcube_int(obj, interior->elevators) || has_bcube_int(obj, interior->escalators)) return 0;
 	return 1;
 }
 

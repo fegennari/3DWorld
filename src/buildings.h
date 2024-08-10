@@ -96,6 +96,7 @@ class building_nav_graph_t;
 struct building_t;
 class building_creator_t;
 struct elevator_t;
+struct escalator_t;
 class brg_batch_draw_t;
 typedef vector<vert_norm_comp_tc_color> vect_vnctcc_t;
 struct sign_t;
@@ -1029,6 +1030,7 @@ struct building_room_geom_t {
 	void add_skylight_details(cube_t const &skylight, bool has_skylight_light);
 	void add_elevator(room_object_t const &c, elevator_t const &e, float tscale, float fc_thick_scale,
 		unsigned floor_offset, float floor_spacing, bool has_parking_garage, bool is_powered);
+	void add_escalator(escalator_t const &e, float floor_spacing, bool draw_static, bool draw_dynamic);
 	void add_elevator_doors(elevator_t const &e, float fc_thick_scale);
 	void add_light(room_object_t const &c, float tscale);
 	void add_rug(room_object_t const &c);
@@ -1523,7 +1525,7 @@ struct building_interior_t {
 	vector<landing_t> landings; // for stairs and elevators
 	vector<room_t> rooms;
 	vector<elevator_t> elevators;
-	//vector<escalator_t> escalators;
+	vector<escalator_t> escalators;
 	vector<person_t> people;
 	std::unique_ptr<building_room_geom_t> room_geom;
 	std::unique_ptr<building_nav_graph_t> nav_graph;

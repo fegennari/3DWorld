@@ -2532,9 +2532,17 @@ bool has_stairs_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, f
 	return 0;
 }
 bool has_elevator_bcube_int(cube_t const &bcube, vector<elevator_t> const &elevators, float doorway_width) {
-	for (auto e = elevators.begin(); e != elevators.end(); ++e) {
-		cube_t tc(*e);
-		tc.d[e->dim][e->dir] += doorway_width*(e->dir ? 1.0 : -1.0); // add extra space in front of the elevator
+	for (elevator_t const &e : elevators) {
+		cube_t tc(e);
+		tc.d[e.dim][e.dir] += doorway_width*(e.dir ? 1.0 : -1.0); // add extra space in front of the elevator
+		if (tc.intersects(bcube)) return 1;
+	}
+	return 0;
+}
+bool has_escalator_bcube_int(cube_t const &bcube, vector<escalator_t> const &escalators, float doorway_width) {
+	for (escalator_t const &e : escalators) {
+		cube_t tc(e);
+		tc.expand_in_dim(e.dim, doorway_width); // add extra space to both ends of the escalator (conservative)
 		if (tc.intersects(bcube)) return 1;
 	}
 	return 0;
@@ -2547,11 +2555,13 @@ float building_t::get_doorway_width() const {
 	if (interior) {width = interior->get_doorway_width();}
 	return (width ? width : DOOR_WIDTH_SCALE*get_door_height()); // calculate from window spacing/door height if there's no interior or no interior doors
 }
-bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin, bool elevators_only, int no_check_enter_exit) const { // and ramps, and extb conn rooms/doors
+// and ramps, and extb conn rooms/doors, and escalators
+bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin, bool elevators_only, int no_check_enter_exit) const {
 	cube_t tc(c);
 	tc.expand_by_xy(dmin); // no pad in z
 	float const doorway_width(get_doorway_width()); // Note: can return zero
-	if (has_elevator_bcube_int(tc, elevators, doorway_width)) return 1;
+	if (has_elevator_bcube_int (tc, elevators,  doorway_width)) return 1;
+	if (has_escalator_bcube_int(tc, escalators, doorway_width)) return 1;
 	if (elevators_only) return 0;
 	tc.z1() -= 0.001*tc.dz(); // expand slightly to avoid placing an object exactly at the top of the stairs
 	if (has_stairs_bcube_int(tc, stairwells, doorway_width, no_check_enter_exit)) return 1; // must check zval to exclude stairs and elevators in parts with other z-ranges
@@ -2575,7 +2585,7 @@ bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, floa
 	}
 	return 0;
 }
-// similar to above (without stairs pretest), but returns bounding cubes rather than checking for intersections
+// similar to above (without stairs pretest), but returns bounding cubes rather than checking for intersections; used for parking garage queries
 void building_interior_t::get_stairs_and_elevators_bcubes_intersecting_cube(cube_t const &c, vect_cube_t &bcubes, float ends_clearance, float sides_clearance) const {
 	float const doorway_width(get_doorway_width());
 
@@ -2589,6 +2599,7 @@ void building_interior_t::get_stairs_and_elevators_bcubes_intersecting_cube(cube
 		tc.d[e.dim][e.dir] += (ends_clearance - sides_clearance)*(e.dir ? 1.0 : -1.0); // add extra space in front of the elevator
 		if (tc.intersects(c)) {bcubes.push_back(tc);}
 	}
+	// escalators are currently ignored here because they're not in basements/parking garages
 }
 
 struct cube_by_z1_descending {

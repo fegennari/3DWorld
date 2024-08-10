@@ -14,6 +14,8 @@ int get_concrete_tid();
 void set_tile_floor_texture();
 
 
+int get_walkway_track_tid() {return get_texture_by_name("interiors/walkway_track.png", 1, 0, 1, 8.0);}
+
 class tile_drawer_t {
 	uint64_t last_tile_id=0;
 	bool tile_was_set=0;
@@ -290,7 +292,7 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 	td.end_draw(qbds.untex_qbd);
 	
 	if (!shadow_only) { // draw moving walkway moving textured tracks; not needed for the shadow pass
-		select_texture(get_texture_by_name("interiors/walkway_track.png", 1, 0, 1, 8.0));
+		select_texture(get_walkway_track_tid());
 		for (moving_walkway_t const &mww : mwws) {mww.draw(dstate, qbds, td, shadow_only, 1, 0);} // draw_track=1, draw_sides=0
 		qbds.qbd.draw_and_clear();
 		select_texture(WHITE_TEX);

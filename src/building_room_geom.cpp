@@ -24,8 +24,8 @@ extern int display_mode, player_in_closet, frame_counter;
 
 int get_rand_screenshot_texture(unsigned rand_ix);
 unsigned get_num_screenshot_tids();
+int get_walkway_track_tid();
 string gen_random_full_name(rand_gen_t &rgen);
-
 void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize,
 	vector3d const &column_dir, vector3d const &line_dir, bool use_quads=0, bool include_space_chars=0);
 string const &gen_book_title(unsigned rand_id, string *author, unsigned split_len);
@@ -2622,6 +2622,17 @@ void building_room_geom_t::add_elevator_doors(elevator_t const &e, float fc_thic
 		}
 		if (door.dz() > 0.0) {mat.add_cube_to_verts_untextured(door, GRAY, skip_faces);} // all or top part
 	} // for d
+}
+
+void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spacing, bool draw_static, bool draw_dynamic) {
+	if (draw_static) {
+		// TODO_ESCALATOR
+		get_untextured_material(1).add_cube_to_verts_untextured(e, LT_GRAY); // shadowed; placeholder
+	}
+	if (draw_dynamic) { // draw moving belt
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_walkway_track_tid()), 0, 1)); // unshadowed, dynamic
+		// TODO_ESCALATOR
+	}
 }
 
 void building_room_geom_t::add_light(room_object_t const &c, float tscale) {

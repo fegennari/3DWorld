@@ -247,26 +247,29 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 	float const stairs_z1(z1 - floor_spacing), stairs_z2(z2 + floor_spacing); // stairs extend an extra floor up and down to block rays in stairwells
 	for (unsigned d = 0; d < 2; ++d) {add_colored_cubes(interior->walls[d], wall_color, ext_bcube, cc);}
 
-	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
-		if (!e->intersects(ext_bcube)) continue;
+	for (elevator_t const &e : interior->elevators) {
+		if (!e.intersects(ext_bcube)) continue;
 		cube_t cubes[5];
-		unsigned const num_cubes(e->get_coll_cubes(cubes));
+		unsigned const num_cubes(e.get_coll_cubes(cubes));
 		// for now elevators are treated the same as walls with the same color, even though the inside of open elevators is wood
 		add_colored_cubes(cubes, num_cubes, wall_color, cc); // can only assign the same color to all sides of the cube
 	}
-	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
-		if (i->open || !i->intersects(ext_bcube)) continue; // add only closed doors
-		cc.emplace_back(i->get_true_bcube(), WHITE);
+	for (escalator_t const &e : interior->escalators) {
+		// TODO_ESCALATOR
 	}
-	for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) {
-		if (!i->intersects(ext_bcube)) continue;
-		tid_nm_pair_t tex;
-		cc.emplace_back(*i, get_floor_tex_and_color(*i, tex).modulate_with(tex.get_avg_color()));
+	for (door_t const &d : interior->doors) {
+		if (d.open || !d.intersects(ext_bcube)) continue; // add only closed doors
+		cc.emplace_back(d.get_true_bcube(), WHITE);
 	}
-	for (auto i = interior->ceilings.begin(); i != interior->ceilings.end(); ++i) {
-		if (!i->intersects(ext_bcube)) continue;
+	for (cube_t const &i : interior->floors) {
+		if (!i.intersects(ext_bcube)) continue;
 		tid_nm_pair_t tex;
-		cc.emplace_back(*i, get_ceil_tex_and_color(*i, tex).modulate_with(tex.get_avg_color()));
+		cc.emplace_back(i, get_floor_tex_and_color(i, tex).modulate_with(tex.get_avg_color()));
+	}
+	for (cube_t const &i : interior->ceilings) {
+		if (!i.intersects(ext_bcube)) continue;
+		tid_nm_pair_t tex;
+		cc.emplace_back(i, get_ceil_tex_and_color(i, tex).modulate_with(tex.get_avg_color()));
 	}
 	add_colored_cubes(details, detail_color.modulate_with(mat.roof_tex.get_avg_color()), ext_bcube, cc); // should this be included?
 	if (!has_room_geom()) return; // nothing else to add
