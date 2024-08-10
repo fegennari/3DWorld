@@ -433,10 +433,15 @@ void building_room_geom_t::draw_mirror_surface(room_object_t const &c, cube_t co
 	unsigned const skip_faces(get_face_mask(dim, dir));
 	// draw only the front face; use dim/dir rather than from c; doesn't need to be emissive
 	get_material(tid_nm_pair_t(REFLECTION_TEXTURE_ID, 0.0, shadowed), shadowed).add_cube_to_verts(mirror, WHITE, zero_vector, skip_faces, !dim);
+	// draw untextured quad behind the mirror that will be drawn when the mirror is visible through a window
+	float const backing_shift((dir ? 1.0 : -1.0)*0.01*mirror.get_sz_dim(dim));
+	cube_t backing(mirror);
+	backing.d[dim][dir] -= backing_shift; // move in to prevent z-fighting
+	get_untextured_material(0).add_cube_to_verts_untextured(backing, apply_light_color(c), skip_faces); // unshadowed
 
 	if (c.is_broken()) {
 		cube_t crack(mirror);
-		crack.d[dim][dir] += (dir ? 1.0 : -1.0)*0.01*mirror.get_sz_dim(dim); // move out to prevent z-fighting
+		crack.d[dim][dir] += backing_shift; // move out to prevent z-fighting
 		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crack_tid(c, 1), 0.0, 0, true), 0, 0, 0, 1)); // alpha=1, unshadowed, transparent=1
 		mat.add_cube_to_verts(crack, apply_light_color(c, WHITE), all_zeros, skip_faces, !dim, (c.obj_id&1), (c.obj_id&2)); // X/Y mirror based on obj_id
 	}
@@ -1292,7 +1297,7 @@ cube_t get_mirror_surface(room_object_t const &c) {
 	return mirror;
 }
 void building_room_geom_t::add_mirror(room_object_t const &c) {
-	bool const shadowed(c.get_sz_dim(c.dim) > 0.05*c.dz()); // medicine cabinets cast shadows
+	bool const shadowed(c.get_sz_dim(c.dim) > 0.05*c.dz()); // medicine cabinets cast shadows, while bathroom mirrors do not
 	colorRGBA const side_color(apply_light_color(c));
 
 	if (c.is_open()) { // open medicine cabinet
@@ -1320,7 +1325,7 @@ void building_room_geom_t::add_mirror(room_object_t const &c) {
 			mat.add_cube_to_verts(*i, side_color, zero_vector, sf); // skip back face
 		}
 	}
-	else { // closed
+	else { // closed medicine cabinet, or bathroom mirror
 		draw_mirror_surface(c, c, c.dim, c.dir, shadowed);
 		get_untextured_material(shadowed).add_cube_to_verts_untextured(c, side_color, get_skip_mask_for_xy(c.dim)); // draw only the exterior sides, untextured
 	}
