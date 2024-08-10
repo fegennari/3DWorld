@@ -128,15 +128,20 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, cube_t const &room, v
 	point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, unsigned max_chairs, bool use_tall_table)
 {
 	bool const use_bar_stools(use_tall_table);
-	float const table_rscale(use_tall_table ? 0.12 : 0.18), table_hscale(use_tall_table ? 0.35 : 0.2);
+	float const table_rscale(use_tall_table ? 0.12 : 0.18), table_hscale(use_tall_table ? 0.35 : 0.2), room_dx(room.dx()), room_dy(room.dy());
 	float const window_vspacing(get_window_vspace()), room_pad(max(4.0f*get_wall_thickness(), get_min_front_clearance_inc_people()));
+	// use a long table for a large room 50% of the time
+	bool const use_long_table(!use_tall_table && max(room_dx, room_dy) > 3.0*window_vspacing && min(room_dx, room_dy) > 2.0*window_vspacing && rgen.rand_bool());
+	bool const long_dim(room_dx < room_dy);
 	vector3d const room_sz(room.get_size());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	point table_pos(place_pos);
-	vector3d table_sz;
+	vector3d table_sz; // half size
 	for (unsigned d = 0; d < 2; ++d) {table_sz [d]  = table_rscale*window_vspacing*(1.0 + rgen.rand_float());} // half size relative to window_vspacing
 	for (unsigned d = 0; d < 2; ++d) {table_pos[d] += rand_place_off*room_sz[d]*rgen.rand_uniform(-1.0, 1.0);} // near the center of the room
-	bool const is_round((rgen.rand()&3) == 0); // 25% of the time
+	if (use_long_table) {table_sz[long_dim] *= 1.5;}
+	float const long_edge_len(2.0*max(table_sz.x, table_sz.y));
+	bool const is_round(!use_tall_table && !use_long_table && rgen.rand_float() < 0.25); // 25% of the time
 	if (is_round) {table_sz.x = table_sz.y = 0.6f*(table_sz.x + table_sz.y);} // round tables must have square bcubes for now (no oval tables yet); make radius slightly larger
 	point llc(table_pos - table_sz), urc(table_pos + table_sz);
 	llc.z = table_pos.z; // bottom
@@ -169,16 +174,25 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, cube_t const &room, v
 		} // for d
 	}
 	else {
+		bool const two_chairs_long_side(use_long_table && long_edge_len > 3.0*0.2*window_vspacing);
+		if (two_chairs_long_side && max_chairs == 4) {max_chairs = 6;}
+
 		for (unsigned orient = 0; orient < 4; ++orient) {
-			if (num_chairs == max_chairs) break; // done
-			if (prev_not_added) {prev_not_added = 0;} // if the previous chair failed to be added, make sure to try the next orient
-			else if (orient == 3 && num_chairs == 0) {} // make sure to place a chair if we have none and this is our last orient
-			else if (rgen.rand_bool()) continue; // 50% of the time
 			bool const dim(bool(orient >> 1) ^ pri_dim), dir(bool(orient & 1) ^ pri_dir);
-			point chair_pos(table_pos); // same starting center and z1
-			chair_pos[dim] += (dir ? -1.0f : 1.0f)*table_sz[dim];
-			bool const added(add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, 0)); // office_chair=0
-			if (added) {++num_chairs;} else {prev_not_added = 1;}
+			// add 2 chairs on long side of table if there's space
+			unsigned const num_this_orient((two_chairs_long_side && dim != long_dim) ? 2 : 1);
+
+			for (unsigned n = 0; n < num_this_orient; ++n) {
+				if (num_chairs == max_chairs) break; // done
+				if (prev_not_added) {prev_not_added = 0;} // if the previous chair failed to be added, make sure to try the next orient
+				else if (orient == 3 && num_chairs == 0 && n+1 == num_this_orient) {} // make sure to place a chair if we have none and this is our last orient/chair
+				else if (rgen.rand_float() > 0.25*(num_this_orient + 1)) continue; // skip 50% of the time for single chair, 25% of the time for double
+				point chair_pos(table_pos); // same starting center and z1
+				chair_pos[dim] += (dir ? -1.0f : 1.0f)*table_sz[dim];
+				if (num_this_orient == 2) {chair_pos[!dim] += ((n==0) ? -1.0 : 1.0)*0.225*long_edge_len;} // offset to sides
+				bool const added(add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, 0)); // office_chair=0
+				if (added) {++num_chairs;} else {prev_not_added = 1;}
+			}
 		} // for orient
 	} // use chairs
 	return num_chairs + 1; // add 1 for the table
