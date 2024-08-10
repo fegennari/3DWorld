@@ -4944,7 +4944,6 @@ void building_room_geom_t::add_door_handle(door_t const &door, door_rotation_t c
 		mat.add_cube_to_verts_untextured(handle, color); // all faces
 	}
 	if (door.open_amt > 0.0) { // rotate around door pivot point
-		unsigned max_angle(75); // in degrees
 		// similar to rotate_and_shift_door()
 		float const rot_angle(-float(drot.angle)*TO_RADIANS*(door.hinge_side ? -1.0 : 1.0));
 		float const sin_term(sin(rot_angle)), cos_term(cos(rot_angle));
