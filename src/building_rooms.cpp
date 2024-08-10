@@ -2626,18 +2626,25 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				interior->floors.push_back(sub_floor);
 			}
 		}
-		else if (i->has_walled_sides() && extend_walls_up) { // add upper section only
-			cube_t wall_upper(wall);
-			set_wall_width(wall_upper, (i->d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_hw), wall_hw, dim); // move to the other side
-			wall_upper.z1() = railing_z2;
+		else {
+			if (i->has_walled_sides() && extend_walls_up) { // add upper section only
+				cube_t wall_upper(wall);
+				set_wall_width(wall_upper, (i->d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_hw), wall_hw, dim); // move to the other side
+				wall_upper.z1() = railing_z2;
 
-			for (unsigned d = 0; d < 2; ++d) {
-				// if there's no wall, extend to cover the gap where the wall would be; slightly smaller to avoid z-fighting on exterior walls (happens to be the trim thickness);
-				// we can't just skip this face for exterior walls because it may be visible through a window
-				if (i->against_wall[d]) {wall_upper.d[!dim][d] += (d ? 1.0 : -1.0)*0.9*wall_thickness;}
+				for (unsigned d = 0; d < 2; ++d) {
+					// if there's no wall, extend to cover the gap where the wall would be; slightly smaller to avoid z-fighting on exterior walls (happens to be the trim thickness);
+					// we can't just skip this face for exterior walls because it may be visible through a window
+					if (i->against_wall[d]) {wall_upper.d[!dim][d] += (d ? 1.0 : -1.0)*0.9*wall_thickness;}
+				}
+				// add wall at back/end of stairs; hanging in case the bottom surface is visible
+				objs.emplace_back(wall_upper, TYPE_STAIR_WALL, 0, dim, dir, RO_FLAG_HANGING);
 			}
-			// add wall at back/end of stairs; hanging in case the bottom surface is visible
-			objs.emplace_back(wall_upper, TYPE_STAIR_WALL, 0, dim, dir, RO_FLAG_HANGING);
+			if (i->shape == SHAPE_WALLED && i->stack_conn) { // stacked parts connector stairs with clipped walls; add lower section only
+				cube_t wall_lower(wall);
+				wall_lower.z2() = wall.z1() + window_vspacing - half_thick;
+				objs.emplace_back(wall_lower, TYPE_STAIR_WALL, 0, dim, dir);
+			}
 		}
 		wall.d[dim][!dir] = i->d[dim][!dir];
 
