@@ -944,7 +944,7 @@ struct door_rotation_t {
 
 struct building_room_geom_t {
 
-	bool has_elevators=0, has_pictures=0, has_garage_car=0, modified_by_player=0, have_clock=0;
+	bool has_pictures=0, has_garage_car=0, modified_by_player=0, have_clock=0;
 	unsigned char num_pic_tids=0, invalidate_mats_mask=0;
 	float obj_scale=1.0;
 	unsigned wall_ps_start=0, buttons_start=0, stairs_start=0, backrooms_start=0; // index of first object of {TYPE_PG_*|TYPE_PSPACE, TYPE_BUTTON, TYPE_STAIR}

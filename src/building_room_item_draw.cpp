@@ -753,7 +753,6 @@ void building_room_geom_t::clear() {
 	clear_materials();
 	objs.clear();
 	light_bcubes.clear();
-	has_elevators = 0;
 }
 void building_room_geom_t::clear_materials() { // clears all materials
 	mats_static .clear();

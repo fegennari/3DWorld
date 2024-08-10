@@ -2499,9 +2499,8 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		}
 		i->button_id_end = objs.size();
 	} // for e
-	interior->room_geom->stairs_start  = objs.size();
-	interior->room_geom->has_elevators = (!interior->elevators.empty());
-	colorRGBA const railing_colors[3]  = {GOLD, DK_BROWN, BLACK};
+	interior->room_geom->stairs_start = objs.size();
+	colorRGBA const railing_colors[3] = {GOLD, DK_BROWN, BLACK};
 	colorRGBA const railing_color(railing_colors[rgen.rand()%3]); // set per-building
 
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {

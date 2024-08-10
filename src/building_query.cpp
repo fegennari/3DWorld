@@ -1068,7 +1068,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				had_coll |= check_balcony_collision(*c, pos, p_last, xy_radius, cnorm);
 			}
 			else if (c->type == TYPE_RDESK) {
-				had_coll |= check_rdesk_collision(*c, pos, p_last, xy_radius, cnorm);
+				had_coll |= (check_rdesk_collision(*c, pos, p_last, xy_radius, cnorm) != 0);
 			}
 			else if (sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 0, cnorm)) { // assume it's a cube; skip_z=0
 				if (c->type == TYPE_TOILET || (c->type == TYPE_URINAL && !is_player_model_female())) {player_near_toilet = 1;} // females can't use urinals
