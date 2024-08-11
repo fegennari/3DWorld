@@ -1695,7 +1695,7 @@ bool building_t::is_valid_ai_placement(point const &pos, float radius, bool skip
 	if (point_in_water_area(pos) || is_above_retail_area(pos)) return 0;
 	cube_t ai_bcube(pos);
 	ai_bcube.expand_by(radius); // expand more in Z?
-	if (!is_valid_stairs_elevator_placement(ai_bcube, radius)) return 0;
+	if (!is_valid_stairs_elevator_placement(ai_bcube, ai_bcube, radius)) return 0; // Note: will double pad by radius
 
 	// Note: people are placed before room geom is generated for all buildings, so this may not work and will have to be handled during room geom placement
 	if (!no_check_objs && interior->room_geom) { // check placement against room geom objects

@@ -2105,7 +2105,7 @@ private:
 	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, bool inc_open_doors, float room_pad=0.0) const;
 	bool check_cube_intersect_walls(cube_t const &c) const;
 	bool check_cube_contained_in_part(cube_t const &c) const;
-	bool is_valid_stairs_elevator_placement(cube_t const &c, float pad, int dim=2, bool check_walls=1, bool check_private_rooms=0) const;
+	bool is_valid_stairs_elevator_placement(cube_t const &c, cube_t const &c_nopad, float pad, int dim=2, bool check_walls=1, bool check_private_rooms=0) const;
 	bool clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out, vect_cube_t &temp) const;
 	void add_ceiling_cube_no_skylights(cube_t const &c);
 	void calc_room_ext_sides(room_t &room) const;
