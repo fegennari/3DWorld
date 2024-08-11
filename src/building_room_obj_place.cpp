@@ -1703,10 +1703,17 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	}
 	float stall_width(2.0*twidth), sink_spacing(1.75*swidth);
 	bool br_dim(room.dy() < room.dx()), sink_side(0), sink_side_set(0), mens_room(0); // br_dim is the smaller dim
-	cube_t place_area(room), br_door;
+	cube_t place_area(room), br_door, avoid;
 	place_area.expand_by(-0.5*wall_thickness);
 	unsigned br_door_stack_ix(0);
 
+	// check for any stairs or elevators that may partiall overlap a bathroom wall from the adjacent room and avoid them; there should be at most one
+	for (stairwell_t const &s : interior->stairwells) {
+		if (s.intersects(room) && zval >= s.z1() && zval < s.z2()) {avoid = s; break;}
+	}
+	for (elevator_t const &e : interior->elevators) {
+		if (e.intersects(room) && zval >= e.z1() && zval < e.z2()) {avoid = e; break;}
+	}
 	// determine men's room vs. women's room
 	point const part_center(get_part_for_room(room).get_cube_center()), room_center(room.get_cube_center());
 	mens_room = ((part_center.x < room_center.x) ^ (part_center.y < room_center.y));
@@ -1786,6 +1793,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			stall.d[br_dim][ dir] = wall_pos; // + wall_thickness?
 			stall.d[br_dim][!dir] = wall_pos + dir_sign*stall_depth; // extend the front outward from the wall
 			if (interior->is_cube_close_to_doorway(stall, room, 0.0, 1)) continue; // skip if close to a door (for rooms with doors at both ends); inc_open=1
+			if (!avoid.is_all_zeros() && stall.intersects(avoid))        continue;
 
 			if (!is_cube()) {
 				cube_t stall_exp(stall);
@@ -1827,7 +1835,8 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			if (interior->is_cube_close_to_doorway(sink, room, 0.0, 1)) continue; // skip if close to a door, inc_open=1, pre expand
 			sink.expand_in_dim(!br_dim, 0.5*(use_sink_model ? swidth : fabs(sink_step))); // tile exactly with the adjacent sink
 			if (interior->is_cube_close_to_doorway(sink, room, 0.0, 0)) continue; // skip if close to a door
-			if (!check_cube_within_part_sides(sink)) continue; // outside the building
+			if (!check_cube_within_part_sides(sink))                    continue; // outside the building
+			if (!avoid.is_all_zeros() && sink.intersects(avoid))        continue;
 			if (use_sink_model) {objs.emplace_back(sink, TYPE_SINK,   room_id, br_dim, !dir, 0, tot_light_amt);} // sink 3D model
 			else                {objs.emplace_back(sink, TYPE_BRSINK, room_id, br_dim, !dir, 0, tot_light_amt);} // flat basin sink
 			if (use_sink_model) {add_bathroom_plumbing(objs.back());}
@@ -1853,14 +1862,16 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				urinal.expand_in_dim(!br_dim, 0.5*uwidth);
 				urinal.z2() += uheight;
 				if (interior->is_cube_close_to_doorway(urinal, room, 0.0, 1)) continue; // skip if close to a door
-				if (!check_cube_within_part_sides(urinal)) continue; // outside the building
+				if (!check_cube_within_part_sides(urinal))                    continue; // outside the building
+				if (!avoid.is_all_zeros() && urinal.intersects(avoid))        continue;
 				objs.emplace_back(sep_wall, TYPE_STALL,  room_id, br_dim, !dir, 0, tot_light_amt, SHAPE_SHORT, stall_color);
 				objs.emplace_back(urinal,   TYPE_URINAL, room_id, br_dim,  dir, 0, tot_light_amt);
 				add_bathroom_plumbing(objs.back());
 			} // for n
 			if (!two_rows) { // skip first wall if adjacent to a stall
 				set_wall_width(sep_wall, (u_pos - 0.5*sink_step), 0.2*wall_thickness, !br_dim);
-				objs.emplace_back(sep_wall, TYPE_STALL, room_id, br_dim, !dir, 0, tot_light_amt, SHAPE_SHORT, stall_color);
+				if (!avoid.is_all_zeros() && sep_wall.intersects(avoid)) {} // skip
+				else {objs.emplace_back(sep_wall, TYPE_STALL, room_id, br_dim, !dir, 0, tot_light_amt, SHAPE_SHORT, stall_color);}
 			}
 		}
 		if (!sinks_bcube.is_all_zeros()) { // add a long mirror above the sink
