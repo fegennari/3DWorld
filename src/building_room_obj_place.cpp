@@ -3091,8 +3091,49 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 			}
 		} // for r
 	} // for n
-	if (has_tall_retail()) {
-		// TODO_ESCALATOR: maybe add a pair of escalators
+	if (0 && has_tall_retail()) { // maybe add a pair of escalators
+		float const e_height(room.dz() - get_floor_thickness()), e_length(1.0*e_height); // upward at 45 degree angle
+		float const e_width(1.0*door_width), pair_width(2.0*e_width), e_end_pad(1.2*door_width);
+		cube_t centered;
+		set_cube_zvals(centered, zval, (zval + e_height));
+		set_wall_width(centered, room.get_center_dim(!dim), 0.5*pair_width, !dim);
+		set_wall_width(centered, room.get_center_dim( dim), (0.5*e_length + e_end_pad), dim);
+		// try to find a valid escalator placement by starting at the center and translating to each side
+		float const gap(centered.d[dim][0] - room.d[dim][0]); // should be the same at each end; room has exterior walls, so no place area shrink
+
+		if (gap > 0.0) { // we have the space to add an escalator; should always be true
+			unsigned const num_steps = 10;
+			float const step_len(gap/num_steps);
+			bool const first_dir(rgen.rand_bool());
+			bool success(0);
+
+			for (unsigned step = 0; step <= num_steps && !success; ++step) { // take N steps to each side
+				for (unsigned dir = 0; dir < (step ? 2 : 1); ++dir) { // first step is length 0 and has no dir
+					cube_t cand(centered);
+					cand.translate_dim(dim, ((bool(dir) ^ first_dir) ? 1.0 : -1.0)*step*step_len);
+					// Note: we don't need to pad stairs and elevators because we've already padded the ends of the escalator, and double padding on each side isn't needed
+					if (has_bcube_int(cand, interior->elevators)) continue; // no need to check for other escalators (should be none)
+					bool has_int(0);
+
+					for (stairwell_t const &s : interior->stairwells) { // check stairs coll
+						if (s.z2() < room.z2() || !s.intersects(room)) continue; // wrong stairs
+						cube_t stairs_ext(s);
+						stairs_ext.d[s.dim][!s.dir] += (s.dir ? -1.0 : 1.0)*s.get_retail_landing_width(floor_spacing);
+						if (stairs_ext.intersects(cand)) {has_int = 1; break;}
+					}
+					if (has_int) continue;
+
+					for (unsigned s = 0; s < 2; ++s) { // place two side-by-side escalators with opposite directions
+						escalator_t e(cand, dim, dir, (bool(s) ^ dir));
+						e.expand_in_dim(dim, -e_end_pad);
+						e.d[!dim][s] = cand.get_center_dim(!dim);
+						interior->escalators.push_back(e);
+					}
+					success = 1;
+					break;
+				} // for dir
+			} // for step
+		}
 	}
 	if (!doors.empty()) { // add checkout counters
 		// find union of primary stairs and central elevators, which forms the other bounds of our checkout counter
