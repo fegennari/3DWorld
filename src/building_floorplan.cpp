@@ -2157,6 +2157,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 						if (allow_clip_walls) { // Note: conservative and not well tested, but this case is likely to be disabled anyway
 							cube_t clip_cube(cand);
 							if (ab) {clip_cube.z2() += window_vspacing;} else {clip_cube.z1() -= window_vspacing;}
+							for (unsigned d = 0; d < 2; ++d) {clip_cube.d[s.dim][d] = ext_cube.d[s.dim][d];} // include padding
 							for (unsigned d = 0; d < 2; ++d) {subtract_cube_from_cubes(clip_cube, interior->walls[d], nullptr, 1);}
 						}
 					} // for s
@@ -2264,6 +2265,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				if (allow_clip_walls) { // clip out walls around stairs
 					cand_test[0].z1() = cand.z1(); cand_test[0].z2() = part.z2(); // lower
 					cand_test[1].z1() = part.z2(); cand_test[1].z2() = part.z2() + window_vspacing - fc_thick; // upper (bot of ceiling for first floor on upper part)
+					cand_test[ stairs_dir].d[dim][1] += 0.5*stairs_pad; // increase padding
+					cand_test[!stairs_dir].d[dim][0] -= 0.5*stairs_pad; // increase padding
 
 					for (unsigned e = 0; e < 2; ++e) {
 						for (unsigned d = 0; d < 2; ++d) {wall_clipped |= subtract_cube_from_cubes(cand_test[e], interior->walls[d], nullptr, 1);} // clip_in_z=1
@@ -2375,9 +2378,12 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			if (has_bcube_int(cand_test, interior->exclusion)) continue; // bad placement
 
 			if (allow_clip_walls) { // clip out walls around extended elevator
+				cube_t clip_cube(cand_test);
+				clip_cube.d[e->dim][e->dir] += 0.5*doorway_width*(e->dir ? 1.0 : -1.0); // add some extra wall clearance
+
 				for (unsigned d = 0; d < 2; ++d) {
 					holes.clear();
-					subtract_cube_from_cubes(cand_test, interior->walls[d], (((bool)d == e->dim) ? &holes : nullptr));
+					subtract_cube_from_cubes(clip_cube, interior->walls[d], (((bool)d == e->dim) ? &holes : nullptr));
 
 					// see if we need to add any walls to close gaps created between the front of the elevator and a removed wall section
 					for (auto h = holes.begin(); h != holes.end(); ++h) {
