@@ -3103,14 +3103,14 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 		} // for r
 	} // for n
 	if (0 && has_tall_retail()) { // maybe add a pair of escalators
-		float const e_height(room.dz() - get_floor_thickness()), e_length(1.0*e_height); // upward at 45 degree angle
-		float const e_width(1.0*door_width), pair_width(2.0*e_width), e_end_pad(1.2*door_width);
+		float const e_height(room.dz() - get_floor_thickness()), e_length(1.0*(e_height - get_floor_ceil_gap()) + 2.0*door_width); // upward at 45 degree angle + entrance/exit
+		float const e_width(1.0*door_width), pair_width(2.0*e_width), end_pad(1.2*door_width), door_extra_pad(0.5*door_width);
 		cube_t centered;
 		set_cube_zvals(centered, zval, (zval + e_height));
 		set_wall_width(centered, room.get_center_dim(!dim), 0.5*pair_width, !dim);
-		set_wall_width(centered, room.get_center_dim( dim), (0.5*e_length + e_end_pad), dim);
+		set_wall_width(centered, room.get_center_dim( dim), (0.5*e_length + end_pad), dim);
 		// try to find a valid escalator placement by starting at the center and translating to each side
-		float const gap(centered.d[dim][0] - room.d[dim][0]); // should be the same at each end; room has exterior walls, so no place area shrink
+		float const gap(centered.d[dim][0] - room.d[dim][0] - door_extra_pad); // should be the same at each end; room has exterior walls, so no place area shrink
 
 		if (gap > 0.0) { // we have the space to add an escalator; should always be true
 			unsigned const num_steps = 10;
@@ -3136,7 +3136,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 
 					for (unsigned s = 0; s < 2; ++s) { // place two side-by-side escalators with opposite directions
 						escalator_t e(cand, dim, dir, (bool(s) ^ dir));
-						e.expand_in_dim(dim, -e_end_pad);
+						e.expand_in_dim(dim, -end_pad);
 						e.d[!dim][s] = cand.get_center_dim(!dim);
 						interior->escalators.push_back(e);
 					}
