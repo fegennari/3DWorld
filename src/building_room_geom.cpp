@@ -434,7 +434,7 @@ void building_room_geom_t::draw_mirror_surface(room_object_t const &c, cube_t co
 	// draw only the front face; use dim/dir rather than from c; doesn't need to be emissive
 	get_material(tid_nm_pair_t(REFLECTION_TEXTURE_ID, 0.0, shadowed), shadowed).add_cube_to_verts(mirror, WHITE, zero_vector, skip_faces, !dim);
 	// draw untextured quad behind the mirror that will be drawn when the mirror is visible through a window
-	float const backing_shift((dir ? 1.0 : -1.0)*0.01*mirror.get_sz_dim(dim));
+	float const backing_shift((dir ? 1.0 : -1.0)*max(0.1f*mirror.get_sz_dim(dim), 0.005f*mirror.dz()));
 	cube_t backing(mirror);
 	backing.d[dim][dir] -= backing_shift; // move in to prevent z-fighting
 	get_untextured_material(0).add_cube_to_verts_untextured(backing, apply_light_color(c), skip_faces); // unshadowed
