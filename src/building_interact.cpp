@@ -9,6 +9,7 @@
 // physics constants, currently applied to balls
 float const KICK_VELOCITY  = 0.0025;
 float const MIN_VELOCITY   = 0.0001;
+float const MIN_VELOCITY_SQ= MIN_VELOCITY*MIN_VELOCITY;
 float const SMOKE_VELOCITY = 0.0006;
 float const OBJ_DECELERATE = 0.008;
 float const OBJ_GRAVITY    = 0.0003; // unsigned magnitude
@@ -1189,7 +1190,7 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 			}
 			if (on_floor) { // moving on the floor, apply surface friction
 				velocity *= (1.0f - min(1.0f, bt.friction*OBJ_DECELERATE*step_sz));
-				if (velocity.mag_sq() < MIN_VELOCITY*MIN_VELOCITY) {velocity = zero_vector;} // zero velocity if stopped
+				if (velocity.mag_sq() < MIN_VELOCITY_SQ) {velocity = zero_vector;} // zero velocity if stopped
 			}
 			else { // in the air - apply gravity
 				apply_building_gravity(velocity.z, step_sz);
@@ -1200,6 +1201,7 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 			}
 			new_center += velocity*step_sz; // move based on velocity
 		} // for step
+		if (velocity.xy_mag_sq() < 0.1*MIN_VELOCITY_SQ && fabs(velocity.z) < 5.0*MIN_VELOCITY) {velocity = zero_vector;} // reduce vertical jitter for stopped balls
 	}
 	if (new_center == center) return; // not moving, done
 	// check for collisions and move to new location
@@ -1275,7 +1277,7 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 				velocity *= (1.0f - min(1.0f, 25.0f*OBJ_DECELERATE*fticks_stable)); // apply water dampening
 				if (point_in_water_area(new_center)) {velocity.z = 0.0;} // remove vertical velocity component if center is underwater
 
-				if (new_center.z == target_zval && velocity.mag_sq() < MIN_VELOCITY*MIN_VELOCITY) { // zero velocity if stopped and no longer rising
+				if (new_center.z == target_zval && velocity.mag_sq() < MIN_VELOCITY_SQ) { // zero velocity if stopped and no longer rising
 					velocity = zero_vector;
 					obj_dynamic_to_static(ball, *interior);
 				}
