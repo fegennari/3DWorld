@@ -1657,7 +1657,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (shadow_only || num_geom_this_frame < max(global_building_params.max_room_geom_gen_per_frame, 1U)) {
 		if (!mats_static.valid) { // create static materials if needed
 			create_obj_model_insts(building);
-			create_static_vbos(building);
+			create_static_vbos    (building);
 			if (!shadow_only) {++num_geom_this_frame;}
 		}
 		bool const create_small(inc_small && !mats_small.valid), create_text(draw_int_detail_objs && !mats_text.valid);

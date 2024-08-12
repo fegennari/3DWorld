@@ -1386,6 +1386,7 @@ struct door_base_t : public cube_t {
 	door_base_t(cube_t const &c, bool dim_, bool dir, bool os=0, bool hs=0) :
 		cube_t(c), dim(dim_), open_dir(dir), hinge_side(hs), on_stairs(os) {assert(is_normalized());}
 	bool get_check_dirs  () const {return (dim ^ open_dir ^ hinge_side ^ 1);}
+	bool get_handle_side () const {return (get_check_dirs() ^ 1);} // 0: handle on left; 1: handle on right
 	float get_width      () const {return get_sz_dim(!dim);}
 	float get_thickness  () const {return DOOR_THICK_TO_WIDTH*get_width();}
 	cube_t get_true_bcube     () const {cube_t bc(*this); bc.expand_in_dim(dim, 0.5*get_thickness()); return bc;}
