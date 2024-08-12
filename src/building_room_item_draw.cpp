@@ -767,6 +767,7 @@ void building_room_geom_t::clear_materials() { // clears all materials
 	mats_exterior.clear();
 	mats_ext_detail.clear();
 	obj_model_insts.clear(); // these are associated with static VBOs
+	door_handles   .clear();
 }
 // Note: used for room lighting changes; detail object changes are not supported
 void building_room_geom_t::check_invalid_draw_data() {
@@ -782,7 +783,7 @@ void building_room_geom_t::check_invalid_draw_data() {
 	}
 	//if (invalidate_mats_mask & (1 << MAT_TYPE_TEXT  )) {mats_text    .invalidate();} // text objects
 	if (invalidate_mats_mask & (1 << MAT_TYPE_DYNAMIC )) {mats_dynamic .invalidate();} // dynamic objects
-	if (invalidate_mats_mask & (1 << MAT_TYPE_DOORS   )) {mats_doors   .invalidate();}
+	if (invalidate_mats_mask & (1 << MAT_TYPE_DOORS   )) {mats_doors   .invalidate();} // door_handles will also be created
 	if (invalidate_mats_mask & (1 << MAT_TYPE_LIGHTS  )) {mats_lights  .invalidate();}
 	if (invalidate_mats_mask & (1 << MAT_TYPE_DETAIL  )) {mats_detail  .invalidate();}
 	invalidate_mats_mask = 0; // reset for next frame
@@ -1189,25 +1190,58 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building, point
 	mats_dynamic.create_vbos(building);
 }
 
+colorRGBA building_t::get_door_handle_color() const {
+	colorRGBA const house_handle_colors [3] = {LT_GRAY, GRAY, BRASS_C};
+	colorRGBA const office_handle_colors[3] = {GRAY, DK_GRAY, BLACK};
+	return (is_house ? house_handle_colors : office_handle_colors)[(interior->doors.size() + interior->rooms.size() + mat_ix) % 3];
+}
 void building_room_geom_t::create_door_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Doors"); // 0.1ms
 	vector<door_t> const &doors(building.interior->doors);
 	uint8_t const door_type(building.is_residential() ? (uint8_t)tquad_with_ix_t::TYPE_HDOOR : (uint8_t)tquad_with_ix_t::TYPE_ODOOR);
 	bool const have_door_handle_model(global_building_params.add_door_handles && building_obj_model_loader.is_model_valid(OBJ_MODEL_DOOR_HANDLE));
-	colorRGBA handle_color(WHITE);
+	colorRGBA const handle_color(global_building_params.add_door_handles ? building.get_door_handle_color() : WHITE);
+	door_handles.clear();
 
-	if (global_building_params.add_door_handles) { // select a random handle color per building, consistent across all doors
-		colorRGBA const house_handle_colors [3] = {LT_GRAY, GRAY, BRASS_C};
-		colorRGBA const office_handle_colors[3] = {GRAY, DK_GRAY, BLACK};
-		handle_color = (building.is_house ? house_handle_colors : office_handle_colors)[(doors.size() + building.interior->rooms.size() + building.mat_ix) % 3];
-	}
 	for (door_t const &d : doors) { // interior doors; opens_out=0, exterior=0
 		door_rotation_t drot;
 		building.add_door_verts(d, *this, drot, door_type, d.dim, d.open_dir, d.open_amt, 0, 0, d.on_stairs, d.hinge_side, d.is_bldg_conn, d.mult_floor_room); // opens_out=0, exterior=0
 		if (!global_building_params.add_door_handles) continue;
-		if (have_door_handle_model) {} // TODO: add model, maybe to obj_model_insts
+		
+		if (have_door_handle_model) { // add model to door_handles
+			bool const handle_side(d.get_handle_side());
+			float const handle_height(0.04*d.dz());
+			point const door_center(d.get_cube_center());
+			vector3d handle_dir;
+			handle_dir[!d.dim] = (handle_side ? -1.0 : 1.0);
+			point handle_center(door_center);
+			handle_center.z += (building.is_house ? 0.15 : -0.18)*handle_height;
+			handle_center   -= 0.393*d.get_width()*handle_dir;
+			float sin_term(0.0), cos_term(0.0);
+			point pivot;
+			
+			if (d.open_amt > 0.0) { // rotate handle_dir and handle_center
+				// similar to rotate_and_shift_door()
+				float const rot_angle(-float(drot.angle)*TO_RADIANS*(d.hinge_side ? -1.0 : 1.0));
+				sin_term = sin(rot_angle);
+				cos_term = cos(rot_angle);
+				pivot    = d.get_cube_center();
+				pivot[!d.dim] = d.d[!d.dim][!handle_side];
+				do_xy_rotate_normal(sin_term, cos_term, handle_dir);
+			}
+			for (unsigned side = 0; side < 2; ++side) {
+				point side_pos(handle_center);
+				side_pos[d.dim] += (side ? 1.0 : -1.0)*0.68*handle_height;
+
+				if (d.open_amt > 0.0) {
+					do_xy_rotate(sin_term, cos_term, pivot, side_pos);
+					side_pos[d.dim] += drot.shift;
+				}
+				door_handles.emplace_back(side_pos, handle_height, (bool(side) ^ d.open_dir ^ d.hinge_side ^ 1), handle_dir);
+			}
+		}
 		else {add_door_handle(d, drot, handle_color, building.is_house);}
-	}
+	} // for d
 	mats_doors.create_vbos(building);
 }
 
@@ -1744,6 +1778,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	bool const is_rotated(building.is_rotated()), is_residential(building.is_residential()), check_occlusion(display_mode & 0x08);
 	bool const check_clip_cube(shadow_only && !is_rotated && !smap_light_clip_cube.is_all_zeros()); // check clip cube for shadow pass; not implemented for rotated buildings
 	bool const skip_interior_objs(!player_in_building_or_doorway && !shadow_only), has_windows(building.has_windows());
+	float const one_floor_above(camera_bs.z + floor_spacing), two_floors_below(camera_bs.z - 2.0*floor_spacing);
 	cube_t const clip_cube_bs(smap_light_clip_cube - xlate);
 	// skip for rotated buildings and reflection pass, since reflected pos may be in a different room; should we use actual_player_pos for shadow_only mode?
 	int const camera_room((is_rotated || reflection_pass) ? -1 : building.get_room_containing_pt(camera_bs));
@@ -1771,11 +1806,10 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			if (obj.type == TYPE_CEIL_FAN) continue; // not shadow casting; would shadow its own light
 			if (obj.is_exterior())         continue; // outdoors; no indoor shadow
 			if (obj.type == TYPE_KEY || obj.type == TYPE_SILVER || obj.type == TYPE_FOLD_SHIRT) continue; // small
-			if (obj.z1() > camera_bs.z)    continue; // above the light
-			if (obj.z2() < camera_bs.z - 2.0*floor_spacing) continue; // more than two floors below the light
+			if (obj.z1() > camera_bs.z || obj.z2() < two_floors_below) continue; // above or more than two floors below the light
 		}
 		else if (!building.is_house && !has_windows) { // windowless building
-			if (obj.z1() > camera_bs.z + floor_spacing || obj.z2() < camera_bs.z - 2.0*floor_spacing) continue; // more than one floor of difference
+			if (obj.z1() > one_floor_above || obj.z2() < two_floors_below) continue; // more than one floor of difference
 		}
 		point obj_center(obj.get_cube_center());
 		if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
@@ -1833,6 +1867,29 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			water_draw.add_water_for_sink(obj);
 		}
 	} // for i
+	if (!skip_interior_objs && !door_handles.empty()) { // optimization: skip door handles for player outside building
+		colorRGBA const handle_color(building.get_door_handle_color());
+
+		for (door_handle_t const &h : door_handles) {
+			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_DOOR_HANDLE)); // L, W, H
+			cube_t bc(h.center);
+			bc.expand_by((0.5*h.height/sz.z)*sz);
+			if (check_clip_cube && !clip_cube_bs.intersects(bc)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
+
+			if (shadow_only) {
+				if (bc.z1() > camera_bs.z || bc.z2() < two_floors_below) continue; // above or more than two floors below the light
+			}
+			else if (!building.is_house && !has_windows) { // windowless building
+				if (bc.z1() > one_floor_above || bc.z2() < two_floors_below) continue; // more than one floor of difference
+			}
+			point obj_center(h.center);
+			if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
+			if (!(is_rotated ? building.is_rot_cube_visible(bc, xlate) : camera_pdu.cube_visible(bc + xlate))) continue; // VFC
+			if (check_occlusion && building.check_obj_occluded(bc, camera_bs, oc, reflection_pass)) continue;
+			building_obj_model_loader.draw_model(s, obj_center, bc, h.dir, handle_color, xlate, OBJ_MODEL_DOOR_HANDLE, shadow_only, 0, nullptr, 0, 0, 0, h.mirror);
+			obj_drawn = 1;
+		} // for h
+	}
 	if (player_in_building) { // only drawn for the player building
 		if (!shadow_only && !reflection_pass) { // these models aren't drawn in the shadow or reflection passes; no emissive or rotated objects
 			for (auto i = model_objs.begin(); i != model_objs.end(); ++i) {

@@ -942,6 +942,13 @@ struct courtyard_t : public cube_t {
 struct door_rotation_t {
 	float angle=0.0, shift=0.0;
 };
+struct door_handle_t {
+	point center;
+	float height;
+	bool mirror;
+	vector3d dir;
+	door_handle_t(point const &c, float h, bool m, vector3d const d) : center(c), height(h), mirror(m), dir(d) {}
+};
 
 struct building_room_geom_t {
 
@@ -958,6 +965,7 @@ struct building_room_geom_t {
 	vect_room_object_t objs, expanded_objs, model_objs, trim_objs;
 	vector<room_obj_dstate_t> obj_dstate;
 	vector<obj_model_inst_t> obj_model_insts;
+	vector<door_handle_t> door_handles; // for 3D model drawing
 	vector<unsigned> moved_obj_ids;
 	vect_rat_t    rats;
 	vect_spider_t spiders;
@@ -1693,6 +1701,7 @@ struct building_t : public building_geom_t {
 	colorRGBA get_avg_side_color  () const {return side_color  .modulate_with(get_material().side_tex.get_avg_color());}
 	colorRGBA get_avg_roof_color  () const {return roof_color  .modulate_with(get_material().roof_tex.get_avg_color());}
 	colorRGBA get_avg_detail_color() const {return detail_color.modulate_with(get_material().roof_tex.get_avg_color());}
+	colorRGBA get_door_handle_color() const;
 	building_mat_t const &get_material() const;
 	bool has_windows         () const {return get_material().add_windows;}
 	bool has_int_windows     () const {return (DRAW_CITY_INT_WINDOWS || has_windows());}
