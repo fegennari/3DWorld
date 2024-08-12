@@ -945,9 +945,9 @@ struct door_rotation_t {
 struct door_handle_t {
 	point center;
 	float height;
-	bool mirror;
+	bool dim, hdir, mirror, closed;
 	vector3d dir;
-	door_handle_t(point const &c, float h, bool m, vector3d const d) : center(c), height(h), mirror(m), dir(d) {}
+	door_handle_t(point const &cp, float h, bool D, bool hd, bool m, bool c, vector3d const d) : center(cp), height(h), dim(D), hdir(hd), mirror(m), closed(c), dir(d) {}
 };
 
 struct building_room_geom_t {

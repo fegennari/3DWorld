@@ -1237,7 +1237,8 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 					do_xy_rotate(sin_term, cos_term, pivot, side_pos);
 					side_pos[d.dim] += drot.shift;
 				}
-				door_handles.emplace_back(side_pos, handle_height, (bool(side) ^ d.open_dir ^ d.hinge_side ^ 1), handle_dir);
+				bool const mirror(bool(side) ^ d.open_dir ^ d.hinge_side ^ 1);
+				door_handles.emplace_back(side_pos, handle_height, d.dim, bool(side), mirror, (d.open_amt == 0.0), handle_dir);
 			}
 		}
 		else {add_door_handle(d, drot, handle_color, building.is_house);}
@@ -1884,6 +1885,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			}
 			point obj_center(h.center);
 			if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
+			if (h.closed && (camera_bs[h.dim] < obj_center[h.dim]) == h.hdir) continue; // opposite side of closed door
 			if (!(is_rotated ? building.is_rot_cube_visible(bc, xlate) : camera_pdu.cube_visible(bc + xlate))) continue; // VFC
 			if (check_occlusion && building.check_obj_occluded(bc, camera_bs, oc, reflection_pass)) continue;
 			building_obj_model_loader.draw_model(s, obj_center, bc, h.dir, handle_color, xlate, OBJ_MODEL_DOOR_HANDLE, shadow_only, 0, nullptr, 0, 0, 0, h.mirror);
