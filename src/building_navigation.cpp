@@ -568,18 +568,14 @@ public:
 			c.expand_by_xy(radius);
 
 			if (c.contains_pt_xy(p1)) {
-				if (ignore_p1_coll) {
-					if (i->contains_pt_xy(p1)) continue; // even the unexpanded cube intersects, skip it
-					c = *i; // use unexpanded cube instead
-				}
-				else {return 0;} // fail
+				if (!ignore_p1_coll) return 0; // fail
+				if (i->contains_pt_xy(p1)) continue; // even the unexpanded cube intersects, skip it
+				c = *i; // use unexpanded cube instead
 			}
 			if (c.contains_pt_xy(p2)) {
-				if (ignore_p2_coll) {
-					if (i->contains_pt_xy(p2)) continue; // even the unexpanded cube intersects, skip it
-					c = *i; // use unexpanded cube instead
-				}
-				else {return 0;} // fail
+				if (!ignore_p2_coll) return 0; // fail
+				if (i->contains_pt_xy(p2)) continue; // even the unexpanded cube intersects, skip it
+				c = *i; // use unexpanded cube instead
 			}
 			if (check_line_clip_xy(p1, p2, c.d)) {is_path_valid = 0;}
 			keepout.push_back(c);
