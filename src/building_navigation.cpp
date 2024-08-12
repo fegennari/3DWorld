@@ -566,17 +566,26 @@ public:
 			if (!i->intersects_xy(walk_area_exp)) continue;
 			cube_t c(*i);
 			c.expand_by_xy(radius);
+			bool skip(0);
 
-			if (c.contains_pt_xy(p1)) {
-				if (!ignore_p1_coll) return 0; // fail
-				if (i->contains_pt_xy(p1)) continue; // even the unexpanded cube intersects, skip it
-				c = *i; // use unexpanded cube instead
-			}
-			if (c.contains_pt_xy(p2)) {
-				if (!ignore_p2_coll) return 0; // fail
-				if (i->contains_pt_xy(p2)) continue; // even the unexpanded cube intersects, skip it
-				c = *i; // use unexpanded cube instead
-			}
+			for (unsigned d = 0; d < 2; ++d) {
+				point const &p(d ? p2 : p1);
+				if (!c.contains_pt_xy(p)) continue; // okay/keep
+				if (!(d ? ignore_p2_coll : ignore_p1_coll)) return 0; // fail
+
+				for (unsigned dim = 0; dim < 2; ++dim) {
+					bool const dir(c.get_center_dim(dim) < p[dim]); // direction of point relative to cube center
+					cube_t cc(c);
+					cc.d[dim][dir] = p[dim] - (dir ? 1.0 : -1.0)*0.1*radius; // clip to exclude p, and a bit more to avoid false intersections
+					assert(c.contains_cube(cc));
+					assert(!cc.contains_pt_xy(p));
+					if (cc.get_sz_dim(dim) <= 0.0) continue;
+					keepout.push_back(cc); // keep partial cube
+					if (check_line_clip_xy(p1, p2, cc.d)) {is_path_valid = 0;}
+				} // for dim
+				skip = 1;
+			} // for d
+			if (skip) continue;
 			if (check_line_clip_xy(p1, p2, c.d)) {is_path_valid = 0;}
 			keepout.push_back(c);
 		} // for i
