@@ -790,6 +790,7 @@ public:
 	void add_ortho_torus_to_verts(point const &center, float r_inner, float r_outer, unsigned dim, colorRGBA const &color, float tscale=1.0, bool low_detail=0);
 	void add_contained_vert_torus_to_verts(cube_t const &c, colorRGBA const &color, float tscale=1.0, bool low_detail=0);
 	void add_triangle_to_verts(point const v[3], colorRGBA const &color, bool two_sided, float tscale=1.0);
+	void add_quad_to_verts(point const v[4], colorRGBA const &color, float tscale=1.0);
 	void create_vbo(building_t const &building);
 	void create_vbo_inner();
 	void vao_setup(bool shadow_only);
@@ -1379,8 +1380,9 @@ struct stairs_place_t : public cube_t { // for extended basements
 
 struct escalator_t : public oriented_cube_t { // Note: not yet used
 	bool move_dir=0; // dir points upward
+	float end_ext=0.0, delta_z=0.0;
 	escalator_t() {}
-	escalator_t(cube_t const &c, bool dim_, bool dir_, bool mdir) : oriented_cube_t(c, dim_, dir_), move_dir(mdir) {}
+	escalator_t(cube_t const &c, bool dim_, bool dir_, bool mdir, float ext, float dz) : oriented_cube_t(c, dim_, dir_), move_dir(mdir), end_ext(ext), delta_z(dz) {}
 };
 
 struct door_base_t : public cube_t {

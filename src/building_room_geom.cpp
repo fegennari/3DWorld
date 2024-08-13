@@ -2625,13 +2625,56 @@ void building_room_geom_t::add_elevator_doors(elevator_t const &e, float fc_thic
 }
 
 void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spacing, bool draw_static, bool draw_dynamic) {
+	assert(draw_static != draw_dynamic); // must be one or the other
+	bool const dim(e.dim), dir(e.dir);
+	float const height(e.dz()), length(e.get_length()), width(e.get_width()), rail_height(0.8*width), side_width(0.1*width), railing_width(0.7*side_width);
+	cube_t ramp(e), lo_end(e), hi_end(e);
+	ramp.expand_in_dim(dim, -e.end_ext); // subtract off ends
+	ramp.z2() = e.z1() + e.delta_z;
+	if (draw_dynamic) {ramp.expand_in_dim(!dim, -side_width);} // subtract off sides to get the belt
+	assert(ramp.is_strictly_normalized());
+	lo_end.z2() = e.z1() + rail_height;
+	hi_end.z1() = ramp.z2();
+	hi_end.z2() = hi_end.z1() + rail_height;
+	// calculate bottom points for belt/ramp/steps
+	point bot_pts[4]; // {lo-left, lo-right, hi-right, hi-left}
+	bot_pts[0].z = bot_pts[1].z = lo_end.z1();
+	bot_pts[2].z = bot_pts[3].z = hi_end.z1();
+	bot_pts[0][ dim] = bot_pts[1][ dim] = lo_end.d[dim][ dir] = ramp.d[dim][!dir];
+	bot_pts[2][ dim] = bot_pts[3][ dim] = hi_end.d[dim][!dir] = ramp.d[dim][ dir];
+	bot_pts[0][!dim] = bot_pts[3][!dim] = ramp.d[!dim][0];
+	bot_pts[1][!dim] = bot_pts[2][!dim] = ramp.d[!dim][1];
+
 	if (draw_static) {
-		// TODO_ESCALATOR
-		get_untextured_material(1).add_cube_to_verts_untextured(e, LT_GRAY); // shadowed; placeholder
+		float const support_radius(0.15*width);
+		colorRGBA const sides_color(LT_GRAY), railing_color(BKGRAY);
+		rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed=1
+		//metal_mat.add_cube_to_verts_untextured(e, sides_color); // placeholder
+		metal_mat.add_cube_to_verts_untextured(lo_end, sides_color, EF_Z1); // skip bottom
+		metal_mat.add_cube_to_verts_untextured(hi_end, sides_color, 0); // draw all sides
+		// draw the ramp/stairs
+		point top_pts[4];
+		for (unsigned n = 0; n < 4; ++n) {top_pts[n] = bot_pts[n] + point(0.0, 0.0, rail_height);}
+		metal_mat.add_quad_to_verts(bot_pts, sides_color);
+		point const lhs_pts[4] = {bot_pts[3], top_pts[3], top_pts[0], bot_pts[0]};
+		point const rhs_pts[4] = {bot_pts[1], top_pts[1], top_pts[2], bot_pts[2]};
+		metal_mat.add_quad_to_verts(lhs_pts, sides_color);
+		metal_mat.add_quad_to_verts(rhs_pts, sides_color);
+		reverse(top_pts, top_pts+4); // reverse normal and winding order
+		metal_mat.add_quad_to_verts(top_pts, sides_color);
+		// draw a vertical support under the high side
+		cube_t support(e);
+		support.z2() = ramp.z2();
+		set_wall_width(support, e.get_center_dim    (!dim), support_radius, !dim);
+		set_wall_width(support, hi_end.get_center_dim(dim), support_radius,  dim);
+		metal_mat.add_cube_to_verts_untextured(support, WHITE, EF_Z12); // skip top and bottom
 	}
 	if (draw_dynamic) { // draw moving belt
+		colorRGBA const belt_color(WHITE);
 		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_walkway_track_tid()), 0, 1)); // unshadowed, dynamic
-		// TODO_ESCALATOR
+		reverse(bot_pts, bot_pts+4); // reverse normal and winding order
+		mat.add_quad_to_verts(bot_pts, belt_color);
+		// TODO: lo/hi flat ends
 	}
 }
 
