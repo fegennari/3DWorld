@@ -1054,21 +1054,19 @@ bool is_ai_coll_obj(room_object_t const &c, bool same_as_player) {
 
 bool move_sphere_to_not_int_cube_xy(point &pos, float radius, cube_t const &c) {
 	if (!sphere_cube_intersect_xy(pos, radius, c)) return 0;
-	// find closest cube edge
-	float closest_dist(0.0);
+	float closest_dist(-1.0);
 	point new_pos(pos);
 
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		for (unsigned dir = 0; dir < 2; ++dir) {
-			float const edge_pos(c.d[dim][dir]), dist(fabs(pos[dim] - edge_pos));
-			if ((dim > 0 || dir > 0) && dist >= closest_dist) continue; // not closer
-			closest_dist  = dist;
-			new_pos[ dim] = edge_pos + (dir ? 1.0 : -1.0)*radius; // move away from this edge
-			new_pos[!dim] = pos[!dim];
+			point cand(pos);
+			cand[dim] = c.d[dim][dir] + (dir ? 1.0 : -1.0)*radius; // move away from this edge
+			float const dist(fabs(pos[dim] - cand[dim]));
+			if (closest_dist < 0.0 || dist < closest_dist) {closest_dist = dist; new_pos = cand;} // update if closer
 		}
-	} // for dim
+	}
 	bool const ret(pos != new_pos);
-	pos = new_pos;
+	pos = new_pos; // new_pos is the point not intersecting the cube which requires the least movement
 	return ret;
 }
 
@@ -1189,6 +1187,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 			}
 			if (!any_updated) break; // done
 		} // for n
+		legal_area.clamp_pt(person.target_pos); // clamp to building interior again
 	}
 	return 1;
 }
