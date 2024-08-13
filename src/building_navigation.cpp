@@ -766,6 +766,8 @@ public:
 		// used for reaching a goal such as the player within the same room;
 		// assumes the building shape is convex and the goal is inside the building so that the path to the goal never leaves a non-cube building
 		cube_t const walk_area(calc_walkable_room_area(get_node(room_ix), radius));
+		cube_t clamp_area(walk_area);
+		clamp_area.expand_by_xy(-0.1*radius); // slightly smaller to allow for some FP inaccuracy
 		rand_gen_t rgen;
 		rgen.set_state((ped_ix + 13*room_ix + 1), (ped_rseed + 1));
 		vect_cube_t keepout;
@@ -782,10 +784,11 @@ public:
 
 				if (following_player) {
 					// try to find a partial path, starting at "to" and working toward "from"; since rooms are rectangular, all points on the line will be contained
-					for (unsigned n = 1; n <= 9; ++n) { // {10% ... 90%}
+					for (unsigned n = 0; n <= 9; ++n) { // {0% ... 90%}
+						if (n == 0 && clamp_area.contains_pt_xy(to)) continue; // if <to> is already inside the walk area, there's no need to test it again
 						point new_to(to + (float(n)/10)*(from - to));
 						//if (!walk_area.contains_pt(new_to)) continue; // can fail for player hiding in a closet
-						walk_area.clamp_pt_xy(new_to);
+						clamp_area.clamp_pt_xy(new_to);
 						if (building.point_in_or_above_pool(new_to)) continue;
 						
 						if (connect_room_endpoints(avoid, building, walk_area, room_ix, new_to, from, radius, path, keepout, rgen, 0, 1)) { // ignore_p1_coll=0, ignore_p2_coll=1
@@ -2284,9 +2287,9 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	person.has_room_geom = has_rgeom;
 
 	if (update_path) { // need to update based on player movement; higher priority than choose_dest
-		if (choose_dest_goal(person, rgen) != 1 || // check if person can reach the target
-			!find_route_to_point(person, coll_dist, 0, 1, person.path)) // is_first_path=0, following_player=1
-		{
+		bool const goal_ret(choose_dest_goal(person, rgen)); // check if person can reach the target
+
+		if (!goal_ret || !find_route_to_point(person, coll_dist, 0, 1, person.path)) { // is_first_path=0, following_player=1
 			choose_dest = 1; // or increment person.cur_rseed and return AI_WAITING? or restore person to prev value?
 		}
 		else { // success
