@@ -1674,6 +1674,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	bool const draw_int_detail_objs(inc_small >= 3 && !shadow_only);
 	// update clocks if moved to next second; only applies to the player's building
 	bool const update_clocks(player_in_building && inc_small >= 2 && !shadow_only && !reflection_pass && have_clock && check_clock_time());
+	// TODO_ESCALATOR: only when visible to the player?
+	bool const update_escalators(animate2 && player_in_building && !shadow_only && !reflection_pass && !building.interior->escalators.empty());
 	bool const player_in_doorway(building.point_near_ext_door(camera_bs, get_door_open_dist()));
 	bool const player_in_building_or_doorway(player_in_building || player_in_doorway);
 	if (bbd != nullptr) {bbd->set_camera_dir_mask(camera_bs, ((camera_bs.z < building.ground_floor_z1) ? building.get_bcube_inc_extensions() : building.bcube));}
@@ -1691,7 +1693,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		invalidate_static_geom(); // user created a new screenshot texture, and this building has pictures - recreate room geom
 		num_pic_tids = num_screenshot_tids;
 	}
-	if (update_clocks) {update_dynamic_draw_data();}
+	if (update_clocks || update_escalators) {update_dynamic_draw_data();}
 	check_invalid_draw_data();
 
 	// generate vertex data in the shadow pass or if we haven't hit our generation limit; must be consistent for static and small geom

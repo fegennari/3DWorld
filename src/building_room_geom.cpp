@@ -20,11 +20,10 @@ vect_room_object_t temp_objects;
 vect_cube_t &get_temp_cubes() {temp_cubes.clear(); return temp_cubes;}
 vect_room_object_t &get_temp_objects() {temp_objects.clear(); return temp_objects;}
 
-extern int display_mode, player_in_closet, frame_counter;
+extern int display_mode, player_in_closet, frame_counter, animate2;
 
 int get_rand_screenshot_texture(unsigned rand_ix);
 unsigned get_num_screenshot_tids();
-int get_walkway_track_tid();
 string gen_random_full_name(rand_gen_t &rgen);
 void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize,
 	vector3d const &column_dir, vector3d const &line_dir, bool use_quads=0, bool include_space_chars=0);
@@ -2698,6 +2697,7 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 				rside.z2() += rail_height;
 				rside.expand_in_dim(!dim, -rail_shrink);
 				railing_mat.add_cube_to_verts_untextured(rside, rail_color, EF_Z1); // skip bottom
+				// TODO: add vertical cube as well
 			}
 		} // for side
 		// draw a vertical support under the high side
@@ -2707,21 +2707,45 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 		set_wall_width(support, hi_end.get_center_dim(dim), support_radius,  dim);
 		metal_mat.add_cube_to_verts_untextured(support, WHITE, EF_Z12); // skip top and bottom
 	}
-	if (draw_dynamic) { // draw moving belt
-		colorRGBA const belt_color(WHITE);
-		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_walkway_track_tid()), 0, 1)); // unshadowed, dynamic
-		float const belt_height(1.2*floor_height);
-		for (unsigned n = 0; n < 4; ++n) {bot_pts[n].z += belt_height;}
-		reverse(bot_pts, bot_pts+4); // reverse normal and winding order
-		mat.add_quad_to_verts(bot_pts, belt_color);
-		// draw lo/hi flat ends
+	if (draw_dynamic) { // draw moving steps
+		static float last_step_pos(0.0); // cahed for most recently drawn escalator
+		float const step_pos(animate2 ? fract(0.7*tfticks/TICKS_PER_SECOND) : last_step_pos);
+		last_step_pos = step_pos;
+		// draw steps
+		unsigned const num_steps(NUM_STAIRS_PER_FLOOR);
+		float const step_len(ramp.get_sz_dim(dim)/num_steps), step_height(ramp.dz()/num_steps), belt_height(1.2*floor_height);
+		vector3d delta;
+		delta.z = step_height;
+		delta[dim] = (dir ? 1.0 : -1.0)*step_len;
+		cube_t step(ramp);
+		step.z1() += belt_height;
+		step.z2()  = step.z1() + step_height;
+		step.d[dim][dir] = ramp.d[dim][!dir] + delta[dim];
+		step -= (e.move_dir ? (1.0 - step_pos) : step_pos)*delta; // fractional offset for animation
+		bool const shadows(0); // shadows may be out of sync with the geometry and not updated every frame, so skip them
+		rgeom_mat_t &steps_mat(get_untextured_material(shadows, 1)); // dynamic
+		colorRGBA const top_color(BKGRAY), front_color(DK_GRAY);
+
+		for (unsigned n = 0; n <= num_steps; ++n) { // draw one extra step for the animation
+			cube_t step_clamped(step); // clamp steps to fold them into the track
+			max_eq(step_clamped.z1(), ramp.z1() + belt_height);
+			min_eq(step_clamped.z2(), ramp.z2() + belt_height);
+			
+			if (step_clamped.dz() > 0.0) {
+				steps_mat.add_cube_to_verts_untextured(step_clamped, top_color, ~EF_Z2); // top
+				steps_mat.add_cube_to_verts_untextured(step_clamped, front_color, get_face_mask(dim, !dir)); // front
+				// TODO: draw yellow stripe on top of stair
+			}
+			step += delta;
+		} // for n
+		// draw lo/hi flat ends (stationary, but could be animated)
 		rgeom_mat_t &track_mat(get_untextured_material(0, 1)); // unshadowed, dynamic
 
 		for (unsigned d = 0; d < 2; ++d) {
 			cube_t &c(d ? hi_end : lo_end);
 			c.d[dim][dir ^ d ^ 1] += ((dir ^ d) ? 1.0 : -1.0)*0.5*e.end_ext;
 			c.z2() = c.z1() + belt_height;
-			track_mat.add_cube_to_verts_untextured(c, BKGRAY, ~EF_Z2); // draw top face only
+			track_mat.add_cube_to_verts_untextured(c, top_color, ~EF_Z2); // draw top face only
 		}
 	}
 }

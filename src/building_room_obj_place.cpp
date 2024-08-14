@@ -3105,7 +3105,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	if (0 && has_tall_retail()) { // maybe add a pair of escalators
 		float const e_height(room.dz() - get_floor_thickness()), delta_z(e_height - get_floor_ceil_gap());
 		float const e_length(1.0*delta_z + 2.0*door_width); // upward at 45 degree angle + entrance/exit
-		float const e_width(1.0*door_width), pair_width(2.2*e_width), end_pad(1.2*door_width), door_extra_pad(0.5*door_width);
+		float const e_width(1.0*door_width), pair_width(2.1*e_width), end_pad(1.2*door_width), door_extra_pad(0.5*door_width);
 		cube_t centered;
 		set_cube_zvals(centered, zval, (zval + e_height));
 		set_wall_width(centered, room.get_center_dim(!dim), 0.5*pair_width, !dim);
@@ -3136,7 +3136,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 					if (has_int) continue;
 
 					for (unsigned s = 0; s < 2; ++s) { // place two side-by-side escalators with opposite directions
-						escalator_t e(cand, dim, dir, (bool(s) ^ dir), door_width, delta_z);
+						escalator_t e(cand, dim, dir, (bool(s) ^ dim ^ dir), door_width, delta_z);
 						e.expand_in_dim(dim, -end_pad);
 						e.d[!dim][!s] = cand.d[!dim][s] + (s ? -1.0 : 1.0)*e_width;
 						interior->escalators.push_back(e);
