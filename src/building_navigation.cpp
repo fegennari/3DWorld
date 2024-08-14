@@ -717,9 +717,14 @@ public:
 					bool not_room_center(0);
 					point const end_point(find_valid_room_dest(avoid, building, radius, cur_pt.z, start_ix, up_or_down, not_room_center, rgen, no_use_init, custom_dest));
 					path.add(end_point);
-					if (node.is_vert_conn()) {success = 1; break;} // done, don't need to run code below
-					point const room_exit(closest_room_pt(walk_area, next)); // first doorway
-					if (connect_room_endpoints(avoid, building, walk_area, n, end_point, room_exit, radius, path, keepout, rgen)) {path.add(room_exit); success = 1; break;}
+
+					if (node.is_vert_conn()) { // stairs or ramp
+						if (connect_room_endpoints(avoid, building, walk_area, n, end_point, next, radius, path, keepout, rgen)) {success = 1; break;}
+					}
+					else { // room/doorway
+						point const room_exit(closest_room_pt(walk_area, next)); // first doorway
+						if (connect_room_endpoints(avoid, building, walk_area, n, end_point, room_exit, radius, path, keepout, rgen)) {path.add(room_exit); success = 1; break;}
+					}
 					path.clear(); // failed, reset for next iteration
 					if (!not_room_center) break; // if we did choose the room center, and there is no path to it, we've failed
 				} // for n
@@ -1592,8 +1597,6 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 			// new floor, new zval, new avoid cubes
 			get_avoid_cubes(seg2_start.z, height, radius, avoid, following_player);
 			// stairs/ramp => to
-			// note that zombies may plan a path through an obstacle on the dest floor when following the player (such as in a primary hallway),
-			// but they should update their path when reaching the dest floor; they should only walk through objects when ending gameplay mode
 			if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, person.ssn, radius, 0, is_first_path,
 				!up_or_down, person.cur_rseed, avoid, *this, seg2_start, interior->doors, person.has_key, nullptr, path)) continue; // no custom_dest
 			assert(!path.empty() && !from_path.empty());
