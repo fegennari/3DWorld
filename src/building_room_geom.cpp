@@ -2623,6 +2623,15 @@ void building_room_geom_t::add_elevator_doors(elevator_t const &e, float fc_thic
 	} // for d
 }
 
+cube_t escalator_t::get_ramp_bcube(bool exclude_sides) const {
+	cube_t ramp(*this);
+	if (exclude_sides) {ramp.expand_in_dim(!dim, -get_side_width());} // subtract off sides to get the belt/stairs
+	cube_t lo_end(ramp), hi_end(ramp);
+	ramp.expand_in_dim(dim, -end_ext); // subtract off ends
+	ramp.z2() = z1() + delta_z;
+	assert(ramp.is_strictly_normalized());
+	return ramp;
+}
 void draw_sloped_top_and_sides(rgeom_mat_t &mat, point const bot_pts[4], float height, colorRGBA const &color) {
 	point top_pts[4];
 	for (unsigned n = 0; n < 4; ++n) {top_pts[n] = bot_pts[n] + point(0.0, 0.0, height);}
@@ -2637,13 +2646,10 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 	assert(draw_static != draw_dynamic); // must be one or the other
 	bool const dim(e.dim), dir(e.dir);
 	unsigned const sides_skip(get_skip_mask_for_xy(!dim));
-	float const height(e.dz()), width(e.get_width()), side_height(0.8*width), side_width(0.1*width), floor_height(0.01*width);
-	cube_t ramp(e);
-	if (draw_dynamic) {ramp.expand_in_dim(!dim, -side_width);} // subtract off sides to get the belt/stairs
-	cube_t lo_end(ramp), hi_end(ramp);
-	ramp.expand_in_dim(dim, -e.end_ext); // subtract off ends
-	ramp.z2() = e.z1() + e.delta_z;
-	assert(ramp.is_strictly_normalized());
+	float const height(e.dz()), width(e.get_width()), side_height(0.8*width), side_width(e.get_side_width()), floor_height(0.01*width);
+	cube_t lo_end(e), hi_end(e);
+	if (draw_dynamic) {lo_end.expand_in_dim(!dim, -side_width); hi_end.expand_in_dim(!dim, -side_width);}
+	cube_t const ramp(e.get_ramp_bcube(draw_dynamic));
 	lo_end.z2() = e.z1() + side_height;
 	hi_end.z1() = ramp.z2();
 	hi_end.z2() = hi_end.z1() + side_height;

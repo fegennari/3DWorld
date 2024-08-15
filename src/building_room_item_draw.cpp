@@ -1665,7 +1665,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (frame_counter < 100 || frame_counter > last_frame) {num_geom_this_frame = 0; last_frame = frame_counter;} // unlimited for the first 100 frames
 	point const camera_bs(camera_pdu.pos - xlate);
 	float const floor_spacing(building.get_window_vspace());
-	bool const draw_ext_only(inc_small == 4);
+	bool const draw_ext_only(inc_small == 4), check_occlusion(display_mode & 0x08);
 	if (draw_ext_only) {inc_small = 0;}
 	// don't draw ceiling lights when player is above the building unless there's a light placed on a skylight
 	bool const draw_lights(!draw_ext_only && (camera_bs.z < building.bcube.z2() + (building.has_skylight_light ? 20.0*floor_spacing : 0.0)));
@@ -1674,15 +1674,22 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	bool const draw_int_detail_objs(inc_small >= 3 && !shadow_only);
 	// update clocks if moved to next second; only applies to the player's building
 	bool const update_clocks(player_in_building && inc_small >= 2 && !shadow_only && !reflection_pass && have_clock && check_clock_time());
-	// TODO_ESCALATOR: only when visible to the player?
-	bool const update_escalators(animate2 && player_in_building && !shadow_only && !reflection_pass && !building.interior->escalators.empty());
 	bool const player_in_doorway(building.point_near_ext_door(camera_bs, get_door_open_dist()));
 	bool const player_in_building_or_doorway(player_in_building || player_in_doorway);
 	if (bbd != nullptr) {bbd->set_camera_dir_mask(camera_bs, ((camera_bs.z < building.ground_floor_z1) ? building.get_bcube_inc_extensions() : building.bcube));}
 	brg_batch_draw_t *const bbd_in(bbd); // capture bbd for instance drawing before setting to null if player_in_building
 	if (player_in_building_or_doorway) {bbd = nullptr;} // use immediate drawing when player is in the building because draw order matters for alpha blending
-	bool enable_indir(0);
+	bool enable_indir(0), update_escalators(0);
 
+	if (animate2 && player_in_building && !shadow_only && !reflection_pass) { // maybe update escalators
+		for (escalator_t const &e : building.interior->escalators) {
+			cube_t const bc(e.get_ramp_bcube(1)); // exclude_sides=1
+			if (!building.is_rot_cube_visible(bc, xlate)) continue; // VFC
+			if (check_occlusion && building.check_obj_occluded(bc, camera_bs, oc, reflection_pass)) continue;
+			update_escalators = 1;
+			break;
+		}
+	}
 	if (player_in_building && !shadow_only && !reflection_pass) { // indir lighting auto update logic
 		static bool last_enable_indir(0);
 		enable_indir = enable_building_indir_lighting_no_cib();
@@ -1786,7 +1793,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	water_sound_manager_t water_sound_manager(camera_bs);
 	rgeom_mat_t monitor_screens_mat, onscreen_text_mat=rgeom_mat_t(tid_nm_pair_t(FONT_TEXTURE_ID));
 	string onscreen_text;
-	bool const is_rotated(building.is_rotated()), is_residential(building.is_residential()), check_occlusion(display_mode & 0x08);
+	bool const is_rotated(building.is_rotated()), is_residential(building.is_residential());
 	bool const check_clip_cube(shadow_only && !is_rotated && !smap_light_clip_cube.is_all_zeros()); // check clip cube for shadow pass; not implemented for rotated buildings
 	bool const skip_interior_objs(!player_in_building_or_doorway && !shadow_only), has_windows(building.has_windows());
 	float const one_floor_above(camera_bs.z + floor_spacing), two_floors_below(camera_bs.z - 2.0*floor_spacing);
