@@ -2636,6 +2636,7 @@ void draw_sloped_top_and_sides(rgeom_mat_t &mat, point const bot_pts[4], float h
 void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spacing, bool draw_static, bool draw_dynamic) {
 	assert(draw_static != draw_dynamic); // must be one or the other
 	bool const dim(e.dim), dir(e.dir);
+	unsigned const sides_skip(get_skip_mask_for_xy(!dim));
 	float const height(e.dz()), width(e.get_width()), side_height(0.8*width), side_width(0.1*width), floor_height(0.01*width);
 	cube_t ramp(e);
 	if (draw_dynamic) {ramp.expand_in_dim(!dim, -side_width);} // subtract off sides to get the belt/stairs
@@ -2656,7 +2657,6 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 	bot_pts[1][!dim] = bot_pts[2][!dim] = ramp.d[!dim][1];
 
 	if (draw_static) {
-		unsigned const sides_skip(get_skip_mask_for_xy(!dim));
 		float const rail_shrink(0.2*side_width), rail_height(0.5*side_width), upper_hang(0.25*width), support_radius(0.15*width);
 		colorRGBA const sides_color(LT_GRAY), rail_color(BKGRAY);
 		rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed=1
@@ -2691,13 +2691,18 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 			bs_pts[3][!dim] += rail_shrink;
 			draw_sloped_top_and_sides(railing_mat, bs_pts, rail_height, rail_color);
 
-			for (unsigned d = 0; d < 2; ++d) {
-				cube_t &rside(d ? hi_end_side : lo_end_side);
+			for (unsigned d = 0; d < 2; ++d) { // {lo, hi} ends
+				cube_t &rside(d ? hi_end_side : lo_end_side); // horizontal section
 				rside.z1()  = rside.z2();
 				rside.z2() += rail_height;
 				rside.expand_in_dim(!dim, -rail_shrink);
 				railing_mat.add_cube_to_verts_untextured(rside, rail_color, EF_Z1); // skip bottom
-				// TODO: add vertical cube as well
+				bool const D(dir ^ d);
+				cube_t rend(rside); // vertical section
+				rend.d[dim][ D] = rside.d[dim][!D];
+				rend.d[dim][!D] = rside.d[dim][!D] + (D ? -1.0 : 1.0)*rail_height; // extend outward
+				rend.z1() -= 0.5*side_height; // extend halfway down to the floor
+				railing_mat.add_cube_to_verts_untextured(rend, rail_color, ~get_face_mask(dim, D)); // skip inside face
 			}
 		} // for side
 		// draw a vertical support under the high side
@@ -2712,19 +2717,21 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 		float const step_pos(animate2 ? fract(0.7*tfticks/TICKS_PER_SECOND) : last_step_pos);
 		last_step_pos = step_pos;
 		// draw steps
-		unsigned const num_steps(NUM_STAIRS_PER_FLOOR);
-		float const step_len(ramp.get_sz_dim(dim)/num_steps), step_height(ramp.dz()/num_steps), belt_height(1.2*floor_height);
-		vector3d delta;
-		delta.z = step_height;
-		delta[dim] = (dir ? 1.0 : -1.0)*step_len;
+		unsigned const num_steps(NUM_STAIRS_PER_FLOOR), front_face(get_face_mask(dim, !dir));
+		float const step_len(ramp.get_sz_dim(dim)/num_steps), step_delta((dir ? 1.0 : -1.0)*step_len), step_height(ramp.dz()/num_steps);
+		float const belt_height(1.2*floor_height), stripe_height(0.2*step_height), tscale(0.5/step_len);
 		cube_t step(ramp);
+		vector3d delta; // goes up the ramp
+		delta.z    = step_height;
+		delta[dim] = step_delta;
 		step.z1() += belt_height;
 		step.z2()  = step.z1() + step_height;
 		step.d[dim][dir] = ramp.d[dim][!dir] + delta[dim];
 		step -= (e.move_dir ? (1.0 - step_pos) : step_pos)*delta; // fractional offset for animation
 		bool const shadows(0); // shadows may be out of sync with the geometry and not updated every frame, so skip them
-		rgeom_mat_t &steps_mat(get_untextured_material(shadows, 1)); // dynamic
-		colorRGBA const top_color(BKGRAY), front_color(DK_GRAY);
+		rgeom_mat_t &steps_mat(get_material(tid_nm_pair_t(get_blinds_tid(), get_blinds_nm_tid(), tscale, tscale), shadows, 1)); // dynamic
+		colorRGBA const top_color(GRAY_BLACK), front_color(DK_GRAY);
+		point const tex_origin(e.get_llc());
 
 		for (unsigned n = 0; n <= num_steps; ++n) { // draw one extra step for the animation
 			cube_t step_clamped(step); // clamp steps to fold them into the track
@@ -2732,20 +2739,25 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 			min_eq(step_clamped.z2(), ramp.z2() + belt_height);
 			
 			if (step_clamped.dz() > 0.0) {
-				steps_mat.add_cube_to_verts_untextured(step_clamped, top_color, ~EF_Z2); // top
-				steps_mat.add_cube_to_verts_untextured(step_clamped, front_color, get_face_mask(dim, !dir)); // front
-				// TODO: draw yellow stripe on top of stair
+				steps_mat.add_cube_to_verts(step_clamped, top_color,   tex_origin, ~EF_Z2,    !dim); // top
+				steps_mat.add_cube_to_verts(step_clamped, front_color, tex_origin, front_face, dim); // front
+				// draw yellow stripe on top of stair; should we use hazard_stripes.jpg?
+				cube_t stripe(step_clamped);
+				stripe.z1()  = step_clamped.z2() - stripe_height;
+				stripe.z2() += 0.1*stripe_height;
+				stripe.d[dim][ dir]  = stripe.d[dim][!dir] + 0.2*step_delta;
+				stripe.d[dim][!dir] -= stripe_height*step_delta;
+				steps_mat.add_cube_to_verts(stripe, YELLOW, tex_origin, ~EF_Z2,    !dim); // top
+				steps_mat.add_cube_to_verts(stripe, YELLOW, tex_origin, front_face, dim); // front
 			}
 			step += delta;
 		} // for n
 		// draw lo/hi flat ends (stationary, but could be animated)
-		rgeom_mat_t &track_mat(get_untextured_material(0, 1)); // unshadowed, dynamic
-
 		for (unsigned d = 0; d < 2; ++d) {
 			cube_t &c(d ? hi_end : lo_end);
 			c.d[dim][dir ^ d ^ 1] += ((dir ^ d) ? 1.0 : -1.0)*0.5*e.end_ext;
 			c.z2() = c.z1() + belt_height;
-			track_mat.add_cube_to_verts_untextured(c, top_color, ~EF_Z2); // draw top face only
+			steps_mat.add_cube_to_verts(c, top_color, tex_origin, ~EF_Z2, !dim); // draw top face only
 		}
 	}
 }
