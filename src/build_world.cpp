@@ -1012,7 +1012,7 @@ void add_polygons_to_cobj_vector(vector<coll_tquad> const &ppts, coll_obj const 
 		if (i->color.c[3] > 0 && (i->color.c[0] < 255 || i->color.c[1] < 255 || i->color.c[2] < 255)) {
 			// we have a valid override color that's not transparent or white, so set the color to this and reset the texture id
 			poly.cp.color = i->color.get_c4();
-			poly.cp.tid   = -1;
+			poly.cp.tid   = poly.cp.normal_map = -1;
 		}
 		if (group_ids) {poly.group_id = group_ids[get_max_dim(norm)];}
 		poly.add_to_vector(fixed_cobjs, COLL_POLYGON); // 3 or 4 point convex polygons only
