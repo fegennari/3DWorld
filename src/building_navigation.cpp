@@ -500,6 +500,7 @@ public:
 		bool up_or_down, bool &not_room_center, rand_gen_t &rgen, bool no_use_init, point const *const custom_dest) const
 	{
 		node_t const &node(get_node(node_ix));
+		assert(!node.is_vert_conn()); // must be room, not stairs or ramp
 		point pos;
 		if (custom_dest != nullptr) {pos = *custom_dest;}
 		else {pos = get_room_center(building, node.bcube, zval);} // first candidate is the center of the room
@@ -602,10 +603,11 @@ public:
 			unsigned const num_tries((npts == 1) ? 200 : 100);
 			float dmin(0.0);
 			bool use_pos2(0);
-			point best_pt, best_pt2, pos, pos2;
-			pos.z = pos2.z = p1.z;
+			point best_pt, best_pt2;
 
 			for (unsigned n = 0; n < num_tries; ++n) { // make num_tries attempts
+				point pos, pos2;
+				pos.z = pos2.z = p1.z;
 				cube_t const &pref_bcube((use_pts_bcube && n < num_tries/2) ? pts_bcube : walk_area); // prefer point inside p1/p2 bcube (for backrooms)
 				choose_pt_xy_in_room_avoid_pool(pos, pref_bcube, building, room_ix, n, rgen); // choose a rand point in the room
 				if (check_pt_contained_xy(keepout, pos))       continue; // bad point
@@ -636,8 +638,8 @@ public:
 					} // for ordering
 				}
 			} // for n
-			if (dmin == 0.0) continue;
-			maybe_shorten_either_path(p1, (use_pos2 ? pos2 : p2), best_pt, keepout);
+			if (dmin == 0.0) continue; // no path found above
+			maybe_shorten_either_path(p1, (use_pos2 ? best_pt2 : p2), best_pt, keepout);
 			path.add(best_pt);
 			
 			if (use_pos2) {
@@ -698,7 +700,7 @@ public:
 		unsigned n(start_ix);
 		rand_gen_t rgen;
 		rgen.set_state((ped_ix + 17*start_ix + 1), (ped_rseed + 1));
-		vect_cube_t keepout;
+		vect_cube_t keepout; // reused across rooms
 
 		while (1) {
 			node_t const &node(get_node(n));
@@ -711,18 +713,18 @@ public:
 				assert(n == start_ix);
 				assert(came_from >= 0);
 
-				if (node.is_vert_conn()) { // stairs or ramp
+				if (node.is_vert_conn()) { // stairs or ramp (end point of starting floor)
 					path.add(get_stairs_entrance_pt(cur_pt.z, n, up_or_down)); // likely == next
 				}
 				else { // room/doorway
 					bool success(0);
 
-					for (unsigned N = 0; N < 10; ++N) { // keep retrying until we find a point that is reachable from the doorway
+					for (unsigned N = 0; N < 10; ++N) { // keep retrying until we find a point that is reachable from the room or doorway
 						bool const no_use_init(N > 0); // choose a random new point on iterations after the first one
 						bool not_room_center(0);
-						point const end_point(find_valid_room_dest(avoid, building, radius, cur_pt.z, start_ix, up_or_down, not_room_center, rgen, no_use_init, custom_dest));
+						point const end_point(find_valid_room_dest(avoid, building, radius, cur_pt.z, n, up_or_down, not_room_center, rgen, no_use_init, custom_dest));
 						path.add(end_point);
-						point const room_exit(closest_room_pt(walk_area, next)); // first doorway
+						point const room_exit(closest_room_pt(walk_area, next)); // first doorway, or stairs/ramp in this room
 						if (connect_room_endpoints(avoid, building, walk_area, n, end_point, room_exit, radius, path, keepout, rgen)) {path.add(room_exit); success = 1; break;}
 						path.clear(); // failed, reset for next iteration
 						if (!not_room_center) break; // if we did choose the room center, and there is no path to it, we've failed
@@ -1595,7 +1597,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 			point const seg2_start(interior->nav_graph->get_stairs_entrance_pt(to.z, stairs_room_ix, !up_or_down)); // other end
 			assert(point_in_building_or_basement_bcube(seg2_start));
 			// new floor, new zval, new avoid cubes
-			get_avoid_cubes(seg2_start.z, height, radius, avoid, following_player);
+			get_avoid_cubes(seg2_start.z, height, radius, avoid, following_player); // no fires_select_cube
 			// stairs/ramp => to
 			if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, person.ssn, radius, 0, is_first_path,
 				!up_or_down, person.cur_rseed, avoid, *this, seg2_start, interior->doors, person.has_key, nullptr, path)) continue; // no custom_dest
