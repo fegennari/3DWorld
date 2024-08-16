@@ -45,15 +45,14 @@ unsigned char const SWAP_TCS_NM_BS = 0x02; // swap normal map bitangent sign
 
 struct obj_layer : public base_mat_t { // size = 84
 
-	bool draw, is_emissive;
-	unsigned char swap_tcs, cobj_type;
-	float elastic, tscale, tdx, tdy, refract_ix, light_atten, density, metalness, damage; // Note: elastic is misnamed - it's really hardness
-	int normal_map;
+	bool draw=1, is_emissive=0;
+	unsigned char swap_tcs=0, cobj_type=COBJ_TYPE_STD;
+	float elastic=1.0, tscale=0.0, tdx=0.0, tdy=0.0, refract_ix=1.0, light_atten=0.0, density=1.0, metalness=0.0, damage=0.0; // Note: elastic is misnamed - it's really hardness
+	int normal_map=-1;
 	collision_func coll_func;
 
 	obj_layer(float e=0.0, colorRGBA const &c=WHITE, bool d=0, const collision_func cf=NULL, int ti=-1, float ts=1.0, float spec=0.0, float shi=0.0)
-		: base_mat_t(ti, c, colorRGB(spec, spec, spec), shi), draw(d), is_emissive(0), swap_tcs(0), cobj_type(COBJ_TYPE_STD),
-		elastic(e), tscale(ts), tdx(0.0), tdy(0.0), refract_ix(1.0), light_atten(0.0), density(1.0), metalness(0.0), damage(0.0), normal_map(-1), coll_func(cf) {}
+		: base_mat_t(ti, c, colorRGB(spec, spec, spec), shi), draw(d), elastic(e), tscale(ts), coll_func(cf) {}
 
 	// assumes obj_layer contained classes are POD with no padding
 	bool operator==(obj_layer const &layer) const {return (memcmp(this, &layer, sizeof(obj_layer)) == 0);}
@@ -404,7 +403,7 @@ struct coll_tquad : public tquad_t { // size = 68
 	coll_tquad(colorRGBA const &c) : color(c) {}
 	coll_tquad(coll_obj const &c);
 	coll_tquad(polygon_t const &p, colorRGBA const &c=WHITE);
-	coll_tquad(triangle const &t, colorRGBA const &c=WHITE);
+	coll_tquad(triangle  const &t, colorRGBA const &c=WHITE);
 	void update_normal() {get_normal(pts[0], pts[1], pts[2], normal, 1);}
 
 	static bool is_cobj_valid(coll_obj const &c) {

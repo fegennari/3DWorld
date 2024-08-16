@@ -27,7 +27,6 @@ coll_tquad::coll_tquad(coll_obj const &c) : tquad_t(c.npoints), normal(c.norm), 
 	for (unsigned i = 0; i < npts; ++i) {pts[i] = c.points[i];}
 	if (npts == 3) pts[3] = pts[2]; // duplicate the last point so that it's valid
 }
-
 coll_tquad::coll_tquad(polygon_t const &p, colorRGBA const &c) : color(c) {
 	npts = p.size();
 	assert(npts == 3 || npts == 4);
@@ -35,7 +34,6 @@ coll_tquad::coll_tquad(polygon_t const &p, colorRGBA const &c) : color(c) {
 	if (npts == 3) pts[3] = pts[2]; // duplicate the last point so that it's valid
 	update_normal();
 }
-
 coll_tquad::coll_tquad(triangle const &t, colorRGBA const &c) : color(c) {
 	npts = 3;
 	UNROLL_3X(pts[i_] = t.pts[i_];);

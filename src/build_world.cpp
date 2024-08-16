@@ -1857,7 +1857,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			if (add_as_rotated_cube && npoints != 4) {return read_error(fp, "collision polygon npts != 4", coll_obj_file);}
 			check_layer(has_layer);
 			cobj.thickness *= xf.scale;
-			ppts.resize(0);
+			ppts.clear();
 			split_polygon(poly, ppts, 0.99);
 			add_polygons_to_cobj_vector(ppts, cobj, NULL, cobj.cp.cobj_type, add_as_rotated_cube);
 			break;
