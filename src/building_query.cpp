@@ -1449,7 +1449,13 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 	} // for e
 	for (escalator_t const &e : escalators) {
 		if (obj_z < e.z1() || obj_z > e.z2()) continue; // wrong part/floor
-		// TODO_ESCALATOR: something custom
+		if (!sphere_cube_intersect_xy(pos, radius, e)) continue;
+		cube_t const ramp(e.get_ramp_bcube(1)); // exclude_sides=1
+
+		if (sphere_cube_intersect_xy(pos, radius, ramp)) {
+			// TODO_ESCALATOR: steps/ramp coll - move with the escalator
+		}
+		// TODO: check lo and hi side walls
 	}
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
 		had_coll |= check_door_coll(building, *i, pos, p_last, radius, obj_z, check_open_doors, cnorm);
