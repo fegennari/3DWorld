@@ -1581,6 +1581,15 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 			person.cur_rseed, is_first_path, following_player, avoid, *this, path)) return 0;
 		return 1;
 	}
+	bool have_goal_pos(0);
+	// if the target is an elevator, use that as the preferred destination rather than the center of the room
+	if (person.goal_type == GOAL_TYPE_ELEVATOR) {have_goal_pos = 1;}
+	// if the target is the player and they're in a hallway, use the correct dest along the hallway
+	else if (person.goal_type == GOAL_TYPE_PLAYER || person.goal_type == GOAL_TYPE_PLAYER_LAST_POS) {
+		have_goal_pos = get_room(loc2.room_ix).is_hallway;//is_valid_ai_placement(person.target_pos, person.radius, 0, 1); // skip_nocoll=0, no_check_objs=1
+	}
+	point const *const custom_dest(have_goal_pos ? &person.target_pos : nullptr);
+
 	if (loc1.floor_ix != loc2.floor_ix) { // different floors: find path from <from> to nearest stairs, then find path from stairs to <to>
 		vector<unsigned> nearest_stairs_or_ramp;
 		find_nearest_stairs_or_ramp(from, to, nearest_stairs_or_ramp); // pass in loc1.part_ix if both loc part_ix values are equal?
@@ -1602,7 +1611,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 			get_avoid_cubes(seg2_start.z, height, radius, avoid, following_player); // no fires_select_cube
 			// stairs/ramp => to
 			if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, person.ssn, radius, 0, is_first_path,
-				!up_or_down, person.cur_rseed, avoid, *this, seg2_start, interior->doors, person.has_key, nullptr, path)) continue; // no custom_dest
+				!up_or_down, person.cur_rseed, avoid, *this, seg2_start, interior->doors, person.has_key, custom_dest, path)) continue;
 			assert(!path.empty() && !from_path.empty());
 			path.add(seg2_start); // other end of the stairs
 			// add two or more more points to straighten the entrance and exit paths and wrap around stairs; this segment doesn't check for intersection with stairs
@@ -1675,14 +1684,6 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 		return 0; // failed
 	}
 	assert(loc1.room_ix != loc2.room_ix);
-	bool have_goal_pos(0);
-	// if the target is an elevator, use that as the preferred destination rather than the center of the room
-	if (person.goal_type == GOAL_TYPE_ELEVATOR) {have_goal_pos = 1;}
-	// if the target is the player and they're in a hallway, use the correct dest along the hallway
-	else if (person.goal_type == GOAL_TYPE_PLAYER || person.goal_type == GOAL_TYPE_PLAYER_LAST_POS) {
-		have_goal_pos = get_room(loc2.room_ix).is_hallway;//is_valid_ai_placement(person.target_pos, person.radius, 0, 1); // skip_nocoll=0, no_check_objs=1
-	}
-	point const *const custom_dest(have_goal_pos ? &person.target_pos : nullptr);
 	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, person.ssn, radius, 0, is_first_path,
 		0, person.cur_rseed, avoid, *this, from, interior->doors, person.has_key, custom_dest, path)) return 0;
 	assert(!path.empty());
