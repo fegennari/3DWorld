@@ -500,7 +500,6 @@ public:
 		bool up_or_down, bool &not_room_center, rand_gen_t &rgen, bool no_use_init, point const *const custom_dest) const
 	{
 		node_t const &node(get_node(node_ix));
-		if (node.is_vert_conn()) {return get_stairs_entrance_pt(zval, node_ix, up_or_down);}
 		point pos;
 		if (custom_dest != nullptr) {pos = *custom_dest;}
 		else {pos = get_room_center(building, node.bcube, zval);} // first candidate is the center of the room
@@ -709,26 +708,27 @@ public:
 			cube_t const walk_area(calc_walkable_room_area(node, radius));
 			
 			if (is_first_pt) { // last point in path (first point in reverse path)
+				assert(n == start_ix);
 				assert(came_from >= 0);
-				bool success(0);
 
-				for (unsigned N = 0; N < 10; ++N) { // keep retrying until we find a point that is reachable from the doorway
-					bool const no_use_init(N > 0); // choose a random new point on iterations after the first one
-					bool not_room_center(0);
-					point const end_point(find_valid_room_dest(avoid, building, radius, cur_pt.z, start_ix, up_or_down, not_room_center, rgen, no_use_init, custom_dest));
-					path.add(end_point);
+				if (node.is_vert_conn()) { // stairs or ramp
+					path.add(get_stairs_entrance_pt(cur_pt.z, n, up_or_down)); // likely == next
+				}
+				else { // room/doorway
+					bool success(0);
 
-					if (node.is_vert_conn()) { // stairs or ramp
-						if (connect_room_endpoints(avoid, building, walk_area, n, end_point, next, radius, path, keepout, rgen)) {success = 1; break;}
-					}
-					else { // room/doorway
+					for (unsigned N = 0; N < 10; ++N) { // keep retrying until we find a point that is reachable from the doorway
+						bool const no_use_init(N > 0); // choose a random new point on iterations after the first one
+						bool not_room_center(0);
+						point const end_point(find_valid_room_dest(avoid, building, radius, cur_pt.z, start_ix, up_or_down, not_room_center, rgen, no_use_init, custom_dest));
+						path.add(end_point);
 						point const room_exit(closest_room_pt(walk_area, next)); // first doorway
 						if (connect_room_endpoints(avoid, building, walk_area, n, end_point, room_exit, radius, path, keepout, rgen)) {path.add(room_exit); success = 1; break;}
-					}
-					path.clear(); // failed, reset for next iteration
-					if (!not_room_center) break; // if we did choose the room center, and there is no path to it, we've failed
-				} // for n
-				if (!success) {assert(path.empty()); return 0;} // failed to connect to a point in dest room
+						path.clear(); // failed, reset for next iteration
+						if (!not_room_center) break; // if we did choose the room center, and there is no path to it, we've failed
+					} // for n
+					if (!success) {assert(path.empty()); return 0;} // failed to connect to a point in dest room
+				}
 			}
 			else if (came_from < 0) { // done (next is not valid here)
 				assert(n == end_ix);
@@ -1601,7 +1601,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 				!up_or_down, person.cur_rseed, avoid, *this, seg2_start, interior->doors, person.has_key, nullptr, path)) continue; // no custom_dest
 			assert(!path.empty() && !from_path.empty());
 			path.add(seg2_start); // other end of the stairs
-			// add two more points to straighten the entrance and exit paths; this segment doesn't check for intersection with stairs
+			// add two or more more points to straighten the entrance and exit paths and wrap around stairs; this segment doesn't check for intersection with stairs
 			point enter_pt;
 
 			if (is_ramp) {
