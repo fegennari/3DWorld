@@ -2646,7 +2646,7 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 	assert(draw_static != draw_dynamic); // must be one or the other
 	bool const dim(e.dim), dir(e.dir);
 	unsigned const sides_skip(get_skip_mask_for_xy(!dim));
-	float const height(e.dz()), width(e.get_width()), side_height(0.8*width), side_width(e.get_side_width()), floor_height(0.01*width);
+	float const width(e.get_width()), side_height(0.8*width), side_width(e.get_side_width()), floor_height(0.01*width);
 	cube_t lo_end(e), hi_end(e);
 	if (draw_dynamic) {lo_end.expand_in_dim(!dim, -side_width); hi_end.expand_in_dim(!dim, -side_width);}
 	cube_t const ramp(e.get_ramp_bcube(draw_dynamic));
@@ -2684,7 +2684,7 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 			metal_mat.add_cube_to_verts_untextured(lo_end_side, sides_color, EF_Z1); // skip bottom
 			metal_mat.add_cube_to_verts_untextured(hi_end_side, sides_color, 0); // draw all sides
 			// draw the ramp/stairs
-			point bs_pts[4], top_pts[4];
+			point bs_pts[4];
 			for (unsigned n = 0; n < 4; ++n) {bs_pts [n] = bot_pts[n];}
 			bs_pts[side ? 0 : 1][!dim] = bs_pts[side ? 3 : 2][!dim] = inner_pos;
 			draw_sloped_top_and_sides(metal_mat, bs_pts, side_height, sides_color);
