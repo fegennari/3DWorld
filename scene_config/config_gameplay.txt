@@ -10,6 +10,7 @@ smiley_accuracy 0.96
 smiley_speed 1.0
 speed_mult 1.0
 mouse_sensitivity 1.0
+mouse_smooth_factor 1.0
 free_for_all 1
 teams 2
 crater_size 0.1

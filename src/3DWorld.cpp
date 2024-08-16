@@ -115,6 +115,7 @@ float ocean_wave_height(DEF_OCEAN_WAVE_HEIGHT), tree_density_thresh(0.55), model
 float custom_glaciate_exp(0.0), tree_type_rand_zone(0.0), jump_height(1.0), force_czmin(0.0), force_czmax(0.0), smap_thresh_scale(1.0), dlight_intensity_scale(1.0);
 float model_mat_lod_thresh(5.0), clouds_per_tile(0.5), def_atmosphere(1.0), def_vegetation(1.0), ocean_depth_opacity_mult(1.0), erode_amount(1.0), ambient_scale(1.0);
 float model_hemi_lighting_scale(0.5), pine_tree_radius_scale(1.0), sunlight_brightness(1.0), moonlight_brightness(1.0), sm_tree_scale(1.0), tt_fog_density(1.0);
+float mouse_smooth_factor(0.0);
 float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0, 1.0, 1.0}, first_ray_weight[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0, 1.0, 1.0};
 double camera_zh(0.0);
 point mesh_origin(all_zeros), camera_pos(all_zeros), cube_map_center(all_zeros);
@@ -143,7 +144,7 @@ extern unsigned scene_smap_vbo_invalid, spheres_mode, max_cube_map_tex_sz, DL_GR
 extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness, tree_dead_prob, lm_dz_adj, nleaves_scale, flower_density, universe_ambient_scale;
 extern float mesh_scale, tree_scale, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width, branch_radius_scale, tree_height_scale, planet_update_rate;
 extern float MESH_START_MAG, MESH_START_FREQ, MESH_MAG_MULT, MESH_FREQ_MULT, def_tex_aniso;
-extern double map_x, map_y;
+extern double map_x, map_y, tfticks;
 extern point hmv_pos, camera_last_pos;
 extern colorRGBA sunlight_color;
 extern int coll_id[];
@@ -684,23 +685,21 @@ void clamp_and_scale_mouse_delta(int &delta, int dmax) {
 	if (abs(delta) > 1) {delta = round_fp(mouse_sensitivity*delta);} // don't round +/-1 down to 0
 }
 
-// This function is called whenever the mouse is moved with a mouse button held down.
-// x and y are the location of the mouse (in window-relative coordinates)
-void mouseMotion(int x, int y) {
+void update_mouse_pos(int dx, int dy) {
 
-	int button(m_button);
-
-	if (screen_reset || start_maximized) {
-		last_mouse_x = x;
-		last_mouse_y = y;
-		screen_reset = 0;
-		return;
+	if (animate && mouse_smooth_factor > 0.0) { // mouse smoothing
+		// Note: this doesn't work well because it's only run when the mouse moves rather than every frame
+		static float prev_tfticks(0.0);
+		static float prev_dx(0), prev_dy(0);
+		if (dx == 0 && dy == 0 && tfticks == prev_tfticks) return; // same frame, no change
+		float const elapsed_time(tfticks - prev_tfticks), blend(min(1.0f*elapsed_time/mouse_smooth_factor, 1.0f));
+		prev_dx = blend*dx + (1.0 - blend)*prev_dx;
+		prev_dy = blend*dy + (1.0 - blend)*prev_dy;
+		dx = round_fp(prev_dx);
+		dy = round_fp(prev_dy);
+		prev_tfticks = tfticks;
 	}
-	add_uevent_mmotion(x, y);
-	if (ui_intercept_mouse(0, 0, x, y, 0)) return; // already handled
-	int dx(x - last_mouse_x), dy(y - last_mouse_y);
-	clamp_and_scale_mouse_delta(dx, window_width /20); // limit to a reasonable delta in case the frame rate is very low
-	clamp_and_scale_mouse_delta(dy, window_height/20);
+	int button(m_button);
 	if (camera_mode == 1 && enable_mouse_look && !map_mode) {button = GLUT_LEFT_BUTTON;}
 
 	switch (button) {
@@ -719,7 +718,7 @@ void mouseMotion(int x, int y) {
 		else { // ground mode
 			float c_phi2(c_phi - double(MOUSE_ANG_ADJ)*dy);
 			if (camera_mode) {c_phi2 = max(0.01f, min((float)PI-0.01f, c_phi2));} // walking on ground
-			
+
 			if (dy > 0) { // change camera y direction when camera moved through poles and jump over poles (x=0,z=0) to eliminate "singularity"
 				if (c_phi2 < 0.0 || (c_phi > PI && c_phi2 < PI)) {camera_y *= -1.0;}
 				if (fabs(c_phi2) < MA_TOLERANCE || fabs(c_phi2 - PI) < MA_TOLERANCE) {++dy;}
@@ -761,8 +760,26 @@ void mouseMotion(int x, int y) {
 		break;
 
 	default: // is there any other mouse button? error?
-	  break;
+		break;
 	}
+}
+
+// This function is called whenever the mouse is moved with a mouse button held down.
+// x and y are the location of the mouse (in window-relative coordinates)
+void mouseMotion(int x, int y) {
+
+	if (screen_reset || start_maximized) {
+		last_mouse_x = x;
+		last_mouse_y = y;
+		screen_reset = 0;
+		return;
+	}
+	add_uevent_mmotion(x, y);
+	if (ui_intercept_mouse(0, 0, x, y, 0)) return; // already handled
+	int dx(x - last_mouse_x), dy(y - last_mouse_y);
+	clamp_and_scale_mouse_delta(dx, window_width /20); // limit to a reasonable delta in case the frame rate is very low
+	clamp_and_scale_mouse_delta(dy, window_height/20);
+	update_mouse_pos(dx, dy);
 	last_mouse_x = x;
 	last_mouse_y = y;
 
@@ -1576,6 +1593,7 @@ void proc_kbd_events() {
 		if (keyset.find(*it) != keyset.end()) {keyboard_proc(*it, 0, 0);} // x and y = ?
 	}
 	player_height_mgr.next_frame(); // updated based on control key and run once at the beginning of each frame
+	if (animate && mouse_smooth_factor > 0.0) {update_mouse_pos(0, 0);}
 }
 
 
@@ -1958,6 +1976,7 @@ int load_config(string const &config_file) {
 	kwmf.add("sunlight_brightness", sunlight_brightness);
 	kwmf.add("moonlight_brightness", moonlight_brightness);
 	kwmf.add("tiled_terrain_fog_density", tt_fog_density); // (0.0, 1.0]
+	kwmf.add("mouse_smooth_factor", mouse_smooth_factor); // >= 0.0
 
 	kwmf.add("hmap_plat_bot",    hmap_params.plat_bot);
 	kwmf.add("hmap_plat_height", hmap_params.plat_h);
