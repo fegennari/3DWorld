@@ -566,12 +566,12 @@ public:
 			if (!i->intersects_xy(walk_area_exp)) continue;
 			cube_t c(*i);
 			c.expand_by_xy(radius);
-			bool skip(0);
+			bool skip(0), failed(0);
 
 			for (unsigned d = 0; d < 2; ++d) {
 				point const &p(d ? p2 : p1);
 				if (!c.contains_pt_xy(p)) continue; // okay/keep
-				if (!(d ? ignore_p2_coll : ignore_p1_coll)) return 0; // fail
+				if (!(d ? ignore_p2_coll : ignore_p1_coll)) {failed = 1; continue;} // fail - but we may want to skip if the other point is contained, so we can't return 0
 
 				for (unsigned dim = 0; dim < 2; ++dim) {
 					bool const dir(c.get_center_dim(dim) < p[dim]); // direction of point relative to cube center
@@ -585,7 +585,9 @@ public:
 				} // for dim
 				skip = 1;
 			} // for d
-			if (skip) continue;
+			if (skip  ) continue;
+			if (failed) return 0;
+			c.expand_by_xy(-0.01*radius); // shrink oh so slightly to avoid false line intersections due to FP error
 			if (check_line_clip_xy(p1, p2, c.d)) {is_path_valid = 0;}
 			keepout.push_back(c);
 		} // for i
