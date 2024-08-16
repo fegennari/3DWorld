@@ -289,18 +289,17 @@ void init_window() { // register all glut callbacks
 	glutSetCursor(GLUT_CURSOR_CROSSHAIR);
 	glutDisplayFunc(display);
  	glutReshapeFunc(resize);
- 	glutMouseFunc(mouseButton);
- 	glutMotionFunc(mouseMotion);
- 	glutKeyboardFunc(keyboard);
-	glutSpecialFunc(keyboard2);
 	//glutCloseFunc(quit_3dworld); // can't do this because we don't want to quit when destroying the context
-
 	// init keyboard and mouse callbacks
 	glutIgnoreKeyRepeat(1);
+	glutMouseFunc(mouseButton);
+	glutMotionFunc(mouseMotion);
+	glutPassiveMotionFunc(mousePassiveMotion);
+	glutKeyboardFunc(keyboard);
+	glutSpecialFunc(keyboard2);
 	glutKeyboardUpFunc(keyboard_up);
 	glutSpecialUpFunc(keyboard2_up);
 	init_keyset();
-	glutPassiveMotionFunc(mousePassiveMotion);
 
  	// Initialize GL
 	fgMatrixMode(FG_PROJECTION);
@@ -700,7 +699,7 @@ void mouseMotion(int x, int y) {
 	add_uevent_mmotion(x, y);
 	if (ui_intercept_mouse(0, 0, x, y, 0)) return; // already handled
 	int dx(x - last_mouse_x), dy(y - last_mouse_y);
-	clamp_and_scale_mouse_delta(dx, window_width/20); // limit to a reasonable delta in case the frame rate is very low
+	clamp_and_scale_mouse_delta(dx, window_width /20); // limit to a reasonable delta in case the frame rate is very low
 	clamp_and_scale_mouse_delta(dy, window_height/20);
 	if (camera_mode == 1 && enable_mouse_look && !map_mode) {button = GLUT_LEFT_BUTTON;}
 
@@ -717,9 +716,9 @@ void mouseMotion(int x, int y) {
 		else if (map_mode) { // map mode click and drag
 			if (mouse_state == 0) {map_drag_x -= dx; map_drag_y += dy;} // mouse down
 		}
-		else {
+		else { // ground mode
 			float c_phi2(c_phi - double(MOUSE_ANG_ADJ)*dy);
-			if (camera_mode && world_mode != WMODE_UNIVERSE) {c_phi2 = max(0.01f, min((float)PI-0.01f, c_phi2));} // walking on ground
+			if (camera_mode) {c_phi2 = max(0.01f, min((float)PI-0.01f, c_phi2));} // walking on ground
 			
 			if (dy > 0) { // change camera y direction when camera moved through poles and jump over poles (x=0,z=0) to eliminate "singularity"
 				if (c_phi2 < 0.0 || (c_phi > PI && c_phi2 < PI)) {camera_y *= -1.0;}
@@ -750,7 +749,7 @@ void mouseMotion(int x, int y) {
 			else if (dy > 0) {map_zoom *= (1.0 + 0.01*dy);}
 			break;
 		}
-		if (camera_mode == 1) break;
+		if (camera_mode == 1) break; // not free look mode
 
 		if (!camera_view) {
 			up_theta += double(MOUSE_ANG_ADJ)*dx;
