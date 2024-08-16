@@ -2248,23 +2248,26 @@ void building_t::debug_people_in_building(shader_t &s) const {
 	shader_t color_shader;
 	color_shader.begin_color_only_shader(YELLOW);
 	vector<vert_wrap_t> line_pts;
+	unsigned const ndiv = 16;
 
 	for (person_t const &p : interior->people) {
 		// use different colors if the path uses the nav grid or was shortened
 		color_shader.set_cur_color(p.path.uses_nav_grid ? (p.path.is_shortened ? LT_BLUE : GREEN) : (p.path.is_shortened ? ORANGE : YELLOW));
 		for (point const &v : p.path) {append_line_pt(line_pts, v);}
-		if (p.target_valid ())        {append_line_pt(line_pts, p.target_pos);}
+		if (p.target_valid ())        {append_line_pt(line_pts, p.target_pos);} // next target - not dest
 		if (!line_pts.empty())        {append_line_pt(line_pts, p.pos);} // add starting point if there's a valid path
 		if (line_pts.size() > 1) {draw_verts(line_pts, GL_LINES);}
 		line_pts.clear();
-		for (point const &v : p.path) {draw_sphere_vbo(v, 0.25*p.radius, 16, 0);}
+		float const sradius(0.25*p.radius);
 
-		if (p.target_valid()) {
-			if      (p.goal_type == GOAL_TYPE_PLAYER) {color_shader.set_cur_color(RED   );}
-			else if (p.goal_type == GOAL_TYPE_SOUND ) {color_shader.set_cur_color(PURPLE);}
-			else if (p.goal_type == GOAL_TYPE_ROOM  ) {color_shader.set_cur_color(BLUE  );}
-			draw_sphere_vbo(p.target_pos, 0.25*p.radius, 16, 0);
+		for (point const &v : p.path) {
+			if (v != p.path.front()) {draw_sphere_vbo(v, sradius, ndiv, 0);} // skip first point
 		}
+		assert(p.goal_type < NUM_GOAL_TYPES);
+		colorRGBA const goal_colors[NUM_GOAL_TYPES] = {BLACK, BLUE, PINK, RED, ORANGE, PURPLE}; // NONE, ROOM, ELEVATOR, PLAYER, PLAYER_LAST_POS, SOUND
+		color_shader.set_cur_color(goal_colors[p.goal_type]);
+		if (!p.path.empty ()) {draw_sphere_vbo(p.path.front(), sradius, ndiv, 0);} // draw last point is dest
+		if (p.target_valid()) {draw_sphere_vbo(p.target_pos,   sradius, ndiv, 0);} // draw target pos
 	} // for p
 	color_shader.end_shader();
 	s.make_current();
