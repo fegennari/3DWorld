@@ -2703,7 +2703,7 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 				rside.z2() += rail_height;
 				rside.expand_in_dim(!dim, -rail_shrink);
 				railing_mat.add_cube_to_verts_untextured(rside, rail_color, EF_Z1); // skip bottom
-				bool const D(dir ^ d);
+				bool const D(dir ^ bool(d));
 				cube_t rend(rside); // vertical section
 				rend.d[dim][ D] = rside.d[dim][!D];
 				rend.d[dim][!D] = rside.d[dim][!D] + (D ? -1.0 : 1.0)*rail_height; // extend outward
@@ -2761,7 +2761,7 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 		// draw lo/hi flat ends (stationary, but could be animated)
 		for (unsigned d = 0; d < 2; ++d) {
 			cube_t &c(d ? hi_end : lo_end);
-			c.d[dim][dir ^ d ^ 1] += ((dir ^ d) ? 1.0 : -1.0)*0.5*e.end_ext;
+			c.d[dim][dir ^ bool(d) ^ 1] += ((dir ^ bool(d)) ? 1.0 : -1.0)*0.5*e.end_ext;
 			c.z2() = c.z1() + belt_height;
 			steps_mat.add_cube_to_verts(c, top_color, tex_origin, ~EF_Z2, !dim); // draw top face only
 		}

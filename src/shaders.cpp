@@ -1173,8 +1173,8 @@ void compute_shader_t::gen_matrix_RGBA8(vector<float> &vals, unsigned &tid, bool
 
 	for (unsigned y = 0; y < ysize; ++y) {
 		for (unsigned x = 0; x < xsize; ++x) {
-			unsigned const ix(y*xsize + x);
-			vals[ix] = data[ix<<2]; // red component [0.0, 1.0)
+			size_t const ix(size_t(y)*xsize + x);
+			vals[ix] = data[ix<<2U]; // red component [0.0, 1.0)
 		}
 	}
 	is_running = 0;

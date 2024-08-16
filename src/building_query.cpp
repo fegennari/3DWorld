@@ -2011,7 +2011,7 @@ template<typename T> bool line_int_cubes_exp(point const &p1, point const &p2, v
 	}
 	return 0;
 }
-template bool line_int_cubes_exp(point const &p1, point const &p2, vect_cube_t const &cubes, vector3d const &expand, cube_t const &line_bcube); // explicit instantiation
+template bool line_int_cubes_exp(point const &p1, point const &p2, vector<cube_t> const &cubes, vector3d const &expand, cube_t const &line_bcube); // explicit instantiation
 
 template<typename T> bool line_int_cubes(point const &p1, point const &p2, vector<T> const &cubes, cube_t const &line_bcube) {
 	for (auto const &c : cubes) {
@@ -2019,7 +2019,7 @@ template<typename T> bool line_int_cubes(point const &p1, point const &p2, vecto
 	}
 	return 0;
 }
-template bool line_int_cubes(point const &p1, point const &p2, vect_cube_t const &cubes, cube_t const &line_bcube); // explicit instantiation
+template bool line_int_cubes(point const &p1, point const &p2, vector<cube_t> const &cubes, cube_t const &line_bcube); // explicit instantiation
 
 unsigned get_ksink_cubes(room_object_t const &sink, cube_t cubes[3]) {
 	assert(sink.type == TYPE_KSINK);

@@ -1687,7 +1687,8 @@ bool building_t::add_tp_roll(cube_t const &room, unsigned room_id, float tot_lig
 
 bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor) {
 	// Note: assumes no prior placed objects
-	bool const use_sink_model(0 && building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK)); // not using sink models
+	//bool const use_sink_model(building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK)); // not using sink models
+	bool const use_sink_model(0);
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	vector3d const tsz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOILET)); // L, W, H
 	float const theight(0.35*floor_spacing), twidth(theight*tsz.y/tsz.z), tlength(theight*tsz.x/tsz.z), stall_depth(2.2*tlength);
@@ -3120,7 +3121,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 			bool success(0);
 
 			for (unsigned step = 0; step <= num_steps && !success; ++step) { // take N steps to each side
-				for (unsigned dir = 0; dir < (step ? 2 : 1); ++dir) { // first step is length 0 and has no dir
+				for (unsigned dir = 0; dir < (step ? 2U : 1U); ++dir) { // first step is length 0 and has no dir
 					cube_t cand(centered);
 					cand.translate_dim(dim, ((bool(dir) ^ first_dir) ? 1.0 : -1.0)*step*step_len);
 					// Note: we don't need to pad stairs and elevators because we've already padded the ends of the escalator, and double padding on each side isn't needed
