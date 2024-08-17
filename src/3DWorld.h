@@ -1206,7 +1206,7 @@ public:
 
 struct water_params_t {
 
-	float alpha, mud, bright, reflect, green, wave_amp;
+	float alpha, mud, algae, bright, reflect, green, wave_amp;
 	water_params_t() {set_def_water();}
 	void set_def_water();
 	void set_def_lava();

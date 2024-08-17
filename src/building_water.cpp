@@ -22,7 +22,7 @@ void reset_interior_lighting_and_end_shader(shader_t &s);
 // from postproc_effects.cpp
 void bind_frame_buffer_RGB(unsigned tu_id);
 void apply_player_underwater_effect(colorRGBA const &color_mod, float intensity=1.0);
-void add_postproc_underwater_fog(float atten_scale, float max_uw_dist, float mud_amt);
+void add_postproc_underwater_fog(float atten_scale, float max_uw_dist, float mud_amt, float algae_amt);
 void bind_depth_buffer(unsigned tu_id);
 
 
@@ -236,10 +236,14 @@ void building_t::draw_water(vector3d const &xlate) const {
 	}
 	cube_t const water(get_water_cube());
 	bool const is_pool(has_pool());
-	float const floor_spacing(get_window_vspace()), atten_scale((is_pool ? 0.3 : 1.0)/floor_spacing), water_z1(water.z1());
-	if (animate2) {building_splash_manager.next_frame(floor_spacing, is_pool);} // maybe should do this somewhere else? or update even if water isn't visible?
+	float const floor_spacing(get_window_vspace()), water_z1(water.z1());
+	rand_gen_t rgen;
+	rgen.set_state(long(water.x1()/floor_spacing), long(water.y1()/floor_spacing)); // random based on position
+	float const mud_amt  (CLIP_TO_01(is_pool ? rgen.rand_uniform(-0.2, 0.2) : rgen.rand_uniform( 0.2, 0.8)));
+	float const algae_amt(CLIP_TO_01(is_pool ? rgen.rand_uniform(-2.0, 1.5) : rgen.rand_uniform(-0.5, 1.5)));
+	float const atten_scale((1.0 + mud_amt + algae_amt)*(is_pool ? 0.3 : 0.7)/floor_spacing);
 	point const camera_pos(get_camera_pos());
-	float const mud_amt(is_pool ? 0.0 : 0.5);
+	if (animate2) {building_splash_manager.next_frame(floor_spacing, is_pool);} // maybe should do this somewhere else? or update even if water isn't visible?
 
 	if (camera_pos.z < interior->water_zval) { // player under the water; could also check (player_in_water == 2)
 		point const camera_bs(camera_pos - get_tiled_terrain_model_xlate());
@@ -264,10 +268,10 @@ void building_t::draw_water(vector3d const &xlate) const {
 		point pts[8];
 		unsigned const npts(get_cube_corners(water.d, pts)); // get all corners; we could use visible corners, but then there would be a pop when a corner becomes visible
 		for (unsigned n = 0; n < npts; ++n) {max_eq(max_uw_dist, p2p_dist(camera_bs, pts[n]));}
-		colorRGBA const pool_color(0.7, 0.8, 1.0), clear_color(0.4, 0.6, 1.0), mud_color(1.0, 0.6, 0.33);
-		colorRGBA uw_color(is_pool ? pool_color : blend_color(mud_color, clear_color, mud_amt, 0));
+		colorRGBA const pool_color(0.7, 0.8, 1.0), clear_color(0.4, 0.6, 1.0), mud_color(1.0, 0.6, 0.33), algae_color(0.1, 0.3, 0.15);
+		colorRGBA uw_color(is_pool ? pool_color : blend_color(mud_color, blend_color(algae_color, clear_color, algae_amt, 0), mud_amt, 0));
 		apply_player_underwater_effect(uw_color*min(1.0, 10.0*oxygen), intensity); // fade to black when oxygen is low
-		add_postproc_underwater_fog((is_pool ? 2.0 : 1.0)*WATER_COL_ATTEN*atten_scale, max_uw_dist, mud_amt);
+		add_postproc_underwater_fog((is_pool ? 2.0 : 1.0)*WATER_COL_ATTEN*atten_scale, max_uw_dist, mud_amt, algae_amt);
 		bool const is_lit(is_room_lit(get_room_containing_pt(camera_bs), camera_bs.z));
 		colorRGBA const base_color(is_lit ? WHITE : DK_GRAY);
 		float const orig_water_plane_z(water_plane_z);
@@ -303,7 +307,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 	s.add_uniform_vector3d("camera_pos", camera_pos);
 	s.add_uniform_float("water_depth",   water_depth);
 	s.add_uniform_float("foam_scale",    min(1.0f, 0.1f*floor_spacing/water_depth)); // higher with shallow water, lower with deep water
-	setup_shader_underwater_atten(s, atten_scale, mud_amt); // attenuates to dark blue (or brown for mud)/opaque around this distance
+	setup_shader_underwater_atten(s, atten_scale, mud_amt, algae_amt); // attenuates to dark blue (or brown for mud)/opaque around this distance
 	building_splash_manager.set_shader_uniforms(s, is_pool);
 	bind_frame_buffer_RGB(8); // tu_id=8
 	s.add_uniform_int("frame_buffer", 8); // tu_id=8

@@ -375,7 +375,7 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 		vector_add_to(floor_parts, interior->floors);
 	} // for f
 	room.assign_to(RTYPE_SWIM, 0);
-	if (rgen.rand_float() < 0.75) {interior->water_zval = pool.z2() - 0.05*pool_depth;} // add water to the pool 75% of the time
+	if (rgen.rand_float() < 0.8) {interior->water_zval = pool.z2() - 0.05*pool_depth;} // add water to the pool 80% of the time
 	min_eq(interior->basement_ext_bcube.z1(), pool_bottom); // is this a good idea? it certainly makes other logic easier
 }
 

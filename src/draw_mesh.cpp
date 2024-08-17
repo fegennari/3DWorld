@@ -54,7 +54,7 @@ bool use_water_plane_tess();
 bool enable_ocean_waves();
 void set_smap_enable_for_shader(shader_t &s, bool enable_smap, int shader_type);
 void setup_mesh_and_water_shader(shader_t &s, bool use_detail_normal_map, bool is_water);
-colorRGB get_underwater_atten_color(float mud_amt);
+colorRGB get_underwater_atten_color(float mud_amt, float algae_amt);
 
 
 float camera_min_dist_to_surface() { // min dist of four corners and center
@@ -255,10 +255,10 @@ void setup_detail_normal_map(shader_t &s, float tscale) { // also used for tiled
 	s.add_uniform_vector2d("detail_normal_tex_scale", vector2d(tscale*X_SCENE_SIZE, tscale*Y_SCENE_SIZE));
 }
 
-void setup_shader_underwater_atten(shader_t &s, float atten_scale, float mud_amt) {
+void setup_shader_underwater_atten(shader_t &s, float atten_scale, float mud_amt, float algae_amt) {
 	s.add_uniform_float("water_atten",    atten_scale);
 	s.add_uniform_color("uw_atten_max",   uw_atten_max);
-	s.add_uniform_color("uw_atten_scale", ((mud_amt > 0.0) ? get_underwater_atten_color(mud_amt) : uw_atten_scale));
+	s.add_uniform_color("uw_atten_scale", ((mud_amt > 0.0 || algae_amt > 0.0) ? get_underwater_atten_color(mud_amt, algae_amt) : uw_atten_scale));
 }
 
 

@@ -325,5 +325,5 @@ struct tile_blend_tex_data_t {
 };
 
 void set_one_texture(shader_t &s, unsigned tid, unsigned tu_id, const char *const name);
-void setup_shader_underwater_atten(shader_t &s, float atten_scale, float mud_amt=0.0);
+void setup_shader_underwater_atten(shader_t &s, float atten_scale, float mud_amt=0.0, float algae_amt=0.0);
 

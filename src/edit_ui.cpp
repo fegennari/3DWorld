@@ -324,17 +324,16 @@ colorRGB uw_atten_max(WHITE), uw_atten_scale(BLACK);
 water_params_t water_params;
 extern bool water_is_lava;
 
-void water_params_t::set_def_water() {alpha=0.5; mud=0.0; bright=1.0; reflect=1.0; green=0.16; wave_amp=1.0;}
-void water_params_t::set_def_lava () {alpha=1.5; mud=0.0; bright=1.0; reflect=0.5; green=0.02; wave_amp=1.5;}
+void water_params_t::set_def_water() {alpha=0.5; mud=0.0; algae=0.0; bright=1.0; reflect=1.0; green=0.16; wave_amp=1.0;}
+void water_params_t::set_def_lava () {alpha=1.5; mud=0.0; algae=0.0; bright=1.0; reflect=0.5; green=0.02; wave_amp=1.5;}
 
-colorRGB get_underwater_atten_color(float mud_amt) {
-	colorRGB ret;
-	blend_color(ret, colorRGB(0.9, 1.0, 1.5), colorRGB(1.5, 0.9, 0.5), mud_amt);
-	return ret;
+colorRGB get_underwater_atten_color(float mud_amt, float algae_amt) {
+	colorRGBA const c(blend_color(colorRGB(1.5, 0.5, 0.9), colorRGB(1.5, 0.9, 0.5), algae_amt, 0));
+	return blend_color(colorRGB(0.9, 1.0, 1.5), c, mud_amt, 0);
 }
 void calc_uw_atten_colors() {
 	if (water_is_lava) {uw_atten_scale = colorRGB(1.0, 1.5, 2.2);} // red-orange
-	else               {uw_atten_scale = get_underwater_atten_color(water_params.mud);} // blend in mud color
+	else               {uw_atten_scale = get_underwater_atten_color(water_params.mud, water_params.algae);} // blend in mud color
 	//UNROLL_3X(uw_atten_max[i_] = CLIP_TO_01(1.0f - 0.03f/uw_atten_scale[i_]);)
 	uw_atten_scale *= 0.05 + 0.95*water_params.alpha;
 }
