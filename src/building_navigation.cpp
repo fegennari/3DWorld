@@ -577,10 +577,9 @@ public:
 					bool const dir(c.get_center_dim(dim) < p[dim]); // direction of point relative to cube center
 					cube_t cc(c);
 					cc.d[dim][dir] = p[dim] - (dir ? 1.0 : -1.0)*0.1*radius; // clip to exclude p, and a bit more to avoid false intersections
-					assert(c.contains_cube(cc));
-					assert(!cc.contains_pt_xy(p));
 					if (cc.get_sz_dim(dim) <= 0.0) continue;
-					keepout.push_back(cc); // keep partial cube
+					if ((d ? ignore_p1_coll : ignore_p2_coll) && c.contains_pt_xy(d ? p1 : p2)) continue; // skip entirely if the partial cube contains the other point
+					keepout.push_back(cc); // keep partial cube (expanded by radius)
 					if (check_line_clip_xy(p1, p2, cc.d)) {is_path_valid = 0;}
 				} // for dim
 				skip = 1;
@@ -589,7 +588,7 @@ public:
 			if (failed) return 0;
 			c.expand_by_xy(-0.01*radius); // shrink oh so slightly to avoid false line intersections due to FP error
 			if (check_line_clip_xy(p1, p2, c.d)) {is_path_valid = 0;}
-			keepout.push_back(c);
+			keepout.push_back(c); // expanded by radius
 		} // for i
 		if (is_path_valid) return 1; // done
 
@@ -1559,7 +1558,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 	assert((unsigned)loc1.part_ix < parts.size() && (unsigned)loc2.part_ix < parts.size());
 	assert((unsigned)loc1.room_ix < interior->rooms.size() && (unsigned)loc2.room_ix < interior->rooms.size());
 	float const floor_spacing(get_window_vspace()), height(0.7*floor_spacing); // approximate, since we're not tracking actual heights
-	static vect_cube_t avoid; // reuse across frames/people
+	static vect_cube_t avoid, avoid2; // reuse across frames/people
 	get_avoid_cubes(from.z, height, radius, avoid, following_player, &get_room(loc1.room_ix)); // include fires in the current room
 
 	if (loc1.same_room_floor(loc2)) { // same room/floor (not checking stairs_ix)
@@ -1608,10 +1607,10 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 			point const seg2_start(interior->nav_graph->get_stairs_entrance_pt(to.z, stairs_room_ix, !up_or_down)); // other end
 			assert(point_in_building_or_basement_bcube(seg2_start));
 			// new floor, new zval, new avoid cubes
-			get_avoid_cubes(seg2_start.z, height, radius, avoid, following_player); // no fires_select_cube
+			get_avoid_cubes(seg2_start.z, height, radius, avoid2, following_player); // no fires_select_cube
 			// stairs/ramp => to
 			if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, person.ssn, radius, 0, is_first_path,
-				!up_or_down, person.cur_rseed, avoid, *this, seg2_start, interior->doors, person.has_key, custom_dest, path)) continue;
+				!up_or_down, person.cur_rseed, avoid2, *this, seg2_start, interior->doors, person.has_key, custom_dest, path)) continue;
 			assert(!path.empty() && !from_path.empty());
 			path.add(seg2_start); // other end of the stairs
 			// add two or more more points to straighten the entrance and exit paths and wrap around stairs; this segment doesn't check for intersection with stairs
