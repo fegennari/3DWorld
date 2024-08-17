@@ -1324,10 +1324,11 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 		if (!above_ground) {tc.z1() -= inground_pool_depth;}
 		if (is_placement_blocked(tc, blockers, cube_t(), prev_blockers_end))   continue; // intersects some other object
 		if (!above_ground && has_blockers && has_bcube_int(tc, pool_blockers)) continue; // blocked by an extended basement room
-		float const grayscale(rgen.rand_uniform(0.7, 1.0));
+		float const grayscale(rgen.rand_uniform(0.7, 1.0)), dirtyness(CLIP_TO_01(rgen.rand_uniform(-3.0, 1.2)));
 		float const water_white_comp(rgen.rand_uniform(0.1, 0.3)), extra_green(rgen.rand_uniform(0.2, 0.5)), lightness(rgen.rand_uniform(0.5, 0.8));
 		colorRGBA const color(above_ground ? pool_side_colors[rgen.rand()%5]: colorRGBA(grayscale, grayscale, grayscale));
-		colorRGBA const wcolor(lightness*water_white_comp, lightness*(water_white_comp + extra_green), lightness);
+		colorRGBA wcolor(lightness*water_white_comp, lightness*(water_white_comp + extra_green), lightness, 0.5); // A=0.5
+		blend_color(wcolor, colorRGBA(0.1, 0.3, 0.15, 1.0), wcolor, dirtyness, 1); // blend in dark green dirty water; calc_alpha=1
 
 		// add fences along the sides of the house to separate the back yard from the front yard; if fences can't be added, then don't add the pool either
 		plot_divider_type_t const &fence_pdt(plot_divider_types[DIV_CHAINLINK]);
@@ -2207,7 +2208,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 				if (pos.x < b->bcube.x1()) break; // pools are sorted by x1, none after this can match
 				if (!b->bcube.contains_pt_xy(pos)) continue;
 				if (b->above_ground && !dist_xy_less_than(pos, cube_bot_center(b->bcube), b->get_radius())) continue; // circular in-ground pool
-				color = b->wcolor; // return water color
+				color = colorRGBA(b->wcolor, 1.0); // return water color with alpha=1.0
 				return 1;
 			}
 		} // for i

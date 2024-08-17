@@ -511,6 +511,7 @@ void end_water_surface_draw() {
 void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	bool const caustics_pass(dstate.pass_ix == 4);
 	if (((dstate.pass_ix > 1) ^ above_ground) && !caustics_pass) return; // not drawn in this pass
+	if (caustics_pass && wcolor.A > 0.75) return; // water too murky, disable caustics
 	float cull_dist_scale(dist_scale);
 	if (caustics_pass) {min_eq(cull_dist_scale, 0.75f*get_inf_terrain_fog_dist()/dstate.draw_tile_dist);} // cull caustics at 75% fog scale since they don't have fog enabled
 	if (!dstate.check_cube_visible(bcube, cull_dist_scale))      return;
@@ -565,10 +566,10 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 			}
 		}
 		else if (!shadow_only && dstate.pass_ix == 3) { // draw water surface; not for the shadow pass
-			dstate.s.set_cur_color(colorRGBA(wcolor, 0.5)); // semi-transparent
+			dstate.s.set_cur_color(wcolor);
 			draw_circle_normal(0.0, radius, ndiv, 0, point(xc, yc, water_zval)); // shift slightly below the top
 		}
-		else if (dstate.pass_ix == 4) { // draw sides and bottom caustics
+		else if (caustics_pass) { // draw sides and bottom caustics
 			assert(!shadow_only);
 			float const tscale = 2.0;
 			int const bias_loc(dstate.s.get_uniform_loc("shad_bias_scale"));
@@ -589,7 +590,7 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 		cube_t inner(bcube);
 		inner.expand_by_xy(-wall_thick);
 
-		if (dstate.pass_ix == 0 || dstate.pass_ix == 4) { // draw walls or caustics
+		if (dstate.pass_ix == 0 || caustics_pass) { // draw walls or caustics
 			// draw sides
 			color_wrapper const cw(caustics_pass ? WHITE : color);
 			cube_t sides[4] = {bcube, bcube, bcube, bcube}; // {S, N, W center, E center}
@@ -616,7 +617,7 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 		}
 		else if (dstate.pass_ix == 1) { // draw water surface
 			inner.z2() = water_zval; // shift water surface a bit below the top
-			dstate.draw_cube(qbds.qbd, inner, color_wrapper(colorRGBA(wcolor, 0.5)), 1, 0.5*tscale, 3); // draw top water as semi-transparent
+			dstate.draw_cube(qbds.qbd, inner, color_wrapper(wcolor), 1, 0.5*tscale, 3); // draw top water as semi-transparent
 		}
 	}
 }

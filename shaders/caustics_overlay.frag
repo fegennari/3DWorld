@@ -1,6 +1,7 @@
 uniform float time       = 0.0;
 uniform float smap_scale = 1.0;
 uniform float tc_scale   = 1.0;
+uniform float strength   = 1.0;
 uniform vec4 color_scale = vec4(1.0);
 uniform sampler2D caustic_tex;
 
@@ -16,5 +17,6 @@ void main() {
 	vec4 lpos    = fg_LightSource[0].position;
 	color.rgb   *= max(0.0, dot(normalize(lpos.xyz), normal));
 	if (smap_scale > 0.0) {color.rgb *= mix(1.0, get_shadow_map_weight_light0(epos, normal), smap_scale);}
+	color.a     *= strength;
 	fg_FragColor = color;
 }
