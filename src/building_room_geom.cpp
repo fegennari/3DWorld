@@ -2632,6 +2632,18 @@ cube_t escalator_t::get_ramp_bcube(bool exclude_sides) const {
 	assert(ramp.is_strictly_normalized());
 	return ramp;
 }
+void escalator_t::get_ends_bcube(cube_t &lo_end, cube_t &hi_end, bool exclude_sides) const {
+	cube_t const ramp(get_ramp_bcube(exclude_sides));
+	lo_end = hi_end = *this;
+	for (unsigned d = 0; d < 2; ++d) {lo_end.d[!dim][d] = hi_end.d[!dim][d] = ramp.d[!dim][d];}
+	float const side_height(get_side_height());
+	lo_end.z2() = z1() + side_height;
+	hi_end.z1() = ramp.z2();
+	hi_end.z2() = hi_end.z1() + side_height;
+	lo_end.d[dim][ dir] = ramp.d[dim][!dir];
+	hi_end.d[dim][!dir] = ramp.d[dim][ dir];
+}
+
 void draw_sloped_top_and_sides(rgeom_mat_t &mat, point const bot_pts[4], float height, colorRGBA const &color) {
 	point top_pts[4];
 	for (unsigned n = 0; n < 4; ++n) {top_pts[n] = bot_pts[n] + point(0.0, 0.0, height);}
@@ -2646,19 +2658,16 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 	assert(draw_static != draw_dynamic); // must be one or the other
 	bool const dim(e.dim), dir(e.dir);
 	unsigned const sides_skip(get_skip_mask_for_xy(!dim));
-	float const width(e.get_width()), side_height(0.8*width), side_width(e.get_side_width()), floor_height(0.01*width);
-	cube_t lo_end(e), hi_end(e);
-	if (draw_dynamic) {lo_end.expand_in_dim(!dim, -side_width); hi_end.expand_in_dim(!dim, -side_width);}
+	float const width(e.get_width()), side_height(e.get_side_height()), side_width(e.get_side_width()), floor_height(0.01*width);
 	cube_t const ramp(e.get_ramp_bcube(draw_dynamic));
-	lo_end.z2() = e.z1() + side_height;
-	hi_end.z1() = ramp.z2();
-	hi_end.z2() = hi_end.z1() + side_height;
+	cube_t lo_end, hi_end;
+	e.get_ends_bcube(lo_end, hi_end, draw_dynamic);
 	// calculate bottom points for belt/ramp/steps
 	point bot_pts[4]; // {lo-left, lo-right, hi-right, hi-left}
 	bot_pts[0].z = bot_pts[1].z = lo_end.z1();
 	bot_pts[2].z = bot_pts[3].z = hi_end.z1();
-	bot_pts[0][ dim] = bot_pts[1][ dim] = lo_end.d[dim][ dir] = ramp.d[dim][!dir];
-	bot_pts[2][ dim] = bot_pts[3][ dim] = hi_end.d[dim][!dir] = ramp.d[dim][ dir];
+	bot_pts[0][ dim] = bot_pts[1][ dim] = ramp.d[dim][!dir];
+	bot_pts[2][ dim] = bot_pts[3][ dim] = ramp.d[dim][ dir];
 	bot_pts[0][!dim] = bot_pts[3][!dim] = ramp.d[!dim][0];
 	bot_pts[1][!dim] = bot_pts[2][!dim] = ramp.d[!dim][1];
 
@@ -2668,8 +2677,8 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 		rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed=1
 		cube_t floors[2] = {lo_end, hi_end};
 		for (unsigned d = 0; d < 2; ++d) {floors[d].expand_in_dim(!dim, -side_width);}
-		floors[0].z2()  = lo_end.z1() + floor_height;
-		floors[1].z2()  = hi_end.z1() + floor_height;
+		floors[0].z2()  = floors[0].z1() + floor_height;
+		floors[1].z2()  = floors[1].z1() + floor_height;
 		cube_t upper(hi_end);
 		upper.z2()  = hi_end.z1();
 		upper.z1() -= upper_hang; // extend below to make space for the mechanicals
