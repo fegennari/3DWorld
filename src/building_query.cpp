@@ -1450,18 +1450,39 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 	for (escalator_t const &e : escalators) {
 		if (obj_z < e.z1() || obj_z > e.z2()) continue; // wrong part/floor
 		if (!sphere_cube_intersect_xy(pos, radius, e)) continue;
-		cube_t const ramp(e.get_ramp_bcube(1)); // exclude_sides=1
+		cube_t const ramp(e.get_ramp_bcube(0)); // exclude_sides=0
 		cube_t ends[2];
-		e.get_ends_bcube(ends[0], ends[1], 0); // exclude_sides=0
 
 		if (sphere_cube_intersect_xy(pos, radius, ramp)) {
-			// TODO_ESCALATOR: steps/ramp coll - move with the escalator
+			cube_t const ramp_inner(e.get_ramp_bcube(1)); // exclude_sides=1
+			e.get_ends_bcube(ends[0], ends[1], 1); // exclude_sides=1
+			bool handled(0);
+
+			for (unsigned hi = 0; hi < 2; ++hi) { // check for standing on one of the ends
+				if (!ends[hi].contains_pt_xy(pos)) continue;
+				float const floor_zmin(ends[hi].z1() + radius);
+				if (obj_z < floor_zmin) {pos.z = floor_zmin; had_coll = 1;}
+				handled = 1;
+			}
+			if (handled) { // player entering or exiting
+				continue; // ignore the ramp
+			}
+			else if (ramp_inner.contains_pt_xy(pos)) { // player on escalator
+				// TODO_ESCALATOR: steps/ramp coll - move with the escalator
+			}
+			else { // check for collision with exterior
+				// TODO_ESCALATOR: proper extruded polygon collision check
+				had_coll |= sphere_cube_int_update_pos(pos, radius, ramp, p_last, 0, cnorm); // skip_z=0
+			}
 		}
+		e.get_ends_bcube(ends[0], ends[1], 0); // exclude_sides=0
+
 		for (unsigned hi = 0; hi < 2; ++hi) {
 			if (!sphere_cube_intersect_xy(pos, radius, ends[hi])) continue;
-			// TODO: check side walls
+			for (unsigned lr = 0; lr < 2; ++lr) {had_coll |= sphere_cube_int_update_pos(pos, radius, e.get_side_for_end(ends[hi], lr), p_last, 0, cnorm);} // skip_z=0
 		}
-	}
+		had_coll |= sphere_cube_int_update_pos(pos, radius, e.get_support_pillar(), p_last, 0, cnorm); // skip_z=0
+	} // for e
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
 		had_coll |= check_door_coll(building, *i, pos, p_last, radius, obj_z, check_open_doors, cnorm);
 	}

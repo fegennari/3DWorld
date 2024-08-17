@@ -1383,10 +1383,13 @@ struct escalator_t : public oriented_cube_t { // Note: not yet used
 	float end_ext=0.0, delta_z=0.0;
 	escalator_t() {}
 	escalator_t(cube_t const &c, bool dim_, bool dir_, bool mdir, float ext, float dz) : oriented_cube_t(c, dim_, dir_), move_dir(mdir), end_ext(ext), delta_z(dz) {}
-	float get_side_width () const {return 0.1*get_width();}
-	float get_side_height() const {return 0.8*get_width();}
+	float get_side_width () const {return 0.10*get_width();}
+	float get_side_height() const {return 0.80*get_width();}
+	float get_upper_hang () const {return 0.25*get_width();}
 	cube_t get_ramp_bcube(bool exclude_sides) const;
 	void get_ends_bcube(cube_t &lo_end, cube_t &hi_end, bool exclude_sides) const;
+	cube_t get_side_for_end(cube_t const &end, bool lr) const;
+	cube_t get_support_pillar() const;
 };
 
 struct door_base_t : public cube_t {

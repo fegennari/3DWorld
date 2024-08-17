@@ -2643,6 +2643,19 @@ void escalator_t::get_ends_bcube(cube_t &lo_end, cube_t &hi_end, bool exclude_si
 	lo_end.d[dim][ dir] = ramp.d[dim][!dir];
 	hi_end.d[dim][!dir] = ramp.d[dim][ dir];
 }
+cube_t escalator_t::get_side_for_end(cube_t const &end, bool lr) const {
+	cube_t end_side(end);
+	end_side.d[!dim][!lr] = d[!dim][lr] + (lr ? -1.0 : 1.0)*get_side_width();
+	return end_side;
+}
+cube_t escalator_t::get_support_pillar() const {
+	float const support_radius(0.15*get_width());
+	cube_t support(*this);
+	support.z2() = z1() + delta_z - get_upper_hang();
+	set_wall_width(support, get_center_dim(!dim), support_radius, !dim);
+	set_wall_width(support, (d[dim][dir] + (dim ? 1.0 : -1.0)*0.5*end_ext), support_radius, dim); // center of upper end
+	return support;
+}
 
 void draw_sloped_top_and_sides(rgeom_mat_t &mat, point const bot_pts[4], float height, colorRGBA const &color) {
 	point top_pts[4];
@@ -2658,7 +2671,7 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 	assert(draw_static != draw_dynamic); // must be one or the other
 	bool const dim(e.dim), dir(e.dir);
 	unsigned const sides_skip(get_skip_mask_for_xy(!dim));
-	float const width(e.get_width()), side_height(e.get_side_height()), side_width(e.get_side_width()), floor_height(0.01*width);
+	float const side_height(e.get_side_height()), side_width(e.get_side_width()), floor_height(0.01*e.get_width());
 	cube_t const ramp(e.get_ramp_bcube(draw_dynamic));
 	cube_t lo_end, hi_end;
 	e.get_ends_bcube(lo_end, hi_end, draw_dynamic);
@@ -2672,30 +2685,28 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 	bot_pts[1][!dim] = bot_pts[2][!dim] = ramp.d[!dim][1];
 
 	if (draw_static) {
-		float const rail_shrink(0.2*side_width), rail_height(0.5*side_width), upper_hang(0.25*width), support_radius(0.15*width);
+		float const rail_shrink(0.2*side_width), rail_height(0.5*side_width);
 		colorRGBA const sides_color(LT_GRAY), rail_color(BKGRAY);
 		rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed=1
 		cube_t floors[2] = {lo_end, hi_end};
 		for (unsigned d = 0; d < 2; ++d) {floors[d].expand_in_dim(!dim, -side_width);}
-		floors[0].z2()  = floors[0].z1() + floor_height;
-		floors[1].z2()  = floors[1].z1() + floor_height;
+		floors[0].z2() = floors[0].z1() + floor_height;
+		floors[1].z2() = floors[1].z1() + floor_height;
 		cube_t upper(hi_end);
 		upper.z2()  = hi_end.z1();
-		upper.z1() -= upper_hang; // extend below to make space for the mechanicals
+		upper.z1() -= e.get_upper_hang(); // extend below to make space for the mechanicals
 		for (unsigned d = 0; d < 2; ++d) {metal_mat.add_cube_to_verts_untextured(floors[d], sides_color, (EF_Z1 | sides_skip));} // skip bottom and sides; skip inside end as well?
 		metal_mat.add_cube_to_verts_untextured(upper, sides_color, EF_Z2); // skip top surface
 		metal_mat.add_quad_to_verts(bot_pts, sides_color); // draw bottom sloped surface
 		
 		for (unsigned side = 0; side < 2; ++side) {
-			float const inner_pos(e.d[!dim][side] + (side ? -1.0 : 1.0)*side_width);
-			cube_t lo_end_side(lo_end), hi_end_side(hi_end);
-			lo_end_side.d[!dim][!side] = hi_end_side.d[!dim][!side] = inner_pos;
+			cube_t lo_end_side(e.get_side_for_end(lo_end, side)), hi_end_side(e.get_side_for_end(hi_end, side));
 			metal_mat.add_cube_to_verts_untextured(lo_end_side, sides_color, EF_Z1); // skip bottom
 			metal_mat.add_cube_to_verts_untextured(hi_end_side, sides_color, 0); // draw all sides
 			// draw the ramp/stairs
 			point bs_pts[4];
 			for (unsigned n = 0; n < 4; ++n) {bs_pts [n] = bot_pts[n];}
-			bs_pts[side ? 0 : 1][!dim] = bs_pts[side ? 3 : 2][!dim] = inner_pos;
+			bs_pts[side ? 0 : 1][!dim] = bs_pts[side ? 3 : 2][!dim] = lo_end_side.d[!dim][!side];
 			draw_sloped_top_and_sides(metal_mat, bs_pts, side_height, sides_color);
 			// draw railings
 			rgeom_mat_t &railing_mat(get_untextured_material(0)); // unshadowed
@@ -2721,11 +2732,7 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 			}
 		} // for side
 		// draw a vertical support under the high side
-		cube_t support(e);
-		support.z2() = upper.z1();
-		set_wall_width(support, e.get_center_dim    (!dim), support_radius, !dim);
-		set_wall_width(support, hi_end.get_center_dim(dim), support_radius,  dim);
-		metal_mat.add_cube_to_verts_untextured(support, WHITE, EF_Z12); // skip top and bottom
+		metal_mat.add_cube_to_verts_untextured(e.get_support_pillar(), WHITE, EF_Z12); // skip top and bottom
 	}
 	if (draw_dynamic) { // draw moving steps
 		static float last_step_pos(0.0); // cahed for most recently drawn escalator
