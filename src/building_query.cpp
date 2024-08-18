@@ -906,7 +906,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 	// *** Note ***: at this point pos.z is radius above the floors and *not* at the camera height, which is why we add camera_height to pos.z below
 	// Note: this check must be after pos.z is set from interior->floors
 	// pass in radius as wall_test_extra_z as a hack to allow player to step over a wall that's below the stairs connecting stacked parts
-	had_coll |= interior->check_sphere_coll_walls_elevators_doors(*this, pos, p_last, xy_radius, radius, 0, cnorm); // check_open_doors=0 (to avoid getting the player stuck)
+	had_coll |= interior->check_sphere_coll_walls_elevators_doors(*this, pos, p_last, xy_radius, radius, 1, cnorm); // is_player=1
 
 	if (interior->room_geom) { // collision with room geometry
 		vect_room_object_t const &objs(interior->room_geom->objs);
@@ -1273,7 +1273,7 @@ bool building_t::all_room_int_doors_closed(unsigned room_ix, float zval) const {
 bool building_interior_t::check_sphere_coll(building_t const &building, point &pos, point const &p_last, float radius,
 	vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix, bool is_ball) const
 {
-	bool had_coll(check_sphere_coll_walls_elevators_doors(building, pos, p_last, radius, 0.0, 1, &cnorm)); // check_open_doors=1
+	bool had_coll(check_sphere_coll_walls_elevators_doors(building, pos, p_last, radius, 0.0, 0, &cnorm)); // is_player=0
 	if (had_coll) {hardness = 1.0;}
 	cube_t scube; scube.set_from_sphere(pos, radius);
 
@@ -1394,6 +1394,12 @@ room_object_t const &building_interior_t::get_elevator_car(elevator_t const &e) 
 	return obj;
 }
 
+bool sphere_cube_int_zval(point const &pos, float zval, float radius, cube_t const &c) {
+	return (zval > c.z1() && zval < c.z2() && sphere_cube_intersect_xy(pos, radius, c));
+}
+bool sphere_cube_int_update_pos_zval(point &pos, float zval, float radius, cube_t const &c, point const &p_last, vector3d *cnorm) {
+	return (zval > c.z1() && zval < c.z2() && sphere_cube_int_update_pos(pos, radius, c, p_last, 1, cnorm)); // skip_z=1
+}
 bool check_door_coll(building_t const &building, door_t const &door, point &pos, point const &p_last, float radius, float obj_z, bool check_open_doors, vector3d *cnorm) {
 	if (door.open) {
 		if (!check_open_doors) return 0; // doors tend to block the player and other objects, don't collide with them unless they're closed
@@ -1414,15 +1420,16 @@ bool check_door_coll(building_t const &building, door_t const &door, point &pos,
 		}
 		return 0;
 	}
-	if (obj_z < door.z1() || obj_z > door.z2()) return 0; // wrong part/floor
-	return sphere_cube_int_update_pos(pos, radius, door, p_last, 0, cnorm); // skip_z=0
+	return sphere_cube_int_update_pos_zval(pos, obj_z, radius, door, p_last, cnorm);
 }
 
-// Note: should be valid for players and other spherical objects
+// Note: should be valid for players and other spherical objects; also checks escalators
 bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t const &building, point &pos, point const &p_last, float radius,
-	float wall_test_extra_z, bool check_open_doors, vector3d *cnorm) const
+	float wall_test_extra_z, bool is_player, vector3d *cnorm) const
 {
-	float const obj_z(max(pos.z, p_last.z)), wall_test_z(obj_z + wall_test_extra_z); // use p_last to get orig zval
+	bool const check_open_doors(!is_player); // check_open_doors=0 for player to avoid getting the player stuck
+	float obj_z(max(pos.z, p_last.z)); // use p_last to get orig zval
+	float const wall_test_z(obj_z + wall_test_extra_z);
 	bool had_coll(0);
 
 	// Note: pos.z may be too small here and we should really use obj_z, so skip_z must be set to 1 in cube tests and obj_z tested explicitly instead
@@ -1448,40 +1455,51 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 		had_coll |= sphere_cube_int_update_pos(pos, radius, e, p_last, 1, cnorm); // handle as a single blocking cube; skip_z=1
 	} // for e
 	for (escalator_t const &e : escalators) {
-		if (obj_z < e.z1() || obj_z > e.z2()) continue; // wrong part/floor
-		if (!sphere_cube_intersect_xy(pos, radius, e)) continue;
+		if (!sphere_cube_int_zval(pos, obj_z, radius, e)) continue;
 		cube_t const ramp(e.get_ramp_bcube(0)); // exclude_sides=0
 		cube_t ends[2];
+		e.get_ends_bcube(ends[0], ends[1], 1); // exclude_sides=1
+		bool handled(0);
 
-		if (sphere_cube_intersect_xy(pos, radius, ramp)) {
-			cube_t const ramp_inner(e.get_ramp_bcube(1)); // exclude_sides=1
-			e.get_ends_bcube(ends[0], ends[1], 1); // exclude_sides=1
-			bool handled(0);
+		for (unsigned hi = 0; hi < 2; ++hi) { // check for standing on one of the ends
+			if (!ends[hi].contains_pt(point(pos.x, pos.y, obj_z))) continue;
+			float const floor_zmin(ends[hi].z1() + e.get_floor_thick() + radius);
+			if (pos.z < floor_zmin) {pos.z = floor_zmin; max_eq(obj_z, pos.z); had_coll = 1;}
+			handled = 1;
+		}
+		if (!handled && sphere_cube_intersect_xy(pos, radius, ramp)) { // if entering or exiting, ignore the ramp
+			point bot_pts[4]; // {lo-left, lo-right, hi-right, hi-left}
+			e.get_ramp_bottom_pts(ramp, bot_pts);
+			vector3d const normal(get_poly_norm(bot_pts));
 
-			for (unsigned hi = 0; hi < 2; ++hi) { // check for standing on one of the ends
-				if (!ends[hi].contains_pt_xy(pos)) continue;
-				float const floor_zmin(ends[hi].z1() + radius);
-				if (obj_z < floor_zmin) {pos.z = floor_zmin; had_coll = 1;}
-				handled = 1;
+			if (is_player) {
+				cube_t const ramp_inner(e.get_ramp_bcube(1)); // exclude_sides=1
+
+				if (ramp_inner.contains_pt_xy(pos)) { // player or ball on escalator
+				
+					// TODO_ESCALATOR: steps/ramp coll - move with the escalator
+				}
 			}
-			if (handled) { // player entering or exiting
-				continue; // ignore the ramp
-			}
-			else if (ramp_inner.contains_pt_xy(pos)) { // player on escalator
-				// TODO_ESCALATOR: steps/ramp coll - move with the escalator
-			}
-			else { // check for collision with exterior
-				// TODO_ESCALATOR: proper extruded polygon collision check
-				had_coll |= sphere_cube_int_update_pos(pos, radius, ramp, p_last, 0, cnorm); // skip_z=0
+			// treat the sloped part of the escalator as an extruded polygon; should be conservative for balls and correct for player exterior collisions
+			float const side_height(e.get_side_height());
+			float val(0.0);
+			vector3d coll_norm;
+
+			if (get_sphere_poly_int_val(pos, radius, bot_pts, 4, normal, side_height, val, coll_norm)) {
+				if (is_player && coll_norm.z < 0.0) {coll_norm.z = 0.0; coll_norm.normalize();} // don't push player through floor when colliding with bottom
+				if (cnorm) {*cnorm = coll_norm;}
+				pos += coll_norm*val;
+				had_coll = 1;
 			}
 		}
 		e.get_ends_bcube(ends[0], ends[1], 0); // exclude_sides=0
 
 		for (unsigned hi = 0; hi < 2; ++hi) {
-			if (!sphere_cube_intersect_xy(pos, radius, ends[hi])) continue;
-			for (unsigned lr = 0; lr < 2; ++lr) {had_coll |= sphere_cube_int_update_pos(pos, radius, e.get_side_for_end(ends[hi], lr), p_last, 0, cnorm);} // skip_z=0
+			if (!sphere_cube_int_zval(pos, obj_z, radius, ends[hi])) continue;
+			for (unsigned lr = 0; lr < 2; ++lr) {had_coll |= sphere_cube_int_update_pos(pos, radius, e.get_side_for_end(ends[hi], lr), p_last, 1, cnorm);} // skip_z=1
 		}
-		had_coll |= sphere_cube_int_update_pos(pos, radius, e.get_support_pillar(), p_last, 0, cnorm); // skip_z=0
+		cube_t const pillar(e.get_support_pillar());
+		had_coll |= sphere_cube_int_update_pos_zval(pos, obj_z, radius, pillar, p_last, cnorm);
 	} // for e
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
 		had_coll |= check_door_coll(building, *i, pos, p_last, radius, obj_z, check_open_doors, cnorm);

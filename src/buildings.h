@@ -1386,10 +1386,12 @@ struct escalator_t : public oriented_cube_t { // Note: not yet used
 	float get_side_width () const {return 0.10*get_width();}
 	float get_side_height() const {return 0.80*get_width();}
 	float get_upper_hang () const {return 0.25*get_width();}
+	float get_floor_thick() const {return 0.01*get_width();}
 	cube_t get_ramp_bcube(bool exclude_sides) const;
 	void get_ends_bcube(cube_t &lo_end, cube_t &hi_end, bool exclude_sides) const;
 	cube_t get_side_for_end(cube_t const &end, bool lr) const;
 	cube_t get_support_pillar() const;
+	void get_ramp_bottom_pts(cube_t const &ramp, point bot_pts[4]) const;
 };
 
 struct door_base_t : public cube_t {
@@ -1581,7 +1583,7 @@ struct building_interior_t {
 		vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix, bool is_ball=0) const;
 	room_object_t const &get_elevator_car(elevator_t const &e) const;
 	bool check_sphere_coll_walls_elevators_doors(building_t const &building, point &pos, point const &p_last, float radius,
-		float wall_test_extra_z, bool check_open_doors, vector3d *cnorm) const;
+		float wall_test_extra_z, bool is_player, vector3d *cnorm) const;
 	bool line_coll(building_t const &building, point const &p1, point const &p2, point &p_int) const;
 	point find_closest_pt_on_obj_to_pos(building_t const &building, point const &pos, float pad_dist, bool no_ceil_floor) const;
 	void update_dynamic_draw_data() {assert(room_geom); room_geom->update_dynamic_draw_data();}

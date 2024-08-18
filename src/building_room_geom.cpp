@@ -2656,6 +2656,14 @@ cube_t escalator_t::get_support_pillar() const {
 	set_wall_width(support, (d[dim][dir] + (dim ? 1.0 : -1.0)*0.5*end_ext), support_radius, dim); // center of upper end
 	return support;
 }
+void escalator_t::get_ramp_bottom_pts(cube_t const &ramp, point bot_pts[4]) const { // {lo-left, lo-right, hi-right, hi-left}
+	bot_pts[0].z = bot_pts[1].z = ramp.z1();
+	bot_pts[2].z = bot_pts[3].z = ramp.z2();
+	bot_pts[0][ dim] = bot_pts[1][ dim] = ramp.d[dim][!dir];
+	bot_pts[2][ dim] = bot_pts[3][ dim] = ramp.d[dim][ dir];
+	bot_pts[0][!dim] = bot_pts[3][!dim] = ramp.d[!dim][0];
+	bot_pts[1][!dim] = bot_pts[2][!dim] = ramp.d[!dim][1];
+}
 
 void draw_sloped_top_and_sides(rgeom_mat_t &mat, point const bot_pts[4], float height, colorRGBA const &color) {
 	point top_pts[4];
@@ -2671,18 +2679,12 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 	assert(draw_static != draw_dynamic); // must be one or the other
 	bool const dim(e.dim), dir(e.dir);
 	unsigned const sides_skip(get_skip_mask_for_xy(!dim));
-	float const side_height(e.get_side_height()), side_width(e.get_side_width()), floor_height(0.01*e.get_width());
+	float const side_height(e.get_side_height()), side_width(e.get_side_width()), floor_height(e.get_floor_thick());
 	cube_t const ramp(e.get_ramp_bcube(draw_dynamic));
 	cube_t lo_end, hi_end;
-	e.get_ends_bcube(lo_end, hi_end, draw_dynamic);
-	// calculate bottom points for belt/ramp/steps
 	point bot_pts[4]; // {lo-left, lo-right, hi-right, hi-left}
-	bot_pts[0].z = bot_pts[1].z = lo_end.z1();
-	bot_pts[2].z = bot_pts[3].z = hi_end.z1();
-	bot_pts[0][ dim] = bot_pts[1][ dim] = ramp.d[dim][!dir];
-	bot_pts[2][ dim] = bot_pts[3][ dim] = ramp.d[dim][ dir];
-	bot_pts[0][!dim] = bot_pts[3][!dim] = ramp.d[!dim][0];
-	bot_pts[1][!dim] = bot_pts[2][!dim] = ramp.d[!dim][1];
+	e.get_ends_bcube(lo_end, hi_end, draw_dynamic);
+	e.get_ramp_bottom_pts(ramp, bot_pts);
 
 	if (draw_static) {
 		float const rail_shrink(0.2*side_width), rail_height(0.5*side_width);
