@@ -43,6 +43,7 @@ float const WHEATER_PIPE_SPACING   = 0.65; // relative to radius
 float const WHEATER_PIPE_H_DIST    = 0.92; // relative to radius
 float const DEF_NORM_BIAS_SCALE    = 10.0; // see shadow_map.part
 float const CITY_BIAS_SCALE        = 0.1;
+float const ESCALATOR_SPEED        = 1.0/TICKS_PER_SECOND; // in steps per tick
 
 unsigned const NUM_CHAIR_COLORS = 12;
 unsigned const MAX_BCASE_BOOKS  = 48; // limited by available bit flags

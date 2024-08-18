@@ -2696,7 +2696,7 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 	}
 	if (draw_dynamic) { // draw moving steps
 		static float last_step_pos(0.0); // cahed for most recently drawn escalator
-		float const step_pos(animate2 ? fract(0.7*tfticks/TICKS_PER_SECOND) : last_step_pos);
+		float const step_pos(animate2 ? fract(ESCALATOR_SPEED*tfticks) : last_step_pos);
 		last_step_pos = step_pos;
 		// draw steps
 		unsigned const num_steps(NUM_STAIRS_PER_FLOOR), front_face(get_face_mask(dim, !dir));

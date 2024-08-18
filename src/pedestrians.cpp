@@ -16,7 +16,7 @@ bool  const AVOID_RES_PRIV_PROP  = 1; // avoid private property in residential p
 
 bool some_person_has_idle_animation(0);
 
-extern bool tt_fire_button_down, camera_in_building;
+extern bool tt_fire_button_down, camera_in_building, player_on_moving_ww;
 extern int display_mode, game_mode, camera_mode, animate2, frame_counter, camera_surf_collide;
 extern float fticks, FAR_CLIP;
 extern double camera_zh;
@@ -2304,8 +2304,8 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 	static point prev_player_pos;
 	
 	if (enable_animations && p2p_dist_xy(actual_player_pos, prev_player_pos) > 0.01*CAMERA_RADIUS) { // don't include minor differences related to turning in place
-		prev_player_pos   = actual_player_pos;
-		player_anim_time += fticks*city_params.ped_speed;
+		prev_player_pos = actual_player_pos;
+		if (!player_on_moving_ww) {player_anim_time += fticks*city_params.ped_speed;} // skip for escalators
 	}
 	float const crouch_amt(get_crouch_amt());
 	static bone_transform_data_t cached_player_transforms;

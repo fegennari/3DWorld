@@ -7,9 +7,9 @@
 
 
 extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_in_unlit_room, building_has_open_ext_door, ctrl_key_pressed;
-extern bool player_is_hiding, player_wait_respawn, had_building_interior_coll, player_in_int_elevator, player_in_walkway, player_on_house_stairs;
-extern int camera_surf_collide, frame_counter, player_in_closet, player_in_elevator, player_in_basement, player_in_attic, player_in_water;
-extern float CAMERA_RADIUS, C_STEP_HEIGHT, NEAR_CLIP, building_bcube_expand;
+extern bool player_is_hiding, player_wait_respawn, had_building_interior_coll, player_in_int_elevator, player_in_walkway, player_on_house_stairs, player_on_moving_ww;
+extern int camera_surf_collide, frame_counter, animate2, player_in_closet, player_in_elevator, player_in_basement, player_in_attic, player_in_water;
+extern float CAMERA_RADIUS, C_STEP_HEIGHT, NEAR_CLIP, fticks, building_bcube_expand;
 extern double camera_zh;
 extern building_params_t global_building_params;
 extern bldg_obj_type_t bldg_obj_types[];
@@ -1538,10 +1538,16 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 					if (ztop < obj_z - radius + C_STEP_HEIGHT*radius) { // step onto or move along ramp top surface
 						bool const is_falling(pos.z < obj_z);
 						float const reff((is_falling ? 1.01 : 0.99)*radius); // effective radius
-						pos.z   = ztop + reff; // use reff rather than radius to prevent jitter when stepping onto the upper edge of the ramp
-						obj_z   = max(pos.z, p_last.z);
-						handled = had_coll = 1;
+						pos.z = ztop + reff; // use reff rather than radius to prevent jitter when stepping onto the upper edge of the ramp
 						apply_speed_factor(pos, p_last, 0.5); // slower when walking on escalator
+
+						if (animate2) { // apply escalator movement
+							float const delta((e.move_dir ? 1.0 : -1.0)*fticks*ESCALATOR_SPEED/NUM_STAIRS_PER_FLOOR);
+							pos.z += delta*height;
+							pos[e.dim] += (e.dir ? 1.0 : -1.0)*delta*length;
+						}
+						obj_z   = max(pos.z, p_last.z);
+						handled = had_coll = player_on_moving_ww = 1; // set player_on_moving_ww=1 to suppress footsteps
 						// clamp player to interior of escalator
 						float const shrink(min(radius, 0.5f*ramp_inner.get_sz_dim(!e.dim))); // make sure it's normalized
 						max_eq(pos[!e.dim], ramp_inner.d[!e.dim][0]+shrink);
