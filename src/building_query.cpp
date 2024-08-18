@@ -1423,6 +1423,61 @@ bool check_door_coll(building_t const &building, door_t const &door, point &pos,
 	return sphere_cube_int_update_pos_zval(pos, obj_z, radius, door, p_last, cnorm);
 }
 
+cube_t escalator_t::get_ramp_bcube(bool exclude_sides) const {
+	cube_t ramp(*this);
+	if (exclude_sides) {ramp.expand_in_dim(!dim, -get_side_width());} // subtract off sides to get the belt/stairs
+	cube_t lo_end(ramp), hi_end(ramp);
+	ramp.expand_in_dim(dim, -end_ext); // subtract off ends
+	ramp.z2() = z1() + delta_z;
+	assert(ramp.is_strictly_normalized());
+	return ramp;
+}
+void escalator_t::get_ends_bcube(cube_t &lo_end, cube_t &hi_end, bool exclude_sides) const {
+	cube_t const ramp(get_ramp_bcube(exclude_sides));
+	lo_end = hi_end = *this;
+	for (unsigned d = 0; d < 2; ++d) {lo_end.d[!dim][d] = hi_end.d[!dim][d] = ramp.d[!dim][d];}
+	float const side_height(get_side_height());
+	lo_end.z2() = z1() + side_height;
+	hi_end.z1() = ramp.z2();
+	hi_end.z2() = hi_end.z1() + side_height;
+	lo_end.d[dim][ dir] = ramp.d[dim][!dir];
+	hi_end.d[dim][!dir] = ramp.d[dim][ dir];
+}
+cube_t escalator_t::get_side_for_end(cube_t const &end, bool lr) const {
+	cube_t end_side(end);
+	end_side.d[!dim][!lr] = end.d[!dim][lr] + (lr ? -1.0 : 1.0)*get_side_width();
+	return end_side;
+}
+cube_t escalator_t::get_support_pillar() const {
+	float const support_radius(0.15*get_width());
+	cube_t support(*this);
+	support.z2() = z1() + delta_z - get_upper_hang();
+	set_wall_width(support, get_center_dim(!dim), support_radius, !dim);
+	set_wall_width(support, (d[dim][dir] + (dim ? 1.0 : -1.0)*0.5*end_ext), support_radius, dim); // center of upper end
+	return support;
+}
+void escalator_t::get_ramp_bottom_pts(cube_t const &ramp, point bot_pts[4]) const { // {lo-left, lo-right, hi-right, hi-left}
+	bot_pts[0].z = bot_pts[1].z = ramp.z1();
+	bot_pts[2].z = bot_pts[3].z = ramp.z2();
+	bot_pts[0][ dim] = bot_pts[1][ dim] = ramp.d[dim][!dir];
+	bot_pts[2][ dim] = bot_pts[3][ dim] = ramp.d[dim][ dir];
+	bot_pts[0][!dim] = bot_pts[3][!dim] = ramp.d[!dim][0];
+	bot_pts[1][!dim] = bot_pts[2][!dim] = ramp.d[!dim][1];
+}
+void escalator_t::get_all_cubes(cube_t cubes[7]) const { // {lo left wall, lo right wall, lo floor, hi left wall, hi right wall, hi floor, pillar}
+	cube_t ends[2];
+	get_ends_bcube(ends[0], ends[1], 0); // exclude_sides=0
+	unsigned ix(0);
+
+	for (unsigned hi = 0; hi < 2; ++hi) {
+		cube_t end(ends[hi]);
+		for (unsigned lr = 0; lr < 2; ++lr) {cubes[ix++] = get_side_for_end(end, lr);}
+		end.z2() = end.z1() + get_floor_thick();
+		cubes[ix++] = end;
+	}
+	cubes[ix++] = get_support_pillar();
+}
+
 // Note: should be valid for players and other spherical objects; also checks escalators
 bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t const &building, point &pos, point const &p_last, float radius,
 	float wall_test_extra_z, bool is_player, vector3d *cnorm) const
@@ -1475,8 +1530,7 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 			if (is_player) {
 				cube_t const ramp_inner(e.get_ramp_bcube(1)); // exclude_sides=1
 
-				if (ramp_inner.contains_pt_xy(pos)) { // player or ball on escalator
-				
+				if (ramp_inner.contains_pt_xy(pos)) { // player on escalator steps
 					// TODO_ESCALATOR: steps/ramp coll - move with the escalator
 				}
 			}
@@ -1521,7 +1575,7 @@ template<typename T> bool get_line_clip_update_t(point const &p1, point const &p
 	for (auto i = cubes.begin(); i != cubes.end(); ++i) {had_coll |= get_line_clip_update_t(p1, p2, *i, t);}
 	return had_coll;
 }
-bool building_interior_t::line_coll(building_t const &building, point const &p1, point const &p2, point &p_int) const {
+bool building_interior_t::line_coll(building_t const &building, point const &p1, point const &p2, point &p_int) const { // for snakes
 	bool had_coll(0);
 	float t(1.0), tmin(1.0);
 	had_coll |= get_line_clip_update_t(p1, p2, floors,   t);
@@ -1529,12 +1583,18 @@ bool building_interior_t::line_coll(building_t const &building, point const &p1,
 	for (unsigned d = 0; d < 2; ++d) {had_coll |= get_line_clip_update_t(p1, p2, walls[d], t);}
 
 	for (elevator_t const &e : elevators) {
+		if (!check_line_clip(p1, p2, e.d)) continue;
 		cube_t cubes[5];
 		unsigned const num_cubes(e.get_coll_cubes(cubes));
 		for (unsigned n = 0; n < num_cubes; ++n) {had_coll |= get_line_clip_update_t(p1, p2, cubes[n], t);}
 	}
-	for (escalator_t const &e : escalators) {had_coll |= get_line_clip_update_t(p1, p2, e, t);} // use escalator bcube, for now
-
+	for (escalator_t const &e : escalators) {
+		if (!check_line_clip(p1, p2, e.d)) continue;
+		cube_t cubes[7];
+		e.get_all_cubes(cubes);
+		for (unsigned n = 0; n < 7; ++n) {had_coll |= get_line_clip_update_t(p1, p2, cubes[n], t);}
+		had_coll |= get_line_clip_update_t(p1, p2, e.get_ramp_bcube(0), t); // use conservative bcube of ramp
+	}
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
 		if (i->open) {
 			cube_t door_bounds(*i);
@@ -1600,8 +1660,12 @@ point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &build
 	}
 	for (unsigned d = 0; d < 2; ++d) {update_closest_pt(walls[d], pos, closest, pad_dist, dmin_sq);}
 	for (elevator_t const &e : elevators) {update_closest_pt(e, pos, closest, pad_dist, dmin_sq);} // ignores open elevator doors
-	// Note: escalators are ignored for now
-
+	
+	for (escalator_t const &e : escalators) { // ramps are ignored
+		cube_t cubes[7];
+		e.get_all_cubes(cubes);
+		for (unsigned n = 0; n < 7; ++n) {update_closest_pt(cubes[n], pos, closest, pad_dist, dmin_sq);}
+	}
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
 		if (i->open) {} // handle open doors? - closest point on extruded polygon
 		else {update_closest_pt(*i, pos, closest, pad_dist, dmin_sq);} // closed
@@ -2307,8 +2371,12 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 		}
 	} // for s
 	if (line_int_cubes_exp(p1, p2, interior->elevators,  expand, line_bcube)) return 7; // collide with entire elevator
-	if (line_int_cubes_exp(p1, p2, interior->escalators, expand, line_bcube)) return 7; // collide with entire escalator
 	
+	for (escalator_t const &e : interior->escalators) { // ramps are ignored
+		cube_t cubes[7];
+		e.get_all_cubes(cubes);
+		if (line_int_cubes_exp(p1, p2, cubes, 7, expand) || line_int_cube_exp(p1, p2, e.get_ramp_bcube(0), expand)) return 7; // test cubes and ramp bcube
+	}
 	// check exterior walls
 	if (point_in_attic(p1) && point_in_attic(p2)) {} // both points in attic, no need to check exterior walls
 	else if (real_num_parts > 1) { // only need to do this for multi-part buildings because the caller is assumed to check the building bcube

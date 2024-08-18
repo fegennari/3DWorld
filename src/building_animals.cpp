@@ -947,10 +947,15 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 		avoid.clear();
 	} // for i
 	if (has_pool()) {obj_avoid.register_avoid_cube(interior->pool);}
-	// check elevators
+	// check elevators and escalators
 	for (elevator_t  const &e : interior->elevators ) {surface_orienter.register_cube(e);} // should we avoid open elevators?
-	for (escalator_t const &e : interior->escalators) {obj_avoid.register_avoid_cube (e);} // avoid escalators, since they're not cube-shaped
 	
+	for (escalator_t const &e : interior->escalators) {
+		cube_t cubes[7];
+		e.get_all_cubes(cubes);
+		for (unsigned n = 0; n < 7; ++n) {surface_orienter.register_cube(cubes[n]);}
+		obj_avoid.register_avoid_cube(e.get_ramp_bcube(0)); // avoid ramp since it's not a cube; exclude_sides=0
+	}
 	if (in_attic) {
 		// the attic roof is not a cube we can walk on and the beams aren't real objects;
 		// also, it's not really possible to move from the attic floor to the roof without getting stuck in/on the corner

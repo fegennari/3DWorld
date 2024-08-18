@@ -255,7 +255,11 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 		add_colored_cubes(cubes, num_cubes, wall_color, cc); // can only assign the same color to all sides of the cube
 	}
 	for (escalator_t const &e : interior->escalators) {
-		// TODO_ESCALATOR
+		cube_t cubes[7];
+		e.get_all_cubes(cubes);
+		add_colored_cubes(cubes, 6, LT_GRAY, cc); // walls and floors are light gray
+		cc.emplace_back(cubes[6], WHITE); // pillar is white
+		//e.get_ramp_bcube(0) - ignore ramp for now because it's not a cube
 	}
 	for (door_t const &d : interior->doors) {
 		if (d.open || !d.intersects(ext_bcube)) continue; // add only closed doors

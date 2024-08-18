@@ -2623,48 +2623,6 @@ void building_room_geom_t::add_elevator_doors(elevator_t const &e, float fc_thic
 	} // for d
 }
 
-cube_t escalator_t::get_ramp_bcube(bool exclude_sides) const {
-	cube_t ramp(*this);
-	if (exclude_sides) {ramp.expand_in_dim(!dim, -get_side_width());} // subtract off sides to get the belt/stairs
-	cube_t lo_end(ramp), hi_end(ramp);
-	ramp.expand_in_dim(dim, -end_ext); // subtract off ends
-	ramp.z2() = z1() + delta_z;
-	assert(ramp.is_strictly_normalized());
-	return ramp;
-}
-void escalator_t::get_ends_bcube(cube_t &lo_end, cube_t &hi_end, bool exclude_sides) const {
-	cube_t const ramp(get_ramp_bcube(exclude_sides));
-	lo_end = hi_end = *this;
-	for (unsigned d = 0; d < 2; ++d) {lo_end.d[!dim][d] = hi_end.d[!dim][d] = ramp.d[!dim][d];}
-	float const side_height(get_side_height());
-	lo_end.z2() = z1() + side_height;
-	hi_end.z1() = ramp.z2();
-	hi_end.z2() = hi_end.z1() + side_height;
-	lo_end.d[dim][ dir] = ramp.d[dim][!dir];
-	hi_end.d[dim][!dir] = ramp.d[dim][ dir];
-}
-cube_t escalator_t::get_side_for_end(cube_t const &end, bool lr) const {
-	cube_t end_side(end);
-	end_side.d[!dim][!lr] = d[!dim][lr] + (lr ? -1.0 : 1.0)*get_side_width();
-	return end_side;
-}
-cube_t escalator_t::get_support_pillar() const {
-	float const support_radius(0.15*get_width());
-	cube_t support(*this);
-	support.z2() = z1() + delta_z - get_upper_hang();
-	set_wall_width(support, get_center_dim(!dim), support_radius, !dim);
-	set_wall_width(support, (d[dim][dir] + (dim ? 1.0 : -1.0)*0.5*end_ext), support_radius, dim); // center of upper end
-	return support;
-}
-void escalator_t::get_ramp_bottom_pts(cube_t const &ramp, point bot_pts[4]) const { // {lo-left, lo-right, hi-right, hi-left}
-	bot_pts[0].z = bot_pts[1].z = ramp.z1();
-	bot_pts[2].z = bot_pts[3].z = ramp.z2();
-	bot_pts[0][ dim] = bot_pts[1][ dim] = ramp.d[dim][!dir];
-	bot_pts[2][ dim] = bot_pts[3][ dim] = ramp.d[dim][ dir];
-	bot_pts[0][!dim] = bot_pts[3][!dim] = ramp.d[!dim][0];
-	bot_pts[1][!dim] = bot_pts[2][!dim] = ramp.d[!dim][1];
-}
-
 void draw_sloped_top_and_sides(rgeom_mat_t &mat, point const bot_pts[4], float height, colorRGBA const &color) {
 	point top_pts[4];
 	for (unsigned n = 0; n < 4; ++n) {top_pts[n] = bot_pts[n] + point(0.0, 0.0, height);}
