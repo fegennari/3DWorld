@@ -926,6 +926,7 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 	building_nav_graph_t &ng(*interior->nav_graph);
 	float const wall_width(get_wall_thickness()), doorway_width(get_doorway_width());
 	unsigned const num_rooms(interior->rooms.size()), num_stairs(interior->stairwells.size());
+	// TODO_ESCALATOR: escalators
 	bool const has_ramp(has_pg_ramp());
 	ng.set_num_rooms(num_rooms, num_stairs, has_ramp);
 	for (unsigned s = 0; s < num_stairs; ++s) {ng.set_stairs_bcube(s, interior->stairwells[s]);}
@@ -1376,7 +1377,8 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 			if (s.z1() < z2 && s.z2() > z1) {avoid.push_back(get_stairs_bcube_expanded(s, 0.0, 0.0, doorway_width));}
 		}
 	}
-	add_bcube_if_overlaps_zval(elevators, avoid, z1, z2); // clearance not required
+	add_bcube_if_overlaps_zval(elevators,  avoid, z1, z2); // clearance not required
+	add_bcube_if_overlaps_zval(escalators, avoid, z1, z2); // clearance not required; using the full bcube rather than the parts is conservative but probably okay
 	
 	if (pool.valid && z1 < (pool.z2() + floor_ceil_gap)) { // skip if !same_as_player to allow zombies in pools?
 		avoid.push_back(pool);
@@ -1519,6 +1521,7 @@ void building_t::find_nearest_stairs_or_ramp(point const &p1, point const &p2, v
 			sorted.emplace_back((p2p_dist(p1, center) + p2p_dist(center, p2)), interior->stairwells.size());
 		}
 	}
+	// interior->escalators?
 	sort(sorted.begin(), sorted.end()); // sort by distance, min first
 	for (auto s = sorted.begin(); s != sorted.end(); ++s) {nearest_stairs.push_back(s->second);}
 }
@@ -2654,7 +2657,7 @@ building_loc_t building_t::get_building_loc_for_pt(point const &pt) const {
 	}
 	if (loc.part_ix < 0 && point_in_extended_basement(pt)) {loc.part_ix = basement_part_ix;} // use basement part if in extended basement, even though point is outside the cube
 
-	if (interior) { // rooms and stairwells, no elevators yet
+	if (interior) { // rooms and stairwells, no elevators or escalators
 		loc.room_ix = get_room_containing_pt(pt);
 		if (loc.room_ix >= 0) {loc.floor_ix = get_floor_for_zval(pt.z);}
 
