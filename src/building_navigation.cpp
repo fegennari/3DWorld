@@ -1102,7 +1102,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 		}
 	}
 	else if (can_ai_follow_player(person) && get_closest_building_sound(person.pos, sound_pos, floor_spacing)) { // target the loudest sound
-		if (point_in_or_above_pool(sound_pos) && get_room(interior->pool.room_ix).contains_pt(person.pos)) {
+		if (point_in_or_above_pool(sound_pos) && get_pool_room().contains_pt(person.pos)) {
 			// ignore pool splash if already in the pool room; maybe should target a nearby location on the side of the pool?
 		}
 		else {
@@ -1834,7 +1834,7 @@ bool has_nearby_sound(person_t const &person, float floor_spacing) {
 }
 
 bool building_t::point_in_or_above_pool(point const &pos) const {
-	return (has_pool() && interior->pool.contains_pt_xy(pos) && pos.z < get_room(interior->pool.room_ix).z2());
+	return (has_pool() && interior->pool.contains_pt_xy(pos) && pos.z < get_pool_room().z2());
 }
 bool building_t::same_room_and_floor_as_player(person_t const &person) const {
 	return (cur_player_building_loc.room_ix == person.cur_room && cur_player_building_loc.floor_ix == get_floor_for_zval(person.pos.z) && cur_player_building_loc.stairs_ix < 0);

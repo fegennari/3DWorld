@@ -1925,6 +1925,7 @@ struct building_t : public building_geom_t {
 	door_t const &get_door(unsigned door_ix) const {assert(interior); return interior->get_door(door_ix);}
 	door_t       &get_door(unsigned door_ix)       {assert(interior); return interior->get_door(door_ix);}
 	point get_center_of_room(unsigned room_ix) const {return get_room(room_ix).get_cube_center();}
+	room_t const &get_pool_room() const {assert(interior); return get_room(interior->pool.room_ix);}
 
 	// building AI people
 	unsigned count_connected_room_components();

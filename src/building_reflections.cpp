@@ -105,7 +105,9 @@ void create_mirror_reflection_if_needed(building_t const *vis_conn_bldg) {
 		if (bldg == nullptr) continue;
 	
 		if (bldg->water_visible_to_player()) { // draw water plane reflection
-			if (get_camera_pos().z < bldg->interior->water_zval + bldg->get_window_vspace()) { // only if the player is on the same floor as the water
+			if (get_camera_pos().z < (bldg->interior->water_zval + bldg->get_window_vspace()) || // if the player is on the same floor as the water
+				(bldg->has_pool() && bldg->get_pool_room().contains_pt(get_camera_pos()))) // or if the player is in the pool room
+			{
 				cube_t water_cube(bldg->get_water_cube(0));
 				water_cube.z1() = water_cube.z2(); // top surface only
 				mirror_in_ext_basement = 1; // required when extended basement goes outside the building's tile

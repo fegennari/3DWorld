@@ -209,8 +209,7 @@ bool building_t::water_visible_to_player() const { // applies to backrooms and p
 		} // for s
 	}
 	if (has_pool()) { // pool water
-		room_t const &room(get_room(interior->pool.room_ix));
-		if (room.contains_pt_exp(camera_bs, 2.0*get_wall_thickness())) return 1; // player in room with the pool, or in its doorway
+		if (get_pool_room().contains_pt_exp(camera_bs, 2.0*get_wall_thickness())) return 1; // player in room with the pool, or in its doorway
 		// check if pool is visible through a doorway
 		cube_t pool_surface(interior->pool);
 		pool_surface.z1() = interior->water_zval;
