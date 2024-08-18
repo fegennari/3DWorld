@@ -1532,18 +1532,35 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 
 				if (ramp_inner.contains_pt_xy(pos)) { // player on escalator steps
 					// TODO_ESCALATOR: steps/ramp coll - move with the escalator
+					float const length(ramp_inner.get_sz_dim(e.dim)), height(ramp_inner.dz()), t(CLIP_TO_01((pos[e.dim] - ramp_inner.d[e.dim][0])/length));
+					float const ztop(ramp_inner.z1() + height*(e.dir ? t : (1.0-t)));
+
+					if (ztop < obj_z - radius + C_STEP_HEIGHT*radius) { // step onto or move along ramp top surface
+						bool const is_falling(pos.z < obj_z);
+						float const reff((is_falling ? 1.01 : 0.99)*radius); // effective radius
+						pos.z   = ztop + reff; // use reff rather than radius to prevent jitter when stepping onto the upper edge of the ramp
+						obj_z   = max(pos.z, p_last.z);
+						handled = had_coll = 1;
+						apply_speed_factor(pos, p_last, 0.5); // slower when walking on escalator
+						// clamp player to interior of escalator
+						float const shrink(min(radius, 0.5f*ramp_inner.get_sz_dim(!e.dim))); // make sure it's normalized
+						max_eq(pos[!e.dim], ramp_inner.d[!e.dim][0]+shrink);
+						min_eq(pos[!e.dim], ramp_inner.d[!e.dim][1]-shrink);
+					}
 				}
 			}
-			// treat the sloped part of the escalator as an extruded polygon; should be conservative for balls and correct for player exterior collisions
-			float const side_height(e.get_side_height());
-			float val(0.0);
-			vector3d coll_norm;
+			if (!handled) {
+				// treat the sloped part of the escalator as an extruded polygon; should be conservative for balls and correct for player exterior collisions
+				float const side_height(e.get_side_height());
+				float val(0.0);
+				vector3d coll_norm;
 
-			if (get_sphere_poly_int_val(pos, radius, bot_pts, 4, normal, side_height, val, coll_norm)) {
-				if (is_player && coll_norm.z < 0.0) {coll_norm.z = 0.0; coll_norm.normalize();} // don't push player through floor when colliding with bottom
-				if (cnorm) {*cnorm = coll_norm;}
-				pos += coll_norm*val;
-				had_coll = 1;
+				if (get_sphere_poly_int_val(pos, radius, bot_pts, 4, normal, side_height, val, coll_norm)) {
+					if (is_player && coll_norm.z < 0.0) {coll_norm.z = 0.0; coll_norm.normalize();} // don't push player through floor when colliding with bottom
+					if (cnorm) {*cnorm = coll_norm;}
+					pos += coll_norm*val;
+					had_coll = 1;
+				}
 			}
 		}
 		e.get_ends_bcube(ends[0], ends[1], 0); // exclude_sides=0
