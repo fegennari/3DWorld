@@ -1211,12 +1211,11 @@ bool coll_obj::sphere_intersects_exact(point const &sc, float sr, vector3d &cnor
 		if (sphere_sphere_int(sc, points[1], sr, radius2, cnorm, new_sc)) return 1;
 		return sphere_intersect_cylinder_ipt(sc, sr, points[0], points[1], radius, radius2, 0, new_sc, cnorm, 1);
 	case COLL_POLYGON: { // must be coplanar
-		float thick, rdist;
+		float thick, rdist, val;
 		cnorm = norm;
 		if (dot_product_ptv(cnorm, sc, points[0]) < 0.0) {cnorm.negate();} // sc or points[0]?
 		if (!sphere_ext_poly_int_base(points[0], cnorm, sc, sr, thickness, thick, rdist)) return 0;
 		if (!sphere_poly_intersect(points, npoints, sc, cnorm, rdist, max(0.0f, (thick - MIN_POLY_THICK)))) return 0;
-		float val;
 
 		if (thickness > MIN_POLY_THICK) { // compute norm based on extruded sides
 			if (!get_sphere_poly_int_val(sc, sr, points, npoints, norm, thickness, val, cnorm)) return 0;
@@ -1388,7 +1387,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 		break;
 	}
 	case COLL_POLYGON: { // must be coplanar
-		float thick, rdist;
+		float thick, rdist, val;
 		norm = cobj.norm;
 		if (dot_product_ptv(norm, (pold - mdir), cobj.points[0]) < 0.0) {norm.negate();} // pos or cobj.points[0]?
 
@@ -1396,8 +1395,6 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 			//if (rdist < 0) {rdist = -rdist; norm.negate();}
 
 			if (sphere_poly_intersect(cobj.points, cobj.npoints, pos, norm, rdist, max(0.0f, (thick - MIN_POLY_THICK)))) {
-				float val;
-
 				if (cobj.thickness > MIN_POLY_THICK) { // compute norm based on extruded sides
 					if (!get_sphere_poly_int_val(pos, o_radius, cobj.points, cobj.npoints, cobj.norm, cobj.thickness, val, norm)) break;
 				}
