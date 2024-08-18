@@ -270,9 +270,9 @@ struct color_range_t {
 };
 
 struct riser_pos_t : public sphere_t {
-	bool has_hot, flow_dir; // flow_dir: 0=out/down, 1=in/up
-	riser_pos_t() : has_hot(0), flow_dir(0) {}
-	riser_pos_t(point const &pos_, float radius_, bool hh=0, float fd=0) : sphere_t(pos_, radius_), has_hot(hh), flow_dir(fd) {}
+	bool has_hot=0, flow_dir=0, upper_floor=0; // flow_dir: 0=out/down, 1=in/up
+	riser_pos_t() {}
+	riser_pos_t(point const &pos_, float radius_, bool hh=0, bool fd=0, bool uf=0) : sphere_t(pos_, radius_), has_hot(hh), flow_dir(fd), upper_floor(uf) {}
 };
 typedef vector<riser_pos_t> vect_riser_pos_t;
 
