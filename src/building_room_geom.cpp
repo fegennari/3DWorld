@@ -655,7 +655,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 
 				if (!is_side && !use_small_door) { // draw vertical door frame on either side of the door; small doors have their own trim added elsewhere
 					set_cube_zvals(trim, c.z1(), c.z2()); // full z height
-					set_wall_width(trim, cubes[2*d].get_center_dim(c.dim), 0.6*wall_thick, c.dim);
+					set_wall_width(trim, cubes[2*d].get_center_dim(c.dim), 0.7*wall_thick, c.dim); // a bit more than wall half thickness + trim thickness
 					set_wall_width(trim, trim.d[!c.dim][!d], trim_hwidth, !c.dim);
 					add_wall_trim(room_object_t(trim, TYPE_WALL_TRIM, c.room_id, trim_dim, trim_dir, (RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), 1.0, SHAPE_TALL, trim_color), 1);
 				}
