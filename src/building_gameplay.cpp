@@ -2244,6 +2244,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	} // for i
 	// check for rugs, pictures, and whiteboards, which can all be painted over; also check for walls from closets
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+	float const floor_spacing(get_window_vspace());
 	bool const is_wall(normal.x != 0.0 || normal.y != 0.0), is_floor(normal == plus_z);
 	bool walls_blocked(0);
 
@@ -2294,7 +2295,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		if (!i->is_u_shape() && !i->has_walled_sides()) continue; // no walls, skip
 		// expand by wall half-width; see building_t::add_stairs_and_elevators()
 		cube_t c(*i);
-		c.expand_by_xy(STAIRS_WALL_WIDTH_MULT*i->get_step_length()); // wall half width
+		c.expand_by_xy(i->get_wall_hwidth(floor_spacing)); // wall half width
 		float tmin0(tmin);
 		if (!line_int_cube_get_t(pos, pos2, c, tmin0)) continue;
 		if (c.contains_pt(pos)) {walls_blocked = 1; continue;} // can't spraypaint the outside of the stairs when standing inside them

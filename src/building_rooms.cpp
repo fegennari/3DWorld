@@ -2357,6 +2357,11 @@ unsigned building_t::calc_floor_offset(float zval) const { // for basements
 	return ((zval < ground_floor_z1) ? round_fp((ground_floor_z1 - zval)/get_window_vspace()) : 0);
 }
 
+float stairs_landing_base_t::get_wall_hwidth(float floor_spacing) const {
+	float const stair_dz(get_stair_dz(floor_spacing));
+	return min(STAIRS_WALL_WIDTH_MULT*max(get_step_length(), stair_dz), 0.25f*stair_dz);
+}
+
 unsigned get_L_stairs_first_flight_count(stairs_landing_base_t const &s, float landing_width) {
 	float const length(s.get_length() - landing_width), width(s.get_width() - landing_width), tot_len(length + width);
 	assert(length > 0.0 && width > 0.0);
@@ -2507,13 +2512,13 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		if (i->for_elevator || i->for_ramp) continue; // for elevator or ramp, not stairs
 		unsigned const num_stairs(i->get_num_stairs());
 		unsigned const stair_flags((i->floor == 1) ? RO_FLAG_ADJ_BOT : 0); // tag first floor of stairs as RO_FLAG_ADJ_BOT for proper player collisions
-		float const stair_dz(window_vspacing/(num_stairs+1)), stair_height(stair_dz + floor_thickness), stair_z1h(0.4f*stair_height);
+		float const stair_dz(i->get_stair_dz(window_vspacing)), stair_height(stair_dz + floor_thickness), stair_z1h(0.4f*stair_height);
 		bool const dim(i->dim), dir(i->dir), is_U(i->is_u_shape()), has_side_walls(i->has_walled_sides() || is_U);
 		bool const has_wall_both_sides(i->against_wall[0] && i->against_wall[1]); // ext basement stairs
 		bool const side(dir); // for U-shaped stairs; for now this needs to be consistent for the entire stairwell, can't use rgen.rand_bool()
 		// Note: stairs always start at floor_thickness above the landing z1, ignoring landing z2/height
 		float const floor_z(i->z1() + floor_thickness - window_vspacing), step_len_pos(i->get_step_length());
-		float const wall_hw(min(STAIRS_WALL_WIDTH_MULT*max(step_len_pos, stair_dz), 0.25f*stair_dz));
+		float const wall_hw(i->get_wall_hwidth(window_vspacing));
 		float const stairs_zmin(i->in_ext_basement ? interior->basement_ext_bcube.z1() : bcube.z1());
 		float step_len((dir ? 1.0 : -1.0)*step_len_pos), z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
 		cube_t stair(*i), landing; // Note: landing is for L-shaped stairs
