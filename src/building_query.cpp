@@ -1453,7 +1453,7 @@ cube_t escalator_t::get_support_pillar() const {
 	cube_t support(*this);
 	support.z2() = z1() + delta_z - get_upper_hang();
 	set_wall_width(support, get_center_dim(!dim), support_radius, !dim);
-	set_wall_width(support, (d[dim][dir] + (dim ? 1.0 : -1.0)*0.5*end_ext), support_radius, dim); // center of upper end
+	set_wall_width(support, (d[dim][dir] + (dir ? -1.0 : 1.0)*0.5*end_ext), support_radius, dim); // center of upper end
 	return support;
 }
 void escalator_t::get_ramp_bottom_pts(cube_t const &ramp, point bot_pts[4]) const { // {lo-left, lo-right, hi-right, hi-left}
@@ -1463,6 +1463,7 @@ void escalator_t::get_ramp_bottom_pts(cube_t const &ramp, point bot_pts[4]) cons
 	bot_pts[2][ dim] = bot_pts[3][ dim] = ramp.d[dim][ dir];
 	bot_pts[0][!dim] = bot_pts[3][!dim] = ramp.d[!dim][0];
 	bot_pts[1][!dim] = bot_pts[2][!dim] = ramp.d[!dim][1];
+	if (dim ^ dir ^ 1) {std::reverse(bot_pts, bot_pts+4);} // use correct vertex winding order
 }
 void escalator_t::get_all_cubes(cube_t cubes[7]) const { // {lo left wall, lo right wall, lo floor, hi left wall, hi right wall, hi floor, pillar}
 	cube_t ends[2];

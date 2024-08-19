@@ -2665,7 +2665,7 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 			metal_mat.add_cube_to_verts_untextured(hi_end_side, sides_color, 0); // draw all sides
 			// draw the ramp/stairs
 			point bs_pts[4];
-			for (unsigned n = 0; n < 4; ++n) {bs_pts [n] = bot_pts[n];}
+			for (unsigned n = 0; n < 4; ++n) {bs_pts[n] = bot_pts[n];}
 			bs_pts[side ? 0 : 1][!dim] = bs_pts[side ? 3 : 2][!dim] = lo_end_side.d[!dim][!side];
 			draw_sloped_top_and_sides(metal_mat, bs_pts, side_height, sides_color);
 			// draw railings
