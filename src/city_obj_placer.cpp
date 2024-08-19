@@ -275,6 +275,9 @@ bool city_obj_placer_t::check_walkway_coll_xy(point const &pos, float radius) co
 	for (walkway_t const &w : walkways) {
 		if (w.bcube.intersects_xy(test_cube)) return 1;
 	}
+	for (ww_elevator_t const &e : elevators) {
+		if (e.bcube.intersects_xy(test_cube)) return 1;
+	}
 	return 0;
 }
 
@@ -528,7 +531,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			} // for n
 		}
 	} // end is_park
-	if (!walkways.empty()) { // place vertical pillars supporting walkways connecting buildings
+	if (!walkways.empty()) {
+		// place vertical pillars supporting walkways connecting buildings
 		cube_t pillar_area(plot);
 		pillar_area.expand_by_xy(-2.0*sidewalk_width); // don't block sidewalks or nearby areas
 
@@ -557,13 +561,16 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				pillar_exp.expand_by_xy(min_obj_spacing);
 				if (has_bcube_int_no_adj(pillar_exp, blockers)) continue; // skip the walkway; what else can this intersect, only parking lots?
 				bool blocked(0);
-				for (walkway_t const &w2 : walkways) {blocked |= (w2.bcube != w.bcube && w2.bcube.intersects(pillar_exp));}
+				for (walkway_t     const &w2 : walkways ) {blocked |= (w2.bcube != w.bcube && w2.bcube.intersects(pillar_exp));}
+				for (ww_elevator_t const &e  : elevators) {blocked |= e.bcube.intersects(pillar_exp);}
 				if (blocked) continue; // blocked by another walkway below
 				pillar_groups.add_obj(pillar_t(pillar, is_concrete), pillars);
 				add_cube_to_colliders_and_blockers(pillar, colliders, blockers);
 				break; // success
 			} // for n
 		} // for w
+		// place walkway elevators
+		// TODO: wwe_groups.add(ww_elevator_t, elevators);
 	}
 	// place fire_hydrants if the model has been loaded; don't add fire hydrants in parks
 	if (!is_park && building_obj_model_loader.is_model_valid(OBJ_MODEL_FHYDRANT)) {
@@ -1761,6 +1768,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	pond_groups    .create_groups(ponds,     all_objs_bcube);
 	walkway_groups .create_groups(walkways,  all_objs_bcube);
 	pillar_groups  .create_groups(pillars,   all_objs_bcube);
+	wwe_groups     .create_groups(elevators, all_objs_bcube);
 	p_solar_groups .create_groups(p_solars,  all_objs_bcube);
 	if (skyway.valid) {all_objs_bcube.assign_or_union_with_cube(skyway.bcube);}
 	if (add_parking_lots) {cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << endl;}
@@ -1959,6 +1967,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(plants,    plant_groups,    dstate, 0.04, shadow_only, 1); // dist_scale=0.05, has_immediate_draw=1
 	draw_objects(flowers,   flower_groups,   dstate, 0.06, shadow_only, 1); // dist_scale=0.06, has_immediate_draw=1
 	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1); // dist_scale=0.25, has_immediate_draw=1
+	draw_objects(elevators, wwe_groups,      dstate, 0.20, shadow_only, 1); // dist_scale=0.20, has_immediate_draw=0
 	draw_objects(p_solars,  p_solar_groups,  dstate, 0.40, shadow_only, 0); // dist_scale=0.20, has_immediate_draw=0
 	
 	if (!shadow_only) { // non shadow casting objects
@@ -2105,6 +2114,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(plants,    plant_groups,    pos, p_last, radius, xlate, cnorm)) return 1; // optional?
 	if (proc_vector_sphere_coll(ponds,     pond_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(pillars,   pillar_groups,   pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(elevators, wwe_groups,      pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(pdecks,    pdeck_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(p_solars,  p_solar_groups,  pos, p_last, radius, xlate, cnorm)) return 1;
 	// Note: no coll with tree_planters because the tree coll should take care of it; no coll with hcaps, manholes, tcones, flowers, pladders, pigeons, ppaths, or birds
@@ -2138,6 +2148,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(newsracks, nrack_groups,    p1, p2, t, ret);
 	check_vector_line_intersect(walkways,  walkway_groups,  p1, p2, t, ret);
 	check_vector_line_intersect(pillars,   pillar_groups,   p1, p2, t, ret);
+	check_vector_line_intersect(elevators, wwe_groups,      p1, p2, t, ret);
 	check_vector_line_intersect(dumpsters, dumpster_groups, p1, p2, t, ret);
 	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, tcones, flowers, pladders, pool decks, pigeons, ppaths, or birds;
 	// mboxes, swings, tramps, umbrellas, bikes, plants, ponds, p_solars, and momorail are ignored because they're small or not simple shapes
@@ -2237,6 +2248,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 	if (check_city_obj_pt_xy_contains(tramp_groups,    tramps,    pos, obj_ix, 1)) {color = (BKGRAY*0.75 + tramps[obj_ix].color*0.25); return 1;} // is_cylin=1
 	if (check_city_obj_pt_xy_contains(dumpster_groups, dumpsters, pos, obj_ix, 0)) {color = colorRGBA(0.1, 0.4, 0.1, 1.0); return 1;} // dark green
 	if (check_city_obj_pt_xy_contains(umbrella_groups, umbrellas, pos, obj_ix, 1)) {color = WHITE; return 1;} // is_cylin=1
+	if (check_city_obj_pt_xy_contains(wwe_groups,      elevators, pos, obj_ix, 0)) {color = colorRGBA(0.8, 1.0, 0.8, 1.0); return 1;} // slightly blue-green glass; transparent?
 	// Note: ppoles, hcaps, manholes, mboxes, tcones, flowers, pladders, stopsigns, flags, pigeons, birds, swings, umbrellas, bikes, and plants are skipped for now;
 	// pillars aren't visible under walkways;
 	// free standing signs can be added, but they're small and expensive to iterate over and won't contribute much
@@ -2252,6 +2264,7 @@ void city_obj_placer_t::get_occluders(pos_dir_up const &pdu, vector3d const &xla
 			if ((w.bcube + xlate).contains_pt(pdu.pos)) {occluders.push_back(w.get_floor_occluder() + xlate); break;} // can be only one
 		}
 	}
+	//if (player_in_elevator) {}
 	if (dividers.empty()) return; // dividers are currently the only other occluders
 	float const dmax(0.25f*(X_SCENE_SIZE + Y_SCENE_SIZE)); // set far clipping plane to 1/4 a tile (currently 2.0)
 	unsigned start_ix(0);

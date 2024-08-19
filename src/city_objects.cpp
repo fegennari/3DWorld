@@ -1523,6 +1523,19 @@ bool pillar_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_,
 	return sphere_city_obj_cylin_coll(point(pos.x, pos.y, bcube.z1()), get_cylin_radius(), pos_, p_last, radius_, xlate, cnorm);
 }
 
+ // ww_elevator_t
+
+/*static*/ void ww_elevator_t::pre_draw (draw_state_t &dstate, bool shadow_only) {enable_blend ();}
+/*static*/ void ww_elevator_t::post_draw(draw_state_t &dstate, bool shadow_only) {disable_blend();}
+
+void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	dstate.draw_cube(qbds.untex_qbd, bcube, colorRGBA(0.8, 1.0, 0.9, 0.25), 1); // skip bottom
+}
+bool ww_elevator_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	// TODO: special logic to allow the player to enter and ride the elevator; this may go elsewhere
+	return sphere_cube_int_update_pos(pos_, radius_, (bcube + xlate), p_last, 0, cnorm);
+}
+
 // parking lot solar roofs
 
 parking_solar_t::parking_solar_t(cube_t const &c, bool dim_, bool dir_, unsigned ns, unsigned nr) : oriented_city_obj_t(c, dim_, dir_), num_spaces(ns), num_rows(nr) {
