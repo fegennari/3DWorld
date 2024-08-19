@@ -1525,6 +1525,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		}
 		bdraw.add_section(*this, 1, *i, mat.side_tex, side_color, 3, 0, 0, is_house, 0); // XY exterior walls
 		bool skip_top((!need_top_roof && (is_house || i+1 == parts.end())) || is_basement(i)); // don't add the flat roof for the top part in this case
+		skip_top |= (has_retail() && i == parts.begin()); // skip drawing the roof between the retail area and the office above
 		// skip the bottom of stacked cubes (not using ground_floor_z1); need to draw the porch roof, so test i->dz()
 		bool const is_stacked(i->z1() > bcube.z1() && i->dz() > 0.5f*get_window_vspace()), is_stacked_cube(is_stacked && is_cube());
 		if (is_stacked_cube && skip_top) continue; // no top/bottom to draw
