@@ -1134,6 +1134,11 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 				gen_sound_thread_safe(SOUND_RAT_SQUEAK, building.local_to_camera_space(rats[rat_ix].pos));
 				register_building_sound(rats[rat_ix].pos, 0.8);
 			}
+			if (!r.dead && in_building_gameplay_mode()) { // maybe bite the player when picked up
+				rand_gen_t rgen;
+				rgen.set_state(frame_counter, obj_id+1);
+				if (rgen.rand_bool()) {building.rat_bite_player(at_pos, rgen.rand_uniform(0.05, 0.1), rgen);}
+			}
 			rats.erase(rats.begin() + rat_ix); // remove the rat from the building
 			modified_by_player = 1;
 			return 1;
@@ -2637,11 +2642,11 @@ bool flashlight_enabled() { // flashlight can't be used in tiled terrain buildin
 // returns player_dead
 // should we include falling damage? currently the player can't fall down elevator shafts or stairwells,
 // and falling off building roofs doesn't count because gameplay isn't enabled because the player isn't in the building
-bool player_take_damage(float damage_scale, int poison_type, uint8_t *has_key) {
+bool player_take_damage(float damage_scale, bool scream, int poison_type, uint8_t *has_key) {
 	if (player_wait_respawn) return 0;
 	static double last_scream_time(0.0), last_hurt_time(0.0);
 
-	if (damage_scale < 0.01) { // hurt for rats, scream for zombies and spiders
+	if (!scream) { // hurt for rats, scream for zombies and spiders
 		if (tfticks - last_hurt_time > 0.5*TICKS_PER_SECOND) {
 			gen_sound_thread_safe_at_player(SOUND_HURT2);
 			last_hurt_time = tfticks;
@@ -2669,7 +2674,7 @@ int register_ai_player_coll(uint8_t &has_key, float height) {
 		do_room_obj_pickup = 0; // no more object pickups
 		return 2;
 	}
-	return player_take_damage(0.04, 0, &has_key);
+	return player_take_damage(0.04, 1, 0, &has_key); // scream=1, poison_type=0
 }
 
 void building_gameplay_action_key(int mode, bool mouse_wheel) {

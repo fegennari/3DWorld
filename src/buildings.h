@@ -1970,6 +1970,7 @@ public:
 	void update_insects(point const &camera_bs, unsigned building_ix);
 	void get_objs_at_or_below_ground_floor(vect_room_object_t &ret, bool for_spider) const;
 	bool begin_fish_draw() const;
+	void rat_bite_player(point const &pos, float damage, rand_gen_t &rgen);
 private:
 	// animals
 	point gen_animal_floor_pos(float radius, bool place_in_attic, bool not_player_visible, bool pref_dark_room, bool not_by_ext_door, rand_gen_t &rgen) const;
@@ -2544,7 +2545,7 @@ bool enable_building_indir_lighting_no_cib();
 bool enable_building_indir_lighting();
 bool player_in_windowless_building();
 bool player_cant_see_outside_building();
-bool player_take_damage(float damage_scale, int poison_type=0, uint8_t *has_key=nullptr);
+bool player_take_damage(float damage_scale, bool scream=0, int poison_type=0, uint8_t *has_key=nullptr);
 float get_bldg_player_height();
 cube_t get_stairs_bcube_expanded(stairwell_t const &s, float ends_clearance, float sides_clearance, float doorway_width);
 float get_door_open_dist();

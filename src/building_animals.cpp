@@ -443,6 +443,13 @@ public:
 dir_gen_t<1> dir_gen_xy;
 dir_gen_t<0> dir_gen_xyz;
 
+void building_t::rat_bite_player(point const &pos, float damage, rand_gen_t &rgen) {
+	play_attack_sound(local_to_camera_space(pos), 1.0, 1.0, rgen);
+	bool const player_dead(player_take_damage(damage));
+	if (player_dead) {register_achievement("Rat Food");} // damage over time; achievement if the player dies
+	if (player_dead) {register_player_death(cur_player_building_loc.pos);}
+}
+
 // Note: non-const because biting the player can add blood and the player's inventory items to the building
 void building_t::update_rat(rat_t &rat, point const &camera_bs, float timestep, float &max_xmove, bool can_attack_player, rand_gen_t &rgen) {
 
@@ -511,13 +518,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, float timestep, 
 				rat.speed     = RAT_ATTACK_SPEED*global_building_params.rat_speed;
 				rat.wake_time = 0.0; // wake up
 				update_path   = 0;
-
-				if (dist_xy_less_than(rat.pos, target, 0.05*min_dist)) { // do damage when nearly colliding with the player
-					play_attack_sound(local_to_camera_space(rat.pos), 1.0, 1.0, rgen);
-					bool const player_dead(player_take_damage(0.004, 0));
-					if (player_dead) {register_achievement("Rat Food");} // damage over time; achievement if the player dies
-					if (player_dead) {register_player_death(cur_player_building_loc.pos);}
-				}
+				if (dist_xy_less_than(rat.pos, target, 0.05*min_dist)) {rat_bite_player(rat.pos, 0.004, rgen);} // do damage when nearly colliding with the player
 			}
 		}
 	}
@@ -1066,7 +1067,7 @@ void building_t::maybe_bite_and_poison_player(point const &pos, point const &cam
 		bool const played_sound(play_attack_sound(local_to_camera_space(pos), 0.5, 1.5, rgen)); // quieter and higher pitch than rats
 		
 		if (played_sound) { // bite and maybe poisoned every so often
-			bool const player_dead(player_take_damage(damage, poison_type));
+			bool const player_dead(player_take_damage(damage, (poison_type > 0), poison_type)); // scream if poisoned
 			if (player_dead) {register_player_death(cur_player_building_loc.pos);}
 		}
 	}
