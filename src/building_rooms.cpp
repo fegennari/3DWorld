@@ -1499,6 +1499,13 @@ void clip_trim_cube(cube_t const &trim, cube_t const &trim_exclude, vect_cube_t 
 	if (!trim_exclude.is_all_zeros() && trim_exclude.intersects_no_adj(trim)) {subtract_cube_from_cube(trim, trim_exclude, trim_cubes);}
 	else {trim_cubes.push_back(trim);}
 }
+cube_t get_trim_cube(cube_t const &c, bool dim, bool dir, float trim_thickness) {
+	cube_t trim(c);
+	trim.d[dim][!dir]  = c.d[dim][dir]; // shrink to zero width
+	trim.d[dim][ dir] += (dir ? 1.0 : -1.0)*trim_thickness;
+	trim.expand_in_dim(!dim, trim_thickness);
+	return trim;
+}
 
 void building_t::add_wall_and_door_trim() { // and window trim
 	//highres_timer_t timer("Add Wall And Door Trim");
@@ -1526,7 +1533,8 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			break; // can only have one room of this type
 		}
 	}
-	for (auto d = interior->door_stacks.begin(); d != interior->door_stacks.end(); ++d) { // vertical strips on each side + strip on top of interior doors
+	// add vertical strips on each side + strip on top of interior doors
+	for (auto d = interior->door_stacks.begin(); d != interior->door_stacks.end(); ++d) {
 		if (d->on_stairs) continue; // no frame for stairs door, skip
 		cube_t trim(*d);
 		set_wall_width(trim, trim.get_center_dim(d->dim), door_trim_exp, d->dim);
@@ -1552,7 +1560,8 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, d->dim, 0, flags2, 1.0, SHAPE_SHORT, trim_color);
 		}
 	} // for d
-	for (auto d = doors.begin(); d != doors.end(); ++d) { // exterior doors
+	// add trim around exterior doors
+	for (auto d = doors.begin(); d != doors.end(); ++d) {
 		if (d->type == tquad_with_ix_t::TYPE_RDOOR) continue; // roof access door - requires completely different approach to trim and has not been implemented
 		cube_t door(d->get_bcube()), trim(door);
 		bool const dim(door.dy() < door.dx()), garage_door(d->type == tquad_with_ix_t::TYPE_GDOOR);
@@ -1610,7 +1619,8 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		}
 		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_SHORT, ext_trim_color); // top of door
 	} // for d
-	for (unsigned dim = 0; dim < 2; ++dim) { // add horizontal strips along each wall at each floor/ceiling
+	// add horizontal strips along each wall at each floor/ceiling
+	for (unsigned dim = 0; dim < 2; ++dim) {
 		for (auto w = interior->walls[dim].begin(); w != interior->walls[dim].end(); ++w) {
 			bool const in_basement(w->zc() < ground_floor_z1);
 			if (in_basement && interior->has_backrooms && !get_basement().intersects_no_adj(*w)) continue; // no trim in basement backrooms
@@ -1673,7 +1683,8 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			} // for f
 		} // for w
 	} // for d
-	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // add trim for exterior walls
+	// add trim for exterior walls
+	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
 		if (is_basement(i)) continue; // skip basement walls because they're bare concrete
 		bool const is_sec_bldg(i == get_real_parts_end());
 		unsigned const num_floors(is_sec_bldg ? 1 : calc_num_floors(*i, window_vspacing, floor_thickness));
@@ -1781,6 +1792,72 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, ds.dim, 0, flags, 1.0, SHAPE_CUBE, trim_color);
 		} // for ds
 	} // for i
+	if (!is_house) { // office building
+		// add trim to elevators and stairs, at the bottom of each floor
+		unsigned const draw_end_flags(flags | RO_FLAG_ADJ_BOT); // trim with exposed ends will use SHAPE_TALL and set RO_FLAG_ADJ_BOT to skip the bottom
+		unsigned const dir_flags[2] = {RO_FLAG_ADJ_LO, RO_FLAG_ADJ_HI};
+		vect_cube_with_ix_t walls; // ix stores flags
+
+		for (elevator_t const &e : interior->elevators) {
+			float const fwidth(e.get_frame_width() + trim_thickness);
+			cube_t const front(get_trim_cube(e, e.dim, e.dir, trim_thickness));
+
+			for (unsigned d = 0; d < 2; ++d) {
+				walls.emplace_back(get_trim_cube(e, !e.dim, d, trim_thickness), (flags | dir_flags[!d])); // sides
+				cube_t front_side(front);
+				front_side.d[!e.dim][d] = front.d[!e.dim][!d] + (d ? 1.0 : -1.0)*fwidth; // clip around the door
+				walls.emplace_back(front_side, (draw_end_flags | dir_flags[!e.dir])); // draw ends
+			}
+			if (e.adj_pair_ix > 0) { // back to back elevators don't need back trim
+				elevator_t const &adj_e(get_elevator(e.adj_elevator_ix));
+				if (adj_e.z1() <= e.z1() && adj_e.z2() >= e.z2()) continue; // skip back trim if they share the entire Z-range
+			}
+			walls.emplace_back(get_trim_cube(e, e.dim, !e.dir, trim_thickness), (flags | dir_flags[e.dir])); // back trim
+		} // for e
+		cube_t prev_stairs;
+		unsigned walls_ix(walls.size());
+		float const first_floor_cutoff(ground_floor_z1 + floor_thickness);
+
+		for (stairwell_t const &s : interior->stairwells) {
+			if (has_parking_garage && s.z2() <= ground_floor_z1) continue; // skip parking garage and extended basement stairs
+			if (!s.is_u_shape() && !s.has_walled_sides())        continue;
+			
+			// attempt to vertically merge stacked/extended stairs (for parking garage and retail room) to avoid duplicate trim at shared floors
+			if (s.x1() == prev_stairs.x1() && s.y1() == prev_stairs.y1() && s.x2() == prev_stairs.x2() && s.y2() == prev_stairs.y2()) {
+				if (s.z1() <= prev_stairs.z2() && prev_stairs.z1() <= s.z2()) { // adjacent or overlapping in z
+					min_eq(prev_stairs.z1(), s.z1());
+					max_eq(prev_stairs.z2(), s.z2());
+					assert(walls_ix < walls.size());		
+					for (auto w = walls.begin()+walls_ix; w != walls.end(); ++w) {set_cube_zvals(*w, prev_stairs.z1(), prev_stairs.z2());}
+					continue;
+				}
+			}
+			float const wall_hwidth(s.get_wall_hwidth(window_vspacing));
+			cube_t stairs_with_wall(s);
+			stairs_with_wall.expand_in_dim(!s.dim, wall_hwidth); // expand on sides
+			stairs_with_wall.d[s.dim][ s.dir] += (s.dir ? 1.0 : -1.0)*(wall_hwidth - (s.is_u_shape() ? 0.0 : trim_thickness)); // expand on back (even if not U-shaped stairs)
+			stairs_with_wall.d[s.dim][!s.dir] += (s.dir ? 1.0 : -1.0)*trim_thickness; // pull back slightly since there's no right angle joining trim
+			prev_stairs = s;
+			walls_ix    = walls.size(); // starting index of walls for these stairs
+			for (unsigned d = 0; d < 2; ++d) {walls.emplace_back(get_trim_cube(stairs_with_wall, !s.dim, d, trim_thickness), (draw_end_flags | dir_flags[!d]));} // sides; draw ends
+			if (s.is_u_shape()) {walls.emplace_back(get_trim_cube(stairs_with_wall, s.dim, s.dir, trim_thickness), (flags | dir_flags[!s.dir]));} // U-shaped stairs back wall
+		} // for s
+		for (cube_with_ix_t &w : walls) {
+			if (w.z1() > ground_floor_z1 && w.z1() < first_floor_cutoff) {w.z1() = ground_floor_z1;} // starts at top of first floor (retail), move to ground level
+			else if (has_parking_garage) {max_eq(w.z1(), ground_floor_z1);} // remove the parking garage/basement levels, which should have no trim
+			bool const dim(w.dy() < w.dx());
+			unsigned const num_floors(calc_num_floors(w, window_vspacing, floor_thickness)), trim_flags(w.ix);
+			room_obj_shape const shape((trim_flags & RO_FLAG_ADJ_BOT) ? SHAPE_TALL : SHAPE_CUBE); // use SHAPE_TALL to draw unterminated ends
+			float z(w.z1() + fc_thick);
+			cube_t trim(w);
+
+			for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
+				if (has_tall_retail() && z > first_floor_cutoff && z < get_retail_part().z2()) continue; // skip false floor at upper retail
+				set_cube_zvals(trim, z, z+trim_height); // starts at floor height
+				objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, trim_flags, 1.0, shape, trim_color); // floor trim
+			}
+		} // for w
+	}
 	if (!is_cube() || is_rotated()) return; // window trim is not yet working for non-cube and rotated buildings
 	add_window_trim_and_coverings(1, 0, 0); // add_trim=1, add_coverings=0, add_ext_sills=0
 	if (has_pool()) {add_pool_trim();}
