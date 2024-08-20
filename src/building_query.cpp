@@ -1599,7 +1599,7 @@ template<typename T> bool get_line_clip_update_t(point const &p1, point const &p
 	for (auto i = cubes.begin(); i != cubes.end(); ++i) {had_coll |= get_line_clip_update_t(p1, p2, *i, t);}
 	return had_coll;
 }
-bool building_interior_t::line_coll(building_t const &building, point const &p1, point const &p2, point &p_int) const { // for snakes
+bool building_interior_t::line_coll(building_t const &building, point const &p1, point const &p2, point &p_int, bool skip_room_geom) const { // for snakes and ball throwing
 	bool had_coll(0);
 	float t(1.0), tmin(1.0);
 	had_coll |= get_line_clip_update_t(p1, p2, floors,   t);
@@ -1636,9 +1636,9 @@ bool building_interior_t::line_coll(building_t const &building, point const &p1,
 				if (tmin > 0.0 && tmin < t) {t = tmin; had_coll = 1;}
 			}
 		}
-		else {had_coll |= get_line_clip_update_t(p1, p2, *i, t);} // closed
-	}
-	if (room_geom) { // check room geometry
+		else {had_coll |= get_line_clip_update_t(p1, p2, i->get_true_bcube(), t);} // closed
+	} // for i
+	if (room_geom && !skip_room_geom) { // check room geometry
 		for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with (including stairs)
 			if (c->no_coll() || c->type == TYPE_BLOCKER || c->type == TYPE_ELEVATOR) continue; // skip blockers and elevators
 

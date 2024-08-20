@@ -1916,8 +1916,15 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 		dir = rgen.signed_rand_vector_spherical_xy();
 	}
 	if (obj.has_dstate()) { // it's a dynamic object (ball), throw it; only activated with use_object/'E' key
-		point dest(player_pos + (1.2f*(player_radius + obj.get_radius()))*dir);
+		float const radius(obj.get_radius());
+		point dest(player_pos + (1.2f*(player_radius + radius))*dir);
 		dest.z -= 0.5*player_radius; // slightly below the player's face
+		point p_int;
+
+		if (interior->line_coll(*this, player_pos, dest, p_int, 1)) { // check if throwing through an object; skip_room_geom=1
+			vector3d const delta(dest - player_pos);
+			dest = p_int - (radius/delta.mag())*delta; // shift back by radius
+		}
 		obj.translate(dest - cube_bot_center(obj));
 		obj.flags |= RO_FLAG_DYNAMIC; // make it dynamic, assuming it will be dropped/thrown
 		if (!interior->room_geom->add_room_object(obj, *this, 1, THROW_VELOCITY*dir)) return 0;

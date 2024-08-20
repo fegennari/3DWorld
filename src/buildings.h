@@ -1589,7 +1589,7 @@ struct building_interior_t {
 	room_object_t const &get_elevator_car(elevator_t const &e) const;
 	bool check_sphere_coll_walls_elevators_doors(building_t const &building, point &pos, point const &p_last, float radius,
 		float wall_test_extra_z, bool is_player, vector3d *cnorm) const;
-	bool line_coll(building_t const &building, point const &p1, point const &p2, point &p_int) const;
+	bool line_coll(building_t const &building, point const &p1, point const &p2, point &p_int, bool skip_room_geom=0) const;
 	point find_closest_pt_on_obj_to_pos(building_t const &building, point const &pos, float pad_dist, bool no_ceil_floor) const;
 	void update_dynamic_draw_data() {assert(room_geom); room_geom->update_dynamic_draw_data();}
 	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float r_shrink_if_low, float floor_thickness, float floor_ceil_gap,
