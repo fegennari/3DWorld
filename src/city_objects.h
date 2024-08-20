@@ -642,6 +642,7 @@ public:
 	void get_occluders(pos_dir_up const &pdu, vector3d const &xlate, vect_cube_t &occluders) const;
 	void get_plot_cuts(cube_t const &plot, vect_cube_t &cuts) const;
 	bool cube_int_underground_obj(cube_t const &c) const;
+	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &pond_bcs) const;
 	bool update_depth_if_underwater(point const &pos, float &depth) const;
 	bool move_to_not_intersect_driveway(point &pos, float radius, bool dim) const;
 	void next_frame();

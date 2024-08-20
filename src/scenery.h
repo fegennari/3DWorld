@@ -205,6 +205,7 @@ public:
 	int create(int x, int y, int use_xy, float minz);
 	void create2(point const &pos_, float height_, float radius_, int type_, int calc_z);
 	void create_no_verts(point const &pos_, float height_, float radius_, int type_, int calc_z=0, bool land_plants_only=0);
+	void place_in_pond(cube_t const &pond);
 	void add_cobjs();
 	bool check_sphere_coll(point &center, float sphere_radius) const;
 	void create_leaf_points(vector<vert_norm_comp> &points, float plant_scale, float nlevels_scale=1.0, unsigned nrings=3) const;

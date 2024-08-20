@@ -2295,6 +2295,13 @@ bool city_obj_placer_t::cube_int_underground_obj(cube_t const &c) const { // Not
 	}
 	return 0;
 }
+void city_obj_placer_t::get_ponds_in_xy_range(cube_t const &range, vect_cube_t &pond_bcs) const {
+	if (!range.intersects_xy(pond_groups.get_bcube())) return;
+
+	for (pond_t const &p : ponds) {
+		if (range.intersects_xy(p.bcube)) {pond_bcs.push_back(p.bcube);}
+	}
+}
 
 bool city_obj_placer_t::update_depth_if_underwater(point const &pos, float &depth) const {
 	if (!all_objs_bcube.contains_pt(pos)) return 0;

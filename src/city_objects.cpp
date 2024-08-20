@@ -1408,10 +1408,13 @@ bool pond_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, p
 	if (cnorm) {*cnorm = vector3d(delta.x, delta.y, 0.0).get_norm();} // assume collision normal is in the XY plane
 	return 1;
 }
-bool pond_t::point_contains_xy(point const &p) const { // p is in global space
-	if (!bcube.contains_pt_xy(p)) return 0;
-	float const xv((p.x - pos.x)/(0.5*bcube.dx())), yv((p.y - pos.y)/(0.5*bcube.dy()));
+bool point_in_ellipse(point const &p, cube_t const &c) {
+	if (!c.contains_pt_xy(p)) return 0;
+	float const xv((p.x - c.xc())/(0.5*c.dx())), yv((p.y - c.yc())/(0.5*c.dy()));
 	return (xv*xv + yv*yv < 1.0);
+}
+bool pond_t::point_contains_xy(point const &p) const { // p is in global space
+	return point_in_ellipse(p, bcube);
 }
 bool pond_t::update_depth_if_underwater(point const &p, float &depth) const {
 	if (p.z <= bcube.z1() || p.z > bcube.z2() || !point_contains_xy(p)) return 0;

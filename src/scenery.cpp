@@ -51,6 +51,9 @@ extern tree_type tree_types[];
 
 int get_bark_tex_for_tree_type(int type); // for small trees
 bool is_pine_tree_type(int type);
+void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &ponds);
+bool point_in_ellipse(point const &p, cube_t const &c);
+vector3d get_tt_xlate_val();
 
 
 inline float get_pt_line_thresh   () {return PT_LINE_THRESH*(do_zoom ? ZOOM_FACTOR : 1.0);}
@@ -58,7 +61,6 @@ inline float get_min_water_plane_z() {return (get_water_z_height() - ocean_wave_
 
 
 bool skip_uw_draw(point const &pos, float radius) {
-
 	// used in tiled terrain mode to skip underwater rocks - otherwise, the fog calculation is incorrect (needs special air/water fog transition handling)
 	if (world_mode != WMODE_INF_TERRAIN || DISABLE_WATER || !(display_mode & 0x04)) return 0;
 	return (get_camera_pos().z > water_plane_z && (pos.z + radius) < get_min_water_plane_z());
@@ -757,6 +759,19 @@ void s_plant::create_no_verts(point const &pos_, float height_, float radius_, i
 	if (calc_z) {pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);}
 }
 
+void s_plant::place_in_pond(cube_t const &pond) {
+	cube_t pond_center(pond);
+	for (unsigned d = 0; d < 2; ++d) {pond_center.expand_in_dim(d, -0.1*pond.get_sz_dim(d));} // shrink
+	type  = NUM_LAND_PLANT_TYPES + (rand2() % NUM_WATER_PLANT_TYPES); // water plant
+	pos.z = pond.z1() + 0.7*pond.dz(); // between bottom and surface; should somewhat match the pond slope
+
+	do {
+		for (unsigned d = 0; d < 2; ++d) {pos[d] = rand_uniform2(pond.d[d][0], pond.d[d][1]);}
+	} while (!point_in_ellipse(pos, pond) || point_in_ellipse(pos, pond_center));
+	height = rand_uniform2(0.7, 1.0)*min(0.25f*min(pond.dx(), pond.dy()), pond.dz()); // sticking out of the water
+	radius = rand_uniform2(0.012, 0.015)*height;
+}
+
 colorRGBA const &s_plant::get_leaf_color() const {return pltype[type].leafc;}
 colorRGBA const &s_plant::get_stem_color() const {return pltype[type].stemc;}
 int s_plant::get_leaf_tid() const {return pltype[type].tid;}
@@ -1251,6 +1266,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 	float const min_stump_z(water_plane_z + 0.010*zmax_est);
 	float const min_plant_z(water_plane_z + 0.016*zmax_est);
 	float const min_log_z  (water_plane_z - 0.040*zmax_est);
+	//if (inside_city) {y2 = y1;} // optimization if we can query city bcubes: shrink y to empty range if completely contained in a city
 	generated = 1;
 
 	for (int i = y1; i < y2; ++i) {
@@ -1318,6 +1334,28 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 			}
 		} // for j
 	} // for i
+	if (world_mode == WMODE_INF_TERRAIN) { // place water plants in city ponds
+		// Note: ponds are drawn first and won't alpha blend with plants, meaning they're not visible underwater
+		vector3d const xlate(get_tt_xlate_val() - get_camera_coord_space_xlate()); // convert from tile space to global space
+		vect_cube_t ponds;
+		cube_t const tile_range(get_xval(x1), get_xval(x2), get_yval(y1), get_yval(y2), 0.0, 0.0);
+		get_ponds_in_xy_range((tile_range + xlate), ponds);
+		global_rand_gen.rseed1 = 786433* (y1 + yoff2) + 196613 *rand_gen_index;
+		global_rand_gen.rseed2 = 6291469*(x1 + xoff2) + 1572869*rand_gen_index;
+
+		for (cube_t &p : ponds) {
+			p -= xlate;
+			unsigned const num_plants(rand2() % 11); // 0-10
+
+			for (unsigned n = 0; n < num_plants; ++n) {
+				s_plant plant;
+				plant.place_in_pond(p);
+				if (!tile_range.contains_pt_xy(plant.get_pos())) continue; // skip pond if outside the tile (for ponds partially overlapping)
+				plants.push_back(plant);
+				plant.add_bounds_to_bcube(all_bcube);
+			}
+		} // for p
+	}
 	if (!fixed_sz_rock_cache) {surface_rock_cache.clear_unref();}
 	post_gen_setup(trees);
 }
