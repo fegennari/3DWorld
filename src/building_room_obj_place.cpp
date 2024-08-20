@@ -3104,7 +3104,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 		} // for r
 	} // for n
 	if (0 && has_tall_retail()) { // maybe add a pair of escalators
-		float const e_height(room.dz() - get_floor_thickness()), delta_z(e_height - get_floor_ceil_gap());
+		float const floor_thickness(get_floor_thickness()), e_height(room.dz() - floor_thickness), delta_z(e_height - get_floor_ceil_gap());
 		float const e_length(1.0*delta_z + 2.0*door_width); // upward at 45 degree angle + entrance/exit
 		float const e_width(0.8*door_width), pair_width(2.1*e_width), end_pad(1.2*door_width), door_extra_pad(0.5*door_width);
 		cube_t centered;
@@ -3121,9 +3121,10 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 			bool success(0);
 
 			for (unsigned step = 0; step <= num_steps && !success; ++step) { // take N steps to each side
-				for (unsigned dir = 0; dir < (step ? 2U : 1U); ++dir) { // first step is length 0 and has no dir
+				for (unsigned D = 0; D < (step ? 2U : 1U); ++D) { // first step is length 0 and has no dir
+					bool const dir(bool(D) ^ first_dir);
 					cube_t cand(centered);
-					cand.translate_dim(dim, ((bool(dir) ^ first_dir) ? 1.0 : -1.0)*step*step_len);
+					cand.translate_dim(dim, (dir ? 1.0 : -1.0)*step*step_len);
 					// Note: we don't need to pad stairs and elevators because we've already padded the ends of the escalator, and double padding on each side isn't needed
 					if (has_bcube_int(cand, interior->elevators)) continue; // no need to check for other escalators (should be none)
 					bool has_int(0);
@@ -3135,15 +3136,29 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 						if (stairs_ext.intersects(cand)) {has_int = 1; break;}
 					}
 					if (has_int) continue;
+					cube_t upper_conn;
 
 					for (unsigned s = 0; s < 2; ++s) { // place two side-by-side escalators with opposite directions
 						escalator_t e(cand, dim, dir, (bool(s) ^ dim ^ dir), door_width, delta_z);
 						e.expand_in_dim(dim, -end_pad);
 						e.d[!dim][!s] = cand.d[!dim][s] + (s ? -1.0 : 1.0)*e_width;
 						interior->escalators.push_back(e);
+						cube_t lo_end, hi_end;
+						e.get_ends_bcube(lo_end, hi_end, 0); // exclude_sides=0
+						upper_conn.assign_or_union_with_cube(hi_end);
 					}
 					success = 1;
-					break;
+
+					// add an upper floor connected to the escalator; it's too late to add to interior->floors, since the VBO has already been created
+					float const floor_z1(upper_conn.z1() - 0.5*floor_thickness), floor_z2(upper_conn.z1());
+					cube_t upper_floor(room);
+					set_cube_zvals(upper_floor, floor_z1, floor_z2);
+					upper_floor.d[dim][!dir] = upper_conn.d[dim][!dir] + (dir ? 1.0 : -1.0)*0.1*upper_conn.get_sz_dim(dim); // connect to upper end of escalator
+					colorRGBA const color(0.8, 1.0, 0.9, 0.5);
+					// Note: to avoid Z-fighting, only the edge in (dim, !dir) should be drawn
+					objs.emplace_back(upper_floor, TYPE_DBG_SHAPE, room_id, dim, dir, 0, 1.0, SHAPE_CUBE, color); // TESTING
+					// TODO
+					break; // done
 				} // for dir
 			} // for step
 		}
