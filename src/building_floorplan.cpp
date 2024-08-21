@@ -338,6 +338,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		unsigned const rooms_start(rooms.size()), num_doors_per_stack(num_floors);
 		cube_t hall, place_area(*p);
 		place_area.expand_by_xy(-wall_edge_spacing); // shrink slightly to avoid z-fighting with walls
+		bool no_split_walls_this_part(0);
 		float window_hspacing   [2] = {0.0};
 		int num_windows_per_side[2] = {0};
 
@@ -820,7 +821,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			add_room(hall, part_id, 3, 1, 0); // add primary hallway as room with 3+ lights
 			if (has_sec_hallways) {rooms.back().mark_open_wall_dim(min_dim);} // flag primary hallway as open on sides if there are secondary hallways
 			if (is_ground_floor || pri_hall.is_all_zeros()) {pri_hall = hall;} // assign to primary hallway if on first floor and hasn't yet been assigned
-			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();} // don't split any walls added up to this point
+			no_split_walls_this_part = 1;
 
 			// add special ground floor room types
 			unsigned const NUM_GFLOOR_RTYPES = 3;
@@ -1027,6 +1028,10 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			} // end !too_small
 		} // end wall placement
 		add_ceilings_floors_stairs(rgen, *p, hall, part_id, num_floors, rooms_start, use_hallway, first_part_this_stack, window_hspacing, window_border);
+		
+		if (no_split_walls_this_part) { // don't split any walls added up to this point (for fixed floorplans with primary hallways)
+			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();}
+		}
 	} // for p (parts)
 
 	if (has_sec_bldg()) { // add garage/shed floor and ceiling
@@ -1484,18 +1489,53 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		else {sshape = SHAPE_WALLED_SIDES;} // walled sides to meet fire codes
 		cube_t stairs(hall); // start as hallway
 		// add elevator(s)
-		float const hall_len(room.get_sz_dim(long_dim));
-		unsigned const num_elevators((hall_len > 10.0*ewidth) ? 2 : 1); // two elevators if there's space
+		bool const add_side_elevator(0 && !is_apt_or_hotel()); // as opposed to central elevators; not valid for fixed floorplans of apartments and hotels
+		float const hall_len(room.get_sz_dim(long_dim)), stairs_len(4.0*doorway_width), ehwidth(0.5*ewidth);
+		unsigned const num_elevators((!add_side_elevator && hall_len > 10.0*ewidth) ? 2 : 1); // two elevators if there's space
+		unsigned const room_ix(interior->rooms.size() - 1);
 		if (interior->landings.empty()) {interior->landings.reserve(num_elevators + (num_floors-1));} // lower bound
 
-		if (num_elevators > 0) {
+		if (num_elevators == 0) {} // no elevators; currently can't get here
+		else if (add_side_elevator) {
+			bool const dir(rgen.rand_bool());
+			float const wall_pos(room.d[!long_dim][dir] + (dir ? -1.0 : 1.0)*0.5*wall_thickness); // side of hallway
+			elevator_t elevator(room, room_ix, !long_dim, !dir, 0, 1); // elevator shaft; at_edge=0, interior_room=1 (considered interior-enough)
+			elevator.d[!long_dim][!dir] = wall_pos;
+			elevator.d[!long_dim][ dir] = wall_pos + (dir ? 1.0 : -1.0)*ewidth; // cuts into rooms
+			float const stairs_spacing(0.5*stairs_len), end_spacing(max((stairs_len + stairs_spacing), 0.2f*hall_len));
+			float const place_lo(room.d[long_dim][0] + end_spacing), place_hi(room.d[long_dim][1] - end_spacing);
+			
+			if (place_lo < place_hi) { // hallway should be long enough
+				for (unsigned n = 0; n < 100; ++n) { // try 100 random positions along the wall
+					set_wall_width(elevator, rgen.rand_uniform(place_lo, place_hi), ehwidth, long_dim);
+					assert(part.contains_cube(elevator));
+					if (is_cube_close_to_doorway(elevator, room)) continue; // try again
+					if (check_skylight_intersection(elevator))    continue; // check skylights; is this necessary?
+					add_or_extend_elevator(elevator, 1);
+					for (unsigned d = 0; d < 2; ++d) {subtract_cube_from_cubes(elevator, interior->walls[d], nullptr, 1);}
+					float const room_center(room.get_center_dim(long_dim));
+					set_wall_width(stairs, room_center, 0.5*stairs_len, long_dim); // start with stairs centered
+					cube_t avoid(elevator);
+					avoid.expand_in_dim(long_dim, stairs_spacing);
+
+					if (stairs.d[long_dim][0] <= avoid.d[long_dim][1] && avoid.d[long_dim][0] <= stairs.d[long_dim][1]) { // overlapping or adjacent in long_dim
+						bool const stairs_dir(avoid.get_center_dim(long_dim) < room_center); // set stairs to the side with more space
+						stairs.translate_dim(long_dim, (avoid.d[long_dim][stairs_dir] - stairs.d[long_dim][!stairs_dir])); // shift stairs away from elevator (req for subtract)
+					}
+					room.has_elevator = 1;
+					elevator_cut      = elevator;
+					break; // done
+				} // for N
+			}
+		}
+		else { // add central elevator(s)
 			point center(room.get_cube_center());
 			// choose elevator dir on first elevator, and reuse this dir for later parts;
 			// increases symmetry and possibly improves the chances of connecting elevators vertically through multiple stacked parts
 			if (interior->elevators.empty()) {interior->elevator_dir = rgen.rand_bool();}
-			float const center_shift(0.125*hall_len*(interior->elevator_dir ? -1.0 : 1.0)), ehwidth(0.5*ewidth);
+			float const center_shift(0.125*hall_len*(interior->elevator_dir ? -1.0 : 1.0));
 			center[long_dim] += center_shift; // make elevator off-center
-			elevator_t elevator(room, (interior->rooms.size()-1), long_dim, rgen.rand_bool(), 0, 1); // elevator shaft; at_edge=0, interior_room=1 (considered interior-enough)
+			elevator_t elevator(room, room_ix, long_dim, rgen.rand_bool(), 0, 1); // elevator shaft; at_edge=0, interior_room=1 (considered interior-enough)
 			for (unsigned d = 0; d < 2; ++d) {set_wall_width(elevator, center[d], ehwidth, d);}
 
 			if (num_elevators == 1) {add_or_extend_elevator(elevator, 1);} // single elevator
@@ -1521,7 +1561,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		// always add stairs
 		for (unsigned dim = 0; dim < 2; ++dim) { // shrink in XY
 			bool const is_step_dim(bool(dim) == long_dim); // same orientation as the hallway
-			float shrink(stairs.get_sz_dim(dim) - (is_step_dim ? 4.0*doorway_width : 0.9*ewidth)); // set max size of stairs opening
+			float shrink(stairs.get_sz_dim(dim) - (is_step_dim ? stairs_len : 0.9*ewidth)); // set max size of stairs opening
 			stairs.expand_in_dim(dim, -0.5*shrink); // centered in the hallway
 		}
 		room.has_stairs = 255; // stairs on all floors
@@ -1723,6 +1763,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		if (!has_stairs && !has_elevator) {to_add[0] = part;} // neither - add single cube
 		else {
 			bool const is_at_top(f+1 == num_floors && !extended_from_above);
+			assert(part.contains_cube_xy(first_cut));
 			subtract_cube_xy(part, first_cut, to_add);
 
 			if (has_stairs && has_elevator) { // both
