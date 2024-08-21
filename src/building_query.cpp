@@ -1128,6 +1128,12 @@ bool building_t::point_in_elevator(point const &pos, bool check_elevator_car) co
 
 bool building_t::check_pos_in_unlit_room(point const &pos) const {
 	if (!interior) return 0; // error?
+
+	if (!interior->elevators_disabled) { // check if in elevator, if powered, since light is always on; assumes point is in the elevator car
+		for (elevator_t const &e : interior->elevators) {
+			if (e.contains_pt(pos)) return 0;
+		}
+	}
 	set<unsigned> rooms_visited;
 	return check_pos_in_unlit_room_recur(pos, rooms_visited);
 }
