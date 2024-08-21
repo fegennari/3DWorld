@@ -2530,9 +2530,7 @@ bool has_stairs_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, f
 }
 bool has_elevator_bcube_int(cube_t const &bcube, vector<elevator_t> const &elevators, float doorway_width) {
 	for (elevator_t const &e : elevators) {
-		cube_t tc(e);
-		tc.d[e.dim][e.dir] += doorway_width*(e.dir ? 1.0 : -1.0); // add extra space in front of the elevator
-		if (tc.intersects(bcube)) return 1;
+		if (e.get_bcube_padded(doorway_width).intersects(bcube)) return 1;
 	}
 	return 0;
 }

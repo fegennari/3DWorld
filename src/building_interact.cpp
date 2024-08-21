@@ -1963,6 +1963,11 @@ void elevator_t::move_closest_in_dir_to_front(float zval, bool dir) {
 		stop_on_passing_floor = 1; // flag so that we can set the up/down call button state correctly
 	}
 }
+cube_t elevator_t::get_bcube_padded(float front_pad) const {
+	cube_t tc(*this);
+	tc.d[dim][dir] += front_pad*(dir ? 1.0 : -1.0); // add extra space in front of the elevator
+	return tc;
+}
 
 void building_t::register_button_event(room_object_t const &button) {
 	// here room_id is elevator_id (buttons are only used with elevators)
