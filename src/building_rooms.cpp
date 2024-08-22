@@ -384,7 +384,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					segs.clear();
 					segs.push_back(centerline);
 
-					for (elevator_t  const &e : interior->elevators ) {
+					for (elevator_t const &e : interior->elevators) {
 						cube_t bc(e);
 
 						if (e.dim != room_dim) { // extend front of elevator by hallway half width for elevators to the side of the hallway

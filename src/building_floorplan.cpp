@@ -1526,9 +1526,10 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				for (unsigned n = 0; n < 100; ++n) { // try 100 random positions along the wall
 					set_wall_width(elevator, rgen.rand_uniform(place_lo, place_hi), ehwidth, long_dim);
 					assert(part.contains_cube(elevator));
-					if (has_bcube_int(elevator, avoid))           continue;
-					if (is_cube_close_to_doorway(elevator, room)) continue; // try again
-					if (check_skylight_intersection(elevator))    continue; // check skylights; is this necessary?
+					if (has_bcube_int(elevator, avoid))               continue;
+					if (is_cube_close_to_doorway(elevator, room))     continue; // try again
+					if (has_bcube_int(elevator, interior->exclusion)) continue; // try again
+					if (check_skylight_intersection(elevator))        continue; // check skylights; is this necessary?
 					add_or_extend_elevator(elevator, 1);
 					cube_t const sub_cube(elevator.get_bcube_padded(window_vspacing));
 					for (unsigned d = 0; d < 2; ++d) {subtract_cube_from_cubes(sub_cube, interior->walls[d], nullptr, 1);}
