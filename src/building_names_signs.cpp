@@ -473,6 +473,9 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 			test_cube.translate_dim(i->dim, side_sign*0.1*wall_thickness); // move out in front of the current wall to avoid colliding with it (in case of T-junction)
 			if (has_bcube_int(test_cube, interior->walls[!i->dim])) continue; // check for intersections with orthogonal walls; needed for inside corner offices
 		}
+		cube_t sign_pad(sign);
+		sign_pad.expand_in_dim(i->dim, wall_thickness); // extend into the wall
+		if (has_bcube_int(sign_pad, interior->elevators) || has_bcube_int(sign_pad, interior->stairwells)) continue; // check if blocked by side elevator or stairs
 		add_sign_outside_door(interior->room_geom->objs, sign, text, text_color, room_id, i->dim, side, !dark_mode); // add_frame=!dark_mode
 		if (is_apt_or_hotel()) break; // only add to the first (front) door
 	} // for i

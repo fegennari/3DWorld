@@ -1502,12 +1502,12 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		// add elevator(s)
 		bool const add_side_elevator(0 && !is_apt_or_hotel()); // as opposed to central elevators; not valid for fixed floorplans of apartments and hotels
 		float const hall_len(room.get_sz_dim(long_dim)), stairs_len(4.0*doorway_width), ehwidth(0.5*ewidth);
-		unsigned const num_elevators((!add_side_elevator && hall_len > 10.0*ewidth) ? 2 : 1); // two elevators if there's space
+		unsigned const num_elevators((hall_len > 10.0*ewidth) ? 2 : 1); // two elevators if there's space; will only add 1 if there's a side elevator
 		unsigned const room_ix(interior->rooms.size() - 1);
+		bool elevator_added(0);
 		if (interior->landings.empty()) {interior->landings.reserve(num_elevators + (num_floors-1));} // lower bound
 
-		if (num_elevators == 0) {} // no elevators; currently can't get here
-		else if (add_side_elevator) {
+		if (add_side_elevator) {
 			bool const dir(rgen.rand_bool());
 			float const wall_pos(room.d[!long_dim][dir] + (dir ? -1.0 : 1.0)*0.5*wall_thickness); // side of hallway
 			elevator_t elevator(room, room_ix, !long_dim, !dir, 0, 1); // elevator shaft; at_edge=0, interior_room=1 (considered interior-enough)
@@ -1517,13 +1517,21 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			float const place_lo(room.d[long_dim][0] + end_spacing), place_hi(room.d[long_dim][1] - end_spacing);
 			
 			if (place_lo < place_hi) { // hallway should be long enough
+				vect_cube_t avoid; // avoid bathrooms; what about utility rooms?
+
+				for (room_t const &r : interior->rooms) {
+					if (!is_bathroom(r.get_room_type(0))) continue; // not a bathroom; assumes bathrooms are assigned to all floors, and checking the first floor is correct
+					if (r.intersects(part)) {avoid.push_back(r);}
+				}
 				for (unsigned n = 0; n < 100; ++n) { // try 100 random positions along the wall
 					set_wall_width(elevator, rgen.rand_uniform(place_lo, place_hi), ehwidth, long_dim);
 					assert(part.contains_cube(elevator));
+					if (has_bcube_int(elevator, avoid))           continue;
 					if (is_cube_close_to_doorway(elevator, room)) continue; // try again
 					if (check_skylight_intersection(elevator))    continue; // check skylights; is this necessary?
 					add_or_extend_elevator(elevator, 1);
-					for (unsigned d = 0; d < 2; ++d) {subtract_cube_from_cubes(elevator, interior->walls[d], nullptr, 1);}
+					cube_t const sub_cube(elevator.get_bcube_padded(window_vspacing));
+					for (unsigned d = 0; d < 2; ++d) {subtract_cube_from_cubes(sub_cube, interior->walls[d], nullptr, 1);}
 					float const room_center(room.get_center_dim(long_dim));
 					set_wall_width(stairs, room_center, 0.5*stairs_len, long_dim); // start with stairs centered
 					cube_t avoid(elevator);
@@ -1535,11 +1543,12 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					}
 					room.has_elevator = 1;
 					elevator_cut      = elevator;
+					elevator_added    = 1;
 					break; // done
 				} // for N
 			}
 		}
-		else { // add central elevator(s)
+		if (num_elevators > 0 && !elevator_added) { // add central elevator(s) if no side elevator was added
 			point center(room.get_cube_center());
 			// choose elevator dir on first elevator, and reuse this dir for later parts;
 			// increases symmetry and possibly improves the chances of connecting elevators vertically through multiple stacked parts
