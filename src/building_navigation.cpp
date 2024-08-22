@@ -696,7 +696,7 @@ public:
 	}
 	bool reconstruct_path(vector<a_star_node_state_t> const &state, vect_cube_t const &avoid, building_t const &building, point const &cur_pt,
 		float radius, unsigned start_ix, unsigned end_ix, unsigned ped_ix, bool is_first_path, bool up_or_down, unsigned ped_rseed,
-		point const *const custom_dest, ai_path_t &path) const
+		point const *const custom_dest, bool req_custom_dest, ai_path_t &path) const
 	{
 		unsigned n(start_ix);
 		rand_gen_t rgen;
@@ -718,9 +718,10 @@ public:
 					path.add(get_stairs_entrance_pt(cur_pt.z, n, up_or_down)); // likely == next
 				}
 				else { // room/doorway
+					unsigned const num_tries(req_custom_dest ? 1 : 10); // only try custom_dest if req_custom_dest is set
 					bool success(0);
 
-					for (unsigned N = 0; N < 10; ++N) { // keep retrying until we find a point that is reachable from the room or doorway
+					for (unsigned N = 0; N < num_tries; ++N) { // keep retrying until we find a point that is reachable from the room or doorway
 						bool const no_use_init(N > 0); // choose a random new point on iterations after the first one
 						bool not_room_center(0);
 						point const end_point(find_valid_room_dest(avoid, building, radius, cur_pt.z, n, up_or_down, not_room_center, rgen, no_use_init, custom_dest));
@@ -836,7 +837,7 @@ public:
 	// A* algorithm; Note: path is stored backwards
 	bool find_path_points(unsigned room1, unsigned room2, unsigned ped_ix, float radius, bool use_stairs, bool is_first_path,
 		bool up_or_down, unsigned ped_rseed, vect_cube_t const &avoid, building_t const &building, point const &cur_pt,
-		vect_door_t const &doors, unsigned has_key, point const *const custom_dest, ai_path_t &path) const
+		vect_door_t const &doors, unsigned has_key, point const *const custom_dest, bool req_custom_dest, ai_path_t &path) const
 	{
 		// Note: opening and closing doors updates the nav graph; an AI encountering a closed door after choosing a path can either open it or stop and wait
 		assert(room1 < nodes.size() && room2 < nodes.size());
@@ -887,7 +888,7 @@ public:
 				sn.path_pt.assign(pt.x, pt.y, cur_pt.z);
 				
 				if (is_goal) { // done, reconstruct path (in reverse)
-					return reconstruct_path(state, avoid, building, cur_pt, radius, i->ix, room1, ped_ix, is_first_path, up_or_down, ped_rseed, custom_dest, path);
+					return reconstruct_path(state, avoid, building, cur_pt, radius, i->ix, room1, ped_ix, is_first_path, up_or_down, ped_rseed, custom_dest, req_custom_dest, path);
 				}
 				sn.g_score = new_g_score;
 				sn.f_score = sn.g_score + p2p_dist_xy(next_pt, dest_pos);
@@ -1241,7 +1242,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 	float const floor_spacing(get_window_vspace());
 
 	// maybe choose a destination elevator (for office buildings) if our prev dest wasn't an elevator
-	if (!is_house && !person.is_first_path && !interior->elevators_disabled && !person.last_changed_floor() &&
+	if (!person.is_first_path && !interior->elevators.empty() && !interior->elevators_disabled && !person.last_changed_floor() &&
 		person.goal_type != GOAL_TYPE_ELEVATOR && global_building_params.elevator_capacity > 0)
 	{
 		if (rgen.rand_probability(global_building_params.use_elevator_prob)) {
@@ -1583,9 +1584,9 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 			person.cur_rseed, is_first_path, following_player, avoid, *this, path)) return 0;
 		return 1;
 	}
-	bool have_goal_pos(0);
-	// if the target is an elevator, use that as the preferred destination rather than the center of the room
-	if (person.goal_type == GOAL_TYPE_ELEVATOR) {have_goal_pos = 1;}
+	bool have_goal_pos(0), req_custom_dest(0);
+	// if the target is an elevator, use that as the required destination rather than the center of the room
+	if (person.goal_type == GOAL_TYPE_ELEVATOR) {have_goal_pos = req_custom_dest = 1;}
 	// if the target is the player and they're in a hallway, use the correct dest along the hallway
 	else if (person.goal_type == GOAL_TYPE_PLAYER || person.goal_type == GOAL_TYPE_PLAYER_LAST_POS) {
 		have_goal_pos = get_room(loc2.room_ix).is_hallway;//is_valid_ai_placement(person.target_pos, person.radius, 0, 1); // skip_nocoll=0, no_check_objs=1
@@ -1606,14 +1607,14 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 			// Note: passing use_stairs=0 here because it's unclear if we want to go through stairs nodes in our A* algorithm
 			// from => stairs/ramp
 			if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, person.ssn, radius, 0, is_first_path,
-				up_or_down, person.cur_rseed, avoid, *this, from, interior->doors, person.has_key, nullptr, from_path)) continue; // no custom_dest
+				up_or_down, person.cur_rseed, avoid, *this, from, interior->doors, person.has_key, nullptr, req_custom_dest, from_path)) continue; // no custom_dest
 			point const seg2_start(interior->nav_graph->get_stairs_entrance_pt(to.z, stairs_room_ix, !up_or_down)); // other end
 			assert(point_in_building_or_basement_bcube(seg2_start));
 			// new floor, new zval, new avoid cubes
 			get_avoid_cubes(seg2_start.z, height, radius, avoid2, following_player); // no fires_select_cube
 			// stairs/ramp => to
 			if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, person.ssn, radius, 0, is_first_path,
-				!up_or_down, person.cur_rseed, avoid2, *this, seg2_start, interior->doors, person.has_key, custom_dest, path)) continue;
+				!up_or_down, person.cur_rseed, avoid2, *this, seg2_start, interior->doors, person.has_key, custom_dest, req_custom_dest, path)) continue;
 			assert(!path.empty() && !from_path.empty());
 			path.add(seg2_start); // other end of the stairs
 			// add two or more more points to straighten the entrance and exit paths and wrap around stairs; this segment doesn't check for intersection with stairs
@@ -1687,7 +1688,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 	}
 	assert(loc1.room_ix != loc2.room_ix);
 	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, person.ssn, radius, 0, is_first_path,
-		0, person.cur_rseed, avoid, *this, from, interior->doors, person.has_key, custom_dest, path)) return 0;
+		0, person.cur_rseed, avoid, *this, from, interior->doors, person.has_key, custom_dest, req_custom_dest, path)) return 0;
 	assert(!path.empty());
 	return 1;
 }
@@ -2253,6 +2254,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		assert(0);
 	}
 	debug_mode = (cur_player_building_loc.building_ix == person.cur_bldg); // used for debugging printouts
+	//if (zombie_in_attack_range(person)) {cout << TXTi(person.goal_type) << TXTi(person.ai_state) << TXT(person.path.size()) << endl;} // TESTING
 	bool const zombie_attack_mode(can_ai_follow_player(person, allow_diff_building));
 	
 	if (zombie_attack_mode && zombie_in_attack_range(person)) { // check for player intersection/damage (even if zombie is in the elevator)
@@ -2340,6 +2342,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		if (!find_route_to_point(person, coll_dist, person.is_first_path, 0, person.path)) { // following_player=0
 			float const wait_time(is_single_large_room(person.cur_room) ? 0.1 : 1.0);
 			person.wait_for(wait_time); // stop for 1 second (0.1s for parking garage/backrooms/retail), then try again
+			person.goal_type = GOAL_TYPE_NONE; // reset just to be safe
 			return AI_WAITING;
 		}
 		if (has_rgeom) {person.is_first_path = 0;} // treat the path as the first path until room geom is generated
