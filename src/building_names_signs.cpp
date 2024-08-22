@@ -449,7 +449,7 @@ void add_sign_outside_door(vect_room_object_t &objs, cube_t const &sign, string 
 	objs.back().obj_id = register_sign_text(text);
 }
 void building_t::add_door_sign(string const &text, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool no_check_adj_walls) {
-	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), half_wt(0.5*wall_thickness);
 	point const part_center(get_part_for_room(room).get_cube_center()), room_center(room.get_cube_center());
 	cube_t c(room);
 	set_cube_zvals(c, zval, zval+wall_thickness); // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
@@ -475,7 +475,8 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 		}
 		cube_t sign_pad(sign);
 		sign_pad.expand_in_dim(i->dim, wall_thickness); // extend into the wall
-		if (has_bcube_int(sign_pad, interior->elevators) || has_bcube_int(sign_pad, interior->stairwells)) continue; // check if blocked by side elevator or stairs
+		if (has_bcube_int(sign_pad, interior->elevators) || has_bcube_int(sign_pad, interior->stairwells))      continue; // check if blocked by side elevator or stairs
+		if (room.d[!i->dim][0]-half_wt > sign.d[!i->dim][0] || room.d[!i->dim][1]+half_wt < sign.d[!i->dim][1]) continue; // sign not contained in room, including wall
 		add_sign_outside_door(interior->room_geom->objs, sign, text, text_color, room_id, i->dim, side, !dark_mode); // add_frame=!dark_mode
 		if (is_apt_or_hotel()) break; // only add to the first (front) door
 	} // for i
