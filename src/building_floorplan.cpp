@@ -444,7 +444,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			int const num_windows   (num_windows_per_side[!min_dim]);
 			int const num_windows_od(num_windows_per_side[ min_dim]); // other dim, for use in hallway width calculation
 			int windows_per_room((num_windows >= 7 && num_windows_od >= 7) ? 2 : 1); // 1-2 windows per room (only assign 2 windows if we can get into the secondary hallway case below)
-			float const cube_len(psz[!min_dim]), wind_hspacing(cube_len/num_windows);
+			float const hall_len(psz[!min_dim]), wind_hspacing(hall_len/num_windows);
 			float room_len(wind_hspacing*windows_per_room);
 
 			while (room_len < 0.9*min_wall_len) { // add more windows to increase room size if too small
@@ -459,7 +459,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			hall = get_hallway_for_part(*p, num_hall_windows, hall_width, room_width);
 			float const *hall_wall_pos(hall.d[min_dim]);
 			unsigned const doors_start(interior->doors.size());
-			int const num_rooms((apt_or_hotel ? num_windows : (num_windows+windows_per_room-1))/windows_per_room); // round down for apts/hotels, otherwise round down
+			int const num_rooms((apt_or_hotel ? num_windows : (num_windows+windows_per_room-1))/windows_per_room); // round down for apts/hotels, otherwise round up
 			int const windows_per_side_od((num_windows_od - round_fp(num_hall_windows))/2); // of hallway
 			assert(num_rooms >= 0 && num_rooms < 1000); // sanity check
 			auto &room_walls(interior->walls[!min_dim]), &hall_walls(interior->walls[min_dim]);
@@ -475,7 +475,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				float const ring_hall_room_depth(0.5f*(room_width - sh_width)); // for inner and outer rows of rooms
 
 				// Note: the ring_hall_room_depth check can fail for two level retail areas that force wider hallways for U-shaped stairs
-				if (ring_hall_room_depth > 2.0f*doorway_width && rgen.rand_bool()) { // ring hallway
+				if (ring_hall_room_depth > 2.0f*doorway_width && hall_len > 12.5*window_vspacing && rgen.rand_bool()) { // ring hallway, if large enough
 					float const hall_offset(room_len); // outer edge of hallway to building exterior on each end
 					bool const add_doors_to_main_wall(rgen.rand_bool());
 					unsigned const num_cent_rooms(num_rooms - 2); // skip the rooms on each side
@@ -653,7 +653,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						if (room_sub_width > 1.5*doorway_width) break; // done
 						++windows_per_room_od;
 					}
-					float const sh_spacing(cube_len/num_sec_halls - sh_width), end_spacing(0.5*sh_spacing); // half spacing at both ends
+					float const sh_spacing(hall_len/num_sec_halls - sh_width), end_spacing(0.5*sh_spacing); // half spacing at both ends
 					assert(sh_spacing > min_wall_len); // I'm not sure if this can fail or what we should do in that case - use fewer secondary hallways?
 					float room_start(p->d[!min_dim][0]), wall_pos(room_start + end_spacing); // first sec hall wall pos
 					int const num_offices(4*rooms_per_side*num_sec_halls);
