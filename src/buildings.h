@@ -1659,7 +1659,7 @@ struct building_t : public building_geom_t {
 	colorRGBA side_color=WHITE, roof_color=WHITE, detail_color=BLACK, door_color=WHITE, wall_color=WHITE;
 	cube_t bcube, coll_bcube, pri_hall, driveway, porch, assigned_plot, exterior_flag, ladder, deck_bounds;
 	mutable cube_t city_driveway; // set by city gen, which only has a const ref to the building; technically this is cached city state, and not directly used by the building
-	vect_cube_t parts, fences;
+	vect_cube_t parts, fences, split_window_walls;
 	vect_cube_with_ix_t skylights, gutters;
 	vect_roof_obj_t details; // cubes on the roof - antennas, AC units, etc.
 	vect_tquad_with_ix_t roof_tquads, doors;
@@ -2091,7 +2091,7 @@ private:
 	bool add_chimney(bool two_parts, bool stacked_parts, bool hipped_roof[4], float roof_dz[4], unsigned force_dim[2], rand_gen_t &rgen);
 	float get_min_hallway_width() const;
 	bool can_use_hallway_for_part(unsigned part_id) const;
-	cube_t get_hallway_for_part(cube_t const &part, float &num_hall_windows, float &hall_width, float &room_width) const;
+	cube_t get_hallway_for_part(cube_t const &part, float &num_hall_windows, float &hall_width, float &room_width);
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void maybe_add_basement(rand_gen_t rgen);
 	bool extend_underground_basement(rand_gen_t rgen);

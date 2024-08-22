@@ -2022,6 +2022,15 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 				float const side_trim_width(window_trim_width*((window_ar > 1.5) ? (window_ar - 0.5) : 1.0)); // widen for very wide windows to cover holes at stretched edges
 				add_window_trim(window, exclude, trim_color, window_trim_width, side_trim_width, extra_depth, dim, dir, ext_flags, trim_objs, trims);
 
+				if ((trim_objs.size() - trim_start) == 4) { // full window with {top, bottom, left, right} - add split window wall vertical trim
+					for (cube_t const &sww : split_window_walls) {
+						if (!sww.intersects(window)) continue;
+						room_object_t trim(trim_objs[trim_start+2]); // left edge
+						trim.translate_dim(!dim, (sww.get_center_dim(!dim) - trim.get_center_dim(!dim))); // translate horizontally to align with wall centerline
+						trim.expand_in_dim(!dim, window_trim_width); // expand 2x to 1.5x wall width
+						trim_objs.push_back(trim);
+					}
+				}
 				if (add_ext_trim) { // exterior trim
 					unsigned const trim_end(trim_objs.size());
 				
