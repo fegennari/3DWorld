@@ -4638,6 +4638,13 @@ bool building_t::is_light_placement_valid(cube_t const &light, room_t const &roo
 	if (has_bcube_int(light, interior->elevators )) return 0;
 	if (has_bcube_int(light, interior->escalators)) return 0; // conservative; is this needed?
 	if (!check_cube_within_part_sides(light))       return 0; // handle non-cube buildings
+
+	// the fc_occluders test below will handle stairs cutouts, but we still need to handle the ceiling above stairs;
+	// check stairs with walled sides because these may clip through ceiling lights;
+	// lights completely contained in the stairs look okay, but the logic to enable them isn't correct, and they're asymmetric, so skip them as well
+	for (stairwell_t const &s : interior->stairwells) {
+		if (s.intersects(light) /*&& !s.contains_cube_xy(light)*/ && (s.has_walled_sides() || s.is_u_shape())) return 0;
+	}
 	unsigned const pg_wall_start(interior->room_geom->wall_ps_start);
 
 	// check for intersection with low pipes such as sprinkler pipes that have been previously placed; only works for top level of parking garage; skip for backrooms
