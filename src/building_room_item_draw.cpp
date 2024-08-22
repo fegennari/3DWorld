@@ -1209,6 +1209,7 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 	uint8_t const door_type(building.is_residential() ? (uint8_t)tquad_with_ix_t::TYPE_HDOOR : (uint8_t)tquad_with_ix_t::TYPE_ODOOR);
 	bool const have_door_handle_model(global_building_params.add_door_handles && building_obj_model_loader.is_model_valid(OBJ_MODEL_DOOR_HANDLE));
 	colorRGBA const handle_color(global_building_params.add_door_handles ? building.get_door_handle_color() : WHITE);
+	bool const residential(building.is_residential());
 	door_handles.clear();
 
 	for (door_t const &d : doors) { // interior doors; opens_out=0, exterior=0
@@ -1223,7 +1224,7 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 			vector3d handle_dir;
 			handle_dir[!d.dim] = (handle_side ? -1.0 : 1.0);
 			point handle_center(door_center);
-			handle_center.z += (building.is_house ? 0.15 : -0.18)*handle_height;
+			handle_center.z += (residential ? 0.15 : -0.18)*handle_height;
 			handle_center   -= 0.393*d.get_width()*handle_dir;
 			float sin_term(0.0), cos_term(0.0);
 			point pivot;
@@ -1249,7 +1250,7 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 				door_handles.emplace_back(side_pos, handle_height, d.dim, bool(side), mirror, (d.open_amt == 0.0), handle_dir);
 			}
 		}
-		else {add_door_handle(d, drot, handle_color, building.is_house);}
+		else {add_door_handle(d, drot, handle_color, residential);}
 	} // for d
 	mats_doors.create_vbos(building);
 }

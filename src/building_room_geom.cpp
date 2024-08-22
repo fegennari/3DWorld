@@ -5035,21 +5035,21 @@ void building_room_geom_t::add_trash(room_object_t const &c) {
 	}
 }
 
-void building_room_geom_t::add_door_handle(door_t const &door, door_rotation_t const &drot, colorRGBA const &color, bool is_house) {
+void building_room_geom_t::add_door_handle(door_t const &door, door_rotation_t const &drot, colorRGBA const &color, bool residential) {
 	// should the door handle be different (more rounded) for office doors compared to house doors?
 	bool const dim(door.dim), dir(!door.get_handle_side()); // dir=0: handle on right; dir=1: handle on left
 	float const width(door.get_width()), height(door.dz()), thickness(door.get_thickness()), dsign(dir ? -1.0 : 1.0);
-	float const shaft_radius(0.33*thickness), handle_hwidth((is_house ? 1.33 : 1.1)*shaft_radius);
-	float const handle_len((is_house ? 7.5 : 10.5)*handle_hwidth), handle_depth(0.7*handle_hwidth);
+	float const shaft_radius(0.33*thickness), handle_hwidth((residential ? 1.33 : 1.1)*shaft_radius);
+	float const handle_len((residential ? 7.5 : 10.5)*handle_hwidth), handle_depth(0.7*handle_hwidth);
 	cube_t const bc(door.get_true_bcube());
 	cube_t base(bc);
 	base.z1() += 0.44*height;
-	base.z2() -= (is_house ? 0.45 : 0.49)*height;
+	base.z2() -= (residential ? 0.45 : 0.49)*height;
 	base.expand_in_dim(dim, 0.25*thickness);
-	float const handle_pos(door.get_center_dim(!dim) + dsign*(is_house ? 0.435 : 0.442)*width);
-	set_wall_width(base, handle_pos, (is_house ? 0.035 : 0.038)*width, !dim);
+	float const handle_pos(door.get_center_dim(!dim) + dsign*(residential ? 0.435 : 0.442)*width);
+	set_wall_width(base, handle_pos, (residential ? 0.035 : 0.038)*width, !dim);
 	cube_t shaft(base);
-	set_wall_width(shaft, (base.z1() + (is_house ? 0.64 : 0.76)*base.dz()), shaft_radius, 2);
+	set_wall_width(shaft, (base.z1() + (residential ? 0.64 : 0.76)*base.dz()), shaft_radius, 2);
 	set_wall_width(shaft, base.get_center_dim(!dim), shaft_radius, !dim);
 	shaft.expand_in_dim(dim, 0.1*thickness);
 	cube_t handle(shaft);
