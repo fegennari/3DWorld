@@ -136,7 +136,7 @@ point building_t::gen_animal_floor_pos(float radius, bool place_in_attic, bool n
 		}
 		if (not_player_visible && n < 50 && fabs(camera_bs.z - pos.z) < floor_spacing && camera_pdu.sphere_visible_test((pos + xlate), radius)) {
 			// may be visible to the player; checked for the first 50 iterations
-			bool const same_room(get_room_containing_pt(pos) == get_room_containing_pt(camera_bs));
+			bool const same_room(get_room_containing_pt(pos) == get_room_containing_camera(camera_bs));
 			if (!line_intersect_walls(pos, camera_bs, same_room)) continue; // line of sight, skip
 		}
 		return pos; // success

@@ -1495,7 +1495,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 	if (player_in_this_building) {
 		last_player_pos = player_pos;
 		camera_rot      = get_inv_rot_pos(camera_rot); // rotate camera pos into building space; should we use camera_rot elsewhere below?
-		player_room_ix  = get_room_containing_pt(camera_rot);
+		player_room_ix  = get_room_containing_camera(camera_rot);
 		if (player_in_elevator >= 3) {hum_amt = 0.2; hum_freq = 100.0;} // moving elevator sound
 	}
 	// update dynamic objects; run for current and connected buildings

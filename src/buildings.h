@@ -2003,6 +2003,7 @@ private:
 	bool get_begin_end_room_objs_on_ground_floor(float zval, bool for_spider, vect_room_object_t::const_iterator &b, vect_room_object_t::const_iterator &e) const;
 public:
 	int get_room_containing_pt(point const &pt) const;
+	int get_room_containing_camera(point const &camera_rot) const;
 	unsigned get_attic_room_id() const;
 	int room_or_adj_room_has_stairs(int room_ix, float zval, bool inc_adj_rooms, bool check_door_open) const;
 	void register_player_in_building(point const &camera_bs, unsigned building_id) const;

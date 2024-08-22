@@ -2649,6 +2649,14 @@ int building_t::get_room_containing_pt(point const &pt) const {
 	if (has_pool() && interior->pool.contains_pt(pt)) {return interior->pool.room_ix;}
 	return -1; // room not found
 }
+int building_t::get_room_containing_camera(point const &camera_rot) const {
+	if (player_in_elevator) { // use room assigned to elevator the player is in; more correct when elevator overlaps rooms other than the one it opens to
+		for (elevator_t const &e : interior->elevators) {
+			if (e.contains_pt(camera_rot)) {return e.room_id;}
+		}
+	}
+	return get_room_containing_pt(camera_rot);
+}
 building_loc_t building_t::get_building_loc_for_pt(point const &pt) const {
 	building_loc_t loc;
 

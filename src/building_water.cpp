@@ -271,7 +271,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 		colorRGBA uw_color(is_pool ? pool_color : blend_color(mud_color, blend_color(algae_color, clear_color, algae_amt, 0), mud_amt, 0));
 		apply_player_underwater_effect(uw_color*min(1.0, 10.0*oxygen), intensity); // fade to black when oxygen is low
 		add_postproc_underwater_fog((is_pool ? 2.0 : 1.0)*WATER_COL_ATTEN*atten_scale, max_uw_dist, mud_amt, algae_amt);
-		bool const is_lit(is_room_lit(get_room_containing_pt(camera_bs), camera_bs.z));
+		bool const is_lit(is_room_lit(get_room_containing_camera(camera_bs), camera_bs.z));
 		colorRGBA const base_color(is_lit ? WHITE : DK_GRAY);
 		float const orig_water_plane_z(water_plane_z);
 		water_plane_z = interior->water_zval;
