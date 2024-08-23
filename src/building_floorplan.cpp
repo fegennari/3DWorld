@@ -1454,12 +1454,13 @@ bool building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
 	return 1;
 }
 
-void find_and_merge_with_landing(vector<landing_t> &landings, cube_t const &stairs, stairs_shape &sshape, unsigned num_floors) {
+void find_and_merge_with_landing(vector<landing_t> &landings, cube_t const &stairs, stairs_shape &sshape, unsigned num_floors, bool is_above) {
 	for (landing_t &landing : landings) { // process and maybe update all landings for this stairwell
 		if (!landing.intersects(stairs)) continue; // wrong landing; only one landing stack should intersect the stairs
 		if (landing.shape == SHAPE_WALLED) {sshape = SHAPE_WALLED; landing.shape = SHAPE_WALLED_SIDES;} // shift bottom wall down a floor
 		// if the parking garage is multiple levels, exclude the back wall so that we can connect the lower level(s) with this same stairwell
 		if (sshape == SHAPE_WALLED && num_floors > 1) {sshape = SHAPE_WALLED_SIDES;}
+		if (is_above) {landing.is_at_top = 0;} // landing below is no longer at the top
 		return;
 	}
 	assert(0); // should never get here
@@ -1605,7 +1606,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		room.has_stairs = 255; // stairs on all floors
 		cube_t stairs_bot(s);
 		stairs_bot.z2() = stairs_bot.z1() + window_vspacing; // limit to bottom landing
-		find_and_merge_with_landing(interior->landings, stairs_bot, sshape, num_floors); // merge with bottom landing
+		find_and_merge_with_landing(interior->landings, stairs_bot, sshape, num_floors, 0); // merge with bottom landing; is_above=0
 	}
 	// only add stairs to first part of a house unless we haven't added stairs yet, or if it's the top floor of a stacked part
 	else if (!is_house || interior->stairwells.empty() || (first_part_this_stack && part.z1() > ground_floor_z1)) {
@@ -2171,7 +2172,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			}
 			// place stairs in shared area if there's space and no walls are in the way for either the room above or below
 			cube_t cand;
-			stairs_shape sshape(0);
+			stairs_shape sshape(SHAPE_STRAIGHT);
 			bool cand_is_valid(0), dim(0), stairs_dir(0), add_railing(1), stack_conn(1), is_at_top(0);
 			float const stairs_height((is_retail ? retail_floor_levels : 1)*window_vspacing);
 			float const cand_z2(part.z2() + fc_thick); // top of bottom floor of upper part *p
@@ -2189,7 +2190,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				if (num_floors > 1) {} // can we extend down to the lower parking garage level from here?
 				cube_t stairs_bot(s);
 				stairs_bot.z2() = s.z1() + window_vspacing; // limit to bottom landing
-				find_and_merge_with_landing(interior->landings, stairs_bot, sshape, 1); // merge with bottom landing; num_floors=1
+				find_and_merge_with_landing(interior->landings, stairs_bot, sshape, 1, 0); // merge with bottom landing; num_floors=1; is_above=0
 			}
 			else if (!is_basement && is_cube()) { // try to extend an existing stairwell on the part above or below upward/downward; not for basements or non-cube buildings
 				for (unsigned ab = 0; ab < 2 && !cand_is_valid; ++ab) { // extend {below, above}
@@ -2211,10 +2212,13 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 						bool const allow_clip_walls(0); // clipping walls rarely helps and tends to create some strange stairs
 						if (!is_valid_stairs_elevator_placement(ext_cube, s_bc, stairs_pad, s.dim, !allow_clip_walls, check_private_rooms)) continue; // bad placement
 						s.extends_below = (ab == 0);
-						cand = s; dim = s.dim; stairs_dir = s.dir; sshape = s.shape; // copy fields from these stairs and extend down
+						cand = s; dim = s.dim; stairs_dir = s.dir; sshape = s.shape; // copy fields from these stairs and extend down/up
 						stack_conn    = 0; // not stacked - extended main stairs
-						cand_is_valid = 1;
-						find_and_merge_with_landing(interior->landings, s, sshape, 1); // num_floors=1
+						cand_is_valid = is_at_top = 1;
+						// clip stairs cube to the correct top or bottom floor to find the adjacent landing
+						float const landing_z1(part.z2() - fc_thick + (ab ? -1.0 : 1.0)*window_vspacing);
+						set_cube_zvals(s_bc, landing_z1, landing_z1+floor_thickness);
+						find_and_merge_with_landing(interior->landings, s_bc, sshape, 1, ab); // num_floors=1
 						
 						if (allow_clip_walls) { // Note: conservative and not well tested, but this case is likely to be disabled anyway
 							cube_t clip_cube(cand);
@@ -2222,6 +2226,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 							for (unsigned d = 0; d < 2; ++d) {clip_cube.d[s.dim][d] = ext_cube.d[s.dim][d];} // include padding
 							for (unsigned d = 0; d < 2; ++d) {subtract_cube_from_cubes(clip_cube, interior->walls[d], nullptr, 1);}
 						}
+						break; // done
 					} // for s
 				} // for ab
 			}
@@ -2229,8 +2234,10 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			// check if any previously placed stairs span these zvals; since rooms are generally horizontally connected on each floor, there's a valid existing path
 			bool have_spanning_stairs(0);
 
-			for (stairwell_t const &s: interior->stairwells) {
-				if (s.z1() <= cand_z1 && s.z2() >= cand_z2) {have_spanning_stairs = 1; break;}
+			if (!cand_is_valid) {
+				for (stairwell_t const &s: interior->stairwells) {
+					if (s.z1() <= cand_z1 && s.z2() >= cand_z2) {have_spanning_stairs = 1; break;}
+				}
 			}
 			unsigned const cur_num_iters(have_spanning_stairs ? num_iters/2 : num_iters); // fewer iterations and no compact/cut stairs if we have existing spanning stairs
 
