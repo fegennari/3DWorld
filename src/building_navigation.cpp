@@ -2296,8 +2296,9 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	}
 	bool choose_dest(!person.target_valid());
 	bool const update_path(!person.in_pool && need_to_update_ai_path(person)), has_rgeom(has_room_geom());
-	// if room objects spawn in, select a new dest to avoid walking through objects based on our previous, possibly invalid path
-	if (has_rgeom && !person.has_room_geom) {person.abort_dest();}
+	// if room objects spawn in, select a new dest to avoid walking through objects based on our previous, possibly invalid path;
+	// but not if this person is on stairs or an elevator, or they may end at an invalid zval between floors
+	if (has_rgeom && !person.has_room_geom && !person.on_stairs() && person.ai_state < AI_ENTER_ELEVATOR) {person.abort_dest();}
 	person.has_room_geom = has_rgeom;
 
 	if (update_path) { // need to update based on player movement; higher priority than choose_dest
