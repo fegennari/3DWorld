@@ -1828,7 +1828,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		for (stairwell_t const &s : interior->stairwells) {
 			if (has_parking_garage && s.z2() <= ground_floor_z1) continue; // skip parking garage and extended basement stairs
 			if (!s.is_u_shape() && !s.has_walled_sides())        continue;
-			
+
 			// attempt to vertically merge stacked/extended stairs (for parking garage and retail room) to avoid duplicate trim at shared floors
 			if (s.x1() == prev_stairs.x1() && s.y1() == prev_stairs.y1() && s.x2() == prev_stairs.x2() && s.y2() == prev_stairs.y2()) {
 				if (s.z1() <= prev_stairs.z2() && prev_stairs.z1() <= s.z2()) { // adjacent or overlapping in z
@@ -1850,8 +1850,9 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			if (s.is_u_shape()) {walls.emplace_back(get_trim_cube(stairs_with_wall, s.dim, s.dir, trim_thickness), (flags | dir_flags[!s.dir]));} // U-shaped stairs back wall
 		} // for s
 		for (cube_with_ix_t &w : walls) {
-			if (w.z1() > ground_floor_z1 && w.z1() < first_floor_cutoff) {w.z1() = ground_floor_z1;} // starts at top of first floor (retail), move to ground level
-			else if (has_parking_garage) {max_eq(w.z1(), ground_floor_z1);} // remove the parking garage/basement levels, which should have no trim
+			// snap to an exact floor zval, starting with the ground floor (no basements)
+			w.z1() = ground_floor_z1 + max(0, round_fp((w.z1() - ground_floor_z1)/window_vspacing))*window_vspacing;
+			if (w.z1() >= w.z2()) continue; // basement only, skip
 			bool const dim(w.dy() < w.dx());
 			unsigned const num_floors(calc_num_floors(w, window_vspacing, floor_thickness)), trim_flags(w.ix);
 			room_obj_shape const shape((trim_flags & RO_FLAG_ADJ_BOT) ? SHAPE_TALL : SHAPE_CUBE); // use SHAPE_TALL to draw unterminated ends
