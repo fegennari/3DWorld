@@ -288,14 +288,14 @@ cube_t building_t::get_hallway_for_part(cube_t const &part, float &num_hall_wind
 	cube_t hall(part);
 	hall.expand_in_dim(min_dim, -room_width); // shink rooms off of each end
 
-	if (is_odd && num_hall_windows > 1.5) { // walls may intersect windows, so flag them so that we can cover the wall ends with extra window trim
+	if (is_odd && num_hall_windows > 1.5 && interior) { // walls may intersect windows, so flag them so that we can cover the wall ends with extra window trim
 		float const wall_thickness(get_wall_thickness());
 
 		for (unsigned d = 0; d < 2; ++d) {
 			cube_t sw_wall(hall);
 			set_wall_width(sw_wall, hall.d[min_dim][d], wall_thickness, min_dim); // side of hallway
 			sw_wall.expand_in_dim(!min_dim, wall_thickness); // extend outside of building to include windows
-			split_window_walls.push_back(sw_wall);
+			interior->split_window_walls.push_back(sw_wall);
 		}
 	}
 	return hall;
