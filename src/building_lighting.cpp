@@ -1622,7 +1622,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (!is_house && floor_is_below &&  in_ext_basement && !camera_in_ext_basement && lpos.z   < get_basement().z1()) continue; // light  in lower level extb, player not in extb
 		if (!is_house && floor_is_above && !in_ext_basement &&  camera_in_ext_basement && camera_z < get_basement().z1()) continue; // player in lower level extb, light  not in extb
 		if (!camera_on_stairs && floor_is_below && !floor_below_region.is_all_zeros() && !floor_below_region.contains_pt_xy(lpos)) continue; // check floor_below_region
-		if (!camera_on_stairs && floor_is_above && !floor_above_region.is_all_zeros() && !floor_above_region.contains_pt_xy(lpos)) continue; // check floor_below_region
+		if (!camera_on_stairs && floor_is_above && !floor_above_region.is_all_zeros() && !floor_above_region.contains_pt_xy(lpos) && !(i->flags & RO_FLAG_TOS)) continue; // check floor_below_region
 		if (is_exterior && (floor_is_below || floor_is_above)) continue; // different floor of walkway - not visible
 		cube_t const &room_part(get_part_for_room(room));
 		bool const camera_in_room_part_xy(room_part.contains_pt_xy(camera_rot)), in_camera_room((int)i->room_id == camera_room);

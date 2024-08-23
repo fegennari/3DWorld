@@ -510,7 +510,7 @@ enum {PART_EFFECT_NONE=0, PART_EFFECT_SPARK, PART_EFFECT_CLOUD, PART_EFFECT_SMOK
 
 // object flags
 unsigned const RO_FLAG_LIT     = 0x01; // light is on
-unsigned const RO_FLAG_TOS     = 0x02; // at top of stairs; used for railings
+unsigned const RO_FLAG_TOS     = 0x02; // at top of stairs; used for railings and lights
 unsigned const RO_FLAG_RSTAIRS = 0x04; // in a room with stairs
 unsigned const RO_FLAG_INVIS   = 0x08; // invisible
 unsigned const RO_FLAG_NOCOLL  = 0x10; // no collision detection

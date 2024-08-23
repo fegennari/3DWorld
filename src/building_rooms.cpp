@@ -449,6 +449,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 				else {l_flags |= RO_FLAG_NOCOLL;} // no collision detection for ceiling lights
 				if (check_skylight_intersection(l)) {l_flags |= RO_FLAG_ADJ_TOP; has_skylight_light = 1;} // if attached to a skylight, draw top surface
+				if (has_bcube_int(l, interior->stairwells)) {l_flags |= RO_FLAG_TOS;} // assumes light at top of stairs, since other cases are illegal
 				room_object_t light_obj(l, TYPE_LIGHT, room_id, dim, dir, l_flags, light_amt, light_shape, color);
 				light_obj.obj_id = light_ix_assign.get_ix_for_light(l, walls_not_shared);
 				unsigned const flicker_mod(is_parking_garage ? 50 : (is_ext_basement ? 20 : 0)); // 2% chance for parking garage, 5% chance for ext basement
