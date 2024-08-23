@@ -1380,7 +1380,10 @@ float building_t::add_flooring(room_t const &room, float &zval, unsigned room_id
 	tot_light_amt = 0.5*tot_light_amt + 0.5; // brighten flooring so that lights shining through doors and flashlights look better
 	unsigned flags(RO_FLAG_NOCOLL);
 	if (room.open_wall_mask) {flags |= RO_FLAG_OPEN;} // flag flooring as "open" so that color is not adjusted by room light
-	interior->room_geom->objs.emplace_back(flooring, TYPE_FLOORING, room_id, 0, 0, flags, tot_light_amt, SHAPE_CUBE, WHITE, flooring_type);
+	// cut elevators out of flooring in case they pass through bathrooms or utility rooms
+	static vect_cube_t fparts, temp;
+	subtract_cubes_from_cube(flooring, interior->elevators, fparts, temp, 2); // check zval overlap
+	for (cube_t const &f : fparts) {interior->room_geom->objs.emplace_back(f, TYPE_FLOORING, room_id, 0, 0, flags, tot_light_amt, SHAPE_CUBE, WHITE, flooring_type);}
 	return new_zval;
 }
 

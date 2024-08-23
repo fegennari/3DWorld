@@ -2075,6 +2075,7 @@ template<typename T> void subtract_cubes_from_cube(cube_t const &c, vector<T> co
 }
 template void subtract_cubes_from_cube(cube_t const &c, vector<cube_t>         const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode); // explicit instantiation
 template void subtract_cubes_from_cube(cube_t const &c, vector<stairs_place_t> const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode); // explicit instantiation
+template void subtract_cubes_from_cube(cube_t const &c, vector<elevator_t>     const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode); // explicit instantiation
 
 template<typename T> bool subtract_cube_from_cubes(cube_t const &s, vector<T> &cubes, vect_cube_t *holes, bool clip_in_z, bool include_adj, bool no_z_test) {
 	unsigned iter_end(cubes.size()); // capture size before splitting
