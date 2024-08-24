@@ -1824,11 +1824,16 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		cube_t prev_stairs;
 		unsigned walls_ix(walls.size());
 		float const first_floor_cutoff(ground_floor_z1 + floor_thickness);
+		vector<stairwell_t> stairs_to_add;
 
 		for (stairwell_t const &s : interior->stairwells) {
 			if (has_parking_garage && s.z2() <= ground_floor_z1) continue; // skip parking garage and extended basement stairs
 			if (!s.is_u_shape() && !s.has_walled_sides())        continue;
+			stairs_to_add.push_back(s);
+		}
+		sort(stairs_to_add.begin(), stairs_to_add.end()); // sort by {x1, y1, z1} so that connected stairs are adjacent and stacked bottom to top
 
+		for (stairwell_t const &s : stairs_to_add) {
 			// attempt to vertically merge stacked/extended stairs (for parking garage and retail room) to avoid duplicate trim at shared floors
 			if (s.x1() == prev_stairs.x1() && s.y1() == prev_stairs.y1() && s.x2() == prev_stairs.x2() && s.y2() == prev_stairs.y2()) {
 				if (s.z1() <= prev_stairs.z2() && prev_stairs.z1() <= s.z2()) { // adjacent or overlapping in z
