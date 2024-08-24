@@ -1257,7 +1257,8 @@ void scenery_group::add_leafy_plant(point const &pos, float radius, int type, in
 	leafy_plants.back().create2(pos, radius, type, calc_z, plant_ix);
 }
 
-bool check_valid_scenery_pos(scenery_obj const &obj) {return check_valid_scenery_pos(obj.get_pos(), obj.get_radius());}
+bool check_valid_scenery_pos(scenery_obj          const &obj) {return check_valid_scenery_pos(obj.get_pos(), obj.get_radius        ());}
+bool check_valid_scenery_pos(burnable_scenery_obj const &obj) {return check_valid_scenery_pos(obj.get_pos(), obj.get_bsphere_radius());}
 
 void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool fixed_sz_rock_cache, tree_cont_t const &trees) { // called in tiled terrain mode
 

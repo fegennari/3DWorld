@@ -101,11 +101,11 @@ public:
 class burnable_scenery_obj : public scenery_obj {
 protected:
 	float fire_amt, burn_amt;
-	virtual float get_bsphere_radius() const = 0;
-	virtual point get_center() const = 0;
 public:
 	burnable_scenery_obj() : fire_amt(0.0), burn_amt(0.0) {}
 	virtual ~burnable_scenery_obj() {}
+	virtual float get_bsphere_radius() const = 0;
+	virtual point get_center() const = 0;
 	void next_frame();
 	void draw_fire(fire_drawer_t &fire_drawer, float rscale, unsigned ix) const;
 };
