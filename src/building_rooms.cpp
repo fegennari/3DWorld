@@ -1846,7 +1846,11 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			stairs_with_wall.d[s.dim][!s.dir] += dscale*trim_thickness; // pull back slightly since there's no right angle joining trim
 			prev_stairs = s;
 			walls_ix    = walls.size(); // starting index of walls for these stairs
-			for (unsigned d = 0; d < 2; ++d) {walls.emplace_back(get_trim_cube(stairs_with_wall, !s.dim, d, trim_thickness), (draw_end_flags | dir_flags[!d]));} // sides; draw ends
+			
+			for (unsigned d = 0; d < 2; ++d) {
+				if (s.against_wall[d]) continue; // no wall, no trim
+				walls.emplace_back(get_trim_cube(stairs_with_wall, !s.dim, d, trim_thickness), (draw_end_flags | dir_flags[!d])); // sides; draw ends
+			}
 			if (s.is_u_shape()) {walls.emplace_back(get_trim_cube(stairs_with_wall, s.dim, s.dir, trim_thickness), (flags | dir_flags[!s.dir]));} // U-shaped stairs back wall
 
 			if (s.has_walled_sides() && !s.extends_above && !s.roof_access) { // upper back end wall
