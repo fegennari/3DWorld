@@ -1839,15 +1839,22 @@ void building_t::add_wall_and_door_trim() { // and window trim
 					continue;
 				}
 			}
-			float const wall_hwidth(s.get_wall_hwidth(window_vspacing));
+			float const wall_hwidth(s.get_wall_hwidth(window_vspacing)), dscale(s.dir ? 1.0 : -1.0);
 			cube_t stairs_with_wall(s);
 			stairs_with_wall.expand_in_dim(!s.dim, wall_hwidth); // expand on sides
-			stairs_with_wall.d[s.dim][ s.dir] += (s.dir ? 1.0 : -1.0)*(wall_hwidth - (s.is_u_shape() ? 0.0 : trim_thickness)); // expand on back (even if not U-shaped stairs)
-			stairs_with_wall.d[s.dim][!s.dir] += (s.dir ? 1.0 : -1.0)*trim_thickness; // pull back slightly since there's no right angle joining trim
+			stairs_with_wall.d[s.dim][ s.dir] += dscale*(wall_hwidth - (s.is_u_shape() ? 0.0 : trim_thickness)); // expand on back (even if not U-shaped stairs)
+			stairs_with_wall.d[s.dim][!s.dir] += dscale*trim_thickness; // pull back slightly since there's no right angle joining trim
 			prev_stairs = s;
 			walls_ix    = walls.size(); // starting index of walls for these stairs
 			for (unsigned d = 0; d < 2; ++d) {walls.emplace_back(get_trim_cube(stairs_with_wall, !s.dim, d, trim_thickness), (draw_end_flags | dir_flags[!d]));} // sides; draw ends
 			if (s.is_u_shape()) {walls.emplace_back(get_trim_cube(stairs_with_wall, s.dim, s.dir, trim_thickness), (flags | dir_flags[!s.dir]));} // U-shaped stairs back wall
+
+			if (s.has_walled_sides() && !s.extends_above && !s.roof_access) { // upper back end wall
+				cube_t back_wall(get_trim_cube(stairs_with_wall, s.dim, !s.dir, trim_thickness));
+				back_wall.d[s.dim][!s.dir] -= dscale*trim_thickness; // extend outward
+				back_wall.z1() = back_wall.z2() - get_floor_ceil_gap(); // shrink to upper floor
+				walls.emplace_back(back_wall, (draw_end_flags | dir_flags[s.dir])); // draw ends
+			}
 		} // for s
 		for (cube_with_ix_t &w : walls) {
 			// snap to an exact floor zval, starting with the ground floor (no basements)

@@ -1367,7 +1367,7 @@ struct landing_t : public stairs_landing_base_t {
 };
 
 struct stairwell_t : public stairs_landing_base_t {
-	bool extends_below=0;
+	bool extends_below=0, extends_above=0;
 	uint8_t num_floors=0;
 	int16_t stairs_door_ix=-1, not_an_exit_mask=0;
 

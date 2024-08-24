@@ -2212,7 +2212,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 						if (has_bcube_int(ext_cube, interior->exclusion)) continue; // bad placement
 						bool const allow_clip_walls(0); // clipping walls rarely helps and tends to create some strange stairs
 						if (!is_valid_stairs_elevator_placement(ext_cube, s_bc, stairs_pad, s.dim, !allow_clip_walls, check_private_rooms)) continue; // bad placement
-						s.extends_below = (ab == 0);
+						(ab ? s.extends_above : s.extends_below) = 1;
 						cand = s; dim = s.dim; stairs_dir = s.dir; sshape = s.shape; // copy fields from these stairs and extend down/up
 						stack_conn    = 0; // not stacked - extended main stairs
 						cand_is_valid = 1;
