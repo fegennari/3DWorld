@@ -1634,14 +1634,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		//bool const light_room_is_tall(room.is_single_floor && lpos.z > room.z1() + window_vspacing);
 		// special case for light shining down from above stairs or ramp when the player is below
 		bool const light_above_stairs(lpos.z > camera_z && light_room_has_stairs_or_ramp); // or ramp
-		bool stairs_light(0), player_in_elevator(0), cull_if_not_by_stairs(0), in_camera_walkway(0), in_walkway_near_camera(0);
+		bool stairs_light(0), camera_in_elevator(0), cull_if_not_by_stairs(0), in_camera_walkway(0), in_walkway_near_camera(0);
 		//if (!light_above_stairs && camera_in_basement && !light_in_basement) {cull_if_not_by_stairs = 1;} // light may not be visible from basement; check not needed?
 
 		if (is_in_elevator) {
 			elevator_t const &e(get_elevator(i->obj_id));
 			room_object_t const &car(interior->get_elevator_car(e)); // elevator car for this elevator
 			
-			if (car.contains_pt(camera_rot)) {player_in_elevator = 1;} // player inside elevator
+			if (car.contains_pt(camera_rot)) {camera_in_elevator = 1;} // player inside elevator
 			else if (e.open_amt == 0.0) { // closed elevator
 				if (floor_is_above || floor_is_below)          continue; // viewed from a different floor
 				if ((lpos[e.dim] < camera_rot[e.dim]) ^ e.dir) continue; // camera facing the back of the elevator: light not visible
@@ -1656,7 +1656,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			// on the same floor (not separated by stairs) of the same part (not visible across windows), then the light isn't visible
 			if ((last_room_closed || camera_in_closed_room) && i->room_id != camera_room && (room.part_id == camera_part || !has_windows())) continue;
 		}
-		if (!player_in_elevator) { // none of the below culling applies when the player is in the elevator
+		if (!camera_in_elevator) { // none of the below culling applies when the player is in the elevator
 			// if the light is in the basement and the camera isn't, it's not visible unless the player is by the stairs
 			if ( light_in_basement && player_in_basement == 0 && !camera_somewhat_by_stairs) continue;
 			//if (!light_vis_from_basement && player_in_basement >= 2 && !light_room_has_stairs_or_ramp) continue; // player is fully in basement but light isn't; too strong
@@ -1735,7 +1735,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					}
 				}
 			} // end camera on different floor case
-		} // end !player_in_elevator
+		} // end !camera_in_elevator
 		float const light_radius(get_radius_for_room_light(*i)), cull_radius(0.95*light_radius);
 		// note that the same lights are used for the reflection pass, so a light behind the player won't be active in a mirror reflection
 		if (!camera_pdu.sphere_visible_test((lpos_rot + xlate), cull_radius)) continue; // VFC

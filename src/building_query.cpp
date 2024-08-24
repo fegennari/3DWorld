@@ -942,7 +942,9 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			if (on_attic_ladder && c->type == TYPE_ATTIC_DOOR) continue; // collision with attic door/ladder is handled above
 
 			if (c->type == TYPE_ELEVATOR) { // special handling for elevators
-				if (!c->contains_pt_xy(pos)) continue;
+				cube_t car_inc_door(*c);
+				car_inc_door.d[c->dim][c->dir] += get_wall_thickness()*(c->dir ? 1.0 : -1.0); // add extra space in front of the elevator for the door
+				if (!car_inc_door.contains_pt_xy(pos)) continue;
 				elevator_t const &elevator(get_elevator(c->room_id));
 				bool ecoll(0);
 				if      (obj_z >= elevator.z2()) {} // above the elevator shaft - not in the elevator
@@ -1131,7 +1133,7 @@ bool building_t::check_pos_in_unlit_room(point const &pos) const {
 
 	if (!interior->elevators_disabled) { // check if in elevator, if powered, since light is always on; assumes point is in the elevator car
 		for (elevator_t const &e : interior->elevators) {
-			if (e.contains_pt(pos)) return 0;
+			if (e.get_bcube_padded(get_wall_thickness()).contains_pt(pos)) return 0; // include the wall in front
 		}
 	}
 	set<unsigned> rooms_visited;
