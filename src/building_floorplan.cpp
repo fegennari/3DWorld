@@ -2215,7 +2215,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 						s.extends_below = (ab == 0);
 						cand = s; dim = s.dim; stairs_dir = s.dir; sshape = s.shape; // copy fields from these stairs and extend down/up
 						stack_conn    = 0; // not stacked - extended main stairs
-						cand_is_valid = is_at_top = 1;
+						cand_is_valid = 1;
+						if (ab) {is_at_top = 1;} // adding to the top, so this landing is the new top
 						// clip stairs cube to the correct top or bottom floor to find the adjacent landing
 						float const landing_z1(part.z2() - fc_thick + (ab ? -1.0 : 1.0)*window_vspacing);
 						set_cube_zvals(s_bc, landing_z1, landing_z1+floor_thickness);
