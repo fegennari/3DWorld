@@ -2619,7 +2619,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		bool const side(dir); // for U-shaped stairs; for now this needs to be consistent for the entire stairwell, can't use rgen.rand_bool()
 		// Note: stairs always start at floor_thickness above the landing z1, ignoring landing z2/height
 		float const floor_z(i->z1() + floor_thickness - window_vspacing), step_len_pos(i->get_step_length());
-		float const wall_hw(i->get_wall_hwidth(window_vspacing));
+		float const wall_hw(i->get_wall_hwidth(window_vspacing)), wall_end_bias(0.01*wall_hw); // bias just enough to avoid z-fighting with stairs;
 		float const stairs_zmin(i->in_ext_basement ? interior->basement_ext_bcube.z1() : bcube.z1());
 		float step_len((dir ? 1.0 : -1.0)*step_len_pos), z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
 		cube_t stair(*i), landing; // Note: landing is for L-shaped stairs
@@ -2709,7 +2709,9 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		float walls_extend_to(0.0);
 
 		if ((i->shape == SHAPE_WALLED && !(i->against_wall[0] || i->against_wall[1]) && (!i->stack_conn || !i->is_at_top)) || is_U) {
-			objs.emplace_back(wall, TYPE_STAIR_WALL, 0, dim, dir); // add wall at back/end of stairs
+			cube_t back_wall(wall);
+			back_wall.expand_in_dim(dim, wall_end_bias); // bias to match side walls
+			objs.emplace_back(back_wall, TYPE_STAIR_WALL, 0, dim, dir); // add wall at back/end of stairs
 
 			if (i->not_an_exit && is_U) { // blocked U-shaped stairs
 				cube_t front_wall(*i);
@@ -2735,7 +2737,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		else {
 			if (i->has_walled_sides() && extend_walls_up) { // add upper section only
 				cube_t wall_upper(wall);
-				set_wall_width(wall_upper, (i->d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_hw), wall_hw, dim); // move to the other side
+				set_wall_width(wall_upper, (i->d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_hw), (wall_hw + wall_end_bias), dim); // move to the other side; bias matches side walls
 				wall_upper.z1() = railing_z2;
 
 				for (unsigned d = 0; d < 2; ++d) {
@@ -2748,6 +2750,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			}
 			if (i->shape == SHAPE_WALLED && i->stack_conn) { // stacked parts connector stairs with clipped walls; add lower section only
 				cube_t wall_lower(wall);
+				wall_lower.expand_in_dim(dim, wall_end_bias); // bias to match side walls
 				wall_lower.z2() = wall.z1() + window_vspacing - half_thick;
 				objs.emplace_back(wall_lower, TYPE_STAIR_WALL, 0, dim, dir);
 			}
@@ -2757,7 +2760,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		for (unsigned d = 0; d < 2; ++d) { // sides of stairs
 			if (i->is_l_shape()) continue; // nothing to add in this loop
 			set_wall_width(wall, i->d[!dim][d], wall_hw, !dim);
-			wall.expand_in_dim(dim, 0.01*wall_hw); // just enough to avoid z-fighting with stairs
+			wall.expand_in_dim(dim, wall_end_bias); // apply bias avoid z-fighting with stairs
 			bool const add_wall(has_side_walls && !i->against_wall[d]); // don't add a wall if the stairs are already against a wall
 			
 			if (add_wall) { // add walls around stairs for this floor
