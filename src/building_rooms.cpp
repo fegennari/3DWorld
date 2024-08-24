@@ -1834,21 +1834,29 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		sort(stairs_to_add.begin(), stairs_to_add.end()); // sort by {x1, y1, z1} so that connected stairs are adjacent and stacked bottom to top
 
 		for (stairwell_t const &s : stairs_to_add) {
+			unsigned const walls_end(walls.size());
+			float const wall_hwidth(s.get_wall_hwidth(window_vspacing)), dscale(s.dir ? 1.0 : -1.0);
+			cube_t stairs_with_wall(s);
+			stairs_with_wall.expand_in_dim(!s.dim, wall_hwidth); // expand on sides
+			stairs_with_wall.d[s.dim][ s.dir] += dscale*(wall_hwidth - (s.is_u_shape() ? 0.0 : trim_thickness)); // expand on back (even if not U-shaped stairs)
+			stairs_with_wall.d[s.dim][!s.dir] += dscale*trim_thickness; // pull back slightly since there's no right angle joining trim
+
+			if (s.has_walled_sides() && !s.extends_below && !(s.against_wall[0] || s.against_wall[1])) { // lower front, not against a wall; not vertically merged
+				cube_t front_wall(get_trim_cube(stairs_with_wall, s.dim, s.dir, trim_thickness));
+				front_wall.d[s.dim][s.dir] += dscale*trim_thickness; // extend outward
+				front_wall.z2() = front_wall.z1() + get_floor_ceil_gap(); // shrink to lower floor
+				walls.emplace_back(front_wall, (draw_end_flags | dir_flags[!s.dir])); // draw ends
+			}
 			// attempt to vertically merge stacked/extended stairs (for parking garage and retail room) to avoid duplicate trim at shared floors
 			if (s.x1() == prev_stairs.x1() && s.y1() == prev_stairs.y1() && s.x2() == prev_stairs.x2() && s.y2() == prev_stairs.y2()) {
 				if (s.z1() <= prev_stairs.z2() && prev_stairs.z1() <= s.z2()) { // adjacent or overlapping in z
 					min_eq(prev_stairs.z1(), s.z1());
 					max_eq(prev_stairs.z2(), s.z2());
 					assert(walls_ix < walls.size());		
-					for (auto w = walls.begin()+walls_ix; w != walls.end(); ++w) {set_cube_zvals(*w, prev_stairs.z1(), prev_stairs.z2());}
+					for (auto w = walls.begin()+walls_ix; w != walls.begin()+walls_end; ++w) {set_cube_zvals(*w, prev_stairs.z1(), prev_stairs.z2());}
 					continue;
 				}
 			}
-			float const wall_hwidth(s.get_wall_hwidth(window_vspacing)), dscale(s.dir ? 1.0 : -1.0);
-			cube_t stairs_with_wall(s);
-			stairs_with_wall.expand_in_dim(!s.dim, wall_hwidth); // expand on sides
-			stairs_with_wall.d[s.dim][ s.dir] += dscale*(wall_hwidth - (s.is_u_shape() ? 0.0 : trim_thickness)); // expand on back (even if not U-shaped stairs)
-			stairs_with_wall.d[s.dim][!s.dir] += dscale*trim_thickness; // pull back slightly since there's no right angle joining trim
 			prev_stairs = s;
 			walls_ix    = walls.size(); // starting index of walls for these stairs
 			
@@ -1858,10 +1866,9 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			}
 			if (s.is_u_shape()) {walls.emplace_back(get_trim_cube(stairs_with_wall, s.dim, s.dir, trim_thickness), (flags | dir_flags[!s.dir]));} // U-shaped stairs back wall
 
-			if (s.has_walled_sides() && !s.extends_above && !s.roof_access) { // upper back end wall
+			if (s.has_walled_sides()) { // back wall at the end where stairs come down from above
 				cube_t back_wall(get_trim_cube(stairs_with_wall, s.dim, !s.dir, trim_thickness));
 				back_wall.d[s.dim][!s.dir] -= dscale*trim_thickness; // extend outward
-				back_wall.z1() = back_wall.z2() - get_floor_ceil_gap(); // shrink to upper floor
 				walls.emplace_back(back_wall, (draw_end_flags | dir_flags[s.dir])); // draw ends
 			}
 		} // for s
