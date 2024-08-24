@@ -1963,9 +1963,10 @@ void elevator_t::move_closest_in_dir_to_front(float zval, bool dir) {
 		stop_on_passing_floor = 1; // flag so that we can set the up/down call button state correctly
 	}
 }
-cube_t elevator_t::get_bcube_padded(float front_pad) const {
+cube_t elevator_t::get_bcube_padded(float front_pad, float all_sides_pad) const {
 	cube_t tc(*this);
 	tc.d[dim][dir] += front_pad*(dir ? 1.0 : -1.0); // add extra space in front of the elevator
+	if (all_sides_pad > 0.0) {tc.expand_by_xy(all_sides_pad);}
 	return tc;
 }
 

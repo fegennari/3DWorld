@@ -1532,7 +1532,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					if (has_bcube_int(elevator, interior->exclusion)) continue; // try again
 					if (check_skylight_intersection(elevator))        continue; // check skylights; is this necessary?
 					add_or_extend_elevator(elevator, 1);
-					cube_t const sub_cube(elevator.get_bcube_padded(window_vspacing));
+					cube_t const sub_cube(elevator.get_bcube_padded(window_vspacing)); // trim is excluded
 					for (unsigned d = 0; d < 2; ++d) {subtract_cube_from_cubes(sub_cube, interior->walls[d], nullptr, 1);}
 					float const room_center(room.get_center_dim(long_dim));
 					set_wall_width(stairs, room_center, 0.5*stairs_len, long_dim); // start with stairs centered

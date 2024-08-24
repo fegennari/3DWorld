@@ -1249,7 +1249,7 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 	void call_elevator(unsigned floor_ix, float targ_z, unsigned req_dirs, bool inside_press);
 	void register_at_dest();
 	void move_closest_in_dir_to_front(float zval, bool dir);
-	cube_t get_bcube_padded(float front_pad) const;
+	cube_t get_bcube_padded(float front_pad, float all_sides_pad=0.0) const;
 };
 
 unsigned const NUM_RTYPE_SLOTS = 8; // enough for houses; hard max is 8 so that a uint8_t bit mask can be used

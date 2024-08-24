@@ -388,7 +388,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						cube_t bc(e);
 
 						if (e.dim != room_dim) { // extend front of elevator by hallway half width for elevators to the side of the hallway
-							bc = e.get_bcube_padded(0.5*r->get_sz_dim(!room_dim) + 2.0*wall_thickness);
+							bc = e.get_bcube_padded(0.5*r->get_sz_dim(!room_dim) + 2.0*wall_thickness); // trim excluded since it's only on the floor
 							bc.expand_in_dim(room_dim, -0.5*(bc.get_sz_dim(room_dim) - wall_thickness)); // shrink to a narrow strip in front of the elevator
 						}
 						if (centerline.intersects(bc)) {subtract_cube_from_cubes(bc, segs);}
