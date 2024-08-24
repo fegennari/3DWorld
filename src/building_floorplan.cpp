@@ -1501,7 +1501,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		else {sshape = SHAPE_WALLED_SIDES;} // walled sides to meet fire codes
 		cube_t stairs(hall); // start as hallway
 		// add elevator(s)
-		bool const add_side_elevator(0 && !is_apt_or_hotel()); // as opposed to central elevators; not valid for fixed floorplans of apartments and hotels
+		bool const add_side_elevator(!is_apt_or_hotel() && rgen.rand_bool()); // as opposed to central elevators; not valid for fixed floorplans of apartments and hotels
 		float const hall_len(room.get_sz_dim(long_dim)), stairs_len(4.0*doorway_width), ehwidth(0.5*ewidth);
 		unsigned const num_elevators((hall_len > 10.0*ewidth) ? 2 : 1); // two elevators if there's space; will only add 1 if there's a side elevator
 		unsigned const room_ix(interior->rooms.size() - 1);
