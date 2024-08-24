@@ -4704,8 +4704,9 @@ void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &r
 				for (unsigned n = 1; n <= num_shifts; ++n) { // try different shift values
 					cube_t cand(light_cand);
 					cand.translate_dim(dim, ((bool(d) ^ first_dir) ? -1.0 : 1.0)*n*shift_step);
-					if (!is_light_placement_valid(cand, room, pad))      continue;
-					if (overlaps_other_room_obj(cand, check_coll_start)) continue; // intersects wall, pillar, etc.
+					if (!is_light_placement_valid(cand, room, pad))        continue;
+					if (overlaps_other_room_obj(cand, check_coll_start))   continue; // intersects wall, pillar, etc.
+					if (lights.size() <= 8 && has_bcube_int(cand, lights)) continue; // check for intersecting other lights if there aren't too many
 					lights.push_back(cand);
 					light_placed = 2;
 					break;

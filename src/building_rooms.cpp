@@ -363,7 +363,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 			if (num_lights > 1) { // r->is_hallway or ext basement
 				// hallway: place a light on each side (of the stairs if they exist), and also between stairs and elevator if there are both
-				if (r->is_hallway && r->has_elevator && r->has_stairs == 255) {max_eq(num_lights, (2U + r->has_elevator));} // hall with elevator + stairs on all floors; 3+ lights
+				if (r->is_hallway && r->has_elevator && r->has_stairs == 255) {max_eq(num_lights, 4U);} // hall with elevator + stairs on all floors; 4+ lights
 				min_eq(num_lights, 6U);
 				float const offsets[6] = {0.0, -0.2, -0.3, -0.36, -0.4, -0.43}, steps[6] = {0.0, 0.4, 0.3, 0.24, 0.2, 0.172}; // indexed by num_lights-1
 				float const hallway_len(r->get_sz_dim(light_dim));
