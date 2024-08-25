@@ -455,6 +455,7 @@ void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir,
 		s.add_uniform_float("wet_effect",   water_damage);
 		s.add_uniform_float("puddle_scale", 0.5);
 		s.add_uniform_float("water_damage_zmax", player_building->ground_floor_z1); // water damage is only in the basement
+		s.add_uniform_float("water_damage_zscale", 0.25); // stretch out vertically on walls
 	}
 	if (crack_damage > 0.0) {
 		s.add_uniform_float("crack_weight", crack_damage);

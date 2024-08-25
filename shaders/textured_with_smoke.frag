@@ -23,8 +23,9 @@ uniform float depth_trans_bias, clip_plane_z, ripple_time, rain_intensity, refle
 uniform float reflect_plane_ztop, reflect_plane_zbot;
 uniform float winding_normal_sign = 1.0;
 uniform float cube_map_reflect_mipmap_level = 0.0;
-uniform float puddle_scale = 0.04;
-uniform float water_damage_zmax = 0.0;
+uniform float puddle_scale        = 0.04;
+uniform float water_damage_zmax   = 0.0;
+uniform float water_damage_zscale = 1.0;
 uniform float crack_scale  = 1.0;
 uniform float crack_sharp  = 100.0;
 uniform float crack_weight = 0.0;
@@ -197,11 +198,12 @@ float get_water_snow_coverage() {
 }
 
 float get_puddle_val(in float wetness) {
-	float wet_val = 0.0;
-	float freq    = 1.0;
+	float wet_val  = 0.0;
+	float freq     = 1.0;
+	vec3 noise_pos = puddle_scale*vec3(vpos.x, vpos.y, vpos.z*water_damage_zscale);
 
 	for (int i = 0; i < 4; ++i) {
-		wet_val += texture(wet_noise_tex, puddle_scale*freq*vpos).r/freq;
+		wet_val += texture(wet_noise_tex, freq*noise_pos).r/freq;
 		freq    *= 2.0;
 	}
 	return sqrt(min(1.0, 8.0*wetness))*min(1.0, pow((wetness + max(wet_val, 0.6) - 0.6), 8.0));
