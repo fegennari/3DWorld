@@ -2536,22 +2536,43 @@ void building_t::add_floor_clutter_objs(rand_gen_t rgen, room_t const &room, flo
 	}
 }
 
+cube_t place_cylin_object_maybe_near(rand_gen_t &rgen, cube_t const &place_on, point &prev_pos,
+	float radius, float height, float dist_from_edge, float near_prob, float min_dist, float max_dist)
+{
+	if (prev_pos != all_zeros && rgen.rand_probability(near_prob)) {
+		assert(min_dist < max_dist);
+		cube_t c;
+
+		for (unsigned n = 0; n < 10; ++n) { // 10 attempts to not intersect the original, otherwise fall through
+			c.set_from_sphere((prev_pos + rgen.signed_rand_vector_spherical_xy(max_dist)), radius); // place at least spacing from edge
+			if (dist_less_than(c.get_cube_center(), prev_pos, min_dist)) continue; // skip if too close
+			if (!place_on.contains_cube_xy(c)) continue; // outside the place area
+			set_cube_zvals(c, place_on.z1(), place_on.z1()+height);
+			return c;
+		}
+	}
+	cube_t const c(place_cylin_object(rgen, place_on, radius, height, dist_from_edge, 1)); // place_at_z1=1
+	prev_pos = c.get_cube_center();
+	return c;
+}
 void building_t::add_basement_clutter_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	float const floor_spacing(get_window_vspace()), stain_height(1.5*get_flooring_thick());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-get_trim_thickness()); // add some extra padding
 	place_area.z1() = zval;
-	float const min_place_sz(min(place_area.dx(), place_area.dy()));
+	float const floor_spacing(get_window_vspace()), stain_height(1.5*get_flooring_thick()), min_place_sz(min(place_area.dx(), place_area.dy()));
 	vect_cube_t avoid;
 
 	if (rgen.rand_float() < 0.35) { // add bottles on the floor to 35% of rooms
-		unsigned const num_bottles((rgen.rand() % 10) + 1); // 1-10
+		unsigned const num_bottles((rgen.rand() % 12) + 1); // 1-12
+		float const near_prob(0.75), near_dist(0.3*floor_spacing);
+		point prev_pos;
 	
 		for (unsigned n = 0; n < num_bottles; ++n) {
 			float const height(floor_spacing*rgen.rand_uniform(0.075, 0.12)), radius(floor_spacing*rgen.rand_uniform(0.012, 0.018));
 			if (min_place_sz < 6.0*radius) return; // room is too small to place this bottle; shouldn't get here
-			cube_t bottle(place_cylin_object(rgen, place_area, radius, height, max(2.0f*radius, height), 1)), bc(bottle); // place_at_z1=1
+			cube_t bottle(place_cylin_object_maybe_near(rgen, place_area, prev_pos, radius, height, max(2.0f*radius, height), near_prob, 2.0*height, near_dist));
+			cube_t bc(bottle);
 			bool const fallen_over(rgen.rand_float() < 0.75); // make the bottle fallen over 75% of the time
 			unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_ON_FLOOR);
 			bool dim(0), dir(0);
@@ -2589,11 +2610,13 @@ void building_t::add_basement_clutter_objs(rand_gen_t rgen, room_t const &room, 
 		} // for n
 	}
 	if (rgen.rand_float() < 0.35) { // add trash (paper balls) on the floor to 35% of rooms
-		unsigned const num_trash((rgen.rand() % 5) + 1); // 1-5
+		unsigned const num_trash((rgen.rand() % 6) + 1); // 1-6
+		float const near_prob(0.6), near_dist(0.3*floor_spacing);
+		point prev_pos;
 
 		for (unsigned n = 0; n < num_trash; ++n) {
 			float const radius(rgen.rand_uniform(0.015, 0.03)*min(floor_spacing, min_place_sz));
-			cube_t const trash(place_cylin_object(rgen, place_area, radius, 2.0*radius, 1.5*radius, 1)); // place_at_z1=1
+			cube_t trash(place_cylin_object_maybe_near(rgen, place_area, prev_pos, radius, 2.0*radius, 1.5*radius, near_prob, 2.0*radius, near_dist));
 			if (is_obj_placement_blocked(trash, room, 1) || overlaps_other_room_obj(trash, objs_start) || has_bcube_int(trash, avoid)) continue; // bad placement
 			avoid.push_back(trash);
 			colorRGBA const color(trash_colors[rgen.rand() % NUM_TRASH_COLORS]);
