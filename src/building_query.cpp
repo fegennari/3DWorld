@@ -2101,6 +2101,7 @@ bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start, b
 
 	for (auto i = start; i != end; ++i) {
 		if (i->type == TYPE_POOL_TILE) continue; // always excluded, since it's thin and objects can be mounted over it
+		if (i->type == TYPE_BOTTLE && i->is_on_floor() && i->intersects(c)) return 1; // bottles on the floor do count
 		// Note: light switches/outlets/vents/pipes don't collide with the player or AI, but they collide with other placed objects to avoid blocking them;
 		// however, it's okay to block outlets with furniture
 		if ((check_all || !i->no_coll() || i->type == TYPE_SWITCH || i->type == TYPE_OUTLET || i->type == TYPE_VENT || i->type == TYPE_PIPE ||
