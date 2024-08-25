@@ -107,19 +107,20 @@ typedef vector<point> vect_point;
 
 struct bottle_params_t {
 	std::string name, texture_fn;
-	colorRGBA color;
+	colorRGBA glass_color, liquid_color;
 	float value, label_tscale;
-	bottle_params_t(std::string const &n, std::string const &fn, colorRGBA const &c, float v, float ts) : name(n), texture_fn(fn), color(c), value(v), label_tscale(ts) {}
+	bottle_params_t(std::string const &n, std::string const &fn, colorRGBA const &gc, colorRGBA const &lc, float v, float ts) :
+		name(n), texture_fn(fn), glass_color(gc), liquid_color(lc), value(v), label_tscale(ts) {}
 };
 enum {BOTTLE_TYPE_WATER=0, BOTTLE_TYPE_COKE, BOTTLE_TYPE_BEER, BOTTLE_TYPE_WINE, BOTTLE_TYPE_POISON, BOTTLE_TYPE_MEDS, NUM_BOTTLE_TYPES};
 // Note: we could add colorRGBA(0.8, 0.9, 1.0, 0.4) for water bottles, but transparent objects require removing interior faces such as half of the sphere
 bottle_params_t const bottle_params[NUM_BOTTLE_TYPES] = {
-	bottle_params_t("bottle of water",    "interiors/arrowhead_logo.jpg", colorRGBA(0.4, 0.7, 1.0 ), 1.0, 1.0),
-	bottle_params_t("bottle of Coke",     "interiors/coke_label.jpg",     colorRGBA(0.2, 0.1, 0.05), 1.0, 1.0),
-	bottle_params_t("bottle of beer",     "interiors/heineken_label.jpg", colorRGBA(0.1, 0.4, 0.1 ), 3.0, 2.0),
-	bottle_params_t("bottle of wine",     "interiors/wine_label.jpg",     BLACK,                    10.0, 2.0),
-	bottle_params_t("bottle of poison",   "yuck.png",                     BLACK,                     5.0, 2.0),
-	bottle_params_t("bottle of medicine", "interiors/magenta_cross.png",  LT_BLUE,                  20.0, 1.0),
+	bottle_params_t("bottle of water",    "interiors/arrowhead_logo.jpg", colorRGBA(0.4, 0.7, 1.0 ), colorRGBA(0.0,  0.5,  1.0, 0.0), 1.0,  1.0),
+	bottle_params_t("bottle of Coke",     "interiors/coke_label.jpg",     colorRGBA(0.2, 0.1, 0.05), colorRGBA(0.22, 0.11, 0.06),     1.0,  1.0),
+	bottle_params_t("bottle of beer",     "interiors/heineken_label.jpg", colorRGBA(0.1, 0.4, 0.1 ), colorRGBA(0.5,  0.4,  0.1 ),     3.0,  2.0),
+	bottle_params_t("bottle of wine",     "interiors/wine_label.jpg",     BLACK,                     colorRGBA(0.4,  0.0,  0.1 ),     10.0, 2.0),
+	bottle_params_t("bottle of poison",   "yuck.png",                     BLACK,                     BLACK,                           5.0,  2.0),
+	bottle_params_t("bottle of medicine", "interiors/magenta_cross.png",  LT_BLUE,                   colorRGBA(0.2,  0.0,  0.7 ),     20.0, 1.0),
 };
 
 struct ball_type_t {
@@ -665,6 +666,7 @@ struct room_object_t : public oriented_cube_t { // size=64
 	unsigned get_bottle_type() const {return ((obj_id&63) % NUM_BOTTLE_TYPES);} // first 6 bits are bottle type
 	unsigned get_orient () const {return (2*dim + dir);}
 	unsigned get_num_shelves() const {assert(type == TYPE_SHELVES); return (2 + (room_id % 3));} // 2-4 shelves
+	float get_bottle_rot_angle() const {return (rotates() ? PI*(0.321*obj_id + color.R + 2.0*color.G) : 0.0);}
 	float get_depth () const {return get_length();} // some objects use depth rather than length
 	float get_radius() const;
 	cylinder_3dw get_cylinder() const;

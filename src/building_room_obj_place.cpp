@@ -2537,7 +2537,7 @@ void building_t::add_floor_clutter_objs(rand_gen_t rgen, room_t const &room, flo
 }
 
 void building_t::add_basement_clutter_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	float const floor_spacing(get_window_vspace());
+	float const floor_spacing(get_window_vspace()), stain_height(1.5*get_flooring_thick());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-get_trim_thickness()); // add some extra padding
@@ -2552,10 +2552,11 @@ void building_t::add_basement_clutter_objs(rand_gen_t rgen, room_t const &room, 
 			float const height(floor_spacing*rgen.rand_uniform(0.075, 0.12)), radius(floor_spacing*rgen.rand_uniform(0.012, 0.018));
 			if (min_place_sz < 6.0*radius) return; // room is too small to place this bottle; shouldn't get here
 			cube_t bottle(place_cylin_object(rgen, place_area, radius, height, max(2.0f*radius, height), 1)), bc(bottle); // place_at_z1=1
+			bool const fallen_over(rgen.rand_float() < 0.75); // make the bottle fallen over 75% of the time
 			unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_ON_FLOOR);
 			bool dim(0), dir(0);
 
-			if (rgen.rand_float() < 0.75) { // make the bottle fallen over 75% of the time
+			if (fallen_over) {
 				dim = rgen.rand_bool();
 				dir = rgen.rand_bool();
 				float const delta(height - 2.0*radius), xy_shift((dir ? 1.0 : -1.0)*delta);
@@ -2569,8 +2570,22 @@ void building_t::add_basement_clutter_objs(rand_gen_t rgen, room_t const &room, 
 			if (is_obj_placement_blocked(bc, room, 1) || overlaps_other_room_obj(bc, objs_start) || has_bcube_int(bc, avoid)) continue; // bad placement
 			avoid.push_back(bc);
 			objs.emplace_back(bottle, TYPE_BOTTLE, room_id, dim, dir, flags, tot_light_amt, SHAPE_CYLIN);
-			objs.back().set_as_bottle(rgen.rand()); // all bottle types
-			objs.back().obj_id |= 192; // always empty - set both empty bits
+			room_object_t &bottle_obj(objs.back());
+			bottle_obj.set_as_bottle(rgen.rand()); // all bottle types
+			bottle_obj.obj_id |= 192; // always empty - set both empty bits
+
+			if (fallen_over && rgen.rand_bool()) { // maybe add a stain the same color as the liquid in the bottle
+				colorRGBA const color(bottle_params[bottle_obj.get_bottle_type()].liquid_color);
+
+				if (color.alpha > 0.0) { // not transparent (water)
+					float const radius(10.0*radius*rgen.rand_uniform(0.5, 1.0));
+					// stain should be near the open end of the bottle
+					point const center(bottle.xc(), bottle.yc(), zval+stain_height);
+					vector3d rot_dir(bottle_obj.get_dir());
+					rotate_vector3d(plus_z, bottle_obj.get_bottle_rot_angle(), rot_dir);
+					interior->room_geom->decal_manager.add_blood_or_stain((center - (0.5*height)*rot_dir), radius, color, 0); // is_blood=0
+				}
+			}
 		} // for n
 	}
 	if (rgen.rand_float() < 0.35) { // add trash (paper balls) on the floor to 35% of rooms
@@ -4101,9 +4116,8 @@ void building_t::add_stains_to_room(rand_gen_t rgen, room_t const &room, float z
 	unsigned const num_floor_stains(rgen.rand() % (max_stains+1));
 	unsigned const num_wall_stains((backrooms || parking_garage) ? 0 : (rgen.rand() % (2*max_stains+1))); // no backrooms or parking garage wall stains - no interior walls
 	if (num_floor_stains == 0 && num_wall_stains == 0) return;
-	float const window_vspacing(get_window_vspace()), flooring_thick(get_flooring_thick());
+	float const window_vspacing(get_window_vspace()), height(1.5*get_flooring_thick()), rmax(0.2*window_vspacing);
 	cube_t const place_area(get_walkable_room_bounds(room));
-	float const height(1.5*flooring_thick), rmax(0.2*window_vspacing);
 	if (rmax > 0.25*min(place_area.dx(), place_area.dy())) return; // room is too small
 
 	// stains on the floor

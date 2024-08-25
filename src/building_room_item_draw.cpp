@@ -850,7 +850,7 @@ void room_object_t::set_as_bottle(unsigned rand_id, unsigned max_type, bool no_e
 	// cycle with a prime number until a valid type is selected; it's up to the caller to not exclude everything and make this infinite loop
 	while (get_bottle_type() > max_type || ((1 << get_bottle_type()) & exclude_mask)) {obj_id += 13;}
 	if (no_empty) {obj_id &= 127;} // strip off second empty bit
-	color  = bottle_params[get_bottle_type()].color;
+	color  = bottle_params[get_bottle_type()].glass_color;
 }
 
 void building_room_geom_t::create_static_vbos(building_t const &building) {
