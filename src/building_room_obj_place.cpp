@@ -4141,7 +4141,8 @@ void building_t::add_stains_to_room(rand_gen_t rgen, room_t const &room, float z
 	if (num_floor_stains == 0 && num_wall_stains == 0) return;
 	float const window_vspacing(get_window_vspace()), height(1.5*get_flooring_thick()), rmax(0.2*window_vspacing);
 	cube_t const place_area(get_walkable_room_bounds(room));
-	if (rmax > 0.25*min(place_area.dx(), place_area.dy())) return; // room is too small
+	float const place_area_xymin(min(place_area.dx(), place_area.dy()));
+	if (rmax > 0.25*place_area_xymin) return; // room is too small
 
 	// stains on the floor
 	for (unsigned n = 0; n < num_floor_stains; ++n) {
@@ -4149,7 +4150,20 @@ void building_t::add_stains_to_room(rand_gen_t rgen, room_t const &room, float z
 		point const pos(gen_xy_pos_in_area(place_area, radius, rgen, zval));
 		cube_t const c(get_cube_height_radius(pos, radius, height));
 		if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 0)) continue; // for now, just make one random attempt
-		interior->room_geom->decal_manager.add_blood_or_stain(point(pos.x, pos.y, zval+height), radius, get_stain_color(rgen), 0); // is_blood=0
+		interior->room_geom->decal_manager.add_blood_or_stain(point(pos.x, pos.y, zval+height), radius, get_stain_color(rgen), 0, 2, 1); // is_blood=0; +z
+	}
+	// black mold stains on the ceiling if wood or tile
+	if (!room.is_ext_basement() && !has_parking_garage && (!is_house || has_basement_pipes)) {
+		float const bot_zval(zval + get_floor_ceil_gap() - height), ceil_rmax(min(0.5f*window_vspacing, 0.4f*place_area_xymin)); // larger radius
+		unsigned const num_ceil_stains(rgen.rand() % (max_stains+1));
+
+		for (unsigned n = 0; n < num_ceil_stains; ++n) {
+			float const radius(ceil_rmax*rgen.rand_uniform(0.5, 1.0));
+			point const pos(gen_xy_pos_in_area(place_area, radius, rgen, bot_zval));
+			cube_t const c(get_cube_height_radius(pos, radius, height));
+			if (is_obj_placement_blocked(c, room, 0)) continue; // for now, just make one random attempt; okay if overlaps a ceiling light or other object
+			interior->room_geom->decal_manager.add_blood_or_stain(pos, radius, BLACK, 0, 2, 0); // is_blood=0; -z
+		}
 	}
 	// stains on the walls
 	if (num_wall_stains == 0) return;
