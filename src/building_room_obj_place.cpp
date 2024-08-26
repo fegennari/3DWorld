@@ -3195,10 +3195,10 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 					cube_t upper_floor(room);
 					set_cube_zvals(upper_floor, floor_z1, floor_z2);
 					upper_floor.d[dim][!dir] = upper_conn.d[dim][!dir] + (dir ? 1.0 : -1.0)*0.1*upper_conn.get_sz_dim(dim); // connect to upper end of escalator
-					colorRGBA const color(0.8, 1.0, 0.9, 0.5);
 					// Note: to avoid Z-fighting, only the edge in (dim, !dir) should be drawn
-					objs.emplace_back(upper_floor, TYPE_DBG_SHAPE, room_id, dim, dir, 0, 1.0, SHAPE_CUBE, color); // TESTING
-					// TODO
+					//objs.emplace_back(upper_floor, TYPE_DBG_SHAPE, room_id, dim, dir, 0, 1.0, SHAPE_CUBE, colorRGBA(0.8, 1.0, 0.9, 0.5)); // TESTING
+					interior->room_geom->glass_floors.push_back(upper_floor);
+					// TODO: railings and other items on this floor
 					break; // done
 				} // for dir
 			} // for step

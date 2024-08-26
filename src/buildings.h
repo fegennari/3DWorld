@@ -977,7 +977,8 @@ struct building_room_geom_t {
 	vect_insect_t insects;
 	// {large static, small static, dynamic, lights, alpha mask, transparent, door} materials
 	building_materials_t mats_static, mats_small, mats_text, mats_detail, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors, mats_exterior, mats_ext_detail;
-	vect_cube_t light_bcubes, shelf_rack_occluders, pgbr_walls[2]; // parking garage and backrooms walls, in each dim
+	vect_cube_t light_bcubes, shelf_rack_occluders, glass_floors;
+	vect_cube_t pgbr_walls[2]; // parking garage and backrooms walls, in each dim
 	vector<index_pair_t> pgbr_wall_ixs; // indexes into pgbr_walls
 	building_decal_manager_t decal_manager;
 	particle_manager_t particle_manager;
@@ -1190,6 +1191,7 @@ struct building_room_geom_t {
 		vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building);
 	void draw_animals(shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 		point const &camera_bs, bool shadow_only, bool reflection_pass, bool check_clip_cube) const;
+	void draw_glass_surfaces(shader_t &s, building_t const &building, vector3d const &xlate, point const &camera_bs);
 	unsigned allocate_dynamic_state();
 	room_obj_dstate_t &get_dstate(room_object_t const &obj);
 private:
@@ -2556,6 +2558,8 @@ bool player_take_damage(float damage_scale, bool scream=0, int poison_type=0, ui
 float get_bldg_player_height();
 cube_t get_stairs_bcube_expanded(stairwell_t const &s, float ends_clearance, float sides_clearance, float doorway_width);
 float get_door_open_dist();
+unsigned get_face_mask(unsigned dim, bool dir);
+unsigned get_skip_mask_for_xy(bool dim);
 // functions in building_room_obj_expand.cc
 point gen_xy_pos_in_area(cube_t const &S, vector3d const &sz, rand_gen_t &rgen, float zval=0.0);
 point gen_xy_pos_in_area(cube_t const &S, float radius, rand_gen_t &rgen, float zval=0.0);

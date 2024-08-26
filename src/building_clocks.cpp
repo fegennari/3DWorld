@@ -10,7 +10,6 @@
 
 extern int frame_counter;
 
-unsigned get_face_mask(unsigned dim, bool dir);
 colorRGBA apply_light_color(room_object_t const &o);
 
 

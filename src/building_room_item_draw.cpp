@@ -2015,6 +2015,34 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		disable_blend();
 		indexed_vao_manager_with_shadow_t::post_render();
 	}
+	// TODO: move after building exterior walls are drawn
+	if (player_in_building && !shadow_only && !reflection_pass) {draw_glass_surfaces(s, building, xlate, camera_bs);}
+}
+
+void building_room_geom_t::draw_glass_surfaces(shader_t &s, building_t const &building, vector3d const &xlate, point const &camera_bs) {
+	// currently there are only glass floors, but this could be used for drawing showers and fishtanks as well
+	if (glass_floors.empty()) return;
+	float const wall_thickness(building.get_wall_thickness());
+	colorRGBA const glass_color(0.8, 1.0, 0.9, 0.25);
+	// TODO: reflection on top surface
+	// TODO: cache this across frames
+	static rgeom_mat_t mat; // allocated memory is reused across frames; VBO is recreated every time; untextured
+
+	for (cube_t const &c : glass_floors) {
+		// skip faces along building exterior walls; assumes glass floor is in a retail room that spans the entire building bcube
+		unsigned skip_faces(0);
+
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				if (fabs(c.d[dim][dir] - building.bcube.d[dim][dir]) < wall_thickness) {skip_faces |= ~get_face_mask(dim, dir);}
+			}
+		}
+		mat.add_cube_to_verts_untextured(c, glass_color, skip_faces);
+	} // for c
+	tid_nm_pair_dstate_t state(s);
+	enable_blend();
+	mat.upload_draw_and_clear(state);
+	disable_blend();
 }
 
 void draw_billboards(quad_batch_draw &qbd, int tid, bool no_depth_write=1, bool do_blend=1) {
