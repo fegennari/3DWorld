@@ -575,7 +575,7 @@ void building_room_geom_t::add_attic_door(room_object_t const &c, float tscale) 
 	set_wall_width(cord, (c.get_center_dim( c.dim) + (c.dir ? -1.0 : 1.0)*cord_len_pos*c.get_sz_dim(c.dim)), cord_radius, c.dim);
 	rgeom_mat_t &cord_mat(get_untextured_material(0, 0, 1)); // unshadowed, small
 	cord_mat.add_vcylin_to_verts(cord, WHITE, 0, 0); // draw sides only
-	cord_mat.add_sphere_to_verts(point(cord.xc(), cord.yc(), cord.z1()), ball_radius, WHITE, 1); // low_detail=1
+	cord_mat.add_sphere_to_verts(cube_bot_center(cord), ball_radius, WHITE, 1); // low_detail=1
 }
 
 bool building_t::is_attic_roof(tquad_with_ix_t const &tq, bool type_roof_only) const {

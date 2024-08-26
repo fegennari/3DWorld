@@ -1554,7 +1554,7 @@ void city_obj_placer_t::place_objects_in_isec(road_isec_t &isec, bool is_residen
 		// place some traffic cones
 		float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
 		float const cone_radius(0.075*car_length), isec_radius(0.25*(isec.dx() + isec.dy())), place_radius(2.0*isec_radius);
-		point center(isec.xc(), isec.yc(), isec.z2());
+		point center(cube_top_center(isec));
 		// set center of curvature
 		center.x += ((isec.conn & 1) ? -1.0 : 1.0)*isec_radius;
 		center.y += ((isec.conn & 4) ? -1.0 : 1.0)*isec_radius;

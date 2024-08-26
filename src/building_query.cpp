@@ -497,7 +497,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 						leg.d[1][!yd] = inner.d[1][yd];
 						had_coll |= sphere_cube_int_update_pos(pos2, radius, (leg + xlate), p_last2, xy_only, cnorm_ptr);
 					}
-					cylinder_3dw const cylin(point(i.xc(), i.yc(), i.z1())+xlate, point(i.xc(), i.yc(), i.z2())+xlate, 0.1*hwidth, 0.1*hwidth);
+					cylinder_3dw const cylin(cube_bot_center(i)+xlate, cube_top_center(i)+xlate, 0.1*hwidth, 0.1*hwidth);
 					had_coll |= sphere_vert_cylin_intersect(pos2, radius, cylin, cnorm_ptr);
 				}
 				else {had_coll |= sphere_cube_int_update_pos(pos2, radius, (i + xlate), p_last2, xy_only, cnorm_ptr);} // treat as cubes

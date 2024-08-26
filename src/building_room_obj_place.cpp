@@ -1062,7 +1062,7 @@ bool building_t::replace_light_with_ceiling_fan(rand_gen_t &rgen, cube_t const &
 	float const floor_spacing(get_window_vspace());
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_CEIL_FAN)); // D, W, H
 	float const diameter(min(0.4*min(room.dx(), room.dy()), 0.5*floor_spacing)), height(diameter*sz.z/sz.y); // assumes width = depth = diameter
-	point const top_center(light.xc(), light.yc(), light.z2()); // center on the light, with z2 on the ceiling
+	point const top_center(cube_top_center(light)); // center on the light, with z2 on the ceiling
 	cube_t fan(top_center, top_center);
 	fan.expand_by_xy(0.5*diameter);
 	fan.z1() -= height;
@@ -3023,7 +3023,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 			gen_xy_pos_for_round_obj(pfloat, pool_area, pf_radius, pf_height, pf_radius, rgen, 1); // place_at_z1=1
 			
 			if (!pool_has_water) { // resting on the bottom of the pool if there's no water
-				point const center(pfloat.xc(), pfloat.yc(), pfloat.z1());
+				point const center(cube_bot_center(pfloat));
 				float float_zval(center.z);
 				if (get_zval_for_pool_bottom(center, float_zval)) {pfloat.translate_dim(2, (float_zval - center.z));}
 			}
@@ -3195,8 +3195,6 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 					cube_t upper_floor(room);
 					set_cube_zvals(upper_floor, floor_z1, floor_z2);
 					upper_floor.d[dim][!dir] = upper_conn.d[dim][!dir] + (dir ? 1.0 : -1.0)*0.1*upper_conn.get_sz_dim(dim); // connect to upper end of escalator
-					// Note: to avoid Z-fighting, only the edge in (dim, !dir) should be drawn
-					//objs.emplace_back(upper_floor, TYPE_DBG_SHAPE, room_id, dim, dir, 0, 1.0, SHAPE_CUBE, colorRGBA(0.8, 1.0, 0.9, 0.5)); // TESTING
 					interior->room_geom->glass_floors.push_back(upper_floor);
 					// TODO: railings and other items on this floor
 					break; // done

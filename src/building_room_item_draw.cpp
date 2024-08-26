@@ -1366,7 +1366,7 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 		tmp_rgeom.mats_small.upload_draw_and_clear(s);
 		
 		if (c.is_lit()) { // add flame; will be drawn after building interior geom
-			player_candle_pos.assign(obj.xc(), obj.yc(), obj.z2());
+			player_candle_pos = cube_top_center(obj);
 			float const radius(0.8*c.get_radius()), height(4.0*radius);
 			point const camera_bs(get_camera_pos() - xlate);
 			point center(player_candle_pos + 0.2*height*plus_z);
@@ -2023,7 +2023,7 @@ void building_room_geom_t::draw_glass_surfaces(shader_t &s, building_t const &bu
 	// currently there are only glass floors, but this could be used for drawing showers and fishtanks as well
 	if (glass_floors.empty()) return;
 	float const wall_thickness(building.get_wall_thickness());
-	colorRGBA const glass_color(0.8, 1.0, 0.9, 0.25);
+	colorRGBA const glass_color(0.8, 1.0, 0.9, 0.3);
 	// TODO: reflection on top surface
 	// TODO: cache this across frames
 	static rgeom_mat_t mat; // allocated memory is reused across frames; VBO is recreated every time; untextured
