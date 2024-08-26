@@ -197,28 +197,34 @@ float get_water_snow_coverage() {
 	return clamp((1.0 - 5.0*delta/half_dxy), 0.0, 1.0);
 }
 
-float get_puddle_val(in float wetness) {
-	float wet_val  = 0.0;
-	float freq     = 1.0;
-	vec3 noise_pos = puddle_scale*vec3(vpos.x, vpos.y, vpos.z*water_damage_zscale);
-
-	for (int i = 0; i < 4; ++i) {
-		wet_val += texture(wet_noise_tex, freq*noise_pos).r/freq;
-		freq    *= 2.0;
-	}
-	return sqrt(min(1.0, 8.0*wetness))*min(1.0, pow((wetness + max(wet_val, 0.6) - 0.6), 8.0));
-}
-
-float get_crack_factor() {
+float noise_lookup_4_octaves(in vec3 pos) {
 	float val  = 0.0;
 	float freq = 1.0;
 
 	for (int i = 0; i < 4; ++i) {
-		val  += texture(wet_noise_tex, crack_scale*freq*vpos).r/freq;
+		val  += texture(wet_noise_tex, freq*pos).r/freq;
 		freq *= 2.0;
 	}
-	return min(1.0, crack_sharp*crack_scale*abs(val - 1.0));
-	//return ((abs(val - 1.0) < 0.02) ? 0.0 : 1.0);
+	return val;
+}
+
+float get_puddle_val(in float wetness) {
+	float wet_val = noise_lookup_4_octaves(puddle_scale*vec3(vpos.x, vpos.y, vpos.z*water_damage_zscale));
+	return sqrt(min(1.0, 8.0*wetness))*min(1.0, pow((wetness + max(wet_val, 0.6) - 0.6), 8.0));
+}
+
+float get_crack_factor(in float weight) {
+	float val = noise_lookup_4_octaves(crack_scale*(vpos + vec3(1.234))); // offset so that it's not aligned to puddles
+	val = min(1.0, crack_sharp*crack_scale*abs(val - 1.0));
+	//val = ((abs(val - 1.0) < 0.02) ? 0.0 : 1.0);
+	float weight0 = 0.5;
+
+	if (weight0 < 1.0) { // handle weight less than 1.0 with sparse cracks
+		float strength = noise_lookup_4_octaves(1.237*crack_scale*(vpos + vec3(4.321)));
+		float sub_val  = 1.875*(0.5*weight0 + 0.25); // 1.875 = sum of 4 weight octaves
+		val = mix(val, 1.0, clamp(20.0*(strength - sub_val), 0.0, 1.0)); // sharp cutoff
+	}
+	return val;
 }
 
 // returns {fresnel_term, reflect_weight}
@@ -336,7 +342,7 @@ void main()
 #ifdef ADD_CRACKS
 	// not on ceilings since they may be wood; what about floors/carpets?
 	if (crack_weight > 0.0 && vpos.z < crack_zmax && normal.z > -0.5) {
-		float color_scale = mix(1.0, get_crack_factor(), crack_weight);
+		float color_scale = get_crack_factor(crack_weight);
 		texel.rgb *= color_scale;
 		wetness   *= color_scale;
 	}
