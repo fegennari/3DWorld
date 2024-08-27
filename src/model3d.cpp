@@ -52,6 +52,7 @@ bool no_sparse_smap_update();
 bool enable_reflection_dynamic_updates();
 string texture_str(int tid);
 bool use_model3d_bump_maps() {return enable_bump_map();} // global function export
+void draw_player_building_transparent(int reflection_pass, vector3d const &xlate);
 
 
 // ************ texture_manager ************
@@ -2887,7 +2888,11 @@ void free_model_context() {all_models.free_context();}
 void render_models(int shadow_pass, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // shadow_only: 0=non-shadow pass, 1=sun/moon shadow, 2=dynamic shadow
 	all_models.render((shadow_pass != 0), reflection_pass, trans_op_mask, xlate);
 	if (trans_op_mask & 1) {draw_buildings(shadow_pass, 0, xlate);} // opaque pass (first); Note: not passing reflection_pass (which is for water plane, not mirrors)
-	if ((trans_op_mask & 2) && !shadow_pass) {draw_building_lights(xlate);} // transparent pass (second); not drawn in the shadow pass
+	
+	if ((trans_op_mask & 2) && !shadow_pass) {
+		draw_building_lights(xlate); // transparent pass (second); not drawn in the shadow pass
+		draw_player_building_transparent(reflection_pass, xlate);
+	}
 	if (world_mode == WMODE_INF_TERRAIN) {draw_cities(shadow_pass, reflection_pass, trans_op_mask, xlate);}
 }
 void ensure_model_reflection_cube_maps() {all_models.ensure_reflection_cube_maps();}

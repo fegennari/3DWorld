@@ -2015,14 +2015,14 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		disable_blend();
 		indexed_vao_manager_with_shadow_t::post_render();
 	}
-	// TODO: move after building exterior walls are drawn
-	if (player_in_building && !shadow_only && !reflection_pass) {draw_glass_surfaces(s, building, xlate, camera_bs);}
 }
 
-void building_room_geom_t::draw_glass_surfaces(shader_t &s, building_t const &building, vector3d const &xlate, point const &camera_bs) {
+void building_t::draw_glass_surfaces(shader_t &s, vector3d const &xlate) const { // Note: xlate is unused; camera_bs = get_camera_pos()-xlate
 	// currently there are only glass floors, but this could be used for drawing showers and fishtanks as well
+	assert(has_room_geom());
+	vect_cube_t const &glass_floors(interior->room_geom->glass_floors);
 	if (glass_floors.empty()) return;
-	float const wall_thickness(building.get_wall_thickness());
+	float const wall_thickness(get_wall_thickness());
 	colorRGBA const glass_color(0.8, 1.0, 0.9, 0.3);
 	// TODO: reflection on top surface
 	// TODO: cache this across frames
@@ -2034,7 +2034,7 @@ void building_room_geom_t::draw_glass_surfaces(shader_t &s, building_t const &bu
 
 		for (unsigned dim = 0; dim < 2; ++dim) {
 			for (unsigned dir = 0; dir < 2; ++dir) {
-				if (fabs(c.d[dim][dir] - building.bcube.d[dim][dir]) < wall_thickness) {skip_faces |= ~get_face_mask(dim, dir);}
+				if (fabs(c.d[dim][dir] - bcube.d[dim][dir]) < wall_thickness) {skip_faces |= ~get_face_mask(dim, dir);}
 			}
 		}
 		mat.add_cube_to_verts_untextured(c, glass_color, skip_faces);

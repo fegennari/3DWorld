@@ -1913,6 +1913,8 @@ struct building_t : public building_geom_t {
 		unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building);
 	void gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 		unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building, bool ext_basement_conn_visible);
+	bool has_glass_surfaces() const {return (has_room_geom() && !interior->room_geom->glass_floors.empty());}
+	void draw_glass_surfaces(shader_t &s, vector3d const &xlate) const;
 	bool has_cars_to_draw(bool player_in_building) const;
 	void draw_cars_in_building(shader_t &s, vector3d const &xlate, bool player_in_building, bool shadow_only) const;
 	bool check_for_water_splash(point const &pos_bs, float size=1.0, bool full_room_height=0, bool draw_splash=0, bool alert_zombies=1) const;

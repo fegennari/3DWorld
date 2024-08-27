@@ -3978,6 +3978,28 @@ public:
 		enable_dlight_bcubes = 0;
 	}
 
+	static void draw_player_building_transparent(int reflection_pass, vector3d const &xlate) {
+		// draw glass materials such as floors for the player's building
+		if (reflection_pass || !draw_building_interiors) return;
+		if (player_building == nullptr || !player_building->has_glass_surfaces()) return;
+		enable_dlight_bcubes = 1;
+		fgPushMatrix();
+		translate_to(xlate);
+		shader_t s;
+		setup_smoke_shaders(s, 0.0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0.0, 0, 0, 0);
+		// we don't have building light sources setup in this pass, and sun/moon light isn't correct indoors;
+		// so instead treat this glass as lit with ambient only, where the ambient color is a function of exterior light through windows and average interior room light
+		s.add_uniform_float("diffuse_scale",       0.0);
+		s.add_uniform_float("ambient_scale",       2.0);
+		s.add_uniform_float("hemi_lighting_scale", 0.0);
+		//player_building->get_retail_light_color()
+
+		player_building->draw_glass_surfaces(s, xlate);
+		reset_interior_lighting_and_end_shader(s);
+		fgPopMatrix();
+		enable_dlight_bcubes = 0;
+	}
+
 	void draw_building_lights(vector3d const &xlate) { // add night time lights to buildings; non-const because it modifies building_lights
 		if (empty() || !is_night(WIND_LIGHT_ON_RAND)) return;
 		//timer_t timer("Building Lights"); // 0.06ms
@@ -5031,6 +5053,8 @@ void draw_buildings(int shadow_only, int reflection_pass, vector3d const &xlate)
 	building_tiles.add_drawn(xlate, bcs);
 	building_creator_t::multi_draw(shadow_only, reflection_pass, xlate, bcs);
 }
+void draw_player_building_transparent(int reflection_pass, vector3d const &xlate) {building_creator_t::draw_player_building_transparent(reflection_pass, xlate);}
+
 void draw_building_lights(vector3d const &xlate) {
 	building_creator_city.draw_building_lights(xlate);
 	//building_creator.draw_building_lights(xlate); // only city buildings for now
