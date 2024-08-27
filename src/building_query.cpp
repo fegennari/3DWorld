@@ -853,9 +853,15 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // Note: includes attic and basement floors
 			if (!i->contains_pt_xy(pos)) continue; // sphere not in this floor
-			float const z1(i->z2());
-			if (z1 > floor_test_zval)    continue; // floor is above, skip
-			if (z1 > closest_floor_zval) {closest_floor_zval = z1; had_coll = 1;} // move up
+			float const z(i->z2());
+			if (z <= floor_test_zval && z > closest_floor_zval) {closest_floor_zval = z; had_coll = 1;} // move up
+		}
+		if (interior->room_geom) { // collision with room geometry
+			for (cube_t const &f : interior->room_geom->glass_floors) {
+				if (!f.contains_pt_xy(pos)) continue; // sphere not on this floor
+				float const z(f.z2());
+				if (z <= floor_test_zval && z > closest_floor_zval) {closest_floor_zval = z; had_coll = 1;} // move up
+			}
 		}
 		if (had_coll) {pos.z = closest_floor_zval + radius; obj_z = max(pos.z, p_last.z);}
 
