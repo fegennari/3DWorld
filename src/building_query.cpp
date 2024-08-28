@@ -1311,6 +1311,11 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 			had_coll = 1; hardness = 1.0;
 		}
 	}
+	if (room_geom) { // check glass floors
+		for (cube_t const &c : room_geom->glass_floors) {
+			if (sphere_cube_int_update_pos(pos, radius, c, p_last, 0, &cnorm)) {had_coll = 1; hardness = 1.0;} // skip_z=0
+		}
+	}
 	had_coll |= check_sphere_coll_room_objects(building, pos, p_last, radius, self, cnorm, hardness, obj_ix, is_ball);
 	return had_coll;
 }
