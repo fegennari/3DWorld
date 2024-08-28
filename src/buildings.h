@@ -83,6 +83,7 @@ colorRGBA const WOOD_COLOR(0.9, 0.7, 0.5); // light brown, multiplies wood textu
 colorRGBA const DUCT_COLOR(WHITE);
 colorRGBA const rat_color(GRAY); // make the rat's fur darker
 colorRGBA const candle_color(0.95, 0.9, 0.75, 1.0); // cream
+colorRGBA const GLASS_COLOR(0.8, 1.0, 0.9, 0.3);
 
 unsigned const NUM_LOCK_COLORS = 8;
 unsigned const MAX_LOCK_INDEX  = NUM_LOCK_COLORS + 2;
@@ -959,7 +960,7 @@ struct building_room_geom_t {
 	bool has_pictures=0, has_garage_car=0, modified_by_player=0, have_clock=0;
 	unsigned char num_pic_tids=0, invalidate_mats_mask=0;
 	float obj_scale=1.0;
-	unsigned wall_ps_start=0, buttons_start=0, stairs_start=0, backrooms_start=0; // index of first object of {TYPE_PG_*|TYPE_PSPACE, TYPE_BUTTON, TYPE_STAIR}
+	unsigned wall_ps_start=0, buttons_start=0, stairs_start=0, backrooms_start=0, retail_start=0; // index of first object of {TYPE_PG_*|TYPE_PSPACE, TYPE_BUTTON, TYPE_STAIR, retail}
 	unsigned init_num_doors=0, init_num_dstacks=0; // required for removing doors added by backrooms generation when room_geom is deleted
 	unsigned pool_ramp_obj_ix=0, pool_stairs_start_ix=0, last_animal_update_frame=0;
 	point tex_origin;
@@ -1879,6 +1880,7 @@ struct building_t : public building_geom_t {
 	void write_basement_entrance_depth_pass(shader_t &s) const;
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, bool sec_camera_mode,
 		occlusion_checker_noncity_t &oc, vect_cube_with_ix_t &ped_bcubes, cube_t &lights_bcube);
+	colorRGBA get_retail_light_color() const;
 	void run_light_motion_detect_logic(point const &camera_bs);
 	bool toggle_room_light(point const &closest_to, bool sound_from_closest_to=0, int room_id=-1, bool inc_lamps=1, bool closet_light=0, bool known_in_attic=0);
 	bool toggle_walkway_lights(point const &pos);

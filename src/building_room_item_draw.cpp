@@ -20,6 +20,7 @@ extern int display_mode, frame_counter, animate2, player_in_basement;
 extern unsigned room_mirror_ref_tid;
 extern float fticks, office_chair_rot_rate, building_ambient_scale;
 extern point actual_player_pos, player_candle_pos;
+extern colorRGB cur_diffuse;
 extern cube_t smap_light_clip_cube;
 extern pos_dir_up camera_pdu;
 extern building_t const *player_building;
@@ -40,6 +41,7 @@ bool check_clock_time();
 bool have_fish_model();
 void register_fishtank(room_object_t const &obj, bool is_visible);
 void end_fish_draw(shader_t &s, bool inc_pools_and_fb);
+void calc_cur_ambient_diffuse();
 
 bool has_key_3d_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 
@@ -2023,7 +2025,14 @@ void building_t::draw_glass_surfaces(shader_t &s, vector3d const &xlate) const {
 	vect_cube_t const &glass_floors(interior->room_geom->glass_floors);
 	if (glass_floors.empty()) return;
 	float const wall_thickness(get_wall_thickness());
-	colorRGBA const glass_color(0.8, 1.0, 0.9, 0.3);
+	// we don't have building light sources setup in this pass, and sun/moon light isn't correct indoors;
+	// so instead treat this glass as lit with ambient only, where the emissive color is a function of exterior light through windows and average interior room light
+	s.add_uniform_float("diffuse_scale",       0.0);
+	s.add_uniform_float("ambient_scale",       0.5);
+	s.add_uniform_float("hemi_lighting_scale", 0.0);
+	calc_cur_ambient_diffuse();
+	colorRGBA const indoor_light_color(player_building->get_retail_light_color());
+	s.set_color_e((indoor_light_color*0.5 + colorRGBA(cur_diffuse)*0.2).modulate_with(GLASS_COLOR));
 	// TODO: reflection on top surface
 	// TODO: cache this across frames
 	static rgeom_mat_t mat; // allocated memory is reused across frames; VBO is recreated every time; untextured
@@ -2037,12 +2046,13 @@ void building_t::draw_glass_surfaces(shader_t &s, vector3d const &xlate) const {
 				if (fabs(c.d[dim][dir] - bcube.d[dim][dir]) < wall_thickness) {skip_faces |= ~get_face_mask(dim, dir);}
 			}
 		}
-		mat.add_cube_to_verts_untextured(c, glass_color, skip_faces);
+		mat.add_cube_to_verts_untextured(c, GLASS_COLOR, skip_faces);
 	} // for c
 	tid_nm_pair_dstate_t state(s);
 	enable_blend();
 	mat.upload_draw_and_clear(state);
 	disable_blend();
+	s.clear_color_e();
 }
 
 void draw_billboards(quad_batch_draw &qbd, int tid, bool no_depth_write=1, bool do_blend=1) {

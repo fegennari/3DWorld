@@ -3987,13 +3987,6 @@ public:
 		translate_to(xlate);
 		shader_t s;
 		setup_smoke_shaders(s, 0.0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0.0, 0, 0, 0);
-		// we don't have building light sources setup in this pass, and sun/moon light isn't correct indoors;
-		// so instead treat this glass as lit with ambient only, where the ambient color is a function of exterior light through windows and average interior room light
-		s.add_uniform_float("diffuse_scale",       0.0);
-		s.add_uniform_float("ambient_scale",       2.0);
-		s.add_uniform_float("hemi_lighting_scale", 0.0);
-		//player_building->get_retail_light_color()
-
 		player_building->draw_glass_surfaces(s, xlate);
 		reset_interior_lighting_and_end_shader(s);
 		fgPopMatrix();

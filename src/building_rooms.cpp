@@ -437,6 +437,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			rand_gen_t rgen_lights(rgen); // copy state so that we don't modify rgen
 			unsigned const objs_start_inc_lights(objs.size());
 			bool const walls_not_shared(is_backrooms); // multi-floor backrooms have different walls and can't share the light stack
+			if (is_retail_room) {interior->room_geom->retail_start = objs_start_inc_lights;}
 
 			for (cube_t const &l : valid_lights) {
 				bool dim(l.dx() < l.dy()), dir(0); // dir is only used for wall lights

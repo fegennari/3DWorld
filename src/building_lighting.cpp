@@ -275,6 +275,8 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 		tid_nm_pair_t tex;
 		cc.emplace_back(i, get_ceil_tex_and_color(i, tex).modulate_with(tex.get_avg_color()));
 	}
+	// should glass floors be included? maybe not, since we want refractions rather than reflections; plus they're mostly transparent and near white
+	//for (cube_t const &i : interior->room_geom->glass_floors) {if (i.intersects(ext_bcube)) {cc.emplace_back(i, GLASS_COLOR);}}
 	add_colored_cubes(details, detail_color.modulate_with(mat.roof_tex.get_avg_color()), ext_bcube, cc); // should this be included?
 	if (!has_room_geom()) return; // nothing else to add
 	vect_room_object_t const &objs(interior->room_geom->objs);
@@ -2156,6 +2158,19 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		interior->room_geom->particle_manager.add_lights(xlate, *this, oc, lights_bcube);
 		interior->room_geom->fire_manager    .add_lights(xlate, *this, oc, lights_bcube);
 	}
+}
+
+colorRGBA building_t::get_retail_light_color() const {
+	assert(has_room_geom());
+	vect_room_object_t const &objs(interior->room_geom->objs);
+	assert(interior->room_geom->retail_start < objs.size());
+	
+	// find the first light placed in the retail area, starting with the first retail room object (which should be a light)
+	for (auto i = objs.begin()+interior->room_geom->retail_start; i != objs.end(); ++i) {
+		if (i->type == TYPE_LIGHT) {return (i->is_light_on() ? i->color : BLACK);}
+	}
+	assert(0);
+	return BLACK; // not found?
 }
 
 bool check_bcube_visible_for_building(cube_t const &bcube, vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t &oc, cube_t &lights_bcube) {

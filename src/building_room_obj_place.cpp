@@ -3261,7 +3261,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 			set_wall_width(light, s.get_center_dim(!s.dim), radius, !s.dim); // width
 			set_wall_width(light, (room.z2() - get_fc_thickness() - 0.25*floor_spacing), radius, 2); // height
 			colorRGBA const light_color(get_light_color_temp(0.6)); // slightly blue-ish white
-			objs.emplace_back(light, TYPE_LIGHT, room_id, s.dim, s.dir, (RO_FLAG_NOCOLL | RO_FLAG_LIT | RO_FLAG_ADJ_HI), 0.0, SHAPE_CYLIN, light_color);
+			objs.emplace_back(light, TYPE_LIGHT, room_id, s.dim, s.dir, (RO_FLAG_NOCOLL | RO_FLAG_LIT | RO_FLAG_ADJ_HI | RO_FLAG_RSTAIRS), 0.0, SHAPE_CYLIN, light_color);
 			objs.back().obj_id = light_ix_assign.get_next_ix();
 			break;
 		} // for s
