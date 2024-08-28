@@ -3144,7 +3144,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 			}
 		} // for r
 	} // for n
-	if (0 && has_tall_retail()) { // maybe add a pair of escalators
+	if (has_tall_retail()) { // maybe add a pair of escalators
 		float const floor_thickness(get_floor_thickness()), e_height(room.dz() - floor_thickness), delta_z(e_height - get_floor_ceil_gap());
 		float const e_length(1.0*delta_z + 2.0*door_width); // upward at 45 degree angle + entrance/exit
 		float const e_width(0.8*door_width), pair_width(2.1*e_width), end_pad(1.2*door_width), door_extra_pad(0.5*door_width);
