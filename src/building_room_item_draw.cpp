@@ -778,6 +778,7 @@ void building_room_geom_t::clear_materials() { // clears all materials
 	mats_ext_detail.clear();
 	obj_model_insts.clear(); // these are associated with static VBOs
 	door_handles   .clear();
+	mats_glass.clear();
 }
 // Note: used for room lighting changes; detail object changes are not supported
 void building_room_geom_t::check_invalid_draw_data() {
@@ -2033,24 +2034,27 @@ void building_t::draw_glass_surfaces(shader_t &s, vector3d const &xlate) const {
 	calc_cur_ambient_diffuse();
 	colorRGBA const indoor_light_color(player_building->get_retail_light_color());
 	s.set_color_e((indoor_light_color*0.5 + colorRGBA(cur_diffuse)*0.2).modulate_with(GLASS_COLOR));
+	rgeom_mat_t &mat(interior->room_geom->mats_glass);
 	// TODO: reflection on top surface
-	// TODO: cache this across frames
-	static rgeom_mat_t mat; // allocated memory is reused across frames; VBO is recreated every time; untextured
 
-	for (cube_t const &c : glass_floors) {
-		// skip faces along building exterior walls; assumes glass floor is in a retail room that spans the entire building bcube
-		unsigned skip_faces(0);
+	if (mat.empty()) { // create geometry
+		for (cube_t const &c : glass_floors) {
+			// skip faces along building exterior walls; assumes glass floor is in a retail room that spans the entire building bcube
+			unsigned skip_faces(0);
 
-		for (unsigned dim = 0; dim < 2; ++dim) {
-			for (unsigned dir = 0; dir < 2; ++dir) {
-				if (fabs(c.d[dim][dir] - bcube.d[dim][dir]) < wall_thickness) {skip_faces |= ~get_face_mask(dim, dir);}
+			for (unsigned dim = 0; dim < 2; ++dim) {
+				for (unsigned dir = 0; dir < 2; ++dir) {
+					if (fabs(c.d[dim][dir] - bcube.d[dim][dir]) < wall_thickness) {skip_faces |= ~get_face_mask(dim, dir);}
+				}
 			}
-		}
-		mat.add_cube_to_verts_untextured(c, GLASS_COLOR, skip_faces);
-	} // for c
+			mat.add_cube_to_verts_untextured(c, GLASS_COLOR, skip_faces);
+		} // for c
+		mat.create_vbo_inner();
+	}
 	tid_nm_pair_dstate_t state(s);
 	enable_blend();
-	mat.upload_draw_and_clear(state);
+	mat.draw(state, nullptr, 0, 0, 0); // no brg_batch_draw_t, shadow=reflection=exterior=0
+	indexed_vao_manager_with_shadow_t::post_render();
 	disable_blend();
 	s.clear_color_e();
 }
