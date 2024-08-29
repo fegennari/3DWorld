@@ -266,7 +266,7 @@ bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, p
 				register_fly_attract(new_achievement); // don't print a message if the achievement message was printed
 				dead = 1;
 
-				if (i->type == TYPE_MWAVE && i->is_open() && !(i->flags & RO_FLAG_NONEMPTY)) { // open and empty, microwave, put the rat inside
+				if (i->type == TYPE_MWAVE && i->is_open() && !i->is_nonempty()) { // open and empty, microwave, put the rat inside
 					// see building_room_geom_t::add_mwave()
 					bool const open_dir(i->dim ^ i->dir ^ 1);
 					cube_t const panel(get_mwave_panel_bcube(*i));

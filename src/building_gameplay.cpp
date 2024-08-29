@@ -1399,14 +1399,14 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 				if (has_hanger) continue;
 			}
 			if (i->type == TYPE_HANGER  && i->is_hanging() && (i+1) != objs_end && (i+1)->type == TYPE_CLOTHES) continue; // hanger with clothes - must take clothes first
-			if (i->type == TYPE_MIRROR  && !i->is_house())                continue; // can only pick up mirrors from houses, not office buildings
-			if (i->type == TYPE_TABLE   && i->shape == SHAPE_CUBE)        continue; // can only pick up short (TV) tables and cylindrical tables
-			if (i->type == TYPE_BED     && i->taken_level > 2)            continue; // can only take pillow, sheets, and mattress - not the frame
-			if (i->type == TYPE_SHELVES   && i->obj_expanded())           continue; // shelves are   already expanded, can no longer select this object
-			if (i->type == TYPE_MIRROR  && i->is_open())                  continue; // can't take mirror/medicine cabinet until it's closed
-			if (i->type == TYPE_LIGHT   && !i->is_visible())              continue; // can't take light attached to a ceiling fan as a separate object
-			if (i->type == TYPE_MWAVE   && (i->flags & RO_FLAG_NONEMPTY)) continue; // can't take a microwave with something inside it
-			if (i->type == TYPE_PADLOCK && i->is_active())                continue; // padlock in locked onto a door, can't take
+			if (i->type == TYPE_MIRROR  && !i->is_house())         continue; // can only pick up mirrors from houses, not office buildings
+			if (i->type == TYPE_TABLE   && i->shape == SHAPE_CUBE) continue; // can only pick up short (TV) tables and cylindrical tables
+			if (i->type == TYPE_BED     && i->taken_level > 2)     continue; // can only take pillow, sheets, and mattress - not the frame
+			if (i->type == TYPE_SHELVES   && i->obj_expanded())    continue; // shelves are   already expanded, can no longer select this object
+			if (i->type == TYPE_MIRROR  && i->is_open())           continue; // can't take mirror/medicine cabinet until it's closed
+			if (i->type == TYPE_LIGHT   && !i->is_visible())       continue; // can't take light attached to a ceiling fan as a separate object
+			if (i->type == TYPE_MWAVE   && i->is_nonempty())       continue; // can't take a microwave with something inside it
+			if (i->type == TYPE_PADLOCK && i->is_active())         continue; // padlock in locked onto a door, can't take
 
 			if (i->type == TYPE_SHELFRACK && i->obj_expanded()) { // shelf rack is already expanded, can no longer select this object
 				// check the back of the shelf rack to make sure the player can't take an object through it

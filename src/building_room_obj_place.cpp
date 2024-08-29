@@ -2417,7 +2417,8 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 				if (has_bcube_int(cand, exclude)) continue; // too close to a doorway
 				if (!is_garage_or_shed && interior->is_blocked_by_stairs_or_elevator(cand)) continue;
 				if (overlaps_other_room_obj(cand, objs_start)) continue; // can be blocked by bookcase, etc.
-				unsigned const shelf_flags((is_house ? RO_FLAG_IS_HOUSE : 0) | (is_garage_or_shed ? 0 : RO_FLAG_INTERIOR));
+				bool const is_empty(rgen.rand_float() < 0.05); // 5% empty
+				unsigned const shelf_flags((is_house ? RO_FLAG_IS_HOUSE : 0) | (is_garage_or_shed ? 0 : RO_FLAG_INTERIOR) | (is_empty ? 0 : RO_FLAG_NONEMPTY));
 				objs.emplace_back(cand, TYPE_SHELVES, room_id, dim, dir, shelf_flags, tot_light_amt);
 				set_obj_id(objs);
 				break; // done
@@ -3119,7 +3120,8 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 				cube_t test_cube(cand);
 				test_cube.expand_by_xy(se_pad); // add extra padding
 				if (interior->is_blocked_by_stairs_or_elevator(test_cube)) {was_shortened = 1; continue;} // blocked
-				room_object_t srack(cand, TYPE_SHELFRACK, room_id, !dim, 0, 0, 1.0, SHAPE_CUBE, WHITE); // tot_light_amt=1.0
+				bool const is_empty(rgen.rand_float() < 0.05); // 5% empty
+				room_object_t srack(cand, TYPE_SHELFRACK, room_id, !dim, 0, (is_empty ? 0 : RO_FLAG_NONEMPTY), 1.0, SHAPE_CUBE, WHITE); // tot_light_amt=1.0
 				srack.obj_id     = obj_id; // common for all racks
 				srack.item_flags = rack_id++; // unique per rack
 				objs.push_back(srack);

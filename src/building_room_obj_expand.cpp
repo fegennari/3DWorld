@@ -508,6 +508,7 @@ void set_spraypaint_color(room_object_t &obj, rand_gen_t &rgen, unsigned *color_
 }
 
 void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vect_room_object_t &objects) {
+	if (!c_in.is_nonempty()) return; // empty - no objects
 	room_object_t c(c_in);
 	c.flags |= RO_FLAG_WAS_EXP;
 	bool const is_house(c.is_house());
@@ -781,13 +782,14 @@ void add_row_of_balls(room_object_t const &c, cube_t const &region, float spacin
 void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects, bool add_models_mode, cube_t *back_cube) {
 	cube_t back, top, sides[2], shelves[5];
 	unsigned const num_shelves(get_shelf_rack_cubes(c, back, top, sides, shelves));
+	if (back_cube != nullptr) {*back_cube = back;}
+	if (!c.is_nonempty()) return; // empty - no objects
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_WAS_EXP | RO_FLAG_ON_SRACK), unpowered_flags(flags | RO_FLAG_NO_POWER);
 	float const floor_spacing(c.dz()/SHELF_RACK_HEIGHT_FS);
 	float const top_shelf_z2(top.is_all_zeros() ? c.z2() : top.z1()); // bottom of the top, if present
 	bool const add_food_boxes(!global_building_params.food_box_tids.empty());
 	rand_gen_t rgen;
 	vect_cube_t cubes; // for placed object overlap tests
-	if (back_cube != nullptr) {*back_cube = back;}
 
 	for (unsigned dir = 0; dir < 2; ++dir) { // each shelf has two sides/aisles
 		unsigned const rack_id((c.item_flags << 1) + dir);

@@ -748,7 +748,12 @@ unsigned get_all_shelf_rack_cubes(room_object_t const &c, cube_t cubes[9]) { // 
 }
 unsigned check_shelf_rack_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	cube_t cubes[9];
-	return check_cubes_collision(cubes, get_all_shelf_rack_cubes(c, cubes), pos, p_last, radius, cnorm);
+	unsigned const num_cubes(get_all_shelf_rack_cubes(c, cubes));
+
+	if (c.is_nonempty()) { // if there are objects on the shelf rack, expand the back to 80% of the full shelf width
+		set_wall_width(cubes[0], c.get_center_dim(c.dim), 0.8*0.5*c.get_depth(), c.dim);
+	}
+	return check_cubes_collision(cubes, num_cubes, pos, p_last, radius, cnorm);
 }
 
 unsigned get_couch_cubes(room_object_t const &c, cube_t cubes[4]) { // bottom, back, arm, arm; excludes pillows and blanket
