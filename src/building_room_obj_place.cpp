@@ -3147,9 +3147,11 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 		} // for r
 	} // for n
 	if (has_tall_retail()) { // maybe add a pair of escalators
+		bool const add_glass_floor = 1;
 		float const floor_thickness(get_floor_thickness()), e_height(room.dz() - floor_thickness), delta_z(e_height - get_floor_ceil_gap());
 		float const e_length(1.0*delta_z + 2.0*door_width); // upward at 45 degree angle + entrance/exit
-		float const e_width(0.8*door_width), pair_width(2.1*e_width), end_pad(1.2*door_width), door_extra_pad(0.5*door_width);
+		float const e_width(0.8*door_width), pair_width(2.1*e_width), end_pad(1.2*door_width);
+		float const door_extra_pad(0.5*door_width + (add_glass_floor ? 2.0*floor_spacing : 0.0)); // add extra spaacing so that the glass floor at the top is wide enough
 		cube_t centered;
 		set_cube_zvals(centered, zval, (zval + e_height));
 		set_wall_width(centered, room.get_center_dim(!dim), 0.5*pair_width, !dim);
@@ -3193,6 +3195,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 					success = 1;
 
 					// add an upper floor connected to the escalator; it's too late to add to interior->floors, since the VBO has already been created
+					if (!add_glass_floor) break; // done
 					float const floor_z1(upper_conn.z1() - 0.5*floor_thickness), floor_z2(upper_conn.z1());
 					cube_t upper_floor(room);
 					set_cube_zvals(upper_floor, floor_z1, floor_z2);
