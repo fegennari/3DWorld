@@ -1185,8 +1185,11 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 			point const test_pt(new_center.x, new_center.y, (new_center.z - radius - 0.1*fc_thick));
 			on_floor = 0; // reset for this iteration
 
-			for (auto f = interior->floors.begin(); f != interior->floors.end(); ++f) {
-				if (f->contains_pt(test_pt)) {on_floor = 1; break;}
+			for (cube_t const &f : interior->floors) {
+				if (f.contains_pt(test_pt)) {on_floor = 1; break;}
+			}
+			for (cube_t const &f : interior->room_geom->glass_floors) {
+				if (f.contains_pt(test_pt)) {on_floor = 1; break;}
 			}
 			if (on_floor) { // moving on the floor, apply surface friction
 				velocity *= (1.0f - min(1.0f, bt.friction*OBJ_DECELERATE*step_sz));
