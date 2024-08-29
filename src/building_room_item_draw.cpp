@@ -2039,21 +2039,41 @@ void building_t::draw_glass_surfaces(shader_t &s, vector3d const &xlate) const {
 
 	if (mat.empty()) { // create geometry
 		for (cube_t const &c : glass_floors) {
-			// skip faces along building exterior walls; assumes glass floor is in a retail room that spans the entire building bcube
-			unsigned skip_faces(0);
+			vect_cube_t floor_parts;
+			floor_parts.push_back(c);
 
-			for (unsigned dim = 0; dim < 2; ++dim) {
-				for (unsigned dir = 0; dir < 2; ++dir) {
-					if (fabs(c.d[dim][dir] - bcube.d[dim][dir]) < wall_thickness) {skip_faces |= ~get_face_mask(dim, dir);}
-				}
+			for (elevator_t const &e : interior->elevators) { // clip out holes for elevators
+				if (e.intersects(c)) {subtract_cube_from_cubes(e, floor_parts);}
 			}
-			mat.add_cube_to_verts_untextured(c, GLASS_COLOR, skip_faces);
+			for (stairwell_t const &s : interior->stairwells) { // clip out holes for stairs
+				if (s.intersects(c)) {subtract_cube_from_cubes(s, floor_parts);}
+			}
+			bool const was_split(floor_parts.size() > 1);
+			interior->room_geom->glass_floor_split |= was_split;
+			colorRGBA color(GLASS_COLOR);
+			if (was_split) {color.A *= 2.0;} // if split, back face culling is enabled, bottom side is not drawn, so double the alpha value
+
+			for (cube_t const &f : floor_parts) {
+				// skip faces along building exterior walls; assumes glass floor is in a retail room that spans the entire building bcube;
+				// also skip interior faces that are not part of the original floor cube's edge
+				unsigned skip_faces(0);
+
+				for (unsigned dim = 0; dim < 2; ++dim) {
+					for (unsigned dir = 0; dir < 2; ++dir) {
+						if (f.d[dim][dir] != c.d[dim][dir] || fabs(f.d[dim][dir] - bcube.d[dim][dir]) < wall_thickness) {skip_faces |= ~get_face_mask(dim, dir);}
+					}
+				}
+				mat.add_cube_to_verts_untextured(f, color, skip_faces);
+			} // for f
 		} // for c
 		mat.create_vbo_inner();
 	}
 	tid_nm_pair_dstate_t state(s);
 	enable_blend();
+	// cull back faces if floor was split due to stairs or an elevator, since the bottom won't alpha blend properly
+	if (interior->room_geom->glass_floor_split) {glEnable(GL_CULL_FACE);}
 	mat.draw(state, nullptr, 0, 0, 0); // no brg_batch_draw_t, shadow=reflection=exterior=0
+	if (interior->room_geom->glass_floor_split) {glDisable(GL_CULL_FACE);}
 	indexed_vao_manager_with_shadow_t::post_render();
 	disable_blend();
 	s.clear_color_e();

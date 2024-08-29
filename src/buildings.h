@@ -83,7 +83,7 @@ colorRGBA const WOOD_COLOR(0.9, 0.7, 0.5); // light brown, multiplies wood textu
 colorRGBA const DUCT_COLOR(WHITE);
 colorRGBA const rat_color(GRAY); // make the rat's fur darker
 colorRGBA const candle_color(0.95, 0.9, 0.75, 1.0); // cream
-colorRGBA const GLASS_COLOR(0.8, 1.0, 0.9, 0.3);
+colorRGBA const GLASS_COLOR(0.8, 1.0, 0.9, 0.25);
 
 unsigned const NUM_LOCK_COLORS = 8;
 unsigned const MAX_LOCK_INDEX  = NUM_LOCK_COLORS + 2;
@@ -958,7 +958,7 @@ struct door_handle_t {
 
 struct building_room_geom_t {
 
-	bool has_pictures=0, has_garage_car=0, modified_by_player=0, have_clock=0;
+	bool has_pictures=0, has_garage_car=0, modified_by_player=0, have_clock=0, glass_floor_split=0;
 	unsigned char num_pic_tids=0, invalidate_mats_mask=0;
 	float obj_scale=1.0;
 	unsigned wall_ps_start=0, buttons_start=0, stairs_start=0, backrooms_start=0, retail_start=0; // index of first object of {TYPE_PG_*|TYPE_PSPACE, TYPE_BUTTON, TYPE_STAIR, retail}
@@ -1782,7 +1782,8 @@ struct building_t : public building_geom_t {
 	bool check_sphere_coll_inner(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm=nullptr, bool check_interior=0) const;
 	bool check_sphere_coll_interior(point &pos, point const &p_last, float radius, bool is_in_attic, bool xy_only, vector3d *cnorm) const;
 	bool check_cube_intersect_non_main_part(cube_t const &c) const;
-	bool point_in_elevator(point const &pos, bool check_elevator_car) const;
+	bool point_in_elevator(point const &pos, bool check_elevator_car=0) const;
+	bool point_in_stairwell(point const &pos) const;
 	bool check_pos_in_unlit_room(point const &pos) const;
 	bool check_pos_in_unlit_room_recur(point const &pos, std::set<unsigned> &rooms_visited, int known_room_id=-1) const;
 	bool is_room_windowless(room_t const &room) const;

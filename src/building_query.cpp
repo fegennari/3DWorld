@@ -864,6 +864,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 		if (interior->room_geom) { // collision with room geometry
 			for (cube_t const &f : interior->room_geom->glass_floors) {
 				if (!f.contains_pt_xy(pos)) continue; // sphere not on this floor
+				if (point_in_elevator(pos) || point_in_stairwell(pos)) continue; // elevators and stairwells cut out glass floors, so ignore them in this case
 				float const z(f.z2());
 				if (z <= floor_test_zval && z > closest_floor_zval) {closest_floor_zval = z; had_coll = 1;} // move up
 			}
@@ -1135,6 +1136,14 @@ bool building_t::point_in_elevator(point const &pos, bool check_elevator_car) co
 		if (!e.contains_pt(pos)) continue;
 		if (check_elevator_car && !interior->get_elevator_car(e).contains_pt(pos)) continue;
 		return 1;
+	}
+	return 0;
+}
+bool building_t::point_in_stairwell(point const &pos) const {
+	if (!interior) return 0;
+
+	for (stairwell_t const &s : interior->stairwells) {
+		if (s.contains_pt(pos)) return 1;
 	}
 	return 0;
 }
@@ -2744,9 +2753,7 @@ int building_t::check_player_in_basement(point const &pos) const {
 	if (point_in_extended_basement_not_basement(pos_rot)) return 3;
 	
 	if (interior && (pos_rot.z - get_bldg_player_height()) > (ground_floor_z1 - get_window_vspace())) { // only need to check if on the top floor of the basement
-		for (auto const &s : interior->stairwells) {
-			if (s.contains_pt(pos_rot)) return 1; // player on stairs, upper floor and windows/outside may be visible
-		}
+		if (point_in_stairwell(pos_rot)) return 1; // player on stairs, upper floor and windows/outside may be visible
 		if (has_pg_ramp() && interior->pg_ramp.contains_pt(pos_rot)) return 1;
 	}
 	return 2; // player in basement but not on stairs or ramp
