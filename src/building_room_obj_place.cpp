@@ -3201,7 +3201,21 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 					set_cube_zvals(upper_floor, floor_z1, floor_z2);
 					upper_floor.d[dim][!dir] = upper_conn.d[dim][!dir] + (dir ? 1.0 : -1.0)*0.1*upper_conn.get_sz_dim(dim); // connect to upper end of escalator
 					interior->room_geom->glass_floors.push_back(upper_floor);
-					// TODO: railings, support beams, and other items on this floor
+					// add upper floor railing to each side of the escalator
+					colorRGBA const railing_color(railing_colors[rgen.rand()%3]);
+					float const railing_thickness(0.5*wall_thickness), railing_z1(upper_floor.z2() + 0.25*railing_thickness);
+					cube_t railing(upper_floor);
+					set_cube_zvals(railing, railing_z1, railing_z1+fc_gap);
+					railing.d[dim][dir] = upper_floor.d[dim][!dir] + (dir ? 1.0 : -1.0)*railing_thickness;
+					railing.expand_in_dim(!dim, -get_trim_thickness()); // shrink slightly to prevent Z-fighting with building exterior
+					
+					for (unsigned d = 0; d < 2; ++d) {
+						cube_t r(railing);
+						r.d[!dim][!d] = upper_conn.d[!dim][d]; // flush with the escalator side
+						objs.emplace_back(r, TYPE_RAILING, room_id, !dim, d, (RO_FLAG_TOS | RO_FLAG_OPEN | RO_FLAG_ADJ_TOP), 1.0, SHAPE_CUBE, railing_color);
+					}
+					// TODO: add support beams
+					// TODO: add other items such as shelfracks on this floor
 					break; // done
 				} // for dir
 			} // for step

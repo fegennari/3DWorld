@@ -2499,7 +2499,7 @@ cube_t building_t::get_init_elevator_car(elevator_t const &elevator) const {
 }
 
 void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
-	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), half_thick(0.5*floor_thickness);
+	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), half_thick(0.5*floor_thickness), fc_gap(get_floor_ceil_gap());
 	float const wall_thickness(get_wall_thickness()), fc_thick_scale(get_elevator_fc_thick_scale()), stairs_sign_width(1.0*wall_thickness);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	ostringstream oss; // reused across elevators/floors
@@ -2623,7 +2623,6 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		i->button_id_end = objs.size();
 	} // for e
 	interior->room_geom->stairs_start = objs.size();
-	colorRGBA const railing_colors[3] = {GOLD, DK_BROWN, BLACK};
 	colorRGBA const railing_color(railing_colors[rgen.rand()%3]); // set per-building
 
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
@@ -2635,7 +2634,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		bool const has_wall_both_sides(i->against_wall[0] && i->against_wall[1]); // ext basement stairs
 		bool const side(dir); // for U-shaped stairs; for now this needs to be consistent for the entire stairwell, can't use rgen.rand_bool()
 		// Note: stairs always start at floor_thickness above the landing z1, ignoring landing z2/height
-		float const floor_z(i->z1() + floor_thickness - window_vspacing), step_len_pos(i->get_step_length());
+		float const floor_z(i->z1() - fc_gap), step_len_pos(i->get_step_length());
 		float const wall_hw(i->get_wall_hwidth(window_vspacing)), wall_end_bias(0.01*wall_hw); // bias just enough to avoid z-fighting with stairs;
 		float const stairs_zmin(i->in_ext_basement ? interior->basement_ext_bcube.z1() : bcube.z1());
 		float step_len((dir ? 1.0 : -1.0)*step_len_pos), z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
@@ -2719,7 +2718,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		float const railing_z2(i->z2() + (i->roof_access ? 0.025*i->dz() : 0.0)); // capture z2 before we change it; move roof access railing up a bit to offset the shrink resize
 		float const wall_bottom(floor_z - half_thick), railing_side_dz(0.5*stair_dz); // for U-shaped stairs
 		cube_t wall(*i);
-		if (extend_walls_up) {wall.z2() += window_vspacing - floor_thickness;}
+		if (extend_walls_up) {wall.z2() += fc_gap;}
 		else {wall.z2() -= 0.5*floor_thickness;} // prevent z-fighting on top floor
 		wall.z1() = max((stairs_zmin + half_thick), wall_bottom); // full height
 		set_wall_width(wall, i->d[dim][dir], wall_hw, dim);
@@ -2851,7 +2850,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			}
 			// add top railings
 			cube_t railing(*i);
-			set_cube_zvals(railing, i->z2(), (i->z2() + window_vspacing - floor_thickness)); // starts at the floor
+			set_cube_zvals(railing, i->z2(), (i->z2() + fc_gap)); // starts at the floor
 			if (!i->is_at_top) {railing.d[!dim][!dir2] = landing.d[!dim][dir2];} // inside edge of landing to make room for the flight above, if there is one
 			
 			// upper end next to landing and lower end; vertical poles are only needed for one end, except for the top floor
@@ -2870,7 +2869,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		else if (i->has_railing && !has_wall_both_sides && (i->stack_conn || (extend_walls_up && i->shape == SHAPE_STRAIGHT))) {
 			// add railings around the top if: straight + top floor with no roof access, connector stairs, or basement stairs
 			room_object_t railing(*i, TYPE_RAILING, 0, !dim, dir, (RO_FLAG_TOS | RO_FLAG_ADJ_BOT), 1.0, SHAPE_CUBE, railing_color); // flag to skip drawing ends
-			set_cube_zvals(railing, i->z2(), (i->z2() + window_vspacing - floor_thickness)); // starts at the floor
+			set_cube_zvals(railing, i->z2(), (i->z2() + fc_gap)); // starts at the floor
 			set_wall_width(railing, (i->d[dim][!dir] + (dir ? -1.0 : 1.0)*wall_hw), wall_hw, dim); // no overlap with stairs cutout
 
 			for (unsigned d = 0; d < 2; ++d) {

@@ -67,9 +67,10 @@ colorRGBA const sp_emissive_colors[NUM_SP_EMISSIVE_COLORS] = {colorRGBA(0.2, 1.0
 colorRGBA const lamp_colors[NUM_LAMP_COLORS]   = {WHITE, GRAY_BLACK, BROWN, LT_BROWN, DK_BROWN, OLIVE};
 colorRGBA const cream(0.9, 0.9, 0.8), vlt_yellow(1.0, 1.0, 0.5);
 colorRGBA const paper_colors[NUM_PAPER_COLORS] = {WHITE, WHITE, WHITE, cream, cream, vlt_yellow};
-colorRGBA const pen_colors   [4] = {WHITE, BLACK, colorRGBA(0.2, 0.4, 1.0), RED};
-colorRGBA const pencil_colors[2] = {colorRGBA(1.0, 0.75, 0.25), colorRGBA(1.0, 0.5, 0.1)};
-colorRGBA const marker_colors[8] = {BLACK, RED, BLACK, BLUE, BLACK, GREEN, RED, PURPLE};
+colorRGBA const pen_colors    [4] = {WHITE, BLACK, colorRGBA(0.2, 0.4, 1.0), RED};
+colorRGBA const pencil_colors [2] = {colorRGBA(1.0, 0.75, 0.25), colorRGBA(1.0, 0.5, 0.1)};
+colorRGBA const marker_colors [8] = {BLACK, RED, BLACK, BLUE, BLACK, GREEN, RED, PURPLE};
+colorRGBA const railing_colors[3] = {GOLD, DK_BROWN, BLACK};
 colorRGBA const tcan_colors   [NUM_TCAN_COLORS   ] = {BLUE, DK_GRAY, LT_GRAY, GRAY, BLUE, WHITE};
 colorRGBA const tape_colors   [NUM_TAPE_COLORS   ] = {GRAY, GRAY, GRAY, GRAY, BKGRAY, BKGRAY, colorRGBA(0.2, 0.2, 1.0)}; // gray duct tape is the most common
 colorRGBA const shirt_colors  [NUM_SHIRT_COLORS  ] = {WHITE, WHITE, WHITE, BKGRAY, BKGRAY, GRAY, GRAY, RED, BLUE, DK_BLUE, DK_GREEN, DK_BROWN, BROWN, ORANGE};
