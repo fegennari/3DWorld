@@ -894,6 +894,7 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 	surface_orienter.register_cubes(interior->floors);
 	surface_orienter.register_cubes(interior->ceilings, 1); // check_z_merge=1
 	surface_orienter.clip_and_max_expand_cubes(); // required to remove false splits between ceilings and floors
+	if (has_room_geom()) {surface_orienter.register_cubes(interior->room_geom->glass_floors);}
 	
 	if (!in_attic) {
 		for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d]);} // XY walls

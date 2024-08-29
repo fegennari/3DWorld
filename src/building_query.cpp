@@ -2466,6 +2466,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 		}
 	}
 	if (!has_room_geom()) return 0; // done (but really shouldn't get here)
+	if (line_int_cubes_exp(p1, p2, interior->room_geom->glass_floors, expand_walls, line_bcube)) return 9; // counts as a room object?
 	// check room objects and expanded objects (from closets)
 	float t(0.0);
 	vect_room_object_t::const_iterator b, e;
