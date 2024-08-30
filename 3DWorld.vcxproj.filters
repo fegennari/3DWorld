@@ -1534,7 +1534,7 @@
       <Filter>Shaders\vert</Filter>
     </None>
     <None Include="shaders\vorocracks.frag">
-      <Filter>Shaders\frag</Filter>
+      <Filter>Shaders\frag\Gallery</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
