@@ -2421,19 +2421,19 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		int const ret(choose_dest_room(person, rgen)); // 0=failed, 1=success, 2=failed but can retry
 
 		if (ret == 2 && interior->door_state_updated) { // wait rather than stopping in case the player trapped this person in a room by closing the door
-			person.wait_for(2.0); // stop for 2 seconds, then try again
+			person.wait_for(1.0); // stop for a second, then try again
 			return AI_WAITING;
 		}
 		else if (ret != 1) { // if there's no valid room or valid path, set the speed to 0 so that we don't check this every frame
 			if (!ai_follow_player()) { // if not following the player
 				//person.speed = 0.0; // movement will be stopped from now on - not valid if we get into this state before gameplay is enabled
-				person.wait_for(2.0); // stop for 2 seconds, then try again
+				person.wait_for(1.0); // stop for a second, then try again
 			}
 			return AI_STOP;
 		}
 		if (!find_route_to_point(person, coll_dist, person.is_first_path, 0, person.path)) { // following_player=0
-			float const wait_time(is_single_large_room(person.cur_room) ? 0.1 : 1.0);
-			person.wait_for(wait_time); // stop for 1 second (0.1s for parking garage/backrooms/retail), then try again
+			float const wait_time(is_single_large_room(person.cur_room) ? 0.1 : 0.5);
+			person.wait_for(wait_time); // stop for 0.5 second (0.1s for parking garage/backrooms/retail), then try again
 			person.goal_type = GOAL_TYPE_NONE; // reset just to be safe
 			return AI_WAITING;
 		}
