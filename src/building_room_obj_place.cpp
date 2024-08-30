@@ -3087,6 +3087,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	float const wall_thickness(get_wall_thickness()), pillar_width(2.0*wall_thickness), fc_gap(get_floor_ceil_gap());
 	assert(rack_length > 0.0);
 	vect_room_object_t &objs(interior->room_geom->objs);
+	vect_cube_t pillars;
 	cube_t rack, pillar;
 	set_cube_zvals(rack,   zval, (zval + rack_height));
 	set_cube_zvals(pillar, zval, (zval + fc_gap + (retail_floor_levels - 1)*floor_spacing)); // up to the ceiling
@@ -3142,6 +3143,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 					objs.back().z2() = pillar_top.z1() = zval + fc_gap; // prev was bottom, next is top
 					pillar_top.expand_by_xy(-0.1*wall_thickness); // slight shrink
 					objs.emplace_back(pillar_top, TYPE_PG_PILLAR, room_id, 0, 0);
+					pillars.push_back(pillar); // needed for upper glass floors
 				}
 			}
 		} // for r
@@ -3203,18 +3205,45 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 					interior->room_geom->glass_floors.push_back(upper_floor);
 					// add upper floor railing to each side of the escalator
 					colorRGBA const railing_color(railing_colors[rgen.rand()%3]);
+					unsigned const railing_flags(RO_FLAG_TOS | RO_FLAG_OPEN | RO_FLAG_ADJ_TOP);
 					float const railing_thickness(0.5*wall_thickness), railing_z1(upper_floor.z2() + 0.25*railing_thickness);
 					cube_t railing(upper_floor);
 					set_cube_zvals(railing, railing_z1, railing_z1+fc_gap);
 					railing.d[dim][dir] = upper_floor.d[dim][!dir] + (dir ? 1.0 : -1.0)*railing_thickness;
 					railing.expand_in_dim(!dim, -get_trim_thickness()); // shrink slightly to prevent Z-fighting with building exterior
+					vect_cube_t obj_parts;
 					
 					for (unsigned d = 0; d < 2; ++d) {
 						cube_t r(railing);
 						r.d[!dim][!d] = upper_conn.d[!dim][d]; // flush with the escalator side
-						objs.emplace_back(r, TYPE_RAILING, room_id, !dim, d, (RO_FLAG_TOS | RO_FLAG_OPEN | RO_FLAG_ADJ_TOP), 1.0, SHAPE_CUBE, railing_color);
+						subtract_stairs_and_elevators_from_cube(r, obj_parts);
+						for (cube_t const &c : obj_parts) {objs.emplace_back(c, TYPE_RAILING, room_id, !dim, d, railing_flags, 1.0, SHAPE_CUBE, railing_color);}
 					}
-					// TODO: add support beams
+					// add support beams connected to pillars
+					float const beam_hwidth(0.36*pillar_width), beam_thickness(0.3*pillar_width);
+					vector<float> pillar_xy[2];
+
+					for (cube_t const &pillar : pillars) {
+						if (!pillar.intersects_xy(upper_floor)) continue;
+						pillar_xy[0].push_back(pillar.xc());
+						pillar_xy[1].push_back(pillar.yc());
+					}
+					for (unsigned d = 0; d < 2; ++d) {
+						sort_and_unique(pillar_xy[d]);
+						cube_t beam_area(upper_floor);
+						set_cube_zvals(beam_area, upper_floor.z1()-beam_thickness, upper_floor.z1()); // below the floor
+						unsigned const skip_faces(get_skip_mask_for_xy(!d) & get_face_mask(dim, !dir)); // skip ends except for the edge of the glass floor
+
+						for (float v : pillar_xy[d]) {
+							set_wall_width(beam_area, v, beam_hwidth, d);
+							subtract_stairs_and_elevators_from_cube(beam_area, obj_parts);
+
+							for (cube_t const &c : obj_parts) {
+								objs.emplace_back(c, TYPE_METAL_BAR, room_id, !d, 0, 0, 1.0, SHAPE_CUBE, BLACK);
+								objs.back().item_flags = skip_faces;
+							}
+						} // for v
+					} // for d
 					// TODO: add other items such as shelfracks on this floor
 					break; // done
 				} // for dir

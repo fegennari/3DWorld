@@ -916,6 +916,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_LADDER:    add_ext_ladder(*i); break;
 		case TYPE_CHECKOUT:  add_checkout(*i, tscale); break;
 		case TYPE_FISHTANK:  add_fishtank(*i); break;
+		case TYPE_METAL_BAR: add_metal_bar(*i); break;
 		//case TYPE_FRIDGE: if (i->is_open()) {} break; // draw open fridge?
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
@@ -2020,6 +2021,18 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	}
 }
 
+void building_t::subtract_stairs_and_elevators_from_cube(cube_t const &c, vect_cube_t &cube_parts) const {
+	cube_parts.clear();
+	cube_parts.push_back(c);
+	if (!interior) return; // error?
+
+	for (elevator_t const &e : interior->elevators) { // clip out holes for elevators
+		if (e.intersects(c)) {subtract_cube_from_cubes(e, cube_parts);}
+	}
+	for (stairwell_t const &s : interior->stairwells) { // clip out holes for stairs
+		if (s.intersects(c)) {subtract_cube_from_cubes(s, cube_parts);}
+	}
+}
 void building_t::draw_glass_surfaces(shader_t &s, vector3d const &xlate) const { // Note: xlate is unused; camera_bs = get_camera_pos()-xlate
 	// currently there are only glass floors, but this could be used for drawing showers and fishtanks as well
 	assert(has_room_geom());
@@ -2040,14 +2053,7 @@ void building_t::draw_glass_surfaces(shader_t &s, vector3d const &xlate) const {
 	if (mat.empty()) { // create geometry
 		for (cube_t const &c : glass_floors) {
 			vect_cube_t floor_parts;
-			floor_parts.push_back(c);
-
-			for (elevator_t const &e : interior->elevators) { // clip out holes for elevators
-				if (e.intersects(c)) {subtract_cube_from_cubes(e, floor_parts);}
-			}
-			for (stairwell_t const &s : interior->stairwells) { // clip out holes for stairs
-				if (s.intersects(c)) {subtract_cube_from_cubes(s, floor_parts);}
-			}
+			subtract_stairs_and_elevators_from_cube(c, floor_parts);
 			bool const was_split(floor_parts.size() > 1);
 			interior->room_geom->glass_floor_split |= was_split;
 			colorRGBA color(GLASS_COLOR);

@@ -4987,6 +4987,11 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 	gravel_mat.add_cube_to_verts(gravel, apply_light_color(c, WHITE), c.get_llc(), EF_Z1);
 }
 
+void building_room_geom_t::add_metal_bar(room_object_t const &c) {
+	rgeom_mat_t &metal_mat(get_metal_material(1)); // untextured, shadowed
+	metal_mat.add_cube_to_verts_untextured(c, apply_light_color(c), c.item_flags); // skip_faces is stored in item_flags
+}
+
 void building_room_geom_t::add_lava_lamp(room_object_t const &c) {
 	float const height(c.get_height());
 	// draw top and bottom
