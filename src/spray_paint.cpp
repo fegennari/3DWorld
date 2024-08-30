@@ -35,7 +35,6 @@ colorRGBA get_cur_paint_color() {
 
 
 colorRGBA sample_cobj_color(point const &p1, point const &p2, colorRGBA const &def_color) {
-
 	point cpos;
 	vector3d cnorm;
 	int cindex;
@@ -54,27 +53,21 @@ void show_cur_spraypaint_mode() {
 	print_text_onscreen(str, get_cur_paint_color(), 1.0, TICKS_PER_SECOND, 1); // 1 second
 }
 
-
 void toggle_spraypaint_mode() {
-
 	if (world_mode != WMODE_GROUND) return;
 	spraypaint_mode ^= 1;
 	if (spraypaint_mode) {spheres_mode = 0;}
 	show_cur_spraypaint_mode();
 }
 
-
 void change_spraypaint_color(int val) {
-
 	if (world_mode != WMODE_GROUND) return;
 	paint_color_ix = (paint_color_ix + TOT_PAINT_COLORS + val) % TOT_PAINT_COLORS;
 	show_cur_spraypaint_mode();
 	play_switch_weapon_sound();
 }
 
-
 void draw_spraypaint_crosshair() {
-
 	if (world_mode != WMODE_GROUND) return;
 	shader_t s;
 	s.begin_color_only_shader(colorRGBA(get_cur_paint_color(), 0.5));
@@ -86,9 +79,7 @@ void draw_spraypaint_crosshair() {
 	s.end_shader();
 }
 
-
 float get_spray_radius(point const &pos, float &alpha) {
-
 	float const dist(distance_to_camera(pos)), radius(min(0.1, max(0.001, 0.05*dist)));
 	if (radius > 0.05) {alpha = 1.0 - 10.0*(radius - 0.05);} // 0.5 - 1.0
 	return radius;

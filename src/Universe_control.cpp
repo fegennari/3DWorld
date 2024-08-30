@@ -1266,7 +1266,7 @@ float const *uobject::get_sphere_shadow_pmap(point const &sun_pos, point const &
 	vector3d v12; // unused
 	vector_point_norm const &vpn(gen_cylinder_data(ce, radius, 0.0, ndiv, v12));
 
-	for (int i = 0; i < ndiv; ++i) { // assumes the cylinder is more or less constant radius
+	for (unsigned i = 0; i < (unsigned)ndiv; ++i) { // assumes the cylinder is more or less constant radius
 		pmap_vector[i] = shadow_scale_val*(get_radius_at(vpn.p[i<<1]) - radius);
 	}
 	return &pmap_vector.front();
