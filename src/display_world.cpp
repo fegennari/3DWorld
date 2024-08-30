@@ -52,7 +52,7 @@ extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, DISABLE_WATER, can_pickup_bldg_obj, player_in_water;
 extern float TIMESTEP, NEAR_CLIP, FAR_CLIP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, ocean_wave_height, brightness;
 extern float def_atmosphere, def_vegetation, clip_plane_z, ambient_scale, sunlight_brightness, moonlight_brightness;
-extern point mesh_origin, surface_pos, univ_sun_pos, orig_cdir, sun_pos, moon_pos;
+extern point mesh_origin, surface_pos, univ_sun_pos, orig_cdir, sun_pos, moon_pos, debug_event_pos;
 extern vector3d total_wind;
 extern colorRGBA sun_color;
 extern water_params_t water_params;
@@ -76,6 +76,7 @@ void play_switch_weapon_sound();
 void toggle_fullscreen();
 void calc_cur_ambient_diffuse();
 void print_texture_memory_usage();
+void show_debug_event_pos(point const &pos);
 
 vector3d calc_camera_direction();
 void draw_player_model(point const &pos, vector3d const &dir, int time);
@@ -1051,6 +1052,7 @@ void display() {
 			//draw_scene_bounds_and_light_frustum(get_light_pos()); // TESTING
 		} // WMODE_GROUND
 		check_gl_error(13);
+		if (debug_event_pos != all_zeros) {show_debug_event_pos(debug_event_pos);}
 		final_draw(framerate);
 		purge_coll_freed(0); // optional
 		camera_flight = 0;

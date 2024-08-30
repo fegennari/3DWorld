@@ -1972,6 +1972,17 @@ void draw_compass_and_alt() { // and temperature
 	}
 }
 
+void show_debug_event_pos(point const &pos) {
+	point const camera(get_camera_pos());
+	vector3d const dir((pos - camera).get_norm());
+	shader_t s;
+	s.begin_color_only_shader(MAGENTA);
+	glDisable(GL_DEPTH_TEST);
+	draw_subdiv_sphere((camera + dir*2.0*CAMERA_RADIUS), 0.01*CAMERA_RADIUS, 16, 0); // draw a fixed distance in front of the player, untextured
+	glEnable(GL_DEPTH_TEST);
+	s.end_shader();
+}
+
 // Note: icons are from https://www.svgrepo.com
 string const icon_fns[NUM_ICONS] = {"plus", "shield", "fist", "alcohol", "toilet", "droplet", "oxygen", "carry"};
 

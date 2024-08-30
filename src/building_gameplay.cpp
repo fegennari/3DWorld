@@ -16,6 +16,7 @@ bool do_room_obj_pickup(0), use_last_pickup_object(0), show_bldg_pickup_crosshai
 bool city_action_key(0), can_do_building_action(0);
 int can_pickup_bldg_obj(0), player_in_elevator(0); // player_in_elevator: 0=no, 1=in, 2=in + doors closed, 3=moving
 float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
+point debug_event_pos;
 carried_item_t player_held_object;
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
@@ -2738,4 +2739,11 @@ void building_gameplay_next_frame() {
 }
 
 void enter_building_gameplay_mode() {player_inventory.clear_all();}
+
+void register_debug_event(point const &pos, string const &str) {
+	cout << "debug event " << str << " at pos " << pos.str() << endl;
+	gen_sound(SOUND_ALERT, get_camera_pos(), 0.5);
+	debug_event_pos = pos;
+	animate2 = 0; // freeze time
+}
 
