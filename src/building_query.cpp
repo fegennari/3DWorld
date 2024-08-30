@@ -1489,7 +1489,7 @@ cube_t escalator_t::get_support_pillar() const {
 	set_wall_width(support, (d[dim][dir] + (dir ? -1.0 : 1.0)*0.5*end_ext), support_radius, dim); // center of upper end
 	return support;
 }
-void escalator_t::get_ramp_bottom_pts(cube_t const &ramp, point bot_pts[4]) const { // {lo-left, lo-right, hi-right, hi-left}
+void escalator_t::get_ramp_bottom_pts(cube_t const &ramp, point bot_pts[4]) const { // {lo-left, lo-right, hi-right, hi-left} (or reversed)
 	bot_pts[0].z = bot_pts[1].z = ramp.z1();
 	bot_pts[2].z = bot_pts[3].z = ramp.z2();
 	bot_pts[0][ dim] = bot_pts[1][ dim] = ramp.d[dim][!dir];
@@ -1565,7 +1565,6 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 				cube_t const ramp_inner(e.get_ramp_bcube(1)); // exclude_sides=1
 
 				if (ramp_inner.contains_pt_xy(pos)) { // player on escalator steps
-					// TODO_ESCALATOR: steps/ramp coll - move with the escalator
 					float const length(ramp_inner.get_sz_dim(e.dim)), height(ramp_inner.dz()), t(CLIP_TO_01((pos[e.dim] - ramp_inner.d[e.dim][0])/length));
 					float const ztop(ramp_inner.z1() + height*(e.dir ? t : (1.0-t)));
 
@@ -1576,7 +1575,7 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 						apply_speed_factor(pos, p_last, 0.5); // slower when walking on escalator
 
 						if (animate2) { // apply escalator movement
-							float const delta((e.move_dir ? 1.0 : -1.0)*fticks*ESCALATOR_SPEED/NUM_STAIRS_PER_FLOOR);
+							float const delta((e.move_dir ? 1.0 : -1.0)*fticks*ESCALATOR_SPEED/NUM_STAIRS_PER_FLOOR_ESC);
 							pos.z += delta*height;
 							pos[e.dim] += (e.dir ? 1.0 : -1.0)*delta*length;
 						}
