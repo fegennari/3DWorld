@@ -1397,6 +1397,7 @@ struct escalator_t : public oriented_cube_t { // Note: not yet used
 	float end_ext=0.0, delta_z=0.0;
 	escalator_t() {}
 	escalator_t(cube_t const &c, bool dim_, bool dir_, bool mdir, float ext, float dz) : oriented_cube_t(c, dim_, dir_), move_dir(mdir), end_ext(ext), delta_z(dz) {}
+	bool  is_going_up    () const {return (move_dir != dir);}
 	float get_side_width () const {return 0.10*get_width();}
 	float get_side_height() const {return 0.80*get_width();}
 	float get_upper_hang () const {return 0.25*get_width();}
@@ -1920,7 +1921,7 @@ struct building_t : public building_geom_t {
 		unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building);
 	void gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 		unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building, bool ext_basement_conn_visible);
-	bool has_glass_surfaces() const {return (has_room_geom() && !interior->room_geom->glass_floors.empty());}
+	bool has_glass_floor() const {return (has_room_geom() && !interior->room_geom->glass_floors.empty());}
 	void draw_glass_surfaces(shader_t &s, vector3d const &xlate) const;
 	bool has_cars_to_draw(bool player_in_building) const;
 	void draw_cars_in_building(shader_t &s, vector3d const &xlate, bool player_in_building, bool shadow_only) const;
@@ -1968,6 +1969,7 @@ private:
 	bool select_person_dest_in_room(person_t &person, rand_gen_t &rgen, room_t const &room) const;
 	void get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player, cube_t const *const fires_select_cube=nullptr) const;
 	bool find_route_to_point(person_t &person, float radius, bool is_first_path, bool following_player, ai_path_t &path) const;
+	void add_escalator_points(person_t const &person, ai_path_t &path) const;
 	bool stairs_contained_in_part(stairwell_t const &s, cube_t const &p) const;
 	bool no_stairs_exit_on_floor(stairwell_t const &stairs, float zval) const;
 	void find_nearest_stairs_or_ramp(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, int part_ix=-1) const;

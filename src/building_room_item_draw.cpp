@@ -2333,7 +2333,7 @@ void building_t::debug_people_in_building(shader_t &s) const {
 			if (v != p.path.front()) {draw_sphere_vbo(v, sradius, ndiv, 0);} // skip first point
 		}
 		assert(p.goal_type < NUM_GOAL_TYPES);
-		colorRGBA const goal_colors[NUM_GOAL_TYPES] = {BLACK, BLUE, PINK, RED, ORANGE, PURPLE}; // NONE, ROOM, ELEVATOR, PLAYER, PLAYER_LAST_POS, SOUND
+		colorRGBA const goal_colors[NUM_GOAL_TYPES] = {BLACK, BLUE, PINK, MAGENTA, RED, ORANGE, PURPLE}; // NONE, ROOM, ELEVATOR, ESCALATOR, PLAYER, PLAYER_LAST_POS, SOUND
 		color_shader.set_cur_color(goal_colors[p.goal_type]);
 		if (!p.path.empty ()) {draw_sphere_vbo(p.path.front(), sradius, ndiv, 0);} // draw last point is dest
 		if (p.target_valid()) {draw_sphere_vbo(p.target_pos,   sradius, ndiv, 0);} // draw target pos

@@ -927,7 +927,6 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 	building_nav_graph_t &ng(*interior->nav_graph);
 	float const wall_width(get_wall_thickness()), doorway_width(get_doorway_width());
 	unsigned const num_rooms(interior->rooms.size()), num_stairs(interior->stairwells.size());
-	// TODO_ESCALATOR: escalators
 	bool const has_ramp(has_pg_ramp());
 	ng.set_num_rooms(num_rooms, num_stairs, has_ramp);
 	for (unsigned s = 0; s < num_stairs; ++s) {ng.set_stairs_bcube(s, interior->stairwells[s]);}
@@ -1230,6 +1229,33 @@ point get_pos_to_stand_for_elevator(person_t const &person, elevator_t const &e,
 	return pos;
 }
 
+void building_t::add_escalator_points(person_t const &person, ai_path_t &path) const {
+	assert(interior);
+	assert(person.goal_type == GOAL_TYPE_ESCALATOR);
+	assert(person.cur_escalator < interior->escalators.size());
+	escalator_t const &e(interior->escalators[person.cur_escalator]);
+	bool const going_up(e.is_going_up());
+	cube_t ends[2];
+	e.get_ends_bcube(ends[0], ends[1], 0); // exclude_sides=0
+	cube_t const &enter_end(ends[!going_up]), &exit_end(ends[going_up]);
+	bool const dim(e.dim), move_dir(enter_end.d[dim][0] < exit_end.d[dim][0]);
+	float const move_radius((move_dir ? 1.0 : -1.0)*person.radius); // one radius in the direction of movement
+	float const step_lead((going_up ? -1.0 : 1.0)*0.5*move_radius); // TODO: e.get_step_len()?
+	point enter_pt, step_beg, step_end, exit_pt;
+	enter_pt[!dim] = step_beg[!dim] = step_end[!dim] = exit_pt[!dim] = e.get_center_dim(!dim); // centerline
+	enter_pt.z = step_beg.z = /*enter_end.z1() + person.radius*/person.pos.z; // should be the same zval within FP error
+	step_end.z = exit_pt .z = exit_end .z1() + person.radius;
+	enter_pt[dim] = enter_end.d[dim][!move_dir] - 1.1*move_radius; // in front of entrance
+	step_beg[dim] = enter_end.d[dim][ move_dir] + step_lead; // just before first step
+	step_end[dim] = exit_end .d[dim][!move_dir] + step_lead; // on last step
+	exit_pt [dim] = exit_end .d[dim][ move_dir] + 1.1*move_radius; // at exit
+	// add to path backwards
+	path.add(exit_pt );
+	path.add(step_end);
+	path.add(step_beg);
+	path.add(enter_pt);
+}
+
 int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // used for randomly walking around the building
 
 	assert(interior && interior->nav_graph);
@@ -1239,8 +1265,46 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 	person.target_pos   = person.pos; // set but not yet used
 	person.is_on_stairs = 0;
 	if (interior->rooms.size() == 1) return 0; // no other room to move to
+	bool const last_used_escalator(person.last_used_escalator);
+	person.last_used_escalator = 0;
 	float const floor_spacing(get_window_vspace());
 
+	// maybe use retail area escalator
+	if (0 && loc.room_ix >= 0 && has_tall_retail() && !interior->escalators.empty() && has_glass_floor() && rgen.rand_float() < 0.9) {
+		room_t const &room(get_room(loc.room_ix));
+
+		if (room.is_retail()) {
+			bool on_upper_floor(0);
+
+			for (cube_t const &f : interior->room_geom->glass_floors) {
+				if (f.contains_pt_xy(person.pos) && person.pos.z > f.z2()) {on_upper_floor = 1; break;}
+			}
+			if (!last_used_escalator || on_upper_floor) { // don't use escalator on bottom floor if we just came down
+				for (auto e = interior->escalators.begin(); e != interior->escalators.end(); ++e) {
+					if (!room.contains_cube(*e)) continue;
+					if (e->is_going_up() == on_upper_floor) continue; // wrong direction
+
+					if (on_upper_floor) { // dest is lower floor
+						person.target_pos.z = e->z1() + person.radius; // on ground floor of retail
+						assert(person.target_pos.z < person.pos.z);
+						if (!select_person_dest_in_room(person, rgen, get_room(loc.room_ix))) continue;
+					}
+					else { // dest is upper floor
+						cube_t const dest_floor(interior->room_geom->glass_floors[rgen.rand() % interior->room_geom->glass_floors.size()]);
+						person.target_pos.assign(dest_floor.xc(), dest_floor.yc(), (dest_floor.z2() + person.radius)); // temporary dest
+						// TODO: find random point on dest_floor; check for stairs, elevator, or obj collision
+						assert(person.target_pos.z > person.pos.z);
+					}
+					person.dest_room = loc.room_ix; // same as current room
+					person.goal_type = GOAL_TYPE_ESCALATOR;
+					person.cur_escalator    = (e - interior->escalators.begin());
+					person.last_used_stairs = 0; // non-stairs dest, reset
+					building_loc_t const loc(get_building_loc_for_pt(person.target_pos));
+					return 1;
+				} // for e
+			}
+		}
+	}
 	// maybe choose a destination elevator (for office buildings) if our prev dest wasn't an elevator
 	if (!person.is_first_path && !interior->elevators.empty() && !interior->elevators_disabled && !person.last_changed_floor() &&
 		person.goal_type != GOAL_TYPE_ELEVATOR && global_building_params.elevator_capacity > 0)
@@ -1547,6 +1611,11 @@ cube_t get_stairs_plus_step_up(stairwell_t const &stairs) {
 	return stairs_ext;
 }
 
+void ai_path_t::add(ai_path_t const &path) {
+	for (point const &p : path) {add(p);}
+	uses_nav_grid |= path.uses_nav_grid;
+}
+
 void building_t::get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player, cube_t const *const fires_select_cube) const {
 	assert(interior);
 	float const z1(zval - radius);
@@ -1555,14 +1624,29 @@ void building_t::get_avoid_cubes(float zval, float height, float radius, vect_cu
 bool building_t::find_route_to_point(person_t &person, float radius, bool is_first_path, bool following_player, ai_path_t &path) const {
 
 	assert(interior && interior->nav_graph);
-	point const &from(person.pos), &to(person.target_pos);
 	path.clear();
+	point const &from(person.pos), &to(person.target_pos);
 	building_loc_t const loc1(get_building_loc_for_pt(from)), loc2(get_building_loc_for_pt(to));
 	if (loc1.part_ix < 0 || loc2.part_ix < 0 || loc1.room_ix < 0 || loc2.room_ix < 0) return 0; // not in a room
 	assert((unsigned)loc1.part_ix < parts.size() && (unsigned)loc2.part_ix < parts.size());
 	assert((unsigned)loc1.room_ix < interior->rooms.size() && (unsigned)loc2.room_ix < interior->rooms.size());
 	float const floor_spacing(get_window_vspace()), height(0.7*floor_spacing); // approximate, since we're not tracking actual heights
 	static vect_cube_t avoid, avoid2; // reuse across frames/people
+
+	if (person.goal_type == GOAL_TYPE_ESCALATOR) {
+		ai_path_t epath;
+		add_escalator_points(person, epath);
+		assert(epath.size() >= 2);
+		point const &eenter(epath.back()), &eexit(epath.front()); // entrance and exit point of escalator
+		get_avoid_cubes(to.z, height, radius, avoid, following_player);
+		// FIXME: upper path should be constrained to glass floor rather than room
+		if (!interior->nav_graph->complete_path_within_room(eexit, to, loc1.room_ix, person.ssn, radius,
+			person.cur_rseed, is_first_path, following_player, avoid, *this, path)) return 0; // escalator to target
+		path.add(epath); // add escalator segment
+		get_avoid_cubes(from.z, height, radius, avoid, following_player);
+		return interior->nav_graph->complete_path_within_room(from, eenter, loc1.room_ix, person.ssn, radius,
+			person.cur_rseed, is_first_path, following_player, avoid, *this, path); // person to escalator
+	}
 	get_avoid_cubes(from.z, height, radius, avoid, following_player, &get_room(loc1.room_ix)); // include fires in the current room
 
 	if (loc1.same_room_floor(loc2)) { // same room/floor (not checking stairs_ix)
@@ -1700,7 +1784,7 @@ bool person_t::waiting_for_same_elevator_as(person_t const &other, float floor_s
 }
 void person_t::next_path_pt(bool starting_path) {
 	assert(!path.empty());
-	is_on_stairs = (!starting_path && target_pos.z != path.back().z); // or ramp
+	is_on_stairs = (!starting_path && target_pos.z != path.back().z); // or ramp, or escalator
 	target_pos   = path.back();
 	path.pop_back();
 }
@@ -1916,7 +2000,7 @@ bool building_t::need_to_update_ai_path(person_t const &person) const {
 	}
 	//if (same_room && person.path.size() > 1) return 0; // same room but path has a jog, continue on existing path (faster, but slower to adapt to player position change)
 	if (dist_less_than(person.pos, target.pos, person.radius)) return 0; // already close enough
-	if (person.on_stairs()) return 0; // don't change paths when on the stairs
+	if (person.on_stairs()) return 0; // don't change paths when on the stairs/ramp/escalator
 	float const floor_spacing(get_window_vspace());
 
 	if (int(target.pos.z/floor_spacing) != int(prev_player_building_loc.pos.z/floor_spacing)) { // if player did not change floors
@@ -2297,7 +2381,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	bool choose_dest(!person.target_valid());
 	bool const update_path(!person.in_pool && need_to_update_ai_path(person)), has_rgeom(has_room_geom());
 	// if room objects spawn in, select a new dest to avoid walking through objects based on our previous, possibly invalid path;
-	// but not if this person is on stairs or an elevator, or they may end at an invalid zval between floors
+	// but not if this person is on stairs/ramp/escalator or an elevator, or they may end at an invalid zval between floors
 	if (has_rgeom && !person.has_room_geom && !person.on_stairs() && person.ai_state < AI_ENTER_ELEVATOR) {person.abort_dest();}
 	person.has_room_geom = has_rgeom;
 
@@ -2569,14 +2653,14 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	// update state
 	float const old_anim_time(person.anim_time);
 	person.pos        = new_pos; // Note: new_pos.z should equal person.poz.z unless on stairs, which is difficult to accurately check for in this function
-	person.anim_time += max_dist;
+	person.anim_time += max_dist * (person.on_escalator() ? 0.75 : 1.0); // slower walking on escalator; TODO: should we reduce speed and use the idle animation?
+	person.idle_time  = 0.0; // reset idle time if we actually move
 	bool enable_bl_update(display_mode & 0x20); // disabled by default, enable with key '6'
 	if (in_building_gameplay_mode()) {enable_bl_update = 0;} // zombies don't turn on and off lights
 	if (ai_follow_player() && global_building_params.ai_player_vis_test >= 3) {enable_bl_update = 0;} // if AI tests that player is lit, don't turn on/off lights
 	if (enable_bl_update) {ai_room_lights_update(person);} // non-const part
 	// update cur_room after moving and lights update; needed if player is in the room and for ai_room_lights_update() same room optimization
 	if (player_in_this_building || enable_bl_update) {person.cur_room = get_room_containing_pt(person.pos);}
-	person.idle_time = 0.0; // reset idle time if we actually move
 
 	// create splashes if just fell in the pool, or if head is above the water
 	if (!prev_in_pool && person.in_pool) { // fell in
@@ -2698,7 +2782,7 @@ bool building_t::maybe_zombie_retreat(unsigned person_ix, point const &hit_pos) 
 	if (!ai_follow_player()) return 0; // not in gameplay mode, ignore it
 	assert(interior && person_ix < interior->people.size());
 	person_t &person(interior->people[person_ix]);
-	if (person.is_on_stairs) return 0; // ignore when on stairs as this doesn't work correctly
+	if (person.is_on_stairs) return 0; // ignore when on stairs/ramp/escalator as this doesn't work correctly
 	if (hit_pos.z < (person.get_z1() + 0.25*person.get_height())) return 0; // less than 25% up, coll with legs, assume this is kicking a ball that's on the floor (if a ball)
 	// play sound on first retreat: alert_other_zombies=1, high_priority=1, gain=1.0, pitch=1.25
 	if (person.retreat_time == 0.0) {maybe_play_zombie_sound(person.pos, person_ix, 1, 1, 1.0, 1.25);}

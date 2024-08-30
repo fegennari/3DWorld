@@ -56,25 +56,26 @@ struct ai_path_t : public vector<point> {
 	bool uses_nav_grid=0, is_shortened=0;
 	void clear() {vector<point>::clear(); uses_nav_grid = is_shortened = 0;}
 	void add(point const &p) {if (empty() || p != back()) {push_back(p);}}
-	void add(ai_path_t const &path) {vector_add_to(path, *this); uses_nav_grid |= path.uses_nav_grid;}
+	void add(ai_path_t const &path);
 };
 
 enum {AI_STOP=0, AI_WAITING, AI_NEXT_PT, AI_BEGIN_PATH, AI_AT_DEST, AI_MOVING, AI_TO_REMOVE, AI_IN_POOL,
 	  AI_WAIT_ELEVATOR, AI_ENTER_ELEVATOR, AI_ACTIVATE_ELEVATOR, AI_RIDE_ELEVATOR, AI_EXIT_ELEVATOR}; // elevator states
-enum {GOAL_TYPE_NONE=0, GOAL_TYPE_ROOM, GOAL_TYPE_ELEVATOR, GOAL_TYPE_PLAYER, GOAL_TYPE_PLAYER_LAST_POS, GOAL_TYPE_SOUND, NUM_GOAL_TYPES};
+enum {GOAL_TYPE_NONE=0, GOAL_TYPE_ROOM, GOAL_TYPE_ELEVATOR, GOAL_TYPE_ESCALATOR, GOAL_TYPE_PLAYER, GOAL_TYPE_PLAYER_LAST_POS, GOAL_TYPE_SOUND, NUM_GOAL_TYPES};
 
 struct person_t : public person_base_t { // building person
 	float retreat_time=0.0;
 	int cur_bldg=-1, cur_room=-1, dest_room=-1; // Note: -1 is unassigned
 	unsigned short cur_rseed=1;
-	uint8_t goal_type=GOAL_TYPE_NONE, cur_elevator=0, dest_elevator_floor=0, ai_state=AI_STOP, has_key=0;
+	uint8_t goal_type=GOAL_TYPE_NONE, cur_elevator=0, cur_escalator=0, dest_elevator_floor=0, ai_state=AI_STOP, has_key=0;
 	bool following_player=0, saw_player_hide=0, is_first_path=1, on_new_path_seg=0;
-	bool last_used_elevator=0, last_used_stairs=0, must_re_call_elevator=0, has_room_geom=0, in_pool=0, prev_walked_down=0, no_wait_at_dest=0;
+	bool last_used_elevator=0, last_used_escalator=0, last_used_stairs=0, must_re_call_elevator=0, has_room_geom=0, in_pool=0, prev_walked_down=0, no_wait_at_dest=0;
 	ai_path_t path; // stored backwards, next point on path is path.back()
 
 	person_t(float radius_) : person_base_t(radius_) {in_building = 1;}
-	bool on_stairs() const {return is_on_stairs;}
-	bool last_changed_floor() const {return (last_used_elevator || last_used_stairs);}
+	bool on_stairs   () const {return is_on_stairs;}
+	bool on_escalator() const {return (is_on_stairs && goal_type == GOAL_TYPE_ESCALATOR);}
+	bool last_changed_floor() const {return (last_used_elevator || last_used_stairs /*|| last_used_escalator*/);}
 	bool waiting_for_same_elevator_as(person_t const &other, float floor_spacing) const;
 	void next_path_pt(bool starting_path);
 	void abort_dest() {target_pos = all_zeros; path.clear(); goal_type = GOAL_TYPE_NONE;}

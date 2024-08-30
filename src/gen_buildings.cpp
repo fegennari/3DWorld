@@ -3981,7 +3981,7 @@ public:
 	static void draw_player_building_transparent(int reflection_pass, vector3d const &xlate) {
 		// draw glass materials such as floors for the player's building
 		if (reflection_pass || !draw_building_interiors) return;
-		if (player_building == nullptr || !player_building->has_glass_surfaces()) return;
+		if (player_building == nullptr || !player_building->has_glass_floor()) return;
 		enable_dlight_bcubes = 1;
 		fgPushMatrix();
 		translate_to(xlate);
