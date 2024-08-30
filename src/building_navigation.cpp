@@ -769,14 +769,16 @@ public:
 		} // end while()
 		return 0; // never gets here
 	}
-	bool complete_path_within_room(point const &from, point const &to, unsigned room_ix, unsigned ped_ix, float radius,
-		unsigned ped_rseed, bool is_first_path, bool following_player, vect_cube_t const &avoid, building_t const &building, ai_path_t &path) const
+	bool complete_path_within_room(point const &from, point const &to, unsigned room_ix, unsigned ped_ix, float radius, unsigned ped_rseed,
+		bool is_first_path, bool following_player, cube_t const &constrain_area, vect_cube_t const &avoid, building_t const &building, ai_path_t &path) const
 	{
 		// used for reaching a goal such as the player within the same room;
 		// assumes the building shape is convex and the goal is inside the building so that the path to the goal never leaves a non-cube building
-		cube_t const walk_area(calc_walkable_room_area(get_node(room_ix), radius));
+		cube_t walk_area(calc_walkable_room_area(get_node(room_ix), radius));
+		if (!constrain_area.is_all_zeros()) {walk_area.intersect_with_cube_xy(constrain_area);}
 		cube_t clamp_area(walk_area);
 		clamp_area.expand_by_xy(-0.1*radius); // slightly smaller to allow for some FP inaccuracy
+		if (clamp_area.dx() <= 0 || clamp_area.dy() <= 0.0) return 0; // area too small; shouldn't happen
 		rand_gen_t rgen;
 		rgen.set_state((ped_ix + 13*room_ix + 1), (ped_rseed + 1));
 		vect_cube_t keepout;
@@ -1239,8 +1241,9 @@ void building_t::add_escalator_points(person_t const &person, ai_path_t &path) c
 	e.get_ends_bcube(ends[0], ends[1], 0); // exclude_sides=0
 	cube_t const &enter_end(ends[!going_up]), &exit_end(ends[going_up]);
 	bool const dim(e.dim), move_dir(enter_end.d[dim][0] < exit_end.d[dim][0]);
+	float const step_len(e.get_ramp_bcube(0).get_sz_dim(dim)/NUM_STAIRS_PER_FLOOR_ESC);
 	float const move_radius((move_dir ? 1.0 : -1.0)*person.radius); // one radius in the direction of movement
-	float const step_lead((going_up ? -1.0 : 1.0)*0.5*move_radius); // TODO: e.get_step_len()?
+	float const step_lead(1.5*((going_up ^ move_dir) ? 1.0 : -1.0)*step_len); // or 0.5*person.radius?
 	point enter_pt, step_beg, step_end, exit_pt;
 	enter_pt[!dim] = step_beg[!dim] = step_end[!dim] = exit_pt[!dim] = e.get_center_dim(!dim); // centerline
 	enter_pt.z = step_beg.z = /*enter_end.z1() + person.radius*/person.pos.z; // should be the same zval within FP error
@@ -1639,13 +1642,17 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 		assert(epath.size() >= 2);
 		point const &eenter(epath.back()), &eexit(epath.front()); // entrance and exit point of escalator
 		get_avoid_cubes(to.z, height, radius, avoid, following_player);
-		// FIXME: upper path should be constrained to glass floor rather than room
-		if (!interior->nav_graph->complete_path_within_room(eexit, to, loc1.room_ix, person.ssn, radius,
-			person.cur_rseed, is_first_path, following_player, avoid, *this, path)) return 0; // escalator to target
+		// upper path should be constrained to glass floor rather than room; assumes glass floors create a full rectangle
+		cube_t clamp_area;
+		for (cube_t const &f : interior->room_geom->glass_floors) {clamp_area.assign_or_union_with_cube(f);}
+		assert(clamp_area.is_strictly_normalized());
+		bool const going_up(to.z > from.z);
+		if (!interior->nav_graph->complete_path_within_room(eexit, to, loc1.room_ix, person.ssn, radius, person.cur_rseed,
+			is_first_path, following_player, (going_up ? clamp_area : cube_t()), avoid, *this, path)) return 0; // escalator to target
 		path.add(epath); // add escalator segment
 		get_avoid_cubes(from.z, height, radius, avoid, following_player);
-		return interior->nav_graph->complete_path_within_room(from, eenter, loc1.room_ix, person.ssn, radius,
-			person.cur_rseed, is_first_path, following_player, avoid, *this, path); // person to escalator
+		return interior->nav_graph->complete_path_within_room(from, eenter, loc1.room_ix, person.ssn, radius, person.cur_rseed,
+			is_first_path, following_player, (going_up ? cube_t() : clamp_area), avoid, *this, path); // person to escalator
 	}
 	get_avoid_cubes(from.z, height, radius, avoid, following_player, &get_room(loc1.room_ix)); // include fires in the current room
 
@@ -1665,7 +1672,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 			}
 		}
 		if (!interior->nav_graph->complete_path_within_room(from, dest, loc1.room_ix, person.ssn, radius,
-			person.cur_rseed, is_first_path, following_player, avoid, *this, path)) return 0;
+			person.cur_rseed, is_first_path, following_player, cube_t(), avoid, *this, path)) return 0;
 		return 1;
 	}
 	bool have_goal_pos(0), req_custom_dest(0);
@@ -2561,7 +2568,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			 << TXT(person.on_stairs()) << TXT(max_dist) << TXT(person.dir.str()) << TXT(prev_in_pool) << TXT(person.in_pool) << endl;
 		assert(0);
 	}
-	// don't do collision detection while on stairs because it doesn't work properly; just let people walk through each other
+	// don't do collision detection while on stairs/ramp/escalator because it doesn't work properly; just let people walk through each other
 	if (!person.on_stairs()) {
 		if (person.goal_type == GOAL_TYPE_ELEVATOR) { // heading for the elevator
 			// check for collisions with someone else waiting for the elevator
