@@ -1296,7 +1296,8 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 						cube_t const dest_floor(interior->room_geom->glass_floors[rgen.rand() % interior->room_geom->glass_floors.size()]);
 						person.target_pos.assign(dest_floor.xc(), dest_floor.yc(), (dest_floor.z2() + person.radius)); // temporary dest
 						// TODO: find random point on dest_floor; check for stairs, elevator, or obj collision
-						assert(person.target_pos.z > person.pos.z);
+						//assert(person.target_pos.z > person.pos.z);
+						if (person.target_pos.z <= person.pos.z) {register_debug_event(person.target_pos, "invalid target_pos");}
 					}
 					person.dest_room = loc.room_ix; // same as current room
 					person.goal_type = GOAL_TYPE_ESCALATOR;
@@ -2715,6 +2716,19 @@ void building_t::move_person_to_not_collide(person_t &person, person_t const &ot
 	clip_bounds.union_with_pt(new_pos);  // we know this point is valid
 	clip_bounds.clamp_pt_xy(person.pos); // force player into the room
 
+	// check for person getting pushed off the upper glass floor if not on an escalator
+	if (person.goal_type == GOAL_TYPE_ESCALATOR && !person.on_stairs()) {
+		assert(has_glass_floor());
+
+		if (new_pos.z > interior->room_geom->glass_floors.front().z2()) { // on upper floor
+			bool on_floor(0);
+
+			for (cube_t const &f : interior->room_geom->glass_floors) {
+				if (f.contains_pt_xy(new_pos)) {on_floor = 1; break;}
+			}
+			if (!on_floor) {person.pos = orig_pos;} // restore original pos
+		}
+	}
 	if (!point_in_building_or_basement_bcube(person.pos)) { // this can happen on rare occasions, due to fp inaccuracy or multiple collisions
 		//cout << TXT(rsum) << TXT(sep_dist) << TXT(move_dist) << TXT(room_ix) << TXT(other.pos.str()) << TXT(person.pos.str()) << TXT(bcube.str()) << endl;
 		bcube.clamp_pt_xy(person.pos); // just clamp pos so that it doesn't assert later
