@@ -2600,12 +2600,12 @@ void building_t::add_basement_clutter_objs(rand_gen_t rgen, room_t const &room, 
 				colorRGBA const color(bottle_params[bottle_obj.get_bottle_type()].liquid_color);
 
 				if (color.alpha > 0.0) { // not transparent (water)
-					float const radius(10.0*radius*rgen.rand_uniform(0.5, 1.0));
+					float const stain_radius(10.0*radius*rgen.rand_uniform(0.5, 1.0));
 					// stain should be near the open end of the bottle
 					point const center(bottle.xc(), bottle.yc(), zval+stain_height);
 					vector3d rot_dir(bottle_obj.get_dir());
 					rotate_vector3d(plus_z, bottle_obj.get_bottle_rot_angle(), rot_dir);
-					interior->room_geom->decal_manager.add_blood_or_stain((center - (0.5*height)*rot_dir), radius, color, 0); // is_blood=0
+					interior->room_geom->decal_manager.add_blood_or_stain((center - (0.5*height)*rot_dir), stain_radius, color, 0); // is_blood=0
 				}
 			}
 		} // for n
