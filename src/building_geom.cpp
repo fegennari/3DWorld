@@ -315,7 +315,9 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 			}
 			else if (is_cube() && height > 2.5*floor_spacing && rgen.rand_probability(global_building_params.retail_floorplan_prob)) { // 3+ floors
 				rand_gen_t rgen2(rgen); // create a new rgen to avoid affecting the other building parameters when this option is changed
-				retail_floor_levels = (rgen2.rand_probability(global_building_params.two_floor_retail_prob) ? 2 : 1);
+				retail_floor_levels = 1;
+				// only create a tall retail area if there are at least 4 floors (2 below and 2 above), otherwise the top part won't have central stairs to extend below
+				if (height > 3.5*floor_spacing && rgen2.rand_probability(global_building_params.two_floor_retail_prob)) {retail_floor_levels = 2;}
 				parts.push_back(base);
 				parts[0].z2() = parts[1].z1() = base.z1() + retail_floor_levels*floor_spacing; // split in Z: parts[0] is the bottom, parts[1] is the top
 			}
