@@ -1244,13 +1244,15 @@ void building_t::add_escalator_points(person_t const &person, ai_path_t &path) c
 	e.get_ends_bcube(ends[0], ends[1], 0); // exclude_sides=0
 	cube_t const &enter_end(ends[!going_up]), &exit_end(ends[going_up]);
 	bool const dim(e.dim), move_dir(enter_end.d[dim][0] < exit_end.d[dim][0]);
+	float const floor_thick(e.get_floor_thick()); // small value added to zval when on escalator
 	float const step_len(e.get_ramp_bcube(0).get_sz_dim(dim)/NUM_STAIRS_PER_FLOOR_ESC);
 	float const move_radius((move_dir ? 1.0 : -1.0)*person.radius); // one radius in the direction of movement
 	float const step_lead(1.5*((going_up ^ move_dir) ? 1.0 : -1.0)*step_len); // or 0.5*person.radius?
 	point enter_pt, step_beg, step_end, exit_pt;
 	enter_pt[!dim] = step_beg[!dim] = step_end[!dim] = exit_pt[!dim] = e.get_center_dim(!dim); // centerline
-	enter_pt.z = step_beg.z = /*enter_end.z1() + person.radius*/person.pos.z; // should be the same zval within FP error
-	step_end.z = exit_pt .z = exit_end .z1() + person.radius;
+	enter_pt.z  = step_beg.z = /*enter_end.z1() + person.radius*/person.pos.z; // should be the same zval within FP error
+	step_end.z  = exit_pt .z = exit_end .z1() + person.radius;
+	step_beg.z += floor_thick; step_end.z += floor_thick; // makes the entrance and exit points sloped so that person.on_stairs=1
 	enter_pt[dim] = enter_end.d[dim][!move_dir] - move_radius; // in front of entrance
 	step_beg[dim] = enter_end.d[dim][ move_dir] + step_lead; // just before first step
 	step_end[dim] = exit_end .d[dim][!move_dir] + step_lead; // on last step
@@ -2020,8 +2022,9 @@ bool building_t::is_player_visible(person_t const &person, unsigned vis_test) co
 	return 1;
 }
 bool building_t::can_target_player(person_t const &person) const {
-	if (!can_ai_follow_player(person))  return 0;
-	if (point_in_escalator(person.pos)) return 0; // don't update target when entering or exiting an escalator
+	if (!can_ai_follow_player(person))    return 0;
+	if (point_in_escalator  (person.pos)) return 0; // don't update target when entering or exiting an escalator
+	if (point_in_U_stairwell(person.pos)) return 0; // don't update target when on U-shaped stairs or stairs landing
 	// if we're on an upper retail glass floor, we follow the player if and only if they are also on the floor; but what about stairs landing through glass floor?
 	if (point_over_glass_floor(person.pos)) {return point_over_glass_floor(cur_player_building_loc.pos);}
 	room_t const &player_room(get_room(cur_player_building_loc.room_ix));

@@ -1155,6 +1155,25 @@ bool building_t::point_in_stairwell(point const &pos) const {
 	}
 	return 0;
 }
+bool building_t::point_in_U_stairwell(point const &pos) const {
+	if (!interior) return 0;
+
+	for (stairwell_t const &s : interior->stairwells) {
+		if (!s.is_u_shape())     continue;
+		if (s.contains_pt(pos))  return 1;
+		if (!s.not_an_exit_mask) continue;
+		// handle landing
+		float const floor_spacing(get_window_vspace());
+		int const floor_ix(max(0, int((pos.z - s.z1())/floor_spacing)));
+			
+		if (s.not_an_exit_mask & (1 << floor_ix)) {
+			cube_t stairs_ext(s);
+			stairs_ext.d[s.dim][!s.dir] += (s.dir ? -1.0 : 1.0)*s.get_retail_landing_width(floor_spacing);
+			if (stairs_ext.contains_pt(pos)) return 1;
+		}
+	} // for s
+	return 0;
+}
 
 bool building_t::check_pos_in_unlit_room(point const &pos) const {
 	if (!interior) return 0; // error?

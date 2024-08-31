@@ -1789,6 +1789,7 @@ struct building_t : public building_geom_t {
 	bool point_in_elevator (point const &pos, bool check_elevator_car=0) const;
 	bool point_in_escalator(point const &pos) const;
 	bool point_in_stairwell(point const &pos) const;
+	bool point_in_U_stairwell(point const &pos) const;
 	bool check_pos_in_unlit_room(point const &pos) const;
 	bool check_pos_in_unlit_room_recur(point const &pos, std::set<unsigned> &rooms_visited, int known_room_id=-1) const;
 	bool is_room_windowless(room_t const &room) const;
