@@ -1137,6 +1137,9 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 	person.is_on_stairs = 0;
 	person.last_used_stairs = 0; // non-stairs dest, reset
 
+	if (global_building_params.ai_target_player && point_over_glass_floor(person.pos) && point_over_glass_floor(person.target_pos)) {
+		return 1; // person/zombie and player both on glass floor
+	}
 	// allow moving to a different floor, currently only one floor at a time
 	// note that if we're following a sound this may lead us to the wrong floor of the room if more than one floor above or below;
 	// the current system doesn't allow for paths that span more than two floors;
@@ -1259,6 +1262,68 @@ void building_t::add_escalator_points(person_t const &person, ai_path_t &path) c
 	path.add(enter_pt);
 }
 
+bool building_t::point_over_glass_floor(point const &pos) const {
+	if (!has_room_geom()) return 0;
+
+	for (cube_t const &f : interior->room_geom->glass_floors) {
+		if (f.contains_pt_xy(pos) && pos.z > f.z2()) return 1;
+	}
+	return 0;
+}
+
+int building_t::maybe_use_escalator(person_t &person, building_loc_t const &loc, bool last_used_escalator, rand_gen_t &rgen) const {
+
+	if (!has_tall_retail() || interior->escalators.empty() || !has_glass_floor()) return 0;
+	if (loc.room_ix < 0) return 0;
+	bool const target_player(global_building_params.ai_target_player && can_ai_follow_player(person) && loc.room_ix == prev_player_building_loc.room_ix);
+	//if (!target_player && rgen.rand_float() > 0.25) return 0;
+	room_t const &room(get_room(loc.room_ix));
+	if (!room.is_retail()) return 0;
+	bool const on_upper_floor(point_over_glass_floor(person.pos)); // TODO: include escalator upper entrance
+	if (!on_upper_floor && person.pos.z > room.z1() + get_window_vspace()) return 0; // on neither upper nor lower floor; on stairs landing?
+	if (!on_upper_floor && last_used_escalator) return 0; // don't use escalator on bottom floor if we just came down
+	point const &ppos(prev_player_building_loc.pos);
+
+	if (target_player) {
+		bool const player_on_upper_floor(point_over_glass_floor(ppos));
+		if (!on_upper_floor && !player_on_upper_floor) return 0; // player not on glass floor, so don't go there
+		
+		if (on_upper_floor && player_on_upper_floor) { // person/zombie and player both on glass floor
+			person.dest_room = loc.room_ix; // same as current room
+			person.goal_type = GOAL_TYPE_PLAYER;
+			person.target_pos.assign(ppos.x, ppos.y, person.pos.z);
+			return 2; // not using escalator, but have a goal
+		}
+	}
+	for (auto e = interior->escalators.begin(); e != interior->escalators.end(); ++e) {
+		if (!room.contains_cube(*e))            continue; // escalator in wrong room - shouldn't happen?
+		if (e->is_going_up() == on_upper_floor) continue; // wrong direction
+
+		if (on_upper_floor) { // dest is lower floor
+			person.target_pos.z = e->z1() + person.radius; // on ground floor of retail
+			assert(person.target_pos.z < person.pos.z);
+			if (target_player) {person.target_pos.x = ppos.x; person.target_pos.y = ppos.y;}
+			else if (!select_person_dest_in_room(person, rgen, get_room(loc.room_ix))) continue;
+		}
+		else { // dest is upper floor
+			cube_t const dest_floor(interior->room_geom->glass_floors[rgen.rand() % interior->room_geom->glass_floors.size()]);
+			float const zval(dest_floor.z2() + person.radius), height(person.get_height()), radius(COLL_RADIUS_SCALE*person.radius);
+			person.target_pos.assign(dest_floor.xc(), dest_floor.yc(), zval); // init dest is center
+			static vect_cube_t avoid; // reuse across frames/people
+			get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
+			if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, zval, dest_floor, rgen, person.target_pos, 1)) continue; // no_use_init=1				
+			//assert(person.target_pos.z > person.pos.z);
+			if (person.target_pos.z <= person.pos.z) {register_debug_event(person.target_pos, "invalid target_pos");}
+		}
+		person.dest_room = loc.room_ix; // same as current room
+		person.goal_type = GOAL_TYPE_ESCALATOR;
+		person.cur_escalator    = (e - interior->escalators.begin());
+		person.last_used_stairs = 0; // non-stairs dest, reset
+		return 1;
+	} // for e
+	return 0;
+}
+
 int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // used for randomly walking around the building
 
 	assert(interior && interior->nav_graph);
@@ -1270,48 +1335,11 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 	if (interior->rooms.size() == 1) return 0; // no other room to move to
 	bool const last_used_escalator(person.last_used_escalator);
 	person.last_used_escalator = 0;
+	
+	// maybe use retail area escalator
+	if (maybe_use_escalator(person, loc, last_used_escalator, rgen)) return 1;
 	float const floor_spacing(get_window_vspace());
 
-	// maybe use retail area escalator
-	if (0 && loc.room_ix >= 0 && has_tall_retail() && !interior->escalators.empty() && has_glass_floor() && rgen.rand_float() < 0.9) {
-		room_t const &room(get_room(loc.room_ix));
-
-		if (room.is_retail()) {
-			bool on_upper_floor(0);
-
-			for (cube_t const &f : interior->room_geom->glass_floors) {
-				if (f.contains_pt_xy(person.pos) && person.pos.z > f.z2()) {on_upper_floor = 1; break;}
-			}
-			if (!last_used_escalator || on_upper_floor) { // don't use escalator on bottom floor if we just came down
-				for (auto e = interior->escalators.begin(); e != interior->escalators.end(); ++e) {
-					if (!room.contains_cube(*e)) continue;
-					if (e->is_going_up() == on_upper_floor) continue; // wrong direction
-
-					if (on_upper_floor) { // dest is lower floor
-						person.target_pos.z = e->z1() + person.radius; // on ground floor of retail
-						assert(person.target_pos.z < person.pos.z);
-						if (!select_person_dest_in_room(person, rgen, get_room(loc.room_ix))) continue;
-					}
-					else { // dest is upper floor
-						cube_t const dest_floor(interior->room_geom->glass_floors[rgen.rand() % interior->room_geom->glass_floors.size()]);
-						float const zval(dest_floor.z2() + person.radius), height(person.get_height()), radius(COLL_RADIUS_SCALE*person.radius);
-						person.target_pos.assign(dest_floor.xc(), dest_floor.yc(), zval); // init dest is center
-						static vect_cube_t avoid; // reuse across frames/people
-						get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
-						if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, zval, dest_floor, rgen, person.target_pos, 1)) continue; // no_use_init=1				
-						//assert(person.target_pos.z > person.pos.z);
-						if (person.target_pos.z <= person.pos.z) {register_debug_event(person.target_pos, "invalid target_pos");}
-					}
-					person.dest_room = loc.room_ix; // same as current room
-					person.goal_type = GOAL_TYPE_ESCALATOR;
-					person.cur_escalator    = (e - interior->escalators.begin());
-					person.last_used_stairs = 0; // non-stairs dest, reset
-					building_loc_t const loc(get_building_loc_for_pt(person.target_pos));
-					return 1;
-				} // for e
-			}
-		}
-	}
 	// maybe choose a destination elevator (for office buildings) if our prev dest wasn't an elevator
 	if (!person.is_first_path && !interior->elevators.empty() && !interior->elevators_disabled && !person.last_changed_floor() &&
 		person.goal_type != GOAL_TYPE_ELEVATOR && global_building_params.elevator_capacity > 0)
@@ -1992,9 +2020,15 @@ bool building_t::is_player_visible(person_t const &person, unsigned vis_test) co
 	return 1;
 }
 bool building_t::can_target_player(person_t const &person) const {
-	if (!can_ai_follow_player(person)) return 0;
+	if (!can_ai_follow_player(person))  return 0;
+	if (point_in_escalator(person.pos)) return 0; // don't update target when entering or exiting an escalator
+	// if we're on an upper retail glass floor, we follow the player if and only if they are also on the floor; but what about stairs landing through glass floor?
+	if (point_over_glass_floor(person.pos)) {return point_over_glass_floor(cur_player_building_loc.pos);}
 	room_t const &player_room(get_room(cur_player_building_loc.room_ix));
-	if (player_room.is_single_floor && get_camera_pos().z > player_room.z1() + get_window_vspace()) return 0; // player on unreachable floor
+	float const first_floor_zceil(player_room.z1() + get_window_vspace());
+	if (player_room.is_single_floor && cur_player_building_loc.pos.z > first_floor_zceil) return 0; // check for player on unreachable floor
+	// if player is on the upper floor, don't update target (in case person is on stairs landing)
+	if (person.pos.z > first_floor_zceil && point_over_glass_floor(cur_player_building_loc.pos)) return 0;
 	return is_player_visible(person, global_building_params.ai_player_vis_test); // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
 }
 
@@ -2723,13 +2757,8 @@ void building_t::move_person_to_not_collide(person_t &person, person_t const &ot
 	if (person.goal_type == GOAL_TYPE_ESCALATOR && !person.on_stairs()) {
 		assert(has_glass_floor());
 
-		if (new_pos.z > interior->room_geom->glass_floors.front().z2()) { // on upper floor
-			bool on_floor(0);
-
-			for (cube_t const &f : interior->room_geom->glass_floors) {
-				if (f.contains_pt_xy(new_pos)) {on_floor = 1; break;}
-			}
-			if (!on_floor) {person.pos = orig_pos;} // restore original pos
+		if (person.pos.z > interior->room_geom->glass_floors.front().z2()) { // on upper floor
+			if (!point_over_glass_floor(person.pos) && point_over_glass_floor(orig_pos)) {person.pos = orig_pos;} // restore original pos if not over glass floor
 		}
 	}
 	if (!point_in_building_or_basement_bcube(person.pos)) { // this can happen on rare occasions, due to fp inaccuracy or multiple collisions
