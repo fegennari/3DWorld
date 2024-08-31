@@ -1207,7 +1207,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 }
 
 bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, room_t const &room) const {
-	float const height(0.7*get_window_vspace()), radius(COLL_RADIUS_SCALE*person.radius);
+	float const height(person.get_height()), radius(COLL_RADIUS_SCALE*person.radius);
 	point dest_pos(room.get_cube_center());
 	static vect_cube_t avoid; // reuse across frames/people
 	get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
@@ -1248,10 +1248,10 @@ void building_t::add_escalator_points(person_t const &person, ai_path_t &path) c
 	enter_pt[!dim] = step_beg[!dim] = step_end[!dim] = exit_pt[!dim] = e.get_center_dim(!dim); // centerline
 	enter_pt.z = step_beg.z = /*enter_end.z1() + person.radius*/person.pos.z; // should be the same zval within FP error
 	step_end.z = exit_pt .z = exit_end .z1() + person.radius;
-	enter_pt[dim] = enter_end.d[dim][!move_dir] - 1.1*move_radius; // in front of entrance
+	enter_pt[dim] = enter_end.d[dim][!move_dir] - move_radius; // in front of entrance
 	step_beg[dim] = enter_end.d[dim][ move_dir] + step_lead; // just before first step
 	step_end[dim] = exit_end .d[dim][!move_dir] + step_lead; // on last step
-	exit_pt [dim] = exit_end .d[dim][ move_dir] + 1.1*move_radius; // at exit
+	exit_pt [dim] = exit_end .d[dim][ move_dir] + move_radius; // at exit
 	// add to path backwards
 	path.add(exit_pt );
 	path.add(step_end);
@@ -1294,8 +1294,11 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 					}
 					else { // dest is upper floor
 						cube_t const dest_floor(interior->room_geom->glass_floors[rgen.rand() % interior->room_geom->glass_floors.size()]);
-						person.target_pos.assign(dest_floor.xc(), dest_floor.yc(), (dest_floor.z2() + person.radius)); // temporary dest
-						// TODO: find random point on dest_floor; check for stairs, elevator, or obj collision
+						float const zval(dest_floor.z2() + person.radius), height(person.get_height()), radius(COLL_RADIUS_SCALE*person.radius);
+						person.target_pos.assign(dest_floor.xc(), dest_floor.yc(), zval); // init dest is center
+						static vect_cube_t avoid; // reuse across frames/people
+						get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
+						if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, zval, dest_floor, rgen, person.target_pos, 1)) continue; // no_use_init=1				
 						//assert(person.target_pos.z > person.pos.z);
 						if (person.target_pos.z <= person.pos.z) {register_debug_event(person.target_pos, "invalid target_pos");}
 					}
@@ -1634,7 +1637,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 	if (loc1.part_ix < 0 || loc2.part_ix < 0 || loc1.room_ix < 0 || loc2.room_ix < 0) return 0; // not in a room
 	assert((unsigned)loc1.part_ix < parts.size() && (unsigned)loc2.part_ix < parts.size());
 	assert((unsigned)loc1.room_ix < interior->rooms.size() && (unsigned)loc2.room_ix < interior->rooms.size());
-	float const floor_spacing(get_window_vspace()), height(0.7*floor_spacing); // approximate, since we're not tracking actual heights
+	float const floor_spacing(get_window_vspace()), height(person.get_height());
 	static vect_cube_t avoid, avoid2; // reuse across frames/people
 
 	if (person.goal_type == GOAL_TYPE_ESCALATOR) {
