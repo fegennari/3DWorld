@@ -2902,7 +2902,7 @@ public:
 			get_city_road_bcubes(avoid_bcubes, 1); // connector roads only
 			get_all_model_bcubes(avoid_bcubes);
 			expand_cubes_by_xy(avoid_bcubes, get_road_max_width());
-			for (auto i = avoid_bcubes.begin(); i != avoid_bcubes.end(); ++i) {avoid_bcubes_bcube.assign_or_union_with_cube(*i);}
+			avoid_bcubes_bcube = get_bcubes_union(avoid_bcubes);
 		}
 		bool const use_city_plots(!valid_city_plot_ixs.empty()), check_plot_coll(!avoid_bcubes.empty());
 		vect_city_prob_t city_prob(use_city_plots); // calculated and reused once per city

@@ -1679,9 +1679,8 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 		point const &eenter(epath.back()), &eexit(epath.front()); // entrance and exit point of escalator
 		get_avoid_cubes(to.z, height, radius, avoid, following_player);
 		// upper path should be constrained to glass floor rather than room; assumes glass floors create a full rectangle
-		cube_t clamp_area;
-		for (cube_t const &f : interior->room_geom->glass_floors) {clamp_area.assign_or_union_with_cube(f);}
-		assert(clamp_area.is_strictly_normalized());
+		cube_t const clamp_area(get_bcubes_union(interior->room_geom->glass_floors));
+		assert(clamp_area.is_strictly_normalized()); // glass floors must be nonempty
 		bool const going_up(to.z > from.z);
 		if (!interior->nav_graph->complete_path_within_room(eexit, to, loc1.room_ix, person.ssn, radius, person.cur_rseed,
 			is_first_path, following_player, (going_up ? clamp_area : cube_t()), avoid, *this, path)) return 0; // escalator to target

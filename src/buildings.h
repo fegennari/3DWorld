@@ -2474,6 +2474,11 @@ template<typename T> cube_t get_cube_height_radius(point const &center, T radius
 	c.z2() += height;
 	return c;
 }
+template<typename T> cube_t get_bcubes_union(vector<T> const &cubes) {
+	cube_t bcube;
+	for (cube_t const &c : cubes) {bcube.assign_or_union_with_cube(c);}
+	return bcube;
+}
 inline void swap_cube_dims(cube_t &c, unsigned d1, unsigned d2) {
 	for (unsigned d = 0; d < 2; ++d) {swap(c.d[d1][d], c.d[d2][d]);}
 }
