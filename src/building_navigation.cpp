@@ -815,8 +815,7 @@ public:
 			}
 		}
 		// maybe add an extra path point to prevent clipping through walls when walking through a doorway
-		point const from_extend_pt(closest_room_pt(walk_area, from));
-		path.add(from_extend_pt); // add if p1 was clamped
+		path.add(closest_room_pt(walk_area, from)); // add if p1 was clamped
 		return 1;
 	}
 
@@ -1281,14 +1280,14 @@ int building_t::maybe_use_escalator(person_t &person, building_loc_t const &loc,
 	//if (!target_player && rgen.rand_float() > 0.25) return 0;
 	room_t const &room(get_room(loc.room_ix));
 	if (!room.is_retail()) return 0;
-	bool const on_upper_floor(point_over_glass_floor(person.pos)); // TODO: include escalator upper entrance
+	bool const on_upper_floor(point_over_glass_floor(person.pos));
 	if (!on_upper_floor && person.pos.z > room.z1() + get_window_vspace()) return 0; // on neither upper nor lower floor; on stairs landing?
-	if (!on_upper_floor && last_used_escalator) return 0; // don't use escalator on bottom floor if we just came down
+	if (!on_upper_floor && last_used_escalator && !target_player) return 0; // don't use escalator on bottom floor if we just came down unless following the player
 	point const &ppos(prev_player_building_loc.pos);
 
 	if (target_player) {
 		bool const player_on_upper_floor(point_over_glass_floor(ppos));
-		if (!on_upper_floor && !player_on_upper_floor) return 0; // player not on glass floor, so don't go there
+		if (!on_upper_floor && !player_on_upper_floor) return 0; // player not on glass/upper floor, so don't go there
 		
 		if (on_upper_floor && player_on_upper_floor) { // person/zombie and player both on glass floor
 			person.dest_room = loc.room_ix; // same as current room
@@ -1304,7 +1303,12 @@ int building_t::maybe_use_escalator(person_t &person, building_loc_t const &loc,
 		if (on_upper_floor) { // dest is lower floor
 			person.target_pos.z = e->z1() + person.radius; // on ground floor of retail
 			assert(person.target_pos.z < person.pos.z);
-			if (target_player) {person.target_pos.x = ppos.x; person.target_pos.y = ppos.y;}
+			
+			if (target_player) { // the player may not be reachable, so target a point at the bottom of the escalator
+				//person.target_pos.x = ppos.x; person.target_pos.y = ppos.y; // player pos
+				person.target_pos[!e->dim] = e->get_center_dim(!e->dim); // centerline
+				person.target_pos[ e->dim] = e->d[e->dim][!e->dir] + (e->dir ? -1.0 : 1.0)*1.1*person.radius; // slightly in front
+			}
 			else if (!select_person_dest_in_room(person, rgen, get_room(loc.room_ix))) continue;
 		}
 		else { // dest is upper floor
@@ -1623,7 +1627,6 @@ void building_t::find_nearest_stairs_or_ramp(point const &p1, point const &p2, v
 			sorted.emplace_back((p2p_dist(p1, center) + p2p_dist(center, p2)), interior->stairwells.size());
 		}
 	}
-	// interior->escalators?
 	sort(sorted.begin(), sorted.end()); // sort by distance, min first
 	for (auto s = sorted.begin(); s != sorted.end(); ++s) {nearest_stairs.push_back(s->second);}
 }
@@ -1685,6 +1688,16 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 			is_first_path, following_player, (going_up ? clamp_area : cube_t()), avoid, *this, path)) return 0; // escalator to target
 		path.add(epath); // add escalator segment
 		get_avoid_cubes(from.z, height, radius, avoid, following_player);
+		// check if already intersecting the escalator; if so, remove it from avoid
+		escalator_t const &e(interior->escalators[person.cur_escalator]);
+		cube_t person_bc;
+		person_bc.set_from_sphere(person.pos, radius); // tighter than person.get_bcube()
+
+		if (person_bc.intersects(e)) {
+			for (auto i = avoid.begin(); i != avoid.end(); ++i) {
+				if (*i == e) {avoid.erase(i); break;}
+			}
+		}
 		return interior->nav_graph->complete_path_within_room(from, eenter, loc1.room_ix, person.ssn, radius, person.cur_rseed,
 			is_first_path, following_player, (going_up ? cube_t() : clamp_area), avoid, *this, path); // person to escalator
 	}
@@ -1733,7 +1746,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 			// from => stairs/ramp
 			if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, person.ssn, radius, 0, is_first_path,
 				up_or_down, person.cur_rseed, avoid, *this, from, interior->doors, person.has_key, nullptr, req_custom_dest, from_path)) continue; // no custom_dest
-			point const seg2_start(interior->nav_graph->get_stairs_entrance_pt(to.z, stairs_room_ix, !up_or_down)); // other end
+			point const seg2_start(interior->nav_graph->get_stairs_entrance_pt(to.z, stairs_room_ix, !up_or_down)); // other/entrance end
 			assert(point_in_building_or_basement_bcube(seg2_start));
 			// new floor, new zval, new avoid cubes
 			get_avoid_cubes(seg2_start.z, height, radius, avoid2, following_player); // no fires_select_cube
