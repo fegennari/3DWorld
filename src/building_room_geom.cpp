@@ -2636,20 +2636,19 @@ void draw_sloped_top_and_sides(rgeom_mat_t &mat, point const bot_pts[4], float h
 void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spacing, bool draw_static, bool draw_dynamic) {
 	assert(draw_static != draw_dynamic); // must be one or the other
 	bool const dim(e.dim), dir(e.dir);
-	unsigned const sides_skip(get_skip_mask_for_xy(!dim));
-	float const side_height(e.get_side_height()), side_width(e.get_side_width()), floor_height(e.get_floor_thick());
+	float const floor_height(e.get_floor_thick());
 	cube_t const ramp(e.get_ramp_bcube(draw_dynamic));
 	cube_t lo_end, hi_end;
-	point bot_pts[4]; // {lo-left, lo-right, hi-right, hi-left} (or reversed)
 	e.get_ends_bcube(lo_end, hi_end, draw_dynamic);
-	e.get_ramp_bottom_pts(ramp, bot_pts);
 
 	if (draw_static) {
+		unsigned const sides_skip(get_skip_mask_for_xy(!dim));
+		float const side_height(e.get_side_height()), side_width(e.get_side_width()), get_side_deltaz(e.get_side_deltaz());
 		float const rail_shrink(0.2*side_width), rail_height(0.5*side_width);
-		float const bot_edge_shift(0.9*FLOOR_THICK_VAL_OFFICE*floor_spacing), side_height_ext(side_height + bot_edge_shift);
 		colorRGBA const sides_color(LT_GRAY), rail_color(BKGRAY);
 		rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed=1
-		for (unsigned n = 0; n < 4; ++n) {bot_pts[n].z -= bot_edge_shift;} // shift below the steps for extra space and to hide the walking feet of people
+		point bot_pts[4]; // {lo-left, lo-right, hi-right, hi-left} (or reversed)
+		e.get_ramp_bottom_pts(ramp, bot_pts);
 		cube_t floors[2] = {lo_end, hi_end};
 		for (unsigned d = 0; d < 2; ++d) {floors[d].expand_in_dim(!dim, -side_width);}
 		floors[0].z2() = floors[0].z1() + floor_height;
@@ -2669,10 +2668,10 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 			point bs_pts[4];
 			for (unsigned n = 0; n < 4; ++n) {bs_pts[n] = bot_pts[n];}
 			bs_pts[side ? 0 : 1][!dim] = bs_pts[side ? 3 : 2][!dim] = lo_end_side.d[!dim][!side];
-			draw_sloped_top_and_sides(metal_mat, bs_pts, side_height_ext, sides_color);
+			draw_sloped_top_and_sides(metal_mat, bs_pts, get_side_deltaz, sides_color);
 			// draw railings
 			rgeom_mat_t &railing_mat(get_untextured_material(0)); // unshadowed
-			for (unsigned n = 0; n < 4; ++n) {bs_pts[n].z += side_height_ext;} // move to top of sides
+			for (unsigned n = 0; n < 4; ++n) {bs_pts[n].z += get_side_deltaz;} // move to top of sides
 			bs_pts[0][!dim] += rail_shrink;
 			bs_pts[1][!dim] -= rail_shrink;
 			bs_pts[2][!dim] -= rail_shrink;

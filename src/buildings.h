@@ -1395,14 +1395,17 @@ struct stairs_place_t : public cube_t { // for extended basements
 
 struct escalator_t : public oriented_cube_t { // Note: not yet used
 	bool move_dir=0; // dir points upward
-	float end_ext=0.0, delta_z=0.0;
+	float end_ext=0.0, delta_z=0.0, bot_edge_shift=0.0;
+
 	escalator_t() {}
-	escalator_t(cube_t const &c, bool dim_, bool dir_, bool mdir, float ext, float dz) : oriented_cube_t(c, dim_, dir_), move_dir(mdir), end_ext(ext), delta_z(dz) {}
+	escalator_t(cube_t const &c, bool dim_, bool dir_, bool mdir, float ext, float dz, float brz) :
+		oriented_cube_t(c, dim_, dir_), move_dir(mdir), end_ext(ext), delta_z(dz), bot_edge_shift(brz) {}
 	bool  is_going_up    () const {return (move_dir != dir);}
 	float get_side_width () const {return 0.10*get_width();}
-	float get_side_height() const {return 0.80*get_width();}
+	float get_side_height() const {return 0.80*get_width();} // ramp/steps to top edge
 	float get_upper_hang () const {return 0.25*get_width();}
 	float get_floor_thick() const {return 0.01*get_width();}
+	float get_side_deltaz() const {return (get_side_height() + bot_edge_shift);} // bottom edge to top edge
 	cube_t get_ramp_bcube(bool exclude_sides) const;
 	void get_ends_bcube(cube_t &lo_end, cube_t &hi_end, bool exclude_sides) const;
 	cube_t get_side_for_end(cube_t const &end, bool lr) const;

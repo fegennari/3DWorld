@@ -1517,8 +1517,8 @@ cube_t escalator_t::get_support_pillar() const {
 	return support;
 }
 void escalator_t::get_ramp_bottom_pts(cube_t const &ramp, point bot_pts[4]) const { // {lo-left, lo-right, hi-right, hi-left} (or reversed)
-	bot_pts[0].z = bot_pts[1].z = ramp.z1();
-	bot_pts[2].z = bot_pts[3].z = ramp.z2();
+	bot_pts[0].z = bot_pts[1].z = ramp.z1() - bot_edge_shift; // shift below the steps for extra space and to hide the walking feet of people
+	bot_pts[2].z = bot_pts[3].z = ramp.z2() - bot_edge_shift;
 	bot_pts[0][ dim] = bot_pts[1][ dim] = ramp.d[dim][!dir];
 	bot_pts[2][ dim] = bot_pts[3][ dim] = ramp.d[dim][ dir];
 	bot_pts[0][!dim] = bot_pts[3][!dim] = ramp.d[!dim][0];
@@ -1539,7 +1539,7 @@ void escalator_t::get_all_cubes(cube_t cubes[7]) const { // {lo left wall, lo ri
 	cubes[ix++] = get_support_pillar();
 }
 
-// Note: should be valid for players and other spherical objects; also checks escalators
+// Note: should be valid for player and other spherical objects; also checks escalators
 bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t const &building, point &pos, point const &p_last, float radius,
 	float wall_test_extra_z, bool is_player, vector3d *cnorm) const
 {
@@ -1618,11 +1618,10 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 			}
 			if (!handled) {
 				// treat the sloped part of the escalator as an extruded polygon; should be conservative for balls and correct for player exterior collisions
-				float const side_height(e.get_side_height());
 				float val(0.0);
 				vector3d coll_norm;
 
-				if (get_sphere_poly_int_val(pos, radius, bot_pts, 4, normal, side_height, val, coll_norm)) {
+				if (get_sphere_poly_int_val(pos, radius, bot_pts, 4, normal, e.get_side_deltaz(), val, coll_norm)) {
 					if (is_player && coll_norm.z < 0.0) {coll_norm.z = 0.0; coll_norm.normalize();} // don't push player through floor when colliding with bottom
 					if (cnorm) {*cnorm = coll_norm;}
 					pos += coll_norm*val;
