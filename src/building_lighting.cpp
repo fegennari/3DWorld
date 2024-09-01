@@ -1487,6 +1487,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					(has_ext_basement() && interior->get_ext_basement_door().get_clearance_bcube().contains_pt(camera_rot)))
 				{
 					stair_ramp_cuts.emplace_back(interior->pg_ramp, 3); // both dirs
+					cube_t &region((camera_floor == 0) ? floor_above_region : floor_below_region); // lights on PG level above or below may be visible through ramp opening
+					if (!region.is_all_zeros()) {region.union_with_cube_xy(interior->pg_ramp);} // close enough?
+					//region.set_to_zeros(); // conservative
 				}
 			}
 			for (cube_with_ix_t const &s : stair_ramp_cuts) {
