@@ -1643,8 +1643,9 @@ int building_t::find_nearest_elevator_this_floor(point const &pos) const {
 	return nearest;
 }
 
-cube_t get_stairs_plus_step_up(stairwell_t const &stairs) {
-	float const step_len((stairs.get_length()/stairs.get_num_stairs())*(stairs.is_straight() ? 1.0 : 2.0)); // U and L shaped stairs are longer due to bends
+cube_t get_stairs_plus_step_up(stairwell_t const &stairs, float max_ext) {
+	float step_len((stairs.get_length()/stairs.get_num_stairs())*(stairs.is_straight() ? 1.0 : 2.0)); // U and L shaped stairs are longer due to bends
+	min_eq(step_len, max_ext); // limit to a reasonable value for long stairs such as L-shaped
 	cube_t stairs_ext(stairs);
 	stairs_ext.d[stairs.dim][!stairs.dir] += (stairs.dir ? -1.0 : 1.0)*step_len; // location of step up
 	return stairs_ext;
@@ -1763,7 +1764,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 			}
 			else { // stairs
 				stairwell_t const &stairs(interior->stairwells[s]);
-				cube_t const stairs_ext(get_stairs_plus_step_up(stairs));
+				cube_t const stairs_ext(get_stairs_plus_step_up(stairs, radius));
 				enter_pt = stairs_ext.closest_pt(from_path.front());
 				point const exit_pt(stairs_ext.closest_pt(path.back()));
 				path.add(exit_pt, 1);
