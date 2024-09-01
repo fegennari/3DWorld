@@ -17,7 +17,7 @@ building_dest_t cur_player_building_loc, prev_player_building_loc;
 room_object_t player_hiding_obj;
 bool debug_mode(0);
 
-extern bool player_is_hiding;
+extern bool player_is_hiding, player_on_escalator;
 extern int frame_counter, display_mode, animate2, player_in_elevator;
 extern float fticks;
 extern building_params_t global_building_params;
@@ -1944,10 +1944,11 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 }
 
 bool can_ai_follow_player(person_t const &person, bool allow_diff_building) {
-	if (!ai_follow_player()) return 0; // disabled
+	if (!ai_follow_player())                 return 0; // disabled
 	if (!cur_player_building_loc.is_valid()) return 0; // no target
 	if (!allow_diff_building && cur_player_building_loc.building_ix != person.cur_bldg) return 0; // wrong building
 	if (player_is_hiding && !person.saw_player_hide) return 0; // ignore player in closet, bathroom stall, or shower with door closed, and we didn't see them hide
+	if (player_on_escalator)       return 0; // don't follow player on escalator; wait until player reaches the floor above or below
 	if (person.retreat_time > 0.0) return 0; // ignore the player if retreating
 	// handle elevator case; this isn't perfect because it doesn't handle the case of player and zombie in adjacent elevators, but I've never seen that failure mode
 	if (player_in_elevator != (person.ai_state >= AI_ENTER_ELEVATOR)) return 0; // {player, zombie) in elevator, and {zombie, player} is not

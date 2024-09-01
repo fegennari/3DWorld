@@ -6,7 +6,7 @@
 #include "buildings.h"
 
 
-extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_in_unlit_room, building_has_open_ext_door, ctrl_key_pressed;
+extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_in_unlit_room, building_has_open_ext_door, player_on_escalator, ctrl_key_pressed;
 extern bool player_is_hiding, player_wait_respawn, had_building_interior_coll, player_in_int_elevator, player_in_walkway, player_on_house_stairs, player_on_moving_ww;
 extern int camera_surf_collide, frame_counter, animate2, player_in_closet, player_in_elevator, player_in_basement, player_in_attic, player_in_water;
 extern float CAMERA_RADIUS, C_STEP_HEIGHT, NEAR_CLIP, fticks, building_bcube_expand;
@@ -1581,6 +1581,7 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 			if (!ends[hi].contains_pt(point(pos.x, pos.y, obj_z))) continue;
 			float const floor_zmin(ends[hi].z1() + e.get_floor_thick() + radius);
 			if (pos.z < floor_zmin) {pos.z = floor_zmin; max_eq(obj_z, pos.z); had_coll = 1;}
+			if (is_player) {player_on_escalator = 1;}
 			handled = 1;
 		}
 		if (!handled && sphere_cube_intersect_xy(pos, radius, ramp)) { // if entering or exiting, ignore the ramp
@@ -1607,7 +1608,7 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 							pos[e.dim] += (e.dir ? 1.0 : -1.0)*delta*length;
 						}
 						obj_z   = max(pos.z, p_last.z);
-						handled = had_coll = player_on_moving_ww = 1; // set player_on_moving_ww=1 to suppress footsteps
+						handled = had_coll = player_on_moving_ww = player_on_escalator = 1; // set player_on_moving_ww=1 to suppress footsteps
 						// clamp player to interior of escalator
 						float const shrink(min(radius, 0.5f*ramp_inner.get_sz_dim(!e.dim))); // make sure it's normalized
 						max_eq(pos[!e.dim], ramp_inner.d[!e.dim][0]+shrink);

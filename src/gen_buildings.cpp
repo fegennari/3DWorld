@@ -23,7 +23,7 @@ unsigned const NO_SHADOW_WHITE_TEX = BLACK_TEX; // alias to differentiate shadow
 unsigned const SHADOW_ONLY_TEX     = RED_TEX;   // alias to differentiate shadow only vs. other      untextured objects
 
 bool camera_in_building(0), interior_shadow_maps(0), player_is_hiding(0), player_in_unlit_room(0), player_in_walkway(0), player_in_int_elevator(0), player_on_house_stairs(0);
-bool building_has_open_ext_door(0), sec_camera_shadow_mode(0), player_in_skyway(0), player_on_moving_ww(0);
+bool building_has_open_ext_door(0), sec_camera_shadow_mode(0), player_in_skyway(0), player_on_moving_ww(0), player_on_escalator(0);
 int player_in_basement(0); // 0=no, 1=below ground level, 2=in basement and not on stairs, 3=in extended basement
 int player_in_closet  (0); // uses flags RO_FLAG_IN_CLOSET (player in closet), RO_FLAG_LIT (closet light is on), RO_FLAG_OPEN (closet door is open)
 int player_in_water   (0); // 0=no, 1=standing in water, 2=head underwater
@@ -5054,9 +5054,10 @@ void draw_building_lights(vector3d const &xlate) {
 }
 bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, vector3d *cnorm, bool check_interior, bool exclude_city) { // pos is in camera space
 	if (check_interior) { // only called for the player
-		player_in_closet   = 0; // reset for this call
-		player_is_hiding   = 0;
-		player_in_elevator = 0;
+		player_in_closet       = 0; // reset for this call
+		player_is_hiding       = 0;
+		player_in_elevator     = 0;
+		player_on_escalator    = 0;
 		player_on_house_stairs = 0;
 	}
 	// we generally won't intersect more than one of these categories, so we can return true without checking all cases
