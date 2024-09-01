@@ -2033,6 +2033,9 @@ void building_t::subtract_stairs_and_elevators_from_cube(cube_t const &c, vect_c
 		if (s.intersects(c)) {subtract_cube_from_cubes(s, cube_parts);}
 	}
 }
+bool building_t::glass_floor_visible(vector3d const &xlate) const {
+	return (has_glass_floor() && get_retail_room().contains_pt(get_camera_pos() - xlate));
+}
 void building_t::draw_glass_surfaces(shader_t &s, vector3d const &xlate) const { // Note: xlate is unused; camera_bs = get_camera_pos()-xlate
 	// currently there are only glass floors, but this could be used for drawing showers and fishtanks as well
 	assert(has_room_geom());

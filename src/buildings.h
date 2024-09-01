@@ -1928,6 +1928,7 @@ struct building_t : public building_geom_t {
 	void gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 		unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building, bool ext_basement_conn_visible);
 	bool has_glass_floor() const {return (has_room_geom() && !interior->room_geom->glass_floors.empty());}
+	bool glass_floor_visible(vector3d const &xlate) const;
 	bool point_over_glass_floor(point const &pos) const;
 	void draw_glass_surfaces(shader_t &s, vector3d const &xlate) const;
 	bool has_cars_to_draw(bool player_in_building) const;
