@@ -97,7 +97,7 @@ void draw_scene_for_building_reflection(unsigned &ref_tid, unsigned dim, bool di
 	if (draw_exterior) {draw_cloud_planes(0.0, 0, 1, 1);} // redraw cloud planes since they got overwritten; terrain_zmin=0 (use prev)
 }
 
-void create_mirror_reflection_if_needed(building_t const *vis_conn_bldg) {
+void create_mirror_reflection_if_needed(building_t const *vis_conn_bldg, vector3d const &xlate) {
 	building_t const *buildings[2] = {player_building, vis_conn_bldg};
 
 	for (unsigned n = 0; n < 2; ++n) { // check player building, then visible connected building
@@ -106,7 +106,7 @@ void create_mirror_reflection_if_needed(building_t const *vis_conn_bldg) {
 	
 		if (bldg->water_visible_to_player()) { // draw water plane reflection
 			if (get_camera_pos().z < (bldg->interior->water_zval + bldg->get_window_vspace()) || // if the player is on the same floor as the water
-				(bldg->has_pool() && bldg->get_pool_room().contains_pt(get_camera_pos()))) // or if the player is in the pool room
+				(bldg->has_pool() && bldg->get_pool_room().contains_pt(get_camera_pos() - xlate))) // or if the player is in the pool room
 			{
 				cube_t water_cube(bldg->get_water_cube(0));
 				water_cube.z1() = water_cube.z2(); // top surface only

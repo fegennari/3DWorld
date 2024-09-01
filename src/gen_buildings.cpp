@@ -3411,7 +3411,7 @@ public:
 			// which may look wrong if a window is visible in the same frame as a mirror
 			update_security_camera_image();
 			setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass
-			create_mirror_reflection_if_needed(vis_conn_bldg);
+			create_mirror_reflection_if_needed(vis_conn_bldg, xlate);
 		}
 		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish(), 6.3ms with building interiors)
 		point const camera(get_camera_pos()), camera_bs(camera - xlate);
