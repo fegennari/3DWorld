@@ -1276,7 +1276,7 @@ int building_t::maybe_use_escalator(person_t &person, building_loc_t const &loc,
 	if (!has_tall_retail() || interior->escalators.empty() || !has_glass_floor()) return 0;
 	if (loc.room_ix < 0) return 0;
 	bool const target_player(global_building_params.ai_target_player && can_ai_follow_player(person) && loc.room_ix == prev_player_building_loc.room_ix);
-	//if (!target_player && rgen.rand_float() > 0.25) return 0;
+	if (!target_player && rgen.rand_float() > 0.35) return 0;
 	room_t const &room(get_room(loc.room_ix));
 	if (!room.is_retail()) return 0;
 	bool const on_upper_floor(point_over_glass_floor(person.pos));
