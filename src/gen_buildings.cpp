@@ -3985,10 +3985,7 @@ public:
 		enable_dlight_bcubes = 1;
 		fgPushMatrix();
 		translate_to(xlate);
-		shader_t s;
-		setup_smoke_shaders(s, 0.0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0.0, 0, 0, 0);
-		player_building->draw_glass_surfaces(s, xlate);
-		reset_interior_lighting_and_end_shader(s);
+		player_building->draw_glass_surfaces(xlate);
 		fgPopMatrix();
 		enable_dlight_bcubes = 0;
 	}

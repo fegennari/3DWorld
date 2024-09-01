@@ -13,6 +13,7 @@
 
 bool const EXACT_MULT_FLOOR_HEIGHT = 1;
 bool const ENABLE_MIRROR_REFLECTIONS = 1;
+bool const ENABLE_GLASS_FLOOR_REF  = 0;
 bool const DRAW_CITY_INT_WINDOWS   = 1; // requires having different window x/y size/space/offset values for interior vs. exterior windows
 bool const ADD_WALKWAY_EXT_DOORS   = 1; // requires DRAW_WALKWAY_INTERIORS=1 in gen_buildings.cpp
 unsigned const MAX_CYLIN_SIDES     = 36;
@@ -562,13 +563,14 @@ unsigned const RO_FLAG_BROKEN   = 0x40000000; // for TVs, monitors, flickering l
 unsigned const RO_FLAG_MOVED    = 0x80000000; // for player push/pull
 
 // reflection pass flags
-unsigned const REF_PASS_ENABLED  = 0x01;
-unsigned const REF_PASS_INTERIOR = 0x02;
-unsigned const REF_PASS_HOUSE    = 0x04;
-unsigned const REF_PASS_WATER    = 0x08;
-unsigned const REF_PASS_EXTB     = 0x10;
-unsigned const REF_PASS_NO_MIRROR= 0x20;
-unsigned const REF_PASS_INT_ONLY = 0x40;
+unsigned const REF_PASS_ENABLED     = 0x01;
+unsigned const REF_PASS_INTERIOR    = 0x02;
+unsigned const REF_PASS_HOUSE       = 0x04;
+unsigned const REF_PASS_WATER       = 0x08;
+unsigned const REF_PASS_EXTB        = 0x10;
+unsigned const REF_PASS_NO_MIRROR   = 0x20;
+unsigned const REF_PASS_INT_ONLY    = 0x40;
+unsigned const REF_PASS_GLASS_FLOOR = 0x80;
 
 inline vector3d vector_from_dim_dir(bool dim, bool dir) {
 	vector3d v;
@@ -1930,7 +1932,7 @@ struct building_t : public building_geom_t {
 	bool has_glass_floor() const {return (has_room_geom() && !interior->room_geom->glass_floors.empty());}
 	bool glass_floor_visible(vector3d const &xlate) const;
 	bool point_over_glass_floor(point const &pos) const;
-	void draw_glass_surfaces(shader_t &s, vector3d const &xlate) const;
+	void draw_glass_surfaces(vector3d const &xlate) const;
 	bool has_cars_to_draw(bool player_in_building) const;
 	void draw_cars_in_building(shader_t &s, vector3d const &xlate, bool player_in_building, bool shadow_only) const;
 	bool check_for_water_splash(point const &pos_bs, float size=1.0, bool full_room_height=0, bool draw_splash=0, bool alert_zombies=1) const;

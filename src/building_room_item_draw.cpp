@@ -42,6 +42,7 @@ bool have_fish_model();
 void register_fishtank(room_object_t const &obj, bool is_visible);
 void end_fish_draw(shader_t &s, bool inc_pools_and_fb);
 void calc_cur_ambient_diffuse();
+void reset_interior_lighting_and_end_shader(shader_t &s);
 
 bool has_key_3d_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 
@@ -2036,12 +2037,14 @@ void building_t::subtract_stairs_and_elevators_from_cube(cube_t const &c, vect_c
 bool building_t::glass_floor_visible(vector3d const &xlate) const {
 	return (has_glass_floor() && get_retail_room().contains_pt(get_camera_pos() - xlate));
 }
-void building_t::draw_glass_surfaces(shader_t &s, vector3d const &xlate) const { // Note: xlate is unused; camera_bs = get_camera_pos()-xlate
+void building_t::draw_glass_surfaces(vector3d const &xlate) const {
 	// currently there are only glass floors, but this could be used for drawing showers and fishtanks as well
 	assert(has_room_geom());
 	vect_cube_t const &glass_floors(interior->room_geom->glass_floors);
 	if (glass_floors.empty()) return;
 	float const wall_thickness(get_wall_thickness());
+	shader_t s;
+	setup_smoke_shaders(s, 0.0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0.0, 0, 0, 0);
 	// we don't have building light sources setup in this pass, and sun/moon light isn't correct indoors;
 	// so instead treat this glass as lit with ambient only, where the emissive color is a function of exterior light through windows and average interior room light
 	s.add_uniform_float("diffuse_scale",       0.0);
@@ -2051,7 +2054,6 @@ void building_t::draw_glass_surfaces(shader_t &s, vector3d const &xlate) const {
 	colorRGBA const indoor_light_color(player_building->get_retail_light_color());
 	s.set_color_e((indoor_light_color*0.5 + colorRGBA(cur_diffuse)*0.2).modulate_with(GLASS_COLOR));
 	rgeom_mat_t &mat(interior->room_geom->mats_glass);
-	// TODO: reflection on top surface
 
 	if (mat.empty()) { // create geometry
 		for (cube_t const &c : glass_floors) {
@@ -2081,11 +2083,23 @@ void building_t::draw_glass_surfaces(shader_t &s, vector3d const &xlate) const {
 	enable_blend();
 	// cull back faces if floor was split due to stairs or an elevator, since the bottom won't alpha blend properly
 	if (interior->room_geom->glass_floor_split) {glEnable(GL_CULL_FACE);}
-	mat.draw(state, nullptr, 0, 0, 0); // no brg_batch_draw_t, shadow=reflection=exterior=0
+	mat.draw(state, nullptr, 0, 0, 0); // no brg_batch_draw_t, shadow=0 reflection=0 exterior=0
 	if (interior->room_geom->glass_floor_split) {glDisable(GL_CULL_FACE);}
 	indexed_vao_manager_with_shadow_t::post_render();
-	disable_blend();
 	s.clear_color_e();
+	reset_interior_lighting_and_end_shader(s);
+
+	if (ENABLE_GLASS_FLOOR_REF) { // draw mirror reflection on top surface of glass
+		// FIXME: broken, should be a custom shader
+		point const camera_bs(get_camera_pos() - xlate);
+
+		if (point_over_glass_floor(camera_bs)) {
+			if (tid_nm_pair_t::bind_reflection_shader()) {
+				mat.draw(state, nullptr, 0, 1, 0); // no brg_batch_draw_t, shadow=0 reflection=1 exterior=0
+			}
+		}
+	}
+	disable_blend();
 }
 
 void draw_billboards(quad_batch_draw &qbd, int tid, bool no_depth_write=1, bool do_blend=1) {
