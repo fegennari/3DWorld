@@ -27,7 +27,7 @@ struct person_base_t : public waiting_obj_t {
 	float radius=0.0, speed=0.0, anim_time=0.0, idle_time=0.0; // Note: idle_time is currently only used for building people
 	unsigned short model_id=0, ssn=0;
 	int model_rand_seed=0;
-	bool in_building=0, is_stopped=0, is_female=0, is_zombie=0, is_on_stairs=0;
+	bool in_building=0, is_stopped=0, is_female=0, is_zombie=0, is_on_stairs=0, path_is_fixed=0;
 	// temp state used for animations/drawing
 	mutable bool prev_was_idle=0;
 	mutable float last_anim_state_change_time=0.0;
@@ -52,10 +52,16 @@ struct person_base_t : public waiting_obj_t {
 	bool is_close_to_player () const;
 };
 
-struct ai_path_t : public vector<point> {
+struct path_pt_t : public point {
+	bool fixed=0; // path segment is fixed and AI can't select a new path/dest (can't follow the player)
+	path_pt_t(point const &p, bool f=0) : point(p), fixed(f) {}
+};
+
+struct ai_path_t : public vector<path_pt_t> {
 	bool uses_nav_grid=0, is_shortened=0;
-	void clear() {vector<point>::clear(); uses_nav_grid = is_shortened = 0;}
-	void add(point const &p) {if (empty() || p != back()) {push_back(p);}}
+	void clear() {vector<path_pt_t>::clear(); uses_nav_grid = is_shortened = 0;}
+	void add(path_pt_t const &p) {if (empty() || p != back()) {push_back(p);}}
+	void add(point const &p, unsigned f) {add(path_pt_t(p, f));}
 	void add(ai_path_t const &path);
 };
 
@@ -73,8 +79,9 @@ struct person_t : public person_base_t { // building person
 	ai_path_t path; // stored backwards, next point on path is path.back()
 
 	person_t(float radius_) : person_base_t(radius_) {in_building = 1;}
-	bool on_stairs   () const {return is_on_stairs;}
-	bool on_escalator() const {return (is_on_stairs && goal_type == GOAL_TYPE_ESCALATOR);}
+	bool on_stairs    () const {return is_on_stairs;}
+	bool on_escalator () const {return (is_on_stairs && goal_type == GOAL_TYPE_ESCALATOR);}
+	bool on_fixed_path() const {return (path_is_fixed || on_stairs());} // checking path_is_fixed should be sufficient, but include stairs in case
 	bool last_changed_floor() const {return (last_used_elevator || last_used_stairs /*|| last_used_escalator*/);}
 	bool waiting_for_same_elevator_as(person_t const &other, float floor_spacing) const;
 	void next_path_pt(bool starting_path);

@@ -2321,7 +2321,8 @@ void building_t::debug_people_in_building(shader_t &s) const {
 
 	for (person_t const &p : interior->people) {
 		// use different colors if the path uses the nav grid or was shortened
-		color_shader.set_cur_color(p.path.uses_nav_grid ? (p.path.is_shortened ? LT_BLUE : GREEN) : (p.path.is_shortened ? ORANGE : YELLOW));
+		colorRGBA const &path_color(p.path.uses_nav_grid ? (p.path.is_shortened ? LT_BLUE : GREEN) : (p.path.is_shortened ? ORANGE : YELLOW));
+		color_shader.set_cur_color(path_color);
 		for (point const &v : p.path) {append_line_pt(line_pts, v);}
 		if (p.target_valid ())        {append_line_pt(line_pts, p.target_pos);} // next target - not dest
 		if (!line_pts.empty())        {append_line_pt(line_pts, p.pos);} // add starting point if there's a valid path
@@ -2329,13 +2330,15 @@ void building_t::debug_people_in_building(shader_t &s) const {
 		line_pts.clear();
 		float const sradius(0.25*p.radius);
 
-		for (point const &v : p.path) {
-			if (v != p.path.front()) {draw_sphere_vbo(v, sradius, ndiv, 0);} // skip first point
+		for (path_pt_t const &v : p.path) {
+			if (v == p.path.front()) continue; // skip first point
+			color_shader.set_cur_color(path_color*(v.fixed ? 0.5 : 1.0));
+			draw_sphere_vbo(v, sradius, ndiv, 0);
 		}
 		assert(p.goal_type < NUM_GOAL_TYPES);
 		colorRGBA const goal_colors[NUM_GOAL_TYPES] = {BLACK, BLUE, PINK, MAGENTA, RED, ORANGE, PURPLE}; // NONE, ROOM, ELEVATOR, ESCALATOR, PLAYER, PLAYER_LAST_POS, SOUND
 		color_shader.set_cur_color(goal_colors[p.goal_type]);
-		if (!p.path.empty ()) {draw_sphere_vbo(p.path.front(), sradius, ndiv, 0);} // draw last point is dest
+		if (!p.path.empty ()) {draw_sphere_vbo(p.path.front(), sradius, ndiv, 0);} // draw last point/dest
 		if (p.target_valid()) {draw_sphere_vbo(p.target_pos,   sradius, ndiv, 0);} // draw target pos
 	} // for p
 	color_shader.end_shader();
