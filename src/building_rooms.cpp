@@ -183,6 +183,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0), added_pool_room(0);
 	light_ix_assign_t light_ix_assign;
 	interior->create_fc_occluders(); // not really part of room geom, but needed for generating and drawing room geom, so we create them here
+	interior->escalators.clear(); // clear existing and recreate
 	for (building_walkway_t &w : walkways) {w.has_door = 0;} // reset for each call
 	has_int_fplace = 0; // reset for this generation
 
