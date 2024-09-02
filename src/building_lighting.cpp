@@ -1367,6 +1367,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 {
 	if (!has_room_geom()) return; // error?
 	point const camera_bs(camera_pdu.pos - xlate), building_center(bcube.get_cube_center()); // camera in building space
+	bool const player_by_ext_door(!camera_in_building && point_near_ext_door(camera_bs, get_door_open_dist()));
 	bool walkway_only(0), same_floor_only(0), same_or_adj_floor_only(0);
 
 	if (!camera_in_building && !has_windows()) { // can't see interior through windows
@@ -1376,7 +1377,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (camera_bs.z > sl.z2()) {above_skylight = 1; break;}
 		}
 		if (!above_skylight) {
-			if (!point_near_ext_door(camera_bs, get_door_open_dist())) { // interior lights not visible
+			if (!player_by_ext_door) { // interior lights not visible
 				if (check_pt_in_or_near_walkway(camera_bs, 1, 1, 1)) {walkway_only = 1;} // player in or near walkway
 				else if (has_int_windows() && player_building != nullptr && is_connected_with_walkway(*player_building, camera_bs.z)) {walkway_only = 1;}
 				else return; // no lights visible
@@ -1635,6 +1636,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (!camera_on_stairs && floor_is_below && !floor_below_region.is_all_zeros() && !floor_below_region.contains_pt_xy(lpos)) continue; // check floor_below_region
 		if (!camera_on_stairs && floor_is_above && !floor_above_region.is_all_zeros() && !floor_above_region.contains_pt_xy(lpos) && !(i->flags & RO_FLAG_TOS)) continue; // check floor_below_region
 		if (is_exterior && (floor_is_below || floor_is_above)) continue; // different floor of walkway - not visible
+		if (player_by_ext_door && camera_z < level_z - window_vspacing) continue; // can't see more than one floor above current floor through open door
 		cube_t const &room_part(get_part_for_room(room));
 		bool const camera_in_room_part_xy(room_part.contains_pt_xy(camera_rot)), in_camera_room((int)i->room_id == camera_room);
 		bool const camera_room_same_part(room.part_id == camera_part || (is_house && camera_in_room_part_xy)); // treat stacked house parts as the same
