@@ -1389,7 +1389,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	else if ((display_mode & 0x08) && !camera_in_building && !bcube.contains_pt_xy(camera_bs) && is_entire_building_occluded(camera_bs, oc)) return;
 	// Note: camera_bs is used to test against bcube, lpos_rot, and anything else in global space; camera_rot is used to test against building interior objects
 	point const camera_rot(get_inv_rot_pos(camera_bs)); // rotate camera into building space; use this pos below except with building bcube, occlusion checks, or lpos_rot
-	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness());
+	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness()), fc_gap(get_floor_ceil_gap());
 	float const room_xy_expand(0.75*wall_thickness), player_feet_zval(camera_bs.z - get_bldg_player_height()), ground_floor_z2(ground_floor_z1 + window_vspacing);
 	bool const check_building_people(enable_building_people_ai()), check_attic(camera_in_building && has_attic() && interior->attic_access_open);
 	bool const camera_in_basement(camera_bs.z < ground_floor_z1), camera_in_ext_basement(camera_in_building && point_in_extended_basement_not_basement(camera_rot));
@@ -1914,6 +1914,17 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				clipped_bc.x1() = light_bcube.x1(); clipped_bc.x2() = light_bcube.x2(); // copy X/Y but keep orig zvals
 				clipped_bc.y1() = light_bcube.y1(); clipped_bc.y2() = light_bcube.y2();
 				clipped_bc.expand_by_xy(light_bcube_expand);
+				// clip to the current floor zval if there are no floor stairs or ramp cutouts for the light to pass through;
+				// unclear if this helps with framerate or light culling/shadow map issues, but it seems like a good idea
+				float clip_z1(is_single_floor ? room.z1() : (lpos.z - fc_gap));
+				cube_t test_cube(clipped_bc);
+				test_cube.z1() = clip_z1;
+
+				for (stairwell_t const &s : interior->stairwells) {
+					if (s.intersects(test_cube)) {min_eq(clip_z1, s.z1());}
+				}
+				if (has_pg_ramp() && interior->pg_ramp.intersects(test_cube)) {min_eq(clip_z1, interior->pg_ramp.z1());}
+				max_eq(clipped_bc.z1(), (clip_z1 - fc_thick)); // slightly lower to include the floor
 			}
 			// expand so that offset exterior doors are properly handled, but less for walkway lights
 			bool const is_upper_floor(!room.is_single_floor && lpos.z > ground_floor_z1 + window_vspacing);
