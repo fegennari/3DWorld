@@ -1263,13 +1263,16 @@ void building_t::add_escalator_points(person_t const &person, ai_path_t &path) c
 	path.add(enter_pt, 1);
 }
 
-bool building_t::point_over_glass_floor(point const &pos) const {
+bool building_t::point_over_glass_floor(point const &pos, bool inc_escalator) const {
 	if (!has_room_geom()) return 0;
+	bool is_above_floor(0);
 
 	for (cube_t const &f : interior->room_geom->glass_floors) {
-		if (f.contains_pt_xy(pos) && pos.z > f.z2()) return 1;
+		if (pos.z < f.z2()) continue;
+		if (f.contains_pt_xy(pos)) return 1;
+		is_above_floor = 1;
 	}
-	return 0;
+	return (inc_escalator && is_above_floor && point_in_escalator(pos));
 }
 
 int building_t::maybe_use_escalator(person_t &person, building_loc_t const &loc, bool last_used_escalator, rand_gen_t &rgen) const {
@@ -1281,7 +1284,7 @@ int building_t::maybe_use_escalator(person_t &person, building_loc_t const &loc,
 	room_t const &room(get_room(loc.room_ix));
 	if (!room.is_retail()) return 0;
 	bool const on_upper_floor(point_over_glass_floor(person.pos));
-	if (!on_upper_floor && person.pos.z > room.z1() + get_window_vspace()) return 0; // on neither upper nor lower floor; on stairs landing?
+	if (!on_upper_floor && person.pos.z > room.z1() + get_window_vspace()) return 0; // on neither upper nor lower floor; on stairs landing or escalator?
 	if (!on_upper_floor && last_used_escalator && !target_player) return 0; // don't use escalator on bottom floor if we just came down unless following the player
 	point const &ppos(prev_player_building_loc.pos);
 
@@ -2041,7 +2044,7 @@ bool building_t::can_target_player(person_t const &person) const {
 	if (!can_ai_follow_player(person))    return 0;
 	if (point_in_escalator  (person.pos)) return 0; // don't update target when entering or exiting an escalator
 	if (point_in_U_stairwell(person.pos)) return 0; // don't update target when on U-shaped stairs or stairs landing
-	// if we're on an upper retail glass floor, we follow the player if and only if they are also on the floor; but what about stairs landing through glass floor?
+	// if we're on an upper retail glass floor, we follow the player if and only if they are also on the floor
 	if (point_over_glass_floor(person.pos)) {return point_over_glass_floor(cur_player_building_loc.pos);}
 	room_t const &player_room(get_room(cur_player_building_loc.room_ix));
 	float const first_floor_zceil(player_room.z1() + get_window_vspace());

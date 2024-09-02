@@ -1931,7 +1931,7 @@ struct building_t : public building_geom_t {
 		unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building, bool ext_basement_conn_visible);
 	bool has_glass_floor() const {return (has_room_geom() && !interior->room_geom->glass_floors.empty());}
 	bool glass_floor_visible(vector3d const &xlate) const;
-	bool point_over_glass_floor(point const &pos) const;
+	bool point_over_glass_floor(point const &pos, bool inc_escalator=0) const;
 	void draw_glass_surfaces(vector3d const &xlate) const;
 	bool has_cars_to_draw(bool player_in_building) const;
 	void draw_cars_in_building(shader_t &s, vector3d const &xlate, bool player_in_building, bool shadow_only) const;

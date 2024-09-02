@@ -105,6 +105,7 @@ void draw_scene_for_building_reflection(unsigned &ref_tid, unsigned dim, bool di
 }
 
 void create_mirror_reflection_if_needed(building_t const *vis_conn_bldg, vector3d const &xlate) {
+	point const camera_bs(get_camera_pos() - xlate);
 	building_t const *buildings[2] = {player_building, vis_conn_bldg};
 
 	for (unsigned n = 0; n < 2; ++n) { // check player building, then visible connected building
@@ -112,8 +113,8 @@ void create_mirror_reflection_if_needed(building_t const *vis_conn_bldg, vector3
 		if (bldg == nullptr) continue;
 	
 		if (bldg->water_visible_to_player()) { // draw water plane reflection
-			if (get_camera_pos().z < (bldg->interior->water_zval + bldg->get_window_vspace()) || // if the player is on the same floor as the water
-				(bldg->has_pool() && bldg->get_pool_room().contains_pt(get_camera_pos() - xlate))) // or if the player is in the pool room
+			if (camera_bs.z < (bldg->interior->water_zval + bldg->get_window_vspace()) || // if the player is on the same floor as the water
+				(bldg->has_pool() && bldg->get_pool_room().contains_pt(camera_bs))) // or if the player is in the pool room
 			{
 				cube_t water_cube(bldg->get_water_cube(0));
 				water_cube.z1() = water_cube.z2(); // top surface only
@@ -122,7 +123,7 @@ void create_mirror_reflection_if_needed(building_t const *vis_conn_bldg, vector3
 				return;
 			}
 		}
-		if (ENABLE_GLASS_FLOOR_REF && n == 0 && bldg->glass_floor_visible(xlate) && bldg->point_over_glass_floor(get_camera_pos() - xlate)) { // only check player building
+		if (ENABLE_GLASS_FLOOR_REF && n == 0 && bldg->glass_floor_visible(xlate) && bldg->point_over_glass_floor(camera_bs, 1)) { // only check player building; inc_escalator=1
 			cube_t const ref_cube(get_bcubes_union(bldg->interior->room_geom->glass_floors));
 			draw_scene_for_building_reflection(room_mirror_ref_tid, 2, 1, ref_cube.z2(), 0, 0, 1, 0, 0, 1, ref_cube); // +z, not house, not interior, draw exterior, glass floor
 			return;
