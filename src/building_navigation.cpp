@@ -719,10 +719,11 @@ public:
 				}
 				else { // room/doorway
 					unsigned const num_tries(req_custom_dest ? 1 : 10); // only try custom_dest if req_custom_dest is set
+					bool const is_lg_room(building.is_single_large_room(n));
 					bool success(0);
 
 					for (unsigned N = 0; N < num_tries; ++N) { // keep retrying until we find a point that is reachable from the room or doorway
-						bool const no_use_init(N > 0); // choose a random new point on iterations after the first one
+						bool const no_use_init(N > 0 || is_lg_room); // choose a random new point on iterations after the first one, and on first iteration for large rooms
 						bool not_room_center(0);
 						point const end_point(find_valid_room_dest(avoid, building, radius, cur_pt.z, n, up_or_down, not_room_center, rgen, no_use_init, custom_dest));
 						path.add(end_point);

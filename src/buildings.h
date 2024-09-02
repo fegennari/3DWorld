@@ -1966,6 +1966,8 @@ struct building_t : public building_geom_t {
 	bool maybe_zombie_retreat(unsigned person_ix, point const &hit_pos);
 	void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
 	bool is_room_backrooms(unsigned room_ix)   const {return get_room(room_ix).is_backrooms();}
+	bool is_single_large_room(room_t const &room) const {return(room.is_parking() || room.is_backrooms() || room.is_retail());}
+	bool is_single_large_room(int room_ix) const {return (room_ix >= 0 && is_single_large_room(get_room(room_ix)));}
 	bool is_above_retail_area(point const &pos) const;
 	point get_retail_upper_stairs_landing_center() const;
 private:
@@ -1974,8 +1976,6 @@ private:
 	bool choose_dest_goal(person_t &person, rand_gen_t &rgen) const;
 	int  choose_dest_room(person_t &person, rand_gen_t &rgen) const;
 	int  maybe_use_escalator(person_t &person, building_loc_t const &loc, bool last_used_escalator, rand_gen_t &rgen) const;
-	bool is_single_large_room(room_t const &room) const {return(room.is_parking() || room.is_backrooms() || room.is_retail());}
-	bool is_single_large_room(int room_ix) const {return (room_ix >= 0 && is_single_large_room(get_room(room_ix)));}
 	bool is_pos_in_pg_or_backrooms(point const &pos) const {return (has_parking_garage && pos.z < ground_floor_z1);}
 	bool select_person_dest_in_room(person_t &person, rand_gen_t &rgen, room_t const &room) const;
 	void get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player, cube_t const *const fires_select_cube=nullptr) const;
