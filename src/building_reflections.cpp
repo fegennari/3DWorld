@@ -16,6 +16,7 @@ extern vector4d clip_plane;
 extern building_t const *player_building;
 
 colorRGBA get_clear_color();
+void draw_sun_moon_stars(bool no_update);
 cube_t get_mirror_surface(room_object_t const &c);
 
 bool is_mirror(room_object_t const &obj) {return (obj.type == TYPE_MIRROR || obj.type == TYPE_DRESS_MIR);}
@@ -84,7 +85,12 @@ void draw_scene_for_building_reflection(unsigned &ref_tid, unsigned dim, bool di
 		if (world_mode == WMODE_INF_TERRAIN) {draw_city_roads(1, xlate);} // opaque only
 		draw_tiled_terrain(2); // reflection_pass=2
 		draw_building_lights(xlate);
-		//draw_tiled_terrain_clouds(1); // clouds are unlikely to be reflected in mirrors so probably don't need to be drawn
+		
+		if (is_glass_floor && world_mode == WMODE_INF_TERRAIN) { // clouds/sky/sun are unlikely to be reflected in mirrors so don't need to be drawn, except for glass floors
+			draw_sun_moon_stars(0);
+			draw_cloud_planes(0.0, 1, 1, 1);
+			draw_tiled_terrain_clouds(1);
+		}
 		disable_city_shadow_maps = 0;
 	}
 	glDisable(GL_STENCIL_TEST);
@@ -118,7 +124,7 @@ void create_mirror_reflection_if_needed(building_t const *vis_conn_bldg, vector3
 		}
 		if (ENABLE_GLASS_FLOOR_REF && n == 0 && bldg->glass_floor_visible(xlate) && bldg->point_over_glass_floor(get_camera_pos() - xlate)) { // only check player building
 			cube_t const ref_cube(get_bcubes_union(bldg->interior->room_geom->glass_floors));
-			draw_scene_for_building_reflection(room_mirror_ref_tid, 2, 1, ref_cube.z2(), 0, 0, 0, 0, 0, 1, ref_cube); // +z, not house, not interior, no exterior, glass floor
+			draw_scene_for_building_reflection(room_mirror_ref_tid, 2, 1, ref_cube.z2(), 0, 0, 1, 0, 0, 1, ref_cube); // +z, not house, not interior, draw exterior, glass floor
 			return;
 		}
 		if (!is_mirror(cur_room_mirror)) continue; // not enabled
