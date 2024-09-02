@@ -20,7 +20,7 @@ extern int display_mode, frame_counter, animate2, player_in_basement;
 extern unsigned room_mirror_ref_tid;
 extern float fticks, office_chair_rot_rate, building_ambient_scale;
 extern point actual_player_pos, player_candle_pos;
-extern colorRGB cur_diffuse;
+extern colorRGB cur_diffuse, cur_ambient;
 extern cube_t smap_light_clip_cube;
 extern pos_dir_up camera_pdu;
 extern building_t const *player_building;
@@ -2042,20 +2042,11 @@ void building_t::draw_glass_surfaces(vector3d const &xlate) const {
 	assert(has_room_geom());
 	vect_cube_t const &glass_floors(interior->room_geom->glass_floors);
 	if (glass_floors.empty()) return;
-	float const wall_thickness(get_wall_thickness());
-	shader_t s;
-	setup_smoke_shaders(s, 0.0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0.0, 0, 0, 0);
-	// we don't have building light sources setup in this pass, and sun/moon light isn't correct indoors;
-	// so instead treat this glass as lit with ambient only, where the emissive color is a function of exterior light through windows and average interior room light
-	s.add_uniform_float("diffuse_scale",       0.0);
-	s.add_uniform_float("ambient_scale",       0.5);
-	s.add_uniform_float("hemi_lighting_scale", 0.0);
-	calc_cur_ambient_diffuse();
-	colorRGBA const indoor_light_color(player_building->get_retail_light_color());
-	s.set_color_e((indoor_light_color*0.5 + colorRGBA(cur_diffuse)*0.2).modulate_with(GLASS_COLOR));
 	rgeom_mat_t &mat(interior->room_geom->mats_glass);
 
 	if (mat.empty()) { // create geometry
+		float const wall_thickness(get_wall_thickness());
+
 		for (cube_t const &c : glass_floors) {
 			vect_cube_t floor_parts;
 			subtract_stairs_and_elevators_from_cube(c, floor_parts);
@@ -2079,26 +2070,27 @@ void building_t::draw_glass_surfaces(vector3d const &xlate) const {
 		} // for c
 		mat.create_vbo_inner();
 	}
-	tid_nm_pair_dstate_t state(s);
+	calc_cur_ambient_diffuse();
 	enable_blend();
 	// cull back faces if floor was split due to stairs or an elevator, since the bottom won't alpha blend properly
 	if (interior->room_geom->glass_floor_split) {glEnable(GL_CULL_FACE);}
-	mat.draw(state, nullptr, 0, 0, 0); // no brg_batch_draw_t, shadow=0 reflection=0 exterior=0
-	if (interior->room_geom->glass_floor_split) {glDisable(GL_CULL_FACE);}
-	indexed_vao_manager_with_shadow_t::post_render();
-	s.clear_color_e();
-	reset_interior_lighting_and_end_shader(s);
+	colorRGBA const indoor_light_color(player_building->get_retail_light_color());
+	shader_t s;
 
-	if (ENABLE_GLASS_FLOOR_REF) { // draw mirror reflection on top surface of glass
-		// FIXME: broken, should be a custom shader
-		point const camera_bs(get_camera_pos() - xlate);
-
-		if (point_over_glass_floor(camera_bs)) {
-			if (tid_nm_pair_t::bind_reflection_shader()) {
-				mat.draw(state, nullptr, 0, 1, 0); // no brg_batch_draw_t, shadow=0 reflection=1 exterior=0
-			}
+	if (ENABLE_GLASS_FLOOR_REF && point_over_glass_floor(get_camera_pos() - xlate)) { // draw mirror reflection on top surface of glass
+		if (tid_nm_pair_t::bind_reflection_shader()) {
+			//
 		}
 	}
+	s.set_vert_shader("vert_xform_only");
+	s.set_frag_shader("glass_surface");
+	s.begin_shader();
+	s.add_uniform_color("light_color", colorRGB(indoor_light_color*0.5 + cur_diffuse*0.2 + cur_ambient*0.5));
+	mat.vao_setup (0); // shadow_only=0
+	mat.draw_inner(0); // shadow_only=0
+	indexed_vao_manager_with_shadow_t::post_render();
+	s.end_shader();
+	if (interior->room_geom->glass_floor_split) {glDisable(GL_CULL_FACE);}
 	disable_blend();
 }
 

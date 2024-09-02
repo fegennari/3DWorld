@@ -1536,6 +1536,9 @@
     <None Include="shaders\vorocracks.frag">
       <Filter>Shaders\frag\Gallery</Filter>
     </None>
+    <None Include="shaders\glass_surface.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">
