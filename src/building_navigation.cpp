@@ -213,20 +213,20 @@ bool cube_nav_grid::find_path(point const &p1, point const &p2, ai_path_t &path)
 						point const path_pt(get_grid_pt(xn, yn, p1.z));
 						// smooth path by removing colinear points and merging unblocked segments
 						int dx(xn - int(prev_x)), dy(yn - int(prev_y));
-						if (dx == prev_dx && dy == prev_dy) {path.back() = path_pt;} // same angle, extend previous point
-						else {path.add(path_pt);} // add new point
+						if (dx == prev_dx && dy == prev_dy && !path.empty()) {path.pop_back();} // same angle, extend previous point; remove last point and re-add
+						path.add(path_pt); // add new point
 						path_ix = get_node_ix(xn, yn);
 						prev_x = xn; prev_y = yn; prev_dx = dx; prev_dy = dy;
 					} // end while()
 					path.add(get_grid_pt(nx1, ny1, p1.z)); // first point, added last
 					reverse(path.begin()+rev_start_ix, path.end());
 					// run another pass to remove unnecessary points
-					path.push_back(p2); // temporary end point
+					path.push_back(p2); // temporary end point; don't call path.add() because we need to remove it later
 
 					while (1) { // iteratively remove points until no more can be removed
 						unsigned const orig_sz(path.size());
 
-						for (unsigned i = rev_start_ix; i+1 < path.size(); ++i) { // inefficient, but simple
+						for (unsigned i = rev_start_ix; i+1 < path.size(); ++i) { // inefficient, but simple; can this introduce duplicate points?
 							if (!check_line_intersect(path[i-1], path[i+1], radius)) {path.erase(path.begin() + i); --i;}
 						}
 						if (path.size() == orig_sz) break; // no points removed - done
@@ -2513,7 +2513,12 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		
 		if (!person.path.empty()) { // move to next path point
 			person.next_path_pt(0);
-			assert(person.target_pos != person.pos);
+
+			if (person.target_pos == person.pos) { // this is rare and maybe should be an error, but I've seen it fail once
+				cout << "Invalid building AI path point: " << person.pos.str() << endl;
+				//register_debug_event(person.target_pos, "invalid building AI path point");
+				person.target_pos += 0.01*person.radius*rgen.signed_rand_vector_xy(); // add a small random offset so that dir isn't a zero vector
+			}
 			//return AI_NEXT_PT; // returning here and recalculating the path on the next frame can get us stuck at this point when chasing the player
 		}
 		else {
