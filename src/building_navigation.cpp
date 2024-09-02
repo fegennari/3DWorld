@@ -1062,6 +1062,7 @@ bool is_ai_coll_obj(room_object_t const &c, bool same_as_player) {
 	// these object types are not collided with by people and can be skipped
 	if (c.no_coll() || c.is_dynamic() || c.type == TYPE_LG_BALL) return 0; // skip dynamic objects (balls, etc.)
 	if (c.type == TYPE_POOL_TILE) return 0; // pools are handled with custom code that works different from the player
+	if (c.type == TYPE_RAILING  ) return (!c.is_exterior() && (c.flags & RO_FLAG_TOS)); // railings at top of stairs and escalator are always AI colliders
 	if (!(same_as_player ? c.is_player_collidable() : bldg_obj_types[c.type].ai_coll)) return 0;
 	return 1;
 }
@@ -1210,11 +1211,22 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 
 bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, room_t const &room) const {
 	float const height(person.get_height()), radius(COLL_RADIUS_SCALE*person.radius);
-	point dest_pos(room.get_cube_center());
+	cube_t valid_area(room);
+
+	// if on a glass floor and dest isn't the floor below, clip valid area to bounds of glass floor, assuming it makes a cube; railing coll should handle non-cube case
+	if (room.is_retail() && point_over_glass_floor(person.pos)) {
+		cube_t const glass_floor_bcube(get_bcubes_union(interior->room_geom->glass_floors));
+		
+		if (person.target_pos.z > glass_floor_bcube.z2()) {
+			valid_area.intersect_with_cube_xy(glass_floor_bcube);
+			if (!valid_area.is_strictly_normalized()) return 0; // shouldn't happen
+		}
+	}
+	point dest_pos(valid_area.get_cube_center());
 	static vect_cube_t avoid; // reuse across frames/people
 	get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
 	bool const no_use_init(is_single_large_room(room)); // don't use the room center for a parking garage, backrooms, or retail area
-	if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, person.target_pos.z, room, rgen, dest_pos, no_use_init)) return 0;
+	if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, person.target_pos.z, valid_area, rgen, dest_pos, no_use_init)) return 0;
 	
 	if (!is_cube()) { // non-cube building
 		cube_t const person_bcube(person.get_bcube() + (dest_pos - person.pos)); // bcube, but translated to dest_pos
@@ -1742,8 +1754,9 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 				valid_area.clamp_pt_xy(dest);
 			}
 		}
+		cube_t const constrain_area(point_over_glass_floor(from) ? get_bcubes_union(interior->room_geom->glass_floors) : cube_t());
 		if (!interior->nav_graph->complete_path_within_room(from, dest, loc1.room_ix, person.ssn, radius,
-			person.cur_rseed, is_first_path, following_player, cube_t(), avoid, *this, path)) return 0;
+			person.cur_rseed, is_first_path, following_player, constrain_area, avoid, *this, path)) return 0;
 		return 1;
 	}
 	bool have_goal_pos(0), req_custom_dest(0);
