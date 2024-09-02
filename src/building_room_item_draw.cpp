@@ -2467,7 +2467,8 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 			if (!not_occluded) return 1;
 		} // for p
 	}
-	if (check_pt_in_retail_room(center) && viewer.z > ground_floor_z1 && viewer.z < ground_floor_ceiling && has_room_geom()) {
+	// skip shelf rack occlusion culling when on a reflective glass floor
+	if (!reflection_pass && viewer.z > ground_floor_z1 && viewer.z < ground_floor_ceiling && check_pt_in_retail_room(center) && has_room_geom()) {
 		// both the object and the viewer are in the ground floor of a retail building - check shelf rack backs as occluders
 		if (check_shelfrack_occlusion(viewer, pts, npts, occ_area)) return 1;
 	}

@@ -1264,11 +1264,12 @@ void building_t::add_escalator_points(person_t const &person, ai_path_t &path) c
 }
 
 bool building_t::point_over_glass_floor(point const &pos, bool inc_escalator) const {
-	if (!has_room_geom()) return 0;
+	if (!has_glass_floor()) return 0;
+	float const floor_spacing(get_window_vspace());
 	bool is_above_floor(0);
 
 	for (cube_t const &f : interior->room_geom->glass_floors) {
-		if (pos.z < f.z2()) continue;
+		if (pos.z < f.z2() || pos.z > f.z2() + floor_spacing) continue; // below, or more than one floor above
 		if (f.contains_pt_xy(pos)) return 1;
 		is_above_floor = 1;
 	}
