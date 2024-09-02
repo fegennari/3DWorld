@@ -505,7 +505,7 @@ public:
 		if (custom_dest != nullptr) {pos = *custom_dest;}
 		else {pos = get_room_center(building, node.bcube, zval);} // first candidate is the center of the room
 		
-		if (building.is_above_retail_area(pos)) {
+		if (building.is_above_retail_area(pos) && !building.point_over_glass_floor(pos)) {
 			point const landing_pos(building.get_retail_upper_stairs_landing_center());
 			//zval += (up_or_down ? -1.0 : 1.0)*building.get_window_vspace(); // one floor above or below so that we skip the blocked floor; but this asserts
 			return point(landing_pos.x, landing_pos.y, zval);
@@ -1390,11 +1390,17 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		}
 	}
 	bool const single_large_room(loc.room_ix >= 0 && is_single_large_room(loc.room_ix));
-	bool const must_leave_room(point_in_water_area(person.pos) || is_above_retail_area(person.pos));
+	bool const must_leave_room(point_in_water_area(person.pos) || (is_above_retail_area(person.pos) && !point_over_glass_floor(person.pos)));
 
-	if (single_large_room && !must_leave_room && (person.is_first_path || rgen.rand_float() < 0.75)) { // stay in this room 75% of the time, always on the first path
-		person.is_first_path = 0; // respect the walls
-		if (select_person_dest_in_room(person, rgen, get_room(loc.room_ix))) return 1;
+	if (single_large_room && !must_leave_room) {
+		room_t const &room(get_room(loc.room_ix));
+		bool stay_in_room(person.is_first_path || rgen.rand_float() < 0.75); // stay in this room 75% of the time, always on the first path
+		stay_in_room |= (room.is_retail() && room.contains_pt(cur_player_building_loc.pos) && can_ai_follow_player(person)); // stay in retail room if the player is there
+
+		if (stay_in_room) {
+			person.is_first_path = 0; // respect the walls
+			if (select_person_dest_in_room(person, rgen, room)) return 1;
+		}
 	}
 	// sometimes use stairs in backrooms, parking garages, and retail areas
 	bool const try_use_stairs(single_large_room && get_room(loc.room_ix).has_stairs && (must_leave_room || (!person.last_changed_floor() && rgen.rand_bool())));
@@ -1870,7 +1876,7 @@ bool building_t::is_above_retail_area(point const &pos) const {
 }
 bool building_t::is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll, bool no_check_objs) const { // for people and animals
 	if (!is_pos_inside_building(pos, radius, radius, 1))       return 0; // required for attic; for_attic=1
-	if (point_in_water_area(pos) || is_above_retail_area(pos)) return 0;
+	if (point_in_water_area(pos) || is_above_retail_area(pos)) return 0; // excludes glass floors, in case they're not connected to the lower floor by escalators
 	cube_t ai_bcube(pos);
 	ai_bcube.expand_by(radius); // expand more in Z?
 	if (!is_valid_stairs_elevator_placement(ai_bcube, ai_bcube, radius)) return 0; // Note: will double pad by radius
@@ -1981,7 +1987,6 @@ bool can_ai_follow_player(person_t const &person, bool allow_diff_building) {
 	if (!cur_player_building_loc.is_valid()) return 0; // no target
 	if (!allow_diff_building && cur_player_building_loc.building_ix != person.cur_bldg) return 0; // wrong building
 	if (player_is_hiding && !person.saw_player_hide) return 0; // ignore player in closet, bathroom stall, or shower with door closed, and we didn't see them hide
-	if (player_on_escalator)       return 0; // don't follow player on escalator; wait until player reaches the floor above or below
 	if (person.retreat_time > 0.0) return 0; // ignore the player if retreating
 	// handle elevator case; this isn't perfect because it doesn't handle the case of player and zombie in adjacent elevators, but I've never seen that failure mode
 	if (player_in_elevator != (person.ai_state >= AI_ENTER_ELEVATOR)) return 0; // {player, zombie) in elevator, and {zombie, player} is not
@@ -2059,6 +2064,7 @@ bool building_t::can_target_player(person_t const &person) const {
 	if (!can_ai_follow_player(person))    return 0;
 	if (point_in_escalator  (person.pos)) return 0; // don't update target when entering or exiting an escalator
 	if (point_in_U_stairwell(person.pos)) return 0; // don't update target when on U-shaped stairs or stairs landing
+	if (player_on_escalator)              return 0; // don't follow player on escalator; wait until player reaches the floor above or below
 	// if we're on an upper retail glass floor, we follow the player if and only if they are also on the floor
 	if (point_over_glass_floor(person.pos)) {return point_over_glass_floor(cur_player_building_loc.pos);}
 	room_t const &player_room(get_room(cur_player_building_loc.room_ix));
@@ -2464,7 +2470,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	bool const update_path(!person.in_pool && need_to_update_ai_path(person)), has_rgeom(has_room_geom());
 	// if room objects spawn in, select a new dest to avoid walking through objects based on our previous, possibly invalid path;
 	// but not if this person is on stairs/ramp/escalator or an elevator, or they may end at an invalid zval between floors
-	if (has_rgeom && !person.has_room_geom && !person.on_fixed_path() && !person.path_is_fixed && person.ai_state < AI_ENTER_ELEVATOR) {person.abort_dest();}
+	if (has_rgeom && !person.has_room_geom && !person.on_fixed_path() && person.ai_state < AI_ENTER_ELEVATOR) {person.abort_dest();}
 	person.has_room_geom = has_rgeom;
 
 	if (update_path) { // need to update based on player movement; higher priority than choose_dest
