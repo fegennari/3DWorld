@@ -2075,17 +2075,20 @@ void building_t::draw_glass_surfaces(vector3d const &xlate) const {
 	// cull back faces if floor was split due to stairs or an elevator, since the bottom won't alpha blend properly
 	if (interior->room_geom->glass_floor_split) {glEnable(GL_CULL_FACE);}
 	colorRGBA const indoor_light_color(player_building->get_retail_light_color());
+	// draw mirror reflection if player is on the top surface of the glass floor
+	point const camera_bs(get_camera_pos() - xlate);
+	bool const enable_reflection(ENABLE_GLASS_FLOOR_REF && room_mirror_ref_tid > 0 && point_over_glass_floor(camera_bs, 1)); // inc_escalator=1
 	shader_t s;
-
-	if (ENABLE_GLASS_FLOOR_REF && point_over_glass_floor(get_camera_pos() - xlate)) { // draw mirror reflection on top surface of glass
-		if (tid_nm_pair_t::bind_reflection_shader()) {
-			//
-		}
-	}
-	s.set_vert_shader("vert_xform_only");
-	s.set_frag_shader("glass_surface");
+	if (enable_reflection) {s.set_prefix("#define ENABLE_REFLECTION", 1);} // FS
+	s.set_vert_shader("glass_surface");
+	s.set_frag_shader("fresnel.part*+glass_surface");
 	s.begin_shader();
 	s.add_uniform_color("light_color", colorRGB(indoor_light_color*0.5 + cur_diffuse*0.2 + cur_ambient*0.5));
+	
+	if (enable_reflection) {
+		s.add_uniform_int("reflection_tex", 0);
+		bind_2d_texture(room_mirror_ref_tid);
+	}
 	mat.vao_setup (0); // shadow_only=0
 	mat.draw_inner(0); // shadow_only=0
 	indexed_vao_manager_with_shadow_t::post_render();

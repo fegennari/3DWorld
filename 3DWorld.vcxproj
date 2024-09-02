@@ -1146,6 +1146,7 @@
     <None Include="shaders\gen_voxel_weights.comp" />
     <None Include="shaders\gen_voxel_weights.frag" />
     <None Include="shaders\glass_surface.frag" />
+    <None Include="shaders\glass_surface.vert" />
     <None Include="shaders\glsl_sandbox_planet.frag" />
     <None Include="shaders\glsl_sandbox_terrain.frag" />
     <None Include="shaders\god_rays.frag" />
