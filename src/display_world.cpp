@@ -81,6 +81,7 @@ void show_debug_event_pos(point const &pos);
 vector3d calc_camera_direction();
 void draw_player_model(point const &pos, vector3d const &dir, int time);
 void building_gameplay_next_frame(); // from building_interact.cc
+void create_building_reflections();
 void follow_city_actor();
 
 
@@ -1265,6 +1266,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	if (show_fog || underwater) {set_inf_terrain_fog(underwater, terrain_zmin);}
 	unsigned tt_reflection_tid(0);
 	if (draw_water && !underwater) {tt_reflection_tid = create_tt_reflection(terrain_zmin);}
+	create_building_reflections();
 	far_clip_ratio = 1.0; // reset to default, may be overwritten below
 
 	if (enable_tt_model_indir) {

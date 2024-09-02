@@ -33,6 +33,7 @@ point player_candle_pos;
 cube_t building_occluder;
 building_params_t global_building_params;
 building_t const *player_building(nullptr);
+building_t const *vis_conn_bldg  (nullptr); // non-player building visible through extended basement connector room
 
 extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light;
 extern bool teleport_to_screenshot, enable_dlight_bcubes, can_do_building_action, mirror_in_ext_basement;
@@ -3392,6 +3393,13 @@ public:
 		else {s.enable();}
 	}
 
+	static void create_building_reflections(vector3d const &xlate) {
+		bind_default_sun_moon_smap_textures();
+		update_security_camera_image();
+		setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass
+		create_mirror_reflection_if_needed(vis_conn_bldg, xlate);
+	}
+
 	// reflection_pass: 0 = not reflection pass, 1 = reflection for room with exterior wall,
 	// 2 = reflection for room no exterior wall (can't see outside windows), 3 = reflection from mirror in a house (windows and doors need to be drawn)
 	static void multi_draw(int shadow_only, int reflection_pass, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
@@ -3403,16 +3411,7 @@ public:
 			return;
 		}
 		bind_default_sun_moon_smap_textures(); // bind default sun/moon smap textures
-		building_t const *new_player_building (nullptr);
-		static building_t const *vis_conn_bldg(nullptr); // non-player building visible through extended basement connector room
-
-		if (!reflection_pass) {
-			// Note: creating the reflection or security camera image here will also overwrite anything that was previously drawn such as clouds and the Ferris wheel,
-			// which may look wrong if a window is visible in the same frame as a mirror
-			update_security_camera_image();
-			setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass
-			create_mirror_reflection_if_needed(vis_conn_bldg, xlate);
-		}
+		building_t const *new_player_building(nullptr);
 		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish(), 6.3ms with building interiors)
 		point const camera(get_camera_pos()), camera_bs(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map);
@@ -5031,7 +5030,7 @@ void gen_buildings() {
 	} else {building_creator .gen(global_building_params, 0, 0, 0, 1);} // mixed/non-city buildings
 }
 void draw_buildings(int shadow_only, int reflection_pass, vector3d const &xlate) {
-	//if (!building_tiles.empty()) {cout << "Building Tiles: " << building_tiles.size() << " Tiled Buildings: " << building_tiles.get_tot_num_buildings() << endl;} // debugging
+	//if (!shadow_only && !reflection_pass && !building_tiles.empty()) {cout << "Building Tiles: " << building_tiles.size() << " Tiled Buildings: " << building_tiles.get_tot_num_buildings() << endl;} // debugging
 	if (world_mode != WMODE_INF_TERRAIN) {building_tiles.clear();}
 	building_creator_city.create_vbos(); // create VBOs for city buildings (after adding skyways, etc.), if needed
 	vector<building_creator_t *> bcs;
@@ -5042,6 +5041,10 @@ void draw_buildings(int shadow_only, int reflection_pass, vector3d const &xlate)
 	if (draw_sec  && building_creator     .is_visible(xlate)) {bcs.push_back(&building_creator     );}
 	building_tiles.add_drawn(xlate, bcs);
 	building_creator_t::multi_draw(shadow_only, reflection_pass, xlate, bcs);
+}
+void create_building_reflections() {
+	building_creator_city.create_vbos(); // create VBOs for city buildings (after adding skyways, etc.), if needed
+	building_creator_t::create_building_reflections(get_tiled_terrain_model_xlate());
 }
 void draw_player_building_transparent(int reflection_pass, vector3d const &xlate) {building_creator_t::draw_player_building_transparent(reflection_pass, xlate);}
 
