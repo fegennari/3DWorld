@@ -2778,10 +2778,8 @@ void building_t::move_person_to_not_collide(person_t &person, person_t const &ot
 	clip_bounds.union_with_pt(new_pos);  // we know this point is valid
 	clip_bounds.clamp_pt_xy(person.pos); // force player into the room
 
-	// check for person getting pushed off the upper glass floor if not on an escalator
-	if (person.goal_type == GOAL_TYPE_ESCALATOR && !person.on_stairs()) {
-		assert(has_glass_floor());
-
+	// check for person getting pushed off the upper glass floor if not on an escalator; check for glass floor in case interior->room_geom was deleted
+	if (person.goal_type == GOAL_TYPE_ESCALATOR && !person.on_stairs() && has_glass_floor()) {
 		if (person.pos.z > interior->room_geom->glass_floors.front().z2()) { // on upper floor
 			if (!point_over_glass_floor(person.pos) && point_over_glass_floor(orig_pos)) {person.pos = orig_pos;} // restore original pos if not over glass floor
 		}
