@@ -45,7 +45,6 @@ public:
 	bool check_sphere_coll(point &center, float radius) const;
 	bool line_intersect(point const &p1, point const &p2, float *t=NULL) const;
 	void clear_vbo_mgr_ix() {vbo_mgr_ix = -1;}
-	void alloc_pine_tree_pts(vbo_vnc_block_manager_t &vbo_manager);
 	void calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail, bool update_mode=0);
 	void calc_palm_tree_points();
 	void update_points_vbo(vbo_vnc_block_manager_t &vbo_manager, bool low_detail);

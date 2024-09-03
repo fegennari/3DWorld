@@ -964,10 +964,6 @@ float small_tree::get_pine_tree_radius() const { // Note: doesn't include branch
 	return 0.35*pine_tree_radius_scale*(height0 + 0.03/tree_scale);
 }
 
-void small_tree::alloc_pine_tree_pts(vbo_vnc_block_manager_t &vbo_manager) {
-	if (is_pine_tree()) {vbo_mgr_ix = vbo_manager.alloc_points_with_offset(PINE_TREE_NPTS);}
-}
-
 void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail, bool update_mode) {
 
 	if (type == T_PALM) {calc_palm_tree_points(); return;} // palm tree
@@ -1032,7 +1028,9 @@ void small_tree::add_trunk_as_line(vector<point> &points) const {
 
 void small_tree::draw_pine(vbo_vnc_block_manager_t const &vbo_manager, unsigned num_instances) const { // 30 quads per tree
 	assert(is_pine_tree());
-	assert(vbo_mgr_ix >= 0);
+	//assert(vbo_mgr_ix >= 0);
+	// this should be a fatal error, but I've seen it fail once; I suspect this is related to trees visible in building object reflections that aren't visible to the player
+	if (vbo_mgr_ix < 0) {std::cerr << "Error: Draw of pine tree with invalid vbo_mgr_ix" << endl; return;}
 	vbo_manager.render_single(vbo_mgr_ix, num_instances); // use glDrawElementsIndirect()?
 }
 
