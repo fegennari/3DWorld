@@ -2312,10 +2312,17 @@ bool building_t::get_zval_of_floor(point const &pos, float radius, float &zval) 
 	if (get_zval_for_pool_bottom(pos, zval)) return 1; // on the bottom of the pool
 	float const floor_spacing(get_window_vspace());
 
-	for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // blood can only be placed on floors
-		if (pos.z < i->z2() || pos.z > (i->z2() + floor_spacing) || !i->contains_cube_xy(cur_bcube)) continue; // wrong floor, or not contained
-		zval = (i->z2() + 1.5*get_flooring_thick()); // slightly above rugs and flooring
+	for (cube_t const &f : interior->floors) { // blood can only be placed on floors
+		if (pos.z < f.z2() || pos.z > (f.z2() + floor_spacing) || !f.contains_cube_xy(cur_bcube)) continue; // wrong floor, or not contained
+		zval = (f.z2() + 1.5*get_flooring_thick()); // slightly above rugs and flooring
 		return 1;
+	}
+	if (has_room_geom()) { // check glass floors as well
+		for (cube_t const &f : interior->room_geom->glass_floors) {
+			if (pos.z < f.z2() || pos.z > (f.z2() + floor_spacing) || !f.contains_cube_xy(cur_bcube)) continue; // wrong floor, or not contained
+			zval = (f.z2() + 0.5*get_flooring_thick()); // no rugs or flooring
+			return 1;
+		}
 	}
 	return 0; // no suitable floor found
 }

@@ -234,7 +234,7 @@ bool rat_t::is_facing_dest() const {
 bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, point const &placed_from, bool &dead) {
 	if (!rat_t::allow_in_attic() && point_in_attic(pos)) return 0;
 	point rat_pos(pos);
-	if (!get_zval_of_floor(pos, hlength, rat_pos.z)) return 0; // place on the floor, skip if there's no floor here
+	if (!get_zval_of_floor(pos, hlength, rat_pos.z)) return 0; // place on the floor, skip if there's no floor here; doesn't work with glass floors
 	if (point_in_water_area(rat_pos, 0)) return 0; // don't place rat in water; full_room_height=0
 	rat_t rat(rat_pos, hlength, vector3d(dir.x, dir.y, 0.0).get_norm(), interior->room_geom->rats.size(), dead); // dir in XY plane
 	
