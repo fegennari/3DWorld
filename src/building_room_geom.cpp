@@ -987,6 +987,7 @@ unsigned get_shelf_rack_cubes(room_object_t const &c, cube_t &back, cube_t &top,
 	back = c; // pegboard
 	if (add_sides) {back.expand_in_dim(!c.dim, -side_thickness);}
 	back.z2() -= top_thickness; // back is under top
+	back.z1() += bot_gap;
 	back.expand_in_dim(c.dim, -0.5*(depth - back_thickness));
 	cube_t shelf(c);
 	shelf.expand_in_dim(!c.dim, -(add_sides ? 1.0 : 0.5)*side_thickness); // shrink a bit even if there are no sides to prevent Z-fighting
@@ -1014,7 +1015,7 @@ void building_room_geom_t::add_rack(room_object_t const &c, bool add_rack, bool 
 	if (add_rack) { // static objects
 		cube_t back, top, sides[2], shelves[5];
 		unsigned const num_shelves(get_shelf_rack_cubes(c, back, top, sides, shelves));
-		bool const add_top(!top.is_all_zeros()), add_sides(!sides[0].is_all_zeros());
+		bool const add_top(!top.is_all_zeros()), add_sides(!sides[0].is_all_zeros()), draw_bot(c.is_on_floor());
 		colorRGBA const back_color(c.color*0.67); // make a bit darker
 		rgeom_mat_t &back_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/pegboard.png"), 2.5/c.get_height(), 1), 1)); // shadowed
 		back_mat.add_cube_to_verts(back, back_color, back.get_llc(), ~get_skip_mask_for_xy(c.dim)); // front and back sides only
@@ -1027,9 +1028,10 @@ void building_room_geom_t::add_rack(room_object_t const &c, bool add_rack, bool 
 		for (unsigned n = 0; n < num_shelves; ++n) {mat.add_cube_to_verts_untextured(shelves[n], c.color, skip_faces_shelves);}
 
 		if (add_sides) { // if one side is valid, they should both be valid
-			for (unsigned d = 0; d < 2; ++d) { // {left, right}
-				mat.add_cube_to_verts_untextured(sides[d], c.color, (add_top ? EF_Z12 : EF_Z1)); // skip bottom and maybe top
-			}
+			unsigned skip_faces(0);
+			if ( add_top ) {skip_faces |= EF_Z2;} // sides not visible
+			if (!draw_bot) {skip_faces |= EF_Z1;} // bottom only visible if on upper glass floor
+			for (unsigned d = 0; d < 2; ++d) {mat.add_cube_to_verts_untextured(sides[d], c.color, skip_faces);} // {left, right}
 		}
 	}
 	if (add_objs) { // add objects to the racks; drawn as small static objects

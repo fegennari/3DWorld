@@ -3091,7 +3091,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	cube_t rack, pillar;
 	set_cube_zvals(rack,   zval, (zval + rack_height));
 	set_cube_zvals(pillar, zval, (zval + fc_gap + (retail_floor_levels - 1)*floor_spacing)); // up to the ceiling
-	unsigned const objs_start(objs.size()), obj_id(rgen.rand()); // same style for each rack
+	unsigned const objs_start(objs.size()), style_id(rgen.rand()); // same style for each rack
 	unsigned rack_id(0);
 	bool const skip_middle_row(nrows & 1);
 	interior->room_geom->shelf_rack_occluders.reserve((nrows - skip_middle_row)*nracks);
@@ -3121,15 +3121,8 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 				cube_t test_cube(cand);
 				test_cube.expand_by_xy(se_pad); // add extra padding
 				if (interior->is_blocked_by_stairs_or_elevator(test_cube)) {was_shortened = 1; continue;} // blocked
-				bool const is_empty(rgen.rand_float() < 0.05); // 5% empty
-				room_object_t srack(cand, TYPE_SHELFRACK, room_id, !dim, 0, (is_empty ? 0 : RO_FLAG_NONEMPTY), 1.0, SHAPE_CUBE, WHITE); // tot_light_amt=1.0
-				srack.obj_id     = obj_id; // common for all racks
-				srack.item_flags = rack_id++; // unique per rack
-				objs.push_back(srack);
-				cube_t back_cube;
-				interior->room_geom->get_shelfrack_objects(srack, objs, 1, &back_cube); // add_models_mode=1; capture back cube for occlusion culling
-				interior->room_geom->shelf_rack_occluders.push_back(back_cube);
-				//for (unsigned n = 0; n < 2; ++n) {interior->room_geom->get_shelfrack_objects(srack, temp_objs, n);}
+				add_shelf_rack(cand, dim, style_id, rack_id, room_id, 0, rgen);
+				//for (unsigned n = 0; n < 2; ++n) {interior->room_geom->get_shelfrack_objects(objs.back(), temp_objs, n);}
 				break; // done
 			} // for n
 			if (!was_shortened && r > 0) { // place a pillar at the end of the rack
@@ -3245,7 +3238,21 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 							}
 						} // for v
 					} // for d
-					// TODO: add other items such as shelfracks on this floor
+					// add another level of shelf racks on this floor; stairs/elevators/escalators/pillars extend through both floors, so we don't need to recheck intersections
+					unsigned const objs_end(objs.size());
+					float const min_rack_len(min(0.5f*rack_length, 1.0f*floor_spacing));
+					cube_t upper_place_area(upper_floor);
+					upper_place_area.expand_by_xy(-nom_aisle_width); // add space around the edges for aisles
+
+					for (unsigned i = objs_start; i < objs_end; ++i) {
+						room_object_t const &obj(objs[i]);
+						if (obj.type != TYPE_SHELFRACK || !upper_place_area.intersects_xy(obj)) continue;
+						cube_t cand(obj);
+						cand.intersect_with_cube_xy(upper_place_area); // clip to fit in upper floor area
+						if (cand.get_sz_dim(dim) < min_rack_len) continue; // too short
+						cand.translate_dim(2, (floor_z2 - obj.z1())); // move to the floor above
+						add_shelf_rack(cand, dim, style_id, rack_id, room_id, RO_FLAG_ON_FLOOR, rgen); // flag so that bottom surface is drawn
+					} // for i
 					break; // done
 				} // for dir
 			} // for step
@@ -3315,6 +3322,17 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 			break;
 		} // for s
 	}
+}
+
+void building_t::add_shelf_rack(cube_t const &c, bool dim, unsigned style_id, unsigned &rack_id, unsigned room_id, unsigned extra_flags, rand_gen_t &rgen) {
+	bool const is_empty(rgen.rand_float() < 0.05); // 5% empty
+	room_object_t srack(c, TYPE_SHELFRACK, room_id, !dim, 0, (extra_flags | (is_empty ? 0 : RO_FLAG_NONEMPTY)), 1.0, SHAPE_CUBE, WHITE); // tot_light_amt=1.0
+	srack.obj_id     = style_id; // common for all racks
+	srack.item_flags = rack_id++; // unique per rack
+	interior->room_geom->objs.push_back(srack);
+	cube_t back_cube;
+	interior->room_geom->get_shelfrack_objects(srack, interior->room_geom->objs, 1, &back_cube); // add_models_mode=1; capture back cube for occlusion culling
+	interior->room_geom->shelf_rack_occluders.push_back(back_cube);
 }
 
 // add objects to rooms connected to walkways, since the walkways themselves aren't actual rooms (and aren't inside the building bcube);
