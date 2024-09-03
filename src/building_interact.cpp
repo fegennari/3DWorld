@@ -29,7 +29,7 @@ unsigned player_has_room_key();
 bool player_has_pool_cue();
 void register_broken_object(room_object_t const &obj);
 void record_building_damage(float damage);
-void pool_ball_in_pocket();
+void pool_ball_in_pocket(unsigned ball_number);
 void refill_thirst();
 colorRGBA get_glow_color(float stime, bool fade);
 void play_hum_sound(point const &pos, float gain, float pitch);
@@ -1456,7 +1456,7 @@ void building_t::update_pool_table(room_object_t &ball) {
 			if (pocket.contains_cube_xy(ball_bc)) {
 				in_pocket = 1;
 				ball.taken_level = 1; // about to fall into the hole
-				pool_ball_in_pocket();
+				pool_ball_in_pocket(ball.item_flags);
 			}
 			play_area.expand_by_xy(radius); // expand play area to allow the ball to partially intersect the edges
 			break;

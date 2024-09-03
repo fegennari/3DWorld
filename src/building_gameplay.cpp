@@ -248,6 +248,12 @@ float get_paper_value(room_object_t const &obj) {
 	float const val_mult((rgen.rand_float() < 0.25) ? 10.0 : 1.0); // 25% of papers have higher value
 	return val_mult*(2 + (rgen.rand()%10))*(1 + (rgen.rand()%10));
 }
+string get_pool_ball_name(unsigned number) {
+	assert(number < 16);
+	std::ostringstream oss;
+	if (number == 15) {oss << "cue ball";} else {oss << (number+1) << " ball";}
+	return oss.str();
+}
 bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	if (obj.type == TYPE_PICTURE && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 20.0, 6.0, "picture frame");} // second item to take from picture
 	if (obj.type == TYPE_TPROLL  && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 6.0,  0.5, "toilet paper holder");} // second item to take from tproll
@@ -329,11 +335,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		else if (value >    0.0) {type.name = "valuable document";}
 	}
 	else if (obj.type == TYPE_POOL_BALL) {
-		unsigned const number(obj.item_flags); // starts from 0; cue ball is 15
-		assert(number < 16);
-		std::ostringstream oss;
-		if (number == 15) {oss << "cue ball";} else {oss << (number+1) << " ball";}
-		type.name = oss.str();
+		type.name = get_pool_ball_name(obj.item_flags); // starts from 0; cue ball is 15
 	}
 	else if (obj.type == TYPE_FOOD_BOX) {
 		string const &food_name(obj.get_food_box_name());
@@ -1047,9 +1049,11 @@ void refill_thirst() {player_inventory.refill_thirst();}
 void apply_building_fall_damage(float delta_z) {player_inventory.apply_fall_damage(delta_z, 0.5);} // dscale=0.5
 void get_dead_players_in_building(vector<dead_person_t> &dead_players, building_t const &building) {player_inventory.get_dead_players_in_building(dead_players, building);}
 
-void pool_ball_in_pocket() {
+void pool_ball_in_pocket(unsigned ball_number) {
+	if (ball_number == 15) return; // scratch on the cue ball doesn't count
+	// future work: special achievement for getting the balls in the correct order
 	player_inventory.register_reward(100.0);
-	register_achievement("Ball in Pocket");
+	register_achievement("Ball in Pocket (" + get_pool_ball_name(ball_number) + ")");
 }
 
 void register_building_sound_for_obj(room_object_t const &obj, point const &pos) {
