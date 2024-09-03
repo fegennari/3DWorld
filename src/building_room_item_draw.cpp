@@ -19,7 +19,7 @@ extern bool camera_in_building;
 extern int display_mode, frame_counter, animate2, player_in_basement;
 extern unsigned room_mirror_ref_tid;
 extern float fticks, office_chair_rot_rate, building_ambient_scale;
-extern point actual_player_pos, player_candle_pos;
+extern point actual_player_pos, player_candle_pos, pre_reflect_camera_pos;
 extern colorRGB cur_diffuse, cur_ambient;
 extern cube_t smap_light_clip_cube;
 extern pos_dir_up camera_pdu;
@@ -2467,14 +2467,21 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 			if (!not_occluded) return 1;
 		} // for p
 	}
-	// skip shelf rack occlusion culling when on a reflective glass floor
-	if (!reflection_pass && viewer.z > ground_floor_z1 && viewer.z < ground_floor_ceiling && check_pt_in_retail_room(center) && has_room_geom()) {
+	if (viewer.z > ground_floor_z1 && has_retail() && viewer.z < get_retail_room().z2() && check_pt_in_retail_room(center)) {
 		// both the object and the viewer are in the ground floor of a retail building - check shelf rack backs as occluders
-		if (check_shelfrack_occlusion(viewer, pts, npts, occ_area)) return 1;
+		if (reflection_pass) { // use actual camera, not camera reflected in glass floor; should be correct for vertical reflection
+			cube_t occ_area2(c);
+			occ_area2.union_with_pt(pre_reflect_camera_pos);
+			if (check_shelfrack_occlusion(pre_reflect_camera_pos, pts, get_cube_corners(c.d, pts, pre_reflect_camera_pos, 0), occ_area2)) return 1;
+		}
+		else {
+			if (check_shelfrack_occlusion(viewer, pts, npts, occ_area)) return 1;
+		}
 	}
 	return 0;
 }
 bool building_t::check_pg_br_wall_occlusion(point const &viewer, point const *const pts, unsigned npts, cube_t const &occ_area, vector3d const &view_dir) const {
+	if (!has_room_geom()) return 0;
 	bool const pri_dim(fabs(view_dir.x) < fabs(view_dir.y));
 	index_pair_t start, end;
 	get_pgbr_wall_ix_for_pos(viewer, start, end);
@@ -2488,6 +2495,7 @@ bool building_t::check_pg_br_wall_occlusion(point const &viewer, point const *co
 	return 0;
 }
 bool building_t::check_shelfrack_occlusion(point const &viewer, point const *const pts, unsigned npts, cube_t const &occ_area) const {
+	if (!has_room_geom()) return 0;
 	bool const long_dim(get_retail_long_dim());
 	return are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, interior->room_geom->shelf_rack_occluders, !long_dim);
 }

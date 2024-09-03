@@ -7,6 +7,7 @@
 
 bool disable_city_shadow_maps(0), mirror_in_ext_basement(0);
 unsigned room_mirror_ref_tid(0);
+point pre_reflect_camera_pos;
 room_object_t cur_room_mirror;
 shader_t reflection_shader;
 
@@ -45,7 +46,7 @@ void draw_scene_for_building_reflection(unsigned &ref_tid, unsigned dim, bool di
 	unsigned const txsize(window_width), tysize(window_height); // full resolution
 	vector3d const xlate(get_tiled_terrain_model_xlate());
 	float const reflect_plane_xf(reflect_plane + xlate[dim]), reflect_sign(dir ? -1.0 : 1.0);
-	point const old_camera_pos(camera_pos);
+	pre_reflect_camera_pos = camera_pos;
 	pos_dir_up const old_camera_pdu(camera_pdu); // reflect camera frustum used for VFC
 	camera_pdu.apply_dim_mirror(dim, reflect_plane_xf); // setup reflected camera frustum
 	//camera_pos = camera_pdu.pos; // this can move the camera outside the building, so we can't use it
@@ -98,7 +99,7 @@ void draw_scene_for_building_reflection(unsigned &ref_tid, unsigned dim, bool di
 	setup_reflection_texture(ref_tid, txsize, tysize);
 	render_to_texture(ref_tid, txsize, tysize); // render reflection to texture
 	restore_matrices_and_clear(); // reset state
-	camera_pos = old_camera_pos;
+	camera_pos = pre_reflect_camera_pos;
 	camera_pdu = old_camera_pdu; // restore camera_pdu
 	clip_plane = vector4d(); // reset to disable
 	if (draw_exterior) {draw_cloud_planes(0.0, 0, 1, 1);} // redraw cloud planes since they got overwritten; terrain_zmin=0 (use prev)
