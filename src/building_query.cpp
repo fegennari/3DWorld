@@ -431,7 +431,8 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 					if (has_complex_floorplan) {continue;} else {break;}
 				}
 			}
-			float const zval(max(pos2.z, p_last2.z));
+			// zval must include p_last2 for correct part selection in complex building floorplans (with flat roofs), but is not correct for walking on sloped roofs
+			float const zval((roof_type == ROOF_TYPE_FLAT) ? max(pos2.z, p_last2.z) : pos2.z);
 			cube_t const part_bc(*i + xlate);
 			if (!xy_only && ((zval + radius < part_bc.z1()) || (zval - radius - r_bias > part_bc.z2()))) continue; // test z overlap
 			if (radius == 0.0 && !(xy_only ? part_bc.contains_pt_xy(pos2) : part_bc.contains_pt(point(pos2.x, pos2.y, zval)))) continue; // no intersection; ignores p_last
