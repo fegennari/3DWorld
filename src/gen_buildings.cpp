@@ -3419,6 +3419,7 @@ public:
 		bool const ref_pass_int_only(reflection_pass & REF_PASS_INT_ONLY), ref_pass_interior(reflection_pass & REF_PASS_INTERIOR); // REF_PASS_HOUSE is no longer used here
 		bool const ref_pass_water(reflection_pass & REF_PASS_WATER), ref_pass_extb(reflection_pass & REF_PASS_EXTB);
 		bool const not_mirror(reflection_pass & REF_PASS_NO_MIRROR), swap_front_back(reflection_pass && !not_mirror); // for mirror reflection, but not security cameras
+		bool const ref_glass_floor(reflection_pass & REF_PASS_GLASS_FLOOR);
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
 		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
 		bool have_windows(0), have_wind_lights(0), have_interior(0), is_city_lighting_setup(0), this_frame_camera_in_building(0);
@@ -3815,8 +3816,8 @@ public:
 					if (!reflection_pass) {oc.set_camera(camera_pdu);} // setup occlusion culling
 					gen_and_draw_people_in_building(ped_draw_vars_t(*defer_ped_draw_vars.building, oc, s, xlate, defer_ped_draw_vars.bix, 0, reflection_pass));
 				}
-				// draw player reflection last so that alpha blending of hair works properly; not visible in water reflections
-				if (reflection_pass && !ref_pass_water && !not_mirror) {draw_player_model(s, xlate, 0);} // shadow_only=0
+				// draw player reflection last so that alpha blending of hair works properly; not visible in water reflections or glass floor (due to low Fresnel term)
+				if (reflection_pass && !ref_pass_water && !not_mirror && !ref_glass_floor) {draw_player_model(s, xlate, 0);} // shadow_only=0
 				reset_interior_lighting_and_end_shader(s);
 			}
 			if (!ref_pass_interior && have_buildings_ext_paint()) { // draw spraypaint/markers on building exterior walls/windows, if needed
