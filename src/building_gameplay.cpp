@@ -2230,6 +2230,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	vector3d const delta(max_dist*dir);
 	point const pos2(pos + delta);
 	float tmin(1.0);
+	bool on_glass(0);
 	vector3d normal;
 	cube_t target;
 	
@@ -2352,6 +2353,10 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 			}
 		}
 	}
+	if (line_int_cubes_get_t(pos, pos2, interior->room_geom->glass_floors, tmin, target)) { // check glass floors last
+		normal   = ((delta.z > 0.0) ? -plus_z : plus_z);
+		on_glass = 1;
+	}
 	if (normal == zero_vector)            return 0; // no walls, ceilings, floors, etc. hit
 	if (walls_blocked && normal.z == 0.0) return 0; // can't spraypaint walls through elevator, stairs, etc.
 	point p_int(pos + tmin*delta);
@@ -2379,7 +2384,8 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	colorRGBA const paint_color(((emissive_color_id > 0) ? WHITE : color), alpha); // color is always white if emissive
 	quad_batch_draw &qbd(interior->room_geom->decal_manager.paint_draw[exterior_wall].get_paint_qbd(is_marker, emissive_color_id));
 	qbd.add_quad_dirs(p_int, dx, radius*dir2, paint_color, normal); // add interior/exterior paint
-	
+	if (on_glass) {qbd.add_quad_dirs(p_int, -dx, radius*dir2, paint_color, -normal);} // draw on both sides of glass
+
 	if (exterior_wall) { // add exterior paint only; will be drawn after building interior, but without iterior lighting, so it will be darker
 		ext_paint_manager.get_paint_qbd_for_bldg(this, is_marker, emissive_color_id).add_quad_dirs(p_int, dx, radius*dir2, paint_color, normal);
 	}
