@@ -1300,7 +1300,7 @@ int building_t::maybe_use_escalator(person_t &person, building_loc_t const &loc,
 	bool const on_upper_floor(point_over_glass_floor(person.pos));
 	if (!on_upper_floor && person.pos.z > room.z1() + get_window_vspace()) return 0; // on neither upper nor lower floor; on stairs landing or escalator?
 	if (!on_upper_floor && last_used_escalator && !target_player) return 0; // don't use escalator on bottom floor if we just came down unless following the player
-	point const &ppos(prev_player_building_loc.pos);
+	point const &ppos(cur_player_building_loc.pos);
 	vect_cube_t const &glass_floors(interior->room_geom->glass_floors);
 
 	if (target_player) {
