@@ -15,6 +15,7 @@ float const COLL_RADIUS_SCALE = 0.75; // somewhat smaller than radius, but large
 int player_hiding_frame(0);
 building_dest_t cur_player_building_loc, prev_player_building_loc;
 room_object_t player_hiding_obj;
+vect_cube_t reused_avoid_cubes[2]; // temporary that's reused across frames and people
 bool debug_mode(0);
 
 extern bool player_is_hiding, player_on_escalator;
@@ -1187,7 +1188,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 			if (dsq < dmin_sq) {closest_part = interior->basement_ext_bcube;}
 		}
 		if (!contained && !closest_part.is_all_zeros()) {closest_part.clamp_pt(person.target_pos);} // clamp to closest part
-		static vect_cube_t avoid; // reuse across frames/people
+		vect_cube_t &avoid(reused_avoid_cubes[0]);
 		float const z1(person.target_pos.z - person.radius), z2(person.target_pos.z + z2_add), fc_gap(get_floor_ceil_gap());
 		interior->get_avoid_cubes(avoid, z1, z2, 0.5*person.radius, get_floor_thickness(), fc_gap, 1, 1); // same_as_player=1, skip_stairs=1
 		
@@ -1223,7 +1224,7 @@ bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, 
 		}
 	}
 	point dest_pos(valid_area.get_cube_center());
-	static vect_cube_t avoid; // reuse across frames/people
+	vect_cube_t &avoid(reused_avoid_cubes[0]);
 	get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
 	bool const no_use_init(is_single_large_room(room)); // don't use the room center for a parking garage, backrooms, or retail area
 	if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, person.target_pos.z, valid_area, rgen, dest_pos, no_use_init)) return 0;
@@ -1344,7 +1345,7 @@ int building_t::maybe_use_escalator(person_t &person, building_loc_t const &loc,
 				cube_t const &dest_floor(glass_floors[rgen.rand() % glass_floors.size()]);
 				float const zval(dest_floor.z2() + person.radius), height(person.get_height()), radius(COLL_RADIUS_SCALE*person.radius);
 				person.target_pos.assign(dest_floor.xc(), dest_floor.yc(), zval); // init dest is center
-				static vect_cube_t avoid; // reuse across frames/people
+				vect_cube_t &avoid(reused_avoid_cubes[0]);
 				get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
 				if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, zval, dest_floor, rgen, person.target_pos, 1)) continue; // no_use_init=1
 			}
@@ -1708,7 +1709,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 	assert((unsigned)loc1.part_ix < parts.size() && (unsigned)loc2.part_ix < parts.size());
 	assert((unsigned)loc1.room_ix < interior->rooms.size() && (unsigned)loc2.room_ix < interior->rooms.size());
 	float const floor_spacing(get_window_vspace()), height(person.get_height());
-	static vect_cube_t avoid, avoid2; // reuse across frames/people
+	vect_cube_t &avoid(reused_avoid_cubes[0]);
 
 	if (person.goal_type == GOAL_TYPE_ESCALATOR) {
 		ai_path_t epath;
@@ -1786,6 +1787,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 			point const seg2_start(interior->nav_graph->get_stairs_entrance_pt(to.z, stairs_room_ix, !up_or_down)); // other/entrance end
 			assert(point_in_building_or_basement_bcube(seg2_start));
 			// new floor, new zval, new avoid cubes
+			vect_cube_t &avoid2(reused_avoid_cubes[1]);
 			get_avoid_cubes(seg2_start.z, height, radius, avoid2, following_player); // no fires_select_cube
 			// stairs/ramp => to
 			if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, person.ssn, radius, 0, is_first_path,
