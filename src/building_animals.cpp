@@ -7,6 +7,7 @@
 #include "city_model.h" // for object_model_loader_t
 #include "openal_wrap.h"
 
+bool  const SPIDERS_FOLLOW_PLAYER = 0;
 float const RAT_FOV_DEG      = 60.0; // field of view in degrees
 float const RAT_VIEW_FLOORS  = 4.0; // view distance in floors
 float const RAT_FEAR_SPEED   = 1.3; // multiplier
@@ -741,6 +742,7 @@ vector3d spider_t::get_size() const {
 void spider_t::choose_new_dir(rand_gen_t &rgen) {
 	if (upv == zero_vector) {upv = plus_z;} // can this ever happen?
 	dir = cross_product(rgen.signed_rand_vector_spherical(), upv).get_norm(); // must be orthogonal to upv
+	if (SPIDERS_FOLLOW_PLAYER && dot_product_ptv(dir, pos, get_camera_building_space()) > 0.0) {dir = -dir;} // invert dir if moving away from the player; approximate
 }
 void spider_t::jump(float vel) {
 	assert(vel > 0.0);
