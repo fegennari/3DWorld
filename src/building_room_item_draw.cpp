@@ -19,7 +19,7 @@ extern bool camera_in_building;
 extern int display_mode, frame_counter, animate2, player_in_basement;
 extern unsigned room_mirror_ref_tid;
 extern float fticks, office_chair_rot_rate, building_ambient_scale;
-extern point actual_player_pos, player_candle_pos, pre_reflect_camera_pos;
+extern point actual_player_pos, player_candle_pos, pre_reflect_camera_pos_bs;
 extern colorRGB cur_diffuse, cur_ambient;
 extern cube_t smap_light_clip_cube;
 extern pos_dir_up camera_pdu;
@@ -2412,6 +2412,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	}
 	if (!c_is_building_part && player_in_building) {
 		// viewer inside this building; includes shadow_only case and reflection_pass (even if reflected camera is outside the building);
+		// okay for retail glass floor reflections because the reflection won't cross an opaque floor or ceiling in fc_occluders
 		// check floors/ceilings of this building
 		if (fabs(viewer.z - c.zc()) > (reflection_pass ? 1.0 : 0.5)*floor_spacing) { // on different floors
 			float max_sep_dist(floor_spacing);
@@ -2470,9 +2471,10 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	if (viewer.z > ground_floor_z1 && has_retail() && viewer.z < get_retail_room().z2() && check_pt_in_retail_room(center)) {
 		// both the object and the viewer are in the ground floor of a retail building - check shelf rack backs as occluders
 		if (reflection_pass) { // use actual camera, not camera reflected in glass floor; should be correct for vertical reflection
+			if (pre_reflect_camera_pos_bs == zero_vector || is_rotated()) return 0; // no pre-reflect pos; rotated building should not get into this case
 			cube_t occ_area2(c);
-			occ_area2.union_with_pt(pre_reflect_camera_pos);
-			if (check_shelfrack_occlusion(pre_reflect_camera_pos, pts, get_cube_corners(c.d, pts, pre_reflect_camera_pos, 0), occ_area2)) return 1;
+			occ_area2.union_with_pt(pre_reflect_camera_pos_bs);
+			if (check_shelfrack_occlusion(pre_reflect_camera_pos_bs, pts, get_cube_corners(c.d, pts, pre_reflect_camera_pos_bs, 0), occ_area2)) return 1;
 		}
 		else {
 			if (check_shelfrack_occlusion(viewer, pts, npts, occ_area)) return 1;

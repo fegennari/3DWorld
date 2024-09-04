@@ -1286,7 +1286,6 @@ bool check_for_shadow_caster(vect_cube_with_ix_t const &cubes, cube_t const &lig
 				float const t((floor_z - lpos.z)/delta.z);
 				cube_ext.union_with_pt(lpos + delta*t); // union with floor hit pos
 			}
-			//if ((display_mode & 0x08) && check_obj_occluded((cube_ext + xlate), get_camera_pos(), oc, 0)) continue; // occlusion culling - is this useful?
 			if (!camera_pdu.cube_visible(cube_ext + xlate)) { // VFC
 				hash_mix_point(c->get_size(), shadow_caster_hash); // hash size rather than position to include the object's presence but not its position (sort of)
 				continue;
