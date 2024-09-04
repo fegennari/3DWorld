@@ -3260,6 +3260,12 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 							add_shelf_rack(cand, dim, style_id, rack_id, room_id, RO_FLAG_ON_FLOOR, rgen); // flag so that bottom surface is drawn
 						}
 					} // for i
+					// re-enable this floor on any elevator passing through it
+					for (elevator_t &e : interior->elevators) {
+						if (e.skip_floors_mask == 0 || e.z2() < floor_z2 || e.z1() > floor_z1 || !upper_floor.contains_cube_xy(e)) continue;
+						unsigned const floor_ix(round_fp((floor_z1 - e.z1())/floor_spacing));
+						e.skip_floors_mask &= ~(1ULL << floor_ix); // unset this floor
+					}
 					break; // done
 				} // for dir
 			} // for step
