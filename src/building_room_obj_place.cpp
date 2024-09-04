@@ -3202,7 +3202,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 					// add upper floor railing to each side of the escalator
 					colorRGBA const railing_color(railing_colors[rgen.rand()%3]);
 					unsigned const railing_flags(RO_FLAG_TOS | RO_FLAG_OPEN | RO_FLAG_ADJ_TOP);
-					float const railing_thickness(0.5*wall_thickness), railing_z1(upper_floor.z2() + 0.25*railing_thickness);
+					float const railing_thickness(0.5*wall_thickness), railing_z1(floor_z2 + 0.25*railing_thickness);
 					cube_t railing(upper_floor);
 					set_cube_zvals(railing, railing_z1, railing_z1+fc_gap);
 					railing.d[dim][dir] = upper_floor.d[dim][!dir] + (dir ? 1.0 : -1.0)*railing_thickness;
@@ -3240,20 +3240,25 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 							}
 						} // for v
 					} // for d
-					// add another level of shelf racks on this floor; stairs/elevators/escalators/pillars extend through both floors, so we don't need to recheck intersections
+					// add another level of shelf racks on this floor;
+					// stairs/elevators/escalators/pillars extend through both floors, so we don't need to recheck intersections, but we may need to increase their height
 					unsigned const objs_end(objs.size());
-					float const min_rack_len(min(0.5f*rack_length, 1.0f*floor_spacing));
+					float const min_rack_len(min(0.5f*rack_length, 1.0f*floor_spacing)), min_pillar_z2(floor_z2 + 0.85*fc_gap);
 					cube_t upper_place_area(upper_floor);
 					upper_place_area.expand_by_xy(-nom_aisle_width); // add space around the edges for aisles
 
 					for (unsigned i = objs_start; i < objs_end; ++i) {
-						room_object_t const &obj(objs[i]);
-						if (obj.type != TYPE_SHELFRACK || !upper_place_area.intersects_xy(obj)) continue;
-						cube_t cand(obj);
-						cand.intersect_with_cube_xy(upper_place_area); // clip to fit in upper floor area
-						if (cand.get_sz_dim(dim) < min_rack_len) continue; // too short
-						cand.translate_dim(2, (floor_z2 - obj.z1())); // move to the floor above
-						add_shelf_rack(cand, dim, style_id, rack_id, room_id, RO_FLAG_ON_FLOOR, rgen); // flag so that bottom surface is drawn
+						room_object_t &obj(objs[i]);
+						if (!upper_place_area.intersects_xy(obj)) continue;
+
+						if (obj.type == TYPE_PG_WALL) {max_eq(obj.z2(), min_pillar_z2);} // pillar outer
+						else if (obj.type == TYPE_SHELFRACK) {
+							cube_t cand(obj);
+							cand.intersect_with_cube_xy(upper_place_area); // clip to fit in upper floor area
+							if (cand.get_sz_dim(dim) < min_rack_len) continue; // too short
+							cand.translate_dim(2, (floor_z2 - obj.z1())); // move to the floor above
+							add_shelf_rack(cand, dim, style_id, rack_id, room_id, RO_FLAG_ON_FLOOR, rgen); // flag so that bottom surface is drawn
+						}
 					} // for i
 					break; // done
 				} // for dir
