@@ -3983,12 +3983,10 @@ public:
 		// draw glass materials such as floors for the player's building
 		if (reflection_pass || !draw_building_interiors) return;
 		if (player_building == nullptr || !player_building->glass_floor_visible(xlate)) return;
-		enable_dlight_bcubes = 1;
 		fgPushMatrix();
 		translate_to(xlate);
 		player_building->draw_glass_surfaces(xlate);
 		fgPopMatrix();
-		enable_dlight_bcubes = 0;
 	}
 
 	void draw_building_lights(vector3d const &xlate) { // add night time lights to buildings; non-const because it modifies building_lights
