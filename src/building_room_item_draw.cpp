@@ -20,6 +20,7 @@ extern int display_mode, frame_counter, animate2, player_in_basement;
 extern unsigned room_mirror_ref_tid;
 extern float fticks, office_chair_rot_rate, building_ambient_scale;
 extern point actual_player_pos, player_candle_pos, pre_reflect_camera_pos_bs;
+extern vector4d clip_plane;
 extern colorRGB cur_diffuse, cur_ambient;
 extern cube_t smap_light_clip_cube;
 extern pos_dir_up camera_pdu;
@@ -2377,6 +2378,15 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	}
 	point pts[8];
 	unsigned const npts(get_cube_corners(c.d, pts, viewer, 0)); // should return only the 6 visible corners
+
+	if (reflection_pass && clip_plane.w != 0.0 && !is_rotated()) { // check for all visible corners of object behind the clip plane
+		bool any_not_behind(0);
+
+		for (unsigned n = 0; n < npts; ++n) {
+			if (dot_product(pts[n], clip_plane) > -clip_plane.w) {any_not_behind = 1; break;} // why do we have to negate clip_plane.w here?
+		}
+		if (!any_not_behind) return 1;
+	}
 	cube_t occ_area(c);
 	occ_area.union_with_pt(viewer); // any occluder must intersect this cube
 	point const center(c.get_cube_center());
