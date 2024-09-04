@@ -85,7 +85,7 @@ void draw_scene_for_building_reflection(unsigned &ref_tid, unsigned dim, bool di
 	if (draw_exterior) {
 		disable_city_shadow_maps = 1; // shadows don't work due to the mirror transform and are disabled for both the terrain and the city roads/objects
 		if (world_mode == WMODE_INF_TERRAIN) {draw_city_roads(1, xlate);} // opaque only
-		draw_tiled_terrain(2); // reflection_pass=2
+		draw_tiled_terrain(is_glass_floor ? 3 : 2); // reflection_pass=2/3
 		draw_building_lights(xlate);
 		
 		if (is_glass_floor && world_mode == WMODE_INF_TERRAIN) { // clouds/sky/sun are unlikely to be reflected in mirrors so don't need to be drawn, except for glass floors

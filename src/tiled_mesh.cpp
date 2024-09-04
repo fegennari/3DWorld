@@ -1927,7 +1927,7 @@ void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned co
 		s.ensure_uniform_loc(shader_locs[1], "tc_xlate");
 		s.set_uniform_vector3d(shader_locs[1], xlate);
 	}
-	if (reflection_pass == 2) {disable_shadow_maps(s);} // disabled for mirror reflections because shadows don't work
+	if (reflection_pass >= 2) {disable_shadow_maps(s);} // disabled for mirror reflections because shadows don't work
 	else {shader_shadow_map_setup(s);}
 	bind_textures(); // Note: moved after the disable_shadow_maps() call to ensure TU 0 is not overwritten
 	unsigned const lod_level(get_lod_level(reflection_pass));
@@ -2723,7 +2723,7 @@ tile_draw_t::occluder_cubes_t::occluder_cubes_t(tile_t const *const tile_) : til
 	}
 }
 
-void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=water plane Z, 2=building mirror
+void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=water plane Z, 2=building horizontal mirror, 3=building vertical mirror
 
 	if (player_cant_see_outside_building()) return; // no need to draw tiles if player in extended basement or parking garage
 	//timer_t timer("TT Draw");
@@ -2799,7 +2799,8 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 		if (shadow_map_enabled()) {draw_tiles(reflection_pass, 1);} // shadow map pass
 		draw_tiles(reflection_pass, 0); // non-shadow map pass
 	}
-	if (!player_cant_see_outside_building()) { // trees/scenerg/grass not visible when player is in the extended basement, parking garage, or attic
+	// trees/scenerg/grass not visible when player is in the extended basement, parking garage, or attic; also not very visible in glass floor reflection, so disable
+	if (!player_cant_see_outside_building() && reflection_pass < 3) {
 		if (pine_trees_enabled ()) {draw_pine_trees (reflection_pass);}
 		if (decid_trees_enabled()) {draw_decid_trees(reflection_pass);}
 	
