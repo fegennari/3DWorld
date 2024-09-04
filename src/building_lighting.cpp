@@ -1967,11 +1967,13 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, dir, bwidth);
 		if (track_lights) {enabled_bldg_lights.push_back(lpos_rot);}
 		//++num_add;
+		// use smaller shadow radius for retail rooms, since there are so many lights (meaning shadows are less visible and perf is more important)
+		float const light_radius_shadow((room.is_retail() ? RETAIL_SMAP_DSCALE : 1.0)*light_radius);
 		bool force_smap_update(0);
 
-		// check for dynamic shadows; check the player first; use full light radius
+		// check for dynamic shadows; check the player first; use full light_radius_shadow
 		if (camera_surf_collide && (camera_in_building || in_camera_walkway || (player_in_walkway && maybe_walkway) || camera_can_see_ext_basement) &&
-			dist_less_than(lpos_rot, camera_bs, light_radius))
+			dist_less_than(lpos_rot, camera_bs, light_radius_shadow))
 		{
 			bool player_in_this_room(player_on_attic_stairs && (is_in_attic || room.intersects_xy(interior->attic_access))); // ladder case
 			player_in_this_room |= (player_in_pool && is_over_pool); // pool case
@@ -1997,7 +1999,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			check_dynamic_shadows |= (room.get_has_skylight() && camera_bs.z > lpos.z && lpos.z > (room.z2() - 0.5*window_vspacing));
 			
 			if (check_dynamic_shadows) {
-				float const dshadow_radius((is_in_attic ? 1.0 : 0.8)*light_radius); // use full light radius for attics since they're more open
+				float const dshadow_radius((is_in_attic ? 1.0 : PERSON_INT_SMAP_DSCALE)*light_radius); // use full light radius for attics since they're more open
 				if (building_action_key) {force_smap_update = 1;} // toggling a door state or interacting with objects invalidates shadows in the building for that frame
 				check_for_dynamic_shadow_casters(interior->people, ped_bcubes, moving_objs, clipped_bc, lpos_rot,
 					dshadow_radius, stairs_light, xlate, (check_building_people && !is_lamp), shadow_caster_hash); // no people shadows for lam[s

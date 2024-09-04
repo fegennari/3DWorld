@@ -3268,7 +3268,8 @@ public:
 						if (!basement_light) {b.get_walkway_end_verts(ext_parts_draw, lpos);}
 						b.draw_cars_in_building(s, xlate, 1, 1); // player_in_building=1, shadow_only=1
 						is_house |= b.is_house;
-						bool const viewer_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
+						float const player_smap_dist((b.check_pt_in_retail_room(pre_smap_player_pos) ? RETAIL_SMAP_DSCALE : 1.0)*camera_pdu.far_);
+						bool const viewer_close(dist_less_than(lpos, pre_smap_player_pos, player_smap_dist)); // Note: pre_smap_player_pos already in building space
 						bool const add_player_shadow(camera_surf_collide && camera_in_this_building && viewer_close && !sec_camera_mode &&
 							(actual_player_pos.z - get_bldg_player_height()) < lpos.z);
 						bool const add_people_shadow((camera_in_this_building || viewer_close) && b.has_people());
