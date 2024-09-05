@@ -2383,7 +2383,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 		bool any_not_behind(0);
 
 		for (unsigned n = 0; n < npts; ++n) {
-			if (dot_product(pts[n], clip_plane) > -clip_plane.w) {any_not_behind = 1; break;} // why do we have to negate clip_plane.w here?
+			if (dot_product(pts[n], clip_plane) + clip_plane.w > 0.0) {any_not_behind = 1; break;}
 		}
 		if (!any_not_behind) return 1;
 	}
