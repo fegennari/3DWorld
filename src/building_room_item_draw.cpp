@@ -2035,12 +2035,14 @@ void building_t::subtract_stairs_and_elevators_from_cube(cube_t const &c, vect_c
 		if (s.intersects(c)) {subtract_cube_from_cubes(s, cube_parts);}
 	}
 }
-bool building_t::glass_floor_visible(vector3d const &xlate) const {
-	return (has_glass_floor() && get_retail_room().contains_pt(get_camera_pos() - xlate));
+bool building_t::glass_floor_visible(vector3d const &xlate, bool from_outside_building) const {
+	if (!has_glass_floor()) return 0;
+	if (!from_outside_building && !get_retail_room().contains_pt(get_camera_pos() - xlate)) return 0; // wrong room (should always have U-shaped stairs that block visibility)
+	return is_rot_cube_visible(get_bcubes_union(interior->room_geom->glass_floors), xlate); // VFC
 }
 void building_t::draw_glass_surfaces(vector3d const &xlate) const {
 	// currently there are only glass floors, but this could be used for drawing showers and fishtanks as well
-	assert(has_room_geom());
+	if (!has_room_geom()) return;
 	vect_cube_t const &glass_floors(interior->room_geom->glass_floors);
 	if (glass_floors.empty()) return;
 	rgeom_mat_t &mat(interior->room_geom->mats_glass);
@@ -2075,7 +2077,7 @@ void building_t::draw_glass_surfaces(vector3d const &xlate) const {
 	enable_blend();
 	// cull back faces if floor was split due to stairs or an elevator, since the bottom won't alpha blend properly
 	if (interior->room_geom->glass_floor_split) {glEnable(GL_CULL_FACE);}
-	colorRGBA const indoor_light_color(player_building->get_retail_light_color());
+	colorRGBA const indoor_light_color(get_retail_light_color());
 	// draw mirror reflection if player is on the top surface of the glass floor
 	point const camera_bs(get_camera_pos() - xlate);
 	bool const enable_reflection(ENABLE_GLASS_FLOOR_REF && room_mirror_ref_tid > 0 && point_over_glass_floor(camera_bs, 1)); // inc_escalator=1

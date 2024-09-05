@@ -3642,6 +3642,11 @@ public:
 						if (!camera_in_this_building) { // camera not in building
 							if (ext_basement_conn_visible && animate2) {b.update_player_interact_objects(camera_bs);} // need to at least update door open/close state
 							if (ext_basement_conn_visible && !reflection_pass) {vis_conn_bldg = &b;} // for now we only support one visible connected building
+
+							if (had_open_door && !reflection_pass && b.glass_floor_visible(xlate, 1)) { // from_outside_building=1
+								b.draw_glass_surfaces(xlate);
+								s.make_current();
+							}
 							continue;
 						}
 						// we should get here for at most one building
