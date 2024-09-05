@@ -97,7 +97,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_SHELVES   ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 0.0,   0.0,   "shelves");
 	bldg_obj_types[TYPE_KEYBOARD  ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 15.0,  2.0,   "keyboard");
 	bldg_obj_types[TYPE_SHOWER    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 0.0,   0.0,   "shower"); // technically large + small, but only large objects are dynamically updated
-	bldg_obj_types[TYPE_RDESK     ] = bldg_obj_type_t(1, 1, 1, 0, 0, 0, 1, 800.0, 300.0, "reception desk");
+	bldg_obj_types[TYPE_RDESK     ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 800.0, 300.0, "reception desk"); // mark as attached to prevent movement blocking stairs or elevators
 	bldg_obj_types[TYPE_BOTTLE    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 1.0,   1.0,   "bottle", 1); // single use
 	bldg_obj_types[TYPE_WINE_RACK ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 3, 75.0,  40.0,  "wine rack");
 	bldg_obj_types[TYPE_COMPUTER  ] = bldg_obj_type_t(0, 1, 1, 1, 0, 0, 2, 500.0, 20.0,  "computer"); // rats can collide with computers
