@@ -2389,7 +2389,17 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 	}
 	else if (type == TYPE_SHELFRACK) {
 		cube_t cubes[9];
-		lg_cubes.insert(lg_cubes.end(), cubes, cubes+get_all_shelf_rack_cubes(c, cubes));
+		unsigned const num_cubes(get_all_shelf_rack_cubes(c, cubes));
+
+		for (unsigned n = 0; n < num_cubes; ++n) {
+			cube_t &C(cubes[n]);
+			// spiders can walk on empty shelves, top, and sides, but not shelves with items on them
+			if (!c.is_nonempty() || C.z1() == c.z1() || C.z2() == c.z2()) {lg_cubes.push_back(C);}
+			else {
+				C.expand_in_dim(!c.dim, -0.05*c.dz()); // shrink ends of shelves and back slightly so that they don't interfere with shelf ends
+				non_cubes.push_back(C);
+			}
+		}
 	}
 	else if (type == TYPE_COUCH) {
 		cube_t cubes[4]; // bottom, back, arm, arm
