@@ -34,6 +34,7 @@ float const DOOR_WIDTH_SCALE       = 0.5;
 float const DOOR_WIDTH_SCALE_OFFICE= 0.7; // wider than house doors
 float const STAIRS_WALL_WIDTH_MULT = 0.15; // relative to the depth of a stair
 float const ELEVATOR_Z2_SHIFT      = 0.6; // shift downward, relative to ceiling thickness
+float const ELEVATOR_STAND_DIST    = 0.4; // distance that people stand from the elevator door relative to floor spacing
 float const DOOR_FRAME_WIDTH       = 0.07; // for door texture, relative to door width
 float const EXT_BASEMENT_JOIN_DIST = 4.0; // relative to floor spacing
 float const BALCONY_PILLAR_SCALE   = 0.15; // relative to depth

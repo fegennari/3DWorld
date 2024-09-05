@@ -1239,10 +1239,11 @@ bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, 
 	return 1;
 }
 
-point get_pos_to_stand_for_elevator(person_t const &person, elevator_t const &e, float floor_spacing) {
-	point pos(person.pos);
+point get_pos_to_stand_for_elevator(elevator_t const &e, float floor_spacing, float zval) {
+	point pos;
 	pos[!e.dim] = e.get_center_dim(!e.dim); // centered on the elevator
-	pos[ e.dim] = e.d[e.dim][e.dir] + (e.dir ? 1.0 : -1.0)*0.4*floor_spacing; // stand in front of the elevator door
+	pos[ e.dim] = e.d[e.dim][e.dir] + (e.dir ? 1.0 : -1.0)*ELEVATOR_STAND_DIST*floor_spacing; // stand in front of the elevator door
+	pos.z = zval;
 	return pos;
 }
 
@@ -1391,7 +1392,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 
 				// Note: to simplify multiple AI logic, we could check e.in_use here and not even go to the elevator if someone else is using it
 				if (interior->nav_graph->is_room_connected_to(loc.room_ix, elevator_room, interior->doors, person.pos.z, person.has_key)) { // check if reachable
-					person.target_pos   = get_pos_to_stand_for_elevator(person, e, floor_spacing);
+					person.target_pos   = get_pos_to_stand_for_elevator(e, floor_spacing, person.pos.z); // check if this is blocked, or leave that up to path finding?
 					person.dest_room    = elevator_room;
 					person.goal_type    = GOAL_TYPE_ELEVATOR;
 					person.cur_elevator = (uint8_t)nearest_elevator;
@@ -1674,7 +1675,7 @@ int building_t::find_nearest_elevator_this_floor(point const &pos) const {
 	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
 		if (e->z1() > pos.z || e->z2() < pos.z) continue; // doesn't span the correct floor
 		if (e->skip_floor_ix(get_elevator_floor(pos.z, *e, get_window_vspace()))) continue; // floor not reachable from this elevator; unclear if we can get here
-		// skip if elevator is currently in use?
+		// skip if elevator is currently in use?; skip elevator if wait pos is blocked?
 		float const dsq(p2p_dist_xy_sq(pos, e->get_cube_center()));
 		if (nearest < 0 || dsq < dmin_sq) {nearest = (e - interior->elevators.begin()); dmin_sq = dsq;}
 	}
@@ -2319,7 +2320,7 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 	}
 	else if (person.ai_state == AI_ACTIVATE_ELEVATOR) {
 		vector3d const prev_dir(person.dir);
-		bool const is_turning(person_slow_turn(person, get_pos_to_stand_for_elevator(person, e, floor_spacing), 0.5*delta_dir)); // slow turn to face the elevator door
+		bool const is_turning(person_slow_turn(person, get_pos_to_stand_for_elevator(e, floor_spacing, person.pos.z), 0.5*delta_dir)); // slow turn to face the elevator door
 
 		if (!is_turning) { // turn completed
 			call_elevator_to_floor_and_light_nearest_button(e, person.dest_elevator_floor, 1, 0); // is_inside_elevator=1, is_up=0
@@ -2339,7 +2340,7 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 		person.idle_time += fticks;
 	}
 	else if (person.ai_state == AI_EXIT_ELEVATOR) {
-		point const target_dest(get_pos_to_stand_for_elevator(person, e, floor_spacing));
+		point const target_dest(get_pos_to_stand_for_elevator(e, floor_spacing, person.pos.z));
 		bool const is_inside_elevator(e.contains_pt_xy(person.pos));
 
 		// as long as we're inside the elevator, plan to exit to the designated point in front of the elevator

@@ -3178,7 +3178,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 						if (stairs_ext.intersects(cand)) {has_int = 1; break;}
 					}
 					if (has_int) continue;
-					cube_t upper_conn;
+					cube_t upper_conn; // union of high ends of both escalators
 
 					for (unsigned s = 0; s < 2; ++s) { // place two side-by-side escalators with opposite directions
 						// extend 90% of floor thickness below; enough to hide building people animated feet, but not enough to clip through the ceiling below
@@ -3263,6 +3263,11 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 					// re-enable this floor on any elevator passing through it
 					for (elevator_t &e : interior->elevators) {
 						if (e.skip_floors_mask == 0 || e.z2() < floor_z2 || e.z1() > floor_z1 || !upper_floor.contains_cube_xy(e)) continue;
+						// check for opening clearance
+						float const front_clearance(ELEVATOR_STAND_DIST*floor_spacing + 0.5*get_min_front_clearance_inc_people());
+						cube_t const bc_pad(e.get_bcube_padded(front_clearance));
+						if (!upper_floor.contains_cube_xy(bc_pad)) continue; // too close to edge of floor; can this fail?
+						if (upper_conn.intersects(bc_pad))         continue; // too close to escalator
 						unsigned const floor_ix(round_fp((floor_z1 - e.z1())/floor_spacing));
 						e.skip_floors_mask &= ~(1ULL << floor_ix); // unset this floor
 					}
