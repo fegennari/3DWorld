@@ -1913,17 +1913,20 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				clipped_bc.x1() = light_bcube.x1(); clipped_bc.x2() = light_bcube.x2(); // copy X/Y but keep orig zvals
 				clipped_bc.y1() = light_bcube.y1(); clipped_bc.y2() = light_bcube.y2();
 				clipped_bc.expand_by_xy(light_bcube_expand);
-				// clip to the current floor zval if there are no floor stairs or ramp cutouts for the light to pass through;
-				// unclear if this helps with framerate or light culling/shadow map issues, but it seems like a good idea
-				float clip_z1(is_single_floor ? room.z1() : (lpos.z - fc_gap));
-				cube_t test_cube(clipped_bc);
-				test_cube.z1() = clip_z1;
 
-				for (stairwell_t const &s : interior->stairwells) {
-					if (s.intersects(test_cube)) {min_eq(clip_z1, s.z1());}
+				if (!is_over_pool) {
+					// clip to the current floor zval if there are no floor stairs or ramp cutouts for the light to pass through;
+					// unclear if this helps with framerate or light culling/shadow map issues, but it seems like a good idea; possibly redundant with z1 clip above
+					float clip_z1(is_single_floor ? room.z1() : (lpos.z - fc_gap));
+					cube_t test_cube(clipped_bc);
+					test_cube.z1() = clip_z1;
+
+					for (stairwell_t const &s : interior->stairwells) {
+						if (s.intersects(test_cube)) {min_eq(clip_z1, s.z1());}
+					}
+					if (has_pg_ramp() && interior->pg_ramp.intersects(test_cube)) {min_eq(clip_z1, interior->pg_ramp.z1());}
+					max_eq(clipped_bc.z1(), (clip_z1 - fc_thick)); // slightly lower to include the floor
 				}
-				if (has_pg_ramp() && interior->pg_ramp.intersects(test_cube)) {min_eq(clip_z1, interior->pg_ramp.z1());}
-				max_eq(clipped_bc.z1(), (clip_z1 - fc_thick)); // slightly lower to include the floor
 			}
 			// expand so that offset exterior doors are properly handled, but less for walkway lights
 			bool const is_upper_floor(!room.is_single_floor && lpos.z > ground_floor_z1 + window_vspacing);
