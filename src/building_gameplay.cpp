@@ -90,7 +90,7 @@ void setup_bldg_obj_types() {
 	// closets can't be picked up, but they can block a pickup; marked as large because small objects are not modified; marked as is_model because closets can contain lamps
 	bldg_obj_types[TYPE_CLOSET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 1, 0.0,   0.0,   "closet");
 	bldg_obj_types[TYPE_WALL_TRIM ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0, 0.0,   0.0,   "wall trim"); // detail object
-	bldg_obj_types[TYPE_RAILING   ] = bldg_obj_type_t(1, 0, 0, 0, 1, 0, 2, 0.0,   0.0,   "railing");
+	bldg_obj_types[TYPE_RAILING   ] = bldg_obj_type_t(1, 1, 0, 0, 1, 0, 2, 0.0,   0.0,   "railing"); // Note: ai_coll logic is custom, but ai_coll flag has been set for consistency
 	bldg_obj_types[TYPE_CRATE     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 10.0,  12.0,  "crate"); // should be random value
 	bldg_obj_types[TYPE_BOX       ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 5.0,   8.0,   "box");   // should be random value
 	bldg_obj_types[TYPE_MIRROR    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 40.0,  15.0,  "mirror");
