@@ -2468,6 +2468,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 	if (line_int_cubes_exp(p1, p2, interior->elevators,  expand, line_bcube)) return 7; // collide with entire elevator
 	
 	for (escalator_t const &e : interior->escalators) {
+		if (!line_int_cube_exp(p1, p2, e, expand)) continue;
 		cube_t cubes[7];
 		e.get_all_cubes(cubes);
 		if (line_int_cubes_exp(p1, p2, cubes, 7, expand) || line_int_cube_exp(p1, p2, e.get_ramp_bcube(0), expand)) return 7; // test cubes and ramp bcube

@@ -955,6 +955,7 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 	for (elevator_t  const &e : interior->elevators ) {surface_orienter.register_cube(e);} // should we avoid open elevators?
 	
 	for (escalator_t const &e : interior->escalators) {
+		if (!tc.intersects(e)) continue;
 		cube_t cubes[7];
 		e.get_all_cubes(cubes);
 		for (unsigned n = 0; n < 7; ++n) {surface_orienter.register_cube(cubes[n]);}
