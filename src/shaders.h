@@ -20,11 +20,11 @@ bool check_for_tess_shader();
 struct gl_light_params_t {
 
 	point pos, eye_space_pos;
-	colorRGBA ambient, diffuse, specular;
-	float pos_w;
+	colorRGBA ambient=ALPHA0, diffuse=ALPHA0, specular=ALPHA0;
+	float pos_w=-1.0;
 	vector3d atten; // {constant, linear, quadratic}
 
-	gl_light_params_t() : pos(all_zeros), eye_space_pos(pos), ambient(ALPHA0), diffuse(ALPHA0), specular(ALPHA0), pos_w(-1.0) {set_atten(-1.0, -1.0, -1.0);}
+	gl_light_params_t() {set_atten(-1.0, -1.0, -1.0);}
 	void set_a (colorRGBA const &a) {ambient = a;};
 	void set_ds(colorRGBA const &c) {diffuse = specular = c;}
 	void set_atten(float c, float l, float q) {atten.assign(c, l, q);}
@@ -32,10 +32,7 @@ struct gl_light_params_t {
 };
 
 
-struct zi_unsigned_t {
-	unsigned v;
-	zi_unsigned_t() : v(0) {}
-};
+struct zi_unsigned_t {unsigned v=0;};
 
 class property_map_t { // for storing user-defined shader properties
 	map<string, string> prop_map;
@@ -57,12 +54,12 @@ enum {SHADER_FLAG_NO_ALPHA_TEST=0};
 
 class shader_t : public property_map_t {
 
-	unsigned program; // active program
+	unsigned program=0; // active program
 	string prepend_string[NUM_SHADER_TYPES]; // vertex=0, fragment=1, geometry=2, tess_control=3, tess_eval=4, compute=5
 	string prog_name_prefix;
 	vector<int> attrib_locs;
 	string shader_names[NUM_SHADER_TYPES];
-	colorRGBA last_spec;
+	colorRGBA last_spec=ALPHA0;
 	
 	struct light_loc_t {
 		int v[5];
@@ -73,7 +70,7 @@ class shader_t : public property_map_t {
 	light_loc_t light_locs[MAX_SHADER_LIGHTS];
 	gl_light_params_t prev_lps[MAX_SHADER_LIGHTS];
 	int vnct_locs[4]; // {vertex, normal, color, tex_coord}
-	int emission_loc, specular_color_loc;
+	int emission_loc=-1, specular_color_loc=-1;
 
 	struct subroutine_val_t {
 		vector<unsigned> ixs;
@@ -83,9 +80,8 @@ class shader_t : public property_map_t {
 	};
 	typedef map<unsigned, subroutine_val_t> subroutine_map_t;
 	subroutine_map_t subroutines;
-	unsigned user_flags;
-
-	int pm_loc, mvm_loc, mvmi_loc, mvpm_loc, nm_loc; // matrices
+	unsigned user_flags=0;
+	int pm_loc=-1, mvm_loc=-1, mvmi_loc=-1, mvpm_loc=-1, nm_loc=-1; // matrices
 
 	unsigned get_shader(string const &name, unsigned type) const;
 	static void print_shader_info_log(unsigned shader);
@@ -95,9 +91,7 @@ class shader_t : public property_map_t {
 	void clear_vntc_locs() {vnct_locs[0] = vnct_locs[1] = vnct_locs[2] = vnct_locs[3] = -1;}
 
 public:
-	shader_t() : program(0), last_spec(ALPHA0), emission_loc(-1), specular_color_loc(-1), user_flags(0), pm_loc(-1), mvm_loc(-1), mvmi_loc(-1), mvpm_loc(-1), nm_loc(-1) {
-		clear_vntc_locs();
-	}
+	shader_t() {clear_vntc_locs();}
 	//~shader_t() {assert(!program);} // end_shader() should have been called (but not for cached global variables)
 	unsigned get_program() const {return program;} // semi-private, for internal use as map key in vao_cache_t
 	void get_program_binary(vector<unsigned char> &binary_data, GLenum &binary_format) const;
@@ -219,8 +213,7 @@ public:
 // special shader used with volume particle clouds (nebulas, explosions, teleporters) that caches uniform locs
 class vpc_shader_t : public shader_t { // move somewhere else?
 public:
-	int ns_loc, c1i_loc, c1o_loc, c2i_loc, c2o_loc, c3i_loc, c3o_loc, rad_loc, rs_loc, off_loc, vd_loc, as_loc, nexp_loc;
-	vpc_shader_t() : ns_loc(0), c1i_loc(0), c1o_loc(0), c2i_loc(0), c2o_loc(0), c3i_loc(0), c3o_loc(0), rad_loc(0), rs_loc(0), off_loc(0), vd_loc(0), as_loc(0), nexp_loc(0) {}
+	int ns_loc=-1, c1i_loc=-1, c1o_loc=-1, c2i_loc=-1, c2o_loc=-1, c3i_loc=-1, c3o_loc=-1, rad_loc=-1, rs_loc=-1, off_loc=-1, vd_loc=-1, as_loc=-1, nexp_loc=-1;
 	void cache_locs();
 	void set_all_colors(colorRGBA const &c1i, colorRGBA const &c1o, colorRGBA const &c2i, colorRGBA const &c2o, colorRGBA const &c3i, colorRGBA const &c3o);
 };
@@ -229,12 +222,11 @@ public:
 class compute_shader_base_t : public shader_t {
 protected:
 	unsigned xsize, ysize, xsize_req, ysize_req; // actual and requested sizes
-	bool is_running;
+	bool is_running=0;
 
 	bool setup_target_texture(unsigned &tid, bool is_R32F) const;
 public:
-	compute_shader_base_t(unsigned xsize_, unsigned ysize_) :
-	  xsize(xsize_), ysize(ysize_), xsize_req(xsize), ysize_req(ysize), is_running(0) {assert(xsize > 0 && ysize > 0);}
+	compute_shader_base_t(unsigned xsize_, unsigned ysize_) : xsize(xsize_), ysize(ysize_), xsize_req(xsize), ysize_req(ysize) {assert(xsize > 0 && ysize > 0);}
 	bool get_is_running() const {return is_running;}
 	unsigned get_xsize() const {return xsize;}
 	unsigned get_ysize() const {return ysize;}
@@ -245,17 +237,15 @@ public:
 // "fake" compute shader implemented as a fragment shader
 class compute_shader_t : public compute_shader_base_t {
 
-	unsigned fbo_id, pbo;
+	unsigned fbo_id=0, pbo=0;
 	string frag_shader_str;
 
 	unsigned get_pbo_size() const {return xsize*ysize*sizeof(float);}
 	void draw_geom() const;
 	void unset_fbo(bool keep_fbo_for_reuse);
 	void read_pixels(vector<float> &vals, bool is_last=1);
-
 public:
-	compute_shader_t(string const &fstr, unsigned xsize_, unsigned ysize_) :
-	  compute_shader_base_t(xsize_, ysize_), fbo_id(0), pbo(0), frag_shader_str(fstr) {}
+	compute_shader_t(string const &fstr, unsigned xsize_, unsigned ysize_) : compute_shader_base_t(xsize_, ysize_), frag_shader_str(fstr) {}
 	void begin();
 	void end_shader();
 	void setup_and_run(unsigned &tid, bool is_R32F, bool is_first=1, bool is_last=1);
@@ -272,7 +262,6 @@ class compute_shader_comp_t : public compute_shader_base_t {
 
 	unsigned zsize, zsize_req, block_sz_x, block_sz_y, block_sz_z;
 	string comp_shader_str;
-
 public:
 	compute_shader_comp_t(string const &cstr, unsigned xsize_, unsigned ysize_, unsigned zsize_=1, unsigned bsx=2, unsigned bsy=2, unsigned bsz=1);
 	bool is_3d() const {return (zsize > 1);}
@@ -286,7 +275,6 @@ public:
 
 
 template<unsigned M, unsigned N> struct shader_float_matrix_uploader {
-
 	static void enable(int start_loc, int divisor, float const *const data=NULL);
 	static void disable(int start_loc);
 };
@@ -295,9 +283,8 @@ template<unsigned M, unsigned N> struct shader_float_matrix_uploader {
 class text_drawer {
 	shader_t s;
 	vector<vert_tc_t> verts;
-	colorRGBA cur_color;
+	colorRGBA cur_color=ALPHA0;
 public:
-	text_drawer() : cur_color(ALPHA0) {}
 	void begin_draw(colorRGBA const *const color=nullptr);
 	void end_draw();
 	static void bind_font_texture();
@@ -313,10 +300,9 @@ unsigned const FONT_TEXTURE_ID = (1<<16); // some large number that will never b
 unsigned const REFLECTION_TEXTURE_ID = FONT_TEXTURE_ID + 1; // another special texture ID
 
 struct tile_blend_tex_data_t {
-	unsigned tid_tinput, tid_lut, context_count;
+	unsigned tid_tinput=0, tid_lut=0, context_count=0;
 	vector3d colorSpaceVector1, colorSpaceVector2, colorSpaceVector3, colorSpaceOrigin;
 
-	tile_blend_tex_data_t() : tid_tinput(0), tid_lut(0), context_count(0) {}
 	bool textures_valid() const {return (tid_tinput > 0 && tid_lut > 0);}
 	void create_textures(texture_t const &texture);
 	void ensure_textures(unsigned tid);
