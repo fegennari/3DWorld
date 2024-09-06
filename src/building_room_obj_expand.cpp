@@ -930,7 +930,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 						if (!add_models_mode) continue; // not adding models
 						if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_CUP)) continue;
 						float const oheight(height_val*rgen2.rand_uniform(0.42, 0.44)), radius(oheight*get_radius_for_square_model(OBJ_MODEL_CUP));
-						add_rows_of_vcylinders(c, section, radius, oheight, 0.5, TYPE_CUP, 2, flags, objects, rgen2); // 1-2 columns
+						add_rows_of_vcylinders(c, section, radius, oheight, 1.2, TYPE_CUP, 2, flags, objects, rgen2); // 1-2 columns
 					}
 					else if (type_ix == 1) { // pans
 						if (add_models_mode) continue; // not model
