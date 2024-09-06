@@ -2394,6 +2394,25 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	cube_t occ_area(c);
 	occ_area.union_with_pt(viewer); // any occluder must intersect this cube
 	point const center(c.get_cube_center());
+
+	if (!c_is_building_part && viewer.z > ground_floor_z1 && has_retail()) {
+		cube_t const &retail_part(get_retail_part());
+
+		if (viewer.z < retail_part.z2() && retail_part.contains_pt(center)) {
+			// both the object and the viewer are in the ground floor of a retail building - check shelf rack backs as occluders
+			if (reflection_pass) { // use actual camera, not camera reflected in glass floor; should be correct for vertical reflection
+				if (pre_reflect_camera_pos_bs != zero_vector && !is_rotated()) { // have pre-reflect pos; rotated building should not get into this case
+					cube_t occ_area2(c);
+					occ_area2.union_with_pt(pre_reflect_camera_pos_bs);
+					if (check_shelfrack_occlusion(pre_reflect_camera_pos_bs, pts, get_cube_corners(c.d, pts, pre_reflect_camera_pos_bs, 0), occ_area2)) return 1;
+				}
+			}
+			else {
+				if (check_shelfrack_occlusion(viewer, pts, npts, occ_area)) return 1;
+			}
+			if (retail_part.contains_pt(viewer)) return 0; // no walls/ceilings/floors in retail area; done
+		}
+	}
 	vector3d const dir(viewer - center);
 	bool const pri_dim(fabs(dir.x) < fabs(dir.y));
 	
@@ -2481,18 +2500,6 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 			}
 			if (!not_occluded) return 1;
 		} // for p
-	}
-	if (viewer.z > ground_floor_z1 && has_retail() && viewer.z < get_retail_room().z2() && check_pt_in_retail_room(center)) {
-		// both the object and the viewer are in the ground floor of a retail building - check shelf rack backs as occluders
-		if (reflection_pass) { // use actual camera, not camera reflected in glass floor; should be correct for vertical reflection
-			if (pre_reflect_camera_pos_bs == zero_vector || is_rotated()) return 0; // no pre-reflect pos; rotated building should not get into this case
-			cube_t occ_area2(c);
-			occ_area2.union_with_pt(pre_reflect_camera_pos_bs);
-			if (check_shelfrack_occlusion(pre_reflect_camera_pos_bs, pts, get_cube_corners(c.d, pts, pre_reflect_camera_pos_bs, 0), occ_area2)) return 1;
-		}
-		else {
-			if (check_shelfrack_occlusion(viewer, pts, npts, occ_area)) return 1;
-		}
 	}
 	return 0;
 }
