@@ -728,7 +728,7 @@ rgeom_mat_t &building_materials_t::get_material(tid_nm_pair_t const &tex, bool i
 	// for now we do a simple linear search because there shouldn't be too many unique materials
 	for (iterator m = begin(); m != end(); ++m) {
 		if (!m->tex.is_compatible(tex)) continue;
-		if (inc_shadows) {m->enable_shadows();}
+		if (inc_shadows) {m->enable_shadows();} // Note: m->en_shadows should already be set
 		// tscale diffs don't make new materials; copy tscales from incoming tex; this field may be used locally by the caller, but isn't used for drawing
 		m->tex.tscale_x = tex.tscale_x; m->tex.tscale_y = tex.tscale_y;
 		if (m->get_tot_vert_capacity() == 0) {rgeom_alloc.alloc_safe(*m);} // existing but empty entry, allocate capacity from the allocator free list

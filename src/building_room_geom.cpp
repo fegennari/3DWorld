@@ -215,7 +215,7 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 		legs_bcube.z2() = top.z1();
 		legs_bcube.expand_by_xy(-0.46*size);
 		colorRGBA const top_color(marble ? apply_light_color(c, LT_GRAY) : apply_wood_light_color(c)), base_color(marble ? BLACK : top_color);
-		rgeom_mat_t &top_mat(marble ? get_material(tid_nm_pair_t(MARBLE_TEX/*get_counter_tid()*/, 1.2*tscale), 1) : get_wood_material(tscale));
+		rgeom_mat_t &top_mat(marble ? get_material(tid_nm_pair_t(MARBLE_TEX/*get_counter_tid()*/, 1.2*tscale, 1), 1) : get_wood_material(tscale)); // shadowed
 		top_mat.add_vcylin_to_verts(top, top_color, 1, 1, 0, 0, 1.0, 1.0, 16.0, 2.0, 0, 64); // draw top and bottom with scaled side texture coords; ndiv=64
 		rgeom_mat_t &base_mat(marble ? get_metal_material(1) : get_wood_material(tscale)); // shadowed=1, dynamic=0, small=0
 		base_mat.add_vcylin_to_verts(legs_bcube, base_color, 1, 1, 0, 0, 1.0, 1.0, 1.0); // support
@@ -281,7 +281,7 @@ void get_chair_cubes(room_object_t const &c_in, cube_t cubes[3]) {
 void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 6 quads for seat + 5 quads for back + 4 quads per leg = 27 quads = 108 verts
 	cube_t cubes[3]; // seat, back, legs_bcube
 	get_chair_cubes(c, cubes);
-	get_material(tid_nm_pair_t(MARBLE_TEX, 1.2*tscale), 1).add_cube_to_verts(cubes[0], apply_light_color(c), c.get_llc()); // seat; all faces drawn
+	get_material(tid_nm_pair_t(MARBLE_TEX, 1.2*tscale, 1), 1).add_cube_to_verts(cubes[0], apply_light_color(c), c.get_llc()); // seat; shadowed, all faces drawn
 	colorRGBA const color(apply_wood_light_color(c));
 	get_wood_material(tscale).add_cube_to_verts(cubes[1], color, c.get_llc(), EF_Z1); // back; skip bottom face
 	add_tc_legs(cubes[2], c, color, CHAIR_LEG_WIDTH, 1, tscale); // legs
@@ -1559,7 +1559,7 @@ void building_room_geom_t::add_shower_tub(room_object_t const &c, tid_nm_pair_t 
 		curtains.d[c.dim][ c.dir] += (c.dir ? 1.0 : -1.0)*1.0*crod_radius; // outer
 		curtains.d[c.dim][!c.dir]  = crod.d[c.dim][c.dir]; // inner
 		curtains.d[!c.dim][!shower_dir] = inner_wall_pos; // shower wall
-		tid_nm_pair_t const curtains_tex(get_blinds_tid(), get_blinds_nm_tid(), 0.0, 0.0);
+		tid_nm_pair_t const curtains_tex(get_blinds_tid(), get_blinds_nm_tid(), 0.0, 0.0, 0.0, 0.0, 1); // shadowed
 		rgeom_mat_t &curtains_mat(get_material(curtains_tex, 1));
 		colorRGBA const curtains_color(apply_light_color(c, WHITE));
 
@@ -1908,18 +1908,17 @@ void building_room_geom_t::add_blinds(room_object_t const &c) {
 	colorRGBA const color(c.color); // room color not applied as it looks wrong when viewed from outside the building
 	// fit the texture to the cube; blinds have a fixed number of slats that compress when they are shortened
 	// should these be partially transparent/backlit like bathroom windows? I guess not, most blinds are plastic or wood rather than material
-	int const blinds_tid(get_blinds_tid());
+	int const blinds_tid(get_blinds_tid()), blinds_nm_tid(get_blinds_nm_tid());
 	float tx(vertical ? 1.0/c.dz() : 0.0), ty(vertical ? 0.5/c.get_width() : 0.0);
 	if (c.dim) {swap(tx, ty);}
-	tid_nm_pair_t const tex(blinds_tid, get_blinds_nm_tid(), tx, ty);
-	rgeom_mat_t &mat(get_material(tex, 1));
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(blinds_tid, blinds_nm_tid, tx, ty, 0.0, 0.0, 1), 1));
 	unsigned df1(~get_skip_mask_for_xy(!c.dim)), df2(~EF_Z12);
 	if (vertical) {swap(df1, df2);} // swap sides vs. top/bottom
 	vector3d const llc(c.get_llc());
 	bool const swap_st(c.dim ^ vertical ^ 1);
 	mat.add_cube_to_verts(c, color, llc, df1, (c.dim ^ vertical)); // draw sides / top and bottom
 	mat.add_cube_to_verts(c, color, llc, get_face_mask(c.dim, !c.dir), swap_st); // draw interior face
-	get_material(tex, 0, 0, 0, 0, 1).add_cube_to_verts(c, color, llc, get_face_mask(c.dim, c.dir), swap_st); // draw exterior face; exterior=1
+	get_material(tid_nm_pair_t(blinds_tid, blinds_nm_tid, tx, ty), 0, 0, 0, 0, 1).add_cube_to_verts(c, color, llc, get_face_mask(c.dim, c.dir), swap_st); // draw ext face; exterior=1
 	get_untextured_material(1).add_cube_to_verts_untextured(c, texture_color(blinds_tid).modulate_with(color), df2); // draw top and bottom / front and back untextured
 }
 
@@ -2126,7 +2125,7 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin) { // Note: no room lighting color atten
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale), 1));
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale, 1), 1)); // shadowed
 
 	if (c.flags & RO_FLAG_IN_POOL) { // pool stairs are simpler with no separate top vs. bottom
 		mat.add_cube_to_verts(c, WHITE, tex_origin); // all faces drawn
@@ -3454,7 +3453,7 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 	get_bed_cubes(c, cubes);
 	cube_t const &frame(cubes[0]), &head(cubes[1]), &foot(cubes[2]), &mattress(cubes[3]), &pillow(cubes[4]), &legs_bcube(cubes[5]);
 	colorRGBA const sheet_color(apply_light_color(c));
-	tid_nm_pair_t const sheet_tex(c.get_sheet_tid(), tscale);
+	tid_nm_pair_t const sheet_tex(c.get_sheet_tid(), tscale, 1); // shadowed
 	point const tex_origin(c.get_llc());
 
 	if (inc_lg) {
@@ -3554,11 +3553,11 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 		if (!no_mattress) {
 			unsigned const mattress_skip_faces(EF_Z1 | get_skip_mask_for_xy(c.dim));
 			if (c.taken_level > 1) {get_untextured_material(1).add_cube_to_verts_untextured(mattress, sheet_color, mattress_skip_faces);} // sheets taken, bare mattress
-			else {get_material(sheet_tex, 1).add_cube_to_verts(mattress, sheet_color, tex_origin, mattress_skip_faces);} // draw matterss with sheets
+			else {get_material(sheet_tex, 1).add_cube_to_verts(mattress, sheet_color, tex_origin, mattress_skip_faces);} // draw mattress with sheets, shadowed
 		}
 	}
 	if (inc_sm && c.taken_level == 0) { // draw pillows if not taken
-		rgeom_mat_t &pillow_mat(get_material(sheet_tex, 1, 0, 1)); // small=1
+		rgeom_mat_t &pillow_mat(get_material(sheet_tex, 1, 0, 1)); // shadowed, small=1
 
 		if (bed_is_wide(c)) { // two pillows
 			for (unsigned d = 0; d < 2; ++d) {
@@ -3909,7 +3908,7 @@ void building_room_geom_t::add_cubicle(room_object_t const &c, float tscale) {
 	edge_mat.add_cube_to_verts_untextured(front2, edge_color, front_edge_skip_mask);
 	edge_mat.add_cube_to_verts_untextured(back,   edge_color, ~EF_Z2);
 	// desk surface
-	rgeom_mat_t &surf_mat(get_material(tid_nm_pair_t(MARBLE_TEX, 4.0*tscale), 1));
+	rgeom_mat_t &surf_mat(get_material(tid_nm_pair_t(MARBLE_TEX, 4.0*tscale, 1), 1));
 	colorRGBA const surf_color(apply_light_color(c, LT_GRAY));
 	cube_t surface(sides);
 	set_cube_zvals(surface, (c.z1() + 0.45*dz), (c.z1() + 0.50*dz));
@@ -4193,7 +4192,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 		add_cabinet(cabinet, tscale, inc_lg, inc_sm); // draw the wood part
 	}
 	if (!inc_lg) return; // everything below this point is large static
-	tid_nm_pair_t const marble_tex(get_counter_tid(), 2.5*tscale);
+	tid_nm_pair_t const marble_tex(get_counter_tid(), 2.5*tscale, 1);
 	rgeom_mat_t &top_mat(get_material(marble_tex, 1));
 	colorRGBA const top_color(apply_light_color(c, WHITE));
 
