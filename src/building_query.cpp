@@ -828,6 +828,11 @@ cube_t get_true_room_obj_bcube(room_object_t const &c) { // for collisions, etc.
 		c_ext.expand_in_dim(!c.dim, -0.25*c.get_width()); // object bcube is twice the size it should be; subtract this off
 		return c_ext;
 	}
+	if (c.type == TYPE_PLANT) {
+		cube_t c_pot(c);
+		c_pot.expand_by_xy(-(1.0 - PLANT_POT_RADIUS)*c.get_radius()); // use XY radius of the pot; better for AI coll
+		return c_pot;
+	}
 	if (c.type == TYPE_SHOWERTUB) {return get_shower_tub_wall   (c);} // only the end wall is a collider; the tub handles the bottom (what about curtains?)
 	if (c.type == TYPE_SHELVES  ) {return get_shelves_no_bot_gap(c);}
 	return c; // default cube case
