@@ -4651,7 +4651,7 @@ void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot
 		get_untextured_material(1).add_cylin_to_verts(point(cx, cy, c.z1()), point(cx, cy, pot_top), 0.65*pot_radius, pot_radius, apply_light_color(c), no_dirt, 0, 1, 0);
 		
 		if (!no_dirt) { // draw dirt in the pot as a disk if not taken
-			rgeom_mat_t &dirt_mat(get_material(tid_nm_pair_t(get_texture_by_name("rock2.png")), 1)); // use dirt texture
+			rgeom_mat_t &dirt_mat(get_material(tid_nm_pair_t(get_texture_by_name("rock2.png")))); // use dirt texture; unshadowed
 			dirt_mat.add_vert_disk_to_verts(base_pos, 0.947*pot_radius, 0, apply_light_color(c, WHITE));
 		}
 	}
