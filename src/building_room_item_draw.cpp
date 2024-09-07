@@ -1677,7 +1677,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	// don't draw ceiling lights when player is above the building unless there's a light placed on a skylight
 	bool const draw_lights(!draw_ext_only && (camera_bs.z < building.bcube.z2() + (building.has_skylight_light ? 20.0*floor_spacing : 0.0)));
 	// only parking garages and attics have detail objects that cast shadows
-	bool const draw_detail_objs(inc_small >= 2 && (!shadow_only || building.has_parking_garage || building.has_attic()));
+	bool const draw_detail_objs(inc_small >= 2 && (!shadow_only || building.point_in_attic(camera_bs) ||
+		(building.has_parking_garage && building.get_basement().contains_pt(camera_bs))));
 	bool const draw_int_detail_objs(inc_small >= 3 && !shadow_only);
 	// update clocks if moved to next second; only applies to the player's building
 	bool const update_clocks(player_in_building && inc_small >= 2 && !shadow_only && !reflection_pass && have_clock && check_clock_time());
@@ -1758,7 +1759,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (!draw_ext_only) {mats_static .draw(bbd, s, shadow_only, reflection_pass);} // this is the slowest call
 	if (draw_lights)    {mats_lights .draw(bbd, s, shadow_only, reflection_pass);}
 	if (inc_small  )    {mats_dynamic.draw(bbd, s, shadow_only, reflection_pass);}
-	if (inc_small >= 3) {mats_detail .draw(bbd, s, shadow_only, reflection_pass);} // now included in the shadow pass
+	if (draw_detail_objs && inc_small >= 3) {mats_detail.draw(bbd, s, shadow_only, reflection_pass);} // now included in the shadow pass
 	
 	// draw exterior geom; shadows not supported; always use bbd;
 	// skip in reflection pass because that control flow doesn't work and is probably not needed (except for L-shaped house?)
@@ -1789,7 +1790,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			s.make_current(); // switch back to the normal shader
 		}
 	}
-	if (draw_int_detail_objs && !shadow_only) {mats_text.draw(bbd, s, shadow_only, reflection_pass);} // text must be drawn last; drawn as interior detail objects
+	if (draw_int_detail_objs) {mats_text.draw(bbd, s, shadow_only, reflection_pass);} // text must be drawn last; drawn as interior detail objects
 	disable_blend();
 	indexed_vao_manager_with_shadow_t::post_render();
 	if (draw_ext_only) return; // done
