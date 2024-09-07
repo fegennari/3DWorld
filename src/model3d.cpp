@@ -1380,7 +1380,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		if (has_amask) {select_texture(WHITE_TEX);} // back to a default white texture
 	}
 	else {
-		bool bmap_disabled(0);
+		int bump_map_mag_ix(-1), metalness_ix(-1), refract_ix_ix(-1);
 		
 		if (disable_model_textures) {
 			select_texture(WHITE_TEX);
@@ -1396,16 +1396,19 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		}
 		else if (is_bmap_pass) {
 			if (enable_bump_map()) {bind_default_flat_normal_map();} // use default normal map in this case instead of leaving it unbound, or bound to the previous material
-			shader.add_uniform_float("bump_map_mag", 0.0); // disable bump map, including TBN matrix transform of eye_pos and light_dir; needed when there are no TCs or tangent vectors
-			bmap_disabled = 1;
+			// disable bump map, including TBN matrix transform of eye_pos and light_dir; needed when there are no TCs or tangent vectors
+			bump_map_mag_ix = shader.get_uniform_loc("bump_map_mag");
+			if (bump_map_mag_ix >= 0) {shader.set_uniform_float(bump_map_mag_ix, 0.0);}
 		}
 		if (enable_spec_map()) { // all white/specular if no specular map texture
 			tmgr.bind_texture_tu_or_white_tex(s_tid,  8); // specular map
 			tmgr.bind_texture_tu_or_white_tex(ns_tid, 9); // gloss map (Note: unclear how to interpret map_ns in object files)
 		}
-		if (metalness >= 0.0) {shader.add_uniform_float("metalness", metalness);} // set metalness if specified/valid; may or may not be used
-		bool const set_ref_ix(!disable_shader_effects /*&& alpha < 1.0*/ && ni != 1.0);
-		if (set_ref_ix) {shader.add_uniform_float("refract_ix", ni);} // set index of refraction - may not actually be used
+		if (!disable_shader_effects && metalness >= 0.0) {metalness_ix = shader.get_uniform_loc("metalness");}
+		if (metalness_ix >= 0) {shader.set_uniform_float(metalness_ix, metalness);} // set metalness if specified/valid; may or may not be used
+		// set index of refraction - may not actually be used (ENABLE_CUBE_MAP_REFLECT/ENABLE_REFLECTIONS)
+		if (!disable_shader_effects /*&& alpha < 1.0*/ && ni != 1.0 && ni > 0.0) {refract_ix_ix = shader.get_uniform_loc("refract_ix");}
+		if (refract_ix_ix >= 0) {shader.set_uniform_float(refract_ix_ix, ni);}
 		bool const need_blend(is_partial_transparent()); // conservative, but should be okay
 		if (need_blend) {enable_blend(); /*glDepthMask(GL_FALSE);*/ /*glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);*/}
 
@@ -1425,9 +1428,9 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		shader.clear_color_e(); // Note: caller can cheat and override the emissive of the first material because it won't be set above but will be cleared here
 		if (ns > 0.0)    {shader.clear_specular();}
 		if (need_blend)  {disable_blend(); /*glDepthMask(GL_TRUE);*/ /*glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);*/}
-		if (set_ref_ix)       {shader.add_uniform_float("refract_ix",   1.0);}
-		if (metalness >= 0.0) {shader.add_uniform_float("metalness",    0.0);} // if metalness was specified, reset to the default of 0.0 for the next material
-		if (bmap_disabled)    {shader.add_uniform_float("bump_map_mag", 1.0);} // reset back to default
+		if (refract_ix_ix   >= 0) {shader.set_uniform_float(refract_ix_ix,   1.0);}
+		if (metalness_ix    >= 0) {shader.set_uniform_float(metalness_ix,    0.0);} // if metalness was specified, reset to the default of 0.0 for the next material
+		if (bump_map_mag_ix >= 0) {shader.set_uniform_float(bump_map_mag_ix, 1.0);} // reset back to default
 	}
 }
 
