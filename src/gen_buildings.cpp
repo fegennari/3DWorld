@@ -3268,7 +3268,8 @@ public:
 						if (!basement_light) {b.get_walkway_end_verts(ext_parts_draw, lpos);}
 						b.draw_cars_in_building(s, xlate, 1, 1); // player_in_building=1, shadow_only=1
 						is_house |= b.is_house;
-						float const player_smap_dist((b.check_pt_in_retail_room(pre_smap_player_pos) ? RETAIL_SMAP_DSCALE : 1.0)*camera_pdu.far_);
+						bool const in_retail_room(b.check_pt_in_retail_room(lpos));
+						float const player_smap_dist((in_retail_room ? RETAIL_SMAP_DSCALE : 1.0)*camera_pdu.far_);
 						bool const viewer_close(dist_less_than(lpos, pre_smap_player_pos, player_smap_dist)); // Note: pre_smap_player_pos already in building space
 						bool const add_player_shadow(camera_surf_collide && camera_in_this_building && viewer_close && !sec_camera_mode &&
 							(actual_player_pos.z - get_bldg_player_height()) < lpos.z);
@@ -3278,7 +3279,7 @@ public:
 						if (add_people_shadow || add_player_shadow) {
 							shader_t &shader(enable_animations ? person_shader : s);
 							if (enable_animations) {select_person_shadow_shader(person_shader);}
-							if (add_people_shadow) {gen_and_draw_people_in_building(ped_draw_vars_t(b, oc, shader, xlate, bi->ix, 1, 0));}
+							if (add_people_shadow) {gen_and_draw_people_in_building(ped_draw_vars_t(b, oc, shader, xlate, bi->ix, 1, 0, in_retail_room));}
 							if (add_player_shadow) {draw_player_model(shader, xlate, 1);} // shadow_only=1
 							if (enable_animations) {s.make_current();} // switch back to normal building shader
 						}

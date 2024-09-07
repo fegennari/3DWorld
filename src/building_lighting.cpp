@@ -1589,7 +1589,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if ((is_in_elevator || is_in_closet) && camera_z > lpos.z) continue; // elevator or closet light on the floor below the player
 		if (light_in_basement && camera_above_ground_floor)        continue; // basement lights only visible if player is on basement or ground floor
 		room_t const &room(get_room(i->room_id));
-		bool const in_ext_basement(room.is_ext_basement());
+		bool const in_ext_basement(room.is_ext_basement()), in_retail_room(room.is_retail());
 		bool light_vis_from_basement(light_in_basement);
 
 		if (camera_in_ext_basement && !light_in_basement && lpos.z < ground_floor_z2) { // check if light by basement stairs; can happen with office ground floor hall lights
@@ -1605,7 +1605,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (camera_in_ext_basement && !light_vis_from_basement) continue; // camera in extended basement, and light  not in basement
 		
 		// if the player is in the parking garage, retail lights may not be visible through stairs; this check may not be valid if ramps extend to the first floor in the future
-		if (camera_in_basement && !camera_on_stairs && room.is_retail() && !interior->stairwells.empty()) {
+		if (camera_in_basement && !camera_on_stairs && in_retail_room && !interior->stairwells.empty()) {
 			stairwell_t const &s(interior->stairwells.front()); // assume first stairs placed are the ones connecting retail to parking garage, and no other stairs
 			if (s.is_u_shape()) continue; // U-shaped stairs - light is never visible
 			float const entrance_plane(s.d[s.dim][!s.dir]);
@@ -1965,13 +1965,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if ((display_mode & 0x08) && !clipped_bc.contains_pt(camera_rot) && check_obj_occluded(clipped_bc, camera_bs, oc, 0)) continue; // occlusion culling (expensive)
 		//float const bwidth(wall_light ? 1.0 : 0.25); // wall light omnidirectional; ceiling light as close to 180 degree FOV as can get without shadow clipping; shadows are wrong
 		float const bwidth(0.25); // as close to 180 degree FOV as we can get without shadow clipping
+		// should bwidth be set smaller for (in_retail_room && has_tall_retail())?
 		vector3d dir;
 		if (wall_light) {dir[i->dim] = (i->dir ? 1.0 : -1.0);} else {dir = -plus_z;} // points down, unless it's a wall light
 		dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, dir, bwidth);
 		if (track_lights) {enabled_bldg_lights.push_back(lpos_rot);}
 		//++num_add;
 		// use smaller shadow radius for retail rooms, since there are so many lights (meaning shadows are less visible and perf is more important)
-		float const light_radius_shadow((room.is_retail() ? RETAIL_SMAP_DSCALE : 1.0)*light_radius);
+		float const light_radius_shadow((in_retail_room ? RETAIL_SMAP_DSCALE : 1.0)*light_radius);
 		bool force_smap_update(0);
 
 		// check for dynamic shadows; check the player first; use full light_radius_shadow
@@ -1990,6 +1991,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				if (is_lamp || player_in_this_room || (player_in_attic && is_in_attic) ||
 					(lpos_rot.z > player_feet_zval && (check_floor_above || lpos_rot.z < (camera_bs.z + window_vspacing))))
 				{
+					//if (dl_sources.back().calc_pdu(0, 0, 0.0).sphere_visible_test(camera_bs, CAMERA_RADIUS)) {} // not really correct, and doesn't help much
 					// player shadow, based on head to feet Z-range; includes lamps (with no zval test)
 					force_smap_update   = 1; // always update, even if stationary; required to get correct shadows when player stands still and takes/moves objects
 					shadow_caster_hash ^= 0xdeadbeef; // update hash when player enters or leaves the light's area
@@ -2002,7 +2004,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			check_dynamic_shadows |= (room.get_has_skylight() && camera_bs.z > lpos.z && lpos.z > (room.z2() - 0.5*window_vspacing));
 			
 			if (check_dynamic_shadows) {
-				float const dshadow_radius((is_in_attic ? 1.0 : PERSON_INT_SMAP_DSCALE)*light_radius); // use full light radius for attics since they're more open
+				// use full light radius for attics since they're more open
+				float const dshadow_radius((is_in_attic ? 1.0 : (in_retail_room ? RETAIL_SMAP_DSCALE : PERSON_INT_SMAP_DSCALE))*light_radius);
 				if (building_action_key) {force_smap_update = 1;} // toggling a door state or interacting with objects invalidates shadows in the building for that frame
 				check_for_dynamic_shadow_casters(interior->people, ped_bcubes, moving_objs, clipped_bc, lpos_rot,
 					dshadow_radius, stairs_light, xlate, (check_building_people && !is_lamp), shadow_caster_hash); // no people shadows for lam[s

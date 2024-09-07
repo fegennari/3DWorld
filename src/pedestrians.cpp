@@ -2107,7 +2107,7 @@ void ped_manager_t::draw_people_in_building(vector<person_t> const &people, ped_
 	if (ped_model_loader.num_models() > 0) {get_dead_players_in_building(dead_players, pdv.building);} // get dead players if there's a model to draw
 	if (people.empty() && dead_players.empty()) return;
 	float const def_draw_dist(120.0*get_ped_radius()); // smaller than city peds
-	float const draw_dist(pdv.shadow_only ? PERSON_INT_SMAP_DSCALE*camera_pdu.far_ : def_draw_dist), draw_dist_sq(draw_dist*draw_dist);
+	float const draw_dist(pdv.shadow_only ? (pdv.in_retail_room ? RETAIL_SMAP_DSCALE : PERSON_INT_SMAP_DSCALE)*camera_pdu.far_ : def_draw_dist), draw_dist_sq(draw_dist*draw_dist);
 	bool const enable_occ_cull((display_mode & 0x08) && !city_params.ped_model_files.empty()); // occlusion culling, if using models
 	pos_dir_up pdu(camera_pdu); // decrease the far clipping plane for pedestrians
 	pdu.pos -= pdv.xlate; // adjust for local translate

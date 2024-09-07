@@ -2424,10 +2424,10 @@ struct ped_draw_vars_t {
 	shader_t &s;
 	vector3d const &xlate;
 	unsigned bix;
-	bool shadow_only, reflection_pass;
+	bool shadow_only, reflection_pass, in_retail_room;
 
-	ped_draw_vars_t(building_t &b, occlusion_checker_noncity_t &oc_, shader_t &s_, vector3d const &x, unsigned bix_, bool so, bool rp)
-		: building(b), oc(oc_), s(s_), xlate(x), bix(bix_), shadow_only(so), reflection_pass(rp) {}
+	ped_draw_vars_t(building_t &b, occlusion_checker_noncity_t &oc_, shader_t &s_, vector3d const &x, unsigned bix_, bool so, bool rp, bool irr=0)
+		: building(b), oc(oc_), s(s_), xlate(x), bix(bix_), shadow_only(so), reflection_pass(rp), in_retail_room(irr) {}
 };
 
 class water_sound_manager_t {
