@@ -208,7 +208,7 @@ void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit
 		if (i->type == TYPE_STAIR || i->type == TYPE_STAIR_WALL || i->type == TYPE_ELEVATOR || i->type == TYPE_LIGHT || i->type == TYPE_BLOCKER ||
 			i->type == TYPE_COLLIDER || i->type == TYPE_SIGN || i->type == TYPE_WALL_TRIM || i->type == TYPE_RAILING || i->type == TYPE_BLINDS ||
 			i->type == TYPE_SWITCH || i->type == TYPE_OUTLET || i->type == TYPE_PG_WALL || i->type == TYPE_PG_PILLAR || i->type == TYPE_PG_BEAM ||
-			i->type == TYPE_PARK_SPACE || i->type == TYPE_RAMP || i->type == TYPE_VENT)
+			i->type == TYPE_PARK_SPACE || i->type == TYPE_RAMP || i->type == TYPE_VENT || i->type == TYPE_METAL_BAR || i->type == TYPE_OFF_PILLAR)
 		{
 			continue; // not a type that uses light_amt
 		}

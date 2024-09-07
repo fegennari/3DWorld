@@ -654,7 +654,7 @@ void building_t::add_office_pillars(rand_gen_t rgen, room_t const &room, float z
 	pillar.expand_by_xy(1.8*get_wall_thickness());
 	if (!check_cube_within_part_sides(pillar)) return; // handle non-cube buildings
 	if (has_bcube_int(pillar, lights))         return; // really should all the pillar, then the lights, but this is easier (and usually doesn't fail)
-	interior->room_geom->objs.emplace_back(pillar, TYPE_PG_WALL, room_id, 0, 0); // TYPE_PG_WALL is okay since there are no windows so pillar is interior
+	interior->room_geom->objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, 0, 0);
 	blockers.push_back(pillar);
 }
 
@@ -3130,14 +3130,14 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 			if (!was_shortened && r > 0) { // place a pillar at the end of the rack
 				pillar.d[dim][0] = start - pillar_width;
 				pillar.d[dim][1] = start;
-				objs.emplace_back(pillar, TYPE_PG_WALL, room_id, 0, 0); // interior is okay since pillars are hard to see up against shelf racks
+				objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, 0, 0, RO_FLAG_ADJ_TOP); // flag so that top is drawn
 
 				if (has_tall_retail()) { // add bare top part of pillars
 					objs.back().flags |= RO_FLAG_ADJ_TOP; // must draw the top surface
 					cube_t pillar_top(pillar);
 					objs.back().z2() = pillar_top.z1() = zval + fc_gap; // prev was bottom, next is top
 					pillar_top.expand_by_xy(-0.1*wall_thickness); // slight shrink
-					objs.emplace_back(pillar_top, TYPE_PG_PILLAR, room_id, 0, 0);
+					objs.emplace_back(pillar_top, TYPE_OFF_PILLAR, room_id, 0, 0, RO_FLAG_ADJ_HI); // flag as upper/concrete
 					pillars.push_back(pillar); // needed for upper glass floors
 				}
 			}
@@ -3251,7 +3251,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 						room_object_t &obj(objs[i]);
 						if (!upper_place_area.intersects_xy(obj)) continue;
 
-						if (obj.type == TYPE_PG_WALL) {max_eq(obj.z2(), min_pillar_z2);} // pillar outer
+						if (obj.type == TYPE_OFF_PILLAR) {max_eq(obj.z2(), min_pillar_z2);} // raise pillar outer
 						else if (obj.type == TYPE_SHELFRACK) {
 							cube_t cand(obj);
 							cand.intersect_with_cube_xy(upper_place_area); // clip to fit in upper floor area

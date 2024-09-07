@@ -918,7 +918,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_LADDER:    add_ext_ladder(*i); break;
 		case TYPE_CHECKOUT:  add_checkout(*i, tscale); break;
 		case TYPE_FISHTANK:  add_fishtank(*i); break;
-		case TYPE_METAL_BAR: add_metal_bar(*i); break;
+		case TYPE_OFF_PILLAR:add_wall_or_pillar(*i, tex_origin, wall_tex); break;
 		//case TYPE_FRIDGE: if (i->is_open()) {} break; // draw open fridge?
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
@@ -1038,6 +1038,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_SAFE:       add_safe(c); break;
 		case TYPE_LAVALAMP:   add_lava_lamp(c); break;
 		case TYPE_TRASH:      add_trash(c); break;
+		case TYPE_METAL_BAR:  add_metal_bar(c); break;
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		default: break;
 		} // end switch
@@ -1074,7 +1075,7 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 		case TYPE_OUTLET:     add_outlet(*i); break;
 		case TYPE_VENT:       add_vent  (*i); break;
 		case TYPE_SWITCH:     add_switch(*i, 1); break; // draw_detail_pass=0
-		case TYPE_PG_WALL:    add_basement_wall  (*i, tex_origin, wall_tex); break;
+		case TYPE_PG_WALL:    add_wall_or_pillar (*i, tex_origin, wall_tex); break;
 		case TYPE_PG_PILLAR:  add_basement_pillar(*i, wall_tex); break;
 		case TYPE_PG_BEAM:    add_basement_beam  (*i, wall_tex); break;
 		case TYPE_RAMP:       add_pg_ramp        (*i, wall_tex.tscale_x); break;

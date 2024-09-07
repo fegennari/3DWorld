@@ -2175,10 +2175,12 @@ void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d cons
 	unsigned const skip_faces(c.is_hanging() ? 0 : EF_Z1); // skip bottom, unless hanging (non-exit floor)
 	get_material(get_scaled_wall_tex(wall_tex), 1).add_cube_to_verts(c, c.color, tex_origin, skip_faces); // no room lighting color atten
 }
-void building_room_geom_t::add_basement_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
-	bool const is_concrete(c.flags & RO_FLAG_BACKROOM), draw_top(c.flags & RO_FLAG_ADJ_TOP);
+void building_room_geom_t::add_wall_or_pillar(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
+	// backroom pillars and upper (ADJ_HI) sections of retail room pillars are concrete; other objects are plaster/stucco
+	bool const is_concrete(c.flags & (RO_FLAG_BACKROOM | RO_FLAG_ADJ_HI)), draw_top(c.flags & RO_FLAG_ADJ_TOP);
 	tid_nm_pair_t const tex(is_concrete ? tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1) : get_scaled_wall_tex(wall_tex));
-	get_material(tex, 1, 0, 2).add_cube_to_verts(c, c.color, tex_origin, (draw_top ? EF_Z1 : EF_Z12)); // small=2/detail, shadowed, no color atten, sides only unless draw_top
+	unsigned const small((c.type == TYPE_PG_WALL) ? 2 : 0); // small=2/detail for parking garage or backrooms wall or pillar
+	get_material(tex, 1, 0, small).add_cube_to_verts(c, c.color, tex_origin, (draw_top ? EF_Z1 : EF_Z12)); // shadowed, no color atten, sides only unless draw_top
 }
 void building_room_geom_t::add_basement_pillar(room_object_t const &c, tid_nm_pair_t const &wall_tex) {
 	get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1), 1, 0, 2).add_cube_to_verts(c, c.color, all_zeros, EF_Z12); // small=2/detail, shadowed, no color atten
@@ -2186,6 +2188,7 @@ void building_room_geom_t::add_basement_pillar(room_object_t const &c, tid_nm_pa
 void building_room_geom_t::add_basement_beam(room_object_t const &c, tid_nm_pair_t const &wall_tex) {
 	get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 0), 0, 0, 2).add_cube_to_verts(c, c.color, all_zeros, EF_Z2 ); // small=2/detail, unshadowed, no color atten
 }
+
 void building_room_geom_t::add_parking_space(room_object_t const &c, float tscale) {
 	float const space_width(c.get_width()), line_width(0.04*space_width);
 	cube_t yellow_line(c);
@@ -4991,7 +4994,7 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 }
 
 void building_room_geom_t::add_metal_bar(room_object_t const &c) {
-	rgeom_mat_t &metal_mat(get_metal_material(1)); // untextured, shadowed
+	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small
 	metal_mat.add_cube_to_verts_untextured(c, apply_light_color(c), c.item_flags); // skip_faces is stored in item_flags
 }
 
@@ -5113,6 +5116,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_PG_WALL:    return texture_color(STUCCO_TEX);
 	case TYPE_PG_PILLAR:  return texture_color(get_concrete_tid());
 	case TYPE_PG_BEAM:    return texture_color(get_concrete_tid());
+	case TYPE_OFF_PILLAR: return texture_color((flags & RO_FLAG_ADJ_HI) ? get_concrete_tid() : STUCCO_TEX);
 	case TYPE_PARK_SPACE: return LT_GRAY; // texture_color(...)?
 	case TYPE_ELEVATOR: return LT_BROWN; // ???
 	case TYPE_RUG:      return texture_color(get_rug_tid());

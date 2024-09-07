@@ -178,7 +178,8 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_TRASH     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,  0.0,  0.1,   "trash");
 	bldg_obj_types[TYPE_VALVE     ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0,  0.0,  0.0,   "valve"); // detail object
 	bldg_obj_types[TYPE_DBG_SHAPE ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 1,  0.0,  0.0,   "debug shape"); // small (optimization)
-	bldg_obj_types[TYPE_METAL_BAR ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1,  0.0,  0.0,   "metal bar");
+	bldg_obj_types[TYPE_METAL_BAR ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2,  0.0,  0.0,   "metal bar");
+	bldg_obj_types[TYPE_OFF_PILLAR] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1,  0.0,  0.0,   "office pillar");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
