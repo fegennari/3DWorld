@@ -918,7 +918,7 @@ void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
 }
 
 void building_room_geom_t::add_paint_can(room_object_t const &c) {
-	float const side_tscale_add(fract(21111*c.x1() + 22222*c.y1() + 23333*c.z1())); // somewhat random
+	float const side_tscale_add(fract(21111*c.x1() + 29222*c.y1() + 25333*c.z1())); // somewhat random
 	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/paint_can_label.png")), 1, 0, 1)); // shadows, small
 	side_mat.add_vcylin_to_verts(c, apply_light_color(c), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 24, side_tscale_add); // draw sides only; random texture rotation
 	point top(c.get_cube_center());
