@@ -1296,7 +1296,7 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst, vect_room
 
 void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, shader_t &s, vector3d const &xlate) { // held by the player
 	static rgeom_mat_t mat; // allocated memory is reused across frames; VBO is recreated every time; untextured
-	bool needs_blend(0);
+	bool needs_blend(0), reset_mat_nm_tid(0);
 
 	if (c.type == TYPE_SPRAYCAN || c.type == TYPE_MARKER) {
 		room_object_t c_rot(c);
@@ -1311,6 +1311,7 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 		else {add_pen_pencil_marker_to_material(c_rot, mat);}
 	}
 	else if (c.type == TYPE_TPROLL || c.type == TYPE_TAPE) { // apply get_player_cview_rot_matrix()?
+		if (c.type == TYPE_TPROLL) {mat.tex.nm_tid = get_toilet_paper_nm_id(); reset_mat_nm_tid = 1;}
 		add_vert_roll_to_material(c, mat, c.get_remaining_capacity_ratio(), 1); // player_held=1; unfortunately, we don't support texturing the TP roll here
 		needs_blend = 1;
 	}
@@ -1396,6 +1397,7 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 	if (needs_blend) {enable_blend();}
 	tid_nm_pair_dstate_t state(s);
 	mat.upload_draw_and_clear(state);
+	if (reset_mat_nm_tid) {mat.tex.nm_tid = -1;}
 	if (needs_blend) {disable_blend();}
 }
 
