@@ -988,7 +988,7 @@ struct building_room_geom_t {
 	// {large static, small static, dynamic, lights, alpha mask, transparent, door} materials
 	building_materials_t mats_static, mats_small, mats_text, mats_detail, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors, mats_exterior, mats_ext_detail;
 	rgeom_mat_t mats_glass;
-	vect_cube_t light_bcubes, shelf_rack_occluders, glass_floors;
+	vect_cube_t light_bcubes, shelf_rack_occluders[2], glass_floors; // shelf_rack_occluders: {back, top}
 	vect_cube_t pgbr_walls[2]; // parking garage and backrooms walls, in each dim
 	vector<index_pair_t> pgbr_wall_ixs; // indexes into pgbr_walls
 	building_decal_manager_t decal_manager;
@@ -1223,7 +1223,7 @@ private:
 	static unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]);
 	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vect_room_object_t &objects);
 public:
-	static void get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects, bool add_models_mode=0, cube_t *back_cube=nullptr);
+	static void get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects, bool add_models_mode=0);
 private:
 	static void add_wine_rack_bottles(room_object_t const &c, vect_room_object_t &objects);
 	static void add_vert_roll_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio=1.0, bool player_held=0);

@@ -3068,7 +3068,7 @@ bool building_t::get_retail_long_dim() const {
 void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, light_ix_assign_t &light_ix_assign) {
 	// Note: this room should occupy the entire floor, so walkable room bounds == room == part
 	assert(has_room_geom());
-	interior->room_geom->shelf_rack_occluders.clear();
+	for (unsigned d = 0; d < 2; ++d) {interior->room_geom->shelf_rack_occluders[d].clear();}
 	float const floor_spacing(get_window_vspace()), dx(room.dx()), dy(room.dy()), spacing(0.7);
 	float const door_width(get_doorway_width()), se_pad(0.8*door_width), nom_aisle_width(1.5*door_width), rack_height(SHELF_RACK_HEIGHT_FS*floor_spacing);
 	unsigned const nx(max(1U, unsigned(spacing*dx/floor_spacing))), ny(max(1U, unsigned(spacing*dy/floor_spacing))); // same spacing as room lights
@@ -3096,7 +3096,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	unsigned const objs_start(objs.size()), style_id(rgen.rand()); // same style for each rack
 	unsigned rack_id(0);
 	bool const skip_middle_row(nrows & 1);
-	interior->room_geom->shelf_rack_occluders.reserve((nrows - skip_middle_row)*nracks);
+	for (unsigned d = 0; d < 2; ++d) {interior->room_geom->shelf_rack_occluders[d].reserve((nrows - skip_middle_row)*nracks);}
 	//vect_room_object_t temp_objs;
 	
 	for (unsigned n = 0; n < nrows; ++n) { // n+1 aisles
@@ -3348,9 +3348,11 @@ void building_t::add_shelf_rack(cube_t const &c, bool dim, unsigned style_id, un
 	srack.obj_id     = style_id; // common for all racks
 	srack.item_flags = rack_id++; // unique per rack
 	interior->room_geom->objs.push_back(srack);
-	cube_t back_cube;
-	interior->room_geom->get_shelfrack_objects(srack, interior->room_geom->objs, 1, &back_cube); // add_models_mode=1; capture back cube for occlusion culling
-	interior->room_geom->shelf_rack_occluders.push_back(back_cube);
+	cube_t back, top, sides[2], shelves[5];
+	unsigned const num_shelves(get_shelf_rack_cubes(srack, back, top, sides, shelves));
+	interior->room_geom->get_shelfrack_objects(srack, interior->room_geom->objs, 1); // add_models_mode=1
+	interior->room_geom->shelf_rack_occluders[0].push_back(back);
+	interior->room_geom->shelf_rack_occluders[1].push_back(top.is_all_zeros() ? shelves[num_shelves-1] : top); // top, or top shelf
 }
 
 // add objects to rooms connected to walkways, since the walkways themselves aren't actual rooms (and aren't inside the building bcube);

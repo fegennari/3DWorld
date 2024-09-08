@@ -2520,9 +2520,12 @@ bool building_t::check_pg_br_wall_occlusion(point const &viewer, point const *co
 	return 0;
 }
 bool building_t::check_shelfrack_occlusion(point const &viewer, point const *const pts, unsigned npts, cube_t const &occ_area) const {
-	if (!has_room_geom() || interior->room_geom->shelf_rack_occluders.empty()) return 0;
+	vect_cube_t const &back_occ(interior->room_geom->shelf_rack_occluders[0]), &top_acc(interior->room_geom->shelf_rack_occluders[1]);
+	if (!has_room_geom() || back_occ.empty()) return 0;
+	// if viewer (maybe light) is above shelf racks (first one should be on the ground floor), use tops as occluders
+	if (viewer.z > back_occ.front().z2() && are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, top_acc, 2)) return 1;
 	bool const long_dim(get_retail_long_dim());
-	return are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, interior->room_geom->shelf_rack_occluders, !long_dim);
+	return are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, back_occ, !long_dim); // use backs as occluders
 }
 
 bool building_t::is_entire_building_occluded(point const &viewer, occlusion_checker_noncity_t &oc) const {

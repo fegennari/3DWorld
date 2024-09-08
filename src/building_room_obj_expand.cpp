@@ -779,10 +779,9 @@ void add_row_of_balls(room_object_t const &c, cube_t const &region, float spacin
 	}
 }
 
-void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects, bool add_models_mode, cube_t *back_cube) {
+void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects, bool add_models_mode) {
 	cube_t back, top, sides[2], shelves[5];
 	unsigned const num_shelves(get_shelf_rack_cubes(c, back, top, sides, shelves));
-	if (back_cube != nullptr) {*back_cube = back;}
 	if (!c.is_nonempty()) return; // empty - no objects
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_WAS_EXP | RO_FLAG_ON_SRACK), unpowered_flags(flags | RO_FLAG_NO_POWER);
 	float const floor_spacing(c.dz()/SHELF_RACK_HEIGHT_FS);
