@@ -1597,7 +1597,7 @@ void building_room_geom_t::add_shower_tub(room_object_t const &c, tid_nm_pair_t 
 
 void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	// obj_id: bits 1-3 for type, bits 6-7 for emptiness, bit 6 for cap color
-	unsigned const bottle_ndiv = 16; // use smaller ndiv to reduce vertex count; must be 16 to match sphere low_detail mode
+	unsigned const bottle_ndiv(get_rgeom_sphere_ndiv(1)); // use smaller ndiv (16) to reduce vertex count
 	bool const cap_color_ix(c.obj_id & 64);
 	colorRGBA const color(apply_light_color(c));
 	colorRGBA const cap_colors[2] = {LT_GRAY, GOLD}, cap_spec_colors[2] = {WHITE, GOLD};
@@ -1610,11 +1610,11 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	add_bottom |= (dim != 2); // add bottom if bottle is on its side
 	float const dir_sign(c.dir ? -1.0 : 1.0), radius(0.25f*(sz[dim1] + sz[dim2])); // base should be square (default/avg radius is 0.15*height)
 	float const length(sz[dim]); // AKA height, if standing up
-	cube_t sphere(c), body(c), neck(c);
-	sphere.d[dim][ c.dir] = c.d[dim][c.dir] + dir_sign*0.5*length;
-	sphere.d[dim][!c.dir] = sphere.d[dim][c.dir] + dir_sign*0.3*length;
-	body  .d[dim][!c.dir] = sphere.d[dim][c.dir] + dir_sign*0.15*length;
-	neck  .d[dim][ c.dir] = body.d[dim][!c.dir]; // there will be some intersection, but that should be okay
+	cube_t mid(c), body(c), neck(c);
+	mid .d[dim][ c.dir] = c   .d[dim][ c.dir] + dir_sign*0.50*length;
+	mid .d[dim][!c.dir] = mid .d[dim][ c.dir] + dir_sign*0.30*length;
+	body.d[dim][!c.dir] = mid .d[dim][ c.dir] + dir_sign*0.15*length;
+	neck.d[dim][ c.dir] = body.d[dim][!c.dir]; // there will be some intersection, but that should be okay
 	neck.expand_in_dim(dim1, -0.29*sz[dim1]); // smaller radius
 	neck.expand_in_dim(dim2, -0.29*sz[dim2]); // smaller radius
 	cube_t cap(neck);
@@ -1622,11 +1622,17 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	cap.expand_in_dim(dim1, -0.006*sz[dim1]); // slightly larger radius than narrow end of neck
 	cap.expand_in_dim(dim2, -0.006*sz[dim2]); // slightly larger radius than narrow end of neck
 	float const rot_angle(c.get_bottle_rot_angle());
-	// draw as a sphere
 	unsigned const verts_start(mat.itri_verts.size());
-	vector3d skip_hemi_dir(zero_vector);
-	skip_hemi_dir[dim] = -dir_sign;
-	mat.add_sphere_to_verts(sphere, color, 1, skip_hemi_dir); // low_detail=1
+
+	if ((c.flags & RO_FLAG_ON_SRACK) && (c.flags & RO_FLAG_WAS_EXP)) { // shelf rack bottle; draw middle as a cone as an optimization
+		mid.d[dim][c.dir] = body.d[dim][!c.dir];
+		mat.add_ortho_cylin_to_verts(mid, color, dim, 0, 0, 0, 0, (c.dir ? 0.38 : 1.0), (c.dir ? 1.0 : 0.38), 1.0, 1.0, 0, bottle_ndiv);
+	}
+	else { // normal bottle; draw as a sphere
+		vector3d skip_hemi_dir(zero_vector);
+		skip_hemi_dir[dim] = -dir_sign;
+		mat.add_sphere_to_verts(mid, color, 1, skip_hemi_dir); // low_detail=1
+	}
 	mat.add_ortho_cylin_to_verts(body, color, dim, (add_bottom && !c.dir), (add_bottom && c.dir), 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv); // bottom
 	// draw neck of bottle as a truncated cone; draw as two sided if empty
 	mat.add_ortho_cylin_to_verts(neck, color, dim, 0, 0, is_empty, 0, (c.dir ? 0.85 : 1.0), (c.dir ? 1.0 : 0.85), 1.0, 1.0, 0, bottle_ndiv); // neck
