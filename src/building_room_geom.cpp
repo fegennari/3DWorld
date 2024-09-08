@@ -1674,8 +1674,6 @@ void building_room_geom_t::add_vase(room_object_t const &c) { // or urn
 	colorRGBA color(apply_light_color(c));
 	UNROLL_3X(min_eq(color[i_], 0.9f);); // clamp color to 90% max to avoid over saturation
 	// parametric curve rotated around the Z-axis
-	unsigned const lod_factor(c.was_expanded() ? 2 : 1); // use lower detail for expanded vases/urns on shelf racks
-	unsigned const num_stacks(32 / lod_factor);
 	rand_gen_t rgen(c.create_rgen());
 	float tex_scale_v(1.0), tex_scale_h(1.0);
 	int tid(WHITE_TEX);
@@ -1692,7 +1690,7 @@ void building_room_geom_t::add_vase(room_object_t const &c) { // or urn
 		}
 	}
 	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(tid, 0.0, 1), 1, 0, 1)); // shadowed, small
-	unsigned const ndiv(N_CYL_SIDES / lod_factor), itris_start(side_mat.itri_verts.size()), ixs_start(side_mat.indices.size());
+	unsigned const ndiv(get_def_cylin_ndiv(c)), num_stacks(ndiv), itris_start(side_mat.itri_verts.size()), ixs_start(side_mat.indices.size());
 	float const tscale(tex_scale_v/num_stacks), zstep(c.dz()/num_stacks);
 	float const rbase(c.get_radius()), rmax(rbase);
 	float rmin(rgen.rand_uniform(0.25, 0.75)*rbase);
@@ -1717,12 +1715,14 @@ void building_room_geom_t::add_vase(room_object_t const &c) { // or urn
 		radius = rnext;
 	} // for n
 	add_inverted_triangles(side_mat.itri_verts, side_mat.indices, itris_start, ixs_start); // add inner surfaces
-	// draw the bottom surface
-	cube_t bot;
-	bot.set_from_point(c.get_cube_center());
-	bot.expand_by_xy(start_radius);
-	bot.z1() = c.z1() + 0.01*c.dz(); // prevent z-fighting
-	get_untextured_material(1, 0, 1).add_vcylin_to_verts(bot, color, 1, 0, 0, 1, 1.0, 1.0, 1.0, 1.0, 1); // inverted, skip sides
+	
+	if (!c.is_on_srack()) { // draw the bottom surface if not on a shelf rack, though it may still be visible from above on a glass floor on the top shelf if no srack top
+		cube_t bot;
+		bot.set_from_point(c.get_cube_center());
+		bot.expand_by_xy(start_radius);
+		bot.z1() = c.z1() + 0.01*c.dz(); // prevent z-fighting
+		get_untextured_material(1, 0, 1).add_vcylin_to_verts(bot, color, 1, 0, 0, 1, 1.0, 1.0, 1.0, 1.0, 1); // inverted, skip sides; shadowed in case it's on a glass table
+	}
 }
 
 void building_room_geom_t::add_paper(room_object_t const &c) {
@@ -4683,8 +4683,7 @@ int get_ball_tid   (room_object_t const &c) {return get_texture_by_name(c.get_ba
 int get_ball_nm_tid(room_object_t const &c) {return get_texture_by_name(c.get_ball_type().nm_fname, 1);}
 
 xform_matrix get_player_cview_rot_matrix(bool invert) {
-	float const scale(invert ? -1.0 : 1.0);
-	float const angle(atan2(scale*cview_dir.y, scale*cview_dir.x)); // angle of camera view in XY plane, for rotating about Z
+	float const scale(invert ? -1.0 : 1.0), angle(atan2(scale*cview_dir.y, scale*cview_dir.x)); // angle of camera view in XY plane, for rotating about Z
 	return get_rotation_matrix(plus_z, angle);
 }
 
@@ -4699,12 +4698,12 @@ tid_nm_pair_t get_ball_tex_params(room_object_t const &c, bool shadowed) {
 	return tex;
 }
 void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
-	bool const dynamic(c.is_dynamic()); // either small or dynamic
+	bool const dynamic(c.is_dynamic()), low_detail(c.is_on_srack()); // either small or dynamic
 	rgeom_mat_t &mat(get_material(get_ball_tex_params(c, 1), 1, dynamic, !dynamic)); // shadowed=1
 	float ts_off(0.0);
 	if (c.rotates()) {ts_off = fract(21111*c.x1() + 22222*c.y1());} // ball placed with random rotation
 	// rotate the texture coords using rot_matrix when the ball is rolling
-	mat.add_sphere_to_verts(c, apply_light_color(c), 0, zero_vector, tex_range_t(), (c.has_dstate() ? &get_dstate(c).rot_matrix : nullptr), ts_off, 0.0); // low_detail=0
+	mat.add_sphere_to_verts(c, apply_light_color(c), low_detail, zero_vector, tex_range_t(), (c.has_dstate() ? &get_dstate(c).rot_matrix : nullptr), ts_off, 0.0);
 }
 /*static*/ void building_room_geom_t::draw_ball_in_building(room_object_t const &c, shader_t &s) {
 	//highres_timer_t timer("Draw Ball"); // 0.105ms
