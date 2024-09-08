@@ -349,6 +349,9 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 	assert(pool.is_strictly_normalized());
 	float const pool_length(pool.get_sz_dim(long_dim)), pool_depth(min(pool_max_depth, 0.3f*pool_length));
 	set_cube_zvals(pool, (floor_zval - pool_depth), floor_zval);
+	pool.orig_z1    = pool.z1();
+	pool.bottomless = ((pool.z1() > sea_level + 4.0*floor_spacing) && rgen.rand_float() < 0.2); // bottomless 20% of the time, if high enough above sea level
+	if (pool.bottomless) {pool.z1() = max((pool.z1() - 10.0f*pool_depth), (sea_level + fc_thickness));} // not quite bottomless, but very deep
 	float const pool_width(pool.get_sz_dim(!long_dim)), extra_width(pool_width - 2.0*floor_spacing), pool_bottom(pool.z1() - fc_thickness);
 	if (pool_width < floor_spacing) return; // too small; shouldn't happen unless the door width to floor spacing values are wrong
 	if (extra_width > 0.0) {pool.expand_in_dim(!long_dim, -0.25*extra_width);} // can make narrower if there's extra space
@@ -361,7 +364,7 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 	pool.dir     = dir;
 	pool.room_ix = largest_valid_room;
 	pool.valid   = 1;
-	pool.shallow_zval = pool.z1(); // default is all deep
+	pool.shallow_zval = pool.orig_z1; // default is all deep
 	assert(pool.is_strictly_normalized());
 	
 	// cut out a space in the floor for the pool
@@ -375,7 +378,7 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 		vector_add_to(floor_parts, interior->floors);
 	} // for f
 	room.assign_to(RTYPE_SWIM, 0);
-	if (rgen.rand_float() < 0.8) {interior->water_zval = pool.z2() - 0.05*pool_depth;} // add water to the pool 80% of the time
+	if (pool.bottomless || rgen.rand_float() < 0.8) {interior->water_zval = pool.z2() - 0.05*pool_depth;} // add water to the pool 80% of the time, always if bottomless
 	min_eq(interior->basement_ext_bcube.z1(), pool_bottom); // is this a good idea? it certainly makes other logic easier
 }
 

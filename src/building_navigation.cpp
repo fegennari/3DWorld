@@ -2208,7 +2208,7 @@ bool building_t::run_ai_pool_logic(person_t &person, float &speed_mult) const {
 	else          {person.pos.z -= min(-dz, max_dz);} // falling
 	float const radius(person.radius); // Note: not using COLL_RADIUS_SCALE here
 	
-	if (dz > -radius) { // move toward the stairs once we're near the bottom
+	if (dz > -radius && !pool.bottomless) { // move toward the stairs once we're near the bottom, unless it's bottomless
 		cube_t pool_exp(pool);
 		pool_exp.expand_by_xy(radius);
 		vector3d move_dir;

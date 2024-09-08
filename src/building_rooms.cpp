@@ -2904,8 +2904,9 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		pool_shallow.z1() = pool.shallow_zval;
 		bool const dim(pool.dim), dir(pool.dir);
 		float const stairs_height(window_vspacing/(NUM_STAIRS_PER_FLOOR+1)), pool_depth(pool_shallow.dz());
+		assert(pool_depth > 0.0);
 		unsigned const num_stairs(round_fp(pool_depth/stairs_height)); // same spacing is regular stairs
-		float const step_height(pool_depth/(num_stairs+1)), step_stride((dir ? -1.0 : 1.0)*1.2*step_height); // last step up to the edge counts
+		float const step_height(pool_depth/(num_stairs+1)), step_len(1.2*step_height), step_stride((dir ? -1.0 : 1.0)*step_len); // last step up to the edge counts
 		cube_t step(pool_shallow); // copy the correct width (spans to entire pool width)
 		step.d[dim][!dir] = pool.d[dim][dir] + step_stride; // extend into pool
 
@@ -2916,6 +2917,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		}
 		// add stairs railings
 		cube_t railing(pool_shallow);
+		if (pool.bottomless) {max_eq(railing.z1(), railing.z2()-window_vspacing);} // limit railing to a reasonable height
 		railing.z2() += 0.5*step_height + get_trim_thickness(); // starts on pool deck
 		railing.d[ dim][ dir] -= 0.5*step_stride; // on the pool deck
 		railing.d[ dim][!dir]  = step.d[dim][!dir]; // to the end of the last step

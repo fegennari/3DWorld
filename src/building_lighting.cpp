@@ -828,7 +828,7 @@ public:
 					room_t const &pool_room(b.get_room(b.interior->pool.room_ix));
 
 					if (pool_room.contains_pt(target) || b.interior->pool.contains_pt(target)) {
-						min_eq(VA.z1(), b.interior->pool.z1()); // bottom of the pool
+						min_eq(VA.z1(), b.interior->pool.orig_z1); // bottom of the pool
 						max_eq(VA.z2(), pool_room.z2()); // ceiling above the pool
 					}
 				}

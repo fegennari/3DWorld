@@ -285,7 +285,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 	shader_t s;
 	float water_depth(0.0);
 
-	if (is_pool) {water_depth = interior->water_zval - interior->pool.z1();}
+	if (is_pool) {water_depth = interior->water_zval - interior->pool.orig_z1;}
 	else { // backrooms water
 		unsigned const camera_floor(unsigned((min(camera_pos.z, interior->water_zval) - water_z1)/floor_spacing)); // handle player on floor above water
 		water_depth = interior->water_zval - (water_z1 + get_fc_thickness() + camera_floor*floor_spacing); // for the player's floor

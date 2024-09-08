@@ -1489,9 +1489,9 @@ struct roof_obj_t : public cube_t {
 typedef vector<roof_obj_t> vect_roof_obj_t;
 
 struct indoor_pool_t : cube_t {
-	bool valid=0, dim=0, dir=0;
+	bool valid=0, dim=0, dir=0, bottomless=0;
 	int room_ix=-1;
-	float shallow_zval=0.0;
+	float shallow_zval=0.0, orig_z1=0.0;
 };
 
 
