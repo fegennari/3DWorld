@@ -3215,7 +3215,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 						for (cube_t const &c : obj_parts) {objs.emplace_back(c, TYPE_RAILING, room_id, !dim, d, railing_flags, 1.0, SHAPE_CUBE, railing_color);}
 					}
 					// add support beams connected to pillars
-					float const beam_hwidth(0.36*pillar_width), beam_thickness(0.3*pillar_width);
+					float const beam_hwidth(0.36*pillar_width), beam_thickness(0.3*pillar_width), beam_z1(upper_floor.z1() - beam_thickness);
 					vector<float> pillar_xy[2];
 
 					for (cube_t const &pillar : pillars) {
@@ -3226,8 +3226,8 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 					for (unsigned d = 0; d < 2; ++d) {
 						sort_and_unique(pillar_xy[d]);
 						cube_t beam_area(upper_floor);
-						set_cube_zvals(beam_area, upper_floor.z1()-beam_thickness, upper_floor.z1()); // below the floor
-						unsigned const skip_faces(get_skip_mask_for_xy(!d) & get_face_mask(dim, !dir)); // skip ends except for the edge of the glass floor
+						set_cube_zvals(beam_area, beam_z1, upper_floor.z1()); // below the floor
+						unsigned const skip_faces(get_skip_mask_for_xy(!d)); // skip ends
 
 						for (float v : pillar_xy[d]) {
 							set_wall_width(beam_area, v, beam_hwidth, d);
@@ -3239,6 +3239,13 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 							}
 						} // for v
 					} // for d
+					if (!pillar_xy[0].empty()) { // at least one pillar, add an additional metal bar under the railing to cover the exposed end
+						cube_t beam(upper_floor);
+						set_cube_zvals(beam, beam_z1, upper_floor.zc()); // below the floor and slightly intersecting
+						set_wall_width(beam, upper_floor.d[dim][!dir], 0.5*beam_thickness, dim);
+						objs.emplace_back(beam, TYPE_METAL_BAR, room_id, !dim, !dir, 0, 1.0, SHAPE_CUBE, BLACK);
+						objs.back().item_flags = get_skip_mask_for_xy(!dim); // skip ends
+					}
 					// add another level of shelf racks on this floor;
 					// stairs/elevators/escalators/pillars extend through both floors, so we don't need to recheck intersections, but we may need to increase their height
 					unsigned const objs_end(objs.size());
@@ -3259,7 +3266,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 							add_shelf_rack(cand, dim, style_id, rack_id, room_id, RO_FLAG_ON_FLOOR, rgen); // flag so that bottom surface is drawn
 						}
 					} // for i
-					// re-enable this floor on any elevator passing through it
+					// re-enable this floor on any elevator passing through it; add short beams under elevator entrances
 					for (elevator_t &e : interior->elevators) {
 						if (e.skip_floors_mask == 0 || e.z2() < floor_z2 || e.z1() > floor_z1 || !upper_floor.contains_cube_xy(e)) continue;
 						// check for opening clearance
@@ -3269,6 +3276,14 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 						if (upper_conn.intersects(bc_pad))         continue; // too close to escalator
 						unsigned const floor_ix(round_fp((floor_z1 - e.z1())/floor_spacing));
 						e.skip_floors_mask &= ~(1ULL << floor_ix); // unset this floor
+						// add beam
+						cube_t beam(upper_floor);
+						set_cube_zvals(beam, beam_z1, upper_floor.z2()+0.1*beam_thickness); // below the floor spanning to slightly above
+						for (unsigned d = 0; d < 2; ++d) {beam.d[!e.dim][d] = e.d[!e.dim][d];} // flush with sides of elevator
+						beam.d[e.dim][!e.dir] = e.d[e.dim][e.dir]; // flush with elevator entrance side
+						beam.d[e.dim][ e.dir] = e.d[e.dim][e.dir] + (e.dir ? 1.0 : -1.0)*beam_hwidth; // extend outward
+						objs.emplace_back(beam, TYPE_METAL_BAR, room_id, !e.dim, e.dir, 0, 1.0, SHAPE_CUBE, BLACK);
+						objs.back().item_flags = 0; // draw all faces
 					}
 					break; // done
 				} // for dir
