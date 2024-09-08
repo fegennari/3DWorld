@@ -1,5 +1,9 @@
 #include <fresnel.part>
 
+#ifdef USE_VOROCRACKS
+#include <vorocracks.part.frag>
+#endif
+
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
 uniform float step_delta;
 uniform sampler2D tex0;
@@ -214,9 +218,12 @@ float get_puddle_val(in float wetness) {
 }
 
 float get_crack_factor(in float weight) {
+#ifdef USE_VOROCRACKS
+	float val = get_crack_weight(crack_scale*tc);
+#else
 	float val = noise_lookup_4_octaves(crack_scale*(vpos + vec3(1.234))); // offset so that it's not aligned to puddles
 	val = min(1.0, crack_sharp*crack_scale*abs(val - 1.0));
-	//val = ((abs(val - 1.0) < 0.02) ? 0.0 : 1.0);
+#endif
 	float weight0 = 0.5;
 
 	if (weight0 < 1.0) { // handle weight less than 1.0 with sparse cracks

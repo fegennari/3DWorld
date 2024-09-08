@@ -1542,6 +1542,9 @@
     <None Include="shaders\glass_surface.vert">
       <Filter>Shaders\vert</Filter>
     </None>
+    <None Include="shaders\vorocracks.part.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">

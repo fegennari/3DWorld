@@ -169,14 +169,15 @@ float fbm3(vec3 p) {
 
 void main()
 {
-    vec2 I = floor(tc/2.); 
+    vec2 U = tc;
+    vec2 I = floor(U/2.);
     bool vert = mod(I.x+I.y,2.)==0.; //if (vert) U = U.yx;
     vec3 H0;
     vec4 O = vev4(0.0);
 
     for(float i=0.; i<CRACK_depth ; i++) {
-        vec2 V =  tc / vec2(RATIO,1),                  // voronoi cell shape
-             D = CRACK_zebra_amp * fbm22(tc/CRACK_zebra_scale) * CRACK_zebra_scale;
+        vec2 V =  U / vec2(RATIO,1),                  // voronoi cell shape
+             D = CRACK_zebra_amp * fbm22(U/CRACK_zebra_scale) * CRACK_zebra_scale;
         vec3  H = voronoiB( V + D ); if (i==0.) H0=H;
         float d = H.x;                                // distance to cracks
         d = min( 1., CRACK_slope * pow(max(0.,d-CRACK_width),CRACK_profile) );

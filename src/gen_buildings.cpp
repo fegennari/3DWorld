@@ -438,14 +438,16 @@ void setup_building_draw_shader_post(shader_t &s, bool have_indir) {
 }
 void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, int use_texgen, float water_damage, float crack_damage) { // for building interiors
 	float const pcf_scale = 0.2;
+	if (player_building == nullptr) {water_damage = crack_damage = 0.0;} // water damage and cracks only apply to player building; this can fail on the exterior walls pass
 	// disable indir if the player is in a closed closet
 	bool const have_indir(enable_indir && have_building_indir_lighting() && !(player_in_closet && !(player_in_closet & RO_FLAG_OPEN)));
+	bool const add_vorocracks(global_building_params.use_voronoise_cracks && crack_damage > 0.0);
 	int const use_bmap(global_building_params.has_normal_map), interior_use_smaps(ADD_ROOM_SHADOWS ? 2 : 1); // dynamic light smaps only
 	cube_t const lights_bcube(building_lights_manager.get_lights_bcube());
-	if (player_building == nullptr) {water_damage = crack_damage = 0.0;} // water damage and cracks only apply to player building; this can fail on the exterior walls pass
 	if (have_indir) {s.set_prefix("#define ENABLE_OUTSIDE_INDIR_RANGE",  1);} // FS
 	if (water_damage > 0.0) {s.set_prefix("#define ENABLE_WATER_DAMAGE", 1);} // FS
 	if (crack_damage > 0.0) {s.set_prefix("#define ADD_CRACKS",          1);} // FS
+	if (add_vorocracks    ) {s.set_prefix("#define USE_VOROCRACKS",      1);} // FS
 	s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1); // FS; improves room lighting (better light distribution vs. framerate trade-off)
 	city_shader_setup(s, lights_bcube, 1, interior_use_smaps, use_bmap, min_alpha, force_tsl, pcf_scale, use_texgen, have_indir, 0); // use_dlights=1, is_outside=0
 	setup_building_draw_shader_post(s, have_indir);
