@@ -652,6 +652,7 @@ struct room_object_t : public oriented_cube_t { // size=64
 	bool rotates    () const {return  (flags & RO_FLAG_RAND_ROT);}
 	bool is_on_floor() const {return  (flags & RO_FLAG_ON_FLOOR);}
 	bool is_nonempty() const {return  (flags & RO_FLAG_NONEMPTY);}
+	bool is_on_srack() const {return (was_expanded() && (flags & RO_FLAG_ON_SRACK));} // Note: RO_FLAG_ON_SRACK is aliased with other flags, so also check was_expanded
 	bool is_floor_clutter() const {return ((type == TYPE_BOTTLE || type == TYPE_TRASH) && is_on_floor());}
 	bool is_light_type() const {return (type == TYPE_LIGHT || (type == TYPE_LAMP && !was_expanded() && !in_attic()));} // light, or lamp not in closet
 	bool is_sink_type () const {return (type == TYPE_SINK || type == TYPE_KSINK || type == TYPE_BRSINK);}

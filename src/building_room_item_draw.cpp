@@ -1822,7 +1822,6 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	// draw object models
 	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
 		room_object_t &obj(get_room_object_by_index(i->obj_id));
-		//if (shadow_only && obj.type == TYPE_CUP && (obj.flags & RO_FLAG_ON_SRACK)) continue; // skip shadows for cups on shelf racks as these are too slow?
 
 		if (skip_interior_objs && obj.is_interior()) { // don't draw objects in interior rooms if the player is outside the building (useful for office bathrooms)
 			// draw interior objects in residential buildings, such as plumbing fixtures visible through open interior bathroom doors, but not if in basement

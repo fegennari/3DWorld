@@ -1624,7 +1624,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	float const rot_angle(c.get_bottle_rot_angle());
 	unsigned const verts_start(mat.itri_verts.size());
 
-	if ((c.flags & RO_FLAG_ON_SRACK) && (c.flags & RO_FLAG_WAS_EXP)) { // shelf rack bottle; draw middle as a cone as an optimization
+	if (c.is_on_srack()) { // shelf rack bottle; draw middle as a cone as an optimization
 		mid.d[dim][c.dir] = body.d[dim][!c.dir];
 		mat.add_ortho_cylin_to_verts(mid, color, dim, 0, 0, 0, 0, (c.dir ? 0.38 : 1.0), (c.dir ? 1.0 : 0.38), 1.0, 1.0, 0, bottle_ndiv);
 	}
@@ -1639,7 +1639,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	if (rot_angle != 0.0) {rotate_verts(mat.itri_verts, plus_z, rot_angle, c.get_cube_center(), verts_start);}
 
 	if (!is_empty) { // draw cap if nonempty
-		bool const draw_bot(c.was_expanded() && !(c.flags & RO_FLAG_ON_SRACK));
+		bool const draw_bot(c.was_expanded() && !c.is_on_srack());
 		tid_nm_pair_t cap_tex(-1, 1.0, 0); // unshadowed
 		cap_tex.set_specular_color(cap_spec_colors[cap_color_ix], 0.8, 80.0);
 		rgeom_mat_t &cap_mat(get_material(cap_tex, 0, 0, 1)); // inc_shadows=0, dynamic=0, small=1
