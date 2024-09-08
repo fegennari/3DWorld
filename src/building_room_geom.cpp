@@ -34,6 +34,7 @@ void rotate_verts(point *verts, unsigned num_verts, vector3d const &axis, float 
 
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // draw only these faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
 unsigned get_skip_mask_for_xy(bool dim) {return (dim ? EF_Y12 : EF_X12);} // skip these faces
+unsigned get_def_cylin_ndiv(room_object_t const &c) {return get_rgeom_sphere_ndiv(c.is_on_srack());} // low detail for shelfrack objects
 tid_nm_pair_t get_tex_auto_nm(int tid, float tscale=1.0, bool shadowed=1) {return tid_nm_pair_t(tid, get_normal_map_for_bldg_tid(tid), tscale, tscale, 0.0, 0.0, shadowed);}
 int get_counter_tid  () {return get_texture_by_name("marble2.jpg");}
 int get_blinds_tid   () {return get_texture_by_name("interiors/blinds.jpg",    0, 0, 1, 8.0);} // use high aniso
@@ -730,21 +731,22 @@ void building_room_geom_t::add_phone(room_object_t const &c) { // is_small=1
 void building_room_geom_t::add_vert_roll_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio, bool player_held) { // TP and tape
 	bool const is_tape(c.type == TYPE_TAPE);
 	float const hole_shrink(is_tape ? 0.24 : 0.3);
+	unsigned const ndiv(get_def_cylin_ndiv(c));
 	cube_t hole(c);
 	hole.expand_by_xy(-hole_shrink*c.dx());
 	cube_t tube(hole);
-	mat.add_vcylin_to_verts(tube, apply_light_color(c, LT_BROWN), 0, 0, 1); // tube, sides only, two sided (only need inside)
+	mat.add_vcylin_to_verts(tube, apply_light_color(c, LT_BROWN), 0, 0, 1, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // tube, sides only, two sided (only need inside)
 	if (sz_ratio == 0.0) return; // empty, tube only, don't need to draw the rest of the roll
 	cube_t roll(c);
 	if (sz_ratio < 1.0) {roll.expand_by_xy(-hole_shrink*(1.0 - sz_ratio)*c.dx());} // partially used
 	hole.expand_in_dim(2, 0.0025*c.dz()); // expand slightly to avoid z-fighting
 	bool const swap_txy(c.type == TYPE_TPROLL); // TP texture is horizontal rather than vertical
 	// draw top/bottom surface only to mask off the outer part of the roll when held by the player; when resting on an object, draw the top surface only
-	mat.add_vcylin_to_verts(hole, ALPHA0, player_held, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // hole
-	mat.add_vcylin_to_verts(roll, apply_light_color(c), 1, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 32, 0.0, swap_txy); // paper/plastic roll
+	mat.add_vcylin_to_verts(hole, ALPHA0, player_held, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1, ndiv); // hole
+	mat.add_vcylin_to_verts(roll, apply_light_color(c), 1, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv, 0.0, swap_txy); // paper/plastic roll
 }
 void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
-	if (c.was_expanded()) { // bare TP roll from a box
+	if (c.was_expanded()) { // bare TP roll from a box or shelf rack
 		rgeom_mat_t &mat(get_material(tid_nm_pair_t(WHITE_TEX, get_toilet_paper_nm_id(), 0.0, 0.0, 0.0, 0.0, 1), 1, 0, 1)); // shadowed, small
 		add_vert_roll_to_material(c, mat);
 		return;
@@ -808,13 +810,13 @@ void building_room_geom_t::add_tape(room_object_t const &c) { // is_small=1
 }
 
 void building_room_geom_t::add_spraycan_to_material(room_object_t const &c, rgeom_mat_t &mat, bool draw_bottom) {
-	unsigned const dim(get_max_dim(c.get_size()));
+	unsigned const dim(get_max_dim(c.get_size())), ndiv(get_def_cylin_ndiv(c));
 	draw_bottom |= (dim != 2); // if on its side or held by the player
 	cube_t can(c), cap(c);
 	can.d[dim][!c.dir] = cap.d[dim][c.dir] = (c.d[dim][c.dir] + 0.7*c.get_sz_dim(dim)*(c.dir ? -1.0 : 1.0)); // point between top of can and bottom of cap
-	mat.add_ortho_cylin_to_verts(can, apply_light_color(c, DK_GRAY), dim, 0, 0); // sides only
-	mat.add_ortho_cylin_to_verts(cap, apply_light_color(c), dim, c.dir, !c.dir); // sides + top
-	if (draw_bottom) {mat.add_ortho_cylin_to_verts(can, apply_light_color(c, LT_GRAY), dim, !c.dir, c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1);} // top or bottom only, no sides
+	mat.add_ortho_cylin_to_verts(can, apply_light_color(c, DK_GRAY), dim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // sides only
+	mat.add_ortho_cylin_to_verts(cap, apply_light_color(c), dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // sides + top
+	if (draw_bottom) {mat.add_ortho_cylin_to_verts(can, apply_light_color(c, LT_GRAY), dim, !c.dir, c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1, ndiv);} // top or bottom only, no sides
 }
 void building_room_geom_t::add_spraycan(room_object_t const &c) { // is_small=1
 	add_spraycan_to_material(c, get_untextured_material(1, 0, 1));
@@ -4844,6 +4846,7 @@ void building_room_geom_t::add_diving_board(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_flashlight(room_object_t const &c) {
+	unsigned const ndiv(get_def_cylin_ndiv(c));
 	colorRGBA const color(apply_light_color(c));
 	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small
 	cube_t bot(c), top(c);
@@ -4851,11 +4854,12 @@ void building_room_geom_t::add_flashlight(room_object_t const &c) {
 	bot.d[dim][!c.dir] = top.d[dim][c.dir] = (c.d[dim][c.dir] + 0.25*c.get_sz_dim(dim)*(c.dir ? -1.0 : 1.0));
 	top.expand_in_dim(d1, -0.15*c.get_sz_dim(d1));
 	top.expand_in_dim(d2, -0.15*c.get_sz_dim(d2));
-	mat.add_ortho_cylin_to_verts(bot, color, dim, (dim != 2), 1); // draw sides, top, and bottom if horizontal
-	mat.add_ortho_cylin_to_verts(top, color, dim, c.dir, !c.dir); // draw sides and top
+	mat.add_ortho_cylin_to_verts(bot, color, dim, (dim != 2), 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // draw sides, top, and bottom if horizontal
+	mat.add_ortho_cylin_to_verts(top, color, dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // draw sides and top
 }
 
 void building_room_geom_t::add_candle(room_object_t const &c) {
+	unsigned const ndiv(get_def_cylin_ndiv(c)), ndiv_wick(c.is_on_srack() ? 8 : 12); // low detail for shelfrack objects
 	cube_t candle(c), wick(c);
 	candle.z2() = wick.z1() = c.z1() + 0.8*c.dz();
 	wick.expand_by_xy(-0.94*c.get_radius()); // very thin
@@ -4863,10 +4867,10 @@ void building_room_geom_t::add_candle(room_object_t const &c) {
 	wick.z2() = tip.z1() = wick.z1() + 0.6*wick.dz();
 	tid_nm_pair_t tp; // untextured
 	if (c.is_lit()) {tp.emissive = 0.5;} // somewhat emissive to simulate subsurface scattering
-	get_material(tp, 1, 0, 1).add_vcylin_to_verts(candle, (c.is_lit() ? c.color : apply_light_color(c)), 0, 1); // draw sides and top
+	get_material(tp, 1, 0, 1).add_vcylin_to_verts(candle, (c.is_lit() ? c.color : apply_light_color(c)), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // draw sides and top
 	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
-	mat.add_vcylin_to_verts(wick, apply_light_color(c, WHITE), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 12); // draw sides only,    ndiv=12
-	mat.add_vcylin_to_verts(tip,  apply_light_color(c, BLACK), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 12); // draw sides and top, ndiv=12
+	mat.add_vcylin_to_verts(wick, apply_light_color(c, WHITE), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv_wick); // draw sides only
+	mat.add_vcylin_to_verts(tip,  apply_light_color(c, BLACK), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv_wick); // draw sides and top
 }
 
 void get_security_camera_parts(room_object_t const &c, cube_t &mount, cube_t &body, cube_t &shaft) {

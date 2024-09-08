@@ -692,6 +692,7 @@ public:
 			if (obj.is_interactive()) {
 				carried.push_back(obj);
 				room_object_t &co(carried.back());
+				co.flags &= ~RO_FLAG_ON_SRACK; // no longer on/in shelf rack, floor, or closet
 
 				if (obj.type == TYPE_BOOK) { // clear dim and dir for books
 					float const dx(co.dx()), dy(co.dy()), dz(co.dz());
