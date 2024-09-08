@@ -1755,7 +1755,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (draw_lights && !mats_lights .valid) {create_lights_vbos (building);} // create lights  materials if needed (no limit)
 	if (inc_small   && !mats_dynamic.valid) {create_dynamic_vbos(building, camera_bs, xlate, update_clocks);} // create dynamic materials if needed (no limit)
 	if (!mats_doors.valid) {create_door_vbos(building);} // create door materials if needed (no limit)
-	enable_blend(); // needed for rugs and book text
+	if (!shadow_only) {enable_blend();} // needed for rugs and book text
 	assert(s.is_setup());
 	if (!draw_ext_only) {mats_static .draw(bbd, s, shadow_only, reflection_pass);} // this is the slowest call
 	if (draw_lights)    {mats_lights .draw(bbd, s, shadow_only, reflection_pass);}
@@ -1792,7 +1792,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		}
 	}
 	if (draw_int_detail_objs) {mats_text.draw(bbd, s, shadow_only, reflection_pass);} // text must be drawn last; drawn as interior detail objects
-	disable_blend();
+	if (!shadow_only) {disable_blend();}
 	indexed_vao_manager_with_shadow_t::post_render();
 	if (draw_ext_only) return; // done
 	bool const disable_cull_face(0); // better but slower?
@@ -2520,7 +2520,7 @@ bool building_t::check_pg_br_wall_occlusion(point const &viewer, point const *co
 	return 0;
 }
 bool building_t::check_shelfrack_occlusion(point const &viewer, point const *const pts, unsigned npts, cube_t const &occ_area) const {
-	if (!has_room_geom()) return 0;
+	if (!has_room_geom() || interior->room_geom->shelf_rack_occluders.empty()) return 0;
 	bool const long_dim(get_retail_long_dim());
 	return are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, interior->room_geom->shelf_rack_occluders, !long_dim);
 }
