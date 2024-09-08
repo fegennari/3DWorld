@@ -4864,8 +4864,8 @@ void building_room_geom_t::add_candle(room_object_t const &c) {
 	tid_nm_pair_t tp; // untextured
 	if (c.is_lit()) {tp.emissive = 0.5;} // somewhat emissive to simulate subsurface scattering
 	get_material(tp, 1, 0, 1).add_vcylin_to_verts(candle, (c.is_lit() ? c.color : apply_light_color(c)), 0, 1); // draw sides and top
-	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
-	mat.add_vcylin_to_verts(wick, apply_light_color(c, WHITE), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 12); // draw sides only, ndiv=12
+	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
+	mat.add_vcylin_to_verts(wick, apply_light_color(c, WHITE), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 12); // draw sides only,    ndiv=12
 	mat.add_vcylin_to_verts(tip,  apply_light_color(c, BLACK), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 12); // draw sides and top, ndiv=12
 }
 
