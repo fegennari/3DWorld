@@ -1944,7 +1944,7 @@ struct building_t : public building_geom_t {
 	cube_t calc_splash_bounds(point const &pos) const;
 	void draw_water(vector3d const &xlate) const;
 	void debug_people_in_building(shader_t &s) const;
-	void subtract_stairs_and_elevators_from_cube(cube_t const &c, vect_cube_t &cube_parts) const;
+	void subtract_stairs_and_elevators_from_cube(cube_t const &c, vect_cube_t &cube_parts, bool inc_stairs=1, bool inc_elevators=1) const;
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
 	void clear_room_geom();
 	void update_grass_exclude_at_pos(point const &pos, vector3d const &xlate, bool camera_in_building) const;

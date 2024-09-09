@@ -16,7 +16,7 @@ vect_room_object_t pending_objs;
 object_model_loader_t building_obj_model_loader;
 
 extern bool camera_in_building;
-extern int display_mode, frame_counter, animate2, player_in_basement;
+extern int display_mode, frame_counter, animate2, player_in_basement, player_in_elevator;
 extern unsigned room_mirror_ref_tid;
 extern float fticks, office_chair_rot_rate, building_ambient_scale;
 extern point actual_player_pos, player_candle_pos, pre_reflect_camera_pos_bs;
@@ -2028,20 +2028,25 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	}
 }
 
-void building_t::subtract_stairs_and_elevators_from_cube(cube_t const &c, vect_cube_t &cube_parts) const {
+void building_t::subtract_stairs_and_elevators_from_cube(cube_t const &c, vect_cube_t &cube_parts, bool inc_stairs, bool inc_elevators) const {
 	cube_parts.clear();
 	cube_parts.push_back(c);
 	if (!interior) return; // error?
 
-	for (elevator_t const &e : interior->elevators) { // clip out holes for elevators
-		if (e.intersects(c)) {subtract_cube_from_cubes(e, cube_parts);}
+	if (inc_elevators) {
+		for (elevator_t const &e : interior->elevators) { // clip out holes for elevators
+			if (e.intersects(c)) {subtract_cube_from_cubes(e, cube_parts);}
+		}
 	}
-	for (stairwell_t const &s : interior->stairwells) { // clip out holes for stairs
-		if (s.intersects(c)) {subtract_cube_from_cubes(s, cube_parts);}
+	if (inc_stairs) {
+		for (stairwell_t const &s : interior->stairwells) { // clip out holes for stairs
+			if (s.intersects(c)) {subtract_cube_from_cubes(s, cube_parts);}
+		}
 	}
 }
 bool building_t::glass_floor_visible(vector3d const &xlate, bool from_outside_building) const {
-	if (!has_glass_floor()) return 0;
+	if (!has_glass_floor())      return 0;
+	if (player_in_elevator >= 2) return 0; // not visible from within an elevator with the doors closed
 	if (!from_outside_building && !get_retail_room().contains_pt(get_camera_pos() - xlate)) return 0; // wrong room (should always have U-shaped stairs that block visibility)
 	return is_rot_cube_visible(get_bcubes_union(interior->room_geom->glass_floors), xlate); // VFC
 }
@@ -2057,7 +2062,7 @@ void building_t::draw_glass_surfaces(vector3d const &xlate) const {
 
 		for (cube_t const &c : glass_floors) {
 			vect_cube_t floor_parts;
-			subtract_stairs_and_elevators_from_cube(c, floor_parts);
+			subtract_stairs_and_elevators_from_cube(c, floor_parts, 1, 0); // inc_stairs=1, inc_elevators=0 (since we check for player in elevator)
 			bool const was_split(floor_parts.size() > 1);
 			interior->room_geom->glass_floor_split |= was_split;
 			colorRGBA color(GLASS_COLOR);
