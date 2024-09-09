@@ -3215,7 +3215,8 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 						for (cube_t const &c : obj_parts) {objs.emplace_back(c, TYPE_RAILING, room_id, !dim, d, railing_flags, 1.0, SHAPE_CUBE, railing_color);}
 					}
 					// add support beams connected to pillars
-					float const beam_hwidth(0.36*pillar_width), beam_thickness(0.3*pillar_width), beam_z1(upper_floor.z1() - beam_thickness);
+					float const beam_hwidth(0.36*pillar_width), beam_thickness(0.3*pillar_width);
+					float const beam_z2(upper_floor.z1() + 0.1*beam_thickness), beam_z1(beam_z2 - beam_thickness); // slightly overlapping with bottom of upper floor
 					vector<float> pillar_xy[2];
 
 					for (cube_t const &pillar : pillars) {
@@ -3226,7 +3227,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 					for (unsigned d = 0; d < 2; ++d) {
 						sort_and_unique(pillar_xy[d]);
 						cube_t beam_area(upper_floor);
-						set_cube_zvals(beam_area, beam_z1, upper_floor.z1()); // below the floor
+						set_cube_zvals(beam_area, beam_z1, beam_z2); // below the floor
 						unsigned const skip_faces(get_skip_mask_for_xy(!d)); // skip ends
 
 						for (float v : pillar_xy[d]) {
