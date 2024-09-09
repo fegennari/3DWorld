@@ -1141,8 +1141,8 @@ void road_draw_state_t::draw_city_skirt(cube_t const &bcube, bool shadow_only) {
 	qbd_skirt.draw_and_clear();
 }
 
-void road_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only, bool always_setup_shader) {
-	draw_state_t::pre_draw(xlate_, use_dlights_, shadow_only, always_setup_shader);
+void road_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only, bool always_setup_shader, bool enable_occlusion) {
+	draw_state_t::pre_draw(xlate_, use_dlights_, shadow_only, always_setup_shader, enable_occlusion);
 	ar = city_params.get_road_ar();
 }
 

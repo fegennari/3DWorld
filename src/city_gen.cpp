@@ -85,13 +85,18 @@ void draw_state_t::begin_tile(point const &pos, bool will_emit_now, bool ensure_
 	emit_now = (use_smap && try_bind_tile_smap_at_point((pos + xlate), s));
 	if (will_emit_now && !emit_now) {disable_shadow_maps(s);} // not using shadow maps or second (non-shadow map) pass - disable shadow maps
 }
-void draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_, bool always_setup_shader, bool enable_animations) {
+void draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_, bool always_setup_shader, bool enable_animations, bool enable_occlusion) {
 	xlate       = xlate_;
 	camera_bs   = camera_pdu.pos - xlate;
 	shadow_only = shadow_only_;
 	use_dlights = (use_dlights_ && !shadow_only);
 	use_smap    = (shadow_map_enabled() && !shadow_only && !disable_city_shadow_maps);
 	draw_tile_dist = get_draw_tile_dist();
+
+	if (enable_occlusion) {
+		occlusion_checker.set_exclude_camera_building(); // if the player is inside a building, skip occlusion culling
+		occlusion_checker.set_camera(camera_pdu);
+	}
 	if (!use_smap && !always_setup_shader) return;
 
 	if (shadow_only) {
@@ -102,8 +107,6 @@ void draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shad
 		bool const force_tsl = 0; // helps with hedges and flags, but causes problems with other models
 		cube_t const &lights_bcube(use_building_lights ? get_building_lights_bcube() : get_city_lights_bcube());
 		city_shader_setup(s, lights_bcube, use_dlights, use_smap, (use_bmap && !shadow_only), DEF_CITY_MIN_ALPHA, force_tsl, 0.5);
-		occlusion_checker.set_exclude_camera_building(); // if the player is inside a building, skip occlusion culling
-		occlusion_checker.set_camera(camera_pdu);
 	}
 }
 void draw_state_t::end_draw() {
