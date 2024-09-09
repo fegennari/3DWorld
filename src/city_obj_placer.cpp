@@ -268,17 +268,18 @@ void resize_blockers_for_trees(vect_cube_t &blockers, unsigned six, unsigned eix
 	}
 }
 
+template<typename T> bool intersects_city_obj(cube_t const &c, vector<T> const &objs, cube_t const &exclude=cube_t()) {
+	for (T const &i : objs) {if (i.bcube != exclude && i.bcube.intersects(c)) return 1;}
+	return 0;
+}
+template<typename T> bool intersects_city_obj_xy(cube_t const &c, vector<T> const &objs) {
+	for (T const &i : objs) {if (i.bcube.intersects_xy(c)) return 1;}
+	return 0;
+}
 bool city_obj_placer_t::check_walkway_coll_xy(point const &pos, float radius) const {
 	cube_t test_cube(pos);
 	test_cube.expand_by_xy(radius);
-
-	for (walkway_t const &w : walkways) {
-		if (w.bcube.intersects_xy(test_cube)) return 1;
-	}
-	for (ww_elevator_t const &e : elevators) {
-		if (e.bcube.intersects_xy(test_cube)) return 1;
-	}
-	return 0;
+	return (intersects_city_obj_xy(test_cube, walkways) || intersects_city_obj_xy(test_cube, elevators));
 }
 
 void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t &blockers,
@@ -532,7 +533,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		}
 	} // end is_park
 	if (!walkways.empty()) {
-		// place vertical pillars supporting walkways connecting buildings
+		// place vertical pillars supporting walkways connecting buildings, and elevators leading up to walkways
 		cube_t pillar_area(plot);
 		pillar_area.expand_by_xy(-2.0*sidewalk_width); // don't block sidewalks or nearby areas
 
@@ -540,7 +541,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			if (!w.bcube.intersects_xy(plot)) continue;
 			float const length(w.get_length()), width(w.get_width()), height(w.bcube.z1() - plot.z2());
 			bool const to_skyway(w.open_ends[0] || w.open_ends[1]);
-			if (!to_skyway && (length < 8.0*width || length < 1.6*height)) continue; // too short or too high for a support pillar; skyway walkways are always supported
+			if (!to_skyway && (length < 8.0*width || length < 1.6*height)) continue; // too short or high for a support pillar/elevator; skyway walkways are always supported
 			bool const is_concrete(height < 0.25*length); // concrete when shorter, steel when taller
 			float const pillar_hlen((is_concrete ? 0.1 : 0.15)*width), pillar_hwid((is_concrete ? 0.3 : 0.15)*width);
 			cube_t pillar;
@@ -560,17 +561,33 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				cube_t pillar_exp(pillar);
 				pillar_exp.expand_by_xy(min_obj_spacing);
 				if (has_bcube_int_no_adj(pillar_exp, blockers)) continue; // skip the walkway; what else can this intersect, only parking lots?
-				bool blocked(0);
-				for (walkway_t     const &w2 : walkways ) {blocked |= (w2.bcube != w.bcube && w2.bcube.intersects(pillar_exp));}
-				for (ww_elevator_t const &e  : elevators) {blocked |= e.bcube.intersects(pillar_exp);}
-				if (blocked) continue; // blocked by another walkway below
+				if (intersects_city_obj(pillar_exp, elevators) || intersects_city_obj(pillar_exp, walkways, w.bcube)) continue; // exclude ourself
 				pillar_groups.add_obj(pillar_t(pillar, is_concrete), pillars);
 				add_cube_to_colliders_and_blockers(pillar, colliders, blockers);
+
+				// maybe add walkway elevator
+				float const e_width(2.0*sidewalk_width), e_depth(0.9*e_width), e_clearance(0.9*e_depth);
+				bool const first_side(rgen.rand_bool());
+
+				for (unsigned side = 0; side < 2; ++side) {
+					bool const dir(bool(side) ^ first_side ^ 1);
+					cube_t ebc;
+					set_cube_zvals(ebc, plot.z2(), w.bcube.z2()-0.01*sidewalk_width);
+					set_wall_width(ebc, len_pos, 0.5*e_width, w.dim); // set width, parallel to pillar
+					ebc.d[!w.dim][0] = ebc.d[!w.dim][1] = w.bcube.d[!w.dim][dir]; // edge of walkway
+					ebc.d[!w.dim][dir] += (dir ? 1.0 : -1.0)*e_depth; // set depth
+					cube_t ebc_exp(ebc);
+					ebc_exp.d[!w.dim][dir] += (dir ? 1.0 : -1.0)*e_clearance; // add clearance in front of door
+					if (!pillar_area.contains_cube_xy(ebc_exp))  continue; // not contained in plot interior
+					if (has_bcube_int_no_adj(ebc_exp, blockers)) continue;
+					if (intersects_city_obj(ebc_exp, elevators) || intersects_city_obj(ebc_exp, walkways, w.bcube)) continue; // exclude ourself
+					wwe_groups.add_obj(ww_elevator_t(ebc, !w.dim, dir), elevators);
+					add_cube_to_colliders_and_blockers(ebc, colliders, blockers);
+					break; // only one side needed
+				} // for side
 				break; // success
 			} // for n
 		} // for w
-		// place walkway elevators
-		// TODO: wwe_groups.add(ww_elevator_t, elevators);
 	}
 	// place fire_hydrants if the model has been loaded; don't add fire hydrants in parks
 	if (!is_park && building_obj_model_loader.is_model_valid(OBJ_MODEL_FHYDRANT)) {
