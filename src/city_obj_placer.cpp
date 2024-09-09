@@ -1984,7 +1984,6 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(plants,    plant_groups,    dstate, 0.04, shadow_only, 1); // dist_scale=0.05, has_immediate_draw=1
 	draw_objects(flowers,   flower_groups,   dstate, 0.06, shadow_only, 1); // dist_scale=0.06, has_immediate_draw=1
 	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1); // dist_scale=0.25, has_immediate_draw=1
-	draw_objects(elevators, wwe_groups,      dstate, 0.20, shadow_only, 1); // dist_scale=0.20, has_immediate_draw=0
 	draw_objects(p_solars,  p_solar_groups,  dstate, 0.40, shadow_only, 0); // dist_scale=0.20, has_immediate_draw=0
 	
 	if (!shadow_only) { // non shadow casting objects
@@ -2070,13 +2069,15 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	}
 	dstate.pass_ix = 0; // reset back to 0
 	if (!shadow_only) {bird_poop_manager.draw(dstate.s, dstate.xlate);}
-	skyway.draw(dstate, *this, shadow_only);
+	skyway.draw(dstate, *this, shadow_only); // must be last due to transparent roof
 }
-void city_obj_placer_t::draw_transparent_objects(draw_state_t &dstate, bool shadow_only) {
-	if (shadow_only) return; // currently not drawn in the shadow pass
+void city_obj_placer_t::draw_transparent_objects(draw_state_t &dstate) {
+	if (!dstate.check_cube_visible(all_objs_bcube, 1.0)) return; // check bcube, dist_scale=1.0
 	dstate.pass_ix = 2; // water surface
-	draw_objects(ponds, pond_groups, dstate, 0.30, shadow_only, 1); // dist_scale=0.30, has_immediate_draw=1
+	draw_objects(ponds, pond_groups, dstate, 0.30, 0, 1); // dist_scale=0.30, shadow_only=0, has_immediate_draw=1
 	dstate.pass_ix = 0; // reset back to 0
+	draw_objects(elevators, wwe_groups, dstate, 0.20, 0, 1); // dist_scale=0.20, shadow_only=0, has_immediate_draw=0
+	skyway.draw_glass_surfaces(dstate, *this);
 }
 
 void city_obj_placer_t::add_lights(vector3d const &xlate, cube_t &lights_bcube) const {

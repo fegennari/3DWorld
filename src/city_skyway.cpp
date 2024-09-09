@@ -385,16 +385,22 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 		frame.translate_dim(dim, panel_len);
 	}
 	qbds.untex_qbd.draw_and_clear();
-		
-	if (!shadow_only) { // draw transparent top glass panel; Z only; drawn last
-		enable_blend();
-		glDepthMask(GL_FALSE); // disable depth writing so that terrain and grass are drawn over the glass
-		draw_long_cube(top, colorRGBA(1.0, 1.0, 1.0, 0.25), dstate, qbds.untex_qbd, td, dist_scale, shadow_only, 0, 0, 0.0, 3);
-		td.end_draw(qbds.untex_qbd);
-		glDepthMask(GL_TRUE);
-		disable_blend();
-	}
 	dstate.unset_untextured_material();
+}
+
+void skyway_t::draw_glass_surfaces(draw_state_t &dstate, city_draw_qbds_t &qbds) const {
+	float const dist_scale = 0.7;
+	if (!valid || !dstate.check_cube_visible(bcube, dist_scale)) return; // VFC/distance culling
+	// draw transparent top glass panel; Z only
+	bind_default_flat_normal_map();
+	select_texture(WHITE_TEX);
+	tile_drawer_t td;
+	enable_blend();
+	glDepthMask(GL_FALSE); // disable depth writing so that clouds, etc. are drawn over the glass
+	draw_long_cube(top, colorRGBA(1.0, 1.0, 1.0, 0.25), dstate, qbds.untex_qbd, td, dist_scale, 0, 0, 0, 0.0, 3); // shadow_only=0
+	td.end_draw(qbds.untex_qbd);
+	glDepthMask(GL_TRUE);
+	disable_blend();
 }
 
 bool skyway_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {

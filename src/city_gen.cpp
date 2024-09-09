@@ -36,6 +36,7 @@ void disable_shadow_maps(shader_t &s);
 vector3d get_tt_xlate_val();
 float get_max_house_size();
 bool proc_buildings_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm=nullptr, bool check_interior=0, bool exclude_city=0);
+void draw_player_building_transparent(int reflection_pass, vector3d const &xlate);
 
 
 template<typename S, typename T> void get_all_bcubes(vector<T> const &v, S &bcubes) {
@@ -1318,7 +1319,6 @@ public:
 		city_obj_placer.draw_detail_objects(dstate, shadow_only); // always drawn; does its own VFC and distance test
 		if (!empty()) {draw_roads_and_plots(dstate, shadow_only, is_connector_road);}
 		dstate.end_cur_tile(); // once for all tiles, to draw shadow casters and untextured streetlights
-		city_obj_placer.draw_transparent_objects(dstate, shadow_only);
 	}
 	void draw_roads_and_plots(road_draw_state_t &dstate, bool shadow_only, bool is_connector_road) {
 		if (!dstate.check_cube_visible(get_bcube_inc_stoplights_and_streetlights(), 1.0)) return; // VFC/too far
@@ -1408,6 +1408,9 @@ public:
 			dstate.draw_tunnel(*t, shadow_only);
 			t->draw_streetlights(dstate, shadow_only, 1); // always_on=1
 		}
+	}
+	void draw_transparent(road_draw_state_t &dstate) {
+		city_obj_placer.draw_transparent_objects(dstate);
 	}
 	void add_city_lights(vector3d const &xlate, cube_t &lights_bcube) const { // for now, the only light sources added by the road network are city block streetlights
 		add_streetlight_dlights(xlate, lights_bcube, 0);
@@ -2764,6 +2767,17 @@ public:
 		}
 		if (trans_op_mask & 2) {dstate.draw_and_clear_light_flares();} // transparent pass; must be done last for alpha blending, and no translate
 	}
+	void draw_transparent(vector3d const &xlate, bool use_dlights) { // non-const because dstate/qbd is modified
+		fgPushMatrix();
+		translate_to(xlate);
+		bind_default_flat_normal_map();
+		enable_dlight_bcubes |= city_lights_custom_bcube;
+		dstate.pre_draw(xlate, use_dlights, 0, 1); // shadow_only=0, always_setup_shader=1
+		for (road_network_t &r : road_networks) {r.draw_transparent(dstate);}
+		dstate.post_draw();
+		enable_dlight_bcubes = 0;
+		fgPopMatrix();
+	}
 	void draw_transmission_lines() { // non-const because dstate is modified
 		if (transmission_lines.empty()) return;
 		//highres_timer_t timer("Draw Transmission Lines"); // 0.12ms
@@ -3202,6 +3216,7 @@ public:
 		if ((trans_op_mask & 1) && !shadow_only) {road_gen.draw_label();} // after drawing cars so that it's in front
 		// Note: buildings are drawn through draw_buildings()
 	}
+	void draw_transparent(vector3d const &xlate) {road_gen.draw_transparent(xlate, enable_lights());} // drawn at the very end
 	void draw_roads(int trans_op_mask, vector3d const &xlate) {road_gen.draw(trans_op_mask, xlate, enable_lights(), 0);} // shadow_only=0
 	void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only) {car_manager.draw_car_in_pspace(car, s, xlate, shadow_only);}
 	void set_car_model_color(car_t &car) {car_manager.set_car_model_color(car);}
@@ -3266,6 +3281,10 @@ void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector
 void draw_city_roads(int trans_op_mask, vector3d const &xlate) {city_gen.draw_roads(trans_op_mask, xlate);}
 void setup_city_lights(vector3d const &xlate) {city_gen.setup_city_lights(xlate);}
 
+void draw_transparent_city_bldg_geom(int reflection_pass, vector3d const &xlate) {
+	if (!reflection_pass) {city_gen.draw_transparent(xlate);}
+	draw_player_building_transparent(reflection_pass, xlate);
+}
 void gen_and_draw_people_in_building(ped_draw_vars_t const &pdv) {city_gen.gen_and_draw_people_in_building(pdv);}
 void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only) {city_gen.draw_player_model(s, xlate, shadow_only);}
 bool is_player_model_female() {return city_gen.is_player_model_female();}

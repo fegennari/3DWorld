@@ -52,7 +52,7 @@ bool no_sparse_smap_update();
 bool enable_reflection_dynamic_updates();
 string texture_str(int tid);
 bool use_model3d_bump_maps() {return enable_bump_map();} // global function export
-void draw_player_building_transparent(int reflection_pass, vector3d const &xlate);
+void draw_transparent_city_bldg_geom(int reflection_pass, vector3d const &xlate);
 
 
 // ************ texture_manager ************
@@ -2894,7 +2894,7 @@ void render_models(int shadow_pass, int reflection_pass, int trans_op_mask, vect
 	
 	if ((trans_op_mask & 2) && !shadow_pass) {
 		draw_building_lights(xlate); // transparent pass (second); not drawn in the shadow pass
-		draw_player_building_transparent(reflection_pass, xlate);
+		draw_transparent_city_bldg_geom(reflection_pass, xlate);
 	}
 	if (world_mode == WMODE_INF_TERRAIN) {draw_cities(shadow_pass, reflection_pass, trans_op_mask, xlate);}
 }
