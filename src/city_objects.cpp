@@ -1545,13 +1545,48 @@ bool pillar_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_,
 /*static*/ void ww_elevator_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (dstate.pass_ix == 1) {disable_blend();} // transparent glass pass
 }
-
-void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	float const floor_thickness(FLOOR_THICK_VAL_OFFICE*floor_spacing), fc_thick(0.5*floor_thickness);
-	float const frame_hwidth(0.5*fc_thick), bot_z2(bcube.z1() + fc_thick), top_z1(bcube.z2() - fc_thick);
+cube_t ww_elevator_t::get_glass_area() const {
+	float const fc_thick(0.5*FLOOR_THICK_VAL_OFFICE*floor_spacing);
 	cube_t glass_area(bcube);
-	glass_area.expand_by_xy(-frame_hwidth);
-	set_cube_zvals(glass_area, bot_z2, top_z1);
+	glass_area.expand_by_xy(-0.5*fc_thick);
+	glass_area.expand_in_dim(2, -fc_thick); // shrink top and bottom
+	return glass_area;
+}
+void ww_elevator_t::get_glass_sides(cube_with_ix_t sides[4]) const {
+	float const floor_thickness(FLOOR_THICK_VAL_OFFICE*floor_spacing), fc_thick(0.5*floor_thickness), frame_hwidth(0.5*fc_thick);
+	cube_t const glass_area(get_glass_area());
+
+	for (unsigned n = 0; n < 4; ++n) { // draw 4 sides
+		bool const sdim(n>>1), sdir(n&1);
+		cube_t side(glass_area);
+		side.d[sdim][!sdir] = side.d[sdim][sdir] + (sdir ? -1.0 : 1.0)*frame_hwidth; // set glass width
+
+		if (sdim == dim) {
+			if (sdir == dir) { // ground floor entrance
+				side.z1() += floor_spacing - floor_thickness; // cutout space for entrance
+			}
+			else { // upper floor entrance(s)
+				side.z2() = ww_z1 + fc_thick; // cutout space for exit
+			}
+		}
+		unsigned skip_mask(EF_Z12 | get_skip_mask_for_xy(!sdim)); // skip top and bottom by default, and sides
+
+		if (sdim == dim) {
+			if (sdir == dir) { // ground floor entrance
+				side.z1() += floor_spacing - floor_thickness; // cutout space for entrance
+				skip_mask &= ~EF_Z1; // draw bottom edge
+			}
+			else { // upper floor entrance(s)
+				side.z2() = ww_z1 + fc_thick; // cutout space for exit
+				skip_mask &= ~EF_Z2; // draw top edge
+			}
+		}
+		sides[n] = cube_with_ix_t(side, skip_mask);
+	} // for n
+}
+void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	float const floor_thickness(FLOOR_THICK_VAL_OFFICE*floor_spacing), fc_thick(0.5*floor_thickness), frame_hwidth(0.5*fc_thick);
+	cube_t const glass_area(get_glass_area());
 
 	if (dstate.pass_ix == 0) { // opaque pass
 		colorRGBA const frame_color(GRAY);
@@ -1563,40 +1598,23 @@ void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 			dstate.draw_cube(qbds.untex_qbd, corner, frame_color, 1, 0.0, 4); // skip top and bottom
 		}
 		cube_t bot(bcube), top(bcube);
-		bot.z2() = bot_z2;
-		top.z1() = top_z1;
+		bot.z2() = glass_area.z1();
+		top.z1() = glass_area.z2();
 		dstate.draw_cube(qbds.untex_qbd, bot, frame_color, 1); // skip_bottom=1
 		dstate.draw_cube(qbds.untex_qbd, top, frame_color, 0); // skip_bottom=0
 	}
-	else { // transparent glass pass
+	else { // transparent glass pass; draw 4 glass side walls
 		colorRGBA const glass_color(0.8, 1.0, 0.9, 0.25);
-		float const fc_gap(floor_spacing - floor_thickness);
 		cube_t inner_area(glass_area);
 		inner_area.expand_by_xy(-frame_hwidth);
-		pair<float, cube_with_ix_t> sides[4];
-		
-		for (unsigned n = 0; n < 4; ++n) { // draw 4 sides
-			bool const sdim(n>>1), sdir(n&1);
-			cube_t side(glass_area);
-			side.d[sdim][!sdir] = side.d[sdim][sdir] + (sdir ? -1.0 : 1.0)*frame_hwidth; // set glass width
-			unsigned skip_mask(EF_Z12 | get_skip_mask_for_xy(!sdim)); // skip top and bottom by default, and sides
-
-			if (sdim == dim) {
-				if (sdir == dir) { // ground floor entrance
-					side.z1() += fc_gap; // cutout space for entrance
-					skip_mask &= ~EF_Z1; // draw bottom edge
-				}
-				else { // upper floor entrance(s)
-					side.z2() = ww_z1 + fc_thick; // cutout space for exit
-					skip_mask &= ~EF_Z2; // draw top edge
-				}
-			}
-			sides[n] = make_pair(-p2p_dist_sq(side.closest_pt(dstate.camera_bs), dstate.camera_bs), cube_with_ix_t(side, skip_mask));
-		} // for n
-		sort(sides, sides+4); // sort faces back to front for proper blending
+		cube_with_ix_t sides[4];
+		get_glass_sides(sides);
+		pair<float, cube_with_ix_t> to_draw[4];
+		for (unsigned n = 0; n < 4; ++n) {to_draw[n] = make_pair(-p2p_dist_sq(sides[n].closest_pt(dstate.camera_bs), dstate.camera_bs), sides[n]);}
+		sort(to_draw, to_draw+4); // sort faces back to front for proper blending
 		
 		for (unsigned n = 0; n < 4; ++n) {
-			cube_with_ix_t const &s(sides[n].second);
+			cube_with_ix_t const &s(to_draw[n].second);
 			bool const skip_bot(s.ix & EF_Z1), skip_top(s.ix & EF_Z2);
 			unsigned const skip_dims(((s.ix & EF_X1) ? 1 : 0) | ((s.ix & EF_Y1) ? 2 : 0));
 			dstate.draw_cube(qbds.untex_qbd, s, glass_color, skip_bot, 0.0, skip_dims, 0, 0, 0, 1.0, 1.0, 1.0, skip_top);
@@ -1605,7 +1623,22 @@ void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 }
 bool ww_elevator_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	// TODO: special logic to allow the player to enter and ride the elevator; this may go elsewhere
-	return sphere_cube_int_update_pos(pos_, radius_, (bcube + xlate), p_last, 0, cnorm);
+	cube_t const bc(bcube + xlate);
+	if (!bc.contains_pt_xy_exp(pos_, radius_)) return 0;
+	float const pzmax(max(pos_.z, p_last.z));
+	if (pzmax < bc.z1()) return 0; // below the elevator; can this happen?
+
+	if (pzmax > bc.z2()) { // above the elevator
+		if (pzmax > bc.z2() + 1.1*radius_) return 0; // in the air above the elevator
+		max_eq(pos_.z, (bc.z2() + radius_));
+		if (cnorm) {*cnorm = plus_z;}
+		return 1; // collision with top
+	}
+	cube_with_ix_t sides[4];
+	get_glass_sides(sides);
+	bool had_coll(0);
+	for (unsigned n = 0; n < 4; ++n) {had_coll |= sphere_cube_int_update_pos(pos_, radius_, (sides[n] + xlate), p_last, 0, cnorm);} // check sides
+	return had_coll;
 }
 
 // parking lot solar roofs

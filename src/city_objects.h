@@ -334,6 +334,8 @@ struct ww_elevator_t : public oriented_city_obj_t {
 		oriented_city_obj_t(c, dim_, dir_), ww_ix(wwix), floor_spacing(fs), ww_z1(wwz1) {set_bsphere_from_bcube();}
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
+	cube_t get_glass_area() const;
+	void get_glass_sides(cube_with_ix_t sides[4]) const;
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
