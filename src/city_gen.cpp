@@ -94,7 +94,7 @@ void draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shad
 	use_smap    = (shadow_map_enabled() && !shadow_only && !disable_city_shadow_maps);
 	draw_tile_dist = get_draw_tile_dist();
 
-	if (enable_occlusion) {
+	if (enable_occlusion && !shadow_only) {
 		occlusion_checker.set_exclude_camera_building(); // if the player is inside a building, skip occlusion culling
 		occlusion_checker.set_camera(camera_pdu);
 	}
