@@ -306,6 +306,7 @@ struct pond_t : public city_obj_t {
 
 struct walkway_t : public oriented_city_obj_t, public walkway_base_t {
 	colorRGBA map_mode_color;
+	int elevator_ix=-1;
 
 	walkway_t(bldg_walkway_t const &w);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
@@ -326,9 +327,11 @@ struct pillar_t : public city_obj_t { // for walkway support
 };
 
 struct ww_elevator_t : public oriented_city_obj_t {
-	unsigned ww_ix=0;
+	unsigned ww_ix;
+	float floor_spacing, ww_z1;
 
-	ww_elevator_t(cube_t const &c, bool dim_, bool dir_) : oriented_city_obj_t(c, dim_, dir_) {set_bsphere_from_bcube();}
+	ww_elevator_t(cube_t const &c, bool dim_, bool dir_, unsigned wwix, float fs, float wwz1) :
+		oriented_city_obj_t(c, dim_, dir_), ww_ix(wwix), floor_spacing(fs), ww_z1(wwz1) {set_bsphere_from_bcube();}
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;

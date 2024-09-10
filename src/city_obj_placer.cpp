@@ -537,7 +537,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		cube_t pillar_area(plot);
 		pillar_area.expand_by_xy(-2.0*sidewalk_width); // don't block sidewalks or nearby areas
 
-		for (walkway_t const &w : walkways) {
+		for (auto i = walkways.begin(); i != walkways.end(); ++i) {
+			walkway_t &w(*i);
 			if (!w.bcube.intersects_xy(plot)) continue;
 			float const length(w.get_length()), width(w.get_width()), height(w.bcube.z1() - plot.z2());
 			bool const to_skyway(w.open_ends[0] || w.open_ends[1]);
@@ -581,7 +582,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 					if (!pillar_area.contains_cube_xy(ebc_exp))  continue; // not contained in plot interior
 					if (has_bcube_int_no_adj(ebc_exp, blockers)) continue;
 					if (intersects_city_obj(ebc_exp, elevators) || intersects_city_obj(ebc_exp, walkways, w.bcube)) continue; // exclude ourself
-					wwe_groups.add_obj(ww_elevator_t(ebc, !w.dim, dir), elevators);
+					w.elevator_ix = elevators.size();
+					wwe_groups.add_obj(ww_elevator_t(ebc, !w.dim, dir, (i - walkways.begin()), w.floor_spacing, w.bcube.z1()), elevators);
 					add_cube_to_colliders_and_blockers(ebc, colliders, blockers);
 					break; // only one side needed
 				} // for side
@@ -1966,6 +1968,7 @@ bool city_obj_placer_t::add_skyway(cube_t const &city_bcube, vect_bldg_walkway_t
 
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
 	if (!dstate.check_cube_visible(all_objs_bcube, 1.0)) return; // check bcube, dist_scale=1.0
+	dstate.pass_ix = 0;
 	draw_objects(benches,   bench_groups,    dstate, 0.16, shadow_only, 0); // dist_scale=0.16, has_immediate_draw=0
 	draw_objects(fhydrants, fhydrant_groups, dstate, 0.06, shadow_only, 1); // dist_scale=0.06, has_immediate_draw=1
 	draw_objects(sstations, sstation_groups, dstate, 0.15, shadow_only, 1); // dist_scale=0.15, has_immediate_draw=1
@@ -1985,6 +1988,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(flowers,   flower_groups,   dstate, 0.06, shadow_only, 1); // dist_scale=0.06, has_immediate_draw=1
 	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1); // dist_scale=0.25, has_immediate_draw=1
 	draw_objects(p_solars,  p_solar_groups,  dstate, 0.40, shadow_only, 0); // dist_scale=0.20, has_immediate_draw=0
+	draw_objects(elevators, wwe_groups,      dstate, 0.15, shadow_only, 0); // dist_scale=0.15, has_immediate_draw=0; draw first pass opaque geometry
 	
 	if (!shadow_only) { // non shadow casting objects
 		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0); // dist_scale=0.12, has_immediate_draw=0
@@ -2075,8 +2079,9 @@ void city_obj_placer_t::draw_transparent_objects(draw_state_t &dstate) {
 	if (!dstate.check_cube_visible(all_objs_bcube, 1.0)) return; // check bcube, dist_scale=1.0
 	dstate.pass_ix = 2; // water surface
 	draw_objects(ponds, pond_groups, dstate, 0.30, 0, 1); // dist_scale=0.30, shadow_only=0, has_immediate_draw=1
+	dstate.pass_ix = 1; // transparent glass surfaces
+	draw_objects(elevators, wwe_groups, dstate, 0.20, 0, 0); // dist_scale=0.20, shadow_only=0, has_immediate_draw=0
 	dstate.pass_ix = 0; // reset back to 0
-	draw_objects(elevators, wwe_groups, dstate, 0.20, 0, 1); // dist_scale=0.20, shadow_only=0, has_immediate_draw=0
 	skyway.draw_glass_surfaces(dstate, *this);
 }
 
