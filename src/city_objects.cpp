@@ -1434,6 +1434,17 @@ walkway_t::walkway_t(bldg_walkway_t const &w) : oriented_city_obj_t(w, w.dim, 0)
 	if (!shadow_only) {bind_default_flat_normal_map();}
 }
 void walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	if (shadow_only) {
+		dstate.draw_cube(qbds.qbd, bcube, BLACK, 0, 1.0, (1 << unsigned(dim))); // skip ends
+
+		if (open_ends[0] || open_ends[1]) { // draw interior for skyway shadow
+			cube_t bc_inv(bcube);
+			swap(bc_inv.z1(), bc_inv.z2());
+			swap(bc_inv.d[!dim][0], bc_inv.d[!dim][1]);
+			dstate.draw_cube(qbds.qbd, bc_inv, BLACK, 0, 1.0, (1 << unsigned(dim))); // skip ends
+		}
+		return;
+	}
 	tid_nm_pair_dstate_t state(dstate.s); // pass this in?
 
 	if (dstate.camera_bs[!dim] < bcube.d[!dim][0] || dstate.camera_bs[!dim] > bcube.d[!dim][1]) { // camera not inside walkway projection - draw sides
