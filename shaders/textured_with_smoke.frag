@@ -220,14 +220,16 @@ float get_puddle_val(in float wetness) {
 float get_crack_factor(in float weight) {
 #ifdef USE_VOROCRACKS
 	float val = get_crack_weight(crack_scale*tc);
+	float sparse_noise_scale = 0.435; // lower frequency
 #else
 	float val = noise_lookup_4_octaves(crack_scale*(vpos + vec3(1.234))); // offset so that it's not aligned to puddles
 	val = min(1.0, crack_sharp*crack_scale*abs(val - 1.0));
+	float sparse_noise_scale = 1.237;
 #endif
 	float weight0 = 0.5;
 
 	if (weight0 < 1.0) { // handle weight less than 1.0 with sparse cracks
-		float strength = noise_lookup_4_octaves(1.237*crack_scale*(vpos + vec3(4.321)));
+		float strength = noise_lookup_4_octaves(sparse_noise_scale*crack_scale*(vpos + vec3(4.321)));
 		float sub_val  = 1.875*(0.5*weight0 + 0.25); // 1.875 = sum of 4 weight octaves
 		val = mix(val, 1.0, clamp(20.0*(strength - sub_val), 0.0, 1.0)); // sharp cutoff
 	}
