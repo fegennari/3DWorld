@@ -573,7 +573,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				for (unsigned side = 0; side < 2; ++side) {
 					bool const dir(bool(side) ^ first_side ^ 1);
 					cube_t ebc;
-					set_cube_zvals(ebc, plot.z2(), w.bcube.z2()-0.01*sidewalk_width);
+					set_cube_zvals(ebc, plot.z2(), w.bcube.z2());
 					set_wall_width(ebc, len_pos, 0.5*e_width, w.dim); // set width, parallel to pillar
 					ebc.d[!w.dim][0] = ebc.d[!w.dim][1] = w.bcube.d[!w.dim][dir]; // edge of walkway
 					ebc.d[!w.dim][dir] += (dir ? 1.0 : -1.0)*e_depth; // set depth
@@ -582,8 +582,10 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 					if (!pillar_area.contains_cube_xy(ebc_exp))  continue; // not contained in plot interior
 					if (has_bcube_int_no_adj(ebc_exp, blockers)) continue;
 					if (intersects_city_obj(ebc_exp, elevators) || intersects_city_obj(ebc_exp, walkways, w.bcube)) continue; // exclude ourself
-					w.elevator_ix = elevators.size();
-					wwe_groups.add_obj(ww_elevator_t(ebc, !w.dim, dir, (i - walkways.begin()), w.floor_spacing, w.bcube.z1()), elevators);
+					ww_elevator_t const elevator(ebc, !w.dim, dir, (i - walkways.begin()), w.floor_spacing, w.bcube.z1());
+					w.attach_elevator(elevator, elevators.size());
+					// TODO: must attach elevator to building walkway as well so that interior wall is cut out and the player can enter the elevator
+					wwe_groups.add_obj(elevator, elevators);
 					add_cube_to_colliders_and_blockers(ebc, colliders, blockers);
 					break; // only one side needed
 				} // for side

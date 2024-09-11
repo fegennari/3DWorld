@@ -1435,6 +1435,7 @@ walkway_t::walkway_t(bldg_walkway_t const &w) : oriented_city_obj_t(w, w.dim, 0)
 }
 void walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (shadow_only) {
+		//if (!elevator_cut.is_all_zeros()) {} // do we cut out the elevators from the exterior shadows? but the interior isn't lit by the sun and moon anyway
 		dstate.draw_cube(qbds.qbd, bcube, BLACK, 0, 1.0, (1 << unsigned(dim))); // skip ends
 
 		if (open_ends[0] || open_ends[1]) { // draw interior for skyway shadow
@@ -1451,7 +1452,26 @@ void walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 		auto const &side_mat(global_building_params.get_material(side_mat_ix));
 		side_mat.side_tex.set_gl(state);
 		float const tsx(side_mat.side_tex.get_drawn_tscale_x()), tsy(side_mat.side_tex.get_drawn_tscale_y());
-		dstate.draw_cube(qbds.qbd, bcube, side_color, 0, 1.0, ((1 << unsigned(dim)) | 4), 0, 0, 0, tsx, tsx, tsy); // sides; skip ends, top, and bottom
+		unsigned const skip_dims((1 << unsigned(dim)) | 4);
+
+		if (!elevator_cut.is_all_zeros() && (dstate.camera_bs[!dim] < bcube.get_center_dim(!dim)) == elevator_dir) { // camera on same side as elevator, add a cut
+			float const split_pts[4] = {bcube.d[dim][0], elevator_cut.d[dim][0], elevator_cut.d[dim][1], bcube.d[dim][1]};
+			float const dz(bcube.dz());
+			unsigned const num_floors(round_fp(dz/floor_spacing));
+			float const floor_dz(dz - floor_spacing*num_floors + 0.5*FLOOR_THICK_VAL_WINDOWLESS*floor_spacing); // bottom floor is the remainder
+
+			for (unsigned n = 0; n < 3; ++n) {
+				cube_t seg(bcube);
+				seg.d[dim][0] = split_pts[n  ];
+				seg.d[dim][1] = split_pts[n+1];
+				assert(seg.is_strictly_normalized());
+				if (n == 1) {seg.z2() = seg.z1() + floor_dz;} // short side in the middle
+				dstate.draw_cube(qbds.qbd, seg, side_color, 0, 1.0, skip_dims, 0, 0, 0, tsx, tsx, tsy); // sides; skip ends, top, and bottom
+			} // for n
+		}
+		else { // draw full sides
+			dstate.draw_cube(qbds.qbd, bcube, side_color, 0, 1.0, skip_dims, 0, 0, 0, tsx, tsx, tsy); // sides; skip ends, top, and bottom
+		}
 	}
 	if (dstate.camera_bs.z < bcube.z1() || dstate.camera_bs.z > bcube.z2()) { // camera not inside walkway zvals - draw top and bottom
 		auto const &roof_mat(global_building_params.get_material(roof_mat_ix));
@@ -1464,6 +1484,7 @@ void walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 bool walkway_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	// Note: if the player is coming from a building, this code won't be called until pos_ is outside the building bcube,
 	// which can cause a one frame glitch during the transition; when coming from the walkway, the player isn't in the building until they're outside the walkway
+	// Note: collisions with walkway exterior are ignored because it should be above ground and not collidable, except from elevators, where we want to ignore collisions
 	cube_t const bc(bcube + xlate);
 	if (!bc.contains_pt_xy_exp(pos_, radius_)) return 0; // include radius so that we can walk from a building roof onto a walkway
 	float const pzmax(max(pos_.z, p_last.z));
@@ -1491,6 +1512,12 @@ bool walkway_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_
 			pos_.z = wwz;
 			if (cnorm) {*cnorm = plus_z;}
 		}
+		if (!elevator_cut.is_all_zeros()) { // handle entering from elevator
+			cube_t exit_area(elevator_cut + xlate);
+			exit_area.expand_in_dim(dim, -radius_); // must be fully between doors
+			exit_area.d[!dim][elevator_dir] += 1.1*(elevator_dir ? 1.0 : -1.0)*radius_;
+			if (exit_area.contains_pt_xy(pos_)) return floor_coll; // in elevator exit; no side clamp
+		}
 		point const prev(pos_);
 		max_eq(pos_[!dim], bc.d[!dim][0]+radius_); // clamp in !dim
 		min_eq(pos_[!dim], bc.d[!dim][1]-radius_);
@@ -1505,6 +1532,13 @@ cube_t walkway_t::get_floor_occluder() const {
 	cube_t occluder(bcube);
 	occluder.z2() = bcube.z1() + 0.3*floor_spacing; // matches bottom window zval calculation in building_t::get_all_drawn_interior_verts()
 	return occluder;
+}
+void walkway_t::attach_elevator(ww_elevator_t const &e, unsigned eix) {
+	assert(elevator_ix < 0 && elevator_cut.is_all_zeros()); // must not have been set previously - one elevator per walkway
+	elevator_ix  = eix; // record elevator index, in case it turns out to be useful later
+	elevator_cut = e.bcube;
+	elevator_dir = !e.dir;
+	max_eq(elevator_cut.z1(), bcube.z1());
 }
 
 // pillars
@@ -1546,14 +1580,14 @@ bool pillar_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_,
 	if (dstate.pass_ix == 1) {disable_blend();} // transparent glass pass
 }
 cube_t ww_elevator_t::get_glass_area() const {
-	float const fc_thick(0.5*FLOOR_THICK_VAL_OFFICE*floor_spacing);
+	float const fc_thick(0.5*FLOOR_THICK_VAL_WINDOWLESS*floor_spacing);
 	cube_t glass_area(bcube);
 	glass_area.expand_by_xy(-0.5*fc_thick);
 	glass_area.expand_in_dim(2, -fc_thick); // shrink top and bottom
 	return glass_area;
 }
 void ww_elevator_t::get_glass_sides(cube_with_ix_t sides[4]) const {
-	float const floor_thickness(FLOOR_THICK_VAL_OFFICE*floor_spacing), fc_thick(0.5*floor_thickness), frame_hwidth(0.5*fc_thick);
+	float const floor_thickness(FLOOR_THICK_VAL_WINDOWLESS*floor_spacing), fc_thick(0.5*floor_thickness), frame_hwidth(0.5*fc_thick);
 	cube_t const glass_area(get_glass_area());
 
 	for (unsigned n = 0; n < 4; ++n) { // draw 4 sides
@@ -1585,7 +1619,7 @@ void ww_elevator_t::get_glass_sides(cube_with_ix_t sides[4]) const {
 	} // for n
 }
 void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	float const floor_thickness(FLOOR_THICK_VAL_OFFICE*floor_spacing), fc_thick(0.5*floor_thickness), frame_hwidth(0.5*fc_thick);
+	float const floor_thickness(FLOOR_THICK_VAL_WINDOWLESS*floor_spacing), fc_thick(0.5*floor_thickness), frame_hwidth(0.5*fc_thick);
 	cube_t const glass_area(get_glass_area());
 
 	if (dstate.pass_ix == 0) { // opaque pass

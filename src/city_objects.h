@@ -304,8 +304,12 @@ struct pond_t : public city_obj_t {
 	bool update_depth_if_underwater(point const &p, float &depth) const;
 };
 
+struct ww_elevator_t;
+
 struct walkway_t : public oriented_city_obj_t, public walkway_base_t {
 	colorRGBA map_mode_color;
+	cube_t elevator_cut;
+	bool elevator_dir=0;
 	int elevator_ix=-1;
 
 	walkway_t(bldg_walkway_t const &w);
@@ -313,6 +317,7 @@ struct walkway_t : public oriented_city_obj_t, public walkway_base_t {
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 	cube_t get_floor_occluder() const;
+	void attach_elevator(ww_elevator_t const &e, unsigned eix);
 };
 
 struct pillar_t : public city_obj_t { // for walkway support
