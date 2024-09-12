@@ -1490,7 +1490,7 @@ bool walkway_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_
 	float const pzmax(max(pos_.z, p_last.z));
 	if (pzmax < bc.z1()) return 0; // below the walkway
 
-	if (pzmax > bc.z2()) { // above the walkway
+	if (pzmax > bc.z2() - radius_) { // feet above the walkway
 		float const wwz(bc.z2() + radius_);
 		if (pzmax > wwz) return 0; // in the air above the walkway
 		pos_.z = wwz;
@@ -1594,6 +1594,7 @@ void ww_elevator_t::get_glass_sides(cube_with_ix_t sides[4]) const {
 		bool const sdim(n>>1), sdir(n&1);
 		cube_t side(glass_area);
 		side.d[sdim][!sdir] = side.d[sdim][sdir] + (sdir ? -1.0 : 1.0)*frame_hwidth; // set glass width
+		side.expand_in_dim(!sdim, -frame_hwidth); // shrink to exclude frame and prevent overlap/Z-fighting
 
 		if (sdim == dim) {
 			if (sdir == dir) { // ground floor entrance
