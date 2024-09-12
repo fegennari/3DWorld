@@ -310,14 +310,13 @@ struct walkway_t : public oriented_city_obj_t, public walkway_base_t {
 	colorRGBA map_mode_color;
 	cube_t elevator_cut;
 	bool elevator_dir=0;
-	int elevator_ix=-1;
 
 	walkway_t(bldg_walkway_t const &w);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 	cube_t get_floor_occluder() const;
-	void attach_elevator(ww_elevator_t const &e, unsigned eix);
+	void attach_elevator(ww_elevator_t const &e);
 };
 
 struct pillar_t : public city_obj_t { // for walkway support
@@ -640,6 +639,7 @@ public:
 	void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, vector<road_t> const &roads,
 		vector<road_isec_t> isecs[3], cube_t const &city_bcube, unsigned city_id, bool have_cars, bool is_residential, bool have_streetlights);
 	bool add_skyway(cube_t const &city_bcube, vect_bldg_walkway_t const &walkway_cands, rand_gen_t rgen);
+	void bind_elevators_to_building_walkways(cube_t const &city_bcube) const;
 	void finalize_streetlights_and_power(streetlights_t &sl, vector<vect_cube_t> &plot_colliders);
 	static bool subdivide_plot_for_residential(cube_t const &plot, vector<road_t> const &roads,
 		float plot_subdiv_sz, unsigned parent_plot_ix, unsigned city_ix, vect_city_zone_t &sub_plots);

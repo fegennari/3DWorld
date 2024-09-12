@@ -1939,11 +1939,12 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 	} // for dim
 	// add the walkway interiors; these are outside the building and may get culled when outside the view frustum
 	if (DRAW_WALKWAY_INTERIORS) {
+		vect_cube_t ww_walls;
+
 		for (building_walkway_t &w : walkways) {
 			w.windows.clear(); // in case this gets called multiple times on the same walkway
 			if (!w.is_owner) continue;
 			assert(w.bcube.z1() >= ground_floor_z1); // must be above ground
-			float const length(w.get_length());
 			unsigned const bot_floor(round_fp((w.bcube.z1() - ground_floor_z1)/floor_spacing)), top_floor(round_fp((w.bcube.z2() - ground_floor_z1)/floor_spacing));
 			assert(bot_floor < top_floor); // must be at least one floor
 			cube_t ww_floor(w.bcube), ww_ceil(w.bcube);
@@ -1981,36 +1982,50 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 						}
 					}
 					else { // draw sides with (real) cutouts for windows
-						unsigned num_segs(length/floor_spacing);
-						if (!(num_segs & 1)) {++num_segs;} // must be odd
-						float const seg_len(length/num_segs), first_seg_end(wall.d[!dim][0] + seg_len);
-						cube_t seg(wall);
-						seg.d[!dim][1] = first_seg_end;
-						dim_mask |= (1 << unsigned(!dim)); // draw edges
+						ww_walls.clear();
+						ww_walls.push_back(wall);
+						if (!w.elevator_cut.is_all_zeros() && w.elevator_cut.intersects(wall)) {subtract_cube_from_cubes(w.elevator_cut, ww_walls);}
 
-						for (unsigned n = 0; n < num_segs; n += 2) { // alternate seg - window - seg
-							bdraw.add_section(*this, 0, seg, mat.wall_tex, wall_color, dim_mask, 1, 1, 1, 0); // no AO; skip bottom and top
-							seg.translate_dim(!dim, 2.0*seg_len);
-						}
-						for (unsigned f = bot_floor; f < top_floor; ++f) { // add top and bottom strips for each floor
-							float const zval(ground_floor_z1 + f*floor_spacing), next_zval(zval + floor_spacing);
-							float const wz1(zval+0.30*floor_spacing), wz2(next_zval -0.15*floor_spacing);
-							cube_t bot(wall), top(wall);
-							set_cube_zvals(bot, zval, wz1);
-							set_cube_zvals(top, wz2,  next_zval);
-							bdraw.add_section(*this, 0, bot, mat.wall_tex, wall_color, (dim_mask | 4), 1, 0, 1, 0); // no AO; skip bottom
-							bdraw.add_section(*this, 0, top, mat.wall_tex, wall_color, (dim_mask | 4), 0, 1, 1, 0); // no AO; skip top
-							// add windows
-							cube_with_ix_t window(wall, (2*dim + d));
-							set_cube_zvals(window, wz1, wz2);
-							window.d[!dim][0] = first_seg_end;
-							window.d[!dim][1] = first_seg_end + seg_len;
+						for (cube_t &wseg : ww_walls) {
+							float const length(wseg.get_sz_dim(w.dim));
+							unsigned num_segs(length/floor_spacing);
 
-							for (unsigned n = 0; n < num_segs/2; ++n) {
-								w.windows.push_back(window);
-								window.translate_dim(!dim, 2.0*seg_len);
+							if (num_segs == 0) { // short segment with no window
+								float const zval(ground_floor_z1 + bot_floor*floor_spacing);
+								set_cube_zvals(wseg, zval, (zval + (top_floor - bot_floor)*floor_spacing));
+								bdraw.add_section(*this, 0, wseg, mat.wall_tex, wall_color, dim_mask, 1, 1, 1, 0); // no AO; skip bottom and top
+								continue;
 							}
-						} // for f
+							if (!(num_segs & 1)) {++num_segs;} // must be odd
+							float const seg_len(length/num_segs), first_seg_end(wseg.d[!dim][0] + seg_len);
+							cube_t seg(wseg);
+							seg.d[!dim][1] = first_seg_end;
+							dim_mask |= (1 << unsigned(!dim)); // draw edges
+
+							for (unsigned n = 0; n < num_segs; n += 2) { // alternate seg - window - seg
+								bdraw.add_section(*this, 0, seg, mat.wall_tex, wall_color, dim_mask, 1, 1, 1, 0); // no AO; skip bottom and top
+								seg.translate_dim(!dim, 2.0*seg_len);
+							}
+							for (unsigned f = bot_floor; f < top_floor; ++f) { // add top and bottom strips for each floor
+								float const zval(ground_floor_z1 + f*floor_spacing), next_zval(zval + floor_spacing);
+								float const wz1(zval+0.30*floor_spacing), wz2(next_zval -0.15*floor_spacing);
+								cube_t bot(wseg), top(wseg);
+								set_cube_zvals(bot, zval, wz1);
+								set_cube_zvals(top, wz2,  next_zval);
+								bdraw.add_section(*this, 0, bot, mat.wall_tex, wall_color, (dim_mask | 4), 1, 0, 1, 0); // no AO; skip bottom
+								bdraw.add_section(*this, 0, top, mat.wall_tex, wall_color, (dim_mask | 4), 0, 1, 1, 0); // no AO; skip top
+								// add windows
+								cube_with_ix_t window(wseg, (2*dim + d));
+								set_cube_zvals(window, wz1, wz2);
+								window.d[!dim][0] = first_seg_end;
+								window.d[!dim][1] = first_seg_end + seg_len;
+
+								for (unsigned n = 0; n < num_segs/2; ++n) {
+									w.windows.push_back(window);
+									window.translate_dim(!dim, 2.0*seg_len);
+								}
+							} // for f
+						} // for wseg
 					}
 				} // for d
 			} // for dim
@@ -4752,6 +4767,20 @@ public:
 		return 1; // success
 	}
 
+	void get_city_building_walkways(cube_t const &city_bcube, vector<building_walkway_t *> &bwws) {
+		vector<cube_with_ix_t> city_bldgs;
+		get_overlapping_bcubes(city_bcube, city_bldgs);
+		float max_xy_sz(0.0);
+
+		for (cube_with_ix_t const &b : city_bldgs) {
+			building_t &building(get_building(b.ix));
+			
+			for (building_walkway_t &ww : building.walkways) {
+				if (ww.is_owner) {bwws.push_back(&ww);} // add walkway only once, for the building owner
+			}
+		}
+	}
+
 	void get_power_points(cube_t const &xy_range, vector<point> &ppts) const { // similar to above function, but returns points rather than cubes
 		if (empty()) return; // nothing to do
 		unsigned ixr[2][2];
@@ -5160,6 +5189,9 @@ float get_max_house_size() {return global_building_params.get_max_house_size();}
 
 bool connect_buildings_to_skyway(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube, vector<skyway_conn_t> &ww_conns) {
 	return building_creator_city.connect_buildings_to_skyway(m_bcube, m_dim, city_bcube, ww_conns);
+}
+void get_city_building_walkways(cube_t const &city_bcube, vector<building_walkway_t *> &bwws) {
+	building_creator_city.get_city_building_walkways(city_bcube, bwws);
 }
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube, bool sec_camera_mode) {
 	//highres_timer_t timer("Add building interior lights"); // 0.97/0.37

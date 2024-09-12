@@ -23,6 +23,7 @@ void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcu
 void get_walkways_for_city(cube_t const &city_bcube, vect_bldg_walkway_t &walkway_cands);
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
 bool connect_buildings_to_skyway(cube_t &m_bcube, bool m_dim, cube_t const &city_bcube, vector<skyway_conn_t> &ww_conns);
+void get_city_building_walkways(cube_t const &city_bcube, vector<building_walkway_t *> &bwws);
 float get_inner_sidewalk_width();
 cube_t get_plot_coll_region(cube_t const &plot_bcube);
 void play_hum_sound(point const &pos, float gain, float pitch);
@@ -583,7 +584,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 					if (has_bcube_int_no_adj(ebc_exp, blockers)) continue;
 					if (intersects_city_obj(ebc_exp, elevators) || intersects_city_obj(ebc_exp, walkways, w.bcube)) continue; // exclude ourself
 					ww_elevator_t const elevator(ebc, !w.dim, dir, (i - walkways.begin()), w.floor_spacing, w.bcube.z1());
-					w.attach_elevator(elevator, elevators.size());
+					w.attach_elevator(elevator);
 					// TODO: must attach elevator to building walkway as well so that interior wall is cut out and the player can enter the elevator
 					wwe_groups.add_obj(elevator, elevators);
 					add_cube_to_colliders_and_blockers(ebc, colliders, blockers);
@@ -1753,6 +1754,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 			place_objects_in_isec(isec, is_residential, hospital_signs, rgen);
 		}
 	}
+	bind_elevators_to_building_walkways(city_bcube); // after all plots are populate and elevators are added
 	add_ssign_and_slight_plot_colliders(plots, isecs, plot_colliders);
 	connect_power_to_buildings(plots);
 	if (have_cars && is_residential) {add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);}
@@ -1966,6 +1968,18 @@ bool city_obj_placer_t::add_skyway(cube_t const &city_bcube, vect_bldg_walkway_t
 	skyway.get_building_signs(skyway_signs);
 	for (sign_t const &sign : skyway_signs) {sign_groups.add_obj(sign, signs);}
 	return 1;
+}
+
+void city_obj_placer_t::bind_elevators_to_building_walkways(cube_t const &city_bcube) const {
+	if (elevators.empty()) return;
+	vector<building_walkway_t *> bwws;
+	get_city_building_walkways(city_bcube, bwws);
+
+	for (building_walkway_t *bww : bwws) { // walkways and elevators should be small enough that we can iterate over the cross product
+		for (ww_elevator_t const &e : elevators) {
+			if (bww->bcube.intersects(e.bcube)) {bww->attach_elevator(e.bcube); break;} // should be adjacent, and only one
+		}
+	}
 }
 
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only) {

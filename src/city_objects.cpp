@@ -1465,7 +1465,7 @@ void walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 				seg.d[dim][0] = split_pts[n  ];
 				seg.d[dim][1] = split_pts[n+1];
 				assert(seg.is_strictly_normalized());
-				if (n == 1) {seg.z2() = seg.z1() + floor_dz;} // short side in the middle
+				if (n == 1) {seg.z2() = bcube.z1() + floor_dz;} // short side in the middle
 				dstate.draw_cube(qbds.qbd, seg, side_color, 0, 1.0, skip_dims, 0, 0, 0, tsx, tsx, tsy); // sides; skip ends, top, and bottom
 			} // for n
 		}
@@ -1533,12 +1533,21 @@ cube_t walkway_t::get_floor_occluder() const {
 	occluder.z2() = bcube.z1() + 0.3*floor_spacing; // matches bottom window zval calculation in building_t::get_all_drawn_interior_verts()
 	return occluder;
 }
-void walkway_t::attach_elevator(ww_elevator_t const &e, unsigned eix) {
-	assert(elevator_ix < 0 && elevator_cut.is_all_zeros()); // must not have been set previously - one elevator per walkway
-	elevator_ix  = eix; // record elevator index, in case it turns out to be useful later
+
+void walkway_t::attach_elevator(ww_elevator_t const &e) {
+	assert(elevator_cut.is_all_zeros()); // must not have been set previously - one elevator per walkway
 	elevator_cut = e.bcube;
 	elevator_dir = !e.dir;
 	max_eq(elevator_cut.z1(), bcube.z1());
+}
+void building_walkway_t::attach_elevator(cube_t const &e) {
+	assert(elevator_cut.is_all_zeros());
+	float const cut_exp(0.25*bcube.get_sz_dim(!dim)); // quarter of walkway width, to include one side wall
+	elevator_cut = e;
+	elevator_cut.expand_in_dim(!dim, cut_exp);
+	cube_t bc_exp(bcube);
+	bc_exp.expand_in_dim(!dim, cut_exp);
+	elevator_cut.intersect_with_cube(bc_exp);
 }
 
 // pillars
@@ -1595,15 +1604,6 @@ void ww_elevator_t::get_glass_sides(cube_with_ix_t sides[4]) const {
 		cube_t side(glass_area);
 		side.d[sdim][!sdir] = side.d[sdim][sdir] + (sdir ? -1.0 : 1.0)*frame_hwidth; // set glass width
 		side.expand_in_dim(!sdim, -frame_hwidth); // shrink to exclude frame and prevent overlap/Z-fighting
-
-		if (sdim == dim) {
-			if (sdir == dir) { // ground floor entrance
-				side.z1() += floor_spacing - floor_thickness; // cutout space for entrance
-			}
-			else { // upper floor entrance(s)
-				side.z2() = ww_z1 + fc_thick; // cutout space for exit
-			}
-		}
 		unsigned skip_mask(EF_Z12 | get_skip_mask_for_xy(!sdim)); // skip top and bottom by default, and sides
 
 		if (sdim == dim) {
