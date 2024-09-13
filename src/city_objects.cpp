@@ -1684,20 +1684,28 @@ bool ww_elevator_t::proc_sphere_coll(point &pos_, point const &p_last, float rad
 	for (unsigned n = 0; n < 4; ++n) {had_coll |= sphere_cube_int_update_pos(pos_, radius_, (sides[n] + xlate), p_last, 0, cnorm);} // check sides
 	return had_coll;
 }
-bool ww_elevator_t::point_on_platform(point const &camera_bs) const {
-	return (bcube.contains_pt_xy(camera_bs) && camera_bs.z > platform_zval && camera_bs.z < platform_zval + get_platform_height());
+bool ww_elevator_t::point_on_platform(point const &camera_bs, float exp) const {
+	return (bcube.contains_pt_xy_exp(camera_bs, exp) && camera_bs.z > platform_zval && camera_bs.z < platform_zval + get_platform_height());
 }
 void ww_elevator_t::next_frame(point const &camera_bs, float fticks_stable) {
-	if (point_on_platform(camera_bs)) {
-		// TODO: move with the player; need more state logic
+	float const fc_thick(0.5*get_floor_thickness()), player_radius(building_t::get_scaled_player_radius());
+	bool const player_is_inside(point_on_platform(camera_bs, -player_radius)); // fully inside
+	if (move_dir != 0) {platform_zval += move_dir*fticks_stable*bcube.dz()/(6.0*TICKS_PER_SECOND);}
+
+	if (move_dir < 0) { // going down
+		float const platform_zmin(bcube.z1() + fc_thick);
+		if (platform_zval <= platform_zmin) {platform_zval = platform_zmin; move_dir = 0;} // hit the bottom
 	}
-	else {
-		bool move_dir(camera_bs.z > bcube.zc()); // move to whatever end is closer to the player
-		platform_zval += (move_dir ? 1.0 : -1.0)*fticks_stable*bcube.dz()/(6.0*TICKS_PER_SECOND);
+	else if (move_dir > 0) { // going up
+		float const platform_zmax(bcube.z2() - get_platform_height() - fc_thick);
+		if (platform_zval >= platform_zmax) {platform_zval = platform_zmax; move_dir = 0;} // hit the top
 	}
-	float const fc_thick(0.5*get_floor_thickness());
-	max_eq(platform_zval, (bcube.z1() + fc_thick));
-	min_eq(platform_zval, (bcube.z2() - get_platform_height() - fc_thick));
+	if (move_dir == 0 && !player_was_inside && lo_door_open == 0.0 && hi_door_open == 0.0) { // not moving, player not in elevator last frame, and no doors are open
+		bool const player_above(camera_bs.z > bcube.zc());
+		if (player_is_inside) {move_dir = (player_above ? -1 :  1);} // player on elevator, move to opposite end
+		else                  {move_dir = (player_above ?  1 : -1);} // move to whatever end is closer to the player
+	}
+	player_was_inside = player_is_inside;
 }
 
 // parking lot solar roofs

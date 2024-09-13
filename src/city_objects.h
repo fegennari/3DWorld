@@ -331,6 +331,7 @@ struct pillar_t : public city_obj_t { // for walkway support
 };
 
 struct ww_elevator_t : public oriented_city_obj_t {
+	bool player_was_inside=0;
 	int move_dir=0; // -1=down, 1=up, 0=stopped
 	float floor_spacing, ww_z1, platform_zval, lo_door_open=0.0, hi_door_open=0.0;
 
@@ -345,7 +346,7 @@ struct ww_elevator_t : public oriented_city_obj_t {
 	void get_glass_sides(cube_with_ix_t sides[4]) const;
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
-	bool point_on_platform(point const &camera_bs) const;
+	bool point_on_platform(point const &camera_bs, float exp=0.0) const;
 	void next_frame(point const &camera_bs, float fticks_stable);
 };
 
