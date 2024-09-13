@@ -15,7 +15,7 @@ float const BIRD_MAX_ALT_COM = 1.8; // above destination; in multiples of road w
 float const anim_time_scale(1.25/TICKS_PER_SECOND);
 
 extern bool camera_in_building;
-extern int animate2, frame_counter;
+extern int frame_counter;
 extern float fticks;
 extern double tfticks;
 extern vector3d wind;
@@ -25,11 +25,10 @@ extern object_model_loader_t building_obj_model_loader;
 enum {BIRD_STATE_FLYING=0, BIRD_STATE_GLIDING, BIRD_STATE_LANDING, BIRD_STATE_STANDING, BIRD_STATE_TAKEOFF, NUM_BIRD_STATES};
 
 
-void bird_poop_manager_t::next_frame() {
+void bird_poop_manager_t::next_frame(float fticks_stable) {
 	if (poops.empty()) return;
 	assert(!city_bounds.is_all_zeros()); // must call init() first
 	float const z_ground(city_bounds.z2());
-	float const fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
 	float const gravity  = 0.0002; // unsigned magnitude
 	float const term_vel = 0.1;
 
@@ -317,11 +316,7 @@ template<typename T> void city_obj_groups_t::update_obj_pos(vector<T> const &obj
 	all_objs_bcube.union_with_cube(bcube);
 }
 
-// this is here because only birds are updated each frame
-void city_obj_placer_t::next_frame() {
-	if (!animate2) return;
-	point const camera_bs(get_camera_building_space());
-	for (swingset_t &s : swings) {s.next_frame(camera_bs);}
+void city_obj_placer_t::next_frame_birds(point const &camera_bs, float fticks_stable) {
 	if (birds.empty()) return;
 	float const enable_birds_dist(0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE)); // half the pedestrian AI distance
 	if (!all_objs_bcube.closest_dist_less_than(camera_bs, enable_birds_dist)) return; // too far from the player
@@ -337,7 +332,7 @@ void city_obj_placer_t::next_frame() {
 	else if (bird_moved) { // incrementally update group bcubes and all_objs_bcube
 		bird_groups.update_obj_pos(birds, all_objs_bcube);
 	}
-	bird_poop_manager.next_frame();
+	bird_poop_manager.next_frame(fticks_stable);
 }
 
 bool city_obj_placer_t::choose_bird_dest(point const &pos, float radius, unsigned &loc_ix, point &dest_pos, vector3d &dest_dir) {

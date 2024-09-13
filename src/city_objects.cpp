@@ -113,12 +113,12 @@ void swingset_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 		model_city_obj_t::draw(dstate, qbds, dist_scale, shadow_only);
 	}
 }
-void swingset_t::next_frame(point const &camera_bs) {
+void swingset_t::next_frame(point const &camera_bs, float fticks_stable) {
 	if (bcube.contains_pt_exp(camera_bs, 1.2*CAMERA_RADIUS)) {anim_scale = 1.0;}
 
 	if (anim_scale > 0.01) {
-		anim_time  += 0.0006*fticks;
-		anim_scale *= (1.0f - min(1.0f, 0.0025f*fticks)); // dampen
+		anim_time  += 0.0006*fticks_stable;
+		anim_scale *= (1.0f - min(1.0f, 0.0025f*fticks_stable)); // dampen
 	}
 	else {anim_time = anim_scale = 0.0;}
 }
@@ -1588,22 +1588,15 @@ bool pillar_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_,
 /*static*/ void ww_elevator_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (dstate.pass_ix == 1) {disable_blend();} // transparent glass pass
 }
-cube_t ww_elevator_t::get_glass_area() const {
-	float const fc_thick(0.5*FLOOR_THICK_VAL_WINDOWLESS*floor_spacing);
-	cube_t glass_area(bcube);
-	glass_area.expand_by_xy(-0.5*fc_thick);
-	glass_area.expand_in_dim(2, -fc_thick); // shrink top and bottom
-	return glass_area;
-}
 void ww_elevator_t::get_glass_sides(cube_with_ix_t sides[4]) const {
-	float const floor_thickness(FLOOR_THICK_VAL_WINDOWLESS*floor_spacing), fc_thick(0.5*floor_thickness), frame_hwidth(0.5*fc_thick);
-	cube_t const glass_area(get_glass_area());
+	float const floor_thickness(get_floor_thickness()), glass_width(get_glass_thickness());
 
 	for (unsigned n = 0; n < 4; ++n) { // draw 4 sides
 		bool const sdim(n>>1), sdir(n&1);
-		cube_t side(glass_area);
-		side.d[sdim][!sdir] = side.d[sdim][sdir] + (sdir ? -1.0 : 1.0)*frame_hwidth; // set glass width
-		side.expand_in_dim(!sdim, -frame_hwidth); // shrink to exclude frame and prevent overlap/Z-fighting
+		cube_t side(bcube);
+		side.expand_in_dim(2, -get_fc_thick()); // shrink top and bottom
+		side.d[sdim][!sdir] = side.d[sdim][sdir] + (sdir ? -1.0 : 1.0)*glass_width; // set glass width
+		side.expand_in_dim(!sdim, -glass_width); // shrink to exclude frame and prevent overlap/Z-fighting
 		unsigned skip_mask(EF_Z12 | get_skip_mask_for_xy(!sdim)); // skip top and bottom by default, and sides
 
 		if (sdim == dim) {
@@ -1612,36 +1605,46 @@ void ww_elevator_t::get_glass_sides(cube_with_ix_t sides[4]) const {
 				skip_mask &= ~EF_Z1; // draw bottom edge
 			}
 			else { // upper floor entrance(s)
-				side.z2() = ww_z1 + fc_thick; // cutout space for exit
+				side.z2() = ww_z1 + 0.5*floor_thickness; // cutout space for exit
 				skip_mask &= ~EF_Z2; // draw top edge
 			}
 		}
 		sides[n] = cube_with_ix_t(side, skip_mask);
 	} // for n
 }
+void draw_cube_frame(draw_state_t &dstate, city_draw_qbds_t &qbds, cube_t const &bcube, float fc_thick, float frame_hwidth, bool skip_bot, colorRGBA const &color) {
+	cube_t frame_area(bcube);
+	frame_area.expand_in_dim(2, -fc_thick); // shrink top and bottom
+	frame_area.expand_by_xy(-frame_hwidth); // frame is centered on the glass
+	cube_t corner(frame_area);
+
+	for (unsigned n = 0; n < 4; ++n) { // draw 4 corners
+		set_wall_width(corner, frame_area.d[0][n& 1], frame_hwidth, 0); // x
+		set_wall_width(corner, frame_area.d[1][n>>1], frame_hwidth, 1); // y
+		dstate.draw_cube(qbds.untex_qbd, corner, color, 1, 0.0, 4); // skip top and bottom
+	}
+	// draw bottom and top
+	cube_t bot(bcube), top(bcube);
+	bot.z2() = frame_area.z1();
+	top.z1() = frame_area.z2();
+	dstate.draw_cube(qbds.untex_qbd, bot, color, skip_bot);
+	dstate.draw_cube(qbds.untex_qbd, top, color, 0); // skip_bottom=0
+}
 void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	float const floor_thickness(FLOOR_THICK_VAL_WINDOWLESS*floor_spacing), fc_thick(0.5*floor_thickness), frame_hwidth(0.5*fc_thick);
-	cube_t const glass_area(get_glass_area());
+	float const fc_thick(get_fc_thick()), frame_hwidth(0.5*get_glass_thickness());
 
 	if (dstate.pass_ix == 0) { // opaque pass
-		colorRGBA const frame_color(GRAY);
-		cube_t corner(glass_area);
+		draw_cube_frame(dstate, qbds, bcube, fc_thick, frame_hwidth, 1, GRAY); // outer elevator frame; skip_bot=1
+		cube_t platform(bcube);
+		set_cube_zvals(platform, platform_zval, (platform_zval + get_platform_height()));
+		platform.expand_by_xy(-2.0*frame_hwidth);
 
-		for (unsigned n = 0; n < 4; ++n) { // draw 4 corners
-			set_wall_width(corner, glass_area.d[0][n& 1], frame_hwidth, 0); // x
-			set_wall_width(corner, glass_area.d[1][n>>1], frame_hwidth, 1); // y
-			dstate.draw_cube(qbds.untex_qbd, corner, frame_color, 1, 0.0, 4); // skip top and bottom
+		if (dstate.check_cube_visible(platform, 0.75*dist_scale)) { // draw platform frame
+			draw_cube_frame(dstate, qbds, platform, fc_thick, frame_hwidth, 0, LT_GRAY); // skip_bot=0
 		}
-		cube_t bot(bcube), top(bcube);
-		bot.z2() = glass_area.z1();
-		top.z1() = glass_area.z2();
-		dstate.draw_cube(qbds.untex_qbd, bot, frame_color, 1); // skip_bottom=1
-		dstate.draw_cube(qbds.untex_qbd, top, frame_color, 0); // skip_bottom=0
 	}
 	else { // transparent glass pass; draw 4 glass side walls
 		colorRGBA const glass_color(0.8, 1.0, 0.9, 0.25);
-		cube_t inner_area(glass_area);
-		inner_area.expand_by_xy(-frame_hwidth);
 		cube_with_ix_t sides[4];
 		get_glass_sides(sides);
 		pair<float, cube_with_ix_t> to_draw[4];
@@ -1657,7 +1660,6 @@ void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 	}
 }
 bool ww_elevator_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
-	// TODO: special logic to allow the player to enter and ride the elevator; this may go elsewhere
 	cube_t const bc(bcube + xlate);
 	if (!bc.contains_pt_xy_exp(pos_, radius_)) return 0;
 	float const pzmax(max(pos_.z, p_last.z));
@@ -1669,11 +1671,33 @@ bool ww_elevator_t::proc_sphere_coll(point &pos_, point const &p_last, float rad
 		if (cnorm) {*cnorm = plus_z;}
 		return 1; // collision with top
 	}
+	float const fc_thick(get_fc_thick()), prev_zval(pos_.z);
+	max_eq(pos_.z, (bcube.z1() + fc_thick + radius_)); // standing on the bottom
+	
+	if (point_on_platform(point(pos.x, pos.y, pzmax))) {
+		max_eq(pos_.z, (platform_zval + fc_thick + radius_)); // floor coll
+		min_eq(pos_.z, (platform_zval + get_platform_height() - fc_thick - radius_)); // ceiling coll
+	}
+	bool had_coll(pos_.z != prev_zval);
 	cube_with_ix_t sides[4];
 	get_glass_sides(sides);
-	bool had_coll(0);
 	for (unsigned n = 0; n < 4; ++n) {had_coll |= sphere_cube_int_update_pos(pos_, radius_, (sides[n] + xlate), p_last, 0, cnorm);} // check sides
 	return had_coll;
+}
+bool ww_elevator_t::point_on_platform(point const &camera_bs) const {
+	return (bcube.contains_pt_xy(camera_bs) && camera_bs.z > platform_zval && camera_bs.z < platform_zval + get_platform_height());
+}
+void ww_elevator_t::next_frame(point const &camera_bs, float fticks_stable) {
+	if (point_on_platform(camera_bs)) {
+		// TODO: move with the player; need more state logic
+	}
+	else {
+		bool move_dir(camera_bs.z > bcube.zc()); // move to whatever end is closer to the player
+		platform_zval += (move_dir ? 1.0 : -1.0)*fticks_stable*bcube.dz()/(6.0*TICKS_PER_SECOND);
+	}
+	float const fc_thick(0.5*get_floor_thickness());
+	max_eq(platform_zval, (bcube.z1() + fc_thick));
+	min_eq(platform_zval, (bcube.z2() - get_platform_height() - fc_thick));
 }
 
 // parking lot solar roofs

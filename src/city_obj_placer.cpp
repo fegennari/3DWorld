@@ -9,8 +9,9 @@
 float pond_max_depth(0.0);
 
 extern bool enable_model3d_custom_mipmaps, player_in_walkway, player_in_skyway;
-extern int display_mode;
+extern int display_mode, animate2;
 extern unsigned max_unique_trees;
+extern float fticks;
 extern colorRGBA sun_color;
 extern tree_placer_t tree_placer;
 extern city_params_t city_params;
@@ -538,8 +539,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		cube_t pillar_area(plot);
 		pillar_area.expand_by_xy(-2.0*sidewalk_width); // don't block sidewalks or nearby areas
 
-		for (auto i = walkways.begin(); i != walkways.end(); ++i) {
-			walkway_t &w(*i);
+		for (walkway_t &w : walkways) {
 			if (!w.bcube.intersects_xy(plot)) continue;
 			float const length(w.get_length()), width(w.get_width()), height(w.bcube.z1() - plot.z2());
 			bool const to_skyway(w.open_ends[0] || w.open_ends[1]);
@@ -583,7 +583,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 					if (!pillar_area.contains_cube_xy(ebc_exp))  continue; // not contained in plot interior
 					if (has_bcube_int_no_adj(ebc_exp, blockers)) continue;
 					if (intersects_city_obj(ebc_exp, elevators) || intersects_city_obj(ebc_exp, walkways, w.bcube)) continue; // exclude ourself
-					ww_elevator_t const elevator(ebc, !w.dim, dir, (i - walkways.begin()), w.floor_spacing, w.bcube.z1());
+					ww_elevator_t const elevator(ebc, !w.dim, dir, w.floor_spacing, w.bcube.z1());
 					w.attach_elevator(elevator);
 					// TODO: must attach elevator to building walkway as well so that interior wall is cut out and the player can enter the elevator
 					wwe_groups.add_obj(elevator, elevators);
@@ -1980,6 +1980,15 @@ void city_obj_placer_t::bind_elevators_to_building_walkways(cube_t const &city_b
 			if (bww->bcube.intersects(e.bcube)) {bww->attach_elevator(e.bcube); break;} // should be adjacent, and only one
 		}
 	}
+}
+
+void city_obj_placer_t::next_frame() {
+	if (!animate2) return;
+	float const fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
+	point const camera_bs(get_camera_building_space());
+	for (swingset_t    &s : swings   ) {s.next_frame(camera_bs, fticks_stable);}
+	for (ww_elevator_t &e : elevators) {e.next_frame(camera_bs, fticks_stable);}
+	next_frame_birds(camera_bs, fticks_stable);
 }
 
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
