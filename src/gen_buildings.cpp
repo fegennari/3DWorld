@@ -1997,11 +1997,12 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 
 void building_t::get_walkway_interior_verts(building_draw_t &bdraw, building_walkway_t &w) {
 	w.windows.clear(); // in case this gets called multiple times on the same walkway
+	w.frames .clear();
 	if (!w.is_owner) return;
 	assert(w.bcube.z1() >= ground_floor_z1); // must be above ground
 	building_mat_t const &mat(get_material());
 	auto const parts_end(get_real_parts_end());
-	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thickness(get_fc_thickness()), wall_thickness(get_wall_thickness());
+	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(get_fc_thickness()), wall_thickness(get_wall_thickness());
 	unsigned const bot_floor(round_fp((w.bcube.z1() - ground_floor_z1)/floor_spacing)), top_floor(round_fp((w.bcube.z2() - ground_floor_z1)/floor_spacing));
 	assert(bot_floor < top_floor); // must be at least one floor
 	cube_t ww_floor(w.bcube), ww_ceil(w.bcube);
@@ -2009,8 +2010,8 @@ void building_t::get_walkway_interior_verts(building_draw_t &bdraw, building_wal
 
 	for (unsigned f = bot_floor; f < top_floor; ++f) {
 		float const zval(ground_floor_z1 + f*floor_spacing), next_zval(zval + floor_spacing);
-		set_cube_zvals(ww_floor, zval, zval+fc_thickness);
-		set_cube_zvals(ww_ceil,  next_zval-fc_thickness, next_zval);
+		set_cube_zvals(ww_floor, zval, zval+fc_thick);
+		set_cube_zvals(ww_ceil,  next_zval-fc_thick, next_zval);
 		bdraw.add_section(*this, 0, ww_floor, mat.floor_tex, mat.floor_color, 4, 1, 0, 1, 0); // no AO; top only
 		bdraw.add_section(*this, 0, ww_ceil,  mat.ceil_tex,  mat.ceil_color,  4, 0, 1, 1, 0); // no AO; bottom only; applies to apartments and hotels as well
 	}
@@ -2045,7 +2046,23 @@ void building_t::get_walkway_interior_verts(building_draw_t &bdraw, building_wal
 
 				if (!w.elevator_cut.is_all_zeros() && w.elevator_cut.intersects(wall)) {
 					subtract_cube_from_cubes(w.elevator_cut, ww_walls);
-					// TODO: add frame around each floor of the elevator
+					// add frame around each floor of the elevator
+					float const frame_thickness(1.5*get_trim_thickness()), frame_width(1.5*get_trim_height()), frame_dz(fc_thick + frame_thickness);
+					cube_t cutout(wall);
+					cutout.intersect_with_cube(w.elevator_cut);
+
+					for (unsigned f = bot_floor; f <= top_floor; ++f) { // add horizontal frames for each floor and at the top
+						float const zval(ground_floor_z1 + f*floor_spacing);
+						cube_t frame(cutout);
+						set_cube_zvals(frame, max(cutout.z1(), zval-frame_dz), min(cutout.z2(), zval+frame_dz));
+						frame.expand_in_dim(w.dim, -frame_width); // clip off vertical frame width
+						w.frames.push_back(frame);
+					}
+					for (unsigned d = 0; d < 2; ++d) {
+						cube_t frame(cutout);
+						frame.d[w.dim][!d] = cutout.d[w.dim][d] + (d ? -1.0 : 1.0)*frame_width;
+						w.frames.push_back(frame);
+					}
 				}
 				for (cube_t &wseg : ww_walls) {
 					float const length(wseg.get_sz_dim(w.dim));

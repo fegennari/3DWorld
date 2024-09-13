@@ -1642,6 +1642,7 @@ void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 		if (dstate.check_cube_visible(platform, 0.75*dist_scale)) { // draw platform frame
 			draw_cube_frame(dstate, qbds, platform, fc_thick, frame_hwidth, 0, LT_GRAY); // skip_bot=0
 		}
+		// TODO: draw upper and lower doors using lo_door_open and hi_door_open
 	}
 	else { // transparent glass pass; draw 4 glass side walls
 		colorRGBA const glass_color(0.8, 1.0, 0.9, 0.25);
@@ -1697,6 +1698,7 @@ void ww_elevator_t::next_frame(point const &camera_bs, float fticks_stable) {
 		if (platform_zval <= platform_zmin) {platform_zval = platform_zmin; move_dir = 0;} // hit the bottom
 	}
 	else if (move_dir > 0) { // going up
+		if (player_is_inside) {} // TODO: some way for the player to select a walkway floor, rather than always going to the top floor
 		float const platform_zmax(bcube.z2() - get_platform_height() - fc_thick);
 		if (platform_zval >= platform_zmax) {platform_zval = platform_zmax; move_dir = 0;} // hit the top
 	}

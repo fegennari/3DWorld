@@ -1549,6 +1549,7 @@ struct building_walkway_t : public building_walkway_geom_t { // "owned" walkway,
 	bool is_owner, open_ends[2]={};
 	building_t *conn_bldg;
 	vect_cube_with_ix_t windows;
+	vect_cube_t frames;
 	cube_t bcube_inc_rooms, skyway_conn, elevator_cut;
 
 	building_walkway_t(building_walkway_geom_t const &g, bool owner, building_t *b) : building_walkway_geom_t(g), is_owner(owner), conn_bldg(b) {bcube_inc_rooms = bcube;}

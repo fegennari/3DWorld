@@ -1891,6 +1891,17 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			}
 		} // for w
 	}
+	// add walkway elevator trim
+	for (building_walkway_t const &ww : walkways) {
+		for (cube_t const &c : ww.frames) {
+			assert(c.is_strictly_normalized());
+			cube_t trim(c);
+			trim.expand_in_dim(!ww.dim, 1.5*trim_thickness);
+			bool const is_vert(c.dz() > max(c.dx(), c.dy()));
+			unsigned const flags(RO_FLAG_NOCOLL | (is_vert ? (RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP) : 0));
+			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, !ww.dim, 0, flags, 1.0, (is_vert ? SHAPE_TALL : SHAPE_SHORT), trim_color);
+		}
+	} // for ww
 	if (!is_cube() || is_rotated()) return; // window trim is not yet working for non-cube and rotated buildings
 	add_window_trim_and_coverings(1, 0, 0); // add_trim=1, add_coverings=0, add_ext_sills=0
 	if (has_pool()) {add_pool_trim();}
