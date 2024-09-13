@@ -1939,97 +1939,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 	} // for dim
 	// add the walkway interiors; these are outside the building and may get culled when outside the view frustum
 	if (DRAW_WALKWAY_INTERIORS) {
-		vect_cube_t ww_walls;
-
-		for (building_walkway_t &w : walkways) {
-			w.windows.clear(); // in case this gets called multiple times on the same walkway
-			if (!w.is_owner) continue;
-			assert(w.bcube.z1() >= ground_floor_z1); // must be above ground
-			unsigned const bot_floor(round_fp((w.bcube.z1() - ground_floor_z1)/floor_spacing)), top_floor(round_fp((w.bcube.z2() - ground_floor_z1)/floor_spacing));
-			assert(bot_floor < top_floor); // must be at least one floor
-			cube_t ww_floor(w.bcube), ww_ceil(w.bcube);
-
-			for (unsigned f = bot_floor; f < top_floor; ++f) {
-				float const zval(ground_floor_z1 + f*floor_spacing), next_zval(zval + floor_spacing);
-				set_cube_zvals(ww_floor, zval, zval+fc_thickness);
-				set_cube_zvals(ww_ceil,  next_zval-fc_thickness, next_zval);
-				bdraw.add_section(*this, 0, ww_floor, mat.floor_tex, mat.floor_color, 4, 1, 0, 1, 0); // no AO; top only
-				bdraw.add_section(*this, 0, ww_ceil,  mat.ceil_tex,  mat.ceil_color,  4, 0, 1, 1, 0); // no AO; bottom only; applies to apartments and hotels as well
-			}
-			// walls on all 4 sides; walls extend through all floors; unlike normal exterior walls, these are windowless and have thickness
-			for (unsigned dim = 0; dim < 2; ++dim) {
-				for (unsigned d = 0; d < 2; ++d) { // dir
-					bool const is_end_dim(bool(dim) == w.dim), add_ext_door(is_end_dim && w.has_ext_door(d));
-					if (is_end_dim && w.open_ends[d]) continue; // no wall (or door) at this end
-					float const wall_thick(add_ext_door ? /*get_door_shift_dist()*/0.5*wall_thickness : wall_thickness); // flush with exterior door? then there's a light gap
-					cube_t wall(w.bcube);
-					wall.d[dim][!d] = w.bcube.d[dim][d] + (d ? -1.0 : 1.0)*wall_thick;
-					unsigned const base_dim_mask(1 << unsigned(dim));
-					unsigned dim_mask(base_dim_mask | (1<<(2*dim+d+3))); // only inside face in dim !w.dim should be visible
-
-					if (is_end_dim) { // draw ends
-						//if (has_int_windows()) {dim_mask = base_dim_mask;} // draw opposite of ends to block unwanted interior windows; but then we can get narrow strips
-
-						if (add_ext_door) { // draw half wall to either side of door
-							for (unsigned s = 0; s < 2; ++s) { // {left, right} side
-								cube_t side(wall);
-								side.d[!dim][!s] = w.door_bounds[d][s];
-								bdraw.add_section(*this, 0, side, mat.wall_tex, wall_color, dim_mask, 1, 1, 1, 0); // no AO; skip bottom and top
-							}
-						}
-						else { // draw full wall
-							bdraw.add_section(*this, 0, wall, mat.wall_tex, wall_color, dim_mask, 1, 1, 1, 0); // no AO; skip bottom and top
-						}
-					}
-					else { // draw sides with (real) cutouts for windows
-						ww_walls.clear();
-						ww_walls.push_back(wall);
-						if (!w.elevator_cut.is_all_zeros() && w.elevator_cut.intersects(wall)) {subtract_cube_from_cubes(w.elevator_cut, ww_walls);}
-
-						for (cube_t &wseg : ww_walls) {
-							float const length(wseg.get_sz_dim(w.dim));
-							unsigned num_segs(length/floor_spacing);
-
-							if (num_segs == 0) { // short segment with no window
-								float const zval(ground_floor_z1 + bot_floor*floor_spacing);
-								set_cube_zvals(wseg, zval, (zval + (top_floor - bot_floor)*floor_spacing));
-								bdraw.add_section(*this, 0, wseg, mat.wall_tex, wall_color, dim_mask, 1, 1, 1, 0); // no AO; skip bottom and top
-								continue;
-							}
-							if (!(num_segs & 1)) {++num_segs;} // must be odd
-							float const seg_len(length/num_segs), first_seg_end(wseg.d[!dim][0] + seg_len);
-							cube_t seg(wseg);
-							seg.d[!dim][1] = first_seg_end;
-							dim_mask |= (1 << unsigned(!dim)); // draw edges
-
-							for (unsigned n = 0; n < num_segs; n += 2) { // alternate seg - window - seg
-								bdraw.add_section(*this, 0, seg, mat.wall_tex, wall_color, dim_mask, 1, 1, 1, 0); // no AO; skip bottom and top
-								seg.translate_dim(!dim, 2.0*seg_len);
-							}
-							for (unsigned f = bot_floor; f < top_floor; ++f) { // add top and bottom strips for each floor
-								float const zval(ground_floor_z1 + f*floor_spacing), next_zval(zval + floor_spacing);
-								float const wz1(zval+0.30*floor_spacing), wz2(next_zval -0.15*floor_spacing);
-								cube_t bot(wseg), top(wseg);
-								set_cube_zvals(bot, zval, wz1);
-								set_cube_zvals(top, wz2,  next_zval);
-								bdraw.add_section(*this, 0, bot, mat.wall_tex, wall_color, (dim_mask | 4), 1, 0, 1, 0); // no AO; skip bottom
-								bdraw.add_section(*this, 0, top, mat.wall_tex, wall_color, (dim_mask | 4), 0, 1, 1, 0); // no AO; skip top
-								// add windows
-								cube_with_ix_t window(wseg, (2*dim + d));
-								set_cube_zvals(window, wz1, wz2);
-								window.d[!dim][0] = first_seg_end;
-								window.d[!dim][1] = first_seg_end + seg_len;
-
-								for (unsigned n = 0; n < num_segs/2; ++n) {
-									w.windows.push_back(window);
-									window.translate_dim(!dim, 2.0*seg_len);
-								}
-							} // for f
-						} // for wseg
-					}
-				} // for d
-			} // for dim
-		} // for w
+		for (building_walkway_t &w : walkways) {get_walkway_interior_verts(bdraw, w);}
 	}
 	// Note: stair/elevator landings can probably be drawn in room_geom along with stairs, though I don't think there would be much benefit in doing so
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) { // added per-floor (530K T)
@@ -2083,6 +1993,103 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 	}
 	// Note: interior doors are drawn as part of room_geom
 	bdraw.end_draw_range_capture(interior->draw_range); // 80MB, 394MB, 836ms
+}
+
+void building_t::get_walkway_interior_verts(building_draw_t &bdraw, building_walkway_t &w) {
+	w.windows.clear(); // in case this gets called multiple times on the same walkway
+	if (!w.is_owner) return;
+	assert(w.bcube.z1() >= ground_floor_z1); // must be above ground
+	building_mat_t const &mat(get_material());
+	auto const parts_end(get_real_parts_end());
+	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thickness(get_fc_thickness()), wall_thickness(get_wall_thickness());
+	unsigned const bot_floor(round_fp((w.bcube.z1() - ground_floor_z1)/floor_spacing)), top_floor(round_fp((w.bcube.z2() - ground_floor_z1)/floor_spacing));
+	assert(bot_floor < top_floor); // must be at least one floor
+	cube_t ww_floor(w.bcube), ww_ceil(w.bcube);
+	vect_cube_t ww_walls;
+
+	for (unsigned f = bot_floor; f < top_floor; ++f) {
+		float const zval(ground_floor_z1 + f*floor_spacing), next_zval(zval + floor_spacing);
+		set_cube_zvals(ww_floor, zval, zval+fc_thickness);
+		set_cube_zvals(ww_ceil,  next_zval-fc_thickness, next_zval);
+		bdraw.add_section(*this, 0, ww_floor, mat.floor_tex, mat.floor_color, 4, 1, 0, 1, 0); // no AO; top only
+		bdraw.add_section(*this, 0, ww_ceil,  mat.ceil_tex,  mat.ceil_color,  4, 0, 1, 1, 0); // no AO; bottom only; applies to apartments and hotels as well
+	}
+	// walls on all 4 sides; walls extend through all floors; unlike normal exterior walls, these are windowless and have thickness
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		for (unsigned d = 0; d < 2; ++d) { // dir
+			bool const is_end_dim(bool(dim) == w.dim), add_ext_door(is_end_dim && w.has_ext_door(d));
+			if (is_end_dim && w.open_ends[d]) continue; // no wall (or door) at this end
+			float const wall_thick(add_ext_door ? /*get_door_shift_dist()*/0.5*wall_thickness : wall_thickness); // flush with exterior door? then there's a light gap
+			cube_t wall(w.bcube);
+			wall.d[dim][!d] = w.bcube.d[dim][d] + (d ? -1.0 : 1.0)*wall_thick;
+			unsigned const base_dim_mask(1 << unsigned(dim));
+			unsigned dim_mask(base_dim_mask | (1<<(2*dim+d+3))); // only inside face in dim !w.dim should be visible
+
+			if (is_end_dim) { // draw ends
+				//if (has_int_windows()) {dim_mask = base_dim_mask;} // draw opposite of ends to block unwanted interior windows; but then we can get narrow strips
+
+				if (add_ext_door) { // draw half wall to either side of door
+					for (unsigned s = 0; s < 2; ++s) { // {left, right} side
+						cube_t side(wall);
+						side.d[!dim][!s] = w.door_bounds[d][s];
+						bdraw.add_section(*this, 0, side, mat.wall_tex, wall_color, dim_mask, 1, 1, 1, 0); // no AO; skip bottom and top
+					}
+				}
+				else { // draw full wall
+					bdraw.add_section(*this, 0, wall, mat.wall_tex, wall_color, dim_mask, 1, 1, 1, 0); // no AO; skip bottom and top
+				}
+			}
+			else { // draw sides with (real) cutouts for windows
+				ww_walls.clear();
+				ww_walls.push_back(wall);
+
+				if (!w.elevator_cut.is_all_zeros() && w.elevator_cut.intersects(wall)) {
+					subtract_cube_from_cubes(w.elevator_cut, ww_walls);
+					// TODO: add frame around each floor of the elevator
+				}
+				for (cube_t &wseg : ww_walls) {
+					float const length(wseg.get_sz_dim(w.dim));
+					unsigned num_segs(length/floor_spacing);
+
+					if (num_segs == 0) { // short segment with no window
+						float const zval(ground_floor_z1 + bot_floor*floor_spacing);
+						set_cube_zvals(wseg, zval, (zval + (top_floor - bot_floor)*floor_spacing));
+						bdraw.add_section(*this, 0, wseg, mat.wall_tex, wall_color, dim_mask, 1, 1, 1, 0); // no AO; skip bottom and top
+						continue;
+					}
+					if (!(num_segs & 1)) {++num_segs;} // must be odd
+					float const seg_len(length/num_segs), first_seg_end(wseg.d[!dim][0] + seg_len);
+					cube_t seg(wseg);
+					seg.d[!dim][1] = first_seg_end;
+					dim_mask |= (1 << unsigned(!dim)); // draw edges
+
+					for (unsigned n = 0; n < num_segs; n += 2) { // alternate seg - window - seg
+						bdraw.add_section(*this, 0, seg, mat.wall_tex, wall_color, dim_mask, 1, 1, 1, 0); // no AO; skip bottom and top
+						seg.translate_dim(!dim, 2.0*seg_len);
+					}
+					for (unsigned f = bot_floor; f < top_floor; ++f) { // add top and bottom strips for each floor
+						float const zval(ground_floor_z1 + f*floor_spacing), next_zval(zval + floor_spacing);
+						float const wz1(zval+0.30*floor_spacing), wz2(next_zval -0.15*floor_spacing);
+						cube_t bot(wseg), top(wseg);
+						set_cube_zvals(bot, zval, wz1);
+						set_cube_zvals(top, wz2,  next_zval);
+						bdraw.add_section(*this, 0, bot, mat.wall_tex, wall_color, (dim_mask | 4), 1, 0, 1, 0); // no AO; skip bottom
+						bdraw.add_section(*this, 0, top, mat.wall_tex, wall_color, (dim_mask | 4), 0, 1, 1, 0); // no AO; skip top
+						// add windows
+						cube_with_ix_t window(wseg, (2*dim + d));
+						set_cube_zvals(window, wz1, wz2);
+						window.d[!dim][0] = first_seg_end;
+						window.d[!dim][1] = first_seg_end + seg_len;
+
+						for (unsigned n = 0; n < num_segs/2; ++n) {
+							w.windows.push_back(window);
+							window.translate_dim(!dim, 2.0*seg_len);
+						}
+					} // for f
+				} // for wseg
+			} // end drawn sides
+		} // for d
+	} // for dim
 }
 
 template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer, door_rotation_t &drot, uint8_t door_type, bool dim,

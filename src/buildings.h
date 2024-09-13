@@ -1883,6 +1883,7 @@ struct building_t : public building_geom_t {
 	void get_all_drawn_ext_wall_verts(building_draw_t &bdraw);
 	void get_basement_ext_wall_verts (building_draw_t &bdraw) const;
 	void get_all_drawn_interior_verts(building_draw_t &bdraw);
+	void get_walkway_interior_verts  (building_draw_t &bdraw, building_walkway_t &w);
 	void get_all_drawn_window_verts  (building_draw_t &bdraw, bool lights_pass=0, float offset_scale=1.0,
 		point const *only_cont_pt_in=nullptr, bool no_skylights=0, bool draw_int_windows=0) const;
 	void get_all_drawn_window_verts_as_quads(vect_vnctcc_t &verts) const;
