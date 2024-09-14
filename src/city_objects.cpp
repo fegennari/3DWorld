@@ -710,6 +710,38 @@ bool pool_deck_t::proc_sphere_coll(point &pos_, point const &p_last, float radiu
 	return coll;
 }
 
+// beach balls
+
+beach_ball_t::beach_ball_t(point const &pos_, float radius_) : city_obj_t(pos_, radius_) {
+	pos.z += radius; // centered
+	bcube.set_from_sphere(*this);
+}
+/*static*/ void beach_ball_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {select_texture(get_texture_by_name(ball_types[BALL_TYPE_BEACH].tex_fname));}
+	begin_sphere_draw(1); // textured=1
+}
+/*static*/ void beach_ball_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	end_sphere_draw();
+}
+void beach_ball_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(2.0f*dist_scale/p2p_dist(dstate.camera_bs, pos)))));
+	draw_sphere_vbo(pos, radius, ndiv, 1); // textured=1
+}
+
+// pool floats
+
+pool_float_t::pool_float_t(point const &pos_, float radius_) : city_obj_t(pos_, radius_) {
+	bcube.set_from_sphere(*this);
+	set_cube_zvals(bcube, pos.z, pos.z+get_height());
+	pos.z = bcube.zc(); // re-center
+}
+/*static*/ void pool_float_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
+	// anything?
+}
+void pool_float_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	// TODO: torus?
+}
+
 // newsracks
 
 newsrack_t::newsrack_t(point const &pos_, float height, float width, float depth, bool dim_, bool dir_, unsigned style_, colorRGBA const &color_) :

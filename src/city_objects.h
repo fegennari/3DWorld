@@ -180,6 +180,21 @@ struct pool_deck_t : public oriented_city_obj_t {
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
+struct beach_ball_t : public city_obj_t {
+	beach_ball_t(point const &pos_, float radius_);
+	static void pre_draw (draw_state_t &dstate, bool shadow_only);
+	static void post_draw(draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+};
+
+struct pool_float_t : public city_obj_t {
+	pool_float_t(point const &pos_, float radius_);
+	float get_inner_radius() const {return 0.3*radius;}
+	float get_height      () const {return 2.0*get_inner_radius();}
+	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+};
+
 class power_pole_t : public city_obj_t {
 	struct wire_t {
 		point pts[2], pole_base;
