@@ -695,8 +695,9 @@ void update_mouse_pos(int dx, int dy) {
 		float const elapsed_time(tfticks - prev_tfticks), blend(min(1.0f*elapsed_time/mouse_smooth_factor, 1.0f));
 		prev_dx = blend*dx + (1.0 - blend)*prev_dx;
 		prev_dy = blend*dy + (1.0 - blend)*prev_dy;
-		dx = round_fp(prev_dx);
-		dy = round_fp(prev_dy);
+		int const new_dx(round_fp(prev_dx)), new_dy(round_fp(prev_dy));
+		if (new_dx != 0) {dx = new_dx;} else if (dx != 0) {dx = ((dx < 0) ? -1 : 1);}
+		if (new_dy != 0) {dy = new_dy;} else if (dy != 0) {dy = ((dy < 0) ? -1 : 1);}
 		prev_tfticks = tfticks;
 	}
 	int button(m_button);
