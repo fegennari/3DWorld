@@ -1639,7 +1639,8 @@ void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 		set_cube_zvals(platform, platform_zval, (platform_zval + get_platform_height()));
 		platform.expand_by_xy(-2.0*frame_hwidth);
 
-		if (dstate.check_cube_visible(platform, 0.75*dist_scale)) { // draw platform frame
+		// draw platform frame; skip in shadow pass since we don't dynamically update shadows
+		if (!shadow_only && dstate.check_cube_visible(platform, 0.75*dist_scale)) {
 			draw_cube_frame(dstate, qbds, platform, fc_thick, frame_hwidth, 0, LT_GRAY); // skip_bot=0
 		}
 		// TODO: draw upper and lower doors using lo_door_open and hi_door_open
