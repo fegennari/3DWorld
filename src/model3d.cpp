@@ -2892,11 +2892,13 @@ void render_models(int shadow_pass, int reflection_pass, int trans_op_mask, vect
 	all_models.render((shadow_pass != 0), reflection_pass, trans_op_mask, xlate);
 	if (trans_op_mask & 1) {draw_buildings(shadow_pass, 0, xlate);} // opaque pass (first); Note: not passing reflection_pass (which is for water plane, not mirrors)
 	
-	if ((trans_op_mask & 2) && !shadow_pass) {
-		draw_building_lights(xlate); // transparent pass (second); not drawn in the shadow pass
-		draw_transparent_city_bldg_geom(reflection_pass, xlate);
+	if (world_mode == WMODE_INF_TERRAIN) {
+		if ((trans_op_mask & 2) && !shadow_pass) {
+			draw_building_lights(xlate); // transparent pass (second); not drawn in the shadow pass
+			draw_transparent_city_bldg_geom(reflection_pass, xlate);
+		}
+		draw_cities(shadow_pass, reflection_pass, trans_op_mask, xlate);
 	}
-	if (world_mode == WMODE_INF_TERRAIN) {draw_cities(shadow_pass, reflection_pass, trans_op_mask, xlate);}
 }
 void ensure_model_reflection_cube_maps() {all_models.ensure_reflection_cube_maps();}
 void auto_calc_model_zvals() {all_models.set_xform_zval_from_tt_height(flatten_tt_mesh_under_models);}
