@@ -1852,7 +1852,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 	if (!is_valid() || interior == nullptr) return; // invalid building or no interior
 	building_mat_t const &mat(get_material());
 	auto const parts_end(get_real_parts_end());
-	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thickness(get_fc_thickness());
+	float const floor_thickness(get_floor_thickness()), fc_thickness(get_fc_thickness());
 	bdraw.begin_draw_range_capture();
 
 	for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // 600K T
@@ -2002,7 +2002,7 @@ void building_t::get_walkway_interior_verts(building_draw_t &bdraw, building_wal
 	assert(w.bcube.z1() >= ground_floor_z1); // must be above ground
 	building_mat_t const &mat(get_material());
 	auto const parts_end(get_real_parts_end());
-	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(get_fc_thickness()), wall_thickness(get_wall_thickness());
+	float const floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness()), wall_thickness(get_wall_thickness());
 	unsigned const bot_floor(round_fp((w.bcube.z1() - ground_floor_z1)/floor_spacing)), top_floor(round_fp((w.bcube.z2() - ground_floor_z1)/floor_spacing));
 	assert(bot_floor < top_floor); // must be at least one floor
 	cube_t ww_floor(w.bcube), ww_ceil(w.bcube);
@@ -4794,7 +4794,6 @@ public:
 	void get_city_building_walkways(cube_t const &city_bcube, vector<building_walkway_t *> &bwws) {
 		vector<cube_with_ix_t> city_bldgs;
 		get_overlapping_bcubes(city_bcube, city_bldgs);
-		float max_xy_sz(0.0);
 
 		for (cube_with_ix_t const &b : city_bldgs) {
 			building_t &building(get_building(b.ix));
