@@ -1896,7 +1896,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		for (cube_t const &c : ww.frames) {
 			assert(c.is_strictly_normalized());
 			cube_t trim(c);
-			trim.expand_in_dim(!ww.dim, 1.5*trim_thickness);
+			trim.expand_in_dim(!ww.dim, 4.0*trim_thickness); // expand further to fill the gap
 			bool const is_vert(c.dz() > max(c.dx(), c.dy()));
 			unsigned const flags(RO_FLAG_NOCOLL | (is_vert ? (RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP) : 0));
 			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, !ww.dim, 0, flags, 1.0, (is_vert ? SHAPE_TALL : SHAPE_SHORT), trim_color);

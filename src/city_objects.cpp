@@ -1543,7 +1543,7 @@ void walkway_t::attach_elevator(ww_elevator_t const &e) {
 void building_walkway_t::attach_elevator(cube_t const &e) {
 	assert(elevator_cut.is_all_zeros());
 	float const cut_exp(0.25*bcube.get_sz_dim(!dim)); // quarter of walkway width, to include one side wall
-	elevator_cut = e;
+	elevator_cut = elevator_bcube = e;
 	elevator_cut.expand_in_dim(!dim, cut_exp);
 	cube_t bc_exp(bcube);
 	bc_exp.expand_in_dim(!dim, cut_exp);
@@ -1649,14 +1649,14 @@ void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 		cube_with_ix_t sides[4];
 		get_glass_sides(sides);
 		pair<float, cube_with_ix_t> to_draw[4];
-		for (unsigned n = 0; n < 4; ++n) {to_draw[n] = make_pair(-p2p_dist_sq(sides[n].closest_pt(dstate.camera_bs), dstate.camera_bs), sides[n]);}
+		for (unsigned n = 0; n < 4; ++n) {to_draw[n] = make_pair(-p2p_dist_xy_sq(sides[n].closest_pt(dstate.camera_bs), dstate.camera_bs), sides[n]);}
 		sort(to_draw, to_draw+4); // sort faces back to front for proper blending
 		
 		for (unsigned n = 0; n < 4; ++n) {
 			cube_with_ix_t const &s(to_draw[n].second);
 			bool const skip_bot(s.ix & EF_Z1), skip_top(s.ix & EF_Z2);
 			unsigned const skip_dims(((s.ix & EF_X1) ? 1 : 0) | ((s.ix & EF_Y1) ? 2 : 0));
-			dstate.draw_cube(qbds.untex_qbd, s, glass_color, skip_bot, 0.0, skip_dims, 0, 0, 0, 1.0, 1.0, 1.0, skip_top);
+			dstate.draw_cube(qbds.untex_qbd, s, glass_color, skip_bot, 0.0, skip_dims, 0, 0, 0, 1.0, 1.0, 1.0, skip_top, 1); // no_cull=1
 		}
 	}
 }

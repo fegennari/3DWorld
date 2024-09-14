@@ -121,10 +121,12 @@ bool building_t::check_pt_in_or_near_walkway(point const &p, bool owned_only, bo
 			vis_area.expand_in_dim(w.dim, (player_in_walkway ? 2.0 : 0.1)*w.get_length()); // extend to include other nearby walkways
 			if (vis_area.contains_pt(p)) return 1; // player in nearby skyway area or opposing walkway
 		}
-		if (p.z < w.bcube.z1() || p.z > w.bcube.z2()) continue; // no Z overlap
-		if ((inc_open_door ? w.get_bcube_inc_open_door() : w.bcube).contains_pt(p)) return 1;
-		// check adjacent rooms if connected, walkway is visible through windows, and pos is off the ends of the walkways; forms a dog bone shape
-		if (inc_conn_room && has_int_windows() && (p[w.dim] < w.bcube.d[w.dim][0] || p[w.dim] > w.bcube.d[w.dim][1]) && w.bcube_inc_rooms.contains_pt(p)) return 1;
+		if (p.z > w.bcube.z1() && p.z < w.bcube.z2()) { // check for Z overlap
+			if ((inc_open_door ? w.get_bcube_inc_open_door() : w.bcube).contains_pt(p)) return 1;
+			// check adjacent rooms if connected, walkway is visible through windows, and pos is off the ends of the walkways; forms a dog bone shape
+			if (inc_conn_room && has_int_windows() && (p[w.dim] < w.bcube.d[w.dim][0] || p[w.dim] > w.bcube.d[w.dim][1]) && w.bcube_inc_rooms.contains_pt(p)) return 1;
+		}
+		if (!w.elevator_bcube.is_all_zeros() && w.elevator_bcube.contains_pt(p)) return 1; // check elevator connected to walkway
 	} // for walkways
 	return 0;
 }
