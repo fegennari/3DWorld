@@ -1334,7 +1334,7 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 		max_eq(pool_area.d[d][0], plot.d[d][0]+min_pool_spacing_to_plot_edge);
 		min_eq(pool_area.d[d][1], plot.d[d][1]-min_pool_spacing_to_plot_edge);
 	}
-	pool_area.expand_by_xy(-0.05*dmin); // small shrink to keep away from walls, fences, and hedges
+	pool_area.expand_by_xy(-(0.05*dmin + 0.05*city_params.road_width)); // small shrink to keep away from walls, fences, and hedges
 	vector3d pool_sz;
 	pool_sz.z = (above_ground ? rgen.rand_uniform(0.08, 0.12)*city_params.road_width : 0.01f*dmin);
 
