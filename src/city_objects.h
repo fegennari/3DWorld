@@ -160,6 +160,7 @@ struct swimming_pool_t : public oriented_city_obj_t { // Note: dim and dir are u
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 	bool update_depth_if_underwater(point const &p, float &depth) const;
+	bool place_obj_on_water(point &obj_pos, float obj_radius, float submerge_amt, rand_gen_t &rgen) const;
 };
 
 struct pool_ladder_t : public model_city_obj_t { // for in-ground pools
@@ -182,15 +183,18 @@ struct pool_deck_t : public oriented_city_obj_t {
 };
 
 struct beach_ball_t : public city_obj_t {
-	beach_ball_t(point const &pos_, float radius_);
+	vector3d orient;
+	beach_ball_t(point const &pos_, float radius_, vector3d const &orient_);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
 
 struct pool_float_t : public city_obj_t {
-	pool_float_t(point const &pos_, float radius_);
+	colorRGBA color;
+	pool_float_t(point const &pos_, float radius_, colorRGBA const &color_);
 	float get_inner_radius() const {return 0.3*radius;}
+	float get_outer_radius() const {return radius - get_inner_radius();}
 	float get_height      () const {return 2.0*get_inner_radius();}
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
@@ -616,11 +620,13 @@ private:
 	vector<pillar_t> pillars;
 	vector<ww_elevator_t> elevators;
 	vector<parking_solar_t> p_solars;
+	vector<beach_ball_t> bballs;
+	vector<pool_float_t> pfloats;
 	// index is last obj in group
 	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, fountain_groups, divider_groups, pool_groups, plad_groups,
 		pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups, stopsign_groups, flag_groups,
 		nrack_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, dumpster_groups, plant_groups, flower_groups, pond_groups, walkway_groups,
-		pillar_groups, wwe_groups, p_solar_groups;
+		pillar_groups, wwe_groups, p_solar_groups, bball_groups, pfloat_groups;
 	skyway_t skyway; // optional
 	bird_poop_manager_t bird_poop_manager;
 	vector<city_zone_t> sub_plots; // reused across calls

@@ -3015,8 +3015,6 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 	
 	if (pool_len > 3.0*floor_spacing && pool_depth > 0.8*floor_spacing) { // add pool float(s) if pool is large and deep enough
 		unsigned const num_floats(rgen.rand() % 3); // 0-2
-		unsigned const NUM_FLOAT_COLORS = 6;
-		colorRGBA const float_colors[NUM_FLOAT_COLORS] = {WHITE, YELLOW, PINK, GREEN, ORANGE, LT_BLUE};
 		float const pf_radius(0.25*floor_spacing), pf_height(0.6*pf_radius);
 
 		for (unsigned n = 0; n < num_floats; ++n) {
@@ -3035,7 +3033,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 			bool const deflated(!pool_has_water);
 			unsigned flags(0);
 			if (deflated) {flags |= RO_FLAG_BROKEN; pfloat.z2() -= 0.9*pfloat.dz();}
-			colorRGBA const &color(float_colors[rgen.rand() % NUM_FLOAT_COLORS]);
+			colorRGBA const &color(pfloat_colors[rgen.rand() % NUM_PFLOAT_COLORS]);
 			objs.emplace_back(pfloat, TYPE_POOL_FLOAT, room_id, 0, 0, flags, tot_light_amt, (deflated ? SHAPE_CYLIN : SHAPE_VERT_TORUS), color);
 		} // for n
 	}

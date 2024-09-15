@@ -1483,6 +1483,56 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 			pdeck.calc_pillars(ladder); // pass in the ladder pos to avoid placing pillars there
 			vector_add_to(pdeck.pillars, colliders); // include pillars for AI collisions
 		}
+		// maybe place pool float in the pool
+		cube_t float_bcube;
+		point center;
+
+		if (rgen.rand_float() < 0.6) {
+			float const radius(0.05*city_params.road_width);
+			colorRGBA const color(pfloat_colors[rgen.rand() % NUM_PFLOAT_COLORS]);
+			
+			if (rgen.rand_float() < 0.5) { // place inside the pool
+				if (pool_obj.place_obj_on_water(center, radius, 0.1*radius, rgen)) {
+					pool_float_t const pfloat(center, radius, color);
+
+					if (!pfloat.bcube.intersects(ladder)) {
+						pfloat_groups.add_obj(pfloat, pfloats);
+						float_bcube = pfloat.bcube; // record so that ball placement avoids intersecting the pool float
+					}
+				}
+			}
+			else { // place next to the pool
+				for (unsigned n = 0; n < 10; ++n) {
+					pool_float_t const pfloat(rgen.gen_rand_cube_point_xy(pool_area, plot.z2()), radius, color);
+					if (has_bcube_int(pfloat.bcube, blockers)) continue; // Note: may intersect the in-ground pool ladder
+					pfloat_groups.add_obj(pfloat, pfloats);
+					float_bcube = pfloat.bcube; // record so that ball placement avoids intersecting the pool float
+					add_cube_to_colliders_and_blockers(pfloat.bcube, colliders, blockers);
+					break;
+				}
+			}
+		}
+		// maybe place beach ball in the pool or next to it
+		if (rgen.rand_float() < 0.7) {
+			float const radius(ball_types[BALL_TYPE_BEACH].radius*0.18*city_params.road_width/(12*8));
+			vector3d const orient(rgen.signed_rand_vector_norm()); // random orient
+
+			if (rgen.rand_float() < 0.5) { // place inside the pool
+				if (pool_obj.place_obj_on_water(center, radius, 0.1*radius, rgen)) {
+					beach_ball_t const ball(center, radius, orient);
+					if (!ball.bcube.intersects(ladder) && !ball.bcube.intersects(float_bcube)) {bball_groups.add_obj(ball, bballs);}
+				}
+			}
+			else { // place next to the pool
+				for (unsigned n = 0; n < 10; ++n) {
+					beach_ball_t const ball(rgen.gen_rand_cube_point_xy(pool_area, plot.z2()), radius, orient);
+					if (has_bcube_int(ball.bcube, blockers) || ball.bcube.intersects(float_bcube)) continue; // Note: may intersect the in-ground pool ladder
+					bball_groups.add_obj(ball, bballs);
+					add_cube_to_colliders_and_blockers(ball.bcube, colliders, blockers);
+					break;
+				}
+			}
+		}
 		return 1; // success - done with pool
 	} // for n
 	return 0; // placement failed
@@ -1795,6 +1845,8 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	pillar_groups  .create_groups(pillars,   all_objs_bcube);
 	wwe_groups     .create_groups(elevators, all_objs_bcube);
 	p_solar_groups .create_groups(p_solars,  all_objs_bcube);
+	bball_groups   .create_groups(bballs,    all_objs_bcube);
+	pfloat_groups  .create_groups(pfloats,   all_objs_bcube);
 	if (skyway.valid) {all_objs_bcube.assign_or_union_with_cube(skyway.bcube);}
 	if (add_parking_lots) {cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << endl;}
 }
@@ -1997,33 +2049,35 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	if (!dstate.check_cube_visible(all_objs_bcube, 1.0)) return; // check bcube, dist_scale=1.0
 	dstate.pass_ix = 0;
 	draw_objects(benches,   bench_groups,    dstate, 0.16, shadow_only, 0); // dist_scale=0.16, has_immediate_draw=0
-	draw_objects(fhydrants, fhydrant_groups, dstate, 0.06, shadow_only, 1); // dist_scale=0.06, has_immediate_draw=1
-	draw_objects(sstations, sstation_groups, dstate, 0.15, shadow_only, 1); // dist_scale=0.15, has_immediate_draw=1
-	draw_objects(fountains, fountain_groups, dstate, 0.20, shadow_only, 1); // dist_scale=0.20, has_immediate_draw=1
-	draw_objects(mboxes,    mbox_groups,     dstate, 0.04, shadow_only, 1); // dist_scale=0.04, has_immediate_draw=1
-	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0); // dist_scale=0.20, has_immediate_draw=0
-	draw_objects(signs,     sign_groups,     dstate, 0.25, shadow_only, 1, 1); // dist_scale=0.25, has_immediate_draw=1, draw_qbd_as_quads=1
-	draw_objects(flags,     flag_groups,     dstate, 0.18, shadow_only, 1); // dist_scale=0.18, has_immediate_draw=1
-	draw_objects(newsracks, nrack_groups,    dstate, 0.10, shadow_only, 0); // dist_scale=0.10, has_immediate_draw=0
-	draw_objects(tcones,    tcone_groups,    dstate, 0.08, shadow_only, 1); // dist_scale=0.08, has_immediate_draw=1
-	draw_objects(swings,    swing_groups,    dstate, 0.06, shadow_only, 1); // dist_scale=0.06, has_immediate_draw=1
-	draw_objects(tramps,    tramp_groups,    dstate, 0.10, shadow_only, 1); // dist_scale=0.10, has_immediate_draw=1
-	draw_objects(umbrellas, umbrella_groups, dstate, 0.18, shadow_only, 1); // dist_scale=0.18, has_immediate_draw=1
-	draw_objects(bikes,     bike_groups,     dstate, 0.025,shadow_only, 1); // dist_scale=0.025,has_immediate_draw=1
-	draw_objects(dumpsters, dumpster_groups, dstate, 0.15, shadow_only, 1); // dist_scale=0.15, has_immediate_draw=1
-	draw_objects(plants,    plant_groups,    dstate, 0.04, shadow_only, 1); // dist_scale=0.05, has_immediate_draw=1
-	draw_objects(flowers,   flower_groups,   dstate, 0.06, shadow_only, 1); // dist_scale=0.06, has_immediate_draw=1
-	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1); // dist_scale=0.25, has_immediate_draw=1
-	draw_objects(p_solars,  p_solar_groups,  dstate, 0.40, shadow_only, 0); // dist_scale=0.20, has_immediate_draw=0
-	draw_objects(elevators, wwe_groups,      dstate, 0.15, shadow_only, 0); // dist_scale=0.15, has_immediate_draw=0; draw first pass opaque geometry
+	draw_objects(fhydrants, fhydrant_groups, dstate, 0.06, shadow_only, 1);
+	draw_objects(sstations, sstation_groups, dstate, 0.15, shadow_only, 1);
+	draw_objects(fountains, fountain_groups, dstate, 0.20, shadow_only, 1);
+	draw_objects(mboxes,    mbox_groups,     dstate, 0.04, shadow_only, 1);
+	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0);
+	draw_objects(signs,     sign_groups,     dstate, 0.25, shadow_only, 1, 1); // draw_qbd_as_quads=1
+	draw_objects(flags,     flag_groups,     dstate, 0.18, shadow_only, 1);
+	draw_objects(newsracks, nrack_groups,    dstate, 0.10, shadow_only, 0);
+	draw_objects(tcones,    tcone_groups,    dstate, 0.08, shadow_only, 1);
+	draw_objects(swings,    swing_groups,    dstate, 0.06, shadow_only, 1);
+	draw_objects(tramps,    tramp_groups,    dstate, 0.10, shadow_only, 1);
+	draw_objects(umbrellas, umbrella_groups, dstate, 0.18, shadow_only, 1);
+	draw_objects(bikes,     bike_groups,     dstate, 0.025,shadow_only, 1);
+	draw_objects(dumpsters, dumpster_groups, dstate, 0.15, shadow_only, 1);
+	draw_objects(plants,    plant_groups,    dstate, 0.04, shadow_only, 1);
+	draw_objects(flowers,   flower_groups,   dstate, 0.06, shadow_only, 1);
+	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1);
+	draw_objects(p_solars,  p_solar_groups,  dstate, 0.40, shadow_only, 0);
+	draw_objects(elevators, wwe_groups,      dstate, 0.15, shadow_only, 0); // draw first pass opaque geometry
+	draw_objects(bballs,    bball_groups,    dstate, 0.12, shadow_only, 1);
+	draw_objects(pfloats,   pfloat_groups,   dstate, 0.15, shadow_only, 1);
 	
 	if (!shadow_only) { // non shadow casting objects
-		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0); // dist_scale=0.12, has_immediate_draw=0
-		draw_objects(manholes, manhole_groups, dstate, 0.07, shadow_only, 1); // dist_scale=0.07, has_immediate_draw=1
-		draw_objects(pigeons,  pigeon_groups,  dstate, 0.03, shadow_only, 1); // dist_scale=0.03, has_immediate_draw=1
-		draw_objects(birds,    bird_groups,    dstate, 0.03, shadow_only, 1); // dist_scale=0.03, has_immediate_draw=1
-		draw_objects(pladders, plad_groups,    dstate, 0.06, shadow_only, 1); // dist_scale=0.06, has_immediate_draw=1
-		draw_objects(ppaths,   ppath_groups,   dstate, 0.25, shadow_only, 0, 1); // dist_scale=0.25, has_immediate_draw=0, draw_qbd_as_quads=1
+		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0);
+		draw_objects(manholes, manhole_groups, dstate, 0.07, shadow_only, 1);
+		draw_objects(pigeons,  pigeon_groups,  dstate, 0.03, shadow_only, 1);
+		draw_objects(birds,    bird_groups,    dstate, 0.03, shadow_only, 1);
+		draw_objects(pladders, plad_groups,    dstate, 0.06, shadow_only, 1);
+		draw_objects(ppaths,   ppath_groups,   dstate, 0.25, shadow_only, 0, 1); // draw_qbd_as_quads=1
 
 		for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {dirt bottom, dark blur}
 			draw_objects(ponds, pond_groups, dstate, 0.30, shadow_only, 1); // dist_scale=0.30, has_immediate_draw=1
@@ -2167,7 +2221,8 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(elevators, wwe_groups,      pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(pdecks,    pdeck_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(p_solars,  p_solar_groups,  pos, p_last, radius, xlate, cnorm)) return 1;
-	// Note: no coll with tree_planters because the tree coll should take care of it; no coll with hcaps, manholes, tcones, flowers, pladders, pigeons, ppaths, or birds
+	// Note: no coll with tree_planters because the tree coll should take care of it;
+	// no coll with hcaps, manholes, tcones, flowers, pladders, bballs, pfloats, pigeons, ppaths, or birds
 	return 0;
 }
 
@@ -2200,7 +2255,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(pillars,   pillar_groups,   p1, p2, t, ret);
 	check_vector_line_intersect(elevators, wwe_groups,      p1, p2, t, ret);
 	check_vector_line_intersect(dumpsters, dumpster_groups, p1, p2, t, ret);
-	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, tcones, flowers, pladders, pool decks, pigeons, ppaths, or birds;
+	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, tcones, flowers, pladders, pdecks, bballs, pfloats, pigeons, ppaths, or birds;
 	// mboxes, swings, tramps, umbrellas, bikes, plants, ponds, p_solars, and momorail are ignored because they're small or not simple shapes
 	return ret;
 }

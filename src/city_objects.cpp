@@ -639,6 +639,20 @@ bool swimming_pool_t::update_depth_if_underwater(point const &p, float &depth) c
 	depth = (water_zval - pos.z);
 	return 1;
 }
+bool swimming_pool_t::place_obj_on_water(point &obj_pos, float obj_radius, float submerge_amt, rand_gen_t &rgen) const {
+	float const min_spacing(2.0*obj_radius), ball_zval(get_water_zval() - submerge_amt); // place below the water level
+	cube_t place_area(bcube);
+	place_area.expand_by_xy(-min_spacing); // add some padding
+	if (!place_area.is_strictly_normalized()) return 0; // no space; shouldn't get here
+
+	for (unsigned n = 0; n < 10; ++n) {
+		point const cand_pos(rgen.gen_rand_cube_point_xy(place_area, ball_zval));
+		if (above_ground && !dist_xy_less_than(cand_pos, pos, (get_radius() - min_spacing))) continue; // outside the circle
+		obj_pos = cand_pos;
+		return 1;
+	}
+	return 0;
+}
 
 // pool decks
 
@@ -712,12 +726,14 @@ bool pool_deck_t::proc_sphere_coll(point &pos_, point const &p_last, float radiu
 
 // beach balls
 
-beach_ball_t::beach_ball_t(point const &pos_, float radius_) : city_obj_t(pos_, radius_) {
+beach_ball_t::beach_ball_t(point const &pos_, float radius_, vector3d const &orient_) : city_obj_t(pos_, radius_), orient(orient_) {
 	pos.z += radius; // centered
 	bcube.set_from_sphere(*this);
 }
 /*static*/ void beach_ball_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {select_texture(get_texture_by_name(ball_types[BALL_TYPE_BEACH].tex_fname));}
+	if (!shadow_only) {bind_default_flat_normal_map();}
+	if (!shadow_only) {dstate.s.set_cur_color(WHITE);}
 	begin_sphere_draw(1); // textured=1
 }
 /*static*/ void beach_ball_t::post_draw(draw_state_t &dstate, bool shadow_only) {
@@ -725,21 +741,30 @@ beach_ball_t::beach_ball_t(point const &pos_, float radius_) : city_obj_t(pos_, 
 }
 void beach_ball_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(1.0f*dist_scale*dstate.get_lod_factor(pos)))));
-	draw_sphere_vbo(pos, radius, ndiv, 1); // textured=1
+	fgPushMatrix();
+	translate_to(pos);
+	rotate_from_v2v(plus_z, orient);
+	uniform_scale(radius);
+	draw_sphere_vbo(all_zeros, 1.0, ndiv, 1); // textured=1
+	fgPopMatrix();
 }
 
 // pool floats
 
-pool_float_t::pool_float_t(point const &pos_, float radius_) : city_obj_t(pos_, radius_) {
+pool_float_t::pool_float_t(point const &pos_, float radius_, colorRGBA const &color_) : city_obj_t(pos_, radius_), color(color_) {
 	bcube.set_from_sphere(*this);
 	set_cube_zvals(bcube, pos.z, pos.z+get_height());
 	pos.z = bcube.zc(); // re-center
 }
 /*static*/ void pool_float_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	// anything?
+	if (!shadow_only) {select_texture(WHITE_TEX);}
+	if (!shadow_only) {bind_default_flat_normal_map();}
 }
 void pool_float_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	// TODO: torus?
+	float const ndiv_scale(dist_scale*dstate.get_lod_factor(pos));
+	unsigned const ndivi(shadow_only ? 12 : max(4U, min(32U, unsigned(1.2f*ndiv_scale)))), ndivo(shadow_only ? 16 : max(4U, min(32U, unsigned(2.0f*ndiv_scale))));
+	dstate.s.set_cur_color(color);
+	draw_torus(pos, get_inner_radius(), get_outer_radius(), ndivi, ndivo);
 }
 
 // newsracks
