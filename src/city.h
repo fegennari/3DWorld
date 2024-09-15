@@ -437,6 +437,7 @@ public:
 	vect_cube_t &get_occluders() {return occlusion_checker.occluders;}
 	bool is_visible_and_unoccluded(cube_t const &c, float dist_scale=1.0) const {return (check_cube_visible(c, dist_scale) && !is_occluded(c));}
 	bool is_occluded(cube_t const &c) const {return (!shadow_only && occlusion_checker.is_occluded(c));}
+	float get_lod_factor(point const &pos) const {return draw_tile_dist/p2p_dist(camera_bs, pos);}
 	virtual void draw_unshadowed() {}
 	void begin_tile(point const &pos, bool will_emit_now=0, bool ensure_active=0);
 	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_, bool always_setup_shader, bool enable_animations=0, bool enable_occlusion=1);

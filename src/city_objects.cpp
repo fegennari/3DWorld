@@ -262,7 +262,7 @@ void trashcan_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 
 	if (is_cylin) { // cylindrical residential trashcan
-		unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(2.0f*dist_scale*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, pos)))));
+		unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(2.0f*dist_scale*dstate.get_lod_factor(pos)))));
 		float const cylin_radius(get_cylin_radius()), lid_radius(1.08*cylin_radius), height(bcube.dz());
 		point const rim_center(pos.x, pos.y, (bcube.z1() + 0.88*height)), lid_center(pos.x, pos.y, (bcube.z1() + 0.96*bcube.dz()));
 		draw_fast_cylinder(point(pos.x, pos.y, bcube.z1()), rim_center, cylin_radius, cylin_radius, ndiv, 1, 0); // draw sides only
@@ -724,7 +724,7 @@ beach_ball_t::beach_ball_t(point const &pos_, float radius_) : city_obj_t(pos_, 
 	end_sphere_draw();
 }
 void beach_ball_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(2.0f*dist_scale/p2p_dist(dstate.camera_bs, pos)))));
+	unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(1.0f*dist_scale*dstate.get_lod_factor(pos)))));
 	draw_sphere_vbo(pos, radius, ndiv, 1); // textured=1
 }
 
@@ -1325,7 +1325,7 @@ manhole_t::manhole_t(point const &pos_, float radius_) : city_obj_t(pos_, radius
 	dstate.s.set_cur_color(colorRGBA(0.5, 0.35, 0.25, 1.0)); // gray-brown
 }
 void manhole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	unsigned const ndiv(max(4U, min(32U, unsigned(1.0f*dist_scale*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, pos)))));
+	unsigned const ndiv(max(4U, min(32U, unsigned(1.0f*dist_scale*dstate.get_lod_factor(pos)))));
 	draw_circle_normal(0.0, radius, ndiv, 0, point(pos.x, pos.y, pos.z+get_height()), -1.0); // draw top surface, invert texture coords
 }
 
@@ -1357,7 +1357,7 @@ void traffic_cone_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float di
 	cube_t base(bcube);
 	base.z2() = bcube.z1() + 0.05*bcube.dz();
 	color_wrapper const cw(colorRGBA(1.0, 0.25, 0.0, 1.0)); // dark orange
-	unsigned const ndiv(max(4U, min(32U, unsigned(2.0f*dist_scale*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, pos)))));
+	unsigned const ndiv(max(4U, min(32U, unsigned(2.0f*dist_scale*dstate.get_lod_factor(pos)))));
 	dstate.draw_cube(qbds.untex_qbd, base, color_wrapper(BKGRAY), 1); // skip bottom
 	float const xc(bcube.xc()), yc(bcube.yc());
 	float const cone_height(bcube.z2() - base.z2()), cone_r1(0.54*radius), cone_r2(0.13*radius), cone_dr(cone_r1 - cone_r2);
@@ -1602,7 +1602,7 @@ void pillar_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sca
 	if (is_concrete != (dstate.pass_ix == 0)) return; // wrong pass
 	if (is_concrete) {dstate.draw_cube(qbds.qbd, bcube, WHITE, 1, 16.0, 4);} // skip top and bottom
 	else {
-		unsigned const ndiv(shadow_only ? 8 : max(4U, min(32U, unsigned(2.0f*dist_scale*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, pos)))));
+		unsigned const ndiv(shadow_only ? 8 : max(4U, min(32U, unsigned(2.0f*dist_scale*dstate.get_lod_factor(pos)))));
 		float const cylin_radius(get_cylin_radius());
 		draw_fast_cylinder(point(pos.x, pos.y, bcube.z1()), point(pos.x, pos.y, bcube.z2()), cylin_radius, cylin_radius, ndiv, 1, 0); // draw sides only
 	}
