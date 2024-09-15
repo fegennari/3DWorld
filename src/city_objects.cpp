@@ -540,7 +540,7 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 				float const ladder_height(1.2*height), step_delta(ladder_height/(num_steps + 0.25)), step_offset(0.25*step_delta), step_height(0.14*step_delta);
 				ladder.d[dim][!dir] = side_pos;
 				ladder.d[dim][ dir] = side_pos + swidth;
-				set_wall_width(ladder, (dim ? xc : yc), 0.16*radius, !dim);
+				set_wall_width(ladder, (dim ? xc : yc), 0.1*radius, !dim);
 				bool const is_close(bcube.closest_dist_less_than(camera_bs, 0.2*dscale));
 				bool const is_very_close(is_close && bcube.closest_dist_less_than(camera_bs, 0.1*dscale));
 
