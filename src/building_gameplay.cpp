@@ -22,7 +22,8 @@ bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
 
 extern bool camera_in_building, player_is_hiding, player_in_unlit_room, disable_blood;
-extern int window_width, window_height, display_framerate, display_mode, game_mode, building_action_key, frame_counter, player_in_basement, player_in_water, animate2;
+extern int window_width, window_height, display_framerate, display_mode, game_mode, building_action_key, frame_counter, player_in_basement, player_in_water;
+extern int animate2, camera_surf_collide;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks, camera_zh;
 extern colorRGBA vignette_color;
@@ -922,7 +923,9 @@ public:
 	}
 	bool apply_fall_damage(float delta_z, float dscale=1.0) {
 		if (!in_building_gameplay_mode()) return 0;
-		if (!camera_in_building)          return 0; // only take fall damage when inside the building (no falling off the roof for now)
+		if (player_wait_respawn)          return 0;
+		if (!camera_surf_collide)         return 0; // no fall damage when flying
+		//if (!camera_in_building)          return 0; // only take fall damage when inside the building (no falling off the roof) - not needed due to terminal velocity logic
 		float const fall_damage_start(3.0*CAMERA_RADIUS); // should be a function of building floor spacing?
 		if (delta_z < fall_damage_start)  return 0; // no damage
 		player_health -= dscale*(delta_z - fall_damage_start)/fall_damage_start;

@@ -1705,12 +1705,15 @@ bool ww_elevator_t::proc_sphere_coll(point &pos_, point const &p_last, float rad
 		if (cnorm) {*cnorm = plus_z;}
 		return 1; // collision with top
 	}
-	float const fc_thick(get_fc_thick()), prev_zval(pos_.z);
+	float const fc_thick(get_fc_thick()), prev_zval(pos_.z), platform_ceiling(platform_zval + get_platform_height());
 	max_eq(pos_.z, (bcube.z1() + fc_thick + radius_)); // standing on the bottom
-	
+
+	if (pzmax > platform_ceiling && pzmax - radius_ < platform_ceiling) { // landing on the ceiling - assume player fell down the elevator shaft
+		apply_building_fall_damage((bcube.z2() - floor_spacing) - platform_zval);
+	}
 	if (point_on_platform(point(pos.x, pos.y, pzmax))) {
-		max_eq(pos_.z, (platform_zval + fc_thick + radius_)); // floor coll
-		min_eq(pos_.z, (platform_zval + get_platform_height() - fc_thick - radius_)); // ceiling coll
+		max_eq(pos_.z, (platform_zval    + fc_thick + radius_)); // floor   coll
+		min_eq(pos_.z, (platform_ceiling - fc_thick - radius_)); // ceiling coll
 	}
 	bool had_coll(pos_.z != prev_zval);
 	cube_with_ix_t sides[4];
