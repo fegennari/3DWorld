@@ -152,8 +152,9 @@ struct swimming_pool_t : public oriented_city_obj_t { // Note: dim and dir are u
 
 	swimming_pool_t(cube_t const &c, colorRGBA const &color_, colorRGBA const &wcolor_, bool above_ground_, bool sloped_, bool dim_, bool dir_) :
 		oriented_city_obj_t(c.get_cube_center(), c.get_bsphere_radius(), dim_, dir_), color(color_), wcolor(wcolor_), above_ground(above_ground_), sloped(sloped_) {bcube = c;}
-	float get_radius    () const {assert(above_ground); return 0.25f*(bcube.dx() + bcube.dy());}
-	float get_water_zval() const {return (bcube.z2() - (above_ground ? 0.1 : 0.06)*bcube.dz());}
+	float get_radius      () const {assert(above_ground); return 0.25f*(bcube.dx() + bcube.dy());}
+	float get_ladder_depth() const {return 0.065*get_radius();}
+	float get_water_zval  () const {return (bcube.z2() - (above_ground ? 0.1 : 0.06)*bcube.dz());}
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;

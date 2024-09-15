@@ -536,7 +536,7 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 				unsigned const num_steps = 5;
 				color_wrapper const step_color(LT_GRAY);
 				cube_t ladder;
-				float const side_pos(bcube.d[dim][dir]), swidth((dir ? 1.0 : -1.0)*0.065*radius); // ladder is on this side of the pool
+				float const side_pos(bcube.d[dim][dir]), swidth((dir ? 1.0 : -1.0)*get_ladder_depth()); // ladder is on this side of the pool
 				float const ladder_height(1.2*height), step_delta(ladder_height/(num_steps + 0.25)), step_offset(0.25*step_delta), step_height(0.14*step_delta);
 				ladder.d[dim][!dir] = side_pos;
 				ladder.d[dim][ dir] = side_pos + swidth;

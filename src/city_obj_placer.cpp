@@ -1401,10 +1401,12 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 		cube_t pool_full_height(pool);
 		if (!above_ground) {pool_full_height.z1() -= inground_pool_depth;} // actual pool extends below the ground
 		bool const sloped(!above_ground && rgen.rand_bool()); // 50% of in-ground pools have sloped bottoms
-		pool_groups.add_obj(swimming_pool_t(pool_full_height, color, wcolor, above_ground, sloped, dim, dir), pools);
+		swimming_pool_t const pool_obj(pool_full_height, color, wcolor, above_ground, sloped, dim, dir);
+		pool_groups.add_obj(pool_obj, pools);
 		unsigned const pre_pool_blockers_end(blockers.size());
 		cube_t pool_collider(pool), ladder;
 		pool_collider.z2() += 0.1*city_params.road_width; // extend upward to make a better collider
+		if (above_ground) {pool_collider.d[dim][dir] += (dir ? 1.0 : -1.0)*pool_obj.get_ladder_depth();} // include external ladder
 		add_cube_to_colliders_and_blockers(pool_collider, colliders, blockers);
 		bool added_deck(0);
 
