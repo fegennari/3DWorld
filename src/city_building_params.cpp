@@ -198,7 +198,8 @@ void building_params_t::init_kw_maps() {
 	kwmr.add("split_prob", cur_mat.split_prob, FP_CHECK_01);
 	kwmr.add("cube_prob",  cur_mat.cube_prob,  FP_CHECK_01);
 	kwmr.add("round_prob", cur_mat.round_prob, FP_CHECK_01);
-	kwmr.add("alt_step_factor_prob", cur_mat.asf_prob, FP_CHECK_01);
+	kwmr.add("alt_step_factor_prob", cur_mat.asf_prob,  FP_CHECK_01);
+	kwmr.add("glass_floor_alpha",    glass_floor_alpha, FP_CHECK_01);
 	// consistency probabilities of houses for cities and blocks
 	kwmr.add("house_same_mat_prob",       house_same_mat_prob,       FP_CHECK_01);
 	kwmr.add("house_same_size_prob",      house_same_size_prob,      FP_CHECK_01);

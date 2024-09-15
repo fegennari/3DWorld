@@ -2065,8 +2065,9 @@ void building_t::draw_glass_surfaces(vector3d const &xlate) const {
 			subtract_stairs_and_elevators_from_cube(c, floor_parts, 1, 0); // inc_stairs=1, inc_elevators=0 (since we check for player in elevator)
 			bool const was_split(floor_parts.size() > 1);
 			interior->room_geom->glass_floor_split |= was_split;
-			colorRGBA color(GLASS_COLOR);
+			colorRGBA color(GLASS_COLOR, global_building_params.glass_floor_alpha);
 			if (was_split) {color.A *= 2.0;} // if split, back face culling is enabled, bottom side is not drawn, so double the alpha value
+			min_eq(color.A, 1.0f); // clamp, in case it was specified > 0.5 in the config file
 
 			for (cube_t const &f : floor_parts) {
 				// skip faces along building exterior walls; assumes glass floor is in a retail room that spans the entire building bcube;

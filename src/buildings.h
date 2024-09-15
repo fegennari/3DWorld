@@ -325,6 +325,7 @@ struct building_params_t {
 	float wall_split_thresh=4.0, max_fp_wind_xscale=0.0, max_fp_wind_yscale=0.0, basement_water_level_min=0.0, basement_water_level_max=0.0; // interiors
 	float open_door_prob=1.0, locked_door_prob=0.0, basement_prob_house=0.5, basement_prob_office=0.5, ball_prob=0.3, two_floor_retail_prob=0.0; // interior probabilities
 	float split_stack_floorplan_prob=0.0, retail_floorplan_prob=0.0; // floorplan probabilities
+	float glass_floor_alpha=GLASS_COLOR.A;
 	// consistency probabilities of houses for cities and blocks
 	float house_same_mat_prob =0.0, house_same_size_prob =0.0, house_same_geom_prob =0.0, house_same_per_city_prob =0.0;
 	float office_same_mat_prob=0.0, office_same_size_prob=0.0, office_same_geom_prob=0.0, office_same_per_city_prob=0.0;
