@@ -24,7 +24,6 @@ extern float fticks;
 extern building_params_t global_building_params;
 extern bldg_obj_type_t bldg_obj_types[];
 
-bool in_building_gameplay_mode();
 bool ai_follow_player() {return (global_building_params.ai_follow_player || in_building_gameplay_mode());}
 bool can_ai_follow_player(person_t const &person, bool allow_diff_building=0);
 float get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing);

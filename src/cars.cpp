@@ -21,7 +21,6 @@ extern vector<light_source> dl_sources;
 extern city_params_t city_params;
 
 
-bool in_building_gameplay_mode();
 void invalidate_tile_smap_in_region(cube_t const &region, bool repeat_next_frame=0);
 
 float get_clamped_fticks() {return min(fticks, 4.0f);} // clamp to 100ms

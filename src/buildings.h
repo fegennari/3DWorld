@@ -2383,7 +2383,7 @@ public:
 	bool is_sphere_visible(point const &center, float radius, point const &pt) const;
 	bool is_pt_lit(point const &pt) const;
 	bool is_sphere_lit(point const &center, float radius) const;
-};
+}; // end building_t
 
 struct vect_building_t : public vector<building_t> {
 	void ai_room_update(float delta_dir, float dmax, point const &camera_bs, rand_gen_t &rgen);
@@ -2593,6 +2593,7 @@ cube_t register_deck_and_get_part_bounds(unsigned building_id, cube_t const &dec
 bool register_achievement(std::string const &str);
 bool enable_building_indir_lighting_no_cib();
 bool enable_building_indir_lighting();
+bool in_building_gameplay_mode();
 bool player_in_windowless_building();
 bool player_cant_see_outside_building();
 bool player_take_damage(float damage_scale, bool scream=0, int poison_type=0, uint8_t *has_key=nullptr);

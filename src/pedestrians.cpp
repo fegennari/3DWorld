@@ -27,7 +27,6 @@ extern building_params_t global_building_params;
 extern object_model_loader_t building_obj_model_loader; // for umbrella model
 
 
-bool in_building_gameplay_mode(); // from building_gameplay.cpp
 bool ai_follow_player();
 void get_dead_players_in_building(vector<dead_person_t> &dead_players, building_t const &building); // from building_gameplay.cpp
 bool check_city_building_line_coll_bs_any(point const &p1, point const &p2);

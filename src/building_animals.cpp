@@ -26,7 +26,6 @@ extern building_t const *player_building;
 
 float get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing);
 sphere_t get_cur_frame_loudest_sound();
-bool in_building_gameplay_mode();
 void apply_building_gravity(float &vz, float dt_ticks);
 void apply_fc_cube_max_merge_xy(vect_cube_t &cubes);
 void register_fly_attract(bool no_msg);
