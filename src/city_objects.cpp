@@ -1687,8 +1687,18 @@ void draw_cube_frame(draw_state_t &dstate, city_draw_qbds_t &qbds, cube_t const 
 	dstate.draw_cube(qbds.untex_qbd, bot, color, skip_bot);
 	dstate.draw_cube(qbds.untex_qbd, top, color, 0); // skip_bottom=0
 }
+void add_elevator_door_pair(draw_state_t &dstate, city_draw_qbds_t &qbds, cube_t const &doors, colorRGBA const &color, float gap, float open_amt, bool dim) {
+	float const split_pt(doors.get_center_dim(!dim)), open_dist(open_amt*(0.5*doors.get_sz_dim(!dim) - gap));
+
+	for (unsigned d = 0; d < 2; ++d) { // L, R
+		cube_t door(doors);
+		door.d[!dim][!d] = split_pt + (d ? 1.0 : -1.0)*gap;
+		door.translate_dim(!dim, (d ? 1.0 : -1.0)*open_dist);
+		dstate.draw_cube(qbds.untex_qbd, door, color);
+	}
+}
 void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	float const fc_thick(get_fc_thick()), frame_hwidth(0.5*get_glass_thickness());
+	float const fc_thick(get_fc_thick()), glass_thickness(get_glass_thickness()), frame_hwidth(0.5*glass_thickness);
 
 	if (dstate.pass_ix == 0) { // opaque pass
 		draw_cube_frame(dstate, qbds, bcube, fc_thick, frame_hwidth, 1, GRAY); // outer elevator frame; skip_bot=1
@@ -1700,7 +1710,30 @@ void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 		if (!shadow_only && dstate.check_cube_visible(platform, 0.75*dist_scale)) {
 			draw_cube_frame(dstate, qbds, platform, fc_thick, frame_hwidth, 0, LT_GRAY); // skip_bot=0
 		}
-		// TODO: draw upper and lower doors using lo_door_open and hi_door_open
+		// draw lower vertical gate
+		float const floor_thickness(get_floor_thickness());
+		cube_t upper(bcube), lower(bcube);
+		lower.d[dim][0]    = lower.d[dim][1] = bcube.d[dim][dir]; // front face at lower entrance
+		lower.d[dim][dir] += (dir ? 1.0 : -1.0)*1.0*glass_thickness; // set door thickness; extends outward
+		lower.expand_in_dim(!dim, -0.5*glass_thickness); // small shrink
+		lower.z2() = bcube.z1() + floor_spacing + floor_thickness; // overlaps the top a bit
+		lower.translate_dim(2, lo_door_open*(floor_spacing - floor_thickness)); // opens upward
+		dstate.draw_cube(qbds.untex_qbd, lower, DK_GRAY);
+		// draw upper doors
+		float const door_gap(0.1*glass_thickness); // gap to each side
+		set_wall_width(upper, (bcube.d[dim][!dir] + (dir ? -1.0 : 1.0)*0.5*glass_thickness), 0.25*glass_thickness, dim); // inside the walkway exterior wall
+		upper.expand_in_dim(!dim, -0.5*glass_thickness); // small shrink
+		upper.z1() = ww_z1 + fc_thick;
+
+		if (upper.dz() > floor_spacing) { // multi-floor walkway
+			// since the elevator currently only stops at the top floor, draw the lower floor doors as closed
+			cube_t upper_lf(upper);
+			upper.z1() = upper_lf.z2() = upper.z2() - (floor_spacing - fc_thick);
+			//upper.z1() += fc_thick; upper_lf.z2() -= fc_thick; // add a vertical gap? this looks wrong from outside the elevator
+			add_elevator_door_pair(dstate, qbds, upper_lf, GRAY, door_gap, 0.0, dim); // open_amt=0.0
+		}
+		upper.z2() -= fc_thick; // clip off area at top of elevator
+		add_elevator_door_pair(dstate, qbds, upper, GRAY, door_gap, 0.9*hi_door_open, dim); // doesn't fully open
 	}
 	else { // transparent glass pass; draw 4 glass side walls
 		colorRGBA const glass_color(0.8, 1.0, 0.9, 0.25);
@@ -1744,26 +1777,37 @@ bool ww_elevator_t::proc_sphere_coll(point &pos_, point const &p_last, float rad
 	cube_with_ix_t sides[4];
 	get_glass_sides(sides);
 	for (unsigned n = 0; n < 4; ++n) {had_coll |= sphere_cube_int_update_pos(pos_, radius_, (sides[n] + xlate), p_last, 0, cnorm);} // check sides
+	// TODO: lo_door_open
+	// TODO: hi_door_open
 	return had_coll;
 }
 bool ww_elevator_t::point_on_platform(point const &camera_bs, float exp) const {
 	return (bcube.contains_pt_xy_exp(camera_bs, exp) && camera_bs.z > platform_zval && camera_bs.z < platform_zval + get_platform_height());
 }
 void ww_elevator_t::next_frame(point const &camera_bs, float fticks_stable) {
+	bool const door_is_open(lo_door_open > 0.0 || hi_door_open > 0.0);
+	float const door_change_amt(1.0*fticks_stable/TICKS_PER_SECOND); // 1s to full open or close
 	float const fc_thick(0.5*get_floor_thickness()), player_radius(building_t::get_scaled_player_radius());
+	float const platform_zmin(bcube.z1() + fc_thick), platform_zmax(bcube.z2() - get_platform_height() - fc_thick);
 	bool const player_is_inside(point_on_platform(camera_bs, -player_radius)); // fully inside
-	if (move_dir != 0) {platform_zval += move_dir*fticks_stable*bcube.dz()/(6.0*TICKS_PER_SECOND);}
+	if (move_dir != 0 && !door_is_open) {platform_zval += move_dir*fticks_stable*bcube.dz()/(6.0*TICKS_PER_SECOND);} // can't move if a door is open
 
 	if (move_dir < 0) { // going down
-		float const platform_zmin(bcube.z1() + fc_thick);
 		if (platform_zval <= platform_zmin) {platform_zval = platform_zmin; move_dir = 0;} // hit the bottom
 	}
 	else if (move_dir > 0) { // going up
 		if (player_is_inside) {} // TODO: some way for the player to select a walkway floor, rather than always going to the top floor
-		float const platform_zmax(bcube.z2() - get_platform_height() - fc_thick);
 		if (platform_zval >= platform_zmax) {platform_zval = platform_zmax; move_dir = 0;} // hit the top
 	}
-	if (move_dir == 0 && !player_was_inside && lo_door_open == 0.0 && hi_door_open == 0.0) { // not moving, player not in elevator last frame, and no doors are open
+	if (move_dir != 0) { // moving or will move, make sure both doors are closed
+		lo_door_open = max(0.0f, (lo_door_open - door_change_amt));
+		hi_door_open = max(0.0f, (hi_door_open - door_change_amt));
+	}
+	else { // stopped; change any doors that had started opening to fully open
+		if (platform_zval == platform_zmin) {lo_door_open = min(1.0f, (lo_door_open + door_change_amt));}
+		if (platform_zval == platform_zmax) {hi_door_open = min(1.0f, (hi_door_open + door_change_amt));}
+	}
+	if (move_dir == 0 && !player_was_inside) { // not moving, and player not in elevator last frame
 		bool const player_above(camera_bs.z > bcube.zc());
 		if (player_is_inside) {move_dir = (player_above ? -1 :  1);} // player on elevator, move to opposite end
 		else                  {move_dir = (player_above ?  1 : -1);} // move to whatever end is closer to the player
