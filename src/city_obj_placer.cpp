@@ -585,7 +585,6 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 					if (intersects_city_obj(ebc_exp, elevators) || intersects_city_obj(ebc_exp, walkways, w.bcube)) continue; // exclude ourself
 					ww_elevator_t const elevator(ebc, !w.dim, dir, w.floor_spacing, w.bcube.z1());
 					w.attach_elevator(elevator);
-					// TODO: must attach elevator to building walkway as well so that interior wall is cut out and the player can enter the elevator
 					wwe_groups.add_obj(elevator, elevators);
 					add_cube_to_colliders_and_blockers(ebc, colliders, blockers);
 					break; // only one side needed

@@ -4,6 +4,7 @@
 
 #include "city_objects.h"
 #include "lightmap.h" // for light_source
+#include "openal_wrap.h"
 
 extern bool player_in_walkway;
 extern int animate2, display_mode;
@@ -1818,6 +1819,7 @@ bool ww_elevator_t::point_on_platform(point const &camera_bs, float exp) const {
 }
 void ww_elevator_t::next_frame(point const &camera_bs, float fticks_stable) {
 	bool const door_is_open(lo_door_open > 0.0 || hi_door_open > 0.0);
+	float const prev_ldo(lo_door_open), prev_hdo(hi_door_open);
 	float const door_change_amt(1.0*fticks_stable/TICKS_PER_SECOND); // 1s to full open or close
 	float const fc_thick(0.5*get_floor_thickness()), player_radius(building_t::get_scaled_player_radius());
 	float const platform_zmin(bcube.z1() + fc_thick), platform_zmax(bcube.z2() - get_platform_height() - fc_thick);
@@ -1838,6 +1840,18 @@ void ww_elevator_t::next_frame(point const &camera_bs, float fticks_stable) {
 	else { // stopped; change any doors that had started opening to fully open
 		if (platform_zval == platform_zmin) {lo_door_open = min(1.0f, (lo_door_open + door_change_amt));}
 		if (platform_zval == platform_zmax) {hi_door_open = min(1.0f, (hi_door_open + door_change_amt));}
+	}
+	if (!door_is_open && (lo_door_open > 0.0 || hi_door_open > 0.0)) { // door beings to open
+		point const beep_pos(bcube.xc(), bcube.yc(), (platform_zval + 0.5*floor_spacing));
+
+		if (player_is_inside || dist_less_than(camera_bs, beep_pos, 4.0*bcube.get_sz_dim(!dim))) { // player is close
+			gen_sound_thread_safe(SOUND_BEEP, (beep_pos + get_camera_coord_space_xlate()), 0.5, 0.75); // lower frequency beep
+		}
+	}
+	if (player_is_inside) { // play sliding sound when either door starts moving open or closed
+		if ((prev_ldo==0.0 && lo_door_open>0.0) || (prev_ldo==1.0 && lo_door_open<1.0) || (prev_hdo==0.0 && hi_door_open>0.0) || (prev_hdo==1.0 && hi_door_open<1.0)) {
+			gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.75);
+		}
 	}
 	if (move_dir == 0 && !player_was_inside) { // not moving, and player not in elevator last frame
 		bool const player_above(camera_bs.z > bcube.zc());
