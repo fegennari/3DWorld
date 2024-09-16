@@ -480,7 +480,7 @@ tape_manager_t tape_manager;
 unsigned const NUM_ACHIEVEMENTS = 17;
 
 class achievement_tracker_t {
-	// Rat Food, Top Secret Document, Mr. Yuck, Zombie Hunter, Royal Flush, Zombie Bashing, One More Drink, Bathroom Reader, TP Artist,
+	// Rat Food, Fish Food, Top Secret Document, Mr. Yuck, Zombie Hunter, Royal Flush, Zombie Bashing, One More Drink, Bathroom Reader, TP Artist,
 	// Master Lockpick, Squeaky Clean, Sleep with the Fishes, Splat the Spider, 7 years of bad luck, Tastes Like Chicken, Spam Risk, Ball in Pocket
 	set<string> achievements;
 	// some way to make this persistent, print these out somewhere, or add small screen icons?

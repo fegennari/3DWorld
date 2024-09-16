@@ -13,6 +13,7 @@ extern float fticks;
 bool check_ramp_collision(room_object_t const &c, point &pos, float radius, vector3d *cnorm);
 bool add_water_splash(point const &pos, float radius, float size);
 void draw_animated_fish_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, float anim_time, colorRGBA const &color);
+bool play_attack_sound(point const &pos, float gain, float pitch, rand_gen_t &rgen);
 
 
 int get_future_frame(float min_secs, float max_secs, rand_gen_t &rgen) {
@@ -23,6 +24,7 @@ int get_future_frame(float min_secs, float max_secs, rand_gen_t &rgen) {
 class fish_manager_t {
 	struct fish_t {
 		float radius=0.0, mspeed=0.0, tspeed=0.0, speed_mult=1.0; // movement speed and tail speed
+		bool attacks_player=0;
 		unsigned id=0;
 		int next_splash_frame=0, next_turn_frame=0, next_speed_frame=0, next_alert_frame=0;
 		point pos; // p_last?
@@ -75,6 +77,7 @@ class fish_manager_t {
 				f.tspeed = rgen.rand_uniform(0.8, 1.2)/TICKS_PER_SECOND;
 				f.mspeed = speed_mult*f.tspeed; // movement speed is also modulated by the tail animation speed
 				f.id     = id++;
+				f.attacks_player = rgen.rand_bool(); // 50% of the time; only applies to swimming pool and flooded basement fish
 				for (unsigned d = 0; d < 3; ++d) {f.color[d] *= rgen.rand_uniform(0.8, 1.0);} // slight color variation
 				cube_t const valid_area(get_valid_area(1.05*f.radius)); // slightly larger radius so that we don't start out intersecting
 
@@ -94,8 +97,8 @@ class fish_manager_t {
 					f.dir = delta_dir*f.target_dir + (1.0 - delta_dir)*f.dir;
 					if (f.dir == zero_vector) {f.dir = assign_fish_dir();} // error?
 					else {f.dir.normalize();}
-					if (dot_product(f.dir, f.target_dir) > 0.95) {f.target_dir = zero_vector;} // turn complete
-					continue;
+					if (dot_product(f.dir, f.target_dir) < 0.95) continue; // still turning
+					f.target_dir = zero_vector; // turn complete
 				}
 				cube_t const valid_area(get_valid_area(f.radius));
 				point const prev_pos(f.pos);
@@ -180,7 +183,7 @@ class fish_manager_t {
 		}
 	}; // fishtank_t
 
-	class area_fish_cont_t : public fish_cont_t {
+	class area_fish_cont_t : public fish_cont_t { // base class for swimming pools and flooded basements
 	protected:
 		vect_cube_t obstacles;
 		bool test_line_of_sight=0;
@@ -194,18 +197,45 @@ class fish_manager_t {
 				if (f.can_splash(rgen) && camera_pdu.sphere_visible_test((f.pos + xlate), f.radius)) {add_water_splash(f.pos, 2.0*f.radius, 0.25);}
 			}
 			if (player_in_water) { // handle player interaction
+				float const player_radius(building_t::get_scaled_player_radius()), player_height(get_bldg_player_height());
 				point const camera_bs(get_camera_pos() - xlate);
 
 				for (fish_t &f : fish) {
 					if (f.has_target()) continue; // skip if recently collided
 					if (frame_counter < f.next_alert_frame) continue; // distracted by a collision; required to avoid getting stuck against a wall
-					float const alert_radius(4.0*(CAMERA_RADIUS + f.radius));
-					if (!dist_xy_less_than(camera_bs, f.pos, alert_radius)) continue; // not close enough
-					point const test_pt(camera_bs.x, camera_bs.y, f.pos.z); // at fish zval
-					if (dot_product_ptv(f.dir, test_pt, f.pos) < 0.0) continue; // moving away from the player
-					if (test_line_of_sight && line_int_cubes(test_pt, f.pos, obstacles, cube_t(camera_bs, f.pos))) continue; // not visible
-					f.target_dir = (f.pos - test_pt).get_norm(); // move away from the player
-					max_eq(f.speed_mult, 5.0f*(1.2f - p2p_dist_xy(test_pt, f.pos)/alert_radius)); // higher speed
+					if (f.pos.z < camera_bs.z - player_height || f.pos.z > camera_bs.z + player_radius) continue; // no Z overlap
+
+					if (f.attacks_player && in_building_gameplay_mode()) {
+						if (!dist_xy_less_than(camera_bs, f.pos, 10.0*(CAMERA_RADIUS + f.radius))) continue; // not close enough to attack
+						float const coll_dist(player_radius + f.radius);
+						point const test_pt(camera_bs.x, camera_bs.y, f.pos.z); // at fish zval
+
+						if (dist_xy_less_than(test_pt, f.pos, coll_dist)) { // collided with the player
+							f.pos = test_pt + coll_dist*(f.pos - test_pt).get_norm(); // move to not collide
+							get_valid_area(f.radius).clamp_pt(f.pos);
+							play_attack_sound((f.pos + get_camera_coord_space_xlate()), 1.0, 1.0, rgen);
+							bool const player_dead(player_take_damage(0.001)); // small damage
+							if (player_dead) {register_achievement("Fish Food");} // damage over time; achievement if the player dies
+							// Note: no blood decal or dropping of inventory items in the water
+						}
+						bool visible(1); // check for player visibilty
+
+						for (cube_t const &c : obstacles) {
+							if (c.line_intersects(camera_bs, f.pos)) {visible = 0; break;}
+						}
+						if (!visible) continue;
+						f.target_dir = (test_pt - f.pos).get_norm(); // move toward the player
+						max_eq(f.speed_mult, 2.0f); // faster
+					}
+					else { // avoid player
+						float const alert_dist(4.0*(CAMERA_RADIUS + f.radius));
+						if (!dist_xy_less_than(camera_bs, f.pos, alert_dist)) continue; // not close enough
+						point const test_pt(camera_bs.x, camera_bs.y, f.pos.z); // at fish zval
+						if (dot_product_ptv(f.dir, test_pt, f.pos) < 0.0) continue; // moving away from the player
+						if (test_line_of_sight && line_int_cubes(test_pt, f.pos, obstacles, cube_t(camera_bs, f.pos))) continue; // not visible
+						f.target_dir = (f.pos - test_pt).get_norm(); // move away from the player
+						max_eq(f.speed_mult, 5.0f*(1.2f - p2p_dist_xy(test_pt, f.pos)/alert_dist)); // higher speed
+					}
 				} // for f
 			}
 		}
