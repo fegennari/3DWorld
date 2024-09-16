@@ -1573,7 +1573,7 @@ bool walkway_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_
 			cube_t exit_area(elevator_cut + xlate);
 			exit_area.expand_in_dim(dim, -radius_); // must be fully between doors
 			exit_area.d[!dim][elevator_dir] += 1.1*(elevator_dir ? 1.0 : -1.0)*radius_;
-			if (exit_area.contains_pt_xy(pos_)) return floor_coll; // in elevator exit; no side clamp
+			if (exit_area.contains_pt_xy(pos_)) return 0; // in elevator exit; no side clamp; not considered a collision - leave it up to the elevator door coll
 		}
 		point const prev(pos_);
 		max_eq(pos_[!dim], bc.d[!dim][0]+radius_); // clamp in !dim
@@ -1687,15 +1687,42 @@ void draw_cube_frame(draw_state_t &dstate, city_draw_qbds_t &qbds, cube_t const 
 	dstate.draw_cube(qbds.untex_qbd, bot, color, skip_bot);
 	dstate.draw_cube(qbds.untex_qbd, top, color, 0); // skip_bottom=0
 }
-void add_elevator_door_pair(draw_state_t &dstate, city_draw_qbds_t &qbds, cube_t const &doors, colorRGBA const &color, float gap, float open_amt, bool dim) {
-	float const split_pt(doors.get_center_dim(!dim)), open_dist(open_amt*(0.5*doors.get_sz_dim(!dim) - gap));
+void get_elevator_door_pair(cube_t const &doors_area, float gap, float open_amt, bool dim, cube_t doors[2]) {
+	float const split_pt(doors_area.get_center_dim(!dim)), open_dist(open_amt*(0.5*doors_area.get_sz_dim(!dim) - gap));
 
 	for (unsigned d = 0; d < 2; ++d) { // L, R
-		cube_t door(doors);
+		cube_t door(doors_area);
 		door.d[!dim][!d] = split_pt + (d ? 1.0 : -1.0)*gap;
 		door.translate_dim(!dim, (d ? 1.0 : -1.0)*open_dist);
-		dstate.draw_cube(qbds.untex_qbd, door, color);
+		doors[d] = door;
 	}
+}
+// {bottom, top upper floor left, top upper floor right, top lower floor left, top lower floor right}
+void ww_elevator_t::get_door_cubes(cube_t doors[5]) const {
+	// add lower door/gate
+	float const fc_thick(get_fc_thick()), glass_thickness(get_glass_thickness()), floor_thickness(get_floor_thickness());
+	cube_t upper(bcube), lower(bcube);
+	lower.d[dim][0]    = lower.d[dim][1] = bcube.d[dim][dir]; // front face at lower entrance
+	lower.d[dim][dir] += (dir ? 1.0 : -1.0)*1.0*glass_thickness; // set door thickness; extends outward
+	lower.expand_in_dim(!dim, -0.5*glass_thickness); // small shrink
+	lower.z2() = bcube.z1() + floor_spacing + floor_thickness; // overlaps the top a bit
+	lower.translate_dim(2, lo_door_open*(floor_spacing - floor_thickness)); // opens upward
+	doors[0] = lower;
+	// add upper doors
+	float const door_gap(0.1*glass_thickness); // gap to each side
+	set_wall_width(upper, (bcube.d[dim][!dir] + (dir ? -1.0 : 1.0)*0.5*glass_thickness), 0.25*glass_thickness, dim); // inside the walkway exterior wall
+	upper.expand_in_dim(!dim, -0.5*glass_thickness); // small shrink
+	upper.z1() = ww_z1 + fc_thick;
+
+	if (upper.dz() > floor_spacing) { // multi-floor walkway
+		// since the elevator currently only stops at the top floor, draw the lower floor doors as closed
+		cube_t upper_lf(upper);
+		upper.z1() = upper_lf.z2() = upper.z2() - (floor_spacing - fc_thick);
+		//upper.z1() += fc_thick; upper_lf.z2() -= fc_thick; // add a vertical gap? this looks wrong from outside the elevator
+		get_elevator_door_pair(upper_lf, door_gap, 0.0, dim, doors+3); // open_amt=0.0
+	}
+	upper.z2() -= fc_thick; // clip off area at top of elevator
+	get_elevator_door_pair(upper, door_gap, 0.9*hi_door_open, dim, doors+1); // doesn't fully open
 }
 void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	float const fc_thick(get_fc_thick()), glass_thickness(get_glass_thickness()), frame_hwidth(0.5*glass_thickness);
@@ -1710,30 +1737,15 @@ void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 		if (!shadow_only && dstate.check_cube_visible(platform, 0.75*dist_scale)) {
 			draw_cube_frame(dstate, qbds, platform, fc_thick, frame_hwidth, 0, LT_GRAY); // skip_bot=0
 		}
+		cube_t doors[5]; // {bottom, top upper floor left, top upper floor right, top lower floor left, top lower floor right}
+		get_door_cubes(doors);
 		// draw lower vertical gate
-		float const floor_thickness(get_floor_thickness());
-		cube_t upper(bcube), lower(bcube);
-		lower.d[dim][0]    = lower.d[dim][1] = bcube.d[dim][dir]; // front face at lower entrance
-		lower.d[dim][dir] += (dir ? 1.0 : -1.0)*1.0*glass_thickness; // set door thickness; extends outward
-		lower.expand_in_dim(!dim, -0.5*glass_thickness); // small shrink
-		lower.z2() = bcube.z1() + floor_spacing + floor_thickness; // overlaps the top a bit
-		lower.translate_dim(2, lo_door_open*(floor_spacing - floor_thickness)); // opens upward
-		dstate.draw_cube(qbds.untex_qbd, lower, DK_GRAY);
-		// draw upper doors
-		float const door_gap(0.1*glass_thickness); // gap to each side
-		set_wall_width(upper, (bcube.d[dim][!dir] + (dir ? -1.0 : 1.0)*0.5*glass_thickness), 0.25*glass_thickness, dim); // inside the walkway exterior wall
-		upper.expand_in_dim(!dim, -0.5*glass_thickness); // small shrink
-		upper.z1() = ww_z1 + fc_thick;
+		dstate.draw_cube(qbds.untex_qbd, doors[0], GRAY);
 
-		if (upper.dz() > floor_spacing) { // multi-floor walkway
-			// since the elevator currently only stops at the top floor, draw the lower floor doors as closed
-			cube_t upper_lf(upper);
-			upper.z1() = upper_lf.z2() = upper.z2() - (floor_spacing - fc_thick);
-			//upper.z1() += fc_thick; upper_lf.z2() -= fc_thick; // add a vertical gap? this looks wrong from outside the elevator
-			add_elevator_door_pair(dstate, qbds, upper_lf, GRAY, door_gap, 0.0, dim); // open_amt=0.0
+		// draw upper doors
+		for (unsigned n = 1; n < 5; ++n) {
+			if (!doors[n].is_all_zeros()) {dstate.draw_cube(qbds.untex_qbd, doors[n], GRAY, 1, 1.0, 4);} // skip top and bottom, since they're covered by trim
 		}
-		upper.z2() -= fc_thick; // clip off area at top of elevator
-		add_elevator_door_pair(dstate, qbds, upper, GRAY, door_gap, 0.9*hi_door_open, dim); // doesn't fully open
 	}
 	else { // transparent glass pass; draw 4 glass side walls
 		colorRGBA const glass_color(0.8, 1.0, 0.9, 0.25);
@@ -1777,8 +1789,13 @@ bool ww_elevator_t::proc_sphere_coll(point &pos_, point const &p_last, float rad
 	cube_with_ix_t sides[4];
 	get_glass_sides(sides);
 	for (unsigned n = 0; n < 4; ++n) {had_coll |= sphere_cube_int_update_pos(pos_, radius_, (sides[n] + xlate), p_last, 0, cnorm);} // check sides
-	// TODO: lo_door_open
-	// TODO: hi_door_open
+	// handle door collisions from either inside or outside the elevator
+	cube_t doors[5];
+	get_door_cubes(doors);
+
+	for (unsigned n = 0; n < 5; ++n) {
+		if (!doors[n].is_all_zeros()) {had_coll |= sphere_cube_int_update_pos(pos_, radius_, (doors[n] + xlate), p_last, 0, cnorm);}
+	}
 	return had_coll;
 }
 bool ww_elevator_t::point_on_platform(point const &camera_bs, float exp) const {

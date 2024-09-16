@@ -364,6 +364,7 @@ struct ww_elevator_t : public oriented_city_obj_t {
 	float get_glass_thickness() const {return 0.75*get_floor_thickness();}
 	float get_platform_height() const {return (floor_spacing - get_floor_thickness());} // same as building get_floor_ceil_gap()
 	void get_glass_sides(cube_with_ix_t sides[4]) const;
+	void get_door_cubes(cube_t doors[5]) const;
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 	bool point_on_platform(point const &camera_bs, float exp=0.0) const;
