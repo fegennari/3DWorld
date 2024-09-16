@@ -1703,7 +1703,7 @@ void ww_elevator_t::get_door_cubes(cube_t doors[5]) const {
 	float const fc_thick(get_fc_thick()), glass_thickness(get_glass_thickness()), floor_thickness(get_floor_thickness());
 	cube_t upper(bcube), lower(bcube);
 	lower.d[dim][0]    = lower.d[dim][1] = bcube.d[dim][dir]; // front face at lower entrance
-	lower.d[dim][dir] += (dir ? 1.0 : -1.0)*1.0*glass_thickness; // set door thickness; extends outward
+	lower.d[dim][dir] += (dir ? 1.0 : -1.0)*0.5*glass_thickness; // set door thickness; extends outward
 	lower.expand_in_dim(!dim, -0.5*glass_thickness); // small shrink
 	lower.z2() = bcube.z1() + floor_spacing + floor_thickness; // overlaps the top a bit
 	lower.translate_dim(2, lo_door_open*(floor_spacing - floor_thickness)); // opens upward
@@ -1740,8 +1740,23 @@ void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 		cube_t doors[5]; // {bottom, top upper floor left, top upper floor right, top lower floor left, top lower floor right}
 		get_door_cubes(doors);
 		// draw lower vertical gate
-		dstate.draw_cube(qbds.untex_qbd, doors[0], GRAY);
+		colorRGBA const gate_color(BLACK);
+		cube_t const &gate(doors[0]);
+		float const door_width(gate.get_sz_dim(!dim)), bar_thickness(gate.get_sz_dim(dim)), door_height(gate.dz());
+		unsigned const num_v_bars(door_width/building_t::get_scaled_player_radius() + 2), num_h_bars(2);
+		float const bar_hthick(0.5*bar_thickness), vbar_spacing((door_width - bar_thickness)/(num_v_bars-1)), hbar_spacing((door_height - bar_thickness)/(num_h_bars-1));
 
+		for (unsigned n = 0; n < num_v_bars; ++n) { // vertical bars
+			cube_t bar(gate);
+			set_wall_width(bar, (gate.d[!dim][0] + bar_hthick + n*vbar_spacing), bar_hthick, !dim);
+			bar.expand_in_dim(2, -bar_hthick); // remove overlap with h-bars
+			dstate.draw_cube(qbds.untex_qbd, bar, gate_color, 1, 0.0, 4); // skip top and bottom
+		}
+		for (unsigned n = 0; n < num_h_bars; ++n) { // horizontal bars
+			cube_t bar(gate);
+			set_wall_width(bar, (gate.z1() + bar_hthick + n*hbar_spacing), bar_hthick, 2); // Z
+			dstate.draw_cube(qbds.untex_qbd, bar, gate_color);
+		}
 		// draw upper doors
 		for (unsigned n = 1; n < 5; ++n) {
 			if (!doors[n].is_all_zeros()) {dstate.draw_cube(qbds.untex_qbd, doors[n], GRAY, 1, 1.0, 4);} // skip top and bottom, since they're covered by trim
