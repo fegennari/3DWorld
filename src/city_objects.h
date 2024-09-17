@@ -352,17 +352,17 @@ struct pillar_t : public city_obj_t { // for walkway support
 
 struct ww_elevator_t : public oriented_city_obj_t {
 	bool player_was_inside=0;
-	int move_dir=0; // -1=down, 1=up, 0=stopped
-	float floor_spacing, ww_z1, platform_zval, lo_door_open=0.0, hi_door_open=0.0;
+	float floor_spacing, ww_z1, platform_zval, target_pzval, lo_door_open=0.0, hi_door_open=0.0;
 
 	ww_elevator_t(cube_t const &c, bool dim_, bool dir_, float fs, float wwz1) :
-		oriented_city_obj_t(c, dim_, dir_), floor_spacing(fs), ww_z1(wwz1), platform_zval(c.z1()) {set_bsphere_from_bcube();}
+		oriented_city_obj_t(c, dim_, dir_), floor_spacing(fs), ww_z1(wwz1), platform_zval(c.z1()), target_pzval(platform_zval) {set_bsphere_from_bcube();}
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	float get_floor_thickness() const {return 0.5*FLOOR_THICK_VAL_WINDOWLESS*floor_spacing;} // half as thick as a building floor since we have top/bottom of shaft and platform
 	float get_fc_thick       () const {return 0.50*get_floor_thickness();}
 	float get_glass_thickness() const {return 0.75*get_floor_thickness();}
 	float get_platform_height() const {return (floor_spacing - get_floor_thickness());} // same as building get_floor_ceil_gap()
+	unsigned get_num_floors  () const {return round_fp((bcube.z2() - ww_z1)/floor_spacing);} // in walkway
 	void get_glass_sides(cube_with_ix_t sides[4]) const;
 	void get_door_cubes(cube_t doors[5]) const;
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;

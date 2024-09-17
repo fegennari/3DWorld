@@ -1715,7 +1715,7 @@ void ww_elevator_t::get_door_cubes(cube_t doors[5]) const {
 	upper.expand_in_dim(!dim, -0.5*glass_thickness); // small shrink
 	upper.z1() = ww_z1 + fc_thick;
 
-	if (upper.dz() > floor_spacing) { // multi-floor walkway
+	if (get_num_floors() > 1) { // multi-floor walkway
 		// since the elevator currently only stops at the top floor, draw the lower floor doors as closed
 		cube_t upper_lf(upper);
 		upper.z1() = upper_lf.z2() = upper.z2() - (floor_spacing - fc_thick);
@@ -1824,16 +1824,24 @@ void ww_elevator_t::next_frame(point const &camera_bs, float fticks_stable) {
 	float const fc_thick(0.5*get_floor_thickness()), player_radius(building_t::get_scaled_player_radius());
 	float const platform_zmin(bcube.z1() + fc_thick), platform_zmax(bcube.z2() - get_platform_height() - fc_thick);
 	bool const player_is_inside(point_on_platform(camera_bs, -player_radius)); // fully inside
-	if (move_dir != 0 && !door_is_open) {platform_zval += move_dir*fticks_stable*bcube.dz()/(6.0*TICKS_PER_SECOND);} // can't move if a door is open
+	bool const want_to_move(platform_zval != target_pzval);
 
-	if (move_dir < 0) { // going down
-		if (platform_zval <= platform_zmin) {platform_zval = platform_zmin; move_dir = 0;} // hit the bottom
+	if (!door_is_open && want_to_move) { // can't move if a door is open
+		float const targ_dz(target_pzval - platform_zval), move_dist(fticks_stable*(bcube.dz() - floor_spacing)/(6.0*TICKS_PER_SECOND)); // 6s for full height change
+		
+		if (fabs(targ_dz) < move_dist) { // reached dest floor; doors should begin to open
+			platform_zval = target_pzval;
+			point const beep_pos(bcube.xc(), bcube.yc(), (platform_zval + 0.5*floor_spacing));
+
+			if (player_is_inside || dist_less_than(camera_bs, beep_pos, 4.0*bcube.get_sz_dim(!dim))) { // player is close
+				gen_sound_thread_safe(SOUND_BEEP, (beep_pos + get_camera_coord_space_xlate()), 0.5, 0.75); // lower frequency beep
+			}
+		}
+		else { // move toward the target
+			platform_zval += move_dist*SIGN(targ_dz);
+		}
 	}
-	else if (move_dir > 0) { // going up
-		if (player_is_inside) {} // TODO: some way for the player to select a walkway floor, rather than always going to the top floor
-		if (platform_zval >= platform_zmax) {platform_zval = platform_zmax; move_dir = 0;} // hit the top
-	}
-	if (move_dir != 0) { // moving or will move, make sure both doors are closed
+	if (want_to_move) { // moving or will move, make sure both doors are closed
 		lo_door_open = max(0.0f, (lo_door_open - door_change_amt));
 		hi_door_open = max(0.0f, (hi_door_open - door_change_amt));
 	}
@@ -1841,22 +1849,20 @@ void ww_elevator_t::next_frame(point const &camera_bs, float fticks_stable) {
 		if (platform_zval == platform_zmin) {lo_door_open = min(1.0f, (lo_door_open + door_change_amt));}
 		if (platform_zval == platform_zmax) {hi_door_open = min(1.0f, (hi_door_open + door_change_amt));}
 	}
-	if (!door_is_open && (lo_door_open > 0.0 || hi_door_open > 0.0)) { // door beings to open
-		point const beep_pos(bcube.xc(), bcube.yc(), (platform_zval + 0.5*floor_spacing));
-
-		if (player_is_inside || dist_less_than(camera_bs, beep_pos, 4.0*bcube.get_sz_dim(!dim))) { // player is close
-			gen_sound_thread_safe(SOUND_BEEP, (beep_pos + get_camera_coord_space_xlate()), 0.5, 0.75); // lower frequency beep
-		}
-	}
 	if (player_is_inside) { // play sliding sound when either door starts moving open or closed
 		if ((prev_ldo==0.0 && lo_door_open>0.0) || (prev_ldo==1.0 && lo_door_open<1.0) || (prev_hdo==0.0 && hi_door_open>0.0) || (prev_hdo==1.0 && hi_door_open<1.0)) {
 			gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.75);
 		}
 	}
-	if (move_dir == 0 && !player_was_inside) { // not moving, and player not in elevator last frame
+	if (!want_to_move && !player_was_inside) { // not moving, and player not in elevator last frame
 		bool const player_above(camera_bs.z > bcube.zc());
-		if (player_is_inside) {move_dir = (player_above ? -1 :  1);} // player on elevator, move to opposite end
-		else                  {move_dir = (player_above ?  1 : -1);} // move to whatever end is closer to the player
+		if (player_is_inside) {target_pzval = (player_above ? platform_zmin : platform_zmax);} // player on elevator, move to opposite end
+		else                  {target_pzval = (player_above ? platform_zmax : platform_zmin);} // move to whatever end is closer to the player
+	}
+	if (!player_is_inside && !want_to_move && camera_bs.z > ww_z1 && camera_bs.z < bcube.z2() && get_num_floors() > 1) {
+		// check for player on non-upper floor of walkway and stop at that floor
+		int const floors_from_top(floor((bcube.z2() - camera_bs.z)/floor_spacing));
+		target_pzval = platform_zmax - floors_from_top*floor_spacing;
 	}
 	player_was_inside = player_is_inside;
 }
