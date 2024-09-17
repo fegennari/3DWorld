@@ -2039,8 +2039,11 @@ void city_obj_placer_t::next_frame() {
 	if (!animate2) return;
 	float const fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
 	point const camera_bs(get_camera_building_space());
-	for (swingset_t    &s : swings   ) {s.next_frame(camera_bs, fticks_stable);}
-	for (ww_elevator_t &e : elevators) {e.next_frame(camera_bs, fticks_stable);}
+
+	if (all_objs_bcube.contains_pt_xy(camera_bs)) { // player in city (approximate, since all_objs_bcube doesn't cover the entire city)
+		for (swingset_t    &s : swings   ) {s.next_frame(camera_bs, fticks_stable);}
+		for (ww_elevator_t &e : elevators) {e.next_frame(camera_bs, fticks_stable);}
+	}
 	next_frame_birds(camera_bs, fticks_stable);
 }
 
