@@ -14,7 +14,7 @@ float const BIRD_MAX_ALT_RES = 0.8; // above destination; in multiples of road w
 float const BIRD_MAX_ALT_COM = 1.8; // above destination; in multiples of road width; for commercial  cities
 float const anim_time_scale(1.25/TICKS_PER_SECOND);
 
-extern bool camera_in_building;
+extern bool camera_in_building, player_in_walkway;
 extern int frame_counter;
 extern float fticks;
 extern double tfticks;
@@ -289,7 +289,7 @@ void city_bird_t::next_frame(float timestep, float delta_dir, point const &camer
 		bird_moved     = 1;
 		
 		// poop on the player if above and the player is in the open
-		if (!camera_in_building && pos.z > camera_bs.z && dist_xy_less_than(pos, camera_bs, 2.0*CAMERA_RADIUS) && tfticks > next_poop_time) {
+		if (!camera_in_building && !player_in_walkway && pos.z > camera_bs.z && dist_xy_less_than(pos, camera_bs, 2.0*CAMERA_RADIUS) && tfticks > next_poop_time) {
 			placer.add_bird_poop(pos, 0.18*radius, (velocity + 0.001*wind)); // use bird's initial velocity and add a small amount of wind; should wind apply acceleration?
 			next_poop_time = tfticks + rgen.rand_uniform(2.0, 5.0)*TICKS_PER_SECOND; // wait 2-5s before pooping again
 		}
@@ -405,11 +405,14 @@ int city_obj_placer_t::check_path_segment_coll(point const &p1, point const &p2,
 	return 0;
 }
 
-bool city_obj_placer_t::check_bird_walkway_clearance(cube_t const &bc) const { // and skyway
+bool city_obj_placer_t::check_bird_walkway_clearance(cube_t const &bc) const { // and skyway, and elevators
 	for (walkway_t const &w : walkways) {
 		cube_t bc_ext(w.bcube);
 		bc_ext.z1() -= w.floor_spacing; // extend lower edge by one floor for clearance
 		if (bc_ext.intersects_xy(bc)) return 0;
+	}
+	for (ww_elevator_t const &e : elevators) {
+		if (e.bcube.intersects_xy(bc)) return 0;
 	}
 	if (skyway.valid) { // check skyway intersection
 		cube_t bc_ext(skyway.bcube);

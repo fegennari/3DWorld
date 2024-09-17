@@ -353,6 +353,7 @@ struct pillar_t : public city_obj_t { // for walkway support
 struct ww_elevator_t : public oriented_city_obj_t {
 	bool player_was_inside=0;
 	float floor_spacing, ww_z1, platform_zval, target_pzval, lo_door_open=0.0, hi_door_open=0.0;
+	static vect_cube_t doors; // reused across elevators and frames
 
 	ww_elevator_t(cube_t const &c, bool dim_, bool dir_, float fs, float wwz1) :
 		oriented_city_obj_t(c, dim_, dir_), floor_spacing(fs), ww_z1(wwz1), platform_zval(c.z1()), target_pzval(platform_zval) {set_bsphere_from_bcube();}
@@ -364,7 +365,7 @@ struct ww_elevator_t : public oriented_city_obj_t {
 	float get_platform_height() const {return (floor_spacing - get_floor_thickness());} // same as building get_floor_ceil_gap()
 	unsigned get_num_floors  () const {return round_fp((bcube.z2() - ww_z1)/floor_spacing);} // in walkway
 	void get_glass_sides(cube_with_ix_t sides[4]) const;
-	void get_door_cubes(cube_t doors[5]) const;
+	void get_door_cubes() const;
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 	bool point_on_platform(point const &camera_bs, float exp=0.0) const;
