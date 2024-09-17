@@ -1690,16 +1690,6 @@ void draw_cube_frame(draw_state_t &dstate, city_draw_qbds_t &qbds, cube_t const 
 	dstate.draw_cube(qbds.untex_qbd, bot, color, skip_bot);
 	dstate.draw_cube(qbds.untex_qbd, top, color, 0); // skip_bottom=0
 }
-void get_elevator_door_pair(cube_t const &doors_area, float gap, float open_amt, bool dim, vect_cube_t &doors) {
-	float const split_pt(doors_area.get_center_dim(!dim)), open_dist(open_amt*(0.5*doors_area.get_sz_dim(!dim) - gap));
-
-	for (unsigned d = 0; d < 2; ++d) { // L, R
-		cube_t door(doors_area);
-		door.d[!dim][!d] = split_pt + (d ? 1.0 : -1.0)*gap;
-		door.translate_dim(!dim, (d ? 1.0 : -1.0)*open_dist);
-		doors.push_back(door);
-	}
-}
 void ww_elevator_t::get_door_cubes() const {
 	// add lower door/gate
 	doors.clear();
@@ -1715,16 +1705,27 @@ void ww_elevator_t::get_door_cubes() const {
 	float const door_gap(0.1*glass_thickness); // gap to each side
 	set_wall_width(upper, (bcube.d[dim][!dir] + (dir ? -1.0 : 1.0)*0.5*glass_thickness), 0.25*glass_thickness, dim); // inside the walkway exterior wall
 	upper.expand_in_dim(!dim, -0.5*glass_thickness); // small shrink
-	upper.z1() = ww_z1 + fc_thick;
+	float const split_pt(upper.get_center_dim(!dim));
+	unsigned const num_floors(get_num_floors());
+	assert(num_floors > 0);
 
-	if (get_num_floors() > 1) { // multi-floor walkway
-		// since the elevator currently only stops at the top floor, draw the lower floor doors as closed
-		cube_t upper_lf(upper);
-		upper.z1() = upper_lf.z2() = upper.z2() - (floor_spacing - fc_thick);
-		get_elevator_door_pair(upper_lf, door_gap, 0.0, dim, doors); // open_amt=0.0
-	}
-	upper.z2() -= fc_thick; // clip off area at top of elevator
-	get_elevator_door_pair(upper, door_gap, 0.9*hi_door_open, dim, doors); // doesn't fully open
+	for (unsigned n = 0; n < num_floors; ++n) {
+		float const floor_offset((num_floors - n - 1)*floor_spacing); // indexed from the top, since walkways may have extra space under the bottom floor
+		// no vertical gap between doors to prevent the walkway interior from being seen from outside the elevator, but add a gap at the top and bottom of the walkway
+		upper.z2() = bcube.z2() - floor_offset;
+		upper.z1() = upper.z2() - floor_spacing;
+		min_eq(upper.z2(), (bcube.z2() - fc_thick));
+		max_eq(upper.z1(), (ww_z1      + fc_thick));
+		bool const stopped_on_floor(fabs(upper.z1() - platform_zval) < 0.5*floor_spacing);
+		float const open_dist(stopped_on_floor ? 0.9*hi_door_open*(0.5*upper.get_sz_dim(!dim) - door_gap) : 0.0); // doesn't fully open
+
+		for (unsigned d = 0; d < 2; ++d) { // L, R
+			cube_t door(upper);
+			door.d[!dim][!d] = split_pt + (d ? 1.0 : -1.0)*door_gap;
+			door.translate_dim(!dim, (d ? 1.0 : -1.0)*open_dist);
+			doors.push_back(door);
+		}
+	} // for n
 }
 void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	float const fc_thick(get_fc_thick()), glass_thickness(get_glass_thickness()), frame_hwidth(0.5*glass_thickness);
@@ -1743,7 +1744,7 @@ void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 		assert(!doors.empty()); // must at least be a gate
 		cube_t const &gate(doors[0]);
 		
-		if (dstate.check_cube_visible(gate, 0.5*dist_scale)) { // draw lower vertical gate when close
+		if (dstate.check_cube_visible(gate, 0.4*dist_scale)) { // draw lower vertical gate when close
 			colorRGBA const gate_color(BLACK);
 			float const door_width(gate.get_sz_dim(!dim)), bar_thickness(gate.get_sz_dim(dim)), door_height(gate.dz());
 			unsigned const num_v_bars(door_width/building_t::get_scaled_player_radius() + 2), num_h_bars(2);
@@ -1843,8 +1844,8 @@ void ww_elevator_t::next_frame(point const &camera_bs, float fticks_stable) {
 		hi_door_open = max(0.0f, (hi_door_open - door_change_amt));
 	}
 	else { // stopped; change any doors that had started opening to fully open
-		if (platform_zval == platform_zmin) {lo_door_open = min(1.0f, (lo_door_open + door_change_amt));}
-		if (platform_zval == platform_zmax) {hi_door_open = min(1.0f, (hi_door_open + door_change_amt));}
+		if (platform_zval == platform_zmin) {lo_door_open = min(1.0f, (lo_door_open + door_change_amt));} // at bottom
+		else                                {hi_door_open = min(1.0f, (hi_door_open + door_change_amt));} // at a top door
 	}
 	if (player_is_inside) { // play sliding sound when either door starts moving open or closed
 		if ((prev_ldo==0.0 && lo_door_open>0.0) || (prev_ldo==1.0 && lo_door_open<1.0) || (prev_hdo==0.0 && hi_door_open>0.0) || (prev_hdo==1.0 && hi_door_open<1.0)) {
