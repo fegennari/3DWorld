@@ -3264,6 +3264,7 @@ public:
 	}
 
 	static void multi_draw_shadow(vector3d const &xlate, vector<building_creator_t *> const &bcs) {
+		DebugScope scope("building_multi_draw_shadow");
 		//timer_t timer("Draw Buildings Shadow");
 		fgPushMatrix();
 		translate_to(xlate); // drawn in building space
@@ -3453,6 +3454,7 @@ public:
 			multi_draw_shadow(xlate, bcs);
 			return;
 		}
+		DebugScope scope("building_multi_draw");
 		bind_default_sun_moon_smap_textures(); // bind default sun/moon smap textures
 		building_t const *new_player_building(nullptr);
 		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish(), 6.3ms with building interiors)

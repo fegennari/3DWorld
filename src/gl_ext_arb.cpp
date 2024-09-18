@@ -469,5 +469,7 @@ void end_stencil_write() {
 	glDisable(GL_STENCIL_TEST);
 }
 
+GLuint DebugScope::global_scope_depth = 0;
+
 
 

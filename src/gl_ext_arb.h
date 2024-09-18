@@ -407,14 +407,26 @@ public:
 GLint64 get_timestamp();
 
 struct DrawElementsIndirectCommand { // used with glMultiDrawElementsIndirect()
-	uint32_t count;
-	uint32_t instanceCount;
-	uint32_t firstIndex;
-	int32_t  baseVertex;
-	uint32_t baseInstance; // OpenGL >= 4.2
+	uint32_t count=0, instanceCount=0, firstIndex=0;
+	int32_t  baseVertex=0;
+	uint32_t baseInstance=0; // OpenGL >= 4.2
 };
 
 inline int get_2d_texture_target(bool is_array=0, bool multisample=0) {
 	return (is_array ? (multisample ? GL_TEXTURE_2D_MULTISAMPLE_ARRAY : GL_TEXTURE_2D_ARRAY) : (multisample ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D));
 }
+
+class DebugScope {
+	static GLuint global_scope_depth;
+	const GLuint scope_depth;
+public:
+	DebugScope(std::string const &name) : scope_depth(global_scope_depth++) {
+		glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, scope_depth, name.size(), name.data());
+	}
+	~DebugScope() {
+		glPopDebugGroup();
+		global_scope_depth--;
+	}
+};
+
 
