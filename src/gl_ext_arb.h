@@ -117,9 +117,8 @@ template<typename T> void update_indices(unsigned ivbo, vector<T> const &indices
 
 struct vbo_wrap_t { // Note: not for use with index vbo
 
-	unsigned vbo;
+	unsigned vbo=0;
 
-	vbo_wrap_t() : vbo(0) {}
 	bool vbo_valid() const {return (vbo > 0);}
 	void clear() {delete_and_zero_vbo(vbo);}
 	void clear_vbo() {clear();} // alias for clear()
@@ -133,9 +132,8 @@ struct vbo_wrap_t { // Note: not for use with index vbo
 
 struct ubo_wrap_t { // uniform buffer object
 
-	unsigned ubo;
+	unsigned ubo=0;
 
-	ubo_wrap_t() : ubo(0) {}
 	bool ubo_valid() const {return (ubo > 0);}
 	void clear() {delete_and_zero_vbo(ubo);} // same as VBO
 	void allocate_with_size(unsigned size, int dynamic_level=0);
@@ -150,9 +148,8 @@ struct ubo_wrap_t { // uniform buffer object
 
 struct vao_wrap_t {
 
-	unsigned vao;
+	unsigned vao=0;
 
-	vao_wrap_t() : vao(0) {}
 	bool is_valid() const {return (vao != 0);}
 	void clear() {delete_and_zero_vao(vao);}
 
@@ -173,9 +170,8 @@ struct vao_wrap_t {
 
 struct indexed_vbo_manager_t : public vbo_wrap_t {
 
-	unsigned ivbo, gpu_mem; // aka EBO
+	unsigned ivbo=0, gpu_mem=0; // aka EBO
 
-	indexed_vbo_manager_t() : ivbo(0), gpu_mem(0) {}
 	bool ivbo_valid() const {return (ivbo > 0);}
 	void reset_vbos_to_zero() {vbo = ivbo = gpu_mem = 0;}
 
@@ -284,9 +280,7 @@ template<unsigned N> struct indexed_vao_multi_manager_t : public indexed_vbo_man
 
 class subdiv_sphere_drawer_t : public indexed_vao_manager_t {
 protected:
-	unsigned nverts, nindices;
-public:
-	subdiv_sphere_drawer_t() : nverts(0), nindices(0) {}
+	unsigned nverts=0, nindices=0;
 };
 struct icosphere_drawer_t : public subdiv_sphere_drawer_t {
 	icosphere_drawer_t(unsigned ndiv);
@@ -306,12 +300,12 @@ typedef subdiv_sphere_manager_t<icosphere_drawer_t> icosphere_manager_t;
 
 class vbo_ring_buffer_t : public vbo_wrap_t {
 
-	unsigned init_size, size, pos;
+	unsigned init_size, size, pos=0;
 	bool is_index;
 
 	void ensure_vbo(unsigned min_size);
 public:
-	vbo_ring_buffer_t(unsigned init_size_, bool is_index_=0) : init_size(init_size_), size(init_size), pos(0), is_index(is_index_) {}
+	vbo_ring_buffer_t(unsigned init_size_, bool is_index_=0) : init_size(init_size_), size(init_size), is_index(is_index_) {}
 	void clear() {vbo_wrap_t::clear(); size = init_size; pos = 0;}
 	unsigned get_alloced_size() const {return (vbo_valid() ? size : 0);}
 
@@ -394,8 +388,7 @@ void update_ssbo(unsigned  ssbo, unsigned data_sz, void const *const data);
 
 
 class query_perf_timer_t {
-	unsigned query_id;
-
+	unsigned query_id=0;
 public:
 	query_perf_timer_t();
 	~query_perf_timer_t();
@@ -405,8 +398,7 @@ public:
 
 class gpu_timer_t {
 	query_perf_timer_t time_query;
-	GLint64 timer;
-
+	GLint64 timer=0;
 public:
 	gpu_timer_t();
 	void show();
