@@ -6,7 +6,7 @@
 #include "lightmap.h" // for light_source
 #include "openal_wrap.h"
 
-extern bool player_in_walkway;
+extern bool player_in_walkway, player_in_ww_elevator;
 extern int animate2, display_mode;
 extern float fticks;
 extern double camera_zh;
@@ -1825,6 +1825,7 @@ void ww_elevator_t::next_frame(point const &camera_bs, float fticks_stable) {
 	bool const want_to_move(platform_zval != target_pzval);
 	// the top door only opens when the player is in the elevator or walkway so that the unlit walkway interior isn't visible from outside
 	bool const top_door_can_open(player_is_inside || ww_bcube.contains_pt(camera_bs));
+	player_in_ww_elevator |= player_is_inside;
 
 	if (!door_is_open && want_to_move) { // can't move if a door is open
 		float const targ_dz(target_pzval - platform_zval), move_dist(fticks_stable*(bcube.dz() - floor_spacing)/(6.0*TICKS_PER_SECOND)); // 6s for full height change

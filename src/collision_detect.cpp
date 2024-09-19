@@ -26,7 +26,7 @@ coll_obj_group coll_objects;
 cobj_groups_t cobj_groups;
 cobj_draw_groups cdraw_groups;
 
-extern bool lm_alloc, has_snow, player_wait_respawn, camera_in_building, player_on_house_stairs, player_in_walkway, player_in_skyway, player_on_moving_ww;
+extern bool lm_alloc, has_snow, player_wait_respawn, camera_in_building, player_on_house_stairs, player_in_walkway, player_in_skyway, player_in_ww_elevator, player_on_moving_ww;
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
 extern int camera_in_air, mesh_scale_change, camera_invincible, camera_flight, num_smileys, iticks, frame_counter, player_in_water, player_in_basement;
 extern unsigned snow_coverage_resolution;
@@ -1708,7 +1708,7 @@ void play_camera_footstep_sound() { // tiled terrain mode
 	if (dist_xy_less_than(pos, last_pos, 0.5*CAMERA_RADIUS)) return;
 	last_pos = pos;
 	fs_time  = tfticks;
-	bool const not_in_building(!camera_in_building && !player_in_walkway && !player_in_skyway);
+	bool const not_in_building(!camera_in_building && !player_in_walkway && !player_in_skyway && !player_in_ww_elevator);
 	if (player_in_water) {register_building_water_splash(pos, 1.0, 1);} // water splash; alert_zombies=1
 	//else if (player_in_water       ) {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_splash.wav"), pos, 0.2);}
 	else if (not_in_building       ) {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_grass.wav" ), pos, 0.2);}
