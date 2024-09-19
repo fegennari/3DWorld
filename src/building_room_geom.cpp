@@ -1665,6 +1665,16 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	if (rot_angle != 0.0) {rotate_verts(label_mat.itri_verts, plus_z, rot_angle, c.get_cube_center(), label_verts_start);}
 }
 
+void building_room_geom_t::add_drink_can(room_object_t const &c, bool add_bottom) {
+	unsigned const ndiv(get_rgeom_sphere_ndiv(1)); // use smaller ndiv (16) to reduce vertex count
+	bottle_params_t const &bp(bottle_params[c.get_bottle_type()]);
+	float const tscale(bp.label_tscale); // some textures are more square and scaled 2x to repeat as they're more stretched out
+	float const tscale_add(0.123*c.obj_id); // add a pseudo-random rotation to the texture
+	string const &texture_fn(bp.texture_fn); // select the custom texture for each can type
+	rgeom_mat_t &label_mat(get_material(tid_nm_pair_t(get_texture_by_name(texture_fn), 1), 1, 0, 1)); // shadowed
+	label_mat.add_vcylin_to_verts(c, apply_light_color(c), add_bottom, 1, 0, 0, 1.0, 1.0, tscale, 1.0, 0, ndiv, tscale_add);
+}
+
 // functions reused from snake drawing
 template<typename T> void add_inverted_triangles(T &verts, vector<unsigned> &indices, unsigned verts_start, unsigned ixs_start);
 void draw_segment(rgeom_mat_t &mat, point const &p1, point const &p2, float radius1, float radius2,

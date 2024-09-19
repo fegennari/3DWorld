@@ -181,6 +181,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_DBG_SHAPE ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 1,  0.0,  0.0,   "debug shape"); // small (optimization)
 	bldg_obj_types[TYPE_METAL_BAR ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2,  0.0,  0.0,   "metal bar");
 	bldg_obj_types[TYPE_OFF_PILLAR] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1,  0.0,  0.0,   "office pillar");
+	bldg_obj_types[TYPE_DRINK_CAN ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 1.0,   1.0,   "drink can", 1); // single use
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -293,7 +294,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		string const name(string(obj.is_broken() ? "dead " : "") + (is_fly ? "fly" : "cockroach"));
 		return bldg_obj_type_t(0, 0, 0, 1, 0, !is_fly, (is_fly ? 2 : 0), 0.0, 0.01, name);
 	}
-	if (obj.type == TYPE_BOTTLE) {
+	if (obj.type == TYPE_BOTTLE || obj.type == TYPE_DRINK_CAN) {
 		bottle_params_t const &bparams(bottle_params[obj.get_bottle_type()]);
 		bldg_obj_type_t type(0, 0, 0, 1, 0, 0, 2,  bparams.value, 1.0, bparams.name);
 
