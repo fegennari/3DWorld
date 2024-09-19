@@ -583,7 +583,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 					if (!pillar_area.contains_cube_xy(ebc_exp))  continue; // not contained in plot interior
 					if (has_bcube_int_no_adj(ebc_exp, blockers)) continue;
 					if (intersects_city_obj(ebc_exp, elevators) || intersects_city_obj(ebc_exp, walkways, w.bcube)) continue; // exclude ourself
-					ww_elevator_t const elevator(ebc, !w.dim, dir, w.floor_spacing, w.bcube.z1());
+					ww_elevator_t const elevator(ebc, !w.dim, dir, w.floor_spacing, w.bcube);
 					w.attach_elevator(elevator);
 					wwe_groups.add_obj(elevator, elevators);
 					add_cube_to_colliders_and_blockers(ebc, colliders, blockers);
