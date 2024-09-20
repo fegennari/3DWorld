@@ -133,6 +133,20 @@ bottle_params_t const bottle_params[NUM_BOTTLE_TYPES] = {
 	bottle_params_t("bottle of medicine", "interiors/magenta_cross.png",  LT_BLUE,                   colorRGBA(0.2,  0.0,  0.7 ),     20.0, 1.0),
 };
 
+struct drink_can_params_t {
+	std::string name, texture_fn;
+	colorRGBA liquid_color;
+	float value, tscale;
+	drink_can_params_t(std::string const &n, std::string const &fn, colorRGBA const &lc, float v, float ts) :
+		name(n), texture_fn(fn), liquid_color(lc), value(v), tscale(ts) {}
+};
+enum {DRINK_CAN_TYPE_COKE=0, DRINK_CAN_TYPE_BEER, NUM_DRINK_CAN_TYPES};
+
+drink_can_params_t const drink_can_params[NUM_DRINK_CAN_TYPES] = {
+	drink_can_params_t("can of Coke", "interiors/coke_label.jpg",     colorRGBA(0.22, 0.11, 0.06), 1.0, 1.0),
+	drink_can_params_t("can of beer", "interiors/heineken_label.jpg", colorRGBA(0.5,  0.4,  0.1 ), 3.0, 2.0),
+};
+
 struct ball_type_t {
 	std::string name, tex_fname, nm_fname;
 	float radius, density, value, weight, spec, shine, elastic, friction; // radius in inches, value in dollars, weight in pounds
@@ -656,12 +670,12 @@ struct room_object_t : public oriented_cube_t { // size=64
 	bool is_on_floor() const {return  (flags & RO_FLAG_ON_FLOOR);}
 	bool is_nonempty() const {return  (flags & RO_FLAG_NONEMPTY);}
 	bool is_on_srack() const {return (was_expanded() && (flags & RO_FLAG_ON_SRACK));} // Note: RO_FLAG_ON_SRACK is aliased with other flags, so also check was_expanded
-	bool is_floor_clutter() const {return ((type == TYPE_BOTTLE || type == TYPE_TRASH) && is_on_floor());}
+	bool is_floor_clutter() const {return ((is_a_drink() || type == TYPE_TRASH) && is_on_floor());}
 	bool is_light_type() const {return (type == TYPE_LIGHT || (type == TYPE_LAMP && !was_expanded() && !in_attic()));} // light, or lamp not in closet
 	bool is_sink_type () const {return (type == TYPE_SINK || type == TYPE_KSINK || type == TYPE_BRSINK);}
 	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_ROBJ_TYPES);}
 	bool is_small_closet() const {return (type == TYPE_CLOSET && get_width() < 1.2*dz());}
-	bool is_bottle_empty() const {return ((obj_id & 192) == 192);} // empty if both bits 6 and 7 are set
+	bool is_bottle_empty() const {return ((obj_id & 192) == 192);} // empty if both bits 6 and 7 are set; also applies to drink cans
 	bool desk_has_drawers()const {return bool(room_id & 3);} // 75% of the time
 	bool is_glass_table () const {return (type == TYPE_TABLE && (flags & RO_FLAG_IS_HOUSE) && (obj_id & 1));} // 50% chance if in a house
 	bool is_parked_car  () const {return (type == TYPE_COLLIDER && (flags & RO_FLAG_FOR_CAR));}
@@ -676,9 +690,11 @@ struct room_object_t : public oriented_cube_t { // size=64
 	bool is_spider_collidable() const;
 	bool is_collidable(bool for_spider) const {return (for_spider ? is_spider_collidable() : is_floor_collidable());}
 	bool is_vert_cylinder() const;
-	bool is_round() const {return (shape == SHAPE_CYLIN || shape == SHAPE_SPHERE || shape == SHAPE_VERT_TORUS);}
-	unsigned get_bottle_type() const {return ((obj_id&63) % NUM_BOTTLE_TYPES);} // first 6 bits are bottle type
-	unsigned get_orient () const {return (2*dim + dir);}
+	bool is_round  () const {return (shape == SHAPE_CYLIN || shape == SHAPE_SPHERE || shape == SHAPE_VERT_TORUS);}
+	bool is_a_drink() const {return (type == TYPE_BOTTLE || type == TYPE_DRINK_CAN);}
+	unsigned get_bottle_type   () const {return ((obj_id&63) % NUM_BOTTLE_TYPES   );} // first 6 bits are bottle type
+	unsigned get_drink_can_type() const {return ((obj_id&63) % NUM_DRINK_CAN_TYPES);} // first 6 bits are drink can type
+	unsigned get_orient() const {return (2*dim + dir);}
 	unsigned get_num_shelves() const {assert(type == TYPE_SHELVES); return (2 + (room_id % 3));} // 2-4 shelves
 	float get_bottle_rot_angle() const {return (rotates() ? PI*(0.321*obj_id + color.R + 2.0*color.G) : 0.0);}
 	float get_depth () const {return get_length();} // some objects use depth rather than length

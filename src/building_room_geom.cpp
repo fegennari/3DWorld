@@ -1659,7 +1659,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	float const tscale(bp.label_tscale); // some labels are more square and scaled 2x to repeat as they're more stretched out; should we use a partial cylinder instead?
 	float const tscale_add(0.123*c.obj_id); // add a pseudo-random rotation to the label texture
 	string const &texture_fn(bp.texture_fn); // select the custom label texture for each bottle type
-	rgeom_mat_t &label_mat(get_material(tid_nm_pair_t(texture_fn.empty() ? -1 : get_texture_by_name(texture_fn)), 0, 0, 1)); // unshadowed
+	rgeom_mat_t &label_mat(get_material(tid_nm_pair_t(texture_fn.empty() ? -1 : get_texture_by_name(texture_fn)), 0, 0, 1)); // unshadowed, small
 	unsigned const label_verts_start(label_mat.itri_verts.size());
 	label_mat.add_ortho_cylin_to_verts(body, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, tscale, 1.0, 0, bottle_ndiv, tscale_add); // draw label
 	if (rot_angle != 0.0) {rotate_verts(label_mat.itri_verts, plus_z, rot_angle, c.get_cube_center(), label_verts_start);}
@@ -1667,12 +1667,12 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 
 void building_room_geom_t::add_drink_can(room_object_t const &c, bool add_bottom) {
 	unsigned const ndiv(get_rgeom_sphere_ndiv(1)); // use smaller ndiv (16) to reduce vertex count
-	bottle_params_t const &bp(bottle_params[c.get_bottle_type()]);
-	float const tscale(bp.label_tscale); // some textures are more square and scaled 2x to repeat as they're more stretched out
+	drink_can_params_t const &bp(drink_can_params[c.get_drink_can_type()]);
 	float const tscale_add(0.123*c.obj_id); // add a pseudo-random rotation to the texture
-	string const &texture_fn(bp.texture_fn); // select the custom texture for each can type
-	rgeom_mat_t &label_mat(get_material(tid_nm_pair_t(get_texture_by_name(texture_fn), 1), 1, 0, 1)); // shadowed
-	label_mat.add_vcylin_to_verts(c, apply_light_color(c), add_bottom, 1, 0, 0, 1.0, 1.0, tscale, 1.0, 0, ndiv, tscale_add);
+	colorRGBA const color(apply_light_color(c));
+	rgeom_mat_t &label_mat(get_material(tid_nm_pair_t(get_texture_by_name(bp.texture_fn), 1), 1, 0, 1)); // shadowed, small
+	label_mat.add_vcylin_to_verts(c, color, 0, 0, 0, 0, 1.0, 1.0, bp.tscale, 1.0, 0, ndiv, tscale_add); // sides only
+	get_metal_material(1, 0, 1).add_vcylin_to_verts(c, color, add_bottom, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // untextured, shadowed, small=1, top and maybe bottom
 }
 
 // functions reused from snake drawing

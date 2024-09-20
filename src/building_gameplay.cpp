@@ -294,13 +294,15 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		string const name(string(obj.is_broken() ? "dead " : "") + (is_fly ? "fly" : "cockroach"));
 		return bldg_obj_type_t(0, 0, 0, 1, 0, !is_fly, (is_fly ? 2 : 0), 0.0, 0.01, name);
 	}
-	if (obj.type == TYPE_BOTTLE || obj.type == TYPE_DRINK_CAN) {
-		bottle_params_t const &bparams(bottle_params[obj.get_bottle_type()]);
-		bldg_obj_type_t type(0, 0, 0, 1, 0, 0, 2,  bparams.value, 1.0, bparams.name);
+	if (obj.is_a_drink()) {
+		bool const is_bottle(obj.type == TYPE_BOTTLE); // else drink can
+		string const &name(is_bottle ? bottle_params[obj.get_bottle_type()].name  : drink_can_params[obj.get_drink_can_type()].name );
+		float const  value(is_bottle ? bottle_params[obj.get_bottle_type()].value : drink_can_params[obj.get_drink_can_type()].value);
+		bldg_obj_type_t type(0, 0, 0, 1, 0, 0, 2, value, 1.0, name);
 
 		if (obj.is_bottle_empty()) {
 			type.name    = "empty " + type.name;
-			type.weight *= 0.25;
+			type.weight *= (is_bottle ? 0.25 : 0.05);
 			type.value   = 0.0;
 		}
 		else if (!(obj.flags & RO_FLAG_NO_CONS)) {
@@ -367,7 +369,7 @@ float get_obj_weight(room_object_t const &obj) {
 	return get_taken_obj_type(obj).weight; // constant per object type, for now, but really should depend on object size/volume
 }
 bool is_consumable(room_object_t const &obj) {
-	if (!in_building_gameplay_mode() || obj.type != TYPE_BOTTLE || obj.is_bottle_empty() || (obj.flags & RO_FLAG_NO_CONS)) return 0; // not consumable
+	if (!in_building_gameplay_mode() || !obj.is_a_drink() || obj.is_bottle_empty() || (obj.flags & RO_FLAG_NO_CONS)) return 0; // not consumable
 	unsigned const bottle_type(obj.get_bottle_type());
 	bool const is_drink(bottle_type == BOTTLE_TYPE_WATER || bottle_type == BOTTLE_TYPE_COKE);
 
@@ -1314,7 +1316,7 @@ cube_t get_true_obj_bcube(room_object_t const &obj) { // for player object picku
 		obj_bcube.expand_in_dim(!obj.dim, obj.get_width());
 		return obj_bcube;
 	}
-	if (obj.type == TYPE_BOTTLE && obj.rotates()) { // rotated bottle on floor; drawing doesn't perfectly match the bcube, so increase the size a bit
+	if (obj.is_a_drink() && obj.rotates()) { // rotated bottle or can on floor; drawing doesn't perfectly match the bcube, so increase the size a bit
 		cube_t obj_bcube(obj);
 		obj_bcube.expand_by_xy(0.5*obj.min_len()); // expand by half radius
 		return obj_bcube;

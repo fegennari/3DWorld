@@ -1377,7 +1377,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 	for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with
 		room_object const type(c->type);
 		// ignore blockers and railings, but allow more than c->no_coll()
-		if (c == self || type == TYPE_BLOCKER || type == TYPE_PAPER || type == TYPE_PEN || type == TYPE_PENCIL || type == TYPE_BOTTLE || type == TYPE_FLOORING || type == TYPE_SIGN ||
+		if (c == self || type == TYPE_BLOCKER || type == TYPE_PAPER || type == TYPE_PEN || type == TYPE_PENCIL || c->is_a_drink() || type == TYPE_FLOORING || type == TYPE_SIGN ||
 			type == TYPE_WBOARD || type == TYPE_WALL_TRIM || type == TYPE_DRAIN || type == TYPE_CRACK || type == TYPE_SWITCH || type == TYPE_BREAKER || type == TYPE_OUTLET ||
 			type == TYPE_VENT || type == TYPE_WIND_SILL || type == TYPE_TEESHIRT || type == TYPE_PANTS || type == TYPE_BLANKET || type == TYPE_FOLD_SHIRT) continue;
 		if (type == TYPE_RAILING && (!(c->flags & RO_FLAG_TOS) || !c->is_open())) continue; // only railings at the top of stairs (non-sloped) with balusters have collisions
@@ -1950,7 +1950,7 @@ public:
 				if (obj.flags & RO_FLAG_INVIS) continue;
 				room_object const type(obj.type);
 				if (type != TYPE_PIPE && min(obj.dx(), obj.dy()) < sz_thresh) continue; // too small; exclude pipes
-				if (type == TYPE_BOOK || type == TYPE_PLANT || type == TYPE_RAILING || type == TYPE_BOTTLE || type == TYPE_PAPER || type == TYPE_PAINTCAN ||
+				if (type == TYPE_BOOK || type == TYPE_PLANT || type == TYPE_RAILING || obj.is_a_drink() || type == TYPE_PAPER || type == TYPE_PAINTCAN ||
 					type == TYPE_WBOARD || type == TYPE_DRAIN || type == TYPE_PLATE || type == TYPE_LBASKET || type == TYPE_LAMP || type == TYPE_CUP || type == TYPE_LAPTOP ||
 					is_ball_type(type) || type == TYPE_PAN || type == TYPE_PG_BEAM || type == TYPE_PLANT_MODEL || type == TYPE_PICTURE || type == TYPE_WINDOW ||
 					type == TYPE_SIGN || type == TYPE_WALL_TRIM || type == TYPE_BLINDS || type == TYPE_PEN || type == TYPE_PENCIL || type == TYPE_HANGER_ROD ||
@@ -2159,7 +2159,7 @@ bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start, b
 
 	for (auto i = start; i != end; ++i) {
 		if (i->type == TYPE_POOL_TILE) continue; // always excluded, since it's thin and objects can be mounted over it
-		if (i->type == TYPE_BOTTLE && i->is_on_floor() && i->intersects(c)) return 1; // bottles on the floor do count
+		if (i->is_a_drink() && i->is_on_floor() && i->intersects(c)) return 1; // bottles and cans on the floor do count
 		// Note: light switches/outlets/vents/pipes don't collide with the player or AI, but they collide with other placed objects to avoid blocking them;
 		// however, it's okay to block outlets with furniture
 		if ((check_all || !i->no_coll() || i->type == TYPE_SWITCH || i->type == TYPE_OUTLET || i->type == TYPE_VENT || i->type == TYPE_PIPE ||
