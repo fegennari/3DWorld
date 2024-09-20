@@ -214,7 +214,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	}
 	for (auto r = rooms.begin(); r != rooms.end(); ++r) {
 		bool const is_basement(has_basement() && r->part_id == (int)basement_part_ix); // includes extended basement and parking garage
-		bool const residential_room(is_house || (residential && !r->is_hallway && !is_basement));
 		float light_amt(is_basement ? 0.0f : window_vspacing*r->get_light_amt()); // exterior light: multiply perimeter/area by window spacing to make unitless; none for basement rooms
 		if (!is_house && r->is_hallway) {light_amt *= 2.0;} // double the light in office building hallways because they often connect to other lit hallways
 		float const floor_height(r->is_single_floor ? r->dz() : window_vspacing); // secondary buildings are always one floor
@@ -227,7 +226,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			else if (has_shed) {r->assign_all_to(RTYPE_SHED  );}
 		}
 		// determine light pos and size for this stack of rooms
-		room_obj_shape const light_shape(residential_room ? SHAPE_CYLIN : SHAPE_CUBE);
 		float const dx(r->dx()), dy(r->dy());
 		bool const room_dim(dx < dy); // longer room dim
 		room_type const init_rtype_f0(r->get_room_type(0));
@@ -236,6 +234,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_swim_pool_room(init_rtype_f0 == RTYPE_SWIM); // room with a swimming pool
 		bool const is_retail_room   (init_rtype_f0 == RTYPE_RETAIL);
 		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(r->is_backrooms()), is_apt_or_hotel_room(r->is_apt_or_hotel_room());
+		bool const residential_room(is_house || (residential && !r->is_hallway && !is_basement && !is_retail_room));
+		room_obj_shape const light_shape(residential_room ? SHAPE_CYLIN : SHAPE_CUBE);
 		float light_density(0.0), light_size(def_light_size); // default size for houses
 		unsigned const room_objs_start(objs.size());
 		unsigned nx(1), ny(1); // number of lights in X and Y for this room
