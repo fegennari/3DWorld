@@ -1375,23 +1375,23 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 
 	// Note: no collision check with expanded_objs
 	for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with
+		room_object const type(c->type);
 		// ignore blockers and railings, but allow more than c->no_coll()
-		if (c == self || c->type == TYPE_BLOCKER || c->type == TYPE_PAPER || c->type == TYPE_PEN || c->type == TYPE_PENCIL ||
-			c->type == TYPE_BOTTLE || c->type == TYPE_FLOORING || c->type == TYPE_SIGN || c->type == TYPE_WBOARD || c->type == TYPE_WALL_TRIM ||
-			c->type == TYPE_DRAIN || c->type == TYPE_CRACK || c->type == TYPE_SWITCH || c->type == TYPE_BREAKER || c->type == TYPE_OUTLET || c->type == TYPE_VENT ||
-			c->type == TYPE_WIND_SILL || c->type == TYPE_TEESHIRT || c->type == TYPE_PANTS || c->type == TYPE_BLANKET || c->type == TYPE_FOLD_SHIRT) continue;
-		if (c->type == TYPE_RAILING && (!(c->flags & RO_FLAG_TOS) || !c->is_open())) continue; // only railings at the top of stairs (non-sloped) with balusters have collisions
-		if (c->type == TYPE_POOL_TILE && c->no_coll()) continue;
+		if (c == self || type == TYPE_BLOCKER || type == TYPE_PAPER || type == TYPE_PEN || type == TYPE_PENCIL || type == TYPE_BOTTLE || type == TYPE_FLOORING || type == TYPE_SIGN ||
+			type == TYPE_WBOARD || type == TYPE_WALL_TRIM || type == TYPE_DRAIN || type == TYPE_CRACK || type == TYPE_SWITCH || type == TYPE_BREAKER || type == TYPE_OUTLET ||
+			type == TYPE_VENT || type == TYPE_WIND_SILL || type == TYPE_TEESHIRT || type == TYPE_PANTS || type == TYPE_BLANKET || type == TYPE_FOLD_SHIRT) continue;
+		if (type == TYPE_RAILING && (!(c->flags & RO_FLAG_TOS) || !c->is_open())) continue; // only railings at the top of stairs (non-sloped) with balusters have collisions
+		if (type == TYPE_POOL_TILE && c->no_coll()) continue;
 		cube_t const bc(get_true_room_obj_bcube(*c));
 		if (!sphere_cube_intersect(pos, radius, bc)) continue; // no intersection (optimization)
-		if (is_ball && c->type == TYPE_BOOK && c->dz() < 0.2*radius) continue; // large ball vs. small book on the floor: unstable, skip
+		if (is_ball && type == TYPE_BOOK && c->dz() < 0.2*radius) continue; // large ball vs. small book on the floor: unstable, skip
 		unsigned coll_ret(0);
 		// add special handling for things like elevators and cubicles? right now these are only in office buildings, where there are no dynamic objects
 
 		if (c->is_vert_cylinder()) { // vertical cylinder (including table)
 			cylinder_3dw const cylin(c->get_cylinder());
 
-			if (c->type == TYPE_TABLE) {
+			if (type == TYPE_TABLE) {
 				cylinder_3dw top(cylin), base(cylin);
 				top.p1.z  = base.p2.z = c->z2() - 0.12*c->dz(); // top shifted down by 0.12
 				base.r1  *= 0.4; base.r2 *= 0.4; // vertical support has radius 0.08, legs have radius of 0.6, so use something in between
@@ -1416,35 +1416,35 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 		}
 		else { // assume it's a cube
 			// some object types are special because they're common collision objects and they're not filled cubes
-			if      (c->type == TYPE_CLOSET ) {coll_ret |= check_closet_collision(*c, pos, p_last, radius, &cnorm);} // special case to handle closet interiors
-			else if (c->type == TYPE_BED    ) {coll_ret |= check_bed_collision   (*c, pos, p_last, radius, &cnorm);}
+			if      (type == TYPE_CLOSET    ) {coll_ret |= check_closet_collision(*c, pos, p_last, radius, &cnorm);} // special case to handle closet interiors
+			else if (type == TYPE_BED       ) {coll_ret |= check_bed_collision   (*c, pos, p_last, radius, &cnorm);}
 			else if (can_use_table_coll(*c) ) {coll_ret |= check_table_collision (*c, pos, p_last, radius, &cnorm);}
-			else if (c->type == TYPE_RDESK  ) {coll_ret |= check_rdesk_collision (*c, pos, p_last, radius, &cnorm);}
-			else if (c->type == TYPE_CHAIR  ) {coll_ret |= check_chair_collision (*c, pos, p_last, radius, &cnorm);}
-			else if (c->type == TYPE_TUB    ) {coll_ret |= check_tub_collision   (*c, pos, p_last, radius, &cnorm, is_ball);}
-			else if (c->type == TYPE_BCASE  ) {coll_ret |= check_bookcase_collision(*c, pos, p_last, radius, &cnorm);}
-			else if (c->type == TYPE_BENCH  ) {coll_ret |= check_bench_collision   (*c, pos, p_last, radius, &cnorm);}
-			else if (c->type == TYPE_DIV_BOARD) {coll_ret |= check_diving_board_collision   (*c, pos, p_last, radius, &cnorm);}
+			else if (type == TYPE_RDESK     ) {coll_ret |= check_rdesk_collision (*c, pos, p_last, radius, &cnorm);}
+			else if (type == TYPE_CHAIR     ) {coll_ret |= check_chair_collision (*c, pos, p_last, radius, &cnorm);}
+			else if (type == TYPE_TUB       ) {coll_ret |= check_tub_collision   (*c, pos, p_last, radius, &cnorm, is_ball);}
+			else if (type == TYPE_BCASE     ) {coll_ret |= check_bookcase_collision(*c, pos, p_last, radius, &cnorm);}
+			else if (type == TYPE_BENCH     ) {coll_ret |= check_bench_collision   (*c, pos, p_last, radius, &cnorm);}
+			else if (type == TYPE_DIV_BOARD ) {coll_ret |= check_diving_board_collision     (*c, pos, p_last, radius, &cnorm);}
 			else if (c->is_sloped_ramp()    ) {coll_ret |= (unsigned)check_ramp_collision   (*c, pos,         radius, &cnorm);} // p_last is unused
-			else if (c->type == TYPE_BALCONY) {had_coll |= (unsigned)check_balcony_collision(*c, pos, p_last, radius, &cnorm);}
-			else if (c->type == TYPE_POOL_TABLE) {coll_ret |= check_pool_table_collision(*c, pos, p_last, radius, &cnorm);}
-			else if (c->type == TYPE_SHELFRACK ) {coll_ret |= check_shelf_rack_collision(*c, pos, p_last, radius, &cnorm);}
-			else if (c->type == TYPE_COUCH     ) {coll_ret |= check_couch_collision     (*c, pos, p_last, radius, &cnorm);}
-			else if (c->type == TYPE_CASHREG   ) {coll_ret |= check_cashreg_collision   (*c, pos, p_last, radius, &cnorm);}
-			else if (c->type == TYPE_STALL  && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_stall_collision (*c, pos, p_last, radius, &cnorm);}
-			else if (c->type == TYPE_SHOWER && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_shower_collision(*c, pos, p_last, radius, &cnorm);}
+			else if (type == TYPE_BALCONY   ) {had_coll |= (unsigned)check_balcony_collision(*c, pos, p_last, radius, &cnorm);}
+			else if (type == TYPE_POOL_TABLE) {coll_ret |= check_pool_table_collision(*c, pos, p_last, radius, &cnorm);}
+			else if (type == TYPE_SHELFRACK ) {coll_ret |= check_shelf_rack_collision(*c, pos, p_last, radius, &cnorm);}
+			else if (type == TYPE_COUCH     ) {coll_ret |= check_couch_collision     (*c, pos, p_last, radius, &cnorm);}
+			else if (type == TYPE_CASHREG   ) {coll_ret |= check_cashreg_collision   (*c, pos, p_last, radius, &cnorm);}
+			else if (type == TYPE_STALL  && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_stall_collision (*c, pos, p_last, radius, &cnorm);}
+			else if (type == TYPE_SHOWER && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_shower_collision(*c, pos, p_last, radius, &cnorm);}
 			else {coll_ret |= (unsigned)sphere_cube_int_update_pos(pos, radius, bc, p_last, 0, &cnorm);} // skip_z=0
 		}
 		if (coll_ret) { // collision with this object - set hardness
-			if      (c->type == TYPE_RUG && cnorm != plus_z) {cnorm = plus_z; continue;} // rug collision can only be +z
-			if      (c->type == TYPE_COUCH    ) {hardness = 0.6;} // couches are soft
-			else if (c->type == TYPE_RUG      ) {hardness = 0.8;} // rug is somewhat soft, but placed on a hard floor
-			else if (c->type == TYPE_BLINDS   ) {hardness = 0.6;} // blinds are soft
-			else if (c->type == TYPE_PIZZA_BOX) {hardness = 0.7;} // somewhat soft
-			else if (c->type == TYPE_TEESHIRT || c->type == TYPE_PANTS || c->type == TYPE_FOLD_SHIRT) {hardness = 0.7;} // somewhat soft, though collisions may be skipped
-			else if (c->type == TYPE_BLANKET  ) {hardness = 0.5;} // soft
-			else if (c->type == TYPE_BED && (coll_ret & 24)) {hardness = 0.5;} // pillow/mattress collision is very soft
-			else if (c->type == TYPE_TUB && cnorm == plus_z) {hardness = 0.2;} // bottom of tub, possibly with water; will make a ball less likely to bounce out
+			if      (type == TYPE_RUG && cnorm != plus_z) {cnorm = plus_z; continue;} // rug collision can only be +z
+			if      (type == TYPE_COUCH    ) {hardness = 0.6;} // couches are soft
+			else if (type == TYPE_RUG      ) {hardness = 0.8;} // rug is somewhat soft, but placed on a hard floor
+			else if (type == TYPE_BLINDS   ) {hardness = 0.6;} // blinds are soft
+			else if (type == TYPE_PIZZA_BOX) {hardness = 0.7;} // somewhat soft
+			else if (type == TYPE_TEESHIRT || type == TYPE_PANTS || type == TYPE_FOLD_SHIRT) {hardness = 0.7;} // somewhat soft, though collisions may be skipped
+			else if (type == TYPE_BLANKET  ) {hardness = 0.5;} // soft
+			else if (type == TYPE_BED && (coll_ret & 24)) {hardness = 0.5;} // pillow/mattress collision is very soft
+			else if (type == TYPE_TUB && cnorm == plus_z) {hardness = 0.2;} // bottom of tub, possibly with water; will make a ball less likely to bounce out
 			else {hardness = 1.0;}
 			obj_ix   = (c - room_geom->objs.begin()); // may be overwritten, will be the last collided object
 			had_coll = 1;
