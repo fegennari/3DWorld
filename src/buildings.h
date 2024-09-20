@@ -136,15 +136,15 @@ bottle_params_t const bottle_params[NUM_BOTTLE_TYPES] = {
 struct drink_can_params_t {
 	std::string name, texture_fn;
 	colorRGBA liquid_color;
-	float value, tscale;
-	drink_can_params_t(std::string const &n, std::string const &fn, colorRGBA const &lc, float v, float ts) :
-		name(n), texture_fn(fn), liquid_color(lc), value(v), tscale(ts) {}
+	float value, tscale, tex_clip_y;
+	drink_can_params_t(std::string const &n, std::string const &fn, colorRGBA const &lc, float v, float ts, float tcy) :
+		name(n), texture_fn(fn), liquid_color(lc), value(v), tscale(ts), tex_clip_y(tcy) {}
 };
 enum {DRINK_CAN_TYPE_COKE=0, DRINK_CAN_TYPE_BEER, NUM_DRINK_CAN_TYPES};
 
 drink_can_params_t const drink_can_params[NUM_DRINK_CAN_TYPES] = {
-	drink_can_params_t("can of Coke", "interiors/coke_label.jpg",     colorRGBA(0.22, 0.11, 0.06), 1.0, 1.0),
-	drink_can_params_t("can of beer", "interiors/heineken_label.jpg", colorRGBA(0.5,  0.4,  0.1 ), 3.0, 2.0),
+	drink_can_params_t("can of Coke", "interiors/coke_label.jpg",     colorRGBA(0.22, 0.11, 0.06), 1.0, 1.0, 0.16),
+	drink_can_params_t("can of beer", "interiors/heineken_label.jpg", colorRGBA(0.5,  0.4,  0.1 ), 3.0, 2.0, 0.08),
 };
 
 struct ball_type_t {

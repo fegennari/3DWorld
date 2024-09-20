@@ -917,10 +917,12 @@ void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
 	}
 }
 
+float get_obj_rand_tscale_add(room_object_t const &c) {
+	return fract(21111*c.x1() + 29222*c.y1() + 25333*c.z1()); // somewhat random
+}
 void building_room_geom_t::add_paint_can(room_object_t const &c) {
-	float const side_tscale_add(fract(21111*c.x1() + 29222*c.y1() + 25333*c.z1())); // somewhat random
 	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/paint_can_label.png")), 1, 0, 1)); // shadows, small
-	side_mat.add_vcylin_to_verts(c, apply_light_color(c), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 24, side_tscale_add); // draw sides only; random texture rotation
+	side_mat.add_vcylin_to_verts(c, apply_light_color(c), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 24, get_obj_rand_tscale_add(c)); // draw sides only; random texture rotation
 	point top(c.get_cube_center());
 	top.z = c.z2();
 	get_metal_material(1, 0, 1).add_vert_disk_to_verts(top, 0.5*min(c.dx(), c.dy()), 0, apply_light_color(c, LT_GRAY)); // shadowed, specular metal; small=1
@@ -1657,7 +1659,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	body.d[dim][c.dir] += dir_sign*0.24*length; body.d[dim][!c.dir] -= dir_sign*0.12*length; // shrink in length
 	bottle_params_t const &bp(bottle_params[c.get_bottle_type()]);
 	float const tscale(bp.label_tscale); // some labels are more square and scaled 2x to repeat as they're more stretched out; should we use a partial cylinder instead?
-	float const tscale_add(0.123*c.obj_id); // add a pseudo-random rotation to the label texture
+	float const tscale_add(0.123*c.obj_id + get_obj_rand_tscale_add(c)); // add a pseudo-random rotation to the label texture
 	string const &texture_fn(bp.texture_fn); // select the custom label texture for each bottle type
 	rgeom_mat_t &label_mat(get_material(tid_nm_pair_t(texture_fn.empty() ? -1 : get_texture_by_name(texture_fn)), 0, 0, 1)); // unshadowed, small
 	unsigned const label_verts_start(label_mat.itri_verts.size());
@@ -1667,11 +1669,13 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 
 void building_room_geom_t::add_drink_can(room_object_t const &c, bool add_bottom) {
 	unsigned const ndiv(get_rgeom_sphere_ndiv(1)); // use smaller ndiv (16) to reduce vertex count
-	drink_can_params_t const &bp(drink_can_params[c.get_drink_can_type()]);
-	float const tscale_add(0.123*c.obj_id); // add a pseudo-random rotation to the texture
+	drink_can_params_t const &cp(drink_can_params[c.get_drink_can_type()]);
+	float const tscale_add(0.123*c.obj_id + get_obj_rand_tscale_add(c)); // add a pseudo-random rotation to the texture
 	colorRGBA const color(apply_light_color(c));
-	rgeom_mat_t &label_mat(get_material(tid_nm_pair_t(get_texture_by_name(bp.texture_fn), 1), 1, 0, 1)); // shadowed, small
-	label_mat.add_vcylin_to_verts(c, color, 0, 0, 0, 0, 1.0, 1.0, bp.tscale, 1.0, 0, ndiv, tscale_add); // sides only
+	tid_nm_pair_t tp(get_texture_by_name(cp.texture_fn), 1);
+	tp.set_specular(0.8, 80.0);
+	rgeom_mat_t &label_mat(get_material(tp, 1, 0, 1)); // shadowed, small
+	label_mat.add_vcylin_to_verts(c, color, 0, 0, 0, 0, 1.0, 1.0, cp.tscale, 1.0, 0, ndiv, tscale_add, 0, (1.0 - cp.tex_clip_y), cp.tex_clip_y); // sides only
 	get_metal_material(1, 0, 1).add_vcylin_to_verts(c, color, add_bottom, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // untextured, shadowed, small=1, top and maybe bottom
 }
 
