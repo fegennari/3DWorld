@@ -681,9 +681,9 @@ void add_rows_of_vcylinders(room_object_t const &c, cube_t const &region, float 
 	pos.z = region.z1();
 	if (type == TYPE_PAN || type == TYPE_TCAN || type == TYPE_VASE) {pos.z += 0.002*c.dz();} // shift up slightly to prevent Z-fighting
 	cube_t objc(get_cube_height_radius(pos, radius, height));
-	bool const is_bottle(type == TYPE_BOTTLE);
-	unsigned rand_id(is_bottle ? rgen.rand() : 0);
-	if (is_bottle) {flags |= RO_FLAG_NO_CONS;} // not consumable
+	bool const is_drink(type == TYPE_BOTTLE || type == TYPE_DRINK_CAN);
+	unsigned rand_id(is_drink ? rgen.rand() : 0);
+	if (is_drink) {flags |= RO_FLAG_NO_CONS;} // not consumable
 
 	for (unsigned row = 0; row < num_rows; ++row) {
 		cube_t row_obj(objc);
@@ -691,7 +691,8 @@ void add_rows_of_vcylinders(room_object_t const &c, cube_t const &region, float 
 		for (unsigned col = 0; col < num_cols; ++col) {
 			if (rgen.rand_float() < 0.75) { // 75% chance
 				room_object_t obj(row_obj, type, c.room_id, (c.dim ^ inv_dim), dir, flags, c.light_amt, SHAPE_CYLIN);
-				if      (is_bottle              ) {obj.set_as_bottle(rand_id, 3, 1);} // 0-3; excludes poison and medicine; should we include medicine?; no_empty=1
+				if      (type == TYPE_BOTTLE    ) {obj.set_as_bottle(rand_id, 3, 1);} // 0-3; excludes poison and medicine; should we include medicine?; no_empty=1
+				else if (type == TYPE_DRINK_CAN ) {obj.obj_id = (uint16_t)(rand_id & 127); obj.color = LT_GRAY;} // strip off empty bit
 				else if (type == TYPE_VASE      ) {set_vase_id_and_color(obj, rgen);} // randomize the vase
 				else if (type == TYPE_SPRAYCAN  ) {set_spraypaint_color (obj, rgen);}
 				else if (type == TYPE_FLASHLIGHT) {obj.color = BLACK;}
@@ -703,7 +704,7 @@ void add_rows_of_vcylinders(room_object_t const &c, cube_t const &region, float 
 			}
 			row_obj.translate_dim(c.dim, col_spacing);
 		} // for col
-		if (is_bottle && rgen.rand_float() < 0.1) {rand_id = rgen.rand();} // 10% chance to update bottle type
+		if (is_drink && rgen.rand_float() < 0.1) {rand_id = rgen.rand();} // 10% chance to update bottle/can type
 		objc.translate_dim(!c.dim, row_spacing);
 	} // for row
 }
@@ -852,9 +853,14 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 				else if (add_food_boxes && n == num_shelves-1) { // add food boxes on the top shelf
 					// will fall through to grouped items case below
 				}
-				else { // add bottles; these aren't consumable by the player because that would be too powerful
+				else if (rgen2.rand_float() < 0.65) { // add bottles; these aren't consumable by the player because that would be too powerful
 					float const bot_height(height_val*rgen2.rand_uniform(0.7, 0.9)), bot_radius(min(0.25f*depth, bot_height*rgen2.rand_uniform(0.12, 0.18)));
 					add_rows_of_vcylinders(c, shelf, bot_radius, bot_height, 0.25, TYPE_BOTTLE, 2, flags, objects, rgen2); // 1-2 columns
+					continue;
+				}
+				else { // add drink cans; should these be grouped into six packs?
+					float const can_height(0.48*height_val), can_radius(0.13*height_val); // standard height and radius
+					add_rows_of_vcylinders(c, shelf, can_radius, can_height, 0.25, TYPE_DRINK_CAN, 2, flags, objects, rgen2); // 1-3 columns
 					continue;
 				}
 			} // end food
@@ -1189,6 +1195,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 		set_rand_pos_for_sz(obj, dim, length, diameter, rgen);
 		break;
 	}
+	//case TYPE_DRINK_CAN: {} // drink can - not yet added
 	case TYPE_MONEY: // money
 	{
 		float const length(0.135*c.dz()), width(2.35*length);

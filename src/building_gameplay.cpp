@@ -181,7 +181,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_DBG_SHAPE ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 1,  0.0,  0.0,   "debug shape"); // small (optimization)
 	bldg_obj_types[TYPE_METAL_BAR ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2,  0.0,  0.0,   "metal bar");
 	bldg_obj_types[TYPE_OFF_PILLAR] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1,  0.0,  0.0,   "office pillar");
-	bldg_obj_types[TYPE_DRINK_CAN ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 1.0,   1.0,   "drink can", 1); // single use
+	bldg_obj_types[TYPE_DRINK_CAN ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 1.0,   0.75,  "drink can", 1); // single use
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -298,7 +298,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		bool const is_bottle(obj.type == TYPE_BOTTLE); // else drink can
 		string const &name(is_bottle ? bottle_params[obj.get_bottle_type()].name  : drink_can_params[obj.get_drink_can_type()].name );
 		float const  value(is_bottle ? bottle_params[obj.get_bottle_type()].value : drink_can_params[obj.get_drink_can_type()].value);
-		bldg_obj_type_t type(0, 0, 0, 1, 0, 0, 2, value, 1.0, name);
+		bldg_obj_type_t type(0, 0, 0, 1, 0, 0, 2, value, (is_bottle ? 1.0 : 0.75), name);
 
 		if (obj.is_bottle_empty()) {
 			type.name    = "empty " + type.name;
@@ -370,6 +370,7 @@ float get_obj_weight(room_object_t const &obj) {
 }
 bool is_consumable(room_object_t const &obj) {
 	if (!in_building_gameplay_mode() || !obj.is_a_drink() || obj.is_bottle_empty() || (obj.flags & RO_FLAG_NO_CONS)) return 0; // not consumable
+	if (obj.type == TYPE_DRINK_CAN) return 1; // always consumable; not an inventory item
 	unsigned const bottle_type(obj.get_bottle_type());
 	bool const is_drink(bottle_type == BOTTLE_TYPE_WATER || bottle_type == BOTTLE_TYPE_COKE);
 
@@ -638,7 +639,7 @@ public:
 		tape_manager.clear();
 	}
 	void add_item(room_object_t const &obj) {
-		float health(0.0), drunk(0.0), liquid(0.0); // add these fields to bldg_obj_type_t?
+		float health(0.0), drunk(0.0), liquid(0.0);
 		bool const bladder_was_full(bladder >= 0.9);
 		float const value(get_obj_value(obj));
 		if (obj.type == TYPE_PAPER && value >= 500.0) {register_achievement("Top Secret Document");}
@@ -652,16 +653,26 @@ public:
 		oss << get_taken_obj_type(obj).name;
 
 		if (is_consumable(obj)) { // nonempty bottle, consumable
-			// should alcohol, poison, and medicine help with thirst? I guess alcohol helps somewhat
-			switch (obj.get_bottle_type()) {
-			case BOTTLE_TYPE_WATER : health =  0.25; liquid = 1.0; break; // water
-			case BOTTLE_TYPE_COKE  : health =  0.50; liquid = 1.0; break; // Coke
-			case BOTTLE_TYPE_BEER  : drunk  =  0.25; liquid = 0.5; break; // beer
-			case BOTTLE_TYPE_WINE  : drunk  =  0.50; liquid = 0.5; break; // wine (entire bottle)
-			case BOTTLE_TYPE_POISON: health = -0.50; break; // poison - take damage
-			case BOTTLE_TYPE_MEDS  : health =  1.00; is_poisoned = 0; break; // medicine, restore full health and cure poisoning
-			default: assert(0);
+			if (obj.type == TYPE_BOTTLE) {
+				// should alcohol, poison, and medicine help with thirst? I guess alcohol helps somewhat
+				switch (obj.get_bottle_type()) {
+				case BOTTLE_TYPE_WATER : health =  0.25; liquid = 1.0; break; // water
+				case BOTTLE_TYPE_COKE  : health =  0.50; liquid = 1.0; break; // Coke
+				case BOTTLE_TYPE_BEER  : drunk  =  0.25; liquid = 0.5; break; // beer
+				case BOTTLE_TYPE_WINE  : drunk  =  0.50; liquid = 0.5; break; // wine (entire bottle)
+				case BOTTLE_TYPE_POISON: health = -0.50; break; // poison - take damage
+				case BOTTLE_TYPE_MEDS  : health =  1.00; is_poisoned = 0; break; // medicine, restore full health and cure poisoning
+				default: assert(0);
+				}
 			}
+			else if (obj.type == TYPE_DRINK_CAN) { // slightly smaller than a bottle
+				switch (obj.get_drink_can_type()) {
+				case DRINK_CAN_TYPE_COKE: health = 0.4; liquid = 0.8; break;
+				case DRINK_CAN_TYPE_BEER: drunk  = 0.2; liquid = 0.4; break;
+				default: assert(0);
+				}
+			}
+			else {assert(0);} // invalid type
 		}
 		else if (is_healing_food(obj)) {
 			health = 0.50; // healing pizza
