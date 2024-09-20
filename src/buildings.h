@@ -1007,7 +1007,7 @@ struct building_room_geom_t {
 	vect_insect_t insects;
 	// {large static, small static, dynamic, lights, alpha mask, transparent, door} materials
 	building_materials_t mats_static, mats_small, mats_text, mats_detail, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors, mats_exterior, mats_ext_detail;
-	rgeom_mat_t mats_glass;
+	rgeom_mat_t mats_glass[2]; // {viewed from below, viewed from above}
 	vect_cube_t light_bcubes, shelf_rack_occluders[2], glass_floors; // shelf_rack_occluders: {back, top}
 	vect_cube_t pgbr_walls[2]; // parking garage and backrooms walls, in each dim
 	vector<index_pair_t> pgbr_wall_ixs; // indexes into pgbr_walls

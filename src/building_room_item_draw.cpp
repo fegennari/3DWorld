@@ -780,7 +780,7 @@ void building_room_geom_t::clear_materials() { // clears all materials
 	mats_ext_detail.clear();
 	obj_model_insts.clear(); // these are associated with static VBOs
 	door_handles   .clear();
-	mats_glass.clear();
+	for (unsigned d = 0; d < 2; ++d) {mats_glass[d].clear();}
 }
 // Note: used for room lighting changes; detail object changes are not supported
 void building_room_geom_t::check_invalid_draw_data() {
@@ -2056,7 +2056,9 @@ void building_t::draw_glass_surfaces(vector3d const &xlate) const {
 	if (!has_room_geom()) return;
 	vect_cube_t const &glass_floors(interior->room_geom->glass_floors);
 	if (glass_floors.empty()) return;
-	rgeom_mat_t &mat(interior->room_geom->mats_glass);
+	point const camera_bs(get_camera_pos() - xlate);
+	bool const player_is_above(camera_bs.z > glass_floors.front().zc());
+	rgeom_mat_t &mat(interior->room_geom->mats_glass[player_is_above]);
 
 	if (mat.empty()) { // create geometry
 		float const wall_thickness(get_wall_thickness());
@@ -2083,6 +2085,7 @@ void building_t::draw_glass_surfaces(vector3d const &xlate) const {
 				mat.add_cube_to_verts_untextured(f, color, skip_faces);
 			} // for f
 		} // for c
+		if (!player_is_above) {reverse(mat.quad_verts.begin(), mat.quad_verts.end());} // reverse so that top surface is drawn before bottom surface for correct alpha blending
 		mat.create_vbo_inner();
 	}
 	calc_cur_ambient_diffuse();
@@ -2091,7 +2094,6 @@ void building_t::draw_glass_surfaces(vector3d const &xlate) const {
 	if (interior->room_geom->glass_floor_split) {glEnable(GL_CULL_FACE);}
 	colorRGBA const indoor_light_color(get_retail_light_color());
 	// draw mirror reflection if player is on the top surface of the glass floor
-	point const camera_bs(get_camera_pos() - xlate);
 	bool const enable_reflection(ENABLE_GLASS_FLOOR_REF && room_mirror_ref_tid > 0 && point_over_glass_floor(camera_bs, 1)); // inc_escalator=1
 	shader_t s;
 	if (enable_reflection) {s.set_prefix("#define ENABLE_REFLECTION", 1);} // FS
