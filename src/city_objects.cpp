@@ -1735,7 +1735,7 @@ void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 		if (shadow_only) return; // skip drawing platform and doors in the shadow pass since we don't dynamically update shadows
 		cube_t platform(bcube);
 		set_cube_zvals(platform, platform_zval, (platform_zval + get_platform_height()));
-		platform.expand_by_xy(-2.0*frame_hwidth);
+		platform.expand_by_xy(-2.01*frame_hwidth); // slightly smaller to prevent Z-fighting with the glass walls
 
 		if (dstate.check_cube_visible(platform, 0.75*dist_scale)) { // draw platform frame
 			draw_cube_frame(dstate, qbds, platform, fc_thick, frame_hwidth, 0, LT_GRAY); // skip_bot=0
@@ -1747,7 +1747,7 @@ void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 		if (dstate.check_cube_visible(gate, 0.4*dist_scale)) { // draw lower vertical gate when close
 			colorRGBA const gate_color(BLACK);
 			float const door_width(gate.get_sz_dim(!dim)), bar_thickness(gate.get_sz_dim(dim)), door_height(gate.dz());
-			unsigned const num_v_bars(door_width/building_t::get_scaled_player_radius() + 2), num_h_bars(2);
+			unsigned const num_v_bars(door_width/building_t::get_scaled_player_radius() + 2), num_h_bars(3);
 			float const bar_hthick(0.5*bar_thickness), vbar_spacing((door_width - bar_thickness)/(num_v_bars-1)), hbar_spacing((door_height - bar_thickness)/(num_h_bars-1));
 
 			for (unsigned n = 0; n < num_v_bars; ++n) { // vertical bars
