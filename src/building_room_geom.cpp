@@ -2201,13 +2201,20 @@ void building_room_geom_t::add_wall_or_pillar(room_object_t const &c, vector3d c
 	bool const is_concrete(c.flags & (RO_FLAG_BACKROOM | RO_FLAG_ADJ_HI)), draw_top(c.flags & RO_FLAG_ADJ_TOP);
 	tid_nm_pair_t const tex(is_concrete ? tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1) : get_scaled_wall_tex(wall_tex));
 	unsigned const small((c.type == TYPE_PG_WALL) ? 2 : 0); // small=2/detail for parking garage or backrooms wall or pillar
-	get_material(tex, 1, 0, small).add_cube_to_verts(c, c.color, tex_origin, (draw_top ? EF_Z1 : EF_Z12)); // shadowed, no color atten, sides only unless draw_top
+	rgeom_mat_t &mat(get_material(tex, 1, 0, small)); // shadowed, no color atten, sides only unless draw_top
+	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts  (c, c.color, tex_origin, (draw_top ? EF_Z1 : EF_Z12));}
+	else if (c.shape == SHAPE_CYLIN) {mat.add_vcylin_to_verts_tscale(c, c.color, 0, draw_top);}
+	else {assert(0);} // unsupported shape
 }
 void building_room_geom_t::add_basement_pillar(room_object_t const &c, tid_nm_pair_t const &wall_tex) {
-	get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1), 1, 0, 2).add_cube_to_verts(c, c.color, all_zeros, EF_Z12); // small=2/detail, shadowed, no color atten
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1), 1, 0, 2)); // small=2/detail, shadowed, no color atten
+	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts  (c, c.color, all_zeros, EF_Z12);}
+	else if (c.shape == SHAPE_CYLIN) {mat.add_vcylin_to_verts_tscale(c, c.color, 0, 0);} // skip top and bottom
+	else {assert(0);} // unsupported shape
 }
 void building_room_geom_t::add_basement_beam(room_object_t const &c, tid_nm_pair_t const &wall_tex) {
-	get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 0), 0, 0, 2).add_cube_to_verts(c, c.color, all_zeros, EF_Z2 ); // small=2/detail, unshadowed, no color atten
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 0), 0, 0, 2)); // small=2/detail, unshadowed, no color atten
+	mat.add_cube_to_verts(c, c.color, all_zeros, EF_Z2);
 }
 
 void building_room_geom_t::add_parking_space(room_object_t const &c, float tscale) {

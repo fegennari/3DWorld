@@ -1098,6 +1098,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	} // for y
 	partition_cubes_into_conn_groups(big_space, space_groups, pad);
 	cube_t pillar(wall_area); // copy zvals
+	room_obj_shape const pillar_shape(rgen.rand_bool() ? SHAPE_CYLIN : SHAPE_CUBE); // randomly cube or cylinder per-floor; should this be per building?
 
 	for (vect_cube_t &group : space_groups) {
 		if (rgen.rand_float() < 0.4) continue; // no pillars 40% of the time
@@ -1106,7 +1107,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 
 		for (auto s = group.begin(); s != group.end(); ++s) {
 			for (unsigned d = 0; d < 2; ++d) {set_wall_width(pillar, s->get_center_dim(d), pillar_hwidth, d);}
-			objs.emplace_back(pillar, TYPE_PG_PILLAR, room_id, 0, 0, RO_FLAG_BACKROOM, tot_light_amt, SHAPE_CUBE, wall_color); // dim=0, dir=0
+			objs.emplace_back(pillar, TYPE_PG_PILLAR, room_id, 0, 0, RO_FLAG_BACKROOM, tot_light_amt, pillar_shape, wall_color); // dim=0, dir=0
 			// maybe merge rows of adjacent pillars into a single wall
 			cube_t merge_cand;
 

@@ -654,7 +654,7 @@ void building_t::add_office_pillars(rand_gen_t rgen, room_t const &room, float z
 	pillar.expand_by_xy(1.8*get_wall_thickness());
 	if (!check_cube_within_part_sides(pillar)) return; // handle non-cube buildings
 	if (has_bcube_int(pillar, lights))         return; // really should all the pillar, then the lights, but this is easier (and usually doesn't fail)
-	interior->room_geom->objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, 0, 0);
+	interior->room_geom->objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, 0, 0, 0, 1.0, (use_cylinder_coll() ? SHAPE_CYLIN : SHAPE_CUBE)); // cylin buildings have cylin pillars
 	blockers.push_back(pillar);
 }
 

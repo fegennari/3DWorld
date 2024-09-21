@@ -149,6 +149,12 @@ void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, b
 	add_cylin_to_verts(point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2()), radius*rs_bot, radius*rs_top,
 		color, draw_bot, draw_top, two_sided, inv_tb, side_tscale, end_tscale, skip_sides, ndiv, side_tscale_add, swap_txy, len_tc2, len_tc1);
 }
+void rgeom_mat_t::add_vcylin_to_verts_tscale(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top) {
+	vector3d const sz(c.get_size());
+	// make side_tscale an exact multiple of 1.0 so that there are no seams
+	float const side_tscale(round_fp(max(1.0, tex.tscale_x*0.5*PI*(sz.x + sz.y)))), len_tscale(tex.tscale_y*sz.z), end_tscale(0.25*(tex.tscale_x*sz.x + tex.tscale_y*sz.y));
+	add_vcylin_to_verts(c, color, draw_bot, draw_top, 0, 0, 1.0, 1.0, side_tscale, end_tscale, 0, N_CYL_SIDES, 0.0, 0, len_tscale);
+}
 void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float bot_radius, float top_radius, colorRGBA const &color, bool draw_bot, bool draw_top,
 	bool two_sided, bool inv_tb, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add, bool swap_txy, float len_tc2, float len_tc1)
 {
