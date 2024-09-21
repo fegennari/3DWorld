@@ -1821,10 +1821,11 @@ void ww_elevator_t::next_frame(point const &camera_bs, float fticks_stable) {
 	float const door_change_amt(1.0*fticks_stable/TICKS_PER_SECOND); // 1s to full open or close
 	float const fc_thick(0.5*get_floor_thickness()), player_radius(building_t::get_scaled_player_radius());
 	float const platform_zmin(bcube.z1() + fc_thick), platform_zmax(bcube.z2() - get_platform_height() - fc_thick);
-	bool const player_is_inside(point_on_platform(camera_bs, -player_radius)); // fully inside
+	bool const player_is_inside  (point_on_platform(camera_bs, -player_radius)); // fully inside
+	bool const player_overlapping(point_on_platform(camera_bs,  player_radius)); // partially inside
 	bool const want_to_move(platform_zval != target_pzval);
 	// the top door only opens when the player is in the elevator or walkway so that the unlit walkway interior isn't visible from outside
-	bool const top_door_can_open(player_is_inside || ww_bcube.contains_pt(camera_bs));
+	bool const top_door_can_open(player_overlapping || ww_bcube.contains_pt(camera_bs));
 	player_in_ww_elevator |= player_is_inside;
 
 	if (!door_is_open && want_to_move) { // can't move if a door is open
@@ -1868,7 +1869,8 @@ void ww_elevator_t::next_frame(point const &camera_bs, float fticks_stable) {
 		int const floors_from_top(floor((bcube.z2() - camera_bs.z)/floor_spacing));
 		target_pzval = platform_zmax - floors_from_top*floor_spacing;
 	}
-	player_was_inside = player_is_inside;
+	if      ( player_is_inside  ) {player_was_inside = 1;} // fully  inside the elevator
+	else if (!player_overlapping) {player_was_inside = 0;} // fully outside the elevator
 }
 
 // parking lot solar roofs
