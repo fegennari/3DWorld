@@ -1680,9 +1680,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (draw_ext_only) {inc_small = 0;}
 	// don't draw ceiling lights when player is above the building unless there's a light placed on a skylight
 	bool const draw_lights(!draw_ext_only && (camera_bs.z < building.bcube.z2() + (building.has_skylight_light ? 20.0*floor_spacing : 0.0)));
-	// only parking garages and attics have detail objects that cast shadows
-	bool const draw_detail_objs(inc_small >= 2 && (!shadow_only || building.point_in_attic(camera_bs) ||
-		(building.has_parking_garage && building.get_basement().contains_pt(camera_bs))));
+	// only parking garages, backrooms, and attics have detail objects that cast shadows
+	bool const draw_detail_objs(inc_small >= 2 && (!shadow_only || building.point_in_attic(camera_bs) || building.is_pos_in_pg_or_backrooms(camera_bs)));
 	bool const draw_int_detail_objs(inc_small >= 3 && !shadow_only);
 	// update clocks if moved to next second; only applies to the player's building
 	bool const update_clocks(player_in_building && inc_small >= 2 && !shadow_only && !reflection_pass && have_clock && check_clock_time());
