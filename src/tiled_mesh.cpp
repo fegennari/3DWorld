@@ -96,11 +96,19 @@ int check_city_contains_overlaps(cube_t const &query);
 bool check_inside_city(point const &pos, float radius);
 cube_t get_city_bcube_overlapping(cube_t const &c);
 void show_gpu_mem_info();
+void interpolate_over_time(float &val, float target_val, float transition_secs, int &last_frame);
 
 
-// lower fog distance when rainy/cloudy; very low when player is in the extended basement
-float get_tt_fog_scale    () {return tt_fog_density*((player_in_basement == 3) ? 0.01 : (is_cloudy ? 0.25 : 1.0));}
-float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius()*get_tt_fog_scale();}
+float get_tt_fog_scale() {
+	// lower fog distance when rainy/cloudy; very low when player is in the extended basement
+	static float fog_scale(1.0); // lower is denser fog
+	static int last_update_frame(0);
+	float const target_fog_scale((player_in_basement == 3) ? 0.01 : (is_cloudy ? 0.25 : 1.0));
+	float const change_rate(camera_in_building ? 0.1/(fog_scale*fog_scale) : 1.0); // change exponentially when inside a building
+	interpolate_over_time(fog_scale, target_fog_scale, change_rate, last_update_frame);
+	return fog_scale;
+}
+float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius()*tt_fog_density*get_tt_fog_scale();}
 float get_draw_tile_dist  () {return DRAW_DIST_TILES*get_scaled_tile_radius();}
 float get_grass_thresh    () {return GRASS_THRESH*tt_grass_scale_factor*get_tile_width();}
 float get_grass_blend_dist() {return tt_grass_scale_factor/GRASS_DIST_SLOPE;}
