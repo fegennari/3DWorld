@@ -352,12 +352,11 @@ struct pillar_t : public city_obj_t { // for walkway support
 
 struct ww_elevator_t : public oriented_city_obj_t {
 	bool player_was_inside=0;
-	float floor_spacing, platform_zval, target_pzval, lo_door_open=0.0, hi_door_open=0.0;
+	float floor_spacing, platform_zval, target_pzval, lo_door_open=0.0, hi_door_open=0.0, velocity_z=0.0;
 	cube_t ww_bcube;
 	static vect_cube_t doors; // reused across elevators and frames
 
-	ww_elevator_t(cube_t const &c, bool dim_, bool dir_, float fs, cube_t const &ww_bcube_) :
-		oriented_city_obj_t(c, dim_, dir_), floor_spacing(fs), platform_zval(c.z1()), target_pzval(platform_zval), ww_bcube(ww_bcube_) {set_bsphere_from_bcube();}
+	ww_elevator_t(cube_t const &c, bool dim_, bool dir_, float fs, cube_t const &ww_bcube_);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	float get_floor_thickness() const {return 0.5*FLOOR_THICK_VAL_WINDOWLESS*floor_spacing;} // half as thick as a building floor since we have top/bottom of shaft and platform

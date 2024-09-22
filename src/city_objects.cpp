@@ -1642,6 +1642,9 @@ bool pillar_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_,
 
 vect_cube_t ww_elevator_t::doors;
 
+ww_elevator_t::ww_elevator_t(cube_t const &c, bool dim_, bool dir_, float fs, cube_t const &ww_bcube_) :
+	oriented_city_obj_t(c, dim_, dir_), floor_spacing(fs), platform_zval(c.z1() + get_fc_thick()), target_pzval(platform_zval), ww_bcube(ww_bcube_) {set_bsphere_from_bcube();}
+
 /*static*/ void ww_elevator_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
 	if (dstate.pass_ix == 1) {enable_blend();} // transparent glass pass
 }
@@ -1818,8 +1821,8 @@ bool ww_elevator_t::point_on_platform(point const &camera_bs, float exp) const {
 void ww_elevator_t::next_frame(point const &camera_bs, float fticks_stable) {
 	bool const door_is_open(lo_door_open > 0.0 || hi_door_open > 0.0);
 	float const prev_ldo(lo_door_open), prev_hdo(hi_door_open);
-	float const door_change_amt(1.0*fticks_stable/TICKS_PER_SECOND); // 1s to full open or close
-	float const fc_thick(0.5*get_floor_thickness()), player_radius(building_t::get_scaled_player_radius());
+	float const elapsed_secs(fticks_stable/TICKS_PER_SECOND), door_change_amt(1.0*elapsed_secs); // 1s to full open or close
+	float const fc_thick(get_fc_thick()), player_radius(building_t::get_scaled_player_radius());
 	float const platform_zmin(bcube.z1() + fc_thick), platform_zmax(bcube.z2() - get_platform_height() - fc_thick);
 	bool const player_is_inside  (point_on_platform(camera_bs, -player_radius)); // fully inside
 	bool const player_overlapping(point_on_platform(camera_bs,  player_radius)); // partially inside
@@ -1829,7 +1832,11 @@ void ww_elevator_t::next_frame(point const &camera_bs, float fticks_stable) {
 	player_in_ww_elevator |= player_is_inside;
 
 	if (!door_is_open && want_to_move) { // can't move if a door is open
-		float const targ_dz(target_pzval - platform_zval), move_dist(fticks_stable*(bcube.dz() - floor_spacing)/(6.0*TICKS_PER_SECOND)); // 6s for full height change
+		float const full_path_dz(bcube.dz() - floor_spacing);
+		float const full_height_time(min(6.0f, 0.5f*full_path_dz/floor_spacing)); // 0.5s per floor / 6s max for full height change
+		float const targ_dz(target_pzval - platform_zval);
+		float const move_dist(velocity_z*elapsed_secs*full_path_dz/full_height_time);
+		velocity_z = min(1.0f, (velocity_z + 0.5f*elapsed_secs)); // accelerate in 2s
 		
 		if (fabs(targ_dz) < move_dist) { // reached dest floor; doors should begin to open
 			platform_zval = target_pzval;
