@@ -1084,7 +1084,8 @@ void power_pole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist
 		bool const draw_top(ce[1].z < camera_bs.z);
 		add_cylin_as_tris(qbds.qbd.verts, ce, pole_radius, pole_radius, cw, pole_ndiv, (draw_top ? 2 : 0), vert_tscale, 1.0/pole_ndiv, 1); // swap_ts_tt=1
 
-		if (has_transformer() && (shadow_only || bcube.closest_dist_less_than(camera_bs, 0.7*dmax))) { // draw transformer, untextured
+		if (has_transformer() && (shadow_only || bcube.closest_dist_less_than(camera_bs, 0.7*dmax))) { // pole at intersection with both X and Y connections
+			// draw transformer, untextured
 			float const tf_radius(2.0*pole_radius), tf_height(0.1*pole_height), y_sign(at_line_end[1] ? 1.0 : -1.0);
 			ce[0].z = base.z  + 0.77*pole_height;
 			ce[1].z = ce[0].z + tf_height;
@@ -1101,6 +1102,41 @@ void power_pole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist
 				point const cce[2] = {point(conduit_top.x, conduit_top.y, base.z), conduit_top};
 				bool const draw_top(ndiv > 8 && camera_bs.z > conduit_top.z);
 				add_cylin_as_tris(s_qbd.verts, cce, cradius, cradius, gray, min(ndiv, 16U), (draw_top ? 2 : 0)); // specular
+			}
+			// draw traffic camera
+			float const pole_dist(pole_radius/SQRT2);
+			point const attach_pt((base.x + pole_dist), (base.y + pole_dist), (base.z + 0.5*pole_height));
+			cube_t bc_test;
+			bc_test.set_from_sphere(attach_pt, 2.5*pole_radius); // conservative
+
+			if (dstate.check_cube_visible(bc_test, 0.25*dist_scale)) {
+				float const length(1.8*pole_radius), hwidth(0.32*pole_radius), hheight(0.24*pole_radius), shroud_thick(0.04*hwidth);
+				cube_t tcam;
+				tcam.set_from_point(attach_pt);
+				tcam.x1() += 0.2*length; tcam.x2() = tcam.x1() + length; // extend away from pole and set length
+				tcam.expand_in_y(hwidth );
+				tcam.expand_in_z(hheight);
+				cube_t window(tcam), shroud(tcam), mount(tcam);
+				window.expand_in_y(-0.35*hwidth );
+				window.expand_in_z(-0.35*hheight);
+				set_wall_width(window, tcam.x2(), 0.01*length, 0);
+				shroud.x1() += 0.85*length; shroud.x2() += 0.1*length;
+				shroud.z2() += shroud_thick;
+				cube_t shroud_t(shroud), shroud_l(shroud), shroud_r(shroud); // top, left, right
+				shroud_t.z1()  = tcam.z2();
+				shroud_l.y2()  = tcam.y1(); shroud_l.y1() -= shroud_thick;
+				shroud_r.y1()  = tcam.y2(); shroud_r.y2() += shroud_thick;
+				shroud_l.z1() += hheight;   shroud_r.z1() += hheight; // starts halfway up
+				mount.x1() = attach_pt.x; mount.x2() = tcam.x1() + hwidth;
+				mount.expand_in_y(-0.6*hwidth); // shrink width
+				mount.z2() = tcam.z1(); mount.z1() -= 0.4*hheight; // below the camera
+				unsigned const start_ix(qbds.untex_qbd.verts.size());
+				cube_t    const parts [5] = {tcam,  mount, shroud_t, shroud_l, shroud_r};
+				colorRGBA const colors[5] = {WHITE, GRAY,  WHITE,    WHITE,    WHITE   };
+				for (unsigned n = 0; n < 5; ++n) {dstate.draw_cube(qbds.untex_qbd, parts[n], colors[n], 0, 0.0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 0, 1);} // no_cull=1 since it's rotated
+				dstate.draw_cube(qbds.untex_qbd, window, BLACK, 0, 0.0, 6, 0, 0, 0, 1.0, 1.0, 1.0, 0, 1); // no_cull=1, draw X only (only really need one side)
+				rotate_verts(qbds.untex_qbd.verts, plus_y, -0.20*PI, attach_pt, start_ix); // tilt downward
+				rotate_verts(qbds.untex_qbd.verts, plus_z, -0.25*PI, attach_pt, start_ix); // rotate 45 degrees to face the intersection
 			}
 		}
 	}
