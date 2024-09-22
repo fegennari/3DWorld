@@ -586,7 +586,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					
 					if (!walkways.empty() && is_room_adjacent_to_ext_door(unit_bounds)) {make_public = 1;}
 					else { // check for stairs in this room
-						unit_bounds.expand_in_dim(2, -fc_thick); // floor to ceiling
+						unit_bounds.expand_in_z (-fc_thick); // floor to ceiling
 						unit_bounds.expand_by_xy(-wall_thickness); // subtract off walls to avoid including stairs in adjacent rooms
 						if (has_stairs_bcube_int(unit_bounds, interior->stairwells, doorway_width, 1)) {make_public = 1;} // no_check_enter_exit=1 (check with no expand)
 					}
@@ -1538,7 +1538,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		if (room.is_single_floor && room.dz() > 1.5*window_vspacing) {
 			trim_exclude = room;
 			trim_exclude.expand_by_xy(0.5*wall_thickness); // include half the wall
-			trim_exclude.expand_in_dim(2, -0.5*window_vspacing); // allow trim at floor and ceiling, but not at floors in between
+			trim_exclude.expand_in_z (-0.5*window_vspacing); // allow trim at floor and ceiling, but not at floors in between
 			break; // can only have one room of this type
 		}
 	}
@@ -2403,7 +2403,7 @@ void building_t::add_window_blinds(cube_t const &window, bool dim, bool dir, uns
 	}
 	c.d[dim][!dir] += (dir ? -1.0 : 1.0)*thickness;
 	expand_to_nonzero_area(c, thickness, dim);
-	c.expand_in_dim(2, extend); // extend in Z to cover window trim
+	c.expand_in_z(extend); // extend in Z to cover window trim
 
 	if (vertical) { // vertical, moves horizontally
 		c.expand_in_dim(!dim, 1.5*wall_thickness); // larger expand value (beyond the wall trim)
@@ -2458,7 +2458,7 @@ void add_elevator_button(point const &pos, float button_radius, bool dim, bool d
 	float const button_thickness(0.25*button_radius);
 	cube_t c; c.set_from_point(pos);
 	c.expand_in_dim(!dim, button_radius);
-	c.expand_in_dim(2, button_radius); // Z
+	c.expand_in_dim(2,    button_radius); // Z
 	c.d[dim][dir] += (dir ? 1.0 : -1.0)*button_thickness;
 	unsigned flags(RO_FLAG_NOCOLL);
 	if (inside) {flags |= RO_FLAG_IN_ELEV;}

@@ -2185,7 +2185,7 @@ bool building_t::overlaps_any_placed_obj(cube_t const &c) const { // Note: inclu
 bool building_t::check_skylight_intersection(cube_t const &c) const {
 	if (skylights.empty()) return 0;
 	cube_t test_cube(c);
-	test_cube.expand_in_dim(2, 0.5*get_window_vspace()); // expand to include half a floor of space above and below the skylight
+	test_cube.expand_in_z(0.5*get_window_vspace()); // expand to include half a floor of space above and below the skylight
 	return has_bcube_int(test_cube, skylights);
 }
 

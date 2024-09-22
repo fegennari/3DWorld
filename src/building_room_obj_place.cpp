@@ -2805,14 +2805,14 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 			pos[!cdim] = mount.d[!cdim][0] + (n+1)*spacing;
 			cue.set_from_point(pos);
 			cue.expand_by_xy(cue_radius);
-			cue.expand_in_dim(2, 0.5*cue_len); // set height/length
+			cue.expand_in_z(0.5*cue_len); // set height/length
 			// either add the cue to the holder, on the table, or leaning against the table
 			if (rgen.rand_bool()) {++((num_table_cues < 2 && rgen.rand_bool()) ? num_table_cues : num_leaning_cues);}
 			else {objs.emplace_back(cue, TYPE_POOL_CUE, room_id, 0, 1, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE);} // dim=2 (calculated from size)
 
 			for (unsigned d = 0; d < 2; ++d) { // add tiny blocks on each side of the cue, even if not present
 				room_object_t block(mount);
-				block.expand_in_dim(2, -0.2*mount.dz()); // shrink in Z
+				block.expand_in_z(-0.2*mount.dz()); // shrink in Z
 				for (unsigned e = 0; e < 2; ++e) {block.d[cdim][e] = cue.d[cdim][e];}
 				set_wall_width(block, (pos[!cdim] + (d ? 1.0 : -1.0)*(0.7*cue_radius + block_hwidth)), block_hwidth, !cdim);
 				objs.push_back(block);
@@ -4150,7 +4150,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 					center[!dim] = rgen.rand_uniform(lo, hi);
 				}
 				cube_t c(center, center);
-				c.expand_in_dim(2, 0.5*height);
+				c.expand_in_z(0.5*height);
 				c.d[dim][!dir] += 0.2*base_shift; // move out to prevent z-fighting
 				// add an additional half wall thickness for interior hallway and office walls
 				if (room.inc_half_walls() && classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT) {c.translate_dim(dim, base_shift);}
@@ -4841,8 +4841,8 @@ void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &r
 
 		if (allow_rot) { // flip aspect ratio
 			float const sz_diff(0.5*(light.dx() - light.dy()));
-			light_cand.expand_in_dim(0, -sz_diff);
-			light_cand.expand_in_dim(1,  sz_diff);
+			light_cand.expand_in_x(-sz_diff);
+			light_cand.expand_in_y( sz_diff);
 		}
 		for (unsigned D = 0; D < 2 && !light_placed; ++D) { // try both dims
 			bool const dim(room_dim ^ bool(D));

@@ -739,7 +739,7 @@ void building_room_geom_t::add_vert_roll_to_material(room_object_t const &c, rge
 	if (sz_ratio == 0.0) return; // empty, tube only, don't need to draw the rest of the roll
 	cube_t roll(c);
 	if (sz_ratio < 1.0) {roll.expand_by_xy(-hole_shrink*(1.0 - sz_ratio)*c.dx());} // partially used
-	hole.expand_in_dim(2, 0.0025*c.dz()); // expand slightly to avoid z-fighting
+	hole.expand_in_z(0.0025*c.dz()); // expand slightly to avoid z-fighting
 	bool const swap_txy(c.type == TYPE_TPROLL); // TP texture is horizontal rather than vertical
 	// draw top/bottom surface only to mask off the outer part of the roll when held by the player; when resting on an object, draw the top surface only
 	mat.add_vcylin_to_verts(hole, ALPHA0, player_held, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1, ndiv); // hole
@@ -779,7 +779,7 @@ void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
 	rod.expand_in_dim( 2,     rod_shrink); // z
 	rod.expand_in_dim(!c.dim, 0.05*length); // will go slightly outside the bounds of c
 	float const rod_end(rod.d[!c.dim][0]); // arbitrarily choose lower end
-	bar.expand_in_dim(2, -0.65*radius); // z
+	bar.expand_in_z(-0.65*radius);
 	bar.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.6*radius;
 	bar.d[!c.dim][0] = rod_end - 0.08*length; // set thickness; will go slightly outside the bounds of c
 	bar.d[!c.dim][1] = rod_end;
@@ -791,7 +791,7 @@ void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
 		cube_t plate(c);
 		plate.d[c.dim][!c.dir] = c.d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*0.75*side_clearance; // set plate thickness
 		plate.d[!c.dim][0] = bar.d[!c.dim][0]; // flush with the bar
-		plate.expand_in_dim(2, -0.2*height); // shrink in Z
+		plate.expand_in_z(-0.2*height); // shrink in Z
 		holder_mat.add_cube_to_verts_untextured(plate, holder_color, wall_face); // skip the face against the wall
 	}
 }
@@ -1065,8 +1065,8 @@ void building_room_geom_t::add_chimney_cap(room_object_t const &c) {
 	bool const add_overlap(c.obj_id & 2);
 	cube_t crown(c), hole(c);
 	crown.z2() -= 0.75*dz; // shorten height
-	hole.expand_in_dim(0, -0.5*(dx - 0.4*min_sz)); // shrink
-	hole.expand_in_dim(1, -0.5*(dy - 0.4*min_sz)); // shrink
+	hole.expand_in_x(-0.5*(dx - 0.4*min_sz)); // shrink
+	hole.expand_in_y(-0.5*(dy - 0.4*min_sz)); // shrink
 	if (add_overlap) {crown.expand_by_xy(0.1*min_sz);} // grow
 	cube_t sides[4]; // {-y, +y, -x, +x}
 	subtract_cube_xy(crown, hole, sides);
@@ -2085,7 +2085,7 @@ void building_room_geom_t::add_ceiling_fan_light(room_object_t const &fan, room_
 	tp.emissive = (is_on ? 1.0 : 0.0);
 	cube_t light_bcube;
 	light_bcube.set_from_sphere(light.get_cube_center(), 0.035*(fan.dx() + fan.dy()));
-	light_bcube.expand_in_dim(2, -0.4*light_bcube.dz()); // shrink in Z
+	light_bcube.expand_in_z(-0.4*light_bcube.dz()); // shrink in Z
 	mats_lights.get_material(tp, 0).add_sphere_to_verts(light_bcube, apply_light_color(fan), 0, plus_z); // no shadows, bottom hemisphere
 }
 
@@ -3507,7 +3507,7 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 			for (unsigned d = 0; d < 2; ++d) {wood_mat.add_cube_to_verts(ends[d], color, tex_origin, slat_skip_faces);}
 			slat.d[c.dim][1] = slat.d[c.dim][0] + slat_spacing;
 			slat.expand_in_dim(c.dim, -slat_gap); // add gap between slats to each side
-			slat.expand_in_dim(2, -0.25*frame.dz()); // make thinner in Z
+			slat.expand_in_dim(2,     -0.25*frame.dz()); // make thinner in Z
 			rgeom_mat_t &slat_mat(get_wood_material(4.0*tscale));
 			colorRGBA const slat_color(color*1.5); // make them lighter in color
 
@@ -4355,7 +4355,7 @@ float get_cabinet_doors(room_object_t const &c, vect_cube_t &doors, vect_cube_t 
 	cube_t door0(c);
 	door0.d[ c.dim][!c.dir]  = door0.d[c.dim][c.dir];
 	door0.d[ c.dim][ c.dir] += signed_thick; // expand out a bit
-	door0.expand_in_dim(2, -tb_border); // shrink in Z
+	door0.expand_in_z(-tb_border); // shrink in Z
 	float const drawer_height(0.18*door0.dz()), drawer_gap(0.25*drawer_height);
 	if (add_drawers) {door0.z2() -= (drawer_height + drawer_gap);} // shorten to make space for drawers above
 	unsigned const doors_start(doors.size()); // always 0?
@@ -4474,7 +4474,7 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale, boo
 		cube_t handle(door);
 		handle.d[c.dim][!c.dir]  = door.d[c.dim][c.dir];
 		handle.d[c.dim][ c.dir] += dir_sign*handle_thick; // expand out a bit
-		handle.expand_in_dim(2, -0.4*door.dz()); // shrink in Z
+		handle.expand_in_z(-0.4*door.dz()); // shrink in Z
 
 		if (is_open) { // rotate 90 degrees
 			handle.d[!c.dim][!handle_side] = door.d[!c.dim][handle_side];

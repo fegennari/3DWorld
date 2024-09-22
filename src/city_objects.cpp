@@ -1259,7 +1259,7 @@ void power_pole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist
 			draw_wire(w.pts, wire_radius, black, m_qbd);
 			// draw vertical wire segment connecting the three, which also represents all three power wires tied together
 			cube_t wire(w.pts[1], w.pts[1]); // connection point to bottom horizontal wires
-			wire.expand_in_dim(2, vwire_spacing); // connect to wires above and below
+			wire.expand_in_z (vwire_spacing); // connect to wires above and below
 			wire.expand_by_xy(wire_radius);
 			dstate.draw_cube(m_qbd, wire, black, 1, 0.0, 4); // skip top and bottom
 			if (w.pole_base.z == w.pts[0].z || !dist_less_than(w.pts[0], camera_bs, 0.15*dmax)) continue; // no pole, or too far away
@@ -1398,8 +1398,8 @@ void traffic_cone_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float di
 
 pond_t::pond_t(point const &pos_, float x_radius, float y_radius, float depth) : city_obj_t(pos_, max(x_radius, y_radius)) {
 	bcube.set_from_point(pos);
-	bcube.expand_in_dim(0, x_radius);
-	bcube.expand_in_dim(1, y_radius);
+	bcube.expand_in_x(x_radius);
+	bcube.expand_in_y(y_radius);
 	bcube.z1() -= depth;
 }
 /*static*/ void pond_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
@@ -1657,7 +1657,7 @@ void ww_elevator_t::get_glass_sides(cube_with_ix_t sides[4]) const {
 	for (unsigned n = 0; n < 4; ++n) { // draw 4 sides
 		bool const sdim(n>>1), sdir(n&1);
 		cube_t side(bcube);
-		side.expand_in_dim(2, -get_fc_thick()); // shrink top and bottom
+		side.expand_in_z(-get_fc_thick()); // shrink top and bottom
 		side.d[sdim][!sdir] = side.d[sdim][sdir] + (sdir ? -1.0 : 1.0)*glass_width; // set glass width
 		side.expand_in_dim(!sdim, -glass_width); // shrink to exclude frame and prevent overlap/Z-fighting
 		unsigned skip_mask(EF_Z12 | get_skip_mask_for_xy(!sdim)); // skip top and bottom by default, and sides
@@ -1677,7 +1677,7 @@ void ww_elevator_t::get_glass_sides(cube_with_ix_t sides[4]) const {
 }
 void draw_cube_frame(draw_state_t &dstate, city_draw_qbds_t &qbds, cube_t const &bcube, float fc_thick, float frame_hwidth, bool skip_bot, colorRGBA const &color) {
 	cube_t frame_area(bcube);
-	frame_area.expand_in_dim(2, -fc_thick); // shrink top and bottom
+	frame_area.expand_in_z (-fc_thick); // shrink top and bottom
 	frame_area.expand_by_xy(-frame_hwidth); // frame is centered on the glass
 	cube_t corner(frame_area);
 
@@ -1782,7 +1782,7 @@ void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 			for (unsigned n = 0; n < num_v_bars; ++n) { // vertical bars
 				cube_t bar(gate);
 				set_wall_width(bar, (gate.d[!dim][0] + bar_hthick + n*vbar_spacing), bar_hthick, !dim);
-				bar.expand_in_dim(2, -bar_hthick); // remove overlap with h-bars
+				bar.expand_in_z(-bar_hthick); // remove overlap with h-bars
 				dstate.draw_cube(qbds.untex_qbd, bar, gate_color, 1, 0.0, 4); // skip top and bottom
 			}
 			for (unsigned n = 0; n < num_h_bars; ++n) { // horizontal bars

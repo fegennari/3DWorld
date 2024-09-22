@@ -227,7 +227,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	// add attic access door
 	cube_with_ix_t adoor(interior->attic_access);
 	assert(adoor.is_strictly_normalized());
-	adoor.expand_in_dim(2, -0.2*adoor.dz()); // shrink in z
+	adoor.expand_in_z(-0.2*adoor.dz()); // shrink in z
 	unsigned const room_id(get_attic_room_id());
 	room_t const &room(get_room(room_id));
 	bool const ddim(adoor.ix >> 1), ddir(adoor.ix & 1);

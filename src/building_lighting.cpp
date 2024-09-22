@@ -316,7 +316,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			}
 			float const shrink(c->get_radius()*(1.0 - 1.0/SQRT2));
 			inner_cube.expand_by_xy(-shrink); // shrink to inscribed cube in XY
-			if (c->shape == SHAPE_SPHERE) {inner_cube.expand_in_dim(2, -shrink);} // shrink in Z as well
+			if (c->shape == SHAPE_SPHERE) {inner_cube.expand_in_z(-shrink);} // shrink in Z as well
 			if (   type  == TYPE_TABLE  ) {inner_cube.z1() += 0.88*c->dz();} // top of table
 			cc.emplace_back(inner_cube, color);
 		}
@@ -868,7 +868,7 @@ public:
 			float const dist_above_below(0.5f*(INDIR_LIGHT_FLOOR_SPAN - 1)*b.get_window_vspace());
 			cube_t const interior_bcube(b.get_interior_bcube(0)); // inc_ext_basement=0
 			light_bounds = valid_area;
-			light_bounds.expand_in_dim(2, dist_above_below); // expand in Z
+			light_bounds.expand_in_z(dist_above_below);
 			// clamp Z range to interior_bcube and add any excess height to the other end of the range
 			if      (light_bounds.z1() < interior_bcube.z1()) {light_bounds.z2() += (interior_bcube.z1() - light_bounds.z1());}
 			else if (light_bounds.z2() > interior_bcube.z2()) {light_bounds.z1() -= (light_bounds.z2() - interior_bcube.z2());}

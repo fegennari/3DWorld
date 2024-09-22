@@ -2426,7 +2426,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			cube_t extension(*e);
 			extension.z1() = p->z1(); extension.z2() = p->z2();
 			cube_t cand_test(extension);
-			cand_test.expand_in_dim(2, -fc_thick); // shrink slightly in Z so that we don't intersect the original elevator *e
+			cand_test.expand_in_z(-fc_thick); // shrink slightly in Z so that we don't intersect the original elevator *e
 			cube_t const cand_test_nopad(cand_test);
 			cand_test.d[e->dim][e->dir] += doorway_width*(e->dir ? 1.0 : -1.0); // add extra space in front of the elevator
 			if (!p->contains_cube_xy(cand_test)) continue; // not enough space at elevator entrance

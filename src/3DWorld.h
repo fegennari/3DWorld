@@ -617,6 +617,9 @@ struct cube_t { // size = 24; Note: AABB, not actually a cube
 	void expand_by_xy(float val) {UNROLL_2X(d[i_][0] -= val; d[i_][1] += val;)}
 	void expand_by_xy(vector3d const &val) {UNROLL_2X(d[i_][0] -= val[i_]; d[i_][1] += val[i_];)}
 	void expand_in_dim(unsigned dim, float val) {assert(dim < 3); d[dim][0] -= val; d[dim][1] += val;}
+	void expand_in_x(float val) {x1() -= val; x2() += val;}
+	void expand_in_y(float val) {y1() -= val; y2() += val;}
+	void expand_in_z(float val) {z1() -= val; z2() += val;}
 	unsigned get_split_dim(float &max_sz, float &sval, unsigned skip_dims) const;
 	bool cube_intersection(const cube_t &cube, cube_t &res) const;
 	float get_overlap_volume(const cube_t &cube) const;

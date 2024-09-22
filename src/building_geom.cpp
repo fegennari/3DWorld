@@ -2225,9 +2225,9 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	}
 	if (num_ac_units > 0) {
 		vect_cube_t ac_avoid;
-		for (cube_t const &s : skylights) {ac_avoid.push_back(s); ac_avoid.back().expand_in_dim(2, 0.25*window_vspacing);} // avoid skylights
-		if (!avoid_bcube .is_all_zeros())  {ac_avoid.push_back(avoid_bcube );}
-		if (!door_blocker.is_all_zeros())  {ac_avoid.push_back(door_blocker);}
+		for (cube_t const &s : skylights) {ac_avoid.push_back(s); ac_avoid.back().expand_in_z(0.25*window_vspacing);} // avoid skylights
+		if (!avoid_bcube .is_all_zeros()) {ac_avoid.push_back(avoid_bcube );}
+		if (!door_blocker.is_all_zeros()) {ac_avoid.push_back(door_blocker);}
 		place_roof_ac_units(num_ac_units, xy_sz*rgen.rand_uniform(0.012, 0.02), bounds, ac_avoid, rgen);
 	}
 	if (add_walls) {

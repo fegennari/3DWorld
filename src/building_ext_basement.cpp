@@ -100,7 +100,7 @@ bool building_t::is_basement_room_under_mesh_not_int_bldg(cube_t &room, building
 bool building_t::is_basement_room_placement_valid(cube_t &room, ext_basement_room_params_t &P, bool dim, bool dir, bool *add_end_door, building_t const *exclude) const {
 	float const wall_thickness(get_wall_thickness()), wall_expand_toler(0.1*wall_thickness);
 	cube_t test_cube(room);
-	test_cube.expand_in_dim(2, -0.01*test_cube.dz()); // shrink slightly so that rooms on different floors can cross over each other
+	test_cube.expand_in_z(-0.01*test_cube.dz()); // shrink slightly so that rooms on different floors can cross over each other
 	
 	if (!P.rooms.empty()) { // not the first hallway; check if too close to the basement such that the wall or trim will clip through the basement wall
 		cube_t room_exp(test_cube);
@@ -625,7 +625,7 @@ void building_t::add_false_door_to_extb_room_if_needed(room_t const &room, float
 		query_region.d[dim][!dir] = room.d[dim][dir]; // shrink to the end of the hallway
 		query_region.expand_in_dim(dim, 1.5*door_width); // distance from end to nearest door/room in either direction
 		query_region.expand_by_xy(expand_val);
-		query_region.expand_in_dim(2, -get_fc_thickness()); // subtract floors and ceilings
+		query_region.expand_in_z(-get_fc_thickness()); // subtract floors and ceilings
 		if (interior->is_cube_close_to_doorway(query_region, room))   continue; // bad placement/not needed
 		if (interior->is_blocked_by_stairs_or_elevator(query_region)) continue; // check stairs
 		bool near_other_room(0);

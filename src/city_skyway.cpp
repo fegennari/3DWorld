@@ -366,7 +366,7 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 	// draw window frames/dividers; untextured black, so grouping into tiles for shadows isn't needed and they can all be batched together
 	float const frame_width(0.75*top.dz());
 	cube_t top_exp(top);
-	top_exp.expand_in_dim(2, 0.25*frame_width); // extends outside the glass
+	top_exp.expand_in_z(0.25*frame_width); // extends outside the glass
 	assert(qbds.untex_qbd.empty());
 
 	for (unsigned dir = 0; dir < 2; ++dir) { // sides

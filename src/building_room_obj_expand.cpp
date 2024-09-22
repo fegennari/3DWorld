@@ -383,7 +383,7 @@ void building_room_geom_t::expand_breaker_panel(room_object_t const &c, building
 	breakers.d[c.dim][0] = breakers.d[c.dim][1] = breakers.d[c.dim][!c.dir] - dir_sign*thickness; // move both edges to front of panel
 	breakers.d[c.dim][!c.dir] += dir_sign*0.5*thickness; // expand out for correct width
 	breakers.expand_in_dim(!c.dim, -0.2*box_width); // shrink the width
-	breakers.expand_in_dim(2, -0.1*box_height); // shrink vertically
+	breakers.expand_in_dim(2,      -0.1*box_height); // shrink vertically
 	float const width(breakers.get_sz_dim(!c.dim)), height(breakers.dz());
 	float const breaker_height(0.1*box_depth + 0.025*box_width + 0.05*box_height), breaker_width(2.4*breaker_height);
 	unsigned const num_cols(max(1, round_fp(width/breaker_width))), num_rows(max(1, round_fp(height/breaker_height))), num_breakers(num_cols*num_rows);
