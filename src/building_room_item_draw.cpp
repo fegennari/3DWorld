@@ -1230,6 +1230,7 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 		door_rotation_t drot;
 		building.add_door_verts(d, *this, drot, door_type, d.dim, d.open_dir, d.open_amt, 0, 0, d.on_stairs, d.hinge_side, d.is_bldg_conn, d.mult_floor_room); // opens_out=0, exterior=0
 		if (!global_building_params.add_door_handles) continue;
+		if (d.on_stairs) continue; // skip basement stairs doors since they're not drawn when open anyway
 		
 		if (have_door_handle_model) { // add model to door_handles
 			bool const handle_side(d.get_handle_side());
