@@ -3445,7 +3445,7 @@ bool building_t::maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room
 			if (!ADD_WALKWAY_EXT_DOORS) continue; // choose a different door pos
 			// if we get here, that means we couldn't add a real door and we can't add a two sided fake door;
 			// but a walkway that leads to nowhere is no good, so create a single sided door that exists only in the walkway
-			door.d[dim][dir] -= (dir ? -1.0 : 1.0)*(wall_thickness + 0.1*door_thickness); // extend into walkway, enough to prevent Z-fighting
+			door.d[dim][dir] -= (dir ? -1.0 : 1.0)*(wall_thickness + 0.25*door_thickness); // extend into walkway, enough to prevent Z-fighting
 			objs.emplace_back(door, TYPE_FALSE_DOOR, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_WALKWAY | RO_FLAG_INTERIOR), tot_light_amt);
 		}
 		else {
