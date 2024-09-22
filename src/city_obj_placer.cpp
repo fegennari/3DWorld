@@ -1481,6 +1481,7 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 			pool_deck_t &pdeck(pdecks.back());
 			pdeck.calc_pillars(ladder); // pass in the ladder pos to avoid placing pillars there
 			vector_add_to(pdeck.pillars, colliders); // include pillars for AI collisions
+			// TODO: add chair(s) to the deck
 		}
 		// maybe place pool float in the pool
 		cube_t float_bcube;
@@ -1819,6 +1820,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	divider_groups .create_groups(dividers,  all_objs_bcube);
 	pool_groups    .create_groups(pools,     all_objs_bcube);
 	plad_groups    .create_groups(pladders,  all_objs_bcube);
+	chair_groups   .create_groups(chairs,    all_objs_bcube);
 	pdeck_groups   .create_groups(pdecks,    all_objs_bcube);
 	ppole_groups   .create_groups(ppoles,    all_objs_bcube);
 	hcap_groups    .create_groups(hcaps,     all_objs_bcube);
@@ -2067,6 +2069,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(dumpsters, dumpster_groups, dstate, 0.15, shadow_only, 1);
 	draw_objects(plants,    plant_groups,    dstate, 0.04, shadow_only, 1);
 	draw_objects(flowers,   flower_groups,   dstate, 0.06, shadow_only, 1);
+	draw_objects(chairs,    chair_groups,    dstate, 0.10, shadow_only, 1);
 	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1);
 	draw_objects(p_solars,  p_solar_groups,  dstate, 0.40, shadow_only, 0);
 	draw_objects(elevators, wwe_groups,      dstate, 0.15, shadow_only, 0); // draw first pass opaque geometry
@@ -2218,6 +2221,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(bikes,     bike_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(dumpsters, dumpster_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(plants,    plant_groups,    pos, p_last, radius, xlate, cnorm)) return 1; // optional?
+	if (proc_vector_sphere_coll(chairs,    chair_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(ponds,     pond_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(pillars,   pillar_groups,   pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(elevators, wwe_groups,      pos, p_last, radius, xlate, cnorm)) return 1;
@@ -2257,7 +2261,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(pillars,   pillar_groups,   p1, p2, t, ret);
 	check_vector_line_intersect(elevators, wwe_groups,      p1, p2, t, ret);
 	check_vector_line_intersect(dumpsters, dumpster_groups, p1, p2, t, ret);
-	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, tcones, flowers, pladders, pdecks, bballs, pfloats, pigeons, ppaths, or birds;
+	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, tcones, flowers, pladders, chairs, pdecks, bballs, pfloats, pigeons, ppaths, or birds;
 	// mboxes, swings, tramps, umbrellas, bikes, plants, ponds, p_solars, and momorail are ignored because they're small or not simple shapes
 	return ret;
 }
@@ -2356,7 +2360,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 	if (check_city_obj_pt_xy_contains(dumpster_groups, dumpsters, pos, obj_ix, 0)) {color = colorRGBA(0.1, 0.4, 0.1, 1.0); return 1;} // dark green
 	if (check_city_obj_pt_xy_contains(umbrella_groups, umbrellas, pos, obj_ix, 1)) {color = WHITE; return 1;} // is_cylin=1
 	if (check_city_obj_pt_xy_contains(wwe_groups,      elevators, pos, obj_ix, 0)) {color = colorRGBA(0.8, 1.0, 0.8, 1.0); return 1;} // slightly blue-green glass; transparent?
-	// Note: ppoles, hcaps, manholes, mboxes, tcones, flowers, pladders, stopsigns, flags, pigeons, birds, swings, umbrellas, bikes, and plants are skipped for now;
+	// Note: ppoles, hcaps, manholes, mboxes, tcones, flowers, pladders, chairs, stopsigns, flags, pigeons, birds, swings, umbrellas, bikes, and plants are skipped for now;
 	// pillars aren't visible under walkways;
 	// free standing signs can be added, but they're small and expensive to iterate over and won't contribute much
 	return 0;

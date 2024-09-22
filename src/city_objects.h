@@ -168,6 +168,11 @@ struct pool_ladder_t : public model_city_obj_t { // for in-ground pools
 	virtual unsigned get_model_id() const {return OBJ_MODEL_POOL_LAD;}
 };
 
+struct deck_chair_t : public model_city_obj_t {
+	deck_chair_t(cube_t const &bcube_, bool dim_, bool dir_) : model_city_obj_t(bcube_, dim_, dir_) {}
+	virtual unsigned get_model_id() const {return OBJ_MODEL_DECK_CHAIR;}
+};
+
 struct pool_deck_t : public oriented_city_obj_t {
 	unsigned mat_id;
 	cube_t base, roof;
@@ -597,6 +602,7 @@ private:
 	vector<divider_t> dividers; // dividers for residential plots
 	vector<swimming_pool_t> pools;
 	vector<pool_ladder_t> pladders;
+	vector<deck_chair_t> chairs;
 	vector<pool_deck_t> pdecks;
 	vector<power_pole_t> ppoles;
 	vector<hcap_space_t> hcaps; // handicap signs painted on parking lots
@@ -626,9 +632,9 @@ private:
 	vector<pool_float_t> pfloats;
 	// index is last obj in group
 	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, fountain_groups, divider_groups, pool_groups, plad_groups,
-		pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups, stopsign_groups, flag_groups,
-		nrack_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, dumpster_groups, plant_groups, flower_groups, pond_groups, walkway_groups,
-		pillar_groups, wwe_groups, p_solar_groups, bball_groups, pfloat_groups;
+		chair_groups, pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups, stopsign_groups,
+		flag_groups, nrack_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, dumpster_groups, plant_groups, flower_groups, pond_groups,
+		walkway_groups, pillar_groups, wwe_groups, p_solar_groups, bball_groups, pfloat_groups;
 	skyway_t skyway; // optional
 	bird_poop_manager_t bird_poop_manager;
 	vector<city_zone_t> sub_plots; // reused across calls
