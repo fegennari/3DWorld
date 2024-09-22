@@ -1703,6 +1703,7 @@ void ww_elevator_t::get_door_cubes() const {
 	lower.expand_in_dim(!dim, -0.5*glass_thickness); // small shrink
 	lower.z2() = bcube.z1() + floor_spacing + floor_thickness; // overlaps the top a bit
 	lower.translate_dim(2, lo_door_open*(floor_spacing - floor_thickness)); // opens upward
+	lower.translate_dim(dim, (dir ? 1.0 : -1.0)*0.1*glass_thickness); // move out slightly to avoid clipping through the exterior frame and Z-fighting with the glass
 	doors.push_back(lower);
 	// add upper doors
 	float const door_gap(0.1*glass_thickness); // gap to each side
@@ -1734,7 +1735,32 @@ void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 	float const fc_thick(get_fc_thick()), glass_thickness(get_glass_thickness()), frame_hwidth(0.5*glass_thickness);
 
 	if (dstate.pass_ix == 0) { // opaque pass
-		draw_cube_frame(dstate, qbds, bcube, fc_thick, frame_hwidth, 1, GRAY); // outer elevator frame; skip_bot=1
+		colorRGBA const &outer_frame_color(GRAY);
+		draw_cube_frame(dstate, qbds, bcube, fc_thick, frame_hwidth, 1, outer_frame_color); // outer elevator frame; skip_bot=1
+		
+		// draw exterior trim/frame at each floor that separates the glass into panels, using a lower dscale
+		if (dstate.check_cube_visible(bcube, 0.5*dist_scale)) {
+			float const trim_hthick(0.4*fc_thick);
+			cube_t frame_bounds(bcube), support_bar;
+			frame_bounds.expand_by_xy(0.1*glass_thickness); // expand slightly to prevent Z-fighting
+			set_wall_width(support_bar, bcube.get_center_dim(!dim), 1.25*glass_thickness, !dim);
+			support_bar.d[dim][ dir] = bcube.d[dim][!dir]; // flush with elevator exterior wall
+			support_bar.d[dim][!dir] = ww_bcube.get_center_dim(dim); // center of pillar; works for any pillar size and shape
+
+			for (float zval = (bcube.z1() + floor_spacing); zval < (bcube.z2() - fc_thick); zval += floor_spacing) {
+				for (unsigned n = 0; n < 4; ++n) { // draw 4 sides
+					bool const sdim(n>>1), sdir(n&1);
+					cube_t side(frame_bounds);
+					side.d[sdim][!sdir] = side.d[sdim][sdir] + (sdir ? -1.0 : 1.0)*glass_thickness; // set width
+					set_wall_width(side, zval, trim_hthick, 2);
+					dstate.draw_cube(qbds.untex_qbd, side, outer_frame_color, 0, 0.0, (sdim ? 1 : 2));
+				}
+				if (zval + trim_hthick < ww_bcube.z1()) { // draw support bars if below the walkway
+					set_wall_width(support_bar, zval, trim_hthick, 2);
+					dstate.draw_cube(qbds.untex_qbd, support_bar, outer_frame_color, 0, 0.0, (dim ? 2 : 1));
+				}
+			} // for zval
+		}
 		if (shadow_only) return; // skip drawing platform and doors in the shadow pass since we don't dynamically update shadows
 		cube_t platform(bcube);
 		set_cube_zvals(platform, platform_zval, (platform_zval + get_platform_height()));
