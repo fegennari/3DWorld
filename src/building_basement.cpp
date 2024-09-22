@@ -359,7 +359,8 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	if (has_ext_basement()) { // everything should avoid the extended basement door
 		door_t const &eb_door(interior->get_ext_basement_door());
 		cube_t avoid(eb_door.get_true_bcube());
-		avoid.expand_in_dim(eb_door.dim, get_doorway_width());
+		avoid.expand_in_dim( eb_door.dim, get_doorway_width ());
+		avoid.expand_in_dim(!eb_door.dim, get_wall_thickness());
 		obstacles    .push_back(avoid);
 		obstacles_exp.push_back(avoid);
 		obstacles_ps .push_back(avoid);
