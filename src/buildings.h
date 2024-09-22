@@ -1998,7 +1998,7 @@ struct building_t : public building_geom_t {
 	bool is_single_large_room(room_t const &room) const {return(room.is_parking() || room.is_backrooms() || room.is_retail());}
 	bool is_single_large_room(int room_ix) const {return (room_ix >= 0 && is_single_large_room(get_room(room_ix)));}
 	bool is_above_retail_area(point const &pos) const;
-	bool is_pos_in_pg_or_backrooms(point const &pos) const {return (has_parking_garage && pos.z < ground_floor_z1);}
+	bool is_pos_in_pg_or_backrooms(point const &pos) const;
 	point get_retail_upper_stairs_landing_center() const;
 private:
 	void build_nav_graph() const;
