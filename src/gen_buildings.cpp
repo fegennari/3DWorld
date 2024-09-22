@@ -38,7 +38,7 @@ building_t const *vis_conn_bldg  (nullptr); // non-player building visible throu
 extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light;
 extern bool teleport_to_screenshot, enable_dlight_bcubes, can_do_building_action, mirror_in_ext_basement;
 extern unsigned room_mirror_ref_tid;
-extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2, building_action_key, player_in_elevator;
+extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2, building_action_key, player_in_elevator, frame_counter;
 extern float CAMERA_RADIUS, fticks, NEAR_CLIP, FAR_CLIP;
 extern colorRGB cur_ambient, cur_diffuse;
 extern point pre_smap_player_pos, actual_player_pos;
@@ -390,13 +390,18 @@ void setup_building_lights(vector3d const &xlate, bool sec_camera_mode=0) {
 	interior_shadow_maps = 0;
 }
 
-
+void interpolate_over_time(float &val, float target_val, float transition_secs, int &last_frame) {
+	if (frame_counter == last_frame) return; // update once per frame
+	last_frame = frame_counter;
+	float const delta_val(fticks/(transition_secs*TICKS_PER_SECOND));
+	if      (val > target_val) {val = max(target_val, (val - delta_val));} // decrease
+	else if (val < target_val) {val = min(target_val, (val + delta_val));} // increase
+}
 void set_interior_lighting(shader_t &s, bool have_indir) {
-	float const light_scale(0.5), light_change_amt(fticks/(2.0f*TICKS_PER_SECOND));
-	float const target_blscale((player_in_basement || player_in_attic) ? 0.0 : (player_in_walkway ? 2.0 : 1.0));
-	static float blscale(1.0); // indir/ambient lighting slowly transitions when entering or leaving the basement or walkway
-	if      (blscale > target_blscale) {blscale = max(target_blscale, (blscale - light_change_amt));} // decrease
-	else if (blscale < target_blscale) {blscale = min(target_blscale, (blscale + light_change_amt));} // increase
+	float const light_scale(0.5), target_blscale((player_in_basement || player_in_attic) ? 0.0 : (player_in_walkway ? 2.0 : 1.0));
+	static float blscale(1.0);
+	static int last_update_frame(0);
+	interpolate_over_time(blscale, target_blscale, 0.5, last_update_frame); // indir/ambient lighting slowly transitions when entering or leaving the basement or walkway
 	float ambient_scale(0.5f*(1.0f + blscale)*light_scale); // brighter ambient
 	float diffuse_scale(0.2f        *blscale *light_scale); // reduce diffuse and specular lighting for sun/moon
 	float hemi_scale(   0.2f        *blscale *light_scale); // reduced hemispherical lighting
