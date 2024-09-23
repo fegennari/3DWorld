@@ -286,8 +286,8 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 		room_object const type(c->type);
 		if (!c->is_visible())         continue;
 		if (type  == TYPE_ELEVATOR)   continue; // elevator cars/internals can move so should not contribute to lighting
-		if (type  == TYPE_SHOWER  )   continue; // transparent
-		if (type  == TYPE_BLOCKER || type == TYPE_COLLIDER) continue; // blockers and colliders are not drawn
+		if (type  == TYPE_SHOWER  || type == TYPE_INT_WINDOW) continue; // transparent
+		if (type  == TYPE_BLOCKER || type == TYPE_COLLIDER  ) continue; // blockers and colliders are not drawn
 		if (c->shape == SHAPE_ANGLED) continue; // sloped objects such as parking garage and pool ramps aren't cubes
 		if (c->is_exterior())         continue; // interior objects only
 		// skip other object types that are too small, not cube shaped, or not interior

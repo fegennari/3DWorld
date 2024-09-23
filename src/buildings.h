@@ -1093,6 +1093,7 @@ struct building_room_geom_t {
 	void add_reception_desk(room_object_t const &c, float tscale);
 	void add_bed(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale);
 	void add_window(room_object_t const &c, float tscale);
+	void add_int_window(room_object_t const &c);
 	void add_crack(room_object_t const &c);
 	void add_switch(room_object_t const &c, bool draw_detail_pass);
 	void add_breaker(room_object_t const &c);
