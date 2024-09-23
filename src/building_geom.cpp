@@ -433,6 +433,14 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	finish_gen_geometry(rgen, 0);
 }
 
+void building_t::setup_damage_vals() {
+	point const center(bcube.get_cube_center());
+	float const floor_spacing(get_window_vspace());
+	float const water_rand_val(fract((center.x + center.y + center.z)/floor_spacing)), crack_rand_val(fract(1.5*(center.x + center.y + center.z)/floor_spacing));
+	water_damage = max(0.0f, (water_rand_val - 0.5f)); // 50% of buildings have up to 50% water damage
+	crack_damage = ((crack_rand_val < 0.4) ? 2.5*crack_rand_val : 0.0); // random amount of cracks, 40% of the time
+}
+
 void building_t::create_per_part_ext_verts() {
 	if (per_part_ext_verts.empty() && !is_cube()) { // generate exterior verts for each part if not yet created
 		per_part_ext_verts.resize(parts.size());
@@ -460,6 +468,7 @@ void building_t::finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cube
 	if (interior) {interior->assign_door_conn_rooms();} // must be after adding extended basement and before adding room geom
 	if (interior) {interior->finalize();}
 	gen_building_doors_if_needed(rgen);
+	setup_damage_vals();
 }
 
 void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {

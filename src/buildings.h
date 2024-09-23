@@ -1720,7 +1720,7 @@ struct building_t : public building_geom_t {
 	std::string address; // only used for city buildings on roads
 	vertex_range_t ext_side_qv_range;
 	point tree_pos; // (0,0,0) is unplaced/no tree
-	float ao_bcz2=0.0, ground_floor_z1=0.0, interior_z2=0.0;
+	float ao_bcz2=0.0, ground_floor_z1=0.0, interior_z2=0.0, water_damage=0.0, crack_damage=0.0;
 
 	friend class building_indir_light_mgr_t;
 
@@ -1852,6 +1852,7 @@ struct building_t : public building_geom_t {
 	void calc_bcube_from_parts();
 	void adjust_part_zvals_for_floor_spacing(cube_t &c) const;
 	void gen_geometry(int rseed1, int rseed2);
+	void setup_damage_vals();
 	cube_t place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center, float door_pos,
 		float door_center_shift, float width_scale, bool can_fail, bool opens_up, rand_gen_t &rgen, unsigned floor_ix=0) const;
 	bool check_walkway_door_clearance(cube_t const &c, bool dim) const;

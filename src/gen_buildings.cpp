@@ -3555,14 +3555,12 @@ public:
 
 			if (camera_in_building && player_building != nullptr) { // handle damage effects
 				if (camera_bs.z < player_building->ground_floor_z1 || player_building->point_on_basement_stairs(camera_bs)) { // entering or in basement
-					point const center(player_building->bcube.get_cube_center());
-					float const floor_spacing(player_building->get_window_vspace());
-					float const water_rand_val(fract((center.x + center.y + center.z)/floor_spacing)), crack_rand_val(fract(1.5*(center.x + center.y + center.z)/floor_spacing));
+					water_damage = player_building->water_damage;
+					crack_damage = player_building->crack_damage;
 					float const player_feet_zval(camera_bs.z - get_bldg_player_height());
-					water_damage = max(0.0f, (water_rand_val - 0.5f)); // 50% of buildings have up to 50% water damage
-					crack_damage = ((crack_rand_val < 0.4) ? 2.5*crack_rand_val : 0.0); // random amount of cracks, 40% of the time
 					// incremental transition when entering/exiting the basement
-					float const damage_weight(CLIP_TO_01(1.25f*(player_building->ground_floor_z1 + player_building->get_fc_thickness() - player_feet_zval)/floor_spacing));
+					float const damage_weight(CLIP_TO_01(1.25f*(player_building->ground_floor_z1 + player_building->get_fc_thickness() -
+						player_feet_zval)/player_building->get_window_vspace()));
 					water_damage *= damage_weight;
 					crack_damage *= damage_weight;
 				}
