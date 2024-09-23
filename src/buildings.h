@@ -2597,6 +2597,8 @@ int get_bldg_door_tid ();
 int get_concrete_tid  ();
 int get_plywood_tid   ();
 int get_insulation_tid();
+int get_met_plate_tid ();
+int get_mplate_nm_tid ();
 int get_normal_map_for_bldg_tid(int tid);
 unsigned register_sign_text(std::string const &text);
 void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, int use_texgen, float water_damage=0.0, float crack_damage=0.0);

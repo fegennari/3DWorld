@@ -2399,15 +2399,8 @@ void building_room_geom_t::add_sprinkler(room_object_t const &c) { // vertical s
 	mat.add_vcylin_to_verts(top, metal_color,          1,      1,     0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // draw ends
 }
 
-void building_room_geom_t::add_valve(room_object_t const &c) {
-	// Note: we don't know which direction the pipe is in, so the valve handle must be symmetric
-	unsigned const dim(c.dir ? 2 : unsigned(c.dim)); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
+void draw_metal_handle_wheel(cube_t const &c, unsigned dim, colorRGBA const &color, colorRGBA const &shaft_color, rgeom_mat_t &mat, rgeom_mat_t &shaft_mat) {
 	float const radius(0.5*c.get_sz_dim((dim+1)%3));
-	colorRGBA const color(apply_light_color(c));
-	colorRGBA const spec_color(is_known_metal_color(c.color) ? c.color : WHITE); // special case metals
-	tid_nm_pair_t tex(WHITE_TEX, 1.0, 1); // custom specular color, shadowed
-	tex.set_specular_color(spec_color, 0.8, 60.0);
-	rgeom_mat_t &mat(get_material(tex, 1, 0, 2)); // detail object
 	// draw the outer handle
 	float const r_inner(0.12*radius), r_outer(radius - r_inner), r_bar(0.075*radius), r_shaft(0.1*radius);
 	point const center(c.get_cube_center());
@@ -2419,7 +2412,7 @@ void building_room_geom_t::add_valve(room_object_t const &c) {
 	unsigned const verts_start(mat.itri_verts.size());
 	cube_t bar;
 	set_wall_width(bar, center[dim], r_bar, dim);
-	
+
 	for (unsigned d = 0; d < 2; ++d) {
 		set_wall_width(bar, center[dims[ d]], r_bar,   dims[ d]);
 		set_wall_width(bar, center[dims[!d]], r_outer, dims[!d]);
@@ -2431,7 +2424,18 @@ void building_room_geom_t::add_valve(room_object_t const &c) {
 	// draw the shaft
 	cube_t shaft(c);
 	for (unsigned d = 0; d < 2; ++d) {set_wall_width(shaft, center[dims[d]], r_shaft, dims[d]);}
-	get_metal_material(1, 0, 2).add_ortho_cylin_to_verts(shaft, apply_light_color(c, WHITE), dim, 1, 1); // draw sides and ends
+	shaft_mat.add_ortho_cylin_to_verts(shaft, shaft_color, dim, 1, 1); // draw sides and ends
+}
+void building_room_geom_t::add_valve(room_object_t const &c) {
+	// Note: we don't know which direction the pipe is in, so the valve handle must be symmetric
+	unsigned const dim(c.dir ? 2 : unsigned(c.dim)); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
+	get_metal_material(1, 0, 2); // make sure it's in the map
+	colorRGBA const color(apply_light_color(c));
+	colorRGBA const spec_color(is_known_metal_color(c.color) ? c.color : WHITE); // special case metals
+	tid_nm_pair_t tex(WHITE_TEX, 1.0, 1); // custom specular color, shadowed
+	tex.set_specular_color(spec_color, 0.8, 60.0);
+	rgeom_mat_t &mat(get_material(tex, 1, 0, 2)); // detail object
+	draw_metal_handle_wheel(c, dim, color, apply_light_color(c, WHITE), mat, get_metal_material(1, 0, 2));
 }
 
 void building_room_geom_t::add_curb(room_object_t const &c) {
@@ -4181,12 +4185,29 @@ void building_room_geom_t::add_false_door(room_object_t const &c) {
 	
 	for (unsigned exterior = 0; exterior < 2; ++exterior) {
 		if (exterior && c.is_interior()) continue; // interior only; no exterior side to this door
+		bool const front_dir(c.dir ^ bool(exterior) ^ 1);
+		
+		if (c.flags & RO_FLAG_HAS_EXTRA) { // vault door
+			float const width(c.get_width()), tscale(2.0/width);
+			tid_nm_pair_t const door_tex(get_met_plate_tid(), get_mplate_nm_tid(), tscale, tscale); // unshadowed
+			get_material(door_tex, 0, 0, 0, 0, exterior).add_cube_to_verts(c, c.color, c.get_llc(), (~get_face_mask(c.dim, !front_dir) | EF_Z1)); // skip front and bottom
+			// draw wheel/handle
+			float const wheel_radius(0.2*width), wheel_depth(0.08*width);
+			cube_t wheel;
+			wheel.set_from_point(c.get_cube_center());
+			wheel.d[c.dim][front_dir] = c.d[c.dim][front_dir] + (front_dir ? 1.0 : -1.0)*wheel_depth; // extend outward
+			wheel.expand_in_dim(!c.dim, wheel_radius);
+			wheel.expand_in_dim(2,      wheel_radius); // Z
+			rgeom_mat_t &handle_mat(get_metal_material(1, 0, 0, exterior));
+			draw_metal_handle_wheel(wheel, c.dim, GRAY, LT_GRAY, handle_mat, handle_mat);
+			continue;
+		}
 		int const tid((c.flags & RO_FLAG_WALKWAY) ? get_bldg_door_tid() : (c.is_house() ? get_int_door_tid() : get_off_door_tid()));
 		rgeom_mat_t &fb_mat(get_material(tid_nm_pair_t(tid, 0.0), 0, 0, 0, 0, exterior)); // unshadowed
-		fb_mat.add_cube_to_verts(c, c.color, all_zeros, get_face_mask(c.dim, (c.dir ^ bool(exterior) ^ 1)), !c.dim); // draw only front or back
+		fb_mat.add_cube_to_verts(c, c.color, all_zeros, get_face_mask(c.dim, front_dir), !c.dim); // draw only front or back
 		rgeom_mat_t &side_mat(get_untextured_material(0, 0, 0, 0, exterior)); // unshadowed
 		side_mat.add_cube_to_verts_untextured(c, c.color, (get_skip_mask_for_xy(c.dim) | EF_Z1)); // skip front, back, and bottom faces
-	}
+	} // for exterior
 }
 
 bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher) {
