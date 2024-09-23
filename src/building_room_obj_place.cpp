@@ -2474,6 +2474,12 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		set_obj_id(objs); // used to select texture and box contents
 		if (++num_placed == num_crates) break; // we're done
 	} // for n
+	if (rgen.rand_bool()) { // add a ladder leaning against the wall
+		float const ladder_height(rgen.rand_uniform(0.77, 0.95)*get_floor_ceil_gap());
+		vector3d const ladder_sz(0.25, rgen.rand_uniform(0.2, 0.22), 1.0); // D, W, H
+		cube_t const place_area(get_walkable_room_bounds(room));
+		place_obj_along_wall(TYPE_INT_LADDER, room, ladder_height, ladder_sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 1, 4, 0, GRAY);
+	}
 	// add office building storage room sign, in a hallway, basement, etc.
 	if (!is_house /*&& !is_basement*/) {add_door_sign((has_stairs ? "Stairs" : "Storage"), room, zval, room_id, tot_light_amt);}
 	return 1; // it's always a storage room, even if it's empty

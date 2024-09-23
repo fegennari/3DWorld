@@ -1095,17 +1095,15 @@ void building_room_geom_t::add_chimney_cap(room_object_t const &c) {
 	}
 }
 
-void building_room_geom_t::add_ext_ladder(room_object_t const &c) {
-	rgeom_mat_t &mat(get_metal_material(0, 0, 0, 1)); // unshadowed, specular metal, exterior; no apply_light_color()
+void add_ladder_geom(rgeom_mat_t &mat, room_object_t const &c, colorRGBA const &color, unsigned sides_dim_mask) {
 	float const height(c.get_height()), depth(c.get_depth()), width(c.get_width());
 	float const side_width(0.06*width), rung_spacing(0.8*width), rung_height(0.08*rung_spacing), rung_inset(0.05*depth);
 	unsigned const num_rungs((height - rung_height)/rung_spacing); // round down
-	unsigned const sides_dim_mask(EF_Z1 | ~get_face_mask(c.dim, !c.dir)); // draw all but the bottom and back face against the wall
-	
+
 	for (unsigned d = 0; d < 2; ++d) { // left/right side verticals
 		cube_t side(c);
 		side.d[!c.dim][!d] = c.d[!c.dim][d] + (d ? -1.0 : 1.0)*side_width;
-		mat.add_cube_to_verts_untextured(side, c.color, sides_dim_mask);
+		mat.add_cube_to_verts_untextured(side, color, sides_dim_mask);
 	}
 	cube_t rung(c);
 	rung.expand_in_dim(!c.dim, -side_width);
@@ -1115,8 +1113,28 @@ void building_room_geom_t::add_ext_ladder(room_object_t const &c) {
 
 	for (unsigned r = 0; r < num_rungs; ++r) { // draw rungs
 		rung.translate_dim(2, rung_spacing); // translate up, starting with first rung
-		mat.add_cube_to_verts_untextured(rung, c.color, rung_skip_faces);
+		mat.add_cube_to_verts_untextured(rung, color, rung_skip_faces);
 	}
+}
+void building_room_geom_t::add_ext_ladder(room_object_t const &c) {
+	rgeom_mat_t &mat(get_metal_material(0, 0, 0, 1)); // unshadowed, specular metal, exterior
+	unsigned const sides_dim_mask(EF_Z1 | ~get_face_mask(c.dim, !c.dir)); // draw all but the bottom and back face against the wall
+	add_ladder_geom(mat, c, c.color, sides_dim_mask); // no apply_light_color()
+}
+void building_room_geom_t::add_int_ladder(room_object_t const &c) {
+	float const depth(c.get_depth());
+	room_object_t c_unrot(c);
+	c_unrot.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.8*depth; // shrink depth prior to rotate/lean against wall
+	c_unrot.z1() -= 0.2*depth; // move down slightly so that the legs are on the floor when rotated
+	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small, specular metal
+	unsigned const verts_start(mat.quad_verts.size());
+	add_ladder_geom(mat, c_unrot, apply_light_color(c), EF_Z1); // skip bottom
+	// rotate the ladder about the bottom to lean up against the wall
+	point about;
+	about.z       = c.z1();
+	about[ c.dim] = c.d[c.dim][!c.dir];
+	about[!c.dim] = c.get_center_dim(!c.dim);
+	rotate_verts(mat.quad_verts, vector_from_dim_dir(!c.dim, (c.dim ^ c.dir)), 0.063*PI, about, verts_start);
 }
 
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {

@@ -1141,6 +1141,7 @@ struct building_room_geom_t {
 	void add_rack(room_object_t const &c, bool add_rack, bool add_objs);
 	void add_chimney_cap(room_object_t const &c);
 	void add_ext_ladder(room_object_t const &c);
+	void add_int_ladder(room_object_t const &c);
 	void add_keyboard(room_object_t const &c);
 	void add_obj_with_top_texture  (room_object_t const &c, std::string const &texture_name, colorRGBA const &sides_color, bool is_small=0);
 	void add_obj_with_front_texture(room_object_t const &c, std::string const &texture_name, colorRGBA const &sides_color, bool is_small=0);
