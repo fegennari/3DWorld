@@ -741,7 +741,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	assert(pipe_zval > bcube.z1());
 	vector<pipe_t> pipes, fittings;
 	cube_t pipe_end_bcube;
-	unsigned num_valid(0), num_connected(0), num_conn_segs(0);
+	unsigned num_conn_segs(0);
 	// build random shifts table; make consistent per pipe to preserve X/Y alignments
 	unsigned const NUM_SHIFTS = 21; // {0,0} + 20 random shifts
 	vector3d rshifts[NUM_SHIFTS] = {};
@@ -781,7 +781,6 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		if (!valid) continue; // no valid shift, skip this connection
 		pipes.emplace_back(point(pos.x, pos.y, pipe_zval), pos, p.radius, 2, PIPE_RISER, 0); // neither end capped
 		pipe_end_bcube.assign_or_union_with_cube(pipes.back().get_bcube());
-		++num_valid;
 	} // for pipe_ends
 	if (pipes.empty()) return 0; // no valid pipes
 
@@ -968,7 +967,6 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		// update main pipe endpoints to include this connector pipe range
 		min_eq(mp[0][dim], v.first-radius);
 		max_eq(mp[1][dim], v.first+radius);
-		num_connected += num_keep;
 		++num_conn_segs;
 	} // for v
 	if (mp[0][dim] >= mp[1][dim]) return 0; // no pipes connected to main? I guess there's nothing to do here
