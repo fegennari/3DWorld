@@ -237,7 +237,7 @@ void city_obj_placer_t::add_cars_to_driveways(vector<car_t> &cars, vector<road_p
 
 bool check_pt_and_place_blocker(point const &pos, vect_cube_t &blockers, float radius, float blocker_spacing, bool add_blocker=1) {
 	cube_t bc(pos);
-	if (has_bcube_int_xy(bc, blockers, radius)) return 0; // intersects a building or parking lot - skip
+	if (has_bcube_int_xy(bc, blockers, radius)) return 0; // intersects a building, parking lot, or other object - skip
 	if (!add_blocker) return 1;
 	bc.expand_by_xy(blocker_spacing);
 	blockers.push_back(bc); // prevent trees and benches from being too close to each other
@@ -1469,7 +1469,7 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_POOL_LAD)); // D, W, H
 			float const height(1.6*sz_scale), hdepth(0.5*height*sz.x/sz.z), hwidth(0.5*height*sz.y/sz.z);
 
-			if (hdepth < 8.0*min(pool.dx(), pool.dy())) { // add if large enough; should be true
+			if (hdepth < 0.2*min(pool.dx(), pool.dy())) { // add if pool is large enough; should be true
 				ladder.z1() = pool.z2() - 0.425*height;
 				ladder.z2() = ladder.z1() + height;
 				set_wall_width(ladder, rgen.rand_uniform((pool.d[!dim][0] + 2.0*hdepth), (pool.d[!dim][1] - 2.0*hdepth)), hdepth, !dim); // pos along pool length
@@ -1481,7 +1481,40 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 			pool_deck_t &pdeck(pdecks.back());
 			pdeck.calc_pillars(ladder); // pass in the ladder pos to avoid placing pillars there
 			vector_add_to(pdeck.pillars, colliders); // include pillars for AI collisions
-			// TODO: add chair(s) to the deck
+			
+			if (building_obj_model_loader.is_model_valid(OBJ_MODEL_DECK_CHAIR)) { // add deck chair
+				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_DECK_CHAIR)); // D, W, H
+				float const height(1.2*sz_scale), hdepth(0.5*height*sz.x/sz.z), hwidth(0.5*height*sz.y/sz.z), radius(max(hwidth, hdepth));
+
+				if (radius < 0.2*pdeck.get_width() && radius < 0.4*pdeck.get_depth()) { // add if deck is large enough; uses radius rather than hwidth/hdepth
+					cube_t place_area(pdeck.base), chair;
+					place_area.expand_in_dim( dim, -0.25*hdepth);
+					place_area.expand_in_dim(!dim, -0.10*hwidth);
+					point pos, door_pos;
+					// use custom blockers that includes the ladder and pillars but not the deck
+					vect_cube_t chair_blockers(blockers.begin(), blockers.begin()+pre_pool_blockers_end);
+					chair_blockers.push_back(ladder);
+					vector_add_to(pdeck.pillars, chair_blockers);
+					
+					if (get_building_door_pos_closest_to(house.ix, place_area.get_cube_center(), door_pos, 1)) { // check for house back door at pool deck
+						cube_t door_blocker;
+						door_blocker.set_from_sphere(door_pos, 1.5*radius);
+						chair_blockers.push_back(door_blocker);
+					}
+					for (unsigned n = 0; n < 4; ++n) { // 4 outer layer placement iterations
+						if (!try_place_obj(place_area, chair_blockers, rgen, radius, radius, 10, pos, 0)) break; // failed
+						if (check_sphere_coll_building(pos, radius, 0, house.ix)) continue; // collided with part of the house (AC unit, etc.)
+						pos.z = place_area.z2();
+						chair.set_from_point(pos);
+						chair.z2() += height;
+						chair.expand_in_dim( dim, hdepth);
+						chair.expand_in_dim(!dim, hwidth);
+						chair_groups.add_obj(deck_chair_t(chair, dim, !dir), chairs);
+						add_cube_to_colliders_and_blockers(chair, colliders, blockers);
+						break; // success
+					} // for n
+				}
+			}
 		}
 		// maybe place pool float in the pool
 		cube_t float_bcube;

@@ -270,6 +270,8 @@ city big_umbrella_model  ../models/umbrella/beach_umbrella_anim.fbx   0 1 0  -1 
 #city big_umbrella_model  ../models/umbrella/beach_umbrella.fbx        0 1 0  -1 -1  0   1 1.0 1.0 # two sided; tall and thin
 city flower_model        ../models/flowers/rose_flower.glb            0 0 0  -1 -1 0    1 1.0 1.0
 #city flower_model        ../models/flowers/tulip_flower.glb           0 0 0  -1 -1 0    1 1.0 1.0
+city deck_chair_model    ../models/beach_chair/scene.gltf             0 0 0  -1 -1 0    1 1.0 1.0 # Note: model is slightly rotated, but that's okay
+#city deck_chair_model    ../models/interiors/chairs/folding_chair/scene.gltf  0 0 0  -1 -1 270  1 1.0 1.0
 
 # animated bird model
 city model_anim_scale 100.0 # model animations are scaled by 100 for some reason
