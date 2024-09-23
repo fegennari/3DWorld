@@ -1336,7 +1336,8 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 	float const sp_radius(1.2*get_wall_thickness()), spacing(2.0*sp_radius), flange_expand(0.3*sp_radius);
 	float const bolt_dist(sp_radius + 0.5*flange_expand), bolt_radius(0.32*flange_expand), bolt_height(0.1*fc_thickness);
 	bool const inverted_sprinklers(room_id & 1); // random-ish
-	colorRGBA const pcolor(RED), ccolor(BRASS_C); // pipe and connector colors
+	colorRGBA const pcolor(blend_color(DK_BROWN, RED, min(1.0f, 2.0f*water_damage), 0)); // pipe color; fade to rusty brown when there's water damage
+	colorRGBA const ccolor(BRASS_C); // connector color
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const sprinker_pipes_start(objs.size());
 	cube_t const &basement(get_basement());
