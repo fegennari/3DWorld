@@ -4051,7 +4051,8 @@ int building_t::check_valid_picture_placement(room_t const &room, cube_t const &
 	bool const inc_open(!is_house && !room.is_office);
 	if (is_cube_close_to_doorway(tc, room, 0.0, inc_open)) return 0; // bad placement
 	// Note: it's not legal to guard the below check with (room.has_stairs || room.has_elevator) because room.has_stairs may not be set for stack connector stairs that split a wall
-	if (interior->is_blocked_by_stairs_or_elevator(tc, 4.0*wall_thickness)) return 0; // check stairs and elevators
+	float const se_clearance(2.0*get_min_front_clearance_inc_people() + 4.0*wall_thickness); // enough space to walk in front, and then some
+	if (interior->is_blocked_by_stairs_or_elevator(tc, se_clearance)) return 0; // check stairs and elevators
 	if (!check_cube_within_part_sides(tc)) return 0; // handle non-cube buildings
 	if (!inc_open && !room.is_hallway && is_cube_close_to_doorway(tc, room, 0.0, 1)) return 2; // success, but could be better (doors never open into hallway)
 
