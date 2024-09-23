@@ -658,6 +658,14 @@ void building_t::add_office_pillars(rand_gen_t rgen, room_t const &room, float z
 	blockers.push_back(pillar);
 }
 
+bool building_t::add_conference_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	cube_t const room_bounds(get_walkable_room_bounds(room));
+	float const floor_spacing(get_window_vspace());
+	vect_room_object_t &objs(interior->room_geom->objs);
+	// TODO: TYPE_CONF_TABLE surrounded by TYPE_OFF_CHAIR with TYPE_MONITOR on the wall, and maybe a phone on the table
+	return 0;
+}
+
 void offset_hanging_tv(room_object_t &obj) {
 	if (obj.is_hanging()) {obj.translate_dim(obj.dim, (obj.dir ? -1.0 : 1.0)*0.28*obj.get_depth());} // translate to the wall to account for the missing stand
 }

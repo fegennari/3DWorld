@@ -1091,6 +1091,7 @@ struct building_room_geom_t {
 	void add_wine_rack(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale);
 	void add_desk(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);
 	void add_reception_desk(room_object_t const &c, float tscale);
+	void add_conference_table(room_object_t const &c, float tscale);
 	void add_bed(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale);
 	void add_window(room_object_t const &c, float tscale);
 	void add_int_window(room_object_t const &c);
@@ -2228,6 +2229,7 @@ private:
 		float zval, unsigned room_id, unsigned floor, float tot_light_amt, unsigned objs_start, bool is_basement);
 	bool create_office_cubicles(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_office_pillars(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t const &lights, vect_cube_t &blockers);
+	bool add_conference_objs (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_lounge_objs     (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_lobby);
 	bool check_valid_closet_placement(cube_t const &c, room_t const &room, unsigned objs_start, unsigned bed_ix, float min_bed_space=0.0) const;
 	bool add_bedroom_objs    (rand_gen_t rgen, room_t &room, vect_cube_t &blockers, colorRGBA const &chair_color, float zval, unsigned room_id, unsigned floor,

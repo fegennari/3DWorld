@@ -925,6 +925,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_CHECKOUT:  add_checkout(*i, tscale); break;
 		case TYPE_FISHTANK:  add_fishtank(*i); break;
 		case TYPE_OFF_PILLAR:add_wall_or_pillar(*i, tex_origin, wall_tex); break;
+		case TYPE_CONF_TABLE:add_conference_table(*i, tscale); break;
 		//case TYPE_FRIDGE: if (i->is_open()) {} break; // draw open fridge?
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn

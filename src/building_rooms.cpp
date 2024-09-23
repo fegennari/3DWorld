@@ -660,6 +660,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 				added_obj = 1; // assume something was added above, and don't place any other furniture or try to assign to another room type
 			}
+			if (r->get_room_type(f) == RTYPE_CONF) { // already assigned to a conference room
+				added_obj = add_conference_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+			}
 			// bedroom or bathroom case; need to check first floor even if must_be_bathroom
 			if (!added_obj && allow_br && !is_tall_room && !has_walkway && can_be_bedroom_or_bathroom(*r, f)) {
 				// Note: num_bedrooms is summed across all floors, while num_bathrooms is per-floor

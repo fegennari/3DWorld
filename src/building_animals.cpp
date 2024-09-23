@@ -350,6 +350,9 @@ bool can_hide_under(room_object_t const &c, cube_t &hide_area) {
 		hide_area = cubes[0]; // body
 		return 1;
 	}
+	else if (c.type == TYPE_CONF_TABLE) {
+		// TODO
+	}
 	else if (c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND) {
 		hide_area = get_dresser_middle(c);
 		return 1;

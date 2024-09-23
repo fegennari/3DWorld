@@ -3403,9 +3403,9 @@ void building_room_geom_t::add_reception_desk(room_object_t const &c, float tsca
 	side_mat.add_cube_to_verts(right, color, tex_origin, (EF_Z2 | lr_dim_mask), 0, 0, 0, 0, 1); // skip top face, z_dim_uses_ty=1
 	// shiny marble top
 	// Note: I wanted to add cylinders to the left and right top to round the corners like in the mapx lobby, but it's not easy to get the textures to line up here
-	tid_nm_pair_t top_tex(get_counter_tid(), 2.5*tscale);
+	tid_nm_pair_t top_tex(get_counter_tid(), 2.5*tscale, 1);
 	top_tex.set_specular(0.5, 80.0);
-	rgeom_mat_t &top_mat(get_material(top_tex, 1)); // with shadows
+	rgeom_mat_t &top_mat(get_material(top_tex, 1)); // shadowed
 	cube_t top_front(front), top_left(left), top_right(right);
 	top_front.z1() = top_left.z1() = top_right.z1() = top_z1;
 	top_front.z2() = top_left.z2() = top_right.z2() = c.z2();
@@ -3416,6 +3416,17 @@ void building_room_geom_t::add_reception_desk(room_object_t const &c, float tsca
 	top_mat.add_cube_to_verts(top_front, color, tex_origin, 0); // all faces drawn
 	top_mat.add_cube_to_verts(top_left,  color, tex_origin, lr_dim_mask);
 	top_mat.add_cube_to_verts(top_right, color, tex_origin, lr_dim_mask);
+}
+
+void building_room_geom_t::add_conference_table(room_object_t const &c, float tscale) {
+	cube_t top(c), base(c);
+	base.z2() = top.z1() = c.z2() - 0.1*c.dz();
+	base.expand_by_xy(-0.3*min(c.dx(), c.dy()));
+	colorRGBA const color(apply_light_color(c));
+	tid_nm_pair_t top_tex(get_counter_tid(), 2.5*tscale, 1);
+	top_tex.set_specular(0.5, 80.0);
+	get_material(top_tex, 1).add_cube_to_verts(top, color, all_zeros, 0); // shadowed; draw all faces
+	get_wood_material(4.0*tscale).add_cube_to_verts(base, color, all_zeros, EF_Z12); // shadowed; skip top and bottom
 }
 
 void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color, point const &tex_origin) {
