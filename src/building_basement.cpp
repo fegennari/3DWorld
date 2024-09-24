@@ -909,11 +909,12 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	bool const d(!dim);
 	float const conn_pipe_merge_exp = 3.0; // cubic
 	unsigned const conn_pipes_start(pipes.size());
+	float extra_extb_fitting_extend(0.0);
 	bool had_extb_conn(0);
 
 	// connect drains/feeders to main pipe in !dim
 	for (auto const &v : xy_map) { // for each unique position along the main pipe
-		float radius(0.0), range_min(centerline), range_max(centerline), unconn_radius(0.0);
+		float radius(0.0), range_min(centerline), range_max(centerline), unconn_radius(0.0); // range of connector perpendicular to main pipe
 		point const &ref_p1(pipes[v.second.front()].p1);
 		unsigned num_keep(0);
 
@@ -932,15 +933,34 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 				float const r_test(radius_factor*pipe.radius);
 				bool skip(has_int_obstacle_or_parallel_wall(pipe_t(p1, p2, r_test, d, PIPE_CONN, 3).get_bcube(), obstacles, walls));
 
-				if (skip && !pipe.for_extb && (p2[d] - p1[d]) > 8.0*pipe.radius) { // blocked, can't connect, long segment: try extending halfway
-					if      (lo < range_min) {p1[d] = lo = 0.5*(lo + range_min); pipe.p1[d] = pipe.p2[d] = lo + pipe.radius;} // on the lo side
-					else if (hi > range_max) {p2[d] = hi = 0.5*(hi + range_max); pipe.p1[d] = pipe.p2[d] = hi - pipe.radius;} // on the hi side
-					skip = has_int_obstacle_or_parallel_wall(pipe_t(p1, p2, r_test, d, PIPE_CONN, 3).get_bcube(), obstacles, walls);
+				if (skip) { // blocked, can't connect
+					if (pipe.for_extb) { // extended basement pipe
+						if (d != interior->extb_wall_dim) { // try moving away from the wall in case there was an outlet conduit there
+							float const offset_dist(0.35*wall_thickness); // should be about the diameter of a conduit
+							vector3d offset;
+							offset[interior->extb_wall_dim] += (interior->extb_wall_dir ? -1.0 : 1.0)*offset_dist;
+							p1 += offset; p2 += offset;
+							
+							if (!has_int_obstacle_or_parallel_wall(pipe_t(p1, p2, r_test, d, PIPE_CONN, 3).get_bcube(), obstacles, walls)) {
+								for (pipe_t &ep : extb_conn) { // success, move pipes and extb conn so that it matches
+									if (pipe.p2 == ep.p2) {ep.p2 += offset;}
+								}
+								pipe.p1 += offset; pipe.p2 += offset;
+								extra_extb_fitting_extend = offset_dist;
+								skip = 0;
+							}
+						}
+					}
+					else if ((p2[d] - p1[d]) > 8.0*pipe.radius) { // long segment: try extending halfway
+						if      (lo < range_min) {p1[d] = lo = 0.5*(lo + range_min); pipe.p1[d] = pipe.p2[d] = lo + pipe.radius;} // on the lo side
+						else if (hi > range_max) {p2[d] = hi = 0.5*(hi + range_max); pipe.p1[d] = pipe.p2[d] = hi - pipe.radius;} // on the hi side
+						skip = has_int_obstacle_or_parallel_wall(pipe_t(p1, p2, r_test, d, PIPE_CONN, 3).get_bcube(), obstacles, walls);
 
-					if (!skip) { // okay so far; now check that the new shortened pipe has a riser pos that's clear of walls and beams
-						point const new_riser_pos((lo < range_min) ? p1 : p2); // the end that was clipped
-						cube_t test_cube; test_cube.set_from_sphere(new_riser_pos, pipe.radius);
-						skip = (has_bcube_int(test_cube, walls) || has_bcube_int(test_cube, beams));
+						if (!skip) { // okay so far; now check that the new shortened pipe has a riser pos that's clear of walls and beams
+							point const new_riser_pos((lo < range_min) ? p1 : p2); // the end that was clipped
+							cube_t test_cube; test_cube.set_from_sphere(new_riser_pos, pipe.radius);
+							skip = (has_bcube_int(test_cube, walls) || has_bcube_int(test_cube, beams));
+						}
 					}
 				}
 				if (skip) {
@@ -1154,7 +1174,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		// note that we may not need fittings at T-junctions for hot water pipes, but then we would need to cap the ends
 		if (p.type == PIPE_RISER) continue; // not for vertical drain pipes, since they're so short and mostly hidden above the connector pipes
 		float const fitting_len(FITTING_LEN*r_main), fitting_expand((FITTING_RADIUS - 1.0)*p.radius); // fitting len based on main pipe radius
-		float conn_fitting_len(fitting_len + ((p.type == PIPE_EXTB) ? wall_thickness : 0.0)); // extended basement pipe passes through the wall on both ends
+		float conn_fitting_len(fitting_len + ((p.type == PIPE_EXTB) ? (wall_thickness + extra_extb_fitting_extend) : 0.0)); // extb pipe passes through the wall on both ends
 
 		for (unsigned d = 0; d < 2; ++d) {
 			if ((p.type == PIPE_CONN || p.type == PIPE_MAIN) && !(p.end_flags & (1<<d))) continue; // already have fittings added from connecting pipes
