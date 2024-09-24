@@ -657,7 +657,7 @@ float get_merged_risers_radius(vect_riser_pos_t const &risers, int exclude_flow_
 	return radius;
 }
 
-enum {PIPE_RISER=0, PIPE_CONN, PIPE_MAIN, PIPE_MEC, PIPE_EXIT, PIPE_FITTING};
+enum {PIPE_RISER=0, PIPE_CONN, PIPE_MAIN, PIPE_MEC, PIPE_EXIT, PIPE_EXTB, PIPE_FITTING};
 
 void expand_cube_except_in_dim(cube_t &c, float expand, unsigned not_dim) {
 	c.expand_by(expand);
@@ -668,10 +668,10 @@ struct pipe_t {
 	point p1, p2;
 	float radius;
 	unsigned dim, type, end_flags; // end_flags: 1 bit is low end, 2 bit is high end
-	bool connected, outside_pg;
+	bool connected, outside_pg, for_extb;
 
-	pipe_t(point const &p1_, point const &p2_, float radius_, unsigned dim_, unsigned type_, unsigned end_flags_) :
-		p1(p1_), p2(p2_), radius(radius_), dim(dim_), type(type_), end_flags(end_flags_), connected(type != PIPE_RISER), outside_pg(0) {}
+	pipe_t(point const &p1_, point const &p2_, float radius_, unsigned dim_, unsigned type_, unsigned end_flags_, bool for_extb_=0) :
+		p1(p1_), p2(p2_), radius(radius_), dim(dim_), type(type_), end_flags(end_flags_), connected(type != PIPE_RISER), outside_pg(0), for_extb(for_extb_) {}
 	float get_length() const {return fabs(p2[dim] - p1[dim]);}
 
 	cube_t get_bcube() const {
@@ -739,7 +739,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	float const r_main_spacing(radius_factor*r_main); // include insulation thickness for hot water pipes
 	min_eq(r_main, max_pipe_radius); // limit pipe radius; even with these limits, we can still have hot water and cold water clipping through each other with enough flow
 	assert(pipe_zval > bcube.z1());
-	vector<pipe_t> pipes, fittings;
+	vector<pipe_t> pipes, fittings, extb_conn;
 	cube_t pipe_end_bcube;
 	unsigned num_conn_segs(0);
 	// build random shifts table; make consistent per pipe to preserve X/Y alignments
@@ -761,27 +761,36 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		assert(p.radius > 0.0);
 		assert(p.pos.z > pipe_zval);
 		point pos(p.pos);
-		bool valid(0);
+		
+		if (p.in_extb) { // extended basement connection has special handling
+			cube_t valid_bounds(basement);
+			valid_bounds.expand_by_xy(-FITTING_RADIUS*p.radius);
+			valid_bounds.clamp_pt(pos);
+			extb_conn.emplace_back(p.pos, pos, p.radius, interior->extb_wall_dim, PIPE_RISER, 0); // store for later
+		}
+		else {
+			bool valid(0);
 
-		for (unsigned n = 0; n < NUM_SHIFTS; ++n) { // try zero + random shifts
-			cube_t c(pos);
-			c.expand_by_xy(p.radius);
-			//c.z1() = bcube.z1(); // extend all the way down to the floor of the lowest basement
-			c.z1() = pipe_min_z1; // extend down to the lowest pipe z1
+			for (unsigned n = 0; n < NUM_SHIFTS; ++n) { // try zero + random shifts
+				cube_t c(pos);
+				c.expand_by_xy(p.radius);
+				//c.z1() = bcube.z1(); // extend all the way down to the floor of the lowest basement
+				c.z1() = pipe_min_z1; // extend down to the lowest pipe z1
 
-			// can't place outside building bcube, or over stairs/elevators/ramps/pillars/walls/beams;
-			// here beams are included because lights are attached to the underside of them, so avoiding beams should hopefully also avoid lights
-			if (!bcube.contains_cube_xy(c) || has_bcube_int(c, obstacles) || has_bcube_int(c, walls) || has_bcube_int(c, beams)) {
-				pos = p.pos + rshifts[n]; // apply shift
-				continue;
-			}
-			valid = 1;
-			break;
-		} // for n
-		if (!valid) continue; // no valid shift, skip this connection
-		pipes.emplace_back(point(pos.x, pos.y, pipe_zval), pos, p.radius, 2, PIPE_RISER, 0); // neither end capped
+				// can't place outside building bcube, or over stairs/elevators/ramps/pillars/walls/beams;
+				// here beams are included because lights are attached to the underside of them, so avoiding beams should hopefully also avoid lights
+				if (!bcube.contains_cube_xy(c) || has_bcube_int(c, obstacles) || has_bcube_int(c, walls) || has_bcube_int(c, beams)) {
+					pos = p.pos + rshifts[n]; // apply shift
+					continue;
+				}
+				valid = 1;
+				break;
+			} // for n
+			if (!valid) continue; // no valid shift, skip this connection
+		}
+		pipes.emplace_back(point(pos.x, pos.y, pipe_zval), pos, p.radius, 2, PIPE_RISER, 0, p.in_extb); // neither end capped
 		pipe_end_bcube.assign_or_union_with_cube(pipes.back().get_bcube());
-	} // for pipe_ends
+	} // for risers
 	if (pipes.empty()) return 0; // no valid pipes
 
 	// calculate unique positions of pipes along the main pipe
@@ -791,6 +800,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	for (auto p = pipes.begin(); p != pipes.end(); ++p) {
 		unsigned const pipe_ix(p - pipes.begin());
 		float &v(p->p1[dim]);
+		if (p->for_extb) {xy_map[v].push_back(pipe_ix); continue;} // add without merging
 		auto it(xy_map.find(v));
 		if (it != xy_map.end()) {it->second.push_back(pipe_ix); continue;} // found
 		bool found(0);
@@ -899,6 +909,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	bool const d(!dim);
 	float const conn_pipe_merge_exp = 3.0; // cubic
 	unsigned const conn_pipes_start(pipes.size());
+	bool had_extb_conn(0);
 
 	// connect drains/feeders to main pipe in !dim
 	for (auto const &v : xy_map) { // for each unique position along the main pipe
@@ -909,9 +920,10 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		for (unsigned ix : v.second) {
 			assert(ix < pipes.size());
 			pipe_t &pipe(pipes[ix]);
+			if (had_extb_conn && pipe.for_extb) continue; // already have an extended basement connector pipe
 			float const val(pipe.p1[d]);
 
-			if (fabs(val - centerline) < r_main) {pipe.p1[d] = pipe.p2[d] = centerline;} // shift to connect directly to main pipe since it's close enough
+			if (!pipe.for_extb && fabs(val - centerline) < r_main) {pipe.p1[d] = pipe.p2[d] = centerline;} // shift to connect directly to main pipe since it's close enough
 			else {
 				float lo(val - pipe.radius), hi(val + pipe.radius);
 				point p1(ref_p1), p2(p1);
@@ -920,7 +932,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 				float const r_test(radius_factor*pipe.radius);
 				bool skip(has_int_obstacle_or_parallel_wall(pipe_t(p1, p2, r_test, d, PIPE_CONN, 3).get_bcube(), obstacles, walls));
 
-				if (skip && (p2[d] - p1[d]) > 8.0*pipe.radius) { // blocked, can't connect, long segment: try extending halfway
+				if (skip && !pipe.for_extb && (p2[d] - p1[d]) > 8.0*pipe.radius) { // blocked, can't connect, long segment: try extending halfway
 					if      (lo < range_min) {p1[d] = lo = 0.5*(lo + range_min); pipe.p1[d] = pipe.p2[d] = lo + pipe.radius;} // on the lo side
 					else if (hi > range_max) {p2[d] = hi = 0.5*(hi + range_max); pipe.p1[d] = pipe.p2[d] = hi - pipe.radius;} // on the hi side
 					skip = has_int_obstacle_or_parallel_wall(pipe_t(p1, p2, r_test, d, PIPE_CONN, 3).get_bcube(), obstacles, walls);
@@ -939,6 +951,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 				max_eq(range_max, hi);
 			}
 			pipe.connected = 1;
+			had_extb_conn |= pipe.for_extb;
 			if (unconn_radius > 0.0) {pipe.radius = get_merged_pipe_radius(pipe.radius, unconn_radius, conn_pipe_merge_exp); unconn_radius = 0.0;} // add extra capacity
 			radius = get_merged_pipe_radius(radius, pipe.radius, conn_pipe_merge_exp);
 			++num_keep;
@@ -970,6 +983,19 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		++num_conn_segs;
 	} // for v
 	if (mp[0][dim] >= mp[1][dim]) return 0; // no pipes connected to main? I guess there's nothing to do here
+
+	// reroute extended basement pipe(s) from next to door to the end of the hallway; only one of them should actually be connected
+	for (pipe_t const &ep : extb_conn) {
+		for (pipe_t &p : pipes) {
+			if (!p.connected) continue; // unconnected drain, skip
+			if (p.type != PIPE_RISER || p.p2 != ep.p2) continue; // wrong pipe, or it was moved
+			//p.p1.z = ceil_zval - FITTING_RADIUS*p.radius; // shift up to the ceiling; no, PG ceiling is below the beam, and the fitting doesn't connect
+			p.p2.assign(ep.p1.x, ep.p1.y, p.p1.z);
+			p.dim  = ep.dim;
+			p.type = PIPE_EXTB;
+			break;
+		}
+	} // for ep
 	unsigned main_pipe_end_flags(0); // start with both ends unconnected
 
 	if (add_exit_pipe) {
@@ -1119,7 +1145,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		bool const pdim(p.dim & 1), pdir(p.dim >> 1); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
 		unsigned flags(0);
 		if (p.type != PIPE_EXIT) {flags |= RO_FLAG_NOCOLL;} // only exit pipe has collisions enabled
-		if (p.type == PIPE_CONN || p.type == PIPE_MAIN) {flags |= RO_FLAG_HANGING;} // hanging connector/main pipe with flat ends
+		if (p.type == PIPE_CONN || p.type == PIPE_MAIN || p.type == PIPE_EXTB) {flags |= RO_FLAG_HANGING;} // hanging connector/main pipe with flat ends
 		room_object_t const pipe(pbc, TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, pipes_color);
 		objs.push_back(pipe);
 		if (p.type == PIPE_EXIT && p.dim == 2) {objs.back().flags |= RO_FLAG_LIT;} // vertical exit pipes are shadow casting; applies to pipe but not fittings
@@ -1128,6 +1154,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		// note that we may not need fittings at T-junctions for hot water pipes, but then we would need to cap the ends
 		if (p.type == PIPE_RISER) continue; // not for vertical drain pipes, since they're so short and mostly hidden above the connector pipes
 		float const fitting_len(FITTING_LEN*r_main), fitting_expand((FITTING_RADIUS - 1.0)*p.radius); // fitting len based on main pipe radius
+		float conn_fitting_len(fitting_len + ((p.type == PIPE_EXTB) ? wall_thickness : 0.0)); // extended basement pipe passes through the wall on both ends
 
 		for (unsigned d = 0; d < 2; ++d) {
 			if ((p.type == PIPE_CONN || p.type == PIPE_MAIN) && !(p.end_flags & (1<<d))) continue; // already have fittings added from connecting pipes
@@ -1137,8 +1164,8 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			if (d == 0 || p.type != PIPE_MAIN) {pf.flags |= RO_FLAG_ADJ_HI;} // skip end cap for main pipe exiting through the wall
 			pf.color  = fittings_color;
 			expand_cube_except_in_dim(pf, fitting_expand, p.dim); // expand slightly
-			pf.d[p.dim][!d] = pf.d[p.dim][d] + (d ? -1.0 : 1.0)*fitting_len;
-			if (!basement.intersects_xy(pf)) continue;
+			pf.d[p.dim][!d] = pf.d[p.dim][d] + (d ? -1.0 : 1.0)*conn_fitting_len;
+			if (p.type != PIPE_EXTB && !basement.intersects_xy(pf)) continue; // skip fittings outside the basement, except for extended basement pipe
 			objs.push_back(pf);
 			if (add_insul) {add_insul_exclude(p, pf, insul_exclude);}
 
@@ -1485,14 +1512,19 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 // here each sphere represents the entry point of a pipe with this radius into the basement ceiling
 // find all plumbing fixtures such as toilets, urinals, sinks, and showers; these should have all been placed in rooms by now
 void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, vect_riser_pos_t &cold_water, vect_riser_pos_t &hot_water, rand_gen_t &rgen) const {
+	assert(has_room_geom());
 	cube_t const &basement(get_basement());
 	float const merge_dist = 4.0; // merge two pipes if their combined radius is within this distance
 	// use reduced pipe radius for apartments and hotels since they have so many plumbing fixtures
 	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), second_floor_zval(ground_floor_z1 + floor_spacing);
 	float const base_pipe_radius((is_apt_or_hotel() ? 0.008 : 0.01)*floor_spacing), base_pipe_area(base_pipe_radius*base_pipe_radius);
 	float const merge_dist_sq(merge_dist*merge_dist), max_radius(0.3*get_wall_thickness()), ceil_zval(basement.z2() - get_fc_thickness());
-	vector<room_object_t> water_heaters;
+	bool const inc_extb_conns(has_ext_basement() && !interior->has_backrooms);
 	bool const inc_basement_wheaters = 1;
+	float extb_pipe_radius(0.0);
+	bool extb_pipe_has_hot(0);
+	cube_t extb_area;
+	vector<room_object_t> water_heaters;
 
 	// start with sewer pipes and water heaters
 	for (room_object_t const &i : interior->room_geom->objs) { // check all objects placed so far
@@ -1504,7 +1536,13 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 			water_heaters.push_back(i);
 			continue;
 		}
-		if (i.z1() < ground_floor_z1) continue; // object in the house basement; unclear how to handle it here - should be a direct connection or go through the wall/floor
+		if (i.z1() < ground_floor_z1) { // object in the basement
+			if (inc_extb_conns && point_in_extended_basement_not_basement(i.get_cube_center())) {
+				extb_pipe_radius   = get_merged_pipe_radius(extb_pipe_radius, base_pipe_radius, 3.0);
+				extb_pipe_has_hot |= (i.type == TYPE_SINK); // only sinks consume hot water in extended basements?
+			}
+			continue; // unclear how to handle it here - should be a direct connection or go through the wall/floor
+		}
 		// Note: the dishwasher is always next to the kitchen sink and uses the same water connections
 		bool const hot_cold_obj (i.type == TYPE_SINK || i.type == TYPE_BRSINK || i.type == TYPE_KSINK || i.type == TYPE_TUB ||
 			i.type == TYPE_SHOWER || i.type == TYPE_SHOWERTUB || i.type == TYPE_WASHER);
@@ -1528,10 +1566,26 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 		} // for p
 		if (!merged) {sewer.emplace_back(pos, base_pipe_radius, hot_cold_obj, 0, upper_floor);} // create a new riser; flow_dir=0/out
 	} // for i
+	if (inc_extb_conns /*&& extb_pipe_radius > 0.0*/) { // we have extended basement water consumers (or maybe enable even if not), add a connection through the hallway
+		extb_pipe_radius = max(min(0.5f*extb_pipe_radius, 2.0f*base_pipe_radius), base_pipe_radius); // not too large and not too small
+		room_t const &hallway(interior->get_room(interior->ext_basement_hallway_room_id));
+		extb_area = get_walkable_room_bounds(hallway);
+		bool const wdim(interior->extb_wall_dim), wdir(interior->extb_wall_dir), first_side(rgen.rand_bool());
+		float const wall_dist(max(FITTING_RADIUS*extb_pipe_radius, (extb_pipe_radius + 2.0f*get_trim_thickness())));
+		point conn_pt(0.0, 0.0, ceil_zval);
+		conn_pt[wdim] = extb_area.d[wdim][wdir]; // at the far end of the hallway
+
+		for (unsigned side = 0; side < 2; ++side) { // try both sides, in the hope that we can connect to one
+			bool const d(bool(side) ^ first_side);
+			conn_pt[!wdim] = extb_area.d[!wdim][d] - (d ? 1.0 : -1.0)*wall_dist; // in the corner, but avoiding the door trim
+			sewer.emplace_back(conn_pt, extb_pipe_radius, extb_pipe_has_hot, 0, 0, 1); // flow_dir=0/out, upper_floor=0, in_extb=1
+		}
+	}
 	vect_riser_pos_t water_risers;
 	water_risers.reserve(sewer.size());
 
 	for (riser_pos_t &s : sewer) {
+		if (s.in_extb) continue; // no water risers (yet) since they don't route correctly along the same path
 		min_eq(s.radius, max_radius); // clamp radius to a reasonable value after all merges
 		water_risers.push_back(s);
 		// try to find a nearby interior wall on the ground floor to route the riser to
@@ -1568,16 +1622,16 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 
 	for (riser_pos_t &s : water_risers) {
 		float const wp_radius(0.5*s.radius), pipe_spacing(2.0*(s.radius + wp_radius));
-		cube_t place_area(basement.contains_pt_xy(s.pos) ? basement : bcube); // force the water riser to be in the basement if the sewer riser is there
+		cube_t place_area(s.in_extb ? extb_area : (basement.contains_pt_xy(s.pos) ? basement : bcube)); // force water riser inside basement if sewer riser is there
 		place_area.expand_by_xy(-wp_radius);
 		vector3d delta(shift_dir*pipe_spacing);
 		if (!place_area.contains_pt_xy(s.pos + delta)) {delta.negate();} // if shift takes pos outside placement area, shift in the other direction
-		cold_water.emplace_back((s.pos + delta), wp_radius, 0, 1); // has_hot=0, flow_dir=1/in
+		cold_water.emplace_back((s.pos + delta), wp_radius, 0, 1, s.upper_floor, s.in_extb); // has_hot=0, flow_dir=1/in
 		if (!s.has_hot) continue; // no hot water, done
 		float const hot_radius(0.75*wp_radius); // smaller radius than cold water pipe
 		place_area.expand_by_xy(wp_radius - hot_radius); // resize for new radius
 		if (!place_area.contains_pt_xy(s.pos - delta)) {delta *= 2.0;} // if shift takes pos outside placement area, shift further from the drain
-		hot_water.emplace_back((s.pos - delta), hot_radius, 1, 1); // shift in opposite dir; has_hot=1, flow_dir=1/in
+		hot_water.emplace_back((s.pos - delta), hot_radius, 1, 1, s.upper_floor, s.in_extb); // shift in opposite dir; has_hot=1, flow_dir=1/in
 	} // for sewer
 	if (!water_heaters.empty() && !hot_water.empty()) { // add connections for water heaters if there are hot water pipes
 		float const radius_hot(get_merged_risers_radius(hot_water)); // this is the radius of the main hot water supply; not limited to max
