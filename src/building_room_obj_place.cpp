@@ -658,12 +658,31 @@ void building_t::add_office_pillars(rand_gen_t rgen, room_t const &room, float z
 	blockers.push_back(pillar);
 }
 
+vector2d building_t::get_conf_room_table_length_width(cube_t const &room) const {
+	float const doorway_width(get_doorway_width()), end_clearance(1.25*max(doorway_width, get_min_front_clearance_inc_people())), side_clearance(1.25*end_clearance);
+	bool const dim(room.dx() < room.dy()); // long dim
+	float const table_len(room.get_sz_dim(dim) - 2.0*end_clearance), table_width(1.1*doorway_width);
+	if (table_len < 1.5*table_width || room.get_sz_dim(!dim) < table_width + 2.0*side_clearance) return vector2d(); // too small to be a conference room
+	return vector2d(table_len, table_width);
+}
 bool building_t::add_conference_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	if (room.has_stairs || room.has_elevator || room.is_hallway) return 0; // not a conference room
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	float const floor_spacing(get_window_vspace());
+	bool const dim(room.dx() < room.dy()); // long dim
 	vect_room_object_t &objs(interior->room_geom->objs);
-	// TODO: TYPE_CONF_TABLE surrounded by TYPE_OFF_CHAIR with TYPE_MONITOR on the wall, and maybe a phone on the table
-	return 0;
+	// add conference table
+	vector2d const table_lw(get_conf_room_table_length_width(room_bounds));
+	if (table_lw == vector2d()) return 0; // too small to be a conference room
+	cube_t table;
+	set_cube_zvals(table, zval, (zval + 0.25*rgen.rand_uniform(1.0, 1.05)*floor_spacing)); // set height
+	set_wall_width(table, room.get_center_dim( dim), 0.5*table_lw.x,  dim); // set length
+	set_wall_width(table, room.get_center_dim(!dim), 0.5*table_lw.y, !dim); // set width
+	if (interior->is_blocked_by_stairs_or_elevator(table)) return 0; // shouldn't be true
+	objs.emplace_back(table, TYPE_CONF_TABLE, room_id, dim, 0, 0, tot_light_amt, SHAPE_CUBE, WHITE); // dir=0, flags=0
+	// TODO: TYPE_OFF_CHAIR with TYPE_MONITOR on the wall, and maybe a phone on the table
+	// TODO: add "Conference" sign outside the door(s)
+	return 1;
 }
 
 void offset_hanging_tv(room_object_t &obj) {

@@ -1878,6 +1878,7 @@ struct building_t : public building_geom_t {
 	float get_hspacing_for_part(cube_t const &part, bool dim) const;
 	bool interior_enabled() const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
+	void assign_special_room_types(vector<unsigned> &utility_room_cands, vector<unsigned> &special_room_cands, unsigned doors_start, rand_gen_t &rgen);
 	void divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsigned hall_num_rooms, unsigned tot_num_windows,
 		unsigned windows_per_room, unsigned windows_per_room_side, bool hall_dim, bool hall_dir, rand_gen_t &rgen);
 	bool maybe_assign_interior_garage(bool &gdim, bool &gdir);
@@ -2229,6 +2230,7 @@ private:
 		float zval, unsigned room_id, unsigned floor, float tot_light_amt, unsigned objs_start, bool is_basement);
 	bool create_office_cubicles(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_office_pillars(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t const &lights, vect_cube_t &blockers);
+	vector2d get_conf_room_table_length_width(cube_t const &room) const;
 	bool add_conference_objs (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_lounge_objs     (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_lobby);
 	bool check_valid_closet_placement(cube_t const &c, room_t const &room, unsigned objs_start, unsigned bed_ix, float min_bed_space=0.0) const;

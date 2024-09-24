@@ -3426,7 +3426,7 @@ void building_room_geom_t::add_conference_table(room_object_t const &c, float ts
 	tid_nm_pair_t top_tex(get_counter_tid(), 2.5*tscale, 1);
 	top_tex.set_specular(0.5, 80.0);
 	get_material(top_tex, 1).add_cube_to_verts(top, color, all_zeros, 0); // shadowed; draw all faces
-	get_wood_material(4.0*tscale).add_cube_to_verts(base, color, all_zeros, EF_Z12); // shadowed; skip top and bottom
+	get_wood_material(2.0*tscale).add_cube_to_verts(base, color, all_zeros, EF_Z12); // shadowed; skip top and bottom
 }
 
 void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color, point const &tex_origin) {

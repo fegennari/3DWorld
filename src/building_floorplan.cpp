@@ -833,32 +833,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			if (has_sec_hallways) {rooms.back().mark_open_wall_dim(min_dim);} // flag primary hallway as open on sides if there are secondary hallways
 			if (is_ground_floor || pri_hall.is_all_zeros()) {pri_hall = hall;} // assign to primary hallway if on first floor and hasn't yet been assigned
 			no_split_walls_this_part = 1;
-
-			// add special ground floor room types
-			unsigned const NUM_GFLOOR_RTYPES = 3;
-			unsigned const GFLOOR_RTYPES      [NUM_GFLOOR_RTYPES] = {RTYPE_UTILITY, RTYPE_SERVER, RTYPE_SECURITY}; // placed in this priority order
-			unsigned const GFLOOR_RTYPE_COUNTS[NUM_GFLOOR_RTYPES] = {MAX_OFFICE_UTILITY_ROOMS, 1, 1};
-
-			for (unsigned rtype = 0; rtype < NUM_GFLOOR_RTYPES; ++rtype) { // assign round robin
-				unsigned const room_type(GFLOOR_RTYPES[rtype]);
-				vector<unsigned> &room_cands((room_type == RTYPE_UTILITY) ? utility_room_cands : special_room_cands);
-
-				for (unsigned n = 0; n < GFLOOR_RTYPE_COUNTS[rtype]; ++n) {
-					if (room_cands.empty()) break; // no more rooms to assign
-					unsigned &room_ix(room_cands[rand() % room_cands.size()]);
-					assert(room_ix < rooms.size());
-					room_t &room(rooms[room_ix]);
-					room.assign_to(room_type, 0, 1); // assign this room on floor 0; locked=1
-					bool const ensure_locked(0); // probably should be locked, but unlocked makes these rooms easier to explore
-					ensure_doors_to_room_are_closed(room, doors_start, ensure_locked);
-
-					if (room.is_apt_or_hotel_room()) { // make other rooms in this unit the same type; should be RTYPE_UTILITY
-						for (auto r = rooms.begin()+room_ix+1; r != rooms.end() && r->unit_id == room.unit_id; ++r) {r->assign_to(room_type, 0, 1);} // locked=1
-					}
-					room_ix = room_cands.back();
-					room_cands.pop_back(); // remove this room from consideration
-				} // for n
-			} // for rtype
+			assign_special_room_types(utility_room_cands, special_room_cands, doors_start, rgen);
 		} // end use_hallway
 
 		else { // generate random walls using recursive 2D slices
@@ -1174,6 +1149,56 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 	else if (has_basement()) {interior->furnace_type = FTYPE_BASEMENT;} // basement only: place furnace in basement (at least if it's a house)
 	// else no furnace
 } // end gen_interior_int()
+
+void building_t::assign_special_room_types(vector<unsigned> &utility_room_cands, vector<unsigned> &special_room_cands, unsigned doors_start, rand_gen_t &rgen) {
+	vector<room_t> &rooms(interior->rooms);
+	
+	if (!is_residential()) {
+		// try to assign conference room(s); this may be overwritten with a special room on the ground floor;
+		// conference rooms are currently interior and windowless so that we can have glass walls without blending problems with windows
+		float max_area(0.0);
+		vector<unsigned> conf_room_cands;
+
+		for (unsigned d = 0; d < 2; ++d) { // conference rooms can optionally be next to a bathroom
+			for (unsigned room_ix : (d ? special_room_cands : utility_room_cands)) {
+				room_t &room(rooms[room_ix]);
+				if (room.has_stairs || room.has_elevator || room.is_hallway) continue; // may not be set yet
+				if (get_conf_room_table_length_width(get_walkable_room_bounds(room)) == vector2d()) continue; // can't fit a conference room table
+				conf_room_cands.push_back(room_ix);
+				max_eq(max_area, room.get_area_xy());
+			}
+		} // for d
+		for (unsigned room_ix : conf_room_cands) {
+			if (rooms[room_ix].get_area_xy() < 0.99*max_area) continue; // skip non-max area rooms
+			if (rgen.rand_bool()) {rooms[room_ix].assign_all_to(RTYPE_CONF, 1);} // 50% chance of conference room; locked=1
+		}
+	}
+	// add special ground floor room types
+	unsigned const NUM_GFLOOR_RTYPES = 3;
+	unsigned const GFLOOR_RTYPES      [NUM_GFLOOR_RTYPES] = {RTYPE_UTILITY, RTYPE_SERVER, RTYPE_SECURITY}; // placed in this priority order
+	unsigned const GFLOOR_RTYPE_COUNTS[NUM_GFLOOR_RTYPES] = {MAX_OFFICE_UTILITY_ROOMS, 1, 1};
+
+	for (unsigned rtype = 0; rtype < NUM_GFLOOR_RTYPES; ++rtype) { // assign round robin
+		unsigned const room_type(GFLOOR_RTYPES[rtype]);
+		vector<unsigned> &room_cands((room_type == RTYPE_UTILITY) ? utility_room_cands : special_room_cands);
+
+		for (unsigned n = 0; n < GFLOOR_RTYPE_COUNTS[rtype]; ++n) {
+			if (room_cands.empty()) break; // no more rooms to assign
+			unsigned &room_ix(room_cands[rgen.rand() % room_cands.size()]);
+			assert(room_ix < rooms.size());
+			room_t &room(rooms[room_ix]);
+			room.assign_to(room_type, 0, 1); // assign this room on floor 0; locked=1
+			bool const ensure_locked(0); // probably should be locked, but unlocked makes these rooms easier to explore
+			ensure_doors_to_room_are_closed(room, doors_start, ensure_locked);
+
+			if (room.is_apt_or_hotel_room()) { // make other rooms in this unit the same type; should be RTYPE_UTILITY
+				for (auto r = rooms.begin()+room_ix+1; r != rooms.end() && r->unit_id == room.unit_id; ++r) {r->assign_to(room_type, 0, 1);} // locked=1
+			}
+			room_ix = room_cands.back();
+			room_cands.pop_back(); // remove this room from consideration
+		} // for n
+	} // for rtype
+}
 
 void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsigned hall_num_rooms, unsigned tot_num_windows,
 	unsigned windows_per_room, unsigned windows_per_room_side, bool hall_dim, bool hall_dir, rand_gen_t &rgen) // hall_dim is also window dim
