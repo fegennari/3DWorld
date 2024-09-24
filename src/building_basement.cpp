@@ -1560,7 +1560,7 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 		if (i.z1() < ground_floor_z1) { // object in the basement
 			if (inc_extb_conns && point_in_extended_basement_not_basement(i.get_cube_center())) {
 				extb_pipe_radius   = get_merged_pipe_radius(extb_pipe_radius, base_pipe_radius, 3.0);
-				extb_pipe_has_hot |= (i.type == TYPE_SINK); // only sinks consume hot water in extended basements?
+				extb_pipe_has_hot |= (i.type == TYPE_SINK || i.type == TYPE_TUB); // only sinks and tubs consume hot water in extended basements?
 			}
 			continue; // unclear how to handle it here - should be a direct connection or go through the wall/floor
 		}
@@ -1606,7 +1606,6 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 	water_risers.reserve(sewer.size());
 
 	for (riser_pos_t &s : sewer) {
-		if (s.in_extb) continue; // no water risers (yet) since they don't route correctly along the same path
 		min_eq(s.radius, max_radius); // clamp radius to a reasonable value after all merges
 		water_risers.push_back(s);
 		// try to find a nearby interior wall on the ground floor to route the riser to
