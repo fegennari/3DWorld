@@ -714,6 +714,32 @@ void add_pass_through_fittings(room_object_t const &pipe, vect_cube_t const &wal
 		objs.push_back(pf);
 	} // for wall
 }
+void add_hanging_pipe_bracket(cube_t const &pipe, float len_pos, float ceiling_zval, bool dim, unsigned room_id, float tot_light_amt,
+	unsigned pipe_conn_start, vect_room_object_t &objs, vect_cube_t const &obstacles, vect_cube_t const &walls)
+{
+	unsigned const pipe_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
+	float const radius(0.5*pipe.dz()), thickness(0.12*radius);
+	cube_t bracket(pipe);
+	set_wall_width(bracket, len_pos, 0.8*radius, dim);
+	bracket.expand_in_dim(!dim, thickness);
+	bracket.expand_in_dim(2,    thickness);
+	cube_t bc(bracket);
+	bc.z1() = ceiling_zval; // extend up to ceiling
+	if (has_bcube_int(bc, obstacles) || has_bcube_int(bc, walls)) return;
+
+	for (auto i = objs.begin()+pipe_conn_start; i != objs.end(); ++i) {
+		if (i->intersects(bc)) return; // is this intersection possible given the existing constraints on pipe placement? unclear
+	}
+	objs.emplace_back(bracket, TYPE_PIPE, room_id, dim, 0, (pipe_flags | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, LT_GRAY);
+
+	if (bracket.z2() < ceiling_zval) { // add a vertical bolt into the ceiling; beams should not be empty
+		cube_t bolt;
+		set_cube_zvals(bolt, pipe.z2(), ceiling_zval);
+		set_wall_width(bolt, bracket.get_center_dim( dim), 0.2*radius,  dim);
+		set_wall_width(bolt, bracket.get_center_dim(!dim), 0.2*radius, !dim);
+		objs.emplace_back(bolt, TYPE_PIPE, room_id, 0, 1, pipe_flags, tot_light_amt, SHAPE_CYLIN, GRAY); // vertical, no ends
+	}
+}
 
 float const FITTING_LEN(1.25), FITTING_RADIUS(1.1); // relative to radius
 
@@ -725,6 +751,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	if (risers.empty()) return 0; // can happen for hot water pipes when there are no hot water fixtures
 	float const max_pipe_radius_mult[NUM_PIPE_TYPES] = {0.75, 0.25, 0.2, 0.15}; // sewer, cold water, hot water, gas; in muptiples of wall thickness
 	bool const is_hot_water(pipe_type == PIPE_TYPE_HW), is_closed_loop(is_hot_water), add_insul(is_hot_water);
+	bool const extb_wall_dim(interior->extb_wall_dim), extb_wall_dir(interior->extb_wall_dir);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	assert(objs_start <= objs.size());
 	cube_t const &basement(get_basement());
@@ -766,7 +793,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			cube_t valid_bounds(basement);
 			valid_bounds.expand_by_xy(-FITTING_RADIUS*p.radius);
 			valid_bounds.clamp_pt(pos);
-			extb_conn.emplace_back(p.pos, pos, p.radius, interior->extb_wall_dim, PIPE_RISER, 0); // store for later
+			extb_conn.emplace_back(p.pos, pos, p.radius, extb_wall_dim, PIPE_RISER, 0); // store for later
 		}
 		else {
 			bool valid(0);
@@ -936,10 +963,10 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 
 				if (skip) { // blocked, can't connect
 					if (pipe.for_extb) { // extended basement pipe
-						if (d != interior->extb_wall_dim) { // try moving away from the wall in case there was an outlet conduit there
+						if (d != extb_wall_dim) { // try moving away from the wall in case there was an outlet conduit there
 							float const offset_dist(0.35*wall_thickness); // should be about the diameter of a conduit
 							vector3d offset;
-							offset[interior->extb_wall_dim] += (interior->extb_wall_dir ? -1.0 : 1.0)*offset_dist;
+							offset[extb_wall_dim] += (extb_wall_dir ? -1.0 : 1.0)*offset_dist;
 							p1 += offset; p2 += offset;
 							
 							if (!has_int_obstacle_or_parallel_wall(pipe_t(p1, p2, r_test, d, PIPE_CONN, 3).get_bcube(), obstacles, walls)) {
@@ -1217,6 +1244,17 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			add_pass_through_fittings(pipe, walls, fitting_len, fitting_expand, p.dim, LT_GRAY, objs); // different from fittings color
 			add_pass_through_fittings(pipe, beams, fitting_len, fitting_expand, p.dim, LT_GRAY, objs);
 		}
+		if (p.type == PIPE_EXTB) { // add pipe hanging brackets
+			float const ceiling_zval(interior->get_room(interior->ext_basement_hallway_room_id).z2() - fc_thickness);
+			float const pipe_len(pipe.get_sz_dim(extb_wall_dim));
+			unsigned const num_brackets(0.5*pipe_len/window_vspacing);
+			float const bracket_spacing(pipe_len/(num_brackets+1));
+
+			for (unsigned n = 0; n < num_brackets; ++n) {
+				float const len_pos(pipe.d[extb_wall_dim][0] + (n+1)*bracket_spacing);
+				add_hanging_pipe_bracket(pipe, len_pos, ceiling_zval, dim, room_id, tot_light_amt, objs_start+1, objs, obstacles, walls);
+			}
+		}
 	} // for p
 	for (pipe_t const &p : fittings) {
 		cube_t const pbc(p.get_bcube());
@@ -1252,33 +1290,6 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		} // for p
 	}
 	return 1;
-}
-
-void add_hanging_pipe_bracket(cube_t const &pipe, float len_pos, float ceiling_zval, bool dim, unsigned room_id, float tot_light_amt,
-	unsigned pipe_conn_start, vect_room_object_t &objs, vect_cube_t const &obstacles, vect_cube_t const &walls)
-{
-	unsigned const pipe_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
-	float const radius(0.5*pipe.dz()), thickness(0.12*radius);
-	cube_t bracket(pipe);
-	set_wall_width(bracket, len_pos, 0.8*radius, dim);
-	bracket.expand_in_dim(!dim, thickness);
-	bracket.expand_in_dim(2,    thickness);
-	cube_t bc(bracket);
-	bc.z1() = ceiling_zval; // extend up to ceiling
-	if (has_bcube_int(bc, obstacles) || has_bcube_int(bc, walls)) return;
-
-	for (auto i = objs.begin()+pipe_conn_start; i != objs.end(); ++i) {
-		if (i->intersects(bc)) return; // is this intersection possible given the existing constraints on pipe placement? unclear
-	}
-	objs.emplace_back(bracket, TYPE_PIPE, room_id, dim, 0, (pipe_flags | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, LT_GRAY);
-
-	if (bracket.z2() < ceiling_zval) { // add a vertical bolt into the ceiling; beams should not be empty
-		cube_t bolt;
-		set_cube_zvals(bolt, pipe.z2(), ceiling_zval);
-		set_wall_width(bolt, bracket.get_center_dim( dim), 0.2*radius,  dim);
-		set_wall_width(bolt, bracket.get_center_dim(!dim), 0.2*radius, !dim);
-		objs.emplace_back(bolt, TYPE_PIPE, room_id, 0, 1, pipe_flags, tot_light_amt, SHAPE_CYLIN, GRAY); // vertical, no ends
-	}
 }
 
 // return value: 0=failed to place, 1=placed full length, 2=placed partial length
