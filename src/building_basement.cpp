@@ -904,6 +904,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			UNROLL_2X(mp[i_][!dim] += move_amt;);
 			cur_pos = new_pos;
 		} // for a
+		centerline = mp[0][!dim]; // update centerline
 	}
 	mp[0][dim] = bcube.d[dim][1]; mp[1][dim] = bcube.d[dim][0]; // make dim range denormalized; will recalculate below with correct range
 	bool const d(!dim);
