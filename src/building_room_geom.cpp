@@ -3418,15 +3418,20 @@ void building_room_geom_t::add_reception_desk(room_object_t const &c, float tsca
 	top_mat.add_cube_to_verts(top_right, color, tex_origin, lr_dim_mask);
 }
 
-void building_room_geom_t::add_conference_table(room_object_t const &c, float tscale) {
+void get_conf_table_cubes(room_object_t const &c, cube_t cubes[2]) { // {top, base}
 	cube_t top(c), base(c);
 	base.z2() = top.z1() = c.z2() - 0.075*c.dz();
 	base.expand_by_xy(-0.32*min(c.dx(), c.dy()));
+	cubes[0] = top; cubes[1] = base;
+}
+void building_room_geom_t::add_conference_table(room_object_t const &c, float tscale) {
+	cube_t cubes[2]; // {top, base}
+	get_conf_table_cubes(c, cubes);
 	colorRGBA const color(apply_light_color(c));
 	tid_nm_pair_t top_tex(get_counter_tid(), 2.5*tscale, 1);
 	top_tex.set_specular(0.5, 80.0);
-	get_material(top_tex, 1).add_cube_to_verts(top, color, all_zeros, 0); // shadowed; draw all faces
-	get_wood_material(2.0*tscale).add_cube_to_verts(base, color, all_zeros, EF_Z12); // shadowed; skip top and bottom
+	get_material(top_tex, 1).add_cube_to_verts(cubes[0], color, all_zeros, 0); // shadowed; draw all faces
+	get_wood_material(2.0*tscale).add_cube_to_verts(cubes[1], color, all_zeros, EF_Z12); // shadowed; skip top and bottom
 }
 
 void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color, point const &tex_origin) {
@@ -5217,6 +5222,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_WINE_RACK:return get_textured_wood_color();
 	case TYPE_DESK:     return get_textured_wood_color();
 	case TYPE_RDESK:    return (texture_color(PANELING_TEX)*0.5 + texture_color(get_counter_tid())*0.5);
+	case TYPE_CONF_TABLE:return (get_textured_wood_color() *0.5 + texture_color(get_counter_tid())*0.5);
 	case TYPE_BED:      return (color.modulate_with(texture_color(get_sheet_tid())) + get_textured_wood_color())*0.5; // half wood and half cloth
 	case TYPE_COUNTER:  return get_counter_color();
 	case TYPE_KSINK:    return (get_counter_color()*0.9 + GRAY*0.1); // counter, with a bit of gray mixed in from the sink

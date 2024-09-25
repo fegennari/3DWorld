@@ -606,6 +606,11 @@ unsigned check_table_collision(room_object_t const &c, point &pos, point const &
 	unsigned const num(get_table_like_object_cubes(c, cubes));
 	return check_cubes_collision(cubes, num, pos, p_last, radius, cnorm);
 }
+unsigned check_conf_table_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+	cube_t cubes[2]; // {top, base}
+	get_conf_table_cubes(c, cubes);
+	return check_cubes_collision(cubes, 2, pos, p_last, radius, cnorm);
+}
 unsigned check_rdesk_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	cube_t cubes[3];
 	get_reception_desk_cubes(c, cubes);
@@ -1419,6 +1424,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			if      (type == TYPE_CLOSET    ) {coll_ret |= check_closet_collision(*c, pos, p_last, radius, &cnorm);} // special case to handle closet interiors
 			else if (type == TYPE_BED       ) {coll_ret |= check_bed_collision   (*c, pos, p_last, radius, &cnorm);}
 			else if (can_use_table_coll(*c) ) {coll_ret |= check_table_collision (*c, pos, p_last, radius, &cnorm);}
+			else if (type == TYPE_CONF_TABLE) {coll_ret |= check_conf_table_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_RDESK     ) {coll_ret |= check_rdesk_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_CHAIR     ) {coll_ret |= check_chair_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (type == TYPE_TUB       ) {coll_ret |= check_tub_collision   (*c, pos, p_last, radius, &cnorm, is_ball);}
@@ -2365,6 +2371,11 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		sm_cubes.insert(sm_cubes.end(), cubes+1, cubes+5); // skip table top; legs are small
 		sm_cubes.insert(lg_cubes.end(), cubes+5, cubes+num); // middle, drawers, and back
 	}
+	else if (type == TYPE_CONF_TABLE) {
+		cube_t cubes[2]; // {top, base}
+		get_conf_table_cubes(c, cubes);
+		lg_cubes.insert(lg_cubes.end(), cubes, cubes+2);
+	}
 	else if (type == TYPE_RDESK) {
 		cube_t cubes[3];
 		get_reception_desk_cubes(c, cubes);
@@ -2565,6 +2576,11 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 				cube_t cubes[7];
 				unsigned const num(get_table_like_object_cubes(*c, cubes));
 				if (line_int_cubes_exp(p1, p2, cubes, num, expand)) return 9;
+			}
+			else if (c->type == TYPE_CONF_TABLE) {
+				cube_t cubes[2]; // {top, base}
+				get_conf_table_cubes(*c, cubes);
+				if (line_int_cubes_exp(p1, p2, cubes, 2, expand)) return 9;
 			}
 			else if (c->type == TYPE_RDESK) {
 				cube_t cubes[3];

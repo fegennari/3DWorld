@@ -1418,6 +1418,11 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 				for (unsigned n = 0; n < 3 && !intersects; ++n) {intersects |= cubes[n].line_intersects(p1c, p2c);}
 				if (!intersects) continue;
 			}
+			else if (i->type == TYPE_CONF_TABLE) {
+				cube_t cubes[2]; // {top, base}
+				get_conf_table_cubes(*i, cubes);
+				if (!cubes[0].line_intersects(p1c, p2c) && !cubes[1].line_intersects(p1c, p2c)) continue;
+			}
 			if (i->type == TYPE_HANGER_ROD && i->item_flags > 0) { // nonempty hanger rod
 				// search for hangers and don't allow hanger rod to be taken until the hangers are all taken
 				bool has_hanger(0);

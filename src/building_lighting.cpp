@@ -35,12 +35,13 @@ void calc_cur_ambient_diffuse();
 colorRGBA get_textured_wood_color();
 bool bed_has_canopy_mat(room_object_t const &c);
 int get_canopy_texture();
+int get_counter_tid   ();
 colorRGBA get_canopy_base_color(room_object_t const &c);
 void get_water_heater_cubes(room_object_t const &wh, cube_t cubes[2]);
 bool line_int_polygon_sides(point const &p1, point const &p2, cube_t const &bcube, vect_point const &points, float &t);
 void get_pool_table_cubes(room_object_t const &c, cube_t cubes[5]);
 unsigned get_couch_cubes(room_object_t const &c, cube_t cubes[4]);
-unsigned get_cashreg_cubes(room_object_t const &c, cube_t cubes[2]);;
+unsigned get_cashreg_cubes(room_object_t const &c, cube_t cubes[2]);
 
 bool check_indir_enabled(bool in_basement, bool in_attic) {
 	if (in_basement) return INDIR_BASEMENT_EN;
@@ -348,10 +349,16 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			unsigned const num(get_table_like_object_cubes(*c, cubes));
 			add_colored_cubes(cubes, num, color, cc);
 		}
+		else if (type == TYPE_CONF_TABLE) {
+			cube_t cubes[2]; // {top, base}
+			get_conf_table_cubes(*c, cubes);
+			cc.emplace_back(cubes[0], texture_color(get_counter_tid())); // top
+			cc.emplace_back(cubes[1], get_textured_wood_color()); // base
+		}
 		else if (type == TYPE_RDESK) {
 			cube_t cubes[3];
 			get_reception_desk_cubes(*c, cubes);
-			add_colored_cubes(cubes, 3, color, cc);
+			add_colored_cubes(cubes, 3, color, cc); // divided horizontally, not vertically, so use the mixed color for all cubes
 		}
 		else if (type == TYPE_CHAIR) {
 			colorRGBA const wood_color(get_textured_wood_color());
