@@ -3420,8 +3420,8 @@ void building_room_geom_t::add_reception_desk(room_object_t const &c, float tsca
 
 void building_room_geom_t::add_conference_table(room_object_t const &c, float tscale) {
 	cube_t top(c), base(c);
-	base.z2() = top.z1() = c.z2() - 0.1*c.dz();
-	base.expand_by_xy(-0.3*min(c.dx(), c.dy()));
+	base.z2() = top.z1() = c.z2() - 0.075*c.dz();
+	base.expand_by_xy(-0.32*min(c.dx(), c.dy()));
 	colorRGBA const color(apply_light_color(c));
 	tid_nm_pair_t top_tex(get_counter_tid(), 2.5*tscale, 1);
 	top_tex.set_specular(0.5, 80.0);

@@ -667,6 +667,10 @@ void building_t::add_office_pillars(rand_gen_t rgen, room_t const &room, float z
 	blockers.push_back(pillar);
 }
 
+void offset_hanging_tv(room_object_t &obj) {
+	if (obj.is_hanging()) {obj.translate_dim(obj.dim, (obj.dir ? -1.0 : 1.0)*0.28*obj.get_depth());} // translate to the wall to account for the missing stand
+}
+
 vector2d building_t::get_conf_room_table_length_width(cube_t const &room) const {
 	float const doorway_width(get_doorway_width()), end_clearance(1.25*max(doorway_width, get_min_front_clearance_inc_people())), side_clearance(1.25*end_clearance);
 	bool const dim(room.dx() < room.dy()); // long dim
@@ -684,20 +688,46 @@ bool building_t::add_conference_objs(rand_gen_t rgen, room_t const &room, float 
 	vector2d const table_lw(get_conf_room_table_length_width(room_bounds));
 	if (table_lw == vector2d()) return 0; // too small to be a conference room
 	cube_t table;
-	set_cube_zvals(table, zval, (zval + 0.25*rgen.rand_uniform(1.0, 1.05)*floor_spacing)); // set height
+	set_cube_zvals(table, zval, (zval + 0.30*rgen.rand_uniform(1.0, 1.05)*floor_spacing)); // set height
 	set_wall_width(table, room.get_center_dim( dim), 0.5*table_lw.x,  dim); // set length
 	set_wall_width(table, room.get_center_dim(!dim), 0.5*table_lw.y, !dim); // set width
 	objs.emplace_back(table, TYPE_CONF_TABLE, room_id, dim, 0, 0, tot_light_amt, SHAPE_CUBE, WHITE); // dir=0, flags=0
-	// TODO: TYPE_OFF_CHAIR along sides
-	// TODO: TYPE_MONITOR on the wall
+	// add office chairs along sides of the table
+	vector3d const chair_sz(get_office_chair_size());
+	unsigned const num_chairs(floor(table_lw.x/(1.2*2.0*chair_sz.x)));
+	float const chair_spacing(table_lw.x/max(1U, num_chairs));
+	point chair_pos(0.0, 0.0, zval);
+	
+	for (unsigned side = 0; side < 2; ++side) {
+		chair_pos[!dim] = table.d[!dim][side] + (side ? 1.0 : -1.0)*chair_sz.x*rgen.rand_uniform(0.3, 0.7);
+
+		for (unsigned n = 0; n < num_chairs; ++n) {
+			chair_pos[dim] = table.d[dim][0] + (n + 0.5)*chair_spacing + 0.1*chair_spacing*rgen.signed_rand_float();
+			cube_t chair(get_cube_height_radius(chair_pos, chair_sz.x, chair_sz.z));
+			objs.emplace_back(chair, TYPE_OFF_CHAIR, room_id, !dim, !side, 0, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK);
+		}
+	} // for side
+	// add a big TV/monitor on the wall
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) {
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H
+		float const tv_height(0.5*floor_spacing*rgen.rand_uniform(1.0, 1.2)), tv_hwidth(0.5*tv_height*sz.y/sz.z), tv_depth(tv_height*sz.x/sz.z);
+		bool const dir(rgen.rand_bool());
+		cube_t tv;
+		tv.z1() = zval + 0.25*floor_spacing;
+		tv.z2() = tv.z1() + tv_height;
+		tv.d[dim][ dir] = room_bounds.d[dim][dir]; // on the wall
+		tv.d[dim][!dir] = tv.d[dim][dir] + (dir ? -1.0 : 1.0)*tv_depth;
+		set_wall_width(tv, room_bounds.get_center_dim(!dim), tv_hwidth, !dim);
+		objs.emplace_back(tv, TYPE_MONITOR, room_id, dim, !dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), tot_light_amt, SHAPE_SHORT, BLACK); // monitors are shorter than TVs
+		offset_hanging_tv(objs.back());
+		set_obj_id(objs);
+		objs.back().obj_id |= 1; // off by default; set LSB
+	}
 	// TODO: phone on the table?
 	add_door_sign("Conference", room, zval, room_id);
 	return 1;
 }
 
-void offset_hanging_tv(room_object_t &obj) {
-	if (obj.is_hanging()) {obj.translate_dim(obj.dim, (obj.dir ? -1.0 : 1.0)*0.28*obj.get_depth());} // translate to the wall to account for the missing stand
-}
 void add_lounge_blockers(vect_room_object_t const &objs, unsigned objs_start, vect_cube_t &blockers) {
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 		if (i->no_coll() || i->type == TYPE_BLOCKER) continue; // skip pictures, outlets, blocker padding in front of couches, etc.
@@ -4136,7 +4166,8 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 	bool was_hung(0);
 
 	if (!is_residential() || room.is_office) { // add whiteboards
-		if (rgen.rand_float() < 0.1) return 0; // skip 10% of the time
+		bool const is_conference(room.get_room_type(floor_ix) == RTYPE_CONF); // conference rooms always have a whiteboard
+		if (!is_conference && rgen.rand_float() < 0.1) return 0; // skip 10% of the time
 		bool const pref_dim(rgen.rand_bool()), pref_dir(rgen.rand_bool());
 		float const floor_thick(get_floor_thickness());
 
@@ -4167,7 +4198,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 				}
 				assert(c.is_strictly_normalized());
 				objs.emplace_back(c, TYPE_WBOARD, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt); // whiteboard faces dir opposite the wall
-				return 1; // done, only need to add one
+				if (!is_conference || rgen.rand_bool()) return 1; // only need to add one, except for conference rooms
 			} // for dir
 		} // for dim
 		return 0;
