@@ -1568,18 +1568,19 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 			water_heaters.push_back(i);
 			continue;
 		}
-		if (i.z1() < ground_floor_z1) { // object in the basement
-			if (inc_extb_conns && point_in_extended_basement_not_basement(i.get_cube_center())) {
-				extb_pipe_radius   = get_merged_pipe_radius(extb_pipe_radius, base_pipe_radius, 3.0);
-				extb_pipe_has_hot |= (i.type == TYPE_SINK || i.type == TYPE_TUB); // only sinks and tubs consume hot water in extended basements?
-			}
-			continue; // unclear how to handle it here - should be a direct connection or go through the wall/floor
-		}
 		// Note: the dishwasher is always next to the kitchen sink and uses the same water connections
 		bool const hot_cold_obj (i.type == TYPE_SINK || i.type == TYPE_BRSINK || i.type == TYPE_KSINK || i.type == TYPE_TUB ||
 			i.type == TYPE_SHOWER || i.type == TYPE_SHOWERTUB || i.type == TYPE_WASHER);
 		bool const cold_only_obj(i.type == TYPE_TOILET || i.type == TYPE_URINAL || i.type == TYPE_DRAIN);
 		if (!hot_cold_obj && !cold_only_obj) continue;
+
+		if (i.z1() < ground_floor_z1) { // object in the basement
+			if (inc_extb_conns && point_in_extended_basement_not_basement(i.get_cube_center())) {
+				extb_pipe_radius   = get_merged_pipe_radius(extb_pipe_radius, base_pipe_radius, 3.0);
+				extb_pipe_has_hot |= hot_cold_obj;
+			}
+			continue; // unclear how to handle it here - should be a direct connection or go through the wall/floor
+		}
 		bool const upper_floor(i.z1() > second_floor_zval);
 		point pos(i.xc(), i.yc(), ceil_zval);
 		//if (!basement.contains_pt_xy(pos)) continue; // riser/pipe doesn't pass through the basement, but this is now allowed
