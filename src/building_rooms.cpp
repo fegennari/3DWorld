@@ -641,7 +641,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (r->get_is_entryway()) { // this is the room that has the front entry door connected to the hallway
 					if (!not_private_room) { // no number if this is a public room connected to a walkway
 						unsigned room_num(100*(f+1) + numbered_rooms_seen);
-						add_door_sign(std::to_string(room_num), *r, room_center.z, room_id, tot_light_amt); // Note: sign text is always unique
+						add_door_sign(std::to_string(room_num), *r, room_center.z, room_id); // Note: sign text is always unique
 					}
 					else if (is_hotel()) { // hotel doors should not auto close
 						vect_door_stack_t const &doorways(get_doorways_for_room(*r, room_center.z));
@@ -782,7 +782,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			// office building part with primary hallway, first floor of first non-retail part
 			else if (has_pri_hall() && r->part_id == (has_retail() ? 1 : 0) && f == 0 && added_desk) {
-				add_office_door_sign(rgen, *r, room_center.z, room_id, tot_light_amt);
+				add_office_door_sign(rgen, *r, room_center.z, room_id);
 			}
 			if (is_basement && !is_swim_pool_room) {add_stains_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
 			bool const room_type_was_not_set(r->get_room_type(f) == RTYPE_NOTSET);

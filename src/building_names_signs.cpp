@@ -448,7 +448,7 @@ void add_sign_outside_door(vect_room_object_t &objs, cube_t const &sign, string 
 	objs.emplace_back(sign, TYPE_SIGN, room_id, dim, dir, flags, sign_light_amt, SHAPE_CUBE, color); // technically should use hallway room_id
 	objs.back().obj_id = register_sign_text(text);
 }
-void building_t::add_door_sign(string const &text, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool no_check_adj_walls) {
+void building_t::add_door_sign(string const &text, room_t const &room, float zval, unsigned room_id, bool no_check_adj_walls) {
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), half_wt(0.5*wall_thickness);
 	point const part_center(get_part_for_room(room).get_cube_center()), room_center(room.get_cube_center());
 	cube_t c(room);
@@ -481,18 +481,18 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 		if (is_apt_or_hotel()) break; // only add to the first (front) door
 	} // for i
 }
-void building_t::add_office_door_sign(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
+void building_t::add_office_door_sign(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
 	string const name(gen_random_full_name(rgen));
-	add_door_sign(name, room, zval, room_id, tot_light_amt); // will cache the name; maybe it shouldn't?
+	add_door_sign(name, room, zval, room_id); // will cache the name; maybe it shouldn't?
 }
-void building_t::add_door_sign_remove_existing(std::string const &text, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+void building_t::add_door_sign_remove_existing(std::string const &text, room_t const &room, float zval, unsigned room_id, unsigned objs_start) {
 	for (auto i = interior->room_geom->objs.begin()+objs_start; i != interior->room_geom->objs.end(); ++i) {
 		if (i->type == TYPE_SIGN) {i->remove();}
 	}
-	add_door_sign(text, room, zval, room_id, tot_light_amt);
+	add_door_sign(text, room, zval, room_id);
 }
 
-void building_t::add_out_or_order_sign(cube_t const &door_bc, bool dim, bool dir, unsigned room_id, float tot_light_amt) {
+void building_t::add_out_or_order_sign(cube_t const &door_bc, bool dim, bool dir, unsigned room_id) {
 	float const door_height(door_bc.dz()), door_width(door_bc.get_sz_dim(!dim)), z1(door_bc.z1() + 0.5*door_height), door_pos(door_bc.d[dim][dir]);
 	cube_t sign;
 	set_cube_zvals(sign, z1, z1+0.15*door_height);
@@ -501,7 +501,7 @@ void building_t::add_out_or_order_sign(cube_t const &door_bc, bool dim, bool dir
 	sign.d[dim][ dir] = door_pos + (dir ? 1.0 : -1.0)*0.1*get_wall_thickness(); // extend outward
 	add_sign_outside_door(interior->room_geom->objs, sign, "OUT OF\nORDER", BLACK, room_id, dim, dir, 0); // add_frame=0
 }
-void building_t::make_door_out_or_order(room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned door_stack_ix) {
+void building_t::make_door_out_or_order(room_t const &room, float zval, unsigned room_id, unsigned door_stack_ix) {
 	assert(interior && door_stack_ix < interior->door_stacks.size());
 	door_stack_t const &ds(interior->door_stacks[door_stack_ix]);
 
@@ -512,7 +512,7 @@ void building_t::make_door_out_or_order(room_t const &room, float zval, unsigned
 		door.set_locked_unlockable();
 		// add an out of order sign
 		bool const dim(door.dim), dir(room.get_center_dim(dim) < door.get_center_dim(dim));
-		add_out_or_order_sign(door.get_true_bcube(), dim, dir, room_id, tot_light_amt);
+		add_out_or_order_sign(door.get_true_bcube(), dim, dir, room_id);
 		break; // done
 	} // for dix
 }

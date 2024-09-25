@@ -679,8 +679,10 @@ bool building_t::add_conference_objs(rand_gen_t rgen, room_t const &room, float 
 	set_wall_width(table, room.get_center_dim( dim), 0.5*table_lw.x,  dim); // set length
 	set_wall_width(table, room.get_center_dim(!dim), 0.5*table_lw.y, !dim); // set width
 	objs.emplace_back(table, TYPE_CONF_TABLE, room_id, dim, 0, 0, tot_light_amt, SHAPE_CUBE, WHITE); // dir=0, flags=0
-	// TODO: TYPE_OFF_CHAIR with TYPE_MONITOR on the wall, and maybe a phone on the table
-	// TODO: add "Conference" sign outside the door(s)
+	// TODO: TYPE_OFF_CHAIR along sides
+	// TODO: TYPE_MONITOR on the wall
+	// TODO: phone on the table?
+	add_door_sign("Conference", room, zval, room_id);
 	return 1;
 }
 
@@ -1840,7 +1842,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			if (out_of_order) { // add out-of-order sign
 				cube_t stall_clipped(stall);
 				stall_clipped.z2() -= 0.33*stall.dz(); // make it shorter; really only need the stall door, but the dim dimension size isn't used anyway
-				add_out_or_order_sign(stall_clipped, br_dim, !dir, room_id, tot_light_amt);
+				add_out_or_order_sign(stall_clipped, br_dim, !dir, room_id);
 			}
 			float const tp_length(0.18*theight), wall_pos(toilet.get_center_dim(br_dim));
 			cube_t stall_inner(stall);
@@ -1937,10 +1939,10 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		}
 	} // for ds
 	// add a sign outside the bathroom door
-	add_door_sign((mens_room ? "Men" : "Women"), room, zval, room_id, tot_light_amt, 1); // no_check_adj_walls=1
+	add_door_sign((mens_room ? "Men" : "Women"), room, zval, room_id, 1); // no_check_adj_walls=1
 
 	if (is_cube() && rgen.rand_float() < 0.1) { // make this door/room out of order 10% of the time; only for cube buildings (others need the connectivity)
-		make_door_out_or_order(room, zval, room_id, tot_light_amt, br_door_stack_ix);
+		make_door_out_or_order(room, zval, room_id, br_door_stack_ix);
 		room.set_has_out_of_order(); // flag if any floor is out of order
 	}
 	return 1;
@@ -2370,7 +2372,7 @@ bool building_t::add_library_objs(rand_gen_t rgen, room_t const &room, float zva
 		if (added) {++num_added;} else {break;}
 	}
 	if (num_added == 0) return 0;
-	if (!is_house) {add_door_sign_remove_existing("Library", room, zval, room_id, tot_light_amt, objs_start);} // add office building library sign
+	if (!is_house) {add_door_sign_remove_existing("Library", room, zval, room_id, objs_start);} // add office building library sign
 	return 1;
 }
 
@@ -2507,7 +2509,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		place_obj_along_wall(TYPE_INT_LADDER, room, ladder_height, ladder_sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 1, 4, 0, GRAY);
 	}
 	// add office building storage room sign, in a hallway, basement, etc.
-	if (!is_house /*&& !is_basement*/) {add_door_sign((has_stairs ? "Stairs" : "Storage"), room, zval, room_id, tot_light_amt);}
+	if (!is_house /*&& !is_basement*/) {add_door_sign((has_stairs ? "Stairs" : "Storage"), room, zval, room_id);}
 	return 1; // it's always a storage room, even if it's empty
 }
 
@@ -3781,7 +3783,7 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 		laptop.translate_dim(dim, xlate);
 		laptop.flags |= RO_FLAG_HANGING;
 	} // for i
-	add_door_sign("Server Room", room, zval, room_id, tot_light_amt);
+	add_door_sign("Server Room", room, zval, room_id);
 	return 1;
 }
 
@@ -3846,7 +3848,7 @@ bool building_t::add_security_room_objs(rand_gen_t rgen, room_t const &room, flo
 			} // for col
 		} // for dir
 	} // for dim
-	add_door_sign("Security Room", room, zval, room_id, tot_light_amt);
+	add_door_sign("Security Room", room, zval, room_id);
 	return 1;
 }
 
