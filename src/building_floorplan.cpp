@@ -1152,7 +1152,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 void building_t::assign_special_room_types(vector<unsigned> &utility_room_cands, vector<unsigned> &special_room_cands, unsigned doors_start, rand_gen_t &rgen) {
 	vector<room_t> &rooms(interior->rooms);
 	
-	if (!is_residential()) {
+	if (!is_residential() && has_office_chair_model()) { // office buildings with office chairs
 		// try to assign conference room(s); this may be overwritten with a special room on the ground floor;
 		// conference rooms are currently interior and windowless so that we can have glass walls without blending problems with windows
 		float max_area(0.0);

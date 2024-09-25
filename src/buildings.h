@@ -2216,6 +2216,7 @@ private:
 	void get_doorways_for_room(cube_t const &room, float zval, vect_door_stack_t &doorways, bool all_floors=0) const;
 	vect_door_stack_t &get_doorways_for_room(cube_t const &room, float zval, bool all_floors=0) const;
 	bool is_room_an_exit(cube_t const &room, int room_ix, float zval) const;
+	vector3d get_office_chair_size() const;
 	bool add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
 		colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair=0, bool enable_rotation=0, bool bar_stool=0);
 	unsigned add_table_and_chairs(rand_gen_t rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
@@ -2605,6 +2606,7 @@ int get_insulation_tid();
 int get_met_plate_tid ();
 int get_mplate_nm_tid ();
 int get_normal_map_for_bldg_tid(int tid);
+bool has_office_chair_model();
 unsigned register_sign_text(std::string const &text);
 void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, int use_texgen, float water_damage=0.0, float crack_damage=0.0);
 void rotate_verts(vector<rgeom_mat_t::vertex_t> &verts, building_t const &building);

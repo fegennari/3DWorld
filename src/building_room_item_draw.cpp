@@ -45,7 +45,8 @@ void end_fish_draw(shader_t &s, bool inc_pools_and_fb);
 void calc_cur_ambient_diffuse();
 void reset_interior_lighting_and_end_shader(shader_t &s);
 
-bool has_key_3d_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
+bool has_key_3d_model      () {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
+bool has_office_chair_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR);}
 
 colorRGBA room_object_t::get_model_color() const {return building_obj_model_loader.get_avg_color(get_model_id());}
 
