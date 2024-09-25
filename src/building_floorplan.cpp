@@ -346,12 +346,13 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		bool const is_basement_part(is_basement(p)), first_part(part_id == 0), first_part_this_stack(first_part || is_basement_part || (p-1)->z1() < p->z1());
 		// office building hallways only; house hallways are added later
 		bool const use_hallway(can_use_hallway_for_part(part_id)), min_dim(psz.y < psz.x);
-		unsigned const rooms_start(rooms.size()), num_doors_per_stack(num_floors);
+		unsigned const rooms_start(rooms.size()), doors_start(interior->doors.size()), num_doors_per_stack(num_floors);
 		cube_t hall, place_area(*p);
 		place_area.expand_by_xy(-wall_edge_spacing); // shrink slightly to avoid z-fighting with walls
 		bool no_split_walls_this_part(0);
 		float window_hspacing   [2] = {0.0};
 		int num_windows_per_side[2] = {0};
+		vector<unsigned> utility_room_cands, special_room_cands; // used for parts with a hallway + assign_special_room_types()
 
 		for (unsigned d = 0; d < 2; ++d) {
 			num_windows_per_side[d] = get_num_windows_on_side(p->d[d][0], p->d[d][1]);
@@ -458,13 +459,11 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			float num_hall_windows, hall_width, room_width;
 			hall = get_hallway_for_part(*p, num_hall_windows, hall_width, room_width);
 			float const *hall_wall_pos(hall.d[min_dim]);
-			unsigned const doors_start(interior->doors.size());
 			int const num_rooms((apt_or_hotel ? num_windows : (num_windows+windows_per_room-1))/windows_per_room); // round down for apts/hotels, otherwise round up
 			int const windows_per_side_od((num_windows_od - round_fp(num_hall_windows))/2); // of hallway
 			assert(num_rooms >= 0 && num_rooms < 1000); // sanity check
 			auto &room_walls(interior->walls[!min_dim]), &hall_walls(interior->walls[min_dim]);
 			if (hallway_dim == 2) {hallway_dim = !min_dim;} // cache in building for later use, only for first part (ground floor)
-			vector<unsigned> utility_room_cands, special_room_cands;
 			
 			// add secondary or ring hallways if there are at least 7 windows (3 on each side of hallway); not for apartments and hotels
 			bool const has_sec_hallways(!apt_or_hotel && num_windows_od >= 7 && num_rooms >= 4);
@@ -833,7 +832,6 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			if (has_sec_hallways) {rooms.back().mark_open_wall_dim(min_dim);} // flag primary hallway as open on sides if there are secondary hallways
 			if (is_ground_floor || pri_hall.is_all_zeros()) {pri_hall = hall;} // assign to primary hallway if on first floor and hasn't yet been assigned
 			no_split_walls_this_part = 1;
-			assign_special_room_types(utility_room_cands, special_room_cands, doors_start, rgen);
 		} // end use_hallway
 
 		else { // generate random walls using recursive 2D slices
@@ -1014,6 +1012,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			} // end !too_small
 		} // end wall placement
 		add_ceilings_floors_stairs(rgen, *p, hall, part_id, num_floors, rooms_start, use_hallway, first_part_this_stack, window_hspacing, window_border);
+		assign_special_room_types(utility_room_cands, special_room_cands, doors_start, rgen); // for rooms with hallways
 		
 		if (no_split_walls_this_part) { // don't split any walls added up to this point (for fixed floorplans with primary hallways)
 			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();}
@@ -1162,7 +1161,7 @@ void building_t::assign_special_room_types(vector<unsigned> &utility_room_cands,
 		for (unsigned d = 0; d < 2; ++d) { // conference rooms can optionally be next to a bathroom
 			for (unsigned room_ix : (d ? special_room_cands : utility_room_cands)) {
 				room_t &room(rooms[room_ix]);
-				if (room.has_stairs || room.has_elevator || room.is_hallway) continue; // may not be set yet
+				if (room.has_stairs || room.has_elevator || room.is_hallway || interior->is_blocked_by_stairs_or_elevator(room)) continue; // not a valid conference room
 				if (get_conf_room_table_length_width(get_walkable_room_bounds(room)) == vector2d()) continue; // can't fit a conference room table
 				conf_room_cands.push_back(room_ix);
 				max_eq(max_area, room.get_area_xy());

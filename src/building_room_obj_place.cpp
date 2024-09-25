@@ -666,7 +666,7 @@ vector2d building_t::get_conf_room_table_length_width(cube_t const &room) const 
 	return vector2d(table_len, table_width);
 }
 bool building_t::add_conference_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	if (room.has_stairs || room.has_elevator || room.is_hallway) return 0; // not a conference room
+	if (room.has_stairs || room.has_elevator || room.is_hallway || interior->is_blocked_by_stairs_or_elevator(room)) return 0; // not a valid conference room
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	float const floor_spacing(get_window_vspace());
 	bool const dim(room.dx() < room.dy()); // long dim
@@ -678,7 +678,6 @@ bool building_t::add_conference_objs(rand_gen_t rgen, room_t const &room, float 
 	set_cube_zvals(table, zval, (zval + 0.25*rgen.rand_uniform(1.0, 1.05)*floor_spacing)); // set height
 	set_wall_width(table, room.get_center_dim( dim), 0.5*table_lw.x,  dim); // set length
 	set_wall_width(table, room.get_center_dim(!dim), 0.5*table_lw.y, !dim); // set width
-	if (interior->is_blocked_by_stairs_or_elevator(table)) return 0; // shouldn't be true
 	objs.emplace_back(table, TYPE_CONF_TABLE, room_id, dim, 0, 0, tot_light_amt, SHAPE_CUBE, WHITE); // dir=0, flags=0
 	// TODO: TYPE_OFF_CHAIR with TYPE_MONITOR on the wall, and maybe a phone on the table
 	// TODO: add "Conference" sign outside the door(s)
