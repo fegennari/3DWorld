@@ -113,6 +113,7 @@ typedef vector<vert_norm_comp_tc_color> vect_vnctcc_t;
 struct sign_t;
 struct city_flag_t;
 struct door_t;
+struct pipe_t;
 typedef vector<point> vect_point;
 
 struct bottle_params_t {
@@ -2302,6 +2303,8 @@ private:
 		room_object_t const &ref_light, vect_cube_t const &rooms_to_light, light_ix_assign_t &light_ix_assign);
 	bool add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_riser_pos_t const &risers, vect_cube_t &pipe_cubes,
 		unsigned room_id, unsigned num_floors, unsigned objs_start, float tot_light_amt, float ceil_zval, rand_gen_t &rgen, unsigned pipe_type, bool allow_place_fail=0);
+	void add_ext_basement_hallway_pipes(unsigned room_id, bool hall_dim, bool pipe_src_dir, unsigned pipe_type,
+		pipe_t const &parent, vector<pipe_t> &pipes, vector<pipe_t> &fittings) const;
 	void add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes,
 		unsigned room_id, unsigned num_floors, unsigned objs_start, float tot_light_amt, rand_gen_t &rgen);
 	void get_pipe_basement_water_connections(vect_riser_pos_t &sewer, vect_riser_pos_t &cold_water, vect_riser_pos_t &hot_water, rand_gen_t &rgen) const;
