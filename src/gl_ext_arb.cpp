@@ -24,9 +24,14 @@ void init_glew() {
 		exit(1);
 	}
 #endif
-	if (!glewIsSupported("GL_VERSION_4_5")) {
-		std::cerr << "Error: GL version 4.5 not found" << endl;
-		exit(1);
+	// Note: not sure why the 4.6 check is needed, but a user claimed that 4.6 was supported but 4.5 was not
+	if (!glewIsSupported("GL_VERSION_4_5") && !glewIsSupported("GL_VERSION_4_6")) {
+		std::cerr << "Error: GL version 4.5 not found; trying 4.4" << endl;
+
+		if (!glewIsSupported("GL_VERSION_4_4")) { // does 3DWorld work with OpenGL 4.4? maybe most scenes?
+			std::cerr << "Error: GL version 4.4 not found; exiting" << endl;
+			exit(1);
+		}
 	}
 }
 
