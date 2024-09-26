@@ -863,16 +863,17 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	} // for r (room)
 	if (is_house) {interior->assign_master_bedroom(window_vspacing, floor_thickness);}
 	add_padlocks(rgen);
+	bool const has_toilet(building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)), has_sink(building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK));
 
 	if (is_rotated() || !is_cube()) {} // skip for rotated and non-cube buildings, since toilets, etc. may not be placed
 	else if (is_apt_or_hotel()) {} // not yet added - suppress warnings
-	else if (num_bathrooms == 0) { // can happen, but very rare
+	else if (num_bathrooms == 0 && has_toilet) { // can happen, but very rare; skip if there was no toilet model since we can't have bathrooms in that case
 		cout << "no bathroom in building " << bcube.xc() << " " << bcube.yc() << endl;
 		if (cand_bathroom < rooms.size()) {cout << "cand bathroom was at " << rooms[cand_bathroom].str() << endl;}
 	}
 	else {
-		if (!(added_bathroom_objs_mask & PLACED_TOILET)) {cout << "no toilet in building " << bcube.xc() << " " << bcube.yc() << endl;}
-		if (!(added_bathroom_objs_mask & PLACED_SINK  )) {cout << "no sink in building "   << bcube.xc() << " " << bcube.yc() << endl;}
+		if (!(added_bathroom_objs_mask & PLACED_TOILET) && has_toilet) {cout << "no toilet in building " << bcube.xc() << " " << bcube.yc() << endl;}
+		if (!(added_bathroom_objs_mask & PLACED_SINK  ) && has_sink  ) {cout << "no sink in building "   << bcube.xc() << " " << bcube.yc() << endl;}
 		//if (is_house && !(added_bathroom_objs_mask & (PLACED_TUB | PLACED_SHOWER))) {cout << "no bathtub or shower in building " << bcube.xc() << " " << bcube.yc() << endl;} // common
 	}
 	// add trim + window coverings; must be done after room assignment; not implemented for rotated buildings
