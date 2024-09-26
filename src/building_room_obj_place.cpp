@@ -3380,7 +3380,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 			cube_t checkout(room);
 			checkout.d[dim][!dir] = blocked.d[dim][dir];
 			checkout.expand_in_dim(dim, -1.6*nom_aisle_width); // shrink
-			float const checkout_len(checkout.get_sz_dim(dim)), centerline(room.get_center_dim(!dim)), cr_space(nom_aisle_width);
+			float checkout_len(checkout.get_sz_dim(dim)), centerline(room.get_center_dim(!dim)), cr_space(nom_aisle_width);
 
 			if (building_obj_model_loader.is_model_valid(OBJ_MODEL_CASHREG)) {
 				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_CASHREG)); // D, W, H
@@ -3402,8 +3402,18 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 				checkout.expand_in_dim(dim, -0.1*(checkout_len - 0.4*floor_spacing)); // shrink slightly more if long
 				set_wall_width(checkout, centerline, min(rack_width, 0.2f*floor_spacing), !dim); // set width
 				set_cube_zvals(checkout, zval, (zval + 0.4*floor_spacing));
-				// check shelfracks; shouldn't need to check stairs or elevators
-				if (skip_middle_row || !check_for_overlap(checkout, objs, objs_start, cr_space)) {objs.emplace_back(checkout, TYPE_CHECKOUT, room_id, dim, dir, 0);}
+				checkout_len = checkout.get_sz_dim(dim); // update after shrink
+				unsigned const num_segs(max(1, round_fp(checkout_len/(1.33*floor_spacing))));
+				float const seg_len(checkout_len/num_segs), seg_half_gap((num_segs == 1) ? 0.0 : 0.15*seg_len);
+
+				for (unsigned n = 0; n < num_segs; ++n) {
+					float const lo_end(checkout.d[dim][0] + n*seg_len);
+					cube_t seg(checkout);
+					seg.d[dim][0] = lo_end + seg_half_gap;
+					seg.d[dim][1] = lo_end + seg_len - seg_half_gap;
+					// check shelfracks; shouldn't need to check stairs or elevators
+					if (skip_middle_row || !check_for_overlap(seg, objs, objs_start, cr_space)) {objs.emplace_back(seg, TYPE_CHECKOUT, room_id, dim, dir, 0);}
+				}
 			}
 		} // for dir
 	}
