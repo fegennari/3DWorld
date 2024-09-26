@@ -1670,9 +1670,9 @@ float get_ao_shadow(room_object_t const &c, bool enable_indir) {
 		return ((c.shape == SHAPE_TALL) ? 0.25 : 0.5); // small/medium shadow
 	}
 	if (c.type == TYPE_BED) {return ((c.taken_level > 2) ? 0.35 : 0.5);} // reduced AO when the mattress has been taken and light gets through the slats
-	if (c.type == TYPE_BCASE || c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND || c.type == TYPE_COUCH) return 0.75; // dense shadow
+	if (c.type == TYPE_BCASE || c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND || c.type == TYPE_COUCH || c.type == TYPE_CONF_TABLE) return 0.75; // dense shadow
 	if (c.type == TYPE_SINK || c.type == TYPE_TOILET || c.type == TYPE_STALL) return 0.25; // light shadow
-	if (c.type == TYPE_CHAIR || c.type == TYPE_DESK || c.type == TYPE_RDESK || c.type == TYPE_POOL_TABLE) return 0.5; // medium shadow
+	if (c.type == TYPE_CHAIR || c.type == TYPE_DESK || c.type == TYPE_RDESK || c.type == TYPE_POOL_TABLE || c.type == TYPE_MACHINE) return 0.5; // medium shadow
 	return 0.0; // no shadow
 }
 
