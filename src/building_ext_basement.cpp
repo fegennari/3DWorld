@@ -84,9 +84,7 @@ struct ext_basement_room_params_t {
 	vector<stairs_place_t> stairs;
 };
 
-bool building_t::is_basement_room_under_mesh_not_int_bldg(cube_t &room, building_t const *exclude) const {
-	float const ceiling_zval(room.z2() - get_fc_thickness());
-	if (query_min_height(room, ceiling_zval) < ceiling_zval)  return 0; // check for terrain clipping through ceiling
+bool building_t::is_basement_room_not_int_bldg(cube_t &room, building_t const *exclude) const {
 	// check for other buildings, including their extended basements;
 	// Warning: not thread safe, since we can be adding basements to another building at the same time
 	if (check_buildings_cube_coll(room, 0, 1, this, exclude)) return 0; // xy_only=0, inc_basement=1, exclude ourself
@@ -96,6 +94,11 @@ bool building_t::is_basement_room_under_mesh_not_int_bldg(cube_t &room, building
 	if (!grid_bcube.contains_cube_xy(room)) return 0; // outside the grid (tile or city) bcube
 	if (cube_int_underground_obj    (room)) return 0; // check tunnels, in-ground pools, etc.
 	return 1;
+}
+bool building_t::is_basement_room_under_mesh_not_int_bldg(cube_t &room, building_t const *exclude) const {
+	float const ceiling_zval(room.z2() - get_fc_thickness());
+	if (query_min_height(room, ceiling_zval) < ceiling_zval) return 0; // check for terrain clipping through ceiling
+	return is_basement_room_not_int_bldg(room, exclude);
 }
 bool building_t::is_basement_room_placement_valid(cube_t &room, ext_basement_room_params_t &P, bool dim, bool dir, bool *add_end_door, building_t const *exclude) const {
 	float const wall_thickness(get_wall_thickness()), wall_expand_toler(0.1*wall_thickness);
@@ -270,7 +273,12 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 	} // for r
 	if (largest_valid_room < 0) return; // no valid room found
 	room_t &room(rooms[largest_valid_room]);
-	vect_door_stack_t &doorways(get_doorways_for_room(room, room.z1())); // choose the first door as the main entrance; there's likely only one
+	// make sure there's space below the room for the pool
+	cube_t room_ext_down(room);
+	room_ext_down.z1() -= pool_max_depth; // account for the bottom of the pool
+	if (!is_basement_room_not_int_bldg(room_ext_down)) return; // only fails 1-2% of the time
+	// choose the first door as the main entrance; there's likely only one
+	vect_door_stack_t &doorways(get_doorways_for_room(room, room.z1()));
 	if (doorways.empty()) {std::cerr << "Error: No doorway found for pool in room " << room.str() << endl;} // can this ever fail?
 
 	// attempt to expand the room so that we can fit a larger pool; assume connected to a hallway with <door>, and expand away from door
@@ -351,7 +359,15 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 	set_cube_zvals(pool, (floor_zval - pool_depth), floor_zval);
 	pool.orig_z1    = pool.z1();
 	pool.bottomless = ((pool.z1() > sea_level + 4.0*floor_spacing) && rgen.rand_float() < 0.2); // bottomless 20% of the time, if high enough above sea level
-	if (pool.bottomless) {pool.z1() = max((pool.z1() - 10.0f*pool_depth), (sea_level + fc_thickness));} // not quite bottomless, but very deep
+
+	if (pool.bottomless) {
+		pool.z1() = max((pool.z1() - 10.0f*pool_depth), (sea_level + fc_thickness)); // not quite bottomless, but very deep
+		
+		if (!is_basement_room_not_int_bldg(pool)) { // some other extended basement is below the pool, can't make bottomless
+			pool.z1() = pool.orig_z1;
+			pool.bottomless = 0;
+		}
+	}
 	float const pool_width(pool.get_sz_dim(!long_dim)), extra_width(pool_width - 2.0*floor_spacing), pool_bottom(pool.z1() - fc_thickness);
 	if (pool_width < floor_spacing) return; // too small; shouldn't happen unless the door width to floor spacing values are wrong
 	if (extra_width > 0.0) {pool.expand_in_dim(!long_dim, -0.25*extra_width);} // can make narrower if there's extra space

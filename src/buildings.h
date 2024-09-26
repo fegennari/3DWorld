@@ -2098,7 +2098,7 @@ public:
 	bool has_pool        () const {return (interior &&  interior->pool.valid);}
 	bool point_in_extended_basement(point const &pos) const;
 	bool point_in_extended_basement_not_basement(point const &pos) const {return (point_in_extended_basement(pos) && !get_basement().contains_pt(pos));}
-	bool cube_int_ext_basement(cube_t const &c) const {return (interior && interior->basement_ext_bcube.intersects(c));}
+	bool cube_int_ext_basement(cube_t const &c) const {return (interior && interior->basement_ext_bcube.intersects(c));} // includes pools
 	bool point_in_building_or_basement_bcube(point const &pos) const {return (bcube.contains_pt(pos) || point_in_extended_basement(pos));}
 	bool point_in_extb_conn_room(point const &pos_bs) const;
 	bool point_in_courtyard(point const &pos_bs) const;
@@ -2158,6 +2158,7 @@ private:
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void maybe_add_basement(rand_gen_t rgen);
 	bool extend_underground_basement(rand_gen_t rgen);
+	bool is_basement_room_not_int_bldg(cube_t &room, building_t const *exclude=nullptr) const;
 	bool is_basement_room_under_mesh_not_int_bldg(cube_t &room, building_t const *exclude=nullptr) const;
 	bool is_basement_room_placement_valid(cube_t &room, ext_basement_room_params_t &P, bool dim, bool dir, bool *add_end_door=nullptr, building_t const *exclude=nullptr) const;
 	bool add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &door_bcube, cube_t const &basement, bool wall_dim, bool wall_dir, float length_mult);
