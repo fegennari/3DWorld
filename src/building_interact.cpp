@@ -431,7 +431,7 @@ bool building_t::chair_can_be_rotated(room_object_t const &chair) const {
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-		if (i->type != TYPE_DESK && i->type != TYPE_TABLE) continue; // these should be the only objects a chair can be pushed under
+		if (i->type != TYPE_DESK && i->type != TYPE_TABLE && i->type != TYPE_CONF_TABLE) continue; // these should be the only objects a chair can be pushed under
 		if (i->intersects(chair)) return 0;
 	}
 	return 1;

@@ -525,6 +525,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (!is_house && r->is_hallway && *r == pri_hall) { // office building primary hallway
 					add_pri_hall_objs(rgen, room_rgen, *r, room_center.z, room_id, tot_light_amt, f, objs_start);
 					if (is_ground_floor) {r->assign_to(RTYPE_LOBBY, f);} // first floor primary hallway, make it the lobby
+					if (f == 0) {place_objects_onto_surfaces(rgen, *r, room_id, tot_light_amt, objs_start, f, is_basement, 1);} // first floor reception desks; not_private=1
 				}
 				if (is_basement && !is_swim_pool_room) {add_stains_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
 				if (has_stairs_this_floor && r->get_room_type(f) == RTYPE_NOTSET) {r->assign_to(RTYPE_STAIRS, f);}
@@ -661,7 +662,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				added_obj = 1; // assume something was added above, and don't place any other furniture or try to assign to another room type
 			}
 			if (r->get_room_type(f) == RTYPE_CONF) { // already assigned to a conference room
-				added_obj = add_conference_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+				if (add_conference_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {added_obj = can_place_onto = 1;}
 			}
 			// bedroom or bathroom case; need to check first floor even if must_be_bathroom
 			if (!added_obj && allow_br && !is_tall_room && !has_walkway && can_be_bedroom_or_bathroom(*r, f)) {

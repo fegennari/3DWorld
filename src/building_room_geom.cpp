@@ -3373,7 +3373,7 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale, bool i
 	}
 }
 
-void get_reception_desk_cubes(room_object_t const &c, cube_t cubes[3]) { // excludes overhang but includes top
+void get_reception_desk_cubes(room_object_t const &c, cube_t cubes[3]) { // {front, left, right}; excludes overhang but includes top
 	float const depth(c.get_depth()), width(c.get_width()), overhang(0.04*depth), lr_width(0.2*width), cutlen(depth - lr_width);
 	assert(width > depth && cutlen > 0.0);
 	cube_t base(c);

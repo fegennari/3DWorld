@@ -612,7 +612,7 @@ unsigned check_conf_table_collision(room_object_t const &c, point &pos, point co
 	return check_cubes_collision(cubes, 2, pos, p_last, radius, cnorm);
 }
 unsigned check_rdesk_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
-	cube_t cubes[3];
+	cube_t cubes[3]; // {front, left, right}
 	get_reception_desk_cubes(c, cubes);
 	return check_cubes_collision(cubes, 3, pos, p_last, radius, cnorm);
 }
