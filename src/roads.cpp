@@ -1026,7 +1026,8 @@ void tunnel_t::init(point const &start, point const &end, float radius_, float e
 cube_t tunnel_t::get_tunnel_bcube() const {
 	cube_t bcube(*this);
 	bcube.expand_by_xy(radius);
-	bcube.z2() += max(facade_height[0], facade_height[1]); // should be close enough
+	bcube.z2() += max(facade_height[0], facade_height[1]); // extend upward; should be close enough
+	bcube.z1() -= 2.0*TUNNEL_WALL_THICK*city_params.road_width; // extend downward to match bottom of facade; needed for underground extended basements
 	return bcube;
 }
 
