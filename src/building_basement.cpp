@@ -714,25 +714,25 @@ void add_pass_through_fittings(room_object_t const &pipe, vect_cube_t const &wal
 		objs.push_back(pf);
 	} // for wall
 }
-void add_hanging_pipe_bracket(cube_t const &pipe, float len_pos, float ceiling_zval, bool dim, unsigned room_id, float tot_light_amt,
-	unsigned pipe_conn_start, vect_room_object_t &objs, vect_cube_t const &obstacles, vect_cube_t const &walls)
+void add_hanging_pipe_bracket(cube_t const &pipe, float len_pos, float ceiling_zval, float radius, float length_factor, bool dim, unsigned room_id,
+	float tot_light_amt, unsigned pipe_conn_start, vect_room_object_t &objs, vect_cube_t const &obstacles, vect_cube_t const &walls)
 {
 	unsigned const pipe_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
-	float const radius(0.5*pipe.dz()), thickness(0.12*radius);
+	float const radius_expand(1.12*radius - 0.5*pipe.dz()); // larger than outer radius; radius can be larger than pipe radius (pipe.dz()) for insulated pipes
 	cube_t bracket(pipe);
-	set_wall_width(bracket, len_pos, 0.8*radius, dim);
-	bracket.expand_in_dim(!dim, thickness);
-	bracket.expand_in_dim(2,    thickness);
+	set_wall_width(bracket, len_pos, length_factor*radius, dim);
+	bracket.expand_in_dim(!dim, radius_expand);
+	bracket.expand_in_dim(2,    radius_expand);
 	cube_t bc(bracket);
 	bc.z1() = ceiling_zval; // extend up to ceiling
 	if (has_bcube_int(bc, obstacles) || has_bcube_int(bc, walls)) return;
 
 	for (auto i = objs.begin()+pipe_conn_start; i != objs.end(); ++i) {
-		if (i->intersects(bc)) return; // is this intersection possible given the existing constraints on pipe placement? unclear
+		if (i->intersects(bc)) return; // is this intersection possible given the existing constraints on pipe placement? maybe only for vertically stacked pipes
 	}
 	objs.emplace_back(bracket, TYPE_PIPE, room_id, dim, 0, (pipe_flags | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, LT_GRAY);
 
-	if (bracket.z2() < ceiling_zval) { // add a vertical bolt into the ceiling; beams should not be empty
+	if (bracket.z2() < ceiling_zval) { // add a vertical bolt into the ceiling
 		cube_t bolt;
 		set_cube_zvals(bolt, pipe.z2(), ceiling_zval);
 		set_wall_width(bolt, bracket.get_center_dim( dim), 0.2*radius,  dim);
@@ -1271,13 +1271,15 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		}
 		if (p.type == PIPE_EXTB) { // add pipe hanging brackets
 			float const ceiling_zval(interior->get_room(interior->ext_basement_hallway_room_id).z2() - fc_thickness);
-			float const pipe_len(pipe.get_sz_dim(extb_wall_dim));
+			float const pipe_len(pipe.get_sz_dim(p.dim)), bracket_radius(radius_factor*p.radius); // includes insulation
 			unsigned const num_brackets(0.5*pipe_len/window_vspacing);
 			float const bracket_spacing(pipe_len/(num_brackets+1));
 
 			for (unsigned n = 0; n < num_brackets; ++n) {
-				float const len_pos(pipe.d[extb_wall_dim][0] + (n+1)*bracket_spacing);
-				add_hanging_pipe_bracket(pipe, len_pos, ceiling_zval, dim, room_id, tot_light_amt, objs_start+1, objs, obstacles, walls);
+				float const len_pos(pipe.d[p.dim][0] + (n+1)*bracket_spacing);
+				// skip checking of walls and obstacles since they shouldn't intersect; pass in objs end as start index to avoid checking pipes;
+				// may intersect stacked pipes, but that should be okay; increase length to cover this up better
+				add_hanging_pipe_bracket(pipe, len_pos, ceiling_zval, bracket_radius, 1.2, p.dim, room_id, tot_light_amt, objs.size(), objs, vect_cube_t(), vect_cube_t());
 			}
 		}
 	} // for p
@@ -1404,7 +1406,7 @@ int add_sprinkler_pipe(building_t const &b, point const &p1, float end_val, floa
 	}
 	if (is_partial) { // partial pipe, add a bracket to suspend the end
 		float const len_pos(pipe_end - (dir ? -1.0 : 1.0)*2.6*conn_max_length);
-		add_hanging_pipe_bracket(h_pipe, len_pos, ceiling_zval, dim, room_id, tot_light_amt, objs_start+1, objs, obstacles, walls);
+		add_hanging_pipe_bracket(h_pipe, len_pos, ceiling_zval, radius, 0.8, dim, room_id, tot_light_amt, objs_start+1, objs, obstacles, walls);
 	}
 	if (add_sprinklers) {
 		bool const inverted(add_sprinklers & 1); // use LSB
@@ -1445,7 +1447,7 @@ int add_sprinkler_pipe(building_t const &b, point const &p1, float end_val, floa
 			if (beam.d[!dim][0] > h_pipe.d[!dim][0] || beam.d[!dim][1] < h_pipe.d[!dim][1]) continue; // beam length doesn't contain pipe
 			if (beam.d[ dim][0] < h_pipe.d[ dim][0] || beam.d[ dim][1] > h_pipe.d[ dim][1]) continue; // pipe length doesn't contain beam
 			float const len_pos(beam.get_center_dim(dim));
-			add_hanging_pipe_bracket(h_pipe, len_pos, ceiling_zval, dim, room_id, tot_light_amt, objs_start+1, objs, obstacles, walls);
+			add_hanging_pipe_bracket(h_pipe, len_pos, ceiling_zval, radius, 0.8, dim, room_id, tot_light_amt, objs_start+1, objs, obstacles, walls);
 		}
 	}
 	// add fittings at parking garage walls and pillars
