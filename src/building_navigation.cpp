@@ -908,7 +908,7 @@ cube_t building_t::get_walkable_room_bounds(room_t const &room) const {
 	cube_t c(room);
 	float const half_wall_thick(0.5*get_wall_thickness());
 
-	if (room.is_hallway || room.get_office_floorplan()) { // office building room; only shrink interior walls
+	if ((room.is_hallway && !room.is_ext_basement()) || room.get_office_floorplan()) { // office building room; only shrink interior walls
 		cube_t const &part(get_part_for_room(room));
 
 		for (unsigned d = 0; d < 2; ++d) {
