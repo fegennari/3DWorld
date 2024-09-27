@@ -778,7 +778,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	float const r_main_spacing(radius_factor*r_main); // include insulation thickness for hot water pipes
 	min_eq(r_main, max_pipe_radius); // limit pipe radius; even with these limits, we can still have hot water and cold water clipping through each other with enough flow
 	assert(pipe_zval > bcube.z1());
-	vector<pipe_t> pipes, fittings, extb_conn;
+	vector<pipe_t> pipes, fittings, extb_conn, vert_conn_pipes;
 	cube_t pipe_end_bcube;
 	unsigned num_conn_segs(0);
 	// build random shifts table; make consistent per pipe to preserve X/Y alignments
@@ -1049,7 +1049,18 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		for (pipe_t &p : pipes) {
 			if (!p.connected) continue; // unconnected drain, skip
 			if (p.type != PIPE_RISER || p.p2 != ep.p2) continue; // wrong pipe, or it was moved
-			//p.p1.z = get_room(interior->ext_basement_hallway_room_id).z2() - fc_thickness - FITTING_RADIUS*p.radius; // shift up to the ceiling; no, fitting doesn't connect
+			float const pipe_zmax(get_room(interior->ext_basement_hallway_room_id).z2() - fc_thickness - FITTING_RADIUS*p.radius);
+
+			if (p.p1.z > pipe_zmax) { // pipe is too high, likely on the floor above; run a vertical segment to connect it
+				if (pipe_type != PIPE_TYPE_SEWER) continue; // only allow this for sewer pipes since water pipes may intersect sewer pipes when set to the same zval
+				pipe_t vpipe(p);
+				vpipe.p1.assign(ep.p2.x, ep.p2.y, (pipe_zmax - FITTING_RADIUS*p.radius)); // low end, extend to cover the vertical connected pipe
+				vpipe.p2.assign(ep.p2.x, ep.p2.y, p.p1.z); // high end
+				vpipe.dim  = 2;
+				vpipe.type = PIPE_MEC; // similar to vertical exit pipe with fittings on both ends
+				vert_conn_pipes.push_back(vpipe);
+				p.p1.z = pipe_zmax;
+			}
 			p.p2.assign(ep.p1.x, ep.p1.y, p.p1.z);
 			p.dim      = ep.dim;
 			p.conn_dir = !extb_wall_dir;
@@ -1057,8 +1068,9 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			pipe_t const parent(p); // make a copy to avoid invalidating the p reference
 			add_ext_basement_hallway_pipes_recur(interior->ext_basement_hallway_room_id, extb_wall_dim, pipe_type, parent, pipes, fittings, rgen);
 			break;
-		}
+		} // for p
 	} // for ep
+	vector_add_to(vert_conn_pipes, pipes);
 	unsigned main_pipe_end_flags(0); // start with both ends unconnected
 
 	if (add_exit_pipe) {
