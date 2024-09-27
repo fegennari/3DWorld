@@ -1054,10 +1054,12 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			if (p.p1.z > pipe_zmax) { // pipe is too high, likely on the floor above; run a vertical segment to connect it
 				if (pipe_type != PIPE_TYPE_SEWER) continue; // only allow this for sewer pipes since water pipes may intersect sewer pipes when set to the same zval
 				pipe_t vpipe(p);
-				vpipe.p1.assign(ep.p2.x, ep.p2.y, (pipe_zmax - FITTING_RADIUS*p.radius)); // low end, extend to cover the vertical connected pipe
-				vpipe.p2.assign(ep.p2.x, ep.p2.y, p.p1.z); // high end
+				vpipe.p1.assign(ep.p2.x, ep.p2.y, pipe_zmax); // low end
+				vpipe.p2.assign(ep.p2.x, ep.p2.y, p.p1.z   ); // high end
 				vpipe.dim  = 2;
 				vpipe.type = PIPE_MEC; // similar to vertical exit pipe with fittings on both ends
+				vpipe.end_flags = 1; // round end at bottom; top end could be round, but it needs to be pulled back on the connector pipe
+				if (has_bcube_int(vpipe.get_bcube(), obstacles)) continue; // unclear if this can happen, but should be a good check
 				vert_conn_pipes.push_back(vpipe);
 				p.p1.z = pipe_zmax;
 			}
