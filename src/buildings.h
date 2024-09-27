@@ -1657,7 +1657,7 @@ struct building_interior_t {
 	void assign_master_bedroom(float window_vspacing, float floor_thickness);
 	void assign_door_conn_rooms(unsigned start_ds_ix=0);
 	breaker_zone_t get_circuit_breaker_info(unsigned zone_id, unsigned num_zones, float floor_spacing) const;
-};
+}; // end building_interior_t
 
 struct building_stats_t {
 	unsigned nbuildings, nparts, ndetails, ntquads, ndoors, ninterior, nrooms, nceils, nfloors, nwalls, nrgeom, nobjs, nverts;
@@ -2301,10 +2301,11 @@ private:
 	void add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t &rooms_to_light);
 	void add_missing_backrooms_lights(rand_gen_t rgen, float zval, unsigned room_id, unsigned objs_start, unsigned lights_start,
 		room_object_t const &ref_light, vect_cube_t const &rooms_to_light, light_ix_assign_t &light_ix_assign);
+	bool cube_intersects_basement_or_extb_room(cube_t const &c) const;
 	bool add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_riser_pos_t const &risers, vect_cube_t &pipe_cubes,
 		unsigned room_id, unsigned num_floors, unsigned objs_start, float tot_light_amt, float ceil_zval, rand_gen_t &rgen, unsigned pipe_type, bool allow_place_fail=0);
-	void add_ext_basement_hallway_pipes(unsigned room_id, bool hall_dim, bool pipe_src_dir, unsigned pipe_type,
-		pipe_t const &parent, vector<pipe_t> &pipes, vector<pipe_t> &fittings) const;
+	void add_ext_basement_hallway_pipes_recur(unsigned room_id, bool hall_dim, unsigned pipe_type,
+		pipe_t const &parent, vector<pipe_t> &pipes, vector<pipe_t> &fittings, rand_gen_t &rgen) const;
 	void add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes,
 		unsigned room_id, unsigned num_floors, unsigned objs_start, float tot_light_amt, rand_gen_t &rgen);
 	void get_pipe_basement_water_connections(vect_riser_pos_t &sewer, vect_riser_pos_t &cold_water, vect_riser_pos_t &hot_water, rand_gen_t &rgen) const;
