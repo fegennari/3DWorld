@@ -2244,7 +2244,8 @@ room_obj_dstate_t &building_room_geom_t::get_dstate(room_object_t const &obj) {
 bool is_blocking_obj_on_top_surface(room_object_t const &obj) { // objects on tables, counters, desks, etc.
 	return (obj.type == TYPE_PLANT || obj.type == TYPE_KEYBOARD || obj.is_a_drink() || obj.type == TYPE_MWAVE || is_ball_type(obj.type) ||
 		obj.type == TYPE_PLATE || obj.type == TYPE_LAPTOP || obj.type == TYPE_PAN || obj.type == TYPE_VASE || obj.type == TYPE_URN || obj.type == TYPE_MONITOR ||
-		obj.type == TYPE_LAMP || obj.type == TYPE_CUP || obj.type == TYPE_TOASTER || obj.type == TYPE_SILVER || obj.type == TYPE_PIZZA_BOX || obj.type == TYPE_PLANT_MODEL);
+		obj.type == TYPE_LAMP || obj.type == TYPE_CUP || obj.type == TYPE_TOASTER || obj.type == TYPE_SILVER || obj.type == TYPE_PIZZA_BOX ||
+		obj.type == TYPE_PLANT_MODEL || obj.type == TYPE_CONF_PHONE);
 }
 bool can_place_on_object(room_object_t const &obj, point const &pos, float radius, float z_bias, float start_zval, float &zval) {
 	if (!obj.can_place_onto() && obj.type != TYPE_RUG) return 0; // can't place on this object type

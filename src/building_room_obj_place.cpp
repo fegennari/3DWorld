@@ -723,7 +723,10 @@ bool building_t::add_conference_objs(rand_gen_t rgen, room_t const &room, float 
 		set_obj_id(objs);
 		objs.back().obj_id |= 1; // off by default; set LSB
 	}
-	// TODO: phone on the table?
+	// phone on the table
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_PHONE)) {
+		// TODO: TYPE_CONF_PHONE
+	}
 	add_door_sign("Conference", room, zval, room_id);
 	return 1;
 }
@@ -3628,6 +3631,10 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 						objs.emplace_back(chair, TYPE_OFF_CHAIR, room_id, long_dim, dir, 0, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK);
 					}
 					objs.emplace_back(desk, TYPE_RDESK, room_id, long_dim, dir, 0, tot_light_amt, SHAPE_CUBE);
+
+					if (building_obj_model_loader.is_model_valid(OBJ_MODEL_PHONE)) {
+						// TODO: TYPE_CONF_PHONE
+					}
 					break; // done
 				} // for n
 			} // for dir
