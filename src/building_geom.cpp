@@ -1233,6 +1233,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	if (rgen.rand_bool()) {add_outdoor_ac_unit(rgen);} // place an outdoor AC unit against an exterior wall 50% of the time, not actually on the roof
 	if (has_basement()) {has_basement_pipes = rgen.rand_bool();}
 	if (interior) {interior->finalize();}
+	setup_damage_vals();
 }
 
 bool building_t::add_outdoor_ac_unit(rand_gen_t &rgen) { // for houses

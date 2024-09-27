@@ -34,6 +34,7 @@ uniform float crack_scale  = 1.0;
 uniform float crack_sharp  = 100.0;
 uniform float crack_weight = 0.0;
 uniform float crack_zmax   = 0.0;
+uniform float crack_normal_zmax   = -2.0; // default is all normals
 uniform int cube_map_texture_size = 0;
 uniform vec4 emission = vec4(0,0,0,1);
 uniform bool two_sided_lighting = true;
@@ -349,8 +350,7 @@ void main()
 #endif // ENABLE_WATER_DAMAGE
 
 #ifdef ADD_CRACKS
-	// not on ceilings since they may be wood; what about floors/carpets?
-	if (crack_weight > 0.0 && vpos.z < crack_zmax && normal.z > -0.5) {
+	if (crack_weight > 0.0 && vpos.z < crack_zmax && normal.z > crack_normal_zmax) {
 		float color_scale = get_crack_factor(crack_weight);
 		texel.rgb *= color_scale;
 		wetness   *= color_scale;

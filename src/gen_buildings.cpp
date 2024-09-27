@@ -471,6 +471,8 @@ void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir,
 		s.add_uniform_float("crack_weight", crack_damage);
 		s.add_uniform_float("crack_scale",  1.0);
 		s.add_uniform_float("crack_zmax",   player_building->ground_floor_z1); // cracks are only in the basement
+		// disable cracks on on ceilings (-z) since they may be wood; carpet is special cased to not have cracks; are cracks on particle board ceilings okay?
+		s.add_uniform_float("crack_normal_zmax", (player_building->is_house ? -0.5 : -2.0));
 	}
 }
 
