@@ -667,7 +667,7 @@ void expand_cube_except_in_dim(cube_t &c, float expand, unsigned not_dim) {
 struct pipe_t {
 	point p1, p2;
 	float radius;
-	unsigned dim, type, end_flags; // end_flags: 1 bit is low end, 2 bit is high end
+	unsigned dim, type, end_flags; // end_flags: 1 bit is low end, 2 bit is high end; 4 bit for round lo end, 8 bit for round hi end
 	bool connected=0, conn_dir=0, outside_pg=0, for_extb=0;
 
 	pipe_t(point const &p1_, point const &p2_, float radius_, unsigned dim_, unsigned type_, unsigned end_flags_, bool for_extb_=0) :
@@ -966,7 +966,8 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 
 			if (!pipe.for_extb && fabs(val - centerline) < r_main) {pipe.p1[d] = pipe.p2[d] = centerline;} // shift to connect directly to main pipe since it's close enough
 			else {
-				float lo(val - pipe.radius), hi(val + pipe.radius);
+				float const range_ext(pipe.for_extb ? 0.0 : pipe.radius);
+				float lo(val - range_ext), hi(val + range_ext);
 				point p1(ref_p1), p2(p1);
 				if      (lo < range_min) {p1[d] = lo; p2[d] = range_min;} // on the lo side
 				else if (hi > range_max) {p1[d] = range_max; p2[d] = hi;} // on the hi side
@@ -1026,8 +1027,9 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			pipes.emplace_back(p1, p2, radius, d, PIPE_CONN, 3); // cap both ends
 
 			for (unsigned ix : v.second) { // add fittings
-				if (!pipes[ix].connected) continue; // pipe was not connected, don't add the fitting
-				float const val(pipes[ix].p1[d]), fitting_len(FITTING_LEN*radius);
+				pipe_t const &pipe(pipes[ix]);
+				if (!pipe.connected || pipe.for_extb) continue; // pipe was not connected, don't add the fitting
+				float const val(pipe.p1[d]), fitting_len(FITTING_LEN*radius);
 				p1[d] = val - fitting_len; p2[d] = val + fitting_len;
 				fittings.emplace_back(p1, p2, FITTING_RADIUS*radius, d, PIPE_FITTING, 3);
 			}
@@ -1052,14 +1054,15 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			float const pipe_zmax(get_room(interior->ext_basement_hallway_room_id).z2() - fc_thickness - FITTING_RADIUS*p.radius);
 
 			if (p.p1.z > pipe_zmax) { // pipe is too high, likely on the floor above; run a vertical segment to connect it
-				if (pipe_type != PIPE_TYPE_SEWER) continue; // only allow this for sewer pipes since water pipes may intersect sewer pipes when set to the same zval
+				// Note: unconnected pipes have a dead end
+				if (pipe_type != PIPE_TYPE_SEWER) {p.connected = 0; continue;} // only allow for sewer pipes since water pipes may intersect sewer pipes when set to the same zval
 				pipe_t vpipe(p);
 				vpipe.p1.assign(ep.p2.x, ep.p2.y, pipe_zmax); // low end
 				vpipe.p2.assign(ep.p2.x, ep.p2.y, p.p1.z   ); // high end
 				vpipe.dim  = 2;
 				vpipe.type = PIPE_MEC; // similar to vertical exit pipe with fittings on both ends
-				vpipe.end_flags = 1; // round end at bottom; top end could be round, but it needs to be pulled back on the connector pipe
-				if (has_bcube_int(vpipe.get_bcube(), obstacles)) continue; // unclear if this can happen, but should be a good check
+				vpipe.end_flags = 3; // round end at bottom; top end could be round, but it needs to be pulled back on the connector pipe
+				if (has_bcube_int(vpipe.get_bcube(), obstacles)) {p.connected = 0; continue;} // unclear if this can happen, but should be a good check
 				vert_conn_pipes.push_back(vpipe);
 				p.p1.z = pipe_zmax;
 			}
@@ -1067,6 +1070,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			p.dim      = ep.dim;
 			p.conn_dir = !extb_wall_dir;
 			p.type     = PIPE_EXTB;
+			if (p.dim == dim) {p.end_flags |= (1 << (p.conn_dir+2));} // flag connection point as round end if it's a right angle
 			pipe_t const parent(p); // make a copy to avoid invalidating the p reference
 			add_ext_basement_hallway_pipes_recur(interior->ext_basement_hallway_room_id, extb_wall_dim, pipe_type, parent, pipes, fittings, rgen);
 			break;
@@ -1228,6 +1232,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			pf.flags |= RO_FLAG_NOCOLL;
 			if (d == 1 || p.type != PIPE_MAIN) {pf.flags |= RO_FLAG_ADJ_LO;} // skip end cap for main pipe exiting through the wall
 			if (d == 0 || p.type != PIPE_MAIN) {pf.flags |= RO_FLAG_ADJ_HI;} // skip end cap for main pipe exiting through the wall
+			if (p.end_flags & (1<<(d+2))) {pf.flags |= (d ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT);} // handle round end flags
 			pf.color  = fittings_color;
 			expand_cube_except_in_dim(pf, fitting_expand, p.dim); // expand slightly
 			float fitting_len_ext(fitting_len);
