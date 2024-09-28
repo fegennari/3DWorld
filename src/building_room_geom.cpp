@@ -2537,7 +2537,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 	get_material(get_tex_auto_nm(get_rect_panel_tid(), tscale), 1, 1).add_cube_to_verts(ceil_, WHITE, tex_origin, floor_ceil_face_mask); // ceiling
 	rgeom_mat_t &paneling_mat(get_material(paneling, 1, 1));
 	paneling_mat.add_cube_to_verts(back, WHITE, tex_origin, front_face_mask, !c.dim);
-	float const width(c.get_width()), frame_width(0.2*width), spacing(0.02*width), front_face(c.d[c.dim][c.dir] - signed_thickness);
+	float const width(c.get_width()), frame_width(ELEVATOR_FRAME_WIDTH*width), spacing(0.02*width), front_face(c.d[c.dim][c.dir] - signed_thickness);
 	cube_t front(car);
 	front.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*spacing; // slight gap with elevator doors
 	front.d[c.dim][!c.dir]  = front_face;

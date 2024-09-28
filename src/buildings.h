@@ -35,6 +35,7 @@ float const DOOR_WIDTH_SCALE_OFFICE= 0.7; // wider than house doors
 float const STAIRS_WALL_WIDTH_MULT = 0.15; // relative to the depth of a stair
 float const ELEVATOR_Z2_SHIFT      = 0.6; // shift downward, relative to ceiling thickness
 float const ELEVATOR_STAND_DIST    = 0.4; // distance that people stand from the elevator door relative to floor spacing
+float const ELEVATOR_FRAME_WIDTH   = 0.2; // frame width to each side of door relative to elevator width
 float const DOOR_FRAME_WIDTH       = 0.07; // for door texture, relative to door width
 float const EXT_BASEMENT_JOIN_DIST = 4.0; // relative to floor spacing
 float const BALCONY_PILLAR_SCALE   = 0.15; // relative to depth
@@ -1280,7 +1281,7 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 	elevator_t(cube_t const &c, unsigned rid, bool dim_, bool dir_, bool at_edge_, bool interior_room_) :
 		oriented_cube_t(c, dim_, dir_), at_edge(at_edge_), interior_room(interior_room_), room_id(rid) {assert(is_strictly_normalized());}
 	float get_wall_thickness () const {return 0.02*get_width();}
-	float get_frame_width    () const {return 0.20*get_width();}
+	float get_frame_width    () const {return ELEVATOR_FRAME_WIDTH*get_width();} // to each side of elevator door
 	unsigned get_door_face_id() const {return (2*dim + dir);}
 	bool was_called          () const {return !call_requests.empty();}
 	bool may_be_moving       () const {return (is_moving || was_called());} // Note: conservative; includes elevator or doors moving

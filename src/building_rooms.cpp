@@ -1544,7 +1544,7 @@ void building_t::add_trim_for_door_or_int_window(cube_t const &c, bool dim, bool
 	for (unsigned side = 0; side < 2; ++side) { // left/right of door
 		trim.d[!dim][0] = c.d[!dim][side] - (side ? trim_thickness : side_twidth);
 		trim.d[!dim][1] = c.d[!dim][side] + (side ? side_twidth : trim_thickness);
-		bool const draw_top(draw_top_edge || check_skylight_intersection(trim)); // draw top edge of trim for top floor?
+		bool const draw_top(draw_top_edge || check_skylight_intersection(trim)); // draw top edge of trim for top floor if there's a skylight
 		unsigned const flags2(RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT | (draw_top ? 0 : RO_FLAG_ADJ_TOP));
 		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, side, flags2, 1.0, SHAPE_TALL, trim_color); // abuse tall flag
 	}
@@ -1556,7 +1556,7 @@ void building_t::add_trim_for_door_or_int_window(cube_t const &c, bool dim, bool
 
 	for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
 		set_cube_zvals(trim, z-top_twidth, z); // z2=ceil height
-		bool const draw_top(draw_top_edge || (f+1 == num_floors && check_skylight_intersection(trim))); // draw top edge of trim for top floor?
+		bool const draw_top(draw_top_edge || (f+1 == num_floors && check_skylight_intersection(trim))); // draw top edge of trim for top floor if there's a skylight
 		unsigned const flags2(RO_FLAG_NOCOLL | (draw_top ? 0 : RO_FLAG_ADJ_TOP));
 		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, flags2, 1.0, SHAPE_SHORT, trim_color);
 
@@ -1842,15 +1842,25 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		vect_cube_with_ix_t walls; // ix stores flags
 
 		for (elevator_t const &e : interior->elevators) {
-			float const fwidth(e.get_frame_width() + trim_thickness);
+			float const fwidth(e.get_frame_width() + trim_thickness), front_face(e.d[e.dim][e.dir]);
 			cube_t const front(get_trim_cube(e, e.dim, e.dir, trim_thickness));
+			cube_t door_trim(e);
+			set_wall_width(door_trim, front_face, 1.6*trim_thickness, e.dim);
+			door_trim.z1() += fc_thick; // don't clip into the bottom floor
+			door_trim.z2() -= 0.65*fc_thick; // don't clip through the skylight; use 0.65 rather than 0.6 to avoid Z-fighting with the top of the elevator
 
 			for (unsigned d = 0; d < 2; ++d) {
 				walls.emplace_back(get_trim_cube(e, !e.dim, d, trim_thickness), (flags | dir_flags[!d])); // sides
+				float const door_edge_pos(front.d[!e.dim][!d] + (d ? 1.0 : -1.0)*fwidth);
 				cube_t front_side(front);
-				front_side.d[!e.dim][d] = front.d[!e.dim][!d] + (d ? 1.0 : -1.0)*fwidth; // clip around the door
+				front_side.d[!e.dim][d] = door_edge_pos; // clip around the door
 				walls.emplace_back(front_side, (draw_end_flags | dir_flags[!e.dir])); // draw ends
-			}
+				// add trim on sides of doors running the whole length of the elevator
+				set_wall_width(door_trim, door_edge_pos, 0.5*door_trim_width, !e.dim);
+				bool const draw_top(check_skylight_intersection(door_trim)); // draw top edge of trim for top floor if there's a skylight
+				unsigned const flags2(flags | RO_FLAG_ADJ_BOT | (draw_top ? 0 : RO_FLAG_ADJ_TOP));
+				objs.emplace_back(door_trim, TYPE_WALL_TRIM, 0, e.dim, e.dir, flags2, 1.0, SHAPE_TALL, trim_color); // abuse tall flag
+			} // for d
 			if (e.adj_pair_ix > 0) { // back to back elevators don't need back trim
 				elevator_t const &adj_e(get_elevator(e.adj_elevator_ix));
 				if (adj_e.z1() <= e.z1() && adj_e.z2() >= e.z2()) continue; // skip back trim if they share the entire Z-range
