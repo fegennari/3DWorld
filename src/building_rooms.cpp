@@ -863,6 +863,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		}
 	} // for r (room)
 	if (is_house) {interior->assign_master_bedroom(window_vspacing, floor_thickness);}
+	add_interior_window_objects();
 	add_padlocks(rgen);
 	bool const has_toilet(building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)), has_sink(building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK));
 
@@ -1354,6 +1355,17 @@ void building_t::add_exterior_ac_pipes(rand_gen_t rgen) {
 			break; // done - there should only be one part
 		} // for p
 	} // for i
+}
+
+void building_t::add_interior_window_objects() {
+	assert(has_room_geom());
+
+	for (cube_with_ix_t const &w : interior->int_windows) {
+		bool const dim(w.dy() < w.dx()), dir(0);
+		cube_t window(w);
+		window.expand_in_dim(dim, -0.2*window.get_sz_dim(dim)); // shrink
+		interior->room_geom->objs.emplace_back(window, TYPE_INT_WINDOW, w.ix, dim, dir, 0, 1.0);
+	}
 }
 
 struct key_info_t {

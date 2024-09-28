@@ -1151,6 +1151,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 
 void building_t::assign_special_room_types(vector<unsigned> &utility_room_cands, vector<unsigned> &special_room_cands, unsigned doors_start, rand_gen_t &rgen) {
 	vector<room_t> &rooms(interior->rooms);
+	vector<unsigned> conf_rooms;
 	
 	if (!is_residential() && has_office_chair_model()) { // office buildings with office chairs
 		// try to assign conference room(s); this may be overwritten with a special room on the ground floor;
@@ -1160,7 +1161,7 @@ void building_t::assign_special_room_types(vector<unsigned> &utility_room_cands,
 
 		for (unsigned d = 0; d < 2; ++d) { // conference rooms can optionally be next to a bathroom
 			for (unsigned room_ix : (d ? special_room_cands : utility_room_cands)) {
-				room_t &room(rooms[room_ix]);
+				room_t &room(get_room(room_ix));
 				if (room.has_stairs || room.has_elevator || room.is_hallway || interior->is_blocked_by_stairs_or_elevator(room)) continue; // not a valid conference room
 				if (get_conf_room_table_length_width(get_walkable_room_bounds(room)) == vector2d()) continue; // can't fit a conference room table
 				conf_room_cands.push_back(room_ix);
@@ -1169,7 +1170,9 @@ void building_t::assign_special_room_types(vector<unsigned> &utility_room_cands,
 		} // for d
 		for (unsigned room_ix : conf_room_cands) {
 			if (rooms[room_ix].get_area_xy() < 0.99*max_area) continue; // skip non-max area rooms
-			if (rgen.rand_bool()) {rooms[room_ix].assign_all_to(RTYPE_CONF, 1);} // 50% chance of conference room; locked=1
+			if (!rgen.rand_bool()) continue; // 50% chance of conference room
+			rooms[room_ix].assign_all_to(RTYPE_CONF, 1); // locked=1
+			conf_rooms.push_back(room_ix);
 		}
 	}
 	// add special ground floor room types
@@ -1184,8 +1187,7 @@ void building_t::assign_special_room_types(vector<unsigned> &utility_room_cands,
 		for (unsigned n = 0; n < GFLOOR_RTYPE_COUNTS[rtype]; ++n) {
 			if (room_cands.empty()) break; // no more rooms to assign
 			unsigned &room_ix(room_cands[rgen.rand() % room_cands.size()]);
-			assert(room_ix < rooms.size());
-			room_t &room(rooms[room_ix]);
+			room_t &room(get_room(room_ix));
 			room.assign_to(room_type, 0, 1); // assign this room on floor 0; locked=1
 			bool const ensure_locked(0); // probably should be locked, but unlocked makes these rooms easier to explore
 			ensure_doors_to_room_are_closed(room, doors_start, ensure_locked);
@@ -1197,6 +1199,60 @@ void building_t::assign_special_room_types(vector<unsigned> &utility_room_cands,
 			room_cands.pop_back(); // remove this room from consideration
 		} // for n
 	} // for rtype
+	for (unsigned room_ix : conf_rooms) {add_conference_room_window(room_ix);}
+}
+
+void building_t::add_conference_room_window(unsigned room_ix) {
+	room_t &room(get_room(room_ix));
+	assert(!room.is_hallway);
+	// find the longest wall segment shared between the room and an adjacent hallway
+	float const wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness), fc_thick(get_fc_thickness()), door_width(get_doorway_width());
+	float const window_edge_space(0.25*door_width), min_window_width(0.5*door_width), min_wall_len(min_window_width + 2.0*window_edge_space);
+	bool best_dim(0), best_dir(0);
+	float best_lo(0.0), best_hi(0.0);
+	cube_t *best_wall(nullptr);
+	room_t *conn_hall(nullptr);
+
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			cube_t wall_area(room);
+			set_wall_width(wall_area, room.d[dim][dir], wall_thickness, dim);
+			wall_area.expand_in_dim(!dim, -wall_hthick); // shrink to room interior
+			wall_area.expand_in_z(-fc_thick); // shrink off floor and ceiling to avoid picking up adjacent rooms
+
+			for (room_t &r : interior->rooms) {
+				if (!r.is_hallway || !r.intersects(wall_area)) continue;
+				cube_t shared_area(wall_area); // shared wall between conference room and hallway
+				max_eq(shared_area.d[!dim][0], r.d[!dim][0]);
+				min_eq(shared_area.d[!dim][1], r.d[!dim][1]);
+
+				for (cube_t &w : interior->walls[dim]) {
+					if (!w.intersects(shared_area)) continue;
+					float const lo(max(shared_area.d[!dim][0], w.d[!dim][0])), hi(min(shared_area.d[!dim][1], w.d[!dim][1]));
+					if ((hi - lo) <= max((best_hi - best_lo), min_wall_len)) continue; // too short
+					best_dim = dim; best_dir = dir; best_lo = lo; best_hi = hi; best_wall = &w; conn_hall = &r;
+				}
+			} // for r
+		} // for dir
+	} // for dim
+	if (best_wall != nullptr) {
+		assert(conn_hall != nullptr);
+		cube_t &wall(*best_wall);
+		float const wind_lo(best_lo + window_edge_space), wind_hi(best_hi - window_edge_space);
+		cube_t wall2(wall), window(wall);
+		wall .d[!best_dim][1] = window.d[!best_dim][0] = wind_lo; // low  edge of window
+		wall2.d[!best_dim][0] = window.d[!best_dim][1] = wind_hi; // high edge of window
+		interior->walls[best_dim].push_back(wall2);
+		room.flags       |= ROOM_FLAG_INT_WIND;
+		conn_hall->flags |= ROOM_FLAG_INT_WIND;
+
+		if (room.get_room_type(0) != RTYPE_CONF) { // re-add ground floor wall if re-assigned as a utility or special room
+			cube_t short_wall(window);
+			short_wall.z2() = window.z1() = short_wall.z1() + get_window_vspace(); // only floor tall
+			interior->walls[best_dim].push_back(short_wall);
+		}
+		interior->int_windows.emplace_back(window, room_ix);
+	}
 }
 
 void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsigned hall_num_rooms, unsigned tot_num_windows,

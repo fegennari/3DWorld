@@ -711,17 +711,21 @@ bool building_t::add_conference_objs(rand_gen_t rgen, room_t const &room, float 
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) {
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H
 		float const tv_height(0.5*floor_spacing*rgen.rand_uniform(1.0, 1.2)), tv_hwidth(0.5*tv_height*sz.y/sz.z), tv_depth(tv_height*sz.x/sz.z);
-		bool const dir(rgen.rand_bool());
+		bool dir(rgen.rand_bool());
 		cube_t tv;
-		tv.z1() = zval + 0.25*floor_spacing;
+		tv.z1() = zval    + 0.25*floor_spacing;
 		tv.z2() = tv.z1() + tv_height;
-		tv.d[dim][ dir] = room_bounds.d[dim][dir]; // on the wall
-		tv.d[dim][!dir] = tv.d[dim][dir] + (dir ? -1.0 : 1.0)*tv_depth;
 		set_wall_width(tv, room_bounds.get_center_dim(!dim), tv_hwidth, !dim);
-		objs.emplace_back(tv, TYPE_MONITOR, room_id, dim, !dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), tot_light_amt, SHAPE_SHORT, BLACK); // monitors are shorter than TVs
-		offset_hanging_tv(objs.back());
-		set_obj_id(objs);
-		objs.back().obj_id |= 1; // off by default; set LSB
+
+		for (unsigned n = 0; n < 2; ++n, dir ^= 1) { // find a valid wall dir
+			tv.d[dim][ dir] = room_bounds.d[dim][dir]; // on the wall
+			tv.d[dim][!dir] = tv.d[dim][dir] + (dir ? -1.0 : 1.0)*tv_depth;
+			if (overlaps_or_adj_int_window(tv)) continue; // check interior windows
+			objs.emplace_back(tv, TYPE_MONITOR, room_id, dim, !dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), tot_light_amt, SHAPE_SHORT, BLACK); // monitors are shorter than TVs
+			offset_hanging_tv(objs.back());
+			set_obj_id(objs);
+			objs.back().obj_id |= 1; // off by default; set LSB
+		} // for n
 	}
 	// phone on the table
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_PHONE)) {
@@ -4139,6 +4143,7 @@ int building_t::check_valid_picture_placement(room_t const &room, cube_t const &
 	float const se_clearance(2.0*get_min_front_clearance_inc_people() + 4.0*wall_thickness); // enough space to walk in front, and then some
 	if (interior->is_blocked_by_stairs_or_elevator(tc, se_clearance)) return 0; // check stairs and elevators
 	if (!check_cube_within_part_sides(tc)) return 0; // handle non-cube buildings
+	if (overlaps_or_adj_int_window   (tc)) return 0; // check interior windows
 	if (!inc_open && !room.is_hallway && is_cube_close_to_doorway(tc, room, 0.0, 1)) return 2; // success, but could be better (doors never open into hallway)
 
 	if (has_complex_floorplan && c.z1() > ground_floor_z1) { // check for office building whiteboards placed on room sides that aren't true walls; skip basements
@@ -4463,6 +4468,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 					if (overlaps_other_room_obj(c_test, objs_start))                     continue;
 					if (!is_gdoor && is_obj_placement_blocked(c_test, room, (ei==1), 1)) continue; // inc_open_doors=1/check_open_dir=1 for inside, to avoid placing behind open door
 					if (!check_if_placed_on_interior_wall(c, room, dim, dir))            continue; // ensure the switch is on a wall
+					if (overlaps_or_adj_int_window(c))                                   continue; // check interior windows
 					// if is_basement, and this is an exterior wall, use a non-recessed light switch? but the basement ext wall will never have a doorway; next to basement stairs?
 					unsigned flags(RO_FLAG_NOCOLL);
 
@@ -4545,6 +4551,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 		if (overlaps_other_room_obj(c_exp, objs_start, 1))     continue; // check for things like closets; check_all=1 to include blinds
 		if (interior->is_blocked_by_stairs_or_elevator(c_exp)) continue; // check stairs and elevators
 		if (!check_cube_within_part_sides(c_exp))              continue; // handle non-cube buildings
+		if (overlaps_or_adj_int_window(c_exp))                 continue; // check interior windows
 		bool bad_place(0);
 
 		if (is_ground_floor || !walkways.empty()) { // handle exterior doors
@@ -4617,6 +4624,7 @@ bool building_t::add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, floa
 		c_exp.d[dim][!dir] += (dir ? -1.0 : 1.0)*hwidth; // add some clearance in front
 		if (overlaps_other_room_obj(c_exp, objs_start, 1))     continue; // check for objects; check_all=1 to inc whiteboards; excludes picture frames
 		if (interior->is_blocked_by_stairs_or_elevator(c_exp)) continue; // check stairs and elevators
+		if (overlaps_or_adj_int_window(c_exp))                 continue; // check interior windows
 		cube_t door_test_cube(c_exp);
 		door_test_cube.expand_in_dim(!dim, 0.25*hwidth); // not too close to doors
 		bool bad_place(0);

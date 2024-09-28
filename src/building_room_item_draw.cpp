@@ -927,6 +927,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_FISHTANK:  add_fishtank(*i); break;
 		case TYPE_OFF_PILLAR:add_wall_or_pillar(*i, tex_origin, wall_tex); break;
 		case TYPE_CONF_TABLE:add_conference_table(*i, tscale); break;
+		case TYPE_INT_WINDOW: add_int_window(*i); break;
 		//case TYPE_FRIDGE: if (i->is_open()) {} break; // draw open fridge?
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
@@ -1049,7 +1050,6 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_TRASH:      add_trash(c); break;
 		case TYPE_METAL_BAR:  add_metal_bar(c); break;
 		case TYPE_INT_LADDER: add_int_ladder(c); break;
-		case TYPE_INT_WINDOW: add_int_window(c); break;
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		default: break;
 		} // end switch

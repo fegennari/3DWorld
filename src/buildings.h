@@ -1306,6 +1306,7 @@ unsigned const ROOM_FLAG_SKYLIGHT = 0x04; // has a ceiling skylight
 unsigned const ROOM_FLAG_IS_ENTRY = 0x08; // is unit entryway room
 unsigned const ROOM_FLAG_MIRROR   = 0x10; // contains a mirror
 unsigned const ROOM_FLAG_HAS_OOO  = 0x20; // has out-of-order sign
+unsigned const ROOM_FLAG_INT_WIND = 0x40; // has interior window
 
 struct room_t : public cube_t { // size=56
 	bool no_geom=0, is_hallway=0, is_office=0, is_sec_bldg=0, is_single_floor=0;
@@ -1360,6 +1361,7 @@ struct room_t : public cube_t { // size=56
 	bool get_is_entryway      () const {return (flags & ROOM_FLAG_IS_ENTRY);}
 	bool get_has_mirror       () const {return (flags & ROOM_FLAG_MIRROR  );}
 	bool get_has_out_of_order () const {return (flags & ROOM_FLAG_HAS_OOO );}
+	bool has_interior_window  () const {return (flags & ROOM_FLAG_INT_WIND);}
 }; // room_t
 
 struct extb_room_t : public cube_t { // extended basement room candidate
@@ -1595,6 +1597,7 @@ struct skyway_conn_t : public cube_t {
 struct building_interior_t {
 	vect_cube_t floors, ceilings, fc_occluders, exclusion, open_walls, split_window_walls;
 	vect_cube_t walls[2]; // walls are split by dim, which is the separating dimension of the wall
+	vect_cube_with_ix_t int_windows; // ix stores room index
 	vect_stairwell_t stairwells;
 	vector<door_t> doors;
 	vector<door_stack_t> door_stacks;
@@ -1606,7 +1609,7 @@ struct building_interior_t {
 	std::unique_ptr<building_room_geom_t> room_geom;
 	std::unique_ptr<building_nav_graph_t> nav_graph;
 	std::unique_ptr<building_conn_info_t> conn_info;
-	cube_with_ix_t pg_ramp, attic_access; // ix stores {dim, dir}
+	cube_with_ix_t pg_ramp, attic_access; // ix stores {2*dim + dir}
 	indoor_pool_t pool;
 	cube_t basement_ext_bcube;
 	draw_range_t draw_range;
@@ -1880,6 +1883,7 @@ struct building_t : public building_geom_t {
 	bool interior_enabled() const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void assign_special_room_types(vector<unsigned> &utility_room_cands, vector<unsigned> &special_room_cands, unsigned doors_start, rand_gen_t &rgen);
+	void add_conference_room_window(unsigned room_ix);
 	void divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsigned hall_num_rooms, unsigned tot_num_windows,
 		unsigned windows_per_room, unsigned windows_per_room_side, bool hall_dim, bool hall_dir, rand_gen_t &rgen);
 	bool maybe_assign_interior_garage(bool &gdim, bool &gdir);
@@ -2209,6 +2213,7 @@ private:
 	void remove_intersecting_roof_cubes(cube_t const &c);
 	bool overlaps_other_room_obj(cube_t const &c, unsigned objs_start=0, bool check_all=0, unsigned const *objs_end=nullptr) const;
 	bool overlaps_any_placed_obj(cube_t const &c) const;
+	bool overlaps_or_adj_int_window (cube_t const &c) const;
 	bool check_skylight_intersection(cube_t const &c) const;
 	int classify_room_wall(room_t const &room, float zval, bool dim, bool dir, bool ret_sep_if_part_int_part_ext) const;
 	unsigned count_ext_walls_for_room(room_t const &room, float zval) const;
@@ -2292,6 +2297,7 @@ private:
 	int choose_air_intake_room() const;
 	int vent_in_attic_test(cube_t const &vent, bool dim) const;
 	void add_exterior_ac_pipes(rand_gen_t rgen);
+	void add_interior_window_objects();
 	void add_padlocks(rand_gen_t rgen);
 	bool add_padlock_to_door     (unsigned door_ix, unsigned lock_color_mask, rand_gen_t &rgen);
 	bool remove_padlock_from_door(unsigned door_ix, point const &remove_pos);

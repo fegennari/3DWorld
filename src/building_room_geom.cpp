@@ -4566,14 +4566,15 @@ void building_room_geom_t::add_window(room_object_t const &c, float tscale) { //
 
 void building_room_geom_t::add_int_window(room_object_t const &c) {
 	unsigned const skip_faces(~get_skip_mask_for_xy(c.dim));
+	colorRGBA const window_color(0.7, 1.0, 0.85, 0.15); // greenish tint, semi transparent
 	rgeom_mat_t &mat(get_untextured_material(0, 0, 0, 1)); // no shadows + transparent
-	mat.add_cube_to_verts_untextured(c, table_glass_color, skip_faces);
+	mat.add_cube_to_verts_untextured(c, window_color, skip_faces);
 
 	if (c.is_broken()) { // glass is cracked
 		cube_t crack(c);
 		crack.expand_in_dim(c.dim, 0.1*c.get_depth());
 		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crack_tid(c, 2), 0.0, 0, true), 0, 0, 0, 1)); // alpha=2, unshadowed, transparent=1
-		mat.add_cube_to_verts(crack, colorRGBA(table_glass_color, 1.0), c.get_llc(), skip_faces, (c.obj_id&1), (c.obj_id&2), (c.obj_id&4)); // swap and X/Y mirror based on obj_id
+		mat.add_cube_to_verts(crack, colorRGBA(window_color, 1.0), c.get_llc(), skip_faces, (c.obj_id&1), (c.obj_id&2), (c.obj_id&4)); // swap and X/Y mirror based on obj_id
 	}
 }
 

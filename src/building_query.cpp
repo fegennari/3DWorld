@@ -1206,6 +1206,7 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	if (!room.interior && has_int_windows()) return 0; // room has windows and may be lit from outside; what about a room with an open exterior door?
 	// Note: we can't easily check the connected building here, so assume it's lit; this doesn't fix the case where the conn room is in the other building
 	if ( room.is_ext_basement_conn       ()) return 0; // be safe/conservative and treat rooms connected to two buildings as potentially lit
+	if ( room.has_interior_window        ()) return 0; // light can go through the window
 	float const floor_spacing(get_window_vspace());
 	if (room.is_backrooms() && room.dz() > 1.5*floor_spacing) return 0; // multi-floor backrooms: assume lit as this is too difficult to determine
 	unsigned const floor_ix(room.is_single_floor ? 0 : max(0.0f, (pos.z - room.z1()))/floor_spacing);
@@ -1318,6 +1319,7 @@ bool building_t::all_room_int_doors_closed(unsigned room_ix, float zval) const {
 	if (room.open_wall_mask)                      return 0; // office hallways and open wall rooms can connect to other hallways with no doors
 	if (room.is_parking() || room.is_backrooms()) return 0; // these cases are excluded because they have interior doors or ramps
 	if (room.is_retail())                         return 0; // retail doesn't work because objects may be visible through stairs (similar to office hallway)
+	if (room.has_interior_window())               return 0; // can see through the window
 	min_eq(zval, room.z2()); max_eq(zval, room.z1()); // clamp to room bounds - is this needed?
 	if (room.has_stairs_on_floor(room.get_floor_containing_zval(zval, get_window_vspace()))) return 0; // might be visible through stairs
 	// if the room is a single floor, check doors within the full Z span; otherwise, only consider doors overlapping zval
@@ -2187,6 +2189,13 @@ bool building_t::overlaps_any_placed_obj(cube_t const &c) const { // Note: inclu
 		if (i->type != TYPE_BLOCKER && i->intersects(c)) return 1; // maybe should use rat_coll flag?
 	}
 	return 0;
+}
+
+bool building_t::overlaps_or_adj_int_window(cube_t const &c) const {
+	if (!interior || interior->int_windows.empty()) return 0;
+	cube_t c_exp(c);
+	c_exp.expand_by_xy(get_wall_thickness());
+	return has_bcube_int(c_exp, interior->int_windows);
 }
 
 bool building_t::check_skylight_intersection(cube_t const &c) const {

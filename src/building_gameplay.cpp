@@ -183,7 +183,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_OFF_PILLAR] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1,  0.0,  0.0,   "office pillar");
 	bldg_obj_types[TYPE_DRINK_CAN ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 1.0,   0.75,  "drink can", 1); // single use
 	bldg_obj_types[TYPE_CONF_TABLE] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1, 200.0, 300.0, "conference table");
-	bldg_obj_types[TYPE_INT_WINDOW] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2,  0.0,  0.0,   "window"); // window in interior wall between two rooms
+	bldg_obj_types[TYPE_INT_WINDOW] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1,  0.0,  0.0,   "window"); // window in interior wall between two rooms
 	bldg_obj_types[TYPE_INT_LADDER] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 50.0,  40.0,  "ladder");
 	bldg_obj_types[TYPE_MACHINE   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2,  0.0,   0.0,  "machine");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
