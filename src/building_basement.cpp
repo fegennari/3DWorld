@@ -1082,7 +1082,9 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		bool tried_horizontal(0);
 
 		for (unsigned attempt = 0; attempt < 2; ++attempt) { // make up to 2 attempts with a horizontal or vertical connection
-			if (is_closed_loop || num_floors > 1 || attempt == 1 || num_conn_segs == 1 || rgen.rand_bool()) { // exit into the wall of the building
+			float const short_main_pipe((mp[1][dim] - mp[0][dim]) < 4.0*r_main); // likely a single connector pipe; common for gas pipes; vert exit pippe doesn't look good
+
+			if (is_closed_loop || num_floors > 1 || attempt == 1 || num_conn_segs == 1 || short_main_pipe || rgen.rand_bool()) { // exit into the wall of the building
 				if (tried_horizontal) break; // we got here the previous iteration; give up, exit can't be found
 				tried_horizontal = 1;
 				// Note: if roads are added for secondary buildings, we should have the exit on the side of the building closest to the road
@@ -1186,6 +1188,13 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			point exit_floor_pos(exit_pos);
 			exit_floor_pos.z = exit_floor_zval;
 			pipes.emplace_back(exit_floor_pos, exit_pos, r_main, 2, PIPE_EXIT, exit_pipe_end_flags);
+
+			if (short_main_pipe) { // short main pipe connected to vertical needs some adjustments to the fittings
+				point &open_end(mp[!exit_dir]);
+				point end_ext(open_end);
+				end_ext[dim] += (exit_dir ? 1.0 : -1.0)*0.25*r_main; // actually moves toward the interior/exit end of the pipe
+				pipes.emplace_back(open_end, end_ext, r_main, dim, PIPE_FITTING, (1<<unsigned(exit_dir)));
+			}
 			break; // success
 		} // for attempt
 	} // end add_exit_pipe
