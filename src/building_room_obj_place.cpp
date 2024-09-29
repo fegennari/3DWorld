@@ -692,6 +692,13 @@ bool building_t::add_conference_objs(rand_gen_t rgen, room_t const &room, float 
 	set_wall_width(table, room.get_center_dim( dim), 0.5*table_lw.x,  dim); // set length
 	set_wall_width(table, room.get_center_dim(!dim), 0.5*table_lw.y, !dim); // set width
 	objs.emplace_back(table, TYPE_CONF_TABLE, room_id, dim, 0, 0, tot_light_amt, SHAPE_CUBE, WHITE); // dir=0, flags=0
+	
+	if (rgen.rand_float() < 0.9) { // add conference phone with a random dir 90% of the time
+		cube_t table_center(table);
+		table_center.expand_in_dim( dim, -0.375*table_lw.x); // center 25%
+		table_center.expand_in_dim(!dim, -0.250*table_lw.y); // center 50%
+		place_phone_on_obj(rgen, table_center, room_id, tot_light_amt, !dim, rgen.rand_bool());
+	}
 	// add office chairs along sides of the table
 	vector3d const chair_sz(get_office_chair_size());
 	unsigned const num_chairs(floor(table_lw.x/(1.2*2.0*chair_sz.x)));
@@ -726,10 +733,6 @@ bool building_t::add_conference_objs(rand_gen_t rgen, room_t const &room, float 
 			set_obj_id(objs);
 			objs.back().obj_id |= 1; // off by default; set LSB
 		} // for n
-	}
-	// phone on the table
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_PHONE)) {
-		// TODO: TYPE_CONF_PHONE
 	}
 	add_door_sign("Conference", room, zval, room_id);
 	return 1;
@@ -3594,6 +3597,21 @@ bool building_t::is_contained_in_wall_range(float wall_pos, float cov_lo, float 
 	}
 	return 0;
 }
+cube_t get_rand_reception_desk_placement_cube(room_object_t const &rdesk, rand_gen_t &rgen, unsigned &sel_ix) {
+	unsigned const placed(rdesk.item_flags & 7);
+	if (placed == 7) return cube_t(); // all three cubes are occupied
+	cube_t cubes[3]; // {front, left, right}
+	get_reception_desk_cubes(rdesk, cubes);
+	if (placed == 6) return cubes[0]; // only front is available
+	if (placed == 5) return cubes[1]; // only left  is available
+	if (placed == 3) return cubes[2]; // only right is available
+	unsigned rval_to_ix[4] = {0, 0, 1, 2}; // front cube is twice as likely
+	if (placed == 1) {rval_to_ix[0] = 1; rval_to_ix[1] = 2;} // front is occupied, redistribute weights to back
+	if (placed == 2) {rval_to_ix[2] = 2;} // left  is occupied, redistribute weight to right
+	if (placed == 4) {rval_to_ix[3] = 1;} // right is occupied, redistribute weight to left
+	sel_ix = rval_to_ix[rgen.rand()&3];
+	return cubes[sel_ix];
+}
 void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t const &room, float zval,
 	unsigned room_id, float tot_light_amt, unsigned floor_ix, unsigned objs_start)
 {
@@ -3634,10 +3652,23 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 						if (interior->is_blocked_by_stairs_or_elevator(chair)) continue; // bad location, try a new one
 						objs.emplace_back(chair, TYPE_OFF_CHAIR, room_id, long_dim, dir, 0, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK);
 					}
+					unsigned const rdesk_ix(objs.size());
 					objs.emplace_back(desk, TYPE_RDESK, room_id, long_dim, dir, 0, tot_light_amt, SHAPE_CUBE);
 
-					if (building_obj_model_loader.is_model_valid(OBJ_MODEL_PHONE)) {
-						// TODO: TYPE_CONF_PHONE
+					if (building_obj_model_loader.is_model_valid(OBJ_MODEL_PHONE) && rgen.rand_float() < 0.75) { // add phone 75% of the time
+						unsigned sel_ix(0);
+						cube_t const place_area(get_rand_reception_desk_placement_cube(objs.back(), rgen, sel_ix));
+						
+						if (place_area.is_strictly_normalized()) {
+							bool pdim(0), pdir(0); // facing the chair
+							if      (sel_ix == 0) {pdim =  long_dim; pdir = !dir;} // front
+							else if (sel_ix == 1) {pdim = !long_dim; pdir = 1;} // left
+							else if (sel_ix == 2) {pdim = !long_dim; pdir = 0;} // right
+
+							if (place_phone_on_obj(rgen, place_area, room_id, tot_light_amt, pdim, pdir, 0.2)) { // allow a bit of overhang
+								objs[rdesk_ix].item_flags |= (1 << sel_ix); // mark this surface as occupied
+							}
+						}
 					}
 					break; // done
 				} // for n
@@ -4053,6 +4084,15 @@ bool building_t::place_banana_on_obj(rand_gen_t &rgen, cube_t const &place_on, u
 	gen_xy_pos_for_cube_obj(bbc, place_on, bsz, height, rgen);
 	if (has_bcube_int(bbc, avoid)) return 0; // only make one attempt
 	interior->room_geom->objs.emplace_back(bbc, TYPE_BANANA, room_id, dim, rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt);
+	return 1;
+}
+
+bool building_t::place_phone_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, bool dim, bool dir, float overhang_amt) {
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_PHONE)) return 0;
+	float const height(0.03*get_window_vspace()), radius((1.0 - overhang_amt)*height*get_radius_for_square_model(OBJ_MODEL_PHONE)); // almost square
+	if (min(place_on.dx(), place_on.dy()) < 2.1*radius) return 0; // surface is too small to place this phone
+	cube_t const phone(place_cylin_object(rgen, place_on, radius, height, radius));
+	interior->room_geom->objs.emplace_back(phone, TYPE_CONF_PHONE, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt);
 	return 1;
 }
 
@@ -4817,6 +4857,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			cup_prob    = 0.6*place_cup_prob;
 			laptop_prob = 0.8*place_laptop_prob;
 			pizza_prob  = 1.0*place_pizza_prob;
+			if (i+1 < objs_end && objs[i+1].type == TYPE_CONF_PHONE) {avoid.push_back(objs[i+1]);} // avoid overlapping the conference phone
 		}
 		else if (obj.type == TYPE_DESK && !(obj.flags & RO_FLAG_ADJ_TOP)) { // desk with no computer monitor
 			book_prob   = 0.8*place_book_prob;
@@ -4856,15 +4897,14 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 		if (is_library) {book_prob *= 2.5;} // higher probability of books placed in a library
 		if (is_kitchen) {cup_prob  *= 2.0; pizza_prob *= 2.0;} // higher probability of cups and pizza if placed in a kitchen
 		room_object_t surface(obj); // deep copy to allow modification and avoid using an invalidated reference
+		unsigned sel_ix(0); // for reception desks
 		
 		if (obj.shape == SHAPE_CYLIN) { // find max contained XY rectangle (simpler than testing distance to center vs. radius)
 			for (unsigned d = 0; d < 2; ++d) {surface.expand_in_dim(d, -0.5*(1.0 - SQRTOFTWOINV)*surface.get_sz_dim(d));}
 		}
 		else if (obj.type == TYPE_RDESK) { // select a random cube
-			cube_t cubes[3]; // {front, left, right}
-			get_reception_desk_cubes(obj, cubes);
-			unsigned const rval_to_ix[4] = {0, 0, 1, 2}; // front cube is twice as likely
-			surface.copy_from(cubes[rval_to_ix[rgen.rand()&3]]);
+			surface.copy_from(get_rand_reception_desk_placement_cube(obj, rgen, sel_ix));
+			if (surface.is_all_zeros()) continue; // no surface to place on
 		}
 		// Note: after this point, the obj reference is invalid
 		if (is_eating_table) { // table in a room for eating, add a plate
@@ -4896,6 +4936,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			case 6: placed = (rgen.rand_probability(toy_prob)    && place_toy_on_obj   (rgen, surface, room_id, tot_light_amt, avoid)); break;
 			}
 		} // for n
+		if (placed && obj.type == TYPE_RDESK) {objs[i].item_flags |= (1 << sel_ix);} // mark this surface of the reception desk as occupied
 	} // for i
 }
 
