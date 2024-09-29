@@ -1146,6 +1146,7 @@ struct building_room_geom_t {
 	void add_chimney_cap(room_object_t const &c);
 	void add_ext_ladder(room_object_t const &c);
 	void add_int_ladder(room_object_t const &c);
+	void add_machine(room_object_t const &c);
 	void add_keyboard(room_object_t const &c);
 	void add_obj_with_top_texture  (room_object_t const &c, std::string const &texture_name, colorRGBA const &sides_color, bool is_small=0);
 	void add_obj_with_front_texture(room_object_t const &c, std::string const &texture_name, colorRGBA const &sides_color, bool is_small=0);
@@ -1889,6 +1890,7 @@ struct building_t : public building_geom_t {
 		unsigned windows_per_room, unsigned windows_per_room_side, bool hall_dim, bool hall_dir, rand_gen_t &rgen);
 	bool maybe_assign_interior_garage(bool &gdim, bool &gdir);
 	void add_parking_garage_ramp(rand_gen_t &rgen);
+	void add_machine_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,
 		unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border);
 	void connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part);

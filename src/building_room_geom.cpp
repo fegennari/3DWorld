@@ -1137,6 +1137,12 @@ void building_room_geom_t::add_int_ladder(room_object_t const &c) {
 	rotate_verts(mat.quad_verts, vector_from_dim_dir(!c.dim, (c.dim ^ c.dir)), 0.063*PI, about, verts_start);
 }
 
+void building_room_geom_t::add_machine(room_object_t const &c) {
+	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small, specular metal
+	// TODO: something more complex
+	mat.add_cube_to_verts_untextured(c, apply_light_color(c), EF_Z1); // placeholder
+}
+
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name(texture_name), 0.0), 1, 0, is_small)); // shadows
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // top face only

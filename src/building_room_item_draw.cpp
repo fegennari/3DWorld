@@ -1050,6 +1050,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_TRASH:      add_trash(c); break;
 		case TYPE_METAL_BAR:  add_metal_bar(c); break;
 		case TYPE_INT_LADDER: add_int_ladder(c); break;
+		case TYPE_MACHINE:    add_machine(c); break;
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		default: break;
 		} // end switch
