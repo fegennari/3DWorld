@@ -848,6 +848,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		auto it(xy_map.find(v));
 		if (it != xy_map.end()) {it->second.push_back(pipe_ix); continue;} // found
 		bool found(0);
+
 		// try to find an existing map value that's within align_dist of this value; messy and inefficient, but I'm not sure how else to do this
 		for (auto &i : xy_map) {
 			if (fabs(i.first - v) > align_dist) continue; // too far
@@ -961,6 +962,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	// connect drains/feeders to main pipe in !dim
 	for (auto const &v : xy_map) { // for each unique position along the main pipe
 		float radius(0.0), range_min(centerline), range_max(centerline), unconn_radius(0.0); // range of connector perpendicular to main pipe
+		float mp_pos(v.first);
 		point const &ref_p1(pipes[v.second.front()].p1);
 		unsigned num_keep(0);
 
@@ -985,7 +987,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 						if (d != extb_wall_dim) { // try moving away from the wall in case there was an outlet conduit there
 							float const offset_dist(0.35*wall_thickness); // should be about the diameter of a conduit
 							vector3d offset;
-							offset[extb_wall_dim] += (extb_wall_dir ? -1.0 : 1.0)*offset_dist;
+							offset[!d] += (extb_wall_dir ? -1.0 : 1.0)*offset_dist;
 							p1 += offset; p2 += offset;
 							
 							if (!has_int_obstacle_or_parallel_wall(pipe_t(p1, p2, r_test, d, PIPE_CONN, 3).get_bcube(), obstacles, walls)) {
@@ -994,7 +996,8 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 								}
 								pipe.p1 += offset; pipe.p2 += offset;
 								extra_extb_fitting_extend = offset_dist;
-								skip = 0;
+								mp_pos = p1[!d]; // update position
+								skip   = 0;
 							}
 						}
 					}
@@ -1028,8 +1031,10 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 
 		// we can skip adding a connector if short and under the main pipe
 		if (range_max - range_min > r_main) {
-			point p1(ref_p1), p2(p1); // copy dims !d and z from a representative pipe
-			p1[d] = range_min; p2[d] = range_max;
+			point p1, p2;
+			p1[!d] = p2[!d] = mp_pos;
+			p1[ d] = range_min; p2[d] = range_max;
+			p1.z   = p2.z = ref_p1.z;
 			pipes.emplace_back(p1, p2, radius, d, PIPE_CONN, 3); // cap both ends
 
 			for (unsigned ix : v.second) { // add fittings
@@ -1043,12 +1048,12 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		// add fitting to the main pipe
 		point p1(mp[0]), p2(p1);
 		float const fitting_len(FITTING_LEN*r_main);
-		p1[!d] = v.first - fitting_len; p2[!d] = v.first + fitting_len;
+		p1[!d] = mp_pos - fitting_len; p2[!d] = mp_pos + fitting_len;
 		fittings.emplace_back(p1, p2, FITTING_RADIUS*r_main, !d, PIPE_FITTING, 3);
 		// update main pipe endpoints to include this connector pipe range
-		min_eq(mp[0][dim], v.first-radius);
-		max_eq(mp[1][dim], v.first+radius);
-		conn_pipe_pos.push_back(v.first);
+		min_eq(mp[0][dim], mp_pos-radius);
+		max_eq(mp[1][dim], mp_pos+radius);
+		conn_pipe_pos.push_back(mp_pos);
 		++num_conn_segs;
 	} // for v
 	if (mp[0][dim] >= mp[1][dim]) return 0; // no pipes connected to main? I guess there's nothing to do here
