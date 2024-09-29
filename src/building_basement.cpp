@@ -1071,7 +1071,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			p.type     = PIPE_EXTB;
 			if (p.dim == dim) {p.end_flags |= (1 << (p.conn_dir+2));} // flag connection point as round end if it's a right angle
 			pipe_t const parent(p); // make a copy to avoid invalidating the p reference
-			add_ext_basement_hallway_pipes_recur(interior->ext_basement_hallway_room_id, extb_wall_dim, pipe_type, parent, pipes, fittings, rgen);
+			add_ext_basement_hallway_pipes_recur(interior->ext_basement_hallway_room_id, extb_wall_dim, pipe_type, radius_factor, parent, pipes, fittings, rgen);
 			break;
 		} // for p
 	} // for ep
@@ -1328,7 +1328,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	return 1;
 }
 
-void building_t::add_ext_basement_hallway_pipes_recur(unsigned room_id, bool hall_dim, unsigned pipe_type,
+void building_t::add_ext_basement_hallway_pipes_recur(unsigned room_id, bool hall_dim, unsigned pipe_type, float radius_factor,
 	pipe_t const &parent, vector<pipe_t> &pipes, vector<pipe_t> &fittings, rand_gen_t &rgen) const
 {
 	// Note: pipes added here may loop around and meet each other or intersect other basement pipes if the extended basement hallway runs under the building;
@@ -1354,7 +1354,7 @@ void building_t::add_ext_basement_hallway_pipes_recur(unsigned room_id, bool hal
 		pipe_t conn_pipe(parent);
 		// 0.8x = ~0.5^3; limit to between parent pipe radius and base pipe radius
 		conn_pipe.radius = min(parent.radius, max(0.8f*parent.radius, rmin));
-		float const wall_dist(get_pipe_dist_to_wall(conn_pipe.radius, get_trim_thickness()));
+		float const wall_dist(get_pipe_dist_to_wall(radius_factor*conn_pipe.radius, get_trim_thickness()));
 		point conn_pt(parent.p1);
 		conn_pt[hall_dim] = room_bounds.d[hall_dim][door_side] + (door_side ? -1.0 : 1.0)*wall_dist; // adjacent to wall on side of door closest to source
 		conn_pipe.p1 = conn_pipe.p2 = conn_pt;
@@ -1367,7 +1367,7 @@ void building_t::add_ext_basement_hallway_pipes_recur(unsigned room_id, bool hal
 		point fitting_p1(conn_pt), fitting_p2(conn_pt);
 		fitting_p1[hall_dim] -= fitting_len; fitting_p2[hall_dim] += fitting_len;
 		fittings.emplace_back(fitting_p1, fitting_p2, FITTING_RADIUS*parent.radius, hall_dim, PIPE_FITTING, 3);
-		add_ext_basement_hallway_pipes_recur(conn_room_id, !hall_dim, pipe_type, conn_pipe, pipes, fittings, rgen);
+		add_ext_basement_hallway_pipes_recur(conn_room_id, !hall_dim, pipe_type, radius_factor, conn_pipe, pipes, fittings, rgen);
 	} // for ds
 }
 
@@ -1685,7 +1685,7 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 		room_t const &hallway(interior->get_room(interior->ext_basement_hallway_room_id));
 		extb_area = get_walkable_room_bounds(hallway);
 		bool const wdim(interior->extb_wall_dim), wdir(interior->extb_wall_dir), first_side(rgen.rand_bool());
-		float const wall_dist(get_pipe_dist_to_wall(extb_pipe_radius, get_trim_thickness()));
+		float const wall_dist(get_pipe_dist_to_wall(extb_pipe_radius, get_trim_thickness())); // calculated for sewer pipe, but should be large enough for water/HW pipes
 		point conn_pt(0.0, 0.0, ceil_zval);
 		conn_pt[wdim] = extb_area.d[wdim][wdir]; // at the far end of the hallway
 
