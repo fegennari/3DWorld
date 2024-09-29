@@ -948,6 +948,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	bool const d(!dim);
 	float const conn_pipe_merge_exp = 3.0; // cubic
 	unsigned const conn_pipes_start(pipes.size());
+	vector<float> conn_pipe_pos;
 	float extra_extb_fitting_extend(0.0);
 	bool had_extb_conn(0);
 
@@ -1041,9 +1042,11 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		// update main pipe endpoints to include this connector pipe range
 		min_eq(mp[0][dim], v.first-radius);
 		max_eq(mp[1][dim], v.first+radius);
+		conn_pipe_pos.push_back(v.first);
 		++num_conn_segs;
 	} // for v
 	if (mp[0][dim] >= mp[1][dim]) return 0; // no pipes connected to main? I guess there's nothing to do here
+	unsigned const conn_pipe_fittings_end(fittings.size());
 
 	// reroute extended basement pipe(s) from next to door to the end of the hallway; only one of them should actually be connected
 	for (pipe_t const &ep : extb_conn) {
@@ -1077,6 +1080,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	} // for ep
 	vector_add_to(vert_conn_pipes, pipes);
 	unsigned main_pipe_end_flags(0); // start with both ends unconnected
+	bool no_main_pipe(0);
 
 	if (add_exit_pipe) {
 		bool tried_horizontal(0);
@@ -1133,17 +1137,36 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 				if (added_exit) break;
 			}
 			// create exit segment and vertical pipe into the floor
+			float const exit_floor_zval(basement.z1() + fc_thickness); // on the bottom level floor
+			unsigned exit_pipe_end_flags(2); // bend at the top only
+
+			if (short_main_pipe && conn_pipe_pos.size() == 1) { // align to the single connector pipe
+				point exit_conn(mp[0]); // can use either mp
+				exit_conn[dim] = conn_pipe_pos.front(); // connect directly to the pipe
+				exit_pos = get_closest_wall_pos(exit_conn, r_main_spacing, basement, walls, obstacles, 1);
+				
+				if (exit_pos[!dim] != exit_conn[!dim]) { // exit point not along the main pipe; create a right angle bend
+					// this doesn't look quite right when the exit point is on the same side of the main pipe as the connector pipe, but this is relatively rare
+					pipes.emplace_back(exit_conn, exit_pos, r_main, !dim, PIPE_MEC, 3); // main exit connector, bends at both ends
+					exit_pipe_end_flags = 0; // the above pipe will provide the bend, so it's not needed at the top of the exit pipe
+				}
+				point exit_floor_pos(exit_pos);
+				exit_floor_pos.z = exit_floor_zval;
+				pipes.emplace_back(exit_floor_pos, exit_pos, r_main, 2, PIPE_EXIT, exit_pipe_end_flags); // bend at the top only
+				if (conn_pipe_fittings_end > 0) {fittings.erase(fittings.begin()+conn_pipe_fittings_end-1);} // remove the conn pipe fitting as it's not needed
+				no_main_pipe = 1;
+				break; // done
+			}
+			// find the end closest to the wall
 			float exit_dmin(0.0);
 
-			for (unsigned d = 0; d < 2; ++d) { // dim
+			for (unsigned d = 0; d < 2; ++d) { // choose the exit side
 				point const cand_exit_pos(get_closest_wall_pos(mp[d], r_main_spacing, basement, walls, obstacles, 1)); // vertical=1
 				float dist(p2p_dist(mp[d], cand_exit_pos));
 				if (dist == 0.0) {dist = FLT_MAX;} // dist will be 0 if we fail to find a wall, so don't prefer it in that case
 				if (exit_dmin == 0.0 || dist < exit_dmin) {exit_pos = cand_exit_pos; exit_dir = d; exit_dmin = dist;}
 			}
 			point &exit_conn(mp[exit_dir]);
-			unsigned exit_pipe_end_flags(2); // bend at the top only
-			float const exit_floor_zval(basement.z1() + fc_thickness); // on the bottom level floor
 
 			if (exit_pos[!dim] == exit_conn[!dim]) { // exit point is along the main pipe
 				if (exit_conn[dim] == exit_pos[dim]) { // exit is exactly at the pipe end
@@ -1188,26 +1211,20 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			point exit_floor_pos(exit_pos);
 			exit_floor_pos.z = exit_floor_zval;
 			pipes.emplace_back(exit_floor_pos, exit_pos, r_main, 2, PIPE_EXIT, exit_pipe_end_flags);
-
-			if (short_main_pipe) { // short main pipe connected to vertical needs some adjustments to the fittings
-				point &open_end(mp[!exit_dir]);
-				point end_ext(open_end);
-				end_ext[dim] += (exit_dir ? 1.0 : -1.0)*0.25*r_main; // actually moves toward the interior/exit end of the pipe
-				pipes.emplace_back(open_end, end_ext, r_main, dim, PIPE_FITTING, (1<<unsigned(exit_dir)));
-			}
 			break; // success
 		} // for attempt
 	} // end add_exit_pipe
 	// add main pipe
-	assert(mp[0] != mp[1]);
-	pipe_t main_pipe(mp[0], mp[1], r_main, dim, PIPE_MAIN, main_pipe_end_flags);
+	if (!no_main_pipe) {
+		assert(mp[0] != mp[1]);
+		pipe_t main_pipe(mp[0], mp[1], r_main, dim, PIPE_MAIN, main_pipe_end_flags);
 	
-	if (!main_pipe.get_bcube().is_strictly_normalized()) {
-		cout << "Error: Invalid main pipe: " << TXT(r_main) << TXT(mp[0].str()) << TXT(mp[1].str()) << TXT(main_pipe.get_bcube().str()) << endl;
-		assert(0);
+		if (!main_pipe.get_bcube().is_strictly_normalized()) {
+			cout << "Error: Invalid main pipe: " << TXT(r_main) << TXT(mp[0].str()) << TXT(mp[1].str()) << TXT(main_pipe.get_bcube().str()) << endl;
+			assert(0);
+		}
+		pipes.push_back(main_pipe);
 	}
-	pipes.push_back(main_pipe);
-
 	// add pipe objects: sewer: dark gray pipes / gray-brown fittings; water: copper pipes / brass fittings; hot water: white insulation
 	colorRGBA const pcolors[4] = {DK_GRAY, COPPER_C, COPPER_C, GRAY}; // sewer, cw, hw, gas
 	colorRGBA const fcolors[4] = {colorRGBA(0.7, 0.6, 0.5, 1.0), BRASS_C, BRASS_C, DK_GRAY}; // sewer, cw, hw, gas
