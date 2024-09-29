@@ -2303,6 +2303,7 @@ private:
 	bool add_padlock_to_door     (unsigned door_ix, unsigned lock_color_mask, rand_gen_t &rgen);
 	bool remove_padlock_from_door(unsigned door_ix, point const &remove_pos);
 	vector3d get_parked_car_size() const;
+	cube_t get_ext_basement_door_blocker() const;
 	void add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 		unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z);
 	void add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t &rooms_to_light);

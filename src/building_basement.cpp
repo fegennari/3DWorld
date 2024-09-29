@@ -300,6 +300,15 @@ void add_pg_obstacles(vect_room_object_t const &objs, unsigned objs_start, unsig
 	} // for i
 }
 
+cube_t building_t::get_ext_basement_door_blocker() const {
+	if (!has_ext_basement()) return cube_t();
+	door_t const &eb_door(interior->get_ext_basement_door());
+	cube_t avoid(eb_door.get_true_bcube());
+	avoid.expand_in_dim( eb_door.dim, get_doorway_width ());
+	avoid.expand_in_dim(!eb_door.dim, get_wall_thickness());
+	return avoid;
+}
+
 void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 	unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z)
 {
@@ -357,10 +366,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles_exp, 0.9*window_vspacing); // with more  clearance in front, for walls and pillars
 
 	if (has_ext_basement()) { // everything should avoid the extended basement door
-		door_t const &eb_door(interior->get_ext_basement_door());
-		cube_t avoid(eb_door.get_true_bcube());
-		avoid.expand_in_dim( eb_door.dim, get_doorway_width ());
-		avoid.expand_in_dim(!eb_door.dim, get_wall_thickness());
+		cube_t const &avoid(get_ext_basement_door_blocker());
 		obstacles    .push_back(avoid);
 		obstacles_exp.push_back(avoid);
 		obstacles_ps .push_back(avoid);
@@ -1849,12 +1855,8 @@ void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t con
 			if (is_house) { // try to reroute outlet conduits that were previously placed on the same wall horizontally to the breaker box
 				float const conn_height(c.z1() + rgen.rand_uniform(0.25, 0.75)*c.dz());
 				cube_t avoid;
+				if (has_ext_basement()) {avoid = get_ext_basement_door_blocker();}
 
-				if (has_ext_basement()) {
-					door_t const &eb_door(interior->get_ext_basement_door());
-					avoid = eb_door.get_true_bcube();
-					avoid.expand_in_dim(eb_door.dim, get_wall_thickness());
-				}
 				// Note: only need to check basement objects, but there's no easy way to do this (index not recorded), so we check them all
 				for (unsigned i = 0; i < objs_start; ++i) { // can't use an iterator as it may be invalidated
 					room_object_t &obj(objs[i]);
@@ -1968,6 +1970,7 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 	float const trim_thickness(get_trim_thickness()), wall_thickness(get_wall_thickness());
 	vect_cube_t pipe_cubes, obstacles, walls, beams; // beams remains empty
 	unsigned room_id(0);
+	if (has_ext_basement()) {obstacles.push_back(get_ext_basement_door_blocker());}
 
 	// we can't pass in a single valid room_id because house basements/pipes span multiple rooms, but we can at least use the ID of a room in the basement
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
@@ -2074,11 +2077,8 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 				cube_t test_cube(ramp_cand);
 				test_cube.expand_in_dim(!dim, road_width); // extend outward for clearance to enter/exit the ramp (ramp dim is actually !dim)
 				if (interior->is_blocked_by_stairs_or_elevator(test_cube)) continue;
-				
-				if (has_ext_basement()) { // check for backrooms door, in case it was placed already (but currently it's not)
-					test_cube.expand_in_dim(dim, get_wall_thickness());
-					if (interior->get_ext_basement_door().get_true_bcube().intersects(test_cube)) continue; // blocked by backrooms door
-				}
+				// check for backrooms door, in case it was placed already (but currently it's not)
+				if (has_ext_basement() && get_ext_basement_door_blocker().intersects(test_cube)) continue; // blocked by extended basement door
 				ramp = cube_with_ix_t(ramp_cand, (((!dim)<<1) + dir)); // encode dim and dir in ramp index field
 				added_ramp = 1;
 				break; // done
