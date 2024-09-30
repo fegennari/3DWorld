@@ -317,14 +317,17 @@ void rgeom_mat_t::add_sphere_to_verts(point const &center, vector3d const &size,
 	assert(indices.back() < itri_verts.size());
 }
 
-void rgeom_mat_t::add_vert_torus_to_verts(point const &center, float r_inner, float r_outer, colorRGBA const &color, float tscale, bool low_detail) {
-	unsigned const ndiv(get_rgeom_sphere_ndiv(low_detail));
+void rgeom_mat_t::add_vert_torus_to_verts(point const &center, float r_inner, float r_outer, colorRGBA const &color,
+	float tscale, bool low_detail, bool half, float s_offset)
+{
+	unsigned const ndiv(get_rgeom_sphere_ndiv(low_detail)), s_end(half ? ndiv/2 : ndiv);
 	float const ts_tt(tscale/ndiv), ds(TWO_PI/ndiv), cds(cos(ds)), sds(sin(ds));
 	vector<float> const &sin_cos(gen_torus_sin_cos_vals(ndiv));
 	color_wrapper const cw(color);
+	s_offset *= TWO_PI;
 
-	for (unsigned s = 0; s < ndiv; ++s) { // outer
-		float const theta(s*ds), ct(cos(theta)), st(sin(theta)), ct2(ct*cds - st*sds), st2(st*cds + ct*sds);
+	for (unsigned s = 0; s < s_end; ++s) { // outer
+		float const theta(s*ds + s_offset), ct(cos(theta)), st(sin(theta)), ct2(ct*cds - st*sds), st2(st*cds + ct*sds);
 		point const pos [2] = {point(ct, st, 0.0), point(ct2, st2, 0.0)};
 		point const vpos[2] = {(center + pos[0]*r_outer), (center + pos[1]*r_outer)};
 		unsigned const tri_ix_start(itri_verts.size()), ixs_start(indices.size());
@@ -356,10 +359,12 @@ void rgeom_mat_t::add_contained_vert_torus_to_verts(cube_t const &c, colorRGBA c
 	assert(r_inner > 0.0 && r_outer > 0.0); // cube must be wider than it is tall
 	add_vert_torus_to_verts(c.get_cube_center(), r_inner, r_outer, color, tscale, low_detail);
 }
-void rgeom_mat_t::add_ortho_torus_to_verts(point const &center, float r_inner, float r_outer, unsigned dim, colorRGBA const &color, float tscale, bool low_detail) {
+void rgeom_mat_t::add_ortho_torus_to_verts(point const &center, float r_inner, float r_outer, unsigned dim, colorRGBA const &color,
+	float tscale, bool low_detail, bool half, float s_offset)
+{
 	assert(dim < 3);
 	unsigned const verts_start(itri_verts.size()), ixs_start(indices.size());
-	add_vert_torus_to_verts(all_zeros, r_inner, r_outer, color, tscale, low_detail);
+	add_vert_torus_to_verts(all_zeros, r_inner, r_outer, color, tscale, low_detail, half, s_offset);
 	
 	if (dim < 2) { // swap X or Y with Z
 		for (auto i = itri_verts.begin()+verts_start; i != itri_verts.end(); ++i) {
@@ -927,7 +932,8 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_FISHTANK:  add_fishtank(*i); break;
 		case TYPE_OFF_PILLAR:add_wall_or_pillar(*i, tex_origin, wall_tex); break;
 		case TYPE_CONF_TABLE:add_conference_table(*i, tscale); break;
-		case TYPE_INT_WINDOW: add_int_window(*i); break;
+		case TYPE_INT_WINDOW:add_int_window(*i); break;
+		case TYPE_BUCKET:    add_bucket(*i, 0, 1); break; // draw_metal=0, draw_liquid=1
 		//case TYPE_FRIDGE: if (i->is_open()) {} break; // draw open fridge?
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
@@ -974,6 +980,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_DESK:      add_desk     (c, tscale, 0, 1); break;
 		case TYPE_DRESSER: case TYPE_NIGHTSTAND: add_dresser(c, tscale, 0, 1); break;
 		case TYPE_TCAN:      add_trashcan (c); break;
+		case TYPE_BUCKET:    add_bucket   (c, 1, 0); break; // draw_metal=1, draw_liquid=0
 		case TYPE_SIGN:      add_sign     (c, 1, inc_text); break; // sm, maybe text
 		case TYPE_CLOSET:    add_closet   (c, tid_nm_pair_t(), trim_color, 0, 1); break; // add closet wall trim and interior objects, don't need wall_tex; inc_lg=0, inc_sm=1
 		case TYPE_SHOWER:    add_shower   (c, tscale, 0, 1); break; // inc_lg=0, inc_sm=1

@@ -476,7 +476,7 @@ enum { // room object types
 	TYPE_POOL_BALL, TYPE_POOL_CUE, TYPE_WALL_MOUNT, TYPE_POOL_TILE, TYPE_POOL_FLOAT, TYPE_BENCH, TYPE_DIV_BOARD, TYPE_FALSE_DOOR, TYPE_FLASHLIGHT, TYPE_CANDLE,
 	TYPE_CAMERA, TYPE_CLOCK, TYPE_DOWNSPOUT, TYPE_SHELFRACK, TYPE_CHIM_CAP, TYPE_FOOD_BOX, TYPE_SAFE, TYPE_LADDER, TYPE_CHECKOUT, TYPE_FISHTANK,
 	TYPE_LAVALAMP, TYPE_SHOWERTUB, TYPE_TRASH, TYPE_VALVE, TYPE_METAL_BAR, TYPE_OFF_PILLAR, TYPE_DRINK_CAN, TYPE_CONF_TABLE, TYPE_INT_WINDOW, TYPE_INT_LADDER,
-	TYPE_MACHINE,
+	TYPE_MACHINE, TYPE_BUCKET,
 	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_WALL_LAMP, TYPE_CUP, TYPE_TOASTER,
@@ -824,8 +824,10 @@ public:
 	{
 		add_sphere_to_verts(c.get_cube_center(), 0.5*c.get_size(), color, low_detail, skip_hemi_dir, tr, matrix, ts_add, tt_add);
 	}
-	void add_vert_torus_to_verts (point const &center, float r_inner, float r_outer, colorRGBA const &color, float tscale=1.0, bool low_detail=0);
-	void add_ortho_torus_to_verts(point const &center, float r_inner, float r_outer, unsigned dim, colorRGBA const &color, float tscale=1.0, bool low_detail=0);
+	void add_vert_torus_to_verts (point const &center, float r_inner, float r_outer, colorRGBA const &color,
+		float tscale=1.0, bool low_detail=0, bool half=0, float s_offset=0.0);
+	void add_ortho_torus_to_verts(point const &center, float r_inner, float r_outer, unsigned dim, colorRGBA const &color,
+		float tscale=1.0, bool low_detail=0, bool half=0, float s_offset=0.0);
 	void add_contained_vert_torus_to_verts(cube_t const &c, colorRGBA const &color, float tscale=1.0, bool low_detail=0);
 	void add_triangle_to_verts(point const v[3], colorRGBA const &color, bool two_sided, float tscale=1.0);
 	void add_quad_to_verts(point const v[4], colorRGBA const &color, float tscale=1.0);
@@ -1109,6 +1111,7 @@ struct building_room_geom_t {
 	void add_sink_water(room_object_t const &c);
 	void add_tv_picture(room_object_t const &c);
 	void add_trashcan(room_object_t const &c);
+	void add_bucket(room_object_t const &c, bool draw_metal, bool draw_liquid);
 	void add_laundry_basket(room_object_t const &c);
 	void add_water_heater(room_object_t const &c);
 	void add_furnace(room_object_t const &c);

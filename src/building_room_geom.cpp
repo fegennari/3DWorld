@@ -3686,6 +3686,30 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 	}
 }
 
+void building_room_geom_t::add_bucket(room_object_t const &c, bool draw_metal, bool draw_liquid) {
+	assert(c.shape == SHAPE_CYLIN);
+	float const bot_rscale = 0.65;
+
+	if (draw_metal) {
+		rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+		colorRGBA const color(apply_light_color(c));
+		mat.add_vcylin_to_verts(c, color, 1, 0, 1, 1, bot_rscale, 1.0); // untextured, bottom only, two_sided truncated cone with inverted bottom normal
+		// draw a half torus handle
+		float const r_outer(c.get_radius()), r_inner(0.05*r_outer);
+		point const handle_center(c.xc(), c.yc(), c.z2());
+		mat.add_ortho_torus_to_verts(handle_center, r_inner, r_outer, c.dim, color, 1.0, 0, 1, (c.dim ? 0.0 : 0.75)); // half
+	}
+	if (draw_liquid) { // maybe add liquid to the bucket
+		rand_gen_t rgen(c.create_rgen());
+		float const liquid_level(rgen.rand_uniform(-0.25, 0.75));
+		if (liquid_level <= 0.0) return; // no liquid
+		float const radius(c.get_radius()*(liquid_level + (1.0 - liquid_level)*bot_rscale));
+		point const center(c.xc(), c.yc(), (c.z1() + liquid_level*c.dz()));
+		colorRGBA const liquid_color(rgen.rand_uniform(0.01, 0.2), rgen.rand_uniform(0.01, 0.2), rgen.rand_uniform(0.01, 0.2), min(rgen.rand_uniform(0.25, 1.25), 1.0f));
+		get_untextured_material(0, 0, 0, 1).add_vert_disk_to_verts(center, radius, 0, apply_light_color(c, liquid_color)); // unshadowed, transparent
+	}
+}
+
 void add_pipe_with_bend(rgeom_mat_t &mat, colorRGBA const &color, point const &bot_pt, point const &top_pt, point const &bend, unsigned ndiv, float radius, bool draw_ends) {
 	mat.add_sphere_to_verts(bend, vector3d(radius, radius, radius), color, (ndiv == 16), -plus_z); // round part, low detail if ndiv==16, top hemisphere (always bends down)
 	mat.add_cylin_to_verts (bot_pt, bend, radius, radius, color, draw_ends, 0, 0, 0, 1.0, 1.0, 0, ndiv); // vertical

@@ -679,7 +679,7 @@ void add_rows_of_vcylinders(room_object_t const &c, cube_t const &region, float 
 	pos[ c.dim] = region.d[ c.dim][0] + 0.5*col_spacing;
 	pos[!c.dim] = region.d[!c.dim][0] + 0.5*row_spacing;
 	pos.z = region.z1();
-	if (type == TYPE_PAN || type == TYPE_TCAN || type == TYPE_VASE) {pos.z += 0.002*c.dz();} // shift up slightly to prevent Z-fighting
+	if (type == TYPE_PAN || type == TYPE_TCAN || type == TYPE_BUCKET || type == TYPE_VASE) {pos.z += 0.002*c.dz();} // shift up slightly to prevent Z-fighting
 	cube_t objc(get_cube_height_radius(pos, radius, height));
 	bool const is_drink(type == TYPE_BOTTLE || type == TYPE_DRINK_CAN);
 	unsigned rand_id(is_drink ? rgen.rand() : 0);
@@ -699,6 +699,7 @@ void add_rows_of_vcylinders(room_object_t const &c, cube_t const &region, float 
 				else if (type == TYPE_CANDLE    ) {obj.color = candle_color;}
 				else if (type == TYPE_TCAN      ) {obj.color = tcan_colors[rgen.rand()%NUM_TCAN_COLORS];}
 				else if (type == TYPE_LAMP      ) {obj.color = lamp_colors[rgen.rand()%NUM_LAMP_COLORS];}
+				else if (type == TYPE_BUCKET    ) {obj.color = LT_GRAY;}
 				else if (type == TYPE_PAN       ) {obj.color = GRAY_BLACK;}
 				objects.push_back(obj);
 			}
