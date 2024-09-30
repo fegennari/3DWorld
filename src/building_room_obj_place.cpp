@@ -116,7 +116,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 	else {
 		unsigned flags(0);
 
-		if (place_pos.z < ground_floor_z1 && rgen.rand_float() < 0.4) { // fallen basement chair 40% of the time
+		if (place_pos.z < ground_floor_z1 && rgen.rand_float() < 0.25) { // fallen basement chair 25% of the time
 			// rotate 90 degrees about back legs bottom, tilting backwards
 			cube_t new_chair(chair);
 			rotate_obj_cube(new_chair, chair, dim, dir);
