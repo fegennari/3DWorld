@@ -1831,6 +1831,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					if (is_rot_cube_visible(vis_bcube, xlate) && !((display_mode & 0x08) && check_obj_occluded(vis_bcube, camera_bs, oc, 0))) {maybe_visible = 1; break;}
 				} // for s
 			}
+			if (!maybe_visible && floor_is_above) { // check for light on ceiling at top of U-shaped stairs
+				for (stairwell_t const &s : interior->stairwells) {
+					if (s.is_u_shape() && s.contains_pt(lpos)) {maybe_visible = 1; break;} // light on floor in front of stairs may be visible to the player from behind
+				}
+			}
 			if (!maybe_visible) continue;
 		}
 		//if (line_intersect_walls(lpos, camera_rot)) continue; // straight line visibility test - for debugging, or maybe future use in assigning priorities
