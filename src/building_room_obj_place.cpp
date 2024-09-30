@@ -1945,7 +1945,10 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				if (interior->is_cube_close_to_doorway(urinal, room, 0.0, 1)) continue; // skip if close to a door
 				if (!check_cube_within_part_sides(urinal))                    continue; // outside the building
 				if (!avoid.is_all_zeros() && urinal.intersects(avoid))        continue;
-				objs.emplace_back(sep_wall, TYPE_STALL,  room_id, br_dim, !dir, 0, tot_light_amt, SHAPE_SHORT, stall_color);
+				
+				if (!interior->is_cube_close_to_doorway(sep_wall, room, 0.0, 1)) { // check for doors, when the bathroom door is not centered on the room
+					objs.emplace_back(sep_wall, TYPE_STALL,  room_id, br_dim, !dir, 0, tot_light_amt, SHAPE_SHORT, stall_color);
+				}
 				objs.emplace_back(urinal,   TYPE_URINAL, room_id, br_dim,  dir, 0, tot_light_amt);
 				add_bathroom_plumbing(objs.back());
 			} // for n
@@ -3858,9 +3861,11 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 				float const dir_sign(dir ? -1.0 : 1.0);
 				center[!dim] = place_area.d[!dim][dir] + dir_sign*server_hdepth;
 				set_wall_width(server, center[!dim], server_hdepth, !dim); // position from the wall
+				cube_t server_exp(server);
+				server_exp.expand_in_dim(dim, server_hwidth); // check for more side/width spacing for doors
 				
 				// Note: overlaps_other_room_obj includes previously placed servers, so we don't have to check for intersections at the corners of rooms
-				if (is_obj_placement_blocked(server, room, 1) || overlaps_other_room_obj(server, objs_start)) { // no space for server; try computer instead
+				if (is_obj_placement_blocked(server_exp, room, 1) || overlaps_other_room_obj(server, objs_start)) { // no space for server; try computer instead
 					set_wall_width(computer,  center[ dim], comp_hwidth, dim); // position along the wall
 					set_wall_width(computer, (place_area.d[!dim][dir] + 1.2*dir_sign*comp_hdepth), comp_hdepth, !dim); // position from the wall
 					if (is_obj_placement_blocked(computer, room, 1) || overlaps_other_room_obj(computer, objs_start)) continue;
