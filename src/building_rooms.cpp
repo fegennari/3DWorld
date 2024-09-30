@@ -287,7 +287,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		// reset is_public_on_floor when we move to a new apartment/hotel unit
 		if (r->unit_id != last_unit_id) {is_public_on_floor = 0; last_unit_id = r->unit_id;}
 		// make chair colors consistent for each part by using a few variables for a hash
-		colorRGBA chair_color(chair_colors[(13*r->part_id + 123*tot_num_rooms + 617*mat_ix + 1367*num_floors) % NUM_CHAIR_COLORS]);
+		colorRGBA const chair_color(chair_colors[(13*r->part_id + 123*tot_num_rooms + 617*mat_ix + 1367*num_floors) % NUM_CHAIR_COLORS]);
 		light_ix_assign.next_room();
 		rand_gen_t room_rgen(rgen); // shared across all floors of this room
 		// select light color for this room
@@ -536,7 +536,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			bool const must_be_bathroom(room_id == cand_bathroom && (multi_family ? !(added_bath_mask & floor_mask) : (num_bathrooms == 0)));
 			bool const is_tall_room(r->is_single_floor && r->dz() > 1.5*window_vspacing);
 			bool added_tc(0), added_desk(0), added_obj(0), can_place_onto(0), no_whiteboard(0), no_plants(0);
-			bool is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0), is_dining(0), is_storage(0), is_utility(0), is_machine(0), is_play_art(0), is_library(0);
+			bool is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0), is_dining(0), is_storage(0), is_utility(0), is_machine(0), is_play_art(0), is_library(0), is_inter(0);
 			unsigned num_chairs(0);
 			// unset room type if not locked on this floor during floorplanning; required to generate determinstic room geom
 			if (!r->is_rtype_locked(f)) {r->assign_to(RTYPE_NOTSET, f);}
@@ -691,6 +691,18 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (!added_obj && r->is_office) { // add cubicles if this is a large office
 				added_obj = no_whiteboard = create_office_cubicles(rgen, *r, room_center.z, room_id, tot_light_amt);
 			}
+			if (!added_obj && is_ext_basement && rgen.rand_float() < 0.5) { // machine room
+				if (add_machines_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {
+					r->assign_to(RTYPE_MACHINE, f);
+					added_obj = no_whiteboard = is_machine = 1;
+				}
+			}
+			if (!added_obj && is_ext_basement && water_damage > 0.25 && rgen.rand_float() < 0.25) { // interrogation room; only for buildings with water damage
+				if (add_interrogation_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {
+					r->assign_to(RTYPE_INTERR, f);
+					added_obj = no_whiteboard = is_inter = 1;
+				}
+			}
 			if (!added_obj && rgen.rand_float() < (is_basement ? 0.4 : (r->is_office ? 0.6 : (is_house ? 0.95 : 0.5)))) {
 				// place a table and maybe some chairs near the center of the room if it's not a hallway;
 				// 60% of the time for offices, 95% of the time for houses, and 50% for other buildings
@@ -770,7 +782,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (can_place_onto) { // an object was placed (table, desk, counter, etc.), maybe add a book or bottle on top of it
 				place_objects_onto_surfaces(rgen, *r, room_id, tot_light_amt, objs_start, f, is_basement, not_private_room);
 			}
-			if (residential_room && !is_utility) { // place house/apartment/hotel-specific items
+			if (residential_room && !is_utility && !is_inter) { // place house/apartment/hotel-specific items
 				if (!is_bathroom && !is_kitchen && !is_library && rgen.rand_float() < (is_basement ? 0.25 : 0.8)) {
 					// place bookcase 80% of the time, but not in bathrooms, kitchens, or utlity rooms
 					rand_gen_t rgen2(rgen); // copy so that rgen isn't updated in the call below
@@ -799,11 +811,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						r->assign_to((is_lobby ? (room_type)RTYPE_LOBBY : (room_type)RTYPE_LOUNGE), f);
 						if (!is_house) {add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_lobby);}
 					}
-				}
-				else if (is_ext_basement && rgen.rand_bool()) { // machine room
-					add_machine_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
-					r->assign_to(RTYPE_MACHINE, f);
-					is_machine = 1;
 				}
 				else if (!is_house) {r->assign_to(RTYPE_OFFICE, f);} // any unset room in an office building is an office
 				// else house

@@ -1668,7 +1668,8 @@ bool building_conn_info_t::point_in_conn_room(point const &pos_bs) const {
 	return 0;
 }
 
-void building_t::add_machine_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	// TODO
+	return 0;
 }
 

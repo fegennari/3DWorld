@@ -2552,15 +2552,53 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		set_obj_id(objs); // used to select texture and box contents
 		if (++num_placed == num_crates) break; // we're done
 	} // for n
-	if (rgen.rand_bool()) { // add a ladder leaning against the wall
-		float const ladder_height(rgen.rand_uniform(0.77, 0.95)*get_floor_ceil_gap());
-		vector3d const ladder_sz(0.25, rgen.rand_uniform(0.2, 0.22), 1.0); // D, W, H
-		cube_t const place_area(get_walkable_room_bounds(room));
-		place_obj_along_wall(TYPE_INT_LADDER, room, ladder_height, ladder_sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 1, 4, 0, GRAY);
-	}
+	// add a ladder leaning against the wall
+	if (rgen.rand_bool()) {add_ladder_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);}
 	// add office building storage room sign, in a hallway, basement, etc.
 	if (!is_house /*&& !is_basement*/) {add_door_sign((has_stairs ? "Stairs" : "Storage"), room, zval, room_id);}
 	return 1; // it's always a storage room, even if it's empty
+}
+
+bool building_t::add_ladder_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	float const ladder_height(rgen.rand_uniform(0.77, 0.95)*get_floor_ceil_gap());
+	vector3d const ladder_sz(0.25, rgen.rand_uniform(0.2, 0.22), 1.0); // D, W, H
+	cube_t const place_area(get_walkable_room_bounds(room));
+	return place_obj_along_wall(TYPE_INT_LADDER, room, ladder_height, ladder_sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 1, 4, 0, GRAY);
+}
+
+bool building_t::add_interrogation_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	// find the direction to the main (first) door
+	bool dim(0), dir(0);
+	unsigned const first_door_ix(has_ext_basement() ? interior->ext_basement_door_stack_ix : 0);
+	
+	for (auto ds = interior->door_stacks.begin()+first_door_ix; ds != interior->door_stacks.end(); ++ds) {
+		door_t const &door(get_door(ds->first_door_ix)); // assume a single door stack
+		if (!door.is_connected_to_room(room_id)) continue;
+		dim = door.dim;
+		dir = (room.get_center_dim(dim) < door.get_center_dim(dim));
+		break; // found the door - done
+	}
+	// add a single chair in the center, facing the door; it may have falled over
+	point const chair_pos(room.xc(), room.yc(), zval);
+	colorRGBA const chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
+	if (!add_chair(rgen, room, vect_cube_t(), room_id, chair_pos, chair_color, dim, dir, tot_light_amt)) return 0; // should always return true?
+	// add bucket(s)
+	unsigned const num_buckets((rgen.rand() % 3) + 1); // 1-3
+	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness());
+	vect_room_object_t &objs(interior->room_geom->objs);
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.z1() = zval + 1.5*get_flooring_thick(); // slightly above the flooring/rug to avoid z-fighting
+
+	for (unsigned n = 0; n < num_buckets; ++n) {
+		float const height(rgen.rand_uniform(0.1, 0.15)*floor_spacing), radius(rgen.rand_uniform(0.4, 0.6)*height);
+		cube_t const bucket(place_cylin_object(rgen, place_area, radius, height, (radius + trim_thickness), 1)); // place_at_z1=1
+		if (is_obj_placement_blocked(bucket, room, 1) || overlaps_other_room_obj(bucket, objs_start)) continue; // bad placement
+		objs.emplace_back(bucket, TYPE_BUCKET, room_id, rgen.rand_bool(), 0, 0, tot_light_amt, SHAPE_CYLIN, LT_GRAY); // dir=0 (unused)
+		set_obj_id(objs); // used for setting water/liquid properties
+	}
+	// add a ladder leaning against the wall
+	if (rgen.rand_bool()) {add_ladder_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);}
+	return 1;
 }
 
 void building_t::add_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
