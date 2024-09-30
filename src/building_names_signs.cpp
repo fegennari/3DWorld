@@ -459,8 +459,10 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
 		if (!is_cube_close_to_door(c, 0.0, 0, *i, 2)) continue; // check both dirs; should we check that the room on the other side of the door is a hallway?
-		// put the sign toward the outside of the building because there's more space and more light
-		bool const side(room_center[i->dim] < i->get_center_dim(i->dim)), shift_dir(room_center[!i->dim] < part_center[!i->dim]);
+		float const door_offset(i->get_center_dim(!i->dim) - room_center[!i->dim]); // in width dim
+		bool const side(room_center[i->dim] < i->get_center_dim(i->dim));
+		// put the sign toward the outside of the building when the door is centered because there's more space and more light; otherwise, center on the room
+		bool const shift_dir((fabs(door_offset) < wall_thickness) ? (room_center[!i->dim] < part_center[!i->dim]) : (door_offset > 0.0));
 		float const door_width(i->get_width()), side_sign(side ? 1.0 : -1.0);
 		cube_t sign(*i);
 		set_cube_zvals(sign, zval+0.55*floor_spacing, zval+0.6*floor_spacing); // high enough that it's not blocked by filing cabinets
