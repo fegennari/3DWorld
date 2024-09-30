@@ -308,7 +308,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
 	float const doorway_width(get_nominal_doorway_width()), doorway_hwidth(0.5*doorway_width);
 	float const wall_thick(get_wall_thickness()), wall_half_thick(0.5*wall_thick), wall_edge_spacing(0.05*wall_thick), min_wall_len(get_min_wall_len());
-	float const window_border(get_window_h_border());
+	float const window_border(get_window_h_border()), door_to_wall_dist(1.5*doorway_hwidth + wall_thick);
+	bool const put_doors_in_corners(global_building_params.put_doors_in_corners);
 	vector3d const car_sz(get_nom_car_size());
 	point bldg_door_open_dir_tp(bcube.get_cube_center()); // used to determine in which direction doors open; updated base on central hallway
 	// houses have at most two parts; exclude garage, shed, porch, porch support, etc.
@@ -594,6 +595,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 								insert_door_in_wall_and_add_seg(long_swall, lo_pos, hi_pos, !min_dim, d, !e);
 							}
 						} // for e
+						bool const doors_in_corners(put_doors_in_corners && cent_room_width > 2.0*doorway_width);
+						bool const door_side(doors_in_corners ? rgen.rand_bool() : 0); // side to push the door when in a corner of the room; consistent per wall
+
 						for (unsigned n = 0; n <= num_cent_rooms; ++n) { // center rooms, inside and outside
 							float const start_pos(shift_val_to_not_intersect_window(*p, room_pos, hspace, window_border, !min_dim));
 
@@ -601,8 +605,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 								float const next_pos(shift_val_to_not_intersect_window(*p, (room_pos + cent_room_width), hspace, window_border, !min_dim));
 								room_pos += cent_room_width; // move to next row
 								room_outer.d[!min_dim][0] = start_pos;
-								room_inner.d[!min_dim][0] = ((n == 0) ? (rooms_start + wall_half_thick) : start_pos); // first inner room is relative to the sec hallway
 								room_outer.d[!min_dim][1] = next_pos;
+								room_inner.d[!min_dim][0] = ((n == 0) ? (rooms_start + wall_half_thick) : start_pos); // first inner room is relative to the sec hallway
 								room_inner.d[!min_dim][1] = ((n+1 == num_cent_rooms) ? (rooms_end - wall_half_thick) : next_pos); // last inner room is relative to sec hallway
 								add_room(room_outer, part_id, 1, 0, 1); // office
 								add_room(room_inner, part_id, 1, 0, 1); // office or bathroom
@@ -614,10 +618,15 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 									(next_to_br ? utility_room_cands : special_room_cands).push_back(rooms.size() - 1); // utility rooms must be next to the bathroom
 								}
 								// add doors to 2-3 walls
-								float const door_pos(0.5f*(start_pos + next_pos)), lo_pos(door_pos - doorway_hwidth), hi_pos(door_pos + doorway_hwidth);
-								cube_t *to_split[3] = {&long_swall, &short_swall, &main_wall};
+								float door_pos(0.5f*(start_pos + next_pos)); // centered by default
+								cube_t *to_split[3] = {&long_swall, &short_swall, &main_wall}; // outer, inner, inner
 
 								for (unsigned k = 0; k < num_doors_inner_rooms; ++k) {
+									if (doors_in_corners) {
+										cube_t const &room(k ? room_inner : room_outer);
+										door_pos = (door_side ? (room.d[!min_dim][1] - door_to_wall_dist) : (room.d[!min_dim][0] + door_to_wall_dist));
+									}
+									float const lo_pos(door_pos - doorway_hwidth), hi_pos(door_pos + doorway_hwidth);
 									insert_door_in_wall_and_add_seg(*to_split[k], lo_pos, hi_pos, !min_dim, (d^(k&1)), 1, is_bathroom);
 								}
 							}
@@ -686,6 +695,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						}
 						for (unsigned d = 0; d < 2; ++d) { // left, right of main hall
 							float const dsign(d ? -1.0 : 1.0);
+							bool const doors_in_corners(put_doors_in_corners && room_sub_width > 2.0*doorway_width);
+							// should the door always be close to the hallway (shorter walking path), or close to the exterior wall (no dead end hallway)?
+							bool const door_side(d); // closer to exterior wall
 							cube_t split_wall(*p);
 							split_wall.d[!min_dim][0] = room_start     + wall_edge_spacing; // start of building or end of prev sec hall
 							split_wall.d[!min_dim][1] = hall_start_pos - wall_edge_spacing; // start of this hall or end of building
@@ -742,8 +754,10 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 									(next_to_br ? utility_room_cands : special_room_cands).push_back(rooms.size() - 1); // utility rooms must be next to the bathroom
 								}
 								if (add_sec_hall) { // add doorways + doors
-									float const doorway_pos(0.5f*(room_split_pos + next_split_pos)); // room center
-									float const lo_pos(doorway_pos - doorway_hwidth), hi_pos(doorway_pos + doorway_hwidth);
+									float door_pos(0.0);
+									if (!doors_in_corners) {door_pos = 0.5f*(room_split_pos + next_split_pos);} // centered	
+									else {door_pos = (door_side ? (room.d[min_dim][1] - door_to_wall_dist) : (room.d[min_dim][0] + door_to_wall_dist));}
+									float const lo_pos(door_pos - doorway_hwidth), hi_pos(door_pos + doorway_hwidth);
 
 									for (unsigned dir = 0; dir < 2; ++dir) {
 										insert_door_in_wall_and_add_seg(sep_walls[dir], lo_pos, hi_pos, min_dim, dir, !d, is_bathroom); // bathroom doors are always open
@@ -772,6 +786,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				hall_walls.reserve(2*(num_rooms+1));
 				cube_t rwall(*p); // copy from part; shared zvals, but X/Y will be overwritten per wall
 				create_wall(rwall, !min_dim, wall_pos, fc_thick, wall_half_thick, wall_edge_spacing); // room walls, create first wall
+				//bool const doors_in_corners(put_doors_in_corners && !apt_or_hotel && room_len > 2.0*doorway_width); // this case is more complex and has not been implemented
 				vector<float> doorway_vals(2*num_rooms, 0.0);
 
 				for (int i = 0; i+1 < num_rooms; ++i) { // num_rooms-1 walls
@@ -822,7 +837,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						door_t door(c, min_dim, d); // copy zvals and wall pos
 						clip_wall_to_ceil_floor(door, fc_thick);
 						door.d[min_dim][d] = hall_wall_pos[d]; // set to zero area at hallway
-						for (unsigned e = 0; e < 2; ++e) {door.d[!min_dim][e] = doorway_vals[2*i+e];}
+						for (unsigned e = 0; e < 2; ++e) {door.d[!min_dim][e] = doorway_vals[2*i+e];} // set doorway left and right edges
 						add_interior_door(door, is_bathroom);
 						if (apt_or_hotel) {divide_last_room_into_apt_or_hotel(i, num_rooms, num_windows, windows_per_room, windows_per_side_od, !min_dim, d, rgen);}
 					} // for d
