@@ -743,7 +743,8 @@ bool building_t::add_conference_objs(rand_gen_t rgen, room_t const &room, float 
 			tv.d[dim][ dir] = room_bounds.d[dim][dir]; // on the wall
 			tv.d[dim][!dir] = tv.d[dim][dir] + (dir ? -1.0 : 1.0)*tv_depth;
 			if (overlaps_or_adj_int_window(tv)) continue; // check interior windows
-			objs.emplace_back(tv, TYPE_MONITOR, room_id, dim, !dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), tot_light_amt, SHAPE_SHORT, BLACK); // monitors are shorter than TVs
+			// here we want the name, weight, and value of a TV, but we want the images of a computer monitor, so set as TYPE_TV + SHAPE_SHORT
+			objs.emplace_back(tv, TYPE_TV, room_id, dim, !dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), tot_light_amt, SHAPE_SHORT, BLACK);
 			offset_hanging_tv(objs.back());
 			set_obj_id(objs);
 			objs.back().obj_id |= 1; // off by default; set LSB
