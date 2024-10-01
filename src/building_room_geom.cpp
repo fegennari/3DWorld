@@ -4604,13 +4604,7 @@ void building_room_geom_t::add_int_window(room_object_t const &c) {
 	colorRGBA const window_color(0.7, 1.0, 0.85, 0.15); // greenish tint, semi transparent
 	rgeom_mat_t &mat(get_untextured_material(0, 0, 0, 1)); // no shadows + transparent
 	mat.add_cube_to_verts_untextured(c, window_color, skip_faces);
-
-	if (c.is_broken()) { // glass is cracked
-		cube_t crack(c);
-		crack.expand_in_dim(c.dim, 0.1*c.get_depth());
-		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crack_tid(c, 2), 0.0, 0, true), 0, 0, 0, 1)); // alpha=2, unshadowed, transparent=1
-		mat.add_cube_to_verts(crack, colorRGBA(window_color, 1.0), c.get_llc(), skip_faces, (c.obj_id&1), (c.obj_id&2), (c.obj_id&4)); // swap and X/Y mirror based on obj_id
-	}
+	// Note: can't add a crack for broken interior windows because the window extends through multiple floors; cracks must be added with decals or TYPE_CRACK
 }
 
 colorRGBA const &get_outlet_or_switch_box_color(room_object_t const &c) {return (c.is_hanging() ? GRAY : c.color);} // should be silver metal
@@ -4728,8 +4722,9 @@ void building_room_geom_t::add_sink_water(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_crack(room_object_t const &c) { // in window? (TV and computer monitor cracks are drawn below)
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crack_tid(c), 0.0, 0, true), 0, 0, 1)); // unshadowed, small, transparent
-	mat.add_cube_to_verts(c, apply_light_color(c), all_zeros, get_face_mask(c.dim, c.dir), !c.dim, (c.obj_id&1), (c.obj_id&2)); // X/Y mirror based on obj_id
+	bool const use_alpha(c.color.A < 1.0);
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crack_tid(c, (use_alpha ? 2 : 0)), 0.0, 0, true), 0, 0, !use_alpha, use_alpha)); // unshadowed, small or transparent
+	mat.add_cube_to_verts(c, apply_light_color(c), c.get_llc(), get_face_mask(c.dim, c.dir), !c.dim, (c.obj_id&1), (c.obj_id&2)); // X/Y mirror based on obj_id
 }
 
 cube_t get_tv_screen(room_object_t const &c) {
