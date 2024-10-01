@@ -1669,7 +1669,41 @@ bool building_conn_info_t::point_in_conn_room(point const &pos_bs) const {
 }
 
 bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	// TODO
-	return 0;
+	float const floor_spacing(get_window_vspace()), fc_gap(get_floor_ceil_gap());
+	float const min_clearance(get_min_front_clearance_inc_people()), min_gap(max(get_doorway_width(), min_clearance));
+	cube_t const place_area(get_walkable_room_bounds(room)); // ignore trim?
+	cube_t avoid;
+	avoid.set_from_sphere(point(place_area.xc(), place_area.yc(), zval), min_clearance);
+	vector2d const place_sz(place_area.dx(), place_area.dy());
+	vector2d avail_sz, max_sz;
+	for (unsigned d = 0; d < 2; ++d) {avail_sz[d] = min(0.4f*place_sz[d], place_sz[d]-min_gap);}
+	for (unsigned d = 0; d < 2; ++d) {max_sz  [d] = min(avail_sz[d], 2.0f*avail_sz[!d]);} // keep aspect ratio <= 2:1
+	if (min(max_sz.x, max_sz.y) < 0.5*floor_spacing) return 0; // too small of a room to place a machine
+	unsigned const flags(0), num_machines((rgen.rand() % 2) + 1); // 1-2
+	vect_room_object_t &objs(interior->room_geom->objs);
+	bool any_placed(0);
+
+	for (unsigned n = 0; n < num_machines; ++n) {
+		float const height(fc_gap*rgen.rand_uniform(0.6, 0.9));
+		// similar to place_obj_along_wall(), but with custom size logic that depends on dim
+		cube_t c;
+		set_cube_zvals(c, zval, zval+height);
+
+		for (unsigned i = 0; i < 25; ++i) { // make 25 attempts to place the object
+			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
+			float const hwidth(0.5*max_sz[!dim]*rgen.rand_uniform(0.75, 1.0));
+			float const depth(min(2.0f*hwidth, max_sz[dim])*rgen.rand_uniform(0.75, 1.0));
+			float center(rgen.rand_uniform(place_area.d[!dim][0]+hwidth, place_area.d[!dim][1]-hwidth)); // random position
+			c.d[dim][ dir] = place_area.d[dim][dir];
+			c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
+			set_wall_width(c, center, hwidth, !dim);
+			if (c.intersects(avoid) || overlaps_other_room_obj(c, objs_start)) continue;
+			if (interior->is_blocked_by_stairs_or_elevator(c) || is_cube_close_to_doorway(c, room, 0.0, 1)) continue;
+			objs.emplace_back(c, TYPE_MACHINE, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CUBE, LT_GRAY);
+			any_placed = 1;
+			break; // done
+		} // for i
+	} // for n
+	return any_placed;
 }
 
