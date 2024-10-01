@@ -2140,6 +2140,7 @@ bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2,
 			if (has_cube_line_coll(p1, p2, interior->room_geom->pgbr_walls[d])) return 1;
 		}
 	}
+	if (check_line_int_interior_window(p1, p2)) return 1;
 	return 0;
 }
 bool building_t::line_intersect_stairs_or_ramp(point const &p1, point const &p2) const {
@@ -2690,6 +2691,11 @@ bool building_t::check_line_of_sight_large_objs(point const &p1, point const &p2
 		if (!contained && tot_len < 0.99*p2p_dist(p1, p2)) return 0;
 	}
 	return 1;
+}
+
+bool building_t::check_line_int_interior_window(point const &p1, point const &p2) const {
+	if (!interior || interior->int_windows.empty()) return 0;
+	return line_int_cubes(p1, p2, interior->int_windows, cube_t(p1, p2));
 }
 
 cube_t building_t::get_best_occluder(point const &camera_bs) const {

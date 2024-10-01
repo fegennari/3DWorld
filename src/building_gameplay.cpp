@@ -2251,6 +2251,11 @@ float get_paint_radius(point const &source, point const &hit_pos, bool is_sprayp
 	float const max_radius(get_paint_max_radius(is_spraypaint));
 	return (is_spraypaint ? min(max_radius, max(0.05f*max_radius, 0.1f*p2p_dist(source, hit_pos))) : max_radius); // modified version of get_spray_radius()
 }
+vector3d get_coll_normal(unsigned dim, vector3d const &line_dir) {
+	vector3d normal;
+	normal[dim] = -SIGN(line_dir[dim]); // normal is opposite of ray dir in this dim
+	return normal;
+}
 
 bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, unsigned emissive_color_id, room_object const obj_type) const { // spraypaint/marker
 	bool const is_spraypaint(obj_type == TYPE_SPRAYCAN), is_marker(obj_type == TYPE_MARKER);
@@ -2266,15 +2271,9 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	cube_t target;
 	
 	for (unsigned d = 0; d < 2; ++d) {
-		if (line_int_cubes_get_t(pos, pos2, interior->walls[d], tmin, target)) {
-			normal    = zero_vector;
-			normal[d] = -SIGN(dir[d]); // normal is opposite of ray dir in this dim
-		}
-		if (is_pos_in_pg_or_backrooms(pos) && line_int_cubes_get_t(pos, pos2, interior->room_geom->pgbr_walls[d], tmin, target)) {
-			normal    = zero_vector;
-			normal[d] = -SIGN(dir[d]); // normal is opposite of ray dir in this dim
-		}
-	} // for d
+		if (line_int_cubes_get_t(pos, pos2, interior->walls[d], tmin, target)) {normal = get_coll_normal(d, dir);}
+		if (is_pos_in_pg_or_backrooms(pos) && line_int_cubes_get_t(pos, pos2, interior->room_geom->pgbr_walls[d], tmin, target)) {normal = get_coll_normal(d, dir);}
+	}
 	if (line_int_cubes_get_t(pos, pos2, interior->floors  , tmin, target)) {normal =  plus_z;}
 	if (line_int_cubes_get_t(pos, pos2, interior->ceilings, tmin, target)) {normal = -plus_z;}
 	
@@ -2284,9 +2283,8 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		cube_t door(i->get_true_bcube());
 		if (!line_int_cube_get_t(pos, pos2, door, tmin)) continue;
 		target = door;
-		normal = zero_vector;
-		normal[i->dim] = -SIGN(dir[i->dim]);
-	} // for i
+		normal = get_coll_normal(i->dim, dir);
+	}
 	// check for rugs, pictures, and whiteboards, which can all be painted over; also check for walls from closets
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 	float const floor_spacing(get_window_vspace());
@@ -2384,8 +2382,16 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 			}
 		}
 	}
+	for (cube_t const &w : interior->int_windows) { // check interior windows
+		if (line_int_cube_get_t(pos, pos2, w, tmin)) {
+			bool const dim(w.dy() < w.dx());
+			target   = w;
+			normal   = get_coll_normal(dim, dir);
+			on_glass = 1;
+		}
+	}
 	if (line_int_cubes_get_t(pos, pos2, interior->room_geom->glass_floors, tmin, target)) { // check glass floors last
-		normal   = ((delta.z > 0.0) ? -plus_z : plus_z);
+		normal   = get_coll_normal(2, dir); // Z
 		on_glass = 1;
 	}
 	if (normal == zero_vector)            return 0; // no walls, ceilings, floors, etc. hit

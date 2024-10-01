@@ -2072,6 +2072,7 @@ private:
 	void get_room_obj_cubes(room_object_t const &c, point const &pos, vect_cube_t &lg_cubes, vect_cube_t &sm_cubes, vect_cube_t &non_cubes) const;
 	int  check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight, bool for_spider=0) const;
 	bool check_line_of_sight_large_objs(point const &p1, point const &p2) const;
+	bool check_line_int_interior_window(point const &p1, point const &p2) const;
 	bool check_and_handle_dynamic_obj_coll(point &pos, point const &cur_obj_pos, float radius,
 		float z1, float z2, point const &camera_bs, bool for_spider, bool skip_player=0) const;
 	bool get_begin_end_room_objs_on_ground_floor(float zval, bool for_spider, vect_room_object_t::const_iterator &b, vect_room_object_t::const_iterator &e) const;

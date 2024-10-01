@@ -698,7 +698,7 @@ void building_t::scare_rat(rat_t &rat, point const &camera_bs) const {
 			// determine if the player is close and visible for attack strength; can't use a return value of scare_rat_at_pos() due to early termination
 			if (fabs(rat.pos.z - camera_bs.z) < get_window_vspace()) { // same floor
 				if (dist_less_than(rat.pos, camera_bs, RAT_VIEW_FLOORS*get_window_vspace())) { // close enough; doesn't have to be in the same room
-					if (check_line_of_sight_large_objs(rat.pos, camera_bs)) {rat.near_player = 1;}
+					if (check_line_of_sight_large_objs(rat.pos, camera_bs)) {rat.near_player = 1;} // what about interior windows?
 				}
 			}
 		}
@@ -824,7 +824,7 @@ public:
 		apply_fc_cube_max_merge_xy(colliders);
 		sort_and_unique(colliders);
 	}
-	bool align_to_surfaces(spider_t &s, float delta_dir, point const &camera_bs, rand_gen_t &rgen) {
+	bool align_to_surfaces(spider_t &s, float delta_dir, rand_gen_t &rgen) {
 		if (colliders.empty()) return 0; // floating in midair
 		// Note: assumes last_pos is valid and non-intersecting; may not hold for initial placement or when objects are moved
 		float const dist(p2p_dist(s.pos, s.last_pos)), r_inner(size.get_min_val()), r_outer(size.get_max_val());
@@ -1041,7 +1041,7 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 	}
 	float const delta_dir(min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep))));
 
-	if (!surface_orienter.align_to_surfaces(spider, delta_dir, camera_bs, rgen)) { // not on a surface
+	if (!surface_orienter.align_to_surfaces(spider, delta_dir, rgen)) { // not on a surface
 		if (!spider.is_jumping()) { // if jumping, we continue the jump; otherwise, drop to a surface below using a web
 			if (!spider.on_web) {
 				spider.web_start_zval = max(spider.pos.z, spider.last_pos.z) + spider.get_xy_radius();
@@ -1609,14 +1609,17 @@ void building_t::update_fly(insect_t &fly, point const &camera_bs, float timeste
 
 	for (auto const &target : targets) {
 		bool const is_player(target.second == camera_bs);
-		if ((get_room_containing_pt(pos) != (is_player ? cur_player_building_loc.room_ix : get_room_containing_pt(target.second)) &&
-			!is_pt_visible(pos, target.second))) continue; // not visible
+		
+		if (get_room_containing_pt(pos) != (is_player ? cur_player_building_loc.room_ix : get_room_containing_pt(target.second))) { // different rooms
+			if (!is_pt_visible(pos, target.second))                 continue; // not visible
+			if (check_line_int_interior_window(pos, target.second)) continue; // not reachable
+		}
 		fly.has_target = 1;
 		if (is_player) {fly.target_player = 1;}
 		follow_mode = (target.first > 1.2*get_scaled_player_radius()); // follow if not very close to the target
 		vector3d const dir_to_target((target.second - pos).get_norm());
 		update_dir_incremental_no_zero_check(fly.dir, dir_to_target, 0.5, timestep); // slow turn to target direction
-	}
+	} // for target
 	// apply a slow random dir change
 	fly.delta_dir += (0.1f*timestep)*rgen.signed_rand_vector();
 	fly.dir       += (0.1f*timestep)*fly.delta_dir;
