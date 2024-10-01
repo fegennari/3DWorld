@@ -3686,6 +3686,12 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 	}
 }
 
+colorRGBA get_bucket_liquid_info(room_object_t const &c, float &liquid_level) { // returns color and liquid level
+	rand_gen_t rgen(c.create_rgen());
+	liquid_level = rgen.rand_uniform(-0.25, 0.75);
+	if (liquid_level <= 0.0) return ALPHA0; // no liquid
+	return colorRGBA(rgen.rand_uniform(0.01, 0.2), rgen.rand_uniform(0.01, 0.2), rgen.rand_uniform(0.01, 0.2), min(rgen.rand_uniform(0.25, 1.25), 1.0f));
+}
 void building_room_geom_t::add_bucket(room_object_t const &c, bool draw_metal, bool draw_liquid) {
 	assert(c.shape == SHAPE_CYLIN);
 	float const bot_rscale = 0.65;
@@ -3700,12 +3706,11 @@ void building_room_geom_t::add_bucket(room_object_t const &c, bool draw_metal, b
 		mat.add_ortho_torus_to_verts(handle_center, r_inner, r_outer, c.dim, color, 1.0, 0, 1, (c.dim ? 0.0 : 0.75)); // half
 	}
 	if (draw_liquid) { // maybe add liquid to the bucket
-		rand_gen_t rgen(c.create_rgen());
-		float const liquid_level(rgen.rand_uniform(-0.25, 0.75));
+		float liquid_level(0.0);
+		colorRGBA const liquid_color(get_bucket_liquid_info(c, liquid_level));
 		if (liquid_level <= 0.0) return; // no liquid
 		float const radius(c.get_radius()*(liquid_level + (1.0 - liquid_level)*bot_rscale));
 		point const center(c.xc(), c.yc(), (c.z1() + liquid_level*c.dz()));
-		colorRGBA const liquid_color(rgen.rand_uniform(0.01, 0.2), rgen.rand_uniform(0.01, 0.2), rgen.rand_uniform(0.01, 0.2), min(rgen.rand_uniform(0.25, 1.25), 1.0f));
 		get_untextured_material(0, 0, 0, 1).add_vert_disk_to_verts(center, radius, 0, apply_light_color(c, liquid_color)); // unshadowed, transparent
 	}
 }

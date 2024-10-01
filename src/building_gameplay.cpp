@@ -42,6 +42,7 @@ bool player_is_thirsty();
 void register_fly_attract(bool no_msg);
 room_obj_or_custom_item_t steal_from_car(room_object_t const &car, float floor_spacing, bool do_pickup);
 float get_filing_cabinet_drawers(room_object_t const &c, vect_cube_t &drawers);
+colorRGBA get_bucket_liquid_info(room_object_t const &c, float &liquid_level);
 void reset_creepy_sounds();
 void clear_building_water_splashes();
 
@@ -357,6 +358,14 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		assert(obj.obj_id < NUM_LOCK_COLORS);
 		type.name = lock_color_names[obj.obj_id] + " " + type.name;
 	}
+	else if (obj.type == TYPE_TCAN) {
+		if (obj.color == BLUE) {type.name = "recycling bin";}
+	}
+	else if (obj.type == TYPE_BUCKET) {
+		float liquid_level(0.0);
+		get_bucket_liquid_info(obj, liquid_level);
+		type.name = ((liquid_level > 0.0) ? "bucket of unknown liquid" : "empty bucket");
+	}
 	return type;
 }
 bool is_refillable(room_object_t const &obj) {return (obj.type == TYPE_FIRE_EXT);}
@@ -651,8 +660,10 @@ public:
 		float const value(get_obj_value(obj));
 		if (obj.type == TYPE_PAPER && value >= 500.0) {register_achievement("Top Secret Document");}
 		
-		if ((obj.type == TYPE_TCAN && !obj.was_expanded()) || obj.type == TYPE_TOILET || obj.type == TYPE_URINAL || (obj.type == TYPE_RAT && obj.is_broken())) {
-			register_fly_attract(0); // trahscans not on a shelf, toilets, urinals, and dead rats attract flies
+		if ((obj.type == TYPE_TCAN && !obj.was_expanded() && obj.color != BLUE) || // skip trashcans on shelves and recycling bins
+			obj.type == TYPE_TOILET || obj.type == TYPE_URINAL || (obj.type == TYPE_RAT && obj.is_broken()))
+		{
+			register_fly_attract(0); // trashcans, toilets, urinals, and dead rats attract flies
 		}
 		damage_done += value;
 		colorRGBA text_color(GREEN);
