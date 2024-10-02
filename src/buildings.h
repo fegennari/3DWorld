@@ -1477,7 +1477,7 @@ struct door_base_t : public cube_t {
 	bool not_a_room_separator() const {return (on_stairs || for_closet || in_backrooms || is_bldg_conn);}
 	bool is_same_stack(door_base_t const &d) const {return (d.x1() == x1() && d.y1() == y1());}
 	bool is_connected_to_room(unsigned room_id) const {return (!no_room_conn() && (room_id == conn_room[0] || room_id == conn_room[1]) && !is_bldg_conn);}
-	bool no_room_conn() const {return (conn_room[0] == 0 && conn_room[1] == 0);} // || is_bldg_conn?
+	bool no_room_conn() const {return (conn_room[0] == 0 && conn_room[1] == 0);}
 	unsigned get_conn_room(unsigned room_id) const;
 };
 struct door_stack_t : public door_base_t {

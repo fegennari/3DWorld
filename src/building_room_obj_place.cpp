@@ -225,7 +225,7 @@ void building_t::get_doorways_for_room(cube_t const &room, float zval, vect_door
 	doorways.clear();
 
 	for (door_stack_t const &ds : interior->door_stacks) {
-		if (ds.not_a_room_separator()) continue; // not a real doorway into the room
+		if (ds.not_a_room_separator()) continue; // not a real doorway into the room; should is_bldg_conn doors count? depends on the caller?
 		if (ds.intersects_no_adj(room_exp)) {doorways.push_back(ds);} // Note: can't use ds.get_conn_room() because this is called before it's filled in
 	}
 }
@@ -2472,7 +2472,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 
 	// first pass to record the doors in this room
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) { // check both dirs
-		if ((i->no_room_conn() || i->is_connected_to_room(room_id)) && is_cube_close_to_door(test_cube, 0.0, 0, *i, 2)) {
+		if ((i->no_room_conn() || i->is_bldg_conn || i->is_connected_to_room(room_id)) && is_cube_close_to_door(test_cube, 0.0, 0, *i, 2)) {
 			ds_ixs.push_back(i - interior->door_stacks.begin());
 		}
 	}
