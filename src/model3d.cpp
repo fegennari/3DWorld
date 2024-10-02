@@ -2194,15 +2194,16 @@ bool is_cube_visible_to_camera(cube_t const &cube, bool is_shadow_pass, bool ani
 }
 
 
-void model3d::fit_to_scene() {
-	if (!transforms.empty()) {cerr << "Error: Can't fit model3d to scene when transforms have been added" << endl; return;}
+geom_xform_t model3d::fit_to_scene() {
+	model3d_xform_t xf;
+	if (!transforms.empty()) {cerr << "Error: Can't fit model3d to scene when transforms have been added" << endl; return xf;}
 	cube_t scene(get_scene_bounds());
 	max_eq(scene.z2(), (scene.z1() + Z_SCENE_SIZE)); // make sure delta Z is at least Z_SCENE_SIZE
 	vector3d const model_sz(bcube.get_size()), scene_sz(scene.get_size());
-	model3d_xform_t xf;
 	xf.scale = min(scene_sz.x/model_sz.x, min(scene_sz.y/model_sz.y, scene_sz.z/model_sz.z)); // make sure it fits in all dims
 	xf.tv    = scene.get_cube_center() - xf.scale*bcube.get_cube_center();
 	transforms.push_back(xf);
+	return xf;
 }
 
 void model3d::set_target_translate_scale(point const &target_pos, float target_radius, geom_xform_t &xf) const {
@@ -3012,8 +3013,8 @@ void set_sky_lighting_file_for_cur_model(string const &fn, float weight, unsigne
 void set_occlusion_cube_for_cur_model(cube_t const &cube) {
 	get_cur_model("model_occlusion_cube").set_occlusion_cube(cube);
 }
-void fit_cur_model_to_scene() {
-	get_cur_model("fit_to_scene").fit_to_scene();
+geom_xform_t fit_cur_model_to_scene() {
+	return get_cur_model("fit_to_scene").fit_to_scene();
 }
 bool have_cur_model() {return (!all_models.empty());}
 

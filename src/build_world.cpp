@@ -1200,6 +1200,13 @@ bool read_block_comment(FILE *fp) {
 	return 0; // never gets here
 }
 
+// assumes transform has only translate and scale, not rotate/mirror; only need to transform verts, not normals
+void apply_transform_to_tquads(vector<coll_tquad> &ppts, geom_xform_t const &xf) {
+	for (coll_tquad &tq : ppts) {
+		for (unsigned n = 0; n < tq.npts; ++n) {xf.xform_pos(tq.pts[n]);}
+	}
+}
+
 
 int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj, bool has_layer, colorRGBA lcolor) {
 
@@ -1468,7 +1475,10 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					skip_cur_model = 1;
 					break;
 				}
-				if (model3d_fit_to_scene) {fit_cur_model_to_scene();} // apply translate and scale as a transform before adding the model
+				if (model3d_fit_to_scene) {
+					geom_xform_t const mxf(fit_cur_model_to_scene()); // apply translate and scale as a transform before adding the model
+					if (!no_cobjs) {apply_transform_to_tquads(ppts, mxf);}
+				}
 				string const error_str(add_loaded_model(ppts, cobj, xf.scale, has_layer, model_xf2));
 				if (!error_str.empty()) {return read_error(fp, error_str.c_str(), coll_obj_file);}
 				skip_cur_model = 0;

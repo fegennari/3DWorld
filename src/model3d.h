@@ -624,7 +624,7 @@ public:
 	void reverse_winding_order(uint64_t mats_mask=~uint64_t(0));
 	void set_sky_lighting_file(string const &fn, float weight, unsigned sz[3]);
 	void set_occlusion_cube(cube_t const &cube) {occlusion_cube = cube;}
-	void fit_to_scene();
+	geom_xform_t fit_to_scene();
 	void set_target_translate_scale(point const &target_pos, float target_radius, geom_xform_t &xf) const;
 	void render_materials_def(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, int enable_alpha_mask,
 		unsigned bmap_pass_mask, int trans_op_mask, point const *const xlate, xform_matrix const *const mvm=nullptr)
@@ -738,7 +738,7 @@ void get_cur_model_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf);
 bool add_transform_for_cur_model(model3d_xform_t const &xf);
 void set_sky_lighting_file_for_cur_model(string const &fn, float weight, unsigned sz[3]);
 void set_occlusion_cube_for_cur_model(cube_t const &cube);
-void fit_cur_model_to_scene();
+geom_xform_t fit_cur_model_to_scene();
 bool have_cur_model();
 cube_t calc_and_return_all_models_bcube(bool only_reflective=0);
 void get_all_model_bcubes(vector<cube_t> &bcubes);
