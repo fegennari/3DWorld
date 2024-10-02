@@ -284,7 +284,7 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 	// attempt to expand the room so that we can fit a larger pool; assume connected to a hallway with <door>, and expand away from door
 	float const wall_thickness(get_wall_thickness()), wall_pad(2.0*wall_thickness + get_trim_thickness()), exp_step(0.25*floor_spacing), fc_thickness(get_fc_thickness());
 	room_t const orig_room(room);
-	bool const long_dim(room.dx() < room.dy()); // likely door.dim
+	bool long_dim(room.dx() < room.dy()); // likely door.dim, unless there are multiple doors
 	bool const exp_dim(doorways.empty() ? long_dim : doorways.front().dim);
 	bool const exp_dir(doorways.empty() ? rgen.rand_bool() : (doorways.front().get_center_dim(exp_dim) < room.get_center_dim(exp_dim)));
 	cube_t const &basement(get_basement());
@@ -341,6 +341,7 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 		}
 	}
 	assert(room.is_strictly_normalized());
+	long_dim = (room.dx() < room.dy()); // recalculate, in case the aspect ratio of the room changed when expanding
 	bool const was_extended(room != orig_room);
 	room.is_single_floor = 1; // even if it was extended upward
 
