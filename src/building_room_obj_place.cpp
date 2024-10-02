@@ -68,7 +68,7 @@ vector3d building_t::get_office_chair_size() const {
 	return vector3d(radius, radius, height);
 }
 bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
-	colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair, bool enable_rotation, bool bar_stool)
+	colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair, bool enable_rotation, bool bar_stool, bool no_push_out)
 {
 	assert(!(office_chair && bar_stool)); // can't ask for both
 	office_chair &= has_office_chair_model();
@@ -97,9 +97,12 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 		max_push_out = 1.2;
 	}
 	float const min_wall_dist(fabs(place_pos[dim] - room.d[dim][!dir]) - 1.33*get_min_front_clearance_inc_people());
-	min_eq(max_push_out, (min_wall_dist - chair_hwidth)/chair_hwidth);
-	if (min_push_out >= max_push_out) return 0; // not enough space
-	chair_pos[dim] += dir_sign*rgen.rand_uniform(min_push_out, max_push_out)*chair_hwidth;
+
+	if (!no_push_out) {
+		min_eq(max_push_out, (min_wall_dist - chair_hwidth)/chair_hwidth);
+		if (min_push_out >= max_push_out) return 0; // not enough space
+		chair_pos[dim] += dir_sign*rgen.rand_uniform(min_push_out, max_push_out)*chair_hwidth;
+	}
 	cube_t chair(get_cube_height_radius(chair_pos, chair_hwidth, chair_height));
 	if (!is_valid_placement_for_room(chair, room, blockers, 1, room_pad)) return 0; // check proximity to doors; inc_open_doors=1
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -2597,13 +2600,25 @@ bool building_t::add_interrogation_objs(rand_gen_t rgen, room_t const &room, flo
 		dir = (room.get_center_dim(dim) < door.get_center_dim(dim));
 		break; // found the door - done
 	}
-	// add a single chair in the center, facing the door; it may have falled over
-	point const chair_pos(room.xc(), room.yc(), zval);
+	// add chair(s) facing the door; they may have falled over
+	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness());
+	unsigned const num_chairs((rgen.rand_float() < 0.25) ? 2 : 1); // add a pair of chairs 25% of the time
 	colorRGBA const chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
-	if (!add_chair(rgen, room, vect_cube_t(), room_id, chair_pos, chair_color, dim, dir, tot_light_amt)) return 0; // should always return true?
+	point const room_center(room.xc(), room.yc(), zval);
+	point chair_pos[2] = {room_center, room_center};
+	bool added_chair(0);
+
+	if (num_chairs == 2) { // add two chairs: pairwise interrogation!
+		float const chair_offset(0.2*floor_spacing);
+		chair_pos[0][!dim] -= chair_offset;
+		chair_pos[1][!dim] += chair_offset;
+	}
+	for (unsigned n = 0; n < num_chairs; ++n) {
+		added_chair |= add_chair(rgen, room, vect_cube_t(), room_id, chair_pos[n], chair_color, dim, dir, tot_light_amt, 0, 0, 0, 1); // no_push_out=1
+	}
+	if (!added_chair) return 0;
 	// add bucket(s)
 	unsigned const num_buckets((rgen.rand() % 3) + 1); // 1-3
-	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.z1() = zval + 1.5*get_flooring_thick(); // slightly above the flooring/rug to avoid z-fighting
