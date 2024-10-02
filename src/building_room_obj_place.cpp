@@ -520,7 +520,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 	return 0; // failed
 }
 
-void building_t::add_papers_to_surface(cube_t const &c, bool dim, bool dir, unsigned max_num, rand_gen_t &rgen, unsigned room_id, float tot_light_amt) {
+void building_t::add_papers_to_surface(cube_t const &c, bool dim, bool dir, unsigned max_num, rand_gen_t &rgen, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
 	float const floor_spacing(get_window_vspace());
 	float const plen(0.115*floor_spacing), pwidth(0.77*plen), thickness(0.00025*floor_spacing); // 8.5x11
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -533,6 +533,7 @@ void building_t::add_papers_to_surface(cube_t const &c, bool dim, bool dir, unsi
 		for (unsigned n = 0; n < num_papers; ++n) { // okay if they overlap
 			set_wall_width(paper, rgen.rand_uniform(c.d[ dim][0]+plen,   c.d[ dim][1]-plen  ), 0.5*plen,    dim);
 			set_wall_width(paper, rgen.rand_uniform(c.d[!dim][0]+pwidth, c.d[!dim][1]-pwidth), 0.5*pwidth, !dim);
+			if (!avoid.is_all_zeros() && paper.intersects_xy(avoid)) continue; // skip this paper
 			objs.emplace_back(paper, TYPE_PAPER, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT),
 				tot_light_amt, SHAPE_CUBE, paper_colors[rgen.rand()%NUM_PAPER_COLORS]);
 			set_obj_id(objs);
@@ -540,7 +541,7 @@ void building_t::add_papers_to_surface(cube_t const &c, bool dim, bool dir, unsi
 		} // for n
 	}
 }
-void building_t::add_pens_pencils_to_surface(cube_t const &c, bool dim, bool dir, unsigned max_num, rand_gen_t &rgen, unsigned room_id, float tot_light_amt) {
+void building_t::add_pens_pencils_to_surface(cube_t const &c, bool dim, bool dir, unsigned max_num, rand_gen_t &rgen, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
 	float const floor_spacing(get_window_vspace());
 	float const pp_len(0.077*floor_spacing), pp_dia(0.0028*floor_spacing), edge_space(0.75*pp_len); // ~7.5 inches long
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -556,6 +557,7 @@ void building_t::add_pens_pencils_to_surface(cube_t const &c, bool dim, bool dir
 			colorRGBA const color(is_pen ? pen_colors[rgen.rand()&3] : pencil_colors[rgen.rand()&1]);
 			set_wall_width(pp_bcube, rgen.rand_uniform(c.d[ dim][0]+edge_space, c.d[ dim][1]-edge_space), 0.5*pp_len,  dim);
 			set_wall_width(pp_bcube, rgen.rand_uniform(c.d[!dim][0]+edge_space, c.d[!dim][1]-edge_space), 0.5*pp_dia, !dim);
+			if (!avoid.is_all_zeros() && pp_bcube.intersects_xy(avoid)) continue; // skip this paper
 			// Note: no check for overlap with books and potted plants, but that would be complex to add and this case is rare;
 			//       computer monitors/keyboards aren't added in this case, and pencils should float above papers, so we don't need to check those
 			if (!pp_bcube.is_strictly_normalized()) continue; // too small, likely due to FP error when far from the origin
@@ -705,17 +707,18 @@ bool building_t::add_conference_objs(rand_gen_t rgen, room_t const &room, float 
 	set_wall_width(table, room.get_center_dim( dim), 0.5*table_lw.x,  dim); // set length
 	set_wall_width(table, room.get_center_dim(!dim), 0.5*table_lw.y, !dim); // set width
 	objs.emplace_back(table, TYPE_CONF_TABLE, room_id, dim, 0, 0, tot_light_amt, SHAPE_CUBE, WHITE); // dir=0, flags=0
+	cube_t avoid; // avoid placing papers and pens/pencils under the phone
 	
 	if (rgen.rand_float() < 0.9) { // add conference phone with a random dir 90% of the time
 		cube_t table_center(table);
 		table_center.expand_in_dim( dim, -0.375*table_lw.x); // center 25%
 		table_center.expand_in_dim(!dim, -0.250*table_lw.y); // center 50%
-		place_phone_on_obj(rgen, table_center, room_id, tot_light_amt, !dim, rgen.rand_bool());
+		if (place_phone_on_obj(rgen, table_center, room_id, tot_light_amt, !dim, rgen.rand_bool())) {avoid = objs.back();}
 	}
-	if (rgen.rand_float() < 0.8) {add_papers_to_surface(table, !dim, rgen.rand_bool(), 5, rgen, room_id, tot_light_amt);} // add 0-5 sheet(s) of paper 80% of the time
+	if (rgen.rand_float() < 0.8) {add_papers_to_surface(table, !dim, rgen.rand_bool(), 5, rgen, room_id, tot_light_amt, avoid);} // add 0-5 sheet(s) of paper 80% of the time
 
 	for (unsigned n = 0; n < 2; ++n) { // add twice, so that dim and dir are different
-		add_pens_pencils_to_surface(table, rgen.rand_bool(), rgen.rand_bool(), 1, rgen, room_id, tot_light_amt); // 0-1, random dim and dir
+		add_pens_pencils_to_surface(table, rgen.rand_bool(), rgen.rand_bool(), 1, rgen, room_id, tot_light_amt, avoid); // 0-1, random dim and dir
 	}
 	// add office chairs along sides of the table
 	vector3d const chair_sz(get_office_chair_size());
