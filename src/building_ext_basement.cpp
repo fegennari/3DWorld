@@ -1425,10 +1425,11 @@ void populate_params_from_building(building_interior_t const &bi, ext_basement_r
 void building_t::try_connect_ext_basement_to_building(building_t &b) {
 	assert(has_ext_basement() && b.has_ext_basement());
 	assert(ground_floor_z1 == b.ground_floor_z1); // must be at same elevation
-	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), z_toler(0.1*get_trim_thickness());
-	float const doorway_width(get_doorway_width()), wall_hwidth(0.8*doorway_width), min_shared_wall_len(2.01*(wall_hwidth + 2.0*wall_thickness));
+	float const floor_spacing(get_window_vspace());
+	if (b.get_window_vspace() != floor_spacing) return; // can't connect if floor spacing differs; can happen with city office buildings
+	float const wall_thickness(get_wall_thickness()), z_toler(0.1*get_trim_thickness()), doorway_width(get_doorway_width());
+	float const wall_hwidth(0.8*doorway_width), min_shared_wall_len(2.01*(wall_hwidth + 2.0*wall_thickness));
 	float const max_connect_dist(EXT_BASEMENT_JOIN_DIST*floor_spacing), min_connect_dist(2.1*doorway_width); // need enough space to fit two open doors
-	assert(b.get_window_vspace() == floor_spacing);
 	cube_t const &other_eb_bc(b.interior->basement_ext_bcube);
 	vector<room_t> const &rooms1(interior->rooms), &rooms2(b.interior->rooms);
 	unsigned const rstart1(interior->ext_basement_hallway_room_id), rstart2(b.interior->ext_basement_hallway_room_id);
@@ -1532,17 +1533,17 @@ void building_t::finalize_extb_conn_rooms(unsigned ds_start) {
 	interior->remove_excess_capacity(); // optional optimization
 }
 
-void try_join_house_ext_basements(vect_building_t &buildings) {
-	//timer_t timer("Join House Basements"); // ~10ms
-	vector<vector<unsigned>> houses_by_city;
+void try_join_city_building_ext_basements(vect_building_t &buildings) {
+	//timer_t timer("Join Building Basements"); // ~10ms
+	vector<vector<unsigned>> bldgs_by_city;
 
 	for (auto b = buildings.begin(); b != buildings.end(); ++b) {
-		if (!b->is_in_city || !b->is_house || !b->has_ext_basement()) continue; // Note: houses only, for now
-		if (b->city_ix >= houses_by_city.size()) {houses_by_city.resize(b->city_ix+1);}
-		houses_by_city[b->city_ix].push_back(b - buildings.begin());
+		if (!b->is_in_city || !b->has_ext_basement()) continue;
+		if (b->city_ix >= bldgs_by_city.size()) {bldgs_by_city.resize(b->city_ix+1);}
+		bldgs_by_city[b->city_ix].push_back(b - buildings.begin());
 	}
-	for (vector<unsigned> const &work : houses_by_city) { // could be run in parallel, but not needed
-		// do a quadratic iteration to find nearby houses in this city that can potentially be connected
+	for (vector<unsigned> const &work : bldgs_by_city) { // could be run in parallel, but not needed
+		// do a quadratic iteration to find nearby buildings in this city that can potentially be connected
 		for (unsigned i = 0; i < work.size(); ++i) {
 			building_t &b1(buildings[work[i]]);
 			cube_t search_area(b1.interior->basement_ext_bcube);

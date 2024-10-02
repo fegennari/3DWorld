@@ -56,7 +56,7 @@ float get_power_pole_height();
 void register_player_not_in_building();
 bool player_holding_lit_candle();
 void parse_universe_name_str_tables();
-void try_join_house_ext_basements(vect_building_t &buildings);
+void try_join_city_building_ext_basements(vect_building_t &buildings);
 void add_sign_text_verts_both_sides(string const &text, cube_t const &sign, bool dim, bool dir, vect_vnctcc_t &verts);
 void draw_candle_flames();
 void update_security_camera_image();
@@ -3150,7 +3150,7 @@ public:
 					b.gen_geometry(rs_ix, 1337*rs_ix+rseed);
 				}
 			} // for is_house
-			if (city_only && gen_interiors && global_building_params.max_ext_basement_room_depth > 0) {try_join_house_ext_basements(buildings);}
+			if (city_only && gen_interiors && global_building_params.max_ext_basement_room_depth > 0) {try_join_city_building_ext_basements(buildings);}
 		} // close the scope
 		if (0 && non_city_only) { // perform room graph analysis
 			timer_t timer3("Building Room Graph Analysis");
