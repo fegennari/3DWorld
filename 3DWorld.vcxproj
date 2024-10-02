@@ -499,6 +499,7 @@
     <ClCompile Include="src\building_names_signs.cpp" />
     <ClCompile Include="src\building_navigation.cpp" />
     <ClCompile Include="src\building_pictures.cpp" />
+    <ClCompile Include="src\building_pipes.cpp" />
     <ClCompile Include="src\building_query.cpp" />
     <ClCompile Include="src\building_reflections.cpp" />
     <ClCompile Include="src\building_rooms.cpp" />

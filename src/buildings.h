@@ -537,6 +537,7 @@ enum {/*building models*/ OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ
 	OBJ_MODEL_BICYCLE, OBJ_MODEL_SWINGSET, OBJ_MODEL_TRAMPOLINE, OBJ_MODEL_DUMPSTER, OBJ_MODEL_BIG_UMBRELLA, OBJ_MODEL_FLOWER, OBJ_MODEL_DECK_CHAIR, NUM_OBJ_MODELS};
 
 enum {PART_EFFECT_NONE=0, PART_EFFECT_SPARK, PART_EFFECT_CLOUD, PART_EFFECT_SMOKE, PART_EFFECT_SPLASH, PART_EFFECT_BUBBLE, NUM_PART_EFFECTS};
+enum {PIPE_TYPE_SEWER=0, PIPE_TYPE_CW, PIPE_TYPE_HW, PIPE_TYPE_GAS, NUM_PIPE_TYPES};
 
 // object flags
 unsigned const RO_FLAG_LIT     = 0x01; // light is on
@@ -2557,6 +2558,11 @@ struct cube_by_sz { // sort cube by size in dim descending
 	cube_by_sz(bool dim_) : dim(dim_) {}
 	bool operator()(cube_t const &a, cube_t const &b) const {return (b.get_sz_dim(dim) < a.get_sz_dim(dim));}
 };
+
+template<typename T> void add_to_and_clear(T &src, T &dest) {
+	vector_add_to(src, dest);
+	src.clear();
+}
 
 inline point get_camera_building_space() {return (get_camera_pos() - get_tiled_terrain_model_xlate());}
 inline void set_cube_zvals(cube_t &c, float z1, float z2) {c.z1() = z1; c.z2() = z2;}
