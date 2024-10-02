@@ -1083,7 +1083,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			p.dim      = ep.dim;
 			p.conn_dir = !extb_wall_dir;
 			p.type     = PIPE_EXTB;
-			if (p.dim == dim) {p.end_flags |= (1 << (p.conn_dir+2));} // flag connection point as round end if it's a right angle
+			if (bool(p.dim) == dim) {p.end_flags |= (1 << (p.conn_dir+2));} // flag connection point as round end if it's a right angle
 			pipe_t const parent(p); // make a copy to avoid invalidating the p reference
 			add_ext_basement_hallway_pipes_recur(interior->ext_basement_hallway_room_id, extb_wall_dim, pipe_type, radius_factor, parent, pipes, fittings, rgen);
 			break;
@@ -1273,7 +1273,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			pf.color  = fittings_color;
 			expand_cube_except_in_dim(pf, fitting_expand, p.dim); // expand slightly
 			float fitting_len_ext(fitting_len);
-			if (p.type == PIPE_EXTB && p.conn_dir == d) {fitting_len_ext += p.radius + wall_thickness + extra_extb_fitting_extend;} // extb pipe passes through wall at starting pt
+			if (p.type == PIPE_EXTB && p.conn_dir == bool(d)) {fitting_len_ext += p.radius + wall_thickness + extra_extb_fitting_extend;} // extb pipe passes through wall at start pt
 			pf.d[p.dim][!d] = pf.d[p.dim][d] + (d ? -1.0 : 1.0)*fitting_len_ext;
 			if (p.type != PIPE_EXTB && !basement.intersects_xy(pf)) continue; // skip fittings outside the basement, except for extended basement pipe
 			objs.push_back(pf);
