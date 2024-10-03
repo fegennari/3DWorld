@@ -30,6 +30,7 @@ int player_in_water   (0); // 0=no, 1=standing in water, 2=head underwater
 int player_in_attic   (0); // 0=no, 1=attic with windows, 2=windowless attic
 float building_bcube_expand(0.0), building_ambient_scale(0.0);
 point player_candle_pos;
+vector3d cur_camera_pos_xlate;
 cube_t building_occluder;
 building_params_t global_building_params;
 building_t const *player_building(nullptr);
@@ -3275,8 +3276,7 @@ public:
 	static void multi_draw_shadow(vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		DebugScope scope("building_multi_draw_shadow");
 		//timer_t timer("Draw Buildings Shadow");
-		fgPushMatrix();
-		translate_to(xlate); // drawn in building space
+		push_scene_xlate(xlate); // drawn in building space
 		shader_t s, amask_shader, person_shader;
 		s.begin_shadow_map_shader();
 		glEnable(GL_CULL_FACE); // slightly faster for interior shadow maps
@@ -3363,7 +3363,7 @@ public:
 		ext_parts_draw.clear();
 		if (!enable_back_faces) {glDisable(GL_CULL_FACE);}
 		s.end_shader();
-		fgPopMatrix();
+		pop_scene_xlate();
 	}
 	static bool check_tile_smap(bool shadow_only) {
 		return (!shadow_only && world_mode == WMODE_INF_TERRAIN && shadow_map_enabled());
@@ -3452,6 +3452,15 @@ public:
 		setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass
 		create_mirror_reflection_if_needed(vis_conn_bldg, xlate);
 	}
+	static void push_scene_xlate(vector3d const &xlate) {
+		fgPushMatrix();
+		translate_to(xlate);
+		cur_camera_pos_xlate = xlate; // needed for correct dlights specular
+	}
+	static void pop_scene_xlate() {
+		fgPopMatrix();
+		cur_camera_pos_xlate = zero_vector;
+	}
 
 	// reflection_pass: 0 = not reflection pass, 1 = reflection for room with exterior wall,
 	// 2 = reflection for room no exterior wall (can't see outside windows), 3 = reflection from mirror in a house (windows and doors need to be drawn)
@@ -3497,8 +3506,7 @@ public:
 		bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
 		float const min_alpha = 0.0; // 0.0 to avoid alpha test
 		enable_dlight_bcubes  = 1; // using light bcubes is both faster and more correct when shadow maps are not enabled
-		fgPushMatrix();
-		translate_to(xlate);
+		push_scene_xlate(xlate);
 		float water_damage(0.0), crack_damage(0.0);
 		building_draw_t interior_wind_draw, ext_door_draw;
 		vector<building_draw_t> int_wall_draw_front, int_wall_draw_back;
@@ -3917,7 +3925,7 @@ public:
 		// when the player is in the extended basement we still need to draw the exterior wall and door
 		if ((reflection_pass && (!DRAW_EXT_REFLECTIONS || ref_pass_int_only)) || player_cant_see_outside_building()) {
 			// early exit for player fully in basement or attic, or house reflections, if enabled
-			fgPopMatrix();
+			pop_scene_xlate();
 			enable_dlight_bcubes = 0;
 			return;
 		}
@@ -4031,7 +4039,7 @@ public:
 		if (!ext_door_draw.empty()) {setup_depth_clamp();} // restore
 		glCullFace(GL_BACK);
 		set_std_depth_func();
-		fgPopMatrix();
+		pop_scene_xlate();
 		enable_dlight_bcubes = 0;
 	}
 
@@ -4039,10 +4047,9 @@ public:
 		// draw glass materials such as floors for the player's building
 		if (reflection_pass || !draw_building_interiors) return;
 		if (player_building == nullptr || !player_building->glass_floor_visible(xlate)) return;
-		fgPushMatrix();
-		translate_to(xlate);
+		push_scene_xlate(xlate);
 		player_building->draw_glass_surfaces(xlate);
-		fgPopMatrix();
+		pop_scene_xlate();
 	}
 
 	void draw_building_lights(vector3d const &xlate) { // add night time lights to buildings; non-const because it modifies building_lights
