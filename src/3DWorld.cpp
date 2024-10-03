@@ -86,6 +86,7 @@ bool disable_model_textures(0), start_in_inf_terrain(0), allow_shader_invariants
 bool enable_timing_profiler(0), fast_transparent_spheres(0), force_ref_cmap_update(0), use_instanced_pine_trees(0), enable_postproc_recolor(0), draw_building_interiors(0);
 bool toggle_room_light(0), teleport_to_screenshot(0), merge_model_objects(0), reverse_3ds_vert_winding_order(1), disable_dlights(0), voxel_add_remove(0), enable_ground_csm(0);
 bool enable_hcopter_shadows(0), pre_load_full_tiled_terrain(0), disable_blood(0), enable_model_animations(1), rotate_trees(0), invert_model3d_faces(0), play_gameplay_alert(1);
+bool player_custom_start_pos(0);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), mesh_rgen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
 int animate(1), animate2(1), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0), init_num_balls(-1), change_wmode_frame(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0), rgen_seed(1);
@@ -2101,6 +2102,7 @@ int load_config(string const &config_file) {
 			if (!read_double(fp, camera_zh)) cfg_err("camera_height command", error);
 		}
 		else if (str == "player_start") {
+			player_custom_start_pos = 1;
 			if (!read_vector(fp, surface_pos)) cfg_err("player_start command", error);
 		}
 		else if (str == "cube_map_center") {

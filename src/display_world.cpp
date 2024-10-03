@@ -46,7 +46,7 @@ string lighting_update_text;
 
 extern bool combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp, enable_multisample, water_is_lava;
 extern bool user_action_key, flashlight_on, enable_clip_plane_z, begin_motion, config_unlimited_weapons, start_maximized, show_bldg_pickup_crosshair;
-extern bool can_do_building_action, enable_tt_model_indir, pre_load_full_tiled_terrain;
+extern bool can_do_building_action, enable_tt_model_indir, pre_load_full_tiled_terrain, player_custom_start_pos;
 extern unsigned inf_terrain_fire_mode, reflection_tid;
 extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing, UNLIMITED_WEAPONS, player_in_basement;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, DISABLE_WATER, can_pickup_bldg_obj, player_in_water;
@@ -1242,7 +1242,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 		show_fog = 1;
 		c_radius = 0.001;
 		update_cpos();
-		surface_pos         = all_zeros;
+		if (!player_custom_start_pos) {surface_pos = all_zeros;}
 		camera_surf_collide = 1;
 	}
 	camera_view = 0;
