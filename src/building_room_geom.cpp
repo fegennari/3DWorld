@@ -1137,10 +1137,55 @@ void building_room_geom_t::add_int_ladder(room_object_t const &c) {
 	rotate_verts(mat.quad_verts, vector_from_dim_dir(!c.dim, (c.dim ^ c.dir)), 0.063*PI, about, verts_start);
 }
 
+colorRGBA choose_machine_part_color(room_object_t const &c, rand_gen_t &rgen, bool is_small) {
+	if (!is_small || rgen.rand_float() < 0.6) { // shade of gray
+		float const lum(rgen.rand_uniform(0.1, 0.6));
+		return apply_light_color(c, colorRGBA(lum, lum, lum));
+	}
+	unsigned const NCOLORS = 5;
+	colorRGBA const colors[NCOLORS] = {BRASS_C, COPPER_C, BRONZE_C, DK_BROWN, BROWN};
+	return apply_light_color(c, colors[rgen.rand() % NCOLORS]);
+}
 void building_room_geom_t::add_machine(room_object_t const &c) {
 	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small, specular metal
 	// TODO: something more complex
-	mat.add_cube_to_verts_untextured(c, apply_light_color(c), EF_Z1); // placeholder
+	// base + 1-2 large parts depending on aspect ratio; cubes + cylinders in various orients, connected by pipes between parts and the wall
+	// can use TYPE_SWITCH, TYPE_PIPE, TYPE_BRK_PANEL, TYPE_VENT, TYPE_DUCT, AC Unit, metal plate texture, buttons, lights, etc.
+	//mat.add_cube_to_verts_untextured(c, apply_light_color(c), EF_Z1); // placeholder
+	rand_gen_t rgen(c.create_rgen());
+	float const height(c.dz()), width(c.get_width()), depth(c.get_depth());
+	bool const dim(c.dim), dir(c.dir), two_part(width > rgen.rand_uniform(1.5, 2.4)*depth);
+	colorRGBA const base_color(apply_light_color(c));
+	cube_t base(c), main(c);
+	base.z2() = main.z1() = c.z1() + rgen.rand_uniform(0.04, 0.1)*height;
+	main.expand_in_dim( dim, -max(0.0f, rgen.rand_uniform(-0.1, 0.1))*depth); // maybe small shrink
+	main.expand_in_dim(!dim, -max(0.0f, rgen.rand_uniform(-0.1, 0.1))*width); // maybe small shrink
+	cube_t parts[2] = {main, main};
+	mat.add_cube_to_verts_untextured(base, base_color, EF_Z1); // skip bottom
+	bool has_cylin(0);
+	
+	if (two_part) {
+		float const split_pos(main.d[!dim][0] + rgen.rand_uniform(0.4, 0.6)*width);
+		parts[0].d[!dim][1] = split_pos - max(0.0f, rgen.rand_uniform(-0.1, 0.1))*width; // maybe add a gap
+		parts[1].d[!dim][0] = split_pos + max(0.0f, rgen.rand_uniform(-0.1, 0.1))*width; // maybe add a gap
+		if (rgen.rand_bool()) {swap(parts[0], parts[1]);} // remove any bias toward the left/right
+	}
+	for (unsigned n = 0; n < (two_part ? 2 : 1); ++n) {
+		cube_t const &part(parts[n]);
+		bool const is_cylin(!has_cylin && rgen.rand_float() < 0.4 && max(part.dx(), part.dy()) < 1.5*min(part.dx(), part.dy())); // don't place two cylinders
+		has_cylin |= is_cylin;
+		colorRGBA const color(choose_machine_part_color(c, rgen, 0)); // is_small=0
+		if (is_cylin) {mat.add_vcylin_to_verts(part, color, 0, 1);} // draw sides and top
+		else {mat.add_cube_to_verts_untextured(part, color, EF_Z1);} // skip bottom
+
+		// add smaller shapes to this one
+		// TODO
+
+		// add pipe(s) connecting to back wall in {dim, !dir} or ceiling
+		// TODO
+	} // for n
+	// connect the two parts with pipe(s)
+	// TODO
 }
 
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {

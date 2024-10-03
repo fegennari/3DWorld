@@ -1681,7 +1681,7 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 	for (unsigned d = 0; d < 2; ++d) {avail_sz[d] = min(0.4f*place_sz[d], place_sz[d]-min_gap);}
 	for (unsigned d = 0; d < 2; ++d) {max_sz  [d] = min(avail_sz[d], 2.0f*avail_sz[!d]);} // keep aspect ratio <= 2:1
 	if (min(max_sz.x, max_sz.y) < 0.5*floor_spacing) return 0; // too small of a room to place a machine
-	unsigned const flags(0), num_machines((rgen.rand() % 2) + 1); // 1-2
+	unsigned const flags(0), num_machines((rgen.rand() % 4) + 1); // 1-4
 	vect_room_object_t &objs(interior->room_geom->objs);
 	bool any_placed(0);
 
@@ -1702,6 +1702,8 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 			if (c.intersects(avoid) || overlaps_other_room_obj(c, objs_start)) continue;
 			if (interior->is_blocked_by_stairs_or_elevator(c) || is_cube_close_to_doorway(c, room, 0.0, 1)) continue;
 			objs.emplace_back(c, TYPE_MACHINE, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CUBE, LT_GRAY);
+			objs.back().item_flags = rgen.rand(); // add more randomness
+			set_obj_id(objs);
 			any_placed = 1;
 			break; // done
 		} // for i
