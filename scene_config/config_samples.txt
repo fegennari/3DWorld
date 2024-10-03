@@ -45,7 +45,7 @@ use_interior_cube_map_refl 1
 no_store_model_textures_in_memory 0
 use_model3d_tex_mipmaps 1
 enable_model3d_custom_mipmaps 1
-enable_model_animations 1
+enable_model_animations 0
 default_anim_id -1
 
 mesh_height 0.05
