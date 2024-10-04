@@ -1137,6 +1137,9 @@ void building_room_geom_t::add_int_ladder(room_object_t const &c) {
 	rotate_verts(mat.quad_verts, vector_from_dim_dir(!c.dim, (c.dim ^ c.dir)), 0.063*PI, about, verts_start);
 }
 
+tid_nm_pair_t get_metal_plate_tex(float tscale, bool shadowed) {
+	return tid_nm_pair_t(get_met_plate_tid(), get_mplate_nm_tid(), tscale, tscale, 0.0, 0.0, shadowed);
+}
 colorRGBA choose_pipe_color(room_object_t const &c, rand_gen_t &rgen) {
 	unsigned const NCOLORS = 6;
 	colorRGBA const colors[NCOLORS] = {BRASS_C, COPPER_C, BRONZE_C, DK_BROWN, BROWN, LT_GRAY};
@@ -1166,7 +1169,7 @@ void add_machine_pipe_in_region(rgeom_mat_t &mat, room_object_t const &c, cube_t
 	mat.add_cylin_to_verts(p1, p2, radius, radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, 16);
 }
 void building_room_geom_t::add_machine(room_object_t const &c) {
-	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small, specular metal
+	rgeom_mat_t *mat(&get_metal_material(1, 0, 1)); // shadowed, small, specular metal; use a pointer so that it can be reset
 	// can use TYPE_SWITCH, TYPE_PIPE, TYPE_BRK_PANEL, TYPE_VENT, TYPE_DUCT, AC Unit, metal plate texture, buttons, lights, etc.
 	rand_gen_t rgen(c.create_rgen());
 	float const height(c.dz()), width(c.get_width()), depth(c.get_depth()), pipe_rmax(0.033*min(height, min(width, depth)));
@@ -1177,7 +1180,7 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 	main.expand_in_dim( dim, -rgen.rand_uniform(0.0, 0.1)*depth); // small shrink
 	main.expand_in_dim(!dim, -rgen.rand_uniform(0.0, 0.1)*width); // small shrink
 	cube_t parts[2] = {main, main};
-	mat.add_cube_to_verts_untextured(base, base_color, EF_Z1); // skip bottom
+	mat->add_cube_to_verts_untextured(base, base_color, EF_Z1); // skip bottom
 	bool parts_swapped(0), is_cylins[2] = {0, 0};
 	
 	if (two_part) {
@@ -1187,7 +1190,7 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 		if (rgen.rand_bool()) {swap(parts[0], parts[1]); parts_swapped = 1;} // remove any bias toward the left/right
 		parts[rgen.rand_bool()].z2() -= rgen.rand_uniform(0.0, 0.2)*height; // make one side a bit shorter
 	}
-	for (unsigned n = 0; n < (two_part ? 2 : 1); ++n) {
+	for (unsigned n = 0; n < (two_part ? 2U : 1U); ++n) {
 		cube_t &part(parts[n]);
 		bool const is_cylin(!is_cylins[0] && rgen.rand_float() < 0.4 && max(part.dx(), part.dy()) < 1.5*min(part.dx(), part.dy())); // don't place two cylinders
 		is_cylins[n] = is_cylin;
@@ -1198,8 +1201,17 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 			if (two_part && part.intersects(parts[1-n])) {part.expand_by_xy(-0.1*min(dx, dy));} // if adjacent, shrink to force a gap
 		}
 		colorRGBA const color(choose_machine_part_color(c, rgen, 0)); // is_small=0
-		if (is_cylin) {mat.add_vcylin_to_verts(part, color, 0, 1);} // draw sides and top
-		else {mat.add_cube_to_verts_untextured(part, color, EF_Z1);} // skip bottom
+		
+		if (is_cylin) {
+			if (rgen.rand_bool()) { // make it textured
+				tid_nm_pair_t const mplate_tex(get_metal_plate_tex(1.0, 1)); // shadowed
+				rgeom_mat_t &mp_mat(get_material(mplate_tex, 1, 0, 1)); // shadowed, small
+				mp_mat.add_vcylin_to_verts(part, color, 0, 1, 0, 0, 1.0, 1.0, 2.0, 1.0, 0, 32, 0.0, 0, 2.0); // draw sides and top; tscale=2.0
+				mat = &get_metal_material(1, 0, 1); // update the pointer
+			}
+			else {mat->add_vcylin_to_verts(part, color, 0, 1);} // draw sides and top
+		}
+		else {mat->add_cube_to_verts_untextured(part, color, EF_Z1);} // skip bottom
 
 		// add smaller shapes to this one
 		// TODO
@@ -1213,7 +1225,7 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 				region.d[dim][ dir] = (is_cylin ? part.get_center_dim(dim) : part.d[dim][!dir]); // center plane of cylinder or back of cube
 				region.d[dim][!dir] = c.d[dim][!dir]; // wall behind the machine
 				assert(region.is_strictly_normalized());
-				for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(mat, c, region, pipe_rmax, dim, rgen);}
+				for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(*mat, c, region, pipe_rmax, dim, rgen);}
 			}
 		}
 	} // for n
@@ -1226,13 +1238,13 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 			max_eq(region.d[dim][0], parts[1].d[dim][0]); // shared range
 			min_eq(region.d[dim][1], parts[1].d[dim][1]);
 			float side_pos[2] = {};
-			for (unsigned d = 0; d < 2; ++d) {side_pos[d] = (is_cylins[d] ? parts[d].get_center_dim(!dim) : parts[d].d[!dim][d^parts_swapped]);}
+			for (unsigned d = 0; d < 2; ++d) {side_pos[d] = (is_cylins[d] ? parts[d].get_center_dim(!dim) : parts[d].d[!dim][bool(d)^parts_swapped]);}
 
 			if (side_pos[0] != side_pos[1]) {
 				region.d[!dim][0] = min(side_pos[0], side_pos[1]);
 				region.d[!dim][1] = max(side_pos[0], side_pos[1]);
 				assert(region.is_strictly_normalized());
-				for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(mat, c, region, pipe_rmax, !dim, rgen);}
+				for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(*mat, c, region, pipe_rmax, !dim, rgen);}
 			}
 		}
 	}
@@ -2786,7 +2798,7 @@ void draw_sloped_top_and_sides(rgeom_mat_t &mat, point const bot_pts[4], float h
 	point const rhs_pts[4] = {bot_pts[1], top_pts[1], top_pts[2], bot_pts[2]};
 	mat.add_quad_to_verts(lhs_pts, color);
 	mat.add_quad_to_verts(rhs_pts, color);
-	reverse(top_pts, top_pts+4); // reverse normal and winding order
+	std::reverse(top_pts, top_pts+4); // reverse normal and winding order
 	mat.add_quad_to_verts(top_pts, color); // top
 }
 void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spacing, bool draw_static, bool draw_dynamic) {
@@ -4334,8 +4346,8 @@ void building_room_geom_t::add_false_door(room_object_t const &c) {
 		bool const front_dir(c.dir ^ bool(exterior) ^ 1);
 		
 		if (c.flags & RO_FLAG_HAS_EXTRA) { // vault door
-			float const width(c.get_width()), tscale(2.0/width);
-			tid_nm_pair_t const door_tex(get_met_plate_tid(), get_mplate_nm_tid(), tscale, tscale); // unshadowed
+			float const width(c.get_width());
+			tid_nm_pair_t const door_tex(get_metal_plate_tex(2.0/width, 0)); // unshadowed
 			get_material(door_tex, 0, 0, 0, 0, exterior).add_cube_to_verts(c, c.color, c.get_llc(), (~get_face_mask(c.dim, !front_dir) | EF_Z1)); // skip front and bottom
 			// draw wheel/handle
 			float const wheel_radius(0.2*width), wheel_depth(0.08*width);
@@ -5241,14 +5253,14 @@ void building_room_geom_t::add_lava_lamp(room_object_t const &c) {
 	rgeom_mat_t &back_mat(get_untextured_material(1, 0, 1)); // shadowed, small
 	unsigned const ixs1_start(back_mat.indices.size());
 	back_mat.add_vcylin_to_verts(center, lit_color, 1, 1, 0, 0, 1.0, 0.5);
-	reverse(back_mat.indices.begin()+ixs1_start, back_mat.indices.end()); // reverse the winding order to swap which sides are drawn
+	std::reverse(back_mat.indices.begin()+ixs1_start, back_mat.indices.end()); // reverse the winding order to swap which sides are drawn
 	// draw center part emissive inverted geometry; should be drawn over the previous cylinder
 	tid_nm_pair_t tp;
 	tp.emissive = 1.0; // always emissive, to match the shader
 	rgeom_mat_t &mat(get_material(tp, 0, 0, 1)); // unshadowed, small; emissive materials can't cast shadows
 	unsigned const vix_start(mat.itri_verts.size()), ixs2_start(mat.indices.size());
 	mat.add_vcylin_to_verts(center, lit_color, 1, 1, 0, 0, 1.0, 0.5); // draw sides, top, and bottom
-	reverse(mat.indices.begin()+ixs2_start, mat.indices.end()); // reverse the winding order to swap which sides are drawn
+	std::reverse(mat.indices.begin()+ixs2_start, mat.indices.end()); // reverse the winding order to swap which sides are drawn
 	for (auto i = mat.itri_verts.begin()+vix_start; i != mat.itri_verts.end(); ++i) {i->set_norm(-plus_z);} // normals point down
 }
 
