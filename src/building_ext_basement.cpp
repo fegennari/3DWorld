@@ -1676,12 +1676,13 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 	cube_t const place_area(get_walkable_room_bounds(room)); // ignore trim?
 	cube_t avoid;
 	avoid.set_from_sphere(point(place_area.xc(), place_area.yc(), zval), min_clearance);
+	unsigned const flags(0), num_machines((rgen.rand() % 4) + 1); // 1-4
+	float const sz_cap_mult((num_machines > 0) ? 0.5 : 1.0); // need to guarantee gap if two machines are placed on opposite walls of a narrow room
 	vector2d const place_sz(place_area.dx(), place_area.dy());
 	vector2d avail_sz, max_sz;
-	for (unsigned d = 0; d < 2; ++d) {avail_sz[d] = min(0.4f*place_sz[d], place_sz[d]-min_gap);}
+	for (unsigned d = 0; d < 2; ++d) {avail_sz[d] = min(0.4f*place_sz[d], sz_cap_mult*(place_sz[d] - min_gap));}
 	for (unsigned d = 0; d < 2; ++d) {max_sz  [d] = min(avail_sz[d], 2.0f*avail_sz[!d]);} // keep aspect ratio <= 2:1
 	if (min(max_sz.x, max_sz.y) < 0.5*floor_spacing) return 0; // too small of a room to place a machine
-	unsigned const flags(0), num_machines((rgen.rand() % 4) + 1); // 1-4
 	vect_room_object_t &objs(interior->room_geom->objs);
 	bool any_placed(0);
 

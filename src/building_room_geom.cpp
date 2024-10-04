@@ -1137,55 +1137,105 @@ void building_room_geom_t::add_int_ladder(room_object_t const &c) {
 	rotate_verts(mat.quad_verts, vector_from_dim_dir(!c.dim, (c.dim ^ c.dir)), 0.063*PI, about, verts_start);
 }
 
+colorRGBA choose_pipe_color(room_object_t const &c, rand_gen_t &rgen) {
+	unsigned const NCOLORS = 6;
+	colorRGBA const colors[NCOLORS] = {BRASS_C, COPPER_C, BRONZE_C, DK_BROWN, BROWN, LT_GRAY};
+	return apply_light_color(c, colors[rgen.rand() % NCOLORS]);
+}
 colorRGBA choose_machine_part_color(room_object_t const &c, rand_gen_t &rgen, bool is_small) {
 	if (!is_small || rgen.rand_float() < 0.6) { // shade of gray
 		float const lum(rgen.rand_uniform(0.1, 0.6));
 		return apply_light_color(c, colorRGBA(lum, lum, lum));
 	}
-	unsigned const NCOLORS = 5;
-	colorRGBA const colors[NCOLORS] = {BRASS_C, COPPER_C, BRONZE_C, DK_BROWN, BROWN};
-	return apply_light_color(c, colors[rgen.rand() % NCOLORS]);
+	return choose_pipe_color(c, rgen);
+}
+void add_machine_pipe_in_region(rgeom_mat_t &mat, room_object_t const &c, cube_t const &region, float rmax, bool dim, rand_gen_t &rgen) {
+	assert(region.is_strictly_normalized());
+	min_eq(rmax, 0.25f*min(region.dz(), region.get_sz_dim(!dim)));
+	float const radius(rgen.rand_uniform(0.2, 1.0)*rmax), edge_space(1.5*radius);
+	point p1, p2;
+	p1[dim] = region.d[dim][0];
+	p2[dim] = region.d[dim][1];
+	
+	for (unsigned n = 0; n < 2; ++n) {
+		unsigned const d(n ? 2 : !dim);
+		p1[d] = p2[d] = rgen.rand_uniform(region.d[d][0]+edge_space, region.d[d][1]-edge_space);
+	}
+	colorRGBA const color(choose_pipe_color(c, rgen));
+	// TODO: custom specular color?
+	mat.add_cylin_to_verts(p1, p2, radius, radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, 16);
 }
 void building_room_geom_t::add_machine(room_object_t const &c) {
 	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small, specular metal
-	// TODO: something more complex
-	// base + 1-2 large parts depending on aspect ratio; cubes + cylinders in various orients, connected by pipes between parts and the wall
 	// can use TYPE_SWITCH, TYPE_PIPE, TYPE_BRK_PANEL, TYPE_VENT, TYPE_DUCT, AC Unit, metal plate texture, buttons, lights, etc.
-	//mat.add_cube_to_verts_untextured(c, apply_light_color(c), EF_Z1); // placeholder
 	rand_gen_t rgen(c.create_rgen());
-	float const height(c.dz()), width(c.get_width()), depth(c.get_depth());
-	bool const dim(c.dim), dir(c.dir), two_part(width > rgen.rand_uniform(1.5, 2.4)*depth);
+	float const height(c.dz()), width(c.get_width()), depth(c.get_depth()), pipe_rmax(0.033*min(height, min(width, depth)));
+	bool const dim(c.dim), dir(c.dir), two_part(width > rgen.rand_uniform(1.5, 2.2)*depth);
 	colorRGBA const base_color(apply_light_color(c));
 	cube_t base(c), main(c);
 	base.z2() = main.z1() = c.z1() + rgen.rand_uniform(0.04, 0.1)*height;
-	main.expand_in_dim( dim, -max(0.0f, rgen.rand_uniform(-0.1, 0.1))*depth); // maybe small shrink
-	main.expand_in_dim(!dim, -max(0.0f, rgen.rand_uniform(-0.1, 0.1))*width); // maybe small shrink
+	main.expand_in_dim( dim, -rgen.rand_uniform(0.0, 0.1)*depth); // small shrink
+	main.expand_in_dim(!dim, -rgen.rand_uniform(0.0, 0.1)*width); // small shrink
 	cube_t parts[2] = {main, main};
 	mat.add_cube_to_verts_untextured(base, base_color, EF_Z1); // skip bottom
-	bool has_cylin(0);
+	bool parts_swapped(0), is_cylins[2] = {0, 0};
 	
 	if (two_part) {
 		float const split_pos(main.d[!dim][0] + rgen.rand_uniform(0.4, 0.6)*width);
 		parts[0].d[!dim][1] = split_pos - max(0.0f, rgen.rand_uniform(-0.1, 0.1))*width; // maybe add a gap
 		parts[1].d[!dim][0] = split_pos + max(0.0f, rgen.rand_uniform(-0.1, 0.1))*width; // maybe add a gap
-		if (rgen.rand_bool()) {swap(parts[0], parts[1]);} // remove any bias toward the left/right
+		if (rgen.rand_bool()) {swap(parts[0], parts[1]); parts_swapped = 1;} // remove any bias toward the left/right
+		parts[rgen.rand_bool()].z2() -= rgen.rand_uniform(0.0, 0.2)*height; // make one side a bit shorter
 	}
 	for (unsigned n = 0; n < (two_part ? 2 : 1); ++n) {
-		cube_t const &part(parts[n]);
-		bool const is_cylin(!has_cylin && rgen.rand_float() < 0.4 && max(part.dx(), part.dy()) < 1.5*min(part.dx(), part.dy())); // don't place two cylinders
-		has_cylin |= is_cylin;
+		cube_t &part(parts[n]);
+		bool const is_cylin(!is_cylins[0] && rgen.rand_float() < 0.4 && max(part.dx(), part.dy()) < 1.5*min(part.dx(), part.dy())); // don't place two cylinders
+		is_cylins[n] = is_cylin;
+		
+		if (is_cylin) { // make it square
+			float const dx(part.dx()), dy(part.dy());
+			if (dx < dy) {part.expand_in_y(-0.5*(dy - dx));} else {part.expand_in_x(-0.5*(dx - dy));}
+			if (two_part && part.intersects(parts[1-n])) {part.expand_by_xy(-0.1*min(dx, dy));} // if adjacent, shrink to force a gap
+		}
 		colorRGBA const color(choose_machine_part_color(c, rgen, 0)); // is_small=0
 		if (is_cylin) {mat.add_vcylin_to_verts(part, color, 0, 1);} // draw sides and top
 		else {mat.add_cube_to_verts_untextured(part, color, EF_Z1);} // skip bottom
 
 		// add smaller shapes to this one
 		// TODO
+		
+		if (is_cylin || part.d[dim][dir] != c.d[dim][dir]) { // if there's a gap between the machine and the wall
+			// add pipe(s) connecting to back wall in {dim, !dir} or ceiling
+			unsigned const num_pipes(rgen.rand() % 4); // 0-3
 
-		// add pipe(s) connecting to back wall in {dim, !dir} or ceiling
-		// TODO
+			if (num_pipes > 0) {
+				cube_t region(part);
+				region.d[dim][ dir] = (is_cylin ? part.get_center_dim(dim) : part.d[dim][!dir]); // center plane of cylinder or back of cube
+				region.d[dim][!dir] = c.d[dim][!dir]; // wall behind the machine
+				assert(region.is_strictly_normalized());
+				for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(mat, c, region, pipe_rmax, dim, rgen);}
+			}
+		}
 	} // for n
-	// connect the two parts with pipe(s)
-	// TODO
+	if (two_part) { // connect the two parts with pipe(s)
+		unsigned const num_pipes(rgen.rand() % 4); // 0-3
+
+		if (num_pipes > 0) {
+			cube_t region(parts[0]);
+			min_eq(region.z2(), parts[1].z2()); // shared Z range
+			max_eq(region.d[dim][0], parts[1].d[dim][0]); // shared range
+			min_eq(region.d[dim][1], parts[1].d[dim][1]);
+			float side_pos[2] = {};
+			for (unsigned d = 0; d < 2; ++d) {side_pos[d] = (is_cylins[d] ? parts[d].get_center_dim(!dim) : parts[d].d[!dim][d^parts_swapped]);}
+
+			if (side_pos[0] != side_pos[1]) {
+				region.d[!dim][0] = min(side_pos[0], side_pos[1]);
+				region.d[!dim][1] = max(side_pos[0], side_pos[1]);
+				assert(region.is_strictly_normalized());
+				for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(mat, c, region, pipe_rmax, !dim, rgen);}
+			}
+		}
+	}
 }
 
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {
