@@ -1348,21 +1348,22 @@ public:
 				// if the player is in the basement, don't draw the plot over the basement stairs; the player can't see any of this anyway
 				if (!player_in_basement || is_connector_road) {
 					if (!plots.empty()) { // draw plots if not global connector road network
-						cube_t const plot_exclude(get_cur_basement());
-						if (!plot_exclude.is_all_zeros() && plot_exclude.intersects_xy(b->bcube)) {b->quads[TYPE_PLOT].clear();} // clear and rebuild plot cache
-
+						cube_t const plot_exclude(get_cur_basement()); // clip out basement
+						dstate.plot_cuts.clear();
+						
+						if (!plot_exclude.is_all_zeros() && plot_exclude.intersects_xy(b->bcube)) {
+							b->quads[TYPE_PLOT].clear(); // clear and rebuild plot cache
+							dstate.plot_cuts.push_back(plot_exclude);
+						}
 						if (is_residential) { // draw all plots with grass, using the park materials
-							dstate.plot_cuts.clear();
-							cube_t const plot_exclude(get_cur_basement()); // clip out basement
-							if (!plot_exclude.is_all_zeros() && plot_exclude.intersects_xy(b->bcube)) {dstate.plot_cuts.push_back(plot_exclude);}
-							city_obj_placer.get_plot_cuts(b->bcube, dstate.plot_cuts);
+							city_obj_placer.get_plot_cuts(b->bcube, dstate.plot_cuts); // inground swimming pools
 							dstate.draw_city_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PARK, 1); // draw_all=1
-							dstate.plot_cuts.clear();
 						}
 						else {
 							dstate.draw_city_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PLOT); // concrete
 							dstate.draw_city_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PARK], TYPE_PARK); // grass parks (stored as plots)
 						}
+						dstate.plot_cuts.clear();
 					}
 					if (use_road_normal_maps) {set_road_normal_map();} // set normal maps for roads, parking lots, and driveways
 					dstate.draw_city_region(segs, b->ranges[TYPE_RSEG], b->quads[TYPE_RSEG], TYPE_RSEG); // road segments
