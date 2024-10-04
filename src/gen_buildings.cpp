@@ -469,9 +469,8 @@ void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir,
 		s.add_uniform_float("water_damage_zscale", 0.25); // stretch out vertically on walls
 	}
 	if (crack_damage > 0.0) {
-		s.add_uniform_float("crack_weight", crack_damage);
-		s.add_uniform_float("crack_scale",  1.0);
-		s.add_uniform_float("crack_zmax",   player_building->ground_floor_z1); // cracks are only in the basement
+		s.add_uniform_float("crack_scale", 1.0); // Note: crack_weight will be set to crack_damage later
+		s.add_uniform_float("crack_zmax",  player_building->ground_floor_z1); // cracks are only in the basement
 		// disable cracks on on ceilings (-z) since they may be wood; carpet is special cased to not have cracks; are cracks on particle board ceilings okay?
 		s.add_uniform_float("crack_normal_zmax", (player_building->is_house ? -0.5 : -2.0));
 	}
@@ -3616,6 +3615,7 @@ public:
 					if (!building_grid_visible(xlate, grid_bcube)) continue; // VFC
 					if (is_first_tile) {(*i)->ensure_interior_geom_vbos();} // we need the interior geom at this point, even if it's the reflection pass
 					if (crack_damage > 0.0) {s.add_uniform_float("crack_weight", crack_damage);} // crack damage for interior
+					// Note: in cases where another building's extended basement is visible, we can't set crack_weight and wet_effect per-building, only per-tile
 					(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()), 0, crack_damage); // shadow_only=0
 					// iterate over nearby buildings in this tile and draw interior room geom, generating it if needed
 					if (gdist_sq > rgeom_draw_dist_sq) continue; // too far
@@ -3661,7 +3661,9 @@ public:
 						else if (inc_small && bdist_sq < rgeom_ext_detail_dist_sq) {inc_small = 2;} // include exterior detail objects
 						if (debug_draw) {inc_small = 3;} // TESTING
 						bool const player_in_bldg(debug_draw || player_in_building_bcube);
+						if (ext_basement_conn_visible) {s.add_uniform_float("wet_effect", 0.0);} // disable for non-player building
 						b.gen_and_draw_room_geom(&bbd, s, amask_shader, oc, xlate, bi->ix, 0, reflection_pass, inc_small, player_in_bldg, ext_basement_conn_visible); // shadow_only=0
+						if (ext_basement_conn_visible) {s.add_uniform_float("wet_effect", water_damage);}
 						g->has_room_geom = 1;
 						if (!draw_interior) continue;
 						
