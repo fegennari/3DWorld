@@ -1224,7 +1224,7 @@ void building_t::add_conference_room_window(unsigned room_ix) {
 	// find the longest wall segment shared between the room and an adjacent hallway
 	float const wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness), fc_thick(get_fc_thickness()), door_width(get_doorway_width());
 	float const window_edge_space(0.25*door_width), min_window_width(0.5*door_width), min_wall_len(min_window_width + 2.0*window_edge_space);
-	bool best_dim(0), best_dir(0);
+	bool best_dim(0);
 	float best_lo(0.0), best_hi(0.0);
 	cube_t *best_wall(nullptr);
 	room_t *conn_hall(nullptr);
@@ -1246,7 +1246,7 @@ void building_t::add_conference_room_window(unsigned room_ix) {
 					if (!w.intersects(shared_area)) continue;
 					float const lo(max(shared_area.d[!dim][0], w.d[!dim][0])), hi(min(shared_area.d[!dim][1], w.d[!dim][1]));
 					if ((hi - lo) <= max((best_hi - best_lo), min_wall_len)) continue; // too short
-					best_dim = dim; best_dir = dir; best_lo = lo; best_hi = hi; best_wall = &w; conn_hall = &r;
+					best_dim = dim; best_lo = lo; best_hi = hi; best_wall = &w; conn_hall = &r;
 				}
 			} // for r
 		} // for dir
