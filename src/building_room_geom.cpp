@@ -1184,6 +1184,7 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 	cube_t parts[2] = {main, main};
 	mat->add_cube_to_verts_untextured(base, base_color, EF_Z1); // skip bottom
 	bool parts_swapped(0), is_cylins[2] = {0, 0};
+	static vect_cube_t avoid;
 	
 	if (two_part) {
 		float const split_pos(main.d[!dim][0] + rgen.rand_uniform(0.4, 0.6)*width);
@@ -1198,12 +1199,14 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 		is_cylins[n] = is_cylin;
 		float const max_shrink_val(is_cylin ? 0.15 : 0.25);
 		for (unsigned d = 0; d < 2; ++d) {part.expand_in_dim(d, -rgen.rand_uniform(0.0, max_shrink_val)*part.get_sz_dim(d));} // shrink in both dims independently
+		avoid.clear();
 		
 		if (is_cylin) { // make it square
 			float const dx(part.dx()), dy(part.dy());
 			if (dx < dy) {part.expand_in_y(-0.5*(dy - dx));} else {part.expand_in_x(-0.5*(dx - dy));}
 			if (two_part && part.intersects(parts[1-n])) {part.expand_by_xy(-0.1*min(dx, dy));} // if adjacent, shrink to force a gap
 		}
+		vector3d const part_sz(part.get_size());
 		colorRGBA const color(choose_machine_part_color(c, rgen, 0)); // is_small=0
 		
 		if (is_cylin) {
@@ -1217,12 +1220,6 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 		}
 		else {mat->add_cube_to_verts_untextured(part, color, EF_Z1);} // skip bottom
 
-		// add smaller shapes to this one
-		unsigned const num_shapes(rgen.rand() % 6); // 0-5
-
-		for (unsigned n = 0; n < num_shapes; ++n) {
-			// TODO
-		} // for n
 		// add vents
 		if (!is_cylin && rgen.rand_float() < 0.8) {
 			unsigned orients[3]={};
@@ -1234,11 +1231,11 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 			else { // both sides
 				for (unsigned d = 0; d < 2; ++d) {orients[d+1] = 2*(!dim) + d;}
 			}
-			for (unsigned n = 0; n < (two_part ? 2 : 3); ++n) {
+			for (unsigned m = 0; m < (two_part ? 2 : 3); ++m) {
 				if (rgen.rand_bool()) continue;
 				int const tid(get_texture_by_name("interiors/vent.jpg"));
-				bool const vdim(orients[n] >> 1), vdir(orients[n] & 1);
-				float const pwidth(part.get_sz_dim(!vdim)), pheight(part.dz());
+				bool const vdim(orients[m] >> 1), vdir(orients[m] & 1);
+				float const pwidth(part_sz[!vdim]), pheight(part_sz.z);
 				float const vhwidth(rgen.rand_uniform(0.24, 0.32)*min(pwidth, 1.0f*pheight)), wpad(1.2*vhwidth);
 				float const vhheight(rgen.rand_uniform(0.4, 0.6)*vhwidth), hpad(1.2*vhheight);
 				cube_t vent;
@@ -1246,10 +1243,11 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 				vent.d[vdim][ vdir] = part.d[vdim][vdir] + (vdir ? 1.0 : -1.0)*rgen.rand_uniform(0.02, 0.4)*vhwidth; // set depth
 				set_wall_width(vent, rgen.rand_uniform(part.d[!vdim][0]+wpad, part.d[!vdim][1]-wpad), vhwidth, !vdim);
 				set_wall_width(vent, rgen.rand_uniform(part.d[2    ][0]+hpad, part.d[2    ][1]-hpad), vhheight, 2   );
-				vent.intersect_with_cube(c); // can't extend outside
+				vent.intersect_with_cube(main); // can't extend outside or into the base
 				assert(vent.is_strictly_normalized());
 				room_object_t vent_obj(vent, TYPE_VENT, c.room_id, vdim, !vdir, 0, c.light_amt);
 				add_flat_textured_detail_wall_object(vent_obj, c.color, tid, 0, 0, 0); // side vent; skip_z1_face=0, draw_all_faces=0, detail=0 (small)
+				avoid.push_back(vent);
 			} // for n
 			mat = &get_metal_material(1, 0, 1); // update the pointer
 		}
@@ -1274,7 +1272,51 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 			rgeom_mat_t &duct_mat(get_material(tid_nm_pair_t(get_cylin_duct_tid(), 1.0, 1), 1, 0, 1)); // shadowed, small
 			duct_mat.add_cylin_to_verts(p1, p2, radius, radius, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.0, 1.0, 0, 32, 1.0, 1); // ndiv=32, swap_txy=1
 			mat = &get_metal_material(1, 0, 1); // update the pointer
+			cube_t vent_bc(p1, p2);
+			vent_bc.expand_by(radius); // close enough
+			avoid.push_back(vent_bc);
 		}
+		// add smaller shapes to this one
+		unsigned const num_shapes(rgen.rand() % (is_cylin ? 5 : 9) + (two_part ? 0 : 1)); // 0-4 for cylin, 0-8 for cube, +1 for single part
+		float const max_shape_sz(0.25*part_sz.get_min_val());
+
+		for (unsigned N = 0; N < num_shapes; ++N) {
+			bool const add_cylin(rgen.rand_float() < 0.33);
+			unsigned const cdim(add_cylin ? (rgen.rand() % 3) : 0);
+
+			for (unsigned m = 0; m < 10; ++m) { // 10 attempts to place this shape
+				unsigned const face(rgen.rand() & 3); // {top, front, left, right}
+				unsigned const face_dims[4] = {2, dim, !dim, !dim}, face_dirs[4] = {1, dir, 0, 1};
+				unsigned const fdim(face_dims[face]), fdir(face_dirs[face]);
+				vector3d half_sz;
+				cube_t shape;
+				for (unsigned d = 0; d < 3; ++d) {half_sz[d] = rgen.rand_uniform(0.4, 1.0)*max_shape_sz;}
+			
+				if (is_cylin) { // make sure cylinder ends are square
+					unsigned const d1((cdim+1)%3), d2((cdim+2)%3); // the non-cylin long dims
+					half_sz[d1] = half_sz[d2] = 0.5*(half_sz[d1] + half_sz[d2]);
+				}
+				for (unsigned d = 0; d < 3; ++d) {
+					float const val((d == fdim) ? part.d[fdim][fdir] : rgen.rand_uniform(part.d[d][0], part.d[d][1]));
+					set_wall_width(shape, val, half_sz[d], d);
+				}
+				shape.intersect_with_cube(main); // TODO: make cylinders squares if clipped; TODO: fix Z-fighting when overlapping shapes are clipped
+				assert(shape.is_strictly_normalized());
+				if (part.contains_cube(shape))                continue; // shouldn't happen?
+				if (two_part && parts[1-n].intersects(shape)) continue; // TODO: but if n==0, the other part hasn't been shrunk
+				if (has_bcube_int(shape, avoid))              continue;
+				colorRGBA const color(choose_machine_part_color(c, rgen, 1)); // is_small=1
+
+				if (add_cylin) {
+					mat->add_ortho_cylin_to_verts(shape, color, cdim, 1, 1); // draw top and bottom in case they're visible
+				}
+				else {
+					mat->add_cube_to_verts_untextured(shape, color, 0); // draw all faces since we don't track which are visible
+				}
+				avoid.push_back(shape); // optional?
+				break; // success/done
+			} // for m
+		} // for n
 	} // for n
 	if (two_part) { // connect the two parts with pipe(s); there's no check for intersecting pipes
 		unsigned const num_pipes(rgen.rand() % 4); // 0-3
