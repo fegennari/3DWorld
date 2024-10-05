@@ -1152,20 +1152,24 @@ colorRGBA choose_machine_part_color(room_object_t const &c, rand_gen_t &rgen, bo
 	}
 	return choose_pipe_color(c, rgen);
 }
-void add_machine_pipe_in_region(rgeom_mat_t &mat, room_object_t const &c, cube_t const &region, float rmax, bool dim, rand_gen_t &rgen) {
-	assert(region.is_strictly_normalized());
-	min_eq(rmax, 0.25f*min(region.dz(), region.get_sz_dim(!dim)));
-	float const radius(rgen.rand_uniform(0.2, 1.0)*rmax), edge_space(1.5*radius);
-	point p1, p2;
+void select_pipe_location(point &p1, point &p2, cube_t const &region, float radius, bool dim, rand_gen_t &rgen) {
+	float const edge_space(1.5*radius);
 	p1[dim] = region.d[dim][0];
 	p2[dim] = region.d[dim][1];
-	
+
 	for (unsigned n = 0; n < 2; ++n) {
 		unsigned const d(n ? 2 : !dim);
 		p1[d] = p2[d] = rgen.rand_uniform(region.d[d][0]+edge_space, region.d[d][1]-edge_space);
 	}
+}
+void add_machine_pipe_in_region(rgeom_mat_t &mat, room_object_t const &c, cube_t const &region, float rmax, bool dim, rand_gen_t &rgen) {
+	assert(region.is_strictly_normalized());
+	min_eq(rmax, 0.25f*min(region.dz(), region.get_sz_dim(!dim)));
+	float const radius(rgen.rand_uniform(0.25, 1.0)*rmax);
+	point p1, p2;
+	select_pipe_location(p1, p2, region, radius, dim, rgen);
 	colorRGBA const color(choose_pipe_color(c, rgen));
-	// TODO: custom specular color?
+	//tex.set_specular_color((is_known_metal_color(c.color) ? c.color : WHITE), 0.8, 60.0); // TODO: custom specular color?
 	mat.add_cylin_to_verts(p1, p2, radius, radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, 16);
 }
 void building_room_geom_t::add_machine(room_object_t const &c) {
@@ -1177,8 +1181,6 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 	colorRGBA const base_color(apply_light_color(c));
 	cube_t base(c), main(c);
 	base.z2() = main.z1() = c.z1() + rgen.rand_uniform(0.04, 0.1)*height;
-	main.expand_in_dim( dim, -rgen.rand_uniform(0.0, 0.1)*depth); // small shrink
-	main.expand_in_dim(!dim, -rgen.rand_uniform(0.0, 0.1)*width); // small shrink
 	cube_t parts[2] = {main, main};
 	mat->add_cube_to_verts_untextured(base, base_color, EF_Z1); // skip bottom
 	bool parts_swapped(0), is_cylins[2] = {0, 0};
@@ -1194,6 +1196,8 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 		cube_t &part(parts[n]);
 		bool const is_cylin(!is_cylins[0] && rgen.rand_float() < 0.4 && max(part.dx(), part.dy()) < 1.5*min(part.dx(), part.dy())); // don't place two cylinders
 		is_cylins[n] = is_cylin;
+		float const max_shrink_val(is_cylin ? 0.15 : 0.25);
+		for (unsigned d = 0; d < 2; ++d) {part.expand_in_dim(d, -rgen.rand_uniform(0.0, max_shrink_val)*part.get_sz_dim(d));} // shrink in both dims independently
 		
 		if (is_cylin) { // make it square
 			float const dx(part.dx()), dy(part.dy());
@@ -1214,22 +1218,65 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 		else {mat->add_cube_to_verts_untextured(part, color, EF_Z1);} // skip bottom
 
 		// add smaller shapes to this one
-		// TODO
-		
-		if (is_cylin || part.d[dim][dir] != c.d[dim][dir]) { // if there's a gap between the machine and the wall
-			// add pipe(s) connecting to back wall in {dim, !dir} or ceiling
-			unsigned const num_pipes(rgen.rand() % 4); // 0-3
+		unsigned const num_shapes(rgen.rand() % 6); // 0-5
 
-			if (num_pipes > 0) {
-				cube_t region(part);
-				region.d[dim][ dir] = (is_cylin ? part.get_center_dim(dim) : part.d[dim][!dir]); // center plane of cylinder or back of cube
-				region.d[dim][!dir] = c.d[dim][!dir]; // wall behind the machine
-				assert(region.is_strictly_normalized());
-				for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(*mat, c, region, pipe_rmax, dim, rgen);}
+		for (unsigned n = 0; n < num_shapes; ++n) {
+			// TODO
+		} // for n
+		// add vents
+		if (!is_cylin && rgen.rand_float() < 0.8) {
+			unsigned orients[3]={};
+			orients[0] = 2*dim + dir; // front side
+
+			if (two_part) { // side not facing the other part
+				orients[1] = 2*(!dim) + (bool(n)^parts_swapped);
 			}
+			else { // both sides
+				for (unsigned d = 0; d < 2; ++d) {orients[d+1] = 2*(!dim) + d;}
+			}
+			for (unsigned n = 0; n < (two_part ? 2 : 3); ++n) {
+				if (rgen.rand_bool()) continue;
+				int const tid(get_texture_by_name("interiors/vent.jpg"));
+				bool const vdim(orients[n] >> 1), vdir(orients[n] & 1);
+				float const pwidth(part.get_sz_dim(!vdim)), pheight(part.dz());
+				float const vhwidth(rgen.rand_uniform(0.24, 0.32)*min(pwidth, 1.0f*pheight)), wpad(1.2*vhwidth);
+				float const vhheight(rgen.rand_uniform(0.4, 0.6)*vhwidth), hpad(1.2*vhheight);
+				cube_t vent;
+				vent.d[vdim][!vdir] = part.d[vdim][vdir]; // edge of part
+				vent.d[vdim][ vdir] = part.d[vdim][vdir] + (vdir ? 1.0 : -1.0)*rgen.rand_uniform(0.02, 0.4)*vhwidth; // set depth
+				set_wall_width(vent, rgen.rand_uniform(part.d[!vdim][0]+wpad, part.d[!vdim][1]-wpad), vhwidth, !vdim);
+				set_wall_width(vent, rgen.rand_uniform(part.d[2    ][0]+hpad, part.d[2    ][1]-hpad), vhheight, 2   );
+				vent.intersect_with_cube(c); // can't extend outside
+				assert(vent.is_strictly_normalized());
+				room_object_t vent_obj(vent, TYPE_VENT, c.room_id, vdim, !vdir, 0, c.light_amt);
+				add_flat_textured_detail_wall_object(vent_obj, c.color, tid, 0, 0, 0); // side vent; skip_z1_face=0, draw_all_faces=0, detail=0 (small)
+			} // for n
+			mat = &get_metal_material(1, 0, 1); // update the pointer
+		}
+		if (1/*rgen.rand_float() < 0.5*/) { // add a breaker panel
+			// TODO
+		}
+		bool const has_gap(fabs(part.d[dim][dir] - c.d[dim][dir]) > pipe_rmax); // add pipes if gap is large enough
+		cube_t region(part);
+		region.d[dim][ dir] = (is_cylin ? part.get_center_dim(dim) : part.d[dim][!dir]); // center plane of cylinder or back of cube
+		region.d[dim][!dir] = c.d[dim][!dir]; // wall behind the machine
+		assert(region.is_strictly_normalized());
+
+		if (is_cylin || has_gap) { // if there's a gap between the machine and the wall
+			// add pipe(s) connecting to back wall in {dim, !dir} or ceiling; there's no check for intersecting pipes
+			unsigned const num_pipes(rgen.rand() % 4); // 0-3
+			for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(*mat, c, region, pipe_rmax, dim, rgen);}
+		}
+		if (!is_cylin && has_gap && rgen.rand_float() < 0.65) { // add a duct to the wall
+			float const radius(rgen.rand_uniform(2.0, 4.0)*pipe_rmax); // wider than a pipe
+			point p1, p2;
+			select_pipe_location(p1, p2, region, radius, dim, rgen);
+			rgeom_mat_t &duct_mat(get_material(tid_nm_pair_t(get_cylin_duct_tid(), 1.0, 1), 1, 0, 1)); // shadowed, small
+			duct_mat.add_cylin_to_verts(p1, p2, radius, radius, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.0, 1.0, 0, 32, 1.0, 1); // ndiv=32, swap_txy=1
+			mat = &get_metal_material(1, 0, 1); // update the pointer
 		}
 	} // for n
-	if (two_part) { // connect the two parts with pipe(s)
+	if (two_part) { // connect the two parts with pipe(s); there's no check for intersecting pipes
 		unsigned const num_pipes(rgen.rand() % 4); // 0-3
 
 		if (num_pipes > 0) {
@@ -4722,7 +4769,7 @@ void building_room_geom_t::add_switch(room_object_t const &c, bool draw_detail_p
 	room_object_t plate(c);
 	plate.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.70*scaled_depth; // front face of plate
 
-	if (draw_detail_pass) { // draw face plate (static detail); draw_z1_face=0, draw_all_faces=in_attic
+	if (draw_detail_pass) { // draw face plate (static detail); skip_z1_face=0, draw_all_faces=in_attic
 		add_flat_textured_detail_wall_object(plate, get_outlet_or_switch_box_color(c), get_texture_by_name("interiors/light_switch.jpg"), 0, in_attic);
 	}
 	else { // draw rocker (small object that can move/change state)
@@ -4755,14 +4802,16 @@ void building_room_geom_t::add_breaker(room_object_t const &c) {
 	rotate_verts(mat.quad_verts, rot_axis, 0.12*PI, plate.get_cube_center(), qv_start); // rotate rocker slightly about base plate center
 }
 
-void building_room_geom_t::add_flat_textured_detail_wall_object(room_object_t const &c, colorRGBA const &side_color, int tid, bool draw_z1_face, bool draw_all_faces) {
-	rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(tid, 0.0, 0), 0, 0, 2)); // small=2/detail
+void building_room_geom_t::add_flat_textured_detail_wall_object(room_object_t const &c, colorRGBA const &side_color,
+	int tid, bool skip_z1_face, bool draw_all_faces, bool detail)
+{
+	rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(tid, 0.0, 0), 0, 0, (detail ? 2 : 1))); // small=1 or 2/detail
 	front_mat.add_cube_to_verts(c, c.color, zero_vector, get_face_mask(c.dim, !c.dir), !c.dim); // textured front face; always fully lit to match wall
-	unsigned const skip_faces(draw_all_faces ? 0 : (get_skip_mask_for_xy(c.dim) | (draw_z1_face ? EF_Z1 : 0))); // skip front/back and maybe bottom faces
+	unsigned const skip_faces(draw_all_faces ? 0 : (get_skip_mask_for_xy(c.dim) | (skip_z1_face ? EF_Z1 : 0))); // skip front/back and maybe bottom faces
 	get_untextured_material(0, 0, 2).add_cube_to_verts_untextured(c, side_color, skip_faces); // sides: unshadowed, small
 }
 void building_room_geom_t::add_outlet(room_object_t const &c) {
-	add_flat_textured_detail_wall_object(c, get_outlet_or_switch_box_color(c), get_texture_by_name("interiors/outlet1.jpg"), 1); // draw_z1_face=1 (optimization)
+	add_flat_textured_detail_wall_object(c, get_outlet_or_switch_box_color(c), get_texture_by_name("interiors/outlet1.jpg"), 1); // skip_z1_face=1 (optimization)
 }
 void building_room_geom_t::add_vent(room_object_t const &c) {
 	int const tid(get_texture_by_name("interiors/vent.jpg"));
@@ -4772,7 +4821,7 @@ void building_room_geom_t::add_vent(room_object_t const &c) {
 		front_mat.add_cube_to_verts(c, c.color, zero_vector, ~EF_Z1, !c.dim); // textured bottom face; always fully lit to match wall
 		get_untextured_material(0, 0, 2).add_cube_to_verts_untextured(c, c.color, EF_Z12); // sides: unshadowed, small; skip top and bottom face
 	}
-	else {add_flat_textured_detail_wall_object(c, c.color, tid, 0);} // vent on a wall; draw_z1_face=0
+	else {add_flat_textured_detail_wall_object(c, c.color, tid, 0);} // vent on a wall; skip_z1_face=0
 }
 
 int select_plate_texture(unsigned rand_val) {
