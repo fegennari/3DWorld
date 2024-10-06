@@ -851,7 +851,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				else          {add_wall_vent_to_room(rgen, *r, floor_zval, room_id, objs_start, is_utility);} // office building vents
 			}
 			// pictures and whiteboards must not be placed behind anything, excluding trashcans; so we add them here
-			bool const can_hang((is_house || !(is_bathroom || is_kitchen || no_whiteboard)) && !is_storage && !is_utility && !is_machine);
+			bool const can_hang((is_house || !(is_bathroom || is_kitchen || no_whiteboard)) && !is_storage && !is_utility && !is_machine && !is_inter);
 			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement));
 
 			if (is_bathroom || is_kitchen || rgen.rand_float() < 0.8) { // 80% of the time, always in bathrooms and kitchens
