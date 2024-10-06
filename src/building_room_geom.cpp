@@ -4202,33 +4202,42 @@ void building_room_geom_t::add_false_door(room_object_t const &c) {
 		// no sides, since they may be visible through an interior window
 		return;
 	}
+	bool const interior(c.is_interior()), two_side_interior(interior && c.is_open());
 	cube_t sides[2] = {c, c}; // {interior, exterior}
 	sides[0].d[c.dim][!c.dir] = sides[1].d[c.dim][c.dir] = c.get_center_dim(c.dim);
 	
 	for (unsigned exterior = 0; exterior < 2; ++exterior) {
-		if (exterior && c.is_interior()) continue; // interior only; no exterior side to this door
+		if (exterior && interior) continue; // interior only; no exterior side to this door
 		bool const front_dir(c.dir ^ bool(exterior) ^ 1);
 		
 		if (c.flags & RO_FLAG_HAS_EXTRA) { // vault door
 			float const width(c.get_width());
+			unsigned const front_skip(two_side_interior ? 0 : ~get_face_mask(c.dim, !front_dir)); // skip front if not 2 sided
 			tid_nm_pair_t const door_tex(get_metal_plate_tex(2.0/width, 0)); // unshadowed
-			get_material(door_tex, 0, 0, 0, 0, exterior).add_cube_to_verts(c, c.color, c.get_llc(), (~get_face_mask(c.dim, !front_dir) | EF_Z1)); // skip front and bottom
-			// draw wheel/handle
+			get_material(door_tex, 0, 0, 0, 0, exterior).add_cube_to_verts(c, c.color, c.get_llc(), (front_skip | EF_Z1)); // skip bottom
+			// draw wheel/handle(s)
+			rgeom_mat_t &handle_mat(get_metal_material(1, 0, 0, exterior));
+			colorRGBA const handle_color((c.room_id & 1) ? DK_RED : GRAY);
 			float const wheel_radius(0.2*width), wheel_depth(0.08*width);
 			cube_t wheel;
-			wheel.set_from_point(c.get_cube_center());
-			wheel.d[c.dim][front_dir] = c.d[c.dim][front_dir] + (front_dir ? 1.0 : -1.0)*wheel_depth; // extend outward
-			wheel.expand_in_dim(!c.dim, wheel_radius);
-			wheel.expand_in_dim(2,      wheel_radius); // Z
-			rgeom_mat_t &handle_mat(get_metal_material(1, 0, 0, exterior));
-			draw_metal_handle_wheel(wheel, c.dim, GRAY, LT_GRAY, handle_mat, handle_mat);
-			continue;
+
+			for (unsigned n = 0; n < (two_side_interior ? 2 : 1); ++n) { // front and maybe back side wheels
+				bool const dir(front_dir ^ bool(n));
+				wheel.set_from_point(c.get_cube_center());
+				wheel.d[c.dim][dir] = c.d[c.dim][dir] + (dir ? 1.0 : -1.0)*wheel_depth; // extend outward
+				wheel.expand_in_dim(!c.dim, wheel_radius);
+				wheel.expand_in_dim(2,      wheel_radius); // Z
+				draw_metal_handle_wheel(wheel, c.dim, handle_color, LT_GRAY, handle_mat, handle_mat);
+			}
 		}
-		int const tid((c.flags & RO_FLAG_WALKWAY) ? get_bldg_door_tid() : (c.is_house() ? get_int_door_tid() : get_off_door_tid()));
-		rgeom_mat_t &fb_mat(get_material(tid_nm_pair_t(tid, 0.0), 0, 0, 0, 0, exterior)); // unshadowed
-		fb_mat.add_cube_to_verts(c, c.color, all_zeros, get_face_mask(c.dim, front_dir), !c.dim); // draw only front or back
-		rgeom_mat_t &side_mat(get_untextured_material(0, 0, 0, 0, exterior)); // unshadowed
-		side_mat.add_cube_to_verts_untextured(c, c.color, (get_skip_mask_for_xy(c.dim) | EF_Z1)); // skip front, back, and bottom faces
+		else {
+			unsigned const skip_faces(two_side_interior ? ~get_skip_mask_for_xy(c.dim) : get_face_mask(c.dim, front_dir)); // draw only front and/or back
+			int const tid((c.flags & RO_FLAG_WALKWAY) ? get_bldg_door_tid() : (c.is_house() ? get_int_door_tid() : get_off_door_tid()));
+			rgeom_mat_t &fb_mat(get_material(tid_nm_pair_t(tid, 0.0), 0, 0, 0, 0, exterior)); // unshadowed
+			fb_mat.add_cube_to_verts(c, c.color, all_zeros, skip_faces, !c.dim);
+			rgeom_mat_t &side_mat(get_untextured_material(0, 0, 0, 0, exterior)); // unshadowed
+			side_mat.add_cube_to_verts_untextured(c, c.color, (get_skip_mask_for_xy(c.dim) | EF_Z1)); // skip front, back, and bottom faces
+		}
 	} // for exterior
 }
 
