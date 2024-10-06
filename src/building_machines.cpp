@@ -145,8 +145,7 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 		else {get_metal_material(1, 0, 1).add_cube_to_verts_untextured(part, color, EF_Z1);} // skip bottom
 
 		if (!is_cylin && rgen.rand_float() < 0.6) { // maybe add a breaker panel if a cube
-			//unsigned const flags(rgen.rand_bool() ? RO_FLAG_OPEN : 0); // open 50% of the time
-			unsigned const flags(0); // not open, because the breakers aren't currently drawn
+			unsigned const flags((rgen.rand_float() < 0.2) ? RO_FLAG_OPEN : 0); // open 20% of the time
 			float panel_hheight(part_sz.z*rgen.rand_uniform(0.15, 0.22)), panel_hwidth(part_sz[!dim]*rgen.rand_uniform(0.15, 0.22));
 			min_eq(panel_hheight, 1.5f*panel_hwidth ); // set reasonable aspect ratio
 			min_eq(panel_hwidth,  1.5f*panel_hheight); // set reasonable aspect ratio
@@ -159,6 +158,18 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 				room_object_t const bp(panel, TYPE_BRK_PANEL, c.room_id, dim, !dir, flags, c.light_amt, SHAPE_CUBE, panel_color);
 				add_breaker_panel(bp);
 				avoid.push_back(panel);
+
+				if (bp.is_open()) { // draw breakers insiode as a texured quad
+					avoid.back().expand_in_dim(!dim, 0.1*panel_hwidth); // add space for the open door
+					rgeom_mat_t &breaker_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/breaker_panel.jpg"), 0.0), 0, 0, 1)); // unshadowed, small
+					float const border(0.1*min(panel_hwidth, panel_hheight)), new_hheight(panel_hheight - border), new_hwidth(panel_hwidth - border);
+					panel.expand_in_dim(!dim, -border); // shrink
+					panel.expand_in_dim(2,    -border);
+					float const target_ar(1.25), ar(new_hwidth/new_hheight);
+					if (ar < target_ar) {set_wall_width(panel, panel.zc(),  new_hwidth /target_ar,  2  );} // too tall
+					else {set_wall_width(panel, panel.get_center_dim(!dim), new_hheight*target_ar, !dim);} // too wide
+					breaker_mat.add_cube_to_verts(panel, apply_light_color(c, WHITE), part.get_llc(), get_face_mask(dim, dir));
+				}
 			}
 		}
 		if (!is_cylin && rgen.rand_float() < 0.75) { // maybe add a valve handle to the front if a cube
