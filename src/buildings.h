@@ -1150,6 +1150,7 @@ struct building_room_geom_t {
 	void add_chimney_cap(room_object_t const &c);
 	void add_ext_ladder(room_object_t const &c);
 	void add_int_ladder(room_object_t const &c);
+	void add_machine_pipe_in_region(room_object_t const &c, cube_t const &region, float rmax, bool dim, rand_gen_t &rgen);
 	void add_machine(room_object_t const &c);
 	void add_keyboard(room_object_t const &c);
 	void add_obj_with_top_texture  (room_object_t const &c, std::string const &texture_name, colorRGBA const &sides_color, bool is_small=0);
@@ -2570,6 +2571,8 @@ inline float get_tc_leg_width(cube_t const &c, float width) {return 0.5f*width*(
 inline unsigned get_rgeom_sphere_ndiv(bool low_detail) {return (low_detail ? N_SPHERE_DIV/2 : N_SPHERE_DIV);}
 inline point cube_bot_center(cube_t const &c) {return point(c.xc(), c.yc(), c.z1());}
 inline point cube_top_center(cube_t const &c) {return point(c.xc(), c.yc(), c.z2());}
+inline bool is_known_metal_color(colorRGBA const &c) {return (c == COPPER_C || c == BRASS_C || c == BRONZE_C || c == GOLD);}
+inline colorRGBA get_specular_color(colorRGBA const &c) {return (is_known_metal_color(c) ? c : WHITE);}
 
 void get_city_plot_zones(vect_city_zone_t &zones);
 void get_city_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state);

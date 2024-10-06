@@ -100,8 +100,6 @@ int get_toilet_paper_nm_id() {return get_texture_by_name("interiors/toilet_paper
 colorRGBA get_textured_wood_color() {return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));} // Note: uses default WOOD_COLOR, not the per-building random variant
 colorRGBA get_counter_color      () {return (get_textured_wood_color()*0.75 + texture_color(get_counter_tid())*0.25);}
 
-bool is_known_metal_color(colorRGBA const &c) {return (c == COPPER_C || c == BRASS_C || c == BRONZE_C || c == GOLD);}
-
 rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale, bool inc_shadows, bool dynamic, unsigned small, bool exterior) {
 	return get_material(tid_nm_pair_t(WOOD2_TEX, get_texture_by_name("normal_maps/wood_NRM.jpg", 1),
 		3.0*tscale, 3.0*tscale, 0.0, 0.0, inc_shadows), inc_shadows, dynamic, small, 0, exterior); // hard-coded for common material
@@ -2324,7 +2322,7 @@ void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) {
 	// draw sides and possibly one or both ends
 	tid_nm_pair_t tex((is_duct ? get_cylin_duct_tid() : -1), 1.0, shadowed); // custom specular color
 	// make specular; maybe should not make specular if rusty, but setting per-pipe specular doesn't work, and water effect adds specular anyway
-	colorRGBA const spec_color(is_known_metal_color(c.color) ? c.color : WHITE); // special case metals
+	colorRGBA const spec_color(get_specular_color(c.color)); // special case metals
 	tex.set_specular_color(spec_color, 0.8, 60.0);
 	rgeom_mat_t &mat(get_material(tex, shadowed, 0, (exterior ? 0 : 2), 0, exterior)); // detail or exterior object
 	// swap texture XY for ducts
@@ -2407,11 +2405,8 @@ void building_room_geom_t::add_valve(room_object_t const &c) {
 	// Note: we don't know which direction the pipe is in, so the valve handle must be symmetric
 	unsigned const dim(c.dir ? 2 : unsigned(c.dim)); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
 	get_metal_material(1, 0, 2); // make sure it's in the map
-	colorRGBA const color(apply_light_color(c));
-	colorRGBA const spec_color(is_known_metal_color(c.color) ? c.color : WHITE); // special case metals
-	tid_nm_pair_t tex(WHITE_TEX, 1.0, 1); // custom specular color, shadowed
-	tex.set_specular_color(spec_color, 0.8, 60.0);
-	rgeom_mat_t &mat(get_material(tex, 1, 0, 2)); // detail object
+	colorRGBA const color(apply_light_color(c)), spec_color(get_specular_color(c.color)); // special case metals
+	rgeom_mat_t &mat(get_metal_material(1, 0, 2, 0, spec_color)); // detail object
 	draw_metal_handle_wheel(c, dim, color, apply_light_color(c, WHITE), mat, get_metal_material(1, 0, 2));
 }
 

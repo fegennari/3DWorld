@@ -10,17 +10,17 @@ tid_nm_pair_t get_metal_plate_tex(float tscale, bool shadowed);
 colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c);
 
 
-colorRGBA choose_pipe_color(room_object_t const &c, rand_gen_t &rgen) {
+colorRGBA choose_pipe_color(rand_gen_t &rgen) {
 	unsigned const NCOLORS = 6;
 	colorRGBA const colors[NCOLORS] = {BRASS_C, COPPER_C, BRONZE_C, DK_BROWN, BROWN, LT_GRAY};
-	return apply_light_color(c, colors[rgen.rand() % NCOLORS]);
+	return colors[rgen.rand() % NCOLORS];
 }
-colorRGBA choose_machine_part_color(room_object_t const &c, rand_gen_t &rgen, bool is_small) {
+colorRGBA choose_machine_part_color(rand_gen_t &rgen, bool is_small) {
 	if (!is_small || rgen.rand_float() < 0.6) { // shade of gray
 		float const lum(rgen.rand_uniform(0.1, 0.6));
-		return apply_light_color(c, colorRGBA(lum, lum, lum));
+		return colorRGBA(lum, lum, lum);
 	}
-	return choose_pipe_color(c, rgen);
+	return choose_pipe_color(rgen);
 }
 
 void select_pipe_location(point &p1, point &p2, cube_t const &region, float radius, bool dim, rand_gen_t &rgen) {
@@ -34,15 +34,14 @@ void select_pipe_location(point &p1, point &p2, cube_t const &region, float radi
 	}
 }
 
-void add_machine_pipe_in_region(rgeom_mat_t &mat, room_object_t const &c, cube_t const &region, float rmax, bool dim, rand_gen_t &rgen) {
+void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cube_t const &region, float rmax, bool dim, rand_gen_t &rgen) {
 	assert(region.is_strictly_normalized());
 	min_eq(rmax, 0.25f*min(region.dz(), region.get_sz_dim(!dim)));
 	float const radius(rgen.rand_uniform(0.25, 1.0)*rmax);
 	point p1, p2;
 	select_pipe_location(p1, p2, region, radius, dim, rgen);
-	colorRGBA const color(choose_pipe_color(c, rgen));
-	//tex.set_specular_color((is_known_metal_color(c.color) ? c.color : WHITE), 0.8, 60.0); // TODO: custom specular color
-	mat.add_cylin_to_verts(p1, p2, radius, radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, 16);
+	colorRGBA const color(choose_pipe_color(rgen)), spec_color(get_specular_color(color)); // special case metals
+	get_metal_material(1, 0, 1, 0, spec_color).add_cylin_to_verts(p1, p2, radius, radius, apply_light_color(c, color), 0, 0, 0, 0, 1.0, 1.0, 0, 16); // shadowed, small
 }
 
 void clip_cylin_to_square(cube_t &c, unsigned dim) { // about the center
@@ -89,8 +88,7 @@ void draw_metal_handle_wheel(cube_t const &c, unsigned dim, colorRGBA const &col
 	shaft_mat.add_ortho_cylin_to_verts(shaft, shaft_color, dim, 1, 1); // draw sides and ends
 }
 
-void building_room_geom_t::add_machine(room_object_t const &c) {
-	rgeom_mat_t *mat(&get_metal_material(1, 0, 1)); // shadowed, small, specular metal; use a pointer so that it can be reset
+void building_room_geom_t::add_machine(room_object_t const &c) { // components are shadowed and small
 	// can use AC Unit, metal plate texture, buttons, lights, etc.
 	rand_gen_t rgen(c.create_rgen());
 	float const height(c.dz()), width(c.get_width()), depth(c.get_depth());
@@ -101,7 +99,7 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 	cube_t base(c), main(c);
 	base.z2() = main.z1() = c.z1() + rgen.rand_uniform(0.04, 0.1)*height;
 	cube_t parts[2] = {main, main};
-	mat->add_cube_to_verts_untextured(base, base_color, EF_Z1); // skip bottom
+	get_metal_material(1, 0, 1).add_cube_to_verts_untextured(base, base_color, EF_Z1); // skip bottom
 	bool parts_swapped(0), is_cylins[2] = {0, 0};
 	static vect_cube_t avoid, shapes;
 
@@ -130,7 +128,7 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 		cube_t const &part(parts[n]);
 		bool const is_cylin(is_cylins[n]);
 		vector3d const part_sz(part.get_size());
-		colorRGBA const color(choose_machine_part_color(c, rgen, 0)); // is_small=0
+		colorRGBA const color(apply_light_color(c, choose_machine_part_color(rgen, 0))); // is_small=0
 		avoid .clear();
 		shapes.clear();
 
@@ -139,11 +137,10 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 				tid_nm_pair_t const mplate_tex(get_metal_plate_tex(1.0, 1)); // shadowed
 				rgeom_mat_t &mp_mat(get_material(mplate_tex, 1, 0, 1)); // shadowed, small
 				mp_mat.add_vcylin_to_verts(part, color, 0, 1, 0, 0, 1.0, 1.0, 2.0, 1.0, 0, 32, 0.0, 0, 2.0); // draw sides and top; tscale=2.0
-				mat = &get_metal_material(1, 0, 1); // update the pointer
 			}
-			else {mat->add_vcylin_to_verts(part, color, 0, 1);} // draw sides and top
+			else {get_metal_material(1, 0, 1).add_vcylin_to_verts(part, color, 0, 1);} // draw sides and top
 		}
-		else {mat->add_cube_to_verts_untextured(part, color, EF_Z1);} // skip bottom
+		else {get_metal_material(1, 0, 1).add_cube_to_verts_untextured(part, color, EF_Z1);} // skip bottom
 
 		if (!is_cylin && rgen.rand_float() < 0.6) { // maybe add a breaker panel if a cube
 			//unsigned const flags(rgen.rand_bool() ? RO_FLAG_OPEN : 0); // open 50% of the time
@@ -160,7 +157,6 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 				room_object_t const bp(panel, TYPE_BRK_PANEL, c.room_id, dim, !dir, flags, c.light_amt, SHAPE_CUBE, panel_color);
 				add_breaker_panel(bp);
 				avoid.push_back(panel);
-				mat = &get_metal_material(1, 0, 1); // update the pointer (may not be needed)
 			}
 		}
 		if (!is_cylin && rgen.rand_float() < 0.75) { // maybe add a valve handle to the front if a cube
@@ -172,10 +168,11 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 			if (!has_bcube_int(valve, avoid)) {
 				unsigned const NUM_HANDLE_COLORS = 5;
 				colorRGBA const handle_colors[NUM_HANDLE_COLORS] = {colorRGBA(0.5, 0.0, 0.0), colorRGBA(0.7, 0.0, 0.0), colorRGBA(0.5, 0.25, 0.0), LT_GRAY, BKGRAY};
-				colorRGBA const handle_color(handle_colors[rgen.rand() % NUM_HANDLE_COLORS]), shaft_color(choose_pipe_color(c, rgen));
-				draw_metal_handle_wheel(valve, dim, handle_color, shaft_color, *mat, *mat); // use the same material for the handle and the shaft
+				colorRGBA const handle_color(handle_colors[rgen.rand() % NUM_HANDLE_COLORS]), shaft_color(choose_pipe_color(rgen));
+				rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small, specular metal
+				// use the same material for the handle and the shaft
+				draw_metal_handle_wheel(valve, dim, apply_light_color(c, handle_color), apply_light_color(c, shaft_color), mat, mat);
 				avoid.push_back(valve);
-				mat = &get_metal_material(1, 0, 1); // update the pointer (may not be needed)
 			}
 		}
 		// add vents
@@ -209,7 +206,6 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 					break; // done/success
 				} // for N
 			} // for n
-			mat = &get_metal_material(1, 0, 1); // update the pointer
 		}
 		float const pipe_rmax(0.05*part_sz.get_min_val());
 		bool const has_gap(fabs(part.d[dim][dir] - c.d[dim][dir]) > pipe_rmax); // add pipes if gap is large enough
@@ -221,7 +217,7 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 		if (is_cylin || has_gap) { // if there's a gap between the machine and the wall
 			// add pipe(s) connecting to back wall in {dim, !dir} or ceiling; there's no check for intersecting pipes
 			unsigned const num_pipes(rgen.rand() % 4); // 0-3
-			for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(*mat, c, region, pipe_rmax, dim, rgen);}
+			for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region, pipe_rmax, dim, rgen);}
 		}
 		if (!is_cylin && has_gap && rgen.rand_float() < 0.65) { // add a duct to the wall
 			float const radius(rgen.rand_uniform(2.0, 4.0)*pipe_rmax); // wider than a pipe
@@ -229,7 +225,6 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 			select_pipe_location(p1, p2, region, radius, dim, rgen);
 			rgeom_mat_t &duct_mat(get_material(tid_nm_pair_t(get_cylin_duct_tid(), 1.0, 1), 1, 0, 1)); // shadowed, small
 			duct_mat.add_cylin_to_verts(p1, p2, radius, radius, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.0, 1.0, 0, 32, 1.0, 1); // ndiv=32, swap_txy=1
-			mat = &get_metal_material(1, 0, 1); // update the pointer
 			cube_t vent_bc(p1, p2);
 			vent_bc.expand_by(radius); // close enough
 			avoid.push_back(vent_bc);
@@ -273,9 +268,10 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 				}
 				if (bad_place) continue;
 				// TODO: textures
-				colorRGBA const color(choose_machine_part_color(c, rgen, 1)); // is_small=1
-				if (add_cylin) {mat->add_ortho_cylin_to_verts(shape, color, cdim, 1, 1);} // draw top and bottom in case they're visible
-				else           {mat->add_cube_to_verts_untextured(shape, color, 0);} // draw all faces since we don't track which are visible
+				colorRGBA const pcolor(choose_machine_part_color(rgen, 1)), spec_color(get_specular_color(pcolor)), lcolor(apply_light_color(c, pcolor));
+				rgeom_mat_t &mat(get_metal_material(1, 0, 1, 0, spec_color)); // shadowed, small, specular metal
+				if (add_cylin) {mat.add_ortho_cylin_to_verts(shape, lcolor, cdim, 1, 1);} // draw top and bottom in case they're visible
+				else           {mat.add_cube_to_verts_untextured(shape, lcolor, 0);} // draw all faces since we don't track which are visible
 				shapes.push_back(shape);
 				break; // success/done
 			} // for m
@@ -297,7 +293,7 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 				region.d[!dim][1] = max(side_pos[0], side_pos[1]);
 				assert(region.is_strictly_normalized());
 				// add flanges if large and connecting to a cube?
-				for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(*mat, c, region, pipe_rmax, !dim, rgen);}
+				for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region, pipe_rmax, !dim, rgen);}
 			}
 		}
 	}
