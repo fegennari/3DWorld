@@ -1169,45 +1169,57 @@ void add_machine_pipe_in_region(rgeom_mat_t &mat, room_object_t const &c, cube_t
 	point p1, p2;
 	select_pipe_location(p1, p2, region, radius, dim, rgen);
 	colorRGBA const color(choose_pipe_color(c, rgen));
-	//tex.set_specular_color((is_known_metal_color(c.color) ? c.color : WHITE), 0.8, 60.0); // TODO: custom specular color?
+	//tex.set_specular_color((is_known_metal_color(c.color) ? c.color : WHITE), 0.8, 60.0); // TODO: custom specular color
 	mat.add_cylin_to_verts(p1, p2, radius, radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, 16);
+}
+void clip_cylin_to_square(cube_t &c, unsigned dim) { // about the center
+	unsigned const d1((dim+1)%3), d2((dim+2)%3); // the non-cylin long dims
+	float const da(c.get_sz_dim(d1)), db(c.get_sz_dim(d2));
+	if (da < db) {c.expand_in_dim(d2, -0.5*(db - da));} else {c.expand_in_dim(d1, -0.5*(da - db));} // shrink
 }
 void building_room_geom_t::add_machine(room_object_t const &c) {
 	rgeom_mat_t *mat(&get_metal_material(1, 0, 1)); // shadowed, small, specular metal; use a pointer so that it can be reset
-	// can use TYPE_SWITCH, TYPE_PIPE, TYPE_BRK_PANEL, TYPE_VENT, TYPE_DUCT, AC Unit, metal plate texture, buttons, lights, etc.
+	// can use TYPE_BRK_PANEL, AC Unit, metal plate texture, buttons, lights, etc.
 	rand_gen_t rgen(c.create_rgen());
-	float const height(c.dz()), width(c.get_width()), depth(c.get_depth()), pipe_rmax(0.033*min(height, min(width, depth)));
+	float const height(c.dz()), width(c.get_width()), depth(c.get_depth());
 	bool const dim(c.dim), dir(c.dir), two_part(width > rgen.rand_uniform(1.5, 2.2)*depth);
+	unsigned const num_parts(two_part ? 2U : 1U);
 	colorRGBA const base_color(apply_light_color(c));
 	cube_t base(c), main(c);
 	base.z2() = main.z1() = c.z1() + rgen.rand_uniform(0.04, 0.1)*height;
 	cube_t parts[2] = {main, main};
 	mat->add_cube_to_verts_untextured(base, base_color, EF_Z1); // skip bottom
 	bool parts_swapped(0), is_cylins[2] = {0, 0};
-	static vect_cube_t avoid;
+	static vect_cube_t avoid, shapes;
 	
 	if (two_part) {
 		float const split_pos(main.d[!dim][0] + rgen.rand_uniform(0.4, 0.6)*width);
 		parts[0].d[!dim][1] = split_pos - max(0.0f, rgen.rand_uniform(-0.1, 0.1))*width; // maybe add a gap
 		parts[1].d[!dim][0] = split_pos + max(0.0f, rgen.rand_uniform(-0.1, 0.1))*width; // maybe add a gap
 		if (rgen.rand_bool()) {swap(parts[0], parts[1]); parts_swapped = 1;} // remove any bias toward the left/right
-		parts[rgen.rand_bool()].z2() -= rgen.rand_uniform(0.0, 0.2)*height; // make one side a bit shorter
 	}
-	for (unsigned n = 0; n < (two_part ? 2U : 1U); ++n) {
+	// calculate size and shape of each part
+	for (unsigned n = 0; n < num_parts; ++n) {
 		cube_t &part(parts[n]);
 		bool const is_cylin(!is_cylins[0] && rgen.rand_float() < 0.4 && max(part.dx(), part.dy()) < 1.5*min(part.dx(), part.dy())); // don't place two cylinders
 		is_cylins[n] = is_cylin;
 		float const max_shrink_val(is_cylin ? 0.15 : 0.25);
-		for (unsigned d = 0; d < 2; ++d) {part.expand_in_dim(d, -rgen.rand_uniform(0.0, max_shrink_val)*part.get_sz_dim(d));} // shrink in both dims independently
-		avoid.clear();
+		for (unsigned d = 0; d < 2; ++d) {part.expand_in_dim(d, -rgen.rand_uniform(0.1, 1.0)*max_shrink_val*part.get_sz_dim(d));} // shrink in both dims independently
+		part.z2() -= rgen.rand_uniform(0.05, 0.2)*height; // make a bit shorter
 		
 		if (is_cylin) { // make it square
-			float const dx(part.dx()), dy(part.dy());
-			if (dx < dy) {part.expand_in_y(-0.5*(dy - dx));} else {part.expand_in_x(-0.5*(dx - dy));}
-			if (two_part && part.intersects(parts[1-n])) {part.expand_by_xy(-0.1*min(dx, dy));} // if adjacent, shrink to force a gap
+			clip_cylin_to_square(part, 2); // Z
+			if (two_part && part.intersects(parts[1-n])) {part.expand_by_xy(-0.1*min(part.dx(), part.dy()));} // if adjacent, shrink to force a gap
 		}
+	}
+	// add/draw shapes/objects for each part
+	for (unsigned n = 0; n < num_parts; ++n) {
+		cube_t const &part(parts[n]);
+		bool const is_cylin(is_cylins[n]);
 		vector3d const part_sz(part.get_size());
 		colorRGBA const color(choose_machine_part_color(c, rgen, 0)); // is_small=0
+		avoid .clear();
+		shapes.clear();
 		
 		if (is_cylin) {
 			if (rgen.rand_bool()) { // make it textured
@@ -1254,6 +1266,7 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 		if (1/*rgen.rand_float() < 0.5*/) { // add a breaker panel
 			// TODO
 		}
+		float const pipe_rmax(0.05*part_sz.get_min_val());
 		bool const has_gap(fabs(part.d[dim][dir] - c.d[dim][dir]) > pipe_rmax); // add pipes if gap is large enough
 		cube_t region(part);
 		region.d[dim][ dir] = (is_cylin ? part.get_center_dim(dim) : part.d[dim][!dir]); // center plane of cylinder or back of cube
@@ -1282,17 +1295,18 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 
 		for (unsigned N = 0; N < num_shapes; ++N) {
 			bool const add_cylin(rgen.rand_float() < 0.33);
-			unsigned const cdim(add_cylin ? (rgen.rand() % 3) : 0);
 
 			for (unsigned m = 0; m < 10; ++m) { // 10 attempts to place this shape
 				unsigned const face(rgen.rand() & 3); // {top, front, left, right}
 				unsigned const face_dims[4] = {2, dim, !dim, !dim}, face_dirs[4] = {1, dir, 0, 1};
 				unsigned const fdim(face_dims[face]), fdir(face_dirs[face]);
+				unsigned cdim(2); // defaults to Z
+				if (add_cylin && fdim < 2) {cdim = (rgen.rand() % 3);} // cylin on part side can be oriented in X, Y, or Z
 				vector3d half_sz;
 				cube_t shape;
 				for (unsigned d = 0; d < 3; ++d) {half_sz[d] = rgen.rand_uniform(0.4, 1.0)*max_shape_sz;}
 			
-				if (is_cylin) { // make sure cylinder ends are square
+				if (is_cylin) { // make sure cylinder ends are square; could use clip_cylin_to_square(), but this always makes shapes smaller
 					unsigned const d1((cdim+1)%3), d2((cdim+2)%3); // the non-cylin long dims
 					half_sz[d1] = half_sz[d2] = 0.5*(half_sz[d1] + half_sz[d2]);
 				}
@@ -1300,20 +1314,24 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 					float const val((d == fdim) ? part.d[fdim][fdir] : rgen.rand_uniform(part.d[d][0], part.d[d][1]));
 					set_wall_width(shape, val, half_sz[d], d);
 				}
-				shape.intersect_with_cube(main); // TODO: make cylinders squares if clipped; TODO: fix Z-fighting when overlapping shapes are clipped
+				shape.intersect_with_cube(main);
+				if (is_cylin) {clip_cylin_to_square(shape, cdim);}
 				assert(shape.is_strictly_normalized());
-				if (part.contains_cube(shape))                continue; // shouldn't happen?
-				if (two_part && parts[1-n].intersects(shape)) continue; // TODO: but if n==0, the other part hasn't been shrunk
-				if (has_bcube_int(shape, avoid))              continue;
-				colorRGBA const color(choose_machine_part_color(c, rgen, 1)); // is_small=1
+				if (!part.intersects(shape) || part.contains_cube(shape)) continue; // shouldn't happen?
+				if (two_part && parts[1-n].intersects(shape)) continue;
+				if (has_bcube_int(shape, avoid)) continue;
+				bool bad_place(0);
 
-				if (add_cylin) {
-					mat->add_ortho_cylin_to_verts(shape, color, cdim, 1, 1); // draw top and bottom in case they're visible
+				for (cube_t const &s : shapes) { // check previously placed shapes for Z-fighting at clip boundaries
+					if (!s.intersects(shape)) continue;
+					if (s.x1()==shape.x1() || s.x2()==shape.x2() || s.y1()==shape.y1() || s.y2()==shape.y2() || s.z1()==shape.z1() || s.z2()==shape.z2()) {bad_place = 1; break;}
 				}
-				else {
-					mat->add_cube_to_verts_untextured(shape, color, 0); // draw all faces since we don't track which are visible
-				}
-				avoid.push_back(shape); // optional?
+				if (bad_place) continue;
+				// TODO: textures
+				colorRGBA const color(choose_machine_part_color(c, rgen, 1)); // is_small=1
+				if (add_cylin) {mat->add_ortho_cylin_to_verts(shape, color, cdim, 1, 1);} // draw top and bottom in case they're visible
+				else           {mat->add_cube_to_verts_untextured(shape, color, 0);} // draw all faces since we don't track which are visible
+				shapes.push_back(shape);
 				break; // success/done
 			} // for m
 		} // for n
@@ -1322,6 +1340,7 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 		unsigned const num_pipes(rgen.rand() % 4); // 0-3
 
 		if (num_pipes > 0) {
+			float const pipe_rmax(0.033*min(height, min(width, depth)));
 			cube_t region(parts[0]);
 			min_eq(region.z2(), parts[1].z2()); // shared Z range
 			max_eq(region.d[dim][0], parts[1].d[dim][0]); // shared range
