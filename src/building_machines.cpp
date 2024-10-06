@@ -231,7 +231,8 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 		}
 		// add smaller shapes to this one
 		unsigned const num_shapes(rgen.rand() % (is_cylin ? 5 : 9) + (two_part ? 0 : 1)); // 0-4 for cylin, 0-8 for cube, +1 for single part
-		float const max_shape_sz(0.25*part_sz.get_min_val());
+		float const max_shape_sz(0.25*part_sz.get_min_val()), cylin_radius(0.25*(part_sz.x + part_sz.y));
+		point const part_center(part.get_cube_center());
 
 		for (unsigned N = 0; N < num_shapes; ++N) {
 			bool const add_cylin(rgen.rand_float() < 0.33);
@@ -246,7 +247,7 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 				cube_t shape;
 				for (unsigned d = 0; d < 3; ++d) {half_sz[d] = rgen.rand_uniform(0.4, 1.0)*max_shape_sz;}
 
-				if (is_cylin) { // make sure cylinder ends are square; could use clip_cylin_to_square(), but this always makes shapes smaller
+				if (add_cylin) { // make sure cylinder ends are square; could use clip_cylin_to_square(), but this always makes shapes smaller
 					unsigned const d1((cdim+1)%3), d2((cdim+2)%3); // the non-cylin long dims
 					half_sz[d1] = half_sz[d2] = 0.5*(half_sz[d1] + half_sz[d2]);
 				}
@@ -255,10 +256,18 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 					set_wall_width(shape, val, half_sz[d], d);
 				}
 				shape.intersect_with_cube(main);
-				if (is_cylin) {clip_cylin_to_square(shape, cdim);}
+				if (add_cylin) {clip_cylin_to_square(shape, cdim);}
 				assert(shape.is_strictly_normalized());
 				if (!part.intersects(shape) || part.contains_cube(shape)) continue; // shouldn't happen?
-				if (two_part && parts[1-n].intersects(shape)) continue;
+				if (two_part && parts[1-n].intersects(shape)) continue; // safer to check this, though it may be okay to allow
+				
+				if (add_cylin) { // cylinder case is more difficult
+					float const shape_radius(0.25*(shape.dx() + shape.dy()));
+					point const shape_center(shape.get_cube_center());
+					if (!circle_rect_intersect(shape_center, shape_radius, part, cdim)) continue; // new cylinder vs. part bcube
+					if (is_cylin && cdim == 2 && !dist_xy_less_than(part_center, shape.get_cube_center(), (cylin_radius + shape_radius))) continue; // vcylin vs. vcylin
+				}
+				if (is_cylin && !circle_rect_intersect(part_center, cylin_radius, shape, 2)) continue; // new bcube vs. part cylinder
 				if (has_bcube_int(shape, avoid)) continue;
 				bool bad_place(0);
 
