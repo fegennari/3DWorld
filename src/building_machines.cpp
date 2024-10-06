@@ -17,12 +17,9 @@ colorRGBA choose_pipe_color(rand_gen_t &rgen) {
 	colorRGBA const colors[NCOLORS] = {BRASS_C, COPPER_C, BRONZE_C, DK_BROWN, BROWN, LT_GRAY};
 	return colors[rgen.rand() % NCOLORS];
 }
-colorRGBA choose_machine_part_color(rand_gen_t &rgen, bool is_small, bool is_textured) {
-	if (!is_small || is_textured || rgen.rand_float() < 0.6) { // shade of gray
-		float const lum(is_textured ? rgen.rand_uniform(0.5, 1.0) : rgen.rand_uniform(0.1, 0.6));
-		return colorRGBA(lum, lum, lum);
-	}
-	return choose_pipe_color(rgen); // only small untextured objects
+colorRGBA choose_machine_part_color(rand_gen_t &rgen, bool is_textured) { // shade of gray
+	float const lum(is_textured ? rgen.rand_uniform(0.5, 1.0) : rgen.rand_uniform(0.1, 0.6));
+	return colorRGBA(lum, lum, lum);
 }
 
 void select_pipe_location(point &p1, point &p2, cube_t const &region, float radius, bool dim, rand_gen_t &rgen) {
@@ -66,12 +63,10 @@ tid_nm_pair_t get_machine_part_texture(bool is_cylin, vector3d const sz, float &
 	if (!is_cylin) {tscale /= sz.get_max_val();} // scale to fit the cube largest dim; cylinder tscale is unused in drawing
 	int tid(-1), nm_tid(-1);
 
-	switch (rgen.rand() % 5) {
+	switch (rgen.rand() % 3) {
 	case 0: tid = get_met_plate_tid(); nm_tid = get_mplate_nm_tid(); tscale *= 2.0; break;
 	case 1: tid = get_texture_by_name("shiphull.jpg"); nm_tid = get_texture_by_name("normal_maps/shiphull_NRM.jpg", 1); break;
-	case 2: tid = get_texture_by_name("buildings/corrugated_metal.tif"); nm_tid = get_texture_by_name("buildings/corrugated_metal_normal.tif", 1); break;
-	case 3: tid = get_texture_by_name("buildings/metal_roof.jpg"); break; // no normal map
-	case 4: tid = get_cube_duct_tid(); break; // no normal map
+	case 2: tid = get_cube_duct_tid(); break; // no normal map
 	}
 	tid_nm_pair_t tex(tid, nm_tid, tscale, tscale, 0.0, 0.0, 1);
 	tex.set_specular(0.1, 20.0);
@@ -153,7 +148,7 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 			float tscale(1.0);
 			tid_nm_pair_t const part_tex(get_machine_part_texture(is_cylin, part_sz, tscale, rgen));
 			rgeom_mat_t &part_mat(get_material(part_tex, 1, 0, 1)); // shadowed, small
-			colorRGBA const part_color(apply_light_color(c, choose_machine_part_color(rgen, 0, (part_tex.tid >= 0)))); // is_small=0
+			colorRGBA const part_color(apply_light_color(c, choose_machine_part_color(rgen, (part_tex.tid >= 0))));
 			if (is_cylin) {part_mat.add_vcylin_to_verts(part, part_color, 0, 1, 0, 0, 1.0, 1.0, tscale, 1.0, 0, 32, 0.0, 0, tscale);} // draw sides and top
 			else {part_mat.add_cube_to_verts(part, part_color, part.get_llc(), EF_Z1);} // skip bottom
 		}
@@ -172,7 +167,7 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 				add_breaker_panel(bp);
 				avoid.push_back(panel);
 
-				if (bp.is_open()) { // draw breakers insiode as a texured quad
+				if (bp.is_open()) { // draw breakers inside as a texured quad
 					avoid.back().expand_in_dim(!dim, 0.1*panel_hwidth); // add space for the open door
 					rgeom_mat_t &breaker_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/breaker_panel.jpg"), 0.0), 0, 0, 1)); // unshadowed, small
 					float const border(0.1*min(panel_hwidth, panel_hheight)), new_hheight(panel_hheight - border), new_hwidth(panel_hwidth - border);
@@ -242,7 +237,7 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 
 		if (is_cylin || has_gap) { // if there's a gap between the machine and the wall
 			// add pipe(s) connecting to back wall in {dim, !dir} or ceiling; there's no check for intersecting pipes
-			unsigned const num_pipes(rgen.rand() % 4); // 0-3
+			unsigned const num_pipes((rgen.rand() % 4) + 1); // 1-4
 			for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region, pipe_rmax, dim, rgen);}
 		}
 		if (!is_cylin && has_gap && rgen.rand_float() < 0.65) { // add a duct to the wall
@@ -268,7 +263,14 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 				unsigned const face_dims[4] = {2, dim, !dim, !dim}, face_dirs[4] = {1, dir, 0, 1};
 				unsigned const fdim(face_dims[face]), fdir(face_dirs[face]);
 				unsigned cdim(2); // defaults to Z
-				if (add_cylin && fdim < 2) {cdim = (rgen.rand() % 3);} // cylin on part side can be oriented in X, Y, or Z
+				
+				if (add_cylin) { // cylin on part side can be oriented in X, Y, or Z
+					if (is_cylin) {
+						if (fdim == 2) {cdim = 2;} // top attachment is always vertical
+						else {cdim = (rgen.rand_bool() ? fdim : 2);} // side attachment can be horizontal or vertical
+					}
+					else {cdim = fdim;} // cylinder always follows surface orient for cubes
+				}
 				vector3d half_sz;
 				cube_t shape;
 				for (unsigned d = 0; d < 3; ++d) {half_sz[d] = rgen.rand_uniform(0.4, 1.0)*max_shape_sz;}
@@ -278,7 +280,10 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 					half_sz[d1] = half_sz[d2] = 0.5*(half_sz[d1] + half_sz[d2]);
 				}
 				for (unsigned d = 0; d < 3; ++d) {
-					float const val((d == fdim) ? part.d[fdim][fdir] : rgen.rand_uniform(part.d[d][0], part.d[d][1]));
+					float val(0.0);
+					if (d == fdim) {val = part.d[fdim][fdir];} // attach to surface
+					else if (d != 2 && is_cylin && !(add_cylin && cdim == 2)) {val = part.get_center_dim(d);} // centered on the side for non vert cylin
+					else {val = rgen.rand_uniform(part.d[d][0], part.d[d][1]);} // chose a random attachment point
 					set_wall_width(shape, val, half_sz[d], d);
 				}
 				shape.intersect_with_cube(main);
@@ -305,7 +310,7 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 				float tscale(1.0);
 				tid_nm_pair_t const tex(get_machine_part_texture(add_cylin, 2.0*half_sz, tscale, rgen));
 				rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // shadowed, small
-				colorRGBA const pcolor(choose_machine_part_color(rgen, 1, (tex.tid >= 0))), spec_color(get_specular_color(pcolor)), lcolor(apply_light_color(c, pcolor));
+				colorRGBA const pcolor(choose_machine_part_color(rgen, (tex.tid >= 0))), spec_color(get_specular_color(pcolor)), lcolor(apply_light_color(c, pcolor));
 				if (add_cylin) {mat.add_ortho_cylin_to_verts(shape, lcolor, cdim, 1, 1, 0, 0, 1.0, 1.0, tscale, 1.0, 0, 32, 0.0, 0, tscale);} // draw top/bot
 				else           {mat.add_cube_to_verts(shape, lcolor, shape.get_llc(), 0);} // draw all faces since we don't track which are visible
 				shapes.push_back(shape);
@@ -314,23 +319,20 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 		} // for n
 	} // for n
 	if (two_part) { // connect the two parts with pipe(s); there's no check for intersecting pipes
-		unsigned const num_pipes(rgen.rand() % 4); // 0-3
+		unsigned const num_pipes((rgen.rand() % 4) + 1); // 1-4
+		cube_t region(parts[0]);
+		min_eq(region.z2(), parts[1].z2()); // shared Z range
+		max_eq(region.d[dim][0], parts[1].d[dim][0]); // shared range
+		min_eq(region.d[dim][1], parts[1].d[dim][1]);
+		float side_pos[2] = {};
+		for (unsigned d = 0; d < 2; ++d) {side_pos[d] = (is_cylins[d] ? parts[d].get_center_dim(!dim) : parts[d].d[!dim][bool(d)^parts_swapped]);}
 
-		if (num_pipes > 0) {
-			cube_t region(parts[0]);
-			min_eq(region.z2(), parts[1].z2()); // shared Z range
-			max_eq(region.d[dim][0], parts[1].d[dim][0]); // shared range
-			min_eq(region.d[dim][1], parts[1].d[dim][1]);
-			float side_pos[2] = {};
-			for (unsigned d = 0; d < 2; ++d) {side_pos[d] = (is_cylins[d] ? parts[d].get_center_dim(!dim) : parts[d].d[!dim][bool(d)^parts_swapped]);}
-
-			if (side_pos[0] != side_pos[1]) {
-				region.d[!dim][0] = min(side_pos[0], side_pos[1]);
-				region.d[!dim][1] = max(side_pos[0], side_pos[1]);
-				assert(region.is_strictly_normalized());
-				// add flanges if large and connecting to a cube?
-				for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region, pipe_rmax, !dim, rgen);}
-			}
+		if (side_pos[0] != side_pos[1]) {
+			region.d[!dim][0] = min(side_pos[0], side_pos[1]);
+			region.d[!dim][1] = max(side_pos[0], side_pos[1]);
+			assert(region.is_strictly_normalized());
+			// add flanges if large and connecting to a cube?
+			for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region, pipe_rmax, !dim, rgen);}
 		}
 	}
 }
