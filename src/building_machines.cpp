@@ -164,7 +164,8 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 			}
 		}
 		if (!is_cylin && rgen.rand_float() < 0.75) { // maybe add a valve handle to the front if a cube
-			float const valve_radius(5.0*pipe_rmax*rgen.rand_uniform(0.75, 1.0)), valve_depth(valve_radius*rgen.rand_uniform(0.4, 0.5));
+			float const valve_radius(min(5.0f*pipe_rmax, 0.4f*min(part_sz[!dim], part_sz.z))*rgen.rand_uniform(0.75, 1.0));
+			float const valve_depth(valve_radius*rgen.rand_uniform(0.4, 0.5));
 			cube_t valve(place_obj_on_cube_side(part, dim, dir, valve_radius, valve_radius, valve_depth, 1.1, rgen)); // Note: may extend a bit outside c in the front
 			assert(valve.is_strictly_normalized());
 
