@@ -1137,6 +1137,34 @@ void building_room_geom_t::add_int_ladder(room_object_t const &c) {
 	rotate_verts(mat.quad_verts, vector_from_dim_dir(!c.dim, (c.dim ^ c.dir)), 0.063*PI, about, verts_start);
 }
 
+void draw_metal_handle_wheel(cube_t const &c, unsigned dim, colorRGBA const &color, colorRGBA const &shaft_color, rgeom_mat_t &mat, rgeom_mat_t &shaft_mat) {
+	float const radius(0.5*c.get_sz_dim((dim+1)%3));
+	// draw the outer handle
+	float const r_inner(0.12*radius), r_outer(radius - r_inner), r_bar(0.075*radius), r_shaft(0.1*radius);
+	point const center(c.get_cube_center());
+	mat.add_ortho_torus_to_verts(center, r_inner, r_outer, dim, color);
+	// draw inner sphere for handle
+	mat.add_sphere_to_verts(center, 0.2*radius, color, 1); // low_detail=1
+	// draw horizontal and vertical bars
+	unsigned const dims[2] = {(dim+1)%3, (dim+2)%3};
+	unsigned const verts_start(mat.itri_verts.size());
+	cube_t bar;
+	set_wall_width(bar, center[dim], r_bar, dim);
+
+	for (unsigned d = 0; d < 2; ++d) {
+		set_wall_width(bar, center[dims[ d]], r_bar,   dims[ d]);
+		set_wall_width(bar, center[dims[!d]], r_outer, dims[!d]);
+		mat.add_ortho_cylin_to_verts(bar, color, dims[!d], 0, 0); // draw sides only
+	}
+	// rotate a random-ish amount
+	float const rot_angle((c.x1() + c.y1() + c.z1())/radius);
+	rotate_verts(mat.itri_verts, vector_from_dim_dir(dim, 1), rot_angle, center, verts_start);
+	// draw the shaft
+	cube_t shaft(c);
+	for (unsigned d = 0; d < 2; ++d) {set_wall_width(shaft, center[dims[d]], r_shaft, dims[d]);}
+	shaft_mat.add_ortho_cylin_to_verts(shaft, shaft_color, dim, 1, 1); // draw sides and ends
+}
+
 tid_nm_pair_t get_metal_plate_tex(float tscale, bool shadowed) {
 	return tid_nm_pair_t(get_met_plate_tid(), get_mplate_nm_tid(), tscale, tscale, 0.0, 0.0, shadowed);
 }
@@ -1177,11 +1205,21 @@ void clip_cylin_to_square(cube_t &c, unsigned dim) { // about the center
 	float const da(c.get_sz_dim(d1)), db(c.get_sz_dim(d2));
 	if (da < db) {c.expand_in_dim(d2, -0.5*(db - da));} else {c.expand_in_dim(d1, -0.5*(da - db));} // shrink
 }
+cube_t place_obj_on_cube_side(cube_t const &c, bool dim, bool dir, float hheight, float hwidth, float depth, float pad, rand_gen_t &rgen) {
+	float const wpad(pad*hwidth), hpad(pad*hheight);
+	cube_t obj;
+	obj.d[dim][!dir] = c.d[dim][dir]; // edge of part
+	obj.d[dim][ dir] = c.d[dim][dir] + (dir ? 1.0 : -1.0)*depth; // set depth
+	set_wall_width(obj, rgen.rand_uniform(c.d[!dim][0]+wpad, c.d[!dim][1]-wpad), hwidth, !dim);
+	set_wall_width(obj, rgen.rand_uniform(c.d[2   ][0]+hpad, c.d[2   ][1]-hpad), hheight, 2  );
+	return obj;
+}
 void building_room_geom_t::add_machine(room_object_t const &c) {
 	rgeom_mat_t *mat(&get_metal_material(1, 0, 1)); // shadowed, small, specular metal; use a pointer so that it can be reset
-	// can use TYPE_BRK_PANEL, AC Unit, metal plate texture, buttons, lights, etc.
+	// can use AC Unit, metal plate texture, buttons, lights, etc.
 	rand_gen_t rgen(c.create_rgen());
 	float const height(c.dz()), width(c.get_width()), depth(c.get_depth());
+	float const pipe_rmax(0.033*min(height, min(width, depth)));
 	bool const dim(c.dim), dir(c.dir), two_part(width > rgen.rand_uniform(1.5, 2.2)*depth);
 	unsigned const num_parts(two_part ? 2U : 1U);
 	colorRGBA const base_color(apply_light_color(c));
@@ -1232,6 +1270,38 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 		}
 		else {mat->add_cube_to_verts_untextured(part, color, EF_Z1);} // skip bottom
 
+		if (!is_cylin && rgen.rand_float() < 0.6) { // maybe add a breaker panel if a cube
+			//unsigned const flags(rgen.rand_bool() ? RO_FLAG_OPEN : 0); // open 50% of the time
+			unsigned const flags(0); // not open, because the breakers aren't currently drawn
+			float panel_hheight(part_sz.z*rgen.rand_uniform(0.15, 0.22)), panel_hwidth(part_sz[!dim]*rgen.rand_uniform(0.15, 0.22));
+			min_eq(panel_hheight, 1.5f*panel_hwidth ); // set reasonable aspect ratio
+			min_eq(panel_hwidth,  1.5f*panel_hheight); // set reasonable aspect ratio
+			float const panel_depth(min(panel_hheight, panel_hwidth)*rgen.rand_uniform(0.3, 0.4));
+			cube_t panel(place_obj_on_cube_side(part, dim, dir, panel_hheight, panel_hwidth, panel_depth, 1.0, rgen)); // Note: may extend a bit outside c in the front
+			assert(panel.is_strictly_normalized());
+
+			if (!has_bcube_int(panel, avoid)) { // Note: checking avoid here in case we add some object before the panel later
+				colorRGBA const panel_color(0.3, 0.4, 0.4); // hard-coded, for now, darker than normal breaker panels
+				room_object_t const bp(panel, TYPE_BRK_PANEL, c.room_id, dim, !dir, flags, c.light_amt, SHAPE_CUBE, panel_color);
+				add_breaker_panel(bp);
+				avoid.push_back(panel);
+				mat = &get_metal_material(1, 0, 1); // update the pointer (may not be needed)
+			}
+		}
+		if (!is_cylin && rgen.rand_float() < 0.75) { // maybe add a valve handle to the front if a cube
+			float const valve_radius(5.0*pipe_rmax*rgen.rand_uniform(0.75, 1.0)), valve_depth(valve_radius*rgen.rand_uniform(0.4, 0.5));
+			cube_t valve(place_obj_on_cube_side(part, dim, dir, valve_radius, valve_radius, valve_depth, 1.1, rgen)); // Note: may extend a bit outside c in the front
+			assert(valve.is_strictly_normalized());
+
+			if (!has_bcube_int(valve, avoid)) {
+				unsigned const NUM_HANDLE_COLORS = 5;
+				colorRGBA const handle_colors[NUM_HANDLE_COLORS] = {colorRGBA(0.5, 0.0, 0.0), colorRGBA(0.7, 0.0, 0.0), colorRGBA(0.5, 0.25, 0.0), LT_GRAY, BKGRAY};
+				colorRGBA const handle_color(handle_colors[rgen.rand() % NUM_HANDLE_COLORS]), shaft_color(choose_pipe_color(c, rgen));
+				draw_metal_handle_wheel(valve, dim, handle_color, shaft_color, *mat, *mat); // use the same material for the handle and the shaft
+				avoid.push_back(valve);
+				mat = &get_metal_material(1, 0, 1); // update the pointer (may not be needed)
+			}
+		}
 		// add vents
 		if (!is_cylin && rgen.rand_float() < 0.8) {
 			unsigned orients[3]={};
@@ -1245,26 +1315,25 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 			}
 			for (unsigned m = 0; m < (two_part ? 2 : 3); ++m) {
 				if (rgen.rand_bool()) continue;
-				int const tid(get_texture_by_name("interiors/vent.jpg"));
 				bool const vdim(orients[m] >> 1), vdir(orients[m] & 1);
 				float const pwidth(part_sz[!vdim]), pheight(part_sz.z);
-				float const vhwidth(rgen.rand_uniform(0.24, 0.32)*min(pwidth, 1.0f*pheight)), wpad(1.2*vhwidth);
-				float const vhheight(rgen.rand_uniform(0.4, 0.6)*vhwidth), hpad(1.2*vhheight);
-				cube_t vent;
-				vent.d[vdim][!vdir] = part.d[vdim][vdir]; // edge of part
-				vent.d[vdim][ vdir] = part.d[vdim][vdir] + (vdir ? 1.0 : -1.0)*rgen.rand_uniform(0.02, 0.4)*vhwidth; // set depth
-				set_wall_width(vent, rgen.rand_uniform(part.d[!vdim][0]+wpad, part.d[!vdim][1]-wpad), vhwidth, !vdim);
-				set_wall_width(vent, rgen.rand_uniform(part.d[2    ][0]+hpad, part.d[2    ][1]-hpad), vhheight, 2   );
-				vent.intersect_with_cube(main); // can't extend outside or into the base
-				assert(vent.is_strictly_normalized());
-				room_object_t vent_obj(vent, TYPE_VENT, c.room_id, vdim, !vdir, 0, c.light_amt);
-				add_flat_textured_detail_wall_object(vent_obj, c.color, tid, 0, 0, 0); // side vent; skip_z1_face=0, draw_all_faces=0, detail=0 (small)
-				avoid.push_back(vent);
+
+				for (unsigned N = 0; N < 10; ++N) { // make 10 attempts to place it
+					float const vhwidth(rgen.rand_uniform(0.24, 0.32)*min(pwidth, 1.0f*pheight)), wpad(1.2*vhwidth);
+					float const vhheight(rgen.rand_uniform(0.4, 0.6)*vhwidth), hpad(1.2*vhheight);
+					float const vdepth(rgen.rand_uniform(0.02, 0.4)*vhwidth);
+					cube_t vent(place_obj_on_cube_side(part, vdim, vdir, vhheight, vhwidth, vdepth, 1.2, rgen));
+					vent.intersect_with_cube(main); // can't extend outside or into the base
+					assert(vent.is_strictly_normalized());
+					if (has_bcube_int(vent, avoid)) continue;
+					int const tid(get_texture_by_name("interiors/vent.jpg"));
+					room_object_t const vent_obj(vent, TYPE_VENT, c.room_id, vdim, !vdir, 0, c.light_amt);
+					add_flat_textured_detail_wall_object(vent_obj, c.color, tid, 0, 0, 0); // side vent; skip_z1_face=0, draw_all_faces=0, detail=0 (small)
+					avoid.push_back(vent);
+					break; // done/success
+				} // for N
 			} // for n
 			mat = &get_metal_material(1, 0, 1); // update the pointer
-		}
-		if (1/*rgen.rand_float() < 0.5*/) { // add a breaker panel
-			// TODO
 		}
 		float const pipe_rmax(0.05*part_sz.get_min_val());
 		bool const has_gap(fabs(part.d[dim][dir] - c.d[dim][dir]) > pipe_rmax); // add pipes if gap is large enough
@@ -1340,7 +1409,6 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 		unsigned const num_pipes(rgen.rand() % 4); // 0-3
 
 		if (num_pipes > 0) {
-			float const pipe_rmax(0.033*min(height, min(width, depth)));
 			cube_t region(parts[0]);
 			min_eq(region.z2(), parts[1].z2()); // shared Z range
 			max_eq(region.d[dim][0], parts[1].d[dim][0]); // shared range
@@ -1352,6 +1420,7 @@ void building_room_geom_t::add_machine(room_object_t const &c) {
 				region.d[!dim][0] = min(side_pos[0], side_pos[1]);
 				region.d[!dim][1] = max(side_pos[0], side_pos[1]);
 				assert(region.is_strictly_normalized());
+				// add flanges if large and connecting to a cube?
 				for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(*mat, c, region, pipe_rmax, !dim, rgen);}
 			}
 		}
@@ -2620,33 +2689,6 @@ void building_room_geom_t::add_sprinkler(room_object_t const &c) { // vertical s
 	mat.add_vcylin_to_verts(top, metal_color,          1,      1,     0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // draw ends
 }
 
-void draw_metal_handle_wheel(cube_t const &c, unsigned dim, colorRGBA const &color, colorRGBA const &shaft_color, rgeom_mat_t &mat, rgeom_mat_t &shaft_mat) {
-	float const radius(0.5*c.get_sz_dim((dim+1)%3));
-	// draw the outer handle
-	float const r_inner(0.12*radius), r_outer(radius - r_inner), r_bar(0.075*radius), r_shaft(0.1*radius);
-	point const center(c.get_cube_center());
-	mat.add_ortho_torus_to_verts(center, r_inner, r_outer, dim, color);
-	// draw inner sphere for handle
-	mat.add_sphere_to_verts(center, 0.2*radius, color, 1); // low_detail=1
-	// draw horizontal and vertical bars
-	unsigned const dims[2] = {(dim+1)%3, (dim+2)%3};
-	unsigned const verts_start(mat.itri_verts.size());
-	cube_t bar;
-	set_wall_width(bar, center[dim], r_bar, dim);
-
-	for (unsigned d = 0; d < 2; ++d) {
-		set_wall_width(bar, center[dims[ d]], r_bar,   dims[ d]);
-		set_wall_width(bar, center[dims[!d]], r_outer, dims[!d]);
-		mat.add_ortho_cylin_to_verts(bar, color, dims[!d], 0, 0); // draw sides only
-	}
-	// rotate a random-ish amount
-	float const rot_angle((c.x1() + c.y1() + c.z1())/radius);
-	rotate_verts(mat.itri_verts, vector_from_dim_dir(dim, 1), rot_angle, center, verts_start);
-	// draw the shaft
-	cube_t shaft(c);
-	for (unsigned d = 0; d < 2; ++d) {set_wall_width(shaft, center[dims[d]], r_shaft, dims[d]);}
-	shaft_mat.add_ortho_cylin_to_verts(shaft, shaft_color, dim, 1, 1); // draw sides and ends
-}
 void building_room_geom_t::add_valve(room_object_t const &c) {
 	// Note: we don't know which direction the pipe is in, so the valve handle must be symmetric
 	unsigned const dim(c.dir ? 2 : unsigned(c.dim)); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
