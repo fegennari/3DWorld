@@ -23,20 +23,23 @@ colorRGBA choose_machine_part_color(rand_gen_t &rgen, bool is_textured) { // sha
 	return colorRGBA(lum, lum, lum);
 }
 
-void select_pipe_location(point &p1, point &p2, cube_t const &region, float radius, bool dim, rand_gen_t &rgen) {
+void select_pipe_location(point &p1, point &p2, cube_t const &region, float radius, unsigned dim, rand_gen_t &rgen) {
 	float const edge_space(1.5*radius);
 	p1[dim] = region.d[dim][0];
 	p2[dim] = region.d[dim][1];
 
 	for (unsigned n = 0; n < 2; ++n) {
-		unsigned const d(n ? 2 : !dim);
+		unsigned const d((dim+n+1)%3);
 		p1[d] = p2[d] = rgen.rand_uniform(region.d[d][0]+edge_space, region.d[d][1]-edge_space);
 	}
 }
 
-void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cube_t const &region, float rmax, bool dim, rand_gen_t &rgen) {
+float get_cylin_radius(vector3d const &sz, unsigned dim) {
+	return 0.25*(sz[(dim+1)%3] + sz[(dim+2)%3]);
+}
+void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cube_t const &region, float rmax, unsigned dim, rand_gen_t &rgen) { // untextured
 	assert(region.is_strictly_normalized());
-	min_eq(rmax, 0.25f*min(region.dz(), region.get_sz_dim(!dim)));
+	min_eq(rmax, get_cylin_radius(region.get_size(), dim));
 	float const radius(rgen.rand_uniform(0.25, 1.0)*rmax);
 	point p1, p2;
 	select_pipe_location(p1, p2, region, radius, dim, rgen);
@@ -74,8 +77,8 @@ tid_nm_pair_t get_machine_part_texture(bool is_cylin, vector3d const sz, float &
 	tex.set_specular(0.1, 20.0);
 	return tex;
 }
-vector3d calc_cylin_tscale_y(float tscale, vector3d const sz, unsigned dim) { // returns {side_tscale, end_tscale, len_tscale}
-	float const length(sz[dim]), radius(0.25*(sz[(dim+1)%3] + sz[(dim+2)%3])), diameter(2.0*radius), circumference(PI*radius);
+vector3d calc_cylin_tscale_y(float tscale, vector3d const &sz, unsigned dim) { // returns {side_tscale, end_tscale, len_tscale}
+	float const length(sz[dim]), radius(get_cylin_radius(sz, dim)), diameter(2.0*radius), circumference(PI*radius);
 	assert(length > 0.0 && radius > 0.0);
 	float const len_tscale(tscale), side_tscale(len_tscale*circumference/length), end_tscale(len_tscale*diameter/length);
 	return vector3d(max(1, round_fp(side_tscale)), end_tscale, len_tscale); // round side_tscale to an exact multiple to ensure it tiles
@@ -109,7 +112,7 @@ void draw_metal_handle_wheel(cube_t const &c, unsigned dim, colorRGBA const &col
 	shaft_mat.add_ortho_cylin_to_verts(shaft, shaft_color, dim, 1, 1); // draw sides and ends
 }
 
-void building_room_geom_t::add_machine(room_object_t const &c) { // components are shadowed and small
+void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_gap) { // components are shadowed and small
 	// can use AC Unit, metal plate texture, buttons, lights, etc.
 	rand_gen_t rgen(c.create_rgen());
 	float const height(c.dz()), width(c.get_width()), depth(c.get_depth());
@@ -152,7 +155,8 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 		avoid .clear();
 		shapes.clear();
 
-		if (1) { // draw main part; create a new scope for local variables
+		// draw main part
+		if (1) { // create a new scope for local variables
 			float tscale(1.0);
 			tid_nm_pair_t const part_tex(get_machine_part_texture(is_cylin, part_sz, tscale, rgen));
 			rgeom_mat_t &part_mat(get_material(part_tex, 1, 0, 1)); // shadowed, small
@@ -164,7 +168,8 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 			}
 			else {part_mat.add_cube_to_verts(part, part_color, part.get_llc(), EF_Z1);} // skip bottom
 		}
-		if (!is_cylin && rgen.rand_float() < 0.6) { // maybe add a breaker panel if a cube
+		// maybe add a breaker panel if a cube
+		if (!is_cylin && rgen.rand_float() < 0.6) {
 			unsigned const flags((rgen.rand_float() < 0.2) ? RO_FLAG_OPEN : 0); // open 20% of the time
 			float panel_hheight(part_sz.z*rgen.rand_uniform(0.15, 0.22)), panel_hwidth(part_sz[!dim]*rgen.rand_uniform(0.15, 0.22));
 			min_eq(panel_hheight, 1.5f*panel_hwidth ); // set reasonable aspect ratio
@@ -192,7 +197,8 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 				}
 			}
 		}
-		if (!is_cylin && rgen.rand_float() < 0.75) { // maybe add a valve handle to the front if a cube
+		// maybe add a valve handle to the front if a cube
+		if (!is_cylin && rgen.rand_float() < 0.75) {
 			float const valve_radius(min(5.0f*pipe_rmax, 0.4f*min(part_sz[!dim], part_sz.z))*rgen.rand_uniform(0.75, 1.0));
 			float const valve_depth(valve_radius*rgen.rand_uniform(0.4, 0.5));
 			cube_t valve(place_obj_on_cube_side(part, dim, dir, valve_radius, valve_radius, valve_depth, 1.1, rgen)); // Note: may extend a bit outside c in the front
@@ -240,8 +246,9 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 				} // for N
 			} // for n
 		}
-		float const pipe_rmax(0.05*part_sz.get_min_val());
-		bool const has_gap(fabs(part.d[dim][dir] - c.d[dim][dir]) > pipe_rmax); // add pipes if gap is large enough
+		// add pipes if gap is large enough
+		float const cylin_radius(0.25*(part_sz.x + part_sz.y)), pipe_rmax(0.05*part_sz.get_min_val());
+		bool const has_gap(fabs(part.d[dim][dir] - c.d[dim][dir]) > pipe_rmax);
 		cube_t region(part);
 		region.d[dim][ dir] = (is_cylin ? part.get_center_dim(dim) : part.d[dim][!dir]); // center plane of cylinder or back of cube
 		region.d[dim][!dir] = c.d[dim][!dir]; // wall behind the machine
@@ -252,7 +259,24 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 			unsigned const num_pipes((rgen.rand() % 4) + 1); // 1-4
 			for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region, pipe_rmax, dim, rgen);}
 		}
-		if (!is_cylin && has_gap && rgen.rand_float() < 0.65) { // add a duct to the wall
+		// add pipes up to the ceiling if there's space and floor_ceil_gap was specified
+		if (height < floor_ceil_gap) {
+			float const ceil_zval(c.z1() + floor_ceil_gap);
+			unsigned const num_pipes(rgen.rand() % 4); // 0-3
+
+			if (num_pipes > 0) {
+				cube_t region(part);
+				set_cube_zvals(region, part.z2(), ceil_zval);
+				if (is_cylin) {region.expand_by_xy(-(1.0 - SQRTOFTWOINV)*cylin_radius);} // use square inscribed in circle
+				for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region, pipe_rmax, 2, rgen);} // dim=2
+			}
+		}
+		// add pipes down to the floor
+		if (1) {
+			// TODO
+		}
+		// add a duct to the wall
+		if (!is_cylin && has_gap && rgen.rand_float() < 0.65) {
 			float const radius(rgen.rand_uniform(2.0, 4.0)*pipe_rmax); // wider than a pipe
 			point p1, p2;
 			select_pipe_location(p1, p2, region, radius, dim, rgen);
@@ -264,7 +288,7 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 		}
 		// add smaller shapes to this one
 		unsigned const num_shapes(rgen.rand() % (is_cylin ? 5 : 9) + (two_part ? 0 : 1)); // 0-4 for cylin, 0-8 for cube, +1 for single part
-		float const max_shape_sz(0.25*part_sz.get_min_val()), cylin_radius(0.25*(part_sz.x + part_sz.y));
+		float const max_shape_sz(0.25*part_sz.get_min_val());
 		point const part_center(part.get_cube_center());
 
 		for (unsigned N = 0; N < num_shapes; ++N) {
@@ -334,7 +358,8 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 			} // for m
 		} // for n
 	} // for n
-	if (two_part) { // connect the two parts with pipe(s); there's no check for intersecting pipes
+	// connect the two parts with pipe(s); there's no check for intersecting pipes
+	if (two_part) {
 		unsigned const num_pipes((rgen.rand() % 4) + 1); // 1-4
 		cube_t region(parts[0]);
 		min_eq(region.z2(), parts[1].z2()); // shared Z range
@@ -347,8 +372,8 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 			region.d[!dim][0] = min(side_pos[0], side_pos[1]);
 			region.d[!dim][1] = max(side_pos[0], side_pos[1]);
 			assert(region.is_strictly_normalized());
-			// add flanges if large and connecting to a cube?
 			for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region, pipe_rmax, !dim, rgen);}
+			// add flanges if large and connecting to a cube?
 		}
 	}
 }
