@@ -107,6 +107,16 @@ buildings add_paper_texture papers/report_card.jpeg
 buildings add_paper_texture papers/welcome_letter.jpeg
 buildings add_paper_texture papers/handwritten.jpeg
 
+buildings add_metal_texture metals/60_scratch_metal.jpg
+buildings add_metal_texture metals/217_industrial_aluminium_metal_plate.jpg
+buildings add_metal_texture metals/61_scratch_eroded_metal.jpg
+buildings add_metal_texture metals/225_industrial_aluminium_metal_plate.jpg
+buildings add_metal_texture metals/67_rusty_dirty_metal.jpg
+buildings add_metal_texture metals/243_aluminium_metal_plate.jpg
+buildings add_metal_texture metals/73_zinc_metal.jpg
+buildings add_metal_texture metals/249_iron_metal_plate.jpg
+buildings add_metal_texture metals/76_galvanized_steel_metal.jpg
+
 buildings add_food_box_texture food_boxes/cracker_box.png "box of crackers"
 buildings add_food_box_texture food_boxes/pianos_cereal.png "Pianos Cereal"
 buildings add_food_box_texture food_boxes/froot_loop_bars.jpg "Froot Loop Bars"

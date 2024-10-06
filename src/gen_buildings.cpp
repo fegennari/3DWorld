@@ -138,8 +138,8 @@ int room_object_t::get_comp_monitor_tid() const {return select_tid_from_list(glo
 int room_object_t::get_sheet_tid       () const {return select_tid_from_list(global_building_params.sheet_tids,   obj_id);}
 int room_object_t::get_paper_tid       () const {return select_tid_from_list(global_building_params.paper_tids,   obj_id);}
 int room_object_t::get_food_box_tid    () const {return select_tid_from_list(global_building_params.food_box_tids,obj_id);}
-// food_box_names
-int get_flag_texture(unsigned id)               {return select_tid_from_list(global_building_params.flag_tids,        id);}
+int get_metal_texture(unsigned id)              {return select_tid_from_list(global_building_params.metal_tids,       id);}
+int get_flag_texture (unsigned id)              {return select_tid_from_list(global_building_params.flag_tids,        id);} // food_box_names
 
 string const &select_str_from_list(vector<string> const &strs, unsigned ix) {
 	static string empty_str;

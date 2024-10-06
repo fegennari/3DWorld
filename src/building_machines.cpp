@@ -8,6 +8,7 @@
 int get_cylin_duct_tid();
 int get_cube_duct_tid ();
 int get_ac_unit_tid   (unsigned ix);
+int get_metal_texture (unsigned id);
 tid_nm_pair_t get_metal_plate_tex(float tscale, bool shadowed);
 colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c);
 
@@ -62,12 +63,13 @@ cube_t place_obj_on_cube_side(cube_t const &c, bool dim, bool dir, float hheight
 tid_nm_pair_t get_machine_part_texture(bool is_cylin, vector3d const sz, float &tscale, rand_gen_t &rgen) {
 	if (!is_cylin) {tscale /= sz.get_max_val();} // scale to fit the cube largest dim; cylinder tscale is unused in drawing
 	int tid(-1), nm_tid(-1);
-
-	switch (rgen.rand() % 3) {
-	case 0: tid = get_met_plate_tid(); nm_tid = get_mplate_nm_tid(); tscale *= 2.0; break;
-	case 1: tid = get_texture_by_name("shiphull.jpg"); nm_tid = get_texture_by_name("normal_maps/shiphull_NRM.jpg", 1); break;
-	case 2: tid = get_cube_duct_tid(); break; // no normal map
+	
+	if (rgen.rand_float() < 0.1) { // built-in textures; could maybe use shiphull.jpg and get_cube_duct_tid()
+		tid     = get_met_plate_tid();
+		nm_tid  = get_mplate_nm_tid();
+		tscale *= 2.0;
 	}
+	else {tid = get_metal_texture(rgen.rand());}
 	tid_nm_pair_t tex(tid, nm_tid, tscale, tscale, 0.0, 0.0, 1);
 	tex.set_specular(0.1, 20.0);
 	return tex;
