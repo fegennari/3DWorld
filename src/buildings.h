@@ -1103,7 +1103,8 @@ struct building_room_geom_t {
 	void add_crack(room_object_t const &c);
 	void add_switch(room_object_t const &c, bool draw_detail_pass);
 	void add_breaker(room_object_t const &c);
-	void add_flat_textured_detail_wall_object(room_object_t const &c, colorRGBA const &side_color, int tid, bool skip_z1_face, bool draw_all_faces=0, bool detail=1);
+	void add_flat_textured_detail_wall_object(room_object_t const &c, colorRGBA const &side_color, int tid, bool skip_z1_face,
+		bool draw_all_faces=0, bool detail=1, bool mirror_y=0);
 	void add_outlet(room_object_t const &c);
 	void add_vent(room_object_t const &c);
 	void add_plate(room_object_t const &c);

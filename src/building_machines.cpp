@@ -6,6 +6,8 @@
 
 
 int get_cylin_duct_tid();
+int get_cube_duct_tid ();
+int get_ac_unit_tid   (unsigned ix);
 tid_nm_pair_t get_metal_plate_tex(float tscale, bool shadowed);
 colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c);
 
@@ -175,8 +177,8 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 				avoid.push_back(valve);
 			}
 		}
-		// add vents
-		if (!is_cylin && rgen.rand_float() < 0.8) {
+		// add vents or AC unit fans
+		if (!is_cylin && rgen.rand_float() < 0.9) {
 			unsigned orients[3]={};
 			orients[0] = 2*dim + dir; // front side
 
@@ -189,19 +191,19 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 			for (unsigned m = 0; m < (two_part ? 2 : 3); ++m) {
 				if (rgen.rand_bool()) continue;
 				bool const vdim(orients[m] >> 1), vdir(orients[m] & 1);
+				bool const add_ac_unit(rgen.rand_float() < ((vdim == dim) ? 0.75 : 0.25)), mirror_y(add_ac_unit);
 				float const pwidth(part_sz[!vdim]), pheight(part_sz.z);
 
 				for (unsigned N = 0; N < 10; ++N) { // make 10 attempts to place it
-					float const vhwidth(rgen.rand_uniform(0.24, 0.32)*min(pwidth, 1.0f*pheight)), wpad(1.2*vhwidth);
-					float const vhheight(rgen.rand_uniform(0.4, 0.6)*vhwidth), hpad(1.2*vhheight);
-					float const vdepth(rgen.rand_uniform(0.02, 0.4)*vhwidth);
-					cube_t vent(place_obj_on_cube_side(part, vdim, vdir, vhheight, vhwidth, vdepth, 1.2, rgen));
+					float const vhwidth((add_ac_unit ? rgen.rand_uniform(0.36, 0.4) : rgen.rand_uniform(0.24, 0.32))*min(pwidth, 1.0f*pheight));
+					float const vhheight((add_ac_unit ? 0.7 : rgen.rand_uniform(0.4, 0.6))*vhwidth), vdepth(rgen.rand_uniform(0.02, 0.4)*vhwidth);
+					cube_t vent(place_obj_on_cube_side(part, vdim, vdir, vhheight, vhwidth, vdepth, (add_ac_unit ? 1.02 : 1.2), rgen));
 					vent.intersect_with_cube(main); // can't extend outside or into the base
 					assert(vent.is_strictly_normalized());
 					if (has_bcube_int(vent, avoid)) continue;
-					int const tid(get_texture_by_name("interiors/vent.jpg"));
+					int const tid(add_ac_unit ? get_ac_unit_tid(rgen.rand()) : get_texture_by_name("interiors/vent.jpg"));
 					room_object_t const vent_obj(vent, TYPE_VENT, c.room_id, vdim, !vdir, 0, c.light_amt);
-					add_flat_textured_detail_wall_object(vent_obj, c.color, tid, 0, 0, 0); // side vent; skip_z1_face=0, draw_all_faces=0, detail=0 (small)
+					add_flat_textured_detail_wall_object(vent_obj, c.color, tid, 0, 0, 0, mirror_y); // side vent; skip_z1_face=0, draw_all_faces=0, detail=0 (small)
 					avoid.push_back(vent);
 					break; // done/success
 				} // for N

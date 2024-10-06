@@ -167,8 +167,8 @@ class building_texture_mgr_t {
 	int window_tid=-1, hdoor_tid=-1, odoor_tid=-1, bdoor_tid=-1, bdoor2_tid=-1, gdoor_tid=-1, mdoor_tid=-1, ac_unit_tid1=-1, ac_unit_tid2=-1, bath_wind_tid=-1, helipad_tex=-1,
 		solarp_tex=-1, concrete_tex=-1, met_plate_tex=-1, mplate_nm_tex=-1, met_roof_tex=-1, tile_floor_tex=-1, tile_floor_nm_tex=-1, duct_tid=-1, vent_tid=-1;
 
-	int ensure_tid(int &tid, const char *name, bool is_normal_map=0) {
-		if (tid < 0) {tid = get_texture_by_name(name, is_normal_map);}
+	int ensure_tid(int &tid, const char *name, bool is_normal_map=0, bool invert_y=0) {
+		if (tid < 0) {tid = get_texture_by_name(name, is_normal_map, invert_y);}
 		if (tid < 0) {tid = (is_normal_map ? FLAT_NMAP_TEX : WHITE_TEX);} // failed to load texture - use a simple white texture/flat normal map
 		return tid;
 	}
@@ -214,6 +214,7 @@ int get_concrete_tid  () {return building_texture_mgr.get_concrete_tid ();}
 int get_solarp_tid    () {return building_texture_mgr.get_solarp_tid   ();}
 int get_met_plate_tid () {return building_texture_mgr.get_met_plate_tid();}
 int get_mplate_nm_tid () {return building_texture_mgr.get_mplate_nm_tid();}
+int get_ac_unit_tid   (unsigned ix) {return ((ix & 1) ? building_texture_mgr.get_ac_unit_tid1() : building_texture_mgr.get_ac_unit_tid2());}
 
 void set_tile_floor_texture() {
 	select_texture(building_texture_mgr.get_tile_floor_tid   ());
@@ -1719,8 +1720,8 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 
 		if (i->type == ROOF_OBJ_AC) {
 			bool const swap_st(i->dx() > i->dy());
-			bool const tex_id((details.size() + parts.size() + mat_ix) & 1); // somewhat of a hash of various things; deterministic
-			int const ac_tid(tex_id ? building_texture_mgr.get_ac_unit_tid1() : building_texture_mgr.get_ac_unit_tid2());
+			unsigned const tex_id(details.size() + parts.size() + mat_ix); // somewhat of a hash of various things; deterministic
+			int const ac_tid(get_ac_unit_tid(tex_id));
 			bdraw.add_cube(*this, *i, tid_nm_pair_t(ac_tid, -1, (swap_st ? 1.0 : -1.0), 1.0), WHITE, swap_st, 4, 1, 0, 0); // Z, skip bottom, ws_texture=0
 			bdraw.add_cube(*this, *i, tid_nm_pair_t(ac_tid, -1, 0.3, 1.0), WHITE, 0, 3, 1, 0, 0); // XY with stretched texture, ws_texture=0
 			continue;
