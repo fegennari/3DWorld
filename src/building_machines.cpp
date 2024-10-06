@@ -17,12 +17,12 @@ colorRGBA choose_pipe_color(rand_gen_t &rgen) {
 	colorRGBA const colors[NCOLORS] = {BRASS_C, COPPER_C, BRONZE_C, DK_BROWN, BROWN, LT_GRAY};
 	return colors[rgen.rand() % NCOLORS];
 }
-colorRGBA choose_machine_part_color(rand_gen_t &rgen, bool is_small) {
-	if (!is_small || rgen.rand_float() < 0.6) { // shade of gray
-		float const lum(rgen.rand_uniform(0.1, 0.6));
+colorRGBA choose_machine_part_color(rand_gen_t &rgen, bool is_small, bool is_textured) {
+	if (!is_small || is_textured || rgen.rand_float() < 0.6) { // shade of gray
+		float const lum(is_textured ? rgen.rand_uniform(0.5, 1.0) : rgen.rand_uniform(0.1, 0.6));
 		return colorRGBA(lum, lum, lum);
 	}
-	return choose_pipe_color(rgen);
+	return choose_pipe_color(rgen); // only small untextured objects
 }
 
 void select_pipe_location(point &p1, point &p2, cube_t const &region, float radius, bool dim, rand_gen_t &rgen) {
@@ -60,6 +60,22 @@ cube_t place_obj_on_cube_side(cube_t const &c, bool dim, bool dir, float hheight
 	set_wall_width(obj, rgen.rand_uniform(c.d[!dim][0]+wpad, c.d[!dim][1]-wpad), hwidth, !dim);
 	set_wall_width(obj, rgen.rand_uniform(c.d[2   ][0]+hpad, c.d[2   ][1]-hpad), hheight, 2  );
 	return obj;
+}
+
+tid_nm_pair_t get_machine_part_texture(bool is_cylin, vector3d const sz, float &tscale, rand_gen_t &rgen) {
+	if (!is_cylin) {tscale /= sz.get_max_val();} // scale to fit the cube largest dim; cylinder tscale is unused in drawing
+	int tid(-1), nm_tid(-1);
+
+	switch (rgen.rand() % 5) {
+	case 0: tid = get_met_plate_tid(); nm_tid = get_mplate_nm_tid(); tscale *= 2.0; break;
+	case 1: tid = get_texture_by_name("shiphull.jpg"); nm_tid = get_texture_by_name("normal_maps/shiphull_NRM.jpg", 1); break;
+	case 2: tid = get_texture_by_name("buildings/corrugated_metal.tif"); nm_tid = get_texture_by_name("buildings/corrugated_metal_normal.tif", 1); break;
+	case 3: tid = get_texture_by_name("buildings/metal_roof.jpg"); break; // no normal map
+	case 4: tid = get_cube_duct_tid(); break; // no normal map
+	}
+	tid_nm_pair_t tex(tid, nm_tid, tscale, tscale, 0.0, 0.0, 1);
+	tex.set_specular(0.1, 20.0);
+	return tex;
 }
 
 void draw_metal_handle_wheel(cube_t const &c, unsigned dim, colorRGBA const &color, colorRGBA const &shaft_color, rgeom_mat_t &mat, rgeom_mat_t &shaft_mat) {
@@ -128,22 +144,19 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 	// add/draw shapes/objects for each part
 	for (unsigned n = 0; n < num_parts; ++n) {
 		cube_t const &part(parts[n]);
-		bool const is_cylin(is_cylins[n]);
 		vector3d const part_sz(part.get_size());
-		colorRGBA const color(apply_light_color(c, choose_machine_part_color(rgen, 0))); // is_small=0
+		bool const is_cylin(is_cylins[n]);
 		avoid .clear();
 		shapes.clear();
 
-		if (is_cylin) {
-			if (rgen.rand_bool()) { // make it textured
-				tid_nm_pair_t const mplate_tex(get_metal_plate_tex(1.0, 1)); // shadowed
-				rgeom_mat_t &mp_mat(get_material(mplate_tex, 1, 0, 1)); // shadowed, small
-				mp_mat.add_vcylin_to_verts(part, color, 0, 1, 0, 0, 1.0, 1.0, 2.0, 1.0, 0, 32, 0.0, 0, 2.0); // draw sides and top; tscale=2.0
-			}
-			else {get_metal_material(1, 0, 1).add_vcylin_to_verts(part, color, 0, 1);} // draw sides and top
+		if (1) { // draw main part; create a new scope for local variables
+			float tscale(1.0);
+			tid_nm_pair_t const part_tex(get_machine_part_texture(is_cylin, part_sz, tscale, rgen));
+			rgeom_mat_t &part_mat(get_material(part_tex, 1, 0, 1)); // shadowed, small
+			colorRGBA const part_color(apply_light_color(c, choose_machine_part_color(rgen, 0, (part_tex.tid >= 0)))); // is_small=0
+			if (is_cylin) {part_mat.add_vcylin_to_verts(part, part_color, 0, 1, 0, 0, 1.0, 1.0, tscale, 1.0, 0, 32, 0.0, 0, tscale);} // draw sides and top
+			else {part_mat.add_cube_to_verts(part, part_color, part.get_llc(), EF_Z1);} // skip bottom
 		}
-		else {get_metal_material(1, 0, 1).add_cube_to_verts_untextured(part, color, EF_Z1);} // skip bottom
-
 		if (!is_cylin && rgen.rand_float() < 0.6) { // maybe add a breaker panel if a cube
 			unsigned const flags((rgen.rand_float() < 0.2) ? RO_FLAG_OPEN : 0); // open 20% of the time
 			float panel_hheight(part_sz.z*rgen.rand_uniform(0.15, 0.22)), panel_hwidth(part_sz[!dim]*rgen.rand_uniform(0.15, 0.22));
@@ -289,11 +302,12 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 					if (s.x1()==shape.x1() || s.x2()==shape.x2() || s.y1()==shape.y1() || s.y2()==shape.y2() || s.z1()==shape.z1() || s.z2()==shape.z2()) {bad_place = 1; break;}
 				}
 				if (bad_place) continue;
-				// TODO: textures
-				colorRGBA const pcolor(choose_machine_part_color(rgen, 1)), spec_color(get_specular_color(pcolor)), lcolor(apply_light_color(c, pcolor));
-				rgeom_mat_t &mat(get_metal_material(1, 0, 1, 0, spec_color)); // shadowed, small, specular metal
-				if (add_cylin) {mat.add_ortho_cylin_to_verts(shape, lcolor, cdim, 1, 1);} // draw top and bottom in case they're visible
-				else           {mat.add_cube_to_verts_untextured(shape, lcolor, 0);} // draw all faces since we don't track which are visible
+				float tscale(1.0);
+				tid_nm_pair_t const tex(get_machine_part_texture(add_cylin, 2.0*half_sz, tscale, rgen));
+				rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // shadowed, small
+				colorRGBA const pcolor(choose_machine_part_color(rgen, 1, (tex.tid >= 0))), spec_color(get_specular_color(pcolor)), lcolor(apply_light_color(c, pcolor));
+				if (add_cylin) {mat.add_ortho_cylin_to_verts(shape, lcolor, cdim, 1, 1, 0, 0, 1.0, 1.0, tscale, 1.0, 0, 32, 0.0, 0, tscale);} // draw top/bot
+				else           {mat.add_cube_to_verts(shape, lcolor, shape.get_llc(), 0);} // draw all faces since we don't track which are visible
 				shapes.push_back(shape);
 				break; // success/done
 			} // for m
