@@ -125,6 +125,7 @@ building_names_signs.o
 building_water.o
 building_clocks.o
 building_fish.o
+building_machines.o
 simplifier.o
 city_model.o
 city_building_params.o
