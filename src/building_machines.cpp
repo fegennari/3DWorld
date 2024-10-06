@@ -72,6 +72,12 @@ tid_nm_pair_t get_machine_part_texture(bool is_cylin, vector3d const sz, float &
 	tex.set_specular(0.1, 20.0);
 	return tex;
 }
+vector3d calc_cylin_tscale_y(float tscale, vector3d const sz, unsigned dim) { // returns {side_tscale, end_tscale, len_tscale}
+	float const length(sz[dim]), radius(0.25*(sz[(dim+1)%3] + sz[(dim+2)%3])), diameter(2.0*radius), circumference(PI*radius);
+	assert(length > 0.0 && radius > 0.0);
+	float const len_tscale(tscale), side_tscale(len_tscale*circumference/length), end_tscale(len_tscale*diameter/length);
+	return vector3d(max(1, round_fp(side_tscale)), end_tscale, len_tscale); // round side_tscale to an exact multiple to ensure it tiles
+}
 
 void draw_metal_handle_wheel(cube_t const &c, unsigned dim, colorRGBA const &color, colorRGBA const &shaft_color, rgeom_mat_t &mat, rgeom_mat_t &shaft_mat) {
 	float const radius(0.5*c.get_sz_dim((dim+1)%3));
@@ -149,7 +155,11 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 			tid_nm_pair_t const part_tex(get_machine_part_texture(is_cylin, part_sz, tscale, rgen));
 			rgeom_mat_t &part_mat(get_material(part_tex, 1, 0, 1)); // shadowed, small
 			colorRGBA const part_color(apply_light_color(c, choose_machine_part_color(rgen, (part_tex.tid >= 0))));
-			if (is_cylin) {part_mat.add_vcylin_to_verts(part, part_color, 0, 1, 0, 0, 1.0, 1.0, tscale, 1.0, 0, 32, 0.0, 0, tscale);} // draw sides and top
+			
+			if (is_cylin) {
+				vector3d const ts(calc_cylin_tscale_y(tscale, part_sz, 2)); // dim=2/Z; {side_tscale, end_tscale, len_tscale}
+				part_mat.add_vcylin_to_verts(part, part_color, 0, 1, 0, 0, 1.0, 1.0, ts.x, ts.y, 0, 32, 0.0, 0, ts.z); // draw sides and top
+			}
 			else {part_mat.add_cube_to_verts(part, part_color, part.get_llc(), EF_Z1);} // skip bottom
 		}
 		if (!is_cylin && rgen.rand_float() < 0.6) { // maybe add a breaker panel if a cube
@@ -256,7 +266,7 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 		point const part_center(part.get_cube_center());
 
 		for (unsigned N = 0; N < num_shapes; ++N) {
-			bool const add_cylin(rgen.rand_float() < 0.33);
+			bool const add_cylin(rgen.rand_float() < (is_cylin ? 0.5 : 0.25));
 
 			for (unsigned m = 0; m < 10; ++m) { // 10 attempts to place this shape
 				unsigned const face(rgen.rand() & 3); // {top, front, left, right}
@@ -311,8 +321,12 @@ void building_room_geom_t::add_machine(room_object_t const &c) { // components a
 				tid_nm_pair_t const tex(get_machine_part_texture(add_cylin, 2.0*half_sz, tscale, rgen));
 				rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // shadowed, small
 				colorRGBA const pcolor(choose_machine_part_color(rgen, (tex.tid >= 0))), spec_color(get_specular_color(pcolor)), lcolor(apply_light_color(c, pcolor));
-				if (add_cylin) {mat.add_ortho_cylin_to_verts(shape, lcolor, cdim, 1, 1, 0, 0, 1.0, 1.0, tscale, 1.0, 0, 32, 0.0, 0, tscale);} // draw top/bot
-				else           {mat.add_cube_to_verts(shape, lcolor, shape.get_llc(), 0);} // draw all faces since we don't track which are visible
+				
+				if (add_cylin) {
+					vector3d const ts(calc_cylin_tscale_y(tscale, 2.0*half_sz, cdim)); // {side_tscale, end_tscale, len_tscale}
+					mat.add_ortho_cylin_to_verts(shape, lcolor, cdim, 1, 1, 0, 0, 1.0, 1.0, ts.x, ts.y, 0, 32, 0.0, 0, ts.z); // draw top/bot
+				}
+				else {mat.add_cube_to_verts(shape, lcolor, shape.get_llc(), 0);} // draw all faces since we don't track which are visible
 				shapes.push_back(shape);
 				break; // success/done
 			} // for m
