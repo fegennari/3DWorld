@@ -1585,6 +1585,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const trim_height(get_trim_height()), trim_thickness(get_trim_thickness()), expand_val(2.0*trim_thickness), door_trim_offset(0.025*window_vspacing);
 	float const door_trim_exp(2.0*trim_thickness + 0.5*wall_thickness), door_trim_width(0.5*wall_thickness), floor_to_ceil_height(window_vspacing - floor_thickness);
+	float const fc_gap(get_floor_ceil_gap());
 	float const trim_toler(0.1*trim_thickness); // required to handle wall intersections that were calculated with FP math and may misalign due to FP rounding error
 	float const ext_wall_toler(0.01*trim_thickness); // required to prevent z-fighting when AA is disabled
 	unsigned const flags(RO_FLAG_NOCOLL);
@@ -1829,6 +1830,13 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+		if (i->type == TYPE_FALSE_DOOR && i->is_interior() && !(i->flags & RO_FLAG_WALKWAY)) {
+			float const top_trim_width(max(trim_thickness, fc_gap - i->dz())); // make sure it covers the gap above the door
+			cube_t door_bc(*i);
+			door_bc.z2() = i->z1() + fc_gap; // extend wall trim to the ceiling
+			add_trim_for_door_or_int_window(door_bc, i->dim, 0, 0, 0.5*door_trim_width, top_trim_width, 0.5*door_trim_exp); // draw_top_edge=0, draw_bot_trim=0
+			continue;
+		}
 		if (i->type == TYPE_FLOORING && (i->item_flags == FLOORING_TILE || i->item_flags == FLOORING_MARBLE || i->item_flags == FLOORING_CONCRETE)) {} // bath/server room flooring
 		else if (is_pool_tile_floor(*i)) {} // pool tile
 		else {continue;} // no trim
@@ -1902,7 +1910,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			if (s.has_walled_sides() && !s.extends_below && !(s.against_wall[0] || s.against_wall[1])) { // lower front, not against a wall; not vertically merged
 				cube_t front_wall(get_trim_cube(stairs_with_wall, s.dim, s.dir, trim_thickness));
 				front_wall.d[s.dim][s.dir] += dscale*trim_thickness; // extend outward
-				front_wall.z2() = front_wall.z1() + get_floor_ceil_gap(); // shrink to lower floor
+				front_wall.z2() = front_wall.z1() + fc_gap; // shrink to lower floor
 				walls.emplace_back(front_wall, (draw_end_flags | dir_flags[!s.dir])); // draw ends
 			}
 			// attempt to vertically merge stacked/extended stairs (for parking garage and retail room) to avoid duplicate trim at shared floors
