@@ -84,6 +84,12 @@ vector3d calc_cylin_tscale_y(float tscale, vector3d const &sz, unsigned dim) { /
 	return vector3d(max(1, round_fp(side_tscale)), end_tscale, len_tscale); // round side_tscale to an exact multiple to ensure it tiles
 }
 
+void add_pipe_with_bend(rgeom_mat_t &mat, colorRGBA const &color, point const &bot_pt, point const &top_pt, point const &bend, unsigned ndiv, float radius, bool draw_ends) {
+	mat.add_sphere_to_verts(bend, vector3d(radius, radius, radius), color, (ndiv == 16), -plus_z); // round part, low detail if ndiv==16, top hemisphere (always bends down)
+	mat.add_cylin_to_verts (bot_pt, bend, radius, radius, color, draw_ends, 0, 0, 0, 1.0, 1.0, 0, ndiv); // vertical
+	mat.add_cylin_to_verts (top_pt, bend, radius, radius, color, draw_ends, 0, 0, 0, 1.0, 1.0, 0, ndiv); // horizontal
+}
+
 void draw_metal_handle_wheel(cube_t const &c, unsigned dim, colorRGBA const &color, colorRGBA const &shaft_color, rgeom_mat_t &mat, rgeom_mat_t &shaft_mat) {
 	float const radius(0.5*c.get_sz_dim((dim+1)%3));
 	// draw the outer handle
@@ -214,17 +220,18 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 				avoid.push_back(valve);
 			}
 		}
+		// calculate exterior orients, used for placing vents, AC units, and pipes
+		unsigned orients[3]={};
+		orients[0] = 2*dim + dir; // front side
+
+		if (two_part) { // side not facing the other part
+			orients[1] = 2*(!dim) + (bool(n)^parts_swapped);
+		}
+		else { // both sides
+			for (unsigned d = 0; d < 2; ++d) {orients[d+1] = 2*(!dim) + d;}
+		}
 		// add vents or AC unit fans
 		if (!is_cylin && rgen.rand_float() < 0.9) {
-			unsigned orients[3]={};
-			orients[0] = 2*dim + dir; // front side
-
-			if (two_part) { // side not facing the other part
-				orients[1] = 2*(!dim) + (bool(n)^parts_swapped);
-			}
-			else { // both sides
-				for (unsigned d = 0; d < 2; ++d) {orients[d+1] = 2*(!dim) + d;}
-			}
 			for (unsigned m = 0; m < (two_part ? 2 : 3); ++m) {
 				if (rgen.rand_bool()) continue;
 				bool const vdim(orients[m] >> 1), vdir(orients[m] & 1);
@@ -270,10 +277,6 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 				if (is_cylin) {region.expand_by_xy(-(1.0 - SQRTOFTWOINV)*cylin_radius);} // use square inscribed in circle
 				for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region, pipe_rmax, 2, rgen);} // dim=2
 			}
-		}
-		// add pipes down to the floor
-		if (1) {
-			// TODO
 		}
 		// add a duct to the wall
 		if (!is_cylin && has_gap && rgen.rand_float() < 0.65) {
@@ -356,7 +359,49 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 				shapes.push_back(shape);
 				break; // success/done
 			} // for m
-		} // for n
+		} // for N
+		// add pipes down to the floor
+		unsigned const num_floor_pipes(rgen.rand() % 5); // 0-4
+
+		if (num_floor_pipes > 0) {
+			colorRGBA const color(choose_pipe_color(rgen)), spec_color(get_specular_color(color)), pcolor(apply_light_color(c, color));
+			rgeom_mat_t &mat(get_metal_material(1, 0, 1, 0, spec_color));
+			bool used_sides[3] = {};
+
+			for (unsigned n = 0; n < num_floor_pipes; ++n) {
+				for (unsigned N = 0; N < 4; ++N) { // make 4 placement attempts
+					unsigned const orient_ix(rgen.rand() % (two_part ? 2 : 3)); // pick a random exterior side
+
+					if (is_cylin) { // cylinder can have at most one pipe per orient since they're at the same horizontal position
+						if (used_sides[orient_ix]) continue;
+						used_sides[orient_ix] = 1;
+					}
+					bool const fdim(orients[orient_ix] >> 1), fdir(orients[orient_ix] & 1);
+					float const radius(rgen.rand_uniform(0.25, 1.0)*pipe_rmax), edge_space(1.5*radius);
+					cube_t base_valid(base);
+					base_valid.expand_by_xy(-edge_space); // shrink
+					point top_pos;
+
+					for (unsigned d = 0; d < 3; ++d) {
+						if (d == fdim) {top_pos[d] = part.d[fdim][fdir];} // attach to surface
+						else if (d != 2 && is_cylin) {top_pos[d] = part.get_center_dim(d);} // centered on the side of cylinder part
+						else {top_pos[d] = rgen.rand_uniform(part.d[d][0]+edge_space, part.d[d][1]-edge_space);} // chose a random attachment point
+					}
+					point bend_pos(top_pos);
+					bend_pos[fdim] += rgen.rand_uniform(2.0, 5.0)*radius*(fdir ? 1.0 : -1.0); // extend a random amount; may go outside the base
+					base_valid.clamp_pt_xy(bend_pos);
+					if (fabs(bend_pos[fdim] - top_pos[fdim]) < 2.0*radius) continue; // too short/too close to the part face
+					point bot_pos(bend_pos);
+					bot_pos.z = base.z2(); // top of base platform
+					cube_t pipe_bcube(top_pos, bot_pos);
+					pipe_bcube.expand_by(radius);
+					if (has_bcube_int(pipe_bcube, avoid) || has_bcube_int(pipe_bcube, shapes)) continue; // skip if any other object is intersected
+					add_pipe_with_bend(mat, pcolor, bot_pos, top_pos, bend_pos, 16, radius, 0); // ndiv=16, draw_ends=0
+					avoid.push_back(pipe_bcube); // is this needed?
+					break; // done/success
+				} // for N
+			} // for n
+		}
 	} // for n
 	// connect the two parts with pipe(s); there's no check for intersecting pipes
 	if (two_part) {

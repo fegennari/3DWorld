@@ -30,6 +30,7 @@ string const &gen_book_title(unsigned rand_id, string *author, unsigned split_le
 void add_floor_number(unsigned floor_ix, unsigned floor_offset, bool has_parking_garage, ostringstream &oss);
 unsigned get_rgeom_sphere_ndiv(bool low_detail);
 void rotate_verts(point *verts, unsigned num_verts, vector3d const &axis, float angle, vector3d const &about);
+void add_pipe_with_bend(rgeom_mat_t &mat, colorRGBA const &color, point const &bot_pt, point const &top_pt, point const &bend, unsigned ndiv, float radius, bool draw_ends);
 void draw_metal_handle_wheel(cube_t const &c, unsigned dim, colorRGBA const &color, colorRGBA const &shaft_color, rgeom_mat_t &mat, rgeom_mat_t &shaft_mat);
 
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // draw only these faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
@@ -3679,12 +3680,6 @@ void building_room_geom_t::add_bucket(room_object_t const &c, bool draw_metal, b
 		point const center(c.xc(), c.yc(), (c.z1() + liquid_level*c.dz()));
 		get_untextured_material(0, 0, 0, 1).add_vert_disk_to_verts(center, radius, 0, apply_light_color(c, liquid_color)); // unshadowed, transparent
 	}
-}
-
-void add_pipe_with_bend(rgeom_mat_t &mat, colorRGBA const &color, point const &bot_pt, point const &top_pt, point const &bend, unsigned ndiv, float radius, bool draw_ends) {
-	mat.add_sphere_to_verts(bend, vector3d(radius, radius, radius), color, (ndiv == 16), -plus_z); // round part, low detail if ndiv==16, top hemisphere (always bends down)
-	mat.add_cylin_to_verts (bot_pt, bend, radius, radius, color, draw_ends, 0, 0, 0, 1.0, 1.0, 0, ndiv); // vertical
-	mat.add_cylin_to_verts (top_pt, bend, radius, radius, color, draw_ends, 0, 0, 0, 1.0, 1.0, 0, ndiv); // horizontal
 }
 
 void building_room_geom_t::add_water_heater(room_object_t const &c) {
