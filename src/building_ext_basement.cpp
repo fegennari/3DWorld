@@ -165,7 +165,8 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	P.wall_exclude.back().expand_in_dim(wall_dim, 1.1*get_trim_thickness()); // add slightly expanded basement to keep interior wall trim from intersecting exterior walls
 	P.wall_exclude.push_back(door_bcube);
 	P.wall_exclude.back().expand_in_dim(wall_dim, 2.0*wall_thickness); // make sure the doorway covers the entire wall thickness
-	interior->ext_basement_hallway_room_id = interior->rooms.size();
+	vector<room_t> &rooms(interior->rooms);
+	interior->ext_basement_hallway_room_id = rooms.size();
 	door_t Door(door_bcube, wall_dim, wall_dir, rgen.rand_bool());
 	add_interior_door(Door, 0, 1); // open 50% of the time; is_bathroom=0, make_unlocked=1
 	P.rooms.emplace_back(basement, 0);
@@ -202,8 +203,8 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	wall_area.d[wall_dim][!wall_dir] += (wall_dir ? 1.0 : -1.0)*0.5*wall_thickness; // move separator wall inside the hallway to avoid clipping exterior wall
 	assert(P.rooms.size() >= 2); // must have at least basement and primary hallway
 	interior->place_exterior_room(hallway, wall_area, fc_thick, wall_thickness, P, basement_part_ix, 0, hallway.is_hallway); // use basement part_ix; num_lights=0
-	if (interior->has_backrooms) {interior->rooms.back().assign_all_to(RTYPE_BACKROOMS);} // make it backrooms
-	interior->rooms.reserve(interior->rooms.size() + (P.rooms.size()-2) + 1); // allocate an extra room for a possible connector to an adjacent building
+	if (interior->has_backrooms) {rooms.back().assign_all_to(RTYPE_BACKROOMS);} // make it backrooms
+	rooms.reserve(rooms.size() + (P.rooms.size()-2) + 1); // allocate an extra room for a possible connector to an adjacent building
 
 	for (auto r = P.rooms.begin()+2; r != P.rooms.end(); ++r) { // skip basement and primary hallway
 		interior->place_exterior_room(*r, *r, fc_thick, wall_thickness, P, basement_part_ix, 0, r->is_hallway);
@@ -219,6 +220,10 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 		interior->stairwells.emplace_back(stairwell, 1); // num_floors=1
 	} // for stairs
 	maybe_assign_extb_room_as_swimming(rgen);
+
+	if (!interior->has_backrooms) { // maybe add tunnel connections to hallways
+		//for (unsigned r = interior->ext_basement_hallway_room_id; r < rooms.size(); ++r) {try_place_tunnel_at_extb_hallway_end(rooms[r], r);}
+	}
 	return 1;
 }
 
@@ -626,20 +631,22 @@ void building_t::end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_
 	room.clip_hallway_to_conn_bcube(dim); // else clip
 }
 
-void building_t::add_false_door_to_extb_room_if_needed(room_t const &room, float zval, unsigned room_id) {
+void building_t::get_valid_extb_hallway_end_doors(room_t const &room, float zval, unsigned room_id, float end_pad_ext, cube_with_ix_t doors[2]) const {
+	assert(interior);
+
 	if (!room.is_hallway) {
 		float const dx(room.dx()), dy(room.dy());
 		if (min(dx, dy) > 0.25*max(dx, dy)) return; // not high aspect ratio
 	}
 	if (room.is_ext_basement_conn()) return; // don't add a door to the end that connects to the adjacent building's extended basement
-	assert(has_room_geom());
 	bool const dim(room.dx() < room.dy()); // long dim
 	float const door_width(get_doorway_width()), wall_thickness(get_wall_thickness()), expand_val(2.0*wall_thickness);
 	assert(interior->ext_basement_hallway_room_id >= 0 && (unsigned)interior->ext_basement_hallway_room_id < interior->rooms.size());
 
 	for (unsigned dir = 0; dir < 2; ++dir) { // check both ends
 		cube_t query_region(room);
-		query_region.d[dim][!dir] = room.d[dim][dir]; // shrink to the end of the hallway
+		query_region.d[dim][!dir]  = room.d[dim][dir]; // shrink to the end of the hallway
+		query_region.d[dim][ dir] += (dir ? 1.0 : -1.0)*end_pad_ext; // extend away from the room
 		query_region.expand_in_dim(dim, 1.5*door_width); // distance from end to nearest door/room in either direction
 		query_region.expand_by_xy(expand_val);
 		query_region.expand_in_z(-get_fc_thickness()); // subtract floors and ceilings
@@ -652,20 +659,58 @@ void building_t::add_false_door_to_extb_room_if_needed(room_t const &room, float
 		}
 		if (near_other_room) continue; // too close to another room to the side of or opposite the door
 		cube_t door;
-		set_cube_zvals(door, zval, (zval + get_door_height()));
+		set_cube_zvals(door, zval, (zval + get_floor_ceil_gap())); // extend to the ceiling
 		set_wall_width(door, room.get_center_dim(!dim), 0.5*door_width, !dim);
 		set_wall_width(door, (room.d[dim][dir] + (dir ? -1.0 : 1.0)*0.5*wall_thickness), 2.0*get_trim_thickness(), dim);
-		unsigned flags(RO_FLAG_NOCOLL);
-		if      (is_house)           {flags |= RO_FLAG_IS_HOUSE ;}
-		else if ((room_id & 3) == 0) {flags |= RO_FLAG_HAS_EXTRA;} // make this a vault/blast door 25% of the time
-		interior->room_geom->objs.emplace_back(door, TYPE_FALSE_DOOR, room_id, dim, dir, flags, 1.0, SHAPE_CUBE, WHITE);
-		
-		if (!room.is_hallway) { // add door blocker
-			cube_t blocker(door);
-			blocker.d[dim][!dir] = room.d[dim][dir] + (dir ? -1.0 : 1.0)*door_width; // add clearance
-			interior->room_geom->objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, dir, RO_FLAG_INVIS);
-		}
+		doors[dir] = cube_with_ix_t(door, (2*dim + dir));
 	} // for dir
+}
+void building_t::add_false_door_to_extb_room_if_needed(room_t const &room, float zval, unsigned room_id) {
+	assert(has_room_geom());
+	cube_with_ix_t doors[2];
+	get_valid_extb_hallway_end_doors(room, zval, room_id, 0.0, doors); // end_pad_ext=0.0
+
+	for (unsigned d = 0; d < 2; ++d) { // check both door locations
+		cube_with_ix_t const &door(doors[d]);
+		if (door.is_all_zeros()) continue;
+		bool const dim(door.ix >> 1), dir(door.ix & 1);
+		unsigned flags(RO_FLAG_NOCOLL);
+
+		if (room.has_tunnel_conn()) { // add an open door; should this have collisions enabled?
+			flags |= (RO_FLAG_HAS_EXTRA | RO_FLAG_OPEN); // make this an open vault/blast door
+			//cube_t debug(door_bc); debug.z2() += 1.0; interior->room_geom->objs.emplace_back(debug, TYPE_DBG_SHAPE, room_id, dim, dir, 0, 1.0, SHAPE_CUBE, RED); // TESTING
+		}
+		else { // add a closed door
+			if      (is_house)           {flags |= RO_FLAG_IS_HOUSE ;}
+			else if ((room_id & 3) == 0) {flags |= RO_FLAG_HAS_EXTRA;} // make this a vault/blast door 25% of the time
+		}
+		interior->room_geom->objs.emplace_back(door, TYPE_FALSE_DOOR, room_id, dim, dir, flags, 1.0, SHAPE_CUBE, WHITE);
+		// add door blocker to avoid placing objects in front of the door; needed even for hallways to avoid placing an overlapping outlet
+		cube_t blocker(door);
+		blocker.d[dim][!dir] = room.d[dim][dir] + (dir ? -1.0 : 1.0)*get_doorway_width(); // add clearance
+		interior->room_geom->objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, dir, RO_FLAG_INVIS);
+	} // for d
+}
+
+bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned room_id) {
+	if (!room.is_hallway) return 0;
+	float const zval(room.z1() + get_fc_thickness()), end_pad_ext(2.0*get_doorway_width());
+	cube_with_ix_t doors[2];
+	get_valid_extb_hallway_end_doors(room, zval, room_id, end_pad_ext, doors);
+
+	for (unsigned d = 0; d < 2; ++d) { // check both door locations
+		cube_with_ix_t const &door(doors[d]);
+		if (door.is_all_zeros()) continue;
+		bool const dim(door.ix >> 1), dir(door.ix & 1);
+		cube_t wall_clip(door);
+		wall_clip.expand_in_dim(dim, 2.0*get_wall_thickness()); // make sure it contains the wall
+		subtract_cube_from_cubes(wall_clip, interior->walls[dim]); // remove door from wall
+		// TODO: check if valid
+		// TODO: add tunnel
+		room.set_has_tunnel_conn();
+		return 1; // done (only add tunnel conn to one end)
+	} // for d
+	return 0;
 }
 
 void extb_room_t::clip_hallway_to_conn_bcube(bool dim) { // clip off the unconnected length at the end of the hallway

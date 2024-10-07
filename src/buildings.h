@@ -1128,6 +1128,7 @@ struct building_room_geom_t {
 	void add_exterior_step(room_object_t const &c);
 	void add_balcony(room_object_t const &c, float ground_floor_z1, bool is_in_city);
 	void add_sign(room_object_t const &c, bool inc_back, bool inc_text, bool exterior_only=0);
+	void add_false_door_int(room_object_t const &c);
 	void add_false_door(room_object_t const &c);
 	void add_counter(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);
 	void add_cabinet(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);
@@ -1315,6 +1316,7 @@ unsigned const ROOM_FLAG_MIRROR   = 0x0010; // contains a mirror
 unsigned const ROOM_FLAG_HAS_OOO  = 0x0020; // has out-of-order sign
 unsigned const ROOM_FLAG_INT_WIND = 0x0040; // has interior window
 unsigned const ROOM_FLAG_RO_GEOM  = 0x0080; // room should not have objects placed in it
+unsigned const ROOM_FLAG_TUNNEL   = 0x0100; // room has a tunnel connection at one end
 
 struct room_t : public cube_t { // size=56
 	bool is_hallway=0, is_office=0, is_sec_bldg=0, is_single_floor=0;
@@ -1363,7 +1365,8 @@ struct room_t : public cube_t { // size=56
 	void set_is_entryway      () {flags |= ROOM_FLAG_IS_ENTRY;}
 	void set_has_mirror       () {flags |= ROOM_FLAG_MIRROR  ;}
 	void set_has_out_of_order () {flags |= ROOM_FLAG_HAS_OOO ;}
-	void set_no_geom          () {flags |= ROOM_FLAG_RO_GEOM;}
+	void set_no_geom          () {flags |= ROOM_FLAG_RO_GEOM ;}
+	void set_has_tunnel_conn  () {flags |= ROOM_FLAG_TUNNEL  ;}
 	bool get_has_center_stairs() const {return (flags & ROOM_FLAG_CSTAIRS );}
 	bool get_office_floorplan () const {return (flags & ROOM_FLAG_OFF_FP  );}
 	bool get_has_skylight     () const {return (flags & ROOM_FLAG_SKYLIGHT);}
@@ -1371,7 +1374,8 @@ struct room_t : public cube_t { // size=56
 	bool get_has_mirror       () const {return (flags & ROOM_FLAG_MIRROR  );}
 	bool get_has_out_of_order () const {return (flags & ROOM_FLAG_HAS_OOO );}
 	bool has_interior_window  () const {return (flags & ROOM_FLAG_INT_WIND);}
-	bool has_no_geom          () const {return (flags & ROOM_FLAG_RO_GEOM);}
+	bool has_no_geom          () const {return (flags & ROOM_FLAG_RO_GEOM );}
+	bool has_tunnel_conn      () const {return (flags & ROOM_FLAG_TUNNEL  );}
 }; // room_t
 
 struct extb_room_t : public cube_t { // extended basement room candidate
@@ -2189,7 +2193,9 @@ private:
 		float door_width, bool dim, bool dir, bool is_end_room, unsigned depth, bool const add_doors[2], rand_gen_t &rgen);
 	void end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_bcube, ext_basement_room_params_t &P,
 		float door_width, bool dim, bool dir, unsigned depth, rand_gen_t &rgen);
+	void get_valid_extb_hallway_end_doors(room_t const &room, float zval, unsigned room_id, float end_pad_ext, cube_with_ix_t doors[2]) const;
 	void add_false_door_to_extb_room_if_needed(room_t const &room, float zval, unsigned room_id);
+	bool try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned room_id);
 	building_t *get_conn_bldg_for_pt(point const &p, float radius=0.0) const;
 	building_t *get_bldg_containing_pt(point const &p);
 	bool is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist, bool expand_for_light=0) const;

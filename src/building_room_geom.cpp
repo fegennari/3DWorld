@@ -4185,14 +4185,14 @@ void building_room_geom_t::add_balcony(room_object_t const &c, float ground_floo
 	}
 }
 
-void building_room_geom_t::add_false_door(room_object_t const &c) {
+void building_room_geom_t::add_false_door_int(room_object_t const &c) {
 	if ((c.flags & RO_FLAG_WALKWAY) && c.is_interior()) { // interior walkway door decal
 		rgeom_mat_t &fb_mat(get_material(tid_nm_pair_t(get_bldg_door_tid(), 0.0), 0, 0, 0, 0, 1)); // unshadowed, exterior
 		fb_mat.add_cube_to_verts(c, c.color, all_zeros, get_face_mask(c.dim, c.dir), !c.dim); // draw only exterior face
 		// no sides, since they may be visible through an interior window
 		return;
 	}
-	bool const interior(c.is_interior()), two_side_interior(interior && c.is_open());
+	bool const interior(c.is_interior()), two_side_interior(interior && c.is_open()), shadowed(two_side_interior);
 	cube_t sides[2] = {c, c}; // {interior, exterior}
 	sides[0].d[c.dim][!c.dir] = sides[1].d[c.dim][c.dir] = c.get_center_dim(c.dim);
 	
@@ -4201,14 +4201,14 @@ void building_room_geom_t::add_false_door(room_object_t const &c) {
 		bool const front_dir(c.dir ^ bool(exterior) ^ 1);
 		
 		if (c.flags & RO_FLAG_HAS_EXTRA) { // vault door
-			float const width(c.get_width());
+			float const width(c.get_width()), depth(c.get_depth());
 			unsigned const front_skip(two_side_interior ? 0 : ~get_face_mask(c.dim, !front_dir)); // skip front if not 2 sided
-			tid_nm_pair_t const door_tex(get_metal_plate_tex(2.0/width, 0)); // unshadowed
-			get_material(door_tex, 0, 0, 0, 0, exterior).add_cube_to_verts(c, c.color, c.get_llc(), (front_skip | EF_Z1)); // skip bottom
+			tid_nm_pair_t const door_tex(get_metal_plate_tex(2.0/width, shadowed));
+			get_material(door_tex, shadowed, 0, 0, 0, exterior).add_cube_to_verts(c, c.color, c.get_llc(), (front_skip | EF_Z1)); // skip bottom
 			// draw wheel/handle(s)
 			rgeom_mat_t &handle_mat(get_metal_material(1, 0, 0, exterior));
 			colorRGBA const handle_color((c.room_id & 1) ? DK_RED : GRAY);
-			float const wheel_radius(0.2*width), wheel_depth(0.08*width);
+			float const wheel_radius(0.2*width), wheel_depth(0.08*width + 0.5*depth);
 			cube_t wheel;
 
 			for (unsigned n = 0; n < (two_side_interior ? 2U : 1U); ++n) { // front and maybe back side wheels
@@ -4223,12 +4223,28 @@ void building_room_geom_t::add_false_door(room_object_t const &c) {
 		else {
 			unsigned const skip_faces(two_side_interior ? ~get_skip_mask_for_xy(c.dim) : get_face_mask(c.dim, front_dir)); // draw only front and/or back
 			int const tid((c.flags & RO_FLAG_WALKWAY) ? get_bldg_door_tid() : (c.is_house() ? get_int_door_tid() : get_off_door_tid()));
-			rgeom_mat_t &fb_mat(get_material(tid_nm_pair_t(tid, 0.0), 0, 0, 0, 0, exterior)); // unshadowed
-			fb_mat.add_cube_to_verts(c, c.color, all_zeros, skip_faces, !c.dim);
-			rgeom_mat_t &side_mat(get_untextured_material(0, 0, 0, 0, exterior)); // unshadowed
-			side_mat.add_cube_to_verts_untextured(c, c.color, (get_skip_mask_for_xy(c.dim) | EF_Z1)); // skip front, back, and bottom faces
+			rgeom_mat_t &fb_mat(get_material(tid_nm_pair_t(tid, 0.0, shadowed), shadowed, 0, 0, 0, exterior));
+			fb_mat.add_cube_to_verts(c, c.color, all_zeros, skip_faces, !c.dim, (two_side_interior ? c.dir : 0)); // dir swaps texture x (handle) for two sided doors
+
+			if (c.is_open()) { // sides are covered by the frame and only need to be drawn if the door is open
+				rgeom_mat_t &side_mat(get_untextured_material(shadowed, 0, 0, 0, exterior));
+				side_mat.add_cube_to_verts_untextured(c, c.color, (get_skip_mask_for_xy(c.dim) | EF_Z1)); // skip front, back, and bottom faces
+			}
 		}
 	} // for exterior
+}
+void building_room_geom_t::add_false_door(room_object_t const &c) {
+	if (c.is_open()) { // draw the door as open
+		bool const hinge_dir(0); // makes no difference?
+		room_object_t c_open(c);
+		c_open.expand_in_dim(c.dim, 0.5*c.get_depth()); // make it wider
+		float const width(c_open.get_sz_dim(!c.dim)), thickness(c_open.get_depth()), shift(width - thickness);
+		c_open.d[ c.dim][!c.dir]     += (c.dir     ? -1.0 : 1.0)*shift; // open outward
+		c_open.d[!c.dim][!hinge_dir] += (hinge_dir ? 1.0 : -1.0)*shift;
+		c_open.dim ^= 1;
+		add_false_door_int(c_open);
+	}
+	else {add_false_door_int(c);}
 }
 
 bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher) {
