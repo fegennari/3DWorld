@@ -15,7 +15,7 @@ colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c);
 
 colorRGBA choose_pipe_color(rand_gen_t &rgen) {
 	unsigned const NCOLORS = 6;
-	colorRGBA const colors[NCOLORS] = {BRASS_C, COPPER_C, BRONZE_C, DK_BROWN, BROWN, LT_GRAY};
+	colorRGBA const colors[NCOLORS] = {DARK_BRASS_C, COPPER_C, BRONZE_C, DK_BROWN, BROWN, LT_GRAY};
 	return colors[rgen.rand() % NCOLORS];
 }
 colorRGBA choose_machine_part_color(rand_gen_t &rgen, bool is_textured) { // shade of gray

@@ -2566,13 +2566,15 @@ template<typename T> void add_to_and_clear(T &src, T &dest) {
 	src.clear();
 }
 
+colorRGBA const DARK_BRASS_C(0.4, 0.35, 0.15, 1.0);
+
 inline point get_camera_building_space() {return (get_camera_pos() - get_tiled_terrain_model_xlate());}
 inline void set_cube_zvals(cube_t &c, float z1, float z2) {c.z1() = z1; c.z2() = z2;}
 inline float get_tc_leg_width(cube_t const &c, float width) {return 0.5f*width*(c.dx() + c.dy());} // make legs square
 inline unsigned get_rgeom_sphere_ndiv(bool low_detail) {return (low_detail ? N_SPHERE_DIV/2 : N_SPHERE_DIV);}
 inline point cube_bot_center(cube_t const &c) {return point(c.xc(), c.yc(), c.z1());}
 inline point cube_top_center(cube_t const &c) {return point(c.xc(), c.yc(), c.z2());}
-inline bool is_known_metal_color(colorRGBA const &c) {return (c == COPPER_C || c == BRASS_C || c == BRONZE_C || c == GOLD);}
+inline bool is_known_metal_color(colorRGBA const &c) {return (c == COPPER_C || c == BRASS_C || c == DARK_BRASS_C || c == BRONZE_C || c == GOLD);}
 inline colorRGBA get_specular_color(colorRGBA const &c) {return (is_known_metal_color(c) ? c : WHITE);}
 
 void get_city_plot_zones(vect_city_zone_t &zones);
