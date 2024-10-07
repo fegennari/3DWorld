@@ -501,7 +501,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (!walkways.empty()) {
 				has_walkway = maybe_add_walkway_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, light_ix_assign);
 			}
-			if (r->no_geom || is_garage_or_shed || is_swim_pool_room) {
+			if (r->has_no_geom() || is_garage_or_shed || is_swim_pool_room) {
 				if (is_garage_or_shed) {
 					if (init_rtype_f0 == RTYPE_GARAGE) {
 						room_center.z = add_flooring(*r, room_center.z, room_id, tot_light_amt, FLOORING_CONCRETE);
@@ -3123,10 +3123,11 @@ void building_t::add_doorbell_lamp_and_porch_items(tquad_with_ix_t const &door, 
 }
 
 room_t::room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool is_office_, bool is_sec_bldg_) :
-	cube_t(c), no_geom(is_hallway_), // no geom in hallways
-	is_hallway(is_hallway_), is_office(is_office_), is_sec_bldg(is_sec_bldg_), is_single_floor(is_sec_bldg), part_id(p), num_lights(nl) // sec buildings always a single floor
+	cube_t(c), is_hallway(is_hallway_), is_office(is_office_), is_sec_bldg(is_sec_bldg_),
+	is_single_floor(is_sec_bldg), part_id(p), num_lights(nl) // sec buildings always a single floor
 {
 	if (is_office_) {set_office_floorplan();}
+	if (is_hallway) {set_no_geom         ();} // no geom in hallways
 	if      (is_sec_bldg) {assign_all_to(RTYPE_GARAGE);} // or RTYPE_SHED - will be set later
 	else if (is_hallway)  {assign_all_to(RTYPE_HALL  );}
 	else if (is_office)   {assign_all_to(RTYPE_OFFICE);}

@@ -1307,17 +1307,18 @@ unsigned const NUM_RTYPE_SLOTS = 8; // enough for houses; hard max is 8 so that 
 inline unsigned wrap_room_floor(unsigned floor) {return min(floor, NUM_RTYPE_SLOTS-1U);}
 
 // room flags
-unsigned const ROOM_FLAG_CSTAIRS  = 0x01; // has center stairs
-unsigned const ROOM_FLAG_OFF_FP   = 0x02; // has office building floorplan
-unsigned const ROOM_FLAG_SKYLIGHT = 0x04; // has a ceiling skylight
-unsigned const ROOM_FLAG_IS_ENTRY = 0x08; // is unit entryway room
-unsigned const ROOM_FLAG_MIRROR   = 0x10; // contains a mirror
-unsigned const ROOM_FLAG_HAS_OOO  = 0x20; // has out-of-order sign
-unsigned const ROOM_FLAG_INT_WIND = 0x40; // has interior window
+unsigned const ROOM_FLAG_CSTAIRS  = 0x0001; // has center stairs
+unsigned const ROOM_FLAG_OFF_FP   = 0x0002; // has office building floorplan
+unsigned const ROOM_FLAG_SKYLIGHT = 0x0004; // has a ceiling skylight
+unsigned const ROOM_FLAG_IS_ENTRY = 0x0008; // is unit entryway room
+unsigned const ROOM_FLAG_MIRROR   = 0x0010; // contains a mirror
+unsigned const ROOM_FLAG_HAS_OOO  = 0x0020; // has out-of-order sign
+unsigned const ROOM_FLAG_INT_WIND = 0x0040; // has interior window
+unsigned const ROOM_FLAG_RO_GEOM  = 0x0080; // room should not have objects placed in it
 
 struct room_t : public cube_t { // size=56
-	bool no_geom=0, is_hallway=0, is_office=0, is_sec_bldg=0, is_single_floor=0;
-	uint8_t flags=0;
+	bool is_hallway=0, is_office=0, is_sec_bldg=0, is_single_floor=0;
+	uint16_t flags=0;
 	uint8_t has_stairs=0; // per-floor bit mask; always set to 255 for stairs that span the entire room
 	uint8_t has_elevator=0; // number of elevators, usually either 0 or 1
 	uint8_t interior=0; // 0=not interior (has windows), 1=interior, 2=extended basement, {3,4}=extended basement connector, dim=interior-3
@@ -1362,6 +1363,7 @@ struct room_t : public cube_t { // size=56
 	void set_is_entryway      () {flags |= ROOM_FLAG_IS_ENTRY;}
 	void set_has_mirror       () {flags |= ROOM_FLAG_MIRROR  ;}
 	void set_has_out_of_order () {flags |= ROOM_FLAG_HAS_OOO ;}
+	void set_no_geom          () {flags |= ROOM_FLAG_RO_GEOM;}
 	bool get_has_center_stairs() const {return (flags & ROOM_FLAG_CSTAIRS );}
 	bool get_office_floorplan () const {return (flags & ROOM_FLAG_OFF_FP  );}
 	bool get_has_skylight     () const {return (flags & ROOM_FLAG_SKYLIGHT);}
@@ -1369,6 +1371,7 @@ struct room_t : public cube_t { // size=56
 	bool get_has_mirror       () const {return (flags & ROOM_FLAG_MIRROR  );}
 	bool get_has_out_of_order () const {return (flags & ROOM_FLAG_HAS_OOO );}
 	bool has_interior_window  () const {return (flags & ROOM_FLAG_INT_WIND);}
+	bool has_no_geom          () const {return (flags & ROOM_FLAG_RO_GEOM);}
 }; // room_t
 
 struct extb_room_t : public cube_t { // extended basement room candidate

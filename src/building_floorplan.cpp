@@ -1045,7 +1045,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		C.z1() = C.z2() - fc_thick;
 		interior->ceilings.push_back(C);
 		add_room(garage, (parts_end - parts.begin()), 1, 0, 0, 1); // is_sec_bldg=1
-		rooms.back().no_geom = 1;
+		rooms.back().set_no_geom();
 	}
 	// attempt to cut extra doorways into long walls if there's space to produce a more connected floorplan
 	for (unsigned d = 0; d < 2; ++d) { // x,y: dim in which the wall partitions the room (wall runs in dim !d)
@@ -1758,7 +1758,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					} // for y
 					if (!placed) continue; // try another room
 					room.has_elevator = 1;
-					room.no_geom      = 1;
+					room.set_no_geom();
 				}
 				else { // stairs
 					cube_t cutout(room);
@@ -1851,7 +1851,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					stairs_cut      = cutout;
 					room.has_stairs = 255; // stairs on all floors
 					if (!against_wall) {room.set_has_center_stairs();}
-					if (use_hallway || !pri_hall.is_all_zeros()) {room.no_geom = 1;} // no geom in an office with stairs for buildings with hallways
+					if (use_hallway || !pri_hall.is_all_zeros()) {room.set_no_geom();} // no geom in an office with stairs for buildings with hallways
 				}
 				break; // success - done
 			} // for n
