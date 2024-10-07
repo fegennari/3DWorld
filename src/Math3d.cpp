@@ -393,7 +393,7 @@ template<typename T> bool sphere_test_comp(pointT<T> const &pl, pointT<T> const 
 }
 
 // explicit instantiations
-template bool sphere_test_comp(point const &pl, point const &sc, point const &v1, float r2sq, float &t);
+template bool sphere_test_comp(point   const &pl, point   const &sc, point   const &v1, float  r2sq, float  &t);
 template bool sphere_test_comp(point_d const &pl, point_d const &sc, point_d const &v1, double r2sq, double &t);
 
 

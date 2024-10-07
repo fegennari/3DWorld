@@ -233,7 +233,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		}
 		// add vents or AC unit fans
 		if (!is_cylin && rgen.rand_float() < 0.9) {
-			for (unsigned m = 0; m < (two_part ? 2 : 3); ++m) {
+			for (unsigned m = 0; m < (two_part ? 2U : 3U); ++m) {
 				if (rgen.rand_bool()) continue;
 				bool const vdim(orients[m] >> 1), vdir(orients[m] & 1);
 				bool const add_ac_unit(rgen.rand_float() < ((vdim == dim) ? 0.75 : 0.25)), mirror_y(add_ac_unit);
@@ -384,7 +384,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 					point top_pos;
 
 					for (unsigned d = 0; d < 3; ++d) {
-						if (d == fdim) {top_pos[d] = part.d[fdim][fdir];} // attach to surface
+						if (d == unsigned(fdim)) {top_pos[d] = part.d[fdim][fdir];} // attach to surface
 						else if (d != 2 && is_cylin) {top_pos[d] = part.get_center_dim(d);} // centered on the side of cylinder part
 						else {top_pos[d] = rgen.rand_uniform(part.d[d][0]+edge_space, part.d[d][1]-edge_space);} // chose a random attachment point
 					}

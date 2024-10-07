@@ -236,7 +236,7 @@ struct model_anim_t {
 	};
 	struct merged_anim_data_t {
 		vector3d pos, scale;
-		glm::quat q;
+		glm::quat q=glm::quat(1.0, 0.0, 0.0, 0.0); // initialize to identity
 		void set(vector3d const &pos_, vector3d const &scale_, glm::quat const &q_) {pos = pos_; scale = scale_; q = q_;}
 	};
 	struct anim_data_t {
@@ -255,9 +255,6 @@ struct model_anim_t {
 	vector<animation_t> animations;
 
 	unsigned get_bone_id(string const &bone_name);
-	vector3d  calc_interpolated_position(float anim_time, anim_data_t const &A) const;
-	glm::quat calc_interpolated_rotation(float anim_time, anim_data_t const &A) const;
-	vector3d  calc_interpolated_scale   (float anim_time, anim_data_t const &A) const;
 	void transform_node_hierarchy_recur(float anim_time, animation_t const &animation, unsigned node_ix, xform_matrix const &parent_transform);
 	void get_bone_transforms(unsigned anim_id, float cur_time);
 	bool check_anim_wrapped(unsigned anim_id, float old_time, float new_time) const;

@@ -4211,7 +4211,7 @@ void building_room_geom_t::add_false_door(room_object_t const &c) {
 			float const wheel_radius(0.2*width), wheel_depth(0.08*width);
 			cube_t wheel;
 
-			for (unsigned n = 0; n < (two_side_interior ? 2 : 1); ++n) { // front and maybe back side wheels
+			for (unsigned n = 0; n < (two_side_interior ? 2U : 1U); ++n) { // front and maybe back side wheels
 				bool const dir(front_dir ^ bool(n));
 				wheel.set_from_point(c.get_cube_center());
 				wheel.d[c.dim][dir] = c.d[c.dim][dir] + (dir ? 1.0 : -1.0)*wheel_depth; // extend outward

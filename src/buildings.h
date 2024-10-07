@@ -1239,7 +1239,6 @@ struct building_room_geom_t {
 		vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building);
 	void draw_animals(shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 		point const &camera_bs, bool shadow_only, bool reflection_pass, bool check_clip_cube) const;
-	void draw_glass_surfaces(shader_t &s, building_t const &building, vector3d const &xlate, point const &camera_bs);
 	unsigned allocate_dynamic_state();
 	room_obj_dstate_t &get_dstate(room_object_t const &obj);
 private:
@@ -1333,7 +1332,7 @@ struct room_t : public cube_t { // size=56
 
 	room_t() {assign_all_to(RTYPE_NOTSET, 0);} // locked=0
 	room_t(cube_t const &c, unsigned p, unsigned nl=0, bool is_hallway_=0, bool is_office_=0, bool is_sec_bldg_=0);
-	room_t(room_t const &r, cube_t const &c) : room_t(r) {copy_from(c);} // sub-room
+	room_t(room_t const &r, cube_t const &c) {*this = r; copy_from(c);} // sub-room
 	void assign_all_to(room_type rt, bool locked=1); // locked by default
 	void assign_to(room_type rt, unsigned floor, bool locked=0); // unlocked by default
 	void mark_open_wall     (bool dim, bool dir) {open_wall_mask |= (1 << (2*dim + dir));}
