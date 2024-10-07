@@ -129,7 +129,8 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 	cube_t base(c), main(c);
 	base.z2() = main.z1() = c.z1() + rgen.rand_uniform(0.04, 0.1)*height;
 	cube_t parts[2] = {main, main};
-	get_metal_material(1, 0, 1).add_cube_to_verts_untextured(base, base_color, EF_Z1); // skip bottom
+	rgeom_mat_t &base_mat(get_material(tid_nm_pair_t(get_concrete_tid(), 12.0), 1, 0, 1)); // shadowed, small
+	base_mat.add_cube_to_verts(base, base_color, all_zeros, EF_Z1); // skip bottom
 	bool parts_swapped(0), is_cylins[2] = {0, 0};
 	static vect_cube_t avoid, shapes;
 
