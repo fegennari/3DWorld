@@ -77,7 +77,7 @@ tid_nm_pair_t get_machine_part_texture(bool is_cylin, vector3d const sz, float &
 	tex.set_specular(0.1, 20.0);
 	return tex;
 }
-vector3d calc_cylin_tscale_y(float tscale, vector3d const &sz, unsigned dim) { // returns {side_tscale, end_tscale, len_tscale}
+vector3d calc_cylin_tscales(float tscale, vector3d const &sz, unsigned dim) { // returns {side_tscale, end_tscale, len_tscale}
 	float const length(sz[dim]), radius(get_cylin_radius(sz, dim)), diameter(2.0*radius), circumference(PI*radius);
 	assert(length > 0.0 && radius > 0.0);
 	float const len_tscale(tscale), side_tscale(len_tscale*circumference/length), end_tscale(len_tscale*diameter/length);
@@ -170,7 +170,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 			colorRGBA const part_color(apply_light_color(c, choose_machine_part_color(rgen, (part_tex.tid >= 0))));
 			
 			if (is_cylin) {
-				vector3d const ts(calc_cylin_tscale_y(tscale, part_sz, 2)); // dim=2/Z; {side_tscale, end_tscale, len_tscale}
+				vector3d const ts(calc_cylin_tscales(tscale, part_sz, 2)); // dim=2/Z; {side_tscale, end_tscale, len_tscale}
 				part_mat.add_vcylin_to_verts(part, part_color, 0, 1, 0, 0, 1.0, 1.0, ts.x, ts.y, 0, 32, 0.0, 0, ts.z); // draw sides and top
 			}
 			else {part_mat.add_cube_to_verts(part, part_color, part.get_llc(), EF_Z1);} // skip bottom
@@ -353,7 +353,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 				colorRGBA const pcolor(choose_machine_part_color(rgen, (tex.tid >= 0))), spec_color(get_specular_color(pcolor)), lcolor(apply_light_color(c, pcolor));
 				
 				if (add_cylin) {
-					vector3d const ts(calc_cylin_tscale_y(tscale, 2.0*half_sz, cdim)); // {side_tscale, end_tscale, len_tscale}
+					vector3d const ts(calc_cylin_tscales(tscale, 2.0*half_sz, cdim)); // {side_tscale, end_tscale, len_tscale}
 					mat.add_ortho_cylin_to_verts(shape, lcolor, cdim, 1, 1, 0, 0, 1.0, 1.0, ts.x, ts.y, 0, 32, 0.0, 0, ts.z); // draw top/bot
 				}
 				else {mat.add_cube_to_verts(shape, lcolor, shape.get_llc(), 0);} // draw all faces since we don't track which are visible

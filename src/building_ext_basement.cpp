@@ -222,7 +222,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	maybe_assign_extb_room_as_swimming(rgen);
 
 	if (!interior->has_backrooms) { // maybe add tunnel connections to hallways
-		//for (unsigned r = interior->ext_basement_hallway_room_id; r < rooms.size(); ++r) {try_place_tunnel_at_extb_hallway_end(rooms[r], r);}
+		//for (unsigned r = interior->ext_basement_hallway_room_id; r < rooms.size(); ++r) {try_place_tunnel_at_extb_hallway_end(rooms[r], r, rgen);}
 	}
 	return 1;
 }
@@ -674,7 +674,7 @@ void building_t::add_false_door_to_extb_room_if_needed(room_t const &room, float
 
 		if (room.has_tunnel_conn()) { // add an open door; should this have collisions enabled?
 			flags |= (RO_FLAG_HAS_EXTRA | RO_FLAG_OPEN); // make this an open vault/blast door
-			//cube_t debug(door_bc); debug.z2() += 1.0; interior->room_geom->objs.emplace_back(debug, TYPE_DBG_SHAPE, room_id, dim, dir, 0, 1.0, SHAPE_CUBE, RED); // TESTING
+			//cube_t c(door); c.z1() = c.z2(); c.z2() += 1.0; interior->room_geom->objs.emplace_back(c, TYPE_DBG_SHAPE, room_id, dim, dir, 0, 1.0, SHAPE_CUBE, RED); // TESTING
 		}
 		else { // add a closed door
 			if      (is_house)           {flags |= RO_FLAG_IS_HOUSE ;}
@@ -688,7 +688,7 @@ void building_t::add_false_door_to_extb_room_if_needed(room_t const &room, float
 	} // for d
 }
 
-bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned room_id) {
+bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned room_id, rand_gen_t &rgen) {
 	if (!room.is_hallway) return 0;
 	float const zval(room.z1() + get_fc_thickness()), end_pad_ext(2.0*get_doorway_width());
 	cube_with_ix_t doors[2];
@@ -698,15 +698,40 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 		cube_with_ix_t const &door(doors[d]);
 		if (door.is_all_zeros()) continue;
 		bool const dim(door.ix >> 1), dir(door.ix & 1);
+		float const wall_thickness(get_wall_thickness()), floor_spacing(get_window_vspace());
+		float const min_len(4.0*floor_spacing), max_len(10.0*floor_spacing), len_step(0.5*floor_spacing);
+		float const radius(0.5*door.dz()), dist_from_door(radius + wall_thickness); // or 0.5*floor_spacing?
 		cube_t wall_clip(door);
-		wall_clip.expand_in_dim(dim, 2.0*get_wall_thickness()); // make sure it contains the wall
+		wall_clip.expand_in_dim(dim, 2.0*wall_thickness); // make sure it contains the wall
 		subtract_cube_from_cubes(wall_clip, interior->walls[dim]); // remove door from wall
-		// TODO: check if valid
-		// TODO: add tunnel
+		point middle(door.get_cube_center());
+		middle[dim] += (dir ? 1.0 : -1.0)*dist_from_door;
+		point p1(middle), p2(middle);
+		p1[!dim] -= min_len; p2[!dim] += min_len; // start at min length in each dim
+		cube_t tunnel_bc(tunnel_seg_t(p1, p2, radius).bcube);
+		// TODO: calculate length
+		if (cube_intersects_basement_or_extb_room(tunnel_bc))             continue;
+		if (query_min_height(tunnel_bc, tunnel_bc.z2()) < tunnel_bc.z2()) continue; // check for terrain clipping through ceiling
+		if (!is_basement_room_not_int_bldg(tunnel_bc))                    continue;
+		tunnel_seg_t const tseg(p1, p2, radius);
+		interior->tunnels.emplace_back(tseg);
+		interior->basement_ext_bcube.assign_or_union_with_cube(tseg.bcube);
 		room.set_has_tunnel_conn();
 		return 1; // done (only add tunnel conn to one end)
 	} // for d
 	return 0;
+}
+
+tunnel_seg_t::tunnel_seg_t(point const &p1, point const &p2, float radius_) : radius(radius_) {
+	if      (p1.x == p2.x) {dim = 1;}
+	else if (p1.y == p2.y) {dim = 0;}
+	else {assert(0);} // no vertical tunnels for now
+	p[0] = p1; p[1] = p2;
+	assert(p[0][dim] != p[1][dim]);
+	if (p[1][dim] < p[0][dim]) {swap(p[0], p[1]);}
+	bcube = cube_t(p[0], p[1]);
+	bcube.expand_in_z(radius);
+	bcube.expand_in_dim(!dim, radius);
 }
 
 void extb_room_t::clip_hallway_to_conn_bcube(bool dim) { // clip off the unconnected length at the end of the hallway
@@ -1437,10 +1462,13 @@ bool building_interior_t::point_in_ext_basement_room(point const &pos, float exp
 	for (auto r = ext_basement_rooms_start(); r != rooms.end(); ++r) {
 		if (r->contains_pt_exp(pos, expand)) return 1;
 	}
+	for (tunnel_seg_t const &t : tunnels) {
+		if (t.bcube.contains_pt_exp(pos, expand)) return 1;
+	}
 	if (pool.valid && pool.contains_pt_exp(pos, expand)) return 1;
 	return 0;
 }
-// returns true if cube is completely contained in any single room
+// returns true if cube is completely contained in any single room; tunnels are ignored
 bool building_interior_t::cube_in_ext_basement_room(cube_t const &c, bool xy_only) const {
 	if (ext_basement_hallway_room_id < 0)        return 0; // no ext basement rooms
 	if (!basement_ext_bcube.contains_cube_xy(c)) return 0;

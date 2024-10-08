@@ -2773,6 +2773,16 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 	}
 }
 
+// tunnels reall should be drawn as building interior verts rather than small static objects, but the code here is much more flexible and more efficient
+void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
+	bool const shadowed(0); // ???
+	float const length(t.get_length()), circumference(PI*t.radius);
+	float const side_tscale(2.0), len_tscale(side_tscale*length/circumference), end_tscale(len_tscale*2.0*t.radius/length);
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), 16.0, shadowed), shadowed, 0, 1));
+	// TODO: only the tunnel interior is drawn, since it can't be viewed from the exterior
+	mat.add_ortho_cylin_to_verts(t.bcube, WHITE, t.dim, 0, 0, 1, 0, 1.0, 1.0, side_tscale, end_tscale, 0, MAX_CYLIN_SIDES, 0.0, 0, len_tscale);
+}
+
 void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	bool const is_on(c.is_light_on()), on_but_dim(is_on && c.light_is_out());
 	tid_nm_pair_t tp(((is_on || c.shape == SHAPE_SPHERE) ? (int)WHITE_TEX : (int)PLASTER_TEX), tscale);

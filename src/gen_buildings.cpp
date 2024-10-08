@@ -4562,8 +4562,8 @@ public:
 		for (cube_with_ix_t const &b : cand_bldgs) {
 			building_t const &building(get_building(b.ix));
 			if (!building.has_ext_basement() || !building.interior) continue;
-			auto const &rooms(building.interior->rooms);
-			for (auto r = rooms.begin()+building.interior->ext_basement_hallway_room_id; r != rooms.end(); ++r) {bcubes.push_back(*r);}
+			for (auto r = building.interior->ext_basement_rooms_start(); r != building.interior->rooms.end(); ++r) {bcubes.push_back(*r);}
+			for (tunnel_seg_t const &t : building.interior->tunnels) {bcubes.push_back(t.bcube);}
 		}
 	}
 

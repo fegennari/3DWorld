@@ -115,6 +115,7 @@ struct sign_t;
 struct city_flag_t;
 struct door_t;
 struct pipe_t;
+struct tunnel_seg_t;
 typedef vector<point> vect_point;
 
 struct bottle_params_t {
@@ -1083,6 +1084,7 @@ struct building_room_geom_t {
 	void add_elevator(room_object_t const &c, elevator_t const &e, float tscale, float fc_thick_scale,
 		unsigned floor_offset, float floor_spacing, bool has_parking_garage, bool is_powered);
 	void add_escalator(escalator_t const &e, float floor_spacing, bool draw_static, bool draw_dynamic);
+	void add_tunnel(tunnel_seg_t const &t);
 	void add_elevator_doors(elevator_t const &e, float fc_thick_scale);
 	void add_light(room_object_t const &c, float tscale);
 	void add_rug(room_object_t const &c);
@@ -1387,6 +1389,16 @@ struct extb_room_t : public cube_t { // extended basement room candidate
 };
 typedef vector<extb_room_t> vect_extb_room_t;
 
+struct tunnel_seg_t {
+	bool dim=0;
+	float radius=0.0;
+	point p[2];
+	cube_t bcube;
+	tunnel_seg_t(point const &p1, point const &p2, float radius_);
+	float get_length() const {return (p[1][dim] - p[0][dim]);}
+};
+typedef vector<tunnel_seg_t> vect_tunnel_seg_t;
+
 struct breaker_zone_t {
 	unsigned rtype, room_start=0, room_end=0;
 	int pri_room=-1;
@@ -1613,6 +1625,7 @@ struct building_interior_t {
 	vect_cube_t walls[2]; // walls are split by dim, which is the separating dimension of the wall
 	vect_cube_with_ix_t int_windows; // ix stores room index
 	vect_stairwell_t stairwells;
+	vect_tunnel_seg_t tunnels;
 	vector<door_t> doors;
 	vector<door_stack_t> door_stacks;
 	vector<landing_t> landings; // for stairs and elevators
@@ -2196,7 +2209,7 @@ private:
 		float door_width, bool dim, bool dir, unsigned depth, rand_gen_t &rgen);
 	void get_valid_extb_hallway_end_doors(room_t const &room, float zval, unsigned room_id, float end_pad_ext, cube_with_ix_t doors[2]) const;
 	void add_false_door_to_extb_room_if_needed(room_t const &room, float zval, unsigned room_id);
-	bool try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned room_id);
+	bool try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned room_id, rand_gen_t &rgen);
 	building_t *get_conn_bldg_for_pt(point const &p, float radius=0.0) const;
 	building_t *get_bldg_containing_pt(point const &p);
 	bool is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist, bool expand_for_light=0) const;

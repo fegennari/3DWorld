@@ -941,7 +941,8 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		default: break;
 		} // end switch
 	} // for i
-	for (escalator_t const &e : building.interior->escalators) {add_escalator(e, building.get_window_vspace(), 1, 0);} // draw_static=1, draw_dynamic=0
+	for (escalator_t  const &e : building.interior->escalators) {add_escalator(e, building.get_window_vspace(), 1, 0);} // draw_static=1, draw_dynamic=0
+	for (tunnel_seg_t const &t : building.interior->tunnels   ) {add_tunnel(t);}
 	add_skylights_details(building);
 	for (room_object_t &rug : rugs) {add_rug(rug);} // rugs are added last so that alpha blending of their edges works
 	// Note: verts are temporary, but cubes are needed for things such as collision detection with the player and ray queries for indir lighting
