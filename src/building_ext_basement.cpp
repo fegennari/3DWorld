@@ -84,7 +84,7 @@ struct ext_basement_room_params_t {
 	vector<stairs_place_t> stairs;
 };
 
-bool building_t::is_basement_room_not_int_bldg(cube_t &room, building_t const *exclude) const {
+bool building_t::is_basement_room_not_int_bldg(cube_t const &room, building_t const *exclude) const {
 	// check for other buildings, including their extended basements;
 	// Warning: not thread safe, since we can be adding basements to another building at the same time
 	if (check_buildings_cube_coll(room, 0, 1, this, exclude)) return 0; // xy_only=0, inc_basement=1, exclude ourself
@@ -95,7 +95,7 @@ bool building_t::is_basement_room_not_int_bldg(cube_t &room, building_t const *e
 	if (cube_int_underground_obj    (room)) return 0; // check tunnels, in-ground pools, etc.
 	return 1;
 }
-bool building_t::is_basement_room_under_mesh_not_int_bldg(cube_t &room, building_t const *exclude) const {
+bool building_t::is_basement_room_under_mesh_not_int_bldg(cube_t const &room, building_t const *exclude) const {
 	float const ceiling_zval(room.z2() - get_fc_thickness());
 	if (query_min_height(room, ceiling_zval) < ceiling_zval) return 0; // check for terrain clipping through ceiling
 	return is_basement_room_not_int_bldg(room, exclude);
@@ -251,6 +251,14 @@ void extend_adj_cubes(cube_t const &oldc, cube_t const &newc, vect_cube_t &cubes
 		else if (c.zc() > oldc.zc() && c.contains_pt_xy(oldc.get_cube_center())) {c.translate_dim(2, z2_ext);} // extend ceiling upward
 	} // for c
 }
+bool building_t::check_pool_room_slice_valid(cube_t const &slice, int skip_room_ix) const {
+	if (slice.intersects(get_basement())) return 0;
+
+	for (auto r = interior->ext_basement_rooms_start(); r != interior->rooms.end(); ++r) {
+		if (int(r - interior->rooms.begin()) != skip_room_ix && r->intersects_no_adj(slice)) return 0;
+	}
+	return is_basement_room_under_mesh_not_int_bldg(slice);
+}
 void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 	// swimming pools are in the basement so that we don't need to cut out the terrain, and in the extended basement so that we can create a custom lower floor area
 	assert(has_ext_basement());
@@ -309,13 +317,7 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 			slice.d[edim][ edir] += step_dist;
 			slice.expand_by_xy(wall_pad); // add some space around it for the walls
 			slice.z1() -= pool_max_depth; // account for the bottom of the pool
-			if (slice.intersects(basement)) break;
-			bool had_coll(0);
-
-			for (auto r = interior->ext_basement_rooms_start(); r != rooms.end(); ++r) {
-				if (int(r - rooms.begin()) != largest_valid_room && r->intersects_no_adj(slice)) {had_coll = 1; break;} // skip self
-			}
-			if (had_coll || !is_basement_room_under_mesh_not_int_bldg(slice)) break;
+			if (!check_pool_room_slice_valid(slice, largest_valid_room)) break;
 			end_wall += step_dist;
 		} // for n
 	} // for d
@@ -326,15 +328,9 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 		for (unsigned n = 0; n < z_exp_num; ++n) {
 			cube_t slice(room);
 			set_cube_zvals(slice, room.z2(), (room.z2() + z_exp_step));
-			if (slice.intersects(basement)) break;
-			bool had_coll(0);
-
-			for (auto r = interior->ext_basement_rooms_start(); r != rooms.end(); ++r) {
-				if (int(r - rooms.begin()) != largest_valid_room && r->intersects_no_adj(slice)) {had_coll = 1; break;} // skip self
-			}
-			if (had_coll || !is_basement_room_under_mesh_not_int_bldg(slice)) break;
+			if (!check_pool_room_slice_valid(slice, largest_valid_room)) break;
 			room.z2() = slice.z2(); // extend upward
-		} // for n
+		}
 		if (room.z2() > orig_room.z2()) { // was extended vertically; add missing wall sections above doors
 			cube_t room_exp(room);
 			room_exp.expand_by_xy(wall_thickness);
