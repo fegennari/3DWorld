@@ -119,11 +119,6 @@ template<typename T> void add_inverted_triangles(T &verts, vector<unsigned> &ind
 	for (unsigned i = 0; i < numi; ++i) {indices[ixs_end + i] = (indices[ixs_end - i - 1] + numv);} // copy in reverse order
 }
 
-void swap_cube_z_xy(cube_t &c, bool dim) {
-	swap(c.z1(), c.d[dim][0]);
-	swap(c.z2(), c.d[dim][1]);
-}
-
 void rgeom_mat_t::add_ortho_cylin_to_verts(cube_t const &c, colorRGBA const &color, int dim, bool draw_bot, bool draw_top, bool two_sided, bool inv_tb,
 	float rs_bot, float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add, bool swap_txy, float len_tc2, float len_tc1)
 {
@@ -132,7 +127,7 @@ void rgeom_mat_t::add_ortho_cylin_to_verts(cube_t const &c, colorRGBA const &col
 		return;
 	}
 	cube_t c_rot(c);
-	swap_cube_z_xy(c_rot, dim);
+	c_rot.swap_dims(2, dim);
 	unsigned const itri_verts_start_ix(itri_verts.size()), ixs_start_ix(indices.size());
 	add_vcylin_to_verts(c_rot, color, draw_bot, draw_top, two_sided, inv_tb, rs_bot, rs_top, side_tscale, end_tscale, skip_sides, ndiv, side_tscale_add, swap_txy, len_tc2, len_tc1);
 	

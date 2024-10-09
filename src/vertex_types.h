@@ -32,7 +32,8 @@ struct norm_comp { // size = 4
 	void set_norm(char const n_[3]) {UNROLL_3X(n[i_] = n_[i_];)}
 	void set_norm_no_clamp(vector3d const &n_) {UNROLL_3X(n[i_] = int(127.0*n_[i_]);)}
 	vector3d get_norm() const {return vector3d(n[0]/127.0, n[1]/127.0, n[2]/127.0);}
-	void invert_normal() {UNROLL_3X(n[i_] = ((n[i_] == -128) ? 127 : ((n[i_] == 127) ? -128 : -n[i_]));)} // careful to not wraparound for -128 => 128
+	void invert_normal_dim(unsigned d) {assert(d < 3); n[d] = ((n[d] == -128) ? 127 : ((n[d] == 127) ? -128 : -n[d]));} // careful to not wraparound for -128 => 128
+	void invert_normal() {UNROLL_3X(invert_normal_dim(i_);)}
 };
 
 
@@ -75,6 +76,8 @@ struct vert_norm_comp : public vert_wrap_t, public norm_comp { // size = 16
 	vert_norm_comp(point const &v_, vector3d  const &n_) : vert_wrap_t(v_), norm_comp(n_) {}
 	vert_norm_comp(point const &v_, norm_comp const &n_) : vert_wrap_t(v_), norm_comp(n_) {}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
+	void swap_dims(unsigned d1, unsigned d2) {assert(d1 < 3 && d2 < 3); swap(v[d1], v[d2]); swap(n[d1], n[d2]);}
+	void invert_dim(unsigned d) {assert(d < 3); v[d] = -v[d]; invert_normal_dim(d);}
 };
 
 

@@ -479,6 +479,7 @@ struct cube_t { // size = 24; Note: AABB, not actually a cube
 
 	void translate(point const &p) {UNROLL_3X(d[i_][0] += p[i_]; d[i_][1] += p[i_];)}
 	void translate_dim(unsigned dim, float v) {assert(dim < 3); d[dim][0] += v; d[dim][1] += v;}
+	void swap_dims(unsigned d1, unsigned d2) {assert(d1 < 3 && d2 < 3); swap(d[d1][0], d[d2][0]); swap(d[d1][1], d[d2][1]);}
 	void set_from_points(point const *const pts, unsigned npts);
 	void set_from_points(vector<point> const &pts) {set_from_points(pts.data(), pts.size());}
 	std::string str() const;
