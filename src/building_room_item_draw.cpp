@@ -120,30 +120,28 @@ template<typename T> void add_inverted_triangles(T &verts, vector<unsigned> &ind
 }
 
 void rgeom_mat_t::add_ortho_cylin_to_verts(cube_t const &c, colorRGBA const &color, int dim, bool draw_bot, bool draw_top, bool two_sided, bool inv_tb,
-	float rs_bot, float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add, bool swap_txy, float len_tc2, float len_tc1)
+	float rs_bot, float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add, bool swap_txy, float len_tc2, float len_tc1, bool half)
 {
 	if (dim == 2) { // Z: this is our standard v_cylinder
-		add_vcylin_to_verts(c, color, draw_bot, draw_top, two_sided, inv_tb, rs_bot, rs_top, side_tscale, end_tscale, skip_sides, ndiv, side_tscale_add, swap_txy, len_tc2, len_tc1);
+		add_vcylin_to_verts(c, color, draw_bot, draw_top, two_sided, inv_tb, rs_bot, rs_top, side_tscale, end_tscale, skip_sides,
+			ndiv, side_tscale_add, swap_txy, len_tc2, len_tc1, half);
 		return;
 	}
 	cube_t c_rot(c);
 	c_rot.swap_dims(2, dim);
 	unsigned const itri_verts_start_ix(itri_verts.size()), ixs_start_ix(indices.size());
-	add_vcylin_to_verts(c_rot, color, draw_bot, draw_top, two_sided, inv_tb, rs_bot, rs_top, side_tscale, end_tscale, skip_sides, ndiv, side_tscale_add, swap_txy, len_tc2, len_tc1);
-	
-	for (auto v = itri_verts.begin()+itri_verts_start_ix; v != itri_verts.end(); ++v) { // swap triangle vertices and normals
-		std::swap(v->v[2], v->v[dim]);
-		std::swap(v->n[2], v->n[dim]);
-	}
+	add_vcylin_to_verts(c_rot, color, draw_bot, draw_top, two_sided, inv_tb, rs_bot, rs_top, side_tscale, end_tscale, skip_sides,
+		ndiv, side_tscale_add, swap_txy, len_tc2, len_tc1, half);
+	for (auto v = itri_verts.begin()+itri_verts_start_ix; v != itri_verts.end(); ++v) {v->swap_dims(2, dim);} // swap triangle vertices and normals
 	std::reverse(indices.begin()+ixs_start_ix, indices.end()); // fix winding order
 }
 void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided, bool inv_tb, float rs_bot,
-	float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add, bool swap_txy, float len_tc2, float len_tc1)
+	float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add, bool swap_txy, float len_tc2, float len_tc1, bool half)
 {
 	point const center(c.get_cube_center());
 	float const radius(0.5*min(c.dx(), c.dy())); // cube X/Y size should be equal/square
 	add_cylin_to_verts(point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2()), radius*rs_bot, radius*rs_top,
-		color, draw_bot, draw_top, two_sided, inv_tb, side_tscale, end_tscale, skip_sides, ndiv, side_tscale_add, swap_txy, len_tc2, len_tc1);
+		color, draw_bot, draw_top, two_sided, inv_tb, side_tscale, end_tscale, skip_sides, ndiv, side_tscale_add, swap_txy, len_tc2, len_tc1, half);
 }
 void rgeom_mat_t::add_vcylin_to_verts_tscale(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top) {
 	vector3d const sz(c.get_size());
@@ -152,7 +150,7 @@ void rgeom_mat_t::add_vcylin_to_verts_tscale(cube_t const &c, colorRGBA const &c
 	add_vcylin_to_verts(c, color, draw_bot, draw_top, 0, 0, 1.0, 1.0, side_tscale, end_tscale, 0, N_CYL_SIDES, 0.0, 0, len_tscale);
 }
 void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float bot_radius, float top_radius, colorRGBA const &color, bool draw_bot, bool draw_top,
-	bool two_sided, bool inv_tb, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add, bool swap_txy, float len_tc2, float len_tc1)
+	bool two_sided, bool inv_tb, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add, bool swap_txy, float len_tc2, float len_tc1, bool half)
 {
 	assert((!skip_sides) || draw_bot || draw_top); // must draw something
 	point const ce[2] = {bot, top};
@@ -165,12 +163,13 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 	if (!skip_sides) {
 		unsigned const ixs_off[6] = {1,2,0, 3,2,1}; // 1 quad = 2 triangles
 		bool const flat_sides(ndiv <= 6 && side_tscale == 0.0); // hack to draw bolts untextured with flat sides, since no other cylinders have only 6 sides
-		unsigned const num_side_verts(flat_sides ? 4*ndiv : 2*(ndiv+1)), unique_verts_per_side(flat_sides ? 4 : 2);
+		unsigned const ndiv_draw(half ? ndiv/2 : ndiv);
+		unsigned const num_side_verts(flat_sides ? 4*ndiv_draw : 2*(ndiv_draw+1)), unique_verts_per_side(flat_sides ? 4 : 2);
 		itri_verts.resize(itris_start + num_side_verts);
-		indices.resize(ixs_start + 6*ndiv);
+		indices.resize(ixs_start + 6*ndiv_draw);
 
 		if (flat_sides) {
-			for (unsigned i = 0; i < ndiv; ++i) { // vertex data
+			for (unsigned i = 0; i < ndiv_draw; ++i) { // vertex data
 				unsigned const in((i+1)%ndiv);
 				point const pts[4] = {vpn.p[(i<<1)+0], vpn.p[(i<<1)+1], vpn.p[(in<<1)+0], vpn.p[(in<<1)+1]};
 				norm_comp const normal(get_poly_norm(pts));
@@ -178,7 +177,7 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 			}
 		}
 		else {
-			for (unsigned i = 0; i <= ndiv; ++i) { // vertex data
+			for (unsigned i = 0; i <= ndiv_draw; ++i) { // vertex data
 				unsigned const s(i%ndiv);
 				float const ts(side_tscale*(1.0f - i*ndiv_inv) + side_tscale_add);
 				norm_comp const normal(0.5*(vpn.n[s] + vpn.n[(i+ndiv-1)%ndiv])); // normalize?
@@ -186,7 +185,7 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 				itri_verts[itix++].assign(vpn.p[(s<<1)+1], normal, (swap_txy ? len_tc2 : ts), (swap_txy ? ts : len_tc2), cw);
 			}
 		}
-		for (unsigned i = 0; i < ndiv; ++i) { // index data
+		for (unsigned i = 0; i < ndiv_draw; ++i) { // index data
 			unsigned const ix0(itris_start + unique_verts_per_side*i);
 			for (unsigned j = 0; j < 6; ++j) {indices[iix++] = ix0 + ixs_off[j];}
 		}
@@ -202,6 +201,7 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 
 	for (unsigned bt = 0; bt < 2; ++bt) {
 		if (!(bt ? draw_top : draw_bot)) continue; // this disk not drawn
+		assert(!half);
 		norm_comp const normal((bool(bt) ^ inv_tb) ? v12 : -v12);
 		unsigned const center_ix(itix);
 		itri_verts[itix++].assign(ce[bt], normal, half_end_tscale, half_end_tscale, cw); // center
