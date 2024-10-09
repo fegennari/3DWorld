@@ -546,6 +546,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			bool const allow_br(!is_house || must_be_bathroom || f > 0 || num_floors == 1 || (rgen.rand_float() < 0.33f*(added_living + (added_kitchen_mask&1) + 1))); // bed/bath
 			bool const is_office_bathroom(!has_walkway && is_room_office_bathroom(*r, room_center.z, f));
 			bool has_fireplace(0);
+			if (is_ext_basement) {add_false_door_to_extb_room_if_needed(*r, room_center.z, room_id);}
 			
 			if (has_chimney == 2 && !is_basement && is_entry_floor && !added_fireplace) { // handle fireplaces on the first floor
 				has_fireplace = added_fireplace = maybe_add_fireplace_to_room(rgen, *r, blockers, room_center.z, room_id, tot_light_amt);
@@ -563,9 +564,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 				else if (init_rtype_f0 == RTYPE_SECURITY) {
 					added_obj = no_whiteboard = no_plants = add_security_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
-				}
-				else if (is_ext_basement) {
-					add_false_door_to_extb_room_if_needed(*r, room_center.z, room_id);
 				}
 			}
 			// check if this room is adjacent to an exterior/walkway door, and if so, make it a lounge
