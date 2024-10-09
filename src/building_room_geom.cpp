@@ -2776,11 +2776,26 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 // tunnels reall should be drawn as building interior verts rather than small static objects, but the code here is much more flexible and more efficient
 void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 	bool const shadowed(0); // ???
+	bool const dim(t.dim);
+	unsigned const ndiv(N_CYL_SIDES);
 	float const length(t.get_length()), circumference(PI*t.radius);
 	float const side_tscale(2.0), len_tscale(side_tscale*length/circumference), end_tscale(len_tscale*2.0*t.radius/length);
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), 16.0, shadowed), shadowed, 0, 1));
-	// TODO: only the tunnel interior is drawn, since it can't be viewed from the exterior
-	mat.add_ortho_cylin_to_verts(t.bcube, WHITE, t.dim, 0, 0, 1, 0, 1.0, 1.0, side_tscale, end_tscale, 0, MAX_CYLIN_SIDES, 0.0, 0, len_tscale);
+	unsigned const itri_verts_start_ix(mat.itri_verts.size());
+	// only the tunnel interior needs to be drawn, since it can't be viewed from the exterior; but drawing the exterior helps with debugging
+	mat.add_ortho_cylin_to_verts(t.bcube, WHITE, dim, 0, 0, 1, 0, 1.0, 1.0, side_tscale, end_tscale, 0, ndiv, 0.0, 0, len_tscale, 0.0, t.room_conn);
+
+	if (t.room_conn) { // rotate half cylinder into the proper orient
+		float angle(0.0);
+		if (!dim      ) {angle += PI_TWO;} // 90 degrees
+		if (t.room_dir) {angle += PI    ;} // 180 degrees
+		if (angle != 0.0) { rotate_verts(mat.itri_verts, (dim ? plus_y : plus_x), angle, t.p[0], itri_verts_start_ix); }
+	}
+	// draw closed ends in black so that they appear to extend into darkness
+	if (t.closed_ends[0] || t.closed_ends[1]) {
+		assert(!t.room_conn); // not supported
+		mat.add_ortho_cylin_to_verts(t.bcube, BLACK, t.dim, t.closed_ends[0], t.closed_ends[1], 1, 0, 1.0, 1.0, 1.0, 1.0, 1);
+	}
 }
 
 void building_room_geom_t::add_light(room_object_t const &c, float tscale) {

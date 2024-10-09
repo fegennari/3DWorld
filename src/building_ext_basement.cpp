@@ -688,8 +688,15 @@ void building_t::add_false_door_to_extb_room_if_needed(room_t const &room, float
 	} // for d
 }
 
+bool building_t::is_tunnel_placement_valid(point const &p1, point const &p2, float radius) const {
+	cube_t const tunnel_bc(tunnel_seg_t(p1, p2, radius).bcube);
+	if (cube_intersects_basement_or_extb_room(tunnel_bc))             return 0;
+	if (query_min_height(tunnel_bc, tunnel_bc.z2()) < tunnel_bc.z2()) return 0; // check for terrain clipping through ceiling
+	if (!is_basement_room_not_int_bldg(tunnel_bc))                    return 0;
+	return 1;
+}
 bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned room_id, rand_gen_t &rgen) {
-	if (!room.is_hallway) return 0;
+	if (!room.is_hallway && rgen.rand_bool()) return 0; // 50% chance for non-hallways
 	float const zval(room.z1() + get_fc_thickness()), end_pad_ext(2.0*get_doorway_width());
 	cube_with_ix_t doors[2];
 	get_valid_extb_hallway_end_doors(room, zval, room_id, end_pad_ext, doors);
@@ -699,7 +706,7 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 		if (door.is_all_zeros()) continue;
 		bool const dim(door.ix >> 1), dir(door.ix & 1);
 		float const wall_thickness(get_wall_thickness()), floor_spacing(get_window_vspace());
-		float const min_len(4.0*floor_spacing), max_len(10.0*floor_spacing), len_step(0.5*floor_spacing);
+		float const min_len(5.0*floor_spacing), max_len(20.0*floor_spacing); // in each direction
 		float const radius(0.5*door.dz()), dist_from_door(radius + wall_thickness); // or 0.5*floor_spacing?
 		cube_t wall_clip(door);
 		wall_clip.expand_in_dim(dim, 2.0*wall_thickness); // make sure it contains the wall
@@ -708,14 +715,31 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 		middle[dim] += (dir ? 1.0 : -1.0)*dist_from_door;
 		point p1(middle), p2(middle);
 		p1[!dim] -= min_len; p2[!dim] += min_len; // start at min length in each dim
-		cube_t tunnel_bc(tunnel_seg_t(p1, p2, radius).bcube);
-		// TODO: calculate length
-		if (cube_intersects_basement_or_extb_room(tunnel_bc))             continue;
-		if (query_min_height(tunnel_bc, tunnel_bc.z2()) < tunnel_bc.z2()) continue; // check for terrain clipping through ceiling
-		if (!is_basement_room_not_int_bldg(tunnel_bc))                    continue;
-		tunnel_seg_t const tseg(p1, p2, radius);
-		interior->tunnels.emplace_back(tseg);
-		interior->basement_ext_bcube.assign_or_union_with_cube(tseg.bcube);
+		if (!is_tunnel_placement_valid(p1, p2, radius)) continue; // can't place a tunnel of min length
+		unsigned const num_steps = 10;
+		float const step_len((max_len - min_len)/num_steps);
+
+		// try extending tunnel in both directions
+		for (unsigned d = 0; d < 2; ++d) {
+			for (unsigned n = 0; n < num_steps; ++n) {
+				point p1e(p1), p2e(p2);
+				(d ? p2e : p1e)[!dim] += (d ? 1.0 : -1.0)*step_len;
+				if (!is_tunnel_placement_valid(p1e, p2e, radius)) break; // can't extend further in this dir
+				p1 = p1e; p2 = p2e; // accept the new length
+			}
+		} // for dir
+		// split into three segments (center, left, right)
+		point pa(p1), pb(p2);
+		pa[!dim] = door.d[!dim][0]; // left  end of room connection
+		pb[!dim] = door.d[!dim][1]; // right end of room connection
+		tunnel_seg_t tseg_c(pa, pb, radius), tseg_l(p1, pa, radius), tseg_r(pb, p2, radius);
+		tseg_c.room_conn = 1;
+		tseg_c.room_dir  = !dir;
+		tseg_l.closed_ends[0] = tseg_r.closed_ends[1] = 1;
+		interior->tunnels.emplace_back(tseg_c);
+		interior->tunnels.emplace_back(tseg_l);
+		interior->tunnels.emplace_back(tseg_r);
+		interior->basement_ext_bcube.assign_or_union_with_cube(tunnel_seg_t(p1, p2, radius).bcube); // add full tunnel to bcube
 		room.set_has_tunnel_conn();
 		return 1; // done (only add tunnel conn to one end)
 	} // for d

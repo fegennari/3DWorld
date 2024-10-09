@@ -1393,7 +1393,7 @@ struct extb_room_t : public cube_t { // extended basement room candidate
 typedef vector<extb_room_t> vect_extb_room_t;
 
 struct tunnel_seg_t {
-	bool dim=0;
+	bool dim=0, room_conn=0, room_dir=0, closed_ends[2]={};
 	float radius=0.0;
 	point p[2];
 	cube_t bcube;
@@ -2212,6 +2212,7 @@ private:
 		float door_width, bool dim, bool dir, unsigned depth, rand_gen_t &rgen);
 	void get_valid_extb_hallway_end_doors(room_t const &room, float zval, unsigned room_id, float end_pad_ext, cube_with_ix_t doors[2]) const;
 	void add_false_door_to_extb_room_if_needed(room_t const &room, float zval, unsigned room_id);
+	bool is_tunnel_placement_valid(point const &p1, point const &p2, float radius) const;
 	bool try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned room_id, rand_gen_t &rgen);
 	building_t *get_conn_bldg_for_pt(point const &p, float radius=0.0) const;
 	building_t *get_bldg_containing_pt(point const &p);
