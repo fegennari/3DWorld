@@ -4331,7 +4331,10 @@ public:
 						if (bcube.z1() >= b->z2()) continue; // above the building, doesn't intersect (I guess attics are skipped?)
 						// if parts has been allocated, the basement should be known, and the building's z1 should be valid; otherwise, extend the bcube z1 down
 						float basement_z1(building.bcube.z1());
-						if (!building.parts_generated) {basement_z1 -= (building.is_house ? 1 : 2)*building.get_window_vspace();} // 1 basement level for house, 1-2 for office
+						
+						if (!building.parts_generated) { // 1 basement level for house, 1+ for office
+							basement_z1 -= (building.is_house ? 1 : global_building_params.max_office_basement_floors)*building.get_window_vspace();
+						}
 						if (bcube.z2() <= basement_z1) continue;
 					}
 					if (!building.parts_generated) return 1; // parts not yet allocated, assume it intersects

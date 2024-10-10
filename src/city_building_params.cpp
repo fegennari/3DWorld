@@ -179,6 +179,7 @@ void building_params_t::init_kw_maps() {
 	kwmu.add("max_ext_basement_hall_branches", max_ext_basement_hall_branches);
 	kwmu.add("max_ext_basement_room_depth",    max_ext_basement_room_depth);
 	kwmu.add("max_room_geom_gen_per_frame",    max_room_geom_gen_per_frame);
+	kwmu.add("max_office_basement_floors",     max_office_basement_floors);
 	kwmb.add("add_office_backroom_basements",  add_office_br_basements);
 	kwmf.add("ao_factor", ao_factor);
 	kwmf.add("sec_extra_spacing", sec_extra_spacing);
@@ -194,6 +195,7 @@ void building_params_t::init_kw_maps() {
 	kwmb.add("add_office_basements",    add_office_basements);
 	kwmb.add("put_doors_in_corners",    put_doors_in_corners);
 	kwmb.add("add_door_handles",        add_door_handles    );
+	kwmb.add("add_basement_tunnels",    add_basement_tunnels);
 	kwmr.add("two_floor_retail_prob",   two_floor_retail_prob, FP_CHECK_01);
 	kwmr.add("split_prob", cur_mat.split_prob, FP_CHECK_01);
 	kwmr.add("cube_prob",  cur_mat.cube_prob,  FP_CHECK_01);
