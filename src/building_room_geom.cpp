@@ -2780,16 +2780,51 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 	unsigned const ndiv(N_CYL_SIDES);
 	float const length(t.get_length()), circumference(PI*t.radius);
 	float const side_tscale(2.0), len_tscale(side_tscale*length/circumference), end_tscale(len_tscale*2.0*t.radius/length);
+	colorRGBA const wall_color(WHITE);
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), 16.0, shadowed), shadowed, 0, 1));
-	unsigned const itri_verts_start_ix(mat.itri_verts.size());
+	unsigned const verts_start_ix(mat.itri_verts.size()), ixs_start_ix(mat.indices.size());
 	// only the tunnel interior needs to be drawn, since it can't be viewed from the exterior; but drawing the exterior helps with debugging
-	mat.add_ortho_cylin_to_verts(t.bcube, WHITE, dim, 0, 0, 1, 0, 1.0, 1.0, side_tscale, end_tscale, 0, ndiv, 0.0, 0, len_tscale, 0.0, t.room_conn);
+	mat.add_ortho_cylin_to_verts(t.bcube, wall_color, dim, 0, 0, 1, 0, 1.0, 1.0, side_tscale, end_tscale, 0, ndiv, 0.0, 0, len_tscale, 0.0, t.room_conn);
 
 	if (t.room_conn) { // rotate half cylinder into the proper orient
 		float angle(0.0);
-		if (!dim      ) {angle += PI_TWO;} // 90 degrees
+		if (!dim      ) {angle += PI_TWO;} // 90  degrees
 		if (t.room_dir) {angle += PI    ;} // 180 degrees
-		if (angle != 0.0) { rotate_verts(mat.itri_verts, (dim ? plus_y : plus_x), angle, t.p[0], itri_verts_start_ix); }
+		if (angle != 0.0) {rotate_verts(mat.itri_verts, (dim ? plus_y : plus_x), angle, t.p[0], verts_start_ix);}
+		// draw wall sections connecting to the door
+		float const centerline(t.bcube.get_center_dim(!dim));
+		cube_t conn_area(t.bcube_ext);
+		conn_area.d[!dim][!t.room_dir] = centerline; // cut in half
+
+		for (unsigned invert = 0; invert < 2; ++invert) { // draw ceiling and floor, both inner and outer
+			mat.add_cube_to_verts(conn_area, wall_color, all_zeros, ~EF_Z12, 0, 0, 0, invert);
+		}
+		// draw the two C-shaped sides
+		size_t const num_verts(mat.itri_verts.size() - verts_start_ix), num_ixs(mat.indices.size() - ixs_start_ix);
+		float const door_pos(t.bcube_ext.d[!dim][t.room_dir]), center_dim(t.bcube.get_center_dim(dim)), tscale(1.0/PI);
+
+		for (unsigned d = 0; d < 2; ++d) {
+			size_t const vert_ix_off(mat.itri_verts.size() - verts_start_ix);
+
+			// copy cylin side verts and transform them into the correct place
+			for (unsigned i = 0; i < num_verts; ++i) {
+				auto v(mat.itri_verts[verts_start_ix+i]);
+				
+				if ((v.v[dim] < center_dim) ^ bool(d)) { // keep this vertex on the cylinder, but move to the other hemisphere
+					v.v[!dim] = 2.0*centerline - v.v[!dim]; // reflect about center_dim
+				}
+				else { // move this vertex to the wall next to the door
+					v.v[!dim] = door_pos;
+					v.v[ dim] = t.bcube.d[dim][d]; // move to the other end
+				}
+				v.set_ortho_norm(dim, !d); // recalculate normal
+				v.t[0] *= 5.0*tscale; // hack to make the texture coordinates look less distorted
+				v.t[1] *= tscale;
+				mat.itri_verts.push_back(v);
+			} // for i
+			// indices have the same quad topology, so copy and offset them
+			for (unsigned i = 0; i < num_ixs; ++i) {mat.indices.push_back(mat.indices[ixs_start_ix+i] + vert_ix_off);}
+		} // for d
 	}
 	// draw closed ends in black so that they appear to extend into darkness
 	if (t.closed_ends[0] || t.closed_ends[1]) {

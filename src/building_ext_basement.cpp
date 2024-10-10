@@ -705,7 +705,7 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 		cube_with_ix_t const &door(doors[d]);
 		if (door.is_all_zeros()) continue;
 		bool const dim(door.ix >> 1), dir(door.ix & 1);
-		float const wall_thickness(get_wall_thickness()), floor_spacing(get_window_vspace());
+		float const wall_thickness(get_wall_thickness()), floor_spacing(get_window_vspace()), sm_shift_val(0.5*get_rug_thickness());
 		float const min_len(5.0*floor_spacing), max_len(20.0*floor_spacing); // in each direction
 		float const radius(0.5*door.dz()), wall_gap(1.0*wall_thickness), dist_from_door(radius + wall_gap); // or 0.5*floor_spacing?
 		cube_t wall_clip(door);
@@ -713,6 +713,7 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 		subtract_cube_from_cubes(wall_clip, interior->walls[dim]); // remove door from wall
 		point middle(door.get_cube_center());
 		middle[dim] += (dir ? 1.0 : -1.0)*dist_from_door;
+		middle.z -= sm_shift_val; // shift down slightly to prevent Z-fighting with concrete on ceiling and floor
 		point p1(middle), p2(middle);
 		p1[!dim] -= min_len; p2[!dim] += min_len; // start at min length in each dim
 		if (!is_tunnel_placement_valid(p1, p2, radius)) continue; // can't place a tunnel of min length
@@ -730,8 +731,8 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 		} // for dir
 		// split into three segments (center, left, right)
 		point pa(p1), pb(p2);
-		pa[!dim] = door.d[!dim][0]; // left  end of room connection
-		pb[!dim] = door.d[!dim][1]; // right end of room connection
+		pa[!dim] = door.d[!dim][0] + sm_shift_val; // left  end of room connection
+		pb[!dim] = door.d[!dim][1] - sm_shift_val; // right end of room connection
 		tunnel_seg_t tseg_c(pa, pb, radius), tseg_l(p1, pa, radius), tseg_r(pb, p2, radius);
 		tseg_c.set_as_room_conn(!dir, wall_gap);
 		tseg_l.closed_ends[0] = tseg_r.closed_ends[1] = 1;
