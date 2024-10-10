@@ -1396,8 +1396,11 @@ struct tunnel_seg_t {
 	bool dim=0, room_conn=0, room_dir=0, closed_ends[2]={};
 	float radius=0.0;
 	point p[2];
-	cube_t bcube;
+	cube_t bcube, bcube_ext; // bcube_ext includes the area connecting to the door when room_conn=1
+
 	tunnel_seg_t(point const &p1, point const &p2, float radius_);
+	void set_as_room_conn(bool rdir, float wall_gap);
+	cube_t get_player_walk_area(float player_radius) const;
 	float get_length() const {return (p[1][dim] - p[0][dim]);}
 };
 typedef vector<tunnel_seg_t> vect_tunnel_seg_t;
@@ -1685,6 +1688,7 @@ struct building_interior_t {
 	room_t const &get_garage_room() const {assert(garage_room >= 0); return get_room(garage_room);}
 	vector<room_t>::const_iterator ext_basement_rooms_start() const;
 	bool point_in_ext_basement_room(point const &pos, float expand=0.0) const;
+	bool point_in_tunnel(point const &pos, float expand=0.0) const;
 	bool cube_in_ext_basement_room(cube_t const &c, bool xy_only) const;
 	door_t const &get_ext_basement_door() const;
 	void assign_master_bedroom(float window_vspacing, float floor_thickness);

@@ -707,7 +707,7 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 		bool const dim(door.ix >> 1), dir(door.ix & 1);
 		float const wall_thickness(get_wall_thickness()), floor_spacing(get_window_vspace());
 		float const min_len(5.0*floor_spacing), max_len(20.0*floor_spacing); // in each direction
-		float const radius(0.5*door.dz()), dist_from_door(radius + wall_thickness); // or 0.5*floor_spacing?
+		float const radius(0.5*door.dz()), wall_gap(1.0*wall_thickness), dist_from_door(radius + wall_gap); // or 0.5*floor_spacing?
 		cube_t wall_clip(door);
 		wall_clip.expand_in_dim(dim, 2.0*wall_thickness); // make sure it contains the wall
 		subtract_cube_from_cubes(wall_clip, interior->walls[dim]); // remove door from wall
@@ -733,8 +733,7 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 		pa[!dim] = door.d[!dim][0]; // left  end of room connection
 		pb[!dim] = door.d[!dim][1]; // right end of room connection
 		tunnel_seg_t tseg_c(pa, pb, radius), tseg_l(p1, pa, radius), tseg_r(pb, p2, radius);
-		tseg_c.room_conn = 1;
-		tseg_c.room_dir  = !dir;
+		tseg_c.set_as_room_conn(!dir, wall_gap);
 		tseg_l.closed_ends[0] = tseg_r.closed_ends[1] = 1;
 		interior->tunnels.emplace_back(tseg_c);
 		interior->tunnels.emplace_back(tseg_l);
@@ -756,6 +755,22 @@ tunnel_seg_t::tunnel_seg_t(point const &p1, point const &p2, float radius_) : ra
 	bcube = cube_t(p[0], p[1]);
 	bcube.expand_in_z(radius);
 	bcube.expand_in_dim(!dim, radius);
+	bcube_ext = bcube;
+}
+void tunnel_seg_t::set_as_room_conn(bool rdir, float wall_gap) {
+	room_conn = 1;
+	room_dir  = rdir;
+	bcube_ext.d[!dim][room_dir] += (room_dir ? 1.0 : -1.0)*wall_gap;
+}
+cube_t tunnel_seg_t::get_player_walk_area(float player_radius) const {
+	cube_t walk_area(bcube_ext);
+	float const walk_width(0.1*radius), blocked_width(radius - walk_width); // area inside the tunnel near the center where the player can walk
+	if (room_conn) {walk_area.d[!dim][!room_dir] += (room_dir ? 1.0 : -1.0)*blocked_width;} // shrink on non-room side
+	else {walk_area.expand_in_dim(!dim, -blocked_width);} // shrink on both sides
+	// prevent the player from walking off a closed end
+	if (closed_ends[0]) {walk_area.d[dim][0] += player_radius;}
+	if (closed_ends[1]) {walk_area.d[dim][1] -= player_radius;}
+	return walk_area;
 }
 
 void extb_room_t::clip_hallway_to_conn_bcube(bool dim) { // clip off the unconnected length at the end of the hallway
@@ -1486,10 +1501,14 @@ bool building_interior_t::point_in_ext_basement_room(point const &pos, float exp
 	for (auto r = ext_basement_rooms_start(); r != rooms.end(); ++r) {
 		if (r->contains_pt_exp(pos, expand)) return 1;
 	}
-	for (tunnel_seg_t const &t : tunnels) {
-		if (t.bcube.contains_pt_exp(pos, expand)) return 1;
-	}
+	if (point_in_tunnel(pos, expand)) return 1;
 	if (pool.valid && pool.contains_pt_exp(pos, expand)) return 1;
+	return 0;
+}
+bool building_interior_t::point_in_tunnel(point const &pos, float expand) const {
+	for (tunnel_seg_t const &t : tunnels) {
+		if (t.bcube_ext.contains_pt_exp(pos, expand)) return 1;
+	}
 	return 0;
 }
 // returns true if cube is completely contained in any single room; tunnels are ignored

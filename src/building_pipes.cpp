@@ -155,7 +155,7 @@ bool building_t::cube_intersects_basement_or_extb_room(cube_t const &c) const {
 		if (c.intersects(*r)) return 1;
 	}
 	for (tunnel_seg_t const &t : interior->tunnels) {
-		if (c.intersects(t.bcube)) return 1;
+		if (c.intersects(t.bcube_ext)) return 1;
 	}
 	return 0;
 }

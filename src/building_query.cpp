@@ -8,6 +8,7 @@
 
 extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_in_unlit_room, building_has_open_ext_door, player_on_escalator, ctrl_key_pressed;
 extern bool player_is_hiding, player_wait_respawn, had_building_interior_coll, player_in_int_elevator, player_in_walkway, player_on_house_stairs, player_on_moving_ww;
+extern bool player_in_tunnel;
 extern int camera_surf_collide, frame_counter, animate2, player_in_closet, player_in_elevator, player_in_basement, player_in_attic, player_in_water;
 extern float CAMERA_RADIUS, C_STEP_HEIGHT, NEAR_CLIP, fticks, building_bcube_expand;
 extern double camera_zh;
@@ -873,12 +874,24 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			float const z(i->z2());
 			if (z <= floor_test_zval && z > closest_floor_zval) {closest_floor_zval = z; had_coll = 1;} // move up
 		}
-		if (interior->room_geom) { // collision with room geometry
+		if (interior->room_geom) { // check glass floors
 			for (cube_t const &f : interior->room_geom->glass_floors) {
 				if (!f.contains_pt_xy(pos)) continue; // sphere not on this floor
 				if (point_in_elevator(pos) || point_in_stairwell(pos)) continue; // elevators and stairwells cut out glass floors, so ignore them in this case
 				float const z(f.z2());
 				if (z <= floor_test_zval && z > closest_floor_zval) {closest_floor_zval = z; had_coll = 1;} // move up
+			}
+		}
+		// check tunnels
+		if (!interior->tunnels.empty() && point_in_extended_basement_not_basement(pos)) {
+			point const p_test(pos.x, pos.y, obj_z);
+
+			for (tunnel_seg_t const &t : interior->tunnels) {
+				if (!t.bcube_ext.contains_pt(p_test)) continue;
+				cube_t const walk_area(t.get_player_walk_area(xy_radius));
+				walk_area.clamp_pt_xy(pos);
+				closest_floor_zval = t.bcube.z1();
+				had_coll = player_in_tunnel = 1;
 			}
 		}
 		if (had_coll) {pos.z = closest_floor_zval + radius; obj_z = max(pos.z, p_last.z);}
