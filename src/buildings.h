@@ -1088,6 +1088,7 @@ struct building_room_geom_t {
 		unsigned floor_offset, float floor_spacing, bool has_parking_garage, bool is_powered);
 	void add_escalator(escalator_t const &e, float floor_spacing, bool draw_static, bool draw_dynamic);
 	void add_tunnel(tunnel_seg_t const &t);
+	void add_tunnel_water(tunnel_seg_t const &t);
 	void add_elevator_doors(elevator_t const &e, float fc_thick_scale);
 	void add_light(room_object_t const &c, float tscale);
 	void add_rug(room_object_t const &c);

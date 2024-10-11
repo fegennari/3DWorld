@@ -4,6 +4,7 @@
 #include "function_registry.h"
 #include "buildings.h"
 
+extern double tfticks;
 
 float query_min_height(cube_t const &c, float stop_at);
 
@@ -182,7 +183,7 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 	bool const shadowed(0); // not shadowed, since there's no light
 	bool const dim(t.dim);
 	unsigned const ndiv(48);
-	float const length(t.get_length()), circumference(PI*t.radius), centerline(t.bcube.get_center_dim(!dim));;
+	float const length(t.get_length()), circumference(PI*t.radius), centerline(t.bcube.get_center_dim(!dim));
 	float const side_tscale(2.0), len_tscale(side_tscale*length/circumference), end_tscale(len_tscale*2.0*t.radius/length);
 	colorRGBA const wall_color(WHITE);
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), 16.0, shadowed), shadowed, 0, 1));
@@ -255,20 +256,23 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 			bar_mat.add_vcylin_to_verts(bar, bar_color, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bar_ndiv); // draw sides but not ends
 		}
 	}
+}
+
+void building_room_geom_t::add_tunnel_water(tunnel_seg_t const &t) {
+	if (t.water_level <= 0.0) return;
 	// draw water surface
-	if (t.water_level > 0.0) {
-		// TODO: in dynamic pass if t.water_flow != 0.0
-		float const tscale(1.0/t.radius);
-		float tscale_xy[2] = {tscale, tscale};
-		tscale_xy[!dim] *= 1.0/(1.0 + 10.0*fabs(t.water_flow)); // stretch along tunnel length more with higher water flow
-		rgeom_mat_t &water_mat(get_material(tid_nm_pair_t(FOAM_TEX, -1, tscale_xy[0], tscale_xy[1]), 0, 0, 1)); // unshadowed, small
-		cube_t water(t.bcube);
-		water.z2() = t.bcube.z1() + t.water_level;
-		float const dist(t.radius - t.water_level), water_hwidth(sqrt(t.radius*t.radius - dist*dist));
-		set_wall_width(water, centerline, water_hwidth, !dim);
-		if (t.room_conn) {water.d[!dim][t.room_dir] = t.get_room_conn_block().d[!dim][!t.room_dir];} // ends flush with conn block
-		water_mat.add_cube_to_verts(water, DK_BROWN, all_zeros, ~EF_Z2); // draw top surface only
-	}
+	bool const dim(t.dim);
+	float const tscale(1.0/t.radius);
+	float tscale_xy[2] = {tscale, tscale};
+	tscale_xy[!dim] *= 1.0/(1.0 + 10.0*fabs(t.water_flow)); // stretch along tunnel length more with higher water flow
+	rgeom_mat_t &water_mat(get_material(tid_nm_pair_t(FOAM_TEX, -1, tscale_xy[0], tscale_xy[1]), 0, 1)); // unshadowed, dynamic
+	cube_t water(t.bcube);
+	water.z2() = t.bcube.z1() + t.water_level;
+	float const dist(t.radius - t.water_level), water_hwidth(sqrt(t.radius*t.radius - dist*dist));
+	set_wall_width(water, t.bcube.get_center_dim(!dim), water_hwidth, !dim);
+	if (t.room_conn) {water.d[!dim][t.room_dir] = t.get_room_conn_block().d[!dim][!t.room_dir];} // ends flush with conn block
+	(dim ? water_mat.tex.txoff : water_mat.tex.tyoff) = fract(0.15*(tfticks/TICKS_PER_SECOND)*t.water_flow); // animate the water texture
+	water_mat.add_cube_to_verts(water, DK_BROWN, all_zeros, ~EF_Z2); // draw top surface only
 }
 
 

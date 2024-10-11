@@ -15,7 +15,7 @@ quad_batch_draw candle_qbd;
 vect_room_object_t pending_objs;
 object_model_loader_t building_obj_model_loader;
 
-extern bool camera_in_building;
+extern bool camera_in_building, player_in_tunnel;
 extern int display_mode, frame_counter, animate2, player_in_basement, player_in_elevator;
 extern unsigned room_mirror_ref_tid;
 extern float fticks, office_chair_rot_rate, building_ambient_scale;
@@ -1217,7 +1217,8 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building, point
 			if (j->in_elevator()) {add_button(*j);} // add button as a dynamic object if it's inside the elevator
 		}
 	} // for e
-	for (escalator_t const &e : building.interior->escalators) {add_escalator(e, building.get_window_vspace(), 0, 1);} // draw_static=0, draw_dynamic=1
+	for (escalator_t  const &e : building.interior->escalators) {add_escalator(e, building.get_window_vspace(), 0, 1);} // draw_static=0, draw_dynamic=1
+	for (tunnel_seg_t const &t : building.interior->tunnels   ) {add_tunnel_water(t);}
 	mats_dynamic.create_vbos(building);
 }
 
@@ -1706,6 +1707,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (bbd != nullptr) {bbd->set_camera_dir_mask(camera_bs, ((camera_bs.z < building.ground_floor_z1) ? building.get_bcube_inc_extensions() : building.bcube));}
 	brg_batch_draw_t *const bbd_in(bbd); // capture bbd for instance drawing before setting to null if player_in_building
 	if (player_in_building_or_doorway) {bbd = nullptr;} // use immediate drawing when player is in the building because draw order matters for alpha blending
+	bool const update_tunnel_water(animate2 && player_in_building && !shadow_only && player_in_tunnel);
 	bool enable_indir(0), update_escalators(0);
 
 	if (animate2 && player_in_building && !shadow_only && !reflection_pass) { // maybe update escalators
@@ -1727,7 +1729,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		invalidate_static_geom(); // user created a new screenshot texture, and this building has pictures - recreate room geom
 		num_pic_tids = num_screenshot_tids;
 	}
-	if (update_clocks || update_escalators) {update_dynamic_draw_data();}
+	if (update_clocks || update_escalators || update_tunnel_water) {update_dynamic_draw_data();}
 	check_invalid_draw_data();
 
 	// generate vertex data in the shadow pass or if we haven't hit our generation limit; must be consistent for static and small geom
