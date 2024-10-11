@@ -888,7 +888,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 
 			for (tunnel_seg_t const &t : interior->tunnels) {
 				if (!t.bcube_ext.contains_pt(p_test)) continue;
-				cube_t const walk_area(t.get_player_walk_area(xy_radius));
+				cube_t const walk_area(t.get_player_walk_area(pos, xy_radius));
 				walk_area.clamp_pt_xy(pos);
 				closest_floor_zval = t.bcube.z1();
 				had_coll = player_in_tunnel = 1;

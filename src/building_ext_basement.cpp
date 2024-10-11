@@ -706,7 +706,7 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 		if (door.is_all_zeros()) continue;
 		bool const dim(door.ix >> 1), dir(door.ix & 1);
 		float const wall_thickness(get_wall_thickness()), floor_spacing(get_window_vspace()), sm_shift_val(0.5*get_rug_thickness());
-		float const min_len(5.0*floor_spacing), max_len(20.0*floor_spacing); // in each direction
+		float const min_len(8.0*floor_spacing), max_len(20.0*floor_spacing); // in each direction
 		float const radius(0.5*door.dz()), wall_gap(2.0*wall_thickness), check_radius(radius + wall_thickness), dist_from_door(radius + wall_gap);
 		cube_t wall_clip(door);
 		wall_clip.expand_in_dim(dim, 2.0*wall_thickness); // make sure it contains the wall
@@ -730,15 +730,24 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 			}
 		} // for dir
 		// split into three segments (center, left, right)
+		float const gate_dist_from_end(5.0*floor_spacing);
 		point pa(p1), pb(p2);
 		pa[!dim] = door.d[!dim][0] + sm_shift_val; // left  end of room connection
 		pb[!dim] = door.d[!dim][1] - sm_shift_val; // right end of room connection
 		tunnel_seg_t tseg_c(pa, pb, radius), tseg_l(p1, pa, radius), tseg_r(pb, p2, radius);
 		tseg_c.set_as_room_conn(!dir, wall_gap);
-		tseg_l.closed_ends[0] = tseg_r.closed_ends[1] = 1;
-		interior->tunnels.emplace_back(tseg_c);
-		interior->tunnels.emplace_back(tseg_l);
-		interior->tunnels.emplace_back(tseg_r);
+		tseg_l.closed_ends[0] = tseg_r.closed_ends[1] = tseg_l.has_gate = tseg_r.has_gate = 1;
+		tseg_l.gate_pos = p1[!dim] + gate_dist_from_end;
+		tseg_r.gate_pos = p2[!dim] - gate_dist_from_end;
+		tunnel_seg_t *to_add[3] = {&tseg_c, &tseg_l, &tseg_r};
+		float const water_level(rgen.rand_uniform(0.0, 1.0)*0.2*radius), water_flow(rgen.signed_rand_float());
+		
+		for (unsigned n = 0; n < 3; ++n) {
+			tunnel_seg_t &tseg(*to_add[n]);
+			tseg.water_level = water_level;
+			tseg.water_flow  = water_flow;
+			interior->tunnels.emplace_back(tseg);
+		}
 		interior->basement_ext_bcube.assign_or_union_with_cube(tunnel_seg_t(p1, p2, radius).bcube); // add full tunnel to bcube
 		room.set_has_tunnel_conn();
 		return 1; // done (only add tunnel conn to one end)
@@ -763,15 +772,27 @@ void tunnel_seg_t::set_as_room_conn(bool rdir, float wall_gap) {
 	room_dir  = rdir;
 	bcube_ext.d[!dim][room_dir] += (room_dir ? 1.0 : -1.0)*wall_gap;
 }
-cube_t tunnel_seg_t::get_player_walk_area(float player_radius) const {
+cube_t tunnel_seg_t::get_player_walk_area(point const &player_pos, float player_radius) const {
 	cube_t walk_area(bcube_ext);
 	float const walk_width(0.1*radius), blocked_width(radius - walk_width); // area inside the tunnel near the center where the player can walk
 	if (room_conn) {walk_area.d[!dim][!room_dir] += (room_dir ? 1.0 : -1.0)*blocked_width;} // shrink on non-room side
 	else {walk_area.expand_in_dim(!dim, -blocked_width);} // shrink on both sides
-	// prevent the player from walking off a closed end
+	// prevent the player from walking off a closed end or through a gate
 	if (closed_ends[0]) {walk_area.d[dim][0] += player_radius;}
 	if (closed_ends[1]) {walk_area.d[dim][1] -= player_radius;}
+
+	if (has_gate) {
+		if (player_pos[dim] < gate_pos) {min_eq(walk_area.d[dim][1], gate_pos-player_radius);} // player at low end, clamp high end
+		else                            {max_eq(walk_area.d[dim][0], gate_pos+player_radius);} // player at high end, clamp low end
+	}
 	return walk_area;
+}
+cube_t tunnel_seg_t::get_room_conn_block() const {
+	cube_t block(bcube_ext);
+	block.d[!dim][ room_dir] += (room_dir ? -1.0 : 1.0)*0.05*radius;
+	block.d[!dim][!room_dir]  = block.d[!dim][room_dir] + (room_dir ? -1.0 : 1.0)*0.5*radius;
+	block.z2() = block.z1() + 0.22*radius; // set the height
+	return block;
 }
 
 void extb_room_t::clip_hallway_to_conn_bcube(bool dim) { // clip off the unconnected length at the end of the hallway

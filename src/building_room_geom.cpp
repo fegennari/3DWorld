@@ -2775,10 +2775,10 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 
 // tunnels reall should be drawn as building interior verts rather than small static objects, but the code here is much more flexible and more efficient
 void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
-	bool const shadowed(0); // ???
+	bool const shadowed(0); // not shadowed, since there's no light
 	bool const dim(t.dim);
 	unsigned const ndiv(48);
-	float const length(t.get_length()), circumference(PI*t.radius);
+	float const length(t.get_length()), circumference(PI*t.radius), centerline(t.bcube.get_center_dim(!dim));;
 	float const side_tscale(2.0), len_tscale(side_tscale*length/circumference), end_tscale(len_tscale*2.0*t.radius/length);
 	colorRGBA const wall_color(WHITE);
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), 16.0, shadowed), shadowed, 0, 1));
@@ -2792,13 +2792,14 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 		if (t.room_dir) {angle += PI    ;} // 180 degrees
 		if (angle != 0.0) {rotate_verts(mat.itri_verts, (dim ? plus_y : plus_x), angle, t.p[0], verts_start_ix);}
 		// draw wall sections connecting to the door
-		float const centerline(t.bcube.get_center_dim(!dim));
 		cube_t conn_area(t.bcube_ext);
 		conn_area.d[!dim][!t.room_dir] = centerline; // cut in half
 
 		for (unsigned invert = 0; invert < 2; ++invert) { // draw ceiling and floor, both inner and outer
 			mat.add_cube_to_verts(conn_area, wall_color, all_zeros, ~EF_Z12, 0, 0, 0, invert);
 		}
+		// draw another cube at the inside of the door to block the water
+		mat.add_cube_to_verts(t.get_room_conn_block(), wall_color, all_zeros, (EF_Z1 | get_skip_mask_for_xy(dim))); // draw top, front, and back
 		// draw the two C-shaped sides
 		size_t const num_verts(mat.itri_verts.size() - verts_start_ix), num_ixs(mat.indices.size() - ixs_start_ix);
 		float const door_pos(t.bcube_ext.d[!dim][t.room_dir]), center_dim(t.bcube.get_center_dim(dim)), tscale(1.0/PI);
@@ -2830,6 +2831,39 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 	if (t.closed_ends[0] || t.closed_ends[1]) {
 		assert(!t.room_conn); // not supported
 		mat.add_ortho_cylin_to_verts(t.bcube, BLACK, t.dim, t.closed_ends[0], t.closed_ends[1], 1, 0, 1.0, 1.0, 1.0, 1.0, 1);
+	}
+	// draw gate if present
+	if (t.has_gate) {
+		assert(!t.room_conn); // not supported
+		unsigned const num_bars(8), bar_ndiv(16);
+		float const bar_spacing(2*t.radius/(num_bars + 1)), bar_radius(0.025*t.radius);
+		float const zc(t.bcube.zc()), rsq(t.radius*t.radius);
+		float bar_pos(t.bcube.d[!dim][0] + bar_spacing);
+		rgeom_mat_t &bar_mat(get_metal_material(shadowed, 0, 1)); // inc_shadows=0 (no light), dynamic=0, small=1
+		colorRGBA const bar_color(BKGRAY);
+
+		for (unsigned n = 0; n < num_bars; ++n, bar_pos += bar_spacing) {
+			cube_t bar;
+			float const dist(bar_pos - centerline), hheight(sqrt(rsq - dist*dist) + bar_radius);
+			set_wall_width(bar, zc,         hheight,     2  );
+			set_wall_width(bar, t.gate_pos, bar_radius,  dim);
+			set_wall_width(bar, bar_pos,    bar_radius, !dim);
+			bar_mat.add_vcylin_to_verts(bar, bar_color, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bar_ndiv); // draw sides but not ends
+		}
+	}
+	// draw water surface
+	if (t.water_level > 0.0) {
+		// TODO: in dynamic pass if t.water_flow != 0.0
+		float const tscale(1.0/t.radius);
+		float tscale_xy[2] = {tscale, tscale};
+		tscale_xy[!dim] *= 1.0/(1.0 + 10.0*fabs(t.water_flow)); // stretch along tunnel length more with higher water flow
+		rgeom_mat_t &water_mat(get_material(tid_nm_pair_t(FOAM_TEX, -1, tscale_xy[0], tscale_xy[1]), 0, 0, 1)); // unshadowed, small
+		cube_t water(t.bcube);
+		water.z2() = t.bcube.z1() + t.water_level;
+		float const dist(t.radius - t.water_level), water_hwidth(sqrt(t.radius*t.radius - dist*dist));
+		set_wall_width(water, centerline, water_hwidth, !dim);
+		if (t.room_conn) {water.d[!dim][t.room_dir] = t.get_room_conn_block().d[!dim][!t.room_dir];} // ends flush with conn block
+		water_mat.add_cube_to_verts(water, DK_BROWN, all_zeros, ~EF_Z2); // draw top surface only
 	}
 }
 
