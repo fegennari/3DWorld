@@ -46,7 +46,7 @@ string lighting_update_text;
 
 extern bool combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp, enable_multisample, water_is_lava;
 extern bool user_action_key, flashlight_on, enable_clip_plane_z, begin_motion, config_unlimited_weapons, start_maximized, show_bldg_pickup_crosshair;
-extern bool can_do_building_action, enable_tt_model_indir, pre_load_full_tiled_terrain, player_custom_start_pos;
+extern bool can_do_building_action, enable_tt_model_indir, pre_load_full_tiled_terrain, player_custom_start_pos, player_in_tunnel;
 extern unsigned inf_terrain_fire_mode, reflection_tid;
 extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing, UNLIMITED_WEAPONS, player_in_basement;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, DISABLE_WATER, can_pickup_bldg_obj, player_in_water;
@@ -625,7 +625,8 @@ void set_inf_terrain_fog(bool underwater, float zmin2) {
 		blend_color(fog_color, cloud_color, bkg_color, 0.375, 1); // weighted more towards bkg_color
 		if (water_is_lava) {blend_color(fog_color, fog_color, colorRGBA(1.0, 0.2, 0.0, 1.0), 0.75, 0);} // add slight red-orange color
 		fog_dist = get_inf_terrain_fog_dist();
-		if (player_in_basement) {fog_color = GRAY_BLACK;} // dark gray fog in basements
+		if      (player_in_tunnel  ) {fog_color = BLACK     ;} // black fog in tunnels
+		else if (player_in_basement) {fog_color = GRAY_BLACK;} // dark gray fog in basements
 	}
 	setup_linear_fog(fog_color, fog_dist); // under water/ice
 	fog_enabled = 1;
