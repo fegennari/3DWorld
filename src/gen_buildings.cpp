@@ -403,12 +403,14 @@ void interpolate_over_time(float &val, float target_val, float transition_secs, 
 }
 void set_interior_lighting(shader_t &s, bool have_indir) {
 	float const light_scale(0.5), target_blscale((player_in_basement || player_in_attic) ? 0.0 : (player_in_walkway ? 2.0 : 1.0));
-	static float blscale(1.0);
-	static int last_update_frame(0);
-	interpolate_over_time(blscale, target_blscale, 0.5, last_update_frame); // indir/ambient lighting slowly transitions when entering or leaving the basement or walkway
-	float ambient_scale(0.5f*(1.0f + blscale)*light_scale); // brighter ambient
-	float diffuse_scale(0.2f        *blscale *light_scale); // reduce diffuse and specular lighting for sun/moon
-	float hemi_scale(   0.2f        *blscale *light_scale); // reduced hemispherical lighting
+	float const target_ascale(player_in_tunnel ? 0.0 : 1.0); // brighter ambient unless in tunnel
+	static float blscale(1.0), ascale(1.0);
+	static int lu_frame1(0), lu_frame2(0);
+	interpolate_over_time(blscale, target_blscale, 0.5, lu_frame1); // indir/ambient lighting slowly transitions when entering or leaving the basement or walkway
+	interpolate_over_time(ascale,  target_ascale,  0.5, lu_frame2);
+	float ambient_scale(0.5f*(ascale + blscale)*light_scale);
+	float diffuse_scale(0.2f*blscale*light_scale); // reduce diffuse and specular lighting for sun/moon
+	float hemi_scale(   0.2f*blscale*light_scale); // reduced hemispherical lighting
 
 	if (have_indir || player_in_dark_room()) { // using indir lighting, or player in a closed closet/windowless room with the light off
 		s.add_uniform_float("SHADOW_LEAKAGE", 0.0); // no light leakage

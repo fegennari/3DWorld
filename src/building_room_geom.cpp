@@ -2777,7 +2777,7 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 	bool const shadowed(0); // ???
 	bool const dim(t.dim);
-	unsigned const ndiv(N_CYL_SIDES);
+	unsigned const ndiv(48);
 	float const length(t.get_length()), circumference(PI*t.radius);
 	float const side_tscale(2.0), len_tscale(side_tscale*length/circumference), end_tscale(len_tscale*2.0*t.radius/length);
 	colorRGBA const wall_color(WHITE);
@@ -2818,7 +2818,7 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 					v.v[ dim] = t.bcube.d[dim][d]; // move to the other end
 				}
 				v.set_ortho_norm(dim, !d); // recalculate normal
-				v.t[0] *= 5.0*tscale; // hack to make the texture coordinates look less distorted
+				v.t[0] *= 4.0*tscale; // hack to make the texture coordinates look less distorted
 				v.t[1] *= tscale;
 				mat.itri_verts.push_back(v);
 			} // for i

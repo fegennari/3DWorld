@@ -707,7 +707,7 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 		bool const dim(door.ix >> 1), dir(door.ix & 1);
 		float const wall_thickness(get_wall_thickness()), floor_spacing(get_window_vspace()), sm_shift_val(0.5*get_rug_thickness());
 		float const min_len(5.0*floor_spacing), max_len(20.0*floor_spacing); // in each direction
-		float const radius(0.5*door.dz()), wall_gap(1.0*wall_thickness), dist_from_door(radius + wall_gap); // or 0.5*floor_spacing?
+		float const radius(0.5*door.dz()), wall_gap(2.0*wall_thickness), check_radius(radius + wall_thickness), dist_from_door(radius + wall_gap);
 		cube_t wall_clip(door);
 		wall_clip.expand_in_dim(dim, 2.0*wall_thickness); // make sure it contains the wall
 		subtract_cube_from_cubes(wall_clip, interior->walls[dim]); // remove door from wall
@@ -716,7 +716,7 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 		middle.z -= sm_shift_val; // shift down slightly to prevent Z-fighting with concrete on ceiling and floor
 		point p1(middle), p2(middle);
 		p1[!dim] -= min_len; p2[!dim] += min_len; // start at min length in each dim
-		if (!is_tunnel_placement_valid(p1, p2, radius)) continue; // can't place a tunnel of min length
+		if (!is_tunnel_placement_valid(p1, p2, check_radius)) continue; // can't place a tunnel of min length
 		unsigned const num_steps = 10;
 		float const step_len((max_len - min_len)/num_steps);
 
@@ -725,7 +725,7 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 			for (unsigned n = 0; n < num_steps; ++n) {
 				point p1e(p1), p2e(p2);
 				(d ? p2e : p1e)[!dim] += (d ? 1.0 : -1.0)*step_len;
-				if (!is_tunnel_placement_valid(p1e, p2e, radius)) break; // can't extend further in this dir
+				if (!is_tunnel_placement_valid(p1e, p2e, check_radius)) break; // can't extend further in this dir
 				p1 = p1e; p2 = p2e; // accept the new length
 			}
 		} // for dir
