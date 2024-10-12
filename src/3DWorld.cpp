@@ -137,7 +137,7 @@ bool vert_opt_flags[3] = {0}; // {enable, full_opt, verbose}
 
 
 extern bool clear_landscape_vbo, use_dense_voxels, tree_4th_branches, model_calc_tan_vect, water_is_lava, use_grass_tess, def_tex_compress, ship_cube_map_reflection;
-extern bool flashlight_on, player_wait_respawn, camera_in_building;
+extern bool flashlight_on, player_wait_respawn, camera_in_building, player_in_tunnel;
 extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display, mesh_freq_filter, show_waypoints, last_inventory_frame;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST, mesh_gen_mode, mesh_gen_shape, map_drag_x, map_drag_y, player_in_water;
 extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, DYNAMIC_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz;
@@ -573,11 +573,11 @@ void change_world_mode() { // switch terrain mode: 0 = normal/ground, 1 = univer
 void update_sound_loops() {
 
 	bool const universe(world_mode == WMODE_UNIVERSE);
-	float const fire_gain(0.1/dist_to_fire_sq);
-	float const rain_wind_volume(get_tt_building_sound_gain());
-	set_sound_loop_state(SOUND_LOOP_FIRE, (!universe && dist_to_fire_sq > 0.0 && dist_to_fire_sq < 2.0), fire_gain);
-	set_sound_loop_state(SOUND_LOOP_RAIN, (!universe && rain_wind_volume > 0.0 && is_rain_enabled()), rain_wind_volume);
-	set_sound_loop_state(SOUND_LOOP_WIND, (!universe && rain_wind_volume > 0.0 && wind.mag() >= 1.0), rain_wind_volume);
+	float const fire_gain(0.1/dist_to_fire_sq), rain_wind_volume(get_tt_building_sound_gain());
+	if (player_in_tunnel) {set_sound_loop_state(SOUND_LOOP_RAIN, 1, 0.5);} // light rain sound in tunnel
+	else {set_sound_loop_state(SOUND_LOOP_RAIN, (!universe && rain_wind_volume > 0.0 && is_rain_enabled()),    rain_wind_volume);}
+	set_sound_loop_state(SOUND_LOOP_WIND,       (!universe && rain_wind_volume > 0.0 && wind.mag() >= 1.0),    rain_wind_volume);
+	set_sound_loop_state(SOUND_LOOP_FIRE,       (!universe && dist_to_fire_sq > 0.0 && dist_to_fire_sq < 2.0), fire_gain);
 	set_sound_loop_state(SOUND_LOOP_UNDERWATER, (!universe && (underwater || player_in_water == 2) && frame_counter > change_wmode_frame+1));
 	dist_to_fire_sq = 0.0;
 	proc_delayed_and_placed_sounds();
