@@ -147,8 +147,7 @@ float const FITTING_LEN(1.25), FITTING_RADIUS(1.1); // relative to radius
 
 float get_pipe_dist_to_wall(float radius, float trim_thickness) {return max(FITTING_RADIUS*radius, (radius + 2.0f*trim_thickness));}
 
-bool building_t::cube_intersects_basement_or_extb_room(cube_t const &c) const {
-	if (c.intersects(get_basement())) return 1;
+bool building_t::cube_intersects_extb_room(cube_t const &c) const {
 	if (!has_ext_basement() || !c.intersects(interior->basement_ext_bcube)) return 0;
 
 	for (auto r = interior->ext_basement_rooms_start(); r != interior->rooms.end(); ++r) {

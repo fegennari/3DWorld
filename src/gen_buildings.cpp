@@ -4326,8 +4326,7 @@ public:
 				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
 					building_t const &building(get_building(b->ix));
 					if (&building == exclude1 || &building == exclude2) continue;
-					// Note: could check individual ext basement rooms, but that's slower
-					if (inc_basement && building.cube_int_ext_basement(bcube)) return 1; // extended basement intersection
+					if (inc_basement && building.cube_intersects_extb_room(bcube)) return 1; // extended basement intersection
 					if (!bcube.intersects_xy(*b)) continue; // no intersection
 						
 					if (!xy_only) {
