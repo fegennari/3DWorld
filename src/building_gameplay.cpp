@@ -21,7 +21,7 @@ carried_item_t player_held_object;
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
 
-extern bool camera_in_building, player_is_hiding, player_in_unlit_room, disable_blood;
+extern bool camera_in_building, player_is_hiding, player_in_unlit_room, player_in_tunnel, disable_blood;
 extern int window_width, window_height, display_framerate, display_mode, game_mode, building_action_key, frame_counter, player_in_basement, player_in_water;
 extern int animate2, camera_surf_collide;
 extern float fticks, CAMERA_RADIUS;
@@ -2691,7 +2691,7 @@ point building_t::choose_creepy_sound_pos(point const &player_pos, rand_gen_t &r
 	return sound_pos;
 }
 void building_t::update_creepy_sounds(point const &player_pos) const {
-	if (player_in_basement == 3) {creepy_sound_manager.next_frame(*this, player_pos);} // update if player in extended basement
+	if (player_in_basement == 3 && !player_in_tunnel) {creepy_sound_manager.next_frame(*this, player_pos);} // update if player in extended basement
 }
 
 void play_hum_sound(point const &pos, float gain, float pitch) { // pos is in building space; nominal hum is 100Hz
