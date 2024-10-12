@@ -252,16 +252,16 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 		float const bar_spacing(2*t.radius/(num_bars + 1)), bar_radius(0.025*t.radius);
 		float const zc(t.bcube.zc()), rsq(t.radius*t.radius);
 		float bar_pos(t.bcube.d[!dim][0] + bar_spacing);
-		rgeom_mat_t &bar_mat(get_metal_material(shadowed, 0, 1)); // inc_shadows=0 (no light), dynamic=0, small=1
-		colorRGBA const bar_color(BKGRAY);
+		rgeom_mat_t &bar_mat(get_material(tid_nm_pair_t(get_texture_by_name("metals/67_rusty_dirty_metal.jpg")), shadowed, 0, 1)); // inc_shadows=0 (no light), small=1
+		colorRGBA const bar_color(DK_GRAY);
 
 		for (unsigned n = 0; n < num_bars; ++n, bar_pos += bar_spacing) {
 			cube_t bar;
-			float const dist(bar_pos - centerline), hheight(sqrt(rsq - dist*dist) + bar_radius);
+			float const dist(bar_pos - centerline), hheight(sqrt(rsq - dist*dist) + bar_radius), len_tc(0.25*hheight/bar_radius);
 			set_wall_width(bar, zc,         hheight,     2  );
 			set_wall_width(bar, t.gate_pos, bar_radius,  dim);
 			set_wall_width(bar, bar_pos,    bar_radius, !dim);
-			bar_mat.add_vcylin_to_verts(bar, bar_color, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bar_ndiv); // draw sides but not ends
+			bar_mat.add_vcylin_to_verts(bar, bar_color, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bar_ndiv, 0.0, 0, len_tc); // draw sides but not ends
 		}
 	}
 }

@@ -788,6 +788,7 @@ void building_t::add_ext_basement_hallway_pipes_recur(unsigned room_id, bool hal
 		conn_pipe.p2[!hall_dim] = room_bounds.d[!hall_dim][conn_dir]; // far end of connecting hall
 		conn_pipe.dim      = !hall_dim;
 		conn_pipe.conn_dir = !conn_dir;
+		if (conn_room.has_tunnel_conn()) {} // extend pipe through tunnel? code appears to be unreachable
 		pipes.push_back(conn_pipe);
 		// add fitting at the junction
 		float const fitting_len(FITTING_LEN*conn_pipe.radius);
