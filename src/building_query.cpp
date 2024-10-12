@@ -2814,7 +2814,7 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, point const &cur_
 	float const rat_radius_scale    = 0.7; // allow them to get a bit closer together, since radius is conservative
 	float const spider_radius_scale = 0.75;
 	float const snake_radius_scale  = 1.0;
-	interior->room_geom->rats   .update_delta_sum_for_animal_coll(pos, cur_obj_pos, radius, z1, z2, rat_radius_scale,    max_overlap, delta_sum);
+	interior->room_geom->rats   .update_delta_sum_for_animal_coll(pos, cur_obj_pos, radius, z1, z2, rat_radius_scale,    max_overlap, delta_sum); // no collisions with sewer_rats
 	interior->room_geom->spiders.update_delta_sum_for_animal_coll(pos, cur_obj_pos, radius, z1, z2, spider_radius_scale, max_overlap, delta_sum); // should we avoid squished spiders?
 	interior->room_geom->snakes .update_delta_sum_for_animal_coll(pos, cur_obj_pos, radius, z1, z2, snake_radius_scale,  max_overlap, delta_sum);
 	
@@ -2960,8 +2960,8 @@ void building_t::print_building_manifest() const { // Note: skips expanded_objs
 	}
 	if (has_room_geom()) {
 		unsigned const objects(interior->room_geom->objs.size()), models(interior->room_geom->obj_model_insts.size());
-		unsigned const rats(interior->room_geom->rats.size()), spiders(interior->room_geom->spiders.size());
-		cout << TXT(objects) << TXT(models) << TXT(rats) << TXT(spiders) << endl;
+		unsigned const rats(interior->room_geom->rats.size()), sewer_rats(interior->room_geom->sewer_rats.size()), spiders(interior->room_geom->spiders.size());
+		cout << TXT(objects) << TXT(models) << TXT(rats) << TXT(sewer_rats) << TXT(spiders) << endl;
 		unsigned obj_counts[NUM_ROBJ_TYPES] = {};
 
 		for (auto const &i : interior->room_geom->objs) {

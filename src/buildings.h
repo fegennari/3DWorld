@@ -1013,7 +1013,7 @@ struct building_room_geom_t {
 	vector<obj_model_inst_t> obj_model_insts;
 	vector<door_handle_t> door_handles; // for 3D model drawing
 	vector<unsigned> moved_obj_ids;
-	vect_rat_t    rats;
+	vect_rat_t    rats, sewer_rats;
 	vect_spider_t spiders;
 	vect_snake_t  snakes;
 	vect_insect_t insects;
@@ -2074,6 +2074,7 @@ public:
 	template<typename T> void add_animals_on_floor(T &animals, unsigned building_ix, unsigned num_min, unsigned num_max, float sz_min, float sz_max) const;
 	void update_animals(point const &camera_bs, unsigned building_ix);
 	void update_rats   (point const &camera_bs, unsigned building_ix);
+	void update_sewer_rats(point const &camera_bs, unsigned building_ix);
 	void update_spiders(point const &camera_bs, unsigned building_ix);
 	void update_snakes (point const &camera_bs, unsigned building_ix);
 	void update_insects(point const &camera_bs, unsigned building_ix);
@@ -2345,6 +2346,7 @@ private:
 	int choose_air_intake_room() const;
 	int vent_in_attic_test(cube_t const &vent, bool dim) const;
 	void add_exterior_ac_pipes(rand_gen_t rgen);
+	void add_tunnel_objects   (rand_gen_t rgen);
 	void add_interior_window_objects();
 	void add_padlocks(rand_gen_t rgen);
 	bool add_padlock_to_door     (unsigned door_ix, unsigned lock_color_mask, rand_gen_t &rgen);

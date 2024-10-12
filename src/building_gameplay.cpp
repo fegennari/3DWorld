@@ -1145,6 +1145,7 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 			range  = dist;
 			rat_ix = (r - rats.begin());
 		} // for r
+		// what about sewer_rats?
 	}
 	//if (bldg_obj_types[TYPE_SPIDER].pickup) {} // check spiders (future work)
 	//if (bldg_obj_types[TYPE_SNAKE ].pickup) {} // check snakes  (future work)

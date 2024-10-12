@@ -8,6 +8,7 @@ extern double tfticks;
 
 float query_min_height(cube_t const &c, float stop_at);
 
+// *** tunnel_seg_t ***
 
 tunnel_seg_t::tunnel_seg_t(point const &p1, point const &p2, float radius_) : radius(radius_) {
 	if      (p1.x == p2.x) {dim = 1;}
@@ -48,6 +49,8 @@ cube_t tunnel_seg_t::get_room_conn_block() const {
 	block.z2() = block.z1() + 0.22*radius; // set the height
 	return block;
 }
+
+// *** Placement ***
 
 void building_t::get_valid_extb_room_end_doors(room_t const &room, float zval, unsigned room_id, float end_pad_ext, cube_with_ix_t doors[2]) const {
 	assert(interior);
@@ -161,6 +164,7 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 			}
 		} // for dir
 		// split into three segments (center, left, right)
+		// TODO: add bends at the ends if there's space
 		float const gate_dist_from_end(5.0*floor_spacing);
 		point pa(p1), pb(p2);
 		pa[!dim] = door.d[!dim][0] + sm_shift_val; // left  end of room connection
@@ -185,6 +189,18 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 	} // for d
 	return 0;
 }
+
+void building_t::add_tunnel_objects(rand_gen_t rgen) {
+	assert(interior);
+
+	for (tunnel_seg_t const &t : interior->tunnels) {
+		if (t.room_conn) continue; // nothing added to these tunnels
+		// add smaller pipes, etc.
+		// TODO
+	} // for t
+}
+
+// *** Drawing ***
 
 // tunnels really should be drawn as building interior verts rather than small static objects, but the code here is much more flexible and more efficient
 void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {

@@ -7,7 +7,7 @@
 #include "shaders.h"
 #include "city_model.h"
 
-extern bool enable_depth_clamp;
+extern bool enable_depth_clamp, player_in_tunnel;
 extern int display_mode, animate2;
 extern cube_t smap_light_clip_cube;
 extern object_model_loader_t building_obj_model_loader;
@@ -526,7 +526,7 @@ snake_draw_t snake_draw;
 void building_room_geom_t::draw_animals(shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 	point const &camera_bs, bool shadow_only, bool reflection_pass, bool check_clip_cube) const
 {
-	if (!rats.empty()) {
+	if (!rats.empty() && !sewer_rats.empty()) {
 		bool const enable_animations(!shadow_only); // can't see the animation in the shadow pass
 		animation_state_t anim_state(enable_animations, ANIM_ID_RAT);
 		bool rat_drawn(0);
@@ -560,6 +560,15 @@ void building_room_geom_t::draw_animals(shader_t &s, building_t const &building,
 			}
 			rat_drawn = 1;
 		} // for rat
+		if (player_in_tunnel) { // draw sewer rats
+			for (rat_t const &rat : sewer_rats) {
+				cube_t const bcube(rat.get_bcube());
+				if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
+				anim_state.anim_time = rat.anim_time;
+				building_obj_model_loader.draw_model(s, bcube.get_cube_center(), rat.get_bcube_with_dir(), rat.dir, rat_color, xlate, OBJ_MODEL_RAT, shadow_only, 0, &anim_state);
+				rat_drawn = 1;
+			}
+		}
 		anim_state.clear_animation_id(s); // clear animations
 		bind_default_flat_normal_map();
 		if (rat_drawn) {check_mvm_update();} // needed after popping model transform matrix

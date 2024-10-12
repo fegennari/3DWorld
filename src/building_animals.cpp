@@ -1,4 +1,4 @@
-// 3D World - Building Animals (rats, etc.)
+// 3D World - Building Animals (rats, spiders, snakes, flies, cockroaches, etc.)
 // by Frank Gennari 1/16/22
 
 #include "3DWorld.h"
@@ -61,6 +61,7 @@ float building_animal_t::move(float timestep, bool can_move_forward) { // return
 void building_t::update_animals(point const &camera_bs, unsigned building_ix) {
 	if (!animate2 || is_rotated() || !has_room_geom() || interior->rooms.empty()) return;
 	update_rats   (camera_bs, building_ix);
+	update_sewer_rats(camera_bs, building_ix);
 	update_spiders(camera_bs, building_ix);
 	update_snakes (camera_bs, building_ix);
 	update_insects(camera_bs, building_ix);
@@ -295,6 +296,7 @@ bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, p
 void building_t::update_rats(point const &camera_bs, unsigned building_ix) {
 	vect_rat_t &rats(interior->room_geom->rats);
 	if (rats.placed && rats.empty()) return; // no rats placed in this building
+	if (global_building_params.num_rats_max == 0) return;
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_RAT)) return; // no rat model
 	//timer_t timer("Update Rats"); // multi-part: 1.1ms, open door 1.7ms; office building 1.7ms
 	add_animals_on_floor(rats, building_ix, global_building_params.num_rats_min, global_building_params.num_rats_max,
@@ -327,6 +329,24 @@ void building_t::update_rats(point const &camera_bs, unsigned building_ix) {
 	else { // forward iteration; ~0.004ms per rat
 		for (auto r = rats. begin(); r != rats. end(); ++r) {update_rat(*r, camera_bs, timestep, rats.max_xmove, can_attack_player, rgen);}
 	}
+}
+
+void building_t::update_sewer_rats(point const &camera_bs, unsigned building_ix) {
+	vect_rat_t &rats(interior->room_geom->sewer_rats);
+	if (rats.placed && rats.empty()) return; // no rats placed in this building
+	if (global_building_params.num_rats_max == 0) return;
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_RAT)) return; // no rat model
+	
+	if (!rats.placed) {
+		// TODO: add initial rats
+	}
+	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
+	
+	for (rat_t &rat : rats) {
+		rat.move(timestep);
+		// TODO: update logic
+	}
+	//gen_sound_thread_safe(SOUND_RAT_SQUEAK, local_to_camera_space(rat.pos), 1.0, 1.2); // high pitch
 }
 
 bool can_hide_under(room_object_t const &c, cube_t &hide_area) {

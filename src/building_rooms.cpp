@@ -873,6 +873,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		}
 	} // for r (room)
 	if (is_house) {interior->assign_master_bedroom(window_vspacing, floor_thickness);}
+	add_tunnel_objects(rgen);
 	add_interior_window_objects();
 	add_padlocks(rgen);
 	bool const has_toilet(building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)), has_sink(building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK));
