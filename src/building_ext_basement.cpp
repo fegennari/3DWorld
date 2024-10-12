@@ -547,7 +547,17 @@ bool building_t::max_expand_underground_room(cube_t &room, bool dim, bool dir, r
 	room = exp_room;
 	float const max_depth(room.z2() - get_max_sea_level());
 	unsigned const max_num_floors(max(1U, min(global_building_params.max_ext_basement_room_depth, unsigned(floor(max_depth/floor_spacing)))));
-	if (max_num_floors > 1) {room.z1() -= floor_spacing*(rgen.rand() % max_num_floors);} // maybe expand downward for additional floors
+	
+	if (max_num_floors > 1) { // maybe expand downward for additional floors
+		unsigned const num_floors_add(rgen.rand() % max_num_floors);
+
+		for (unsigned n = 0; n < num_floors_add; ++n) {
+			cube_t cand(room);
+			set_cube_zvals(cand, room.z1()-floor_spacing, room.z1()); // one floor below
+			if (check_buildings_cube_coll(room, 0, 1, this)) break; // check for extended basement and tunnels below; xy_only=0, inc_basement=1, exclude ourself
+			room.z1() = cand.z1();
+		}
+	}
 	return 1;
 }
 
