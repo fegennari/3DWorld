@@ -146,13 +146,21 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 		// try extending tunnel in both directions
 		for (unsigned d = 0; d < 2; ++d) {
 			for (unsigned n = 0; n < num_steps; ++n) {
-				point p1e(p1), p2e(p2);
-				(d ? p2e : p1e)[!dim] += (d ? 1.0 : -1.0)*step_len;
-				if (!is_tunnel_placement_valid(p1e, p2e, check_radius)) break; // can't extend further in this dir
-				p1 = p1e; p2 = p2e; // accept the new length
+				if (d) {
+					point p2e(p2);
+					p2e[!dim] += step_len;
+					if (!is_tunnel_placement_valid(p2, p2e, check_radius)) break; // can't extend further in this dir
+					p2 = p2e; // accept the new length
+				}
+				else {
+					point p1e(p1);
+					p1e[!dim] -= step_len;
+					if (!is_tunnel_placement_valid(p1e, p1, check_radius)) break; // can't extend further in this dir
+					p1 = p1e; // accept the new length
+				}
 			}
 		} // for dir
-		  // split into three segments (center, left, right)
+		// split into three segments (center, left, right)
 		float const gate_dist_from_end(5.0*floor_spacing);
 		point pa(p1), pb(p2);
 		pa[!dim] = door.d[!dim][0] + sm_shift_val; // left  end of room connection
