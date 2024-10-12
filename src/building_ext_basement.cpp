@@ -40,7 +40,10 @@ bool building_t::extend_underground_basement(rand_gen_t rgen) {
 				float const fc_thick(get_fc_thickness());
 				set_cube_zvals(cand_door, basement.z1()+fc_thick, basement.z2()-fc_thick); // change z to span floor to ceiling for interior door
 				cand_door.translate_dim(dim, (dir ? 1.0 : -1.0)*0.25*get_wall_thickness()); // zero width, centered on the door
-				if (add_underground_exterior_rooms(rgen, cand_door, basement, dim, dir, 0.25*len)) return 1; // exit on success
+				bool ret(0);
+#pragma omp critical(add_underground_exterior_rooms)
+				ret = add_underground_exterior_rooms(rgen, cand_door, basement, dim, dir, 0.25*len);
+				if (ret) return 1; // exit on success
 			} // for e
 		} // for d
 		if (!is_house) return 0; // not large enough for office building
@@ -85,7 +88,6 @@ struct ext_basement_room_params_t {
 
 bool building_t::is_basement_room_not_int_bldg(cube_t const &room, building_t const *exclude) const {
 	// check for other buildings, including their extended basements;
-	// Warning: not thread safe, since we can be adding basements to another building at the same time
 	if (check_buildings_cube_coll(room, 0, 1, this, exclude)) return 0; // xy_only=0, inc_basement=1, exclude ourself
 	cube_t const grid_bcube(get_grid_bcube_for_building(*this));
 	assert(!grid_bcube.is_all_zeros()); // must be found

@@ -3139,11 +3139,12 @@ public:
 			}
 		} // if flatten_mesh
 		{ // open a scope
+			has_office_chair_model(); // must call this to load models here, since it's called inside building_t::gen_geometry() and is not thread safe
 			timer_t timer2("Gen Building Geometry", !is_tile); // 120ms/700ms => 160ms/900ms
 			bool const gen_interiors(global_building_params.gen_building_interiors);
 			bool const use_mt(!is_tile || gen_interiors); // only single threaded for tiles with no interiors, which is a fast case anyway
-			// house extended basement logic isn't thread safe because two houses being generated on different threads could have overlapping basement rooms;
-			// however, office buildings don't have extended basements, so it should be okay to process them in parallel to houses; this is just a bit slower
+
+			// split into houses and office buildings run on 2 threads
 #pragma omp parallel for schedule(static) num_threads(2) if (use_mt)
 			for (int is_house=0; is_house < 2; ++is_house) {
 				for (unsigned i = 0; i < buildings.size(); ++i) {
@@ -4325,7 +4326,7 @@ public:
 				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
 					building_t const &building(get_building(b->ix));
 					if (&building == exclude1 || &building == exclude2) continue;
-					// Note: could check individual ext basement rooms, but that's not thread safe
+					// Note: could check individual ext basement rooms, but that's slower
 					if (inc_basement && building.cube_int_ext_basement(bcube)) return 1; // extended basement intersection
 					if (!bcube.intersects_xy(*b)) continue; // no intersection
 						
