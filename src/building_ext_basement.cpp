@@ -554,7 +554,7 @@ bool building_t::max_expand_underground_room(cube_t &room, bool dim, bool dir, r
 		for (unsigned n = 0; n < num_floors_add; ++n) {
 			cube_t cand(room);
 			set_cube_zvals(cand, room.z1()-floor_spacing, room.z1()); // one floor below
-			if (check_buildings_cube_coll(room, 0, 1, this)) break; // check for extended basement and tunnels below; xy_only=0, inc_basement=1, exclude ourself
+			if (check_buildings_cube_coll(cand, 0, 1, this)) break; // check for extended basement and tunnels below; xy_only=0, inc_basement=1, exclude ourself
 			room.z1() = cand.z1();
 		}
 	}
