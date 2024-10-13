@@ -55,6 +55,7 @@ cube_t tunnel_seg_t::get_room_conn_block() const {
 
 void building_t::get_valid_extb_room_end_doors(room_t const &room, float zval, unsigned room_id, float end_pad_ext, cube_with_ix_t doors[2]) const {
 	assert(interior);
+	if (has_pool() && (int)room_id == interior->pool.room_ix) return; // no false doors or tunnels in swimming pool room
 
 	if (!room.is_hallway) {
 		float const dx(room.dx()), dy(room.dy());
