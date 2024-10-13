@@ -132,6 +132,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 	rgeom_mat_t &base_mat(get_material(tid_nm_pair_t(get_concrete_tid(), 12.0), 1, 0, 1)); // shadowed, small
 	base_mat.add_cube_to_verts(base, base_color, all_zeros, EF_Z1); // skip bottom
 	bool parts_swapped(0), is_cylins[2] = {0, 0};
+	unsigned cylin_dims[2] = {2, 2}; // defaults to Z
 	vect_cube_t avoid, shapes;
 
 	if (two_part) {
@@ -143,15 +144,20 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 	// calculate size and shape of each part
 	for (unsigned n = 0; n < num_parts; ++n) {
 		cube_t &part(parts[n]);
-		bool const is_cylin(!is_cylins[0] && rgen.rand_float() < 0.4 && max(part.dx(), part.dy()) < 1.5*min(part.dx(), part.dy())); // don't place two cylinders
+		bool const is_cylin(!is_cylins[0] && rgen.rand_float() < 0.5 && max(part.dx(), part.dy()) < 1.5*min(part.dx(), part.dy())); // don't place two cylinders
+		if (is_cylin) {cylin_dims[n] = (rgen.rand_bool() ? 2 : rgen.rand_bool());} // 50% chance vert/Z, 25% chance X, 25% chance Y
 		is_cylins[n] = is_cylin;
 		float const max_shrink_val(is_cylin ? 0.15 : 0.25);
 		for (unsigned d = 0; d < 2; ++d) {part.expand_in_dim(d, -rgen.rand_uniform(0.1, 1.0)*max_shrink_val*part.get_sz_dim(d));} // shrink in both dims independently
 		part.z2() -= rgen.rand_uniform(0.05, 0.2)*height; // make a bit shorter
 
 		if (is_cylin) { // make it square
-			clip_cylin_to_square(part, 2); // Z
-			if (two_part && part.intersects(parts[1-n])) {part.expand_by_xy(-0.1*min(part.dx(), part.dy()));} // if adjacent, shrink to force a gap
+			clip_cylin_to_square(part, cylin_dims[n]);
+
+			if (two_part && part.intersects(parts[1-n])) { // if adjacent, shrink to force a gap; maybe can't happen now?
+				part.expand_by_xy(-0.1*min(part.dx(), part.dy()));
+				clip_cylin_to_square(part, cylin_dims[n]);
+			}
 		}
 	}
 	// add/draw shapes/objects for each part
@@ -159,10 +165,11 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		cube_t const &part(parts[n]);
 		vector3d const part_sz(part.get_size());
 		bool const is_cylin(is_cylins[n]);
+		unsigned const cylin_dim(cylin_dims[n]);
 		avoid .clear();
 		shapes.clear();
 
-		// draw main part
+		// draw main part and horizontal cylinder support
 		if (1) { // create a new scope for local variables
 			float tscale(1.0);
 			tid_nm_pair_t const part_tex(get_machine_part_texture(is_cylin, part_sz, tscale, rgen));
@@ -170,8 +177,18 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 			colorRGBA const part_color(apply_light_color(c, choose_machine_part_color(rgen, (part_tex.tid >= 0))));
 			
 			if (is_cylin) {
-				vector3d const ts(calc_cylin_tscales(tscale, part_sz, 2)); // dim=2/Z; {side_tscale, end_tscale, len_tscale}
-				part_mat.add_vcylin_to_verts(part, part_color, 0, 1, 0, 0, 1.0, 1.0, ts.x, ts.y, 0, 32, 0.0, 0, ts.z); // draw sides and top
+				vector3d const ts(calc_cylin_tscales(tscale, part_sz, cylin_dim)); // {side_tscale, end_tscale, len_tscale}
+				part_mat.add_ortho_cylin_to_verts(part, part_color, cylin_dim, (cylin_dim < 2), 1, 0, 0, 1.0, 1.0, ts.x, ts.y, 0, 32, 0.0, 0, ts.z); // draw sides and top
+
+				if (cylin_dim < 2 && part.z1() > main.z1()) { // horizontal cylinder off the ground - draw a supporting cube
+					cube_t support(part);
+					set_cube_zvals(support, main.z1(), part.zc());
+					for (unsigned d = 0; d < 2; ++d) {support.expand_in_dim(d, -rgen.rand_uniform(0.05, 0.45)*part.get_sz_dim(d));} // shrink in both dims
+					tid_nm_pair_t const tex(get_machine_part_texture(0, support.get_size(), tscale, rgen)); // is_cylin=0
+					rgeom_mat_t &support_mat(get_material(tex, 1, 0, 1)); // shadowed, small
+					colorRGBA const support_color(apply_light_color(c, choose_machine_part_color(rgen, (part_tex.tid >= 0))));
+					support_mat.add_cube_to_verts(support, support_color, part.get_llc(), EF_Z12); // skip top and bottom
+				}
 			}
 			else {part_mat.add_cube_to_verts(part, part_color, part.get_llc(), EF_Z1);} // skip bottom
 		}
@@ -255,14 +272,14 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 			} // for n
 		}
 		// add pipes if gap is large enough
-		float const cylin_radius(0.25*(part_sz.x + part_sz.y)), pipe_rmax(0.05*part_sz.get_min_val());
+		float const cylin_radius(0.25*(part_sz[(cylin_dim+1)%3] + part_sz[(cylin_dim+2)%3])), pipe_rmax(0.05*part_sz.get_min_val());
 		bool const has_gap(fabs(part.d[dim][dir] - c.d[dim][dir]) > pipe_rmax);
 		cube_t region(part);
 		region.d[dim][ dir] = (is_cylin ? part.get_center_dim(dim) : part.d[dim][!dir]); // center plane of cylinder or back of cube
 		region.d[dim][!dir] = c.d[dim][!dir]; // wall behind the machine
 		assert(region.is_strictly_normalized());
 
-		if (is_cylin || has_gap) { // if there's a gap between the machine and the wall
+		if ((is_cylin || has_gap) && cylin_dim != dim) { // if there's a gap between the machine and the wall; not for cylinders facing the wall
 			// add pipe(s) connecting to back wall in {dim, !dir} or ceiling; there's no check for intersecting pipes
 			unsigned const num_pipes((rgen.rand() % 4) + 1); // 1-4
 			for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region, pipe_rmax, dim, rgen);}
@@ -275,7 +292,11 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 			if (num_pipes > 0) {
 				cube_t region(part);
 				set_cube_zvals(region, part.z2(), ceil_zval);
-				if (is_cylin) {region.expand_by_xy(-(1.0 - SQRTOFTWOINV)*cylin_radius);} // use square inscribed in circle
+				
+				if (is_cylin) {
+					if (cylin_dim == 2) {region.expand_by_xy(-(1.0 - SQRTOFTWOINV)*cylin_radius);} // use square inscribed in circle
+					else {region.z1() = part.zc();} // extend to center of cylinder
+				}
 				for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region, pipe_rmax, 2, rgen);} // dim=2
 			}
 		}
@@ -306,14 +327,15 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 				
 				if (add_cylin) { // cylin on part side can be oriented in X, Y, or Z
 					if (is_cylin) {
-						if (fdim == 2) {cdim = 2;} // top attachment is always vertical
-						else {cdim = (rgen.rand_bool() ? fdim : 2);} // side attachment can be horizontal or vertical
+						if (fdim == cylin_dim) {cdim = cylin_dim;} // end attachment is always the same orient
+						else {cdim = (rgen.rand_bool() ? fdim : cylin_dim);} // side attachment can be horizontal or vertical
 					}
 					else {cdim = fdim;} // cylinder always follows surface orient for cubes
 				}
 				vector3d half_sz;
 				cube_t shape;
 				for (unsigned d = 0; d < 3; ++d) {half_sz[d] = rgen.rand_uniform(0.4, 1.0)*max_shape_sz;}
+				bool const centered(add_cylin && is_cylin && cdim == cylin_dim && rgen.rand_float() < 0.75); // centered cylinders in same dim 75% of the time
 
 				if (add_cylin) { // make sure cylinder ends are square; could use clip_cylin_to_square(), but this always makes shapes smaller
 					unsigned const d1((cdim+1)%3), d2((cdim+2)%3); // the non-cylin long dims
@@ -322,7 +344,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 				for (unsigned d = 0; d < 3; ++d) {
 					float val(0.0);
 					if (d == fdim) {val = part.d[fdim][fdir];} // attach to surface
-					else if (d != 2 && is_cylin && !(add_cylin && cdim == 2)) {val = part.get_center_dim(d);} // centered on the side for non vert cylin
+					else if (centered || (d != cylin_dim && is_cylin && !(add_cylin && cdim == cylin_dim))) {val = part.get_center_dim(d);} // centered on the side
 					else {val = rgen.rand_uniform(part.d[d][0], part.d[d][1]);} // chose a random attachment point
 					set_wall_width(shape, val, half_sz[d], d);
 				}
@@ -336,9 +358,14 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 					float const shape_radius(0.25*(shape.dx() + shape.dy()));
 					point const shape_center(shape.get_cube_center());
 					if (!circle_rect_intersect(shape_center, shape_radius, part, cdim)) continue; // new cylinder vs. part bcube
-					if (is_cylin && cdim == 2 && !dist_xy_less_than(part_center, shape.get_cube_center(), (cylin_radius + shape_radius))) continue; // vcylin vs. vcylin
+					
+					if (is_cylin && cdim == cylin_dim) { // cylins same dim
+						vector3d delta(part_center - shape.get_cube_center());
+						delta[cdim] = 0.0; // ignore this dim
+						if (delta.mag_sq() >= (cylin_radius + shape_radius)*(cylin_radius + shape_radius)) continue;
+					}
 				}
-				if (is_cylin && !circle_rect_intersect(part_center, cylin_radius, shape, 2)) continue; // new bcube vs. part cylinder
+				if (is_cylin && !circle_rect_intersect(part_center, cylin_radius, shape, cylin_dim)) continue; // new bcube vs. part cylinder
 				if (has_bcube_int(shape, avoid)) continue;
 				bool bad_place(0);
 
@@ -378,20 +405,20 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 						used_sides[orient_ix] = 1;
 					}
 					bool const fdim(orients[orient_ix] >> 1), fdir(orients[orient_ix] & 1);
-					float const radius(rgen.rand_uniform(0.25, 1.0)*pipe_rmax), edge_space(1.5*radius);
+					float const radius(rgen.rand_uniform(0.25, 1.0)*pipe_rmax), edge_space(1.5*radius), face_edge(part.d[fdim][fdir]);
 					cube_t base_valid(base);
 					base_valid.expand_by_xy(-edge_space); // shrink
 					point top_pos;
 
 					for (unsigned d = 0; d < 3; ++d) {
-						if (d == unsigned(fdim)) {top_pos[d] = part.d[fdim][fdir];} // attach to surface
-						else if (d != 2 && is_cylin) {top_pos[d] = part.get_center_dim(d);} // centered on the side of cylinder part
+						if (d == unsigned(fdim)) {top_pos[d] = (is_cylin ? part.get_center_dim(fdim) : face_edge);} // attach to surface, or centerline for cylinder
+						else if (is_cylin && (/*d != cylin_dim*/fdim == cylin_dim && d == 2)) {top_pos[d] = part.get_center_dim(d);} // centered on the side of cylinder part
 						else {top_pos[d] = rgen.rand_uniform(part.d[d][0]+edge_space, part.d[d][1]-edge_space);} // chose a random attachment point
 					}
 					point bend_pos(top_pos);
-					bend_pos[fdim] += rgen.rand_uniform(2.0, 5.0)*radius*(fdir ? 1.0 : -1.0); // extend a random amount; may go outside the base
+					bend_pos[fdim] = face_edge + rgen.rand_uniform(2.0, 5.0)*radius*(fdir ? 1.0 : -1.0); // extend a random amount; may go outside the base
 					base_valid.clamp_pt_xy(bend_pos);
-					if (fabs(bend_pos[fdim] - top_pos[fdim]) < 2.0*radius) continue; // too short/too close to the part face
+					if (fabs(bend_pos[fdim] - face_edge) < 2.0*radius) continue; // too short/too close to the part face
 					point bot_pos(bend_pos);
 					bot_pos.z = base.z2(); // top of base platform
 					cube_t pipe_bcube(top_pos, bot_pos);
@@ -430,7 +457,7 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 	cube_t const place_area(get_walkable_room_bounds(room)); // ignore trim?
 	cube_t avoid;
 	avoid.set_from_sphere(point(place_area.xc(), place_area.yc(), zval), min_clearance);
-	unsigned const flags(0), num_machines((rgen.rand() % 4) + 1); // 1-4
+	unsigned const flags(0), num_machines((rgen.rand() % 5) + 1); // 1-5
 	float const sz_cap_mult((num_machines > 0) ? 0.5 : 1.0); // need to guarantee gap if two machines are placed on opposite walls of a narrow room
 	vector2d const place_sz(place_area.dx(), place_area.dy());
 	vector2d avail_sz, max_sz;
