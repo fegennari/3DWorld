@@ -1591,7 +1591,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 			assert(room_type < NUM_RTYPES);
 			if      (room_type == RTYPE_UTILITY ) {hum_amt = 0.1; hum_freq =  60.0;}
 			else if (room_type == RTYPE_SERVER  ) {hum_amt = 0.2; hum_freq = 120.0;}
-			else if (room_type == RTYPE_MACHINE ) {hum_amt = 0.2; hum_freq =  60.0;}
+			else if (room_type == RTYPE_MACHINE ) {hum_amt = 0.1; hum_freq =  60.0;}
 			//else if (room_type == RTYPE_SECURITY) {}
 			//else if (room_type == RTYPE_SWIM    ) {}
 			//else if (room_type == RTYPE_LAUNDRY ) {}
