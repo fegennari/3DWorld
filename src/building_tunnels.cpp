@@ -7,6 +7,7 @@
 extern double tfticks;
 
 float query_min_height(cube_t const &c, float stop_at);
+colorRGBA choose_pipe_color(rand_gen_t &rgen);
 
 // *** tunnel_seg_t ***
 
@@ -191,12 +192,27 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 }
 
 void building_t::add_tunnel_objects(rand_gen_t rgen) {
-	assert(interior);
+	assert(has_room_geom());
+	vect_room_object_t &objs(interior->room_geom->objs);
 
 	for (tunnel_seg_t const &t : interior->tunnels) {
 		if (t.room_conn) continue; // nothing added to these tunnels
-		// add smaller pipes, etc.
-		// TODO
+		// add smaller pipes
+		unsigned const num_pipes(rgen.rand() % 3); // 0-2
+
+		for (unsigned n = 0; n < num_pipes; ++n) {
+			float const radius(0.05*t.radius*rgen.rand_uniform(0.5, 1.0));
+			float const v1(t.p[0][t.dim] + 2.0*radius), v2(t.p[1][t.dim] - 2.0*radius);
+			if (v1 >= v2) continue; // too short a tunnel; shouldn't happen
+			float const pos(rgen.rand_uniform(v1, v2)), height(t.radius*rgen.rand_uniform(0.7, 0.9));
+			if (t.has_gate && fabs(pos - t.gate_pos) < 2.0*radius) continue; // too close to the gate
+			float const zval(t.p[0].z + height), hlen(sqrt(t.radius*t.radius - height*height) + 2.0*radius);
+			cube_t pipe;
+			set_wall_width(pipe, t.p[0][!t.dim], hlen, !t.dim);
+			set_wall_width(pipe, pos,  radius, t.dim);
+			set_wall_width(pipe, zval, radius, 2);
+			objs.emplace_back(pipe, TYPE_PIPE, 0, !t.dim, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CYLIN, choose_pipe_color(rgen)); // horizontal, room_id=0
+		} // for n
 	} // for t
 }
 
