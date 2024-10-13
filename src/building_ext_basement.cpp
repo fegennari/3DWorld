@@ -1174,10 +1174,13 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 			if (sub_room.get_has_mirror()) {room.set_has_mirror();}
 		}
 		// 2 or more rooms
-		else if (rgen.rand_bool()) { // add furnace
+		if (!objs_added) { // maybe make a machine room
+			objs_added = add_machines_to_room(rgen, sub_room, zval, room_id, tot_light_amt, objs_start);
+		}
+		if (!objs_added && rgen.rand_bool()) { // add furnace
 			objs_added = add_furnace_to_room(rgen, sub_room, zval, room_id, tot_light_amt, sub_objs_start);
 		}
-		else { // add water heater
+		if (!objs_added) { // add water heater
 			objs_added = add_water_heaters(rgen, sub_room, zval, room_id, tot_light_amt, sub_objs_start, 1); // single_only=1
 		}
 		if (!objs_added) {} // try other objects or room types?
