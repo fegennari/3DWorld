@@ -269,14 +269,16 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 				v.t[1] *= tscale;
 				mat.itri_verts.push_back(v);
 			} // for i
-			  // indices have the same quad topology, so copy and offset them
+			// indices have the same quad topology, so copy and offset them
 			for (unsigned i = 0; i < num_ixs; ++i) {mat.indices.push_back(mat.indices[ixs_start_ix+i] + vert_ix_off);}
 		} // for d
 	}
 	// draw closed ends in black so that they appear to extend into darkness
 	if (t.closed_ends[0] || t.closed_ends[1]) {
 		assert(!t.room_conn); // not supported
+		unsigned const start_ix(mat.itri_verts.size());
 		mat.add_ortho_cylin_to_verts(t.bcube, BLACK, t.dim, t.closed_ends[0], t.closed_ends[1], 1, 0, 1.0, 1.0, 1.0, 1.0, 1);
+		for (auto v = mat.itri_verts.begin()+start_ix; v != mat.itri_verts.end(); ++v) {v->set_norm_to_zero();} // zero normal to prevent wet effect
 	}
 	// draw gate if present
 	if (t.has_gate) {
