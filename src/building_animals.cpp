@@ -15,7 +15,7 @@ float const RAT_ATTACK_SPEED = 1.2; // multiplier
 float const RAT_FOV_DP(cos(0.5*RAT_FOV_DEG*TO_RADIANS));
 float const SPIDER_VIEW_FLOORS = 4.0; // view distance in floors
 
-extern bool player_attracts_flies, player_wait_respawn, camera_in_building;
+extern bool player_attracts_flies, player_wait_respawn, camera_in_building, player_in_tunnel;
 extern int animate2, camera_surf_collide, frame_counter, display_mode;
 extern float fticks, NEAR_CLIP;
 extern double tfticks, camera_zh;
@@ -68,6 +68,10 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix) {
 	interior->room_geom->last_animal_update_frame = frame_counter;
 }
 
+float select_animal_radius(float sz_min, float sz_max, float floor_spacing, rand_gen_t &rgen) {
+	// there's no error check for min_sz <= max_sz, so just use min_sz in that case
+	return 0.5f*floor_spacing*((sz_min >= sz_max) ? sz_min : rgen.rand_uniform(sz_min, sz_max));
+}
 template<typename T> void building_t::add_animals_on_floor(T &animals, unsigned building_ix, unsigned num_min, unsigned num_max, float sz_min, float sz_max) const {
 	if (animals.placed) return; // already placed
 	animals.placed = 1; // even if there were no animals placed
@@ -79,8 +83,7 @@ template<typename T> void building_t::add_animals_on_floor(T &animals, unsigned 
 	animals.reserve(num);
 
 	for (unsigned n = 0; n < num; ++n) {
-		// there's no error check for min_sz <= max_sz, so just use min_sz in that case
-		float const sz_scale((sz_min >= sz_max) ? sz_min : rgen.rand_uniform(sz_min, sz_max)), radius(0.5f*floor_spacing*sz_scale);
+		float const radius(select_animal_radius(sz_min, sz_max, floor_spacing, rgen));
 		point const pos(gen_animal_floor_pos(radius, T::value_type::allow_in_attic(), 0, 0, T::value_type::not_by_ext_door(), rgen)); // not_player_visible=0, pref_dark_room=0
 		if (pos == all_zeros) continue; // bad pos? skip this animal
 		animals.add(typename T::value_type(pos, radius, rgen.signed_rand_vector_spherical_xy_norm(), n));
@@ -334,19 +337,55 @@ void building_t::update_rats(point const &camera_bs, unsigned building_ix) {
 void building_t::update_sewer_rats(point const &camera_bs, unsigned building_ix) {
 	vect_rat_t &rats(interior->room_geom->sewer_rats);
 	if (rats.placed && rats.empty()) return; // no rats placed in this building
-	if (global_building_params.num_rats_max == 0) return;
+	if (global_building_params.num_rats_max == 0 || interior->tunnels.empty()) return;
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_RAT)) return; // no rat model
+	float const floor_spacing(get_window_vspace()), timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
+	rand_gen_t rgen;
+	rgen.set_state(building_ix+1, building_ix+123); // unique per building
 	
-	if (!rats.placed) {
-		// TODO: add initial rats
+	if (!rats.placed) { // add initial rats in tunnels
+		for (auto i = interior->tunnels.begin(); i != interior->tunnels.end(); ++i) {
+			tunnel_seg_t const &t(*i);
+			if (t.room_conn)      continue; // don't add to room connector tunnel segment
+			if (!t.has_gate)      continue; // only add a rat if it has a gate to hide behind
+			if (rgen.rand_bool()) continue; // add 50% of the time
+			float const radius(select_animal_radius(global_building_params.rat_size_min, global_building_params.rat_size_max, floor_spacing, rgen));
+			if (radius < t.water_level) continue; // skip if underwater
+			float v1(t.p[0][t.dim]), v2(t.p[1][t.dim]); // placement range
+			if      (t.closed_ends[0]) {v1 = t.gate_pos;}
+			else if (t.closed_ends[1]) {v2 = t.gate_pos;}
+			v1 += 2.0*radius; v2 -= 2.0*radius; // add padding
+			if (v1 >= v2) continue; // not enough space for a rat
+			point pos;
+			vector3d dir;
+			pos[ t.dim] = rgen.rand_uniform(v1, v2);
+			pos[!t.dim] = t.p[0][!t.dim]; // either point should work
+			pos.z       = t.p[0].z - t.radius; // on the bottom of the tunnel
+			dir[t.dim]  = ((pos[t.dim] < t.gate_pos) ? 1.0 : -1.0); // face toward the gate
+			rats.add(rat_t(pos, radius, dir, (i - interior->tunnels.begin()))); // store tunnel index in ID
+		} // for r
+		rats.placed = 1;
 	}
-	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
-	
-	for (rat_t &rat : rats) {
-		rat.move(timestep);
-		// TODO: update logic
-	}
-	//gen_sound_thread_safe(SOUND_RAT_SQUEAK, local_to_camera_space(rat.pos), 1.0, 1.2); // high pitch
+	for (rat_t &rat : rats) { // update logic
+		if (rat.speed > 0.0) { // moving
+			assert(rat.id < interior->tunnels.size());
+			tunnel_seg_t const &t(interior->tunnels[rat.id]);
+			bool const dir(rat.dir[t.dim] > 0.0); // movement direction along the tunnel
+			float const stop_pos(0.5*(t.p[dir][t.dim] + t.gate_pos));
+			
+			if ((rat.pos[t.dim] < stop_pos) != dir) { // stop
+				rat.speed     = 0.0;
+				rat.is_hiding = 1; // safe behind the bars
+			}
+			else {rat.move(timestep);}
+		}
+		else if (player_in_tunnel && !rat.is_hiding) { // stopped and not safe
+			if (dist_xy_less_than(rat.pos, camera_bs, 2.0*floor_spacing)) { // check for player proximity
+				gen_sound_thread_safe(SOUND_RAT_SQUEAK, local_to_camera_space(rat.pos), 1.0, 1.1); // medium pitch
+				rat.speed = global_building_params.rat_speed*rgen.rand_uniform(1.6, 2.0); // fast
+			}
+		}
+	} // for rat
 }
 
 bool can_hide_under(room_object_t const &c, cube_t &hide_area) {
