@@ -451,6 +451,13 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 	}
 }
 
+vector2d get_machine_max_sz(cube_t const &place_area, float min_gap, float sz_cap_mult) {
+	vector2d const place_sz(place_area.dx(), place_area.dy());
+	vector2d avail_sz, max_sz;
+	for (unsigned d = 0; d < 2; ++d) {avail_sz[d] = min(0.4f*place_sz[d], sz_cap_mult*(place_sz[d] - min_gap));}
+	for (unsigned d = 0; d < 2; ++d) {max_sz  [d] = min(avail_sz[d], 2.0f*avail_sz[!d]);} // keep aspect ratio <= 2:1
+	return max_sz;
+}
 bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	float const floor_spacing(get_window_vspace()), fc_gap(get_floor_ceil_gap());
 	float const min_clearance(get_min_front_clearance_inc_people()), min_gap(max(get_doorway_width(), min_clearance));
@@ -458,15 +465,15 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 	cube_t avoid;
 	avoid.set_from_sphere(point(place_area.xc(), place_area.yc(), zval), min_clearance);
 	unsigned const flags(0), num_machines((rgen.rand() % 5) + 1); // 1-5
-	float const sz_cap_mult((num_machines > 0) ? 0.5 : 1.0); // need to guarantee gap if two machines are placed on opposite walls of a narrow room
-	vector2d const place_sz(place_area.dx(), place_area.dy());
-	vector2d avail_sz, max_sz;
-	for (unsigned d = 0; d < 2; ++d) {avail_sz[d] = min(0.4f*place_sz[d], sz_cap_mult*(place_sz[d] - min_gap));}
-	for (unsigned d = 0; d < 2; ++d) {max_sz  [d] = min(avail_sz[d], 2.0f*avail_sz[!d]);} // keep aspect ratio <= 2:1
-	if (min(max_sz.x, max_sz.y) < 0.5*floor_spacing) return 0; // too small of a room to place a machine
+	bool any_placed(0), no_opposite_sides(0), used_orients[4] = {};
 	vect_room_object_t &objs(interior->room_geom->objs);
-	bool any_placed(0);
+	vector2d max_sz(get_machine_max_sz(place_area, min_gap, 0.5)); // start with a larger gap that allows two opposing machines
 
+	if (min(max_sz.x, max_sz.y) < 0.5*floor_spacing) { // not enough space
+		max_sz = get_machine_max_sz(place_area, min_gap, 1.0); // try again with larger size cap, which means we can't place machines on opposite walls
+		if (min(max_sz.x, max_sz.y) < 0.5*floor_spacing) return 0; // still too small of a room to place a machine
+		no_opposite_sides = 1;
+	}
 	for (unsigned n = 0; n < num_machines; ++n) {
 		float const height(fc_gap*rgen.rand_uniform(0.6, 0.9));
 		// similar to place_obj_along_wall(), but with custom size logic that depends on dim
@@ -475,6 +482,7 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 
 		for (unsigned i = 0; i < 25; ++i) { // make 25 attempts to place the object
 			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
+			if (no_opposite_sides && used_orients[unsigned(dim) + unsigned(!dir)]) continue; // can't place opposing object
 			float const hwidth(0.5*max_sz[!dim]*rgen.rand_uniform(0.75, 1.0));
 			float const depth(min(2.0f*hwidth, max_sz[dim])*rgen.rand_uniform(0.75, 1.0));
 			float center(rgen.rand_uniform(place_area.d[!dim][0]+hwidth, place_area.d[!dim][1]-hwidth)); // random position
@@ -486,6 +494,7 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 			objs.emplace_back(c, TYPE_MACHINE, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CUBE, LT_GRAY);
 			objs.back().item_flags = rgen.rand(); // add more randomness
 			set_obj_id(objs);
+			if (no_opposite_sides) {used_orients[unsigned(dim) + unsigned(dir)] = 1;} // mark this orient as used
 			any_placed = 1;
 			break; // done
 		} // for i
