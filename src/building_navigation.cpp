@@ -2459,14 +2459,18 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		return run_ai_elevator_logic(person, delta_dir, rgen);
 	}
 	person.must_re_call_elevator = 0; // reset if we got out of the elevator logic with this set
-	bool const prev_in_pool(person.in_pool);
+	bool const has_rgeom(has_room_geom()), prev_in_pool(person.in_pool);
 	person.in_pool = 0; // reset for this frame
 	run_ai_pool_logic(person, speed_mult); // handle AI inside the pool; this can happen for zombies
-	if (prev_in_pool && !person.in_pool) {person.retreat_time = 0.5*TICKS_PER_SECOND;} // retreat for 0.5s to avoid falling back into the pool chasing the player
+	
+	if (prev_in_pool && !person.in_pool) {
+		person.retreat_time = 0.5*TICKS_PER_SECOND; // retreat for 0.5s to avoid falling back into the pool chasing the player
+		if (has_pool()) {max_eq(person.pos.z, (get_room(interior->pool.room_ix).z1() + get_fc_thickness() + person.radius));} // make sure completely out of pool
+	}
 	build_nav_graph();
 
 	if (zombie_attack_mode && player_is_hiding && person.saw_player_hide && global_building_params.ai_opens_doors && global_building_params.ai_sees_player_hide >= 2 &&
-		player_hiding_obj.type != TYPE_NONE && same_room_and_floor_as_player(person) && cur_player_building_loc.building_ix == person.cur_bldg)
+		player_hiding_obj.type != TYPE_NONE && same_room_and_floor_as_player(person) && cur_player_building_loc.building_ix == person.cur_bldg && has_rgeom)
 	{
 		// open the closet, stall, or shower door (closet door should already be open)
 		// it may not be safe to use an object iterator or even an index since we're in a different thread, so do a linear search for the target object
@@ -2485,7 +2489,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		} // for i
 	}
 	bool choose_dest(!person.target_valid());
-	bool const update_path(!person.in_pool && need_to_update_ai_path(person)), has_rgeom(has_room_geom());
+	bool const update_path(!person.in_pool && need_to_update_ai_path(person));
 	// if room objects spawn in, select a new dest to avoid walking through objects based on our previous, possibly invalid path;
 	// but not if this person is on stairs/ramp/escalator or an elevator, or they may end at an invalid zval between floors
 	if (has_rgeom && !person.has_room_geom && !person.on_fixed_path() && person.ai_state < AI_ENTER_ELEVATOR) {person.abort_dest();}
