@@ -10,6 +10,8 @@ extern city_params_t city_params; // for num_cars
 
 car_t car_from_parking_space(room_object_t const &o);
 void subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs);
+colorRGBA get_light_color_temp_range(float tmin, float tmax, rand_gen_t &rgen);
+void set_light_xy(cube_t &light, point const &center, float light_size, bool light_dim, room_obj_shape light_shape);
 
 
 bool enable_parked_cars() {return (city_params.num_cars > 0 && !city_params.car_model_files.empty());}
@@ -301,7 +303,7 @@ cube_t building_t::get_ext_basement_door_blocker() const {
 }
 
 void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
-	unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z)
+	unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z, light_ix_assign_t &light_ix_assign)
 {
 	assert(has_room_geom());
 	rgen.rseed1 += 123*floor_ix; // make it unique per floor
@@ -310,7 +312,8 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	// spaces are arranged in !dim, with roads along the edges of the building that connect to the roads of each row
 	bool const dim(room.dx() < room.dy()); // long/primary dim; cars are lined up along this dim, oriented along the other dim
 	vector3d const car_sz(get_parked_car_size()), parking_sz(1.1*car_sz.x, 1.4*car_sz.y, 1.5*car_sz.z); // space is somewhat larger than a car; car length:width = 2.3
-	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), wall_thickness(1.2*get_wall_thickness()), wall_hc(0.5*wall_thickness); // thicker
+	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness());
+	float const int_wall_thick(get_wall_thickness()), wall_thickness(1.2*int_wall_thick), wall_hc(0.5*wall_thickness); // thicker
 	float const ceiling_z(zval + window_vspacing - floor_thickness); // Note: zval is at floor level, not at the bottom of the room
 	float const pillar_width(0.5*car_sz.y), pillar_hwidth(0.5*pillar_width), beam_hwidth(0.5*pillar_hwidth), road_width(2.3*car_sz.y); // road wide enough for two cars
 	float const wid_sz(room.get_sz_dim(dim)), len_sz(room.get_sz_dim(!dim)), wid_sz_spaces(wid_sz - 2.0*road_width);
@@ -406,6 +409,69 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			back_railing.d[dim][dir] = back_railing.d[dim][!dir] + dir_sign*railing_thickness;
 			objs.emplace_back(back_railing, TYPE_RAILING, room_id, !dim, 0, (RO_FLAG_OPEN | RO_FLAG_TOS), tot_light_amt, SHAPE_CUBE, railing_color);
 		}
+	}
+	// add equipment room for first elevator extending to parking garage, only on the lowest floor
+	if (floor_ix == 0) {
+		for (elevator_t const &e : interior->elevators) {
+			if (e.z1() > zval || !room.contains_cube_xy(e)) continue;
+			bool const dim(!e.dim), dir(rgen.rand_bool());
+			float const dir_sign(dir ? 1.0 : -1.0), door_width(get_doorway_width()), room_len(max(1.25f*e.get_sz_dim(dim), 1.0f*e.get_sz_dim(!dim)));
+			cube_t sub_room(e);
+			
+			if (e.adj_elevator_ix >= 0) {
+				elevator_t const &e2(get_elevator(e.adj_elevator_ix));
+				if (e2.z1() == e.z1()) {sub_room.union_with_cube(e2);} // extend to cover both elevators
+			}
+			if (sub_room.get_sz_dim(!dim) < (1.5*door_width + 2.0*int_wall_thick)) continue; // too narrow
+			float const ceil_zval(wall.z2());
+			set_cube_zvals(sub_room, zval, ceil_zval);
+			sub_room.d[dim][!dir] = e.d[dim][dir]; // adjacent to the elevator
+			sub_room.d[dim][ dir] = e.d[dim][dir] + dir_sign*room_len; // extend outward
+			cube_t avoid(sub_room);
+			avoid.d[dim][dir] += dir_sign*door_width; // add space for the door
+			if (!room.contains_cube(avoid)) continue; // outside the parking garage
+			if (has_bcube_int_no_adj(avoid, obstacles)) continue; // check other elevators, stairs, and ext basement door
+			// add door
+			cube_t door(sub_room);
+			door.d[dim][0] = door.d[dim][1] = sub_room.d[dim][dir] - 0.5*dir_sign*int_wall_thick; // shrink to zero area at wall centerline
+			set_wall_width(door, sub_room.get_center_dim(!dim), 0.5*door_width, !dim);
+			door_t Door(door, dim, !dir, rgen.rand_bool());
+			Door.for_small_room = 1; // mark so that it only opens 90 degrees
+			add_interior_door(Door, 0, 0, 1); // is_bathroom=0, make_unlocked=0, make_closed=1
+
+			// add walls, one on each side of elevator, and one on each side of the door
+			for (unsigned d = 0; d < 2; ++d) {
+				cube_t side_wall(sub_room), door_wall(sub_room);
+				door_wall.d[!dim][ d  ] = side_wall.d[!dim][!d] = side_wall.d[!dim][d] - (d ? 1.0 : -1.0)*int_wall_thick;
+				door_wall.d[!dim][!d  ] = door.d[!dim][d];
+				door_wall.d[ dim][!dir] = sub_room.d[dim][dir] - dir_sign*int_wall_thick;
+				objs.emplace_back(side_wall, TYPE_PG_WALL, room_id, !dim, d,   0, tot_light_amt, SHAPE_CUBE, wall_color);
+				objs.emplace_back(door_wall, TYPE_PG_WALL, room_id,  dim, dir, 0, tot_light_amt, SHAPE_CUBE, wall_color);
+			} // d
+			room_t equipment_room(room, sub_room); // keep flags, copy cube
+			equipment_room.interior = 1; // treated as basement but not extended basement (no wall padding)
+			equipment_room.expand_in_dim(!dim, -int_wall_thick); // subtract off walls
+			equipment_room.d[dim][dir] -= dir_sign*int_wall_thick;
+			// add a ceiling light; do we need a light switch as well?
+			float const light_size(0.02*(sub_room.dx() + sub_room.dy()));
+			cube_t light;
+			set_light_xy(light, sub_room.get_cube_center(), light_size, !dim, SHAPE_CUBE);
+			bool const recessed(fabs(light.d[dim][dir] - door.d[dim][!dir]) < door_width);
+			float const light_dz((recessed ? 0.01 : 0.025)*window_vspacing);
+			set_cube_zvals(light, (ceil_zval - light_dz), ceil_zval);
+			colorRGBA const light_color(get_light_color_temp_range(0.2, 0.5, rgen));
+			room_object_t light_obj(light, TYPE_LIGHT, room_id, !dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, light_color);
+			add_sub_room_light(light_obj, equipment_room, !dim, objs.size(), light_ix_assign, rgen);
+			// add machines
+			add_machines_to_room(rgen, equipment_room, zval, room_id, tot_light_amt, objs.size(), 1); // objs_start at end; less_clearance=1
+			// add a breaker panel
+			//add_breaker_panel(rgen, bp, ceil_zval, dim, dir, room_id, tot_light_amt); // TODO
+			obstacles    .push_back(avoid);
+			obstacles_exp.push_back(avoid);
+			obstacles_ps .push_back(avoid);
+			interior->elevator_equip_room = sub_room; // needed for parking garage light placement, and may be useful in other situations
+			break; // done
+		} // for e
 	}
 	// add walls and pillars
 	bool const no_sep_wall(num_walls == 0 || (capacity < 100 && (room_id & 1))); // use room_id rather than rgen so that this agrees between floors

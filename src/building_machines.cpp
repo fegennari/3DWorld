@@ -458,9 +458,10 @@ vector2d get_machine_max_sz(cube_t const &place_area, float min_gap, float sz_ca
 	for (unsigned d = 0; d < 2; ++d) {max_sz  [d] = min(avail_sz[d], 2.0f*avail_sz[!d]);} // keep aspect ratio <= 2:1
 	return max_sz;
 }
-bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool less_clearance) {
 	float const floor_spacing(get_window_vspace()), fc_gap(get_floor_ceil_gap());
-	float const min_clearance(get_min_front_clearance_inc_people()), min_gap(max(get_doorway_width(), min_clearance));
+	float const clearance_factor(less_clearance ? 0.2 : 1.0), min_place_sz((less_clearance ? 0.25 : 0.5)*floor_spacing);
+	float const min_clearance(clearance_factor*get_min_front_clearance_inc_people()), min_gap(max(clearance_factor*get_doorway_width(), min_clearance));
 	cube_t const place_area(get_walkable_room_bounds(room)); // ignore trim?
 	cube_t avoid;
 	avoid.set_from_sphere(point(place_area.xc(), place_area.yc(), zval), min_clearance);
@@ -469,9 +470,9 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 	vect_room_object_t &objs(interior->room_geom->objs);
 	vector2d max_sz(get_machine_max_sz(place_area, min_gap, 0.5)); // start with a larger gap that allows two opposing machines
 
-	if (min(max_sz.x, max_sz.y) < 0.5*floor_spacing) { // not enough space
+	if (min(max_sz.x, max_sz.y) < min_place_sz) { // not enough space
 		max_sz = get_machine_max_sz(place_area, min_gap, 1.0); // try again with larger size cap, which means we can't place machines on opposite walls
-		if (min(max_sz.x, max_sz.y) < 0.5*floor_spacing) return 0; // still too small of a room to place a machine
+		if (min(max_sz.x, max_sz.y) < min_place_sz) return 0; // still too small of a room to place a machine
 		no_opposite_sides = 1;
 	}
 	for (unsigned n = 0; n < num_machines; ++n) {

@@ -314,7 +314,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 			if (is_parking_garage) { // parking garage; added first because this sets the number of lights
 				assert(r->interior == 1);
-				add_parking_garage_objs(rgen, *r, room_center.z, room_id, f, num_floors, nx, ny, light_delta_z);
+				add_parking_garage_objs(rgen, *r, room_center.z, room_id, f, num_floors, nx, ny, light_delta_z, light_ix_assign);
 			}
 			else if (is_backrooms) { // should be single floor only
 				add_backrooms_objs(rgen, *r, room_center.z, room_id, f, rooms_to_light);

@@ -2122,7 +2122,7 @@ void building_t::get_walkway_interior_verts(building_draw_t &bdraw, building_wal
 }
 
 template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer, door_rotation_t &drot, uint8_t door_type, bool dim,
-	bool dir, float open_amt, bool opens_out, bool exterior, bool on_stairs, bool hinge_side, bool is_bldg_conn, bool draw_top_edge) const
+	bool dir, float open_amt, bool opens_out, bool exterior, bool on_stairs, bool hinge_side, bool open_min_amt, bool draw_top_edge) const
 {
 	bool const is_rooftop_door(door_type == tquad_with_ix_t::TYPE_RDOOR);
 	int type(tquad_with_ix_t::TYPE_IDOOR); // use interior door type, even for exterior door, because we're drawing it in 3D inside the building
@@ -2144,7 +2144,7 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 		if (opened && on_stairs) {dc.z2() = dc.z1();}
 		bool const int_other_side(exterior ? 0 : hinge_side), swap_sides(exterior ? (side == 0) : hinge_side); // swap sides for right half of exterior door
 		// 0,1: bottom, 2,3: top; we pass in the same drot for both sides because the value is only filled in and used for interior doors, which have only one side
-		tquad_with_ix_t const door(set_door_from_cube(dc, dim, dir, type, 0.0, exterior, open_amt, opens_out, opens_up, swap_sides, is_bldg_conn, drot));
+		tquad_with_ix_t const door(set_door_from_cube(dc, dim, dir, type, 0.0, exterior, open_amt, opens_out, opens_up, swap_sides, open_min_amt, drot));
 		vector3d const normal(door.get_norm());
 		tquad_with_ix_t door_edges[4] = {door, door, door, door}; // most doors will only use 2 of these
 
@@ -2185,7 +2185,7 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 
 // explicit template specialization
 template void building_t::add_door_verts(cube_t const &D, building_room_geom_t &drawer, door_rotation_t &drot, uint8_t door_type, bool dim,
-	bool dir, float open_amt, bool opens_out, bool exterior, bool on_stairs, bool hinge_side, bool is_bldg_conn, bool draw_top_edge) const;
+	bool dir, float open_amt, bool opens_out, bool exterior, bool on_stairs, bool hinge_side, bool open_min_amt, bool draw_top_edge) const;
 
 // Note: this is actually the geometry of walls that have windows, not the windows themselves
 void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale,
