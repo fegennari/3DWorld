@@ -1452,6 +1452,7 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 				float const door_center(rgen.rand_uniform(shared_lo+wall_hwidth+wall_thickness, shared_hi-wall_hwidth-wall_thickness));
 				bool const dir(r1->d[d][0] < r2->d[d][0]); // dir sign from r1 => r2 in dim d
 				cube_t cand_join(*r1);
+				cand_join.z2() = cand_join.z1() + floor_spacing; // make it exactly one floor, in case this room connects to a tall pool room
 				cand_join.d[d][ dir] = r2->d[d][!dir];
 				cand_join.d[d][!dir] = r1->d[d][ dir];
 				if (cand_join.get_sz_dim(d) < min_connect_dist) continue;
