@@ -114,8 +114,13 @@ void create_mirror_reflection_if_needed(building_t const *vis_conn_bldg, vector3
 	for (unsigned n = 0; n < 2; ++n) { // check player building, then visible connected building
 		building_t const *bldg(buildings[n]);
 		if (bldg == nullptr) continue;
+		bool const have_mirror(is_mirror(cur_room_mirror));
+		bool draw_water_reflect(bldg->water_visible_to_player());
 	
-		if (bldg->water_visible_to_player()) { // draw water plane reflection
+		if (n == 0 && draw_water_reflect && have_mirror && bldg->has_pool()) { // both a pool and a mirror are visible
+			if (bldg->get_room(cur_room_mirror.room_id).contains_pt(camera_bs)) {draw_water_reflect = 0;} // if player in room with mirror, draw it and not the pool
+		}
+		if (draw_water_reflect) { // draw water plane reflection
 			if (camera_bs.z < (bldg->interior->water_zval + bldg->get_window_vspace()) || // if the player is on the same floor as the water
 				(bldg->has_pool() && bldg->get_pool_room().contains_pt(camera_bs))) // or if the player is in the pool room
 			{
@@ -131,7 +136,7 @@ void create_mirror_reflection_if_needed(building_t const *vis_conn_bldg, vector3
 			draw_scene_for_building_reflection(room_mirror_ref_tid, 2, 1, ref_cube.z2(), 0, 0, 1, 0, 0, 1, ref_cube); // +z, not house, not interior, draw exterior, glass floor
 			return;
 		}
-		if (!is_mirror(cur_room_mirror)) continue; // not enabled
+		if (!have_mirror) continue; // not enabled
 		bool const interior_room(cur_room_mirror.is_interior()), is_house(cur_room_mirror.is_house()), is_open(cur_room_mirror.is_open());
 		// assumes mirror is not facing the doorway to a room with a window; assumes cube-shaped office buildings always use opaque glass block windows
 		bool const can_see_out_windows((is_house || !bldg->is_cube()) && !interior_room && bldg->has_int_windows());
