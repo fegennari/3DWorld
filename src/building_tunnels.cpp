@@ -167,6 +167,7 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 		} // for dir
 		// split into three segments (center, left, right)
 		// TODO: add bends at the ends if there's space
+		unsigned const tseg_ix(interior->tunnels.size());
 		float const gate_dist_from_end(5.0*floor_spacing);
 		point pa(p1), pb(p2);
 		pa[!dim] = door.d[!dim][0] + sm_shift_val; // left  end of room connection
@@ -176,13 +177,17 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 		tseg_l.closed_ends[0] = tseg_r.closed_ends[1] = tseg_l.has_gate = tseg_r.has_gate = 1;
 		tseg_l.gate_pos = p1[!dim] + gate_dist_from_end;
 		tseg_r.gate_pos = p2[!dim] - gate_dist_from_end;
+		tseg_l.conn_ix[1] = tseg_ix;
+		tseg_r.conn_ix[0] = tseg_ix;
+		for (unsigned d = 0; d < 2; ++d) {tseg_c.conn_ix[d] = tseg_ix + d + 1;}
 		tunnel_seg_t *to_add[3] = {&tseg_c, &tseg_l, &tseg_r};
 		float const water_level(rgen.rand_uniform(0.0, 1.0)*0.2*radius), water_flow(rgen.signed_rand_float());
 
 		for (unsigned n = 0; n < 3; ++n) {
 			tunnel_seg_t &tseg(*to_add[n]);
-			tseg.water_level = water_level;
-			tseg.water_flow  = water_flow;
+			tseg.water_level  = water_level;
+			tseg.water_flow   = water_flow;
+			tseg.conn_room_ix = room_id;
 			interior->tunnels.emplace_back(tseg);
 		}
 		interior->basement_ext_bcube.assign_or_union_with_cube(tunnel_seg_t(p1, p2, radius).bcube); // add full tunnel to bcube
