@@ -1707,7 +1707,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (bbd != nullptr) {bbd->set_camera_dir_mask(camera_bs, ((camera_bs.z < building.ground_floor_z1) ? building.get_bcube_inc_extensions() : building.bcube));}
 	brg_batch_draw_t *const bbd_in(bbd); // capture bbd for instance drawing before setting to null if player_in_building
 	if (player_in_building_or_doorway) {bbd = nullptr;} // use immediate drawing when player is in the building because draw order matters for alpha blending
-	bool const update_tunnel_water(animate2 && player_in_building && !shadow_only && player_in_tunnel);
+	bool const update_tunnel_water(animate2 && player_in_building && !shadow_only && (player_in_tunnel || building.interior->point_near_tunnel_entrance(camera_bs)));
 	bool enable_indir(0), update_escalators(0);
 
 	if (animate2 && player_in_building && !shadow_only && !reflection_pass) { // maybe update escalators

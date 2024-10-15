@@ -1695,6 +1695,7 @@ struct building_interior_t {
 	vector<room_t>::const_iterator ext_basement_rooms_start() const;
 	bool point_in_ext_basement_room(point const &pos, float expand=0.0) const;
 	bool point_in_tunnel(point const &pos, float expand=0.0) const;
+	bool point_near_tunnel_entrance(point const &pos) const;
 	bool cube_in_ext_basement_room(cube_t const &c, bool xy_only) const;
 	door_t const &get_ext_basement_door() const;
 	void assign_master_bedroom(float window_vspacing, float floor_thickness);
