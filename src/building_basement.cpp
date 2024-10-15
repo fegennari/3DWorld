@@ -436,7 +436,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			door.d[dim][0] = door.d[dim][1] = sub_room.d[dim][dir] - 0.5*dir_sign*int_wall_thick; // shrink to zero area at wall centerline
 			set_wall_width(door, sub_room.get_center_dim(!dim), 0.5*door_width, !dim);
 			door_t Door(door, dim, !dir, rgen.rand_bool());
-			Door.for_small_room = 1; // mark so that it only opens 90 degrees
+			Door.set_small_room(); // mark so that it only opens 90 degrees
 			add_interior_door(Door, 0, 0, 1); // is_bathroom=0, make_unlocked=0, make_closed=1
 			room_t equipment_room(room, sub_room); // keep flags, copy cube
 			equipment_room.interior = 1; // treated as basement but not extended basement (no wall padding)

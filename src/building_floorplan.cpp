@@ -2625,7 +2625,7 @@ void building_interior_t::assign_door_conn_rooms(unsigned start_ds_ix) {
 	assert(start_ds_ix <= door_stacks.size());
 
 	for (auto d = door_stacks.begin()+start_ds_ix; d != door_stacks.end(); ++d) {
-		if (d->for_closet || d->in_backrooms) continue; // excluded
+		if (d->get_for_closet() || d->get_backrooms()) continue; // excluded
 		unsigned const dsix(d - door_stacks.begin());
 		unsigned rooms_start(0), rooms_end(rooms.size());
 
@@ -2648,7 +2648,7 @@ void building_interior_t::assign_door_conn_rooms(unsigned start_ds_ix) {
 				if (rooms[r].contains_pt(test_pt)) {ds_room_ix = r; break;}
 			}
 			if (ds_room_ix == -1) { // adj room not found
-				if (d->is_bldg_conn) { // door connecting adjacent building with no room for this building on the other side
+				if (d->get_bldg_conn()) { // door connecting adjacent building with no room for this building on the other side
 					ds_room_ix = 0; // set to 0 and hope it's unused; this can't be the first room, so the assert below won't fail
 				}
 				else { // can only happen with complex floorplan buildings where a wall ends exactly at a doorway so that neither room contains the point
@@ -2700,9 +2700,9 @@ void building_t::create_two_story_tall_rooms(rand_gen_t &rgen) {
 			door_stack_t &ds(door_stacks[i]);
 			if ( ds.not_a_room_separator())        continue; // skip basement and closet doors
 			if (!ds.is_connected_to_room(room_ix)) continue;
-			ds.mult_floor_room = 1; // counts as multi-floor (for drawing top edge), even if not extending to upper floor
+			ds.set_mult_floor(); // counts as multi-floor (for drawing top edge), even if not extending to upper floor
 			assert(ds.first_door_ix < idoors.size());
-			idoors[ds.first_door_ix].mult_floor_room = 1;
+			idoors[ds.first_door_ix].set_mult_floor();
 			if (ds.z2() > upper_floor_zval_thresh) {stack_ixs.push_back(i);} // add if extends to second floor
 		} // for i
 		if (stack_ixs.size() > 1) { // only need to check if there are multiple connecting doors, since a single door must connect as this room has no stairs

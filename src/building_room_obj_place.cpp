@@ -986,7 +986,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 				get_closet_cubes(closet, cubes);
 				door_t door(cubes[4], dim, !dir, 0); // open=0
 				door.d[dim][0] = door.d[dim][1] = door.get_center_dim(dim); // shrink to zero width
-				door.for_closet = 1; // flag so that we don't try to add a light switch by this door, etc.
+				door.set_for_closet(); // flag so that we don't try to add a light switch by this door, etc.
 				add_interior_door(door, 0, 1, 1); // is_bathroom=0, make_unlocked=1, make_closed=1
 				interior->doors.back().obj_ix = closet_obj_id;
 			}
@@ -2472,7 +2472,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 
 	// first pass to record the doors in this room
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) { // check both dirs
-		if ((i->no_room_conn() || i->is_bldg_conn || i->is_connected_to_room(room_id)) && is_cube_close_to_door(test_cube, 0.0, 0, *i, 2)) {
+		if ((i->no_room_conn() || i->get_bldg_conn() || i->is_connected_to_room(room_id)) && is_cube_close_to_door(test_cube, 0.0, 0, *i, 2)) {
 			ds_ixs.push_back(i - interior->door_stacks.begin());
 		}
 	}

@@ -943,9 +943,9 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 	door_t &door(interior->get_door(door_ix));
 	door.toggle_open_state(/*by_player*/player_in_this_building); // allow partial open/animated door if player is in this building
 	// we changed the door state, but navigation should adapt to this, except for doors on stairs (which are special)
-	if ( door.on_stairs ) {invalidate_nav_graph();} // any in-progress paths may have people walking to and stopping at closed/locked doors
-	if (!door.for_closet) {interior->door_state_updated = 1;} // required for AI navigation logic to adjust to this change; what about backrooms doors?
-	if (has_room_geom() ) {interior->room_geom->invalidate_mats_mask |= (1 << MAT_TYPE_DOORS);} // need to recreate doors VBO
+	if ( door.on_stairs) {invalidate_nav_graph();} // any in-progress paths may have people walking to and stopping at closed/locked doors
+	if (!door.get_for_closet()) {interior->door_state_updated = 1;} // required for AI navigation logic to adjust to this change; what about backrooms doors?
+	if (has_room_geom()) {interior->room_geom->invalidate_mats_mask |= (1 << MAT_TYPE_DOORS);} // need to recreate doors VBO
 	check_for_water_splash(cube_bot_center(door), 2.0); // big splash
 
 	if (player_in_this_building || by_player) { // is it really safe to call this from the AI thread?
@@ -1016,7 +1016,7 @@ void door_t::toggle_open_state(bool allow_partial_open) {
 }
 bool door_t::next_frame() { // returns true if state changed
 	if (!is_partially_open()) return 0;
-	open_amt += (open ? 1.0 : -(auto_close ? 0.1 : 1.0))*4.0*(fticks/TICKS_PER_SECOND); // 0.25s to open/close; auto closing doors close slowly
+	open_amt += (open ? 1.0 : -(get_auto_close() ? 0.1 : 1.0))*4.0*(fticks/TICKS_PER_SECOND); // 0.25s to open/close; auto closing doors close slowly
 	open_amt  = CLIP_TO_01(open_amt);
 	return 1;
 }
@@ -1025,7 +1025,7 @@ void building_t::doors_next_frame(point const &player_pos) {
 	interior->last_active_door_ix = -1;
 
 	for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) {
-		if (d->auto_close && d->open_amt > 0.0) { // handle auto closing
+		if (d->get_auto_close() && d->open_amt > 0.0) { // handle auto closing
 			cube_t open_area(*d);
 			open_area.expand_in_dim(d->dim, 0.5*d->get_width()); // expand halfway (for the non-opening side)
 			open_area.union_with_cube(d->get_open_door_path_bcube()); // include the path of the door

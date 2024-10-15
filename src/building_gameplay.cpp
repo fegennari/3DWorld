@@ -1900,7 +1900,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 				if (is_cube_close_to_door(moved_obj, 0.0, inc_open, *i, check_dirs))              {i->blocked = 1;} // newly blocked  , either dir
 				else if (i->blocked && is_cube_close_to_door(obj, 0.0, inc_open, *i, check_dirs)) {i->blocked = 0;} // newly unblocked, either dir
 				else {continue;}
-				if (!i->for_closet) {interior->door_state_updated = 1;} // trigger AI update if this is a door between rooms
+				if (!i->get_for_closet()) {interior->door_state_updated = 1;} // trigger AI update if this is a door between rooms
 			} // for i
 			// update this object
 			obj = moved_obj; // keep this placement

@@ -1243,7 +1243,7 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 
 	// check for a light path through a series of open doors
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
-		if (i->is_bldg_conn) {
+		if (i->get_bldg_conn()) {
 			door_t const &door(interior->doors[i->first_door_ix]); // should be only one door
 			if (door.open_amt > 0.0 && door.get_true_bcube().intersects(room)) return 0; // open ext basement conn door counts, assuming light is on or opposite door is open
 			continue;

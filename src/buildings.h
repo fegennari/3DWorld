@@ -1487,8 +1487,17 @@ struct escalator_t : public oriented_cube_t { // Note: not yet used
 	void get_all_cubes(cube_t cubes[7]) const;
 };
 
+// door flags
+unsigned const DOOR_FLAG_MULT_FLOOR = 0x01; // multi-floor room door
+unsigned const DOOR_FLAG_FOR_CLOSET = 0x02; // closet door
+unsigned const DOOR_FLAG_BLDG_CONN  = 0x04; // door connecting two different buildings
+unsigned const DOOR_FLAG_BACKROOMS  = 0x08; // door in backrooms
+unsigned const DOOR_FLAG_SMALL_ROOM = 0x10; // door for a small room such as an elevator equipment room
+unsigned const DOOR_FLAG_AUTO_CLOSE = 0x20; // door automatically closes (office bathroom)
+
 struct door_base_t : public cube_t {
-	bool dim=0, open_dir=0, hinge_side=0, on_stairs=0, mult_floor_room=0, for_closet=0, is_bldg_conn=0, in_backrooms=0, for_small_room=0;
+	bool dim=0, open_dir=0, hinge_side=0, on_stairs=0;
+	uint8_t flags=0;
 	uint16_t conn_room[2]={}; // on each side of the door
 	// is it useful to store the two rooms in the door/door_stack? this will speed up connectivity searches for navigation and room assignment,
 	// but only for finding the second room connected to a door, because we still need to iterate over all doors;
@@ -1505,12 +1514,26 @@ struct door_base_t : public cube_t {
 	cube_t get_clearance_bcube() const {cube_t bc(*this); bc.expand_in_dim(dim,     get_width    ()); return bc;}
 	cube_t get_open_door_path_bcube() const;
 	cube_t get_open_door_bcube_for_room(cube_t const &room) const;
-	bool not_a_room_separator() const {return (on_stairs || for_closet || in_backrooms || is_bldg_conn || for_small_room);}
+	bool not_a_room_separator() const {return (on_stairs || get_for_closet() || get_backrooms() || get_bldg_conn() || get_small_room());}
 	bool is_same_stack(door_base_t const &d) const {return (d.x1() == x1() && d.y1() == y1());}
-	bool is_connected_to_room(unsigned room_id) const {return (!no_room_conn() && (room_id == conn_room[0] || room_id == conn_room[1]) && !is_bldg_conn);}
+	bool is_connected_to_room(unsigned room_id) const {return (!no_room_conn() && (room_id == conn_room[0] || room_id == conn_room[1]) && !get_bldg_conn());}
 	bool no_room_conn() const {return (conn_room[0] == 0 && conn_room[1] == 0);}
-	bool use_min_open_amt() const {return (is_bldg_conn || for_small_room);} // building connector doors don't have adj building info to determine open amount
+	bool use_min_open_amt() const {return (get_bldg_conn() || get_small_room());} // building connector doors don't have adj building info to determine open amount
 	unsigned get_conn_room(unsigned room_id) const;
+
+	void set_mult_floor() {flags |= DOOR_FLAG_MULT_FLOOR;}
+	void set_for_closet() {flags |= DOOR_FLAG_FOR_CLOSET;}
+	void set_bldg_conn () {flags |= DOOR_FLAG_BLDG_CONN ;}
+	void set_backrooms () {flags |= DOOR_FLAG_BACKROOMS ;}
+	void set_small_room() {flags |= DOOR_FLAG_SMALL_ROOM;}
+	void set_auto_close() {flags |= DOOR_FLAG_AUTO_CLOSE;}
+	void clear_auto_close() {flags &= ~DOOR_FLAG_AUTO_CLOSE;}
+	bool get_mult_floor() const {return (flags & DOOR_FLAG_MULT_FLOOR);}
+	bool get_for_closet() const {return (flags & DOOR_FLAG_FOR_CLOSET);}
+	bool get_bldg_conn () const {return (flags & DOOR_FLAG_BLDG_CONN );}
+	bool get_backrooms () const {return (flags & DOOR_FLAG_BACKROOMS );}
+	bool get_small_room() const {return (flags & DOOR_FLAG_SMALL_ROOM);}
+	bool get_auto_close() const {return (flags & DOOR_FLAG_AUTO_CLOSE);}
 };
 struct door_stack_t : public door_base_t {
 	unsigned first_door_ix=0, num_doors=1; // first_door_ix is on the lowest floor
@@ -1518,7 +1541,7 @@ struct door_stack_t : public door_base_t {
 	door_stack_t(door_base_t const &db, unsigned fdix) : door_base_t(db), first_door_ix(fdix) {}
 };
 struct door_t : public door_base_t {
-	bool open=0, blocked=0, auto_close=0;
+	bool open=0, blocked=0;
 	uint8_t locked=0; // 1=regular lock, >= 2=padlock, where color index is locked-2
 	int obj_ix=-1; // for closets, etc.
 	float open_amt=0.0; // 0.0=fully closed, 1.0=fully open
@@ -1536,7 +1559,7 @@ struct door_t : public door_base_t {
 	void set_locked_unlockable() {locked = MAX_LOCK_INDEX;}; // use a lock for which there is no matching color key
 	unsigned get_padlock_color_ix() const {assert(is_padlocked()); assert(locked < MAX_LOCK_INDEX); return (locked - 2);}
 	void toggle_open_state(bool allow_partial_open=0);
-	void make_auto_close() {auto_close = 1; open = 0; open_amt = 0.0;}
+	void make_auto_close() {set_auto_close(); open = 0; open_amt = 0.0;}
 	void make_fully_open_or_closed() {open_amt = (open ? 1.0 : 0.0);}
 	bool next_frame();
 };
