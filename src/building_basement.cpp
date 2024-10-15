@@ -438,16 +438,6 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			door_t Door(door, dim, !dir, rgen.rand_bool());
 			Door.for_small_room = 1; // mark so that it only opens 90 degrees
 			add_interior_door(Door, 0, 0, 1); // is_bathroom=0, make_unlocked=0, make_closed=1
-
-			// add walls, one on each side of elevator, and one on each side of the door
-			for (unsigned d = 0; d < 2; ++d) {
-				cube_t side_wall(sub_room), door_wall(sub_room);
-				door_wall.d[!dim][ d  ] = side_wall.d[!dim][!d] = side_wall.d[!dim][d] - (d ? 1.0 : -1.0)*int_wall_thick;
-				door_wall.d[!dim][!d  ] = door.d[!dim][d];
-				door_wall.d[ dim][!dir] = sub_room.d[dim][dir] - dir_sign*int_wall_thick;
-				objs.emplace_back(side_wall, TYPE_PG_WALL, room_id, !dim, d,   0, tot_light_amt, SHAPE_CUBE, wall_color);
-				objs.emplace_back(door_wall, TYPE_PG_WALL, room_id,  dim, dir, 0, tot_light_amt, SHAPE_CUBE, wall_color);
-			} // d
 			room_t equipment_room(room, sub_room); // keep flags, copy cube
 			equipment_room.interior = 1; // treated as basement but not extended basement (no wall padding)
 			equipment_room.expand_in_dim(!dim, -int_wall_thick); // subtract off walls
@@ -466,6 +456,18 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			add_machines_to_room(rgen, equipment_room, zval, room_id, tot_light_amt, objs.size(), 1); // objs_start at end; less_clearance=1
 			// add a breaker panel
 			//add_breaker_panel(rgen, bp, ceil_zval, dim, dir, room_id, tot_light_amt); // TODO
+
+			// add walls, one on each side of elevator, and one on each side of the door; added last since these are occluders; what about back of room/side of elevator?
+			if (interior->room_geom->wall_ps_start == 0) {interior->room_geom->wall_ps_start = objs.size();} // set if not set, on first level
+
+			for (unsigned d = 0; d < 2; ++d) {
+				cube_t side_wall(sub_room), door_wall(sub_room);
+				door_wall.d[!dim][ d  ] = side_wall.d[!dim][!d] = side_wall.d[!dim][d] - (d ? 1.0 : -1.0)*int_wall_thick;
+				door_wall.d[!dim][!d  ] = door.d[!dim][d];
+				door_wall.d[ dim][!dir] = sub_room.d[dim][dir] - dir_sign*int_wall_thick;
+				objs.emplace_back(side_wall, TYPE_PG_WALL, room_id, !dim, d,   0, tot_light_amt, SHAPE_CUBE, wall_color);
+				objs.emplace_back(door_wall, TYPE_PG_WALL, room_id,  dim, dir, 0, tot_light_amt, SHAPE_CUBE, wall_color);
+			} // d
 			obstacles    .push_back(avoid);
 			obstacles_exp.push_back(avoid);
 			obstacles_ps .push_back(avoid);
@@ -661,7 +663,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		add_to_and_clear(pipe_cubes, obstacles); // add gas pipes to obstacles
 
 		// if there are multiple parking garage floors, lights have already been added on the floor(s) below; add them as occluders for sprinkler pipes;
-		// lights on the top floor will be added later and will check for pipe intersections
+		// lights on the top floor will be added later and will check for pipe intersections; elevator equipment room lights are ignored as the entire room is an obstacle
 		for (auto i = objs.begin()+interior->room_geom->wall_ps_start; i < objs.begin()+objs_start; ++i) {
 			if (i->type == TYPE_LIGHT && room.contains_cube(*i)) {obstacles.push_back(*i);}
 		}
