@@ -2385,6 +2385,10 @@ bool zombie_in_attack_range(person_t &person) {
 	point const feet_pos(person.pos.x, person.pos.y, person.get_z1()), player_feet_pos(cur_player_building_loc.pos - vector3d(0.0, 0.0, player_height));
 	return (fabs(feet_pos.z - player_feet_pos.z) < 0.5*player_height && dist_less_than(feet_pos, player_feet_pos, 1.2f*(person.radius + building_t::get_scaled_player_radius())));
 }
+void clamp_person_to_building_bcube(point &pos, cube_t bcube, float radius, float fc_thick) {
+	bcube.z1() += fc_thick + radius; // make sure feet are above the floor
+	bcube.clamp_pt(pos);
+}
 
 // Note: non-const because this updates room light and door state
 int building_t::ai_room_update(person_t &person, float delta_dir, unsigned person_ix, rand_gen_t &rgen) {
@@ -2656,8 +2660,9 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			else {clip_cube = basement;} // basement only
 		}
 		else {clip_cube = bcube;} // above ground
+		// make sure person stays within building bcube; can't clip to room because person may be exiting it
 		clip_cube.expand_by_xy(-coll_dist); // shrink
-		clip_cube.clamp_pt_xy(new_pos); // make sure person stays within building bcube; can't clip to room because person may be exiting it
+		clamp_person_to_building_bcube(new_pos, clip_cube, person.radius, fc_thick);
 	}
 	if (!is_cube() && !person.on_fixed_path() && !check_cube_within_part_sides(person.get_bcube() + (new_pos - person.pos))) { // outside the building
 		int const part_ix(get_part_ix_containing_pt(new_pos));
@@ -2839,7 +2844,7 @@ void building_t::move_person_to_not_collide(person_t &person, person_t const &ot
 	}
 	if (!point_in_building_or_basement_bcube(person.pos)) { // this can happen on rare occasions, due to fp inaccuracy or multiple collisions
 		//cout << TXT(rsum) << TXT(sep_dist) << TXT(move_dist) << TXT(room_ix) << TXT(other.pos.str()) << TXT(person.pos.str()) << TXT(bcube.str()) << endl;
-		bcube.clamp_pt_xy(person.pos); // just clamp pos so that it doesn't assert later
+		clamp_person_to_building_bcube(person.pos, bcube, person.radius, get_fc_thickness()); // just clamp pos so that it doesn't assert later
 	}
 }
 
