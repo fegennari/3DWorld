@@ -1661,6 +1661,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 						// calculate bcube of points along bottom edge of roof section; required for intersecting/clipped roofs where bottom edge is shorter than top edge
 						if (tq.pts[n].z < tq_bcube.zc()) {bot_edge_bcube.assign_or_union_with_pt(cur);}
 					} // for n
+					bot_edge_bcube.expand_in_dim(top_dim, -0.001*extend); // small inward bias to prevent Z-fighting with interior
 					assert(!bot_edge_bcube.is_all_zeros()); // must have at least one point
 					cube_t const new_bcube(tq.get_bcube());
 
