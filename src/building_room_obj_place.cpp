@@ -5221,10 +5221,12 @@ bool building_t::remove_padlock_from_door(unsigned door_ix, point const &remove_
 	float const center(door.get_center_dim(dim));
 	vect_room_object_t &objs(interior->room_geom->objs);
 	assert(door.obj_ix >= 0 && unsigned(door.obj_ix+1) < objs.size()); // must be space for two locks
+	bool saw_padlock(0);
 
 	for (unsigned d = 0; d < 2; ++d) {
 		room_object_t &obj(objs[door.obj_ix + d]);
-		assert(obj.type == TYPE_PADLOCK);
+		if (obj.type != TYPE_PADLOCK) continue; // may have been skipped above if the door has a single entry
+		saw_padlock = 1;
 		bool const keep(((remove_pos[dim] - center)*(obj.get_center_dim(dim) - center)) > 0.0); // keep if it's on the side that was opened
 
 		if (keep) {
@@ -5233,6 +5235,7 @@ bool building_t::remove_padlock_from_door(unsigned door_ix, point const &remove_
 		}
 		else {obj.remove();}
 	} // for d
+	assert(saw_padlock); // at least one padlock must have been removed
 	interior->room_geom->invalidate_model_geom();
 	return 1;
 }
