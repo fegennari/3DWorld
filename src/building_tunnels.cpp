@@ -50,6 +50,13 @@ cube_t tunnel_seg_t::get_room_conn_block() const {
 	block.z2() = block.z1() + 0.22*radius; // set the height
 	return block;
 }
+point tunnel_seg_t::get_room_conn_pt(float zval) const {
+	assert(room_conn);
+	point pt(0.0, 0.0, zval);
+	pt[ dim] = bcube_ext.get_center_dim(dim);
+	pt[!dim] = bcube_ext.d[!dim][room_dir];
+	return pt;
+}
 
 // *** Placement ***
 
@@ -220,6 +227,106 @@ void building_t::add_tunnel_objects(rand_gen_t rgen) {
 			objs.emplace_back(pipe, TYPE_PIPE, 0, !t.dim, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CYLIN, choose_pipe_color(rgen)); // horizontal, room_id=0
 		} // for n
 	} // for t
+}
+
+bool building_interior_t::point_in_tunnel(point const &pos, float expand) const {
+	for (tunnel_seg_t const &t : tunnels) {
+		if (t.bcube_ext.contains_pt_exp(pos, expand)) return 1;
+	}
+	return 0;
+}
+bool building_interior_t::point_near_tunnel_entrance(point const &pos) const {
+	for (tunnel_seg_t const &t : tunnels) {
+		if (!t.room_conn) continue;
+		cube_t c(t.bcube_ext);
+		c.union_with_cube(get_room(t.conn_room_ix)); // include the connected room
+		if (c.contains_pt(pos)) return 1;
+	}
+	return 0;
+}
+int building_interior_t::get_tunnel_ix_for_point(point const &pos) const {
+	for (auto t = tunnels.begin(); t != tunnels.end(); ++t) {
+		if (t->bcube_ext.contains_pt(pos)) return (t - tunnels.begin());
+	}
+	return -1; // not found
+}
+int building_interior_t::get_tunnel_ix_for_room(unsigned room_ix) const {
+	for (auto t = tunnels.begin(); t != tunnels.end(); ++t) {
+		if (t->room_conn && t->conn_room_ix == room_ix) return (t - tunnels.begin());
+	}
+	return -1; // not found
+}
+
+// Note: paths include end_pt and start_pt
+bool building_interior_t::get_tunnel_path_from_room(point const &end_pt, unsigned room_ix, ai_path_t &path) const { // room => tunnel
+	path.clear();
+	room_t const &room(get_room(room_ix));
+	if (!room.has_tunnel_conn()) return 0;
+	int const pt_tix(get_tunnel_ix_for_point(end_pt));
+	if (pt_tix < 0) return 0; // end_pt not in a tunnel
+	if (tunnels[pt_tix].conn_room_ix != room_ix) return 0; // end_pt tunnel not connected to this room
+	int const room_tix(get_tunnel_ix_for_room(room_ix));
+	assert(room_tix >= 0); // should be found
+	tunnel_seg_t const &tseg(tunnels[room_tix]);
+	path.add(tseg.get_room_conn_pt(end_pt.z)); // room to tunnel transition
+	
+	if (room_tix != pt_tix) { // not in the room connector segment
+		path.add(tseg.bcube.xc(), tseg.bcube.yc(), end_pt.z); // center of tunnel entrance segment
+		if (!get_tunnel_path(room_tix, pt_tix, -1, path)) {path.clear(); return 0;}
+		reverse(path.begin()+2, path.end());
+	}
+	path.add(end_pt);
+	return 1;
+}
+bool building_interior_t::get_tunnel_path_to_room(point const &start_pt, unsigned &room_ix, ai_path_t &path) const { // tunnel => room
+	path.clear();
+	int const pt_tix(get_tunnel_ix_for_point(start_pt));
+	if (pt_tix < 0) return 0; // start_pt not in a tunnel
+	room_ix = tunnels[pt_tix].conn_room_ix;
+	int const room_tix(get_tunnel_ix_for_room(room_ix));
+	assert(room_tix >= 0); // should be found
+	tunnel_seg_t const &tseg(tunnels[room_tix]);
+	path.add(start_pt);
+
+	if (room_tix != pt_tix) { // not in the room connector segment
+		if (!get_tunnel_path(pt_tix, room_tix, -1, path)) {path.clear(); return 0;}
+		reverse(path.begin()+1, path.end());
+		path.add(tseg.bcube.xc(), tseg.bcube.yc(), start_pt.z); // center of tunnel entrance segment
+	}
+	path.add(tseg.get_room_conn_pt(start_pt.z)); // tunnel to room transition
+	return 1;
+}
+bool building_interior_t::get_tunnel_path_two_pts(point const &start_pt, point const &end_pt, ai_path_t &path) const {
+	int const s_tix(get_tunnel_ix_for_point(start_pt));
+	if (s_tix < 0) return 0;
+	int const e_tix(get_tunnel_ix_for_point(end_pt));
+	if (s_tix < 0) return 0;
+	tunnel_seg_t const &s_tseg(tunnels[s_tix]), &e_tseg(tunnels[e_tix]);
+	if (s_tseg.conn_room_ix != e_tseg.conn_room_ix) return 0; // different tunnel networks
+	path.add(start_pt);
+
+	if (s_tix != e_tix) { // not in the same segment
+		if (!get_tunnel_path(s_tix, e_tix, -1, path)) {path.clear(); return 0;}
+		reverse(path.begin()+2, path.end());
+	}
+	path.add(end_pt);
+	return 1;
+}
+bool building_interior_t::get_tunnel_path(unsigned tix1, unsigned tix2, int prev_tix, ai_path_t &path) const {
+	if (tix1 == tix2) return 1; // paths connected
+	tunnel_seg_t const &tseg(tunnels[tix1]);
+
+	for (unsigned d = 0; d < 2; ++d) { // try both ends
+		int const new_tix(tseg.conn_ix[d]);
+		if (new_tix < 0 || new_tix == prev_tix) continue;
+		if (!get_tunnel_path(new_tix, tix2, tix1, path)) continue;
+		assert(!path.empty());
+		point const &tseg_pt(tseg.p[d]), &path_pt(path.back());
+		if (tseg.has_gate && tseg.gate_pos > min(tseg_pt[tseg.dim], path_pt[tseg.dim]) && tseg.gate_pos < max(tseg_pt[tseg.dim], path_pt[tseg.dim])) continue; // blocked by gate
+		path.emplace_back(tseg_pt.x, tseg_pt.y, path.back().z);
+		return 1;
+	} // for d
+	return 0;
 }
 
 // *** Drawing ***

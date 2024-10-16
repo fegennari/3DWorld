@@ -1406,6 +1406,7 @@ struct tunnel_seg_t {
 	void set_as_room_conn(bool rdir, float wall_gap);
 	cube_t get_player_walk_area(point const &player_pos, float player_radius) const;
 	cube_t get_room_conn_block() const;
+	point get_room_conn_pt(float zval) const;
 	float get_length() const {return (p[1][dim] - p[0][dim]);}
 };
 typedef vector<tunnel_seg_t> vect_tunnel_seg_t;
@@ -1719,6 +1720,12 @@ struct building_interior_t {
 	bool point_in_ext_basement_room(point const &pos, float expand=0.0) const;
 	bool point_in_tunnel(point const &pos, float expand=0.0) const;
 	bool point_near_tunnel_entrance(point const &pos) const;
+	int get_tunnel_ix_for_point(point const &pos) const;
+	int get_tunnel_ix_for_room (unsigned room_ix) const;
+	bool get_tunnel_path_from_room(point const &end_pt,   unsigned  room_ix, ai_path_t &path) const;
+	bool get_tunnel_path_to_room  (point const &start_pt, unsigned &room_ix, ai_path_t &path) const;
+	bool get_tunnel_path_two_pts(point const &start_pt, point const &end_pt, ai_path_t &path) const;
+	bool get_tunnel_path(unsigned tix1, unsigned tix2, int prev_tix, ai_path_t &path) const;
 	bool cube_in_ext_basement_room(cube_t const &c, bool xy_only) const;
 	door_t const &get_ext_basement_door() const;
 	void assign_master_bedroom(float window_vspacing, float floor_thickness);
@@ -2044,7 +2051,7 @@ struct building_t : public building_geom_t {
 	bool check_for_water_splash(point const &pos_bs, float size=1.0, bool full_room_height=0, bool draw_splash=0, bool alert_zombies=1) const;
 	cube_t calc_splash_bounds(point const &pos) const;
 	void draw_water(vector3d const &xlate) const;
-	void debug_people_in_building(shader_t &s) const;
+	void debug_people_in_building(shader_t &s, point const &camera_bs) const;
 	void subtract_stairs_and_elevators_from_cube(cube_t const &c, vect_cube_t &cube_parts, bool inc_stairs=1, bool inc_elevators=1) const;
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
 	void clear_room_geom();

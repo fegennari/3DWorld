@@ -2359,7 +2359,7 @@ void append_line_pt(vector<vert_wrap_t> &line_pts, point const &pos) {
 	if (line_pts.size() > 1) {line_pts.emplace_back(line_pts.back());} // duplicate point to create a line segment
 	line_pts.emplace_back(pos);
 }
-void building_t::debug_people_in_building(shader_t &s) const {
+void building_t::debug_people_in_building(shader_t &s, point const &camera_bs) const {
 	if (!has_people()) return;
 	shader_t color_shader;
 	color_shader.begin_color_only_shader(YELLOW);

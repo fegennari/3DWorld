@@ -1376,21 +1376,6 @@ bool building_interior_t::point_in_ext_basement_room(point const &pos, float exp
 	if (pool.valid && pool.contains_pt_exp(pos, expand)) return 1;
 	return 0;
 }
-bool building_interior_t::point_in_tunnel(point const &pos, float expand) const {
-	for (tunnel_seg_t const &t : tunnels) {
-		if (t.bcube_ext.contains_pt_exp(pos, expand)) return 1;
-	}
-	return 0;
-}
-bool building_interior_t::point_near_tunnel_entrance(point const &pos) const {
-	for (tunnel_seg_t const &t : tunnels) {
-		if (!t.room_conn) continue;
-		cube_t c(t.bcube_ext);
-		c.union_with_cube(get_room(t.conn_room_ix)); // include the connected room
-		if (c.contains_pt(pos)) return 1;
-	}
-	return 0;
-}
 // returns true if cube is completely contained in any single room; tunnels are ignored
 bool building_interior_t::cube_in_ext_basement_room(cube_t const &c, bool xy_only) const {
 	if (ext_basement_hallway_room_id < 0)        return 0; // no ext basement rooms

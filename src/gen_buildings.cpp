@@ -3728,7 +3728,7 @@ public:
 						building_cont_player    = &b; // there can be only one
 						if (!interior_wind_draw.empty() && !ref_pass_interior) {per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;} // only if there are drawn windows
 						if (reflection_pass) continue; // don't execute the code below
-						if (display_mode & 0x20) {b.debug_people_in_building(s);} // debug visualization
+						if (display_mode & 0x20) {b.debug_people_in_building(s, camera_bs);} // debug visualization
 						float const basement_z_adj(2.0*BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness()); // adjust to prevent problems when camera is close to the plane
 						this_frame_camera_in_building = 1;
 						this_frame_player_in_basement =   b.check_player_in_basement(camera_bs - basement_z_adj*plus_z); // set once

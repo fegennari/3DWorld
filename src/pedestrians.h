@@ -55,6 +55,7 @@ struct person_base_t : public waiting_obj_t {
 struct path_pt_t : public point {
 	bool fixed=0; // path segment is fixed and AI can't select a new path/dest (can't follow the player)
 	path_pt_t(point const &p, bool f=0) : point(p), fixed(f) {}
+	path_pt_t(float x, float y, float z, bool f=0) : point(x, y, z), fixed(f) {}
 };
 
 struct ai_path_t : public vector<path_pt_t> {
@@ -62,6 +63,7 @@ struct ai_path_t : public vector<path_pt_t> {
 	void clear() {vector<path_pt_t>::clear(); uses_nav_grid = is_shortened = 0;}
 	void add(path_pt_t const &p) {if (empty() || p != back()) {push_back(p);}}
 	void add(point const &p, unsigned f) {add(path_pt_t(p, f));}
+	void add(float x, float y, float z, unsigned f=0) {add(path_pt_t(x, y, z, f));}
 	void add(ai_path_t const &path);
 };
 
