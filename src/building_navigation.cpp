@@ -2467,9 +2467,11 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	person.in_pool = 0; // reset for this frame
 	run_ai_pool_logic(person, speed_mult); // handle AI inside the pool; this can happen for zombies
 	
-	if (prev_in_pool && !person.in_pool) {
+	if (prev_in_pool && !person.in_pool) { // stepped out of the pool
+		assert(has_pool());
 		person.retreat_time = 0.5*TICKS_PER_SECOND; // retreat for 0.5s to avoid falling back into the pool chasing the player
-		if (has_pool()) {max_eq(person.pos.z, (get_room(interior->pool.room_ix).z1() + fc_thick + person.radius));} // make sure completely out of pool
+		person.abort_dest(); // reset target to avoid walking back toward the pool
+		max_eq(person.pos.z, (get_room(interior->pool.room_ix).z1() + fc_thick + person.radius)); // make sure completely out of pool
 	}
 	build_nav_graph();
 
