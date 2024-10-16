@@ -2507,6 +2507,7 @@ void building_t::register_player_death(point const &camera_bs) { // due to zombi
 void building_t::add_blood_decal(point const &pos, float radius, colorRGBA const &color) {
 	bool const is_blood(color == WHITE); // else insect guts; here WHITE represents real red blood, while any other color is something custom
 	if (disable_blood && is_blood) return; // disable_blood only applies to red blood, not bug guts
+	if (point_in_water_area(pos))  return; // no blood decal under the water
 	assert(has_room_geom());
 	float zval(pos.z);
 	if (!get_zval_of_floor(pos, radius, zval)) return; // no suitable floor found
