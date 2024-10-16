@@ -453,10 +453,27 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			room_object_t light_obj(light, TYPE_LIGHT, room_id, !dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, light_color);
 			add_sub_room_light(light_obj, equipment_room, !dim, objs.size(), light_ix_assign, rgen);
 			// add machines
-			add_machines_to_room(rgen, equipment_room, zval, room_id, tot_light_amt, objs.size(), 1); // objs_start at end; less_clearance=1
+			unsigned const machines_start_ix(objs.size());
+			add_machines_to_room(rgen, equipment_room, zval, room_id, tot_light_amt, machines_start_ix, 1); // objs_start at end; less_clearance=1
 			// add a breaker panel
-			//add_breaker_panel(rgen, bp, ceil_zval, dim, dir, room_id, tot_light_amt); // TODO
+			cube_t const door_avoid(Door.get_open_door_path_bcube());
 
+			for (unsigned n = 0; n < 20; ++n) { // 20 tries
+				bool const wall_dir(rgen.rand_bool());
+				float const hwidth(0.5*min(0.25f*room_len, rgen.rand_uniform(0.25, 0.35)*window_vspacing)), depth(0.04*window_vspacing);
+				float const wall_pos(sub_room.d[!dim][wall_dir] - (wall_dir ? 1.0 : -1.0)*int_wall_thick);
+				float const wall_center(rgen.rand_uniform(sub_room.d[dim][0]+hwidth+int_wall_thick, sub_room.d[dim][1]-hwidth-int_wall_thick));
+				cube_t breaker_panel;
+				set_cube_zvals(breaker_panel, (ceil_zval - 0.7*window_vspacing), (ceil_zval - rgen.rand_uniform(0.25, 0.3)*window_vspacing));
+				set_wall_width(breaker_panel, wall_center, hwidth, dim);
+				breaker_panel.d[!dim][ wall_dir] = wall_pos;
+				breaker_panel.d[!dim][!wall_dir] = wall_pos + (wall_dir ? -1.0 : 1.0)*depth;
+				cube_t test_cube(breaker_panel);
+				test_cube.d[!dim][!wall_dir] += (wall_dir ? -1.0 : 1.0)*2.0*hwidth; // add clearance so that it can open
+				if (test_cube.intersects(door_avoid) || overlaps_other_room_obj(test_cube, machines_start_ix)) continue; // avoid door and machines
+				add_breaker_panel(rgen, breaker_panel, ceil_zval, !dim, wall_dir, room_id, tot_light_amt);
+				break; // success
+			} // for n
 			// add walls, one on each side of elevator, and one on each side of the door; added last since these are occluders; what about back of room/side of elevator?
 			if (interior->room_geom->wall_ps_start == 0) {interior->room_geom->wall_ps_start = objs.size();} // set if not set, on first level
 
