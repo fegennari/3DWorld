@@ -995,6 +995,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		show_frame_stats();
 		break;
 	case 'g': // pause/resume playback of eventlist
+		show_bool_option_change("Frame Pause", !pause_frame);
 		pause_frame = !pause_frame;
 		break;
 	case 'G': // toggle show framerate/universe stats / voxel add/remove (used to be z)
