@@ -2075,7 +2075,8 @@ struct building_t : public building_geom_t {
 	void all_ai_room_update(rand_gen_t &rgen, float delta_dir);
 	int ai_room_update(person_t &person, float delta_dir, unsigned person_ix, rand_gen_t &rgen);
 	int run_ai_elevator_logic(person_t &person, float delta_dir, rand_gen_t &rgen);
-	bool run_ai_pool_logic(person_t &person, float &speed_mult) const;
+	bool run_ai_pool_logic  (person_t &person, float &speed_mult) const;
+	bool run_ai_tunnel_logic(person_t &person, float &speed_mult) const;
 	bool maybe_zombie_retreat(unsigned person_ix, point const &hit_pos);
 	void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
 	bool is_room_backrooms(unsigned room_ix)   const {return get_room(room_ix).is_backrooms();}

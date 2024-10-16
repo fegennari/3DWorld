@@ -18,7 +18,7 @@ room_object_t player_hiding_obj;
 vect_cube_t reused_avoid_cubes[2]; // temporary that's reused across frames and people
 bool debug_mode(0);
 
-extern bool player_is_hiding, player_on_escalator;
+extern bool player_is_hiding, player_on_escalator, player_in_tunnel;
 extern int frame_counter, display_mode, animate2, player_in_elevator;
 extern float fticks;
 extern building_params_t global_building_params;
@@ -2230,6 +2230,30 @@ bool building_t::run_ai_pool_logic(person_t &person, float &speed_mult) const {
 	return 1; // in the pool
 }
 
+bool building_t::run_ai_tunnel_logic(person_t &person, float &speed_mult) const {
+	if (interior->tunnels.empty() || !point_in_extended_basement(person.pos)) return 0;
+	point const dest(cur_player_building_loc.pos.x, cur_player_building_loc.pos.y, person.pos.z);
+
+	if (person.in_tunnel) {
+		if (player_in_tunnel) {
+			if (!interior->get_tunnel_path_two_pts(person.pos, dest, person.path)) return 0;
+			speed_mult *= 2.0; // faster
+		}
+		else { // player not in tunnel
+			unsigned room_ix(0); // unused
+			if (!interior->get_tunnel_path_to_room(person.pos, room_ix, person.path)) return 0;
+		}
+		assert(!person.path.empty());
+		person.path.erase(person.path.begin()); // remove person.pos
+		return 1;
+	}
+	else if (player_in_tunnel) { // not in tunnel, but player in tunnel
+		int const room_ix(get_room_containing_pt(person.pos));
+		if (room_ix >= 0 && interior->get_tunnel_path_from_room(dest, room_ix, person.path)) return 1;
+	}
+	return 0;
+}
+
 int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_gen_t &rgen) {
 	assert(person.goal_type == GOAL_TYPE_ELEVATOR);
 	if (!has_room_geom()) return person.ai_state; // if player has moved away and room_geom was deleted, remain in the current state
@@ -2473,6 +2497,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		person.abort_dest(); // reset target to avoid walking back toward the pool
 		max_eq(person.pos.z, (get_room(interior->pool.room_ix).z1() + fc_thick + person.radius)); // make sure completely out of pool
 	}
+	//if (zombie_attack_mode && run_ai_tunnel_logic(person, speed_mult)) {reverse(person.path.begin(), person.path.end());}
 	build_nav_graph();
 
 	if (zombie_attack_mode && player_is_hiding && person.saw_player_hide && global_building_params.ai_opens_doors && global_building_params.ai_sees_player_hide >= 2 &&
@@ -2495,7 +2520,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		} // for i
 	}
 	bool choose_dest(!person.target_valid());
-	bool const update_path(!person.in_pool && need_to_update_ai_path(person));
+	bool const update_path(!person.in_pool && !person.in_tunnel && need_to_update_ai_path(person));
 	// if room objects spawn in, select a new dest to avoid walking through objects based on our previous, possibly invalid path;
 	// but not if this person is on stairs/ramp/escalator or an elevator, or they may end at an invalid zval between floors
 	if (has_rgeom && !person.has_room_geom && !person.on_fixed_path() && person.ai_state < AI_ENTER_ELEVATOR) {person.abort_dest();}
@@ -2632,7 +2657,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	else { // optimization for aligned dir
 		new_pos = person.pos + max_dist*person.dir;
 	}
-	if (!person.in_pool) { // make sure the person is inside the building, in case they were pushed by another person
+	if (!person.in_pool && !person.in_tunnel) { // make sure the person is inside the building, in case they were pushed by another person
 		cube_t clip_cube;
 		
 		if (has_basement() && new_pos.z < ground_floor_z1) { // in the basement
@@ -2763,8 +2788,8 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	}
 	float const min_valid_zval(true_z1 + fc_thick + person.radius), max_valid_zval(bcube.z2() - person.radius); // Note: max should include the attic
 
-	if (/*player_in_this_building &&*/ !person.in_pool && !person.on_stairs() && person.cur_room >= 0) { // movement in XY, not on stairs, room is valid: snap to nearest floor
-		// this is optional and is done just in case something went wrong
+	if (/*player_in_this_building &&*/ !person.in_pool && !person.in_tunnel && !person.on_stairs() && person.cur_room >= 0) {
+		// movement in XY, not on stairs, room is valid: snap to nearest floor; this is optional and is done just in case something went wrong
 		room_t room(get_room(person.cur_room));
 
 		if (!room.contains_pt(new_pos)) { // maybe we just exited the stairs into a different part and cur_room hasn't been updated yet
