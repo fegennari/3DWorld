@@ -1407,6 +1407,7 @@ struct tunnel_seg_t {
 	cube_t get_player_walk_area(point const &player_pos, float player_radius) const;
 	cube_t get_room_conn_block() const;
 	point get_room_conn_pt(float zval) const;
+	bool is_blocked_by_gate(point const &p1, point const &p2) const;
 	float get_length() const {return (p[1][dim] - p[0][dim]);}
 };
 typedef vector<tunnel_seg_t> vect_tunnel_seg_t;

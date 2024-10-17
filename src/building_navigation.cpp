@@ -25,7 +25,7 @@ extern building_params_t global_building_params;
 extern bldg_obj_type_t bldg_obj_types[];
 
 bool ai_follow_player() {return (global_building_params.ai_follow_player || in_building_gameplay_mode());}
-bool can_ai_follow_player(person_t const &person, bool allow_diff_building=0);
+bool can_ai_follow_player(person_t const &person, bool allow_diff_building=0, bool allow_outside_room=0);
 float get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing);
 void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool alert_other_zombies, bool high_priority=0, float gain=1.0, float pitch=1.0);
 int register_ai_player_coll(uint8_t &has_key, float height);
@@ -2000,9 +2000,9 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 	return 1;
 }
 
-bool can_ai_follow_player(person_t const &person, bool allow_diff_building) {
-	if (!ai_follow_player())                 return 0; // disabled
-	if (!cur_player_building_loc.is_valid()) return 0; // no target
+bool can_ai_follow_player(person_t const &person, bool allow_diff_building, bool allow_outside_room) {
+	if (!ai_follow_player()) return 0; // disabled
+	if (!cur_player_building_loc.is_valid() && !allow_outside_room) return 0; // no target
 	if (!allow_diff_building && cur_player_building_loc.building_ix != person.cur_bldg) return 0; // wrong building
 	if (player_is_hiding && !person.saw_player_hide) return 0; // ignore player in closet, bathroom stall, or shower with door closed, and we didn't see them hide
 	if (person.retreat_time > 0.0) return 0; // ignore the player if retreating
@@ -2231,25 +2231,50 @@ bool building_t::run_ai_pool_logic(person_t &person, float &speed_mult) const {
 }
 
 bool building_t::run_ai_tunnel_logic(person_t &person, float &speed_mult) const {
+	if (person.in_pool || person.retreat_time > 0.0) return 0;
 	if (interior->tunnels.empty() || !point_in_extended_basement(person.pos)) return 0;
+	bool const in_tunnel(interior->point_in_tunnel(person.pos));
 	point const dest(cur_player_building_loc.pos.x, cur_player_building_loc.pos.y, person.pos.z);
 
 	if (person.in_tunnel) {
+		if (!in_tunnel && get_room_containing_pt(person.pos) >= 0) { // must check both conditions if case person was pushed
+			person.in_tunnel = 0;
+			return 0;
+		}
 		if (player_in_tunnel) {
-			if (!interior->get_tunnel_path_two_pts(person.pos, dest, person.path)) return 0;
+			if (dest == person.pos) return 0; // already at dest
+			if (!interior->get_tunnel_path_two_pts(person.pos, dest, person.path)) return 0; // tunnel => tunnel
 			speed_mult *= 2.0; // faster
 		}
 		else { // player not in tunnel
-			unsigned room_ix(0); // unused
-			if (!interior->get_tunnel_path_to_room(person.pos, room_ix, person.path)) return 0;
+			unsigned room_ix(0);
+			if (!interior->get_tunnel_path_to_room(person.pos, room_ix, person.path)) return 0; // tunnel => room
+			room_t const &room(get_room(room_ix));
+			person.path.add(room.xc(), room.yc(), person.pos.z); // use the room center, even though it may be blocked by an object such as a box, crate, or chair
 		}
 		assert(!person.path.empty());
+		unique_cont(person.path); // in case there are duplicates
 		person.path.erase(person.path.begin()); // remove person.pos
+		reverse(person.path.begin(), person.path.end());
+		person.next_path_pt(1);
 		return 1;
 	}
-	else if (player_in_tunnel) { // not in tunnel, but player in tunnel
-		int const room_ix(get_room_containing_pt(person.pos));
-		if (room_ix >= 0 && interior->get_tunnel_path_from_room(dest, room_ix, person.path)) return 1;
+	else { // not currently in the tunnel
+		if (in_tunnel) { // newly entering tunnel
+			person.in_tunnel = 1;
+			return 0;
+		}
+		if (player_in_tunnel && cur_player_building_loc.building_ix == person.cur_bldg && ai_follow_player()) { // not in tunnel, but player in tunnel
+			if (dest == person.pos) return 0; // already at dest
+			int const room_ix(get_room_containing_pt(person.pos));
+			if (room_ix < 0) return 0;
+
+			// Note: doesn't check for obstacles in the room; this can lead to zombies walking through boxes and crates in storage rooms, and chairs
+			if (interior->get_tunnel_path_from_room(dest, room_ix, person.path)) { // room => tunne
+				reverse(person.path.begin(), person.path.end());
+				return 1;
+			}
+		}
 	}
 	return 0;
 }
@@ -2441,19 +2466,20 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		person.idle_time += fticks;
 
 		if (wait_time > fticks && !can_ai_follow_player(person, allow_diff_building)) { // waiting; don't wait if there's a player to follow
-			// check for other people colliding with this person and handle it
-			bool was_bumped(0);
+			if (!person.in_tunnel) { // check for other people colliding with this person and handle it; skip for tunnels
+				bool was_bumped(0);
 
-			for (auto p = interior->people.begin()+person_ix+1; p < interior->people.end(); ++p) {
-				if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
-				if (global_building_params.no_coll_enter_exit_elevator && person.ai_state == AI_WAIT_ELEVATOR && p->ai_state == AI_EXIT_ELEVATOR) continue;
-				float const rsum(coll_dist + COLL_RADIUS_SCALE*p->radius);
-				if (!dist_xy_less_than(person.pos, p->pos, rsum)) continue; // not intersecting
-				move_person_to_not_collide(person, *p, person.pos, rsum, coll_dist); // if we get here, we have to actively move out of the way
-				was_bumped = 1;
-			} // for p
-			if (was_bumped) {wait_time  = 0.0;} // stop waiting so that we can react
-			else            {wait_time -= fticks;}
+				for (auto p = interior->people.begin()+person_ix+1; p < interior->people.end(); ++p) {
+					if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
+					if (global_building_params.no_coll_enter_exit_elevator && person.ai_state == AI_WAIT_ELEVATOR && p->ai_state == AI_EXIT_ELEVATOR) continue;
+					float const rsum(coll_dist + COLL_RADIUS_SCALE*p->radius);
+					if (!dist_xy_less_than(person.pos, p->pos, rsum)) continue; // not intersecting
+					move_person_to_not_collide(person, *p, person.pos, rsum, coll_dist); // if we get here, we have to actively move out of the way
+					was_bumped = 1;
+				} // for p
+				if (was_bumped) {wait_time  = 0.0;} // stop waiting so that we can react
+				else            {wait_time -= fticks;}
+			}
 			person.anim_time = 0.0; // reset just in case (though should already be at 0.0)
 
 			if (person.ai_state != AI_WAIT_ELEVATOR) { // don't reset goal and return here if waiting at an elevator
@@ -2473,7 +2499,8 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	}
 	debug_mode = (cur_player_building_loc.building_ix == person.cur_bldg); // used for debugging printouts
 	//if (zombie_in_attack_range(person)) {cout << TXTi(person.goal_type) << TXTi(person.ai_state) << TXT(person.path.size()) << endl;} // TESTING
-	bool const zombie_attack_mode(can_ai_follow_player(person, allow_diff_building));
+	bool const allow_outside_room(person.in_tunnel && player_in_tunnel); // zombies can attack the player in tunnels
+	bool const zombie_attack_mode(can_ai_follow_player(person, allow_diff_building, allow_outside_room));
 	
 	if (zombie_attack_mode && zombie_in_attack_range(person)) { // check for player intersection/damage (even if zombie is in the elevator)
 		if (!check_for_wall_ceil_floor_int(person.pos, cur_player_building_loc.pos, 1)) { // inc_pg_br_walls=1
@@ -2497,7 +2524,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		person.abort_dest(); // reset target to avoid walking back toward the pool
 		max_eq(person.pos.z, (get_room(interior->pool.room_ix).z1() + fc_thick + person.radius)); // make sure completely out of pool
 	}
-	//if (zombie_attack_mode && run_ai_tunnel_logic(person, speed_mult)) {reverse(person.path.begin(), person.path.end());}
+	if (run_ai_tunnel_logic(person, speed_mult)) {}
 	build_nav_graph();
 
 	if (zombie_attack_mode && player_is_hiding && person.saw_player_hide && global_building_params.ai_opens_doors && global_building_params.ai_sees_player_hide >= 2 &&
@@ -2592,10 +2619,11 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		if (!person.path.empty()) { // move to next path point
 			person.next_path_pt(0);
 
-			if (person.target_pos == person.pos) { // this is rare and maybe should be an error, but I've seen it fail once
-				cout << "Invalid building AI path point: " << person.pos.str() << endl;
+			if (person.target_pos == person.pos) { // this is rare and maybe should be an error, but I've seen it fail once, and it can fail for tunnels
+				if (!person.in_tunnel) {cout << "Invalid building AI path point: " << person.pos.str() << endl;}
 				//register_debug_event(person.target_pos, "invalid building AI path point");
-				person.target_pos += 0.01*person.radius*rgen.signed_rand_vector_xy(); // add a small random offset so that dir isn't a zero vector
+				if (person.dir.x != 0.0 || person.dir.y != 0.0) {person.target_pos += 0.01*person.radius*person.dir;} // move forward slightly
+				else {person.target_pos += 0.01*person.radius*rgen.signed_rand_vector_xy();} // add a small random offset so that dir isn't a zero vector
 			}
 			//return AI_NEXT_PT; // returning here and recalculating the path on the next frame can get us stuck at this point when chasing the player
 		}
@@ -2676,10 +2704,14 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 				else { // primarily in the extended basement
 					cube_t cur_room_bcube(basement); // start at the basement in case we're not even in a room, so we can at least snap here as a fallback
 
-					for (auto r = interior->ext_basement_rooms_start(); r != interior->rooms.end(); ++r) {
+					for (auto r = interior->ext_basement_rooms_start(); r != interior->rooms.end(); ++r) { // include extended basement rooms
 						if (new_pos.z < r->z1() || new_pos.z > r->z2()) continue; // wrong level
 						if (r->contains_pt(new_pos)) {cur_room_bcube = *r;} // this is the room we'll be pushed into if needed
 						accumulate_shared_xy_area(*r, sc, cont_area);
+					}
+					for (tunnel_seg_t const &t : interior->tunnels) { // include tunnels
+						if (t.room_conn && t.bcube_ext.contains_pt(new_pos)) {cur_room_bcube = t.bcube_ext;}
+						accumulate_shared_xy_area(t.bcube_ext, sc, cont_area);
 					}
 					if (cont_area < 0.99*sc.get_area_xy()) {clip_cube = cur_room_bcube;} // not contained - force into containing room
 				}
@@ -2710,7 +2742,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		assert(0);
 	}
 	// don't do collision detection while on stairs/ramp/escalator because it doesn't work properly; just let people walk through each other
-	if (!person.on_fixed_path()) {
+	if (!person.on_fixed_path() && !person.in_tunnel) {
 		if (person.goal_type == GOAL_TYPE_ELEVATOR) { // heading for the elevator
 			// check for collisions with someone else waiting for the elevator
 			for (auto p = interior->people.begin(); p < interior->people.end(); ++p) {

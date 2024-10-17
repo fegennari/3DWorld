@@ -57,6 +57,9 @@ point tunnel_seg_t::get_room_conn_pt(float zval) const {
 	pt[!dim] = bcube_ext.d[!dim][room_dir];
 	return pt;
 }
+bool tunnel_seg_t::is_blocked_by_gate(point const &p1, point const &p2) const {
+	return (has_gate && gate_pos > min(p1[dim], p2[dim]) && gate_pos < max(p1[dim], p2[dim]));
+}
 
 // *** Placement ***
 
@@ -229,6 +232,8 @@ void building_t::add_tunnel_objects(rand_gen_t rgen) {
 	} // for t
 }
 
+// *** queries and pathing ***
+
 bool building_interior_t::point_in_tunnel(point const &pos, float expand) const {
 	for (tunnel_seg_t const &t : tunnels) {
 		if (t.bcube_ext.contains_pt_exp(pos, expand)) return 1;
@@ -267,15 +272,16 @@ bool building_interior_t::get_tunnel_path_from_room(point const &end_pt, unsigne
 	if (tunnels[pt_tix].conn_room_ix != room_ix) return 0; // end_pt tunnel not connected to this room
 	int const room_tix(get_tunnel_ix_for_room(room_ix));
 	assert(room_tix >= 0); // should be found
-	tunnel_seg_t const &tseg(tunnels[room_tix]);
-	path.add(tseg.get_room_conn_pt(end_pt.z)); // room to tunnel transition
+	tunnel_seg_t const &tseg_r(tunnels[room_tix]);
+	path.add(tseg_r.get_room_conn_pt(end_pt.z)); // room to tunnel transition
 	
 	if (room_tix != pt_tix) { // not in the room connector segment
-		path.add(tseg.bcube.xc(), tseg.bcube.yc(), end_pt.z); // center of tunnel entrance segment
+		path.add(tseg_r.bcube.xc(), tseg_r.bcube.yc(), end_pt.z, 1); // center of tunnel entrance segment; fixed=1
 		if (!get_tunnel_path(room_tix, pt_tix, -1, path)) {path.clear(); return 0;}
 		reverse(path.begin()+2, path.end());
 	}
-	path.add(end_pt);
+	if (tunnels[pt_tix].is_blocked_by_gate(end_pt, path.back())) {path.clear(); return 0;} // blocked by gate
+	path.add(end_pt, 1); // fixed=1
 	return 1;
 }
 bool building_interior_t::get_tunnel_path_to_room(point const &start_pt, unsigned &room_ix, ai_path_t &path) const { // tunnel => room
@@ -291,25 +297,26 @@ bool building_interior_t::get_tunnel_path_to_room(point const &start_pt, unsigne
 	if (room_tix != pt_tix) { // not in the room connector segment
 		if (!get_tunnel_path(pt_tix, room_tix, -1, path)) {path.clear(); return 0;}
 		reverse(path.begin()+1, path.end());
-		path.add(tseg.bcube.xc(), tseg.bcube.yc(), start_pt.z); // center of tunnel entrance segment
+		path.add(tseg.bcube.xc(), tseg.bcube.yc(), start_pt.z, 1); // center of tunnel entrance segment; fixed=1
 	}
-	path.add(tseg.get_room_conn_pt(start_pt.z)); // tunnel to room transition
+	path.add(tseg.get_room_conn_pt(start_pt.z), 1); // tunnel to room transition; fixed=1
 	return 1;
 }
 bool building_interior_t::get_tunnel_path_two_pts(point const &start_pt, point const &end_pt, ai_path_t &path) const {
+	path.clear();
 	int const s_tix(get_tunnel_ix_for_point(start_pt));
 	if (s_tix < 0) return 0;
 	int const e_tix(get_tunnel_ix_for_point(end_pt));
 	if (s_tix < 0) return 0;
-	tunnel_seg_t const &s_tseg(tunnels[s_tix]), &e_tseg(tunnels[e_tix]);
-	if (s_tseg.conn_room_ix != e_tseg.conn_room_ix) return 0; // different tunnel networks
+	if (tunnels[s_tix].conn_room_ix != tunnels[e_tix].conn_room_ix) return 0; // different tunnel networks
 	path.add(start_pt);
 
 	if (s_tix != e_tix) { // not in the same segment
 		if (!get_tunnel_path(s_tix, e_tix, -1, path)) {path.clear(); return 0;}
-		reverse(path.begin()+2, path.end());
+		reverse(path.begin()+1, path.end());
 	}
-	path.add(end_pt);
+	if (tunnels[e_tix].is_blocked_by_gate(end_pt, path.back())) {path.clear(); return 0;} // blocked by gate
+	path.add(end_pt, 1); // fixed=1
 	return 1;
 }
 bool building_interior_t::get_tunnel_path(unsigned tix1, unsigned tix2, int prev_tix, ai_path_t &path) const {
@@ -318,12 +325,12 @@ bool building_interior_t::get_tunnel_path(unsigned tix1, unsigned tix2, int prev
 
 	for (unsigned d = 0; d < 2; ++d) { // try both ends
 		int const new_tix(tseg.conn_ix[d]);
-		if (new_tix < 0 || new_tix == prev_tix) continue;
+		if (new_tix < 0 || new_tix == prev_tix)          continue;
 		if (!get_tunnel_path(new_tix, tix2, tix1, path)) continue;
 		assert(!path.empty());
-		point const &tseg_pt(tseg.p[d]), &path_pt(path.back());
-		if (tseg.has_gate && tseg.gate_pos > min(tseg_pt[tseg.dim], path_pt[tseg.dim]) && tseg.gate_pos < max(tseg_pt[tseg.dim], path_pt[tseg.dim])) continue; // blocked by gate
-		path.emplace_back(tseg_pt.x, tseg_pt.y, path.back().z);
+		point const &tseg_pt(tseg.p[d]);
+		if (tseg.is_blocked_by_gate(tseg_pt, path.back())) continue; // blocked by gate
+		path.add(tseg_pt.x, tseg_pt.y, path.back().z, 1); // fixed=1
 		return 1;
 	} // for d
 	return 0;
