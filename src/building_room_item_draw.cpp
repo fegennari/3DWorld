@@ -2388,27 +2388,6 @@ void building_t::debug_people_in_building(shader_t &s, point const &camera_bs) c
 		if (!p.path.empty ()) {draw_sphere_vbo(p.path.front(), sradius, ndiv, 0);} // draw last point/dest
 		if (p.target_valid()) {draw_sphere_vbo(p.target_pos,   sradius, ndiv, 0);} // draw target pos
 	} // for p
-	if (0 && player_building == this) { // debug tunnels if player is in this building
-		static point last_player_tunnel_pos;
-		ai_path_t path;
-		colorRGBA const colors[6] = {RED, ORANGE, YELLOW, GREEN, BLUE, PURPLE};
-		unsigned color_ix(0);
-
-		if (player_in_tunnel) {
-			unsigned room_ix(0); // unused
-			interior->get_tunnel_path_to_room(camera_bs, room_ix, path);
-			last_player_tunnel_pos = camera_bs;
-		}
-		else {
-			int const room_ix(get_room_containing_pt(camera_bs));
-			if (room_ix >= 0) {interior->get_tunnel_path_from_room(last_player_tunnel_pos, room_ix, path);}
-		}
-		for (point const &p : path) {
-			if (p == camera_bs) continue;
-			color_shader.set_cur_color(colors[(color_ix++) % 6]);
-			draw_sphere_vbo(p, (0.2 + 0.1*color_ix)*CAMERA_RADIUS, ndiv, 0);
-		}
-	}
 	color_shader.end_shader();
 	s.make_current();
 }
