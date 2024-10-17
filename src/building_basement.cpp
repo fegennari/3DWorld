@@ -507,7 +507,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	float center_pos(wall.get_center_dim(dim));
 	// if there's an odd number of pillars, move the gap between two pillars on one side or the other
 	if (split_sep_wall && (num_pillars & 1)) {center_pos += (rgen.rand_bool() ? -1.0 : 1.0)*0.5*pillar_spacing;}
-	vect_cube_t pillars; // added after wall segments
+	vect_cube_t sep_walls, pillars; // pillars are added after wall segments
 
 	for (unsigned n = 0; n < num_walls+2; ++n) { // includes room far walls
 		if (n < num_walls) { // interior wall
@@ -529,6 +529,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 						if (w.get_sz_dim(dim) < 2.0*window_vspacing) continue; // too short, skip
 						objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color);
 						interior->room_geom->pgbr_walls[!dim].push_back(w); // save for occlusion culling
+						sep_walls.push_back(w);
 					}
 				} // for side
 			}
@@ -605,13 +606,30 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			cube_t space(row);
 			space.d[!dim][!d] += d_sign*space_shrink; // shrink
 			space.d[ dim][0]   = row_left_edge;
+			float const space_center_len(space.get_center_dim(!dim));
 			bool last_was_space(0);
 
 			for (unsigned s = 0; s < num_spaces_per_row; ++s) {
 				space.d[dim][1] = space.d[dim][0] + space_width; // set width
 				assert(space.is_strictly_normalized());
+				bool blocked(0);
 				
-				if (has_bcube_int_xy(space, obstacles_ps)) { // skip entire space if it intersects stairs or an elevator
+				for (cube_t const &c : obstacles_ps) {
+					if (!space.intersects_xy(c)) continue;
+					float const obj_center(c.get_center_dim(!dim));
+					blocked = 1;
+					
+					// ignore intersection if sep_walls spans entire parking space and obstacle center is on the other side
+					for (cube_t const &w : sep_walls) {
+						if (w.d[dim][0] > space.d[dim][0] || w.d[dim][1] < space.d[dim][1]) continue; // wall does not span parking space
+						if (!w.intersects(c)) continue;
+						float const wall_center(w.get_center_dim(!dim));
+						bool wall_dir(space_center_len < wall_center); // direction of wall relative to parking space
+						if ((wall_center < obj_center) == wall_dir) {blocked = 0; break;} // allow it
+					}
+					if (blocked) break;
+				} // for c
+				if (blocked) { // skip entire space if it intersects stairs or an elevator
 					if (last_was_space) {objs.back().flags &= ~RO_FLAG_ADJ_HI;} // no space to the right for the previous space
 					last_was_space = 0;
 				}
