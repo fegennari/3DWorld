@@ -1767,7 +1767,7 @@ bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t 
 		room_object_t &added_obj(get_room_object_by_index(obj_id));
 		added_obj = obj; // overwrite with new object
 		if (set_obj_id) {added_obj.obj_id = (uint16_t)(obj.has_dstate() ? allocate_dynamic_state() : obj_id);}
-		if (velocity != zero_vector) {get_dstate(added_obj).velocity = velocity;}
+		if (velocity != zero_vector) {assert(added_obj.has_dstate()); get_dstate(added_obj).velocity = velocity;}
 	}
 	update_draw_state_for_room_object(obj, building, 0);
 	return 1;

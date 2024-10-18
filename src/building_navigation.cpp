@@ -2085,6 +2085,7 @@ bool building_t::can_target_player(person_t const &person) const {
 	if (player_on_escalator)              return 0; // don't follow player on escalator; wait until player reaches the floor above or below
 	// if we're on an upper retail glass floor, we follow the player if and only if they are also on the floor
 	if (point_over_glass_floor(person.pos)) {return point_over_glass_floor(cur_player_building_loc.pos);}
+	assert(cur_player_building_loc.room_ix >= 0);
 	room_t const &player_room(get_room(cur_player_building_loc.room_ix));
 	float const first_floor_zceil(player_room.z1() + get_window_vspace());
 	if (player_room.is_single_floor && cur_player_building_loc.pos.z > first_floor_zceil) return 0; // check for player on unreachable floor

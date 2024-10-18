@@ -878,6 +878,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		interior->room_geom->expand_object(obj, *this);
 	}
 	else if (is_ball_type(obj.type)) { // push the ball
+		assert(obj.has_dstate());
 		room_obj_dstate_t &dstate(interior->room_geom->get_dstate(obj));
 		dstate.velocity.x += 0.5*KICK_VELOCITY*int_dir.x;
 		dstate.velocity.y += 0.5*KICK_VELOCITY*int_dir.y;
@@ -1121,6 +1122,7 @@ void apply_building_gravity(float &vz, float dt_ticks) {
 
 void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point const &player_pos, float player_z1, bool player_is_moving) {
 	room_object_t &ball(*ball_it);
+	assert(ball.has_dstate());
 	room_obj_dstate_t &dstate(interior->room_geom->get_dstate(ball));
 	vector3d &velocity(dstate.velocity);
 
