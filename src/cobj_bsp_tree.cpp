@@ -43,7 +43,13 @@ coll_tquad::coll_tquad(triangle const &t, colorRGBA const &c) : color(c) {
 bool tquad_t::is_valid() const {return (npts >= 3 && is_triangle_valid(pts[0], pts[1], pts[2]));}
 
 void tquad_t::update_bcube(cube_t &c) const {
-	for (unsigned n = 0; n < npts; ++n) {c.union_with_pt(pts[n]);}
+	UNROLL_3X(min_eq(c.d[i_][0], min(pts[0][i_], min(pts[1][i_], pts[2][i_]))););
+	UNROLL_3X(max_eq(c.d[i_][1], max(pts[0][i_], max(pts[1][i_], pts[2][i_]))););
+	
+	if (npts == 4) {
+		UNROLL_3X(min_eq(c.d[i_][0], pts[3][i_]););
+		UNROLL_3X(max_eq(c.d[i_][1], pts[3][i_]););
+	}
 }
 cube_t tquad_t::get_bcube() const {
 	cube_t c(pts[0], pts[1]);
@@ -631,7 +637,7 @@ void cobj_bvh_tree::build_tree_top_level_omp() { // single octtree level
 		assert(cur_nix <= nodes.size());
 	}
 
-	#pragma omp parallel for schedule(static,1)
+#pragma omp parallel for schedule(static,1)
 	for (int bix = 0; bix < 8; ++bix) {
 		unsigned const count(top_temp_bins[bix].size());
 		if (count == 0) continue; // empty bin
