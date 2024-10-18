@@ -4206,7 +4206,10 @@ public:
 		unsigned const num_iverts(building_draw_interior.num_verts() + building_draw_int_ext_walls.num_verts());
 		unsigned const num_itris( building_draw_interior.num_tris () + building_draw_int_ext_walls.num_tris ());
 		gpu_mem_usage += (num_everts + num_iverts)*sizeof(vert_norm_comp_tc_color);
-		if (!is_tile) {cout << "Building V: " << num_everts << ", T: " << num_etris << ", interior V: " << num_iverts << ", T: " << num_itris << ", mem: " << gpu_mem_usage << endl;}
+		
+		if (!is_tile && num_everts > 0) {
+			cout << "Building V: " << num_everts << ", T: " << num_etris << ", interior V: " << num_iverts << ", T: " << num_itris << ", mem: " << gpu_mem_usage << endl;
+		}
 	}
 	void create_vbos(bool is_tile=0) {
 		if (vbos_created) return; // already created
