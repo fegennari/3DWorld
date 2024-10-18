@@ -1723,9 +1723,9 @@ struct building_interior_t {
 	bool point_near_tunnel_entrance(point const &pos) const;
 	int get_tunnel_ix_for_point(point const &pos) const;
 	int get_tunnel_ix_for_room (unsigned room_ix) const;
-	bool get_tunnel_path_from_room(point const &end_pt,   unsigned  room_ix, ai_path_t &path) const;
+	bool get_tunnel_path_from_room(point const &end_pt,   unsigned  room_ix, float radius, ai_path_t &path) const;
 	bool get_tunnel_path_to_room  (point const &start_pt, unsigned &room_ix, ai_path_t &path) const;
-	bool get_tunnel_path_two_pts(point const &start_pt, point const &end_pt, ai_path_t &path) const;
+	bool get_tunnel_path_two_pts(point const &start_pt, point const &end_pt, float radius, ai_path_t &path) const;
 	bool get_tunnel_path(unsigned tix1, unsigned tix2, int prev_tix, ai_path_t &path) const;
 	bool cube_in_ext_basement_room(cube_t const &c, bool xy_only) const;
 	door_t const &get_ext_basement_door() const;

@@ -2244,7 +2244,7 @@ bool building_t::run_ai_tunnel_logic(person_t &person, float &speed_mult) const 
 		}
 		if (player_in_tunnel) {
 			if (dest == person.pos) return 0; // already at dest
-			if (!interior->get_tunnel_path_two_pts(person.pos, dest, person.path)) return 0; // tunnel => tunnel
+			if (!interior->get_tunnel_path_two_pts(person.pos, dest, COLL_RADIUS_SCALE*person.radius, person.path)) return 0; // tunnel => tunnel
 			speed_mult *= 2.0; // faster
 		}
 		else { // player not in tunnel
@@ -2271,7 +2271,7 @@ bool building_t::run_ai_tunnel_logic(person_t &person, float &speed_mult) const 
 			if (room_ix < 0) return 0;
 
 			// Note: doesn't check for obstacles in the room; this can lead to zombies walking through boxes and crates in storage rooms, and chairs
-			if (interior->get_tunnel_path_from_room(dest, room_ix, person.path)) { // room => tunne
+			if (interior->get_tunnel_path_from_room(dest, room_ix, COLL_RADIUS_SCALE*person.radius, person.path)) { // room => tunnel
 				reverse(person.path.begin(), person.path.end());
 				return 1;
 			}

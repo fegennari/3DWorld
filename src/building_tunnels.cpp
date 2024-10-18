@@ -263,7 +263,11 @@ int building_interior_t::get_tunnel_ix_for_room(unsigned room_ix) const {
 }
 
 // Note: paths include end_pt and start_pt
-bool building_interior_t::get_tunnel_path_from_room(point const &end_pt, unsigned room_ix, ai_path_t &path) const { // room => tunnel
+void add_clamped_pt(tunnel_seg_t const &tseg, point pos, float radius, ai_path_t &path) {
+	tseg.get_player_walk_area(pos, radius).clamp_pt_xy(pos);
+	path.add(pos, 1); // fixed=1
+}
+bool building_interior_t::get_tunnel_path_from_room(point const &end_pt, unsigned room_ix, float radius, ai_path_t &path) const { // room => tunnel
 	path.clear();
 	room_t const &room(get_room(room_ix));
 	if (!room.has_tunnel_conn()) return 0;
@@ -281,7 +285,7 @@ bool building_interior_t::get_tunnel_path_from_room(point const &end_pt, unsigne
 		reverse(path.begin()+2, path.end());
 	}
 	if (tunnels[pt_tix].is_blocked_by_gate(end_pt, path.back())) {path.clear(); return 0;} // blocked by gate
-	path.add(end_pt, 1); // fixed=1
+	add_clamped_pt(tunnels[pt_tix], end_pt, radius, path);
 	return 1;
 }
 bool building_interior_t::get_tunnel_path_to_room(point const &start_pt, unsigned &room_ix, ai_path_t &path) const { // tunnel => room
@@ -302,7 +306,7 @@ bool building_interior_t::get_tunnel_path_to_room(point const &start_pt, unsigne
 	path.add(tseg.get_room_conn_pt(start_pt.z), 1); // tunnel to room transition; fixed=1
 	return 1;
 }
-bool building_interior_t::get_tunnel_path_two_pts(point const &start_pt, point const &end_pt, ai_path_t &path) const {
+bool building_interior_t::get_tunnel_path_two_pts(point const &start_pt, point const &end_pt, float radius, ai_path_t &path) const {
 	path.clear();
 	int const s_tix(get_tunnel_ix_for_point(start_pt));
 	if (s_tix < 0) return 0;
@@ -316,7 +320,7 @@ bool building_interior_t::get_tunnel_path_two_pts(point const &start_pt, point c
 		reverse(path.begin()+1, path.end());
 	}
 	if (tunnels[e_tix].is_blocked_by_gate(end_pt, path.back())) {path.clear(); return 0;} // blocked by gate
-	path.add(end_pt, 1); // fixed=1
+	add_clamped_pt(tunnels[e_tix], end_pt, radius, path);
 	return 1;
 }
 bool building_interior_t::get_tunnel_path(unsigned tix1, unsigned tix2, int prev_tix, ai_path_t &path) const {

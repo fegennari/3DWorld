@@ -863,6 +863,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 	unsigned reset_to_last_dims(0); // {x, y} bit flags, for attic roof collision
 	double camera_height(get_player_height());
 	static double prev_camera_height(0.0);
+	cube_t tunnel_walk_area;
 
 	if (!xy_only && 2.2f*radius < (floor_spacing - floor_thickness)) { // diameter is smaller than space between floor and ceiling
 		// check Z collision with floors; no need to check ceilings; this will set pos.z correctly so that we can set skip_z=0 in later tests
@@ -888,8 +889,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 
 			for (tunnel_seg_t const &t : interior->tunnels) {
 				if (!t.bcube_ext.contains_pt(p_test)) continue;
-				cube_t const walk_area(t.get_player_walk_area(pos, xy_radius));
-				walk_area.clamp_pt_xy(pos);
+				tunnel_walk_area = t.get_player_walk_area(pos, xy_radius);
+				tunnel_walk_area.clamp_pt_xy(pos);
 				closest_floor_zval = t.bcube.z1();
 				had_coll = player_in_tunnel = 1;
 			}
@@ -1116,14 +1117,17 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			if ((c->type == TYPE_STALL || c->type == TYPE_SHOWER) && !c->is_open() && c->contains_pt(pos)) {register_player_hiding(*c);} // player is hiding in the stall/shower
 		} // for c
 	} // end interior->room_geom
-	for (person_t const &p : interior->people) {
-		float const dist(p2p_dist(pos, p.pos)), r_sum(xy_radius + 0.5*p.get_width()); // ped_radius is a bit too large, multiply it by 0.5
-		if (dist >= r_sum) continue; // no intersection
-		vector3d const normal(vector3d(pos.x-p.pos.x, pos.y-p.pos.y, 0.0).get_norm()); // XY direction
-		if (cnorm) {*cnorm = normal;}
-		pos += normal*(r_sum - dist);
-		had_coll = 1;
-	} // for i
+	if (!player_wait_respawn) { // zombies push player, but not when player is dead
+		for (person_t const &p : interior->people) {
+			float const dist(p2p_dist(pos, p.pos)), r_sum(xy_radius + 0.5*p.get_width()); // ped_radius is a bit too large, multiply it by 0.5
+			if (dist >= r_sum) continue; // no intersection
+			vector3d const normal(vector3d(pos.x-p.pos.x, pos.y-p.pos.y, 0.0).get_norm()); // XY direction
+			if (cnorm) {*cnorm = normal;}
+			pos += normal*(r_sum - dist);
+			if (!tunnel_walk_area.is_all_zeros()) {tunnel_walk_area.clamp_pt_xy(pos);} // re-clamp to avoid zombie pushing the player through a gate
+			had_coll = 1;
+		} // for i
+	}
 	for (unsigned d = 0; d < 2; ++d) { // apply attic roof pos reset at the end, to override other collisions that may move pos
 		if (reset_to_last_dims & (1<<d)) {pos[d] = p_last[d];}
 	}
