@@ -2235,6 +2235,8 @@ bool building_t::run_ai_tunnel_logic(person_t &person, float &speed_mult) const 
 	if (person.in_pool || person.retreat_time > 0.0) return 0;
 	if (interior->tunnels.empty() || !point_in_extended_basement(person.pos)) return 0;
 	bool const in_tunnel(interior->point_in_tunnel(person.pos));
+	bool const target_in_tunnel(player_in_tunnel && cur_player_building_loc.building_ix == person.cur_bldg && ai_follow_player());
+	float const radius(COLL_RADIUS_SCALE*person.radius);
 	point const dest(cur_player_building_loc.pos.x, cur_player_building_loc.pos.y, person.pos.z);
 
 	if (person.in_tunnel) {
@@ -2242,22 +2244,28 @@ bool building_t::run_ai_tunnel_logic(person_t &person, float &speed_mult) const 
 			person.in_tunnel = 0;
 			return 0;
 		}
-		if (player_in_tunnel) {
+		if (target_in_tunnel) {
 			if (dest == person.pos) return 0; // already at dest
-			if (!interior->get_tunnel_path_two_pts(person.pos, dest, COLL_RADIUS_SCALE*person.radius, person.path)) return 0; // tunnel => tunnel
-			speed_mult *= 2.0; // faster
+			if (!interior->get_tunnel_path_two_pts(person.pos, dest, radius, person.path)) return 0; // tunnel => tunnel
+			assert(!person.path.empty());
+			speed_mult      *= 2.0; // faster
+			person.goal_type = GOAL_TYPE_PLAYER;
 		}
-		else { // player not in tunnel
+		else { // target not in tunnel
 			unsigned room_ix(0);
 			if (!interior->get_tunnel_path_to_room(person.pos, room_ix, person.path)) return 0; // tunnel => room
 			room_t const &room(get_room(room_ix));
-			person.path.add(room.xc(), room.yc(), person.pos.z); // use the room center, even though it may be blocked by an object such as a box, crate, or chair
+			cube_t room_inner(get_walkable_room_bounds(room));
+			room_inner.expand_by_xy(-radius);
+			assert(!person.path.empty());
+			point pt_in_room(person.path.back());
+			room_inner.clamp_pt_xy(pt_in_room);
+			person.path.add(pt_in_room);
+			person.goal_type = GOAL_TYPE_ROOM;
 		}
-		assert(!person.path.empty());
-		unique_cont(person.path); // in case there are duplicates
 		person.path.erase(person.path.begin()); // remove person.pos
 		reverse(person.path.begin(), person.path.end());
-		person.next_path_pt(1);
+		if (!person.path.empty()) {person.next_path_pt(1);}
 		return 1;
 	}
 	else { // not currently in the tunnel
@@ -2265,14 +2273,17 @@ bool building_t::run_ai_tunnel_logic(person_t &person, float &speed_mult) const 
 			person.in_tunnel = 1;
 			return 0;
 		}
-		if (player_in_tunnel && cur_player_building_loc.building_ix == person.cur_bldg && ai_follow_player()) { // not in tunnel, but player in tunnel
+		if (target_in_tunnel) { // not in tunnel, but want to be in tunnel
 			if (dest == person.pos) return 0; // already at dest
 			int const room_ix(get_room_containing_pt(person.pos));
 			if (room_ix < 0) return 0;
 
-			// Note: doesn't check for obstacles in the room; this can lead to zombies walking through boxes and crates in storage rooms, and chairs
-			if (interior->get_tunnel_path_from_room(dest, room_ix, COLL_RADIUS_SCALE*person.radius, person.path)) { // room => tunnel
+			// Note: doesn't check for obstacles in the room; this can lead to zombies walking through boxes and crates in storage rooms, and chairs;
+			// can we call interior->get_avoid_cubes() and then nav_graph->connect_room_endpoints() here? wait until AI is past the center of the room?
+			if (interior->get_tunnel_path_from_room(dest, room_ix, radius, person.path)) { // room => tunnel
 				reverse(person.path.begin(), person.path.end());
+				if (!person.path.empty()) {person.next_path_pt(1);}
+				person.goal_type = GOAL_TYPE_PLAYER;
 				return 1;
 			}
 		}
@@ -2525,7 +2536,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		person.abort_dest(); // reset target to avoid walking back toward the pool
 		max_eq(person.pos.z, (get_room(interior->pool.room_ix).z1() + fc_thick + person.radius)); // make sure completely out of pool
 	}
-	if (run_ai_tunnel_logic(person, speed_mult)) {}
+	if (run_ai_tunnel_logic(person, speed_mult)) {person.no_wait_at_dest = 1;}
 	build_nav_graph();
 
 	if (zombie_attack_mode && player_is_hiding && person.saw_player_hide && global_building_params.ai_opens_doors && global_building_params.ai_sees_player_hide >= 2 &&
@@ -2621,7 +2632,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			person.next_path_pt(0);
 
 			if (person.target_pos == person.pos) { // this is rare and maybe should be an error, but I've seen it fail once, and it can fail for tunnels
-				if (!person.in_tunnel) {cout << "Invalid building AI path point: " << person.pos.str() << endl;}
+				cout << "Invalid building AI path point: " << person.pos.str() << " " << TXT(person.in_tunnel) << endl;
 				//register_debug_event(person.target_pos, "invalid building AI path point");
 				if (person.dir.x != 0.0 || person.dir.y != 0.0) {person.target_pos += 0.01*person.radius*person.dir;} // move forward slightly
 				else {person.target_pos += 0.01*person.radius*rgen.signed_rand_vector_xy();} // add a small random offset so that dir isn't a zero vector
@@ -2655,7 +2666,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 				person.no_wait_at_dest = 0; // reset for next goal
 			}
 			// don't wait if we can follow the player
-			else if (!(global_building_params.ai_target_player && (can_target_player(person) || has_nearby_sound(person, floor_spacing)))) {
+			else if (!(global_building_params.ai_target_player && (can_target_player(person) || has_nearby_sound(person, floor_spacing))) && !person.in_tunnel) {
 				person.wait_for(rgen.rand_uniform(1.0, (can_ai_follow_player(person) ? 2.0 : 10.0))); // stop for 1-10s, 1-2s if player is in this building in gameplay mode
 			}
 			person.on_new_path_seg    = 1; // allow player following AI update logic to rerun this frame
