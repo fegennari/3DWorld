@@ -198,6 +198,7 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 			tseg.water_level  = water_level;
 			tseg.water_flow   = water_flow;
 			tseg.conn_room_ix = room_id;
+			tseg.tseg_ix      = interior->tunnels.size();
 			interior->tunnels.emplace_back(tseg);
 		}
 		interior->basement_ext_bcube.assign_or_union_with_cube(tunnel_seg_t(p1, p2, radius).bcube); // add full tunnel to bcube
@@ -347,10 +348,45 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 	bool const shadowed(0); // not shadowed, since there's no light
 	bool const dim(t.dim);
 	unsigned const ndiv(48);
-	float const length(t.get_length()), circumference(PI*t.radius), centerline(t.bcube.get_center_dim(!dim));
+	float const length(t.get_length()), circumference(PI*t.radius), centerline(t.bcube.get_center_dim(!dim)), bar_radius(0.025*t.radius);
 	float const side_tscale(2.0), len_tscale(side_tscale*length/circumference), end_tscale(len_tscale*2.0*t.radius/length);
 	colorRGBA const wall_color(WHITE);
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), 16.0, shadowed), shadowed, 0, 1));
+
+	// add smaller side pipes for non-short, non-connector segments; must use the same material and be drawn before the main tunnel walls
+	if (!t.room_conn && length > 4.0*t.radius) {
+		rand_gen_t rgen;
+		rgen.set_state(t.conn_room_ix+1, t.tseg_ix+1);
+		rgen.rand_mix();
+		unsigned const max_pipes(3), mod_val(max_pipes + 1), num_pipes(rgen.rand() % mod_val); // 0-3
+		float avoid_vals[mod_val]={}, avoid_radii[mod_val]={};
+		unsigned num_avoid(0);
+		if (t.has_gate) {avoid_vals[num_avoid] = t.gate_pos; avoid_radii[num_avoid++] = bar_radius;}
+
+		for (unsigned n = 0; n < num_pipes; ++n) {
+			float const radius(rgen.rand_uniform(0.1, 0.3)*t.radius), end_pad(2.0*radius);
+			float const pos(rgen.rand_uniform(t.p[0][dim]+end_pad, t.p[1][dim]-end_pad));
+			bool blocked(0);
+
+			for (unsigned N = 0; N < num_avoid; ++N) {
+				if (fabs(pos - avoid_vals[N]) < (end_pad + avoid_radii[N])) {blocked = 1; break;} // too close to gate or another pipe
+			}
+			if (blocked) continue;
+			bool const dir(rgen.rand_bool());
+			point center(0.0, 0.0, t.bcube.zc());
+			center[ dim] = pos; // pos along tunnel
+			center[!dim] = t.bcube.d[!dim][dir]; // wall of tunnel
+			cube_t pipe(center);
+			pipe.expand_in_dim(   2,     radius);
+			pipe.expand_in_dim( dim,     radius);
+			pipe.expand_in_dim(!dim, 0.5*radius); // length
+			mat.add_ortho_cylin_to_verts(pipe, wall_color, !dim, 0, 0, 1); // skip ends; two_sided=1
+			// draw the open/interior end transparent to create a hole in the outer pipe
+			mat.add_ortho_cylin_to_verts(pipe, ALPHA0, !dim,  dir, !dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // transparent cut; skip_sides=1
+			mat.add_ortho_cylin_to_verts(pipe, BLACK,  !dim, !dir,  dir, 0, 1, 1.0, 1.0, 1.0, 1.0, 1); // black interior end cap; skip_sides=1
+			avoid_vals[num_avoid] = pos; avoid_radii[num_avoid++] = radius; // should we check dir or track it separately? may not matter much
+		} // for n
+	}
 	unsigned const verts_start_ix(mat.itri_verts.size()), ixs_start_ix(mat.indices.size());
 	// only the tunnel interior needs to be drawn, since it can't be viewed from the exterior; but drawing the exterior helps with debugging
 	mat.add_ortho_cylin_to_verts(t.bcube, wall_color, dim, 0, 0, 1, 0, 1.0, 1.0, side_tscale, end_tscale, 0, ndiv, 0.0, 0, len_tscale, 0.0, t.room_conn);
@@ -407,8 +443,7 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 	if (t.has_gate) {
 		assert(!t.room_conn); // not supported
 		unsigned const num_bars(8), bar_ndiv(16);
-		float const bar_spacing(2*t.radius/(num_bars + 1)), bar_radius(0.025*t.radius);
-		float const zc(t.bcube.zc()), rsq(t.radius*t.radius);
+		float const bar_spacing(2*t.radius/(num_bars + 1)), zc(t.bcube.zc()), rsq(t.radius*t.radius);
 		float bar_pos(t.bcube.d[!dim][0] + bar_spacing);
 		rgeom_mat_t &bar_mat(get_material(tid_nm_pair_t(get_texture_by_name("metals/67_rusty_dirty_metal.jpg")), shadowed, 0, 1)); // inc_shadows=0 (no light), small=1
 		colorRGBA const bar_color(DK_GRAY);
