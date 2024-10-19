@@ -23,8 +23,8 @@ void rotate_obj_cube(cube_t &c, cube_t const &bc, bool in_dim, bool dir);
 class door_path_checker_t {
 	vector<point> door_centers;
 public:
-	bool check_door_path_blocked(cube_t const &c, cube_t const &room, float zval, building_t const &building) {
-		if (door_centers.empty()) {building.get_all_door_centers_for_room(room, zval, door_centers);}
+	bool check_door_path_blocked(cube_t const &c, room_t const &room, unsigned room_id, float zval, building_t const &building) {
+		if (door_centers.empty()) {building.get_all_door_centers_for_room(room, room_id, zval, door_centers);}
 		if (door_centers.size() < 2) return 0; // must have at least 2 doors for the path to be blocked
 
 		for (auto p1 = door_centers.begin(); p1 != door_centers.end(); ++p1) {
@@ -159,7 +159,7 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, cube_t const &room, v
 	urc.z = table_pos.z + table_hscale*rgen.rand_uniform(1.0, 1.1)*window_vspacing; // top
 	cube_t table(llc, urc);
 	if (!is_valid_placement_for_room(table, room, blockers, 0, room_pad)) return 0; // check proximity to doors and collision with blockers
-	//if (door_path_checker_t().check_door_path_blocked(table, room, table_pos.z, *this)) return 0; // optional, but we may want to allow this for kitchens and dining rooms
+	//if (door_path_checker_t().check_door_path_blocked(table, get_room(room_id), room_id, table_pos.z, *this)) return 0; // optional, but may want to allow for kitchens/dining
 	unsigned flags(is_house ? RO_FLAG_IS_HOUSE : 0);
 	if (place_pos.z < ground_floor_z1 && (rgen.rand_float() < 0.5)) {flags |= RO_FLAG_BROKEN;} // basements can have broken glass tables 50% of the time
 	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, flags, tot_light_amt, (is_round ? SHAPE_CYLIN : SHAPE_CUBE));
@@ -234,7 +234,7 @@ vect_door_stack_t &building_t::get_doorways_for_room(cube_t const &room, float z
 	get_doorways_for_room(room, zval, doorways, all_floors);
 	return doorways;
 }
-void building_t::get_all_door_centers_for_room(cube_t const &room, float zval, vector<point> &door_centers) const {
+void building_t::get_all_door_centers_for_room(room_t const &room, unsigned room_id, float zval, vector<point> &door_centers) const { // used for door_path_checker_t
 	float const floor_spacing(get_window_vspace());
 	zval += 0.01*floor_spacing; // shift up so that it intersects objects even if they're placed with their z1 exactly at zval
 	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval)); // get interior doors
@@ -247,6 +247,11 @@ void building_t::get_all_door_centers_for_room(cube_t const &room, float zval, v
 		for (tquad_with_ix_t const &door : doors) {
 			cube_t door_bcube(door.get_bcube());
 			if (door_bcube.intersects(room_exp)) {door_centers.emplace_back(door_bcube.xc(), door_bcube.yc(), zval);}
+		}
+	}
+	if (room.has_tunnel_conn()) { // tunnel entrance counts as a door, but not false doors
+		for (tunnel_seg_t const &t : interior->tunnels) {
+			if (t.room_conn && t.conn_room_ix == (int)room_id) {door_centers.push_back(t.get_room_conn_pt(zval));}
 		}
 	}
 }
@@ -1243,7 +1248,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 		} // for d
 		if (!is_valid_placement_for_room(c, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
 		// prefer not to block the path between doors in the first half of iterations
-		if (n < 10 && door_path_checker.check_door_path_blocked(c, room, zval, *this)) continue;
+		if (n < 10 && door_path_checker.check_door_path_blocked(c, room, room_id, zval, *this)) continue;
 		bool const dir((room_bounds.d[dim][1] - c.d[dim][1]) < (c.d[dim][0] - room_bounds.d[dim][0])); // head of the bed is closer to the wall; opposite first_head_dir
 		objs.emplace_back(c, TYPE_BED, room_id, dim, dir, (is_house ? RO_FLAG_IS_HOUSE : 0), tot_light_amt);
 		set_obj_id(objs);
@@ -2468,21 +2473,32 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	vect_cube_t exclude;
 	cube_t test_cube(room);
 	set_cube_zvals(test_cube, zval, zval+wall_thickness); // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
-	unsigned num_placed(0);
+	unsigned num_placed(0), num_doors(0);
 
 	// first pass to record the doors in this room
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) { // check both dirs
 		if ((i->no_room_conn() || i->get_bldg_conn() || i->is_connected_to_room(room_id)) && is_cube_close_to_door(test_cube, 0.0, 0, *i, 2)) {
 			ds_ixs.push_back(i - interior->door_stacks.begin());
+			++num_doors;
+		}
+	}
+	if (room.has_tunnel_conn()) { // tunnel entrance counts as a door, but not false doors
+		for (tunnel_seg_t const &t : interior->tunnels) {
+			if (t.room_conn && t.conn_room_ix == (int)room_id) {
+				exclude.push_back(t.bcube_ext);
+				exclude.back().expand_in_dim(!t.dim, 0.4*room.get_sz_dim(!t.dim)); // will cover the entire room if there's a door at the opposite end
+				++num_doors;
+			}
 		}
 	}
 	for (unsigned dsix : ds_ixs) {
 		door_stack_t const &ds(interior->door_stacks[dsix]);
 		exclude.push_back(ds);
 		exclude.back().expand_in_dim( ds.dim, 0.6*room.get_sz_dim(ds.dim));
-		// if there are multiple doors (houses only?), expand the exclude area more in the other dimension to make sure there's a path between doors
-		float const path_expand(((ds_ixs.size() > 1) ? min(1.2f*ds.get_width(), 0.3f*room.get_sz_dim(!ds.dim)) : 0.0));
-		exclude.back().expand_in_dim(!ds.dim, path_expand);
+		
+		if (num_doors > 1) { // if there are multiple doors (houses only?), expand the exclude area more in the other dimension to make sure there's a path between doors
+			exclude.back().expand_in_dim(!ds.dim, min(1.2f*ds.get_width(), 0.3f*room.get_sz_dim(!ds.dim)));
+		}
 		exclude.back().union_with_cube(ds.get_open_door_bcube_for_room(room)); // include open door
 	}
 	// add shelves on walls (avoiding any door(s)), and have crates avoid them
@@ -2560,7 +2576,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		}
 		if (bad_placement) continue;
 		if (is_obj_placement_blocked(crate, room, 1)) continue;
-		if (door_path_checker.check_door_path_blocked(crate, room, zval, *this)) continue; // don't block the path between doors
+		if (door_path_checker.check_door_path_blocked(crate, room, room_id, zval, *this)) continue; // don't block the path between doors
 		cube_t c2(crate);
 		c2.expand_by(vector3d(0.5*c2.dx(), 0.5*c2.dy(), 0.0)); // approx extents of flaps if open
 		room_object const type(rgen.rand_bool() ? TYPE_CRATE : TYPE_BOX);
