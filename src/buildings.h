@@ -1403,12 +1403,14 @@ struct tunnel_seg_t {
 	cube_t bcube, bcube_ext; // bcube_ext includes the area connecting to the door when room_conn=1
 
 	tunnel_seg_t(point const &p1, point const &p2, float radius_);
+	float get_length() const {return (p[1][dim] - p[0][dim]);}
+	void set_gate(float pos) {gate_pos = pos; has_gate = 1;}
 	void set_as_room_conn(bool rdir, float wall_gap);
 	cube_t get_player_walk_area(point const &player_pos, float player_radius) const;
 	cube_t get_room_conn_block() const;
 	point get_room_conn_pt(float zval) const;
 	bool is_blocked_by_gate(point const &p1, point const &p2) const;
-	float get_length() const {return (p[1][dim] - p[0][dim]);}
+	tunnel_seg_t connect_segment_to(point const &pos, bool conn_dir, unsigned new_tseg_ix, bool is_end=0);
 };
 typedef vector<tunnel_seg_t> vect_tunnel_seg_t;
 
@@ -1732,6 +1734,7 @@ struct building_interior_t {
 	void assign_master_bedroom(float window_vspacing, float floor_thickness);
 	void assign_door_conn_rooms(unsigned start_ds_ix=0);
 	breaker_zone_t get_circuit_breaker_info(unsigned zone_id, unsigned num_zones, float floor_spacing) const;
+	void add_tunnel_seg(tunnel_seg_t const &tseg);
 }; // end building_interior_t
 
 struct building_stats_t {
