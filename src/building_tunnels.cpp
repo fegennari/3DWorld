@@ -8,6 +8,7 @@ extern double tfticks;
 
 float query_min_height(cube_t const &c, float stop_at);
 colorRGBA choose_pipe_color(rand_gen_t &rgen);
+room_object_t get_open_false_door(room_object_t const &c);
 
 // *** tunnel_seg_t ***
 
@@ -122,26 +123,28 @@ void building_t::add_false_door_to_extb_room_if_needed(room_t const &room, float
 	assert(has_room_geom());
 	cube_with_ix_t doors[2];
 	get_valid_extb_room_end_doors(room, zval, room_id, 0.0, doors); // end_pad_ext=0.0
+	vect_room_object_t &objs(interior->room_geom->objs);
 
 	for (unsigned d = 0; d < 2; ++d) { // check both door locations
 		cube_with_ix_t const &door(doors[d]);
 		if (door.is_all_zeros()) continue;
-		bool const dim(door.ix >> 1), dir(door.ix & 1);
+		bool const dim(door.ix >> 1), dir(door.ix & 1), is_open(room.has_tunnel_conn());
 		unsigned flags(RO_FLAG_NOCOLL);
 
-		if (room.has_tunnel_conn()) { // add an open door; should this have collisions enabled?
+		if (is_open) { // add an open door; should this have collisions enabled?
 			flags |= (RO_FLAG_HAS_EXTRA | RO_FLAG_OPEN); // make this an open vault/blast door
-			//cube_t c(door); c.z1() = c.z2(); c.z2() += 1.0; interior->room_geom->objs.emplace_back(c, TYPE_DBG_SHAPE, room_id, dim, dir, 0, 1.0, SHAPE_CUBE, RED); // TESTING
+			//cube_t c(door); c.z1() = c.z2(); c.z2() += 1.0; objs.emplace_back(c, TYPE_DBG_SHAPE, room_id, dim, dir, 0, 1.0, SHAPE_CUBE, RED); // TESTING
 		}
 		else { // add a closed door
 			if      (is_house)           {flags |= RO_FLAG_IS_HOUSE ;}
 			else if ((room_id & 3) == 0) {flags |= RO_FLAG_HAS_EXTRA;} // make this a vault/blast door 25% of the time
 		}
-		interior->room_geom->objs.emplace_back(door, TYPE_FALSE_DOOR, room_id, dim, dir, flags, 1.0, SHAPE_CUBE, WHITE);
+		objs.emplace_back(door, TYPE_FALSE_DOOR, room_id, dim, dir, flags, 1.0, SHAPE_CUBE, WHITE);
+		if (is_open) {objs.emplace_back(get_open_false_door(objs.back()), TYPE_COLLIDER, room_id, dim, dir, RO_FLAG_INVIS);} // open door is a collider for player
 		// add door blocker to avoid placing objects in front of the door; needed even for hallways to avoid placing an overlapping outlet
 		cube_t blocker(door);
 		blocker.d[dim][!dir] = room.d[dim][dir] + (dir ? -1.0 : 1.0)*get_doorway_width(); // add clearance
-		interior->room_geom->objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, dir, RO_FLAG_INVIS);
+		objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, dir, RO_FLAG_INVIS);
 	} // for d
 }
 

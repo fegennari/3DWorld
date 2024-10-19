@@ -4233,17 +4233,18 @@ void building_room_geom_t::add_false_door_int(room_object_t const &c) {
 		}
 	} // for exterior
 }
+room_object_t get_open_false_door(room_object_t const &c) {
+	bool const hinge_dir(0); // makes no difference?
+	room_object_t c_open(c);
+	c_open.expand_in_dim(c.dim, 0.5*c.get_depth()); // make it wider
+	float const width(c_open.get_sz_dim(!c.dim)), thickness(c_open.get_depth()), shift(width - thickness);
+	c_open.d[ c.dim][!c.dir]     += (c.dir     ? -1.0 : 1.0)*shift; // open outward
+	c_open.d[!c.dim][!hinge_dir] += (hinge_dir ? 1.0 : -1.0)*shift;
+	c_open.dim ^= 1;
+	return c_open;
+}
 void building_room_geom_t::add_false_door(room_object_t const &c) {
-	if (c.is_open()) { // draw the door as open
-		bool const hinge_dir(0); // makes no difference?
-		room_object_t c_open(c);
-		c_open.expand_in_dim(c.dim, 0.5*c.get_depth()); // make it wider
-		float const width(c_open.get_sz_dim(!c.dim)), thickness(c_open.get_depth()), shift(width - thickness);
-		c_open.d[ c.dim][!c.dir]     += (c.dir     ? -1.0 : 1.0)*shift; // open outward
-		c_open.d[!c.dim][!hinge_dir] += (hinge_dir ? 1.0 : -1.0)*shift;
-		c_open.dim ^= 1;
-		add_false_door_int(c_open);
-	}
+	if (c.is_open()) {add_false_door_int(get_open_false_door(c));} // draw the door as open
 	else {add_false_door_int(c);}
 }
 
