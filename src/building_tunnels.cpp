@@ -28,18 +28,23 @@ void tunnel_seg_t::set_as_room_conn(bool rdir, float wall_gap) {
 	room_dir  = rdir;
 	bcube_ext.d[!dim][room_dir] += (room_dir ? 1.0 : -1.0)*wall_gap;
 }
-cube_t tunnel_seg_t::get_player_walk_area(point const &player_pos, float player_radius) const {
+cube_t tunnel_seg_t::get_walk_area(point const &pos, float user_radius) const {
+	assert(radius > user_radius); // otherwise we can't walk in this tunnel
 	cube_t walk_area(bcube_ext);
 	float const walk_width(0.1*radius), blocked_width(radius - walk_width); // area inside the tunnel near the center where the player can walk
 	if (room_conn) {walk_area.d[!dim][!room_dir] += (room_dir ? 1.0 : -1.0)*blocked_width;} // shrink on non-room side
 	else {walk_area.expand_in_dim(!dim, -blocked_width);} // shrink on both sides
-	// prevent the player from walking off a closed end or through a gate
-	if (closed_ends[0]) {walk_area.d[dim][0] += player_radius;}
-	if (closed_ends[1]) {walk_area.d[dim][1] -= player_radius;}
+	// prevent the player from walking off a closed end, through a gate, or through the connecting room door frame
+	if (closed_ends[0]) {walk_area.d[dim][0] += user_radius;}
+	if (closed_ends[1]) {walk_area.d[dim][1] -= user_radius;}
 
+	if (room_conn) {
+		float const shrink_amt(min(user_radius, (fabs(pos[!dim] - bcube.get_center_dim(!dim)) - radius + user_radius)));
+		if (shrink_amt > 0.0) {walk_area.expand_in_dim(dim, -shrink_amt);} // 45 degree XY edges at the entrance door
+	}
 	if (has_gate) {
-		if (player_pos[dim] < gate_pos) {min_eq(walk_area.d[dim][1], gate_pos-player_radius);} // player at low end, clamp high end
-		else                            {max_eq(walk_area.d[dim][0], gate_pos+player_radius);} // player at high end, clamp low end
+		if (pos[dim] < gate_pos) {min_eq(walk_area.d[dim][1], gate_pos-user_radius);} // player at low end, clamp high end
+		else                     {max_eq(walk_area.d[dim][0], gate_pos+user_radius);} // player at high end, clamp low end
 	}
 	return walk_area;
 }
@@ -280,7 +285,7 @@ int building_interior_t::get_tunnel_ix_for_room(unsigned room_ix) const {
 
 // Note: paths include end_pt and start_pt
 void add_clamped_pt(tunnel_seg_t const &tseg, point pos, float radius, ai_path_t &path) {
-	tseg.get_player_walk_area(pos, radius).clamp_pt_xy(pos);
+	tseg.get_walk_area(pos, radius).clamp_pt_xy(pos);
 	path.add(pos, 1); // fixed=1
 }
 bool building_interior_t::get_tunnel_path_from_room(point const &end_pt, unsigned room_ix, float radius, ai_path_t &path) const { // room => tunnel

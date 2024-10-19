@@ -1406,7 +1406,7 @@ struct tunnel_seg_t {
 	float get_length() const {return (p[1][dim] - p[0][dim]);}
 	void set_gate(float pos) {gate_pos = pos; has_gate = 1;}
 	void set_as_room_conn(bool rdir, float wall_gap);
-	cube_t get_player_walk_area(point const &player_pos, float player_radius) const;
+	cube_t get_walk_area(point const &pos, float user_radius) const;
 	cube_t get_room_conn_block() const;
 	point get_room_conn_pt(float zval) const;
 	bool is_blocked_by_gate(point const &p1, point const &p2) const;
