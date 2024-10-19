@@ -1290,7 +1290,7 @@ void building_t::add_missing_backrooms_lights(rand_gen_t rgen, float zval, unsig
 		add_sub_room_light(light, room_t(room, r), room_dim, objs_start, light_ix_assign, rgen);
 	} // for r
 }
-void building_t::add_sub_room_light(room_object_t light, room_t &room, bool dim, unsigned objs_start, light_ix_assign_t &light_ix_assign, rand_gen_t &rgen) {
+void building_t::add_sub_room_light(room_object_t light, room_t const &room, bool dim, unsigned objs_start, light_ix_assign_t &light_ix_assign, rand_gen_t &rgen) {
 	vect_cube_t to_add;
 	try_place_light_on_ceiling(light, room, dim, get_fc_thickness(), 1, 0, 1, 1, objs_start, to_add, rgen); // or wall light?
 
