@@ -207,7 +207,8 @@ bool play_attack_sound(point const &pos, float gain, float pitch, rand_gen_t &rg
 
 // *** Rats ***
 
-rat_t::rat_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_, bool dead_) : building_animal_t(pos_, radius_, dir_, id_), dest(pos), dead(dead_) {
+rat_t::rat_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_, bool dead_, unsigned tix) :
+	building_animal_t(pos_, radius_, dir_, id_), dest(pos), tunnel_ix(tix), dead(dead_) {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAT)); // L=3878, W=861, H=801
 	hwidth = radius*sz.y/sz.x; // scale radius by ratio of width to length
 	height = 2.0*radius*sz.z/max(sz.x, sz.y); // use max of x/y size; the x/y size represents the bcube across rotations
@@ -362,14 +363,14 @@ void building_t::update_sewer_rats(point const &camera_bs, unsigned building_ix)
 			pos[!t.dim] = t.p[0][!t.dim]; // either point should work
 			pos.z       = t.p[0].z - t.radius; // on the bottom of the tunnel
 			dir[t.dim]  = ((pos[t.dim] < t.gate_pos) ? 1.0 : -1.0); // face toward the gate
-			rats.add(rat_t(pos, radius, dir, (i - interior->tunnels.begin()))); // store tunnel index in ID
+			rats.add(rat_t(pos, radius, dir, 0, 0, (i - interior->tunnels.begin()))); // id=0, dead=0; store tunnel index
 		} // for r
 		rats.placed = 1;
 	}
 	for (rat_t &rat : rats) { // update logic
 		if (rat.speed > 0.0) { // moving
 			assert(rat.id < interior->tunnels.size());
-			tunnel_seg_t const &t(interior->tunnels[rat.id]);
+			tunnel_seg_t const &t(interior->tunnels[rat.tunnel_ix]);
 			bool const dir(rat.dir[t.dim] > 0.0); // movement direction along the tunnel
 			float const stop_pos(0.5*(t.p[dir][t.dim] + t.gate_pos));
 			

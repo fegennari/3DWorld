@@ -27,11 +27,12 @@ struct building_animal_t {
 struct rat_t : public building_animal_t {
 	point dest, fear_pos;
 	float height=0.0, hwidth=0.0, fear=0.0;
+	unsigned tunnel_ix=0; // for sewer rats; could also add room_ix if it helps
 	bool is_hiding=0, near_player=0, attacking=0, dead=0;
 
 	// this first constructor is for the lower_bound() call in vect_rat_t::get_first_rat_with_x2_gt()
 	rat_t(float xval) : building_animal_t(xval) {}
-	rat_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_, bool dead_=0);
+	rat_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_, bool dead_=0, unsigned tix=0);
 	bool operator<(rat_t const &r) const {return (pos.x < r.pos.x);} // compare only xvals
 	static bool allow_in_attic () {return 1;}
 	static bool not_by_ext_door() {return 0;}
