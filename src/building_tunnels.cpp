@@ -76,8 +76,9 @@ tunnel_seg_t tunnel_seg_t::connect_segment_to(point const &pos, bool conn_dir, u
 	tseg.tseg_ix      = new_tseg_ix;
 	tseg.water_level  = water_level;
 	tseg.water_flow   = water_flow;
-	if ((tseg.dim != dim) && (conn_dir ^ dim ^ tseg_conn_dir)) {tseg.water_flow *= -1.0;} // TODO: may be backwards
+	if ((tseg.dim != dim) && (conn_dir ^ dim ^ tseg_conn_dir)) {tseg.water_flow *= -1.0;}
 	if (is_end) {tseg.closed_ends[!tseg_conn_dir] = 1;} // closed at unconnected end
+	closed_ends[conn_dir] = 0; // parent is no longer closed
 	return tseg;
 }
 
@@ -148,13 +149,35 @@ void building_t::add_false_door_to_extb_room_if_needed(room_t const &room, float
 	} // for d
 }
 
-bool building_t::is_tunnel_placement_valid(point const &p1, point const &p2, float radius) const {
-	cube_t const tunnel_bc(tunnel_seg_t(p1, p2, radius).bcube);
+bool building_t::is_tunnel_bcube_placement_valid(cube_t const &tunnel_bc) const {
 	if (cube_intersects_basement_or_extb_room(tunnel_bc))             return 0;
 	if (query_min_height(tunnel_bc, tunnel_bc.z2()) < tunnel_bc.z2()) return 0; // check for terrain clipping through ceiling
 	if (!is_basement_room_not_int_bldg(tunnel_bc))                    return 0;
 	return 1;
 }
+bool building_t::is_tunnel_placement_valid(point const &p1, point const &p2, float radius) const {
+	return is_tunnel_bcube_placement_valid(tunnel_seg_t(p1, p2, radius).bcube);
+}
+void building_t::try_extend_tunnel(point &p1, point &p2, float max_extend, float check_radius, bool dim, bool dir) const {
+	unsigned const num_steps = 10;
+	float const step_len(max_extend/num_steps);
+
+	for (unsigned n = 0; n < num_steps; ++n) {
+		if (dir) {
+			point p2e(p2);
+			p2e[dim] += step_len;
+			if (!is_tunnel_placement_valid(p2, p2e, check_radius)) break; // can't extend further in this dir
+			p2 = p2e; // accept the new length
+		}
+		else {
+			point p1e(p1);
+			p1e[dim] -= step_len;
+			if (!is_tunnel_placement_valid(p1e, p1, check_radius)) break; // can't extend further in this dir
+			p1 = p1e; // accept the new length
+		}
+	}
+}
+
 bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned room_id, rand_gen_t &rgen) {
 	if (!room.is_hallway && rgen.rand_bool()) return 0; // 50% chance for non-hallways
 	float const zval(room.z1() + get_fc_thickness()), end_pad_ext(2.0*get_doorway_width());
@@ -177,28 +200,12 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 		point p1(middle), p2(middle);
 		p1[!dim] -= min_len; p2[!dim] += min_len; // start at min length in each dim
 		if (!is_tunnel_placement_valid(p1, p2, check_radius)) continue; // can't place a tunnel of min length
-		unsigned const num_steps = 10;
-		float const step_len((max_len - min_len)/num_steps);
-
+		float const max_extend(max_len - min_len);
 		// try extending tunnel in both directions
-		for (unsigned d = 0; d < 2; ++d) {
-			for (unsigned n = 0; n < num_steps; ++n) {
-				if (d) {
-					point p2e(p2);
-					p2e[!dim] += step_len;
-					if (!is_tunnel_placement_valid(p2, p2e, check_radius)) break; // can't extend further in this dir
-					p2 = p2e; // accept the new length
-				}
-				else {
-					point p1e(p1);
-					p1e[!dim] -= step_len;
-					if (!is_tunnel_placement_valid(p1e, p1, check_radius)) break; // can't extend further in this dir
-					p1 = p1e; // accept the new length
-				}
-			}
-		} // for dir
+		for (unsigned e = 0; e < 2; ++e) {try_extend_tunnel(p1, p2, max_extend, check_radius, !dim, e);}
 		// split into three segments (center, left, right)
-		unsigned const tseg_ix(interior->tunnels.size());
+		vect_tunnel_seg_t &tunnels(interior->tunnels);
+		unsigned const tseg_ix(tunnels.size());
 		float const gate_dist_from_end(5.0*floor_spacing);
 		float const water_level(rgen.rand_uniform(0.0, 1.0)*0.2*radius), water_flow(rgen.signed_rand_float());
 		point pa(p1), pb(p2);
@@ -212,13 +219,30 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 		tseg_c.tseg_ix      = tseg_ix;
 		interior->add_tunnel_seg(tseg_c);
 
-		for (unsigned e = 0; e < 2; ++e) {
+		for (unsigned e = 0; e < 2; ++e) { // {left, right}
+			unsigned const cur_seg_ix(tunnels.size());
 			point const &end_pt(e ? p2 : p1);
-			bool is_end(1);
-			// TODO: add bends at the ends if there's space
-			tunnel_seg_t tseg(interior->tunnels[tseg_ix].connect_segment_to(end_pt, bool(e), interior->tunnels.size(), is_end));
-			if (is_end) {tseg.set_gate(end_pt[!dim] + gate_dist_from_end*(e ? -1.0 : 1.0));}
-			interior->add_tunnel_seg(tseg);
+			// check if we can extend this tunnel before placing it, so that the query doesn't pick up a self intersection
+			cube_t end_conn_bcube; end_conn_bcube.set_from_sphere(end_pt, check_radius);
+			bool const can_extend(is_tunnel_bcube_placement_valid(end_conn_bcube));
+			interior->connect_and_add_tunnel_seg(tunnels[tseg_ix], end_pt, e, !e, gate_dist_from_end);
+			if (!can_extend) continue;
+			// attempt to add a 90 degree bend
+			bool const first_dir(rgen.rand_bool());
+
+			for (unsigned n = 0; n < 2; ++n) {
+				bool const bend_dir(bool(n) ^ first_dir);
+				point p1b(end_pt), p2b(end_pt);
+				point &new_end_pt(bend_dir ? p2b : p1b);
+				new_end_pt[dim] += (bend_dir ? 1.0 : -1.0)*min_len;
+				point p1bt(p1b), p2bt(p2b); // pull back the connecting end so that it doesn't intersect the parent tunnel segment
+				(bend_dir ? p1bt : p2bt)[dim] += (bend_dir ? 1.0 : -1.0)*(check_radius + wall_thickness);
+				if (!is_tunnel_placement_valid(p1bt, p2bt, check_radius)) continue; // can't place a tunnel of min length
+				try_extend_tunnel(p1b, p2b, max_extend, check_radius, dim, bend_dir);
+				interior->connect_and_add_tunnel_seg(tunnels[cur_seg_ix], new_end_pt, e, !bend_dir, gate_dist_from_end);
+				tunnels[cur_seg_ix].has_gate = 0; // remove gate from parent
+				break; // don't need to check the other dir
+			} // for n
 		} // for e
 		room.set_has_tunnel_conn();
 		return 1; // done (only add tunnel conn to one end)
@@ -226,6 +250,12 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 	return 0;
 }
 
+void building_interior_t::connect_and_add_tunnel_seg(tunnel_seg_t &parent, point const &conn_pt, bool parent_conn_dir, bool child_conn_dir, float gate_dist_from_end) {
+	bool is_end(1); // starts as an end, but may be extended
+	tunnel_seg_t tseg(parent.connect_segment_to(conn_pt, parent_conn_dir, tunnels.size(), is_end));
+	if (is_end) {tseg.set_gate(conn_pt[tseg.dim] + gate_dist_from_end*(child_conn_dir ? 1.0 : -1.0));}
+	add_tunnel_seg(tseg);
+}
 void building_interior_t::add_tunnel_seg(tunnel_seg_t const &tseg) {
 	tunnels.emplace_back(tseg);
 	basement_ext_bcube.assign_or_union_with_cube(tseg.bcube); // add to bcube

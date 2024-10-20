@@ -1734,6 +1734,7 @@ struct building_interior_t {
 	void assign_master_bedroom(float window_vspacing, float floor_thickness);
 	void assign_door_conn_rooms(unsigned start_ds_ix=0);
 	breaker_zone_t get_circuit_breaker_info(unsigned zone_id, unsigned num_zones, float floor_spacing) const;
+	void connect_and_add_tunnel_seg(tunnel_seg_t &parent, point const &conn_pt, bool parent_conn_dir, bool child_conn_dir, float gate_dist_from_end);
 	void add_tunnel_seg(tunnel_seg_t const &tseg);
 }; // end building_interior_t
 
@@ -2261,7 +2262,9 @@ private:
 		float door_width, bool dim, bool dir, unsigned depth, rand_gen_t &rgen);
 	void get_valid_extb_room_end_doors(room_t const &room, float zval, unsigned room_id, float end_pad_ext, cube_with_ix_t doors[2]) const;
 	void add_false_door_to_extb_room_if_needed(room_t const &room, float zval, unsigned room_id);
+	bool is_tunnel_bcube_placement_valid(cube_t const &tunnel_bc) const;
 	bool is_tunnel_placement_valid(point const &p1, point const &p2, float radius) const;
+	void try_extend_tunnel(point &p1, point &p2, float max_extend, float check_radius, bool dim, bool dir) const;
 	bool try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned room_id, rand_gen_t &rgen);
 	building_t *get_conn_bldg_for_pt(point const &p, float radius=0.0) const;
 	building_t *get_bldg_containing_pt(point const &p);
