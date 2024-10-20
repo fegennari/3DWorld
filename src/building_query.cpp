@@ -888,7 +888,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			point const p_test(pos.x, pos.y, obj_z);
 
 			for (tunnel_seg_t const &t : interior->tunnels) {
-				if (!t.bcube_ext.contains_pt(p_test)) continue;
+				float const expand(t.room_conn ? 0.1*radius : 0.0);
+				if (!t.bcube_ext.contains_pt_exp(p_test, expand)) continue;
 				tunnel_walk_area = t.get_walk_area(pos, xy_radius);
 				tunnel_walk_area.clamp_pt_xy(pos);
 				closest_floor_zval = t.bcube.z1();
