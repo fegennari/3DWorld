@@ -51,12 +51,14 @@ bool has_office_chair_model() {return building_obj_model_loader.is_model_valid(O
 colorRGBA room_object_t::get_model_color() const {return building_obj_model_loader.get_avg_color(get_model_id());}
 
 // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2 to match CSG cube flags
-void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, point const &tex_origin,
-	unsigned skip_faces, bool swap_tex_st, bool mirror_x, bool mirror_y, bool inverted, bool z_dim_uses_ty)
+void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, point const &tex_origin, unsigned skip_faces,
+	bool swap_tex_st, bool mirror_x, bool mirror_y, bool inverted, bool z_dim_uses_ty, float tx_add, float ty_add)
 {
 	//assert(c.is_normalized()); // no, bathroom window is denormalized
 	vertex_t v;
 	v.set_c4(color);
+	tx_add += tex.txoff;
+	ty_add += tex.tyoff;
 
 	// Note: stolen from draw_cube() with tex coord logic, back face culling, etc. removed
 	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions, drawn as {Z, X, Y}
@@ -70,12 +72,12 @@ void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, poi
 
 			for (unsigned s1 = 0; s1 < 2; ++s1) {
 				v.v[d[1]] = c.d[d[1]][s1];
-				v.t[tex_st] = ((tex.tscale_x == 0.0) ? float(s1) : (tex.tscale_x*(v.v[d[1]] - tex_origin[d[1]]) + tex.txoff)); // tscale==0.0 => fit texture to cube
+				v.t[tex_st] = ((tex.tscale_x == 0.0) ? float(s1) : (tex.tscale_x*(v.v[d[1]] - tex_origin[d[1]]) + tx_add)); // tscale==0.0 => fit texture to cube
 
 				for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
 					bool const s2(bool(k^j^s1)^inverted^1); // need to orient the vertices differently for each side
 					v.v[d[0]] = c.d[d[0]][s2];
-					v.t[!tex_st] = ((tex.tscale_y == 0.0) ? float(s2) : (tex.tscale_y*(v.v[d[0]] - tex_origin[d[0]]) + tex.tyoff));
+					v.t[!tex_st] = ((tex.tscale_y == 0.0) ? float(s2) : (tex.tscale_y*(v.v[d[0]] - tex_origin[d[0]]) + ty_add));
 					quad_verts.push_back(v);
 					if (mirror_x) {quad_verts.back().t[0] = 1.0 - v.t[0];} // use for pictures and books
 					if (mirror_y) {quad_verts.back().t[1] = 1.0 - v.t[1];} // used for books

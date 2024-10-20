@@ -495,8 +495,9 @@ void building_room_geom_t::add_tunnel_water(tunnel_seg_t const &t) {
 	float const dist(t.radius - t.water_level), water_hwidth(sqrt(t.radius*t.radius - dist*dist));
 	set_wall_width(water, t.bcube.get_center_dim(!dim), water_hwidth, !dim);
 	if (t.room_conn) {water.d[!dim][t.room_dir] = t.get_room_conn_block().d[!dim][!t.room_dir];} // ends flush with conn block
-	(dim ? water_mat.tex.txoff : water_mat.tex.tyoff) = fract(0.15*(tfticks/TICKS_PER_SECOND)*t.water_flow); // animate the water texture
-	water_mat.add_cube_to_verts(water, DK_BROWN, all_zeros, ~EF_Z2); // draw top surface only
+	float tex_add[2] = {0.0, 0.0};
+	tex_add[!dim] = fract(0.15*(tfticks/TICKS_PER_SECOND)*t.water_flow); // animate the water texture
+	water_mat.add_cube_to_verts(water, DK_BROWN, all_zeros, ~EF_Z2, 0, 0, 0, 0, 0, tex_add[0], tex_add[1]); // draw top surface only
 }
 
 
