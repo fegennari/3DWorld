@@ -22,7 +22,7 @@ tunnel_seg_t::tunnel_seg_t(point const &p1, point const &p2, float radius_) : ra
 	bcube = cube_t(p[0], p[1]);
 	bcube.expand_in_z(radius);
 	bcube.expand_in_dim(!dim, radius);
-	bcube_ext = bcube;
+	bcube_ext = bcube_draw = bcube;
 }
 void tunnel_seg_t::set_as_room_conn(bool rdir, float wall_gap) {
 	room_conn = 1;
@@ -240,7 +240,15 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 				if (!is_tunnel_placement_valid(p1bt, p2bt, check_radius)) continue; // can't place a tunnel of min length
 				try_extend_tunnel(p1b, p2b, max_extend, check_radius, dim, bend_dir);
 				interior->connect_and_add_tunnel_seg(tunnels[cur_seg_ix], new_end_pt, e, !bend_dir, gate_dist_from_end);
-				tunnels[cur_seg_ix].has_gate = 0; // remove gate from parent
+				tunnel_seg_t &parent(tunnels[cur_seg_ix]), &child(tunnels.back());
+				// pull back cylinder draw bcubes to remove overlaps
+				float const child_ext((bend_dir ? -1.0 : 1.0)*radius), parent_ext((e ? 1.0 : -1.0)*radius);
+				child .bcube_draw.d[child .dim][!bend_dir] -= child_ext;
+				parent.bcube_draw.d[parent.dim][ e       ] -= parent_ext;
+				// extend bcubes to cover the gap at the corner so that the player stays in the tunnel
+				child .bcube_ext .d[child .dim][!bend_dir] += child_ext;
+				parent.bcube_ext .d[parent.dim][ e       ] += parent_ext;
+				parent.has_gate = 0; // remove gate from parent
 				break; // don't need to check the other dir
 			} // for n
 		} // for e
@@ -304,7 +312,10 @@ bool building_interior_t::point_near_tunnel_entrance(point const &pos) const {
 	return 0;
 }
 int building_interior_t::get_tunnel_ix_for_point(point const &pos) const {
-	for (auto t = tunnels.begin(); t != tunnels.end(); ++t) {
+	for (auto t = tunnels.begin(); t != tunnels.end(); ++t) { // bcube containment first
+		if (t->bcube.contains_pt(pos)) return (t - tunnels.begin());
+	}
+	for (auto t = tunnels.begin(); t != tunnels.end(); ++t) { // now include extended bcubes
 		if (t->bcube_ext.contains_pt(pos)) return (t - tunnels.begin());
 	}
 	return -1; // not found
@@ -418,7 +429,7 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 
 		for (unsigned n = 0; n < num_pipes; ++n) {
 			float const radius(rgen.rand_uniform(0.1, 0.3)*t.radius), end_pad(2.0*radius);
-			float const pos(rgen.rand_uniform(t.p[0][dim]+end_pad, t.p[1][dim]-end_pad));
+			float const pos(rgen.rand_uniform(t.bcube_draw.d[dim][0]+end_pad, t.bcube_draw.d[dim][1]-end_pad));
 			bool blocked(0);
 
 			for (unsigned N = 0; N < num_avoid; ++N) {
@@ -442,7 +453,7 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 	}
 	unsigned const verts_start_ix(mat.itri_verts.size()), ixs_start_ix(mat.indices.size());
 	// only the tunnel interior needs to be drawn, since it can't be viewed from the exterior; but drawing the exterior helps with debugging
-	mat.add_ortho_cylin_to_verts(t.bcube, wall_color, dim, 0, 0, 1, 0, 1.0, 1.0, side_tscale, end_tscale, 0, ndiv, 0.0, 0, len_tscale, 0.0, t.room_conn);
+	mat.add_ortho_cylin_to_verts(t.bcube_draw, wall_color, dim, 0, 0, 1, 0, 1.0, 1.0, side_tscale, end_tscale, 0, ndiv, 0.0, 0, len_tscale, 0.0, t.room_conn);
 
 	if (t.room_conn) { // rotate half cylinder into the proper orient
 		float angle(0.0);
@@ -489,7 +500,7 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 	if (t.closed_ends[0] || t.closed_ends[1]) {
 		assert(!t.room_conn); // not supported
 		unsigned const start_ix(mat.itri_verts.size());
-		mat.add_ortho_cylin_to_verts(t.bcube, BLACK, t.dim, t.closed_ends[0], t.closed_ends[1], 1, 0, 1.0, 1.0, 1.0, 1.0, 1);
+		mat.add_ortho_cylin_to_verts(t.bcube_draw, BLACK, t.dim, t.closed_ends[0], t.closed_ends[1], 1, 0, 1.0, 1.0, 1.0, 1.0, 1);
 		for (auto v = mat.itri_verts.begin()+start_ix; v != mat.itri_verts.end(); ++v) {v->set_norm_to_zero();} // zero normal to prevent wet effect
 	}
 	// draw gate if present
@@ -520,7 +531,7 @@ void building_room_geom_t::add_tunnel_water(tunnel_seg_t const &t) {
 	float tscale_xy[2] = {tscale, tscale};
 	tscale_xy[!dim] *= 1.0/(1.0 + 10.0*fabs(t.water_flow)); // stretch along tunnel length more with higher water flow
 	rgeom_mat_t &water_mat(get_material(tid_nm_pair_t(FOAM_TEX, -1, tscale_xy[0], tscale_xy[1]), 0, 1)); // unshadowed, dynamic
-	cube_t water(t.bcube);
+	cube_t water(t.bcube_draw);
 	water.z2() = t.bcube.z1() + t.water_level;
 	float const dist(t.radius - t.water_level), water_hwidth(sqrt(t.radius*t.radius - dist*dist));
 	set_wall_width(water, t.bcube.get_center_dim(!dim), water_hwidth, !dim);

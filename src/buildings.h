@@ -1400,7 +1400,7 @@ struct tunnel_seg_t {
 	unsigned conn_room_ix=0, tseg_ix=0;
 	float radius=0.0, gate_pos=0.0, water_level=0.0, water_flow=0.0;
 	point p[2];
-	cube_t bcube, bcube_ext; // bcube_ext includes the area connecting to the door when room_conn=1
+	cube_t bcube, bcube_ext, bcube_draw; // bcube_ext includes the area connecting to the door when room_conn=1 and overlap area at bends
 
 	tunnel_seg_t(point const &p1, point const &p2, float radius_);
 	float get_length() const {return (p[1][dim] - p[0][dim]);}
