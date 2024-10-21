@@ -210,7 +210,7 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 
 		for (unsigned I = 0; I < ndiv; ++I) {
 			unsigned const i(bt ? ndiv-I-1 : I); // invert winding order for top face
-			vector3d const &side_normal(vpn.n[i]);
+			vector3d const side_normal(0.5*(vpn.n[i] + vpn.n[(i+ndiv-1)%ndiv])); // normalize?
 			itri_verts[itix++].assign(vpn.p[(i<<1) + bt], normal, half_end_tscale*(side_normal.x + 1.0), half_end_tscale*(side_normal.y + 1.0), cw); // assign tcs from side normal
 			indices[iix++] = center_ix; // center
 			indices[iix++] = center_ix + i + 1;
