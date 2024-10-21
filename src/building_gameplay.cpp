@@ -364,7 +364,8 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	else if (obj.type == TYPE_BUCKET) {
 		float liquid_level(0.0);
 		get_bucket_liquid_info(obj, liquid_level);
-		type.name = ((liquid_level > 0.0) ? "bucket of unknown liquid" : "empty bucket");
+		type.name    = ((liquid_level > 0.0) ? "bucket of unknown liquid" : "empty bucket");
+		type.weight += 0.1*round_fp(10*16.0*liquid_level); // 2 gallon bucket, gets heavier with more liquid; round to nearest tenth
 	}
 	return type;
 }
