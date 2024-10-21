@@ -118,6 +118,16 @@ void draw_metal_handle_wheel(cube_t const &c, unsigned dim, colorRGBA const &col
 	shaft_mat.add_ortho_cylin_to_verts(shaft, shaft_color, dim, 1, 1); // draw sides and ends
 }
 
+void building_room_geom_t::add_spring(point const &p1, float len, float radius, float r_wire, float length, float coil_gap, unsigned dim, colorRGBA const &color) {
+	assert(dim < 3);
+	//point p2(p1); p2[dim] += length;
+	unsigned num_coils(max(1, round_fp(length/(2.0*r_wire + coil_gap))));
+	float const coil_spacing(length/num_coils);
+	bool const low_detail = 1;
+	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small
+	mat.add_vert_torus_to_verts(p1, r_wire, radius, color, 1.0, low_detail, 2); // TODO: draw as spiral with multiple turns and offset in dim
+}
+
 void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_gap) { // components are shadowed and small
 	// can use AC Unit, metal plate texture, buttons, lights, etc.
 	rand_gen_t rgen(c.create_rgen());

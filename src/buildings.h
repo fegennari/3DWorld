@@ -1160,6 +1160,7 @@ struct building_room_geom_t {
 	void add_ext_ladder(room_object_t const &c);
 	void add_int_ladder(room_object_t const &c);
 	void add_machine_pipe_in_region(room_object_t const &c, cube_t const &region, float rmax, unsigned dim, rand_gen_t &rgen);
+	void add_spring(point const &p1, float len, float radius, float r_wire, float length, float coil_gap, unsigned dim, colorRGBA const &color);
 	void add_machine(room_object_t const &c, float floor_ceil_gap);
 	void add_keyboard(room_object_t const &c);
 	void add_obj_with_top_texture  (room_object_t const &c, std::string const &texture_name, colorRGBA const &sides_color, bool is_small=0);
