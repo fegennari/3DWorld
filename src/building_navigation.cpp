@@ -2234,8 +2234,8 @@ bool building_t::run_ai_pool_logic(person_t &person, float &speed_mult) const {
 bool building_t::run_ai_tunnel_logic(person_t &person, float &speed_mult) const {
 	if (person.in_pool || person.retreat_time > 0.0) return 0;
 	if (interior->tunnels.empty() || !point_in_extended_basement(person.pos)) return 0;
-	bool const in_tunnel(interior->point_in_tunnel(person.pos));
-	bool const target_in_tunnel(player_in_tunnel && cur_player_building_loc.building_ix == person.cur_bldg && ai_follow_player());
+	int const tunnel_ix(interior->get_tunnel_ix_for_point(person.pos));
+	bool const in_tunnel(tunnel_ix >= 0), target_in_tunnel(player_in_tunnel && cur_player_building_loc.building_ix == person.cur_bldg && ai_follow_player());
 	float const radius(COLL_RADIUS_SCALE*person.radius);
 	point const dest(cur_player_building_loc.pos.x, cur_player_building_loc.pos.y, person.pos.z);
 
@@ -2265,6 +2265,12 @@ bool building_t::run_ai_tunnel_logic(person_t &person, float &speed_mult) const 
 		}
 		person.path.erase(person.path.begin()); // remove person.pos
 		reverse(person.path.begin(), person.path.end());
+
+		if (in_tunnel) { // check current tunnel segment and make sure we're in the walkable area
+			point pos_clamped(person.pos);
+			interior->tunnels[tunnel_ix].get_walk_area(person.pos, radius).clamp_pt_xy(pos_clamped);
+			if (pos_clamped != person.pos) {person.path.add(pos_clamped);}
+		}
 		if (!person.path.empty()) {person.next_path_pt(1);}
 		return 1;
 	}
