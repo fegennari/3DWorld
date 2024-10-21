@@ -1398,6 +1398,7 @@ struct tunnel_seg_t {
 	bool dim=0, room_conn=0, room_dir=0, has_gate=0, closed_ends[2]={};
 	int conn_ix[2]={-1,-1}; // index of adjacent connected tunnel in each dir; -1 is none
 	unsigned conn_room_ix=0, tseg_ix=0;
+	int8_t add_bend_dir[2] = { -1, -1 }; // one per end; -1 is no bend
 	float radius=0.0, gate_pos=0.0, water_level=0.0, water_flow=0.0;
 	point p[2];
 	cube_t bcube, bcube_ext, bcube_draw; // bcube_ext includes the area connecting to the door when room_conn=1 and overlap area at bends

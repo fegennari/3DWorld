@@ -248,6 +248,7 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 				// extend bcubes to cover the gap at the corner so that the player stays in the tunnel
 				child .bcube_ext .d[child .dim][!bend_dir] += child_ext;
 				parent.bcube_ext .d[parent.dim][ e       ] += parent_ext;
+				parent.add_bend_dir[e] = int(bend_dir); // bend is drawn by the parent
 				parent.has_gate = 0; // remove gate from parent
 				break; // don't need to check the other dir
 			} // for n
@@ -536,9 +537,27 @@ void building_room_geom_t::add_tunnel_water(tunnel_seg_t const &t) {
 	float const dist(t.radius - t.water_level), water_hwidth(sqrt(t.radius*t.radius - dist*dist));
 	set_wall_width(water, t.bcube.get_center_dim(!dim), water_hwidth, !dim);
 	if (t.room_conn) {water.d[!dim][t.room_dir] = t.get_room_conn_block().d[!dim][!t.room_dir];} // ends flush with conn block
+	float const flow_val(0.15*(tfticks/TICKS_PER_SECOND)*t.water_flow);
 	float tex_add[2] = {0.0, 0.0};
-	tex_add[!dim] = fract(0.15*(tfticks/TICKS_PER_SECOND)*t.water_flow); // animate the water texture
+	tex_add[!dim] = fract(flow_val); // animate the water texture
 	water_mat.add_cube_to_verts(water, DK_BROWN, all_zeros, ~EF_Z2, 0, 0, 0, 0, 0, tex_add[0], tex_add[1]); // draw top surface only
+
+	// draw water at bends
+	for (unsigned d = 0; d < 2; ++d) {
+		if (t.add_bend_dir[d] < 0) continue; // no bend on this end
+		bool const conn_dir(t.add_bend_dir[d]);
+		cube_t bend_water(t.bcube_ext);
+		bend_water.d[dim][!d] = t.bcube_draw.d[dim][d]; // constrain to end only
+		bend_water.z2() = water.z2();
+
+		if (water_mat.tex.tscale_x != water_mat.tex.tscale_y) { // average out the texture scale
+			water_mat.tex.tscale_x = water_mat.tex.tscale_y = sqrt(water_mat.tex.tscale_x*water_mat.tex.tscale_y);
+		}
+		// water moves diagonally; can we rotate the quad to create seamless movement?
+		tex_add[!dim] = fract(SQRTOFTWOINV*flow_val);
+		tex_add[ dim] = tex_add[!dim] * ((d ^ t.dim ^ conn_dir) ? 1.0 : -1.0);
+		water_mat.add_cube_to_verts(bend_water, DK_BROWN, all_zeros, ~EF_Z2, 0, 0, 0, 0, 0, tex_add[0], tex_add[1]); // draw top surface only
+	} // for d
 }
 
 
