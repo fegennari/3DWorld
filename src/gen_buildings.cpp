@@ -4269,7 +4269,8 @@ public:
 		}
 		return check_road_seg_sphere_coll(ge, pos2, p_last, xlate, 0.0, xy_only, nullptr);
 	}
-	bool check_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm=nullptr, bool check_interior=0) const { // Note: pos is in camera space
+	// Note: pos is in camera space; assumes only player collision queries set check_interior=1
+	bool check_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm=nullptr, bool check_interior=0) const {
 		if (empty()) return 0;
 		bool const xy_only = 0;
 		vector3d const xlate(get_camera_coord_space_xlate());
@@ -4303,9 +4304,7 @@ public:
 		// hack to handle player in extended basement, which may be outside the building or even grid bbox:
 		// if player is in the basement, and we haven't checked the player's building, and the player's building is in our range of buildings, check it now
 		if (check_interior && !saw_player_building && player_in_basement && own_this_building(player_building)) {
-			if (dist_xy_less_than(get_camera_pos(), pos, CAMERA_RADIUS)) { // if this is the player
-				if (player_building->check_sphere_coll(pos, p_last, xlate, radius, xy_only, cnorm, check_interior)) return 1;
-			}
+			if (player_building->check_sphere_coll(pos, p_last, xlate, radius, xy_only, cnorm, check_interior)) return 1;
 		}
 		return 0;
 	}

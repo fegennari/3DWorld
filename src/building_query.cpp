@@ -886,15 +886,19 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 		// check tunnels
 		if (!interior->tunnels.empty() && point_in_extended_basement_not_basement(pos)) {
 			point const p_test(pos.x, pos.y, obj_z);
+			player_in_tunnel = 0; // caller should have cleared this flag, but we do it again so that we can use it for loop control flow
 
-			for (tunnel_seg_t const &t : interior->tunnels) {
-				float const expand(t.room_conn ? 0.1*radius : 0.0);
-				if (!t.bcube_ext.contains_pt_exp(p_test, expand)) continue;
-				tunnel_walk_area = t.get_walk_area(pos, xy_radius);
-				tunnel_walk_area.clamp_pt_xy(pos);
-				closest_floor_zval = t.bcube.z1();
-				had_coll = player_in_tunnel = 1;
-			}
+			// first pass checks bcube, second pass checks bcube_ext (which may overlap other tunnels)
+			for (unsigned pass = 0; pass < 2 && !player_in_tunnel; ++pass) {
+				for (tunnel_seg_t const &t : interior->tunnels) {
+					if (!((pass == 0) ? t.bcube : t.bcube_ext).contains_pt(p_test)) continue;
+					tunnel_walk_area = t.get_walk_area(pos, xy_radius);
+					tunnel_walk_area.clamp_pt_xy(pos);
+					closest_floor_zval = t.bcube.z1();
+					had_coll = player_in_tunnel = 1;
+					break;
+				}
+			} // for pass
 		}
 		if (had_coll) {pos.z = closest_floor_zval + radius; obj_z = max(pos.z, p_last.z);}
 
