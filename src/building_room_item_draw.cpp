@@ -315,9 +315,14 @@ void rgeom_mat_t::add_sphere_to_verts(point const &center, vector3d const &size,
 }
 
 void rgeom_mat_t::add_vert_torus_to_verts(point const &center, float r_inner, float r_outer, colorRGBA const &color,
-	float tscale, bool low_detail, bool half, float s_offset)
+	float tscale, bool low_detail, int half_or_quarter, float s_offset, unsigned ndiv)
 {
-	unsigned const ndiv(get_rgeom_sphere_ndiv(low_detail)), s_end(half ? ndiv/2 : ndiv);
+	if (ndiv == 0) {ndiv = get_rgeom_sphere_ndiv(low_detail);} // calculate ndiv if not set
+	unsigned s_end(ndiv);
+	if      (half_or_quarter == 0) {} // full
+	else if (half_or_quarter == 1) {s_end /= 2;} // half
+	else if (half_or_quarter == 2) {s_end /= 4;} // quarter
+	else {assert(0);}
 	float const ts_tt(tscale/ndiv), ds(TWO_PI/ndiv), cds(cos(ds)), sds(sin(ds));
 	vector<float> const &sin_cos(gen_torus_sin_cos_vals(ndiv));
 	color_wrapper const cw(color);
@@ -357,11 +362,11 @@ void rgeom_mat_t::add_contained_vert_torus_to_verts(cube_t const &c, colorRGBA c
 	add_vert_torus_to_verts(c.get_cube_center(), r_inner, r_outer, color, tscale, low_detail);
 }
 void rgeom_mat_t::add_ortho_torus_to_verts(point const &center, float r_inner, float r_outer, unsigned dim, colorRGBA const &color,
-	float tscale, bool low_detail, bool half, float s_offset)
+	float tscale, bool low_detail, int half_or_quarter, float s_offset)
 {
 	assert(dim < 3);
 	unsigned const verts_start(itri_verts.size()), ixs_start(indices.size());
-	add_vert_torus_to_verts(all_zeros, r_inner, r_outer, color, tscale, low_detail, half, s_offset);
+	add_vert_torus_to_verts(all_zeros, r_inner, r_outer, color, tscale, low_detail, half_or_quarter, s_offset);
 	
 	if (dim < 2) { // swap X or Y with Z
 		for (auto i = itri_verts.begin()+verts_start; i != itri_verts.end(); ++i) {

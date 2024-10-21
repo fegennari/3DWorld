@@ -497,6 +497,20 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 			for (unsigned i = 0; i < num_ixs; ++i) {mat.indices.push_back(mat.indices[ixs_start_ix+i] + vert_ix_off);}
 		} // for d
 	}
+	// draw walls for curved bends
+	for (unsigned d = 0; d < 2; ++d) {
+		if (t.add_bend_dir[d] < 0) continue; // no bend on this end
+		bool const conn_dir(t.add_bend_dir[d]);
+		int const off_ixs[8] = {1, 2, 0, 3, 3, 2, 0, 1};
+		unsigned const off_ix(off_ixs[4*dim + 2*d + conn_dir]);
+		float const s_offset(0.25*off_ix);
+		point pos(t.p[d]);
+		pos.x += ((off_ix == 1 || off_ix == 2) ? 1.0 : -1.0)*t.radius;
+		pos.y += ((off_ix == 2 || off_ix == 3) ? 1.0 : -1.0)*t.radius;
+		unsigned itris_start(mat.itri_verts.size()), ixs_start(mat.indices.size());
+		mat.add_vert_torus_to_verts(pos, t.radius, t.radius, wall_color, side_tscale, 0, 2, s_offset, ndiv); // low_detail=0, half_or_quarter=2 (quarter)
+		add_inverted_triangles(mat.itri_verts, mat.indices, itris_start, ixs_start); // draw the back side
+	} // for d
 	// draw closed ends in black so that they appear to extend into darkness
 	if (t.closed_ends[0] || t.closed_ends[1]) {
 		assert(!t.room_conn); // not supported

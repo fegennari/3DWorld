@@ -1701,7 +1701,6 @@ void building_room_geom_t::add_drink_can(room_object_t const &c, bool add_bottom
 }
 
 // functions reused from snake drawing
-template<typename T> void add_inverted_triangles(T &verts, vector<unsigned> &indices, unsigned verts_start, unsigned ixs_start);
 void draw_segment(rgeom_mat_t &mat, point const &p1, point const &p2, float radius1, float radius2,
 	float seg_ix, float tscale_x, float tscale_y, color_wrapper const &cw, unsigned ndiv, unsigned &data_pos);
 
@@ -3670,7 +3669,7 @@ void building_room_geom_t::add_bucket(room_object_t const &c, bool draw_metal, b
 		// draw a half torus handle
 		float const r_outer(c.get_radius()), r_inner(0.05*r_outer);
 		point const handle_center(c.xc(), c.yc(), c.z2());
-		mat.add_ortho_torus_to_verts(handle_center, r_inner, r_outer, c.dim, color, 1.0, 0, 1, (c.dim ? 0.0 : 0.75)); // half
+		mat.add_ortho_torus_to_verts(handle_center, r_inner, r_outer, c.dim, color, 1.0, 0, 1, (c.dim ? 0.0 : 0.75)); // half (half_or_quarter=1)
 	}
 	if (draw_liquid) { // maybe add liquid to the bucket
 		float liquid_level(0.0);
