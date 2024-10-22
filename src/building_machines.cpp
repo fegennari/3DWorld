@@ -37,12 +37,19 @@ void select_pipe_location(point &p1, point &p2, cube_t const &region, float radi
 float get_cylin_radius(vector3d const &sz, unsigned dim) {
 	return 0.25*(sz[(dim+1)%3] + sz[(dim+2)%3]);
 }
-void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cube_t const &region, float rmax, unsigned dim, rand_gen_t &rgen, bool add_coil) {
+void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cube_t const &region, float rmax, unsigned dim,
+	vect_sphere_t &pipe_ends, rand_gen_t &rgen, bool add_coil)
+{
 	assert(region.is_strictly_normalized());
 	min_eq(rmax, get_cylin_radius(region.get_size(), dim));
 	float const radius(rgen.rand_uniform((add_coil ? 0.4 : 0.25), 1.0)*rmax);
 	point p1, p2;
 	select_pipe_location(p1, p2, region, radius, dim, rgen);
+
+	for (sphere_t const &pe : pipe_ends) {
+		if (dist_less_than(p1, pe.pos, (radius + pe.radius))) return; // too close to a previously placed pipe
+	}
+	pipe_ends.emplace_back(p1, radius);
 	colorRGBA const color(choose_pipe_color(rgen)), spec_color(get_specular_color(color)); // special case metals
 
 	if (add_coil) {
@@ -156,6 +163,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 	bool parts_swapped(0), is_cylins[2] = {0, 0};
 	unsigned cylin_dims[2] = {2, 2}; // defaults to Z
 	vect_cube_t avoid, shapes;
+	vect_sphere_t pipe_ends;
 
 	if (two_part) {
 		float const split_pos(main.d[!dim][0] + rgen.rand_uniform(0.4, 0.6)*width);
@@ -302,9 +310,10 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		assert(region.is_strictly_normalized());
 
 		if ((is_cylin || has_gap) && cylin_dim != dim) { // if there's a gap between the machine and the wall; not for cylinders facing the wall
-			// add pipe(s) connecting to back wall in {dim, !dir} or ceiling; there's no check for intersecting pipes
+			// add pipe(s) connecting to back wall in {dim, !dir} or ceiling
 			unsigned const num_pipes((rgen.rand() % 4) + 1); // 1-4
-			for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region, pipe_rmax, dim, rgen);}
+			pipe_ends.clear();
+			for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region, pipe_rmax, dim, pipe_ends, rgen);}
 		}
 		// add pipes up to the ceiling if there's space and floor_ceil_gap was specified
 		if (height < floor_ceil_gap) {
@@ -319,7 +328,8 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 					if (cylin_dim == 2) {region.expand_by_xy(-(1.0 - SQRTOFTWOINV)*cylin_radius);} // use square inscribed in circle
 					else {region.z1() = part.zc();} // extend to center of cylinder
 				}
-				for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region, pipe_rmax, 2, rgen);} // dim=2
+				pipe_ends.clear();
+				for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region, pipe_rmax, 2, pipe_ends, rgen);} // dim=2
 			}
 		}
 		// add a duct to the wall
@@ -454,7 +464,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		}
 	} // for n
 	if (two_part) {
-		// connect the two parts with pipe and coils; there's no check for intersecting pipes
+		// connect the two parts with pipe and coils
 		unsigned const num_pipes((rgen.rand() % 4) + 1); // 1-4
 		cube_t region(parts[0]);
 		min_eq(region.z2(), parts[1].z2()); // shared Z range
@@ -469,11 +479,12 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 			region.d[!dim][1] = max(side_pos[0], side_pos[1]);
 			assert(region.is_strictly_normalized());
 			unsigned num_coils(0);
+			pipe_ends.clear();
 			
 			for (unsigned n = 0; n < num_pipes; ++n) {
 				bool const is_coil(num_coils < 2 && rgen.rand_float() < coil_prob); // max of 2 coils
 				num_coils += is_coil;
-				add_machine_pipe_in_region(c, region, (is_coil ? 2.0 : 1.0)*pipe_rmax, !dim, rgen, is_coil);
+				add_machine_pipe_in_region(c, region, (is_coil ? 2.0 : 1.0)*pipe_rmax, !dim, pipe_ends, rgen, is_coil);
 			}
 			// add flanges if large and connecting to a cube?
 		}

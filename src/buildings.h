@@ -117,6 +117,7 @@ struct door_t;
 struct pipe_t;
 struct tunnel_seg_t;
 typedef vector<point> vect_point;
+typedef vector<sphere_t> vect_sphere_t;
 
 struct bottle_params_t {
 	std::string name, texture_fn;
@@ -1159,7 +1160,7 @@ struct building_room_geom_t {
 	void add_chimney_cap(room_object_t const &c);
 	void add_ext_ladder(room_object_t const &c);
 	void add_int_ladder(room_object_t const &c);
-	void add_machine_pipe_in_region(room_object_t const &c, cube_t const &region, float rmax, unsigned dim, rand_gen_t &rgen, bool add_coil=0);
+	void add_machine_pipe_in_region(room_object_t const &c, cube_t const &region, float rmax, unsigned dim, vect_sphere_t &pipe_ends, rand_gen_t &rgen, bool add_coil=0);
 	void add_spring(point pos, float radius, float r_wire, float length, float coil_gap, unsigned dim, colorRGBA const &color, colorRGBA const &spec_color);
 	void add_machine(room_object_t const &c, float floor_ceil_gap);
 	void add_keyboard(room_object_t const &c);
