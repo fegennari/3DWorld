@@ -550,7 +550,7 @@ void building_room_geom_t::add_attic_door(room_object_t const &c, float tscale) 
 		}
 		// draw the steps
 		unsigned const num_steps = 10;
-		float const step_spacing(ladder.dz()/(num_steps+1)), step_thickness(0.1*step_spacing);
+		float const length(ladder.dz()), step_spacing(length/(num_steps+1)), step_thickness(0.1*step_spacing);
 		cube_t step(ladder);
 		step.expand_in_dim(!c.dim, -side_width_factor*ladder_width);
 
@@ -560,6 +560,16 @@ void building_room_geom_t::add_attic_door(room_object_t const &c, float tscale) 
 			ladder_mat.add_cube_to_verts(step, ladder_color, step.get_llc(), get_skip_mask_for_xy(!c.dim), 1); // skip sides, swap_tex_st=1
 		}
 		rotate_verts(ladder_mat.quad_verts, rot_axis, rot_angle, rot_pt, qv_start2);
+
+		// draw the springs
+		for (unsigned n = 0; n < 2; ++n) {
+			float const spring_len(0.42*length), radius(0.03*ladder_width), r_wire(0.1*radius), coil_gap(6.0*r_wire);
+			point pos;
+			pos[ c.dim] = door.d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*0.23*c.get_sz_dim(c.dim);
+			pos[!c.dim] = door.d[!c.dim][n];
+			pos.z = c.z1() - spring_len; // set bottom point
+			add_spring(pos, radius, r_wire, spring_len, coil_gap, 2, LT_GRAY); // vertical
+		} // for n
 		cord_len_pos = -0.35; // closer to the back
 		cord_z2     -= 0.36*ladder.dz(); // shift down
 	}
