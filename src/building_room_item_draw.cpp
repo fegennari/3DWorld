@@ -315,7 +315,7 @@ void rgeom_mat_t::add_sphere_to_verts(point const &center, vector3d const &size,
 }
 
 void rgeom_mat_t::add_vert_torus_to_verts(point const &center, float r_inner, float r_outer, colorRGBA const &color,
-	float tscale, bool low_detail, int half_or_quarter, float s_offset, unsigned ndiv)
+	float tscale, bool low_detail, int half_or_quarter, float s_offset, unsigned ndiv, float spiral_offset)
 {
 	if (ndiv == 0) {ndiv = get_rgeom_sphere_ndiv(low_detail);} // calculate ndiv if not set
 	unsigned s_end(ndiv);
@@ -323,14 +323,17 @@ void rgeom_mat_t::add_vert_torus_to_verts(point const &center, float r_inner, fl
 	else if (half_or_quarter == 1) {s_end /= 2;} // half
 	else if (half_or_quarter == 2) {s_end /= 4;} // quarter
 	else {assert(0);}
+	bool const is_offset(spiral_offset != 0.0);
 	float const ts_tt(tscale/ndiv), ds(TWO_PI/ndiv), cds(cos(ds)), sds(sin(ds));
 	vector<float> const &sin_cos(gen_torus_sin_cos_vals(ndiv));
 	color_wrapper const cw(color);
+	float zval(0.0);
 	s_offset *= TWO_PI;
+	if (is_offset) {spiral_offset /= (ndiv*r_outer);}
 
 	for (unsigned s = 0; s < s_end; ++s) { // outer
 		float const theta(s*ds + s_offset), ct(cos(theta)), st(sin(theta)), ct2(ct*cds - st*sds), st2(st*cds + ct*sds);
-		point const pos [2] = {point(ct, st, 0.0), point(ct2, st2, 0.0)};
+		point const pos [2] = {point(ct, st, zval), point(ct2, st2, (zval + spiral_offset))};
 		point const vpos[2] = {(center + pos[0]*r_outer), (center + pos[1]*r_outer)};
 		unsigned const tri_ix_start(itri_verts.size()), ixs_start(indices.size());
 
@@ -340,10 +343,12 @@ void rgeom_mat_t::add_vert_torus_to_verts(point const &center, float r_inner, fl
 			float const cp(sin_cos[(t_<<1)+0]), sp(sin_cos[(t_<<1)+1]);
 
 			for (unsigned i = 0; i < 2; ++i) {
-				vector3d const delta(pos[1-i]*sp + vector3d(0.0, 0.0, cp));
+				vector3d delta(pos[1-i]*sp + vector3d(0.0, 0.0, cp)); // normal
+				if (is_offset) {delta.normalize();}
 				itri_verts.emplace_back((vpos[1-i] + delta*r_inner), delta, ts_tt*(s+1-i), ts_tt*t, cw);
 			}
 		} // for t
+		zval += spiral_offset;
 		for (unsigned n = 0; n < 3; ++n) {indices.push_back(tri_ix_start + n);} // first triangle
 
 		for (unsigned n = tri_ix_start+3; n < itri_verts.size(); ++n) { // each vertex after this creates a new triangle
@@ -362,11 +367,11 @@ void rgeom_mat_t::add_contained_vert_torus_to_verts(cube_t const &c, colorRGBA c
 	add_vert_torus_to_verts(c.get_cube_center(), r_inner, r_outer, color, tscale, low_detail);
 }
 void rgeom_mat_t::add_ortho_torus_to_verts(point const &center, float r_inner, float r_outer, unsigned dim, colorRGBA const &color,
-	float tscale, bool low_detail, int half_or_quarter, float s_offset)
+	float tscale, bool low_detail, int half_or_quarter, float s_offset, unsigned ndiv, float spiral_offset)
 {
 	assert(dim < 3);
 	unsigned const verts_start(itri_verts.size()), ixs_start(indices.size());
-	add_vert_torus_to_verts(all_zeros, r_inner, r_outer, color, tscale, low_detail, half_or_quarter, s_offset);
+	add_vert_torus_to_verts(all_zeros, r_inner, r_outer, color, tscale, low_detail, half_or_quarter, s_offset, ndiv, spiral_offset);
 	
 	if (dim < 2) { // swap X or Y with Z
 		for (auto i = itri_verts.begin()+verts_start; i != itri_verts.end(); ++i) {

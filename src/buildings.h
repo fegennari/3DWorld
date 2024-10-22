@@ -831,9 +831,9 @@ public:
 		add_sphere_to_verts(c.get_cube_center(), 0.5*c.get_size(), color, low_detail, skip_hemi_dir, tr, matrix, ts_add, tt_add);
 	}
 	void add_vert_torus_to_verts (point const &center, float r_inner, float r_outer, colorRGBA const &color,
-		float tscale=1.0, bool low_detail=0, int half_or_quarter=0, float s_offset=0.0, unsigned ndiv=0);
+		float tscale=1.0, bool low_detail=0, int half_or_quarter=0, float s_offset=0.0, unsigned ndiv=0, float spiral_offset=0.0);
 	void add_ortho_torus_to_verts(point const &center, float r_inner, float r_outer, unsigned dim, colorRGBA const &color,
-		float tscale=1.0, bool low_detail=0, int half_or_quarter=0, float s_offset=0.0);
+		float tscale=1.0, bool low_detail=0, int half_or_quarter=0, float s_offset=0.0, unsigned ndiv=0, float spiral_offset=0.0);
 	void add_contained_vert_torus_to_verts(cube_t const &c, colorRGBA const &color, float tscale=1.0, bool low_detail=0);
 	void add_triangle_to_verts(point const v[3], colorRGBA const &color, bool two_sided, float tscale=1.0);
 	void add_quad_to_verts(point const v[4], colorRGBA const &color, float tscale=1.0);
@@ -1159,8 +1159,8 @@ struct building_room_geom_t {
 	void add_chimney_cap(room_object_t const &c);
 	void add_ext_ladder(room_object_t const &c);
 	void add_int_ladder(room_object_t const &c);
-	void add_machine_pipe_in_region(room_object_t const &c, cube_t const &region, float rmax, unsigned dim, rand_gen_t &rgen);
-	void add_spring(point const &p1, float len, float radius, float r_wire, float length, float coil_gap, unsigned dim, colorRGBA const &color);
+	void add_machine_pipe_in_region(room_object_t const &c, cube_t const &region, float rmax, unsigned dim, rand_gen_t &rgen, bool add_coil=0);
+	void add_spring(point pos, float radius, float r_wire, float length, float coil_gap, unsigned dim, colorRGBA const &color, colorRGBA const &spec_color);
 	void add_machine(room_object_t const &c, float floor_ceil_gap);
 	void add_keyboard(room_object_t const &c);
 	void add_obj_with_top_texture  (room_object_t const &c, std::string const &texture_name, colorRGBA const &sides_color, bool is_small=0);

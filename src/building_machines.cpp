@@ -37,14 +37,23 @@ void select_pipe_location(point &p1, point &p2, cube_t const &region, float radi
 float get_cylin_radius(vector3d const &sz, unsigned dim) {
 	return 0.25*(sz[(dim+1)%3] + sz[(dim+2)%3]);
 }
-void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cube_t const &region, float rmax, unsigned dim, rand_gen_t &rgen) { // untextured
+void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cube_t const &region, float rmax, unsigned dim, rand_gen_t &rgen, bool add_coil) {
 	assert(region.is_strictly_normalized());
 	min_eq(rmax, get_cylin_radius(region.get_size(), dim));
-	float const radius(rgen.rand_uniform(0.25, 1.0)*rmax);
+	float const radius(rgen.rand_uniform((add_coil ? 0.4 : 0.25), 1.0)*rmax);
 	point p1, p2;
 	select_pipe_location(p1, p2, region, radius, dim, rgen);
 	colorRGBA const color(choose_pipe_color(rgen)), spec_color(get_specular_color(color)); // special case metals
-	get_metal_material(1, 0, 1, 0, spec_color).add_cylin_to_verts(p1, p2, radius, radius, apply_light_color(c, color), 0, 0, 0, 0, 1.0, 1.0, 0, 16); // shadowed, small
+
+	if (add_coil) {
+		float const coil_radius(rgen.rand_uniform(0.05, 0.15)*radius), coil_gap(rgen.rand_uniform(1.5, 4.0)*coil_radius);
+		p1[dim] -= coil_radius; p2[dim] += coil_radius; // must start and end inside the object
+		float const length(p2[dim] - p1[dim]);
+		add_spring(p1, radius, coil_radius, length, coil_gap, dim, color, spec_color);
+	}
+	else {
+		get_metal_material(1, 0, 1, 0, spec_color).add_cylin_to_verts(p1, p2, radius, radius, apply_light_color(c, color), 0, 0, 0, 0, 1.0, 1.0, 0, 16); // shadowed, small
+	}
 }
 
 void clip_cylin_to_square(cube_t &c, unsigned dim) { // about the center
@@ -118,14 +127,17 @@ void draw_metal_handle_wheel(cube_t const &c, unsigned dim, colorRGBA const &col
 	shaft_mat.add_ortho_cylin_to_verts(shaft, shaft_color, dim, 1, 1); // draw sides and ends
 }
 
-void building_room_geom_t::add_spring(point const &p1, float len, float radius, float r_wire, float length, float coil_gap, unsigned dim, colorRGBA const &color) {
+void building_room_geom_t::add_spring(point pos, float radius, float r_wire, float length, float coil_gap, unsigned dim, colorRGBA const &color, colorRGBA const &spec_color) {
 	assert(dim < 3);
-	//point p2(p1); p2[dim] += length;
 	unsigned num_coils(max(1, round_fp(length/(2.0*r_wire + coil_gap))));
 	float const coil_spacing(length/num_coils);
-	bool const low_detail = 1;
-	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small
-	mat.add_vert_torus_to_verts(p1, r_wire, radius, color, 1.0, low_detail, 2); // TODO: draw as spiral with multiple turns and offset in dim
+	bool const low_detail = 0;
+	rgeom_mat_t &mat(get_metal_material(1, 0, 1, 0, spec_color)); // shadowed, small
+	
+	for (unsigned n = 0; n < num_coils; ++n) {
+		mat.add_ortho_torus_to_verts(pos, r_wire, radius, dim, color, 1.0, low_detail, 0, 0.0, 0, coil_spacing);
+		pos[dim] += coil_spacing;
+	}
 }
 
 void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_gap) { // components are shadowed and small
@@ -441,8 +453,8 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 			} // for n
 		}
 	} // for n
-	// connect the two parts with pipe(s); there's no check for intersecting pipes
 	if (two_part) {
+		// connect the two parts with pipe and coils; there's no check for intersecting pipes
 		unsigned const num_pipes((rgen.rand() % 4) + 1); // 1-4
 		cube_t region(parts[0]);
 		min_eq(region.z2(), parts[1].z2()); // shared Z range
@@ -452,10 +464,17 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		for (unsigned d = 0; d < 2; ++d) {side_pos[d] = (is_cylins[d] ? parts[d].get_center_dim(!dim) : parts[d].d[!dim][bool(d)^parts_swapped^1]);}
 
 		if (side_pos[0] != side_pos[1]) {
+			float const coil_prob((is_cylins[0] || is_cylins[1]) ? 0.25 : 0.5); // less likely for cylinders since some of the coils are hidden inside the cylider
 			region.d[!dim][0] = min(side_pos[0], side_pos[1]);
 			region.d[!dim][1] = max(side_pos[0], side_pos[1]);
 			assert(region.is_strictly_normalized());
-			for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region, pipe_rmax, !dim, rgen);}
+			unsigned num_coils(0);
+			
+			for (unsigned n = 0; n < num_pipes; ++n) {
+				bool const is_coil(num_coils < 2 && rgen.rand_float() < coil_prob); // max of 2 coils
+				num_coils += is_coil;
+				add_machine_pipe_in_region(c, region, (is_coil ? 2.0 : 1.0)*pipe_rmax, !dim, rgen, is_coil);
+			}
 			// add flanges if large and connecting to a cube?
 		}
 	}
