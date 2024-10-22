@@ -449,7 +449,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		max_eq(region.d[dim][0], parts[1].d[dim][0]); // shared range
 		min_eq(region.d[dim][1], parts[1].d[dim][1]);
 		float side_pos[2] = {};
-		for (unsigned d = 0; d < 2; ++d) {side_pos[d] = (is_cylins[d] ? parts[d].get_center_dim(!dim) : parts[d].d[!dim][bool(d)^parts_swapped]);}
+		for (unsigned d = 0; d < 2; ++d) {side_pos[d] = (is_cylins[d] ? parts[d].get_center_dim(!dim) : parts[d].d[!dim][bool(d)^parts_swapped^1]);}
 
 		if (side_pos[0] != side_pos[1]) {
 			region.d[!dim][0] = min(side_pos[0], side_pos[1]);
