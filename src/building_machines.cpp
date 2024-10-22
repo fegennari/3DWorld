@@ -138,11 +138,10 @@ void building_room_geom_t::add_spring(point pos, float radius, float r_wire, flo
 	assert(dim < 3);
 	unsigned num_coils(max(1, round_fp(length/(2.0*r_wire + coil_gap))));
 	float const coil_spacing(length/num_coils);
-	bool const low_detail = 0;
 	rgeom_mat_t &mat(get_metal_material(1, 0, 1, 0, spec_color)); // shadowed, small
 	
 	for (unsigned n = 0; n < num_coils; ++n) {
-		mat.add_ortho_torus_to_verts(pos, r_wire, radius, dim, color, 1.0, low_detail, 0, 0.0, 0, coil_spacing);
+		mat.add_ortho_torus_to_verts(pos, r_wire, radius, dim, color, 1.0, 0, 0, 0.0, N_CYL_SIDES, N_CYL_SIDES/2, coil_spacing); // reduce inner ndiv
 		pos[dim] += coil_spacing;
 	}
 }

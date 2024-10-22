@@ -508,7 +508,7 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 		pos.x += ((off_ix == 1 || off_ix == 2) ? 1.0 : -1.0)*t.radius;
 		pos.y += ((off_ix == 2 || off_ix == 3) ? 1.0 : -1.0)*t.radius;
 		unsigned itris_start(mat.itri_verts.size()), ixs_start(mat.indices.size());
-		mat.add_vert_torus_to_verts(pos, t.radius, t.radius, wall_color, side_tscale, 0, 2, s_offset, ndiv); // low_detail=0, half_or_quarter=2 (quarter)
+		mat.add_vert_torus_to_verts(pos, t.radius, t.radius, wall_color, side_tscale, 0, 2, s_offset, ndiv, ndiv); // low_detail=0, half_or_quarter=2 (quarter)
 		add_inverted_triangles(mat.itri_verts, mat.indices, itris_start, ixs_start); // draw the back side
 	} // for d
 	// draw closed ends in black so that they appear to extend into darkness

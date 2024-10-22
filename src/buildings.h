@@ -832,9 +832,9 @@ public:
 		add_sphere_to_verts(c.get_cube_center(), 0.5*c.get_size(), color, low_detail, skip_hemi_dir, tr, matrix, ts_add, tt_add);
 	}
 	void add_vert_torus_to_verts (point const &center, float r_inner, float r_outer, colorRGBA const &color,
-		float tscale=1.0, bool low_detail=0, int half_or_quarter=0, float s_offset=0.0, unsigned ndiv=0, float spiral_offset=0.0);
+		float tscale=1.0, bool low_detail=0, int half_or_quarter=0, float s_offset=0.0, unsigned ndivo=0, unsigned ndivi=0, float spiral_offset=0.0);
 	void add_ortho_torus_to_verts(point const &center, float r_inner, float r_outer, unsigned dim, colorRGBA const &color,
-		float tscale=1.0, bool low_detail=0, int half_or_quarter=0, float s_offset=0.0, unsigned ndiv=0, float spiral_offset=0.0);
+		float tscale=1.0, bool low_detail=0, int half_or_quarter=0, float s_offset=0.0, unsigned ndivo=0, unsigned ndivi=0, float spiral_offset=0.0);
 	void add_contained_vert_torus_to_verts(cube_t const &c, colorRGBA const &color, float tscale=1.0, bool low_detail=0);
 	void add_triangle_to_verts(point const v[3], colorRGBA const &color, bool two_sided, float tscale=1.0);
 	void add_quad_to_verts(point const v[4], colorRGBA const &color, float tscale=1.0);
