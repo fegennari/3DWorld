@@ -1954,24 +1954,21 @@ private:
 	bool select_avail_driveway_or_parking_space(car_t &car, rand_gen_t &rgen) const {
 		// consider destination driveways, possibly including parking lot entrances
 		if (city_obj_placer.driveways.empty()) return 0; // no driveways
+		if (!is_residential) return 0; // skip driveways that are commercial city parking lot entrances (even though it works) because cars shouldn't stop there
 		
-		if (!is_residential) { // not a residential city
-			return 0; // skip driveways that are commercial city parking lot entrances (even though it works) because cars shouldn't stop there
-			bool const allow_hcap(rgen.rand_float() < 0.25);
-			pspace_ref_t const ps_ref(city_obj_placer.select_dest_parking_space(car.get_center(), allow_hcap, 1, rgen)); // reserve_spot=1
-			if (!ps_ref.valid()) return 0;
-			car.dest_driveway = ps_ref.dwix; // no need to store ps_ref.plix?
-			car.dest_pspace   = ps_ref.psix;
-			//point const dest(city_obj_placer.get_parking_space_center(ps_ref.psix));
-			// TODO
-			return 1;
-		}
 		for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to find a valid driveway
 			unsigned const dix(rgen.rand()%city_obj_placer.driveways.size());
 			driveway_t const &driveway(get_driveway(dix));
 			if (driveway.in_use) continue;
 			if (driveway.get_length() < 1.5*car.get_length()) continue; // driveway is too short
 			if (driveway.get_width () < 1.1*car.get_width ()) continue; // driveway is too narrow (mostly applies to trucks)
+
+			if (!is_residential) { // not a residential city
+				bool const allow_hcap(rgen.rand_float() < 0.25);
+				int const psix(city_obj_placer.select_dest_parking_space(dix, allow_hcap, 1, rgen)); // reserve_spot=1
+				if (psix < 0) continue;
+				car.dest_pspace = psix;
+			}
 			driveway.in_use   = 1; // temporarily in use
 			car.dest_driveway = (unsigned short)dix;
 			// find intersection before the driveway such that driving on the road exiting this intersection will encounter the driveway on the right

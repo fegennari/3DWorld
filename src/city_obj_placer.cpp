@@ -252,21 +252,12 @@ void city_obj_placer_t::add_cars_to_driveways(vector<car_t> &cars, vector<road_p
 	} // for i
 }
 
-pspace_ref_t city_obj_placer_t::select_dest_parking_space(point const &pos, bool allow_hcap, bool reserve_spot, rand_gen_t &rgen) const {
-	if (pspaces.empty()) return pspace_ref_t(); // no parking spaces; error?
-	// find the parking lot containing the point
-	int park_lot_ix(-1);
-
-	for (unsigned i = 0; i < parking_lots.size(); ++i) {
-		//if (parking_lots[i].contains_pt_xy(pos)) {park_lot_ix = i; break;} // no - unreachable if there is no driveway
-		// check the parking lot driveway if one exists
-		int const driveway_ix(parking_lots[i].driveway_ix);
-		if (driveway_ix < 0) continue; // no driveway
-		assert(driveway_ix < driveways.size());
-		if (driveways[driveway_ix].in_use) continue; // one car per parking lot/driveway, for now
-		if (driveways[driveway_ix].contains_pt_xy(pos)) {park_lot_ix = i; break;}
-	}
-	if (park_lot_ix < 0) return pspace_ref_t(); // not found
+int city_obj_placer_t::select_dest_parking_space(unsigned driveway_ix, bool allow_hcap, bool reserve_spot, rand_gen_t &rgen) const {
+	if (pspaces.empty()) return -1; // no parking spaces; error?
+	assert(driveway_ix < driveways.size());
+	int const park_lot_ix(driveways[driveway_ix].park_lot_ix);
+	if (park_lot_ix < 0) return -1; // error?
+	assert(park_lot_ix < (int)parking_lots.size());
 	// select an available spot on the row next to the driveway
 	vector<unsigned> avail_spaces;
 
@@ -288,10 +279,11 @@ pspace_ref_t city_obj_placer_t::select_dest_parking_space(point const &pos, bool
 		if (col_has_car) continue; // don't block another car in; this is only needed because parking lots don't have space between columns
 		avail_spaces.push_back(psix);
 	} // for i
-	if (avail_spaces.empty()) return pspace_ref_t(); // no space found
+	//point const plpos(parking_lots[park_lot_ix].get_cube_center());
+	if (avail_spaces.empty()) return -1; // no space found
 	unsigned const sel_space(avail_spaces[rgen.rand() % avail_spaces.size()]); // select a random space
 	if (reserve_spot) {pspaces[sel_space].add_car();} // mark space as occupied; this is non-const
-	return pspace_ref_t(park_lot_ix, sel_space, parking_lots[park_lot_ix].driveway_ix);
+	return sel_space;
 }
 
 bool check_pt_and_place_blocker(point const &pos, vect_cube_t &blockers, float radius, float blocker_spacing, bool add_blocker=1) {
