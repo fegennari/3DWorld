@@ -248,7 +248,8 @@ public:
 };
 
 struct hcap_space_t : public oriented_city_obj_t { // handicap space
-	hcap_space_t(point const &pos_, float radius_, bool dim_, bool dir_);
+	unsigned pspace_ix;
+	hcap_space_t(point const &pos_, float radius_, bool dim_, bool dir_, unsigned psix);
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
@@ -257,6 +258,28 @@ struct hcap_with_dist_t : public hcap_space_t {
 	hcap_with_dist_t(hcap_space_t const &hs, cube_t const &plot, vect_cube_t &bcubes, unsigned bcubes_end);
 	bool operator<(hcap_with_dist_t const &v) const {return (dmin_sq < v.dmin_sq);}
 };
+
+struct parking_space_t { // parking space; not drawn
+	bool dim=0, dir=0, blocked=0, is_hcap=0;
+	mutable bool has_active_car=0, occupied=0;
+	int car_ix=-1; // index of dynamic car parked in this spot, if present
+	unsigned p_lot_ix=0, row_ix=0, col_ix=0;
+	point center;
+
+	parking_space_t(point const &c, bool dim_, bool dir_, unsigned pix, unsigned rix, unsigned cix) :
+		dim(dim_), dir(dir_), p_lot_ix(pix), row_ix(rix), col_ix(cix), center(c) {}
+	bool is_avail() const {return !(occupied || blocked);}
+	// these two shouldn't be const, but they're called from other const functions; car state is considered mutable because it's temporary
+	void add_car   () const {assert(is_avail() && !has_active_car); occupied = has_active_car = 1;}
+	void remove_car() const {assert(has_active_car); occupied = has_active_car = 0;}
+};
+struct pspace_ref_t {
+	int plix=-1, psix=-1, dwix=-1; // index of parking lot, parking space, and driveway
+	pspace_ref_t() {}
+	pspace_ref_t(int plix_, int psix_, int dwix_) : plix(plix_), psix(psix_), dwix(dwix_) {}
+	bool valid() const {return (plix >= 0 && psix >= 0 && dwix >= 0);}
+};
+typedef vector<parking_space_t> vect_parking_space_t;
 
 struct manhole_t : public city_obj_t {
 	manhole_t(point const &pos_, float radius_);
@@ -636,6 +659,7 @@ private:
 		flag_groups, nrack_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, dumpster_groups, plant_groups, flower_groups, pond_groups,
 		walkway_groups, pillar_groups, wwe_groups, p_solar_groups, bball_groups, pfloat_groups;
 	skyway_t skyway; // optional
+	vect_parking_space_t pspaces;
 	bird_poop_manager_t bird_poop_manager;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
@@ -675,6 +699,8 @@ public:
 	void set_plot_subdiv_sz(float sz) {plot_subdiv_sz = sz;}
 	void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, vector<road_t> const &roads,
 		vector<road_isec_t> isecs[3], cube_t const &city_bcube, unsigned city_id, bool have_cars, bool is_residential, bool have_streetlights);
+	pspace_ref_t select_dest_parking_space(point const &pos, bool allow_hcap, bool reserve_spot, rand_gen_t &rgen) const;
+	point get_parking_space_center(unsigned pspace_ix) const {assert(pspace_ix < pspaces.size()); return pspaces[pspace_ix].center;}
 	bool add_skyway(cube_t const &city_bcube, vect_bldg_walkway_t const &walkway_cands, rand_gen_t rgen);
 	void bind_elevators_to_building_walkways(cube_t const &city_bcube) const;
 	void finalize_streetlights_and_power(streetlights_t &sl, vector<vect_cube_t> &plot_colliders);

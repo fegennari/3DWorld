@@ -141,7 +141,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 100
 	cube_t prev_bcube;
 	bool is_truck=0, is_police=0, is_ambulance=0, is_emergency=0, entering_city=0, in_tunnel=0, dest_valid=0, destroyed=0, in_reverse=0, engine_running=0, is_braking=0;
 	uint8_t color_id=0, front_car_turn_dir=TURN_UNSPEC, model_id=0;
-	uint16_t dest_city=0, dest_isec=0;
+	uint16_t dest_city=0, dest_isec=0, dest_pspace=0;
 	float height=0.0, dz=0.0, rot_z=0.0, turn_val=0.0, waiting_pos=0.0, wake_time=0.0;
 	car_t const *car_in_front=nullptr;
 
@@ -294,8 +294,10 @@ struct driveway_t : public oriented_cube_t {
 	mutable uint8_t in_use=0; // either reserves the spot, or a car is parked there; 1=temporary, 2=permanent
 	mutable unsigned last_ped_frame=0;
 	unsigned plot_ix=0;
+	int park_lot_ix=-1;
+
 	driveway_t() {}
-	driveway_t(cube_t const &c, bool dim_, bool dir_, unsigned pix) : oriented_cube_t(c, dim_, dir_), plot_ix(pix) {}
+	driveway_t(cube_t const &c, bool dim_, bool dir_, unsigned pix, int plix=-1) : oriented_cube_t(c, dim_, dir_), plot_ix(pix), park_lot_ix(plix) {}
 	float get_edge_at_road() const {return d[dim][dir];}
 	void mark_ped_this_frame() const;
 	bool has_recent_ped() const;
@@ -337,6 +339,7 @@ struct plot_xy_t {
 
 struct parking_lot_t : public oriented_cube_t {
 	unsigned short row_sz, num_rows;
+	int driveway_ix=-1;
 	vector<unsigned char> used_spaces;
 	parking_lot_t(cube_t const &c, bool dim_, bool dir_, unsigned row_sz_=0, unsigned num_rows_=0) : oriented_cube_t(c, dim_, dir_), row_sz(row_sz_), num_rows(num_rows_) {}
 	tex_range_t get_tex_range(float ar) const;

@@ -83,6 +83,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 		}
 		assert(park.row_sz >= city_params.min_park_spaces && park.num_rows >= city_params.min_park_rows);
 		assert(park.dx() > 0.0 && park.dy() > 0.0);
+		unsigned const parking_lot_ix(parking_lots.size());
 
 		if (1) { // add driveways connecting to parking lot
 			float const back_of_lot(park.d[car_dim][!car_dir]);
@@ -91,7 +92,8 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 			driveway.d[ car_dim][ car_dir] = back_of_lot;
 			driveway.d[ car_dim][!car_dir] = back_of_lot + (car_dir ? -1.0 : 1.0)*1.25*space_width;
 			driveway.d[!car_dim][  dw_dir] = full_plot.d[!car_dim][dw_dir] + (dw_dir ? 1.0 : -1.0)*sidewalk_width; // extend to the road, with a small gap for the curb
-			driveways.emplace_back(driveway, !car_dim, dw_dir, plot_ix);
+			park.driveway_ix = driveways.size();
+			driveways.emplace_back(driveway, !car_dim, dw_dir, plot_ix, parking_lot_ix);
 			bcubes.push_back(driveway); // add to list of blocker bcubes
 		}
 		if (rgen.rand_float() < 0.4) { // add solar roofs over parking lots 40% of the time
@@ -117,14 +119,14 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 				bcubes.push_back(blocker); // required for trees
 			}
 		}
-		car.cur_seg = (unsigned short)parking_lots.size(); // store parking lot index in cur_seg
+		car.cur_seg = (unsigned short)parking_lot_ix; // store parking lot index in cur_seg
 		parking_lots.push_back(park);
 		bcubes.push_back(park); // add to list of blocker bcubes so that no later parking lots or other city objects overlap this one
 		//parking_lots.back().expand_by_xy(0.5*pad_dist); // re-add half the padding for drawing (breaks texture coord alignment)
 		unsigned const nspaces(park.row_sz*park.num_rows);
 		num_spaces += nspaces;
 
-		// fill the parking lot with cars and assign handicap spaces
+		// create parking spaces, fill the parking lot with cars, and assign handicap spaces
 		vector<unsigned char> &used_spaces(parking_lots.back().used_spaces);
 		used_spaces.resize(nspaces, 0); // start empty
 		car.dim = car_dim; car.dir = car_dir;
@@ -132,12 +134,18 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 		pos[car_dim] += 0.5*dr + (car_dir ? 0.15 : -0.15)*fabs(dr); // offset for centerline, biased toward the front of the parking space
 		float const car_density(rgen.rand_uniform(city_params.min_park_density, city_params.max_park_density));
 
-		for (unsigned row = 0; row < park.num_rows; ++row) {
-			pos[!car_dim] = corner_pos[!car_dim] + 0.5*dw; // half offset for centerline
+		for (unsigned row = 0; row < park.num_rows; ++row) { // car lengths
+			pos[!car_dim] = corner_pos[!car_dim] + 0.5*dw; // start at the low end; add half offset for centerline
 			bool prev_was_bad(0);
 
-			for (unsigned col = 0; col < park.row_sz; ++col) { // iterate one past the end
-				if (prev_was_bad) {prev_was_bad = 0;} // previous car did a bad parking job, leave this space empty
+			for (unsigned col = 0; col < park.row_sz; ++col) { // car widths
+				point const center(pos.x, pos.y, park.z2());
+				parking_space_t pspace(center, car_dim, car_dir, parking_lot_ix, row, col);
+
+				if (prev_was_bad) { // previous car did a bad parking job, leave this space empty
+					prev_was_bad   = 0;
+					pspace.blocked = 1;
+				}
 				else if (rgen.rand_float() < car_density) { // only half the spaces are filled on average
 					point cpos(pos);
 					cpos[ car_dim] += 0.05*dr*rgen.rand_uniform(-1.0, 1.0); // randomness of front amount
@@ -151,10 +159,12 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 					cars.push_back(car);
 					if ((rgen.rand()&7) == 0) {cars.back().dir ^= 1;} // pack backwards 1/8 of the time
 					used_spaces[row*park.row_sz + col] = 1;
+					has_parking     = 1;
+					pspace.occupied = 1;
 					++filled_spaces;
-					has_parking = 1;
 				}
-				hcap_cands.emplace_back(hcap_space_t(point(pos.x, pos.y, park.z2()), 0.25*space_width, car_dim, car_dir), plot, bcubes, buildings_end);
+				hcap_cands.emplace_back(hcap_space_t(center, 0.25*space_width, car_dim, car_dir, pspaces.size()), plot, bcubes, buildings_end);
+				pspaces.push_back(pspace);
 				pos[!car_dim] += dw;
 			} // for col
 			pos[car_dim] += dr;
@@ -165,7 +175,9 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 		bool inside(0);
 
 		for (unsigned col = 0; col <= park.row_sz; ++col) { // one extra iteration
-			// mark space as blocked if any spaces in the row are blocked; avoids creating diagonally adjacent colliders that cause dead ends and confuse path finding
+			// mark space as blocked if any spaces in the row are blocked;
+			// avoids creating diagonally adjacent colliders that cause dead ends and confuse path finding;
+			// doesn't affect parking spaces or cars
 			bool blocked(0);
 
 			if (col < park.row_sz) { // not a valid column
@@ -195,7 +207,12 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 
 	if (num_hcap_spots > 0) {
 		sort(hcap_cands.begin(), hcap_cands.end());
-		for (unsigned n = 0; n < num_hcap_spots; ++n) {hcap_groups.add_obj(hcap_space_t(hcap_cands[n]), hcaps);}
+
+		for (unsigned n = 0; n < num_hcap_spots; ++n) {
+			hcap_groups.add_obj(hcap_space_t(hcap_cands[n]), hcaps);
+			assert(hcap_cands[n].pspace_ix < pspaces.size());
+			pspaces[hcap_cands[n].pspace_ix].is_hcap = 1;
+		}
 	}
 	return has_parking;
 }
@@ -233,6 +250,48 @@ void city_obj_placer_t::add_cars_to_driveways(vector<car_t> &cars, vector<road_p
 		cars.push_back(car);
 		plot_colliders[i->plot_ix].push_back(car.bcube); // prevent pedestrians from walking through this parked car
 	} // for i
+}
+
+pspace_ref_t city_obj_placer_t::select_dest_parking_space(point const &pos, bool allow_hcap, bool reserve_spot, rand_gen_t &rgen) const {
+	if (pspaces.empty()) return pspace_ref_t(); // no parking spaces; error?
+	// find the parking lot containing the point
+	int park_lot_ix(-1);
+
+	for (unsigned i = 0; i < parking_lots.size(); ++i) {
+		//if (parking_lots[i].contains_pt_xy(pos)) {park_lot_ix = i; break;} // no - unreachable if there is no driveway
+		// check the parking lot driveway if one exists
+		int const driveway_ix(parking_lots[i].driveway_ix);
+		if (driveway_ix < 0) continue; // no driveway
+		assert(driveway_ix < driveways.size());
+		if (driveways[driveway_ix].in_use) continue; // one car per parking lot/driveway, for now
+		if (driveways[driveway_ix].contains_pt_xy(pos)) {park_lot_ix = i; break;}
+	}
+	if (park_lot_ix < 0) return pspace_ref_t(); // not found
+	// select an available spot on the row next to the driveway
+	vector<unsigned> avail_spaces;
+
+	for (unsigned i = 0; i < pspaces.size(); ++i) {
+		parking_space_t const &pi(pspaces[i]);
+		if (pi.p_lot_ix != park_lot_ix || !pi.is_avail()) continue;
+		if (!allow_hcap && pi.is_hcap) continue;
+		if (pi.row_ix > 0) continue; // can only enter along the first row, which is connected to the driveway
+		unsigned psix(i);
+		bool col_has_car(0);
+		
+		// pull all the way forward
+		for (unsigned j = i+1; j < pspaces.size(); ++j) {
+			parking_space_t const &pj(pspaces[j]);
+			if (pj.p_lot_ix != park_lot_ix || pj.col_ix != pi.col_ix) break; // end of column, done
+			if (pj.has_active_car) {col_has_car = 1; break;}
+			if (pj.is_avail()) {psix = j;} // move up one space
+		}
+		if (col_has_car) continue; // don't block another car in; this is only needed because parking lots don't have space between columns
+		avail_spaces.push_back(psix);
+	} // for i
+	if (avail_spaces.empty()) return pspace_ref_t(); // no space found
+	unsigned const sel_space(avail_spaces[rgen.rand() % avail_spaces.size()]); // select a random space
+	if (reserve_spot) {pspaces[sel_space].add_car();} // mark space as occupied; this is non-const
+	return pspace_ref_t(park_lot_ix, sel_space, parking_lots[park_lot_ix].driveway_ix);
 }
 
 bool check_pt_and_place_blocker(point const &pos, vect_cube_t &blockers, float radius, float blocker_spacing, bool add_blocker=1) {

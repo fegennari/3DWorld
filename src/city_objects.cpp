@@ -1352,7 +1352,7 @@ bool transmission_line_t::cube_intersect_xy(cube_t const &c) const {
 
 // handicap spaces
 
-hcap_space_t::hcap_space_t(point const &pos_, float radius_, bool dim_, bool dir_) : oriented_city_obj_t(pos_, radius_, dim_, dir_) {
+hcap_space_t::hcap_space_t(point const &pos_, float radius_, bool dim_, bool dir_, unsigned psix) : oriented_city_obj_t(pos_, radius_, dim_, dir_), pspace_ix(psix) {
 	assert(radius > 0.0);
 	set_bcube_from_vcylin(pos, 0.01*radius, radius); // make nonzero height
 }
