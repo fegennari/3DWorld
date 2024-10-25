@@ -364,12 +364,12 @@ void building_t::update_sewer_rats(point const &camera_bs, unsigned building_ix)
 			pos.z       = t.p[0].z - t.radius; // on the bottom of the tunnel
 			dir[t.dim]  = ((pos[t.dim] < t.gate_pos) ? 1.0 : -1.0); // face toward the gate
 			rats.add(rat_t(pos, radius, dir, 0, 0, (i - interior->tunnels.begin()))); // id=0, dead=0; store tunnel index
-		} // for r
+		} // for i
 		rats.placed = 1;
 	}
 	for (rat_t &rat : rats) { // update logic
 		if (rat.speed > 0.0) { // moving
-			assert(rat.id < interior->tunnels.size());
+			assert(rat.tunnel_ix < interior->tunnels.size());
 			tunnel_seg_t const &t(interior->tunnels[rat.tunnel_ix]);
 			bool const dir(rat.dir[t.dim] > 0.0); // movement direction along the tunnel
 			float const stop_pos(0.5*(t.p[dir][t.dim] + t.gate_pos));

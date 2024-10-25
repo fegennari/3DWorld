@@ -560,7 +560,7 @@ void building_room_geom_t::draw_animals(shader_t &s, building_t const &building,
 			}
 			rat_drawn = 1;
 		} // for rat
-		if (player_in_tunnel) { // draw sewer rats
+		if (player_in_tunnel && !shadow_only) { // draw sewer rats
 			for (rat_t const &rat : sewer_rats) {
 				cube_t const bcube(rat.get_bcube());
 				if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
