@@ -540,7 +540,7 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 
 void building_room_geom_t::add_tunnel_water(tunnel_seg_t const &t) {
 	if (t.water_level <= 0.0) return;
-	// draw water surface
+	// draw water/sewage surface
 	bool const dim(t.dim);
 	float const tscale(1.0/t.radius);
 	float tscale_xy[2] = {tscale, tscale};
@@ -556,12 +556,15 @@ void building_room_geom_t::add_tunnel_water(tunnel_seg_t const &t) {
 	tex_add[!dim] = fract(flow_val); // animate the water texture
 	water_mat.add_cube_to_verts(water, DK_BROWN, all_zeros, ~EF_Z2, 0, 0, 0, 0, 0, tex_add[0], tex_add[1]); // draw top surface only
 
-	// draw water at bends
+	// draw water/sewage at bends
 	for (unsigned d = 0; d < 2; ++d) {
 		if (t.add_bend_dir[d] < 0) continue; // no bend on this end
 		bool const conn_dir(t.add_bend_dir[d]);
+		float const tunnel_end(t.bcube_draw.d[dim][d]);
 		cube_t bend_water(t.bcube_ext);
-		bend_water.d[dim][!d] = t.bcube_draw.d[dim][d]; // constrain to end only
+		bend_water.d[ dim][!d] = tunnel_end; // constrain to end only
+		bend_water.d[ dim][ d] = tunnel_end + (t.radius + water_hwidth)*(d ? 1.0 : -1.0);
+		bend_water.d[!dim][!conn_dir] -= (t.radius - water_hwidth)*(conn_dir ? -1.0 : 1.0);
 		bend_water.z2() = water.z2();
 
 		if (water_mat.tex.tscale_x != water_mat.tex.tscale_y) { // average out the texture scale
