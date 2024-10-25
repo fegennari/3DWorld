@@ -279,7 +279,6 @@ int city_obj_placer_t::select_dest_parking_space(unsigned driveway_ix, bool allo
 		if (col_has_car) continue; // don't block another car in; this is only needed because parking lots don't have space between columns
 		avail_spaces.push_back(psix);
 	} // for i
-	//point const plpos(parking_lots[park_lot_ix].get_cube_center());
 	if (avail_spaces.empty()) return -1; // no space found
 	unsigned const sel_space(avail_spaces[rgen.rand() % avail_spaces.size()]); // select a random space
 	if (reserve_spot) {pspaces[sel_space].add_car();} // mark space as occupied; this is non-const

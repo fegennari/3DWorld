@@ -299,9 +299,16 @@ bool car_t::run_enter_driveway_logic(vector<car_t> const &cars, driveway_t const
 void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 	assert(dim == driveway.dim);
 	assert(dir != driveway.dir);
-	float const stop_pos(driveway.get_center_dim(driveway.dim)), car_center(bcube.get_center_dim(driveway.dim));
+	float stop_pos(0.0), car_pos(bcube.get_center_dim(driveway.dim));
 
-	if ((car_center < stop_pos) == driveway.dir) { // reached the driveway center, stop
+	if (driveway.park_lot_ix >= 0) { // parking lot driveway; stop and turn at dest parking space
+		stop_pos = park_space_cent[dim];
+		car_pos += 0.5*(dir ? 1.0 : -1.0)*get_length(); // half length
+	}
+	else { // house driveway; stop in the center
+		stop_pos = driveway.get_center_dim(driveway.dim);
+	}
+	if ((car_pos < stop_pos) == driveway.dir) { // reached the driveway center, stop
 		dest_valid     = 0;
 		dest_driveway  = -1;
 		engine_running = 0;

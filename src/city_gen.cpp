@@ -1967,7 +1967,9 @@ private:
 				bool const allow_hcap(rgen.rand_float() < 0.25);
 				int const psix(city_obj_placer.select_dest_parking_space(dix, allow_hcap, 1, rgen)); // reserve_spot=1
 				if (psix < 0) continue;
+				point const ps_center(city_obj_placer.get_parking_space_center(psix));
 				car.dest_pspace = psix;
+				car.park_space_cent.assign(ps_center.x, ps_center.y);
 			}
 			driveway.in_use   = 1; // temporarily in use
 			car.dest_driveway = (unsigned short)dix;
