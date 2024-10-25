@@ -151,9 +151,9 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 					cpos[ car_dim] += 0.05*dr*rgen.rand_uniform(-1.0, 1.0); // randomness of front amount
 					cpos[!car_dim] += 0.12*dw*rgen.rand_uniform(-1.0, 1.0); // randomness of side  amount
 
-					if (col+1 != park.row_sz && (rgen.rand()&15) == 0) {// occasional bad parking job
-						cpos[!car_dim] += dw*rgen.rand_uniform(0.3, 0.35);
-						prev_was_bad = 1;
+					if (col+1 != park.row_sz && (rgen.rand()&15) == 0) { // occasional bad parking job
+						cpos[!car_dim] += dw*rgen.rand_uniform(0.3, 0.35)*(rgen.rand_bool() ? 1.0 : -1.0);
+						prev_was_bad    = 1;
 					}
 					car.set_bcube(pos, nom_car_size);
 					cars.push_back(car);
