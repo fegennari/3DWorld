@@ -49,10 +49,12 @@ struct spider_t : public building_animal_t {
 	vector3d upv;
 	point last_valid_pos;
 	float update_time=0.0, web_start_zval=0.0, jump_vel_z=0.0, jump_dist=0.0;
+	unsigned tunnel_ix=0; // for sewer spiders
 	bool on_web=0, web_dir=0, squished=0; // web_dir: 0=going down, 1=going up
+
 	// this first constructor is for the lower_bound() call in vect_rat_t::get_first_rat_with_x2_gt()
 	spider_t(float xval) : building_animal_t(xval) {}
-	spider_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_);
+	spider_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_, unsigned tix=0);
 	static bool allow_in_attic () {return 1;}
 	static bool not_by_ext_door() {return 1;}
 	float get_xy_radius() const {return 2.0*radius;}

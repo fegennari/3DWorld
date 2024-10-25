@@ -1016,7 +1016,7 @@ struct building_room_geom_t {
 	vector<door_handle_t> door_handles; // for 3D model drawing
 	vector<unsigned> moved_obj_ids;
 	vect_rat_t    rats, sewer_rats;
-	vect_spider_t spiders;
+	vect_spider_t spiders, sewer_spiders;
 	vect_snake_t  snakes;
 	vect_insect_t insects;
 	// {large static, small static, dynamic, lights, alpha mask, transparent, door} materials
@@ -2120,6 +2120,7 @@ public:
 	void update_rats   (point const &camera_bs, unsigned building_ix);
 	void update_sewer_rats(point const &camera_bs, unsigned building_ix);
 	void update_spiders(point const &camera_bs, unsigned building_ix);
+	void update_sewer_spiders(point const &camera_bs, unsigned building_ix);
 	void update_snakes (point const &camera_bs, unsigned building_ix);
 	void update_insects(point const &camera_bs, unsigned building_ix);
 	void get_objs_at_or_below_ground_floor(vect_room_object_t &ret, bool for_spider) const;

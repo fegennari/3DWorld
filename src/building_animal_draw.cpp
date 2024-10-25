@@ -576,6 +576,10 @@ void building_room_geom_t::draw_animals(shader_t &s, building_t const &building,
 	spider_draw.draw(spiders, s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);
 	snake_draw .draw(snakes,  s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);
 	if (!shadow_only) {insect_draw.draw(insects, s, building, oc, xlate, reflection_pass);} // insects are too small to cast shadows
+
+	if (player_in_tunnel && !shadow_only) { // draw sewer spiders
+		spider_draw.draw(sewer_spiders, s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);
+	}
 }
 
 

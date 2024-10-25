@@ -63,6 +63,7 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix) {
 	update_rats   (camera_bs, building_ix);
 	update_sewer_rats(camera_bs, building_ix);
 	update_spiders(camera_bs, building_ix);
+	update_sewer_spiders(camera_bs, building_ix);
 	update_snakes (camera_bs, building_ix);
 	update_insects(camera_bs, building_ix);
 	interior->room_geom->last_animal_update_frame = frame_counter;
@@ -788,7 +789,9 @@ void building_t::scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amou
 // *** Spiders ***
 
 // Note: radius is really used for height and body size; legs can extend out to ~2x radius, so we decrease radius to half the user-specified value to account for this
-spider_t::spider_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_) : building_animal_t(pos_, 0.5*radius_, dir_, id_), upv(plus_z) {
+spider_t::spider_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_, unsigned tix) :
+	building_animal_t(pos_, 0.5*radius_, dir_, id_), upv(plus_z), tunnel_ix(tix)
+{
 	pos.z += radius; // shift upward so that the center is off the ground
 }
 cube_t spider_t::get_bcube() const {
@@ -849,6 +852,47 @@ void building_t::update_spiders(point const &camera_bs, unsigned building_ix) {
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, frame_counter+1); // unique per building and per frame
 	for (spider_t &spider : spiders) {update_spider(spider, camera_bs, timestep, spiders.max_xmove, rgen);}
+}
+
+void building_t::update_sewer_spiders(point const &camera_bs, unsigned building_ix) {
+	vect_spider_t &spiders(interior->room_geom->sewer_spiders);
+	if (spiders.placed && spiders.empty()) return; // no spiders placed in this building
+	if (global_building_params.num_spiders_max == 0 || interior->tunnels.empty()) return;
+	float const floor_spacing(get_window_vspace()), timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
+	rand_gen_t rgen;
+	rgen.set_state(building_ix+1, building_ix+123); // unique per building
+
+	if (!spiders.placed) {
+		for (auto i = interior->tunnels.begin(); i != interior->tunnels.end(); ++i) {
+			tunnel_seg_t const &t(*i);
+			if (t.room_conn)      continue; // don't add to room connector tunnel segment
+			if (rgen.rand_bool()) continue; // add 50% of the time
+			float const radius(select_animal_radius(global_building_params.spider_size_min, global_building_params.spider_size_max, floor_spacing, rgen));
+			float const v1(t.p[0][t.dim] + 4.0*radius), v2(t.p[1][t.dim] - 4.0*radius); // placement range
+			if (v1 >= v2) continue; // not enough space for a spider
+			point pos;
+			vector3d dir;
+			pos[ t.dim] = rgen.rand_uniform(v1, v2);
+			pos[!t.dim] = t.p[0][!t.dim]; // either point should work
+			pos.z       = t.p[0].z + t.radius - radius; // on the top of the tunnel
+			dir[t.dim]  = (rgen.rand_bool() ? 1.0 : -1.0); // face a random direction
+			spider_t spider(pos, radius, dir, 0, (i - interior->tunnels.begin())); // id=0, store tunnel index
+			spider.upv   = -plus_z; // upside down
+			spider.speed = global_building_params.spider_speed*rgen.rand_uniform(0.5, 1.0);
+			spiders.add(spider);
+		} // for i
+		spiders.placed = 1;
+	}
+	if (player_in_tunnel) {
+		for (spider_t &spider : spiders) { // update logic
+			assert(spider.tunnel_ix < interior->tunnels.size());
+			tunnel_seg_t const &t(interior->tunnels[spider.tunnel_ix]);
+			float const v1(t.p[0][t.dim] + 2.0*spider.radius), v2(t.p[1][t.dim] - 2.0*spider.radius); // movement range
+			if (spider.pos[t.dim] < v1) {spider.dir[t.dim] =  1.0;} // off low  end - reverse
+			if (spider.pos[t.dim] > v2) {spider.dir[t.dim] = -1.0;} // off high end - reverse
+			if (!spider.squished) {spider.move(timestep);} // can't be squished?
+		}
+	}
 }
 
 class surface_orienter_t {
