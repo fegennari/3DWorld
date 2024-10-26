@@ -278,7 +278,7 @@ int city_obj_placer_t::select_dest_parking_space(unsigned driveway_ix, bool allo
 
 	for (unsigned i = 0; i < pspaces.size(); ++i) {
 		parking_space_t const &pi(pspaces[i]);
-		if (pi.p_lot_ix != park_lot_ix || !pi.is_avail()) continue;
+		if ((int)pi.p_lot_ix != park_lot_ix || !pi.is_avail()) continue;
 		if (!allow_hcap && pi.is_hcap)    continue;
 		if (pi.row_ix != entrance_row_ix) continue; // can only enter along the first row, which is connected to the driveway
 		unsigned psix(i);
@@ -287,7 +287,7 @@ int city_obj_placer_t::select_dest_parking_space(unsigned driveway_ix, bool allo
 		// pull all the way forward
 		for (int j = int(i)+next_space_inc; j >= 0 && j < (int)pspaces.size(); j += next_space_inc) {
 			parking_space_t const &pj(pspaces[j]);
-			if (pj.p_lot_ix != park_lot_ix) break; // end of parking lot, done
+			if ((int)pj.p_lot_ix != park_lot_ix) break; // end of parking lot, done
 			assert(pj.col_ix == pi.col_ix);
 			if (pj.has_active_car) {col_has_car = 1; break;}
 			if (!pj.is_avail()) break; // blocked, done
@@ -1966,9 +1966,7 @@ void city_obj_placer_t::remap_parking_lot_ixs() {
 	for (driveway_t &d : driveways) {
 		if (d.park_lot_ix >= 0) {assert(d.park_lot_ix < (int)num_pl); d.park_lot_ix = ix_map[d.park_lot_ix];}
 	}
-	for (parking_space_t &p : pspaces) {
-		if (p.p_lot_ix >= 0) {assert(p.p_lot_ix < (int)num_pl);	p.p_lot_ix = ix_map[p.p_lot_ix];}
-	}
+	for (parking_space_t &p : pspaces) {assert(p.p_lot_ix < num_pl); p.p_lot_ix = ix_map[p.p_lot_ix];}
 }
 
 // also adds signs on the ground near building doors
