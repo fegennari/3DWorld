@@ -46,7 +46,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 	if (bcubes.empty()) return 0; // shouldn't happen, unless buildings are disabled; skip to avoid perf problems with an entire plot of parking lot
 	unsigned const buildings_end(bcubes.size()), first_corner(rgen.rand()&3); // 0-3
 	bool const car_dim(rgen.rand() & 1); // 0=cars face in X; 1=cars face in Y
-	bool const car_dir(rgen.rand() & 1);
+	bool car_dir(rgen.rand() & 1);
 	float const xsz(car_dim ? space_width : space_len), ysz(car_dim ? space_len : space_width);
 	bool has_parking(0);
 	vector<hcap_with_dist_t> hcap_cands;
@@ -87,14 +87,25 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 		assert(park.dx() > 0.0 && park.dy() > 0.0);
 
 		if (1) { // add driveways connecting to parking lot
-			float const back_of_lot(park.d[car_dim][!car_dir]); // driveway connects to this side
 			bool const dw_dir(plot.get_center_dim(!car_dim) < park.get_center_dim(!car_dim)); // connect to road on closer side
-			cube_t driveway(park);
-			driveway.d[ car_dim][ car_dir] = back_of_lot;
-			driveway.d[ car_dim][!car_dir] = back_of_lot + (car_dir ? -1.0 : 1.0)*1.25*space_width;
-			driveway.d[!car_dim][  dw_dir] = full_plot.d[!car_dim][dw_dir] + (dw_dir ? 1.0 : -1.0)*sidewalk_width; // extend to the road, with a small gap for the curb
-			driveways.emplace_back(driveway, !car_dim, dw_dir, plot_ix, parking_lot_ix);
-			bcubes.push_back(driveway); // add to list of blocker bcubes
+
+			for (unsigned d = 0; d < 2; ++d) { // try both dirs
+				float const back_of_lot(park.d[car_dim][!car_dir]); // driveway connects to this side
+				cube_t driveway(park);
+				driveway.d[ car_dim][ car_dir] = back_of_lot;
+				driveway.d[ car_dim][!car_dir] = back_of_lot + (car_dir ? -1.0 : 1.0)*1.25*space_width;
+				driveway.d[!car_dim][  dw_dir] = full_plot.d[!car_dim][dw_dir] + (dw_dir ? 1.0 : -1.0)*sidewalk_width; // extend to the road, with a small gap for the curb
+
+				if (has_bcube_int_xy(driveway, bcubes, 0.25*pad_dist)) { // too close to an object such as a building (or its door); try other dir
+					car_dir  ^= 1;
+					park.dir ^= 1;
+				}
+				else {
+					driveways.emplace_back(driveway, !car_dim, dw_dir, plot_ix, parking_lot_ix);
+					bcubes.push_back(driveway); // add to list of blocker bcubes
+					break;
+				}
+			} // for d
 		}
 		if (rgen.rand_float() < 0.4) { // add solar roofs over parking lots 40% of the time
 			bool blocked(0);
