@@ -693,6 +693,7 @@ public:
 	void set_plot_subdiv_sz(float sz) {plot_subdiv_sz = sz;}
 	void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, vector<road_t> const &roads,
 		vector<road_isec_t> isecs[3], cube_t const &city_bcube, unsigned city_id, bool have_cars, bool is_residential, bool have_streetlights);
+	void remap_parking_lot_ixs();
 	int select_dest_parking_space(unsigned driveway_ix, bool allow_hcap, bool reserve_spot, rand_gen_t &rgen) const;
 	point get_parking_space_center(unsigned pspace_ix) const {assert(pspace_ix < pspaces.size()); return pspaces[pspace_ix].center;}
 	bool add_skyway(cube_t const &city_bcube, vect_bldg_walkway_t const &walkway_cands, rand_gen_t rgen);

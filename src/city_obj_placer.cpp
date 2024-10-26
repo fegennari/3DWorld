@@ -61,8 +61,10 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 		float const dx(xdir ? -xsz : xsz), dy(ydir ? -ysz : ysz), dw(car_dim ? dx : dy), dr(car_dim ? dy : dx); // delta-wdith and delta-row
 		point const corner_pos(plot.d[0][xdir], plot.d[1][ydir], (plot.z1() + 0.1*ROAD_HEIGHT)); // shift up slightly to avoid z-fighting
 		assert(dw != 0.0 && dr != 0.0);
-		parking_lot_t cand(cube_t(corner_pos, corner_pos), car_dim, car_dir, city_params.min_park_spaces, city_params.min_park_rows); // start as min size at the corner
-		cand.d[!car_dim][!wdir] += cand.row_sz*dw;
+		unsigned const parking_lot_ix(parking_lots.size());
+		// start as min size at the corner
+		parking_lot_t cand(cube_t(corner_pos, corner_pos), car_dim, car_dir, rdir, city_params.min_park_spaces, city_params.min_park_rows, parking_lot_ix);
+		cand.d[!car_dim][!wdir] += cand.row_sz  *dw;
 		cand.d[ car_dim][!rdir] += cand.num_rows*dr;
 		if (!plot.contains_cube_xy(cand)) {continue;} // can't fit a min size parking lot in this plot, so skip it (shouldn't happen)
 		if (has_bcube_int_xy(cand, bcubes, pad_dist)) continue; // intersects a building - skip (can't fit min size parking lot)
@@ -83,16 +85,14 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 		}
 		assert(park.row_sz >= city_params.min_park_spaces && park.num_rows >= city_params.min_park_rows);
 		assert(park.dx() > 0.0 && park.dy() > 0.0);
-		unsigned const parking_lot_ix(parking_lots.size());
 
 		if (1) { // add driveways connecting to parking lot
-			float const back_of_lot(park.d[car_dim][!car_dir]);
+			float const back_of_lot(park.d[car_dim][!car_dir]); // driveway connects to this side
 			bool const dw_dir(plot.get_center_dim(!car_dim) < park.get_center_dim(!car_dim)); // connect to road on closer side
 			cube_t driveway(park);
 			driveway.d[ car_dim][ car_dir] = back_of_lot;
 			driveway.d[ car_dim][!car_dir] = back_of_lot + (car_dir ? -1.0 : 1.0)*1.25*space_width;
 			driveway.d[!car_dim][  dw_dir] = full_plot.d[!car_dim][dw_dir] + (dw_dir ? 1.0 : -1.0)*sidewalk_width; // extend to the road, with a small gap for the curb
-			park.driveway_ix = driveways.size();
 			driveways.emplace_back(driveway, !car_dim, dw_dir, plot_ix, parking_lot_ix);
 			bcubes.push_back(driveway); // add to list of blocker bcubes
 		}
@@ -119,7 +119,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 				bcubes.push_back(blocker); // required for trees
 			}
 		}
-		car.cur_seg = (unsigned short)parking_lot_ix; // store parking lot index in cur_seg
+		//car.cur_seg = (unsigned short)parking_lot_ix; // store parking lot index in cur_seg; or rather don't, because sort invalidates the index
 		parking_lots.push_back(park);
 		bcubes.push_back(park); // add to list of blocker bcubes so that no later parking lots or other city objects overlap this one
 		//parking_lots.back().expand_by_xy(0.5*pad_dist); // re-add half the padding for drawing (breaks texture coord alignment)
@@ -1933,6 +1933,25 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	pfloat_groups  .create_groups(pfloats,   all_objs_bcube);
 	if (skyway.valid) {all_objs_bcube.assign_or_union_with_cube(skyway.bcube);}
 	if (add_parking_lots) {cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << endl;}
+}
+
+void city_obj_placer_t::remap_parking_lot_ixs() {
+	// sort of parking lots has invalidated the indices in parking spaces and driveways; generate the permutation vector and update the indices
+	unsigned const num_pl(parking_lots.size());
+	vector<unsigned> ix_map(num_pl, 0);
+	
+	for (unsigned i = 0; i < num_pl; ++i) {
+		unsigned const orig_ix(parking_lots[i].orig_ix);
+		assert(parking_lots[i].orig_ix < num_pl);
+		assert(ix_map[orig_ix] == 0); // not yet assigned
+		ix_map[orig_ix] = i;
+	}
+	for (driveway_t &d : driveways) {
+		if (d.park_lot_ix >= 0) {assert(d.park_lot_ix < (int)num_pl); d.park_lot_ix = ix_map[d.park_lot_ix];}
+	}
+	for (parking_space_t &p : pspaces) {
+		if (p.p_lot_ix >= 0) {assert(p.p_lot_ix < (int)num_pl);	p.p_lot_ix = ix_map[p.p_lot_ix];}
+	}
 }
 
 // also adds signs on the ground near building doors

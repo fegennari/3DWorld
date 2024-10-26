@@ -1062,6 +1062,7 @@ public:
 		city_obj_placer.gen_parking_and_place_objects(plots, plot_colliders, cars, roads, isecs, bcube, city_id, have_cars, is_residential, !streetlights.empty());
 		add_tile_blocks(city_obj_placer.parking_lots, tile_to_block_map, TYPE_PARK_LOT); // need to do this later, after gen_tile_blocks()
 		add_tile_blocks(city_obj_placer.driveways,    tile_to_block_map, TYPE_DRIVEWAY);
+		city_obj_placer.remap_parking_lot_ixs(); // required after sorting parking_lots
 		tile_to_block_map.clear(); // no longer needed
 		city_obj_placer.finalize_streetlights_and_power(*this, plot_colliders);
 		for (auto i = plot_colliders.begin(); i != plot_colliders.end(); ++i) {sort(i->begin(), i->end(), [](cube_t const &a, cube_t const &b) {return (a.x1() < b.x1());});}

@@ -339,10 +339,11 @@ struct plot_xy_t {
 };
 
 struct parking_lot_t : public oriented_cube_t {
-	unsigned short row_sz, num_rows;
-	int driveway_ix=-1;
+	bool row_dir;
+	unsigned short row_sz, num_rows, orig_ix;
 	vector<unsigned char> used_spaces;
-	parking_lot_t(cube_t const &c, bool dim_, bool dir_, unsigned row_sz_=0, unsigned num_rows_=0) : oriented_cube_t(c, dim_, dir_), row_sz(row_sz_), num_rows(num_rows_) {}
+	parking_lot_t(cube_t const &c, bool dim_, bool dir_, bool rdir, unsigned row_sz_, unsigned num_rows_, unsigned ix) :
+		oriented_cube_t(c, dim_, dir_), row_dir(rdir), row_sz(row_sz_), num_rows(num_rows_), orig_ix(ix) {}
 	tex_range_t get_tex_range(float ar) const;
 };
 
