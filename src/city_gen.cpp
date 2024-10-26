@@ -1726,6 +1726,12 @@ private:
 		assert(dix < city_obj_placer.driveways.size());
 		return city_obj_placer.driveways[dix];
 	}
+	cube_t get_driveway_cube_inc_parking_lot(driveway_t const &driveway) const {
+		if (!driveway.is_parking_lot()) return driveway;
+		cube_t bc(driveway);
+		bc.union_with_cube(city_obj_placer.parking_lots[driveway.park_lot_ix]);
+		return bc;
+	}
 
 	bool run_car_in_driveway_logic(car_t &car, vector<car_t> const &cars, rand_gen_t &rgen) const {
 		assert(city_params.cars_use_driveways);
@@ -1738,7 +1744,7 @@ private:
 			return 1; // no other logic to run here
 		}
 		// else leaving driveway
-		if (driveway.contains_cube_xy(car.bcube)) { // car still in driveway, continue to pull/back out
+		if (get_driveway_cube_inc_parking_lot(driveway).contains_cube_xy(car.bcube)) { // car still in driveway or parking lot, continue to pull/back out
 			car.back_or_pull_out_of_driveway(driveway);
 			return 1;
 		}

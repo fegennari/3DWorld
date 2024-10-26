@@ -173,6 +173,7 @@ bool car_t::maybe_wake(rand_gen_t &rgen) {
 }
 
 bool car_t::maybe_apply_turn(float centerline, bool for_driveway) {
+	if (turn_dir == TURN_NONE) return 0; // not turning
 	bool const right_turn(turn_dir == TURN_RIGHT); // 0=left, 1=right
 	bool const tdir(dir ^ in_reverse); // direction of movement
 	point const car_center(get_center()), prev_center(prev_bcube.get_cube_center());
@@ -297,30 +298,54 @@ bool car_t::run_enter_driveway_logic(vector<car_t> const &cars, driveway_t const
 	return 1;
 }
 void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
-	assert(dim == driveway.dim);
-	assert(dir != driveway.dir);
-	float stop_pos(0.0), car_pos(bcube.get_center_dim(driveway.dim));
+	float stop_pos(0.0), car_pos(0.0);
 
-	if (driveway.park_lot_ix >= 0) { // parking lot driveway; stop and turn at dest parking space
+	if (driveway.is_parking_lot()) { // parking lot driveway
+		if (maybe_apply_turn(park_space_cent[dim], 1)) { // turning into parking space row; for_driveway=1
+			return; // continue to turn
+		}
+		if (dim == driveway.dim) { // in driveway; stop and turn at dest parking space
+			assert(dim == driveway.dim);
+			assert(dir != driveway.dir);
+			car_pos = bcube.d[dim][dir]; // add half length to get front of car
+		}
+		else { // pull into parking space
+			car_pos = bcube.get_center_dim(dim);
+		}
 		stop_pos = park_space_cent[dim];
-		car_pos += 0.5*(dir ? 1.0 : -1.0)*get_length(); // half length
 	}
 	else { // house driveway; stop in the center
+		assert(dim == driveway.dim);
+		assert(dir != driveway.dir);
+		car_pos  = bcube.get_center_dim(dim);
 		stop_pos = driveway.get_center_dim(driveway.dim);
 	}
-	if ((car_pos < stop_pos) == driveway.dir) { // reached the driveway center, stop
-		dest_valid     = 0;
-		dest_driveway  = -1;
-		engine_running = 0;
-		sleep(rgen, 60.0); // sleep for 60-120s rather than permanently parking
+	if ((car_pos < stop_pos) != dir) { // reached the driveway center or turn point
+		if (driveway.is_parking_lot() && dim == driveway.dim) { // turn into parking space
+			bool const ps_dir(bcube.get_center_dim(!dim) < park_space_cent[!dim]), dw_turn_dir(dir ^ ps_dir ^ dim);
+			turn_dir = (dw_turn_dir ? (uint8_t)TURN_RIGHT : (uint8_t)TURN_LEFT);
+			begin_turn(); // capture car centerline before the turn
+		}
+		else {
+			dest_valid      = 0;
+			dest_driveway   = -1;
+			engine_running  = 0;
+			park_space_cent = vector2d();
+			sleep(rgen, 60.0); // sleep for 60-120s rather than permanently parking
+		}
 	}
 }
 void car_t::back_or_pull_out_of_driveway(driveway_t const &driveway) {
-	assert(dim == driveway.dim);
-	// |---> driveway dir=0, car dir=1
-	in_reverse = (dir != driveway.dir); // back up if pointing away from the road
-	turn_dir   = (in_reverse ? (int)TURN_LEFT : (int)TURN_RIGHT); // always turn right when exiting the driveway/entering the road (left when backing out)
-	set_target_speed(in_reverse ? 0.2 : 0.3); // 20-30% of max speed
+	if (driveway.is_parking_lot() && dim != driveway.dim) { // backing out of parking space
+		// TODO
+	}
+	else { // normal driveway
+		assert(dim == driveway.dim);
+		// |---> driveway dir=0, car dir=1
+		in_reverse = (dir != driveway.dir); // back up if pointing away from the road
+		turn_dir   = (in_reverse ? (int)TURN_LEFT : (int)TURN_RIGHT); // always turn right when exiting the driveway/entering the road (left when backing out)
+		set_target_speed(in_reverse ? 0.2 : 0.3); // 20-30% of max speed
+	}
 	begin_turn(); // capture car centerline before the turn
 }
 // returns 1 when the exit + turn are complete
