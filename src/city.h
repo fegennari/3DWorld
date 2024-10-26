@@ -152,6 +152,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 128
 	float get_max_lookahead_dist() const;
 	bool headlights_on() const;
 	float get_turn_rot_z(float dist_to_turn) const;
+	float get_front_end() const {return bcube.d[dim][dir];}
 	bool is_close_to_player() const;
 	colorRGBA const &get_color() const;
 	unsigned get_unique_id() const {return (unsigned(1000000.0*max_speed) + color_id + (model_id<<8));} // not guaranteed to be unique, but pretty close

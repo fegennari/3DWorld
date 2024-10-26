@@ -307,7 +307,7 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 		if (dim == driveway.dim) { // in driveway; stop and turn at dest parking space
 			assert(dim == driveway.dim);
 			assert(dir != driveway.dir);
-			car_pos = bcube.d[dim][dir]; // add half length to get front of car
+			car_pos = get_front_end(); // add half length to get front of car
 		}
 		else { // pull into parking space
 			car_pos = bcube.get_center_dim(dim);
@@ -1267,7 +1267,7 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 	// Warning: not really thread safe, but should be okay; the ped state should valid at all points (thought maybe inconsistent) and we don't need it to be exact every frame
 	ped_manager.get_peds_crossing_roads(peds_crossing_roads);
 	//timer_t timer("Update Cars"); // 4K cars = 0.7ms / 2.1ms with destinations + navigation
-	comp_car_road_then_pos const sort_func(camera_pdu.pos - dstate.xlate);
+	comp_car_road_then_pos const sort_func(dstate.camera_bs);
 #pragma omp critical(modify_car_data)
 	{
 		if (car_destroyed) {remove_destroyed_cars();} // at least one car was destroyed in the previous frame - remove it/them
@@ -1312,7 +1312,9 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 			check_collision(*i, *j);
 			i->register_adj_car(*j);
 			j->register_adj_car(*i);
-			if (!dist_xy_less_than(i->get_center(), j->get_center(), max_check_dist)) break;
+			// early exit when we get far enough away from the car; only include cars going in the same direction to avoid exiting too early
+			// when a car passes us by in the other lane before we've checked cars in the next intersection
+			if (i->dim == j->dim && i->dir == j->dir && !dist_xy_less_than(i->get_center(), j->get_center(), max_check_dist)) break;
 		}
 		if (on_conn_road) { // on connector road, check before entering intersection to a city
 			for (auto ix = entering_city.begin(); ix != entering_city.end(); ++ix) {
