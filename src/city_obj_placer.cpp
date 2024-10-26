@@ -258,23 +258,29 @@ int city_obj_placer_t::select_dest_parking_space(unsigned driveway_ix, bool allo
 	int const park_lot_ix(driveways[driveway_ix].park_lot_ix);
 	if (park_lot_ix < 0) return -1; // error?
 	assert(park_lot_ix < (int)parking_lots.size());
+	parking_lot_t const &parking_lot(parking_lots[park_lot_ix]);
+	bool const rdir(parking_lot.dir ^ parking_lot.row_dir);
+	unsigned const entrance_row_ix(rdir ? 0 : parking_lot.num_rows-1);
+	int const next_space_inc((rdir ? 1 : -1) * parking_lot.row_sz); // skip by columns
 	// select an available spot on the row next to the driveway
 	vector<unsigned> avail_spaces;
 
 	for (unsigned i = 0; i < pspaces.size(); ++i) {
 		parking_space_t const &pi(pspaces[i]);
 		if (pi.p_lot_ix != park_lot_ix || !pi.is_avail()) continue;
-		if (!allow_hcap && pi.is_hcap) continue;
-		if (pi.row_ix > 0) continue; // can only enter along the first row, which is connected to the driveway
+		if (!allow_hcap && pi.is_hcap)    continue;
+		if (pi.row_ix != entrance_row_ix) continue; // can only enter along the first row, which is connected to the driveway
 		unsigned psix(i);
 		bool col_has_car(0);
-		
+
 		// pull all the way forward
-		for (unsigned j = i+1; j < pspaces.size(); ++j) {
+		for (int j = int(i)+next_space_inc; j >= 0 && j < (int)pspaces.size(); j += next_space_inc) {
 			parking_space_t const &pj(pspaces[j]);
-			if (pj.p_lot_ix != park_lot_ix || pj.col_ix != pi.col_ix) break; // end of column, done
+			if (pj.p_lot_ix != park_lot_ix) break; // end of parking lot, done
+			assert(pj.col_ix == pi.col_ix);
 			if (pj.has_active_car) {col_has_car = 1; break;}
-			if (pj.is_avail()) {psix = j;} // move up one space
+			if (!pj.is_avail()) break; // blocked, done
+			psix = j; // move up one space
 		}
 		if (col_has_car) continue; // don't block another car in; this is only needed because parking lots don't have space between columns
 		avail_spaces.push_back(psix);

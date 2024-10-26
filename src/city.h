@@ -302,6 +302,7 @@ struct driveway_t : public oriented_cube_t {
 	float get_edge_at_road() const {return d[dim][dir];}
 	void mark_ped_this_frame() const;
 	bool has_recent_ped() const;
+	bool is_parking_lot() const {return (park_lot_ix >= 0);}
 	cube_t extend_across_road() const;
 	tex_range_t get_tex_range(float ar) const;
 };

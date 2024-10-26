@@ -666,6 +666,12 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 		if (!sphere_in_light_cone_approx(camera_pdu, center, car.bcube.get_xy_bsphere_radius())) return;
 		if (car.bcube.contains_pt_exp(camera_pdu.pos, 0.1*car.height)) return; // don't self-shadow
 	}
+	else if (0 && car.park_space_cent != vector2d()) { // debug visualization for parking spaces
+		cube_t parked(point(car.park_space_cent.x, car.park_space_cent.y, car.bcube.z1()));
+		parked.z2() += car.bcube.dz();
+		parked.expand_by_xy(0.5*car.get_width());
+		draw_cube(qbds[emit_now], parked, RED, 1); // skip_bottom=1
+	}
 	point const center_xlated(center + xlate);
 	if (!shadow_only && !dist_less_than(camera_pdu.pos, center_xlated, 0.5*draw_tile_dist)) return; // check draw distance, dist_scale=0.5
 	if (!camera_pdu.sphere_visible_test(center_xlated, 0.5f*car.height*CAR_RADIUS_SCALE) || !camera_pdu.cube_visible(car.bcube + xlate)) return;
