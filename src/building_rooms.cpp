@@ -598,8 +598,15 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			bool const not_private_room(is_public_on_floor & floor_mask); // current unit has an intersecting walkway or stairs and is not private
 
 			if (is_apt_or_hotel_room) {
-				room_type const rtype((init_rtype_f0 == RTYPE_UTILITY && f > 0) ? r->get_room_type(f) : init_rtype_f0); // utility room is only on the first floor
-
+				int rtype(init_rtype_f0);
+				
+				if (rtype == RTYPE_UTILITY && f > 0) { // ground floor utility room
+					rtype = r->get_room_type(f); // get room type for this particular floor
+					// if rtype is a lounge without objects added, this likely means it's a floor > NUM_RTYPE_SLOTS above a walkway lounge;
+					// while we can't get the rtype correct, we can at least place the correct set of objects by looking at the second floor room assignment,
+					// since a) walkways shouldn't be that low, and b) walkways shouldn't span floors 2 through NUM_RTYPE_SLOTS (=8)
+					if (!added_obj && rtype == RTYPE_LOUNGE && f > 1) {rtype = r->get_room_type(1);}
+				}
 				// handle pre-assigned apartment or hotel rooms
 				if (added_obj) {} // added a lounge above; nothing else to do
 				else if (rtype == RTYPE_BATH) { // assigned bathroom; can be public or private
@@ -634,6 +641,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 				else if (rtype == RTYPE_ENTRY) { // entryway
 					// too small to place anything larger than a rug, trashcan, or pictures
+				}
+				else if (rtype == RTYPE_LOUNGE) { // lounge, possibly on a floor above the walkway above NUM_RTYPE_SLOTS
+					cerr << "Error: Unexpected empty lounge room in hotel or apartment at " << r->str() << endl;
 				}
 				else {cout << TXT(r->str()) << TXTi(rtype) << endl; assert(0);} // unsupported room type
 
