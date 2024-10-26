@@ -1726,7 +1726,7 @@ private:
 		assert(dix < city_obj_placer.driveways.size());
 		return city_obj_placer.driveways[dix];
 	}
-	cube_t get_driveway_cube_inc_parking_lot(driveway_t const &driveway) const {
+	cube_t get_driveway_cube_inc_parking_lot(driveway_t const &driveway) const { // Note: currently unused
 		if (!driveway.is_parking_lot()) return driveway;
 		cube_t bc(driveway);
 		bc.union_with_cube(city_obj_placer.parking_lots[driveway.park_lot_ix]);
@@ -1744,11 +1744,16 @@ private:
 			return 1; // no other logic to run here
 		}
 		// else leaving driveway
-		if (get_driveway_cube_inc_parking_lot(driveway).contains_cube_xy(car.bcube)) { // car still in driveway or parking lot, continue to pull/back out
+		bool const ddim(driveway.dim);
+		bool in_driveway(driveway.contains_cube_xy(car.bcube));
+		// for cars in parking lots, we only need to check the bounds of the car inside the driveway dim, since parking spaces are to the side
+		in_driveway |= (driveway.is_parking_lot() && car.bcube.d[ddim][0] >= driveway.d[ddim][0] && car.bcube.d[ddim][1] <= driveway.d[ddim][1]);
+		
+		if (in_driveway) { // car still in driveway or parking lot, continue to pull/back out
 			car.back_or_pull_out_of_driveway(driveway);
 			return 1;
 		}
-		int const road_ix(find_road_for_car(car, !driveway.dim));
+		int const road_ix(find_road_for_car(car, !ddim));
 
 		if (road_ix < 0) {
 			cerr << car.str() << TXT(driveway.str()) << endl;
@@ -1977,6 +1982,15 @@ private:
 				point const ps_center(city_obj_placer.get_parking_space_center(psix));
 				car.dest_pspace = psix;
 				car.park_space_cent.assign(ps_center.x, ps_center.y);
+
+				if (driveway.park_lot_ix >= 0) { // should always be true
+					// clamp point inside the parking lot so that large vehicles such as ambulances don't stick out; parking space should be large enough
+					float const ends_pad(1.01*0.5*car.get_length());
+					float &val(car.park_space_cent[!driveway.dim]);
+					parking_lot_t const &parking_lot(city_obj_placer.parking_lots[driveway.park_lot_ix]);
+					max_eq(val, parking_lot.d[!driveway.dim][0]+ends_pad);
+					min_eq(val, parking_lot.d[!driveway.dim][1]-ends_pad);
+				}
 			}
 			driveway.in_use   = 1; // temporarily in use
 			car.dest_driveway = (unsigned short)dix;
