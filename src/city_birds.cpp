@@ -289,7 +289,9 @@ void city_bird_t::next_frame(float timestep, float delta_dir, point const &camer
 		bird_moved     = 1;
 		
 		// poop on the player if above and the player is in the open
-		if (!camera_in_building && !player_in_walkway && pos.z > camera_bs.z && dist_xy_less_than(pos, camera_bs, 2.0*CAMERA_RADIUS) && tfticks > next_poop_time) {
+		if (!camera_in_building && !player_in_walkway && pos.z > camera_bs.z && dist_xy_less_than(pos, camera_bs, 2.0*CAMERA_RADIUS) &&
+			tfticks > next_poop_time && !placer.player_under_roof(camera_bs))
+		{
 			placer.add_bird_poop(pos, 0.18*radius, (velocity + 0.001*wind)); // use bird's initial velocity and add a small amount of wind; should wind apply acceleration?
 			next_poop_time = tfticks + rgen.rand_uniform(2.0, 5.0)*TICKS_PER_SECOND; // wait 2-5s before pooping again
 		}
@@ -420,6 +422,16 @@ bool city_obj_placer_t::check_bird_walkway_clearance(cube_t const &bc) const { /
 		if (bc_ext.intersects_xy(bc)) return 0;
 	}
 	return 1;
+}
+
+template<typename T> bool check_obj_under(vector<T> const &objs, point const &pos) {
+	for (T const &i : objs) {
+		if (pos.z < i.bcube.z2() && i.bcube.contains_pt_xy(pos)) return 1;
+	}
+	return 0;
+}
+bool city_obj_placer_t::player_under_roof(point const &camera_bs) const { // called for bird poop logic
+	return (check_obj_under(p_solars, camera_bs) || check_obj_under(walkways, camera_bs)); // what about pool deck roofs?
 }
 
 void city_obj_placer_t::add_bird_poop(point const &pos, float radius, vector3d const &init_vel) {
