@@ -88,6 +88,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 
 		if (1) { // add driveways connecting to parking lot
 			bool const dw_dir(plot.get_center_dim(!car_dim) < park.get_center_dim(!car_dim)); // connect to road on closer side
+			float const dw_pad_dist(0.25*pad_dist);
 
 			for (unsigned d = 0; d < 2; ++d) { // try both dirs
 				float const back_of_lot(park.d[car_dim][!car_dir]); // driveway connects to this side
@@ -96,11 +97,26 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 				driveway.d[ car_dim][!car_dir] = back_of_lot + (car_dir ? -1.0 : 1.0)*1.25*space_width;
 				driveway.d[!car_dim][  dw_dir] = full_plot.d[!car_dim][dw_dir] + (dw_dir ? 1.0 : -1.0)*sidewalk_width; // extend to the road, with a small gap for the curb
 
-				if (has_bcube_int_xy(driveway, bcubes, 0.25*pad_dist)) { // too close to an object such as a building (or its door); try other dir
+				if (has_bcube_int_xy(driveway, bcubes, dw_pad_dist)) { // too close to an object such as a building (or its door); try other dir
 					car_dir  ^= 1;
 					park.dir ^= 1;
 				}
-				else {
+				else { // add the driveway
+					// try to extend the driveway in the other dim if there's space, so that cars have room to back out of parking spaces
+					float const max_ext(space_len - 0.5*space_width), dw_end(driveway.d[!car_dim][!dw_dir]);
+					cube_t dw_ext(driveway);
+					dw_ext.d[!car_dim][dw_dir] = dw_end;
+					float const ext_factor[5] = {1.0, 0.9, 0.8, 0.7, 0.6};
+
+					for (unsigned n = 0; n < 5; ++n) { // 5 possible extend dists
+						float const extend_to(dw_end + (dw_dir ? -1.0 : 1.0)*ext_factor[n]*max_ext);
+						dw_ext.d[!car_dim][!dw_dir] = extend_to;
+						
+						if (full_plot.contains_cube_xy(dw_ext) && !has_bcube_int_xy(dw_ext, bcubes, dw_pad_dist)) {
+							driveway.d[!car_dim][!dw_dir] = extend_to;
+							break;
+						}
+					} // for n
 					driveways.emplace_back(driveway, !car_dim, dw_dir, plot_ix, parking_lot_ix);
 					bcubes.push_back(driveway); // add to list of blocker bcubes
 					break;
@@ -263,16 +279,18 @@ void city_obj_placer_t::add_cars_to_driveways(vector<car_t> &cars, vector<road_p
 	} // for i
 }
 
-int city_obj_placer_t::select_dest_parking_space(unsigned driveway_ix, bool allow_hcap, bool reserve_spot, rand_gen_t &rgen) const {
+int city_obj_placer_t::select_dest_parking_space(unsigned driveway_ix, bool allow_hcap, bool reserve_spot, float car_len, rand_gen_t &rgen) const {
 	if (pspaces.empty()) return -1; // no parking spaces; error?
 	assert(driveway_ix < driveways.size());
-	int const park_lot_ix(driveways[driveway_ix].park_lot_ix);
+	driveway_t const &driveway(driveways[driveway_ix]);
+	int const park_lot_ix(driveway.park_lot_ix);
 	if (park_lot_ix < 0) return -1; // error?
 	assert(park_lot_ix < (int)parking_lots.size());
 	parking_lot_t const &parking_lot(parking_lots[park_lot_ix]);
 	bool const rdir(parking_lot.dir ^ parking_lot.row_dir);
 	unsigned const entrance_row_ix(rdir ? 0 : parking_lot.num_rows-1);
 	int const next_space_inc((rdir ? 1 : -1) * parking_lot.row_sz); // skip by columns
+	float const min_dw_pad(1.1*car_len); // for backing up out of parking space
 	// select an available spot on the row next to the driveway
 	vector<unsigned> avail_spaces;
 
@@ -281,6 +299,9 @@ int city_obj_placer_t::select_dest_parking_space(unsigned driveway_ix, bool allo
 		if (pi.p_lot_ix != park_lot_ix || !pi.is_avail()) continue;
 		if (!allow_hcap && pi.is_hcap)    continue;
 		if (pi.row_ix != entrance_row_ix) continue; // can only enter along the first row, which is connected to the driveway
+		// check driveway padding around space for pulling in and backing up
+		float const centerline(pi.center[driveway.dim]);
+		if ((driveway.d[driveway.dim][1] - centerline) < min_dw_pad || (centerline - driveway.d[driveway.dim][0]) < min_dw_pad) continue;
 		unsigned psix(i);
 		bool col_has_car(0);
 

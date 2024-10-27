@@ -1967,17 +1967,18 @@ private:
 		// consider destination driveways, possibly including parking lot entrances
 		if (city_obj_placer.driveways.empty()) return 0; // no driveways
 		if (!is_residential) return 0; // skip driveways that are commercial city parking lot entrances (even though it works) because cars shouldn't stop there
+		float const car_len(car.get_length()), car_width(car.get_width());
 		
 		for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to find a valid driveway
 			unsigned const dix(rgen.rand()%city_obj_placer.driveways.size());
 			driveway_t const &driveway(get_driveway(dix));
 			if (driveway.in_use) continue;
-			if (driveway.get_length() < 1.5*car.get_length()) continue; // driveway is too short
-			if (driveway.get_width () < 1.1*car.get_width ()) continue; // driveway is too narrow (mostly applies to trucks)
+			if (driveway.get_length() < 1.5*car_len  ) continue; // driveway is too short
+			if (driveway.get_width () < 1.1*car_width) continue; // driveway is too narrow (mostly applies to trucks)
 
 			if (!is_residential) { // not a residential city
 				bool const allow_hcap(rgen.rand_float() < 0.25);
-				int const psix(city_obj_placer.select_dest_parking_space(dix, allow_hcap, 1, rgen)); // reserve_spot=1
+				int const psix(city_obj_placer.select_dest_parking_space(dix, allow_hcap, 1, car_len, rgen)); // reserve_spot=1
 				if (psix < 0) continue;
 				point const ps_center(city_obj_placer.get_parking_space_center(psix));
 				car.dest_pspace = psix;
@@ -1985,7 +1986,7 @@ private:
 
 				if (driveway.park_lot_ix >= 0) { // should always be true
 					// clamp point inside the parking lot so that large vehicles such as ambulances don't stick out; parking space should be large enough
-					float const ends_pad(1.01*0.5*car.get_length());
+					float const ends_pad(1.01*0.5*car_len);
 					float &val(car.park_space_cent[!driveway.dim]);
 					parking_lot_t const &parking_lot(city_obj_placer.parking_lots[driveway.park_lot_ix]);
 					max_eq(val, parking_lot.d[!driveway.dim][0]+ends_pad);
