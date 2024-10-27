@@ -839,10 +839,10 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			point pos(pts[i]);
 			float wires_offset(0.0);
 
-			if (i > 0 && !driveways.empty()) {
+			if (i > 0 && !driveways.empty()) { // check driveways for non-corner pole
 				bool const dim(i == 2);
 				float const prev_val(pos[dim]);
-				move_to_not_intersect_driveway(pos, (pole_radius + sidewalk_width), dim);
+				move_to_not_intersect_driveway(pos, (2.0*pole_radius + sidewalk_width), dim);
 				wires_offset = prev_val - pos[dim];
 			}
 			point base(pos);
@@ -851,7 +851,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			bool const at_grid_edge(plot.xpos+1U == num_x_plots || plot.ypos+1U == num_y_plots);
 			ppole_groups.add_obj(power_pole_t(base, pos, pole_radius, height, wires_offset, xyspace, dims[i], at_grid_edge, at_line_end, is_residential), ppoles);
 			if (i == 0) {corner_pole_pos = base;}
-		}
+		} // for i
 		if (plot.xpos == 0) { // no -x neighbor plot, but need to add the power poles there
 			unsigned const pole_ixs[2] = {0, 2};
 
