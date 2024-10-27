@@ -194,6 +194,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 128
 	void register_adj_car(car_t &c);
 	unsigned count_cars_in_front(cube_t const &range=cube_t(all_zeros)) const;
 	float get_sum_len_space_for_cars_in_front(cube_t const &range) const;
+	cube_t get_parking_space_debug_marker() const;
 };
 
 struct car_city_vect_t {

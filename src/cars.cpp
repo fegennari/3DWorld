@@ -444,6 +444,14 @@ float car_t::get_sum_len_space_for_cars_in_front(cube_t const &range) const {
 	return len * (1.0 + MIN_CAR_STOP_SEP); // car length + stopped space (including one extra space for the car behind us)
 }
 
+cube_t car_t::get_parking_space_debug_marker() const {
+	if (park_space_cent == vector2d()) return cube_t(); // no parking space
+	cube_t c(point(park_space_cent.x, park_space_cent.y, bcube.z1()));
+	c.z2() += bcube.dz();
+	c.expand_by_xy(0.5*get_width());
+	return c;
+}
+
 bool car_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, vector3d *cnorm) const {
 	return sphere_cube_int_update_pos(pos, radius, (bcube + xlate), p_last, 0, cnorm); // Note: approximate when car is tilted or turning
 	//return sphere_sphere_int((bcube.get_cube_center() + xlate), pos, bcube.get_bsphere_radius(), radius, cnorm, pos); // Note: handle cnorm in if using this
@@ -695,10 +703,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 		if (car.bcube.contains_pt_exp(camera_pdu.pos, 0.1*car.height)) return; // don't self-shadow
 	}
 	else if (0 && car.park_space_cent != vector2d()) { // debug visualization for parking spaces
-		cube_t parked(point(car.park_space_cent.x, car.park_space_cent.y, car.bcube.z1()));
-		parked.z2() += car.bcube.dz();
-		parked.expand_by_xy(0.5*car.get_width());
-		draw_cube(qbds[emit_now], parked, RED, 1); // skip_bottom=1
+		draw_cube(qbds[emit_now], car.get_parking_space_debug_marker(), RED, 1); // skip_bottom=1
 	}
 	point const center_xlated(center + xlate);
 	if (!shadow_only && !dist_less_than(camera_pdu.pos, center_xlated, 0.5*draw_tile_dist)) return; // check draw distance, dist_scale=0.5
@@ -1631,6 +1636,11 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 						cube_t dw_bcube(get_car_dest_bcube(*sel_car, 0)); // driveway
 						dw_bcube.z2() += 4.0*city_params.road_width; // increase height to make it more easily visible
 						draw_simple_cube(dw_bcube + xlate);
+
+						if (sel_car->park_space_cent != vector2d()) { // have a dest parking space
+							s.set_cur_color(RED);
+							draw_simple_cube(sel_car->get_parking_space_debug_marker() + xlate);
+						}
 					}
 					s.set_cur_color(PURPLE);
 					cube_t isec_bcube(get_car_dest_bcube(*sel_car, 1)); // isec
