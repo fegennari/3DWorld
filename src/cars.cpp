@@ -782,7 +782,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 		double const time(fract((tfticks + 1000.0*car.max_speed)/(double(ts_period)*TICKS_PER_SECOND))); // use car max_speed as seed to offset time base
 
 		if (time > 0.5 || !animate2) { // flash on and off; always on when time is stopped to help with visual debugging
-			bool const tdir((car.turn_dir == TURN_LEFT) ^ dim ^ dir); // R=1,2,5,6 or L=0,3,4,7
+			bool const tdir((car.turn_dir == TURN_LEFT) ^ dim ^ dir ^ car.in_reverse); // R=1,2,5,6 or L=0,3,4,7
 			vector3d const side_n(cross_product((pb[6] - pb[2]), (pb[1] - pb[2])).get_norm()*sign*(tdir ? 1.0 : -1.0));
 
 			for (unsigned d = 0; d < 2; ++d) { // B, F
