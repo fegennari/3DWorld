@@ -128,7 +128,7 @@ void car_t::move(float speed_mult) {
 	min_eq(dist, 0.25f*city_params.road_width); // limit to half a car length to prevent cars from crossing an intersection in a single frame
 	move_by((dir ^ in_reverse) ? dist : -dist);
 	// update waiting state
-	float const cur_pos(bcube.d[dim][dir]);
+	float const cur_pos(get_front_end());
 	if (fabs(cur_pos - waiting_pos) > get_length()) {waiting_pos = cur_pos; reset_waiting();} // update when we move at least a car length
 }
 
@@ -464,14 +464,14 @@ bool car_t::check_collision(car_t &c, road_gen_base_t const &road_gen) {
 	cube_t bcube_ext(bcube);
 	bcube_ext.d[dim][0] -= test_dist; bcube_ext.d[dim][1] += test_dist; // expand by test_dist distance
 	if (!bcube_ext.intersects_xy(c.bcube)) return 0;
-	float const front(bcube.d[dim][dir]), c_front(c.bcube.d[dim][dir]);
+	float const front(get_front_end()), c_front(c.get_front_end());
 	bool const move_c((front < c_front) ^ dir); // move the car that's behind
 	// Note: we could slow the car in behind, but that won't work for initial placement collisions when speed == 0
 	car_t &cmove(move_c ? c : *this); // the car that will be moved
 	car_t const &cstay(move_c ? *this : c); // the car that won't be moved
 	//cout << "Collision between " << cmove.str() << " and " << cstay.str() << endl;
 	if (cstay.is_stopped()) {cmove.decelerate_fast();} else {cmove.decelerate();}
-	float const dist(cstay.bcube.d[dim][!dir] - cmove.bcube.d[dim][dir]); // signed distance between the back of the car in front, and the front of the car in back
+	float const dist(cstay.get_back_end() - cmove.get_front_end()); // signed distance between the back of the car in front, and the front of the car in back
 	point delta(all_zeros);
 	delta[dim] += dist + (cmove.dir ? -sep_dist : sep_dist); // force separation between cars
 	cube_t const &bcube(road_gen.get_bcube_for_car(cmove));
@@ -1314,7 +1314,7 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 			j->register_adj_car(*i);
 			// early exit when we get far enough away from the car; only include cars going in the same direction to avoid exiting too early
 			// when a car passes us by in the other lane before we've checked cars in the next intersection
-			if (i->dim == j->dim && i->dir == j->dir && !dist_xy_less_than(i->get_center(), j->get_center(), max_check_dist)) break;
+			if (i->dim == j->dim && i->dir == j->dir && fabs(i->get_front_end() - j->get_front_end()) > max_check_dist) break;
 		}
 		if (on_conn_road) { // on connector road, check before entering intersection to a city
 			for (auto ix = entering_city.begin(); ix != entering_city.end(); ++ix) {
