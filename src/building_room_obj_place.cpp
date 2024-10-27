@@ -251,7 +251,7 @@ void building_t::get_all_door_centers_for_room(room_t const &room, unsigned room
 	}
 	if (room.has_tunnel_conn()) { // tunnel entrance counts as a door, but not false doors
 		for (tunnel_seg_t const &t : interior->tunnels) {
-			if (t.room_conn && t.conn_room_ix == (int)room_id) {door_centers.push_back(t.get_room_conn_pt(zval));}
+			if (t.room_conn && t.conn_room_ix == room_id) {door_centers.push_back(t.get_room_conn_pt(zval));}
 		}
 	}
 }
@@ -2484,7 +2484,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	}
 	if (room.has_tunnel_conn()) { // tunnel entrance counts as a door, but not false doors
 		for (tunnel_seg_t const &t : interior->tunnels) {
-			if (t.room_conn && t.conn_room_ix == (int)room_id) {
+			if (t.room_conn && t.conn_room_ix == room_id) {
 				exclude.push_back(t.bcube_ext);
 				exclude.back().expand_in_dim(!t.dim, 0.4*room.get_sz_dim(!t.dim)); // will cover the entire room if there's a door at the opposite end
 				++num_doors;
