@@ -1966,7 +1966,6 @@ private:
 	bool select_avail_driveway_or_parking_space(car_t &car, rand_gen_t &rgen) const {
 		// consider destination driveways, possibly including parking lot entrances
 		if (city_obj_placer.driveways.empty()) return 0; // no driveways
-		if (!is_residential) return 0; // skip driveways that are commercial city parking lot entrances (even though it works) because cars shouldn't stop there
 		float const car_len(car.get_length()), car_width(car.get_width());
 		
 		for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to find a valid driveway

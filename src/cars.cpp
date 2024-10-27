@@ -337,15 +337,18 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 }
 void car_t::back_or_pull_out_of_driveway(driveway_t const &driveway) {
 	if (driveway.is_parking_lot() && dim != driveway.dim) { // backing out of parking space
-		// TODO
+		bool const dw_turn_dir(dir ^ driveway.dir ^ dim);
+		in_reverse = 1; // always back out, since we pulled in
+		turn_dir   = (dw_turn_dir ? (uint8_t)TURN_RIGHT : (uint8_t)TURN_LEFT); // Note: if we turn the other way, we need to back out of the driveway
+		if (maybe_apply_turn(driveway.get_center_dim(dim), 1)) return;
 	}
-	else { // normal driveway
+	else { // normal driveway or parking lot exit driveway
 		assert(dim == driveway.dim);
 		// |---> driveway dir=0, car dir=1
 		in_reverse = (dir != driveway.dir); // back up if pointing away from the road
 		turn_dir   = (in_reverse ? (int)TURN_LEFT : (int)TURN_RIGHT); // always turn right when exiting the driveway/entering the road (left when backing out)
-		set_target_speed(in_reverse ? 0.2 : 0.3); // 20-30% of max speed
 	}
+	set_target_speed(in_reverse ? 0.2 : (driveway.is_parking_lot() ? 0.4 : 0.3)); // 20-40% of max speed
 	begin_turn(); // capture car centerline before the turn
 }
 // returns 1 when the exit + turn are complete
