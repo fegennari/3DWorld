@@ -1399,7 +1399,7 @@ typedef vector<extb_room_t> vect_extb_room_t;
 struct tunnel_conn_t {
 	unsigned dim;
 	bool dir;
-	float pos, length, radius;
+	float pos, length, radius, water_level=0.0, water_flow=0.0;
 	tunnel_conn_t(unsigned dim_, bool dir_, float p, float len, float r) : dim(dim_), dir(dir_), pos(p), length(len), radius(r) {}
 };
 struct tunnel_seg_t {
@@ -1423,6 +1423,7 @@ struct tunnel_seg_t {
 	bool is_blocked_by_gate(point const &p1, point const &p2) const;
 	tunnel_seg_t connect_segment_to(point const &pos, bool conn_dir, unsigned new_tseg_ix, bool is_end=0);
 	point get_conn_pt(tunnel_conn_t const &c) const;
+	cube_t get_conn_bcube(tunnel_conn_t const &c) const;
 };
 typedef vector<tunnel_seg_t> vect_tunnel_seg_t;
 

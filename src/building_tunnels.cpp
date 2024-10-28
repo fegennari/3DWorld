@@ -87,6 +87,14 @@ point tunnel_seg_t::get_conn_pt(tunnel_conn_t const &c) const {
 	p[c.dim] = bcube.d[c.dim][c.dir]; // wall of tunnel
 	return p;
 }
+cube_t tunnel_seg_t::get_conn_bcube(tunnel_conn_t const &c) const {
+	cube_t pipe(get_conn_pt(c));
+	pipe.expand_in_dim((c.dim+1)%3, c.radius);
+	pipe.expand_in_dim((c.dim+2)%3, c.radius);
+	pipe.d[c.dim][!c.dir] -= (c.dir ? 1.0 : -1.0)*0.25*c.radius; // inward
+	pipe.d[c.dim][ c.dir] += (c.dir ? 1.0 : -1.0)*c.length; // outward
+	return pipe;
+}
 
 // *** Placement ***
 
@@ -307,6 +315,11 @@ void building_t::add_tunnel_objects(rand_gen_t rgen) {
 				point p2(p1);
 				try_extend_tunnel(p1, p2, conn.length, 1.1*radius, conn.dim, conn.dir);
 				conn.length = fabs((conn.dir ? p2 : p1)[conn.dim] - conn_pt[conn.dim]); // clip length
+
+				if (rgen.rand_bool()) { // add flowing water 50% of the time
+					conn.water_level = min(rgen.rand_uniform(0.0, 1.0)*0.2*radius, 0.5*t.water_level);
+					conn.water_flow  = rgen.rand_uniform(0.25, 0.5)*(conn.dir ? 1.0 : -1.0);
+				}
 				t.conns.push_back(conn);
 				avoid_vals[num_avoid] = pos; avoid_radii[num_avoid++] = radius; // should we check dir or track it separately? may not matter much
 			} // for n
@@ -457,11 +470,7 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 	// draw smaller connecting tunnels
 	for (tunnel_conn_t const &c : t.conns) {
 		float const side_tscale2(1.0), len_tscale2(side_tscale2*c.length/(PI*c.radius));
-		cube_t pipe(t.get_conn_pt(c));
-		pipe.expand_in_dim((c.dim+1)%3, c.radius);
-		pipe.expand_in_dim((c.dim+2)%3, c.radius);
-		pipe.d[c.dim][!c.dir] -= (c.dir ? 1.0 : -1.0)*0.25*c.radius; // inward
-		pipe.d[c.dim][ c.dir] += (c.dir ? 1.0 : -1.0)*c.length; // outward
+		cube_t const pipe(t.get_conn_bcube(c));
 		mat.add_ortho_cylin_to_verts(pipe, wall_color, c.dim, 0, 0, 1, 0, 1.0, 1.0, side_tscale2, 1.0, 0, N_CYL_SIDES, 0.0, 0, len_tscale2); // skip ends; two_sided=1
 		// draw the open/interior end transparent to create a hole in the outer pipe
 		mat.add_ortho_cylin_to_verts(pipe, ALPHA0, c.dim,  c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // transparent cut; skip_sides=1
@@ -553,23 +562,29 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 	}
 }
 
+float draw_flowing_water(rgeom_mat_t &mat, cube_t const &water, bool dim, float water_flow) {
+	float &tscale((dim ? mat.tex.tscale_x : mat.tex.tscale_y));
+	float const orig_tscale(tscale);
+	tscale *= 1.0/(1.0 + 10.0*fabs(water_flow)); // stretch along tunnel length more with higher water flow
+	float const flow_val(0.15*(tfticks/TICKS_PER_SECOND)*water_flow);
+	float tex_add[2] = {0.0, 0.0};
+	tex_add[!dim] = fract(flow_val); // animate the water texture
+	mat.add_cube_to_verts(water, DK_BROWN, all_zeros, ~EF_Z2, 0, 0, 0, 0, 0, tex_add[0], tex_add[1]); // draw top surface only
+	tscale = orig_tscale;
+	return flow_val;
+}
 void building_room_geom_t::add_tunnel_water(tunnel_seg_t const &t) {
 	if (t.water_level <= 0.0) return;
 	// draw water/sewage surface
 	bool const dim(t.dim);
 	float const tscale(1.0/t.radius);
-	float tscale_xy[2] = {tscale, tscale};
-	tscale_xy[!dim] *= 1.0/(1.0 + 10.0*fabs(t.water_flow)); // stretch along tunnel length more with higher water flow
-	rgeom_mat_t &water_mat(get_material(tid_nm_pair_t(FOAM_TEX, -1, tscale_xy[0], tscale_xy[1]), 0, 1)); // unshadowed, dynamic
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(FOAM_TEX, tscale), 0, 1)); // unshadowed, dynamic
 	cube_t water(t.bcube_draw);
 	water.z2() = t.bcube.z1() + t.water_level;
 	float const dist(t.radius - t.water_level), water_hwidth(sqrt(t.radius*t.radius - dist*dist));
 	set_wall_width(water, t.bcube.get_center_dim(!dim), water_hwidth, !dim);
 	if (t.room_conn) {water.d[!dim][t.room_dir] = t.get_room_conn_block().d[!dim][!t.room_dir];} // ends flush with conn block
-	float const flow_val(0.15*(tfticks/TICKS_PER_SECOND)*t.water_flow);
-	float tex_add[2] = {0.0, 0.0};
-	tex_add[!dim] = fract(flow_val); // animate the water texture
-	water_mat.add_cube_to_verts(water, DK_BROWN, all_zeros, ~EF_Z2, 0, 0, 0, 0, 0, tex_add[0], tex_add[1]); // draw top surface only
+	float const flow_val(draw_flowing_water(mat, water, dim, t.water_flow));
 
 	// draw water/sewage at bends
 	for (unsigned d = 0; d < 2; ++d) {
@@ -582,14 +597,38 @@ void building_room_geom_t::add_tunnel_water(tunnel_seg_t const &t) {
 		bend_water.d[!dim][!conn_dir] -= (t.radius - water_hwidth)*(conn_dir ? -1.0 : 1.0);
 		bend_water.z2() = water.z2();
 
-		if (water_mat.tex.tscale_x != water_mat.tex.tscale_y) { // average out the texture scale
-			water_mat.tex.tscale_x = water_mat.tex.tscale_y = sqrt(water_mat.tex.tscale_x*water_mat.tex.tscale_y);
+		if (mat.tex.tscale_x != mat.tex.tscale_y) { // average out the texture scale
+			mat.tex.tscale_x = mat.tex.tscale_y = sqrt(mat.tex.tscale_x*mat.tex.tscale_y);
 		}
 		// water moves diagonally; can we rotate the quad to create seamless movement?
+		float tex_add[2] = {};
 		tex_add[!dim] = fract(SQRTOFTWOINV*flow_val);
 		tex_add[ dim] = tex_add[!dim] * ((d ^ t.dim ^ conn_dir) ? 1.0 : -1.0);
-		water_mat.add_cube_to_verts(bend_water, DK_BROWN, all_zeros, ~EF_Z2, 0, 0, 0, 0, 0, tex_add[0], tex_add[1]); // draw top surface only
+		mat.add_cube_to_verts(bend_water, DK_BROWN, all_zeros, ~EF_Z2, 0, 0, 0, 0, 0, tex_add[0], tex_add[1]); // draw top surface only
 	} // for d
+	// draw water flowing out of side tunnels
+	for (tunnel_conn_t const &c : t.conns) {
+		if (c.water_level <= 0.0) continue;
+		cube_t const pipe(t.get_conn_bcube(c));
+		cube_t w(pipe);
+		w.z2() = pipe.z1() + c.water_level;
+		float const dist(c.radius - c.water_level), water_hwidth(sqrt(c.radius*c.radius - dist*dist));
+		set_wall_width(w, c.pos, water_hwidth, dim);
+		float const flow_val2(draw_flowing_water(mat, w, !dim, c.water_flow));
+		// draw running water below
+		float &tscale((dim ? mat.tex.tscale_x : mat.tex.tscale_y));
+		float const orig_tscale(tscale);
+		float tex_add[2] = {};
+		tscale *= 0.25;
+		tex_add[!dim] = fract(fabs(flow_val2)); // always flows down
+		w.z1() = water.z2(); // down to the surface of the tunnel water
+		w.expand_in_dim(dim, -0.1*water_hwidth); // small shrink
+		w.d[c.dim][c.dir] = w.d[c.dim][!c.dir]; // shrink to zero area
+		mat.add_cube_to_verts(w, DK_BROWN, all_zeros, get_face_mask(c.dim, !c.dir), 0, 0, 0, 0, 0, tex_add[0], tex_add[1]);
+		// this water doesn't connect to the water at the bottom of the tunnel;
+		// should we add an arc of water? Or let it run down the pipe in a slightly less than quarter cylinder? or a particle effect?
+		mat.tex.tscale_y = orig_tscale;
+	} // for c
 }
 
 
