@@ -883,7 +883,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	cube_t const region(get_plot_coll_region(cur_plot));
 	static vect_cube_t car_bcubes; // reused across calls
 	car_bcubes.clear();
-	if (!in_the_road) {ped_mgr.get_parked_car_bcubes_for_plot(plot_bcube, city, car_bcubes);} // get collider bcubes for cars parked in house driveways
+	if (!in_the_road) {ped_mgr.get_parked_car_bcubes_for_plot(plot_bcube, city, car_bcubes);} // get collider bcubes for cars parked in house driveways or parking lots
 	bool keep_cur_dest(0);
 	avoid_entire_plot = 0;
 
@@ -938,7 +938,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 		if (avoid_entire_plot) {
 			avoid.push_back(avoid_area); // this is the highest priority, so add it first
 
-			for (auto i = car_bcubes.begin(); i != car_bcubes.end(); ++i) { // include collider bcubes for cars parked in house driveways
+			for (auto i = car_bcubes.begin(); i != car_bcubes.end(); ++i) { // include collider bcubes for cars parked in house driveways or parking lots
 				i->expand_by_xy(0.75*radius); // use smaller collision radius
 				if (!avoid_area.contains_cube_xy(*i)) {avoid.push_back(*i);}
 			}
@@ -961,7 +961,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	//remove_cube_if_contains_pt_xy(avoid, pos); // init coll cases (for example from previous dest_bldg) are handled by path_finder_t
 	if (is_home_plot && has_dest_bldg) {remove_cube_if_contains_pt_xy(avoid, dest_pos);} // exclude our dest building, we do want to collide with it
 
-	for (auto i = car_bcubes.begin(); i != car_bcubes.end(); ++i) { // include collider bcubes for cars parked in house driveways
+	for (auto i = car_bcubes.begin(); i != car_bcubes.end(); ++i) { // include collider bcubes for cars parked in house driveways or parking lots
 		if (is_home_plot && has_dest_car && i->contains_pt_xy(dest_pos)) continue; // exclude our dest car, we do want to collide with it
 		i->expand_by_xy(0.75*radius); // use smaller collision radius
 		avoid.push_back(*i);
@@ -1009,7 +1009,7 @@ bool pedestrian_t::check_path_blocked(ped_manager_t &ped_mgr, point const &dest,
 		vect_cube_t const &colliders(ped_mgr.get_colliders_for_plot(city, plots_to_test[d]));
 		for (cube_t const &c : colliders) {add_and_expand_ped_avoid_cube(c, avoid, expand, height, region);} // check plot colliders
 	}
-	if (!in_the_road) {ped_mgr.get_parked_car_bcubes_for_plot(check_area, city, avoid);} // include collider bcubes for cars parked in house driveways
+	if (!in_the_road) {ped_mgr.get_parked_car_bcubes_for_plot(check_area, city, avoid);} // include collider bcubes for cars parked in house driveways or parking lots
 	return check_line_int_xy(avoid, pos, dest);
 }
 
@@ -1039,7 +1039,7 @@ void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, 
 		if (!no_crossing_check && !check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube)) {stop(); return;}
 	}
 	else if (city_params.cars_use_driveways && ped_mgr.has_cars_in_city(city)) { // in a plot
-		// check for cars if about to enter a driveway that's in use
+		// check for cars if about to enter a driveway that's in use; this works when crossing a house driveway, but not when walking down a parking lot driveway
 		float const sw_width(get_sidewalk_width());
 		dw_query_t const dw(ped_mgr.get_nearby_driveway(city, plot, pos, max(sw_width, radius)));
 
@@ -1673,7 +1673,7 @@ void ped_manager_t::get_pedestrians_in_area(cube_t const &area, int building_ix,
 	} // for city
 }
 
-bool ped_manager_t::has_nearby_car(pedestrian_t const &ped, bool road_dim, float delta_time, vect_cube_t *dbg_cubes) const {
+bool ped_manager_t::has_nearby_car(pedestrian_t const &ped, bool road_dim, float delta_time, vect_cube_t *dbg_cubes) const { // for road crossing
 	int const road_ix(get_road_ix_for_ped_crossing(ped, road_dim));
 	if (road_ix < 0) return 0; // failed for some reason, assume the answer is no
 	// Note: we only use road_ix, not seg_ix, because we need to find cars that are in adjacent segments to the ped (and it's difficult to get seg_ix)
@@ -1759,23 +1759,21 @@ bool ped_manager_t::has_car_at_pt(point const &pos, unsigned city, bool is_parke
 	car_city_vect_t const &cv(get_cars_for_city(city));
 
 	if (is_parked) { // handle parked cars case
-		for (auto c = cv.parked_car_bcubes.begin(); c != cv.parked_car_bcubes.end(); ++c) {
-			if (c->contains_pt_xy(pos)) return 1;
+		for (cube_t const &c : cv.parked_car_bcubes) {
+			if (c.contains_pt_xy(pos)) return 1;
 		}
 	}
 	else { // check all dims/dirs of non-parked cars
 		for (unsigned d = 0; d < 4; ++d) {
-			auto const &cars(cv.cars[d>>1][d&1]);
-
-			for (auto c = cars.begin(); c != cars.end(); ++c) {
-				if (c->bcube.contains_pt_xy(pos)) return 1;
+			for (car_base_t const &c : cv.cars[d>>1][d&1]) {
+				if (c.bcube.contains_pt_xy(pos)) return 1;
 			}
 		}
 	}
 	return 0;
 }
 
-// these two functions are intended for use with cars in driveways
+// these two functions are intended for use with cars in driveways or parking lots
 bool ped_manager_t::has_parked_car_on_path(point const &p1, point const &p2, unsigned city) const {
 	car_city_vect_t const &cv(get_cars_for_city(city));
 

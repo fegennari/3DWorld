@@ -1037,12 +1037,12 @@ void car_manager_t::add_helicopters(vect_cube_t const &hp_locs) {
 	cout << TXT(helipads.size()) << TXT(helicopters.size()) << endl; // 55/30
 }
 
-void car_city_vect_t::clear_cars() {
+void car_city_vect_t::clear_cars() { // Note: not clearing parked_car_bcubes()
 	for (unsigned d = 0; d < 4; ++d) {cars[d>>1][d&1].clear();}
 	sleeping_car_bcubes.clear();
 }
 
-void car_manager_t::extract_car_data(vector<car_city_vect_t> &cars_by_city) const {
+void car_manager_t::extract_car_data(vector<car_city_vect_t> &cars_by_city) const { // used for pedetrian update logic
 	if (cars.empty()) return;
 	//timer_t timer("Extract Car Data");
 	// create parked cars vectors on first call; this is used for pedestrian navigation within parking lots;

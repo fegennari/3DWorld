@@ -1980,7 +1980,6 @@ private:
 				int const psix(city_obj_placer.select_dest_parking_space(dix, allow_hcap, 1, car_len, rgen)); // reserve_spot=1
 				if (psix < 0) continue;
 				point const ps_center(city_obj_placer.get_parking_space_center(psix));
-				car.dest_pspace = psix;
 				car.park_space_cent.assign(ps_center.x, ps_center.y);
 
 				if (driveway.park_lot_ix >= 0) { // should always be true
