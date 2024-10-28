@@ -82,7 +82,7 @@ tunnel_seg_t tunnel_seg_t::connect_segment_to(point const &pos, bool conn_dir, u
 	return tseg;
 }
 point tunnel_seg_t::get_conn_pt(tunnel_conn_t const &c) const {
-	point p(0.0, 0.0, bcube.zc());
+	point p(bcube.get_cube_center()); // will set the third dim
 	p[  dim] = c.pos; // pos along tunnel
 	p[c.dim] = bcube.d[c.dim][c.dir]; // wall of tunnel
 	return p;
@@ -293,11 +293,33 @@ void building_t::add_tunnel_objects(rand_gen_t rgen) {
 		bool const dim(t.dim);
 
 		if (!t.conns_added && t.get_length() > 4.0*t.radius) {
-			// add smaller side pipes for non-short, non-connector segments; must use the same material and be drawn before the main tunnel walls
-			unsigned const max_pipes(3), mod_val(max_pipes + 1), num_pipes(rgen.rand() % mod_val); // 0-3
+			unsigned const max_pipes(3), mod_val(max_pipes + 2);
 			float avoid_vals[mod_val]={}, avoid_radii[mod_val]={};
 			unsigned num_avoid(0);
 			if (t.has_gate) {avoid_vals[num_avoid] = t.gate_pos; avoid_radii[num_avoid++] = t.get_bar_radius();}
+			
+			// maybe add a vertical shaft up to the city surface
+			if (0 && is_in_city) {
+				float const radius(rgen.rand_uniform(0.8, 0.9)*t.radius), end_pad(1.5*radius);
+				float const pos(rgen.rand_uniform(t.bcube_draw.d[dim][0]+end_pad, t.bcube_draw.d[dim][1]-end_pad));
+				
+				if (num_avoid == 0 || fabs(pos - avoid_vals[0]) > (end_pad + avoid_radii[0])) { // check gate if present
+					float const tb_thickness(get_fc_thickness());
+					cube_t shaft;
+					set_cube_zvals(shaft, t.bcube.z2()+tb_thickness, ground_floor_z1-tb_thickness);
+					set_wall_width(shaft, pos,          radius,  dim);
+					set_wall_width(shaft, t.p[0][!dim], radius, !dim);
+					float const length(shaft.z2() - t.bcube.z2());
+
+					if (length > tb_thickness && is_tunnel_bcube_placement_valid(shaft)) {
+						t.conns.emplace_back(2, 1, pos, length, radius);
+						avoid_vals [num_avoid  ] = pos;
+						avoid_radii[num_avoid++] = radius;
+					}
+				}
+			}
+			// add smaller side pipes for non-short, non-connector segments; must use the same material and be drawn before the main tunnel walls
+			unsigned const num_pipes(rgen.rand() % mod_val); // 0-3
 
 			for (unsigned n = 0; n < num_pipes; ++n) {
 				float const radius(rgen.rand_uniform(0.1, 0.3)*t.radius), end_pad(2.0*radius);
@@ -321,6 +343,7 @@ void building_t::add_tunnel_objects(rand_gen_t rgen) {
 					conn.water_flow  = rgen.rand_uniform(0.25, 0.5)*(conn.dir ? 1.0 : -1.0);
 				}
 				t.conns.push_back(conn);
+				//basement_ext_bcube.union_with_point(conn.dir ? p2 : p1); // ???
 				avoid_vals[num_avoid] = pos; avoid_radii[num_avoid++] = radius; // should we check dir or track it separately? may not matter much
 			} // for n
 			t.conns_added = 1; // flag so that we don't re-add if room geom is re-added
@@ -461,21 +484,27 @@ bool building_interior_t::get_tunnel_path(unsigned tix1, unsigned tix2, int prev
 void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 	bool const shadowed(0); // not shadowed, since there's no light
 	bool const dim(t.dim);
-	unsigned const ndiv(48);
-	float const length(t.get_length()), circumference(PI*t.radius), centerline(t.bcube.get_center_dim(!dim));
-	float const side_tscale(2.0), len_tscale(side_tscale*length/circumference), end_tscale(len_tscale*2.0*t.radius/length);
 	colorRGBA const wall_color(WHITE);
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), 16.0, shadowed), shadowed, 0, 1));
 
 	// draw smaller connecting tunnels
 	for (tunnel_conn_t const &c : t.conns) {
-		float const side_tscale2(1.0), len_tscale2(side_tscale2*c.length/(PI*c.radius));
+		float const side_tscale(1.0), len_tscale(side_tscale*c.length/(PI*c.radius));
 		cube_t const pipe(t.get_conn_bcube(c));
-		mat.add_ortho_cylin_to_verts(pipe, wall_color, c.dim, 0, 0, 1, 0, 1.0, 1.0, side_tscale2, 1.0, 0, N_CYL_SIDES, 0.0, 0, len_tscale2); // skip ends; two_sided=1
+		mat.add_ortho_cylin_to_verts(pipe, wall_color, c.dim, 0, 0, 1, 0, 1.0, 1.0, side_tscale, 1.0, 0, N_CYL_SIDES, 0.0, 0, len_tscale); // skip ends; two_sided=1
 		// draw the open/interior end transparent to create a hole in the outer pipe
 		mat.add_ortho_cylin_to_verts(pipe, ALPHA0, c.dim,  c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // transparent cut; skip_sides=1
-		mat.add_ortho_cylin_to_verts(pipe, BLACK,  c.dim, !c.dir,  c.dir, 0, 1, 1.0, 1.0, 1.0, 1.0, 1); // black interior end cap; skip_sides=1
+
+		if (c.dim == 2) { // vertical
+			// TODO: concrete with man hole cover + man hole cover above ground if it's over a road, concrete, sidewalk, or yard
+		}
+		else { // horizontal
+			mat.add_ortho_cylin_to_verts(pipe, BLACK,  c.dim, !c.dir,  c.dir, 0, 1, 1.0, 1.0, 1.0, 1.0, 1); // black interior end cap; skip_sides=1
+		}
 	} // for c
+	unsigned const ndiv(48);
+	float const length(t.get_length()), circumference(PI*t.radius), centerline(t.bcube.get_center_dim(!dim));
+	float const side_tscale(2.0), len_tscale(side_tscale*length/circumference), end_tscale(len_tscale*2.0*t.radius/length);
 	unsigned const verts_start_ix(mat.itri_verts.size()), ixs_start_ix(mat.indices.size());
 	// only the tunnel interior needs to be drawn, since it can't be viewed from the exterior; but drawing the exterior helps with debugging
 	mat.add_ortho_cylin_to_verts(t.bcube_draw, wall_color, dim, 0, 0, 1, 0, 1.0, 1.0, side_tscale, end_tscale, 0, ndiv, 0.0, 0, len_tscale, 0.0, t.room_conn);
@@ -608,7 +637,8 @@ void building_room_geom_t::add_tunnel_water(tunnel_seg_t const &t) {
 	} // for d
 	// draw water flowing out of side tunnels
 	for (tunnel_conn_t const &c : t.conns) {
-		if (c.water_level <= 0.0) continue;
+		if (c.water_level <= 0.0 || c.dim == 2) continue;
+		assert(c.dim == unsigned(!dim));
 		cube_t const pipe(t.get_conn_bcube(c));
 		cube_t w(pipe);
 		w.z2() = pipe.z1() + c.water_level;
