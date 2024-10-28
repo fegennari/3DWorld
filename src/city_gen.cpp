@@ -1472,13 +1472,13 @@ public:
 		}
 		return 0; // failed
 	}
-	unsigned decode_plot_id(unsigned global_plot_id) const {
+	unsigned decode_plot_id(unsigned global_plot_id) const { // global => local
 		assert(global_plot_id >= plot_id_offset);
 		unsigned const plot_id(global_plot_id - plot_id_offset);
 		assert(plot_id < plots.size());
 		return plot_id;
 	}
-	unsigned encode_plot_id(unsigned local_plot_id) const {return (local_plot_id + plot_id_offset);}
+	unsigned encode_plot_id(unsigned local_plot_id) const {return (local_plot_id + plot_id_offset);} // local => global
 	road_plot_t const &get_plot_from_global_id(unsigned global_plot_id) const {return plots         [decode_plot_id(global_plot_id)];}
 	vect_cube_t const &get_colliders_for_plot (unsigned global_plot_id) const {return plot_colliders[decode_plot_id(global_plot_id)];}
 
@@ -2101,8 +2101,10 @@ public:
 		} // for b
 		return nullptr;
 	}
-	dw_query_t get_nearby_driveway(unsigned plot_ix, point const &pos, float dist) const {
-		if (!get_is_residential()) return dw_query_t(); // no driveways
+	dw_query_t get_nearby_driveway(unsigned global_plot_id, point const &pos, float dist) const {
+		if (city_obj_placer.driveways.empty()) return dw_query_t(); // no driveways
+		if (!is_residential) return dw_query_t(); // logic doesn't really work well for city parking lot driveways as cars can get stuck, so skip
+		unsigned const plot_id(decode_plot_id(global_plot_id));
 
 		// plot_ix isn't required, but it's likely faster to check the plot first in the iteration
 		for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) { // iterate by tile, which is likely faster than iterating over driveways
@@ -2111,7 +2113,7 @@ public:
 				
 			for (unsigned i = rp.s; i < rp.e; ++i) {
 				driveway_t const &driveway(city_obj_placer.driveways[i]);
-				if (driveway.plot_ix != plot_ix) continue; // wrong plot (optimization)
+				if (driveway.plot_ix != plot_id) continue; // wrong plot (optimization)
 				if (driveway.contains_pt_xy_exp(pos, dist)) return dw_query_t(&driveway, i); // found
 			}
 		} // for b
@@ -2898,8 +2900,8 @@ public:
 	cube_t get_road_bcube_for_car(car_base_t const &car) const {return get_car_rn(car).get_road_bcube_for_car(car);}
 	virtual cube_t get_bcube_for_car(car_base_t const &car) const {return get_road_bcube_for_car(car);}
 	
-	dw_query_t get_nearby_driveway(unsigned city_ix, unsigned plot_ix, point const &pos, float dist) const {
-		return get_city(city_ix).get_nearby_driveway(plot_ix, pos, dist);
+	dw_query_t get_nearby_driveway(unsigned city_ix, unsigned global_plot_id, point const &pos, float dist) const {
+		return get_city(city_ix).get_nearby_driveway(global_plot_id, pos, dist);
 	}
 }; // city_road_gen_t
 
@@ -2954,8 +2956,8 @@ road_plot_t const &ped_manager_t::get_city_plot_for_peds(unsigned city_ix, unsig
 road_isec_t const &ped_manager_t::get_car_isec(car_base_t const &car) const {return road_gen.get_car_isec(car);}
 int ped_manager_t::get_global_plot_id_for_pos(unsigned city_ix, point const &pos) const {return road_gen.get_global_plot_id_for_pos(city_ix, pos);}
 
-dw_query_t ped_manager_t::get_nearby_driveway(unsigned city_ix, unsigned plot_ix, point const &pos, float dist) const {
-	return road_gen.get_nearby_driveway(city_ix, plot_ix, pos, dist);
+dw_query_t ped_manager_t::get_nearby_driveway(unsigned city_ix, unsigned global_plot_ix, point const &pos, float dist) const {
+	return road_gen.get_nearby_driveway(city_ix, global_plot_ix, pos, dist);
 }
 bool ped_manager_t::is_city_residential(unsigned city_ix) const {return road_gen.is_city_residential(city_ix);}
 cube_t ped_manager_t::get_city_bcube_for_peds(unsigned city_ix) const {return road_gen.get_city_bcube(city_ix);}

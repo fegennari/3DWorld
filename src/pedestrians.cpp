@@ -1041,12 +1041,18 @@ void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, 
 	else if (city_params.cars_use_driveways && ped_mgr.has_cars_in_city(city)) { // in a plot
 		// check for cars if about to enter a driveway that's in use; this works when crossing a house driveway, but not when walking down a parking lot driveway
 		float const sw_width(get_sidewalk_width());
-		dw_query_t const dw(ped_mgr.get_nearby_driveway(city, plot, pos, max(sw_width, radius)));
+		dw_query_t const dw(ped_mgr.get_nearby_driveway(city, plot, pos, max(sw_width, radius))); // Note: plot is the global plot index
 
 		if (dw.driveway != nullptr && dw.driveway->in_use == 1) { // crossing into a driveway used/reserved by a non-parked car
 			bool const ddim(dw.driveway->dim), ddir(dw.driveway->dir);
 			cube_t dw_extend(*dw.driveway);
 			dw_extend.d[ddim][ddir] += (ddir ? 1.0 : -1.0)*sw_width; // extend to include the sidewalk
+			
+			if (dw.driveway->is_parking_lot()) { // parking lot driveway may be very long, and the car may not drive the full length; only consider the entrance area
+				float const entrance_len(0.5*city_params.road_width);
+				if (ddir) {max_eq(dw_extend.d[ddim][0], (dw_extend.d[ddim][1] - entrance_len));}
+				else      {min_eq(dw_extend.d[ddim][1], (dw_extend.d[ddim][0] + entrance_len));}
+			}
 			cube_t dw_wider(dw_extend);
 			dw_wider.expand_in_dim(!ddim, 0.25*dw.driveway->get_width());
 
