@@ -1396,17 +1396,25 @@ struct extb_room_t : public cube_t { // extended basement room candidate
 };
 typedef vector<extb_room_t> vect_extb_room_t;
 
+struct tunnel_conn_t {
+	unsigned dim;
+	bool dir;
+	float pos, length, radius;
+	tunnel_conn_t(unsigned dim_, bool dir_, float p, float len, float r) : dim(dim_), dir(dir_), pos(p), length(len), radius(r) {}
+};
 struct tunnel_seg_t {
-	bool dim=0, room_conn=0, room_dir=0, has_gate=0, closed_ends[2]={};
+	bool dim=0, room_conn=0, room_dir=0, has_gate=0, conns_added=0, closed_ends[2]={};
 	int conn_ix[2]={-1,-1}; // index of adjacent connected tunnel in each dir; -1 is none
 	unsigned conn_room_ix=0, tseg_ix=0;
 	int8_t add_bend_dir[2] = { -1, -1 }; // one per end; -1 is no bend
 	float radius=0.0, gate_pos=0.0, water_level=0.0, water_flow=0.0;
 	point p[2];
 	cube_t bcube, bcube_ext, bcube_draw; // bcube_ext includes the area connecting to the door when room_conn=1 and overlap area at bends
+	vector<tunnel_conn_t> conns; // connections to other tunnels
 
 	tunnel_seg_t(point const &p1, point const &p2, float radius_);
-	float get_length() const {return (p[1][dim] - p[0][dim]);}
+	float get_length    () const {return (p[1][dim] - p[0][dim]);}
+	float get_bar_radius() const {return 0.025*radius;}
 	void set_gate(float pos) {gate_pos = pos; has_gate = 1;}
 	void set_as_room_conn(bool rdir, float wall_gap);
 	cube_t get_walk_area(point const &pos, float user_radius) const;
@@ -1414,6 +1422,7 @@ struct tunnel_seg_t {
 	point get_room_conn_pt(float zval) const;
 	bool is_blocked_by_gate(point const &p1, point const &p2) const;
 	tunnel_seg_t connect_segment_to(point const &pos, bool conn_dir, unsigned new_tseg_ix, bool is_end=0);
+	point get_conn_pt(tunnel_conn_t const &c) const;
 };
 typedef vector<tunnel_seg_t> vect_tunnel_seg_t;
 
@@ -2268,7 +2277,7 @@ private:
 	void add_false_door_to_extb_room_if_needed(room_t const &room, float zval, unsigned room_id);
 	bool is_tunnel_bcube_placement_valid(cube_t const &tunnel_bc) const;
 	bool is_tunnel_placement_valid(point const &p1, point const &p2, float radius) const;
-	void try_extend_tunnel(point &p1, point &p2, float max_extend, float check_radius, bool dim, bool dir) const;
+	void try_extend_tunnel(point &p1, point &p2, float max_extend, float check_radius, unsigned dim, bool dir) const;
 	bool try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned room_id, rand_gen_t &rgen);
 	building_t *get_conn_bldg_for_pt(point const &p, float radius=0.0) const;
 	building_t *get_bldg_containing_pt(point const &p);

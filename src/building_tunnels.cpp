@@ -81,6 +81,12 @@ tunnel_seg_t tunnel_seg_t::connect_segment_to(point const &pos, bool conn_dir, u
 	closed_ends[conn_dir] = 0; // parent is no longer closed
 	return tseg;
 }
+point tunnel_seg_t::get_conn_pt(tunnel_conn_t const &c) const {
+	point p(0.0, 0.0, bcube.zc());
+	p[  dim] = c.pos; // pos along tunnel
+	p[c.dim] = bcube.d[c.dim][c.dir]; // wall of tunnel
+	return p;
+}
 
 // *** Placement ***
 
@@ -158,7 +164,7 @@ bool building_t::is_tunnel_bcube_placement_valid(cube_t const &tunnel_bc) const 
 bool building_t::is_tunnel_placement_valid(point const &p1, point const &p2, float radius) const {
 	return is_tunnel_bcube_placement_valid(tunnel_seg_t(p1, p2, radius).bcube);
 }
-void building_t::try_extend_tunnel(point &p1, point &p2, float max_extend, float check_radius, bool dim, bool dir) const {
+void building_t::try_extend_tunnel(point &p1, point &p2, float max_extend, float check_radius, unsigned dim, bool dir) const {
 	unsigned const num_steps = 10;
 	float const step_len(max_extend/num_steps);
 
@@ -274,23 +280,53 @@ void building_t::add_tunnel_objects(rand_gen_t rgen) {
 	assert(has_room_geom());
 	vect_room_object_t &objs(interior->room_geom->objs);
 
-	for (tunnel_seg_t const &t : interior->tunnels) {
+	for (tunnel_seg_t &t : interior->tunnels) {
 		if (t.room_conn) continue; // nothing added to these tunnels
+		bool const dim(t.dim);
+
+		if (!t.conns_added && t.get_length() > 4.0*t.radius) {
+			// add smaller side pipes for non-short, non-connector segments; must use the same material and be drawn before the main tunnel walls
+			unsigned const max_pipes(3), mod_val(max_pipes + 1), num_pipes(rgen.rand() % mod_val); // 0-3
+			float avoid_vals[mod_val]={}, avoid_radii[mod_val]={};
+			unsigned num_avoid(0);
+			if (t.has_gate) {avoid_vals[num_avoid] = t.gate_pos; avoid_radii[num_avoid++] = t.get_bar_radius();}
+
+			for (unsigned n = 0; n < num_pipes; ++n) {
+				float const radius(rgen.rand_uniform(0.1, 0.3)*t.radius), end_pad(2.0*radius);
+				float const pos(rgen.rand_uniform(t.bcube_draw.d[dim][0]+end_pad, t.bcube_draw.d[dim][1]-end_pad));
+				bool blocked(0);
+
+				for (unsigned N = 0; N < num_avoid; ++N) {
+					if (fabs(pos - avoid_vals[N]) < (end_pad + avoid_radii[N])) {blocked = 1; break;} // too close to gate or another pipe
+				}
+				if (blocked) continue;
+				tunnel_conn_t conn(!dim, rgen.rand_bool(), pos, 4.0*t.radius, radius); // random dir; set max length
+				point const conn_pt(t.get_conn_pt(conn));
+				point p1(conn_pt);
+				p1[conn.dim] += (conn.dir ? 1.0 : -1.0)*0.5*radius; // set min length; extends so that it doesn't intersect t
+				point p2(p1);
+				try_extend_tunnel(p1, p2, conn.length, 1.1*radius, conn.dim, conn.dir);
+				conn.length = fabs((conn.dir ? p2 : p1)[conn.dim] - conn_pt[conn.dim]); // clip length
+				t.conns.push_back(conn);
+				avoid_vals[num_avoid] = pos; avoid_radii[num_avoid++] = radius; // should we check dir or track it separately? may not matter much
+			} // for n
+			t.conns_added = 1; // flag so that we don't re-add if room geom is re-added
+		}
 		// add smaller pipes
 		unsigned const num_pipes(rgen.rand() % 3); // 0-2
 
 		for (unsigned n = 0; n < num_pipes; ++n) {
 			float const radius(0.05*t.radius*rgen.rand_uniform(0.5, 1.0));
-			float const v1(t.p[0][t.dim] + 2.0*radius), v2(t.p[1][t.dim] - 2.0*radius);
+			float const v1(t.p[0][dim] + 2.0*radius), v2(t.p[1][dim] - 2.0*radius);
 			if (v1 >= v2) continue; // too short a tunnel; shouldn't happen
 			float const pos(rgen.rand_uniform(v1, v2)), height(t.radius*rgen.rand_uniform(0.7, 0.9));
 			if (t.has_gate && fabs(pos - t.gate_pos) < 2.0*radius) continue; // too close to the gate
 			float const zval(t.p[0].z + height), hlen(sqrt(t.radius*t.radius - height*height) + 2.0*radius);
 			cube_t pipe;
-			set_wall_width(pipe, t.p[0][!t.dim], hlen, !t.dim);
-			set_wall_width(pipe, pos,  radius, t.dim);
+			set_wall_width(pipe, t.p[0][!dim], hlen, !dim);
+			set_wall_width(pipe, pos,  radius, dim);
 			set_wall_width(pipe, zval, radius, 2);
-			objs.emplace_back(pipe, TYPE_PIPE, 0, !t.dim, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CYLIN, choose_pipe_color(rgen)); // horizontal, room_id=0
+			objs.emplace_back(pipe, TYPE_PIPE, 0, !dim, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CYLIN, choose_pipe_color(rgen)); // horizontal, room_id=0
 		} // for n
 	} // for t
 }
@@ -413,45 +449,24 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 	bool const shadowed(0); // not shadowed, since there's no light
 	bool const dim(t.dim);
 	unsigned const ndiv(48);
-	float const length(t.get_length()), circumference(PI*t.radius), centerline(t.bcube.get_center_dim(!dim)), bar_radius(0.025*t.radius);
+	float const length(t.get_length()), circumference(PI*t.radius), centerline(t.bcube.get_center_dim(!dim));
 	float const side_tscale(2.0), len_tscale(side_tscale*length/circumference), end_tscale(len_tscale*2.0*t.radius/length);
 	colorRGBA const wall_color(WHITE);
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), 16.0, shadowed), shadowed, 0, 1));
 
-	// add smaller side pipes for non-short, non-connector segments; must use the same material and be drawn before the main tunnel walls
-	if (!t.room_conn && length > 4.0*t.radius) {
-		rand_gen_t rgen;
-		rgen.set_state(t.conn_room_ix+1, t.tseg_ix+1);
-		rgen.rand_mix();
-		unsigned const max_pipes(3), mod_val(max_pipes + 1), num_pipes(rgen.rand() % mod_val); // 0-3
-		float avoid_vals[mod_val]={}, avoid_radii[mod_val]={};
-		unsigned num_avoid(0);
-		if (t.has_gate) {avoid_vals[num_avoid] = t.gate_pos; avoid_radii[num_avoid++] = bar_radius;}
-
-		for (unsigned n = 0; n < num_pipes; ++n) {
-			float const radius(rgen.rand_uniform(0.1, 0.3)*t.radius), end_pad(2.0*radius);
-			float const pos(rgen.rand_uniform(t.bcube_draw.d[dim][0]+end_pad, t.bcube_draw.d[dim][1]-end_pad));
-			bool blocked(0);
-
-			for (unsigned N = 0; N < num_avoid; ++N) {
-				if (fabs(pos - avoid_vals[N]) < (end_pad + avoid_radii[N])) {blocked = 1; break;} // too close to gate or another pipe
-			}
-			if (blocked) continue;
-			bool const dir(rgen.rand_bool());
-			point center(0.0, 0.0, t.bcube.zc());
-			center[ dim] = pos; // pos along tunnel
-			center[!dim] = t.bcube.d[!dim][dir]; // wall of tunnel
-			cube_t pipe(center);
-			pipe.expand_in_dim(   2,     radius);
-			pipe.expand_in_dim( dim,     radius);
-			pipe.expand_in_dim(!dim, 0.5*radius); // length
-			mat.add_ortho_cylin_to_verts(pipe, wall_color, !dim, 0, 0, 1); // skip ends; two_sided=1
-			// draw the open/interior end transparent to create a hole in the outer pipe
-			mat.add_ortho_cylin_to_verts(pipe, ALPHA0, !dim,  dir, !dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // transparent cut; skip_sides=1
-			mat.add_ortho_cylin_to_verts(pipe, BLACK,  !dim, !dir,  dir, 0, 1, 1.0, 1.0, 1.0, 1.0, 1); // black interior end cap; skip_sides=1
-			avoid_vals[num_avoid] = pos; avoid_radii[num_avoid++] = radius; // should we check dir or track it separately? may not matter much
-		} // for n
-	}
+	// draw smaller connecting tunnels
+	for (tunnel_conn_t const &c : t.conns) {
+		float const side_tscale2(1.0), len_tscale2(side_tscale2*c.length/(PI*c.radius));
+		cube_t pipe(t.get_conn_pt(c));
+		pipe.expand_in_dim((c.dim+1)%3, c.radius);
+		pipe.expand_in_dim((c.dim+2)%3, c.radius);
+		pipe.d[c.dim][!c.dir] -= (c.dir ? 1.0 : -1.0)*0.25*c.radius; // inward
+		pipe.d[c.dim][ c.dir] += (c.dir ? 1.0 : -1.0)*c.length; // outward
+		mat.add_ortho_cylin_to_verts(pipe, wall_color, c.dim, 0, 0, 1, 0, 1.0, 1.0, side_tscale2, 1.0, 0, N_CYL_SIDES, 0.0, 0, len_tscale2); // skip ends; two_sided=1
+		// draw the open/interior end transparent to create a hole in the outer pipe
+		mat.add_ortho_cylin_to_verts(pipe, ALPHA0, c.dim,  c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // transparent cut; skip_sides=1
+		mat.add_ortho_cylin_to_verts(pipe, BLACK,  c.dim, !c.dir,  c.dir, 0, 1, 1.0, 1.0, 1.0, 1.0, 1); // black interior end cap; skip_sides=1
+	} // for c
 	unsigned const verts_start_ix(mat.itri_verts.size()), ixs_start_ix(mat.indices.size());
 	// only the tunnel interior needs to be drawn, since it can't be viewed from the exterior; but drawing the exterior helps with debugging
 	mat.add_ortho_cylin_to_verts(t.bcube_draw, wall_color, dim, 0, 0, 1, 0, 1.0, 1.0, side_tscale, end_tscale, 0, ndiv, 0.0, 0, len_tscale, 0.0, t.room_conn);
@@ -522,7 +537,7 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 	if (t.has_gate) {
 		assert(!t.room_conn); // not supported
 		unsigned const num_bars(8), bar_ndiv(16);
-		float const bar_spacing(2*t.radius/(num_bars + 1)), zc(t.bcube.zc()), rsq(t.radius*t.radius);
+		float const bar_radius(t.get_bar_radius()), bar_spacing(2*t.radius/(num_bars + 1)), zc(t.bcube.zc()), rsq(t.radius*t.radius);
 		float bar_pos(t.bcube.d[!dim][0] + bar_spacing);
 		rgeom_mat_t &bar_mat(get_material(tid_nm_pair_t(get_texture_by_name("metals/67_rusty_dirty_metal.jpg")), shadowed, 0, 1)); // inc_shadows=0 (no light), small=1
 		colorRGBA const bar_color(DK_GRAY);
