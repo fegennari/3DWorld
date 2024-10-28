@@ -139,13 +139,14 @@ struct car_base_t { // the part needed for the pedestrian interface (size = 48);
 	point get_front(float dval=0.5) const;
 };
 
-struct car_t : public car_base_t, public waiting_obj_t { // size = 128
-	cube_t prev_bcube;
-	bool is_truck=0, is_police=0, is_ambulance=0, is_emergency=0, entering_city=0, in_tunnel=0, dest_valid=0, destroyed=0, in_reverse=0, engine_running=0, is_braking=0;
+struct car_t : public car_base_t, public waiting_obj_t { // size = 136
+	bool is_truck=0, is_police=0, is_ambulance=0, is_emergency=0, entering_city=0, in_tunnel=0, dest_valid=0, destroyed=0;
+	bool in_reverse=0, engine_running=0, is_braking=0, in_parking_lot=0;
 	uint8_t color_id=0, front_car_turn_dir=TURN_UNSPEC, model_id=0;
 	uint16_t dest_city=0, dest_isec=0;
 	float height=0.0, dz=0.0, rot_z=0.0, turn_val=0.0, waiting_pos=0.0, wake_time=0.0;
 	vector2d park_space_cent;
+	cube_t prev_bcube;
 	car_t const *car_in_front=nullptr;
 
 	void set_bcube(point const &center, vector3d const &sz);
@@ -199,7 +200,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 128
 
 struct car_city_vect_t {
 	vector<car_base_t> cars[2][2]; // {dim x dir}
-	vect_cube_with_ix_t parked_car_bcubes, sleeping_car_bcubes; // stores car bcube + plot_ix
+	vect_cube_with_ix_t parked_car_bcubes, sleeping_car_bcubes, parking_lot_car_bcubes; // stores car bcube + road/plot/driveway index
 	void clear_cars();
 };
 

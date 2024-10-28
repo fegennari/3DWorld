@@ -301,6 +301,8 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 	float stop_pos(0.0), car_pos(0.0);
 
 	if (driveway.is_parking_lot()) { // parking lot driveway
+		in_parking_lot = 1;
+
 		if (maybe_apply_turn(park_space_cent[dim], 1)) { // turning into parking space row; for_driveway=1
 			return; // continue to turn
 		}
@@ -326,7 +328,7 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 			turn_dir = (dw_turn_dir ? (uint8_t)TURN_RIGHT : (uint8_t)TURN_LEFT);
 			begin_turn(); // capture car centerline before the turn
 		}
-		else {
+		else { // transitioned to parked and wait before leaving
 			dest_valid      = 0;
 			dest_driveway   = -1;
 			engine_running  = 0;
@@ -367,7 +369,7 @@ bool car_t::exit_driveway_to_road(vector<car_t> const &cars, driveway_t const &d
 	if (is_turning && turn_dir == TURN_NONE) { // turn has been completed
 		if (in_reverse) {decelerate_fast();} // pause before going forward
 		driveway.in_use = 0; // Note: in_use flag is mutable
-		in_reverse      = 0;
+		in_reverse      = in_parking_lot = 0;
 		return 1; // driveway exit complete, continue forward
 	}
 	set_target_speed(in_reverse ? 0.25 : 0.35); // 25-35% of max speed
@@ -1039,7 +1041,8 @@ void car_manager_t::add_helicopters(vect_cube_t const &hp_locs) {
 
 void car_city_vect_t::clear_cars() { // Note: not clearing parked_car_bcubes()
 	for (unsigned d = 0; d < 4; ++d) {cars[d>>1][d&1].clear();}
-	sleeping_car_bcubes.clear();
+	sleeping_car_bcubes   .clear();
+	parking_lot_car_bcubes.clear();
 }
 
 void car_manager_t::extract_car_data(vector<car_city_vect_t> &cars_by_city) const { // used for pedetrian update logic
@@ -1053,10 +1056,19 @@ void car_manager_t::extract_car_data(vector<car_city_vect_t> &cars_by_city) cons
 	for (auto i = cars.begin(); i != cars.end(); ++i) {
 		if (i->cur_city >= cars_by_city.size()) {cars_by_city.resize(i->cur_city+1);}
 		auto &dest(cars_by_city[i->cur_city]);
-		if (!i->is_parked()) {dest.cars[i->dim][i->dir].push_back(*i);} // moving on road
+		
+		if (!i->is_parked()) { // moving on road
+			if (i->in_parking_lot) { // cars in parking lots
+				bool const mdir(i->dir ^ i->in_reverse); // moving direction
+				cube_t bc(i->bcube);
+				if (!i->is_stopped()) {bc.d[i->dim][mdir] += (mdir ? 1.0 : -1.0)*i->get_length();} // extend one car length in front if moving
+				dest.parking_lot_car_bcubes.emplace_back(bc, i->dest_driveway);
+			}
+			else {dest.cars[i->dim][i->dir].push_back(*i);}
+		}
 		else if (i->is_sleeping()) {dest.sleeping_car_bcubes.emplace_back(i->bcube, i->cur_road);} // cars stopped in driveways
 		else if (add_parked_cars)  {dest.parked_car_bcubes  .emplace_back(i->bcube, i->cur_road);} // parked, not yet updated
-	}
+	} // for i
 }
 
 bool car_manager_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const { // pos is in camera space

@@ -1777,24 +1777,18 @@ bool ped_manager_t::has_car_at_pt(point const &pos, unsigned city, bool is_parke
 bool ped_manager_t::has_parked_car_on_path(point const &p1, point const &p2, unsigned city) const {
 	car_city_vect_t const &cv(get_cars_for_city(city));
 
-	for (unsigned v = 0; v < 2; ++v) { // check both parked and sleeping cars
-		vect_cube_with_ix_t const &cars(v ? cv.sleeping_car_bcubes : cv.parked_car_bcubes);
-
-		for (auto c = cars.begin(); c != cars.end(); ++c) {
-			if (check_line_clip(p1, p2, c->d)) return 1;
-		}
+	for (unsigned v = 0; v < 3; ++v) { // check parked, sleeping, and parking lot cars
+		vect_cube_with_ix_t const &cars((v == 2) ? cv.parking_lot_car_bcubes : (v ? cv.sleeping_car_bcubes : cv.parked_car_bcubes));
+		for (cube_t const &c : cars) {if (check_line_clip(p1, p2, c.d)) return 1;}
 	}
 	return 0;
 }
 void ped_manager_t::get_parked_car_bcubes_for_plot(cube_t const &plot, unsigned city, vect_cube_t &car_bcubes) const {
 	car_city_vect_t const &cv(get_cars_for_city(city));
 
-	for (unsigned v = 0; v < 2; ++v) { // check both parked and sleeping cars
-		vect_cube_with_ix_t const &cars(v ? cv.sleeping_car_bcubes : cv.parked_car_bcubes);
-
-		for (auto c = cars.begin(); c != cars.end(); ++c) {
-			if (c->intersects_xy(plot)) {car_bcubes.push_back(*c);}
-		}
+	for (unsigned v = 0; v < 3; ++v) { // check parked, sleeping, and parking lot cars
+		vect_cube_with_ix_t const &cars((v == 2) ? cv.parking_lot_car_bcubes : (v ? cv.sleeping_car_bcubes : cv.parked_car_bcubes));
+		for (cube_t const &c : cars) {if (c.intersects_xy(plot)) {car_bcubes.push_back(c);}}
 	}
 }
 
