@@ -539,7 +539,7 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 	if (t.closed_ends[0] || t.closed_ends[1]) {
 		assert(!t.room_conn); // not supported
 		unsigned const start_ix(mat.itri_verts.size());
-		mat.add_ortho_cylin_to_verts(t.bcube_draw, BLACK, t.dim, t.closed_ends[0], t.closed_ends[1], 1, 0, 1.0, 1.0, 1.0, 1.0, 1);
+		mat.add_ortho_cylin_to_verts(t.bcube_draw, BLACK, t.dim, t.closed_ends[0], t.closed_ends[1], 1, 0, 1.0, 1.0, 1.0, 1.0, 1, ndiv);
 		for (auto v = mat.itri_verts.begin()+start_ix; v != mat.itri_verts.end(); ++v) {v->set_norm_to_zero();} // zero normal to prevent wet effect
 	}
 	// draw gate if present

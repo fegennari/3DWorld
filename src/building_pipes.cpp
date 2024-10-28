@@ -156,6 +156,7 @@ bool building_t::cube_intersects_extb_room(cube_t const &c) const {
 	for (tunnel_seg_t const &t : interior->tunnels) {
 		if (c.intersects(t.bcube_ext)) return 1;
 	}
+	if (has_pool() && c.intersects(interior->pool)) return 1;
 	return 0;
 }
 
