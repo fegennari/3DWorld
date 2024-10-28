@@ -609,6 +609,7 @@ class city_obj_placer_t : private city_draw_qbds_t {
 public: // road network needs access to parking lots and driveways for drawing
 	vector<parking_lot_t> parking_lots;
 	vector<driveway_t> driveways; // for houses
+	float city_zval=0.0;
 private:
 	vector<bench_t> benches;
 	vector<tree_planter_t> planters;

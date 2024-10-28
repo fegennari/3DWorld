@@ -1660,6 +1660,7 @@ bool city_obj_placer_t::place_swimming_pool(road_plot_t const &plot, city_zone_t
 }
 
 void city_obj_placer_t::place_birds(cube_t const &city_bcube, rand_gen_t &rgen) {
+	city_zval = city_bcube.z2();
 	if (!are_birds_enabled()) return;
 	bird_poop_manager.init(city_bcube);
 
