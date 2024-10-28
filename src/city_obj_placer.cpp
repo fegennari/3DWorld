@@ -45,8 +45,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 	plot.expand_by_xy(-pad_dist);
 	if (bcubes.empty()) return 0; // shouldn't happen, unless buildings are disabled; skip to avoid perf problems with an entire plot of parking lot
 	unsigned const buildings_end(bcubes.size()), first_corner(rgen.rand()&3); // 0-3
-	bool const car_dim(rgen.rand() & 1); // 0=cars face in X; 1=cars face in Y
-	bool car_dir(rgen.rand() & 1);
+	bool const car_dim(rgen.rand() & 1), car_dir(rgen.rand() & 1); // car_dim: 0=cars face in X; 1=cars face in Y
 	float const xsz(car_dim ? space_width : space_len), ysz(car_dim ? space_len : space_width);
 	bool has_parking(0);
 	vector<hcap_with_dist_t> hcap_cands;
@@ -58,7 +57,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 
 	for (unsigned c = 0; c < 4; ++c) { // generate 0-4 parking lots per plot, starting at the corners, in random order
 		unsigned const cix((first_corner + c) & 3), xdir(cix & 1), ydir(cix >> 1), wdir(car_dim ? xdir : ydir), rdir(car_dim ? ydir : xdir);
-		float const dx(xdir ? -xsz : xsz), dy(ydir ? -ysz : ysz), dw(car_dim ? dx : dy), dr(car_dim ? dy : dx); // delta-wdith and delta-row
+		float const dx(xdir ? -xsz : xsz), dy(ydir ? -ysz : ysz), dw(car_dim ? dx : dy), dr(car_dim ? dy : dx); // delta-width and delta-row
 		point const corner_pos(plot.d[0][xdir], plot.d[1][ydir], (plot.z1() + 0.1*ROAD_HEIGHT)); // shift up slightly to avoid z-fighting
 		assert(dw != 0.0 && dr != 0.0);
 		unsigned const parking_lot_ix(parking_lots.size());
@@ -85,21 +84,21 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 		}
 		assert(park.row_sz >= city_params.min_park_spaces && park.num_rows >= city_params.min_park_rows);
 		assert(park.dx() > 0.0 && park.dy() > 0.0);
+		bool &cdir(park.dir);
 
 		if (1) { // add driveways connecting to parking lot
 			bool const dw_dir(plot.get_center_dim(!car_dim) < park.get_center_dim(!car_dim)); // connect to road on closer side
 			float const dw_pad_dist(0.25*pad_dist);
 
 			for (unsigned d = 0; d < 2; ++d) { // try both dirs
-				float const back_of_lot(park.d[car_dim][!car_dir]); // driveway connects to this side
+				float const back_of_lot(park.d[car_dim][!cdir]); // driveway connects to this side
 				cube_t driveway(park);
-				driveway.d[ car_dim][ car_dir] = back_of_lot;
-				driveway.d[ car_dim][!car_dir] = back_of_lot + (car_dir ? -1.0 : 1.0)*1.25*space_width;
+				driveway.d[ car_dim][ cdir] = back_of_lot;
+				driveway.d[ car_dim][!cdir] = back_of_lot + (cdir ? -1.0 : 1.0)*1.25*space_width;
 				driveway.d[!car_dim][  dw_dir] = full_plot.d[!car_dim][dw_dir] + (dw_dir ? 1.0 : -1.0)*sidewalk_width; // extend to the road, with a small gap for the curb
 
 				if (has_bcube_int_xy(driveway, bcubes, dw_pad_dist)) { // too close to an object such as a building (or its door); try other dir
-					car_dir  ^= 1;
-					park.dir ^= 1;
+					cdir ^= 1;
 				}
 				else { // add the driveway
 					// try to extend the driveway in the other dim if there's space, so that cars have room to back out of parking spaces
@@ -156,9 +155,9 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 		// create parking spaces, fill the parking lot with cars, and assign handicap spaces
 		vector<unsigned char> &used_spaces(parking_lots.back().used_spaces);
 		used_spaces.resize(nspaces, 0); // start empty
-		car.dim = car_dim; car.dir = car_dir;
+		car.dim = car_dim; car.dir = cdir;
 		point pos(corner_pos.x, corner_pos.y, plot.z2());
-		pos[car_dim] += 0.5*dr + (car_dir ? 0.15 : -0.15)*fabs(dr); // offset for centerline, biased toward the front of the parking space
+		pos[car_dim] += 0.5*dr + (cdir ? 0.15 : -0.15)*fabs(dr); // offset for centerline, biased toward the front of the parking space
 		float const car_density(rgen.rand_uniform(city_params.min_park_density, city_params.max_park_density));
 
 		for (unsigned row = 0; row < park.num_rows; ++row) { // car lengths
@@ -167,7 +166,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 
 			for (unsigned col = 0; col < park.row_sz; ++col) { // car widths
 				point const center(pos.x, pos.y, park.z2());
-				parking_space_t pspace(center, car_dim, car_dir, parking_lot_ix, row, col);
+				parking_space_t pspace(center, car_dim, cdir, parking_lot_ix, row, col);
 
 				if (prev_was_bad) { // previous car did a bad parking job, leave this space empty
 					prev_was_bad   = 0;
@@ -190,7 +189,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 					pspace.occupied = 1;
 					++filled_spaces;
 				}
-				hcap_cands.emplace_back(hcap_space_t(center, 0.25*space_width, car_dim, car_dir, pspaces.size()), plot, bcubes, buildings_end);
+				hcap_cands.emplace_back(hcap_space_t(center, 0.25*space_width, car_dim, cdir, pspaces.size()), plot, bcubes, buildings_end);
 				pspaces.push_back(pspace);
 				pos[!car_dim] += dw;
 			} // for col
@@ -224,6 +223,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 				cur_cube.d[ car_dim][0] = corner_pos[ car_dim] +  row_min   *dr; // set row span for range of cars
 				cur_cube.d[ car_dim][1] = corner_pos[ car_dim] + (row_max+1)*dr;
 				cur_cube.normalize();
+				cur_cube.d[ car_dim][!cdir] -= (cdir ? -1.0 : 1.0)*0.25*fabs(dr); // remove 25% of back of parking space (by DW) since cars don't usually block this
 				colliders.push_back(cur_cube);
 				row_min = park.num_rows; row_max = 0; inside = 0;
 			}
