@@ -453,6 +453,14 @@ cube_t car_t::get_parking_space_debug_marker() const {
 	c.expand_by_xy(0.5*get_width());
 	return c;
 }
+cube_t car_t::get_ped_coll_check_area() const {
+	cube_t coll_area(bcube);
+	coll_area.d[ dim][!dir]  = coll_area.d[dim][dir]; // exclude the car itself
+	coll_area.d[ dim][ dir] += (dir ? 1.25 : -1.25)*get_length(); // extend the front
+	coll_area.d[!dim][0] -= 0.5*get_width();
+	coll_area.d[!dim][1] += 0.5*get_width();
+	return coll_area;
+}
 
 bool car_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, vector3d *cnorm) const {
 	return sphere_cube_int_update_pos(pos, radius, (bcube + xlate), p_last, 0, cnorm); // Note: approximate when car is tilted or turning
@@ -1252,30 +1260,25 @@ int car_manager_t::find_next_car_after_turn(car_t &car) {
 }
 
 bool car_manager_t::check_car_for_ped_colls(car_t &car) const {
-	if (car.turn_val != 0.0 || car.turn_dir != TURN_NONE) return 0; // for now, don't check for cars when turning as this causes problems with blocked intersections
-	if (car.cur_city >= peds_crossing_roads.peds.size())  return 0; // no peds in this city (includes connector road network); ignores player
-	auto const &peds_by_road(peds_crossing_roads.peds[car.cur_city]);
-	if (car.cur_road >= peds_by_road.size()) return 0; // no peds in this road; ignores player
-	point const player_pos(camera_pdu.pos - dstate.xlate);
-	bool const check_player(camera_surf_collide && !camera_in_building && dist_less_than(car.get_center(), player_pos, (X_SCENE_SIZE + Y_SCENE_SIZE)));
-	auto const &peds(peds_by_road[car.cur_road]);
-	if (peds.empty() && !check_player) return 0;
-	cube_t coll_area(car.bcube);
-	coll_area.d[ car.dim][!car.dir] = coll_area.d[car.dim][car.dir]; // exclude the car itself
-	coll_area.d[ car.dim][car.dir] += (car.dir ? 1.25 : -1.25)*car.get_length(); // extend the front
-	coll_area.d[!car.dim][0] -= 0.5*car.get_width();
-	coll_area.d[!car.dim][1] += 0.5*car.get_width();
+	if (car.turn_val != 0.0 || car.turn_dir != TURN_NONE) return 0; // for now, don't check for peds when turning as this causes problems with blocked intersections
 	bool const at_stopsign(car.in_isect() && get_car_isec(car).has_stopsign);
 
-	for (auto i = peds.begin(); i != peds.end(); ++i) {
-		if (coll_area.contains_pt_xy_exp(i->pos, i->radius)) {
+	if (camera_surf_collide && !camera_in_building && car.get_ped_coll_check_area().contains_pt_xy_exp(dstate.camera_bs, CAMERA_RADIUS)) { // check for player
+		car.person_in_the_way(1, at_stopsign); // is_player=1
+		return 1;
+	}
+	if (peds_crossing_roads.peds.empty() || car.cur_city >= peds_crossing_roads.peds.size()) return 0; // no peds in this city (includes connector road network)
+	auto const &peds_by_road(peds_crossing_roads.peds[car.cur_city]);
+	if (car.cur_road >= peds_by_road.size()) return 0; // no peds in this road
+	auto const &peds(peds_by_road[car.cur_road]);
+	if (peds.empty()) return 0;
+	cube_t const coll_area(car.get_ped_coll_check_area());
+
+	for (sphere_t const &i : peds) {
+		if (coll_area.contains_pt_xy_exp(i.pos, i.radius)) {
 			car.person_in_the_way(0, at_stopsign); // is_player=0
 			return 1;
 		}
-	}
-	if (check_player && coll_area.contains_pt_xy_exp(player_pos, CAMERA_RADIUS)) { // check for player collision
-		car.person_in_the_way(1, at_stopsign); // is_player=1
-		return 1;
 	}
 	return 0;
 }
@@ -1345,7 +1348,7 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 			int const next_car(find_next_car_after_turn(*i)); // Note: calculates in i->car_in_front
 			if (next_car >= 0) {check_collision(*i, cars[next_car]);} // make sure we collide with the correct car
 		}
-		if (!peds_crossing_roads.peds.empty()) {check_car_for_ped_colls(*i);}
+		check_car_for_ped_colls(*i);
 	} // for i
 	update_cars(); // run update logic
 

@@ -196,6 +196,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 136
 	unsigned count_cars_in_front(cube_t const &range=cube_t(all_zeros)) const;
 	float get_sum_len_space_for_cars_in_front(cube_t const &range) const;
 	cube_t get_parking_space_debug_marker() const;
+	cube_t get_ped_coll_check_area() const;
 };
 
 struct car_city_vect_t {

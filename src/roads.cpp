@@ -805,7 +805,7 @@ void road_isec_t::draw_stoplights_and_street_signs(road_draw_state_t &dstate, ve
 				dstate.draw_cube(dstate.qbd_sl, sc, cw, 1); // skip_bottom=1; Note: uses traffic light texture, but color is black so it's all black anyway
 
 				if (!shadow_only && tt_fire_button_down && game_mode != GAME_MODE_FPS) { // player debug visualization
-					point const p1(camera_pdu.pos - dstate.xlate), p2(p1 + camera_pdu.dir*FAR_CLIP);
+					point const p1(dstate.camera_bs), p2(p1 + camera_pdu.dir*FAR_CLIP);
 					if (sc.line_intersects(p1, p2)) {dstate.set_label_text(stoplight.label_str(), (sc.get_cube_center() + dstate.xlate));}
 				}
 				if (sc.z2() < sign_z1) { // sign is too low, add a metal pole to extend it upward
