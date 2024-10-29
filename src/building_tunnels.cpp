@@ -491,16 +491,12 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 	for (tunnel_conn_t const &c : t.conns) {
 		float const side_tscale(1.0), len_tscale(side_tscale*c.length/(PI*c.radius));
 		cube_t const pipe(t.get_conn_bcube(c));
-		mat.add_ortho_cylin_to_verts(pipe, wall_color, c.dim, 0, 0, 1, 0, 1.0, 1.0, side_tscale, 1.0, 0, N_CYL_SIDES, 0.0, 0, len_tscale); // skip ends; two_sided=1
+		bool const draw_top(c.dim == 2); // draw top of vertical shaft
+		mat.add_ortho_cylin_to_verts(pipe, wall_color, c.dim, 0, draw_top, 1, 0, 1.0, 1.0, side_tscale, 1.0, 0, N_CYL_SIDES, 0.0, 0, len_tscale); // skip ends; two_sided=1
 		// draw the open/interior end transparent to create a hole in the outer pipe
-		mat.add_ortho_cylin_to_verts(pipe, ALPHA0, c.dim,  c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // transparent cut; skip_sides=1
-
-		if (c.dim == 2) { // vertical
-			// TODO: concrete with man hole cover + man hole cover above ground if it's over a road, concrete, sidewalk, or yard
-		}
-		else { // horizontal
-			mat.add_ortho_cylin_to_verts(pipe, BLACK,  c.dim, !c.dir,  c.dir, 0, 1, 1.0, 1.0, 1.0, 1.0, 1); // black interior end cap; skip_sides=1
-		}
+		mat.add_ortho_cylin_to_verts(pipe, ALPHA0, c.dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // transparent cut; skip_sides=1
+		// draw black interior end cap for horizontal tunnels; vertical tunnel ends are drawn above
+		if (c.dim < 2) {mat.add_ortho_cylin_to_verts(pipe, BLACK, c.dim, !c.dir, c.dir, 0, 1, 1.0, 1.0, 1.0, 1.0, 1);} // skip_sides=1
 	} // for c
 	unsigned const ndiv(48);
 	float const length(t.get_length()), circumference(PI*t.radius), centerline(t.bcube.get_center_dim(!dim));
@@ -571,13 +567,21 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 		mat.add_ortho_cylin_to_verts(t.bcube_draw, BLACK, t.dim, t.closed_ends[0], t.closed_ends[1], 1, 0, 1.0, 1.0, 1.0, 1.0, 1, ndiv);
 		for (auto v = mat.itri_verts.begin()+start_ix; v != mat.itri_verts.end(); ++v) {v->set_norm_to_zero();} // zero normal to prevent wet effect
 	}
+	// draw manhole covers for vertical shafts
+	for (tunnel_conn_t const &c : t.conns) {
+		if (c.dim != 2) continue; // not vertical
+		point pos(t.get_conn_pt(c));
+		pos.z += 0.999*c.length; // almost to the top
+		get_material(tid_nm_pair_t(MANHOLE_TEX, 0.0), 0, 0, 1).add_disk_to_verts(pos, 0.6*c.radius, -plus_z, BROWN, 0, 1); // unshadowed, small=1, inverted
+		// man hole cover + man hole cover above ground if it's over a road, concrete, sidewalk, or yard?
+	} // for c
 	// draw gate if present
 	if (t.has_gate) {
 		assert(!t.room_conn); // not supported
 		unsigned const num_bars(8), bar_ndiv(16);
 		float const bar_radius(t.get_bar_radius()), bar_spacing(2*t.radius/(num_bars + 1)), zc(t.bcube.zc()), rsq(t.radius*t.radius);
 		float bar_pos(t.bcube.d[!dim][0] + bar_spacing);
-		rgeom_mat_t &bar_mat(get_material(tid_nm_pair_t(get_texture_by_name("metals/67_rusty_dirty_metal.jpg")), shadowed, 0, 1)); // inc_shadows=0 (no light), small=1
+		rgeom_mat_t &bar_mat(get_material(tid_nm_pair_t(get_texture_by_name("metals/67_rusty_dirty_metal.jpg")), 0, 0, 1)); // unshadowed, small=1
 		colorRGBA const bar_color(DK_GRAY);
 
 		for (unsigned n = 0; n < num_bars; ++n, bar_pos += bar_spacing) {

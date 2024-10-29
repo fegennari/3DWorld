@@ -870,9 +870,17 @@ void building_t::update_sewer_spiders(point const &camera_bs, unsigned building_
 			float const radius(select_animal_radius(global_building_params.spider_size_min, global_building_params.spider_size_max, floor_spacing, rgen));
 			float const v1(t.p[0][t.dim] + 4.0*radius), v2(t.p[1][t.dim] - 4.0*radius); // placement range
 			if (v1 >= v2) continue; // not enough space for a spider
+			float const val(rgen.rand_uniform(v1, v2));
+			// check to avoid placing spiders over vertical shafts
+			bool bad_place(0);
+
+			for (tunnel_conn_t const &c : t.conns) {
+				if (c.dim == 2 && fabs(val - c.pos) < (c.radius + 2.0*radius)) {bad_place = 1; break;}
+			}
+			if (bad_place) continue; // skip this spider; could generate a new val
 			point pos;
 			vector3d dir;
-			pos[ t.dim] = rgen.rand_uniform(v1, v2);
+			pos[ t.dim] = val;
 			pos[!t.dim] = t.p[0][!t.dim]; // either point should work
 			pos.z       = t.p[0].z + t.radius - radius; // on the top of the tunnel
 			dir[t.dim]  = (rgen.rand_bool() ? 1.0 : -1.0); // face a random direction
@@ -887,9 +895,17 @@ void building_t::update_sewer_spiders(point const &camera_bs, unsigned building_
 		for (spider_t &spider : spiders) { // update logic
 			assert(spider.tunnel_ix < interior->tunnels.size());
 			tunnel_seg_t const &t(interior->tunnels[spider.tunnel_ix]);
-			float const v1(t.p[0][t.dim] + 2.0*spider.radius), v2(t.p[1][t.dim] - 2.0*spider.radius); // movement range
-			if (spider.pos[t.dim] < v1) {spider.dir[t.dim] =  1.0;} // off low  end - reverse
-			if (spider.pos[t.dim] > v2) {spider.dir[t.dim] = -1.0;} // off high end - reverse
+			float &val(spider.pos[t.dim]);
+			float v1(t.p[0][t.dim] + 2.0*spider.radius), v2(t.p[1][t.dim] - 2.0*spider.radius); // movement range
+
+			// avoid vertical shafts
+			for (tunnel_conn_t const &c : t.conns) {
+				if (c.dim < 2) continue; // not vertical
+				if (val < c.pos) {min_eq(v2, (c.pos - c.radius - 2.0f*spider.radius));} // spider to the left
+				else             {max_eq(v1, (c.pos + c.radius + 2.0f*spider.radius));} // spider to the right
+			}
+			if (val < v1) {spider.dir[t.dim] =  1.0;} // off low  end - reverse
+			if (val > v2) {spider.dir[t.dim] = -1.0;} // off high end - reverse
 			if (!spider.squished) {spider.move(timestep);} // can't be squished?
 		}
 	}
