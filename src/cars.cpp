@@ -217,11 +217,13 @@ void car_t::complete_turn_and_swap_dim() {
 }
 
 void car_t::person_in_the_way(bool is_player, bool at_stopsign) {
-	static rand_gen_t rgen;
-	bool const is_zombie(in_building_gameplay_mode() && !is_player);
-	// honk less often for zombies since they're often in the road; honk less often at stop signs because peds don't predict stop sign logic as well as traffic lights
-	unsigned const rgen_mod_val(is_player ? 2 : (is_zombie ? 24 : (at_stopsign ? 12 : 8)));
-	if ((rgen.rand() % rgen_mod_val) == 0) {honk_horn_if_close_and_fast();}
+	if (!in_parking_lot) { // don't honk if in a parking lot, since people have a right to walk there
+		static rand_gen_t rgen;
+		bool const is_zombie(in_building_gameplay_mode() && !is_player);
+		// honk less often for zombies since they're often in the road; honk less often at stop signs because peds don't predict stop sign logic as well as traffic lights
+		unsigned const rgen_mod_val(is_player ? 2 : (is_zombie ? 24 : (at_stopsign ? 12 : 8)));
+		if ((rgen.rand() % rgen_mod_val) == 0) {honk_horn_if_close_and_fast();}
+	}
 	decelerate_fast(); // must be after honk logic
 }
 
@@ -454,9 +456,10 @@ cube_t car_t::get_parking_space_debug_marker() const {
 	return c;
 }
 cube_t car_t::get_ped_coll_check_area() const {
+	bool const mdir(dir ^ in_reverse);
 	cube_t coll_area(bcube);
-	coll_area.d[ dim][!dir]  = coll_area.d[dim][dir]; // exclude the car itself
-	coll_area.d[ dim][ dir] += (dir ? 1.25 : -1.25)*get_length(); // extend the front
+	coll_area.d[ dim][!mdir]  = coll_area.d[dim][mdir]; // exclude the car itself
+	coll_area.d[ dim][ mdir] += (mdir ? 1.25 : -1.25)*get_length(); // extend the front
 	coll_area.d[!dim][0] -= 0.5*get_width();
 	coll_area.d[!dim][1] += 0.5*get_width();
 	return coll_area;
