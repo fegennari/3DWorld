@@ -147,7 +147,10 @@ float const FITTING_LEN(1.25), FITTING_RADIUS(1.1); // relative to radius
 
 float get_pipe_dist_to_wall(float radius, float trim_thickness) {return max(FITTING_RADIUS*radius, (radius + 2.0f*trim_thickness));}
 
-bool building_t::cube_intersects_extb_room(cube_t const &c) const {
+bool building_t::cube_intersects_basement_or_extb_room(cube_t const &c, bool check_tunnel_pipes) const {
+	return (c.intersects(get_basement()) || cube_intersects_extb_room(c, check_tunnel_pipes));
+}
+bool building_t::cube_intersects_extb_room(cube_t const &c, bool check_tunnel_pipes) const {
 	if (!has_ext_basement() || !c.intersects(interior->basement_ext_bcube)) return 0;
 
 	for (auto r = interior->ext_basement_rooms_start(); r != interior->rooms.end(); ++r) {
@@ -155,7 +158,13 @@ bool building_t::cube_intersects_extb_room(cube_t const &c) const {
 	}
 	for (tunnel_seg_t const &t : interior->tunnels) {
 		if (c.intersects(t.bcube_ext)) return 1;
-	}
+		if (!check_tunnel_pipes) continue;
+
+		// check horizontal and vertical pipe segments connected to tunnels; these only exist for buildings where room geom has been generated
+		for (tunnel_conn_t const &conn : t.conns) {
+			if (c.intersects(t.get_conn_bcube(conn))) return 1;
+		}
+	} // for r
 	if (has_pool() && c.intersects(interior->pool)) return 1;
 	return 0;
 }

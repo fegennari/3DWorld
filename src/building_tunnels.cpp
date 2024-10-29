@@ -164,7 +164,7 @@ void building_t::add_false_door_to_extb_room_if_needed(room_t const &room, float
 }
 
 bool building_t::is_tunnel_bcube_placement_valid(cube_t const &tunnel_bc) const {
-	if (cube_intersects_basement_or_extb_room(tunnel_bc))             return 0;
+	if (cube_intersects_basement_or_extb_room(tunnel_bc, 1))          return 0; // check_tunnel_pipes=1
 	if (query_min_height(tunnel_bc, tunnel_bc.z2()) < tunnel_bc.z2()) return 0; // check for terrain clipping through ceiling
 	if (!is_basement_room_not_int_bldg(tunnel_bc))                    return 0;
 	return 1;
