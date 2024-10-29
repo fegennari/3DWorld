@@ -1604,10 +1604,10 @@ int dwobject::check_vert_collision(int obj_index, int do_coll_funcs, int iter, v
 	vector3d const &mdir, bool skip_dynamic, bool only_drawn, int only_cobj, bool skip_movable)
 {
 	if (world_mode == WMODE_INF_TERRAIN) {
+		bool const check_interior(type == CAMERA);
 		point const p_last(pos - velocity*tstep);
 		float const o_radius(get_true_radius());
 		vector3d cnorm(plus_z);
-		bool const check_interior(PLAYER_CAN_ENTER_BUILDINGS && type == CAMERA);
 		
 		if (proc_city_sphere_coll(pos, p_last, o_radius, p_last.z, 1, &cnorm, check_interior)) { // inc_cars=1; for ground mode only
 			obj_type const &otype(object_types[type]);
@@ -1740,8 +1740,7 @@ float get_max_mesh_height_within_radius(point const &pos, float radius, bool is_
 }
 
 void proc_player_city_sphere_coll(point &pos) {
-	bool const check_interior(PLAYER_CAN_ENTER_BUILDINGS);
-	proc_city_sphere_coll(pos, camera_last_pos, CAMERA_RADIUS, camera_last_pos.z, 0, nullptr, check_interior); // use prev pos for building collisions; z dir
+	proc_city_sphere_coll(pos, camera_last_pos, CAMERA_RADIUS, camera_last_pos.z, 0, nullptr, 1); // use prev pos for building collisions; z dir; check_interior=1
 }
 
 void force_onto_surface_mesh(point &pos) { // for camera
