@@ -306,6 +306,7 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 		in_parking_lot = 1;
 
 		if (maybe_apply_turn(park_space_cent[dim], 1)) { // turning into parking space row; for_driveway=1
+			set_target_speed(0.25); // 25% of max speed when turning
 			return; // continue to turn
 		}
 		if (dim == driveway.dim) { // in driveway; stop and turn at dest parking space
@@ -317,6 +318,7 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 			car_pos = bcube.get_center_dim(dim);
 		}
 		stop_pos = park_space_cent[dim];
+		set_target_speed(0.4); // 40% of max speed - reset in case we stopped due to a pedestrian in the way
 	}
 	else { // house driveway; stop in the center
 		assert(dim == driveway.dim);
@@ -1263,7 +1265,7 @@ int car_manager_t::find_next_car_after_turn(car_t &car) {
 }
 
 bool car_manager_t::check_car_for_ped_colls(car_t &car) const {
-	if (car.turn_val != 0.0 || car.turn_dir != TURN_NONE) return 0; // for now, don't check for peds when turning as this causes problems with blocked intersections
+	if (!car.in_parking_lot && (car.turn_val != 0.0 || car.turn_dir != TURN_NONE)) return 0; // don't check for peds when turning - causes problems with blocked intersections
 	bool const at_stopsign(car.in_isect() && get_car_isec(car).has_stopsign);
 
 	if (camera_surf_collide && !camera_in_building && car.get_ped_coll_check_area().contains_pt_xy_exp(dstate.camera_bs, CAMERA_RADIUS)) { // check for player
@@ -1271,13 +1273,23 @@ bool car_manager_t::check_car_for_ped_colls(car_t &car) const {
 		return 1;
 	}
 	if (peds_crossing_roads.peds.empty() || car.cur_city >= peds_crossing_roads.peds.size()) return 0; // no peds in this city (includes connector road network)
-	auto const &peds_by_road(peds_crossing_roads.peds[car.cur_city]);
-	if (car.cur_road >= peds_by_road.size()) return 0; // no peds in this road
-	auto const &peds(peds_by_road[car.cur_road]);
-	if (peds.empty()) return 0;
+	auto const &by_city(peds_crossing_roads.peds[car.cur_city]);
+	vect_sphere_t const *peds(nullptr);
+
+	if (car.in_parking_lot) {
+		int const p_lot_ix(get_parking_lot_ix_for_car(car));
+		if (p_lot_ix < 0) return 0; // possibly car center not yet in parking lot driveway, or in the process of leaving
+		if ((unsigned)p_lot_ix >= by_city.by_p_lot.size()) return 0; // no peds in this road/parking lot
+		peds = &by_city.by_p_lot[p_lot_ix];
+	}
+	else {
+		if (car.cur_road >= by_city.by_road.size()) return 0; // no peds in this road/parking lot
+		peds = &by_city.by_road[car.cur_road];
+	}
+	if (peds->empty()) return 0;
 	cube_t const coll_area(car.get_ped_coll_check_area());
 
-	for (sphere_t const &i : peds) {
+	for (sphere_t const &i : *peds) {
 		if (coll_area.contains_pt_xy_exp(i.pos, i.radius)) {
 			car.person_in_the_way(0, at_stopsign); // is_player=0
 			return 1;

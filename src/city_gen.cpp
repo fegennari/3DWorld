@@ -1958,6 +1958,12 @@ public:
 		if (!isec_only && dest_driveway_in_this_city(car)) {return get_driveway(car.dest_driveway);} // driveway in this city
 		return get_car_dest_isec(car, road_networks, global_rn); // else assume we want andest intersection
 	}
+	int get_parking_lot_ix_for_car(car_t const &car) const {
+		if (!car.in_parking_lot)    return -1; // caller should really check this
+		if (car.dest_driveway >= 0) return get_driveway(car.dest_driveway).park_lot_ix; // have a cached driveway (optimization)
+		// dest_driveway is reset after the car is parked, so we must re-query; this could be optimized by caching the parking lot index in the car
+		return get_parking_lot_ix(car.get_center(), 1); // inc_driveways=1
+	}
 private:
 	road_isec_t const *find_isec_to_dest_city(car_t const &car, road_network_t const &dest_rn, road_network_t const &global_rn) const {
 		assert(car. cur_city == city_id);
@@ -2139,6 +2145,26 @@ public:
 		}
 		return -1; // should never get here, but occasionally can due to bad collisions between peds, floating-point error, etc.
 	}
+	int get_parking_lot_ix(point const &pos, bool inc_driveways) const {
+		if (city_obj_placer.parking_lots.empty()) return -1;
+
+		for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) { // iterate by tile, which is faster than iterating over parking lots and driveways
+			if (!b->bcube.contains_pt_xy(pos)) continue;
+			range_pair_t const &rpp(b->ranges[TYPE_PARK_LOT]);
+			
+			for (unsigned i = rpp.s; i < rpp.e; ++i) { // check parking lots
+				if (city_obj_placer.parking_lots[i].contains_pt_xy(pos)) return i;
+			}
+			if (!inc_driveways) continue;
+			range_pair_t const &rpd(b->ranges[TYPE_DRIVEWAY]);
+
+			for (unsigned i = rpd.s; i < rpd.e; ++i) { // check driveways
+				driveway_t const &d(city_obj_placer.driveways[i]);
+				if (d.park_lot_ix >= 0 && d.contains_pt_xy(pos)) return d.park_lot_ix;
+			}
+		} // for b
+		return -1; // not found
+	}
 }; // road_network_t
 
 class city_road_gen_t : public road_gen_base_t {
@@ -2190,6 +2216,7 @@ public:
 	cube_t const &get_city_plot_bcube(unsigned city_ix, unsigned plot_ix) const {return get_city(city_ix).get_plot_bcube(plot_ix);}
 	vect_cube_t const &get_colliders_for_plot(unsigned city_ix, unsigned global_plot_id) const {return get_city(city_ix).get_colliders_for_plot(global_plot_id);}
 	cube_t const &get_car_dest_bcube(car_t const &car, bool isec_only) const {return get_city(car.dest_city).get_car_dest(car, road_networks, global_rn, isec_only);}
+	int get_parking_lot_ix_for_car(car_t const &car) const {return get_city(car.dest_city).get_parking_lot_ix_for_car(car);}
 
 	bool cube_int_underground_obj(cube_t const &c) const {
 		if (global_rn.cube_intersect_tunnel(c)) return 1;
@@ -2912,6 +2939,7 @@ road_isec_t const &car_manager_t::get_car_isec(car_t const &car) const {return r
 bool car_manager_t::check_collision(car_t &c1, car_t &c2)        const {return c1.check_collision(c2, road_gen);}
 void car_manager_t::register_car_at_city(car_t const &car) {road_gen.register_car_at_city(car.cur_city);}
 cube_t const &car_manager_t::get_car_dest_bcube(car_t const &car, bool isec_only) const {return road_gen.get_car_dest_bcube(car, isec_only);}
+int car_manager_t::get_parking_lot_ix_for_car(car_t const &car) const {return road_gen.get_parking_lot_ix_for_car(car);}
 
 void car_manager_t::add_car() {
 	car_t car;
@@ -2988,6 +3016,9 @@ bool ped_manager_t::check_streetlight_sphere_coll(pedestrian_t const &ped, cube_
 }
 int ped_manager_t::get_road_ix_for_ped_crossing(pedestrian_t const &ped, bool road_dim) const { // returns -1 on failure (ped not in the road)
 	return road_gen.get_city(ped.city).get_nearby_road_ix(ped.pos, road_dim);
+}
+int ped_manager_t::get_parking_lot_ix_for_ped(pedestrian_t const &ped, bool inc_driveways) const {
+	return road_gen.get_city(ped.city).get_parking_lot_ix(ped.pos, inc_driveways);
 }
 void ped_manager_t::setup_occluders() {
 	dstate.get_occluders().clear();

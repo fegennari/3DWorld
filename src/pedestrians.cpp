@@ -328,7 +328,7 @@ bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_p
 	float const dx(min(fabs(pos.x - plot_bcube.x1()), fabs(pos.x - plot_bcube.x2()))), dy(min(fabs(pos.y - plot_bcube.y1()), fabs(pos.y - plot_bcube.y2())));
 
 	if (max(dx, dy) < 0.75*city_params.road_width) { // near an intersection - near the road in both dims
-		at_crosswalk = 1; // Note: should only be at crosswalks; but if we actually are corssing the road, this is the correct thing to do
+		at_crosswalk = 1; // Note: should only be at crosswalks; but if we actually are crossing the road, this is the correct thing to do
 	}
 	in_the_road = 1;
 	return 1; // allow peds to cross the road; don't need to check for building or other object collisions
@@ -1387,15 +1387,16 @@ int ped_model_loader_t::select_random_model(int rand_val, bool choose_zombie, un
 	return ret;
 }
 
-void ped_city_vect_t::add_ped(pedestrian_t const &ped, unsigned road_ix) {
+void ped_city_vect_t::add_ped(pedestrian_t const &ped, unsigned rp_ix, bool in_parking_lot) {
 	if (ped.city >= peds.size()) {peds.resize(ped.city+1);} // allocate city if needed
-	auto &city(peds[ped.city]);
-	if (road_ix  >= city.size()) {city.resize(road_ix+1 );} // allocate road if needed
-	city[road_ix].emplace_back(ped.pos, ped.radius);
+	auto &city(in_parking_lot ? peds[ped.city].by_p_lot : peds[ped.city].by_road);
+	if (rp_ix  >= city.size()) {city.resize(rp_ix+1 );} // allocate road/parking lot if needed
+	city[rp_ix].emplace_back(ped.pos, ped.radius);
 }
 void ped_city_vect_t::clear() {
-	for (auto i = peds.begin(); i != peds.end(); ++i) {
-		for (auto j = i->begin(); j != i->end(); ++j) {j->clear();}
+	for (auto &i : peds) {
+		for (auto &j : i.by_road ) {j.clear();}
+		for (auto &j : i.by_p_lot) {j.clear();}
 	}
 }
 
@@ -1647,15 +1648,22 @@ pedestrian_t const *ped_manager_t::get_ped_at(point const &p1, point const &p2) 
 	return nullptr; // no ped found
 }
 
-void ped_manager_t::get_peds_crossing_roads(ped_city_vect_t &pcv) const {
-	//timer_t timer("Get Peds Corssing Roads");
+void ped_manager_t::get_peds_crossing_roads(ped_city_vect_t &pcv) const { // and parking lots
+	//timer_t timer("Get Peds Crossing Roads"); // 0.037 => 0.21 including parking lots
 	pcv.clear();
 
 	for (auto i = peds.begin(); i != peds.end(); ++i) {
-		if (!i->in_the_road || i->is_stopped || i->destroyed) continue; // not actively crossing the road
-		bool const road_dim(fabs(i->vel.y) < fabs(i->vel.x)); // ped should be moving across the road, so velocity should give us the road dim (opposite of velocity dim)
-		int const road_ix(get_road_ix_for_ped_crossing(*i, road_dim));
-		if (road_ix >= 0) {pcv.add_ped(*i, road_ix);}
+		if (i->is_stopped || i->destroyed) continue; // not active
+		
+		if (i->in_the_road) {
+			bool const road_dim(fabs(i->vel.y) < fabs(i->vel.x)); // ped should be moving across the road, so velocity should give us the road dim (opposite of velocity dim)
+			int const road_ix(get_road_ix_for_ped_crossing(*i, road_dim));
+			if (road_ix >= 0) {pcv.add_ped(*i, road_ix, 0);} // in_parking_lot=0
+		}
+		else { // possibly in a parking lot
+			int const p_lot_ix(get_parking_lot_ix_for_ped(*i, 1)); // inc_driveways=1
+			if (p_lot_ix >= 0) {pcv.add_ped(*i, p_lot_ix, 1);} // in_parking_lot=1
+		}
 	} // for i
 }
 

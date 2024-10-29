@@ -697,6 +697,7 @@ public:
 	void remap_parking_lot_ixs();
 	int select_dest_parking_space(unsigned driveway_ix, bool allow_hcap, bool reserve_spot, float car_len, rand_gen_t &rgen) const;
 	point get_parking_space_center(unsigned pspace_ix) const {assert(pspace_ix < pspaces.size()); return pspaces[pspace_ix].center;}
+	parking_lot_t const &get_parking_lot(unsigned ix) const {assert(ix < parking_lots.size()); return parking_lots[ix];}
 	bool add_skyway(cube_t const &city_bcube, vect_bldg_walkway_t const &walkway_cands, rand_gen_t rgen);
 	void bind_elevators_to_building_walkways(cube_t const &city_bcube) const;
 	void finalize_streetlights_and_power(streetlights_t &sl, vector<vect_cube_t> &plot_colliders);

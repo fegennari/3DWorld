@@ -749,9 +749,12 @@ private:
 	void get_plot_bcubes_inc_sidewalks(ped_manager_t const &ped_mgr, cube_t &plot_bcube, cube_t &next_plot_bcube) const;
 };
 
+struct peds_per_city_t {
+	vector<vect_sphere_t> by_road, by_p_lot;
+};
 struct ped_city_vect_t {
-	vector<vector<vector<sphere_t>>> peds; // per city per road
-	void add_ped(pedestrian_t const &ped, unsigned road_ix);
+	vector<peds_per_city_t> peds; // per city
+	void add_ped(pedestrian_t const &ped, unsigned rp_ix, bool in_parking_lot);
 	void clear();
 };
 
@@ -788,6 +791,7 @@ class car_manager_t { // and trucks and helicopters
 	bool check_collision(car_t &c1, car_t &c2) const;
 	void register_car_at_city(car_t const &car);
 	cube_t const &get_car_dest_bcube(car_t const &car, bool isec_only) const;
+	int get_parking_lot_ix_for_car(car_t const &car) const;
 	void add_car();
 	void get_car_ix_range_for_cube(vector<car_block_t>::const_iterator cb, cube_t const &bc, unsigned &start, unsigned &end) const;
 	void remove_destroyed_cars();
@@ -899,7 +903,8 @@ class ped_manager_t { // pedestrians
 	void remove_destroyed_peds();
 	void sort_by_city_and_plot();
 	road_isec_t const &get_car_isec(car_base_t const &car) const;
-	int get_road_ix_for_ped_crossing(pedestrian_t const &ped, bool road_dim) const;
+	int get_road_ix_for_ped_crossing(pedestrian_t const &ped, bool road_dim     ) const;
+	int get_parking_lot_ix_for_ped  (pedestrian_t const &ped, bool inc_driveways) const;
 	void setup_occluders();
 	bool draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,
 		bool &in_sphere_draw, bool shadow_only, bool is_dlight_shadows, animation_state_t *anim_state, bool is_in_building);

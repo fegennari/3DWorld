@@ -285,8 +285,7 @@ int city_obj_placer_t::select_dest_parking_space(unsigned driveway_ix, bool allo
 	driveway_t const &driveway(driveways[driveway_ix]);
 	int const park_lot_ix(driveway.park_lot_ix);
 	if (park_lot_ix < 0) return -1; // error?
-	assert(park_lot_ix < (int)parking_lots.size());
-	parking_lot_t const &parking_lot(parking_lots[park_lot_ix]);
+	parking_lot_t const &parking_lot(get_parking_lot(park_lot_ix));
 	bool const rdir(parking_lot.dir ^ parking_lot.row_dir);
 	unsigned const entrance_row_ix(rdir ? 0 : parking_lot.num_rows-1);
 	int const next_space_inc((rdir ? 1 : -1) * parking_lot.row_sz); // skip by columns
