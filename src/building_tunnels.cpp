@@ -299,7 +299,7 @@ void building_t::add_tunnel_objects(rand_gen_t rgen) {
 			if (t.has_gate) {avoid_vals[num_avoid] = t.gate_pos; avoid_radii[num_avoid++] = t.get_bar_radius();}
 			
 			// maybe add a vertical shaft up to the city surface
-			if (0 && is_in_city) {
+			if (is_in_city) {
 				float const radius(rgen.rand_uniform(0.8, 0.9)*t.radius), end_pad(1.5*radius);
 				float const pos(rgen.rand_uniform(t.bcube_draw.d[dim][0]+end_pad, t.bcube_draw.d[dim][1]-end_pad));
 				
@@ -482,8 +482,8 @@ bool building_interior_t::get_tunnel_path(unsigned tix1, unsigned tix2, int prev
 
 // tunnels really should be drawn as building interior verts rather than small static objects, but the code here is much more flexible and more efficient
 void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
-	bool const shadowed(0); // not shadowed, since there's no light
-	bool const dim(t.dim);
+	bool const shadowed(0), dim(t.dim); // not shadowed, since there's no light
+	unsigned const ndiv(48);
 	colorRGBA const wall_color(WHITE);
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), 16.0, shadowed), shadowed, 0, 1));
 
@@ -491,14 +491,26 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 	for (tunnel_conn_t const &c : t.conns) {
 		float const side_tscale(1.0), len_tscale(side_tscale*c.length/(PI*c.radius));
 		cube_t const pipe(t.get_conn_bcube(c));
-		bool const draw_top(c.dim == 2); // draw top of vertical shaft
-		mat.add_ortho_cylin_to_verts(pipe, wall_color, c.dim, 0, draw_top, 1, 0, 1.0, 1.0, side_tscale, 1.0, 0, N_CYL_SIDES, 0.0, 0, len_tscale); // skip ends; two_sided=1
+		bool const vertical(c.dim == 2); // draw top of vertical shaft
+		unsigned const verts_start(mat.itri_verts.size()), c_ndiv(vertical ? ndiv : N_CYL_SIDES); // more ndiv for vertical pipes
+		mat.add_ortho_cylin_to_verts(pipe, wall_color, c.dim, 0, vertical, 1, 0, 1.0, 1.0, side_tscale, 1.0, 0, c_ndiv, 0.0, 0, len_tscale); // skip ends; two_sided=1
 		// draw the open/interior end transparent to create a hole in the outer pipe
-		mat.add_ortho_cylin_to_verts(pipe, ALPHA0, c.dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // transparent cut; skip_sides=1
-		// draw black interior end cap for horizontal tunnels; vertical tunnel ends are drawn above
-		if (c.dim < 2) {mat.add_ortho_cylin_to_verts(pipe, BLACK, c.dim, !c.dir, c.dir, 0, 1, 1.0, 1.0, 1.0, 1.0, 1);} // skip_sides=1
+		mat.add_ortho_cylin_to_verts(pipe, ALPHA0, c.dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1, c_ndiv); // transparent cut; skip_sides=1
+
+		if (vertical) {
+			// adjust bottom edge vertices for both the sides and the transparent end to conform to the curve at the top of the tunnel;
+			// normals don't change for sides, and normals are ignored for the end
+			for (auto i = mat.itri_verts.begin()+verts_start; i != mat.itri_verts.end(); ++i) {
+				if (i->v.z != pipe.z1()) continue; // not bottom vert
+				float const dist(i->v[!dim] - t.p[0][!dim]); // horizontal dist from pipe centerline
+				i->v.z  = t.p[0].z + sqrt(t.radius*t.radius - dist*dist);
+				i->v.z -= ((i->n[2] == 0) ? 0.1 : 0.01)*t.radius; // shift down slightly to cover thin gaps and prevent Z-fighting; more for sides than transparent end
+			}
+		}
+		else { // draw black interior end cap for horizontal tunnels; vertical tunnel ends are drawn above
+			mat.add_ortho_cylin_to_verts(pipe, BLACK, c.dim, !c.dir, c.dir, 0, 1, 1.0, 1.0, 1.0, 1.0, 1, c_ndiv); // skip_sides=1
+		}
 	} // for c
-	unsigned const ndiv(48);
 	float const length(t.get_length()), circumference(PI*t.radius), centerline(t.bcube.get_center_dim(!dim));
 	float const side_tscale(2.0), len_tscale(side_tscale*length/circumference), end_tscale(len_tscale*2.0*t.radius/length);
 	unsigned const verts_start_ix(mat.itri_verts.size()), ixs_start_ix(mat.indices.size());
