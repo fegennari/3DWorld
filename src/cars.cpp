@@ -292,10 +292,11 @@ bool car_t::run_enter_driveway_logic(vector<car_t> const &cars, driveway_t const
 	float const centerline(driveway.get_center_dim(!driveway.dim));
 	maybe_apply_turn(centerline, 1); // for_driveway=1
 
-	if (turn_dir == TURN_NONE) { // turn has been completed, change to being in driveway even though we may not be onto the driveway yet
+	if (turn_dir == TURN_NONE) { // turn has been completed
+		// change to being in driveway even though we may not be onto the driveway yet (especially when turning left)
+		// leave cur_road unchanged until we pull into the driveway so that cars will stop if we're still in the road (possibly waiting for a ped to move)
 		cur_road_type = TYPE_DRIVEWAY;
-		cur_road = (unsigned short)driveway.plot_ix; // store plot_ix in road field
-		cur_seg  = dest_driveway; // store driveway index in cur_seg
+		cur_seg       = dest_driveway; // store driveway index in cur_seg
 	}
 	return 1;
 }
@@ -340,6 +341,7 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 			sleep(rgen, 60.0); // sleep for 60-120s rather than permanently parking
 		}
 	}
+	else if (driveway.contains_cube_xy(bcube)) {cur_road = (unsigned short)driveway.plot_ix;} // store plot_ix in road field; is this actually needed?
 }
 void car_t::back_or_pull_out_of_driveway(driveway_t const &driveway) {
 	if (driveway.is_parking_lot() && dim != driveway.dim) { // backing out of parking space
@@ -1339,7 +1341,7 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 	if (!saw_parked && !car_blocks.empty()) {car_blocks.back().first_parked = cars.size();} // no parked cars in final city
 	car_blocks.emplace_back(cars.size(), 0); // add terminator
 
-	for (auto i = cars.begin(); i != cars.end(); ++i) { // collision detection
+	for (auto i = cars.begin(); i != cars.end(); ++i) { // collision detection; cars are sorted by city => road => front end
 		if (i->is_parked()) continue; // no collisions for parked cars
 		bool const on_conn_road(i->cur_city == CONN_CITY_IX);
 		float const length(i->get_length()), max_check_dist(max(3.0f*length, (length + i->get_max_lookahead_dist()))); // max of collision dist and car-in-front dist
