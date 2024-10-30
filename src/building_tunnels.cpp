@@ -622,8 +622,8 @@ void building_room_geom_t::add_tunnel_water(tunnel_seg_t const &t) {
 	if (t.water_level <= 0.0) return;
 	// draw water/sewage surface
 	bool const dim(t.dim);
-	float const tscale(1.0/t.radius);
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(FOAM_TEX, tscale), 0, 1)); // unshadowed, dynamic
+	float const def_tscale(1.0/t.radius);
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(FOAM_TEX, def_tscale), 0, 1)); // unshadowed, dynamic
 	cube_t water(t.bcube_draw);
 	water.z2() = t.bcube.z1() + t.water_level;
 	float const dist(t.radius - t.water_level), water_hwidth(sqrt(t.radius*t.radius - dist*dist));
@@ -667,13 +667,32 @@ void building_room_geom_t::add_tunnel_water(tunnel_seg_t const &t) {
 		float tex_add[2] = {};
 		tscale *= 0.25;
 		tex_add[!dim] = fract(fabs(flow_val2)); // always flows down
-		w.z1() = water.z2(); // down to the surface of the tunnel water
+		float const edge(w.d[c.dim][!c.dir]), hdist(edge - t.p[0][c.dim]); // horizontal dist from pipe centerline
+		w.z1() = t.p[0].z - sqrt(t.radius*t.radius - hdist*hdist); // down to the edge of the cylinder
 		w.expand_in_dim(dim, -0.1*water_hwidth); // small shrink
-		w.d[c.dim][c.dir] = w.d[c.dim][!c.dir]; // shrink to zero area
+		w.d[c.dim][c.dir] = edge; // shrink to zero area
 		mat.add_cube_to_verts(w, DK_BROWN, all_zeros, get_face_mask(c.dim, !c.dir), 0, 0, 0, 0, 0, tex_add[0], tex_add[1]);
+		mat.tex.tscale_y = orig_tscale;
 		// this water doesn't connect to the water at the bottom of the tunnel;
 		// should we add an arc of water? Or let it run down the pipe in a slightly less than quarter cylinder? or a particle effect?
-		mat.tex.tscale_y = orig_tscale;
+		cube_t cylin_bc(t.bcube);
+		cylin_bc.expand_by(-0.001*t.radius); // slight shrink
+		for (unsigned d = 0; d < 2; ++d) {cylin_bc.d[dim][d] = w.d[dim][d];} // clip to water range
+		float const side_tscale(2.0), len_tscale(2.0*water_hwidth/t.radius), tscale_add(PI_TWO*tex_add[!dim]*((dim ^ c.dir) ? -1.0 : 1.0));
+		unsigned const start_ix(mat.indices.size()), start_vix(mat.itri_verts.size());
+		mat.add_ortho_cylin_to_verts(cylin_bc, DK_BROWN, dim, 0, 0, 0, 0, 1.0, 1.0, side_tscale, 1.0, 0, 48, tscale_add, 0, len_tscale, 0.0, 1); // half=1
+		// rotate into correct half
+		float angle(0.0);
+		if (!dim  ) {angle += PI_TWO;} // 90  degrees
+		if (!c.dir) {angle += PI    ;} // 180 degrees
+		if (angle != 0.0) {rotate_verts(mat.itri_verts, (dim ? plus_y : plus_x), angle, t.p[0], start_vix);}
+		reverse(mat.indices.begin()+start_ix, mat.indices.end()); // draw only interior surface
+		float const zmax(w.z1() + 0.1*w.dz());
+		
+		for (auto i = mat.itri_verts.begin()+start_vix; i != mat.itri_verts.end(); ++i) {
+			if (i->v.z > zmax) {i->v.z = zmax; i->v[c.dim] = edge;} // collapse verts above the spill point to zero area to remove them
+			i->invert_normal();
+		}
 	} // for c
 }
 
