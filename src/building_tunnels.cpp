@@ -678,13 +678,14 @@ void building_room_geom_t::add_tunnel_water(tunnel_seg_t const &t) {
 		cube_t cylin_bc(t.bcube);
 		cylin_bc.expand_by(-0.001*t.radius); // slight shrink
 		for (unsigned d = 0; d < 2; ++d) {cylin_bc.d[dim][d] = w.d[dim][d];} // clip to water range
-		float const side_tscale(2.0), len_tscale(2.0*water_hwidth/t.radius), tscale_add(PI_TWO*tex_add[!dim]*((dim ^ c.dir) ? -1.0 : 1.0));
+		float const side_tscale(2.0), len_tscale(2.0*water_hwidth/t.radius), tscale_add(fract(PI_TWO*fabs(flow_val2))*((dim ^ c.dir) ? -1.0 : 1.0));
 		unsigned const start_ix(mat.indices.size()), start_vix(mat.itri_verts.size());
-		mat.add_ortho_cylin_to_verts(cylin_bc, DK_BROWN, dim, 0, 0, 0, 0, 1.0, 1.0, side_tscale, 1.0, 0, 48, tscale_add, 0, len_tscale, 0.0, 1); // half=1
-		// rotate into correct half
+		mat.add_ortho_cylin_to_verts(cylin_bc, DK_BROWN, dim, 0, 0, 0, 0, 1.0, 1.0, side_tscale, 1.0, 0, 48, tscale_add, 0, len_tscale, 0.0, 2); // half_or_quarter=2 (quarter)
+		// rotate into correct quarter
 		float angle(0.0);
-		if (!dim  ) {angle += PI_TWO;} // 90  degrees
-		if (!c.dir) {angle += PI    ;} // 180 degrees
+		if (!dim           ) {angle += PI_TWO;} // 90  degrees (correct half)
+		if (!c.dir         ) {angle += PI    ;} // 180 degrees (correct half)
+		if (dim ^ c.dir ^ 1) {angle -= PI_TWO;} // -90 degrees (correct bottom quarter)
 		if (angle != 0.0) {rotate_verts(mat.itri_verts, (dim ? plus_y : plus_x), angle, t.p[0], start_vix);}
 		reverse(mat.indices.begin()+start_ix, mat.indices.end()); // draw only interior surface
 		float const zmax(w.z1() + 0.1*w.dz());

@@ -121,29 +121,38 @@ template<typename T> void add_inverted_triangles(T &verts, vector<unsigned> &ind
 	for (unsigned i = 0; i < numi; ++i) {indices[ixs_end + i] = (indices[ixs_end - i - 1] + numv);} // copy in reverse order
 }
 
-void rgeom_mat_t::add_ortho_cylin_to_verts(cube_t const &c, colorRGBA const &color, int dim, bool draw_bot, bool draw_top, bool two_sided, bool inv_tb,
-	float rs_bot, float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add, bool swap_txy, float len_tc2, float len_tc1, bool half)
+void apply_half_or_quarter(int half_or_quarter, unsigned &s_end) { // 0=full, 1=half, 2=quarter
+	if      (half_or_quarter == 0) {} // full
+	else if (half_or_quarter == 1) {s_end /= 2;} // half
+	else if (half_or_quarter == 2) {s_end /= 4;} // quarter
+	else {assert(0);}
+}
+
+void rgeom_mat_t::add_ortho_cylin_to_verts(cube_t const &c, colorRGBA const &color, int dim, bool draw_bot, bool draw_top, bool two_sided,
+	bool inv_tb, float rs_bot, float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add,
+	bool swap_txy, float len_tc2, float len_tc1, int half_or_quarter)
 {
 	if (dim == 2) { // Z: this is our standard v_cylinder
 		add_vcylin_to_verts(c, color, draw_bot, draw_top, two_sided, inv_tb, rs_bot, rs_top, side_tscale, end_tscale, skip_sides,
-			ndiv, side_tscale_add, swap_txy, len_tc2, len_tc1, half);
+			ndiv, side_tscale_add, swap_txy, len_tc2, len_tc1, half_or_quarter);
 		return;
 	}
 	cube_t c_rot(c);
 	c_rot.swap_dims(2, dim);
 	unsigned const itri_verts_start_ix(itri_verts.size()), ixs_start_ix(indices.size());
 	add_vcylin_to_verts(c_rot, color, draw_bot, draw_top, two_sided, inv_tb, rs_bot, rs_top, side_tscale, end_tscale, skip_sides,
-		ndiv, side_tscale_add, swap_txy, len_tc2, len_tc1, half);
+		ndiv, side_tscale_add, swap_txy, len_tc2, len_tc1, half_or_quarter);
 	for (auto v = itri_verts.begin()+itri_verts_start_ix; v != itri_verts.end(); ++v) {v->swap_dims(2, dim);} // swap triangle vertices and normals
 	std::reverse(indices.begin()+ixs_start_ix, indices.end()); // fix winding order
 }
-void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided, bool inv_tb, float rs_bot,
-	float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add, bool swap_txy, float len_tc2, float len_tc1, bool half)
+void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided,
+	bool inv_tb, float rs_bot, float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add,
+	bool swap_txy, float len_tc2, float len_tc1, int half_or_quarter)
 {
 	point const center(c.get_cube_center());
 	float const radius(0.5*min(c.dx(), c.dy())); // cube X/Y size should be equal/square
 	add_cylin_to_verts(point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2()), radius*rs_bot, radius*rs_top,
-		color, draw_bot, draw_top, two_sided, inv_tb, side_tscale, end_tscale, skip_sides, ndiv, side_tscale_add, swap_txy, len_tc2, len_tc1, half);
+		color, draw_bot, draw_top, two_sided, inv_tb, side_tscale, end_tscale, skip_sides, ndiv, side_tscale_add, swap_txy, len_tc2, len_tc1, half_or_quarter);
 }
 void rgeom_mat_t::add_vcylin_to_verts_tscale(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top) {
 	vector3d const sz(c.get_size());
@@ -151,8 +160,9 @@ void rgeom_mat_t::add_vcylin_to_verts_tscale(cube_t const &c, colorRGBA const &c
 	float const side_tscale(round_fp(max(1.0, tex.tscale_x*0.5*PI*(sz.x + sz.y)))), len_tscale(tex.tscale_y*sz.z), end_tscale(0.25*(tex.tscale_x*sz.x + tex.tscale_y*sz.y));
 	add_vcylin_to_verts(c, color, draw_bot, draw_top, 0, 0, 1.0, 1.0, side_tscale, end_tscale, 0, N_CYL_SIDES, 0.0, 0, len_tscale);
 }
-void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float bot_radius, float top_radius, colorRGBA const &color, bool draw_bot, bool draw_top,
-	bool two_sided, bool inv_tb, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add, bool swap_txy, float len_tc2, float len_tc1, bool half)
+void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float bot_radius, float top_radius, colorRGBA const &color,
+	bool draw_bot, bool draw_top, bool two_sided, bool inv_tb, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv,
+	float side_tscale_add, bool swap_txy, float len_tc2, float len_tc1, int half_or_quarter)
 {
 	assert((!skip_sides) || draw_bot || draw_top); // must draw something
 	point const ce[2] = {bot, top};
@@ -165,7 +175,8 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 	if (!skip_sides) {
 		unsigned const ixs_off[6] = {1,2,0, 3,2,1}; // 1 quad = 2 triangles
 		bool const flat_sides(ndiv <= 6 && side_tscale == 0.0); // hack to draw bolts untextured with flat sides, since no other cylinders have only 6 sides
-		unsigned const ndiv_draw(half ? ndiv/2 : ndiv);
+		unsigned ndiv_draw(ndiv);
+		apply_half_or_quarter(half_or_quarter, ndiv_draw);
 		unsigned const num_side_verts(flat_sides ? 4*ndiv_draw : 2*(ndiv_draw+1)), unique_verts_per_side(flat_sides ? 4 : 2);
 		itri_verts.resize(itris_start + num_side_verts);
 		indices.resize(ixs_start + 6*ndiv_draw);
@@ -203,7 +214,7 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 
 	for (unsigned bt = 0; bt < 2; ++bt) {
 		if (!(bt ? draw_top : draw_bot)) continue; // this disk not drawn
-		assert(!half);
+		assert(half_or_quarter == 0); // half and quarter disk are not supported
 		norm_comp const normal((bool(bt) ^ inv_tb) ? v12 : -v12);
 		unsigned const center_ix(itix);
 		itri_verts[itix++].assign(ce[bt], normal, half_end_tscale, half_end_tscale, cw); // center
@@ -321,10 +332,7 @@ void rgeom_mat_t::add_vert_torus_to_verts(point const &center, float r_inner, fl
 	if (ndivo == 0) {ndivo = def_ndiv;}
 	if (ndivi == 0) {ndivi = def_ndiv;}
 	unsigned s_end(ndivo);
-	if      (half_or_quarter == 0) {} // full
-	else if (half_or_quarter == 1) {s_end /= 2;} // half
-	else if (half_or_quarter == 2) {s_end /= 4;} // quarter
-	else {assert(0);}
+	apply_half_or_quarter(half_or_quarter, s_end);
 	bool const is_offset(spiral_offset != 0.0);
 	float const ts_tt(tscale/ndivi), ds(TWO_PI/ndivo), cds(cos(ds)), sds(sin(ds));
 	vector<float> const &sin_cos(gen_torus_sin_cos_vals(ndivi));
