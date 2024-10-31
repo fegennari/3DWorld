@@ -188,6 +188,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_INT_LADDER] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 50.0,  40.0,  "ladder");
 	bldg_obj_types[TYPE_MACHINE   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2,  0.0,  0.0,   "machine");
 	bldg_obj_types[TYPE_BUCKET    ] = bldg_obj_type_t(0, 1, 1, 1, 0, 0, 3,  8.0,  1.0,   "bucket"); // with transparent liquid
+	bldg_obj_types[TYPE_SPIWEB    ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 2,  0.0,  0.0,   "spider web");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");

@@ -5162,6 +5162,12 @@ void building_room_geom_t::add_trash(room_object_t const &c) {
 	}
 }
 
+void building_room_geom_t::add_spider_web(room_object_t const &c) {
+	// Note: using mats_amask looks bad both with and without mipmaps
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("spider_web.png"), 0.0), 0, 0, 1)); // unshadowed, small
+	mat.add_cube_to_verts(c, apply_light_color(c), c.get_llc(), ~get_skip_mask_for_xy(c.dim), !c.dim, !c.dir, 0); // draw front and back faces
+}
+
 void building_room_geom_t::add_door_handle(door_t const &door, door_rotation_t const &drot, colorRGBA const &color, bool residential) {
 	// should the door handle be different (more rounded) for office doors compared to house doors?
 	bool const dim(door.dim), dir(!door.get_handle_side()); // dir=0: handle on right; dir=1: handle on left

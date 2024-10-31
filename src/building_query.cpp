@@ -1414,7 +1414,8 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 		// ignore blockers and railings, but allow more than c->no_coll()
 		if (c == self || type == TYPE_BLOCKER || type == TYPE_PAPER || type == TYPE_PEN || type == TYPE_PENCIL || c->is_a_drink() || type == TYPE_FLOORING || type == TYPE_SIGN ||
 			type == TYPE_WBOARD || type == TYPE_WALL_TRIM || type == TYPE_DRAIN || type == TYPE_CRACK || type == TYPE_SWITCH || type == TYPE_BREAKER || type == TYPE_OUTLET ||
-			type == TYPE_VENT || type == TYPE_WIND_SILL || type == TYPE_TEESHIRT || type == TYPE_PANTS || type == TYPE_BLANKET || type == TYPE_FOLD_SHIRT) continue;
+			type == TYPE_VENT || type == TYPE_WIND_SILL || type == TYPE_TEESHIRT || type == TYPE_PANTS || type == TYPE_BLANKET || type == TYPE_FOLD_SHIRT ||
+			type == TYPE_SPIWEB) continue;
 		if (type == TYPE_RAILING && (!(c->flags & RO_FLAG_TOS) || !c->is_open())) continue; // only railings at the top of stairs (non-sloped) with balusters have collisions
 		if (type == TYPE_POOL_TILE && c->no_coll()) continue;
 		cube_t const bc(get_true_room_obj_bcube(*c));
@@ -1998,7 +1999,7 @@ public:
 					type == TYPE_CAMERA || type == TYPE_CLOCK || type == TYPE_DOWNSPOUT || type == TYPE_CHIM_CAP || type == TYPE_FOOD_BOX || type == TYPE_LADDER ||
 					type == TYPE_LAVALAMP || type == TYPE_POOL_LAD || type == TYPE_PADLOCK || type == TYPE_KEY || type == TYPE_HANGER || type == TYPE_CLOTHES ||
 					type == TYPE_WALL_LAMP || type == TYPE_SILVER || type == TYPE_TOY_MODEL || type == TYPE_CEIL_FAN || type == TYPE_FOLD_SHIRT || type == TYPE_TRASH ||
-					type == TYPE_INT_WINDOW || type == TYPE_INT_LADDER || type == TYPE_CONF_PHONE) continue;
+					type == TYPE_INT_WINDOW || type == TYPE_INT_LADDER || type == TYPE_CONF_PHONE || type == TYPE_SPIWEB) continue;
 				if (z1 > obj.z2() || z2 < obj.z1()) continue; // zval test
 
 				if (obj.type == TYPE_PARK_SPACE) {

@@ -291,6 +291,7 @@ void building_t::add_tunnel_objects(rand_gen_t rgen) {
 	for (tunnel_seg_t &t : interior->tunnels) {
 		if (t.room_conn) continue; // nothing added to these tunnels
 		bool const dim(t.dim);
+		cube_t shaft;
 
 		if (!t.conns_added && t.get_length() > 4.0*t.radius) {
 			unsigned const max_pipes(3), mod_val(max_pipes + 2);
@@ -305,7 +306,6 @@ void building_t::add_tunnel_objects(rand_gen_t rgen) {
 				
 				if (num_avoid == 0 || fabs(pos - avoid_vals[0]) > (end_pad + avoid_radii[0])) { // check gate if present
 					float const tb_thickness(get_fc_thickness());
-					cube_t shaft;
 					set_cube_zvals(shaft, t.bcube.z2()+tb_thickness, ground_floor_z1-tb_thickness);
 					set_wall_width(shaft, pos,          radius,  dim);
 					set_wall_width(shaft, t.p[0][!dim], radius, !dim);
@@ -363,6 +363,22 @@ void building_t::add_tunnel_objects(rand_gen_t rgen) {
 			set_wall_width(pipe, pos,  radius, dim);
 			set_wall_width(pipe, zval, radius, 2);
 			objs.emplace_back(pipe, TYPE_PIPE, 0, !dim, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CYLIN, choose_pipe_color(rgen)); // horizontal, room_id=0
+		} // for n
+		// add spider webs
+		unsigned const num_webs(rgen.rand() % 3); // 0-2
+
+		for (unsigned n = 0; n < num_webs; ++n) {
+			bool const dir(rgen.rand_bool()); // side of the tunnel
+			float const width(0.65*t.radius*rgen.rand_uniform(0.6, 1.0)), height(0.65*t.radius*rgen.rand_uniform(0.6, 1.0)), hthick(0.01*t.radius);
+			float const pos(rgen.rand_uniform(t.p[0][dim], t.p[1][dim])), edge_shift(0.16*t.radius);
+			float const edge(t.bcube.d[!dim][dir] + (dir ? -1.0 : 1.0)*edge_shift), top(t.bcube.z2() - edge_shift);
+			cube_t web;
+			set_cube_zvals(web, top-height, top);
+			set_wall_width(web, pos, hthick, dim);
+			web.d[!dim][ dir] = edge; // align with tunnel
+			web.d[!dim][!dir] = edge + (dir ? -1.0 : 1.0)*width;
+			if (!shaft.is_all_zeros() && web.intersects(shaft)) continue; // too close to the shaft
+			objs.emplace_back(web, TYPE_SPIWEB, 0, dim, dir, RO_FLAG_NOCOLL, 1.0); // room_id=0
 		} // for n
 	} // for t
 }
