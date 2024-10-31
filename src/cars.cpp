@@ -460,12 +460,18 @@ cube_t car_t::get_parking_space_debug_marker() const {
 	return c;
 }
 cube_t car_t::get_ped_coll_check_area() const {
+	float lookahead_len(1.0*get_length());
+
+	if (in_parking_lot) { // shorten lookahead if we're close to stopping in our parking space
+		if (bcube.d[!dim][0] < park_space_cent[!dim] && bcube.d[!dim][1] > park_space_cent[!dim]) { // centered on parking space
+			min_eq(lookahead_len, fabs(bcube.get_center_dim(dim) - park_space_cent[dim]));
+		}
+	}
 	bool const mdir(dir ^ in_reverse);
 	cube_t coll_area(bcube);
-	coll_area.d[ dim][!mdir]  = coll_area.d[dim][mdir]; // exclude the car itself
-	coll_area.d[ dim][ mdir] += (mdir ? 1.25 : -1.25)*get_length(); // extend the front
-	coll_area.d[!dim][0] -= 0.5*get_width();
-	coll_area.d[!dim][1] += 0.5*get_width();
+	coll_area.d[ dim][!mdir]  = coll_area.d[dim][mdir]; // exclude the car itself - it's the ped's job to not intersect with the current car's pos
+	coll_area.d[ dim][ mdir] += (mdir ? 1 : -1)*lookahead_len; // extend the front
+	coll_area.expand_in_dim(!dim, 0.4*get_width());
 	return coll_area;
 }
 
@@ -1673,6 +1679,10 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 							s.set_cur_color(RED);
 							draw_simple_cube(sel_car->get_parking_space_debug_marker() + xlate);
 						}
+					}
+					if (sel_car->in_parking_lot) {
+						s.set_cur_color(BLUE);
+						draw_simple_cube(sel_car->get_ped_coll_check_area() + xlate);
 					}
 					s.set_cur_color(PURPLE);
 					cube_t isec_bcube(get_car_dest_bcube(*sel_car, 1)); // isec

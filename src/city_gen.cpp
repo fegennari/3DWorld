@@ -1739,11 +1739,6 @@ private:
 		// if pedestrian(s) in driveway, stop and wait unless we've been waiting for > 60s
 		if (driveway.has_recent_ped() && car.get_wait_time_secs() < 60.0) {car.sleep(rgen, 0.5); return 1;}
 
-		if (driveway.is_parking_lot() && city_params.num_peds > 0) {
-			// avoid pedestian collisions in parking lot or driveway; unclear how to do this, since peds can be anywhere, especially for driveways near sidewalks;
-			// even if we stop, they may run into us, or we may block their path, so we leave it up to pedestrians to avoid walking into us or our path
-			// should they be removed and respawn if they collide with the car (likey they got into it)?
-		}
 		if (car.dest_driveway == (int)car.cur_seg) { // entering driveway
 			car.pull_into_driveway(driveway, rgen);
 			return 1; // no other logic to run here
@@ -2109,7 +2104,7 @@ public:
 	}
 	dw_query_t get_nearby_driveway(unsigned global_plot_id, point const &pos, float dist) const {
 		if (city_obj_placer.driveways.empty()) return dw_query_t(); // no driveways
-		if (!is_residential) return dw_query_t(); // logic doesn't really work well for city parking lot driveways as cars can get stuck, so skip
+		//if (!is_residential) return dw_query_t(); // logic doesn't really work well for city parking lot driveways as cars can get stuck, so skip
 		unsigned const plot_id(decode_plot_id(global_plot_id));
 
 		// plot_ix isn't required, but it's likely faster to check the plot first in the iteration
