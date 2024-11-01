@@ -152,6 +152,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 	float const height(c.dz()), width(c.get_width()), depth(c.get_depth());
 	float const pipe_rmax(0.033*min(height, min(width, depth)));
 	bool const dim(c.dim), dir(c.dir), two_part(width > rgen.rand_uniform(1.5, 2.2)*depth);
+	float const back_wall_pos(c.d[dim][!dir]);
 	unsigned const num_parts(two_part ? 2U : 1U);
 	colorRGBA const base_color(apply_light_color(c, c.color));
 	cube_t base(c), main(c);
@@ -305,7 +306,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		bool const has_gap(fabs(part.d[dim][dir] - c.d[dim][dir]) > pipe_rmax);
 		cube_t region(part);
 		region.d[dim][ dir] = (is_cylin ? part.get_center_dim(dim) : part.d[dim][!dir]); // center plane of cylinder or back of cube
-		region.d[dim][!dir] = c.d[dim][!dir]; // wall behind the machine
+		region.d[dim][!dir] = back_wall_pos; // wall behind the machine
 		assert(region.is_strictly_normalized());
 
 		if ((is_cylin || has_gap) && cylin_dim != dim) { // if there's a gap between the machine and the wall; not for cylinders facing the wall
@@ -314,9 +315,10 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 			pipe_ends.clear();
 			for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region, pipe_rmax, dim, pipe_ends, rgen);}
 		}
-		// add pipes up to the ceiling if there's space and floor_ceil_gap was specified
+		// if there's space and floor_ceil_gap was specified
 		if (height < floor_ceil_gap) {
 			float const ceil_zval(c.z1() + floor_ceil_gap);
+			// add pipes up to the ceiling
 			unsigned const num_pipes(rgen.rand() % 4); // 0-3
 
 			if (num_pipes > 0) {
@@ -329,6 +331,16 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 				}
 				pipe_ends.clear();
 				for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region, pipe_rmax, 2, pipe_ends, rgen);} // dim=2
+			}
+			// maybe add a spider web between the machine and the wall; only for cubes and vertical cylinders
+			if ((!is_cylin || cylin_dim == 2) && rgen.rand_float() < 0.75) {
+				float const web_pos(is_cylin ? part.get_center_dim(!dim) : rgen.rand_uniform(part.d[!dim][0], part.d[!dim][1]));
+				room_object_t web(c, TYPE_SPIWEB, c.room_id, !dim, !dir, 0, c.light_amt);
+				set_cube_zvals(web, (part.z2() - 0.1*part_sz.z), (ceil_zval + 0.02*floor_ceil_gap));
+				set_wall_width(web, web_pos, 0.0, !dim); // zero thickness
+				web.d[dim][!dir] = back_wall_pos;
+				web.d[dim][ dir] = max(part.d[dim][0], min(part.d[dim][1], (back_wall_pos + (dir ? 1.0f : -1.0f)*web.dz()))); // clamp to part range
+				add_spider_web(web);
 			}
 		}
 		// add a duct to the wall
@@ -461,7 +473,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 				} // for N
 			} // for n
 		}
-	} // for n
+	} // for n (parts)
 	if (two_part) {
 		// connect the two parts with pipe and coils
 		unsigned const num_pipes((rgen.rand() % 4) + 1); // 1-4
