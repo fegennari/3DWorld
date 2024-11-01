@@ -2282,6 +2282,8 @@ private:
 	bool is_tunnel_placement_valid(point const &p1, point const &p2, float radius) const;
 	void try_extend_tunnel(point &p1, point &p2, float max_extend, float check_radius, unsigned dim, bool dir) const;
 	bool try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned room_id, rand_gen_t &rgen);
+	bool add_extend_tunnel_seg(point const &end_pt, float radius, float wall_thickness, float min_len, float max_extend, float gate_dist_from_end,
+		unsigned parent_seg_ix, unsigned seg_depth, bool dim, bool pdir, bool cdir, rand_gen_t &rgen);
 	building_t *get_conn_bldg_for_pt(point const &p, float radius=0.0) const;
 	building_t *get_bldg_containing_pt(point const &p);
 	bool is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist, bool expand_for_light=0) const;

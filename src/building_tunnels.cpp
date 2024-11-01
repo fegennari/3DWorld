@@ -234,42 +234,56 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 		interior->add_tunnel_seg(tseg_c);
 
 		for (unsigned e = 0; e < 2; ++e) { // {left, right}
-			unsigned const cur_seg_ix(tunnels.size());
-			point const &end_pt(e ? p2 : p1);
-			// check if we can extend this tunnel before placing it, so that the query doesn't pick up a self intersection
-			cube_t end_conn_bcube; end_conn_bcube.set_from_sphere(end_pt, check_radius);
-			bool const can_extend(is_tunnel_bcube_placement_valid(end_conn_bcube));
-			interior->connect_and_add_tunnel_seg(tunnels[tseg_ix], end_pt, e, !e, gate_dist_from_end);
-			if (!can_extend) continue;
-			// attempt to add a 90 degree bend
-			bool const first_dir(rgen.rand_bool());
-
-			for (unsigned n = 0; n < 2; ++n) {
-				bool const bend_dir(bool(n) ^ first_dir);
-				point p1b(end_pt), p2b(end_pt);
-				point &new_end_pt(bend_dir ? p2b : p1b);
-				new_end_pt[dim] += (bend_dir ? 1.0 : -1.0)*min_len;
-				point p1bt(p1b), p2bt(p2b); // pull back the connecting end so that it doesn't intersect the parent tunnel segment
-				(bend_dir ? p1bt : p2bt)[dim] += (bend_dir ? 1.0 : -1.0)*(check_radius + wall_thickness);
-				if (!is_tunnel_placement_valid(p1bt, p2bt, check_radius)) continue; // can't place a tunnel of min length
-				try_extend_tunnel(p1b, p2b, max_extend, check_radius, dim, bend_dir);
-				interior->connect_and_add_tunnel_seg(tunnels[cur_seg_ix], new_end_pt, e, !bend_dir, gate_dist_from_end);
-				tunnel_seg_t &parent(tunnels[cur_seg_ix]), &child(tunnels.back());
-				// pull back cylinder draw bcubes to remove overlaps
-				float const child_ext((bend_dir ? -1.0 : 1.0)*radius), parent_ext((e ? 1.0 : -1.0)*radius);
-				child .bcube_draw.d[child .dim][!bend_dir] -= child_ext;
-				parent.bcube_draw.d[parent.dim][ e       ] -= parent_ext;
-				// extend bcubes to cover the gap at the corner so that the player stays in the tunnel
-				child .bcube_ext .d[child .dim][!bend_dir] += child_ext;
-				parent.bcube_ext .d[parent.dim][ e       ] += parent_ext;
-				parent.add_bend_dir[e] = int(bend_dir); // bend is drawn by the parent
-				parent.has_gate = 0; // remove gate from parent
-				break; // don't need to check the other dir
-			} // for n
-		} // for e
+			add_extend_tunnel_seg((e ? p2 : p1), radius, wall_thickness, min_len, max_extend, gate_dist_from_end, tseg_ix, 0, dim, e, !e, rgen);
+		}
 		room.set_has_tunnel_conn();
 		return 1; // done (only add tunnel conn to one end)
 	} // for d
+	return 0;
+}
+
+bool building_t::add_extend_tunnel_seg(point const &end_pt, float radius, float wall_thickness, float min_len, float max_extend, float gate_dist_from_end,
+	unsigned parent_seg_ix, unsigned seg_depth, bool dim, bool pdir, bool cdir, rand_gen_t &rgen)
+{
+	float const check_radius(radius + wall_thickness);
+	vect_tunnel_seg_t &tunnels(interior->tunnels);
+	unsigned const cur_seg_ix(tunnels.size());
+	bool can_extend(0);
+	
+	if (seg_depth < (rgen.rand_bool() ? 1 : 2)) { // add 1-2 bends
+		// check if we can extend this tunnel before placing it, so that the query doesn't pick up a self intersection
+		cube_t end_conn_bcube;
+		end_conn_bcube.set_from_sphere(end_pt, check_radius);
+		can_extend = is_tunnel_bcube_placement_valid(end_conn_bcube);
+	}
+	interior->connect_and_add_tunnel_seg(tunnels[parent_seg_ix], end_pt, pdir, cdir, gate_dist_from_end);
+	if (!can_extend) return 0;
+	// attempt to add a 90 degree bend
+	bool const first_dir(rgen.rand_bool());
+
+	for (unsigned n = 0; n < 2; ++n) {
+		bool const bend_dir(bool(n) ^ first_dir);
+		point p1b(end_pt), p2b(end_pt);
+		point &new_end_pt(bend_dir ? p2b : p1b);
+		new_end_pt[dim] += (bend_dir ? 1.0 : -1.0)*min_len;
+		point p1bt(p1b), p2bt(p2b); // pull back the connecting end so that it doesn't intersect the parent tunnel segment
+		(bend_dir ? p1bt : p2bt)[dim] += (bend_dir ? 1.0 : -1.0)*(check_radius + wall_thickness);
+		if (!is_tunnel_placement_valid(p1bt, p2bt, check_radius)) continue; // can't place a tunnel of min length
+		try_extend_tunnel(p1b, p2b, max_extend, check_radius, dim, bend_dir);
+		unsigned const child_tunnel_ix(tunnels.size());
+		add_extend_tunnel_seg(new_end_pt, radius, wall_thickness, min_len, max_extend, gate_dist_from_end, cur_seg_ix, seg_depth+1, !dim, !cdir, !bend_dir, rgen); // recurse
+		tunnel_seg_t &parent(tunnels[cur_seg_ix]), &child(tunnels[child_tunnel_ix]);
+		// pull back cylinder draw bcubes to remove overlaps
+		float const child_ext((bend_dir ? -1.0 : 1.0)*radius), parent_ext((cdir ? -1.0 : 1.0)*radius);
+		child .bcube_draw.d[child .dim][!bend_dir] -= child_ext;
+		parent.bcube_draw.d[parent.dim][!cdir    ] -= parent_ext;
+		// extend bcubes to cover the gap at the corner so that the player stays in the tunnel
+		child .bcube_ext .d[child .dim][!bend_dir] += child_ext;
+		parent.bcube_ext .d[parent.dim][!cdir    ] += parent_ext;
+		parent.add_bend_dir[!cdir] = int(bend_dir); // bend is drawn by the parent
+		parent.has_gate = 0; // remove gate from parent
+		return 1; // don't need to check the other dir
+	} // for n
 	return 0;
 }
 
