@@ -637,10 +637,13 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 	}
 }
 
+float get_flow_tscale(float water_flow) {
+	return 1.0/(1.0 + 10.0*fabs(water_flow)); // stretch along tunnel length more with higher water flow
+}
 float draw_flowing_water(rgeom_mat_t &mat, cube_t const &water, bool dim, float water_flow) {
 	float &tscale((dim ? mat.tex.tscale_x : mat.tex.tscale_y));
 	float const orig_tscale(tscale);
-	tscale *= 1.0/(1.0 + 10.0*fabs(water_flow)); // stretch along tunnel length more with higher water flow
+	tscale *= get_flow_tscale(water_flow);
 	float const flow_val(0.15*(tfticks/TICKS_PER_SECOND)*water_flow);
 	float tex_add[2] = {0.0, 0.0};
 	tex_add[!dim] = fract(flow_val); // animate the water texture
@@ -670,16 +673,14 @@ void building_room_geom_t::add_tunnel_water(tunnel_seg_t const &t) {
 		bend_water.d[ dim][!d] = tunnel_end; // constrain to end only
 		bend_water.d[ dim][ d] = tunnel_end + (t.radius + water_hwidth)*(d ? 1.0 : -1.0);
 		bend_water.d[!dim][!conn_dir] -= (t.radius - water_hwidth)*(conn_dir ? -1.0 : 1.0);
-		bend_water.z2() = water.z2();
-
-		if (mat.tex.tscale_x != mat.tex.tscale_y) { // average out the texture scale
-			mat.tex.tscale_x = mat.tex.tscale_y = sqrt(mat.tex.tscale_x*mat.tex.tscale_y);
-		}
+		bend_water.z2()  = water.z2();
+		mat.tex.tscale_x = mat.tex.tscale_y = def_tscale*sqrt(get_flow_tscale(t.water_flow)); // stretch in both dims with average tscale
 		// water moves diagonally; can we rotate the quad to create seamless movement?
 		float tex_add[2] = {};
 		tex_add[!dim] = fract(SQRTOFTWOINV*flow_val);
 		tex_add[ dim] = tex_add[!dim] * ((d ^ t.dim ^ conn_dir) ? 1.0 : -1.0);
 		mat.add_cube_to_verts(bend_water, DK_BROWN, all_zeros, ~EF_Z2, 0, 0, 0, 0, 0, tex_add[0], tex_add[1]); // draw top surface only
+		mat.tex.tscale_x = mat.tex.tscale_y = def_tscale; // reset
 	} // for d
 	// draw water flowing out of side tunnels
 	for (tunnel_conn_t const &c : t.conns) {
@@ -693,7 +694,6 @@ void building_room_geom_t::add_tunnel_water(tunnel_seg_t const &t) {
 		float const flow_val2(draw_flowing_water(mat, w, !dim, c.water_flow));
 		// draw running water below
 		float &tscale((dim ? mat.tex.tscale_x : mat.tex.tscale_y));
-		float const orig_tscale(tscale);
 		float tex_add[2] = {};
 		tscale *= 0.25;
 		tex_add[!dim] = fract(fabs(flow_val2)); // always flows down
@@ -702,7 +702,7 @@ void building_room_geom_t::add_tunnel_water(tunnel_seg_t const &t) {
 		w.expand_in_dim(dim, -0.1*water_hwidth); // small shrink
 		w.d[c.dim][c.dir] = edge; // shrink to zero area
 		mat.add_cube_to_verts(w, DK_BROWN, all_zeros, get_face_mask(c.dim, !c.dir), 0, 0, 0, 0, 0, tex_add[0], tex_add[1]);
-		mat.tex.tscale_y = orig_tscale;
+		mat.tex.tscale_y = def_tscale; // reset
 		// this water doesn't connect to the water at the bottom of the tunnel;
 		// should we add an arc of water? Or let it run down the pipe in a slightly less than quarter cylinder? or a particle effect?
 		cube_t cylin_bc(t.bcube);
@@ -719,11 +719,21 @@ void building_room_geom_t::add_tunnel_water(tunnel_seg_t const &t) {
 		if (angle != 0.0) {rotate_verts(mat.itri_verts, (dim ? plus_y : plus_x), angle, t.p[0], start_vix);}
 		reverse(mat.indices.begin()+start_ix, mat.indices.end()); // draw only interior surface
 		float const zmax(w.z1() + 0.1*w.dz());
+		float prev_z(t.bcube.z1()), prev_tc(0.0);
 		
+		// find min point below zmax and get its zval and tex coords
 		for (auto i = mat.itri_verts.begin()+start_vix; i != mat.itri_verts.end(); ++i) {
-			if (i->v.z > zmax) {i->v.z = zmax; i->v[c.dim] = edge;} // collapse verts above the spill point to zero area to remove them
-			i->invert_normal();
+			if (i->v.z < zmax && i->v.z > prev_z) {prev_z = i->v.z; prev_tc = i->t[0];}
 		}
+		for (auto i = mat.itri_verts.begin()+start_vix; i != mat.itri_verts.end(); ++i) {
+			if (i->v.z > zmax) { // collapse verts above the spill point to zero area to remove them
+				float const t((zmax - prev_z)/(i->v.z - prev_z));
+				i->t[0] = prev_tc + t*(i->t[0] - prev_tc); // interpolate texture coord to preserve constant flow rate
+				i->v.z  = zmax;
+				i->v[c.dim] = edge;
+			}
+			i->invert_normal();
+		} // for i
 	} // for c
 }
 
