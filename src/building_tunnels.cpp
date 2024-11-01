@@ -674,13 +674,25 @@ void building_room_geom_t::add_tunnel_water(tunnel_seg_t const &t) {
 		bend_water.d[ dim][ d] = tunnel_end + (t.radius + water_hwidth)*(d ? 1.0 : -1.0);
 		bend_water.d[!dim][!conn_dir] -= (t.radius - water_hwidth)*(conn_dir ? -1.0 : 1.0);
 		bend_water.z2()  = water.z2();
-		mat.tex.tscale_x = mat.tex.tscale_y = def_tscale*sqrt(get_flow_tscale(t.water_flow)); // stretch in both dims with average tscale
-		// water moves diagonally; can we rotate the quad to create seamless movement?
+		// draw tunnel dim section, opaque
+		float const flow_offset(fract(flow_val)), flow_scale(get_flow_tscale(t.water_flow));
+		(dim ? mat.tex.tscale_x : mat.tex.tscale_y) *= flow_scale;
 		float tex_add[2] = {};
-		tex_add[!dim] = fract(SQRTOFTWOINV*flow_val);
-		tex_add[ dim] = tex_add[!dim] * ((d ^ t.dim ^ conn_dir) ? 1.0 : -1.0);
+		tex_add[!dim] = flow_offset;
 		mat.add_cube_to_verts(bend_water, DK_BROWN, all_zeros, ~EF_Z2, 0, 0, 0, 0, 0, tex_add[0], tex_add[1]); // draw top surface only
-		mat.tex.tscale_x = mat.tex.tscale_y = def_tscale; // reset
+		(dim ? mat.tex.tscale_x : mat.tex.tscale_y) = def_tscale; // reset
+		tex_add[!dim] = 0.0; // reset
+		// draw other dim section, fade to transparent
+		bend_water.z2() += 0.01*bend_water.dz(); // shift slightly above
+		unsigned const verts_start(mat.quad_verts.size());
+		(dim ? mat.tex.tscale_y : mat.tex.tscale_x) *= flow_scale;
+		tex_add[ dim] = flow_offset * ((d ^ conn_dir) ? -1.0 : 1.0);
+		mat.add_cube_to_verts(bend_water, DK_BROWN, all_zeros, ~EF_Z2, 0, 0, 0, 0, 0, tex_add[0], tex_add[1]); // draw top surface only
+		(dim ? mat.tex.tscale_y : mat.tex.tscale_x) = def_tscale; // reset
+
+		for (auto i = mat.quad_verts.begin()+verts_start; i != mat.quad_verts.end(); ++i) {
+			if (t.bcube.contains_pt_xy(i->v)) {i->c[3] = 0;} // make transparent where water overlaps the parent tunnel
+		}
 	} // for d
 	// draw water flowing out of side tunnels
 	for (tunnel_conn_t const &c : t.conns) {
