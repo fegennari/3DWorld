@@ -76,7 +76,7 @@ tunnel_seg_t tunnel_seg_t::connect_segment_to(point const &pos, bool conn_dir, u
 	tseg.tseg_ix      = new_tseg_ix;
 	tseg.water_level  = water_level;
 	tseg.water_flow   = water_flow;
-	if ((tseg.dim != dim) && (conn_dir ^ dim ^ tseg_conn_dir)) {tseg.water_flow *= -1.0;}
+	if ((tseg.dim != dim) && (conn_dir ^ tseg_conn_dir ^ 1)) {tseg.water_flow *= -1.0;}
 	if (is_end) {tseg.closed_ends[!tseg_conn_dir] = 1;} // closed at unconnected end
 	closed_ends[conn_dir] = 0; // parent is no longer closed
 	return tseg;
