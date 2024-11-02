@@ -525,12 +525,15 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 	return 0; // failed
 }
 
+colorRGBA select_paper_color(rand_gen_t &rgen) {
+	return paper_colors[rgen.rand()%NUM_PAPER_COLORS];
+}
 void building_t::add_papers_to_surface(cube_t const &c, bool dim, bool dir, unsigned max_num, rand_gen_t &rgen, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
 	float const floor_spacing(get_window_vspace());
 	float const plen(0.115*floor_spacing), pwidth(0.77*plen), thickness(0.00025*floor_spacing); // 8.5x11
 	vect_room_object_t &objs(interior->room_geom->objs);
 
-	if (plen < 0.5*c.get_sz_dim(dim) && pwidth < 0.5*c.get_sz_dim(!dim)) { // desk is large enough for papers
+	if (plen < 0.5*c.get_sz_dim(dim) && pwidth < 0.5*c.get_sz_dim(!dim)) { // desk/table is large enough for papers
 		cube_t paper;
 		set_cube_zvals(paper, c.z2(), c.z2()+thickness); // very thin
 		unsigned const num_papers(rgen.rand() % (max_num+1)); // 0 - max_num
@@ -539,8 +542,7 @@ void building_t::add_papers_to_surface(cube_t const &c, bool dim, bool dir, unsi
 			set_wall_width(paper, rgen.rand_uniform(c.d[ dim][0]+plen,   c.d[ dim][1]-plen  ), 0.5*plen,    dim);
 			set_wall_width(paper, rgen.rand_uniform(c.d[!dim][0]+pwidth, c.d[!dim][1]-pwidth), 0.5*pwidth, !dim);
 			if (!avoid.is_all_zeros() && paper.intersects_xy(avoid)) continue; // skip this paper
-			objs.emplace_back(paper, TYPE_PAPER, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT),
-				tot_light_amt, SHAPE_CUBE, paper_colors[rgen.rand()%NUM_PAPER_COLORS]);
+			objs.emplace_back(paper, TYPE_PAPER, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CUBE, select_paper_color(rgen));
 			set_obj_id(objs);
 			paper.z2() += thickness; // to avoid Z-fighting if different colors
 		} // for n
@@ -2798,6 +2800,24 @@ void building_t::add_basement_clutter_objs(rand_gen_t rgen, room_t const &room, 
 			colorRGBA const color(trash_colors[rgen.rand() % NUM_TRASH_COLORS]);
 			objs.emplace_back(trash, TYPE_TRASH, room_id, rgen.rand_bool(), rgen.rand_bool(), (RO_FLAG_NOCOLL | RO_FLAG_ON_FLOOR), tot_light_amt, SHAPE_SPHERE, color);
 			set_obj_id(objs);
+		} // for n
+	}
+	if (rgen.rand_float() < 0.50) { // add sheets of paper on the floor to 50% of rooms
+		// similar to add_papers_to_surface()
+		unsigned const num_papers((rgen.rand() % 5) + 1); // 1-5
+		float const plen(0.115*floor_spacing), pwidth(0.77*plen), thickness(0.00025*floor_spacing); // 8.5x11
+		point prev_pos;
+		cube_t paper;
+		set_cube_zvals(paper, zval, (zval + get_rug_thickness() + thickness)); // very thin
+
+		for (unsigned n = 0; n < num_papers; ++n) { // okay if they overlap
+			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
+			set_wall_width(paper, rgen.rand_uniform(place_area.d[ dim][0]+plen,   place_area.d[ dim][1]-plen  ), 0.5*plen,    dim);
+			set_wall_width(paper, rgen.rand_uniform(place_area.d[!dim][0]+pwidth, place_area.d[!dim][1]-pwidth), 0.5*pwidth, !dim);
+			if (is_obj_placement_blocked(paper, room, 1) || overlaps_other_room_obj(paper, objs_start) || has_bcube_int(paper, avoid)) continue; // bad placement
+			objs.emplace_back(paper, TYPE_PAPER, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT | RO_FLAG_ON_FLOOR), tot_light_amt, SHAPE_CUBE, select_paper_color(rgen));
+			set_obj_id(objs);
+			paper.z2() += thickness; // to avoid Z-fighting if different colors
 		} // for n
 	}
 	if (rgen.rand_float() < 0.65) { // add broken glass on the floor 65% of the time; often fails to be placed

@@ -256,7 +256,7 @@ rand_gen_t rgen_from_obj(room_object_t const &obj) {
 }
 float get_paper_value(room_object_t const &obj) {
 	rand_gen_t rgen(rgen_from_obj(obj));
-	if (rgen.rand_float() >= 0.25) return 0.0; // only 25% of papers have some value
+	if (rgen.rand_float() >= (obj.is_on_floor() ? 0.05 : 0.25)) return 0.0; // only 25% of papers have some value; 5% of papers on the floor
 	float const val_mult((rgen.rand_float() < 0.25) ? 10.0 : 1.0); // 25% of papers have higher value
 	return val_mult*(2 + (rgen.rand()%10))*(1 + (rgen.rand()%10));
 }
