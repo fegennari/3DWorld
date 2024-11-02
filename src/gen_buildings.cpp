@@ -2307,8 +2307,8 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 
 					for (auto d = doors.begin(); d != doors.end(); ++d) {
 						cube_t const c(d->get_bcube());
-						if (c.z1() > first_floor_z1)  continue; // not ground floor door; walkway door
-						if ((c.dy() < c.dx()) != dim) continue; // wrong dim
+						if (!is_house && c.z1() > first_floor_z1) continue; // not ground floor door and not house upper door; walkway door
+						if ((c.dy() < c.dx()) != dim)             continue; // wrong dim
 						if (c.d[dim][0]-toler > wall_pos || c.d[dim][1]+toler < wall_pos) continue; // door not on this wall
 						float const door_lo(c.d[!dim][0]), door_hi(c.d[!dim][1]);
 						if (door_lo > side_hi || door_hi < side_lo)     continue; // door not on this part
