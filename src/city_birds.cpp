@@ -298,12 +298,7 @@ void city_bird_t::next_frame(float timestep, float delta_dir, point const &camer
 	}
 }
 
-// these template functions are here rather than in city_obj_placer.cpp because they're currently only used for birds
-template<typename T> void city_obj_groups_t::rebuild(vector<T> &objs, cube_t &all_objs_bcube) {
-	clear();
-	for (unsigned i = 0; i < objs.size(); ++i) {insert_obj_ix(objs[i].bcube, i);}
-	create_groups(objs, all_objs_bcube);
-}
+// this template function is here rather than in city_obj_placer.cpp because it's currently only used for birds
 template<typename T> void city_obj_groups_t::update_obj_pos(vector<T> const &objs, cube_t &all_objs_bcube) {
 	unsigned start_ix(0);
 

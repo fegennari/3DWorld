@@ -1241,6 +1241,14 @@ public:
 		park_pos = rand_xy_pt_in_cube(park, get_sidewalk_width(), rgen);
 		return 1;
 	}
+	void add_manhole(point const &pos, float radius) {
+		bool is_over_road(0);
+
+		for (road_t const &road : roads) {
+			if (road.contains_pt_xy_exp(pos, -radius)) {is_over_road = 1; break;} // must fully contain manhole
+		}
+		city_obj_placer.add_manhole(pos, radius, is_over_road);
+	}
 	template<typename T> bool check_tile_group_contains_pt_xy(vector<T> const &objs, point const &pos, unsigned type) const {
 		assert(type < NUM_RD_TYPES);
 		if (objs.empty()) return 0;
@@ -2241,6 +2249,11 @@ public:
 			if (rn.get_bcube().intersects_xy(c)) return rn.get_bcube(); // return the first overlapping cube; assumes c is small and doesn't overlap multiple cities
 		}
 		return cube_t(); // not found
+	}
+	void add_manhole(point const &pos, float radius) {
+		for (road_network_t &rn : road_networks) {
+			if (rn.get_bcube().contains_pt_xy(pos)) {rn.add_manhole(pos, radius); break;}
+		}
 	}
 	bool cube_overlaps_road_xy    (cube_t const &c, unsigned city_ix) const {return get_city(city_ix).cube_overlaps_road_xy    (c);}
 	bool cube_overlaps_pl_or_dw_xy(cube_t const &c, unsigned city_ix) const {return get_city(city_ix).cube_overlaps_pl_or_dw_xy(c);}
@@ -3250,6 +3263,7 @@ public:
 	bool tile_contains_tunnel (cube_t const &bcube) const {return road_gen.tile_contains_tunnel(bcube);}
 	bool cube_int_underground_obj(cube_t const &c ) const {return road_gen.cube_int_underground_obj(c);}
 	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &ponds) const {road_gen.get_ponds_in_xy_range(range, ponds);}
+	void add_manhole(point const &pos, float radius) {road_gen.add_manhole(pos, radius);}
 
 	void destroy_in_radius(point const &pos, float radius) {
 		car_manager.destroy_cars_in_radius(pos, radius);
@@ -3347,6 +3361,7 @@ void next_city_frame(bool use_threads_2_3) {city_gen.next_frame(use_threads_2_3)
 void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) {city_gen.draw(shadow_only, reflection_pass, trans_op_mask, xlate);}
 void draw_city_roads(int trans_op_mask, vector3d const &xlate) {city_gen.draw_roads(trans_op_mask, xlate);}
 void setup_city_lights(vector3d const &xlate) {city_gen.setup_city_lights(xlate);}
+void add_city_manhole(point const &pos, float radius) {city_gen.add_manhole(pos, radius);}
 
 void draw_transparent_city_bldg_geom(int reflection_pass, vector3d const &xlate) {
 	if (!reflection_pass) {city_gen.draw_transparent(xlate);}

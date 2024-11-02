@@ -9,6 +9,7 @@ extern double tfticks;
 float query_min_height(cube_t const &c, float stop_at);
 colorRGBA choose_pipe_color(rand_gen_t &rgen);
 room_object_t get_open_false_door(room_object_t const &c);
+void add_city_manhole(point const &pos, float radius);
 
 // *** tunnel_seg_t ***
 
@@ -329,6 +330,9 @@ void building_t::add_tunnel_objects(rand_gen_t rgen) {
 						t.conns.emplace_back(2, 1, pos, length, radius);
 						avoid_vals [num_avoid  ] = pos;
 						avoid_radii[num_avoid++] = radius;
+						// add a manhole above the ground if it doesn't intersect the building
+						point const top_center(point(shaft.xc(), shaft.yc(), ground_floor_z1));
+						if (!bcube.contains_pt_xy(top_center)) {add_city_manhole(top_center, 0.6*radius);}
 					}
 				}
 			}
@@ -615,8 +619,7 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 		point pos(t.get_conn_pt(c));
 		pos.z += 0.999*c.length; // almost to the top
 		get_material(tid_nm_pair_t(MANHOLE_TEX, 0.0), 0, 0, 1).add_disk_to_verts(pos, 0.6*c.radius, -plus_z, BROWN, 0, 1); // unshadowed, small=1, inverted
-		// man hole cover + man hole cover above ground if it's over a road, concrete, sidewalk, or yard?
-	} // for c
+	}
 	// draw gate if present
 	if (t.has_gate) {
 		assert(!t.room_conn); // not supported

@@ -601,8 +601,13 @@ public:
 	void insert_obj_ix(cube_t const &c, unsigned ix);
 	template<typename T> void add_obj(T const &obj, vector<T> &objs);
 	template<typename T> void create_groups (vector<T>       &objs, cube_t &all_objs_bcube);
-	template<typename T> void rebuild       (vector<T>       &objs, cube_t &all_objs_bcube);
 	template<typename T> void update_obj_pos(vector<T> const &objs, cube_t &all_objs_bcube);
+
+	template<typename T> void rebuild       (vector<T>       &objs, cube_t &all_objs_bcube) {
+		clear();
+		for (unsigned i = 0; i < objs.size(); ++i) {insert_obj_ix(objs[i].bcube, i);}
+		create_groups(objs, all_objs_bcube);
+	}
 };
 
 class city_obj_placer_t : private city_draw_qbds_t {
@@ -701,6 +706,7 @@ public:
 	bool add_skyway(cube_t const &city_bcube, vect_bldg_walkway_t const &walkway_cands, rand_gen_t rgen);
 	void bind_elevators_to_building_walkways(cube_t const &city_bcube) const;
 	void finalize_streetlights_and_power(streetlights_t &sl, vector<vect_cube_t> &plot_colliders);
+	void add_manhole(point const &pos, float radius, bool is_over_road);
 	static bool subdivide_plot_for_residential(cube_t const &plot, vector<road_t> const &roads,
 		float plot_subdiv_sz, unsigned parent_plot_ix, unsigned city_ix, vect_city_zone_t &sub_plots);
 	void draw_detail_objects(draw_state_t &dstate, bool shadow_only);

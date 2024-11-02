@@ -434,6 +434,8 @@ template<typename T> void city_obj_groups_t::add_obj(T const &obj, vector<T> &ob
 	objs.push_back(obj);
 }
 template<typename T> void city_obj_groups_t::create_groups(vector<T> &objs, cube_t &all_objs_bcube) {
+	vector<cube_with_ix_t>::clear();
+	bcube.set_to_zeros();
 	vector<T> new_objs;
 	new_objs.reserve(objs.size());
 	reserve(by_tile.size()); // the number of actual groups
@@ -2130,6 +2132,16 @@ void city_obj_placer_t::finalize_streetlights_and_power(streetlights_t &sl, vect
 		plot_colliders[s->plot_ix].push_back(collider);
 	} // for s
 	if (was_moved) {sl.sort_streetlights_by_yx();} // must re-sort if a streetlight was moved
+}
+
+void city_obj_placer_t::add_manhole(point const &pos, float radius, bool is_over_road) {
+	for (manhole_t const &m : manholes) { // first check to see if this is a duplicate
+		if (m.pos.x == pos.x && m.pos.y == pos.y) return; // duplicate
+	}
+	point pos2(pos);
+	if (!is_over_road && proc_sphere_coll(pos2, pos, zero_vector, radius, nullptr)) return; // check for blocker
+	manhole_groups.add_obj(manhole_t(pos, radius), manholes);
+	manhole_groups.rebuild(manholes, all_objs_bcube); // re-sort by tile
 }
 
 bool city_obj_placer_t::add_skyway(cube_t const &city_bcube, vect_bldg_walkway_t const &walkway_cands, rand_gen_t rgen) {
