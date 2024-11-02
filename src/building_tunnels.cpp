@@ -251,7 +251,7 @@ bool building_t::add_extend_tunnel_seg(point const &end_pt, float radius, float 
 	unsigned const cur_seg_ix(tunnels.size());
 	bool can_extend(0);
 	
-	if (seg_depth < (rgen.rand_bool() ? 1 : 2)) { // add 1-2 bends
+	if (seg_depth < (rgen.rand_bool() ? 1U : 2U)) { // add 1-2 bends
 		// check if we can extend this tunnel before placing it, so that the query doesn't pick up a self intersection
 		cube_t end_conn_bcube;
 		end_conn_bcube.set_from_sphere(end_pt, check_radius);
@@ -689,7 +689,7 @@ void building_room_geom_t::add_tunnel_water(tunnel_seg_t const &t) {
 		bend_water.z2() += 0.01*bend_water.dz(); // shift slightly above
 		unsigned const verts_start(mat.quad_verts.size());
 		(dim ? mat.tex.tscale_y : mat.tex.tscale_x) *= flow_scale;
-		tex_add[ dim] = flow_offset * ((d ^ conn_dir) ? -1.0 : 1.0);
+		tex_add[ dim] = flow_offset * ((bool(d) ^ conn_dir) ? -1.0 : 1.0);
 		mat.add_cube_to_verts(bend_water, DK_BROWN, all_zeros, ~EF_Z2, 0, 0, 0, 0, 0, tex_add[0], tex_add[1]); // draw top surface only
 		(dim ? mat.tex.tscale_y : mat.tex.tscale_x) = def_tscale; // reset
 
