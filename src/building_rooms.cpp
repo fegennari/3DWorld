@@ -1132,7 +1132,13 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 				// add exterior step for this balcony so that the player can stand on it and can't pass through the railings
 				cube_t floor_slab(balcony);
 				floor_slab.z2() = balcony.z1() + 0.12*balcony.dz(); // matches code in get_balcony_cubes()
+				// c, dim, step_dir, wall_dir, at_door, is_base, at_ground, enclosed, [step_up]
 				ext_steps.emplace_back(floor_slab, dim, 0, dir, 0, 0, 0, 1); // enclosed, no step dir
+				// add front wall as well so that the player can stand on it
+				cube_t front_wall(balcony);
+				front_wall.z1() = floor_slab.z2();
+				front_wall.d[dim][!dir] += (dir ? 1.0 : -1.0)*0.9*balcony_depth; // shrink to 10% width
+				ext_steps.emplace_back(front_wall, dim, dir, dir, 0, 0, 0, 0, 1); // step_up=1
 				details.emplace_back(floor_slab, DETAIL_OBJ_COLL_SHAD); // for shadows and pedestrian collisions
 
 				if (draw_style == 0 || draw_style == 3) { // add shadow casters for sides

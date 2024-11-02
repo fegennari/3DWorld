@@ -395,7 +395,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 				}
 			}
 			if (zval + radius > c.z1()) { // step up
-				if (c.contains_pt_xy(pos2)) {max_eq(pos2.z, (c.z2() + radius));} // only step up if on this stair
+				if (s.step_up || c.contains_pt_xy(pos2)) {max_eq(pos2.z, (c.z2() + radius));} // only step up if on this stair, unless it's a wall we can climb
 				if (wval > c.d[!s.dim][0] && wval < c.d[!s.dim][1]) {on_ext_stair = reduce_speed = 1;} // not entering or leaving from the sides
 				had_coll = 1;
 			}

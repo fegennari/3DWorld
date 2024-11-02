@@ -1770,9 +1770,9 @@ struct colored_sphere_t : public sphere_t {
 };
 
 struct ext_step_t : public cube_t {
-	bool dim, step_dir, wall_dir, at_door, is_base, at_ground, enclosed; // enclosed=1 for balconies
-	ext_step_t(cube_t const &c, bool dim_, bool sdir, bool wdir, bool door=0, bool base=0, bool ag=0, bool enc=0) :
-		cube_t(c), dim(dim_), step_dir(sdir), wall_dir(wdir), at_door(door), is_base(base), at_ground(ag), enclosed(enc) {}
+	bool dim, step_dir, wall_dir, at_door, is_base, at_ground, enclosed, step_up; // enclosed=1 for balconies
+	ext_step_t(cube_t const &c, bool dim_, bool sdir, bool wdir, bool door=0, bool base=0, bool ag=0, bool enc=0, bool su=0) :
+		cube_t(c), dim(dim_), step_dir(sdir), wall_dir(wdir), at_door(door), is_base(base), at_ground(ag), enclosed(enc), step_up(su) {}
 };
 
 struct building_colors_t {
