@@ -365,8 +365,9 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 			}
 		}
 	}
-	if (!xy_only) { // check for collision with exterior stairs, since they apply to both the interior and exterior case
-		for (ext_step_t const &s : ext_steps) {
+	if (!xy_only && min(pos2.z, p_last2.z) > ground_floor_z1) { // only when above ground; skip if in basement
+		// check for collision with exterior stairs, since they apply to both the interior and exterior case
+		for (ext_step_t const &s : ext_steps) { // Note: includes balconies
 			cube_t const c(s + xlate);
 			if (s.enclosed && !c.contains_pt_xy(pos2))      continue; // don't clip through walls onto balconies
 			if (!sphere_cube_intersect_xy(pos2, radius, c)) continue;
