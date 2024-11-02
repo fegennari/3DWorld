@@ -1463,13 +1463,18 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 }
 bool building_t::place_model_along_wall(unsigned model_id, room_object type, room_t const &room, float height, rand_gen_t &rgen, float zval, unsigned room_id,
 	float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance, unsigned pref_orient, bool pref_centered, colorRGBA const &color,
-	bool not_at_window, unsigned extra_flags, bool force_pref)
+	bool not_at_window, unsigned extra_flags, bool force_pref, bool sideways)
 {
 	if (place_area.is_all_zeros()) return 0;
 	if (!building_obj_model_loader.is_model_valid(model_id)) return 0; // don't have a model of this type
-	vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id)); // D, W, H
-	return place_obj_along_wall(type, room, height*get_window_vspace(), sz, rgen, zval, room_id, tot_light_amt, place_area,
-		objs_start, front_clearance, 0, pref_orient, pref_centered, color, not_at_window, SHAPE_CUBE, 0.0, extra_flags, 0, force_pref);
+	vect_room_object_t &objs(interior->room_geom->objs);
+	vector3d sz(building_obj_model_loader.get_model_world_space_size(model_id)); // D, W, H
+	if (sideways) {swap(sz[0], sz[1]);}
+	unsigned const obj_id(objs.size());
+	if (!place_obj_along_wall(type, room, height*get_window_vspace(), sz, rgen, zval, room_id, tot_light_amt, place_area,
+		objs_start, front_clearance, 0, pref_orient, pref_centered, color, not_at_window, SHAPE_CUBE, 0.0, extra_flags, 0, force_pref)) return 0;
+	if (sideways) {objs[obj_id].dim ^= 1;}
+	return 1;
 }
 
 float building_t::add_flooring(room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned flooring_type) {
@@ -2657,11 +2662,24 @@ bool building_t::add_interrogation_objs(rand_gen_t rgen, room_t const &room, flo
 }
 
 void building_t::add_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
-	if (!enable_parked_cars() || (rgen.rand()&3) == 0) return; // 75% of garages have cars
+	vect_room_object_t &objs(interior->room_geom->objs);
+
+	if (!enable_parked_cars() || (rgen.rand()&3) == 0) { // 75% of garages have cars
+		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_BICYCLE) && rgen.rand_bool()) { // if no car, add a bike 50% of the time
+			cube_t place_area(get_walkable_room_bounds(room));
+			unsigned const bike_id(objs.size());
+			
+			if (place_model_along_wall(OBJ_MODEL_BICYCLE, TYPE_GBIKE, room, 0.45, rgen, zval, room_id, tot_light_amt,
+				place_area, objs.size(), 1.0, 4, 0, WHITE, 0, 0, 0, 1)) // sideways
+			{
+				objs[bike_id].dir = rgen.rand_bool(); // random dir
+			}
+		}
+		return;
+	}
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_USED | RO_FLAG_INVIS); // lines not shown
 	bool dim(0), dir(0); // set dir so that cars pull into driveways
 	get_garage_dim_dir(room, dim, dir);
-	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t space(room); // full room, car will be centered here
 	set_cube_zvals(space, zval, (zval + get_rug_thickness()));
 	room_object_t pspace(space, TYPE_PARK_SPACE, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, WHITE);

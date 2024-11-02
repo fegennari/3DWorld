@@ -483,7 +483,7 @@ enum { // room object types
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_WALL_LAMP, TYPE_CUP, TYPE_TOASTER,
 	TYPE_HOOD, TYPE_RCHAIR, TYPE_SILVER, TYPE_TOY_MODEL, TYPE_CEIL_FAN, TYPE_FIRE_EXT, TYPE_FOLD_SHIRT, TYPE_PLANT_MODEL, TYPE_POOL_TABLE, TYPE_POOL_LAD,
-	TYPE_BAR_STOOL, TYPE_PADLOCK, TYPE_CASHREG, TYPE_WFOUNTAIN, TYPE_BANANA, TYPE_BAN_PEEL, TYPE_CONF_PHONE,
+	TYPE_BAR_STOOL, TYPE_PADLOCK, TYPE_CASHREG, TYPE_WFOUNTAIN, TYPE_BANANA, TYPE_BAN_PEEL, TYPE_CONF_PHONE, TYPE_GBIKE,
 	/* animals */
 	TYPE_RAT, TYPE_ROACH, TYPE_SPIDER, TYPE_SNAKE, TYPE_INSECT,
 	NUM_ROBJ_TYPES};
@@ -530,11 +530,11 @@ enum {ATTIC_TYPE_RAFTERS=0, ATTIC_TYPE_FIBERGLASS, ATTIC_TYPE_WOOD, ATTIC_TYPE_P
 enum {BLDG_COLL_NONE=0, BLDG_COLL_SIDE, BLDG_COLL_ROOF, BLDG_COLL_DETAIL, BLDG_COLL_DRIVEWAY, BLDG_COLL_FENCE, BLDG_COLL_SKYLIGHT};
 enum {PLACED_TOILET=1, PLACED_SINK=2, PLACED_TUB=4, PLACED_SHOWER=8}; // for bathroom objects
 
-enum {/*building models*/ OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ_MODEL_FRIDGE, OBJ_MODEL_STOVE, OBJ_MODEL_TV, OBJ_MODEL_MONITOR, OBJ_MODEL_COUCH,
+enum {/*building models*/ OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ_MODEL_FRIDGE, OBJ_MODEL_STOVE, OBJ_MODEL_TV, OBJ_MODEL_MONITOR/*unused*/, OBJ_MODEL_COUCH,
 	OBJ_MODEL_OFFICE_CHAIR, OBJ_MODEL_URINAL, OBJ_MODEL_LAMP, OBJ_MODEL_WASHER, OBJ_MODEL_DRYER, OBJ_MODEL_KEY, OBJ_MODEL_HANGER, OBJ_MODEL_CLOTHES, OBJ_MODEL_FESCAPE,
 	OBJ_MODEL_WALL_LAMP, OBJ_MODEL_CUP, OBJ_MODEL_TOASTER, OBJ_MODEL_HOOD, OBJ_MODEL_RCHAIR, OBJ_MODEL_SILVER, OBJ_MODEL_TOY, OBJ_MODEL_CEIL_FAN, OBJ_MODEL_FIRE_EXT,
 	OBJ_MODEL_FOLD_SHIRT, OBJ_MODEL_PLANT, OBJ_MODEL_POOL_TABLE, OBJ_MODEL_POOL_LAD, OBJ_MODEL_BAR_STOOL, OBJ_MODEL_PADLOCK, OBJ_MODEL_CASHREG, OBJ_MODEL_WFOUNTAIN,
-	OBJ_MODEL_BANANA, OBJ_MODEL_BAN_PEEL, OBJ_MODEL_PHONE,
+	OBJ_MODEL_BANANA, OBJ_MODEL_BAN_PEEL, OBJ_MODEL_PHONE, OBJ_MODEL_GBIKE/*unused*/,
 	/*animal models*/ OBJ_MODEL_RAT, OBJ_MODEL_ROACH,
 	/*building non-room objects*/ OBJ_MODEL_DOOR_HANDLE,
 	/*city models*/ OBJ_MODEL_FHYDRANT, OBJ_MODEL_SUBSTATION, OBJ_MODEL_MAILBOX, OBJ_MODEL_UMBRELLA, OBJ_MODEL_PIGEON, OBJ_MODEL_FOUNTAIN, OBJ_MODEL_BIRD_ANIM, OBJ_MODEL_FLAG,
@@ -2177,9 +2177,9 @@ public:
 	bool place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
 		cube_t const &place_area, unsigned objs_start, float front_clearance=0.0, bool add_door_clearance=0, unsigned pref_orient=4, bool pref_centered=0,
 		colorRGBA const &color=WHITE, bool not_at_window=0, room_obj_shape shape=SHAPE_CUBE, float side_clearance=0.0, unsigned extra_flags=0, bool not_ext_wall=0, bool force_pref=0);
-	bool place_model_along_wall(unsigned model_id, room_object type, room_t const &room, float height, rand_gen_t &rgen,
-		float zval, unsigned room_id, float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0,
-		unsigned pref_orient=4, bool pref_centered=0, colorRGBA const &color=WHITE, bool not_at_window=0, unsigned extra_flags=0, bool force_pref=0);
+	bool place_model_along_wall(unsigned model_id, room_object type, room_t const &room, float height, rand_gen_t &rgen, float zval, unsigned room_id,
+		float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0, unsigned pref_orient=4,
+		bool pref_centered=0, colorRGBA const &color=WHITE, bool not_at_window=0, unsigned extra_flags=0, bool force_pref=0, bool sideways=0);
 	int check_valid_picture_placement(room_t const &room, cube_t const &c, float width, float zval, bool dim, bool dir, unsigned objs_start) const;
 	void update_player_interact_objects(point const &player_pos);
 	void update_creepy_sounds(point const &player_pos) const;

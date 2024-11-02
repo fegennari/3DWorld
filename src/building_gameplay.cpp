@@ -228,6 +228,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_BANANA    ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 0.25,  0.3,   "banana");
 	bldg_obj_types[TYPE_BAN_PEEL  ] = bldg_obj_type_t(1, 0, 1, 1, 0, 1, 0, 0.0,   0.05,  "banana peel");
 	bldg_obj_types[TYPE_CONF_PHONE] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 40.0,  2.0,   "phone");
+	bldg_obj_types[TYPE_GBIKE     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 150.0, 20.0,  "bike"); // garage bike
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// animals; not room objects
 	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 8.99,  1.0,   "rat"); // can be picked up
