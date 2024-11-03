@@ -1495,6 +1495,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 	bool const player_is_moving(player_pos != last_player_pos);
 	point camera_rot(player_pos);
 	int player_room_ix(-1);
+	bool player_room_no_power(0);
 	float hum_amt(0.0), hum_freq(0.0);
 	
 	if (player_in_this_building) {
@@ -1555,6 +1556,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 					if (dist < sound_dist) {hum_amt = 0.2*(1.0 - dist/sound_dist); hum_freq = 60.0;}
 				}
 			}
+			else if (c->type == TYPE_LIGHT && !c->is_powered()) {player_room_no_power = 1;}
 			//else if (c->type == TYPE_FURNACE) {} // or AC unit?
 			//else if (c->type == TYPE_FRIDGE ) {}
 		}
@@ -1586,7 +1588,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 		maybe_update_tape(player_pos, 0); // end_of_tape=0
 		if (interior->room_geom->fire_manager.get_closest_fire(player_pos, player_radius, player_z1, player_z2)) {player_take_damage(0.006);} // small amount of fire damage
 
-		if (player_room_ix >= 0 /*&& !is_house*/) { // check for sounds; should this be for office buildings only?
+		if (!player_room_no_power && player_room_ix >= 0 /*&& !is_house*/) { // check for sounds; should this be for office buildings only?
 			room_t const &room(get_room(player_room_ix));
 			unsigned const camera_floor(room.get_floor_containing_zval(camera_rot.z, get_window_vspace()));
 			unsigned const room_type(room.get_room_type(camera_floor));
