@@ -820,7 +820,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						if (!is_house) {add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_lobby);}
 					}
 				}
-				else if (!is_house) {r->assign_to(RTYPE_OFFICE, f);} // any unset room in an office building is an office
+				else if (!is_house) { // any unset room in an office building is an office, except for an empty extended basement room
+					if (is_ext_basement && !added_obj) {r->assign_to(RTYPE_UNFINISHED, f); no_whiteboard = 1;}
+					else {r->assign_to(RTYPE_OFFICE, f);}
+				}
 				// else house
 				else if (has_stairs && !is_basement) {} // will be marked as RTYPE_STAIRS below
 				else if ((!added_obj || is_basement) && f == 0 && !added_laundry && !has_fireplace &&
