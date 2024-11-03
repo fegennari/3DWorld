@@ -1076,7 +1076,7 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), second_floor_zval(ground_floor_z1 + floor_spacing);
 	float const base_pipe_radius((is_apt_or_hotel() ? 0.008 : 0.01)*floor_spacing), base_pipe_area(base_pipe_radius*base_pipe_radius);
 	float const merge_dist_sq(merge_dist*merge_dist), max_radius(0.3*get_wall_thickness()), ceil_zval(basement.z2() - get_fc_thickness());
-	bool const inc_extb_conns(has_ext_basement() && !interior->has_backrooms);
+	bool const inc_extb_conns(has_ext_basement() && !has_backrooms_or_mall());
 	bool const inc_basement_wheaters = 1;
 	float extb_pipe_radius(has_pool() ? base_pipe_radius : 0.0); // pools use cold water
 	bool extb_pipe_has_hot(0);

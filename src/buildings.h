@@ -1363,6 +1363,7 @@ struct room_t : public cube_t { // size=56
 	bool inc_half_walls      () const {return (is_hallway || get_office_floorplan() || is_ext_basement());} // hallway, office, or extended basement
 	bool is_parking          () const {return (get_room_type(0) == RTYPE_PARKING  );}
 	bool is_backrooms        () const {return (get_room_type(0) == RTYPE_BACKROOMS);}
+	bool is_mall             () const {return (get_room_type(0) == RTYPE_MALL     );}
 	bool is_retail           () const {return (get_room_type(0) == RTYPE_RETAIL   );}
 	bool is_apt_or_hotel_room() const {return (unit_id > 0);}
 	bool has_room_of_type(room_type type) const;
@@ -1699,8 +1700,8 @@ struct building_interior_t {
 	unsigned gen_room_details_pass=0;
 	int garage_room=-1, ext_basement_hallway_room_id=-1, ext_basement_door_stack_ix=-1, last_active_door_ix=-1, security_room_ix=-1;
 	uint8_t furnace_type=FTYPE_NONE, attic_type=ATTIC_TYPE_RAFTERS;
-	bool door_state_updated=0, is_unconnected=0, ignore_ramp_placement=0, placed_people=0, elevators_disabled=0, attic_access_open=0, has_backrooms=0, elevator_dir=0;
-	bool extb_wall_dim=0, extb_wall_dir=0, conn_room_in_extb_hallway=0, has_sec_hallways=0;
+	bool door_state_updated=0, is_unconnected=0, ignore_ramp_placement=0, placed_people=0, elevators_disabled=0, attic_access_open=0, has_backrooms=0, has_mall=0;
+	bool elevator_dir=0, extb_wall_dim=0, extb_wall_dir=0, conn_room_in_extb_hallway=0, has_sec_hallways=0;
 	uint8_t mens_count=0, womens_count=0; // bathrooms
 	float water_zval=0.0; // for multilevel backrooms and swimming pools
 
@@ -2105,6 +2106,7 @@ struct building_t : public building_geom_t {
 	bool is_single_large_room(int room_ix) const {return (room_ix >= 0 && is_single_large_room(get_room(room_ix)));}
 	bool is_above_retail_area(point const &pos) const;
 	bool is_pos_in_pg_or_backrooms(point const &pos) const;
+	bool has_backrooms_or_mall() const {return (interior && (interior->has_backrooms || interior->has_mall));}
 	point get_retail_upper_stairs_landing_center() const;
 private:
 	void build_nav_graph() const;
@@ -2271,7 +2273,8 @@ private:
 	void add_wall_section_above_pool_room_door(door_stack_t &ds, room_t const &room);
 	unsigned setup_multi_floor_room(extb_room_t &room, door_t const &door, bool wall_dim, bool wall_dir, rand_gen_t &rgen);
 	bool add_ext_basement_rooms_recur(extb_room_t &parent_room, ext_basement_room_params_t &P, float door_width, bool dim, unsigned depth, rand_gen_t &rgen);
-	bool max_expand_underground_room(cube_t &room, bool dim, bool dir, rand_gen_t &rgen) const;
+	bool max_expand_underground_room(cube_t &room, bool dim, bool dir, bool is_mall, rand_gen_t &rgen) const;
+	void add_mall_stores(cube_t &room, bool dim, bool dir, rand_gen_t &rgen);
 	cube_t add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, rand_gen_t &rgen);
 	cube_t add_and_connect_ext_basement_room(extb_room_t &room, ext_basement_room_params_t &P,
 		float door_width, bool dim, bool dir, bool is_end_room, unsigned depth, bool const add_doors[2], rand_gen_t &rgen);
@@ -2418,6 +2421,7 @@ private:
 	void add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 		unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z, light_ix_assign_t &light_ix_assign);
 	void add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t &rooms_to_light);
+	void add_mall_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t &rooms_to_light);
 	void add_missing_backrooms_lights(rand_gen_t rgen, float zval, unsigned room_id, unsigned objs_start, unsigned lights_start,
 		room_object_t const &ref_light, vect_cube_t const &rooms_to_light, light_ix_assign_t &light_ix_assign);
 	void add_sub_room_light(room_object_t light, room_t const &room, bool dim, unsigned objs_start, light_ix_assign_t &light_ix_assign, rand_gen_t &rgen);

@@ -147,7 +147,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	assert(interior);
 	float const ext_wall_pos(basement.d[wall_dim][wall_dir]);
 	float const hallway_len(length_mult*basement.get_sz_dim(wall_dim)), door_width(door_bcube.get_sz_dim(!wall_dim)), hallway_width(1.6*door_width);
-	// Note: misnamed: hallway for houses, but backrooms for offices with parking garages
+	// Note: misnamed: hallway for houses, but may be backrooms for offices with parking garages
 	extb_room_t hallway(basement, 0); // is_hallway=0; will likely be set below
 	set_wall_width(hallway, door_bcube.get_center_dim(!wall_dim), 0.5*hallway_width, !wall_dim);
 	hallway.d[wall_dim][!wall_dir] = ext_wall_pos; // flush with the exterior wall/door
@@ -174,25 +174,41 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	P.rooms.push_back(hallway);
 	hallway.conn_bcube = basement; // make sure the basement is included
 
-	if (!is_house && has_parking_garage && max_expand_underground_room(hallway, wall_dim, wall_dir, rgen)) { // office building with parking garage
-		// currently, the extended basement can only be a network of connected hallways with leaf rooms, or a single large basement room (this case);
-		// if we want to allow both (either a large room connected to a hallway or a large room with hallways coming off of it), we need per-room flags
-		unsigned const num_floors(setup_multi_floor_room(hallway, Door, wall_dim, wall_dir, rgen));
-		hallway.is_hallway      = 0; // should already be set to 0, but this makes it more clear
-		interior->has_backrooms = 1;
+	if (!is_house && has_parking_garage) { // office building with parking garage
+		bool const try_mall_first(rgen.rand_bool());
 
-		if (num_floors > 1) { // lowest level of multilevel rooms has water; no water if there's a single floor
-			float wmin(global_building_params.basement_water_level_min), wmax(global_building_params.basement_water_level_max);
-			if (wmax < wmin) {swap(wmin, wmax);} // user specfied the values backwards? this isn't error checked in the option parsing, so swap the values
+		for (unsigned n = 0; n < 2; ++n) {
+			bool const is_mall((n == 0) == try_mall_first);
+			if (is_mall) continue; // TESTING - remove when malls are working
+			if (!max_expand_underground_room(hallway, wall_dim, wall_dir, is_mall, rgen)) continue;
+			hallway.is_hallway = 0; // should already be set to 0, but this makes it more clear
+			// currently, the extended basement can only be a network of connected hallways with leaf rooms, or a single large basement room (this case);
+			// if we want to allow both (either a large room connected to a hallway or a large room with hallways coming off of it), we need per-room flags
 
-			if (wmax > 0.0) {
-				float water_level((wmin == wmax) ? wmin : rgen.rand_uniform(wmin, wmax)); // can be a single value or a range
-				min_eq(water_level, float(num_floors - 1)); // top floor can't have water
-				if (water_level > 0.0) {interior->water_zval = hallway.z1() + fc_thick + water_level*get_window_vspace();}
+			if (is_mall) {
+				interior->has_mall = 1;
+				// mark as tall room?
+				add_mall_stores(hallway, wall_dim, wall_dir, rgen);
 			}
-		}
+			else { // backrooms, possibly flooded
+				unsigned const num_floors(setup_multi_floor_room(hallway, Door, wall_dim, wall_dir, rgen));
+				interior->has_backrooms = 1;
+
+				if (num_floors > 1) { // lowest level of multilevel rooms has water; no water if there's a single floor
+					float wmin(global_building_params.basement_water_level_min), wmax(global_building_params.basement_water_level_max);
+					if (wmax < wmin) {swap(wmin, wmax);} // user specfied the values backwards? this isn't error checked in the option parsing, so swap the values
+
+					if (wmax > 0.0) {
+						float water_level((wmin == wmax) ? wmin : rgen.rand_uniform(wmin, wmax)); // can be a single value or a range
+						min_eq(water_level, float(num_floors - 1)); // top floor can't have water
+						if (water_level > 0.0) {interior->water_zval = hallway.z1() + fc_thick + water_level*get_window_vspace();}
+					}
+				}
+			}
+			break; // done/success
+		} // for n
 	}
-	else { // recursively add rooms connected to this hallway in alternating dimensions
+	if (hallway.is_hallway) { // still a hallway, not a larger underground room; recursively add rooms connected to this hallway in alternating dimensions
 		// Note: if we get here for office buildings and global_building_params.max_ext_basement_room_depth == 0, this will only generate the hallway
 		if (add_ext_basement_rooms_recur(hallway, P, door_width, !wall_dim, 1, rgen)) { // dept=1, since we already added a hallway
 			end_ext_basement_hallway(hallway, P.rooms[1].conn_bcube, P, door_width, wall_dim, wall_dir, 0, rgen);
@@ -205,6 +221,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	assert(P.rooms.size() >= 2); // must have at least basement and primary hallway
 	interior->place_exterior_room(hallway, wall_area, fc_thick, wall_thickness, P, basement_part_ix, 0, hallway.is_hallway); // use basement part_ix; num_lights=0
 	if (interior->has_backrooms) {rooms.back().assign_all_to(RTYPE_BACKROOMS);} // make it backrooms
+	else if (interior->has_mall) {rooms.back().assign_all_to(RTYPE_MALL     );} // make it a mall concourse
 	rooms.reserve(rooms.size() + (P.rooms.size()-2) + 1); // allocate an extra room for a possible connector to an adjacent building
 
 	for (auto r = P.rooms.begin()+2; r != P.rooms.end(); ++r) { // skip basement and primary hallway
@@ -222,7 +239,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	} // for stairs
 	maybe_assign_extb_room_as_swimming(rgen);
 
-	if (!interior->has_backrooms && global_building_params.add_basement_tunnels) { // maybe add tunnel connections to hallways
+	if (!has_backrooms_or_mall() && global_building_params.add_basement_tunnels) { // maybe add tunnel connections to hallways
 		for (unsigned r = interior->ext_basement_hallway_room_id; r < rooms.size(); ++r) {try_place_tunnel_at_extb_hallway_end(rooms[r], r, rgen);}
 	}
 	return 1;
@@ -516,9 +533,11 @@ bool building_t::add_ext_basement_rooms_recur(extb_room_t &parent_room, ext_base
 	return was_added;
 }
 
-bool building_t::max_expand_underground_room(cube_t &room, bool dim, bool dir, rand_gen_t &rgen) const {
+// is_mall=0: backrooms, is_mall=1: mall concourse
+bool building_t::max_expand_underground_room(cube_t &room, bool dim, bool dir, bool is_mall, rand_gen_t &rgen) const {
 	float const floor_spacing(get_window_vspace()), step_len(1.0*floor_spacing), room_len(room.get_sz_dim(dim));
-	float const room_width_min(0.5*room_len), room_sz_max(2.0*room_len);
+	float const room_width_min(is_mall ? 4.0*floor_spacing : 0.5*room_len), room_width_max(is_mall ? max(8.0*floor_spacing, 0.25*room_len) : 2.0*room_len);
+	float const room_len_min((is_mall ? 2.0 : 1.0)*room_len), room_len_max((is_mall ? 5.0 : 2.0)*room_len);
 	bool cant_expand[4] = {};
 	cant_expand[2*dim + (!dir)] = 1; // can't expand back into the basement where we came from
 	unsigned const start_ix(rgen.rand() & 3); // start with a random side
@@ -533,7 +552,7 @@ bool building_t::max_expand_underground_room(cube_t &room, bool dim, bool dir, r
 			bool const edim(d >> 1), edir(d & 1);
 			cube_t exp_slice(exp_room);
 			exp_slice.d[edim][ edir] += (edir ? 1.0 : -1.0)*step_len; // move the edge outward
-			if (exp_slice.get_sz_dim(edim) > room_sz_max) {cant_expand[d] = 1; continue;} // too large
+			if (exp_slice.get_sz_dim(edim) > ((edim == dim) ? room_len_max : room_width_max)) {cant_expand[d] = 1; continue;} // too large
 			exp_slice.d[edim][!edir]  = exp_room.d[edim][edir]; // shrink to zero area since we've already checked exp_room
 			assert(exp_slice.is_strictly_normalized());
 			if (!is_basement_room_under_mesh_not_int_bldg(exp_slice)) {cant_expand[d] = 1; continue;} // can't expand this edge any more
@@ -543,22 +562,28 @@ bool building_t::max_expand_underground_room(cube_t &room, bool dim, bool dir, r
 		if (!any_valid) break;
 	} // end while
 	assert(exp_room.contains_cube(room));
-	if (exp_room.get_sz_dim(!dim) < room_width_min) return 0; // room is too narrow, make it a hallway instead
+	if (exp_room.get_sz_dim(!dim) < room_width_min) return 0; // room is too narrow, make it a hallway or mall concourse instead
+	if (exp_room.get_sz_dim( dim) < room_len_min  ) return 0; // room is too short, make it a hallway or backrooms instead
 	room = exp_room;
-	float const max_depth(room.z2() - get_max_sea_level());
-	unsigned const max_num_floors(max(1U, min(global_building_params.max_ext_basement_room_depth, unsigned(floor(max_depth/floor_spacing)))));
-	
-	if (max_num_floors > 1) { // maybe expand downward for additional floors
-		unsigned const num_floors_add(rgen.rand() % max_num_floors);
+	unsigned num_floors_add(0);
 
-		for (unsigned n = 0; n < num_floors_add; ++n) {
-			cube_t cand(room);
-			set_cube_zvals(cand, room.z1()-floor_spacing, room.z1()); // one floor below
-			if (check_buildings_cube_coll(cand, 0, 1, this)) break; // check for extended basement and tunnels below; xy_only=0, inc_basement=1, exclude ourself
-			room.z1() = cand.z1();
-		}
+	if (is_mall) {num_floors_add = 0;} // mall should be 2 floors, but is left at 1 for testing; should add a new config option
+	else {
+		float const max_depth(room.z2() - get_max_sea_level());
+		unsigned const max_num_floors(max(1U, min(global_building_params.max_ext_basement_room_depth, unsigned(floor(max_depth/floor_spacing)))));
+		if (max_num_floors > 1) {num_floors_add = rgen.rand() % max_num_floors;} // maybe expand downward for additional floors
+	}
+	for (unsigned n = 0; n < num_floors_add; ++n) {
+		cube_t cand(room);
+		set_cube_zvals(cand, room.z1()-floor_spacing, room.z1()); // one floor below
+		if (check_buildings_cube_coll(cand, 0, 1, this)) break; // check for extended basement and tunnels below; xy_only=0, inc_basement=1, exclude ourself
+		room.z1() = cand.z1();
 	}
 	return 1;
+}
+
+void building_t::add_mall_stores(cube_t &room, bool dim, bool dir, rand_gen_t &rgen) {
+	// TODO
 }
 
 cube_t building_t::add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, rand_gen_t &rgen) {
@@ -1299,6 +1324,10 @@ void building_t::add_sub_room_light(room_object_t light, room_t const &room, boo
 		light.obj_id = light_ix_assign.get_ix_for_light(light);
 		interior->room_geom->objs.push_back(light);
 	}
+}
+
+void building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t &rooms_to_light) {
+	// TODO
 }
 
 bool building_room_geom_t::cube_int_backrooms_walls(cube_t const &c) const { // used for door opening collision checks

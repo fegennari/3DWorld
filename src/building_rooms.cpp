@@ -233,7 +233,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_unfinished    (init_rtype_f0 == RTYPE_UNFINISHED); //  // unfinished room, for example in a non-cube shaped office building
 		bool const is_swim_pool_room(init_rtype_f0 == RTYPE_SWIM); // room with a swimming pool
 		bool const is_retail_room   (init_rtype_f0 == RTYPE_RETAIL);
-		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(r->is_backrooms()), is_apt_or_hotel_room(r->is_apt_or_hotel_room());
+		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(r->is_backrooms()), is_mall(r->is_mall()), is_apt_or_hotel_room(r->is_apt_or_hotel_room());
 		bool const residential_room(is_house || (residential && !r->is_hallway && !is_basement && !is_retail_room));
 		room_obj_shape const light_shape(residential_room ? SHAPE_CYLIN : SHAPE_CUBE);
 		float light_density(0.0), light_size(def_light_size); // default size for houses
@@ -255,6 +255,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		else if (is_backrooms) { // large office basement room
 			light_density = 0.55;
 			light_size   *= 0.75; // smaller
+		}
+		else if (is_mall) { // mall concourse
+			light_density = 0.35;
 		}
 		else if (is_retail_room) { // more lights in the shorter dim
 			light_size *= 0.7*pow(double(retail_floor_levels), 0.4); // smaller; increase size for taller rooms
@@ -296,6 +299,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		else if (residential_room)  {color = get_light_color_temp(0.4);} // house - yellowish
 		else if (is_parking_garage) {color = get_light_color_temp_range(0.2, 0.5, rgen);} // parking garage - yellow-white
 		else if (is_backrooms)      {color = get_light_color_temp_range(0.2, 0.4, rgen);} // backrooms - yellow-white
+		else if (is_mall)           {color = get_light_color_temp(0.5);} // mall concourse - white
 		else if (r->is_office)      {color = get_light_color_temp(0.6);} // office - blueish
 		else if (r->is_hallway)     {color = get_light_color_temp(0.6);} // office building hallway - blueish
 		else                        {color = get_light_color_temp(0.5);} // small office - white
@@ -316,8 +320,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				assert(r->interior == 1);
 				add_parking_garage_objs(rgen, *r, room_center.z, room_id, f, num_floors, nx, ny, light_delta_z, light_ix_assign);
 			}
-			else if (is_backrooms) { // should be single floor only
+			else if (is_backrooms) {
 				add_backrooms_objs(rgen, *r, room_center.z, room_id, f, rooms_to_light);
+			}
+			else if (is_mall) {
+				add_mall_objs(rgen, *r, room_center.z, room_id, f, rooms_to_light);
 			}
 			else if (is_retail_room) {
 				add_retail_room_objs(rgen, *r, room_center.z, room_id, light_ix_assign);
@@ -342,8 +349,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			else if (r->is_sec_bldg) {is_lit = 0;} // garage and shed lights start off
 			else {
-				// 50% of lights are on, 75% for top of stairs, 100% for non-basement hallways, 100% for parking garages and backrooms
-				is_lit  = ((r->is_hallway && !is_basement) || is_parking_garage || is_backrooms || is_retail_room || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0));
+				// 50% of lights are on, 75% for top of stairs, 100% for non-basement hallways, 100% for parking garages, backrooms, and malls
+				is_lit  = ((r->is_hallway && !is_basement) || is_parking_garage || is_backrooms || is_mall || is_retail_room || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0));
 				is_lit |= (r->is_ext_basement_conn() || (r->is_ext_basement() && r->intersects(get_basement()))); // ext basement conn or primary hallway
 
 				if (!is_lit) { // check people and set is_lit if anyone is in this floor of this room
@@ -362,7 +369,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			set_cube_zvals(light, (light_z2 - light_thick), light_z2);
 			valid_lights.clear();
 
-			if (num_lights > 1) { // r->is_hallway or ext basement
+			if (num_lights > 1 && !is_backrooms && !is_mall) { // r->is_hallway or ext basement
 				// hallway: place a light on each side (of the stairs if they exist), and also between stairs and elevator if there are both
 				if (r->is_hallway && r->has_elevator && r->has_stairs == 255) {max_eq(num_lights, 4U);} // hall with elevator + stairs on all floors; 4+ lights
 				min_eq(num_lights, 6U);
@@ -409,7 +416,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					}
 				}
 			}
-			else if (nx > 1 || ny > 1) { // office, parking garage, or backrooms with multiple lights
+			else if (nx > 1 || ny > 1) { // office, parking garage, backrooms, or mall with multiple lights
 				vector3d const shrink(0.5*light.dx()*sqrt((nx - 1)/nx), 0.5*light.dy()*sqrt((ny - 1)/ny), 0.0);
 				float xstep(dx/nx), ystep(dy/ny), xs(-0.5f*dx + 0.5*xstep), ys(-0.5f*dy + 0.5*ystep);
 
@@ -454,7 +461,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (has_bcube_int(l, interior->stairwells)) {l_flags |= RO_FLAG_TOS;} // assumes light at top of stairs, since other cases are illegal
 				room_object_t light_obj(l, TYPE_LIGHT, room_id, dim, dir, l_flags, light_amt, light_shape, color);
 				light_obj.obj_id = light_ix_assign.get_ix_for_light(l, walls_not_shared);
-				unsigned const flicker_mod(is_parking_garage ? 50 : (is_ext_basement ? 20 : 0)); // 2% chance for parking garage, 5% chance for ext basement
+				unsigned const flicker_mod(is_parking_garage ? 50 : ((is_ext_basement && !is_mall) ? 20 : 0)); // 2% chance parking garage, 5% chance ext basement/backrooms
 				
 				if (flicker_mod > 0 && (((rgen_lights.rand() + 3*f)%flicker_mod) == 13)) {light_obj.flags |= RO_FLAG_BROKEN;} // maybe make this a flickering light
 				else if (is_ext_basement && valid_lights.size() == 1 && (rgen_lights.rand() & 7) == 0) { // broken ext basement light; not for hallways with multiple lights
@@ -473,7 +480,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				add_missing_backrooms_lights(rgen, room_center.z, room_id, floor_objs_start, objs_start_inc_lights, ref_light, rooms_to_light, light_ix_assign);
 				continue; // nothing else to add
 			}
-			if (is_parking_garage || is_retail_room) continue; // generated above, done; no outlets or light switches
+			if (is_parking_garage || is_retail_room || is_mall) continue; // generated above, done; no outlets or light switches
 			if (is_unfinished) continue; // no objects for now; if adding objects later, need to make sure they stay inside the building bounds
 			uint64_t const floor_mask(uint64_t(1) << f);
 			bool const is_garage_or_shed(r->is_garage_or_shed(f));
