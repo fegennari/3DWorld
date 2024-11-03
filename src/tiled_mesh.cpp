@@ -59,7 +59,7 @@ vector<clear_area_t> tile_smaps_to_clear;
 
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp, tt_triplanar_tex, use_grass_tess;
 extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava, tt_fire_button_down, flashlight_on, camera_in_building, rotate_trees;
-extern bool player_in_int_elevator;
+extern bool player_in_int_elevator, player_in_mall;
 extern unsigned grass_density, max_unique_trees, shadow_map_sz, erosion_iters_tt, num_rnd_grass_blocks, tiled_terrain_gen_heightmap_sz;
 extern unsigned num_birds_per_tile, num_fish_per_tile, num_bflies_per_tile, room_geom_mem;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees, window_width, window_height, player_in_basement;
@@ -103,7 +103,7 @@ float get_tt_fog_scale() {
 	// lower fog distance when rainy/cloudy; very low when player is in the extended basement
 	static float fog_scale(1.0); // lower is denser fog
 	static int last_update_frame(0);
-	float const target_fog_scale((player_in_basement == 3) ? 0.01 : (is_cloudy ? 0.25 : 1.0));
+	float const target_fog_scale((player_in_basement == 3 && !player_in_mall) ? 0.01 : (is_cloudy ? 0.25 : 1.0));
 	float const change_rate(camera_in_building ? 0.1/(fog_scale*fog_scale) : 1.0); // change exponentially when inside a building
 	interpolate_over_time(fog_scale, target_fog_scale, change_rate, last_update_frame);
 	return fog_scale;

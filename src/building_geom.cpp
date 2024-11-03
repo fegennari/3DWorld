@@ -434,7 +434,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 }
 
 void building_t::setup_damage_vals() {
-	if (interior && interior->has_mall) return; // no damage for malls
+	if (has_mall()) return; // no damage for malls
 	point const center(bcube.get_cube_center());
 	float const floor_spacing(get_window_vspace());
 	float const water_rand_val(fract((center.x + center.y + center.z)/floor_spacing)), crack_rand_val(fract(1.5*(center.x + center.y + center.z)/floor_spacing));

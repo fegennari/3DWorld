@@ -1841,6 +1841,7 @@ struct building_t : public building_geom_t {
 	bool has_people   () const {return (interior && !interior->people.empty());}
 	bool has_retail   () const {return (retail_floor_levels > 0);}
 	bool has_tall_retail() const {return (retail_floor_levels > 1);}
+	bool has_mall       () const {return (interior && interior->has_mall);}
 	bool is_apartment   () const {return (btype == BTYPE_APARTMENT);}
 	bool is_hotel       () const {return (btype == BTYPE_HOTEL);}
 	bool is_apt_or_hotel() const {return (is_apartment() || is_hotel());}
@@ -1937,6 +1938,7 @@ struct building_t : public building_geom_t {
 	bool point_under_attic_roof(point const &pos, vector3d *const cnorm=nullptr) const;
 	bool point_in_attic(point const &pos, vector3d *const cnorm=nullptr) const;
 	bool cube_in_attic(cube_t const &c) const;
+	bool point_in_mall(point const &pos) const {return (has_mall() && point_in_extended_basement_not_basement(pos));}
 	bool check_point_xy_in_part(point const &pos) const;
 	bool player_can_see_outside() const;
 	void set_building_colors(building_colors_t &bcolors) const;

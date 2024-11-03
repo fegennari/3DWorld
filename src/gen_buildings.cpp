@@ -23,7 +23,8 @@ unsigned const NO_SHADOW_WHITE_TEX = BLACK_TEX; // alias to differentiate shadow
 unsigned const SHADOW_ONLY_TEX     = RED_TEX;   // alias to differentiate shadow only vs. other      untextured objects
 
 bool camera_in_building(0), interior_shadow_maps(0), player_is_hiding(0), player_in_unlit_room(0), player_in_walkway(0), player_in_int_elevator(0), player_on_house_stairs(0);
-bool building_has_open_ext_door(0), sec_camera_shadow_mode(0), player_in_ww_elevator(0), player_in_skyway(0), player_on_moving_ww(0), player_on_escalator(0), player_in_tunnel(0);
+bool building_has_open_ext_door(0), sec_camera_shadow_mode(0), player_in_ww_elevator(0), player_in_skyway(0), player_on_moving_ww(0), player_on_escalator(0);
+bool player_in_tunnel(0), player_in_mall(0);
 int player_in_basement(0); // 0=no, 1=below ground level, 2=in basement and not on stairs, 3=in extended basement
 int player_in_closet  (0); // uses flags RO_FLAG_IN_CLOSET (player in closet), RO_FLAG_LIT (closet light is on), RO_FLAG_OPEN (closet door is open)
 int player_in_water   (0); // 0=no, 1=standing in water, 2=head underwater
@@ -422,7 +423,7 @@ void set_interior_lighting(shader_t &s, bool have_indir) {
 		ambient_scale = ((!have_indir && player_in_dark_room()) ? 0.1 : 0.0); // no ambient for indir; slight ambient for closed closet/windowless room with light off
 		diffuse_scale = hemi_scale = 0.0; // no diffuse or hemispherical from sun/moon
 	}
-	else if (player_in_basement) {
+	else if (player_in_basement && !player_in_mall) {
 		s.add_uniform_float("SHADOW_LEAKAGE", 0.0); // make basements darker and avoid lights leaking through parking garage ceilings
 	}
 	s.add_uniform_float("diffuse_scale",       diffuse_scale);
@@ -3489,7 +3490,7 @@ public:
 		bool const ref_glass_floor(reflection_pass & REF_PASS_GLASS_FLOOR);
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
 		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
-		bool have_windows(0), have_wind_lights(0), have_interior(0), is_city_lighting_setup(0), this_frame_camera_in_building(0);
+		bool have_windows(0), have_wind_lights(0), have_interior(0), is_city_lighting_setup(0), this_frame_camera_in_building(0), this_frame_player_in_mall(0);
 		int this_frame_player_in_basement(0), this_frame_player_in_water(0), this_frame_player_in_attic(0);
 		unsigned max_draw_ix(0);
 		shader_t s, amask_shader, holes_shader, city_shader;
@@ -3732,6 +3733,7 @@ public:
 						float const basement_z_adj(2.0*BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness()); // adjust to prevent problems when camera is close to the plane
 						this_frame_camera_in_building = 1;
 						this_frame_player_in_basement =   b.check_player_in_basement(camera_bs - basement_z_adj*plus_z); // set once
+						this_frame_player_in_mall     =   b.point_in_mall(camera_bs);
 						this_frame_player_in_attic    =  (b.point_in_attic(camera_bs) ? (b.has_attic_window ? 1 : 2) : 0);
 						this_frame_player_in_water    =   b.point_in_water_area(camera_bs, 1); // full_room_height=1
 						if (this_frame_player_in_water && b.point_in_water_area(camera_bs, 0)) {this_frame_player_in_water = 2;} // full_room_height=0; test for underwater
@@ -3773,6 +3775,7 @@ public:
 			if (!reflection_pass) { // update once; non-interior buildings (such as city buildings) won't update this
 				camera_in_building = this_frame_camera_in_building;
 				player_in_basement = this_frame_player_in_basement;
+				player_in_mall     = this_frame_player_in_mall;
 				player_in_attic    = this_frame_player_in_attic;
 				player_in_water    = this_frame_player_in_water;
 				building_has_open_ext_door = !ext_door_draw.empty();
