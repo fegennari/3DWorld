@@ -3393,7 +3393,7 @@ public:
 			for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 				building_t &b(get_building(bi->ix));
 				if (!b.has_room_geom()) continue; // no interior room geom, skip
-				if (!lights_bcube.intersects_xy(b.bcube)) continue; // not within light volume (too far from camera)
+				if (!lights_bcube.intersects_xy(b.bcube) && &b != player_building) continue; // not within light volume (too far from camera); allow if player building (extb)
 				bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_bs, 0.0, points, 1, 1, 0)); // inc_attic=1, inc_ext_basement=1, inc_roof_acc=0
 				if (sec_camera_mode && !camera_in_this_building) continue; // security cameras only show lights in their building
 				// limit room lights to when the player is in a building because we can restrict them to a single floor, otherwise it's too slow
