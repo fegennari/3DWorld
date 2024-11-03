@@ -309,7 +309,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		region.d[dim][!dir] = back_wall_pos; // wall behind the machine
 		assert(region.is_strictly_normalized());
 
-		if ((is_cylin || has_gap) && cylin_dim != dim) { // if there's a gap between the machine and the wall; not for cylinders facing the wall
+		if ((is_cylin || has_gap) && cylin_dim != unsigned(dim)) { // if there's a gap between the machine and the wall; not for cylinders facing the wall
 			// add pipe(s) connecting to back wall in {dim, !dir} or ceiling
 			unsigned const num_pipes((rgen.rand() % 4) + 1); // 1-4
 			pipe_ends.clear();
@@ -455,7 +455,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 
 					for (unsigned d = 0; d < 3; ++d) {
 						if (d == unsigned(fdim)) {top_pos[d] = (is_cylin ? part.get_center_dim(fdim) : face_edge);} // attach to surface, or centerline for cylinder
-						else if (is_cylin && (/*d != cylin_dim*/fdim == cylin_dim && d == 2)) {top_pos[d] = part.get_center_dim(d);} // centered on the side of cylinder part
+						else if (is_cylin && (/*d != cylin_dim*/unsigned(fdim) == cylin_dim && d == 2)) {top_pos[d] = part.get_center_dim(d);} // centered on side of cylinder part
 						else {top_pos[d] = rgen.rand_uniform(part.d[d][0]+edge_space, part.d[d][1]-edge_space);} // chose a random attachment point
 					}
 					point bend_pos(top_pos);
