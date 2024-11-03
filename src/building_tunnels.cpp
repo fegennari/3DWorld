@@ -306,6 +306,7 @@ void building_t::add_tunnel_objects(rand_gen_t rgen) {
 	for (tunnel_seg_t &t : interior->tunnels) {
 		if (t.room_conn) continue; // nothing added to these tunnels
 		bool const dim(t.dim);
+		float const lo_end(t.bcube_draw.d[dim][0]), hi_end(t.bcube_draw.d[dim][1]);
 		cube_t shaft;
 
 		if (!t.conns_added && t.get_length() > 4.0*t.radius) {
@@ -341,7 +342,7 @@ void building_t::add_tunnel_objects(rand_gen_t rgen) {
 
 			for (unsigned n = 0; n < num_pipes; ++n) {
 				float const radius(rgen.rand_uniform(0.1, 0.3)*t.radius), end_pad(2.0*radius);
-				float const pos(rgen.rand_uniform(t.bcube_draw.d[dim][0]+end_pad, t.bcube_draw.d[dim][1]-end_pad));
+				float const pos(rgen.rand_uniform(lo_end+end_pad, hi_end-end_pad));
 				bool blocked(0);
 
 				for (unsigned N = 0; N < num_avoid; ++N) {
@@ -371,7 +372,7 @@ void building_t::add_tunnel_objects(rand_gen_t rgen) {
 
 		for (unsigned n = 0; n < num_pipes; ++n) {
 			float const radius(0.05*t.radius*rgen.rand_uniform(0.5, 1.0));
-			float const v1(t.p[0][dim] + 2.0*radius), v2(t.p[1][dim] - 2.0*radius);
+			float const v1(lo_end + 2.0*radius), v2(hi_end - 2.0*radius);
 			if (v1 >= v2) continue; // too short a tunnel; shouldn't happen
 			float const pos(rgen.rand_uniform(v1, v2)), height(t.radius*rgen.rand_uniform(0.7, 0.9));
 			if (t.has_gate && fabs(pos - t.gate_pos) < 2.0*radius) continue; // too close to the gate
@@ -388,7 +389,7 @@ void building_t::add_tunnel_objects(rand_gen_t rgen) {
 		for (unsigned n = 0; n < num_webs; ++n) {
 			bool const dir(rgen.rand_bool()); // side of the tunnel
 			float const width(0.65*t.radius*rgen.rand_uniform(0.6, 1.0)), height(0.65*t.radius*rgen.rand_uniform(0.6, 1.0)), hthick(0.01*t.radius);
-			float const pos(rgen.rand_uniform(t.p[0][dim], t.p[1][dim])), edge_shift(0.16*t.radius);
+			float const pos(rgen.rand_uniform(lo_end, hi_end)), edge_shift(0.16*t.radius);
 			float const edge(t.bcube.d[!dim][dir] + (dir ? -1.0 : 1.0)*edge_shift), top(t.bcube.z2() - edge_shift);
 			cube_t web;
 			set_cube_zvals(web, top-height, top);
