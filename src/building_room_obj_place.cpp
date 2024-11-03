@@ -2509,12 +2509,15 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		exclude.back().union_with_cube(ds.get_open_door_bcube_for_room(room)); // include open door
 	}
 	// add shelves on walls (avoiding any door(s)), and have crates avoid them
+	bool const has_bike(is_int_garage && objs.size() >= 2 && objs[objs.size()-2].type == TYPE_GBIKE); // previously added bike, then blocker
+	unsigned const rgen_mod(is_int_garage ? (has_bike ? 5 : 3) : 2); // 50% of the walls, 67% for interior garages, 80% if there's a bike
+
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		if (room_bounds.get_sz_dim( dim) < 6.0*shelf_depth  ) continue; // too narrow to add shelves in this dim
 		if (room_bounds.get_sz_dim(!dim) < 4.0*shelf_shorten) continue; // too narrow in the other dim
 
 		for (unsigned dir = 0; dir < 2; ++dir) {
-			if (is_int_garage ? ((rgen.rand()%3) == 0) : rgen.rand_bool()) continue; // only add shelves to 50% of the walls, 67% for interior garages
+			if ((rgen.rand()%rgen_mod) == 0) continue; // only add shelves to some walls
 			
 			if (is_garage_or_shed) {
 				// garage or shed - don't place shelves in front of door, but allow them against windows; basement - don't place against basement door
