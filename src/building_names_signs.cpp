@@ -36,10 +36,9 @@ namespace pixel_city {
 }
 
 string choose_business_name(rand_gen_t rgen, building_type_t btype) {
-	if (btype == BTYPE_APARTMENT) {return gen_random_name(rgen, 4) + " Apartments";}
-	if (btype == BTYPE_HOTEL    ) {return gen_random_name(rgen, 4) + " Hotel"     ;}
-	if (btype == BTYPE_HOSPITAL ) {return gen_random_name(rgen, 4) + " Hospital"  ;}
-	if (rgen.rand_bool()) {return pixel_city::gen_company_name(rgen);}
+	assert(btype < NUM_BUILDING_TYPES);
+	if (btype >= BTYPE_APARTMENT) {return gen_random_name(rgen, 4) + " " + btype_names[btype];}
+	if (rgen.rand_bool())         {return pixel_city::gen_company_name(rgen);}
 	int const v(rgen.rand()%10);
 
 	if (v == 0) { // 3 letter acronym
@@ -318,6 +317,9 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 		} // for d
 		// what about placing hospital signs with arrows at intersections?
 	} // end hospital
+	else if (btype == BTYPE_PARKING) {
+		// add parking signs
+	}
 	if (name.empty())  return; // no company name; shouldn't get here
 	if (num_sides & 1) return; // odd number of sides, may not be able to place a sign correctly (but maybe we can check this with a collision test with conn?)
 	if (half_offset || flat_side_amt != 0.0 || alt_step_factor != 0.0 || start_angle != 0.0) return; // not a shape that's guanrateed to reach the bcube edge
