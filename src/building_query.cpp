@@ -2381,7 +2381,7 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 	room_object const type(c.type);
 	if (c.is_round() || c.is_floor_clutter()) {non_cubes.push_back(c);}
 	else if (type == TYPE_RAILING || type == TYPE_RAMP || type == TYPE_BALCONY || type == TYPE_POOL_LAD || type == TYPE_OFF_CHAIR || type == TYPE_BAR_STOOL ||
-		type == TYPE_LAVALAMP || type == TYPE_WFOUNTAIN || type == TYPE_INT_LADDER || type == TYPE_MACHINE || type == TYPE_CONF_PHONE)
+		type == TYPE_LAVALAMP || type == TYPE_WFOUNTAIN || type == TYPE_INT_LADDER || type == TYPE_MACHINE || type == TYPE_CONF_PHONE || type == TYPE_XFORMER)
 	{
 		non_cubes.push_back(c); // non-cubes; bar stools are close, should they be included?
 		// allow walking on the floor above a parking garage ramp if there's no cutout; shrink ramp bcube to the ceiling of the top floor of the parking garage

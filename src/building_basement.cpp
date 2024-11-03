@@ -203,9 +203,11 @@ bool building_t::add_office_utility_objs(rand_gen_t rgen, room_t const &room, fl
 	for (unsigned n = 0; n < num_water_heaters; ++n) {add_furnace_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);}
 	unsigned const furnaces_end(objs.size());
 	cube_t place_area(get_walkable_room_bounds(room));
-	place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6); // place janitorial sink
+	float const floor_spacing(get_window_vspace()), tzval(zval - 0.02*floor_spacing); // transformer is slightly below floor level
+	place_model_along_wall(OBJ_MODEL_SINK,       TYPE_SINK,    room, 0.45, rgen, zval,  room_id, tot_light_amt, place_area, objs_start, 0.6); // place janitorial sink
+	place_model_along_wall(OBJ_MODEL_SUBSTATION, TYPE_XFORMER, room, 0.40, rgen, tzval, room_id, tot_light_amt, place_area, objs_start, 0.0, 4, 0, WHITE, 0, 0, 0, 1); // sideways
 	// add breaker panel
-	float const floor_spacing(get_window_vspace()), floor_height(floor_spacing - 2.0*get_fc_thickness()), ceil_zval(zval + get_floor_ceil_gap());
+	float const floor_height(floor_spacing - 2.0*get_fc_thickness()), ceil_zval(zval + get_floor_ceil_gap());
 	float const bp_hwidth(rgen.rand_uniform(0.15, 0.25)*(is_house ? 0.7 : 1.0)*floor_height), bp_hdepth(rgen.rand_uniform(0.05, 0.07)*(is_house ? 0.5 : 1.0)*floor_height);
 	
 	if (bp_hwidth < 0.25*min(room.dx(), room.dy())) { // if room is large enough

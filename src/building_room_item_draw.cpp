@@ -1529,6 +1529,7 @@ int room_object_t::get_model_id() const { // Note: first 8 bits is model ID, las
 	assert(type >= TYPE_TOILET);
 	if (type == TYPE_MONITOR) return OBJ_MODEL_TV; // monitor has same model as TV
 	if (type == TYPE_GBIKE  ) return OBJ_MODEL_BICYCLE; // same model as city bicycle
+	if (type == TYPE_XFORMER) return OBJ_MODEL_SUBSTATION; // same model as city substation
 	int id((int)type + OBJ_MODEL_TOILET - TYPE_TOILET);
 	if (type == TYPE_HANGER || type == TYPE_CLOTHES || type == TYPE_PLANT_MODEL) {id += ((int)item_flags << 8);} // choose a sub_model_id for these types using bits 8-15
 	return id;
@@ -1702,7 +1703,7 @@ float get_ao_shadow(room_object_t const &c, bool enable_indir) {
 	if (c.type == TYPE_BED) {return ((c.taken_level > 2) ? 0.35 : 0.5);} // reduced AO when the mattress has been taken and light gets through the slats
 	if (c.type == TYPE_BCASE || c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND || c.type == TYPE_COUCH || c.type == TYPE_CONF_TABLE) return 0.75; // dense shadow
 	if (c.type == TYPE_SINK || c.type == TYPE_TOILET || c.type == TYPE_STALL) return 0.25; // light shadow
-	if (c.type == TYPE_CHAIR || c.type == TYPE_DESK || c.type == TYPE_RDESK || c.type == TYPE_POOL_TABLE || c.type == TYPE_MACHINE) return 0.5; // medium shadow
+	if (c.type == TYPE_CHAIR || c.type == TYPE_DESK || c.type == TYPE_RDESK || c.type == TYPE_POOL_TABLE || c.type == TYPE_MACHINE || c.type == TYPE_XFORMER) return 0.5; // medium shadow
 	return 0.0; // no shadow
 }
 
