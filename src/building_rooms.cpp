@@ -238,7 +238,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		room_obj_shape const light_shape(residential_room ? SHAPE_CYLIN : SHAPE_CUBE);
 		float light_density(0.0), light_size(def_light_size); // default size for houses
 		unsigned const room_objs_start(objs.size());
-		unsigned nx(1), ny(1); // number of lights in X and Y for this room
+		unsigned nx(1), ny(1), min_num_lights(0); // number of lights in X and Y for this room
 
 		if (!is_cube()) { // somewhat more lights for non-cube shaped building pie slices
 			light_density = 0.4;
@@ -279,6 +279,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		if (light_density > 0.0) { // uniform 2D grid of lights
 			nx = max(1U, unsigned(light_density*dx/window_vspacing));
 			ny = max(1U, unsigned(light_density*dy/window_vspacing));
+		}
+		// hallway: place a light on each side (of the stairs if they exist), and also between stairs and elevator if there are both
+		if (r->is_hallway && r->has_elevator && r->has_stairs == 255) { // hall with elevator + stairs on all floors
+			min_num_lights = 5; // 5+ lights, but slightly smaller
+			light_size    *= 0.75;
 		}
 		float const light_val(22.0*light_size);
 		r->light_intensity = light_val*light_val/r->get_area_xy(); // average for room, unitless; light surface area divided by room surface area with some fudge constant
@@ -370,8 +375,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			valid_lights.clear();
 
 			if (num_lights > 1 && !is_backrooms && !is_mall) { // r->is_hallway or ext basement
-				// hallway: place a light on each side (of the stairs if they exist), and also between stairs and elevator if there are both
-				if (r->is_hallway && r->has_elevator && r->has_stairs == 255) {max_eq(num_lights, 4U);} // hall with elevator + stairs on all floors; 4+ lights
+				max_eq(num_lights, min_num_lights);
 				min_eq(num_lights, 6U);
 				float const offsets[6] = {0.0, -0.2, -0.3, -0.36, -0.4, -0.43}, steps[6] = {0.0, 0.4, 0.3, 0.24, 0.2, 0.172}; // indexed by num_lights-1
 				float const hallway_len(r->get_sz_dim(light_dim));
