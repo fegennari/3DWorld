@@ -359,6 +359,8 @@ struct building_lights_manager_t : public city_lights_manager_t {
 		//highres_timer_t timer("Building Dlights Setup"); // 1.9/1.9
 		float const light_radius(0.1*light_radius_scale*get_tile_smap_dist()); // distance from the camera where lights are drawn
 		if (!begin_lights_setup(xlate, light_radius, dl_sources)) return;
+		// include the building and it's extended basement and underground rooms in the lights_bcube; needed for malls
+		if (player_building != nullptr) {lights_bcube.union_with_cube_xy(player_building->get_bcube_inc_extensions());}
 		// no room lights if player is hiding in a closed closet/windowless room with light off (prevents light leakage)
 		if (sec_camera_mode || !player_in_dark_room()) {add_building_interior_lights(xlate, lights_bcube, sec_camera_mode);}
 		if (flashlight_on && !sec_camera_mode) {add_player_flashlight(0.12);} // add player flashlight, even when outside of building so that flashlight can shine through windows

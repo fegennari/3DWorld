@@ -301,13 +301,13 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		// select light color for this room
 		colorRGBA color;
 		if (r->is_ext_basement_conn()) {color = RED;}
-		else if (residential_room)  {color = get_light_color_temp(0.4);} // house - yellowish
+		else if (residential_room)  {color = get_light_color_temp(0.40);} // house - yellowish
 		else if (is_parking_garage) {color = get_light_color_temp_range(0.2, 0.5, rgen);} // parking garage - yellow-white
 		else if (is_backrooms)      {color = get_light_color_temp_range(0.2, 0.4, rgen);} // backrooms - yellow-white
-		else if (is_mall)           {color = get_light_color_temp(0.5);} // mall concourse - white
-		else if (r->is_office)      {color = get_light_color_temp(0.6);} // office - blueish
-		else if (r->is_hallway)     {color = get_light_color_temp(0.6);} // office building hallway - blueish
-		else                        {color = get_light_color_temp(0.5);} // small office - white
+		else if (is_mall)           {color = get_light_color_temp(0.45);} // mall concourse - yellowish white
+		else if (r->is_office)      {color = get_light_color_temp(0.60);} // office - blueish
+		else if (r->is_hallway)     {color = get_light_color_temp(0.60);} // office building hallway - blueish
+		else                        {color = get_light_color_temp(0.50);} // small office - white
 		
 		// place objects on each floor for this room
 		for (unsigned f = 0; f < num_floors; ++f, z += floor_height) {
