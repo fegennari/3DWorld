@@ -2678,3 +2678,10 @@ void building_interior_t::create_fc_occluders() {
 	fc_occluders.erase(o, fc_occluders.end());
 }
 
+void building_interior_t::add_ceil_floor_pair(cube_t cf, float zc, float z, float zf) {
+	set_cube_zvals(cf, zc, z);
+	ceilings.push_back(cf);
+	set_cube_zvals(cf, z, zf);
+	floors.push_back(cf);
+}
+

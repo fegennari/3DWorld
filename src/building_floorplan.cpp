@@ -1039,7 +1039,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		assert(parts_end < parts.end());
 		cube_t const &garage(*parts_end);
 		cube_t C(garage);
-		C.z2() = C.z1() + fc_thick;
+		C.z2() = garage.z1() + fc_thick;
 		interior->floors.push_back(C);
 		C.z2() = garage.z2();
 		C.z1() = C.z2() - fc_thick;
@@ -1920,10 +1920,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			}
 		}
 		for (unsigned i = 0; i < 8; ++i) { // skip zero area cubes from stairs/elevator shafts along an exterior wall
-			cube_t &c(to_add[i]);
-			if (c.is_zero_area()) continue;
-			set_cube_zvals(c, zc, z); interior->ceilings.push_back(c);
-			set_cube_zvals(c, z, zf); interior->floors  .push_back(c);
+			cube_t &cf(to_add[i]);
+			if (!cf.is_zero_area()) {interior->add_ceil_floor_pair(cf, zc, z, zf);}
 		}
 	} // for f
 	bool has_roof_access(0);

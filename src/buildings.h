@@ -1732,6 +1732,7 @@ struct building_interior_t {
 	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float r_shrink_if_low, float floor_thickness, float floor_ceil_gap,
 		bool same_as_player, bool skip_stairs=0, cube_t const *const fires_select_cube=nullptr) const;
 	void create_fc_occluders();
+	void add_ceil_floor_pair(cube_t cf, float zc, float z, float zf);
 	void place_exterior_room(extb_room_t const &room, cube_t const &wall_area, float fc_thick, float wall_thick, ext_basement_room_params_t &P,
 		unsigned part_id, unsigned num_lights=0, bool is_hallway=0, unsigned is_building_conn=0, unsigned wall_skip_dim=2, unsigned thin_wall_dir=2);
 	colorRGBA get_attic_ceiling_color() const;

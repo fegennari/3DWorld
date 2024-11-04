@@ -672,10 +672,7 @@ unsigned building_t::setup_multi_floor_room(extb_room_t &room, door_t const &doo
 				}
 			} // for n
 		}
-		for (cube_t &cf : cf_to_add) {
-			set_cube_zvals(cf, zc, z); interior->ceilings.push_back(cf);
-			set_cube_zvals(cf, z, zf); interior->floors  .push_back(cf);
-		}
+		for (cube_t &cf : cf_to_add) {interior->add_ceil_floor_pair(cf, zc, z, zf);}
 	} // for f
 	return num_floors;
 }
