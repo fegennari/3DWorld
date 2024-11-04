@@ -171,6 +171,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	P.rooms.emplace_back(basement, 0);
 	P.rooms.push_back(hallway);
 	hallway.conn_bcube = basement; // make sure the basement is included
+	bool added_lg_room(0);
 
 	if (!is_house && has_parking_garage) { // office building with parking garage
 		bool const try_mall_first(rgen.rand_bool());
@@ -203,10 +204,11 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 					}
 				}
 			}
+			added_lg_room = 1;
 			break; // done/success
 		} // for n
 	}
-	if (hallway.is_hallway) { // still a hallway, not a larger underground room; recursively add rooms connected to this hallway in alternating dimensions
+	if (!added_lg_room) { // not a larger underground room; recursively add rooms connected to this hallway in alternating dimensions
 		// Note: if we get here for office buildings and global_building_params.max_ext_basement_room_depth == 0, this will only generate the hallway
 		if (add_ext_basement_rooms_recur(hallway, P, door_width, !wall_dim, 1, rgen)) { // dept=1, since we already added a hallway
 			end_ext_basement_hallway(hallway, P.rooms[1].conn_bcube, P, door_width, wall_dim, wall_dir, 0, rgen);
