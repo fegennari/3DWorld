@@ -840,6 +840,10 @@ public:
 						max_eq(VA.z2(), pool_room.z2()); // ceiling above the pool
 					}
 				}
+				else if (b.has_mall()) { // mall concourse is full room height
+					min_eq(VA.z1(), b.interior->basement_ext_bcube.z1());
+					max_eq(VA.z2(), b.interior->basement_ext_bcube.z2());
+				}
 			}
 			else if (b.has_tall_retail()) { // handle lights on tall retail ceilings
 				cube_t const &retail_room(b.get_retail_part());

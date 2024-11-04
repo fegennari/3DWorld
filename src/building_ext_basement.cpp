@@ -186,7 +186,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 
 			if (is_mall) {
 				interior->has_mall = 1;
-				// mark as tall room?
+				setup_mall_concourse(hallway, wall_dim, wall_dir, rgen);
 				add_mall_stores(hallway, wall_dim, wall_dir, rgen);
 			}
 			else { // backrooms, possibly flooded
@@ -222,6 +222,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	interior->place_exterior_room(hallway, wall_area, fc_thick, wall_thickness, P, basement_part_ix, 0, hallway.is_hallway); // use basement part_ix; num_lights=0
 	if (interior->has_backrooms) {rooms.back().assign_all_to(RTYPE_BACKROOMS);} // make it backrooms
 	else if (interior->has_mall) {rooms.back().assign_all_to(RTYPE_MALL     );} // make it a mall concourse
+	if (interior->has_mall) {rooms.back().is_single_floor = 1;}
 	rooms.reserve(rooms.size() + (P.rooms.size()-2) + 1); // allocate an extra room for a possible connector to an adjacent building
 
 	for (auto r = P.rooms.begin()+2; r != P.rooms.end(); ++r) { // skip basement and primary hallway
@@ -499,7 +500,7 @@ bool building_t::max_expand_underground_room(cube_t &room, bool dim, bool dir, b
 	room = exp_room;
 	unsigned num_floors_add(0);
 
-	if (is_mall) {num_floors_add = 0;} // mall should be 2 floors, but is left at 1 for testing; should add a new config option
+	if (is_mall) {num_floors_add = 1;} // mall is always 2 floors; should I add a new config option for this?
 	else {
 		float const max_depth(room.z2() - get_max_sea_level());
 		unsigned const max_num_floors(max(1U, min(global_building_params.max_ext_basement_room_depth, unsigned(floor(max_depth/floor_spacing)))));
@@ -514,8 +515,41 @@ bool building_t::max_expand_underground_room(cube_t &room, bool dim, bool dir, b
 	return 1;
 }
 
+void building_t::setup_mall_concourse(cube_t &room, bool dim, bool dir, rand_gen_t &rgen) {
+	assert(interior);
+	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(get_fc_thickness()), wall_thickness(get_wall_thickness());
+	unsigned const num_floors(calc_num_floors(room, floor_spacing, floor_thickness));
+
+	if (num_floors > 1) { // add wall section below the door on lower floors, since the entrace door is on the top level
+		float const room_end(room.d[dim][!dir]); // entrance end
+		door_t const &door(interior->get_ext_basement_door());
+		assert(door.dim == dim);
+		cube_t wall(door);
+		set_cube_zvals(wall, room.z1()+fc_thick, door.z1()); // below the door
+		//set_wall_width(wall, room_end, 0.5*wall_thickness, dim);
+		wall.d[dim][!dir] = room_end;
+		wall.d[dim][ dir] = room_end + (dir ? 1.0 : -1.0)*wall_thickness;
+		interior->walls[dim].push_back(wall);
+	}
+	// handle upper floors
+	for (unsigned f = 1; f < num_floors; ++f) {
+		// add side walkways
+
+		// add railings
+
+		// add stairs and escalators
+	} // for n
+}
+
 void building_t::add_mall_stores(cube_t &room, bool dim, bool dir, rand_gen_t &rgen) {
-	// TODO
+	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness());
+	unsigned const num_floors(calc_num_floors(room, floor_spacing, floor_thickness));
+
+	for (unsigned f = 0; f < num_floors; ++f) {
+		for (unsigned d = 0; d < 2; ++d) { // each side of concourse
+			// TODO
+		} // for d
+	} // for n
 }
 
 cube_t building_t::add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, rand_gen_t &rgen) {
@@ -655,7 +689,7 @@ void building_interior_t::place_exterior_room(extb_room_t const &room, cube_t co
 }
 
 void building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t &rooms_to_light) {
-	// TODO
+	// TODO: railings, potted plants, fountain, benches, tables, chairs, etc.
 }
 
 unsigned building_t::get_ext_basement_floor_ix(float zval) const {

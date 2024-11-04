@@ -257,7 +257,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			light_size   *= 0.75; // smaller
 		}
 		else if (is_mall) { // mall concourse
-			light_density = 0.35;
+			if (floor_height > 1.5*window_vspacing) { // multi-floor
+				light_density = 0.4;
+				light_size   *= 1.1; // slightly larger
+			}
+			else {light_density = 0.35;} // single floor
 		}
 		else if (is_retail_room) { // more lights in the shorter dim
 			light_size *= 0.7*pow(double(retail_floor_levels), 0.4); // smaller; increase size for taller rooms
