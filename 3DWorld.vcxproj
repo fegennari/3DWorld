@@ -498,6 +498,7 @@
     <ClCompile Include="src\building_interact.cpp" />
     <ClCompile Include="src\building_lighting.cpp" />
     <ClCompile Include="src\building_machines.cpp" />
+    <ClCompile Include="src\building_mall.cpp" />
     <ClCompile Include="src\building_names_signs.cpp" />
     <ClCompile Include="src\building_navigation.cpp" />
     <ClCompile Include="src\building_pictures.cpp" />

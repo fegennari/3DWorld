@@ -1452,11 +1452,12 @@ colorRGBA building_t::get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_p
 	}
 	else { // office building
 		bool const in_ext_basement(in_basement && !get_basement().contains_cube_xy(floor_cube));
-		if (in_basement && (has_parking_garage || in_ext_basement)) {tex = get_concrete_texture();} // parking garage or extended basement
-		else if (has_retail() && floor_cube.z1() == ground_floor_z1) {
+
+		if ((in_ext_basement && has_mall()) || (has_retail() && floor_cube.z1() == ground_floor_z1)) { // retail or mall
 			float const tscale(0.125*mat.floor_tex.tscale_x); // stretch the texture out for large tiles
 			tex = tid_nm_pair_t(building_texture_mgr.get_tile_floor_tid(), building_texture_mgr.get_tile_floor_nm_tid(), tscale, tscale);
 		}
+		else if (in_basement && (has_parking_garage || in_ext_basement)) {tex = get_concrete_texture();} // parking garage or extended basement
 		else {tex = mat.floor_tex;} // office block
 	}
 	return (is_house ? mat.house_floor_color : mat.floor_color);
@@ -1470,11 +1471,11 @@ colorRGBA building_t::get_ceil_tex_and_color(cube_t const &ceil_cube, tid_nm_pai
 		tex = mat.house_floor_tex;
 		return (is_house ? mat.house_floor_color : mat.floor_color);
 	}
-	else if (!is_house && in_ext_basement) { // use concrete for office building extended basements
+	else if (!is_house && in_ext_basement && !has_mall()) { // use concrete for office building extended basements except for malls
 		tex = get_concrete_texture();
 		return WHITE;
 	}
-	else if (in_basement && (is_house || has_parking_garage)) { // use wall texture for basement/parking garage ceilings, not ceiling texture
+	else if (in_basement && (is_house || (has_parking_garage && !in_ext_basement))) { // use wall texture for basement/parking garage ceilings, not ceiling texture
 		tex = mat.wall_tex;
 		return WHITE; // basement walls are always white
 	}
@@ -1948,7 +1949,11 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 			if (check_skylight_intersection(*i)) {dim_mask |= 4;} // draw top surface if under skylight
 			colorRGBA const &color(in_basement ? WHITE : wall_color); // basement walls are always white
 			tid_nm_pair_t tex;
-			if (!is_house && in_ext_basement) {tex = get_concrete_texture();} // office building extended basements
+			
+			if (!is_house && in_ext_basement) {
+				if (has_mall()) {tex = tid_nm_pair_t(get_texture_by_name("bricks_tan.png"), get_texture_by_name("normal_maps/bricks_tan_norm.png", 1), 8.0, 8.0);} // mall
+				else            {tex = get_concrete_texture();} // office building extended basement
+			}
 			else {tex = mat.wall_tex;}
 			bdraw.add_section(*this, 0, *i, tex, color, dim_mask, 1, 0, 1, 0); // no AO; X and/or Y dims only, skip bottom, only draw top if under skylight
 		} // for i
