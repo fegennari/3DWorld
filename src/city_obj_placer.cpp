@@ -622,6 +622,21 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				break; // success
 			} // for n
 		}
+		// place picnic tables
+		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_PICNIC)) {
+			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_PICNIC)); // W, D, H
+			float const pt_len(0.42*car_length), pt_width(pt_len*sz.y/sz.x), pt_height(pt_len*sz.z/sz.x);
+
+			for (unsigned n = 0; n < city_params.max_benches_per_plot; ++n) { // use the same max count as benches
+				point pos;
+				if (!try_place_obj(plot, blockers, rgen, 0.5*max(pt_len, pt_width), 0.0, 1, pos, 0)) continue; // 1 try
+				picnic_t const pt(pos, pt_height, rgen.rand_bool(), 0); // random dim; dir=0 since picnic tables are symmetric
+				if (check_path_coll_xy(pt.bcube, ppaths, paths_start)) continue; // check park path collision
+				picnic_groups.add_obj(pt, picnics);
+				add_cube_to_colliders_and_blockers(pt.bcube, colliders, blockers);
+				blockers.back().expand_by_xy(0.5*pt_width); // add extra padding to the sides and ends
+			} // for n
+		}
 	} // end is_park
 	if (!walkways.empty()) {
 		// place vertical pillars supporting walkways connecting buildings, and elevators leading up to walkways
@@ -1964,6 +1979,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	dumpster_groups.create_groups(dumpsters, all_objs_bcube);
 	plant_groups   .create_groups(plants,    all_objs_bcube);
 	flower_groups  .create_groups(flowers,   all_objs_bcube);
+	picnic_groups  .create_groups(picnics,   all_objs_bcube);
 	pond_groups    .create_groups(ponds,     all_objs_bcube);
 	walkway_groups .create_groups(walkways,  all_objs_bcube);
 	pillar_groups  .create_groups(pillars,   all_objs_bcube);
@@ -2219,6 +2235,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(dumpsters, dumpster_groups, dstate, 0.15, shadow_only, 1);
 	draw_objects(plants,    plant_groups,    dstate, 0.04, shadow_only, 1);
 	draw_objects(flowers,   flower_groups,   dstate, 0.06, shadow_only, 1);
+	draw_objects(picnics,   picnic_groups,   dstate, 0.14, shadow_only, 1);
 	draw_objects(chairs,    chair_groups,    dstate, 0.10, shadow_only, 1);
 	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1);
 	draw_objects(p_solars,  p_solar_groups,  dstate, 0.40, shadow_only, 0);
@@ -2372,6 +2389,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(dumpsters, dumpster_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(plants,    plant_groups,    pos, p_last, radius, xlate, cnorm)) return 1; // optional?
 	if (proc_vector_sphere_coll(chairs,    chair_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(picnics,   picnic_groups,   pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(ponds,     pond_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(pillars,   pillar_groups,   pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(elevators, wwe_groups,      pos, p_last, radius, xlate, cnorm)) return 1;
@@ -2411,6 +2429,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(pillars,   pillar_groups,   p1, p2, t, ret);
 	check_vector_line_intersect(elevators, wwe_groups,      p1, p2, t, ret);
 	check_vector_line_intersect(dumpsters, dumpster_groups, p1, p2, t, ret);
+	check_vector_line_intersect(picnics,   picnic_groups,   p1, p2, t, ret);
 	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, tcones, flowers, pladders, chairs, pdecks, bballs, pfloats, pigeons, ppaths, or birds;
 	// mboxes, swings, tramps, umbrellas, bikes, plants, ponds, p_solars, and momorail are ignored because they're small or not simple shapes
 	return ret;
@@ -2509,6 +2528,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 	if (check_city_obj_pt_xy_contains(tramp_groups,    tramps,    pos, obj_ix, 1)) {color = (BKGRAY*0.75 + tramps[obj_ix].color*0.25); return 1;} // is_cylin=1
 	if (check_city_obj_pt_xy_contains(dumpster_groups, dumpsters, pos, obj_ix, 0)) {color = colorRGBA(0.1, 0.4, 0.1, 1.0); return 1;} // dark green
 	if (check_city_obj_pt_xy_contains(umbrella_groups, umbrellas, pos, obj_ix, 1)) {color = WHITE; return 1;} // is_cylin=1
+	if (check_city_obj_pt_xy_contains(picnic_groups,   picnics,   pos, obj_ix, 0)) {color = BROWN; return 1;}
 	if (check_city_obj_pt_xy_contains(wwe_groups,      elevators, pos, obj_ix, 0)) {color = colorRGBA(0.8, 1.0, 0.8, 1.0); return 1;} // slightly blue-green glass; transparent?
 	// Note: ppoles, hcaps, manholes, mboxes, tcones, flowers, pladders, chairs, stopsigns, flags, pigeons, birds, swings, umbrellas, bikes, and plants are skipped for now;
 	// pillars aren't visible under walkways;
