@@ -165,8 +165,8 @@ void building_geom_t::do_xy_rotate_normal_inv(point &n) const {::do_xy_rotate_no
 
 
 class building_texture_mgr_t {
-	int window_tid=-1, hdoor_tid=-1, odoor_tid=-1, bdoor_tid=-1, bdoor2_tid=-1, gdoor_tid=-1, mdoor_tid=-1, ac_unit_tid1=-1, ac_unit_tid2=-1, bath_wind_tid=-1, helipad_tex=-1,
-		solarp_tex=-1, concrete_tex=-1, met_plate_tex=-1, mplate_nm_tex=-1, met_roof_tex=-1, tile_floor_tex=-1, tile_floor_nm_tex=-1, duct_tid=-1, vent_tid=-1;
+	int window_tid=-1, hdoor_tid=-1, odoor_tid=-1, bdoor_tid=-1, bdoor2_tid=-1, gdoor_tid=-1, mdoor_tid=-1, ac_unit_tid1=-1, ac_unit_tid2=-1, bath_wind_tid=-1, helipad_tid=-1,
+		solarp_tid=-1, concrete_tid=-1, met_plate_tid=-1, mplate_nm_tid=-1, met_roof_tid=-1, tile_floor_tid=-1, tile_floor_nm_tid=-1, duct_tid=-1, vent_tid=-1;
 
 	int ensure_tid(int &tid, const char *name, bool is_normal_map=0, bool invert_y=0) {
 		if (tid < 0) {tid = get_texture_by_name(name, is_normal_map, invert_y);}
@@ -186,14 +186,14 @@ public:
 	int get_duct_tid     () {return ensure_tid(duct_tid,      "interiors/duct.jpg");} // duct
 	int get_vent_tid     () {return ensure_tid(vent_tid,      "interiors/vent.jpg");} // vent
 	int get_bath_wind_tid() {return ensure_tid(bath_wind_tid, "buildings/window_blocks.jpg");} // bathroom window
-	int get_helipad_tid  () {return ensure_tid(helipad_tex,   "buildings/helipad.jpg");}
-	int get_solarp_tid   () {return ensure_tid(solarp_tex,    "buildings/solar_panel.jpg");}
-	int get_concrete_tid () {return ensure_tid(concrete_tex,  "roads/concrete.jpg");}
-	int get_met_plate_tid() {return ensure_tid(met_plate_tex, "metal_plate.jpg");}
-	int get_mplate_nm_tid() {return ensure_tid(mplate_nm_tex, "normal_maps/metal_plate_NRM.jpg", 1);} // is_normal_map=1
-	int get_met_roof_tid () {return ensure_tid(met_roof_tex,  "buildings/metal_roof.jpg");}
-	int get_tile_floor_tid   () {return ensure_tid(tile_floor_tex,    "interiors/mosaic_tiles.jpg");}
-	int get_tile_floor_nm_tid() {return ensure_tid(tile_floor_nm_tex, "interiors/mosaic_tiles_normal.jpg");}
+	int get_helipad_tid  () {return ensure_tid(helipad_tid,   "buildings/helipad.jpg");}
+	int get_solarp_tid   () {return ensure_tid(solarp_tid,    "buildings/solar_panel.jpg");}
+	int get_concrete_tid () {return ensure_tid(concrete_tid,  "roads/concrete.jpg");}
+	int get_met_plate_tid() {return ensure_tid(met_plate_tid, "metal_plate.jpg");}
+	int get_mplate_nm_tid() {return ensure_tid(mplate_nm_tid, "normal_maps/metal_plate_NRM.jpg", 1);} // is_normal_map=1
+	int get_met_roof_tid () {return ensure_tid(met_roof_tid,  "buildings/metal_roof.jpg");}
+	int get_tile_floor_tid   () {return ensure_tid(tile_floor_tid,    "interiors/mosaic_tiles.jpg");}
+	int get_tile_floor_nm_tid() {return ensure_tid(tile_floor_nm_tid, "interiors/mosaic_tiles_normal.jpg");}
 
 	bool check_windows_texture() {
 		if (!global_building_params.windows_enabled()) return 0;
