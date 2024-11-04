@@ -3805,7 +3805,7 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 					break; // done
 				} // for n
 			} // for dir
-		}
+		} // end reception desk
 	}
 	// maybe add a clock on the back of the stairs, if this is the lobby or the floor directly above the retail area
 	if (floor_ix == 0 && is_ground_floor_excluding_retail(room.z1()) && room.has_stairs) {
@@ -3823,7 +3823,22 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 			clock.d[s.dim][!s.dir] = wall_pos;
 			clock.d[s.dim][ s.dir] = wall_pos + (s.dir ? 1.0 : -1.0)*clock_depth;
 			add_clock(clock, room_id, tot_light_amt, s.dim, s.dir, digital);
-		}
+
+			if (building_obj_model_loader.is_model_valid(OBJ_MODEL_FLAG) && rgen.rand_float() < 0.75) { // place US flag
+				// Note: flags are two sided, so lighting doesn't look correct on the unlit side
+				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FLAG)); // W, D, H
+				float const flag_height(0.3*window_vspacing), flag_hwidth(0.5*flag_height*sz.x/sz.z), flag_depth(flag_height*sz.y/sz.z);
+				bool const side(rgen.rand_bool()); // side of clock
+				float const flag_pos(s.d[!s.dim][side] + (side ? -1.0 : 1.0)*max(1.5*flag_hwidth, 0.1*s.get_width()));
+				cube_t flag;
+				flag.z1() = zval + 0.53*window_vspacing;
+				flag.z2() = flag.z1() + flag_height;
+				flag.d[s.dim][!s.dir] = wall_pos;
+				flag.d[s.dim][ s.dir] = wall_pos + (s.dir ? 1.0 : -1.0)*flag_depth;
+				set_wall_width(flag, flag_pos, flag_hwidth, !s.dim);
+				objs.emplace_back(flag, TYPE_US_FLAG, room_id, !s.dim, (s.dim ^ s.dir), RO_FLAG_NOCOLL, tot_light_amt);
+			}
+		} // for s
 	}
 	bool const pri_dir(room_rgen.rand_bool()); // random, but the same across all floors
 	float fe_height(0.0), fe_radius(0.0);
