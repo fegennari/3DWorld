@@ -112,6 +112,7 @@ building_room_item_draw.o
 building_room_obj_place.o
 building_basement.o
 building_ext_basement.o
+building_backrooms.o
 building_pipes.o
 building_attic.o
 building_reflections.o

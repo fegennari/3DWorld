@@ -1889,9 +1889,6 @@ bool building_t::is_above_retail_area(point const &pos) const {
 	cube_t const &retail_room(get_retail_part());
 	return (retail_room.contains_pt(pos) && pos.z > (retail_room.z1() + get_window_vspace()));
 }
-bool building_t::is_pos_in_pg_or_backrooms(point const &pos) const { // Note: typically used to guard interior->room_geom->pgbr_walls logic
-	return (has_parking_garage && pos.z < ground_floor_z1 && ((interior && interior->has_backrooms) || get_basement().contains_pt(pos)));
-}
 bool building_t::is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll, bool no_check_objs) const { // for people and animals
 	if (!is_pos_inside_building(pos, radius, radius, 1))       return 0; // required for attic; for_attic=1
 	if (point_in_water_area(pos) || is_above_retail_area(pos)) return 0; // excludes glass floors, in case they're not connected to the lower floor by escalators
