@@ -17,11 +17,9 @@ cube_t building_t::get_mall_center(cube_t const &room) const {
 	return center;
 }
 
-void building_t::setup_mall_concourse(cube_t &room, bool dim, bool dir, rand_gen_t &rgen) {
+void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, rand_gen_t &rgen) {
 	assert(interior);
-	float const floor_spacing(get_mall_floor_spacing(room)), floor_thickness(get_floor_thickness()), fc_thick(get_fc_thickness()), wall_thickness(get_wall_thickness());
-	//cube_t walk_area(room);
-	//walk_area.expand_by_xy(-wall_thickness);
+	float const floor_spacing(get_mall_floor_spacing(room)), fc_thick(get_fc_thickness()), wall_thickness(get_wall_thickness());
 	
 	// add wall section below the door on lower floors, since the entrace door is on the top level
 	float const room_end(room.d[dim][!dir]); // entrance end
@@ -52,10 +50,9 @@ void building_t::setup_mall_concourse(cube_t &room, bool dim, bool dir, rand_gen
 			ww.d[dim][!d] = center.d[dim][d];
 			interior->add_ceil_floor_pair(ww, zc, z, zf);
 		}
-		// add railings
-
 		// add stairs and escalators
-	} // for n
+		// TODO
+	} // for f
 }
 
 void building_t::add_mall_stores(cube_t &room, bool dim, bool dir, rand_gen_t &rgen) {
@@ -131,8 +128,43 @@ void building_t::add_mall_lower_floor_lights(room_t const &room, unsigned room_i
 	} // for f
 }
 
-void building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t &rooms_to_light) {
-	float const floor_spacing(get_mall_floor_spacing(room)), fc_thick(get_fc_thickness());
-	// TODO: railings, potted plants, fountain, benches, tables, chairs, etc.
+void building_t::add_mall_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t &rooms_to_light) {
+	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), fc_thick(get_fc_thickness());
+	float const wall_thickness(get_wall_thickness()), trim_thick(get_trim_thickness());
+	cube_t const center(get_mall_center(room));
+	vect_room_object_t &objs(interior->room_geom->objs);
+
+	// add walkway railings
+	for (unsigned f = 1; f < interior->num_extb_floors; ++f) { // skip first floor
+		float const z(room.z1() + f*floor_spacing), zb1(z - fc_thick - trim_thick), zb2(z + fc_thick + trim_thick), zt1(z + 0.45*window_vspace), zt2(zt1 + 0.05*window_vspace);
+
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				cube_t railing(center);
+				set_wall_width(railing, center.d[dim][dir], 0.0, dim);
+				cube_t bar(railing);
+				// bottom bar
+				bar.expand_by_xy(0.25*wall_thickness);
+				set_cube_zvals(bar, zb1, zb2);
+				objs.emplace_back(bar, TYPE_METAL_BAR, room_id, !dim, 0, 0, 1.0, SHAPE_CUBE, LT_GRAY);
+				// top bar
+				bar.expand_by_xy(0.15*wall_thickness);
+				set_cube_zvals(bar, zt1, zt2);
+				objs.emplace_back(bar, TYPE_METAL_BAR, room_id, !dim, 0, 0, 1.0, SHAPE_CUBE, LT_GRAY);
+				// glass
+				cube_t panel(railing);
+				set_cube_zvals(panel, zb2, zt1);
+				panel.expand_by_xy(0.1*wall_thickness);
+				objs.emplace_back(panel, TYPE_INT_WINDOW, room_id, dim, 0, 0, 1.0);
+
+				if (dim == 0) { // add corner bar
+					// TODO
+				}
+			} // for dir
+		} // for dim
+	} // for f
+	// TODO: potted plants, fountain, benches, tables, chairs, etc.
+	//cube_t walk_area(room);
+	//walk_area.expand_by_xy(-wall_thickness);
 }
 
