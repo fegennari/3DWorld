@@ -722,7 +722,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			add_pass_through_fittings(pipe, beams, fitting_len, fitting_expand, p.dim, LT_GRAY, objs);
 		}
 		if (p.type == PIPE_EXTB) { // add pipe hanging brackets
-			float const ceiling_zval(interior->get_room(interior->ext_basement_hallway_room_id).z2() - fc_thickness);
+			float const ceiling_zval(interior->get_extb_start_room().z2() - fc_thickness);
 			float const pipe_len(pipe.get_sz_dim(p.dim)), bracket_radius(radius_factor*p.radius); // includes insulation
 			unsigned const num_brackets(0.5*pipe_len/window_vspacing);
 			float const bracket_spacing(pipe_len/(num_brackets+1));
@@ -1126,7 +1126,7 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 	} // for i
 	if (inc_extb_conns /*&& extb_pipe_radius > 0.0*/) { // we have extended basement water consumers (or maybe enable even if not), add a connection through the hallway
 		extb_pipe_radius = max(min(0.5f*extb_pipe_radius, 2.0f*base_pipe_radius), base_pipe_radius); // not too large and not too small
-		room_t const &hallway(interior->get_room(interior->ext_basement_hallway_room_id));
+		room_t const &hallway(interior->get_extb_start_room());
 		extb_area = get_walkable_room_bounds(hallway);
 		bool const wdim(interior->extb_wall_dim), wdir(interior->extb_wall_dir), first_side(rgen.rand_bool());
 		float const wall_dist(get_pipe_dist_to_wall(extb_pipe_radius, get_trim_thickness())); // calculated for sewer pipe, but should be large enough for water/HW pipes
