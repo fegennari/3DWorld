@@ -1842,7 +1842,7 @@ void building_t::get_basement_ext_wall_verts(building_draw_t &bdraw) const {
 	if (has_basement_door) { // remove a section of wall around the basement door; can't use stencil test associated with ext_side_qv_range
 		assert(interior);
 		door_t const &door(interior->get_ext_basement_door());
-		unsigned const this_face(1 << (2*door.dim + door.open_dir + 3));
+		unsigned const this_face(1 << (2*interior->extb_wall_dim + interior->extb_wall_dir + 3));
 		dim_mask |= this_face; // skip this face for the full basement call below
 
 		for (unsigned d = 0; d < 2; ++d) {

@@ -188,6 +188,8 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 
 			if (is_mall) {
 				interior->has_mall = 1;
+				interior->doors      .back().open_dir ^= 1; // door opens into the parking garage rather than the mall
+				interior->door_stacks.back().open_dir ^= 1;
 				setup_mall_concourse(hallway, wall_dim, wall_dir, rgen);
 				add_mall_stores(hallway, wall_dim, wall_dir, rgen);
 			}
