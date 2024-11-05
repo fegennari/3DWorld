@@ -3826,9 +3826,9 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 
 			if (building_obj_model_loader.is_model_valid(OBJ_MODEL_FLAG) && rgen.rand_float() < 0.75) { // place US flag
 				// Note: flags are two sided, so lighting doesn't look correct on the unlit side
+				bool const side(s.dir ^ s.dim); // side of clock; always place on the right because the left side is lit with correct normals
 				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FLAG)); // W, D, H
 				float const flag_height(0.3*window_vspacing), flag_hwidth(0.5*flag_height*sz.x/sz.z), flag_depth(flag_height*sz.y/sz.z);
-				bool const side(rgen.rand_bool()); // side of clock
 				float const flag_pos(s.d[!s.dim][side] + (side ? -1.0 : 1.0)*max(1.5*flag_hwidth, 0.1*s.get_width()));
 				cube_t flag;
 				flag.z1() = zval + 0.53*window_vspacing;
