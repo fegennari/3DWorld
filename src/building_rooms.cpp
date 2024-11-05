@@ -217,7 +217,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		float light_amt(is_basement ? 0.0f : window_vspacing*r->get_light_amt()); // exterior light: multiply perimeter/area by window spacing to make unitless; none for basement rooms
 		if (!is_house && r->is_hallway) {light_amt *= 2.0;} // double the light in office building hallways because they often connect to other lit hallways
 		float const floor_height(r->is_single_floor ? r->dz() : window_vspacing); // secondary buildings are always one floor
-		unsigned const num_floors(calc_num_floors_room(*r, floor_height, floor_thickness)), room_id(r - rooms.begin());
+		unsigned const num_floors(r->is_mall() ? /*interior->num_extb_floors*/1 : calc_num_floors_room(*r, floor_height, floor_thickness)); // consider the mall a single floor
+		unsigned const room_id(r - rooms.begin());
 		unsigned const min_br(multi_family ? num_floors : 1); // multi-family house requires one per floor; can apply to both bedrooms and bathrooms
 		point room_center(r->get_cube_center());
 
@@ -488,7 +489,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				add_missing_backrooms_lights(rgen, room_center.z, room_id, floor_objs_start, objs_start_inc_lights, ref_light, rooms_to_light, light_ix_assign);
 				continue; // nothing else to add
 			}
-			if (is_parking_garage || is_retail_room || is_mall) continue; // generated above, done; no outlets or light switches
+			if (is_mall) {
+				add_mall_lower_floor_lights(*r, room_id, objs_start_inc_lights, light_ix_assign);
+				continue; // nothing else to add
+			}
+			if (is_parking_garage || is_retail_room) continue; // generated above, done; no outlets or light switches
 			if (is_unfinished) continue; // no objects for now; if adding objects later, need to make sure they stay inside the building bounds
 			uint64_t const floor_mask(uint64_t(1) << f);
 			bool const is_garage_or_shed(r->is_garage_or_shed(f));

@@ -1702,6 +1702,7 @@ struct building_interior_t {
 	uint8_t furnace_type=FTYPE_NONE, attic_type=ATTIC_TYPE_RAFTERS;
 	bool door_state_updated=0, is_unconnected=0, ignore_ramp_placement=0, placed_people=0, elevators_disabled=0, attic_access_open=0, has_backrooms=0, has_mall=0;
 	bool elevator_dir=0, extb_wall_dim=0, extb_wall_dir=0, conn_room_in_extb_hallway=0, has_sec_hallways=0;
+	uint8_t num_extb_floors=0; // for malls and backrooms
 	uint8_t mens_count=0, womens_count=0; // bathrooms
 	float water_zval=0.0; // for multilevel backrooms and swimming pools
 
@@ -2277,9 +2278,11 @@ private:
 	void add_wall_section_above_pool_room_door(door_stack_t &ds, room_t const &room);
 	unsigned setup_multi_floor_room(extb_room_t &room, door_t const &door, bool wall_dim, bool wall_dir, rand_gen_t &rgen);
 	bool add_ext_basement_rooms_recur(extb_room_t &parent_room, ext_basement_room_params_t &P, float door_width, bool dim, unsigned depth, rand_gen_t &rgen);
-	bool max_expand_underground_room(cube_t &room, bool dim, bool dir, bool is_mall, rand_gen_t &rgen) const;
+	unsigned max_expand_underground_room(cube_t &room, bool dim, bool dir, bool is_mall, rand_gen_t &rgen) const;
 	void setup_mall_concourse(cube_t &room, bool dim, bool dir, rand_gen_t &rgen);
 	void add_mall_stores(cube_t &room, bool dim, bool dir, rand_gen_t &rgen);
+	float get_mall_floor_spacing(cube_t const &room) const;
+	cube_t get_mall_center(cube_t const &room) const;
 	cube_t add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, rand_gen_t &rgen);
 	cube_t add_and_connect_ext_basement_room(extb_room_t &room, ext_basement_room_params_t &P,
 		float door_width, bool dim, bool dir, bool is_end_room, unsigned depth, bool const add_doors[2], rand_gen_t &rgen);
@@ -2429,6 +2432,7 @@ private:
 	void add_mall_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t &rooms_to_light);
 	void add_missing_backrooms_lights(rand_gen_t rgen, float zval, unsigned room_id, unsigned objs_start, unsigned lights_start,
 		room_object_t const &ref_light, vect_cube_t const &rooms_to_light, light_ix_assign_t &light_ix_assign);
+	void add_mall_lower_floor_lights(room_t const &room, unsigned room_id, unsigned lights_start, light_ix_assign_t &light_ix_assign);
 	void add_sub_room_light(room_object_t light, room_t const &room, bool dim, unsigned objs_start, light_ix_assign_t &light_ix_assign, rand_gen_t &rgen);
 	bool add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_riser_pos_t const &risers, vect_cube_t &pipe_cubes,
 		unsigned room_id, unsigned num_floors, unsigned objs_start, float ceil_zval, rand_gen_t &rgen, unsigned pipe_type, bool allow_place_fail=0);

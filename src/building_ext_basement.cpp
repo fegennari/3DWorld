@@ -179,7 +179,9 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 		for (unsigned n = 0; n < 2; ++n) {
 			bool const is_mall((n == 0) == try_mall_first);
 			if (is_mall) continue; // TESTING - remove when malls are working
-			if (!max_expand_underground_room(hallway, wall_dim, wall_dir, is_mall, rgen)) continue;
+			unsigned const num_floors_added(max_expand_underground_room(hallway, wall_dim, wall_dir, is_mall, rgen));
+			if (num_floors_added == 0) continue;
+			interior->num_extb_floors = num_floors_added;
 			hallway.is_hallway = 0; // should already be set to 0, but this makes it more clear
 			// currently, the extended basement can only be a network of connected hallways with leaf rooms, or a single large basement room (this case);
 			// if we want to allow both (either a large room connected to a hallway or a large room with hallways coming off of it), we need per-room flags
@@ -467,7 +469,7 @@ bool building_t::add_ext_basement_rooms_recur(extb_room_t &parent_room, ext_base
 }
 
 // is_mall=0: backrooms, is_mall=1: mall concourse
-bool building_t::max_expand_underground_room(cube_t &room, bool dim, bool dir, bool is_mall, rand_gen_t &rgen) const {
+unsigned building_t::max_expand_underground_room(cube_t &room, bool dim, bool dir, bool is_mall, rand_gen_t &rgen) const {
 	float const floor_spacing(get_window_vspace()), step_len(1.0*floor_spacing), room_len(room.get_sz_dim(dim));
 	float const room_width_min(is_mall ? 4.0*floor_spacing : 0.5*room_len), room_width_max(is_mall ? max(8.0*floor_spacing, 0.25*room_len) : 2.0*room_len);
 	float const room_len_min((is_mall ? 2.0 : 1.0)*room_len), room_len_max((is_mall ? 4.0 : 2.0)*room_len);
@@ -512,7 +514,7 @@ bool building_t::max_expand_underground_room(cube_t &room, bool dim, bool dir, b
 		if (check_buildings_cube_coll(cand, 0, 1, this)) break; // check for extended basement and tunnels below; xy_only=0, inc_basement=1, exclude ourself
 		room.z1() = cand.z1();
 	}
-	return 1;
+	return (num_floors_add + 1); // return the total number of floors
 }
 
 cube_t building_t::add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, rand_gen_t &rgen) {
