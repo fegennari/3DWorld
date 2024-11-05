@@ -489,8 +489,8 @@ enum { // room object types
 	NUM_ROBJ_TYPES};
 typedef uint8_t room_object;
 
-// room object shapes
-enum {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_SPHERE, SHAPE_STAIRS_U, SHAPE_STAIRS_L, SHAPE_TALL, SHAPE_SHORT, SHAPE_ANGLED, SHAPE_VERT_TORUS}; // room object shapes
+// room object and stairs shapes
+enum {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_SPHERE, SHAPE_STAIRS_U, SHAPE_STAIRS_L, SHAPE_STAIRS_FAN, SHAPE_TALL, SHAPE_SHORT, SHAPE_ANGLED, SHAPE_VERT_TORUS};
 typedef uint8_t room_obj_shape;
 
 // room types
@@ -2281,6 +2281,7 @@ private:
 	unsigned max_expand_underground_room(cube_t &room, bool dim, bool dir, bool is_mall, rand_gen_t &rgen) const;
 	void setup_mall_concourse(cube_t &room, bool dim, bool dir, rand_gen_t &rgen);
 	void add_mall_stores(cube_t &room, bool dim, bool dir, rand_gen_t &rgen);
+	void add_mall_stairs();
 	float get_mall_floor_spacing(cube_t const &room) const;
 	cube_t get_mall_center(cube_t const &room) const;
 	cube_t add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, rand_gen_t &rgen);

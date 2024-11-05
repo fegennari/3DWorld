@@ -3043,6 +3043,8 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			objs.emplace_back(railing, TYPE_RAILING, pool.room_ix, dim, dir, RO_FLAG_IN_POOL, 1.0, SHAPE_CUBE, GOLD); // no balusters
 		}
 	}
+	if (has_mall()) {add_mall_stairs();}
+
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 		i->car_obj_id = objs.size();
 		unsigned const elevator_id(i - interior->elevators.begin()); // used for room_object_t::room_id

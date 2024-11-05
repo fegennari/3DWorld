@@ -973,8 +973,11 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				if (camera_z > mesh_z && camera_z < entrance_z) {pos.z += 1.2*(entrance_z - camera_z);} // move up above the entrance plane
 			}
 			obj_z = max(pos.z, p_last.z);
-			if (!is_ul || c->dir == 1) {max_eq(pos[!c->dim], (c->d[!c->dim][0] + xy_radius));} // force the sphere onto the stairs
-			if (!is_ul || c->dir == 0) {min_eq(pos[!c->dim], (c->d[!c->dim][1] - xy_radius));}
+
+			if (c->shape != SHAPE_STAIRS_FAN) { // force the sphere onto the stairs unless it's a fan (mall entrance)
+				if (!is_ul || c->dir == 1) {max_eq(pos[!c->dim], (c->d[!c->dim][0] + xy_radius));}
+				if (!is_ul || c->dir == 0) {min_eq(pos[!c->dim], (c->d[!c->dim][1] - xy_radius));}
+			}
 			had_coll     = on_stairs = 1;
 			speed_factor = (is_u ? 0.875 : 0.75); // U-shaped stairs are a bit faster
 		} // for c

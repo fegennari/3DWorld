@@ -503,6 +503,7 @@ unsigned building_t::max_expand_underground_room(cube_t &room, bool dim, bool di
 	if (exp_room.get_sz_dim( dim) < room_len_min  ) return 0; // room is too short, make it a hallway or backrooms instead
 	room = exp_room;
 	unsigned num_floors_add(0);
+	float const room_floor_spacing((is_mall ? 2.0 : 1.0)*floor_spacing); // mall has 2x floor spacing
 
 	if (is_mall) {num_floors_add = 1;} // mall is always 2 floors; should I add a new config option for this?
 	else {
@@ -512,7 +513,7 @@ unsigned building_t::max_expand_underground_room(cube_t &room, bool dim, bool di
 	}
 	for (unsigned n = 0; n < num_floors_add; ++n) {
 		cube_t cand(room);
-		set_cube_zvals(cand, room.z1()-floor_spacing, room.z1()); // one floor below
+		set_cube_zvals(cand, room.z1()-room_floor_spacing, room.z1()); // one floor below
 		if (check_buildings_cube_coll(cand, 0, 1, this)) break; // check for extended basement and tunnels below; xy_only=0, inc_basement=1, exclude ourself
 		room.z1() = cand.z1();
 	}
