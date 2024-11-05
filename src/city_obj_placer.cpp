@@ -1242,6 +1242,9 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				}
 			}
 		}
+		// maybe place clothes line
+		// TODO
+		
 		// place short pine trees by the front
 		if (!enable_instanced_pine_trees()) {
 			unsigned const num_trees(rgen.rand() % 5); // 0-4
@@ -1701,6 +1704,8 @@ void city_obj_placer_t::place_birds(cube_t const &city_bcube, rand_gen_t &rgen) 
 	add_objs_top_center(mboxes,    0, 0, 1, unused, bird_locs, rgen);
 	add_objs_top_center(stopsigns, 0, 0, 1, unused, bird_locs, rgen);
 	add_objs_top_center(swings,    0, 0, 1, unused, bird_locs, rgen);
+	add_objs_top_center(picnics,   0, 0, 1, unused, bird_locs, rgen);
+	add_objs_top_center(clines,    0, 0, 1, unused, bird_locs, rgen);
 
 	for (sign_t const &sign : signs) {
 		if (sign.small) continue; // skip small signs above doors
@@ -1971,6 +1976,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	stopsign_groups.create_groups(stopsigns, all_objs_bcube);
 	flag_groups    .create_groups(flags,     all_objs_bcube);
 	nrack_groups   .create_groups(newsracks, all_objs_bcube);
+	cline_groups   .create_groups(clines,    all_objs_bcube);
 	ppath_groups   .create_groups(ppaths,    all_objs_bcube);
 	swing_groups   .create_groups(swings,    all_objs_bcube);
 	tramp_groups   .create_groups(tramps,    all_objs_bcube);
@@ -2227,6 +2233,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(signs,     sign_groups,     dstate, 0.25, shadow_only, 1, 1); // draw_qbd_as_quads=1
 	draw_objects(flags,     flag_groups,     dstate, 0.18, shadow_only, 1);
 	draw_objects(newsracks, nrack_groups,    dstate, 0.10, shadow_only, 0);
+	draw_objects(clines,    cline_groups,    dstate, 0.12, shadow_only, 0);
 	draw_objects(tcones,    tcone_groups,    dstate, 0.08, shadow_only, 1);
 	draw_objects(swings,    swing_groups,    dstate, 0.06, shadow_only, 1);
 	draw_objects(tramps,    tramp_groups,    dstate, 0.10, shadow_only, 1);
@@ -2396,7 +2403,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(pdecks,    pdeck_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(p_solars,  p_solar_groups,  pos, p_last, radius, xlate, cnorm)) return 1;
 	// Note: no coll with tree_planters because the tree coll should take care of it;
-	// no coll with hcaps, manholes, tcones, flowers, pladders, bballs, pfloats, pigeons, ppaths, or birds
+	// no coll with hcaps, manholes, tcones, flowers, pladders, bballs, pfloats, clines, pigeons, ppaths, or birds
 	return 0;
 }
 
@@ -2430,7 +2437,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(elevators, wwe_groups,      p1, p2, t, ret);
 	check_vector_line_intersect(dumpsters, dumpster_groups, p1, p2, t, ret);
 	check_vector_line_intersect(picnics,   picnic_groups,   p1, p2, t, ret);
-	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, tcones, flowers, pladders, chairs, pdecks, bballs, pfloats, pigeons, ppaths, or birds;
+	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, tcones, flowers, pladders, chairs, pdecks, bballs, pfloats, clines, pigeons, ppaths, or birds;
 	// mboxes, swings, tramps, umbrellas, bikes, plants, ponds, p_solars, and momorail are ignored because they're small or not simple shapes
 	return ret;
 }
@@ -2530,7 +2537,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 	if (check_city_obj_pt_xy_contains(umbrella_groups, umbrellas, pos, obj_ix, 1)) {color = WHITE; return 1;} // is_cylin=1
 	if (check_city_obj_pt_xy_contains(picnic_groups,   picnics,   pos, obj_ix, 0)) {color = BROWN; return 1;}
 	if (check_city_obj_pt_xy_contains(wwe_groups,      elevators, pos, obj_ix, 0)) {color = colorRGBA(0.8, 1.0, 0.8, 1.0); return 1;} // slightly blue-green glass; transparent?
-	// Note: ppoles, hcaps, manholes, mboxes, tcones, flowers, pladders, chairs, stopsigns, flags, pigeons, birds, swings, umbrellas, bikes, and plants are skipped for now;
+	// Note: ppoles, hcaps, manholes, mboxes, tcones, flowers, pladders, chairs, stopsigns, flags, clines, pigeons, birds, swings, umbrellas, bikes, and plants are skipped;
 	// pillars aren't visible under walkways;
 	// free standing signs can be added, but they're small and expensive to iterate over and won't contribute much
 	return 0;

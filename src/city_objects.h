@@ -501,6 +501,17 @@ struct newsrack_t : public oriented_city_obj_t {
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
 
+struct clothesline_t : public oriented_city_obj_t {
+	float cheight, lradius;
+	point p1, p2;
+	vect_cube_t clothes;
+
+	clothesline_t(point const &p1_, point const &p2_, float clothes_height_, float lradius_, rand_gen_t &rgen);
+	static void pre_draw (draw_state_t &dstate, bool shadow_only);
+	static void post_draw(draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+};
+
 struct park_path_t : public city_obj_t {
 	vector<point> pts;
 	float hwidth;
@@ -643,6 +654,7 @@ private:
 	vector<stopsign_t> stopsigns;
 	vector<city_flag_t> flags;
 	vector<newsrack_t> newsracks;
+	vector<clothesline_t> clines;
 	vector<park_path_t> ppaths;
 	vector<swingset_t> swings;
 	vector<trampoline_t> tramps;
@@ -662,8 +674,8 @@ private:
 	// index is last obj in group
 	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, fountain_groups, divider_groups, pool_groups, plad_groups,
 		chair_groups, pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups, stopsign_groups,
-		flag_groups, nrack_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, dumpster_groups, plant_groups, flower_groups, picnic_groups,
-		pond_groups, walkway_groups, pillar_groups, wwe_groups, p_solar_groups, bball_groups, pfloat_groups;
+		flag_groups, nrack_groups, cline_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, dumpster_groups, plant_groups, flower_groups,
+		picnic_groups, pond_groups, walkway_groups, pillar_groups, wwe_groups, p_solar_groups, bball_groups, pfloat_groups;
 	skyway_t skyway; // optional
 	vect_parking_space_t pspaces;
 	bird_poop_manager_t bird_poop_manager;

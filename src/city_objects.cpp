@@ -857,6 +857,39 @@ void newsrack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 	}
 }
 
+// clothes lines
+
+clothesline_t::clothesline_t(point const &p1_, point const &p2_, float cheight_, float lradius_, rand_gen_t &rgen) :
+	cheight(cheight_), lradius(lradius_), p1(p1_), p2(p2_)
+{
+	if      (p1.x == p2.x) {dim = 1;}
+	else if (p1.y == p2.y) {dim = 0;}
+	else {assert(0);} // diag not supported
+	dir = 0; // unused
+	pos = 0.5*(p1 + p2); // center
+	if (p2[dim] < p1[dim]) {swap(p1, p2);}
+	radius = (p2[dim] - p1[dim]) + lradius; // close enough
+	bcube.set_from_point(p1);
+	bcube.union_with_pt(p2);
+	bcube.expand_in_dim(!dim, lradius);
+	bcube.z2() += lradius;
+	bcube.z1() -= lradius + cheight;
+	// TODO: add clothes
+}
+
+/*static*/ void clothesline_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
+	// TODO
+}
+/*static*/ void clothesline_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	// TODO
+}
+void clothesline_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	// TODO: line cylinder
+	for (cube_t const &c : clothes) {
+		// TODO: shirt model, etc.
+	}
+}
+
 // power poles
 
 power_pole_t::power_pole_t(point const &base_, point const &center_, float pole_radius_, float height, float wires_offset_,
