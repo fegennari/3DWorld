@@ -2593,6 +2593,10 @@ float stairs_landing_base_t::get_wall_hwidth(float floor_spacing) const {
 	float const stair_dz(get_stair_dz(floor_spacing));
 	return min(STAIRS_WALL_WIDTH_MULT*max(get_step_length(), stair_dz), 0.25f*stair_dz);
 }
+unsigned stairs_landing_base_t::get_num_stairs() const {
+	if (num_stairs > 0) return num_stairs;
+	return (is_u_shape() ? NUM_STAIRS_PER_FLOOR_U : (is_l_shape() ? NUM_STAIRS_PER_FLOOR_L : NUM_STAIRS_PER_FLOOR));
+}
 
 unsigned get_L_stairs_first_flight_count(stairs_landing_base_t const &s, float landing_width) {
 	float const length(s.get_length() - landing_width), width(s.get_width() - landing_width), tot_len(length + width);
@@ -2743,12 +2747,13 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		if (i->for_elevator || i->for_ramp) continue; // for elevator or ramp, not stairs
 		unsigned const num_stairs(i->get_num_stairs());
 		unsigned const stair_flags((i->floor == 1) ? RO_FLAG_ADJ_BOT : 0); // tag first floor of stairs as RO_FLAG_ADJ_BOT for proper player collisions
-		float const stair_dz(i->get_stair_dz(window_vspacing)), stair_height(stair_dz + floor_thickness), stair_z1h(0.4f*stair_height);
+		float const floor_spacing(i->in_mall ? get_mall_floor_spacing() : window_vspacing);
+		float const stair_dz(i->get_stair_dz(floor_spacing)), stair_height(stair_dz + floor_thickness), stair_z1h(0.4f*stair_height);
 		bool const dim(i->dim), dir(i->dir), is_U(i->is_u_shape()), has_side_walls(i->has_walled_sides() || is_U);
 		bool const has_wall_both_sides(i->against_wall[0] && i->against_wall[1]); // ext basement stairs
 		bool const side(dir); // for U-shaped stairs; for now this needs to be consistent for the entire stairwell, can't use rgen.rand_bool()
 		// Note: stairs always start at floor_thickness above the landing z1, ignoring landing z2/height
-		float const floor_z(i->z1() - fc_gap), step_len_pos(i->get_step_length());
+		float const floor_z(i->z1() - (floor_spacing - floor_thickness)), step_len_pos(i->get_step_length());
 		float const wall_hw(i->get_wall_hwidth(window_vspacing)), wall_end_bias(0.01*wall_hw); // bias just enough to avoid z-fighting with stairs;
 		float const stairs_zmin(i->in_ext_basement ? interior->basement_ext_bcube.z1() : bcube.z1());
 		float step_len((dir ? 1.0 : -1.0)*step_len_pos), z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
@@ -2922,6 +2927,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 					railing.z1() += 0.15*stair_height; // shift up slightly so that the bottom doesn't clip through the bottom stair
 				}
 				objs.emplace_back(railing, TYPE_RAILING, 0, dim, railing_dir, flags, 1.0, SHAPE_CUBE, railing_color);
+				if (i->in_mall) {objs.back().state_flags = num_stairs;} // encode num_stairs in state_flags so that railing height can be drawn correctly
 			}
 		} // for d
 		if (i->has_railing && is_U) { // add a railing for the back wall of U-shaped stairs
@@ -2980,7 +2986,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			set_wall_width(railing, i->d[!dim][dir2], railing_hw, !dim);
 			objs.emplace_back(railing, TYPE_RAILING, 0, dim, dir2, (RO_FLAG_TOS | RO_FLAG_OPEN | RO_FLAG_ADJ_TOP), 1.0, SHAPE_CUBE, railing_color); // no vertical pole
 		}
-		else if (i->has_railing && !has_wall_both_sides && (i->stack_conn || (extend_walls_up && i->shape == SHAPE_STRAIGHT))) {
+		else if (i->has_railing && !has_wall_both_sides && !i->in_mall && (i->stack_conn || (extend_walls_up && i->shape == SHAPE_STRAIGHT))) {
 			// add railings around the top if: straight + top floor with no roof access, connector stairs, or basement stairs
 			room_object_t railing(*i, TYPE_RAILING, 0, !dim, dir, (RO_FLAG_TOS | RO_FLAG_ADJ_BOT), 1.0, SHAPE_CUBE, railing_color); // flag to skip drawing ends
 			set_cube_zvals(railing, i->z2(), (i->z2() + fc_gap)); // starts at the floor

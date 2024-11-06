@@ -1440,7 +1440,8 @@ struct breaker_zone_t {
 };
 
 struct stairs_landing_base_t : public oriented_cube_t {
-	bool bend_dir=0, roof_access=0, stack_conn=0, in_ext_basement=0, against_wall[2]={};
+	bool bend_dir=0, roof_access=0, stack_conn=0, in_ext_basement=0, in_mall=0, against_wall[2]={};
+	uint8_t num_stairs=0; // used for malls, since floor spacing may be larger
 	stairs_shape shape=SHAPE_STRAIGHT;
 
 	stairs_landing_base_t() {}
@@ -1452,7 +1453,7 @@ struct stairs_landing_base_t : public oriented_cube_t {
 	bool is_straight       () const {return !(is_u_shape() || is_l_shape());}
 	bool has_walled_sides  () const {return (shape == SHAPE_WALLED || shape == SHAPE_WALLED_SIDES);}
 	unsigned get_face_id   () const {return (2*dim + dir);}
-	unsigned get_num_stairs() const {return (is_u_shape() ? NUM_STAIRS_PER_FLOOR_U : (is_l_shape() ? NUM_STAIRS_PER_FLOOR_L : NUM_STAIRS_PER_FLOOR));}
+	unsigned get_num_stairs() const;
 	float get_step_length  () const {return get_length()/get_num_stairs();}
 	float get_retail_landing_width(float floor_spacing) const {return 0.5*min(get_length(), floor_spacing);}
 	float get_stair_dz(float floor_spacing) const {return floor_spacing/(get_num_stairs()+1);}
@@ -2283,6 +2284,7 @@ private:
 	void add_mall_stores(cube_t &room, bool dim, bool dir, rand_gen_t &rgen);
 	void add_mall_stairs();
 	float get_mall_floor_spacing(cube_t const &room) const;
+	float get_mall_floor_spacing() const {return get_mall_floor_spacing(interior->get_extb_start_room());}
 	cube_t get_mall_center(cube_t const &room) const;
 	void get_mall_open_areas(cube_t const &room, vect_cube_t &openings) const;
 	cube_t add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, rand_gen_t &rgen);

@@ -36,7 +36,7 @@ void building_t::get_mall_open_areas(cube_t const &room, vect_cube_t &openings) 
 
 void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, rand_gen_t &rgen) {
 	assert(interior);
-	float const floor_spacing(get_mall_floor_spacing(room)), fc_thick(get_fc_thickness()), wall_thickness(get_wall_thickness());
+	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), fc_thick(get_fc_thickness()), wall_thickness(get_wall_thickness());
 	
 	// add wall section below the door on lower floors, since the entrace door is on the top level
 	float const room_end(room.d[dim][!dir]); // entrance end
@@ -53,6 +53,7 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 	vect_cube_t openings;
 	get_mall_open_areas(room, openings);
 	assert(!openings.empty());
+	interior->stairwells.reserve(interior->stairwells.size() + openings.size() + 1);
 
 	for (unsigned f = 1; f < interior->num_extb_floors; ++f) { // skip first floor
 		float const z(room.z1() + f*floor_spacing), zc(z - fc_thick), zf(z + fc_thick);
@@ -64,13 +65,32 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 			interior->add_ceil_floor_pair(ww, zc, z, zf);
 		}
 		for (unsigned n = 0; n <= openings.size(); ++n) { // ends and gaps between openings
+			bool const first(n == 0), last(n == openings.size());
 			cube_t ww(openings.front());
-			ww.d[dim][0] = ((n == 0              ) ? room.d[dim][0] : openings[n-1].d[dim][1]);
-			ww.d[dim][1] = ((n == openings.size()) ? room.d[dim][1] : openings[n  ].d[dim][0]);
+			ww.d[dim][0] = (first ? room.d[dim][0] : openings[n-1].d[dim][1]);
+			ww.d[dim][1] = (last  ? room.d[dim][1] : openings[n  ].d[dim][0]);
 			interior->add_ceil_floor_pair(ww, zc, z, zf);
-		}
-		// add stairs and escalators
-		// TODO
+			// add stairs
+			bool const run_dir(first ? 1 : (last ? 0 : rgen.rand_bool())), side_dir(rgen.rand_bool());
+			float const ww_edge(ww.d[dim][run_dir]), ww_side(ww.d[!dim][side_dir]), stairs_len(1.5*floor_spacing), stairs_width(0.5*floor_spacing);
+			cube_t stairs_bc;
+			set_cube_zvals(stairs_bc, zf-floor_spacing, zf); // top of floor below to top of current floor
+			stairs_bc.d[ dim][ !run_dir] = ww_edge; // at walkway
+			stairs_bc.d[ dim][  run_dir] = ww_edge + (run_dir  ?  1.0 : -1.0)*stairs_len; // extend away from walkway
+			stairs_bc.d[!dim][ side_dir] = ww_side + (side_dir ? -1.0 :  1.0)*wall_thickness;
+			stairs_bc.d[!dim][!side_dir] = ww_side + (side_dir ? -1.0 :  1.0)*stairs_width;
+			landing_t landing(stairs_bc, 0, 0, dim, !run_dir, 1, SHAPE_STRAIGHT, 0, 1, 0, 0, 1); // add_railing=1, roof_access=0, is_at_top=1, stack_conn=0, for_ramp=0, in_extb=1
+			landing.num_stairs = round_fp(NUM_STAIRS_PER_FLOOR*floor_spacing/window_vspace);
+			landing.in_mall = 1;
+			stairs_landing_base_t stairwell(landing);
+			landing  .z1() = zc;
+			stairwell.z2() = zf + floor_spacing;
+			interior->landings.push_back(landing);
+			interior->stairwells.emplace_back(stairwell, 1); // num_floors=1
+
+			// add escalators
+			// TODO
+		} // for n
 	} // for f
 }
 
@@ -84,7 +104,7 @@ void building_t::add_mall_stores(cube_t &room, bool dim, bool dir, rand_gen_t &r
 	} // for n
 }
 
-void building_t::add_mall_stairs() {
+void building_t::add_mall_stairs() { // connecting to the entrance door
 	if (!has_mall()) return;
 	room_t const &room(interior->get_extb_start_room());
 	door_t const &door(interior->get_ext_basement_door());
@@ -149,48 +169,66 @@ void building_t::add_mall_lower_floor_lights(room_t const &room, unsigned room_i
 }
 
 void building_t::add_mall_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t &rooms_to_light) {
-	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), fc_thick(get_fc_thickness());
+	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), fc_thick(get_fc_thickness()), doorway_width(get_doorway_width());
 	float const wall_thickness(get_wall_thickness()), trim_thick(get_trim_thickness());
-	vect_cube_t openings;
+	vect_cube_t openings, railing_cuts, railing_segs, temp;
 	get_mall_open_areas(room, openings);
 	vect_room_object_t &objs(interior->room_geom->objs);
 
+	for (stairwell_t const &s : interior->stairwells) {
+		if (!s.in_mall) continue;
+		railing_cuts.push_back(s);
+		railing_cuts.back().expand_in_dim( s.dim, doorway_width ); // add padding on both ends
+		railing_cuts.back().expand_in_dim(!s.dim, wall_thickness); // add space for railings
+	}
 	// add walkway railings
 	for (unsigned f = 1; f < interior->num_extb_floors; ++f) { // skip first floor
-		float const z(room.z1() + f*floor_spacing);
-		float const zb1(z - fc_thick - trim_thick), zb2(z + fc_thick + 2.0*trim_thick), zt1(z + 0.45*window_vspace), zt2(zt1 + 0.04*window_vspace);
+		float const z(room.z1() + f*floor_spacing), plate_thickness(0.1*wall_thickness), vbar_hwidth(0.35*wall_thickness);
+		float const zb1(z - fc_thick - trim_thick), zb2(z + fc_thick + 2.0*trim_thick), zt1(z + 0.42*window_vspace), zt2(zt1 + 0.04*window_vspace);
 		colorRGBA const bar_color(LT_GRAY);
+		cube_t vbar;
+		set_cube_zvals(vbar, zb2, zt1);
 
 		for (cube_t const &opening : openings) {
 			for (unsigned dim = 0; dim < 2; ++dim) {
 				for (unsigned dir = 0; dir < 2; ++dir) {
 					cube_t railing(opening);
-					set_wall_width(railing, opening.d[dim][dir], 0.0, dim);
-					cube_t bar(railing);
-					// bottom bar
-					bar.expand_by_xy(0.4*wall_thickness);
-					set_cube_zvals(bar, zb1, zb2);
-					objs.emplace_back(bar, TYPE_METAL_BAR, room_id, !dim, 0, 0, 1.0, SHAPE_CUBE, bar_color);
-					// top bar
-					bar.expand_by_xy(0.1*wall_thickness); // additional expand
-					set_cube_zvals(bar, zt1, zt2);
-					objs.emplace_back(bar, TYPE_METAL_BAR, room_id, !dim, 0, 0, 1.0, SHAPE_CUBE, bar_color);
-					// glass
-					cube_t panel(railing);
-					set_cube_zvals(panel, zb2, zt1);
-					panel.expand_in_dim(dim, 0.1*wall_thickness);
-					objs.emplace_back(panel, TYPE_INT_WINDOW, room_id, dim, 0, 0, 1.0);
+					set_wall_width(railing, opening.d[dim][dir], plate_thickness, dim); // start with panel width
+					subtract_cubes_from_cube(railing, railing_cuts, railing_segs, temp, 2); // check zval overlap
+					cube_t bot_bar(railing);
+					// bottom bar - not clipped to stairs/escalators
+					bot_bar.expand_by_xy (0.3*wall_thickness); // additional expand from plate
+					bot_bar.expand_in_dim(!dim, plate_thickness); // fill the corner notch
+					set_cube_zvals(bot_bar, zb1, zb2);
+					objs.emplace_back(bot_bar, TYPE_METAL_BAR, room_id, !dim, 0, 0, 1.0, SHAPE_CUBE, bar_color);
+
+					for (cube_t const &r : railing_segs) {
+						// top bar
+						cube_t bar(r);
+						bar.expand_by_xy (0.4*wall_thickness); // additional expand from plate
+						bar.expand_in_dim(!dim, plate_thickness); // fill the corner notch
+						set_cube_zvals(bar, zt1, zt2);
+						objs.emplace_back(bar, TYPE_METAL_BAR, room_id, !dim, 0, 0, 1.0, SHAPE_CUBE, bar_color);
+						// glass
+						cube_t panel(r);
+						set_cube_zvals(panel, zb2, zt1);
+						objs.emplace_back(panel, TYPE_INT_WINDOW, room_id, dim, 0, 0, 1.0);
+
+						// add vertical bars where railing was clipped
+						for (unsigned d = 0; d < 2; ++d) {
+							if (r.d[!dim][d] == railing.d[!dim][d]) continue; // not clipped
+							set_wall_width(vbar, r      .d[!dim][d  ], vbar_hwidth, !dim);
+							set_wall_width(vbar, opening.d[ dim][dir], vbar_hwidth,  dim);
+							objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, 0, 1.0, SHAPE_CUBE, bar_color);
+						}
+					} // for r
 				} // for dir
 			} // for dim
 			// add corner bars; will need to add to both ends and both dims once there are gaps for stairs and escalators
-			float const vbar_hwidth(0.35*wall_thickness);
-
 			for (unsigned n = 0; n < 4; ++n) {
 				bool const dirs[2] = {(n&1), (n&2)}; // x, y
-				cube_t bar;
-				set_cube_zvals(bar, zb2, zt1);
-				for (unsigned d = 0; d < 2; ++d) {set_wall_width(bar, opening.d[d][dirs[d]], vbar_hwidth, d);}
-				objs.emplace_back(bar, TYPE_METAL_BAR, room_id, 0, 0, 0, 1.0, SHAPE_CUBE, bar_color);
+				for (unsigned d = 0; d < 2; ++d) {set_wall_width(vbar, opening.d[d][dirs[d]], vbar_hwidth, d);}
+				objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, 0, 1.0, SHAPE_CUBE, bar_color);
 			}
 		}
 	} // for f
