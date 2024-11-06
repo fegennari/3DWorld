@@ -2284,6 +2284,7 @@ private:
 	void add_mall_stairs();
 	float get_mall_floor_spacing(cube_t const &room) const;
 	cube_t get_mall_center(cube_t const &room) const;
+	void get_mall_open_areas(cube_t const &room, vect_cube_t &openings) const;
 	cube_t add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, rand_gen_t &rgen);
 	cube_t add_and_connect_ext_basement_room(extb_room_t &room, ext_basement_room_params_t &P,
 		float door_width, bool dim, bool dir, bool is_end_room, unsigned depth, bool const add_doors[2], rand_gen_t &rgen);
