@@ -1433,6 +1433,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		room_t const &room(get_room(cand_room));
 		if (room.is_hallway            ) continue; // don't select a hallway
 		if (room.get_has_out_of_order()) continue; // don't select a bathroom that may be out of order (not tracked per-floor)
+		if (room.is_sec_bldg || room.is_mall()) continue; // not a valid dest
 		// what about rooms were all doors are locked? this isn't easy to check for; it will be a surprise for the player if the person is a zombie
 		bool const is_retail(room.is_retail());
 		// allow targeting the top floor of a retail room as the path construction will route to the lowest level
@@ -1936,6 +1937,7 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) { // add room_cands
 		if (r->is_sec_bldg) continue; // don't place people in garages and sheds
+		if (r->is_mall()  ) continue; // don't place people in malls yet
 		if (min(r->dx(), r->dy()) < 3.0*radius) continue; // room to small to place a person
 		unsigned const room_ix(r - interior->rooms.begin());
 		if (interior->pool.valid && (int)room_ix == interior->pool.room_ix) continue; // don't place in pool room so that we don't have to check for pool collisions
