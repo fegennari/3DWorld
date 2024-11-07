@@ -1489,12 +1489,12 @@ struct stairs_place_t : public cube_t { // for extended basements
 };
 
 struct escalator_t : public oriented_cube_t { // Note: not yet used
-	bool move_dir=0; // dir points upward
+	bool move_dir=0, in_mall=0; // move_dir points upward
 	float end_ext=0.0, delta_z=0.0, bot_edge_shift=0.0;
 
 	escalator_t() {}
-	escalator_t(cube_t const &c, bool dim_, bool dir_, bool mdir, float ext, float dz, float brz) :
-		oriented_cube_t(c, dim_, dir_), move_dir(mdir), end_ext(ext), delta_z(dz), bot_edge_shift(brz) {}
+	escalator_t(cube_t const &c, bool dim_, bool dir_, bool mdir, float ext, float dz, float brz, bool in_mall_=0) :
+		oriented_cube_t(c, dim_, dir_), move_dir(mdir), in_mall(in_mall_), end_ext(ext), delta_z(dz), bot_edge_shift(brz) {}
 	bool  is_going_up    () const {return (move_dir != dir);}
 	float get_side_width () const {return 0.10*get_width();}
 	float get_side_height() const {return 0.80*get_width();} // ramp/steps to top edge

@@ -2719,16 +2719,17 @@ void building_room_geom_t::add_escalator(escalator_t const &e, float floor_spaci
 				railing_mat.add_cube_to_verts_untextured(rend, rail_color, ~get_face_mask(dim, D)); // skip inside face
 			}
 		} // for side
-		// draw a vertical support under the high side
-		metal_mat.add_cube_to_verts_untextured(e.get_support_pillar(), WHITE, EF_Z12); // skip top and bottom
+		if (!e.in_mall) { // draw a vertical support under the high side; only for retail glass floor escalators, not mall escalators
+			metal_mat.add_cube_to_verts_untextured(e.get_support_pillar(), WHITE, EF_Z12); // skip top and bottom
+		}
 	}
 	if (draw_dynamic) { // draw moving steps
 		static float last_step_pos(0.0); // cahed for most recently drawn escalator
-		float const step_pos(animate2 ? fract(ESCALATOR_SPEED*tfticks) : last_step_pos);
+		float const step_pos(animate2 ? fract(ESCALATOR_SPEED*tfticks) : last_step_pos), ramp_height(ramp.dz());
 		last_step_pos = step_pos;
 		// draw steps
-		unsigned const num_steps(NUM_STAIRS_PER_FLOOR_ESC), front_face(get_face_mask(dim, !dir));
-		float const step_len(ramp.get_sz_dim(dim)/num_steps), step_delta((dir ? 1.0 : -1.0)*step_len), step_height(ramp.dz()/num_steps);
+		unsigned const num_steps(round_fp(NUM_STAIRS_PER_FLOOR_ESC*ramp_height/floor_spacing)), front_face(get_face_mask(dim, !dir));
+		float const step_len(ramp.get_sz_dim(dim)/num_steps), step_delta((dir ? 1.0 : -1.0)*step_len), step_height(ramp_height/num_steps);
 		float const belt_height(1.2*floor_height), stripe_height(0.2*step_height), tscale(0.5/step_len);
 		cube_t step(ramp);
 		vector3d delta; // goes up the ramp
