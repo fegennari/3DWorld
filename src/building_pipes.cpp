@@ -657,7 +657,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	colorRGBA const &pipes_color(pcolors[pipe_type]), &fittings_color(fcolors[pipe_type]);
 	float const tot_light_amt = 1.0; // to offset the darkness of the basement
 	vect_cube_t insul_exclude;
-	pipe_cubes.reserve(pipe_cubes.size() + pipes.size());
+	reserve_extra(pipe_cubes, pipes.size());
 
 	for (pipe_t &p : pipes) {
 		if (!p.connected) continue; // unconnected drain, skip

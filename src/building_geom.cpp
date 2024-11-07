@@ -2168,7 +2168,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	float const xy_sz(tsz.xy_mag()); // better to use bcube for size?
 	cube_t bounds(top);
 	if (add_walls) {bounds.expand_by_xy(-wall_width);}
-	details.reserve(details.size() + num_details);
+	reserve_extra(details, num_details);
 
 	if (add_water_tower) {
 		float const radius(rgen.rand_uniform(0.04, 0.06)*(tsz.x + tsz.y)), height(rgen.rand_uniform(3.0, 5.0)*radius);

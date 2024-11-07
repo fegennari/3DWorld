@@ -53,7 +53,7 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 	vect_cube_t openings;
 	get_mall_open_areas(room, openings);
 	assert(!openings.empty());
-	interior->stairwells.reserve(interior->stairwells.size() + openings.size() + 1);
+	reserve_extra(interior->stairwells, (openings.size() + 1));
 
 	for (unsigned f = 1; f < interior->num_extb_floors; ++f) { // skip first floor
 		float const z(room.z1() + f*floor_spacing), zc(z - fc_thick), zf(z + fc_thick);

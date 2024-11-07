@@ -2681,6 +2681,7 @@ template<typename T> void add_to_and_clear(T &src, T &dest) {
 	src.clear();
 }
 template<typename T> void add_inverted_triangles(T &verts, vector<unsigned> &indices, unsigned verts_start, unsigned ixs_start);
+template<typename T> void reserve_extra(vector<T> &v, unsigned num) {v.reserve(v.size() + num);}
 
 colorRGBA const DARK_BRASS_C(0.4, 0.35, 0.15, 1.0);
 

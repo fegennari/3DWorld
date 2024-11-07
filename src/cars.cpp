@@ -979,7 +979,7 @@ void car_manager_t::init_cars(unsigned num) {
 
 void car_manager_t::add_parked_cars(vector<car_t> const &new_cars) {
 	first_parked_car = cars.size(); // Note: sort may invalidate this, but okay for use in finalize_cars()
-	cars.reserve(cars.size() + new_cars.size());
+	reserve_extra(cars, new_cars.size());
 	vector_add_to(new_cars, cars);
 }
 
