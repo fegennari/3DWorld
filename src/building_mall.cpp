@@ -95,7 +95,7 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 			side_dir ^= 1; // opposite side
 			ww_edge = ww.d[ dim][run_dir ];
 			ww_side = ww.d[!dim][side_dir];
-			float const delta_z(floor_spacing + trim_thickness), e_width(0.8*door_width); // make slightly taller so that top surface is above the railing bottom trim
+			float const delta_z(floor_spacing + 2.0*trim_thickness), e_width(0.8*door_width); // make slightly taller so that top surface is above the railing bottom trim
 			cube_t epair;
 			set_cube_zvals(epair, floor_below_z, floor_above_z);
 			epair.d[ dim][ !run_dir] = ww_edge - (run_dir  ?  1.0 : -1.0)*door_width; // overlapping walkway

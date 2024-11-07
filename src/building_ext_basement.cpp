@@ -501,11 +501,21 @@ unsigned building_t::max_expand_underground_room(cube_t &room, bool dim, bool di
 	assert(exp_room.contains_cube(room));
 	if (exp_room.get_sz_dim(!dim) < room_width_min) return 0; // room is too narrow, make it a hallway or mall concourse instead
 	if (exp_room.get_sz_dim( dim) < room_len_min  ) return 0; // room is too short, make it a hallway or backrooms instead
+	cube_t const orig_room(room);
 	room = exp_room;
 	unsigned num_floors_add(0);
-	float const room_floor_spacing((is_mall ? 2.0 : 1.0)*floor_spacing); // mall has 2x floor spacing
+	float const room_floor_spacing((is_mall ? 1.5 : 1.0)*floor_spacing); // mall has 1.5x floor spacing
 
-	if (is_mall) {num_floors_add = 1;} // mall is always 2 floors; should I add a new config option for this?
+	if (is_mall) {
+		num_floors_add = 1; // mall is always 2 floors; should I add a new config option for this?
+
+		if (room_floor_spacing > floor_spacing) { // check if we can lower the floor to increase room height
+			cube_t cand(room);
+			set_cube_zvals(cand, (room.z1() - (room_floor_spacing - floor_spacing)), room.z1()); // one floor below
+			if (check_buildings_cube_coll(cand, 0, 1, this)) {room = orig_room; return 0;}
+			room.z1() = cand.z1();
+		}
+	}
 	else {
 		float const max_depth(room.z2() - get_max_sea_level());
 		unsigned const max_num_floors(max(1U, min(global_building_params.max_ext_basement_room_depth, unsigned(floor(max_depth/floor_spacing)))));
@@ -514,7 +524,7 @@ unsigned building_t::max_expand_underground_room(cube_t &room, bool dim, bool di
 	for (unsigned n = 0; n < num_floors_add; ++n) {
 		cube_t cand(room);
 		set_cube_zvals(cand, room.z1()-room_floor_spacing, room.z1()); // one floor below
-		if (check_buildings_cube_coll(cand, 0, 1, this)) break; // check for extended basement and tunnels below; xy_only=0, inc_basement=1, exclude ourself
+		if (check_buildings_cube_coll(cand, 0, 1, this)) {num_floors_add = n; break;} // check for ext basement and tunnels below; xy_only=0, inc_basement=1, exclude ourself
 		room.z1() = cand.z1();
 	}
 	return (num_floors_add + 1); // return the total number of floors
