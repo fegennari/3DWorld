@@ -187,11 +187,11 @@ void building_t::add_mall_lower_floor_lights(room_t const &room, unsigned room_i
 	} // for f
 }
 
-void building_t::add_mall_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t &rooms_to_light) {
+unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t &rooms_to_light) {
 	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), fc_thick(get_fc_thickness()), doorway_width(get_doorway_width());
 	float const wall_thickness(get_wall_thickness()), trim_thick(get_trim_thickness());
 	bool const mall_dim(interior->extb_wall_dim);
-	vect_cube_t openings, railing_cuts, railing_segs, temp;
+	vect_cube_t openings, railing_cuts, railing_segs, temp, pillars;
 	get_mall_open_areas(room, openings);
 	vect_room_object_t &objs(interior->room_geom->objs);
 
@@ -215,7 +215,7 @@ void building_t::add_mall_objs(rand_gen_t rgen, room_t const &room, float zval, 
 		for (unsigned dir = 0; dir < 2; ++dir) { // each side of opening
 			set_wall_width(pillar, (opening.d[!mall_dim][dir] + (dir ? -1.0 : 1.0)*0.7*pillar_hwidth), pillar_hwidth, !mall_dim);
 			set_wall_width(pillar, opening.get_center_dim(mall_dim), pillar_hwidth, mall_dim);
-			objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, 0, 0, 0, 1.0, SHAPE_CUBE, WHITE, EF_Z12);
+			pillars.push_back(pillar);
 			railing_cuts.push_back(pillar);
 		}
 	} // for opening
@@ -287,8 +287,15 @@ void building_t::add_mall_objs(rand_gen_t rgen, room_t const &room, float zval, 
 			}
 		}
 	} // for f
-	// TODO: potted plants, fountain, benches, tables, chairs, etc.
+	
+	// TODO: potted plants, palm trees, fountain, TYPE_TABLE, TYPE_CHAIR, TYPE_PICTURE, TYPE_WBOARD, TYPE_TCAN, TYPE_SIGN, TYPE_PLANT, TYPE_RDESK,
+	// TYPE_VENT, TYPE_DUCT, TYPE_VASE, TYPE_BENCH, TYPE_CLOCK, TYPE_TV, TYPE_FIRE_EXT, TYPE_BAR_STOOL, TYPE_WFOUNTAIN
 	//cube_t walk_area(room);
 	//walk_area.expand_by_xy(-wall_thickness);
+
+	// add pillars last so that we can check lights against them
+	unsigned const pillars_start(objs.size());
+	for (cube_t const &pillar : pillars) {objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, 0, 0, 0, 1.0, SHAPE_CUBE, WHITE, EF_Z12);}
+	return pillars_start;
 }
 

@@ -323,6 +323,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			bool const top_floor(f+1 == num_floors);
 			bool const has_stairs_this_floor(r->has_stairs_on_floor(f));
 			unsigned const floor_objs_start(objs.size()); // needed for backrooms lights
+			unsigned pillars_start(0); // needed for mall lights
 			bool is_lit(0), has_light(1), light_dim(room_dim), wall_light(0), has_stairs(has_stairs_this_floor), top_of_stairs(has_stairs && top_floor);
 			float light_delta_z(0.0);
 			vect_cube_t rooms_to_light;
@@ -335,7 +336,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				add_backrooms_objs(rgen, *r, room_center.z, room_id, f, rooms_to_light);
 			}
 			else if (is_mall) {
-				add_mall_objs(rgen, *r, room_center.z, room_id, f, rooms_to_light);
+				pillars_start = add_mall_objs(rgen, *r, room_center.z, room_id, f, rooms_to_light);
 			}
 			else if (is_retail_room) {
 				add_retail_room_objs(rgen, *r, room_center.z, room_id, light_ix_assign);
@@ -375,8 +376,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (is_lit)     {flags |= RO_FLAG_LIT | RO_FLAG_EMISSIVE;}
 			if (has_stairs) {flags |= RO_FLAG_RSTAIRS;}
 			if (r->is_ext_basement_conn()) {flags |= RO_FLAG_EXTERIOR;} // flag as exterior since this light may reach the connected building
-			// add a light to the ceiling of this room if there's space (always for top of stairs)
-			unsigned const lcheck_start_ix(is_backrooms ? floor_objs_start : objs.size()); // must check lights vs. backrooms walls and pillars
+			// add one or more lights to the ceiling of this room if there's space (always for top of stairs);
+			// must check lights vs. backrooms walls and pillars, and mall pillars
+			unsigned const lcheck_start_ix(is_backrooms ? floor_objs_start : (is_mall ? pillars_start : objs.size()));
 			set_cube_zvals(light, (light_z2 - light_thick), light_z2);
 			valid_lights.clear();
 
