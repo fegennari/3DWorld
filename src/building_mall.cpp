@@ -178,8 +178,8 @@ void building_t::add_mall_objs(rand_gen_t rgen, room_t const &room, float zval, 
 	for (stairwell_t const &s : interior->stairwells) {
 		if (!s.in_mall) continue;
 		railing_cuts.push_back(s);
-		railing_cuts.back().expand_in_dim( s.dim, doorway_width ); // add padding on both ends
-		railing_cuts.back().expand_in_dim(!s.dim, wall_thickness); // add space for railings
+		railing_cuts.back().expand_in_dim( s.dim, doorway_width); // add padding on both ends
+		railing_cuts.back().expand_in_dim(!s.dim, 0.8*wall_thickness); // add space for railings
 	}
 	// add walkway railings
 	for (unsigned f = 1; f < interior->num_extb_floors; ++f) { // skip first floor
@@ -192,8 +192,9 @@ void building_t::add_mall_objs(rand_gen_t rgen, room_t const &room, float zval, 
 		for (cube_t const &opening : openings) {
 			for (unsigned dim = 0; dim < 2; ++dim) {
 				for (unsigned dir = 0; dir < 2; ++dir) {
+					float const centerline(opening.d[dim][dir]);
 					cube_t railing(opening);
-					set_wall_width(railing, opening.d[dim][dir], plate_thickness, dim); // start with panel width
+					set_wall_width(railing, centerline, plate_thickness, dim); // start with panel width
 					subtract_cubes_from_cube(railing, railing_cuts, railing_segs, temp, 2); // check zval overlap
 					cube_t bot_bar(railing);
 					// bottom bar - not clipped to stairs/escalators
@@ -217,9 +218,21 @@ void building_t::add_mall_objs(rand_gen_t rgen, room_t const &room, float zval, 
 						// add vertical bars where railing was clipped
 						for (unsigned d = 0; d < 2; ++d) {
 							if (r.d[!dim][d] == railing.d[!dim][d]) continue; // not clipped
-							set_wall_width(vbar, r      .d[!dim][d  ], vbar_hwidth, !dim);
-							set_wall_width(vbar, opening.d[ dim][dir], vbar_hwidth,  dim);
-							objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, 0, 1.0, SHAPE_CUBE, bar_color);
+							set_wall_width(vbar, r.d[!dim][d], vbar_hwidth, !dim);
+							set_wall_width(vbar, centerline,   vbar_hwidth,  dim);
+							objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, 0, 1.0, SHAPE_CUBE, bar_color, EF_Z12); // skip top and bottom
+						}
+						// add vertical bars at intervals
+						float const length(r.get_sz_dim(!dim));
+						unsigned const num_vbars(round_fp(1.0*length/window_vspace));
+						float const vbar_spacing(length/(num_vbars+1)); // bars at ends are already added
+						float vbar_pos(r.d[!dim][0]);
+
+						for (unsigned n = 0; n < num_vbars; ++n) {
+							vbar_pos += vbar_spacing; // first bar is offset
+							set_wall_width(vbar, vbar_pos,   vbar_hwidth, !dim);
+							set_wall_width(vbar, centerline, vbar_hwidth,  dim);
+							objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, 0, 1.0, SHAPE_CUBE, bar_color, EF_Z12); // skip top and bottom
 						}
 					} // for r
 				} // for dir
@@ -228,7 +241,10 @@ void building_t::add_mall_objs(rand_gen_t rgen, room_t const &room, float zval, 
 			for (unsigned n = 0; n < 4; ++n) {
 				bool const dirs[2] = {(n&1), (n&2)}; // x, y
 				for (unsigned d = 0; d < 2; ++d) {set_wall_width(vbar, opening.d[d][dirs[d]], vbar_hwidth, d);}
-				objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, 0, 1.0, SHAPE_CUBE, bar_color);
+				cube_t test_cube(vbar);
+				test_cube.expand_by_xy(-0.75*vbar_hwidth); // shrink to allow a bit of railing overlap
+				if (has_bcube_int(test_cube, railing_cuts)) continue; // skip if intersecting; shouldn't happen?
+				objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, 0, 1.0, SHAPE_CUBE, bar_color, EF_Z12); // skip top and bottom
 			}
 		}
 	} // for f
