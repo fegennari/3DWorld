@@ -1289,7 +1289,7 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 		call_request_t(unsigned f, float z, unsigned d, bool ip) : floor_ix(f), zval(z), req_dirs(d), inside_press(ip) {}
 		bool operator<(call_request_t const &cr) const {return (cr.inside_press < inside_press);} // sort so that CRs with inside_press=1 are first
 	};
-	bool at_edge=0, going_up=0, at_dest=0, stop_on_passing_floor=0, hold_doors=0, hold_movement=0, under_skylight=0, is_moving=0, interior_room=0;
+	bool at_edge=0, going_up=0, at_dest=0, stop_on_passing_floor=0, hold_doors=0, hold_movement=0, under_skylight=0, is_moving=0, interior_room=0, in_mall=0;
 	uint8_t adj_pair_ix=0; // 0=not a pair, 1=first, 2=second
 	unsigned room_id=0, car_obj_id=0, light_obj_id=0, button_id_start=0, button_id_end=0, num_occupants=0;
 	uint64_t skip_floors_mask=0; // good for up to 64 floors
@@ -1297,8 +1297,8 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 	float open_amt=0;
 	deque<call_request_t> call_requests; // used as a queue
 
-	elevator_t(cube_t const &c, unsigned rid, bool dim_, bool dir_, bool at_edge_, bool interior_room_) :
-		oriented_cube_t(c, dim_, dir_), at_edge(at_edge_), interior_room(interior_room_), room_id(rid) {assert(is_strictly_normalized());}
+	elevator_t(cube_t const &c, unsigned rid, bool dim_, bool dir_, bool at_edge_, bool interior_room_, bool in_mall_=0) :
+		oriented_cube_t(c, dim_, dir_), at_edge(at_edge_), interior_room(interior_room_), in_mall(in_mall_), room_id(rid) {assert(is_strictly_normalized());}
 	float get_wall_thickness () const {return 0.02*get_width();}
 	float get_frame_width    () const {return ELEVATOR_FRAME_WIDTH*get_width();} // to each side of elevator door
 	unsigned get_door_face_id() const {return (2*dim + dir);}
@@ -2255,6 +2255,7 @@ public:
 	bool point_in_water_area(point const &p, bool full_room_height=1) const;
 	bool point_in_or_above_pool(point const &pt) const;
 	bool set_float_height(point &pos, float radius, float ceil_zval, float density=0.5) const;
+	template<typename T> float get_SEE_floor_spacing(T const &v) const {return (v.in_mall ? get_mall_floor_spacing() : get_window_vspace());}
 	void print_building_manifest() const;
 	void print_building_stats() const;
 private:

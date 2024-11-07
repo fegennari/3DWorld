@@ -111,6 +111,18 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 			}
 		} // for n
 	} // for f
+	if (!openings.empty()) { // add elevator(s)
+		unsigned opening_ix(openings.size()/2); // center opening
+		if (!(openings.size() & 1) && rgen.rand_bool()) {--opening_ix;} // tie breaker if even
+		cube_t const opening(openings[opening_ix]);
+		bool const edir(rgen.rand_bool());
+		float const ww_edge(opening.d[dim][!edir]);
+		elevator_t elevator(room, interior->ext_basement_hallway_room_id, dim, !edir, 1, 1, 1); // at_edge=1, interior_room=1, in_mall=1
+		elevator.d[dim][!edir] = ww_edge; // adjacent to walkway
+		elevator.d[dim][ edir] = ww_edge + (edir ? 1.0 : -1.0)*1.6*door_width; // extend away from walkway by depth
+		set_wall_width(elevator, opening.get_center_dim(!dim), 0.8*door_width, !dim); // set width
+		interior->elevators.push_back(elevator);
+	}
 }
 
 void building_t::add_mall_stores(cube_t &room, bool dim, bool dir, rand_gen_t &rgen) {
@@ -206,6 +218,10 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t const &room, float zv
 		if (!e.in_mall) continue;
 		railing_cuts.push_back(e);
 		railing_cuts.back().expand_in_dim(!e.dim, 0.5*wall_thickness); // add space for railings
+	}
+	for (elevator_t const &e : interior->elevators) {
+		if (!e.in_mall) continue;
+		railing_cuts.push_back(e.get_bcube_padded(doorway_width));
 	}
 	// add vertical support pillars
 	float const pillar_hwidth(2.0*wall_thickness);

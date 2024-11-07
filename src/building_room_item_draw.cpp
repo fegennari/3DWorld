@@ -1195,7 +1195,7 @@ void building_room_geom_t::create_lights_vbos(building_t const &building) {
 
 void building_room_geom_t::create_dynamic_vbos(building_t const &building, point const &camera_bs, vector3d const &xlate, bool play_clock_tick) {
 	//highres_timer_t timer(string("Gen Room Geom Dynamic ") + (building.is_house ? "house" : "office"));
-	float const clock_sound_dist(10.0*CAMERA_RADIUS);
+	float const clock_sound_dist(10.0*CAMERA_RADIUS), floor_spacing(building.get_window_vspace());
 	
 	// is it better to have a rgeom type just for clocks that gets updated when the second/minute changes?
 	// unclear if this would help, since we need to iterate over objs in either case, and that may be more expensive than drawing (and would be shared the current way);
@@ -1210,7 +1210,7 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building, point
 				add_clock(*i, 1); // add_dynamic=1
 				if (!play_clock_tick || (i->item_flags & 1)) continue; // skip for digital clocks
 				point const pos(i->get_cube_center());
-				if (fabs(pos.z - camera_bs.z) > 0.75*building.get_window_vspace()) continue; // different floors
+				if (fabs(pos.z - camera_bs.z) > 0.75*floor_spacing) continue; // different floors
 				float const dist(p2p_dist(camera_bs, pos));
 				if (dist > clock_sound_dist) continue;
 				if (!building.get_room(i->room_id).contains_pt(camera_bs)) continue; // only play ticking when the player and clock are in the same room (ignoring rotation)
@@ -1231,8 +1231,8 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building, point
 		float const fc_thick_scale(building.get_elevator_fc_thick_scale());
 		add_elevator_doors(e, fc_thick_scale); // add dynamic elevator doors
 		// draw elevator car for this elevator
-		add_elevator(objs[e.car_obj_id], e, 2.0/obj_scale, fc_thick_scale, building.calc_floor_offset(e.z1()),
-			building.get_window_vspace(), building.has_parking_garage, !building.interior->elevators_disabled);
+		unsigned const floor_offset(e.in_mall ? 0 : building.calc_floor_offset(e.z1()));
+		add_elevator(objs[e.car_obj_id], e, 2.0/obj_scale, fc_thick_scale, floor_offset, floor_spacing, building.has_parking_garage, !building.interior->elevators_disabled);
 
 		for (auto j = objs.begin() + e.button_id_start; j != objs.begin() + e.button_id_end; ++j) {
 			if (j->type == TYPE_BLOCKER) continue; // button was removed?
@@ -1240,7 +1240,7 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building, point
 			if (j->in_elevator()) {add_button(*j);} // add button as a dynamic object if it's inside the elevator
 		}
 	} // for e
-	for (escalator_t  const &e : building.interior->escalators) {add_escalator(e, building.get_window_vspace(), 0, 1);} // draw_static=0, draw_dynamic=1
+	for (escalator_t  const &e : building.interior->escalators) {add_escalator(e, floor_spacing, 0, 1);} // draw_static=0, draw_dynamic=1
 	for (tunnel_seg_t const &t : building.interior->tunnels   ) {add_tunnel_water(t);}
 	mats_dynamic.create_vbos(building);
 }

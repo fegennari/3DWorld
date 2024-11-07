@@ -27,7 +27,7 @@ string gen_random_full_name(rand_gen_t &rgen);
 void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize,
 	vector3d const &column_dir, vector3d const &line_dir, bool use_quads=0, bool include_space_chars=0);
 string const &gen_book_title(unsigned rand_id, string *author, unsigned split_len);
-void add_floor_number(unsigned floor_ix, unsigned floor_offset, bool has_parking_garage, ostringstream &oss);
+void add_floor_number(unsigned floor_ix, unsigned floor_offset, bool has_parking_garage, bool in_mall, ostringstream &oss);
 unsigned get_rgeom_sphere_ndiv(bool low_detail);
 void rotate_verts(point *verts, unsigned num_verts, vector3d const &axis, float angle, vector3d const &about);
 void add_pipe_with_bend(rgeom_mat_t &mat, colorRGBA const &color, point const &bot_pt, point const &top_pt, point const &bend, unsigned ndiv, float radius, bool draw_ends);
@@ -2581,7 +2581,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 		text_pos.z = cur_z;
 		cur_z += button_spacing;
 		verts.clear();
-		add_floor_number((f+1), floor_offset, has_parking_garage, oss);
+		add_floor_number((f+1), floor_offset, has_parking_garage, e.in_mall, oss);
 		gen_text_verts(verts, text_pos, oss.str(), 1000.0*text_height, col_dir, plus_z, 1); // use_quads=1
 		assert(!verts.empty());
 		bool const need_swap(dot_product(normal, cross_product((verts[1].v - verts[0].v), (verts[2].v - verts[1].v))) < 0.0);
@@ -2595,7 +2595,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 		// add floor text
 		ext_text_pos.z = zval + 0.1*panel_width;
 		verts.clear();
-		add_floor_number((cur_floor+1), floor_offset, has_parking_garage, oss);
+		add_floor_number((cur_floor+1), floor_offset, has_parking_garage, e.in_mall, oss);
 		gen_text_verts(verts, ext_text_pos, oss.str(), 1000.0*ext_text_height, -col_dir, plus_z, 1); // use_quads=1
 		if (need_swap) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
 		rgeom_mat_t &cur_ext_mat(is_powered ? get_material(lit_tp, 0, 1) : mat); // lit, as long as the elevator is powered
