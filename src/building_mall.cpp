@@ -171,16 +171,30 @@ void building_t::add_mall_lower_floor_lights(room_t const &room, unsigned room_i
 void building_t::add_mall_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t &rooms_to_light) {
 	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), fc_thick(get_fc_thickness()), doorway_width(get_doorway_width());
 	float const wall_thickness(get_wall_thickness()), trim_thick(get_trim_thickness());
+	bool const mall_dim(interior->extb_wall_dim);
 	vect_cube_t openings, railing_cuts, railing_segs, temp;
 	get_mall_open_areas(room, openings);
 	vect_room_object_t &objs(interior->room_geom->objs);
 
+	// gather railing cuts
 	for (stairwell_t const &s : interior->stairwells) {
 		if (!s.in_mall) continue;
 		railing_cuts.push_back(s);
 		railing_cuts.back().expand_in_dim( s.dim, doorway_width); // add padding on both ends
 		railing_cuts.back().expand_in_dim(!s.dim, 0.8*wall_thickness); // add space for railings
 	}
+	// add vertical support pillars
+	float const pillar_hwidth(2.0*wall_thickness);
+	cube_t pillar(room); // copy room zvals
+
+	for (cube_t const &opening : openings) {
+		for (unsigned dir = 0; dir < 2; ++dir) { // each side of opening
+			set_wall_width(pillar, (opening.d[!mall_dim][dir] + (dir ? -1.0 : 1.0)*0.7*pillar_hwidth), pillar_hwidth, !mall_dim);
+			set_wall_width(pillar, opening.get_center_dim(mall_dim), pillar_hwidth, mall_dim);
+			objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, 0, 0, 0, 1.0, SHAPE_CUBE, WHITE, EF_Z12);
+			railing_cuts.push_back(pillar);
+		}
+	} // for opening
 	// add walkway railings
 	for (unsigned f = 1; f < interior->num_extb_floors; ++f) { // skip first floor
 		float const z(room.z1() + f*floor_spacing), plate_thickness(0.1*wall_thickness), vbar_hwidth(0.35*wall_thickness);
