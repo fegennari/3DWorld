@@ -2464,7 +2464,8 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	if (!interior->room_geom && frame_counter < 60) {person.anim_time = 0.0; return AI_WAITING;} // wait until room geom is generated for this building
 	float const coll_dist(COLL_RADIUS_SCALE*person.radius), floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness());
 	float &wait_time(person.waiting_start); // reuse this field
-	float speed_mult(1.0);
+	float const base_speed_mult(is_house ? 1.0 : 1.2); // 20% faster in office buildings, if targeting the player, player last pos, or sound
+	float speed_mult((person.goal_type >= GOAL_TYPE_PLAYER) ? base_speed_mult : 1.0);
 	person.following_player = person.is_stopped = 0; // reset for this frame
 	// skip the same building check for coll if both this person and the player may be in different but connected buildings
 	bool allow_diff_building(interior->conn_info && person.pos.z < ground_floor_z1 && cur_player_building_loc.pos.z < ground_floor_z1 &&
@@ -2580,7 +2581,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			person.next_path_pt(1);
 			person.following_player = 1;
 			choose_dest = 0;
-			speed_mult  = 1.5; // faster when the player is in the same room
+			speed_mult  = 1.5*base_speed_mult; // faster when the player is in the same room
 			// run logic to play zombie sounds
 			bool const same_room_and_floor(same_room_and_floor_as_player(person));
 			bool play_sound(same_room_and_floor); // always play sound if in the same room and floor; even if in backrooms?
