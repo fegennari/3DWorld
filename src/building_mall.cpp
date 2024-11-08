@@ -75,7 +75,7 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 			// add stairs
 			bool run_dir(first ? 1 : (last ? 0 : rgen.rand_bool())), side_dir(rgen.rand_bool());
 			float ww_edge(ww.d[dim][run_dir]), ww_side(ww.d[!dim][side_dir]);
-			float const stairs_len(1.5*floor_spacing), stairs_width(0.5*floor_spacing);
+			float const stairs_len(1.5*floor_spacing), stairs_width(0.75*window_vspace);
 			cube_t stairs_bc;
 			set_cube_zvals(stairs_bc, floor_below_z, zf); // top of floor below to top of current floor
 			stairs_bc.d[ dim][ !run_dir] = ww_edge; // at walkway
@@ -111,12 +111,13 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 			}
 		} // for n
 	} // for f
-	if (!openings.empty()) { // add elevator(s)
+	if (!openings.empty()) { // add elevator
 		unsigned opening_ix(openings.size()/2); // center opening
 		if (!(openings.size() & 1) && rgen.rand_bool()) {--opening_ix;} // tie breaker if even
 		cube_t const opening(openings[opening_ix]);
 		bool const edir(rgen.rand_bool());
 		float const ww_edge(opening.d[dim][!edir]);
+		// Note: elevator extends half a floor width below and above the room; is this okay, or can it clip through other objects?
 		elevator_t elevator(room, interior->ext_basement_hallway_room_id, dim, !edir, 1, 1, 1); // at_edge=1, interior_room=1, in_mall=1
 		elevator.d[dim][!edir] = ww_edge; // adjacent to walkway
 		elevator.d[dim][ edir] = ww_edge + (edir ? 1.0 : -1.0)*1.6*door_width; // extend away from walkway by depth

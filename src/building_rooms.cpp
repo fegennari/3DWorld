@@ -2658,7 +2658,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		}
 	} // for i
 
-	// add elevator lights, and signs on each floor; must be done before setting buttons_start
+	// add elevator lights, signs, and wall sections on each floor; must be done before setting buttons_start
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 		bool const dim(i->dim), dir(i->dir);
 		// add light
@@ -2692,17 +2692,26 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		efloor.z1() += half_thick; // on top of the carpet
 		efloor.z2()  = efloor.z1() + 0.01*half_thick; // set thickness (very thin)
 		objs.emplace_back(efloor, TYPE_FLOORING, i->room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_IN_ELEV), 1.0, SHAPE_CUBE, WHITE, FLOORING_CONCRETE);
+		// add front wall sections
+		cube_t wall(*i);
+		wall.d[dim][0]     = wall.d[dim][1] = front_wall;
+		wall.d[dim][ dir] += 0.5 *dsign*wall_thickness;
+		wall.d[dim][!dir] -= 0.01*dsign*wall_thickness; // slight shift to make sure interior of wall is inside elevator light range
 
 		if (i->skip_floors_mask > 0) { // block off any unreachable floors
 			for (unsigned f = 0; f < 64; ++f) {
 				if (!(i->skip_floors_mask & (1ULL << f))) continue;
-				cube_t wall(*i);
-				wall.d[dim][0] = wall.d[dim][1] = front_wall;
-				wall.d[dim][dir] += 0.5*dsign*wall_thickness;
-				wall.z1() = i->z1() + f*floor_spacing - half_thick;
-				wall.z2() = wall.z1() + floor_spacing;
+				wall.z1() = i->  z1() + f*floor_spacing - half_thick;
+				wall.z2() = wall.z1() +   floor_spacing;
 				objs.emplace_back(wall, TYPE_STAIR_WALL, 0, dim, !dir, RO_FLAG_HANGING); // hanging so that the bottom surface is drawn
-			} // for f
+			}
+		}
+		if (floor_spacing > window_vspacing + half_thick) { // cover the tops of high ceiling mall elevators
+			for (unsigned f = 0; f < num_floors; ++f) {
+				float const zval(i->z1() + f*floor_spacing);
+				set_cube_zvals(wall, (zval + window_vspacing - half_thick), (zval + floor_spacing - half_thick));
+				objs.emplace_back(wall, TYPE_STAIR_WALL, 0, dim, !dir, RO_FLAG_HANGING); // hanging so that the bottom surface is drawn
+			}
 		}
 	} // for e
 	interior->room_geom->buttons_start = objs.size();
