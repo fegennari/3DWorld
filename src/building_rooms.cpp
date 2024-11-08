@@ -1720,7 +1720,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		for (auto w = interior->walls[dim].begin(); w != interior->walls[dim].end(); ++w) {
 			bool const in_basement(w->zc() < ground_floor_z1);
-			if (in_basement && interior->has_backrooms && !get_basement().intersects_no_adj(*w)) continue; // no trim in basement backrooms
+			if (in_basement && has_backrooms_or_mall() && !get_basement().intersects_no_adj(*w)) continue; // no trim in basement backrooms or mall
 			cube_t trim(*w);
 			trim.expand_in_dim(dim, trim_thickness);
 

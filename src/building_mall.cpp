@@ -84,7 +84,7 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 			stairs_bc.d[!dim][!side_dir] = ww_side + (side_dir ? -1.0 :  1.0)*stairs_width;
 			landing_t landing(stairs_bc, 0, 0, dim, !run_dir, 1, SHAPE_STRAIGHT, 0, 1, 0, 0, 1); // add_railing=1, roof_access=0, is_at_top=1, stack_conn=0, for_ramp=0, in_extb=1
 			landing.num_stairs = round_fp(NUM_STAIRS_PER_FLOOR*floor_spacing/window_vspace);
-			landing.in_mall = 1;
+			landing.in_mall    = 1;
 			stairs_landing_base_t stairwell(landing);
 			landing  .z1() = zc;
 			stairwell.z2() = floor_above_z;
@@ -200,13 +200,14 @@ void building_t::add_mall_lower_floor_lights(room_t const &room, unsigned room_i
 	} // for f
 }
 
-unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t &rooms_to_light) {
+unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t &rooms_to_light) {
 	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), fc_thick(get_fc_thickness()), doorway_width(get_doorway_width());
 	float const wall_thickness(get_wall_thickness()), trim_thick(get_trim_thickness());
 	bool const mall_dim(interior->extb_wall_dim);
 	vect_cube_t openings, railing_cuts, railing_segs, temp, pillars;
 	get_mall_open_areas(room, openings);
 	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned num_elevators(0);
 
 	// gather railing cuts
 	for (stairwell_t const &s : interior->stairwells) {
@@ -214,6 +215,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t const &room, float zv
 		railing_cuts.push_back(s);
 		railing_cuts.back().expand_in_dim( s.dim, doorway_width); // add padding on both ends
 		railing_cuts.back().expand_in_dim(!s.dim, 0.8*wall_thickness); // add space for railings
+		room.has_stairs = 255; // should this be set earlier?
 	}
 	for (escalator_t const &e : interior->escalators) {
 		if (!e.in_mall) continue;
@@ -223,7 +225,9 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t const &room, float zv
 	for (elevator_t const &e : interior->elevators) {
 		if (!e.in_mall) continue;
 		railing_cuts.push_back(e.get_bcube_padded(doorway_width));
+		++num_elevators;
 	}
+	room.has_elevator = num_elevators; // should this be set earlier?
 	// add vertical support pillars
 	float const pillar_hwidth(2.0*wall_thickness);
 	cube_t pillar(room); // copy room zvals

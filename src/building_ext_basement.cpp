@@ -227,7 +227,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	if (interior->has_backrooms) {rooms.back().assign_all_to(RTYPE_BACKROOMS);} // make it backrooms
 	else if (interior->has_mall) {rooms.back().assign_all_to(RTYPE_MALL     );} // make it a mall concourse
 	if (interior->has_mall) {rooms.back().is_single_floor = 1;}
-	rooms.reserve(rooms.size() + (P.rooms.size()-2) + 1); // allocate an extra room for a possible connector to an adjacent building
+	reserve_extra(rooms, ((P.rooms.size()-2) + 1)); // allocate an extra room for a possible connector to an adjacent building
 
 	for (auto r = P.rooms.begin()+2; r != P.rooms.end(); ++r) { // skip basement and primary hallway
 		interior->place_exterior_room(*r, *r, fc_thick, wall_thickness, P, basement_part_ix, 0, r->is_hallway);
