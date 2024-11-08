@@ -191,7 +191,6 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 				interior->doors      .back().open_dir ^= 1; // door opens into the parking garage rather than the mall
 				interior->door_stacks.back().open_dir ^= 1;
 				setup_mall_concourse(hallway, wall_dim, wall_dir, rgen);
-				add_mall_stores(hallway, wall_dim, wall_dir, rgen);
 			}
 			else { // backrooms, possibly flooded
 				unsigned const num_floors(setup_multi_floor_room(hallway, Door, wall_dim, wall_dir, rgen));
@@ -242,7 +241,8 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 		interior->landings.push_back(landing);
 		interior->stairwells.emplace_back(stairwell, 1); // num_floors=1
 	} // for stairs
-	maybe_assign_extb_room_as_swimming(rgen);
+	if (!added_lg_room) {maybe_assign_extb_room_as_swimming(rgen);}
+	if (has_mall()) {add_mall_stores(hallway, wall_dim, rgen);}
 
 	if (!has_backrooms_or_mall() && global_building_params.add_basement_tunnels) { // maybe add tunnel connections to hallways
 		for (unsigned r = interior->ext_basement_hallway_room_id; r < rooms.size(); ++r) {try_place_tunnel_at_extb_hallway_end(rooms[r], r, rgen);}

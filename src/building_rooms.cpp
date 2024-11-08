@@ -235,6 +235,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_unfinished    (init_rtype_f0 == RTYPE_UNFINISHED); //  // unfinished room, for example in a non-cube shaped office building
 		bool const is_swim_pool_room(init_rtype_f0 == RTYPE_SWIM); // room with a swimming pool
 		bool const is_retail_room   (init_rtype_f0 == RTYPE_RETAIL);
+		bool const is_mall_store    (init_rtype_f0 == RTYPE_STORE);
 		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(r->is_backrooms()), is_mall(r->is_mall()), is_apt_or_hotel_room(r->is_apt_or_hotel_room());
 		bool const residential_room(is_house || (residential && !r->is_hallway && !is_basement && !is_retail_room));
 		room_obj_shape const light_shape(residential_room ? SHAPE_CYLIN : SHAPE_CUBE);
@@ -269,6 +270,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			light_size *= 0.7*pow(double(retail_floor_levels), 0.4); // smaller; increase size for taller rooms
 			nx = max(1U, unsigned((room_dim ? 0.7 : 0.4)*dx/window_vspacing));
 			ny = max(1U, unsigned((room_dim ? 0.4 : 0.7)*dy/window_vspacing));
+		}
+		else if (is_mall_store) {
+			light_size   *= 0.9; // smaller
+			light_density = 0.5;
 		}
 		else if (is_swim_pool_room) {
 			light_density = 0.4;
@@ -341,6 +346,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			else if (is_retail_room) {
 				add_retail_room_objs(rgen, *r, room_center.z, room_id, light_ix_assign);
 			}
+			else if (is_mall_store) {
+				add_mall_store_objs(rgen, *r, room_center.z, room_id);
+			}
 			if ((!has_stairs && (f == 0 || top_floor) && interior->stairwells.size() > 1) || top_of_stairs) { // should this be outside the loop?
 				// check for stairwells connecting stacked parts (is this still needed?); check for roof access stairs and set top_of_stairs=0
 				for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
@@ -362,7 +370,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			else if (r->is_sec_bldg) {is_lit = 0;} // garage and shed lights start off
 			else {
 				// 50% of lights are on, 75% for top of stairs, 100% for non-basement hallways, 100% for parking garages, backrooms, and malls
-				is_lit  = ((r->is_hallway && !is_basement) || is_parking_garage || is_backrooms || is_mall || is_retail_room || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0));
+				is_lit  = ((r->is_hallway && !is_basement) || is_parking_garage || is_backrooms || is_mall || is_mall_store || is_retail_room ||
+					((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0));
 				is_lit |= (r->is_ext_basement_conn() || (r->is_ext_basement() && r->intersects(get_basement()))); // ext basement conn or primary hallway
 
 				if (!is_lit) { // check people and set is_lit if anyone is in this floor of this room
@@ -496,7 +505,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				add_mall_lower_floor_lights(*r, room_id, objs_start_inc_lights, light_ix_assign);
 				continue; // nothing else to add
 			}
-			if (is_parking_garage || is_retail_room) continue; // generated above, done; no outlets or light switches
+			if (is_parking_garage || is_retail_room || is_mall_store) continue; // generated above, done; no outlets or light switches
 			if (is_unfinished) continue; // no objects for now; if adding objects later, need to make sure they stay inside the building bounds
 			uint64_t const floor_mask(uint64_t(1) << f);
 			bool const is_garage_or_shed(r->is_garage_or_shed(f));
@@ -1586,8 +1595,10 @@ cube_t get_trim_cube(cube_t const &c, bool dim, bool dir, float trim_thickness) 
 	return trim;
 }
 
-void building_t::add_trim_for_door_or_int_window(cube_t const &c, bool dim, bool draw_top_edge, bool draw_bot_trim, float side_twidth, float top_twidth, float side_texp) {
-	float const window_vspacing(get_window_vspace()), trim_thickness(get_trim_thickness()), fc_gap(get_floor_ceil_gap());
+void building_t::add_trim_for_door_or_int_window(cube_t const &c, bool dim, bool draw_top_edge, bool draw_bot_trim,
+	float side_twidth, float top_twidth, float side_texp, float floor_spacing)
+{
+	float const trim_thickness(get_trim_thickness()), fc_gap(floor_spacing*(1.0 - get_floor_thick_val()));
 	colorRGBA const trim_color(get_trim_color());
 	vect_room_object_t &objs(interior->room_geom->trim_objs);
 	cube_t trim(c);
@@ -1602,12 +1613,12 @@ void building_t::add_trim_for_door_or_int_window(cube_t const &c, bool dim, bool
 		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, side, flags2, 1.0, SHAPE_TALL, trim_color); // abuse tall flag
 	}
 	// add trim at top of door
-	unsigned const num_floors(calc_num_floors(c, window_vspacing, get_floor_thickness()));
+	unsigned const num_floors(calc_num_floors(c, floor_spacing, get_floor_thickness()));
 	float z(c.z1() + fc_gap);
 	trim.d[!dim][0] = c.d[!dim][0] + trim_thickness;
 	trim.d[!dim][1] = c.d[!dim][1] - trim_thickness;
 
-	for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
+	for (unsigned f = 0; f < num_floors; ++f, z += floor_spacing) {
 		set_cube_zvals(trim, z-top_twidth, z); // z2=ceil height
 		bool const draw_top(draw_top_edge || (f+1 == num_floors && check_skylight_intersection(trim))); // draw top edge of trim for top floor if there's a skylight
 		unsigned const flags2(RO_FLAG_NOCOLL | (draw_top ? 0 : RO_FLAG_ADJ_TOP));
@@ -1650,12 +1661,13 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	// add vertical strips on each side + strip on top of interior doors
 	for (auto d = interior->door_stacks.begin(); d != interior->door_stacks.end(); ++d) {
 		if (d->on_stairs) continue; // no frame for stairs door, skip
-		add_trim_for_door_or_int_window(*d, d->dim, d->get_mult_floor(), 0, door_trim_width, trim_thickness, door_trim_exp); // draw_bot_trim=0
+		add_trim_for_door_or_int_window(*d, d->dim, d->get_mult_floor(), 0, door_trim_width, trim_thickness, door_trim_exp, window_vspacing); // draw_bot_trim=0
 	}
 	// handle interior windows similar to interior doors, except we also draw bottom trim
 	for (cube_t const &w : interior->int_windows) {
 		bool const dim(w.dy() < w.dx());
-		add_trim_for_door_or_int_window(w, dim, 0, 1, door_trim_width, door_trim_width, door_trim_exp); // draw_top_edge=0, draw_bot_trim=1
+		float const floor_spacing((interior->has_mall && w.z2() < ground_floor_z1) ? get_mall_floor_spacing() : window_vspacing);
+		add_trim_for_door_or_int_window(w, dim, 0, 1, door_trim_width, door_trim_width, door_trim_exp, floor_spacing); // draw_top_edge=0, draw_bot_trim=1
 	}
 	// add trim around exterior doors
 	for (auto d = doors.begin(); d != doors.end(); ++d) {
@@ -1884,7 +1896,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			float const top_trim_width(max(trim_thickness, fc_gap - i->dz())); // make sure it covers the gap above the door
 			cube_t door_bc(*i);
 			door_bc.z2() = i->z1() + fc_gap; // extend wall trim to the ceiling
-			add_trim_for_door_or_int_window(door_bc, i->dim, 0, 0, 0.5*door_trim_width, top_trim_width, 0.5*door_trim_exp); // draw_top_edge=0, draw_bot_trim=0
+			add_trim_for_door_or_int_window(door_bc, i->dim, 0, 0, 0.5*door_trim_width, top_trim_width, 0.5*door_trim_exp, window_vspacing); // draw_top_edge=0, draw_bot_trim=0
 			continue;
 		}
 		if (i->type == TYPE_FLOORING && (i->item_flags == FLOORING_TILE || i->item_flags == FLOORING_MARBLE || i->item_flags == FLOORING_CONCRETE)) {} // bath/server room flooring

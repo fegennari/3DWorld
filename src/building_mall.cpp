@@ -126,12 +126,71 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 	}
 }
 
-void building_t::add_mall_stores(cube_t &room, bool dim, bool dir, rand_gen_t &rgen) {
-	float const floor_spacing(get_mall_floor_spacing(room)), floor_thickness(get_floor_thickness());
+void building_t::add_mall_stores(cube_t const &room, bool dim, rand_gen_t &rgen) {
+	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace());
+	float const wall_thickness(get_wall_thickness()), floor_thickness(get_floor_thickness()), fc_thick(get_fc_thickness());
+	float const wall_half_thick(0.5*wall_thickness), ceil_gap(get_floor_thick_val()*floor_spacing - fc_thick);
+	float const min_width(2.0*window_vspace), max_width(8.0*window_vspace), min_depth(4.0*window_vspace), max_depth(6.0*window_vspace);
 
 	for (unsigned f = 0; f < interior->num_extb_floors; ++f) {
+		cube_t store;
+		store.z1() = room .z1() + f*floor_spacing;
+		store.z2() = store.z1() +   floor_spacing;
+
 		for (unsigned d = 0; d < 2; ++d) { // each side of concourse
-			// TODO
+			float const pos_end(room.d[dim][1] - wall_thickness), wall_pos(room.d[!dim][d]);
+			float pos(room.d[dim][0] + wall_thickness);
+			store.d[!dim][!d] = wall_pos;
+			
+			while (pos < pos_end) {
+				float next_pos(pos + rgen.rand_uniform(min_width, max_width));
+				if (next_pos + min_width > pos_end) {next_pos = pos_end;} // clamp to far end of mall, and prevent a narrow store
+				store.d[ dim][0] = pos;
+				store.d[ dim][1] = next_pos;
+				store.d[!dim][d] = wall_pos + (d ? 1.0 : -1.0)*rgen.rand_uniform(min_depth, max_depth); // set depth
+				pos = next_pos;
+
+				if (!is_basement_room_under_mesh_not_int_bldg(store)) { // invalid, try min depth
+					store.d[!dim][d] = wall_pos + (d ? 1.0 : -1.0)*min_depth;
+					if (!is_basement_room_under_mesh_not_int_bldg(store)) continue; // still invalid, skip this store
+				}
+				assert(store.is_strictly_normalized());
+				unsigned const room_ix(interior->rooms.size());
+				room_t Room(store, basement_part_ix);
+				Room.assign_all_to(RTYPE_STORE);
+				Room.interior        = 2; // mark as extended basement
+				Room.is_single_floor = 1;
+				interior->rooms.push_back(Room);
+				cube_t ceiling(store), floor(store);
+				ceiling.z1() = store.z2() - fc_thick;
+				floor  .z2() = store.z1() + fc_thick;
+				interior->ceilings.push_back(ceiling);
+				interior->floors  .push_back(floor);
+				interior->basement_ext_bcube.assign_or_union_with_cube(store);
+
+				// add walls
+				for (unsigned wdim = 0; wdim < 2; ++wdim) {
+					for (unsigned wdir = 0; wdir < 2; ++wdir) {
+						if (wdim == !dim && wdir != d) continue; // already have walls on this side
+						float half_thick(wall_half_thick);
+						cube_t wall(store);
+						set_wall_width(wall, store.d[wdim][wdir], half_thick, wdim);
+						interior->walls[wdim].push_back(wall);
+					}
+				} // for dim
+				// add door/window openings
+				cube_t walls_cut(store);
+				walls_cut.z1() += fc_thick;
+				walls_cut.z2() -= ceil_gap;
+				walls_cut.expand_in_dim(dim, -(0.25*window_vspace + 0.15*store.get_sz_dim(dim))); // shrink
+				set_wall_width(walls_cut, wall_pos, 2.0*wall_thickness, !dim);
+				subtract_cube_from_cubes(walls_cut, interior->walls[!dim], nullptr, 1); // no holes; clip_in_z=1
+				// add window
+				// TODO: to cut a doorway
+				cube_t window(walls_cut);
+				set_wall_width(window, wall_pos, 0.25*wall_thickness, !dim);
+				interior->int_windows.emplace_back(window, room_ix);
+			} // while
 		} // for d
 	} // for n
 }
@@ -318,5 +377,9 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	unsigned const pillars_start(objs.size());
 	for (cube_t const &pillar : pillars) {objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, 0, 0, 0, 1.0, SHAPE_CUBE, WHITE, EF_Z12);}
 	return pillars_start;
+}
+
+void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
+	// TODO
 }
 

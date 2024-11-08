@@ -1920,10 +1920,12 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 					set_skip_faces_for_nearby_cube_edge(*i, *r, wall_thickness, !dim, dim_mask); // wall ends
 
 					// ext basement rooms don't need to have their exterior wall surfaces drawn, but only valid for walls not shared between hallways and connected rooms
-					if (in_ext_basement && fabs(i->d[!dim][0] - r->d[!dim][0]) < extb_wall_thresh && fabs(i->d[!dim][1] - r->d[!dim][1]) < extb_wall_thresh) {
-						// use slightly more than half wall_thickness here so that we pick up the edges of the current room but not nearby adjacent rooms;
-						// see building_t::is_basement_room_placement_valid() wall_expand_toler
-						set_skip_faces_for_nearby_cube_edge(*i, *r, 0.6*wall_thickness, dim, dim_mask); // wall side edges
+					if (in_ext_basement && !interior->has_mall) { // also, skip for malls, because this doesn't work with store separators
+						if (fabs(i->d[!dim][0] - r->d[!dim][0]) < extb_wall_thresh && fabs(i->d[!dim][1] - r->d[!dim][1]) < extb_wall_thresh) {
+							// use slightly more than half wall_thickness here so that we pick up the edges of the current room but not nearby adjacent rooms;
+							// see building_t::is_basement_room_placement_valid() wall_expand_toler
+							set_skip_faces_for_nearby_cube_edge(*i, *r, 0.6*wall_thickness, dim, dim_mask); // wall side edges
+						}
 					}
 				} // for r
 			}
