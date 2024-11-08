@@ -1638,9 +1638,9 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	vect_cube_t trim_cubes, trim_parts;
 	cube_t trim_exclude;
 
-	// exclude trim at intermediate floors of tall rooms
+	// exclude trim at intermediate floors of tall rooms (excluding mall because it has partial floors at each level)
 	for (room_t const &room : interior->rooms) {
-		if (room.is_single_floor && room.dz() > 1.5*window_vspacing) {
+		if (room.is_single_floor && !room.is_mall() && room.dz() > 1.5*window_vspacing) {
 			trim_exclude = room;
 			trim_exclude.expand_by_xy(0.5*wall_thickness); // include half the wall
 			trim_exclude.expand_in_z (-0.5*window_vspacing); // allow trim at floor and ceiling, but not at floors in between
@@ -1720,7 +1720,16 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		for (auto w = interior->walls[dim].begin(); w != interior->walls[dim].end(); ++w) {
 			bool const in_basement(w->zc() < ground_floor_z1);
-			if (in_basement && has_backrooms_or_mall() && !get_basement().intersects_no_adj(*w)) continue; // no trim in basement backrooms or mall
+			float floor_spacing(window_vspacing), ref_z1(bcube.z1());
+			
+			if (in_basement && !get_basement().intersects_no_adj(*w)) {
+				if (interior->has_backrooms) continue; // no trim in basement backrooms
+				
+				if (interior->has_mall) {
+					floor_spacing = get_mall_floor_spacing();
+					ref_z1        = interior->basement_ext_bcube.z1();
+				}
+			}
 			cube_t trim(*w);
 			trim.expand_in_dim(dim, trim_thickness);
 
@@ -1739,16 +1748,16 @@ void building_t::add_wall_and_door_trim() { // and window trim
 				} // for W
 			}
 			if (w->dz() < 0.5*window_vspacing) continue; // short wall segment from tall room extension, no trim
-			unsigned const num_floors(calc_num_floors(*w, window_vspacing, floor_thickness));
+			unsigned const num_floors(calc_num_floors(*w, floor_spacing, floor_thickness));
 			// snap to the nearest floor to handle short walls due to cut out stairs
-			float const ground_wall_z1(bcube.z1() + fc_thick);
-			float z(ground_wall_z1 + window_vspacing*round_fp((w->z1() - ground_wall_z1)/window_vspacing));
+			float const ground_wall_z1(ref_z1 + fc_thick);
+			float z(ground_wall_z1 + floor_spacing*round_fp((w->z1() - ground_wall_z1)/floor_spacing));
 
-			for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
+			for (unsigned f = 0; f < num_floors; ++f, z += floor_spacing) {
 				set_cube_zvals(trim, z, z+trim_height); // starts at floor height
 				bool ext_dirs[2] = {0,0};
 
-				if (z < ground_floor_z1 && has_ext_basement() && !get_basement().intersects(trim)) { // check for exterior wall of extended basement
+				if (z < ground_floor_z1 && has_ext_basement() && !has_backrooms_or_mall() && !get_basement().intersects(trim)) { // check for exterior wall of ext basement
 					for (unsigned dir = 0; dir < 2; ++dir) { // for each side of wall
 						point test_pt(0.0, 0.0, trim.z2());
 						test_pt[dim] = w->d[dim][dir];
@@ -1760,7 +1769,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 							any_inside   |= interior->point_in_ext_basement_room(test_pt);
 						}
 						ext_dirs[dir] = !any_inside;
-					}
+					} // for dir
 				}
 				unsigned const trim_flags(flags | (ext_dirs[0] ? RO_FLAG_ADJ_LO : 0) | (ext_dirs[1] ? RO_FLAG_ADJ_HI : 0)); // disable exterior faces
 				clip_trim_cube(trim, trim_exclude, trim_parts);
