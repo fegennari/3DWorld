@@ -405,7 +405,8 @@ void interpolate_over_time(float &val, float target_val, float transition_secs, 
 	else if (val < target_val) {val = min(target_val, (val + delta_val));} // increase
 }
 void set_interior_lighting(shader_t &s, bool have_indir) {
-	float const light_scale(0.5), target_blscale((player_in_basement || player_in_attic) ? 0.0 : (player_in_walkway ? 2.0 : 1.0));
+	bool const player_in_mall(player_in_basement == 3 && player_building && player_building->has_mall());
+	float const light_scale(0.5), target_blscale((player_in_basement || player_in_attic) ? (player_in_mall ? 0.8 : 0.0) : (player_in_walkway ? 2.0 : 1.0));
 	float const target_ascale(player_in_tunnel ? 0.0 : 1.0); // brighter ambient unless in tunnel
 	static float blscale(1.0), ascale(1.0);
 	static int lu_frame1(0), lu_frame2(0);
@@ -1949,11 +1950,11 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 				} // for p
 			}
 			if (check_skylight_intersection(*i)) {dim_mask |= 4;} // draw top surface if under skylight
-			colorRGBA const &color(in_basement ? WHITE : wall_color); // basement walls are always white
+			colorRGBA color(in_basement ? WHITE : wall_color); // basement walls are always white
 			tid_nm_pair_t tex;
 			
 			if (!is_house && in_ext_basement) {
-				if (has_mall()) {tex = tid_nm_pair_t(get_texture_by_name("bricks_tan.png"), get_texture_by_name("normal_maps/bricks_tan_norm.png", 1), 8.0, 8.0);} // mall
+				if (has_mall()) {tex = mat.wall_tex; color = colorRGBA(1.0, 0.9, 0.7);} // light brown/yellow-ish
 				else            {tex = get_concrete_texture();} // office building extended basement
 			}
 			else {tex = mat.wall_tex;}

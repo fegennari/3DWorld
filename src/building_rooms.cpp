@@ -229,7 +229,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		}
 		// determine light pos and size for this stack of rooms
 		float const dx(r->dx()), dy(r->dy());
-		bool const room_dim(dx < dy); // longer room dim
+		bool room_dim(dx < dy); // longer room dim
 		room_type const init_rtype_f0(r->get_room_type(0));
 		bool const is_parking_garage(init_rtype_f0 == RTYPE_PARKING   ); // all floors should be parking garage
 		bool const is_unfinished    (init_rtype_f0 == RTYPE_UNFINISHED); //  // unfinished room, for example in a non-cube shaped office building
@@ -260,11 +260,19 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			light_size   *= 0.75; // smaller
 		}
 		else if (is_mall) { // mall concourse
-			if (floor_height > 1.5*window_vspacing) { // multi-floor
-				light_density = 0.4;
-				light_size   *= 1.1; // slightly larger
+			bool const multi_floor(floor_height > 1.5*window_vspacing);
+			float const ldensity(multi_floor ? 0.33 : 0.3);
+			unsigned const num_lights_wide(multi_floor ? 3 : 2);
+			light_size *= (multi_floor ? 1.2 : 1.0); // larger if multi-floor
+
+			if (interior->extb_wall_dim == 0) {
+				nx = max(1U, unsigned(ldensity*dx/window_vspacing));
+				ny = num_lights_wide;
 			}
-			else {light_density = 0.35;} // single floor
+			else {
+				nx = num_lights_wide;
+				ny = max(1U, unsigned(ldensity*dy/window_vspacing));
+			}
 		}
 		else if (is_retail_room) { // more lights in the shorter dim
 			light_size *= 0.7*pow(double(retail_floor_levels), 0.4); // smaller; increase size for taller rooms
@@ -272,8 +280,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			ny = max(1U, unsigned((room_dim ? 0.4 : 0.7)*dy/window_vspacing));
 		}
 		else if (is_mall_store) {
-			light_size   *= 0.9; // smaller
-			light_density = 0.5;
+			room_dim = !interior->extb_wall_dim; // always perpendicular to mall concourse, independent of aspect ratio
+			light_density = 0.4;
 		}
 		else if (is_swim_pool_room) {
 			light_density = 0.4;
@@ -315,7 +323,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		else if (residential_room)  {color = get_light_color_temp(0.40);} // house - yellowish
 		else if (is_parking_garage) {color = get_light_color_temp_range(0.2, 0.5, rgen);} // parking garage - yellow-white
 		else if (is_backrooms)      {color = get_light_color_temp_range(0.2, 0.4, rgen);} // backrooms - yellow-white
-		else if (is_mall)           {color = get_light_color_temp(0.45);} // mall concourse - yellowish white
+		else if (is_mall)           {color = get_light_color_temp(0.46);} // mall concourse - yellowish white
+		else if (is_mall_store)     {color = get_light_color_temp(0.42);} // mall store - yellowish white (a bit more yellow than concourse)
 		else if (r->is_office)      {color = get_light_color_temp(0.60);} // office - blueish
 		else if (r->is_hallway)     {color = get_light_color_temp(0.60);} // office building hallway - blueish
 		else                        {color = get_light_color_temp(0.50);} // small office - white
@@ -482,7 +491,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (has_bcube_int(l, interior->stairwells)) {l_flags |= RO_FLAG_TOS;} // assumes light at top of stairs, since other cases are illegal
 				room_object_t light_obj(l, TYPE_LIGHT, room_id, dim, dir, l_flags, light_amt, light_shape, color);
 				light_obj.obj_id = light_ix_assign.get_ix_for_light(l, walls_not_shared);
-				unsigned const flicker_mod(is_parking_garage ? 50 : ((is_ext_basement && !is_mall) ? 20 : 0)); // 2% chance parking garage, 5% chance ext basement/backrooms
+				// flicker 2% chance parking garage, 5% chance ext basement/backrooms except for mall and its stores
+				unsigned const flicker_mod(is_parking_garage ? 50 : ((is_ext_basement && !is_mall && !is_mall_store) ? 20 : 0));
 				
 				if (flicker_mod > 0 && (((rgen_lights.rand() + 3*f)%flicker_mod) == 13)) {light_obj.flags |= RO_FLAG_BROKEN;} // maybe make this a flickering light
 				else if (is_ext_basement && valid_lights.size() == 1 && (rgen_lights.rand() & 7) == 0) { // broken ext basement light; not for hallways with multiple lights
