@@ -886,6 +886,7 @@ clothesline_t::clothesline_t(point const &p1_, point const &p2_, float cheight_,
 void clothesline_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	// TODO: line cylinder
 	for (cube_t const &c : clothes) {
+		assert(c.is_strictly_normalized());
 		// TODO: shirt model, etc.
 	}
 }

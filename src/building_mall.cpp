@@ -128,7 +128,7 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 
 void building_t::add_mall_stores(cube_t const &room, bool dim, rand_gen_t &rgen) {
 	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace());
-	float const wall_thickness(get_wall_thickness()), floor_thickness(get_floor_thickness()), fc_thick(get_fc_thickness());
+	float const wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness());
 	float const wall_half_thick(0.5*wall_thickness), ceil_gap(get_floor_thick_val()*floor_spacing - fc_thick);
 	float const min_width(2.0*window_vspace), max_width(8.0*window_vspace), min_depth(4.0*window_vspace), max_depth(6.0*window_vspace);
 
@@ -358,7 +358,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			} // for dim
 			// add corner bars; will need to add to both ends and both dims once there are gaps for stairs and escalators
 			for (unsigned n = 0; n < 4; ++n) {
-				bool const dirs[2] = {(n&1), (n&2)}; // x, y
+				bool const dirs[2] = {bool(n&1), bool(n&2)}; // x, y
 				for (unsigned d = 0; d < 2; ++d) {set_wall_width(vbar, opening.d[d][dirs[d]], vbar_hwidth, d);}
 				cube_t test_cube(vbar);
 				test_cube.expand_by_xy(-0.75*vbar_hwidth); // shrink to allow a bit of railing overlap
