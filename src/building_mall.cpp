@@ -247,7 +247,9 @@ void building_t::add_mall_stairs() { // connecting to the entrance door
 }
 
 void building_t::add_mall_lower_floor_lights(room_t const &room, unsigned room_id, unsigned lights_start, light_ix_assign_t &light_ix_assign) {
-	float const floor_spacing(get_mall_floor_spacing(room)), fc_thick(get_fc_thickness());
+	// Note: lights should be in 2-3 rows, and no lights should be partially overlapping an opening in !dim
+	bool const dim(interior->extb_wall_dim);
+	float const floor_spacing(get_mall_floor_spacing(room)), fc_thick(get_fc_thickness()), opening_pad(2.0*get_wall_thickness());
 	vect_cube_t openings;
 	get_mall_open_areas(room, openings);
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -259,9 +261,20 @@ void building_t::add_mall_lower_floor_lights(room_t const &room, unsigned room_i
 
 		for (unsigned i = lights_start; i < objs_end; ++i) {
 			room_object_t const &obj(objs[i]);
-			if (obj.type != TYPE_LIGHT)       continue; // should this ever fail?
-			if (has_bcube_int(obj, openings)) continue; // skip lights over the openings
+			if (obj.type != TYPE_LIGHT) continue; // should this ever fail?
 			room_object_t light(obj);
+			cube_t light_pad(light);
+			light_pad.expand_in_dim(dim, opening_pad);
+			bool skip(0);
+
+			for (cube_t const &c : openings) {
+				if (!c.intersects_xy(light_pad)) continue;
+				if (c.contains_cube_xy(obj)) {skip = 1; break;} // fully over opening, skip
+				bool const dir(c.get_center_dim(dim) < obj.get_center_dim(dim));
+				light.translate_dim(dim, (c.d[dim][dir] - light_pad.d[dim][!dir])); // shift to not overlap opening
+				break; // can only intersect one opening
+			}
+			if (skip) continue;
 			light.translate_dim(2, (zc - obj.z2()));
 			light.obj_id = light_ix_assign.get_ix_for_light(light);
 			objs.push_back(light);
