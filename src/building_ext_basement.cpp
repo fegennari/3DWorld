@@ -833,7 +833,7 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 			building_t *door_dest(buildings[bool(dir) ^ r.connect_dir ^ 1]); // add door to the building whose room it connects to
 			cube_t const door(door_dest->add_ext_basement_door(r, doorway_width, r.hallway_dim, dir, 0, rgen)); // is_end_room=0
 			// subtract door from walls of each building
-			for (unsigned bix = 0; bix < 2; ++bix) {subtract_cube_from_cubes(door, buildings[bix]->interior->walls[r.hallway_dim]);}
+			for (unsigned bix = 0; bix < 2; ++bix) {subtract_cube_from_cubes(door, buildings[bix]->interior->walls[r.hallway_dim], nullptr, 1);} // no holes, clip_in_z=1
 		} // for dir
 		b.interior->doors      .back().set_bldg_conn(); // door added to the other building, and separates the two buildings
 		b.interior->door_stacks.back().set_bldg_conn();
@@ -853,7 +853,7 @@ void building_t::finalize_extb_conn_rooms(unsigned ds_start) {
 	assert(interior);
 	interior->assign_door_conn_rooms(ds_start); // assign room connections to any doors that were added
 
-	if (has_pool()) { // check for tall pool rooms and add extra wall segments above the door
+	if (has_pool()) { // check for tall pool rooms and add extra wall segments above the door; maybe just clip walls in Z instead?
 		int const room_ix(interior->pool.room_ix);
 		room_t const &pool_room(get_room(room_ix));
 
