@@ -185,12 +185,22 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, rand_gen_t &rgen)
 				walls_cut.expand_in_dim(dim, -(0.25*window_vspace + 0.15*store.get_sz_dim(dim))); // shrink
 				set_wall_width(walls_cut, wall_pos, 2.0*wall_thickness, !dim);
 				subtract_cube_from_cubes(walls_cut, interior->walls[!dim], nullptr, 1); // no holes; clip_in_z=1
-				// add window
-				// TODO: to cut a doorway
-				cube_t window(walls_cut);
-				set_wall_width(window, wall_pos, 0.25*wall_thickness, !dim);
-				interior->int_windows.emplace_back(window, room_ix);
+				// cut an opening in the center
+				cube_t opening(walls_cut);
+				set_wall_width(opening, walls_cut.get_center_dim(dim), 1.0*doorway_width, dim); // twice door width
+				// add floor trim
+				// TODO
+				// add ceiling box where the gate would come down from
+				// TODO
+				// add window on each side of the doorway
+				for (unsigned side = 0; side < 2; ++side) {
+					cube_t window(walls_cut);
+					window.d[dim][!side] = opening.d[dim][side];
+					set_wall_width(window, wall_pos, 0.25*wall_thickness, !dim);
+					interior->int_windows.emplace_back(window, room_ix);
+				}
 			} // while
+			// TODO: add a narrower non-public hallway behind the stores?
 		} // for d
 	} // for n
 }
