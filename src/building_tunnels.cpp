@@ -206,15 +206,15 @@ bool building_t::try_place_tunnel_at_extb_hallway_end(room_t &room, unsigned roo
 		float const wall_thickness(get_wall_thickness()), floor_spacing(get_window_vspace()), sm_shift_val(0.5*get_rug_thickness());
 		float const min_len(8.0*floor_spacing), max_len(20.0*floor_spacing); // in each direction
 		float const radius(0.5*door.dz()), wall_gap(2.0*wall_thickness), check_radius(radius + wall_thickness), dist_from_door(radius + wall_gap);
-		cube_t wall_clip(door);
-		wall_clip.expand_in_dim(dim, 2.0*wall_thickness); // make sure it contains the wall
-		subtract_cube_from_cubes(wall_clip, interior->walls[dim]); // remove door from wall
 		point middle(door.get_cube_center());
 		middle[dim] += (dir ? 1.0 : -1.0)*dist_from_door;
 		middle.z -= sm_shift_val; // shift down slightly to prevent Z-fighting with concrete on ceiling and floor
 		point p1(middle), p2(middle);
 		p1[!dim] -= min_len; p2[!dim] += min_len; // start at min length in each dim
 		if (!is_tunnel_placement_valid(p1, p2, check_radius)) continue; // can't place a tunnel of min length
+		cube_t wall_clip(door);
+		wall_clip.expand_in_dim(dim, 2.0*wall_thickness); // make sure it contains the wall
+		subtract_cube_from_cubes(wall_clip, interior->walls[dim]); // remove door from wall
 		float const max_extend(max_len - min_len);
 		// try extending tunnel in both directions
 		for (unsigned e = 0; e < 2; ++e) {try_extend_tunnel(p1, p2, max_extend, check_radius, !dim, e);}
