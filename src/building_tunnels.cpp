@@ -522,13 +522,17 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 	colorRGBA const wall_color(WHITE);
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), 16.0, shadowed), shadowed, 0, 1));
 
-	// draw smaller connecting tunnels
+	// draw smaller connecting tunnels; must be drawn before the main tunnel
 	for (tunnel_conn_t const &c : t.conns) {
 		float const side_tscale(1.0), len_tscale(side_tscale*c.length/(PI*c.radius));
 		cube_t const pipe(t.get_conn_bcube(c));
 		bool const vertical(c.dim == 2); // draw top of vertical shaft
 		unsigned const verts_start(mat.itri_verts.size()), c_ndiv(vertical ? ndiv : N_CYL_SIDES); // more ndiv for vertical pipes
 		mat.add_ortho_cylin_to_verts(pipe, wall_color, c.dim, 0, vertical, 1, 0, 1.0, 1.0, side_tscale, 1.0, 0, c_ndiv, 0.0, 0, len_tscale); // skip ends; two_sided=1
+		
+		if (!vertical) { // draw black interior end cap for horizontal tunnels; vertical tunnel ends are drawn above
+			mat.add_ortho_cylin_to_verts(pipe, BLACK, c.dim, !c.dir, c.dir, 0, 1, 1.0, 1.0, 1.0, 1.0, 1, c_ndiv); // skip_sides=1
+		}
 		// draw the open/interior end transparent to create a hole in the outer pipe
 		mat.add_ortho_cylin_to_verts(pipe, ALPHA0, c.dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1, c_ndiv); // transparent cut; skip_sides=1
 
@@ -541,9 +545,6 @@ void building_room_geom_t::add_tunnel(tunnel_seg_t const &t) {
 				i->v.z  = t.p[0].z + sqrt(t.radius*t.radius - dist*dist);
 				i->v.z -= ((i->n[2] == 0) ? 0.1 : 0.01)*t.radius; // shift down slightly to cover thin gaps and prevent Z-fighting; more for sides than transparent end
 			}
-		}
-		else { // draw black interior end cap for horizontal tunnels; vertical tunnel ends are drawn above
-			mat.add_ortho_cylin_to_verts(pipe, BLACK, c.dim, !c.dir, c.dir, 0, 1, 1.0, 1.0, 1.0, 1.0, 1, c_ndiv); // skip_sides=1
 		}
 	} // for c
 	float const length(t.get_length()), circumference(PI*t.radius), centerline(t.bcube.get_center_dim(!dim));
