@@ -128,9 +128,9 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 
 void building_t::add_mall_stores(cube_t const &room, bool dim, rand_gen_t &rgen) {
 	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace());
-	float const wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness());
+	float const wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness()), doorway_width(get_doorway_width());
 	float const wall_half_thick(0.5*wall_thickness), ceil_gap(get_floor_thick_val()*floor_spacing - fc_thick);
-	float const min_width(2.0*window_vspace), max_width(8.0*window_vspace), min_depth(4.0*window_vspace), max_depth(6.0*window_vspace);
+	float const min_width(4.0*window_vspace), max_width(9.0*window_vspace), min_depth(6.0*window_vspace), max_depth(8.0*window_vspace);
 
 	for (unsigned f = 0; f < interior->num_extb_floors; ++f) {
 		cube_t store;
@@ -139,22 +139,23 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, rand_gen_t &rgen)
 
 		for (unsigned d = 0; d < 2; ++d) { // each side of concourse
 			float const pos_end(room.d[dim][1] - wall_thickness), wall_pos(room.d[!dim][d]);
+			float const depth(rgen.rand_uniform(min_depth, max_depth)); // consistent depth for each side + floor so that walls can be shared
 			float pos(room.d[dim][0] + wall_thickness);
 			store.d[!dim][!d] = wall_pos;
+			bool has_adj_store(0);
 			
 			while (pos < pos_end) {
 				float next_pos(pos + rgen.rand_uniform(min_width, max_width));
 				if (next_pos + min_width > pos_end) {next_pos = pos_end;} // clamp to far end of mall, and prevent a narrow store
 				store.d[ dim][0] = pos;
 				store.d[ dim][1] = next_pos;
-				store.d[!dim][d] = wall_pos + (d ? 1.0 : -1.0)*rgen.rand_uniform(min_depth, max_depth); // set depth
+				store.d[!dim][d] = wall_pos + (d ? 1.0 : -1.0)*depth;
 				pos = next_pos;
-
-				if (!is_basement_room_under_mesh_not_int_bldg(store)) { // invalid, try min depth
-					store.d[!dim][d] = wall_pos + (d ? 1.0 : -1.0)*min_depth;
-					if (!is_basement_room_under_mesh_not_int_bldg(store)) continue; // still invalid, skip this store
-				}
 				assert(store.is_strictly_normalized());
+				// here we don't need to check rooms of our own building, but we need to check other building basements
+				if (check_buildings_cube_coll(store, 0, 1, this)) {has_adj_store = 0; continue;} // invalid, skip this store
+				// we normally check for rooms outside the building's tile, but this doesn't seem to be a problem for malls; we still check city bounds for city malls
+				if (is_in_city && !get_grid_bcube_for_building(*this).contains_cube_xy(store)) {has_adj_store = 0; continue;} // outside the city bcube
 				unsigned const room_ix(interior->rooms.size());
 				room_t Room(store, basement_part_ix);
 				Room.assign_all_to(RTYPE_STORE);
@@ -171,13 +172,15 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, rand_gen_t &rgen)
 				// add walls
 				for (unsigned wdim = 0; wdim < 2; ++wdim) {
 					for (unsigned wdir = 0; wdir < 2; ++wdir) {
-						if (wdim == !dim && wdir != d) continue; // already have walls on this side
+						if (wdim != dim && wdir != d) continue; // already have walls on this side
+						if (wdim == dim && wdir == 0 && has_adj_store) continue; // wall shared with adjacent store
 						float half_thick(wall_half_thick);
 						cube_t wall(store);
 						set_wall_width(wall, store.d[wdim][wdir], half_thick, wdim);
 						interior->walls[wdim].push_back(wall);
 					}
 				} // for dim
+				has_adj_store = 1;
 				// add door/window openings
 				cube_t walls_cut(store);
 				walls_cut.z1() += fc_thick;
