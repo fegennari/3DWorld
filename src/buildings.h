@@ -1381,6 +1381,7 @@ struct room_t : public cube_t { // size=56
 	void set_has_out_of_order () {flags |= ROOM_FLAG_HAS_OOO ;}
 	void set_no_geom          () {flags |= ROOM_FLAG_RO_GEOM ;}
 	void set_has_tunnel_conn  () {flags |= ROOM_FLAG_TUNNEL  ;}
+	void set_interior_window  () {flags |= ROOM_FLAG_INT_WIND;}
 	bool get_has_center_stairs() const {return (flags & ROOM_FLAG_CSTAIRS );}
 	bool get_office_floorplan () const {return (flags & ROOM_FLAG_OFF_FP  );}
 	bool get_has_skylight     () const {return (flags & ROOM_FLAG_SKYLIGHT);}
@@ -1716,6 +1717,7 @@ struct building_interior_t {
 	door_t const &get_door(unsigned door_ix) const {assert(door_ix < doors.size()); return doors[door_ix];}
 	door_t       &get_door(unsigned door_ix)       {assert(door_ix < doors.size()); return doors[door_ix];}
 	room_t const &get_extb_start_room() const {return get_room(ext_basement_hallway_room_id);} // extb hallway, backrooms, or mall
+	room_t       &get_extb_start_room()       {return get_room(ext_basement_hallway_room_id);} // extb hallway, backrooms, or mall
 	bool is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin=0.0f, bool inc_open=0, bool check_open_dir=0) const;
 	bool is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin=0.0f, bool elevators_only=0, int no_check_enter_exit=0) const;
 	void get_stairs_and_elevators_bcubes_intersecting_cube(cube_t const &c, vect_cube_t &bcubes, float ends_clearance=0.0, float sides_clearance=0.0) const;

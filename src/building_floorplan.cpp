@@ -1259,8 +1259,8 @@ void building_t::add_conference_room_window(unsigned room_ix) {
 		wall .d[!best_dim][1] = window.d[!best_dim][0] = wind_lo; // low  edge of window
 		wall2.d[!best_dim][0] = window.d[!best_dim][1] = wind_hi; // high edge of window
 		interior->walls[best_dim].push_back(wall2);
-		room.flags       |= ROOM_FLAG_INT_WIND;
-		conn_hall->flags |= ROOM_FLAG_INT_WIND;
+		room.set_interior_window();
+		conn_hall->set_interior_window();
 
 		if (room.get_room_type(0) != RTYPE_CONF) { // re-add ground floor wall if re-assigned as a utility or special room
 			cube_t short_wall(window);

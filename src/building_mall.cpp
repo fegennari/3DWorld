@@ -161,6 +161,8 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, rand_gen_t &rgen)
 				Room.assign_all_to(RTYPE_STORE);
 				Room.interior        = 2; // mark as extended basement
 				Room.is_single_floor = 1;
+				Room.set_interior_window();
+				interior->get_extb_start_room().set_interior_window(); // mall concourse also has an interior window
 				interior->rooms.push_back(Room);
 				cube_t ceiling(store), floor(store);
 				ceiling.z1() = store.z2() - fc_thick;
