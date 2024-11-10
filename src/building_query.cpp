@@ -34,10 +34,11 @@ bool building_t::player_can_see_outside() const {
 	point const camera_pos(get_camera_pos()), camera_bs(camera_pos - xlate);
 	float const floor_spacing(get_window_vspace());
 
-	if (!player_building->has_int_windows()) { // no windows
+	if (!has_int_windows()) { // no windows looking out
 		// should we check if the door is visible?
 		if (building_has_open_ext_door && !doors.empty()) { // maybe can see out a door
-			if (have_walkway_ext_door || camera_pos.z < (ground_floor_z1 + floor_spacing)) return 1; // maybe can see out open door on first floor or a walkway
+			// maybe can see out open door on first floor or a walkway
+			if (have_walkway_ext_door || (camera_pos.z < (ground_floor_z1 + floor_spacing) && camera_pos.z > ground_floor_z1)) return 1;
 
 			if (interior) { // check roof access stairs
 				point camera_bot_bs(camera_bs);
@@ -58,11 +59,12 @@ bool building_t::player_can_see_outside() const {
 	}
 	// maybe can see out a window
 	if (!interior || !has_basement() || camera_pos.z > ground_floor_z1) return 1; // no interior, or not in the basement
-	if (camera_pos.z < ground_floor_z1 - floor_spacing) return 0; // on lower level of parking garage or extended basement
+	if (camera_pos.z < ground_floor_z1 - floor_spacing)     return 0; // on lower level of parking garage or extended basement
 	if (point_in_extended_basement_not_basement(camera_bs)) return 0; // not visible from extended basement; not for rotated buildings
 
 	for (auto const &s : interior->stairwells) { // check basement stairs
 		if (s.z1() >= ground_floor_z1 || s.z2() <= ground_floor_z1) continue; // not basement stairs
+		if (s.in_mall || s.in_ext_basement) continue; // mall and extended basement stairs don't count
 		if (s.is_u_shape())                 continue; // can't see around the bend
 		if (!is_rot_cube_visible(s, xlate)) continue; // VFC
 		if (!s.contains_pt(camera_bs) && s.stairs_door_ix >= 0 && get_door(s.stairs_door_ix).open_amt == 0.0) continue; // closed stairs door, not visible
