@@ -2174,6 +2174,7 @@ template void subtract_cubes_from_cube(cube_t const &c, vector<elevator_t>     c
 template<typename T> bool subtract_cube_from_cubes(cube_t const &s, vector<T> &cubes, vect_cube_t *holes, bool clip_in_z, bool include_adj, bool no_z_test) {
 	unsigned iter_end(cubes.size()); // capture size before splitting
 	bool was_clipped(0);
+	vect_cube_t top_bot_cubes;
 
 	for (unsigned i = 0; i < iter_end; ++i) {
 		T const &c(cubes[i]);
@@ -2206,12 +2207,13 @@ template<typename T> bool subtract_cube_from_cubes(cube_t const &s, vector<T> &c
 		if (clip_in_z) { // Note: remember that c reference will be invalidated below
 			T shared(c);
 			shared.intersect_with_cube_xy(s);
-			if (shared.z1() < s.z1()) {T bot(shared); bot.z2() = s.z1(); cubes.push_back(bot);} // bottom part
-			if (shared.z2() > s.z2()) {T top(shared); top.z1() = s.z2(); cubes.push_back(top);} // top part
+			if (shared.z1() < s.z1()) {T bot(shared); bot.z2() = s.z1(); top_bot_cubes.push_back(bot);} // bottom part
+			if (shared.z2() > s.z2()) {T top(shared); top.z1() = s.z2(); top_bot_cubes.push_back(top);} // top part
 		}
 		subtract_cube_from_cube_inplace(s, cubes, i, iter_end); // Note: invalidates c reference
 		was_clipped = 1;
 	} // for i
+	vector_add_to(top_bot_cubes, cubes);
 	return was_clipped;
 }
 template bool subtract_cube_from_cubes(cube_t const &s, vector<cube_t>         &cubes, vect_cube_t *holes, bool clip_in_z, bool include_adj, bool no_z_test);
