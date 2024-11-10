@@ -178,7 +178,6 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 
 		for (unsigned n = 0; n < 2; ++n) {
 			bool const is_mall((n == 0) == try_mall_first);
-			if (is_mall) continue; // TESTING - remove when malls are working
 			unsigned const num_floors_added(max_expand_underground_room(hallway, wall_dim, wall_dir, is_mall, rgen));
 			if (num_floors_added == 0) continue;
 			interior->num_extb_floors = num_floors_added;
