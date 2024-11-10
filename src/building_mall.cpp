@@ -136,7 +136,7 @@ void building_t::add_mall_store(cube_t const &store, cube_t const &window_area, 
 	bool const at_mall_end(window_area != store);
 	float const floor_spacing(get_mall_floor_spacing()), window_vspace(get_window_vspace());
 	float const wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness()), doorway_width(get_doorway_width());
-	float const wall_half_thick(0.5*wall_thickness), ceil_gap(get_floor_thick_val()*floor_spacing - fc_thick);
+	float const ceil_gap(get_floor_thick_val()*floor_spacing - fc_thick + get_mall_top_window_gap(floor_spacing, window_vspace));
 	float const wall_pos(store.d[!dim][!dir]);
 	unsigned const room_ix(interior->rooms.size());
 	room_t Room(store, basement_part_ix);
@@ -158,9 +158,8 @@ void building_t::add_mall_store(cube_t const &store, cube_t const &window_area, 
 		for (unsigned wdir = 0; wdir < 2; ++wdir) {
 			if (wdim != dim && wdir != dir && !at_mall_end) continue; // already have walls on this side
 			if (wdim == dim && wdir == 0 && has_adj_store ) continue; // wall shared with adjacent store
-			float half_thick(wall_half_thick);
 			cube_t wall(store);
-			set_wall_width(wall, store.d[wdim][wdir], half_thick, wdim);
+			set_wall_width(wall, store.d[wdim][wdir], 0.5*wall_thickness, wdim);
 			interior->walls[wdim].push_back(wall);
 		}
 	} // for dim

@@ -1606,9 +1606,9 @@ cube_t get_trim_cube(cube_t const &c, bool dim, bool dir, float trim_thickness) 
 }
 
 void building_t::add_trim_for_door_or_int_window(cube_t const &c, bool dim, bool draw_top_edge, bool draw_bot_trim,
-	float side_twidth, float top_twidth, float side_texp, float floor_spacing)
+	float side_twidth, float top_twidth, float side_texp, float floor_spacing, float extra_top_gap)
 {
-	float const trim_thickness(get_trim_thickness()), fc_gap(floor_spacing*(1.0 - get_floor_thick_val()));
+	float const trim_thickness(get_trim_thickness()), fc_gap(floor_spacing*(1.0 - get_floor_thick_val()) - extra_top_gap);
 	colorRGBA const trim_color(get_trim_color());
 	vect_room_object_t &objs(interior->room_geom->trim_objs);
 	cube_t trim(c);
@@ -1624,18 +1624,19 @@ void building_t::add_trim_for_door_or_int_window(cube_t const &c, bool dim, bool
 	}
 	// add trim at top of door
 	unsigned const num_floors(calc_num_floors(c, floor_spacing, get_floor_thickness()));
-	float z(c.z1() + fc_gap);
+	float z(c.z1());
 	trim.d[!dim][0] = c.d[!dim][0] + trim_thickness;
 	trim.d[!dim][1] = c.d[!dim][1] - trim_thickness;
 
 	for (unsigned f = 0; f < num_floors; ++f, z += floor_spacing) {
-		set_cube_zvals(trim, z-top_twidth, z); // z2=ceil height
+		float const z_top(z + fc_gap);
+		set_cube_zvals(trim, z_top-top_twidth, z_top); // z2=ceil height
 		bool const draw_top(draw_top_edge || (f+1 == num_floors && check_skylight_intersection(trim))); // draw top edge of trim for top floor if there's a skylight
 		unsigned const flags2(RO_FLAG_NOCOLL | (draw_top ? 0 : RO_FLAG_ADJ_TOP));
 		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, flags2, 1.0, SHAPE_SHORT, trim_color);
 
 		if (draw_bot_trim) {
-			set_cube_zvals(trim, z-fc_gap, z-fc_gap+top_twidth); // z2=ceil height
+			set_cube_zvals(trim, z, z+top_twidth); // z2=ceil height
 			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT), 1.0, SHAPE_SHORT, trim_color);
 		}
 	} // for f
@@ -1675,9 +1676,10 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	}
 	// handle interior windows similar to interior doors, except we also draw bottom trim
 	for (cube_t const &w : interior->int_windows) {
-		bool const dim(w.dy() < w.dx());
-		float const floor_spacing((interior->has_mall && w.z2() < ground_floor_z1) ? get_mall_floor_spacing() : window_vspacing);
-		add_trim_for_door_or_int_window(w, dim, 0, 1, door_trim_width, door_trim_width, door_trim_exp, floor_spacing); // draw_top_edge=0, draw_bot_trim=1
+		bool const dim(w.dy() < w.dx()), is_in_mall(interior->has_mall && w.z2() < ground_floor_z1);
+		float const floor_spacing(is_in_mall ? get_mall_floor_spacing() : window_vspacing);
+		float extra_top_gap(is_in_mall ? get_mall_top_window_gap(floor_spacing, window_vspacing) : 0.0);
+		add_trim_for_door_or_int_window(w, dim, 0, 1, door_trim_width, door_trim_width, door_trim_exp, floor_spacing, extra_top_gap); // draw_top_edge=0, draw_bot_trim=1
 	}
 	// add trim around exterior doors
 	for (auto d = doors.begin(); d != doors.end(); ++d) {

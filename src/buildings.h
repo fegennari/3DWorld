@@ -2291,6 +2291,7 @@ private:
 	void add_mall_stairs();
 	float get_mall_floor_spacing(cube_t const &room) const;
 	float get_mall_floor_spacing() const {return get_mall_floor_spacing(interior->get_extb_start_room());}
+	static float get_mall_top_window_gap(float mall_floor_spacing, float window_vspace) {return 0.5*(mall_floor_spacing - window_vspace);}
 	cube_t get_mall_center(cube_t const &room) const;
 	void get_mall_open_areas(cube_t const &room, vect_cube_t &openings) const;
 	cube_t add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, rand_gen_t &rgen);
@@ -2491,7 +2492,7 @@ private:
 	void add_extra_obj_slots();
 	void add_wall_and_door_trim_if_needed();
 	void add_trim_for_door_or_int_window(cube_t const &c, bool dim, bool draw_top_edge, bool draw_bot_trim,
-		float side_twidth, float top_twidth, float side_texp, float floor_spacing);
+		float side_twidth, float top_twidth, float side_texp, float floor_spacing, float extra_top_gap=0.0);
 	void add_wall_and_door_trim();
 	void add_window_trim_and_coverings(bool add_trim, bool add_blinds, bool add_ext_sills=0);
 	void add_pool_trim();
