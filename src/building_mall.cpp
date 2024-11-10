@@ -132,21 +132,80 @@ bool building_t::is_store_placement_invalid(cube_t const &store) const {
 	// we normally check for rooms outside the building's tile, but this doesn't seem to be a problem for malls; we still check city bounds for city malls
 	return (is_in_city && !get_grid_bcube_for_building(*this).contains_cube_xy(store)); // check if outside the city bcube
 }
-void building_t::add_mall_stores(cube_t const &room, bool dim, rand_gen_t &rgen) {
-	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace());
+void building_t::add_mall_store(cube_t const &store, cube_t const &window_area, bool dim, bool dir, bool &has_adj_store) {
+	bool const at_mall_end(window_area != store);
+	float const floor_spacing(get_mall_floor_spacing()), window_vspace(get_window_vspace());
 	float const wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness()), doorway_width(get_doorway_width());
 	float const wall_half_thick(0.5*wall_thickness), ceil_gap(get_floor_thick_val()*floor_spacing - fc_thick);
+	float const wall_pos(store.d[!dim][!dir]);
+	unsigned const room_ix(interior->rooms.size());
+	room_t Room(store, basement_part_ix);
+	Room.assign_all_to(RTYPE_STORE);
+	Room.interior        = 2; // mark as extended basement
+	Room.is_single_floor = 1;
+	Room.set_interior_window();
+	interior->get_extb_start_room().set_interior_window(); // mall concourse also has an interior window
+	interior->rooms.push_back(Room);
+	cube_t ceiling(store), floor(store);
+	ceiling.z1() = store.z2() - fc_thick;
+	floor  .z2() = store.z1() + fc_thick;
+	interior->ceilings.push_back(ceiling);
+	interior->floors  .push_back(floor);
+	interior->basement_ext_bcube.assign_or_union_with_cube(store);
+
+	// add walls
+	for (unsigned wdim = 0; wdim < 2; ++wdim) {
+		for (unsigned wdir = 0; wdir < 2; ++wdir) {
+			if (wdim != dim && wdir != dir && !at_mall_end) continue; // already have walls on this side
+			if (wdim == dim && wdir == 0 && has_adj_store ) continue; // wall shared with adjacent store
+			float half_thick(wall_half_thick);
+			cube_t wall(store);
+			set_wall_width(wall, store.d[wdim][wdir], half_thick, wdim);
+			interior->walls[wdim].push_back(wall);
+		}
+	} // for dim
+	has_adj_store = 1;
+	// add door/window openings
+	cube_t walls_cut(window_area);
+	walls_cut.z1() += fc_thick;
+	walls_cut.z2() -= ceil_gap;
+	walls_cut.expand_in_dim(dim, -(0.25*window_vspace + 0.15*window_area.get_sz_dim(dim))*(at_mall_end ? 0.25 : 1.0)); // shrink, less at mall end stores
+	set_wall_width(walls_cut, wall_pos, 2.0*wall_thickness, !dim);
+	subtract_cube_from_cubes(walls_cut, interior->walls[!dim], nullptr, 1); // no holes; clip_in_z=1
+	// cut an opening in the center
+	cube_t opening(walls_cut);
+	set_wall_width(opening, walls_cut.get_center_dim(dim), 1.0*doorway_width, dim); // twice door width
+	// add floor trim
+	// TODO
+	// add ceiling box where the gate would come down from
+	// TODO
+	// add window on each side of the doorway
+	for (unsigned side = 0; side < 2; ++side) {
+		cube_t window(walls_cut);
+		window.d[dim][!side] = opening.d[dim][side];
+		set_wall_width(window, wall_pos, 0.25*wall_thickness, !dim);
+		interior->int_windows.emplace_back(window, room_ix);
+	}
+}
+
+void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir, rand_gen_t &rgen) {
+	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float const min_width(4.0*window_vspace), max_width(9.0*window_vspace), min_depth(6.0*window_vspace), max_depth(8.0*window_vspace);
 
 	for (unsigned f = 0; f < interior->num_extb_floors; ++f) {
+		bool const is_top_floor(f+1 == interior->num_extb_floors);
+		float depths[2] = {};
 		cube_t store;
 		store.z1() = room .z1() + f*floor_spacing;
 		store.z2() = store.z1() +   floor_spacing;
 
-		for (unsigned d = 0; d < 2; ++d) { // each side of concourse
-			float const pos_end(room.d[dim][1] - wall_thickness), wall_pos(room.d[!dim][d]);
-			float const depth(rgen.rand_uniform(min_depth, max_depth)); // consistent depth for each side + floor so that walls can be shared
-			float pos(room.d[dim][0] + wall_thickness);
+		// place stores on each side of concourse
+		for (unsigned d = 0; d < 2; ++d) {
+			float const wall_pos(room.d[!dim][d]), depth(rgen.rand_uniform(min_depth, max_depth)); // consistent depth for each side + floor so that walls can be shared
+			float pos(room.d[dim][0]), pos_end(room.d[dim][1]);
+			// prevent exterior wall of store from clipping through parking garage wall
+			if (entrance_dir) {pos_end -= wall_thickness;} else {pos += wall_thickness;}
+			depths[d] = depth;
 			store.d[!dim][!d] = wall_pos;
 			store.d[!dim][ d] = wall_pos + (d ? 1.0 : -1.0)*depth;
 			bool has_adj_store(0);
@@ -162,57 +221,30 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, rand_gen_t &rgen)
 					store.d[dim][1] = next_pos = pos + min_width; // try min width store
 					if (is_store_placement_invalid(store)) {pos = next_pos; has_adj_store = 0; continue;} // invalid, skip this store
 				}
+				add_mall_store(store, store, dim, d, has_adj_store); // window_area is full storefront
 				pos = next_pos;
-				unsigned const room_ix(interior->rooms.size());
-				room_t Room(store, basement_part_ix);
-				Room.assign_all_to(RTYPE_STORE);
-				Room.interior        = 2; // mark as extended basement
-				Room.is_single_floor = 1;
-				Room.set_interior_window();
-				interior->get_extb_start_room().set_interior_window(); // mall concourse also has an interior window
-				interior->rooms.push_back(Room);
-				cube_t ceiling(store), floor(store);
-				ceiling.z1() = store.z2() - fc_thick;
-				floor  .z2() = store.z1() + fc_thick;
-				interior->ceilings.push_back(ceiling);
-				interior->floors  .push_back(floor);
-				interior->basement_ext_bcube.assign_or_union_with_cube(store);
-
-				// add walls
-				for (unsigned wdim = 0; wdim < 2; ++wdim) {
-					for (unsigned wdir = 0; wdir < 2; ++wdir) {
-						if (wdim != dim && wdir != d) continue; // already have walls on this side
-						if (wdim == dim && wdir == 0 && has_adj_store) continue; // wall shared with adjacent store
-						float half_thick(wall_half_thick);
-						cube_t wall(store);
-						set_wall_width(wall, store.d[wdim][wdir], half_thick, wdim);
-						interior->walls[wdim].push_back(wall);
-					}
-				} // for dim
-				has_adj_store = 1;
-				// add door/window openings
-				cube_t walls_cut(store);
-				walls_cut.z1() += fc_thick;
-				walls_cut.z2() -= ceil_gap;
-				walls_cut.expand_in_dim(dim, -(0.25*window_vspace + 0.15*store.get_sz_dim(dim))); // shrink
-				set_wall_width(walls_cut, wall_pos, 2.0*wall_thickness, !dim);
-				subtract_cube_from_cubes(walls_cut, interior->walls[!dim], nullptr, 1); // no holes; clip_in_z=1
-				// cut an opening in the center
-				cube_t opening(walls_cut);
-				set_wall_width(opening, walls_cut.get_center_dim(dim), 1.0*doorway_width, dim); // twice door width
-				// add floor trim
-				// TODO
-				// add ceiling box where the gate would come down from
-				// TODO
-				// add window on each side of the doorway
-				for (unsigned side = 0; side < 2; ++side) {
-					cube_t window(walls_cut);
-					window.d[dim][!side] = opening.d[dim][side];
-					set_wall_width(window, wall_pos, 0.25*wall_thickness, !dim);
-					interior->int_windows.emplace_back(window, room_ix);
-				}
 			} // while
 			// TODO: add a narrower non-public hallway behind the stores?
+		} // for d
+		// place a store at each end
+		for (unsigned d = 0; d < 2; ++d) {
+			bool const entrance_side(bool(d) == entrance_dir);
+			if (entrance_side && is_top_floor) continue; // blocked by top floor entrance
+			for (unsigned e = 0; e < 2; ++e) {store.d[!dim][e] = room.d[!dim][e];} // width of mall concourse
+			float const wall_pos(room.d[dim][d]), depth(rgen.rand_uniform(min_depth, max_depth));
+			store.d[dim][!d] = wall_pos + (d ? 1.0 : -1.0)*(entrance_side ? -0.5*wall_thickness : 0.0); // shift slightly on entrance side
+			store.d[dim][ d] = wall_pos + (d ? 1.0 : -1.0)*depth;
+			bool has_adj_store(0); // unused
+			if (is_store_placement_invalid(store)) continue;
+			cube_t const window_area(store); // window area is clipped to the mall concourse
+
+			// try to extend to the left and right to increase width
+			for (unsigned e = 0; e < 2; ++e) {
+				cube_t store_exp(store);
+				store_exp.d[!dim][e] += (e ? 1.0 : -1.0)*depths[e];
+				if (!is_store_placement_invalid(store)) {store = store_exp;}
+			}
+			add_mall_store(store, window_area, !dim, d, has_adj_store);
 		} // for d
 	} // for n
 }

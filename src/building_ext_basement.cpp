@@ -241,7 +241,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 		interior->stairwells.emplace_back(stairwell, 1); // num_floors=1
 	} // for stairs
 	if (!added_lg_room) {maybe_assign_extb_room_as_swimming(rgen);}
-	if (has_mall()) {add_mall_stores(hallway, wall_dim, rgen);}
+	if (has_mall()) {add_mall_stores(hallway, wall_dim, !wall_dir, rgen);}
 
 	if (!has_backrooms_or_mall() && global_building_params.add_basement_tunnels) { // maybe add tunnel connections to hallways
 		for (unsigned r = interior->ext_basement_hallway_room_id; r < rooms.size(); ++r) {try_place_tunnel_at_extb_hallway_end(rooms[r], r, rgen);}

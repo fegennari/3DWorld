@@ -1452,7 +1452,7 @@ colorRGBA building_t::get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_p
 		else {tex = mat.house_floor_tex;}
 	}
 	else { // office building
-		bool const in_ext_basement(in_basement && !get_basement().contains_cube_xy(floor_cube));
+		bool const in_ext_basement(in_basement && (!get_basement().contains_cube_xy(floor_cube) || floor_cube.z2() < bcube.z1()));
 
 		if ((in_ext_basement && has_mall()) || (has_retail() && floor_cube.z1() == ground_floor_z1)) { // retail or mall
 			float const tscale(0.125*mat.floor_tex.tscale_x); // stretch the texture out for large tiles
