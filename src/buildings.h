@@ -2285,6 +2285,7 @@ private:
 	bool add_ext_basement_rooms_recur(extb_room_t &parent_room, ext_basement_room_params_t &P, float door_width, bool dim, unsigned depth, rand_gen_t &rgen);
 	unsigned max_expand_underground_room(cube_t &room, bool dim, bool dir, bool is_mall, rand_gen_t &rgen) const;
 	void setup_mall_concourse(cube_t const &room, bool dim, bool dir, rand_gen_t &rgen);
+	bool is_store_placement_invalid(cube_t const &store) const;
 	void add_mall_stores(cube_t const &room, bool dim, rand_gen_t &rgen);
 	void add_mall_stairs();
 	float get_mall_floor_spacing(cube_t const &room) const;

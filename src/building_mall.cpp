@@ -126,6 +126,12 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 	}
 }
 
+bool building_t::is_store_placement_invalid(cube_t const &store) const {
+	// here we don't need to check rooms of our own building, but we need to check other building basements
+	if (check_buildings_cube_coll(store, 0, 1, this)) return 1;
+	// we normally check for rooms outside the building's tile, but this doesn't seem to be a problem for malls; we still check city bounds for city malls
+	return (is_in_city && !get_grid_bcube_for_building(*this).contains_cube_xy(store)); // check if outside the city bcube
+}
 void building_t::add_mall_stores(cube_t const &room, bool dim, rand_gen_t &rgen) {
 	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace());
 	float const wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness()), doorway_width(get_doorway_width());
@@ -142,20 +148,21 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, rand_gen_t &rgen)
 			float const depth(rgen.rand_uniform(min_depth, max_depth)); // consistent depth for each side + floor so that walls can be shared
 			float pos(room.d[dim][0] + wall_thickness);
 			store.d[!dim][!d] = wall_pos;
+			store.d[!dim][ d] = wall_pos + (d ? 1.0 : -1.0)*depth;
 			bool has_adj_store(0);
 			
 			while (pos < pos_end) {
 				float next_pos(pos + rgen.rand_uniform(min_width, max_width));
 				if (next_pos + min_width > pos_end) {next_pos = pos_end;} // clamp to far end of mall, and prevent a narrow store
-				store.d[ dim][0] = pos;
-				store.d[ dim][1] = next_pos;
-				store.d[!dim][d] = wall_pos + (d ? 1.0 : -1.0)*depth;
-				pos = next_pos;
+				store.d[dim][0] = pos;
+				store.d[dim][1] = next_pos;
 				assert(store.is_strictly_normalized());
-				// here we don't need to check rooms of our own building, but we need to check other building basements
-				if (check_buildings_cube_coll(store, 0, 1, this)) {has_adj_store = 0; continue;} // invalid, skip this store
-				// we normally check for rooms outside the building's tile, but this doesn't seem to be a problem for malls; we still check city bounds for city malls
-				if (is_in_city && !get_grid_bcube_for_building(*this).contains_cube_xy(store)) {has_adj_store = 0; continue;} // outside the city bcube
+
+				if (is_store_placement_invalid(store)) {
+					store.d[dim][1] = next_pos = pos + min_width; // try min width store
+					if (is_store_placement_invalid(store)) {pos = next_pos; has_adj_store = 0; continue;} // invalid, skip this store
+				}
+				pos = next_pos;
 				unsigned const room_ix(interior->rooms.size());
 				room_t Room(store, basement_part_ix);
 				Room.assign_all_to(RTYPE_STORE);
