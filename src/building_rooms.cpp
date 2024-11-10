@@ -1681,6 +1681,13 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		float extra_top_gap(is_in_mall ? get_mall_top_window_gap(floor_spacing, window_vspacing) : 0.0);
 		add_trim_for_door_or_int_window(w, dim, 0, 1, door_trim_width, door_trim_width, door_trim_exp, floor_spacing, extra_top_gap); // draw_top_edge=0, draw_bot_trim=1
 	}
+	// add floor trim for mall store doors
+	for (cube_t const &d : interior->store_doorways) {
+		bool const dim(d.dy() < d.dx());
+		cube_t trim(d);
+		trim.z2() = d.z1() + trim_thickness;
+		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT), 1.0, SHAPE_SHORT, GRAY);
+	}
 	// add trim around exterior doors
 	for (auto d = doors.begin(); d != doors.end(); ++d) {
 		if (d->type == tquad_with_ix_t::TYPE_RDOOR) continue; // roof access door - requires completely different approach to trim and has not been implemented

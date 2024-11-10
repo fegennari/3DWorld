@@ -169,15 +169,15 @@ void building_t::add_mall_store(cube_t const &store, cube_t const &window_area, 
 	walls_cut.z1() += fc_thick;
 	walls_cut.z2() -= ceil_gap;
 	walls_cut.expand_in_dim(dim, -(0.25*window_vspace + 0.15*window_area.get_sz_dim(dim))*(at_mall_end ? 0.25 : 1.0)); // shrink, less at mall end stores
-	set_wall_width(walls_cut, wall_pos, 2.0*wall_thickness, !dim);
+	set_wall_width(walls_cut, wall_pos, 2.0*wall_thickness, !dim); // add extra thickness
 	subtract_cube_from_cubes(walls_cut, interior->walls[!dim], nullptr, 1); // no holes; clip_in_z=1
 	// cut an opening in the center
 	cube_t opening(walls_cut);
 	set_wall_width(opening, walls_cut.get_center_dim(dim), 1.0*doorway_width, dim); // twice door width
-	// add floor trim
-	// TODO
-	// add ceiling box where the gate would come down from
-	// TODO
+	cube_t doorway(opening);
+	set_wall_width(doorway, wall_pos, 0.5*wall_thickness, !dim);
+	interior->store_doorways.push_back(doorway);
+	
 	// add window on each side of the doorway
 	for (unsigned side = 0; side < 2; ++side) {
 		cube_t window(walls_cut);
@@ -385,7 +385,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 					bot_bar.expand_by_xy (0.3*wall_thickness); // additional expand from plate
 					bot_bar.expand_in_dim(!dim, plate_thickness); // fill the corner notch
 					set_cube_zvals(bot_bar, zb1, zb2);
-					objs.emplace_back(bot_bar, TYPE_METAL_BAR, room_id, !dim, 0, 0, 1.0, SHAPE_CUBE, bar_color, skip_mask);
+					objs.emplace_back(bot_bar, TYPE_METAL_BAR, room_id, !dim, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, bar_color, skip_mask);
 					subtract_cubes_from_cube(railing, railing_cuts, railing_segs, temp, 2); // check zval overlap
 
 					for (cube_t const &r : railing_segs) {
@@ -394,7 +394,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 						bar.expand_by_xy (0.4*wall_thickness); // additional expand from plate
 						bar.expand_in_dim(!dim, plate_thickness); // fill the corner notch
 						set_cube_zvals(bar, zt1, zt2);
-						objs.emplace_back(bar, TYPE_METAL_BAR, room_id, !dim, 0, 0, 1.0, SHAPE_CUBE, bar_color); // can't skip drawing of ends if clipped by stairs
+						objs.emplace_back(bar, TYPE_METAL_BAR, room_id, !dim, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, bar_color); // can't skip drawing of ends if clipped by stairs
 						// add glass
 						cube_t panel(r);
 						set_cube_zvals(panel, zb2, zt1);
@@ -405,7 +405,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 							if (r.d[!dim][d] == railing.d[!dim][d]) continue; // not clipped
 							set_wall_width(vbar, r.d[!dim][d], vbar_hwidth, !dim);
 							set_wall_width(vbar, centerline,   vbar_hwidth,  dim);
-							objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, 0, 1.0, SHAPE_CUBE, bar_color, EF_Z12); // skip top and bottom
+							objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, bar_color, EF_Z12); // skip top and bottom
 						}
 						// add vertical bars at intervals
 						float const length(r.get_sz_dim(!dim));
@@ -417,7 +417,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 							vbar_pos += vbar_spacing; // first bar is offset
 							set_wall_width(vbar, vbar_pos,   vbar_hwidth, !dim);
 							set_wall_width(vbar, centerline, vbar_hwidth,  dim);
-							objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, 0, 1.0, SHAPE_CUBE, bar_color, EF_Z12); // skip top and bottom
+							objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, bar_color, EF_Z12); // skip top and bottom
 						}
 					} // for r
 				} // for dir
@@ -429,11 +429,22 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 				cube_t test_cube(vbar);
 				test_cube.expand_by_xy(-0.75*vbar_hwidth); // shrink to allow a bit of railing overlap
 				if (has_bcube_int(test_cube, railing_cuts)) continue; // skip if intersecting; shouldn't happen?
-				objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, 0, 1.0, SHAPE_CUBE, bar_color, EF_Z12); // skip top and bottom
+				objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, bar_color, EF_Z12); // skip top and bottom
 			}
 		}
 	} // for f
-	
+
+	// add objects for store doors, which are always between pairs of interior windows
+	for (cube_t const &d : interior->store_doorways) {
+		bool const dim(d.dy() < d.dx());
+		// add ceiling box where the gate would come down from
+		cube_t cbox(d);
+		cbox.z1() = d.z2() - 0.1*window_vspace;
+		cbox.expand_in_dim( dim,  1.0*wall_thickness); // grow
+		cbox.expand_in_dim(!dim, -0.5*wall_thickness); // shrink
+		objs.emplace_back(cbox, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, GRAY);
+	} // for d
+
 	// TODO: potted plants, palm trees, TYPE_TABLE, TYPE_CHAIR, TYPE_PICTURE, TYPE_WBOARD, TYPE_TCAN, TYPE_SIGN, TYPE_PLANT, TYPE_RDESK,
 	// TYPE_VENT, TYPE_DUCT, TYPE_VASE, TYPE_BENCH, TYPE_CLOCK, TYPE_TV, TYPE_FIRE_EXT, TYPE_BAR_STOOL, TYPE_WFOUNTAIN, TYPE_BLDG_FOUNT
 	//cube_t walk_area(room);
