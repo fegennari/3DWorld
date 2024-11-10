@@ -202,7 +202,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 
 					if (wmax > 0.0) {
 						float water_level((wmin == wmax) ? wmin : rgen.rand_uniform(wmin, wmax)); // can be a single value or a range
-						min_eq(water_level, float(num_floors - 1)); // top floor can't have water
+						min_eq(water_level, (num_floors - 1.0f - 0.5f*get_floor_thick_val())); // top floor can't have water; offset to prevent Z-fighting
 						if (water_level > 0.0) {interior->water_zval = hallway.z1() + fc_thick + water_level*get_window_vspace();}
 					}
 				}
