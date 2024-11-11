@@ -462,18 +462,25 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 	bool const dark_mode((interior->rooms.size() + interior->walls[0].size() + mat_ix) & 1); // random per-building; doors.size() can change as closets are added
 	colorRGBA const text_color(dark_mode ? WHITE : DK_BLUE);
 	bool const check_contained_in_room(!is_residential()); // apartment buildings and hotels always need room numbers
+	bool const in_mall(has_mall() && room.is_ext_basement()), place_above_door(in_mall && get_mall_floor_spacing() > 1.25*floor_spacing);
 
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
 		if (!is_cube_close_to_door(c, 0.0, 0, *i, 2)) continue; // check both dirs; should we check that the room on the other side of the door is a hallway?
-		float const door_offset(i->get_center_dim(!i->dim) - room_center[!i->dim]); // in width dim
 		bool const side(room_center[i->dim] < i->get_center_dim(i->dim));
-		// put the sign toward the outside of the building when the door is centered because there's more space and more light; otherwise, center on the room
-		bool const shift_dir((fabs(door_offset) < wall_thickness) ? (room_center[!i->dim] < part_center[!i->dim]) : (door_offset > 0.0));
 		float const door_width(i->get_width()), side_sign(side ? 1.0 : -1.0);
 		cube_t sign(*i);
-		set_cube_zvals(sign, zval+0.55*floor_spacing, zval+0.6*floor_spacing); // high enough that it's not blocked by filing cabinets
-		sign.translate_dim(!i->dim, (shift_dir ? -1.0 : 1.0)*0.8*door_width);
-		sign.expand_in_dim(!i->dim, -(0.45 - 0.03*min((unsigned)text.size(), 6U))*door_width); // shrink a bit
+
+		if (place_above_door) {
+			set_cube_zvals(sign, zval+0.95*floor_spacing, zval+1.05*floor_spacing);
+		}
+		else {
+			// put the sign toward the outside of the building when the door is centered because there's more space and more light; otherwise, center on the room
+			float const door_offset(i->get_center_dim(!i->dim) - room_center[!i->dim]); // in width dim
+			bool const shift_dir((fabs(door_offset) < wall_thickness) ? (room_center[!i->dim] < part_center[!i->dim]) : (door_offset > 0.0));
+			set_cube_zvals(sign, zval+0.55*floor_spacing, zval+0.6*floor_spacing); // high enough that it's not blocked by filing cabinets
+			sign.translate_dim(!i->dim, (shift_dir ? -1.0 : 1.0)*0.8*door_width);
+		}
+		sign.expand_in_dim(!i->dim, -(0.45 - 0.03*min((unsigned)text.size(), 6U))*(place_above_door ? 0.5 : 1.0)*door_width); // shrink a bit
 		sign.translate_dim( i->dim, side_sign*0.5*wall_thickness); // move to outside wall
 		sign.d[i->dim][side] += side_sign*0.1*wall_thickness; // make nonzero area
 
