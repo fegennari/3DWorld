@@ -108,10 +108,11 @@ bool building_t::toggle_room_light(point const &closest_to, bool sound_from_clos
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_light_type() || (!inc_lamps && i->type == TYPE_LAMP)) continue; // not a light
-		if ( in_attic && !i->in_attic()) continue;
+		if ( in_attic && !i->in_attic())        continue;
 		if (!in_attic && i->room_id != room_id) continue; // wrong room
-		if (i->in_closet() != in_closet) continue;
-		if (i->in_elevator()) continue; // can't toggle elevator light
+		if (i->in_closet() != in_closet)        continue;
+		if (i->in_elevator())                   continue; // can't toggle elevator light
+		if (i->z2() < closest_to.z)             continue; // below the query pos; needed for malls
 		if (!ignore_floor && get_floor_for_zval(i->z1()) != get_floor_for_zval(closest_to.z)) continue; // wrong floor (skip garages and sheds)
 		point center(i->get_cube_center());
 		if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
