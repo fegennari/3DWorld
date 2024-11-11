@@ -503,7 +503,7 @@ unsigned building_t::max_expand_underground_room(cube_t &room, bool dim, bool di
 	cube_t const orig_room(room);
 	room = exp_room;
 	unsigned num_floors_add(0);
-	float const room_floor_spacing((is_mall ? 1.5 : 1.0)*floor_spacing); // mall has 1.5x floor spacing
+	float const room_floor_spacing((is_mall ? 2.0 : 1.0)*floor_spacing); // mall has 2x floor spacing
 
 	if (is_mall) {
 		num_floors_add = 1; // mall is always 2 floors; should I add a new config option for this?

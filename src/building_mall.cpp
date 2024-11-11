@@ -284,7 +284,7 @@ void building_t::add_mall_stairs() { // connecting to the entrance door
 		for (unsigned d = 0; d < 2; ++d) {
 			railing.d[!dim][!d] = door .d[!dim][d] + (d ? 1.0 : -1.0)*1.5*wall_thickness;
 			railing.d[!dim][ d] = stair.d[!dim][d] + (d ? 1.0 : -1.0)*1.5*wall_thickness;
-			objs.emplace_back(railing, TYPE_RAILING, room_id, !dim, !d, RO_FLAG_HAS_EXTRA, 1.0, SHAPE_CUBE, GOLD); // no balusters
+			objs.emplace_back(railing, TYPE_RAILING, room_id, !dim, !d, 0, 1.0, SHAPE_CUBE, GOLD); // no balusters
 		}
 	}
 }
