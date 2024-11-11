@@ -1802,10 +1802,13 @@ void building_t::add_wall_and_door_trim() { // and window trim
 						ext_dirs[dir] = !any_inside;
 					} // for dir
 				}
-				unsigned const trim_flags(flags | (ext_dirs[0] ? RO_FLAG_ADJ_LO : 0) | (ext_dirs[1] ? RO_FLAG_ADJ_HI : 0)); // disable exterior faces
-				clip_trim_cube(trim, trim_exclude, trim_parts);
-				for (cube_t const &t : trim_parts) {objs.emplace_back(t, TYPE_WALL_TRIM, 0, dim, 0, trim_flags, 1.0, SHAPE_CUBE, trim_color);} // floor trim
+				if (w->z1() < trim.z2()) { // wall extends below trim; required to handle partial cuts in lower wall, such as in malls
+					unsigned const trim_flags(flags | (ext_dirs[0] ? RO_FLAG_ADJ_LO : 0) | (ext_dirs[1] ? RO_FLAG_ADJ_HI : 0)); // disable exterior faces
+					clip_trim_cube(trim, trim_exclude, trim_parts);
+					for (cube_t const &t : trim_parts) {objs.emplace_back(t, TYPE_WALL_TRIM, 0, dim, 0, trim_flags, 1.0, SHAPE_CUBE, trim_color);} // floor trim
+				}
 				if (!has_ceil_trim) continue;
+				// add ceiling trim
 				trim.z2() = z + floor_to_ceil_height; // ceil height
 				trim.z1() = trim.z2() - trim_height;
 

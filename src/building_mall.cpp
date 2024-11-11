@@ -195,6 +195,22 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float const min_width(4.0*window_vspace), max_width(9.0*window_vspace), min_depth(6.0*window_vspace), max_depth(8.0*window_vspace);
 
+	// pre-split walls into horizontal strips for each floor
+	for (unsigned d = 0; d < 2; ++d) {
+		vect_cube_t &walls(interior->walls[d]);
+		vect_cube_t walls_to_add;
+		assert(interior->extb_walls_start[d] < walls.size());
+
+		for (auto w = walls.begin()+interior->extb_walls_start[d]; w != walls.end(); ++w) {
+			for (unsigned f = 1; f < interior->num_extb_floors; ++f) { // skip first floor
+				float const z(room.z1() + f*floor_spacing);
+				if (w->z2() <= z || w->z1() >= z) continue; // doesn't span z
+				walls_to_add.push_back(*w);
+				w->z1() = walls_to_add.back().z2() = z;
+			}
+		} // for w
+		vector_add_to(walls_to_add, walls);
+	} // for d
 	for (unsigned f = 0; f < interior->num_extb_floors; ++f) {
 		bool const is_top_floor(f+1 == interior->num_extb_floors);
 		float depths[2] = {};
