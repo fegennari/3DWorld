@@ -215,10 +215,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	}
 	for (auto r = rooms.begin(); r != rooms.end(); ++r) {
 		bool const is_basement(has_basement() && r->part_id == (int)basement_part_ix); // includes extended basement and parking garage
+		bool const is_mall(r->is_mall());
 		float light_amt(is_basement ? 0.0f : window_vspacing*r->get_light_amt()); // exterior light: multiply perimeter/area by window spacing to make unitless; none for basement rooms
 		if (!is_house && r->is_hallway) {light_amt *= 2.0;} // double the light in office building hallways because they often connect to other lit hallways
 		float const floor_height(r->is_single_floor ? r->dz() : window_vspacing); // secondary buildings are always one floor
-		unsigned const num_floors(r->is_mall() ? /*interior->num_extb_floors*/1 : calc_num_floors_room(*r, floor_height, floor_thickness)); // consider the mall a single floor
+		unsigned const num_floors(is_mall ? /*interior->num_extb_floors*/1 : calc_num_floors_room(*r, floor_height, floor_thickness)); // consider the mall a single floor
 		unsigned const room_id(r - rooms.begin());
 		unsigned const min_br(multi_family ? num_floors : 1); // multi-family house requires one per floor; can apply to both bedrooms and bathrooms
 		point room_center(r->get_cube_center());
@@ -236,8 +237,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_swim_pool_room(init_rtype_f0 == RTYPE_SWIM); // room with a swimming pool
 		bool const is_retail_room   (init_rtype_f0 == RTYPE_RETAIL);
 		bool const is_mall_store    (init_rtype_f0 == RTYPE_STORE);
-		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(r->is_backrooms()), is_mall(r->is_mall()), is_apt_or_hotel_room(r->is_apt_or_hotel_room());
+		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(r->is_backrooms()), is_apt_or_hotel_room(r->is_apt_or_hotel_room());
 		bool const residential_room(is_house || (residential && !r->is_hallway && !is_basement && !is_retail_room));
+		bool const is_mall_room(is_ext_basement && has_mall()), is_mall_bathroom(is_mall_room && is_bathroom(init_rtype_f0));
 		room_obj_shape const light_shape(residential_room ? SHAPE_CYLIN : SHAPE_CUBE);
 		float light_density(0.0), light_size(def_light_size); // default size for houses
 		unsigned const room_objs_start(objs.size());
@@ -249,6 +251,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		else if (r->is_hallway) { // light size varies by hallway size
 			float const room_size(min(dx, dy)); // normalized to hallway width
 			light_size = max(0.06f*room_size, 0.67f*def_light_size);
+		}
+		else if (is_mall_bathroom) {
+			light_density = 0.5;
+			light_size   *= 0.7; // smaller, since the ceiling is lower
 		}
 		else if (r->is_office || r->get_has_skylight()) { // more lights for large offices; light size varies by office size; parking garages are handled later
 			light_density = 0.5;
@@ -279,7 +285,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			nx = max(1U, unsigned((room_dim ? 0.7 : 0.4)*dx/window_vspacing));
 			ny = max(1U, unsigned((room_dim ? 0.4 : 0.7)*dy/window_vspacing));
 		}
-		else if (is_mall_store) {
+		else if (is_mall_room) {
 			room_dim = !interior->extb_wall_dim; // always perpendicular to mall concourse, independent of aspect ratio
 			light_density = 0.4;
 		}
@@ -372,15 +378,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			unsigned num_lights(r->num_lights), flags(0);
 			float const light_z2(z + floor_height - fc_thick + light_delta_z);
 
-			// motion detection lights for large office building office; limit to interior rooms so that we still have some lit rooms viewed through windows
-			if (!is_house && has_pri_hall() && r->is_office && r->interior) {
+			// motion detection lights for large office building office and mall bathrooms; limit to interior rooms so that we still have some lit rooms viewed through windows
+			if ((!is_house && has_pri_hall() && r->is_office && r->interior) || is_mall_bathroom) {
 				flags |= RO_FLAG_IS_ACTIVE; // leave unlit and enable motion detection for lights
 			}
 			else if (r->is_sec_bldg) {is_lit = 0;} // garage and shed lights start off
 			else {
 				// 50% of lights are on, 75% for top of stairs, 100% for non-basement hallways, 100% for parking garages, backrooms, and malls
-				is_lit  = ((r->is_hallway && !is_basement) || is_parking_garage || is_backrooms || is_mall || is_mall_store || is_retail_room ||
-					((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0));
+				is_lit  = ((r->is_hallway && !is_basement) || is_parking_garage || is_backrooms || is_mall_room || is_retail_room || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0));
 				is_lit |= (r->is_ext_basement_conn() || (r->is_ext_basement() && r->intersects(get_basement()))); // ext basement conn or primary hallway
 
 				if (!is_lit) { // check people and set is_lit if anyone is in this floor of this room
@@ -492,7 +497,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				room_object_t light_obj(l, TYPE_LIGHT, room_id, dim, dir, l_flags, light_amt, light_shape, color);
 				light_obj.obj_id = light_ix_assign.get_ix_for_light(l, walls_not_shared);
 				// flicker 2% chance parking garage, 5% chance ext basement/backrooms except for mall and its stores
-				unsigned const flicker_mod(is_parking_garage ? 50 : ((is_ext_basement && !is_mall && !is_mall_store) ? 20 : 0));
+				unsigned const flicker_mod(is_parking_garage ? 50 : ((is_ext_basement && !is_mall_room) ? 20 : 0));
 				
 				if (flicker_mod > 0 && (((rgen_lights.rand() + 3*f)%flicker_mod) == 13)) {light_obj.flags |= RO_FLAG_BROKEN;} // maybe make this a flickering light
 				else if (is_ext_basement && valid_lights.size() == 1 && (rgen_lights.rand() & 7) == 0) { // broken ext basement light; not for hallways with multiple lights
@@ -847,7 +852,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			else if (has_pri_hall() && r->part_id == (has_retail() ? 1 : 0) && f == 0 && added_desk) {
 				add_office_door_sign(rgen, *r, room_center.z, room_id);
 			}
-			if (is_basement && !is_swim_pool_room) {add_stains_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
+			// should mall bathrooms have stains? I suppose so
+			if (is_basement && !is_swim_pool_room /*&& !is_mall_bathroom*/) {add_stains_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
 			bool const room_type_was_not_set(r->get_room_type(f) == RTYPE_NOTSET);
 
 			if (room_type_was_not_set) { // attempt to assign it with an optional room type
@@ -911,7 +917,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, (was_hung && !is_house)); // no trashcans on same wall as office whiteboard
 			}
 			if (is_bedroom || is_living || is_dining || is_play_art) {add_floor_clutter_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
-			else if (is_basement) {add_basement_clutter_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
+			else if (is_basement && !is_mall_room) {add_basement_clutter_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}
 
 			if (is_house && !(is_bathroom || is_kitchen || is_storage) && rgen.rand_float() < ((f > 0) ? 0.15 : 0.25)) {
 				unsigned const max_num(is_bedroom ? 1 : 2);

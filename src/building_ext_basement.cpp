@@ -535,8 +535,8 @@ cube_t building_t::add_ext_basement_door(cube_t const &room, float door_width, b
 	set_cube_zvals(door, room.z1()+fc_thick, room.z2()-fc_thick);
 	set_wall_width(door, room.get_center_dim(!dim), 0.5*door_width, !dim);
 	door.d[dim][0] = door.d[dim][1] = room.d[dim][dir]; // one end of the room
-	door_t Door(door, dim, !dir, rgen.rand_bool());
-	add_interior_door(Door, 0, !is_end_room); // open 50% of the time; is_bathroom=0, make_unlocked=!is_end_room
+	door_t Door(door, dim, !dir, rgen.rand_bool()); // open 50% of the time
+	add_interior_door(Door, 0, !is_end_room); // is_bathroom=0, make_unlocked=!is_end_room
 	door.expand_in_dim(dim, 2.0*get_wall_thickness());
 	return door;
 }

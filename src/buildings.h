@@ -2288,6 +2288,7 @@ private:
 	bool is_store_placement_invalid(cube_t const &store) const;
 	void add_mall_stores(cube_t const &room, bool dim, bool entrance_dir, rand_gen_t &rgen);
 	void add_mall_store(cube_t const &store, cube_t const &window_area, bool dim, bool dir, bool &has_adj_store);
+	void add_extb_room_floor_and_ceil(cube_t const &room);
 	void add_mall_stairs();
 	float get_mall_floor_spacing(cube_t const &room) const;
 	float get_mall_floor_spacing() const {return get_mall_floor_spacing(interior->get_extb_start_room());}

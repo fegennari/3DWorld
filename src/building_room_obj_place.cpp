@@ -1830,22 +1830,29 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		if (e.intersects(room) && zval >= e.z1() && zval < e.z2()) {avoid = e; break;}
 	}
 	// determine men's room vs. women's room
-	point const part_center(get_part_for_room(room).get_cube_center()), room_center(room.get_cube_center());
-	mens_room = ((part_center.x < room_center.x) ^ (part_center.y < room_center.y));
+	room_type const init_rtype(room.get_room_type(floor));
 
-	if (!is_cube()) { // alternate between men's and women's restrooms
-		if (interior->mens_count < interior->womens_count) {mens_room = 1;}
-		if (interior->mens_count > interior->womens_count) {mens_room = 0;}
+	if (room.is_rtype_locked(floor) && (init_rtype == RTYPE_MENS || init_rtype == RTYPE_WOMENS)) { // pre-assigned
+		mens_room = (init_rtype == RTYPE_MENS);
 	}
-	else {
-		bool has_second_bathroom(0);
+	else { // determine if this is the men's or women's room
+		point const part_center(get_part_for_room(room).get_cube_center()), room_center(room.get_cube_center());
+		mens_room = ((part_center.x < room_center.x) ^ (part_center.y < room_center.y));
 
-		// if there are two bathrooms (one on each side of the building), assign a gender to each side; if only one, alternate gender per floor
-		for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-			if (r->part_id != room.part_id || &(*r) == &room) continue; // different part or same room
-			if (is_room_office_bathroom(*r, zval, floor)) {has_second_bathroom = 1; break;}
+		if (!is_cube()) { // alternate between men's and women's restrooms
+			if (interior->mens_count < interior->womens_count) {mens_room = 1;}
+			if (interior->mens_count > interior->womens_count) {mens_room = 0;}
 		}
-		if (!has_second_bathroom) {mens_room ^= (floor & 1);}
+		else {
+			bool has_second_bathroom(0);
+
+			// if there are two bathrooms (one on each side of the building), assign a gender to each side; if only one, alternate gender per floor
+			for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+				if (r->part_id != room.part_id || &(*r) == &room) continue; // different part or same room
+				if (is_room_office_bathroom(*r, zval, floor)) {has_second_bathroom = 1; break;}
+			}
+			if (!has_second_bathroom) {mens_room ^= (floor & 1);}
+		}
 	}
 	bool const add_urinals(mens_room && building_obj_model_loader.is_model_valid(OBJ_MODEL_URINAL));
 
@@ -1916,7 +1923,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				if (!check_cube_within_part_sides(stall_exp)) continue; // outside the building
 			}
 			bool const is_open(rgen.rand_bool()); // 50% chance of stall door being open
-			bool const out_of_order(!is_open && rgen.rand_float() < 0.2);
+			bool const out_of_order(!is_open && !room.is_ext_basement() && rgen.rand_float() < 0.2); // not for mall bathrooms
 			unsigned const flags(out_of_order ? RO_FLAG_BROKEN : 0); // toilet can't be flushed and door can't be opened if out of order
 			objs.emplace_back(toilet, TYPE_TOILET, room_id, br_dim, !dir, flags, tot_light_amt);
 			add_bathroom_plumbing(objs.back());
