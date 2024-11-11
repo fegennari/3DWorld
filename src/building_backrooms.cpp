@@ -137,6 +137,13 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	pillar_avoid.push_back(ent_door.get_clearance_bcube());
 	blockers_per_dim[!ent_door.dim].push_back(pillar_avoid.back());
 
+	// add ext basement connector doors as well
+	for (door_stack_t const &ds : interior->door_stacks) {
+		if (!ds.get_bldg_conn()) continue;
+		pillar_avoid.push_back(ds.get_clearance_bcube());
+		blockers_per_dim[!ds.dim].push_back(pillar_avoid.back());
+	}
+
 	// find any stairs in this room and add to both wall blockers
 	for (stairwell_t const &s : interior->stairwells) {
 		if (s.z1() >= ceiling_z || s.z2() <= zval) continue; // wrong floor

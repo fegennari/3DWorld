@@ -777,10 +777,12 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 		cube_t search_area(*r1);
 		search_area.expand_by(max_connect_dist);
 		if (!search_area.intersects(other_eb_bc)) continue; // too far
+		if (interior->has_backrooms && has_water() && r1->z1() < interior->water_zval) continue; // don't connect if underwater
 
 		for (auto r2 = r2_begin; r2 != rooms2.end(); ++r2) {
 			if (!search_area.intersects(*r2))        continue; // too far
 			if (fabs(r1->z1() - r2->z1()) > z_toler) continue; // different floors/levels; do we need to check toler?
+			if (b.interior->has_backrooms && b.has_water() && r1->z1() < b.interior->water_zval) continue; // don't connect if underwater
 			
 			if (r1->intersects(*r2)) { // previously failed at -1.12, -15.7
 				cout << "Error: Invalid intersection of rooms at " << r1->str() << " and " << r2->str() << endl;
