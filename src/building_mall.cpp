@@ -219,13 +219,14 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 	} // for d
 	for (unsigned f = 0; f < interior->num_extb_floors; ++f) {
 		bool const is_top_floor(f+1 == interior->num_extb_floors);
+		unsigned const rooms_start(interior->rooms.size());
 		float depths[2] = {};
-		cube_t store;
-		store.z1() = room .z1() + f*floor_spacing;
-		store.z2() = store.z1() +   floor_spacing;
+		cube_t store, floor_bcube(room);
+		store.z1() = floor_bcube.z1() = room .z1() + f*floor_spacing;
+		store.z2() = floor_bcube.z2() = store.z1() +   floor_spacing;
 
 		// place stores on each side of concourse
-		for (unsigned d = 0; d < 2; ++d) {
+		for (unsigned d = 0; d < 2; ++d) { // sides of mall
 			float const wall_pos(room.d[!dim][d]), depth(rgen.rand_uniform(min_depth, max_depth)); // consistent depth for each side + floor so that walls can be shared
 			float pos(room.d[dim][0]), pos_end(room.d[dim][1]);
 			float const middle(0.5*(pos + pos_end));
@@ -294,19 +295,18 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 				else { // regular store
 					add_mall_store(store, store, dim, d, has_adj_store); // window_area is full storefront
 				}
+				floor_bcube.union_with_cube(store);
 				pos = next_pos;
 			} // while
-			// TODO: add a narrower non-public hallway behind the stores?
 		} // for d
 		// place a store at each end
-		for (unsigned d = 0; d < 2; ++d) {
+		for (unsigned d = 0; d < 2; ++d) { // ends of mall
 			bool const entrance_side(bool(d) == entrance_dir);
 			if (entrance_side && is_top_floor) continue; // blocked by top floor entrance
 			for (unsigned e = 0; e < 2; ++e) {store.d[!dim][e] = room.d[!dim][e];} // width of mall concourse
 			float const wall_pos(room.d[dim][d]), depth(rgen.rand_uniform(min_depth, max_depth));
 			store.d[dim][!d] = wall_pos + (d ? 1.0 : -1.0)*(entrance_side ? -0.5*wall_thickness : 0.0); // shift slightly on entrance side
 			store.d[dim][ d] = wall_pos + (d ? 1.0 : -1.0)*depth;
-			bool has_adj_store(0); // unused
 			if (is_store_placement_invalid(store)) continue;
 			cube_t const window_area(store); // window area is clipped to the mall concourse
 
@@ -316,9 +316,38 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 				store_exp.d[!dim][e] += (e ? 1.0 : -1.0)*depths[e];
 				if (!is_store_placement_invalid(store)) {store = store_exp;}
 			}
+			bool has_adj_store(0); // unused
 			add_mall_store(store, window_area, !dim, d, has_adj_store);
+			floor_bcube.union_with_cube(store);
 		} // for d
-	} // for n
+		// add a narrower non-public hallway behind each row of stores
+		unsigned const rooms_end(interior->rooms.size());
+		float const doorway_width(get_doorway_width()), hall_width(2.0*doorway_width);
+		cube_t hall(floor_bcube); // extends full length of the mall, including the end stores
+		hall.z2() = floor_bcube.z1() + window_vspace; // normal height
+
+		for (unsigned d = 0; d < 2; ++d) { // sides of mall
+			if (hall.d[!dim][d] == room.d[!dim][d]) continue; // no stores added to this side, skip; excludes bathrooms
+			hall.d[!dim][!d]  = hall.d[!dim][d] = floor_bcube.d[!dim][d]; // move to outside of rooms
+			hall.d[!dim][ d] += (d ? 1.0 : -1.0)*hall_width;
+			if (is_store_placement_invalid(store)) continue;
+			room_t Room(hall, basement_part_ix, 0, 1); // num_lights=0, is_hallway=1
+			Room.interior = 2; // mark as extended basement
+			interior->rooms.push_back(Room);
+			add_extb_room_floor_and_ceil(hall);
+			bool has_adj_store(0); // unused
+			add_mall_room_walls(hall, wall_thickness, !dim, d, 1, has_adj_store, interior->walls); // at_mall_end=1
+
+			// connect to rooms with doors
+			for (auto r = interior->rooms.begin()+rooms_start; r != interior->rooms.begin()+rooms_end; ++r) {
+				if (!r->intersects(hall)) continue; // wrong side
+				cube_t conn_room(*r);
+				set_cube_zvals(conn_room, hall.z1(), hall.z2());
+				cube_t const door_cut(add_ext_basement_door(conn_room, doorway_width, !dim, d, 1, rgen)); // is_end_room=1
+				subtract_cube_from_cubes(door_cut, interior->walls[!dim], nullptr, 1); // no holes; clip_in_z=1
+			}
+		} // for d
+	} // for f
 }
 
 void building_t::add_mall_stairs() { // connecting to the entrance door

@@ -2658,6 +2658,7 @@ void building_interior_t::assign_door_conn_rooms(unsigned start_ds_ix) {
 						if (rooms[r].contains_pt(test_pt)) {ds_room_ix = r; break;}
 					}
 					assert(ds_room_ix >= 0);
+					if (ds_room_ix < 0) {ds_room_ix = 0;} // don't fail if the assert above is commented out
 				}
 			}
 			d->conn_room[s] = ds_room_ix;
