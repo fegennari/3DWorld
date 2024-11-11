@@ -4,6 +4,10 @@
 #include "function_registry.h"
 #include "buildings.h"
 
+using std::string;
+string choose_store_name(rand_gen_t rgen);
+
+
 float building_t::get_mall_floor_spacing(cube_t const &room) const { // special function that allows for larger than normal floor spacing
 	assert(has_mall());
 	return room.dz()/interior->num_extb_floors;
