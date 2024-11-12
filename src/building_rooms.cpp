@@ -345,7 +345,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			bool const has_stairs_this_floor(r->has_stairs_on_floor(f));
 			unsigned const floor_objs_start(objs.size()); // needed for backrooms lights
 			unsigned pillars_start(0); // needed for mall lights
-			bool is_lit(0), has_light(1), light_dim(room_dim), wall_light(0), has_stairs(has_stairs_this_floor), top_of_stairs(has_stairs && top_floor);
+			bool is_lit(0), light_dim(room_dim), wall_light(0), has_stairs(has_stairs_this_floor), top_of_stairs(has_stairs && top_floor);
 			float light_delta_z(0.0);
 			vect_cube_t rooms_to_light;
 
@@ -363,7 +363,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				add_retail_room_objs(rgen, *r, room_center.z, room_id, light_ix_assign);
 			}
 			else if (is_mall_store) {
-				add_mall_store_objs(rgen, *r, room_center.z, room_id);
+				unsigned const objs_start(objs.size());
+				float const wall_vent_zval(floor_zval + get_mall_floor_spacing() - window_vspacing); // higher for higher ceiling
+				add_mall_store_objs       (rgen, *r, room_center.z,  room_id);
+				add_outlets_to_room       (rgen, *r, room_center.z,  room_id, objs_start, 0, 0); // is_ground_floor=is_basement=0
+				add_light_switches_to_room(rgen, *r, room_center.z,  room_id, objs_start, 0, 0); // is_ground_floor=is_basement=0
+				add_wall_vent_to_room     (rgen, *r, wall_vent_zval, room_id, objs_start, 0   ); // is_utility=0
 			}
 			if ((!has_stairs && (f == 0 || top_floor) && interior->stairwells.size() > 1) || top_of_stairs) { // should this be outside the loop?
 				// check for stairwells connecting stacked parts (is this still needed?); check for roof access stairs and set top_of_stairs=0
@@ -564,7 +569,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 				if (r->is_hallway && is_ext_basement) {add_false_door_to_extb_room_if_needed(*r, room_center.z, room_id);}
 				add_outlets_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement);
-				if (has_light) {add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement);} // shed, garage, or hallway
+				add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement); // shed, garage, or hallway
 
 				if (is_house && r->is_hallway) { // allow pictures, rugs, and light switches in the hallways of houses
 					hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement);
@@ -904,7 +909,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (num > 0) {add_plants_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, num);}
 			}
 			add_outlets_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement);
-			if (has_light) {add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement);} // add light switch if room has a light
+			add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement); // add light switches
 			
 			if (!r->is_hallway) { // no vents in hallways; vents use orig floor zval, not adjusted for bathroom tile floor
 				if (is_house) {add_ceil_vent_to_room(rgen, *r, floor_zval, room_id, objs_start_inc_lights );} // house vents

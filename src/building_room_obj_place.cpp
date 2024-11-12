@@ -4743,7 +4743,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 				is_val_inside_window(part, !dim, (wall_pos + xy_expand), window_hspacing, window_h_border)) continue;
 		}
 		cube_t c_exp(c);
-		c_exp.expand_by_xy(0.5*wall_thickness);
+		c_exp.expand_by_xy(wall_thickness);
 		if (overlaps_other_room_obj(c_exp, objs_start, 1))     continue; // check for things like closets; check_all=1 to include blinds
 		if (interior->is_blocked_by_stairs_or_elevator(c_exp)) continue; // check stairs and elevators
 		if (!check_cube_within_part_sides(c_exp))              continue; // handle non-cube buildings
@@ -4797,7 +4797,9 @@ unsigned door_base_t::get_conn_room(unsigned room_id) const {
 
 bool building_t::add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool check_for_ducts) {
 	float const wall_thickness(get_wall_thickness()), ceiling_zval(zval + get_floor_ceil_gap());
-	float const thickness(0.1*wall_thickness), height(2.5*wall_thickness), hwidth(2.0*wall_thickness), min_wall_spacing(1.5*hwidth);
+	float height(2.5*wall_thickness), hwidth(2.0*wall_thickness);
+	if (room.is_store()) {height *= 2.0; hwidth *= 2.0;} // larger wall vents for mall stores
+	float const thickness(0.1*wall_thickness), min_wall_spacing(1.5*hwidth);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 3.0*min_wall_spacing) return 0; // room is too small; shouldn't happen
 	bool const pref_dim(room.dx() < room.dy()); // shorter dim, to make it less likely to conflict with whiteboards
