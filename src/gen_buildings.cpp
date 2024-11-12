@@ -1454,7 +1454,7 @@ colorRGBA building_t::get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_p
 	else { // office building
 		bool const in_ext_basement(in_basement && (!get_basement().contains_cube_xy(floor_cube) || floor_cube.z2() < bcube.z1()));
 
-		if ((in_ext_basement && has_mall()) || (has_retail() && floor_cube.z1() == ground_floor_z1)) { // retail or mall
+		if ((in_ext_basement && is_inside_mall_stores(floor_cube.get_cube_center())) || (has_retail() && floor_cube.z1() == ground_floor_z1)) { // retail or mall
 			float const tscale(0.125*mat.floor_tex.tscale_x); // stretch the texture out for large tiles
 			tex = tid_nm_pair_t(building_texture_mgr.get_tile_floor_tid(), building_texture_mgr.get_tile_floor_nm_tid(), tscale, tscale);
 		}
@@ -1472,7 +1472,7 @@ colorRGBA building_t::get_ceil_tex_and_color(cube_t const &ceil_cube, tid_nm_pai
 		tex = mat.house_floor_tex;
 		return (is_house ? mat.house_floor_color : mat.floor_color);
 	}
-	else if (!is_house && in_ext_basement && !has_mall()) { // use concrete for office building extended basements except for malls
+	else if (!is_house && in_ext_basement && !is_inside_mall_stores(ceil_cube.get_cube_center())) { // use concrete for office building ext basements except for malls
 		tex = get_concrete_texture();
 		return WHITE;
 	}
@@ -1954,8 +1954,9 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 			tid_nm_pair_t tex;
 			
 			if (!is_house && in_ext_basement) {
-				if (has_mall()) {tex = mat.wall_tex; color = colorRGBA(1.0, 0.9, 0.7);} // light brown/yellow-ish
-				else            {tex = get_concrete_texture();} // office building extended basement
+				// mall stores have wall texture with custom color, but back hallways are concrete; should bathrooms be white?
+				if (is_inside_mall_stores(i->get_cube_center())) {tex = mat.wall_tex; color = colorRGBA(1.0, 0.9, 0.7);} // light brown/yellow-ish
+				else {tex = get_concrete_texture();} // office building extended basement
 			}
 			else {tex = mat.wall_tex;}
 			bdraw.add_section(*this, 0, *i, tex, color, dim_mask, 1, 0, 1, 0); // no AO; X and/or Y dims only, skip bottom, only draw top if under skylight
