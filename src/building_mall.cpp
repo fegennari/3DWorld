@@ -131,10 +131,9 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 }
 
 bool building_t::is_store_placement_invalid(cube_t const &store) const {
-	// here we don't need to check rooms of our own building, but we need to check other building basements
-	if (check_buildings_cube_coll(store, 0, 1, this)) return 1;
+	// here we don't need to check rooms of our own building, but we need to check other building basements;
 	// we normally check for rooms outside the building's tile, but this doesn't seem to be a problem for malls; we still check city bounds for city malls
-	return (is_in_city && !get_grid_bcube_for_building(*this).contains_cube_xy(store)); // check if outside the city bcube
+	return !is_basement_room_under_mesh_not_int_bldg(store, nullptr, !is_in_city); // allow_outside_grid=!is_in_city
 }
 void building_t::add_extb_room_floor_and_ceil(cube_t const &room) {
 	float const fc_thick(get_fc_thickness());
@@ -191,6 +190,7 @@ void building_t::add_mall_store(cube_t const &store, cube_t const &window_area, 
 		cube_t window(walls_cut);
 		window.d[dim][!side] = opening.d[dim][side];
 		set_wall_width(window, wall_pos, 0.25*wall_thickness, !dim);
+		assert(window.is_strictly_normalized());
 		interior->int_windows.emplace_back(window, room_ix);
 	}
 }
@@ -237,7 +237,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			store.d[!dim][ d] = wall_pos + (d ? 1.0 : -1.0)*depth;
 			bool has_adj_store(0);
 			
-			while (pos < pos_end) {
+			while (pos + min_width < pos_end) { // continue until we can't fit a min width room
 				float next_pos(pos);
 				bool is_bathroom(0);
 
@@ -314,7 +314,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			for (unsigned e = 0; e < 2; ++e) {
 				cube_t store_exp(store);
 				store_exp.d[!dim][e] += (e ? 1.0 : -1.0)*depths[e];
-				if (!is_store_placement_invalid(store)) {store = store_exp;}
+				if (!is_store_placement_invalid(store_exp)) {store = store_exp;}
 			}
 			bool has_adj_store(0); // unused
 			add_mall_store(store, window_area, !dim, d, has_adj_store);
@@ -331,7 +331,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			if (hall.d[!dim][d] == room.d[!dim][d]) continue; // no stores added to this side, skip; excludes bathrooms
 			hall.d[!dim][!d]  = hall.d[!dim][d] = floor_bcube.d[!dim][d]; // move to outside of rooms
 			hall.d[!dim][ d] += (d ? 1.0 : -1.0)*hall_width;
-			if (is_store_placement_invalid(store)) continue;
+			if (is_store_placement_invalid(hall)) continue;
 			room_t Room(hall, basement_part_ix, 0, 1); // num_lights=0, is_hallway=1
 			Room.interior = 2; // mark as extended basement
 			interior->rooms.push_back(Room);
@@ -375,6 +375,7 @@ void building_t::add_mall_stairs() { // connecting to the entrance door
 		for (unsigned n = 0; n < num_steps; ++n) { // top down
 			stair.expand_in_dim(!dim, step_len);  // widen sides
 			stair.d[dim][dir] += front_step_dist; // add length
+			stair.intersect_with_cube_xy(room); // don't let stair extend outside mall in case door is close to a wall
 			objs.emplace_back(stair, TYPE_STAIR, room_id, dim, dir, 0, 1.0, SHAPE_STAIRS_FAN);
 			stair.translate_dim(2, -step_height);
 		}
@@ -387,6 +388,7 @@ void building_t::add_mall_stairs() { // connecting to the entrance door
 		for (unsigned d = 0; d < 2; ++d) {
 			railing.d[!dim][!d] = door .d[!dim][d] + (d ? 1.0 : -1.0)*1.5*wall_thickness;
 			railing.d[!dim][ d] = stair.d[!dim][d] + (d ? 1.0 : -1.0)*1.5*wall_thickness;
+			if (!room.contains_cube_xy(railing)) continue; // skip if outside mall in case door is close to a wall
 			objs.emplace_back(railing, TYPE_RAILING, room_id, !dim, !d, 0, 1.0, SHAPE_CUBE, GOLD); // no balusters
 		}
 	}
@@ -502,6 +504,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 						// add glass
 						cube_t panel(r);
 						set_cube_zvals(panel, zb2, zt1);
+						assert(panel.is_strictly_normalized());
 						objs.emplace_back(panel, TYPE_INT_WINDOW, room_id, dim, 0, 0, 1.0);
 
 						// add vertical bars where railing was clipped

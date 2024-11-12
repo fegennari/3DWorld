@@ -1443,6 +1443,7 @@ void building_t::add_interior_window_objects() {
 		bool const dim(w.dy() < w.dx()), dir(0);
 		cube_t window(w);
 		window.expand_in_dim(dim, -0.2*window.get_sz_dim(dim)); // shrink
+		assert(window.is_strictly_normalized());
 		interior->room_geom->objs.emplace_back(window, TYPE_INT_WINDOW, w.ix, dim, dir, 0, 1.0);
 	}
 }

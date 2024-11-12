@@ -2274,8 +2274,8 @@ private:
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void maybe_add_basement(rand_gen_t rgen);
 	bool extend_underground_basement(rand_gen_t rgen);
-	bool is_basement_room_not_int_bldg(cube_t const &room, building_t const *exclude=nullptr) const;
-	bool is_basement_room_under_mesh_not_int_bldg(cube_t const &room, building_t const *exclude=nullptr) const;
+	bool is_basement_room_not_int_bldg(cube_t const &room, building_t const *exclude=nullptr, bool allow_outside_grid=0) const;
+	bool is_basement_room_under_mesh_not_int_bldg(cube_t const &room, building_t const *exclude=nullptr, bool allow_outside_grid=0) const;
 	bool is_basement_room_placement_valid(cube_t &room, ext_basement_room_params_t &P, bool dim, bool dir, bool *add_end_door=nullptr, building_t const *exclude=nullptr) const;
 	bool add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &door_bcube, cube_t const &basement, bool wall_dim, bool wall_dir, float length_mult);
 	bool check_pool_room_slice_valid(cube_t const &slice, int skip_room_ix) const;

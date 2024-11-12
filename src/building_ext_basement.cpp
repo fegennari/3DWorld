@@ -84,20 +84,23 @@ struct ext_basement_room_params_t {
 	vector<stairs_place_t> stairs;
 };
 
-bool building_t::is_basement_room_not_int_bldg(cube_t const &room, building_t const *exclude) const {
+bool building_t::is_basement_room_not_int_bldg(cube_t const &room, building_t const *exclude, bool allow_outside_grid) const {
 	// check for other buildings, including their extended basements;
 	if (check_buildings_cube_coll(room, 0, 1, this, exclude)) return 0; // xy_only=0, inc_basement=1, exclude ourself
-	cube_t const grid_bcube(get_grid_bcube_for_building(*this));
-	assert(!grid_bcube.is_all_zeros()); // must be found
-	assert(grid_bcube.contains_cube_xy(bcube)); // must contain our building
-	if (!grid_bcube.contains_cube_xy(room)) return 0; // outside the grid (tile or city) bcube
-	if (cube_int_underground_obj    (room)) return 0; // check tunnels, in-ground pools, etc.
+
+	if (!allow_outside_grid) {
+		cube_t const grid_bcube(get_grid_bcube_for_building(*this));
+		assert(!grid_bcube.is_all_zeros()); // must be found
+		assert(grid_bcube.contains_cube_xy(bcube)); // must contain our building
+		if (!grid_bcube.contains_cube_xy(room)) return 0; // outside the grid (tile or city) bcube
+	}
+	if (cube_int_underground_obj(room)) return 0; // check tunnels, in-ground pools, etc.
 	return 1;
 }
-bool building_t::is_basement_room_under_mesh_not_int_bldg(cube_t const &room, building_t const *exclude) const {
+bool building_t::is_basement_room_under_mesh_not_int_bldg(cube_t const &room, building_t const *exclude, bool allow_outside_grid) const {
 	float const ceiling_zval(room.z2() - get_fc_thickness());
 	if (query_min_height(room, ceiling_zval) < ceiling_zval) return 0; // check for terrain clipping through ceiling
-	return is_basement_room_not_int_bldg(room, exclude);
+	return is_basement_room_not_int_bldg(room, exclude, allow_outside_grid);
 }
 bool building_t::is_basement_room_placement_valid(cube_t &room, ext_basement_room_params_t &P, bool dim, bool dir, bool *add_end_door, building_t const *exclude) const {
 	float const wall_thickness(get_wall_thickness()), wall_expand_toler(0.1*wall_thickness);
