@@ -1772,7 +1772,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 				if (interior->has_backrooms) continue; // no trim in basement backrooms
 				
 				if (interior->has_mall) {
-					floor_spacing = get_mall_floor_spacing();
+					floor_spacing = get_mall_floor_spacing(); // not for all rooms; bathrooms are lower ceilings
 					ref_z1        = interior->basement_ext_bcube.z1();
 				}
 			}
@@ -1794,7 +1794,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 				} // for W
 			}
 			if (w->dz() < 0.5*window_vspacing) continue; // short wall segment from tall room extension, no trim
-			unsigned const num_floors(calc_num_floors(*w, floor_spacing, floor_thickness));
+			unsigned const num_floors(max(1U, (unsigned)calc_num_floors(*w, floor_spacing, floor_thickness))); // at least one (to include mall bathrooms and hallways)
 			// snap to the nearest floor to handle short walls due to cut out stairs
 			float const ground_wall_z1(ref_z1 + fc_thick);
 			float z(ground_wall_z1 + floor_spacing*round_fp((w->z1() - ground_wall_z1)/floor_spacing));
