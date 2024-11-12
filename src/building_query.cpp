@@ -1180,22 +1180,6 @@ bool building_t::point_in_elevator(point const &pos, bool check_elevator_car) co
 	}
 	return 0;
 }
-bool building_t::point_in_escalator(point const &pos) const {
-	if (!interior) return 0;
-
-	for (escalator_t const &e : interior->escalators) {
-		if (e.contains_pt(pos)) return 1;
-	}
-	return 0;
-}
-bool building_t::point_in_stairwell(point const &pos) const {
-	if (!interior) return 0;
-
-	for (stairwell_t const &s : interior->stairwells) {
-		if (s.contains_pt(pos)) return 1;
-	}
-	return 0;
-}
 bool building_t::point_in_U_stairwell(point const &pos) const {
 	if (!interior) return 0;
 

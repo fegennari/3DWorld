@@ -1003,9 +1003,7 @@ cube_t building_conn_info_t::get_conn_room_closest_to(building_t const &parent, 
 }
 bool building_conn_info_t::point_in_conn_room(point const &pos_bs) const {
 	for (conn_pt_t const &c : conn) {
-		for (conn_room_t const &room : c.rooms) {
-			if (room.contains_pt(pos_bs)) return 1;
-		}
+		if (check_vect_cube_contains_pt(c.rooms, pos_bs)) return 1;
 	}
 	return 0;
 }

@@ -101,6 +101,7 @@ colorRGBA   const lock_colors     [NUM_LOCK_COLORS] = {WHITE, BLACK, RED, GREEN,
 std::string const lock_color_names[NUM_LOCK_COLORS] = {"silver", "black", "red", "green", "blue", "yellow", "orange", "brown"};
 
 inline colorRGBA gen_box_color(rand_gen_t &rgen) {return colorRGBA(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0));} // add minor color variation
+template<typename T> static bool check_vect_cube_contains_pt(vector<T> const &cubes, point const &pos);
 
 class light_source;
 class lmap_manager_t;
@@ -1931,8 +1932,8 @@ struct building_t : public building_geom_t {
 	bool check_sphere_coll_interior(point &pos, point const &p_last, float radius, bool is_in_attic, bool xy_only, vector3d *cnorm) const;
 	bool check_cube_intersect_non_main_part(cube_t const &c) const;
 	bool point_in_elevator (point const &pos, bool check_elevator_car=0) const;
-	bool point_in_escalator(point const &pos) const;
-	bool point_in_stairwell(point const &pos) const;
+	bool point_in_escalator(point const &pos) const {return (interior && check_vect_cube_contains_pt(interior->escalators, pos));}
+	bool point_in_stairwell(point const &pos) const {return (interior && check_vect_cube_contains_pt(interior->stairwells, pos));}
 	bool point_in_U_stairwell(point const &pos) const;
 	bool check_pos_in_unlit_room(point const &pos) const;
 	bool check_pos_in_unlit_room_recur(point const &pos, std::set<unsigned> &rooms_visited, int known_room_id=-1) const;
@@ -2639,31 +2640,30 @@ inline bool check_bcube_sphere_coll(cube_t const &bcube, point const &sc, float 
 	return (xy_only ? sphere_cube_intersect_xy(sc, radius, bcube) : sphere_cube_intersect(sc, radius, bcube));
 }
 
-template<typename T> bool has_bcube_int(cube_t const &bcube, vector<T> const &bcubes) { // T must derive from cube_t
-	for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {if (c->intersects(bcube)) return 1;}
+template<typename T> bool has_bcube_int(cube_t const &bcube, vector<T> const &cubes) { // T must derive from cube_t
+	for (cube_t const &c : cubes) {if (c.intersects(bcube)) return 1;}
 	return 0;
 }
-template<typename T> bool has_bcube_int_no_adj(cube_t const &bcube, vector<T> const &bcubes) { // T must derive from cube_t
-	for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {if (c->intersects_no_adj(bcube)) return 1;}
+template<typename T> bool has_bcube_int_no_adj(cube_t const &bcube, vector<T> const &cubes) { // T must derive from cube_t
+	for (cube_t const &c : cubes) {if (c.intersects_no_adj(bcube)) return 1;}
 	return 0;
 }
-template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist=0.0) { // T must derive from cube_t
+template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &cubes, float pad_dist=0.0) { // T must derive from cube_t
 	cube_t tc(bcube);
 	tc.expand_by_xy(pad_dist);
-
-	for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {
-		if (c->intersects_xy(tc)) return 1; // intersection
-	}
+	for (cube_t const &c : cubes) {if (c.intersects_xy(tc)) return 1;}
 	return 0;
 }
-template<typename T> bool has_bcube_int_xy_no_adj(cube_t const &bcube, vector<T> const &bcubes) { // T must derive from cube_t
-	for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {if (c->intersects_xy_no_adj(bcube)) return 1;}
+template<typename T> bool has_bcube_int_xy_no_adj(cube_t const &bcube, vector<T> const &cubes) { // T must derive from cube_t
+	for (cube_t const &c : cubes) {if (c.intersects_xy_no_adj(bcube)) return 1;}
 	return 0;
 }
 template<typename T> static bool check_vect_cube_contains_pt_xy(vector<T> const &cubes, point const &pos) {
-	for (auto i = cubes.begin(); i != cubes.end(); ++i) {
-		if (i->contains_pt_xy(pos)) return 1;
-	}
+	for (cube_t const &c : cubes) {if (c.contains_pt_xy(pos)) return 1;}
+	return 0;
+}
+template<typename T> static bool check_vect_cube_contains_pt(vector<T> const &cubes, point const &pos) {
+	for (cube_t const &c : cubes) {if (c.contains_pt(pos)) return 1;}
 	return 0;
 }
 template<typename T> cube_t get_cube_height_radius(point const &center, T radius, float height) { // T can be float or vector3d
