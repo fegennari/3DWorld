@@ -321,6 +321,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			floor_bcube.union_with_cube(store);
 		} // for d
 		// add a narrower non-public hallway behind each row of stores
+		bool const is_tall_room(floor_spacing > 1.1*window_vspace);
 		unsigned const rooms_end(interior->rooms.size());
 		float const doorway_width(get_doorway_width()), hall_width(2.0*doorway_width);
 		cube_t hall(floor_bcube); // extends full length of the mall, including the end stores
@@ -343,7 +344,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 				if (!r->intersects(hall)) continue; // wrong side
 				cube_t conn_room(*r);
 				set_cube_zvals(conn_room, hall.z1(), hall.z2());
-				cube_t const door_cut(add_ext_basement_door(conn_room, doorway_width, !dim, d, 1, rgen)); // is_end_room=1
+				cube_t const door_cut(add_ext_basement_door(conn_room, doorway_width, !dim, d, 1, is_tall_room, rgen)); // is_end_room=1
 				subtract_cube_from_cubes(door_cut, interior->walls[!dim], nullptr, 1); // no holes; clip_in_z=1
 			}
 		} // for d

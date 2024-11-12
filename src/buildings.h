@@ -2295,7 +2295,7 @@ private:
 	static float get_mall_top_window_gap(float mall_floor_spacing, float window_vspace) {return 0.5*(mall_floor_spacing - window_vspace);}
 	cube_t get_mall_center(cube_t const &room) const;
 	void get_mall_open_areas(cube_t const &room, vect_cube_t &openings) const;
-	cube_t add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, rand_gen_t &rgen);
+	cube_t add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, bool is_tall_room, rand_gen_t &rgen);
 	cube_t add_and_connect_ext_basement_room(extb_room_t &room, ext_basement_room_params_t &P,
 		float door_width, bool dim, bool dir, bool is_end_room, unsigned depth, bool const add_doors[2], rand_gen_t &rgen);
 	void end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_bcube, ext_basement_room_params_t &P,

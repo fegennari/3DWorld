@@ -529,13 +529,14 @@ unsigned building_t::max_expand_underground_room(cube_t &room, bool dim, bool di
 	return (num_floors_add + 1); // return the total number of floors
 }
 
-cube_t building_t::add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, rand_gen_t &rgen) {
+cube_t building_t::add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, bool is_tall_room, rand_gen_t &rgen) {
 	float const fc_thick(get_fc_thickness());
 	cube_t door;
 	set_cube_zvals(door, room.z1()+fc_thick, room.z2()-fc_thick);
 	set_wall_width(door, room.get_center_dim(!dim), 0.5*door_width, !dim);
 	door.d[dim][0] = door.d[dim][1] = room.d[dim][dir]; // one end of the room
 	door_t Door(door, dim, !dir, rgen.rand_bool()); // open 50% of the time
+	if (is_tall_room) {Door.set_mult_floor();}
 	add_interior_door(Door, 0, !is_end_room); // is_bathroom=0, make_unlocked=!is_end_room
 	door.expand_in_dim(dim, 2.0*get_wall_thickness());
 	return door;
@@ -549,7 +550,7 @@ cube_t building_t::add_and_connect_ext_basement_room(extb_room_t &room, ext_base
 	// add a connecting door at one or both ends
 	for (unsigned d = 0; d < 2; ++d) {
 		if (!add_doors[d]) continue; // no door at this end
-		cube_t const door(add_ext_basement_door(room, door_width, dim, d, is_end_room, rgen));
+		cube_t const door(add_ext_basement_door(room, door_width, dim, d, is_end_room, 0, rgen)); // is_tall_room=0
 		P.wall_exclude.push_back(door);
 		room.conn_bcube.assign_or_union_with_cube(door);
 	}
@@ -832,7 +833,7 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 		// place doors at each end
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			building_t *door_dest(buildings[bool(dir) ^ r.connect_dir ^ 1]); // add door to the building whose room it connects to
-			cube_t const door(door_dest->add_ext_basement_door(r, doorway_width, r.hallway_dim, dir, 0, rgen)); // is_end_room=0
+			cube_t const door(door_dest->add_ext_basement_door(r, doorway_width, r.hallway_dim, dir, 0, 0, rgen)); // is_end_room=0, is_tall_room=0
 			// subtract door from walls of each building
 			for (unsigned bix = 0; bix < 2; ++bix) {subtract_cube_from_cubes(door, buildings[bix]->interior->walls[r.hallway_dim], nullptr, 1);} // no holes, clip_in_z=1
 		} // for dir

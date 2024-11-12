@@ -1616,11 +1616,13 @@ void building_t::add_trim_for_door_or_int_window(cube_t const &c, bool dim, bool
 	float side_twidth, float top_twidth, float side_texp, float floor_spacing, float extra_top_gap)
 {
 	float const trim_thickness(get_trim_thickness()), fc_gap(floor_spacing*(1.0 - get_floor_thick_val()) - extra_top_gap);
+	float const top_z_adj(draw_top_edge ? (side_twidth - top_twidth) : 0.0); // higher when top edge is drawn since door is below ceiling
 	colorRGBA const trim_color(get_trim_color());
 	vect_room_object_t &objs(interior->room_geom->trim_objs);
 	cube_t trim(c);
 	set_wall_width(trim, trim.get_center_dim(dim), side_texp, dim);
-	trim.z2() -= 0.01*trim_thickness; // shift top down oh so slightly to prevent z-fighting with top of wall when drawn under a skylight
+	trim.z2() += top_z_adj;
+	if (top_z_adj == 0.0) {trim.z2() -= 0.01*trim_thickness;} // shift top down oh so slightly to prevent z-fighting with top of wall when drawn under a skylight
 
 	for (unsigned side = 0; side < 2; ++side) { // left/right of door
 		trim.d[!dim][0] = c.d[!dim][side] - (side ? trim_thickness : side_twidth);
@@ -1637,7 +1639,7 @@ void building_t::add_trim_for_door_or_int_window(cube_t const &c, bool dim, bool
 
 	for (unsigned f = 0; f < num_floors; ++f, z += floor_spacing) {
 		float const z_top(z + fc_gap);
-		set_cube_zvals(trim, z_top-top_twidth, z_top); // z2=ceil height
+		set_cube_zvals(trim, z_top-top_twidth, z_top+top_z_adj); // z2=ceil height
 		bool const draw_top(draw_top_edge || (f+1 == num_floors && check_skylight_intersection(trim))); // draw top edge of trim for top floor if there's a skylight
 		unsigned const flags2(RO_FLAG_NOCOLL | (draw_top ? 0 : RO_FLAG_ADJ_TOP));
 		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, flags2, 1.0, SHAPE_SHORT, trim_color);
