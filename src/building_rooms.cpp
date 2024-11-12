@@ -1623,6 +1623,7 @@ void building_t::add_trim_for_door_or_int_window(cube_t const &c, bool dim, bool
 {
 	float const trim_thickness(get_trim_thickness()), fc_gap(floor_spacing*(1.0 - get_floor_thick_val()) - extra_top_gap);
 	float const top_z_adj(draw_top_edge ? (side_twidth - top_twidth) : 0.0); // higher when top edge is drawn since door is below ceiling
+	unsigned const bot_flags(RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT);
 	colorRGBA const trim_color(get_trim_color());
 	vect_room_object_t &objs(interior->room_geom->trim_objs);
 	cube_t trim(c);
@@ -1634,7 +1635,7 @@ void building_t::add_trim_for_door_or_int_window(cube_t const &c, bool dim, bool
 		trim.d[!dim][0] = c.d[!dim][side] - (side ? trim_thickness : side_twidth);
 		trim.d[!dim][1] = c.d[!dim][side] + (side ? side_twidth : trim_thickness);
 		bool const draw_top(draw_top_edge || check_skylight_intersection(trim)); // draw top edge of trim for top floor if there's a skylight
-		unsigned const flags2(RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT | (draw_top ? 0 : RO_FLAG_ADJ_TOP));
+		unsigned const flags2(bot_flags | (draw_top ? 0 : RO_FLAG_ADJ_TOP));
 		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, side, flags2, 1.0, SHAPE_TALL, trim_color); // abuse tall flag
 	}
 	// add trim at top of door
@@ -1651,8 +1652,14 @@ void building_t::add_trim_for_door_or_int_window(cube_t const &c, bool dim, bool
 		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, flags2, 1.0, SHAPE_SHORT, trim_color);
 
 		if (draw_bot_trim) {
-			set_cube_zvals(trim, z, z+top_twidth); // z2=ceil height
-			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT), 1.0, SHAPE_SHORT, trim_color);
+			set_cube_zvals(trim, z, z+top_twidth);
+			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, bot_flags, 1.0, SHAPE_SHORT, trim_color);
+		}
+		else if (has_mall() && c.z2() < ground_floor_z1 && !get_basement().contains_cube(c)) { // draw threshold below mall doors
+			cube_t btrim(trim);
+			set_cube_zvals(btrim, z, z+0.5*trim_thickness);
+			btrim.expand_in_dim(dim, -0.25*trim.get_sz_dim(dim)); // half the thickness
+			objs.emplace_back(btrim, TYPE_WALL_TRIM, 0, dim, 0, bot_flags, 1.0, SHAPE_SHORT, GRAY);
 		}
 	} // for f
 }
@@ -1800,6 +1807,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			float z(ground_wall_z1 + floor_spacing*round_fp((w->z1() - ground_wall_z1)/floor_spacing));
 
 			for (unsigned f = 0; f < num_floors; ++f, z += floor_spacing) {
+				if (z+trim_height < w->z1() || z > w->z2()) continue; // above or below wall; applies to short/clipped walls
 				set_cube_zvals(trim, z, z+trim_height); // starts at floor height
 				bool ext_dirs[2] = {0,0};
 
