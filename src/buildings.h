@@ -2292,7 +2292,8 @@ private:
 	void add_extb_room_floor_and_ceil(cube_t const &room);
 	void add_mall_stairs();
 	float get_mall_floor_spacing(cube_t const &room) const;
-	float get_mall_floor_spacing() const {return get_mall_floor_spacing(interior->get_extb_start_room());}
+	room_t const &get_mall_concourse() const {assert(has_mall()); return interior->get_extb_start_room();}
+	float get_mall_floor_spacing() const {return get_mall_floor_spacing(get_mall_concourse());}
 	static float get_mall_top_window_gap(float mall_floor_spacing, float window_vspace) {return 0.5*(mall_floor_spacing - window_vspace);}
 	cube_t get_mall_center(cube_t const &room) const;
 	void get_mall_open_areas(cube_t const &room, vect_cube_t &openings) const;

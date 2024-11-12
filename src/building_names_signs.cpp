@@ -462,13 +462,15 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 	bool const dark_mode((interior->rooms.size() + interior->walls[0].size() + mat_ix) & 1); // random per-building; doors.size() can change as closets are added
 	colorRGBA const text_color(dark_mode ? WHITE : DK_BLUE);
 	bool const check_contained_in_room(!is_residential()); // apartment buildings and hotels always need room numbers
-	bool const in_mall(has_mall() && room.is_ext_basement()), place_above_door(in_mall && get_mall_floor_spacing() > 1.25*floor_spacing);
+	bool const in_mall(has_mall() && room.is_ext_basement());
 
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
 		if (!is_cube_close_to_door(c, 0.0, 0, *i, 2)) continue; // check both dirs; should we check that the room on the other side of the door is a hallway?
 		bool const side(room_center[i->dim] < i->get_center_dim(i->dim));
 		float const door_width(i->get_width()), side_sign(side ? 1.0 : -1.0);
 		cube_t sign(*i);
+		sign.translate_dim(i->dim, side_sign*0.5*wall_thickness); // move to outside wall
+		bool const place_above_door(in_mall && get_mall_floor_spacing() > 1.25*floor_spacing && get_mall_concourse().intersects(sign));
 
 		if (place_above_door) {
 			set_cube_zvals(sign, zval+0.95*floor_spacing, zval+1.05*floor_spacing);
@@ -481,7 +483,6 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 			sign.translate_dim(!i->dim, (shift_dir ? -1.0 : 1.0)*0.8*door_width);
 		}
 		sign.expand_in_dim(!i->dim, -(0.45 - 0.03*min((unsigned)text.size(), 6U))*(place_above_door ? 0.5 : 1.0)*door_width); // shrink a bit
-		sign.translate_dim( i->dim, side_sign*0.5*wall_thickness); // move to outside wall
 		sign.d[i->dim][side] += side_sign*0.1*wall_thickness; // make nonzero area
 
 		// skip this check for rooms that require signs such as bathrooms, and in cases where we know there are no inside corners
@@ -492,11 +493,11 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 		}
 		cube_t sign_pad(sign);
 		sign_pad.expand_in_dim(i->dim, wall_thickness); // extend into the wall
-		if (has_bcube_int(sign_pad, interior->elevators) || has_bcube_int(sign_pad, interior->stairwells))      continue; // check if blocked by side elevator or stairs
+		if (has_bcube_int(sign_pad, interior->elevators) || has_bcube_int(sign_pad, interior->stairwells)) continue; // check if blocked by side elevator or stairs
 		// check if the sign is contained in room, including the side wall
 		if (check_contained_in_room && (room.d[!i->dim][0]-half_wt > sign.d[!i->dim][0] || room.d[!i->dim][1]+half_wt < sign.d[!i->dim][1])) continue;
 		add_sign_outside_door(interior->room_geom->objs, sign, text, text_color, room_id, i->dim, side, !dark_mode); // add_frame=!dark_mode
-		if (is_apt_or_hotel()) break; // only add to the first (front) door
+		if (is_apt_or_hotel() && zval > ground_floor_z1) break; // only add to the first (front) door; applies to above ground rooms, not basement or mall
 	} // for i
 }
 void building_t::add_office_door_sign(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {

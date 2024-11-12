@@ -342,9 +342,11 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			// connect to rooms with doors
 			for (auto r = interior->rooms.begin()+rooms_start; r != interior->rooms.begin()+rooms_end; ++r) {
 				if (!r->intersects(hall)) continue; // wrong side
+				bool const is_bathroom(is_bathroom(r->get_room_type(0)));
+				//if (is_bathroom) continue; // no door to bathrooms?
 				cube_t conn_room(*r);
 				set_cube_zvals(conn_room, hall.z1(), hall.z2());
-				cube_t const door_cut(add_ext_basement_door(conn_room, doorway_width, !dim, d, 1, is_tall_room, rgen)); // is_end_room=1
+				cube_t const door_cut(add_ext_basement_door(conn_room, doorway_width, !dim, d, 1, (is_tall_room && !is_bathroom), rgen)); // is_end_room=1
 				subtract_cube_from_cubes(door_cut, interior->walls[!dim], nullptr, 1); // no holes; clip_in_z=1
 			}
 		} // for d
@@ -353,7 +355,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 
 void building_t::add_mall_stairs() { // connecting to the entrance door
 	if (!has_mall()) return;
-	room_t const &room(interior->get_extb_start_room());
+	room_t const &room(get_mall_concourse());
 	door_t const &door(interior->get_ext_basement_door());
 	bool const dim(interior->extb_wall_dim), dir(interior->extb_wall_dir);
 	assert(door.dim == dim);
