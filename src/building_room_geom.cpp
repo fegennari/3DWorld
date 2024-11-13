@@ -1185,10 +1185,7 @@ void place_pizza_toppings(cube_t const &pizza, float rmin, float rmax, float hei
 				if (overlaps) continue;
 				placed.emplace_back(pos, radius);
 			}
-			cube_t c;
-			c.set_from_point(pos);
-			c.expand_by_xy(radius);
-			c.z2() += height*pizza.dz();
+			cube_t const c(get_cube_height_radius(pos, radius, height*pizza.dz()));
 			mat.add_vcylin_to_verts(c, color, 0, 1); // draw sides and top
 			break;
 		} // for N

@@ -1253,14 +1253,12 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			for (unsigned n = 0; n < num_trees; ++n) {
 				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random house wall dim/dir
 				float const wall_pos(house.d[dim][dir]);
-				float const tree_scale(rgen.rand_uniform(0.25, 0.3)), radius(3.0*sz_scale*tree_scale);
+				float const tree_scale(rgen.rand_uniform(0.25, 0.3)), radius(3.0*sz_scale*tree_scale), height(3.0*radius); // height is just a guess
 				point pos;
 				pos.z = i->z2();
 				pos[ dim] = wall_pos + (dir ? 1.0 : -1.0)*1.5*radius; // place near this wall of the house
 				pos[!dim] = rgen.rand_uniform(house.d[!dim][0], house.d[!dim][1]); // on the corner is okay
-				cube_t tree_bc; tree_bc.set_from_point(pos);
-				tree_bc.expand_by_xy(radius);
-				tree_bc.z2() += 3.0*radius; // just a guess
+				cube_t const tree_bc(get_cube_height_radius(pos, radius, height));
 				if (!check_valid_house_obj_place(pos, radius, radius, wall_pos, dim, dir, tree_bc, house, blockers, prev_blockers_end, yard_blockers_start)) continue;
 				// Note: we can't test objects such as balconies and fire escapes, so we might end up with a pine tree intersecting them
 				int const ttype(0); // 0=pine, 1=short pine, 2=palm

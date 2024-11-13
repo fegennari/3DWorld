@@ -1704,13 +1704,6 @@ void particle_manager_t::next_frame(building_t &building) {
 
 // fire_manager_t
 
-cube_t fire_manager_t::fire_t::get_bcube() const {
-	cube_t bcube(pos);
-	bcube.expand_by_xy(radius);
-	bcube.z2() += get_height();
-	return bcube;
-}
-
 void fire_manager_t::spawn_fire(point const &pos, float size) {
 	size *= rgen.rand_uniform(0.8, 1.25); // randomize size a bit
 

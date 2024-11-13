@@ -3705,9 +3705,7 @@ void building_t::add_fire_ext(float height, float radius, float zval, float wall
 	pos[!dim] = pos_along_wall;
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// add fire extinguisher
-	cube_t fe_bcube(pos, pos);
-	fe_bcube.expand_by_xy(radius);
-	fe_bcube.z2() += height;
+	cube_t const fe_bcube(get_cube_height_radius(pos, radius, height));
 	objs.emplace_back(fe_bcube, TYPE_FIRE_EXT, room_id, !dim, (dir ^ dim), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN); // mounted sideways
 	// add the wall mounting bracket; what about adding a small box with a door that contains the fire extinguisher?
 	cube_t wall_mount(fe_bcube);

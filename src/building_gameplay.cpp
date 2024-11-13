@@ -1692,10 +1692,8 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 			flags |= (obj.dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // draw exposed end
 		}
 		else { // drain is on the floor
-			float const radius(((obj.type == TYPE_SINK) ? 0.045 : 0.08)*obj.dz());
-			drain.set_from_point(cube_bot_center(obj));
-			drain.expand_by_xy(radius); // expand by radius
-			drain.z2() += 0.02*obj.dz();
+			float const radius(((obj.type == TYPE_SINK) ? 0.045 : 0.08)*obj.dz()), height(0.02*obj.dz());
+			drain = get_cube_height_radius(cube_bot_center(obj), radius, height);
 		}
 		obj = room_object_t(drain, TYPE_DRAIN, obj.room_id, ddim, ddir, flags, obj.light_amt, SHAPE_CYLIN, DK_GRAY); // replace with drain
 		invalidate_draw_data_for_obj(obj);

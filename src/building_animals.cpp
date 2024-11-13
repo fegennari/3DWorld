@@ -214,12 +214,6 @@ rat_t::rat_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id
 	hwidth = radius*sz.y/sz.x; // scale radius by ratio of width to length
 	height = 2.0*radius*sz.z/max(sz.x, sz.y); // use max of x/y size; the x/y size represents the bcube across rotations
 }
-cube_t rat_t::get_bcube() const {
-	cube_t bcube(pos, pos);
-	bcube.expand_by_xy(radius);
-	bcube.z2() += height;
-	return bcube;
-}
 cube_t get_obj_model_bcube_for_dir(point const &pos, vector3d const &dir, float radius, float height, unsigned model_id) {
 	bool const pri_dim(fabs(dir.x) < fabs(dir.y));
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id));
@@ -1591,13 +1585,9 @@ float insect_t::get_height() const {
 	return get_cockroach_height_from_radius(radius);
 }
 cube_t insect_t::get_bcube() const {
+	if (type == INSECT_TYPE_ROACH) {return get_cube_height_radius(pos, radius, get_height());}
 	cube_t bcube(pos);
-
-	if (type == INSECT_TYPE_ROACH) {
-		bcube.expand_by_xy(radius);
-		bcube.z2() += get_height();
-	}
-	else {bcube.expand_by(radius);} // default spherical (INSECT_TYPE_FLY)
+	bcube.expand_by(radius); // default spherical (INSECT_TYPE_FLY)
 	return bcube;
 }
 cube_t insect_t::get_bcube_with_dir() const {

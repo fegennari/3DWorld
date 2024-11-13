@@ -443,7 +443,7 @@ public:
 
 	// Note: assumes zvals are already checked
 	static bool is_valid_pos(vect_cube_t const &avoid, building_t const &building, point const &pos, float radius) {
-		cube_t c(pos, pos);
+		cube_t c(pos);
 		c.expand_by_xy(radius);
 
 		for (auto i = avoid.begin(); i != avoid.end(); ++i) {

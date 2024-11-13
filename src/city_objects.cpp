@@ -40,11 +40,8 @@ void textured_mat_t::post_draw(bool shadow_only) {
 }
 
 
-void city_obj_t::set_bcube_from_vcylin(point const &base, float height, float xy_radius) {
-	bcube.set_from_point(base);
-	bcube.expand_by_xy(xy_radius);
-	bcube.z2() += height;
-}
+void city_obj_t::set_bcube_from_vcylin(point const &base, float height, float xy_radius) {bcube = get_cube_height_radius(base, xy_radius, height);}
+
 bool city_obj_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	return sphere_cube_int_update_pos(pos_, radius_, (bcube + xlate), p_last, 0, cnorm);
 }

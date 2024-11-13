@@ -470,7 +470,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 }
 
 bool building_t::add_attic_roof_vent(point const &bot_center, float radius, unsigned room_id, float light_amt) {
-	cube_t pipe(bot_center, bot_center);
+	cube_t pipe(bot_center);
 	pipe.expand_by_xy(radius);
 	float pipe_z2(bot_center.z); // starting value zero height; should set based on roof height below
 

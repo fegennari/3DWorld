@@ -5,6 +5,8 @@
 
 #include "3DWorld.h"
 
+template<typename T> cube_t get_cube_height_radius(point const &center, T radius, float height);
+
 
 struct building_animal_t {
 	point pos, last_pos;
@@ -40,7 +42,7 @@ struct rat_t : public building_animal_t {
 	float get_height () const {return height;}
 	float get_xy_radius() const {return radius;}
 	point get_center () const {return point(pos.x, pos.y, (pos.z + 0.5f*height));}
-	cube_t get_bcube () const; // used for collision detection and VFC; bounding cube across rotations
+	cube_t get_bcube () const {return get_cube_height_radius(pos, radius, height);} // used for collision detection and VFC; bounding cube across rotations
 	cube_t get_bcube_with_dir() const; // used for model drawing; must be correct aspect ratio
 	bool is_facing_dest() const;
 };

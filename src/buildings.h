@@ -958,6 +958,13 @@ public:
 	void draw(shader_t &s, vector3d const &xlate);
 };
 
+template<typename T> cube_t get_cube_height_radius(point const &center, T radius, float height) { // T can be float or vector3d
+	cube_t c(center);
+	c.expand_by_xy(radius);
+	c.z2() += height;
+	return c;
+}
+
 class fire_manager_t {
 	struct fire_t {
 		point pos; // pos is the bottom
@@ -965,7 +972,7 @@ class fire_manager_t {
 		fire_t(point const &pos_, float max_radius_) : pos(pos_), max_radius(max_radius_) {}
 		float get_height() const {return 4.0*radius;}
 		point get_center() const {return pos + vector3d(0.0, 0.0, 0.5*get_height());}
-		cube_t get_bcube() const;
+		cube_t get_bcube() const {return get_cube_height_radius(pos, radius, get_height());}
 	};
 	vector<fire_t> fires;
 	quad_batch_draw qbd;
@@ -2666,12 +2673,6 @@ template<typename T> static bool check_vect_cube_contains_pt_xy(vector<T> const 
 template<typename T> static bool check_vect_cube_contains_pt(vector<T> const &cubes, point const &pos) {
 	for (cube_t const &c : cubes) {if (c.contains_pt(pos)) return 1;}
 	return 0;
-}
-template<typename T> cube_t get_cube_height_radius(point const &center, T radius, float height) { // T can be float or vector3d
-	cube_t c(center);
-	c.expand_by_xy(radius);
-	c.z2() += height;
-	return c;
 }
 template<typename T> cube_t get_bcubes_union(vector<T> const &cubes) {
 	if (cubes.size() == 1) {return cubes.front();}

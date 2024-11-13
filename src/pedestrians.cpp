@@ -2254,7 +2254,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 		if (!ped.in_building && !ped.is_zombie && is_rain_enabled() && !shadow_only && (ped.ssn & 3) != 0 && building_obj_model_loader.is_model_valid(OBJ_MODEL_UMBRELLA)) {
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_UMBRELLA));
 			float const ped_sz_scale(ped_model_loader.get_model(ped.model_id).scale), radius(0.5*bcube.dz()/ped_sz_scale);
-			cube_t u_bcube(bcube.get_cube_center() + 0.25*radius*dir_horiz);
+			cube_t u_bcube(bcube.get_cube_center() + (0.25*radius)*dir_horiz);
 			u_bcube.expand_by_xy(radius);
 			u_bcube.z1() -= 0.35*radius;
 			u_bcube.z2() += 0.85*radius;
