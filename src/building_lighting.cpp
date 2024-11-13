@@ -573,10 +573,21 @@ class building_indir_light_mgr_t {
 			weight *= surface_area/0.0003f;
 			if (b.has_pri_hall())     {weight *= 0.70;} // floorplan is open and well lit, indir lighting value seems too high
 			if (ro.type == TYPE_LAMP) {weight *= 0.33;} // lamps are less bright
-			if (light_in_basement)    {weight *= ((b.has_parking_garage && !in_ext_basement) ? 0.25 : 0.5);} // basement is darker, parking garages are even darker
-			if (in_attic)             {weight *= ATTIC_LIGHT_RADIUS_SCALE*ATTIC_LIGHT_RADIUS_SCALE;} // based on surface area rather than radius
 			if (ro.is_round())        {light_radius = ro.get_radius();}
+			if (in_attic)             {weight *= ATTIC_LIGHT_RADIUS_SCALE*ATTIC_LIGHT_RADIUS_SCALE;} // based on surface area rather than radius
+			else if (light_in_basement) {
+				if (in_ext_basement) {
+					if      (b.interior->has_backrooms) {weight *= 0.2; base_num_rays /= 4;} // darker and fewer rays
+					else if (b.interior->has_mall     ) {weight *= 0.1; base_num_rays /= 8;} // darker and fewer rays, since there are so many lights
+					else                                {weight *= 0.5;} // regular extended basement
+				}
+				else { // basement is darker, parking garages are even darker
+					weight *= (b.has_parking_garage ? 0.25 : 0.5);
+					base_num_rays /= 4;
+				}
+			}
 		}
+		if (b.check_pt_in_retail_room(light_center)) {weight *= 0.5; base_num_rays /= 5;} // many lights, fewer rays
 		if (b.is_house)        {weight *=  2.0;} // houses have dimmer lights and seem to work better with more indir
 		if (is_negative_light) {weight *= -1.0;}
 		weight /= base_num_rays; // normalize to the number of rays
