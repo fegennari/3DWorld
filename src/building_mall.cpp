@@ -159,8 +159,8 @@ void building_t::add_extb_room_floor_and_ceil(cube_t const &room) {
 void add_mall_room_walls(cube_t const &room, float wall_thickness, bool dim, bool dir, bool at_mall_end, bool &has_adj_store, vect_cube_t walls[2]) {
 	for (unsigned wdim = 0; wdim < 2; ++wdim) {
 		for (unsigned wdir = 0; wdir < 2; ++wdir) {
-			if (wdim != dim && wdir != dir && !at_mall_end) continue; // already have walls on this side
-			if (wdim == dim && wdir == 0 && has_adj_store ) continue; // wall shared with adjacent store
+			if (bool(wdim) != dim && bool(wdir) != dir && !at_mall_end) continue; // already have walls on this side
+			if (bool(wdim) == dim && bool(wdir) == 0 && has_adj_store ) continue; // wall shared with adjacent store
 			cube_t wall(room);
 			set_wall_width(wall, room.d[wdim][wdir], 0.5*wall_thickness, wdim);
 			walls[wdim].push_back(wall);
