@@ -526,7 +526,7 @@ snake_draw_t snake_draw;
 void building_room_geom_t::draw_animals(shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 	point const &camera_bs, bool shadow_only, bool reflection_pass, bool check_clip_cube) const
 {
-	if (!rats.empty() && !sewer_rats.empty()) {
+	if (!rats.empty() || !sewer_rats.empty()) {
 		bool const enable_animations(!shadow_only); // can't see the animation in the shadow pass
 		animation_state_t anim_state(enable_animations, ANIM_ID_RAT);
 		bool rat_drawn(0);
