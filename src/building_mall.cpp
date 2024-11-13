@@ -7,6 +7,7 @@
 
 using std::string;
 string choose_store_name(rand_gen_t rgen);
+colorRGBA choose_pot_color(rand_gen_t &rgen);
 
 extern object_model_loader_t building_obj_model_loader;
 
@@ -458,9 +459,11 @@ void building_t::add_mall_lower_floor_lights(room_t const &room, unsigned room_i
 // this is for the central mall concourse; store objects are added in add_mall_store_objs() below; treated as a single floor
 unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, vect_cube_t &rooms_to_light) {
 	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), fc_thick(get_fc_thickness()), doorway_width(get_doorway_width());
-	float const wall_thickness(get_wall_thickness()), trim_thick(get_trim_thickness());
+	float const wall_thickness(get_wall_thickness()), trim_thick(get_trim_thickness()), plant_radius(0.25*window_vspace);
 	bool const mall_dim(interior->extb_wall_dim);
 	vect_cube_t openings, railing_cuts, railing_segs, temp, pillars;
+	vector<sphere_t> plant_locs;
+	point plant_loc(0.0, 0.0, zval);
 	get_mall_open_areas(room, openings);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned num_elevators(0);
@@ -472,11 +475,13 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		railing_cuts.back().expand_in_dim( s.dim, doorway_width); // add padding on both ends
 		railing_cuts.back().expand_in_dim(!s.dim, 0.8*wall_thickness); // add space for railings
 		room.has_stairs = 255; // should this be set earlier?
+		// TODO: plant_locs
 	}
 	for (escalator_t const &e : interior->escalators) {
 		if (!e.in_mall) continue;
 		railing_cuts.push_back(e);
 		railing_cuts.back().expand_in_dim(!e.dim, 0.5*wall_thickness); // add space for railings
+		// TODO: plant_locs
 	}
 	for (elevator_t const &e : interior->elevators) {
 		if (!e.in_mall) continue;
@@ -490,11 +495,18 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 
 	for (cube_t const &opening : openings) {
 		for (unsigned dir = 0; dir < 2; ++dir) { // each side of opening
-			set_wall_width(pillar, (opening.d[!mall_dim][dir] + (dir ? -1.0 : 1.0)*0.7*pillar_hwidth), pillar_hwidth, !mall_dim);
+			float const pillar_pos(opening.d[!mall_dim][dir] + (dir ? -1.0 : 1.0)*0.7*pillar_hwidth);
+			set_wall_width(pillar, pillar_pos, pillar_hwidth, !mall_dim);
 			set_wall_width(pillar, opening.get_center_dim(mall_dim), pillar_hwidth, mall_dim);
-			pillars.push_back(pillar);
+			pillars     .push_back(pillar);
 			railing_cuts.push_back(pillar);
-		}
+			plant_loc[!mall_dim] = pillar_pos;
+
+			for (unsigned d = 0; d < 2; ++d) {
+				plant_loc[mall_dim] = pillar.d[mall_dim][d] + (d ? 1.0 : -1.0)*1.25*plant_radius;
+				plant_locs.emplace_back(plant_loc, plant_radius);
+			}
+		} // for dir
 	} // for opening
 	// add walkway railings
 	for (unsigned f = 1; f < interior->num_extb_floors; ++f) { // skip first floor
@@ -593,8 +605,15 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		objs.emplace_back(fbc, TYPE_BLDG_FOUNT, room_id, rgen.rand_bool(), rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN); // random dim/dir
 		objs.back().item_flags = rgen.rand(); // select a random sub_model_id
 	}
+	// add potted plants
+	colorRGBA const pot_color(choose_pot_color(rgen)); // same for all plants in this mall
 
-	// TODO: potted plants, palm trees, TYPE_TABLE, TYPE_CHAIR, TYPE_PICTURE, TYPE_WBOARD, TYPE_TCAN, TYPE_SIGN, TYPE_PLANT, TYPE_RDESK,
+	for (sphere_t const &p : plant_locs) {
+		cube_t const plant(get_cube_height_radius(p.pos, p.radius, 4.0*p.radius));
+		objs.emplace_back(plant, TYPE_PLANT, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT), 1.0, SHAPE_CYLIN, pot_color);
+	}
+
+	// TODO: palm trees, TYPE_TABLE, TYPE_CHAIR, TYPE_PICTURE, TYPE_WBOARD, TYPE_TCAN, TYPE_SIGN, TYPE_RDESK,
 	// TYPE_VENT, TYPE_DUCT, TYPE_VASE, TYPE_BENCH, TYPE_CLOCK, TYPE_TV, TYPE_FIRE_EXT, TYPE_BAR_STOOL, TYPE_WFOUNTAIN
 	//cube_t walk_area(room);
 	//walk_area.expand_by_xy(-wall_thickness);
