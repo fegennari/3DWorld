@@ -3,9 +3,12 @@
 
 #include "function_registry.h"
 #include "buildings.h"
+#include "city_model.h"
 
 using std::string;
 string choose_store_name(rand_gen_t rgen);
+
+extern object_model_loader_t building_obj_model_loader;
 
 
 float building_t::get_mall_floor_spacing(cube_t const &room) const { // special function that allows for larger than normal floor spacing
@@ -36,6 +39,12 @@ void building_t::get_mall_open_areas(cube_t const &room, vect_cube_t &openings) 
 		c.d[dim][1] = pos - half_gap;
 		openings.push_back(c);
 	}
+}
+
+unsigned choose_one_center(unsigned num, rand_gen_t &rgen) {
+	unsigned ix(num/2); // center value
+	if (!(num & 1) && rgen.rand_bool()) {--ix;} // tie breaker if even
+	return ix;
 }
 
 void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, rand_gen_t &rgen) {
@@ -116,9 +125,7 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 		} // for n
 	} // for f
 	if (!openings.empty()) { // add elevator
-		unsigned opening_ix(openings.size()/2); // center opening
-		if (!(openings.size() & 1) && rgen.rand_bool()) {--opening_ix;} // tie breaker if even
-		cube_t const opening(openings[opening_ix]);
+		cube_t const opening(openings[choose_one_center(openings.size(), rgen)]);
 		bool const edir(rgen.rand_bool());
 		float const ww_edge(opening.d[dim][!edir]);
 		// Note: elevator extends half a floor width below and above the room; is this okay, or can it clip through other objects?
@@ -443,8 +450,8 @@ void building_t::add_mall_lower_floor_lights(room_t const &room, unsigned room_i
 	} // for f
 }
 
-// this is for the central mall concourse; store objects are added in add_mall_store_objs() below
-unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t &rooms_to_light) {
+// this is for the central mall concourse; store objects are added in add_mall_store_objs() below; treated as a single floor
+unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, vect_cube_t &rooms_to_light) {
 	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), fc_thick(get_fc_thickness()), doorway_width(get_doorway_width());
 	float const wall_thickness(get_wall_thickness()), trim_thick(get_trim_thickness());
 	bool const mall_dim(interior->extb_wall_dim);
@@ -568,13 +575,26 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	if (is_in_city) {
 		// add skylight(s)?
 	}
+	// add a fountain in the center of an opening
+	if (!openings.empty() && building_obj_model_loader.is_model_valid(OBJ_MODEL_FOUNTAIN)) {
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FLAG)); // W, D, H
+		cube_t const opening(openings[choose_one_center(openings.size(), rgen)]);
+		float const max_radius(0.25*min(opening.dx(), opening.dy()));
+		float height(0.9*floor_spacing*rgen.rand_uniform(0.9, 1.1)), radius(0.5*height*0.5*(sz.x + sz.y)/sz.z); // use average of width and depth for radius
+		if (radius > max_radius) {height *= max_radius/radius; radius = max_radius;} // reduce size if radius is too large
+		cube_t fbc;
+		set_cube_zvals(fbc, zval, zval+height);
+		for (unsigned d = 0; d < 2; ++d) {set_wall_width(fbc, opening.get_center_dim(d), radius, d);}
+		objs.emplace_back(fbc, TYPE_BLDG_FOUNT, room_id, rgen.rand_bool(), rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN); // random dim/dir
+		objs.back().item_flags = rgen.rand(); // select a random sub_model_id
+	}
 
 	// TODO: potted plants, palm trees, TYPE_TABLE, TYPE_CHAIR, TYPE_PICTURE, TYPE_WBOARD, TYPE_TCAN, TYPE_SIGN, TYPE_PLANT, TYPE_RDESK,
-	// TYPE_VENT, TYPE_DUCT, TYPE_VASE, TYPE_BENCH, TYPE_CLOCK, TYPE_TV, TYPE_FIRE_EXT, TYPE_BAR_STOOL, TYPE_WFOUNTAIN, TYPE_BLDG_FOUNT
+	// TYPE_VENT, TYPE_DUCT, TYPE_VASE, TYPE_BENCH, TYPE_CLOCK, TYPE_TV, TYPE_FIRE_EXT, TYPE_BAR_STOOL, TYPE_WFOUNTAIN
 	//cube_t walk_area(room);
 	//walk_area.expand_by_xy(-wall_thickness);
 
-	// add pillars last so that we can check lights against them
+	// add pillars last so that we can check lights against them; must be added last
 	unsigned const pillars_start(objs.size());
 	for (cube_t const &pillar : pillars) {objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, 0, 0, 0, 1.0, SHAPE_CUBE, WHITE, EF_Z12);}
 	return pillars_start;

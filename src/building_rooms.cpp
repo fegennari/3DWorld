@@ -357,7 +357,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				add_backrooms_objs(rgen, *r, room_center.z, room_id, f, rooms_to_light);
 			}
 			else if (is_mall) {
-				pillars_start = add_mall_objs(rgen, *r, room_center.z, room_id, f, rooms_to_light);
+				assert(f == 0); // treated as a single floor
+				pillars_start = add_mall_objs(rgen, *r, room_center.z, room_id, rooms_to_light);
 			}
 			else if (is_retail_room) {
 				add_retail_room_objs(rgen, *r, room_center.z, room_id, light_ix_assign);
