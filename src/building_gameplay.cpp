@@ -85,7 +85,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CABINET   ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 3, 0.0,   0.0,   "kitchen cabinet");
 	bldg_obj_types[TYPE_KSINK     ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 3, 0.0,   0.0,   "kitchen sink");
 	bldg_obj_types[TYPE_BRSINK    ] = bldg_obj_type_t(1, 1, 0, 0, 1, 0, 1, 0.0,   0.0,   "bathroom sink"); // for office building bathrooms
-	bldg_obj_types[TYPE_PLANT     ] = bldg_obj_type_t(0, 1, 1, 1, 0, 0, 3, 18.0,  8.0,   "potted plant"); // AI collides with plants on the floor
+	bldg_obj_types[TYPE_PLANT     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 3, 18.0,  8.0,   "potted plant"); // AI collides with plants on the floor, and player does in some cases
 	bldg_obj_types[TYPE_DRESSER   ] = bldg_obj_type_t(1, 1, 1, 0, 0, 0, 3, 120.0, 110.0, "dresser"); // Note: can't pick up until drawers can be opened and items removed from them
 	bldg_obj_types[TYPE_NIGHTSTAND] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 3, 60.0,  45.0,  "nightstand");
 	bldg_obj_types[TYPE_FLOORING  ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1, 0.0,   0.0,   "flooring");
