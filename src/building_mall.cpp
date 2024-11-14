@@ -283,6 +283,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 					set_cube_zvals(door, store.z1()+fc_thick, store.z1()+window_vspace-fc_thick);
 					door.d[!dim][0] = door.d[!dim][1] = wall_pos;
 					if (use_low_ceiling) {bathrooms.z2() = bathrooms.z1() + window_vspace;} // set normal ceiling height
+					interior->mall_bathrooms = bathrooms;
 					
 					for (unsigned e = 0; e < 2; ++e) {
 						cube_t bathroom(bathrooms);
@@ -519,6 +520,8 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		if (!e.in_mall) continue;
 		railing_cuts.push_back(e.get_bcube_padded(doorway_width));
 		++num_elevators;
+		// place clock on back of elevator
+		// TODO: TYPE_CLOCK
 	}
 	room.has_elevator = num_elevators; // should this be set earlier?
 	// add vertical support pillars
@@ -639,6 +642,19 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		objs.emplace_back(fbc, TYPE_BLDG_FOUNT, room_id, rgen.rand_bool(), rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN); // random dim/dir
 		objs.back().item_flags = rgen.rand(); // select a random sub_model_id
 	}
+	// if there are bathrooms, add a water fountain between them
+	if (!interior->mall_bathrooms.is_all_zeros() && building_obj_model_loader.is_model_valid(OBJ_MODEL_WFOUNTAIN)) {
+		bool const wf_dir(interior->mall_bathrooms.get_center_dim(!mall_dim) > room.get_center_dim(!mall_dim));
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_WFOUNTAIN)); // D, W, H
+		float const height(0.25*window_vspace), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
+		float const z1(zval + 0.18*window_vspace), wall_pos(room.d[!mall_dim][wf_dir] + (wf_dir ? -1.0 : 1.0)*0.5*wall_thickness);
+		cube_t wf;
+		set_wall_width(wf, interior->mall_bathrooms.get_center_dim(mall_dim), hwidth, mall_dim);
+		set_cube_zvals(wf, z1, z1+height);
+		wf.d[!mall_dim][ wf_dir] = wall_pos;
+		wf.d[!mall_dim][!wf_dir] = wall_pos - (wf_dir ? 1.0 : -1.0)*depth;
+		objs.emplace_back(wf, TYPE_WFOUNTAIN, room_id, !mall_dim, wf_dir, 0, 1.0, SHAPE_CUBE);
+	}
 	// add potted plants
 	for (plant_loc_t const &p : plant_locs) {
 		cube_t const plant(get_cube_height_radius(p.pos, p.radius, 4.0*p.radius));
@@ -646,14 +662,18 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		set_obj_id(objs);
 	}
 
-	// TODO: palm trees, TYPE_TABLE, TYPE_CHAIR, TYPE_PICTURE, TYPE_WBOARD, TYPE_TCAN, TYPE_SIGN, TYPE_RDESK,
-	// TYPE_VENT, TYPE_DUCT, TYPE_VASE, TYPE_BENCH, TYPE_CLOCK, TYPE_TV, TYPE_FIRE_EXT, TYPE_BAR_STOOL, TYPE_WFOUNTAIN
+	// TODO: palm trees, TYPE_TABLE, TYPE_CHAIR, TYPE_PICTURE, TYPE_TCAN, TYPE_SIGN, TYPE_RDESK, TYPE_DUCT, TYPE_VASE, TYPE_BENCH, TYPE_TV, TYPE_BAR_STOOL
 	//cube_t walk_area(room);
 	//walk_area.expand_by_xy(-wall_thickness);
 
 	// add pillars last so that we can check lights against them; must be added last
 	unsigned const pillars_start(objs.size());
-	for (cube_t const &pillar : pillars) {objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, 0, 0, 0, 1.0, SHAPE_CUBE, WHITE, EF_Z12);}
+	
+	for (cube_t const &pillar : pillars) {
+		objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, 0, 0, 0, 1.0, SHAPE_CUBE, WHITE, EF_Z12);
+		// maybe add fire extinguisher on pillar
+		// TODO: TYPE_FIRE_EXT
+	}
 	return pillars_start;
 }
 

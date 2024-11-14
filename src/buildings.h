@@ -1706,7 +1706,7 @@ struct building_interior_t {
 	std::unique_ptr<building_conn_info_t> conn_info;
 	cube_with_ix_t pg_ramp, attic_access; // ix stores {2*dim + dir}
 	indoor_pool_t pool;
-	cube_t basement_ext_bcube, elevator_equip_room;
+	cube_t basement_ext_bcube, elevator_equip_room, mall_bathrooms;
 	draw_range_t draw_range;
 	unsigned extb_walls_start[2] = {0,0};
 	unsigned gen_room_details_pass=0;
