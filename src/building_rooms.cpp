@@ -2662,7 +2662,7 @@ unsigned building_t::calc_floor_offset(float zval) const { // for basements
 
 float stairs_landing_base_t::get_wall_hwidth(float floor_spacing) const {
 	float const stair_dz(get_stair_dz(floor_spacing));
-	return min(STAIRS_WALL_WIDTH_MULT*max(get_step_length(), stair_dz), 0.25f*stair_dz);
+	return min(STAIRS_WALL_WIDTH_MULT*max(get_step_length(), stair_dz), 0.25f*stair_dz) * (in_mall ? 1.9 : 1.0); // widen mall railings
 }
 unsigned stairs_landing_base_t::get_num_stairs() const {
 	if (num_stairs > 0) return num_stairs;

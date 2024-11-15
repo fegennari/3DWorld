@@ -387,7 +387,7 @@ void building_t::add_mall_stairs() { // connecting to the entrance door
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const room_id(interior->ext_basement_hallway_room_id);
 	float const floor_spacing(get_mall_floor_spacing(room)), fc_thick(get_fc_thickness()), wall_thickness(get_wall_thickness());
-	// add stairs under the door if needed
+	// add stairs under the door if needed; maybe we should add to stairwells with SHAPE_FAN for building AI path finding to work?
 	float const upper_floor_zval(room.z2() - floor_spacing + fc_thick), delta_z(door.z1() - upper_floor_zval);
 	unsigned const num_steps(max(0, (int)ceil(NUM_STAIRS_PER_FLOOR*delta_z/get_floor_ceil_gap())));
 

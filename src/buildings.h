@@ -521,7 +521,7 @@ std::string const room_names_short[NUM_RTYPES] =
 	"Swim", "Security", "Lounge", "Common", "Basement", "Retail", "Elevator", "Conference", "Machine", "Dungeon",
 	"Equipment", "Store", "Mall"};
 
-enum {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES, SHAPE_RAMP, SHAPE_L}; // stairs shapes; SHAPE_L is unused
+enum {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES, SHAPE_RAMP, SHAPE_L, SHAPE_FAN}; // stairs shapes; SHAPE_FAN is unused
 typedef uint8_t stairs_shape;
 
 enum {ROOM_WALL_INT=0, ROOM_WALL_SEP, ROOM_WALL_EXT, ROOM_WALL_BASEMENT};
