@@ -466,6 +466,7 @@ struct plant_loc_t : public sphere_t {
 unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, vect_cube_t &rooms_to_light) {
 	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), fc_thick(get_fc_thickness()), doorway_width(get_doorway_width());
 	float const wall_thickness(get_wall_thickness()), trim_thick(get_trim_thickness());
+	float const light_amt = 1.0; // fully lit, for now
 	unsigned const num_floors(interior->num_extb_floors);
 	bool const mall_dim(interior->extb_wall_dim);
 	cube_t const mall_center(get_mall_center(room));
@@ -520,9 +521,16 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		if (!e.in_mall) continue;
 		railing_cuts.push_back(e.get_bcube_padded(doorway_width));
 		++num_elevators;
-		// place clock on back of elevator
-		// TODO: TYPE_CLOCK
-	}
+		// place clock on back of elevator and front if there's space
+		bool const digital(rgen.rand_bool());
+		add_clock_to_cube(e, (zval + floor_spacing) , room_id, light_amt, e.dim, !e.dir, digital); // back
+
+		if (floor_spacing >= 1.5*window_vspace) {
+			cube_t place_cube(e);
+			place_cube.d[e.dim][e.dir] += (e.dir ? 1.0 : -1.0)*0.5*wall_thickness; // account for front blocker
+			add_clock_to_cube(place_cube, (zval + floor_spacing + 0.5*window_vspace) , room_id, light_amt, e.dim, e.dir, digital); // front
+		}
+	} // for e
 	room.has_elevator = num_elevators; // should this be set earlier?
 	// add vertical support pillars
 	float const pillar_hwidth(2.0*wall_thickness);
@@ -565,7 +573,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 					bot_bar.expand_by_xy (0.3*wall_thickness); // additional expand from plate
 					bot_bar.expand_in_dim(!dim, plate_thickness); // fill the corner notch
 					set_cube_zvals(bot_bar, zb1, zb2);
-					objs.emplace_back(bot_bar, TYPE_METAL_BAR, room_id, !dim, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, bar_color, skip_mask);
+					objs.emplace_back(bot_bar, TYPE_METAL_BAR, room_id, !dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, bar_color, skip_mask);
 					subtract_cubes_from_cube(railing, railing_cuts, railing_segs, temp, 2); // check zval overlap
 
 					for (cube_t const &r : railing_segs) {
@@ -574,19 +582,19 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 						bar.expand_by_xy (0.4*wall_thickness); // additional expand from plate
 						bar.expand_in_dim(!dim, plate_thickness); // fill the corner notch
 						set_cube_zvals(bar, zt1, zt2);
-						objs.emplace_back(bar, TYPE_METAL_BAR, room_id, !dim, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, bar_color); // can't skip drawing of ends if clipped by stairs
+						objs.emplace_back(bar, TYPE_METAL_BAR, room_id, !dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, bar_color); // can't skip drawing of ends if clipped by stairs
 						// add glass
 						cube_t panel(r);
 						set_cube_zvals(panel, zb2, zt1);
 						assert(panel.is_strictly_normalized());
-						objs.emplace_back(panel, TYPE_INT_WINDOW, room_id, dim, 0, 0, 1.0);
+						objs.emplace_back(panel, TYPE_INT_WINDOW, room_id, dim, 0, 0, light_amt);
 
 						// add vertical bars where railing was clipped
 						for (unsigned d = 0; d < 2; ++d) {
 							if (r.d[!dim][d] == railing.d[!dim][d]) continue; // not clipped
 							set_wall_width(vbar, r.d[!dim][d], vbar_hwidth, !dim);
 							set_wall_width(vbar, centerline,   vbar_hwidth,  dim);
-							objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, bar_color, EF_Z12); // skip top and bottom
+							objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, bar_color, EF_Z12); // skip top and bottom
 						}
 						// add vertical bars at intervals
 						float const length(r.get_sz_dim(!dim));
@@ -598,7 +606,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 							vbar_pos += vbar_spacing; // first bar is offset
 							set_wall_width(vbar, vbar_pos,   vbar_hwidth, !dim);
 							set_wall_width(vbar, centerline, vbar_hwidth,  dim);
-							objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, bar_color, EF_Z12); // skip top and bottom
+							objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, bar_color, EF_Z12); // skip top and bottom
 						}
 					} // for r
 				} // for dir
@@ -610,7 +618,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 				cube_t test_cube(vbar);
 				test_cube.expand_by_xy(-0.75*vbar_hwidth); // shrink to allow a bit of railing overlap
 				if (has_bcube_int(test_cube, railing_cuts)) continue; // skip if intersecting; shouldn't happen?
-				objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, bar_color, EF_Z12); // skip top and bottom
+				objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, bar_color, EF_Z12); // skip top and bottom
 			}
 		}
 	} // for f
@@ -623,7 +631,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		cbox.z1() = d.z2() - 0.1*window_vspace;
 		cbox.expand_in_dim( dim,  1.0*wall_thickness); // grow
 		cbox.expand_in_dim(!dim, -0.5*wall_thickness); // shrink
-		objs.emplace_back(cbox, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, GRAY);
+		objs.emplace_back(cbox, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, GRAY);
 	} // for d
 
 	if (is_in_city) {
@@ -639,7 +647,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		cube_t fbc;
 		set_cube_zvals(fbc, zval, zval+height);
 		for (unsigned d = 0; d < 2; ++d) {set_wall_width(fbc, opening.get_center_dim(d), radius, d);}
-		objs.emplace_back(fbc, TYPE_BLDG_FOUNT, room_id, rgen.rand_bool(), rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN); // random dim/dir
+		objs.emplace_back(fbc, TYPE_BLDG_FOUNT, room_id, rgen.rand_bool(), rgen.rand_bool(), 0, light_amt, SHAPE_CYLIN); // random dim/dir
 		objs.back().item_flags = rgen.rand(); // select a random sub_model_id
 	}
 	// if there are bathrooms, add a water fountain between them
@@ -653,12 +661,12 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		set_cube_zvals(wf, z1, z1+height);
 		wf.d[!mall_dim][ wf_dir] = wall_pos;
 		wf.d[!mall_dim][!wf_dir] = wall_pos - (wf_dir ? 1.0 : -1.0)*depth;
-		objs.emplace_back(wf, TYPE_WFOUNTAIN, room_id, !mall_dim, wf_dir, 0, 1.0, SHAPE_CUBE);
+		objs.emplace_back(wf, TYPE_WFOUNTAIN, room_id, !mall_dim, wf_dir, 0, light_amt, SHAPE_CUBE);
 	}
 	// add potted plants
 	for (plant_loc_t const &p : plant_locs) {
 		cube_t const plant(get_cube_height_radius(p.pos, p.radius, 4.0*p.radius));
-		objs.emplace_back(plant, TYPE_PLANT, room_id, 0, 0, RO_FLAG_ADJ_BOT, 1.0, SHAPE_CYLIN, p.color);
+		objs.emplace_back(plant, TYPE_PLANT, room_id, 0, 0, RO_FLAG_ADJ_BOT, light_amt, SHAPE_CYLIN, p.color);
 		set_obj_id(objs);
 	}
 
@@ -670,7 +678,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	unsigned const pillars_start(objs.size());
 	
 	for (cube_t const &pillar : pillars) {
-		objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, 0, 0, 0, 1.0, SHAPE_CUBE, WHITE, EF_Z12);
+		objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, 0, 0, 0, light_amt, SHAPE_CUBE, WHITE, EF_Z12);
 		// maybe add fire extinguisher on pillar
 		// TODO: TYPE_FIRE_EXT
 	}

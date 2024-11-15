@@ -187,5 +187,16 @@ void building_t::add_clock(cube_t const &clock, unsigned room_id, float tot_ligh
 	interior->room_geom->objs.push_back(obj);
 	interior->room_geom->have_clock = 1; // flag so that we know to update the draw state
 }
+void building_t::add_clock_to_cube(cube_t const &c, float zval, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool digital) {
+	float const window_vspacing(get_window_vspace()), place_pos(c.get_center_dim(!dim)), clock_z1(zval + 0.6*window_vspacing);
+	float const clock_height((digital ? 0.08 : 0.25)*window_vspacing), clock_width((digital ? 4.0 : 1.0)*clock_height), clock_depth(0.08*clock_width);
+	cube_t clock;
+	set_cube_zvals(clock, clock_z1, clock_z1+clock_height);
+	set_wall_width(clock, place_pos, 0.5*clock_width, !dim);
+	float const wall_pos(c.d[dim][dir]);
+	clock.d[dim][!dir] = wall_pos;
+	clock.d[dim][ dir] = wall_pos + (dir ? 1.0 : -1.0)*clock_depth;
+	add_clock(clock, room_id, tot_light_amt, dim, dir, digital);
+}
 
 
