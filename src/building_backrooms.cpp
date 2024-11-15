@@ -4,8 +4,6 @@
 #include "function_registry.h"
 #include "buildings.h"
 
-bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius);
-
 
 bool try_place_wall(cube_t const &place_area, cube_t const &wall_area, cube_t const &cent_area, bool dim, float len_min, float len_max, float half_thick, float min_gap,
 	vect_cube_t &walls, vect_cube_t &blockers, rand_gen_t &rgen)

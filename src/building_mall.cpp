@@ -464,11 +464,11 @@ struct plant_loc_t : public sphere_t {
 
 // this is for the central mall concourse; store objects are added in add_mall_store_objs() below; treated as a single floor
 unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, vect_cube_t &rooms_to_light) {
+	bool const mall_dim(interior->extb_wall_dim);
 	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), fc_thick(get_fc_thickness()), doorway_width(get_doorway_width());
-	float const wall_thickness(get_wall_thickness()), trim_thick(get_trim_thickness());
+	float const wall_thickness(get_wall_thickness()), trim_thick(get_trim_thickness()), room_centerline(room.get_center_dim(!mall_dim));
 	float const light_amt = 1.0; // fully lit, for now
 	unsigned const num_floors(interior->num_extb_floors);
-	bool const mall_dim(interior->extb_wall_dim);
 	cube_t const mall_center(get_mall_center(room));
 	vect_cube_t openings, railing_cuts, railing_segs, temp, pillars;
 	vector<plant_loc_t> plant_locs;
@@ -652,7 +652,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	}
 	// if there are bathrooms, add a water fountain between them
 	if (!interior->mall_bathrooms.is_all_zeros() && building_obj_model_loader.is_model_valid(OBJ_MODEL_WFOUNTAIN)) {
-		bool const wf_dir(interior->mall_bathrooms.get_center_dim(!mall_dim) > room.get_center_dim(!mall_dim));
+		bool const wf_dir(interior->mall_bathrooms.get_center_dim(!mall_dim) > room_centerline);
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_WFOUNTAIN)); // D, W, H
 		float const height(0.25*window_vspace), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
 		float const z1(zval + 0.18*window_vspace), wall_pos(room.d[!mall_dim][wf_dir] + (wf_dir ? -1.0 : 1.0)*0.5*wall_thickness);
@@ -676,16 +676,26 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 
 	// add pillars last so that we can check lights against them; must be added last
 	unsigned const pillars_start(objs.size());
-	
+	float fe_height(0.0), fe_radius(0.0);
+	bool const add_fire_extinguishers(get_fire_ext_height_and_radius(window_vspace, fe_height, fe_radius));
+	unsigned pillar_ix(0);
+	bool add_fe(rgen.rand_bool()); // random start on even vs. odd pillars
+
 	for (cube_t const &pillar : pillars) {
-		objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, 0, 0, 0, light_amt, SHAPE_CUBE, WHITE, EF_Z12);
-		// maybe add fire extinguisher on pillar
-		// TODO: TYPE_FIRE_EXT
-	}
+		objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, !mall_dim, 0, 0, light_amt, SHAPE_CUBE, WHITE, EF_Z12);
+		
+		if (add_fire_extinguishers) { // maybe add fire extinguisher on pillar
+			if (add_fe) {
+				bool const dim(!mall_dim), dir(pillar.get_center_dim(dim) < room_centerline);
+				add_fire_ext(fe_height, fe_radius, zval, pillar.d[dim][!dir], pillar.get_center_dim(!dim), room_id, light_amt, dim, dir);
+			}
+			if (!(pillar_ix++ & 1)) {add_fe ^= 1;} // swap every pair of pillars, alternating sides
+		}
+	} // for pillar
 	return pillars_start;
 }
 
 void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
-	// TODO
+	// TODO: TYPE_SHELFRACK, TYPE_CASHREG, etc.
 }
 

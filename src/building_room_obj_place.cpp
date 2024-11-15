@@ -3847,7 +3847,7 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 
 		if (wall_pos_lo < wall_pos_hi) { // should always be true?
 			bool const dim(!long_dim), dir(pri_dir);
-			float const wall_pos(room.d[!long_dim][dir] + (dir ? -1.0 : 1.0)*0.5*wall_thickness);
+			float const wall_pos(room.d[dim][dir] + (dir ? -1.0 : 1.0)*0.5*wall_thickness);
 
 			for (unsigned n = 0; n < 20; ++n) { // make 20 attempts at placing a fire extinguisher
 				float const val(room_rgen.rand_uniform(wall_pos_lo, wall_pos_hi)), cov_lo(val - min_clearance), cov_hi(val + min_clearance);
