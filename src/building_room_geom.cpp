@@ -4776,9 +4776,19 @@ void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot
 		points.clear();
 		plant.create_leaf_points(points, 10.0, 1.5, 4); // plant_scale=10.0 seems to work well; more levels and rings
 		auto &leaf_verts(mats_amask.get_material(tid_nm_pair_t(plant.get_leaf_tid()), 1).quad_verts);
+		unsigned const leaf_verts_start(leaf_verts.size());
 		color_wrapper const leaf_cw(apply_light_color(c, plant.get_leaf_color()));
 		float const ts[4] = {0,1,1,0}, tt[4] = {0,0,1,1};
 		for (unsigned i = 0; i < points.size(); ++i) {leaf_verts.emplace_back(vert_norm_comp_tc(points[i], ts[i&3], tt[i&3]), leaf_cw);}
+		unsigned const leaf_verts_end(leaf_verts.size());
+
+		if (c.flags & RO_FLAG_HAS_EXTRA) { // upper floor of mall, visible from below; duplicate and reverse leaf verts to draw back surfaces
+			for (unsigned i = leaf_verts_start; i < leaf_verts_end; ++i) {
+				leaf_verts.push_back(leaf_verts[i]);
+				leaf_verts.back().invert_normal();
+			}
+			reverse(leaf_verts.begin()+leaf_verts_end, leaf_verts.end());
+		}
 		// draw plant stem
 		colorRGBA const stem_color(plant.get_stem_color());
 		mats_amask.get_material(get_tex_auto_nm(WOOD2_TEX), 1).add_cylin_to_verts(point(cx, cy, base_pos.z), point(cx, cy, c.z2()), stem_radius, 0.0f, stem_color, 0, 0); // stem

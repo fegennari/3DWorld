@@ -458,8 +458,9 @@ void building_t::add_mall_lower_floor_lights(room_t const &room, unsigned room_i
 }
 
 struct plant_loc_t : public sphere_t {
+	bool upper_floor;
 	colorRGBA color;
-	plant_loc_t(point const &p, float r, colorRGBA const &c) : sphere_t(p, r), color(c) {}
+	plant_loc_t(point const &p, float r, colorRGBA const &c, bool uf=0) : sphere_t(p, r), upper_floor(uf), color(c) {}
 };
 
 // this is for the central mall concourse; store objects are added in add_mall_store_objs() below; treated as a single floor
@@ -512,7 +513,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 
 			for (unsigned f = 1; f < num_floors; ++f) { // skip first floor
 				plant_loc.z += floor_spacing;
-				plant_locs.emplace_back(plant_loc, plant_radius, pot_colors[1]);
+				plant_locs.emplace_back(plant_loc, plant_radius, pot_colors[1], 1); // upper_floor=1
 			}
 			plant_loc.z = zval; // restore ground floor zval
 		}
@@ -666,7 +667,8 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	// add potted plants
 	for (plant_loc_t const &p : plant_locs) {
 		cube_t const plant(get_cube_height_radius(p.pos, p.radius, 4.0*p.radius));
-		objs.emplace_back(plant, TYPE_PLANT, room_id, 0, 0, RO_FLAG_ADJ_BOT, light_amt, SHAPE_CYLIN, p.color);
+		unsigned const flags(RO_FLAG_ADJ_BOT | (p.upper_floor ? RO_FLAG_HAS_EXTRA : 0)); // flag upper floor plants so that the bottom sides of leaves are drawn
+		objs.emplace_back(plant, TYPE_PLANT, room_id, 0, 0, flags, light_amt, SHAPE_CYLIN, p.color);
 		set_obj_id(objs);
 	}
 
