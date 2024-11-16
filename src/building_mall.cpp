@@ -565,15 +565,20 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		if (!e.in_mall) continue;
 		railing_cuts.push_back(e.get_bcube_padded(doorway_width));
 		++num_elevators;
-		// place clock on back of elevator and front if there's space
+		// place clocks on back of elevator for each floor, and front if there's space; we know there's vertical space since elevators are only added if there are multiple floors
 		bool const digital(rgen.rand_bool());
-		add_clock_to_cube(e, (zval + floor_spacing) , room_id, light_amt, e.dim, !e.dir, digital); // back
+		float const floor_extra_spacing(floor_spacing - window_vspace);
 
-		if (floor_spacing >= 1.5*window_vspace) {
-			cube_t place_cube(e);
-			place_cube.d[e.dim][e.dir] += (e.dir ? 1.0 : -1.0)*0.5*wall_thickness; // account for front blocker
-			add_clock_to_cube(place_cube, (zval + floor_spacing + 0.5*window_vspace) , room_id, light_amt, e.dim, e.dir, digital); // front
-		}
+		for (unsigned f = 0; f < num_floors; ++f) {
+			float const z(zval + f*floor_spacing + 0.5*floor_extra_spacing);
+			add_clock_to_cube(e, z, room_id, light_amt, e.dim, !e.dir, digital); // back
+
+			if (floor_extra_spacing > 0.4*window_vspace) {
+				cube_t place_cube(e);
+				place_cube.d[e.dim][e.dir] += (e.dir ? 1.0 : -1.0)*0.5*wall_thickness; // account for front blocker
+				add_clock_to_cube(place_cube, z, room_id, light_amt, e.dim, e.dir, digital); // front
+			}
+		} // for f
 	} // for e
 	room.has_elevator = num_elevators; // should this be set earlier?
 
