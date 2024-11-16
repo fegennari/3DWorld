@@ -1276,6 +1276,7 @@ private:
 	void create_dynamic_vbos(building_t const &building, point const &camera_bs, vector3d const &xlate, bool play_clock_tick);
 	void create_door_vbos(building_t const &building);
 	void add_door_handle(door_t const &door, door_rotation_t const &drot, colorRGBA const &color, bool residential);
+	void maybe_add_door_sign(door_t const &door, door_rotation_t const &drot);
 	static void add_closet_objects(room_object_t const &c, vect_room_object_t &objects);
 	static unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]);
 	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vect_room_object_t &objects);
@@ -1576,6 +1577,7 @@ struct door_stack_t : public door_base_t {
 struct door_t : public door_base_t {
 	bool open=0, blocked=0;
 	uint8_t locked=0; // 1=regular lock, >= 2=padlock, where color index is locked-2
+	room_type rtype=RTYPE_NOTSET; // room type connected to door, if special; for example a bathroom
 	int obj_ix=-1; // for closets, etc.
 	float open_amt=0.0; // 0.0=fully closed, 1.0=fully open
 

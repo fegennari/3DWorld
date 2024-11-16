@@ -2016,7 +2016,8 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		set_obj_id(objs); // for crack texture selection/orient
 		room.set_has_mirror();
 	}
-	room.assign_to((mens_room ? RTYPE_MENS : RTYPE_WOMENS), floor);
+	room_type const rtype(mens_room ? RTYPE_MENS : RTYPE_WOMENS);
+	room.assign_to(rtype, floor);
 	
 	// make sure doors start closed and unlocked, and flag them as auto_close
 	for (door_stack_t const &ds : interior->door_stacks) {
@@ -2027,6 +2028,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			door_t &door(interior->doors[dix]);
 			if (!ds.is_same_stack(door)) break; // moved to a different stack, done
 			if (door.z1() > zval || door.z2() < zval) continue; // wrong floor
+			door.rtype  = rtype; // tag type so that the correct sign is added
 			door.locked = 0; // only needed for non-cube buildings
 			door.make_auto_close();
 		}
@@ -2034,7 +2036,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	// add a sign outside the bathroom door
 	add_door_sign((mens_room ? "Men" : "Women"), room, zval, room_id, 1); // no_check_adj_walls=1
 
-	if (is_cube() && rgen.rand_float() < 0.1) { // make this door/room out of order 10% of the time; only for cube buildings (others need the connectivity)
+	if (is_cube() && !room.is_mall() && rgen.rand_float() < 0.1) { // make this door/room out of order 10% of the time; only for cube buildings (others need the connectivity)
 		make_door_out_or_order(room, zval, room_id, br_door_stack_ix);
 		room.set_has_out_of_order(); // flag if any floor is out of order
 	}

@@ -55,7 +55,7 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 	
 	// add wall section below the door on lower floors, since the entrace door is on the top level
 	float const room_end(room.d[dim][!dir]); // entrance end
-	door_t const &door(interior->get_ext_basement_door());
+	door_t const &door(interior->get_ext_basement_door()); // entrance door to mall
 	assert(door.dim == dim);
 	cube_t wall(door);
 	set_cube_zvals(wall, room.z1()+fc_thick, door.z1()); // below the door
@@ -286,10 +286,11 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 					interior->mall_bathrooms = bathrooms;
 					
 					for (unsigned e = 0; e < 2; ++e) {
+						room_type const rtype((bool(e) ^ wm_first) ? RTYPE_WOMENS : RTYPE_MENS);
 						cube_t bathroom(bathrooms);
 						bathroom.d[dim][!e] = sep_pos;
 						room_t Room(bathroom, basement_part_ix);
-						Room.assign_all_to((bool(e) ^ wm_first) ? RTYPE_WOMENS : RTYPE_MENS);
+						Room.assign_all_to(rtype);
 						Room.interior        = 2; // mark as extended basement
 						Room.is_single_floor = 1;
 						Room.is_office       = 1; // required for creating office building bathroom
@@ -300,6 +301,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 						door_t Door(door, !dim, d, 1); // open=1
 						Door.make_auto_close();
 						Door.set_mult_floor(); // counts as multi-floor (for drawing top edge)
+						Door.rtype = rtype; // flag so that it has the correct sign
 						add_interior_door(Door, 1); // is_bathroom=1
 						cube_t walls_cut(door);
 						walls_cut.expand_in_dim(!dim, wall_thickness);
@@ -367,12 +369,14 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			// connect to rooms with doors
 			for (auto r = interior->rooms.begin()+rooms_start; r != interior->rooms.begin()+rooms_end; ++r) {
 				if (!r->intersects(hall)) continue; // wrong side
-				bool const is_bath(is_bathroom(r->get_room_type(0)));
+				room_type const rtype(r->get_room_type(0));
+				bool const is_bath(is_bathroom(rtype));
 				//if (is_bath) continue; // no door to bathrooms?
 				cube_t conn_room(*r);
 				set_cube_zvals(conn_room, hall.z1(), hall.z2());
 				cube_t const door_cut(add_ext_basement_door(conn_room, doorway_width, !dim, d, 1, (is_tall_room && !is_bath), rgen)); // is_end_room=1
 				subtract_cube_from_cubes(door_cut, interior->walls[!dim], nullptr, 1); // no holes; clip_in_z=1
+				interior->doors.back().rtype = rtype; // flag door (in particular if bathroom) so that the correct sign is added
 			}
 		} // for d
 	} // for f

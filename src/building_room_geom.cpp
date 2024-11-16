@@ -5175,6 +5175,23 @@ void building_room_geom_t::add_spider_web(room_object_t const &c) {
 	mat.add_cube_to_verts(c, apply_light_color(c), c.get_llc(), ~get_skip_mask_for_xy(c.dim), !c.dim, !c.dir, 0); // draw front and back faces
 }
 
+void maybe_rotate_door_verts(vector<rgeom_storage_t::vertex_t> &verts, unsigned start_ix, door_t const &door, door_rotation_t const &drot) {
+	if (door.open_amt == 0.0) return; // not rotated
+	// rotate around door pivot point, similar to rotate_and_shift_door()
+	float const rot_angle(-float(drot.angle)*TO_RADIANS*(door.hinge_side ? -1.0 : 1.0)), sin_term(sin(rot_angle)), cos_term(cos(rot_angle));
+	cube_t const bc(door.get_true_bcube());
+	point pivot(bc.get_cube_center());
+	pivot[!door.dim] = bc.d[!door.dim][!door.get_handle_side()];
+
+	for (auto v = verts.begin()+start_ix; v != verts.end(); ++v) {
+		do_xy_rotate(sin_term, cos_term, pivot, v->v);
+		v->v[door.dim] += drot.shift;
+		vector3d normal(v->get_norm());
+		do_xy_rotate_normal(sin_term, cos_term, normal);
+		v->set_norm(normal); // normalize not needed
+	}
+}
+
 void building_room_geom_t::add_door_handle(door_t const &door, door_rotation_t const &drot, colorRGBA const &color, bool residential) {
 	// should the door handle be different (more rounded) for office doors compared to house doors?
 	bool const dim(door.dim), dir(!door.get_handle_side()); // dir=0: handle on right; dir=1: handle on left
@@ -5208,20 +5225,26 @@ void building_room_geom_t::add_door_handle(door_t const &door, door_rotation_t c
 		handle.d[dim][ side] = shaft.d[dim][side] + (side ? 1.0 : -1.0)*handle_depth;
 		mat.add_cube_to_verts_untextured(handle, color); // all faces
 	}
-	if (door.open_amt > 0.0) { // rotate around door pivot point
-		// similar to rotate_and_shift_door()
-		float const rot_angle(-float(drot.angle)*TO_RADIANS*(door.hinge_side ? -1.0 : 1.0)), sin_term(sin(rot_angle)), cos_term(cos(rot_angle));
-		point pivot(bc.get_cube_center());
-		pivot[!dim] = bc.d[!dim][dir];
+	maybe_rotate_door_verts(mat.quad_verts, qv_start, door, drot);
+}
 
-		for (auto v = mat.quad_verts.begin()+qv_start; v != mat.quad_verts.end(); ++v) {
-			do_xy_rotate(sin_term, cos_term, pivot, v->v);
-			v->v[dim] += drot.shift;
-			vector3d normal(v->get_norm());
-			do_xy_rotate_normal(sin_term, cos_term, normal);
-			v->set_norm(normal); // normalize not needed
-		}
-	}
+void building_room_geom_t::maybe_add_door_sign(door_t const &door, door_rotation_t const &drot) {
+	int tid(-1);
+	if      (door.rtype == RTYPE_MENS  ) {tid = get_texture_by_name("interiors/men_restroom.png"  );}
+	else if (door.rtype == RTYPE_WOMENS) {tid = get_texture_by_name("interiors/women_restroom.png");}
+	if (tid == -1) return; // no sign for this door type
+	bool const dim(door.dim), dir(!door.open_dir); // door opens inward; sign is on the outside
+	float const ar(get_tex_ar(tid)), width(0.25*door.get_width()), height(width/ar);
+	float const dsign(dir ? 1.0 : -1.0), door_edge(door.d[dim][dir] + 0.5*dsign*door.get_thickness());
+	cube_t sign;
+	set_wall_width(sign, (door.z1() + 0.67*door.dz()), 0.5*height, 2); // Z
+	set_wall_width(sign, door.get_center_dim(!dim),    0.5*width, !dim);
+	sign.d[dim][!dir] = door_edge;
+	sign.d[dim][ dir] = door_edge + 0.025*dsign*width;
+	rgeom_mat_t &mat(mats_doors.get_material(tid_nm_pair_t(tid, -1, 1.0/(dim ? width : height), 1.0/(dim ? height : width)), 0)); // unshadowed
+	unsigned const qv_start(mat.quad_verts.size());
+	mat.add_cube_to_verts(sign, WHITE, sign.get_llc(), ~get_face_mask(dim, !dir), !dim, (dim ^ dir ^ 1));
+	maybe_rotate_door_verts(mat.quad_verts, qv_start, door, drot);
 }
 
 void building_room_geom_t::add_debug_shape(room_object_t const &c) {
