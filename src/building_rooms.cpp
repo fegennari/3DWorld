@@ -28,6 +28,7 @@ unsigned light_ix_assign_t::get_ix_for_light(cube_t const &c, bool walls_not_sha
 		}
 	}
 	cur.emplace_back(pos, get_next_ix()); // allocate a new light
+	assert(next_ix < (1U<<16)); // must fit in a 16-bit integer
 	return cur.back().second;
 }
 
