@@ -177,10 +177,11 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	bool added_lg_room(0);
 
 	if (!is_house && has_parking_garage) { // office building with parking garage
-		bool const try_mall_first(rgen.rand_bool());
+		bool const add_malls(global_building_params.max_mall_levels > 0), try_mall_first(add_malls && rgen.rand_bool());
 
 		for (unsigned n = 0; n < 2; ++n) {
 			bool const is_mall((n == 0) == try_mall_first);
+			if (is_mall && !add_malls) continue;
 			unsigned const num_floors_added(max_expand_underground_room(hallway, wall_dim, wall_dir, is_mall, rgen));
 			if (num_floors_added == 0) continue;
 			interior->num_extb_floors = num_floors_added;
@@ -509,7 +510,8 @@ unsigned building_t::max_expand_underground_room(cube_t &room, bool dim, bool di
 	float const room_floor_spacing((is_mall ? 2.0 : 1.0)*floor_spacing); // mall has 2x floor spacing
 
 	if (is_mall) {
-		num_floors_add = 1; // mall is always 2 floors; should I add a new config option for this?
+		assert(global_building_params.max_mall_levels > 0);
+		num_floors_add = global_building_params.max_mall_levels - 1;
 
 		if (room_floor_spacing > floor_spacing) { // check if we can lower the floor to increase room height
 			cube_t cand(room);

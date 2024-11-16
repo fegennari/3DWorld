@@ -340,7 +340,7 @@ struct building_params_t {
 	bool gen_building_interiors=1, add_city_interiors=0, enable_rotated_room_geom=0, add_secondary_buildings=0, add_office_basements=0, add_office_br_basements=0;
 	bool put_doors_in_corners=0, cities_all_bldg_mats=0, small_city_buildings=0, add_door_handles=0, use_voronoise_cracks=0, add_basement_tunnels=0;
 	unsigned num_place=0, num_tries=10, cur_prob=1, max_shadow_maps=32, buildings_rand_seed=0, max_ext_basement_hall_branches=4, max_ext_basement_room_depth=4;
-	unsigned max_room_geom_gen_per_frame=1, max_office_basement_floors=2;
+	unsigned max_room_geom_gen_per_frame=1, max_office_basement_floors=2, max_mall_levels=2;
 	float ao_factor=0.0, sec_extra_spacing=0.0, player_coll_radius_scale=1.0, interior_view_dist_scale=1.0;
 	float window_width=0.0, window_height=0.0, window_xspace=0.0, window_yspace=0.0; // windows
 	float wall_split_thresh=4.0, max_fp_wind_xscale=0.0, max_fp_wind_yscale=0.0, basement_water_level_min=0.0, basement_water_level_max=0.0; // interiors

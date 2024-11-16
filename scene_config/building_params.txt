@@ -23,8 +23,9 @@ buildings two_floor_retail_prob 0.5
 buildings glass_floor_alpha 0.25 # set to 1.0 for opaque floor
 buildings add_office_basements 1
 buildings add_basement_tunnels 1
-buildings max_ext_basement_hall_branches 4
-buildings max_ext_basement_room_depth    4
+buildings max_ext_basement_hall_branches 4 # 0 disables extended basements
+buildings max_ext_basement_room_depth    4 # backrooms levels; 0 disables backrooms
+buildings max_mall_levels                2 # 0 disables malls; don't set larger than 5 or it can fail with too many rooms
 buildings max_office_basement_floors     2
 buildings max_room_geom_gen_per_frame 10 # >= 1; 1 is smoothest framerate but slower updating
 buildings add_office_backroom_basements 1
