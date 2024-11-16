@@ -465,7 +465,7 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 	bool const in_mall(has_mall() && room.is_ext_basement());
 
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
-		if (!is_cube_close_to_door(c, 0.0, 0, *i, 2)) continue; // check both dirs; should we check that the room on the other side of the door is a hallway?
+		if (!i->is_connected_to_room(room_id)) continue;
 		bool const side(room_center[i->dim] < i->get_center_dim(i->dim));
 		float const door_width(i->get_width()), side_sign(side ? 1.0 : -1.0);
 		cube_t sign(*i);
