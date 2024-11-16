@@ -506,7 +506,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		railing_cuts.back().expand_in_dim(!e.dim, 0.5*wall_thickness); // add space for railings
 		// escalators are placed in pairs, so we add one plant to each side
 		float const plant_radius(0.16*window_vspace);
-		bool const side(e.dir ^ e.move_dir);
+		bool const side(e.dir ^ e.move_dir ^ e.dim);
 		plant_loc[ e.dim] = 0.9*e.d[e.dim][!e.dir] + 0.1*e.d[e.dim][e.dir]; // bottom end of escalator
 		plant_loc[!e.dim] = e.d[!e.dim][side] + (side ? 1.0 : -1.0)*1.25*plant_radius;
 		plant_locs.emplace_back(plant_loc, plant_radius, pot_colors[1]);
@@ -514,12 +514,9 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		// add to upper walkway(s) if not too close to railing
 		if (plant_loc[!mall_dim] - plant_radius > mall_center.d[!mall_dim][0] && plant_loc[!mall_dim] + plant_radius < mall_center.d[!mall_dim][1]) {
 			plant_loc[e.dim] = 0.1*e.d[e.dim][!e.dir] + 0.9*e.d[e.dim][e.dir]; // top end of escalator
-
-			for (unsigned f = 1; f < num_floors; ++f) { // skip first floor
-				plant_loc.z += floor_spacing;
-				plant_locs.emplace_back(plant_loc, plant_radius, pot_colors[1], 1); // upper_floor=1
-			}
-			plant_loc.z = zval; // restore ground floor zval
+			point loc(plant_loc);
+			loc.z = e.z1() + floor_spacing; // one floor above
+			plant_locs.emplace_back(loc, plant_radius, pot_colors[1], 1); // upper_floor=1
 		}
 	} // for e
 	for (elevator_t const &e : interior->elevators) {
