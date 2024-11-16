@@ -1605,10 +1605,11 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 		had_coll |= sphere_cube_int_update_pos(pos, radius, e, p_last, 1, cnorm); // handle as a single blocking cube; skip_z=1
 	} // for e
 	for (escalator_t const &e : escalators) {
-		if (!sphere_cube_int_zval(pos, obj_z, radius, e)) continue;
+		if (!sphere_cube_int_zval(pos, obj_z, radius, e)) continue; // Note: e.z2() extends up to the floor above, so this is conservative
 		cube_t const ramp(e.get_ramp_bcube(0)); // exclude_sides=0
 		cube_t ends[2];
 		e.get_ends_bcube(ends[0], ends[1], 1); // exclude_sides=1
+		if (obj_z > max(ramp.z2(), max(ends[0].z2(), ends[1].z2()))) continue; // above ramp and both ends
 		bool handled(0);
 
 		for (unsigned hi = 0; hi < 2; ++hi) { // check for standing on one of the ends
@@ -1651,7 +1652,7 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 				}
 			}
 			if (!handled) {
-				// treat the sloped part of the escalator as an extruded polygon; should be conservative for balls and correct for player exterior collisions
+				// treat the sloped part of the escalator as an extruded polygon; should be conservative for balls and correct for player exterior collisions with bottom
 				float val(0.0);
 				vector3d coll_norm;
 
@@ -1669,8 +1670,10 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 			if (!sphere_cube_int_zval(pos, obj_z, radius, ends[hi])) continue;
 			for (unsigned lr = 0; lr < 2; ++lr) {had_coll |= sphere_cube_int_update_pos(pos, radius, e.get_side_for_end(ends[hi], lr), p_last, 1, cnorm);} // skip_z=1
 		}
-		cube_t const pillar(e.get_support_pillar());
-		had_coll |= sphere_cube_int_update_pos_zval(pos, obj_z, radius, pillar, p_last, cnorm);
+		if (!e.in_mall) { // check support pillar; not present in malls
+			cube_t const pillar(e.get_support_pillar());
+			had_coll |= sphere_cube_int_update_pos_zval(pos, obj_z, radius, pillar, p_last, cnorm);
+		}
 	} // for e
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
 		had_coll |= check_door_coll(building, *i, pos, p_last, radius, obj_z, check_open_doors, cnorm);
