@@ -1694,6 +1694,7 @@ struct building_interior_t {
 	vect_cube_t floors, ceilings, fc_occluders, exclusion, open_walls, split_window_walls, store_doorways, store_bounds_by_floor;
 	vect_cube_t walls[2]; // walls are split by dim, which is the separating dimension of the wall
 	vect_cube_with_ix_t int_windows; // ix stores room index
+	vect_cube_with_ix_t mall_landings; // ix stores {is_escalator, se_dim, se_dir, ww_dir}
 	vect_stairwell_t stairwells;
 	vect_tunnel_seg_t tunnels;
 	vector<door_t> doors;
@@ -2295,6 +2296,7 @@ private:
 	unsigned setup_multi_floor_room(extb_room_t &room, door_t const &door, bool wall_dim, bool wall_dir, rand_gen_t &rgen);
 	bool add_ext_basement_rooms_recur(extb_room_t &parent_room, ext_basement_room_params_t &P, float door_width, bool dim, unsigned depth, rand_gen_t &rgen);
 	unsigned max_expand_underground_room(cube_t &room, bool dim, bool dir, bool is_mall, rand_gen_t &rgen) const;
+	void add_mall_se_landing(cube_t const &c, bool is_escalator, bool se_dim, bool se_dir, bool ww_dir);
 	void setup_mall_concourse(cube_t const &room, bool dim, bool dir, rand_gen_t &rgen);
 	bool is_store_placement_invalid(cube_t const &store) const;
 	void add_mall_stores(cube_t const &room, bool dim, bool entrance_dir, rand_gen_t &rgen);

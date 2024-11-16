@@ -48,6 +48,12 @@ unsigned choose_one_center(unsigned num, rand_gen_t &rgen) {
 	return ix;
 }
 
+void building_t::add_mall_se_landing(cube_t const &c, bool is_escalator, bool se_dim, bool se_dir, bool ww_dir) {
+	assert(c.is_strictly_normalized());
+	interior->add_ceil_floor_pair(c, c.z1(), c.zc(), c.z2());
+	interior->mall_landings.emplace_back(c, (8*is_escalator + 4*se_dim + 2*se_dir + ww_dir));
+}
+
 void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, rand_gen_t &rgen) {
 	assert(interior);
 	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), door_width(get_doorway_width());
@@ -64,14 +70,15 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 	if (wall.dz() > 0.0) {interior->walls[dim].push_back(wall);}
 
 	// handle upper floors
-	if (interior->num_extb_floors == 1) return; // single floor; nothing else to do
+	unsigned const num_floors(interior->num_extb_floors);
+	if (num_floors == 1) return; // single floor; nothing else to do
 	vect_cube_t openings;
 	get_mall_open_areas(room, openings);
 	assert(!openings.empty());
 	reserve_extra(interior->stairwells, (openings.size() + 1));
 	reserve_extra(interior->escalators, (openings.size() + 1));
 
-	for (unsigned f = 1; f < interior->num_extb_floors; ++f) { // skip first floor
+	for (unsigned f = 1; f < num_floors; ++f) { // skip first floor
 		float const z(room.z1() + f*floor_spacing), zc(z - fc_thick), zf(z + fc_thick), floor_below_z(zf - floor_spacing), floor_above_z(zf + floor_spacing);
 		
 		// add side walkways
@@ -90,12 +97,14 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 			bool run_dir(first ? 1 : (last ? 0 : rgen.rand_bool())), side_dir(rgen.rand_bool());
 			float ww_edge(ww.d[dim][run_dir]), ww_side(ww.d[!dim][side_dir]);
 			float const stairs_len(1.5*floor_spacing), stairs_width(0.75*window_vspace);
+			float rdir_sign(run_dir ? 1.0 : -1.0), side_sign(side_dir ? -1.0 : 1.0);
 			cube_t stairs_bc;
 			set_cube_zvals(stairs_bc, floor_below_z, zf); // top of floor below to top of current floor
 			stairs_bc.d[ dim][ !run_dir] = ww_edge; // at walkway
-			stairs_bc.d[ dim][  run_dir] = ww_edge + (run_dir  ?  1.0 : -1.0)*stairs_len; // extend away from walkway
-			stairs_bc.d[!dim][ side_dir] = ww_side + (side_dir ? -1.0 :  1.0)*wall_thickness;
-			stairs_bc.d[!dim][!side_dir] = ww_side + (side_dir ? -1.0 :  1.0)*stairs_width;
+			stairs_bc.d[ dim][  run_dir] = ww_edge + rdir_sign*stairs_len; // extend away from walkway
+			stairs_bc.d[!dim][ side_dir] = ww_side + side_sign*wall_thickness;
+			stairs_bc.d[!dim][!side_dir] = ww_side + side_sign*stairs_width;
+			assert(stairs_bc.is_strictly_normalized());
 			landing_t landing(stairs_bc, 0, 0, dim, !run_dir, 1, SHAPE_STRAIGHT, 0, 1, 0, 0, 1); // add_railing=1, roof_access=0, is_at_top=1, stack_conn=0, for_ramp=0, in_extb=1
 			landing.num_stairs = round_fp(NUM_STAIRS_PER_FLOOR*floor_spacing/window_vspace);
 			landing.in_mall    = 1;
@@ -104,24 +113,46 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 			stairwell.z2() = floor_above_z;
 			interior->landings.push_back(landing);
 			interior->stairwells.emplace_back(stairwell, 1); // num_floors=1
+
+			if (f > 1) { // middle floor; add landing at bottom of stairs
+				float const stairs_end(landing.d[dim][run_dir]);
+				cube_t stairs_lc(landing);
+				stairs_lc.translate_dim(2, -floor_spacing); // move to the floor below
+				stairs_lc.d[!dim][ side_dir]  = ww_side;
+				stairs_lc.d[!dim][!side_dir] += side_sign*wall_thickness; // extend out a bit further
+				stairs_lc.d[ dim][!run_dir ]  = stairs_end;
+				stairs_lc.d[ dim][ run_dir ]  = stairs_end + 1.2*rdir_sign*stairs_width;
+				add_mall_se_landing(stairs_lc, 0, dim, run_dir, side_dir); // is_escalator=0
+			}
 			// add escalators
-			if (!first && !last) {run_dir ^= 1;} // opposite end except at concourse ends
-			side_dir ^= 1; // opposite side
+			if (!first && !last) {run_dir ^= 1; rdir_sign *= -1.0;} // opposite end except at concourse ends
+			side_dir ^= 1; side_sign *= -1.0; // opposite side
 			ww_edge = ww.d[ dim][run_dir ];
 			ww_side = ww.d[!dim][side_dir];
 			float const delta_z(floor_spacing + 2.0*trim_thickness), e_width(0.8*door_width); // make slightly taller so that top surface is above the railing bottom trim
 			cube_t epair;
 			set_cube_zvals(epair, floor_below_z, floor_above_z);
-			epair.d[ dim][ !run_dir] = ww_edge - (run_dir  ?  1.0 : -1.0)*door_width; // overlapping walkway
-			epair.d[ dim][  run_dir] = ww_edge + (run_dir  ?  1.0 : -1.0)*(1.0*delta_z + door_width); // extend away from walkway, 45 degree slope
-			epair.d[!dim][ side_dir] = ww_side + (side_dir ? -1.0 :  1.0)*wall_thickness;
-			epair.d[!dim][!side_dir] = ww_side + (side_dir ? -1.0 :  1.0)*2.2*e_width; // set width of the pair
+			epair.d[ dim][ !run_dir] = ww_edge - rdir_sign*door_width; // overlapping walkway
+			epair.d[ dim][  run_dir] = ww_edge + rdir_sign*(1.0*delta_z + door_width); // extend away from walkway, 45 degree slope
+			epair.d[!dim][ side_dir] = ww_side + side_sign*wall_thickness;
+			epair.d[!dim][!side_dir] = ww_side + side_sign*2.2*e_width; // set width of the pair
+			assert(epair.is_strictly_normalized());
 			
 			for (unsigned s = 0; s < 2; ++s) { // place two side-by-side escalators with opposite directions
 				// extend 90% of floor thickness below; enough to hide building people animated feet, but not enough to clip through the ceiling below
 				escalator_t e(epair, dim, !run_dir, (bool(s) ^ dim ^ run_dir ^ 1), door_width, delta_z, 0.9*floor_thickness, 1); // in_mall=1
 				e.d[!dim][!s] = epair.d[!dim][s] + (s ? -1.0 : 1.0)*e_width;
 				interior->escalators.push_back(e);
+			}
+			if (f > 1) { // middle floor; add landing at bottom escalators
+				float const esc_end(epair.d[dim][run_dir]);
+				cube_t esc_lc(epair);
+				set_cube_zvals(esc_lc, zc-floor_spacing, zf-floor_spacing); // set ceil-floor zvals on the floor below
+				esc_lc.d[!dim][ side_dir]  = ww_side;
+				esc_lc.d[!dim][!side_dir] += side_sign*wall_thickness; // extend out a bit further
+				esc_lc.d[ dim][!run_dir ]  = esc_end - rdir_sign*door_width; // under bottom escalator entrance
+				esc_lc.d[ dim][ run_dir ]  = esc_end + 1.2*rdir_sign*stairs_width;
+				add_mall_se_landing(esc_lc, 1, dim, run_dir, side_dir); // is_escalator=1
 			}
 		} // for n
 	} // for f
@@ -472,6 +503,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	bool const mall_dim(interior->extb_wall_dim);
 	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), fc_thick(get_fc_thickness()), doorway_width(get_doorway_width());
 	float const wall_thickness(get_wall_thickness()), trim_thick(get_trim_thickness()), room_centerline(room.get_center_dim(!mall_dim));
+	float const railing_height(0.42*window_vspace), railing_top_bar_thick(0.04*window_vspace), plate_thickness(0.1*wall_thickness), vbar_hwidth(0.35*wall_thickness);
 	float const light_amt = 1.0; // fully lit, for now
 	unsigned const num_floors(interior->num_extb_floors);
 	cube_t const mall_center(get_mall_center(room));
@@ -481,37 +513,47 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	get_mall_open_areas(room, openings);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned num_elevators(0);
+	colorRGBA const bar_color(LT_GRAY);
 	colorRGBA pot_colors[3]; // {stairs, escalators, pillars}
 	for (unsigned n = 0; n < 3; ++n) {pot_colors[n] = choose_pot_color(rgen);}
 
 	// gather railing cuts and plant locs
 	for (stairwell_t const &s : interior->stairwells) {
 		if (!s.in_mall) continue;
-		railing_cuts.push_back(s);
-		railing_cuts.back().expand_in_dim( s.dim, doorway_width); // add padding on both ends
-		railing_cuts.back().expand_in_dim(!s.dim, 0.8*wall_thickness); // add space for railings
+		cube_t cut(s);
+		set_cube_zvals(cut, s.zc(), s.z2()-0.5*floor_spacing); // extends from floor at top of stairs half a floor up
+		cut.expand_in_dim( s.dim, doorway_width); // add padding on both ends
+		cut.expand_in_dim(!s.dim, 0.8*wall_thickness); // add space for railings
+		railing_cuts.push_back(cut);
 		room.has_stairs = 255; // should this be set earlier?
-		// place plants to the sides of stairs
-		float const plant_radius(0.15*window_vspace);
-		plant_loc[s.dim] = 0.9*s.d[s.dim][!s.dir] + 0.1*s.d[s.dim][s.dir]; // bottom end of stairs
+		
+		// place plants to the sides of stairs at the bottom
+		if (s.z1() < room.z1() + 0.5*floor_spacing) { // only on ground floor
+			float const plant_radius(0.15*window_vspace);
+			plant_loc[s.dim] = 0.9*s.d[s.dim][!s.dir] + 0.1*s.d[s.dim][s.dir]; // bottom end of stairs
 
-		for (unsigned d = 0; d < 2; ++d) {
-			plant_loc[!s.dim] = s.d[!s.dim][d] + (d ? 1.0 : -1.0)*1.25*plant_radius;
-			plant_locs.emplace_back(plant_loc, plant_radius, pot_colors[0]);
+			for (unsigned d = 0; d < 2; ++d) {
+				plant_loc[!s.dim] = s.d[!s.dim][d] + (d ? 1.0 : -1.0)*1.25*plant_radius;
+				plant_locs.emplace_back(plant_loc, plant_radius, pot_colors[0]);
+			}
 		}
 	} // for s
 	for (escalator_t const &e : interior->escalators) {
 		if (!e.in_mall) continue;
-		railing_cuts.push_back(e);
-		railing_cuts.back().expand_in_dim(!e.dim, 0.5*wall_thickness); // add space for railings
-		// escalators are placed in pairs, so we add one plant to each side
-		float const plant_radius(0.16*window_vspace);
+		cube_t cut(e);
+		set_cube_zvals(cut, e.zc(), e.z2()-0.5*floor_spacing); // extends from floor at top of escalator half a floor up
+		cut.expand_in_dim(!e.dim, 0.5*wall_thickness); // add space for railings
+		railing_cuts.push_back(cut);
+		// add plants; escalators are placed in pairs, so we add one plant to each side
 		bool const side(e.dir ^ e.move_dir ^ e.dim);
-		plant_loc[ e.dim] = 0.9*e.d[e.dim][!e.dir] + 0.1*e.d[e.dim][e.dir]; // bottom end of escalator
+		float const plant_radius(0.16*window_vspace);
 		plant_loc[!e.dim] = e.d[!e.dim][side] + (side ? 1.0 : -1.0)*1.25*plant_radius;
-		plant_locs.emplace_back(plant_loc, plant_radius, pot_colors[1]);
 
-		// add to upper walkway(s) if not too close to railing
+		if (e.z1() < room.z1() + 0.5*floor_spacing) { // only on ground floor
+			plant_loc[ e.dim] = 0.9*e.d[e.dim][!e.dir] + 0.1*e.d[e.dim][e.dir]; // bottom end of escalator
+			plant_locs.emplace_back(plant_loc, plant_radius, pot_colors[1]);
+		}
+		// add to upper walkway if not too close to railing
 		if (plant_loc[!mall_dim] - plant_radius > mall_center.d[!mall_dim][0] && plant_loc[!mall_dim] + plant_radius < mall_center.d[!mall_dim][1]) {
 			plant_loc[e.dim] = 0.1*e.d[e.dim][!e.dir] + 0.9*e.d[e.dim][e.dir]; // top end of escalator
 			point loc(plant_loc);
@@ -534,6 +576,56 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		}
 	} // for e
 	room.has_elevator = num_elevators; // should this be set earlier?
+
+	// add railings for mall landings
+	for (cube_with_ix_t const &c : interior->mall_landings) {
+		bool const is_escalator(c.ix & 8), se_dim(c.ix & 4), se_dir(c.ix & 2), ww_dir(c.ix & 1);
+		float const zb1(c.z1() - trim_thick), zb2(c.z1() + 2.0*fc_thick + trim_thick), zt1(c.z1() + fc_thick + railing_height), zt2(zt1 + railing_top_bar_thick);
+		cube_t railing_area(c), vbar;
+		if (is_escalator) {railing_area.d[se_dim][!se_dir] += (se_dir ? 1.0 : -1.0)*(doorway_width + wall_thickness);} // clip off the area under the elevator entrance
+		set_cube_zvals(vbar, zb2, zt1);
+		set_wall_width(vbar, railing_area.d[!se_dim][!ww_dir], vbar_hwidth, !se_dim);
+
+		for (unsigned d = 0; d < 2; ++d) { // add vertical bars
+			set_wall_width(vbar, railing_area.d[se_dim][d], vbar_hwidth, se_dim);
+			objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, bar_color, EF_Z12); // skip top and bottom
+		}
+		for (unsigned dim = 0; dim < 2; ++dim) { // add railings and glass plates; somewhat duplicated with the openings code below, but difficult to factor out
+			unsigned const skip_mask(get_skip_mask_for_xy(!dim));
+			bool const dir((dim == se_dim) ? se_dir : !ww_dir);
+			cube_t railing(railing_area);
+			set_wall_width(railing, railing_area.d[dim][dir], plate_thickness, dim); // start with panel width
+			// add bottom bar(s)
+			cube_t bot_bar(railing);
+			if (is_escalator && dim != se_dim) {bot_bar.d[se_dim][!se_dir] = c.d[se_dim][!se_dir];} // use full area for bottom bar
+			bot_bar.expand_by_xy (0.3*wall_thickness); // additional expand from plate
+			bot_bar.expand_in_dim(!dim, plate_thickness); // fill the corner notch
+			set_cube_zvals(bot_bar, zb1, zb2);
+			objs.emplace_back(bot_bar, TYPE_METAL_BAR, room_id, !dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, bar_color, skip_mask);
+
+			if (dim == se_dim) { // add second bottom bar to the other end, under the stairs or escalator, to close the ceiling-floor gap
+				bot_bar.translate_dim(se_dim, (se_dir ? -1.0 : 1.0)*c.get_sz_dim(se_dim));
+				objs.emplace_back(bot_bar, TYPE_METAL_BAR, room_id, !dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, bar_color, skip_mask);
+			}
+			// add top bar
+			cube_t bar(railing);
+			bar.expand_by_xy (0.4*wall_thickness); // additional expand from plate
+			bar.expand_in_dim(!dim, plate_thickness); // fill the corner notch
+			set_cube_zvals(bar, zt1, zt2);
+			objs.emplace_back(bar, TYPE_METAL_BAR, room_id, !dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, bar_color); // can't skip drawing of ends if clipped by stairs
+			// add glass
+			cube_t panel(railing);
+			set_cube_zvals(panel, zb2, zt1);
+			objs.emplace_back(panel, TYPE_INT_WINDOW, room_id, dim, 0, 0, light_amt);
+		} // for dim
+		// should we add a vertical support under the landing? but it may block the stairs or escalator below, and what about stacked landings for > 3 floors?
+		// add railing cut where landing connects to walkway
+		cube_t cut(c);
+		cut.z2() += 0.5*floor_spacing; // extend above top of railing
+		cut.d[!se_dim][ ww_dir] += (ww_dir ? 1.0 : -1.0)*1.00*doorway_width; // extend toward walkway
+		cut.d[ se_dim][!se_dir] -= (se_dir ? 1.0 : -1.0)*0.75*doorway_width; // extend a bit under the stairs and escalator to avoid blocking the player with the railing
+		railing_cuts.push_back(cut);
+	} // for c
 	// add vertical support pillars
 	float const pillar_hwidth(2.0*wall_thickness);
 	cube_t pillar(room); // copy room zvals
@@ -557,9 +649,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	} // for opening
 	// add walkway railings
 	for (unsigned f = 1; f < num_floors; ++f) { // skip first floor
-		float const z(room.z1() + f*floor_spacing), plate_thickness(0.1*wall_thickness), vbar_hwidth(0.35*wall_thickness);
-		float const zb1(z - fc_thick - trim_thick), zb2(z + fc_thick + trim_thick), zt1(z + 0.42*window_vspace), zt2(zt1 + 0.04*window_vspace);
-		colorRGBA const bar_color(LT_GRAY);
+		float const z(room.z1() + f*floor_spacing), zb1(z - fc_thick - trim_thick), zb2(z + fc_thick + trim_thick), zt1(z + railing_height), zt2(zt1 + railing_top_bar_thick);
 		cube_t vbar;
 		set_cube_zvals(vbar, zb2, zt1);
 
@@ -576,6 +666,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 					bot_bar.expand_in_dim(!dim, plate_thickness); // fill the corner notch
 					set_cube_zvals(bot_bar, zb1, zb2);
 					objs.emplace_back(bot_bar, TYPE_METAL_BAR, room_id, !dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, bar_color, skip_mask);
+					set_cube_zvals(railing, zb1, zt2); // set to full Z-range of railing for proper zval test in clipping
 					subtract_cubes_from_cube(railing, railing_cuts, railing_segs, temp, 2); // check zval overlap
 
 					for (cube_t const &r : railing_segs) {
