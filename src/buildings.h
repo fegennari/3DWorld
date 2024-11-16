@@ -633,10 +633,9 @@ struct oriented_cube_t : public cube_t {
 	float get_height() const {return dz();}
 };
 
-struct room_object_t : public oriented_cube_t { // size=64
-	uint8_t room_id=0; // for at most 256 rooms per floor
+struct room_object_t : public oriented_cube_t { // size=68
 	uint8_t taken_level=0;
-	uint16_t obj_id=0, drawer_flags=0, item_flags=0, state_flags=0; // Note: state_flags is used for drawer was_opened state, railing num_stairs, and pool balls
+	uint16_t room_id=0, obj_id=0, drawer_flags=0, item_flags=0, state_flags=0; // Note: state_flags is used for drawer was_opened state, railing num_stairs, and pool balls
 	room_object type=TYPE_NONE; // 8-bit
 	room_obj_shape shape=SHAPE_CUBE; // 8-bit
 	unsigned flags=0;
@@ -644,7 +643,7 @@ struct room_object_t : public oriented_cube_t { // size=64
 	colorRGBA color;
 
 	room_object_t() {}
-	room_object_t(cube_t const &c, room_object type_, uint8_t rid, bool dim_=0, bool dir_=0, unsigned f=0, float light=1.0,
+	room_object_t(cube_t const &c, room_object type_, uint16_t rid, bool dim_=0, bool dir_=0, unsigned f=0, float light=1.0,
 		room_obj_shape shape_=SHAPE_CUBE, colorRGBA const color_=WHITE, uint16_t iflags=0) :
 		oriented_cube_t(c, dim_, dir_), room_id(rid), item_flags(iflags), type(type_), shape(shape_), flags(f), light_amt(light), color(color_)
 	{check_normalized();}

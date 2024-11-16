@@ -2639,8 +2639,8 @@ void building_interior_t::remove_excess_capacity() {
 	for (unsigned d = 0; d < 2; ++d) {remove_excess_cap(walls[d]);}
 }
 void building_interior_t::finalize() {
-	if (rooms.size() > 255) {
-		std::cerr << "Error: Too many rooms: " << rooms.size() << "; Max is 255" << endl;
+	if (rooms.size() > (1U << 16)) {
+		std::cerr << "Error: Too many rooms: " << rooms.size() << endl;
 		exit(0);
 	}
 	sort_for_optimal_culling();
