@@ -218,6 +218,7 @@ void add_mall_room_walls(cube_t const &room, float wall_thickness, bool dim, boo
 	} // for dim
 	has_adj_store = 1;
 }
+
 void building_t::add_mall_store(cube_t const &store, cube_t const &window_area, bool dim, bool dir, bool &has_adj_store) {
 	bool const at_mall_end(window_area != store);
 	float const floor_spacing(get_mall_floor_spacing()), window_vspace(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness());
@@ -245,7 +246,7 @@ void building_t::add_mall_store(cube_t const &store, cube_t const &window_area, 
 	set_wall_width(opening, walls_cut.get_center_dim(dim), 1.0*doorway_width, dim); // twice door width
 	cube_t doorway(opening);
 	set_wall_width(doorway, wall_pos, 0.5*wall_thickness, !dim);
-	interior->store_doorways.push_back(doorway);
+	interior->store_doorways.emplace_back(doorway, room_ix);
 	
 	// add window on each side of the doorway
 	for (unsigned side = 0; side < 2; ++side) {
@@ -819,6 +820,29 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 }
 
 void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
-	// TODO: TYPE_SHELFRACK, TYPE_CASHREG, etc.
+	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), doorway_width(get_doorway_width()), wall_thickness(get_wall_thickness());
+	float const light_amt = 1.0; // fully lit, for now
+	// get doorway bcube
+	cube_t doorway;
+
+	for (cube_with_ix_t const &d : interior->store_doorways) {
+		if (d.ix != room_id) continue;
+		assert(doorway.is_all_zeros()); // must be exactly one
+		doorway = d;
+	}
+	assert(!doorway.is_all_zeros()); // must be found
+	bool const dim(doorway.dy() < doorway.dx()), dir(room.get_center_dim(dim) < doorway.get_center_dim(dim));
+	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const objs_start(objs.size());
+
+	if (rgen.rand_float() < 0.67) { // add checkout counter(s)/cash register(s) to the side of the door
+		bool const side(rgen.rand_bool());
+		cube_t checkout_area(room);
+		checkout_area.d[!dim][!side] = doorway.d[!dim][side]; // to the side of the doorway
+		checkout_area.expand_in_dim(!dim, -1.0*doorway_width); // add padding
+		checkout_area.d[dim][!dir] = room.get_center_dim(dim); // only add to the front half of the store
+		add_checkout_objs(checkout_area, zval, room_id, light_amt, objs_start, dim, side, (side ^ dim ^ 1));
+	}
+	// TODO: TYPE_SHELFRACK, etc.
 }
 
