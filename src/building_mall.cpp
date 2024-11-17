@@ -80,6 +80,7 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 
 	for (unsigned f = 1; f < num_floors; ++f) { // skip first floor
 		float const z(room.z1() + f*floor_spacing), zc(z - fc_thick), zf(z + fc_thick), floor_below_z(zf - floor_spacing), floor_above_z(zf + floor_spacing);
+		rand_gen_t se_rgen(rgen); // copy current rgen and create a temp one so that all floors have the same stacked stairs and escalator placement
 		
 		// add side walkways
 		for (unsigned d = 0; d < 2; ++d) { // each side of concourse
@@ -94,7 +95,7 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 			ww.d[dim][1] = (last  ? room.d[dim][1] : openings[n  ].d[dim][0]);
 			interior->add_ceil_floor_pair(ww, zc, z, zf);
 			// add stairs
-			bool run_dir(first ? 1 : (last ? 0 : rgen.rand_bool())), side_dir(rgen.rand_bool());
+			bool run_dir(first ? 1 : (last ? 0 : se_rgen.rand_bool())), side_dir(se_rgen.rand_bool());
 			float ww_edge(ww.d[dim][run_dir]), ww_side(ww.d[!dim][side_dir]);
 			float const stairs_len(1.5*floor_spacing), stairs_width(0.75*window_vspace);
 			float rdir_sign(run_dir ? 1.0 : -1.0), side_sign(side_dir ? -1.0 : 1.0);
@@ -247,6 +248,10 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 	bool added_bathrooms(0);
 	vect_cube_t &side_walls(interior->walls[!dim]);
 	interior->store_bounds_by_floor.resize(num_floors);
+	// pre-calculate depths of stores in each direction so that they vertically align correctly across stores;
+	// use a consistent depth for each side + floor so that walls can be shared
+	float depths[4] = {}; // for two sides and two ends
+	for (unsigned n = 0; n < 4; ++n) {depths[n] = rgen.rand_uniform(min_depth, max_depth);}
 
 	// pre-split walls into horizontal strips for each floor
 	for (unsigned d = 0; d < 2; ++d) {
@@ -267,19 +272,17 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 	for (unsigned f = 0; f < num_floors; ++f) {
 		bool const is_top_floor(f+1 == num_floors);
 		unsigned const rooms_start(interior->rooms.size()), store_walls_start(side_walls.size());
-		float depths[2] = {};
 		cube_t store, floor_bcube(room);
 		store.z1() = floor_bcube.z1() = room .z1() + f*floor_spacing;
 		store.z2() = floor_bcube.z2() = store.z1() +   floor_spacing;
 
 		// place stores on each side of concourse
 		for (unsigned d = 0; d < 2; ++d) { // sides of mall
-			float const wall_pos(room.d[!dim][d]), depth(rgen.rand_uniform(min_depth, max_depth)); // consistent depth for each side + floor so that walls can be shared
+			float const wall_pos(room.d[!dim][d]), depth(depths[d]);
 			float pos(room.d[dim][0]), pos_end(room.d[dim][1]);
 			float const middle(0.5*(pos + pos_end));
 			// prevent exterior wall of store from clipping through parking garage wall
 			if (entrance_dir) {pos_end -= wall_thickness;} else {pos += wall_thickness;}
-			depths[d] = depth;
 			store.d[!dim][!d] = wall_pos;
 			store.d[!dim][ d] = wall_pos + (d ? 1.0 : -1.0)*depth;
 			bool has_adj_store(0);
@@ -354,7 +357,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			bool const entrance_side(bool(d) == entrance_dir);
 			if (entrance_side && is_top_floor) continue; // blocked by top floor entrance
 			for (unsigned e = 0; e < 2; ++e) {store.d[!dim][e] = room.d[!dim][e];} // width of mall concourse
-			float const wall_pos(room.d[dim][d]), depth(rgen.rand_uniform(min_depth, max_depth));
+			float const wall_pos(room.d[dim][d]), depth(depths[d+2]);
 			store.d[dim][!d] = wall_pos + (d ? 1.0 : -1.0)*(entrance_side ? -0.5*wall_thickness : 0.0); // shift slightly on entrance side
 			store.d[dim][ d] = wall_pos + (d ? 1.0 : -1.0)*depth;
 			if (is_store_placement_invalid(store)) continue;
