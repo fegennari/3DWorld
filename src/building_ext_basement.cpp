@@ -510,13 +510,15 @@ unsigned building_t::max_expand_underground_room(cube_t &room, bool dim, bool di
 	float const room_floor_spacing((is_mall ? 2.0 : 1.0)*floor_spacing); // mall has 2x floor spacing
 
 	if (is_mall) {
-		assert(global_building_params.max_mall_levels > 0);
-		num_floors_add = global_building_params.max_mall_levels - 1;
+		unsigned const max_levels(global_building_params.max_mall_levels);
+		assert(max_levels > 0);
+		if (max_levels <= 2) {num_floors_add = max_levels - 1;} // 1-2 levels
+		else {num_floors_add = rgen.rand_uniform_uint(2, max_levels) - 1;} // 2-max_levels levels
 
 		if (room_floor_spacing > floor_spacing) { // check if we can lower the floor to increase room height
 			cube_t cand(room);
 			set_cube_zvals(cand, (room.z1() - (room_floor_spacing - floor_spacing)), room.z1()); // one floor below
-			if (check_buildings_cube_coll(cand, 0, 1, this)) {room = orig_room; return 0;}
+			if (check_buildings_cube_coll(cand, 0, 1, this)) {room = orig_room; return 0;} // not enough space below
 			room.z1() = cand.z1();
 		}
 	}
