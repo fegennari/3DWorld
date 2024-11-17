@@ -2483,7 +2483,7 @@ cube_t get_elevator_car_panel(room_object_t const &c, float fc_thick_scale) {
 	return panel;
 }
 void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const &e, float tscale, float fc_thick_scale,
-	unsigned floor_offset, float floor_spacing, bool has_parking_garage, bool is_powered) // dynamic=1
+	unsigned floor_offset, float floor_spacing, float window_vspace, bool has_parking_garage, bool is_powered) // dynamic=1
 {
 	// elevator car, all materials are dynamic; no lighting scale
 	float const dz(c.dz()), thickness(fc_thick_scale*dz), dir_sign(c.dir ? 1.0 : -1.0), signed_thickness(dir_sign*thickness);
@@ -2525,11 +2525,11 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 	// add button panel
 	cube_t const panel(get_elevator_car_panel(c, fc_thick_scale));
 	get_untextured_material(0, 1).add_cube_to_verts_untextured(panel, DK_GRAY, ~front_face_mask);
-	// add floor numbers to either the panel (or the buttons themselves?); buttons are added in building_t::add_stairs_and_elevators()
+	// add floor numbers to the panel; buttons are added in building_t::add_stairs_and_elevators()
 	unsigned const num_floors(c.drawer_flags), cur_floor(c.item_flags);
 	assert(num_floors > 1);
-	assert(num_floors >= floor_offset); // no sub-basement only elevators
-	bool const use_small_text(floor_offset > 1 || (num_floors - floor_offset) >= 20); // need more space for two non-1 digits (B2 | 20)
+	assert(e.in_mall || num_floors >= floor_offset); // no sub-basement only elevators, except for underground malls
+	bool const use_small_text(floor_offset > 1 || (int(num_floors) - int(floor_offset)) >= 20); // need more space for two non-1 digits (B2 | 20)
 	float const button_spacing(panel.dz()/(num_floors + 1)); // add extra spacing on bottom and top of panel
 	float const panel_width(panel.get_sz_dim(!c.dim));
 	float const inner_button_radius(min(0.6f*thickness, min(0.35f*button_spacing, 0.25f*panel.get_sz_dim(!c.dim)))); // approx match to elevator
@@ -2586,7 +2586,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 		rgeom_mat_t &cur_mat(is_lit ? get_material(lit_tp, 0, 1) : mat);
 		for (auto i = verts.begin(); i != verts.end(); ++i) {cur_mat.quad_verts.emplace_back(i->v, nc, i->t[0], i->t[1], (is_lit ? lit_cw : cw));}
 		// add floor indicator lights and up/down lights outside elevators on each floor
-		float const zval(e.z1() + (f + 0.7)*floor_spacing);
+		float const zval(e.z1() + f*floor_spacing + 0.7*window_vspace);
 		set_cube_zvals(display, (zval - up_down_height), (zval + up_down_height + center_panel_height));
 		get_untextured_material(0, 1).add_cube_to_verts_untextured(display, DK_GRAY, ~back_face_mask); // exterior display panel
 		// add floor text

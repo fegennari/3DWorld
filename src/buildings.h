@@ -1097,7 +1097,7 @@ struct building_room_geom_t {
 	void add_skylights_details(building_t const &b);
 	void add_skylight_details(cube_t const &skylight, bool has_skylight_light);
 	void add_elevator(room_object_t const &c, elevator_t const &e, float tscale, float fc_thick_scale,
-		unsigned floor_offset, float floor_spacing, bool has_parking_garage, bool is_powered);
+		unsigned floor_offset, float floor_spacing, float window_vspace, bool has_parking_garage, bool is_powered);
 	void add_escalator(escalator_t const &e, float floor_spacing, bool draw_static, bool draw_dynamic);
 	void add_tunnel(tunnel_seg_t const &t);
 	void add_tunnel_water(tunnel_seg_t const &t);
@@ -2008,7 +2008,7 @@ struct building_t : public building_geom_t {
 	void create_two_story_tall_rooms(rand_gen_t &rgen);
 	void setup_courtyard();
 	void gen_room_details(rand_gen_t &rgen, unsigned building_ix);
-	unsigned calc_floor_offset(float zval) const;
+	unsigned calc_floor_offset(float zval, float floor_spacing) const;
 	cube_t get_init_elevator_car(elevator_t const &elevator) const;
 	void add_stairs_and_elevators(rand_gen_t &rgen);
 	int get_ext_door_dir(cube_t const &door_bcube, bool dim) const;
