@@ -240,7 +240,7 @@ void building_t::add_mall_store(cube_t const &store, cube_t const &window_area, 
 	}
 }
 
-void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir, rand_gen_t &rgen) {
+void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir, rand_gen_t &rgen) { // and bathrooms
 	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float const min_width(4.0*window_vspace), max_width(9.0*window_vspace), min_depth(6.0*window_vspace), max_depth(8.0*window_vspace);
 	float const bathroom_width(4.0*window_vspace);
@@ -288,15 +288,16 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			bool has_adj_store(0);
 			
 			while (pos + min_width < pos_end) { // continue until we can't fit a min width room
+				float const store_width(rgen.rand_uniform(min_width, max_width));
 				float next_pos(pos);
 				bool is_bathroom(0);
 
-				if (!added_bathrooms && pos < middle && pos+bathroom_width > middle) {
-					next_pos += bathroom_width;
+				if (!added_bathrooms && pos < middle && pos+store_width > middle) { // crosses the middle; make a bathroom
+					next_pos   += bathroom_width;
 					is_bathroom = 1;
 				}
-				else {
-					next_pos += rgen.rand_uniform(min_width, max_width);
+				else { // make a store
+					next_pos += store_width;
 				}
 				if (next_pos + min_width > pos_end) {next_pos = pos_end;} // clamp to far end of mall, and prevent a narrow store
 				store.d[dim][0] = pos;

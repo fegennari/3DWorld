@@ -2036,7 +2036,8 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 	// add a sign outside the bathroom door
 	add_door_sign((mens_room ? "Men" : "Women"), room, zval, room_id, 1); // no_check_adj_walls=1
 
-	if (is_cube() && !room.is_mall() && rgen.rand_float() < 0.1) { // make this door/room out of order 10% of the time; only for cube buildings (others need the connectivity)
+	// make this door/room out of order 10% of the time; only for cube buildings (others need the connectivity), and not for mall bathrooms
+	if (is_cube() && !(has_mall() && room.is_ext_basement()) && rgen.rand_float() < 0.1) {
 		make_door_out_or_order(room, zval, room_id, br_door_stack_ix);
 		room.set_has_out_of_order(); // flag if any floor is out of order
 	}
