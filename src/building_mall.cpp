@@ -8,6 +8,8 @@
 using std::string;
 string choose_store_name(rand_gen_t rgen);
 colorRGBA choose_pot_color(rand_gen_t &rgen);
+bool is_invalid_city_placement_for_cube(cube_t const &c);
+void add_city_plot_cut(cube_t const &cut);
 
 extern object_model_loader_t building_obj_model_loader;
 
@@ -161,20 +163,35 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 		unsigned const opening_ix(choose_one_center(openings.size(), rgen));
 		cube_t const opening(openings[opening_ix]);
 		bool const edir((openings.size() & 1) ? rgen.rand_bool() : (opening_ix == openings.size()/2)); // closer to center; random if tied
-		float const ww_edge(opening.d[dim][!edir]);
+		float const ww_edge(opening.d[dim][!edir]), width(1.6*door_width), depth(width);
 		// Note: elevator extends half a floor width below and above the room; is this okay, or can it clip through other objects?
 		elevator_t elevator(room, interior->ext_basement_hallway_room_id, dim, !edir, 1, 1, 1); // at_edge=1, interior_room=1, in_mall=1
-		elevator.d[dim][!edir] = ww_edge; // adjacent to walkway
-		elevator.d[dim][ edir] = ww_edge + (edir ? 1.0 : -1.0)*1.6*door_width; // extend away from walkway by depth
-		set_wall_width(elevator, opening.get_center_dim(!dim), 0.8*door_width, !dim); // set width
+		elevator.d[dim][!edir] = ww_edge; // front is adjacent to walkway
+		elevator.d[dim][ edir] = ww_edge + (edir ? 1.0 : -1.0)*depth; // extend back away from walkway by depth
+		set_wall_width(elevator, opening.get_center_dim(!dim), 0.5*width, !dim); // set width
 
-		if (is_in_city) {
-			// extend elevator up to street level if there's space?
+		if (0 && is_in_city) { // extend elevator up to street level if there's space?
+			cube_t test_cube(elevator);
+			set_cube_zvals(test_cube, elevator.z2(), elevator.z2()+floor_spacing);
+			test_cube.d[dim][!edir] -= (edir ? 1.0 : -1.0)*depth; // extend by depth in front of elevator
+
+			if (!is_cube_city_placement_invalid(test_cube)) {
+				// TODO: need exterior building surrounding elevator, and a way for the player to interact with it on street level
+				// TODO: needs to be a city blocker for pedestrians, etc.
+				// TODO: need to cut a hole in the plot for the elevator shaft
+				// TODO: should extend window_vspace above, but elevator won't have a stop at this pos, unless parking garage is two floors
+				elevator.z2() += floor_spacing;
+				add_city_plot_cut(elevator);
+			}
 		}
 		interior->elevators.push_back(elevator);
 	}
 }
 
+bool building_t::is_cube_city_placement_invalid(cube_t const &c) const { // for mall skylights, elevator, etc.
+	if (!is_basement_room_not_int_bldg(c, nullptr, 1)) return 1; // check for buildings above; no exclude, allow_outside_grid=1
+	return is_invalid_city_placement_for_cube(c);
+}
 bool building_t::is_store_placement_invalid(cube_t const &store) const {
 	// here we don't need to check rooms of our own building, but we need to check other building basements;
 	// we normally check for rooms outside the building's tile, but this doesn't seem to be a problem for malls; we still check city bounds for city malls

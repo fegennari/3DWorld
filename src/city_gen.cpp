@@ -424,6 +424,7 @@ class road_network_t : public streetlights_t { // AKA city center
 	vector<tunnel_t> tunnels; // tunnels, part of global road network
 	vector<road_t> tracks, track_segs; // railroad tracks (for global road network)
 	vect_cube_t parks;
+	vect_cube_t plot_cuts; // for underground skylights, elevators, etc.
 	//vector<road_isec_t> track_turns; // for railroad tracks
 	city_obj_placer_t city_obj_placer;
 	cube_t bcube;
@@ -1194,6 +1195,21 @@ public:
 		ret |= city_obj_placer.line_intersect(p1, p2, t);
 		return ret;
 	}
+	bool is_invalid_placement_for_cube(cube_t const &c) const { // Note: c is in global space
+		if (!bcube.intersects_xy(c))    return 0; // not in this city
+		if (has_bcube_int_xy(c, roads)) return 1; // intersects or above a road
+		if (plots.empty()) return 0; // global connector road
+
+		for (unsigned plot_ix = 0; plot_ix < plots.size(); ++plot_ix) {
+			if (!plots[plot_ix].contains_cube_xy(c)) continue;
+			if (plot_ix < plot_colliders.size() && has_bcube_int(c, plot_colliders[plot_ix])) return 1;
+			return 0; // fully contained in this plot and not intersecting any colliders
+		}
+		return 1; // not contained in a plot
+	}
+	void add_plot_cut(cube_t const &cut) {
+		if (bcube.intersects_xy(cut)) {plot_cuts.push_back(cut);}
+	}
 	bool check_mesh_disable(point const &pos, float radius) const { // Note: pos is in camera space
 		if (tunnels.empty()) return 0;
 		point const query_pos(pos - get_camera_coord_space_xlate());
@@ -1358,14 +1374,14 @@ public:
 				if (!player_in_basement || is_connector_road) {
 					if (!plots.empty()) { // draw plots if not global connector road network
 						cube_t const plot_exclude(get_cur_basement()); // clip out basement
-						dstate.plot_cuts.clear();
+						dstate.plot_cuts = plot_cuts; // reset to static plot cuts
 						
 						if (!plot_exclude.is_all_zeros() && plot_exclude.intersects_xy(b->bcube)) {
 							b->quads[TYPE_PLOT].clear(); // clear and rebuild plot cache
 							dstate.plot_cuts.push_back(plot_exclude);
 						}
 						if (is_residential) { // draw all plots with grass, using the park materials
-							city_obj_placer.get_plot_cuts(b->bcube, dstate.plot_cuts); // inground swimming pools
+							city_obj_placer.get_plot_cuts(b->bcube, dstate.plot_cuts); // inground swimming pools, etc.
 							dstate.draw_city_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PARK, 1); // draw_all=1
 						}
 						else {
@@ -2229,6 +2245,17 @@ public:
 			if (rn.cube_int_underground_obj(c)) return 1;
 		}
 		return 0;
+	}
+	bool is_invalid_placement_for_cube(cube_t const &c) const {
+		if (global_rn.is_invalid_placement_for_cube(c)) return 1;
+
+		for (road_network_t const &rn : road_networks) {
+			if (rn.is_invalid_placement_for_cube(c)) return 1;
+		}
+		return 0;
+	}
+	void add_plot_cut(cube_t const &cut) {
+		for (road_network_t &rn : road_networks) {rn.add_plot_cut(cut);}
 	}
 	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &ponds) const {
 		for (road_network_t const &rn : road_networks) {rn.get_ponds_in_xy_range(range, ponds);}
@@ -3260,8 +3287,10 @@ public:
 	bool choose_pt_in_park (point const &pos, point &park_pos, rand_gen_t &rgen) const {return road_gen.choose_pt_in_park(pos, park_pos, rgen);}
 	bool check_mesh_disable(point const &pos, float radius ) const {return road_gen.check_mesh_disable(pos, radius);}
 	bool check_inside_city (point const &pos, float radius ) const {return road_gen.check_inside_city (pos, radius);}
-	bool tile_contains_tunnel (cube_t const &bcube) const {return road_gen.tile_contains_tunnel(bcube);}
-	bool cube_int_underground_obj(cube_t const &c ) const {return road_gen.cube_int_underground_obj(c);}
+	bool tile_contains_tunnel(cube_t const &bcube) const {return road_gen.tile_contains_tunnel(bcube);}
+	bool cube_int_underground_obj(cube_t const &c) const {return road_gen.cube_int_underground_obj(c);}
+	bool is_invalid_placement_for_cube(cube_t const &c) const {return road_gen.is_invalid_placement_for_cube(c);}
+	void add_plot_cut(cube_t const &cut) {road_gen.add_plot_cut(cut);}
 	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &ponds) const {road_gen.get_ponds_in_xy_range(range, ponds);}
 	void add_manhole(point const &pos, float radius) {road_gen.add_manhole(pos, radius);}
 
@@ -3472,6 +3501,8 @@ bool check_inside_city(point const &pos, float radius) { // Note: pos is in glob
 	return city_gen.check_inside_city((pos + get_tt_xlate_val()), radius); // apply xlate for all static objects
 }
 bool cube_int_underground_obj(cube_t const &c) {return city_gen.cube_int_underground_obj(c);} // Note: cube is in global space
+bool is_invalid_city_placement_for_cube(cube_t const &c) {return city_gen.is_invalid_placement_for_cube(c);}
+void add_city_plot_cut(cube_t const &cut) {city_gen.add_plot_cut(cut);}
 void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &ponds) {city_gen.get_ponds_in_xy_range(range, ponds);} // Note: range is in global space
 bool choose_pt_in_city_park(point const &pos, point &park_pos, rand_gen_t &rgen) {return city_gen.choose_pt_in_park(pos, park_pos, rgen);}
 bool tile_contains_tunnel(cube_t const &bcube) {return city_gen.tile_contains_tunnel(bcube);}

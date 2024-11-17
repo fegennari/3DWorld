@@ -2297,6 +2297,7 @@ private:
 	unsigned max_expand_underground_room(cube_t &room, bool dim, bool dir, bool is_mall, rand_gen_t &rgen) const;
 	void add_mall_se_landing(cube_t const &c, bool is_escalator, bool se_dim, bool se_dir, bool ww_dir);
 	void setup_mall_concourse(cube_t const &room, bool dim, bool dir, rand_gen_t &rgen);
+	bool is_cube_city_placement_invalid(cube_t const &c) const;
 	bool is_store_placement_invalid(cube_t const &store) const;
 	void add_mall_stores(cube_t const &room, bool dim, bool entrance_dir, rand_gen_t &rgen);
 	void add_mall_store(cube_t const &store, cube_t const &window_area, bool dim, bool dir, bool &has_adj_store);
