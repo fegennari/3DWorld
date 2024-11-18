@@ -153,7 +153,7 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 				set_cube_zvals(esc_lc, zc-floor_spacing, zf-floor_spacing); // set ceil-floor zvals on the floor below
 				esc_lc.d[!dim][ side_dir]  = ww_side;
 				esc_lc.d[!dim][!side_dir] += side_sign*wall_thickness; // extend out a bit further
-				esc_lc.d[ dim][!run_dir ]  = esc_end - rdir_sign*door_width; // under bottom escalator entrance
+				esc_lc.d[ dim][!run_dir ]  = esc_end - rdir_sign*(door_width + wall_thickness); // under bottom escalator entrance, shifted a bit further back to avoid clipping
 				esc_lc.d[ dim][ run_dir ]  = esc_end + 1.2*rdir_sign*stairs_width;
 				add_mall_se_landing(esc_lc, 1, dim, run_dir, side_dir); // is_escalator=1
 			}
@@ -612,7 +612,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		float const zb1(c.z1() - trim_thick), zb2(c.z1() + 2.0*fc_thick + trim_thick), zt1(c.z1() + fc_thick + railing_height), zt2(zt1 + railing_top_bar_thick);
 		float const inner_edge(c.d[!se_dim][!ww_dir]); // bordering the opening
 		cube_t railing_area(c), vbar;
-		if (is_escalator) {railing_area.d[se_dim][!se_dir] += (se_dir ? 1.0 : -1.0)*(doorway_width + wall_thickness);} // clip off the area under the elevator entrance
+		if (is_escalator) {railing_area.d[se_dim][!se_dir] += (se_dir ? 1.0 : -1.0)*(doorway_width + 2.0*wall_thickness);} // clip off the area under the elevator entrance
 		set_cube_zvals(vbar, zb2, zt1);
 		set_wall_width(vbar, inner_edge, vbar_hwidth, !se_dim);
 
