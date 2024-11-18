@@ -700,10 +700,13 @@ vector2d building_t::get_conf_room_table_length_width(cube_t const &room) const 
 	if (table_len < 1.5*table_width || room.get_sz_dim(!dim) < table_width + 2.0*side_clearance) return vector2d(); // too small to be a conference room
 	return vector2d(table_len, table_width);
 }
-bool building_t::add_conference_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	if (room.has_stairs || room.has_elevator || room.is_hallway || interior->is_blocked_by_stairs_or_elevator(room)) return 0; // not a valid conference room
-	cube_t const room_bounds(get_walkable_room_bounds(room));
+bool building_t::add_conference_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor_ix) {
+	if (room.has_stairs_on_floor(floor_ix) || room.has_elevator || room.is_hallway) return 0; // not a valid conference room
 	float const floor_spacing(get_window_vspace());
+	cube_t room_this_floor(room); // clip to a single floor before checking if blocked by stairs or elevator
+	set_cube_zvals(room_this_floor, zval, zval+floor_spacing);
+	if (interior->is_blocked_by_stairs_or_elevator(room_this_floor)) return 0;
+	cube_t const room_bounds(get_walkable_room_bounds(room));
 	bool const dim(room.dx() < room.dy()); // long dim
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// add conference table
@@ -756,6 +759,7 @@ bool building_t::add_conference_objs(rand_gen_t rgen, room_t const &room, float 
 			tv.d[dim][ dir] = room_bounds.d[dim][dir]; // on the wall
 			tv.d[dim][!dir] = tv.d[dim][dir] + (dir ? -1.0 : 1.0)*tv_depth;
 			if (overlaps_or_adj_int_window(tv)) continue; // check interior windows
+			if (is_cube_close_to_doorway(tv, room, 0.0, 1)) continue; // too close to a doorway
 			// here we want the name, weight, and value of a TV, but we want the images of a computer monitor, so set as TYPE_TV + SHAPE_SHORT
 			objs.emplace_back(tv, TYPE_TV, room_id, dim, !dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), tot_light_amt, SHAPE_SHORT, BLACK);
 			offset_hanging_tv(objs.back());

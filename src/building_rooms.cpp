@@ -726,7 +726,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				added_obj = 1; // assume something was added above, and don't place any other furniture or try to assign to another room type
 			}
 			if (r->get_room_type(f) == RTYPE_CONF) { // already assigned to a conference room
-				if (add_conference_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {added_obj = can_place_onto = 1;}
+				if (add_conference_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f)) {added_obj = can_place_onto = 1;}
+				else if (f < NUM_RTYPE_SLOTS) { // failed, maybe because stairs were added to the room
+					r->assign_to(RTYPE_OFFICE, f); // if room is on a lower floor where we can assign a type, re-assign to an office
+				}
 			}
 			// bedroom or bathroom case; need to check first floor even if must_be_bathroom
 			if (!added_obj && allow_br && !is_tall_room && !has_walkway && can_be_bedroom_or_bathroom(*r, f)) {
