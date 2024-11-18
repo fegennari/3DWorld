@@ -1735,6 +1735,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			else if (player_on_attic_stairs && floor_is_below) {
 				// lights on floor below may be visible through attic opening
 			}
+			else if (floor_is_below && in_ext_basement && camera_in_ext_basement && is_inside_mall_stores(camera_bs) && is_inside_mall_stores(lpos)) {
+				// light and camera both in the mall concourse or stores; lights below may be visible through the mall concourse opening
+			}
 			else if (floor_is_above || (floor_is_below && !camera_room_tall)) { // light is on a different floor from the camera
 				bool const parts_are_stacked(camera_part < real_num_parts && (parts[camera_part].z2() <= room.z1() || parts[camera_part].z1() >= room.z2()));
 

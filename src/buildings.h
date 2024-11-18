@@ -1690,7 +1690,7 @@ struct skyway_conn_t : public cube_t {
 
 
 struct building_interior_t {
-	vect_cube_t floors, ceilings, fc_occluders, exclusion, open_walls, split_window_walls, store_bounds_by_floor;
+	vect_cube_t floors, ceilings, fc_occluders, exclusion, open_walls, split_window_walls;
 	vect_cube_t walls[2]; // walls are split by dim, which is the separating dimension of the wall
 	vect_cube_with_ix_t int_windows; // ix stores room index
 	vect_cube_with_ix_t mall_landings; // ix stores {is_escalator, se_dim, se_dir, ww_dir}
@@ -1709,7 +1709,7 @@ struct building_interior_t {
 	std::unique_ptr<building_conn_info_t> conn_info;
 	cube_with_ix_t pg_ramp, attic_access; // ix stores {2*dim + dir}
 	indoor_pool_t pool;
-	cube_t basement_ext_bcube, elevator_equip_room, mall_bathrooms;
+	cube_t basement_ext_bcube, elevator_equip_room, mall_bathrooms, mall_store_bounds;
 	draw_range_t draw_range;
 	unsigned extb_walls_start[2] = {0,0};
 	unsigned gen_room_details_pass=0;
@@ -2305,7 +2305,7 @@ private:
 	void add_extb_room_floor_and_ceil(cube_t const &room);
 	void add_mall_stairs();
 	float get_mall_floor_spacing(cube_t const &room) const;
-	bool is_inside_mall_stores(point const &pos) const {return (interior && check_vect_cube_contains_pt(interior->store_bounds_by_floor, pos));}
+	bool is_inside_mall_stores(point const &pos) const {return (has_mall() && interior->mall_store_bounds.contains_pt(pos) && !get_basement().contains_pt(pos));}
 	room_t const &get_mall_concourse() const {assert(has_mall()); return interior->get_extb_start_room();}
 	float get_mall_floor_spacing() const {return get_mall_floor_spacing(get_mall_concourse());}
 	static float get_mall_top_window_gap(float mall_floor_spacing, float window_vspace) {return 0.5*(mall_floor_spacing - window_vspace);}

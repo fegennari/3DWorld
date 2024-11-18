@@ -265,7 +265,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 	unsigned const num_floors(interior->num_extb_floors);
 	bool added_bathrooms(0);
 	vect_cube_t &side_walls(interior->walls[!dim]);
-	interior->store_bounds_by_floor.resize(num_floors);
+	interior->mall_store_bounds = room; // start with the mall concourse
 	// pre-calculate depths of stores in each direction so that they vertically align correctly across stores;
 	// use a consistent depth for each side + floor so that walls can be shared
 	float depths[4] = {}; // for two sides and two ends
@@ -392,7 +392,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			add_mall_store(store, window_area, !dim, d, has_adj_store);
 			floor_bcube.union_with_cube(store);
 		} // for d
-		interior->store_bounds_by_floor[f] = floor_bcube;
+		interior->mall_store_bounds.union_with_cube(floor_bcube);
 		// add a narrower non-public hallway behind each row of stores
 		bool const is_tall_room(floor_spacing > 1.1*window_vspace);
 		unsigned const rooms_end(interior->rooms.size());
