@@ -841,10 +841,42 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		objs.emplace_back(plant, TYPE_PLANT, room_id, 0, 0, flags, light_amt, SHAPE_CYLIN, p.color);
 		set_obj_id(objs);
 	}
+	// add trashcans
+	cube_t place_area(room);
+	place_area.expand_by_xy(-wall_thickness);
+	unsigned const num_trashcans(openings.size()/2 + 1); // per floor per side
+	float const tc_height(0.4*window_vspace), tc_radius(0.12*window_vspace);
+	room_obj_shape const tc_shape(rgen.rand_bool() ? SHAPE_CYLIN : SHAPE_CUBE);
+	vect_cube_t tc_blockers;
 
-	// TODO: palm trees, TYPE_TABLE, TYPE_CHAIR, TYPE_PICTURE, TYPE_TCAN, TYPE_SIGN, TYPE_RDESK, TYPE_DUCT, TYPE_VASE, TYPE_BENCH, TYPE_TV, TYPE_BAR_STOOL
-	//cube_t walk_area(room);
-	//walk_area.expand_by_xy(-wall_thickness);
+	for (unsigned f = 0; f < num_floors; ++f) {
+		float const z(zval + f*floor_spacing);
+		cube_t tcan;
+		set_cube_zvals(tcan, z, z+tc_height); // set height
+
+		for (unsigned d = 0; d < 2; ++d) { // side
+			float const wall_pos(place_area.d[!mall_dim][d]); // with a bit of padding
+			tcan.d[!mall_dim][ d] = wall_pos; // against the wall
+			tcan.d[!mall_dim][!d] = wall_pos + (d ? -1.0 : 1.0)*2.0*tc_radius;
+
+			for (unsigned n = 0; n < num_trashcans; ++n) {
+				for (unsigned N = 0; N < 10; ++N) { // 10 attempts to place trashcan
+					set_wall_width(tcan, rgen.rand_uniform(place_area.d[mall_dim][0]+tc_radius, place_area.d[mall_dim][1]-tc_radius), tc_radius, mall_dim);
+					cube_t test_cube(tcan);
+					test_cube.expand_by_xy(tc_radius + wall_thickness);
+					if (entrance_stairs_bcube.intersects(test_cube))    continue; // too close to entrance stairs
+					if (interior->mall_bathrooms.intersects(test_cube)) continue; // too close to bathroom doors and water fountain
+					if (has_bcube_int(test_cube, interior->int_windows) || has_bcube_int(test_cube, interior->store_doorways)) continue; // too close to store door or window
+					if (has_bcube_int(test_cube, tc_blockers)) continue;
+					objs.emplace_back(tcan, TYPE_TCAN, room_id, !mall_dim, 0, RO_FLAG_IN_MALL, light_amt, tc_shape, LT_GRAY);
+					tc_blockers.push_back(tcan);
+					tc_blockers.back().expand_by_xy(window_vspace); // don't place two nearby trashcans
+				} // for N
+			} // for n
+			tc_blockers.clear();
+		} // for d
+	} // for f
+	// TODO: palm trees, TYPE_PICTURE?, TYPE_SIGN, TYPE_RDESK?, TYPE_DUCT?, TYPE_VASE?, TYPE_BENCH, TYPE_TV?, TYPE_BAR_STOOL?
 
 	// add pillars last so that we can check lights against them
 	unsigned const pillars_start(objs.size());

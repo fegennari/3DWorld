@@ -3618,8 +3618,23 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 }
 
 void building_room_geom_t::add_trashcan(room_object_t const &c) {
-	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
 	colorRGBA const color(apply_light_color(c));
+
+	if (c.in_mall()) { // large mall trashcan
+		rgeom_mat_t &side_mat(get_metal_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+
+		if (c.shape == SHAPE_CYLIN) {
+			side_mat.add_vcylin_to_verts(c, color, 0, 0); // sides only, untextured
+			// TODO: black torus rim
+			// TODO: black inner lining inverted vcylin
+		}
+		else { // cube
+			side_mat.add_cube_to_verts_untextured(c, color, EF_Z1); // skip bottom
+			// TODO: exterior cube with hole cut into top front
+		}
+		return;
+	}
+	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
 
 	if (c.shape == SHAPE_CYLIN) {
 		mat.add_vcylin_to_verts(c, color, 1, 0, 1, 1, 0.7, 1.0); // untextured, bottom only, two_sided truncated cone with inverted bottom normal
