@@ -570,7 +570,8 @@ unsigned const RO_FLAG_HAS_VOL_IX= 0x2000; // for books,  aliased with RO_FLAG_A
 unsigned const RO_FLAG_FOR_CAR   = 0x1000; // for car blockers, aliased with RO_FLAG_ADJ_BOT
 unsigned const RO_FLAG_WALKWAY   = 0x1000; // for walkway objects (outside of buildings), aliased with RO_FLAG_ADJ_BOT
 // object flags, third byte, for pickup/interact state
-unsigned const RO_FLAG_IN_HALLWAY= 0x010000;
+unsigned const RO_FLAG_IN_HALLWAY= 0x010000; // for attic doors
+unsigned const RO_FLAG_IN_MALL   = 0x010000; // for mall chairs, tables, trashcans, etc.; aliased with RO_FLAG_IN_HALLWAY
 unsigned const RO_FLAG_IN_ATTIC  = 0x020000;
 unsigned const RO_FLAG_HAS_EXTRA = 0x040000; // used for counter backsplash, exterior wall trim, desks with computer monitors and keyboards, books on glass tables, and hotel closets
 unsigned const RO_FLAG_EXTERIOR  = 0x080000; // for signs, window trim, etc.
@@ -589,9 +590,9 @@ unsigned const RO_FLAG_NO_CONS  = 0x04000000; // this object is not consumable (
 unsigned const RO_FLAG_NO_POWER = 0x04000000; // unpowered; related to circuit breakers, aliased with RO_FLAG_NO_CONS
 unsigned const RO_FLAG_IS_ACTIVE= 0x08000000; // active, for sinks, tubs, buttons, pool balls, shower curtains, etc.
 unsigned const RO_FLAG_USED     = 0x10000000; // used by the player (spraypaint, marker, etc.); used by parking spaces to indicate cars
-unsigned const RO_FLAG_IN_ELEV  = 0x20000000; // for elevator lights, buttons, and flooring
-unsigned const RO_FLAG_BACKROOM = 0x20000000; // in backrooms, for walls; aliased with RO_FLAG_IN_ELEV and RO_FLAG_IN_POOL
-unsigned const RO_FLAG_IN_POOL  = 0x20000000; // aliased with RO_FLAG_IN_ELEV and RO_FLAG_BACKROOM
+unsigned const RO_FLAG_IN_ELEV  = 0x20000000; // for elevator lights, buttons, and flooring; aliased with RO_FLAG_BACKROOM and RO_FLAG_IN_POOL
+unsigned const RO_FLAG_BACKROOM = 0x20000000; // in backrooms, for walls and pillars; aliased with RO_FLAG_IN_ELEV and RO_FLAG_IN_POOL
+unsigned const RO_FLAG_IN_POOL  = 0x20000000; // for stairs, railings, and drains; aliased with RO_FLAG_IN_ELEV and RO_FLAG_BACKROOM
 unsigned const RO_FLAG_BROKEN   = 0x40000000; // for TVs, monitors, flickering lights, and ond computers; maybe can use for windows
 unsigned const RO_FLAG_MOVED    = 0x80000000; // for player push/pull
 
@@ -676,6 +677,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool in_elevator() const {return  (flags & RO_FLAG_IN_ELEV);}
 	bool in_closet  () const {return  (flags & RO_FLAG_IN_CLOSET);}
 	bool in_attic   () const {return  (flags & RO_FLAG_IN_ATTIC);}
+	bool in_mall    () const {return  (flags & RO_FLAG_IN_MALL);}
 	bool is_exterior() const {return  (flags & RO_FLAG_EXTERIOR);}
 	bool rotates    () const {return  (flags & RO_FLAG_RAND_ROT);}
 	bool is_on_floor() const {return  (flags & RO_FLAG_ON_FLOOR);}
