@@ -2499,12 +2499,23 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 			}
 			if (has_room_geom() && check_pg_br_wall_occlusion(viewer, pts, npts, occ_area, dir)) return 1;
 		}
-		else { // regular walls case
+		else { // regular walls case, with size check (helps with light bcubes)
+			bool const in_ext_basement(point_in_extended_basement_not_basement(viewer));
+
 			for (unsigned D = 0; D < 2; ++D) {
 				bool const d(bool(D) ^ pri_dim); // try primary dim first
 				float const min_sz(0.5*c.get_sz_dim(!d)); // account for perspective
-				if (are_pts_occluded_by_any_cubes<1>(viewer, pts, npts, occ_area, interior->walls[d], d, min_sz)) return 1; // with size check (helps with light bcubes)
-			}
+				unsigned const extb_walls_start(interior->extb_walls_start[d]);
+				vect_cube_t const &walls(interior->walls[d]);
+				assert(extb_walls_start <= walls.size());
+
+				if (in_ext_basement) {
+					if (are_pts_occluded_by_any_cubes<1>(viewer, pts, npts, occ_area, walls.begin()+extb_walls_start, walls.end(), d, min_sz)) return 1;
+				}
+				else {
+					if (are_pts_occluded_by_any_cubes<1>(viewer, pts, npts, occ_area, walls.begin(), walls.begin()+extb_walls_start, d, min_sz)) return 1;
+				}
+			} // for D
 		}
 	}
 	if (!c_is_building_part && player_in_building) {
