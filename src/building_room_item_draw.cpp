@@ -1901,6 +1901,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			if (building.check_pt_in_retail_room(obj_center)) {cull_dist *= 2.5;} // increased culling distance for retail areas
 			if (!dist_less_than(camera_bs, obj_center, cull_dist)) continue; // too far
 		}
+		if (camera_in_building && player_in_basement >= 2 && obj_center.z > building.ground_floor_z1)        continue; // player in basement, obj not
+		if (camera_in_building && player_in_basement == 0 && obj_center.z < building.ground_floor_z1)        continue; // obj in basement, player not
 		if (!(is_rotated ? building.is_rot_cube_visible(obj, xlate) : camera_pdu.cube_visible(obj + xlate))) continue; // VFC
 		//highres_timer_t timer("Draw " + get_room_obj_type(obj).name);
 		if (check_occlusion && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
@@ -1968,20 +1970,24 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			point obj_center(h.center);
 			if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
 			if (h.closed && (camera_bs[h.dim] < obj_center[h.dim]) == h.hdir) continue; // opposite side of closed door
+			if (camera_in_building && player_in_basement >= 2 && obj_center.z > building.ground_floor_z1)      continue; // player in basement, obj not
+			if (camera_in_building && player_in_basement == 0 && obj_center.z < building.ground_floor_z1)      continue; // obj in basement, player not
 			if (!(is_rotated ? building.is_rot_cube_visible(bc, xlate) : camera_pdu.cube_visible(bc + xlate))) continue; // VFC
-			if (check_occlusion && building.check_obj_occluded(bc, camera_bs, oc, reflection_pass)) continue;
+			if (check_occlusion && building.check_obj_occluded(bc, camera_bs, oc, reflection_pass))            continue;
 			building_obj_model_loader.draw_model(s, obj_center, bc, h.dir, handle_color, xlate, OBJ_MODEL_DOOR_HANDLE, shadow_only, 0, nullptr, 0, 0, 0, h.mirror);
 			obj_drawn = 1;
 		} // for h
 	}
 	if (player_in_building) { // only drawn for the player building
-		if (!shadow_only && !reflection_pass) { // these models aren't drawn in the shadow or reflection passes; no emissive or rotated objects
+		if (!shadow_only && !reflection_pass) { // keys/silverware/folded shirt: not drawn in the shadow or reflection passes; no emissive or rotated objects
 			for (auto i = model_objs.begin(); i != model_objs.end(); ++i) {
 				point obj_center(i->get_cube_center());
 				if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
-				if (!shadow_only && !dist_less_than(camera_bs, obj_center, 100.0*i->max_len())) continue; // too far away
+				if (!shadow_only && !dist_less_than(camera_bs, obj_center, 100.0*i->max_len()))                    continue; // too far away
+				if (camera_in_building && player_in_basement >= 2 && obj_center.z > building.ground_floor_z1)      continue; // player in basement, obj not
+				if (camera_in_building && player_in_basement == 0 && obj_center.z < building.ground_floor_z1)      continue; // obj in basement, player not
 				if (!(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate))) continue; // VFC
-				if (check_occlusion && building.check_obj_occluded(*i, camera_bs, oc, reflection_pass)) continue;
+				if (check_occlusion && building.check_obj_occluded(*i, camera_bs, oc, reflection_pass))            continue;
 				vector3d dir(i->get_dir());
 				if (is_rotated) {building.do_xy_rotate_normal(dir);}
 				building_obj_model_loader.draw_model(s, obj_center, *i, dir, i->color, xlate, i->get_model_id(), shadow_only, 0); // animations disabled
