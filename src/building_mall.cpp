@@ -794,9 +794,12 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	} // for d
 
 	// add a fountain in the center of an opening
+	int fountain_opening_ix(-1);
+
 	if (!openings.empty() && building_obj_model_loader.is_model_valid(OBJ_MODEL_FOUNTAIN)) {
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FLAG)); // W, D, H
-		cube_t const opening(openings[choose_one_center(openings.size(), rgen)]);
+		fountain_opening_ix = choose_one_center(openings.size(), rgen);
+		cube_t const &opening(openings[fountain_opening_ix]);
 		float const max_radius(0.25*min(opening.dx(), opening.dy()));
 		float height(0.9*floor_spacing*rgen.rand_uniform(0.9, 1.1)), radius(0.5*height*0.5*(sz.x + sz.y)/sz.z); // use average of width and depth for radius
 		if (radius > max_radius) {height *= max_radius/radius; radius = max_radius;} // reduce size if radius is too large
@@ -805,6 +808,18 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		for (unsigned d = 0; d < 2; ++d) {set_wall_width(fbc, opening.get_center_dim(d), radius, d);}
 		objs.emplace_back(fbc, TYPE_BLDG_FOUNT, room_id, rgen.rand_bool(), rgen.rand_bool(), 0, light_amt, SHAPE_CYLIN); // random dim/dir
 		objs.back().item_flags = rgen.rand(); // select a random sub_model_id
+		blockers.push_back(fbc);
+	}
+	// add a food court to one of the openings
+	if (openings.size() >= ((fountain_opening_ix >= 0) ? 2 : 1)) {
+		unsigned fc_opening_ix(0);
+
+		while (1) {
+			fc_opening_ix = rgen.rand() % openings.size();
+			if (int(fc_opening_ix) != fountain_opening_ix) break;
+		}
+		cube_t const &opening(openings[fc_opening_ix]);
+		add_food_court_objs(rgen, opening, zval, room_id, light_amt, blockers);
 	}
 	// if there are bathrooms, add a water fountain between them
 	if (!interior->mall_bathrooms.is_all_zeros() && building_obj_model_loader.is_model_valid(OBJ_MODEL_WFOUNTAIN)) {
@@ -835,6 +850,15 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	unsigned const pillars_start(objs.size());
 	for (cube_t const &pillar : pillars) {objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, !mall_dim, 0, 0, light_amt, SHAPE_CUBE, WHITE, EF_Z12);}
 	return pillars_start;
+}
+
+void building_t::add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, vect_cube_t const &blockers) {
+	vect_cube_t fc_blockers;
+
+	for (cube_t const &c : blockers) {
+		if (place_area.intersects_xy(c)) {fc_blockers.push_back(c);} // only consider blockers in the food court area
+	}
+	// TODO: TYPE_TABLE, TYPE_CHAIR, TYPE_TCAN; make sure to tag with RO_FLAG_IN_MALL
 }
 
 void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {

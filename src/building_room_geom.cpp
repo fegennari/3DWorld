@@ -235,6 +235,10 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 	}
 	else { // rectangular or short table
 		assert(c.shape == SHAPE_CUBE || c.shape == SHAPE_SHORT);
+
+		if (c.in_mall()) { // mall food court table
+			// TODO
+		}
 		// Note: glass table top and legs won't quite match the geometry used for collision detection and queries, but it's probably close enough
 		bool const glass(c.is_glass_table()); // 50% glass top with metal base; only in houses; not dressers/desks
 		top       .z1() += (1.0 - (glass ? 0.25 : 1.0)*top_dz)*dz; // glass tables have a thinner top
@@ -285,10 +289,16 @@ void get_chair_cubes(room_object_t const &c_in, cube_t cubes[3]) {
 void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 6 quads for seat + 5 quads for back + 4 quads per leg = 27 quads = 108 verts
 	cube_t cubes[3]; // seat, back, legs_bcube
 	get_chair_cubes(c, cubes);
-	get_material(tid_nm_pair_t(MARBLE_TEX, 1.2*tscale, 1), 1).add_cube_to_verts(cubes[0], apply_light_color(c), c.get_llc()); // seat; shadowed, all faces drawn
-	colorRGBA const color(apply_wood_light_color(c));
-	get_wood_material(tscale).add_cube_to_verts(cubes[1], color, c.get_llc(), EF_Z1); // back; skip bottom face
-	add_tc_legs(cubes[2], c, color, CHAIR_LEG_WIDTH, 1, tscale); // legs
+
+	if (c.in_mall()) { // mall food court chair
+		// TODO
+	}
+	else {
+		get_material(tid_nm_pair_t(MARBLE_TEX, 1.2*tscale, 1), 1).add_cube_to_verts(cubes[0], apply_light_color(c), c.get_llc()); // seat; shadowed, all faces drawn
+		colorRGBA const color(apply_wood_light_color(c));
+		get_wood_material(tscale).add_cube_to_verts(cubes[1], color, c.get_llc(), EF_Z1); // back; skip bottom face
+		add_tc_legs(cubes[2], c, color, CHAIR_LEG_WIDTH, 1, tscale); // legs
+	}
 }
 
 room_object_t get_dresser_middle(room_object_t const &c) {
