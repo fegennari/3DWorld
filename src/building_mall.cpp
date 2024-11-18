@@ -186,6 +186,9 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 		}
 		interior->elevators.push_back(elevator);
 	}
+	if (is_in_city) { // add skylight(s)?
+		// must call is_cube_city_placement_invalid() and add_city_plot_cut()
+	}
 }
 
 bool building_t::is_cube_city_placement_invalid(cube_t const &c) const { // for mall skylights, elevator, etc.
@@ -530,7 +533,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	float const light_amt = 1.0; // fully lit, for now
 	unsigned const num_floors(interior->num_extb_floors);
 	cube_t const mall_center(get_mall_center(room));
-	vect_cube_t openings, railing_cuts, railing_segs, temp, pillars;
+	vect_cube_t openings, railing_cuts, railing_segs, temp, pillars, blockers; // blockers are on the first/ground floor only
 	vector<plant_loc_t> plant_locs;
 	point plant_loc(0.0, 0.0, zval);
 	get_mall_open_areas(room, openings);
@@ -539,6 +542,9 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	colorRGBA const bar_color(LT_GRAY);
 	colorRGBA pot_colors[3]; // plants at {stairs, escalators, pillars}
 	for (unsigned n = 0; n < 3; ++n) {pot_colors[n] = choose_pot_color(rgen);}
+	cube_t entrance_stairs_bcube(interior->get_ext_basement_door()); // approximate
+	entrance_stairs_bcube.expand_by_xy(2.0*(floor_spacing - window_vspace) + doorway_width); // add plenty of clearance around the door for the stairs
+	if (num_floors == 1) {blockers.push_back(entrance_stairs_bcube);} // entrance is on the first/ground floor
 	cube_t pillar(room); // copy room zvals
 
 	// gather railing cuts and plant locs
@@ -560,6 +566,10 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 				plant_loc[!s.dim] = s.d[!s.dim][d] + (d ? 1.0 : -1.0)*1.25*plant_radius;
 				plant_locs.emplace_back(plant_loc, plant_radius, pot_colors[0]);
 			}
+		}
+		if (s.z1() <= zval) { // ground floor, add a blocker
+			blockers.push_back(s);
+			blockers.back().d[s.dim][!s.dir] += 1.25*(s.dir ? -1.0 : 1.0)*s.get_width(); // extend from bottom of stairs
 		}
 	} // for s
 	for (escalator_t const &e : interior->escalators) {
@@ -584,6 +594,10 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			loc.z = e.z1() + floor_spacing; // one floor above
 			plant_locs.emplace_back(loc, plant_radius, pot_colors[1], 1); // upper_floor=1
 		}
+		if (e.z1() <= zval) { // ground floor, add a blocker
+			blockers.push_back(e);
+			blockers.back().d[e.dim][!e.dir] += 1.5*(e.dir ? -1.0 : 1.0)*e.get_width(); // extend from bottom of stairs
+		}
 	} // for e
 	for (elevator_t const &e : interior->elevators) {
 		if (!e.in_mall) continue;
@@ -603,6 +617,8 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 				add_clock_to_cube(place_cube, z, room_id, light_amt, e.dim, e.dir, digital); // front
 			}
 		} // for f
+		blockers.push_back(e);
+		blockers.back().d[e.dim][e.dir] += (e.dir ? 1.0 : -1.0)*e.get_length(); // add space in front
 	} // for e
 	room.has_elevator = num_elevators; // should this be set earlier?
 
@@ -622,18 +638,18 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		}
 		for (unsigned dim = 0; dim < 2; ++dim) { // add railings and glass plates; somewhat duplicated with the openings code below, but difficult to factor out
 			unsigned const skip_mask(get_skip_mask_for_xy(!dim));
-			bool const dir((dim == se_dim) ? se_dir : !ww_dir);
+			bool const dir((bool(dim) == se_dim) ? se_dir : !ww_dir);
 			cube_t railing(railing_area);
 			set_wall_width(railing, railing_area.d[dim][dir], plate_thickness, dim); // start with panel width
 			// add bottom bar(s)
 			cube_t bot_bar(railing);
-			if (is_escalator && dim != se_dim) {bot_bar.d[se_dim][!se_dir] = c.d[se_dim][!se_dir];} // use full area for bottom bar
+			if (is_escalator && bool(dim) != se_dim) {bot_bar.d[se_dim][!se_dir] = c.d[se_dim][!se_dir];} // use full area for bottom bar
 			bot_bar.expand_by_xy (bot_bar_thickness - plate_thickness); // additional expand from plate
 			bot_bar.expand_in_dim(!dim, plate_thickness); // fill the corner notch
 			set_cube_zvals(bot_bar, zb1, zb2);
 			objs.emplace_back(bot_bar, TYPE_METAL_BAR, room_id, !dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, bar_color, skip_mask);
 
-			if (dim == se_dim) { // add second bottom bar to the other end, under the stairs or escalator, to close the ceiling-floor gap
+			if (bool(dim) == se_dim) { // add second bottom bar to the other end, under the stairs or escalator, to close the ceiling-floor gap
 				bot_bar.translate_dim(se_dim, (se_dir ? -1.0 : 1.0)*c.get_sz_dim(se_dim));
 				objs.emplace_back(bot_bar, TYPE_METAL_BAR, room_id, !dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, bar_color, skip_mask);
 			}
@@ -653,7 +669,8 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		pillar.d[!se_dim][ ww_dir] = attach_pos;
 		pillar.d[!se_dim][!ww_dir] = attach_pos + (ww_dir ? -1.0 : 1.0)*2.0*pillar_hwidth; // extend into the opening
 		set_wall_width(pillar, (railing_area.d[se_dim][0] + (se_dir ? 0.1 : 0.9)*railing_area.get_sz_dim(se_dim)), pillar_hwidth, se_dim); // close to stairs/escalator
-		pillars.push_back(pillar);
+		pillars .push_back(pillar);
+		blockers.push_back(pillar);
 		// add railing cut where landing connects to walkway
 		cube_t cut(c);
 		cut.z2() += 0.5*floor_spacing; // extend above top of railing
@@ -675,11 +692,11 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			pillars     .push_back(pillar);
 			railing_cuts.push_back(pillar);
 			// place plants to the sides of pillars
-			float const plant_radius(0.2*window_vspace);
+			float const plant_radius(0.2*window_vspace), plant_clearance(1.25*plant_radius);
 			plant_loc[!mall_dim] = pillar_pos;
 
 			for (unsigned d = 0; d < 2; ++d) {
-				plant_loc[mall_dim] = pillar.d[mall_dim][d] + (d ? 1.0 : -1.0)*1.25*plant_radius;
+				plant_loc[mall_dim] = pillar.d[mall_dim][d] + (d ? 1.0 : -1.0)*plant_clearance;
 				plant_locs.emplace_back(plant_loc, plant_radius, pot_colors[2]);
 			}
 			if (add_fire_extinguishers) { // maybe add fire extinguisher on pillar
@@ -688,6 +705,9 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 					add_fire_ext(fe_height, fe_radius, zval, pillar.d[dim][!dir], pillar.get_center_dim(!dim), room_id, light_amt, dim, dir);
 				}
 			}
+			blockers.push_back(pillar);
+			blockers.back().expand_in_dim( mall_dim, 2.0*plant_clearance); // add clearance for plants
+			blockers.back().expand_in_dim(!mall_dim, 2.0*fe_radius      ); // add clearance for fire extinguisherts
 		} // for dir
 		add_fe ^= 1; // swap every pair of pillars, alternating sides
 	} // for opening
@@ -770,11 +790,9 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		cbox.expand_in_dim( dim,  1.0*wall_thickness); // grow
 		cbox.expand_in_dim(!dim, -0.5*wall_thickness); // shrink
 		objs.emplace_back(cbox, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, GRAY);
+		// add closed gate or other objects?
 	} // for d
 
-	if (is_in_city) {
-		// add skylight(s)?
-	}
 	// add a fountain in the center of an opening
 	if (!openings.empty() && building_obj_model_loader.is_model_valid(OBJ_MODEL_FOUNTAIN)) {
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FLAG)); // W, D, H
