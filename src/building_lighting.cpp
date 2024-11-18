@@ -1420,7 +1420,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	float const room_xy_expand(0.75*wall_thickness), player_feet_zval(camera_bs.z - get_bldg_player_height()), ground_floor_z2(ground_floor_z1 + window_vspacing);
 	bool const check_building_people(enable_building_people_ai()), check_attic(camera_in_building && has_attic() && interior->attic_access_open);
 	bool const camera_in_basement(camera_bs.z < ground_floor_z1), camera_in_ext_basement(camera_in_building && point_in_extended_basement_not_basement(camera_rot));
-	bool const show_room_name(display_mode & 0x20); // debugging, key '6'
+	bool const show_room_name(display_mode & 0x20), check_occlusion(display_mode & 0x08); // debugging, keys '6' and '4'
 	cube_t const &attic_access(interior->attic_access);
 	vect_cube_t &light_bcubes(interior->room_geom->light_bcubes);
 	vect_room_object_t &objs(interior->room_geom->objs); // non-const, light flags are updated
@@ -1535,14 +1535,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				if ((s.ix & 2) && s.z2() >= floor_above_z) { // cut above
 					cube_t cut(s);
 					set_cube_zvals(cut, ceil_above_z, floor_above_z);
-					bool const visible(is_rot_cube_visible(cut, xlate) && !((display_mode & 0x08) && check_obj_occluded(cut, camera_bs, oc, 0))); // VFC + occlusion culling
+					bool const visible(is_rot_cube_visible(cut, xlate) && !(check_occlusion && check_obj_occluded(cut, camera_bs, oc))); // VFC + occlusion culling
 					(visible ? cuts_above : cuts_above_nonvis).push_back(cut);
 					stairs_or_ramp_visible |= visible;
 				}
 				if ((s.ix & 1) && s.z1() <= ceil_below_z) { // cut below
 					cube_t cut(s);
 					set_cube_zvals(cut, ceil_below_z, floor_below_z);
-					bool const visible(is_rot_cube_visible(cut, xlate) && !((display_mode & 0x08) && check_obj_occluded(cut, camera_bs, oc, 0))); // VFC + occlusion culling
+					bool const visible(is_rot_cube_visible(cut, xlate) && !(check_occlusion && check_obj_occluded(cut, camera_bs, oc))); // VFC + occlusion culling
 					if (visible) {cuts_below.push_back(cut);}
 					stairs_or_ramp_visible |= visible;
 				}
@@ -1658,7 +1658,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		float const floor_below_zval(floor_z - window_vspacing), ceil_above_zval(ceil_z + window_vspacing);
 		// Note: we use level_z rather than floor_z for floor_is_above test so that it agrees with the threshold logic for player_in_basement
 		bool const floor_is_above((camera_z < level_z) && !is_single_floor), floor_is_below(camera_z > ceil_z+fc_thick); // check floor_ix transition points
-		if (same_floor_only && (floor_is_above || floor_is_below)) continue;
+		bool const diff_floors(floor_is_above || floor_is_below);
+		if (same_floor_only && diff_floors) continue;
 		if (same_or_adj_floor_only && (camera_z < level_z-window_vspacing || camera_z > ceil_z+fc_thick+window_vspacing)) continue;
 		if (!is_house && floor_is_below &&  in_ext_basement && !camera_in_ext_basement && lpos.z   < get_basement().z1()) continue; // light  in lower level extb, player not in extb
 		if (!is_house && floor_is_above && !in_ext_basement &&  camera_in_ext_basement && camera_z < get_basement().z1()) continue; // player in lower level extb, light  not in extb
@@ -1676,8 +1677,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		//bool const light_room_is_tall(room.is_single_floor && lpos.z > room.z1() + window_vspacing);
 		// special case for light shining down from above stairs or ramp when the player is below
 		bool const light_above_stairs(lpos.z > camera_z && light_room_has_stairs_or_ramp); // or ramp
-		bool stairs_light(0), camera_in_elevator(0), cull_if_not_by_stairs(0), in_camera_walkway(0), in_walkway_near_camera(0);
+		bool stairs_light(0), camera_in_elevator(0), cull_if_not_by_stairs(0), in_camera_walkway(0), in_walkway_near_camera(0), check_occ(check_occlusion);
 		//if (!light_above_stairs && camera_in_basement && !light_in_basement) {cull_if_not_by_stairs = 1;} // light may not be visible from basement; check not needed?
+		// if the player is in the same room, the light can't be occluded, except for backrooms and parking garage walls and retail shelf racks;
+		// floors and ceilings can still occlude though, except for mall concourses
+		if (in_camera_room && !in_retail_room && !room.is_backrooms() && !room.is_parking() && (!diff_floors || room.is_mall())) {check_occ = 0;}
 
 		if (is_in_elevator) {
 			elevator_t const &e(get_elevator(i->obj_id));
@@ -1685,7 +1689,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			
 			if (car.contains_pt(camera_rot)) {camera_in_elevator = 1;} // player inside elevator
 			else if (e.open_amt == 0.0) { // closed elevator
-				if (floor_is_above || floor_is_below)          continue; // viewed from a different floor
+				if (diff_floors) continue; // viewed from a different floor
 				if ((lpos[e.dim] < camera_rot[e.dim]) ^ e.dir) continue; // camera facing the back of the elevator: light not visible
 			}
 		}
@@ -1854,7 +1858,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					point const pts[4] = {point(s.x1(), s.y1(), z), point(s.x2(), s.y1(), z), point(s.x2(), s.y2(), z), point(s.x1(), s.y2(), z)};
 					cube_t vis_bcube(s);
 					for (unsigned n = 0; n < 4; ++n) {vis_bcube.union_with_pt(lpos + t*(pts[n] - lpos));}
-					if (is_rot_cube_visible(vis_bcube, xlate) && !((display_mode & 0x08) && check_obj_occluded(vis_bcube, camera_bs, oc, 0))) {maybe_visible = 1; break;}
+					if (is_rot_cube_visible(vis_bcube, xlate) && !(check_occ && check_obj_occluded(vis_bcube, camera_bs, oc))) {maybe_visible = 1; break;}
 				} // for s
 			}
 			if (!maybe_visible && floor_is_above) { // check for light on ceiling at top of U-shaped stairs
@@ -1879,7 +1883,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				i->light_amt = tfticks + flicker_time_secs*TICKS_PER_SECOND*delay_mult; // schedule time for next transition
 				i->flags    ^= RO_FLAG_OPEN;
 				// regenerate lights geometry (can be somewhat slow); only update if player is below the level of the light and the light itself is visible
-				if (camera_bs.z < i->z2() && is_rot_cube_visible(*i, xlate) && !((display_mode & 0x08) && check_obj_occluded(*i, camera_bs, oc, 0))) {
+				if (camera_bs.z < i->z2() && is_rot_cube_visible(*i, xlate) && !(check_occ && check_obj_occluded(*i, camera_bs, oc))) {
 					interior->room_geom->invalidate_lights_geom();
 				}
 			}
@@ -2000,7 +2004,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 		}
 		if (!is_rot_cube_visible(clipped_bc, xlate, 1)) continue; // VFC - post clip; inc_mirror_reflections=1
-		if ((display_mode & 0x08) && !clipped_bc.contains_pt(camera_rot) && check_obj_occluded(clipped_bc, camera_bs, oc, 0)) continue; // occlusion culling (expensive)
+		if (check_occ && !clipped_bc.contains_pt(camera_rot) && check_obj_occluded(clipped_bc, camera_bs, oc)) continue; // occlusion culling (expensive)
 		//float const bwidth(wall_light ? 1.0 : 0.25); // wall light omnidirectional; ceiling light as close to 180 degree FOV as can get without shadow clipping; shadows are wrong
 		float const bwidth(0.25); // as close to 180 degree FOV as we can get without shadow clipping
 		// should bwidth be set smaller for (in_retail_room && has_tall_retail())?
@@ -2169,7 +2173,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			unsigned const dlights_start(dl_sources.size());
 
 			if (!is_rot_cube_visible(clipped_area, xlate, 1)) {} // VFC, again; inc_mirror_reflections=1
-			else if ((display_mode & 0x08) && !clipped_area.contains_pt(camera_rot) && check_obj_occluded(clipped_area, camera_bs, oc, 0)) {} // occlusion culling
+			else if (check_occlusion && !clipped_area.contains_pt(camera_rot) && check_obj_occluded(clipped_area, camera_bs, oc)) {} // occlusion culling
 			else { // add the light
 				colorRGBA const color(add_sky_lighting ? colorRGBA(cur_diffuse) : outdoor_color);
 				float corner_horiz_dist(0.0);
@@ -2209,7 +2213,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				clipped_area2.intersect_with_cube_xy(proj_bcube2);
 
 				if (!is_rot_cube_visible(clipped_area2, xlate, 1)) {} // VFC; inc_mirror_reflections=1
-				else if ((display_mode & 0x08) && !clipped_area2.contains_pt(camera_rot) && check_obj_occluded(clipped_area2, camera_bs, oc, 0)) {} // occlusion culling
+				else if (check_occlusion && !clipped_area2.contains_pt(camera_rot) && check_obj_occluded(clipped_area2, camera_bs, oc)) {} // occlusion culling
 				else { // add the light
 					dl_sources.emplace_back(light_radius, lpos2, lpos2, cur_ambient, 0);
 					dl_sources.back().set_custom_bcube(clipped_area2);
