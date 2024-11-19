@@ -281,7 +281,7 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t avoid;
 
-	if (!objs.empty() && objs[objs_start].type == TYPE_TABLE) { // make sure there's enough space for the playerand AIs to walk around the table
+	if (!objs.empty() && objs[objs_start].type == TYPE_TABLE) { // make sure there's enough space for the player and AIs to walk around the table
 		avoid = objs[objs_start];
 		avoid.expand_by_xy(get_min_front_clearance_inc_people());
 	}

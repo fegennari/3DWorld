@@ -690,7 +690,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool is_small_closet() const {return (type == TYPE_CLOSET && get_width() < 1.2*dz());}
 	bool is_bottle_empty() const {return ((obj_id & 192) == 192);} // empty if both bits 6 and 7 are set; also applies to drink cans
 	bool desk_has_drawers()const {return bool(room_id & 3);} // 75% of the time
-	bool is_glass_table () const {return (type == TYPE_TABLE && (flags & RO_FLAG_IS_HOUSE) && (obj_id & 1));} // 50% chance if in a house
+	bool is_glass_table () const {return (type == TYPE_TABLE && is_house() && (obj_id & 1));} // 50% chance if in a house
 	bool is_parked_car  () const {return (type == TYPE_COLLIDER && (flags & RO_FLAG_FOR_CAR));}
 	bool is_sloped_ramp () const {return (type == TYPE_RAMP || (type == TYPE_POOL_TILE && shape == SHAPE_ANGLED));}
 	bool light_is_out   () const {return ((is_broken() || is_broken2()) && !is_open());} // only makes sense to call on lights
@@ -2731,6 +2731,7 @@ float get_closet_wall_thickness(room_object_t const &c);
 void get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collision=0);
 void get_bed_cubes   (room_object_t const &c, cube_t cubes[6]);
 void get_table_cubes (room_object_t const &c, cube_t cubes[5]);
+void get_cubes_for_mall_table(room_object_t const &c, float top_dz, cube_t cubes[3]);
 void get_conf_table_cubes(room_object_t const &c, cube_t cubes[2]);
 unsigned get_table_like_object_cubes(room_object_t const &c, cube_t cubes[7]);
 void get_chair_cubes (room_object_t const &c, cube_t cubes[3]);

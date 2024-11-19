@@ -904,7 +904,7 @@ void building_t::add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area,
 	for (cube_t const &c : blockers) {
 		if (place_area.intersects_xy(c)) {fc_blockers.push_back(c);} // only consider blockers in the food court area
 	}
-	// TODO: TYPE_TABLE, TYPE_CHAIR, TYPE_TCAN; make sure to tag with RO_FLAG_IN_MALL
+	// TODO: TYPE_TABLE (slightly taller than usual), TYPE_CHAIR, TYPE_TCAN; make sure to tag with RO_FLAG_IN_MALL
 }
 
 void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {

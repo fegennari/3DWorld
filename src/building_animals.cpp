@@ -399,7 +399,8 @@ bool can_hide_under(room_object_t const &c, cube_t &hide_area) {
 		hide_area = cubes[0]; // frame
 		return 1;
 	}
-	else if ((c.type == TYPE_DESK || c.type == TYPE_TABLE) && !c.is_on_floor()) { // skip fallen over furniture
+	// skip fallen over furniture and tables with a central support (round and mall)
+	else if ((c.type == TYPE_DESK || (c.type == TYPE_TABLE && c.shape != SHAPE_CYLIN && !c.in_mall())) && !c.is_on_floor()) {
 		cube_t cubes[5];
 		get_table_cubes(c, cubes); // body and legs
 		hide_area = cubes[0]; // body

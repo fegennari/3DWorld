@@ -596,6 +596,10 @@ bool can_use_table_coll(room_object_t const &c) {
 }
 // actually applies to tables, desks, dressers, and nightstands
 unsigned get_table_like_object_cubes(room_object_t const &c, cube_t cubes[7]) { // tables, desks, dressers, and nightstands
+	if (c.type == TYPE_TABLE && c.in_mall()) {
+		get_cubes_for_mall_table(c, 0.12, cubes); // top_dz=0.12
+		return 3; // {top, vert, base}
+	}
 	unsigned num(5);
 	get_table_cubes(c, cubes); // top and 4 legs
 	if (c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND) {cubes[num++] = get_dresser_middle(c);}
@@ -2400,10 +2404,11 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 	else if (can_use_table_coll(c)) { // objects with legs
 		cube_t cubes[7];
 		unsigned const num(get_table_like_object_cubes(c, cubes));
-		assert(num >= 5);
+		unsigned const legs_end(min(num, 5U)); // num_legs+1; typically 5, but can be less
+		assert(num >= 2); // top and at least one leg-like cube
 		lg_cubes.push_back(cubes[0]); // top of table, etc.
-		sm_cubes.insert(sm_cubes.end(), cubes+1, cubes+5); // skip table top; legs are small
-		sm_cubes.insert(lg_cubes.end(), cubes+5, cubes+num); // middle, drawers, and back
+		sm_cubes.insert(sm_cubes.end(), cubes+1, cubes+legs_end); // skip table top; legs are small
+		sm_cubes.insert(lg_cubes.end(), cubes+legs_end, cubes+num); // middle, drawers, and back; may be empty range
 	}
 	else if (type == TYPE_CONF_TABLE) {
 		cube_t cubes[2]; // {top, base}
