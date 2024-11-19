@@ -121,10 +121,11 @@ template<typename T> void add_inverted_triangles(T &verts, vector<unsigned> &ind
 	for (unsigned i = 0; i < numi; ++i) {indices[ixs_end + i] = (indices[ixs_end - i - 1] + numv);} // copy in reverse order
 }
 
-void apply_half_or_quarter(int half_or_quarter, unsigned &s_end) { // 0=full, 1=half, 2=quarter
+void apply_half_or_quarter(int half_or_quarter, unsigned &s_end) { // 0=full circle, 1=half circle, 2=quarter circle, 3=half a full circle in the other dim
 	if      (half_or_quarter == 0) {} // full
 	else if (half_or_quarter == 1) {s_end /= 2;} // half
 	else if (half_or_quarter == 2) {s_end /= 4;} // quarter
+	else if (half_or_quarter == 3) {} // half in other dim - not handled here
 	else {assert(0);}
 }
 
@@ -176,6 +177,7 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 		unsigned const ixs_off[6] = {1,2,0, 3,2,1}; // 1 quad = 2 triangles
 		bool const flat_sides(ndiv <= 6 && side_tscale == 0.0); // hack to draw bolts untextured with flat sides, since no other cylinders have only 6 sides
 		unsigned ndiv_draw(ndiv);
+		assert(half_or_quarter <= 2); // no half-in-other-dim
 		apply_half_or_quarter(half_or_quarter, ndiv_draw);
 		unsigned const num_side_verts(flat_sides ? 4*ndiv_draw : 2*(ndiv_draw+1)), unique_verts_per_side(flat_sides ? 4 : 2);
 		itri_verts.resize(itris_start + num_side_verts);
@@ -331,8 +333,9 @@ void rgeom_mat_t::add_vert_torus_to_verts(point const &center, float r_inner, fl
 	unsigned const def_ndiv(get_rgeom_sphere_ndiv(low_detail)); // calculate ndiv if not set
 	if (ndivo == 0) {ndivo = def_ndiv;}
 	if (ndivi == 0) {ndivi = def_ndiv;}
-	unsigned s_end(ndivo);
+	unsigned s_end(ndivo), t_end(ndivi), sin_cos_off(0);
 	apply_half_or_quarter(half_or_quarter, s_end);
+	if (half_or_quarter == 3) {t_end /= 2; sin_cos_off += 3*ndivi/4;} // half of a full circle (+z half)
 	bool const is_offset(spiral_offset != 0.0);
 	float const ts_tt(tscale/ndivi), ds(TWO_PI/ndivo), cds(cos(ds)), sds(sin(ds));
 	vector<float> const &sin_cos(gen_torus_sin_cos_vals(ndivi));
@@ -348,12 +351,13 @@ void rgeom_mat_t::add_vert_torus_to_verts(point const &center, float r_inner, fl
 		unsigned const tri_ix_start(itri_verts.size()), ixs_start(indices.size());
 
 		// Note: drawn as one triangle strip
-		for (unsigned t = 0; t <= ndivi; ++t) { // inner
-			unsigned const t_((t == ndivi) ? 0 : t);
+		for (unsigned t = 0; t <= t_end; ++t) { // inner
+			unsigned const t_((t + sin_cos_off) % ndivi);
 			float const cp(sin_cos[(t_<<1)+0]), sp(sin_cos[(t_<<1)+1]);
 
 			for (unsigned i = 0; i < 2; ++i) {
-				vector3d delta(pos[1-i]*sp + vector3d(0.0, 0.0, cp)); // normal
+				vector3d delta(pos[1-i]*sp); // normal
+				delta.z += cp;
 				if (is_offset) {delta.normalize();}
 				itri_verts.emplace_back((vpos[1-i] + delta*r_inner), delta, ts_tt*(s+1-i), ts_tt*t, cw);
 			}
@@ -371,7 +375,7 @@ void rgeom_mat_t::add_vert_torus_to_verts(point const &center, float r_inner, fl
 		for (unsigned i = ixs_start; i < indices.size(); i += 6) {std::swap(indices[i+4], indices[i+5]);}
 	} // for s
 }
-void rgeom_mat_t::add_contained_vert_torus_to_verts(cube_t const &c, colorRGBA const &color, float tscale, bool low_detail) {
+void rgeom_mat_t::add_contained_vert_torus_to_verts(cube_t const &c, colorRGBA const &color, float tscale, bool low_detail) { // unused
 	float const r_inner(0.5*c.dz()), r_outer(0.25*(c.dx() + c.dy()) - r_inner);
 	assert(r_inner > 0.0 && r_outer > 0.0); // cube must be wider than it is tall
 	add_vert_torus_to_verts(c.get_cube_center(), r_inner, r_outer, color, tscale, low_detail);
