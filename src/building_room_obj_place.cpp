@@ -135,7 +135,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 }
 
 // Note: must be first placed objects; returns the number of total objects added (table + optional chairs)
-unsigned building_t::add_table_and_chairs(rand_gen_t rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
+unsigned building_t::add_table_and_chairs(rand_gen_t rgen, cube_t const &room, vect_cube_t &blockers, unsigned room_id,
 	point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, unsigned max_chairs, bool use_tall_table)
 {
 	bool const use_bar_stools(use_tall_table);
@@ -166,6 +166,7 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, cube_t const &room, v
 	set_obj_id(objs);
 	if (max_chairs == 0) return 1; // table only
 	// maybe place some chairs around the table
+	unsigned const blockers_sz(blockers.size());
 	unsigned num_chairs(0);
 	bool prev_not_added(0), pri_dim(rgen.rand_bool()), pri_dir(rgen.rand_bool());
 
@@ -179,7 +180,7 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, cube_t const &room, v
 				point chair_pos(table_pos); // same starting center and z1
 				chair_pos[dim] += (dir ? -1.0f : 1.0f)*table_sz[dim];
 				bool const added(add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, 0, 0, use_bar_stools)); // office_chair=0
-				if (added) {++num_chairs;}
+				if (added) {++num_chairs; blockers.push_back(objs.back());}
 			}
 			if (num_chairs > 0) break; // done
 		} // for d
@@ -202,10 +203,12 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, cube_t const &room, v
 				chair_pos[dim] += (dir ? -1.0f : 1.0f)*table_sz[dim];
 				if (num_this_orient == 2) {chair_pos[!dim] += ((n==0) ? -1.0 : 1.0)*0.225*long_edge_len;} // offset to sides
 				bool const added(add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, 0)); // office_chair=0
-				if (added) {++num_chairs;} else {prev_not_added = 1;}
-			}
+				if (added) {++num_chairs; blockers.push_back(objs.back());}
+				else {prev_not_added = 1;}
+			} // for n
 		} // for orient
 	} // use chairs
+	blockers.resize(blockers_sz); // remove temp chair blockers
 	return num_chairs + 1; // add 1 for the table
 }
 void building_t::shorten_chairs_in_region(cube_t const &region, unsigned objs_start) {
