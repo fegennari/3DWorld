@@ -844,9 +844,11 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	// add trashcans
 	cube_t place_area(room);
 	place_area.expand_by_xy(-wall_thickness);
-	unsigned const num_trashcans(openings.size()/2 + 1); // per floor per side
-	float const tc_height(0.4*window_vspace), tc_radius(0.12*window_vspace);
-	room_obj_shape const tc_shape(rgen.rand_bool() ? SHAPE_CYLIN : SHAPE_CUBE);
+	unsigned const num_trashcans(openings.size()/4 + 1); // per floor per side
+	bool const is_cylin(rgen.rand_bool());
+	float const tc_height((is_cylin ? 0.28 : 0.4)*window_vspace), tc_radius(0.12*window_vspace);
+	room_obj_shape const tc_shape(is_cylin ? SHAPE_CYLIN : SHAPE_CUBE);
+	colorRGBA const tc_color(is_cylin ? LT_GRAY : colorRGBA(0.8, 0.6, 0.4)); // tan for cube trashcans
 	vect_cube_t tc_blockers;
 
 	for (unsigned f = 0; f < num_floors; ++f) {
@@ -857,7 +859,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		for (unsigned d = 0; d < 2; ++d) { // side
 			float const wall_pos(place_area.d[!mall_dim][d]); // with a bit of padding
 			tcan.d[!mall_dim][ d] = wall_pos; // against the wall
-			tcan.d[!mall_dim][!d] = wall_pos + (d ? -1.0 : 1.0)*2.0*tc_radius;
+			tcan.d[!mall_dim][!d] = wall_pos + (d ? -1.0 : 1.0)*(is_cylin ? 2.0 : 1.6)*tc_radius;
 
 			for (unsigned n = 0; n < num_trashcans; ++n) {
 				for (unsigned N = 0; N < 10; ++N) { // 10 attempts to place trashcan
@@ -868,9 +870,21 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 					if (interior->mall_bathrooms.intersects(test_cube)) continue; // too close to bathroom doors and water fountain
 					if (has_bcube_int(test_cube, interior->int_windows) || has_bcube_int(test_cube, interior->store_doorways)) continue; // too close to store door or window
 					if (has_bcube_int(test_cube, tc_blockers)) continue;
-					objs.emplace_back(tcan, TYPE_TCAN, room_id, !mall_dim, 0, RO_FLAG_IN_MALL, light_amt, tc_shape, LT_GRAY);
+					objs.emplace_back(tcan, TYPE_TCAN, room_id, !mall_dim, !d, RO_FLAG_IN_MALL, light_amt, tc_shape, tc_color);
 					tc_blockers.push_back(tcan);
 					tc_blockers.back().expand_by_xy(window_vspace); // don't place two nearby trashcans
+					// place trash in trashcans
+					unsigned const num_objs(rgen.rand() & 3); // 0-3
+
+					for (unsigned n = 0; n < num_objs; ++n) {
+						float trash_radius(tc_radius*rgen.rand_uniform(0.18, 0.3));
+						cube_t trash;
+						gen_xy_pos_for_round_obj(trash, tcan, trash_radius, 2.0*trash_radius, (trash_radius + (is_cylin ? 0.2 : 0.1)*tc_radius), rgen, 1); // place_at_z1=1
+						trash.translate_dim(2, (trash_radius + (is_cylin ? 0.75 : 0.1)*tc_radius)); // shift up, more for cylinders
+						colorRGBA const color(trash_colors[rgen.rand() % NUM_TRASH_COLORS]);
+						objs.emplace_back(trash, TYPE_TRASH, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, light_amt, SHAPE_SPHERE, color);
+						set_obj_id(objs);
+					} // for n
 				} // for N
 			} // for n
 			tc_blockers.clear();

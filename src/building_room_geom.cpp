@@ -3621,57 +3621,96 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 	colorRGBA const color(apply_light_color(c));
 
 	if (c.in_mall()) { // large mall trashcan
-		rgeom_mat_t &side_mat(get_metal_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+		rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
 
 		if (c.shape == SHAPE_CYLIN) {
-			side_mat.add_vcylin_to_verts(c, color, 0, 0); // sides only, untextured
-			// TODO: black torus rim
-			// TODO: black inner lining inverted vcylin
+			float const radius(c.get_radius()), r_inner(0.67*radius), torus_ri(0.5*(radius - r_inner)), torus_ro(radius - torus_ri);
+			cube_t inner(c);
+			inner.expand_by_xy(-torus_ri); // shrink to centerline of torus, not full width, so that the lid has some overlap
+			inner.z1() += 0.05*c.dz();
+			mat.add_vcylin_to_verts(c, color, 0, 0); // outer, sides only, untextured
+			// draw black torus rim; half_or_quarter=3 (top half)
+			mat.add_vert_torus_to_verts(point(c.xc(), c.yc(), c.z2()), torus_ri, torus_ro, apply_light_color(c, BKGRAY), 1.0, 0, 3);
+			unsigned const verts_start(mat.itri_verts.size()), ixs_start(mat.indices.size());
+			mat.add_vcylin_to_verts(inner, apply_light_color(c, GRAY_BLACK), 1, 0); // inner, sides + bottom, untextured
+			// invert inner surface
+			for (auto i = mat.itri_verts.begin()+verts_start; i != mat.itri_verts.end(); ++i) {i->invert_normal();}
+			reverse(mat.indices.begin()+ixs_start, mat.indices.end());
 		}
-		else { // cube
-			side_mat.add_cube_to_verts_untextured(c, color, EF_Z1); // skip bottom
-			// TODO: exterior cube with hole cut into top front
-		}
-		return;
-	}
-	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+		else { // exterior cube with hole cut into top front
+			float const dz(c.dz()), width(c.get_width()), wall_thickness(0.01*dz), border_thickness(0.1*width);
+			cube_t inner(c), bot(c), top(c);
+			inner.expand_in_z (-wall_thickness); // shift bottom up and top down
+			inner.expand_by_xy(-wall_thickness);
+			bot.z2() -= 0.35*dz;
+			top.z1() += 0.95*dz;
+			cube_t tbag(inner);
+			tbag.expand_by_xy(-wall_thickness);
+			tbag.z2() = bot.z2() - 0.1*dz;
+			unsigned const front_face(get_face_mask(c.dim, c.dir)), skip_faces(~front_face | EF_Z1); // skip front and bottom
+			mat.add_cube_to_verts_untextured(c, color, skip_faces); // outer
+			mat.add_cube_to_verts(inner, color*0.5, all_zeros, skip_faces, 0, 0, 0, 1); // outer, darker, inverted
+			mat.add_cube_to_verts(tbag, apply_light_color(c, BKGRAY), all_zeros, (~front_face | EF_Z2), 0, 0, 0, 1); // black trash bag, inverted
+			// draw the front face with a cutout
+			mat.add_cube_to_verts_untextured(bot, color, front_face);
+			mat.add_cube_to_verts_untextured(top, color, front_face);
+			cube_t front(bot);
+			front.z1() += border_thickness;
+			front.expand_in_dim(!c.dim, -border_thickness);
+			front.d[c.dim][!c.dir] = c.d[c.dim][c.dir]; // flush with front edge
+			front.d[c.dim][ c.dir] = c.d[c.dim][c.dir] + (c.dir ? 1.0 : -1.0)*wall_thickness;
 
-	if (c.shape == SHAPE_CYLIN) {
-		mat.add_vcylin_to_verts(c, color, 1, 0, 1, 1, 0.7, 1.0); // untextured, bottom only, two_sided truncated cone with inverted bottom normal
+			for (unsigned d = 0; d < 2; ++d) { // left and right of opening
+				cube_t side(c);
+				set_cube_zvals(side, bot.z2(), top.z1());
+				side.d[!c.dim][!d] = front.d[!c.dim][d];
+				mat.add_cube_to_verts_untextured(side, color, front_face);
+			}
+			// draw the lighter front panel with a texture
+			rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(get_texture_by_name("roads/asphalt.jpg"), 1.0/width, 0), 0, 0, 1)); // unshadowed, small
+			front_mat.add_cube_to_verts(front, color*1.6, c.get_llc(), (~get_face_mask(c.dim, !c.dir) | EF_Z1)); // skip back and bottom
+		}
 	}
-	else { // sloped cube; this shape is rather unique, so is drawn inline; untextured
-		cube_t base(c);
-		base.expand_by_xy(vector3d(-0.2*c.dx(), -0.2*c.dy(), 0.0)); // shrink base by 40%
-		auto &verts(mat.quad_verts);
-		rgeom_mat_t::vertex_t v;
-		v.set_c4(color);
-		v.set_ortho_norm(2, 1); // +z
+	else { // smaller house/office trashcan
+		rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+
+		if (c.shape == SHAPE_CYLIN) {
+			mat.add_vcylin_to_verts(c, color, 1, 0, 1, 1, 0.7, 1.0); // untextured, bottom only, two_sided truncated cone with inverted bottom normal
+		}
+		else { // sloped cube; this shape is rather unique, so is drawn inline; untextured
+			cube_t base(c);
+			base.expand_by_xy(vector3d(-0.2*c.dx(), -0.2*c.dy(), 0.0)); // shrink base by 40%
+			auto &verts(mat.quad_verts);
+			rgeom_mat_t::vertex_t v;
+			v.set_c4(color);
+			v.set_ortho_norm(2, 1); // +z
 		
-		for (unsigned i = 0; i < 4; ++i) { // bottom
-			bool const xp(i==0||i==1), yp(i==1||i==2);
-			v.v.assign(base.d[0][xp], base.d[1][yp], base.z1());
-			v.t[0] = float(xp); v.t[1] = float(yp); // required for normal mapping ddx/ddy on texture coordinate
-			verts.push_back(v);
-		}
-		for (unsigned dim = 0; dim < 2; ++dim) { // x,y
-			for (unsigned dir = 0; dir < 2; ++dir) {
-				unsigned const six(verts.size());
+			for (unsigned i = 0; i < 4; ++i) { // bottom
+				bool const xp(i==0||i==1), yp(i==1||i==2);
+				v.v.assign(base.d[0][xp], base.d[1][yp], base.z1());
+				v.t[0] = float(xp); v.t[1] = float(yp); // required for normal mapping ddx/ddy on texture coordinate
+				verts.push_back(v);
+			}
+			for (unsigned dim = 0; dim < 2; ++dim) { // x,y
+				for (unsigned dir = 0; dir < 2; ++dir) {
+					unsigned const six(verts.size());
 
-				for (unsigned i = 0; i < 4; ++i) {
-					bool const tb(i==1||i==2), lohi(i==0||i==1);
-					v.v[ dim] = (tb ? (cube_t)c : base).d[ dim][dir];
-					v.v[!dim] = (tb ? (cube_t)c : base).d[!dim][lohi];
-					v.v.z  = c.d[2][tb];
-					//v.t[0] = float(tb); v.t[1] = float(lohi); // causes a seam between triangles due to TBN basis change, so leave at 0.0
-					verts.push_back(v);
-				}
-				for (unsigned i = 0; i < 4; ++i) {verts.push_back(verts[six+3-i]);} // add reversed quad for opposing face
-				norm_comp n(cross_product((verts[six].v - verts[six+1].v), (verts[six].v - verts[six+2].v)).get_norm());
-				for (unsigned i = 0; i < 4; ++i) {verts[six+i].set_norm(n);} // front face
-				n.invert_normal();
-				for (unsigned i = 4; i < 8; ++i) {verts[six+i].set_norm(n);} // back face
-			} // for dir
-		} // for dim
+					for (unsigned i = 0; i < 4; ++i) {
+						bool const tb(i==1||i==2), lohi(i==0||i==1);
+						v.v[ dim] = (tb ? (cube_t)c : base).d[ dim][dir];
+						v.v[!dim] = (tb ? (cube_t)c : base).d[!dim][lohi];
+						v.v.z  = c.d[2][tb];
+						//v.t[0] = float(tb); v.t[1] = float(lohi); // causes a seam between triangles due to TBN basis change, so leave at 0.0
+						verts.push_back(v);
+					}
+					for (unsigned i = 0; i < 4; ++i) {verts.push_back(verts[six+3-i]);} // add reversed quad for opposing face
+					norm_comp n(cross_product((verts[six].v - verts[six+1].v), (verts[six].v - verts[six+2].v)).get_norm());
+					for (unsigned i = 0; i < 4; ++i) {verts[six+i].set_norm(n);} // front face
+					n.invert_normal();
+					for (unsigned i = 4; i < 8; ++i) {verts[six+i].set_norm(n);} // back face
+				} // for dir
+			} // for dim
+		}
 	}
 }
 
