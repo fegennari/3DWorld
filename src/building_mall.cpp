@@ -556,10 +556,10 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		cut.expand_in_dim(!s.dim, 0.8*wall_thickness); // add space for railings
 		railing_cuts.push_back(cut);
 		room.has_stairs = 255; // should this be set earlier?
-		
 		// place plants to the sides of stairs at the bottom
+		float const plant_radius(0.15*window_vspace);
+
 		if (s.z1() < room.z1() + 0.5*floor_spacing) { // only on ground floor
-			float const plant_radius(0.15*window_vspace);
 			plant_loc[s.dim] = 0.9*s.d[s.dim][!s.dir] + 0.1*s.d[s.dim][s.dir]; // bottom end of stairs
 
 			for (unsigned d = 0; d < 2; ++d) {
@@ -570,6 +570,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		if (s.z1() <= zval) { // ground floor, add a blocker
 			blockers.push_back(s);
 			blockers.back().d[s.dim][!s.dir] += 1.25*(s.dir ? -1.0 : 1.0)*s.get_width(); // extend from bottom of stairs
+			blockers.back().expand_in_dim(!s.dim, 2.25f*plant_radius); // add side clearance for plants
 		}
 	} // for s
 	for (escalator_t const &e : interior->escalators) {
@@ -596,7 +597,8 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		}
 		if (e.z1() <= zval) { // ground floor, add a blocker
 			blockers.push_back(e);
-			blockers.back().d[e.dim][!e.dir] += 1.5*(e.dir ? -1.0 : 1.0)*e.get_width(); // extend from bottom of stairs
+			blockers.back().d[e.dim][!e.dir] += 2.0*(e.dir ? -1.0 : 1.0)*e.get_width(); // extend from bottom of escalator
+			blockers.back().expand_in_dim(!e.dim, 2.25f*plant_radius); // add side clearance for plants
 		}
 	} // for e
 	for (elevator_t const &e : interior->elevators) {
@@ -818,8 +820,9 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			fc_opening_ix = rgen.rand() % openings.size();
 			if (int(fc_opening_ix) != fountain_opening_ix) break;
 		}
-		cube_t const &opening(openings[fc_opening_ix]);
-		add_food_court_objs(rgen, opening, zval, room_id, light_amt, blockers);
+		cube_t place_area(openings[fc_opening_ix]);
+		place_area.expand_by_xy(0.06*room.get_sz_dim(!mall_dim)); // allow a bit of overlap with the walkway bounds
+		add_food_court_objs(rgen, place_area, zval, room_id, light_amt, blockers);
 	}
 	// if there are bathrooms, add a water fountain between them
 	if (!interior->mall_bathrooms.is_all_zeros() && building_obj_model_loader.is_model_valid(OBJ_MODEL_WFOUNTAIN)) {
@@ -898,13 +901,79 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	return pillars_start;
 }
 
-void building_t::add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, vect_cube_t const &blockers) {
+bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &table, cube_t const &place_area, colorRGBA const &chair_color,
+	unsigned room_id, float tot_light_amt, bool dim, unsigned tid_tag, vect_cube_t &blockers)
+{
+	if (!place_area.contains_cube_xy(table) || has_bcube_int(table, blockers)) return 0;
+	vect_room_object_t &objs(interior->room_geom->objs);
+	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, RO_FLAG_IN_MALL, tot_light_amt, SHAPE_CUBE, WHITE);
+	set_obj_id(objs);
+	objs.back().item_flags = tid_tag; // sets table texture
+	// place chairs around the table
+	float const table_len(table.get_sz_dim(dim)), table_width(table.get_sz_dim(!dim)), table_center(table.get_center_dim(!dim));
+	unsigned const chairs_per_side(round_fp(table_len/table_width));
+	float const chair_spacing(table_len/chairs_per_side);
+	float const window_vspacing(get_window_vspace()), chair_height(0.4*window_vspacing), chair_hwidth(0.1*window_vspacing);
+	bool const first_dir(rgen.rand_bool());
+
+	for (unsigned D = 0; D < 2; ++D) {
+		bool const dir(bool(D) ^ first_dir); // prevent bias
+
+		for (unsigned n = 0; n < chairs_per_side; ++n) {
+			if (D == 0 && rgen.rand_float() < 0.33) continue; // skip 33% of the time, but only on one side
+			point chair_pos(0.0, 0.0, table.z1());
+			chair_pos[!dim] = table_center + (dir ? -1.0f : 1.0f)*0.5*table_width;
+			chair_pos[ dim] = table.d[dim][0] + (n + 0.5)*chair_spacing;
+			// customized version of add_chair()
+			chair_pos[!dim] += (dir ? -1.0 : 1.0)*rgen.rand_uniform(-0.5, 1.2)*chair_hwidth;
+			cube_t chair(get_cube_height_radius(chair_pos, chair_hwidth, chair_height));
+			if (!place_area.contains_cube_xy(chair) || has_bcube_int(chair, blockers)) continue;
+			objs.emplace_back(chair, TYPE_CHAIR, room_id, !dim, dir, RO_FLAG_IN_MALL, tot_light_amt, SHAPE_CUBE, chair_color);
+			blockers.push_back(objs.back());
+		} // for n
+	} // for D
+	blockers.push_back(table); // add the table last, so that it doesn't block its own chairs
+	return 1;
+}
+
+bool building_t::add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, vect_cube_t const &blockers) {
+	bool const dim(rgen.rand_bool()); // or follow mall dim?
+	float const window_vspacing(get_window_vspace()), clearance(get_min_front_clearance_inc_people()), row_span(place_area.get_sz_dim(!dim));
+	float const table_height(0.3*window_vspacing), table_width(0.4*window_vspacing), table_len_min(table_width), table_len_max(3.0*table_len_min), table_gap(0.25*table_width);
+	float row_spacing(2.5*table_width), col_start(place_area.d[dim][0]), col_end(place_area.d[dim][1]);
+	unsigned const num_rows(row_span/row_spacing); // floor
+	if (num_rows == 0) return 0; // shouldn't happen?
+	row_spacing = row_span/num_rows;
+	// find blockers intersecting the place area
 	vect_cube_t fc_blockers;
 
 	for (cube_t const &c : blockers) {
-		if (place_area.intersects_xy(c)) {fc_blockers.push_back(c);} // only consider blockers in the food court area
+		if (!place_area.intersects_xy(c)) continue; // only consider blockers in the food court area
+		fc_blockers.push_back(c);
+		fc_blockers.back().expand_by_xy(clearance); // add space for walking around tables and chairs
 	}
-	// TODO: TYPE_TABLE (slightly taller than usual), TYPE_CHAIR, TYPE_TCAN; make sure to tag with RO_FLAG_IN_MALL
+	unsigned const NUM_MALL_CHAIR_COLORS = 5;
+	colorRGBA const mall_chair_colors[NUM_MALL_CHAIR_COLORS] = {WHITE, LT_GRAY, GRAY, ORANGE, LT_BROWN};
+	colorRGBA const chair_color(mall_chair_colors[rgen.rand() % NUM_MALL_CHAIR_COLORS]);
+	unsigned const tid_tag(rgen.rand()); // sets table texture
+	cube_t table;
+	set_cube_zvals(table, zval, zval+table_height);
+
+	for (unsigned r = 0; r < num_rows; ++r) {
+		float const row_pos(place_area.d[!dim][0] + (r + 0.5)*row_spacing);
+		set_wall_width(table, row_pos, 0.5*table_width, !dim);
+		float pos(col_start + table_len_min*rgen.rand_float()); // starting point; use a random offset
+
+		while (pos + 1.05*table_len_min < col_end) { // while we can place a table; slight bias to account for FP error
+			float const table_len(rgen.rand_uniform(table_len_min, min(table_len_max, (col_end - pos))));
+			table.d[dim][0] = pos;
+			table.d[dim][1] = pos + table_len;
+			pos += table_len + table_gap;
+			add_mall_table_with_chairs(rgen, table, place_area, chair_color, room_id, tot_light_amt, dim, tid_tag, fc_blockers);
+		} // while
+	} // for r
+	// TODO: trashcans
+	return 1;
 }
 
 void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {

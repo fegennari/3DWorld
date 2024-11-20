@@ -263,8 +263,9 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 			top.expand_by_xy(-0.03*width);
 			rgeom_mat_t &mat(get_untextured_material(1)); // shadowed
 			mat.add_cube_to_verts_untextured(frame, apply_light_color(c, DK_GRAY)); // gray frame; all faces drawn
-			// Note: could use bathroom tile, foam, water, marble, or marble2 textures as well
-			rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/glass_tiles.jpg"), 1.0/width), 0)); // unshadowed - the frame will cast shadows
+			unsigned const NUM_PAT_TEX = 6;
+			string const pat_tex[NUM_PAT_TEX] = {"interiors/glass_tiles.jpg", "marble.jpg", "marble2.jpg", "bathroom_tile.jpg", "foam1.jpg", "water.jpg"};
+			rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(get_texture_by_name(pat_tex[c.item_flags % NUM_PAT_TEX]), 1.0/width), 0)); // unshadowed - frame will cast shadows
 			top_mat.add_cube_to_verts(top, apply_light_color(c), c.get_llc(), ~EF_Z2); // draw top surface only
 			// draw vertical pole and base
 			colorRGBA const base_color(apply_light_color(c, mall_tc_legs_color));
@@ -317,9 +318,9 @@ void get_chair_cubes(room_object_t const &c_in, cube_t cubes[3]) {
 	float const height(c.dz()*((c.shape == SHAPE_SHORT) ? 1.333 : 1.0)); // effective height if the chair wasn't short
 	cube_t seat(c), back(c), legs_bcube(c);
 	seat.z1() += 0.32*height;
-	seat.z2()  = back.z1() = seat.z1() + (mall_chair ? 0.08 : 0.06)*height;
+	seat.z2()  = back.z1() = seat.z1() + (mall_chair ? 0.02 : 0.06)*height;
 	legs_bcube.z2() = seat.z1();
-	back.d[c.dim][c.dir] += (mall_chair ? 0.99 : 0.88f)*(c.dir ? -1.0f : 1.0f)*c.get_depth();
+	back.d[c.dim][c.dir] += (mall_chair ? 0.96 : 0.88f)*(c.dir ? -1.0f : 1.0f)*c.get_depth();
 	cubes[0] = seat; cubes[1] = back; cubes[2] = legs_bcube;
 
 	if (c.is_on_floor()) { // rotate chair
