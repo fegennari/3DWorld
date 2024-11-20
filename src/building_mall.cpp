@@ -26,7 +26,7 @@ cube_t building_t::get_mall_center(cube_t const &room) const {
 	center.expand_in_dim( dim, -2.0*ww_width); // long dim
 	return center;
 }
-void building_t::get_mall_open_areas(cube_t const &room, vect_cube_t &openings) const {
+void building_t::get_mall_open_areas(cube_t const &room, vect_cube_t &openings) const { // Note: applies to single floor malls as well
 	bool const dim(interior->extb_wall_dim);
 	cube_t const center(get_mall_center(room));
 	float const length(center.get_sz_dim(dim)), width(center.get_sz_dim(!dim)), gap(0.75*width), half_gap(0.5*gap);
@@ -821,7 +821,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			if (int(fc_opening_ix) != fountain_opening_ix) break;
 		}
 		cube_t place_area(openings[fc_opening_ix]);
-		place_area.expand_by_xy(0.06*room.get_sz_dim(!mall_dim)); // allow a bit of overlap with the walkway bounds
+		if (num_floors > 1) {place_area.expand_by_xy(0.06*room.get_sz_dim(!mall_dim));} // allow a bit of overlap with the walkway bounds if there are multiple floors
 		add_food_court_objs(rgen, place_area, zval, room_id, light_amt, blockers);
 	}
 	// if there are bathrooms, add a water fountain between them
