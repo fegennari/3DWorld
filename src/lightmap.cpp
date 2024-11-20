@@ -958,7 +958,7 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 	static vector<unsigned> gb_data;
 	static vector<unsigned short> elem_data;
 	unsigned const elem_tex_x = (1<<8); // must agree with value in shader
-	unsigned const elem_tex_y = (1<<10); // larger = slower, but more lights/higher quality
+	unsigned const elem_tex_y = (1<<12); // larger = slower, but more lights/higher quality; 1<<10 is too low for building malls
 	unsigned const max_gb_entries(elem_tex_x*elem_tex_y), gbx(get_grid_xsize()), gby(get_grid_ysize());
 	assert(max_gb_entries <= (1<<24)); // gb_data low bits allocation
 	elem_data.clear();
