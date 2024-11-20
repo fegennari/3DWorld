@@ -1903,6 +1903,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (!shadow_only && obj.type != TYPE_FIRE_EXT && !(building.has_pri_hall() && building.pri_hall.contains_pt(obj_center))) {
 			float cull_dist(32.0*(obj.dx() + obj.dy() + obj.dz()));
 			if (building.check_pt_in_retail_room(obj_center)) {cull_dist *= 2.5;} // increased culling distance for retail areas
+			else if (building.point_in_mall     (obj_center)) {cull_dist *= 2.0;} // increased culling distance for malls
 			if (!dist_less_than(camera_bs, obj_center, cull_dist)) continue; // too far
 		}
 		if (camera_in_building && player_in_basement >= 2 && obj_center.z > building.ground_floor_z1)        continue; // player in basement, obj not
