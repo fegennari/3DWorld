@@ -627,7 +627,7 @@ unsigned check_rdesk_collision(room_object_t const &c, point &pos, point const &
 unsigned check_chair_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
 	get_chair_cubes(c, cubes);
-	get_tc_leg_cubes(cubes[2], c, CHAIR_LEG_WIDTH, 1, leg_cubes);
+	get_tc_leg_cubes(cubes[2], c, c.get_chair_leg_width(), 1, leg_cubes);
 	return (check_cubes_collision(cubes, 2, pos, p_last, radius, cnorm) | check_cubes_collision(leg_cubes, 4, pos, p_last, radius, cnorm));
 }
 
@@ -2424,7 +2424,7 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
 		get_chair_cubes(c, cubes);
 		lg_cubes.insert(lg_cubes.end(), cubes, cubes+2); // seat, back
-		get_tc_leg_cubes(cubes[2], c, CHAIR_LEG_WIDTH, 1, leg_cubes);
+		get_tc_leg_cubes(cubes[2], c, c.get_chair_leg_width(), 1, leg_cubes);
 		sm_cubes.insert(sm_cubes.end(), leg_cubes, leg_cubes+4); // legs are small
 	}
 	else if (type == TYPE_POOL_TABLE) {
@@ -2630,7 +2630,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 				cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
 				get_chair_cubes(*c, cubes);
 				if (line_int_cube_exp(p1, p2, cubes[0], expand)) return 9; // check seat
-				get_tc_leg_cubes(cubes[2], *c, CHAIR_LEG_WIDTH, 1, leg_cubes);
+				get_tc_leg_cubes(cubes[2], *c, c->get_chair_leg_width(), 1, leg_cubes);
 				if (line_int_cubes_exp(p1, p2, leg_cubes, 4, expand)) return 9; // check legs
 			}
 			else if (c->type == TYPE_BCASE && !c->is_on_floor()) { // treat as a cube if fallen over

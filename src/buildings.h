@@ -41,6 +41,7 @@ float const EXT_BASEMENT_JOIN_DIST = 4.0; // relative to floor spacing
 float const BALCONY_PILLAR_SCALE   = 0.15; // relative to depth
 float const BASEMENT_ENTRANCE_SCALE= 0.33;
 float const CHAIR_LEG_WIDTH        = 0.15; // relative to chair width
+float const CHAIR_LEG_WIDTH_MALL   = 0.07; // relative to chair width
 float const BED_HEAD_WIDTH         = 0.04; // headboard width; relative to bed width
 float const SHELF_RACK_HEIGHT_FS   = 0.85*(1.0 - FLOOR_THICK_VAL_OFFICE);
 float const WHEATER_PIPE_SPACING   = 0.65; // relative to radius
@@ -94,6 +95,7 @@ colorRGBA const DUCT_COLOR(WHITE);
 colorRGBA const rat_color(GRAY); // make the rat's fur darker
 colorRGBA const candle_color(0.95, 0.9, 0.75, 1.0); // cream
 colorRGBA const GLASS_COLOR(0.8, 1.0, 0.9, 0.25);
+colorRGBA const mall_tc_legs_color(BKGRAY);
 
 unsigned const NUM_LOCK_COLORS = 8;
 unsigned const MAX_LOCK_INDEX  = NUM_LOCK_COLORS + 2;
@@ -712,6 +714,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	float get_bottle_rot_angle() const {return (rotates() ? PI*(0.321*obj_id + color.R + 2.0*color.G) : 0.0);}
 	float get_depth () const {return get_length();} // some objects use depth rather than length
 	float get_radius() const;
+	float get_chair_leg_width() const {assert(type == TYPE_CHAIR); return (in_mall() ? CHAIR_LEG_WIDTH_MALL : CHAIR_LEG_WIDTH);}
 	cylinder_3dw get_cylinder() const;
 	void toggle_lit_state() {flags ^= RO_FLAG_LIT;}
 	static bool enable_rugs();

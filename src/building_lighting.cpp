@@ -362,13 +362,19 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			add_colored_cubes(cubes, 3, color, cc); // divided horizontally, not vertically, so use the mixed color for all cubes
 		}
 		else if (type == TYPE_CHAIR) {
-			colorRGBA const wood_color(get_textured_wood_color());
 			cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
 			get_chair_cubes(*c, cubes);
-			cc.emplace_back(cubes[0], color     ); // seat
-			cc.emplace_back(cubes[1], wood_color); // back
-			get_tc_leg_cubes(cubes[2], *c, CHAIR_LEG_WIDTH, 1, leg_cubes);
-			add_colored_cubes(leg_cubes, 4, wood_color, cc);
+			cc.emplace_back(cubes[0], c->color); // seat
+
+			if (c->in_mall()) { // plastic chair; legs are so thin that we ignore their contribution as an optimization
+				cc.emplace_back(cubes[1], c->color); // back
+			}
+			else { // wood chair
+				get_tc_leg_cubes(cubes[2], *c, c->get_chair_leg_width(), 1, leg_cubes);
+				colorRGBA const wood_color(get_textured_wood_color());
+				cc.emplace_back(cubes[1], wood_color); // back
+				add_colored_cubes(leg_cubes, 4, wood_color, cc);
+			}
 		}
 		else if (type == TYPE_CUBICLE || (type == TYPE_STALL && c->shape != SHAPE_SHORT)) { // cubicle or bathroom stall - hollow
 			bool const is_stall(type != TYPE_CUBICLE);
