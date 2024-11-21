@@ -4147,6 +4147,16 @@ bool building_t::place_bottle_on_obj(rand_gen_t &rgen, cube_t const &place_on, u
 	objs.back().set_as_bottle(rgen.rand(), 3); // 0-3; excludes poison and medicine
 	return 1;
 }
+bool building_t::place_dcan_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid) { // drink can
+	float const window_vspacing(get_window_vspace()), height(0.06*window_vspacing), radius(0.016*window_vspacing);
+	if (min(place_on.dx(), place_on.dy()) < 6.0*radius) return 0; // surface is too small to place this can
+	cube_t const can(place_cylin_object(rgen, place_on, radius, height, 2.0*radius));
+	if (has_bcube_int(can, avoid)) return 0; // only make one attempt
+	vect_room_object_t &objs(interior->room_geom->objs);
+	objs.emplace_back(can, TYPE_DRINK_CAN, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, LT_GRAY);
+	objs.back().obj_id = (uint16_t)(rgen.rand() & 127); // strip off empty bit
+	return 1;
+}
 
 colorRGBA choose_pot_color(rand_gen_t &rgen) {
 	unsigned const num_colors = 8;

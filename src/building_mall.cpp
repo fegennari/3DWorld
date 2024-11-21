@@ -907,9 +907,10 @@ bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &tabl
 {
 	if (!place_area.contains_cube_xy(table) || has_bcube_int(table, blockers)) return 0;
 	vect_room_object_t &objs(interior->room_geom->objs);
-	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, RO_FLAG_IN_MALL, tot_light_amt, SHAPE_CUBE, WHITE);
+	room_object_t table_obj(table, TYPE_TABLE, room_id, 0, 0, RO_FLAG_IN_MALL, tot_light_amt, SHAPE_CUBE, WHITE);
+	table_obj.item_flags = tid_tag; // sets table texture
+	objs.push_back(table_obj);
 	set_obj_id(objs);
-	objs.back().item_flags = tid_tag; // sets table texture
 	// place chairs around the table
 	float const table_len(table.get_sz_dim(dim)), table_width(table.get_sz_dim(!dim)), table_center(table.get_center_dim(!dim));
 	unsigned const chairs_per_side(round_fp(table_len/table_width));
@@ -934,6 +935,17 @@ bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &tabl
 		} // for n
 	} // for D
 	blockers.push_back(table); // add the table last, so that it doesn't block its own chairs
+	unsigned const place_obj_id(rgen.rand() & 7);
+
+	switch (place_obj_id) { // TYPE_PHONE, TYPE_FOOD_BOX, TYPE_TRASH?
+	case 0: place_bottle_on_obj(rgen, table_obj, room_id, tot_light_amt); break;
+	case 1: place_dcan_on_obj  (rgen, table_obj, room_id, tot_light_amt); break;
+	case 2: place_cup_on_obj   (rgen, table_obj, room_id, tot_light_amt); break;
+	case 3: place_plate_on_obj (rgen, table_obj, room_id, tot_light_amt); break;
+	case 4: if (rgen.rand_float() < 0.5) {place_pizza_on_obj (rgen, table_obj, room_id, tot_light_amt);} break; // less common
+	case 5: if (rgen.rand_float() < 0.5) {place_banana_on_obj(rgen, table_obj, room_id, tot_light_amt);} break; // less common
+	case 6: if (rgen.rand_float() < 0.1) {place_laptop_on_obj(rgen, table_obj, room_id, tot_light_amt);} break; // very rare
+	} // default = place nothing
 	return 1;
 }
 
