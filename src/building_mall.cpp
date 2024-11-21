@@ -821,7 +821,8 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			if (int(fc_opening_ix) != fountain_opening_ix) break;
 		}
 		cube_t place_area(openings[fc_opening_ix]);
-		if (num_floors > 1) {place_area.expand_by_xy(0.06*room.get_sz_dim(!mall_dim));} // allow a bit of overlap with the walkway bounds if there are multiple floors
+		place_area.expand_by_xy(0.06*room.get_sz_dim(!mall_dim)); // allow a bit of overlap with the walkway bounds if there are multiple floors
+		if (num_floors*openings.size() < 4) {place_area.d[mall_dim][rgen.rand_bool()] = place_area.get_center_dim(mall_dim);} // half sized food court for small malls
 		add_food_court_objs(rgen, place_area, zval, room_id, light_amt, blockers);
 	}
 	// if there are bathrooms, add a water fountain between them
@@ -937,13 +938,14 @@ bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &tabl
 }
 
 bool building_t::add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, vect_cube_t const &blockers) {
-	bool const dim(rgen.rand_bool()); // or follow mall dim?
+	bool const dim(!interior->extb_wall_dim); // row dim runs perpendicular to mall dim for more shorter rows
 	float const window_vspacing(get_window_vspace()), clearance(get_min_front_clearance_inc_people()), row_span(place_area.get_sz_dim(!dim));
 	float const table_height(0.3*window_vspacing), table_width(0.4*window_vspacing), table_len_min(table_width), table_len_max(3.0*table_len_min), table_gap(0.25*table_width);
-	float row_spacing(2.5*table_width), col_start(place_area.d[dim][0]), col_end(place_area.d[dim][1]);
+	float row_spacing(2.5*table_width);
 	unsigned const num_rows(row_span/row_spacing); // floor
 	if (num_rows == 0) return 0; // shouldn't happen?
 	row_spacing = row_span/num_rows;
+	float const col_start(place_area.d[dim][0]), col_end(place_area.d[dim][1]), max_cont_row_len(8.0*table_len_min);
 	// find blockers intersecting the place area
 	vect_cube_t fc_blockers;
 
@@ -962,13 +964,16 @@ bool building_t::add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area,
 	for (unsigned r = 0; r < num_rows; ++r) {
 		float const row_pos(place_area.d[!dim][0] + (r + 0.5)*row_spacing);
 		set_wall_width(table, row_pos, 0.5*table_width, !dim);
-		float pos(col_start + table_len_min*rgen.rand_float()); // starting point; use a random offset
+		float cur_row_len(0.0), pos(col_start + table_len_min*rgen.rand_float()); // starting point; use a random offset
 
 		while (pos + 1.05*table_len_min < col_end) { // while we can place a table; slight bias to account for FP error
 			float const table_len(rgen.rand_uniform(table_len_min, min(table_len_max, (col_end - pos))));
 			table.d[dim][0] = pos;
 			table.d[dim][1] = pos + table_len;
-			pos += table_len + table_gap;
+			float next_table_start(table_len + table_gap);
+			cur_row_len += next_table_start;
+			if (cur_row_len > max_cont_row_len) {next_table_start += 1.5*clearance; cur_row_len = 0.0;} // add a gap if run length gets too large
+			pos += next_table_start;
 			add_mall_table_with_chairs(rgen, table, place_area, chair_color, room_id, tot_light_amt, dim, tid_tag, fc_blockers);
 		} // while
 	} // for r
