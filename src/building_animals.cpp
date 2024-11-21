@@ -427,8 +427,8 @@ bool can_hide_under(room_object_t const &c, cube_t &hide_area) {
 		return 1;
 	}
 	else if (c.type == TYPE_BENCH) {
-		cube_t cubes[3]; // seat, lo side, hi side
-		get_bench_cubes(c, cubes);
+		cube_t cubes[4]; // seat, lo side, hi side, [back]
+		get_bench_cubes(c, cubes); // Note: return value ignored
 		hide_area = cubes[0]; // seat
 		return 1;
 	}

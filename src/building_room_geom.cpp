@@ -5029,7 +5029,7 @@ void building_room_geom_t::add_pool_float(room_object_t const &c) {
 	}
 }
 
-void get_bench_cubes(room_object_t const &c, cube_t cubes[3]) { // seat, lo side, hi side
+unsigned get_bench_cubes(room_object_t const &c, cube_t cubes[4]) { // seat, lo side, hi side, [back]
 	float const width(c.get_width());
 	cube_t top(c);
 	top.z1() += 0.8*c.dz();
@@ -5042,12 +5042,23 @@ void get_bench_cubes(room_object_t const &c, cube_t cubes[3]) { // seat, lo side
 		set_wall_width(leg, (c.d[!c.dim][d] + (d ? -1.0 : 1.0)*0.03*width), 0.02*width, !c.dim);
 		cubes[d+1] = leg;
 	}
+	if (c.in_mall()) {
+		cube_t back(c);
+		back.z1() = top.z2();
+		back.z2() += c.dz(); // FIXME: should be top of bench, and bench added taller, and top.z2() < c.z2()
+		back.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.9*c.get_depth(); // push front edge toward back
+		cubes[3] = back;
+	}
+	return 3;
 }
 void building_room_geom_t::add_bench(room_object_t const &c) {
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
-	cube_t cubes[3]; // seat, lo side, hi side
-	get_bench_cubes(c, cubes);
-	mat.add_cube_to_verts_untextured(cubes[0], apply_light_color(c)); // top
+	cube_t cubes[4]; // seat, lo side, hi side, [back]
+	unsigned const num(get_bench_cubes(c, cubes));
+	assert(num == 3 || num == 4);
+	colorRGBA const color(apply_light_color(c));
+	mat.add_cube_to_verts_untextured(cubes[0], color); // top
+	if (num == 4) {mat.add_cube_to_verts_untextured(cubes[3], color);} // back
 	// add legs on each side; draw sides of legs, always light gray
 	for (unsigned d = 0; d < 2; ++d) {mat.add_cube_to_verts_untextured(cubes[d+1], apply_light_color(c, LT_GRAY), EF_Z12);}
 }

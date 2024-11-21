@@ -667,9 +667,9 @@ unsigned check_bookcase_collision(room_object_t const &c, point &pos, point cons
 	return check_cubes_collision(cubes, 3, pos, p_last, radius, cnorm);
 }
 unsigned check_bench_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
-	cube_t cubes[3]; // seat, lo side, hi side
-	get_bench_cubes(c, cubes);
-	return check_cubes_collision(cubes, 3, pos, p_last, radius, cnorm);
+	cube_t cubes[4]; // seat, lo side, hi side, [back]
+	unsigned const num(get_bench_cubes(c, cubes));
+	return check_cubes_collision(cubes, num, pos, p_last, radius, cnorm);
 }
 unsigned check_diving_board_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	cube_t cubes[2]; // board, base
@@ -2662,9 +2662,9 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 				if (line_int_cubes_exp(p1, p2, cubes, num, expand)) return 9;
 			}
 			else if (c->type == TYPE_BENCH) {
-				cube_t cubes[3]; // seat, lo side, hi side
-				get_bench_cubes(*c, cubes);
-				if (line_int_cubes_exp(p1, p2, cubes, 3, expand)) return 9;
+				cube_t cubes[4]; // seat, lo side, hi side, [back]
+				unsigned const num(get_bench_cubes(*c, cubes));
+				if (line_int_cubes_exp(p1, p2, cubes, num, expand)) return 9;
 			}
 			else if (c->is_parked_car()) { // parked car
 				cube_t cubes[5];

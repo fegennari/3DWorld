@@ -573,7 +573,7 @@ unsigned const RO_FLAG_FOR_CAR   = 0x1000; // for car blockers, aliased with RO_
 unsigned const RO_FLAG_WALKWAY   = 0x1000; // for walkway objects (outside of buildings), aliased with RO_FLAG_ADJ_BOT
 // object flags, third byte, for pickup/interact state
 unsigned const RO_FLAG_IN_HALLWAY= 0x010000; // for attic doors
-unsigned const RO_FLAG_IN_MALL   = 0x010000; // for mall chairs, tables, trashcans, etc.; aliased with RO_FLAG_IN_HALLWAY
+unsigned const RO_FLAG_IN_MALL   = 0x010000; // for mall chairs, tables, benches, trashcans, etc.; aliased with RO_FLAG_IN_HALLWAY
 unsigned const RO_FLAG_IN_ATTIC  = 0x020000;
 unsigned const RO_FLAG_HAS_EXTRA = 0x040000; // used for counter backsplash, exterior wall trim, desks with computer monitors and keyboards, books on glass tables, and hotel closets
 unsigned const RO_FLAG_EXTERIOR  = 0x080000; // for signs, window trim, etc.
@@ -2746,7 +2746,7 @@ void get_tc_leg_cubes(cube_t const &c, room_object_t const &obj, float width, bo
 void get_reception_desk_cubes(room_object_t const &c, cube_t cubes[3]);
 void get_bookcase_cubes(room_object_t const &c, cube_t &top, cube_t &middle, cube_t &back, cube_t lr[2], bool no_shelves=0, float sides_scale=1.0);
 float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only, bool inside_only);
-void get_bench_cubes(room_object_t const &c, cube_t cubes[3]);
+unsigned get_bench_cubes(room_object_t const &c, cube_t cubes[4]);
 void get_diving_board_cubes(room_object_t const &c, cube_t cubes[2]);
 unsigned get_shelf_rack_cubes(room_object_t const &c, cube_t &back, cube_t &top, cube_t sides[2], cube_t shelves[5]);
 cube_t get_shower_tub_wall(room_object_t const &c);
