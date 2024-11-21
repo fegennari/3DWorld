@@ -95,7 +95,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_RAILING   ] = bldg_obj_type_t(1, 1, 0, 0, 1, 0, 2, 0.0,   0.0,   "railing"); // Note: ai_coll logic is custom, but ai_coll flag has been set for consistency
 	bldg_obj_types[TYPE_CRATE     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 10.0,  12.0,  "crate"); // should be random value
 	bldg_obj_types[TYPE_BOX       ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 5.0,   8.0,   "box");   // should be random value
-	bldg_obj_types[TYPE_MIRROR    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 40.0,  15.0,  "mirror");
+	bldg_obj_types[TYPE_MIRROR    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 40.0,  15.0,  "mirror"); // house medicine cabinet or office building bathroom mirror
 	bldg_obj_types[TYPE_SHELVES   ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 0.0,   0.0,   "shelves");
 	bldg_obj_types[TYPE_KEYBOARD  ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 15.0,  2.0,   "keyboard");
 	bldg_obj_types[TYPE_SHOWER    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 0.0,   0.0,   "shower"); // technically large + small, but only large objects are dynamically updated
@@ -118,7 +118,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_SPRAYCAN  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 2.0,   1.0,   "spray paint", 5000);
 	bldg_obj_types[TYPE_MARKER    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.20,  0.05,  "marker",      10000);
 	bldg_obj_types[TYPE_BUTTON    ] = bldg_obj_type_t(0, 0, 0, 1, 1, 0, 2, 1.0,   0.05,  "button");
-	bldg_obj_types[TYPE_CRACK     ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 0.0,   0.0,   "crack");
+	bldg_obj_types[TYPE_CRACK     ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 0.0,   0.0,   "crack"); // in glass; not yet used
 	bldg_obj_types[TYPE_SWITCH    ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 10.0,  0.1,   "switch");
 	bldg_obj_types[TYPE_BREAKER   ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 20.0,  0.1,   "breaker");
 	bldg_obj_types[TYPE_PLATE     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 6.0,   0.25,  "plate");
@@ -289,7 +289,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		if (obj.taken_level < 4) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 0.5, 0.025, "toy ring");}
 		// else take the toy base
 	}
-	if (obj.type == TYPE_TABLE    && obj.is_broken ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1,  25.0, 40.0, "broken table");}
+	if (obj.type == TYPE_TABLE    && obj.is_broken ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1,  25.0, 40.0, "broken table");} // glass tables only
 	if (obj.type == TYPE_COMPUTER && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 100.0, 20.0, "old computer");}
 	if (obj.type == TYPE_BOX      && obj.is_open   ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,   0.0, 0.05, "opened box"  );}
 	if (obj.type == TYPE_CRATE    && obj.is_open   ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,   2.0, 0.5,  "opened crate");}
@@ -333,6 +333,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	} // else take the entire box with the pizza
 	// default value, name may be modified below
 	bldg_obj_type_t type(get_room_obj_type(obj));
+	float wv_factor(1.0); // weight/value scale
 
 	if (obj.type == TYPE_LG_BALL) {
 		ball_type_t const &bt(obj.get_ball_type());
@@ -372,6 +373,17 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		get_bucket_liquid_info(obj, liquid_level);
 		type.name    = ((liquid_level > 0.0) ? "bucket of unknown liquid" : "empty bucket");
 		type.weight += 0.1*round_fp(10*16.0*liquid_level); // 2 gallon bucket, gets heavier with more liquid; round to nearest tenth
+	}
+	else if (obj.type == TYPE_TABLE && obj.in_mall()) { // variable sized mall table
+		wv_factor = 0.75*obj.get_length()/obj.get_width(); // longer tables are heavier and higher value
+		type.name = "food court table";
+	}
+	else if (obj.type == TYPE_WBOARD) {
+		wv_factor = 0.5*obj.get_width()/obj.dz(); // longer whiteboards are heavier and higher value
+	}
+	if (wv_factor != 1.0) { // scale weight and value by this factor, rounded to the nearest pound and dollar
+		type.weight = int(wv_factor*type.weight);
+		type.value  = int(wv_factor*type.value );
 	}
 	return type;
 }
