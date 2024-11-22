@@ -5030,37 +5030,51 @@ void building_room_geom_t::add_pool_float(room_object_t const &c) {
 }
 
 unsigned get_bench_cubes(room_object_t const &c, cube_t cubes[4]) { // seat, lo side, hi side, [back]
-	float const width(c.get_width());
-	cube_t top(c);
-	top.z1() += 0.8*c.dz();
-	cubes[0] = top;
+	bool const has_back(c.in_mall());
+	float const width(c.get_width()), depth(c.get_depth());
+	cube_t base(c);
+
+	if (has_back) {
+		cube_t back(c);
+		back.z1() = base.z2() = c.z1() + 0.42*c.dz(); // shift up
+		back.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.88*depth; // push front edge toward back
+		cubes[3] = back;
+	}
+	cube_t top(base);
+	top.z1() += 0.8*base.dz();
+	cubes[0]  = top;
 
 	for (unsigned d = 0; d < 2; ++d) { // add legs on each side
-		cube_t leg(c);
+		cube_t leg(base);
 		leg.z2() = top.z1();
-		leg.expand_in_dim(!c.dim, -0.1*c.get_depth()); // shrink depth
+		leg.expand_in_dim(c.dim, -(has_back ? 0.25 : 0.1)*depth); // shrink depth
 		set_wall_width(leg, (c.d[!c.dim][d] + (d ? -1.0 : 1.0)*0.03*width), 0.02*width, !c.dim);
 		cubes[d+1] = leg;
 	}
-	if (c.in_mall()) {
-		cube_t back(c);
-		back.z1() = top.z2();
-		back.z2() += c.dz(); // FIXME: should be top of bench, and bench added taller, and top.z2() < c.z2()
-		back.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.9*c.get_depth(); // push front edge toward back
-		cubes[3] = back;
-	}
-	return 3;
+	return (has_back ? 4 : 3);
 }
 void building_room_geom_t::add_bench(room_object_t const &c) {
-	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
 	cube_t cubes[4]; // seat, lo side, hi side, [back]
 	unsigned const num(get_bench_cubes(c, cubes));
 	assert(num == 3 || num == 4);
-	colorRGBA const color(apply_light_color(c));
-	mat.add_cube_to_verts_untextured(cubes[0], color); // top
-	if (num == 4) {mat.add_cube_to_verts_untextured(cubes[3], color);} // back
-	// add legs on each side; draw sides of legs, always light gray
-	for (unsigned d = 0; d < 2; ++d) {mat.add_cube_to_verts_untextured(cubes[d+1], apply_light_color(c, LT_GRAY), EF_Z12);}
+	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
+	// add legs on each side; draw sides of legs, always light gray or black
+	colorRGBA const legs_color(apply_light_color(c, (c.in_mall() ? BKGRAY : LT_GRAY)));
+	for (unsigned d = 0; d < 2; ++d) {mat.add_cube_to_verts_untextured(cubes[d+1], legs_color, EF_Z12);}
+
+	if (c.color == LT_BROWN) { // wood material
+		tid_nm_pair_t tex(get_tex_auto_nm(FENCE_TEX, 2.0/c.get_width(), 1)); // shadowed=1
+		tex.set_specular(0.2, 50.0);
+		rgeom_mat_t &wood_mat(get_material(tex, 1, 0, 1)); // shadowed, small
+		colorRGBA const color(apply_light_color(c, WHITE));
+		wood_mat.add_cube_to_verts(cubes[0], color, c.get_llc(), 0, c.dim); // top
+		if (num == 4) {wood_mat.add_cube_to_verts(cubes[3], color, c.get_llc(), EF_Z1, c.dim);} // back; skip bottom
+	}
+	else { // plastic material
+		colorRGBA const color(apply_light_color(c));
+		mat.add_cube_to_verts_untextured(cubes[0], color); // top
+		if (num == 4) {mat.add_cube_to_verts_untextured(cubes[3], color, EF_Z1);} // back; skip bottom
+	}
 }
 
 void get_diving_board_cubes(room_object_t const &c, cube_t cubes[2]) { // board, base
