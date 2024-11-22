@@ -685,13 +685,14 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	float fe_height(0.0), fe_radius(0.0);
 	bool const add_fire_extinguishers(get_fire_ext_height_and_radius(window_vspace, fe_height, fe_radius));
 	bool add_fe(rgen.rand_bool()); // random start on even vs. odd pillars
+	vect_cube_t main_pillars; // used for food court trashcans
 
 	for (cube_t const &opening : openings) {
 		for (unsigned dir = 0; dir < 2; ++dir) { // each side of opening
 			float const pillar_pos(opening.d[!mall_dim][dir] + (dir ? -1.0 : 1.0)*0.7*pillar_hwidth);
 			set_wall_width(pillar, pillar_pos, pillar_hwidth, !mall_dim);
 			set_wall_width(pillar, opening.get_center_dim(mall_dim), pillar_hwidth, mall_dim);
-			pillars     .push_back(pillar);
+			main_pillars.push_back(pillar);
 			railing_cuts.push_back(pillar);
 			// place plants to the sides of pillars
 			float const plant_radius(0.2*window_vspace), plant_clearance(1.25*plant_radius);
@@ -713,6 +714,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		} // for dir
 		add_fe ^= 1; // swap every pair of pillars, alternating sides
 	} // for opening
+	vector_add_to(main_pillars, pillars);
 
 	// add walkway railings
 	for (unsigned f = 1; f < num_floors; ++f) { // skip first floor
@@ -830,8 +832,8 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		place_area.expand_by_xy(0.06*room.get_sz_dim(!mall_dim)); // allow a bit of overlap with the walkway bounds if there are multiple floors
 		if (num_floors*openings.size() < 4) {place_area.d[mall_dim][rgen.rand_bool()] = place_area.get_center_dim(mall_dim);} // half sized food court for small malls
 
-		// add trashcans in food court next to pillars on the ground floor
-		for (cube_t const &p : pillars) {
+		// add trashcans in food court next to main (not landing support) pillars on the ground floor
+		for (cube_t const &p : main_pillars) {
 			if (!p.intersects_xy(place_area)) continue;
 			bool const pdir(room_centerline < p.get_center_dim(!mall_dim));
 			cube_t tcan;
