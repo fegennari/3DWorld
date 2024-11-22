@@ -76,9 +76,10 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 	if (num_floors == 1) return; // single floor; nothing else to do
 	vect_cube_t openings;
 	get_mall_open_areas(room, openings);
-	assert(!openings.empty());
-	reserve_extra(interior->stairwells, (openings.size() + 1));
-	reserve_extra(interior->escalators, (openings.size() + 1));
+	unsigned const num_openings(openings.size()), num_se_added((num_openings + 1)*(num_floors - 1));
+	assert(num_openings > 0);
+	reserve_extra(interior->stairwells, num_se_added);
+	reserve_extra(interior->escalators, num_se_added);
 
 	for (unsigned f = 1; f < num_floors; ++f) { // skip first floor
 		float const z(room.z1() + f*floor_spacing), zc(z - fc_thick), zf(z + fc_thick), floor_below_z(zf - floor_spacing), floor_above_z(zf + floor_spacing);
@@ -90,8 +91,8 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 			ww.d[!dim][!d] = openings.front().d[!dim][d];
 			interior->add_ceil_floor_pair(ww, zc, z, zf);
 		}
-		for (unsigned n = 0; n <= openings.size(); ++n) { // ends and gaps between openings
-			bool const first(n == 0), last(n == openings.size());
+		for (unsigned n = 0; n <= num_openings; ++n) { // ends and gaps between openings
+			bool const first(n == 0), last(n == num_openings);
 			cube_t ww(openings.front());
 			ww.d[dim][0] = (first ? room.d[dim][0] : openings[n-1].d[dim][1]);
 			ww.d[dim][1] = (last  ? room.d[dim][1] : openings[n  ].d[dim][0]);
@@ -160,9 +161,9 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 		} // for n
 	} // for f
 	if (!openings.empty()) { // add elevator
-		unsigned const opening_ix(choose_one_center(openings.size(), rgen));
+		unsigned const opening_ix(choose_one_center(num_openings, rgen));
 		cube_t const opening(openings[opening_ix]);
-		bool const edir((openings.size() & 1) ? rgen.rand_bool() : (opening_ix == openings.size()/2)); // closer to center; random if tied
+		bool const edir((num_openings & 1) ? rgen.rand_bool() : (opening_ix == num_openings/2)); // closer to center; random if tied
 		float const ww_edge(opening.d[dim][!edir]), width(1.6*door_width), depth(width);
 		// Note: elevator extends half a floor width below and above the room; is this okay, or can it clip through other objects?
 		elevator_t elevator(room, interior->ext_basement_hallway_room_id, dim, !edir, 1, 1, 1); // at_edge=1, interior_room=1, in_mall=1
@@ -537,6 +538,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	vector<plant_loc_t> plant_locs;
 	point plant_loc(0.0, 0.0, zval);
 	get_mall_open_areas(room, openings);
+	unsigned const num_openings(openings.size());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned num_elevators(0);
 	colorRGBA const bar_color(LT_GRAY);
@@ -798,11 +800,11 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	} // for d
 
 	// add a fountain in the center of an opening
-	int fountain_opening_ix(-1);
+	int fountain_opening_ix(-1), fc_opening_ix(-1);
 
 	if (!openings.empty() && building_obj_model_loader.is_model_valid(OBJ_MODEL_FOUNTAIN)) {
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FLAG)); // W, D, H
-		fountain_opening_ix = choose_one_center(openings.size(), rgen);
+		fountain_opening_ix = choose_one_center(num_openings, rgen);
 		cube_t const &opening(openings[fountain_opening_ix]);
 		float const max_radius(0.25*min(opening.dx(), opening.dy()));
 		float height(0.9*floor_spacing*rgen.rand_uniform(0.9, 1.1)), radius(0.5*height*0.5*(sz.x + sz.y)/sz.z); // use average of width and depth for radius
@@ -821,16 +823,14 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	colorRGBA const tcan_color(is_cylin_tcan ? LT_GRAY : colorRGBA(0.8, 0.6, 0.4)); // tan for cube trashcans
 
 	// add a food court to one of the openings
-	if (openings.size() >= ((fountain_opening_ix >= 0) ? 2 : 1)) {
-		unsigned fc_opening_ix(0);
-
+	if (num_openings >= ((fountain_opening_ix >= 0) ? 2 : 1)) {
 		while (1) {
-			fc_opening_ix = rgen.rand() % openings.size();
-			if (int(fc_opening_ix) != fountain_opening_ix) break;
+			fc_opening_ix = rgen.rand() % num_openings;
+			if (fc_opening_ix != fountain_opening_ix) break;
 		}
 		cube_t place_area(openings[fc_opening_ix]);
 		place_area.expand_by_xy(0.06*room.get_sz_dim(!mall_dim)); // allow a bit of overlap with the walkway bounds if there are multiple floors
-		if (num_floors*openings.size() < 4) {place_area.d[mall_dim][rgen.rand_bool()] = place_area.get_center_dim(mall_dim);} // half sized food court for small malls
+		if (num_floors*num_openings < 4) {place_area.d[mall_dim][rgen.rand_bool()] = place_area.get_center_dim(mall_dim);} // half sized food court for small malls
 
 		// add trashcans in food court next to main (not landing support) pillars on the ground floor
 		for (cube_t const &p : main_pillars) {
@@ -849,6 +849,11 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		} // for p
 		add_food_court_objs(rgen, place_area, zval, room_id, light_amt, blockers);
 	}
+	// add objects to remaining openings
+	for (unsigned i = 0; i < num_openings; ++i) {
+		if ((int)i == fountain_opening_ix || (int)i == fc_opening_ix) continue; // already occupied
+		// TODO: set of TYPE_VASE
+	} // for i
 	// if there are bathrooms, add a water fountain between them
 	if (!interior->mall_bathrooms.is_all_zeros() && building_obj_model_loader.is_model_valid(OBJ_MODEL_WFOUNTAIN)) {
 		bool const wf_dir(interior->mall_bathrooms.get_center_dim(!mall_dim) > room_centerline);
@@ -873,8 +878,8 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	cube_t place_area(room);
 	place_area.expand_by_xy(-wall_thickness);
 	vect_cube_t wall_blockers;
-	unsigned const num_benches  (openings.size()/2 + 1); // per floor per side
-	unsigned const num_trashcans(openings.size()/4 + 1); // per floor per side
+	unsigned const num_benches  (num_openings/2 + 1); // per floor per side
+	unsigned const num_trashcans(num_openings/4 + 1); // per floor per side
 	float const clearance(get_min_front_clearance_inc_people());
 	float const bench_height(0.42*window_vspace), bench_depth(0.23*window_vspace), bench_hlen(0.5*window_vspace*rgen.rand_uniform(0.6, 0.8));
 	float const tcan_end_pad(2.0*tcan_radius), bench_end_pad(2.0*bench_hlen);
@@ -936,7 +941,14 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			wall_blockers.clear();
 		} // for d
 	} // for f
-	// TODO: palm trees, TYPE_PICTURE?, TYPE_RDESK?, TYPE_DUCT?, TYPE_VASE?, TYPE_TV?, TYPE_BAR_STOOL?
+	// add a reception desk in front of end walls that have no store
+	for (unsigned f = 0; f < num_floors; ++f) {
+		for (unsigned d = 0; d < 2; ++d) { // ends
+			if (f+1 == num_floors && d == interior->extb_wall_dir) continue; // likely blocked by entrance stairs
+			//float const z(zval + f*floor_spacing);
+		}
+	} // for f
+	// TODO: palm trees, TYPE_PICTURE?, TYPE_BAR_STOOL?
 
 	// add pillars last so that we can check lights against them
 	unsigned const pillars_start(objs.size());
@@ -1081,6 +1093,6 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 		checkout_area.d[dim][!dir] = room.get_center_dim(dim); // only add to the front half of the store
 		add_checkout_objs(checkout_area, zval, room_id, light_amt, objs_start, dim, side, (side ^ dim ^ 1));
 	}
-	// TODO: TYPE_SHELFRACK, etc.
+	// TODO: TYPE_SHELFRACK, TYPE_DUCT, etc.
 }
 
