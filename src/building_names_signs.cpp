@@ -62,8 +62,8 @@ string choose_business_name(rand_gen_t rgen, building_type_t btype) {
 	return ""; // never gets here
 }
 
-string choose_store_name(rand_gen_t rgen) { // for malls
-	return gen_random_name(rgen, 4); // TODO: placeholder
+string choose_store_name(rand_gen_t &rgen) { // for malls
+	return gen_random_name(rgen, 5); // TODO: placeholder, should be by category
 }
 
 void building_t::assign_name(rand_gen_t &rgen) {

@@ -6,8 +6,9 @@
 #include "city_model.h"
 
 using std::string;
-string choose_store_name(rand_gen_t rgen);
+string choose_store_name  (rand_gen_t &rgen);
 colorRGBA choose_pot_color(rand_gen_t &rgen);
+colorRGBA choose_sign_color(rand_gen_t &rgen, bool emissive=0);
 bool is_invalid_city_placement_for_cube(cube_t const &c);
 void add_city_plot_cut(cube_t const &cut);
 
@@ -998,7 +999,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			add_reception_desk(rgen, desk, mall_dim, !d, room_id, light_amt); // ignore return value
 		} // for d
 	} // for f
-	// TODO: palm trees, TYPE_PICTURE?, TYPE_BAR_STOOL?
+	// TODO: palm trees, TYPE_PICTURE?
 
 	// add pillars last so that we can check lights against them
 	unsigned const pillars_start(objs.size());
@@ -1108,15 +1109,17 @@ bool building_t::add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area,
 			cur_row_len += next_table_start;
 			if (cur_row_len > max_cont_row_len) {next_table_start += 1.5*clearance; cur_row_len = 0.0;} // add a gap if run length gets too large
 			pos += next_table_start;
+			// what about tall tables with TYPE_BAR_STOOL, such as in coffe shops?
 			add_mall_table_with_chairs(rgen, table, place_area, chair_color, room_id, tot_light_amt, dim, tid_tag, fc_blockers);
 		} // while
 	} // for r
-	// TODO: trashcans
 	return 1;
 }
 
+enum {STORE_OTHER=0, STORE_CLOTHING, STORE_FOOD, STORE_RETAIL, NUM_STORE_TYPES}; // for use with object placement and naming
+
 void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
-	float const doorway_width(get_doorway_width());//, floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), wall_thickness(get_wall_thickness());
+	float const doorway_width(get_doorway_width()), floor_spacing(room.dz()), window_vspace(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float const light_amt = 1.0; // fully lit, for now
 	// get doorway bcube
 	cube_t doorway;
@@ -1127,15 +1130,29 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 		doorway = d;
 	}
 	assert(!doorway.is_all_zeros()); // must be found
-	bool const dim(doorway.dy() < doorway.dx()), dir(room.get_center_dim(dim) < doorway.get_center_dim(dim));
+	bool const mall_dim(interior->extb_wall_dim);
+	bool const dim(doorway.dy() < doorway.dx()), dir(room.get_center_dim(dim) < doorway.get_center_dim(dim)); // points from room center toward doorway
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_start(objs.size());
+	unsigned const store_type(rgen.rand() % NUM_STORE_TYPES);
 
 	// add store name on sign above the entrance
-	// TODO: TYPE_SIGN
+	room_t const &mall_room(get_mall_concourse());
+	float const sign_z1(room.z1() + 0.7*floor_spacing), sign_height(0.3*window_vspace), sign_hwidth(2.0*sign_height), sign_thickness(0.5*wall_thickness);
+	float const ext_wall_pos(mall_room.d[dim][!dir] + (dir ? 1.0 : -1.0)*((dim == mall_dim) ? 1.0 : 0.5)*wall_thickness);
+	cube_t sign;
+	set_cube_zvals(sign, sign_z1, sign_z1+sign_height);
+	sign.d[dim][!dir] = ext_wall_pos;
+	sign.d[dim][ dir] = ext_wall_pos + (dir ? 1.0 : -1.0)*sign_thickness;
+	set_wall_width(sign, room.get_center_dim(!dim), sign_hwidth, !dim);
+	bool const emissive(0);
+	unsigned const flags(RO_FLAG_LIT | RO_FLAG_NOCOLL | (emissive ? RO_FLAG_EMISSIVE : 0) | RO_FLAG_HANGING);
+	colorRGBA const sign_color(choose_sign_color(rgen, emissive));
+	objs.emplace_back(sign, TYPE_SIGN, interior->ext_basement_hallway_room_id, dim, dir, flags, 1.0, SHAPE_CUBE, sign_color); // always lit
+	objs.back().obj_id = register_sign_text(choose_store_name(rgen));
 
 	// add checkout counter(s)/cash register(s) to the side of the door
-	if (rgen.rand_float() < 0.67) {
+	if (store_type == STORE_CLOTHING || store_type == STORE_RETAIL) {
 		bool const side(rgen.rand_bool());
 		cube_t checkout_area(room);
 		checkout_area.d[!dim][!side] = doorway.d[!dim][side]; // to the side of the doorway
@@ -1143,6 +1160,9 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 		checkout_area.d[dim][!dir] = room.get_center_dim(dim); // only add to the front half of the store
 		add_checkout_objs(checkout_area, zval, room_id, light_amt, objs_start, dim, side, (side ^ dim ^ 1));
 	}
-	// TODO: TYPE_SHELFRACK, TYPE_DUCT, etc.
+	if (store_type == STORE_RETAIL) {
+		// TODO: TYPE_SHELFRACK
+	}
+	// TODO: TYPE_DUCT, etc.
 }
 
