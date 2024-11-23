@@ -3797,38 +3797,8 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 				for (unsigned n = 0; n < 10; ++n) { // try to find the closest valid placement to the door, make 10 random attempts
 					float const val(rgen.rand_uniform(min(val1, val2), max(val1, val2)));
 					set_wall_width(desk, val, 0.5*desk_depth, long_dim);
-					if (interior->is_blocked_by_stairs_or_elevator(desk)) continue; // bad location, try a new one
-
-					if (has_office_chair_model()) {
-						vector3d const chair_sz(get_office_chair_size());
-						point pos;
-						pos.z = zval;
-						pos[!long_dim] = centerline;
-						pos[ long_dim] = val + dir_sign*(-0.05*desk_depth + chair_sz.x); // push the chair into the cutout of the desk
-						cube_t const chair(get_cube_height_radius(pos, chair_sz.x, chair_sz.z));
-						if (interior->is_blocked_by_stairs_or_elevator(chair)) continue; // bad location, try a new one
-						objs.emplace_back(chair, TYPE_OFF_CHAIR, room_id, long_dim, dir, 0, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK);
-					}
-					unsigned const rdesk_ix(objs.size());
-					objs.emplace_back(desk, TYPE_RDESK, room_id, long_dim, dir, 0, tot_light_amt, SHAPE_CUBE);
-
-					if (building_obj_model_loader.is_model_valid(OBJ_MODEL_PHONE) && rgen.rand_float() < 0.75) { // add phone 75% of the time
-						unsigned sel_ix(0);
-						cube_t const place_area(get_rand_reception_desk_placement_cube(objs.back(), rgen, sel_ix));
-						
-						if (place_area.is_strictly_normalized()) {
-							bool pdim(0), pdir(0); // facing the chair
-							if      (sel_ix == 0) {pdim =  long_dim; pdir = !dir;} // front
-							else if (sel_ix == 1) {pdim = !long_dim; pdir = 1;} // left
-							else if (sel_ix == 2) {pdim = !long_dim; pdir = 0;} // right
-
-							if (place_phone_on_obj(rgen, place_area, room_id, tot_light_amt, pdim, pdir, 0.2)) { // allow a bit of overhang
-								objs[rdesk_ix].item_flags |= (1 << sel_ix); // mark this surface as occupied
-							}
-						}
-					}
-					break; // done
-				} // for n
+					if (add_reception_desk(rgen, desk, long_dim, dir, room_id, tot_light_amt)) break;
+				}
 			} // for dir
 		} // end reception desk
 	}
@@ -3908,6 +3878,41 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 		}
 	}
 	add_cameras_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
+}
+
+bool building_t::add_reception_desk(rand_gen_t &rgen, cube_t const &desk, bool dim, bool dir, unsigned room_id, float tot_light_amt) {
+	if (interior->is_blocked_by_stairs_or_elevator(desk)) return 0; // bad location, try a new one
+	vect_room_object_t &objs(interior->room_geom->objs);
+
+	if (has_office_chair_model()) {
+		vector3d const chair_sz(get_office_chair_size());
+		point pos;
+		pos.z = desk.z1();
+		pos[!dim] = desk.get_center_dim(!dim);
+		pos[ dim] = desk.get_center_dim( dim) + (dir ? -1.0 : 1.0)*(-0.05*desk.get_sz_dim(dim) + chair_sz.x); // push the chair into the cutout of the desk
+		cube_t const chair(get_cube_height_radius(pos, chair_sz.x, chair_sz.z));
+		if (interior->is_blocked_by_stairs_or_elevator(chair)) return 0; // bad location, try a new one
+		objs.emplace_back(chair, TYPE_OFF_CHAIR, room_id, dim, dir, 0, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK);
+	}
+	unsigned const rdesk_ix(objs.size());
+	objs.emplace_back(desk, TYPE_RDESK, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE);
+
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_PHONE) && rgen.rand_float() < 0.75) { // add phone 75% of the time
+		unsigned sel_ix(0);
+		cube_t const place_area(get_rand_reception_desk_placement_cube(objs.back(), rgen, sel_ix));
+
+		if (place_area.is_strictly_normalized()) {
+			bool pdim(0), pdir(0); // facing the chair
+			if      (sel_ix == 0) {pdim =  dim; pdir = !dir;} // front
+			else if (sel_ix == 1) {pdim = !dim; pdir = 1;} // left
+			else if (sel_ix == 2) {pdim = !dim; pdir = 0;} // right
+
+			if (place_phone_on_obj(rgen, place_area, room_id, tot_light_amt, pdim, pdir, 0.2)) { // allow a bit of overhang
+				objs[rdesk_ix].item_flags |= (1 << sel_ix); // mark this surface as occupied
+			}
+		}
+	}
+	return 1;
 }
 
 void building_t::add_cameras_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {

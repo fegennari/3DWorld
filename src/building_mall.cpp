@@ -942,11 +942,23 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		} // for d
 	} // for f
 	// add a reception desk in front of end walls that have no store
+	float const desk_width(1.5*window_vspace), desk_depth(0.5*desk_width), desk_height(0.32*window_vspace), centerline(room.get_center_dim(!mall_dim));
+	cube_t desk;
+	set_wall_width(desk, centerline, 0.5*desk_width, !mall_dim);
+
 	for (unsigned f = 0; f < num_floors; ++f) {
+		float const z(zval + f*floor_spacing);
+		set_cube_zvals(desk, z, z+desk_height);
+
 		for (unsigned d = 0; d < 2; ++d) { // ends
-			if (f+1 == num_floors && d == interior->extb_wall_dir) continue; // likely blocked by entrance stairs
-			//float const z(zval + f*floor_spacing);
-		}
+			if (f+1 == num_floors && bool(d) == !interior->extb_wall_dir) continue; // likely blocked by entrance stairs
+			float const wall_pos(room.d[mall_dim][d]), d_sign(d ? -1.0 : 1.0), back_pos(wall_pos + d_sign*0.5*desk_depth);
+			desk.d[mall_dim][ d] = back_pos - d_sign*desk_depth; // back, extended back more - for end store window coll test
+			desk.d[mall_dim][!d] = back_pos + d_sign*desk_depth; // front
+			if (has_bcube_int(desk, interior->int_windows) || has_bcube_int(desk, interior->store_doorways)) continue; // too close to store door or window
+			desk.d[mall_dim][ d] = back_pos; // back
+			add_reception_desk(rgen, desk, mall_dim, !d, room_id, light_amt); // ignore return value
+		} // for d
 	} // for f
 	// TODO: palm trees, TYPE_PICTURE?, TYPE_BAR_STOOL?
 
@@ -1066,7 +1078,7 @@ bool building_t::add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area,
 }
 
 void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
-	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), doorway_width(get_doorway_width()), wall_thickness(get_wall_thickness());
+	float const doorway_width(get_doorway_width());//, floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float const light_amt = 1.0; // fully lit, for now
 	// get doorway bcube
 	cube_t doorway;
