@@ -852,7 +852,45 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	// add objects to remaining openings
 	for (unsigned i = 0; i < num_openings; ++i) {
 		if ((int)i == fountain_opening_ix || (int)i == fc_opening_ix) continue; // already occupied
-		// TODO: set of TYPE_VASE
+		// add vases/sculptures
+		unsigned const num_vases(rgen.rand() % 5); // 0-4
+		if (num_vases == 0) continue; // no vases
+		cube_t const &opening(openings[i]);
+		float const opening_len(opening.get_sz_dim(mall_dim)), opening_width(opening.get_sz_dim(!mall_dim));
+		float const place_area_hlen(min(0.2*opening_len, 0.5*opening_width)), place_area_hwidth(min(0.2*opening_len, 0.2*opening_width));
+		point const opening_center(opening.xc(), opening.yc(), zval);
+		cube_t place_area(opening);
+		set_wall_width(place_area, opening_center[ mall_dim], place_area_hlen,    mall_dim);
+		set_wall_width(place_area, opening_center[!mall_dim], place_area_hwidth, !mall_dim);
+		colorRGBA const vase_color(gen_vase_color(rgen)); // consistent per opening
+		unsigned const rand_ix(rgen.rand()); // consistent per opening
+		point center;
+
+		for (unsigned n = 0; n < num_vases; ++n) {
+			float const height(window_vspace*rgen.rand_uniform(0.5, 1.0)), radius(window_vspace*rgen.rand_uniform(0.1, 0.25));
+			
+			for (unsigned N = 0; N < ((num_vases >= 3) ? 10 : 1); ++N) { // 10 placement tries if at least 3 vases
+				if (num_vases == 1) {
+					center = opening_center;
+				}
+				else if (num_vases == 2) {
+					if (n == 0) {center  = gen_xy_pos_in_area(place_area, radius, rgen);} // first vase
+					else        {center += (opening_center - center);} // second vase diagonally opposite
+				}
+				else if (num_vases >= 3) {
+					center[!mall_dim] = opening_center[!mall_dim];
+					center[ mall_dim] = rgen.rand_uniform(place_area.d[mall_dim][0], place_area.d[mall_dim][1]);
+				}
+				cube_t vase;
+				vase.set_from_sphere(center, radius);
+				set_cube_zvals(vase, zval, zval+height);
+				if (has_bcube_int(vase, blockers)) continue;
+				objs.emplace_back(vase, TYPE_VASE, room_id, 0, 0, RO_FLAG_IN_MALL, light_amt, SHAPE_CYLIN, vase_color);
+				objs.back().obj_id = rand_ix;
+				blockers.push_back(vase);
+				break; // success
+			} // for N
+		} // for n
 	} // for i
 	// if there are bathrooms, add a water fountain between them
 	if (!interior->mall_bathrooms.is_all_zeros() && building_obj_model_loader.is_model_valid(OBJ_MODEL_WFOUNTAIN)) {

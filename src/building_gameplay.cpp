@@ -139,7 +139,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_TOY       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 2.0,   0.1,   "toy"); // plastic ring stack
 	bldg_obj_types[TYPE_DRESS_MIR ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 1, 100.0, 30.0,  "mirror");
 	bldg_obj_types[TYPE_PAN       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 15.0,  4.0,   "frying pan");
-	bldg_obj_types[TYPE_VASE      ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 20.0,  1.0,   "vase");
+	bldg_obj_types[TYPE_VASE      ] = bldg_obj_type_t(1, 1, 0, 1, 0, 0, 2, 20.0,  1.0,   "vase"); // only large mall floor vases have collisions enabled
 	bldg_obj_types[TYPE_URN       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 40.0,  2.0,   "urn");
 	bldg_obj_types[TYPE_FCABINET  ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 3, 100.0, 220.0, "filing cabinet"); // body is large, drawers and their contents are small
 	bldg_obj_types[TYPE_STAPLER   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 10.0,  0.6,   "stapler");
@@ -302,6 +302,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	if (obj.type == TYPE_FIRE_EXT && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,  20.0, 10.0, "empty fire extinguisher");}
 	if (obj.type == TYPE_CANDLE   && obj.is_used   ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   0.5,  0.4, "used candle");}
 	if (obj.type == TYPE_POOL_FLOAT&&obj.is_broken ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   5.0,  1.0, "deflated pool float");} // half value, no player coll
+	if (obj.type == TYPE_VASE     && obj.in_mall   ()) {return bldg_obj_type_t(1, 1, 0, 1, 0, 0, 2,  500.0,250.0,"sculpture");}
 
 	if (obj.type == TYPE_INSECT) { // unused
 		bool const is_fly(obj.is_hanging());

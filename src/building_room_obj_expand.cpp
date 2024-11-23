@@ -17,7 +17,6 @@ bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher);
 void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim);
 float get_med_cab_wall_thickness(room_object_t const &c);
 float get_radius_for_square_model(unsigned model_id);
-colorRGBA gen_vase_color(rand_gen_t &rgen);
 
 void resize_model_cube_xy(cube_t &cube, float dim_pos, float not_dim_pos, unsigned id, bool dim) {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(id)); // L, W, H
