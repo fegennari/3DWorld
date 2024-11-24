@@ -1030,6 +1030,7 @@ bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &tabl
 {
 	if (!place_area.contains_cube_xy(table) || has_bcube_int(table, blockers)) return 0;
 	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const table_obj_id(objs.size());
 	room_object_t table_obj(table, TYPE_TABLE, room_id, 0, 0, RO_FLAG_IN_MALL, tot_light_amt, SHAPE_CUBE, WHITE, tid_tag); // tid_tag sets table texture
 	objs.push_back(table_obj);
 	set_obj_id(objs);
@@ -1067,6 +1068,7 @@ bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &tabl
 	case 4: if (rgen.rand_float() < 0.5) {place_pizza_on_obj (rgen, table_obj, room_id, tot_light_amt);} break; // less common
 	case 5: if (rgen.rand_float() < 0.5) {place_banana_on_obj(rgen, table_obj, room_id, tot_light_amt);} break; // less common
 	case 6: if (rgen.rand_float() < 0.1) {place_laptop_on_obj(rgen, table_obj, room_id, tot_light_amt);} break; // very rare
+	case 7: if (rgen.rand_float() < 0.4) {place_eating_items_on_table(rgen, table_obj_id); break;} // less common
 	} // default = place nothing
 	return 1;
 }

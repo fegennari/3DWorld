@@ -5003,7 +5003,7 @@ bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_ob
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SILVER)); // D, W, H
 			float const sw_height(0.0075*floor_spacing), sw_hwidth(0.5*sw_height*sz.x/sz.z), sw_hlen(0.5*sw_height*sz.y/sz.z); // Note: x/y swapped
 			vector3d const offset(pos - table_center);
-			bool const dim(fabs(offset.x) < fabs(offset.y)), dir(offset[dim] > 0.0);
+			bool const dim(objs[i].dim), dir(!objs[i].dir); // use chair dim/dir
 			cube_t sw_bc;
 			set_cube_zvals(sw_bc, table.z2()+0.1*sw_height, table.z2()+sw_height);
 			set_wall_width(sw_bc, pos[!dim] + ((dim ^ dir) ? 1.0 : -1.0)*1.2*(plate_radius + sw_hlen), sw_hlen, !dim);
