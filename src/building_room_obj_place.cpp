@@ -76,6 +76,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 	float const window_vspacing(get_window_vspace()), room_pad(4.0f*get_wall_thickness()), dir_sign(dir ? -1.0 : 1.0);
 	float chair_height(0.0), chair_hwidth(0.0), min_push_out(0.0), max_push_out(0.0);
 	point chair_pos(place_pos); // same starting center and z1
+	bool is_plastic(0);
 
 	if (office_chair) {
 		vector3d const chair_sz(get_office_chair_size());
@@ -90,10 +91,11 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 		min_push_out = 0.25;
 		max_push_out = 0.85;
 	}
-	else { // normal wooden chair
-		chair_height = 0.4*window_vspacing;
+	else { // normal wooden or plastic chair
+		is_plastic   = !is_residential();
+		chair_height = (is_plastic ? 0.44 : 0.4)*window_vspacing;
 		chair_hwidth = 0.1*window_vspacing; // half width
-		min_push_out = -0.5; // varible amount of pushed in/out
+		min_push_out = -0.5; // variable amount of pushed in/out
 		max_push_out = 1.2;
 	}
 	float const min_wall_dist(fabs(place_pos[dim] - room.d[dim][!dir]) - 1.33*get_min_front_clearance_inc_people());
@@ -129,7 +131,10 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 				flags |= RO_FLAG_ON_FLOOR;
 			}
 		}
-		objs.emplace_back(chair, TYPE_CHAIR, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, chair_color);
+		colorRGBA color(chair_color);
+		// colored plastic chairs are too bright; convert to mostly grayscale
+		if (is_plastic) {color = blend_color(color*0.8, WHITE*color.get_luminance(), 0.2, 0);}
+		objs.emplace_back(chair, TYPE_CHAIR, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, color, (is_plastic ? 1 : 0)); // set item_flags to 1 for plastic chair
 	}
 	return 1;
 }
