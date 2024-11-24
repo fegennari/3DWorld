@@ -1169,7 +1169,7 @@ void building_t::assign_special_room_types(vector<unsigned> &utility_room_cands,
 	vector<room_t> &rooms(interior->rooms);
 	vector<unsigned> conf_rooms;
 	
-	if (!is_residential() && has_office_chair_model()) { // office buildings with office chairs
+	if (!is_residential()) { // office building
 		// try to assign conference room(s); this may be overwritten with a special room on the ground floor;
 		// conference rooms are currently interior and windowless so that we can have glass walls without blending problems with windows
 		float max_area(0.0);

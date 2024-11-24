@@ -734,19 +734,26 @@ bool building_t::add_conference_objs(rand_gen_t rgen, room_t const &room, float 
 		add_pens_pencils_to_surface(table, rgen.rand_bool(), rgen.rand_bool(), 1, rgen, room_id, tot_light_amt, avoid); // 0-1, random dim and dir
 	}
 	// add office chairs along sides of the table
-	vector3d const chair_sz(get_office_chair_size());
-	unsigned const num_chairs(floor(table_lw.x/(1.2*2.0*chair_sz.x)));
+	bool add_rolling_chair(has_office_chair_model() /*&& rgen.rand_float() < 0.5*/); // else pastic chairs
+	vector3d const chair_sz(add_rolling_chair ? get_office_chair_size() : vector3d(0.1, 0.1, 0.45)*floor_spacing);
+	unsigned const num_chairs(floor(table_lw.x/((add_rolling_chair ? 1.2 : 1.8)*2.0*chair_sz.x))); // more spacing for plastic chairs
+	colorRGBA const chair_color(add_rolling_chair ? GRAY_BLACK : WHITE*rgen.rand_uniform(0.1, 1.0));
 	float const chair_spacing(table_lw.x/max(1U, num_chairs));
 	point chair_pos(0.0, 0.0, zval);
 	
 	for (unsigned side = 0; side < 2; ++side) {
-		chair_pos[!dim] = table.d[!dim][side] + (side ? 1.0 : -1.0)*chair_sz.x*rgen.rand_uniform(0.3, 0.7);
-
 		for (unsigned n = 0; n < num_chairs; ++n) {
-			chair_pos[dim] = table.d[dim][0] + (n + 0.5)*chair_spacing + 0.1*chair_spacing*rgen.signed_rand_float();
+			chair_pos[!dim] = table.d[!dim][side] + (side ? 1.0 : -1.0)*chair_sz.x*rgen.rand_uniform(0.2, 0.8);
+			chair_pos[ dim] = table.d[ dim][0] + (n + 0.5)*chair_spacing + 0.1*chair_spacing*rgen.signed_rand_float();
 			cube_t chair(get_cube_height_radius(chair_pos, chair_sz.x, chair_sz.z));
-			objs.emplace_back(chair, TYPE_OFF_CHAIR, room_id, !dim, !side, 0, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK);
-		}
+
+			if (add_rolling_chair) {
+				objs.emplace_back(chair, TYPE_OFF_CHAIR, room_id, !dim, !side, 0, tot_light_amt, SHAPE_CYLIN, chair_color);
+			}
+			else { // plastic chair
+				objs.emplace_back(chair, TYPE_CHAIR, room_id, !dim, !side, 0, tot_light_amt, SHAPE_CUBE, chair_color, 1); // item_flags=1 to specify a plastic chair
+			}
+		} // for n
 	} // for side
 	// add a big TV/monitor on the wall
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) {
@@ -3905,7 +3912,7 @@ bool building_t::add_reception_desk(rand_gen_t &rgen, cube_t const &desk, bool d
 	if (interior->is_blocked_by_stairs_or_elevator(desk)) return 0; // bad location, try a new one
 	vect_room_object_t &objs(interior->room_geom->objs);
 
-	if (has_office_chair_model()) {
+	if (has_office_chair_model()) { // add an office chair behind the desk
 		vector3d const chair_sz(get_office_chair_size());
 		point pos;
 		pos.z = desk.z1();

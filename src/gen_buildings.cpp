@@ -3161,7 +3161,6 @@ public:
 			}
 		} // if flatten_mesh
 		{ // open a scope
-			has_office_chair_model(); // must call this to load models here, since it's called inside building_t::gen_geometry() and is not thread safe
 			timer_t timer2("Gen Building Geometry", !is_tile); // 120ms/700ms => 160ms/900ms
 			bool const gen_interiors(global_building_params.gen_building_interiors);
 			bool const use_mt(!is_tile || gen_interiors); // only single threaded for tiles with no interiors, which is a fast case anyway
