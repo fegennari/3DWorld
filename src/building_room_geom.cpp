@@ -11,6 +11,7 @@ using std::swap;
 bool const ADD_BOOK_COVERS = 1; // cover pictures
 bool const ADD_BOOK_TITLES = 1;
 bool const USE_REAL_AUTHOR = 1; // for books
+float const DESK_TOP_THICK = 0.1; // relative to full height
 colorRGBA const STAIRS_COLOR_TOP(0.7, 0.7, 0.7);
 colorRGBA const STAIRS_COLOR_BOT(0.9, 0.9, 0.9);
 
@@ -189,7 +190,7 @@ void get_table_cubes(room_object_t const &c, cube_t cubes[5]) {
 	bool const is_desk(c.type == TYPE_DESK), is_dns(c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND);
 	cube_t top(c), legs_bcube(c);
 	// Note: default table with top_dz=0.12, leg_width=0.08; desk is 0.15/0.06; dresser is 0.88/0.10
-	top.z1() += (is_desk ? 0.85 : (is_dns ? 0.12 : 0.88))*c.dz();
+	top.z1() += (is_desk ? (1.0 - DESK_TOP_THICK) : (is_dns ? 0.12 : 0.88))*c.dz();
 	legs_bcube.z2() = top.z1();
 	cubes[0] = top;
 	get_tc_leg_cubes(legs_bcube, c, (is_desk ? 0.06 : (is_dns ? 0.10 : 0.08)), 1, (cubes+1)); // legs are inexact for glass tables
@@ -3360,7 +3361,7 @@ room_object_t get_desk_drawers_part(room_object_t const &c) {
 	float const desk_width(c.get_width()), height(c.dz());
 	room_object_t drawers(c);
 	drawers.z1() += 0.05*height; // shift up a bit from the floor
-	drawers.z2()  = c.z1() + 0.85*height;
+	drawers.z2()  = c.z1() + (1.0 - DESK_TOP_THICK)*height;
 	drawers.expand_by_xy(-0.15*get_tc_leg_width(c, 0.06));
 	drawers.d[!c.dim][!side] += (side ? 1.0 : -1.0)*0.75*desk_width; // put the drawers off to one side
 	return drawers;
@@ -3378,7 +3379,7 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale, bool i
 
 	if (inc_lg) {
 		cube_t top(c), legs_bcube(c);
-		top.z1() += 0.85 * c.dz();
+		top.z1() += (1.0 - DESK_TOP_THICK)*c.dz();
 		legs_bcube.z2() = top.z1();
 		get_wood_material(tscale).add_cube_to_verts(top, color, tex_origin); // all faces drawn
 		add_tc_legs(legs_bcube, c, color, 0.06, 1, tscale);

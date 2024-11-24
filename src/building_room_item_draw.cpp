@@ -904,7 +904,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		assert(i->type < NUM_ROBJ_TYPES);
 
 		switch (i->type) {
-		case TYPE_TABLE:   add_table   (*i, tscale, 0.12, 0.08); break; // top_dz=12% of height, leg_width=8% of height
+		case TYPE_TABLE:   add_table   (*i, tscale, 0.1, 0.08); break; // top_dz=10% of height, leg_width=8% of height
 		case TYPE_CHAIR:   add_chair   (*i, tscale); break;
 		case TYPE_STAIR:   add_stair   (*i, tscale, tex_origin); break;
 		case TYPE_STAIR_WALL: add_stairs_wall(*i, tex_origin, wall_tex); break;

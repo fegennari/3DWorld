@@ -139,7 +139,7 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, cube_t const &room, v
 	point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, unsigned max_chairs, bool use_tall_table)
 {
 	bool const use_bar_stools(use_tall_table);
-	float const table_rscale(use_tall_table ? 0.12 : 0.18), table_hscale(use_tall_table ? 0.35 : 0.2), room_dx(room.dx()), room_dy(room.dy());
+	float const table_rscale(use_tall_table ? 0.12 : 0.18), table_hscale(use_tall_table ? 0.35 : 0.22), room_dx(room.dx()), room_dy(room.dy());
 	float const window_vspacing(get_window_vspace()), room_pad(max(4.0f*get_wall_thickness(), get_min_front_clearance_inc_people()));
 	// use a long table for a large room 50% of the time
 	bool const use_long_table(!use_tall_table && max(room_dx, room_dy) > 3.0*window_vspacing && min(room_dx, room_dy) > 2.0*window_vspacing && rgen.rand_bool());
@@ -442,7 +442,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace());
 	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return 0; // room is too small
-	float const width(0.8*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.38*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.21*vspace*rgen.rand_uniform(1.08, 1.2));
+	float const width(0.8*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.38*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.23*vspace*rgen.rand_uniform(1.08, 1.2));
 	float const clearance(max(0.5f*depth, get_min_front_clearance_inc_people()));
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t c;
