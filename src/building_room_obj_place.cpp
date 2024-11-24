@@ -3319,22 +3319,22 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	if (width < 4.0*nom_aisle_width) return; // too small for shelf racks
 	unsigned const nrows((dim ? nx : ny)-1), nracks(max(2U, (dim ? ny : nx)/4));
 	if (nrows == 0) return; // too small for shelf racks
-	float aisle_width(nom_aisle_width), aisle_spacing((width - aisle_width)/nrows), rack_width(aisle_spacing - aisle_width);
+	float row_aisle_width(nom_aisle_width), aisle_spacing((width - row_aisle_width)/nrows), rack_width(aisle_spacing - row_aisle_width);
 	assert(rack_width > 0.0);
 	
 	if (rack_width > max_rack_width) { // rack is too wide; widen the aisle instead
-		rack_width    = max_rack_width;
-		aisle_width   = aisle_spacing - rack_width;
-		aisle_spacing = (width - aisle_width)/nrows;
+		rack_width      = max_rack_width;
+		row_aisle_width = aisle_spacing - rack_width;
+		aisle_spacing   = (width - row_aisle_width)/nrows;
 	}
-	float const rack_spacing((length - aisle_width)/nracks), rack_length(rack_spacing - aisle_width);
 	float const wall_thickness(get_wall_thickness()), pillar_width(2.0*wall_thickness), fc_gap(get_floor_ceil_gap());
+	float const col_aisle_width(nom_aisle_width + pillar_width), rack_spacing((length - col_aisle_width)/nracks), rack_length(rack_spacing - col_aisle_width);
 	assert(rack_length > 0.0);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	vect_cube_t pillars;
 	cube_t rack, pillar;
 	set_cube_zvals(rack,   zval, (zval + rack_height));
-	set_cube_zvals(pillar, zval, (zval + fc_gap + (retail_floor_levels - 1)*floor_spacing)); // up to the ceiling
+	set_cube_zvals(pillar, zval, room.z2()-get_fc_thickness()); // up to the ceiling
 	unsigned const objs_start(objs.size()), style_id(rgen.rand()); // same style for each rack
 	unsigned rack_id(0);
 	bool const skip_middle_row(nrows & 1);
@@ -3343,13 +3343,13 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	
 	for (unsigned n = 0; n < nrows; ++n) { // n+1 aisles
 		if (skip_middle_row && n == nrows/2) continue; // skip middle aisle rack to allow direct access to central stairs and elevator/escalator
-		float const rack_lo(room.d[!dim][0] + aisle_width + n*aisle_spacing);
+		float const rack_lo(room.d[!dim][0] + row_aisle_width + n*aisle_spacing);
 		rack.d[!dim][0] = rack_lo;
 		rack.d[!dim][1] = rack_lo + rack_width;
 		set_wall_width(pillar, (rack_lo + 0.5*rack_width), 0.5*pillar_width, !dim); // centered on the rack
 
 		for (unsigned r = 0; r < nracks; ++r) {
-			float const start(room.d[dim][0] + aisle_width + r*rack_spacing);
+			float const start(room.d[dim][0] + col_aisle_width + r*rack_spacing);
 			rack.d[dim][0] = start;
 			rack.d[dim][1] = start + rack_length;
 			bool was_shortened(0);
@@ -3372,6 +3372,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 			if (!was_shortened && r > 0) { // place a pillar at the end of the rack
 				pillar.d[dim][0] = start - pillar_width;
 				pillar.d[dim][1] = start;
+				assert(pillar.is_strictly_normalized());
 				objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, 0, 0, RO_FLAG_ADJ_TOP); // flag so that top is drawn
 
 				if (has_tall_retail()) { // add bare top part of pillars
@@ -3379,6 +3380,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 					cube_t pillar_top(pillar);
 					objs.back().z2() = pillar_top.z1() = zval + fc_gap; // prev was bottom, next is top
 					pillar_top.expand_by_xy(-0.1*wall_thickness); // slight shrink
+					assert(pillar.is_strictly_normalized());
 					objs.emplace_back(pillar_top, TYPE_OFF_PILLAR, room_id, 0, 0, RO_FLAG_ADJ_HI); // flag as upper/concrete
 					pillars.push_back(pillar); // needed for upper glass floors
 				}
