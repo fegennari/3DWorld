@@ -273,7 +273,7 @@ string get_pool_ball_name(unsigned number) {
 bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	if (obj.type == TYPE_PICTURE && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 20.0, 6.0,  "picture frame");} // second item to take from picture
 	if (obj.type == TYPE_TPROLL  && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 6.0,  0.5,  "toilet paper holder");} // second item to take from tproll
-	if (obj.type == TYPE_TCAN    && obj.in_mall()      ) {return bldg_obj_type_t(0, 1, 1, 1, 0, 0, 2, 80.0, 40.0, "mall trashcan");}
+	if (obj.type == TYPE_TCAN    && obj.in_mall()      ) {return bldg_obj_type_t(0, 1, 1, 1, 0, 0, 2, 80.0, 40.0, "large trashcan");}
 
 	if (obj.type == TYPE_BED) { // player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name
 		if (obj.taken_level > 1) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 250.0, mattress_weight, "mattress"  );} // third item to take from bed
@@ -375,7 +375,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		type.name    = ((liquid_level > 0.0) ? "bucket of unknown liquid" : "empty bucket");
 		type.weight += 0.1*round_fp(10*16.0*liquid_level); // 2 gallon bucket, gets heavier with more liquid; round to nearest tenth
 	}
-	else if (obj.type == TYPE_TABLE && obj.in_mall()) { // variable sized mall table
+	else if (obj.type == TYPE_TABLE && obj.in_mall()) { // variable sized mall food court table
 		wv_factor = 0.75*obj.get_length()/obj.get_width(); // longer tables are heavier and higher value
 		type.name = "food court table";
 	}

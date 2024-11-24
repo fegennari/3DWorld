@@ -813,8 +813,8 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		cube_t fbc;
 		set_cube_zvals(fbc, zval, zval+height);
 		for (unsigned d = 0; d < 2; ++d) {set_wall_width(fbc, opening.get_center_dim(d), radius, d);}
-		objs.emplace_back(fbc, TYPE_BLDG_FOUNT, room_id, rgen.rand_bool(), rgen.rand_bool(), 0, light_amt, SHAPE_CYLIN); // random dim/dir
-		objs.back().item_flags = rgen.rand(); // select a random sub_model_id
+		unsigned const item_flags(rgen.rand()); // select a random sub_model_id
+		objs.emplace_back(fbc, TYPE_BLDG_FOUNT, room_id, rgen.rand_bool(), rgen.rand_bool(), 0, light_amt, SHAPE_CYLIN, WHITE, item_flags); // random dim/dir
 		blockers.push_back(fbc);
 	}
 	// trashcan setup for trashcans along walls and food court pillars
@@ -1030,8 +1030,7 @@ bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &tabl
 {
 	if (!place_area.contains_cube_xy(table) || has_bcube_int(table, blockers)) return 0;
 	vect_room_object_t &objs(interior->room_geom->objs);
-	room_object_t table_obj(table, TYPE_TABLE, room_id, 0, 0, RO_FLAG_IN_MALL, tot_light_amt, SHAPE_CUBE, WHITE);
-	table_obj.item_flags = tid_tag; // sets table texture
+	room_object_t table_obj(table, TYPE_TABLE, room_id, 0, 0, RO_FLAG_IN_MALL, tot_light_amt, SHAPE_CUBE, WHITE, tid_tag); // tid_tag sets table texture
 	objs.push_back(table_obj);
 	set_obj_id(objs);
 	// place chairs around the table
@@ -1053,7 +1052,7 @@ bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &tabl
 			chair_pos[!dim] += (dir ? -1.0 : 1.0)*rgen.rand_uniform(-0.5, 1.2)*chair_hwidth;
 			cube_t chair(get_cube_height_radius(chair_pos, chair_hwidth, chair_height));
 			if (!place_area.contains_cube_xy(chair) || has_bcube_int(chair, blockers)) continue;
-			objs.emplace_back(chair, TYPE_CHAIR, room_id, !dim, dir, RO_FLAG_IN_MALL, tot_light_amt, SHAPE_CUBE, chair_color);
+			objs.emplace_back(chair, TYPE_CHAIR, room_id, !dim, dir, RO_FLAG_IN_MALL, tot_light_amt, SHAPE_CUBE, chair_color, 1); // item_flags=1 to specify a plastic chair
 			blockers.push_back(objs.back());
 		} // for n
 	} // for D
@@ -1092,7 +1091,7 @@ bool building_t::add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area,
 	unsigned const NUM_MALL_CHAIR_COLORS = 5;
 	colorRGBA const mall_chair_colors[NUM_MALL_CHAIR_COLORS] = {WHITE, LT_GRAY, GRAY, ORANGE, LT_BROWN};
 	colorRGBA const &chair_color(mall_chair_colors[rgen.rand() % NUM_MALL_CHAIR_COLORS]);
-	unsigned const tid_tag(rgen.rand()); // sets table texture
+	unsigned const tid_tag(rgen.rand() + 1); // sets table texture; make nonzero to flag as a textured surface table
 	cube_t table;
 	set_cube_zvals(table, zval, zval+table_height);
 

@@ -572,7 +572,7 @@ unsigned const RO_FLAG_HAS_VOL_IX= 0x2000; // for books,  aliased with RO_FLAG_A
 unsigned const RO_FLAG_FOR_CAR   = 0x1000; // for car blockers, aliased with RO_FLAG_ADJ_BOT
 unsigned const RO_FLAG_WALKWAY   = 0x1000; // for walkway objects (outside of buildings), aliased with RO_FLAG_ADJ_BOT
 // object flags, third byte, for pickup/interact state
-unsigned const RO_FLAG_IN_HALLWAY= 0x010000; // for attic doors
+unsigned const RO_FLAG_IN_HALLWAY= 0x010000; // for attic doors and trashcans
 unsigned const RO_FLAG_IN_MALL   = 0x010000; // for mall chairs, tables, benches, trashcans, etc.; aliased with RO_FLAG_IN_HALLWAY
 unsigned const RO_FLAG_IN_ATTIC  = 0x020000;
 unsigned const RO_FLAG_HAS_EXTRA = 0x040000; // used for counter backsplash, exterior wall trim, desks with computer monitors and keyboards, books on glass tables, and hotel closets
@@ -680,6 +680,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool in_closet  () const {return  (flags & RO_FLAG_IN_CLOSET);}
 	bool in_attic   () const {return  (flags & RO_FLAG_IN_ATTIC);}
 	bool in_mall    () const {return  (flags & RO_FLAG_IN_MALL);}
+	bool in_hallway () const {return  (flags & RO_FLAG_IN_HALLWAY);}
 	bool is_exterior() const {return  (flags & RO_FLAG_EXTERIOR);}
 	bool rotates    () const {return  (flags & RO_FLAG_RAND_ROT);}
 	bool is_on_floor() const {return  (flags & RO_FLAG_ON_FLOOR);}
@@ -2739,7 +2740,7 @@ float get_closet_wall_thickness(room_object_t const &c);
 void get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collision=0);
 void get_bed_cubes   (room_object_t const &c, cube_t cubes[6]);
 void get_table_cubes (room_object_t const &c, cube_t cubes[5]);
-void get_cubes_for_mall_table(room_object_t const &c, float top_dz, cube_t cubes[3]);
+void get_cubes_for_plastic_table(room_object_t const &c, float top_dz, cube_t cubes[3]);
 void get_conf_table_cubes(room_object_t const &c, cube_t cubes[2]);
 unsigned get_table_like_object_cubes(room_object_t const &c, cube_t cubes[7]);
 void get_chair_cubes (room_object_t const &c, cube_t cubes[3]);

@@ -596,8 +596,8 @@ bool can_use_table_coll(room_object_t const &c) {
 }
 // actually applies to tables, desks, dressers, and nightstands
 unsigned get_table_like_object_cubes(room_object_t const &c, cube_t cubes[7]) { // tables, desks, dressers, and nightstands
-	if (c.type == TYPE_TABLE && c.in_mall()) {
-		get_cubes_for_mall_table(c, 0.12, cubes); // top_dz=0.12
+	if (c.type == TYPE_TABLE && c.item_flags > 0) {
+		get_cubes_for_plastic_table(c, 0.12, cubes); // top_dz=0.12
 		return 3; // {top, vert, base}
 	}
 	unsigned num(5);
@@ -854,7 +854,8 @@ cube_t get_true_room_obj_bcube(room_object_t const &c) { // for collisions, etc.
 
 bool room_object_t::is_player_collidable() const {
 	// chairs are player collidable only when in attics or backrooms; trashcans are only player collidable in malls
-	return (!no_coll() && (bldg_obj_types[type].player_coll || (type == TYPE_CHAIR && (in_attic() || (flags & RO_FLAG_BACKROOM))) || (type == TYPE_TCAN && in_mall())));
+	return (!no_coll() && (bldg_obj_types[type].player_coll || (type == TYPE_CHAIR && (in_attic() || (flags & RO_FLAG_BACKROOM))) ||
+		(type == TYPE_TCAN && (in_mall() || in_hallway()))));
 }
 
 // Note: used for the player; pos and p_last are already in rotated coordinate space

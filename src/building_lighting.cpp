@@ -366,7 +366,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			get_chair_cubes(*c, cubes);
 			cc.emplace_back(cubes[0], c->color); // seat
 
-			if (c->in_mall()) { // plastic chair; legs are so thin that we ignore their contribution as an optimization
+			if (c->item_flags > 0) { // plastic chair; legs are so thin that we ignore their contribution as an optimization
 				cc.emplace_back(cubes[1], c->color); // back
 			}
 			else { // wood chair

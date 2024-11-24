@@ -202,15 +202,15 @@ colorRGBA get_table_color(room_object_t const &c) {
 		bool const marble(c.obj_id & 1);
 		return (marble ? texture_color(MARBLE_TEX) : get_textured_wood_color()); // ignore the black legs of marble tables
 	}
-	else if (c.in_mall()) {
+	else if (c.item_flags > 0) { // plastic textured table
 		return (c.color + mall_tc_legs_color)*0.5; // a mix of table surface color with texture, gray frame, and black base; so make 50% surface color and 50% black
 	}
-	else { // rectangular or short table
+	else { // rectangular or short wooden table
 		bool const glass(c.is_house() && (c.obj_id & 1));
 		return (glass ? table_glass_color : get_textured_wood_color()); // ignore the black legs of glass tables
 	}
 }
-void get_cubes_for_mall_table(room_object_t const &c, float top_dz, cube_t cubes[3]) { // top, vert support, base
+void get_cubes_for_plastic_table(room_object_t const &c, float top_dz, cube_t cubes[3]) { // top, vert support, base
 	float const dz(c.dz()), width(min(c.dx(), c.dy()));
 	cube_t top(c), vert(c), base(c);
 	top.z1() += (1.0 - top_dz)*dz;
@@ -254,10 +254,10 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 	else { // rectangular or short table
 		assert(c.shape == SHAPE_CUBE || c.shape == SHAPE_SHORT);
 
-		if (c.type == TYPE_TABLE && c.in_mall()) { // mall food court table - rectangular with a single cylinder support and flat cylinder base
+		if (c.type == TYPE_TABLE && c.item_flags > 0) { // mall food court table - rectangular with a single cylinder support and flat cylinder base
 			float const width(min(c.dx(), c.dy()));
 			cube_t cubes[3];
-			get_cubes_for_mall_table(c, top_dz, cubes);
+			get_cubes_for_plastic_table(c, top_dz, cubes);
 			cube_t top(cubes[0]), frame(top);
 			frame.z2() = top.z1() = c.z2() - 0.005*dz;
 			top.expand_by_xy(-0.03*width);
@@ -308,19 +308,19 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 }
 
 colorRGBA get_chair_color(room_object_t const &c) {
-	if (c.in_mall()) {return (c.color*0.75 + mall_tc_legs_color*0.25);} // 75% plastic chair color, 25% legs
+	if (c.item_flags > 0) {return (c.color*0.75 + mall_tc_legs_color*0.25);} // 75% plastic chair color, 25% legs
 	return (c.color + get_textured_wood_color())*0.5; // 50% seat color / 50% wood legs color
 }
 void get_chair_cubes(room_object_t const &c_in, cube_t cubes[3]) {
 	room_object_t c(c_in); // copy so that we can modify it
-	bool const mall_chair(c.in_mall());
+	bool const plastic_chair(c.item_flags > 0);
 	if (c.is_on_floor()) {rotate_obj_cube(c, c, c.dim, !c.dir);} // inverse rotate back to upright
 	float const height(c.dz()*((c.shape == SHAPE_SHORT) ? 1.333 : 1.0)); // effective height if the chair wasn't short
 	cube_t seat(c), back(c), legs_bcube(c);
 	seat.z1() += 0.32*height;
-	seat.z2()  = back.z1() = seat.z1() + (mall_chair ? 0.02 : 0.06)*height;
+	seat.z2()  = back.z1() = seat.z1() + (plastic_chair ? 0.02 : 0.06)*height;
 	legs_bcube.z2() = seat.z1();
-	back.d[c.dim][c.dir] += (mall_chair ? 0.96 : 0.88f)*(c.dir ? -1.0f : 1.0f)*c.get_depth();
+	back.d[c.dim][c.dir] += (plastic_chair ? 0.96 : 0.88f)*(c.dir ? -1.0f : 1.0f)*c.get_depth();
 	cubes[0] = seat; cubes[1] = back; cubes[2] = legs_bcube;
 
 	if (c.is_on_floor()) { // rotate chair
@@ -331,14 +331,14 @@ void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 
 	cube_t cubes[3]; // seat, back, legs_bcube
 	get_chair_cubes(c, cubes);
 
-	if (c.in_mall()) { // mall food court chair
+	if (c.item_flags > 0) { // plastic chair
 		colorRGBA const plastic_color(apply_light_color(c));
 		rgeom_mat_t &plastic_mat(get_untextured_material(1)); // shadowed, for seat and back
 		plastic_mat.add_cube_to_verts(cubes[0], plastic_color, all_zeros); // seat; shadowed, all faces drawn
 		plastic_mat.add_cube_to_verts(cubes[1], plastic_color, all_zeros, EF_Z1); // back; skip bottom face
 		add_tc_legs(cubes[2], c, apply_light_color(c, mall_tc_legs_color), CHAIR_LEG_WIDTH_MALL, 1, tscale, 1); // legs; use_metal_mat=1
 	}
-	else {
+	else { // padded wooden chair
 		get_material(tid_nm_pair_t(MARBLE_TEX, 1.2*tscale, 1), 1).add_cube_to_verts(cubes[0], apply_light_color(c), c.get_llc()); // seat; shadowed, all faces drawn
 		colorRGBA const color(apply_wood_light_color(c));
 		get_wood_material(tscale).add_cube_to_verts(cubes[1], color, c.get_llc(), EF_Z1); // back; skip bottom face
@@ -3665,7 +3665,7 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 void building_room_geom_t::add_trashcan(room_object_t const &c) {
 	colorRGBA const color(apply_light_color(c));
 
-	if (c.in_mall()) { // large mall trashcan
+	if (c.in_mall() || c.in_hallway()) { // large mall or hallway trashcan (same flag for both cases)
 		rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
 
 		if (c.shape == SHAPE_CYLIN) {
@@ -3682,7 +3682,7 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 			for (auto i = mat.itri_verts.begin()+verts_start; i != mat.itri_verts.end(); ++i) {i->invert_normal();}
 			reverse(mat.indices.begin()+ixs_start, mat.indices.end());
 		}
-		else { // exterior cube with hole cut into top front
+		else { // SHAPE_CUBE; exterior cube with hole cut into top front
 			float const dz(c.dz()), width(c.get_width()), wall_thickness(0.01*dz), border_thickness(0.1*width);
 			cube_t inner(c), bot(c), top(c);
 			inner.expand_in_z (-wall_thickness); // shift bottom up and top down

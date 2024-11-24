@@ -1539,7 +1539,7 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 		// maybe zombies should walk down the ramp instead? but ramps are wider than stairs, if the player stands to the side then the zombie may walk right by;
 		// so that means we need navigation to the side while on a ramp? this seems quite difficult for the current system to support
 		//if (skip_stairs && c->type == TYPE_RAMP) continue;
-		//if (c->type == TYPE_ATTIC_DOOR && (c->flags & RO_FLAG_IN_HALLWAY)) continue; // skip open attic doors in hallways because they block the path too much
+		//if (c->type == TYPE_ATTIC_DOOR && (c->in_hallway())) continue; // skip open attic doors in hallways because they block the path too much
 		cube_t bc(get_true_room_obj_bcube(*c)); // needed for open attic door
 		if (bc.z1() > z2 || bc.z2() < z1) continue;
 		if (c->type == TYPE_RAMP && bc.z2() < z1 + floor_thickness) continue; // ramp top is exactly at the floor; add floor_thickness to prevent coll when walking above
