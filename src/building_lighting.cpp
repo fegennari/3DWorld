@@ -1761,9 +1761,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					|| (player_in_basement || light_in_basement) // basement only visible through ceiling/floor/stairs
 					|| (parts_are_stacked && camera_within_one_floor))) // stacked parts maybe connected with stairs; shouldn't be visible through windows
 				{
-					// player is on a different floor of the same building part, or more than one floor away in a part stack, and can't see a light from the floor above/below
-					if (!stairs_light) continue; // camera in building and on wrong floor, don't add light; will always return if more than one floor away
-					cull_if_not_by_stairs = 1;
+					// player is on a different floor of the same building part, or more than one floor away in a part stack
+					if (camera_in_ext_basement && in_ext_basement && camera_in_hallway && !room.is_backrooms() && !(floor_is_above ? cuts_above : cuts_below).empty()) {
+						// player in backrooms hallway, and a side room's light may be visible though a door in a hallway connected by stairs to the player's hallway
+					}
+					else { // can't see a light from the floor above/below
+						if (!stairs_light) continue; // camera in building and on wrong floor, don't add light; will always return if more than one floor away
+						cull_if_not_by_stairs = 1;
+					}
 				}
 				else { // camera outside the building (or the part that contains this light)
 					float const xy_dist(p2p_dist_xy(camera_bs, lpos_rot));
