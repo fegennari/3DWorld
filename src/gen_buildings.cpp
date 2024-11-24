@@ -3307,7 +3307,7 @@ public:
 		vector<point> points; // reused temporary
 		static building_draw_t ext_parts_draw; // roof and exterior walls; reused across calls
 		bool const sec_camera_mode(pre_smap_player_pos != actual_player_pos); // hack to determine if this is the shadow for a security camera light
-		bool is_house(0);
+		bool is_house(0), ext_two_sided(0);
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			if (interior_shadow_maps) { // draw interior shadow maps
@@ -3328,7 +3328,6 @@ public:
 						bool const camera_in_walkway(b.check_pt_in_or_near_walkway(pre_smap_player_pos, 1, 0, 0)); // owned_only=1, inc_open_door=0, inc_conn_room=0
 						if (!b.point_in_building_or_basement_bcube(lpos_clamped) && !camera_in_walkway) continue; // wrong building
 						(*i)->building_draw_interior.draw_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
-						b.add_split_roof_shadow_quads(ext_parts_draw);
 						// no batch draw for shadow pass since textures aren't used; draw everything, since shadow may be cached
 						bool camera_in_this_building(b.check_point_or_cylin_contained(pre_smap_player_pos, 0.0, points, 1, 1, 0)); // inc_attic=1, inc_ext_basement=1, inc_roof_acc=0
 						camera_in_this_building |= b.interior_visible_from_other_building_ext_basement(xlate, 1); // check conn building as well; expand_for_light=1
@@ -3338,9 +3337,16 @@ public:
 						int const inc_small(sec_camera_shadow_mode ? 0 : (camera_in_this_building ? 3 : 1));
 						b.draw_room_geom(nullptr, s, amask_shader, oc, xlate, bi->ix, 1, 0, inc_small, 1); // shadow_only=1, player_in_building=1
 						bool const basement_light(lpos.z < b.ground_floor_z1);
-						if (!basement_light) {b.get_ext_wall_verts_no_sec(ext_parts_draw);} // add exterior walls to prevent light leaking between adjacent parts, if not basement
-						else if (b.has_ext_basement()) {b.get_basement_ext_wall_verts(ext_parts_draw);} // draw basement exterior walls to block light from entering ext basement
-						if (!basement_light) {b.get_walkway_end_verts(ext_parts_draw, lpos);}
+
+						if (!basement_light) { // above ground light
+							b.add_split_roof_shadow_quads(ext_parts_draw);
+							b.get_ext_wall_verts_no_sec(ext_parts_draw); // add exterior walls to prevent light leaking between adjacent parts, if not basement
+							b.get_walkway_end_verts(ext_parts_draw, lpos);
+						}
+						else if (b.has_ext_basement()) {
+							b.get_basement_ext_wall_verts(ext_parts_draw); // draw basement exterior walls to block light from entering ext basement
+							if (b.get_basement().contains_pt(lpos)) {ext_two_sided = 1;} // draw back sides of basement walls to block light from basement to ext basement
+						}
 						b.draw_cars_in_building(s, xlate, 1, 1); // player_in_building=1, shadow_only=1
 						is_house |= b.is_house;
 						bool const in_retail_room(b.check_pt_in_retail_room(lpos));
@@ -3381,7 +3387,7 @@ public:
 			}
 		} // for i
 		// need to draw back faces of exterior parts to handle shadows on blinds; only needed for houses, and causes problems with walkway doors
-		bool const enable_back_faces(interior_shadow_maps && is_house);
+		bool const enable_back_faces((interior_shadow_maps && is_house) || ext_two_sided);
 		if ( enable_back_faces) {glDisable(GL_CULL_FACE);}
 		ext_parts_draw.draw(s, 1, 1); // shadow_only=1, direct_draw_no_vbo=1
 		ext_parts_draw.clear();
