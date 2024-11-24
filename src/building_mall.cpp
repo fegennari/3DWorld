@@ -845,7 +845,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			set_wall_width(tcan, p.get_center_dim(mall_dim), tcan_radius, mall_dim);
 			room_object_t const tcan_obj(tcan, TYPE_TCAN, room_id, !mall_dim, !pdir, RO_FLAG_IN_MALL, light_amt, tcan_shape, tcan_color);
 			objs.push_back(tcan_obj);
-			add_mall_trashcan_contents(rgen, tcan_obj, room_id, light_amt);
+			add_large_trashcan_contents(rgen, tcan_obj, room_id, light_amt);
 			blockers.push_back(tcan);
 		} // for p
 		add_food_court_objs(rgen, place_area, zval, room_id, light_amt, blockers);
@@ -973,7 +973,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 					wall_blockers.back().expand_by_xy(window_vspace); // don't place two nearby trashcans
 					room_object_t const tcan_obj(tcan, TYPE_TCAN, room_id, !mall_dim, !d, RO_FLAG_IN_MALL, light_amt, tcan_shape, tcan_color);
 					objs.push_back(tcan_obj);
-					add_mall_trashcan_contents(rgen, tcan_obj, room_id, light_amt);
+					add_large_trashcan_contents(rgen, tcan_obj, room_id, light_amt);
 					break;
 				} // for N
 			} // for n
@@ -1007,7 +1007,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	return pillars_start;
 }
 
-void building_t::add_mall_trashcan_contents(rand_gen_t &rgen, room_object_t const &tcan, unsigned room_id, float tot_light_amt) { // with trash
+void building_t::add_large_trashcan_contents(rand_gen_t &rgen, room_object_t const &tcan, unsigned room_id, float tot_light_amt) { // with trash
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// place trash in trashcans
 	bool const is_cylin(tcan.shape == SHAPE_CYLIN);

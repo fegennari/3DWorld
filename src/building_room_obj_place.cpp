@@ -3829,10 +3829,11 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 			}
 		} // for s
 	}
+	// add a fire extinguisher on the wall
 	bool const pri_dir(room_rgen.rand_bool()); // random, but the same across all floors
 	float fe_height(0.0), fe_radius(0.0);
 
-	if (get_fire_ext_height_and_radius(window_vspacing, fe_height, fe_radius)) { // add a fire extinguisher on the wall
+	if (get_fire_ext_height_and_radius(window_vspacing, fe_height, fe_radius)) {
 		float const min_clearance(2.0*fe_radius), wall_pos_lo(room.d[long_dim][0] + min_clearance), wall_pos_hi(room.d[long_dim][1] - min_clearance);
 
 		if (wall_pos_lo < wall_pos_hi) { // should always be true?
@@ -3849,7 +3850,8 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 			} // for n
 		}
 	}
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_WFOUNTAIN)) { // add a water fountain to the center of the hall (likely between stairs and elevator)
+	// add a water fountain to the center of the hall (likely between stairs and elevator)
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_WFOUNTAIN)) {
 		float used_space_center(0.0); // calculate occupied hallway width near water fountain, assuming the first stairwell and elevator are in the primary hallway
 		if (!interior->stairwells.empty()) {max_eq(used_space_center, interior->stairwells.front().get_width());}
 		if (!interior->elevators .empty()) {max_eq(used_space_center, interior->elevators .front().get_width());}
@@ -3877,6 +3879,25 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 			} // for n
 		}
 	}
+	// add one or more trashcan to a corner; use a large cylinder, the same as a mall trashcan
+	float const tcan_height(0.26*window_vspacing), tcan_radius(0.1*window_vspacing), wall_spacing(1.2*tcan_radius);
+	cube_t tcan;
+	set_cube_zvals(tcan, zval, zval+tcan_height); // set height
+	bool add_to_ends[2] = {1, 1}; // defaults to both ends
+	if (floor_ix > 0) {add_to_ends[rgen.rand_bool()] = 0;} // floors above the ground floor have only one trashcan
+
+	for (unsigned end_dir = 0; end_dir < 2; ++end_dir) {
+		if (!add_to_ends[end_dir]) continue;
+		bool const side_dir(rgen.rand_bool());
+		float const side_pos(room.d[!long_dim][side_dir] + (side_dir ? -1.0 : 1.0)*wall_spacing);
+		float const end_pos (room.d[ long_dim][end_dir ] + (end_dir  ? -1.0 : 1.0)*wall_spacing);
+		set_wall_width(tcan, side_pos, tcan_radius, !long_dim);
+		set_wall_width(tcan, end_pos,  tcan_radius,  long_dim);
+		room_object_t const tcan_obj(tcan, TYPE_TCAN, room_id, long_dim, end_dir, RO_FLAG_IN_HALLWAY, tot_light_amt, SHAPE_CYLIN, LT_GRAY);
+		objs.push_back(tcan_obj);
+		add_large_trashcan_contents(rgen, tcan_obj, room_id, tot_light_amt);
+	} // for d
+	// add cameras to each end of the hallway
 	add_cameras_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
 }
 
