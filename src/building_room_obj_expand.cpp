@@ -412,7 +412,7 @@ void building_room_geom_t::expand_breaker_panel(room_object_t const &c, building
 			else {continue;} // else middle column; no space to add a label
 			cube_t label(breaker);
 			label.translate_dim(!c.dim, label_xlate*breaker_dc);
-			string label_text(room_names_short[zone.rtype]);
+			string label_text(room_names_short[zone.rtype]); // ignores store names
 			if (label_text.empty()) continue;
 
 			// special breaker labeling for apartments and hotels;

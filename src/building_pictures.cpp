@@ -183,7 +183,7 @@ public:
 				unsigned const floor_ix(room.get_floor_containing_zval(i->z1(), b.get_window_vspace()));
 				std::string const dir_strs[4] = {"E", "W", "N", "S"};
 				std::string const &dir_str(dir_strs[i->get_orient()]);
-				std::string const &room_str(room_names[room.get_room_type(floor_ix)]);
+				std::string const &room_str(room_names[room.get_room_type(floor_ix)]); // what about store names? currently there are no cameras in stores
 				std::ostringstream oss;
 				
 				if (room_str == "Hallway") { // shorten hallway => hall and add floor number

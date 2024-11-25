@@ -6,7 +6,7 @@
 #include "city_model.h"
 
 using std::string;
-string choose_store_name  (rand_gen_t &rgen);
+string choose_store_name  (unsigned store_type, unsigned item_category, rand_gen_t &rgen);
 colorRGBA choose_pot_color(rand_gen_t &rgen);
 colorRGBA choose_sign_color(rand_gen_t &rgen, bool emissive=0);
 bool is_invalid_city_placement_for_cube(cube_t const &c);
@@ -1117,8 +1117,6 @@ bool building_t::add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area,
 	return 1;
 }
 
-enum {STORE_OTHER=0, STORE_CLOTHING, STORE_FOOD, STORE_RETAIL, NUM_STORE_TYPES}; // for use with object placement and naming
-
 void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
 	float const door_width(get_doorway_width()), floor_spacing(room.dz()), window_vspace(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float const light_amt = 1.0; // fully lit, for now
@@ -1131,26 +1129,30 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 		doorway = d;
 	}
 	assert(!doorway.is_all_zeros()); // must be found
+	// place items
 	bool const mall_dim(interior->extb_wall_dim);
 	bool const dim(doorway.dy() < doorway.dx()), dir(room.get_center_dim(dim) < doorway.get_center_dim(dim)); // points from room center toward doorway
+	room_t const &mall_room(get_mall_concourse());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_start(objs.size());
 	unsigned const store_type(rgen.rand() % NUM_STORE_TYPES);
+	unsigned const item_category((store_type == STORE_RETAIL) ? (rgen.rand() % NUM_SRACK_CATEGORIES) : 0); // same category for each rack
+	string const store_name(choose_store_name(store_type, item_category, rgen));
+	interior->stores.emplace_back(dim, dir, room_id, store_type, item_category, store_name);
 
 	// add store name on sign above the entrance
-	room_t const &mall_room(get_mall_concourse());
-	float const sign_z1(room.z1() + 0.7*floor_spacing), sign_height(0.3*window_vspace), sign_hwidth(2.0*sign_height), sign_thickness(0.5*wall_thickness);
+	float const sign_z1(room.z1() + 0.7*floor_spacing), sign_height(0.3*window_vspace), sign_hwidth(0.25*sign_height*(store_name.size() + 2)), sign_thick(0.5*wall_thickness);
 	float const ext_wall_pos(mall_room.d[dim][!dir] + (dir ? 1.0 : -1.0)*((dim == mall_dim) ? 1.0 : 0.5)*wall_thickness);
 	cube_t sign;
 	set_cube_zvals(sign, sign_z1, sign_z1+sign_height);
 	sign.d[dim][!dir] = ext_wall_pos;
-	sign.d[dim][ dir] = ext_wall_pos + (dir ? 1.0 : -1.0)*sign_thickness;
+	sign.d[dim][ dir] = ext_wall_pos + (dir ? 1.0 : -1.0)*sign_thick;
 	set_wall_width(sign, room.get_center_dim(!dim), sign_hwidth, !dim);
 	bool const emissive(0);
 	unsigned const flags(RO_FLAG_LIT | RO_FLAG_NOCOLL | (emissive ? RO_FLAG_EMISSIVE : 0) | RO_FLAG_HANGING);
 	colorRGBA const sign_color(choose_sign_color(rgen, emissive));
 	objs.emplace_back(sign, TYPE_SIGN, interior->ext_basement_hallway_room_id, dim, dir, flags, 1.0, SHAPE_CUBE, sign_color); // always lit
-	objs.back().obj_id = register_sign_text(choose_store_name(rgen));
+	objs.back().obj_id = register_sign_text(store_name);
 	cube_t blocked;
 
 	// add checkout counter(s)/cash register(s) to the side of the door
@@ -1189,7 +1191,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 			assert(rack_length > 0.0);
 			cube_t rack;
 			set_cube_zvals(rack, zval, (zval + SHELF_RACK_HEIGHT_FS*window_vspace));
-			unsigned const style_id(rgen.rand()), item_category(rgen.rand() % NUM_SRACK_CATEGORIES); // same style/category for each rack
+			unsigned const style_id(rgen.rand()); // same style for each rack
 			unsigned rack_id(0);
 
 			for (unsigned n = 0; n < nrows; ++n) { // n+1 aisles
@@ -1213,5 +1215,14 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 		}
 	}
 	// TODO: TYPE_DUCT, etc.
+}
+
+int building_interior_t::get_store_id_for_room(unsigned room_id) const { // uses a slow linear iteration over stores, but not called much
+	if (!get_room(room_id).is_store()) return -1; // not a store
+
+	for (auto s = stores.begin(); s != stores.end(); ++s) {
+		if (s->room_id == room_id) return (s - stores.begin()); // found
+	}
+	return -1; // not found
 }
 

@@ -502,7 +502,7 @@ enum {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_
 	  RTYPE_DINING, RTYPE_STUDY, RTYPE_ENTRY, RTYPE_LIBRARY, RTYPE_STORAGE, RTYPE_GARAGE, RTYPE_SHED, RTYPE_LOBBY, RTYPE_LAUNDRY, RTYPE_CARD,
 	  RTYPE_PLAY, RTYPE_ART, RTYPE_UTILITY, RTYPE_PARKING, RTYPE_RAMP_EXIT, RTYPE_ATTIC, RTYPE_MASTER_BED, RTYPE_UNFINISHED, RTYPE_SERVER, RTYPE_POOL,
 	  RTYPE_SWIM, RTYPE_SECURITY, RTYPE_LOUNGE, RTYPE_COMMON, RTYPE_BACKROOMS, RTYPE_RETAIL, RTYPE_ELEVATOR, RTYPE_CONF, RTYPE_MACHINE, RTYPE_INTERR,
-	  RTYPE_ELEV_EQUIP, RTYPE_STORE, RTYPE_MALL, NUM_RTYPES};
+	  RTYPE_ELEV_EQUIP, RTYPE_STORE, RTYPE_MALL, RTYPE_RESTAURANT, NUM_RTYPES};
 typedef uint8_t room_type;
 
 inline bool is_bathroom (room_type   const rtype) {return (rtype == RTYPE_BATH || rtype == RTYPE_MENS || rtype == RTYPE_WOMENS);}
@@ -514,17 +514,19 @@ std::string const room_names[NUM_RTYPES] =
 	 "Dining Room", "Study", "Entryway", "Library", "Storage Room", "Garage", "Shed", "Lobby", "Laundry Room", "Card Room",
 	 "Play Room", "Art Room", "Utility Room", "Parking Garage", "Ramp Exit", "Attic", "Master Bedroom", "Unfinished Room", "Server Room", "Pool Room",
 	 "Swimming Pool Room", "Security Room", "Lounge", "Common Room", "Backrooms", "Retail", "Elevator", "Conference Room", "Machine Room", "Interrogation Room",
-	 "Elev Equip Room", "Store", "Mall Concourse"};
+	 "Elev Equip Room", "Store", "Mall Concourse", "Restaurant"};
 // short room names for elevator buttons (should be <= 8 characters)
 std::string const room_names_short[NUM_RTYPES] =
 	{"", "Hall", "Stairs", "Office", "Bath", "Men", "Women", "Bed", "Kitchen", "Living",
 	"Dining", "Study", "Entry", "Library", "Storage", "Garage", "Shed", "Lobby", "Laundry", "Card",
 	"Play", "Art", "Utility", "Garage", "Ramp", "Attic", "Bed", "", "Server", "Pool",
 	"Swim", "Security", "Lounge", "Common", "Basement", "Retail", "Elevator", "Conference", "Machine", "Dungeon",
-	"Equipment", "Store", "Mall"};
+	"Equipment", "Store", "Mall", "Restaurant"};
 
+enum {STORE_OTHER=0, STORE_CLOTHING, STORE_FOOD, STORE_RETAIL, NUM_STORE_TYPES}; // for use with object placement and naming
+std::string const store_type_strs[NUM_STORE_TYPES] = {"", "clothing", "food", "retail"};
 unsigned const NUM_SRACK_CATEGORIES = 5;
-std::string const srack_categories[NUM_SRACK_CATEGORIES] = {"boxes items", "food", "household goods", "kitchen", "electronics"};
+std::string const srack_categories[NUM_SRACK_CATEGORIES] = {"boxed items", "food", "household goods", "kitchen", "electronics"};
 
 enum {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES, SHAPE_RAMP, SHAPE_L, SHAPE_FAN}; // stairs shapes; SHAPE_FAN is unused
 typedef uint8_t stairs_shape;
@@ -1420,6 +1422,15 @@ struct extb_room_t : public cube_t { // extended basement room candidate
 };
 typedef vector<extb_room_t> vect_extb_room_t;
 
+struct store_info_t {
+	bool dim, dir;
+	unsigned room_id, store_type, item_category;
+	std::string name;
+
+	store_info_t(bool d, bool D, unsigned rid, unsigned type, unsigned cat, std::string const &n) : dim(d), dir(D), room_id(rid), store_type(type), item_category(cat), name(n) {}
+	std::string get_full_name() const;
+};
+
 struct tunnel_conn_t {
 	unsigned dim;
 	bool dir;
@@ -1710,6 +1721,7 @@ struct building_interior_t {
 	vector<door_stack_t> door_stacks;
 	vector<landing_t> landings; // for stairs and elevators
 	vector<room_t> rooms;
+	vector<store_info_t> stores;
 	vector<elevator_t> elevators;
 	vector<escalator_t> escalators;
 	vector<person_t> people;
@@ -1739,6 +1751,7 @@ struct building_interior_t {
 	door_t       &get_door(unsigned door_ix)       {assert(door_ix < doors.size()); return doors[door_ix];}
 	room_t const &get_extb_start_room() const {return get_room(ext_basement_hallway_room_id);} // extb hallway, backrooms, or mall
 	room_t       &get_extb_start_room()       {return get_room(ext_basement_hallway_room_id);} // extb hallway, backrooms, or mall
+	int get_store_id_for_room(unsigned room_id) const;
 	bool is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin=0.0f, bool inc_open=0, bool check_open_dir=0) const;
 	bool is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin=0.0f, bool elevators_only=0, int no_check_enter_exit=0) const;
 	void get_stairs_and_elevators_bcubes_intersecting_cube(cube_t const &c, vect_cube_t &bcubes, float ends_clearance=0.0, float sides_clearance=0.0) const;
@@ -1766,6 +1779,7 @@ struct building_interior_t {
 	room_t const &get_garage_room() const {assert(garage_room >= 0); return get_room(garage_room);}
 	vector<room_t>::const_iterator ext_basement_rooms_start() const;
 	bool point_in_ext_basement_room(point const &pos, float expand=0.0) const;
+	// tunnels
 	bool point_in_tunnel(point const &pos, float expand=0.0) const;
 	bool point_near_tunnel_entrance(point const &pos) const;
 	int get_tunnel_ix_for_point(point const &pos) const;
@@ -2120,6 +2134,7 @@ struct building_t : public building_geom_t {
 	door_t       &get_door(unsigned door_ix)       {assert(interior); return interior->get_door(door_ix);}
 	point get_center_of_room(unsigned room_ix) const {return get_room(room_ix).get_cube_center();}
 	room_t const &get_pool_room() const {assert(interior); return get_room(interior->pool.room_ix);}
+	std::string get_room_name(point const &pos, int room_id=-1, unsigned floor_ix=0) const;
 
 	// building AI people
 	unsigned count_connected_room_components();

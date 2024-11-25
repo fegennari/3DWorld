@@ -1468,13 +1468,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			check_ramp        = (has_pg_ramp() && !interior->ignore_ramp_placement);
 			camera_room_tall  = (room.is_single_floor && camera_bs.z > room.z1() + window_vspacing);
 			if (room.is_single_floor) {up_light_zmin = max(camera_bs.z-window_vspacing, room.z1());} // player can see upward lights on walls when in a tall ceiling room
-			
-			if (show_room_name) {
-				unsigned room_type(room.get_room_type(camera_floor));
-				if (interior->elevator_equip_room.contains_pt(camera_rot)) {room_type = RTYPE_ELEV_EQUIP;} // inside the parking garage
-				assert(room_type < NUM_RTYPES);
-				lighting_update_text = room_names[room_type];
-			}
+			if (show_room_name) {lighting_update_text = get_room_name(camera_rot, room_ix, camera_floor);}
 			// stairs and ramps only allow light to pass if visible to the player
 			float const zval(room.z1() + camera_floor*window_vspacing), ceil_below_z(zval - fc_thick), floor_below_z(zval + fc_thick);
 			float const ceil_above_z(ceil_below_z + window_vspacing), floor_above_z(floor_below_z + window_vspacing);

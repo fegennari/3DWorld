@@ -62,8 +62,16 @@ string choose_business_name(rand_gen_t rgen, building_type_t btype) {
 	return ""; // never gets here
 }
 
-string choose_store_name(rand_gen_t &rgen) { // for malls
-	return gen_random_name(rgen, 5); // TODO: placeholder, should be by category
+string choose_store_name(unsigned store_type, unsigned item_category, rand_gen_t &rgen) { // for malls
+	return gen_random_name(rgen, 5); // TODO: placeholder, should be by store_type/category
+}
+
+string store_info_t::get_full_name() const {
+	string str;
+	if (store_type == STORE_RETAIL) {assert(item_category < NUM_SRACK_CATEGORIES); str += srack_categories[item_category] + "\n";}
+	assert(store_type < NUM_STORE_TYPES);
+	str += store_type_strs[store_type] + " store " + name;
+	return str;
 }
 
 void building_t::assign_name(rand_gen_t &rgen) {
@@ -77,6 +85,17 @@ string building_t::get_name_for_floor(unsigned floor_ix) const {
 	rand_gen_t rgen;
 	rgen.set_state(hash<string>{}(name), floor_ix_from_ground); // seed with hash of original name to create a new family name for an upper floor
 	return choose_family_name(rgen);
+}
+
+string building_t::get_room_name(point const &pos, int room_id, unsigned floor_ix) const {
+	if (room_id < 0) {room_id = get_room_containing_camera(pos);} // find room if not passed in; assumes pos is the camera/player
+	if (room_id < 0) return ""; // no room
+	int const store_id(interior->get_store_id_for_room(room_id));
+	if (store_id >= 0) {return interior->stores[store_id].get_full_name();} // store
+	unsigned room_type(get_room(room_id).get_room_type(floor_ix));
+	if (interior->elevator_equip_room.contains_pt(pos)) {room_type = RTYPE_ELEV_EQUIP;} // inside the parking garage
+	assert(room_type < NUM_RTYPES);
+	return room_names[room_type];
 }
 
 // signs
