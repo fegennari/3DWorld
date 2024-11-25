@@ -796,7 +796,8 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 		rgen.set_state(123*c.obj_id, 207*rack_id+1);
 		rgen.rand_mix();
 		rgen.rand_mix();
-		int const category(rgen.rand() % 5);
+		// 0=boxes items, 1=food, 2=household goods, 3=kitchen, 4=electronics
+		int const category(((c.drawer_flags > 0) ? (c.drawer_flags-1) : rgen.rand()) % NUM_SRACK_CATEGORIES); // use drawer_flags to select category (for malls), if nonzero
 
 		for (unsigned n = 0; n < num_shelves; ++n) {
 			float const ztop(((n+1) == num_shelves) ? top_shelf_z2 : shelves[n+1].z1());

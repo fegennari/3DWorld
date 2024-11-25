@@ -1120,7 +1120,7 @@ bool building_t::add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area,
 enum {STORE_OTHER=0, STORE_CLOTHING, STORE_FOOD, STORE_RETAIL, NUM_STORE_TYPES}; // for use with object placement and naming
 
 void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
-	float const doorway_width(get_doorway_width()), floor_spacing(room.dz()), window_vspace(get_window_vspace()), wall_thickness(get_wall_thickness());
+	float const door_width(get_doorway_width()), floor_spacing(room.dz()), window_vspace(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float const light_amt = 1.0; // fully lit, for now
 	// get doorway bcube
 	cube_t doorway;
@@ -1151,18 +1151,66 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	colorRGBA const sign_color(choose_sign_color(rgen, emissive));
 	objs.emplace_back(sign, TYPE_SIGN, interior->ext_basement_hallway_room_id, dim, dir, flags, 1.0, SHAPE_CUBE, sign_color); // always lit
 	objs.back().obj_id = register_sign_text(choose_store_name(rgen));
+	cube_t blocked;
 
 	// add checkout counter(s)/cash register(s) to the side of the door
 	if (store_type == STORE_CLOTHING || store_type == STORE_RETAIL) {
 		bool const side(rgen.rand_bool());
+		float const checkout_width(0.6*window_vspace), door_edge(doorway.d[!dim][side]);
 		cube_t checkout_area(room);
-		checkout_area.d[!dim][!side] = doorway.d[!dim][side]; // to the side of the doorway
-		checkout_area.expand_in_dim(!dim, -1.0*doorway_width); // add padding
+		checkout_area.d[!dim][!side] = door_edge; // to the side of the doorway
+		if (checkout_area.get_sz_dim(!dim) > checkout_width) {checkout_area.d[!dim][side] = door_edge + (side ? 1.0 : -1.0)*checkout_width;} // reduce width if needed
+		checkout_area.expand_in_dim(!dim, -1.0*door_width); // add padding
 		checkout_area.d[dim][!dir] = room.get_center_dim(dim); // only add to the front half of the store
 		add_checkout_objs(checkout_area, zval, room_id, light_amt, objs_start, dim, side, (side ^ dim ^ 1));
+		blocked = checkout_area;
+		blocked.expand_in_dim(!dim, 2.0*door_width); // add extra space to both sides
 	}
 	if (store_type == STORE_RETAIL) {
-		// TODO: TYPE_SHELFRACK
+		cube_t place_area(room);
+		place_area.expand_by_xy(-0.5*wall_thickness);
+		place_area.expand_in_dim(dim, -0.5*door_width); // add extra padding in front and back for doors
+		// simplified version of building_t::add_retail_room_objs() with no pillars, escalators, checkout counters, wall light, or short racks
+		float const dx(place_area.dx()), dy(place_area.dy()), spacing(0.8), nom_aisle_width(1.5*door_width);
+		unsigned const nx(max(1U, unsigned(spacing*dx/window_vspace))), ny(max(1U, unsigned(spacing*dy/window_vspace)));
+		float const length(dim ? dy : dx), width(dim ? dx : dy), max_rack_width(0.5*window_vspace);
+		unsigned const nrows((dim ? nx : ny)-1), nracks(max(2U, (dim ? ny : nx)/4));
+		
+		if (width > 4.0*nom_aisle_width && nrows > 0) { // can fit shelf racks
+			float row_aisle_width(nom_aisle_width), aisle_spacing((width - row_aisle_width)/nrows), rack_width(aisle_spacing - row_aisle_width);
+			assert(rack_width > 0.0);
+
+			if (rack_width > max_rack_width) { // rack is too wide; widen the aisle instead
+				rack_width      = max_rack_width;
+				row_aisle_width = aisle_spacing - rack_width;
+				aisle_spacing   = (width - row_aisle_width)/nrows;
+			}
+			float const rack_spacing((length - nom_aisle_width)/nracks), rack_length(rack_spacing - nom_aisle_width);
+			assert(rack_length > 0.0);
+			cube_t rack;
+			set_cube_zvals(rack, zval, (zval + SHELF_RACK_HEIGHT_FS*window_vspace));
+			unsigned const style_id(rgen.rand()), item_category(rgen.rand() % NUM_SRACK_CATEGORIES); // same style/category for each rack
+			unsigned rack_id(0);
+
+			for (unsigned n = 0; n < nrows; ++n) { // n+1 aisles
+				float const rack_lo(place_area.d[!dim][0] + row_aisle_width + n*aisle_spacing);
+				rack.d[!dim][0] = rack_lo;
+				rack.d[!dim][1] = rack_lo + rack_width;
+
+				for (unsigned r = 0; r < nracks; ++r) {
+					float const start(place_area.d[dim][0] + nom_aisle_width + r*rack_spacing);
+					rack.d[dim][0] = start;
+					rack.d[dim][1] = start + rack_length;
+					if (rack.intersects_xy(blocked)) continue; // blocked
+					cube_t test_cube(rack);
+					test_cube.expand_in_dim( dim, 0.5*door_width); // add extra padding at ends
+					test_cube.expand_in_dim(!dim, 1.0*door_width); // add extra padding at sides
+					if (overlaps_other_room_obj(test_cube, objs_start)) continue; // blocked; not needed?
+					unsigned const sr_obj_ix(objs.size());
+					add_shelf_rack(rack, dim, style_id, rack_id, room_id, RO_FLAG_IN_MALL, item_category+1, 0, rgen); // add_occluers=0
+				} // for r
+			} // for n
+		}
 	}
 	// TODO: TYPE_DUCT, etc.
 }

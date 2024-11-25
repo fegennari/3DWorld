@@ -523,6 +523,9 @@ std::string const room_names_short[NUM_RTYPES] =
 	"Swim", "Security", "Lounge", "Common", "Basement", "Retail", "Elevator", "Conference", "Machine", "Dungeon",
 	"Equipment", "Store", "Mall"};
 
+unsigned const NUM_SRACK_CATEGORIES = 5;
+std::string const srack_categories[NUM_SRACK_CATEGORIES] = {"boxes items", "food", "household goods", "kitchen", "electronics"};
+
 enum {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES, SHAPE_RAMP, SHAPE_L, SHAPE_FAN}; // stairs shapes; SHAPE_FAN is unused
 typedef uint8_t stairs_shape;
 
@@ -2440,7 +2443,8 @@ private:
 	void add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, light_ix_assign_t &light_ix_assign);
 	void add_checkout_objs   (cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool dim, bool dir, bool cr_dir);
-	void add_shelf_rack(cube_t const &c, bool dim, unsigned style_id, unsigned &rack_id, unsigned room_id, unsigned extra_flags, rand_gen_t &rgen);
+	void add_shelf_rack(cube_t const &c, bool dim, unsigned style_id, unsigned &rack_id, unsigned room_id,
+		unsigned extra_flags, unsigned item_category, bool add_occluders, rand_gen_t &rgen);
 	bool maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, light_ix_assign_t &light_ix_assign);
 	void add_clock(cube_t const &clock, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool digital);
 	void add_clock_to_cube(cube_t const &c, float zval, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool digital);

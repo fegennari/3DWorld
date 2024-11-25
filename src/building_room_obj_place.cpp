@@ -3365,7 +3365,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 				cube_t test_cube(cand);
 				test_cube.expand_by_xy(se_pad); // add extra padding
 				if (interior->is_blocked_by_stairs_or_elevator(test_cube)) {was_shortened = 1; continue;} // blocked
-				add_shelf_rack(cand, dim, style_id, rack_id, room_id, 0, rgen);
+				add_shelf_rack(cand, dim, style_id, rack_id, room_id, 0, 0, 1, rgen); // extra_flags=0, item_category=0, add_occluers=1
 				//for (unsigned n = 0; n < 2; ++n) {interior->room_geom->get_shelfrack_objects(objs.back(), temp_objs, n);}
 				break; // done
 			} // for n
@@ -3509,7 +3509,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 							cand.intersect_with_cube_xy(upper_place_area); // clip to fit in upper floor area
 							if (cand.get_sz_dim(dim) < min_rack_len) continue; // too short
 							cand.translate_dim(2, (floor_z2 - obj.z1())); // move to the floor above
-							add_shelf_rack(cand, dim, style_id, rack_id, room_id, RO_FLAG_ON_FLOOR, rgen); // flag so that bottom surface is drawn
+							add_shelf_rack(cand, dim, style_id, rack_id, room_id, RO_FLAG_ON_FLOOR, 0, 1, rgen); // flag so that bot surf is drawn; item_category=0, add_occluders=0
 						}
 					} // for i
 					// re-enable this floor on any elevator passing through it; add short beams under elevator entrances
@@ -3622,15 +3622,19 @@ void building_t::add_checkout_objs(cube_t const &place_area, float zval, unsigne
 	}
 }
 
-void building_t::add_shelf_rack(cube_t const &c, bool dim, unsigned style_id, unsigned &rack_id, unsigned room_id, unsigned extra_flags, rand_gen_t &rgen) {
+void building_t::add_shelf_rack(cube_t const &c, bool dim, unsigned style_id, unsigned &rack_id, unsigned room_id,
+	unsigned extra_flags, unsigned item_category, bool add_occluders, rand_gen_t &rgen)
+{
 	bool const is_empty(rgen.rand_float() < 0.05); // 5% empty
 	room_object_t srack(c, TYPE_SHELFRACK, room_id, !dim, 0, (extra_flags | (is_empty ? 0 : RO_FLAG_NONEMPTY)), 1.0, SHAPE_CUBE, WHITE); // tot_light_amt=1.0
-	srack.obj_id     = style_id; // common for all racks
-	srack.item_flags = rack_id++; // unique per rack
+	srack.obj_id       = style_id; // common for all racks
+	srack.item_flags   = rack_id++; // unique per rack
+	srack.drawer_flags = item_category;
 	interior->room_geom->objs.push_back(srack);
 	cube_t back, top, sides[2], shelves[5];
 	unsigned const num_shelves(get_shelf_rack_cubes(srack, back, top, sides, shelves));
 	interior->room_geom->get_shelfrack_objects(srack, interior->room_geom->objs, 1); // add_models_mode=1
+	if (!add_occluders) return;
 	interior->room_geom->shelf_rack_occluders[0].push_back(back);
 	interior->room_geom->shelf_rack_occluders[1].push_back(top.is_all_zeros() ? shelves[num_shelves-1] : top); // top, or top shelf
 }
