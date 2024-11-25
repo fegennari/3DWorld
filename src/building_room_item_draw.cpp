@@ -928,6 +928,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_KSINK:   add_counter (*i, tscale, 1, 0); break; // counter with kitchen  sink; lg
 		case TYPE_BRSINK:  add_counter (*i, tscale, 1, 0); break; // counter with bathroom sink; lg
 		case TYPE_PLANT:   add_potted_plant(*i, 1, 0); break; // pot only
+		case TYPE_TREE:    add_tree(*i); break;
 		case TYPE_DRESSER: case TYPE_NIGHTSTAND: add_dresser(*i, tscale, 1, 0); break;
 		case TYPE_DRESS_MIR: add_dresser_mirror(*i, tscale); break;
 		case TYPE_FLOORING:add_flooring(*i, tscale); break;

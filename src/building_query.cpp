@@ -847,6 +847,7 @@ cube_t get_true_room_obj_bcube(room_object_t const &c) { // for collisions, etc.
 		c_pot.expand_by_xy(-(1.0 - PLANT_POT_RADIUS)*c.get_radius()); // use XY radius of the pot; better for AI coll
 		return c_pot;
 	}
+	if (c.type == TYPE_TREE) {} // TODO: trunk only?
 	if (c.type == TYPE_SHOWERTUB) {return get_shower_tub_wall   (c);} // only the end wall is a collider; the tub handles the bottom (what about curtains?)
 	if (c.type == TYPE_SHELVES  ) {return get_shelves_no_bot_gap(c);}
 	return c; // default cube case
@@ -1799,7 +1800,7 @@ point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &build
 	if (room_geom) { // check room geometry
 		for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with (including stairs)
 			if (c->no_coll() || c->type == TYPE_BLOCKER || c->type == TYPE_ELEVATOR) continue; // skip blockers and elevators
-			if (c->type == TYPE_RAILING || c->type == TYPE_PLANT || c->type == TYPE_PLANT_MODEL) continue; // these have complex shapes that are too hard to attach to
+			if (c->type == TYPE_RAILING || c->type == TYPE_PLANT || c->type == TYPE_PLANT_MODEL || c->type == TYPE_TREE) continue; // complex shapes that are too hard to attach to
 
 			if (c->type == TYPE_CLOSET) { // special case to handle closet interiors
 				cube_t cubes[5];
@@ -1998,7 +1999,7 @@ public:
 					type == TYPE_CAMERA || type == TYPE_CLOCK || type == TYPE_DOWNSPOUT || type == TYPE_CHIM_CAP || type == TYPE_FOOD_BOX || type == TYPE_LADDER ||
 					type == TYPE_LAVALAMP || type == TYPE_POOL_LAD || type == TYPE_PADLOCK || type == TYPE_KEY || type == TYPE_HANGER || type == TYPE_CLOTHES ||
 					type == TYPE_WALL_LAMP || type == TYPE_SILVER || type == TYPE_TOY_MODEL || type == TYPE_CEIL_FAN || type == TYPE_FOLD_SHIRT || type == TYPE_TRASH ||
-					type == TYPE_INT_WINDOW || type == TYPE_INT_LADDER || type == TYPE_CONF_PHONE || type == TYPE_SPIWEB) continue;
+					type == TYPE_INT_WINDOW || type == TYPE_INT_LADDER || type == TYPE_CONF_PHONE || type == TYPE_SPIWEB || type == TYPE_TREE) continue;
 				if (z1 > obj.z2() || z2 < obj.z1()) continue; // zval test
 
 				if (obj.type == TYPE_PARK_SPACE) {

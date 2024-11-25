@@ -853,6 +853,11 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	// add objects to remaining openings
 	for (unsigned i = 0; i < num_openings; ++i) {
 		if ((int)i == fountain_opening_ix || (int)i == fc_opening_ix) continue; // already occupied
+		
+		if (rgen.rand_bool()) { // add potted tree
+			// TODO: palm tree using TYPE_TREE
+			//return;
+		}
 		// add vases/sculptures
 		unsigned const num_vases(rgen.rand() % 5); // 0-4
 		if (num_vases == 0) continue; // no vases
@@ -999,7 +1004,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			add_reception_desk(rgen, desk, mall_dim, !d, room_id, light_amt); // ignore return value
 		} // for d
 	} // for f
-	// TODO: palm trees, TYPE_PICTURE?
+	// TODO: TYPE_PICTURE?
 
 	// add pillars last so that we can check lights against them
 	unsigned const pillars_start(objs.size());

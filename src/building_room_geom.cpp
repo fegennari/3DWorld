@@ -4905,6 +4905,10 @@ void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot
 	}
 }
 
+void building_room_geom_t::add_tree(room_object_t const &c) {
+	// TODO
+}
+
 int get_ball_tid   (room_object_t const &c) {return get_texture_by_name(c.get_ball_type().tex_fname  );}
 int get_ball_nm_tid(room_object_t const &c) {return get_texture_by_name(c.get_ball_type().nm_fname, 1);}
 
@@ -5419,6 +5423,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_BRSINK:   return texture_color(get_counter_tid()).modulate_with(color);
 	case TYPE_CABINET:  return get_textured_wood_color();
 	case TYPE_PLANT:    return (color*0.75 + blend_color(GREEN, BROWN, 0.5, 0)*0.25); // halfway between green and brown, as a guess; mix in 75% of pot color
+	case TYPE_TREE:     return blend_color(GREEN, BROWN, 0.5, 0); // halfway between green and brown, as a guess
 	case TYPE_CLOSET:   return (color*0.5 + WHITE*0.5); // half white door and half wall color
 	case TYPE_DRESSER:  return  get_textured_wood_color();
 	case TYPE_NIGHTSTAND:return get_textured_wood_color();
