@@ -824,7 +824,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	colorRGBA const tcan_color(is_cylin_tcan ? LT_GRAY : colorRGBA(0.8, 0.6, 0.4)); // tan for cube trashcans
 
 	// add a food court to one of the openings
-	if (num_openings >= ((fountain_opening_ix >= 0) ? 2 : 1)) {
+	if (num_openings >= ((fountain_opening_ix >= 0) ? 2U : 1U)) {
 		while (1) {
 			fc_opening_ix = rgen.rand() % num_openings;
 			if (fc_opening_ix != fountain_opening_ix) break;
@@ -870,7 +870,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		for (unsigned n = 0; n < num_vases; ++n) {
 			float const height(window_vspace*rgen.rand_uniform(0.5, 1.0)), radius(window_vspace*rgen.rand_uniform(0.1, 0.25));
 			
-			for (unsigned N = 0; N < ((num_vases >= 3) ? 10 : 1); ++N) { // 10 placement tries if at least 3 vases
+			for (unsigned N = 0; N < ((num_vases >= 3) ? 10U : 1U); ++N) { // 10 placement tries if at least 3 vases
 				if (num_vases == 1) {
 					center = opening_center;
 				}
