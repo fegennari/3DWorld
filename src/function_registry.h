@@ -205,8 +205,8 @@ void gen_cone_triangles(vector<vert_norm_tc> &verts, vector_point_norm const &vp
 void gen_cone_triangles_tp(vector<vert_norm_texp> &verts, vector_point_norm const &vpn, bool two_sided_lighting, texgen_params_t const &tp);
 void gen_cylinder_triangle_strip(vector<vert_norm_tc> &verts, vector_point_norm const &vpn,
 	bool two_sided_lighting=0, float tc_t0=0.0, float tc_t1=1.0, float ts_scale=1.0, vector3d const &xlate=zero_vector);
-void gen_cylinder_quads(vector<vert_norm_tc> &verts, vector_point_norm const &vpn, bool two_sided_lighting);
-void gen_cylinder_quads(vector<vert_norm_texp> &verts, vector_point_norm const &vpn, texgen_params_t const &tp, bool two_sided_lighting);
+void gen_cylinder_quads(vector<vert_norm_tc> &verts, vector_point_norm const &vpn, bool two_sided_lighting=0, float tex_scale_len=1.0);
+void gen_cylinder_quads(vector<vert_norm_texp> &verts, vector_point_norm const &vpn, texgen_params_t const &tp, bool two_sided_lighting=0);
 void add_cylin_ends(float radius1, float radius2, int ndiv, bool texture, int draw_sides_ends, vector3d const &v12, point const ce[2], point const &xlate, vector_point_norm const &vpn);
 void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, bool texture,
 	int draw_sides_ends=0, bool two_sided_lighting=0, float const *const perturb_map=NULL, float tex_scale_len=1.0,

@@ -393,7 +393,7 @@ void gen_cylinder_triangle_strip(vector<vert_norm_tc> &verts, vector_point_norm 
 	}
 }
 
-void gen_cylinder_quads(vector<vert_norm_tc> &verts, vector_point_norm const &vpn, bool two_sided_lighting) { // unused
+void gen_cylinder_quads(vector<vert_norm_tc> &verts, vector_point_norm const &vpn, bool two_sided_lighting, float tex_scale_len) {
 
 	unsigned const ndiv(vpn.n.size());
 	float const ndiv_inv(1.0/ndiv);
@@ -405,8 +405,8 @@ void gen_cylinder_quads(vector<vert_norm_tc> &verts, vector_point_norm const &vp
 			unsigned const S(i + j), s(S%ndiv);
 			float const ts(1.0f - S*ndiv_inv);
 			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
-			create_vert(verts[vix++], vpn.p[(s<<1)+ j], normal, ts, 1.0*( j), two_sided_lighting);
-			create_vert(verts[vix++], vpn.p[(s<<1)+!j], normal, ts, 1.0*(!j), two_sided_lighting);
+			create_vert(verts[vix++], vpn.p[(s<<1)+ j], normal, ts, tex_scale_len*( j), two_sided_lighting);
+			create_vert(verts[vix++], vpn.p[(s<<1)+!j], normal, ts, tex_scale_len*(!j), two_sided_lighting);
 		}
 	} // for i
 	assert(vix == verts.size());
@@ -497,12 +497,12 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 			// draw ends only - nothing to do here
 		}
 		else if (radius2 == 0.0) { // cone (Note: still not perfect for pine tree trunks and enforcer ships)
-			gen_cone_triangles(cvb.tverts, vpn, two_sided_lighting, tex_t_start, tex_scale_len+tex_t_start, tex_width_scale, inst_pos[inst]);
+			gen_cone_triangles(cvb.tverts, vpn, two_sided_lighting, tex_t_start, tex_scale_len+tex_t_start, tex_width_scale, inst_pos[inst]); // triangles
 		}
 		else {
-			gen_cylinder_triangle_strip(cvb.sverts, vpn, two_sided_lighting, tex_t_start, tex_scale_len+tex_t_start, tex_width_scale, inst_pos[inst]);
+			gen_cylinder_triangle_strip(cvb.sverts, vpn, two_sided_lighting, tex_t_start, tex_scale_len+tex_t_start, tex_width_scale, inst_pos[inst]); // triangle strip
 		}
-		if (draw_sides_ends != 0) {add_cylin_ends(radius1, radius2, ndiv, texture, draw_sides_ends, v12, ce, inst_pos[inst], vpn);} // Note: TSL doesn't apply here
+		if (draw_sides_ends != 0) {add_cylin_ends(radius1, radius2, ndiv, texture, draw_sides_ends, v12, ce, inst_pos[inst], vpn);} // triangle fan; Note: TSL doesn't apply here
 	} // for inst
 	cvb.end_cylinder();
 }
