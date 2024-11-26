@@ -313,7 +313,8 @@ void small_tree_group::draw_pine_leaves(shader_t &s, bool shadow_only, bool low_
 	if (num_pine_trees == 0) return;
 	if (!draw_all && !camera_pdu.cube_visible(all_bcube + xlate)) return; // VFC
 	select_texture((draw_model != 0) ? WHITE_TEX : (low_detail ? PINE_TREE_TEX : stt[T_PINE].leaf_tid));
-	vbo_vnc_block_manager_t const &vbomgr(vbo_manager[low_detail]);// non-instanced (pine trees only)
+	vbo_vnc_block_manager_t const &vbomgr(vbo_manager[low_detail]); // non-instanced (pine trees only)
+	if (!vbomgr.vbo_valid()) return; // VBO not yet setup; can happen very rarely when the player is moving quickly; is this a bug?
 	vbomgr.begin_render();
 
 	if (draw_all) {
