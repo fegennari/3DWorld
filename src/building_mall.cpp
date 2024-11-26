@@ -853,15 +853,20 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	// add objects to remaining openings
 	for (unsigned i = 0; i < num_openings; ++i) {
 		if ((int)i == fountain_opening_ix || (int)i == fc_opening_ix) continue; // already occupied
+		cube_t const &opening(openings[i]);
 		
-		if (rgen.rand_bool()) { // add potted tree
-			// TODO: palm tree using TYPE_TREE
-			//return;
+		if (rgen.rand_bool()) { // add palm tree
+			unsigned const item_flags(0); // 0=palm, 1=pine (incomplete)
+			float const height(rgen.rand_uniform(0.35, 0.4)*room.dz());
+			cube_t tree_bc(point(opening.xc(), opening.yc(), zval));
+			tree_bc.z2() += height;
+			tree_bc.expand_by_xy(rgen.rand_uniform(0.18, 0.22)*height); // set radius
+			objs.emplace_back(tree_bc, TYPE_TREE, room_id, 0, 0, RO_FLAG_IN_MALL, light_amt, SHAPE_CYLIN, choose_pot_color(rgen), item_flags);
+			continue;
 		}
 		// add vases/sculptures
-		unsigned const num_vases(rgen.rand() % 5); // 0-4
+		unsigned const num_vases((rgen.rand() & 3) + 1); // 1-4
 		if (num_vases == 0) continue; // no vases
-		cube_t const &opening(openings[i]);
 		float const opening_len(opening.get_sz_dim(mall_dim)), opening_width(opening.get_sz_dim(!mall_dim));
 		float const place_area_hlen(min(0.2*opening_len, 0.5*opening_width)), place_area_hwidth(min(0.2*opening_len, 0.2*opening_width));
 		point const opening_center(opening.xc(), opening.yc(), zval);

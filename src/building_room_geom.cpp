@@ -4,6 +4,7 @@
 #include "function_registry.h"
 #include "buildings.h"
 #include "scenery.h" // for s_plant
+#include "small_tree.h" // for interior trees
 #include "shaders.h"
 
 using std::swap;
@@ -4861,44 +4862,48 @@ void building_room_geom_t::add_tv_picture(room_object_t const &c) {
 	add_tv_or_monitor_screen(c, get_material(tex));
 }
 
+void add_inverted_quads(rgeom_storage_t::vect_vertex_t &verts, unsigned verts_start) {
+	unsigned const verts_end(verts.size());
+
+	for (unsigned i = verts_start; i < verts_end; ++i) {
+		verts.push_back(verts[i]);
+		verts.back().invert_normal();
+	}
+	reverse(verts.begin()+verts_end, verts.end());
+}
+void building_room_geom_t::add_plant_pot(room_object_t const &c, float height, float radius, bool no_dirt) {
+	float const pot_top(c.z1() + height), dirt_level(pot_top - 0.15*height), cx(c.get_center_dim(0)), cy(c.get_center_dim(1));
+	get_untextured_material(1).add_cylin_to_verts(point(cx, cy, c.z1()), point(cx, cy, pot_top), 0.65*radius, radius, apply_light_color(c), no_dirt, 0, 1, 0);
+
+	if (!no_dirt) { // draw dirt in the pot as a disk if not taken
+		rgeom_mat_t &dirt_mat(get_material(tid_nm_pair_t(get_texture_by_name("rock2.png")))); // use dirt texture; unshadowed
+		dirt_mat.add_vert_disk_to_verts(point(cx, cy, dirt_level), 0.947*radius, 0, apply_light_color(c, WHITE));
+	}
+}
 void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant) {
-	float const plant_radius(c.get_radius()), stem_radius(0.08*plant_radius);
-	float const pot_height(max(1.2*plant_radius, 0.3*c.dz())), pot_top(c.z1() + pot_height), dirt_level(pot_top - 0.15*pot_height);
-	float const cx(c.get_center_dim(0)), cy(c.get_center_dim(1));
-	point const base_pos(cx, cy, dirt_level); // base of plant trunk, center of dirt disk
+	float const plant_radius(c.get_radius()), pot_height(max(1.2*plant_radius, 0.3*c.dz()));
 
 	if (inc_pot) {
 		// draw the pot, tapered with narrower bottom; draw the bottom of the pot if there's no dirt
 		bool const no_dirt(c.taken_level > 1);
-		float const pot_radius(PLANT_POT_RADIUS*plant_radius);
-		get_untextured_material(1).add_cylin_to_verts(point(cx, cy, c.z1()), point(cx, cy, pot_top), 0.65*pot_radius, pot_radius, apply_light_color(c), no_dirt, 0, 1, 0);
-		
-		if (!no_dirt) { // draw dirt in the pot as a disk if not taken
-			rgeom_mat_t &dirt_mat(get_material(tid_nm_pair_t(get_texture_by_name("rock2.png")))); // use dirt texture; unshadowed
-			dirt_mat.add_vert_disk_to_verts(base_pos, 0.947*pot_radius, 0, apply_light_color(c, WHITE));
-		}
+		add_plant_pot(c, pot_height, PLANT_POT_RADIUS*plant_radius, no_dirt);
 	}
 	if (inc_plant && c.taken_level == 0) { // plant not taken
 		// draw plant leaves
+		float const stem_radius(0.08*plant_radius), pot_top(c.z1() + pot_height), dirt_level(pot_top - 0.15*pot_height), cx(c.get_center_dim(0)), cy(c.get_center_dim(1));
+		point const base_pos(cx, cy, dirt_level); // base of plant trunk, center of dirt disk
 		s_plant plant;
 		plant.create_no_verts(base_pos, (c.z2() - base_pos.z), stem_radius, c.obj_id, 0, 1); // land_plants_only=1
 		static vector<vert_norm_comp> points;
 		points.clear();
 		plant.create_leaf_points(points, 10.0, 1.5, 4); // plant_scale=10.0 seems to work well; more levels and rings
-		auto &leaf_verts(mats_amask.get_material(tid_nm_pair_t(plant.get_leaf_tid()), 1).quad_verts);
+		auto &leaf_verts(mats_amask.get_material(tid_nm_pair_t(plant.get_leaf_tid(), 1.0, 1), 1).quad_verts); // shadowed
 		unsigned const leaf_verts_start(leaf_verts.size());
 		color_wrapper const leaf_cw(apply_light_color(c, plant.get_leaf_color()));
 		float const ts[4] = {0,1,1,0}, tt[4] = {0,0,1,1};
 		for (unsigned i = 0; i < points.size(); ++i) {leaf_verts.emplace_back(vert_norm_comp_tc(points[i], ts[i&3], tt[i&3]), leaf_cw);}
-		unsigned const leaf_verts_end(leaf_verts.size());
-
-		if (c.flags & RO_FLAG_HAS_EXTRA) { // upper floor of mall, visible from below; duplicate and reverse leaf verts to draw back surfaces
-			for (unsigned i = leaf_verts_start; i < leaf_verts_end; ++i) {
-				leaf_verts.push_back(leaf_verts[i]);
-				leaf_verts.back().invert_normal();
-			}
-			reverse(leaf_verts.begin()+leaf_verts_end, leaf_verts.end());
-		}
+		// if on upper floor of mall, visible from below; duplicate and reverse leaf verts to draw back surfaces
+		if (c.flags & RO_FLAG_HAS_EXTRA) {add_inverted_quads(leaf_verts, leaf_verts_start);}
 		// draw plant stem
 		colorRGBA const stem_color(plant.get_stem_color());
 		mats_amask.get_material(get_tex_auto_nm(WOOD2_TEX), 1).add_cylin_to_verts(point(cx, cy, base_pos.z), point(cx, cy, c.z2()), stem_radius, 0.0f, stem_color, 0, 0); // stem
@@ -4906,7 +4911,34 @@ void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot
 }
 
 void building_room_geom_t::add_tree(room_object_t const &c) {
-	// TODO
+	bool const is_palm(c.item_flags == 0); // else pine
+	float const radius(c.get_radius());
+	rand_gen_t rgen(c.create_rgen());
+	small_tree tree(cube_bot_center(c), c.dz(), 2.0*radius, (is_palm ? T_PALM : T_PINE), 0, rgen); // calc_z=0
+
+	if (is_palm) { // palm tree
+		// add leaves
+		tree.calc_palm_tree_points();
+		vector<vert_norm_comp_color> const &verts(tree.get_palm_verts()); // leaf quads
+		assert((verts.size() & 3) == 0); // must be quads
+		auto &leaf_verts(mats_amask.get_material(tid_nm_pair_t(PALM_FROND_TEX, 1.0, 1), 1).quad_verts); // shadowed
+		unsigned const leaf_verts_start(leaf_verts.size());
+		float const ts[8] = {0.5, 0.0, 0.0, 0.5, 1.0, 0.5, 0.5, 1.0}, tt[8] = {1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0}; // bent quad texture coords
+
+		for (unsigned i = 0; i < verts.size(); ++i) {
+			vert_norm_comp_color const &v(verts[i]);
+			leaf_verts.emplace_back(vert_norm_comp_tc(v, ts[i&7], tt[i&7]), v);
+		}
+		add_inverted_quads(leaf_verts, leaf_verts_start); // make double sided
+		// add trunk
+		auto &trunk_verts(mats_amask.get_material(tid_nm_pair_t(PALM_BARK_TEX, 1.0, 1), 1).quad_verts); // shadowed
+		tree.get_palm_trunk_verts(trunk_verts, N_CYL_SIDES);
+		// add pot
+		add_plant_pot(c, 0.95*radius, 1.1*radius, 0); // no_dirt=0
+	}
+	else { // pine tree
+		// TODO
+	}
 }
 
 int get_ball_tid   (room_object_t const &c) {return get_texture_by_name(c.get_ball_type().tex_fname  );}
@@ -5314,7 +5346,7 @@ void building_room_geom_t::add_spider_web(room_object_t const &c) {
 	mat.add_cube_to_verts(c, apply_light_color(c), c.get_llc(), ~get_skip_mask_for_xy(c.dim), !c.dim, !c.dir, 0); // draw front and back faces
 }
 
-void maybe_rotate_door_verts(vector<rgeom_storage_t::vertex_t> &verts, unsigned start_ix, door_t const &door, door_rotation_t const &drot) {
+void maybe_rotate_door_verts(rgeom_storage_t::vect_vertex_t &verts, unsigned start_ix, door_t const &door, door_rotation_t const &drot) {
 	if (door.open_amt == 0.0) return; // not rotated
 	// rotate around door pivot point, similar to rotate_and_shift_door()
 	float const rot_angle(-float(drot.angle)*TO_RADIANS*(door.hinge_side ? -1.0 : 1.0)), sin_term(sin(rot_angle)), cos_term(cos(rot_angle));

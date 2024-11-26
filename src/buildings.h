@@ -788,6 +788,7 @@ public:
 
 struct rgeom_storage_t {
 	typedef vert_norm_comp_tc_color vertex_t;
+	typedef vector<vertex_t> vect_vertex_t;
 	vector<vertex_t> quad_verts, itri_verts;
 	vector<unsigned> indices; // for indexed_quad_verts
 	tid_nm_pair_t tex; // used sort of like a map key
@@ -1217,6 +1218,7 @@ struct building_room_geom_t {
 	void add_ceiling_fan_light(room_object_t const &fan, room_object_t const &light);
 	void add_railing(room_object_t const &c);
 	void add_downspout(room_object_t const &c);
+	void add_plant_pot(room_object_t const &c, float height, float radius, bool no_dirt);
 	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
 	void add_tree(room_object_t const &c);
 	void add_lg_ball(room_object_t const &c);

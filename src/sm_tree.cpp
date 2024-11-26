@@ -958,6 +958,11 @@ void small_tree::calc_palm_tree_points() {
 	} // for n
 	// Note: vbo_manager is unused, but we could put the palm verts into it, though perf seems okay with individual VBOs
 }
+vector<vert_norm_comp_color> const &small_tree::get_palm_verts() const { // used for building interior trees
+	assert(type == T_PALM);
+	assert(palm_verts);
+	return palm_verts->v;
+}
 
 
 float small_tree::get_pine_tree_radius() const { // Note: doesn't include branch_xy_scale
@@ -1054,7 +1059,31 @@ void small_tree::draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, ve
 	if (is_pine_tree() && are_leaves_visible(xlate)) {draw_pine(vbo_manager);}
 }
 
+void add_fast_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, float tex_scale_len, vector<vert_norm_tc> &verts) { // returns quads
+	assert(radius1 > 0.0 || radius2 > 0.0);
+	point const ce[2] = {p1, p2};
+	vector3d v12;
+	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12));
+	gen_cylinder_quads(verts, vpn, 0, tex_scale_len); // two_sided_lighting=0
+}
+void small_tree::get_palm_trunk_verts(vector<vert_norm_comp_tc_color> &verts, unsigned nsides) const {
+	assert(type == T_PALM);
+	color_wrapper const cwb(bark_color), cwl(leaf_color);
+	static vector<vert_norm_tc> cverts; // reused across calls
+	// trunk
+	cverts.clear();
+	point const pa(0.92*trunk_cylin.p2 + 0.08*trunk_cylin.p1);
+	add_fast_cylinder(trunk_cylin.p1, pa, trunk_cylin.r1, trunk_cylin.r2, nsides, 20.0, cverts); // why is tscale 20.0 here but 2.0 below?
+	for (auto const &v : cverts) {verts.emplace_back(vert_norm_comp_tc(v.v, v.n, v.t[0], v.t[1]), cwb);}
+	// top section
+	cverts.clear();
+	point const pb(0.98*trunk_cylin.p2 + 0.02*trunk_cylin.p1), pc(1.04*trunk_cylin.p2 - 0.04*trunk_cylin.p1);
+	add_fast_cylinder(pa, pb, trunk_cylin.r2, 0.8*trunk_cylin.r2, nsides, 10.0, cverts);
+	add_fast_cylinder(pb, pc, 0.8*trunk_cylin.r2, 0.0, nsides, 1.0, cverts);
+	for (auto const &v : cverts) {verts.emplace_back(vert_norm_comp_tc(v.v, v.n, v.t[0], v.t[1]), cwl);}
+}
 
+// Note: cylin_verts is only used for pine trees
 bool small_tree::draw_trunk(bool shadow_only, bool all_visible, bool skip_lines, vector3d const &xlate, vector<vert_norm_tc> *cylin_verts) const {
 
 	if (!small_trees_enabled() || type == T_BUSH) return 1; // disabled, or no trunk/bark
@@ -1097,7 +1126,7 @@ bool small_tree::draw_trunk(bool shadow_only, bool all_visible, bool skip_lines,
 					leaf_color.set_for_cur_shader(); // palm frond color
 					point const pb(0.98*trunk_cylin.p2 + 0.02*trunk_cylin.p1), pc(1.04*trunk_cylin.p2 - 0.04*trunk_cylin.p1);
 					draw_fast_cylinder(pa, pb, trunk_cylin.r2, 0.8*trunk_cylin.r2, nsides, 1);
-					draw_fast_cylinder(pb, pc, 0.8*trunk_cylin.r2, 0.0, nsides, 1);
+					draw_fast_cylinder(pb, pc, 0.8*trunk_cylin.r2, 0.0, nsides, 1); // should we merge these two into the same draw call? but they are quads and triangles
 				}
 			}
 			else {
