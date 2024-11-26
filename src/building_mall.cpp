@@ -804,11 +804,11 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	int fountain_opening_ix(-1), fc_opening_ix(-1);
 
 	if (!openings.empty() && building_obj_model_loader.is_model_valid(OBJ_MODEL_FOUNTAIN)) {
-		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FLAG)); // W, D, H
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FOUNTAIN)); // W, D, H
 		fountain_opening_ix = choose_one_center(num_openings, rgen);
 		cube_t const &opening(openings[fountain_opening_ix]);
 		float const max_radius(0.25*min(opening.dx(), opening.dy()));
-		float height(0.9*floor_spacing*rgen.rand_uniform(0.9, 1.1)), radius(0.5*height*0.5*(sz.x + sz.y)/sz.z); // use average of width and depth for radius
+		float height(0.75*floor_spacing*rgen.rand_uniform(0.9, 1.1)), radius(0.5*height*0.5*(sz.x + sz.y)/sz.z); // use average of width and depth for radius
 		if (radius > max_radius) {height *= max_radius/radius; radius = max_radius;} // reduce size if radius is too large
 		cube_t fbc;
 		set_cube_zvals(fbc, zval, zval+height);
