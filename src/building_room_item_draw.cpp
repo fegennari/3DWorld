@@ -1841,8 +1841,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		else if (inc_small >= 2 && (player_in_building || !camera_in_building)) {
 			// without the special shader these won't look correct when drawn through windows
 			if (!amask_shader.is_setup()) {
-				// used for both plant leaves and spider webs; plants are above ground and use high min_alpha; spider webs are in basement and use low min_alpha
-				float const min_alpha((player_in_basement >= 2) ? 0.1 : 0.9);
+				// used for both plant leaves and spider webs; plants are above ground and in malls and use high min_alpha; spider webs are in basement and use low min_alpha
+				float const min_alpha((player_in_basement >= 2 && !building.has_mall()) ? 0.1 : 0.9);
 				setup_building_draw_shader(amask_shader, min_alpha, 1, 1, 0); // enable_indir=1, force_tsl=1, use_texgen=0, water_damage=0.0
 			}
 			else {amask_shader.make_current();}
