@@ -801,7 +801,10 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		// add closed gate or other objects?
 	} // for d
 
-	// add a fountain in the center of an opening
+	// add a fountain in the center of an opening with benches around it
+	unsigned const NUM_MALL_BENCH_COLORS = 6;
+	colorRGBA const mall_bench_colors[NUM_MALL_BENCH_COLORS] = {WHITE, LT_BROWN, DK_GRAY, LT_BROWN, colorRGBA(0.1, 0.4, 0.8), LT_BROWN}; // LT_BROWN becomes wood texture
+	float const bench_height(0.42*window_vspace), bench_depth(0.23*window_vspace);
 	int fountain_opening_ix(-1), fc_opening_ix(-1);
 
 	if (!openings.empty() && building_obj_model_loader.is_model_valid(OBJ_MODEL_FOUNTAIN)) {
@@ -817,6 +820,20 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		unsigned const item_flags(rgen.rand()); // select a random sub_model_id
 		objs.emplace_back(fbc, TYPE_BLDG_FOUNT, room_id, rgen.rand_bool(), rgen.rand_bool(), 0, light_amt, SHAPE_CYLIN, WHITE, item_flags); // random dim/dir
 		blockers.push_back(fbc);
+		// maybe add benches to either side of the fountain
+		cube_t bench;
+		set_cube_zvals(bench, zval, zval+bench_height); // set height
+		colorRGBA const &bench_color(mall_bench_colors[rgen.rand() % NUM_MALL_BENCH_COLORS]);
+
+		for (unsigned d = 0; d < 2; ++d) {
+			if (rgen.rand_float() < 0.25) continue; // skip 25% of the time
+			float const back_pos(fbc.d[mall_dim][d] + (d ? 1.0 : -1.0)*1.5*wall_thickness);
+			bench.d[mall_dim][!d] = back_pos; // against the fountain
+			bench.d[mall_dim][ d] = back_pos + (d ? 1.0 : -1.0)*bench_depth;
+			set_wall_width(bench, fbc.get_center_dim(!mall_dim), 0.5*radius, !mall_dim);
+			objs.emplace_back(bench, TYPE_BENCH, room_id, mall_dim, d, RO_FLAG_IN_MALL, light_amt, SHAPE_CUBE, bench_color);
+			blockers.push_back(bench);
+		} // for d
 	}
 	// trashcan setup for trashcans along walls and food court pillars
 	bool const is_cylin_tcan(rgen.rand_bool());
@@ -931,11 +948,8 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	unsigned const num_benches  (num_openings/2 + 1); // per floor per side
 	unsigned const num_trashcans(num_openings/4 + 1); // per floor per side
 	unsigned const num_pictures (num_openings/1 + 1); // per floor per side
-	float const clearance(get_min_front_clearance_inc_people());
-	float const bench_height(0.42*window_vspace), bench_depth(0.23*window_vspace), bench_hlen(0.5*window_vspace*rgen.rand_uniform(0.6, 0.8));
+	float const clearance(get_min_front_clearance_inc_people()), bench_hlen(0.5*window_vspace*rgen.rand_uniform(0.6, 0.8));
 	float const tcan_end_pad(2.0*tcan_radius), bench_end_pad(2.0*bench_hlen);
-	unsigned const NUM_MALL_BENCH_COLORS = 6;
-	colorRGBA const mall_bench_colors[NUM_MALL_BENCH_COLORS] = {WHITE, LT_BROWN, DK_GRAY, LT_BROWN, colorRGBA(0.1, 0.4, 0.8), LT_BROWN}; // LT_BROWN becomes wood texture
 	colorRGBA const &bench_color(mall_bench_colors[rgen.rand() % NUM_MALL_BENCH_COLORS]);
 
 	for (unsigned f = 0; f < num_floors; ++f) {
