@@ -814,7 +814,7 @@ cylinder_3dw small_tree::get_trunk_cylin() const {
 	vector3d dir(plus_z);
 	if (r_angle != 0.0) {rotate_vector3d(vector3d(rx, ry, 0.0), -r_angle/TO_DEG, dir);} // oops, rotation is backwards
 	bool const is_pine(is_pine_tree());
-	float const hval(is_pine ? 1.0 : 0.8), zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
+	float const hval(is_pine ? 1.05 : 0.8), zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
 	float const mod_width(width*(is_pine ? 0.8f*len/(hval*height) : 1.0f));
 	point const p1((pos + dir*(zbot - pos.z)));
 	return cylinder_3dw(p1, (p1 + dir*len), stt[type].ws*mod_width, stt[type].w2*mod_width);
