@@ -45,16 +45,18 @@ public:
 	bool check_sphere_coll(point &center, float radius) const;
 	bool line_intersect(point const &p1, point const &p2, float *t=NULL) const;
 	void clear_vbo_mgr_ix() {vbo_mgr_ix = -1;}
+	void get_pine_leaf_points(vert_norm_comp *points) const;
+	void get_pine_leaf_verts(vector<vert_norm_comp_tc_color> &verts) const;
+	void get_palm_leaf_verts(vector<vert_norm_comp_tc_color> &verts) const;
 	void calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail, bool update_mode=0);
 	void calc_palm_tree_points();
 	void update_points_vbo(vbo_vnc_block_manager_t &vbo_manager, bool low_detail);
 	void add_trunk_as_line(vector<point> &points) const;
-	vector<vert_norm_comp_color> const &get_palm_verts() const;
 	colorRGBA get_leaf_color() const {return leaf_color;}
 	void draw_pine(vbo_vnc_block_manager_t const &vbo_manager, unsigned num_instances=1) const;
 	bool are_leaves_visible(vector3d const &xlate) const;
 	void draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, vector3d const &xlate) const;
-	void get_palm_trunk_verts(vector<vert_norm_comp_tc_color> &verts, unsigned nsides) const;
+	void get_trunk_verts(vector<vert_norm_comp_tc_color> &verts, unsigned nsides) const;
 	bool draw_trunk(bool shadow_only, bool all_visible, bool skip_lines=0, vector3d const &xlate=zero_vector, vector<vert_norm_tc> *cylin_verts=nullptr) const;
 	void draw_palm_leaves(unsigned num_instances=1) const;
 	void draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vector3d const &xlate=zero_vector) const;
@@ -72,6 +74,7 @@ public:
 	float get_zmax() const;
 	float get_xy_radius() const {return max(1.5*branch_xy_scale*width, 0.5*height);}
 	float get_trunk_bsphere_radius() const {return (trunk_cylin.r1 + 0.5*((r_angle == 0.0) ? fabs(trunk_cylin.p1.z - trunk_cylin.p2.z) : trunk_cylin.get_length()));}
+	float get_pine_tree_leaves_dz () const {return ((type == T_PINE) ? 0.35*height : 0.0);}
 	void write_to_cobj_file(std::ostream &out) const;
 
 	struct comp_by_type_dist {

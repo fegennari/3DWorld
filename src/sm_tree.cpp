@@ -958,11 +958,6 @@ void small_tree::calc_palm_tree_points() {
 	} // for n
 	// Note: vbo_manager is unused, but we could put the palm verts into it, though perf seems okay with individual VBOs
 }
-vector<vert_norm_comp_color> const &small_tree::get_palm_verts() const { // used for building interior trees
-	assert(type == T_PALM);
-	assert(palm_verts);
-	return palm_verts->v;
-}
 
 
 float small_tree::get_pine_tree_radius() const { // Note: doesn't include branch_xy_scale
@@ -970,32 +965,56 @@ float small_tree::get_pine_tree_radius() const { // Note: doesn't include branch
 	return 0.35*pine_tree_radius_scale*(height0 + 0.03/tree_scale);
 }
 
-void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail, bool update_mode) {
+void small_tree::get_pine_leaf_points(vert_norm_comp *points) const { // Note: points must be allocated to at least size PINE_TREE_NPTS
+	rand_gen_t rgen;
+	rgen.set_state(long(10000*height), long(10000*leaf_color.B));
+	float const sz_scale(SQRT2*get_pine_tree_radius()), dz(get_pine_tree_leaves_dz());
+	float const rd(0.45), height0(((type == T_PINE) ? 0.75f : 1.0f)*height), theta0((int(1.0E6f*(height0 + leaf_color.B))%360)*TO_RADIANS);
+	float const branch_start_height((num_trees > 0) ? 0.4*height0*rgen.rand_float() : 0.0); // only used with generated trees, not placed trees
+	float level_dz((height0 - branch_start_height)/(N_PT_LEVELS + 1.2f)), rd_scale(1.0), height_off(branch_start_height + 1.8f*level_dz);
+	point const center(pos + point(0.0, 0.0, dz));
 
+	for (unsigned j = 0, ix = 0; j < N_PT_LEVELS; ++j) {
+		level_dz *= 0.9; rd_scale *= 1.2; // higher slope, closer spacing near the top levels
+		float const sz(sz_scale*(N_PT_LEVELS - j - 0.4)/(float)N_PT_LEVELS), z(height_off - rd*sz);
+		height_off += level_dz;
+
+		for (unsigned k = 0; k < N_PT_RINGS; ++k) {
+			float const theta(TWO_PI*(3.3*j + k/(float)N_PT_RINGS) + theta0 + 0.5*rgen.signed_rand_float());
+			float const zz(z + 0.4*sz*rgen.signed_rand_float()), xy_sz(branch_xy_scale*sz); // reducing xy_sz makes tree tall+thin with more vertical branches
+			add_rotated_quad_pts(points, ix, theta, zz, center, xy_sz, xy_sz, xy_sz, rd_scale*rd*sz); // bounds are (xy_sz, xy_sz, rd*sz+z)
+		}
+	} // for j
+}
+
+// these two queries are used for buildings
+void small_tree::get_pine_leaf_verts(vector<vert_norm_comp_tc_color> &verts) const {
+	assert(is_pine_tree());
+	vert_norm_comp points[PINE_TREE_NPTS];
+	get_pine_leaf_points(points);
+	if (verts.empty()) {verts.reserve(verts.size() + PINE_TREE_NPTS);}
+	float const ts[4] = {0.0, 1.0, 1.0, 0.0}, tt[4] = {0.0, 0.0, 1.0, 1.0}; // quad texture coords
+	color_wrapper const cwl(leaf_color);
+	for (unsigned i = 0; i < PINE_TREE_NPTS; ++i) {verts.emplace_back(vert_norm_comp_tc(points[i], ts[i&3], tt[i&3]), cwl);}
+}
+void small_tree::get_palm_leaf_verts(vector<vert_norm_comp_tc_color> &verts) const {
+	assert(type == T_PALM);
+	assert(palm_verts);
+	auto const &v(palm_verts->v);
+	if (verts.empty()) {verts.reserve(verts.size() + v.size());}
+	assert((verts.size() & 7) == 0); // must be quad pairs
+	float const ts[8] = {0.5, 0.0, 0.0, 0.5, 1.0, 0.5, 0.5, 1.0}, tt[8] = {1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0}; // bent quad texture coords
+	for (unsigned i = 0; i < v.size(); ++i) {verts.emplace_back(vert_norm_comp_tc(v[i], ts[i&7], tt[i&7]), v[i]);}
+}
+
+void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail, bool update_mode) {
 	if (type == T_PALM) {calc_palm_tree_points(); return;} // palm tree
 	if (!is_pine_tree()) return; // only for pine trees
-	float const sz_scale(SQRT2*get_pine_tree_radius()), dz((type == T_PINE) ? 0.35*height : 0.0);
 
 	if (!low_detail) { // high detail
-		rand_gen_t rgen;
-		rgen.set_state(long(10000*height), long(10000*leaf_color.B));
-		float const rd(0.45), height0(((type == T_PINE) ? 0.75f : 1.0f)*height), theta0((int(1.0E6f*(height0 + leaf_color.B))%360)*TO_RADIANS);
-		float const branch_start_height((num_trees > 0) ? 0.4*height0*rgen.rand_float() : 0.0); // only used with generated trees, not placed trees
-		float level_dz((height0 - branch_start_height)/(N_PT_LEVELS + 1.2f)), rd_scale(1.0), height_off(branch_start_height + 1.8f*level_dz);
-		point const center(pos + point(0.0, 0.0, dz));
 		vert_norm_comp points[PINE_TREE_NPTS];
+		get_pine_leaf_points(points);
 
-		for (unsigned j = 0, ix = 0; j < N_PT_LEVELS; ++j) {
-			level_dz *= 0.9; rd_scale *= 1.2; // higher slope, closer spacing near the top levels
-			float const sz(sz_scale*(N_PT_LEVELS - j - 0.4)/(float)N_PT_LEVELS), z(height_off - rd*sz);
-			height_off += level_dz;
-
-			for (unsigned k = 0; k < N_PT_RINGS; ++k) {
-				float const theta(TWO_PI*(3.3*j + k/(float)N_PT_RINGS) + theta0 + 0.5*rgen.signed_rand_float());
-				float const zz(z + 0.4*sz*rgen.signed_rand_float()), xy_sz(branch_xy_scale*sz); // reducing xy_sz makes tree tall+thin with more vertical branches
-				add_rotated_quad_pts(points, ix, theta, zz, center, xy_sz, xy_sz, xy_sz, rd_scale*rd*sz); // bounds are (xy_sz, xy_sz, rd*sz+z)
-			}
-		} // for j
 		if (update_mode) {
 			assert(vbo_mgr_ix >= 0);
 			vbo_manager.update_range(points, PINE_TREE_NPTS, leaf_color, vbo_mgr_ix, vbo_mgr_ix+1);
@@ -1010,7 +1029,7 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 	}
 	else { // low detail billboard
 		assert(!update_mode);
-		float const zv1(0.75*dz); // shift slightly down to account for sparse tree texture image
+		float const sz_scale(SQRT2*get_pine_tree_radius()), zv1(0.75*get_pine_tree_leaves_dz()); // shift slightly down to account for sparse tree texture image
 		// 0.9x to prevent clipping above 1.0
 		vbo_manager.add_point(vert_norm_comp_color((pos + point(0.0, 0.0, zv1)), vector3d(2.0f*sz_scale/calc_tree_size(), 0.9f*(height - zv1), 0.0f), leaf_color));
 	}
@@ -1066,21 +1085,28 @@ void add_fast_cylinder(point const &p1, point const &p2, float radius1, float ra
 	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12));
 	gen_cylinder_quads(verts, vpn, 0, tex_scale_len); // two_sided_lighting=0
 }
-void small_tree::get_palm_trunk_verts(vector<vert_norm_comp_tc_color> &verts, unsigned nsides) const {
-	assert(type == T_PALM);
-	color_wrapper const cwb(bark_color), cwl(leaf_color);
+void small_tree::get_trunk_verts(vector<vert_norm_comp_tc_color> &verts, unsigned nsides) const { // used for buildings
+	if (type == T_BUSH) return; // no trunk for bush; error?
 	static vector<vert_norm_tc> cverts; // reused across calls
-	// trunk
 	cverts.clear();
-	point const pa(0.92*trunk_cylin.p2 + 0.08*trunk_cylin.p1);
-	add_fast_cylinder(trunk_cylin.p1, pa, trunk_cylin.r1, trunk_cylin.r2, nsides, 20.0, cverts); // why is tscale 20.0 here but 2.0 below?
+
+	if (type == T_PALM) {
+		// top section
+		point const pa(0.92*trunk_cylin.p2 + 0.08*trunk_cylin.p1), pb(0.98*trunk_cylin.p2 + 0.02*trunk_cylin.p1), pc(1.04*trunk_cylin.p2 - 0.04*trunk_cylin.p1);
+		add_fast_cylinder(pa, pb, trunk_cylin.r2, 0.8*trunk_cylin.r2, nsides, 10.0, cverts);
+		add_fast_cylinder(pb, pc, 0.8*trunk_cylin.r2, 0.0, nsides, 1.0, cverts);
+		color_wrapper const cwl(leaf_color);
+		for (auto const &v : cverts) {verts.emplace_back(vert_norm_comp_tc(v.v, v.n, v.t[0], v.t[1]), cwl);}
+		// trunk
+		cverts.clear();
+		add_fast_cylinder(trunk_cylin.p1, pa, trunk_cylin.r1, trunk_cylin.r2, nsides, 20.0, cverts); // why is tscale 20.0 here but 2.0 below?
+	}
+	else { // pine, etc
+		// Note: for pine trees, we really want to draw a cone with triangles to avoid a stretched texture, but the caller (buildings) wants quads
+		add_fast_cylinder(trunk_cylin.p1, trunk_cylin.p2, trunk_cylin.r1, trunk_cylin.r2, nsides, 10.0, cverts); // trunk
+	}
+	color_wrapper const cwb(bark_color);
 	for (auto const &v : cverts) {verts.emplace_back(vert_norm_comp_tc(v.v, v.n, v.t[0], v.t[1]), cwb);}
-	// top section
-	cverts.clear();
-	point const pb(0.98*trunk_cylin.p2 + 0.02*trunk_cylin.p1), pc(1.04*trunk_cylin.p2 - 0.04*trunk_cylin.p1);
-	add_fast_cylinder(pa, pb, trunk_cylin.r2, 0.8*trunk_cylin.r2, nsides, 10.0, cverts);
-	add_fast_cylinder(pb, pc, 0.8*trunk_cylin.r2, 0.0, nsides, 1.0, cverts);
-	for (auto const &v : cverts) {verts.emplace_back(vert_norm_comp_tc(v.v, v.n, v.t[0], v.t[1]), cwl);}
 }
 
 // Note: cylin_verts is only used for pine trees

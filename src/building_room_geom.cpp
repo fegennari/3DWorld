@@ -4915,30 +4915,21 @@ void building_room_geom_t::add_tree(room_object_t const &c) {
 	float const radius(c.get_radius());
 	rand_gen_t rgen(c.create_rgen());
 	small_tree tree(cube_bot_center(c), c.dz(), 2.0*radius, (is_palm ? T_PALM : T_PINE), 0, rgen); // calc_z=0
+	auto &leaf_verts(mats_amask.get_material(tid_nm_pair_t((is_palm ? PALM_FROND_TEX : PINE_TEX), 1.0, 1), 1).quad_verts); // shadowed
+	unsigned const leaf_verts_start(leaf_verts.size());
 
-	if (is_palm) { // palm tree
-		// add leaves
+	if (is_palm) { // palm tree leaves
 		tree.calc_palm_tree_points();
-		vector<vert_norm_comp_color> const &verts(tree.get_palm_verts()); // leaf quads
-		assert((verts.size() & 3) == 0); // must be quads
-		auto &leaf_verts(mats_amask.get_material(tid_nm_pair_t(PALM_FROND_TEX, 1.0, 1), 1).quad_verts); // shadowed
-		unsigned const leaf_verts_start(leaf_verts.size());
-		float const ts[8] = {0.5, 0.0, 0.0, 0.5, 1.0, 0.5, 0.5, 1.0}, tt[8] = {1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0}; // bent quad texture coords
-
-		for (unsigned i = 0; i < verts.size(); ++i) {
-			vert_norm_comp_color const &v(verts[i]);
-			leaf_verts.emplace_back(vert_norm_comp_tc(v, ts[i&7], tt[i&7]), v);
-		}
-		add_inverted_quads(leaf_verts, leaf_verts_start); // make double sided
-		// add trunk
-		auto &trunk_verts(mats_amask.get_material(tid_nm_pair_t(PALM_BARK_TEX, 1.0, 1), 1).quad_verts); // shadowed
-		tree.get_palm_trunk_verts(trunk_verts, N_CYL_SIDES);
-		// add pot
-		add_plant_pot(c, 0.95*radius, 1.1*radius, 0); // no_dirt=0
+		tree.get_palm_leaf_verts(leaf_verts);
 	}
-	else { // pine tree
-		// TODO
+	else { // pine tree leaves
+		tree.get_pine_leaf_verts(leaf_verts);
 	}
+	add_inverted_quads(leaf_verts, leaf_verts_start); // make double sided
+	// add trunk
+	tree.get_trunk_verts(mats_amask.get_material(tid_nm_pair_t((is_palm ? PALM_BARK_TEX : BARK2_TEX), 1.0, 1), 1).quad_verts, N_CYL_SIDES); // shadowed
+	// add pot
+	add_plant_pot(c, 0.95*radius, 1.1*radius, 0); // no_dirt=0
 }
 
 int get_ball_tid   (room_object_t const &c) {return get_texture_by_name(c.get_ball_type().tex_fname  );}

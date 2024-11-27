@@ -873,8 +873,8 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		if ((int)i == fountain_opening_ix || (int)i == fc_opening_ix) continue; // already occupied
 		cube_t const &opening(openings[i]);
 		
-		if (rgen.rand_bool()) { // add palm tree
-			unsigned const item_flags(0); // 0=palm, 1=pine (incomplete)
+		if (num_floors > 1 && rgen.rand_bool()) { // add palm or pine tree if more than one floor tall
+			unsigned const item_flags(0); // 0=palm, 1=pine; pine has alpha blending and trunk texture streching problems, so use palm until this is fixed
 			float const height(rgen.rand_uniform(0.35, 0.4)*room.dz());
 			cube_t tree_bc(point(opening.xc(), opening.yc(), zval));
 			tree_bc.z2() += height;
