@@ -930,6 +930,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	vect_cube_t wall_blockers;
 	unsigned const num_benches  (num_openings/2 + 1); // per floor per side
 	unsigned const num_trashcans(num_openings/4 + 1); // per floor per side
+	unsigned const num_pictures (num_openings/1 + 1); // per floor per side
 	float const clearance(get_min_front_clearance_inc_people());
 	float const bench_height(0.42*window_vspace), bench_depth(0.23*window_vspace), bench_hlen(0.5*window_vspace*rgen.rand_uniform(0.6, 0.8));
 	float const tcan_end_pad(2.0*tcan_radius), bench_end_pad(2.0*bench_hlen);
@@ -939,7 +940,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 
 	for (unsigned f = 0; f < num_floors; ++f) {
 		float const z(zval + f*floor_spacing);
-		cube_t tcan, bench;
+		cube_t tcan, bench, picture;
 		set_cube_zvals(tcan,  z, z+tcan_height ); // set height
 		set_cube_zvals(bench, z, z+bench_height); // set height
 
@@ -956,10 +957,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 					cube_t test_cube(bench);
 					test_cube.expand_in_dim( mall_dim, 0.5*bench_hlen);
 					test_cube.expand_in_dim(!mall_dim, clearance);
-					if (entrance_stairs_bcube.intersects(test_cube))    continue; // too close to entrance stairs
-					if (interior->mall_bathrooms.intersects(test_cube)) continue; // too close to bathroom doors and water fountain
-					if (has_bcube_int(test_cube, interior->int_windows) || has_bcube_int(test_cube, interior->store_doorways)) continue; // too close to store door or window
-					if (has_bcube_int(test_cube, wall_blockers))        continue;
+					if (!is_valid_placement_at_mall_wall(test_cube, entrance_stairs_bcube, wall_blockers)) continue;
 					wall_blockers.push_back(bench);
 					wall_blockers.back().expand_by_xy(0.1*window_vspace); // don't place too close to other benches or trashcans
 					objs.emplace_back(bench, TYPE_BENCH, room_id, !mall_dim, !d, RO_FLAG_IN_MALL, light_amt, SHAPE_CUBE, bench_color);
@@ -976,16 +974,32 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 					set_wall_width(tcan, pos, tcan_radius, mall_dim);
 					cube_t test_cube(tcan);
 					test_cube.expand_by_xy(tcan_radius + wall_thickness);
-					if (entrance_stairs_bcube.intersects(test_cube))    continue; // too close to entrance stairs
-					if (interior->mall_bathrooms.intersects(test_cube)) continue; // too close to bathroom doors and water fountain
-					if (has_bcube_int(test_cube, interior->int_windows) || has_bcube_int(test_cube, interior->store_doorways)) continue; // too close to store door or window
-					if (has_bcube_int(test_cube, wall_blockers))        continue;
+					if (!is_valid_placement_at_mall_wall(test_cube, entrance_stairs_bcube, wall_blockers)) continue;
 					wall_blockers.push_back(tcan);
 					wall_blockers.back().expand_by_xy(window_vspace); // don't place two nearby trashcans
 					room_object_t const tcan_obj(tcan, TYPE_TCAN, room_id, !mall_dim, !d, RO_FLAG_IN_MALL, light_amt, tcan_shape, tcan_color);
 					objs.push_back(tcan_obj);
 					add_large_trashcan_contents(rgen, tcan_obj, room_id, light_amt);
 					break;
+				} // for N
+			} // for n
+			// add pictures
+			picture.d[!mall_dim][ d] = wall_pos; // against the wall
+			picture.d[!mall_dim][!d] = wall_pos + dsign*0.25*wall_thickness;
+
+			for (unsigned n = 0; n < num_pictures; ++n) {
+				float const hheight(0.5*rgen.rand_uniform(0.3, 0.4)*floor_spacing), hwidth(hheight*rgen.rand_uniform(1.5, 1.8)), pic_end_pad(1.0*hwidth);
+				set_wall_width(picture, max((z + 0.5f*floor_spacing), (bench.z1() + hheight + 0.05f*floor_spacing)), hheight, 2); // set zvals; above benches
+
+				for (unsigned N = 0; N < 20; ++N) { // 20 attempts to place picture
+					float const pos(rgen.rand_uniform(place_area.d[mall_dim][0]+pic_end_pad, place_area.d[mall_dim][1]-pic_end_pad));
+					set_wall_width(picture, pos, hwidth, mall_dim);
+					cube_t test_cube(picture);
+					test_cube.expand_by_xy(wall_thickness);
+					if (!is_valid_placement_at_mall_wall(test_cube, entrance_stairs_bcube, wall_blockers)) continue;
+					objs.emplace_back(picture, TYPE_PICTURE, room_id, !mall_dim, !d, (RO_FLAG_NOCOLL | RO_FLAG_IN_MALL), light_amt); // picture faces dir opposite the wall
+					objs.back().obj_id = rgen.rand(); // determines picture texture
+					wall_blockers.push_back(test_cube);
 				} // for N
 			} // for n
 			wall_blockers.clear();
@@ -1024,12 +1038,19 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			}
 		} // for d
 	} // for f
-	// TODO: TYPE_PICTURE?
 
 	// add pillars last so that we can check lights against them
 	unsigned const pillars_start(objs.size());
 	for (cube_t const &pillar : pillars) {objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, !mall_dim, 0, 0, light_amt, SHAPE_CUBE, WHITE, EF_Z12);}
 	return pillars_start;
+}
+
+bool building_t::is_valid_placement_at_mall_wall(cube_t const &c, cube_t const &entrance_stairs_bcube, vect_cube_t const &wall_blockers) const {
+	if (entrance_stairs_bcube.intersects(c))    return 0; // too close to entrance stairs
+	if (interior->mall_bathrooms.intersects(c)) return 0; // too close to bathroom doors and water fountain
+	if (has_bcube_int(c, interior->int_windows) || has_bcube_int(c, interior->store_doorways)) return 0; // too close to store door or window
+	if (has_bcube_int(c, wall_blockers))        return 0;
+	return 1;
 }
 
 void building_t::add_large_trashcan_contents(rand_gen_t &rgen, room_object_t const &tcan, unsigned room_id, float tot_light_amt) { // with trash
