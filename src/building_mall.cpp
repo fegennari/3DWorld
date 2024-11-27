@@ -6,11 +6,12 @@
 #include "city_model.h"
 
 using std::string;
-string choose_store_name  (unsigned store_type, unsigned item_category, rand_gen_t &rgen);
+string choose_store_name(unsigned store_type, unsigned item_category, rand_gen_t &rgen);
 colorRGBA choose_pot_color(rand_gen_t &rgen);
 colorRGBA choose_sign_color(rand_gen_t &rgen, bool emissive=0);
 bool is_invalid_city_placement_for_cube(cube_t const &c);
 void add_city_plot_cut(cube_t const &cut);
+void offset_hanging_tv(room_object_t &obj);
 
 extern object_model_loader_t building_obj_model_loader;
 
@@ -990,7 +991,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			wall_blockers.clear();
 		} // for d
 	} // for f
-	// add a reception desk in front of end walls that have no store
+	// add a reception desk and TV in front of end walls that have no store
 	float const desk_width(1.5*window_vspace), desk_depth(0.5*desk_width), desk_height(0.32*window_vspace), centerline(room.get_center_dim(!mall_dim));
 	cube_t desk;
 	set_wall_width(desk, centerline, 0.5*desk_width, !mall_dim);
@@ -1007,6 +1008,20 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			if (has_bcube_int(desk, interior->int_windows) || has_bcube_int(desk, interior->store_doorways)) continue; // too close to store door or window
 			desk.d[mall_dim][ d] = back_pos; // back
 			add_reception_desk(rgen, desk, mall_dim, !d, room_id, light_amt); // ignore return value
+
+			if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) {
+				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H
+				float const tv_height(0.35*floor_spacing*rgen.rand_uniform(1.0, 1.2)), tv_hwidth(0.5*tv_height*sz.y/sz.z), tv_depth(tv_height*sz.x/sz.z);
+				cube_t tv;
+				tv.z1() = z + 0.3*floor_spacing;
+				tv.z2() = tv.z1() + tv_height;
+				set_wall_width(tv, centerline, tv_hwidth, !mall_dim);
+				tv.d[mall_dim][ d] = wall_pos + d_sign*0.5*wall_thickness; // on the wall
+				tv.d[mall_dim][!d] = tv.d[mall_dim][d] + (d ? -1.0 : 1.0)*tv_depth;
+				objs.emplace_back(tv, TYPE_TV, room_id, mall_dim, !d, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), light_amt, SHAPE_CUBE, BLACK);
+				offset_hanging_tv(objs.back());
+				set_obj_id(objs);
+			}
 		} // for d
 	} // for f
 	// TODO: TYPE_PICTURE?
