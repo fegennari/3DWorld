@@ -140,11 +140,11 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 }
 
 // Note: must be first placed objects; returns the number of total objects added (table + optional chairs)
-unsigned building_t::add_table_and_chairs(rand_gen_t rgen, cube_t const &room, vect_cube_t &blockers, unsigned room_id,
+unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, vect_cube_t &blockers, unsigned room_id,
 	point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, unsigned max_chairs, bool use_tall_table)
 {
 	bool const use_bar_stools(use_tall_table);
-	float const table_rscale(use_tall_table ? 0.12 : 0.18), table_hscale(use_tall_table ? 0.35 : 0.22), room_dx(room.dx()), room_dy(room.dy());
+	float const table_rscale(use_tall_table ? 0.12 : 0.18), room_dx(room.dx()), room_dy(room.dy());
 	float const window_vspacing(get_window_vspace()), room_pad(max(4.0f*get_wall_thickness(), get_min_front_clearance_inc_people()));
 	// use a long table for a large room 50% of the time
 	bool const use_long_table(!use_tall_table && max(room_dx, room_dy) > 3.0*window_vspacing && min(room_dx, room_dy) > 2.0*window_vspacing && rgen.rand_bool());
@@ -158,6 +158,8 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, cube_t const &room, v
 	if (use_long_table) {table_sz[long_dim] *= 1.5;}
 	float const long_edge_len(2.0*max(table_sz.x, table_sz.y));
 	bool const is_round(!use_tall_table && !use_long_table && rgen.rand_float() < 0.25); // 25% of the time
+	bool const is_plastic(room.is_office && rgen.rand_bool()); // plastic table for offices 50% of the time
+	float const table_hscale(use_tall_table ? 0.35 : (is_round ? 0.23 : (is_plastic ? 0.24 : 0.22)));
 	if (is_round) {table_sz.x = table_sz.y = 0.6f*(table_sz.x + table_sz.y);} // round tables must have square bcubes for now (no oval tables yet); make radius slightly larger
 	point llc(table_pos - table_sz), urc(table_pos + table_sz);
 	llc.z = table_pos.z; // bottom
@@ -165,9 +167,11 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, cube_t const &room, v
 	cube_t table(llc, urc);
 	if (!is_valid_placement_for_room(table, room, blockers, 0, room_pad)) return 0; // check proximity to doors and collision with blockers
 	//if (door_path_checker_t().check_door_path_blocked(table, get_room(room_id), room_id, table_pos.z, *this)) return 0; // optional, but may want to allow for kitchens/dining
+	unsigned const item_flags(is_plastic ? 1 : 0);
 	unsigned flags(is_house ? RO_FLAG_IS_HOUSE : 0);
-	if (place_pos.z < ground_floor_z1 && (rgen.rand_float() < 0.5)) {flags |= RO_FLAG_BROKEN;} // basements can have broken glass tables 50% of the time
-	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, flags, tot_light_amt, (is_round ? SHAPE_CYLIN : SHAPE_CUBE));
+	// basements can have broken glass tables 50% of the time; these are short cube tables
+	if (!is_round && !use_tall_table && !is_plastic && place_pos.z < ground_floor_z1 && (rgen.rand_float() < 0.5)) {flags |= RO_FLAG_BROKEN;}
+	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, flags, tot_light_amt, (is_round ? SHAPE_CYLIN : SHAPE_CUBE), WHITE, item_flags);
 	set_obj_id(objs);
 	if (max_chairs == 0) return 1; // table only
 	// maybe place some chairs around the table
