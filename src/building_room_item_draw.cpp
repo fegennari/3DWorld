@@ -928,7 +928,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_KSINK:   add_counter (*i, tscale, 1, 0); break; // counter with kitchen  sink; lg
 		case TYPE_BRSINK:  add_counter (*i, tscale, 1, 0); break; // counter with bathroom sink; lg
 		case TYPE_PLANT:   add_potted_plant(*i, 1, 0); break; // pot only
-		case TYPE_TREE:    add_tree(*i); break;
+		case TYPE_TREE:    add_tree(*i, 1, 0); break; // pot only
 		case TYPE_DRESSER: case TYPE_NIGHTSTAND: add_dresser(*i, tscale, 1, 0); break;
 		case TYPE_DRESS_MIR: add_dresser_mirror(*i, tscale); break;
 		case TYPE_FLOORING:add_flooring(*i, tscale); break;
@@ -1011,6 +1011,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_SHOWERTUB: add_shower_tub(c, tid_nm_pair_t(), trim_color, tscale, 0, 1); break; // don't need wall_tex; inc_lg=0, inc_sm=1
 		case TYPE_RAILING:   if (!c.is_exterior()) {add_railing(c);}  break; // interior only
 		case TYPE_PLANT:     add_potted_plant(c, 0, 1); break; // plant only
+		case TYPE_TREE:      add_tree(c, 0, 1); break; // tree only
 		case TYPE_CRATE:     add_crate    (c); break; // not small but only added to windowless rooms
 		case TYPE_BOX:       add_box      (c); break; // not small but only added to windowless rooms
 		case TYPE_SHELVES:   add_shelves  (c, tscale); break; // not small but only added to windowless rooms

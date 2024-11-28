@@ -1220,7 +1220,7 @@ struct building_room_geom_t {
 	void add_downspout(room_object_t const &c);
 	void add_plant_pot(room_object_t const &c, float height, float radius, bool no_dirt);
 	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
-	void add_tree(room_object_t const &c);
+	void add_tree(room_object_t const &c, bool inc_pot, bool inc_tree);
 	void add_lg_ball(room_object_t const &c);
 	void add_toy(room_object_t const &c);
 	void add_pan(room_object_t const &c);
