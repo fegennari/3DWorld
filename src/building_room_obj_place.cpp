@@ -4229,7 +4229,7 @@ bool building_t::place_plant_on_obj(rand_gen_t &rgen, cube_t const &place_on, un
 	float const radius(min(rgen.rand_uniform(0.06, 0.08)*sz_scale*window_vspacing, max_radius));
 	cube_t const plant(place_cylin_object(rgen, place_on, radius, height, 1.2*radius));
 	if (has_bcube_int(plant, avoid)) return 0; // only make one attempt
-	objs.emplace_back(plant, TYPE_PLANT, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT), tot_light_amt, SHAPE_CYLIN, choose_pot_color(rgen));
+	objs.emplace_back(plant, TYPE_PLANT, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT), tot_light_amt, SHAPE_CYLIN, choose_pot_color(rgen)); // flag for full player pickup
 	set_obj_id(objs);
 	return 1;
 }
@@ -4538,7 +4538,7 @@ void building_t::add_plants_to_room(rand_gen_t rgen, room_t const &room, float z
 	float const window_vspacing(get_window_vspace());
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-get_trim_thickness()); // shrink to leave a small gap
-	zval += 0.01*get_floor_thickness(); // move up slightly to avoid z-fithing of bottom when the dirt is taken
+	zval += 1.1*get_flooring_thick(); // move up slightly to avoid z-fighting of bottom when the dirt is taken
 	
 	for (unsigned n = 0; n < num; ++n) {
 		float const height(rgen.rand_uniform(0.6, 0.9)*window_vspacing), width(rgen.rand_uniform(0.15, 0.35)*window_vspacing);

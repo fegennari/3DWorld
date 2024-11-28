@@ -935,9 +935,12 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		objs.emplace_back(wf, TYPE_WFOUNTAIN, room_id, !mall_dim, wf_dir, 0, light_amt, SHAPE_CUBE);
 	}
 	// add potted plants
-	for (plant_loc_t const &p : plant_locs) {
+	float const plant_shift(1.1*get_flooring_thick());
+
+	for (plant_loc_t &p : plant_locs) {
+		p.pos.z += plant_shift; // move up slightly to avoid z-fighting of bottom when the dirt is taken
 		cube_t const plant(get_cube_height_radius(p.pos, p.radius, 4.0*p.radius));
-		unsigned const flags(RO_FLAG_ADJ_BOT | (p.upper_floor ? RO_FLAG_HAS_EXTRA : 0)); // flag upper floor plants so that the bottom sides of leaves are drawn
+		unsigned const flags(p.upper_floor ? RO_FLAG_HAS_EXTRA : 0); // flag upper floor plants so that the bottom sides of leaves are drawn
 		objs.emplace_back(plant, TYPE_PLANT, room_id, 0, 0, flags, light_amt, SHAPE_CYLIN, p.color);
 		set_obj_id(objs);
 	}
