@@ -5287,6 +5287,29 @@ void building_room_geom_t::add_metal_bar(room_object_t const &c) {
 	metal_mat.add_cube_to_verts_untextured(c, apply_light_color(c), c.item_flags); // skip_faces is stored in item_flags
 }
 
+void building_room_geom_t::add_store_gate(room_object_t const &c) {
+	colorRGBA const color(apply_light_color(c));
+	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small
+	unsigned const num_vbars(6), num_hbars(30);
+	float const thickness(c.get_depth()), vbar_hthick(0.6*thickness), hbar_hthick(0.4*thickness);
+	float const v_span(c.get_width() - 2.0*vbar_hthick), h_span(c.dz() - 2.0*hbar_hthick);
+	float const v_step(v_span/(num_vbars - 1)), h_step(h_span/(num_hbars - 1));
+	cube_t bar(c);
+	bar.expand_in_z(-hbar_hthick);
+
+	for (unsigned n = 0; n < num_vbars; ++n) { // vertical
+		set_wall_width(bar, (c.d[!c.dim][0] + vbar_hthick + n*v_step), vbar_hthick, !c.dim);
+		metal_mat.add_cube_to_verts_untextured(bar, color, EF_Z12);
+	}
+	unsigned const skip_faces(get_skip_mask_for_xy(!c.dim));
+	bar = c;
+
+	for (unsigned n = 0; n < num_hbars; ++n) { // horizontal
+		set_wall_width(bar, (c.z1() + hbar_hthick + n*h_step), hbar_hthick, 2);
+		metal_mat.add_cube_to_verts_untextured(bar, color, skip_faces);
+	}
+}
+
 void building_room_geom_t::add_lava_lamp(room_object_t const &c) {
 	float const height(c.get_height());
 	// draw top and bottom

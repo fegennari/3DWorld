@@ -481,7 +481,7 @@ enum { // room object types
 	TYPE_POOL_BALL, TYPE_POOL_CUE, TYPE_WALL_MOUNT, TYPE_POOL_TILE, TYPE_POOL_FLOAT, TYPE_BENCH, TYPE_DIV_BOARD, TYPE_FALSE_DOOR, TYPE_FLASHLIGHT, TYPE_CANDLE,
 	TYPE_CAMERA, TYPE_CLOCK, TYPE_DOWNSPOUT, TYPE_SHELFRACK, TYPE_CHIM_CAP, TYPE_FOOD_BOX, TYPE_SAFE, TYPE_LADDER, TYPE_CHECKOUT, TYPE_FISHTANK,
 	TYPE_LAVALAMP, TYPE_SHOWERTUB, TYPE_TRASH, TYPE_VALVE, TYPE_METAL_BAR, TYPE_OFF_PILLAR, TYPE_DRINK_CAN, TYPE_CONF_TABLE, TYPE_INT_WINDOW, TYPE_INT_LADDER,
-	TYPE_MACHINE, TYPE_BUCKET, TYPE_SPIWEB, TYPE_TREE,
+	TYPE_MACHINE, TYPE_BUCKET, TYPE_SPIWEB, TYPE_TREE, TYPE_STORE_GATE,
 	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_WALL_LAMP, TYPE_CUP, TYPE_TOASTER,
@@ -1236,6 +1236,7 @@ struct building_room_geom_t {
 	void add_checkout(room_object_t const &c, float tscale);
 	void add_fishtank(room_object_t const &c);
 	void add_metal_bar(room_object_t const &c);
+	void add_store_gate(room_object_t const &c);
 	void add_lava_lamp(room_object_t const &c);
 	void add_trash(room_object_t const &c);
 	void add_spider_web(room_object_t const &c);
@@ -1711,13 +1712,19 @@ struct skyway_conn_t : public cube_t {
 	skyway_conn_t(cube_t const &c, bool dim_, bool dir_, building_t const *b) : cube_t(c), dim(dim_), dir(dir_), building(b) {}
 };
 
+struct store_doorway_t : public cube_t {
+	unsigned room_id;
+	bool closed;
+	store_doorway_t(cube_t const &bc, unsigned r, bool c) : cube_t(bc), room_id(r), closed(c) {}
+};
+
 
 struct building_interior_t {
 	vect_cube_t floors, ceilings, fc_occluders, exclusion, open_walls, split_window_walls;
 	vect_cube_t walls[2]; // walls are split by dim, which is the separating dimension of the wall
 	vect_cube_with_ix_t int_windows; // ix stores room index
 	vect_cube_with_ix_t mall_landings; // ix stores {is_escalator, se_dim, se_dir, ww_dir}
-	vect_cube_with_ix_t store_doorways; // ix stores store room index
+	vector<store_doorway_t> store_doorways; // ix stores store room index
 	vect_stairwell_t stairwells;
 	vect_tunnel_seg_t tunnels;
 	vector<door_t> doors;
@@ -2328,7 +2335,7 @@ private:
 	bool is_cube_city_placement_invalid(cube_t const &c) const;
 	bool is_store_placement_invalid(cube_t const &store) const;
 	void add_mall_stores(cube_t const &room, bool dim, bool entrance_dir, rand_gen_t &rgen);
-	void add_mall_store(cube_t const &store, cube_t const &window_area, bool dim, bool dir, bool &has_adj_store);
+	void add_mall_store(cube_t const &store, cube_t const &window_area, bool dim, bool dir, bool &has_adj_store, rand_gen_t &rgen);
 	void add_extb_room_floor_and_ceil(cube_t const &room);
 	void add_mall_stairs();
 	float get_mall_floor_spacing(cube_t const &room) const;
