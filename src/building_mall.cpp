@@ -1198,9 +1198,11 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	bool const dim(doorway.dy() < doorway.dx()), dir(room.get_center_dim(dim) < doorway.get_center_dim(dim)); // points from room center toward doorway
 	room_t const &mall_room(get_mall_concourse());
 	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const NUM_STORE_SELECT = 8;
+	unsigned const store_selects[NUM_STORE_SELECT] = {STORE_CLOTHING, STORE_CLOTHING, STORE_FOOD, STORE_FOOD, STORE_BOOK, STORE_RETAIL, STORE_RETAIL, STORE_RETAIL};
 	unsigned const objs_start(objs.size());
-	unsigned const store_type(rgen.rand() % NUM_STORE_TYPES);
-	unsigned const item_category((store_type == STORE_RETAIL) ? (rgen.rand() % NUM_SRACK_CATEGORIES) : 0); // same category for each rack
+	unsigned const store_type(store_selects[rgen.rand() % NUM_STORE_SELECT]);
+	unsigned const item_category((store_type == STORE_RETAIL) ? (rgen.rand() % NUM_SRACK_CATEGORIES) : 0); // same category for each rack with equal probability
 	string const store_name(choose_store_name(store_type, item_category, rgen));
 	interior->stores.emplace_back(dim, dir, room_id, store_type, item_category, store_name);
 
@@ -1277,6 +1279,9 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 				} // for r
 			} // for n
 		}
+	}
+	if (store_type == STORE_BOOK) {
+		// TODO: add shelves of books
 	}
 	// TODO: TYPE_DUCT, etc.
 }
