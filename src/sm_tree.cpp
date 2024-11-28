@@ -1078,6 +1078,7 @@ void small_tree::draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, ve
 	if (is_pine_tree() && are_leaves_visible(xlate)) {draw_pine(vbo_manager);}
 }
 
+// trunk vertex calls, used for buildings
 void add_fast_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, float tex_scale_len, vector<vert_norm_tc> &verts) { // returns quads
 	assert(radius1 > 0.0 || radius2 > 0.0);
 	point const ce[2] = {p1, p2};
@@ -1085,7 +1086,7 @@ void add_fast_cylinder(point const &p1, point const &p2, float radius1, float ra
 	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12));
 	gen_cylinder_quads(verts, vpn, 0, tex_scale_len); // two_sided_lighting=0
 }
-void small_tree::get_trunk_verts(vector<vert_norm_comp_tc_color> &verts, unsigned nsides) const { // used for buildings
+void small_tree::get_trunk_quad_verts(vector<vert_norm_comp_tc_color> &verts, unsigned nsides) const {
 	if (type == T_BUSH) return; // no trunk for bush; error?
 	static vector<vert_norm_tc> cverts; // reused across calls
 	cverts.clear();
@@ -1101,12 +1102,39 @@ void small_tree::get_trunk_verts(vector<vert_norm_comp_tc_color> &verts, unsigne
 		cverts.clear();
 		add_fast_cylinder(trunk_cylin.p1, pa, trunk_cylin.r1, trunk_cylin.r2, nsides, 20.0, cverts); // why is tscale 20.0 here but 2.0 below?
 	}
-	else { // pine, etc
-		// Note: for pine trees, we really want to draw a cone with triangles to avoid a stretched texture, but the caller (buildings) wants quads
+	else { // pine, etc.; should be using a cone with triangles rather than quads for correct texturing
 		add_fast_cylinder(trunk_cylin.p1, trunk_cylin.p2, trunk_cylin.r1, trunk_cylin.r2, nsides, 10.0, cverts); // trunk
 	}
 	color_wrapper const cwb(bark_color);
 	for (auto const &v : cverts) {verts.emplace_back(vert_norm_comp_tc(v.v, v.n, v.t[0], v.t[1]), cwb);}
+}
+void small_tree::get_trunk_verts(vector<vert_norm_comp_tc_color> &qv, vector<vert_norm_comp_tc_color> &tv, vector<unsigned> &indices, unsigned nsides) const {
+	if (is_pine_tree()) {
+		assert(trunk_cylin.r2 == 0.0); // cone
+		color_wrapper const cw(bark_color);
+		point const ce[2] = {trunk_cylin.p1, trunk_cylin.p2};
+		vector3d v12;
+		vector_point_norm const &vpn(gen_cylinder_data(ce, trunk_cylin.r1, trunk_cylin.r2, nsides, v12));
+		unsigned const ixoff(tv.size());
+		float const ndiv_inv(1.0/nsides);
+
+		for (unsigned s = 0; s < nsides; ++s) {
+			tv.emplace_back(vpn.p[(s <<1)+1],  vpn.n[s], 0.5, 10.0, cw); // top center; tscale=10.0
+			tv.emplace_back(vpn.p[(s <<1)+0], (vpn.n[s] + vpn.n[(s+nsides-1)%nsides]), (1.0 - s*ndiv_inv), 0.0, cw); // bottom perimeter
+		}
+		for (unsigned s = 0; s < nsides; ++s) { // triangles {center, next, cur}
+			indices.push_back(ixoff + 2*s);
+			indices.push_back(ixoff + 2*((s+1)%nsides) + 1);
+			indices.push_back(ixoff + 2*s + 1);
+		}
+		// duplicate first bottom vertex and shift tex coord so that there is no texture seam and update the index
+		indices[indices.size()-2] = tv.size();
+		tv.push_back(tv[ixoff+1]);
+		tv.back().t[0] = 0.0;
+	}
+	else { // palm, etc.
+		get_trunk_quad_verts(qv, nsides); // quads
+	}
 }
 
 // Note: cylin_verts is only used for pine trees

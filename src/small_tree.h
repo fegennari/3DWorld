@@ -56,7 +56,8 @@ public:
 	void draw_pine(vbo_vnc_block_manager_t const &vbo_manager, unsigned num_instances=1) const;
 	bool are_leaves_visible(vector3d const &xlate) const;
 	void draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, vector3d const &xlate) const;
-	void get_trunk_verts(vector<vert_norm_comp_tc_color> &verts, unsigned nsides) const;
+	void get_trunk_quad_verts(vector<vert_norm_comp_tc_color> &verts, unsigned nsides) const;
+	void get_trunk_verts(vector<vert_norm_comp_tc_color> &qv, vector<vert_norm_comp_tc_color> &tv, vector<unsigned> &indices, unsigned nsides) const;
 	bool draw_trunk(bool shadow_only, bool all_visible, bool skip_lines=0, vector3d const &xlate=zero_vector, vector<vert_norm_tc> *cylin_verts=nullptr) const;
 	void draw_palm_leaves(unsigned num_instances=1) const;
 	void draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vector3d const &xlate=zero_vector) const;

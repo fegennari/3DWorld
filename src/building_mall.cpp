@@ -874,12 +874,13 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		cube_t const &opening(openings[i]);
 		
 		if (num_floors > 1 && rgen.rand_bool()) { // add palm or pine tree if more than one floor tall
-			unsigned const item_flags(0); // 0=palm, 1=pine; pine has alpha blending and trunk texture streching problems, so use palm until this is fixed
-			float const height(rgen.rand_uniform(0.35, 0.4)*room.dz());
+			bool const is_pine(0); // 0=palm, 1=pine; palm trees look better up close
+			// make pine tree taller; palm tree has to be shorter since fronds are added to the top to increase the effective height
+			float const height((is_pine ? 1.1 : 1.0)*rgen.rand_uniform(0.35, 0.4)*room.dz());
 			cube_t tree_bc(point(opening.xc(), opening.yc(), zval));
 			tree_bc.z2() += height;
 			tree_bc.expand_by_xy(rgen.rand_uniform(0.18, 0.22)*height); // set radius
-			objs.emplace_back(tree_bc, TYPE_TREE, room_id, 0, 0, RO_FLAG_IN_MALL, light_amt, SHAPE_CYLIN, choose_pot_color(rgen), item_flags);
+			objs.emplace_back(tree_bc, TYPE_TREE, room_id, 0, 0, RO_FLAG_IN_MALL, light_amt, SHAPE_CYLIN, choose_pot_color(rgen), (is_pine ? 1 : 0));
 			continue;
 		}
 		// add vases/sculptures

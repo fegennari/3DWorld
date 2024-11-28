@@ -4928,8 +4928,9 @@ void building_room_geom_t::add_tree(room_object_t const &c, bool inc_pot, bool i
 			tree.get_pine_leaf_verts(leaf_verts);
 		}
 		add_inverted_quads(leaf_verts, leaf_verts_start); // make double sided
-		// add trunk
-		tree.get_trunk_verts(mats_amask.get_material(tid_nm_pair_t((is_palm ? PALM_BARK_TEX : BARK2_TEX), 1.0, 1), 1).quad_verts, N_CYL_SIDES); // shadowed
+		// add trunk; extends below the floor, but there should be nothing else down there
+		rgeom_mat_t &mat(mats_amask.get_material(tid_nm_pair_t((is_palm ? PALM_BARK_TEX : BARK2_TEX), 1.0, 1), 1)); // shadowed
+		tree.get_trunk_verts(mat.quad_verts, mat.itri_verts, mat.indices, N_CYL_SIDES);
 	}
 	if (inc_pot) {add_plant_pot(c, 0.95*radius, 1.1*radius, 0);} // no_dirt=0
 }
