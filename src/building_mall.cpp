@@ -12,6 +12,7 @@ colorRGBA choose_sign_color(rand_gen_t &rgen, bool emissive=0);
 bool is_invalid_city_placement_for_cube(cube_t const &c);
 void add_city_plot_cut(cube_t const &cut);
 void offset_hanging_tv(room_object_t &obj);
+void rotate_obj_cube(cube_t &c, cube_t const &bc, bool in_dim, bool dir);
 
 extern object_model_loader_t building_obj_model_loader;
 
@@ -1140,7 +1141,19 @@ bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &tabl
 			chair_pos[!dim] += (dir ? -1.0 : 1.0)*rgen.rand_uniform(-0.5, 1.2)*chair_hwidth;
 			cube_t chair(get_cube_height_radius(chair_pos, chair_hwidth, chair_height));
 			if (!place_area.contains_cube_xy(chair) || has_bcube_int(chair, blockers)) continue;
-			objs.emplace_back(chair, TYPE_CHAIR, room_id, !dim, dir, RO_FLAG_IN_MALL, tot_light_amt, SHAPE_CUBE, chair_color, 1); // item_flags=1 to specify a plastic chair
+			unsigned flags(RO_FLAG_IN_MALL);
+
+			if (rgen.rand_float() < 0.05) { // fallen chair 5% of the time
+				// rotate 90 degrees about back legs bottom, tilting backwards
+				cube_t new_chair(chair);
+				rotate_obj_cube(new_chair, chair, !dim, dir);
+
+				if (!has_bcube_int(chair, blockers)) { // has space to fall
+					chair  = new_chair;
+					flags |= RO_FLAG_ON_FLOOR;
+				}
+			}
+			objs.emplace_back(chair, TYPE_CHAIR, room_id, !dim, dir, flags, tot_light_amt, SHAPE_CUBE, chair_color, 1); // item_flags=1 to specify a plastic chair
 			blockers.push_back(objs.back());
 		} // for n
 	} // for D
