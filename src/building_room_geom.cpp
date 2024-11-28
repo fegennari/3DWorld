@@ -5310,6 +5310,42 @@ void building_room_geom_t::add_store_gate(room_object_t const &c) {
 	}
 }
 
+void building_room_geom_t::add_theft_sensor(room_object_t const &c) {
+	float const z1(c.z1()), height(c.dz()), depth(c.get_depth());
+	colorRGBA const color(apply_light_color(c));
+	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
+	cube_t body(c);
+	body .expand_in_dim( c.dim, -0.35*depth); // shrink depth
+	body .expand_in_dim(!c.dim, -0.01*height); // shrink sides slightly
+	cube_t inner(body);
+	inner.expand_in_dim(!c.dim, -0.05*height); // shrink sides
+	cube_t base(c), bot(inner), bar1(inner), bar2(inner), top(inner);
+	bot  .expand_in_dim( c.dim,  0.05*depth); // expand depth slightly
+	top  .expand_in_dim( c.dim,  0.03*depth); // expand depth slightly
+	bar1 .expand_in_dim( c.dim, -0.05*depth); // shrink depth slightly
+	bar2 .expand_in_dim( c.dim, -0.05*depth); // shrink depth slightly
+	base.z2() = bot.z1() = z1 + 0.02*height;
+	bot .z2() = z1 + 0.22*height;
+	bar1.z1() = z1 + 0.40*height;
+	bar1.z2() = z1 + 0.43*height;
+	bar2.z1() = z1 + 0.69*height;
+	bar2.z2() = z1 + 0.72*height;
+	top .z1() = z1 + 0.94*height;
+	mat.add_cube_to_verts_untextured(base, color, EF_Z1);
+	mat.add_cube_to_verts_untextured(bot,  color, EF_Z1);
+	mat.add_cube_to_verts_untextured(top,  color, 0);
+	unsigned const skip_faces(get_skip_mask_for_xy(!c.dim));
+	mat.add_cube_to_verts_untextured(bar1, color, skip_faces);
+	mat.add_cube_to_verts_untextured(bar2, color, skip_faces);
+
+	for (unsigned d = 0; d < 2; ++d) { // vertical sides
+		cube_t side(body);
+		side.z1() = bot.z1();
+		side.d[!c.dim][!d] = inner.d[!c.dim][d];
+		mat.add_cube_to_verts_untextured(side, color, EF_Z1);
+	} // for d
+}
+
 void building_room_geom_t::add_lava_lamp(room_object_t const &c) {
 	float const height(c.get_height());
 	// draw top and bottom

@@ -191,6 +191,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_SPIWEB    ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 2,  0.0,  0.0,   "spider web");
 	bldg_obj_types[TYPE_TREE      ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 3,  0.0,  1000.0,"tree"); // similar to plants; only in basement malls
 	bldg_obj_types[TYPE_STORE_GATE] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2,  0.0,  0.0,   "store gate");
+	bldg_obj_types[TYPE_THEFT_SENS] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 100.0, 30.0,  "theft sensor");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");

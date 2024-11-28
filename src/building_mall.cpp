@@ -253,7 +253,7 @@ void building_t::add_mall_store(cube_t const &store, cube_t const &window_area, 
 	cube_t doorway(opening);
 	set_wall_width(doorway, wall_pos, 0.5*wall_thickness, !dim);
 	bool const closed(rgen.rand_float() < 0.1); // 10% of the time
-	interior->store_doorways.emplace_back(doorway, room_ix, closed);
+	interior->store_doorways.emplace_back(doorway, room_ix, !dim, dir, closed);
 	
 	// add window on each side of the doorway
 	for (unsigned side = 0; side < 2; ++side) {
@@ -792,8 +792,8 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 
 	// add objects for store doors, which are always between pairs of interior windows
 	for (store_doorway_t const &d : interior->store_doorways) {
+		bool const dim(d.dim), dir(d.dir);
 		// can either use room_id or d.room_id for these objects
-		bool const dim(d.dy() < d.dx());
 		// add ceiling box where the gate would come down from
 		cube_t cbox(d);
 		cbox.z1() = d.z2() - 0.1*window_vspace;
@@ -808,6 +808,19 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			gate.expand_in_dim( dim, -0.4*d.get_sz_dim(dim)); // shrink
 			gate.expand_in_dim(!dim, -0.5*wall_thickness); // shrink (same as cbox)
 			objs.emplace_back(gate, TYPE_STORE_GATE, room_id, dim, 0, 0, light_amt, SHAPE_CUBE, LT_GRAY);
+		}
+		if (rgen.rand_float() < 0.67) { // add theft sensors to either side of the doorway inside the store
+			cube_t ts_area(d);
+			ts_area.z2() = d.z1() + 0.6*window_vspace; // set height
+			ts_area.d[dim][!dir] = d.d[dim][dir] + (dir ? 1.0 : -1.0)*0.75*wall_thickness; // move slightly away from the doorway
+			ts_area.d[dim][ dir] = ts_area.d[dim][!dir] + (dir ? 1.0 : -1.0)*0.22*window_vspace; // extend into the store
+			ts_area.expand_in_dim(!dim, 0.07*window_vspace);
+
+			for (unsigned e = 0; e < 2; ++e) {
+				cube_t ts(ts_area);
+				ts.d[!dim][!e] = ts_area.d[!dim][e] + (e ? -1.0 : 1.0)*0.05*window_vspace; // set thickness
+				objs.emplace_back(ts, TYPE_THEFT_SENS, d.room_id, !dim, e, 0, light_amt, SHAPE_CUBE, WHITE);
+			}
 		}
 	} // for d
 

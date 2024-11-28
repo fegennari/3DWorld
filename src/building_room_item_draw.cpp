@@ -1082,6 +1082,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_TRASH:      add_trash(c); break;
 		case TYPE_METAL_BAR:  add_metal_bar(c); break;
 		case TYPE_STORE_GATE: add_store_gate(c); break;
+		case TYPE_THEFT_SENS: add_theft_sensor(c); break;
 		case TYPE_INT_LADDER: add_int_ladder(c); break;
 		case TYPE_MACHINE:    add_machine(c, floor_ceil_gap); break;
 		case TYPE_SPIWEB:     add_spider_web(c); break;
