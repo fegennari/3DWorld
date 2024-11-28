@@ -1831,7 +1831,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (!mats_amask.empty() && !draw_ext_only) { // draw plant leaves, spider webs, etc. using alpha masks in the detail pass
 		if (shadow_only) {
 			if (!amask_shader.is_setup()) {amask_shader.begin_simple_textured_shader(0.9);} // need to use texture with alpha test
-			else {amask_shader.make_current();}
+			else {amask_shader.make_current();} // min_alpha should be left at 0.9 from the previous call
 			mats_amask.draw(nullptr, amask_shader, 2, 0); // shadow pass with alpha mask; no brg_batch_draw
 			s.make_current(); // switch back to the normal shader
 		}
@@ -1841,12 +1841,16 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		// this is expensive: only enable for the main draw pass and skip for buildings the player isn't in
 		else if (inc_small >= 2 && (player_in_building || !camera_in_building)) {
 			// without the special shader these won't look correct when drawn through windows
+			// used for both plant/tree leaves and spider webs; plants are above ground and in malls and use high min_alpha; spider webs are in basement and use low min_alpha
+			float const min_alpha((player_in_basement >= 2 && !building.has_mall()) ? 0.1 : 0.9);
+
 			if (!amask_shader.is_setup()) {
-				// used for both plant leaves and spider webs; plants are above ground and in malls and use high min_alpha; spider webs are in basement and use low min_alpha
-				float const min_alpha((player_in_basement >= 2 && !building.has_mall()) ? 0.1 : 0.9);
 				setup_building_draw_shader(amask_shader, min_alpha, 1, 1, 0); // enable_indir=1, force_tsl=1, use_texgen=0, water_damage=0.0
 			}
-			else {amask_shader.make_current();}
+			else {
+				amask_shader.make_current();
+				amask_shader.add_uniform_float("min_alpha", min_alpha); // set min_alpha in case it changed
+			}
 			mats_amask.draw(nullptr, amask_shader, 0, 0); // no brg_batch_draw
 			s.make_current(); // switch back to the normal shader
 		}
