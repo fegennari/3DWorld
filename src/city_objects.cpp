@@ -855,6 +855,7 @@ void newsrack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 }
 
 // clothes lines
+void draw_wire(point const *const pts, float radius, color_wrapper const &cw, quad_batch_draw &untex_qbd, unsigned ndiv=4);
 
 clothesline_t::clothesline_t(point const &p1_, point const &p2_, float cheight_, float lradius_, rand_gen_t &rgen) :
 	cheight(cheight_), lradius(lradius_), p1(p1_), p2(p2_)
@@ -881,7 +882,15 @@ clothesline_t::clothesline_t(point const &p1_, point const &p2_, float cheight_,
 	// TODO
 }
 void clothesline_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	// TODO: line cylinder
+	// draw line
+	point const pts[2] = {p1, p2};
+	unsigned const ndiv(shadow_only ? 4 : max(4U, min(16U, unsigned(0.5f*dist_scale*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, pos)))));
+	draw_wire(pts, lradius, LT_GRAY, qbds.untex_qbd, ndiv);
+
+	// draw poles, unless we want to attach the line to the house, wall, etc.
+	for (unsigned d = 0; d < 2; ++d) {
+
+	} // for d
 	for (cube_t const &c : clothes) {
 		assert(c.is_strictly_normalized());
 		// TODO: shirt model, etc.
@@ -1031,8 +1040,7 @@ void add_cylin_as_tris(vector<vert_norm_tc_color> &verts, point const ce[2], flo
 		}
 	} // for i
 }
-void draw_wire(point const *const pts, float radius, color_wrapper const &cw, quad_batch_draw &untex_qbd) { // pts is size 2
-	unsigned const ndiv(4);
+void draw_wire(point const *const pts, float radius, color_wrapper const &cw, quad_batch_draw &untex_qbd, unsigned ndiv) { // pts is size 2
 	vector3d v12;
 	vector_point_norm const &vpn(gen_cylinder_data(pts, radius, radius, ndiv, v12));
 

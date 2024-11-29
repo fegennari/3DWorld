@@ -1229,7 +1229,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				if (add_umbrella) { // maybe place a beach umbrella
 					float const umbrella_height(0.25*city_params.road_width);
 
-					for (unsigned n = 0; n < 10; ++n) { // make some attempts to generate a valid trampoline location
+					for (unsigned n = 0; n < 10; ++n) { // make some attempts to generate a valid umbrella location
 						point const ss_pos(rgen.gen_rand_cube_point_xy(center_area, i->z2()));
 						umbrella_t const umbrella(ss_pos, umbrella_height, 0, 0); // dim=0, dir=0
 						if (!place_area.contains_cube_xy(umbrella.bcube)) continue; // too close to back yard edge
@@ -1240,10 +1240,25 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 						break; // success
 					} // for n
 				}
-			}
-		}
-		// maybe place clothes line
-		// TODO
+				// maybe place clothes line
+				if (0 && !placed_pool) {
+					float const height(0.2*city_params.road_width), cl_z2(i->z2() + height);
+
+					for (unsigned n = 0; n < 20; ++n) { // make some attempts to generate a valid pair of points
+						point const p1(rgen.gen_rand_cube_point_xy(center_area, cl_z2));
+						bool const cdim(rgen.rand_bool()), cdir(rgen.rand_bool()); // should we always choose the furthest edge of center_area?
+						point p2(p1);
+						p2[cdim] += (cdir ? 1.0 : -1.0)*rgen.rand_uniform(0.4, 0.8)*city_params.road_width;
+						if (!center_area.contains_pt_xy(p2)) continue;
+						clothesline_t const cline(p1, p2, height, 0.002*city_params.road_width, rgen);
+						if (is_placement_blocked(cline.bcube, blockers, cube_t(), blockers.size())) continue; // intersects some other object; include all objects
+						cline_groups.add_obj(cline, clines);
+						blockers.push_back(cline.bcube);
+						break; // done
+					} // for n
+				}
+			} // end dx/dy check
+		} // end place other objects
 		
 		// place short pine trees by the front
 		if (!enable_instanced_pine_trees()) {
