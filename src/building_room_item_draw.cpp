@@ -1782,9 +1782,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		bool const create_small(inc_small && !mats_small.valid), create_text(draw_int_detail_objs && !mats_text.valid);
 		//highres_timer_t timer("Create Small + Text VBOs", (create_small || create_text));
 
-		// Note: it's not legal to use multiple threads for retail buildings because the shelf racks contain books, which draw text in the non-text pass;
+		// Note: it's not legal to use multiple threads for buildings with retail or malls because the shelf racks contain books, which draw text in the non-text pass;
 		// this isn't thread safe due to text material and static text verts; text time should be small in this case, so threads are unlikely to help anyway
-		if (create_small && create_text && !building.has_retail()) { // MT case
+		if (create_small && create_text && !(building.has_retail() || building.has_mall())) { // MT case
 #pragma omp parallel num_threads(2)
 			if (omp_get_thread_num_3dw() == 0) {create_small_static_vbos(building);} else {create_text_vbos();}
 		}
