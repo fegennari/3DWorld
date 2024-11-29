@@ -359,9 +359,10 @@ cube_t get_book_bcube(rand_gen_t &rgen, point const &pos, float floor_spacing, b
 
 // Note: no blockers, but does check existing objects
 bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
+	bool const is_bookstore(room.is_store());
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	room_bounds.expand_by_xy(-get_trim_thickness());
-	float const vspace(get_window_vspace());
+	float const vspace(get_window_vspace()), wall_thickness(get_wall_thickness());
 	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return 0; // room is too small
 	rand_gen_t rgen2;
 	rgen2.set_state((room_id + 1), (13*mat_ix + interior->rooms.size() + 1)); // local rgen that's per-building/room; ensures bookcases are all the same size in a library
@@ -373,7 +374,8 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a bookcase
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
-		if (!is_basement && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) continue; // don't place against an exterior wall/window, inc. partial ext walls
+		// don't place against an exterior wall/window, inc. partial ext walls
+		if (!is_basement && !is_bookstore && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) continue;
 		c.d[dim][ dir] = room_bounds.d[dim][dir]; // against this wall
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
 		float const pos(rgen.rand_uniform(room_bounds.d[!dim][0]+0.5*width, room_bounds.d[!dim][1]-0.5*width));
@@ -381,6 +383,8 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 		cube_t tc(c);
 		tc.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance; // increase space to add clearance
 		if (is_obj_placement_blocked(tc, room, 1) || overlaps_other_room_obj(tc, objs_start)) continue; // bad placement
+		tc.d[dim][ dir] -= (dir ? -1.0 : 1.0)*wall_thickness; // expand to wall to check for interior windows and store doors
+		if (has_bcube_int(tc, interior->int_windows) || (is_bookstore && has_bcube_int(tc, interior->store_doorways))) continue;
 		unsigned flags(room.has_open_wall(dim, dir) ? RO_FLAG_OPEN : 0); // flag as open if along an open wall so that the back is drawn
 
 		if (is_basement && rgen.rand_float() < 0.40) { // fallen bookcase 40% of the time

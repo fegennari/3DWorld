@@ -1256,7 +1256,8 @@ bool building_t::add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area,
 }
 
 void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
-	float const door_width(get_doorway_width()), floor_spacing(room.dz()), window_vspace(get_window_vspace()), wall_thickness(get_wall_thickness());
+	float const door_width(get_doorway_width()), floor_spacing(room.dz()), window_vspace(get_window_vspace());
+	float const wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness);
 	float const light_amt = 1.0; // fully lit, for now
 	// get doorway bcube
 	cube_t doorway;
@@ -1281,7 +1282,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	interior->stores.emplace_back(dim, dir, room_id, store_type, item_category, store_name);
 
 	// add store name on sign above the entrance
-	float const sign_z1(room.z1() + 0.7*floor_spacing), sign_height(0.3*window_vspace), sign_hwidth(0.25*sign_height*(store_name.size() + 2)), sign_thick(0.5*wall_thickness);
+	float const sign_z1(room.z1() + 0.7*floor_spacing), sign_height(0.3*window_vspace), sign_hwidth(0.25*sign_height*(store_name.size() + 2)), sign_thick(wall_hthick);
 	float const ext_wall_pos(mall_room.d[dim][!dir] + (dir ? 1.0 : -1.0)*((dim == mall_dim) ? 1.0 : 0.5)*wall_thickness);
 	cube_t sign;
 	set_cube_zvals(sign, sign_z1, sign_z1+sign_height);
@@ -1291,7 +1292,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	bool const emissive(0);
 	unsigned const flags(RO_FLAG_LIT | RO_FLAG_NOCOLL | (emissive ? RO_FLAG_EMISSIVE : 0) | RO_FLAG_HANGING);
 	colorRGBA const sign_color(choose_sign_color(rgen, emissive));
-	objs.emplace_back(sign, TYPE_SIGN, interior->ext_basement_hallway_room_id, dim, dir, flags, 1.0, SHAPE_CUBE, sign_color); // always lit
+	objs.emplace_back(sign, TYPE_SIGN, interior->ext_basement_hallway_room_id, dim, dir, flags, light_amt, SHAPE_CUBE, sign_color); // always lit
 	objs.back().obj_id = register_sign_text(store_name);
 	cube_t blocked;
 
@@ -1310,7 +1311,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	}
 	if (store_type == STORE_RETAIL) {
 		cube_t place_area(room);
-		place_area.expand_by_xy(-0.5*wall_thickness);
+		place_area.expand_by_xy(-wall_hthick);
 		place_area.expand_in_dim(dim, -0.5*door_width); // add extra padding in front and back for doors
 		// simplified version of building_t::add_retail_room_objs() with no pillars, escalators, checkout counters, wall light, or short racks
 		float const dx(place_area.dx()), dy(place_area.dy()), spacing(0.8), nom_aisle_width(1.5*door_width);
@@ -1356,6 +1357,9 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	}
 	if (store_type == STORE_BOOK) {
 		// TODO: add shelves of books
+		for (unsigned n = 0; n < 12; ++n) { // place up to 12 bookcases
+			if (!add_bookcase_to_room(rgen, room, zval, room_id, light_amt, objs_start, 0)) break; // is_basement=0
+		}
 	}
 	// TODO: TYPE_DUCT, etc.
 }
