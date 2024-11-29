@@ -1545,6 +1545,18 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 			}
 			continue;
 		}
+		if (c->type == TYPE_THEFT_SENS) {
+			bool const was_active(c->is_active());
+			point const center(c->get_cube_center());
+
+			if (was_room_stolen_from(c->room_id) && dist_less_than(center, camera_rot, 1.6*c->dz())) { // raise the alarm
+				gen_sound_thread_safe(SOUND_ALARM, local_to_camera_space(center), 0.5, 0.85, 1.0, 1); // skip_if_already_playing=1
+				register_building_sound(center, 1.0);
+				c->flags |= RO_FLAG_IS_ACTIVE;
+			}
+			else {c->flags &= ~RO_FLAG_IS_ACTIVE;} // clear the alarm
+			if (c->is_active() != was_active) {interior->room_geom->invalidate_draw_data_for_obj(*c);} // must update material used for flashing light
+		}
 		if (player_room_ix >= 0 && (int)c->room_id == player_room_ix) {
 			if (c->type == TYPE_CEIL_FAN) {
 				if (camera_rot.z < c->z2() && camera_rot.z > c->z1() - floor_spacing && ceiling_fan_is_on(*c, objs)) {

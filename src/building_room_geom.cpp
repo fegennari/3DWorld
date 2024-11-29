@@ -5321,7 +5321,7 @@ void building_room_geom_t::add_theft_sensor(room_object_t const &c) {
 	inner.expand_in_dim(!c.dim, -0.05*height); // shrink sides
 	cube_t base(c), bot(inner), bar1(inner), bar2(inner), top(inner);
 	bot  .expand_in_dim( c.dim,  0.05*depth); // expand depth slightly
-	top  .expand_in_dim( c.dim,  0.03*depth); // expand depth slightly
+	top  .expand_in_dim( c.dim,  0.02*depth); // expand depth slightly
 	bar1 .expand_in_dim( c.dim, -0.05*depth); // shrink depth slightly
 	bar2 .expand_in_dim( c.dim, -0.05*depth); // shrink depth slightly
 	base.z2() = bot.z1() = z1 + 0.02*height;
@@ -5330,7 +5330,7 @@ void building_room_geom_t::add_theft_sensor(room_object_t const &c) {
 	bar1.z2() = z1 + 0.43*height;
 	bar2.z1() = z1 + 0.69*height;
 	bar2.z2() = z1 + 0.72*height;
-	top .z1() = z1 + 0.94*height;
+	top .z1() = z1 + 0.95*height;
 	mat.add_cube_to_verts_untextured(base, color, EF_Z1);
 	mat.add_cube_to_verts_untextured(bot,  color, EF_Z1);
 	mat.add_cube_to_verts_untextured(top,  color, 0);
@@ -5343,7 +5343,15 @@ void building_room_geom_t::add_theft_sensor(room_object_t const &c) {
 		side.z1() = bot.z1();
 		side.d[!c.dim][!d] = inner.d[!c.dim][d];
 		mat.add_cube_to_verts_untextured(side, color, EF_Z1);
-	} // for d
+	}
+	// add alarm light
+	cube_t light(top);
+	light.expand_in_dim( c.dim,  0.01*depth); // expand depth  slightly
+	light.expand_in_dim( 2,      0.01*depth); // expand height slightly
+	light.expand_in_dim(!c.dim, -0.60*depth); // shrink width
+	colorRGBA const light_color(c.is_active() ? RED : apply_light_color(c, DK_RED));
+	rgeom_mat_t &light_mat(get_material(tid_nm_pair_t(c.is_active() ? RED_TEX : -1), 0, 0, 1)); // unshadowed, small
+	light_mat.add_cube_to_verts_untextured(light, light_color, 0); // draw all faces
 }
 
 void building_room_geom_t::add_lava_lamp(room_object_t const &c) {

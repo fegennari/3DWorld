@@ -85,7 +85,7 @@ tid_nm_pair_t tid_nm_pair_t::get_scaled_version(float scale) const {
 	return tex;
 }
 float tid_nm_pair_t::get_emissive_val() const {
-	if (tid == RED_TEX) {return ((fract(tfticks/(1.5*TICKS_PER_SECOND)) < 0.5) ? 1.0 : 0.0);} // camera light flashes on and off with a period of 1.5s
+	if (tid == RED_TEX) {return ((fract(tfticks/(1.0*TICKS_PER_SECOND)) < 0.5) ? 1.0 : 0.0);} // camera/alarm light flashes on and off with a period of 1s
 	return emissive;
 }
 void tid_nm_pair_t::set_specular_color(colorRGB const &color, float mag, float shine) {
