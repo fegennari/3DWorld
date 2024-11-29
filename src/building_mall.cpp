@@ -1361,7 +1361,19 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 			if (!add_bookcase_to_room(rgen, room, zval, room_id, light_amt, objs_start, 0)) break; // is_basement=0
 		}
 	}
-	// TODO: TYPE_DUCT, etc.
+	// add ducts and vents in the ceiling
+	cube_t duct(room);
+	duct.z2() -= get_fc_thickness();
+	duct.z1()  = duct.z2() - 0.2*window_vspace;
+	duct.expand_in_dim(dim, -wall_hthick); // shrink
+
+	for (unsigned d = 0; d < 2; ++d) { // each side
+		float const dscale(d ? 1.0 : -1.0);
+		duct.d[!dim][ d] = room.d[!dim][d] - dscale*wall_hthick;
+		duct.d[!dim][!d] = duct.d[!dim][d] - dscale*0.3*window_vspace;
+		objs.emplace_back(duct, TYPE_DUCT, room_id, dim, dir, RO_FLAG_IN_MALL, light_amt, SHAPE_CUBE);
+		// TODO: TYPE_VENT; and don't place wall vents in stores
+	} // for d
 }
 
 int building_interior_t::get_store_id_for_room(unsigned room_id) const { // uses a slow linear iteration over stores, but not called much
