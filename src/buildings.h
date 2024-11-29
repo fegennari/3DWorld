@@ -1371,7 +1371,7 @@ struct room_t : public cube_t { // size=56
 	float light_intensity=0.0; // due to room lights, if turned on
 
 	room_t() {assign_all_to(RTYPE_NOTSET, 0);} // locked=0
-	room_t(cube_t const &c, unsigned p, unsigned nl=0, bool is_hallway_=0, bool is_office_=0, bool is_sec_bldg_=0);
+	room_t(cube_t const &c, unsigned p, unsigned nl=0, bool is_hallway_=0, bool is_office_=0, bool is_sec_bldg_=0, uint8_t interior_=0);
 	room_t(room_t const &r, cube_t const &c) {*this = r; copy_from(c);} // sub-room
 	void assign_all_to(room_type rt, bool locked=1); // locked by default
 	void assign_to(room_type rt, unsigned floor, bool locked=0); // unlocked by default
@@ -2340,7 +2340,8 @@ private:
 	void add_extb_room_floor_and_ceil(cube_t const &room);
 	void add_mall_stairs();
 	float get_mall_floor_spacing(cube_t const &room) const;
-	bool is_inside_mall_stores(point const &pos) const {return (has_mall() && interior->mall_store_bounds.contains_pt(pos) && !get_basement().contains_pt(pos));}
+	bool inside_mall_hallway(point const &pos) const;
+	bool is_inside_mall_stores(point const &pos) const;
 	room_t const &get_mall_concourse() const {assert(has_mall()); return interior->get_extb_start_room();}
 	float get_mall_floor_spacing() const {return get_mall_floor_spacing(get_mall_concourse());}
 	static float get_mall_top_window_gap(float mall_floor_spacing, float window_vspace) {return 0.5*(mall_floor_spacing - window_vspace);}

@@ -3271,9 +3271,9 @@ void building_t::add_doorbell_lamp_and_porch_items(tquad_with_ix_t const &door, 
 	}
 }
 
-room_t::room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool is_office_, bool is_sec_bldg_) :
+room_t::room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool is_office_, bool is_sec_bldg_, uint8_t interior_) :
 	cube_t(c), is_hallway(is_hallway_), is_office(is_office_), is_sec_bldg(is_sec_bldg_),
-	is_single_floor(is_sec_bldg), part_id(p), num_lights(nl) // sec buildings always a single floor
+	is_single_floor(is_sec_bldg), interior(interior_), part_id(p), num_lights(nl) // sec buildings always a single floor
 {
 	if (is_office_) {set_office_floorplan();}
 	if (is_hallway) {set_no_geom         ();} // no geom in hallways
