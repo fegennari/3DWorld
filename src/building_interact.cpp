@@ -27,6 +27,7 @@ extern building_t const *player_building;
 bool player_can_open_door(door_t const &door);
 unsigned player_has_room_key();
 bool player_has_pool_cue();
+bool was_room_stolen_from(unsigned room_id);
 void register_broken_object(room_object_t const &obj);
 void record_building_damage(float damage);
 void pool_ball_in_pocket(unsigned ball_number);

@@ -546,6 +546,7 @@ bool register_achievement(string const &str) {return achievement_tracker.registe
 class player_inventory_t { // manages player inventory, health, and other stats
 	vector<carried_item_t> carried; // interactive items the player is currently carrying
 	vector<dead_person_t > dead_players;
+	set<unsigned> rooms_stolen_from;
 	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, oxygen, thirst;
 	float prev_player_zval, respawn_time=0.0;
 	unsigned num_doors_unlocked, has_key; // has_key is a bit mask for key colors
@@ -565,6 +566,12 @@ class player_inventory_t { // manages player inventory, health, and other stats
 		else {oss << value;}
 		oss << " weight " << weight << " lbs";
 	}
+	void on_empty_inventory() {
+		phone_manager.disable(); // phones won't ring when taken out of their building, since the player can't switch to them anyway
+		tape_manager.clear();
+		rooms_stolen_from.clear();
+		player_attracts_flies = 0; // even if items remain in the player's inventory
+	}
 public:
 	player_inventory_t() {clear_all();}
 
@@ -575,10 +582,8 @@ public:
 		player_health = oxygen = thirst = 1.0; // full health, oxygen, and (anti-)thirst
 		num_doors_unlocked = has_key = 0; // num_doors_unlocked not saved on death, but maybe should be?
 		prev_in_building = has_flashlight = is_poisoned = poison_from_spider = has_pool_cue = 0;
-		player_attracts_flies = 0;
-		phone_manager.disable();
 		carried.clear();
-		tape_manager.clear();
+		on_empty_inventory();
 	}
 	void clear_all() { // called on game mode init
 		tot_value = best_value = 0.0;
@@ -628,6 +633,7 @@ public:
 	bool  player_at_full_health() const {return (player_health == 1.0 && !is_poisoned);}
 	bool  player_is_thirsty    () const {return (thirst < 0.5);}
 	bool  player_holding_lit_candle() const {return (!carried.empty() && carried.back().type == TYPE_CANDLE && carried.back().is_lit());}
+	bool  was_room_stolen_from(unsigned room_id) const {return (rooms_stolen_from.find(room_id) != rooms_stolen_from.end());}
 	void  refill_thirst() {thirst = 1.0;}
 
 	bool can_open_door(door_t const &door) { // non-const because num_doors_unlocked is modified
@@ -683,6 +689,7 @@ public:
 		float health(0.0), drunk(0.0), liquid(0.0);
 		bool const bladder_was_full(bladder >= 0.9);
 		float const value(get_obj_value(obj));
+		rooms_stolen_from.insert(obj.room_id); // only if was_expanded?
 		if (obj.type == TYPE_PAPER && value >= 500.0) {register_achievement("Top Secret Document");}
 		
 		if ((obj.type == TYPE_TCAN && !obj.was_expanded() && obj.color != BLUE) || // skip trashcans on shelves and recycling bins
@@ -891,8 +898,7 @@ public:
 	}
 	void collect_items(bool keep_interactive) { // called when player exits a building
 		if (!keep_interactive) {has_key = 0;} // key only good for current building; flashlight and pool cue can be used in all buildings
-		phone_manager.disable(); // phones won't ring when taken out of their building, since the player can't switch to them anyway
-		tape_manager.clear();
+		on_empty_inventory();
 		if (carried.empty() && cur_weight == 0.0 && cur_value == 0.0) return; // nothing to add
 		float keep_value(0.0), keep_weight(0.0);
 
@@ -919,7 +925,6 @@ public:
 		}
 		cur_value  = keep_value;
 		cur_weight = keep_weight;
-		player_attracts_flies = 0; // even if items remain in the player's inventory
 	}
 	void show_stats() const {
 		if (!carried.empty()) {
@@ -1107,6 +1112,7 @@ void register_in_closed_bathroom_stall() {player_inventory.register_in_closed_ba
 bool player_at_full_health() {return player_inventory.player_at_full_health();}
 bool player_is_thirsty    () {return player_inventory.player_is_thirsty    ();}
 bool player_holding_lit_candle() {return player_inventory.player_holding_lit_candle();}
+bool was_room_stolen_from(unsigned room_id) {return player_inventory.was_room_stolen_from(room_id);}
 void refill_thirst() {player_inventory.refill_thirst();}
 void apply_building_fall_damage(float delta_z) {player_inventory.apply_fall_damage(delta_z, 0.5);} // dscale=0.5
 void get_dead_players_in_building(vector<dead_person_t> &dead_players, building_t const &building) {player_inventory.get_dead_players_in_building(dead_players, building);}
