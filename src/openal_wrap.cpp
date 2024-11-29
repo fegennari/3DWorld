@@ -169,6 +169,7 @@ public:
 		add_new_sound("neon_sign_sm.wav"); // SOUND_NEON_SIGN
 		add_new_sound("small_splat.wav"); // SOUND_SM_SPLAT
 		add_new_sound("police.wav"     ); // SOUND_POLICE
+		add_new_sound("alarm.wav"      ); // SOUND_ALARM
 		cout << endl;
 
 		// create sources
