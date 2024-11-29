@@ -1513,7 +1513,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 		if (camera_surf_collide && c->type == TYPE_OFF_CHAIR && c->rotates()) { // player push office chair
 			if (c->z1() > player_z2 || c->z2() < player_z1) continue; // no zval overlap
 			float const chair_radius(0.25*(c->dx() + c->dy())); // treat as a cylinder
-			vector3d const delta((c->xc() - player_pos.x), (c->yc() - player_pos.y), 0.0); // in XY plane
+			vector3d const delta((c->xc() - camera_rot.x), (c->yc() - camera_rot.y), 0.0); // in XY plane
 			float const min_dist(1.2*(player_radius + chair_radius)); // use a larger radius, since collision detection should prevent intersections
 			if (delta.xy_mag_sq() > min_dist*min_dist) continue; // no intersection
 			float const dist(delta.xy_mag());
@@ -1547,7 +1547,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 		}
 		if (player_room_ix >= 0 && (int)c->room_id == player_room_ix) {
 			if (c->type == TYPE_CEIL_FAN) {
-				if (player_pos.z < c->z2() && player_pos.z > c->z1() - floor_spacing && ceiling_fan_is_on(*c, objs)) {
+				if (camera_rot.z < c->z2() && camera_rot.z > c->z1() - floor_spacing && ceiling_fan_is_on(*c, objs)) {
 					float const dist(p2p_dist(camera_rot, c->get_cube_center())), sound_dist(2.0*floor_spacing);
 					if (dist < sound_dist) {hum_amt = 0.15*(1.0 - dist/sound_dist); hum_freq = 90.0;}
 				}
@@ -1563,18 +1563,18 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 			//else if (c->type == TYPE_FRIDGE ) {}
 		}
 		if (!c->has_dstate()) continue; // Note: no test of player_coll flag
-		run_ball_update(c, player_pos, player_z1, player_is_moving);
+		run_ball_update(c, camera_rot, player_z1, player_is_moving);
 	} // for c
 	if (player_in_this_building) { // interactions only run for player building
 		if (player_in_closet) { // check for collisions with expanded objects in closets
 			auto &expanded_objs(interior->room_geom->expanded_objs);
 
 			for (auto c = expanded_objs.begin(); c != expanded_objs.end(); ++c) {
-				if (c->type == TYPE_CLOTHES && sphere_cube_intersect(player_pos, player_radius, *c)) { // shirt in a closet with the player
+				if (c->type == TYPE_CLOTHES && sphere_cube_intersect(camera_rot, player_radius, *c)) { // shirt in a closet with the player
 					assert(c != objs.begin());
 					room_object_t &hanger(*(c-1)); // hanger is the previous object
 					assert(hanger.type == TYPE_HANGER);
-					bool const rot_dir(dot_product(c->get_dir(), (player_pos - c->get_cube_center())) < 0);
+					bool const rot_dir(dot_product(c->get_dir(), (camera_rot - c->get_cube_center())) < 0);
 					unsigned const add_flag(rot_dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI), rem_flag(rot_dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO);
 					c->flags     |= ((c->type == TYPE_CLOTHES) ? RO_FLAG_ROTATING : 0) | add_flag;
 					c->flags     &= ~rem_flag;
@@ -1584,11 +1584,11 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 			} // for c
 		}
 		if (use_last_pickup_object || (tt_fire_button_down && !flashlight_on)) { // use object not active, and not using fire key without flashlight (space bar)
-			maybe_use_last_pickup_room_object(player_pos);
+			maybe_use_last_pickup_room_object(camera_rot);
 			use_last_pickup_object = 0; // reset for next frame
 		}
-		maybe_update_tape(player_pos, 0); // end_of_tape=0
-		if (interior->room_geom->fire_manager.get_closest_fire(player_pos, player_radius, player_z1, player_z2)) {player_take_damage(0.006);} // small amount of fire damage
+		maybe_update_tape(camera_rot, 0); // end_of_tape=0
+		if (interior->room_geom->fire_manager.get_closest_fire(camera_rot, player_radius, player_z1, player_z2)) {player_take_damage(0.006);} // small amount of fire damage
 
 		if (!player_room_no_power && player_room_ix >= 0 /*&& !is_house*/) { // check for sounds; should this be for office buildings only?
 			room_t const &room(get_room(player_room_ix));
