@@ -1826,9 +1826,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			light_clip_cube.expand_by_xy(wall_thickness); // needed for garage door
 		}
 		else { // clip to bcube
-			if (is_rotated()) {light_clip_cube = get_rotated_bcube(bcube, 1);} // inv_rotate=1
-			else {light_clip_cube = bcube;}
-			assert(light_clip_cube.contains_pt(lpos));
+			if (is_rotated()) {
+				light_clip_cube = get_rotated_bcube(bcube, 1); // inv_rotate=1
+				light_clip_cube.union_with_pt(lpos); // should not be needed, but I've seen it happen with one rotated building
+			}
+			else {
+				light_clip_cube = bcube;
+				assert(light_clip_cube.contains_pt(lpos));
+			}
 		}
 		cube_t clipped_bc(sphere_bc);
 		clipped_bc.intersect_with_cube(light_clip_cube);
