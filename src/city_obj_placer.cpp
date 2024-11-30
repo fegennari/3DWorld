@@ -1242,7 +1242,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 					} // for n
 				}
 				// maybe place clothes line
-				if (!placed_pool) {
+				if (!placed_pool && building_obj_model_loader.is_model_valid(OBJ_MODEL_CLOTHES)) {
 					float const height(0.14*city_params.road_width), cl_z2(plot_z + height);
 
 					for (unsigned n = 0; n < 20; ++n) { // make some attempts to generate a valid pair of points
@@ -1252,7 +1252,9 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 						p2[cdim] += (cdir ? 1.0 : -1.0)*rgen.rand_uniform(0.4, 0.8)*city_params.road_width;
 						if (!center_area.contains_pt_xy(p2)) continue;
 						clothesline_t const cline(p1, p2, height, rgen);
-						if (is_placement_blocked(cline.bcube, blockers, cube_t(), blockers.size())) continue; // intersects some other object; include all objects
+						cube_t test_cube(cline.bcube);
+						test_cube.expand_in_dim(!cdim, 0.75*height); // add extra padding to the sides - for example, for swing sets
+						if (is_placement_blocked(test_cube, blockers, cube_t(), blockers.size())) continue; // intersects some other object; include all objects
 						cline_groups.add_obj(cline, clines);
 						blockers.push_back(cline.bcube);
 
@@ -2283,6 +2285,10 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 			draw_objects(ponds, pond_groups, dstate, 0.30, shadow_only, 1); // dist_scale=0.30, has_immediate_draw=1
 		}
 	}
+	for (dstate.pass_ix = 0; dstate.pass_ix < 3; ++dstate.pass_ix) { // {line, poles, clothes}
+		if (shadow_only && dstate.pass_ix == 0) continue; // skip line in the shadow pass because its too narrow to cast a good shadow
+		draw_objects(clines, cline_groups, dstate, 0.12, shadow_only, 1); // has_immediate_draw=1
+	}
 	dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // reset back to default after drawing 3D models such as fire hydrants and substations
 	
 	for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {concrete cube, metal cylinder}
@@ -2302,10 +2308,6 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 		if (shadow_only && dstate.pass_ix != 2) continue; // only above ground pools are drawn in the shadow pass
 		float const dist_scales[4] = {0.1, 0.5, 0.3, 0.5};
 		draw_objects(pools, pool_groups, dstate, dist_scales[dstate.pass_ix], shadow_only, (dstate.pass_ix > 1)); // final 2 passes use immediate draw rather than qbd
-	}
-	for (dstate.pass_ix = 0; dstate.pass_ix < 3; ++dstate.pass_ix) { // {line, poles, clothes}
-		if (shadow_only && dstate.pass_ix == 0) continue; // skip line in the shadow pass because its too narrow to cast a good shadow
-		draw_objects(clines, cline_groups, dstate, 0.12, shadow_only, 1); // has_immediate_draw=1
 	}
 	if (!shadow_only && light_factor > 0.5 && !pools.empty()) { // 4=pool underwater caustics pass
 		cube_t draw_region(all_objs_bcube);

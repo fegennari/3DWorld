@@ -21,6 +21,7 @@ bool do_line_clip_xy(point &v1, point &v2, float const d[3][2]);
 float get_power_pole_offset() {return 0.045*city_params.road_width;}
 unsigned get_building_models_gpu_mem() {return building_obj_model_loader.get_gpu_mem();}
 int get_solarp_tid();
+bool is_pants_model(unsigned model_id);
 
 
 void textured_mat_t::pre_draw(bool shadow_only) {
@@ -856,9 +857,11 @@ void newsrack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 
 // clothes lines
 
-clothesline_t::clothesline_t(point const &p1, point const &p2, float height_, rand_gen_t &rgen) :
+// Note: takes rgen by reference so that changes to clothes generation doesn't affect other city objects
+clothesline_t::clothesline_t(point const &p1, point const &p2, float height_, rand_gen_t rgen) :
 	height(height_), lradius(0.005*height), pradius(0.02*height)
 {
+	assert(p1.z == p2.z); // must be level
 	ends[0] = p1; ends[1] = p2;
 	if      (p1.x == p2.x) {dim = 1;}
 	else if (p1.y == p2.y) {dim = 0;}
@@ -872,7 +875,26 @@ clothesline_t::clothesline_t(point const &p1, point const &p2, float height_, ra
 	bcube.expand_by_xy(max(lradius, pradius));
 	bcube.z2() += 2.0*lradius; // account for the top of the pole
 	bcube.z1() -= height;
-	// TODO: add clothes
+	// add clothes
+	float const clothes_z2(p1.z + lradius); // top of the line
+	unsigned const num_items(rgen.rand() % 6); // 0-5
+
+	for (unsigned n = 0; n < num_items; ++n) {
+		unsigned const model_id(OBJ_MODEL_CLOTHES + (rgen.rand() << 8)); // select a random clothing sub-model
+		bool const is_pants(is_pants_model(model_id));
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id)); // W, D, H
+		float const dz((is_pants ? 0.45 : 0.5)*height), hwidth(0.5*dz*sz.x/sz.z), hthick(0.5*dz*sz.y/sz.z), end_pad(2.5*hwidth); // pants are shorter
+		float const lo(ends[0][dim] + end_pad), hi(ends[1][dim] - end_pad);
+		if (hi <= lo) continue; // not enough space; shouldn't fail
+		cube_t c;
+		set_cube_zvals(c, clothes_z2-dz, clothes_z2);
+		set_wall_width(c, ends[0][!dim], hthick, !dim); // centerline
+
+		for (unsigned N = 0; N < 10; ++n) { // 10 attempts to find a non-overlapping pos
+			set_wall_width(c, rgen.rand_uniform(lo, hi), hwidth, dim);
+			if (!has_bcube_int(c, clothes)) {clothes.emplace_back(c, model_id, rgen.rand_bool()); break;} // random dir
+		}
+	} // for n
 }
 /*static*/ void clothesline_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
 	if (shadow_only) return;
@@ -894,9 +916,12 @@ clothesline_t::clothesline_t(point const &p1, point const &p2, float height_, ra
 }
 void clothesline_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (dstate.pass_ix == 2) { // draw clothes
-		for (cube_t const &c : clothes) {
+		if (clothes.empty() || !dstate.is_visible_and_unoccluded(bcube, dist_scale)) return;
+
+		for (item_t const &c : clothes) { // move in the wind?
 			assert(c.is_strictly_normalized());
-			// TODO: shirt model, etc.
+			vector3d const cdir((dim ? plus_y : plus_x)*(c.dir ? -1.0 : 1.0));
+			building_obj_model_loader.draw_model(dstate.s, c.get_cube_center(), c, cdir, WHITE, dstate.xlate, c.model_id, shadow_only);
 		}
 		return;
 	}

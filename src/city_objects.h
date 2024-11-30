@@ -502,11 +502,16 @@ struct newsrack_t : public oriented_city_obj_t {
 };
 
 struct clothesline_t : public oriented_city_obj_t {
+	struct item_t : public cube_t { // clothing item
+		unsigned model_id;
+		bool dir;
+		item_t(cube_t const &c, unsigned id, bool d) : cube_t(c), model_id(id), dir(d) {}
+	};
 	float height, lradius, pradius; // clothes height, line radius, pole radius
 	point ends[2];
-	vect_cube_t clothes;
+	vector<item_t> clothes;
 
-	clothesline_t(point const &p1, point const &p2, float height_, rand_gen_t &rgen);
+	clothesline_t(point const &p1, point const &p2, float height_, rand_gen_t rgen);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
