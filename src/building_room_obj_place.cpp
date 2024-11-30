@@ -1210,12 +1210,17 @@ bool building_t::replace_light_with_ceiling_fan(rand_gen_t &rgen, cube_t const &
 	return 1;
 }
 
+colorRGBA get_bed_sheet_color(int tid, rand_gen_t &rgen) {
+	unsigned const NUM_COLORS = 8;
+	colorRGBA const colors[NUM_COLORS] = {WHITE, WHITE, WHITE, LT_BLUE, LT_BLUE, PINK, PINK, LT_GREEN}; // color of the sheets
+	if (tid < 0 || tid == WHITE_TEX || texture_color(tid).get_luminance() > 0.5) {return colors[rgen.rand()%NUM_COLORS];}
+	return WHITE; // textured
+}
+
 // Note: must be first placed object
 bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval,
 	unsigned room_id, float tot_light_amt, unsigned floor, bool force, int &bed_size_ix, room_object_t const &other_bed)
 {
-	unsigned const NUM_COLORS = 8;
-	colorRGBA const colors[NUM_COLORS] = {WHITE, WHITE, WHITE, LT_BLUE, LT_BLUE, PINK, PINK, LT_GREEN}; // color of the sheets
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace()), wall_thick(get_wall_thickness());
 	bool const long_dim(room_bounds.dx() < room_bounds.dy());
@@ -1284,7 +1289,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 		room_object_t &bed(objs.back());
 		// use white color if a texture is assigned that's not close to white
 		int const sheet_tid(bed.get_sheet_tid());
-		if (sheet_tid < 0 || sheet_tid == WHITE_TEX || texture_color(sheet_tid).get_luminance() > 0.5) {bed.color = colors[rgen.rand()%NUM_COLORS];}
+		bed.color = get_bed_sheet_color(sheet_tid, rgen);
 		cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
 		get_bed_cubes(bed, cubes);
 		cube_t const &mattress(cubes[3]), &pillow(cubes[4]);

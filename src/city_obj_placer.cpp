@@ -1242,10 +1242,10 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 					} // for n
 				}
 				// maybe place clothes line
-				if (!placed_pool && building_obj_model_loader.is_model_valid(OBJ_MODEL_CLOTHES)) {
+				if (!placed_pool && rgen.rand_float() < 0.75) { // 75% of the time (but often fails)
 					float const height(0.14*city_params.road_width), cl_z2(plot_z + height);
 
-					for (unsigned n = 0; n < 20; ++n) { // make some attempts to generate a valid pair of points
+					for (unsigned n = 0; n < 40; ++n) { // make some attempts to generate a valid pair of points
 						point const p1(rgen.gen_rand_cube_point_xy(center_area, cl_z2));
 						bool const cdim(rgen.rand_bool()), cdir(rgen.rand_bool()); // should we always choose the furthest edge of center_area?
 						point p2(p1);

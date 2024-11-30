@@ -503,9 +503,10 @@ struct newsrack_t : public oriented_city_obj_t {
 
 struct clothesline_t : public oriented_city_obj_t {
 	struct item_t : public cube_t { // clothing item
-		unsigned model_id;
-		bool dir;
-		item_t(cube_t const &c, unsigned id, bool d) : cube_t(c), model_id(id), dir(d) {}
+		unsigned id;
+		bool is_model, dir;
+		colorRGBA color;
+		item_t(cube_t const &bc, unsigned id_, bool m, bool d, colorRGBA const &c) : cube_t(bc), id(id_), is_model(m), dir(d), color(c) {}
 	};
 	float height, lradius, pradius; // clothes height, line radius, pole radius
 	point ends[2];
@@ -516,6 +517,8 @@ struct clothesline_t : public oriented_city_obj_t {
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
+private:
+	bool add_item(unsigned id, float dz, float hwidth, float hthick, float zadj, bool is_model, bool cdir, colorRGBA const &color, rand_gen_t &rgen);
 };
 
 struct park_path_t : public city_obj_t {

@@ -22,6 +22,8 @@ float get_power_pole_offset() {return 0.045*city_params.road_width;}
 unsigned get_building_models_gpu_mem() {return building_obj_model_loader.get_gpu_mem();}
 int get_solarp_tid();
 bool is_pants_model(unsigned model_id);
+int select_tid_from_list(vector<unsigned> const &tids, unsigned ix);
+colorRGBA get_bed_sheet_color(int tid, rand_gen_t &rgen);
 
 
 void textured_mat_t::pre_draw(bool shadow_only) {
@@ -879,22 +881,35 @@ clothesline_t::clothesline_t(point const &p1, point const &p2, float height_, ra
 	unsigned const num_items(rgen.rand() % 6); // 0-5
 
 	for (unsigned n = 0; n < num_items; ++n) {
-		unsigned const model_id(OBJ_MODEL_CLOTHES + (rgen.rand() << 8)); // select a random clothing sub-model
-		bool const is_pants(is_pants_model(model_id));
-		vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id)); // W, D, H
-		float const dz((is_pants ? 0.45 : 0.5)*height), hwidth(0.5*dz*sz.x/sz.z), hthick(0.5*dz*sz.y/sz.z), end_pad(2.5*hwidth); // pants are shorter
-		float const lo(ends[0][dim] + end_pad), hi(ends[1][dim] - end_pad);
-		if (hi <= lo) continue; // not enough space; shouldn't fail
-		float const clothes_z2(p1.z + (is_pants ? 2.0 : 1.0)*lradius); // top of the line
-		cube_t c;
-		set_cube_zvals(c, clothes_z2-dz, clothes_z2);
-		set_wall_width(c, ends[0][!dim], hthick, !dim); // centerline
-
-		for (unsigned N = 0; N < 10; ++n) { // 10 attempts to find a non-overlapping pos
-			set_wall_width(c, rgen.rand_uniform(lo, hi), hwidth, dim);
-			if (!has_bcube_int(c, clothes)) {clothes.emplace_back(c, model_id, rgen.rand_bool()); break;} // random dir
+		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_CLOTHES) && rgen.rand_bool()) { // clothing model (shirt or pants)
+			unsigned const model_id(OBJ_MODEL_CLOTHES + (rgen.rand() << 8)); // select a random clothing sub-model
+			bool const is_pants(is_pants_model(model_id));
+			vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id)); // W, D, H
+			float const dz((is_pants ? 0.45 : 0.5)*height), hwidth(0.5*dz*sz.x/sz.z), hthick(0.5*dz*sz.y/sz.z); // pants are shorter
+			add_item(model_id, dz, hwidth, hthick, (is_pants ? 2.0 : 1.0), 1, rgen.rand_bool(), WHITE, rgen); // is_model=1
+		}
+		else { // sheet
+			int const tid(select_tid_from_list(global_building_params.sheet_tids, rgen.rand()));
+			if (tid < 0) continue; // no sheets available
+			float const dz(rgen.rand_uniform(0.4, 0.6)*height), hwidth(rgen.rand_uniform(0.25, 0.4)*height), hthick(1.2*lradius);
+			colorRGBA const color(get_bed_sheet_color(tid, rgen));
+			add_item(tid, dz, hwidth, hthick, 1.5, 0, 0, color, rgen); // is_model=0, cdir=0
 		}
 	} // for n
+}
+bool clothesline_t::add_item(unsigned id, float dz, float hwidth, float hthick, float zadj, bool is_model, bool cdir, colorRGBA const &color, rand_gen_t &rgen) {
+	float const end_pad(2.5*hwidth), lo(ends[0][dim] + end_pad), hi(ends[1][dim] - end_pad);
+	if (hi <= lo) return 0; // not enough space; shouldn't fail
+	float const clothes_z2(ends[0].z + zadj*lradius); // top of the line
+	cube_t c;
+	set_cube_zvals(c, clothes_z2-dz, clothes_z2);
+	set_wall_width(c, ends[0][!dim], hthick, !dim); // centerline
+
+	for (unsigned N = 0; N < 10; ++N) { // 10 attempts to find a non-overlapping pos
+		set_wall_width(c, rgen.rand_uniform(lo, hi), hwidth, dim);
+		if (!has_bcube_int(c, clothes)) {clothes.emplace_back(c, id, is_model, cdir, color); return 1;}
+	}
+	return 0; // failed
 }
 /*static*/ void clothesline_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
 	if (shadow_only) return;
@@ -920,9 +935,18 @@ void clothesline_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 
 		for (item_t const &c : clothes) { // move in the wind?
 			assert(c.is_strictly_normalized());
-			vector3d const cdir((dim ? plus_y : plus_x)*(c.dir ? -1.0 : 1.0));
-			building_obj_model_loader.draw_model(dstate.s, c.get_cube_center(), c, cdir, WHITE, dstate.xlate, c.model_id, shadow_only);
-		}
+
+			if (c.is_model) { // clothing model
+				vector3d const cdir((dim ? plus_y : plus_x)*(c.dir ? -1.0 : 1.0));
+				building_obj_model_loader.draw_model(dstate.s, c.get_cube_center(), c, cdir, c.color, dstate.xlate, c.id, shadow_only);
+			}
+			else { // sheet
+				select_texture(c.id);
+				static quad_batch_draw temp_qbd;
+				dstate.draw_cube(temp_qbd, c, c.color, 0);
+				temp_qbd.draw_and_clear();
+			}
+		} // for c
 		return;
 	}
 	float const dscale(dist_scale*dstate.draw_tile_dist);
@@ -938,7 +962,7 @@ void clothesline_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 		for (unsigned d = 0; d < 2; ++d) {
 			draw_fast_cylinder(ends[d]+end_down, ends[d]+end_up, pradius, pradius, 3*ndiv/2, 0, 4); // draw sides and top
 		}
-		if (!shadow_only && bcube.closest_dist_less_than(dstate.camera_bs, 0.2*dscale)) { // draw small spheres on the top of poles
+		if (!shadow_only && bcube.closest_dist_less_than(dstate.camera_bs, 0.2*dscale)) { // draw small spheres on the top of poles; why doesn't specular work?
 			vector3d const offset(end_up + 1.0*pradius*plus_z);
 			begin_sphere_draw(0); // textured=0
 			for (unsigned d = 0; d < 2; ++d) {draw_sphere_vbo(ends[d]+offset, 1.5*pradius, 2*ndiv, 0);} // textured=0
