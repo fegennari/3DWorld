@@ -384,7 +384,7 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 		tc.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance; // increase space to add clearance
 		if (is_obj_placement_blocked(tc, room, 1) || overlaps_other_room_obj(tc, objs_start)) continue; // bad placement
 		tc.d[dim][ dir] -= (dir ? -1.0 : 1.0)*wall_thickness; // expand to wall to check for interior windows and store doors
-		if (has_bcube_int(tc, interior->int_windows) || (is_bookstore && has_bcube_int(tc, interior->store_doorways))) continue;
+		if (has_bcube_int(tc, interior->int_windows) || (is_bookstore && has_bcube_int(tc, interior->mall_info->store_doorways))) continue;
 		unsigned flags(room.has_open_wall(dim, dir) ? RO_FLAG_OPEN : 0); // flag as open if along an open wall so that the back is drawn
 
 		if (is_basement && rgen.rand_float() < 0.40) { // fallen bookcase 40% of the time

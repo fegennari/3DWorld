@@ -189,7 +189,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 			// if we want to allow both (either a large room connected to a hallway or a large room with hallways coming off of it), we need per-room flags
 
 			if (is_mall) {
-				interior->has_mall = 1;
+				interior->mall_info.reset(new building_mall_info_t);
 				interior->doors      .back().open_dir ^= 1; // door opens into the parking garage rather than the mall
 				interior->door_stacks.back().open_dir ^= 1;
 				setup_mall_concourse(hallway, wall_dim, wall_dir, rgen);
@@ -226,8 +226,8 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	assert(P.rooms.size() >= 2); // must have at least basement and primary hallway
 	interior->place_exterior_room(hallway, wall_area, fc_thick, wall_thickness, P, basement_part_ix, 0, hallway.is_hallway); // use basement part_ix; num_lights=0
 	if (interior->has_backrooms) {rooms.back().assign_all_to(RTYPE_BACKROOMS);} // make it backrooms
-	else if (interior->has_mall) {rooms.back().assign_all_to(RTYPE_MALL     );} // make it a mall concourse
-	if (interior->has_mall) {rooms.back().is_single_floor = 1;}
+	else if (has_mall())         {rooms.back().assign_all_to(RTYPE_MALL     );} // make it a mall concourse
+	if (has_mall()) {rooms.back().is_single_floor = 1;}
 	reserve_extra(rooms, ((P.rooms.size()-2) + 1)); // allocate an extra room for a possible connector to an adjacent building
 
 	for (auto r = P.rooms.begin()+2; r != P.rooms.end(); ++r) { // skip basement and primary hallway

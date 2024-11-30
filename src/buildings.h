@@ -1721,34 +1721,40 @@ struct store_doorway_t : public cube_t {
 };
 
 
+struct building_mall_info_t {
+	vect_cube_with_ix_t landings; // ix stores {is_escalator, se_dim, se_dir, ww_dir}
+	vector<store_doorway_t> store_doorways; // ix stores store room index
+	vector<store_info_t> stores;
+	stairwell_t ent_stairs;
+	cube_t bathrooms, store_bounds;
+};
+
 struct building_interior_t {
 	vect_cube_t floors, ceilings, fc_occluders, exclusion, open_walls, split_window_walls;
 	vect_cube_t walls[2]; // walls are split by dim, which is the separating dimension of the wall
 	vect_cube_with_ix_t int_windows; // ix stores room index
-	vect_cube_with_ix_t mall_landings; // ix stores {is_escalator, se_dim, se_dir, ww_dir}
-	vector<store_doorway_t> store_doorways; // ix stores store room index
 	vect_stairwell_t stairwells;
 	vect_tunnel_seg_t tunnels;
 	vector<door_t> doors;
 	vector<door_stack_t> door_stacks;
 	vector<landing_t> landings; // for stairs and elevators
 	vector<room_t> rooms;
-	vector<store_info_t> stores;
 	vector<elevator_t> elevators;
 	vector<escalator_t> escalators;
 	vector<person_t> people;
 	std::unique_ptr<building_room_geom_t> room_geom;
 	std::unique_ptr<building_nav_graph_t> nav_graph;
 	std::unique_ptr<building_conn_info_t> conn_info;
+	std::unique_ptr<building_mall_info_t> mall_info;
 	cube_with_ix_t pg_ramp, attic_access; // ix stores {2*dim + dir}
 	indoor_pool_t pool;
-	cube_t basement_ext_bcube, elevator_equip_room, mall_bathrooms, mall_store_bounds;
+	cube_t basement_ext_bcube, elevator_equip_room;
 	draw_range_t draw_range;
 	unsigned extb_walls_start[2] = {0,0};
 	unsigned gen_room_details_pass=0;
 	int garage_room=-1, ext_basement_hallway_room_id=-1, ext_basement_door_stack_ix=-1, last_active_door_ix=-1, security_room_ix=-1;
 	uint8_t furnace_type=FTYPE_NONE, attic_type=ATTIC_TYPE_RAFTERS;
-	bool door_state_updated=0, is_unconnected=0, ignore_ramp_placement=0, placed_people=0, elevators_disabled=0, attic_access_open=0, has_backrooms=0, has_mall=0;
+	bool door_state_updated=0, is_unconnected=0, ignore_ramp_placement=0, placed_people=0, elevators_disabled=0, attic_access_open=0, has_backrooms=0;
 	bool elevator_dir=0, extb_wall_dim=0, extb_wall_dir=0, conn_room_in_extb_hallway=0, has_sec_hallways=0;
 	uint8_t num_extb_floors=0; // for malls and backrooms
 	uint8_t mens_count=0, womens_count=0; // bathrooms
@@ -1763,6 +1769,7 @@ struct building_interior_t {
 	door_t       &get_door(unsigned door_ix)       {assert(door_ix < doors.size()); return doors[door_ix];}
 	room_t const &get_extb_start_room() const {return get_room(ext_basement_hallway_room_id);} // extb hallway, backrooms, or mall
 	room_t       &get_extb_start_room()       {return get_room(ext_basement_hallway_room_id);} // extb hallway, backrooms, or mall
+	bool has_mall() const {return bool(mall_info);}
 	int get_store_id_for_room(unsigned room_id) const;
 	bool is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin=0.0f, bool inc_open=0, bool check_open_dir=0) const;
 	bool is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin=0.0f, bool elevators_only=0, int no_check_enter_exit=0) const;
@@ -1895,7 +1902,7 @@ struct building_t : public building_geom_t {
 	bool has_people   () const {return (interior && !interior->people.empty());}
 	bool has_retail   () const {return (retail_floor_levels > 0);}
 	bool has_tall_retail() const {return (retail_floor_levels > 1);}
-	bool has_mall       () const {return (interior && interior->has_mall);}
+	bool has_mall       () const {return (interior && interior->has_mall());}
 	bool is_apartment   () const {return (btype == BTYPE_APARTMENT);}
 	bool is_hotel       () const {return (btype == BTYPE_HOTEL);}
 	bool is_apt_or_hotel() const {return (is_apartment() || is_hotel());}
@@ -2163,7 +2170,7 @@ struct building_t : public building_geom_t {
 	bool is_single_large_room(int room_ix) const {return (room_ix >= 0 && is_single_large_room(get_room(room_ix)));}
 	bool is_above_retail_area(point const &pos) const;
 	bool is_pos_in_pg_or_backrooms(point const &pos) const;
-	bool has_backrooms_or_mall() const {return (interior && (interior->has_backrooms || interior->has_mall));}
+	bool has_backrooms_or_mall() const {return (interior && (interior->has_backrooms || has_mall()));}
 	point get_retail_upper_stairs_landing_center() const;
 private:
 	void build_nav_graph() const;

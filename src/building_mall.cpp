@@ -59,7 +59,7 @@ bool building_t::is_inside_mall_stores(point const &pos) const {
 	if (!has_mall() || pos.z > ground_floor_z1) return 0;
 	if (get_basement().contains_pt(pos))        return 0; // in basement, not mall
 	// Note: inside_mall_hallway() check is needed to handle hallways on floors with no end stores; if this is too slow, the hallways can be stored inside interior
-	return (interior->mall_store_bounds.contains_pt(pos) && !inside_mall_hallway(pos));
+	return (interior->mall_info->store_bounds.contains_pt(pos) && !inside_mall_hallway(pos));
 }
 
 unsigned choose_one_center(unsigned num, rand_gen_t &rgen) {
@@ -71,7 +71,7 @@ unsigned choose_one_center(unsigned num, rand_gen_t &rgen) {
 void building_t::add_mall_se_landing(cube_t const &c, bool is_escalator, bool se_dim, bool se_dir, bool ww_dir) {
 	assert(c.is_strictly_normalized());
 	interior->add_ceil_floor_pair(c, c.z1(), c.zc(), c.z2());
-	interior->mall_landings.emplace_back(c, (8*is_escalator + 4*se_dim + 2*se_dir + ww_dir));
+	interior->mall_info->landings.emplace_back(c, (8*is_escalator + 4*se_dim + 2*se_dir + ww_dir));
 }
 
 void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, rand_gen_t &rgen) {
@@ -269,7 +269,7 @@ void building_t::add_mall_store(cube_t const &store, cube_t const &window_area, 
 	cube_t doorway(opening);
 	set_wall_width(doorway, wall_pos, 0.5*wall_thickness, !dim);
 	bool const closed(rgen.rand_float() < 0.1); // 10% of the time
-	interior->store_doorways.emplace_back(doorway, room_ix, !dim, dir, closed);
+	interior->mall_info->store_doorways.emplace_back(doorway, room_ix, !dim, dir, closed);
 	
 	// add window on each side of the doorway
 	for (unsigned side = 0; side < 2; ++side) {
@@ -288,7 +288,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 	unsigned const num_floors(interior->num_extb_floors);
 	bool added_bathrooms(0);
 	vect_cube_t &side_walls(interior->walls[!dim]);
-	interior->mall_store_bounds = room; // start with the mall concourse
+	interior->mall_info->store_bounds = room; // start with the mall concourse
 	// pre-calculate depths of stores in each direction so that they vertically align correctly across stores;
 	// use a consistent depth for each side + floor so that walls can be shared
 	float depths[4] = {}; // for two sides and two ends
@@ -359,7 +359,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 					set_cube_zvals(door, store.z1()+fc_thick, store.z1()+window_vspace-fc_thick);
 					door.d[!dim][0] = door.d[!dim][1] = wall_pos;
 					if (use_low_ceiling) {bathrooms.z2() = bathrooms.z1() + window_vspace;} // set normal ceiling height
-					interior->mall_bathrooms = bathrooms;
+					interior->mall_info->bathrooms = bathrooms;
 					
 					for (unsigned e = 0; e < 2; ++e) {
 						room_type const rtype((bool(e) ^ wm_first) ? RTYPE_WOMENS : RTYPE_MENS);
@@ -415,7 +415,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			add_mall_store(store, window_area, !dim, d, has_adj_store, rgen);
 			floor_bcube.union_with_cube(store);
 		} // for d
-		interior->mall_store_bounds.union_with_cube(floor_bcube);
+		interior->mall_info->store_bounds.union_with_cube(floor_bcube);
 		// add a narrower non-public hallway behind each row of stores
 		bool const is_tall_room(floor_spacing > 1.1*window_vspace);
 		unsigned const rooms_end(interior->rooms.size());
@@ -671,7 +671,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	room.has_elevator = num_elevators; // should this be set earlier?
 
 	// add railings for mall landings
-	for (cube_with_ix_t const &c : interior->mall_landings) {
+	for (cube_with_ix_t const &c : interior->mall_info->landings) {
 		bool const is_escalator(c.ix & 8), se_dim(c.ix & 4), se_dir(c.ix & 2), ww_dir(c.ix & 1);
 		float const zb1(c.z1() - trim_thick), zb2(c.z1() + 2.0*fc_thick + trim_thick), zt1(c.z1() + fc_thick + railing_height), zt2(zt1 + railing_top_bar_thick);
 		float const inner_edge(c.d[!se_dim][!ww_dir]); // bordering the opening
@@ -832,7 +832,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	} // for f
 
 	// add objects for store doors, which are always between pairs of interior windows
-	for (store_doorway_t const &d : interior->store_doorways) {
+	for (store_doorway_t const &d : interior->mall_info->store_doorways) {
 		bool const dim(d.dim), dir(d.dir);
 		// can either use room_id or d.room_id for these objects
 		// add ceiling box where the gate would come down from
@@ -987,13 +987,15 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		} // for n
 	} // for i
 	// if there are bathrooms, add a water fountain between them
-	if (!interior->mall_bathrooms.is_all_zeros() && building_obj_model_loader.is_model_valid(OBJ_MODEL_WFOUNTAIN)) {
-		bool const wf_dir(interior->mall_bathrooms.get_center_dim(!mall_dim) > room_centerline);
+	cube_t const bathrooms(interior->mall_info->bathrooms);
+
+	if (!bathrooms.is_all_zeros() && building_obj_model_loader.is_model_valid(OBJ_MODEL_WFOUNTAIN)) {
+		bool const wf_dir(bathrooms.get_center_dim(!mall_dim) > room_centerline);
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_WFOUNTAIN)); // D, W, H
 		float const height(0.25*window_vspace), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
 		float const z1(zval + 0.18*window_vspace), wall_pos(room.d[!mall_dim][wf_dir] + (wf_dir ? -1.0 : 1.0)*0.5*wall_thickness);
 		cube_t wf;
-		set_wall_width(wf, interior->mall_bathrooms.get_center_dim(mall_dim), hwidth, mall_dim);
+		set_wall_width(wf, bathrooms.get_center_dim(mall_dim), hwidth, mall_dim);
 		set_cube_zvals(wf, z1, z1+height);
 		wf.d[!mall_dim][ wf_dir] = wall_pos;
 		wf.d[!mall_dim][!wf_dir] = wall_pos - (wf_dir ? 1.0 : -1.0)*depth;
@@ -1101,7 +1103,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			float const wall_pos(room.d[mall_dim][d]), d_sign(d ? -1.0 : 1.0), back_pos(wall_pos + d_sign*0.5*desk_depth);
 			desk.d[mall_dim][ d] = back_pos - d_sign*desk_depth; // back, extended back more - for end store window coll test
 			desk.d[mall_dim][!d] = back_pos + d_sign*desk_depth; // front
-			if (has_bcube_int(desk, interior->int_windows) || has_bcube_int(desk, interior->store_doorways)) continue; // too close to store door or window
+			if (has_bcube_int(desk, interior->int_windows) || has_bcube_int(desk, interior->mall_info->store_doorways)) continue; // too close to store door or window
 			desk.d[mall_dim][ d] = back_pos; // back
 			add_reception_desk(rgen, desk, mall_dim, !d, room_id, light_amt); // ignore return value
 
@@ -1128,10 +1130,10 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 }
 
 bool building_t::is_valid_placement_at_mall_wall(cube_t const &c, cube_t const &entrance_stairs_bcube, vect_cube_t const &wall_blockers) const {
-	if (entrance_stairs_bcube.intersects(c))    return 0; // too close to entrance stairs
-	if (interior->mall_bathrooms.intersects(c)) return 0; // too close to bathroom doors and water fountain
-	if (has_bcube_int(c, interior->int_windows) || has_bcube_int(c, interior->store_doorways)) return 0; // too close to store door or window
-	if (has_bcube_int(c, wall_blockers))        return 0;
+	if (entrance_stairs_bcube.intersects(c))          return 0; // too close to entrance stairs
+	if (interior->mall_info->bathrooms.intersects(c)) return 0; // too close to bathroom doors and water fountain
+	if (has_bcube_int(c, interior->int_windows) || has_bcube_int(c, interior->mall_info->store_doorways)) return 0; // too close to store door or window
+	if (has_bcube_int(c, wall_blockers))              return 0;
 	return 1;
 }
 
@@ -1264,7 +1266,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	// get doorway bcube
 	cube_t doorway;
 
-	for (store_doorway_t const &d : interior->store_doorways) {
+	for (store_doorway_t const &d : interior->mall_info->store_doorways) {
 		if (d.room_id != room_id) continue;
 		assert(doorway.is_all_zeros()); // must be exactly one
 		doorway = d;
@@ -1281,7 +1283,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	unsigned const store_type(store_selects[rgen.rand() % NUM_STORE_SELECT]);
 	unsigned const item_category((store_type == STORE_RETAIL) ? (rgen.rand() % NUM_SRACK_CATEGORIES) : 0); // same category for each rack with equal probability
 	string const store_name(choose_store_name(store_type, item_category, rgen));
-	interior->stores.emplace_back(dim, dir, room_id, store_type, item_category, store_name);
+	interior->mall_info->stores.emplace_back(dim, dir, room_id, store_type, item_category, store_name);
 
 	// add store name on sign above the entrance
 	float const sign_z1(room.z1() + 0.7*floor_spacing), sign_height(0.3*window_vspace), sign_hwidth(0.25*sign_height*(store_name.size() + 2)), sign_thick(wall_hthick);
@@ -1398,9 +1400,10 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 
 int building_interior_t::get_store_id_for_room(unsigned room_id) const { // uses a slow linear iteration over stores, but not called much
 	if (!get_room(room_id).is_store()) return -1; // not a store
+	assert(has_mall());
 
-	for (auto s = stores.begin(); s != stores.end(); ++s) {
-		if (s->room_id == room_id) return (s - stores.begin()); // found
+	for (auto s = mall_info->stores.begin(); s != mall_info->stores.end(); ++s) {
+		if (s->room_id == room_id) return (s - mall_info->stores.begin()); // found
 	}
 	return -1; // not found
 }

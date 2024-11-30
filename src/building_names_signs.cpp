@@ -91,7 +91,7 @@ string building_t::get_room_name(point const &pos, int room_id, unsigned floor_i
 	if (room_id < 0) {room_id = get_room_containing_camera(pos);} // find room if not passed in; assumes pos is the camera/player
 	if (room_id < 0) return ""; // no room
 	int const store_id(interior->get_store_id_for_room(room_id));
-	if (store_id >= 0) {return interior->stores[store_id].get_full_name();} // store
+	if (store_id >= 0) {return interior->mall_info->stores[store_id].get_full_name();} // store
 	unsigned room_type(get_room(room_id).get_room_type(floor_ix));
 	if (interior->elevator_equip_room.contains_pt(pos)) {room_type = RTYPE_ELEV_EQUIP;} // inside the parking garage
 	assert(room_type < NUM_RTYPES);

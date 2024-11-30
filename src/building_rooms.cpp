@@ -1703,17 +1703,18 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	}
 	// handle interior windows similar to interior doors, except we also draw bottom trim
 	for (cube_t const &w : interior->int_windows) {
-		bool const dim(w.dy() < w.dx()), is_in_mall(interior->has_mall && w.z2() < ground_floor_z1);
+		bool const dim(w.dy() < w.dx()), is_in_mall(has_mall() && w.z2() < ground_floor_z1);
 		float const floor_spacing(is_in_mall ? get_mall_floor_spacing() : window_vspacing);
 		float extra_top_gap(is_in_mall ? get_mall_top_window_gap(floor_spacing, window_vspacing) : 0.0);
 		add_trim_for_door_or_int_window(w, dim, 0, 1, door_trim_width, door_trim_width, door_trim_exp, floor_spacing, extra_top_gap); // draw_top_edge=0, draw_bot_trim=1
 	}
-	// add floor trim for mall store doors
-	for (cube_t const &d : interior->store_doorways) {
-		bool const dim(d.dy() < d.dx());
-		cube_t trim(d);
-		trim.z2() = d.z1() + trim_thickness;
-		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT), 1.0, SHAPE_SHORT, GRAY);
+	if (has_mall()) { // add floor trim for mall store doors
+		for (cube_t const &d : interior->mall_info->store_doorways) {
+			bool const dim(d.dy() < d.dx());
+			cube_t trim(d);
+			trim.z2() = d.z1() + trim_thickness;
+			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT), 1.0, SHAPE_SHORT, GRAY);
+		}
 	}
 	// add trim around exterior doors
 	for (auto d = doors.begin(); d != doors.end(); ++d) {
@@ -1783,7 +1784,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			if (in_basement && !get_basement().intersects_no_adj(*w)) {
 				if (interior->has_backrooms) continue; // no trim in basement backrooms
 				
-				if (interior->has_mall) {
+				if (has_mall()) {
 					floor_spacing = get_mall_floor_spacing(); // not for all rooms; bathrooms are lower ceilings
 					ref_z1        = interior->basement_ext_bcube.z1();
 				}

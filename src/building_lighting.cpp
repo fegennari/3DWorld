@@ -584,7 +584,7 @@ class building_indir_light_mgr_t {
 			else if (light_in_basement) {
 				if (in_ext_basement) {
 					if      (b.interior->has_backrooms) {weight *= 0.2; base_num_rays /= 4;} // darker and fewer rays
-					else if (b.interior->has_mall     ) {weight *= 0.1; base_num_rays /= 8;} // darker and fewer rays, since there are so many lights
+					else if (b.has_mall()             ) {weight *= 0.1; base_num_rays /= 8;} // darker and fewer rays, since there are so many lights
 					else                                {weight *= 0.5;} // regular extended basement
 				}
 				else { // basement is darker, parking garages are even darker
