@@ -1499,12 +1499,12 @@ struct stairs_landing_base_t : public oriented_cube_t {
 
 struct landing_t : public stairs_landing_base_t {
 	bool for_elevator=0, for_ramp=0, has_railing=0, is_at_top=0, not_an_exit=0;
-	uint8_t floor=0;
+	uint8_t floor_ix=0; // Note: only used for player coll when floor_ix <= 1
 
 	landing_t() {}
 	landing_t(cube_t const &c, bool e, uint8_t f, bool dim_, bool dir_,
 		bool railing=0, stairs_shape shape_=SHAPE_STRAIGHT, bool roof_access_=0, bool at_top=0, bool sc=0, bool fr=0, bool ieb=0) :
-		stairs_landing_base_t(c, dim_, dir_, roof_access_, shape_, sc, ieb), for_elevator(e), for_ramp(fr), has_railing(railing), is_at_top(at_top), floor(f)
+		stairs_landing_base_t(c, dim_, dir_, roof_access_, shape_, sc, ieb), for_elevator(e), for_ramp(fr), has_railing(railing), is_at_top(at_top), floor_ix(f)
 	{assert(is_strictly_normalized());}
 };
 
