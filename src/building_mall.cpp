@@ -1363,17 +1363,36 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 		}
 	}
 	// add ducts and vents in the ceiling
+	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim));
+	unsigned const num_vents(max(2U, (unsigned)round_fp(0.5*room_len/window_vspace))); // per side
+	float const vent_spacing(room_len/num_vents), duct_height(0.2*window_vspace);
+	unsigned const skip_dir((room_width < 0.8*room_len) ? rgen.rand_bool() : 2); // skip one side if room is narrow
+	unsigned const duct_flags(RO_FLAG_IN_MALL | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // skip both ends
 	cube_t duct(room);
 	duct.z2() -= get_fc_thickness();
-	duct.z1()  = duct.z2() - 0.2*window_vspace;
+	duct.z1()  = duct.z2() - duct_height;
 	duct.expand_in_dim(dim, -wall_hthick); // shrink
 
 	for (unsigned d = 0; d < 2; ++d) { // each side
+		if (unsigned(d) == skip_dir) continue;
 		float const dscale(d ? 1.0 : -1.0);
 		duct.d[!dim][ d] = room.d[!dim][d] - dscale*wall_hthick;
 		duct.d[!dim][!d] = duct.d[!dim][d] - dscale*0.3*window_vspace;
-		objs.emplace_back(duct, TYPE_DUCT, room_id, dim, dir, RO_FLAG_IN_MALL, light_amt, SHAPE_CUBE);
-		// TODO: TYPE_VENT; and don't place wall vents in stores
+		objs.emplace_back(duct, TYPE_DUCT, room_id, dim, 0, (duct_flags | RO_FLAG_ADJ_TOP), light_amt, SHAPE_CUBE); // skip top as well; dir=0 (XY)
+		// add vents along the duct
+		cube_t duct_ext(duct); // duct => vent extension
+		duct_ext.expand_in_z(-0.15*duct_height); // shrink
+		duct_ext.d[!dim][ d] = duct.d[!dim][!d]; // flush with duct
+		duct_ext.d[!dim][!d] = duct.d[!dim][!d] - dscale*0.1*window_vspace; // extend a bit further out
+
+		for (unsigned n = 0; n < num_vents; ++n) {
+			set_wall_width(duct_ext, (duct.d[dim][0] + (0.5 + n)*vent_spacing), 0.12*window_vspace, dim);
+			objs.emplace_back(duct_ext, TYPE_DUCT, room_id, !dim, 0, duct_flags, light_amt, SHAPE_CUBE); // dir=0 (XY)
+			cube_t vent(duct_ext);
+			vent.d[!dim][d] = duct_ext.d[!dim][!d]; // shrink to end of duct
+			vent.expand_by(0.005*window_vspace);
+			objs.emplace_back(vent, TYPE_VENT, room_id, !dim, d, RO_FLAG_IN_MALL, light_amt, SHAPE_CUBE);
+		} // for n
 	} // for d
 }
 
