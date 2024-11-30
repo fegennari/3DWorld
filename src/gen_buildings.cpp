@@ -3754,7 +3754,7 @@ public:
 						this_frame_player_in_basement =   b.check_player_in_basement(camera_bs - basement_z_adj*plus_z); // set once
 						this_frame_player_in_mall     =   b.point_in_mall(camera_bs);
 						this_frame_player_in_attic    =  (b.point_in_attic(camera_bs) ? (b.has_attic_window ? 1 : 2) : 0);
-						this_frame_player_in_water    =   b.point_in_water_area(camera_bs, 1); // full_room_height=1
+						this_frame_player_in_water    =   b.point_in_water_area((camera_bs - get_bldg_player_height()*plus_z), 0); // full_room_height=0
 						if (this_frame_player_in_water && b.point_in_water_area(camera_bs, 0)) {this_frame_player_in_water = 2;} // full_room_height=0; test for underwater
 						
 						if (!camera_surf_collide) { // handle player clipping/flying into or out of an elevator

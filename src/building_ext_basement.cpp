@@ -203,8 +203,11 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 					if (wmax < wmin) {swap(wmin, wmax);} // user specfied the values backwards? this isn't error checked in the option parsing, so swap the values
 
 					if (wmax > 0.0) {
+						float const ftv(get_floor_thick_val());
 						float water_level((wmin == wmax) ? wmin : rgen.rand_uniform(wmin, wmax)); // can be a single value or a range
-						min_eq(water_level, (num_floors - 1.0f - 0.5f*get_floor_thick_val())); // top floor can't have water; offset to prevent Z-fighting
+						min_eq(water_level, (num_floors - 1.0f)); // top floor can't have water
+						// handle water near the level of an upper floor; offset to prevent Z-fighting
+						if (water_level > 0.5 && fract(water_level + 0.5*ftv) < 0.6*ftv) {water_level -= 0.6*ftv;}
 						if (water_level > 0.0) {interior->water_zval = hallway.z1() + fc_thick + water_level*get_window_vspace();}
 					}
 				}

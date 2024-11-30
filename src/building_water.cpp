@@ -289,6 +289,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 	else { // backrooms water
 		unsigned const camera_floor(unsigned((min(camera_pos.z, interior->water_zval) - water_z1)/floor_spacing)); // handle player on floor above water
 		water_depth = interior->water_zval - (water_z1 + get_fc_thickness() + camera_floor*floor_spacing); // for the player's floor
+		max_eq(water_depth, 0.01f*floor_spacing); // can't be negative or zero, in the case of FP error or wrong math
 		min_eq(water_depth, get_floor_ceil_gap()); // lights are on every floor, so optical depth can't be more than the distance between the floor and the lights above it
 	}
 	cube_t const lights_bcube(get_building_lights_bcube());
