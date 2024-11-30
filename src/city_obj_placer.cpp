@@ -2287,7 +2287,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	}
 	for (dstate.pass_ix = 0; dstate.pass_ix < 3; ++dstate.pass_ix) { // {line, poles, clothes}
 		if (shadow_only && dstate.pass_ix == 0) continue; // skip line in the shadow pass because its too narrow to cast a good shadow
-		draw_objects(clines, cline_groups, dstate, 0.12, shadow_only, 1); // has_immediate_draw=1
+		draw_objects(clines, cline_groups, dstate, 0.09, shadow_only, 1); // has_immediate_draw=1
 	}
 	dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // reset back to default after drawing 3D models such as fire hydrants and substations
 	

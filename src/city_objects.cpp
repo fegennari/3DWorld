@@ -859,7 +859,7 @@ void newsrack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 
 // Note: takes rgen by reference so that changes to clothes generation doesn't affect other city objects
 clothesline_t::clothesline_t(point const &p1, point const &p2, float height_, rand_gen_t rgen) :
-	height(height_), lradius(0.005*height), pradius(0.02*height)
+	height(height_), lradius(0.004*height), pradius(0.016*height)
 {
 	assert(p1.z == p2.z); // must be level
 	ends[0] = p1; ends[1] = p2;
@@ -876,7 +876,6 @@ clothesline_t::clothesline_t(point const &p1, point const &p2, float height_, ra
 	bcube.z2() += 2.0*lradius; // account for the top of the pole
 	bcube.z1() -= height;
 	// add clothes
-	float const clothes_z2(p1.z + lradius); // top of the line
 	unsigned const num_items(rgen.rand() % 6); // 0-5
 
 	for (unsigned n = 0; n < num_items; ++n) {
@@ -886,6 +885,7 @@ clothesline_t::clothesline_t(point const &p1, point const &p2, float height_, ra
 		float const dz((is_pants ? 0.45 : 0.5)*height), hwidth(0.5*dz*sz.x/sz.z), hthick(0.5*dz*sz.y/sz.z), end_pad(2.5*hwidth); // pants are shorter
 		float const lo(ends[0][dim] + end_pad), hi(ends[1][dim] - end_pad);
 		if (hi <= lo) continue; // not enough space; shouldn't fail
+		float const clothes_z2(p1.z + (is_pants ? 2.0 : 1.0)*lradius); // top of the line
 		cube_t c;
 		set_cube_zvals(c, clothes_z2-dz, clothes_z2);
 		set_wall_width(c, ends[0][!dim], hthick, !dim); // centerline
@@ -925,17 +925,24 @@ void clothesline_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 		}
 		return;
 	}
-	unsigned const ndiv(shadow_only ? 4 : max(4U, min(16U, unsigned(0.5f*dist_scale*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, pos)))));
+	float const dscale(dist_scale*dstate.draw_tile_dist);
+	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.6*dscale)) return; // pole and line are too far to see
+	unsigned const ndiv(shadow_only ? 4 : max(4U, min(16U, unsigned(0.25f*dscale/p2p_dist(dstate.camera_bs, pos)))));
 
 	if (dstate.pass_ix == 0) { // draw line
 		draw_fast_cylinder(ends[0], ends[1], lradius, lradius, ndiv, 1, 0, 0, nullptr, 8.0*radius/height); // draw sides only
 	}
 	else if (dstate.pass_ix == 1) { // draw poles, unless we want to attach the line to the house, wall, etc.
-		unsigned const ndiv(shadow_only ? 8 : max(4U, min(16U, unsigned(0.5f*dist_scale*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, pos)))));
 		vector3d const end_down(-height*plus_z), end_up(2.0*lradius*plus_z);
 
 		for (unsigned d = 0; d < 2; ++d) {
 			draw_fast_cylinder(ends[d]+end_down, ends[d]+end_up, pradius, pradius, 3*ndiv/2, 0, 4); // draw sides and top
+		}
+		if (!shadow_only && bcube.closest_dist_less_than(dstate.camera_bs, 0.2*dscale)) { // draw small spheres on the top of poles
+			vector3d const offset(end_up + 1.0*pradius*plus_z);
+			begin_sphere_draw(0); // textured=0
+			for (unsigned d = 0; d < 2; ++d) {draw_sphere_vbo(ends[d]+offset, 1.5*pradius, 2*ndiv, 0);} // textured=0
+			end_sphere_draw();
 		}
 	}
 }
