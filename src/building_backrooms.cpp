@@ -632,14 +632,22 @@ unsigned building_t::setup_multi_floor_room(extb_room_t &room, door_t const &doo
 	wall.d[wall_dim][ wall_dir] = room_entrance_edge + 1.0*dir_sign*wall_thickness;
 	assert(wall.is_strictly_normalized());
 	interior->walls[wall_dim].push_back(wall);
+	vect_cube_t avoid, cf_to_add;
 
+	// add an elevator
+	// TODO: people should not select dest elevator floors that have water
+	// choose N random locations and find the one that intersects the fewest walls using the elevator + front clearance
+	// clip walls for best loc and also clip any walls not intersecting sides and back but ending within doorway width
+	// add to avoid and subtract from cf_to_add
+
+	// add stairs, floors, and ceilings
 	cube_t door_avoid(door.get_clearance_bcube());
 	door_avoid.union_with_cube(door.get_open_door_path_bcube()); // make sure it's path is clear as well
-	vect_cube_t avoid, cf_to_add;
 	avoid.push_back(door_avoid);
 	//for (door_stack_t const &ds : interior->door_stacks) {if (ds.intersects(room)) {avoid.push_back(ds.get_open_door_path_bcube());}} // doors not yet placed
 	stairs_shape const sshape(SHAPE_STRAIGHT);
 	float const door_width(door.get_width()), stairs_hwidth(0.6*door_width), stairs_hlen(rgen.rand_uniform(2.0, 3.0)*stairs_hwidth), wall_spacing(1.0*door_width);
+	bool const have_space_for_stairs(4.0*(stairs_hlen + wall_spacing) < min(room.dx(), room.dy())); // should generally be true
 	float z(room.z1() + floor_spacing); // move to next floor
 
 	for (unsigned f = 1; f < num_floors; ++f, z += floor_spacing) { // skip first floor - draw pairs of floors and ceilings
@@ -647,8 +655,7 @@ unsigned building_t::setup_multi_floor_room(extb_room_t &room, door_t const &doo
 		cf_to_add.clear();
 		cf_to_add.push_back(room); // seed with entire room
 
-		// add stairs
-		if (4.0*(stairs_hlen + wall_spacing) < min(room.dx(), room.dy())) { // condition should generally be true
+		if (have_space_for_stairs) { // add stairs
 			unsigned const num_stairs(1 + (rgen.rand()&1)); // 1-2 stairs per floor
 
 			for (unsigned n = 0; n < num_stairs; ++n) {
@@ -676,7 +683,7 @@ unsigned building_t::setup_multi_floor_room(extb_room_t &room, door_t const &doo
 					break; // success
 				}
 			} // for n
-		}
+		} // end stairs
 		for (cube_t &cf : cf_to_add) {interior->add_ceil_floor_pair(cf, zc, z, zf);}
 	} // for f
 	return num_floors;

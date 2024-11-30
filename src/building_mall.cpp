@@ -286,8 +286,10 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 	float const min_width(4.0*window_vspace), max_width(9.0*window_vspace), min_depth(6.0*window_vspace), max_depth(8.0*window_vspace);
 	float const bathroom_width(4.0*window_vspace);
 	unsigned const num_floors(interior->num_extb_floors);
-	bool added_bathrooms(0);
+	bool added_bathrooms(0), at_stack_end[2] = {0, 0};
 	vect_cube_t &side_walls(interior->walls[!dim]);
+	vector<room_t> &rooms(interior->rooms);
+	vector<unsigned> hall_stacks[2]; // one per end hallway
 	interior->mall_info->store_bounds = room; // start with the mall concourse
 	// pre-calculate depths of stores in each direction so that they vertically align correctly across stores;
 	// use a consistent depth for each side + floor so that walls can be shared
@@ -312,7 +314,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 	} // for d
 	for (unsigned f = 0; f < num_floors; ++f) {
 		bool const is_top_floor(f+1 == num_floors);
-		unsigned const rooms_start(interior->rooms.size()), store_walls_start(side_walls.size());
+		unsigned const rooms_start(rooms.size()), store_walls_start(side_walls.size());
 		cube_t store, floor_bcube(room);
 		store.z1() = floor_bcube.z1() = room .z1() + f*floor_spacing;
 		store.z2() = floor_bcube.z2() = store.z1() +   floor_spacing;
@@ -370,7 +372,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 						Room.interior        = 2; // mark as extended basement
 						Room.is_single_floor = 1;
 						Room.is_office       = 1; // required for creating office building bathroom
-						interior->rooms.push_back(Room);
+						rooms.push_back(Room);
 						add_mall_room_walls(bathroom, wall_thickness, dim, d, 0, has_adj_store, interior->walls); // at_mall_end=0
 						// add door
 						set_wall_width(door, bathroom.get_center_dim(dim), 0.5*doorway_width, dim);
@@ -418,7 +420,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 		interior->mall_info->store_bounds.union_with_cube(floor_bcube);
 		// add a narrower non-public hallway behind each row of stores
 		bool const is_tall_room(floor_spacing > 1.1*window_vspace);
-		unsigned const rooms_end(interior->rooms.size());
+		unsigned const rooms_end(rooms.size());
 		float const doorway_width(get_doorway_width()), hall_width(2.0*doorway_width);
 		cube_t hall(floor_bcube); // extends full length of the mall, including the end stores
 		hall.expand_in_dim(dim, wall_thickness); // extend a bit further to allow connecting a parallel hallway between the two side hallways at each end
@@ -431,7 +433,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			hall.d[!dim][0]  = hall.d[!dim][1] = wall_pos; // move to outside of rooms
 			hall.d[!dim][d] += (d ? 1.0 : -1.0)*hall_width;
 			if (is_store_placement_invalid(hall)) continue;
-			interior->rooms.emplace_back(hall, basement_part_ix, 0, 1, 0, 0, 2); // num_lights=0, is_hallway=1, is_office=0, is_sec_floor=0, interior=1 (extb)
+			rooms.emplace_back(hall, basement_part_ix, 0, 1, 0, 0, 2); // num_lights=0, is_hallway=1, is_office=0, is_sec_floor=0, interior=1 (extb)
 			add_extb_room_floor_and_ceil(hall);
 			unsigned const hall_walls_start(side_walls.size());
 			bool has_adj_store(0); // unused
@@ -444,7 +446,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 				w->d[!dim][bool(d) ^ (w < side_walls.begin()+hall_walls_start) ^ 1] = wall_pos; // set to half width
 			}
 			// connect to rooms with doors
-			for (auto r = interior->rooms.begin()+rooms_start; r != interior->rooms.begin()+rooms_end; ++r) {
+			for (auto r = rooms.begin()+rooms_start; r != rooms.begin()+rooms_end; ++r) {
 				if (!r->intersects(hall)) continue; // wrong side
 				room_type const rtype(r->get_room_type(0));
 				bool const is_bath(is_bathroom(rtype));
@@ -467,7 +469,8 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 				hall.d[dim][!d] = wall_pos;
 				hall.d[dim][ d] = wall_pos + dsign*hall_width;
 				if (is_store_placement_invalid(hall)) continue;
-				interior->rooms.emplace_back(hall, basement_part_ix, 0, 1, 0, 0, 2); // num_lights=0, is_hallway=1, is_office=0, is_sec_floor=0, interior=1 (extb)
+				unsigned const hall_room_ix(rooms.size());
+				rooms.emplace_back(hall, basement_part_ix, 0, 1, 0, 0, 2); // num_lights=0, is_hallway=1, is_office=0, is_sec_floor=0, interior=1 (extb)
 				add_extb_room_floor_and_ceil(hall);
 				bool has_adj_store(0); // unused
 				add_mall_room_walls(hall, wall_thickness, !dim, d, 1, has_adj_store, interior->walls); // at_mall_end=1 (to cover missing stores)
@@ -476,11 +479,22 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 					cube_t const door_cut(add_ext_basement_door(side_halls[e], doorway_width, dim, d, 0, 0, rgen)); // is_end_room=0 (unlocked), is_tall_room=0
 					subtract_cube_from_cubes(door_cut, interior->walls[dim], nullptr, 1); // no holes; clip_in_z=1
 				}
+				if (at_stack_end[d]) continue; // done with this stack
+				vector<unsigned> &stacks(hall_stacks[d]);
+				if (stacks.empty() || get_room(stacks.back()).d[dim][!d] == wall_pos) {stacks.push_back(hall_room_ix);} // add if first or aligned to prev
+				else {at_stack_end[d] = 1;} // flag so that the rare case of a missing middle hallway won't cause problems
 			} // for d
 		}
 	} // for f
 	if (MALL_FLOOR_HEIGHT == 2.0) { // connect back hallways with stairs and/or elevator; only valid for exactly N*floor (N=2) spacing
-
+		for (unsigned d = 0; d < 2; ++d) { // each end
+			vector<unsigned> const &stacks(hall_stacks[d]);
+			unsigned const stack_height(stacks.size());
+			if (stack_height < 2) continue; // need at least two floors to connect with elevator or stairs
+			cube_t hall_span(get_room(stacks.front())); // lowest level
+			hall_span.union_with_cube(get_room(stacks.back())); // highest level
+			// TODO: add U-shaped stairs and/or elevator connected to hall_span; stairs should have alternate floors blocked and elevators should have mall floor spacing
+		} // for d
 	}
 }
 
