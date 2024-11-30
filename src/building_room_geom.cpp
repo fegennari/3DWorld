@@ -2227,14 +2227,15 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vecto
 		mat.add_cube_to_verts(c, WHITE, tex_origin); // all faces drawn
 		return;
 	}
-	float const width(c.get_width()); // use width as a size reference because this is constant for a set of stairs and in a relative small range
+	float const height(c.dz()), width(c.get_width()); // use width as a size reference because this is constant for a set of stairs and in a relative small range
 	cube_t top(c), bot(c);
-	bot.z2() = top.z1() = c.z2() - min(0.025*width, 0.25*c.dz()); // set top thickness
+	bot.z2() = top.z1() = c.z2() - min(0.025*width, 0.25*height); // set top thickness
 
 	if (!(c.flags & RO_FLAG_RSTAIRS)) { // not basement stairs
 		bool const is_landing(c.shape == SHAPE_STAIRS_L), dir(c.dir ^ is_landing); // landing has the overhang on the other dim/dir
-		top.d[c.dim ^ is_landing][!dir] += (dir ? -1.0 : 1.0)*0.0125*width; // extension
-		top.expand_in_dim(!c.dim, 0.01*width); // make slightly wider
+		float const sz_ref(min(width, 10.0f*height)); // clamp by height as well for wide mall stairs
+		top.d[c.dim ^ is_landing][!dir] += (dir ? -1.0 : 1.0)*0.0125*sz_ref; // extension
+		top.expand_in_dim(!c.dim, 0.01*sz_ref); // make slightly wider
 	}
 	mat.add_cube_to_verts(top, STAIRS_COLOR_TOP, tex_origin); // all faces drawn
 	mat.add_cube_to_verts(bot, STAIRS_COLOR_BOT, tex_origin, EF_Z2); // skip top face
