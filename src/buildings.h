@@ -523,8 +523,8 @@ std::string const room_names_short[NUM_RTYPES] =
 	"Swim", "Security", "Lounge", "Common", "Basement", "Retail", "Elevator", "Conference", "Machine", "Dungeon",
 	"Equipment", "Store", "Mall", "Restaurant"};
 
-enum {STORE_OTHER=0, STORE_CLOTHING, STORE_FOOD, STORE_BOOK, STORE_RETAIL, NUM_STORE_TYPES}; // for use with object placement and naming
-std::string const store_type_strs[NUM_STORE_TYPES] = {"", "clothing", "food", "retail"};
+enum {STORE_OTHER=0, STORE_CLOTHING, STORE_FOOD, STORE_BOOK, STORE_RETAIL, STORE_FURNITURE, NUM_STORE_TYPES}; // for use with object placement and naming
+std::string const store_type_strs[NUM_STORE_TYPES] = {"", "clothing", "food", "book", "retail", "furniture"};
 unsigned const NUM_SRACK_CATEGORIES = 5;
 std::string const srack_categories[NUM_SRACK_CATEGORIES] = {"boxed items", "food", "household goods", "kitchen", "electronics"};
 

@@ -1349,7 +1349,6 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 					test_cube.expand_in_dim( dim, 0.5*door_width); // add extra padding at ends
 					test_cube.expand_in_dim(!dim, 1.0*door_width); // add extra padding at sides
 					if (overlaps_other_room_obj(test_cube, objs_start)) continue; // blocked; not needed?
-					unsigned const sr_obj_ix(objs.size());
 					add_shelf_rack(rack, dim, style_id, rack_id, room_id, RO_FLAG_IN_MALL, item_category+1, 0, rgen); // add_occluers=0
 				} // for r
 			} // for n
