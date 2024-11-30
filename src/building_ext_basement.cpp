@@ -39,7 +39,6 @@ bool building_t::extend_underground_basement(rand_gen_t rgen) {
 				set_cube_zvals(cand_door, basement.z1()+fc_thick, basement.z2()-fc_thick); // change z to span floor to ceiling for interior door
 				cand_door.translate_dim(dim, (dir ? 1.0 : -1.0)*0.25*get_wall_thickness()); // zero width, centered on the door
 				bool ret(0);
-#pragma omp critical(add_underground_exterior_rooms)
 				ret = add_underground_exterior_rooms(rgen, cand_door, basement, dim, dir, 0.25*len);
 				if (ret) return 1; // exit on success
 			} // for e
