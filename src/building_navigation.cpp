@@ -958,6 +958,9 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 			}
 			if (room.intersects_no_adj(stairwell)) {ng.connect_stairs(r, s, stairwell, doorway_width);}
 		}
+		if (has_mall()) {
+			// something with interior->mall_info->ent_stairs; also must increment num_stairs
+		}
 		if (room.open_wall_mask || (has_complex_floorplan && !room.is_ext_basement())) { // check for connected hallways in office buildings, or open wall rooms
 			for (unsigned r2 = r+1; r2 < num_rooms; ++r2) { // check rooms with higher index (since graph is bidirectional)
 				room_t const &room2(interior->rooms[r2]);
@@ -1520,6 +1523,7 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 		for (auto const &s : stairwells) { // add extra width for side walls only
 			if (s.z1() < z2 && s.z2() > z1) {avoid.push_back(get_stairs_bcube_expanded(s, 0.0, 0.0, doorway_width));}
 		}
+		if (has_mall()) {avoid.push_back(mall_info->ent_stairs);}
 	}
 	add_bcube_if_overlaps_zval(elevators,  avoid, z1, z2); // clearance not required
 	add_bcube_if_overlaps_zval(escalators, avoid, z1, z2); // clearance not required; using the full bcube rather than the parts is conservative but probably okay
@@ -1665,6 +1669,7 @@ void building_t::find_nearest_stairs_or_ramp(point const &p1, point const &p2, v
 			sorted.emplace_back((p2p_dist(p1, center) + p2p_dist(center, p2)), interior->stairwells.size());
 		}
 	}
+	//if (has_mall()) {something with interior->mall_info->ent_stairs}
 	sort(sorted.begin(), sorted.end()); // sort by distance, min first
 	for (auto s = sorted.begin(); s != sorted.end(); ++s) {nearest_stairs.push_back(s->second);}
 }
@@ -1856,6 +1861,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 					path.add((landing_center + exit_dir_xy *landing_offset), 1);
 					path.add((landing_center + enter_dir_xy*landing_offset), 1);
 				}
+				//else if (stairs.shape == SHAPE_FAN) {}
 			} // end stairs case
 			if (from_path.empty() || from_path.front() != enter_pt) {path.add(enter_pt, 1);} // don't add a duplicate
 			from_path.front().fixed = 1;

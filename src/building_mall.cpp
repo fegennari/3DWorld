@@ -523,7 +523,7 @@ void building_t::add_mall_stairs() { // connecting to the entrance door
 		if (!room.contains_cube_xy(railing)) continue; // skip if outside mall in case door is close to a wall
 		objs.emplace_back(railing, TYPE_RAILING, room_id, !dim, !d, 0, 1.0, SHAPE_CUBE, GOLD); // no balusters
 	}
-	// TODO: add to stairwells, or some special interior->mall_stairs
+	interior->mall_info->ent_stairs = stairwell_t(stair, 1, dim, !dir, SHAPE_FAN);
 }
 
 void building_t::add_mall_lower_floor_lights(room_t const &room, unsigned room_id, unsigned lights_start, light_ix_assign_t &light_ix_assign) {
@@ -588,8 +588,8 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	colorRGBA const bar_color(LT_GRAY);
 	colorRGBA pot_colors[3]; // plants at {stairs, escalators, pillars}
 	for (unsigned n = 0; n < 3; ++n) {pot_colors[n] = choose_pot_color(rgen);}
-	cube_t entrance_stairs_bcube(interior->get_ext_basement_door()); // approximate
-	entrance_stairs_bcube.expand_by_xy(2.0*(floor_spacing - window_vspace) + doorway_width); // add plenty of clearance around the door for the stairs
+	cube_t entrance_stairs_bcube(interior->mall_info->ent_stairs);
+	entrance_stairs_bcube.expand_by_xy(doorway_width); // add plenty of clearance around the door for the stairs
 	if (num_floors == 1) {blockers.push_back(entrance_stairs_bcube);} // entrance is on the first/ground floor
 	cube_t pillar(room); // copy room zvals
 
