@@ -3161,20 +3161,14 @@ public:
 			}
 		} // if flatten_mesh
 		{ // open a scope
-			timer_t timer2("Gen Building Geometry", !is_tile); // 120ms/700ms => 160ms/900ms
+			timer_t timer2("Gen Building Geometry", !is_tile); // 160ms/900ms
 			bool const gen_interiors(global_building_params.gen_building_interiors);
-			bool const use_mt(!is_tile || gen_interiors); // only single threaded for tiles with no interiors, which is a fast case anyway
 
-			// split into houses and office buildings run on 2 threads
-#pragma omp parallel for schedule(static) num_threads(2) if (use_mt)
-			for (int is_house=0; is_house < 2; ++is_house) {
-				for (unsigned i = 0; i < buildings.size(); ++i) {
-					building_t &b(buildings[i]);
-					if (b.is_house != bool(is_house)) continue; // wrong pass
-					unsigned const rs_ix(city_prob.get(i).same_geom_per_mat[b.is_house] ? b.mat_ix : i); // same material, maybe from same block/city; could also use city_ix
-					b.gen_geometry(rs_ix, 1337*rs_ix+rseed);
-				}
-			} // for is_house
+			for (unsigned i = 0; i < buildings.size(); ++i) {
+				building_t &b(buildings[i]);
+				unsigned const rs_ix(city_prob.get(i).same_geom_per_mat[b.is_house] ? b.mat_ix : i); // same material, maybe from same block/city; could also use city_ix
+				b.gen_geometry(rs_ix, 1337*rs_ix+rseed);
+			}
 			if (city_only && gen_interiors && global_building_params.max_ext_basement_room_depth > 0) {try_join_city_building_ext_basements(buildings);}
 		} // close the scope
 		if (0 && non_city_only) { // perform room graph analysis
