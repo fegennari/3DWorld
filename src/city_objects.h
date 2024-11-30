@@ -502,14 +502,15 @@ struct newsrack_t : public oriented_city_obj_t {
 };
 
 struct clothesline_t : public oriented_city_obj_t {
-	float cheight, lradius;
-	point p1, p2;
+	float height, lradius, pradius; // clothes height, line radius, pole radius
+	point ends[2];
 	vect_cube_t clothes;
 
-	clothesline_t(point const &p1_, point const &p2_, float clothes_height_, float lradius_, rand_gen_t &rgen);
+	clothesline_t(point const &p1, point const &p2, float height_, rand_gen_t &rgen);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
 struct park_path_t : public city_obj_t {

@@ -1179,6 +1179,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		assert(bcubes.size() == 1); // there should be exactly one building/house in this sub-plot
 		cube_with_ix_t const &house(bcubes.front());
 		bool const sdim((i->street_dir-1)>>1), sdir((i->street_dir-1)&1); // direction to the road
+		float const plot_z(i->z2());
 
 		// attempt place swimming pool; often unsuccessful
 		bool const placed_pool(add_divider && place_swimming_pool(plot, *i, house, sdim, sdir, shrink_dim, prev_blockers_end, hwidth,
@@ -1199,7 +1200,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 					float const ss_height(0.2*city_params.road_width);
 
 					for (unsigned n = 0; n < 10; ++n) { // make some attempts to generate a valid swingset location
-						point const ss_pos(rgen.gen_rand_cube_point_xy(center_area, i->z2()));
+						point const ss_pos(rgen.gen_rand_cube_point_xy(center_area, plot_z));
 						bool dim(0);
 						if      (dx < 0.5*dy) {dim = 0;}
 						else if (dy < 0.5*dx) {dim = 1;}
@@ -1217,7 +1218,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 					float const tramp_height(0.18*city_params.road_width);
 
 					for (unsigned n = 0; n < 10; ++n) { // make some attempts to generate a valid trampoline location
-						point const ss_pos(rgen.gen_rand_cube_point_xy(center_area, i->z2()));
+						point const ss_pos(rgen.gen_rand_cube_point_xy(center_area, plot_z));
 						trampoline_t const tramp(ss_pos, tramp_height, rgen);
 						if (!place_area.contains_cube_xy(tramp.bcube)) continue; // too close to back yard edge
 						if (is_placement_blocked(tramp.bcube, blockers, cube_t(), prev_blockers_end)) continue; // intersects some other object
@@ -1230,7 +1231,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 					float const umbrella_height(0.25*city_params.road_width);
 
 					for (unsigned n = 0; n < 10; ++n) { // make some attempts to generate a valid umbrella location
-						point const ss_pos(rgen.gen_rand_cube_point_xy(center_area, i->z2()));
+						point const ss_pos(rgen.gen_rand_cube_point_xy(center_area, plot_z));
 						umbrella_t const umbrella(ss_pos, umbrella_height, 0, 0); // dim=0, dir=0
 						if (!place_area.contains_cube_xy(umbrella.bcube)) continue; // too close to back yard edge
 						//if (placed_pool && umbrella.bcube.intersects_xy(pools.back().bcube))             continue; // intersects the pool
@@ -1241,8 +1242,8 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 					} // for n
 				}
 				// maybe place clothes line
-				if (0 && !placed_pool) {
-					float const height(0.2*city_params.road_width), cl_z2(i->z2() + height);
+				if (!placed_pool) {
+					float const height(0.14*city_params.road_width), cl_z2(plot_z + height);
 
 					for (unsigned n = 0; n < 20; ++n) { // make some attempts to generate a valid pair of points
 						point const p1(rgen.gen_rand_cube_point_xy(center_area, cl_z2));
@@ -1250,10 +1251,18 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 						point p2(p1);
 						p2[cdim] += (cdir ? 1.0 : -1.0)*rgen.rand_uniform(0.4, 0.8)*city_params.road_width;
 						if (!center_area.contains_pt_xy(p2)) continue;
-						clothesline_t const cline(p1, p2, height, 0.002*city_params.road_width, rgen);
+						clothesline_t const cline(p1, p2, height, rgen);
 						if (is_placement_blocked(cline.bcube, blockers, cube_t(), blockers.size())) continue; // intersects some other object; include all objects
 						cline_groups.add_obj(cline, clines);
 						blockers.push_back(cline.bcube);
+
+						// add ped colliders for each pole, but not for the line itself
+						for (unsigned d = 0; d < 2; ++d) {
+							cube_t c(cline.ends[d]);
+							c.z1() = plot_z;
+							c.expand_by_xy(cline.pradius);
+							colliders.push_back(c);
+						}
 						break; // done
 					} // for n
 				}
@@ -1270,7 +1279,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				float const wall_pos(house.d[dim][dir]);
 				float const tree_scale(rgen.rand_uniform(0.25, 0.3)), radius(3.0*sz_scale*tree_scale), height(3.0*radius); // height is just a guess
 				point pos;
-				pos.z = i->z2();
+				pos.z = plot_z;
 				pos[ dim] = wall_pos + (dir ? 1.0 : -1.0)*1.5*radius; // place near this wall of the house
 				pos[!dim] = rgen.rand_uniform(house.d[!dim][0], house.d[!dim][1]); // on the corner is okay
 				cube_t const tree_bc(get_cube_height_radius(pos, radius, height));
@@ -1293,7 +1302,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				if (radius > 0.25*house.get_sz_dim(!dim)) continue; // house wall is too short - shouldn't happen in the normal case
 				float const wall_pos(house.d[dim][dir]);
 				point pos;
-				pos.z = i->z2();
+				pos.z = plot_z;
 				pos[ dim] = wall_pos + (dir ? 1.0 : -1.0)*1.75*radius; // place near this wall of the house
 				pos[!dim] = rgen.rand_uniform((house.d[!dim][0] + radius), (house.d[!dim][1] - radius));
 				trashcan_t const trashcan(pos, radius, tc_height, 1); // is_cylin=1
@@ -1314,7 +1323,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				if (bike_len > 0.5*house.get_sz_dim(!dim)) continue; // house wall is too short - shouldn't happen in the normal case
 				float const wall_pos(house.d[dim][dir]);
 				point pos;
-				pos.z = i->z2();
+				pos.z = plot_z;
 				pos[ dim] = wall_pos + (dir ? 1.0 : -1.0)*0.6*bike_width; // place near this wall of the house (with a small gap for the window sill and FP error)
 				pos[!dim] = rgen.rand_uniform((house.d[!dim][0] + wall_extend), (house.d[!dim][1] - wall_extend));
 				bicycle_t const bike(pos, bike_height, !dim, rgen.rand_bool()); // random dir, against the wall
@@ -1344,7 +1353,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random house wall dim/dir
 				float const wall_pos(house.d[dim][dir]), plant_height(sz_scale*rgen.rand_uniform(0.8, 1.25));
 				point pos;
-				pos.z = i->z2();
+				pos.z = plot_z;
 				pos[ dim] = wall_pos; // place at the house wall - will move away from the wall once we know the radius
 				pos[!dim] = rgen.rand_uniform(house.d[!dim][0], house.d[!dim][1]); // on the corner is okay
 				potted_plant_t plant(pos, plant_height, rgen.rand_bool(), rgen.rand_bool(), rgen.rand()); // random dim/dir/model
@@ -1369,7 +1378,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random house wall dim/dir for all flowers in this group
 				float const wall_pos(house.d[dim][dir]), flower_height(sz_scale*rgen.rand_uniform(0.75, 1.2));
 				point pos;
-				pos.z = i->z2();
+				pos.z = plot_z;
 				pos[ dim] = wall_pos; // place at the house wall - will move away from the wall once we know the radius
 				pos[!dim] = rgen.rand_uniform(house.d[!dim][0], house.d[!dim][1]); // on the corner is okay
 				unsigned const model_select(rgen.rand());
@@ -2246,7 +2255,6 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(signs,     sign_groups,     dstate, 0.25, shadow_only, 1, 1); // draw_qbd_as_quads=1
 	draw_objects(flags,     flag_groups,     dstate, 0.18, shadow_only, 1);
 	draw_objects(newsracks, nrack_groups,    dstate, 0.10, shadow_only, 0);
-	draw_objects(clines,    cline_groups,    dstate, 0.12, shadow_only, 0);
 	draw_objects(tcones,    tcone_groups,    dstate, 0.08, shadow_only, 1);
 	draw_objects(swings,    swing_groups,    dstate, 0.06, shadow_only, 1);
 	draw_objects(tramps,    tramp_groups,    dstate, 0.10, shadow_only, 1);
@@ -2294,6 +2302,10 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 		if (shadow_only && dstate.pass_ix != 2) continue; // only above ground pools are drawn in the shadow pass
 		float const dist_scales[4] = {0.1, 0.5, 0.3, 0.5};
 		draw_objects(pools, pool_groups, dstate, dist_scales[dstate.pass_ix], shadow_only, (dstate.pass_ix > 1)); // final 2 passes use immediate draw rather than qbd
+	}
+	for (dstate.pass_ix = 0; dstate.pass_ix < 3; ++dstate.pass_ix) { // {line, poles, clothes}
+		if (shadow_only && dstate.pass_ix == 0) continue; // skip line in the shadow pass because its too narrow to cast a good shadow
+		draw_objects(clines, cline_groups, dstate, 0.12, shadow_only, 1); // has_immediate_draw=1
 	}
 	if (!shadow_only && light_factor > 0.5 && !pools.empty()) { // 4=pool underwater caustics pass
 		cube_t draw_region(all_objs_bcube);
@@ -2415,8 +2427,9 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(elevators, wwe_groups,      pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(pdecks,    pdeck_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(p_solars,  p_solar_groups,  pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(clines,    cline_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	// Note: no coll with tree_planters because the tree coll should take care of it;
-	// no coll with hcaps, manholes, tcones, flowers, pladders, bballs, pfloats, clines, pigeons, ppaths, or birds
+	// no coll with hcaps, manholes, tcones, flowers, pladders, bballs, pfloats, pigeons, ppaths, or birds
 	return 0;
 }
 

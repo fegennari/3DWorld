@@ -855,46 +855,73 @@ void newsrack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 }
 
 // clothes lines
-void draw_wire(point const *const pts, float radius, color_wrapper const &cw, quad_batch_draw &untex_qbd, unsigned ndiv=4);
 
-clothesline_t::clothesline_t(point const &p1_, point const &p2_, float cheight_, float lradius_, rand_gen_t &rgen) :
-	cheight(cheight_), lradius(lradius_), p1(p1_), p2(p2_)
+clothesline_t::clothesline_t(point const &p1, point const &p2, float height_, rand_gen_t &rgen) :
+	height(height_), lradius(0.005*height), pradius(0.02*height)
 {
+	ends[0] = p1; ends[1] = p2;
 	if      (p1.x == p2.x) {dim = 1;}
 	else if (p1.y == p2.y) {dim = 0;}
 	else {assert(0);} // diag not supported
 	dir = 0; // unused
 	pos = 0.5*(p1 + p2); // center
-	if (p2[dim] < p1[dim]) {swap(p1, p2);}
-	radius = (p2[dim] - p1[dim]) + lradius; // close enough
+	if (p2[dim] < p1[dim]) {swap(ends[0], ends[1]);}
+	radius = 0.5*(ends[1][dim] - ends[0][dim]) + max(lradius, pradius); // close enough
 	bcube.set_from_point(p1);
-	bcube.union_with_pt(p2);
-	bcube.expand_in_dim(!dim, lradius);
-	bcube.z2() += lradius;
-	bcube.z1() -= lradius + cheight;
+	bcube.union_with_pt (p2);
+	bcube.expand_by_xy(max(lradius, pradius));
+	bcube.z2() += 2.0*lradius; // account for the top of the pole
+	bcube.z1() -= height;
 	// TODO: add clothes
 }
-
 /*static*/ void clothesline_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
-	// TODO
+	if (shadow_only) return;
+	if (dstate.pass_ix == 0) { // line
+		select_texture(get_texture_by_name("interiors/blinds.jpg"));
+		select_texture(get_texture_by_name("interiors/blinds_hn.jpg", 1), 5);
+		dstate.s.set_cur_color(LT_GRAY);
+	}
+	else if (dstate.pass_ix == 1) {
+		select_texture(WHITE_TEX); // poles
+		dstate.s.set_cur_color(colorRGBA(0.0, 0.15, 0.0, 1.0)); // very dark green
+		dstate.s.set_specular(0.4, 40.0); // specular painted metal surface
+	}
 }
 /*static*/ void clothesline_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	// TODO
+	if (shadow_only) return;
+	if (dstate.pass_ix == 0) {bind_default_flat_normal_map();} // line
+	else if (dstate.pass_ix == 1) {dstate.s.clear_specular();}
 }
 void clothesline_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	// draw line
-	point const pts[2] = {p1, p2};
-	unsigned const ndiv(shadow_only ? 4 : max(4U, min(16U, unsigned(0.5f*dist_scale*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, pos)))));
-	draw_wire(pts, lradius, LT_GRAY, qbds.untex_qbd, ndiv);
-
-	// draw poles, unless we want to attach the line to the house, wall, etc.
-	for (unsigned d = 0; d < 2; ++d) {
-
-	} // for d
-	for (cube_t const &c : clothes) {
-		assert(c.is_strictly_normalized());
-		// TODO: shirt model, etc.
+	if (dstate.pass_ix == 2) { // draw clothes
+		for (cube_t const &c : clothes) {
+			assert(c.is_strictly_normalized());
+			// TODO: shirt model, etc.
+		}
+		return;
 	}
+	unsigned const ndiv(shadow_only ? 4 : max(4U, min(16U, unsigned(0.5f*dist_scale*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, pos)))));
+
+	if (dstate.pass_ix == 0) { // draw line
+		draw_fast_cylinder(ends[0], ends[1], lradius, lradius, ndiv, 1, 0, 0, nullptr, 8.0*radius/height); // draw sides only
+	}
+	else if (dstate.pass_ix == 1) { // draw poles, unless we want to attach the line to the house, wall, etc.
+		unsigned const ndiv(shadow_only ? 8 : max(4U, min(16U, unsigned(0.5f*dist_scale*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, pos)))));
+		vector3d const end_down(-height*plus_z), end_up(2.0*lradius*plus_z);
+
+		for (unsigned d = 0; d < 2; ++d) {
+			draw_fast_cylinder(ends[d]+end_down, ends[d]+end_up, pradius, pradius, 3*ndiv/2, 0, 4); // draw sides and top
+		}
+	}
+}
+bool clothesline_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	if (!sphere_cube_intersect((pos_ - xlate), radius_, bcube)) return 0; // optimization
+
+	for (unsigned d = 0; d < 2; ++d) { // collide with poles but ignore clothes
+		point const end(ends[d] + xlate);
+		if (sphere_vert_cylin_intersect(pos_, radius_, cylinder_3dw((end - height*plus_z), end, pradius, pradius), cnorm)) return 1;
+	}
+	return 0;
 }
 
 // power poles
@@ -1040,7 +1067,7 @@ void add_cylin_as_tris(vector<vert_norm_tc_color> &verts, point const ce[2], flo
 		}
 	} // for i
 }
-void draw_wire(point const *const pts, float radius, color_wrapper const &cw, quad_batch_draw &untex_qbd, unsigned ndiv) { // pts is size 2
+void draw_wire(point const *const pts, float radius, color_wrapper const &cw, quad_batch_draw &untex_qbd, unsigned ndiv=4) { // pts is size 2
 	vector3d v12;
 	vector_point_norm const &vpn(gen_cylinder_data(pts, radius, radius, ndiv, v12));
 
