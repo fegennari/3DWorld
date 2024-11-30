@@ -52,6 +52,7 @@ float const CITY_BIAS_SCALE        = 0.1;
 float const RETAIL_SMAP_DSCALE     = 0.7; // player shadow caster distance for retail rooms relative to light radius
 float const PERSON_INT_SMAP_DSCALE = 0.8; // building person shadow caster distance relative to light radius
 float const ESCALATOR_SPEED        = 1.0/TICKS_PER_SECOND; // in steps per tick
+float const MALL_FLOOR_HEIGHT      = 2.0; // as a mutiple of normal building floor height
 
 unsigned const NUM_CHAIR_COLORS = 12;
 unsigned const MAX_BCASE_BOOKS  = 48; // limited by available bit flags

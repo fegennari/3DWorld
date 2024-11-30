@@ -479,6 +479,9 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			} // for d
 		}
 	} // for f
+	if (MALL_FLOOR_HEIGHT == 2.0) { // connect back hallways with stairs and/or elevator; only valid for exactly N*floor (N=2) spacing
+
+	}
 }
 
 void building_t::add_mall_stairs() { // connecting to the entrance door
@@ -493,35 +496,34 @@ void building_t::add_mall_stairs() { // connecting to the entrance door
 	// add stairs under the door if needed; maybe we should add to stairwells with SHAPE_FAN for building AI path finding to work?
 	float const upper_floor_zval(room.z2() - floor_spacing + fc_thick), delta_z(door.z1() - upper_floor_zval);
 	unsigned const num_steps(max(0, (int)ceil(NUM_STAIRS_PER_FLOOR*delta_z/get_floor_ceil_gap())));
+	if (num_steps == 0) return; // no stairs needed
+	float const step_height(delta_z/num_steps), step_len(2.0*step_height);
+	float const wall_edge(room.d[dim][!dir]), dsign(dir ? 1.0 : -1.0), front_step_dist(dsign*step_len);
+	cube_t stair(door);
+	set_cube_zvals(stair, door.z1()-step_height, door.z1());
+	stair.d[dim][!dir] = wall_edge; // starts at wall
+	stair.d[dim][ dir] = wall_edge + 2.0*front_step_dist;
 
-	if (num_steps > 0) {
-		float const step_height(delta_z/num_steps), step_len(2.0*step_height);
-		float const wall_edge(room.d[dim][!dir]), dsign(dir ? 1.0 : -1.0), front_step_dist(dsign*step_len);
-		cube_t stair(door);
-		set_cube_zvals(stair, door.z1()-step_height, door.z1());
-		stair.d[dim][!dir] = wall_edge; // starts at wall
-		stair.d[dim][ dir] = wall_edge + 2.0*front_step_dist;
-
-		for (unsigned n = 0; n < num_steps; ++n) { // top down
-			stair.expand_in_dim(!dim, step_len);  // widen sides
-			stair.d[dim][dir] += front_step_dist; // add length
-			stair.intersect_with_cube_xy(room); // don't let stair extend outside mall in case door is close to a wall
-			objs.emplace_back(stair, TYPE_STAIR, room_id, dim, dir, 0, 1.0, SHAPE_STAIRS_FAN);
-			stair.translate_dim(2, -step_height);
-		}
-		// add railings against the wall
-		cube_t railing;
-		set_cube_zvals(railing, upper_floor_zval, door.z1());
-		railing.d[dim][!dir] = wall_edge + dsign*1.0*wall_thickness;
-		railing.d[dim][ dir] = wall_edge + dsign*1.6*wall_thickness;
-
-		for (unsigned d = 0; d < 2; ++d) {
-			railing.d[!dim][!d] = door .d[!dim][d] + (d ? 1.0 : -1.0)*1.5*wall_thickness;
-			railing.d[!dim][ d] = stair.d[!dim][d] + (d ? 1.0 : -1.0)*1.5*wall_thickness;
-			if (!room.contains_cube_xy(railing)) continue; // skip if outside mall in case door is close to a wall
-			objs.emplace_back(railing, TYPE_RAILING, room_id, !dim, !d, 0, 1.0, SHAPE_CUBE, GOLD); // no balusters
-		}
+	for (unsigned n = 0; n < num_steps; ++n) { // top down
+		stair.expand_in_dim(!dim, step_len);  // widen sides
+		stair.d[dim][dir] += front_step_dist; // add length
+		stair.intersect_with_cube_xy(room); // don't let stair extend outside mall in case door is close to a wall
+		objs.emplace_back(stair, TYPE_STAIR, room_id, dim, dir, 0, 1.0, SHAPE_STAIRS_FAN);
+		stair.translate_dim(2, -step_height);
 	}
+	// add railings against the wall
+	cube_t railing;
+	set_cube_zvals(railing, upper_floor_zval, door.z1());
+	railing.d[dim][!dir] = wall_edge + dsign*1.0*wall_thickness;
+	railing.d[dim][ dir] = wall_edge + dsign*1.6*wall_thickness;
+
+	for (unsigned d = 0; d < 2; ++d) {
+		railing.d[!dim][!d] = door .d[!dim][d] + (d ? 1.0 : -1.0)*1.5*wall_thickness;
+		railing.d[!dim][ d] = stair.d[!dim][d] + (d ? 1.0 : -1.0)*1.5*wall_thickness;
+		if (!room.contains_cube_xy(railing)) continue; // skip if outside mall in case door is close to a wall
+		objs.emplace_back(railing, TYPE_RAILING, room_id, !dim, !d, 0, 1.0, SHAPE_CUBE, GOLD); // no balusters
+	}
+	// TODO: add to stairwells, or some special interior->mall_stairs
 }
 
 void building_t::add_mall_lower_floor_lights(room_t const &room, unsigned room_id, unsigned lights_start, light_ix_assign_t &light_ix_assign) {

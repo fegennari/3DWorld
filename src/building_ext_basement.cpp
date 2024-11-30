@@ -507,7 +507,7 @@ unsigned building_t::max_expand_underground_room(cube_t &room, bool dim, bool di
 	cube_t const orig_room(room);
 	room = exp_room;
 	unsigned num_floors_add(0);
-	float const room_floor_spacing((is_mall ? 2.0 : 1.0)*floor_spacing); // mall has 2x floor spacing
+	float const room_floor_spacing((is_mall ? MALL_FLOOR_HEIGHT : 1.0)*floor_spacing); // mall has larger (2x) floor spacing
 
 	if (is_mall) {
 		unsigned const max_levels(global_building_params.max_mall_levels);
