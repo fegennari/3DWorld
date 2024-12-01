@@ -482,7 +482,7 @@ enum { // room object types
 	TYPE_POOL_BALL, TYPE_POOL_CUE, TYPE_WALL_MOUNT, TYPE_POOL_TILE, TYPE_POOL_FLOAT, TYPE_BENCH, TYPE_DIV_BOARD, TYPE_FALSE_DOOR, TYPE_FLASHLIGHT, TYPE_CANDLE,
 	TYPE_CAMERA, TYPE_CLOCK, TYPE_DOWNSPOUT, TYPE_SHELFRACK, TYPE_CHIM_CAP, TYPE_FOOD_BOX, TYPE_SAFE, TYPE_LADDER, TYPE_CHECKOUT, TYPE_FISHTANK,
 	TYPE_LAVALAMP, TYPE_SHOWERTUB, TYPE_TRASH, TYPE_VALVE, TYPE_METAL_BAR, TYPE_OFF_PILLAR, TYPE_DRINK_CAN, TYPE_CONF_TABLE, TYPE_INT_WINDOW, TYPE_INT_LADDER,
-	TYPE_MACHINE, TYPE_BUCKET, TYPE_SPIWEB, TYPE_TREE, TYPE_STORE_GATE, TYPE_THEFT_SENS,
+	TYPE_MACHINE, TYPE_BUCKET, TYPE_SPIWEB, TYPE_TREE, TYPE_STORE_GATE, TYPE_THEFT_SENS, TYPE_ELEC_WIRE,
 	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_WALL_LAMP, TYPE_CUP, TYPE_TOASTER,
@@ -721,6 +721,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	float get_bottle_rot_angle() const {return (rotates() ? PI*(0.321*obj_id + color.R + 2.0*color.G) : 0.0);}
 	float get_depth () const {return get_length();} // some objects use depth rather than length
 	float get_radius() const;
+	float get_ortho_radius() const {return (is_hanging() ? get_radius() : 0.5*dz());} // hanging is dim=2/z
 	float get_chair_leg_width() const {assert(type == TYPE_CHAIR); return (in_mall() ? CHAIR_LEG_WIDTH_MALL : CHAIR_LEG_WIDTH);}
 	cylinder_3dw get_cylinder() const;
 	void toggle_lit_state() {flags ^= RO_FLAG_LIT;}
@@ -1167,6 +1168,8 @@ struct building_room_geom_t {
 	void add_hanger_rod(room_object_t const &c);
 	void add_drain_cover(cube_t const &c, colorRGBA const &color);
 	void add_drain_pipe(room_object_t const &c);
+	void add_electrical_wire(room_object_t const &c);
+	void add_electrical_wire_pair(room_object_t const &c);
 	void add_key(room_object_t const &c);
 	void add_money(room_object_t const &c);
 	void add_phone(room_object_t const &c);

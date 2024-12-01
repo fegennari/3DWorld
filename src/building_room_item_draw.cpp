@@ -1030,6 +1030,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_LG_BALL:   add_lg_ball   (c); break;
 		case TYPE_HANGER_ROD:add_hanger_rod(c); break;
 		case TYPE_DRAIN:     add_drain_pipe(c); break;
+		case TYPE_ELEC_WIRE: add_electrical_wire_pair(c); break;
 		case TYPE_KEY:       if (has_key_3d_model()) {model_objs.push_back(c);} else {add_key(c);} break; // draw or add as 3D model
 		case TYPE_SILVER:    if (c.was_expanded()  ) {model_objs.push_back(c);} break; // only draw here if expanded
 		case TYPE_FOLD_SHIRT:if (c.was_expanded()  ) {model_objs.push_back(c);} break; // only draw here if expanded

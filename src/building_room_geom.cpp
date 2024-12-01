@@ -757,6 +757,51 @@ void building_room_geom_t::add_drain_pipe(room_object_t const &c) { // is_small=
 	}
 }
 
+void building_room_geom_t::add_electrical_wire(room_object_t const &c) { // is_small=1
+	// plastic cover
+	cube_t plastic(c);
+	rgeom_mat_t &plastic_mat(get_untextured_material(0, 0, 1)); // unshadowed, small
+	colorRGBA const color(apply_light_color(c));
+
+	if (c.is_hanging()) { // vertical
+		plastic.z1() += 0.33*c.dz(); // strip back
+		plastic_mat.add_vcylin_to_verts(plastic, color, 1, 0); // draw sides and bottom
+	}
+	else { // horizontal
+		plastic.d[c.dim][!c.dir] = c.get_center_dim(c.dim); // strip back
+		plastic_mat.add_ortho_cylin_to_verts(plastic, color, c.dim, c.dir, !c.dir);
+	}
+	// copper core
+	float const core_radius(0.67*c.get_ortho_radius());
+	cube_t core(c);
+	rgeom_mat_t &copper_mat(get_metal_material(0, 0, 1, 0, COPPER_C)); // unshadowed, small=1
+	colorRGBA const copper_color(apply_light_color(c, COPPER_C));
+
+	if (c.is_hanging()) { // vertical
+		resize_around_center_xy(core, core_radius);
+		copper_mat.add_vcylin_to_verts(core, copper_color, 1, 0); // draw sides and bottom
+	}
+	else { // horizontal
+		set_wall_width(core, core.get_center_dim(!c.dim), core_radius, !c.dim);
+		set_wall_width(core, core.zc(), core_radius, 2);
+		copper_mat.add_ortho_cylin_to_verts(core, copper_color, c.dim, c.dir, !c.dir);
+	}
+}
+void building_room_geom_t::add_electrical_wire_pair(room_object_t const &c) {
+	// expand one wire into a wire pair; will extend outside the original bcube bounds
+	float const dist(2.0*c.get_ortho_radius());
+	vector3d delta; // from center to wire
+	if (c.is_hanging()) {delta[c.room_id & 1] = dist;} // choose X or Y
+	else {delta[(c.room_id & 1) ? 2 : !c.dim] = dist;}
+
+	for (unsigned d = 0; d < 2; ++d) {
+		room_object_t wire(c);
+		wire.color = (d ? BLACK : RED);
+		wire.translate(delta*(d ? 1.0 : -1.0));
+		add_electrical_wire(wire);
+	}
+}
+
 void building_room_geom_t::add_key(room_object_t const &c) { // is_small=1
 	rgeom_mat_t &key_mat(get_metal_material(0, 0, 1)); // untextured, unshadowed, small=1
 	key_mat.add_cube_to_verts_untextured(c, apply_light_color(c)); // placeholder for case where there's no key 3D model

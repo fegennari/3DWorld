@@ -192,6 +192,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_TREE      ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 3,  0.0,  1000.0,"tree"); // similar to plants; only in basement malls
 	bldg_obj_types[TYPE_STORE_GATE] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2,  0.0,  0.0,   "store gate");
 	bldg_obj_types[TYPE_THEFT_SENS] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 100.0, 30.0,  "theft sensor");
+	bldg_obj_types[TYPE_ELEC_WIRE ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 0.0,   0.0,   "electrical wire");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -1757,7 +1758,28 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 			if (c.type == TYPE_TRASH && old_obj.contains_pt(c.get_cube_center())) {c.remove();} // remove trash as well
 		}
 	}
-	if (is_light) {invalidate_lights_geom();}
+	if (is_light) {
+		// replace with wire pairs
+		float const wire_radius(0.5*building.get_trim_thickness());
+		bool dim(0), dir(0);
+		unsigned wire_flags(RO_FLAG_NOCOLL);
+		cube_t wire(old_obj);
+
+		if (old_obj.flags & RO_FLAG_ADJ_HI) { // wall light
+			dim = old_obj.dim; dir = !old_obj.dir;
+			wire.d[dim][dir] = old_obj.get_center_dim(dim);
+			set_wall_width(wire, wire.get_center_dim(!dim), wire_radius, !dim);
+			set_wall_width(wire, wire.zc(), wire_radius, 2);
+		}
+		else { // ceiling light
+			wire.z1() += 0.1*old_obj.dz(); // shorten wires up from bottom
+			resize_around_center_xy(wire, wire_radius);
+			wire_flags |= RO_FLAG_HANGING;
+		}
+		obj = room_object_t(wire, TYPE_ELEC_WIRE, obj.room_id, dim, dir, wire_flags, obj.light_amt, SHAPE_CYLIN);
+		invalidate_draw_data_for_obj(obj);
+		invalidate_lights_geom();
+	}
 	update_draw_state_for_room_object(old_obj, building, 1);
 	building.check_for_water_splash(cube_bot_center(old_obj), 0.8);
 }
