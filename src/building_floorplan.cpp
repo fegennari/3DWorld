@@ -137,6 +137,9 @@ void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim) {
 	wall.d[dim][0] = pos - half_thick;
 	wall.d[dim][1] = pos + half_thick;
 }
+void resize_around_center_xy(cube_t &c, float radius) {
+	for (unsigned d = 0; d < 2; ++d) {set_wall_width(c, c.get_center_dim(d), radius, d);}
+}
 void clip_wall_to_ceil_floor(cube_t &wall, float fc_thick) {
 	wall.z1() += fc_thick; // start at the floor
 	wall.z2() -= fc_thick; // start at the ceiling

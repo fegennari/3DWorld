@@ -2817,6 +2817,7 @@ void add_building_interior_lights(point const &xlate, cube_t &lights_bcube, bool
 unsigned calc_num_floors(cube_t const &c, float window_vspacing, float floor_thickness);
 unsigned calc_num_floors_room(room_t const &r, float window_vspacing, float floor_thickness);
 void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim);
+void resize_around_center_xy(cube_t &c, float radius);
 bool is_val_inside_window(cube_t const &c, bool dim, float val, float window_spacing, float window_border);
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius);
 template<typename T> void subtract_cube_from_cube(T const &c, cube_t const &s, vector<T> &out);

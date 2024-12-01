@@ -892,9 +892,9 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		float const max_radius(0.25*min(opening.dx(), opening.dy()));
 		float height(0.75*floor_spacing*rgen.rand_uniform(0.9, 1.1)), radius(0.5*height*0.5*(sz.x + sz.y)/sz.z); // use average of width and depth for radius
 		if (radius > max_radius) {height *= max_radius/radius; radius = max_radius;} // reduce size if radius is too large
-		cube_t fbc;
+		cube_t fbc(opening);
 		set_cube_zvals(fbc, zval, zval+height);
-		for (unsigned d = 0; d < 2; ++d) {set_wall_width(fbc, opening.get_center_dim(d), radius, d);}
+		resize_around_center_xy(fbc, radius);
 		unsigned const item_flags(rgen.rand()); // select a random sub_model_id
 		objs.emplace_back(fbc, TYPE_BLDG_FOUNT, room_id, rgen.rand_bool(), rgen.rand_bool(), 0, light_amt, SHAPE_CYLIN, WHITE, item_flags); // random dim/dir
 		blockers.push_back(fbc);
