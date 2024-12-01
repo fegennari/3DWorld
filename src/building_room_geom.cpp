@@ -4874,8 +4874,13 @@ void add_inverted_quads(rgeom_storage_t::vect_vertex_t &verts, unsigned verts_st
 }
 void building_room_geom_t::add_plant_pot(room_object_t const &c, float height, float radius, bool no_dirt) {
 	float const pot_top(c.z1() + height), dirt_level(pot_top - 0.15*height), cx(c.get_center_dim(0)), cy(c.get_center_dim(1));
-	get_untextured_material(1).add_cylin_to_verts(point(cx, cy, c.z1()), point(cx, cy, pot_top), 0.65*radius, radius, apply_light_color(c), no_dirt, 0, 1, 0);
+	rgeom_mat_t &pot_mat(get_untextured_material(1));
+	pot_mat.add_cylin_to_verts(point(cx, cy, c.z1()), point(cx, cy, pot_top), 0.65*radius, radius, apply_light_color(c), no_dirt, 0, 1, 0);
 
+	if ((c.room_id & 1) && c.color.get_luminance() > 0.25) { // add a black band around the pot for 50% of rooms if pot is not already near black
+		float const bz1(c.z1() + 0.7*height), bz2(c.z1() + 0.8*height);
+		pot_mat.add_cylin_to_verts(point(cx, cy, bz1), point(cx, cy, bz2), 0.92*radius, 0.95*radius, apply_light_color(c, BKGRAY), 1, 1); // draw top and bottom
+	}
 	if (!no_dirt) { // draw dirt in the pot as a disk if not taken
 		rgeom_mat_t &dirt_mat(get_material(tid_nm_pair_t(get_texture_by_name("rock2.png")))); // use dirt texture; unshadowed
 		dirt_mat.add_vert_disk_to_verts(point(cx, cy, dirt_level), 0.947*radius, 0, apply_light_color(c, WHITE));
