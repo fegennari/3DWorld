@@ -184,7 +184,7 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 		bool const edir((num_openings & 1) ? rgen.rand_bool() : (opening_ix == num_openings/2)); // closer to center; random if tied
 		float const ww_edge(opening.d[dim][!edir]), width(1.6*door_width), depth(width);
 		// Note: elevator extends half a floor width below and above the room; is this okay, or can it clip through other objects?
-		elevator_t elevator(room, interior->ext_basement_hallway_room_id, dim, !edir, 1, 1, 1); // at_edge=1, interior_room=1, in_mall=1
+		elevator_t elevator(room, interior->ext_basement_hallway_room_id, dim, !edir, 0, 1, 1); // at_edge=0, interior_room=1, in_mall=1
 		elevator.d[dim][!edir] = ww_edge; // front is adjacent to walkway
 		elevator.d[dim][ edir] = ww_edge + (edir ? 1.0 : -1.0)*depth; // extend back away from walkway by depth
 		set_wall_width(elevator, opening.get_center_dim(!dim), 0.5*width, !dim); // set width

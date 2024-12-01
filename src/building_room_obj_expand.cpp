@@ -50,9 +50,10 @@ point gen_xy_pos_in_area(cube_t const &S, vector3d const &sz, rand_gen_t &rgen, 
 point gen_xy_pos_in_area(cube_t const &S, float radius, rand_gen_t &rgen, float zval) {
 	return gen_xy_pos_in_area(S, vector3d(radius, radius, 0.0), rgen, zval);
 }
-void gen_xy_pos_for_cube_obj(cube_t &C, cube_t const &S, vector3d const &sz, float height, rand_gen_t &rgen) {
+void gen_xy_pos_for_cube_obj(cube_t &C, cube_t const &S, vector3d const &sz, float height, rand_gen_t &rgen, bool place_at_z1) {
 	C.set_from_point(gen_xy_pos_in_area(S, sz, rgen));
-	set_cube_zvals(C, S.z2(), S.z2()+height);
+	float const place_z(place_at_z1 ? S.z1() : S.z2());
+	set_cube_zvals(C, place_z, place_z+height);
 	C.expand_by_xy(sz);
 }
 void gen_xy_pos_for_round_obj(cube_t &C, cube_t const &S, float radius, float height, float spacing, rand_gen_t &rgen, bool place_at_z1) {

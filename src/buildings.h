@@ -1319,6 +1319,7 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 		call_request_t(unsigned f, float z, unsigned d, bool ip) : floor_ix(f), zval(z), req_dirs(d), inside_press(ip) {}
 		bool operator<(call_request_t const &cr) const {return (cr.inside_press < inside_press);} // sort so that CRs with inside_press=1 are first
 	};
+	// at_edge is used to avoid expanding the roof elevator cap
 	bool at_edge=0, going_up=0, at_dest=0, stop_on_passing_floor=0, hold_doors=0, hold_movement=0, under_skylight=0, is_moving=0, interior_room=0, in_mall=0;
 	uint8_t adj_pair_ix=0; // 0=not a pair, 1=first, 2=second
 	unsigned room_id=0, car_obj_id=0, light_obj_id=0, button_id_start=0, button_id_end=0, num_occupants=0;
@@ -2873,7 +2874,7 @@ unsigned get_skip_mask_for_xy(bool dim);
 // functions in building_room_obj_expand.cc
 point gen_xy_pos_in_area(cube_t const &S, vector3d const &sz, rand_gen_t &rgen, float zval=0.0);
 point gen_xy_pos_in_area(cube_t const &S, float radius, rand_gen_t &rgen, float zval=0.0);
-void gen_xy_pos_for_cube_obj(cube_t &C, cube_t const &S, vector3d const &sz, float height, rand_gen_t &rgen);
+void gen_xy_pos_for_cube_obj(cube_t &C, cube_t const &S, vector3d const &sz, float height, rand_gen_t &rgen, bool place_at_z1=0);
 void gen_xy_pos_for_round_obj(cube_t &C, cube_t const &S, float radius, float height, float spacing, rand_gen_t &rgen, bool place_at_z1=0);
 // functions in building_interact.cc and building_gameplay.cc
 void gen_sound_thread_safe(unsigned id, point const &pos, float gain=1.0, float pitch=1.0, float gain_scale=1.0, bool skip_if_already_playing=0);

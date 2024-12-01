@@ -153,6 +153,14 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 		for (unsigned d = 0; d < 2; ++d) {blockers_per_dim[d].push_back(stairs_bcube);}
 	}
 
+	// add elevator to avoid and blockers if present
+	for (elevator_t const &e : interior->elevators) {
+		if (!room.intersects(e)) continue;
+		cube_t const elevator_avoid(e.get_bcube_padded(1.5*doorway_width, doorway_width)); // padded on all sides
+		pillar_avoid.push_back(elevator_avoid);
+		for (unsigned d = 0; d < 2; ++d) {blockers_per_dim[d].push_back(elevator_avoid);}
+	}
+
 	// add random interior walls to create an initial maze
 	cube_t const place_area(get_walkable_room_bounds(true_room));
 	cube_t wall_area(place_area);
@@ -625,7 +633,7 @@ unsigned building_t::setup_multi_floor_room(extb_room_t &room, door_t const &doo
 	if (num_floors == 1) return 1;
 	assert(interior->fc_occluders.empty()); // must be called before setup_fc_occluders() because it adds to floors and ceilings
 	// add wall segment under the door on lower floors
-	float const room_entrance_edge(room.d[wall_dim][!wall_dir]), dir_sign(wall_dir ? 1.0 : -1.0);
+	float const room_entrance_edge(room.d[wall_dim][!wall_dir]), dir_sign(wall_dir ? 1.0 : -1.0), door_width(door.get_width()), wall_spacing(1.0*door_width);
 	cube_t wall(door);
 	set_cube_zvals(wall, room.z1()+fc_thick, door.z1());
 	wall.d[wall_dim][!wall_dir] = room_entrance_edge + 0.1*dir_sign*wall_thickness; // shift out slightly
@@ -633,20 +641,28 @@ unsigned building_t::setup_multi_floor_room(extb_room_t &room, door_t const &doo
 	assert(wall.is_strictly_normalized());
 	interior->walls[wall_dim].push_back(wall);
 	vect_cube_t avoid, cf_to_add;
+	cube_t elevator_bc;
+	rand_gen_t elevator_rgen(rgen); // deep copy so that we don't change the rgen sequence
 
-	// add an elevator
-	// TODO: people should not select dest elevator floors that have water
-	// choose N random locations and find the one that intersects the fewest walls using the elevator + front clearance
-	// clip walls for best loc and also clip any walls not intersecting sides and back but ending within doorway width
-	// add to avoid and subtract from cf_to_add
-
+	if (elevator_rgen.rand_bool()) { // add an elevator 50% of the time
+		// TODO: people should not select dest elevator floors that have water
+		// TODO: fix floor names
+		float const room_height(room.dz()), elevator_width(1.5*door_width), front_spacing(elevator_width); // elevator depth == elevator_width
+		cube_t elevator_area(room);
+		elevator_area.expand_by_xy(-max(front_spacing, wall_spacing)); // shrink to keep away from walls and avoid exit doors
+		gen_xy_pos_for_cube_obj(elevator_bc, elevator_area, vector3d(0.5*elevator_width, 0.5*elevator_width, room_height), room_height, elevator_rgen, 1); // place_at_z1=1
+		assert(interior->ext_basement_hallway_room_id >= 0);
+		bool const edim(elevator_rgen.rand_bool()), edir(elevator_rgen.rand_bool());
+		interior->elevators.emplace_back(elevator_bc, interior->ext_basement_hallway_room_id, edim, edir, 0, 1); // at_edge=0, interior_room=1
+		avoid.push_back(interior->elevators.back().get_bcube_padded(front_spacing)); // avoid overlapping/blocking stairs
+	}
 	// add stairs, floors, and ceilings
 	cube_t door_avoid(door.get_clearance_bcube());
 	door_avoid.union_with_cube(door.get_open_door_path_bcube()); // make sure it's path is clear as well
 	avoid.push_back(door_avoid);
 	//for (door_stack_t const &ds : interior->door_stacks) {if (ds.intersects(room)) {avoid.push_back(ds.get_open_door_path_bcube());}} // doors not yet placed
 	stairs_shape const sshape(SHAPE_STRAIGHT);
-	float const door_width(door.get_width()), stairs_hwidth(0.6*door_width), stairs_hlen(rgen.rand_uniform(2.0, 3.0)*stairs_hwidth), wall_spacing(1.0*door_width);
+	float const stairs_hwidth(0.6*door_width), stairs_hlen(rgen.rand_uniform(2.0, 3.0)*stairs_hwidth);
 	bool const have_space_for_stairs(4.0*(stairs_hlen + wall_spacing) < min(room.dx(), room.dy())); // should generally be true
 	float z(room.z1() + floor_spacing); // move to next floor
 
@@ -654,6 +670,7 @@ unsigned building_t::setup_multi_floor_room(extb_room_t &room, door_t const &doo
 		float const zc(z - fc_thick), zf(z + fc_thick);
 		cf_to_add.clear();
 		cf_to_add.push_back(room); // seed with entire room
+		if (!elevator_bc.is_all_zeros()) {subtract_cube_from_cubes(elevator_bc, cf_to_add);} // clip out elevator shaft
 
 		if (have_space_for_stairs) { // add stairs
 			unsigned const num_stairs(1 + (rgen.rand()&1)); // 1-2 stairs per floor
