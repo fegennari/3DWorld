@@ -46,6 +46,7 @@ void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_t
 void free_all_coll_objects();
 bool proc_movable_cobj(point const &orig_pos, point &player_pos, unsigned index, int type);
 void register_building_water_splash(point const &pos, float size, bool alert_zombies);
+float get_bldg_player_height();
 
 
 bool decal_obj::is_on_cobj(int cobj, vector3d *delta) const {
@@ -1710,7 +1711,7 @@ void play_camera_footstep_sound() { // tiled terrain mode
 	last_pos = pos;
 	fs_time  = tfticks;
 	bool const not_in_building(!camera_in_building && !player_in_walkway && !player_in_skyway && !player_in_ww_elevator);
-	if (player_in_water) {register_building_water_splash(pos, 1.0, 1);} // water splash; alert_zombies=1
+	if (player_in_water) {register_building_water_splash((pos - get_bldg_player_height()*plus_z), 1.0, 1);} // water splash at player feet; alert_zombies=1
 	else if (player_in_tunnel      ) {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_splash.wav"), pos, 0.2);}
 	//else if (player_in_water       ) {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_splash.wav"), pos, 0.2);}
 	else if (not_in_building       ) {gen_sound_random_var(get_sound_id_for_file("footsteps/footstep_grass.wav" ), pos, 0.2);}
