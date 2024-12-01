@@ -644,7 +644,8 @@ struct oriented_cube_t : public cube_t {
 
 struct room_object_t : public oriented_cube_t { // size=68
 	uint8_t taken_level=0;
-	uint16_t room_id=0, obj_id=0, drawer_flags=0, item_flags=0, state_flags=0; // Note: state_flags is used for drawer was_opened state, railing num_stairs, and pool balls
+	// Note: state_flags is used for drawer was_opened state, railing num_stairs, pool balls, and sink/tub/shower water
+	uint16_t room_id=0, obj_id=0, drawer_flags=0, item_flags=0, state_flags=0;
 	room_object type=TYPE_NONE; // 8-bit
 	room_obj_shape shape=SHAPE_CUBE; // 8-bit
 	unsigned flags=0;
