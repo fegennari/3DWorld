@@ -148,7 +148,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 		cube_t stairs_bcube(get_stairs_bcube_expanded(s, doorway_width, wall_thickness, doorway_width));
 		if (!room.intersects(stairs_bcube)) continue;
 		bool const dir(rgen.rand_bool());
-		stairs_bcube.d[s.dim][dir] += (dir ? 1.0 : -1.0)*(doorway_width - wall_thickness); // add an extra doorway width gap on a random side to avoid blocking a hallway
+		stairs_bcube.d[!s.dim][dir] += (dir ? 1.0 : -1.0)*(doorway_width - wall_thickness); // add an extra doorway width gap on a random side to avoid blocking a hallway
 		pillar_avoid.push_back(stairs_bcube);
 		for (unsigned d = 0; d < 2; ++d) {blockers_per_dim[d].push_back(stairs_bcube);}
 	}
@@ -670,15 +670,16 @@ unsigned building_t::setup_multi_floor_room(extb_room_t &room, door_t const &doo
 					cube_t cand;
 					for (unsigned d = 0; d < 2; ++d) {set_wall_width(cand, rgen.rand_uniform(place_area.d[d][0], place_area.d[d][1]), size[d], d);}
 					set_cube_zvals(cand, zf-floor_spacing, zc+floor_spacing); // top of floor below to bottom of ceiling on this floor
-					if (has_bcube_int(cand, avoid)) continue; // bad placement
 					assert(cand.is_strictly_normalized());
+					stairwell_t const S(cand, 1, dim, dir, sshape, 0, 1, 1); // floors=1, roof=0, stacked=1, ext_basement=1
+					cube_t const stairs_exp(get_stairs_bcube_expanded(S, door_width, wall_thickness, door_width));
+					if (has_bcube_int(stairs_exp, avoid)) continue; // bad placement
 					subtract_cube_from_cubes(cand, cf_to_add);
 					landing_t landing(cand, 0, 0, dim, dir, 1, sshape, 0, 1, 1, 0, 1); // elevator=0, floor=0, railing=1, roof=0, at_top=1, stacked=1, ramp=0, stacked=1, extb=1
 					set_cube_zvals(landing, zc, zf);
-					interior->landings.push_back(landing);
-					stairwell_t const S(cand, 1, dim, dir, sshape, 0, 1, 1); // floors=1, roof=0, stacked=1, ext_basement=1
+					interior->landings  .push_back(landing);
 					interior->stairwells.push_back(S);
-					avoid.push_back(get_stairs_bcube_expanded(S, door_width, wall_thickness, door_width));
+					avoid.push_back(stairs_exp);
 					room.has_stairs = 1;
 					break; // success
 				}
