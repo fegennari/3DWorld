@@ -1438,11 +1438,11 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			if (player_in_elevator && !i->in_elevator() && !i->is_dynamic()) continue; // can't take an elevator call button from inside the elevator
 		
 			if (obj_bcube == *i) { // check non-cube shapes, but only when get_true_obj_bcube() didn't return a custom cube
-				if (i->shape == SHAPE_SPHERE) {
+				if (i->shape == SHAPE_SPHERE) { // sphere
 					float const radius(i->get_radius());
 					if (!sphere_test_comp(p1c, i->get_cube_center(), (p1c - p2c), radius*radius, t)) continue;
 				}
-				else if (i->shape == SHAPE_CYLIN) {
+				else if (i->is_vert_cylinder()) { // vertical cylinder
 					cylinder_3dw const cylin(i->get_cylinder());
 					if (!line_int_cylinder(p1c, p2c, cylin.p1, cylin.p2, cylin.r1, cylin.r2, 1, t)) continue; // check_ends=1
 				}

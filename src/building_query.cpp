@@ -2320,7 +2320,10 @@ bool room_object_t::is_spider_collidable() const { // include objects on the flo
 }
 bool room_object_t::is_vert_cylinder() const {
 	if (shape != SHAPE_CYLIN) return 0; // not a cylinder
-	if (type != TYPE_DUCT && type != TYPE_PIPE) return 1; // only ducts and pipes can be horizontal cylinders
+	if (type == TYPE_LIGHT  && (flags & RO_FLAG_ADJ_HI)) return 0; // horizontal cylinder wall light
+	if (type == TYPE_PLATE  && get_length() < dz())      return 0; // vertical plate in dishwasher
+	if (type == TYPE_TPROLL && !was_expanded())          return 0; // horizontal TP roll on holder
+	if (type != TYPE_DUCT   && type != TYPE_PIPE)        return 1; // only ducts and pipes can be horizontal cylinders
 	return dir; // duct/pipe encoding for vertical is dim=x, dir=1
 }
 

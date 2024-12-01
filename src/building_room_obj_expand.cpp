@@ -190,7 +190,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 	}
 	// add hanger rod
 	float const hr_radius(0.007*window_vspacing);
-	room_object_t hanger_rod(interior, TYPE_HANGER_ROD, c.room_id, c.dim, c.dir, (RO_FLAG_NOCOLL | RO_FLAG_INTERIOR));
+	room_object_t hanger_rod(interior, TYPE_HANGER_ROD, c.room_id, c.dim, c.dir, (RO_FLAG_NOCOLL | RO_FLAG_INTERIOR)); // SHAPE_CUBE, even though it's a horizontal cylinder
 	hanger_rod.z1() = c.z1() + 0.8*window_vspacing;
 	hanger_rod.z2() = hanger_rod.z1() + 2.0*hr_radius;
 	set_wall_width(hanger_rod, (0.45*c.d[c.dim][c.dir] + 0.55*c.d[c.dim][!c.dir]), hr_radius, c.dim); // move slightly toward the back
@@ -441,7 +441,7 @@ void building_room_geom_t::expand_dishwasher(room_object_t &c, cube_t const &dis
 	unsigned const expanded_objs_start(expanded_objs.size());
 	c.item_flags = expanded_objs_start; // record the location where we'll add our objects
 	//rand_gen_t rgen(c.create_rgen());
-	// add TYPE_PLATE, and TYPE_CUP, and TYPE_SILVER
+	// add TYPE_CUP, and TYPE_SILVER? these are models and are more difficult to expand
 	unsigned const num_plates = 4; // random?
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 	uint16_t obj_place_index(0);
