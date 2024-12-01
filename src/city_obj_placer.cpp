@@ -2014,6 +2014,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	walkway_groups .create_groups(walkways,  all_objs_bcube);
 	pillar_groups  .create_groups(pillars,   all_objs_bcube);
 	wwe_groups     .create_groups(elevators, all_objs_bcube);
+	uge_groups     .create_groups(ug_elevs,  all_objs_bcube); // Note: may not be placed until later
 	p_solar_groups .create_groups(p_solars,  all_objs_bcube);
 	bball_groups   .create_groups(bballs,    all_objs_bcube);
 	pfloat_groups  .create_groups(pfloats,   all_objs_bcube);
@@ -2270,6 +2271,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(walkways,  walkway_groups,  dstate, 0.25, shadow_only, 1);
 	draw_objects(p_solars,  p_solar_groups,  dstate, 0.40, shadow_only, 0);
 	draw_objects(elevators, wwe_groups,      dstate, 0.15, shadow_only, 0); // draw first pass opaque geometry
+	draw_objects(ug_elevs,  uge_groups,      dstate, 0.20, shadow_only, 0);
 	draw_objects(bballs,    bball_groups,    dstate, 0.12, shadow_only, 1);
 	draw_objects(pfloats,   pfloat_groups,   dstate, 0.15, shadow_only, 1);
 	
@@ -2427,6 +2429,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(ponds,     pond_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(pillars,   pillar_groups,   pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(elevators, wwe_groups,      pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(ug_elevs,  uge_groups,      pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(pdecks,    pdeck_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(p_solars,  p_solar_groups,  pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(clines,    cline_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
@@ -2463,6 +2466,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(walkways,  walkway_groups,  p1, p2, t, ret);
 	check_vector_line_intersect(pillars,   pillar_groups,   p1, p2, t, ret);
 	check_vector_line_intersect(elevators, wwe_groups,      p1, p2, t, ret);
+	check_vector_line_intersect(ug_elevs,  uge_groups,      p1, p2, t, ret);
 	check_vector_line_intersect(dumpsters, dumpster_groups, p1, p2, t, ret);
 	check_vector_line_intersect(picnics,   picnic_groups,   p1, p2, t, ret);
 	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, tcones, flowers, pladders, chairs, pdecks, bballs, pfloats, clines, pigeons, ppaths, or birds;
@@ -2565,6 +2569,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 	if (check_city_obj_pt_xy_contains(umbrella_groups, umbrellas, pos, obj_ix, 1)) {color = WHITE; return 1;} // is_cylin=1
 	if (check_city_obj_pt_xy_contains(picnic_groups,   picnics,   pos, obj_ix, 0)) {color = BROWN; return 1;}
 	if (check_city_obj_pt_xy_contains(wwe_groups,      elevators, pos, obj_ix, 0)) {color = colorRGBA(0.8, 1.0, 0.8, 1.0); return 1;} // slightly blue-green glass; transparent?
+	if (check_city_obj_pt_xy_contains(uge_groups,      ug_elevs,  pos, obj_ix, 0)) {color = LT_GRAY; return 1;}
 	// Note: ppoles, hcaps, manholes, mboxes, tcones, flowers, pladders, chairs, stopsigns, flags, clines, pigeons, birds, swings, umbrellas, bikes, and plants are skipped;
 	// pillars aren't visible under walkways;
 	// free standing signs can be added, but they're small and expensive to iterate over and won't contribute much

@@ -377,7 +377,7 @@ struct pillar_t : public city_obj_t { // for walkway support
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
-struct ww_elevator_t : public oriented_city_obj_t {
+struct ww_elevator_t : public oriented_city_obj_t { // elevator connected to overhead walkway
 	bool player_was_inside=0;
 	float floor_spacing, platform_zval, target_pzval, lo_door_open=0.0, hi_door_open=0.0, velocity_z=0.0;
 	cube_t ww_bcube;
@@ -397,6 +397,16 @@ struct ww_elevator_t : public oriented_city_obj_t {
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 	bool point_on_platform(point const &camera_bs, float exp=0.0) const;
 	void next_frame(point const &camera_bs, float fticks_stable);
+};
+
+struct ug_elevator_t : public oriented_city_obj_t { // underground elevator to mall
+	cube_t sides[4]; // left, right, back, top
+
+	ug_elevator_t(cube_t const &c, bool dim_, bool dir_);
+	static void pre_draw (draw_state_t &dstate, bool shadow_only);
+	static void post_draw(draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
 struct parking_solar_t : public oriented_city_obj_t {
@@ -677,6 +687,7 @@ private:
 	vector<walkway_t> walkways;
 	vector<pillar_t> pillars;
 	vector<ww_elevator_t> elevators;
+	vector<ug_elevator_t> ug_elevs;
 	vector<parking_solar_t> p_solars;
 	vector<beach_ball_t> bballs;
 	vector<pool_float_t> pfloats;
@@ -684,7 +695,7 @@ private:
 	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, fountain_groups, divider_groups, pool_groups, plad_groups,
 		chair_groups, pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups, stopsign_groups,
 		flag_groups, nrack_groups, cline_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, dumpster_groups, plant_groups, flower_groups,
-		picnic_groups, pond_groups, walkway_groups, pillar_groups, wwe_groups, p_solar_groups, bball_groups, pfloat_groups;
+		picnic_groups, pond_groups, walkway_groups, pillar_groups, wwe_groups, uge_groups, p_solar_groups, bball_groups, pfloat_groups;
 	skyway_t skyway; // optional
 	vect_parking_space_t pspaces;
 	bird_poop_manager_t bird_poop_manager;

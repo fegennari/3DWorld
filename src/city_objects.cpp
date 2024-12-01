@@ -2064,6 +2064,36 @@ void ww_elevator_t::next_frame(point const &camera_bs, float fticks_stable) {
 	else if (!player_overlapping) {player_was_inside = 0;} // fully outside the elevator
 }
 
+// ug_elevator_t
+
+ug_elevator_t::ug_elevator_t(cube_t const &c, bool dim_, bool dir_) : oriented_city_obj_t(c, dim_, dir_) {
+	float const wall_thick(0.1*min(c.dx(), c.dy())), ceil_thick(0.1*c.dz());
+	cube_t bot(c);
+	sides[3] = c; // top
+	sides[3].z1() = bot.z2() = c.z2() - ceil_thick; // similar to floor thickness
+	for (unsigned n = 0; n < 3; ++n) {sides[n] = bot;}
+	sides[2].d[dim][dir] = c.d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_thick; // back
+	for (unsigned d = 0; d < 2; ++d) {sides[!d].d[!dim][d] = c.d[!dim][!d] + (d ? 1.0 : -1.0)*wall_thick;} // left/right sides
+}
+/*static*/ void ug_elevator_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {select_texture(get_texture_by_name("roads/concrete.jpg"));}
+}
+/*static*/ void ug_elevator_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	// nothing?
+}
+void ug_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	for (unsigned n = 0; n < 4; ++n) {
+		unsigned const skip_dims((n == 3) ? 0 : 4); // skip Z for sides and back
+		dstate.draw_cube(qbds.untex_qbd, sides[n], WHITE, 0, 0.0, 4);
+	}
+}
+bool ug_elevator_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	for (unsigned n = 0; n < 4; ++n) {
+		if (sphere_cube_int_update_pos(pos_, radius_, (sides[n] + xlate), p_last, 0, cnorm)) return 1;
+	}
+	return 0;
+}
+
 // parking lot solar roofs
 
 parking_solar_t::parking_solar_t(cube_t const &c, bool dim_, bool dir_, unsigned ns, unsigned nr) : oriented_city_obj_t(c, dim_, dir_), num_spaces(ns), num_rows(nr) {
