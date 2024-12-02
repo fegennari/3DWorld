@@ -205,6 +205,7 @@ void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 		if (i->room_id != room_id || i->z1() < obj_zmin || i->z1() > light_z2) continue; // wrong room or floor
 		if (i->is_obj_model_type()) continue; // light_amt currently does not apply to 3D models; should it?
+		if (i->is_exterior      ()) continue; // not lit by interior light
 		bool invalidate(0);
 
 		if (i->type == TYPE_STAIR || i->type == TYPE_STAIR_WALL || i->type == TYPE_ELEVATOR || i->type == TYPE_LIGHT || i->type == TYPE_BLOCKER ||
