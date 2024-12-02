@@ -493,7 +493,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			cube_t hall_span(get_room(stacks.front())); // lowest level
 			hall_span.union_with_cube(get_room(stacks.back())); // highest level
 			// add an elevator connected to hall_span
-			float const dsign(d ? 1.0 : -1.0), wall_pos(hall_span.d[dim][d] - dsign*0.1*wall_thickness);
+			float const dsign(d ? 1.0 : -1.0), wall_pos(hall_span.d[dim][d]);
 			cube_t elevator_bc;
 			set_cube_zvals(elevator_bc, hall_span.z1(), (hall_span.z2() + floor_spacing - window_vspace)); // extend a full mall floor on the top
 			set_wall_width(elevator_bc, hall_span.get_center_dim(!dim), 0.8*doorway_width, !dim);

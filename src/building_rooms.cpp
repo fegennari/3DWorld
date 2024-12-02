@@ -1632,7 +1632,7 @@ cube_t get_trim_cube(cube_t const &c, bool dim, bool dir, float trim_thickness) 
 void building_t::add_trim_for_door_or_int_window(cube_t const &c, bool dim, bool draw_top_edge, bool draw_bot_trim,
 	float side_twidth, float top_twidth, float side_texp, float floor_spacing, float extra_top_gap)
 {
-	float const trim_thickness(get_trim_thickness()), fc_gap(floor_spacing*(1.0 - get_floor_thick_val()) - extra_top_gap);
+	float const trim_thickness(get_trim_thickness());
 	float const top_z_adj(draw_top_edge ? (side_twidth - top_twidth) : 0.0); // higher when top edge is drawn since door is below ceiling
 	unsigned const bot_flags(RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT);
 	colorRGBA const trim_color(get_trim_color());
@@ -1649,8 +1649,13 @@ void building_t::add_trim_for_door_or_int_window(cube_t const &c, bool dim, bool
 		unsigned const flags2(bot_flags | (draw_top ? 0 : RO_FLAG_ADJ_TOP));
 		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, side, flags2, 1.0, SHAPE_TALL, trim_color); // abuse tall flag
 	}
+	if (top_twidth == 0.0) { // no top or bottom trim
+		assert(!draw_bot_trim);
+		return;
+	}
 	// add trim at top of door
 	unsigned const num_floors(calc_num_floors(c, floor_spacing, get_floor_thickness()));
+	float const fc_gap(floor_spacing*(1.0 - get_floor_thick_val()) - extra_top_gap);
 	float z(c.z1());
 	trim.d[!dim][0] = c.d[!dim][0] + trim_thickness;
 	trim.d[!dim][1] = c.d[!dim][1] - trim_thickness;
@@ -1983,6 +1988,12 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		for (elevator_t const &e : interior->elevators) {
 			float const fwidth(e.get_frame_width() + trim_thickness), front_face(e.d[e.dim][e.dir]);
 			cube_t const front(get_trim_cube(e, e.dim, e.dir, trim_thickness));
+
+			if (e.in_mall == 2) { // add trim to the front sides of mall back hallway elevator
+				cube_t front_inner(front);
+				front_inner.expand_in_dim(!e.dim, -trim_thickness); // slight shrink to prevent Z-fighting
+				add_trim_for_door_or_int_window(front_inner, e.dim, 0, 0, door_trim_width, 0.0, 0.8*door_trim_exp, get_mall_floor_spacing(), 0.0);
+			}
 			cube_t door_trim(e);
 			set_wall_width(door_trim, front_face, 1.6*trim_thickness, e.dim);
 			door_trim.z1() += fc_thick; // don't clip into the bottom floor
