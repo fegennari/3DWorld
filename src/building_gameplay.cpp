@@ -1681,30 +1681,51 @@ void building_room_geom_t::remove_objs_contained_in(cube_t const &c, vect_room_o
 		update_draw_state_for_room_object(old_obj, building, 1);
 	}
 }
+void building_room_geom_t::replace_with_hanging_wires(room_object_t &obj, room_object_t const &old_obj, float wire_radius, bool vertical) {
+	bool dim(0), dir(0);
+	unsigned wire_flags(RO_FLAG_NOCOLL);
+	cube_t wire(old_obj);
+
+	if (vertical) {
+		wire.z1() += 0.1*old_obj.dz(); // shorten wires up from bottom
+		wire.z2() += wire_radius; // slightly into wall so that end is not visible when rotated
+		resize_around_center_xy(wire, wire_radius);
+		wire_flags |= RO_FLAG_HANGING;
+	}
+	else { // horizontal - use object dim/dir
+		dim = old_obj.dim; dir = !old_obj.dir;
+		wire.d[dim][!dir] += (dir ? 1.0 : -1.0)*0.1*old_obj.get_sz_dim(dim); // pull back slightly
+		wire.d[dim][ dir] += (dir ? 1.0 : -1.0)*wire_radius; // slightly into wall so that end is not visible when rotated
+		set_wall_width(wire, wire.get_center_dim(!dim), wire_radius, !dim);
+		set_wall_width(wire, wire.zc(), wire_radius, 2);
+	}
+	obj = room_object_t(wire, TYPE_ELEC_WIRE, obj.room_id, dim, dir, wire_flags, obj.light_amt, SHAPE_CYLIN);
+	invalidate_draw_data_for_obj(obj);
+}
 void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) {
 	room_object_t &obj(get_room_object_by_index(obj_id));
 	room_object_t const old_obj(obj); // deep copy
-	assert(obj.type != TYPE_ELEVATOR); // elevators require special updates for drawing logic and cannot be removed at this time
+	room_object const type(obj.type);
+	assert(type != TYPE_ELEVATOR); // elevators require special updates for drawing logic and cannot be removed at this time
 	player_inventory.add_item(obj);
-	bldg_obj_type_t const type(get_taken_obj_type(obj)); // capture type before updating obj
-	bool const is_light(obj.type == TYPE_LIGHT);
+	bool const is_light(type == TYPE_LIGHT);
 
-	if      (obj.type == TYPE_PICTURE   && obj.taken_level == 0) {++obj.taken_level;} // take picture, leave frame
-	else if (obj.type == TYPE_PIZZA_BOX && obj.taken_level == 0 && obj.is_open()) {++obj.taken_level;} // take pizza, leave box
-	else if (obj.type == TYPE_TPROLL && !(obj.taken_level > 0 || (obj.flags & RO_FLAG_WAS_EXP))) {++obj.taken_level;} // take TP roll, leave holder; not for expanded TP rolls
-	else if (obj.type == TYPE_BED) {++obj.taken_level;} // take pillow(s), then sheets, then mattress
-	else if (obj.type == TYPE_PLANT && !(obj.flags & RO_FLAG_ADJ_BOT)) { // plant not on a table/desk
+	if      (type == TYPE_PICTURE   && obj.taken_level == 0) {++obj.taken_level;} // take picture, leave frame
+	else if (type == TYPE_PIZZA_BOX && obj.taken_level == 0 && obj.is_open()) {++obj.taken_level;} // take pizza, leave box
+	else if (type == TYPE_TPROLL && !(obj.taken_level > 0 || (obj.flags & RO_FLAG_WAS_EXP))) {++obj.taken_level;} // take TP roll, leave holder; not for expanded TP rolls
+	else if (type == TYPE_BED) {++obj.taken_level;} // take pillow(s), then sheets, then mattress
+	else if (type == TYPE_PLANT && !(obj.flags & RO_FLAG_ADJ_BOT)) { // plant not on a table/desk
 		if (obj.taken_level > 1) {obj.remove();} // take pot - gone
 		else {++obj.taken_level;} // take plant then dirt
 	}
-	else if (obj.type == TYPE_TOILET || obj.type == TYPE_SINK || obj.type == TYPE_TUB || obj.type == TYPE_URINAL) {
+	else if (type == TYPE_TOILET || type == TYPE_SINK || type == TYPE_TUB || type == TYPE_URINAL) {
 		// tubs currently can't be removed, but if they could, they would leave drains
 		// leave a drain in the floor and water pipe(s); should this be on the wall instead for sinks?
 		unsigned flags(RO_FLAG_NOCOLL);
 		bool ddim(0), ddir(0); // for drain
 		cube_t drain;
 
-		if (obj.type == TYPE_URINAL) { // drain is on the wall
+		if (type == TYPE_URINAL) { // drain is on the wall
 			float const radius(0.065*obj.dz());
 			point pipe_p1;
 			pipe_p1.z = obj.z1() + 0.25*obj.dz(); // near the bottom
@@ -1718,39 +1739,39 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 			flags |= (obj.dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // draw exposed end
 		}
 		else { // drain is on the floor
-			float const radius(((obj.type == TYPE_SINK) ? 0.045 : 0.08)*obj.dz()), height(0.02*obj.dz());
+			float const radius(((type == TYPE_SINK) ? 0.045 : 0.08)*obj.dz()), height(0.02*obj.dz());
 			drain = get_cube_height_radius(cube_bot_center(obj), radius, height);
 		}
 		obj = room_object_t(drain, TYPE_DRAIN, obj.room_id, ddim, ddir, flags, obj.light_amt, SHAPE_CYLIN, DK_GRAY); // replace with drain
 		invalidate_draw_data_for_obj(obj);
 	}
-	else if (obj.type == TYPE_TOY) { // take one ring at a time then the base (5 parts)
+	else if (type == TYPE_TOY) { // take one ring at a time then the base (5 parts)
 		if (obj.taken_level >= 4) {obj.remove();} // take the toy base
 		else {++obj.taken_level;} // take a ring
 	}
-	else if (obj.type == TYPE_CEIL_FAN && obj_id > 0) { // Note: currently can't be picked up
+	else if (type == TYPE_CEIL_FAN && obj_id > 0) { // Note: currently can't be picked up
 		// find and remove the light assigned to this ceiling fan; should be a few objects before this one
 		room_object_t &light_obj(get_room_object_by_index(obj.obj_id));
 		if (light_obj.type == TYPE_LIGHT) {light_obj.remove();}
-		obj.remove();
+		replace_with_hanging_wires(obj, old_obj, 0.6*building.get_trim_thickness(), 1); // vertical=1
 	}
 	else { // replace it with an invisible blocker that won't collide with anything
 		obj.remove();
 	}
-	if (old_obj.type == TYPE_MIRROR && old_obj.obj_expanded()) {
+	if (type == TYPE_MIRROR && old_obj.obj_expanded()) {
 		remove_objs_contained_in(old_obj, expanded_objs, building); // search for and remove any contained medicine or other objects
 	}
-	if (old_obj.type == TYPE_WBOARD || old_obj.type == TYPE_PICTURE || old_obj.type == TYPE_MIRROR) {
+	if (type == TYPE_WBOARD || type == TYPE_PICTURE || type == TYPE_MIRROR) {
 		cube_t bc(old_obj);
 		bc.d[old_obj.dim][old_obj.dir] += (old_obj.dir ? 1.0 : -1.0)*building.get_wall_thickness();
 		building.remove_paint_in_cube(bc);
 	}
-	if (old_obj.type == TYPE_RUG || old_obj.type == TYPE_FLOORING) {
+	if (type == TYPE_RUG || type == TYPE_FLOORING) {
 		cube_t bc(old_obj);
 		bc.z2() += building.get_wall_thickness();
 		building.remove_paint_in_cube(bc);
 	}
-	if (old_obj.type == TYPE_TCAN) {
+	if (type == TYPE_TCAN) {
 		unsigned const ix_end(min(size_t(obj_id+11U), objs.size())); // support for up to 10 trash items
 
 		for (unsigned i = obj_id+1; i < ix_end; ++i) {
@@ -1758,28 +1779,12 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 			if (c.type == TYPE_TRASH && old_obj.contains_pt(c.get_cube_center())) {c.remove();} // remove trash as well
 		}
 	}
+	if (type == TYPE_BUTTON || type == TYPE_SWITCH || type == TYPE_CLOCK || ((type == TYPE_MONITOR || type == TYPE_TV) && old_obj.is_hanging())) {
+		float const wire_thickness(min(0.5f*building.get_trim_thickness(), 0.25f*old_obj.get_depth()));
+		replace_with_hanging_wires(obj, old_obj, wire_thickness, 0); // vertical=0
+	}
 	if (is_light) {
-		// replace with wire pairs
-		float const wire_radius(0.5*building.get_trim_thickness());
-		bool dim(0), dir(0);
-		unsigned wire_flags(RO_FLAG_NOCOLL);
-		cube_t wire(old_obj);
-
-		if (old_obj.flags & RO_FLAG_ADJ_HI) { // wall light
-			dim = old_obj.dim; dir = !old_obj.dir;
-			wire.d[dim][!dir] += (dir ? 1.0 : -1.0)*0.1*old_obj.get_sz_dim(dim); // pull back slightly
-			wire.d[dim][ dir] += (dir ? 1.0 : -1.0)*wire_radius; // slightly into wall so that end is not visible when rotated
-			set_wall_width(wire, wire.get_center_dim(!dim), wire_radius, !dim);
-			set_wall_width(wire, wire.zc(), wire_radius, 2);
-		}
-		else { // ceiling light
-			wire.z1() += 0.1*old_obj.dz(); // shorten wires up from bottom
-			wire.z2() += wire_radius; // slightly into wall so that end is not visible when rotated
-			resize_around_center_xy(wire, wire_radius);
-			wire_flags |= RO_FLAG_HANGING;
-		}
-		obj = room_object_t(wire, TYPE_ELEC_WIRE, obj.room_id, dim, dir, wire_flags, obj.light_amt, SHAPE_CYLIN);
-		invalidate_draw_data_for_obj(obj);
+		replace_with_hanging_wires(obj, old_obj, 0.5*building.get_trim_thickness(), !(old_obj.flags & RO_FLAG_ADJ_HI));
 		invalidate_lights_geom();
 	}
 	update_draw_state_for_room_object(old_obj, building, 1);

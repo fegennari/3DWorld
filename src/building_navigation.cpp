@@ -2203,7 +2203,7 @@ void building_t::call_elevator_to_floor_and_light_nearest_button(elevator_t &ele
 	assert(elevator.button_id_start <= elevator.button_id_end && elevator.button_id_end <= interior->room_geom->objs.size());
 
 	for (auto i = interior->room_geom->objs.begin() + elevator.button_id_start; i != interior->room_geom->objs.begin() + elevator.button_id_end; ++i) {
-		if (i->type == TYPE_BLOCKER) continue; // button was removed?
+		if (i->type == TYPE_BLOCKER || i->type == TYPE_ELEC_WIRE) continue; // button was removed?
 		assert(i->type == TYPE_BUTTON);
 		if (i->obj_id != floor_ix) continue; // wrong floor
 		if (i->in_elevator() != is_inside_elevator) continue; // wrong inside/outside

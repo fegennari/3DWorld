@@ -1871,7 +1871,7 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 
 			// disable all call buttons for this elevator that are no longer called
 			for (auto j = objs.begin() + e->button_id_start; j != objs.begin() + e->button_id_end; ++j) {
-				if (j->type == TYPE_BLOCKER) continue; // button was removed?
+				if (j->type == TYPE_BLOCKER || j->type == TYPE_ELEC_WIRE) continue; // button was removed?
 				assert(j->type == TYPE_BUTTON);
 				unsigned const up_down_mask((j->flags & RO_FLAG_ADJ_TOP) ? 2 : ((j->flags & RO_FLAG_ADJ_BOT) ? 1 : 3)); // top=up, bot=down, neither=both
 				if (!j->is_active() || e->was_floor_called(j->obj_id, up_down_mask)) continue; // already unlit, or this floor has also been called
@@ -1896,7 +1896,7 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 			building.register_indir_lighting_state_change(e->light_obj_id);
 		}
 		for (auto j = objs.begin() + e->button_id_start; j != objs.begin() + e->button_id_end; ++j) {
-			if (j->type == TYPE_BLOCKER) continue; // button was removed?
+			if (j->type == TYPE_BLOCKER || j->type == TYPE_ELEC_WIRE) continue; // button was removed?
 			assert(j->type == TYPE_BUTTON);
 			if (j->in_elevator()) {j->translate_dim(2, dist);} // interior panel button, translate in Z
 		}

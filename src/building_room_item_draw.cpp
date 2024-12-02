@@ -1246,7 +1246,7 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building, point
 			floor_spacing, building.has_parking_garage, !building.interior->elevators_disabled);
 
 		for (auto j = objs.begin() + e.button_id_start; j != objs.begin() + e.button_id_end; ++j) {
-			if (j->type == TYPE_BLOCKER) continue; // button was removed?
+			if (j->type == TYPE_BLOCKER || j->type == TYPE_ELEC_WIRE) continue; // button was removed?
 			assert(j->type == TYPE_BUTTON);
 			if (j->in_elevator()) {add_button(*j);} // add button as a dynamic object if it's inside the elevator
 		}
