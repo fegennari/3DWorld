@@ -1679,11 +1679,22 @@ int building_t::find_nearest_elevator_this_floor(point const &pos) const {
 
 	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
 		if (e->z1() > pos.z || e->z2() < pos.z) continue; // doesn't span the correct floor
-		if (e->skip_floor_ix(get_elevator_floor(pos.z, *e, get_window_vspace()))) continue; // floor not reachable from this elevator; unclear if we can get here
+		if (e->in_mall && !point_in_mall(pos))  continue; // mall elevator only reaches the mall
+		float const floor_spacing(e->in_mall ? get_mall_floor_spacing() : get_window_vspace());
+		
+		if (e->in_backrooms) {
+			if (!(interior->has_backrooms && point_in_extended_basement_not_basement(pos))) continue; // backrooms elevator only reaches the backrooms
+			
+			if (has_water()) { // skip if on first floor and second floor is underwater
+				float const fc_thick(get_fc_thickness()), top_floor_zval(e->z2() - floor_spacing + fc_thick), sec_floor_zval(e->z2() - 2.0*floor_spacing + fc_thick);
+				if (pos.z > top_floor_zval && interior->water_zval > sec_floor_zval) continue;
+			}
+		}
+		if (e->skip_floor_ix(get_elevator_floor(pos.z, *e, floor_spacing))) continue; // floor not reachable from this elevator; unclear if we can get here
 		// skip if elevator is currently in use?; skip elevator if wait pos is blocked?
 		float const dsq(p2p_dist_xy_sq(pos, e->get_cube_center()));
 		if (nearest < 0 || dsq < dmin_sq) {nearest = (e - interior->elevators.begin()); dmin_sq = dsq;}
-	}
+	} // for e
 	return nearest;
 }
 
@@ -2654,14 +2665,17 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		else {
 			if (person.goal_type == GOAL_TYPE_ELEVATOR) {
 				elevator_t &e(get_elevator(person.cur_elevator));
+				float const e_floor_spacing(e.in_mall ? get_mall_floor_spacing() : floor_spacing);
 				// floor index relative to this elevator, not the room or building
-				unsigned const cur_floor(get_elevator_floor(person.pos.z, e, floor_spacing)), num_floors(round_fp(e.dz()/floor_spacing));
+				unsigned const cur_floor(get_elevator_floor(person.pos.z, e, e_floor_spacing)), num_floors(round_fp(e.dz()/e_floor_spacing));
 				assert(num_floors > 1);
 				assert(cur_floor  < num_floors);
 
 				// select the destination floor, different from the current floor; this must be done before calling the elevator so that we know if we're going up or down
-				while (1) {
-					person.dest_elevator_floor = rgen.rand() % num_floors;
+				for (unsigned n = 0; n < 1000; ++n) { // should exit after a few iterations, but add a cap of 1000 just in case
+					person.dest_elevator_floor = (rgen.rand() % num_floors);
+					// check for backrooms floors that are underwater
+					if (e.in_backrooms && has_water() && (e.z1() + e_floor_spacing*person.dest_elevator_floor + fc_thick) < interior->water_zval) continue;
 					if (person.dest_elevator_floor != cur_floor && !e.skip_floor_ix(person.dest_elevator_floor)) break; // floor is valid
 				}
 				bool const is_up(person.dest_elevator_floor > cur_floor);
