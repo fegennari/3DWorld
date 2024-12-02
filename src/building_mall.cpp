@@ -487,28 +487,65 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 	} // for f
 	if (MALL_FLOOR_HEIGHT == 2.0) { // connect back hallways with stairs and/or elevator; only valid for exactly N*floor (N=2) spacing
 		for (unsigned d = 0; d < 2; ++d) { // each end
-			vector<unsigned> const &stacks(hall_stacks[d]);
-			unsigned const stack_height(stacks.size());
+			vector<unsigned> const &stack(hall_stacks[d]);
+			unsigned const stack_height(stack.size());
 			if (stack_height < 2) continue; // need at least two floors to connect with elevator or stairs
-			cube_t hall_span(get_room(stacks.front())); // lowest level
-			hall_span.union_with_cube(get_room(stacks.back())); // highest level
+			cube_t hall_span(get_room(stack.front())); // lowest level
+			hall_span.union_with_cube(get_room(stack.back())); // highest level
+			float const hall_center(hall_span.get_center_dim(!dim));
 			// add an elevator connected to hall_span
-			float const dsign(d ? 1.0 : -1.0), wall_pos(hall_span.d[dim][d]);
+			bool const elevator_side(rgen.rand_bool());
+			float const hall_offset((elevator_side ? 1.0 : -1.0)*1.4*doorway_width), dsign(d ? 1.0 : -1.0), wall_pos(hall_span.d[dim][d]);
 			cube_t elevator_bc;
 			set_cube_zvals(elevator_bc, hall_span.z1(), (hall_span.z2() + floor_spacing - window_vspace)); // extend a full mall floor on the top
-			set_wall_width(elevator_bc, hall_span.get_center_dim(!dim), 0.8*doorway_width, !dim);
+			set_wall_width(elevator_bc, (hall_center + hall_offset), 0.8*doorway_width, !dim);
 			elevator_bc.d[dim][!d] = wall_pos;
-			elevator_bc.d[dim][ d] = wall_pos + dsign*1.5*doorway_width;
+			elevator_bc.d[dim][ d] = wall_pos + dsign*1.5*doorway_width; // depth
+			assert(elevator_bc.is_strictly_normalized());
 
 			if (!is_store_placement_invalid(elevator_bc)) {
-				interior->elevators.emplace_back(elevator_bc, stacks.front(), dim, !d, 1, 1, 2); // at_edge=1, interior_room=1, in_mall=2 (back hallway)
+				interior->elevators.emplace_back(elevator_bc, stack.front(), dim, !d, 1, 1, 2); // at_edge=1, interior_room=1, in_mall=2 (back hallway)
 				cube_t elevator_cut(elevator_bc);
 				elevator_cut.d[dim][!d] -= dsign*2.0*wall_thickness; // extend a bit into the hallway
 				subtract_cube_from_cubes(elevator_cut, interior->walls[dim], nullptr, 0); // no holes; clip_in_z=0
 				interior->basement_ext_bcube.assign_or_union_with_cube(elevator_bc); // required for elevator lights logic
+				for (unsigned i : stack) {get_room(i).has_elevator = 1;} // elevator connects to all rooms in this stack
 			}
 			// add U-shaped stairs connected to hall_span
-			// TODO: stairs should have alternate floors blocked
+			cube_t stairs;
+			set_cube_zvals(stairs, hall_span.z1(), hall_span.z2());
+			set_wall_width(stairs, (hall_center - hall_offset), 1.0*doorway_width, !dim); // shift opposite the elevator dir
+			stairs.d[dim][!d] = wall_pos;
+			stairs.d[dim][ d] = wall_pos + dsign*4.0*doorway_width; // depth
+			assert(stairs.is_strictly_normalized());
+
+			if (!is_store_placement_invalid(elevator_bc)) {
+				//unsigned const stairs_num_floors(2*stack_height - 1); // 2 floors per hallway except for the top
+				unsigned const stairs_num_floors(stack_height);
+				interior->stairwells.emplace_back(stairs, stairs_num_floors, dim, d, SHAPE_U);
+				interior->stairwells.back().in_mall = 2;
+
+				for (unsigned f = 1; f < stairs_num_floors; ++f) { // skip bottom floor
+					float const z(hall_span.z1() + f*floor_spacing), zc(z - fc_thick), zf(z + fc_thick);
+					landing_t landing(stairs, 0, f, dim, d, 1, SHAPE_U, 0, (f+1 == stairs_num_floors), 0, 0, 1);
+					landing.in_mall = 2;
+					set_cube_zvals(landing, zc, zf);
+					interior->landings.push_back(landing);
+				}
+				cube_t stairs_cut(stairs);
+				stairs_cut.d[dim][!d] -= dsign*2.0*wall_thickness; // extend a bit into the hallway
+				subtract_cube_from_cubes(stairs_cut, interior->walls[dim], nullptr, 0); // no holes; clip_in_z=0
+				interior->basement_ext_bcube.assign_or_union_with_cube(stairs);
+				for (unsigned i : stack) {get_room(i).has_stairs = 1;} // all rooms in this stack have stairs (on their first floors)
+				cube_t bot_floor(stairs), top_ceil(stairs);
+				bot_floor.z2() = hall_span.z1() + fc_thick;
+				top_ceil .z1() = hall_span.z2() - fc_thick;
+				interior->floors  .push_back(bot_floor);
+				interior->ceilings.push_back(top_ceil );
+				// TODO: stairs should have alternate floors blocked?
+				// TODO: railing height, steps too high, player can't walk up, wider landing
+				// TODO: floor number
+			}
 		} // for d
 	}
 }
@@ -624,7 +661,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 
 	// gather railing cuts and plant locs
 	for (stairwell_t const &s : interior->stairwells) {
-		if (!s.in_mall) continue;
+		if (s.in_mall != 1) continue; // not in mall concourse
 		cube_t cut(s);
 		set_cube_zvals(cut, s.zc(), s.z2()-0.5*floor_spacing); // extends from floor at top of stairs half a floor up
 		cut.expand_in_dim( s.dim, doorway_width); // add padding on both ends

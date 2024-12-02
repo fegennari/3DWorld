@@ -1487,7 +1487,8 @@ struct breaker_zone_t {
 };
 
 struct stairs_landing_base_t : public oriented_cube_t {
-	bool bend_dir=0, roof_access=0, stack_conn=0, in_ext_basement=0, in_mall=0, in_backrooms=0, against_wall[2]={};
+	bool bend_dir=0, roof_access=0, stack_conn=0, in_ext_basement=0, in_backrooms=0, against_wall[2]={};
+	uint8_t in_mall=0; // 0=not in mall, 1=in mall concourse, 2=in mall back area/hallway
 	uint8_t num_stairs=0; // used for malls, since floor spacing may be larger
 	stairs_shape shape=SHAPE_STRAIGHT;
 

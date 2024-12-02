@@ -2798,6 +2798,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		wall.d[dim][0]     = wall.d[dim][1] = front_wall;
 		wall.d[dim][ dir] += 0.5 *dsign*wall_thickness;
 		wall.d[dim][!dir] -= 0.01*dsign*wall_thickness; // slight shift to make sure interior of wall is inside elevator light range
+		assert(wall.is_strictly_normalized());
 
 		if (i->skip_floors_mask > 0) { // block off any unreachable floors
 			for (unsigned f = 0; f < 64; ++f) {
@@ -2936,6 +2937,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			wall.d[dim][!dir] = i->d[dim][dir]; // against landing
 			wall.d[dim][ dir] = i->d[dim][dir] + (dir ? 1.0 : -1.0)*wall_thickness; // extend out by thickness
 			wall.expand_in_dim(!dim, 0.05*wall_thickness); // expand slightly to prevent Z-fighting with side of stair and end of railing
+			assert(wall.is_strictly_normalized());
 			objs.emplace_back(wall, TYPE_STAIR_WALL, 0, dim, dir, 0);
 			// add stairs in !dim
 			pos = inner_edge;
@@ -2957,6 +2959,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		else {wall.z2() -= 0.5*floor_thickness;} // prevent z-fighting on top floor
 		wall.z1() = max((stairs_zmin + half_thick), wall_bottom); // full height
 		set_wall_width(wall, i->d[dim][dir], wall_hw, dim);
+		assert(wall.is_strictly_normalized());
 		float walls_extend_to(0.0);
 
 		if ((i->shape == SHAPE_WALLED && !(i->against_wall[0] || i->against_wall[1]) && (!i->stack_conn || !i->is_at_top)) || is_U) {
@@ -2981,6 +2984,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				sub_floor.z2() = sub_floor.z1() + floor_thickness;
 				sub_floor.expand_in_dim(!dim, wall_hw); // cover the bottoms of the side walls
 				// add as both a stairs wall (for drawing) and a floor (for player collision)
+				assert(sub_floor.is_strictly_normalized());
 				objs.emplace_back(sub_floor, TYPE_STAIR_WALL, 0, dim, !dir, RO_FLAG_HANGING); // hanging so that the bottom surface is drawn
 				interior->floors.push_back(sub_floor);
 			}
