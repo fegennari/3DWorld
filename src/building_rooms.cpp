@@ -252,7 +252,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		else if (r->is_hallway) { // light size varies by hallway size
 			float const room_size(min(dx, dy)); // normalized to hallway width
 			light_size = max(0.06f*room_size, 0.67f*def_light_size);
-			if (is_mall_room) {light_density = 0.2;}
+			if (is_mall_room) {light_density = 0.25;}
 		}
 		else if (is_mall_bathroom) {
 			light_density = 0.5;
@@ -306,6 +306,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		if (light_density > 0.0) { // uniform 2D grid of lights
 			nx = max(1U, unsigned(light_density*dx/window_vspacing));
 			ny = max(1U, unsigned(light_density*dy/window_vspacing));
+			
+			if (r->is_hallway && is_mall_room) { // mall end back hallway should have an odd number of lights to get a center light by the elevator/stairs
+				unsigned &num(interior->extb_wall_dim ? nx : ny);
+				if (!(num & 1)) {++num;}
+			}
 		}
 		// hallway: place a light on each side (of the stairs if they exist), and also between stairs and elevator if there are both
 		if (r->is_hallway && r->has_elevator && r->has_stairs == 255) { // hall with elevator + stairs on all floors
@@ -463,9 +468,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				vector3d const shrink(0.5*light.dx()*sqrt((nx - 1)/nx), 0.5*light.dy()*sqrt((ny - 1)/ny), 0.0);
 				float xstep(dx/nx), ystep(dy/ny), xs(-0.5f*dx + 0.5*xstep), ys(-0.5f*dy + 0.5*ystep);
 
-				if (is_retail_room) { // custom logic to align lights to aisles
-					xs -= 0.25*xstep; ys -= 0.25*ystep;
-					xstep = dx/(nx - 0.5); ystep = dy/(ny - 0.5);
+				if (is_retail_room || (r->is_hallway && is_mall_room)) {
+					// custom logic to align lights to aisles in retail rooms and put lights toward ends of mall back hallways
+					if (nx > 1) {xs -= 0.25*xstep; xstep = dx/(nx - 0.5);}
+					if (ny > 1) {ys -= 0.25*ystep; ystep = dy/(ny - 0.5);}
 				}
 				for (unsigned y = 0; y < ny; ++y) {
 					for (unsigned x = 0; x < nx; ++x) {
