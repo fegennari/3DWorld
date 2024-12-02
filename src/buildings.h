@@ -1322,7 +1322,8 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 	};
 	// at_edge is used to avoid expanding the roof elevator cap
 	bool at_edge=0, going_up=0, at_dest=0, stop_on_passing_floor=0, hold_doors=0, hold_movement=0, under_skylight=0;
-	bool is_moving=0, interior_room=0, in_mall=0, in_backrooms=0, no_buttons=0;
+	bool is_moving=0, interior_room=0, in_backrooms=0, no_buttons=0;
+	uint8_t in_mall=0; // 0=not in mall, 1=in mall concourse, 2=in mall back area/hallway
 	uint8_t adj_pair_ix=0; // 0=not a pair, 1=first, 2=second
 	unsigned room_id=0, car_obj_id=0, light_obj_id=0, button_id_start=0, button_id_end=0, num_occupants=0;
 	uint64_t skip_floors_mask=0; // good for up to 64 floors
@@ -1330,8 +1331,9 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 	float open_amt=0;
 	deque<call_request_t> call_requests; // used as a queue
 
-	elevator_t(cube_t const &c, unsigned rid, bool dim_, bool dir_, bool at_edge_, bool interior_room_, bool in_mall_=0, bool in_br=0) :
-		oriented_cube_t(c, dim_, dir_), at_edge(at_edge_), interior_room(interior_room_), in_backrooms(in_br), in_mall(in_mall_), room_id(rid) {assert(is_strictly_normalized());}
+	elevator_t(cube_t const &c, unsigned rid, bool dim_, bool dir_, bool at_edge_, bool interior_room_, uint8_t in_mall_=0, bool in_br=0) :
+		oriented_cube_t(c, dim_, dir_), at_edge(at_edge_), interior_room(interior_room_), in_backrooms(in_br), in_mall(in_mall_), room_id(rid)
+	{assert(is_strictly_normalized());}
 	float get_wall_thickness () const {return 0.02*get_width();}
 	float get_frame_width    () const {return ELEVATOR_FRAME_WIDTH*get_width();} // to each side of elevator door
 	unsigned get_door_face_id() const {return (2*dim + dir);}

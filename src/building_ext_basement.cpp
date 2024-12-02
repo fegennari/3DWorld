@@ -739,6 +739,12 @@ bool building_interior_t::point_in_ext_basement_room(point const &pos, float exp
 	}
 	if (point_in_tunnel(pos, expand)) return 1;
 	if (pool.valid && pool.contains_pt_exp(pos, expand)) return 1;
+
+	if (has_mall()) { // check player in mall elevator, which may be outside building rooms
+		for (elevator_t const &e : elevators) {
+			if (e.in_mall && e.contains_pt(pos)) return 1;
+		}
+	}
 	return 0;
 }
 // returns true if cube is completely contained in any single room; tunnels are ignored

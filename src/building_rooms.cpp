@@ -2790,7 +2790,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				objs.emplace_back(wall, TYPE_STAIR_WALL, 0, dim, !dir, RO_FLAG_HANGING); // hanging so that the bottom surface is drawn
 			}
 		}
-		if (floor_spacing > window_vspacing + half_thick) { // cover the tops of high ceiling mall elevators
+		if (i->in_mall == 1 && floor_spacing > window_vspacing + half_thick) { // cover the tops of high ceiling mall concourse elevators
 			for (unsigned f = 0; f < num_floors; ++f) {
 				float const zval(i->z1() + f*floor_spacing);
 				set_cube_zvals(wall, (zval + window_vspacing - half_thick), (zval + floor_spacing - half_thick));

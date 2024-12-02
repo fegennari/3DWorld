@@ -645,7 +645,6 @@ unsigned building_t::setup_multi_floor_room(extb_room_t &room, door_t const &doo
 	rand_gen_t elevator_rgen(rgen); // deep copy so that we don't change the rgen sequence
 
 	if (elevator_rgen.rand_bool()) { // add an elevator 50% of the time
-		// TODO: people should not select dest elevator floors that have water
 		float const room_height(room.dz()), elevator_width(1.5*door_width), front_spacing(elevator_width); // elevator depth == elevator_width
 		cube_t elevator_area(room);
 		elevator_area.expand_by_xy(-max(front_spacing, wall_spacing)); // shrink to keep away from walls and avoid exit doors

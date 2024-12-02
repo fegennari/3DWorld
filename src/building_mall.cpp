@@ -284,7 +284,7 @@ void building_t::add_mall_store(cube_t const &store, cube_t const &window_area, 
 void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir, rand_gen_t &rgen) { // and bathrooms
 	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float const min_width(4.0*window_vspace), max_width(9.0*window_vspace), min_depth(6.0*window_vspace), max_depth(8.0*window_vspace);
-	float const bathroom_width(4.0*window_vspace);
+	float const fc_thick(get_fc_thickness()), doorway_width(get_doorway_width()), bathroom_width(4.0*window_vspace);
 	unsigned const num_floors(interior->num_extb_floors);
 	bool added_bathrooms(0), at_stack_end[2] = {0, 0};
 	vect_cube_t &side_walls(interior->walls[!dim]);
@@ -355,7 +355,6 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 				if (is_bathroom) {
 					bool const use_low_ceiling(1); // looks better since stalls don't extend very high
 					bool const wm_first(rgen.rand_bool());
-					float const fc_thick(get_fc_thickness()), doorway_width(get_doorway_width());
 					float const sep_pos(0.5*(pos + next_pos)); // separator between men's and women's rooms
 					cube_t door, bathrooms(store);
 					set_cube_zvals(door, store.z1()+fc_thick, store.z1()+window_vspace-fc_thick);
@@ -421,7 +420,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 		// add a narrower non-public hallway behind each row of stores
 		bool const is_tall_room(floor_spacing > 1.1*window_vspace);
 		unsigned const rooms_end(rooms.size());
-		float const doorway_width(get_doorway_width()), hall_width(2.0*doorway_width);
+		float const hall_width(2.0*doorway_width);
 		cube_t hall(floor_bcube); // extends full length of the mall, including the end stores
 		hall.expand_in_dim(dim, wall_thickness); // extend a bit further to allow connecting a parallel hallway between the two side hallways at each end
 		hall.z2() = floor_bcube.z1() + window_vspace; // normal height
@@ -493,7 +492,23 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			if (stack_height < 2) continue; // need at least two floors to connect with elevator or stairs
 			cube_t hall_span(get_room(stacks.front())); // lowest level
 			hall_span.union_with_cube(get_room(stacks.back())); // highest level
-			// TODO: add U-shaped stairs and/or elevator connected to hall_span; stairs should have alternate floors blocked and elevators should have mall floor spacing
+			// add an elevator connected to hall_span
+			float const dsign(d ? 1.0 : -1.0), wall_pos(hall_span.d[dim][d] - dsign*0.1*wall_thickness);
+			cube_t elevator_bc;
+			set_cube_zvals(elevator_bc, hall_span.z1(), (hall_span.z2() + floor_spacing - window_vspace)); // extend a full mall floor on the top
+			set_wall_width(elevator_bc, hall_span.get_center_dim(!dim), 0.8*doorway_width, !dim);
+			elevator_bc.d[dim][!d] = wall_pos;
+			elevator_bc.d[dim][ d] = wall_pos + dsign*1.5*doorway_width;
+
+			if (!is_store_placement_invalid(elevator_bc)) {
+				interior->elevators.emplace_back(elevator_bc, stacks.front(), dim, !d, 1, 1, 2); // at_edge=1, interior_room=1, in_mall=2 (back hallway)
+				cube_t elevator_cut(elevator_bc);
+				elevator_cut.d[dim][!d] -= dsign*2.0*wall_thickness; // extend a bit into the hallway
+				subtract_cube_from_cubes(elevator_cut, interior->walls[dim], nullptr, 0); // no holes; clip_in_z=0
+				interior->basement_ext_bcube.assign_or_union_with_cube(elevator_bc); // required for elevator lights logic
+			}
+			// add U-shaped stairs connected to hall_span
+			// TODO: stairs should have alternate floors blocked
 		} // for d
 	}
 }
@@ -662,7 +677,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		}
 	} // for e
 	for (elevator_t const &e : interior->elevators) {
-		if (!e.in_mall) continue;
+		if (e.in_mall != 1) continue; // not in mall concourse
 		railing_cuts.push_back(e.get_bcube_padded(doorway_width));
 		++num_elevators;
 		// place clocks on back of elevator for each floor, and front if there's space; we know there's vertical space since elevators are only added if there are multiple floors
