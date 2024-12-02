@@ -49,7 +49,7 @@ float const WHEATER_PIPE_H_DIST    = 0.92; // relative to radius
 float const PLANT_POT_RADIUS       = 0.75; // relative to plant bcube radius
 float const DEF_NORM_BIAS_SCALE    = 10.0; // see shadow_map.part
 float const CITY_BIAS_SCALE        = 0.1;
-float const RETAIL_SMAP_DSCALE     = 0.7; // player shadow caster distance for retail rooms relative to light radius
+float const RETAIL_SMAP_DSCALE     = 0.7; // player shadow caster distance for retail rooms and malls relative to light radius
 float const PERSON_INT_SMAP_DSCALE = 0.8; // building person shadow caster distance relative to light radius
 float const ESCALATOR_SPEED        = 1.0/TICKS_PER_SECOND; // in steps per tick
 float const MALL_FLOOR_HEIGHT      = 2.0; // as a mutiple of normal building floor height
@@ -1397,6 +1397,7 @@ struct room_t : public cube_t { // size=56
 	bool is_mall             () const {return (get_room_type(0) == RTYPE_MALL     );}
 	bool is_store            () const {return (get_room_type(0) == RTYPE_STORE    );}
 	bool is_retail           () const {return (get_room_type(0) == RTYPE_RETAIL   );}
+	bool is_mall_or_store    () const {return (is_mall() || is_store());}
 	bool is_apt_or_hotel_room() const {return (unit_id > 0);}
 	bool has_room_of_type(room_type type) const;
 	void init_pre_populate(bool is_first_pass);
@@ -2004,7 +2005,7 @@ struct building_t : public building_geom_t {
 	bool point_under_attic_roof(point const &pos, vector3d *const cnorm=nullptr) const;
 	bool point_in_attic(point const &pos, vector3d *const cnorm=nullptr) const;
 	bool cube_in_attic(cube_t const &c) const;
-	bool point_in_mall(point const &pos) const {return (has_mall() && point_in_extended_basement_not_basement(pos));}
+	bool point_in_mall(point const &pos) const {return (has_mall() && point_in_extended_basement_not_basement(pos));} // including stores and hallways
 	bool check_point_xy_in_part(point const &pos) const;
 	bool player_can_see_outside() const;
 	void set_building_colors(building_colors_t &bcolors) const;

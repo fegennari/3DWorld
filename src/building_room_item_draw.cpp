@@ -2010,7 +2010,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		}
 	}
 	if (player_in_building_or_doorway) {
-		bool const skip_animals(shadow_only && building.has_retail() && building.get_retail_part().contains_pt(camera_bs));
+		// draw animals; skip animal shadows for retail rooms and malls/stores as an optimization (must agree with lighting code)
+		bool const skip_animals(shadow_only && (building.has_retail() && building.get_retail_part().contains_pt(camera_bs)) || building.point_in_mall(camera_bs));
 		if (!skip_animals) {draw_animals(s, building, oc, xlate, camera_bs, shadow_only, reflection_pass, check_clip_cube);}
 	}
 	if (disable_cull_face) {glEnable(GL_CULL_FACE);} // re-enable face culling
@@ -2545,7 +2546,10 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 		if (fabs(viewer.z - c.zc()) > (reflection_pass ? 1.0 : 0.5)*floor_spacing) { // on different floors
 			float max_sep_dist(floor_spacing);
 			
-			if (has_tall_retail()) { // handle ceilings more than one part tall
+			if (point_in_mall(viewer) && point_in_mall(center)) { // taller ceilings in malls
+				max_sep_dist = get_mall_floor_spacing();
+			}
+			else if (has_tall_retail()) { // handle ceilings more than one part tall
 				cube_t const retail_part(get_retail_part());
 				if (retail_part.contains_pt(viewer) || retail_part.contains_pt(center)) {max_sep_dist *= retail_floor_levels;}
 			}

@@ -1569,6 +1569,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	}
 	if (has_room_geom() && frame_counter <= (int)interior->room_geom->last_animal_update_frame+1) { // animals were updated this frame or the previous frame
 		if (has_retail() && get_retail_part().contains_pt(camera_rot)) {} // optimization: no dynamic animal shadows in retail area
+		else if (point_in_mall(camera_rot)) {} // optimization: no dynamic animal shadows in malls
 		else { // add a base index to each animal group to make all moving objects unique
 			get_animal_shadow_casters(interior->room_geom->rats,    moving_objs, xlate, 10000); // Note: sewer_rats don't cast shadows
 			get_animal_shadow_casters(interior->room_geom->spiders, moving_objs, xlate, 20000);
@@ -2023,8 +2024,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, dir, bwidth);
 		if (track_lights) {enabled_bldg_lights.push_back(lpos_rot);}
 		//++num_add;
-		// use smaller shadow radius for retail rooms, since there are so many lights (meaning shadows are less visible and perf is more important)
-		float const light_radius_shadow((in_retail_room ? RETAIL_SMAP_DSCALE : 1.0)*light_radius);
+		// use smaller shadow radius for retail rooms, malls, and stores since there are so many lights (meaning shadows are less visible and perf is more important)
+		bool const reduced_shadows(in_retail_room || room.is_mall_or_store());
+		float const light_radius_shadow((reduced_shadows ? RETAIL_SMAP_DSCALE : 1.0)*light_radius);
 		bool force_smap_update(0);
 
 		// check for dynamic shadows; check the player first; use full light_radius_shadow
@@ -2057,7 +2059,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			
 			if (check_dynamic_shadows) {
 				// use full light radius for attics since they're more open
-				float const dshadow_radius((is_in_attic ? 1.0 : (in_retail_room ? RETAIL_SMAP_DSCALE : PERSON_INT_SMAP_DSCALE))*light_radius);
+				float const dshadow_radius((is_in_attic ? 1.0 : (reduced_shadows ? RETAIL_SMAP_DSCALE : PERSON_INT_SMAP_DSCALE))*light_radius);
 				if (building_action_key) {force_smap_update = 1;} // toggling a door state or interacting with objects invalidates shadows in the building for that frame
 				check_for_dynamic_shadow_casters(interior->people, ped_bcubes, moving_objs, clipped_bc, lpos_rot,
 					dshadow_radius, stairs_light, xlate, (check_building_people && !is_lamp), shadow_caster_hash); // no people shadows for lam[s

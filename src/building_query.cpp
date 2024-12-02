@@ -1344,7 +1344,8 @@ bool building_t::all_room_int_doors_closed(unsigned room_ix, float zval) const {
 	if (room.open_wall_mask)                      return 0; // office hallways and open wall rooms can connect to other hallways with no doors
 	if (room.is_parking() || room.is_backrooms()) return 0; // these cases are excluded because they have interior doors or ramps
 	if (room.is_retail())                         return 0; // retail doesn't work because objects may be visible through stairs (similar to office hallway)
-	if (room.has_interior_window())               return 0; // can see through the window
+	if (room.is_mall_or_store())                  return 0; // malls and stores have gated doorways rather than doors that can be seen through
+	if (room.has_interior_window())               return 0; // can see through the window (conference rooms, mall stores)
 	min_eq(zval, room.z2()); max_eq(zval, room.z1()); // clamp to room bounds - is this needed?
 	if (room.has_stairs_on_floor(room.get_floor_containing_zval(zval, get_window_vspace()))) return 0; // might be visible through stairs
 	// if the room is a single floor, check doors within the full Z span; otherwise, only consider doors overlapping zval
