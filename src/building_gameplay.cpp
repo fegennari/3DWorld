@@ -523,11 +523,11 @@ bool phone_is_ringing() {return phone_manager.is_phone_ringing();}
 
 tape_manager_t tape_manager;
 
-unsigned const NUM_ACHIEVEMENTS = 17;
+unsigned const NUM_ACHIEVEMENTS = 19;
 
 class achievement_tracker_t {
 	// Rat Food, Fish Food, Top Secret Document, Mr. Yuck, Zombie Hunter, Royal Flush, Zombie Bashing, One More Drink, Bathroom Reader, TP Artist,
-	// Master Lockpick, Squeaky Clean, Sleep with the Fishes, Splat the Spider, 7 years of bad luck, Tastes Like Chicken, Spam Risk, Ball in Pocket
+	// Master Lockpick, Squeaky Clean, Sleep with the Fishes, Splat the Spider, 7 years of bad luck, Tastes Like Chicken, Spam Risk, Ball in Pocket, Soft Locked
 	set<string> achievements;
 	// some way to make this persistent, print these out somewhere, or add small screen icons?
 public:
@@ -1766,12 +1766,12 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 		bc.d[old_obj.dim][old_obj.dir] += (old_obj.dir ? 1.0 : -1.0)*building.get_wall_thickness();
 		building.remove_paint_in_cube(bc);
 	}
-	if (type == TYPE_RUG || type == TYPE_FLOORING) {
+	else if (type == TYPE_RUG || type == TYPE_FLOORING) {
 		cube_t bc(old_obj);
 		bc.z2() += building.get_wall_thickness();
 		building.remove_paint_in_cube(bc);
 	}
-	if (type == TYPE_TCAN) {
+	else if (type == TYPE_TCAN) {
 		unsigned const ix_end(min(size_t(obj_id+11U), objs.size())); // support for up to 10 trash items
 
 		for (unsigned i = obj_id+1; i < ix_end; ++i) {
@@ -1779,7 +1779,21 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 			if (c.type == TYPE_TRASH && old_obj.contains_pt(c.get_cube_center())) {c.remove();} // remove trash as well
 		}
 	}
-	if (type == TYPE_BUTTON || type == TYPE_SWITCH || type == TYPE_CLOCK || ((type == TYPE_MONITOR || type == TYPE_TV) && old_obj.is_hanging())) {
+	if (type == TYPE_BUTTON && old_obj.in_elevator()) {
+		assert(old_obj.room_id < building.interior->elevators.size());
+		elevator_t &e(building.interior->elevators[old_obj.room_id]);
+		bool has_remaining_button(0);
+
+		for (auto j = objs.begin() + e.button_id_start; j != objs.begin() + e.button_id_end; ++j) {
+			if (j->type == TYPE_BUTTON && j->in_elevator()) {has_remaining_button = 1; break;}
+		}
+		if (!has_remaining_button) { // no buttons left inside the elevator
+			if ((e.at_dest || !e.was_called()) && e.open_amt == 0.0) {register_achievement("Soft Locked");}
+			e.no_buttons = 1;
+		}
+	}
+	// in-elevator buttons don't leave wires since they don't move with the elevator, so this must be an 'else if'
+	else if (type == TYPE_BUTTON || type == TYPE_SWITCH || type == TYPE_CLOCK || ((type == TYPE_MONITOR || type == TYPE_TV) && old_obj.is_hanging())) {
 		float const wire_thickness(min(0.5f*building.get_trim_thickness(), 0.25f*old_obj.get_depth()));
 		replace_with_hanging_wires(obj, old_obj, wire_thickness, 0); // vertical=0
 	}

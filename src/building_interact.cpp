@@ -1811,6 +1811,11 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 		e->is_moving = 0; // reset this frame
 
 		if (e->at_dest || !e->was_called()) { // stopped on a floor (either in between stops or at the end of the call requests)
+			if (e->no_buttons && e->contains_pt(player_pos)) { // player stuck in elevator with no buttons - open doors
+				e->open_amt = min((e->open_amt + delta_open_amt), 1.0f);
+				update_ddd  = 1; // regen verts for door
+				continue;
+			}
 			bool const time_for_doors_to_close(e->at_dest_frame > 0 && frame_counter > (e->at_dest_frame + elevator_wait_time) && !e->hold_doors);
 
 			if (!e->was_called() && e->open_amt > 0.0 && time_for_doors_to_close) { // inactive, close the doors
