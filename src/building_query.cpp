@@ -2156,7 +2156,7 @@ template <typename T> bool has_cube_line_coll(point const &p1, point const &p2, 
 	}
 	return 0;
 }
-bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2, bool inc_pg_br_walls) const { // and interior doors
+bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2, bool inc_pg_br_walls) const { // and interior doors/windows/gates
 	if (!interior) return 0;
 
 	for (unsigned d = 0; d < 2; ++d) {
@@ -2172,6 +2172,12 @@ bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2,
 		}
 	}
 	if (check_line_int_interior_window(p1, p2)) return 1;
+
+	if (has_mall()) { // check closed mall store gates
+		for (store_doorway_t const &d : interior->mall_info->store_doorways) {
+			if (d.closed && d.line_intersects(p1, p2)) return 1;
+		}
+	}
 	return 0;
 }
 bool building_t::line_intersect_stairs_or_ramp(point const &p1, point const &p2) const {

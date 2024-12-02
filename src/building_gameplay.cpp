@@ -1483,7 +1483,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			if (i->type == TYPE_MIRROR  && !i->is_house())         continue; // can only pick up mirrors from houses, not office buildings
 			if (i->type == TYPE_TABLE   && i->shape == SHAPE_CUBE) continue; // can only pick up short (TV) tables and cylindrical tables
 			if (i->type == TYPE_BED     && i->taken_level > 2)     continue; // can only take pillow, sheets, and mattress - not the frame
-			if (i->type == TYPE_SHELVES   && i->obj_expanded())    continue; // shelves are   already expanded, can no longer select this object
+			if (i->type == TYPE_SHELVES && i->obj_expanded())      continue; // shelves are   already expanded, can no longer select this object
 			if (i->type == TYPE_MIRROR  && i->is_open())           continue; // can't take mirror/medicine cabinet until it's closed
 			if (i->type == TYPE_LIGHT   && !i->is_visible())       continue; // can't take light attached to a ceiling fan as a separate object
 			if (i->type == TYPE_MWAVE   && i->is_nonempty())       continue; // can't take a microwave with something inside it
