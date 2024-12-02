@@ -646,14 +646,13 @@ unsigned building_t::setup_multi_floor_room(extb_room_t &room, door_t const &doo
 
 	if (elevator_rgen.rand_bool()) { // add an elevator 50% of the time
 		// TODO: people should not select dest elevator floors that have water
-		// TODO: fix floor names
 		float const room_height(room.dz()), elevator_width(1.5*door_width), front_spacing(elevator_width); // elevator depth == elevator_width
 		cube_t elevator_area(room);
 		elevator_area.expand_by_xy(-max(front_spacing, wall_spacing)); // shrink to keep away from walls and avoid exit doors
 		gen_xy_pos_for_cube_obj(elevator_bc, elevator_area, vector3d(0.5*elevator_width, 0.5*elevator_width, room_height), room_height, elevator_rgen, 1); // place_at_z1=1
 		assert(interior->ext_basement_hallway_room_id >= 0);
 		bool const edim(elevator_rgen.rand_bool()), edir(elevator_rgen.rand_bool());
-		interior->elevators.emplace_back(elevator_bc, interior->ext_basement_hallway_room_id, edim, edir, 0, 1); // at_edge=0, interior_room=1
+		interior->elevators.emplace_back(elevator_bc, interior->ext_basement_hallway_room_id, edim, edir, 0, 1, 0, 1); // at_edge=0, interior_room=1, in_mall=0, in_br=1
 		avoid.push_back(interior->elevators.back().get_bcube_padded(front_spacing)); // avoid overlapping/blocking stairs
 	}
 	// add stairs, floors, and ceilings
@@ -688,11 +687,13 @@ unsigned building_t::setup_multi_floor_room(extb_room_t &room, door_t const &doo
 					for (unsigned d = 0; d < 2; ++d) {set_wall_width(cand, rgen.rand_uniform(place_area.d[d][0], place_area.d[d][1]), size[d], d);}
 					set_cube_zvals(cand, zf-floor_spacing, zc+floor_spacing); // top of floor below to bottom of ceiling on this floor
 					assert(cand.is_strictly_normalized());
-					stairwell_t const S(cand, 1, dim, dir, sshape, 0, 1, 1); // floors=1, roof=0, stacked=1, ext_basement=1
+					stairwell_t S(cand, 1, dim, dir, sshape, 0, 1, 1); // floors=1, roof=0, stacked=1, ext_basement=1
+					S.in_backrooms = 1;
 					cube_t const stairs_exp(get_stairs_bcube_expanded(S, door_width, wall_thickness, door_width));
 					if (has_bcube_int(stairs_exp, avoid)) continue; // bad placement
 					subtract_cube_from_cubes(cand, cf_to_add);
 					landing_t landing(cand, 0, 0, dim, dir, 1, sshape, 0, 1, 1, 0, 1); // elevator=0, floor=0, railing=1, roof=0, at_top=1, stacked=1, ramp=0, stacked=1, extb=1
+					landing.in_backrooms = 1;
 					set_cube_zvals(landing, zc, zf);
 					interior->landings  .push_back(landing);
 					interior->stairwells.push_back(S);

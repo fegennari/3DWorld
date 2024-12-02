@@ -2645,7 +2645,7 @@ void add_elevator_button(point const &pos, float button_radius, bool dim, bool d
 	objs.back().obj_id = floor_id; // encode floor index as obj_id
 }
 // Note: floor_ix=1 is ground floor in the following two functions
-void add_floor_number(unsigned floor_ix, unsigned floor_offset, bool has_parking_garage, bool in_mall, ostringstream &oss) {
+void add_floor_number(unsigned floor_ix, unsigned floor_offset, bool has_parking_garage, bool in_mall, bool in_backrooms, ostringstream &oss) {
 	int const adj_floor_ix(int(floor_ix) - int(floor_offset));
 	oss.str("");
 	
@@ -2654,13 +2654,17 @@ void add_floor_number(unsigned floor_ix, unsigned floor_offset, bool has_parking
 		if (adj_floor_ix <= 0) {oss << floor_ix;} // mall floor
 		else {oss << "G";} // above ground - mark as ground floor
 	}
+	else if (in_backrooms) {
+		assert(adj_floor_ix <= 0); // must be below ground
+		oss << "B" << (1 - adj_floor_ix);
+	}
 	else {
 		if (adj_floor_ix <= 0) {oss << (has_parking_garage ? "P" : "B") << (1 - adj_floor_ix);} // basement or parking garage floors
 		else {oss << adj_floor_ix;} // above ground floors
 	}
 }
-void set_floor_text_for_sign(room_object_t &sign, unsigned floor_ix, unsigned floor_offset, bool has_parking_garage, bool in_mall, ostringstream &oss) {
-	add_floor_number(floor_ix, floor_offset, has_parking_garage, in_mall, oss);
+void set_floor_text_for_sign(room_object_t &sign, unsigned floor_ix, unsigned floor_offset, bool has_parking_garage, bool in_mall, bool in_backrooms, ostringstream &oss) {
+	add_floor_number(floor_ix, floor_offset, has_parking_garage, in_mall, in_backrooms, oss);
 	sign.obj_id = register_sign_text(oss.str());
 	int const adj_floor_ix(int(floor_ix) - (in_mall ? 0 : int(floor_offset)));
 	float width_adj(0.0);
@@ -2723,7 +2727,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		sign.expand_in_dim(!i->dim, stairs_sign_width); // set sign width
 		sign.z1() -= 2.5*wall_thickness; // set sign height
 		objs.emplace_back(sign, TYPE_SIGN, 0, i->dim, !i->dir, flags, 1.0, SHAPE_CUBE, DK_BLUE); // no room_id
-		set_floor_text_for_sign(objs.back(), real_floor, floor_offset, has_parking_garage, i->in_mall, oss);
+		set_floor_text_for_sign(objs.back(), real_floor, floor_offset, has_parking_garage, i->in_mall, i->in_backrooms, oss);
 
 		// if this is the top landing, we need to add a floor sign on the ceiling above it for the top floor
 		if (i->is_at_top && !i->roof_access) {
@@ -2734,7 +2738,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				flags |= RO_FLAG_ADJ_TOP; // dra the top surface
 			}
 			objs.emplace_back(sign, TYPE_SIGN, 0, i->dim, !i->dir, flags, 1.0, SHAPE_CUBE, DK_BLUE); // no room_id
-			set_floor_text_for_sign(objs.back(), (real_floor + 1), floor_offset, has_parking_garage, i->in_mall, oss);
+			set_floor_text_for_sign(objs.back(), (real_floor + 1), floor_offset, has_parking_garage, i->in_mall, i->in_backrooms, oss);
 		}
 	} // for i
 
@@ -2764,7 +2768,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			sign.z1() = i->z1()   + f*floor_spacing + 0.5*window_vspacing;
 			sign.z2() = sign.z1() + 0.1*ewidth;
 			objs.emplace_back(sign, TYPE_SIGN, i->room_id, dim, dir, (RO_FLAG_NOCOLL /*| RO_FLAG_HAS_EXTRA*/), 1.0, SHAPE_CUBE, DK_BLUE); // no frame?
-			set_floor_text_for_sign(objs.back(), f+1, floor_offset, has_parking_garage, i->in_mall, oss);
+			set_floor_text_for_sign(objs.back(), f+1, floor_offset, has_parking_garage, i->in_mall, i->in_backrooms, oss);
 		}
 		// add concrete flooring at the base of the elevator, over the carpet
 		cube_t efloor(*i);
