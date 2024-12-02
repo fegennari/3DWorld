@@ -1767,12 +1767,14 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 
 		if (old_obj.flags & RO_FLAG_ADJ_HI) { // wall light
 			dim = old_obj.dim; dir = !old_obj.dir;
-			wire.d[dim][dir] = old_obj.get_center_dim(dim);
+			wire.d[dim][!dir] += (dir ? 1.0 : -1.0)*0.1*old_obj.get_sz_dim(dim); // pull back slightly
+			wire.d[dim][ dir] += (dir ? 1.0 : -1.0)*wire_radius; // slightly into wall so that end is not visible when rotated
 			set_wall_width(wire, wire.get_center_dim(!dim), wire_radius, !dim);
 			set_wall_width(wire, wire.zc(), wire_radius, 2);
 		}
 		else { // ceiling light
 			wire.z1() += 0.1*old_obj.dz(); // shorten wires up from bottom
+			wire.z2() += wire_radius; // slightly into wall so that end is not visible when rotated
 			resize_around_center_xy(wire, wire_radius);
 			wire_flags |= RO_FLAG_HANGING;
 		}

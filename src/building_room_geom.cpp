@@ -757,27 +757,34 @@ void building_room_geom_t::add_drain_pipe(room_object_t const &c) { // is_small=
 	}
 }
 
-void building_room_geom_t::add_electrical_wire(room_object_t const &c) { // is_small=1
+void building_room_geom_t::add_electrical_wire(room_object_t const &c, vector3d const &rot_axis) { // is_small=1
+	bool const vertical(c.is_hanging());
+	float const radius(c.get_ortho_radius()), core_radius(0.67*radius), rot_angle(12.0*TO_RADIANS);
+	float const length(vertical ? c.dz() : c.get_sz_dim(c.dim)), insul_pullback(min(0.33f*length, 4.0f*radius));
+	point rot_pt(c.get_cube_center());
+	if (vertical) {rot_pt.z = c.z2();} else {rot_pt[c.dim] = c.d[c.dim][c.dir];}
 	// plastic cover
 	cube_t plastic(c);
 	rgeom_mat_t &plastic_mat(get_untextured_material(0, 0, 1)); // unshadowed, small
+	unsigned const pastic_verts_start(plastic_mat.itri_verts.size());
 	colorRGBA const color(apply_light_color(c));
 
-	if (c.is_hanging()) { // vertical
-		plastic.z1() += 0.33*c.dz(); // strip back
+	if (vertical) { // vertical
+		plastic.z1() += insul_pullback; // strip back
 		plastic_mat.add_vcylin_to_verts(plastic, color, 1, 0); // draw sides and bottom
 	}
 	else { // horizontal
-		plastic.d[c.dim][!c.dir] = c.get_center_dim(c.dim); // strip back
+		plastic.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*insul_pullback; // strip back
 		plastic_mat.add_ortho_cylin_to_verts(plastic, color, c.dim, c.dir, !c.dir);
 	}
+	rotate_verts(plastic_mat.itri_verts, rot_axis, rot_angle, rot_pt, pastic_verts_start);
 	// copper core
-	float const core_radius(0.67*c.get_ortho_radius());
 	cube_t core(c);
 	rgeom_mat_t &copper_mat(get_metal_material(0, 0, 1, 0, COPPER_C)); // unshadowed, small=1
+	unsigned const copper_verts_start(copper_mat.itri_verts.size());
 	colorRGBA const copper_color(apply_light_color(c, COPPER_C));
 
-	if (c.is_hanging()) { // vertical
+	if (vertical) { // vertical
 		resize_around_center_xy(core, core_radius);
 		copper_mat.add_vcylin_to_verts(core, copper_color, 1, 0); // draw sides and bottom
 	}
@@ -786,19 +793,22 @@ void building_room_geom_t::add_electrical_wire(room_object_t const &c) { // is_s
 		set_wall_width(core, core.zc(), core_radius, 2);
 		copper_mat.add_ortho_cylin_to_verts(core, copper_color, c.dim, c.dir, !c.dir);
 	}
+	rotate_verts(copper_mat.itri_verts, rot_axis, rot_angle, rot_pt, copper_verts_start);
 }
 void building_room_geom_t::add_electrical_wire_pair(room_object_t const &c) {
 	// expand one wire into a wire pair; will extend outside the original bcube bounds
-	float const dist(2.0*c.get_ortho_radius());
+	bool const vertical(c.is_hanging());
+	float const dist(1.25*c.get_ortho_radius()); // close but not quite touching
 	vector3d delta; // from center to wire
 	if (c.is_hanging()) {delta[c.room_id & 1] = dist;} // choose X or Y
 	else {delta[(c.room_id & 1) ? 2 : !c.dim] = dist;}
+	vector3d const rot_axis(cross_product((vertical ? plus_z : (c.dim ? plus_y : plus_x)), delta));
 
 	for (unsigned d = 0; d < 2; ++d) {
 		room_object_t wire(c);
 		wire.color = (d ? BLACK : RED);
 		wire.translate(delta*(d ? 1.0 : -1.0));
-		add_electrical_wire(wire);
+		add_electrical_wire(wire, rot_axis*((bool(d) ^ c.dir ^ vertical) ? -1.0 : 1.0));
 	}
 }
 

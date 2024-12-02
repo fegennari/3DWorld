@@ -1169,7 +1169,7 @@ struct building_room_geom_t {
 	void add_hanger_rod(room_object_t const &c);
 	void add_drain_cover(cube_t const &c, colorRGBA const &color);
 	void add_drain_pipe(room_object_t const &c);
-	void add_electrical_wire(room_object_t const &c);
+	void add_electrical_wire(room_object_t const &c, vector3d const &rot_axis);
 	void add_electrical_wire_pair(room_object_t const &c);
 	void add_key(room_object_t const &c);
 	void add_money(room_object_t const &c);
