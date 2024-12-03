@@ -546,7 +546,6 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 				interior->floors  .push_back(bot_floor);
 				interior->ceilings.push_back(top_ceil );
 				// TODO: missing bottom floor lights
-				// TODO: add wall light
 				// TODO: small railing at top?
 			}
 		} // for d
@@ -595,6 +594,7 @@ void building_t::add_mall_stairs() { // connecting to the entrance door
 	interior->mall_info->ent_stairs = stairwell_t(stair, 1, dim, !dir, SHAPE_FAN);
 }
 
+// and back hallway stairs lights
 void building_t::add_mall_lower_floor_lights(room_t const &room, unsigned room_id, unsigned lights_start, light_ix_assign_t &light_ix_assign) {
 	// Note: lights should be in 2-3 rows, and no lights should be partially overlapping an opening in !dim
 	bool const dim(interior->extb_wall_dim);
@@ -629,6 +629,15 @@ void building_t::add_mall_lower_floor_lights(room_t const &room, unsigned room_i
 			objs.push_back(light);
 		} // for i
 	} // for f
+	for (stairwell_t const &s : interior->stairwells) {
+		if (!s.in_mall || !s.is_u_shape() || s.not_an_exit_mask == 0) continue;
+		unsigned const light_ix(light_ix_assign.get_next_ix()); // can this be reused?
+		
+		for (unsigned n = 0; n < s.num_floors; ++n) {
+			if (!(s.not_an_exit_mask & (1 << n))) continue;
+			add_U_stair_landing_lights(s, room_id, light_ix, (s.z1() + n*get_window_vspace()));
+		}
+	}
 }
 
 struct plant_loc_t : public sphere_t {

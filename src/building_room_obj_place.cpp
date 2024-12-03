@@ -3574,22 +3574,28 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	//cout << TXT(temp_objs.size()) << endl;
 
 	if (has_tall_retail()) { // add a small wall light at the top of the stairs since the stairwell is extra tall
-		// find central stairs (should be first stairs)
+		// find central stairs (should be first stairs), but might not be the vertical segment in the retail area
 		for (stairwell_t const &s : interior->stairwells) {
 			if (s.z2() < room.z2() || !s.intersects(room)) continue; // wrong stairs
-			float const landing_width(s.get_retail_landing_width(floor_spacing));
-			float const radius(0.15*landing_width), dsign(s.dir ? -1.0 : 1.0), wall_pos(s.d[s.dim][!s.dir] + dsign*landing_width);
-			cube_t light;
-			light.d[s.dim][!s.dir] = wall_pos;
-			light.d[s.dim][ s.dir] = wall_pos - dsign*0.01*floor_spacing; // extend out from wall
-			set_wall_width(light, s.get_center_dim(!s.dim), radius, !s.dim); // width
-			set_wall_width(light, (room.z2() - get_fc_thickness() - 0.25*floor_spacing), radius, 2); // height
-			colorRGBA const light_color(get_light_color_temp(0.6)); // slightly blue-ish white
-			objs.emplace_back(light, TYPE_LIGHT, room_id, s.dim, s.dir, (RO_FLAG_NOCOLL | RO_FLAG_LIT | RO_FLAG_ADJ_HI | RO_FLAG_RSTAIRS), 0.0, SHAPE_CYLIN, light_color);
-			objs.back().obj_id = light_ix_assign.get_next_ix();
+			add_U_stair_landing_lights(s, room_id, light_ix_assign.get_next_ix(), (room.z2() - floor_spacing));
 			break;
-		} // for s
+		}
 	}
+}
+
+void building_t::add_U_stair_landing_lights(stairwell_t const &s, unsigned room_id, unsigned light_ix, float floor_zval) {
+	float const floor_spacing(get_window_vspace());
+	float const landing_width(s.get_retail_landing_width(floor_spacing));
+	float const radius(0.15*landing_width), dsign(s.dir ? -1.0 : 1.0), wall_pos(s.d[s.dim][!s.dir] + dsign*landing_width);
+	cube_t light;
+	light.d[s.dim][!s.dir] = wall_pos;
+	light.d[s.dim][ s.dir] = wall_pos - dsign*0.01*floor_spacing; // extend out from wall
+	set_wall_width(light, s.get_center_dim(!s.dim), radius, !s.dim); // width
+	set_wall_width(light, (floor_zval - get_fc_thickness() + 0.75*floor_spacing), radius, 2); // height
+	colorRGBA const light_color(get_light_color_temp(0.6)); // slightly blue-ish white
+	vect_room_object_t &objs(interior->room_geom->objs);
+	objs.emplace_back(light, TYPE_LIGHT, room_id, s.dim, s.dir, (RO_FLAG_NOCOLL | RO_FLAG_LIT | RO_FLAG_ADJ_HI | RO_FLAG_RSTAIRS), 0.0, SHAPE_CYLIN, light_color);
+	objs.back().obj_id = light_ix;
 }
 
 void building_t::add_checkout_objs(cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool dim, bool dir, bool cr_dir) {
