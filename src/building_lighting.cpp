@@ -1531,7 +1531,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 			for (cube_with_ix_t const &s : stair_ramp_cuts) {
 				if (s.contains_pt(camera_rot)) {camera_on_stairs = stairs_or_ramp_visible = camera_by_stairs = camera_somewhat_by_stairs = 1;} // player on this stairs or ramp
-
+				
 				if ((s.ix & 2) && s.z2() >= floor_above_z) { // cut above
 					cube_t cut(s);
 					set_cube_zvals(cut, ceil_above_z, floor_above_z);
@@ -1551,13 +1551,18 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (stairs_or_ramp_visible) {camera_somewhat_by_stairs |= bool(room_or_adj_room_has_stairs(camera_room, camera_bs.z, 1, 1));} // inc_adj_rooms=1, check_door_open=1
 			// if player is by the stairs in a room with all closed doors, it's still possible to see a light shining through a door of the floor above or below
 			camera_in_closed_room = (!camera_by_stairs && !player_on_attic_stairs && all_room_int_doors_closed(room_ix, camera_z));
-		}
+		} // end room_ix >= 0
 		else if (point_in_attic(camera_rot)) {
 			if (show_room_name) {lighting_update_text = room_names[RTYPE_ATTIC];}
 		}
+		else if (has_mall() && camera_in_ext_basement) { // player in the mall; maybe inside stairs that aren't part of a room
+			for (stairwell_t const &s : interior->stairwells) {
+				if (s.contains_pt(camera_rot)) {camera_on_stairs = stairs_or_ramp_visible = camera_by_stairs = camera_somewhat_by_stairs = 1;}
+			}
+		}
 		//lighting_update_text = ((is_sphere_lit(camera_rot, get_scaled_player_radius()) || is_sphere_lit((camera_rot - vector3d(0.0, 0.0, get_player_height())), get_scaled_player_radius())) ? "Lit" : "Unlit");
 	}
-	else {
+	else { // !camera_in_building
 		cube_t bcube_exp(bcube);
 		bcube_exp.expand_by_xy(2.0*window_vspacing);
 		camera_near_building = bcube_exp.contains_pt(camera_bs) || camera_can_see_ext_basement;

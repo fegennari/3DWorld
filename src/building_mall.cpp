@@ -545,7 +545,6 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 				top_ceil .z1() = hall_span.z2() - fc_thick;
 				interior->floors  .push_back(bot_floor);
 				interior->ceilings.push_back(top_ceil );
-				// TODO: missing bottom floor lights
 				// TODO: small railing at top?
 			}
 		} // for d
