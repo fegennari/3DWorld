@@ -1992,7 +1992,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			if (e.in_mall == 2) { // add trim to the front sides of mall back hallway elevator
 				cube_t front_inner(front);
 				front_inner.expand_in_dim(!e.dim, -trim_thickness); // slight shrink to prevent Z-fighting
-				add_trim_for_door_or_int_window(front_inner, e.dim, 0, 0, door_trim_width, 0.0, 0.8*door_trim_exp, get_mall_floor_spacing(), 0.0);
+				add_trim_for_door_or_int_window(front_inner, e.dim, 0, 0, door_trim_width, 0.0, 0.8*door_trim_exp, 0.0, 0.0);
 			}
 			cube_t door_trim(e);
 			set_wall_width(door_trim, front_face, 1.6*trim_thickness, e.dim);
@@ -2023,6 +2023,12 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		vector<stairwell_t> stairs_to_add;
 
 		for (stairwell_t const &s : interior->stairwells) {
+			if (s.in_mall == 2) { // mall back hallway stairs - add vertical trim
+				cube_t front(get_trim_cube(s, s.dim, !s.dir, trim_thickness));
+				front.expand_in_dim(!s.dim, -0.28*wall_thickness); // slight shrink to prevent Z-fighting
+				add_trim_for_door_or_int_window(front, s.dim, 0, 0, door_trim_width, 0.0, 0.8*door_trim_exp, 0.0, 0.0);
+				continue;
+			}
 			if (has_parking_garage && s.z2() <= ground_floor_z1) continue; // skip parking garage and extended basement stairs
 			if (!s.is_u_shape() && !s.has_walled_sides())        continue;
 			stairs_to_add.push_back(s);
@@ -2734,7 +2740,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		float const floor_z1((i->in_mall ? interior->basement_ext_bcube : bcube).z1());
 		float const floor_spacing((i->in_mall ? get_mall_floor_spacing() : window_vspacing)); // uses mall floor spacing for back hallway stairs
 		unsigned const floor_offset(calc_floor_offset(floor_z1, window_vspacing)); // use building z1 - should return number of underground levels
-		unsigned const real_floor(round_fp((i->z1() - floor_z1)/floor_spacing + (i->in_mall ? 0.5 : 1.0))); // mall back hallway landings start at odd floors
+		unsigned const real_floor(round_fp((i->z1() - floor_z1)/floor_spacing + (i->in_mall ? 0.5 : 0.0))); // mall back hallway landings start at odd floors
 		unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
 		point center;
 		center[ i->dim] = i->d[i->dim][!i->dir]; // front of stairs
