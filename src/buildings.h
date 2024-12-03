@@ -1808,7 +1808,8 @@ struct building_interior_t {
 	colorRGBA get_attic_ceiling_color() const;
 	room_t const &get_garage_room() const {assert(garage_room >= 0); return get_room(garage_room);}
 	vector<room_t>::const_iterator ext_basement_rooms_start() const;
-	bool point_in_ext_basement_room(point const &pos, float expand=0.0) const;
+	bool point_in_U_stairwell(point const &pos, float floor_spacing, bool mall_only=0) const;
+	bool point_in_ext_basement_room(point const &pos, float floor_spacing, float expand=0.0) const;
 	// tunnels
 	bool point_in_tunnel(point const &pos, float expand=0.0) const;
 	bool point_near_tunnel_entrance(point const &pos) const;
@@ -1994,10 +1995,10 @@ struct building_t : public building_geom_t {
 	bool check_sphere_coll_inner(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm=nullptr, bool check_interior=0) const;
 	bool check_sphere_coll_interior(point &pos, point const &p_last, float radius, bool is_in_attic, bool xy_only, vector3d *cnorm) const;
 	bool check_cube_intersect_non_main_part(cube_t const &c) const;
-	bool point_in_elevator (point const &pos, bool check_elevator_car=0) const;
-	bool point_in_escalator(point const &pos) const {return (interior && check_vect_cube_contains_pt(interior->escalators, pos));}
-	bool point_in_stairwell(point const &pos) const {return (interior && check_vect_cube_contains_pt(interior->stairwells, pos));}
-	bool point_in_U_stairwell(point const &pos) const;
+	bool point_in_elevator   (point const &pos, bool check_elevator_car=0) const;
+	bool point_in_escalator  (point const &pos) const {return (interior && check_vect_cube_contains_pt(interior->escalators, pos));}
+	bool point_in_stairwell  (point const &pos) const {return (interior && check_vect_cube_contains_pt(interior->stairwells, pos));}
+	bool point_in_U_stairwell(point const &pos) const {return (interior && interior->point_in_U_stairwell(pos, get_window_vspace()));}
 	bool check_pos_in_unlit_room(point const &pos) const;
 	bool check_pos_in_unlit_room_recur(point const &pos, std::set<unsigned> &rooms_visited, int known_room_id=-1) const;
 	bool is_room_windowless(room_t const &room) const;
@@ -2324,7 +2325,7 @@ public:
 	bool point_in_water_area(point const &p, bool full_room_height=1) const;
 	bool point_in_or_above_pool(point const &pt) const;
 	bool set_float_height(point &pos, float radius, float ceil_zval, float density=0.5) const;
-	template<typename T> float get_SEE_floor_spacing(T const &v) const {return (v.in_mall ? get_mall_floor_spacing() : get_window_vspace());}
+	float get_elevator_floor_spacing(elevator_t const &e) const {return (e.in_mall ? get_mall_floor_spacing() : get_window_vspace());}
 	void print_building_manifest() const;
 	void print_building_stats() const;
 private:

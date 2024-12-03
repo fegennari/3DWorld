@@ -1187,15 +1187,13 @@ bool building_t::point_in_elevator(point const &pos, bool check_elevator_car) co
 	}
 	return 0;
 }
-bool building_t::point_in_U_stairwell(point const &pos) const {
-	if (!interior) return 0;
-
-	for (stairwell_t const &s : interior->stairwells) {
-		if (!s.is_u_shape())     continue;
-		if (s.contains_pt(pos))  return 1;
-		if (!s.not_an_exit_mask) continue;
+bool building_interior_t::point_in_U_stairwell(point const &pos, float floor_spacing, bool mall_only) const {
+	for (stairwell_t const &s : stairwells) {
+		if (!s.is_u_shape())         continue;
+		if (mall_only && !s.in_mall) continue;
+		if (s.contains_pt(pos))      return 1;
+		if (!s.not_an_exit_mask)     continue;
 		// handle landing
-		float const floor_spacing(get_window_vspace());
 		int const floor_ix(max(0, int((pos.z - s.z1())/floor_spacing)));
 			
 		if (s.not_an_exit_mask & (1 << floor_ix)) {
@@ -2081,7 +2079,7 @@ int building_t::check_point_or_cylin_contained(point const &pos, float xy_radius
 	if (inc_ext_basement && point_in_extended_basement_not_basement(pr)) { // extended basement is not rotated
 		// this check must be accurate; since the extended basement is sparse, we need to check every extended basement room
 		// expand by wall thickness to avoid failing when crossing between two rooms that don't exactly line up, such as with conn room boundary with adj building
-		return (interior->point_in_ext_basement_room(pr, get_wall_thickness()) ? 3 : 0);
+		return (interior->point_in_ext_basement_room(pr, get_window_vspace(), get_wall_thickness()) ? 3 : 0);
 	}
 	if (inc_ext_basement && has_pool() && interior->pool.contains_pt(pr)) return 3; // in the pool
 

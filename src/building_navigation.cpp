@@ -1680,7 +1680,7 @@ int building_t::find_nearest_elevator_this_floor(point const &pos) const {
 	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
 		if (e->z1() > pos.z || e->z2() < pos.z) continue; // doesn't span the correct floor
 		if (e->in_mall && !point_in_mall(pos))  continue; // mall elevator only reaches the mall
-		float const floor_spacing(e->in_mall ? get_mall_floor_spacing() : get_window_vspace());
+		float const floor_spacing(get_elevator_floor_spacing(*e));
 		
 		if (e->in_backrooms) {
 			if (!(interior->has_backrooms && point_in_extended_basement_not_basement(pos))) continue; // backrooms elevator only reaches the backrooms
@@ -2665,7 +2665,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		else {
 			if (person.goal_type == GOAL_TYPE_ELEVATOR) {
 				elevator_t &e(get_elevator(person.cur_elevator));
-				float const e_floor_spacing(e.in_mall ? get_mall_floor_spacing() : floor_spacing);
+				float const e_floor_spacing(get_elevator_floor_spacing(e));
 				// floor index relative to this elevator, not the room or building
 				unsigned const cur_floor(get_elevator_floor(person.pos.z, e, e_floor_spacing)), num_floors(round_fp(e.dz()/e_floor_spacing));
 				assert(num_floors > 1);

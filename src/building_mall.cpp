@@ -516,22 +516,25 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			set_cube_zvals(stairs, hall_span.z1(), hall_span.z2());
 			set_wall_width(stairs, (hall_center - hall_offset), 1.0*doorway_width, !dim); // shift opposite the elevator dir
 			stairs.d[dim][!d] = wall_pos;
-			stairs.d[dim][ d] = wall_pos + dsign*4.0*doorway_width; // depth
+			stairs.d[dim][ d] = wall_pos + dsign*3.2*doorway_width; // depth
 			assert(stairs.is_strictly_normalized());
 
 			if (!is_store_placement_invalid(elevator_bc)) {
-				//unsigned const stairs_num_floors(2*stack_height - 1); // 2 floors per hallway except for the top
-				unsigned const stairs_num_floors(stack_height);
-				interior->stairwells.emplace_back(stairs, stairs_num_floors, dim, d, SHAPE_U);
-				interior->stairwells.back().in_mall = 2;
+				unsigned const stairs_num_floors(2*stack_height - 1); // 2 floors per hallway except for the top
+				stairwell_t stairwell(stairs, stairs_num_floors, dim, d, SHAPE_U);
+				stairwell.in_mall = 2;
 
 				for (unsigned f = 1; f < stairs_num_floors; ++f) { // skip bottom floor
-					float const z(hall_span.z1() + f*floor_spacing), zc(z - fc_thick), zf(z + fc_thick);
+					float const z(hall_span.z1() + f*window_vspace), zc(z - fc_thick), zf(z + fc_thick);
 					landing_t landing(stairs, 0, f, dim, d, 1, SHAPE_U, 0, (f+1 == stairs_num_floors), 0, 0, 1);
 					landing.in_mall = 2;
+					if (!(f & 1)) {landing.not_an_exit = 1;}
 					set_cube_zvals(landing, zc, zf);
 					interior->landings.push_back(landing);
-				}
+					if (f < 16 && (f & 1)) {stairwell.not_an_exit_mask |= (1 << f);} // odd floors are not exits
+				} // for f
+				interior->landings.back().is_at_top = 1;
+				interior->stairwells.emplace_back(stairwell);
 				cube_t stairs_cut(stairs);
 				stairs_cut.d[dim][!d] -= dsign*2.0*wall_thickness; // extend a bit into the hallway
 				subtract_cube_from_cubes(stairs_cut, interior->walls[dim], nullptr, 0); // no holes; clip_in_z=0
@@ -542,9 +545,10 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 				top_ceil .z1() = hall_span.z2() - fc_thick;
 				interior->floors  .push_back(bot_floor);
 				interior->ceilings.push_back(top_ceil );
-				// TODO: stairs should have alternate floors blocked?
-				// TODO: railing height, steps too high, player can't walk up, wider landing
-				// TODO: floor number
+				// TODO: missing bottom floor lights
+				// TODO: add wall light
+				// TODO: edge trim
+				// TODO: small railing at top?
 			}
 		} // for d
 	}

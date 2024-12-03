@@ -1240,7 +1240,7 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building, point
 		float const fc_thick_scale(building.get_elevator_fc_thick_scale());
 		add_elevator_doors(e, fc_thick_scale); // add dynamic elevator doors
 		// draw elevator car for this elevator
-		float const e_floor_spacing(building.get_SEE_floor_spacing(e));
+		float const e_floor_spacing(building.get_elevator_floor_spacing(e));
 		unsigned const floor_offset(building.calc_floor_offset(e.z1(), e_floor_spacing));
 		add_elevator(objs[e.car_obj_id], e, 2.0/obj_scale, fc_thick_scale, floor_offset, e_floor_spacing,
 			floor_spacing, building.has_parking_garage, !building.interior->elevators_disabled);

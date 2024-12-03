@@ -730,7 +730,7 @@ vector<room_t>::const_iterator building_interior_t::ext_basement_rooms_start() c
 	assert((unsigned)ext_basement_hallway_room_id < rooms.size());
 	return rooms.begin() + ext_basement_hallway_room_id;
 }
-bool building_interior_t::point_in_ext_basement_room(point const &pos, float expand) const {
+bool building_interior_t::point_in_ext_basement_room(point const &pos, float floor_spacing, float expand) const {
 	if (ext_basement_hallway_room_id < 0)                 return 0; // no ext basement rooms
 	if (!basement_ext_bcube.contains_pt_exp(pos, expand)) return 0;
 
@@ -742,11 +742,9 @@ bool building_interior_t::point_in_ext_basement_room(point const &pos, float exp
 
 	if (has_mall()) { // check player in mall elevator or U-shaped stairs, which may be outside building rooms
 		for (elevator_t const &e : elevators) {
-			if (e.in_mall && e.contains_pt(pos)) return 1;
+			if (e.in_mall && e.contains_pt_exp(pos, expand)) return 1;
 		}
-		for (stairwell_t const &s : stairwells) {
-			if (s.in_mall && s.shape == SHAPE_U && s.contains_pt(pos)) return 1;
-		}
+		if (point_in_U_stairwell(pos, floor_spacing, 1)) return 1; // in_mall=1; doesn't handle expand
 	}
 	return 0;
 }

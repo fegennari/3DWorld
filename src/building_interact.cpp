@@ -1889,7 +1889,7 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 			continue;
 		}
 		obj.translate_dim(2, dist); // translate in Z
-		obj.item_flags = uint16_t(floor((obj.zc() - e->z1())/building.get_SEE_floor_spacing(*e))); // set current floor
+		obj.item_flags = uint16_t(floor((obj.zc() - e->z1())/building.get_elevator_floor_spacing(*e))); // set current floor
 		e->is_moving   = 1;
 		assert(e->light_obj_id < objs.size());
 		room_object_t &light(objs[e->light_obj_id]); // light for this elevator
@@ -1998,7 +1998,7 @@ void building_t::register_button_event(room_object_t const &button) {
 }
 void building_t::call_elevator_to_floor(elevator_t &elevator, unsigned floor_ix, bool is_inside_elevator, bool is_up) {
 	if (interior->elevators_disabled) return; // nope
-	float const targ_z(elevator.z1() + max(get_SEE_floor_spacing(elevator)*floor_ix, 0.05f*get_floor_thickness())); // bottom of elevator car for this floor
+	float const targ_z(elevator.z1() + max(get_elevator_floor_spacing(elevator)*floor_ix, 0.05f*get_floor_thickness())); // bottom of elevator car for this floor
 	assert(targ_z <= bcube.z2()); // sanity check
 	// inside: check if button is above or below current elevator car pos, otherwise depends on the call button pressed
 	bool const dest_is_up(targ_z > interior->room_geom->objs[elevator.car_obj_id].z1());

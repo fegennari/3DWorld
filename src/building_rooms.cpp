@@ -1837,7 +1837,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 						
 						for (unsigned d = 0; d < 3 && !any_inside; ++d) {
 							test_pt[!dim] = test_vals[d];
-							any_inside   |= interior->point_in_ext_basement_room(test_pt);
+							any_inside   |= interior->point_in_ext_basement_room(test_pt, window_vspacing);
 						}
 						ext_dirs[dir] = !any_inside;
 					} // for dir
@@ -2696,7 +2696,7 @@ unsigned building_t::calc_floor_offset(float zval, float floor_spacing) const { 
 
 float stairs_landing_base_t::get_wall_hwidth(float floor_spacing) const {
 	float const stair_dz(get_stair_dz(floor_spacing));
-	return min(STAIRS_WALL_WIDTH_MULT*max(get_step_length(), stair_dz), 0.25f*stair_dz) * (in_mall ? 1.9 : 1.0); // widen mall railings
+	return min(STAIRS_WALL_WIDTH_MULT*max(get_step_length(), stair_dz), 0.25f*stair_dz) * ((in_mall == 1) ? 1.9 : 1.0); // widen mall concourse stairs railings
 }
 unsigned stairs_landing_base_t::get_num_stairs() const {
 	if (num_stairs > 0) return num_stairs;
@@ -2731,8 +2731,10 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
 		if (i->for_elevator || i->for_ramp || !i->is_u_shape() || i->not_an_exit) continue; // not U-shaped stairs, or no exit
 		// stacked conn stairs start at floor 0 but are really the top floor of the part below; i->floor is not a global index and can't be used
-		unsigned const floor_offset(calc_floor_offset(bcube.z1(), window_vspacing)); // use building z1 - should return number of underground levels
-		unsigned const real_floor(round_fp((i->z1() - bcube.z1())/get_window_vspace()));
+		float const floor_z1((i->in_mall ? interior->basement_ext_bcube : bcube).z1());
+		float const floor_spacing((i->in_mall ? get_mall_floor_spacing() : window_vspacing)); // uses mall floor spacing for back hallway stairs
+		unsigned const floor_offset(calc_floor_offset(floor_z1, window_vspacing)); // use building z1 - should return number of underground levels
+		unsigned const real_floor(round_fp((i->z1() - floor_z1)/floor_spacing + (i->in_mall ? 0.5 : 1.0))); // mall back hallway landings start at odd floors
 		unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
 		point center;
 		center[ i->dim] = i->d[i->dim][!i->dir]; // front of stairs
@@ -2748,7 +2750,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 		// if this is the top landing, we need to add a floor sign on the ceiling above it for the top floor
 		if (i->is_at_top && !i->roof_access) {
-			sign.translate_dim(2, window_vspacing); // move up one floor
+			sign.translate_dim(2, floor_spacing); // move up one floor
 
 			if (check_skylight_intersection(sign)) { // check for sklight and move sign to the side
 				sign.translate_dim(!i->dim, 0.5*(i->get_width() - stairs_sign_width)); // translate to the positive side
@@ -2771,9 +2773,8 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		objs.emplace_back(light, TYPE_LIGHT, i->room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_IN_ELEV | RO_FLAG_LIT), 0.0, SHAPE_CYLIN, WHITE);
 		objs.back().obj_id = uint16_t(i - interior->elevators.begin()); // encode elevator index as obj_id
 		// add floor signs
-		float const floor_spacing(get_SEE_floor_spacing(*i));
-		unsigned const num_floors(calc_num_floors(*i, floor_spacing, floor_thickness));
-		unsigned const floor_offset(calc_floor_offset(i->z1(), floor_spacing));
+		float const floor_spacing(get_elevator_floor_spacing(*i));
+		unsigned const num_floors(calc_num_floors(*i, floor_spacing, floor_thickness)), floor_offset(calc_floor_offset(i->z1(), floor_spacing));
 		float const ewidth(i->get_width()), dsign(dir ? 1.0 : -1.0), front_wall(i->d[dim][dir]);
 		cube_t sign;
 		sign.d[dim][0] = sign.d[dim][1] = front_wall;
@@ -2820,7 +2821,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 	// add elevator buttons for each floor; must be done before setting stairs_start
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
-		float const button_radius(0.3*wall_thickness), ewidth(i->get_width()), floor_spacing(get_SEE_floor_spacing(*i));
+		float const button_radius(0.3*wall_thickness), ewidth(i->get_width()), floor_spacing(get_elevator_floor_spacing(*i));
 		unsigned const num_floors(calc_num_floors(*i, floor_spacing, floor_thickness)), elevator_id(i - interior->elevators.begin());
 		assert(num_floors > 1); // otherwise, why have an elevator?
 		i->button_id_start = objs.size();
@@ -2864,7 +2865,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		unsigned const num_stairs(i->get_num_stairs());
 		// tag first floor of stairs as RO_FLAG_ADJ_BOT for proper player collisions; multi-floor stair landings start at floor_ix=1; single floor stairs have floor_ix=0
 		unsigned const stair_flags((i->floor_ix <= 1) ? RO_FLAG_ADJ_BOT : 0);
-		float const floor_spacing(get_SEE_floor_spacing(*i));
+		float const floor_spacing((i->in_mall == 1) ? get_mall_floor_spacing() : get_window_vspace()); // only mall concourse stairs have mall floor spacing
 		float const stair_dz(i->get_stair_dz(floor_spacing)), stair_height(stair_dz + floor_thickness), stair_z1h(0.4f*stair_height);
 		bool const dim(i->dim), dir(i->dir), is_U(i->is_u_shape()), has_side_walls(i->has_walled_sides() || is_U);
 		bool const has_wall_both_sides(i->against_wall[0] && i->against_wall[1]); // ext basement stairs
@@ -2976,17 +2977,33 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				float const landing_width(i->get_retail_landing_width(window_vspacing)), front_pos(i->d[dim][!dir]);
 				set_wall_width(front_wall, (front_pos + (dir ? -1.0 : 1.0)*(wall_hw + landing_width)), wall_hw, dim); // move to the front
 				objs.emplace_back(front_wall, TYPE_STAIR_WALL, 0, dim, !dir, 0); // add wall in front of stairs
-				walls_extend_to = front_wall.d[dim][dir];
 				cube_t sub_floor(*i);
 				sub_floor.d[dim][ dir] = front_pos - 0.25*(dir ? -1.0 : 1.0)*wall_hw; // move toward stairs slightly to prevent Z-fighting and fill the gap
 				sub_floor.d[dim][!dir] = front_wall.d[dim][!dir]; // furthest extent of wall
 				sub_floor.z1() = front_wall.z1() - half_thick;
-				sub_floor.z2() = sub_floor.z1() + floor_thickness;
+				sub_floor.z2() = sub_floor .z1() + floor_thickness;
 				sub_floor.expand_in_dim(!dim, wall_hw); // cover the bottoms of the side walls
 				// add as both a stairs wall (for drawing) and a floor (for player collision)
 				assert(sub_floor.is_strictly_normalized());
-				objs.emplace_back(sub_floor, TYPE_STAIR_WALL, 0, dim, !dir, RO_FLAG_HANGING); // hanging so that the bottom surface is drawn
+				unsigned const bot_flag(i->in_mall ? 0 : RO_FLAG_HANGING); // hanging so that the bottom surface is drawn, except for mall stairs that already have a ceiling
+				objs.emplace_back(sub_floor, TYPE_STAIR_WALL, 0, dim, !dir, bot_flag);
 				interior->floors.push_back(sub_floor);
+
+				if (i->in_mall) { // mall back hallway stairs
+					// add new side walls for this landing
+					for (unsigned d = 0; d < 2; ++d) { // sides of stairs
+						cube_t side_wall(wall);
+						set_cube_zvals(side_wall, front_wall.z1(), front_wall.z2());
+						set_wall_width(side_wall, i->d[!dim][d], wall_hw, !dim);
+						side_wall.d[dim][!dir] = front_wall.d[dim][dir]; // extend outward to meet front wall
+						objs.emplace_back(side_wall, TYPE_STAIR_WALL, 0, dim, dir);
+					}
+					// add ceiling under floor of hallway above
+					cube_t ceiling(sub_floor);
+					set_cube_zvals(ceiling, front_wall.z2(), front_wall.z2()+half_thick);
+					objs.emplace_back(ceiling, TYPE_STAIR_WALL, 0, dim, !dir, RO_FLAG_HANGING); // only need bottom surface
+				}
+				else {walls_extend_to = front_wall.d[dim][dir];} // retail stairs; extend upper walls
 			}
 		}
 		else {
@@ -3047,7 +3064,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 					railing.z1() += 0.15*stair_height; // shift up slightly so that the bottom doesn't clip through the bottom stair
 				}
 				objs.emplace_back(railing, TYPE_RAILING, 0, dim, railing_dir, flags, 1.0, SHAPE_CUBE, railing_color);
-				if (i->in_mall) {objs.back().state_flags = num_stairs;} // encode num_stairs in state_flags so that railing height can be drawn correctly
+				if (i->in_mall == 1) {objs.back().state_flags = num_stairs;} // encode num_stairs in state_flags so that railing height can be drawn correctly
 			}
 		} // for d
 		if (i->has_railing && is_U) { // add a railing for the back wall of U-shaped stairs
@@ -3174,7 +3191,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 		i->car_obj_id = objs.size();
 		unsigned const elevator_id(i - interior->elevators.begin()); // used for room_object_t::room_id
-		float const floor_spacing(get_SEE_floor_spacing(*i));
+		float const floor_spacing(get_elevator_floor_spacing(*i));
 		objs.emplace_back(get_init_elevator_car(*i), TYPE_ELEVATOR, elevator_id, i->dim, i->dir, RO_FLAG_DYNAMIC);
 		objs.back().drawer_flags = (uint16_t)calc_num_floors(*i, floor_spacing, floor_thickness); // store the number of floors in drawer_flags; used for drawing
 		objs.back().item_flags   =  uint16_t(floor((objs.back().zc() - i->z1())/floor_spacing)); // use correct starting floor index
