@@ -1746,8 +1746,8 @@ struct building_interior_t {
 	vect_cube_with_ix_t int_windows; // ix stores room index
 	vect_stairwell_t stairwells;
 	vect_tunnel_seg_t tunnels;
-	vector<door_t> doors;
-	vector<door_stack_t> door_stacks;
+	vect_door_t doors;
+	vect_door_stack_t door_stacks;
 	vector<landing_t> landings; // for stairs and elevators
 	vector<room_t> rooms;
 	vector<elevator_t> elevators;
@@ -2169,7 +2169,7 @@ struct building_t : public building_geom_t {
 
 	// building AI people
 	unsigned count_connected_room_components();
-	bool place_people_if_needed(unsigned building_ix, float radius, vector<point> &locs) const;
+	bool place_people_if_needed(unsigned building_ix, float radius, vect_point &locs) const;
 	void all_ai_room_update(rand_gen_t &rgen, float delta_dir);
 	int ai_room_update(person_t &person, float delta_dir, unsigned person_ix, rand_gen_t &rgen);
 	int run_ai_elevator_logic(person_t &person, float delta_dir, rand_gen_t &rgen);
@@ -2622,7 +2622,7 @@ private:
 	void register_button_event(room_object_t const &button);
 	void call_elevator_to_floor(elevator_t &elevator, unsigned floor_ix, bool is_inside_elevator, bool is_up);
 	void call_elevator_to_floor_and_light_nearest_button(elevator_t &elevator, unsigned floor_ix, bool is_inside_elevator, bool is_up);
-	void run_ball_update(vector<room_object_t>::iterator ball_it, point const &player_pos, float player_z1, bool player_is_moving);
+	void run_ball_update(vect_room_object_t::iterator ball_it, point const &player_pos, float player_z1, bool player_is_moving);
 	void update_pool_table(room_object_t &ball);
 	bool get_zval_for_pool_bottom(point const &pos, float &zval) const;
 	bool get_zval_of_floor(point const &pos, float radius, float &zval) const;

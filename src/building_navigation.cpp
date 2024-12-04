@@ -1954,7 +1954,7 @@ struct room_cand_t {
 	room_cand_t(unsigned r, unsigned f) : room_ix(r), floor_ix(f) {}
 };
 
-bool building_t::place_people_if_needed(unsigned building_ix, float radius, vector<point> &locs) const {
+bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect_point &locs) const {
 	if (!interior || interior->rooms.empty() || is_rotated()) return 0; // no people in these cases
 	if (interior->placed_people) return 0; // already placed
 	interior->placed_people = 1; // set, even if no people are placed below

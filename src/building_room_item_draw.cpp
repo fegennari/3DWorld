@@ -1263,7 +1263,7 @@ colorRGBA building_t::get_door_handle_color() const {
 }
 void building_room_geom_t::create_door_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Doors"); // 0.1ms
-	vector<door_t> const &doors(building.interior->doors);
+	vect_door_t const &doors(building.interior->doors);
 	uint8_t const door_type(building.is_residential() ? (uint8_t)tquad_with_ix_t::TYPE_HDOOR : (uint8_t)tquad_with_ix_t::TYPE_ODOOR);
 	bool const have_door_handle_model(global_building_params.add_door_handles && building_obj_model_loader.is_model_valid(OBJ_MODEL_DOOR_HANDLE));
 	colorRGBA const handle_color(global_building_params.add_door_handles ? building.get_door_handle_color() : WHITE);

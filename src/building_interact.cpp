@@ -1123,7 +1123,7 @@ void apply_building_gravity(float &vz, float dt_ticks) {
 	max_eq(vz, -TERM_VELOCITY);
 }
 
-void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point const &player_pos, float player_z1, bool player_is_moving) {
+void building_t::run_ball_update(vect_room_object_t::iterator ball_it, point const &player_pos, float player_z1, bool player_is_moving) {
 	room_object_t &ball(*ball_it);
 	assert(ball.has_dstate());
 	room_obj_dstate_t &dstate(interior->room_geom->get_dstate(ball));

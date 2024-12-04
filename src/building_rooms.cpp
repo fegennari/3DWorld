@@ -2422,7 +2422,7 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 	cube_t stairs_bcube(part);
 	stairs_bcube.expand_by_xy(0.25*floor_spacing); // allow stairs to go slightly outside the building bcube, but not enough to need a railing on the other side
 	vect_cube_t cand_steps;
-	vector<room_object_t> railings;
+	vect_room_object_t railings;
 
 	// add stairs going to upper level doors
 	for (unsigned ix : to_add_stairs) {

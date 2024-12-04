@@ -1081,7 +1081,7 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 	float extb_pipe_radius(has_pool() ? base_pipe_radius : 0.0); // pools use cold water
 	bool extb_pipe_has_hot(0);
 	cube_t extb_area;
-	vector<room_object_t> water_heaters;
+	vect_room_object_t water_heaters;
 
 	// start with sewer pipes and water heaters
 	for (room_object_t const &i : interior->room_geom->objs) { // check all objects placed so far
