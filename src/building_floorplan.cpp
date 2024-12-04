@@ -2427,7 +2427,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					// handle non-cube building; need to check both parts above and below, so clip our test cube to each part
 					cube_t tb[2] = {cand_test[d], cand_test[d]};
 					copy_zvals(tb[0], part);
-					copy_zvals(tb[0], *p);
+					copy_zvals(tb[1], *p  );
 					if (!check_cube_within_part_sides(tb[0]) || !check_cube_within_part_sides(tb[1])) {bad_place = 1; break;} // check both top/bot parts
 				} // for d
 				if (bad_place) continue;
