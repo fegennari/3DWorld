@@ -2875,7 +2875,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		unsigned const num_stairs(i->get_num_stairs());
 		// tag first floor of stairs as RO_FLAG_ADJ_BOT for proper player collisions; multi-floor stair landings start at floor_ix=1; single floor stairs have floor_ix=0
 		unsigned const stair_flags((i->floor_ix <= 1) ? RO_FLAG_ADJ_BOT : 0);
-		float const floor_spacing((i->in_mall == 1) ? get_mall_floor_spacing() : get_window_vspace()); // only mall concourse stairs have mall floor spacing
+		float const floor_spacing(get_stairs_floor_spacing(*i)); // only mall concourse stairs have mall floor spacing
 		float const stair_dz(i->get_stair_dz(floor_spacing)), stair_height(stair_dz + floor_thickness), stair_z1h(0.4f*stair_height);
 		bool const dim(i->dim), dir(i->dir), is_U(i->is_u_shape()), has_side_walls(i->has_walled_sides() || is_U);
 		bool const has_wall_both_sides(i->against_wall[0] && i->against_wall[1]); // ext basement stairs

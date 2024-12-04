@@ -2325,7 +2325,9 @@ public:
 	bool point_in_water_area(point const &p, bool full_room_height=1) const;
 	bool point_in_or_above_pool(point const &pt) const;
 	bool set_float_height(point &pos, float radius, float ceil_zval, float density=0.5) const;
-	float get_elevator_floor_spacing(elevator_t const &e) const {return (e.in_mall ? get_mall_floor_spacing() : get_window_vspace());}
+	float get_elevator_floor_spacing(elevator_t            const &e) const {return ( e.in_mall       ? get_mall_floor_spacing() : get_window_vspace());}
+	float get_stairs_floor_spacing  (stairs_landing_base_t const &s) const {return ((s.in_mall == 1) ? get_mall_floor_spacing() : get_window_vspace());}
+	float get_room_floor_spacing    (room_t                const &r) const {return ( r.is_mall()     ? get_mall_floor_spacing() : get_window_vspace());}
 	void print_building_manifest() const;
 	void print_building_stats() const;
 private:

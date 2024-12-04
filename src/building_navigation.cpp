@@ -11,8 +11,7 @@
 
 
 bool const ALLOW_AI_IN_MALLS  = 1;
-// TODO: zombies target player in mall concourse
-// TODO: stairs logic uses mall floor height
+// TODO: enter/leave mall from parking garage
 // TODO: use escalators
 // TODO: use back hallway stairs?
 float const COLL_RADIUS_SCALE = 0.75; // somewhat smaller than radius, but larger than PED_WIDTH_SCALE
@@ -1113,7 +1112,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 	assert(interior && interior->nav_graph);
 	building_loc_t const loc(get_building_loc_for_pt(person.pos));
 	if (loc.room_ix < 0) return 0; // not in a room
-	float const floor_spacing(get_window_vspace());
+	float const window_vspace(get_window_vspace());
 	building_dest_t goal;
 	point sound_pos;
 
@@ -1127,7 +1126,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 			person.goal_type = GOAL_TYPE_PLAYER;
 		}
 	}
-	else if (can_ai_follow_player(person) && get_closest_building_sound(person.pos, sound_pos, floor_spacing)) { // target the loudest sound
+	else if (can_ai_follow_player(person) && get_closest_building_sound(person.pos, sound_pos, window_vspace)) { // target the loudest sound
 		if (point_in_or_above_pool(sound_pos) && get_pool_room().contains_pt(person.pos)) {
 			// ignore pool splash if already in the pool room; maybe should target a nearby location on the side of the pool?
 		}
@@ -1163,6 +1162,8 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 	if (global_building_params.ai_target_player && point_over_glass_floor(person.pos) && point_over_glass_floor(person.target_pos)) {
 		return 1; // person/zombie and player both on glass floor
 	}
+	// assume current and dest room are both in the mall and we're using mall concourse stairs rather than back hallway stairs
+	float const floor_spacing(point_in_mall(person.pos) ? get_mall_floor_spacing() : window_vspace);
 	// allow moving to a different floor, currently only one floor at a time
 	// note that if we're following a sound this may lead us to the wrong floor of the room if more than one floor above or below;
 	// the current system doesn't allow for paths that span more than two floors;
@@ -1667,7 +1668,7 @@ bool building_t::stairs_contained_in_part(stairwell_t const &s, cube_t const &p)
 }
 bool building_t::no_stairs_exit_on_floor(stairwell_t const &stairs, float zval) const {
 	if (stairs.not_an_exit_mask == 0) return 0;
-	int const to_floor(max(0, int((zval - stairs.z1())/get_window_vspace())));
+	int const to_floor(max(0, int((zval - stairs.z1())/get_stairs_floor_spacing(stairs))));
 	return (stairs.not_an_exit_mask & (1 << to_floor));
 }
 void building_t::find_nearest_stairs_or_ramp(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, int part_ix) const { // p1=from, p2=to
@@ -1968,7 +1969,7 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 	rgen.rand_mix();
 	unsigned const num_people(num_min + (rgen.rand()%(num_max - num_min + 1)));
 	if (num_people == 0) return 0;
-	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
+	float const floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
 	// weight rooms by number of floors to avoid placing too many people in basements
 	static vector<room_cand_t> room_cands;
 	room_cands.clear();
@@ -1980,18 +1981,19 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 		if (min(r->dx(), r->dy()) < 3.0*radius) continue; // room to small to place a person
 		unsigned const room_ix(r - interior->rooms.begin());
 		if (interior->pool.valid && (int)room_ix == interior->pool.room_ix) continue; // don't place in pool room so that we don't have to check for pool collisions
-		unsigned const num_floors(calc_num_floors_room(*r, window_vspacing, floor_thickness));
+		float const floor_spacing(get_room_floor_spacing(*r));
+		unsigned const num_floors(calc_num_floors_room(*r, floor_spacing, floor_thickness));
 		assert(num_floors > 0);
 		if (first_basement_room == 0 && r->z1() < ground_floor_z1) {first_basement_room = room_cands.size();}
 		vect_door_stack_t const &doorways(get_doorways_for_room(*r, 0.0, 1)); // get interior doors; all_floors=1
 
 		for (unsigned f = 0; f < num_floors; ++f) {
 			if (r->lit_by_floor && !r->is_lit_on_floor(f)) continue; // don't place person in an unlit room; only applies if room geom has been generated
-			float const zval(r->z1() + f*window_vspacing);
+			float const zval(r->z1() + f*floor_spacing);
 			if (has_water() && r->intersects(get_water_cube()) && zval < interior->water_zval) continue; // don't place in a room with water on the floor
 			
 			if (!r->is_hallway && !r->has_stairs_on_floor(f) && !is_single_large_room(*r)) { // check if this room has all locked doors
-				float const z_test(zval + 0.5*window_vspacing); // mid-floor height
+				float const z_test(zval + 0.5*floor_spacing); // mid-floor height
 				bool any_unlocked_doors(0);
 
 				for (door_stack_t const &ds : doorways) {
@@ -2023,7 +2025,7 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 			unsigned const cand_ix(rgen.rand() % max_cand_ix);
 			room_cand_t const &cand(room_cands[cand_ix]);
 			room_t const &room(get_room(cand.room_ix));
-			float const zval(room.z1() + fc_thick + window_vspacing*cand.floor_ix);
+			float const zval(room.z1() + fc_thick + get_room_floor_spacing(room)*cand.floor_ix);
 			bool success(0);
 
 			for (unsigned m = 0; m < 100; ++m) { // make 100 attempts at choosing a position in this room
@@ -2131,7 +2133,7 @@ bool building_t::can_target_player(person_t const &person) const {
 	assert(cur_player_building_loc.room_ix >= 0);
 	room_t const &player_room(get_room(cur_player_building_loc.room_ix));
 	float const first_floor_zceil(player_room.z1() + get_window_vspace());
-	if (player_room.is_single_floor && cur_player_building_loc.pos.z > first_floor_zceil) return 0; // check for player on unreachable floor
+	if (player_room.is_single_floor && !player_room.is_mall() && cur_player_building_loc.pos.z > first_floor_zceil) return 0; // check for player on unreachable floor
 	// if player is on the upper floor, don't update target (in case person is on stairs landing)
 	if (person.pos.z > first_floor_zceil && point_over_glass_floor(cur_player_building_loc.pos)) return 0;
 	return is_player_visible(person, global_building_params.ai_player_vis_test); // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
@@ -2154,7 +2156,7 @@ bool building_t::need_to_update_ai_path(person_t const &person) const {
 	float const floor_spacing(get_window_vspace());
 
 	if (int(target.pos.z/floor_spacing) != int(prev_player_building_loc.pos.z/floor_spacing)) { // if player did not change floors
-		if (fabs(person.pos.z - target.pos.z) > 2.0f*floor_spacing) return 0; // person and player are > 2 floors apart, continue toward stairs (or should it be one floor apart?) (optimization)
+		if (fabs(person.pos.z - target.pos.z) > 2.0f*floor_spacing) return 0; // person/player are > 2 floors apart, continue toward stairs (should it be one floor apart?) (optimization)
 	}
 	if (can_target_player(person)) { // have player visibility
 		if (person.goal_type == GOAL_TYPE_PLAYER && target.same_room_floor(prev_player_building_loc) && !person.on_new_path_seg && !person.path.empty()) {
@@ -2343,8 +2345,8 @@ bool building_t::run_ai_tunnel_logic(person_t &person, float &speed_mult) const 
 int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_gen_t &rgen) {
 	assert(person.goal_type == GOAL_TYPE_ELEVATOR);
 	if (!has_room_geom()) return person.ai_state; // if player has moved away and room_geom was deleted, remain in the current state
-	float const floor_spacing(get_window_vspace());
 	elevator_t &e(get_elevator(person.cur_elevator));
+	float const floor_spacing(get_window_vspace()); // TODO: get_elevator_floor_spacing(e)?
 	room_object_t const &ecar(interior->get_elevator_car(e));
 
 	// Note: when AI_LOCKS_ELEVATOR==1, only one person can be in the elevator at once, including walking into and out of the elevator
@@ -2893,10 +2895,11 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			int const new_room_ix(get_room_containing_pt(new_pos));
 			if (new_room_ix >= 0) {room = get_room(new_room_ix);}
 		}
-		int cur_floor(max(0, round_fp((new_pos.z - min_valid_zval)/floor_spacing)));
-		int const max_floor(round_fp((room.z2() - true_z1)/floor_spacing) - 1);
+		float const room_floor_spacing(get_room_floor_spacing(room));
+		int cur_floor(max(0, round_fp((new_pos.z - min_valid_zval)/room_floor_spacing)));
+		int const max_floor(round_fp((room.z2() - true_z1)/room_floor_spacing) - 1);
 		min_eq(cur_floor, max_floor); // clip to the valid floors for this room relative to lowest building floor
-		float const adj_zval(cur_floor*floor_spacing + min_valid_zval);
+		float const adj_zval(cur_floor*room_floor_spacing + min_valid_zval);
 		if (fabs(adj_zval - new_pos.z) > 0.1*person.radius) {person.abort_dest();} // if we snap to the floor, reset the target and path
 		new_pos.z = adj_zval;
 	}
