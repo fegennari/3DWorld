@@ -2735,7 +2735,9 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 	// add floor signs for U-shaped stairs
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
-		if (i->for_elevator || i->for_ramp || !i->is_u_shape() || i->not_an_exit) continue; // not U-shaped stairs, or no exit
+		if (i->for_elevator || i->for_ramp || !i->is_u_shape()) continue; // not U-shaped stairs, or no exit
+		bool const add_top_landing_sign(i->is_at_top && !i->roof_access);
+		if (i->not_an_exit && !add_top_landing_sign) continue; // no signs needed
 		// stacked conn stairs start at floor 0 but are really the top floor of the part below; i->floor is not a global index and can't be used
 		float const floor_z1((i->in_mall ? interior->basement_ext_bcube : bcube).z1());
 		float const floor_spacing((i->in_mall ? get_mall_floor_spacing() : window_vspacing)); // uses mall floor spacing for back hallway stairs
@@ -2751,12 +2753,14 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		sign.d[i->dim][!i->dir] += (i->dir ? -1.0 : 1.0)*0.25*wall_thickness; // set sign thickness
 		sign.expand_in_dim(!i->dim, stairs_sign_width); // set sign width
 		sign.z1() -= 2.5*wall_thickness; // set sign height
-		objs.emplace_back(sign, TYPE_SIGN, 0, i->dim, !i->dir, flags, 1.0, SHAPE_CUBE, DK_BLUE); // no room_id
-		set_floor_text_for_sign(objs.back(), real_floor, floor_offset, has_parking_garage, i->in_mall, i->in_backrooms, oss);
 
+		if (!i->not_an_exit) {
+			objs.emplace_back(sign, TYPE_SIGN, 0, i->dim, !i->dir, flags, 1.0, SHAPE_CUBE, DK_BLUE); // no room_id
+			set_floor_text_for_sign(objs.back(), real_floor, floor_offset, has_parking_garage, i->in_mall, i->in_backrooms, oss);
+		}
 		// if this is the top landing, we need to add a floor sign on the ceiling above it for the top floor
-		if (i->is_at_top && !i->roof_access) {
-			sign.translate_dim(2, floor_spacing); // move up one floor
+		if (add_top_landing_sign) {
+			sign.translate_dim(2, window_vspacing); // move up one floor
 
 			if (check_skylight_intersection(sign)) { // check for sklight and move sign to the side
 				sign.translate_dim(!i->dim, 0.5*(i->get_width() - stairs_sign_width)); // translate to the positive side
@@ -2880,7 +2884,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		float const floor_z(i->z1() - (floor_spacing - floor_thickness)), step_len_pos(i->get_step_length());
 		float const wall_hw(i->get_wall_hwidth(window_vspacing)), wall_end_bias(0.01*wall_hw); // bias just enough to avoid z-fighting with stairs;
 		float const stairs_zmin(i->in_ext_basement ? interior->basement_ext_bcube.z1() : bcube.z1());
-		float step_len((dir ? 1.0 : -1.0)*step_len_pos), z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
+		float step_len((dir ? 1.0 : -1.0)*step_len_pos), z(floor_z - floor_thickness), pos(i->d[dim][!dir]), dsign(dir ? -1.0 : 1.0);
 		cube_t stair(*i), landing; // Note: landing is for L-shaped stairs
 		unsigned num_stairs1(0), num_stairs2(0); // used for L-shaped stairs
 
@@ -2981,10 +2985,10 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				front_wall.expand_in_dim(!dim, wall_hw); // widen slightly
 				// create a box for the landing so that the player and AI can walk there when changing floors
 				float const landing_width(i->get_retail_landing_width(window_vspacing)), front_pos(i->d[dim][!dir]);
-				set_wall_width(front_wall, (front_pos + (dir ? -1.0 : 1.0)*(wall_hw + landing_width)), wall_hw, dim); // move to the front
+				set_wall_width(front_wall, (front_pos + dsign*(wall_hw + landing_width)), wall_hw, dim); // move to the front
 				objs.emplace_back(front_wall, TYPE_STAIR_WALL, 0, dim, !dir, 0); // add wall in front of stairs
 				cube_t sub_floor(*i);
-				sub_floor.d[dim][ dir] = front_pos - 0.25*(dir ? -1.0 : 1.0)*wall_hw; // move toward stairs slightly to prevent Z-fighting and fill the gap
+				sub_floor.d[dim][ dir] = front_pos - 0.25*dsign*wall_hw; // move toward stairs slightly to prevent Z-fighting and fill the gap
 				sub_floor.d[dim][!dir] = front_wall.d[dim][!dir]; // furthest extent of wall
 				sub_floor.z1() = front_wall.z1() - half_thick;
 				sub_floor.z2() = sub_floor .z1() + floor_thickness;
@@ -3076,10 +3080,19 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		if (i->has_railing && is_U) { // add a railing for the back wall of U-shaped stairs
 			float const railing_zc(wall_bottom + 0.819*window_vspacing); // determined experimentally
 			cube_t railing(*i);
-			set_wall_width(railing, (i->d[dim][dir] + (dir ? -1.0 : 1.0)*2.0*wall_hw), wall_hw, dim);
+			set_wall_width(railing, (i->d[dim][dir] + dsign*2.0*wall_hw), wall_hw, dim);
 			set_wall_width(railing, railing_zc, 1.4*railing_side_dz, 2); // set zvals
 			unsigned const railing_flags(RO_FLAG_NOCOLL | RO_FLAG_ADJ_HI | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_BOT | RO_FLAG_HAS_EXTRA); // make taller
 			objs.emplace_back(railing, TYPE_RAILING, 0, !dim, dir, railing_flags, 1.0, SHAPE_CUBE, railing_color); // no ends
+
+			if (i->is_at_top && !i->roof_access) { // add railing at the top
+				railing = *i;
+				set_wall_width(railing, i->d[dim][!dir], 0.75*wall_hw, dim);
+				set_cube_zvals(railing, i->z2(), i->z2()+floor_spacing);
+				railing.expand_in_dim(!dim, -wall_hw); // small shrink
+				railing.d[!dim][side] = i->get_center_dim(!dim); // covers only the open half
+				objs.emplace_back(railing, TYPE_RAILING, 0, !dim, dir, (RO_FLAG_TOS | RO_FLAG_OPEN), 1.0, SHAPE_CUBE, railing_color);
+			}
 		}
 		else if (i->has_railing && i->is_l_shape()) { // add railings to the sides of each segment, along the hole at the top on 3 sides, and around the two landing sides
 			bool const dir2(i->bend_dir);
@@ -3133,7 +3146,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			// add railings around the top if: straight + top floor with no roof access, connector stairs, or basement stairs
 			room_object_t railing(*i, TYPE_RAILING, 0, !dim, dir, (RO_FLAG_TOS | RO_FLAG_ADJ_BOT), 1.0, SHAPE_CUBE, railing_color); // flag to skip drawing ends
 			set_cube_zvals(railing, i->z2(), (i->z2() + fc_gap)); // starts at the floor
-			set_wall_width(railing, (i->d[dim][!dir] + (dir ? -1.0 : 1.0)*wall_hw), wall_hw, dim); // no overlap with stairs cutout
+			set_wall_width(railing, (i->d[dim][!dir] + dsign*wall_hw), wall_hw, dim); // no overlap with stairs cutout
 
 			for (unsigned d = 0; d < 2; ++d) {
 				if (has_side_walls && !i->against_wall[d]) {railing.d[!dim][d] += (d ? -1.0 : 1.0)*2.0*wall_hw;} // shift railing inside of walls

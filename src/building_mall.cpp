@@ -529,7 +529,6 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 					landing_t landing(stairs, 0, f, dim, d, 1, SHAPE_U, 0, (f+1 == stairs_num_floors), 0, 0, 1);
 					landing.in_mall = 2;
 					if (!(f & 1)) {landing.not_an_exit = 1;}
-					if (f+2 == stairs_num_floors) {landing.is_at_top = 1;} // top exit landing
 					set_cube_zvals(landing, zc, zf);
 					interior->landings.push_back(landing);
 					if (f < 16 && (f & 1)) {stairwell.not_an_exit_mask |= (1 << f);} // odd floors are not exits
@@ -545,7 +544,6 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 				top_ceil .z1() = hall_span.z2() - fc_thick;
 				interior->floors  .push_back(bot_floor);
 				interior->ceilings.push_back(top_ceil );
-				// TODO: small railing at top?
 			}
 		} // for d
 	}
