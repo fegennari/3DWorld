@@ -2279,7 +2279,7 @@ void building_t::maybe_add_skylight(rand_gen_t &rgen) {
 				else {set_wall_width(skylight, rgen.rand_uniform((roof_ceiling.d[d][0] + 1.5*hwidth), (roof_ceiling.d[d][1] - 1.5*hwidth)), hwidth, d);} // misaligned
 			}
 		}
-		set_cube_zvals(skylight, roof_ceiling.z1(), roof_ceiling.z2());
+		copy_zvals(skylight, roof_ceiling);
 		skylights.push_back(skylight);
 	} // for p
 }

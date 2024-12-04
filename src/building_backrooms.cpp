@@ -202,7 +202,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 			if (has_bcube_int(s, extra_walls)) continue; // covered (at least partially) by a previously placed extra wall
 			cube_t cent_area(s);
 			cent_area.expand_in_dim(dim, -0.375*space_len); // restrict to central 25%
-			set_cube_zvals(cent_area, wall_area.z1(), wall_area.z2()); // set zvals the same as walls
+			copy_zvals(cent_area, wall_area); // set zvals the same as walls
 			float const space_width(s.get_sz_dim(!dim)), min_len(max(wall_len_min, space_width)), max_len(max(wall_len_max, 2.0f*space_width)); // must cross the space
 
 			for (unsigned m = 0; m < 10; ++m) { // 10 tries to place a wall

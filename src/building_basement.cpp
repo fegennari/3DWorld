@@ -405,7 +405,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			railing.translate_dim( dim, -0.5*dir_sign*railing_thickness); // shift down the ramp a bit
 			objs.emplace_back(railing, TYPE_RAILING, room_id, dim, 0, (RO_FLAG_OPEN | RO_FLAG_TOS), tot_light_amt, SHAPE_CUBE, railing_color);
 			cube_t back_railing(rc);
-			set_cube_zvals(back_railing, railing.z1(), railing.z2());
+			copy_zvals(back_railing, railing);
 			back_railing.translate_dim( dim, -dir_sign*railing_thickness); // shift onto the ajdacent floor
 			back_railing.translate_dim(!dim, 0.5*side_sign*railing_thickness); // shift away from the exterior wall
 			back_railing.d[dim][dir] = back_railing.d[dim][!dir] + dir_sign*railing_thickness;

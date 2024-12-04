@@ -3003,7 +3003,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 					// add new side walls for this landing
 					for (unsigned d = 0; d < 2; ++d) { // sides of stairs
 						cube_t side_wall(wall);
-						set_cube_zvals(side_wall, front_wall.z1(), front_wall.z2());
+						copy_zvals(side_wall, front_wall);
 						set_wall_width(side_wall, i->d[!dim][d], wall_hw, !dim);
 						side_wall.d[dim][!dir] = front_wall.d[dim][dir]; // extend outward to meet front wall
 						objs.emplace_back(side_wall, TYPE_STAIR_WALL, 0, dim, dir);

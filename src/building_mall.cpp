@@ -451,7 +451,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 				bool const is_bath(is_bathroom(rtype));
 				//if (is_bath) continue; // no door to bathrooms?
 				cube_t conn_room(*r);
-				set_cube_zvals(conn_room, hall.z1(), hall.z2());
+				copy_zvals(conn_room, hall);
 				cube_t const door_cut(add_ext_basement_door(conn_room, doorway_width, !dim, d, 1, (is_tall_room && !is_bath), rgen)); // is_end_room=1 (may be locked)
 				subtract_cube_from_cubes(door_cut, interior->walls[!dim], nullptr, 1); // no holes; clip_in_z=1
 				interior->doors.back().rtype = rtype; // flag door (in particular if bathroom) so that the correct sign is added
@@ -512,8 +512,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 				for (unsigned i : stack) {get_room(i).has_elevator = 1;} // elevator connects to all rooms in this stack
 			}
 			// add U-shaped stairs connected to hall_span
-			cube_t stairs;
-			set_cube_zvals(stairs, hall_span.z1(), hall_span.z2());
+			cube_t stairs(hall_span);
 			set_wall_width(stairs, (hall_center - hall_offset), 1.0*doorway_width, !dim); // shift opposite the elevator dir
 			stairs.d[dim][!d] = wall_pos;
 			stairs.d[dim][ d] = wall_pos + dsign*3.2*doorway_width; // depth

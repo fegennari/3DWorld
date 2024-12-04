@@ -1700,7 +1700,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		extended_from_above = 1;
 		sshape       = s.shape;
 		// assume we can extend the existing hallway stairs downward
-		set_cube_zvals(stairs_cut, part.z1(), part.z2());
+		copy_zvals(stairs_cut, part);
 		room_t &room(interior->rooms.back()); // should be the last room
 		room.has_stairs = 255; // stairs on all floors
 		cube_t stairs_bot(s);
@@ -2426,8 +2426,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					if (is_cube()) continue;
 					// handle non-cube building; need to check both parts above and below, so clip our test cube to each part
 					cube_t tb[2] = {cand_test[d], cand_test[d]};
-					set_cube_zvals(tb[0], part.z1(), part.z2());
-					set_cube_zvals(tb[0], p->  z1(), p->  z2());
+					copy_zvals(tb[0], part);
+					copy_zvals(tb[0], *p);
 					if (!check_cube_within_part_sides(tb[0]) || !check_cube_within_part_sides(tb[1])) {bad_place = 1; break;} // check both top/bot parts
 				} // for d
 				if (bad_place) continue;

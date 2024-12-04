@@ -160,7 +160,7 @@ bool building_t::add_attic_access_door(cube_t const &ceiling, unsigned part_ix, 
 	interior->attic_access.set_from_point(access_pos);
 	interior->attic_access.expand_in_dim( long_dim, half_len); // long dim
 	interior->attic_access.expand_in_dim(!long_dim, half_wid); // short dim
-	set_cube_zvals(interior->attic_access, ceiling.z1(), ceiling.z2()); // same zvals as ceiling
+	copy_zvals(interior->attic_access, ceiling); // same zvals as ceiling
 	bool const dir(best_room.get_center_dim(long_dim) < interior->attic_access.get_center_dim(long_dim));
 	interior->attic_access.ix = 2*long_dim + dir;
 	return 1;
