@@ -10,6 +10,11 @@
 #include <queue>
 
 
+bool const ALLOW_AI_IN_MALLS  = 1;
+// TODO: zombies target player in mall concourse
+// TODO: stairs logic uses mall floor height
+// TODO: use escalators
+// TODO: use back hallway stairs?
 float const COLL_RADIUS_SCALE = 0.75; // somewhat smaller than radius, but larger than PED_WIDTH_SCALE
 
 int player_hiding_frame(0);
@@ -243,15 +248,15 @@ bool cube_nav_grid::find_path(point const &p1, point const &p2, ai_path_t &path)
 	return 0; // failed - no path from room1 to room2
 }
 
-class building_cube_nav_grid : public cube_nav_grid {
+class building_cube_nav_grid : public cube_nav_grid { // for backrooms
 public:
-	void build_for_building(cube_t const &bcube_, vect_cube_t const &blockers, vector<door_stack_t> const &doors,
+	void build_for_building(cube_t const &bcube_, vect_cube_t const &blockers, vect_door_stack_t const &door_stacks,
 		vector<stairwell_t> const &stairwells, float stairs_extend, float radius_)
 	{
 		build(bcube_, blockers, radius_, 1, 0); // add_edge_pad=1, no_blocker_expand=0
 		// flag all nodes in doorways as walkable to ensure the graph is connected, even if it means people will clip through the door frame;
 		// other solutions involve aligning doors with the grid (too difficult/restrictive) or reducing spacing to doorway_width/(2*radius) (too slow)
-		for (door_stack_t const &d : doors) {
+		for (door_stack_t const &d : door_stacks) {
 			if (!bcube.intersects(d)) continue; // wrong room; includes zval check
 			cube_t region(d.get_clearance_bcube()); // include space to both sides
 			set_wall_width(region, region.get_center_dim(!d.dim), 0.0, !d.dim); // set width to zero so that exactly one grid is contained in this dim
@@ -268,7 +273,7 @@ public:
 			make_region_walkable(region);
 		} // for s
 	}
-	void create_debug_objs(vector<room_object_t> &objs) const {
+	void create_debug_objs(vect_room_object_t &objs) const {
 		for (unsigned y = 0; y < num[1]; ++y) {
 			for (unsigned x = 0; x < num[0]; ++x) {
 				if (is_blocked(x, y)) continue; // blocked
@@ -958,8 +963,11 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 			}
 			if (room.intersects_no_adj(stairwell)) {ng.connect_stairs(r, s, stairwell, doorway_width);}
 		}
-		if (has_mall()) {
-			// something with interior->mall_info->ent_stairs; also must increment num_stairs
+		if (has_mall() && (int)r == interior->ext_basement_hallway_room_id) { // bidirectional; only need to check mall => store/parking garage direction
+			for (store_doorway_t const &d : interior->mall_info->store_doorways) {
+				if (!d.closed) {ng.connect_rooms(r, d.room_id, -1, d);} // door_ix=-1 (no door)
+			}
+			// TODO: consider interior->mall_info->ent_stairs; also must increment num_stairs
 		}
 		if (room.open_wall_mask || (has_complex_floorplan && !room.is_ext_basement())) { // check for connected hallways in office buildings, or open wall rooms
 			for (unsigned r2 = r+1; r2 < num_rooms; ++r2) { // check rooms with higher index (since graph is bidirectional)
@@ -994,6 +1002,12 @@ unsigned building_t::count_connected_room_components() {
 	return num;
 }
 
+#define VISIT_CONN_ROOM(r) \
+if (use_bit_mask ? (seen_mask & (1ULL << r)) : seen[r]) continue; \
+if (r == room2) return 1; /*found, done*/ \
+pend.push_back(r); \
+if (use_bit_mask) {seen_mask |= (1ULL << r);} else {seen[r] = 1;}
+
 // Note: this is somewhat slow, should we build and use the nav graph? maybe not since this is only called for room assiggnment on the first floor of houses
 // Note: pass in room_exclude=num_rooms for no excluded room
 // Note: door_exclude is optional; -1 disables this check; door_ex_zval must be specified when door_exclude >= 0
@@ -1002,7 +1016,7 @@ bool building_t::are_rooms_connected_without_using_room_or_door(unsigned room1, 
 	assert(room1 < num_rooms && room2 < num_rooms);
 	assert(room_exclude != room1 && room_exclude != room2);
 	if (room1 == room2) return 1;
-	bool const use_bit_mask(num_rooms <= 64); // almost always true
+	bool const use_bit_mask(num_rooms <= 64); // almost always true, except for buildings with malls
 	static vector<unsigned> pend; // reused across calls
 	static vector<uint8_t> seen; // reused across calls
 	uint64_t seen_mask(0);
@@ -1038,12 +1052,18 @@ bool building_t::are_rooms_connected_without_using_room_or_door(unsigned room1, 
 				}
 				if (is_excluded) continue;
 			}
-			unsigned const r(ds.get_conn_room(cur));
-			if (use_bit_mask ? (seen_mask & (1ULL << r)) : seen[r]) continue;
-			if (r == room2) return 1; // found, done
-			pend.push_back(r);
-			if (use_bit_mask) {seen_mask |= (1ULL << r);} else {seen[r] = 1;}
+			VISIT_CONN_ROOM(ds.get_conn_room(cur));
 		} // for d
+		if (has_mall() && get_room(cur).is_mall_or_store()) {
+			int const mall_room_id(interior->ext_basement_hallway_room_id);
+			assert(mall_room_id >= 0);
+
+			for (store_doorway_t const &d : interior->mall_info->store_doorways) {
+				if (d.closed) continue;
+				if ((int)cur == mall_room_id) {VISIT_CONN_ROOM(d.room_id   );} // mall => store
+				else if (d.room_id == cur)    {VISIT_CONN_ROOM(mall_room_id);} // store => mall
+			}
+		}
 	} // end while()
 	return 0; // room2 not found
 }
@@ -1228,7 +1248,7 @@ bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, 
 	point dest_pos(valid_area.get_cube_center());
 	vect_cube_t &avoid(reused_avoid_cubes[0]);
 	get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
-	bool const no_use_init(is_single_large_room(room)); // don't use the room center for a parking garage, backrooms, or retail area
+	bool const no_use_init(is_single_large_room(room)); // don't use the room center for a parking garage, backrooms, retail area, or mall
 	if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, person.target_pos.z, valid_area, rgen, dest_pos, no_use_init)) return 0;
 	
 	if (!is_cube()) { // non-cube building
@@ -1389,7 +1409,9 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 
 			if (nearest_elevator >= 0) {
 				elevator_t const &e(get_elevator(nearest_elevator));
-				int const elevator_room(get_room_containing_pt(point(e.xc(), e.yc(), person.pos.z))); // room containing elevator center at person zval
+				int elevator_room(get_room_containing_pt(point(e.xc(), e.yc(), person.pos.z))); // room containing elevator center at person zval
+				// if elevator is outside all rooms, choose the point where this person would stand; needed for mall back hallway elevators; should we always do this?
+				if (elevator_room < 0) {elevator_room = get_room_containing_pt(get_pos_to_stand_for_elevator(e, floor_spacing, person.pos.z));}
 				assert(elevator_room >= 0); // elevator must be in a valid room
 
 				// Note: to simplify multiple AI logic, we could check e.in_use here and not even go to the elevator if someone else is using it
@@ -1436,7 +1458,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		room_t const &room(get_room(cand_room));
 		if (room.is_hallway            ) continue; // don't select a hallway
 		if (room.get_has_out_of_order()) continue; // don't select a bathroom that may be out of order (not tracked per-floor)
-		if (room.is_sec_bldg || room.is_mall()) continue; // not a valid dest
+		if (room.is_sec_bldg || (!ALLOW_AI_IN_MALLS && room.is_mall())) continue; // not a valid dest
 		// what about rooms were all doors are locked? this isn't easy to check for; it will be a surprise for the player if the person is a zombie
 		bool const is_retail(room.is_retail());
 		// allow targeting the top floor of a retail room as the path construction will route to the lowest level
@@ -1953,8 +1975,8 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 	unsigned first_basement_room(0);
 
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) { // add room_cands
-		if (r->is_sec_bldg) continue; // don't place people in garages and sheds
-		if (r->is_mall()  ) continue; // don't place people in malls yet
+		if (r->is_sec_bldg)                     continue; // don't place people in garages and sheds
+		if (!ALLOW_AI_IN_MALLS && r->is_mall()) continue; // don't place people in malls yet
 		if (min(r->dx(), r->dy()) < 3.0*radius) continue; // room to small to place a person
 		unsigned const room_ix(r - interior->rooms.begin());
 		if (interior->pool.valid && (int)room_ix == interior->pool.room_ix) continue; // don't place in pool room so that we don't have to check for pool collisions
@@ -1983,6 +2005,11 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 					}
 					if (any_unlocked_doors) break;
 				} // for i
+				if (!any_unlocked_doors && has_mall() && r->is_store()) { // check mall store doorways
+					for (store_doorway_t const &d : interior->mall_info->store_doorways) {
+						if (!d.closed && d.room_id == room_ix) {any_unlocked_doors = 1; break;}
+					}
+				}
 				if (!any_unlocked_doors) continue; // skip
 			}
 			unsigned const num_cands(r->is_backrooms() ? 4 : 1); // add 4x for backrooms since this is one room with many sub-rooms (even if multi-level?)
@@ -2053,7 +2080,7 @@ bool building_t::is_player_visible(person_t const &person, unsigned vis_test) co
 	if (same_room_and_floor) {
 		room_t const &room(get_room(person.cur_room));
 
-		if (is_single_large_room(room) && has_room_geom()) { // rooms with additional occluders
+		if (is_single_large_room(room) && has_room_geom() && !room.is_mall()) { // rooms with additional occluders
 			point const viewer(person.get_eye_pos());
 			cube_t occ_area(target.pos);
 			occ_area.expand_by(player_radius);
@@ -2605,7 +2632,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			if (!play_sound && (person_ix & 1)) {play_sound |= is_player_visible(person, 1);} // 50% of zombies use line of sight test
 			if (!play_sound && (person_ix & 2)) {play_sound |= has_nearby_sound (person, floor_spacing);} // 50% of zombies use sound test
 			
-			if (play_sound) { // alert other zombies if in the same room and floor as the player, except in backrooms/parking garage/retail, unless the player is visible
+			if (play_sound) { // alert other zombies if in the same room and floor as the player, except in backrooms/parking garage/retail/mall, unless the player is visible
 				bool const alert_other_zombies(same_room_and_floor && (!is_single_large_room(person.cur_room) || is_player_visible(person, 1)));
 				maybe_play_zombie_sound(person.pos, person_ix, alert_other_zombies);
 			}
@@ -2629,7 +2656,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		}
 		if (!find_route_to_point(person, coll_dist, person.is_first_path, 0, person.path)) { // following_player=0
 			float const wait_time(is_single_large_room(person.cur_room) ? 0.1 : 0.5);
-			person.wait_for(wait_time); // stop for 0.5 second (0.1s for parking garage/backrooms/retail), then try again
+			person.wait_for(wait_time); // stop for 0.5 second (0.1s for parking garage/backrooms/retail/mall), then try again
 			person.goal_type = GOAL_TYPE_NONE; // reset just to be safe
 			return AI_WAITING;
 		}
@@ -2907,7 +2934,7 @@ void building_t::ai_room_lights_update(person_t const &person) {
 	if (room_ix >= 0) {set_room_light_state_to(get_room(room_ix), person.pos.z, 1);} // make sure current room light is on when entering
 	if (person.cur_room < 0)        return; // no old room (error?)
 	room_t const &room(get_room(person.cur_room));
-	if (is_single_large_room(room)) return; // don't turn off parking garage/backrooms/retail lights since they affect a large area
+	if (is_single_large_room(room)) return; // don't turn off parking garage/backrooms/retail/mall lights since they affect a large area
 	float const floor_spacing(get_window_vspace());
 	bool other_person_in_room(cur_player_building_loc.building_ix == person.cur_bldg && same_room_and_floor_as_player(person)); // player counts
 
