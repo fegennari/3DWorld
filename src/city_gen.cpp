@@ -425,6 +425,7 @@ class road_network_t : public streetlights_t { // AKA city center
 	vector<road_t> tracks, track_segs; // railroad tracks (for global road network)
 	vect_cube_t parks;
 	vect_cube_t plot_cuts; // for underground skylights, elevators, etc.
+	vect_cube_with_ix_t ug_elev_entrances;
 	//vector<road_isec_t> track_turns; // for railroad tracks
 	city_obj_placer_t city_obj_placer;
 	cube_t bcube;
@@ -1060,6 +1061,7 @@ public:
 	void gen_parking_lots_and_place_objects(vector<car_t> &cars, bool have_cars, bool &have_plot_dividers) {
 		city_obj_placer = city_obj_placer_t(); // clear; should be empty anyway, since city_obj_placer is not reused
 		city_obj_placer.set_plot_subdiv_sz(get_plot_subdiv_sz());
+		city_obj_placer.add_city_ug_elevator_entrances(ug_elev_entrances); // Note: can clear ug_elev_entrances after this, but it's not needed
 		city_obj_placer.gen_parking_and_place_objects(plots, plot_colliders, cars, roads, isecs, bcube, city_id, have_cars, is_residential, !streetlights.empty());
 		add_tile_blocks(city_obj_placer.parking_lots, tile_to_block_map, TYPE_PARK_LOT); // need to do this later, after gen_tile_blocks()
 		add_tile_blocks(city_obj_placer.driveways,    tile_to_block_map, TYPE_DRIVEWAY);
@@ -1209,6 +1211,19 @@ public:
 	}
 	void add_plot_cut(cube_t const &cut) {
 		if (bcube.intersects_xy(cut)) {plot_cuts.push_back(cut);}
+	}
+	void add_city_ug_elevator_entrance(cube_with_ix_t const &entrance) {
+		if (!bcube.intersects_xy(entrance)) return; // wrong city
+		assert(bcube.contains_cube_xy(entrance)); // can't partially overlap
+		ug_elev_entrances.push_back(entrance);
+		add_cube_to_plot_colliders(entrance);
+	}
+	void add_cube_to_plot_colliders(cube_t const &c) { // Note: must be before plot_colliders sorting in gen_parking_lots_and_place_objects()
+		for (unsigned plot_ix = 0; plot_ix < plots.size(); ++plot_ix) {
+			if (!plots[plot_ix].intersects_xy(c)) continue;
+			plot_colliders[plot_ix].push_back(c); // or insert in the correct place?
+			if (plots[plot_ix].contains_cube_xy(c)) break; // should always be true
+		}
 	}
 	bool check_mesh_disable(point const &pos, float radius) const { // Note: pos is in camera space
 		if (tunnels.empty()) return 0;
@@ -2257,6 +2272,9 @@ public:
 	void add_plot_cut(cube_t const &cut) {
 		for (road_network_t &rn : road_networks) {rn.add_plot_cut(cut);}
 	}
+	void add_city_ug_elevator_entrance(cube_with_ix_t const &entrance) {
+		for (road_network_t &rn : road_networks) {rn.add_city_ug_elevator_entrance(entrance);}
+	}
 	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &ponds) const {
 		for (road_network_t const &rn : road_networks) {rn.get_ponds_in_xy_range(range, ponds);}
 	}
@@ -3291,6 +3309,7 @@ public:
 	bool cube_int_underground_obj(cube_t const &c) const {return road_gen.cube_int_underground_obj(c);}
 	bool is_invalid_placement_for_cube(cube_t const &c) const {return road_gen.is_invalid_placement_for_cube(c);}
 	void add_plot_cut(cube_t const &cut) {road_gen.add_plot_cut(cut);}
+	void add_city_ug_elevator_entrance(cube_with_ix_t const &entrance) {road_gen.add_city_ug_elevator_entrance(entrance);}
 	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &ponds) const {road_gen.get_ponds_in_xy_range(range, ponds);}
 	void add_manhole(point const &pos, float radius) {road_gen.add_manhole(pos, radius);}
 
@@ -3503,6 +3522,7 @@ bool check_inside_city(point const &pos, float radius) { // Note: pos is in glob
 bool cube_int_underground_obj(cube_t const &c) {return city_gen.cube_int_underground_obj(c);} // Note: cube is in global space
 bool is_invalid_city_placement_for_cube(cube_t const &c) {return city_gen.is_invalid_placement_for_cube(c);}
 void add_city_plot_cut(cube_t const &cut) {city_gen.add_plot_cut(cut);}
+void add_city_ug_elevator_entrance(cube_with_ix_t const &entrance) {city_gen.add_city_ug_elevator_entrance(entrance);}
 void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &ponds) {city_gen.get_ponds_in_xy_range(range, ponds);} // Note: range is in global space
 bool choose_pt_in_city_park(point const &pos, point &park_pos, rand_gen_t &rgen) {return city_gen.choose_pt_in_park(pos, park_pos, rgen);}
 bool tile_contains_tunnel(cube_t const &bcube) {return city_gen.tile_contains_tunnel(bcube);}

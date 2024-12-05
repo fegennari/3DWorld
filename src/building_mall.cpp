@@ -5,12 +5,15 @@
 #include "buildings.h"
 #include "city_model.h"
 
+bool const EXTEND_MALL_ELEVATOR_TO_CITY = 1;
+
 using std::string;
 string choose_store_name(unsigned store_type, unsigned item_category, rand_gen_t &rgen);
 colorRGBA choose_pot_color(rand_gen_t &rgen);
 colorRGBA choose_sign_color(rand_gen_t &rgen, bool emissive=0);
 bool is_invalid_city_placement_for_cube(cube_t const &c);
 void add_city_plot_cut(cube_t const &cut);
+void add_city_ug_elevator_entrance(cube_with_ix_t const &entrance);
 void offset_hanging_tv(room_object_t &obj);
 void rotate_obj_cube(cube_t &c, cube_t const &bc, bool in_dim, bool dir);
 
@@ -189,18 +192,22 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 		elevator.d[dim][ edir] = ww_edge + (edir ? 1.0 : -1.0)*depth; // extend back away from walkway by depth
 		set_wall_width(elevator, opening.get_center_dim(!dim), 0.5*width, !dim); // set width
 
-		if (0 && is_in_city) { // extend elevator up to street level if there's space?
-			cube_t test_cube(elevator);
+		if (EXTEND_MALL_ELEVATOR_TO_CITY && is_in_city) { // extend elevator up to street level if there's space?
+			cube_with_ix_t entrance(elevator, (2*dim + (!edir)));
+			entrance.expand_by_xy(0.25*wall_thickness + 0.1*depth); // account for city exterior entrance wall thickness == 0.1*depth
+			cube_t test_cube(entrance);
 			set_cube_zvals(test_cube, elevator.z2(), elevator.z2()+floor_spacing);
 			test_cube.d[dim][!edir] -= (edir ? 1.0 : -1.0)*depth; // extend by depth in front of elevator
 
 			if (!is_cube_city_placement_invalid(test_cube)) {
-				// TODO: need exterior building surrounding elevator, and a way for the player to interact with it on street level
-				// TODO: needs to be a city blocker for pedestrians, etc.
-				// TODO: need to cut a hole in the plot for the elevator shaft
-				// TODO: should extend window_vspace above, but elevator won't have a stop at this pos, unless parking garage is two floors
+				// TODO: need a way for the player to interact with it on street level
+				// TODO: need to set something like skip_floors_mask to (1 << num_floors) to keep building AI from using the top floor
+				// Note: should extend window_vspace above, but elevator won't have a stop at this pos, unless parking garage is two floors; so we extend to floor_spacing
 				elevator.z2() += floor_spacing;
+				entrance.z2()  = elevator.z2();
+				entrance.z1()  = ground_floor_z1; // at city level
 				add_city_plot_cut(elevator);
+				add_city_ug_elevator_entrance(entrance);
 			}
 		}
 		interior->elevators.push_back(elevator);
@@ -212,7 +219,7 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 
 bool building_t::is_cube_city_placement_invalid(cube_t const &c) const { // for mall skylights, elevator, etc.
 	if (!is_basement_room_not_int_bldg(c, nullptr, 1)) return 1; // check for buildings above; no exclude, allow_outside_grid=1
-	return is_invalid_city_placement_for_cube(c);
+	return is_invalid_city_placement_for_cube(c); // Note: city objects may not have been placed yet
 }
 bool building_t::is_store_placement_invalid(cube_t const &store) const {
 	// here we don't need to check rooms of our own building, but we need to check other building basements;

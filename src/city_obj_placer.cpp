@@ -1960,6 +1960,9 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 			}
 			blockers.push_back(dw);
 		} // for j
+		for (ug_elevator_t const &e : ug_elevs) { // add underground elevators to blockers since they have already been placed
+			if (i->intersects_xy(e.bcube)) {blockers.push_back(e.bcube);}
+		}
 		if (city_params.assign_house_plots && plot_subdiv_sz > 0.0) {
 			place_residential_plot_objects(*i, blockers, colliders, roads, underground_blockers, driveways_start, city_id, detail_rgen); // before placing trees
 		}
@@ -2014,7 +2017,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	walkway_groups .create_groups(walkways,  all_objs_bcube);
 	pillar_groups  .create_groups(pillars,   all_objs_bcube);
 	wwe_groups     .create_groups(elevators, all_objs_bcube);
-	uge_groups     .create_groups(ug_elevs,  all_objs_bcube); // Note: may not be placed until later
+	uge_groups     .create_groups(ug_elevs,  all_objs_bcube);
 	p_solar_groups .create_groups(p_solars,  all_objs_bcube);
 	bball_groups   .create_groups(bballs,    all_objs_bcube);
 	pfloat_groups  .create_groups(pfloats,   all_objs_bcube);
@@ -2189,6 +2192,10 @@ void city_obj_placer_t::add_manhole(point const &pos, float radius, bool is_over
 	if (!is_over_road && proc_sphere_coll(pos2, pos, zero_vector, radius, nullptr)) return; // check for blocker
 	manhole_groups.add_obj(manhole_t(pos, radius), manholes);
 	manhole_groups.rebuild(manholes, all_objs_bcube); // re-sort by tile
+}
+
+void city_obj_placer_t::add_city_ug_elevator_entrances(vect_cube_with_ix_t const &entrances) {
+	for (cube_with_ix_t const &e : entrances) {uge_groups.add_obj(ug_elevator_t(e, (e.ix >> 1), (e.ix & 1)), ug_elevs);}
 }
 
 bool city_obj_placer_t::add_skyway(cube_t const &city_bcube, vect_bldg_walkway_t const &walkway_cands, rand_gen_t rgen) {
