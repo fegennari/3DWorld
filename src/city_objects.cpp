@@ -2073,6 +2073,7 @@ ug_elevator_t::ug_elevator_t(cube_t const &c, bool dim_, bool dir_) : oriented_c
 	sides[3].z1() = bot.z2() = c.z2() - ceil_thick; // similar to floor thickness
 	for (unsigned n = 0; n < 3; ++n) {sides[n] = bot;}
 	sides[2].d[dim][dir] = c.d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_thick; // back
+	sides[2].expand_in_dim(!dim, -wall_thick); // shrink to remove overlap
 	for (unsigned d = 0; d < 2; ++d) {sides[!d].d[!dim][d] = c.d[!dim][!d] + (d ? 1.0 : -1.0)*wall_thick;} // left/right sides
 }
 /*static*/ void ug_elevator_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
@@ -2082,9 +2083,11 @@ ug_elevator_t::ug_elevator_t(cube_t const &c, bool dim_, bool dir_) : oriented_c
 	// nothing?
 }
 void ug_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	float const tscale(1.0/get_width());
+
 	for (unsigned n = 0; n < 4; ++n) {
 		unsigned const skip_dims((n == 3) ? 0 : 4); // skip Z for sides and back
-		dstate.draw_cube(qbds.untex_qbd, sides[n], WHITE, 0, 0.0, 4);
+		dstate.draw_cube(qbds.qbd, sides[n], LT_GRAY, 0, tscale, skip_dims);
 	}
 }
 bool ug_elevator_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
