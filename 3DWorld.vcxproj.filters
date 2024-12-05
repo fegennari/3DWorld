@@ -1753,5 +1753,8 @@
     <Text Include="coll_objs\coll_objs_playground.txt">
       <Filter>Input Files\coll_objs</Filter>
     </Text>
+    <Text Include="text_data\store_names.txt">
+      <Filter>Input Files\text_data</Filter>
+    </Text>
   </ItemGroup>
 </Project>
