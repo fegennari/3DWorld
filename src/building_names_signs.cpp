@@ -62,8 +62,57 @@ string choose_business_name(rand_gen_t rgen, building_type_t btype) {
 	return ""; // never gets here
 }
 
+// similar to book_title_gen_t in draw_text.cpp
+class store_name_gen_t {
+	map<string, vector<string>> cat_map; // category => list of names
+	bool loaded=0;
+
+	void load_from_file(string const &fn) {
+		std::ifstream in(fn.c_str());
+		if (!in.good()) return;
+		string line, cur_cat("general");
+
+		while (std::getline(in, line)) {
+			if (line.empty()) {} // skip empty lines
+			else if (line.front() == '#') {} // skip comments
+			else if (line.back () == ':') { // category
+				line.pop_back();
+				cur_cat = line;
+			}
+			else {cat_map[cur_cat].push_back(line);} // name
+		} // end while()
+		loaded = 1;
+	}
+	string choose_category(string const &cat_name, rand_gen_t &rgen) const {
+		auto i(cat_map.find(cat_name));
+		if (i == cat_map.end()) return ""; // category not found
+		assert(!i->second.empty());
+		return i->second[rgen.rand() % i->second.size()];
+	}
+public:
+	string gen_name(unsigned store_type, unsigned item_category, rand_gen_t &rgen) {
+		if (!loaded) {load_from_file("text_data/store_names.txt");} // should this come from a config file?
+		if (rgen.rand_float() < 0.1) {return gen_random_name(rgen, 5);} // 10% purely random generated name
+
+		if (store_type == STORE_RETAIL && rgen.rand_float() < 0.5) { // query shelfrack type
+			assert(item_category < NUM_SRACK_CATEGORIES);
+			string const name(choose_category(srack_categories[item_category], rgen)); // "boxed items", "food", "household goods", "kitchen", "electronics"
+			if (!name.empty()) return name;
+		}
+		if (rgen.rand_float() < 0.75) { // query store type
+			assert(store_type < NUM_STORE_TYPES);
+			string const name(choose_category(store_type_strs[store_type], rgen)); // "clothing", "food", "book", "retail", "furniture"
+			if (!name.empty()) return name;
+		}
+		string const name(choose_category("general", rgen)); // general store category
+		if (!name.empty()) return name;
+		return gen_random_name(rgen, 5); // fallback case
+	}
+};
+store_name_gen_t store_name_gen;
+
 string choose_store_name(unsigned store_type, unsigned item_category, rand_gen_t &rgen) { // for malls
-	return gen_random_name(rgen, 5); // TODO: placeholder, should be by store_type/category
+	return store_name_gen.gen_name(store_type, item_category, rgen);
 }
 
 string store_info_t::get_full_name() const {

@@ -1356,12 +1356,25 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	unsigned const objs_start(objs.size());
 	unsigned const store_type(store_selects[rgen.rand() % NUM_STORE_SELECT]);
 	unsigned const item_category((store_type == STORE_RETAIL) ? (rgen.rand() % NUM_SRACK_CATEGORIES) : 0); // same category for each rack with equal probability
-	string const store_name(choose_store_name(store_type, item_category, rgen));
+	string store_name;
+	
+	for (unsigned n = 0; n < 10; ++n) { // 10 attempts to generate a unique store name for this mall
+		store_name = choose_store_name(store_type, item_category, rgen);
+		bool is_duplicate(0);
+
+		for (store_info_t const &i : interior->mall_info->stores) {
+			if (store_name == i.name) {is_duplicate = 1; break;}
+		}
+		if (!is_duplicate) break; // unique name, done
+	}
+	//cout << store_name << endl; // TESTING
 	interior->mall_info->stores.emplace_back(dim, dir, room_id, store_type, item_category, store_name);
 
 	// add store name on sign above the entrance
-	float const sign_z1(room.z1() + 0.7*floor_spacing), sign_height(0.3*window_vspace), sign_hwidth(0.25*sign_height*(store_name.size() + 2)), sign_thick(wall_hthick);
+	float const sign_z1(room.z1() + 0.7*floor_spacing), sign_height(0.3*window_vspace), sign_thick(wall_hthick);
 	float const ext_wall_pos(mall_room.d[dim][!dir] + (dir ? 1.0 : -1.0)*((dim == mall_dim) ? 1.0 : 0.5)*wall_thickness);
+	float sign_hwidth(0.25*sign_height*(store_name.size() + 2));
+	min_eq(sign_hwidth, 0.5f*room.get_sz_dim(!dim)); // can't be wider than the store
 	cube_t sign;
 	set_cube_zvals(sign, sign_z1, sign_z1+sign_height);
 	sign.d[dim][!dir] = ext_wall_pos;

@@ -224,7 +224,7 @@ void popup_text_t::draw() const {
 class book_title_gen_t {
 	vector<string> titles, authors;
 	string empty_str;
-	bool loaded = 0;
+	bool loaded=0;
 
 	void maybe_split_long_str(string &str, unsigned max_len) {
 		unsigned const len(str.size());

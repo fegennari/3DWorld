@@ -1,0 +1,367 @@
+# sources
+# https://www.rontar.com/blog/store-name-ideas/
+# https://www.shopify.com/ca/blog/4660242-what-should-i-name-my-online-store
+# https://litextension.com/blog/good-store-names/
+# https://www.shopify.com/tools/business-name-generator?mode=search
+
+# shelfrack categories
+
+boxed items:
+Boxies
+Containr
+BoxedBounty
+Boxed Treasures
+Boxed Finds
+The Packing Station
+BoxedGoods
+Packaroo
+BoxedCuriosities
+BoxedGems
+BoxedCollectibles
+Boxed Essentials Hub
+The Boxed Marketplace
+Parcel Paradise
+BoxNest
+Cubix
+BoxedSurprises
+Boxed Delights
+Boxology
+Parcel & Co.
+Bundl
+BoxedHoard
+The Boxed Goods Store
+
+food:
+The Grocery Shelf
+Ecopantry
+Takeaway
+Krispy
+Boxies
+Snacktime
+Orderdine
+Beveragebox
+Mealprepper
+Tasteful
+Lunchon
+Feast & Fable Foods
+The Pantry Project
+Yum
+Gusto Grocery Co.
+Freshly
+Biteful
+Wholesome Bites
+Yummy Yields Market
+Wholesome
+
+household goods:
+Chateau
+Home Harmony Hub
+Sanctuary Supply Co
+Hearth and Home
+Serenity
+Haven of Goods
+Abode Essentials
+Essentials Emporium
+Retreat Resource
+Everyday Essentials
+Household Harmony
+Home Sweet Home Goods
+The Household Haven
+Home Essentials
+Offmarket
+Merchant Aisle
+Urban Haven
+Shophouse
+Discovers
+New Life
+Harbour Shop
+Shop West
+Modern Home Store
+
+kitchen:
+Modern Home Store
+Culinara
+Brew and Bake
+Savory Kitchenware
+Prep and Plate
+Sizzle and Serve
+Whisk and Whip
+Flavorist
+Gourmet Gadgetry
+Kitchify
+Gather and Feast
+Gourmeto
+Bakerly
+Flavorful Finds
+Cook's Companion
+Tasteful
+
+electronics:
+Tech Titan
+Gadget Galaxy
+Cyber Central
+Electro Emporium
+Digital Domain
+Geek Genius
+Future Finds Store
+Byte Boulevard
+Smart Station
+Techno Thrift
+Innovate Inc.
+Electric Exchange
+Boardroom Tech
+Wired Wonderland
+Nano Nexus
+Data Drive Depot
+Idea Innovations
+Streamline Solutions
+Connectopia
+Device District
+Genius Gadgets
+Tech Topia
+Digital Dreamland
+E-Shop Electronics
+
+
+# store categories
+
+clothing:
+Urban Edge
+Chill Chic
+Electric Avenue
+Swag Stop
+High Voltage Zone
+Radical Retail
+Fresh Finds
+Street Style Central
+Groove Garage
+Vintage Vibes
+The Hipster Hub
+Glam Gang
+Rockstar Reserve
+Boho Bliss
+Sleek & Chic
+Trendy Treasures
+Modern Maven
+Edge Emporium
+Cool Kid Collective
+Fashion Fusion
+Style Squad
+Fly Fashion
+Swag City
+Chic Boutique
+Slick Styles
+Vogue Vault
+Epic Elegance
+Snazzy Styles
+Cool Corner
+Curated Chic
+Fashion Fusion
+Style Savvy
+Chic Couture
+Trendy Threads
+Glam Garb
+Elegance Ensemble
+Posh Picks
+SophistiChic
+Opulent Outfits
+Urbane Apparel
+Dapper Dress Code
+Luxe Looks
+Vogue Vesture
+Charm Couture
+Pizzazz Picks
+Dapper Days
+Flair Fashion
+Radiance Racks
+Fashionista Finds
+Style Sanctuary
+Mode Maven
+Style Surge
+Trend Twist
+Glam Gallery
+Chic Closet
+Runway Ready
+Sleek Styles
+Chic Chamber
+Haute Hangout
+Swank Selections
+Closet Social
+The Style Edit
+Gen Z Wardrobe
+Fitcheck
+Vibe Vault
+Look Lounge
+UpTrend
+Rummage
+Thrift
+Leisurewear
+Style Junction
+Couture Collective
+Refined Racks
+Urban Glamour
+Fashion Haven
+Glamour Junction
+Style Sanctuary
+The Fashion Haven
+Trendsetters
+Urban Chic
+The Fashion Foundry
+Refined Raiments
+Wit and Wisdom Wear
+Logical Looks
+Nomad Outfitters
+
+book:
+Novel Nook
+Book Bliss
+Chapter Charm
+Storybook Emporium
+Writer's Way
+Literary Haven
+Page Turners Palace
+Whimsy Words
+Bookworm Boutique
+Fiction Finds
+Word Wizardry
+Enchanting Editions
+Imagination Isle
+Library Lane
+Ink & Ideas
+Story Strands
+Bookish Bliss
+Plot Points
+Dear Diary Bookstore
+Chapter & Verse
+Novelty Niche
+Book Bower
+Verse Vault
+Literature Lane
+Prose Paradise
+Creative Chapters
+Book Bridge
+Readers' Retreat
+Story Sanctuary
+Journey Books
+Underground Books
+Storybook Shoppe
+Funky Fables
+
+retail:
+Mind & Matter Goods
+Wonderinc
+Doing and Done
+Masterpiece Market
+Mindful Marketplace
+The Smart Shoppers
+Brainy Buys
+Sharp Selections
+WhizWares
+Genius Goods
+IntelliItems
+Smart Stuff Store
+Brainy Buys Co.
+Sharp Shop Stop
+Sage Selections
+Crafty Commerce
+Brilliant Buys
+Insightful Items
+Sophisticated Solutions
+Mindful Merchandise
+Trade of the Wise
+
+
+furniture:
+Harmony Home Furnishings
+Zenith Home Furnishings
+Elegant Edge Furnishings
+Serene Spheres Interiors
+Timeless Furniture Emporium
+Rustic Roots Interiors
+Artistic Living Interiors
+Whimsical Comfort
+Timeless Whispers Furniture
+Timeless Classics Interiors
+Urban Elements Furnishings
+Elegant Living Furnishings
+Modern Haven Furnishings
+Artistic Impressions
+Classic Fusion Furniture
+Nature's Symphony Furniture
+Modern Comfort Furniture
+Inspired Living Interiors
+Serenity Home Furnishings
+Urban Whispers Interiors
+Coastal Retreat Interiors
+Serene Spaces Furniture
+Modern Luxe Interiors
+Artisanal Furniture Co.
+Classic Comfort Interiors
+Coastal Comfort Furniture
+Coastal Symphony Interiors
+Luxe Living Designs
+Tranquil Retreat Furnishings
+Stylish Haven Furnishings
+Modern Whims Furnishings
+Zen Furniture Gallery
+Serene Serenades Interiors
+Creative Concepts
+Stylish Abode Furniture
+Urban Serenade Furnishings
+Elite Designs Furniture
+Uptown Living Furnishings
+Artistic Whispers Furnishings
+The Furniture Loft
+Urban Crescendos Furniture
+Cityscape Modern Furnishings
+Modern Muse Furniture
+Heritage Home Furniture
+Zen Retreat Furniture
+Timeless Ballads Furnishings
+Simply Stylish Interiors
+Harmony House Furniture
+Comfort Zone Furniture
+Urban Oasis Furnishings
+Coastal Concertos Furniture
+Whimsical Home Furnishings
+Artistic Abode Interiors
+Modern Serenades Interiors
+Heritage House Interiors
+Refined Living Furniture
+Serene Rhapsodies Furnishings
+Urban Retreat Furniture
+Urban Harmony Furnishings
+Whimsical Crescendos Interiors
+Coastal Reflections Interiors
+Coastal Cottage Furniture
+Coastal Dream Furniture
+Modern Origins Furniture
+
+# general
+
+general:
+Red Skies
+Isogoods
+Pressbox
+Peregrine
+Blue Star
+Condor
+Recorner
+Stoles
+Bowies
+Blue Mountain Shop
+Citadel
+Resonance
+East End Shop
+Park City Shop
+Blackbird
+Tarnix
+Sold Collective
+Zintargo
+Saturn's Ring
+Echoness
+Glimmerisk
+Malltopia
+Mallgaze
+Shopland
+
