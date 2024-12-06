@@ -1396,13 +1396,15 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	// add store name on sign above the entrance
 	float const sign_z1(room.z1() + 0.7*floor_spacing), sign_height(0.3*window_vspace), sign_thick(wall_hthick);
 	float const ext_wall_pos(mall_room.d[dim][!dir] + (dir ? 1.0 : -1.0)*((dim == mall_dim) ? 1.0 : 0.5)*wall_thickness);
+	// stores to the sides of mall concourses have their doors centered, but stores on the end may not be centered on the door, but the mall concourse is
+	float const door_center(((dim == mall_dim) ? mall_room : room).get_center_dim(!dim));
 	float sign_hwidth(0.25*sign_height*(store_name.size() + 2));
 	min_eq(sign_hwidth, 0.5f*room.get_sz_dim(!dim)); // can't be wider than the store
 	cube_t sign;
 	set_cube_zvals(sign, sign_z1, sign_z1+sign_height);
 	sign.d[dim][!dir] = ext_wall_pos;
 	sign.d[dim][ dir] = ext_wall_pos + (dir ? 1.0 : -1.0)*sign_thick;
-	set_wall_width(sign, room.get_center_dim(!dim), sign_hwidth, !dim);
+	set_wall_width(sign, door_center, sign_hwidth, !dim);
 	bool const emissive(0);
 	unsigned const flags(RO_FLAG_LIT | RO_FLAG_NOCOLL | (emissive ? RO_FLAG_EMISSIVE : 0) | RO_FLAG_HANGING);
 	colorRGBA const sign_color(choose_sign_color(rgen, emissive));
