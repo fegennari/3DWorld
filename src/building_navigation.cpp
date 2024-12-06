@@ -11,9 +11,7 @@
 
 
 bool const ALLOW_AI_IN_MALLS  = 1;
-// TODO: waiting for upper floor mall concourse elevator in wrong spot
-// TODO: not exiting mall concourse elevator
-// TODO: use mall stairs when not in zombie mode
+// TODO: zombies don't follow player near entrance stairs
 // TODO: enter/leave mall from parking garage
 // TODO: use escalators
 // TODO: use back hallway stairs?
@@ -348,7 +346,7 @@ public:
 	void set_room_bcube  (unsigned room,   cube_t const &c) {get_node(room).bcube = c;}
 	void set_stairs_bcube(unsigned stairs, cube_t const &c) {get_node(stairs + num_rooms).bcube = c;}
 	void set_ramp_bcube                   (cube_t const &c) {get_node(num_stairs + num_rooms).bcube = c;}
-	void mark_hallway(unsigned room) {get_node(room).is_hallway = 1;}
+	void mark_hallway(unsigned room) {get_node(room).is_hallway = 1;} // or mall concourse
 	void mark_exit   (unsigned room) {get_node(room).has_exit   = 1;}
 
 	void connect_stairs(unsigned room, unsigned stairs, stairwell_t const &s, float doorway_width) {
@@ -724,13 +722,14 @@ public:
 				if (node.is_vert_conn()) { // stairs or ramp (end point of starting floor)
 					path.add(get_stairs_entrance_pt(cur_pt.z, n, up_or_down)); // likely == next
 				}
-				else { // room/doorway
+				else { // room/doorway/elevator/player
 					unsigned const num_tries(req_custom_dest ? 1 : 10); // only try custom_dest if req_custom_dest is set
 					bool const is_lg_room(building.is_single_large_room(n));
 					bool success(0);
 
 					for (unsigned N = 0; N < num_tries; ++N) { // keep retrying until we find a point that is reachable from the room or doorway
-						bool const no_use_init(N > 0 || is_lg_room); // choose a random new point on iterations after the first one, and on first iteration for large rooms
+						// choose a random new point on iterations after the first one, and on first iteration for large rooms unless we have a custom dest
+						bool const no_use_init(N > 0 || (is_lg_room && !req_custom_dest));
 						bool not_room_center(0);
 						point const end_point(find_valid_room_dest(avoid, building, radius, cur_pt.z, n, up_or_down, not_room_center, rgen, no_use_init, custom_dest));
 						path.add(end_point);
@@ -944,7 +943,7 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 	for (unsigned r = 0; r < num_rooms; ++r) {
 		room_t const &room(interior->rooms[r]);
 		cube_t c(get_walkable_room_bounds(room));
-		if (room.is_hallway) {ng.mark_hallway(r);}
+		if (room.is_hallway || room.is_mall()) {ng.mark_hallway(r);} // mall concourse works like a hallway
 		ng.set_room_bcube(r, c);
 		c.expand_by_xy(wall_width); // to include adjacent doors
 		if (is_room_adjacent_to_ext_door(c)) {ng.mark_exit(r);}
@@ -1413,14 +1412,15 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 
 			if (nearest_elevator >= 0) {
 				elevator_t const &e(get_elevator(nearest_elevator));
+				point const pos_to_stand(get_pos_to_stand_for_elevator(e, floor_spacing, person.pos.z));
 				int elevator_room(get_room_containing_pt(point(e.xc(), e.yc(), person.pos.z))); // room containing elevator center at person zval
 				// if elevator is outside all rooms, choose the point where this person would stand; needed for mall back hallway elevators; should we always do this?
-				if (elevator_room < 0) {elevator_room = get_room_containing_pt(get_pos_to_stand_for_elevator(e, floor_spacing, person.pos.z));}
+				if (elevator_room < 0) {elevator_room = get_room_containing_pt(pos_to_stand);}
 				assert(elevator_room >= 0); // elevator must be in a valid room
 
 				// Note: to simplify multiple AI logic, we could check e.in_use here and not even go to the elevator if someone else is using it
 				if (interior->nav_graph->is_room_connected_to(loc.room_ix, elevator_room, interior->doors, person.pos.z, person.has_key)) { // check if reachable
-					person.target_pos   = get_pos_to_stand_for_elevator(e, floor_spacing, person.pos.z); // check if this is blocked, or leave that up to path finding?
+					person.target_pos   = pos_to_stand; // check if this is blocked, or leave that up to path finding?
 					person.dest_room    = elevator_room;
 					person.goal_type    = GOAL_TYPE_ELEVATOR;
 					person.cur_elevator = (uint8_t)nearest_elevator;
@@ -1462,7 +1462,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		room_t const &room(get_room(cand_room));
 		if (room.is_hallway            ) continue; // don't select a hallway
 		if (room.get_has_out_of_order()) continue; // don't select a bathroom that may be out of order (not tracked per-floor)
-		if (room.is_sec_bldg || (!ALLOW_AI_IN_MALLS && room.is_mall())) continue; // not a valid dest
+		if (room.is_sec_bldg || (!ALLOW_AI_IN_MALLS && room.is_mall_or_store())) continue; // not a valid dest
 		// what about rooms were all doors are locked? this isn't easy to check for; it will be a surprise for the player if the person is a zombie
 		bool const is_retail(room.is_retail());
 		// allow targeting the top floor of a retail room as the path construction will route to the lowest level
@@ -1515,8 +1515,9 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 	// how about a different floor of the same room? only check this 50% of the time for parking garages/backrooms/retail to allow movement within a level
 	if (try_use_stairs || (room.has_stairs == 255 && (!single_large_room || rgen.rand_bool()))) {
 		// use person.prev_walked_down?
-		bool const try_below(rgen.rand_bool() && !room.is_retail() && !point_in_water_area(person.target_pos - floor_spacing*plus_z));
-		float const new_z(person.target_pos.z + (try_below ? -1.0 : 1.0)*floor_spacing); // one floor above or below
+		float const room_floor_spacing(room.is_mall() ? get_mall_floor_spacing() : floor_spacing);
+		bool const try_below(rgen.rand_bool() && !room.is_retail() && !point_in_water_area(person.target_pos - room_floor_spacing*plus_z));
+		float const new_z(person.target_pos.z + (try_below ? -1.0 : 1.0)*room_floor_spacing); // one floor above or below
 
 		if (new_z > room.z1() && new_z < room.z2()) { // valid if this floor is inside the room
 			person.target_pos.z = new_z;
@@ -1549,8 +1550,9 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 		for (auto const &s : stairwells) { // add extra width for side walls only
 			if (s.z1() < z2 && s.z2() > z1) {avoid.push_back(get_stairs_bcube_expanded(s, 0.0, 0.0, doorway_width));}
 		}
-		if (has_mall()) {avoid.push_back(mall_info->ent_stairs);}
 	}
+	// Note: move inside the skip_stairs case above when the AI is updated to use these stairs
+	if (has_mall() && mall_info->ent_stairs.z1() < z2 && mall_info->ent_stairs.z2() > z1) {avoid.push_back(mall_info->ent_stairs);}
 	add_bcube_if_overlaps_zval(elevators,  avoid, z1, z2); // clearance not required
 	add_bcube_if_overlaps_zval(escalators, avoid, z1, z2); // clearance not required; using the full bcube rather than the parts is conservative but probably okay
 	
@@ -1979,9 +1981,10 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 	unsigned first_basement_room(0);
 
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) { // add room_cands
-		if (r->is_sec_bldg)                     continue; // don't place people in garages and sheds
-		if (!ALLOW_AI_IN_MALLS && r->is_mall()) continue; // don't place people in malls yet
-		if (min(r->dx(), r->dy()) < 3.0*radius) continue; // room to small to place a person
+		if (r->is_sec_bldg)                              continue; // don't place people in garages and sheds
+		if (!ALLOW_AI_IN_MALLS && r->is_mall_or_store()) continue; // don't place people in malls or stores
+		//if (has_mall() && !r->is_mall_or_store()) continue; // TESTING
+		if (min(r->dx(), r->dy()) < 3.0*radius)          continue; // room to small to place a person
 		unsigned const room_ix(r - interior->rooms.begin());
 		if (interior->pool.valid && (int)room_ix == interior->pool.room_ix) continue; // don't place in pool room so that we don't have to check for pool collisions
 		float const floor_spacing(get_room_floor_spacing(*r));
@@ -2349,7 +2352,7 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 	assert(person.goal_type == GOAL_TYPE_ELEVATOR);
 	if (!has_room_geom()) return person.ai_state; // if player has moved away and room_geom was deleted, remain in the current state
 	elevator_t &e(get_elevator(person.cur_elevator));
-	float const floor_spacing(get_window_vspace()); // TODO: get_elevator_floor_spacing(e)?
+	float const window_vspace(get_window_vspace()), floor_spacing(get_elevator_floor_spacing(e));
 	room_object_t const &ecar(interior->get_elevator_car(e));
 
 	// Note: when AI_LOCKS_ELEVATOR==1, only one person can be in the elevator at once, including walking into and out of the elevator
@@ -2437,7 +2440,7 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 	}
 	else if (person.ai_state == AI_ACTIVATE_ELEVATOR) {
 		vector3d const prev_dir(person.dir);
-		bool const is_turning(person_slow_turn(person, get_pos_to_stand_for_elevator(e, floor_spacing, person.pos.z), 0.5*delta_dir)); // slow turn to face the elevator door
+		bool const is_turning(person_slow_turn(person, get_pos_to_stand_for_elevator(e, window_vspace, person.pos.z), 0.5*delta_dir)); // slow turn to face the elevator door
 
 		if (!is_turning) { // turn completed
 			call_elevator_to_floor_and_light_nearest_button(e, person.dest_elevator_floor, 1, 0); // is_inside_elevator=1, is_up=0
@@ -2457,7 +2460,7 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 		person.idle_time += fticks;
 	}
 	else if (person.ai_state == AI_EXIT_ELEVATOR) {
-		point const target_dest(get_pos_to_stand_for_elevator(e, floor_spacing, person.pos.z));
+		point const target_dest(get_pos_to_stand_for_elevator(e, window_vspace, person.pos.z));
 		bool const is_inside_elevator(e.contains_pt_xy(person.pos));
 
 		// as long as we're inside the elevator, plan to exit to the designated point in front of the elevator
