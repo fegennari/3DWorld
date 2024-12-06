@@ -1731,6 +1731,13 @@ struct store_doorway_t : public cube_t {
 	store_doorway_t(cube_t const &bc, unsigned r, bool dim_, bool dir_, bool c) : cube_t(bc), room_id(r), dim(dim_), dir(dir_), closed(c) {}
 };
 
+struct ug_elev_info_t {
+	cube_t entrance;
+	float top_floor_z2;
+	bool dim, dir;
+	ug_elev_info_t(cube_t const &e, float tfz2, bool dim_, bool dir_) : entrance(e), top_floor_z2(tfz2), dim(dim_), dir(dir_) {}
+};
+typedef vector<ug_elev_info_t> vect_ug_elev_info_t;
 
 struct building_mall_info_t {
 	vect_cube_with_ix_t landings; // ix stores {is_escalator, se_dim, se_dir, ww_dir}
@@ -1738,6 +1745,7 @@ struct building_mall_info_t {
 	vector<store_info_t> stores;
 	stairwell_t ent_stairs;
 	cube_t bathrooms, store_bounds;
+	int city_elevator_ix=-1;
 };
 
 struct building_interior_t {
@@ -2137,8 +2145,8 @@ struct building_t : public building_geom_t {
 	void handle_vert_cylin_tape_collision(point &cur_pos, point const &prev_pos, float z1, float z2, float radius, bool is_player) const;
 	void draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 		unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building);
-	void gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, occlusion_checker_noncity_t &oc, vector3d const &xlate,
-		unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building, bool ext_basement_conn_visible);
+	void gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, occlusion_checker_noncity_t &oc, vector3d const &xlate, unsigned building_ix,
+		bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building, bool ext_basement_conn_visible, bool mall_elevator_visible);
 	bool has_glass_floor() const {return (has_room_geom() && !interior->room_geom->glass_floors.empty());}
 	bool glass_floor_visible(vector3d const &xlate, bool from_outside_building=0) const;
 	bool point_over_glass_floor(point const &pos, bool inc_escalator=0) const;
@@ -2294,6 +2302,7 @@ public:
 	cube_t get_best_occluder(point const &camera_bs) const;
 	cube_t get_step_for_ext_door(tquad_with_ix_t const &door) const;
 	bool interior_visible_from_other_building_ext_basement(vector3d const &xlate, bool expand_for_light=0) const;
+	bool top_of_mall_elevator_visible(point const &camera_bs, vector3d const &xlate) const;
 	void try_connect_ext_basement_to_building(building_t &b);
 	void finalize_extb_conn_rooms(unsigned ds_start);
 	template<typename T> void add_door_verts(cube_t const &D, T &drawer, door_rotation_t &drot, uint8_t door_type, bool dim, bool dir,

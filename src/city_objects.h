@@ -402,7 +402,7 @@ struct ww_elevator_t : public oriented_city_obj_t { // elevator connected to ove
 struct ug_elevator_t : public oriented_city_obj_t { // underground elevator to mall
 	cube_t sides[4]; // left, right, back, top
 
-	ug_elevator_t(cube_t const &c, bool dim_, bool dir_);
+	ug_elevator_t(ug_elev_info_t const &uge);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
@@ -745,7 +745,7 @@ public:
 	void bind_elevators_to_building_walkways(cube_t const &city_bcube) const;
 	void finalize_streetlights_and_power(streetlights_t &sl, vector<vect_cube_t> &plot_colliders);
 	void add_manhole(point const &pos, float radius, bool is_over_road);
-	void add_city_ug_elevator_entrances(vect_cube_with_ix_t const &entrances);
+	void add_city_ug_elevator_entrances(vect_ug_elev_info_t const &uges);
 	static bool subdivide_plot_for_residential(cube_t const &plot, vector<road_t> const &roads,
 		float plot_subdiv_sz, unsigned parent_plot_ix, unsigned city_ix, vect_city_zone_t &sub_plots);
 	void draw_detail_objects(draw_state_t &dstate, bool shadow_only);

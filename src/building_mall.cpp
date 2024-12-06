@@ -7,13 +7,15 @@
 
 bool const EXTEND_MALL_ELEVATOR_TO_CITY = 1;
 
+extern bool camera_in_building;
 using std::string;
+
 string choose_store_name(unsigned store_type, unsigned item_category, rand_gen_t &rgen);
 colorRGBA choose_pot_color(rand_gen_t &rgen);
 colorRGBA choose_sign_color(rand_gen_t &rgen, bool emissive=0);
 bool is_invalid_city_placement_for_cube(cube_t const &c);
 void add_city_plot_cut(cube_t const &cut);
-void add_city_ug_elevator_entrance(cube_with_ix_t const &entrance);
+void add_city_ug_elevator_entrance(ug_elev_info_t const &uge);
 void offset_hanging_tv(room_object_t &obj);
 void rotate_obj_cube(cube_t &c, cube_t const &bc, bool in_dim, bool dir);
 
@@ -193,21 +195,23 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 		set_wall_width(elevator, opening.get_center_dim(!dim), 0.5*width, !dim); // set width
 
 		if (EXTEND_MALL_ELEVATOR_TO_CITY && is_in_city) { // extend elevator up to street level if there's space?
-			cube_with_ix_t entrance(elevator, (2*dim + (!edir)));
+			cube_t entrance(elevator);
 			entrance.expand_by_xy(0.25*wall_thickness + 0.1*depth); // account for city exterior entrance wall thickness == 0.1*depth
 			cube_t test_cube(entrance);
 			set_cube_zvals(test_cube, elevator.z2(), elevator.z2()+floor_spacing);
 			test_cube.d[dim][!edir] -= (edir ? 1.0 : -1.0)*depth; // extend by depth in front of elevator
 
 			if (!is_cube_city_placement_invalid(test_cube)) {
-				// TODO: need a way for the player to interact with it on street level
+				// TODO: ground floor button works or automatically opens for player
+				// TODO: elevator continues after player exits
 				// TODO: need to set something like skip_floors_mask to (1 << num_floors) to keep building AI from using the top floor
 				// Note: should extend window_vspace above, but elevator won't have a stop at this pos, unless parking garage is two floors; so we extend to floor_spacing
 				elevator.z2() += floor_spacing;
 				entrance.z2()  = elevator.z2();
 				entrance.z1()  = ground_floor_z1; // at city level
 				add_city_plot_cut(elevator);
-				add_city_ug_elevator_entrance(entrance);
+				add_city_ug_elevator_entrance(ug_elev_info_t(entrance, (ground_floor_z1 + window_vspace), dim, !edir));
+				interior->mall_info->city_elevator_ix = interior->elevators.size();
 			}
 		}
 		interior->elevators.push_back(elevator);
@@ -215,6 +219,19 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 	if (is_in_city) { // add skylight(s)?
 		// must call is_cube_city_placement_invalid() and add_city_plot_cut()
 	}
+}
+
+bool building_t::top_of_mall_elevator_visible(point const &camera_bs, vector3d const &xlate) const {
+	if (camera_in_building) return 0;
+	if (!has_mall() || interior->mall_info->city_elevator_ix < 0)     return 0;
+	if (camera_bs.z < ground_floor_z1 || camera_bs.z > bcube.z2())    return 0; // player under the ground or far above
+	if (!interior->mall_info->store_bounds.contains_pt_xy(camera_bs)) return 0; // not above the mall / too far away (should end at the front of the building)
+	elevator_t const &e(get_elevator(interior->mall_info->city_elevator_ix));
+	if (e.contains_pt(camera_bs)) return 1; // player in elevator
+	if ((e.d[e.dim][e.dir] < camera_bs[e.dim]) ^ e.dir)  return 0;
+	cube_t elevator(e);
+	elevator.z1() = ground_floor_z1; // at city level
+	return camera_pdu.cube_visible(elevator + xlate); // VFC
 }
 
 bool building_t::is_cube_city_placement_invalid(cube_t const &c) const { // for mall skylights, elevator, etc.

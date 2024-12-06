@@ -3658,18 +3658,20 @@ public:
 						bool player_in_building_bcube(b.bcube.contains_pt_xy(camera_bs) || b.point_in_extended_basement(camera_bs)); // player within building's bcube
 						bool const ext_basement_conn_visible(b.interior_visible_from_other_building_ext_basement(xlate));
 						if (reflection_pass && !player_in_building_bcube && !ext_basement_conn_visible) continue; // not the correct building
+						bool const mall_elevator_visible(b.top_of_mall_elevator_visible(camera_bs, xlate));
+						bool const interior_visible(ext_basement_conn_visible || mall_elevator_visible); // only covers extb connector and mall elevator cases
 						bool const debug_draw(0 && b.interior->has_backrooms); // TESTING
 						
 						if (b.check_pt_in_or_near_walkway(camera_bs, 1, 1, 1)) { // owned_only=1, inc_open_door=1, inc_conn_room=1
 							if (toggle_room_light) {b.toggle_walkway_lights(camera_bs);}
 							player_in_building_bcube = 1; // walkways count as in building bcube
 						}
-						if (!debug_draw && !player_in_building_bcube && !ext_basement_conn_visible && !camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
+						if (!debug_draw && !player_in_building_bcube && !interior_visible && !camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
 						b.maybe_gen_chimney_smoke();
 						bool const camera_near_building(player_in_building_bcube || (!b.doors.empty() && b.bcube.contains_pt_xy_exp(camera_bs, door_open_dist)));
 						bool cant_see_inside(0);
 
-						if (!debug_draw && !ext_basement_conn_visible) {
+						if (!debug_draw && !interior_visible) {
 							// check if player is outside a windowless building (city office building); need to account for open doors
 							if (!player_in_building_bcube && !b.has_windows()) {
 								if (!b.point_near_ext_door(camera_bs, 20.0*door_open_dist)) continue; // too far away (use larger dist for door steps and ext door signs)
@@ -3678,7 +3680,7 @@ public:
 							else if ((display_mode & 0x08) && !player_in_building_bcube && b.is_entire_building_occluded(camera_bs, oc)) continue; // check occlusion
 						}
 						// draw interior detail objects if player is in the building (inc ext basement), even if far from the building center
-						unsigned inc_small(bdist_sq < rgeom_sm_draw_dist_sq);
+						unsigned inc_small(bdist_sq < rgeom_sm_draw_dist_sq || mall_elevator_visible);
 						if      (cant_see_inside)                                  {inc_small = 4;} // only exterior detail objects
 						else if (player_in_building_bcube)                         {inc_small = 3;} // include interior and exterior detail objects
 						else if (ext_basement_conn_visible)                        {inc_small = 3;} // include interior and exterior detail objects
@@ -3687,10 +3689,12 @@ public:
 						if (debug_draw) {inc_small = 3;} // TESTING
 						bool const player_in_bldg(debug_draw || player_in_building_bcube);
 						if (ext_basement_conn_visible) {s.add_uniform_float("wet_effect", 0.0);} // disable for non-player building
-						b.gen_and_draw_room_geom(&bbd, s, amask_shader, oc, xlate, bi->ix, 0, reflection_pass, inc_small, player_in_bldg, ext_basement_conn_visible); // shadow_only=0
+						b.gen_and_draw_room_geom(&bbd, s, amask_shader, oc, xlate, bi->ix, 0, reflection_pass,
+							inc_small, player_in_bldg, ext_basement_conn_visible, mall_elevator_visible); // shadow_only=0
 						if (ext_basement_conn_visible) {s.add_uniform_float("wet_effect", water_damage);}
 						g->has_room_geom = 1;
 						if (!draw_interior) continue;
+						if (!player_in_building_bcube && mall_elevator_visible && !camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC (above mall case)
 						
 						// when player is in the building (not attic or ext basement), draw people later so that alpha blending of hair against ext walls and windows works properly
 						if (defer_people_draw_for_player_building && player_in_building_bcube && b.has_people() && b.check_point_or_cylin_contained(camera_bs, 0.0, points, 0, 0, 0)) {

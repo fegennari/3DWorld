@@ -2066,15 +2066,16 @@ void ww_elevator_t::next_frame(point const &camera_bs, float fticks_stable) {
 
 // ug_elevator_t
 
-ug_elevator_t::ug_elevator_t(cube_t const &c, bool dim_, bool dir_) : oriented_city_obj_t(c, dim_, dir_) {
-	float const wall_thick(0.1*min(c.dx(), c.dy())), ceil_thick(0.1*c.dz());
-	cube_t bot(c);
-	sides[3] = c; // top
-	sides[3].z1() = bot.z2() = c.z2() - ceil_thick; // similar to floor thickness
+ug_elevator_t::ug_elevator_t(ug_elev_info_t const &uge) : oriented_city_obj_t(uge.entrance, uge.dim, uge.dir) {
+	float const wall_thick(0.1*min(bcube.dx(), bcube.dy()));
+	cube_t bot(bcube);
+	sides[3] = bcube; // top
+	sides[3].z1() = bot.z2() = min(uge.top_floor_z2, (bcube.z2() - 0.1f*bcube.dz())); // similar to floor thickness
+	assert(bot.is_strictly_normalized());
 	for (unsigned n = 0; n < 3; ++n) {sides[n] = bot;}
-	sides[2].d[dim][dir] = c.d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_thick; // back
+	sides[2].d[dim][dir] = bcube.d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_thick; // back
 	sides[2].expand_in_dim(!dim, -wall_thick); // shrink to remove overlap
-	for (unsigned d = 0; d < 2; ++d) {sides[!d].d[!dim][d] = c.d[!dim][!d] + (d ? 1.0 : -1.0)*wall_thick;} // left/right sides
+	for (unsigned d = 0; d < 2; ++d) {sides[!d].d[!dim][d] = bcube.d[!dim][!d] + (d ? 1.0 : -1.0)*wall_thick;} // left/right sides
 }
 /*static*/ void ug_elevator_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {select_texture(get_texture_by_name("roads/concrete.jpg"));}

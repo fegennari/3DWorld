@@ -2194,8 +2194,8 @@ void city_obj_placer_t::add_manhole(point const &pos, float radius, bool is_over
 	manhole_groups.rebuild(manholes, all_objs_bcube); // re-sort by tile
 }
 
-void city_obj_placer_t::add_city_ug_elevator_entrances(vect_cube_with_ix_t const &entrances) {
-	for (cube_with_ix_t const &e : entrances) {uge_groups.add_obj(ug_elevator_t(e, (e.ix >> 1), (e.ix & 1)), ug_elevs);}
+void city_obj_placer_t::add_city_ug_elevator_entrances(vect_ug_elev_info_t const &uges) {
+	for (ug_elev_info_t const &e : uges) {uge_groups.add_obj(ug_elevator_t(e), ug_elevs);}
 }
 
 bool city_obj_placer_t::add_skyway(cube_t const &city_bcube, vect_bldg_walkway_t const &walkway_cands, rand_gen_t rgen) {

@@ -2001,10 +2001,12 @@ void building_t::add_wall_and_door_trim() { // and window trim
 
 			for (unsigned d = 0; d < 2; ++d) {
 				walls.emplace_back(get_trim_cube(e, !e.dim, d, trim_thickness), (flags | dir_flags[!d])); // sides
+				if (e.in_mall == 1) {min_eq(walls.back().z2(), ground_floor_z1);} // no above ground trim
 				float const door_edge_pos(front.d[!e.dim][!d] + (d ? 1.0 : -1.0)*fwidth);
 				cube_t front_side(front);
 				front_side.d[!e.dim][d] = door_edge_pos; // clip around the door
 				walls.emplace_back(front_side, (draw_end_flags | dir_flags[!e.dir])); // draw ends
+				if (e.in_mall == 1) {min_eq(walls.back().z2(), ground_floor_z1);} // no above ground trim
 				// add trim on sides of doors running the whole length of the elevator
 				set_wall_width(door_trim, door_edge_pos, 0.5*door_trim_width, !e.dim);
 				bool const draw_top(check_skylight_intersection(door_trim)); // draw top edge of trim for top floor if there's a skylight
@@ -2016,6 +2018,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 				if (adj_e.z1() <= e.z1() && adj_e.z2() >= e.z2()) continue; // skip back trim if they share the entire Z-range
 			}
 			walls.emplace_back(get_trim_cube(e, e.dim, !e.dir, trim_thickness), (flags | dir_flags[e.dir])); // back trim
+			if (e.in_mall == 1) {min_eq(walls.back().z2(), ground_floor_z1);} // no above ground trim
 		} // for e
 		cube_t prev_stairs;
 		unsigned walls_ix(walls.size());
