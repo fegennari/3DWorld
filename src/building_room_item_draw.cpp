@@ -1902,10 +1902,11 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			if (obj.type == TYPE_KEY || obj.type == TYPE_SILVER || obj.type == TYPE_FOLD_SHIRT) continue; // small
 			if (obj.z1() > camera_bs.z || obj.z2() < two_floors_below) continue; // above or more than two floors below the light
 		}
-		else if (!building.is_house && !has_windows) { // windowless building
+		point obj_center(obj.get_cube_center());
+
+		if (!shadow_only && !building.is_house && !has_windows && !building.point_in_mall(obj_center)) { // windowless building
 			if (obj.z1() > one_floor_above || obj.z2() < two_floors_below) continue; // more than one floor of difference
 		}
-		point obj_center(obj.get_cube_center());
 		if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
 		
 		// distance culling; allow fire extinguishers and primary hallway objects to be visible all the way down a long hallway
