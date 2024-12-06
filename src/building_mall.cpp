@@ -204,7 +204,6 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 			if (!is_cube_city_placement_invalid(test_cube)) {
 				// TODO: ground floor button works or automatically opens for player
 				// TODO: elevator continues after player exits
-				// TODO: need to set something like skip_floors_mask to (1 << num_floors) to keep building AI from using the top floor
 				// Note: should extend window_vspace above, but elevator won't have a stop at this pos, unless parking garage is two floors; so we extend to floor_spacing
 				elevator.z2() += floor_spacing;
 				entrance.z2()  = elevator.z2();

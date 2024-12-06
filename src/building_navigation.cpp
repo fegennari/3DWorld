@@ -11,6 +11,9 @@
 
 
 bool const ALLOW_AI_IN_MALLS  = 1;
+// TODO: waiting for upper floor mall concourse elevator in wrong spot
+// TODO: not exiting mall concourse elevator
+// TODO: use mall stairs when not in zombie mode
 // TODO: enter/leave mall from parking garage
 // TODO: use escalators
 // TODO: use back hallway stairs?
@@ -2696,7 +2699,10 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 				elevator_t &e(get_elevator(person.cur_elevator));
 				float const e_floor_spacing(get_elevator_floor_spacing(e));
 				// floor index relative to this elevator, not the room or building
-				unsigned const cur_floor(get_elevator_floor(person.pos.z, e, e_floor_spacing)), num_floors(round_fp(e.dz()/e_floor_spacing));
+				float top_floor_z2(e.z2());
+				if (e.in_mall == 1) {min_eq(top_floor_z2, ground_floor_z1);} // prevent selection of ground floor of underground elevator
+				assert(e.z1() < top_floor_z2);
+				unsigned const cur_floor(get_elevator_floor(person.pos.z, e, e_floor_spacing)), num_floors(round_fp((top_floor_z2 - e.z1())/e_floor_spacing));
 				assert(num_floors > 1);
 				assert(cur_floor  < num_floors);
 
