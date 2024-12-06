@@ -297,7 +297,7 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 	}
 	else { // office building; add signs
 		if (!name.empty()) {
-			// Note: these will only appear when the player is very close to city office buildings, and about to walk through a door
+			// Note: these will only appear when the player is close to city office building exterior doors
 			colorRGBA const &sign_color(choose_sign_color(rgen));
 			float const z1_max(ground_floor_z1 + 0.5*get_window_vspace());
 
@@ -306,6 +306,23 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 				if (d->type != tquad_with_ix_t::TYPE_BDOOR) continue; // office front doors only (not back door, roof, etc.)
 				if (d->get_bcube().z1() > z1_max)           continue; // skip elevated walkway doors
 				add_sign_by_door(*d, 1, name, sign_color, 0); // outside name plate sign, not emissive
+			}
+			if (has_mall() && interior->mall_info->city_elevator_ix >= 0) { // add sign above the exterior elevator entrance
+				float const floor_spacing(get_window_vspace()), mall_floor_spacing(get_mall_floor_spacing());
+
+				if (mall_floor_spacing > 1.4*floor_spacing) { // we have space for a sign
+					elevator_t const &e(get_elevator(interior->mall_info->city_elevator_ix));
+					float const width(e.get_sz_dim(!e.dim)), zc(e.z2() - 0.75*(mall_floor_spacing - floor_spacing));
+					float const front_face(e.d[e.dim][e.dir] + (e.dir ? 1.0 : -1.0)*(0.25*get_wall_thickness() + 0.1*width)); // extend out by exterior wall width
+					cube_t c(e);
+					set_wall_width(c, zc, 0.1*width, 2 ); // Z
+					c.expand_in_dim(!e.dim, -0.2*width); // shrink width
+					c.d[e.dim][!e.dir] = front_face;
+					c.d[e.dim][ e.dir] = front_face + (e.dir ? 1.0 : -1.0)*0.01*width; // set thickness
+					unsigned const flags(RO_FLAG_LIT | RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR);
+					interior->room_geom->objs.emplace_back(c, TYPE_SIGN, interior->ext_basement_hallway_room_id, e.dim, e.dir, flags, 1.0, SHAPE_CUBE, sign_color); // lit
+					interior->room_geom->objs.back().obj_id = register_sign_text("MALL");
+				}
 			}
 		}
 		if (pri_hall.is_all_zeros() && rgen.rand_bool()) return; // place exit signs on buildings with primary hallways and 50% of other buildings
