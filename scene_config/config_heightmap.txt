@@ -43,6 +43,7 @@ tree_size 0.2
 rotate_trees 1
 sm_tree_scale 0.8 # slightly smaller (palm trees in cities are too tall)
 tree_4th_branches 1
+#gen_tree_roots 0 # not needed for cities/buildings?
 nleaves_scale 1.0
 sm_tree_density 0.5
 init_tree_mode 3 # both large and small trees
