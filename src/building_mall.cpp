@@ -186,31 +186,41 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 	if (!openings.empty()) { // add elevator
 		unsigned const opening_ix(choose_one_center(num_openings, rgen));
 		cube_t const opening(openings[opening_ix]);
-		bool const edir((num_openings & 1) ? rgen.rand_bool() : (opening_ix == num_openings/2)); // closer to center; random if tied
-		float const ww_edge(opening.d[dim][!edir] + (edir ? 1.0 : -1.0)*0.2*wall_thickness), width(1.6*door_width), depth(width);
-		// Note: elevator extends half a floor width below and above the room; is this okay, or can it clip through other objects?
+		bool edir((num_openings & 1) ? rgen.rand_bool() : (opening_ix == num_openings/2)); // prefer closer to center; random if tied
+		float const width(1.6*door_width), depth(width);
 		elevator_t elevator(room, interior->ext_basement_hallway_room_id, dim, !edir, 0, 1, 1); // at_edge=0, interior_room=1, in_mall=1
-		elevator.d[dim][!edir] = ww_edge; // front is adjacent to walkway
-		elevator.d[dim][ edir] = ww_edge + (edir ? 1.0 : -1.0)*depth; // extend back away from walkway by depth
 		set_wall_width(elevator, opening.get_center_dim(!dim), 0.5*width, !dim); // set width
 
-		if (EXTEND_MALL_ELEVATOR_TO_CITY && is_in_city) { // extend elevator up to street level if there's space?
-			cube_t entrance(elevator);
-			entrance.expand_by_xy(0.25*wall_thickness + 0.1*depth); // account for city exterior entrance wall thickness == 0.1*depth
-			cube_t test_cube(entrance);
-			set_cube_zvals(test_cube, elevator.z2(), elevator.z2()+floor_spacing);
-			test_cube.d[dim][!edir] -= (edir ? 1.0 : -1.0)*depth; // extend by depth in front of elevator
+		for (unsigned d = 0; d < 3; ++d) { // try both sides, then wrap around to the first side again if both can't extend
+			float const ww_edge(opening.d[dim][!edir] + (edir ? 1.0 : -1.0)*0.2*wall_thickness);
+			// Note: elevator extends half a floor width below and above the room; is this okay, or can it clip through other objects?
+			elevator.d[dim][!edir] = ww_edge; // front is adjacent to walkway
+			elevator.d[dim][ edir] = ww_edge + (edir ? 1.0 : -1.0)*depth; // extend back away from walkway by depth
 
-			if (!is_cube_city_placement_invalid(test_cube)) {
-				// Note: should extend window_vspace above, but elevator won't have a stop at this pos, unless parking garage is two floors; so we extend to floor_spacing
-				elevator.z2() += floor_spacing;
-				entrance.z2()  = elevator.z2();
-				entrance.z1()  = ground_floor_z1; // at city level
-				add_city_plot_cut(elevator);
-				add_city_ug_elevator_entrance(ug_elev_info_t(entrance, (ground_floor_z1 + window_vspace), dim, !edir));
-				interior->mall_info->city_elevator_ix = interior->elevators.size();
+			if (EXTEND_MALL_ELEVATOR_TO_CITY && is_in_city && d < 2) { // extend elevator up to street level if there's space?
+				cube_t entrance(elevator);
+				entrance.expand_by_xy(0.25*wall_thickness + 0.1*depth); // account for city exterior entrance wall thickness == 0.1*depth
+				cube_t test_cube(entrance);
+				set_cube_zvals(test_cube, elevator.z2(), elevator.z2()+floor_spacing);
+				test_cube.d[dim][!edir] -= (edir ? 1.0 : -1.0)*depth; // extend by depth in front of elevator
+
+				if (!is_cube_city_placement_invalid(test_cube)) { // valid
+					// Note: should extend window_vspace above, but elevator won't have a stop at this pos, unless parking garage is two floors; so we extend to floor_spacing
+					elevator.z2() += floor_spacing;
+					entrance.z2()  = elevator.z2();
+					entrance.z1()  = ground_floor_z1; // at city level
+					add_city_plot_cut(elevator);
+					add_city_ug_elevator_entrance(ug_elev_info_t(entrance, (ground_floor_z1 + window_vspace), dim, !edir));
+					interior->mall_info->city_elevator_ix = interior->elevators.size();
+				}
+				else { // try the other dir
+					edir         ^= 1;
+					elevator.dir ^= 1;
+					continue;
+				}
 			}
-		}
+			break; // success
+		} // for d
 		interior->elevators.push_back(elevator);
 	}
 	if (is_in_city) { // add skylight(s)?
