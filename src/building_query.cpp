@@ -254,14 +254,18 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	if (radius > 0.0) {
 		// player can't be in multiple buildings at once; if they were in some other building last frame, they can't be in this building this frame
 		if (check_interior && camera_in_building && player_building != this) return 0;
-		// skip zval check when the player is in the building because pos.z may be placed on the mesh,
-		// which could be above the top of the building when the player is in the extended basement;
-		// this should be legal because the player can't exit the building in the Z direction; maybe better to use p_last.z?
-		bool const sc_xy_only(xy_only || (check_interior && camera_in_building && player_building == this));
-		point const pos_bs(pos - xlate);
-		cube_t test_cube(coll_bcube);
-		if (check_interior && has_ext_basement()) {test_cube.union_with_cube(interior->basement_ext_bcube);} // include the extended basement for interior checks
-		if (!(sc_xy_only ? sphere_cube_intersect_xy(pos_bs, radius, test_cube) : sphere_cube_intersect(pos_bs, radius, test_cube))) return 0;
+
+		// skip cube intersection test if point (camera) is in the mall elevator; use p_last for this test since we want to know where the player was the last frame
+		if (!check_interior || !point_in_mall_elevator_entrance((p_last - xlate), 1)) {
+			// skip zval check when the player is in the building because pos.z may be placed on the mesh,
+			// which could be above the top of the building when the player is in the extended basement;
+			// this should be legal because the player can't exit the building in the Z direction; maybe better to use p_last.z?
+			bool const sc_xy_only(xy_only || (check_interior && camera_in_building && player_building == this));
+			cube_t test_cube(coll_bcube);
+			point const pos_bs(pos - xlate);
+			if (check_interior && has_ext_basement()) {test_cube.union_with_cube(interior->basement_ext_bcube);} // include the extended basement for interior checks
+			if (!(sc_xy_only ? sphere_cube_intersect_xy(pos_bs, radius, test_cube) : sphere_cube_intersect(pos_bs, radius, test_cube))) return 0;
+		}
 	}
 	if (check_sphere_coll_inner(pos, p_last, xlate, radius, xy_only, cnorm_ptr, check_interior)) return 1;
 	if (!check_interior) return 0;
@@ -354,7 +358,12 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 			break; // flag for interior collision detection
 		} // for i
 		if (point_in_attic(query_pt)) {is_interior = is_in_attic = 1;}
+		is_interior |= point_in_mall_elevator_entrance(query_pt, 0); // inc_front_space=0
 
+		if (!is_interior && has_mall() && interior->mall_info->city_elevator_ix >= 0) { // handle mall elevator exterior coll when doors are closed
+			elevator_t const &e(get_elevator(interior->mall_info->city_elevator_ix));
+			if (e.open_amt < 0.5) {had_coll |= sphere_cube_int_update_pos(pos2, radius, (e + xlate), p_last2, xy_only, cnorm_ptr);}
+		}
 		if (!is_interior) { // not interior to a part - check roof access
 			float const floor_thickness(get_floor_thickness());
 
@@ -2058,6 +2067,13 @@ bool building_t::get_interior_color_at_xy(point const &pos_in, colorRGBA &color)
 	return 1;
 }
 
+bool building_t::point_in_mall_elevator_entrance(point const &pos, bool inc_front_space) const {
+	if (!has_mall() || interior->mall_info->city_elevator_ix < 0) return 0; // no mall or above ground elevator
+	if (pos.z < ground_floor_z1 - get_fc_thickness())             return 0; // below ground
+	elevator_t const &e(get_elevator(interior->mall_info->city_elevator_ix));
+	return ((inc_front_space ? e.get_bcube_padded(e.get_length()) : e).contains_pt(pos)); // in or standing in front of the mall underground elevator
+}
+
 void expand_convex_polygon_xy(vect_point &points, point const &center, float expand) {
 	if (expand == 0.0) return;
 
@@ -2082,7 +2098,8 @@ int building_t::check_point_or_cylin_contained(point const &pos, float xy_radius
 		return (interior->point_in_ext_basement_room(pr, get_window_vspace(), get_wall_thickness()) ? 3 : 0);
 	}
 	if (inc_ext_basement && has_pool() && interior->pool.contains_pt(pr)) return 3; // in the pool
-
+	if (inc_ext_basement && point_in_mall_elevator_entrance(pr, 1))       return 3; // in or standing in front of the mall underground elevator; inc_front_space=1
+	
 	if (bcube.contains_pt_exp_xy_only(pos, xy_radius)) { // check parts
 		if (inc_attic && point_in_attic(pr)) return 2;
 

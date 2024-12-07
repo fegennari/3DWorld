@@ -2014,6 +2014,7 @@ struct building_t : public building_geom_t {
 	bool all_room_int_doors_closed(unsigned room_ix, float zval) const;
 	unsigned check_line_coll(point const &p1, point const &p2, float &t, bool occlusion_only=0, bool ret_any_pt=0, bool no_coll_pt=0, bool check_non_coll=0) const;
 	bool get_interior_color_at_xy(point const &pos, colorRGBA &color) const;
+	bool point_in_mall_elevator_entrance(point const &pos, bool inc_front_space) const;
 	int check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points,
 		bool inc_attic=0, bool inc_ext_basement=0, bool inc_roof_acc=0, bool inc_details=0, cube_t *coll_cube=nullptr) const;
 	bool point_under_attic_roof(point const &pos, vector3d *const cnorm=nullptr) const;
@@ -2120,6 +2121,7 @@ struct building_t : public building_geom_t {
 	void register_light_state_change(room_object_t const &light, point const &sound_pos, bool is_lamp=0);
 	void toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned num_zones);
 	bool chair_can_be_rotated(room_object_t const &chair) const;
+	void run_player_interact_logic(point const &camera_bs);
 	bool apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in, int mode, bool check_only=0, bool no_check_conn_building=0);
 	void assign_correct_room_to_object(room_object_t &obj) const;
 	bool move_nearest_object(point const &at_pos, vector3d const &in_dir, float range, int mode);

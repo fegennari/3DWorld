@@ -202,8 +202,6 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 			test_cube.d[dim][!edir] -= (edir ? 1.0 : -1.0)*depth; // extend by depth in front of elevator
 
 			if (!is_cube_city_placement_invalid(test_cube)) {
-				// TODO: ground floor button works or automatically opens for player
-				// TODO: elevator continues after player exits
 				// Note: should extend window_vspace above, but elevator won't have a stop at this pos, unless parking garage is two floors; so we extend to floor_spacing
 				elevator.z2() += floor_spacing;
 				entrance.z2()  = elevator.z2();
@@ -221,9 +219,9 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 }
 
 bool building_t::top_of_mall_elevator_visible(point const &camera_bs, vector3d const &xlate) const {
-	if (camera_in_building) return 0;
 	if (!has_mall() || interior->mall_info->city_elevator_ix < 0)     return 0;
 	if (camera_bs.z < ground_floor_z1 || camera_bs.z > bcube.z2())    return 0; // player under the ground or far above
+	if (bcube.contains_pt(camera_bs))                                 return 0; // player in main building, not outside by elevator
 	if (!interior->mall_info->store_bounds.contains_pt_xy(camera_bs)) return 0; // not above the mall / too far away (should end at the front of the building)
 	elevator_t const &e(get_elevator(interior->mall_info->city_elevator_ix));
 	if (e.contains_pt(camera_bs)) return 1; // player in elevator

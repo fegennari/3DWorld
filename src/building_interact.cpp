@@ -16,8 +16,8 @@ float const OBJ_GRAVITY    = 0.0003; // unsigned magnitude
 float const TERM_VELOCITY  = 1.0;
 float const OBJ_ELASTICITY = 0.8;
 
-extern bool tt_fire_button_down, flashlight_on, use_last_pickup_object, city_action_key, player_wait_respawn;
-extern int player_in_closet, camera_surf_collide, can_pickup_bldg_obj, animate2, frame_counter, player_in_elevator, player_in_attic;
+extern bool tt_fire_button_down, flashlight_on, use_last_pickup_object, city_action_key, can_do_building_action, toggle_room_light, player_wait_respawn;
+extern int player_in_closet, camera_surf_collide, can_pickup_bldg_obj, building_action_key, animate2, frame_counter, player_in_elevator, player_in_attic;
 extern float fticks, CAMERA_RADIUS, office_chair_rot_rate;
 extern double tfticks;
 extern building_dest_t cur_player_building_loc;
@@ -438,6 +438,15 @@ bool building_t::chair_can_be_rotated(room_object_t const &chair) const {
 		if (i->intersects(chair)) return 0;
 	}
 	return 1;
+}
+
+void building_t::run_player_interact_logic(point const &camera_bs) {
+	update_security_cameras(camera_bs);
+	if (::toggle_room_light) {toggle_room_light(camera_bs);}
+	if (building_action_key) {apply_player_action_key(camera_bs, cview_dir, (building_action_key-1), 0);} // check_only=0
+	else {can_do_building_action = apply_player_action_key(camera_bs, cview_dir, 0, 1);} // mode=0, check_only=1
+	player_pickup_object(camera_bs, cview_dir);
+	if (animate2) {update_player_interact_objects(camera_bs);} // update dynamic objects if the player is in the building
 }
 
 // called for the player; mode: 0=normal, 1=pull

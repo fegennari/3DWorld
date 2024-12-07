@@ -24,7 +24,7 @@ unsigned const SHADOW_ONLY_TEX     = RED_TEX;   // alias to differentiate shadow
 
 bool camera_in_building(0), interior_shadow_maps(0), player_is_hiding(0), player_in_unlit_room(0), player_in_walkway(0), player_in_int_elevator(0), player_on_house_stairs(0);
 bool building_has_open_ext_door(0), sec_camera_shadow_mode(0), player_in_ww_elevator(0), player_in_skyway(0), player_on_moving_ww(0), player_on_escalator(0);
-bool player_in_tunnel(0), player_in_mall(0);
+bool player_in_tunnel(0), player_in_mall(0), player_in_uge(0);
 int player_in_basement(0); // 0=no, 1=below ground level, 2=in basement and not on stairs, 3=in extended basement
 int player_in_closet  (0); // uses flags RO_FLAG_IN_CLOSET (player in closet), RO_FLAG_LIT (closet light is on), RO_FLAG_OPEN (closet door is open)
 int player_in_water   (0); // 0=no, 1=standing in water, 2=head underwater
@@ -3509,7 +3509,8 @@ public:
 		bool const ref_glass_floor(reflection_pass & REF_PASS_GLASS_FLOOR);
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
 		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
-		bool have_windows(0), have_wind_lights(0), have_interior(0), is_city_lighting_setup(0), this_frame_camera_in_building(0), this_frame_player_in_mall(0);
+		bool have_windows(0), have_wind_lights(0), have_interior(0), is_city_lighting_setup(0);
+		bool this_frame_camera_in_building(0), this_frame_player_in_mall(0), this_frame_player_in_uge(0);
 		int this_frame_player_in_basement(0), this_frame_player_in_water(0), this_frame_player_in_attic(0);
 		unsigned max_draw_ix(0);
 		shader_t s, amask_shader, holes_shader, city_shader;
@@ -3694,8 +3695,17 @@ public:
 						if (ext_basement_conn_visible) {s.add_uniform_float("wet_effect", water_damage);}
 						g->has_room_geom = 1;
 						if (!draw_interior) continue;
-						if (!player_in_building_bcube && mall_elevator_visible && !camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC (above mall case)
-						
+
+						if (!player_in_building_bcube && mall_elevator_visible) { // above the mall in the elevator
+							if (b.point_in_mall_elevator_entrance(camera_bs, 1)) {
+								b.run_player_interact_logic(camera_bs); // still need to update the elevator and buttons
+								this_frame_camera_in_building = 1;
+								//this_frame_player_in_basement = 1; // basement; setting to 3 (extended basement) will skip drawing exterior geom
+								this_frame_player_in_uge      = 1;
+								new_player_building = &b;
+							}
+							continue;
+						}
 						// when player is in the building (not attic or ext basement), draw people later so that alpha blending of hair against ext walls and windows works properly
 						if (defer_people_draw_for_player_building && player_in_building_bcube && b.has_people() && b.check_point_or_cylin_contained(camera_bs, 0.0, points, 0, 0, 0)) {
 							defer_ped_draw_vars.assign(&b, *i, bi->ix);
@@ -3772,13 +3782,8 @@ public:
 						b.register_player_in_building(camera_bs, bi->ix); // required for AI following logic
 						if (enable_building_indir_lighting()) {indir_bcs_ix = bcs_ix; indir_bix = bi->ix;} // compute indirect lighting for this building
 						// run any player interaction logic here
-						b.update_security_cameras(camera_bs);
-						if (toggle_room_light  ) {b.toggle_room_light(camera_bs);}
-						if (building_action_key) {b.apply_player_action_key(camera_bs, cview_dir, (building_action_key-1), 0);} // check_only=0
-						else {can_do_building_action = b.apply_player_action_key(camera_bs, cview_dir, 0, 1);} // mode=0, check_only=1
-						b.player_pickup_object(camera_bs, cview_dir);
+						b.run_player_interact_logic(camera_bs);
 						if (teleport_to_screenshot) {b.maybe_teleport_to_screenshot();}
-						if (animate2) {b.update_player_interact_objects(camera_bs);} // update dynamic objects if the player is in the building
 						building_occluder = b.get_best_occluder(camera_bs);
 					} // for bi
 					if (can_break_from_loop) break; // done
@@ -3799,6 +3804,7 @@ public:
 				camera_in_building = this_frame_camera_in_building;
 				player_in_basement = this_frame_player_in_basement;
 				player_in_mall     = this_frame_player_in_mall;
+				player_in_uge      = this_frame_player_in_uge;
 				player_in_attic    = this_frame_player_in_attic;
 				player_in_water    = this_frame_player_in_water;
 				building_has_open_ext_door = !ext_door_draw.empty();
@@ -4329,7 +4335,7 @@ public:
 		}
 		// hack to handle player in extended basement, which may be outside the building or even grid bbox:
 		// if player is in the basement, and we haven't checked the player's building, and the player's building is in our range of buildings, check it now
-		if (check_interior && !saw_player_building && player_in_basement && own_this_building(player_building)) {
+		if (check_interior && !saw_player_building && (player_in_basement || player_in_uge) && player_building && own_this_building(player_building)) {
 			if (player_building->check_sphere_coll(pos, p_last, xlate, radius, xy_only, cnorm, check_interior)) return 1;
 		}
 		return 0;
