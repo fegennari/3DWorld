@@ -2069,13 +2069,18 @@ void ww_elevator_t::next_frame(point const &camera_bs, float fticks_stable) {
 ug_elevator_t::ug_elevator_t(ug_elev_info_t const &uge) : oriented_city_obj_t(uge.entrance, uge.dim, uge.dir) {
 	float const wall_thick(0.1*min(bcube.dx(), bcube.dy()));
 	cube_t bot(bcube);
-	sides[3] = bcube; // top
-	sides[3].z1() = bot.z2() = min(uge.top_floor_z2, (bcube.z2() - 0.1f*bcube.dz())); // similar to floor thickness
+	cubes[3] = bcube; // top
+	cubes[3].z1() = bot.z2() = min(uge.top_floor_z2, (bcube.z2() - 0.1f*bcube.dz())); // similar to floor thickness
 	assert(bot.is_strictly_normalized());
-	for (unsigned n = 0; n < 3; ++n) {sides[n] = bot;}
-	sides[2].d[dim][dir] = bcube.d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_thick; // back
-	sides[2].expand_in_dim(!dim, -wall_thick); // shrink to remove overlap
-	for (unsigned d = 0; d < 2; ++d) {sides[!d].d[!dim][d] = bcube.d[!dim][!d] + (d ? 1.0 : -1.0)*wall_thick;} // left/right sides
+	for (unsigned n = 0; n < 3; ++n) {cubes[n] = bot;}
+	cubes[2].d[dim][dir] = bcube.d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_thick; // back
+	cubes[2].expand_in_dim(!dim, -wall_thick); // shrink to remove overlap
+	for (unsigned d = 0; d < 2; ++d) {cubes[!d].d[!dim][d] = bcube.d[!dim][!d] + (d ? 1.0 : -1.0)*wall_thick;} // left/right sides
+	cube_t &step(cubes[4]);
+	step = bcube;
+	step.expand_in_dim(!dim, -2.7*wall_thick); // shrink
+	step.z2() = bcube.z1() +  0.5*wall_thick ; // set height
+	set_wall_width(step, bcube.d[dim][dir], 0.95*wall_thick, dim);
 }
 /*static*/ void ug_elevator_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {select_texture(get_texture_by_name("roads/concrete.jpg"));}
@@ -2086,14 +2091,14 @@ ug_elevator_t::ug_elevator_t(ug_elev_info_t const &uge) : oriented_city_obj_t(ug
 void ug_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	float const tscale(1.0/get_width());
 
-	for (unsigned n = 0; n < 4; ++n) {
-		unsigned const skip_dims((n == 3) ? 0 : 4); // skip Z for sides and back
-		dstate.draw_cube(qbds.qbd, sides[n], LT_GRAY, 0, tscale, skip_dims);
+	for (unsigned n = 0; n < 5; ++n) {
+		unsigned const skip_dims((n == 3 || n == 4) ? 0 : 4); // skip Z for sides and back
+		dstate.draw_cube(qbds.qbd, cubes[n], LT_GRAY, (n == 4), tscale, skip_dims); // skip bottom for step
 	}
 }
 bool ug_elevator_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
-	for (unsigned n = 0; n < 4; ++n) {
-		if (sphere_cube_int_update_pos(pos_, radius_, (sides[n] + xlate), p_last, 0, cnorm)) return 1;
+	for (unsigned n = 0; n < 5; ++n) {
+		if (sphere_cube_int_update_pos(pos_, radius_, (cubes[n] + xlate), p_last, 0, cnorm)) return 1;
 	}
 	return 0;
 }

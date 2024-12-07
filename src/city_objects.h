@@ -400,7 +400,7 @@ struct ww_elevator_t : public oriented_city_obj_t { // elevator connected to ove
 };
 
 struct ug_elevator_t : public oriented_city_obj_t { // underground elevator to mall
-	cube_t sides[4]; // left, right, back, top
+	cube_t cubes[5]; // left, right, back, top, step
 
 	ug_elevator_t(ug_elev_info_t const &uge);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
