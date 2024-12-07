@@ -1005,7 +1005,7 @@ unsigned building_t::count_connected_room_components() {
 
 #define VISIT_CONN_ROOM(r) \
 if (use_bit_mask ? (seen_mask & (1ULL << r)) : seen[r]) continue; \
-if (r == room2) return 1; /*found, done*/ \
+if ((unsigned)r == room2) return 1; /*found, done*/ \
 pend.push_back(r); \
 if (use_bit_mask) {seen_mask |= (1ULL << r);} else {seen[r] = 1;}
 
