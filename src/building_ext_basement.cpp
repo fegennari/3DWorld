@@ -635,11 +635,14 @@ void building_interior_t::place_exterior_room(extb_room_t const &room, cube_t co
 	Room.interior = is_building_conn + 2; // mark as extended basement, or possibly connecting room between two buildings if is_building_conn == 1|2
 	if (room.has_stairs) {Room.has_stairs = 255;} // stairs on the first/only floor, or all floors if backroom
 	if (is_hallway) {Room.assign_all_to(RTYPE_HALL, 0);} // initially all hallways; locked=0
+	bool const is_first_extb_room((int)rooms.size() == ext_basement_hallway_room_id);
 	rooms.push_back(Room);
 	cube_t ceiling(room), floor(room);
 	ceiling.z1() = room.z2() - fc_thick;
 	floor  .z2() = room.z1() + fc_thick;
 	subtract_cubes_from_cube(ceiling, P.stairs, P.wall_segs, P.temp_cubes, 2); // cut out stairs; zval_mode=2 (check for zval overlap)
+	// subtract mall elevator shaft from mall concourse ceiling
+	if (is_first_extb_room && has_mall() && mall_info->city_elevator_ix >= 0) {subtract_cube_from_cubes(elevators[mall_info->city_elevator_ix], P.wall_segs);}
 	vector_add_to(P.wall_segs, ceilings);
 	subtract_cubes_from_cube(floor,   P.stairs, P.wall_segs, P.temp_cubes, 2); // cut out stairs; zval_mode=2 (check for zval overlap)
 	vector_add_to(P.wall_segs, floors);
