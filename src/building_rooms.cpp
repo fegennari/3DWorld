@@ -2797,6 +2797,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			if (i->skip_floor_ix(f)) continue;
 			sign.z1() = i->z1()   + f*floor_spacing + 0.5*window_vspacing;
 			sign.z2() = sign.z1() + 0.1*ewidth;
+			if (i->in_mall == 1 && sign.z2() > ground_floor_z1) continue; // no floor number on above ground mall elevator entrances; text may not be drawn anyway
 			objs.emplace_back(sign, TYPE_SIGN, i->room_id, dim, dir, (RO_FLAG_NOCOLL /*| RO_FLAG_HAS_EXTRA*/), 1.0, SHAPE_CUBE, DK_BLUE); // no frame?
 			set_floor_text_for_sign(objs.back(), f+1, floor_offset, has_parking_garage, i->in_mall, i->in_backrooms, oss);
 		}
