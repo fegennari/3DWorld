@@ -1622,13 +1622,18 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		// basement, attic, and elevator lights are only visible when player is in the building;
 		// elevator test is questionable because it can be open on the ground floor of a room with windows in a small office building, but should be good enough
 		if (!camera_in_building && ((light_in_basement && !camera_can_see_ext_basement) || is_in_windowless_attic || is_in_elevator)) continue;
-		if ((is_in_elevator || is_in_closet) && camera_z > lpos.z) continue; // elevator or closet light on the floor below the player
-		if (light_in_basement && camera_above_ground_floor)        continue; // basement lights only visible if player is on basement or ground floor
-		room_t const &room(get_room(i->room_id));
-		bool const in_ext_basement(room.is_ext_basement()), in_retail_room(room.is_retail());
-		bool light_vis_from_basement(light_in_basement);
 
-		if (camera_in_ext_basement && !light_in_basement && lpos.z < ground_floor_z2) { // check if light by basement stairs; can happen with office ground floor hall lights
+		if (lpos.z < camera_z) { // light below the player
+			if (is_in_elevator || is_in_closet)                 continue; // elevator or closet light on the floor below the player
+			if (light_in_basement && camera_above_ground_floor) continue; // basement lights only visible if player is on basement or ground floor
+		}
+		room_t const &room(get_room(i->room_id));
+		bool const in_ext_basement(room.is_ext_basement());
+		if (in_ext_basement && camera_feet_above_basement && lpos.z < camera_z) continue; // light in extended basement, and camera not in basement or on basement stairs
+		bool light_vis_from_basement(light_in_basement || in_ext_basement); // the in_ext_basement is there to handle mall elevators that extend above ground
+
+		if (camera_in_ext_basement && !light_vis_from_basement && lpos.z < ground_floor_z2) {
+			// check if light by basement stairs; can happen with office ground floor hall lights
 			for (stairwell_t const &s : interior->stairwells) {
 				if (s.z1() >= ground_floor_z1 || s.z2() < ground_floor_z1) continue; // not basement stairs
 				if (s.is_u_shape()) continue; // light from above U-shaped stairs can't be seen from the bottom
@@ -1637,8 +1642,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				if (stairs_exp.intersects_xy(*i)) {light_vis_from_basement = 1; break;}
 			}
 		}
-		if (in_ext_basement && camera_feet_above_basement)      continue; // light  in extended basement, and camera not in basement or on basement stairs
-		if (camera_in_ext_basement && !light_vis_from_basement) continue; // camera in extended basement, and light  not in basement
+		if (camera_in_ext_basement && !light_vis_from_basement) continue; // camera in extended basement, and light not in basement
+		bool const in_retail_room(room.is_retail());
 		
 		// if the player is in the parking garage, retail lights may not be visible through stairs; this check may not be valid if ramps extend to the first floor in the future
 		if (camera_in_basement && !camera_on_stairs && in_retail_room && !interior->stairwells.empty()) {
@@ -1657,8 +1662,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		int const cur_floor(is_single_floor ? 0 : (i->z1() - room.z1())/window_vspacing); // garages and sheds are all one floor
 		float const level_z(is_in_attic ? interior->attic_access.z1() : (room.z1() + cur_floor*window_vspacing)), floor_z(level_z + fc_thick);
 		float ceil_z(0.0);
-		if      (is_in_attic         ) {ceil_z = interior_z2;} // top of interior/attic
-		else if (is_in_elevator      ) {ceil_z = get_elevator(i->obj_id).z2();} // top of elevator shaft
+		cube_t elevator_bounds;
+		
+		if (is_in_elevator) {
+			elevator_t const &elevator(get_elevator(i->obj_id));
+			ceil_z = elevator.z2(); // top of elevator shaft
+			if (elevator.in_mall == 1 && lpos.z > ground_floor_z1 - fc_thick) {elevator_bounds = elevator;} // mall elevator above ground
+		}
+		else if (is_in_attic         ) {ceil_z = interior_z2;} // top of interior/attic
 		else if (room.is_single_floor) {ceil_z = room.z2();} // top of current room/part (garage shed, etc.)
 		else                           {ceil_z = (level_z + window_vspacing - fc_thick);} // normal room light
 		float const floor_below_zval(floor_z - window_vspacing), ceil_above_zval(ceil_z + window_vspacing);
@@ -1835,6 +1846,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (is_rotated()) {
 				light_clip_cube = get_rotated_bcube(bcube, 1); // inv_rotate=1
 				light_clip_cube.union_with_pt(lpos); // should not be needed, but I've seen it happen with one rotated building
+			}
+			else if (is_in_elevator && !elevator_bounds.is_all_zeros()) { // mall elevator
+				light_clip_cube = elevator_bounds;
+				assert(light_clip_cube.contains_pt(lpos));
 			}
 			else {
 				light_clip_cube = bcube;
