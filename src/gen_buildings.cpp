@@ -2682,7 +2682,7 @@ class building_creator_t {
 				}
 			}
 		}
-		cube_t const &get_vis_bcube() const {return (player_in_ext_basement() ? extb_bcube : bcube);}
+		cube_t const &get_vis_bcube() const {return ((player_in_ext_basement() || player_in_uge) ? extb_bcube : bcube);}
 	};
 	vector<grid_elem_t> grid, grid_by_tile;
 
