@@ -2011,7 +2011,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	}
 	if (player_in_building_or_doorway) {
 		// draw animals; skip animal shadows for retail rooms and malls/stores as an optimization (must agree with lighting code)
-		bool const skip_animals(shadow_only && (building.has_retail() && building.get_retail_part().contains_pt(camera_bs)) || building.point_in_mall(camera_bs));
+		bool const skip_animals(shadow_only && ((building.has_retail() && building.get_retail_part().contains_pt(camera_bs)) || building.point_in_mall(camera_bs)));
 		if (!skip_animals) {draw_animals(s, building, oc, xlate, camera_bs, shadow_only, reflection_pass, check_clip_cube);}
 	}
 	if (disable_cull_face) {glEnable(GL_CULL_FACE);} // re-enable face culling

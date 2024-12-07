@@ -371,7 +371,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			else if (is_mall_store) {
 				unsigned const objs_start(objs.size());
-				float const wall_vent_zval(floor_zval + get_mall_floor_spacing() - window_vspacing); // higher for higher ceiling
 				add_mall_store_objs       (rgen, *r, room_center.z,  room_id);
 				add_outlets_to_room       (rgen, *r, room_center.z,  room_id, objs_start, 0, 0); // is_ground_floor=is_basement=0
 				add_light_switches_to_room(rgen, *r, room_center.z,  room_id, objs_start, 0, 0); // is_ground_floor=is_basement=0
