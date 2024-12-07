@@ -207,9 +207,11 @@ void tree_lod_render_t::render_billboards(shader_t &s, bool render_branches) con
 	bind_vbo(0);
 }
 
+float get_default_tree_depth() {return TREE_DEPTH*(0.5 + 0.5/tree_scale);}
 
 float get_tree_z_bottom(float z, point const &pos) {
-	return ((world_mode == WMODE_GROUND && is_over_mesh(pos)) ? max(zbottom, (z - TREE_DEPTH)) : (z - TREE_DEPTH));
+	float const zbot(z - get_default_tree_depth());
+	return ((world_mode == WMODE_GROUND && is_over_mesh(pos)) ? max(zbottom, zbot) : zbot);
 }
 
 
@@ -1462,9 +1464,6 @@ void tree_xform_t::gen_cylin_rotate(vector3d &rotate, vector3d &lrotate, float r
 	if (lrotate.y < 0.0) {temp_deg *= -1.0;}
 	setup_rotate(rotate, rotate_start, temp_deg);
 }
-
-
-float get_default_tree_depth() {return TREE_DEPTH*(0.5 + 0.5/tree_scale);}
 
 float get_tree_size_scale(int tree_type, bool create_bush) {
 	return TREE_SIZE*tree_types[tree_type].branch_size/tree_scale * (create_bush ? 0.7 : 1.0);
