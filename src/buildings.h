@@ -2208,7 +2208,7 @@ private:
 	void add_escalator_points(person_t const &person, ai_path_t &path) const;
 	bool stairs_contained_in_part(stairwell_t const &s, cube_t const &p) const;
 	bool no_stairs_exit_on_floor(stairwell_t const &stairs, float zval) const;
-	void find_nearest_stairs_or_ramp(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, int part_ix=-1) const;
+	void find_nearest_stairs_ramp_esc(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, int part_ix=-1) const;
 	int find_nearest_elevator_this_floor(point const &pos) const;
 	void ai_room_lights_update(person_t const &person);
 	void move_person_to_not_collide(person_t &person, person_t const &other, point const &new_pos, float rsum, float coll_dist) const;
