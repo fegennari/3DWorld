@@ -1174,7 +1174,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			} // for n
 			// add pictures
 			picture.d[!mall_dim][ d] = wall_pos; // against the wall
-			picture.d[!mall_dim][!d] = wall_pos + dsign*0.25*wall_thickness;
+			picture.d[!mall_dim][!d] = wall_pos + dsign*0.1*wall_thickness;
 
 			for (unsigned n = 0; n < num_pictures; ++n) {
 				float const hheight(0.5*rgen.rand_uniform(0.3, 0.4)*floor_spacing), hwidth(hheight*rgen.rand_uniform(1.5, 1.8)), pic_end_pad(1.0*hwidth);
@@ -1184,7 +1184,8 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 					float const pos(rgen.rand_uniform(place_area.d[mall_dim][0]+pic_end_pad, place_area.d[mall_dim][1]-pic_end_pad));
 					set_wall_width(picture, pos, hwidth, mall_dim);
 					cube_t test_cube(picture);
-					test_cube.expand_by_xy(wall_thickness);
+					test_cube.expand_in_dim(!mall_dim, 1.0*wall_thickness);
+					test_cube.expand_in_dim( mall_dim, 2.0*wall_thickness);
 					if (!is_valid_placement_at_mall_wall(test_cube, entrance_stairs_bcube, wall_blockers)) continue;
 					objs.emplace_back(picture, TYPE_PICTURE, room_id, !mall_dim, !d, (RO_FLAG_NOCOLL | RO_FLAG_IN_MALL), light_amt); // picture faces dir opposite the wall
 					objs.back().obj_id = rgen.rand(); // determines picture texture
