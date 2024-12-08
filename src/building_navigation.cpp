@@ -354,6 +354,7 @@ public:
 		assert(room < num_rooms && stairs < num_stairs);
 		unsigned const node_ix2(num_rooms + stairs);
 		node_t &n2(get_node(node_ix2));
+		assert(n2.is_stairs);
 		cube_t entry_u(n2.bcube), entry_d(n2.bcube);
 		bool const dim(s.dim), dir(s.dir);
 		float const extend((dir ? -1.0 : 1.0)*stairs_extend); // extend away from stairs for entrance/exit area; will be denormalized in this dim
@@ -381,6 +382,7 @@ public:
 		assert(room < num_rooms);
 		unsigned const node_ix2(num_rooms + num_stairs); // pg_ramp comes after all stairs
 		node_t &n2(get_node(node_ix2));
+		assert(n2.is_ramp);
 		cube_t entry_u(n2.bcube), entry_d(n2.bcube);
 		float const extend((dir ? -1.0 : 1.0)*stairs_extend); // extend away from stairs for entrance/exit area; will be denormalized in this dim
 		// straight ramp: entrances are on opposite ends
@@ -462,7 +464,10 @@ public:
 		for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(c.d[d][0], c.d[d][1]);}
 	}
 	point get_stairs_entrance_pt(float zval, unsigned node_ix, bool up_or_down) const {
+		// should we always move to the right side on wide stairs such as in malls so that other people can pass by going the other direction?
 		node_t const &node(get_node(node_ix));
+		assert(node.is_stairs || node.is_ramp);
+		if (node.conn_rooms.empty()) {cout << TXT(node.is_stairs) << TXT(node.is_ramp) << TXT(node_ix) << TXT(node.bcube.str()) << endl;} // TESTING
 		assert(!node.conn_rooms.empty());
 		vector2d const &pt(node.conn_rooms.front().pt[up_or_down]); // Note: all conn_rooms should be the same value
 		return point(pt.x, pt.y, zval);
