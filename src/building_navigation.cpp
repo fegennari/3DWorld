@@ -51,6 +51,7 @@ bool check_line_int_xy(vect_cube_t const &c, point const &p1, point const &p2) {
 	}
 	return 0;
 }
+float get_dist_xy_through_pt(point const &p1, point const &p2, point const &p3) {return (p2p_dist_xy(p1, p2) + p2p_dist_xy(p2, p3));}
 
 /*static*/ bool cube_nav_grid::pt_contained_xy(point const &pt, vect_cube_t const &cubes) {
 	for (cube_t const &c : cubes) {
@@ -622,7 +623,7 @@ public:
 
 				if (npts == 1 || !(seg1_bad || seg2_bad)) { // single point or both segments valid
 					if (seg1_bad || seg2_bad) continue; // bad point (either line intersects)
-					float const dist(p2p_dist_xy(p1, pos) + p2p_dist_xy(pos, p2));
+					float const dist(get_dist_xy_through_pt(p1, pos, p2));
 					if (dmin == 0.0 || dist < dmin) {best_pt = pos; dmin = dist; use_pos2 = 0;}
 				}
 				else { // npts == 2
@@ -638,7 +639,7 @@ public:
 
 					for (unsigned ordering = 0; ordering < 2; ++ordering) { // try {p1-pos-pos2-p2} and {p1-pos2-pos-p2}
 						if (check_line_int_xy(keepout, pos, p1) || check_line_int_xy(keepout, pos2, p2)) {swap(pos, pos2); continue;} // bad point (could optimize this if needed)
-						float const dist(p2p_dist_xy(p1, pos) + p2p_dist_xy(pos, pos2) + p2p_dist_xy(pos2, p2));
+						float const dist(get_dist_xy_through_pt(p1, pos, pos2) + p2p_dist_xy(pos2, p2));
 						if (dmin == 0.0 || dist < dmin) {best_pt = pos; best_pt2 = pos2; dmin = dist; use_pos2 = 1;}
 						break;
 					} // for ordering
