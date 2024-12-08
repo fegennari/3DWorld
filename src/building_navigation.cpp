@@ -724,7 +724,7 @@ public:
 				}
 				else { // room/doorway/elevator/player
 					unsigned const num_tries(req_custom_dest ? 1 : 10); // only try custom_dest if req_custom_dest is set
-					bool const is_lg_room(building.is_single_large_room(n));
+					bool const is_lg_room(building.is_single_large_room_or_store(n));
 					bool success(0);
 
 					for (unsigned N = 0; N < num_tries; ++N) { // keep retrying until we find a point that is reachable from the room or doorway
@@ -1251,7 +1251,7 @@ bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, 
 	point dest_pos(valid_area.get_cube_center());
 	vect_cube_t &avoid(reused_avoid_cubes[0]);
 	get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
-	bool const no_use_init(is_single_large_room(room)); // don't use the room center for a parking garage, backrooms, retail area, or mall
+	bool const no_use_init(is_single_large_room_or_store(room)); // don't use the room center for a parking garage, backrooms, retail area, mall, or store
 	if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, person.target_pos.z, valid_area, rgen, dest_pos, no_use_init)) return 0;
 	
 	if (!is_cube()) { // non-cube building
@@ -1527,7 +1527,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		}
 	}
 	// how about a different location in the same room? this will at least get the person unstuck from an object and moving inside a parking garage
-	if ((person.is_first_path || single_large_room) && !must_leave_room) {
+	if ((person.is_first_path || single_large_room || cur_room.is_store()) && !must_leave_room) {
 		if (select_person_dest_in_room(person, rgen, cur_room)) {person.last_used_stairs = 0; return 1;}
 	}
 	return 2; // failed, but can retry
@@ -2948,7 +2948,7 @@ void building_t::ai_room_lights_update(person_t const &person) {
 	if (room_ix >= 0) {set_room_light_state_to(get_room(room_ix), person.pos.z, 1);} // make sure current room light is on when entering
 	if (person.cur_room < 0)        return; // no old room (error?)
 	room_t const &room(get_room(person.cur_room));
-	if (is_single_large_room(room)) return; // don't turn off parking garage/backrooms/retail/mall lights since they affect a large area
+	if (is_single_large_room_or_store(room)) return; // don't turn off parking garage/backrooms/retail/mall/store lights since they affect a large area
 	float const floor_spacing(get_window_vspace());
 	bool other_person_in_room(cur_player_building_loc.building_ix == person.cur_bldg && same_room_and_floor_as_player(person)); // player counts
 
