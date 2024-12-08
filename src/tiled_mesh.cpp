@@ -2689,8 +2689,9 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 	} // for i
 	if (enable_instanced_pine_trees() && !to_gen_trees.empty()) {create_pine_tree_instances();}
 	//RESET_TIME;
-	// don't use parallel tree gen for a single tile
-#pragma omp parallel for schedule(dynamic,1) if (to_gen_trees.size() > 1)
+	// don't use parallel tree gen for a single tile or when using GPU noise
+	bool const use_mt(to_gen_trees.size() > 1 && mesh_gen_mode != MGEN_SIMPLEX_GPU && mesh_gen_mode != MGEN_DWARP_GPU);
+#pragma omp parallel for schedule(dynamic,1) if (use_mt)
 	for (int i = 0; i < (int)to_gen_trees.size(); ++i) {to_gen_trees[i]->init_pine_tree_draw();}
 	//if (!to_gen_trees.empty()) {PRINT_TIME("Gen Trees2");}
 	assert(!height_gens.empty());
