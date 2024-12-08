@@ -963,7 +963,8 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 			if (stairwell.stairs_door_ix >= 0 && global_building_params.ai_opens_doors < 2) { // check for open doors; doors on stairs can't be locked
 				if (!get_door(stairwell.stairs_door_ix).open) continue; // stairs blocked by closed door, don't connect (even if unlocked)
 			}
-			if (room.intersects_no_adj(stairwell)) {ng.connect_stairs(r, s, stairwell, doorway_width);}
+			// allow adjacency only for mall back hallway stairs, since they don't intersect the room
+			if ((stairwell.in_mall == 2) ? room.intersects(stairwell) : room.intersects_no_adj(stairwell)) {ng.connect_stairs(r, s, stairwell, doorway_width);}
 		}
 		if (has_mall() && (int)r == interior->ext_basement_hallway_room_id) { // bidirectional; only need to check mall => store/parking garage direction
 			for (store_doorway_t const &d : interior->mall_info->store_doorways) {
