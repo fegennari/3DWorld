@@ -11,7 +11,7 @@
 
 
 bool const ALLOW_AI_IN_MALLS  = 1;
-// TODO: zombies don't follow player near entrance stairs
+// TODO: zombies use escalators when following the player
 // TODO: enter/leave mall from parking garage
 // TODO: use back hallway stairs?
 float const COLL_RADIUS_SCALE = 0.75; // somewhat smaller than radius, but larger than PED_WIDTH_SCALE
@@ -1696,6 +1696,7 @@ void building_t::find_nearest_stairs_ramp_esc(point const &p1, point const &p2, 
 
 	for (unsigned s = 0; s < num_stairwells; ++s) {
 		stairwell_t const &stairs(interior->stairwells[s]);
+		if (stairs.in_mall == 2) continue; // skip mall back hallway stairs until this is implemented
 		if (zmin < stairs.z1() || zmax > stairs.z2()) continue; // stairs don't span the correct floors
 		if (part_ix >= 0 && !stairs_contained_in_part(stairs, parts[part_ix])) continue; // stairs don't belong to this part (Note: this option is currently unused)
 		//if (no_stairs_exit_on_floor(stairs, p2.z))    continue; // not an exit; now handled in path reconstruction by pathing to the floor above or below through this point
@@ -1773,7 +1774,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 	if (loc1.part_ix < 0 || loc2.part_ix < 0 || loc1.room_ix < 0 || loc2.room_ix < 0) return 0; // not in a room
 	assert((unsigned)loc1.part_ix < parts.size() && (unsigned)loc2.part_ix < parts.size());
 	assert((unsigned)loc1.room_ix < interior->rooms.size() && (unsigned)loc2.room_ix < interior->rooms.size());
-	float const floor_spacing(get_window_vspace()), height(person.get_height());
+	float const height(person.get_height());
 	vect_cube_t &avoid(reused_avoid_cubes[0]);
 
 	if (person.goal_type == GOAL_TYPE_ESCALATOR) {
@@ -1893,12 +1894,13 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 				point const exit_pt(stairs_ext.closest_pt(path.back()));
 				path.add(exit_pt, 1);
 
-				if (stairs.is_u_shape()) { // add 2 extra points on mid-level landing; entrance and exit will be on the same side
+				if (stairs.is_u_shape()) {
+					// add 2 extra points on mid-level landing and possibly more for non-exit landings; entrance and exit will be on the same side
 					bool const dim(stairs.dim), dir(stairs.dir); // Note: see code in add_stairs_and_elevators()
 					float const turn_pt(stairs.d[dim][dir] - 0.1*(dir ? 1.0 : -1.0)*stairs.get_length()), seg_delta_z(0.45f*(to.z - from.z));
-					point exit_turn(exit_pt.x, exit_pt.y, (to.z - seg_delta_z));
-					exit_turn[dim] = turn_pt;
+					point exit_turn (exit_pt .x, exit_pt .y, (to  .z - seg_delta_z));
 					point enter_turn(enter_pt.x, enter_pt.y, (from.z + seg_delta_z));
+					exit_turn [dim] = turn_pt;
 					enter_turn[dim] = turn_pt;
 
 					if (no_stairs_exit_on_floor(stairs, exit_pt.z)) {
@@ -1906,7 +1908,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 						// end our path here, since it may be invalid, then extend a new path away from the stairs
 						path.clear();
 						bool const going_up(exit_pt.z > enter_pt.z);
-						point const next_floor_delta(0.0, 0.0, (going_up ? 1.0 : -1.0)*floor_spacing); // dz
+						point const next_floor_delta(0.0, 0.0, (going_up ? 1.0 : -1.0)*get_window_vspace()); // dz
 						vector3d path_extend;
 						path_extend[dim] -= (dir ? 1.0 : -1.0)*0.5*get_doorway_width(); // move out of the extended stairs area
 						path.add((exit_pt    + next_floor_delta + path_extend), 1); // exit point from stairwell area (clear of walls)
@@ -1924,7 +1926,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 					path.add(enter_turn, 1); // turning point for entrance side of stairs
 				}
 				else if (stairs.is_l_shape()) {
-					float const landing_width(get_landing_width()), landing_offset(0.25*landing_width), stair_dz(floor_spacing/(stairs.get_num_stairs()+1));
+					float const landing_width(get_landing_width()), landing_offset(0.25*landing_width), stair_dz(get_window_vspace()/(stairs.get_num_stairs()+1));
 					unsigned const num_stairs1(get_L_stairs_first_flight_count(stairs, landing_width)); // number of stairs in first/lower flight
 					point landing_center;
 					landing_center.z = min(from.z, to.z) + (num_stairs1 + 1)*stair_dz; // landing is up num_stairs1 + 1 (for the landing itself) in height
@@ -2022,7 +2024,7 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) { // add room_cands
 		if (r->is_sec_bldg)                              continue; // don't place people in garages and sheds
 		if (!ALLOW_AI_IN_MALLS && r->is_mall_or_store()) continue; // don't place people in malls or stores
-		//if (has_mall() && !r->is_mall_or_store()) continue; // TESTING
+		//if (has_mall() && !r->is_mall_or_store()) continue; // TESTING - only place in malls
 		if (min(r->dx(), r->dy()) < 3.0*radius)          continue; // room to small to place a person
 		unsigned const room_ix(r - interior->rooms.begin());
 		if (interior->pool.valid && (int)room_ix == interior->pool.room_ix) continue; // don't place in pool room so that we don't have to check for pool collisions
