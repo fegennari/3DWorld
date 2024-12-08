@@ -64,7 +64,7 @@ extern bool has_snow, no_sun_lpos_update, has_dl_sources, gen_tree_roots, tt_lig
 extern int num_trees, do_zoom, display_mode, animate2, iticks, draw_model, frame_counter;
 extern int xoff2, yoff2, rand_gen_index, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
 extern unsigned smoke_tid;
-extern float zmin, zmax, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation, tree_density_thresh, tree_slope_thresh;
+extern float zmin, zmax, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation, tree_density_thresh, tree_slope_thresh, tree_depth_scale;
 extern double sim_ticks;
 extern vector3d wind;
 extern lightning_t l_strike;
@@ -207,7 +207,7 @@ void tree_lod_render_t::render_billboards(shader_t &s, bool render_branches) con
 	bind_vbo(0);
 }
 
-float get_default_tree_depth() {return TREE_DEPTH*(0.5 + 0.5/tree_scale);}
+float get_default_tree_depth() {return TREE_DEPTH*tree_depth_scale*(0.5 + 0.5/tree_scale);}
 
 float get_tree_z_bottom(float z, point const &pos) {
 	float const zbot(z - get_default_tree_depth());

@@ -37,7 +37,7 @@ extern tree_placer_t tree_placer;
 struct sm_tree_type {
 
 	int leaf_tid, bark_tid;
-	float w2, ws, h, ss, width_scale, height_scale;
+	float w2, ws, h, ss, width_scale, height_scale; // w2=top trunk radius, ws=bottom trunk radius, ss=size scale for ndiv/dist culling
 	colorRGB bc; // trunk color
 
 	sm_tree_type(float w2_, float ws_, float h_, float ss_, float wscale, float hscale, colorRGB const &bc_, int ltid, int btid)
@@ -49,7 +49,7 @@ sm_tree_type const stt[NUM_ST_TYPES] = { // w2, ws, h, ss, wscale, hscale, c, ti
 	sm_tree_type(0.13, 0.15, 0.75, 0.8, 1.0, 1.0, TREE_C,  TREE_HEMI_TEX, BARK3_TEX), // T_DECID // HEDGE_TEX?
 	sm_tree_type(0.13, 0.15, 0.75, 0.7, 1.0, 1.0, TREE_C,  HEDGE_TEX,     BARK1_TEX), // T_TDECID
 	sm_tree_type(0.00, 0.15, 0.00, 0.8, 1.0, 1.0, TREE_C,  HEDGE_TEX,     BARK1_TEX), // T_BUSH NOTE: bark texture is not used in trees, but is used in logs
-	sm_tree_type(0.03, 0.15, 1.00, 0.6, 1.4, 2.0, TREE_C,  PALM_FROND_TEX,PALM_BARK_TEX), // T_PALM
+	sm_tree_type(0.03, 0.12, 1.00, 0.6, 1.4, 2.0, TREE_C,  PALM_FROND_TEX,PALM_BARK_TEX), // T_PALM
 	sm_tree_type(0.00, 0.08, 0.00, 0.4, 1.2, 0.8, PTREE_C, PINE_TEX,      BARK2_TEX), // T_SH_PINE
 };
 
@@ -814,10 +814,11 @@ cylinder_3dw small_tree::get_trunk_cylin() const {
 	vector3d dir(plus_z);
 	if (r_angle != 0.0) {rotate_vector3d(vector3d(rx, ry, 0.0), -r_angle/TO_DEG, dir);} // oops, rotation is backwards
 	bool const is_pine(is_pine_tree());
-	float const hval(is_pine ? 1.05 : 0.8), zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
-	float const mod_width(width*(is_pine ? 0.8f*len/(hval*height) : 1.0f));
+	float const trunk_height((is_pine ? 1.05 : 0.8)*height), zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(trunk_height + (zb - zbot));
+	// pine and palm trees have cone-shaped trunks that come to a point, so scale the base trunk radius for the target width at ground level
+	float const base_rscale(((is_pine || type == T_PALM) ? 0.8f*len/trunk_height : 1.0f));
 	point const p1((pos + dir*(zbot - pos.z)));
-	return cylinder_3dw(p1, (p1 + dir*len), stt[type].ws*mod_width, stt[type].w2*mod_width);
+	return cylinder_3dw(p1, (p1 + dir*len), stt[type].ws*width*base_rscale, stt[type].w2*width); // {bottom, top}
 }
 
 
