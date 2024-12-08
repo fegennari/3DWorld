@@ -2782,7 +2782,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	float const dir_dp(dot_product(new_dir, person.dir));
 	point new_pos;
 
-	if (dir_dp < 0.999) { // dir not perfectly aligned
+	if (dir_dp < 0.9999) { // dir not perfectly aligned
 		//if (person.is_close_to_player()) {cout << TXT(new_dir.str()) << TXT(person.dir.str()) << TXT(new_dir_mag) << TXT(delta_dir) << TXT(max_dist) << TXT(person.radius) << endl;}
 		assert(new_dir != zero_vector); // should be guaranteed by dist_less_than() test, assuming zvals are equal (which they should be)
 		float const step_scale(max(0.1f, dot_product(person.dir, new_dir))); // move more slowly when direction misaligns to avoid overshooting target_pos
