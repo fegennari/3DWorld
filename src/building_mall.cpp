@@ -1382,8 +1382,8 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	bool const dim(doorway.dy() < doorway.dx()), dir(room.get_center_dim(dim) < doorway.get_center_dim(dim)); // points from room center toward doorway
 	room_t const &mall_room(get_mall_concourse());
 	vect_room_object_t &objs(interior->room_geom->objs);
-	unsigned const NUM_STORE_SELECT = 8;
-	unsigned const store_selects[NUM_STORE_SELECT] = {STORE_CLOTHING, STORE_CLOTHING, STORE_FOOD, STORE_FOOD, STORE_BOOK, STORE_RETAIL, STORE_RETAIL, STORE_RETAIL};
+	unsigned const NUM_STORE_SELECT = 9;
+	unsigned const store_selects[NUM_STORE_SELECT] = {STORE_CLOTHING, STORE_CLOTHING, STORE_FOOD, STORE_FOOD, STORE_BOOK, STORE_FURNITURE, STORE_RETAIL, STORE_RETAIL, STORE_RETAIL};
 	unsigned const objs_start(objs.size());
 	unsigned const store_type(store_selects[rgen.rand() % NUM_STORE_SELECT]);
 	unsigned const item_category((store_type == STORE_RETAIL) ? (rgen.rand() % NUM_SRACK_CATEGORIES) : 0); // same category for each rack with equal probability
@@ -1401,23 +1401,24 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	//cout << store_name << endl; // TESTING
 	interior->mall_info->stores.emplace_back(dim, dir, room_id, store_type, item_category, store_name);
 
-	// add store name on sign above the entrance
-	float const sign_z1(room.z1() + 0.7*floor_spacing), sign_height(0.3*window_vspace), sign_thick(wall_hthick);
-	float const ext_wall_pos(mall_room.d[dim][!dir] + (dir ? 1.0 : -1.0)*((dim == mall_dim) ? 1.0 : 0.5)*wall_thickness);
-	// stores to the sides of mall concourses have their doors centered, but stores on the end may not be centered on the door, but the mall concourse is
-	float const door_center(((dim == mall_dim) ? mall_room : room).get_center_dim(!dim));
-	float sign_hwidth(0.25*sign_height*(store_name.size() + 2));
-	min_eq(sign_hwidth, 0.5f*room.get_sz_dim(!dim)); // can't be wider than the store
-	cube_t sign;
-	set_cube_zvals(sign, sign_z1, sign_z1+sign_height);
-	sign.d[dim][!dir] = ext_wall_pos;
-	sign.d[dim][ dir] = ext_wall_pos + (dir ? 1.0 : -1.0)*sign_thick;
-	set_wall_width(sign, door_center, sign_hwidth, !dim);
-	bool const emissive(0);
-	unsigned const flags(RO_FLAG_LIT | RO_FLAG_NOCOLL | (emissive ? RO_FLAG_EMISSIVE : 0) | RO_FLAG_HANGING);
-	colorRGBA const sign_color(choose_sign_color(rgen, emissive));
-	objs.emplace_back(sign, TYPE_SIGN, interior->ext_basement_hallway_room_id, dim, dir, flags, light_amt, SHAPE_CUBE, sign_color); // always lit
-	objs.back().obj_id = register_sign_text(store_name);
+	if (1) { // add store name on sign above the entrance
+		float const sign_z1(room.z1() + 0.7*floor_spacing), sign_height(0.3*window_vspace), sign_thick(wall_hthick);
+		float const ext_wall_pos(mall_room.d[dim][!dir] + (dir ? 1.0 : -1.0)*((dim == mall_dim) ? 1.0 : 0.5)*wall_thickness);
+		// stores to the sides of mall concourses have their doors centered, but stores on the end may not be centered on the door, but the mall concourse is
+		float const door_center(((dim == mall_dim) ? mall_room : room).get_center_dim(!dim));
+		float sign_hwidth(0.25*sign_height*(store_name.size() + 2));
+		min_eq(sign_hwidth, 0.5f*room.get_sz_dim(!dim)); // can't be wider than the store
+		cube_t sign;
+		set_cube_zvals(sign, sign_z1, sign_z1+sign_height);
+		sign.d[dim][!dir] = ext_wall_pos;
+		sign.d[dim][ dir] = ext_wall_pos + (dir ? 1.0 : -1.0)*sign_thick;
+		set_wall_width(sign, door_center, sign_hwidth, !dim);
+		bool const emissive(0);
+		unsigned const flags(RO_FLAG_LIT | RO_FLAG_NOCOLL | (emissive ? RO_FLAG_EMISSIVE : 0) | RO_FLAG_HANGING);
+		colorRGBA const sign_color(choose_sign_color(rgen, emissive));
+		objs.emplace_back(sign, TYPE_SIGN, interior->ext_basement_hallway_room_id, dim, dir, flags, light_amt, SHAPE_CUBE, sign_color); // always lit
+		objs.back().obj_id = register_sign_text(store_name);
+	}
 	cube_t blocked;
 
 	// add checkout counter(s)/cash register(s) to the side of the door
@@ -1433,7 +1434,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 		blocked = checkout_area;
 		blocked.expand_in_dim(!dim, 2.0*door_width); // add extra space to both sides
 	}
-	if (store_type == STORE_RETAIL) {
+	if (store_type == STORE_RETAIL || store_type == STORE_BOOK) {
 		cube_t place_area(room);
 		place_area.expand_by_xy(-wall_hthick);
 		place_area.expand_in_dim(dim, -0.5*door_width); // add extra padding in front and back for doors
@@ -1473,16 +1474,51 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 					test_cube.expand_in_dim( dim, 0.5*door_width); // add extra padding at ends
 					test_cube.expand_in_dim(!dim, 1.0*door_width); // add extra padding at sides
 					if (overlaps_other_room_obj(test_cube, objs_start)) continue; // blocked; not needed?
-					add_shelf_rack(rack, dim, style_id, rack_id, room_id, RO_FLAG_IN_MALL, item_category+1, 0, rgen); // add_occluers=0
+
+					if (store_type == STORE_BOOK) { // add bookcases
+						float const centerline(rack.get_center_dim(!dim));
+
+						for (unsigned d = 0; d < 2; ++d) { // back-to-back
+							cube_t c(rack);
+							c.d[!dim][!d] = centerline;
+							objs.emplace_back(c, TYPE_BCASE, room_id, !dim, d, RO_FLAG_IN_MALL, light_amt); // Note: dir faces into the room, not the wall
+							set_obj_id(objs);
+						}
+					}
+					else { // add retail shelf racks
+						add_shelf_rack(rack, dim, style_id, rack_id, room_id, RO_FLAG_IN_MALL, item_category+1, 0, rgen); // add_occluders=0
+					}
 				} // for r
 			} // for n
 		}
 	}
 	if (store_type == STORE_BOOK) {
-		// TODO: add shelves of books
+		// TODO: more uniform alignment along walls
 		for (unsigned n = 0; n < 12; ++n) { // place up to 12 bookcases
 			if (!add_bookcase_to_room(rgen, room, zval, room_id, light_amt, objs_start, 0)) break; // is_basement=0
 		}
+	}
+	else if (store_type == STORE_CLOTHING) {
+		// TODO: add racks of hanging clothes similar to closets
+	}
+	else if (store_type == STORE_FURNITURE) {
+		// TODO: add random furniture: table + chairs, TYPE_DESK, TYPE_BED, TYPE_DRESSER, TYPE_NIGHTSTAND
+		vect_cube_t blockers;
+		if (!blocked.is_all_zeros()) {blockers.push_back(blocked);} // in case we decide to add a checkout area
+		point const place_pos(room.xc(), room.yc(), zval);
+		unsigned const num_tc(4 + (rgen.rand() % 5)); // 4-8
+
+		for (unsigned n = 0; n < num_tc; ++n) {
+			colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
+			bool const use_tall_table(rgen.rand_float() < 0.25);
+			unsigned const objs_start(objs.size());
+			// TODO: mix of wooden and plastic; currently is all wooden tables and plastic chairs
+			if (!add_table_and_chairs(rgen, room, blockers, room_id, place_pos, chair_color, 0.5, light_amt, 4, use_tall_table)) continue; // rand_place_off=0.5, max_chairs=4
+			assert(objs_start < objs.size());
+			cube_t blocker(objs[objs_start]); // union of table and chairs
+			for (auto i = objs.begin()+objs_start+1; i != objs.end(); ++i) {blocker.union_with_cube(*i);}
+			blockers.push_back(blocker);
+		} // for n
 	}
 	// add ducts and vents in the ceiling
 	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim));

@@ -549,7 +549,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	if (num_chairs > 0) { // add chairs
 		// note that chairs don't block the player (and can be taken/moved), but they may block the AI
 		float const max_radius(0.25*floor_spacing); // should be at least as large as the max chair size
-		colorRGBA chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
+		colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
 		vect_cube_t blockers;
 
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {

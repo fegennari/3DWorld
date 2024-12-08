@@ -121,7 +121,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 	else {
 		unsigned flags(0);
 
-		if (place_pos.z < ground_floor_z1 && rgen.rand_float() < 0.25) { // fallen basement chair 25% of the time
+		if (place_pos.z < ground_floor_z1 && !has_mall() && rgen.rand_float() < 0.25) { // fallen basement chair 25% of the time; not for mall stores
 			// rotate 90 degrees about back legs bottom, tilting backwards
 			cube_t new_chair(chair);
 			rotate_obj_cube(new_chair, chair, dim, dir);
@@ -2674,7 +2674,7 @@ bool building_t::add_interrogation_objs(rand_gen_t rgen, room_t const &room, flo
 	// add chair(s) facing the door; they may have falled over
 	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness());
 	unsigned const num_chairs((rgen.rand_float() < 0.25) ? 2 : 1); // add a pair of chairs 25% of the time
-	colorRGBA const chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
+	colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
 	point const room_center(room.xc(), room.yc(), zval);
 	point chair_pos[2] = {room_center, room_center};
 	bool added_chair(0);

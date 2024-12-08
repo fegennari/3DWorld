@@ -119,7 +119,7 @@ string store_info_t::get_full_name() const {
 	string str;
 	if (store_type == STORE_RETAIL) {assert(item_category < NUM_SRACK_CATEGORIES); str += srack_categories[item_category] + "\n";}
 	assert(store_type < NUM_STORE_TYPES);
-	str += store_type_strs[store_type] + " store " + name;
+	str += store_type_strs[store_type] + " store \n" + name;
 	return str;
 }
 

@@ -327,7 +327,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		// reset is_public_on_floor when we move to a new apartment/hotel unit
 		if (r->unit_id != last_unit_id) {is_public_on_floor = 0; last_unit_id = r->unit_id;}
 		// make chair colors consistent for each part by using a few variables for a hash
-		colorRGBA const chair_color(chair_colors[(13*r->part_id + 123*tot_num_rooms + 617*mat_ix + 1367*num_floors) % NUM_CHAIR_COLORS]);
+		colorRGBA const &chair_color(chair_colors[(13*r->part_id + 123*tot_num_rooms + 617*mat_ix + 1367*num_floors) % NUM_CHAIR_COLORS]);
 		light_ix_assign.next_room();
 		rand_gen_t room_rgen(rgen); // shared across all floors of this room
 		// select light color for this room
