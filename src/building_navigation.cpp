@@ -1322,7 +1322,7 @@ bool building_t::point_over_glass_floor(point const &pos, bool inc_escalator) co
 	return (inc_escalator && is_above_floor && point_in_escalator(pos));
 }
 
-int building_t::maybe_use_escalator(person_t &person, building_loc_t const &loc, bool last_used_escalator, rand_gen_t &rgen) const {
+int building_t::maybe_use_escalator(person_t &person, building_loc_t const &loc, bool last_used_escalator, rand_gen_t &rgen) const { // for retail area, not malls
 
 	if (!has_tall_retail() || interior->escalators.empty() || !has_glass_floor()) return 0;
 	if (loc.room_ix < 0) return 0;
@@ -1348,6 +1348,7 @@ int building_t::maybe_use_escalator(person_t &person, building_loc_t const &loc,
 		}
 	}
 	for (auto e = interior->escalators.begin(); e != interior->escalators.end(); ++e) {
+		if (e->in_mall)                         continue; // mall escalators don't count
 		if (!room.contains_cube(*e))            continue; // escalator in wrong room - shouldn't happen?
 		if (e->is_going_up() == on_upper_floor) continue; // wrong direction
 		bool const dim(e->dim), dir(e->dir);
@@ -1557,14 +1558,41 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 		float const doorway_width(get_doorway_width());
 
 		for (auto const &s : stairwells) { // add extra width for side walls only
-			if (s.z1() < z2 && s.z2() > z1) {avoid.push_back(get_stairs_bcube_expanded(s, 0.0, 0.0, doorway_width));}
-		}
+			if (s.z1() > z2 || s.z2() < z1) continue;
+			cube_t const bc_exp(get_stairs_bcube_expanded(s, 0.0, 0.0, doorway_width));
+
+			if (s.is_l_shape() && z2 < (s.z1() + floor_ceil_gap + floor_thickness)) { // bottom of L-shaped stairs
+				float const width(doorway_width + 0.5*s.get_wall_hwidth(floor_ceil_gap + floor_thickness)); // add railing thickness
+				cube_t seg1(s), seg2(s);
+				seg1.d[!s.dim][ s.bend_dir] = s.d[!s.dim][!s.bend_dir] + (s.bend_dir ? 1.0 : -1.0)*width; // long segment
+				seg2.d[ s.dim][!s.     dir] = s.d[ s.dim][ s.     dir] - (s.     dir ? 1.0 : -1.0)*width; // short segment
+				avoid.push_back(seg1);
+				avoid.push_back(seg2);
+				continue;
+			}
+			if (s.in_mall != 1 || 0.5*(z1 + z2) > s.zc()) {avoid.push_back(bc_exp); continue;} // on top floor, or not mall (single floor tall), use full bcube
+			// on bottom floor of mall stairs; this is a single flight of stairs, so we can treat it as a sloped ramp
+			cube_t ac(bc_exp);
+			float const t(CLIP_TO_01((z2 - s.z1())/(0.5f*s.dz() - floor_thickness))); // value where z2 (head) hits stairs; note that true stairs dz is half the value
+			ac.d[s.dim][s.dir] = s.d[s.dim][!s.dir] + (s.dir ? 1.0 : -1.0)*t*s.get_sz_dim(s.dim);
+			avoid.push_back(ac);
+		} // for s
 	}
 	// Note: move inside the skip_stairs case above when the AI is updated to use these stairs
 	if (has_mall() && mall_info->ent_stairs.z1() < z2 && mall_info->ent_stairs.z2() > z1) {avoid.push_back(mall_info->ent_stairs);}
 	add_bcube_if_overlaps_zval(elevators,  avoid, z1, z2); // clearance not required
-	add_bcube_if_overlaps_zval(escalators, avoid, z1, z2); // clearance not required; using the full bcube rather than the parts is conservative but probably okay
 	
+	for (escalator_t const &e : escalators) {
+		if (e.z1() > z2 || e.z2() < z1) continue; // no Z overlap
+		if (0.5*(z1 + z2) > e.zc()) {avoid.push_back(e); continue;} // on top floor, use full bcube
+		// on bottom floor
+		cube_t const ramp(e.get_ramp_bcube(0)); // exclude_sides=0
+		cube_t ac(e);
+		float const t(CLIP_TO_01((z2 - ramp.z1())/ramp.dz())); // value where z2 (head) hits ramp
+		ac.d[e.dim][e.dir] = ramp.d[e.dim][!e.dir] + (e.dir ? 1.0 : -1.0)*t*ramp.get_sz_dim(e.dim);
+		avoid.push_back(ac);
+		if (!e.in_mall) {avoid.push_back(e.get_support_pillar());}
+	} // for e
 	if (pool.valid && z1 < (pool.z2() + floor_ceil_gap)) { // skip if !same_as_player to allow zombies in pools?
 		avoid.push_back(pool);
 		avoid.back().z2() += floor_ceil_gap; // increase height so that it overlaps a person standing over it
