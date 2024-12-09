@@ -1428,7 +1428,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	cube_t blocked;
 
 	// add checkout counter(s)/cash register(s) to the side of the door
-	if (store_type == STORE_CLOTHING || store_type == STORE_RETAIL) {
+	if (store_type == STORE_CLOTHING || store_type == STORE_RETAIL || store_type == STORE_BOOK) {
 		bool const side(rgen.rand_bool());
 		float const checkout_width(0.6*window_vspace), door_edge(doorway.d[!dim][side]);
 		cube_t checkout_area(room);
@@ -1482,14 +1482,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 					if (overlaps_other_room_obj(test_cube, objs_start)) continue; // blocked; not needed?
 
 					if (store_type == STORE_BOOK) { // add bookcases
-						float const centerline(rack.get_center_dim(!dim));
-
-						for (unsigned d = 0; d < 2; ++d) { // back-to-back
-							cube_t c(rack);
-							c.d[!dim][!d] = centerline;
-							objs.emplace_back(c, TYPE_BCASE, room_id, !dim, d, RO_FLAG_IN_MALL, light_amt); // Note: dir faces into the room, not the wall
-							set_obj_id(objs);
-						}
+						add_row_of_bookcases(rack, zval, room_id, light_amt, dim, 0); // place_inside=0
 					}
 					else { // add retail shelf racks
 						add_shelf_rack(rack, dim, style_id, rack_id, room_id, RO_FLAG_IN_MALL, item_category+1, 0, rgen); // add_occluders=0
@@ -1499,9 +1492,10 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 		}
 	}
 	if (store_type == STORE_BOOK) {
-		// TODO: more uniform alignment along walls
-		for (unsigned n = 0; n < 12; ++n) { // place up to 12 bookcases
-			if (!add_bookcase_to_room(rgen, room, zval, room_id, light_amt, objs_start, 0)) break; // is_basement=0
+		if (rgen.rand_bool()) { // add bookcases along side walls 50% of the time since they're expensive
+			cube_t place_area(room);
+			place_area.expand_by_xy(-wall_hthick);
+			add_row_of_bookcases(place_area, zval, room_id, light_amt, dim, 1); // place_inside=1
 		}
 	}
 	else if (store_type == STORE_CLOTHING) {
@@ -1557,6 +1551,30 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 			vent.expand_by(0.005*window_vspace);
 			objs.emplace_back(vent, TYPE_VENT, room_id, !dim, d, RO_FLAG_IN_MALL, light_amt, SHAPE_CUBE);
 		} // for n
+	} // for d
+}
+
+void building_t::add_row_of_bookcases(cube_t const &row, float zval, unsigned room_id, float light_amt, bool dim, bool place_inside) {
+	float const window_vspace(get_window_vspace());
+	float const bc_width(0.45*window_vspace), bc_depth(0.14*window_vspace), bc_height(0.7*window_vspace);
+	float const wall_length(row.get_sz_dim(dim));
+	unsigned const num_bc(max(1, round_fp(wall_length/bc_width)));
+	float const bcase_width(wall_length/num_bc);
+	vect_room_object_t &objs(interior->room_geom->objs);
+
+	for (unsigned d = 0; d < 2; ++d) { // for each side
+		float const back_pos(place_inside ? row.d[!dim][!d] : row.get_center_dim(!dim));
+		cube_t c;
+		set_cube_zvals(c, zval, zval+bc_height);
+		c.d[!dim][!d] = back_pos;
+		c.d[!dim][ d] = back_pos + (d ? 1.0 : -1.0)*bc_depth;
+
+		for (unsigned m = 0; m < num_bc; ++m) {
+			c.d[dim][0] = row.d[dim][0] + m*bcase_width;
+			c.d[dim][1] = c.d[dim][0] + bcase_width;
+			objs.emplace_back(c, TYPE_BCASE, room_id, !dim, d, RO_FLAG_IN_MALL, light_amt);
+			set_obj_id(objs);
+		}
 	} // for d
 }
 
