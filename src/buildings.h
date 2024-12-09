@@ -1744,7 +1744,8 @@ struct building_mall_info_t {
 	vector<store_doorway_t> store_doorways; // ix stores store room index
 	vector<store_info_t> stores;
 	stairwell_t ent_stairs;
-	cube_t bathrooms, store_bounds;
+	vect_cube_t bathrooms; // actually bathroom pairs
+	cube_t store_bounds;
 	int city_elevator_ix=-1;
 };
 

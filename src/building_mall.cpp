@@ -317,7 +317,9 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 	float const min_width(4.0*window_vspace), max_width(9.0*window_vspace), min_depth(6.0*window_vspace), max_depth(8.0*window_vspace);
 	float const fc_thick(get_fc_thickness()), doorway_width(get_doorway_width()), bathroom_width(4.0*window_vspace);
 	unsigned const num_floors(interior->num_extb_floors);
-	bool added_bathrooms(0), at_stack_end[2] = {0, 0};
+	unsigned const max_bathrooms(max(1, round_fp(0.1*num_floors*room.get_sz_dim(dim)/room.get_sz_dim(!dim)))); // scale with number of stores
+	unsigned num_bathrooms(0);
+	bool at_stack_end[2] = {0, 0};
 	vect_cube_t &side_walls(interior->walls[!dim]);
 	vector<room_t> &rooms(interior->rooms);
 	vector<unsigned> hall_stacks[2]; // one per end hallway
@@ -346,6 +348,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 	for (unsigned f = 0; f < num_floors; ++f) {
 		bool const is_top_floor(f+1 == num_floors);
 		unsigned const rooms_start(rooms.size()), store_walls_start(side_walls.size());
+		bool added_bathrooms(0); // at most one pair per floor
 		cube_t store, floor_bcube(room);
 		store.z1() = floor_bcube.z1() = room .z1() + f*floor_spacing;
 		store.z2() = floor_bcube.z2() = store.z1() +   floor_spacing;
@@ -366,7 +369,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 				float next_pos(pos);
 				bool is_bathroom(0);
 
-				if (!added_bathrooms && pos < middle && pos+store_width > middle) { // crosses the middle; make a bathroom
+				if (!added_bathrooms && num_bathrooms < max_bathrooms && pos < middle && pos+store_width > middle) { // crosses the middle; make a bathroom
 					next_pos   += bathroom_width;
 					is_bathroom = 1;
 				}
@@ -391,7 +394,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 					set_cube_zvals(door, store.z1()+fc_thick, store.z1()+window_vspace-fc_thick);
 					door.d[!dim][0] = door.d[!dim][1] = wall_pos;
 					if (use_low_ceiling) {bathrooms.z2() = bathrooms.z1() + window_vspace;} // set normal ceiling height
-					interior->mall_info->bathrooms = bathrooms;
+					interior->mall_info->bathrooms.push_back(bathrooms);
 					
 					for (unsigned e = 0; e < 2; ++e) {
 						room_type const rtype((bool(e) ^ wm_first) ? RTYPE_WOMENS : RTYPE_MENS);
@@ -417,7 +420,8 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 					} // for e
 					add_extb_room_floor_and_ceil(bathrooms); // add for both bathrooms together
 					if (use_low_ceiling) {has_adj_store = 0;} // bathroom wall does not fully cover the height needed by an adjacent store wall
-					added_bathrooms = 1;
+					added_bathrooms = 1; // on this floor
+					++num_bathrooms;
 				}
 				else { // regular store
 					add_mall_store(store, store, dim, d, has_adj_store, rgen); // window_area is full storefront
@@ -1091,20 +1095,20 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			} // for N
 		} // for n
 	} // for i
-	// if there are bathrooms, add a water fountain between them
-	cube_t const bathrooms(interior->mall_info->bathrooms);
-
-	if (!bathrooms.is_all_zeros() && building_obj_model_loader.is_model_valid(OBJ_MODEL_WFOUNTAIN)) {
-		bool const wf_dir(bathrooms.get_center_dim(!mall_dim) > room_centerline);
-		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_WFOUNTAIN)); // D, W, H
-		float const height(0.25*window_vspace), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
-		float const z1(zval + 0.18*window_vspace), wall_pos(room.d[!mall_dim][wf_dir] + (wf_dir ? -1.0 : 1.0)*0.5*wall_thickness);
-		cube_t wf;
-		set_wall_width(wf, bathrooms.get_center_dim(mall_dim), hwidth, mall_dim);
-		set_cube_zvals(wf, z1, z1+height);
-		wf.d[!mall_dim][ wf_dir] = wall_pos;
-		wf.d[!mall_dim][!wf_dir] = wall_pos - (wf_dir ? 1.0 : -1.0)*depth;
-		objs.emplace_back(wf, TYPE_WFOUNTAIN, room_id, !mall_dim, wf_dir, 0, light_amt, SHAPE_CUBE);
+	// if there are bathrooms, add a water fountain between each pair
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_WFOUNTAIN)) {
+		for (cube_t const &bathrooms : interior->mall_info->bathrooms) { // each bathroom pair
+			bool const wf_dir(bathrooms.get_center_dim(!mall_dim) > room_centerline);
+			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_WFOUNTAIN)); // D, W, H
+			float const height(0.25*window_vspace), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
+			float const z1(zval + 0.18*window_vspace), wall_pos(room.d[!mall_dim][wf_dir] + (wf_dir ? -1.0 : 1.0)*0.5*wall_thickness);
+			cube_t wf;
+			set_wall_width(wf, bathrooms.get_center_dim(mall_dim), hwidth, mall_dim);
+			set_cube_zvals(wf, z1, z1+height);
+			wf.d[!mall_dim][ wf_dir] = wall_pos;
+			wf.d[!mall_dim][!wf_dir] = wall_pos - (wf_dir ? 1.0 : -1.0)*depth;
+			objs.emplace_back(wf, TYPE_WFOUNTAIN, room_id, !mall_dim, wf_dir, 0, light_amt, SHAPE_CUBE);
+		} // for bathrooms
 	}
 	// add potted plants
 	float const plant_shift(1.1*get_flooring_thick());
@@ -1236,10 +1240,10 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 }
 
 bool building_t::is_valid_placement_at_mall_wall(cube_t const &c, cube_t const &entrance_stairs_bcube, vect_cube_t const &wall_blockers) const {
-	if (entrance_stairs_bcube.intersects(c))          return 0; // too close to entrance stairs
-	if (interior->mall_info->bathrooms.intersects(c)) return 0; // too close to bathroom doors and water fountain
+	if (entrance_stairs_bcube.intersects(c))              return 0; // too close to entrance stairs
+	if (has_bcube_int(c, interior->mall_info->bathrooms)) return 0; // too close to bathroom doors and water fountain
 	if (has_bcube_int(c, interior->int_windows) || has_bcube_int(c, interior->mall_info->store_doorways)) return 0; // too close to store door or window
-	if (has_bcube_int(c, wall_blockers))              return 0;
+	if (has_bcube_int(c, wall_blockers)) return 0;
 	return 1;
 }
 
