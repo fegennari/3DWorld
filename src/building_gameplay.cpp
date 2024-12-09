@@ -690,11 +690,20 @@ public:
 		float health(0.0), drunk(0.0), liquid(0.0);
 		bool const bladder_was_full(bladder >= 0.9);
 		float const value(get_obj_value(obj));
-		rooms_stolen_from.insert(obj.room_id); // only if was_expanded?
-		if (obj.type == TYPE_PAPER && value >= 500.0) {register_achievement("Top Secret Document");}
+		room_object const type(obj.type);
+
+		// items that are low value, small, or too strange/random don't count as being stolen
+		if (type != TYPE_BOOK && type != TYPE_FIRE_EXT && type != TYPE_LG_BALL && type != TYPE_TRASH && type !=TYPE_BOTTLE && type != TYPE_PAPER && type != TYPE_PEN &&
+			type != TYPE_PENCIL && type != TYPE_HANGER_ROD && type != TYPE_TPROLL && type != TYPE_MARKER && type != TYPE_BUTTON && type != TYPE_PLATE && type != TYPE_TAPE &&
+			type != TYPE_FEXT_MOUNT && type != TYPE_FEXT_SIGN && type != TYPE_PIZZA_BOX && type != TYPE_PIZZA_TOP && type != TYPE_POOL_BALL && type != TYPE_DRINK_CAN &&
+			type != TYPE_KEY && type != TYPE_HANGER && type != TYPE_PADLOCK && type != TYPE_BANANA && type != TYPE_BAN_PEEL)
+		{
+			rooms_stolen_from.insert(obj.room_id); // only if was_expanded?
+		}
+		if (type == TYPE_PAPER && value >= 500.0) {register_achievement("Top Secret Document");}
 		
-		if ((obj.type == TYPE_TCAN && !obj.was_expanded() && obj.color != BLUE) || // skip trashcans on shelves and recycling bins
-			obj.type == TYPE_TOILET || obj.type == TYPE_URINAL || (obj.type == TYPE_RAT && obj.is_broken()))
+		if ((type == TYPE_TCAN && !obj.was_expanded() && obj.color != BLUE) || // skip trashcans on shelves and recycling bins
+			type == TYPE_TOILET || type == TYPE_URINAL || (type == TYPE_RAT && obj.is_broken()))
 		{
 			register_fly_attract(0); // trashcans, toilets, urinals, and dead rats attract flies
 		}
@@ -704,7 +713,7 @@ public:
 		oss << get_taken_obj_type(obj).name;
 
 		if (is_consumable(obj)) { // nonempty bottle, consumable
-			if (obj.type == TYPE_BOTTLE) {
+			if (type == TYPE_BOTTLE) {
 				// should alcohol, poison, and medicine help with thirst? I guess alcohol helps somewhat
 				switch (obj.get_bottle_type()) {
 				case BOTTLE_TYPE_WATER : health =  0.25; liquid = 1.0; break; // water
@@ -716,7 +725,7 @@ public:
 				default: assert(0);
 				}
 			}
-			else if (obj.type == TYPE_DRINK_CAN) { // slightly smaller than a bottle
+			else if (type == TYPE_DRINK_CAN) { // slightly smaller than a bottle
 				switch (obj.get_drink_can_type()) {
 				case DRINK_CAN_TYPE_COKE: health = 0.4; liquid = 0.8; break;
 				case DRINK_CAN_TYPE_BEER: drunk  = 0.2; liquid = 0.4; break;
@@ -744,10 +753,10 @@ public:
 			oss << ": -" << round_fp(100.0*liquid) << "% Thirst";
 			thirst = min(1.0f, (thirst + liquid));
 		}
-		if (obj.type == TYPE_FLASHLIGHT) {has_flashlight = 1;} // also goes in inventory
-		if (obj.type == TYPE_POOL_CUE  ) {has_pool_cue   = 1;} // also goes in inventory
+		if (type == TYPE_FLASHLIGHT) {has_flashlight = 1;} // also goes in inventory
+		if (type == TYPE_POOL_CUE  ) {has_pool_cue   = 1;} // also goes in inventory
 
-		if (obj.type == TYPE_KEY) {
+		if (type == TYPE_KEY) {
 			has_key |= (1 << obj.obj_id); // mark as having the key and record the color, but it doesn't go into the inventory or contribute to weight or value
 		}
 		else if (health == 0.0 && drunk == 0.0) { // print value and weight if item is not consumed
@@ -760,7 +769,7 @@ public:
 				room_object_t &co(carried.back());
 				co.flags &= ~RO_FLAG_ON_SRACK; // no longer on/in shelf rack, floor, or closet
 
-				if (obj.type == TYPE_BOOK) { // clear dim and dir for books
+				if (type == TYPE_BOOK) { // clear dim and dir for books
 					float const dx(co.dx()), dy(co.dy()), dz(co.dz());
 
 					if (dz > min(dx, dy)) { // upright book from a bookcase, put it on its side facing the player
@@ -776,7 +785,7 @@ public:
 					co.flags    &= ~(RO_FLAG_RAND_ROT | RO_FLAG_OPEN); // remove the rotate and open bits
 					co.light_amt = 1.0; // max light for books when carrying
 				}
-				else if (obj.type == TYPE_PHONE) {
+				else if (type == TYPE_PHONE) {
 					if (co.dim) { // swap aspect ratio to make dim=0
 						float const dx(co.dx()), dy(co.dy());
 						co.x2() = co.x1() + dy;
@@ -785,7 +794,7 @@ public:
 					co.dim = co.dir = 0; // clear dim and dir
 					phone_manager.enable();
 				}
-				else if (obj.type == TYPE_BOTTLE) { // medicine bottle
+				else if (type == TYPE_BOTTLE) { // medicine bottle
 					float const dx(co.dx()), dy(co.dy()), dz(co.dz());
 
 					if (max(dx, dy) > dz) { // sideways bottle, make upright
