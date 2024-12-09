@@ -622,6 +622,7 @@ void building_t::add_mall_stairs() { // connecting to the entrance door
 		if (!room.contains_cube_xy(railing)) continue; // skip if outside mall in case door is close to a wall
 		objs.emplace_back(railing, TYPE_RAILING, room_id, !dim, !d, 0, 1.0, SHAPE_CUBE, GOLD); // no balusters
 	}
+	stair.z2() = door.z2(); // set height
 	interior->mall_info->ent_stairs = stairwell_t(stair, 1, dim, !dir, SHAPE_FAN);
 }
 
