@@ -1892,8 +1892,14 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		vector3d const usz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_URINAL)); // L, W, H
 		uheight = 0.4*floor_spacing; uwidth = uheight*usz.y/usz.z; ulength = uheight*usz.x/usz.z;
 	}
-	for (unsigned d = 0; d < 2 && !sink_side_set; ++d) {
-		for (unsigned side = 0; side < 2 && !sink_side_set; ++side) {
+	for (unsigned d = 0; d < 2 && !sink_side_set; ++d) { // try long then short dim
+		bool first_sink_side(0);
+
+		if (d == 0 && point_in_mall(room.get_cube_center())) { // place sink on the side closer to the mall concourse
+			first_sink_side = (room.get_center_dim(!br_dim) < get_mall_concourse().get_center_dim(!br_dim));
+		}
+		for (unsigned e = 0; e < 2 && !sink_side_set; ++e) {
+			bool const side(e ^ first_sink_side);
 			cube_t c(room);
 			set_cube_zvals(c, zval, zval+wall_thickness); // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
 			c.d[!br_dim][!side] = c.d[!br_dim][side] + (side ? -1.0 : 1.0)*wall_thickness; // shrink to near zero area in this dim
@@ -1907,7 +1913,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				br_door_stack_ix = (i - interior->door_stacks.begin());
 				break; // sinks are on the side closest to the door
 			}
-		} // for side
+		} // for e
 		if (d == 0 && !sink_side_set) {br_dim ^= 1;} // door not found on long dim - R90 and try short dim
 	} // for d
 	assert(sink_side_set);
