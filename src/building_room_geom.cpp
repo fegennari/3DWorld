@@ -3239,12 +3239,14 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 	}
 	if (no_shelves) return;
 	// add shelves
-	rand_gen_t rgen(c.create_rgen());
-	unsigned const num_shelves(3 + ((17*c.room_id + int(1000.0*fabs(c.z1())))%3)); // 3-5, randomly selected by room ID and floor
+	rand_gen_t shelf_rgen;
+	shelf_rgen.set_state(c.room_id+1, int(1000.0*fabs(c.z1()))); // shelves are set based on room ID and floor
+	shelf_rgen.rand_mix();
+	unsigned const num_shelves(3 + shelf_rgen.rand()%3); // 3-5, randomly selected
 	unsigned const max_books(MAX_BCASE_BOOKS); // limited by room_object_t combined flags bits; could increase, but then book taking logic won't always be correct
 	float const shelf_dz(middle.dz()/num_shelves), shelf_thick(0.12*shelf_dz);
 	// 40% of the time lower shelves are higher than upper shelves
-	float const shelf_dz_range((rgen.rand_float() < 0.4) ? rgen.rand_uniform(0.15, 0.28)*shelf_dz : 0.0);
+	float const shelf_dz_range((shelf_rgen.rand_float() < 0.4) ? shelf_rgen.rand_uniform(0.15, 0.28)*shelf_dz : 0.0);
 	uint64_t const skip_book_flags(c.get_combined_flags());
 	cube_t shelves[5];
 	float cur_zval(0.0), shelf_heights[5] = {};
@@ -3261,6 +3263,8 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 		if (inc_lg) {get_wood_material(tscale).add_cube_to_verts(shelf, color, tex_origin, skip_faces_shelves);} // Note: mat reference may be invalidated by adding books
 	}
 	// add books
+	rand_gen_t rgen(c.create_rgen());
+
 	for (unsigned i = 0, book_ix = 0; i < num_shelves && book_ix < max_books; ++i) {
 		// Future work: add vertical shelf splits as well? With recursive nesting?
 		if (rgen.rand_float() < 0.15) continue; // no books on this shelf
