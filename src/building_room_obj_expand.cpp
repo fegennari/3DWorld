@@ -195,71 +195,77 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 	hanger_rod.z1() = c.z1() + 0.8*window_vspacing;
 	hanger_rod.z2() = hanger_rod.z1() + 2.0*hr_radius;
 	set_wall_width(hanger_rod, (0.45*c.d[c.dim][c.dir] + 0.55*c.d[c.dim][!c.dir]), hr_radius, c.dim); // move slightly toward the back
-	unsigned const hanger_rod_ix(objects.size());
 	objects.push_back(hanger_rod);
-
 	// add hangers and hanging clothes
 	unsigned const num_hangers(c.is_small_closet() ? ((rgen.rand()%7) + 2) : ((rgen.rand()%13) + 4)); // 2-8 / 4-16
-	float const wire_radius(0.25*hr_radius);
+	add_hangers_and_clothing(window_vspacing, num_hangers, flags, objects, rgen);
+}
 
-	if (num_hangers > 0 && hanger_rod.get_sz_dim(!c.dim) > 10.0*wire_radius && building_obj_model_loader.is_model_valid(OBJ_MODEL_HANGER)) {
-		room_object_t hanger(hanger_rod);
-		hanger.type       = TYPE_HANGER;
-		hanger.item_flags = rgen.rand(); // choose a random hanger sub_model_id per-closet
-		set_cube_zvals(hanger, (hanger_rod.z1() - 0.07*window_vspacing), (hanger_rod.z2() + 1.0*wire_radius));
-		unsigned const hid(hanger.get_model_id());
-		float const edge_spacing(max(4.0f*hr_radius, 0.1f*depth));
-		float const pos_min(hanger_rod.d[!c.dim][0] + edge_spacing), pos_max(hanger_rod.d[!c.dim][1] - edge_spacing);
-		float const pos_delta(pos_max - pos_min), slot_spacing(pos_delta/63.0);
-		uint64_t slots_used(0); // divide the space into 64 slots, initially all empty
-		bool const use_model(building_obj_model_loader.is_model_valid(OBJ_MODEL_CLOTHES));
-		bool const mix_hangers(rgen.rand_bool());
+void building_room_geom_t::add_hangers_and_clothing(float window_vspacing, unsigned num_hangers, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen) {
+	if (num_hangers == 0) return;
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_HANGER)) return;
+	assert(!objects.empty());
+	unsigned const hanger_rod_ix(objects.size() - 1);
+	room_object_t const hanger_rod(objects.back()); // hanger rod should have been added previously; deep copy to avoid reference invalidation
+	bool const dim(hanger_rod.dim);
+	float const hr_radius(0.5*hanger_rod.dz()), wire_radius(0.25*hr_radius);
+	if (hanger_rod.get_sz_dim(!dim) < 10.0*wire_radius) return;
+	room_object_t hanger(hanger_rod);
+	hanger.type       = TYPE_HANGER;
+	hanger.item_flags = rgen.rand(); // choose a random hanger sub_model_id per-closet
+	set_cube_zvals(hanger, (hanger_rod.z1() - 0.07*window_vspacing), (hanger_rod.z2() + 1.0*wire_radius));
+	unsigned const hid(hanger.get_model_id());
+	float const edge_spacing(max(4.0f*hr_radius, 0.06f*window_vspacing));
+	float const pos_min(hanger_rod.d[!dim][0] + edge_spacing), pos_max(hanger_rod.d[!dim][1] - edge_spacing);
+	float const pos_delta(pos_max - pos_min), slot_spacing(pos_delta/63.0);
+	uint64_t slots_used(0); // divide the space into 64 slots, initially all empty
+	bool const use_model(building_obj_model_loader.is_model_valid(OBJ_MODEL_CLOTHES));
+	bool const mix_hangers(rgen.rand_bool());
 
-		for (unsigned i = 0; i < num_hangers; ++i) { // since hangers are so narrow, we probably don't need to check for intersections
-			unsigned slot_ix(0);
-			bool found_slot(0);
+	for (unsigned i = 0; i < num_hangers; ++i) { // since hangers are so narrow, we probably don't need to check for intersections
+		unsigned slot_ix(0);
+		bool found_slot(0);
 			
-			for (unsigned n = 0; n < 10; ++n) { // 10 attempts to find an unused slot
-				slot_ix = rgen.rand()&63;
-				uint64_t const slot_mask(uint64_t(1) << slot_ix);
-				if (slots_used & slot_mask) continue;
-				slots_used |= slot_mask;
-				found_slot  = 1;
-				break; // success
-			}
-			if (!found_slot) continue; // skip this hanger
-			resize_model_cube_xy(hanger, hanger.get_center_dim(c.dim), (pos_min + slot_ix*slot_spacing), hid, c.dim);
-			expand_to_nonzero_area(hanger, 0.1*hr_radius, !c.dim);
-			objects.push_back(hanger);
+		for (unsigned n = 0; n < 10; ++n) { // 10 attempts to find an unused slot
+			slot_ix = rgen.rand()&63;
+			uint64_t const slot_mask(uint64_t(1) << slot_ix);
+			if (slots_used & slot_mask) continue;
+			slots_used |= slot_mask;
+			found_slot  = 1;
+			break; // success
+		}
+		if (!found_slot) continue; // skip this hanger
+		resize_model_cube_xy(hanger, hanger.get_center_dim(dim), (pos_min + slot_ix*slot_spacing), hid, dim);
+		expand_to_nonzero_area(hanger, 0.1*hr_radius, !dim);
+		objects.push_back(hanger);
 			
-			if (use_model && rgen.rand_float() < 0.8) { // maybe add clothing to the hanger
-				objects.back().flags |= RO_FLAG_HANGING; // flag the hanger has having the shirt hanging on it
-				room_object_t clothes(hanger, TYPE_CLOTHES, c.room_id, c.dim, c.dir, (flags | RO_FLAG_HANGING), c.light_amt, SHAPE_CUBE, WHITE);
-				clothes.z2() -= 0.55*hanger.dz(); // top
-				clothes.z1() -= 0.3*c.dz(); // bottom
-				clothes.item_flags = rgen.rand(); // choose a random clothing sub_model_id
-				if (is_pants_model(clothes) && is_bar_hanger_model(hanger)) {++clothes.item_flags;} // hack to avoid placing pants on bar hangers
-				unsigned const cid(clothes.get_model_id());
-				float const scale(building_obj_model_loader.get_model_scale(cid));
-				if (scale != 0.0) {set_wall_width(clothes, clothes.zc(), 0.5*scale*clothes.dz(), 2);} // rescale zvals around the center
-				resize_model_cube_xy(clothes, clothes.get_center_dim(c.dim), clothes.get_center_dim(!c.dim), cid, c.dim);
-				bool skip(0);
+		if (use_model && rgen.rand_float() < 0.8) { // maybe add clothing to the hanger
+			objects.back().flags |= RO_FLAG_HANGING; // flag the hanger has having the shirt hanging on it
+			room_object_t clothes(hanger, TYPE_CLOTHES, hanger_rod.room_id, dim, hanger_rod.dir, (flags | RO_FLAG_HANGING), hanger_rod.light_amt, SHAPE_CUBE, WHITE);
+			clothes.z2() -= 0.55*hanger.dz(); // top
+			clothes.z1() -= 0.3*window_vspacing/(1.0 + FLOOR_THICK_VAL_HOUSE); // bottom
+			clothes.item_flags = rgen.rand(); // choose a random clothing sub_model_id
+			if (is_pants_model(clothes) && is_bar_hanger_model(hanger)) {++clothes.item_flags;} // hack to avoid placing pants on bar hangers
+			unsigned const cid(clothes.get_model_id());
+			float const scale(building_obj_model_loader.get_model_scale(cid));
+			if (scale != 0.0) {set_wall_width(clothes, clothes.zc(), 0.5*scale*clothes.dz(), 2);} // rescale zvals around the center
+			resize_model_cube_xy(clothes, clothes.get_center_dim(dim), clothes.get_center_dim(!dim), cid, dim);
+			bool skip(0);
 
-				for (auto m = objects.begin()+hanger_rod_ix+1; m != objects.end(); ++m) { // skip if this object intersects a previous hanging clothing item
-					if (m->type == TYPE_CLOTHES && m->intersects(clothes)) {skip = 1; break;}
-				}
-				if (skip) continue;
-
-				if (is_shirt_model(clothes) && rgen.rand_float() < 0.67) { // 67% of shirts are randomly colored rather than colored + textured with the model
-					clothes.color  = shirt_colors[rgen.rand()%NUM_SHIRT_COLORS];
-					clothes.flags |= RO_FLAG_UNTEXTURED;
-				}
-				objects.push_back(clothes);
+			for (auto m = objects.begin()+hanger_rod_ix+1; m != objects.end(); ++m) { // skip if this object intersects a previous hanging clothing item
+				if (m->type == TYPE_CLOTHES && m->intersects(clothes)) {skip = 1; break;}
 			}
-			if (mix_hangers && (rgen.rand()&7) == 0) {hanger.item_flags = rgen.rand();} // switch to a new hanger type occasionally
-		} // for i
-		objects[hanger_rod_ix].item_flags = uint16_t(objects.size() - hanger_rod_ix); // number of objects hanging on the hanger rod, including hangers and shirts
-	}
+			if (skip) continue;
+
+			if (is_shirt_model(clothes) && rgen.rand_float() < 0.67) { // 67% of shirts are randomly colored rather than colored + textured with the model
+				clothes.color  = shirt_colors[rgen.rand()%NUM_SHIRT_COLORS];
+				clothes.flags |= RO_FLAG_UNTEXTURED;
+			}
+			objects.push_back(clothes);
+		}
+		if (mix_hangers && (rgen.rand()&7) == 0) {hanger.item_flags = rgen.rand();} // switch to a new hanger type occasionally
+	} // for i
+	objects[hanger_rod_ix].item_flags = uint16_t(objects.size() - hanger_rod_ix); // number of objects hanging on the hanger rod, including hangers and shirts
 }
 
 void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on cabinets, counters, and kitchen sinks
@@ -801,7 +807,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 		rgen.rand_mix();
 		rgen.rand_mix();
 		// 0=boxes items, 1=food, 2=household goods, 3=kitchen, 4=electronics
-		int const category(((c.drawer_flags > 0) ? (c.drawer_flags-1) : rgen.rand()) % NUM_SRACK_CATEGORIES); // use drawer_flags to select category (for malls), if nonzero
+		int const category(((c.drawer_flags > 0) ? (c.drawer_flags-1) : rgen.rand()) % NUM_RETAIL_CAT); // use drawer_flags to select category (for malls), if nonzero
 
 		for (unsigned n = 0; n < num_shelves; ++n) {
 			float const ztop(((n+1) == num_shelves) ? top_shelf_z2 : shelves[n+1].z1());
@@ -814,7 +820,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 			cubes.clear();
 			rgen.rand_mix(); // make sure to change the random values every shelf even if the items are skipped
 
-			if (category == 0) { // boxed items
+			if (category == RETAIL_BOXED) { // boxed items
 				if (add_models_mode) continue; // not model
 				rand_gen_t rgen2(rgen); // local rgen so that we get the same outcome for either value of add_models_model
 				unsigned const num_boxes(rgen2.rand() % 51); // 0-50
@@ -822,7 +828,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 				add_boxes_to_space(c, objects, shelf, cubes, rgen2, num_boxes, 0.375*depth, 0.3*height, 0.8*height, 0, flags); // allow_crates=0
 				continue;
 			}
-			if (category == 1) { // food
+			if (category == RETAIL_FOOD) { // food
 				if (add_models_mode) continue; // not model
 				rand_gen_t rgen2(rgen); // local rgen so that we get the same outcome for either value of add_models_model
 
@@ -883,13 +889,13 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 				rgen.rand_mix(); // make sure to change the random values every section even if the items are skipped
 				rand_gen_t rgen2(rgen); // local rgen so that we get the same outcome for either value of add_models_model; no use of rgen beyond this point
 
-				if (category == 1) { // food boxes (add_models_mode == 0)
+				if (category == RETAIL_FOOD) { // food boxes (add_models_mode == 0)
 					if (add_models_mode) continue; // not model
 					float const fheight(height_val*rgen2.rand_uniform(0.7, 0.9)), fdepth(min(depth, fheight)*rgen2.rand_uniform(0.15, 0.25));
 					float const fwidth(min(depth, fheight)*rgen2.rand_uniform(0.6, 0.9));
 					add_row_of_cubes(c, section, fwidth, fdepth, fheight, 0.2, TYPE_FOOD_BOX, flags, objects, rgen2, dir);
 				}
-				else if (category == 2) { // houshold goods
+				else if (category == RETAIL_HOUSE_GOODS) { // houshold goods
 					unsigned const type_ix(rgen2.rand() % 9);
 					if (add_models_mode && type_ix != 8) continue; // not model
 
@@ -932,7 +938,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 					}
 					// else TYPE_TOY?
 				} // end household goods
-				else if (category == 3) { // kitchen
+				else if (category == RETAIL_KITCHEN) { // kitchen
 					bool can_have_fire_ext(num_shelves <= 4); // if there are more than 4 shelves, there isn't enough space for fire extinguishers
 					unsigned const type_ix(rgen2.rand() % (can_have_fire_ext ? 6 : 5));
 
@@ -980,7 +986,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 						add_rows_of_vcylinders(c, section, radius, fheight, 0.25, TYPE_FIRE_EXT, 1, flags, objects, rgen2); // 1 column
 					}
 				}
-				else if (category == 4) { // electronics
+				else if (category == RETAIL_ELECTRONICS) { // electronics
 					bool can_have_monitors_lamps(num_shelves <= 3); // if there are more than 3 shelves, there isn't enough space for monitors and lamps
 					unsigned const type_ix(rgen2.rand() % (can_have_monitors_lamps ? 4 : 2));
 

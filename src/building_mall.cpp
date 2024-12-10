@@ -1380,7 +1380,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	unsigned const store_selects[NUM_STORE_SELECT] = {STORE_CLOTHING, STORE_CLOTHING, STORE_FOOD, STORE_FOOD, STORE_BOOK, STORE_FURNITURE, STORE_RETAIL, STORE_RETAIL, STORE_RETAIL};
 	unsigned const objs_start(objs.size());
 	unsigned const store_type(store_selects[rgen.rand() % NUM_STORE_SELECT]);
-	unsigned const item_category((store_type == STORE_RETAIL) ? (rgen.rand() % NUM_SRACK_CATEGORIES) : 0); // same category for each rack with equal probability
+	unsigned const item_category((store_type == STORE_RETAIL) ? (rgen.rand() % NUM_RETAIL_CAT) : 0); // same category for each rack with equal probability
 	string store_name;
 	
 	for (unsigned n = 0; n < 10; ++n) { // 10 attempts to generate a unique store name for this mall
@@ -1442,8 +1442,11 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 		blocked = checkout_area;
 		blocked.expand_in_dim(!dim, 2.0*door_width); // add extra space to both sides
 	}
-	// add rows of shelves for retail and book stores
-	if (store_type == STORE_RETAIL || store_type == STORE_BOOK) {
+	if (store_type == STORE_RETAIL && item_category == RETAIL_FOOD) {
+		// TODO: TYPE_WINE_RACK?
+	}
+	// add rows of shelves for retail and book stores, and rows of clothing to clothing stores
+	if (store_type == STORE_RETAIL || store_type == STORE_BOOK || store_type == STORE_CLOTHING) {
 		cube_t place_area(room);
 		place_area.expand_by_xy(-wall_hthick);
 		place_area.expand_in_dim(dim, -0.5*door_width); // add extra padding in front and back for doors
@@ -1487,6 +1490,26 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 					if (store_type == STORE_BOOK) { // add bookcases
 						add_row_of_bookcases(rack, zval, room_id, light_amt, dim, 0); // place_inside=0
 					}
+					else if (store_type == STORE_CLOTHING) { // add clothes racks
+						float const centerline(rack_lo + 0.5*rack_width);
+						// add an invisible collider around the clothes rack
+						cube_t collider(rack);
+						collider.z2() = zval + 0.5*window_vspace;
+						set_wall_width(collider, centerline, 0.25*rack_width, !dim);
+						objs.emplace_back(collider, TYPE_COLLIDER, room_id, !dim, 0, (RO_FLAG_IN_MALL | RO_FLAG_INVIS), light_amt);
+						// TODO: add a frame that holds the hanger rod; can construct from metal bars
+						// add hanger rod
+						unsigned const flags(RO_FLAG_INTERIOR | RO_FLAG_IN_MALL);
+						float const hr_radius(0.007*window_vspace);
+						room_object_t hanger_rod(rack, TYPE_HANGER_ROD, room_id, !dim, 0, flags); // SHAPE_CUBE, even though it's a horizontal cylinder
+						hanger_rod.z1() = collider.z2();
+						hanger_rod.z2() = hanger_rod.z1() + 2.0*hr_radius;
+						set_wall_width(hanger_rod, centerline, hr_radius, !dim);
+						objs.push_back(hanger_rod);
+						// add hangers and hanging clothes
+						unsigned const num_hangers(round_fp(12.0*rgen.rand_uniform(1.0, 1.5)*rack_length/window_vspace));
+						building_room_geom_t::add_hangers_and_clothing(window_vspace, num_hangers, (flags | RO_FLAG_NOCOLL), objs, rgen);
+					}
 					else { // add retail shelf racks
 						add_shelf_rack(rack, dim, style_id, rack_id, room_id, RO_FLAG_IN_MALL, item_category+1, 0, rgen); // add_occluders=0
 					}
@@ -1502,7 +1525,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 		}
 	}
 	else if (store_type == STORE_CLOTHING) {
-		// TODO: add racks of hanging clothes similar to closets
+		// TODO: add shelves of TYPE_FOLD_SHIRT along walls
 	}
 	else if (store_type == STORE_FURNITURE) {
 		// TODO: add random furniture: table + chairs, TYPE_DESK, TYPE_BED, TYPE_DRESSER, TYPE_NIGHTSTAND
@@ -1522,6 +1545,9 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 			for (auto i = objs.begin()+objs_start+1; i != objs.end(); ++i) {blocker.union_with_cube(*i);}
 			blockers.push_back(blocker);
 		} // for n
+	}
+	else if (store_type == STORE_FOOD) {
+		// TODO
 	}
 	// add ducts and vents in the ceiling
 	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim));

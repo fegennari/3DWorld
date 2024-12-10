@@ -525,9 +525,9 @@ std::string const room_names_short[NUM_RTYPES] =
 	"Equipment", "Store", "Mall", "Restaurant"};
 
 enum {STORE_OTHER=0, STORE_CLOTHING, STORE_FOOD, STORE_BOOK, STORE_RETAIL, STORE_FURNITURE, NUM_STORE_TYPES}; // for use with object placement and naming
-std::string const store_type_strs[NUM_STORE_TYPES] = {"", "clothing", "food", "book", "retail", "furniture"};
-unsigned const NUM_SRACK_CATEGORIES = 5;
-std::string const srack_categories[NUM_SRACK_CATEGORIES] = {"boxed items", "food", "household goods", "kitchen", "electronics"};
+enum {RETAIL_BOXED=0, RETAIL_FOOD, RETAIL_HOUSE_GOODS, RETAIL_KITCHEN, RETAIL_ELECTRONICS, NUM_RETAIL_CAT  };
+std::string const store_type_strs [NUM_STORE_TYPES] = {"", "clothing", "food", "book", "retail", "furniture"};
+std::string const srack_categories[NUM_RETAIL_CAT ] = {"boxed items", "food", "household goods", "kitchen", "electronics"};
 
 enum {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES, SHAPE_RAMP, SHAPE_L, SHAPE_FAN}; // stairs shapes; SHAPE_FAN is unused
 typedef uint8_t stairs_shape;
@@ -1304,6 +1304,7 @@ private:
 	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vect_room_object_t &objects);
 public:
 	static void get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects, bool add_models_mode=0);
+	static void add_hangers_and_clothing(float window_vspacing, unsigned num_hangers, unsigned flags, vect_room_object_t &objects, rand_gen_t &rgen);
 private:
 	static void add_wine_rack_bottles(room_object_t const &c, vect_room_object_t &objects);
 	static void add_vert_roll_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio=1.0, bool player_held=0);

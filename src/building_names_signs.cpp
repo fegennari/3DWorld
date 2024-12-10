@@ -95,7 +95,7 @@ public:
 		if (rgen.rand_float() < 0.1) {return gen_random_name(rgen, 5);} // 10% purely random generated name
 
 		if (store_type == STORE_RETAIL && rgen.rand_float() < 0.5) { // query shelfrack type
-			assert(item_category < NUM_SRACK_CATEGORIES);
+			assert(item_category < NUM_RETAIL_CAT);
 			string const name(choose_category(srack_categories[item_category], rgen)); // "boxed items", "food", "household goods", "kitchen", "electronics"
 			if (!name.empty()) return name;
 		}
@@ -117,7 +117,7 @@ string choose_store_name(unsigned store_type, unsigned item_category, rand_gen_t
 
 string store_info_t::get_full_name() const {
 	string str;
-	if (store_type == STORE_RETAIL) {assert(item_category < NUM_SRACK_CATEGORIES); str += srack_categories[item_category] + "\n";}
+	if (store_type == STORE_RETAIL) {assert(item_category < NUM_RETAIL_CAT); str += srack_categories[item_category] + "\n";}
 	assert(store_type < NUM_STORE_TYPES);
 	str += store_type_strs[store_type] + " store \n" + name;
 	return str;
