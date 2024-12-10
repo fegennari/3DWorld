@@ -1015,7 +1015,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_CRATE:     add_crate    (c); break; // not small but only added to windowless rooms
 		case TYPE_BOX:       add_box      (c); break; // not small but only added to windowless rooms
 		case TYPE_SHELVES:   add_shelves  (c, tscale); break; // not small but only added to windowless rooms
-		case TYPE_SHELFRACK: add_rack(c, 0, 1); break; // add_rack=0, add_objs=1
+		case TYPE_SHELFRACK: add_rack(c, 0, 1, 0); break; // add_rack=0, add_objs=1, obj_text_pass=0
 		case TYPE_MWAVE:     add_mwave    (c); break;
 		case TYPE_COMPUTER:  add_computer (c); break;
 		case TYPE_KEYBOARD:  add_keyboard (c); break;
@@ -1095,20 +1095,20 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 
 void building_room_geom_t::create_text_vbos() {
 	//highres_timer_t timer("Gen Room Geom Text");
-
-	for (unsigned d = 0; d < 2; ++d) { // {objs, expanded_objs}
-		vect_room_object_t const &v(d ? expanded_objs : objs);
-
-		for (auto i = v.begin(); i != v.end(); ++i) {
-			if (!i->is_visible()) continue; // skip invisible objects
-			switch (i->type) {
-			case TYPE_BOOK:  add_book    (*i, 0, 0, 1); break; // text only
-			case TYPE_BCASE: add_bookcase(*i, 0, 0, 1, 1.0, 0); break; // text only
-			case TYPE_SIGN:  add_sign    (*i, 0, 1); break; // text only
-			default: break;
-			} // end switch
-		} // for i
-	} // for d
+	add_text_objs_to_verts(objs);
+	add_text_objs_to_verts(expanded_objs);
+}
+void building_room_geom_t::add_text_objs_to_verts(vect_room_object_t const &objs_to_add) {
+	for (room_object_t const &c : objs_to_add) {
+		if (!c.is_visible()) continue; // skip invisible objects
+		switch (c.type) {
+		case TYPE_BOOK:  add_book    (c, 0, 0, 1); break; // text only
+		case TYPE_BCASE: add_bookcase(c, 0, 0, 1, 1.0, 0); break; // text only
+		case TYPE_SIGN:  add_sign    (c, 0, 1); break; // text only
+		case TYPE_SHELFRACK: add_rack(c, 0, 1, 1); break; // add_rack=0, add_objs=1, obj_text_pass=1
+		default: break;
+		} // end switch
+	} // for i
 }
 
 void building_room_geom_t::create_detail_vbos(building_t const &building) {
@@ -1787,15 +1787,14 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		bool const create_small(inc_small && !mats_small.valid), create_text(draw_int_detail_objs && !mats_text.valid);
 		//highres_timer_t timer("Create Small + Text VBOs", (create_small || create_text));
 
-		// Note: it's not legal to use multiple threads for buildings with retail or malls because the shelf racks contain books, which draw text in the non-text pass;
-		// this isn't thread safe due to text material and static text verts; text time should be small in this case, so threads are unlikely to help anyway
-		if (create_small && create_text && !(building.has_retail() || building.has_mall())) { // MT case
+		// Note: shelf rack book text is drawn in the text pass to make it thread safe
+		if (create_small && create_text) { // MT case
 #pragma omp parallel num_threads(2)
 			if (omp_get_thread_num_3dw() == 0) {create_small_static_vbos(building);} else {create_text_vbos();}
 		}
 		else { // serial case
 			if (create_small) {create_small_static_vbos(building);}
-			if (create_text ) {create_text_vbos        ();}
+			if (create_text ) {create_text_vbos();}
 		}
 		add_small_static_objs_to_verts(pending_objs, building.get_trim_color(), create_text, building.get_floor_ceil_gap());
 		pending_objs.clear();

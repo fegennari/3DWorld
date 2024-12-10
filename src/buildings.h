@@ -1183,7 +1183,7 @@ struct building_room_geom_t {
 	void add_box(room_object_t const &c);
 	void add_paint_can(room_object_t const &c);
 	void add_shelves(room_object_t const &c, float tscale);
-	void add_rack(room_object_t const &c, bool add_rack, bool add_objs);
+	void add_rack(room_object_t const &c, bool add_rack, bool add_objs, bool obj_text_pass=0);
 	void add_chimney_cap(room_object_t const &c);
 	void add_ext_ladder(room_object_t const &c);
 	void add_int_ladder(room_object_t const &c);
@@ -1289,6 +1289,7 @@ private:
 	void create_static_vbos(building_t const &building);
 	void create_small_static_vbos(building_t const &building);
 	void create_text_vbos();
+	void add_text_objs_to_verts(vect_room_object_t const &objs_to_add);
 	void create_detail_vbos(building_t const &building);
 	void add_nested_objs_to_verts(vect_room_object_t const &objs_to_add);
 	void add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add, colorRGBA const &trim_color, bool inc_text=0, float floor_ceil_gap=0.0);

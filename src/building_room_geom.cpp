@@ -17,9 +17,9 @@ colorRGBA const STAIRS_COLOR_TOP(0.7, 0.7, 0.7);
 colorRGBA const STAIRS_COLOR_BOT(0.9, 0.9, 0.9);
 
 vect_cube_t temp_cubes;
-vect_room_object_t temp_objects;
+vect_room_object_t temp_objects[2];
 vect_cube_t &get_temp_cubes() {temp_cubes.clear(); return temp_cubes;}
-vect_room_object_t &get_temp_objects() {temp_objects.clear(); return temp_objects;}
+vect_room_object_t &get_temp_objects(bool ix=0) {temp_objects[ix].clear(); return temp_objects[ix];}
 
 extern int display_mode, player_in_closet, frame_counter, animate2;
 
@@ -1130,7 +1130,7 @@ unsigned get_shelf_rack_cubes(room_object_t const &c, cube_t &back, cube_t &top,
 	}
 	return num_shelves;
 }
-void building_room_geom_t::add_rack(room_object_t const &c, bool add_rack, bool add_objs) {
+void building_room_geom_t::add_rack(room_object_t const &c, bool add_rack, bool add_objs, bool obj_text_pass) {
 	if (add_rack) { // static objects
 		cube_t back, top, sides[2], shelves[5];
 		unsigned const num_shelves(get_shelf_rack_cubes(c, back, top, sides, shelves));
@@ -1155,9 +1155,10 @@ void building_room_geom_t::add_rack(room_object_t const &c, bool add_rack, bool 
 	}
 	if (add_objs) { // add objects to the racks; drawn as small static objects
 		if (c.obj_expanded()) return; // already been expanded, don't need to create contained objects below
-		vect_room_object_t &objects(get_temp_objects());
+		vect_room_object_t &objects(get_temp_objects(obj_text_pass)); // select second vector for text pass
 		get_shelfrack_objects(c, objects);
-		add_small_static_objs_to_verts(objects, WHITE, 1); // trim_color=WHITE(unused), inc_text=1
+		if (obj_text_pass) {add_text_objs_to_verts(objects);}
+		else {add_small_static_objs_to_verts(objects, WHITE, 0);} // trim_color=WHITE(unused), inc_text=0
 	}
 }
 
