@@ -1242,7 +1242,7 @@ struct building_room_geom_t {
 	void add_fishtank(room_object_t const &c);
 	void add_metal_bar(room_object_t const &c);
 	void add_store_gate(room_object_t const &c);
-	void add_theft_sensor(room_object_t const &c);
+	void add_theft_sensor(room_object_t const &c, bool alarm_mode=0);
 	void add_lava_lamp(room_object_t const &c);
 	void add_trash(room_object_t const &c);
 	void add_spider_web(room_object_t const &c);

@@ -15,7 +15,7 @@ quad_batch_draw candle_qbd;
 vect_room_object_t pending_objs;
 object_model_loader_t building_obj_model_loader;
 
-extern bool camera_in_building, player_in_tunnel;
+extern bool camera_in_building, player_in_tunnel, building_alarm_active;
 extern int display_mode, frame_counter, animate2, player_in_basement, player_in_elevator;
 extern unsigned room_mirror_ref_tid;
 extern float fticks, office_chair_rot_rate, building_ambient_scale;
@@ -1209,7 +1209,7 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building, point
 	// is it better to have a rgeom type just for clocks that gets updated when the second/minute changes?
 	// unclear if this would help, since we need to iterate over objs in either case, and that may be more expensive than drawing (and would be shared the current way);
 	// plus when we get here we often want to update both dynamic objects and clocks anyway
-	if (!obj_dstate.empty() || have_clock) { // we have an object with dynamic state or a dynamic clock
+	if (!obj_dstate.empty() || have_clock || building_alarm_active) { // we have an object with dynamic state, a dynamic clock, or an alarm
 		auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
 
 		for (auto i = objs.begin(); i != objs_end; ++i) {
@@ -1224,6 +1224,10 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building, point
 				if (dist > clock_sound_dist) continue;
 				if (!building.get_room(i->room_id).contains_pt(camera_bs)) continue; // only play ticking when the player and clock are in the same room (ignoring rotation)
 				gen_sound_thread_safe(SOUND_CLICK, (pos + xlate), 0.5*(1.0 - dist/clock_sound_dist));
+				continue;
+			}
+			if (i->type == TYPE_THEFT_SENS && i->is_active()) {
+				add_theft_sensor(*i, 1); // alarm_mode=1
 				continue;
 			}
 			if (!i->is_dynamic()) continue; // only dynamic objects

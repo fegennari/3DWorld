@@ -24,7 +24,7 @@ unsigned const SHADOW_ONLY_TEX     = RED_TEX;   // alias to differentiate shadow
 
 bool camera_in_building(0), interior_shadow_maps(0), player_is_hiding(0), player_in_unlit_room(0), player_in_walkway(0), player_in_int_elevator(0), player_on_house_stairs(0);
 bool building_has_open_ext_door(0), sec_camera_shadow_mode(0), player_in_ww_elevator(0), player_in_skyway(0), player_on_moving_ww(0), player_on_escalator(0);
-bool player_in_tunnel(0), player_in_mall(0), player_in_uge(0);
+bool player_in_tunnel(0), player_in_mall(0), player_in_uge(0), building_alarm_active(0);
 int player_in_basement(0); // 0=no, 1=below ground level, 2=in basement and not on stairs, 3=in extended basement
 int player_in_closet  (0); // uses flags RO_FLAG_IN_CLOSET (player in closet), RO_FLAG_LIT (closet light is on), RO_FLAG_OPEN (closet door is open)
 int player_in_water   (0); // 0=no, 1=standing in water, 2=head underwater
@@ -85,7 +85,9 @@ tid_nm_pair_t tid_nm_pair_t::get_scaled_version(float scale) const {
 	return tex;
 }
 float tid_nm_pair_t::get_emissive_val() const {
-	if (tid == RED_TEX) {return ((fract(tfticks/(1.0*TICKS_PER_SECOND)) < 0.5) ? 1.0 : 0.0);} // camera/alarm light flashes on and off with a period of 1s
+	if (tid == RED_TEX) { // camera/alarm light flashes on and off with a period of 1.5s (camera) or 0.5s (alarm)
+		return ((fract(tfticks/((building_alarm_active ? 0.5 : 1.5)*TICKS_PER_SECOND)) < 0.5) ? 1.0 : 0.0);
+	}
 	return emissive;
 }
 void tid_nm_pair_t::set_specular_color(colorRGB const &color, float mag, float shine) {

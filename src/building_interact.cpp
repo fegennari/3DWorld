@@ -16,7 +16,7 @@ float const OBJ_GRAVITY    = 0.0003; // unsigned magnitude
 float const TERM_VELOCITY  = 1.0;
 float const OBJ_ELASTICITY = 0.8;
 
-extern bool tt_fire_button_down, flashlight_on, use_last_pickup_object, city_action_key, can_do_building_action, toggle_room_light, player_wait_respawn;
+extern bool tt_fire_button_down, flashlight_on, use_last_pickup_object, city_action_key, can_do_building_action, toggle_room_light, player_wait_respawn, building_alarm_active;
 extern int player_in_closet, camera_surf_collide, can_pickup_bldg_obj, building_action_key, animate2, frame_counter, player_in_elevator, player_in_attic;
 extern float fticks, CAMERA_RADIUS, office_chair_rot_rate;
 extern double tfticks;
@@ -1509,6 +1509,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 	int player_room_ix(-1);
 	bool player_room_no_power(0);
 	float hum_amt(0.0), hum_freq(0.0);
+	building_alarm_active = 0; // reset for this frame
 	
 	if (player_in_this_building) {
 		last_player_pos = player_pos;
@@ -1570,9 +1571,10 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 				gen_sound_thread_safe(SOUND_ALARM, local_to_camera_space(center), 0.5, 0.85, 1.0, 1); // skip_if_already_playing=1
 				register_building_sound(center, 1.0);
 				c->flags |= RO_FLAG_IS_ACTIVE;
+				building_alarm_active = 1;
 			}
 			else {c->flags &= ~RO_FLAG_IS_ACTIVE;} // clear the alarm
-			if (make_active != was_active) {interior->room_geom->invalidate_draw_data_for_obj(*c);} // must update material used for flashing light
+			if (make_active != was_active) {interior->room_geom->update_dynamic_draw_data();} // must update material used for flashing light
 		}
 		if (player_room_ix >= 0 && (int)c->room_id == player_room_ix) {
 			if (c->type == TYPE_CEIL_FAN) {

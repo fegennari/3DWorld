@@ -5375,47 +5375,51 @@ void building_room_geom_t::add_store_gate(room_object_t const &c) {
 	}
 }
 
-void building_room_geom_t::add_theft_sensor(room_object_t const &c) {
+void building_room_geom_t::add_theft_sensor(room_object_t const &c, bool alarm_mode) {
 	float const z1(c.z1()), height(c.dz()), depth(c.get_depth());
-	colorRGBA const color(apply_light_color(c));
-	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
 	cube_t body(c);
 	body .expand_in_dim( c.dim, -0.35*depth); // shrink depth
 	body .expand_in_dim(!c.dim, -0.01*height); // shrink sides slightly
 	cube_t inner(body);
 	inner.expand_in_dim(!c.dim, -0.05*height); // shrink sides
 	cube_t base(c), bot(inner), bar1(inner), bar2(inner), top(inner);
-	bot  .expand_in_dim( c.dim,  0.05*depth); // expand depth slightly
 	top  .expand_in_dim( c.dim,  0.02*depth); // expand depth slightly
-	bar1 .expand_in_dim( c.dim, -0.05*depth); // shrink depth slightly
-	bar2 .expand_in_dim( c.dim, -0.05*depth); // shrink depth slightly
-	base.z2() = bot.z1() = z1 + 0.02*height;
-	bot .z2() = z1 + 0.22*height;
-	bar1.z1() = z1 + 0.40*height;
-	bar1.z2() = z1 + 0.43*height;
-	bar2.z1() = z1 + 0.69*height;
-	bar2.z2() = z1 + 0.72*height;
 	top .z1() = z1 + 0.95*height;
-	mat.add_cube_to_verts_untextured(base, color, EF_Z1);
-	mat.add_cube_to_verts_untextured(bot,  color, EF_Z1);
-	mat.add_cube_to_verts_untextured(top,  color, 0);
-	unsigned const skip_faces(get_skip_mask_for_xy(!c.dim));
-	mat.add_cube_to_verts_untextured(bar1, color, skip_faces);
-	mat.add_cube_to_verts_untextured(bar2, color, skip_faces);
 
-	for (unsigned d = 0; d < 2; ++d) { // vertical sides
-		cube_t side(body);
-		side.z1() = bot.z1();
-		side.d[!c.dim][!d] = inner.d[!c.dim][d];
-		mat.add_cube_to_verts_untextured(side, color, EF_Z1);
+	if (!alarm_mode) { // add plastic frame
+		bot  .expand_in_dim( c.dim,  0.05*depth); // expand depth slightly
+		bar1 .expand_in_dim( c.dim, -0.05*depth); // shrink depth slightly
+		bar2 .expand_in_dim( c.dim, -0.05*depth); // shrink depth slightly
+		base.z2() = bot.z1() = z1 + 0.02*height;
+		bot .z2() = z1 + 0.22*height;
+		bar1.z1() = z1 + 0.40*height;
+		bar1.z2() = z1 + 0.43*height;
+		bar2.z1() = z1 + 0.69*height;
+		bar2.z2() = z1 + 0.72*height;
+		colorRGBA const color(apply_light_color(c));
+		rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
+		mat.add_cube_to_verts_untextured(base, color, EF_Z1);
+		mat.add_cube_to_verts_untextured(bot,  color, EF_Z1);
+		mat.add_cube_to_verts_untextured(top,  color, 0);
+		unsigned const skip_faces(get_skip_mask_for_xy(!c.dim));
+		mat.add_cube_to_verts_untextured(bar1, color, skip_faces);
+		mat.add_cube_to_verts_untextured(bar2, color, skip_faces);
+
+		for (unsigned d = 0; d < 2; ++d) { // vertical sides
+			cube_t side(body);
+			side.z1() = bot.z1();
+			side.d[!c.dim][!d] = inner.d[!c.dim][d];
+			mat.add_cube_to_verts_untextured(side, color, EF_Z1);
+		}
 	}
 	// add alarm light
 	cube_t light(top);
 	light.expand_in_dim( c.dim,  0.01*depth); // expand depth  slightly
 	light.expand_in_dim( 2,      0.01*depth); // expand height slightly
 	light.expand_in_dim(!c.dim, -0.60*depth); // shrink width
-	colorRGBA const light_color(c.is_active() ? RED : apply_light_color(c, DK_RED));
-	rgeom_mat_t &light_mat(get_material(tid_nm_pair_t(c.is_active() ? RED_TEX : -1), 0, 0, 1)); // unshadowed, small
+	if (alarm_mode) {light.expand_by(0.01*depth);} // expand slighly to draw over normal geom
+	colorRGBA const light_color(alarm_mode ? RED : apply_light_color(c, colorRGBA(0.5, 0.0, 0.0)));
+	rgeom_mat_t &light_mat(get_material(tid_nm_pair_t(alarm_mode ? RED_TEX : -1), 0, alarm_mode, 1)); // unshadowed, small or dynamic in alarm_mode
 	light_mat.add_cube_to_verts_untextured(light, light_color, 0); // draw all faces
 }
 
