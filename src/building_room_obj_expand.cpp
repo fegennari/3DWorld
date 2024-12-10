@@ -250,7 +250,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 				}
 				if (skip) continue;
 
-				if (is_shirt_model(clothes) && rgen.rand_float() < 0.67) { // 67% of shirts and randomly colored rather than colored + textured with the model
+				if (is_shirt_model(clothes) && rgen.rand_float() < 0.67) { // 67% of shirts are randomly colored rather than colored + textured with the model
 					clothes.color  = shirt_colors[rgen.rand()%NUM_SHIRT_COLORS];
 					clothes.flags |= RO_FLAG_UNTEXTURED;
 				}

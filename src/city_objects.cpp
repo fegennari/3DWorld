@@ -22,6 +22,7 @@ float get_power_pole_offset() {return 0.045*city_params.road_width;}
 unsigned get_building_models_gpu_mem() {return building_obj_model_loader.get_gpu_mem();}
 int get_solarp_tid();
 bool is_pants_model(unsigned model_id);
+bool is_shirt_model(unsigned model_id);
 int select_tid_from_list(vector<unsigned> const &tids, unsigned ix);
 colorRGBA get_bed_sheet_color(int tid, rand_gen_t &rgen);
 
@@ -886,7 +887,9 @@ clothesline_t::clothesline_t(point const &p1, point const &p2, float height_, ra
 			bool const is_pants(is_pants_model(model_id));
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id)); // W, D, H
 			float const dz((is_pants ? 0.45 : 0.5)*height), hwidth(0.5*dz*sz.x/sz.z), hthick(0.5*dz*sz.y/sz.z); // pants are shorter
-			add_item(model_id, dz, hwidth, hthick, (is_pants ? 2.0 : 1.0), 1, rgen.rand_bool(), WHITE, rgen); // is_model=1
+			colorRGBA color(WHITE);
+			if (is_shirt_model(model_id) && rgen.rand_float() < 0.67) {color = shirt_colors[rgen.rand()%NUM_SHIRT_COLORS];} // 67% of shirts are randomly colored
+			add_item(model_id, dz, hwidth, hthick, (is_pants ? 2.0 : 1.0), 1, rgen.rand_bool(), color, rgen); // is_model=1
 		}
 		else { // sheet
 			int const tid(select_tid_from_list(global_building_params.sheet_tids, rgen.rand()));
@@ -938,7 +941,8 @@ void clothesline_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 
 			if (c.is_model) { // clothing model
 				vector3d const cdir((dim ? plus_y : plus_x)*(c.dir ? -1.0 : 1.0));
-				building_obj_model_loader.draw_model(dstate.s, c.get_cube_center(), c, cdir, c.color, dstate.xlate, c.id, shadow_only);
+				bool const untextured(c.color != WHITE);
+				building_obj_model_loader.draw_model(dstate.s, c.get_cube_center(), c, cdir, c.color, dstate.xlate, c.id, shadow_only, 0, nullptr, 0, untextured);
 			}
 			else { // sheet
 				select_texture(c.id);
