@@ -1090,7 +1090,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			bool const wf_dir(bathrooms.get_center_dim(!mall_dim) > room_centerline);
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_WFOUNTAIN)); // D, W, H
 			float const height(0.25*window_vspace), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
-			float const z1(zval + 0.18*window_vspace), wall_pos(room.d[!mall_dim][wf_dir] + (wf_dir ? -1.0 : 1.0)*0.5*wall_thickness);
+			float const z1(bathrooms.z1() + fc_thick + 0.18*window_vspace), wall_pos(room.d[!mall_dim][wf_dir] + (wf_dir ? -1.0 : 1.0)*0.5*wall_thickness);
 			cube_t wf;
 			set_wall_width(wf, bathrooms.get_center_dim(mall_dim), hwidth, mall_dim);
 			set_cube_zvals(wf, z1, z1+height);
