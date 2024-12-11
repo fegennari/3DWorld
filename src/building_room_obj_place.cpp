@@ -67,8 +67,8 @@ vector3d building_t::get_office_chair_size() const {
 	float const height(0.425*get_window_vspace()), radius(height*get_radius_for_square_model(OBJ_MODEL_OFFICE_CHAIR));
 	return vector3d(radius, radius, height);
 }
-bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
-	colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair, bool enable_rotation, bool bar_stool, bool no_push_out)
+bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos, colorRGBA const &chair_color,
+	bool dim, bool dir, float tot_light_amt, bool office_chair, bool enable_rotation, bool bar_stool, bool no_push_out, int wooden_or_plastic)
 {
 	assert(!(office_chair && bar_stool)); // can't ask for both
 	office_chair &= has_office_chair_model();
@@ -92,7 +92,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 		max_push_out = 0.85;
 	}
 	else { // normal wooden or plastic chair
-		is_plastic   = !is_residential();
+		is_plastic   = ((wooden_or_plastic == 2) ? !is_residential() : bool(wooden_or_plastic)); // wooden_or_plastic=2 selects based on building type
 		chair_height = (is_plastic ? 0.44 : 0.4)*window_vspacing;
 		chair_hwidth = 0.1*window_vspacing; // half width
 		min_push_out = -0.5; // variable amount of pushed in/out
@@ -140,8 +140,8 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 }
 
 // Note: must be first placed objects; returns the number of total objects added (table + optional chairs)
-unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, vect_cube_t &blockers, unsigned room_id,
-	point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, unsigned max_chairs, bool use_tall_table)
+unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, vect_cube_t &blockers, unsigned room_id, point const &place_pos,
+	colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, unsigned max_chairs, bool use_tall_table, int wooden_or_plastic)
 {
 	bool const use_bar_stools(use_tall_table);
 	float const table_rscale(use_tall_table ? 0.12 : 0.18), room_dx(room.dx()), room_dy(room.dy());
@@ -158,7 +158,7 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, v
 	if (use_long_table) {table_sz[long_dim] *= 1.5;}
 	float const long_edge_len(2.0*max(table_sz.x, table_sz.y));
 	bool const is_round(!use_tall_table && !use_long_table && rgen.rand_float() < 0.25); // 25% of the time
-	bool const is_plastic(room.is_office && rgen.rand_bool()); // plastic table for offices 50% of the time
+	bool const is_plastic((wooden_or_plastic == 2) ? (room.is_office && rgen.rand_bool()) : bool(wooden_or_plastic)); // plastic table for offices 50% of the time unless forced
 	float const table_hscale(use_tall_table ? 0.38 : (is_round ? 0.23 : (is_plastic ? 0.24 : 0.22)));
 	if (is_round) {table_sz.x = table_sz.y = 0.6f*(table_sz.x + table_sz.y);} // round tables must have square bcubes for now (no oval tables yet); make radius slightly larger
 	point llc(table_pos - table_sz), urc(table_pos + table_sz);
@@ -211,7 +211,7 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, v
 				point chair_pos(table_pos); // same starting center and z1
 				chair_pos[dim] += (dir ? -1.0f : 1.0f)*table_sz[dim];
 				if (num_this_orient == 2) {chair_pos[!dim] += ((n==0) ? -1.0 : 1.0)*0.225*long_edge_len;} // offset to sides
-				bool const added(add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, 0)); // office_chair=0
+				bool const added(add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, 0, 0, 0, 0, wooden_or_plastic)); // office_chair=0
 				if (added) {++num_chairs; blockers.push_back(objs.back());}
 				else {prev_not_added = 1;}
 			} // for n

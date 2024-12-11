@@ -1572,8 +1572,8 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 			colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
 			bool const use_tall_table(rgen.rand_float() < 0.25);
 			unsigned const objs_start(objs.size());
-			// TODO: mix of wooden and plastic; currently is all wooden tables and plastic chairs
-			if (!add_table_and_chairs(rgen, room, blockers, room_id, place_pos, chair_color, 0.5, light_amt, 4, use_tall_table)) continue; // rand_place_off=0.5, max_chairs=4
+			int const wooden_or_plastic(rgen.rand() % 3); // randomly select between {wooden, plastic, wooden table with plastic chairs}
+			if (!add_table_and_chairs(rgen, room, blockers, room_id, place_pos, chair_color, 0.5, light_amt, 4, use_tall_table, wooden_or_plastic)) continue; // rand_place_off=0.5
 			assert(objs_start < objs.size());
 			cube_t blocker(objs[objs_start]); // union of table and chairs
 			for (auto i = objs.begin()+objs_start+1; i != objs.end(); ++i) {blocker.union_with_cube(*i);}
