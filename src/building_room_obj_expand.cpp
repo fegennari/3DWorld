@@ -790,7 +790,7 @@ void add_row_of_balls(room_object_t const &c, cube_t const &region, float spacin
 	}
 }
 
-void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects, bool add_models_mode) {
+void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects, bool add_models_mode, bool books_only) {
 	cube_t back, top, sides[2], shelves[5];
 	unsigned const num_shelves(get_shelf_rack_cubes(c, back, top, sides, shelves));
 	if (!c.is_nonempty()) return; // empty - no objects
@@ -821,7 +821,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 			rgen.rand_mix(); // make sure to change the random values every shelf even if the items are skipped
 
 			if (category == RETAIL_BOXED) { // boxed items
-				if (add_models_mode) continue; // not model
+				if (add_models_mode || books_only) continue; // not model or book
 				rand_gen_t rgen2(rgen); // local rgen so that we get the same outcome for either value of add_models_model
 				unsigned const num_boxes(rgen2.rand() % 51); // 0-50
 				// the call below adds boxes randomly; should they be organized in more orderly rows/columns, or have a more consistent size?
@@ -829,7 +829,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 				continue;
 			}
 			if (category == RETAIL_FOOD) { // food
-				if (add_models_mode) continue; // not model
+				if (add_models_mode || books_only) continue; // not model or book
 				rand_gen_t rgen2(rgen); // local rgen so that we get the same outcome for either value of add_models_model
 
 				if (n == 0) { // bottom shelf, add pizza; box can't be opened by the player
@@ -888,6 +888,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 				section.d[!c.dim][1] = lo_edge + (s+1)*section_width + section_offset - section_gap;
 				rgen.rand_mix(); // make sure to change the random values every section even if the items are skipped
 				rand_gen_t rgen2(rgen); // local rgen so that we get the same outcome for either value of add_models_model; no use of rgen beyond this point
+				if (books_only && category != RETAIL_HOUSE_GOODS) continue; // not books
 
 				if (category == RETAIL_FOOD) { // food boxes (add_models_mode == 0)
 					if (add_models_mode) continue; // not model
@@ -898,6 +899,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 				else if (category == RETAIL_HOUSE_GOODS) { // houshold goods
 					unsigned const type_ix(rgen2.rand() % 9);
 					if (add_models_mode && type_ix != 8) continue; // not model
+					if (books_only      && type_ix != 6) continue; // not books
 
 					if (type_ix == 0) { // paint cans
 						float const oheight(height_val*rgen2.rand_uniform(0.6, 0.8)), radius(min(0.4f*depth, 0.44f*oheight));
