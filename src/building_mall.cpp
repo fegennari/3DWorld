@@ -1427,7 +1427,8 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 			objs.emplace_back(ts, TYPE_THEFT_SENS, room_id, !dim, e, 0, light_amt, SHAPE_CUBE, WHITE);
 		}
 	}
-	cube_t blocked;
+	cube_t blocked, room_area(room);
+	room_area.expand_by_xy(-wall_hthick);
 
 	// add checkout counter(s)/cash register(s) to the side of the door
 	if (store_type == STORE_CLOTHING || store_type == STORE_RETAIL || store_type == STORE_BOOK) {
@@ -1442,13 +1443,26 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 		blocked = checkout_area;
 		blocked.expand_in_dim(!dim, 2.0*door_width); // add extra space to both sides
 	}
-	if (store_type == STORE_RETAIL && item_category == RETAIL_FOOD) {
-		// TODO: TYPE_WINE_RACK?
+	if (store_type == STORE_FOOD || (store_type == STORE_RETAIL && item_category == RETAIL_FOOD)) { // maybe add wine racks
+		float const width(0.4*window_vspace*rgen.rand_uniform(1.0, 1.5)), depth(0.16*window_vspace), height(0.5*window_vspace*rgen.rand_uniform(1.0, 1.5));
+
+		for (unsigned yc = 0; yc < 2; ++yc) {
+			for (unsigned xc = 0; xc < 2; ++xc) {
+				if (rgen.rand_bool()) continue;
+				bool const dim(rgen.rand_bool()), dir(dim ? yc : xc), dir2(dim ? xc : yc);
+				cube_t c(point(room_area.d[0][xc], room_area.d[1][yc], zval)); // start at the room corner
+				c.d[ dim][!dir ] += (dir  ? -1.0 : 1.0)*depth;
+				c.d[!dim][!dir2] += (dir2 ? -1.0 : 1.0)*width;
+				c.z2() += height;
+				if (!blocked.is_all_zeros() && c.intersects_xy(blocked)) continue; // blocked; shouldn't happen?
+				objs.emplace_back(c, TYPE_WINE_RACK, room_id, dim, !dir, 0, light_amt); // Note: dir faces into the room, not the wall
+				set_obj_id(objs);
+			} // for xc
+		} // for yc
 	}
 	// add rows of shelves for retail and book stores, and rows of clothing to clothing stores
 	if (store_type == STORE_RETAIL || store_type == STORE_BOOK || store_type == STORE_CLOTHING) {
-		cube_t place_area(room);
-		place_area.expand_by_xy(-wall_hthick);
+		cube_t place_area(room_area);
 		place_area.expand_in_dim(dim, -0.5*door_width); // add extra padding in front and back for doors
 		// simplified version of building_t::add_retail_room_objs() with no pillars, escalators, checkout counters, wall light, or short racks
 		float const dx(place_area.dx()), dy(place_area.dy()), spacing(0.8), nom_aisle_width(1.5*door_width);
@@ -1481,7 +1495,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 					float const start(place_area.d[dim][0] + nom_aisle_width + r*rack_spacing);
 					rack.d[dim][0] = start;
 					rack.d[dim][1] = start + rack_length;
-					if (rack.intersects_xy(blocked)) continue; // blocked
+					if (!blocked.is_all_zeros() && rack.intersects_xy(blocked)) continue; // blocked
 					cube_t test_cube(rack);
 					test_cube.expand_in_dim( dim, 0.5*door_width); // add extra padding at ends
 					test_cube.expand_in_dim(!dim, 1.0*door_width); // add extra padding at sides
@@ -1517,12 +1531,8 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 			} // for n
 		}
 	}
-	if (store_type == STORE_BOOK) {
-		if (rgen.rand_bool()) { // add bookcases along side walls 50% of the time since they're expensive
-			cube_t place_area(room);
-			place_area.expand_by_xy(-wall_hthick);
-			add_row_of_bookcases(place_area, zval, room_id, light_amt, dim, 1); // place_inside=1
-		}
+	if (store_type == STORE_BOOK) { // add bookcases along side walls 50% of the time since they're expensive
+		if (rgen.rand_bool()) {add_row_of_bookcases(room_area, zval, room_id, light_amt, dim, 1);} // place_inside=1
 	}
 	else if (store_type == STORE_CLOTHING) {
 		// TODO: add shelves of TYPE_FOLD_SHIRT along walls
