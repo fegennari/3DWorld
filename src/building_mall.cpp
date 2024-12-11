@@ -1566,17 +1566,17 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 		vect_cube_t blockers;
 		if (!blocked.is_all_zeros()) {blockers.push_back(blocked);} // in case we decide to add a checkout area
 		point const place_pos(room.xc(), room.yc(), zval);
-		unsigned const num_tc(4 + (rgen.rand() % 5)); // 4-8
+		unsigned const num_tc(4 + (rgen.rand() % 5)); // 4-8; should vary with store size
 
 		for (unsigned n = 0; n < num_tc; ++n) {
 			colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
 			bool const use_tall_table(rgen.rand_float() < 0.25);
-			unsigned const objs_start(objs.size());
+			unsigned const objs_start2(objs.size());
 			int const wooden_or_plastic(rgen.rand() % 3); // randomly select between {wooden, plastic, wooden table with plastic chairs}
 			if (!add_table_and_chairs(rgen, room, blockers, room_id, place_pos, chair_color, 0.5, light_amt, 4, use_tall_table, wooden_or_plastic)) continue; // rand_place_off=0.5
-			assert(objs_start < objs.size());
-			cube_t blocker(objs[objs_start]); // union of table and chairs
-			for (auto i = objs.begin()+objs_start+1; i != objs.end(); ++i) {blocker.union_with_cube(*i);}
+			assert(objs_start2 < objs.size());
+			cube_t blocker(objs[objs_start2]); // union of table and chairs
+			for (auto i = objs.begin()+objs_start2+1; i != objs.end(); ++i) {blocker.union_with_cube(*i);}
 			blockers.push_back(blocker);
 		} // for n
 	}
@@ -1584,7 +1584,10 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 		// TODO
 	}
 	else if (store_type == STORE_PETS) { // rats, snakes, birds, spiders, fish, etc.
-		// TODO: fishtank
+		// add fish tanks along walls; TODO: more size variation, grouped together, on longer tables/shelves
+		unsigned const num_fishtanks((rgen.rand() % 8) + 1); // 1-8; should vary with store size
+		for (unsigned n = 0; n < num_fishtanks; ++n) {add_fishtank_to_room(rgen, room, zval, room_id, light_amt, objs_start, room_area);}
+		// TODO: cages with rats, snakes, birds, and spiders
 	}
 	// add ducts and vents in the ceiling
 	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim));
