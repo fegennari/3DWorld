@@ -270,7 +270,6 @@ Sophisticated Solutions
 Mindful Merchandise
 Trade of the Wise
 
-
 furniture:
 Harmony Home Furnishings
 Zenith Home Furnishings
@@ -336,6 +335,31 @@ Coastal Reflections Interiors
 Coastal Cottage Furniture
 Coastal Dream Furniture
 Modern Origins Furniture
+
+pet:
+Furry Friends Emporium
+Scales & Tails Store
+Creature Comforts Co.
+Friendly Fins & Feathers
+Pet Paradise Place
+Snuggle Squad
+Animal Antics Avenue
+Pet Pleasers Palace
+Adorable Allies Store
+Cute Critter Corner
+Chirp & Chipper Shop
+Loveable Pets Emporium
+Pet Patrol Pavilion
+Fur & Feathers Finds
+Pet World Market
+The Pet Exchange
+Critterville
+Petmania
+The Pet Retreat
+Pet Oasis
+Pet Central
+Petropolis
+
 
 # general
 

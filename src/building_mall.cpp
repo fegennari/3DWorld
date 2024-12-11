@@ -1376,8 +1376,9 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	bool const dim(doorway.dy() < doorway.dx()), dir(room.get_center_dim(dim) < doorway.get_center_dim(dim)); // points from room center toward doorway
 	room_t const &mall_room(get_mall_concourse());
 	vect_room_object_t &objs(interior->room_geom->objs);
-	unsigned const NUM_STORE_SELECT = 9;
-	unsigned const store_selects[NUM_STORE_SELECT] = {STORE_CLOTHING, STORE_CLOTHING, STORE_FOOD, STORE_FOOD, STORE_BOOK, STORE_FURNITURE, STORE_RETAIL, STORE_RETAIL, STORE_RETAIL};
+	unsigned const NUM_STORE_SELECT = 10;
+	unsigned const store_selects[NUM_STORE_SELECT] = {STORE_CLOTHING, STORE_CLOTHING, STORE_FOOD, STORE_FOOD, STORE_BOOK,
+		                                              STORE_FURNITURE, STORE_PETS, STORE_RETAIL, STORE_RETAIL, STORE_RETAIL};
 	unsigned const objs_start(objs.size());
 	unsigned const store_type(store_selects[rgen.rand() % NUM_STORE_SELECT]);
 	unsigned const item_category((store_type == STORE_RETAIL) ? (rgen.rand() % NUM_RETAIL_CAT) : 0); // same category for each rack with equal probability
@@ -1581,6 +1582,9 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	}
 	else if (store_type == STORE_FOOD) {
 		// TODO
+	}
+	else if (store_type == STORE_PETS) { // rats, snakes, birds, spiders, fish, etc.
+		// TODO: fishtank
 	}
 	// add ducts and vents in the ceiling
 	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim));
