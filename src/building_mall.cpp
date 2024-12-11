@@ -1505,24 +1505,47 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 						add_row_of_bookcases(rack, zval, room_id, light_amt, dim, 0); // place_inside=0
 					}
 					else if (store_type == STORE_CLOTHING) { // add clothes racks
-						float const centerline(rack_lo + 0.5*rack_width);
+						float const centerline(rack_lo + 0.5*rack_width), hr_radius(0.007*window_vspace), frame_hwidth(1.2*hr_radius);
+						unsigned const flags(RO_FLAG_INTERIOR | RO_FLAG_IN_MALL | RO_FLAG_NOCOLL);
 						// add an invisible collider around the clothes rack
 						cube_t collider(rack);
 						collider.z2() = zval + 0.5*window_vspace;
-						set_wall_width(collider, centerline, 0.25*rack_width, !dim);
+						set_wall_width(collider, centerline, 0.2*rack_width, !dim);
 						objs.emplace_back(collider, TYPE_COLLIDER, room_id, !dim, 0, (RO_FLAG_IN_MALL | RO_FLAG_INVIS), light_amt);
-						// TODO: add a frame that holds the hanger rod; can construct from metal bars
-						// add hanger rod
-						unsigned const flags(RO_FLAG_INTERIOR | RO_FLAG_IN_MALL);
-						float const hr_radius(0.007*window_vspace);
-						room_object_t hanger_rod(rack, TYPE_HANGER_ROD, room_id, !dim, 0, flags); // SHAPE_CUBE, even though it's a horizontal cylinder
-						hanger_rod.z1() = collider.z2();
-						hanger_rod.z2() = hanger_rod.z1() + 2.0*hr_radius;
-						set_wall_width(hanger_rod, centerline, hr_radius, !dim);
-						objs.push_back(hanger_rod);
-						// add hangers and hanging clothes
-						unsigned const num_hangers(round_fp(12.0*rgen.rand_uniform(1.0, 1.5)*rack_length/window_vspace));
-						building_room_geom_t::add_hangers_and_clothing(window_vspace, num_hangers, (flags | RO_FLAG_NOCOLL), objs, rgen);
+						unsigned const num_segs(2 + (room_id & 1)); // 2-3
+						float const seg_len(rack_length/num_segs);
+
+						for (unsigned n = 0; n < num_segs; ++n) { // split into segments
+							// add hanger rod
+							float const lo_val(start + n*seg_len);
+							room_object_t hanger_rod(rack, TYPE_HANGER_ROD, room_id, !dim, 0, flags); // SHAPE_CUBE, even though it's a horizontal cylinder
+							hanger_rod.d[dim][0] = lo_val;
+							hanger_rod.d[dim][1] = lo_val + seg_len;
+							hanger_rod.z1() = collider  .z2();
+							hanger_rod.z2() = hanger_rod.z1() + 2.0*hr_radius;
+							set_wall_width(hanger_rod, centerline, hr_radius, !dim);
+							// add a frame that holds the hanger rod; can construct from metal bars
+							colorRGBA const frame_color(DK_GRAY);
+
+							for (unsigned d = 0; d < 2; ++d) { // each end
+								if (d == 1 && n+1 < num_segs) continue; // not the end, use frame from the next segment
+								cube_t hbar(collider); // copy width from collider
+								set_wall_width(hbar, hanger_rod.zc(),      frame_hwidth, 2  ); // Z
+								set_wall_width(hbar, hanger_rod.d[dim][d], frame_hwidth, dim);
+								objs.emplace_back(hbar, TYPE_METAL_BAR, room_id, 0, 0, flags, light_amt, SHAPE_CUBE, frame_color, 0); // draw all sides
+
+								for (unsigned e = 0; e < 2; ++e) { // each side leg
+									cube_t vbar(hbar);
+									set_cube_zvals(vbar, rack.z1(), hbar.z1());
+									vbar.d[!dim][!e] = hbar.d[!dim][e] + (e ? -1.0 : 1.0)*2.0*frame_hwidth;
+									objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, flags, light_amt, SHAPE_CUBE, frame_color, EF_Z12); // skip top and bottom
+								}
+							} // for d
+							objs.push_back(hanger_rod); // must be added just before clothes
+							// add hangers and hanging clothes
+							unsigned const num_hangers(round_fp(15.0*rgen.rand_uniform(1.0, 1.5)*rack_length/(num_segs*window_vspace)));
+							building_room_geom_t::add_hangers_and_clothing(window_vspace, num_hangers, flags, objs, rgen);
+						} // for n
 					}
 					else { // add retail shelf racks
 						add_shelf_rack(rack, dim, style_id, rack_id, room_id, RO_FLAG_IN_MALL, item_category+1, 0, rgen); // add_occluders=0
