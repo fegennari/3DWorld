@@ -159,7 +159,7 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, v
 	float const long_edge_len(2.0*max(table_sz.x, table_sz.y));
 	bool const is_round(!use_tall_table && !use_long_table && rgen.rand_float() < 0.25); // 25% of the time
 	bool const is_plastic(room.is_office && rgen.rand_bool()); // plastic table for offices 50% of the time
-	float const table_hscale(use_tall_table ? 0.35 : (is_round ? 0.23 : (is_plastic ? 0.24 : 0.22)));
+	float const table_hscale(use_tall_table ? 0.38 : (is_round ? 0.23 : (is_plastic ? 0.24 : 0.22)));
 	if (is_round) {table_sz.x = table_sz.y = 0.6f*(table_sz.x + table_sz.y);} // round tables must have square bcubes for now (no oval tables yet); make radius slightly larger
 	point llc(table_pos - table_sz), urc(table_pos + table_sz);
 	llc.z = table_pos.z; // bottom
