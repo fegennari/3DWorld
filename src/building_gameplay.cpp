@@ -1884,6 +1884,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 	// determine which object the player may be choosing to move
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (i->no_coll() || i->type == TYPE_BLOCKER) continue; // not interactive
+		if (i->type == TYPE_BCASE && i->in_mall())   continue; // can't move bookstore bookcase, since the adjacent bookcase's back isn't drawn
 		
 		if (i->type == TYPE_POOL_TABLE) {
 			// don't push pool table if there are balls on it, since it's too easily to accidentally do this when trying to hit a pool ball

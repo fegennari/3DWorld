@@ -1585,7 +1585,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 
 void building_t::add_row_of_bookcases(cube_t const &row, float zval, unsigned room_id, float light_amt, bool dim, bool place_inside) {
 	float const window_vspace(get_window_vspace());
-	float const bc_width(0.45*window_vspace), bc_depth(0.14*window_vspace), bc_height(0.7*window_vspace);
+	float const bc_width(0.45*window_vspace), bc_depth(0.13*window_vspace), bc_height(0.75*window_vspace);
 	float const wall_length(row.get_sz_dim(dim));
 	unsigned const num_bc(max(1, round_fp(wall_length/bc_width)));
 	float const bcase_width(wall_length/num_bc);

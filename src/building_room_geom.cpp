@@ -3364,7 +3364,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 				book.z2() = shelf.z2() + width;
 			}
 			else { // upright
-				if (!prev_tilted && avail_space > 2.0*width && (right_pos + book_space) < shelf_end && n+1 < num_spaces) {
+				if (!prev_tilted && avail_space > 2.0*width && (right_pos + book_space) < shelf_end && n+1 < num_spaces && book_ix+1 < max_books) {
 					// rotates about the URC; note that books are limited to tilting only in the direction of iteration, which is constant per bookcase
 					float const lean_width(min((avail_space - width), rgen.rand_uniform(0.1, 0.6)*height)); // use part of the availabe space to lean
 					tilt_angle = asinf(lean_width/height);
