@@ -525,7 +525,8 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 	bool const is_house(c.is_house());
 	vector3d const c_sz(c.get_size());
 	float const c_sz_min_xy(min(c_sz.x, c_sz.y)), dz(c_sz.z), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.75*thickness), floor_spacing(1.1*dz);
-	float const z_step(dz/(num_shelves + 1)), shelf_clearance(z_step - thickness - bracket_thickness), sz_scale(is_house ? 0.7 : 1.0), box_zscale(shelf_clearance*sz_scale);
+	float const z_step(dz/(num_shelves + 1)), shelf_clearance(z_step - thickness - bracket_thickness), sz_scale(is_house ? 0.7 : 1.0);
+	float const box_zscale(shelf_clearance*sz_scale), h_val(0.21*floor_spacing);
 	rand_gen_t base_rgen(c.create_rgen());
 
 	// Note: this function doesn't support placement of objects drawn as 3D models such as fire extinguishers
@@ -535,6 +536,35 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 		base_rgen.rand_mix();
 		rand_gen_t rgen(base_rgen); // create a new rgen so that we can early exit this loop based on add_models_mode and still get deterministic results
 		room_object_t C(c);
+		vector3d sz;
+
+		if (c.in_mall()) {
+			if (c.item_flags == STORE_CLOTHING) {
+				if (building_obj_model_loader.is_model_valid(OBJ_MODEL_FOLD_SHIRT)) {
+					vector3d const ssz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FOLD_SHIRT)); // D, W, H
+					float const shelf_depth(S.get_sz_dim(c.dim)), shelf_len(S.get_sz_dim(!c.dim));
+					float const fs_length(rgen.rand_uniform(0.8, 0.95)*shelf_depth), fs_width(min(0.5f*shelf_len, fs_length*ssz.x/ssz.y)), fs_height(fs_length*ssz.z/ssz.y);
+					C.type  = TYPE_FOLD_SHIRT;
+					C.shape = SHAPE_CUBE;
+					C.dim   =  c.dim;
+					C.dir   = !c.dir;
+					C.z2()  = C.z1() + fs_height; // set height
+					sz[ c.dim] = 0.5*fs_length;
+					sz[!c.dim] = 0.5*fs_width;
+					unsigned const num_shirts(round_fp(rgen.rand_uniform(0.5, 1.0)*shelf_len/shelf_depth)); // 50-100% full
+
+					for (unsigned n = 0; n < num_shirts; ++n) {
+						C.color = TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS];
+						gen_xy_pos_for_cube_obj(C, S, sz, fs_height, rgen);
+						add_if_not_intersecting(C, objects, cubes, add_models_mode);
+					}
+				}
+				if (add_models_mode) continue;
+				// TODO: TYPE_TEESHIRT, TYPE_PANTS
+			}
+			else {assert(0);} // unsupported store type
+			continue;
+		}
 		// add fire extinguishers if we have a model and it fits (2 level shelves)
 		float const max_height(((s+1 == num_shelves) ? 1.0 : 0.8)*shelf_clearance); // more space on the top shelf
 		float fe_height(0.0), fe_radius(0.0);
@@ -559,8 +589,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 			0.4*box_zscale, 0.98*box_zscale, 1, (c.flags | RO_FLAG_NOCOLL)); // allow_crates=1
 		// add computers; what about monitors?
 		bool const top_shelf(s+1 == num_shelves);
-		float const h_val(0.21*floor_spacing), cheight(0.75*h_val), cwidth(0.44*cheight), cdepth(0.9*cheight); // fixed AR=0.44 to match the texture
-		vector3d sz;
+		float const cheight(0.75*h_val), cwidth(0.44*cheight), cdepth(0.9*cheight); // fixed AR=0.44 to match the texture
 		sz[ c.dim] = 0.5*cdepth;
 		sz[!c.dim] = 0.5*cwidth;
 

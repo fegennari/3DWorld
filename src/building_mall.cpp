@@ -1559,8 +1559,18 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	if (store_type == STORE_BOOK) { // add bookcases along side walls 50% of the time since they're expensive
 		if (rgen.rand_bool()) {add_row_of_bookcases(room_area, zval, room_id, light_amt, dim, 1);} // place_inside=1
 	}
-	else if (store_type == STORE_CLOTHING) {
-		// TODO: add shelves of TYPE_FOLD_SHIRT along walls
+	else if (store_type == STORE_CLOTHING) { // add shelves of TYPE_FOLD_SHIRT along walls; clothes racks are added above
+		float const height(0.8*window_vspace), depth(0.2*window_vspace);
+		cube_t c(room_area);
+		set_cube_zvals(c, zval, zval+height);
+
+		for (unsigned d = 0; d < 2; ++d) { // for each side
+			float const back_pos(room_area.d[!dim][!d]);
+			c.d[!dim][!d] = back_pos;
+			c.d[!dim][ d] = back_pos + (d ? 1.0 : -1.0)*depth;
+			unsigned const shelf_flags(RO_FLAG_INTERIOR | RO_FLAG_IN_MALL);
+			add_shelves(c, !dim, !d, room_id, light_amt, shelf_flags, store_type, rgen);
+		} // for d
 	}
 	else if (store_type == STORE_FURNITURE) {
 		// TODO: add random furniture: table + chairs, TYPE_DESK, TYPE_BED, TYPE_DRESSER, TYPE_NIGHTSTAND
