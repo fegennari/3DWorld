@@ -176,7 +176,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CHECKOUT  ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1,  0.0,  300.0, "checkout counter");
 	bldg_obj_types[TYPE_FISHTANK  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 100.0, 160.0, "fish tank");
 	bldg_obj_types[TYPE_LAVALAMP  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 30.0,  3.0,   "lava lamp");
-	bldg_obj_types[TYPE_SHOWERTUB ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1,  0.0,  0.0,   "shower"); // this is the shower part of a shower+tub combo; technically large and small
+	bldg_obj_types[TYPE_SHOWERTUB ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 1,  0.0,  0.0,   "shower"); // shower part of a shower+tub combo; technically large and small; take curtains
 	bldg_obj_types[TYPE_TRASH     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,  0.0,  0.1,   "trash");
 	bldg_obj_types[TYPE_VALVE     ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0,  0.0,  0.0,   "valve"); // detail object
 	bldg_obj_types[TYPE_DBG_SHAPE ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 1,  0.0,  0.0,   "debug shape"); // small (optimization)
@@ -295,6 +295,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		if (obj.taken_level < 4) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 0.5, 0.025, "toy ring");}
 		// else take the toy base
 	}
+	if (otype == TYPE_SHOWERTUB) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 20.0, 2.0, "shower curtain");} // only the curtains can be taken
 	if (otype == TYPE_TABLE    && obj.is_broken ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1,  25.0, 40.0, "broken table");} // glass tables only
 	if (otype == TYPE_COMPUTER && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 100.0, 20.0, "old computer");}
 	if (otype == TYPE_BOX      && obj.is_open   ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,   0.0, 0.05, "opened box"  );}
@@ -1282,6 +1283,17 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 		update_draw_state_for_room_object(book, building, 1);
 		return 1;
 	}
+	if (obj.type == TYPE_SHOWERTUB) { // take curtains
+		point const p2(at_pos + in_dir*range);
+		bool const side(p2[!obj.dim] > obj.get_center_dim(!obj.dim));
+		unsigned const bit_mask(1 << side);
+		if (obj.taken_level & bit_mask) return 0; // already taken
+		if (!register_player_object_pickup(obj, at_pos)) return 0;
+		obj.taken_level |= bit_mask;
+		player_inventory.add_item(obj);
+		update_draw_state_for_room_object(obj, building, 0); // was_taken=0
+		return 1; // curtain taken
+	}
 	if (obj.is_parked_car()) {
 		// returns either a standard room object or a custom item; in general, we won't return both, but in any case we're successful if either type of item is taken
 		room_obj_or_custom_item_t const loot(steal_from_car(obj, building.get_window_vspace(), do_room_obj_pickup));
@@ -1499,6 +1511,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			if (type == TYPE_LIGHT   && !i->is_visible())       continue; // can't take light attached to a ceiling fan as a separate object
 			if (type == TYPE_MWAVE   && i->is_nonempty())       continue; // can't take a microwave with something inside it
 			if (type == TYPE_PADLOCK && i->is_active())         continue; // padlock in locked onto a door, can't take
+			if (type == TYPE_SHOWERTUB && (i->taken_level & 3) == 3) continue; // both shower curtains already taken
 
 			if (type == TYPE_SHELFRACK && i->obj_expanded()) { // shelf rack is already expanded, can no longer select this object
 				// check the back of the shelf rack to make sure the player can't take an object through it

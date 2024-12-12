@@ -1705,6 +1705,7 @@ void building_room_geom_t::add_shower_tub(room_object_t const &c, tid_nm_pair_t 
 
 		for (unsigned oi = 0; oi < 2; ++oi) { // {outer, inner}
 			for (unsigned d = 0; d < 2; ++d) { // each side
+				if (c.taken_level & (1<<d)) continue; // this curtain has been taken
 				float const curtain_width(((d ? !c.is_active() : c.is_open()) ? 0.15 : 0.45)*width); // uses two different flags for low vs. high sides
 				(c.dim ? curtains_mat.tex.tscale_x : curtains_mat.tex.tscale_y) = 0.2/curtain_width; // okay to set since tscale isn't used as a key
 				cube_t curtain(curtains);
