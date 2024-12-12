@@ -2143,8 +2143,8 @@ void city_obj_placer_t::connect_power_to_buildings(vector<road_plot_t> const &pl
 	cube_t all_plots_bcube(plots.front());
 	for (auto p = plots.begin()+1; p != plots.end(); ++p) {all_plots_bcube.union_with_cube(*p);} // query all buildings in the entire city rather than per-plot
 	vector<point> ppts;
-	get_building_power_points(all_plots_bcube, ppts);
-	for (auto p = ppts.begin(); p != ppts.end(); ++p) {connect_power_to_point(*p, 1);} // near_power_pole=1
+	get_building_power_points(all_plots_bcube, ppts); // get points on house roofs
+	for (point const &p : ppts) {connect_power_to_point(p, 1);} // near_power_pole=1
 }
 
 bool city_obj_placer_t::move_to_not_intersect_driveway(point &pos, float radius, bool dim) const {

@@ -1077,16 +1077,24 @@ point power_pole_t::get_transformer_center() const { // not checking has_transfo
 	return tf_pos;
 }
 bool power_pole_t::add_wire(point const &p1, point const &p2, bool add_pole) { // Note: p1 connects to building or streetlight; p2 connects to wires on pole
+	float const pole_height(bcube.dz());
 	wire_t wire(p1, p2);
 	
 	if (add_pole) { // used for houses
-		wire.pts[0]   .z += 0.040*bcube.dz(); // set the wire pole height
-		wire.pole_base.z -= 0.006*bcube.dz(); // extend below the roof
+		wire.pts[0]   .z += 0.040*pole_height; // set the wire pole height
+		wire.pole_base.z -= 0.006*pole_height; // extend below the roof
 		if (check_city_building_line_coll_bs_any(wire.pts[0], wire.pts[1])) return 0; // placement failed
 	}
 	wires.push_back(wire);
 	for (unsigned d = 0; d < 2; ++d) {bcube_with_wires.union_with_sphere(wire.pts[d], get_wire_radius());} // okay to omit pole_base
 	bsphere_radius = bcube_with_wires.furthest_dist_to_pt(pos); // recompute
+
+	if (add_pole) { // add lower telephone or cable TV wire
+		wire.pts[0].z -= 0.020*pole_height; // halfway up the wire pole
+		wire.pts[1].z -= 0.042*pole_height + 2.0*get_vwire_spacing(); // connect to lower wire
+		wire.rscale    = 0.67; // smaller radius
+		if (!check_city_building_line_coll_bs_any(wire.pts[0], wire.pts[1])) {wires.push_back(wire);}
+	}
 	return 1;
 }
 /*static*/ void power_pole_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
@@ -1418,7 +1426,8 @@ void power_pole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist
 	}
 	if (!wires.empty() && bcube_with_wires.closest_dist_less_than(camera_bs, 0.3*dmax)) {
 		for (auto &w : wires) { // represents all three wires tied together
-			draw_wire(w.pts, wire_radius, black, m_qbd);
+			draw_wire(w.pts, w.rscale*wire_radius, black, m_qbd);
+			if (w.rscale != 1.0) continue; // telephone/cable TV wire; no vertical connection
 			// draw vertical wire segment connecting the three, which also represents all three power wires tied together
 			cube_t wire(w.pts[1], w.pts[1]); // connection point to bottom horizontal wires
 			wire.expand_in_z (vwire_spacing); // connect to wires above and below

@@ -207,8 +207,9 @@ struct pool_float_t : public city_obj_t {
 
 class power_pole_t : public city_obj_t {
 	struct wire_t {
-		point pts[2], pole_base;
-		wire_t(point const &p1, point const &p2) : pole_base(p1) {pts[0] = p1; pts[1] = p2;}
+		point pts[2], pole_base; // pts: building/streetlight => power lines
+		float rscale;
+		wire_t(point const &p1, point const &p2, float rscale_=1.0) : pole_base(p1), rscale(rscale_) {pts[0] = p1; pts[1] = p2;}
 	};
 	bool at_grid_edge, at_line_end[2], residential;
 	uint8_t dims; // bit mask for direction the wires run
