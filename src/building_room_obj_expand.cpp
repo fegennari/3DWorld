@@ -31,9 +31,9 @@ bool is_shirt_model     (room_object_t const &obj) {return is_shirt_model     (o
 bool is_pants_model     (room_object_t const &obj) {return is_pants_model     (obj.get_model_id());}
 bool is_bar_hanger_model(room_object_t const &obj) {return is_bar_hanger_model(obj.get_model_id());}
 
-bool add_if_not_intersecting(room_object_t const &obj, vect_room_object_t &objects, vect_cube_t &cubes) {
+bool add_if_not_intersecting(room_object_t const &obj, vect_room_object_t &objects, vect_cube_t &cubes, bool add_obj=1) {
 	if (has_bcube_int(obj, cubes)) return 0;
-	objects.push_back(obj);
+	if (add_obj) {objects.push_back(obj);}
 	cubes.push_back(obj);
 	return 1;
 }
@@ -518,21 +518,39 @@ void set_spraypaint_color(room_object_t &obj, rand_gen_t &rgen, unsigned *color_
 	obj.obj_id = rgen.rand(); // used to select emissive color
 }
 
-void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vect_room_object_t &objects) {
+void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vect_room_object_t &objects, bool add_models_mode) {
 	if (!c_in.is_nonempty()) return; // empty - no objects
-	room_object_t c(c_in);
-	c.flags |= RO_FLAG_WAS_EXP;
+	room_object_t c(c_in); // deep copy so that we can set flags and don't invalidate the reference
+	if (!add_models_mode) {c.flags |= RO_FLAG_WAS_EXP;} // only expand for non-models mode
 	bool const is_house(c.is_house());
 	vector3d const c_sz(c.get_size());
 	float const c_sz_min_xy(min(c_sz.x, c_sz.y)), dz(c_sz.z), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.75*thickness), floor_spacing(1.1*dz);
 	float const z_step(dz/(num_shelves + 1)), shelf_clearance(z_step - thickness - bracket_thickness), sz_scale(is_house ? 0.7 : 1.0), box_zscale(shelf_clearance*sz_scale);
-	rand_gen_t rgen(c.create_rgen());
+	rand_gen_t base_rgen(c.create_rgen());
 
 	// Note: this function doesn't support placement of objects drawn as 3D models such as fire extinguishers
 	for (unsigned s = 0; s < num_shelves; ++s) {
 		cube_t const &S(shelves[s]);
 		vect_cube_t &cubes(get_temp_cubes());
+		base_rgen.rand_mix();
+		rand_gen_t rgen(base_rgen); // create a new rgen so that we can early exit this loop based on add_models_mode and still get deterministic results
 		room_object_t C(c);
+		// add fire extinguishers if we have a model and it fits (2 level shelves)
+		float const max_height(((s+1 == num_shelves) ? 1.0 : 0.8)*shelf_clearance); // more space on the top shelf
+		float fe_height(0.0), fe_radius(0.0);
+
+		if (get_fire_ext_height_and_radius(floor_spacing, fe_height, fe_radius) && fe_height < max_height && 2.3*fe_radius < c_sz_min_xy) {
+			if (rgen.rand_float() < 0.3) { // 30% of the time
+				C.color = WHITE;
+				C.type  = TYPE_FIRE_EXT;
+				C.shape = SHAPE_CYLIN;
+				C.dim   = rgen.rand_bool(); // random orient
+				C.dir   = rgen.rand_bool();
+				gen_xy_pos_for_round_obj(C, S, fe_radius, fe_height, 1.1*fe_radius, rgen);
+				add_if_not_intersecting(C, objects, cubes, add_models_mode);
+			}
+		}
+		if (add_models_mode) continue; // all items added below are non-models
 		// add crates/boxes
 		unsigned const num_boxes(rgen.rand() % (is_house ? 8 : 13)); // 0-12
 		cube_t bounds(S);
@@ -664,10 +682,10 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 	} // for s
 }
 
-void building_room_geom_t::expand_shelves(room_object_t const &c) {
+void building_room_geom_t::expand_shelves(room_object_t const &c, bool add_models_mode) {
 	cube_t shelves[4]; // max number of shelves
 	unsigned const num_shelves(get_shelves_for_object(c, shelves));
-	get_shelf_objects(c, shelves, num_shelves, expanded_objs);
+	get_shelf_objects(c, shelves, num_shelves, (add_models_mode ? objs : expanded_objs), add_models_mode); // models expand to objs; everything else expands to expanded_objs
 }
 
 void set_book_id_and_color(room_object_t &obj, rand_gen_t &rgen) {
@@ -793,9 +811,9 @@ void add_row_of_balls(room_object_t const &c, cube_t const &region, float spacin
 }
 
 void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects, bool add_models_mode, bool books_only) {
+	if (!c.is_nonempty()) return; // empty - no objects
 	cube_t back, top, sides[2], shelves[5];
 	unsigned const num_shelves(get_shelf_rack_cubes(c, back, top, sides, shelves));
-	if (!c.is_nonempty()) return; // empty - no objects
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_WAS_EXP | RO_FLAG_ON_SRACK), unpowered_flags(flags | RO_FLAG_NO_POWER);
 	float const floor_spacing(c.dz()/SHELF_RACK_HEIGHT_FS);
 	float const top_shelf_z2(top.is_all_zeros() ? c.z2() : top.z1()); // bottom of the top, if present

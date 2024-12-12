@@ -1899,7 +1899,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			first_sink_side = (room.get_center_dim(!br_dim) < get_mall_concourse().get_center_dim(!br_dim));
 		}
 		for (unsigned e = 0; e < 2 && !sink_side_set; ++e) {
-			bool const side(e ^ first_sink_side);
+			bool const side(bool(e) ^ first_sink_side);
 			cube_t c(room);
 			set_cube_zvals(c, zval, zval+wall_thickness); // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
 			c.d[!br_dim][!side] = c.d[!br_dim][side] + (side ? -1.0 : 1.0)*wall_thickness; // shrink to near zero area in this dim
@@ -2593,10 +2593,8 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 				if (has_bcube_int(cand, exclude)) continue; // too close to a doorway
 				if (!is_garage_or_shed && interior->is_blocked_by_stairs_or_elevator(cand)) continue;
 				if (overlaps_other_room_obj(cand, objs_start)) continue; // can be blocked by bookcase, etc.
-				bool const is_empty(rgen.rand_float() < 0.05); // 5% empty
-				unsigned const shelf_flags((is_house ? RO_FLAG_IS_HOUSE : 0) | (is_garage_or_shed ? 0 : RO_FLAG_INTERIOR) | (is_empty ? 0 : RO_FLAG_NONEMPTY));
-				objs.emplace_back(cand, TYPE_SHELVES, room_id, dim, dir, shelf_flags, tot_light_amt);
-				set_obj_id(objs);
+				unsigned const shelf_flags((is_house ? RO_FLAG_IS_HOUSE : 0) | (is_garage_or_shed ? 0 : RO_FLAG_INTERIOR));
+				add_shelves(cand, dim, dir, room_id, tot_light_amt, shelf_flags, 0, rgen); // item_flags=0
 				break; // done
 			} // for n
 		} // for dir
@@ -2656,6 +2654,16 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	// add office building storage room sign, in a hallway, basement, etc.
 	if (!is_house /*&& !is_basement*/) {add_door_sign((has_stairs ? "Stairs" : "Storage"), room, zval, room_id);}
 	return 1; // it's always a storage room, even if it's empty
+}
+
+void building_t::add_shelves(cube_t const &c, bool dim, bool dir, unsigned room_id, float tot_light_amt, unsigned flags, unsigned item_flags, rand_gen_t &rgen) {
+	bool const is_empty(rgen.rand_float() < 0.05); // 5% empty
+	if (!is_empty) {flags |= RO_FLAG_NONEMPTY;}
+	vect_room_object_t &objs(interior->room_geom->objs);
+	objs.emplace_back(c, TYPE_SHELVES, room_id, dim, dir, flags, tot_light_amt);
+	set_obj_id(objs);
+	objs.back().item_flags = item_flags;
+	interior->room_geom->expand_shelves(objs.back(), 1); // add_models_mode=1
 }
 
 bool building_t::add_ladder_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {

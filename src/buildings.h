@@ -1250,7 +1250,7 @@ struct building_room_geom_t {
 	static void draw_ball_in_building(room_object_t  const &c, shader_t &s);
 	void draw_interactive_player_obj(carried_item_t const &c, shader_t &s, vector3d const &xlate);
 	// functions for expanding nested objects
-	void expand_shelves(room_object_t const &c);
+	void expand_shelves(room_object_t const &c, bool add_models_mode=0);
 	void expand_shelfrack(room_object_t const &c);
 	void get_bookcase_books(room_object_t const &c, vect_room_object_t &books) {add_bookcase(c, 0, 0, 0, 1.0, 0, 1.0, nullptr, &books);} // Note: technically const
 	void expand_closet(room_object_t const &c) {add_closet_objects(c, expanded_objs);}
@@ -1301,7 +1301,7 @@ private:
 	void maybe_add_door_sign(door_t const &door, door_rotation_t const &drot);
 	static void add_closet_objects(room_object_t const &c, vect_room_object_t &objects);
 	static unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]);
-	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vect_room_object_t &objects);
+	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vect_room_object_t &objects, bool add_models_mode=0);
 public:
 	static void get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects, bool add_models_mode=0, bool books_only=0);
 	static void add_hangers_and_clothing(float window_vspacing, unsigned num_hangers, unsigned flags, int hanger_model_id, int clothing_model_id,
@@ -2510,6 +2510,7 @@ private:
 	void add_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, light_ix_assign_t &light_ix_assign);
 	void add_U_stair_landing_lights(stairwell_t const &s, unsigned room_id, unsigned light_ix, float floor_zval);
 	void add_checkout_objs   (cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool dim, bool dir, bool cr_dir);
+	void add_shelves(cube_t const &c, bool dim, bool dir, unsigned room_id, float tot_light_amt, unsigned flags, unsigned item_flags, rand_gen_t &rgen);
 	void add_shelf_rack(cube_t const &c, bool dim, unsigned style_id, unsigned &rack_id, unsigned room_id,
 		unsigned extra_flags, unsigned item_category, bool add_occluders, rand_gen_t &rgen);
 	bool maybe_add_walkway_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, light_ix_assign_t &light_ix_assign);
