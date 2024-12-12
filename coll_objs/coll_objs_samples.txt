@@ -80,5 +80,10 @@ l 0.8 1.0 1.0 1.0 1.0 68 1 # 27 = cblock texture, 102 = spaceship texture, 68 = 
 #s 1 2 O ../models/tetris_factory.glb 4 0 0
 s 1 2 O ../models/sunrise_temple_environment.glb 4 0 0
 
+#s 1 2 m 0.033
+#O ../models/Bistro_v5_2/BistroInterior.fbx 4 0 0
+#s 1 2 O ../models/Bistro_v5_2/BistroInterior_Wine.fbx 4 0 0
+#O ../models/Bistro_v5_2/BistroExterior.fbx 4 0 0
+
 cube_map_ref 0
 metalness 0.0
