@@ -1508,12 +1508,13 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 					else if (store_type == STORE_CLOTHING) { // add clothes racks
 						float const centerline(rack_lo + 0.5*rack_width), hr_radius(0.007*window_vspace), frame_hwidth(1.2*hr_radius);
 						unsigned const flags(RO_FLAG_INTERIOR | RO_FLAG_IN_MALL | RO_FLAG_NOCOLL);
-						// add an invisible collider around the clothes rack
+						// add an invisible collider around the clothes rack for player and AI collisions
 						cube_t collider(rack);
 						collider.z2() = zval + 0.5*window_vspace;
 						set_wall_width(collider, centerline, 0.2*rack_width, !dim);
 						objs.emplace_back(collider, TYPE_COLLIDER, room_id, !dim, 0, (RO_FLAG_IN_MALL | RO_FLAG_INVIS), light_amt);
 						unsigned const num_segs(2 + (room_id & 1)); // 2-3
+						int const hanger_model_id(rgen.rand()), clothing_model_id(rgen.rand()); // consistent for each rack
 						float const seg_len(rack_length/num_segs);
 
 						for (unsigned n = 0; n < num_segs; ++n) { // split into segments
@@ -1545,7 +1546,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 							objs.push_back(hanger_rod); // must be added just before clothes
 							// add hangers and hanging clothes
 							unsigned const num_hangers(round_fp(15.0*rgen.rand_uniform(1.0, 1.5)*rack_length/(num_segs*window_vspace)));
-							building_room_geom_t::add_hangers_and_clothing(window_vspace, num_hangers, flags, objs, rgen);
+							building_room_geom_t::add_hangers_and_clothing(window_vspace, num_hangers, flags, hanger_model_id, clothing_model_id, objs, rgen);
 						} // for n
 					}
 					else { // add retail shelf racks
