@@ -275,48 +275,49 @@ string get_pool_ball_name(unsigned number) {
 	return oss.str();
 }
 bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
+	room_object const otype(obj.type);
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
-	if (obj.type == TYPE_PICTURE && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 20.0, 6.0,  "picture frame");} // second item to take from picture
-	if (obj.type == TYPE_TPROLL  && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 6.0,  0.5,  "toilet paper holder");} // second item to take from tproll
-	if (obj.type == TYPE_TCAN    && obj.in_mall()      ) {return bldg_obj_type_t(0, 1, 1, 1, 0, 0, 2, 80.0, 40.0, "large trashcan");}
+	if (otype == TYPE_PICTURE && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 20.0, 6.0,  "picture frame");} // second item to take from picture
+	if (otype == TYPE_TPROLL  && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 6.0,  0.5,  "toilet paper holder");} // second item to take from tproll
+	if (otype == TYPE_TCAN    && obj.in_mall()      ) {return bldg_obj_type_t(0, 1, 1, 1, 0, 0, 2, 80.0, 40.0, "large trashcan");}
 
-	if (obj.type == TYPE_BED) {
+	if (otype == TYPE_BED) {
 		if (obj.taken_level > 1) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 250.0, mattress_weight, "mattress"  );} // third item to take from bed
 		if (obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 80.0,  sheets_weight,   "bed sheets");} // second item to take from bed
 		return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 20.0, pillow_weight, "pillow"); // first item to take from bed
 	}
-	if (obj.type == TYPE_PLANT && !(obj.flags & RO_FLAG_ADJ_BOT)) { // plant not on a table/desk
+	if (otype == TYPE_PLANT && !(obj.flags & RO_FLAG_ADJ_BOT)) { // plant not on a table/desk
 		if (obj.taken_level > 1) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 1, 10.0, 10.0, "plant pot");} // third item to take
 		if (obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 1, 1.0,  10.0, "dirt"     );} // second item to take
 		return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 25.0, 5.0, "plant"); // first item to take
 	}
-	if (obj.type == TYPE_TOY) { // take one ring at a time then the base (5 parts)
+	if (otype == TYPE_TOY) { // take one ring at a time then the base (5 parts)
 		if (obj.taken_level < 4) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 0.5, 0.025, "toy ring");}
 		// else take the toy base
 	}
-	if (obj.type == TYPE_TABLE    && obj.is_broken ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1,  25.0, 40.0, "broken table");} // glass tables only
-	if (obj.type == TYPE_COMPUTER && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 100.0, 20.0, "old computer");}
-	if (obj.type == TYPE_BOX      && obj.is_open   ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,   0.0, 0.05, "opened box"  );}
-	if (obj.type == TYPE_CRATE    && obj.is_open   ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,   2.0, 0.5,  "opened crate");}
-	if (obj.type == TYPE_TV       && obj.is_broken ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 1, 1,  20.0, 70.0, "broken TV"   );}
-	if (obj.type == TYPE_MONITOR  && obj.is_broken ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 1, 1,  10.0, 15.0, "broken computer monitor");}
-	if (obj.type == TYPE_LIGHT    && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0,  20.0,  5.0, "flickering light");}
-	if (obj.type == TYPE_LIGHT    && obj.is_broken2()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0,  10.0,  5.0, "broken light");}
-	if (obj.type == TYPE_RAT      && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,   0.0,  1.0, "cooked/dead rat");}
-	if (obj.type == TYPE_ROACH    && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0,   0.0, 0.01, "dead cockroach");} // same stats as live cockroach
-	if (obj.type == TYPE_FIRE_EXT && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,  20.0, 10.0, "empty fire extinguisher");}
-	if (obj.type == TYPE_CANDLE   && obj.is_used   ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   0.5,  0.4, "used candle");}
-	if (obj.type == TYPE_POOL_FLOAT&&obj.is_broken ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   5.0,  1.0, "deflated pool float");} // half value, no player coll
-	if (obj.type == TYPE_VASE     && obj.in_mall   ()) {return bldg_obj_type_t(1, 1, 0, 1, 0, 0, 2,  500.0,250.0,"sculpture");}
-	if (obj.type == TYPE_BENCH    && obj.in_mall   ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,  150.0,100.0,"mall bench");}
+	if (otype == TYPE_TABLE    && obj.is_broken ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1,  25.0, 40.0, "broken table");} // glass tables only
+	if (otype == TYPE_COMPUTER && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 100.0, 20.0, "old computer");}
+	if (otype == TYPE_BOX      && obj.is_open   ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,   0.0, 0.05, "opened box"  );}
+	if (otype == TYPE_CRATE    && obj.is_open   ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,   2.0, 0.5,  "opened crate");}
+	if (otype == TYPE_TV       && obj.is_broken ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 1, 1,  20.0, 70.0, "broken TV"   );}
+	if (otype == TYPE_MONITOR  && obj.is_broken ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 1, 1,  10.0, 15.0, "broken computer monitor");}
+	if (otype == TYPE_LIGHT    && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0,  20.0,  5.0, "flickering light");}
+	if (otype == TYPE_LIGHT    && obj.is_broken2()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0,  10.0,  5.0, "broken light");}
+	if (otype == TYPE_RAT      && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,   0.0,  1.0, "cooked/dead rat");}
+	if (otype == TYPE_ROACH    && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0,   0.0, 0.01, "dead cockroach");} // same stats as live cockroach
+	if (otype == TYPE_FIRE_EXT && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,  20.0, 10.0, "empty fire extinguisher");}
+	if (otype == TYPE_CANDLE   && obj.is_used   ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   0.5,  0.4, "used candle");}
+	if (otype == TYPE_POOL_FLOAT&&obj.is_broken ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   5.0,  1.0, "deflated pool float");} // half value, no player coll
+	if (otype == TYPE_VASE     && obj.in_mall   ()) {return bldg_obj_type_t(1, 1, 0, 1, 0, 0, 2,  500.0,250.0,"sculpture");}
+	if (otype == TYPE_BENCH    && obj.in_mall   ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,  150.0,100.0,"mall bench");}
 
-	if (obj.type == TYPE_INSECT) { // unused
+	if (otype == TYPE_INSECT) { // unused
 		bool const is_fly(obj.is_hanging());
 		string const name(string(obj.is_broken() ? "dead " : "") + (is_fly ? "fly" : "cockroach"));
 		return bldg_obj_type_t(0, 0, 0, 1, 0, !is_fly, (is_fly ? 2 : 0), 0.0, 0.01, name);
 	}
 	if (obj.is_a_drink()) {
-		bool const is_bottle(obj.type == TYPE_BOTTLE); // else drink can
+		bool const is_bottle(otype == TYPE_BOTTLE); // else drink can
 		string const &name(is_bottle ? bottle_params[obj.get_bottle_type()].name  : drink_can_params[obj.get_drink_can_type()].name );
 		float const  value(is_bottle ? bottle_params[obj.get_bottle_type()].value : drink_can_params[obj.get_drink_can_type()].value);
 		bldg_obj_type_t type(0, 0, 0, 1, 0, 0, 2, value, (is_bottle ? 1.0 : 0.75), name);
@@ -331,7 +332,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		}
 		return type;
 	}
-	if (obj.type == TYPE_PIZZA_BOX) {
+	if (otype == TYPE_PIZZA_BOX) {
 		if (obj.taken_level == 1) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,  0.25, "empty pizza box");} // whether or not the box is open
 		if (obj.is_open()) { // take the pizza
 			// pizza slice? what about using TYPE_PIZZA_TOP?
@@ -342,50 +343,50 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	bldg_obj_type_t type(get_room_obj_type(obj));
 	float wv_factor(1.0); // weight/value scale
 
-	if (obj.type == TYPE_LG_BALL) {
+	if (otype == TYPE_LG_BALL) {
 		ball_type_t const &bt(obj.get_ball_type());
 		type.name   = bt.name; // use a more specific type name
 		type.value  = bt.value;
 		type.weight = bt.weight;
 	}
-	else if (obj.type == TYPE_CLOTHES) {
+	else if (otype == TYPE_CLOTHES) {
 		if      (is_shirt_model(obj)) {type.name = "shirt";}
 		else if (is_pants_model(obj)) {type.name = "pants";}
 	}
-	else if (obj.type == TYPE_MIRROR && (obj.flags & RO_FLAG_IS_HOUSE)) {
+	else if (otype == TYPE_MIRROR && (obj.flags & RO_FLAG_IS_HOUSE)) {
 		type.name = "medicine cabinet";
 	}
-	else if (obj.type == TYPE_PAPER) {
+	else if (otype == TYPE_PAPER) {
 		float const value(get_paper_value(obj));
 		if      (value >= 500.0) {type.name = "top secret document";}
 		else if (value >= 100.0) {type.name = "confidential document";}
 		else if (value >    0.0) {type.name = "valuable document";}
 	}
-	else if (obj.type == TYPE_POOL_BALL) {
+	else if (otype == TYPE_POOL_BALL) {
 		type.name = get_pool_ball_name(obj.item_flags); // starts from 0; cue ball is 15
 	}
-	else if (obj.type == TYPE_FOOD_BOX) {
+	else if (otype == TYPE_FOOD_BOX) {
 		string const &food_name(obj.get_food_box_name());
 		if (!food_name.empty()) {type.name = food_name;}
 	}
-	else if (obj.type == TYPE_KEY) {
+	else if (otype == TYPE_KEY) {
 		assert(obj.obj_id < NUM_LOCK_COLORS);
 		type.name = lock_color_names[obj.obj_id] + " " + type.name;
 	}
-	else if (obj.type == TYPE_TCAN) {
+	else if (otype == TYPE_TCAN) {
 		if (obj.color == BLUE) {type.name = "recycling bin";}
 	}
-	else if (obj.type == TYPE_BUCKET) {
+	else if (otype == TYPE_BUCKET) {
 		float liquid_level(0.0);
 		get_bucket_liquid_info(obj, liquid_level);
 		type.name    = ((liquid_level > 0.0) ? "bucket of unknown liquid" : "empty bucket");
 		type.weight += 0.1*round_fp(10*16.0*liquid_level); // 2 gallon bucket, gets heavier with more liquid; round to nearest tenth
 	}
-	else if (obj.type == TYPE_TABLE && obj.in_mall()) { // variable sized mall food court table
+	else if (otype == TYPE_TABLE && obj.in_mall()) { // variable sized mall food court table
 		wv_factor = 0.75*obj.get_length()/obj.get_width(); // longer tables are heavier and higher value
 		type.name = "food court table";
 	}
-	else if (obj.type == TYPE_WBOARD) {
+	else if (otype == TYPE_WBOARD) {
 		wv_factor = 0.5*obj.get_width()/obj.dz(); // longer whiteboards are heavier and higher value
 	}
 	if (wv_factor != 1.0) { // scale weight and value by this factor, rounded to the nearest pound and dollar
@@ -1436,9 +1437,10 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			point p1c(at_pos), p2c(p2);
 			if (!do_line_clip(p1c, p2c, obj_bcube.d)) continue; // test ray intersection vs. bcube
 			float dsq(p2p_dist(at_pos, p1c)); // use closest intersection point
+			room_object const type(i->type);
 
 			// check trash in trashcan; if found, set dist closer than the trashcan
-			if (i->type == TYPE_TRASH && in_dir.z < -0.75 && vect_id == 0 && closest_obj_id >= 0) {
+			if (type == TYPE_TRASH && in_dir.z < -0.75 && vect_id == 0 && closest_obj_id >= 0) {
 				room_object_t const &cur_closest(objs[closest_obj_id]);
 				if (cur_closest.type == TYPE_TCAN && cur_closest.contains_pt(i->get_cube_center())) {dsq = 0.9*dmin_sq;}
 			}
@@ -1460,26 +1462,26 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 					if (!line_torus_intersect_rescale(p1c, p2c, i->get_cube_center(), plus_z, ri, ro, t)) continue;
 				}
 			}
-			if (i->type == TYPE_CLOSET || (i->type == TYPE_STALL && i->shape != SHAPE_SHORT)) { // can only take short stalls (separating urinals)
+			if (type == TYPE_CLOSET || (type == TYPE_STALL && i->shape != SHAPE_SHORT)) { // can only take short stalls (separating urinals)
 				if (!i->is_open() && !i->contains_pt(at_pos)) { // stalls/closets block the player from taking toilets/boxes unless open, or the player is inside
 					closest_obj_id = -1;
 					dmin_sq = dsq;
 				}
 				continue;
 			}
-			if (i->type == TYPE_CHAIR) { // separate back vs. seat vs. legs check for improved accuracy
+			if (type == TYPE_CHAIR) { // separate back vs. seat vs. legs check for improved accuracy
 				cube_t cubes[3]; // seat, back, legs_bcube
 				get_chair_cubes(*i, cubes);
 				bool intersects(0);
 				for (unsigned n = 0; n < 3 && !intersects; ++n) {intersects |= cubes[n].line_intersects(p1c, p2c);}
 				if (!intersects) continue;
 			}
-			else if (i->type == TYPE_CONF_TABLE) {
+			else if (type == TYPE_CONF_TABLE) {
 				cube_t cubes[2]; // {top, base}
 				get_conf_table_cubes(*i, cubes);
 				if (!cubes[0].line_intersects(p1c, p2c) && !cubes[1].line_intersects(p1c, p2c)) continue;
 			}
-			if (i->type == TYPE_HANGER_ROD && i->item_flags > 0) { // nonempty hanger rod
+			if (type == TYPE_HANGER_ROD && i->item_flags > 0) { // nonempty hanger rod
 				// search for hangers and don't allow hanger rod to be taken until the hangers are all taken
 				bool has_hanger(0);
 
@@ -1488,17 +1490,17 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 				}
 				if (has_hanger) continue;
 			}
-			if (i->type == TYPE_HANGER  && i->is_hanging() && (i+1) != objs_end && (i+1)->type == TYPE_CLOTHES) continue; // hanger with clothes - must take clothes first
-			if (i->type == TYPE_MIRROR  && !i->is_house())         continue; // can only pick up mirrors from houses, not office buildings
-			if (i->type == TYPE_TABLE   && i->shape == SHAPE_CUBE) continue; // can only pick up short (TV) tables and cylindrical tables
-			if (i->type == TYPE_BED     && i->taken_level > 2)     continue; // can only take pillow, sheets, and mattress - not the frame
-			if (i->type == TYPE_SHELVES && i->obj_expanded())      continue; // shelves are   already expanded, can no longer select this object
-			if (i->type == TYPE_MIRROR  && i->is_open())           continue; // can't take mirror/medicine cabinet until it's closed
-			if (i->type == TYPE_LIGHT   && !i->is_visible())       continue; // can't take light attached to a ceiling fan as a separate object
-			if (i->type == TYPE_MWAVE   && i->is_nonempty())       continue; // can't take a microwave with something inside it
-			if (i->type == TYPE_PADLOCK && i->is_active())         continue; // padlock in locked onto a door, can't take
+			if (type == TYPE_HANGER  && i->is_hanging() && (i+1) != objs_end && (i+1)->type == TYPE_CLOTHES) continue; // hanger with clothes - must take clothes first
+			if (type == TYPE_MIRROR  && !i->is_house())         continue; // can only pick up mirrors from houses, not office buildings
+			if (type == TYPE_TABLE   && i->shape == SHAPE_CUBE) continue; // can only pick up short (TV) tables and cylindrical tables
+			if (type == TYPE_BED     && i->taken_level > 2)     continue; // can only take pillow, sheets, and mattress - not the frame
+			if (type == TYPE_SHELVES && i->obj_expanded())      continue; // shelves are   already expanded, can no longer select this object
+			if (type == TYPE_MIRROR  && i->is_open())           continue; // can't take mirror/medicine cabinet until it's closed
+			if (type == TYPE_LIGHT   && !i->is_visible())       continue; // can't take light attached to a ceiling fan as a separate object
+			if (type == TYPE_MWAVE   && i->is_nonempty())       continue; // can't take a microwave with something inside it
+			if (type == TYPE_PADLOCK && i->is_active())         continue; // padlock in locked onto a door, can't take
 
-			if (i->type == TYPE_SHELFRACK && i->obj_expanded()) { // shelf rack is already expanded, can no longer select this object
+			if (type == TYPE_SHELFRACK && i->obj_expanded()) { // shelf rack is already expanded, can no longer select this object
 				// check the back of the shelf rack to make sure the player can't take an object through it
 				cube_t back, top, sides[2], shelves[5];
 				get_shelf_rack_cubes(*i, back, top, sides, shelves);
