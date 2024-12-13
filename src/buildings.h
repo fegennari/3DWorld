@@ -718,7 +718,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	unsigned get_bottle_type   () const {return ((obj_id&63) % NUM_BOTTLE_TYPES   );} // first 6 bits are bottle type
 	unsigned get_drink_can_type() const {return ((obj_id&63) % NUM_DRINK_CAN_TYPES);} // first 6 bits are drink can type
 	unsigned get_orient() const {return (2*dim + dir);}
-	unsigned get_num_shelves() const {assert(type == TYPE_SHELVES); return (2 + (room_id % 3));} // 2-4 shelves
+	unsigned get_num_shelves() const;
 	float get_bottle_rot_angle() const {return (rotates() ? PI*(0.321*obj_id + color.R + 2.0*color.G) : 0.0);}
 	float get_depth () const {return get_length();} // some objects use depth rather than length
 	float get_radius() const;

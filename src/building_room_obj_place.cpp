@@ -2593,7 +2593,8 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 				if (has_bcube_int(cand, exclude)) continue; // too close to a doorway
 				if (!is_garage_or_shed && interior->is_blocked_by_stairs_or_elevator(cand)) continue;
 				if (overlaps_other_room_obj(cand, objs_start)) continue; // can be blocked by bookcase, etc.
-				unsigned const shelf_flags((is_house ? RO_FLAG_IS_HOUSE : 0) | (is_garage_or_shed ? 0 : RO_FLAG_INTERIOR));
+				bool const is_empty(rgen.rand_float() < 0.05); // 5% empty
+				unsigned const shelf_flags((is_house ? RO_FLAG_IS_HOUSE : 0) | (is_garage_or_shed ? 0 : RO_FLAG_INTERIOR) | (is_empty ? 0 : RO_FLAG_NONEMPTY));
 				add_shelves(cand, dim, dir, room_id, tot_light_amt, shelf_flags, 0, rgen); // item_flags=0
 				break; // done
 			} // for n
@@ -2657,8 +2658,6 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 }
 
 void building_t::add_shelves(cube_t const &c, bool dim, bool dir, unsigned room_id, float tot_light_amt, unsigned flags, unsigned item_flags, rand_gen_t &rgen) {
-	bool const is_empty(rgen.rand_float() < 0.05); // 5% empty
-	if (!is_empty) {flags |= RO_FLAG_NONEMPTY;}
 	vect_room_object_t &objs(interior->room_geom->objs);
 	objs.emplace_back(c, TYPE_SHELVES, room_id, dim, dir, flags, tot_light_amt);
 	set_obj_id(objs);

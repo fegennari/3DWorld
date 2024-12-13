@@ -466,7 +466,7 @@ public:
 		// should we always move to the right side on wide stairs such as in malls so that other people can pass by going the other direction?
 		node_t const &node(get_node(node_ix));
 		assert(node.is_stairs || node.is_ramp);
-		if (node.conn_rooms.empty()) {cout << TXT(node.is_stairs) << TXT(node.is_ramp) << TXT(node_ix) << TXT(node.bcube.str()) << endl;} // TESTING
+		if (node.conn_rooms.empty()) {cout << TXT(node.is_stairs) << TXT(node.is_ramp) << TXT(node_ix) << TXT(node.bcube.str()) << endl;}
 		assert(!node.conn_rooms.empty());
 		vector2d const &pt(node.conn_rooms.front().pt[up_or_down]); // Note: all conn_rooms should be the same value
 		return point(pt.x, pt.y, zval);
@@ -2052,7 +2052,7 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) { // add room_cands
 		if (r->is_sec_bldg)                              continue; // don't place people in garages and sheds
 		if (!ALLOW_AI_IN_MALLS && r->is_mall_or_store()) continue; // don't place people in malls or stores
-		//if (has_mall() && !r->is_mall_or_store()) continue; // TESTING - only place in malls
+		//if (has_mall() && !r->is_mall_or_store())        continue; // TESTING - only place in malls
 		if (min(r->dx(), r->dy()) < 3.0*radius)          continue; // room to small to place a person
 		unsigned const room_ix(r - interior->rooms.begin());
 		if (interior->pool.valid && (int)room_ix == interior->pool.room_ix) continue; // don't place in pool room so that we don't have to check for pool collisions

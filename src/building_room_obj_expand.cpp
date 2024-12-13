@@ -499,6 +499,10 @@ void building_room_geom_t::unexpand_dishwasher(room_object_t &c, cube_t const &d
 	if (num_rem > 0) {invalidate_small_geom();}
 }
 
+unsigned room_object_t::get_num_shelves() const {
+	assert(type == TYPE_SHELVES);
+	return (2 + (room_id % (in_mall() ? 2 : 3))); // 2-4 shelves, 2-3 for mall clothing stores
+}
 unsigned building_room_geom_t::get_shelves_for_object(room_object_t const &c, cube_t shelves[4]) {
 	unsigned const num_shelves(c.get_num_shelves()); // 2-4 shelves
 	float const thickness(0.02*c.dz()), bracket_thickness(0.8*thickness), z_step(c.dz()/(num_shelves + 1)); // include a space at the bottom
@@ -540,27 +544,42 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 
 		if (c.in_mall()) {
 			if (c.item_flags == STORE_CLOTHING) {
-				if (building_obj_model_loader.is_model_valid(OBJ_MODEL_FOLD_SHIRT)) {
-					vector3d const ssz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FOLD_SHIRT)); // D, W, H
-					float const shelf_depth(S.get_sz_dim(c.dim)), shelf_len(S.get_sz_dim(!c.dim));
-					float const fs_length(rgen.rand_uniform(0.8, 0.95)*shelf_depth), fs_width(min(0.5f*shelf_len, fs_length*ssz.x/ssz.y)), fs_height(fs_length*ssz.z/ssz.y);
-					C.type  = TYPE_FOLD_SHIRT;
-					C.shape = SHAPE_CUBE;
-					C.dim   =  c.dim;
-					C.dir   = !c.dir;
-					C.z2()  = C.z1() + fs_height; // set height
-					sz[ c.dim] = 0.5*fs_length;
-					sz[!c.dim] = 0.5*fs_width;
-					unsigned const num_shirts(round_fp(rgen.rand_uniform(0.5, 1.0)*shelf_len/shelf_depth)); // 50-100% full
+				float const shelf_depth(S.get_sz_dim(c.dim)), shelf_len(S.get_sz_dim(!c.dim));
+				unsigned const num_items(round_fp(rgen.rand_uniform(0.5, 1.0)*shelf_len/shelf_depth)); // 50-100% full
+				C.shape = SHAPE_CUBE;
+				C.dim   =  c.dim;
+				C.dir   = !c.dir;
 
-					for (unsigned n = 0; n < num_shirts; ++n) {
+				if (building_obj_model_loader.is_model_valid(OBJ_MODEL_FOLD_SHIRT) && rgen.rand_bool()) { // 50% chance of shirt models
+					vector3d const ssz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FOLD_SHIRT)); // D, W, H
+					float const length(rgen.rand_uniform(0.55, 0.65)*shelf_depth);
+					float const width(min(0.5f*shelf_len, length*ssz.x/ssz.y)), height(length*ssz.z/ssz.y);
+					C.type = TYPE_FOLD_SHIRT;
+					C.z2() = C.z1() + height; // set height
+					sz[ c.dim] = 0.5*length;
+					sz[!c.dim] = 0.5*width;
+
+					for (unsigned n = 0; n < num_items; ++n) {
+						// should folded shirts be stacked? this will increase drawing/culling time
 						C.color = TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS];
-						gen_xy_pos_for_cube_obj(C, S, sz, fs_height, rgen);
+						gen_xy_pos_for_cube_obj(C, S, sz, height, rgen);
 						add_if_not_intersecting(C, objects, cubes, add_models_mode);
 					}
+					continue; // done with this shelf
 				}
 				if (add_models_mode) continue;
-				// TODO: TYPE_TEESHIRT, TYPE_PANTS
+				bool const is_teeshirt(rgen.rand_bool());
+				float const length((is_teeshirt ? 1.0 : 0.8)*rgen.rand_uniform(0.9, 1.0)*shelf_depth), height(0.02*shelf_depth);
+				C.type = (is_teeshirt ? TYPE_TEESHIRT : TYPE_PANTS);
+				C.z2() = C.z1() + height; // set height lower
+				sz[ c.dim] = 0.5*length;
+				sz[!c.dim] = 0.5*min(0.98f*length, 0.5f*shelf_len);
+
+				for (unsigned n = 0; n < num_items; ++n) {
+					C.color = (is_teeshirt ? TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS] : WHITE); // T-shirts are colored, jeans are always white
+					gen_xy_pos_for_cube_obj(C, S, sz, height, rgen);
+					add_if_not_intersecting(C, objects, cubes);
+				}
 			}
 			else {assert(0);} // unsupported store type
 			continue;

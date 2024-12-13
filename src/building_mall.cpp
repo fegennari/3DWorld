@@ -1513,6 +1513,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 						add_row_of_bookcases(rack, zval, room_id, light_amt, dim, 0); // place_inside=0
 					}
 					else if (store_type == STORE_CLOTHING) { // add clothes racks
+						// Note: grouping into a rack object doesn't really help here because these are 3D models and must be drawn individually anyway
 						float const centerline(rack_lo + 0.5*rack_width), hr_radius(0.007*window_vspace), frame_hwidth(1.2*hr_radius);
 						unsigned const flags(RO_FLAG_INTERIOR | RO_FLAG_IN_MALL | RO_FLAG_NOCOLL);
 						// add an invisible collider around the clothes rack for player and AI collisions
@@ -1569,7 +1570,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 		add_row_of_bookcases(bc_area, zval, room_id, light_amt, dim, 1); // place_inside=1
 	}
 	else if (store_type == STORE_CLOTHING) { // add shelves of TYPE_FOLD_SHIRT along walls; clothes racks are added above
-		float const height(0.8*window_vspace), depth(0.2*window_vspace);
+		float const height(0.63*window_vspace), depth(0.25*window_vspace); // set height so that the top shelf is below the camera height
 		cube_t c(room_area);
 		set_cube_zvals(c, zval, zval+height);
 
@@ -1577,7 +1578,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 			float const back_pos(room_area.d[!dim][!d]);
 			c.d[!dim][!d] = back_pos;
 			c.d[!dim][ d] = back_pos + (d ? 1.0 : -1.0)*depth;
-			unsigned const shelf_flags(RO_FLAG_INTERIOR | RO_FLAG_IN_MALL);
+			unsigned const shelf_flags(RO_FLAG_INTERIOR | RO_FLAG_IN_MALL | RO_FLAG_NONEMPTY); // no empty shelves
 			add_shelves(c, !dim, !d, room_id, light_amt, shelf_flags, store_type, rgen);
 		} // for d
 	}
