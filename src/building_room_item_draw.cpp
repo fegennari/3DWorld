@@ -1882,6 +1882,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	int camera_part(-1);
 	unsigned last_room_ix(building.interior->rooms.size()), last_floor_ix(0); // start at an invalid value
 	bool camera_in_closed_room(0), last_room_closed(0), obj_drawn(0), no_cull_room(0);
+	auto model_to_cull(obj_model_insts.end()), model_to_not_cull(obj_model_insts.end());
 
 	if (camera_room >= 0) { // check for stairs in case an object is visible through an open door on a floor above or below
 		room_t const &room(building.get_room(camera_room));
@@ -1892,6 +1893,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	}
 	// draw object models
 	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
+		if (i == model_to_cull) continue;
 		room_object_t &obj(get_room_object_by_index(i->obj_id));
 
 		if (skip_interior_objs && obj.is_interior()) { // don't draw objects in interior rooms if the player is outside the building (useful for office bathrooms)
@@ -1924,8 +1926,18 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (camera_in_building && player_in_basement == 0 && obj_center.z < building.ground_floor_z1)        continue; // obj in basement, player not
 		if (!(is_rotated ? building.is_rot_cube_visible(obj, xlate) : camera_pdu.cube_visible(obj + xlate))) continue; // VFC
 		//highres_timer_t timer("Draw " + get_room_obj_type(obj).name);
-		if (check_occlusion && !(no_cull_room && obj.room_id == (unsigned)camera_room) && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
 
+		if (check_occlusion && !(no_cull_room && obj.room_id == (unsigned)camera_room) && i != model_to_not_cull) { // occlusion culling
+			if (obj.type == TYPE_HANGER && obj.is_hanging() && i+1 != obj_model_insts.end()) {
+				room_object_t &obj2(get_room_object_by_index((i+1)->obj_id));
+
+				if (obj2.type == TYPE_CLOTHES) { // cull hanger and clothing together
+					if (building.check_obj_occluded(obj2, camera_bs, oc, reflection_pass)) {model_to_cull = i+1; continue;}
+					model_to_not_cull = i+1;
+				}
+			}
+			if (building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
+		}
 		if (camera_room >= 0) {
 			room_t const &room(building.get_room(obj.room_id));
 			unsigned const floor_ix(room.get_floor_containing_zval(obj.zc(), floor_spacing));
