@@ -3249,7 +3249,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 	rand_gen_t shelf_rgen;
 	shelf_rgen.set_state(c.room_id+1, int(1000.0*fabs(c.z1()))); // shelves are set based on room ID and floor
 	shelf_rgen.rand_mix();
-	unsigned const num_shelves(3 + shelf_rgen.rand()%3); // 3-5, randomly selected
+	unsigned const num_shelves(3 + (shelf_rgen.rand() % (c.in_mall() ? 2 : 3))); // 3-5, randomly selected; 3-4 for malls
 	unsigned const max_books(MAX_BCASE_BOOKS); // limited by room_object_t combined flags bits; could increase, but then book taking logic won't always be correct
 	float const shelf_dz(middle.dz()/num_shelves), shelf_thick(0.12*shelf_dz);
 	// 40% of the time lower shelves are higher than upper shelves

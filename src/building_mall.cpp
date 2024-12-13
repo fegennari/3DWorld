@@ -1374,6 +1374,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	// place items
 	bool const mall_dim(interior->extb_wall_dim);
 	bool const dim(doorway.dy() < doorway.dx()), dir(room.get_center_dim(dim) < doorway.get_center_dim(dim)); // points from room center toward doorway
+	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim));
 	room_t const &mall_room(get_mall_concourse());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const NUM_STORE_SELECT = 10;
@@ -1402,7 +1403,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 		// stores to the sides of mall concourses have their doors centered, but stores on the end may not be centered on the door, but the mall concourse is
 		float const door_center(((dim == mall_dim) ? mall_room : room).get_center_dim(!dim));
 		float sign_hwidth(0.25*sign_height*(store_name.size() + 2));
-		min_eq(sign_hwidth, 0.5f*room.get_sz_dim(!dim)); // can't be wider than the store
+		min_eq(sign_hwidth, 0.5f*room_width); // can't be wider than the store
 		cube_t sign;
 		set_cube_zvals(sign, sign_z1, sign_z1+sign_height);
 		sign.d[dim][!dir] = ext_wall_pos;
@@ -1556,8 +1557,10 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 			} // for n
 		}
 	}
-	if (store_type == STORE_BOOK) { // add bookcases along side walls 50% of the time since they're expensive
-		if (rgen.rand_bool()) {add_row_of_bookcases(room_area, zval, room_id, light_amt, dim, 1);} // place_inside=1
+	if (store_type == STORE_BOOK) { // add bookcases along side walls
+		cube_t bc_area(room_area);
+		bc_area.expand_in_dim(dim, -0.1*room_len); // shrink ends
+		add_row_of_bookcases(bc_area, zval, room_id, light_amt, dim, 1); // place_inside=1
 	}
 	else if (store_type == STORE_CLOTHING) { // add shelves of TYPE_FOLD_SHIRT along walls; clothes racks are added above
 		float const height(0.8*window_vspace), depth(0.2*window_vspace);
@@ -1601,7 +1604,6 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 		// TODO: cages with rats, snakes, birds, and spiders
 	}
 	// add ducts and vents in the ceiling
-	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim));
 	unsigned const num_vents(max(2U, (unsigned)round_fp(0.5*room_len/window_vspace))); // per side
 	float const vent_spacing(room_len/num_vents), duct_height(0.2*window_vspace);
 	unsigned const skip_dir((room_width < 0.8*room_len) ? rgen.rand_bool() : 2); // skip one side if room is narrow

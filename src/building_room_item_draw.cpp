@@ -892,7 +892,6 @@ void room_object_t::set_as_bottle(unsigned rand_id, unsigned max_type, bool no_e
 }
 
 void building_room_geom_t::create_static_vbos(building_t const &building) {
-	//highres_timer_t timer("Gen Room Geom"); // 2.35ms
 	float const tscale(2.0/obj_scale);
 	tid_nm_pair_t const &wall_tex(building.get_material().wall_tex);
 	static vect_room_object_t rugs;
@@ -1780,6 +1779,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	// unless the player just appeared by this building, or we need to update the geometry; in either case this is higher priority and we want to update both
 	if (shadow_only || num_geom_this_frame < max(global_building_params.max_room_geom_gen_per_frame, 1U)) {
 		if (!mats_static.valid) { // create static materials if needed
+			//highres_timer_t timer("Create Static VBOs");
 			create_obj_model_insts(building);
 			create_static_vbos    (building);
 			if (!shadow_only) {++num_geom_this_frame;}
