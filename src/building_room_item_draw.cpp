@@ -1881,13 +1881,14 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	int const camera_room((is_rotated || reflection_pass) ? -1 : building.get_room_containing_camera(camera_bs));
 	int camera_part(-1);
 	unsigned last_room_ix(building.interior->rooms.size()), last_floor_ix(0); // start at an invalid value
-	bool camera_in_closed_room(0), last_room_closed(0), obj_drawn(0);
+	bool camera_in_closed_room(0), last_room_closed(0), obj_drawn(0), no_cull_room(0);
 
 	if (camera_room >= 0) { // check for stairs in case an object is visible through an open door on a floor above or below
 		room_t const &room(building.get_room(camera_room));
 		unsigned const camera_floor(room.get_floor_containing_zval(max(camera_bs.z, room.z1()), floor_spacing)); // clamp zval to room range
 		camera_in_closed_room = (!room.has_stairs_on_floor(camera_floor) && building.all_room_int_doors_closed(camera_room, camera_bs.z));
 		camera_part           = room.part_id;
+		no_cull_room          = room.is_store(); // don't need to cull objects in the same store as the player
 	}
 	// draw object models
 	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
@@ -1923,7 +1924,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (camera_in_building && player_in_basement == 0 && obj_center.z < building.ground_floor_z1)        continue; // obj in basement, player not
 		if (!(is_rotated ? building.is_rot_cube_visible(obj, xlate) : camera_pdu.cube_visible(obj + xlate))) continue; // VFC
 		//highres_timer_t timer("Draw " + get_room_obj_type(obj).name);
-		if (check_occlusion && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
+		if (check_occlusion && !(no_cull_room && obj.room_id == (unsigned)camera_room) && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
 
 		if (camera_room >= 0) {
 			room_t const &room(building.get_room(obj.room_id));
