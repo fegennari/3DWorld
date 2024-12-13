@@ -1372,8 +1372,8 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	}
 	assert(!doorway.is_all_zeros()); // must be found
 	// place items
-	bool const mall_dim(interior->extb_wall_dim);
 	bool const dim(doorway.dy() < doorway.dx()), dir(room.get_center_dim(dim) < doorway.get_center_dim(dim)); // points from room center toward doorway
+	bool const mall_dim(interior->extb_wall_dim), is_end_store(dim == mall_dim);
 	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim));
 	room_t const &mall_room(get_mall_concourse());
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -1381,7 +1381,13 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	unsigned const store_selects[NUM_STORE_SELECT] = {STORE_CLOTHING, STORE_CLOTHING, STORE_FOOD, STORE_FOOD, STORE_BOOK,
 		                                              STORE_FURNITURE, STORE_PETS, STORE_RETAIL, STORE_RETAIL, STORE_RETAIL};
 	unsigned const objs_start(objs.size());
-	unsigned const store_type(store_selects[rgen.rand() % NUM_STORE_SELECT]);
+	unsigned store_type(store_selects[rgen.rand() % NUM_STORE_SELECT]);
+	// bookstore and clothing stores are too expensive for the larger end stores, so make them retail stores instead
+	if (is_end_store && (store_type == STORE_BOOK || store_type == STORE_CLOTHING)) {store_type = STORE_RETAIL;}
+	// mixed: 225FPS, 2991MB, 249ms
+	// bookstores: 295FPS, 3463MB, 838ms
+	// clothing stores: 163FPS, 2737MB, 19ms
+	// retail stores: 300FPS, 2897MB, 177ms
 	unsigned const item_category((store_type == STORE_RETAIL) ? (rgen.rand() % NUM_RETAIL_CAT) : 0); // same category for each rack with equal probability
 	string store_name;
 	
@@ -1399,9 +1405,9 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 
 	if (1) { // add store name on sign above the entrance
 		float const sign_z1(room.z1() + 0.7*floor_spacing), sign_height(0.3*window_vspace), sign_thick(wall_hthick);
-		float const ext_wall_pos(mall_room.d[dim][!dir] + (dir ? 1.0 : -1.0)*((dim == mall_dim) ? 1.0 : 0.5)*wall_thickness);
+		float const ext_wall_pos(mall_room.d[dim][!dir] + (dir ? 1.0 : -1.0)*(is_end_store ? 1.0 : 0.5)*wall_thickness);
 		// stores to the sides of mall concourses have their doors centered, but stores on the end may not be centered on the door, but the mall concourse is
-		float const door_center(((dim == mall_dim) ? mall_room : room).get_center_dim(!dim));
+		float const door_center((is_end_store ? mall_room : room).get_center_dim(!dim));
 		float sign_hwidth(0.25*sign_height*(store_name.size() + 2));
 		min_eq(sign_hwidth, 0.5f*room_width); // can't be wider than the store
 		cube_t sign;
