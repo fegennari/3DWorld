@@ -20,3 +20,5 @@ public:
 	void end();
 };
 
+inline float get_delta_secs(high_resolution_clock::time_point b, high_resolution_clock::time_point a) {return duration_cast<duration<float>>(b - a).count();}
+

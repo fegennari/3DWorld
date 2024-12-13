@@ -64,8 +64,8 @@ void timing_profiler_stats() {
 
 void highres_timer_t::end() {
 	if (!enabled || name.empty()) return;
-	float const elapsed(duration_cast<duration<float>>(clock.now() - timer1).count());
-	global_highres_profiler.register_time(name.c_str(), 1000.0f*elapsed, no_loading_screen); // print in ms
+	float const elapsed(get_delta_secs(clock.now(), timer1));
+	global_highres_profiler.register_time(name.c_str(), 1000.0*elapsed, no_loading_screen); // print in ms
 	name.clear(); // make sure we don't double count this
 }
 

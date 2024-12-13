@@ -6,6 +6,7 @@
 #include "main.h"
 #include "timetest.h"
 #include "physics_objects.h"
+#include "profiler.h"
 #include "model3d.h"
 #include <fstream>
 
@@ -35,7 +36,7 @@ float const FOG_COLOR_ATTEN    = 0.75;
 
 
 bool mesh_invalidated(1), fog_enabled(0), tt_fire_button_down(0), in_loading_screen(0), no_tt_footsteps(0);
-int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0), timer_a(0);
+int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0);
 unsigned enabled_lights(0), cur_display_iter(0); // 8 bit flags for enabled_lights
 float fticks(0.0), tstep(0.0), camera_shake(0.0), cur_fog_end(1.0), far_clip_ratio(1.0);
 double tfticks(0.0), sim_ticks(0.0);
@@ -277,21 +278,43 @@ void draw_frame_rate(float framerate) {
 	}
 }
 
+class framerate_tracker_t {
+	int last_report_frame=0;
+	float fr_average=0.0;
+	high_resolution_clock::time_point timer_a, global_time, last_report_time, timer_b;
+	high_resolution_clock clock;
+public:
+	float get_framerate() {
+		timer_b = clock.now();
 
-float get_framerate(int &timer_b) {
-
-	static float fr_average(0.0);
-	timer_b = GET_TIME_MS();
-
-	if (timer_b > timer_a) { // skip zero time frames
-		float const framerate(1000.0f/float(timer_b - timer_a));
-		timer_a = timer_b;
-		//return framerate;
-		float const NUM_AVG = 5; // average over several frames
-		fr_average = ((fr_average == 0.0) ? framerate : ((NUM_AVG - 1)*fr_average + framerate)/NUM_AVG);
+		if (timer_b > timer_a) { // skip zero time frames
+			float const framerate(1.0f/get_delta_secs(timer_b, timer_a));
+			timer_a = timer_b;
+			//return framerate;
+			float const NUM_AVG = 5; // average over several frames
+			fr_average = ((fr_average == 0.0) ? framerate : ((NUM_AVG - 1)*fr_average + framerate)/NUM_AVG);
+		}
+		return fr_average;
 	}
-	return fr_average;
-}
+	float show_cur_framerate() {
+		float const framerate(get_framerate());
+
+		if (show_framerate == 2) {
+			cout << used_objs << " objects, time = " << 1000.0*get_delta_secs(timer_b, global_time) << endl;
+			cout << "Elapsed frames = " << (frame_counter - last_report_frame) << ", elapsed time = " << 1000.0*get_delta_secs(timer_b, last_report_time)
+				<< ", avg framerate = " << ((float)frame_counter - (float)last_report_frame)/get_delta_secs(timer_b, last_report_time) << endl;
+			last_report_frame = frame_counter;
+			last_report_time  = timer_b;
+			show_framerate    = 0;
+		}
+		if (show_framerate == 1) {
+			timer_a = clock.now();
+			show_framerate = 2;
+		}
+		return framerate;
+	}
+};
+framerate_tracker_t framerate_tracker;
 
 
 // Nvidia specific defines
@@ -786,7 +809,7 @@ void display() {
 		return;
 	}
 	RESET_TIME;
-	static int init(0), frame_index(0), time_index(0), global_time(0), tticks(0);
+	static int init(0), tticks(0);
 	static point old_spos(0.0, 0.0, 0.0);
 	++cur_display_iter;
 	num_frame_draw_calls = 0;
@@ -884,22 +907,7 @@ void display() {
 		}
 		
 		// timing and framerate code
-		int timer_b;
-		float const framerate(get_framerate(timer_b));
-		if (global_time == 0) {global_time = timer_b;}
-		
-		if (show_framerate == 2) {
-			cout << used_objs << " objects, time = " << (timer_b - global_time) << endl;
-			cout << "Elapsed frames = " << (frame_counter - frame_index) << ", elapsed time = " << (timer_b - time_index)
-				 << ", avg framerate = " << 1000.0f*((float)frame_counter - (float)frame_index)/((float)timer_b - (float)time_index) << endl;
-			frame_index    = frame_counter;
-			time_index     = timer_b;
-			show_framerate = 0;
-		}
-		if (show_framerate == 1) {
-			timer_a = GET_TIME_MS();
-			show_framerate = 2;
-		}
+		float const framerate(framerate_tracker.show_cur_framerate());
 		if (world_mode == WMODE_GROUND) {process_platforms_falling_moving_and_light_triggers();} // must be before camera code
 		else if (world_mode == WMODE_INF_TERRAIN) {camera_mode = 1;} // force to ground/walking mode
 		if (world_mode == WMODE_GROUND) {UNLIMITED_WEAPONS = config_unlimited_weapons;}
@@ -1111,8 +1119,6 @@ void display() {
 
 void display_universe() { // infinite universe
 
-	int timer_b;
-	float framerate;
 	static int init(0);
 	RESET_TIME;
 
@@ -1123,7 +1129,7 @@ void display_universe() { // infinite universe
 		update_cpos();
 	}
 	camera_view = 0;
-	framerate   = get_framerate(timer_b);
+	float const framerate(framerate_tracker.get_framerate());
 	setup_landscape_tex_colors(ALPHA0, ALPHA0); // reset for asteroids
 	init_universe_display();
 	bkg_color   = BACKGROUND_NIGHT;
