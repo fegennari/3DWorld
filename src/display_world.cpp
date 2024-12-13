@@ -8,6 +8,9 @@
 #include "physics_objects.h"
 #include "profiler.h"
 #include "model3d.h"
+#include "shaders.h"
+#include "draw_utils.h"
+#include "city.h"
 #include <fstream>
 
 
@@ -963,7 +966,61 @@ void display() {
 			check_gl_error(4);
 			if (TIMETEST) PRINT_TIME("B");
 		}
-		if (world_mode == WMODE_INF_TERRAIN) { // infinite terrain mode
+		if (0) { // TESTING
+			shader_t s;
+			s.begin_color_only_shader(RED);
+#if 1
+			unsigned const size(128);
+			float const span(1.0), step(span/size), csz(0.5*step), offset(-0.5*span);
+			color_wrapper const cw(RED);
+			vector<vert_wrap_t> pts;
+
+			for (unsigned y = 0; y < size; ++y) {
+				for (unsigned x = 0; x < 2*size; ++x) {
+					float const x1(x*step + offset), y1(y*step + offset);
+					cube_t const c(x1, x1+csz, y1, y1+csz, 0.0, 1.0);
+					if (!camera_pdu.cube_visible(c)) continue;
+					pts.emplace_back(point(x1, y1, 0.0));
+				}
+			}
+			draw_verts(pts, GL_POINTS);
+#else
+			unsigned const size(64);
+			float const span(1.0), step(span/size), csz(0.5*step), offset(-0.5*span);
+
+			for (unsigned y = 0; y < size; ++y) {
+				for (unsigned x = 0; x < size; ++x) {
+					float const x1(x*step + offset), y1(y*step + offset);
+					s.set_cur_color(colorRGBA(x1, y1, 0.0, 1.0));
+					point const scale(csz, csz, 1.0);
+					vector3d const xlate(point(x1, y1, 0.0) - 0.5*scale); // move origin from center to min corner
+					vert_wrap_t verts[24]; // max number of verts that can be drawn is 24, assuming all faces are drawn
+					unsigned vix(0);
+
+					for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
+						unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
+
+						for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
+							point pt;
+							pt[n] = j;
+
+							for (unsigned s1 = 0; s1 < 2; ++s1) {
+								pt[d[1]] = s1;
+
+								for (unsigned k = 0; k < 2; ++k, ++vix) { // iterate over vertices
+									pt[d[0]] = k^j^s1^1; // need to orient the vertices differently for each side
+									verts[vix] = pt*scale + xlate;
+								} // for k
+							} // for s1
+						} // for j
+					} // for i
+					draw_quad_verts_as_tris(verts, vix);
+				}
+			}
+#endif
+			s.end_shader();
+		}
+		else if (world_mode == WMODE_INF_TERRAIN) { // infinite terrain mode
 			display_inf_terrain();
 		}
 		else { // finite terrain mode
