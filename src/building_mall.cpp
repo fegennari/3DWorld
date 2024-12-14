@@ -1371,7 +1371,7 @@ bool building_t::add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area,
 	return 1;
 }
 
-void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
+void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, light_ix_assign_t &light_ix_assign) {
 	float const door_width(get_doorway_width()), floor_spacing(room.dz()), window_vspace(get_window_vspace());
 	float const wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness);
 	float const light_amt = 1.0; // fully lit, for now
@@ -1586,23 +1586,51 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 		add_shelves_along_walls(room_area, zval, room_id, light_amt, dim, store_type, shelf_height, shelf_depth, rgen);
 	}
 	else if (store_type == STORE_FURNITURE) {
-		// TODO: add random furniture: table + chairs, TYPE_DESK, TYPE_BED, TYPE_DRESSER, TYPE_NIGHTSTAND
-		vect_cube_t blockers;
-		if (!blocked.is_all_zeros()) {blockers.push_back(blocked);} // in case we decide to add a checkout area
-		point const place_pos(room.xc(), room.yc(), zval);
-		unsigned const num_tc(4 + (rgen.rand() % 5)); // 4-8; should vary with store size
+		// divide the store up into "rooms": bedrooms, dining rooms, living rooms, etc. and populate these
+		float const room_pad(1.0*door_width), room_size(1.5*window_vspace), room_spacing(room_size + room_pad), pad_len(room_len + room_pad), pad_width(room_width + room_pad);
+		unsigned const rooms_long(max(1U, unsigned(pad_len/room_spacing))), rooms_wide(max(1U, unsigned(pad_width/room_spacing)));
+		float const rlen(pad_len/rooms_long), rwidth(pad_width/rooms_wide);
+		cube_t door_blocker(doorway), div_area(room);
+		door_blocker.expand_by_xy(0.2*window_vspace);
+		div_area.expand_by_xy(0.5*room_pad - wall_hthick); // offset for for the shrink of rooms
+		vect_cube_t blockers; // alwayps empty?
+		cube_t r;
+		set_cube_zvals(r, room.z1(), room.z1()+window_vspace);
 
-		for (unsigned n = 0; n < num_tc; ++n) {
-			colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
-			bool const use_tall_table(rgen.rand_float() < 0.25);
-			unsigned const objs_start2(objs.size());
-			int const wooden_or_plastic(rgen.rand() % 3); // randomly select between {wooden, plastic, wooden table with plastic chairs}
-			if (!add_table_and_chairs(rgen, room, blockers, room_id, place_pos, chair_color, 0.5, light_amt, 4, use_tall_table, wooden_or_plastic)) continue; // rand_place_off=0.5
-			assert(objs_start2 < objs.size());
-			cube_t blocker(objs[objs_start2]); // union of table and chairs
-			for (auto i = objs.begin()+objs_start2+1; i != objs.end(); ++i) {blocker.union_with_cube(*i);}
-			blockers.push_back(blocker);
-		} // for n
+		for (unsigned row = 0; row < rooms_long; ++row) {
+			for (unsigned col = 0; col < rooms_wide; ++col) {
+				r.d[ dim][0] = div_area.d[ dim][0] + row*rlen;
+				r.d[ dim][1] = r       .d[ dim][0] + rlen;
+				r.d[!dim][0] = div_area.d[!dim][0] + col*rwidth;
+				r.d[!dim][1] = r       .d[!dim][0] + rwidth;
+				r.expand_by_xy(-0.5*room_pad); // shrink to add padding between rooms for people to walk
+				if (r.intersects(door_blocker)) continue; // leave the room(s) in front of the entrance empty
+				room_t sub_room(r, room.part_id);
+				sub_room.assign_all_to(RTYPE_STORE);
+				colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
+				unsigned const NUM_RTYPES = 4;
+				unsigned const rtypes[NUM_RTYPES] = {RTYPE_BED, RTYPE_BED, RTYPE_KITCHEN, RTYPE_KITCHEN/*, RTYPE_DINING, RTYPE_LIVING*/};
+				unsigned const rtype(rtypes[rgen.rand() % NUM_RTYPES]);
+
+				if (rtype == RTYPE_BED) { // Note: light_ix_assign is needed for closet lights, but these aren't added here
+					add_bedroom_objs(rgen, sub_room, blockers, chair_color, zval, room_id, 0, light_amt, objs.size(), 1, 0, 1, light_ix_assign);
+				}
+				else if (rtype == RTYPE_DINING) {
+					// TODO
+				}
+				else if (rtype == RTYPE_LIVING) {
+					// TODO
+				}
+				else if (rtype == RTYPE_KITCHEN) { // tables only, for now
+					sub_room.expand_by_xy(room_pad); // make it larger to allow chairs to stick out a bit, since they don't block the player
+					point const place_pos(r.xc(), r.yc(), zval);
+					bool const use_tall_table(rgen.rand_float() < 0.25);
+					int const wooden_or_plastic(rgen.rand() % 3); // randomly select between {wooden, plastic, wooden table with plastic chairs}
+					add_table_and_chairs(rgen, sub_room, blockers, room_id, place_pos, chair_color, 0.0, light_amt, 4, use_tall_table, wooden_or_plastic);
+				}
+				// TODO: add walls between some rooms
+			} // for col
+		} // for row
 	}
 	else if (store_type == STORE_FOOD) {
 		// TODO

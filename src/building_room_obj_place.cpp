@@ -145,7 +145,7 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, v
 {
 	bool const use_bar_stools(use_tall_table);
 	float const table_rscale(use_tall_table ? 0.12 : 0.18), room_dx(room.dx()), room_dy(room.dy());
-	float const window_vspacing(get_window_vspace()), room_pad(max(4.0f*get_wall_thickness(), get_min_front_clearance_inc_people()));
+	float const window_vspacing(get_window_vspace()), room_pad(room.is_store() ? 0.0f : max(4.0f*get_wall_thickness(), get_min_front_clearance_inc_people()));
 	// use a long table for a large room 50% of the time
 	bool const use_long_table(!use_tall_table && max(room_dx, room_dy) > 3.0*window_vspacing && min(room_dx, room_dy) > 2.0*window_vspacing && rgen.rand_bool());
 	bool const long_dim(room_dx < room_dy);
@@ -933,7 +933,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), window_h_border(get_window_h_border());
 	float const closet_min_depth(0.65*doorway_width), closet_min_width(1.5*doorway_width), min_dist_to_wall(1.0*doorway_width), min_bed_space(front_clearance);
 	unsigned const first_corner(rgen.rand() & 3);
-	bool const first_dim(rgen.rand_bool());
+	bool const first_dim(rgen.rand_bool()), is_store(room.is_store());
 	cube_t const &part(get_part_for_room(room));
 	bool placed_closet(0), placed_lamp(0);
 	unsigned closet_obj_id(0);
@@ -943,6 +943,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 		for (unsigned d = 0; d < 4; ++d) {chk_windows[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);}
 	}
 	for (unsigned n = 0; n < 4 && !placed_closet; ++n) { // try 4 room corners
+		if (is_store) continue; // no closets in furniture stores
 		unsigned const corner_ix((first_corner + n)&3);
 		bool const xdir(corner_ix&1), ydir(corner_ix>>1);
 		point const corner(room_bounds.d[0][xdir], room_bounds.d[1][ydir], zval);
@@ -1111,7 +1112,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 			placed_lamp = 1;
 		}
 	}
-	if (!placed_lamp && rgen.rand_float() < 0.75) { // attempt to place a lava lamp on a dresser or nightstand 75% of the time
+	if (!placed_lamp && !is_store && rgen.rand_float() < 0.75) { // attempt to place a lava lamp on a dresser or nightstand 75% of the time
 		float const height(0.15*window_vspacing), radius(0.135*height);
 		bool const on_dresser(rgen.rand() & 3); // dresser 75% of the time
 
@@ -1131,6 +1132,8 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 		// large room, try to add a desk and chair as well
 		add_desk_to_room(rgen, room, blockers, chair_color, zval, room_id, tot_light_amt, objs_start, is_basement);
 	}
+	if (is_store) return 1; // no flashlight, candle, balls, t-shirt, or jeans in furniture store rooms
+
 	// maybe add a flashlight or candle on a dresser, night stand, or desk; or in a drawer?
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 		if (!((i->type == TYPE_DRESSER || i->type == TYPE_NIGHTSTAND || i->type == TYPE_DESK) && !(i->flags & RO_FLAG_ADJ_TOP))) continue; // not empty dresser/nightstand/desk
