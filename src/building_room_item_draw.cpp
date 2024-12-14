@@ -10,6 +10,8 @@
 #include "openal_wrap.h"
 
 
+bool const DEBUG_AI_COLLIDERS = 0;
+
 unsigned room_geom_mem(0);
 quad_batch_draw candle_qbd;
 vect_room_object_t pending_objs;
@@ -2434,7 +2436,7 @@ void append_line_pt(vector<vert_wrap_t> &line_pts, point const &pos) {
 	line_pts.emplace_back(pos);
 }
 void building_t::debug_people_in_building(shader_t &s, point const &camera_bs) const {
-	if (!has_people()) return;
+	if (!has_people() && !DEBUG_AI_COLLIDERS) return;
 	shader_t color_shader;
 	color_shader.begin_color_only_shader(YELLOW);
 	vector<vert_wrap_t> line_pts;
@@ -2462,7 +2464,7 @@ void building_t::debug_people_in_building(shader_t &s, point const &camera_bs) c
 		if (!p.path.empty ()) {draw_sphere_vbo(p.path.front(), sradius, ndiv, 0);} // draw last point/dest
 		if (p.target_valid()) {draw_sphere_vbo(p.target_pos,   sradius, ndiv, 0);} // draw target pos
 	} // for p
-	if (0 && (frame_counter & 1)) { // debug avoid cubes on alternating frames
+	if (DEBUG_AI_COLLIDERS && (frame_counter & 1)) { // debug avoid cubes on alternating frames
 		vect_cube_t avoid;
 		interior->get_avoid_cubes(avoid, (camera_bs.z - get_bldg_player_height()), (camera_bs.z + CAMERA_RADIUS),
 			CAMERA_RADIUS*global_building_params.player_coll_radius_scale, get_floor_thickness(), get_floor_ceil_gap(), 1, 0); // same_as_player=1, skip_stairs=0
