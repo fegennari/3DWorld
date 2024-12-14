@@ -1932,7 +1932,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				room_object_t &obj2(get_room_object_by_index((i+1)->obj_id));
 
 				if (obj2.type == TYPE_CLOTHES) { // cull hanger and clothing together
-					if (building.check_obj_occluded(obj2, camera_bs, oc, reflection_pass)) {model_to_cull = i+1; continue;}
+					cube_t bc(obj);
+					bc.union_with_cube(obj2);
+					if (building.check_obj_occluded(bc, camera_bs, oc, reflection_pass)) {model_to_cull = i+1; continue;}
 					model_to_not_cull = i+1;
 				}
 			}
