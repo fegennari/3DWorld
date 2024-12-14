@@ -1390,9 +1390,8 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim));
 	room_t const &mall_room(get_mall_concourse());
 	vect_room_object_t &objs(interior->room_geom->objs);
-	unsigned const NUM_STORE_SELECT = 10;
-	unsigned const store_selects[NUM_STORE_SELECT] = {STORE_CLOTHING, STORE_CLOTHING, STORE_FOOD, STORE_FOOD, STORE_BOOK,
-		                                              STORE_FURNITURE, STORE_PETS, STORE_RETAIL, STORE_RETAIL, STORE_RETAIL};
+	unsigned const NUM_STORE_SELECT = 8;
+	unsigned const store_selects[NUM_STORE_SELECT] = {STORE_CLOTHING, STORE_CLOTHING, STORE_BOOK, STORE_FURNITURE, STORE_PETS, STORE_RETAIL, STORE_RETAIL, STORE_RETAIL};
 	unsigned const objs_start(objs.size());
 	unsigned store_type(store_selects[rgen.rand() % NUM_STORE_SELECT]);
 	// bookstore and clothing stores are too expensive for the larger end stores, so make them retail stores instead
