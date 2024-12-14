@@ -1582,17 +1582,8 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 		add_row_of_bookcases(bc_area, zval, room_id, light_amt, dim, 1); // place_inside=1
 	}
 	else if (store_type == STORE_CLOTHING) { // add shelves of TYPE_FOLD_SHIRT along walls; clothes racks are added above
-		float const height(0.63*window_vspace), depth(0.25*window_vspace); // set height so that the top shelf is below the camera height
-		cube_t c(room_area);
-		set_cube_zvals(c, zval, zval+height);
-
-		for (unsigned d = 0; d < 2; ++d) { // for each side
-			float const back_pos(room_area.d[!dim][!d]);
-			c.d[!dim][!d] = back_pos;
-			c.d[!dim][ d] = back_pos + (d ? 1.0 : -1.0)*depth;
-			unsigned const shelf_flags(RO_FLAG_INTERIOR | RO_FLAG_IN_MALL | RO_FLAG_NONEMPTY); // no empty shelves
-			add_shelves(c, !dim, !d, room_id, light_amt, shelf_flags, store_type, rgen);
-		} // for d
+		float const shelf_height(0.63*window_vspace), shelf_depth(0.25*window_vspace); // set height so that the top shelf is below the camera height
+		add_shelves_along_walls(room_area, zval, room_id, light_amt, dim, store_type, shelf_height, shelf_depth, rgen);
 	}
 	else if (store_type == STORE_FURNITURE) {
 		// TODO: add random furniture: table + chairs, TYPE_DESK, TYPE_BED, TYPE_DRESSER, TYPE_NIGHTSTAND
@@ -1617,10 +1608,17 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 		// TODO
 	}
 	else if (store_type == STORE_PETS) { // rats, snakes, birds, spiders, fish, etc.
-		// add fish tanks along walls; TODO: more size variation, grouped together, on longer tables/shelves
-		unsigned const num_fishtanks((rgen.rand() % 8) + 1); // 1-8; should vary with store size
+		// add fish tanks along walls
+		float const shelf_height(0.85*window_vspace), shelf_depth(0.25*window_vspace);
+		add_shelves_along_walls(room_area, zval, room_id, light_amt, dim, store_type, shelf_height, shelf_depth, rgen);
+		// add door blocker to avoid placing a fishtank in front of the entry doorway
+		cube_t door_blocker(doorway);
+		door_blocker.expand_by_xy(0.25*window_vspace);
+		objs.emplace_back(door_blocker, TYPE_BLOCKER, room_id, 0, 0, 0, light_amt, SHAPE_CUBE);
+		// add a few more fishtanks if there's any extra space along front and back walls
+		unsigned const num_fishtanks(rgen.rand() % 5); // 0-4
 		for (unsigned n = 0; n < num_fishtanks; ++n) {add_fishtank_to_room(rgen, room, zval, room_id, light_amt, objs_start, room_area);}
-		// TODO: cages with rats, snakes, birds, and spiders
+		// TODO: cages with rats and birds + terrariums with snakes and spiders
 	}
 	// add ducts and vents in the ceiling
 	unsigned const num_vents(max(2U, (unsigned)round_fp(0.5*room_len/window_vspace))); // per side
@@ -1676,6 +1674,21 @@ void building_t::add_row_of_bookcases(cube_t const &row, float zval, unsigned ro
 			objs.emplace_back(c, TYPE_BCASE, room_id, !dim, d, RO_FLAG_IN_MALL, light_amt);
 			set_obj_id(objs);
 		}
+	} // for d
+}
+
+void building_t::add_shelves_along_walls(cube_t const &room_area, float zval, unsigned room_id, float light_amt, bool dim,
+	unsigned store_type, float height, float depth, rand_gen_t &rgen)
+{
+	cube_t c(room_area);
+	set_cube_zvals(c, zval, zval+height);
+
+	for (unsigned d = 0; d < 2; ++d) { // for each side
+		float const back_pos(room_area.d[!dim][!d]);
+		c.d[!dim][!d] = back_pos;
+		c.d[!dim][ d] = back_pos + (d ? 1.0 : -1.0)*depth;
+		unsigned const shelf_flags(RO_FLAG_INTERIOR | RO_FLAG_IN_MALL | RO_FLAG_NONEMPTY); // no empty shelves
+		add_shelves(c, !dim, !d, room_id, light_amt, shelf_flags, store_type, rgen);
 	} // for d
 }
 

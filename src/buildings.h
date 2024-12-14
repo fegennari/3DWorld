@@ -1306,6 +1306,7 @@ public:
 	static void get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects, bool add_models_mode=0, bool books_only=0);
 	static void add_hangers_and_clothing(float window_vspacing, unsigned num_hangers, unsigned flags, int hanger_model_id, int clothing_model_id,
 		vect_room_object_t &objects, rand_gen_t &rgen);
+	static void add_fishtank(cube_t const &tank, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool in_pet_store, vect_room_object_t &objects, rand_gen_t &rgen);
 private:
 	static void add_wine_rack_bottles(room_object_t const &c, vect_room_object_t &objects);
 	static void add_vert_roll_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio=1.0, bool player_held=0);
@@ -2546,6 +2547,7 @@ private:
 	bool add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, vect_cube_t const &blockers);
 	void add_mall_store_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id);
 	void add_row_of_bookcases(cube_t const &row, float zval, unsigned room_id, float light_amt, bool dim, bool place_inside);
+	void add_shelves_along_walls(cube_t const &room_area, float zval, unsigned room_id, float light_amt, bool dim, unsigned store_type, float height, float depth, rand_gen_t &rgen);
 	void add_missing_backrooms_lights(rand_gen_t rgen, float zval, unsigned room_id, unsigned objs_start, unsigned lights_start,
 		room_object_t const &ref_light, vect_cube_t const &rooms_to_light, light_ix_assign_t &light_ix_assign);
 	void add_mall_lower_floor_lights(room_t const &room, unsigned room_id, unsigned lights_start, light_ix_assign_t &light_ix_assign);

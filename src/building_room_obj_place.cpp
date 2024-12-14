@@ -2387,15 +2387,21 @@ bool building_t::add_fishtank_to_room(rand_gen_t &rgen, room_t const &room, floa
 	test_cube.z1() += 0.1*tank.dz(); // shift up so that it doesn't intersect the table
 	// check if fishtank overlaps and object, but not the table; can this happen? maybe if in front of a picture or TV?
 	if (overlaps_other_room_obj(test_cube, objs_start)) return 0; // should we remove the table or leave it there?
+	interior->room_geom->add_fishtank(tank, room_id, tot_light_amt, table.dim, table.dir, 0, objs, rgen); // in_pet_store=0
+	return 1;
+}
+void building_room_geom_t::add_fishtank(cube_t const &tank, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool in_pet_store,
+	vect_room_object_t &objects, rand_gen_t &rgen)
+{
 	unsigned flags(RO_FLAG_NOCOLL);
 
-	if (rgen.rand_float() < 0.80) { // add a lid 80% of the time
+	if (in_pet_store) {flags |= RO_FLAG_ADJ_TOP | RO_FLAG_LIT;} // pet store fishtanks always have a lid and are lit
+	else if (rgen.rand_float() < 0.80) { // add a lid 80% of the time
 		flags |= RO_FLAG_ADJ_TOP;
 		if (rgen.rand_float() < 0.85) {flags |= RO_FLAG_LIT;} // light is on 85% of the time
 	}
-	objs.emplace_back(tank, TYPE_FISHTANK, room_id, table.dim, table.dir, flags, tot_light_amt);
-	set_obj_id(objs);
-	return 1;
+	objects.emplace_back(tank, TYPE_FISHTANK, room_id, dim, dir, flags, tot_light_amt);
+	set_obj_id(objects);
 }
 
 colorRGBA get_couch_color(rand_gen_t &rgen) {

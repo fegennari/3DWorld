@@ -501,6 +501,7 @@ void building_room_geom_t::unexpand_dishwasher(room_object_t &c, cube_t const &d
 
 unsigned room_object_t::get_num_shelves() const {
 	assert(type == TYPE_SHELVES);
+	if (in_mall() && item_flags == STORE_PETS) return 2; // pet store shelves always have two levels
 	return (2 + (room_id % (in_mall() ? 2 : 3))); // 2-4 shelves, 2-3 for mall clothing stores
 }
 unsigned building_room_geom_t::get_shelves_for_object(room_object_t const &c, cube_t shelves[4]) {
@@ -536,6 +537,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 	// Note: this function doesn't support placement of objects drawn as 3D models such as fire extinguishers
 	for (unsigned s = 0; s < num_shelves; ++s) {
 		cube_t const &S(shelves[s]);
+		bool const top_shelf(s+1 == num_shelves);
 		vect_cube_t &cubes(get_temp_cubes());
 		base_rgen.rand_mix();
 		rand_gen_t rgen(base_rgen); // create a new rgen so that we can early exit this loop based on add_models_mode and still get deterministic results
@@ -543,9 +545,10 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 		vector3d sz;
 
 		if (c.in_mall()) {
+			float const shelf_depth(S.get_sz_dim(c.dim)), shelf_len(S.get_sz_dim(!c.dim)), ld_ratio(shelf_len/shelf_depth);
+
 			if (c.item_flags == STORE_CLOTHING) {
-				float const shelf_depth(S.get_sz_dim(c.dim)), shelf_len(S.get_sz_dim(!c.dim));
-				unsigned const num_items(round_fp(rgen.rand_uniform(0.5, 1.0)*shelf_len/shelf_depth)); // 50-100% full
+				unsigned const num_items(round_fp(rgen.rand_uniform(0.5, 1.0)*ld_ratio)); // 50-100% full
 				C.shape = SHAPE_CUBE;
 				C.dim   =  c.dim;
 				C.dir   = !c.dir;
@@ -573,7 +576,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 				C.type = (is_teeshirt ? TYPE_TEESHIRT : TYPE_PANTS);
 				C.z2() = C.z1() + height; // set height lower
 				sz[ c.dim] = 0.5*length;
-				sz[!c.dim] = 0.5*min(0.98f*length, 0.5f*shelf_len);
+				sz[!c.dim] = 0.5*min(0.98f*length, 0.5f*shelf_len); // width
 
 				for (unsigned n = 0; n < num_items; ++n) {
 					C.color = (is_teeshirt ? TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS] : WHITE); // T-shirts are colored, jeans are always white
@@ -581,11 +584,27 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 					add_if_not_intersecting(C, objects, cubes);
 				}
 			}
+			else if (c.item_flags == STORE_PETS) {
+				if (add_models_mode) { // fishtanks count as models since they have fish models
+					unsigned const num_fishtanks(round_fp(0.4*rgen.rand_uniform(0.5, 1.0)*ld_ratio));
+					cube_t tank;
+
+					for (unsigned n = 0; n < num_fishtanks; ++n) {
+						float const height((top_shelf ? 1.2 : 1.0)*rgen.rand_uniform(0.78, 0.88)*shelf_clearance);
+						sz[ c.dim] = 0.5*rgen.rand_uniform(0.84, 0.96)*shelf_depth; // set depth
+						sz[!c.dim] = 0.5*min(0.5f*shelf_len, rgen.rand_uniform(1.6, 2.8)*shelf_depth); // set length
+						gen_xy_pos_for_cube_obj(tank, S, sz, height, rgen);
+						if (has_bcube_int(tank, cubes)) continue;
+						add_fishtank(tank, C.room_id, C.light_amt, c.dim, !c.dir, 1, objects, rgen); // in_pet_store=1
+						cubes.push_back(tank);
+					} // for n
+				}
+			}
 			else {assert(0);} // unsupported store type
 			continue;
 		}
 		// add fire extinguishers if we have a model and it fits (2 level shelves)
-		float const max_height(((s+1 == num_shelves) ? 1.0 : 0.8)*shelf_clearance); // more space on the top shelf
+		float const max_height((top_shelf ? 1.0 : 0.8)*shelf_clearance); // more space on the top shelf
 		float fe_height(0.0), fe_radius(0.0);
 
 		if (get_fire_ext_height_and_radius(floor_spacing, fe_height, fe_radius) && fe_height < max_height && 2.3*fe_radius < c_sz_min_xy) {
@@ -607,7 +626,6 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 		add_boxes_to_space(c, objects, bounds, cubes, rgen, num_boxes, 0.42*width*sz_scale*(is_house ? 1.5 : 1.0),
 			0.4*box_zscale, 0.98*box_zscale, 1, (c.flags | RO_FLAG_NOCOLL)); // allow_crates=1
 		// add computers; what about monitors?
-		bool const top_shelf(s+1 == num_shelves);
 		float const cheight(0.75*h_val), cwidth(0.44*cheight), cdepth(0.9*cheight); // fixed AR=0.44 to match the texture
 		sz[ c.dim] = 0.5*cdepth;
 		sz[!c.dim] = 0.5*cwidth;
