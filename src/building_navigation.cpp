@@ -1874,7 +1874,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 			// map to graph space; should work for stairs or ramp, and escalator is always in the mall
 			unsigned const sre_room_ix(is_escalator ? (unsigned)interior->ext_basement_hallway_room_id : (s + interior->rooms.size()));
 			// this case is currently not handled (escalator from/to mall concourse rather than store)
-			if (is_escalator && (sre_room_ix == loc1.room_ix || sre_room_ix == loc2.room_ix)) continue;
+			if (is_escalator && ((int)sre_room_ix == loc1.room_ix || (int)sre_room_ix == loc2.room_ix)) continue;
 			point seg2_start, enter_pt;
 			ai_path_t from_path, escalator_path;
 

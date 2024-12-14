@@ -2071,7 +2071,7 @@ bool building_t::point_in_mall_elevator_entrance(point const &pos, bool inc_fron
 	if (!has_mall() || interior->mall_info->city_elevator_ix < 0) return 0; // no mall or above ground elevator
 	if (pos.z < ground_floor_z1 - get_fc_thickness())             return 0; // below ground
 	elevator_t const &e(get_elevator(interior->mall_info->city_elevator_ix));
-	return ((inc_front_space ? e.get_bcube_padded(1.5*e.get_length()) : e).contains_pt(pos)); // in or standing in front of the mall underground elevator
+	return ((inc_front_space ? e.get_bcube_padded(1.5*e.get_length()) : (cube_t)e).contains_pt(pos)); // in or standing in front of the mall underground elevator
 }
 
 void expand_convex_polygon_xy(vect_point &points, point const &center, float expand) {

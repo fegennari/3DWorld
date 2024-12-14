@@ -944,7 +944,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	// add objects for store doors, which are always between pairs of interior windows
 	for (store_doorway_t const &d : interior->mall_info->store_doorways) {
 		//room_t const &store(get_room(d.room_id));
-		bool const dim(d.dim), dir(d.dir);
+		bool const dim(d.dim);
 		// can either use room_id or d.room_id for these objects
 		// add ceiling box where the gate would come down from
 		cube_t cbox(d);
