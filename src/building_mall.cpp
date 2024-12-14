@@ -1002,13 +1002,17 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	float const tcan_height((is_cylin_tcan ? 0.28 : 0.4)*window_vspace), tcan_radius(0.12*window_vspace);
 	room_obj_shape const tcan_shape(is_cylin_tcan ? SHAPE_CYLIN : SHAPE_CUBE);
 	colorRGBA const tcan_color(is_cylin_tcan ? LT_GRAY : colorRGBA(0.8, 0.6, 0.4)); // tan for cube trashcans
+	// track available openings
+	vector<unsigned> avail_openings;
 
+	for (unsigned i = 0; i < num_openings; ++i) {
+		if ((int)i != fountain_opening_ix) {avail_openings.push_back(i);}
+	}
 	// add a food court to one of the openings
-	if (num_openings >= ((fountain_opening_ix >= 0) ? 2U : 1U)) {
-		while (1) {
-			fc_opening_ix = rgen.rand() % num_openings;
-			if (fc_opening_ix != fountain_opening_ix) break;
-		}
+	if (!avail_openings.empty()) {
+		unsigned const aoix(rgen.rand() % avail_openings.size());
+		fc_opening_ix = avail_openings[aoix];
+		avail_openings.erase(avail_openings.begin() + aoix);
 		cube_t place_area(openings[fc_opening_ix]);
 		place_area.expand_by_xy(0.06*room.get_sz_dim(!mall_dim)); // allow a bit of overlap with the walkway bounds if there are multiple floors
 		if (num_floors*num_openings < 4) {place_area.d[mall_dim][rgen.rand_bool()] = place_area.get_center_dim(mall_dim);} // half sized food court for small malls
@@ -1031,19 +1035,27 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		add_food_court_objs(rgen, place_area, zval, room_id, light_amt, blockers);
 	}
 	// add objects to remaining openings
-	for (unsigned i = 0; i < num_openings; ++i) {
-		if ((int)i == fountain_opening_ix || (int)i == fc_opening_ix) continue; // already occupied
-		cube_t const &opening(openings[i]);
+	unsigned tree_opening_ix(0);
+	if (!avail_openings.empty() && num_floors > 1) {tree_opening_ix = (rgen.rand() % avail_openings.size());} // select a random available opening for a tree
+
+	for (unsigned i = 0; i < avail_openings.size(); ++i) {
+		unsigned const oix(avail_openings[i]);
+		assert(oix < openings.size());
+		cube_t const &opening(openings[oix]);
+		cube_t tree_avoid;
 		
-		if (num_floors > 1 && rgen.rand_bool()) { // add palm or pine tree if more than one floor tall
+		// add palm or pine tree if more than one floor tall, 50% of the time and at least one available opening
+		if (num_floors > 1 && (i == tree_opening_ix || rgen.rand_bool())) {
 			bool const is_pine(0); // 0=palm, 1=pine; palm trees look better up close
 			// make pine tree taller; palm tree has to be shorter since fronds are added to the top to increase the effective height
 			float const height((is_pine ? 1.1 : 1.0)*rgen.rand_uniform(0.35, 0.4)*room.dz());
 			cube_t tree_bc(point(opening.xc(), opening.yc(), zval));
 			tree_bc.z2() += height;
-			tree_bc.expand_by_xy(rgen.rand_uniform(0.18, 0.22)*height); // set radius
+			tree_bc.expand_by_xy(rgen.rand_uniform(0.20, 0.24)*height); // set radius
 			objs.emplace_back(tree_bc, TYPE_TREE, room_id, 0, 0, RO_FLAG_IN_MALL, light_amt, SHAPE_CYLIN, choose_pot_color(rgen), (is_pine ? 1 : 0));
-			continue;
+			tree_avoid = tree_bc;
+			tree_avoid.expand_by_xy(0.1*height); // add extra padding for vases below
+			//continue; // allow both trees and vases
 		}
 		// add vases/sculptures
 		unsigned const num_vases((rgen.rand() & 3) + 1); // 1-4
@@ -1077,6 +1089,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 				vase.set_from_sphere(center, radius);
 				set_cube_zvals(vase, zval, zval+height);
 				if (has_bcube_int(vase, blockers)) continue;
+				if (!tree_avoid.is_all_zeros() && tree_avoid.intersects(vase)) continue;
 				objs.emplace_back(vase, TYPE_VASE, room_id, 0, 0, RO_FLAG_IN_MALL, light_amt, SHAPE_CYLIN, vase_color);
 				objs.back().obj_id = rand_ix;
 				blockers.push_back(vase);

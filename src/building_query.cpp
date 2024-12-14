@@ -856,7 +856,7 @@ cube_t get_true_room_obj_bcube(room_object_t const &c) { // for collisions, etc.
 		c_pot.expand_by_xy(-(1.0 - PLANT_POT_RADIUS)*c.get_radius()); // use XY radius of the pot; better for AI coll
 		return c_pot;
 	}
-	if (c.type == TYPE_TREE) {} // TODO: trunk only?
+	if (c.type == TYPE_TREE)      {} // bcubes are not a good fit for trees; cube covers the pot and trunk, but not leaves; should not be colliding with leaves anyway
 	if (c.type == TYPE_SHOWERTUB) {return get_shower_tub_wall   (c);} // only the end wall is a collider; the tub handles the bottom (what about curtains?)
 	if (c.type == TYPE_SHELVES  ) {return get_shelves_no_bot_gap(c);}
 	return c; // default cube case

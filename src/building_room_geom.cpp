@@ -5004,7 +5004,7 @@ void building_room_geom_t::add_tree(room_object_t const &c, bool inc_pot, bool i
 		rgeom_mat_t &mat(mats_amask.get_material(tid_nm_pair_t((is_palm ? PALM_BARK_TEX : BARK2_TEX), 1.0, 1), 1)); // shadowed
 		tree.get_trunk_verts(mat.quad_verts, mat.itri_verts, mat.indices, N_CYL_SIDES);
 	}
-	if (inc_pot) {add_plant_pot(c, 0.95*radius, 1.1*radius, 0);} // no_dirt=0
+	if (inc_pot) {add_plant_pot(c, 0.9*radius, 1.04*radius, 0);} // no_dirt=0
 }
 
 int get_ball_tid   (room_object_t const &c) {return get_texture_by_name(c.get_ball_type().tex_fname  );}
