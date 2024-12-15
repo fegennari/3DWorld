@@ -3410,7 +3410,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 				pillar.d[dim][0] = start - pillar_width;
 				pillar.d[dim][1] = start;
 				assert(pillar.is_strictly_normalized());
-				objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, 0, 0, RO_FLAG_ADJ_TOP); // flag so that top is drawn
+				objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, 0, 0, 0);
 
 				if (has_tall_retail()) { // add bare top part of pillars
 					objs.back().flags |= RO_FLAG_ADJ_TOP; // must draw the top surface
