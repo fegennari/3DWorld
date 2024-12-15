@@ -1879,7 +1879,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 		// yellowish-brown, light brown, light yellow, peach, lt green, lt blue, lt blue-green
 		colorRGBA const mall_wall_colors[7] = {colorRGBA(1.0, 0.9, 0.7), colorRGBA(1.0, 0.8, 0.6), colorRGBA(1.0, 1.0, 0.7), colorRGBA(1.0, 0.85, 0.75),
 			                                   colorRGBA(0.85, 1.0, 0.85), colorRGBA(0.85, 0.85, 1.0), colorRGBA(0.7, 0.9, 0.9)};
-		mall_wall_color = mall_wall_colors[(11*mat_ix + 3*interior->rooms.size() + 13*parts.size())%7]; // random-ish
+		interior->mall_info->mall_wall_color = mall_wall_color = mall_wall_colors[(11*mat_ix + 3*interior->rooms.size() + 13*parts.size())%7]; // random-ish
 	}
 	bdraw.begin_draw_range_capture();
 
@@ -1915,8 +1915,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 			//unsigned const dim_mask(1 << dim); // doesn't work with office building hallway intersection corners and door frame shadows
 			unsigned dim_mask(3); // XY
 			set_skip_faces_for_nearby_cube_edge(*i, bcube, wall_thickness, !dim, dim_mask); // easy case: skip faces along the edges of the building bcube
-			bool const in_basement(i->z1() < ground_floor_z1);
-			bool const in_ext_basement(in_basement && i >= (interior->walls[dim].begin() + interior->extb_walls_start[dim]));
+			bool const in_basement(i->z1() < ground_floor_z1), in_ext_basement(in_basement && i >= (interior->walls[dim].begin() + interior->extb_walls_start[dim]));
 			
 			// check rooms; skip this for above ground complex floorplans because they may have unexpected wall ends visible at non-rectangular rooms
 			if (!has_complex_floorplan || in_basement) {
@@ -1963,10 +1962,10 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 			colorRGBA color(in_basement ? WHITE : wall_color); // basement walls are always white
 			tid_nm_pair_t tex;
 			
-			if (!is_house && in_ext_basement) {
+			if (!is_house && in_ext_basement) { // office building extended basement, backrooms, or mall
 				// mall stores have wall texture with custom color, but back hallways are concrete; should bathrooms be white?
 				if (is_inside_mall_stores(i->get_cube_center())) {tex = mat.wall_tex; color = mall_wall_color;}
-				else {tex = get_concrete_texture();} // office building extended basement
+				else {tex = get_concrete_texture();} // extended basement
 			}
 			else {tex = mat.wall_tex;}
 			bdraw.add_section(*this, 0, *i, tex, color, dim_mask, 1, 0, 1, 0); // no AO; X and/or Y dims only, skip bottom, only draw top if under skylight

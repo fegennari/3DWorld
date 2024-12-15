@@ -1750,6 +1750,7 @@ struct building_mall_info_t {
 	stairwell_t ent_stairs;
 	vect_cube_t bathrooms; // actually bathroom pairs
 	cube_t store_bounds;
+	colorRGBA mall_wall_color=WHITE;
 	int city_elevator_ix=-1;
 };
 
