@@ -1395,8 +1395,10 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	unsigned const store_selects[NUM_STORE_SELECT] = {STORE_CLOTHING, STORE_CLOTHING, STORE_BOOK, STORE_FURNITURE, STORE_PETS, STORE_RETAIL, STORE_RETAIL, STORE_RETAIL};
 	unsigned const objs_start(objs.size());
 	unsigned store_type(store_selects[rgen.rand() % NUM_STORE_SELECT]);
-	// bookstore and clothing stores are too expensive for the larger end stores, so make them retail stores instead
-	if (is_end_store && (store_type == STORE_BOOK || store_type == STORE_CLOTHING)) {store_type = STORE_RETAIL;}
+	// bookstore and clothing stores are too expensive for the larger end stores, and pet stores should be small, so make them retail or furniture stores instead
+	if (is_end_store && (store_type == STORE_BOOK || store_type == STORE_CLOTHING || store_type == STORE_PETS)) {store_type = (rgen.rand_bool() ? STORE_FURNITURE : STORE_RETAIL);}
+	// furniture stores should be larger, so make them book or clothing stores if small
+	else if (store_type == STORE_FURNITURE && room_width < 0.8*room_len) {store_type = (rgen.rand_bool() ? STORE_BOOK : STORE_CLOTHING);}
 	// mixed: 225FPS, 2991MB, 249ms
 	// bookstores: 295FPS, 3463MB, 838ms
 	// clothing stores: 163FPS, 2737MB, 19ms
@@ -1682,6 +1684,9 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 				// TODO: TYPE_OFF_PILLAR
 			} // for col
 		} // for row
+	}
+	else if (store_type == STORE_APPLIANCE) {
+		// TYPE_FRIDGE, TYPE_STOVE, TYPE_WASHER, TYPE_DRYER, TYPE_CEIL_FAN, dishwasher; or could add a plumbing section with TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_SHOWERTUB
 	}
 	else if (store_type == STORE_FOOD) {
 		// TODO

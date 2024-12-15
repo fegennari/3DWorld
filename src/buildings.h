@@ -524,9 +524,9 @@ std::string const room_names_short[NUM_RTYPES] =
 	"Swim", "Security", "Lounge", "Common", "Basement", "Retail", "Elevator", "Conference", "Machine", "Dungeon",
 	"Equipment", "Store", "Mall", "Restaurant"};
 
-enum {STORE_OTHER=0, STORE_CLOTHING, STORE_FOOD, STORE_BOOK, STORE_RETAIL, STORE_FURNITURE, STORE_PETS, NUM_STORE_TYPES}; // for use with object placement and naming
+enum {STORE_OTHER=0, STORE_CLOTHING, STORE_FOOD, STORE_BOOK, STORE_RETAIL, STORE_FURNITURE, STORE_PETS, STORE_APPLIANCE, NUM_STORE_TYPES}; // for use with object placement and naming
 enum {RETAIL_BOXED=0, RETAIL_FOOD, RETAIL_HOUSE_GOODS, RETAIL_KITCHEN, RETAIL_ELECTRONICS, NUM_RETAIL_CAT};
-std::string const store_type_strs [NUM_STORE_TYPES] = {"", "clothing", "food", "book", "retail", "furniture", "pet"};
+std::string const store_type_strs [NUM_STORE_TYPES] = {"", "clothing", "food", "book", "retail", "furniture", "pet", "appliance"};
 std::string const srack_categories[NUM_RETAIL_CAT ] = {"boxed items", "food", "household goods", "kitchen", "electronics"};
 
 enum {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES, SHAPE_RAMP, SHAPE_L, SHAPE_FAN}; // stairs shapes; SHAPE_FAN is unused
