@@ -733,7 +733,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 
 void building_room_geom_t::add_hanger_rod(room_object_t const &c) { // is_small=1
 	if (c.in_mall()) { // metal rod
-		get_metal_material(1, 0, 1).add_ortho_cylin_to_verts(c, LT_GRAY, !c.dim, 1, 1); // draw ends
+		get_metal_material(1, 0, 1).add_ortho_cylin_to_verts(c, LT_GRAY, !c.dim, 0, 0); // draw sides only
 	}
 	else { // wooden rod
 		get_wood_material(1.0, 1, 0, 1).add_ortho_cylin_to_verts(c, LT_GRAY, !c.dim, 0, 0, 0, 0, 1.0, 1.0, 0.25, 1.0, 0, 16, 0.0, 1); // 16 sides, swap_txy=1

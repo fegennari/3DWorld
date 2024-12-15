@@ -1375,7 +1375,7 @@ bool building_t::add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area,
 // Note: room is non-const because the has_mirror flag may get set
 void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, light_ix_assign_t &light_ix_assign) {
 	float const door_width(get_doorway_width()), floor_spacing(room.dz()), window_vspace(get_window_vspace());
-	float const wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness), fc_thick(get_fc_thickness());
+	float const wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness), fc_thick(get_fc_thickness()), pillar_width(2.0*wall_thickness);
 	float const light_amt = 1.0; // fully lit, for now
 	// get doorway bcube
 	cube_t doorway;
@@ -1488,7 +1488,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	if (store_type == STORE_RETAIL || store_type == STORE_BOOK || store_type == STORE_CLOTHING || store_type == STORE_PETS) {
 		cube_t place_area(room_area);
 		place_area.expand_in_dim(dim, -0.5*door_width); // add extra padding in front and back for doors
-		// simplified version of building_t::add_retail_room_objs() with no pillars, escalators, checkout counters, wall light, or short racks
+		// simplified version of building_t::add_retail_room_objs() with no escalators, checkout counters, wall light, or short racks
 		float const dx(place_area.dx()), dy(place_area.dy()), spacing(0.8), nom_aisle_width(1.5*door_width);
 		unsigned const nx(max(1U, unsigned(spacing*dx/window_vspace))), ny(max(1U, unsigned(spacing*dy/window_vspace)));
 		float const length(dim ? dy : dx), width(dim ? dx : dy), max_rack_width(0.5*window_vspace);
@@ -1505,15 +1505,19 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 			}
 			float const rack_spacing((length - nom_aisle_width)/nracks), rack_length(rack_spacing - nom_aisle_width);
 			assert(rack_length > 0.0);
-			cube_t rack;
-			set_cube_zvals(rack, zval, (zval + SHELF_RACK_HEIGHT_FS*window_vspace));
+			cube_t rack, pillar, pillar_area(room);
+			set_cube_zvals(rack,   zval, (zval + SHELF_RACK_HEIGHT_FS*window_vspace));
+			set_cube_zvals(pillar, zval, room.z2()-fc_thick); // up to the ceiling
+			pillar_area.expand_in_dim( dim, -0.2*room_len  ); // center 60% of room
+			pillar_area.expand_in_dim(!dim, -0.2*room_width);
 			unsigned const style_id(rgen.rand()); // same style for each rack
 			unsigned rack_id(0);
 
 			for (unsigned n = 0; n < nrows; ++n) { // n+1 aisles
-				float const rack_lo(place_area.d[!dim][0] + row_aisle_width + n*aisle_spacing);
+				float const rack_lo(place_area.d[!dim][0] + row_aisle_width + n*aisle_spacing), rack_center(rack_lo + 0.5*rack_width);
 				rack.d[!dim][0] = rack_lo;
 				rack.d[!dim][1] = rack_lo + rack_width;
+				set_wall_width(pillar, rack_center, 0.5*pillar_width, !dim); // centered on the rack
 
 				for (unsigned r = 0; r < nracks; ++r) {
 					float const start(place_area.d[dim][0] + nom_aisle_width + r*rack_spacing);
@@ -1530,12 +1534,12 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 					}
 					else if (store_type == STORE_CLOTHING) { // add clothes racks
 						// Note: grouping into a rack object doesn't really help here because these are 3D models and must be drawn individually anyway
-						float const centerline(rack_lo + 0.5*rack_width), hr_radius(0.007*window_vspace), frame_hwidth(1.2*hr_radius);
+						float const hr_radius(0.007*window_vspace), frame_hwidth(1.2*hr_radius), frame_width(2.0*frame_hwidth);
 						unsigned const flags(RO_FLAG_INTERIOR | RO_FLAG_IN_MALL | RO_FLAG_NOCOLL);
 						// add an invisible collider around the clothes rack for player and AI collisions
 						cube_t collider(rack);
 						collider.z2() = zval + 0.5*window_vspace;
-						set_wall_width(collider, centerline, 0.2*rack_width, !dim);
+						set_wall_width(collider, rack_center, 0.2*rack_width, !dim);
 						objs.emplace_back(collider, TYPE_COLLIDER, room_id, !dim, 0, (RO_FLAG_IN_MALL | RO_FLAG_INVIS), light_amt);
 						unsigned const num_segs(2 + (room_id & 1)); // 2-3
 						int const hanger_model_id(rgen.rand()), clothing_model_id(rgen.rand()); // consistent for each rack
@@ -1549,21 +1553,23 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 							hanger_rod.d[dim][1] = lo_val + seg_len;
 							hanger_rod.z1() = collider  .z2();
 							hanger_rod.z2() = hanger_rod.z1() + 2.0*hr_radius;
-							set_wall_width(hanger_rod, centerline, hr_radius, !dim);
+							set_wall_width(hanger_rod, rack_center, hr_radius, !dim);
 							// add a frame that holds the hanger rod; can construct from metal bars
 							colorRGBA const frame_color(DK_GRAY);
 
 							for (unsigned d = 0; d < 2; ++d) { // each end
 								if (d == 1 && n+1 < num_segs) continue; // not the end, use frame from the next segment
+								float const end_pos(hanger_rod.d[dim][d]);
 								cube_t hbar(collider); // copy width from collider
-								set_wall_width(hbar, hanger_rod.zc(),      frame_hwidth, 2  ); // Z
-								set_wall_width(hbar, hanger_rod.d[dim][d], frame_hwidth, dim);
+								set_wall_width(hbar, hanger_rod.zc(), frame_hwidth, 2); // Z
+								hbar.d[dim][ d] = end_pos;
+								hbar.d[dim][!d] = end_pos + (d ? -1.0 : 1.0)*frame_width;
 								objs.emplace_back(hbar, TYPE_METAL_BAR, room_id, 0, 0, flags, light_amt, SHAPE_CUBE, frame_color, 0); // draw all sides
 
 								for (unsigned e = 0; e < 2; ++e) { // each side leg
 									cube_t vbar(hbar);
 									set_cube_zvals(vbar, rack.z1(), hbar.z1());
-									vbar.d[!dim][!e] = hbar.d[!dim][e] + (e ? -1.0 : 1.0)*2.0*frame_hwidth;
+									vbar.d[!dim][!e] = hbar.d[!dim][e] + (e ? -1.0 : 1.0)*frame_width;
 									objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, flags, light_amt, SHAPE_CUBE, frame_color, EF_Z12); // skip top and bottom
 								}
 							} // for d
@@ -1577,12 +1583,17 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 						float const shelf_height(0.85*window_vspace), shelf_depth(0.22*window_vspace);
 						cube_t center_wall(rack);
 						center_wall.z2() = zval + shelf_height + fc_thick; // increase height above top of shelf wall anchors
-						set_wall_width(center_wall, (rack_lo + 0.5*rack_width), 0.38*wall_thickness, !dim);
+						set_wall_width(center_wall, rack_center, 0.38*wall_thickness, !dim);
 						add_shelves_along_walls(center_wall, zval, room_id, light_amt, !dim, store_type, shelf_height, shelf_depth, 0, rgen); // place_inside=0
 						objs.emplace_back(center_wall, TYPE_PG_WALL, room_id, !dim, 0, (RO_FLAG_IN_MALL | RO_FLAG_ADJ_TOP), light_amt, SHAPE_CUBE); // draw top; or TYPE_STAIR_WALL?
 					}
 					else { // add retail shelf racks
 						add_shelf_rack(rack, dim, style_id, rack_id, room_id, RO_FLAG_IN_MALL, item_category+1, 0, rgen); // add_occluders=0
+					}
+					if (r > 0) {
+						pillar.d[dim][0] = start - pillar_width;
+						pillar.d[dim][1] = start;
+						if (pillar_area.contains_cube_xy(pillar)) {objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, 0, 0, 0);}
 					}
 				} // for r
 			} // for n
