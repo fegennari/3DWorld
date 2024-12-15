@@ -1286,7 +1286,7 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 	if (obj.type == TYPE_SHOWERTUB) { // take curtains
 		point const p2(at_pos + in_dir*range);
 		bool const side(p2[!obj.dim] > obj.get_center_dim(!obj.dim));
-		unsigned const bit_mask(1 << side);
+		unsigned const bit_mask(1 << unsigned(side));
 		if (obj.taken_level & bit_mask) return 0; // already taken
 		if (!register_player_object_pickup(obj, at_pos)) return 0;
 		obj.taken_level |= bit_mask;

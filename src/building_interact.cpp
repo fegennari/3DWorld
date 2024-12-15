@@ -805,7 +805,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	}
 	else if (obj.type == TYPE_SHOWERTUB) { // open/close curtains
 		bool const side(query_ray_end[!obj.dim] > obj.get_center_dim(!obj.dim));
-		if (obj.taken_level & (1 << side)) return 0; // already taken
+		if (obj.taken_level & (1 << unsigned(side))) return 0; // already taken
 		obj.flags ^= (side ? RO_FLAG_IS_ACTIVE : RO_FLAG_OPEN); // toggle open/close using two different flags for the left vs. right curtains
 		gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.5, 1.5);
 		sound_scale      = 0.4;
