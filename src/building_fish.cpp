@@ -101,8 +101,8 @@ class fish_manager_t {
 					f.target_dir = zero_vector; // turn complete
 				}
 				cube_t const valid_area(get_valid_area(f.radius));
+				assert(valid_area.contains_pt(f.pos));
 				point const prev_pos(f.pos);
-				assert(valid_area.contains_pt(prev_pos));
 				f.pos += (f.mspeed*f.speed_mult*fticks)*f.dir;
 				vector3d coll_dir; // fish => target
 				point coll_pos;
@@ -178,6 +178,7 @@ class fish_manager_t {
 			if (obj == bcube) return; // no update
 			vector3d const delta(obj.get_llc() - bcube.get_llc());
 			bcube = obj;
+			valid_area += delta;
 			for (fish_t &f : fish) {f.pos += delta;}
 		}
 		void draw(shader_t &s, animation_state_t &anim_state, float anim_time) const {
