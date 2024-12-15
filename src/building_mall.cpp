@@ -1372,7 +1372,8 @@ bool building_t::add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area,
 	return 1;
 }
 
-void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, light_ix_assign_t &light_ix_assign) {
+// Note: room is non-const because the has_mirror flag may get set
+void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, light_ix_assign_t &light_ix_assign) {
 	float const door_width(get_doorway_width()), floor_spacing(room.dz()), window_vspace(get_window_vspace());
 	float const wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness), fc_thick(get_fc_thickness());
 	float const light_amt = 1.0; // fully lit, for now
@@ -1635,6 +1636,9 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 
 				if (rtype == RTYPE_BED) { // Note: light_ix_assign is needed for closet lights, but these aren't added here
 					if (add_bedroom_objs(rgen, sub_room, blockers, chair_color, zval, room_id, 0, light_amt, start_ix, 1, 0, 1, light_ix_assign)) {
+						for (auto i = objs.begin()+start_ix; i != objs.end(); ++i) { // set has_mirror flag if a dresser mirror was placed
+							if (i->type == TYPE_DRESS_MIR) {room.set_has_mirror();}
+						}
 						// add wall at head of bed
 						room_object_t const &bed(objs[start_ix]); // should be the first object placed
 						assert(bed.type == TYPE_BED);
