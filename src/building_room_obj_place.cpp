@@ -143,7 +143,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, vect_cube_t &blockers, unsigned room_id, point const &place_pos,
 	colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, unsigned max_chairs, bool use_tall_table, int wooden_or_plastic)
 {
-	bool const use_bar_stools(use_tall_table);
+	bool const use_bar_stools(use_tall_table), is_store(room.is_store());
 	float const table_rscale(use_tall_table ? 0.12 : 0.18), room_dx(room.dx()), room_dy(room.dy());
 	float const window_vspacing(get_window_vspace()), room_pad(room.is_store() ? 0.0f : max(4.0f*get_wall_thickness(), get_min_front_clearance_inc_people()));
 	// use a long table for a large room 50% of the time
@@ -206,6 +206,7 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, v
 			for (unsigned n = 0; n < num_this_orient; ++n) {
 				if (num_chairs == max_chairs) break; // done
 				if (prev_not_added) {prev_not_added = 0;} // if the previous chair failed to be added, make sure to try the next orient
+				else if (is_store) {} // don't skip chairs in furniture stores
 				else if (orient == 3 && num_chairs == 0 && n+1 == num_this_orient) {} // make sure to place a chair if we have none and this is our last orient/chair
 				else if (rgen.rand_float() > 0.25*(num_this_orient + 1)) continue; // skip 50% of the time for single chair, 25% of the time for double
 				point chair_pos(table_pos); // same starting center and z1
@@ -359,7 +360,7 @@ cube_t get_book_bcube(rand_gen_t &rgen, point const &pos, float floor_spacing, b
 
 // Note: no blockers, but does check existing objects
 bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
-	bool const is_bookstore(room.is_store());
+	bool const is_store(room.is_store()); // bookstore or furniture store
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	room_bounds.expand_by_xy(-get_trim_thickness());
 	float const vspace(get_window_vspace()), wall_thickness(get_wall_thickness());
@@ -375,7 +376,7 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a bookcase
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
 		// don't place against an exterior wall/window, inc. partial ext walls
-		if (!is_basement && !is_bookstore && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) continue;
+		if (!is_basement && !is_store && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) continue;
 		c.d[dim][ dir] = room_bounds.d[dim][dir]; // against this wall
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
 		float const pos(rgen.rand_uniform(room_bounds.d[!dim][0]+0.5*width, room_bounds.d[!dim][1]-0.5*width));
@@ -384,7 +385,7 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 		tc.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance; // increase space to add clearance
 		if (is_obj_placement_blocked(tc, room, 1) || overlaps_other_room_obj(tc, objs_start)) continue; // bad placement
 		tc.d[dim][ dir] -= (dir ? -1.0 : 1.0)*wall_thickness; // expand to wall to check for interior windows and store doors
-		if (has_bcube_int(tc, interior->int_windows) || (is_bookstore && has_bcube_int(tc, interior->mall_info->store_doorways))) continue;
+		if (has_bcube_int(tc, interior->int_windows) || (is_store && has_bcube_int(tc, interior->mall_info->store_doorways))) continue;
 		unsigned flags(room.has_open_wall(dim, dir) ? RO_FLAG_OPEN : 0); // flag as open if along an open wall so that the back is drawn
 
 		if (is_basement && rgen.rand_float() < 0.40) { // fallen bookcase 40% of the time
@@ -472,8 +473,9 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		desk_pad.d[dim][!dir] += dsign*clearance; // ensure clearance in front of the desk so that a chair can be placed
 		if (!is_valid_placement_for_room(desk_pad, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
 		if (overlaps_other_room_obj(desk_pad, objs_start))             continue; // check other objects (for bedroom desks or multiple office desks)
-		// make short if against an exterior wall, in an office, or if there's a complex floorplan (in case there's no back wall)
-		bool const is_tall(!room.is_office && !has_complex_floorplan && rgen.rand_float() < 0.5 && (is_basement || classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT));
+		// make short if against an exterior or open wall, in an office, or if there's a complex floorplan (in case there's no back wall)
+		bool const is_tall(!room.is_office && !has_complex_floorplan && !room.has_open_wall(dim, dir) && rgen.rand_float() < 0.5 &&
+			(is_basement || classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT));
 		unsigned const desk_obj_ix(objs.size());
 		room_object_t const desk(c, TYPE_DESK, room_id, dim, !dir, (is_house ? RO_FLAG_IS_HOUSE : 0), tot_light_amt, (is_tall ? SHAPE_TALL : SHAPE_CUBE));
 		objs.push_back(desk);
@@ -515,7 +517,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			// force even/odd-ness of obj_id based on comp_side so that we know what side to put the drawers on so that they don't intersect the computer
 			if (bool(desk_obj.obj_id & 1) == comp_side) {++desk_obj.obj_id;}
 		}
-		else { // no computer; add paper, pens, and pencils
+		else if (!room.is_store()) { // no computer; add paper, pens, and pencils; not for furniture stores
 			if (rgen.rand_float() < 0.75) {add_papers_to_surface(c, dim, !dir, 7, rgen, room_id, tot_light_amt);} // add 0-7 sheet(s) of paper 75% of the time
 			bool const is_big_office(!is_house && room.is_office && interior->rooms.size() > 40);
 			unsigned const max_num_pp(is_big_office ? 2 : 3); // 0-3 for houses, 0-2 for big office buildings
@@ -2458,7 +2460,7 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 	}
 	if (!placed_couch && !placed_tv) return 0; // not a living room
 
-	if (rgen.rand_bool()) {
+	if (rgen.rand_bool()) { // add rocking chair
 		unsigned const chair_ix(objs.size());
 		cube_t chair_place_area(place_area);
 		chair_place_area.expand_by(-wall_thickness); // move a bit further back from the wall to prevent intersections when rotating
