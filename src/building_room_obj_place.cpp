@@ -1226,7 +1226,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 {
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace()), wall_thick(get_wall_thickness());
-	bool const long_dim(room_bounds.dx() < room_bounds.dy());
+	bool const long_dim(room_bounds.dx() < room_bounds.dy()), is_store(room.is_store());
 	bool const dim((is_hotel() && room.get_sz_dim(!long_dim) > 0.8*vspace) ? !long_dim : long_dim); // bed in long room dim, unless in a large hotel room (with 2 beds)
 	vector3d expand, bed_sz;
 	expand[ dim] = -wall_thick; // small amount of space
@@ -1234,7 +1234,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 	room_bounds.expand_by_xy(expand);
 	float const room_len(room_bounds.get_sz_dim(dim)), room_width(room_bounds.get_sz_dim(!dim));
 	
-	if (force) { // no room is too large
+	if (force || is_store) { // no room is too large
 		if (room_len < 1.0*vspace || room_width < 0.55*vspace) return 0; // room is too small to fit a bed
 	}
 	else if (floor == 0) { // special case for ground floor
@@ -1308,7 +1308,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 			objs.emplace_back(blanket, TYPE_BLANKET, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt);
 			set_obj_id(objs);
 		}
-		else if (rand_val < 0.7) { // add teeshirt or jeans on the bed 30% of the time
+		else if (!is_store && rand_val < 0.7) { // add teeshirt or jeans on the bed 30% of the time
 			unsigned const type(rgen.rand_bool() ? TYPE_PANTS : TYPE_TEESHIRT);
 			float const length(((type == TYPE_TEESHIRT) ? 0.26 : 0.2)*vspace), width(0.98*length), height(0.002*vspace);
 			float const clearance(get_min_front_clearance_inc_people());
