@@ -1621,7 +1621,19 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 				unsigned const rtype(rtypes[rgen.rand() % NUM_RTYPES]);
 
 				if (rtype == RTYPE_BED) { // Note: light_ix_assign is needed for closet lights, but these aren't added here
-					add_bedroom_objs(rgen, sub_room, blockers, chair_color, zval, room_id, 0, light_amt, objs.size(), 1, 0, 1, light_ix_assign);
+					unsigned const bed_obj_ix(objs.size());
+
+					if (add_bedroom_objs(rgen, sub_room, blockers, chair_color, zval, room_id, 0, light_amt, objs.size(), 1, 0, 1, light_ix_assign)) {
+						// add wall at head of bed
+						room_object_t const &bed(objs[bed_obj_ix]);
+						assert(bed.type == TYPE_BED);
+						cube_t wall(sub_room);
+						wall.d[bed.dim][!bed.dir] = sub_room.d[bed.dim][bed.dir] + (bed.dir ? -1.0 : 1.0)*wall_thickness;
+
+						if (room.contains_cube(wall)) { // only if interior; skip if overlaps the room wall
+							objs.emplace_back(wall, TYPE_PG_WALL, room_id, !dim, 0, (RO_FLAG_IN_MALL | RO_FLAG_ADJ_TOP), light_amt, SHAPE_CUBE); // draw top
+						}
+					}
 				}
 				else if (rtype == RTYPE_DINING) {
 					// TODO
@@ -1636,7 +1648,6 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 					int const wooden_or_plastic(rgen.rand() % 3); // randomly select between {wooden, plastic, wooden table with plastic chairs}
 					add_table_and_chairs(rgen, sub_room, blockers, room_id, place_pos, chair_color, 0.0, light_amt, 4, use_tall_table, wooden_or_plastic);
 				}
-				// TODO: add walls between some rooms
 			} // for col
 		} // for row
 	}
