@@ -161,7 +161,8 @@ class fish_manager_t {
 		unsigned obj_id=0; // used as a unique identifier
 		bool visible=0;
 
-		fishtank_t(room_object_t const &obj) : obj_id(obj.obj_id) {
+		fishtank_t(room_object_t const &obj, bool visible_=0) : obj_id(obj.obj_id), visible(visible_) {
+			present = 1;
 			cube_t tank_inner(obj);
 			tank_inner.expand_by(-vector3d(0.04, 0.04, 0.1)*obj.get_height()); // subtract off the glass and some area from the top and bottom
 			init(obj, tank_inner, obj_id, 1, 4); // 1-4 fish
@@ -173,6 +174,7 @@ class fish_manager_t {
 			fish_cont_t::next_frame(1.5); // speed_mult_max=1.5
 		}
 		void update_object(room_object_t const &obj) { // handle movement when the table is pushed
+			present = 1;
 			if (obj == bcube) return; // no update
 			vector3d const delta(obj.get_llc() - bcube.get_llc());
 			bcube = obj;
@@ -333,14 +335,16 @@ public:
 		fishtank_ix = 0;
 	}
 	void register_fishtank(room_object_t const &obj, bool is_visible) {
-		if (fishtanks.size() <= fishtank_ix) {fishtanks.push_back(fishtank_t(obj));} // fishtank not yet added
-
-		for (fishtank_t &ft : fishtanks) {
-			if (ft.obj_id == obj.obj_id) {
+		if (fishtanks.size() <= fishtank_ix) { // fishtank not yet added
+			fishtanks.push_back(fishtank_t(obj, is_visible));
+		}
+		else { // find existing fishtank
+			for (fishtank_t &ft : fishtanks) {
+				if (ft.obj_id != obj.obj_id) continue;
 				assert(!ft.present); // check for duplicate obj_id
 				ft.update_object(obj);
-				ft.present = 1;
 				ft.visible = is_visible;
+				break; // can only have one
 			}
 		}
 		++fishtank_ix;
