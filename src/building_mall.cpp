@@ -1373,7 +1373,7 @@ bool building_t::add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area,
 
 void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, light_ix_assign_t &light_ix_assign) {
 	float const door_width(get_doorway_width()), floor_spacing(room.dz()), window_vspace(get_window_vspace());
-	float const wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness);
+	float const wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness), fc_thick(get_fc_thickness());
 	float const light_amt = 1.0; // fully lit, for now
 	// get doorway bcube
 	cube_t doorway;
@@ -1480,8 +1480,8 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 			} // for xc
 		} // for yc
 	}
-	// add rows of shelves for retail and book stores, and rows of clothing to clothing stores
-	if (store_type == STORE_RETAIL || store_type == STORE_BOOK || store_type == STORE_CLOTHING) {
+	// add rows of shelves for retail and book stores, and rows of clothing to clothing stores, and rows of shelves to pet stores
+	if (store_type == STORE_RETAIL || store_type == STORE_BOOK || store_type == STORE_CLOTHING || store_type == STORE_PETS) {
 		cube_t place_area(room_area);
 		place_area.expand_in_dim(dim, -0.5*door_width); // add extra padding in front and back for doors
 		// simplified version of building_t::add_retail_room_objs() with no pillars, escalators, checkout counters, wall light, or short racks
@@ -1522,7 +1522,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 					if (overlaps_other_room_obj(test_cube, objs_start)) continue; // blocked; not needed?
 
 					if (store_type == STORE_BOOK) { // add bookcases
-						add_row_of_bookcases(rack, zval, room_id, light_amt, dim, 0); // place_inside=0
+						add_row_of_bookcases(rack, zval, room_id, light_amt, !dim, 0); // place_inside=0
 					}
 					else if (store_type == STORE_CLOTHING) { // add clothes racks
 						// Note: grouping into a rack object doesn't really help here because these are 3D models and must be drawn individually anyway
@@ -1569,6 +1569,14 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 							building_room_geom_t::add_hangers_and_clothing(window_vspace, num_hangers, flags, hanger_model_id, clothing_model_id, objs, rgen);
 						} // for n
 					}
+					else if (store_type == STORE_PETS) {
+						float const shelf_height(0.85*window_vspace), shelf_depth(0.22*window_vspace);
+						cube_t center_wall(rack);
+						center_wall.z2() = zval + shelf_height + fc_thick; // increase height above top of shelf wall anchors
+						set_wall_width(center_wall, (rack_lo + 0.5*rack_width), 0.38*wall_thickness, !dim);
+						add_shelves_along_walls(center_wall, zval, room_id, light_amt, !dim, store_type, shelf_height, shelf_depth, 0, rgen); // place_inside=0
+						objs.emplace_back(center_wall, TYPE_PG_WALL, room_id, !dim, 0, (RO_FLAG_IN_MALL | RO_FLAG_ADJ_TOP), light_amt, SHAPE_CUBE); // draw top; or TYPE_STAIR_WALL?
+					}
 					else { // add retail shelf racks
 						add_shelf_rack(rack, dim, style_id, rack_id, room_id, RO_FLAG_IN_MALL, item_category+1, 0, rgen); // add_occluders=0
 					}
@@ -1579,11 +1587,11 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	if (store_type == STORE_BOOK) { // add bookcases along side walls
 		cube_t bc_area(room_area);
 		bc_area.expand_in_dim(dim, -0.1*room_len); // shrink ends
-		add_row_of_bookcases(bc_area, zval, room_id, light_amt, dim, 1); // place_inside=1
+		add_row_of_bookcases(bc_area, zval, room_id, light_amt, !dim, 1); // place_inside=1
 	}
 	else if (store_type == STORE_CLOTHING) { // add shelves of TYPE_FOLD_SHIRT along walls; clothes racks are added above
 		float const shelf_height(0.63*window_vspace), shelf_depth(0.25*window_vspace); // set height so that the top shelf is below the camera height
-		add_shelves_along_walls(room_area, zval, room_id, light_amt, dim, store_type, shelf_height, shelf_depth, rgen);
+		add_shelves_along_walls(room_area, zval, room_id, light_amt, !dim, store_type, shelf_height, shelf_depth, 1, rgen); // place_inside=1
 	}
 	else if (store_type == STORE_FURNITURE) {
 		// divide the store up into "rooms": bedrooms, dining rooms, living rooms, etc. and populate these
@@ -1638,7 +1646,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	else if (store_type == STORE_PETS) { // rats, snakes, birds, spiders, fish, etc.
 		// add fish tanks along walls
 		float const shelf_height(0.85*window_vspace), shelf_depth(0.25*window_vspace);
-		add_shelves_along_walls(room_area, zval, room_id, light_amt, dim, store_type, shelf_height, shelf_depth, rgen);
+		add_shelves_along_walls(room_area, zval, room_id, light_amt, !dim, store_type, shelf_height, shelf_depth, 1, rgen); // place_inside=1
 		// add door blocker to avoid placing a fishtank in front of the entry doorway
 		cube_t door_blocker(doorway);
 		door_blocker.expand_by_xy(0.25*window_vspace);
@@ -1646,7 +1654,6 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 		// add a few more fishtanks if there's any extra space along front and back walls
 		unsigned const num_fishtanks(rgen.rand() % 5); // 0-4
 		for (unsigned n = 0; n < num_fishtanks; ++n) {add_fishtank_to_room(rgen, room, zval, room_id, light_amt, objs_start, room_area);}
-		// TODO: cages with rats and birds + terrariums with snakes and spiders
 	}
 	// add ducts and vents in the ceiling
 	unsigned const num_vents(max(2U, (unsigned)round_fp(0.5*room_len/window_vspace))); // per side
@@ -1654,7 +1661,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 	unsigned const skip_dir((room_width < 0.8*room_len) ? rgen.rand_bool() : 2); // skip one side if room is narrow
 	unsigned const duct_flags(RO_FLAG_IN_MALL | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // skip both ends
 	cube_t duct(room);
-	duct.z2() -= get_fc_thickness();
+	duct.z2() -= fc_thick;
 	duct.z1()  = duct.z2() - duct_height;
 	duct.expand_in_dim(dim, -wall_hthick); // shrink
 
@@ -1684,39 +1691,41 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t const &room, float 
 void building_t::add_row_of_bookcases(cube_t const &row, float zval, unsigned room_id, float light_amt, bool dim, bool place_inside) {
 	float const window_vspace(get_window_vspace());
 	float const bc_width(0.45*window_vspace), bc_depth(0.13*window_vspace), bc_height(0.75*window_vspace);
-	float const wall_length(row.get_sz_dim(dim));
+	float const wall_length(row.get_sz_dim(!dim));
 	unsigned const num_bc(max(1, round_fp(wall_length/bc_width)));
 	float const bcase_width(wall_length/num_bc);
 	vect_room_object_t &objs(interior->room_geom->objs);
 
 	for (unsigned d = 0; d < 2; ++d) { // for each side
-		float const back_pos(place_inside ? row.d[!dim][!d] : row.get_center_dim(!dim));
+		float const back_pos(place_inside ? row.d[dim][!d] : row.get_center_dim(dim));
 		cube_t c;
 		set_cube_zvals(c, zval, zval+bc_height);
-		c.d[!dim][!d] = back_pos;
-		c.d[!dim][ d] = back_pos + (d ? 1.0 : -1.0)*bc_depth;
+		c.d[dim][!d] = back_pos;
+		c.d[dim][ d] = back_pos + (d ? 1.0 : -1.0)*bc_depth;
 
 		for (unsigned m = 0; m < num_bc; ++m) {
-			c.d[dim][0] = row.d[dim][0] + m*bcase_width;
-			c.d[dim][1] = c.d[dim][0] + bcase_width;
-			objs.emplace_back(c, TYPE_BCASE, room_id, !dim, d, RO_FLAG_IN_MALL, light_amt);
+			c.d[!dim][0] = row.d[!dim][0] + m*bcase_width;
+			c.d[!dim][1] = c  .d[!dim][0] + bcase_width;
+			objs.emplace_back(c, TYPE_BCASE, room_id, dim, d, RO_FLAG_IN_MALL, light_amt);
 			set_obj_id(objs);
 		}
 	} // for d
 }
 
 void building_t::add_shelves_along_walls(cube_t const &room_area, float zval, unsigned room_id, float light_amt, bool dim,
-	unsigned store_type, float height, float depth, rand_gen_t &rgen)
+	unsigned store_type, float height, float depth, bool place_inside, rand_gen_t &rgen)
 {
 	cube_t c(room_area);
 	set_cube_zvals(c, zval, zval+height);
 
 	for (unsigned d = 0; d < 2; ++d) { // for each side
-		float const back_pos(room_area.d[!dim][!d]);
-		c.d[!dim][!d] = back_pos;
-		c.d[!dim][ d] = back_pos + (d ? 1.0 : -1.0)*depth;
-		unsigned const shelf_flags(RO_FLAG_INTERIOR | RO_FLAG_IN_MALL | RO_FLAG_NONEMPTY); // no empty shelves
-		add_shelves(c, !dim, !d, room_id, light_amt, shelf_flags, store_type, rgen);
+		float const back_pos(room_area.d[dim][bool(d) ^ place_inside]);
+		c.d[dim][!d] = back_pos;
+		c.d[dim][ d] = back_pos + (d ? 1.0 : -1.0)*depth;
+		unsigned shelf_flags(RO_FLAG_INTERIOR | RO_FLAG_IN_MALL);
+		if (!place_inside) {shelf_flags |= RO_FLAG_OPEN | RO_FLAG_NONEMPTY;} // shelf in middle of rooms; flag as open so that back is drawn; no empty shelves
+		else if (rgen.rand_float() < 0.9) {shelf_flags |= RO_FLAG_NONEMPTY;} // shelf against room wall; 10% chance of being empty
+		add_shelves(c, dim, !d, room_id, light_amt, shelf_flags, store_type, rgen);
 	} // for d
 }
 

@@ -1051,11 +1051,12 @@ void building_room_geom_t::add_paint_can(room_object_t const &c) {
 void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	// Note: draw as "small", not because shelves are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
 	// draw back in case it's against a window, even though that shouldn't happen
-	bool const is_house(c.is_house());
+	bool const is_house(c.is_house()), in_room_center(c.is_open());
 	cube_t shelves[4]; // max number of shelves
 	unsigned const num_shelves(get_shelves_for_object(c, shelves));
 	// add wooden shelves
-	unsigned const skip_faces(is_house ? 0 : ~get_face_mask(c.dim, c.dir)); // skip back face at wall if it's a house because it could be against a window (though it really shouldn't be)
+	// skip back face at wall unless it's a house because it could be against a window (though it really shouldn't be), or unless it's a shelf in the middle of a store
+	unsigned const skip_faces((is_house || in_room_center) ? 0 : ~get_face_mask(c.dim, c.dir));
 	rgeom_mat_t &wood_mat(get_wood_material(tscale, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
 	colorRGBA const shelf_color(apply_light_color(c));
 
@@ -1065,7 +1066,10 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	if (c.flags & RO_FLAG_INTERIOR) { // add support brackets to interior shelves; skip them if against an exterior wall in case they intersect a window
 		vector3d const c_sz(c.get_size());
 		float const dz(c_sz.z), length(c_sz[!c.dim]), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.8*thickness);
+		// add a small gap between the back of the bracket and the wall to prevent clipping through building exterior wall, except for shelves in the center of a room
+		float const bracket_wall_offset(in_room_center ? 0.0 : (c.dir ? -1.0 : 1.0)*0.1*bracket_thickness);
 		unsigned const num_brackets(2 + round_fp(0.5*length/dz));
+		unsigned const skip_faces_vbracket(skip_faces | (c.in_mall() ? EF_Z1 : EF_Z12)); // only draw top face for mall shelves since ceiling is high
 		float const b_offset(0.05*dz), b_step((length - 2*b_offset)/(num_brackets-1)), bracket_width(1.8*thickness);
 		rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // shadowed, specular metal; small=1
 		colorRGBA const bracket_color(apply_light_color(c, LT_GRAY));
@@ -1084,9 +1088,9 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 				if (s == 0) { // add vertical brackets on first shelf
 					cube_t vbracket(bracket);
 					copy_zvals(vbracket, c);
-					vbracket.d[c.dim][ c.dir] = c         .d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*0.1*bracket_thickness; // nearly against the wall
+					vbracket.d[c.dim][ c.dir] = c         .d[c.dim][c.dir] + bracket_wall_offset;
 					vbracket.d[c.dim][!c.dir] = shelves[s].d[c.dim][c.dir]; // against the shelf
-					metal_mat.add_cube_to_verts_untextured(vbracket, bracket_color, (skip_faces | EF_Z12)); // skip top/bottom faces, maybe back
+					metal_mat.add_cube_to_verts_untextured(vbracket, bracket_color, skip_faces_vbracket); // skip top/bottom faces, maybe back
 				}
 				bracket.translate_dim(!c.dim, b_step);
 			} // for b

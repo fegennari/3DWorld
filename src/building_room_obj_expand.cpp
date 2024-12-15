@@ -592,13 +592,17 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 
 					for (unsigned n = 0; n < num_fishtanks; ++n) {
 						float const height((top_shelf ? 1.2 : 1.0)*rgen.rand_uniform(0.78, 0.88)*shelf_clearance);
-						sz[ c.dim] = 0.5*rgen.rand_uniform(0.84, 0.96)*shelf_depth; // set depth
+						sz[ c.dim] = 0.5*rgen.rand_uniform(0.86, 0.98)*shelf_depth; // set depth
 						sz[!c.dim] = 0.5*min(0.5f*shelf_len, rgen.rand_uniform(1.6, 2.8)*shelf_depth); // set length
 						gen_xy_pos_for_cube_obj(tank, S, sz, height, rgen);
 						if (has_bcube_int(tank, cubes)) continue;
 						add_fishtank(tank, C.room_id, C.light_amt, c.dim, !c.dir, 1, objects, rgen); // in_pet_store=1
+						tank.expand_in_dim(!c.dim, 0.05*shelf_depth); // add a bit of extra spacing between tanks
 						cubes.push_back(tank);
 					} // for n
+				}
+				else {
+					// TODO: cages with rats and birds + terrariums with snakes and spiders
 				}
 			}
 			else {assert(0);} // unsupported store type
