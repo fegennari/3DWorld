@@ -3374,7 +3374,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	set_cube_zvals(pillar, zval, room.z2()-get_fc_thickness()); // up to the ceiling
 	unsigned const objs_start(objs.size()), style_id(rgen.rand()); // same style for each rack
 	unsigned rack_id(0);
-	bool const skip_middle_row(nrows & 1);
+	bool const skip_middle_row(nrows & 1), tall_retail(has_tall_retail());
 	for (unsigned d = 0; d < 2; ++d) {interior->room_geom->shelf_rack_occluders[d].reserve((nrows - skip_middle_row)*nracks);}
 	//vect_room_object_t temp_objs;
 	
@@ -3409,22 +3409,12 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 			if (!was_shortened && r > 0) { // place a pillar at the end of the rack
 				pillar.d[dim][0] = start - pillar_width;
 				pillar.d[dim][1] = start;
-				assert(pillar.is_strictly_normalized());
-				objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, 0, 0, 0);
-
-				if (has_tall_retail()) { // add bare top part of pillars
-					objs.back().flags |= RO_FLAG_ADJ_TOP; // must draw the top surface
-					cube_t pillar_top(pillar);
-					objs.back().z2() = pillar_top.z1() = zval + fc_gap; // prev was bottom, next is top
-					pillar_top.expand_by_xy(-0.1*wall_thickness); // slight shrink
-					assert(pillar.is_strictly_normalized());
-					objs.emplace_back(pillar_top, TYPE_OFF_PILLAR, room_id, 0, 0, RO_FLAG_ADJ_HI); // flag as upper/concrete
-					pillars.push_back(pillar); // needed for upper glass floors
-				}
+				add_retail_pillar(pillar, zval, room_id, tall_retail);
+				if (tall_retail) {pillars.push_back(pillar);} // needed for upper glass floors
 			}
 		} // for r
 	} // for n
-	if (has_tall_retail()) { // maybe add a pair of escalators
+	if (tall_retail) { // maybe add a pair of escalators
 		bool const add_glass_floor = 1;
 		float const floor_thickness(get_floor_thickness()), e_height(room.dz() - floor_thickness), delta_z(e_height - get_floor_ceil_gap());
 		float const e_length(1.0*delta_z + 2.0*door_width); // upward at 45 degree angle + entrance/exit
@@ -3605,6 +3595,20 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 			break;
 		}
 	}
+}
+
+void building_t::add_retail_pillar(cube_t const &pillar, float zval, unsigned room_id, bool is_tall) {
+	assert(pillar.is_strictly_normalized());
+	vect_room_object_t &objs(interior->room_geom->objs);
+	objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, 0, 0, 0);
+	if (!is_tall) return;
+	// add bare top part of pillars
+	objs.back().flags |= RO_FLAG_ADJ_TOP; // must draw the top surface
+	cube_t pillar_top(pillar);
+	objs.back().z2() = pillar_top.z1() = zval + get_floor_ceil_gap(); // prev was bottom, next is top
+	pillar_top.expand_by_xy(-0.1*get_wall_thickness()); // slight shrink
+	assert(pillar_top.is_strictly_normalized());
+	objs.emplace_back(pillar_top, TYPE_OFF_PILLAR, room_id, 0, 0, RO_FLAG_ADJ_HI); // flag as upper/concrete
 }
 
 void building_t::add_U_stair_landing_lights(stairwell_t const &s, unsigned room_id, unsigned light_ix, float floor_zval) {

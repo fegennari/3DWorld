@@ -1388,7 +1388,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	assert(!doorway.is_all_zeros()); // must be found
 	// place items
 	bool const dim(doorway.dy() < doorway.dx()), dir(room.get_center_dim(dim) < doorway.get_center_dim(dim)); // points from room center toward doorway; doorway wall
-	bool const mall_dim(interior->extb_wall_dim), is_end_store(dim == mall_dim);
+	bool const mall_dim(interior->extb_wall_dim), is_end_store(dim == mall_dim), tall_retail(floor_spacing > 1.5*window_vspace);
 	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim));
 	room_t const &mall_room(get_mall_concourse());
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -1508,8 +1508,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 			cube_t rack, pillar, pillar_area(room);
 			set_cube_zvals(rack,   zval, (zval + SHELF_RACK_HEIGHT_FS*window_vspace));
 			set_cube_zvals(pillar, zval, room.z2()-fc_thick); // up to the ceiling
-			pillar_area.expand_in_dim( dim, -0.2*room_len  ); // center 60% of room
-			pillar_area.expand_in_dim(!dim, -0.2*room_width);
+			pillar_area.expand_in_dim(dim, -0.25*room_len); // center 50% of room
 			unsigned const style_id(rgen.rand()); // same style for each rack
 			unsigned rack_id(0);
 
@@ -1590,10 +1589,10 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 					else { // add retail shelf racks
 						add_shelf_rack(rack, dim, style_id, rack_id, room_id, RO_FLAG_IN_MALL, item_category+1, 0, rgen); // add_occluders=0
 					}
-					if (r > 0) {
-						pillar.d[dim][0] = start - pillar_width;
-						pillar.d[dim][1] = start;
-						if (pillar_area.contains_cube_xy(pillar)) {objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, 0, 0, 0);}
+					if (n > 0 && n+1 < nrows && (n & 1)) { // use alternating/odd rows, skipping ends
+						pillar.d[dim][0] = pillar.d[dim][1] = rack.d[dim][dir]; // end of back rack facing front of store - less likely to be blocked by checkout counter
+						pillar.d[dim][dir] += (dir ? 1.0 : -1.0)*pillar_width;
+						if (pillar_area.contains_cube_xy(pillar)) {add_retail_pillar(pillar, zval, room_id, tall_retail);}
 					}
 				} // for r
 			} // for n
