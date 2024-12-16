@@ -1667,15 +1667,27 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 						// add wall at head of bed
 						room_object_t const &bed(objs[bed_ix]); // should be the first object placed
 						assert(bed.type == TYPE_BED);
+						bool const wdim(bed.dim), wdir(bed.dir);
 						cube_t wall(sub_room);
-						float const wall_pos(sub_room.d[bed.dim][bed.dir]);
-						wall.d[bed.dim][!bed.dir] = wall_pos;
-						wall.d[bed.dim][ bed.dir] = wall_pos + (bed.dir ? 1.0 : -1.0)*0.5*wall_thickness;
+						float const wall_pos(sub_room.d[wdim][wdir]);
+						wall.d[wdim][!wdir] = wall_pos;
+						wall.d[wdim][ wdir] = wall_pos + (wdir ? 1.0 : -1.0)*0.5*wall_thickness; // shift outward from room
 
 						// only if interior; skip if overlaps the room wall; check for back hallway doorway
 						if (room.contains_cube_xy_exp(wall, wall_thickness) && !is_cube_close_to_doorway(wall, sub_room, 0.0, 1, 1)) {
-							objs.emplace_back(wall, TYPE_PG_WALL, room_id, !dim, 0, (RO_FLAG_IN_MALL | RO_FLAG_ADJ_TOP), light_amt, SHAPE_CUBE); // draw top
-							// TYPE_PICTURE?
+							objs.emplace_back(wall, TYPE_PG_WALL, room_id, wdim, wdir, (RO_FLAG_IN_MALL | RO_FLAG_ADJ_TOP), light_amt, SHAPE_CUBE); // draw top
+							
+							if (rgen.rand_float() < 0.67) { // add a picture on the wall 67% of the time
+								float const height(window_vspace*rgen.rand_uniform(0.28, 0.42));
+								float const width(min(height, 0.4f*wall.get_sz_dim(!wdim))*rgen.rand_uniform(1.5, 1.8)); // width > height
+								cube_t c;
+								set_wall_width(c, (zval + rgen.rand_uniform(0.54, 0.62)*window_vspace), 0.5*height, 2); // Z
+								set_wall_width(c, wall.get_center_dim(!wdim), 0.5*width, !wdim);
+								c.d[wdim][ wdir] = wall_pos;
+								c.d[wdim][!wdir] = wall_pos + (wdir ? -1.0 : 1.0)*0.04*wall_thickness; // shift into room
+								objs.emplace_back(c, TYPE_PICTURE, room_id, wdim, !wdir, RO_FLAG_NOCOLL, light_amt); // picture faces dir opposite the wall
+								set_obj_id(objs);
+							}
 						}
 					}
 				}
@@ -1708,7 +1720,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 					add_bookcase_to_room(rgen, sub_room, zval, room_id, light_amt, start_ix, 0);
 				}
 				if (rtype == RTYPE_BED || rtype == RTYPE_LIVING || rtype == RTYPE_DINING) { // maybe add a rug
-					if (rgen.rand_bool()) {add_rug_to_room(rgen, sub_room, zval, room_id, light_amt, start_ix);} // 50% of the time
+					if (rgen.rand_float() < 0.75) {add_rug_to_room(rgen, sub_room, zval, room_id, light_amt, start_ix);} // 75% of the time
 				}
 			} // for col
 		} // for row
