@@ -193,6 +193,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_STORE_GATE] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2,  0.0,  0.0,   "store gate");
 	bldg_obj_types[TYPE_THEFT_SENS] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 100.0, 30.0,  "theft sensor"); // should this be a large object to avoid updating sm_static with lights?
 	bldg_obj_types[TYPE_ELEC_WIRE ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 0.0,   0.0,   "electrical wire");
+	bldg_obj_types[TYPE_ERASER    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 3.0,   0.05,  "whiteboard eraser");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -242,7 +243,8 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_ROACH     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 0.0,   0.01,  "cockroach");
 	bldg_obj_types[TYPE_SPIDER    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 0, 0, 0.0,   0.1,   "spider");
 	bldg_obj_types[TYPE_SNAKE     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 0, 0, 50.00, 4.0,   "snake");
-	bldg_obj_types[TYPE_INSECT    ] = bldg_obj_type_t(0, 0, 0, 0, 0, 1, 0, 0.0,   0.01,  "insect");
+	bldg_obj_types[TYPE_INSECT    ] = bldg_obj_type_t(0, 0, 0, 0, 0, 1, 0, 0.0,   0.01,  "insect"); // not actually added as an object
+	bldg_obj_types[TYPE_FISH      ] = bldg_obj_type_t(0, 0, 0, 0, 0, 1, 0, 10.0,  0.1,   "fish"); // not actually added as an object
 	//                                                pc ac rc pu at im ls value  weight  name [capacity]
 }
 
@@ -698,7 +700,7 @@ public:
 		if (type != TYPE_BOOK && type != TYPE_FIRE_EXT && type != TYPE_LG_BALL && type != TYPE_TRASH && type !=TYPE_BOTTLE && type != TYPE_PAPER && type != TYPE_PEN &&
 			type != TYPE_PENCIL && type != TYPE_HANGER_ROD && type != TYPE_TPROLL && type != TYPE_MARKER && type != TYPE_BUTTON && type != TYPE_PLATE && type != TYPE_TAPE &&
 			type != TYPE_FEXT_MOUNT && type != TYPE_FEXT_SIGN && type != TYPE_PIZZA_BOX && type != TYPE_PIZZA_TOP && type != TYPE_POOL_BALL && type != TYPE_DRINK_CAN &&
-			type != TYPE_KEY && type != TYPE_HANGER && type != TYPE_PADLOCK && type != TYPE_BANANA && type != TYPE_BAN_PEEL)
+			type != TYPE_KEY && type != TYPE_HANGER && type != TYPE_PADLOCK && type != TYPE_BANANA && type != TYPE_BAN_PEEL && type != TYPE_ELEC_WIRE && type != TYPE_ERASER)
 		{
 			rooms_stolen_from.insert(obj.room_id); // only if was_expanded?
 		}
@@ -2092,6 +2094,9 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 			if (!apply_paint(player_pos, dir, obj.color, emissive_color_id, obj.type)) return 0;
 			player_inventory.mark_last_item_used();
 		}
+		else if (obj.type == TYPE_ERASER) {
+			// TODO: erase marker, but only on whiteboards
+		}
 		else if (obj.type == TYPE_TAPE) {
 			if (player_in_water == 2) return 0; // can't use when fully underwater
 			tape_manager.toggle_use(obj, this);
@@ -2571,7 +2576,7 @@ bool room_object_t::can_use() const { // excludes dynamic objects
 	if (is_medicine()) return 1; // medicine can be carried in the inventory and used later
 	if (type == TYPE_TPROLL) {return (taken_level == 0);} // can only use the TP roll, not the holder
 	return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BOOK || type == TYPE_PHONE || type == TYPE_TAPE || type == TYPE_RAT ||
-		type == TYPE_FIRE_EXT || type == TYPE_CANDLE /*|| type == TYPE_FLASHLIGHT*/);
+		type == TYPE_FIRE_EXT || type == TYPE_CANDLE /*|| type == TYPE_FLASHLIGHT*/); // TODO: TYPE_ERASER
 }
 bool room_object_t::can_place_onto() const { // Note: excludes flat objects such as TYPE_RUG and TYPE_BLANKET
 	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_COUNTER || type == TYPE_KSINK ||

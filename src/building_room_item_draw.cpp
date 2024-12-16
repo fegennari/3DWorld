@@ -1061,6 +1061,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_CABINET: add_cabinet (c, tscale, 0, 1); break; // sm
 		case TYPE_FCABINET: add_filing_cabinet(c,  0, 1); break; // sm
 		case TYPE_STAPLER: add_stapler(c); break;
+		case TYPE_ERASER:  add_eraser (c); break;
 		case TYPE_FEXT_MOUNT: add_fire_ext_mount(c); break;
 		case TYPE_FEXT_SIGN:  add_fire_ext_sign (c); break;
 		case TYPE_TEESHIRT:   add_teeshirt(c); break;
@@ -1447,6 +1448,9 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 				}
 			}
 		}
+	}
+	else if (c.type == TYPE_ERASER) {
+		// TODO
 	}
 	else if (c.type == TYPE_FLASHLIGHT) {
 		assert(0); // not yet implemented because the flashlight is triggered by the mouse but not actually drawn

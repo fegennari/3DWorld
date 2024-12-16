@@ -2183,6 +2183,10 @@ void building_room_geom_t::add_stapler(room_object_t const &c) {
 	mat.add_cube_to_verts_untextured(metal, apply_light_color(c, LT_GRAY), EF_Z12);
 }
 
+void building_room_geom_t::add_eraser(room_object_t const &c) { // for now, a single cube
+	get_untextured_material(0, 0, 1).add_cube_to_verts_untextured(c, apply_light_color(c), EF_Z1); // unshadowed, small
+}
+
 void building_room_geom_t::add_fire_ext_mount(room_object_t const &c) {
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
 	colorRGBA const color(apply_light_color(c));
