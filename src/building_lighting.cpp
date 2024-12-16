@@ -1456,7 +1456,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	vect_cube_t cuts_above, cuts_below, cuts_above_nonvis; // only used when player is in the building
 	vect_cube_with_ix_t moving_objs;
 	cube_t floor_above_region, floor_below_region; // filters for lights on the floors above/below based on stairs
-	bool saw_open_stairs(0);
+	bool saw_open_stairs(0), camera_in_mall(0);
 	ped_bcubes.clear();
 	bool const track_lights(0 && camera_in_building && !sec_camera_mode && animate2); // used for debugging
 	bool const camera_above_ground_floor(camera_z > ground_floor_z2), camera_feet_above_basement(player_feet_zval >= ground_floor_z1);
@@ -1479,6 +1479,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			camera_in_hallway = room.is_hallway;
 			check_ramp        = (has_pg_ramp() && !interior->ignore_ramp_placement);
 			camera_room_tall  = (room.is_single_floor && camera_bs.z > room.z1() + window_vspacing);
+			camera_in_mall    = room.is_mall_or_store();
 			if (room.is_single_floor) {up_light_zmin = max(camera_bs.z-window_vspacing, room.z1());} // player can see upward lights on walls when in a tall ceiling room
 			if (show_room_name) {lighting_update_text = get_room_name(camera_rot, room_ix, camera_floor);}
 			// stairs and ramps only allow light to pass if visible to the player
@@ -1600,25 +1601,23 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (camera_near_building && !walkway_only) { // handle light emitting objects in the player's building
-			bool was_added(0);
+			if ((i->type == TYPE_LAVALAMP || i->type == TYPE_FISHTANK) && i->is_light_on()) { // should we do an occlusion query?
+				room_t const &room(get_room(i->room_id)); // should we clip to the current floor in Z?
+				if (camera_room_tall && camera_room == (int)i->room_id) {} // special case for player in a tall room - skip the continue case below
+				else if (camera_in_mall && room.is_store()) {} // special case for store visible from another floor of the mall
+				else if (int((camera_bs.z - ground_floor_z1)/window_vspacing) != int((i->zc() - ground_floor_z1)/window_vspacing)) continue; // different floor
 
-			if (i->type == TYPE_LAVALAMP && i->is_light_on()) { // should we do an occlusion query?
-				if (camera_room_tall && camera_room == (int)i->room_id) {} // special case for player in a tall room - skip the continue case below
-				else if (int((camera_bs.z - ground_floor_z1)/window_vspacing) != int((i->zc() - ground_floor_z1)/window_vspacing)) continue; // different floor
-				if (!add_dlight_if_visible(i->get_cube_center(), 10.0*i->get_radius(), colorRGBA(1.0, 0.75, 0.25), xlate, lights_bcube)) continue;
-				was_added = 1;
-			}
-			else if (i->type == TYPE_FISHTANK && i->is_light_on()) { // should we do an occlusion query?
-				if (camera_room_tall && camera_room == (int)i->room_id) {} // special case for player in a tall room - skip the continue case below
-				else if (int((camera_bs.z - ground_floor_z1)/window_vspacing) != int((i->zc() - ground_floor_z1)/window_vspacing)) continue; // different floor
-				if (!add_dlight_if_visible(cube_top_center(*i), 1.25*(i->dx() + i->dy()), colorRGBA(0.8, 0.9, 1.0), xlate, lights_bcube, -plus_z, 0.3)) continue; // pointed downward
-				was_added = 1;
-			}
-			if (was_added) {
-				cube_t room(get_room(i->room_id)); // should we clip to the current floor in Z?
+				if (i->type == TYPE_LAVALAMP) {
+					if (!add_dlight_if_visible(i->get_cube_center(), 10.0*i->get_radius(), colorRGBA(1.0, 0.75, 0.25), xlate, lights_bcube)) continue;
+				}
+				else if (i->type == TYPE_FISHTANK) { // pointed downward
+					if (!add_dlight_if_visible(cube_top_center(*i), 1.25*(i->dx() + i->dy()), colorRGBA(0.8, 0.9, 1.0), xlate, lights_bcube, -plus_z, 0.3)) continue;
+				}
 				assert(room.contains_pt(dl_sources.back().get_pos()));
-				room.expand_by_xy(wall_thickness);
-				dl_sources.back().set_custom_bcube(room);
+				cube_t clip_cube(room);
+				// expand slightly less than half wall thickness to avoid leaking through a wall for pet stores, but a full wall width to get exterior doors for houses
+				clip_cube.expand_by_xy((room.is_store() ? 0.4 : 1.0)*wall_thickness);
+				dl_sources.back().set_custom_bcube(clip_cube);
 				continue;
 			}
 		}
