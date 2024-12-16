@@ -2184,7 +2184,7 @@ void building_room_geom_t::add_stapler(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_eraser(room_object_t const &c) { // for now, a single cube
-	get_untextured_material(0, 0, 1).add_cube_to_verts_untextured(c, apply_light_color(c), EF_Z1); // unshadowed, small
+	get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(c, apply_light_color(c), EF_Z1); // shadowed, small
 }
 
 void building_room_geom_t::add_fire_ext_mount(room_object_t const &c) {
@@ -2932,6 +2932,13 @@ void building_room_geom_t::add_blanket(room_object_t const &c) {
 	get_material(tid_nm_pair_t(c.get_rug_tid(), 0.0), 0, 0, 1).add_cube_to_verts(c, c.color, c.get_llc(), ~EF_Z2, swap_tex_st); // only draw top/+z face; small=1
 }
 
+cube_t get_whiteboard_marker_ledge(room_object_t const &c) {
+	cube_t ledge(c);
+	ledge.z2() = ledge.z1() + 0.016*c.dz(); // along the bottom edge
+	ledge.d[c.dim][!c.dir] = ledge.d[c.dim][c.dir]; // flush with the face, so that it doesn't extend through the ext wall of a windowless building (should we clip the bcube?)
+	ledge.d[c.dim][ c.dir] += (c.dir ? 1.5 : -1.5)*c.get_depth(); // extrude outward
+	return ledge;
+}
 void building_room_geom_t::add_picture(room_object_t const &c) { // also whiteboards; not affected by room color
 	bool const whiteboard(c.type == TYPE_WBOARD);
 	int picture_tid(WHITE_TEX);
@@ -2960,11 +2967,7 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 	frame_mat.add_cube_to_verts_untextured(frame, (whiteboard ? GRAY : BLACK), skip_faces);
 	
 	if (whiteboard) { // add a marker ledge
-		cube_t ledge(c);
-		ledge.z2() = ledge.z1() + 0.016*c.dz(); // along the bottom edge
-		ledge.d[c.dim][!c.dir] = ledge.d[c.dim][c.dir]; // flush with the face, so that it doesn't extend through the ext wall of a windowless building (should we clip the bcube?)
-		ledge.d[c.dim][ c.dir] += (c.dir ? 1.5 : -1.5)*c.get_depth(); // extrude outward
-		get_untextured_material(1).add_cube_to_verts_untextured(ledge, GRAY, (1 << (2*(2-c.dim) + !c.dir))); // shadowed
+		get_untextured_material(1).add_cube_to_verts_untextured(get_whiteboard_marker_ledge(c), GRAY, (1 << (2*(2-c.dim) + !c.dir))); // shadowed
 	}
 	else if (c.rotates()) { // apply a random rotation
 		float const angle(0.2f*(fract(PI*c.obj_id + 1.61803f*c.item_flags) - 0.5f)); // random rotation based on obj_id and item flags

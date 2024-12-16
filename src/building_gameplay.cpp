@@ -1802,7 +1802,7 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 
 		for (unsigned i = obj_id+1; i < ix_end; ++i) {
 			room_object_t &c(objs[i]);
-			if (c.type == TYPE_TRASH && old_obj.contains_pt(c.get_cube_center())) {c.remove();} // remove trash as well
+			if (c.type == TYPE_TRASH && old_obj.contains_pt(c.get_cube_center())) {invalidate_draw_data_for_obj(c); c.remove();} // remove trash as well
 		}
 	}
 	if (type == TYPE_BUTTON && old_obj.in_elevator()) {
@@ -1822,6 +1822,15 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	else if (type == TYPE_BUTTON || type == TYPE_SWITCH || type == TYPE_CLOCK || ((type == TYPE_MONITOR || type == TYPE_TV) && old_obj.is_hanging())) {
 		float const wire_thickness(min(0.5f*building.get_trim_thickness(), 0.25f*old_obj.get_depth()));
 		replace_with_hanging_wires(obj, old_obj, wire_thickness, 0); // vertical=0
+	}
+	else if (type == TYPE_WBOARD) { // remove marker and eraser
+		unsigned const ix_end(min(size_t(obj_id+3U), objs.size())); // includes marker and eraser
+
+		for (unsigned i = obj_id+1; i < ix_end; ++i) {
+			room_object_t &c(objs[i]);
+			if (c.type == TYPE_MARKER || c.type == TYPE_ERASER) {invalidate_draw_data_for_obj(c); c.remove();}
+			else if (c.type != TYPE_BLOCKER) {break;}
+		}
 	}
 	if (is_light) {
 		replace_with_hanging_wires(obj, old_obj, 0.5*building.get_trim_thickness(), !(old_obj.flags & RO_FLAG_ADJ_HI));

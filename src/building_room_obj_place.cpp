@@ -18,6 +18,7 @@ void get_pool_ball_rot_matrix(room_object_t const &c, xform_matrix &rot_matrix);
 float get_cockroach_height_from_radius(float radius);
 colorRGBA get_light_color_temp(float t);
 void rotate_obj_cube(cube_t &c, cube_t const &bc, bool in_dim, bool dir);
+cube_t get_whiteboard_marker_ledge(room_object_t const &c);
 
 
 class door_path_checker_t {
@@ -4529,6 +4530,32 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 				}
 				assert(c.is_strictly_normalized());
 				objs.emplace_back(c, TYPE_WBOARD, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt); // whiteboard faces dir opposite the wall
+
+				if (rgen.rand_float() < 0.8) { // add marker and maybe eraser
+					float const marker_hlen(0.5*0.06*floor_height), marker_radius(0.005*floor_height);
+					cube_t const ledge(get_whiteboard_marker_ledge(objs.back()));
+
+					if (marker_hlen < 0.1*wb_len && marker_radius < 0.4*ledge.get_sz_dim(dim)) { // have space for a marker
+						float const end_space(1.1*marker_hlen), side_space(1.1*marker_radius);
+						cube_t marker;
+						set_cube_zvals(marker, ledge.z2(), ledge.z2()+2.0*marker_radius);
+						set_wall_width(marker, rgen.rand_uniform(ledge.d[!dim][0]+end_space,  ledge.d[!dim][1]-end_space ), marker_hlen,  !dim);
+						set_wall_width(marker, rgen.rand_uniform(ledge.d[ dim][0]+side_space, ledge.d[ dim][1]-side_space), marker_radius, dim);
+						objs.emplace_back(marker, TYPE_MARKER, room_id, !dim, rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, marker_colors[rgen.rand()&7]);
+						float const eraser_hlen(0.5*0.055*floor_height), eraser_hwidth(0.5*0.025*floor_height), eraser_height(0.012*floor_height);
+
+						if (eraser_hlen < 0.1*wb_len && eraser_hwidth < 0.48*ledge.get_sz_dim(dim) && rgen.rand_float() < 0.7) { // add eraser
+							cube_t eraser;
+							set_cube_zvals(eraser, ledge.z2(), ledge.z2()+eraser_height);
+							set_wall_width(eraser, rgen.rand_uniform(ledge.d[!dim][0]+eraser_hlen,   ledge.d[!dim][1]-eraser_hlen  ), eraser_hlen,  !dim);
+							set_wall_width(eraser, rgen.rand_uniform(ledge.d[ dim][0]+eraser_hwidth, ledge.d[ dim][1]-eraser_hwidth), eraser_hwidth, dim);
+
+							if (!eraser.intersects(marker)) { // skip if eraser intersects marker
+								objs.emplace_back(eraser, TYPE_ERASER, room_id, !dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, BKGRAY);
+							}
+						}
+					}
+				}
 				if (!is_conference || rgen.rand_bool()) return 1; // only need to add one, except for conference rooms
 			} // for dir
 		} // for dim
