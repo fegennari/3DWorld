@@ -2397,16 +2397,28 @@ bool building_t::add_fishtank_to_room(rand_gen_t &rgen, room_t const &room, floa
 	return 1;
 }
 void building_room_geom_t::add_fishtank(cube_t const &tank, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool in_pet_store,
-	vect_room_object_t &objects, rand_gen_t &rgen)
+	vect_room_object_t &objects, rand_gen_t &rgen, unsigned animal_type)
 {
 	unsigned flags(RO_FLAG_NOCOLL);
 
-	if (in_pet_store) {flags |= RO_FLAG_ADJ_TOP | RO_FLAG_LIT;} // pet store fishtanks always have a lid and are lit
+	if (in_pet_store) {
+		bool is_lit(0);
+
+		switch (animal_type) {
+		case TYPE_FISH  : is_lit = 1; break;
+		case TYPE_RAT   : is_lit = 1; break;
+		case TYPE_SNAKE : is_lit = (rgen.rand_float() < 0.6); break;
+		case TYPE_SPIDER: is_lit = (rgen.rand_float() < 0.4); break;
+		default: assert(0); // unsupported
+		}
+		flags |= RO_FLAG_ADJ_TOP; // pet store fishtanks always have a lid
+		if (is_lit) {flags |= RO_FLAG_LIT;}
+	}
 	else if (rgen.rand_float() < 0.80) { // add a lid 80% of the time
 		flags |= RO_FLAG_ADJ_TOP;
 		if (rgen.rand_float() < 0.85) {flags |= RO_FLAG_LIT;} // light is on 85% of the time
 	}
-	objects.emplace_back(tank, TYPE_FISHTANK, room_id, dim, dir, flags, tot_light_amt);
+	objects.emplace_back(tank, TYPE_FISHTANK, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, WHITE, animal_type); // store animal_type in item_flags
 	set_obj_id(objects);
 }
 

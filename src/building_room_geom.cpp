@@ -5351,8 +5351,9 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 	unsigned const back_wall_ix(2*(!c.dim) + (!c.dir));
 	if (back_wall_ix > 0) {swap(sides[back_wall_ix], sides[0]);} // back wall should be first for improved back-to-front alpha blending
 	for (unsigned n = 0; n < 4; ++n) {trans_mat.add_cube_to_verts_untextured(sides[n], glass_color, EF_Z12);} // skip top and bottom
+	unsigned const animal_type(c.item_flags);
 	
-	if (!c.is_broken()) { // draw water
+	if (!c.is_broken() && animal_type == TYPE_FISH) { // draw water if there are fish
 		cube_t water(c);
 		water.z2() -= 0.1*height; // 90% filled
 		trans_mat.add_cube_to_verts_untextured(water, apply_light_color(c, colorRGBA(0.7, 0.85, 1.0, 0.15)), ~EF_Z2); // top surface
@@ -5361,7 +5362,17 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 	cube_t gravel(glass);
 	gravel.z2() = glass.z1() + 0.05*height; // shallow
 	gravel.expand_by_xy(-0.1*glass_thickness); // shrink slightly to prevent Z-fighting
-	rgeom_mat_t &gravel_mat(get_material(tid_nm_pair_t(get_texture_by_name("gravel.jpg"), 3.0/height), 1));
+	int tid(-1);
+	float tscale(1.0);
+	
+	switch (animal_type) {
+	case TYPE_FISH  : tid = get_texture_by_name("gravel.jpg"); tscale = 3.0; break;
+	case TYPE_RAT   : tid = DIRT_TEX; break; // TODO: wood chips
+	case TYPE_SNAKE : tid = DIRT_TEX; break; // TODO: wood chips
+	case TYPE_SPIDER: tid = DIRT_TEX; break;
+	default: assert(0); // unsupported
+	}
+	rgeom_mat_t &gravel_mat(get_material(tid_nm_pair_t(tid, tscale/height), 1));
 	gravel_mat.add_cube_to_verts(gravel, apply_light_color(c, WHITE), c.get_llc(), EF_Z1);
 }
 

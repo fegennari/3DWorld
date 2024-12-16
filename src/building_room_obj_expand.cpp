@@ -588,6 +588,8 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 			else if (c.item_flags == STORE_PETS) {
 				if (add_models_mode) { // fishtanks count as models since they have fish models
 					unsigned const num_fishtanks(round_fp(0.4*rgen.rand_uniform(0.5, 1.0)*ld_ratio));
+					unsigned const animals[4] = {TYPE_FISH, TYPE_RAT, TYPE_SNAKE, TYPE_SPIDER};
+					unsigned const animal_type(animals[rgen.rand() & 3]);
 					cube_t tank;
 
 					for (unsigned n = 0; n < num_fishtanks; ++n) {
@@ -596,7 +598,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 						sz[!c.dim] = 0.5*min(0.5f*shelf_len, rgen.rand_uniform(1.6, 2.8)*shelf_depth); // set length
 						gen_xy_pos_for_cube_obj(tank, S, sz, height, rgen);
 						if (has_bcube_int(tank, cubes)) continue;
-						add_fishtank(tank, C.room_id, C.light_amt, c.dim, !c.dir, 1, objects, rgen); // in_pet_store=1
+						add_fishtank(tank, C.room_id, C.light_amt, c.dim, !c.dir, 1, objects, rgen, animal_type); // in_pet_store=1
 						tank.expand_in_dim(!c.dim, 0.05*shelf_depth); // add a bit of extra spacing between tanks
 						cubes.push_back(tank);
 					} // for n
