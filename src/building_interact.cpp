@@ -2265,6 +2265,7 @@ bool building_t::is_obj_pos_valid(room_object_t const &obj, bool keep_in_room, b
 		if (has_mall() && interior->mall_info->ent_stairs.intersects(obj_exp)) return 0;
 	}
 	if (has_bcube_int(obj, interior->elevators) || has_bcube_int(obj, interior->escalators)) return 0;
+	if (overlaps_or_adj_int_window(obj)) return 0;
 	return 1;
 }
 

@@ -2247,7 +2247,7 @@ bool building_t::overlaps_any_placed_obj(cube_t const &c) const { // Note: inclu
 bool building_t::overlaps_or_adj_int_window(cube_t const &c) const {
 	if (!interior || interior->int_windows.empty()) return 0;
 	cube_t c_exp(c);
-	c_exp.expand_by_xy(get_wall_thickness());
+	c_exp.expand_by_xy(get_wall_thickness()); // account for frame thickness
 	return has_bcube_int(c_exp, interior->int_windows);
 }
 

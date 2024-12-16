@@ -1716,7 +1716,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		// add a few more fishtanks if there's any extra space along front and back walls
 		unsigned const num_fishtanks(rgen.rand() % 5); // 0-4
 		cube_t place_area(room_area);
-		place_area.d[dim][dir] -= (dir ? 1.0 : -1.0)*2.0*get_trim_thickness(); // shink for front window frame clearance
+		place_area.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.5*wall_thickness; // shink for front window frame clearance
 		for (unsigned n = 0; n < num_fishtanks; ++n) {add_fishtank_to_room(rgen, room, zval, room_id, light_amt, objs_start, place_area);}
 	}
 	// add ducts and vents in the ceiling
