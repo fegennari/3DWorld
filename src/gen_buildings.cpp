@@ -2785,7 +2785,7 @@ class building_creator_t {
 	}
 
 	bool check_valid_building_placement(building_params_t const &params, building_t const &b, vect_cube_t const &avoid_bcubes, cube_t const &avoid_bcubes_bcube,
-		float min_building_spacing, unsigned plot_ix, bool non_city_only, bool use_city_plots, bool check_plot_coll)
+		float min_building_spacing, unsigned plot_ix, bool non_city_only, bool use_city_plots, bool check_plot_coll) const
 	{
 		float const expand_val(b.is_rotated() ? 0.05 : 0.1); // expand by 5-10% (relative - multiplied by building size)
 		vector3d const b_sz(b.bcube.get_size());
@@ -2797,7 +2797,6 @@ class building_creator_t {
 		if (use_city_plots) { // use city blocks
 			assert(plot_ix < bix_by_plot.size());
 			if (check_for_overlaps(bix_by_plot[plot_ix], test_bc, b, expand_val, min_building_spacing)) return 0;
-			bix_by_plot[plot_ix].push_back(buildings.size());
 		}
 		else if (check_plot_coll && !avoid_bcubes.empty() && avoid_bcubes_bcube.intersects_xy(test_bc) &&
 			has_bcube_int_xy(test_bc, avoid_bcubes, params.sec_extra_spacing)) // extra expand val
@@ -3076,6 +3075,8 @@ public:
 				float const z_sea_level(center.z - def_water_level);
 				if (z_sea_level < 0.0) break; // skip underwater buildings, failed placement
 				if (z_sea_level < mat.min_alt || z_sea_level > mat.max_alt) break; // skip bad altitude buildings, failed placement
+				unsigned const cur_bix(buildings.size());
+				if (use_city_plots) {bix_by_plot[city_block_ix].push_back(cur_bix);} // must be done after checking elevation
 				float const hmin(use_city_plots ? pos_range.z1() : 0.0), hmax(use_city_plots ? pos_range.z2() : 1.0);
 				assert(hmin <= hmax);
 				float const height_range(mat.sz_range.dz());
@@ -3090,7 +3091,7 @@ public:
 				mat.roof_color.gen_color(b.roof_color, rgen_mat);
 				if (use_city_plots) {b.street_dir = (pref_dir ? pref_dir : get_street_dir(b.bcube, pos_range));}
 				if (city_only     ) {b.is_in_city = 1; b.city_ix = city_ix;}
-				add_to_grid(b.bcube, buildings.size(), 0);
+				add_to_grid(b.bcube, cur_bix, 0);
 				vector3d const sz(b.bcube.get_size());
 				float const mult[3] = {0.5, 0.5, 1.0}; // half in X,Y and full in Z
 				UNROLL_3X(max_extent[i_] = max(max_extent[i_], mult[i_]*sz[i_]);)
