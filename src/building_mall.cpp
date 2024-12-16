@@ -1389,7 +1389,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	// place items
 	bool const dim(doorway.dy() < doorway.dx()), dir(room.get_center_dim(dim) < doorway.get_center_dim(dim)); // points from room center toward doorway; doorway wall
 	bool const mall_dim(interior->extb_wall_dim), is_end_store(dim == mall_dim), tall_retail(floor_spacing > 1.5*window_vspace);
-	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim));
+	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim)), pillar_z2(room.z2() - fc_thick);
 	room_t const &mall_room(get_mall_concourse());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const NUM_STORE_SELECT = 8;
@@ -1507,7 +1507,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 			assert(rack_length > 0.0);
 			cube_t rack, pillar, pillar_area(room);
 			set_cube_zvals(rack,   zval, (zval + SHELF_RACK_HEIGHT_FS*window_vspace));
-			set_cube_zvals(pillar, zval, room.z2()-fc_thick); // up to the ceiling
+			set_cube_zvals(pillar, zval, pillar_z2); // up to the ceiling
 			pillar_area.expand_in_dim(dim, -0.25*room_len); // center 50% of room
 			unsigned const style_id(rgen.rand()); // same style for each rack
 			unsigned rack_id(0);
@@ -1612,12 +1612,13 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		float const trim_thick(get_trim_thickness()), room_pad(1.0*door_width), room_size(1.5*window_vspace), room_spacing(room_size + room_pad);
 		float const size_delta(room_pad - wall_thickness - 2.0*trim_thick), pad_len(room_len + size_delta), pad_width(room_width + size_delta);
 		unsigned const rooms_long(max(1U, unsigned(pad_len/room_spacing))), rooms_wide(max(1U, unsigned(pad_width/room_spacing)));
+		bool const pdirs[2] = {rgen.rand_bool(), rgen.rand_bool()};
 		float const rlen(pad_len/rooms_long), rwidth(pad_width/rooms_wide);
 		cube_t door_blocker(doorway), div_area(room);
 		door_blocker.expand_by_xy(0.2*window_vspace);
 		div_area.expand_by_xy(0.5*room_pad - wall_hthick - trim_thick); // offset for for the shrink of rooms
 		div_area.d[dim][dir] -= (dir ? 1.0 : -1.0)*wall_thickness; // shink for front window/wall clearance
-		vect_cube_t blockers; // empty for most room types
+		vect_cube_t blockers; // may be empty
 		cube_t r;
 		set_cube_zvals(r, room.z1(), room.z1()+window_vspace);
 
@@ -1643,14 +1644,27 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 				unsigned const rtypes[NUM_RTYPES] = {RTYPE_BED, RTYPE_BED, RTYPE_LIVING, RTYPE_LIVING, RTYPE_OFFICE, RTYPE_DINING};
 				unsigned const rtype(rtypes[rgen.rand() % NUM_RTYPES]);
 				unsigned const start_ix(objs.size());
+				blockers.clear();
 
+				if (row > 0 && col > 0 && row+1 < rooms_long && col+1 < rooms_wide) { // skip edge sub-rooms
+					// place pillars at alternating rows and columns, from the side closest to the center if the number of rows/columns is even
+					if ((row & 1) == (bool(rooms_long & 1) || pdirs[dim]) && (col & 1) == (bool(rooms_wide & 1) || pdirs[!dim])) {
+						cube_t pillar(sub_room);
+						pillar.z2() = pillar_z2;
+						for (unsigned d = 0; d < 2; ++d) {pillar.d[d][!pdirs[d]] = sub_room.d[d][pdirs[d]] + (pdirs[d] ? -1.0 : 1.0)*pillar_width;}
+						add_retail_pillar(pillar, zval, room_id, tall_retail);
+						blockers.push_back(pillar); // needed for bed placement
+					}
+				}
 				if (rtype == RTYPE_BED) { // Note: light_ix_assign is needed for closet lights, but these aren't added here
+					unsigned const bed_ix(objs.size());
+
 					if (add_bedroom_objs(rgen, sub_room, blockers, chair_color, zval, room_id, 0, light_amt, start_ix, 1, 0, 1, light_ix_assign)) {
-						for (auto i = objs.begin()+start_ix; i != objs.end(); ++i) { // set has_mirror flag if a dresser mirror was placed
+						for (auto i = objs.begin()+bed_ix+1; i != objs.end(); ++i) { // set has_mirror flag if a dresser mirror was placed
 							if (i->type == TYPE_DRESS_MIR) {room.set_has_mirror();}
 						}
 						// add wall at head of bed
-						room_object_t const &bed(objs[start_ix]); // should be the first object placed
+						room_object_t const &bed(objs[bed_ix]); // should be the first object placed
 						assert(bed.type == TYPE_BED);
 						cube_t wall(sub_room);
 						float const wall_pos(sub_room.d[bed.dim][bed.dir]);
@@ -1695,7 +1709,6 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 				if (rtype == RTYPE_BED || rtype == RTYPE_LIVING || rtype == RTYPE_DINING) { // maybe add a rug
 					if (rgen.rand_bool()) {add_rug_to_room(rgen, sub_room, zval, room_id, light_amt, start_ix);} // 50% of the time
 				}
-				// TODO: TYPE_OFF_PILLAR
 			} // for col
 		} // for row
 	}
