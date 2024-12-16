@@ -1404,7 +1404,8 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	// bookstores: 295FPS, 3463MB, 838ms
 	// clothing stores: 163FPS, 2737MB, 19ms
 	// retail stores: 300FPS, 2897MB, 177ms
-	unsigned const item_category((store_type == STORE_RETAIL) ? (rgen.rand() % NUM_RETAIL_CAT) : 0); // same category for each rack with equal probability
+	unsigned item_category((store_type == STORE_RETAIL) ? (rgen.rand() % NUM_RETAIL_CAT) : 0); // same category for each rack with equal probability
+	if (is_end_store && item_category == RETAIL_BOXED) {item_category = RETAIL_FOOD;} // make end retail stores food rather than boxes
 	string store_name;
 	
 	for (unsigned n = 0; n < 10; ++n) { // 10 attempts to generate a unique store name for this mall
