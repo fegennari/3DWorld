@@ -1450,7 +1450,7 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 		}
 	}
 	else if (c.type == TYPE_ERASER) {
-		// TODO
+		mat.add_cube_to_verts_untextured(c, c.color); // simple untextured cube; all sides drawn
 	}
 	else if (c.type == TYPE_FLASHLIGHT) {
 		assert(0); // not yet implemented because the flashlight is triggered by the mouse but not actually drawn

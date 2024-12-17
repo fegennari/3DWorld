@@ -2104,7 +2104,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 			player_inventory.mark_last_item_used();
 		}
 		else if (obj.type == TYPE_ERASER) {
-			// TODO: erase marker, but only on whiteboards
+			apply_paint(player_pos, dir, ALPHA0, 0, obj.type); // erases markers and paint
 		}
 		else if (obj.type == TYPE_TAPE) {
 			if (player_in_water == 2) return 0; // can't use when fully underwater
@@ -2380,9 +2380,26 @@ vector3d get_coll_normal(unsigned dim, vector3d const &line_dir) {
 	return normal;
 }
 
+bool remove_nearby_quads(point const &pos, float dist, quad_batch_draw &qbd) {
+	bool any_removed(0);
+	assert((qbd.verts.size() % 6) == 0); // must be quads represented as 6 triangles
+
+	for (unsigned i = 0; i < qbd.verts.size(); i += 6) { // iterate by quads
+		point center;
+		for (unsigned n = 0; n < 6; ++n) {center += qbd.verts[i+n].v;}
+		center /= 6.0; // average of 6 verts
+		if (!dist_less_than(center, pos, dist)) continue;
+		unsigned const ix0(qbd.verts.size() - 6);
+		for (unsigned n = 0; n < 6; ++n) {qbd.verts[i+n] = qbd.verts[ix0+n];} // overwrite with end verts
+		qbd.verts.resize(ix0); // remove end verts
+		any_removed = 1;
+	} // for i
+	return any_removed;
+}
+
 bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, unsigned emissive_color_id, room_object const obj_type) const { // spraypaint/marker
-	bool const is_spraypaint(obj_type == TYPE_SPRAYCAN), is_marker(obj_type == TYPE_MARKER);
-	assert(is_spraypaint || is_marker); // only these two are supported
+	bool const is_spraypaint(obj_type == TYPE_SPRAYCAN), is_marker(obj_type == TYPE_MARKER), is_eraser(obj_type == TYPE_ERASER);
+	assert(is_spraypaint || is_marker || is_eraser); // only these three are supported
 	// find intersection point and normal; assumes pos is inside the building
 	assert(has_room_geom());
 	float const max_dist((is_spraypaint ? 16.0 : 3.0)*CAMERA_RADIUS), tolerance(0.01*get_wall_thickness());
@@ -2522,7 +2539,14 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	point p_int(pos + tmin*delta);
 	if (check_line_intersect_doors(pos, p_int, 1))       return 0; // blocked by door, no spraypaint; can't add spraypaint over door in case door is opened; inc_open=1
 	if (has_pool() && interior->pool.contains_pt(p_int)) return 0; // can't use in the pool
-	float const max_radius(get_paint_max_radius(is_spraypaint)), radius(get_paint_radius(pos, p_int, is_spraypaint));
+	float const radius(get_paint_radius(pos, p_int, is_spraypaint));
+
+	if (is_eraser) { // erase mode; only applies to marker
+		bool any_removed(remove_nearby_quads(p_int, radius, interior->room_geom->decal_manager.paint_draw[exterior_wall].get_paint_qbd(1, emissive_color_id))); // is_marker=1
+		if (exterior_wall) {any_removed |= remove_nearby_quads(p_int, radius, ext_paint_manager.get_paint_qbd_for_bldg(this, 1, emissive_color_id));} // is_marker=1
+		return any_removed;
+	}
+	float const max_radius(get_paint_max_radius(is_spraypaint));
 	float const alpha((is_spraypaint && radius > 0.5*max_radius) ? (1.0 - (radius - 0.5*max_radius)/max_radius) : 1.0); // 0.5 - 1.0
 	p_int += 0.01*radius*normal; // move slightly away from the surface
 	assert(get_bcube_inc_extensions().contains_pt(p_int));
@@ -2585,7 +2609,7 @@ bool room_object_t::can_use() const { // excludes dynamic objects
 	if (is_medicine()) return 1; // medicine can be carried in the inventory and used later
 	if (type == TYPE_TPROLL) {return (taken_level == 0);} // can only use the TP roll, not the holder
 	return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BOOK || type == TYPE_PHONE || type == TYPE_TAPE || type == TYPE_RAT ||
-		type == TYPE_FIRE_EXT || type == TYPE_CANDLE /*|| type == TYPE_FLASHLIGHT*/); // TODO: TYPE_ERASER
+		type == TYPE_FIRE_EXT || type == TYPE_CANDLE || type == TYPE_ERASER /*|| type == TYPE_FLASHLIGHT*/);
 }
 bool room_object_t::can_place_onto() const { // Note: excludes flat objects such as TYPE_RUG and TYPE_BLANKET
 	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_COUNTER || type == TYPE_KSINK ||
