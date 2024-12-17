@@ -167,8 +167,9 @@ void building_geom_t::do_xy_rotate_normal_inv(point &n) const {::do_xy_rotate_no
 
 
 class building_texture_mgr_t {
-	int window_tid=-1, hdoor_tid=-1, odoor_tid=-1, bdoor_tid=-1, bdoor2_tid=-1, gdoor_tid=-1, mdoor_tid=-1, ac_unit_tid1=-1, ac_unit_tid2=-1, bath_wind_tid=-1, helipad_tid=-1,
-		solarp_tid=-1, concrete_tid=-1, met_plate_tid=-1, mplate_nm_tid=-1, met_roof_tid=-1, tile_floor_tid=-1, tile_floor_nm_tid=-1, duct_tid=-1, vent_tid=-1;
+	int window_tid=-1, hdoor_tid=-1, odoor_tid=-1, bdoor_tid=-1, bdoor2_tid=-1, gdoor_tid=-1, mdoor_tid=-1, ac_unit_tid1=-1, ac_unit_tid2=-1, bath_wind_tid=-1;
+	int helipad_tid=-1,	solarp_tid=-1, concrete_tid=-1, met_plate_tid=-1, mplate_nm_tid=-1, met_roof_tid=-1, tile_floor_tid=-1, tile_floor_nm_tid=-1, duct_tid=-1;
+	int vent_tid=-1, marble_floor_tid=-1, granite_floor_tid=-1;
 
 	int ensure_tid(int &tid, const char *name, bool is_normal_map=0, bool invert_y=0) {
 		if (tid < 0) {tid = get_texture_by_name(name, is_normal_map, invert_y);}
@@ -196,6 +197,8 @@ public:
 	int get_met_roof_tid () {return ensure_tid(met_roof_tid,  "buildings/metal_roof.jpg");}
 	int get_tile_floor_tid   () {return ensure_tid(tile_floor_tid,    "interiors/mosaic_tiles.jpg");}
 	int get_tile_floor_nm_tid() {return ensure_tid(tile_floor_nm_tid, "interiors/mosaic_tiles_normal.jpg");}
+	int get_marble_floor_tid () {return ensure_tid(marble_floor_tid,  "interiors/marble_floor.jpg");}
+	int get_granite_floor_tid() {return ensure_tid(granite_floor_tid, "interiors/granite_floor.jpg");}
 
 	bool check_windows_texture() {
 		if (!global_building_params.windows_enabled()) return 0;
@@ -273,6 +276,8 @@ public:
 		register_tid(building_texture_mgr.get_met_roof_tid());
 		register_tid(building_texture_mgr.get_tile_floor_tid());
 		register_tid(building_texture_mgr.get_tile_floor_nm_tid());
+		register_tid(building_texture_mgr.get_marble_floor_tid());
+		register_tid(building_texture_mgr.get_granite_floor_tid());
 		register_tid(get_plywood_tid()); // for attics
 		register_tid(FONT_TEXTURE_ID); // for roof signs
 		for (unsigned i = 0; i < num_special_tids; ++i) {register_tid(special_tids[i]);}
@@ -1457,8 +1462,14 @@ colorRGBA building_t::get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_p
 		bool const in_ext_basement(in_basement && (!get_basement().contains_cube_xy(floor_cube) || floor_cube.z2() < bcube.z1()));
 
 		if ((in_ext_basement && is_inside_mall_stores(floor_cube.get_cube_center())) || (has_retail() && floor_cube.z1() == ground_floor_z1)) { // retail or mall
-			float const tscale(0.125*mat.floor_tex.tscale_x); // stretch the texture out for large tiles
-			tex = tid_nm_pair_t(building_texture_mgr.get_tile_floor_tid(), building_texture_mgr.get_tile_floor_nm_tid(), tscale, tscale);
+			float const tscale(mat.floor_tex.tscale_x);
+			unsigned const tid_set(1 + ((mat_ix + real_num_parts + interior->rooms.size()) & 1)); // select one of case {1, 2}
+			switch (tid_set) {
+			// stretch the texture out for large tiles for tile floors
+			case 0: tex = tid_nm_pair_t(building_texture_mgr.get_tile_floor_tid   (), building_texture_mgr.get_tile_floor_nm_tid(), 0.125*tscale, 0.125*tscale); break;
+			case 1: tex = tid_nm_pair_t(building_texture_mgr.get_marble_floor_tid (), 0.6*tscale); break; // no normal map
+			case 2: tex = tid_nm_pair_t(building_texture_mgr.get_granite_floor_tid(), 0.4*tscale); break; // no normal map
+			}
 		}
 		else if (in_basement && (has_parking_garage || in_ext_basement)) {tex = get_concrete_texture();} // parking garage or extended basement
 		else {tex = mat.floor_tex;} // office block
