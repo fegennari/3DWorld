@@ -1373,7 +1373,7 @@ bool building_t::add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area,
 }
 
 // Note: room is non-const because the has_mirror flag may get set
-void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, light_ix_assign_t &light_ix_assign) {
+void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned &type_mask, light_ix_assign_t &light_ix_assign) {
 	float const door_width(get_doorway_width()), floor_spacing(room.dz()), window_vspace(get_window_vspace());
 	float const wall_thickness(get_wall_thickness()), wall_hthick(0.5*wall_thickness), fc_thick(get_fc_thickness()), pillar_width(2.0*wall_thickness);
 	float const light_amt = 1.0; // fully lit, for now
@@ -1386,12 +1386,16 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		doorway = d;
 	}
 	assert(!doorway.is_all_zeros()); // must be found
-	// place items
+	// select store type
 	bool const dim(doorway.dy() < doorway.dx()), dir(room.get_center_dim(dim) < doorway.get_center_dim(dim)); // points from room center toward doorway; doorway wall
 	bool const mall_dim(interior->extb_wall_dim), is_end_store(dim == mall_dim), tall_retail(floor_spacing > 1.5*window_vspace);
 	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim)), pillar_z2(room.z2() - fc_thick);
 	room_t const &mall_room(get_mall_concourse());
 	vect_room_object_t &objs(interior->room_geom->objs);
+	assert(room_id > 0); // can't be the first room
+	room_t const &prev_room(interior->rooms[room_id-1]); // mall or store
+	bool const on_new_floor(room.z1() != prev_room.z1()), on_new_row(room.d[dim][0] != prev_room.d[dim][0]);
+	if (on_new_floor || on_new_row) {type_mask = 0;}
 	unsigned const NUM_STORE_SELECT = 8;
 	unsigned const store_selects[NUM_STORE_SELECT] = {STORE_CLOTHING, STORE_CLOTHING, STORE_BOOK, STORE_FURNITURE, STORE_PETS, STORE_RETAIL, STORE_RETAIL, STORE_RETAIL};
 	unsigned const objs_start(objs.size());
@@ -1404,11 +1408,17 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	// bookstores: 295FPS, 3463MB, 838ms
 	// clothing stores: 163FPS, 2737MB, 19ms
 	// retail stores: 300FPS, 2897MB, 177ms
-	unsigned item_category((store_type == STORE_RETAIL) ? (rgen.rand() % NUM_RETAIL_CAT) : 0); // same category for each rack with equal probability
-	if (is_end_store && item_category == RETAIL_BOXED) {item_category = RETAIL_FOOD;} // make end retail stores food rather than boxes
+	// don't place two pet stores in the same row; assign as retail or clothing instead
+	if (store_type == STORE_PETS && (type_mask & (1U << store_type))) {store_type = (rgen.rand_bool() ? STORE_RETAIL : STORE_CLOTHING);}
+	bool const is_retail(store_type == STORE_RETAIL);
+	unsigned item_category(is_retail ? (rgen.rand() % NUM_RETAIL_CAT) : 0); // same category for each rack with equal probability
+	if (is_end_store && is_retail && item_category == RETAIL_BOXED) {item_category = RETAIL_FOOD;} // make end retail stores food rather than boxes
+	unsigned type_ix(is_retail ? (NUM_STORE_TYPES + item_category) : store_type);
+	type_mask |= (1U << type_ix);
+	// generate or select a store name
 	string store_name;
 	
-	for (unsigned n = 0; n < 10; ++n) { // 10 attempts to generate a unique store name for this mall
+	for (unsigned n = 0; n < 10; ++n) { // 10 attempts to generate a store name unique to this mall
 		store_name = choose_store_name(store_type, item_category, rgen);
 		bool is_duplicate(0);
 
@@ -1420,6 +1430,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	//cout << store_name << endl; // TESTING
 	interior->mall_info->stores.emplace_back(dim, dir, room_id, store_type, item_category, store_name);
 
+	// place items
 	if (1) { // add store name on sign above the entrance
 		float const sign_z1(room.z1() + 0.7*floor_spacing), sign_height(0.3*window_vspace), sign_thick(wall_hthick);
 		float const ext_wall_pos(mall_room.d[dim][!dir] + (dir ? 1.0 : -1.0)*(is_end_store ? 1.0 : 0.5)*wall_thickness);

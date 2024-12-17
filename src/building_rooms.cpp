@@ -178,7 +178,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	float const extra_bathroom_prob((is_house ? 2.0 : 1.0)*0.02*min((int(tot_num_rooms) - 4), 20));
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
 	unsigned added_kitchen_mask(0), added_living_mask(0), added_bath_mask(0); // per-floor
-	unsigned added_bathroom_objs_mask(0), numbered_rooms_seen(0);
+	unsigned added_bathroom_objs_mask(0), numbered_rooms_seen(0), store_type_mask(0);
 	uint8_t last_unit_id(0);
 	uint64_t is_public_on_floor(0); // 64 bit masks
 	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0), added_pool_room(0);
@@ -371,7 +371,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			else if (is_mall_store) {
 				unsigned const objs_start(objs.size());
-				add_mall_store_objs       (rgen, *r, room_center.z,  room_id, light_ix_assign);
+				add_mall_store_objs       (rgen, *r, room_center.z,  room_id, store_type_mask, light_ix_assign);
 				add_outlets_to_room       (rgen, *r, room_center.z,  room_id, objs_start, 0, 0); // is_ground_floor=is_basement=0
 				add_light_switches_to_room(rgen, *r, room_center.z,  room_id, objs_start, 0, 0); // is_ground_floor=is_basement=0
 				rgen.rand_mix(); // make sure numbers are different for each store
