@@ -5366,9 +5366,9 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 	float tscale(1.0);
 	
 	switch (animal_type) {
-	case TYPE_FISH  : tid = get_texture_by_name("gravel.jpg"); tscale = 3.0; break;
-	case TYPE_RAT   : tid = DIRT_TEX; break; // TODO: wood chips
-	case TYPE_SNAKE : tid = DIRT_TEX; break; // TODO: wood chips
+	case TYPE_FISH  : tid = get_texture_by_name("gravel.jpg"    ); tscale = 3.0; break;
+	case TYPE_RAT   : tid = get_texture_by_name("wood_chips.jpg"); tscale = 2.0; break;
+	case TYPE_SNAKE : tid = get_texture_by_name("wood_chips.jpg"); tscale = 2.0; break;
 	case TYPE_SPIDER: tid = DIRT_TEX; break;
 	default: assert(0); // unsupported
 	}
