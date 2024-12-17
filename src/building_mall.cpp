@@ -1609,7 +1609,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		add_shelves_along_walls(room_area, zval, room_id, light_amt, !dim, store_type, shelf_height, shelf_depth, 1, rgen); // place_inside=1
 	}
 	else if (store_type == STORE_FURNITURE) {
-		// divide the store up into "rooms": bedrooms, dining rooms, living rooms, etc. and populate these
+		// divide the store up into a 2D square grid of "rooms": bedrooms, dining rooms, living rooms, etc. and populate these
 		float const trim_thick(get_trim_thickness()), room_pad(1.0*door_width), room_size(1.5*window_vspace), room_spacing(room_size + room_pad);
 		float const size_delta(room_pad - wall_thickness - 2.0*trim_thick), pad_len(room_len + size_delta), pad_width(room_width + size_delta);
 		unsigned const rooms_long(max(1U, unsigned(pad_len/room_spacing))), rooms_wide(max(1U, unsigned(pad_width/room_spacing)));
@@ -1649,7 +1649,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 
 				if (row > 0 && col > 0 && row+1 < rooms_long && col+1 < rooms_wide) { // skip edge sub-rooms
 					// place pillars at alternating rows and columns, from the side closest to the center if the number of rows/columns is even
-					if ((row & 1) == (bool(rooms_long & 1) || pdirs[dim]) && (col & 1) == (bool(rooms_wide & 1) || pdirs[!dim])) {
+					if (bool(row & 1) == (bool(rooms_long & 1) || pdirs[dim]) && bool(col & 1) == (bool(rooms_wide & 1) || pdirs[!dim])) {
 						cube_t pillar(sub_room);
 						pillar.z2() = pillar_z2;
 						for (unsigned d = 0; d < 2; ++d) {pillar.d[d][!pdirs[d]] = sub_room.d[d][pdirs[d]] + (pdirs[d] ? -1.0 : 1.0)*pillar_width;}
@@ -1672,9 +1672,11 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 						float const wall_pos(sub_room.d[wdim][wdir]);
 						wall.d[wdim][!wdir] = wall_pos;
 						wall.d[wdim][ wdir] = wall_pos + (wdir ? 1.0 : -1.0)*0.5*wall_thickness; // shift outward from room
+						cube_t wall_area(room);
+						wall_area.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.5*rlen; // shink to avoid blocking front window
 
 						// only if interior; skip if overlaps the room wall; check for back hallway doorway
-						if (room.contains_cube_xy_exp(wall, wall_thickness) && !is_cube_close_to_doorway(wall, sub_room, 0.0, 1, 1)) {
+						if (wall_area.contains_cube_xy_exp(wall, wall_thickness) && !is_cube_close_to_doorway(wall, sub_room, 0.0, 1, 1)) {
 							objs.emplace_back(wall, TYPE_PG_WALL, room_id, wdim, wdir, (RO_FLAG_IN_MALL | RO_FLAG_ADJ_TOP), light_amt, SHAPE_CUBE); // draw top
 							
 							if (rgen.rand_float() < 0.67) { // add a picture on the wall 67% of the time
