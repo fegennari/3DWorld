@@ -527,11 +527,12 @@ bool phone_is_ringing() {return phone_manager.is_phone_ringing();}
 
 tape_manager_t tape_manager;
 
-unsigned const NUM_ACHIEVEMENTS = 19;
+unsigned const NUM_ACHIEVEMENTS = 20;
 
 class achievement_tracker_t {
 	// Rat Food, Fish Food, Top Secret Document, Mr. Yuck, Zombie Hunter, Royal Flush, Zombie Bashing, One More Drink, Bathroom Reader, TP Artist,
-	// Master Lockpick, Squeaky Clean, Sleep with the Fishes, Splat the Spider, 7 years of bad luck, Tastes Like Chicken, Spam Risk, Ball in Pocket, Soft Locked
+	// Master Lockpick, Squeaky Clean, Sleep with the Fishes, Splat the Spider, 7 years of bad luck, Tastes Like Chicken, Spam Risk, Ball in Pocket,
+	// Soft Locked, Tampering with Evidence
 	set<string> achievements;
 	// some way to make this persistent, print these out somewhere, or add small screen icons?
 public:
@@ -623,7 +624,7 @@ public:
 			poison_from_spider = (poison_type == 1);
 		}
 	}
-	void record_damage_done(float amt) {damage_done += amt;}
+	void record_damage_done(float amt) {damage_done += amt; max_eq(damage_done, 0.0f);} // amt can be negative, but damage_done must remain positive
 	void return_object_to_building(room_object_t const &obj) {damage_done -= get_obj_value(obj);}
 	bool check_weight_limit(float weight) const {return ((cur_weight + weight) <= global_building_params.player_weight_limit);}
 	bool can_pick_up_item(room_object_t const &obj) const {return check_weight_limit(get_obj_weight(obj));}
@@ -2380,8 +2381,8 @@ vector3d get_coll_normal(unsigned dim, vector3d const &line_dir) {
 	return normal;
 }
 
-bool remove_nearby_quads(point const &pos, float dist, quad_batch_draw &qbd) {
-	bool any_removed(0);
+unsigned remove_nearby_quads(point const &pos, float dist, quad_batch_draw &qbd) {
+	unsigned num_removed(0);
 	assert((qbd.verts.size() % 6) == 0); // must be quads represented as 6 triangles
 
 	for (unsigned i = 0; i < qbd.verts.size(); i += 6) { // iterate by quads
@@ -2392,9 +2393,9 @@ bool remove_nearby_quads(point const &pos, float dist, quad_batch_draw &qbd) {
 		unsigned const ix0(qbd.verts.size() - 6);
 		for (unsigned n = 0; n < 6; ++n) {qbd.verts[i+n] = qbd.verts[ix0+n];} // overwrite with end verts
 		qbd.verts.resize(ix0); // remove end verts
-		any_removed = 1;
+		++num_removed;
 	} // for i
-	return any_removed;
+	return num_removed;
 }
 
 bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, unsigned emissive_color_id, room_object const obj_type) const { // spraypaint/marker
@@ -2540,11 +2541,20 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	if (check_line_intersect_doors(pos, p_int, 1))       return 0; // blocked by door, no spraypaint; can't add spraypaint over door in case door is opened; inc_open=1
 	if (has_pool() && interior->pool.contains_pt(p_int)) return 0; // can't use in the pool
 	float const radius(get_paint_radius(pos, p_int, is_spraypaint));
+	static double next_sound_time(0.0);
 
 	if (is_eraser) { // erase mode; only applies to marker
-		bool any_removed(remove_nearby_quads(p_int, radius, interior->room_geom->decal_manager.paint_draw[exterior_wall].get_paint_qbd(1, emissive_color_id))); // is_marker=1
-		if (exterior_wall) {any_removed |= remove_nearby_quads(p_int, radius, ext_paint_manager.get_paint_qbd_for_bldg(this, 1, emissive_color_id));} // is_marker=1
-		return any_removed;
+		unsigned num_removed(remove_nearby_quads(p_int, radius, interior->room_geom->decal_manager.paint_draw[exterior_wall].get_paint_qbd(1, emissive_color_id))); // is_marker=1
+		if (exterior_wall) {max_eq(num_removed, remove_nearby_quads(p_int, radius, ext_paint_manager.get_paint_qbd_for_bldg(this, 1, emissive_color_id)));} // is_marker=1
+		if (num_removed == 0) return 0;
+		register_achievement("Tampering with Evidence");
+		player_inventory.record_damage_done(-0.1*num_removed); // doesn't perfectly cancel damage
+		
+		if (tfticks > next_sound_time) { // play sound if sprayed/marked, but not too frequently; marker has no sound
+			gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.25, 1.4);
+			next_sound_time = tfticks + 0.5*TICKS_PER_SECOND;
+		}
+		return 1;
 	}
 	float const max_radius(get_paint_max_radius(is_spraypaint));
 	float const alpha((is_spraypaint && radius > 0.5*max_radius) ? (1.0 - (radius - 0.5*max_radius)/max_radius) : 1.0); // 0.5 - 1.0
@@ -2573,8 +2583,6 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	if (exterior_wall) { // add exterior paint only; will be drawn after building interior, but without iterior lighting, so it will be darker
 		ext_paint_manager.get_paint_qbd_for_bldg(this, is_marker, emissive_color_id).add_quad_dirs(p_int, dx, radius*dir2, paint_color, normal);
 	}
-	static double next_sound_time(0.0);
-
 	if (tfticks > next_sound_time) { // play sound if sprayed/marked, but not too frequently; marker has no sound
 		gen_sound_thread_safe_at_player((is_spraypaint ? (int)SOUND_SPRAY : (int)SOUND_SQUEAK), 0.25);
 		if (is_spraypaint) {register_building_sound(pos, 0.1);}
