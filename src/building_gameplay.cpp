@@ -297,6 +297,18 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		if (obj.taken_level < 4) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 0.5, 0.025, "toy ring");}
 		// else take the toy base
 	}
+	if (otype == TYPE_FISHTANK) { // glass terrarium or fishtank
+		float value(0.0), weight(0.0);
+		string name;
+		switch (obj.item_flags) {
+		case TYPE_FISH  : value = 100.0; weight = 160.0; name = "fish tank"; break;
+		case TYPE_RAT   : value =  50.0; weight =  30.0; name = "rat tank"; break;
+		case TYPE_SNAKE : value =  60.0; weight =  35.0; name = "snake terrarium"; break;
+		case TYPE_SPIDER: value =  40.0; weight =  25.0; name = "spider terrarium"; break;
+		default: assert(0); // unsupported
+		}
+		return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, value, weight, name);
+	}
 	if (otype == TYPE_SHOWERTUB) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 20.0, 2.0, "shower curtain");} // only the curtains can be taken
 	if (otype == TYPE_TABLE    && obj.is_broken ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1,  25.0, 40.0, "broken table");} // glass tables only
 	if (otype == TYPE_COMPUTER && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 100.0, 20.0, "old computer");}
