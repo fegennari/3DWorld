@@ -2674,8 +2674,8 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		set_obj_id(objs); // used to select texture and box contents
 		if (++num_placed == num_crates) break; // we're done
 	} // for n
-	// add a ladder leaning against the wall
-	if (rgen.rand_bool()) {add_ladder_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);}
+	// add a ladder leaning against the wall if storage room is on the ground floor or basement
+	if (zval < ground_floor_z1 + window_vspacing && rgen.rand_bool()) {add_ladder_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);}
 	// add office building storage room sign, in a hallway, basement, etc.
 	if (!is_house /*&& !is_basement*/) {add_door_sign((has_stairs ? "Stairs" : "Storage"), room, zval, room_id);}
 	return 1; // it's always a storage room, even if it's empty
