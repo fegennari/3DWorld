@@ -1885,8 +1885,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	cube_t const clip_cube_bs(smap_light_clip_cube - xlate);
 	// skip for rotated buildings and reflection pass, since reflected pos may be in a different room; should we use actual_player_pos for shadow_only mode?
 	int const camera_room((is_rotated || reflection_pass) ? -1 : building.get_room_containing_camera(camera_bs));
-	int camera_part(-1);
-	unsigned last_room_ix(building.interior->rooms.size()), last_floor_ix(0); // start at an invalid value
+	int camera_part(-1), cull_room_ix(-1);
+	unsigned last_room_ix(building.interior->rooms.size()), last_culled_room_ix(last_room_ix), last_floor_ix(0); // start at an invalid value
 	bool camera_in_closed_room(0), last_room_closed(0), obj_drawn(0), no_cull_room(0);
 	auto model_to_cull(obj_model_insts.end()), model_to_not_cull(obj_model_insts.end());
 
@@ -1901,6 +1901,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
 		if (i == model_to_cull) continue;
 		room_object_t &obj(get_room_object_by_index(i->obj_id));
+		if ((int)obj.room_id == cull_room_ix) continue; // cull all objects in this room
 
 		if (skip_interior_objs && obj.is_interior()) { // don't draw objects in interior rooms if the player is outside the building (useful for office bathrooms)
 			// draw interior objects in residential buildings, such as plumbing fixtures visible through open interior bathroom doors, but not if in basement
@@ -1928,8 +1929,20 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			else if (building.point_in_mall     (obj_center)) {cull_dist *= 2.0;} // increased culling distance for malls
 			if (!dist_less_than(camera_bs, obj_center, cull_dist)) continue; // too far
 		}
-		if (camera_in_building && player_in_basement >= 2 && obj_center.z > building.ground_floor_z1)        continue; // player in basement, obj not
-		if (camera_in_building && player_in_basement == 0 && obj_center.z < building.ground_floor_z1)        continue; // obj in basement, player not
+		if (camera_in_building && player_in_basement >= 2 && obj_center.z > building.ground_floor_z1) continue; // player in basement, obj not
+		if (camera_in_building && player_in_basement == 0 && obj_center.z < building.ground_floor_z1) continue; // obj in basement, player not
+
+		if (player_in_building && obj.room_id != last_culled_room_ix) { // new room; apply room-based VFC + occlusion culling
+			last_culled_room_ix = obj.room_id;
+
+			if (obj.room_id != (unsigned)camera_room) { // camera not in this room
+				cube_t c(building.get_room(obj.room_id));
+				c.expand_in_z (-building.get_fc_thickness  ());
+				c.expand_by_xy(-building.get_wall_thickness());
+				if (!(is_rotated ? building.is_rot_cube_visible(c, xlate) : camera_pdu.cube_visible(c + xlate)) ||
+					(check_occlusion && building.check_obj_occluded(c, camera_bs, oc, reflection_pass))) {cull_room_ix = obj.room_id; continue;} // cull entire room
+			}
+		}
 		if (!(is_rotated ? building.is_rot_cube_visible(obj, xlate) : camera_pdu.cube_visible(obj + xlate))) continue; // VFC
 		//highres_timer_t timer("Draw " + get_room_obj_type(obj).name);
 
@@ -2558,7 +2571,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 
 			for (unsigned D = 0; D < 2; ++D) {
 				bool const d(bool(D) ^ pri_dim); // try primary dim first
-				float const min_sz(0.5*c.get_sz_dim(!d)); // account for perspective
+				float const min_sz(min(floor_spacing, 0.5f*c.get_sz_dim(!d))); // account for perspective; min with floor_spacing to allow for room sized queries
 				unsigned const extb_walls_start(interior->extb_walls_start[d]);
 				vect_cube_t const &walls(interior->walls[d]);
 				assert(extb_walls_start <= walls.size());
