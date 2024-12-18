@@ -1455,6 +1455,11 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 				coll_ret |= 1;
 			}
 		}
+		else if (type == TYPE_SHELVES && c->in_mall()) { // mall shelves have fishtanks (pet stores) and flat items (clothing stores) that we can collide with
+			cube_t shelves[4]; // max number of shelves
+			unsigned const num_shelves(get_shelves_for_object(*c, shelves));
+			coll_ret |= check_cubes_collision(shelves, num_shelves, pos, p_last, radius, &cnorm);
+		}
 		else { // assume it's a cube
 			// some object types are special because they're common collision objects and they're not filled cubes
 			if      (type == TYPE_CLOSET    ) {coll_ret |= check_closet_collision(*c, pos, p_last, radius, &cnorm);} // special case to handle closet interiors
@@ -2415,7 +2420,14 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		if (type == TYPE_RAMP && interior->ignore_ramp_placement && c.z2() >= ground_floor_z1) {non_cubes.back().z2() -= get_floor_thickness();}
 	}
 	else if (type == TYPE_SHELVES) {
-		non_cubes.push_back(get_shelves_no_bot_gap(c)); // allow spiders to crawl under shelves
+		if (c.in_mall()) { // mall shelves have fishtanks (pet stores) and flat items (clothing stores), so we can handle walking on the shelves
+			cube_t shelves[4]; // max number of shelves
+			unsigned const num_shelves(get_shelves_for_object(c, shelves));
+			lg_cubes.insert(lg_cubes.end(), shelves, shelves+num_shelves);
+		}
+		else { // storage room shelves have all sorts of items when expanded, which we don't collide with, so mark as non-cube
+			non_cubes.push_back(get_shelves_no_bot_gap(c)); // allow spiders to crawl under shelves
+		}
 	}
 	else if (type == TYPE_CLOSET && (c.is_open() || c.contains_pt(pos))) {
 		cube_t cubes[5];
@@ -2684,7 +2696,14 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 				if (line_int_cubes_exp(p1, p2, cubes, 5, expand)) return 11; // 1 or 3 sink parts; counts as a cabinet
 			}
 			else if (c->type == TYPE_SHELVES) {
-				if (line_int_cube_exp(p1, p2, get_shelves_no_bot_gap(*c), expand)) return 9; // there's space under the shelves
+				if (c->in_mall()) { // mall shelves have fishtanks (pet stores) and flat items (clothing stores)
+					cube_t shelves[4]; // max number of shelves
+					unsigned const num_shelves(get_shelves_for_object(*c, shelves));
+					if (line_int_cubes_exp(p1, p2, shelves, num_shelves, expand)) return 9;
+				}
+				else { // storage room shelves have all sorts of items when expanded, which we don't test
+					if (line_int_cube_exp(p1, p2, get_shelves_no_bot_gap(*c), expand)) return 9; // there's space under the shelves
+				}
 			}
 			else if (c->type == TYPE_SHELFRACK) {
 				cube_t cubes[9];

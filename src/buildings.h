@@ -1301,7 +1301,6 @@ private:
 	void add_door_handle(door_t const &door, door_rotation_t const &drot, colorRGBA const &color, bool residential);
 	void maybe_add_door_sign(door_t const &door, door_rotation_t const &drot);
 	static void add_closet_objects(room_object_t const &c, vect_room_object_t &objects);
-	static unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]);
 	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vect_room_object_t &objects, bool add_models_mode=0);
 public:
 	static void get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects, bool add_models_mode=0, bool books_only=0);
@@ -2832,6 +2831,7 @@ void get_bookcase_cubes(room_object_t const &c, cube_t &top, cube_t &middle, cub
 float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only, bool inside_only);
 unsigned get_bench_cubes(room_object_t const &c, cube_t cubes[4]);
 void get_diving_board_cubes(room_object_t const &c, cube_t cubes[2]);
+unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]);
 unsigned get_shelf_rack_cubes(room_object_t const &c, cube_t &back, cube_t &top, cube_t sides[2], cube_t shelves[5]);
 cube_t get_shower_tub_wall(room_object_t const &c);
 cube_t get_open_closet_door(room_object_t const &obj);

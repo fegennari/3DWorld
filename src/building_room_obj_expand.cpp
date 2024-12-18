@@ -504,7 +504,7 @@ unsigned room_object_t::get_num_shelves() const {
 	if (in_mall() && item_flags == STORE_PETS) return 2; // pet store shelves always have two levels
 	return (2 + (room_id % (in_mall() ? 2 : 3))); // 2-4 shelves, 2-3 for mall clothing stores
 }
-unsigned building_room_geom_t::get_shelves_for_object(room_object_t const &c, cube_t shelves[4]) {
+unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]) {
 	unsigned const num_shelves(c.get_num_shelves()); // 2-4 shelves
 	float const bot_space_ratio((num_shelves == 2) ? 0.75 : 1.0); // less space for the 2 shelves case
 	float const thickness(0.02*c.dz()), bracket_thickness(0.8*thickness), z_step(c.dz()/(num_shelves + bot_space_ratio)); // include a space at the bottom
