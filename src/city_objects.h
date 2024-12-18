@@ -754,6 +754,7 @@ public:
 	void add_lights(vector3d const &xlate, cube_t &lights_bcube) const;
 	bool proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, vector3d *cnorm) const;
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
+	bool intersects_parking_lot(cube_t const &c) const;
 	bool player_under_roof(point const &camera_bs) const;
 	bool get_color_at_xy(point const &pos, colorRGBA &color, bool skip_in_road) const;
 	bool get_color_at_xy_pre_road(point const &pos, colorRGBA &color) const;

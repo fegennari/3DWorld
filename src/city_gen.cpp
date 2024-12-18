@@ -1205,6 +1205,7 @@ public:
 		for (unsigned plot_ix = 0; plot_ix < plots.size(); ++plot_ix) {
 			if (!plots[plot_ix].contains_cube_xy(c)) continue;
 			if (plot_ix < plot_colliders.size() && has_bcube_int(c, plot_colliders[plot_ix])) return 1;
+			if (city_obj_placer.intersects_parking_lot(c)) return 1; // parking lots and driveways may not have been added at this point
 			return 0; // fully contained in this plot and not intersecting any colliders
 		}
 		return 1; // not contained in a plot

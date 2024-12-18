@@ -48,6 +48,8 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 	bool const car_dim(rgen.rand() & 1), car_dir(rgen.rand() & 1); // car_dim: 0=cars face in X; 1=cars face in Y
 	float const xsz(car_dim ? space_width : space_len), ysz(car_dim ? space_len : space_width);
 	bool has_parking(0);
+	vector_add_to(colliders, bcubes); // add any underground elevators to blocking bcubes
+	unsigned const bcubes_coll_end(bcubes.size());
 	vector<hcap_with_dist_t> hcap_cands;
 	car_t car;
 	car.park();
@@ -229,6 +231,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 			}
 		} // for col
 	} // for c
+	bcubes.erase(bcubes.begin()+buildings_end, bcubes.begin()+bcubes_coll_end); // erase colliders that were added above from bcubes
 	// assign handicap spots
 	unsigned const num_hcap_spots((hcap_cands.size() + 10)/20); // 5% of total spots, rounded to the center
 
@@ -2479,6 +2482,10 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, tcones, flowers, pladders, chairs, pdecks, bballs, pfloats, clines, pigeons, ppaths, or birds;
 	// mboxes, swings, tramps, umbrellas, bikes, plants, ponds, p_solars, and momorail are ignored because they're small or not simple shapes
 	return ret;
+}
+
+bool city_obj_placer_t::intersects_parking_lot(cube_t const &c) const { // Note: currently called before parking lots and driveways are added
+	return (has_bcube_int_xy(c, parking_lots) || has_bcube_int_xy(c, driveways)); // no acceleration structure for these, so do a linear iteration
 }
 
 template<typename T> bool check_city_obj_pt_xy_contains(city_obj_groups_t const &groups, vector<T> const &objs, point const &pos, unsigned &obj_ix, bool is_cylin=0) {
