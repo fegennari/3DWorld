@@ -567,7 +567,9 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 			set_cube_zvals(sign, zval+0.55*floor_spacing, zval+0.6*floor_spacing); // high enough that it's not blocked by filing cabinets
 			sign.translate_dim(!i->dim, (shift_dir ? -1.0 : 1.0)*0.8*door_width);
 		}
-		sign.expand_in_dim(!i->dim, -(0.45 - 0.03*min((unsigned)text.size(), 6U))*(place_above_door ? 0.5 : 1.0)*door_width); // shrink a bit
+		unsigned const num_chars(text.size());
+		float const sign_hwidth((0.05 + 0.03*min(num_chars, 6U))*(place_above_door ? 1.5 : 1.0)); // relative to door width
+		sign.expand_in_dim(!i->dim, -(0.5 - sign_hwidth)*door_width); // shrink a bit
 		sign.d[i->dim][side] += side_sign*0.1*wall_thickness; // make nonzero area
 
 		// skip this check for rooms that require signs such as bathrooms, and in cases where we know there are no inside corners
