@@ -184,7 +184,9 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 			}
 		} // for n
 	} // for f
-	if (!openings.empty()) { // add elevator
+	if (!openings.empty()) {
+		// add elevator, which may extend up to ground level for city buildings;
+		// note that this won't be added for single floor malls even though it would be valid if extending to ground level, since control flow doesn't get here
 		unsigned const opening_ix(choose_one_center(num_openings, rgen));
 		cube_t const opening(openings[opening_ix]);
 		bool edir((num_openings & 1) ? rgen.rand_bool() : (opening_ix == num_openings/2)); // prefer closer to center; random if tied
