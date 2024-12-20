@@ -1744,12 +1744,18 @@ struct ug_elev_info_t {
 };
 typedef vector<ug_elev_info_t> vect_ug_elev_info_t;
 
+struct pet_tank_t : public cube_t {
+	unsigned animal_type, obj_ix;
+	pet_tank_t(cube_t const &c, unsigned at, unsigned ix) : cube_t(c), animal_type(at), obj_ix(ix) {}
+};
+
 struct building_mall_info_t {
 	vect_cube_with_ix_t landings; // ix stores {is_escalator, se_dim, se_dir, ww_dir}
 	vector<store_doorway_t> store_doorways; // ix stores store room index
 	vector<store_info_t> stores;
 	stairwell_t ent_stairs;
 	vect_cube_t bathrooms; // actually bathroom pairs
+	vector<pet_tank_t> pet_tanks; // except for fish (rats, snakes, spiders)
 	cube_t store_bounds;
 	colorRGBA mall_wall_color=WHITE;
 	int city_elevator_ix=-1;

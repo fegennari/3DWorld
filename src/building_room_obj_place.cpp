@@ -2686,7 +2686,16 @@ void building_t::add_shelves(cube_t const &c, bool dim, bool dir, unsigned room_
 	objs.emplace_back(c, TYPE_SHELVES, room_id, dim, dir, flags, tot_light_amt);
 	set_obj_id(objs);
 	objs.back().item_flags = item_flags;
+	unsigned const objs_start(objs.size());
 	interior->room_geom->expand_shelves(objs.back(), 1); // add_models_mode=1
+
+	if (flags & RO_FLAG_IN_MALL) { // register fishtanks with non-fish animals
+		assert(has_mall());
+
+		for (auto c = objs.begin()+objs_start; c != objs.end(); ++c) {
+			if (c->type == TYPE_FISHTANK && c->item_flags != TYPE_FISH) {interior->mall_info->pet_tanks.emplace_back(*c, c->item_flags, (c - objs.begin()));}
+		}
+	}
 }
 
 bool building_t::add_ladder_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {

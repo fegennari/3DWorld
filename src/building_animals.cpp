@@ -30,6 +30,7 @@ void apply_building_gravity(float &vz, float dt_ticks);
 void apply_fc_cube_max_merge_xy(vect_cube_t &cubes);
 void register_fly_attract(bool no_msg);
 bool phone_is_ringing();
+unsigned get_fishtank_coll_cubes(room_object_t const &c, cube_t cubes[7]);
 template<typename T> bool line_int_cubes_exp(point const &p1, point const &p2, vector<T> const &cubes, vector3d const &expand, cube_t const &line_bcube);
 
 
@@ -784,8 +785,8 @@ void building_t::scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amou
 // *** Spiders ***
 
 // Note: radius is really used for height and body size; legs can extend out to ~2x radius, so we decrease radius to half the user-specified value to account for this
-spider_t::spider_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_, unsigned tix) :
-	building_animal_t(pos_, 0.5*radius_, dir_, id_), upv(plus_z), tunnel_ix(tix)
+spider_t::spider_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_, unsigned tix, bool in_tank_) :
+	building_animal_t(pos_, 0.5*radius_, dir_, id_), upv(plus_z), tunnel_tank_ix(tix), in_tank(in_tank_)
 {
 	pos.z += radius; // shift upward so that the center is off the ground
 }
@@ -833,10 +834,32 @@ bool building_room_geom_t::maybe_spawn_spider_in_drawer(room_object_t const &c, 
 
 void building_t::update_spiders(point const &camera_bs, unsigned building_ix) {
 	vect_spider_t &spiders(interior->room_geom->spiders);
-	if (spiders.placed && spiders.empty()) return; // no spiders placed in this building
+	bool const was_placed(spiders.placed);
+	if (was_placed && spiders.empty()) return; // no spiders placed in this building
 	//timer_t timer("Update Spiders");
 	add_animals_on_floor(spiders, building_ix, global_building_params.num_spiders_min, global_building_params.num_spiders_max,
 		global_building_params.spider_size_min, global_building_params.spider_size_max);
+
+	if (!was_placed && has_mall()) { // add pet store spiders on first update frame
+		for (pet_tank_t const &t : interior->mall_info->pet_tanks) {
+			if (t.animal_type != TYPE_SPIDER) continue;
+			vect_room_object_t const &objs(interior->room_geom->objs);
+			assert(t.obj_ix < objs.size());
+			room_object_t const &obj(objs[t.obj_ix]);
+			if (obj.type != TYPE_FISHTANK) continue; // taken by the player?
+			assert(obj.item_flags == TYPE_SPIDER);
+			rand_gen_t rgen;
+			rgen.set_state(building_ix+1, t.obj_ix+1); // unique per building and per tank
+			unsigned const num_spiders((rgen.rand() % 4) + 1); // 1-5
+			float const zval(obj.z1() + 0.1*obj.dz()); // around substrate height
+
+			for (unsigned n = 0; n < num_spiders; ++n) {
+				float const radius(rgen.rand_uniform(0.5, 1.0)*0.1*obj.dz());
+				point const pos(gen_xy_pos_in_area(obj, vector3d(radius, radius, radius), rgen, zval));
+				spiders.emplace_back(pos, radius, rgen.signed_rand_vector_spherical_xy_norm(), spiders.size(), t.obj_ix, 1); // in_tank=1
+			}
+		} // for t
+	}
 	// update spiders
 	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
 	
@@ -849,6 +872,10 @@ void building_t::update_spiders(point const &camera_bs, unsigned building_ix) {
 	for (spider_t &spider : spiders) {update_spider(spider, camera_bs, timestep, spiders.max_xmove, rgen);}
 }
 
+void set_spider_speed(spider_t &spider, rand_gen_t &rgen, float floor_spacing) {
+	spider.speed = global_building_params.spider_speed*rgen.rand_uniform(0.5, 1.0);
+	if (spider.in_tank) {spider.speed *= min(1.0f, 2.0f*spider.radius/(floor_spacing*global_building_params.spider_size_min));} // scale pet store spider speed with radius
+}
 void building_t::update_sewer_spiders(point const &camera_bs, unsigned building_ix) {
 	vect_spider_t &spiders(interior->room_geom->sewer_spiders);
 	if (spiders.placed && spiders.empty()) return; // no spiders placed in this building
@@ -880,16 +907,16 @@ void building_t::update_sewer_spiders(point const &camera_bs, unsigned building_
 			pos.z       = t.p[0].z + t.radius - radius; // on the top of the tunnel
 			dir[t.dim]  = (rgen.rand_bool() ? 1.0 : -1.0); // face a random direction
 			spider_t spider(pos, radius, dir, 0, (i - interior->tunnels.begin())); // id=0, store tunnel index
-			spider.upv   = -plus_z; // upside down
-			spider.speed = global_building_params.spider_speed*rgen.rand_uniform(0.5, 1.0);
+			spider.upv  = -plus_z; // upside down
+			set_spider_speed(spider, rgen, floor_spacing);
 			spiders.add(spider);
 		} // for i
 		spiders.placed = 1;
 	}
 	if (player_in_tunnel) {
 		for (spider_t &spider : spiders) { // update logic
-			assert(spider.tunnel_ix < interior->tunnels.size());
-			tunnel_seg_t const &t(interior->tunnels[spider.tunnel_ix]);
+			assert(spider.tunnel_tank_ix < interior->tunnels.size());
+			tunnel_seg_t const &t(interior->tunnels[spider.tunnel_tank_ix]);
 			float &val(spider.pos[t.dim]);
 			float v1(t.p[0][t.dim] + 2.0*spider.radius), v2(t.p[1][t.dim] - 2.0*spider.radius); // movement range
 
@@ -929,6 +956,9 @@ public:
 			}
 		}
 		colliders.push_back(c); // record for later processing in align_to_surfaces()
+	}
+	void register_cubes(cube_t const *const cubes, unsigned num) {
+		for (unsigned n = 0; n < num; ++n) {register_cube(cubes[n]);}
 	}
 	template<typename T> void register_cubes(vector<T> const &cubes, bool check_z_merge=0) { // cube, cube_with_ix_t, etc.
 		for (cube_t const &c : cubes) {register_cube(c, check_z_merge);}
@@ -1010,150 +1040,166 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 	bool const in_attic(point_in_attic(spider.pos));
 	obj_avoid_t obj_avoid(spider.pos, spider.last_pos, coll_radius); // use xy_radius for all dims
 	surface_orienter.init(spider.pos, spider.last_pos, size);
-	// Note: we can almost use fc_occluders, except this doesn't contain the very bottom floor because it's not an occluder, and maybe the overlaps would cause problems
-	surface_orienter.register_cubes(interior->floors);
-	surface_orienter.register_cubes(interior->ceilings, 1); // check_z_merge=1
-	surface_orienter.clip_and_max_expand_cubes(); // required to remove false splits between ceilings and floors
-	if (has_room_geom()) {surface_orienter.register_cubes(interior->room_geom->glass_floors);}
-	
-	if (!in_attic) {
-		for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d]);} // XY walls
-	}
-	cube_t const tc(surface_orienter.get_check_cube());
 
-	if (!in_attic) { // check interior doors
-		for (auto const &ds : interior->door_stacks) {
-			if (ds.z1() > tc.z2() || ds.z2() < tc.z1()) continue; // wrong floor for this stack/part
-			// calculate door bounds for bcube test, assuming it's open
-			cube_t door_bounds(ds);
-			door_bounds.expand_by_xy(ds.get_width());
-			if (!tc.intersects(door_bounds)) continue; // optimization
-			assert(ds.first_door_ix < interior->doors.size());
+	if (spider.in_tank) { // pet store tank spider
+		assert(spider.tunnel_tank_ix < interior->room_geom->objs.size());
+		room_object_t const &tank(interior->room_geom->objs[spider.tunnel_tank_ix]);
 
-			for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
-				door_t const &door(interior->doors[dix]);
-				if (!ds.is_same_stack(door)) break; // moved to a different stack, done
-				if (door.z1() > tc.z2() || door.z2() < tc.z1()) continue; // wrong floor
-
-				if (door.open) { // how to handle open doors? they're not cubes; avoid them entirely? use their bcubes?
-					cube_t door_bcube(get_door_bounding_cube(door));
-					bool const dir(door.get_check_dirs()); // side of the door frame the door opens to
-					door_bcube.d[!door.dim][!dir] += (dir ? 1.0 : -1.0)*2.0*spider.radius; // shift edge away from door frame to allow spider to walk on inside of the frame
-				
-					if (tc.intersects(door_bcube)) {
-						obj_avoid.register_avoid_cube(door_bcube);
-						// while the extruded polygon collision check below is more accurate, it can result in spiders getting stuck behind open doors
-						//if (sphere_ext_poly_intersect(door_tq.pts, 4, normal, spider.pos, coll_radius, door.get_thickness(), 0.0)) {obj_avoid.had_coll = 1;}
-					}
-				}
-				else if (tc.intersects(door)) {surface_orienter.register_cube(door);} // closed door
-			} // for dix
-		} // for door_stacks
-	}
-	// check interior objects
-	static vect_cube_t cubes, avoid;
-	vect_room_object_t::const_iterator b, e;
-	get_begin_end_room_objs_on_ground_floor(tc.z2(), 1, b, e); // for_spider=1
-
-	for (auto i = b; i != e; ++i) {
-		if (i->z1() > tc.z2()) continue; // object is too high
-		if (spider.on_web && spider.web_dir == 0 && i->type == TYPE_LIGHT && i->shape == SHAPE_CUBE) continue; // ignore cube lights if descending on a web to avoid getting stuck
-		if (i->z2() < tc.z1() && !(i->type == TYPE_DESK && i->shape == SHAPE_TALL))                  continue; // sigh, tall desks are special
-		if (!tc.intersects_xy((i->type == TYPE_CLOSET) ? get_true_room_obj_bcube(*i) : (cube_t)*i))  continue; // no intersection with this object
-		if (!i->is_spider_collidable()) continue;
-		if (i->get_max_dim_sz() < spider.radius) continue; // too small, skip
-		get_room_obj_cubes(*i, spider.pos, cubes, cubes, avoid); // climb on large and small objects and avoid non-cube objects
-		surface_orienter.register_cubes(cubes);
-		for (cube_t const &c : avoid) {obj_avoid.register_avoid_cube(c);}
-		cubes.clear();
-		avoid.clear();
-	} // for i
-	if (has_pool()) {obj_avoid.register_avoid_cube(interior->pool);}
-	// check elevators and escalators
-	for (elevator_t  const &e : interior->elevators ) {surface_orienter.register_cube(e);} // should we avoid open elevators?
-	
-	for (escalator_t const &e : interior->escalators) {
-		if (!tc.intersects(e)) continue;
+		if (tank.type != TYPE_FISHTANK) { // tank was taken, set the spider free
+			spider.in_tank = 0;
+			return 0;
+		}
 		cube_t cubes[7];
-		e.get_all_cubes(cubes);
-		for (unsigned n = 0; n < 7; ++n) {surface_orienter.register_cube(cubes[n]);}
-		obj_avoid.register_avoid_cube(e.get_ramp_bcube(0)); // avoid ramp since it's not a cube; exclude_sides=0
+		unsigned const num_cubes(get_fishtank_coll_cubes(tank, cubes));
+		surface_orienter.register_cubes(cubes, num_cubes);
+		tank.clamp_pt(spider.pos); // restrict to the tank, just in case they can get out
 	}
-	if (in_attic) {
-		// the attic roof is not a cube we can walk on and the beams aren't real objects;
-		// also, it's not really possible to move from the attic floor to the roof without getting stuck in/on the corner
-	}
-	else if (!is_cube()) {
-		// not cube walls, skip exterior
-	}
-	else { // check exterior walls; the spider can walk on them, but only if they're closed
-		float const wall_thickness(get_wall_thickness()), door_open_dist(get_door_open_dist());
-		auto const parts_end(get_real_parts_end_inc_sec());
-		point const query_pt(get_inv_rot_pos(camera_bs)); // for open exterior door tests
+	else { // free building spider
+		// Note: we can almost use fc_occluders, except this doesn't contain the very bottom floor because it's not an occluder, and maybe the overlaps would cause problems
+		surface_orienter.register_cubes(interior->floors);
+		surface_orienter.register_cubes(interior->ceilings, 1); // check_z_merge=1
+		surface_orienter.clip_and_max_expand_cubes(); // required to remove false splits between ceilings and floors
+		if (has_room_geom()) {surface_orienter.register_cubes(interior->room_geom->glass_floors);}
+	
+		if (!in_attic) {
+			for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d]);} // XY walls
+		}
+		cube_t const tc(surface_orienter.get_check_cube());
 
-		for (auto i = parts.begin(); i != parts_end; ++i) {
-			for (unsigned dim = 0; dim < 2; ++dim) {
-				for (unsigned dir = 0; dir < 2; ++dir) {
-					cube_t cube(*i);
-					cube.d[dim][!dir] = i->d[dim][dir] + (dir ? -1.0 : 1.0)*trim_thickness; // shrink to trim thickness
-					if (!cube.intersects(tc)) continue; // optimization
-					cubes.clear();
-					cubes.push_back(cube); // start with entire length
+		if (!in_attic) { // check interior doors
+			for (auto const &ds : interior->door_stacks) {
+				if (ds.z1() > tc.z2() || ds.z2() < tc.z1()) continue; // wrong floor for this stack/part
+				// calculate door bounds for bcube test, assuming it's open
+				cube_t door_bounds(ds);
+				door_bounds.expand_by_xy(ds.get_width());
+				if (!tc.intersects(door_bounds)) continue; // optimization
+				assert(ds.first_door_ix < interior->doors.size());
 
-					for (auto j = parts.begin(); j != get_real_parts_end(); ++j) { // clip against other parts
-						if (j == i) continue; // skip self
-						subtract_cube_from_cubes(*j, cubes); // subtract this part from current cubes by clipping in XY
-					}
-					if (is_basement(i) && has_ext_basement()) { // check for extended basement door and exclude it if open
-						door_t const &door(interior->get_ext_basement_door());
-						
-						if (door.open && door.z1() < tc.z2() && door.z2() > tc.z1()) { // open door that overlaps spider zval
-							cube_t wall_cut(door);
-							wall_cut.expand_in_dim(door.dim, wall_thickness);
-							subtract_cube_from_cubes(wall_cut, cubes, nullptr, 1); // clip_in_z=1
+				for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
+					door_t const &door(interior->doors[dix]);
+					if (!ds.is_same_stack(door)) break; // moved to a different stack, done
+					if (door.z1() > tc.z2() || door.z2() < tc.z1()) continue; // wrong floor
+
+					if (door.open) { // how to handle open doors? they're not cubes; avoid them entirely? use their bcubes?
+						cube_t door_bcube(get_door_bounding_cube(door));
+						bool const dir(door.get_check_dirs()); // side of the door frame the door opens to
+						door_bcube.d[!door.dim][!dir] += (dir ? 1.0 : -1.0)*2.0*spider.radius; // shift edge away from door frame to allow spider to walk on inside of the frame
+				
+						if (tc.intersects(door_bcube)) {
+							obj_avoid.register_avoid_cube(door_bcube);
+							// while the extruded polygon collision check below is more accurate, it can result in spiders getting stuck behind open doors
+							//if (sphere_ext_poly_intersect(door_tq.pts, 4, normal, spider.pos, coll_radius, door.get_thickness(), 0.0)) {obj_avoid.had_coll = 1;}
 						}
 					}
-					for (cube_t const &c : cubes) {
-						if (!c.intersects(tc)) continue; // optimization
+					else if (tc.intersects(door)) {surface_orienter.register_cube(door);} // closed door
+				} // for dix
+			} // for door_stacks
+		}
+		// check interior objects
+		static vect_cube_t cubes, avoid;
+		vect_room_object_t::const_iterator b, e;
+		get_begin_end_room_objs_on_ground_floor(tc.z2(), 1, b, e); // for_spider=1
 
-						if (has_complex_floorplan && spider.pos.z > ground_floor_z1) { // handle intersecting parts
-							// it's not easy to clip this wall to the other parts, so instead we'll project the spider pos to the other side of the wall
-							// and see if it's outside the building; if so, it's a true exterior wall
-							if (c.z1() <= spider.pos.z && c.z2() >= spider.pos.z && c.d[!dim][0] <= spider.pos[!dim] && c.d[!dim][1] >= spider.pos[!dim]) {
-								point proj_pos(spider.pos);
-								proj_pos[dim] = i->d[dim][dir] + (dir ? 1.0 : -1.0)*wall_thickness;
-								bool contained(0);
+		for (auto i = b; i != e; ++i) {
+			if (i->z1() > tc.z2()) continue; // object is too high
+			if (spider.on_web && spider.web_dir == 0 && i->type == TYPE_LIGHT && i->shape == SHAPE_CUBE) continue; // ignore cube lights if descending on a web to avoid getting stuck
+			if (i->z2() < tc.z1() && !(i->type == TYPE_DESK && i->shape == SHAPE_TALL))                  continue; // sigh, tall desks are special
+			if (!tc.intersects_xy((i->type == TYPE_CLOSET) ? get_true_room_obj_bcube(*i) : (cube_t)*i))  continue; // no intersection with this object
+			if (!i->is_spider_collidable()) continue;
+			if (i->get_max_dim_sz() < spider.radius) continue; // too small, skip
+			get_room_obj_cubes(*i, spider.pos, cubes, cubes, avoid); // climb on large and small objects and avoid non-cube objects
+			surface_orienter.register_cubes(cubes);
+			for (cube_t const &c : avoid) {obj_avoid.register_avoid_cube(c);}
+			cubes.clear();
+			avoid.clear();
+		} // for i
+		if (has_pool()) {obj_avoid.register_avoid_cube(interior->pool);}
+		// check elevators and escalators
+		surface_orienter.register_cubes(interior->elevators); // should we avoid open elevators?
+	
+		for (escalator_t const &e : interior->escalators) {
+			if (!tc.intersects(e)) continue;
+			cube_t cubes[7];
+			e.get_all_cubes(cubes);
+			surface_orienter.register_cubes(cubes, 7);
+			obj_avoid.register_avoid_cube(e.get_ramp_bcube(0)); // avoid ramp since it's not a cube; exclude_sides=0
+		}
+		if (in_attic) {
+			// the attic roof is not a cube we can walk on and the beams aren't real objects;
+			// also, it's not really possible to move from the attic floor to the roof without getting stuck in/on the corner
+		}
+		else if (!is_cube()) {
+			// not cube walls, skip exterior
+		}
+		else { // check exterior walls; the spider can walk on them, but only if they're closed
+			float const wall_thickness(get_wall_thickness()), door_open_dist(get_door_open_dist());
+			auto const parts_end(get_real_parts_end_inc_sec());
+			point const query_pt(get_inv_rot_pos(camera_bs)); // for open exterior door tests
 
-								for (auto j = parts.begin(); j != parts_end; ++j) {
-									if (j != i && j->contains_pt(proj_pos)) {contained = 1; break;}
-								}
-								if (contained) continue; // not a true wall, skip
+			for (auto i = parts.begin(); i != parts_end; ++i) {
+				for (unsigned dim = 0; dim < 2; ++dim) {
+					for (unsigned dir = 0; dir < 2; ++dir) {
+						cube_t cube(*i);
+						cube.d[dim][!dir] = i->d[dim][dir] + (dir ? -1.0 : 1.0)*trim_thickness; // shrink to trim thickness
+						if (!cube.intersects(tc)) continue; // optimization
+						cubes.clear();
+						cubes.push_back(cube); // start with entire length
+
+						for (auto j = parts.begin(); j != get_real_parts_end(); ++j) { // clip against other parts
+							if (j == i) continue; // skip self
+							subtract_cube_from_cubes(*j, cubes); // subtract this part from current cubes by clipping in XY
+						}
+						if (is_basement(i) && has_ext_basement()) { // check for extended basement door and exclude it if open
+							door_t const &door(interior->get_ext_basement_door());
+						
+							if (door.open && door.z1() < tc.z2() && door.z2() > tc.z1()) { // open door that overlaps spider zval
+								cube_t wall_cut(door);
+								wall_cut.expand_in_dim(door.dim, wall_thickness);
+								subtract_cube_from_cubes(wall_cut, cubes, nullptr, 1); // clip_in_z=1
 							}
 						}
-						// check for open exterior doors
-						bool on_open_door(0);
+						for (cube_t const &c : cubes) {
+							if (!c.intersects(tc)) continue; // optimization
 
-						for (tquad_with_ix_t const &door : doors) {
-							cube_t door_bc(door.get_bcube());
-							if (!door_bc.contains_pt_exp(query_pt, door_open_dist)) continue; // not open
-							door_bc.expand_in_dim(dim, spider.radius);
-							if (door_bc.intersects(tc)) {on_open_door = 1; break;}
-						}
-						if (!on_open_door) {surface_orienter.register_cube(c);}
-					} // for c
-				} // for dir
-			} // for dim
-		} // for i
-	}
-	if (obj_avoid.had_coll) {
-		if (spider.on_web && spider.web_dir == 0) { // collided with un unwalkable object while descending on a web
-			// if coll is ignored, spider will clip through the object; if spider stops descending, it will get stuck; so instead climb back up the web
-			spider.web_dir = 1;
-			// if pointing nearly straight down, add some randomness to the XY component so that we can turn around
-			if (spider.dir.z < -0.95) {spider.dir += rgen.signed_rand_vector_xy(0.25); spider.dir.normalize();}
+							if (has_complex_floorplan && spider.pos.z > ground_floor_z1) { // handle intersecting parts
+								// it's not easy to clip this wall to the other parts, so instead we'll project the spider pos to the other side of the wall
+								// and see if it's outside the building; if so, it's a true exterior wall
+								if (c.z1() <= spider.pos.z && c.z2() >= spider.pos.z && c.d[!dim][0] <= spider.pos[!dim] && c.d[!dim][1] >= spider.pos[!dim]) {
+									point proj_pos(spider.pos);
+									proj_pos[dim] = i->d[dim][dir] + (dir ? 1.0 : -1.0)*wall_thickness;
+									bool contained(0);
+
+									for (auto j = parts.begin(); j != parts_end; ++j) {
+										if (j != i && j->contains_pt(proj_pos)) {contained = 1; break;}
+									}
+									if (contained) continue; // not a true wall, skip
+								}
+							}
+							// check for open exterior doors
+							bool on_open_door(0);
+
+							for (tquad_with_ix_t const &door : doors) {
+								cube_t door_bc(door.get_bcube());
+								if (!door_bc.contains_pt_exp(query_pt, door_open_dist)) continue; // not open
+								door_bc.expand_in_dim(dim, spider.radius);
+								if (door_bc.intersects(tc)) {on_open_door = 1; break;}
+							}
+							if (!on_open_door) {surface_orienter.register_cube(c);}
+						} // for c
+					} // for dir
+				} // for dim
+			} // for i
 		}
-		spider.end_jump();
-	}
+		if (obj_avoid.had_coll) {
+			if (spider.on_web && spider.web_dir == 0) { // collided with un unwalkable object while descending on a web
+				// if coll is ignored, spider will clip through the object; if spider stops descending, it will get stuck; so instead climb back up the web
+				spider.web_dir = 1;
+				// if pointing nearly straight down, add some randomness to the XY component so that we can turn around
+				if (spider.dir.z < -0.95) {spider.dir += rgen.signed_rand_vector_xy(0.25); spider.dir.normalize();}
+			}
+			spider.end_jump();
+		}
+	} // end free building spider case
 	float const delta_dir(min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep))));
 
 	if (!surface_orienter.align_to_surfaces(spider, delta_dir, rgen)) { // not on a surface
@@ -1211,7 +1257,7 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 	}
 	rgen.rand_mix(); // make sure it's different per spider
 	// Note: we use a small xy_pad to allow the spider to climb on exterior walls
-	if (spider.speed == 0.0) {spider.speed = global_building_params.spider_speed*rgen.rand_uniform(0.5, 1.0);} // random speed
+	if (spider.speed == 0.0) {set_spider_speed(spider, rgen, get_window_vspace());} // random speed
 
 	if (!is_pos_inside_building(spider.pos, radius, radius)) {
 		spider.end_jump();

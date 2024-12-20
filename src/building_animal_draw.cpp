@@ -122,6 +122,7 @@ public:
 					web_mat.add_vcylin_to_verts(strand, WHITE, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // ndiv=16
 				}
 			}
+			if (shadow_only && S.in_tank)            continue; // too small to cast a shadow
 			if (shadow_only && S.shadow_non_visible) continue; // shadow not visible to the camera (player)
 			cube_t const bcube(S.get_bcube());
 			if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
