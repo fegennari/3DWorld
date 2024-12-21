@@ -2986,7 +2986,7 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 		unsigned const dryer_ix(objs.size());
 		bool const placed_dryer(place_model_along_wall(OBJ_MODEL_DRYER, TYPE_DRYER, room, 0.38, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8, pref_orient));
 		bool success(0);
-		if (placed_dryer) {objs[dryer_ix].obj_id = objs.size();} // set dryer obj_id; will determine whether this is gas or electric
+		if (placed_dryer) {objs[dryer_ix].obj_id = (uint16_t)objs.size();} // set dryer obj_id; will determine whether this is gas or electric
 
 		if (placed_washer && placed_dryer && objs[dryer_ix].get_orient() == pref_orient) {success = 1;} // placed both washer and dryer along the same wall
 		else if (n+1 == 10) { // last attempt
