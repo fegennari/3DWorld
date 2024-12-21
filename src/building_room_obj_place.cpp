@@ -2381,7 +2381,7 @@ bool building_t::add_fishtank_to_room(rand_gen_t &rgen, room_t const &room, floa
 	if (!place_obj_along_wall(TYPE_TABLE, room, table_height, fc_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start,
 		0.5, 1, 4, 0, WHITE, 0, SHAPE_CUBE, 0.0, 0, 1)) return 0; // not_ext_wall=1
 	// then add the fishtank
-	float const tank_height(rgen.rand_uniform(0.22, 0.24)*floor_spacing);
+	float const tank_height(rgen.rand_uniform(0.23, 0.25)*floor_spacing);
 	assert(table_obj_ix < objs.size());
 	room_object_t &table(objs[table_obj_ix]); // table was placed first, then a blocker
 	table.shape  = SHAPE_SHORT;

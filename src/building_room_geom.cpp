@@ -5315,9 +5315,10 @@ void building_room_geom_t::add_checkout(room_object_t const &c, float tscale) {
 }
 
 void get_fishtank_cubes(room_object_t const &c, cube_t sides[4], cube_t &substrate, cube_t &lid, cube_t &light) {
-	float const height(c.dz()), glass_thickness(0.02*height), trim_height(0.05*height);
+	bool const has_lid(c.flags & RO_FLAG_ADJ_TOP);
+	float const height(c.dz()), glass_thickness(0.02*height);
 	cube_t glass(c);
-	set_cube_zvals(glass, (c.z1() + trim_height), (c.z2() - trim_height));
+	set_cube_zvals(glass, (c.z1() + 0.05*height), (c.z2() - (has_lid ? 0.05 : 0.075)*height));
 	// add the sides
 	glass.expand_by_xy(-0.5*glass_thickness); // shrink slightly
 	cube_t hole(glass);
@@ -5328,10 +5329,9 @@ void get_fishtank_cubes(room_object_t const &c, cube_t sides[4], cube_t &substra
 	substrate.z2() = glass.z1() + 0.05*height; // shallow
 	substrate.expand_by_xy(-0.1*glass_thickness); // shrink slightly to prevent Z-fighting
 
-	if (c.flags & RO_FLAG_ADJ_TOP) { // add the lid and light; these extend above z2
+	if (has_lid) { // add the lid and light; the light extends above z2
 		lid = c;
-		lid.z1()  = c.z2();
-		lid.z2() += 0.75*trim_height;
+		lid.z1()  = glass.z2() - 0.04*height;
 		lid.expand_by_xy(0.004*height); // slight overhang
 		light = lid;
 		light.z1()  = lid.z2();
@@ -5342,6 +5342,8 @@ void get_fishtank_cubes(room_object_t const &c, cube_t sides[4], cube_t &substra
 unsigned get_fishtank_coll_cubes(room_object_t const &c, cube_t cubes[7]) { // 4 sides, substrate, [lid, light]
 	cube_t substrate, lid, light;
 	get_fishtank_cubes(c, cubes, substrate, lid, light);
+	for (unsigned n = 0; n < 2; ++n) {cubes[n].z2() = c.z2();} // extend to the top to include the trim
+	substrate.z1() = c.z1(); // extend to the bottom
 	cubes[4] = substrate;
 	if (!(c.flags & RO_FLAG_ADJ_TOP)) return 5; // no top
 	cubes[5] = lid;
@@ -5363,7 +5365,7 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 	subtract_cube_xy(top, trim_hole, trim);
 	for (unsigned n = 0; n < 4; ++n) {trim_mat.add_cube_to_verts_untextured(trim[n], trim_color, 0);}
 
-	if (c.flags & RO_FLAG_ADJ_TOP) { // draw the lid and light; these extend above z2
+	if (c.flags & RO_FLAG_ADJ_TOP) { // draw the lid and light
 		trim_mat.add_cube_to_verts_untextured(lid,   trim_color, 0    );
 		trim_mat.add_cube_to_verts_untextured(light, trim_color, EF_Z1); // skip bottom
 	}
@@ -5377,8 +5379,8 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 
 	if (!c.is_broken() && animal_type == TYPE_FISH) { // draw water if there are fish
 		cube_t water(c);
-		water.z2() -= 0.1*height; // 90% filled
-		trans_mat.add_cube_to_verts_untextured(water, apply_light_color(c, colorRGBA(0.7, 0.85, 1.0, 0.15)), ~EF_Z2); // top surface
+		water.z2() -= 0.12*height; // 88% filled
+		trans_mat.add_cube_to_verts_untextured(water, apply_light_color(c, colorRGBA(0.7, 0.85, 1.0, 0.2)), ~EF_Z2); // top surface
 	}
 	// draw gravel/dirt/wood bottom; this won't be in the correct blend order and won't be visible when outside the building looking in through a window
 	int tid(-1);
