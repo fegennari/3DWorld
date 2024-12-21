@@ -26,6 +26,7 @@ void force_player_height(double height);
 bool is_player_model_female();
 bool get_sphere_poly_int_val(point const &sc, float sr, point const *const points, unsigned npoints, vector3d const &normal, float thickness, float &val, vector3d &cnorm);
 float get_player_move_dist();
+void get_shelf_brackets(room_object_t const &c, cube_t shelves[4], unsigned num_shelves, vect_cube_with_ix_t &brackets);
 
 
 // assumes player is in this building; handles windows and exterior doors but not attics and basements
@@ -2424,6 +2425,10 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 			cube_t shelves[4]; // max number of shelves
 			unsigned const num_shelves(get_shelves_for_object(c, shelves));
 			lg_cubes.insert(lg_cubes.end(), shelves, shelves+num_shelves);
+			// add brackets for small pet store spiders to walk on
+			static vect_cube_with_ix_t brackets;
+			get_shelf_brackets(c, shelves, num_shelves, brackets);
+			vector_add_to(brackets, sm_cubes);
 		}
 		else { // storage room shelves have all sorts of items when expanded, which we don't collide with, so mark as non-cube
 			non_cubes.push_back(get_shelves_no_bot_gap(c)); // allow spiders to crawl under shelves
