@@ -1051,9 +1051,9 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 			spider.in_tank = 0;
 			return 0;
 		}
-		bool const has_top(tank.flags & RO_FLAG_ADJ_TOP);
+		bool const has_lid(tank.has_lid());
 
-		if (!has_top && spider.pos.z > tank.z2()) { // climb out of the open top
+		if (!has_lid && spider.pos.z > tank.z2()) { // climb out of the open top
 			spider.in_tank = 0;
 			return 0;
 		}
@@ -1062,7 +1062,7 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 		surface_orienter.register_cubes(cubes, num_cubes);
 		cube_t clamp_area(tank);
 		clamp_area.expand_by(-spider.radius);
-		if (!has_top) {clamp_area.z2() = tank.z2() + spider.radius;} // don't clamp on the top if the tank is open
+		if (!has_lid) {clamp_area.z2() = tank.z2() + spider.radius;} // don't clamp on the top if the tank is open
 		clamp_area.clamp_pt(spider.pos); // restrict to the tank, just in case they can get out
 	}
 	else { // free building spider

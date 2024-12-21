@@ -298,6 +298,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		// else take the toy base
 	}
 	if (otype == TYPE_FISHTANK) { // glass terrarium or fishtank
+		if (obj.has_lid()) return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 10.0, 1.0, "tank lid and light"); // take the lid and light
 		float value(0.0), weight(0.0);
 		string name;
 		switch (obj.item_flags) {
@@ -1331,6 +1332,20 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 		}
 		if (ret) {++obj.taken_level;} // onto next item
 		return ret;
+	}
+	if (obj.type == TYPE_FISHTANK && obj.has_lid()) { // maybe take the lid first
+		point const p2(at_pos + in_dir*2.0*range);
+		cube_t top(obj);
+		top.z1() = obj.z2() - 0.1*obj.dz(); // top
+		bool const take_lid(check_line_clip(at_pos, p2, top.d)), do_pickup(do_room_obj_pickup);
+
+		if (take_lid) {
+			if (!register_player_object_pickup(obj, at_pos)) return 0;
+			player_inventory.add_item(obj);
+			update_draw_state_for_room_object(obj, building, 0); // was_taken=0
+		}
+		if (do_pickup) {obj.flags &= ~(RO_FLAG_ADJ_TOP | RO_FLAG_LIT);} // remove the lid and light, whether or not we're taking it
+		if (take_lid) return 1;
 	}
 	if (!register_player_object_pickup(obj, at_pos)) return 0;
 	remove_object(obj_id, building);

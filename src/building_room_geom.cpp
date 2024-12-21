@@ -5326,7 +5326,7 @@ void building_room_geom_t::add_checkout(room_object_t const &c, float tscale) {
 }
 
 void get_fishtank_cubes(room_object_t const &c, cube_t sides[4], cube_t &substrate, cube_t &lid, cube_t &light) {
-	bool const has_lid(c.flags & RO_FLAG_ADJ_TOP);
+	bool const has_lid(c.has_lid());
 	float const height(c.dz()), glass_thickness(0.02*height);
 	cube_t glass(c);
 	set_cube_zvals(glass, (c.z1() + 0.05*height), (c.z2() - (has_lid ? 0.05 : 0.075)*height));
@@ -5356,7 +5356,7 @@ unsigned get_fishtank_coll_cubes(room_object_t const &c, cube_t cubes[7]) { // 4
 	for (unsigned n = 0; n < 2; ++n) {cubes[n].z2() = c.z2();} // extend to the top to include the trim
 	substrate.z1() = c.z1(); // extend to the bottom
 	cubes[4] = substrate;
-	if (!(c.flags & RO_FLAG_ADJ_TOP)) return 5; // no top
+	if (!c.has_lid()) return 5; // no lid or light
 	cubes[5] = lid;
 	cubes[6] = light;
 	return 7;
@@ -5376,7 +5376,7 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 	subtract_cube_xy(top, trim_hole, trim);
 	for (unsigned n = 0; n < 4; ++n) {trim_mat.add_cube_to_verts_untextured(trim[n], trim_color, 0);}
 
-	if (c.flags & RO_FLAG_ADJ_TOP) { // draw the lid and light
+	if (c.has_lid()) { // draw the lid and light
 		trim_mat.add_cube_to_verts_untextured(lid,   trim_color, 0    );
 		trim_mat.add_cube_to_verts_untextured(light, trim_color, EF_Z1); // skip bottom
 	}
