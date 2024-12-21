@@ -13,6 +13,10 @@ using namespace std;
 
 extern float CAMERA_RADIUS;
 
+void sleep_for_ms(unsigned milliseconds) {
+	std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
+}
+
 #define ENABLE_OPENAL // comment this out to disable OpenAL sound support
 
 #ifdef ENABLE_OPENAL
@@ -33,10 +37,6 @@ extern int frame_counter, iticks;
 
 float const loop_sound_gains  [NUM_LOOP_SOUNDS] = {0.5, 0.1, 0.1, 0.1};
 float const loop_sound_pitches[NUM_LOOP_SOUNDS] = {1.0, 1.0, 1.0, 1.0};
-
-void sleep_for_ms(unsigned milliseconds) {
-	std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
-}
 
 
 void placed_sound_t::write_to_cobj_file(ostream &out, string const &name) const {
@@ -574,6 +574,7 @@ void add_placed_sound(string const &fn, sound_params_t const &params, sensor_t c
 void write_placed_sounds_to_cobj_file(ostream &out) {}
 void setup_openal_listener(point const &pos, vector3d const &vel, openal_orient const &orient) {}
 void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool rel_to_listener, vector3d const &vel, bool skip_if_already_playing) {}
+void gen_sound_random_var(unsigned id, point const &pos, float gain, float pitch) {}
 void gen_delayed_sound(float delay, unsigned id, point const &pos, float gain, float pitch, bool rel_to_listener) {}
 void proc_delayed_and_placed_sounds() {}
 void init_openal(int &argc, char** argv) {}
