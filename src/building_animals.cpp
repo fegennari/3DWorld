@@ -850,11 +850,13 @@ void building_t::update_spiders(point const &camera_bs, unsigned building_ix) {
 			assert(obj.item_flags == TYPE_SPIDER);
 			rand_gen_t rgen;
 			rgen.set_state(building_ix+1, t.obj_ix+1); // unique per building and per tank
-			unsigned const num_spiders((rgen.rand() % 4) + 1); // 1-5
+			rgen.rand_mix();
+			bool const one_big_spider(rgen.rand_bool());
+			unsigned const num_spiders((one_big_spider ? 0 : (rgen.rand() % 4)) + 1); // 1-5
 			float const zval(obj.z1() + 0.1*obj.dz()); // around substrate height
 
 			for (unsigned n = 0; n < num_spiders; ++n) {
-				float const radius(rgen.rand_uniform(0.5, 1.0)*0.1*obj.dz());
+				float const radius(rgen.rand_uniform(0.5, 1.0)*(one_big_spider ? 0.2 : 0.1)*obj.dz());
 				point const pos(gen_xy_pos_in_area(obj, vector3d(radius, radius, radius), rgen, zval));
 				spiders.emplace_back(pos, radius, rgen.signed_rand_vector_spherical_xy_norm(), spiders.size(), t.obj_ix, 1); // in_tank=1
 			}
@@ -1049,10 +1051,19 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 			spider.in_tank = 0;
 			return 0;
 		}
+		bool const has_top(tank.flags & RO_FLAG_ADJ_TOP);
+
+		if (!has_top && spider.pos.z > tank.z2()) { // climb out of the open top
+			spider.in_tank = 0;
+			return 0;
+		}
 		cube_t cubes[7];
 		unsigned const num_cubes(get_fishtank_coll_cubes(tank, cubes));
 		surface_orienter.register_cubes(cubes, num_cubes);
-		tank.clamp_pt(spider.pos); // restrict to the tank, just in case they can get out
+		cube_t clamp_area(tank);
+		clamp_area.expand_by(-spider.radius);
+		if (!has_top) {clamp_area.z2() = tank.z2() + spider.radius;} // don't clamp on the top if the tank is open
+		clamp_area.clamp_pt(spider.pos); // restrict to the tank, just in case they can get out
 	}
 	else { // free building spider
 		// Note: we can almost use fc_occluders, except this doesn't contain the very bottom floor because it's not an occluder, and maybe the overlaps would cause problems
