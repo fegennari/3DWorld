@@ -657,7 +657,7 @@ bool read_assimp_model(string const &filename, model3d &model, geom_xform_t cons
 
 #else // ENABLE_ASSIMP
 
-bool read_assimp_model(string const &filename, model3d &model, geom_xform_t const &xf, int recalc_normals, bool verbose) {
+bool read_assimp_model(string const &filename, model3d &model, geom_xform_t const &xf, string const &anim_name, int recalc_normals, bool verbose) {
 	cerr << "Error: Assimp model import has not been enabled at compile time" << endl;
 	return 0;
 }
