@@ -23,7 +23,13 @@ textures/skybox/craterlake
 textures/pictures
 textures/papers
 textures/food_boxes
+dependencies/freeglut-2.8.1/progs/demos/x64
 dependencies/meshoptimizer/src/*.o
+dependencies/openal-soft/CMakeFiles
+dependencies/freealut/CMakeCache.txt
+dependencies/freealut/CMakeFiles/
+dependencies/openal-soft/OpenAL.vcxproj.user
+dependencies/tiff-4.3.0
 house/snow.wind.map
 temp_assimp_embedded_image.*
 lib32/assimp-vc140-mt.dll
