@@ -336,6 +336,15 @@ int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y, i
 	if (name == "none" || name == "null")  return -1; // no texture
 	int tid(texture_lookup(name));
 	if (tid >= 0) {assert((unsigned)tid < textures.size()); return tid;}
+#ifndef ENABLE_PNG
+	// no test; handled by stb_image as a fallback
+#endif
+#ifndef ENABLE_TIFF
+	if (endswith(name, ".tif") || endswith(name, ".tiff")) return -1; // tiff format not enabled
+#endif
+#ifndef ENABLE_DDS
+	if (endswith(name, ".dds")) return -1; // dds format not enabled
+#endif
 	//timer_t timer("Load Texture " + name);
 	// try to load/add the texture directly from a file: assume it's RGB with wrap and mipmaps
 	assert(omp_get_thread_num_3dw() == 0); // must be serial
