@@ -1001,7 +1001,7 @@ void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rg
 			else {
 				car.apply_scale(model.scale);
 				// set correct bcube that matches the model; needed for pedestrians; can't modify cars in garages
-				if (!is_in_garage) {car.set_correct_len_width_from_model(car_model_loader.get_model_world_space_size(car.model_id));}
+				if (!is_in_garage && car_model_loader.is_model_valid(car.model_id)) {car.set_correct_len_width_from_model(car_model_loader.get_model_world_space_size(car.model_id));}
 			}
 			fixed_color = model.fixed_color_id;
 			break; // done

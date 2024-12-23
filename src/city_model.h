@@ -114,6 +114,7 @@ public:
 
 class object_model_loader_t : public city_model_loader_t {
 	city_model_t null_model;
+	int get_valid_sub_model_id(unsigned id, vector<city_model_t> const &models) const;
 public:
 	virtual unsigned num_models() const;
 	virtual unsigned get_num_sub_models(unsigned id) const;

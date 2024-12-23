@@ -361,15 +361,24 @@ city_model_t &helicopter_model_loader_t::get_model(unsigned id) {
 unsigned object_model_loader_t::get_num_sub_models(unsigned id) const {
 	return city_params.building_models[get_model_id(id)].size();
 }
+int object_model_loader_t::get_valid_sub_model_id(unsigned id, vector<city_model_t> const &models) const {
+	for (unsigned i = 0; i < models.size(); ++i) { // check all models starting with the selected one and return the first valid
+		unsigned const cand((id + i) % models.size()); // index will wrap around if too large, which allows rand() to be passed in
+		if (models[cand].valid && models[cand].is_loaded()) return cand;
+	}
+	return -1; // no valid models found
+}
 city_model_t const &object_model_loader_t::get_model(unsigned id) const {
 	auto const &models(city_params.building_models[get_model_id(id)]);
-	if (models.empty()) return null_model;
-	return models[get_sub_model_id(id) % models.size()]; // sel_ix will wrap around if too large, which allows rand() to be passed in
+	int const model_id(get_valid_sub_model_id(id, models));
+	if (model_id < 0) return null_model;
+	return models[model_id];
 }
 city_model_t &object_model_loader_t::get_model(unsigned id) {
 	auto &models(city_params.building_models[get_model_id(id)]);
-	if (models.empty()) return null_model; // can get here for OBJ_MODEL_MONITOR
-	return models[get_sub_model_id(id) % models.size()]; // sel_ix will wrap around if too large, which allows rand() to be passed in
+	int const model_id(get_valid_sub_model_id(id, models));
+	if (model_id < 0) return null_model;
+	return models[model_id];
 }
 
 bool city_params_t::add_model(unsigned id, FILE *fp) {
