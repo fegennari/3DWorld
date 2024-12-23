@@ -1014,11 +1014,14 @@ void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rg
 	else if (fixed_color == -2) {car.color_id = 255;} // special 'use model file custom color' value; custom_color should already be set
 	else if (fixed_color == -1) {car.color_id = (local_rgen.rand() % NUM_CAR_COLORS);} // choose a random color
 	else                        {car.color_id = fixed_color;} // use this specific fixed color
-	// the best we can do is to search for the string 'police' and 'ambulance' in the filename
-	string const &fn(car_model_loader.get_model(car.model_id).fn);
-	if      (fn.find("Police"   ) != string::npos || fn.find("police"   ) != string::npos) {car.is_police    = 1;}
-	else if (fn.find("Ambulance") != string::npos || fn.find("ambulance") != string::npos) {car.is_ambulance = 1;}
-	car.is_emergency = is_active_emergency_vehicle(car_model_loader, car, 1, 1); // both lights and siren
+
+	if (num_models > 0) { // handle emergency vehicles
+		// the best we can do is to search for the string 'police' and 'ambulance' in the filename
+		string const &fn(car_model_loader.get_model(car.model_id).fn);
+		if      (fn.find("Police"   ) != string::npos || fn.find("police"   ) != string::npos) {car.is_police    = 1;}
+		else if (fn.find("Ambulance") != string::npos || fn.find("ambulance") != string::npos) {car.is_ambulance = 1;}
+		car.is_emergency = is_active_emergency_vehicle(car_model_loader, car, 1, 1); // both lights and siren
+	}
 	assert(car.is_valid());
 }
 void car_manager_t::finalize_cars() {
