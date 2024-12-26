@@ -646,7 +646,7 @@ bool setup_shaders() {
 	}
 	cout << "OpenGL Version: " << glGetString(GL_VERSION) << endl;
 	cout << "Renderer: " << glGetString(GL_RENDERER) << endl;
-	cout << "Vendor: " << glGetString(GL_VENDOR) << endl;
+	cout << "Vendor: " << glGetString(GL_VENDOR) << endl; // ATI Technologies, Inc., NVIDIA Corporation, etc.
 	cout << "GLSL Shader Version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
 	if (GLEW_ARB_vertex_shader && GLEW_ARB_fragment_shader && GL_EXT_geometry_shader4) return 1;
 	cerr << "Error setting up vertex and fragment GLSL shaders." << endl;

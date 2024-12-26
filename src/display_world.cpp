@@ -338,8 +338,8 @@ void show_gpu_mem_info() {
 	glGetIntegerv(TEXTURE_FREE_MEMORY_ATI,                      &texture_free_mem);
 	glGetIntegerv(RENDERBUFFER_FREE_MEMORY_ATI,                 &rbuf_free_mem);
 	glGetError(); // clear the error state
-	if (ded_vmem    ) {cout << TXT(ded_vmem) << TXT(tot_vmem) << TXT(avail_vmem) << endl;} // Nvidia
-	if (vbo_free_mem) {cout << TXT(vbo_free_mem) << TXT(texture_free_mem) << TXT(rbuf_free_mem) << endl;} // ATI
+	if (ded_vmem     > 0) {cout << TXT(ded_vmem) << TXT(tot_vmem) << TXT(avail_vmem) << endl;} // Nvidia
+	if (vbo_free_mem > 0) {cout << TXT(vbo_free_mem) << TXT(texture_free_mem) << TXT(rbuf_free_mem) << endl;} // ATI
 }
 
 
