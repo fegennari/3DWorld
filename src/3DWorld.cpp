@@ -270,6 +270,7 @@ void quit_3dworld() { // called once at the end for proper cleanup
 		delete_matrices();
 	}
 	glutExit();
+	//_CrtDumpMemoryLeaks();
 	exit(0); // quit
 }
 
@@ -2354,6 +2355,8 @@ void init_debug_callback() {
 int main(int argc, char** argv) {
 
 	cout << "Starting 3DWorld" << endl;
+	//HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
+	//_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 	if (argc == 2) {read_ueventlist(argv[1]);}
 	int rs(1);
 	if      (srand_param == 1) {rs = GET_TIME_MS();}
