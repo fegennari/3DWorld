@@ -1,4 +1,4 @@
-use_core_context 0
+#use_core_context 1
 
 ntrees 200
 max_unique_trees 100

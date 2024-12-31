@@ -18,6 +18,7 @@ read_heightmap 1
 preproc_cube_cobjs 1
 start_maximized 1
 enable_mouse_look 1
+use_core_context 1
 rgen_seed 21 # for universe mode
 
 gravity 1.0
