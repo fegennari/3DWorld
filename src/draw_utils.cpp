@@ -538,7 +538,7 @@ template<typename T> void indexed_mesh_draw<T>::render() const {
 	if (verts.empty()) return;
 	assert(ivbo && ivbo_size > 0);
 	bind_vbo(ivbo, 1);
-	set_ptr_state(&verts.front(), verts.size());
+	set_ptr_state(verts.data(), verts.size());
 	glDrawRangeElements(GL_TRIANGLES, 0, verts.size(), ivbo_size, GL_UNSIGNED_INT, NULL);
 	++num_frame_draw_calls;
 	bind_vbo(0, 1);

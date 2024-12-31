@@ -1956,6 +1956,7 @@ void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned co
 		} // for dir
 	} // for dim
 	bind_vbo(0, 0); // unbind vertex buffer
+	bind_vbo(0, 1); // unbind index  buffer
 	fgPopMatrix();
 	if (draw_near_water) {draw_water_cap(s, 1);}
 }
