@@ -43,14 +43,16 @@ vec3 voronoiB( vec2 u )  // returns len + id
     
 // --- 2D
 #define hash21(p) fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123)
-float noise2(vec2 p) {
+
+float noise2_(vec2 p) {
     vec2 i = floor(p);
     vec2 f = fract(p); f = f*f*(3.-2.*f); // smoothstep
     return mix( mix(hash21(i+vec2(0,0)),hash21(i+vec2(1,0)),f.x),
                 mix(hash21(i+vec2(0,1)),hash21(i+vec2(1,1)),f.x), f.y);
 }
 
-#define noise22(p) vec2(noise2(p),noise2(p+17.7))
+#define noise22(p) vec2(noise2_(p),noise2_(p+17.7))
+
 vec2 fbm22(vec2 p) {
     vec2 v = vec2(0);
     float a = .5;
@@ -64,8 +66,7 @@ vec2 fbm22(vec2 p) {
     
 // ======================================================
 
-float get_crack_weight(in vec2 tc)
-{
+float get_crack_weight(in vec2 tc) {
     vec2 U = tc;
     vec3 H0;
     float weight = 0.0;

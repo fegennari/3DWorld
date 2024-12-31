@@ -90,7 +90,7 @@ int MOD = 1;  // type of Perlin noise
     
 // --- 2D
 #define hash21(p) fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123)
-float noise2(vec2 p) {
+float noise2_(vec2 p) {
     vec2 i = floor(p);
     vec2 f = fract(p); f = f*f*(3.-2.*f); // smoothstep
 
@@ -112,7 +112,7 @@ float fbm2(vec2 p) {
 
     return v;
 }
-#define noise22(p) vec2(noise2(p),noise2(p+17.7))
+#define noise22(p) vec2(noise2_(p),noise2_(p+17.7))
 vec2 fbm22(vec2 p) {
     vec2 v = vec2(0);
     float a = .5;
