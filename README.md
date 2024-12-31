@@ -8,7 +8,7 @@
 It has the following features:
 * 3D graphics functions, classes, and wrappers around OpenGL
 * Shader generator/processor with hot reload
-* Procedural content generation for terrain, vegetation, buildings, etc.
+* Procedural content generation for terrain, vegetation, cities, building interiors and exteriors, etc.
 * Procedural universe generator with galaxies, stars, planets, moons, etc.
 * Procedural voxel 3D terrain generation with realtime user editing
 * Terrain generator including various noise functions, erosion, realtime user editing, heightmap read/write
@@ -20,7 +20,7 @@ It has the following features:
 * Skeletal animation and procedural animation
 * Built-in first person shooter game "smiley killer"
 * Build-in spaceship + planet colonization game
-* Building item collection and zombie gameplay mode
+* Building open world item collection and zombie gameplay mode
 * Computer AI for players in the FPS game, building gameplay, and ships in the universe game
 * Importer for Lightwave object file, 3DS formats, and Assimp for other file formats
 * Reading support for textures: JPEG, PNG, BMP, TIFF, TGA, DDS
@@ -29,7 +29,7 @@ It has the following features:
 I converted the project from svn to git at commit 6607.
 Most of the code is written in C++, with GLSL for shaders.
 This is intended to be a cross-platform project.
-Microsoft Visual Studio 2019 and 2022 project files are included.
+Microsoft Visual Studio 2022 project files are included.
 A linux/gcc makefile is also included, but is more experimental. See README.linux for more details.
 The project should build under gcc on linux with some work, but it's been a while since I tried this.
 I have an old makefile that is out of date, but may not take too much work to fixup and make it usable.
@@ -39,31 +39,33 @@ I've included source code, config files, textures, sounds, small models, lightin
 This repo does not contain the large model files used in some scenes, you'll have to download these separately.
 This means that some of the scene config files won't work because they can't find their referenced data.
 The current list of dependencies is:
-* OpenGL 4.5 (Should come with Windows 7/8/10 latest graphics drivers)
-* OpenAL 1.1 (System Install: https://www.openal.org/downloads/ or you can try the newer openal-soft: https://github.com/kcat/openal-soft)
+* OpenGL 4.5 (Should come with Windows 8/10/11 latest graphics drivers)
+* OpenAL 1.1 (optional) (System Install: https://www.openal.org/downloads/ or you can try the newer openal-soft: https://github.com/kcat/openal-soft)
 * freeglut-2.8.1 (Current 3.0 version probably works: https://sourceforge.net/projects/freeglut/)
-* freealut-1.1.0 (One version is here: https://github.com/vancegroup/freealut)
-* zlib-1.2.1 (You can download a newer version from here: https://zlib.net/)
+* freealut-1.1.0 (optional) (One version is here: https://github.com/vancegroup/freealut)
+* zlib-1.2.11 (You can download a newer version from here: https://zlib.net/)
 * glew-2.0.0 (2.1.0 probably works as well: http://glew.sourceforge.net/)
 * gli (Latest version: https://github.com/g-truc/gli / header only, included in dependencies directory)
 * glm-0.9.9.0 (Latest version: https://glm.g-truc.net/0.9.9/index.html or https://github.com/g-truc/glm / header only, included in dependencies directory)
-* libpng-1.2.20 (My version is very old; Latest version: https://libpng.sourceforge.io/index.html); can be replaced with stb_image in most cases, except for map image export.
-* libtiff-4.0.3 (Latest version: http://www.simplesystems.org/libtiff/)
-* Assimp (optional)
+* libpng-1.2.20 (optional) (My version is very old; Latest version: https://libpng.sourceforge.io/index.html); Can be replaced with stb_image in most cases, except for map image export.)
+* libtiff-4.3.0 (optional) (Latest version: http://www.simplesystems.org/libtiff/)
+* Assimp (optional) (See build instructions at https://github.com/assimp/assimp/blob/master/Build.md ; The vcpkg build instructions are probably the easiest.)
 * libtarga (source included)
 * STB headers: stb_image, stb_image_write, stb_dxt (source included)
 
 I've included stripped down versions of most of these libraries in the dependencies directory.
 I removed all large files that aren't required by 3DWorld, in some cases even examples/tests/documentation.
-These have been built with MS Visual Studio 2022 Community on Windows 10.
-If you want to use these, you'll need to copy the directories to the root directory and rebuild any libraries needed for other versions of Visual Studio.
+These have been built with MS Visual Studio 2022 Community on Windows 11.
+If you want to use these, you'll need to copy the directories to the root directory and rebuild any libraries needed for other versions of Windows or Visual Studio.
+If you clone/install vcpkg it should be at the same level as the 3DWorld directory.
 
 Note that many of these dependencies are old and could be replaced with newer libraries. I've been concentrating on adding content and I'm not too interested in this.
-Freeglut should probably be replaced with SDL, and the last 4 image libraries with STB or DevIL.
+Freeglut should probably be replaced with SDL, and the image libraries with STB or DevIL. (STB is used as a fallback but doesn't support all of the images used.)
 
 If you want to build 3DWorld, you can use the projects in the dependencies/ folder, or download and build them yourself and change the project settings to use them.
-I currently use a 32-bit MS Visual Studio 2022 Community build target for 3DWorld, but it should work with MSVS 2019 as well if you use 3DWorld_msvs2019.vcxproj.
-It should compile and run in 64-bit mode if you copy the DLLs from the lib64/ folder into the root of the repo and make some other project settings changes.
+I currently use the x64 MS Visual Studio 2022 Community build target for 3DWorld, but the win32 build target also works.
+The MSVS 2019 project 3DWorld_msvs2019.vcxproj is currently out of date but can possibly be made to work.
+It should compile and run in 32-bit mode if you copy the DLLs from the lib64/ folder into the root of the repo and make some other project settings changes.
 
 If you have linux, you can try to build using the provided makefile. The file README.linux should be helpful.
 I've gotten 3DWorld to build and mostly run on Ubuntu 18.04 with gcc 7 and Ubuntu 20.04 with gcc 9.
@@ -77,18 +79,19 @@ http://casual-effects.com/data/
 I've packaged up the 3D models that are too large for the GitHub repo and put them on Google Drive here (up to v6 now):
 https://drive.google.com/file/d/1crN9rqT-LSvYyTZTw5wtkhwsubE651ex/view?usp=sharing
 Some of these models are stored in 3DWorld's internal format and should not be reused in other projects. Others come from websites such as Mixamo.
+There is also a textures directory with additional textures used with building interiors that can be merged with the project textures directory.
 
 System requirements:
-* Windows 7/8/10/11 (Runs on Windows 7, but I've only built on 8, 10, and 11). Linux when using the makefile with gcc.
+* Windows 8/10/11; Linux when using the makefile with gcc.
 * Microsoft Visual Studio 2019 or 2022. The professional or community version is needed for OpenMP support. You can also try to use gcc on linux.
 * A relatively new generation of Nvidia or ATI GPU (Runs on my laptop with Intel graphics, but at 12-20 FPS)
-* At least 4GB system memory for the larger scenes
+* At least 8GB system memory for the larger scenes
 * At least 4GB GPU memory for the larger scenes; My GPU has 12GB of memory
 
 Troubleshooting:
-It seems like some systems require an OpenGL core context. This can be selected by adding "use_core_context 1" in the config file.
+It seems like some systems (ATI cards in particular) require an OpenGL core context. This can be selected by adding "use_core_context 1" in the config file.
 This can also be enabled in scene_config/config_post.txt, which is a file that applies after reading all other top-level config files.
-In some situations, using a core context can be slower, which is why I don't have it enabled by default.
+In some situations (some Nvidia cards), using a core context can be slower, which is why I don't have it enabled by default.
 
 Useful Keys (see readme-keys.txt for more key bindings):
 * a,s,d,w: Movement
@@ -108,9 +111,10 @@ Useful Keys (see readme-keys.txt for more key bindings):
 * Mouse Left: Turn/Action
 * Mouse Right: Fire
 
-I currently have this repo up for educational purposes under the GPL license.
+I currently have this repo up for educational purposes under the GPLv3 license.
+Some sub-modules are available with other licenses compatible with commercial use in my GitHub account.
 It's not meant as a commercial tool and I'm not trying to make money here.
-I'm also not looking for others to work on the project at this early stage, though I'm accepting feedback and suggestions.
+I'm also not looking for others to work on the project at this stage, though I'm accepting feedback, bug reports, and suggestions.
 Maybe things will change if I decide to make a real game out of this.
 If you would like to use something here for your project, please let me know.
 
