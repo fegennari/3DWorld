@@ -61,12 +61,13 @@ float building_animal_t::move(float timestep, bool can_move_forward) { // return
 
 void building_t::update_animals(point const &camera_bs, unsigned building_ix) {
 	if (!animate2 || is_rotated() || !has_room_geom() || interior->rooms.empty()) return;
-	update_rats   (camera_bs, building_ix);
-	update_sewer_rats(camera_bs, building_ix);
-	update_spiders(camera_bs, building_ix);
+	update_rats         (camera_bs, building_ix);
+	update_sewer_rats   (camera_bs, building_ix);
+	update_pet_rats     (camera_bs, building_ix);
+	update_spiders      (camera_bs, building_ix);
 	update_sewer_spiders(camera_bs, building_ix);
-	update_snakes (camera_bs, building_ix);
-	update_insects(camera_bs, building_ix);
+	update_snakes       (camera_bs, building_ix);
+	update_insects      (camera_bs, building_ix);
 	interior->room_geom->last_animal_update_frame = frame_counter;
 }
 
@@ -210,7 +211,7 @@ bool play_attack_sound(point const &pos, float gain, float pitch, rand_gen_t &rg
 // *** Rats ***
 
 rat_t::rat_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_, bool dead_, unsigned tix) :
-	building_animal_t(pos_, radius_, dir_, id_), dest(pos), tunnel_ix(tix), dead(dead_) {
+	building_animal_t(pos_, radius_, dir_, id_), dest(pos), tunnel_tank_ix(tix), dead(dead_) {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAT)); // L=3878, W=861, H=801
 	hwidth = radius*sz.y/sz.x; // scale radius by ratio of width to length
 	height = 2.0*radius*sz.z/max(sz.x, sz.y); // use max of x/y size; the x/y size represents the bcube across rotations
@@ -333,7 +334,7 @@ void building_t::update_rats(point const &camera_bs, unsigned building_ix) {
 
 void building_t::update_sewer_rats(point const &camera_bs, unsigned building_ix) {
 	vect_rat_t &rats(interior->room_geom->sewer_rats);
-	if (rats.placed && rats.empty()) return; // no rats placed in this building
+	if (rats.placed && rats.empty()) return; // no sewer rats placed in this building
 	if (global_building_params.num_rats_max == 0 || interior->tunnels.empty()) return;
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_RAT)) return; // no rat model
 	float const floor_spacing(get_window_vspace()), timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
@@ -365,8 +366,8 @@ void building_t::update_sewer_rats(point const &camera_bs, unsigned building_ix)
 	}
 	for (rat_t &rat : rats) { // update logic
 		if (rat.speed > 0.0) { // moving
-			assert(rat.tunnel_ix < interior->tunnels.size());
-			tunnel_seg_t const &t(interior->tunnels[rat.tunnel_ix]);
+			assert(rat.tunnel_tank_ix < interior->tunnels.size());
+			tunnel_seg_t const &t(interior->tunnels[rat.tunnel_tank_ix]);
 			bool const dir(rat.dir[t.dim] > 0.0); // movement direction along the tunnel
 			float const stop_pos(0.5*(t.p[dir][t.dim] + t.gate_pos));
 			
@@ -381,6 +382,42 @@ void building_t::update_sewer_rats(point const &camera_bs, unsigned building_ix)
 				gen_sound_thread_safe(SOUND_RAT_SQUEAK, local_to_camera_space(rat.pos), 1.0, 1.1); // medium pitch
 				rat.speed = global_building_params.rat_speed*rgen.rand_uniform(1.6, 2.0); // fast
 			}
+		}
+	} // for rat
+}
+
+void building_t::update_pet_rats(point const &camera_bs, unsigned building_ix) {
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_RAT)) return; // no rat model
+	vect_rat_t &rats(interior->room_geom->pet_rats);
+
+	if (!rats.placed && has_mall()) { // add pet store rats on first update frame
+		for (pet_tank_t const &t : interior->mall_info->pet_tanks) {
+			if (t.animal_type != TYPE_RAT) continue;
+			vect_room_object_t const &objs(interior->room_geom->objs);
+			assert(t.obj_ix < objs.size());
+			room_object_t const &obj(objs[t.obj_ix]);
+			if (obj.type != TYPE_FISHTANK) continue; // taken by the player?
+			assert(obj.item_flags == TYPE_RAT);
+			rand_gen_t rgen;
+			rgen.set_state(building_ix+1, t.obj_ix+1); // unique per building and per tank
+			rgen.rand_mix();
+			unsigned const num_rats((rgen.rand() % 3) + 2); // 2-4
+			float const height(obj.dz()), zval(obj.z1() + 0.1*height); // around substrate height
+
+			for (unsigned n = 0; n < num_rats; ++n) {
+				float const radius(rgen.rand_uniform(0.5, 1.0)*0.1*height);
+				point const pos(gen_xy_pos_in_area(obj, vector3d(radius, radius, radius), rgen, zval));
+				rats.emplace_back(pos, radius, rgen.signed_rand_vector_spherical_xy_norm(), rats.size(), 0, t.obj_ix); // dead=0
+			}
+		} // for t
+	}
+	if (rats.empty()) return; // no pet rats placed in this building
+	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
+
+	for (rat_t &rat : rats) { // update logic
+		if (rat.speed > 0.0) { // moving
+			// TODO
+			rat.move(timestep);
 		}
 	} // for rat
 }
@@ -853,10 +890,10 @@ void building_t::update_spiders(point const &camera_bs, unsigned building_ix) {
 			rgen.rand_mix();
 			bool const one_big_spider(rgen.rand_bool());
 			unsigned const num_spiders((one_big_spider ? 0 : (rgen.rand() % 4)) + 1); // 1-5
-			float const zval(obj.z1() + 0.1*obj.dz()); // around substrate height
+			float const height(obj.dz()), zval(obj.z1() + 0.1*height); // around substrate height
 
 			for (unsigned n = 0; n < num_spiders; ++n) {
-				float const radius(rgen.rand_uniform(0.5, 1.0)*(one_big_spider ? 0.2 : 0.1)*obj.dz());
+				float const radius(rgen.rand_uniform(0.5, 1.0)*(one_big_spider ? 0.2 : 0.1)*height);
 				point const pos(gen_xy_pos_in_area(obj, vector3d(radius, radius, radius), rgen, zval));
 				spiders.emplace_back(pos, radius, rgen.signed_rand_vector_spherical_xy_norm(), spiders.size(), t.obj_ix, 1); // in_tank=1
 			}

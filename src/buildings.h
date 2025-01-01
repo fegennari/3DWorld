@@ -1041,7 +1041,7 @@ struct building_room_geom_t {
 	vector<obj_model_inst_t> obj_model_insts;
 	vector<door_handle_t> door_handles; // for 3D model drawing
 	vector<unsigned> moved_obj_ids;
-	vect_rat_t    rats, sewer_rats;
+	vect_rat_t    rats, sewer_rats, pet_rats;
 	vect_spider_t spiders, sewer_spiders;
 	vect_snake_t  snakes;
 	vect_insect_t insects;
@@ -2233,13 +2233,14 @@ private:
 	// animals
 public:
 	template<typename T> void add_animals_on_floor(T &animals, unsigned building_ix, unsigned num_min, unsigned num_max, float sz_min, float sz_max) const;
-	void update_animals(point const &camera_bs, unsigned building_ix);
-	void update_rats   (point const &camera_bs, unsigned building_ix);
-	void update_sewer_rats(point const &camera_bs, unsigned building_ix);
-	void update_spiders(point const &camera_bs, unsigned building_ix);
+	void update_animals      (point const &camera_bs, unsigned building_ix);
+	void update_rats         (point const &camera_bs, unsigned building_ix);
+	void update_sewer_rats   (point const &camera_bs, unsigned building_ix);
+	void update_pet_rats     (point const &camera_bs, unsigned building_ix);
+	void update_spiders      (point const &camera_bs, unsigned building_ix);
 	void update_sewer_spiders(point const &camera_bs, unsigned building_ix);
-	void update_snakes (point const &camera_bs, unsigned building_ix);
-	void update_insects(point const &camera_bs, unsigned building_ix);
+	void update_snakes       (point const &camera_bs, unsigned building_ix);
+	void update_insects      (point const &camera_bs, unsigned building_ix);
 	void get_objs_at_or_below_ground_floor(vect_room_object_t &ret, bool for_spider) const;
 	bool begin_fish_draw() const;
 	void rat_bite_player(point const &pos, float damage, rand_gen_t &rgen);

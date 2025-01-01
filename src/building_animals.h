@@ -29,7 +29,7 @@ struct building_animal_t {
 struct rat_t : public building_animal_t {
 	point dest, fear_pos;
 	float height=0.0, hwidth=0.0, fear=0.0;
-	unsigned tunnel_ix=0; // for sewer rats; could also add room_ix if it helps
+	unsigned tunnel_tank_ix=0; // for sewer or pet store rats; could also add room_ix if it helps
 	bool is_hiding=0, near_player=0, attacking=0, dead=0;
 
 	// this first constructor is for the lower_bound() call in vect_rat_t::get_first_rat_with_x2_gt()
@@ -51,7 +51,7 @@ struct spider_t : public building_animal_t {
 	vector3d upv;
 	point last_valid_pos;
 	float update_time=0.0, web_start_zval=0.0, jump_vel_z=0.0, jump_dist=0.0;
-	unsigned tunnel_tank_ix=0; // for sewer spiders or pet store spiders
+	unsigned tunnel_tank_ix=0; // for sewer or pet store spiders
 	bool on_web=0, web_dir=0, squished=0, in_tank=0; // web_dir: 0=going down, 1=going up
 
 	// this first constructor is for the lower_bound() call in vect_rat_t::get_first_rat_with_x2_gt()

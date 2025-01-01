@@ -1589,7 +1589,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (has_retail() && get_retail_part().contains_pt(camera_rot)) {} // optimization: no dynamic animal shadows in retail area
 		else if (point_in_mall(camera_rot)) {} // optimization: no dynamic animal shadows in malls
 		else { // add a base index to each animal group to make all moving objects unique
-			get_animal_shadow_casters(interior->room_geom->rats,    moving_objs, xlate, 10000); // Note: sewer_rats don't cast shadows
+			get_animal_shadow_casters(interior->room_geom->rats,    moving_objs, xlate, 10000); // Note: sewer_rats and pet_rats don't cast shadows
 			get_animal_shadow_casters(interior->room_geom->spiders, moving_objs, xlate, 20000);
 			get_animal_shadow_casters(interior->room_geom->snakes,  moving_objs, xlate, 30000);
 		}

@@ -603,8 +603,8 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 						cubes.push_back(tank);
 					} // for n
 				}
-				else {
-					// TODO: cages with rats and birds + terrariums with snakes and spiders
+				else { // cages with rats and birds + terrariums with snakes and spiders
+					// add other objects?
 				}
 			}
 			else {assert(0);} // unsupported store type
