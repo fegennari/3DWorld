@@ -1036,6 +1036,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			blockers.push_back(tcan);
 		} // for p
 		add_food_court_objs(rgen, place_area, zval, room_id, light_amt, blockers);
+		interior->mall_info->food_court_bounds = place_area;
 	}
 	// add objects to remaining openings
 	unsigned tree_opening_ix(0);
@@ -1402,6 +1403,14 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	unsigned const store_selects[NUM_STORE_SELECT] = {STORE_CLOTHING, STORE_CLOTHING, STORE_BOOK, STORE_FURNITURE, STORE_PETS, STORE_RETAIL, STORE_RETAIL, STORE_RETAIL};
 	unsigned const objs_start(objs.size());
 	unsigned store_type(store_selects[rgen.rand() % NUM_STORE_SELECT]);
+	cube_t const &fc_area(interior->mall_info->food_court_bounds);
+
+	if (0 && !is_end_store && !fc_area.is_zero_area() && room.z1() == fc_area.z1()) { // food stores should be placed on ground floors near the food court
+		// always place if contained in food court
+		if (room.d[mall_dim][0] > fc_area.d[mall_dim][0] && room.d[mall_dim][1] < fc_area.d[mall_dim][1]) {store_type = STORE_FOOD;}
+		// place 50% of the time if partially overlaps food court
+		else if (room.d[mall_dim][0] < fc_area.d[mall_dim][1] && room.d[mall_dim][1] > fc_area.d[mall_dim][0] && rgen.rand_bool()) {store_type = STORE_FOOD;}
+	}
 	// bookstore and clothing stores are too expensive for the larger end stores, and pet stores should be small, so make them retail or furniture stores instead
 	if (is_end_store && (store_type == STORE_BOOK || store_type == STORE_CLOTHING || store_type == STORE_PETS)) {store_type = (rgen.rand_bool() ? STORE_FURNITURE : STORE_RETAIL);}
 	// furniture stores should be larger, so make them book or clothing stores if small

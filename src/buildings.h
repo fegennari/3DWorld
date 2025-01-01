@@ -1757,7 +1757,7 @@ struct building_mall_info_t {
 	stairwell_t ent_stairs;
 	vect_cube_t bathrooms; // actually bathroom pairs
 	vector<pet_tank_t> pet_tanks; // except for fish (rats, snakes, spiders)
-	cube_t store_bounds;
+	cube_t store_bounds, food_court_bounds;
 	colorRGBA mall_wall_color=WHITE;
 	int city_elevator_ix=-1;
 };
