@@ -1734,6 +1734,8 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 							if (add_table_and_chairs(rgen, sub_room, blockers, room_id, room_center, chair_color, 0.25, light_amt, 0, 0, 0)) break;
 							rgen.rand_mix(); // needed to get different rand values
 						}
+						// TODO: plant?
+						// TODO: lamp?
 					}
 					else if (rtype == RTYPE_KITCHEN || rtype == RTYPE_DINING) { // tables only, for now
 						sub_room.expand_by_xy(room_pad); // make it larger to allow chairs to stick out a bit, since they don't block the player
@@ -1750,12 +1752,63 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 					}
 				} // end STORE_FURNITURE
 				else if (store_type == STORE_APPLIANCE) {
-					if (rgen.rand_float() < 0.6) { // appliances
-						// TYPE_FRIDGE, TYPE_STOVE, TYPE_WASHER, TYPE_DRYER, TYPE_CEIL_FAN?, dishwasher
+					float const val(rgen.rand_float());
+					room_object obj_type(TYPE_NONE);
+					float hscale(1.0);
+
+					if (val < 0.4) { // 40% kitchen appliances
+						if (val < 0.2) {obj_type = TYPE_FRIDGE; hscale = 0.75;}
+						else           {obj_type = TYPE_STOVE ; hscale = 0.46;}
+						// TODO: dishwasher (TYPE_KSINK with special case)?
+						// TYPE_MWAVE, TYPE_HOOD?
 					}
-					else { // plumbing
-						// TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_SHOWERTUB
+					else if (val < 0.6) { // 20% laundry appliances
+						if (val < 0.5) {obj_type = TYPE_WASHER; hscale = 0.42;}
+						else           {obj_type = TYPE_DRYER ; hscale = 0.38;}
 					}
+					else { // 40% bathroom plumbing fixtures
+						if      (val < 0.70) {obj_type = TYPE_TUB   ; hscale = 0.20;}
+						else if (val < 0.85) {obj_type = TYPE_TOILET; hscale = 0.35;}
+						else                 {obj_type = TYPE_SINK  ; hscale = 0.45;}
+						// TYPE_SHOWERTUB, WHEATER, TYPE_FURNACE?
+					}
+					// TYPE_CEIL_FAN?
+					if (obj_type == TYPE_NONE) continue;
+					assert(obj_type >= TYPE_TOILET);
+					unsigned const model_id(obj_type + OBJ_MODEL_TOILET - TYPE_TOILET);
+					if (!building_obj_model_loader.is_model_valid(model_id)) continue; // no model; should this select a difference object type?
+					vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id)); // D, W, H
+					float const height(hscale*window_vspace);
+					bool const pri_dir(rgen.rand_bool());
+					cube_t app;
+					set_cube_zvals(app, zval, zval+height);
+					
+					// place appliances around the perimeter of the sub-room facing outward
+					for (unsigned D = 0; D < 2; ++D) {
+						bool const sdim(bool(D) ^ pri_dir);
+						float const width(height*sz.y/sz.z), depth(height*sz.x/sz.z), min_spacing(1.1*width + wall_thickness), sub_room_sz(r.get_sz_dim(sdim));
+						unsigned const num(sub_room_sz/min_spacing); // take the floor
+						if (num == 0) continue; // too large for this sub-room; shouldn't happen
+						float const spacing(sub_room_sz/num);
+						cube_t place_area(room_area);
+						place_area.expand_in_dim(!sdim, -depth); // shink sides to avoid placing appliance facing a wall
+
+						for (unsigned n = 0; n < num; ++n) {
+							set_wall_width(app, (r.d[sdim][0] + (n + 0.5)*spacing), 0.5*width, sdim);
+
+							for (unsigned sdir = 0; sdir < 2; ++sdir) {
+								float const edge_pos(r.d[!sdim][sdir]);
+								app.d[!sdim][ sdir] = edge_pos; // front
+								app.d[!sdim][!sdir] = edge_pos + (sdir ? -1.0 : 1.0)*depth; // back
+								if (!place_area.contains_cube_xy(app))           continue; // against a wall or store window
+								if (is_cube_close_to_doorway(app, r, 0.0, 1, 1)) continue; // blocking back hallway door
+								if (door_blocker.intersects_xy(app))             continue; // blocking front door
+								if (has_bcube_int(app, blockers))                continue; // blocked
+								objs.emplace_back(app, obj_type, room_id, !sdim, sdir, RO_FLAG_IN_MALL, light_amt);
+								blockers.push_back(app);
+							} // for sdir
+						} // for n
+					} // for sdim
 				} // end STORE_APPLIANCE
 				else {assert(0);} // invalid store type
 			} // for col
