@@ -410,6 +410,7 @@ void building_t::update_pet_rats(point const &camera_bs, unsigned building_ix) {
 				rats.emplace_back(pos, radius, rgen.signed_rand_vector_spherical_xy_norm(), rats.size(), 0, t.obj_ix); // dead=0
 			}
 		} // for t
+		rats.placed = 1;
 	}
 	if (rats.empty()) return; // no pet rats placed in this building
 	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
