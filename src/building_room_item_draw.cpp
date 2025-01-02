@@ -2000,7 +2000,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			s.set_color_e(BLACK);
 		}
 		if (player_in_building && !shadow_only && obj.type == TYPE_SINK) { // sink
-			water_sound_manager.register_running_water(obj, building);
+			if (obj.room_id == camera_room) {water_sound_manager.register_running_water(obj, building);}
 			water_draw.add_water_for_sink(obj);
 		}
 	} // for i
@@ -2067,7 +2067,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 
 		for (auto i = objs.begin(); i != objs_end; ++i) {
 			if (i->type == TYPE_KSINK || i->type == TYPE_BRSINK) { // TYPE_SINK is handled above
-				water_sound_manager.register_running_water(*i, building);
+				if (i->room_id == camera_room) {water_sound_manager.register_running_water(*i, building);}
 				if (!i->is_active()) continue; // not turned on
 				if (!(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate))) continue; // VFC
 				water_draw.add_water_for_sink(*i);
