@@ -1399,8 +1399,8 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	room_t const &prev_room(interior->rooms[room_id-1]); // mall or store
 	bool const on_new_floor(room.z1() != prev_room.z1()), on_new_row(room.d[dim][0] != prev_room.d[dim][0]);
 	if (on_new_floor || on_new_row) {type_mask = 0;}
-	unsigned const NUM_STORE_SELECT = 8;
-	unsigned const store_selects[NUM_STORE_SELECT] = {STORE_CLOTHING, STORE_CLOTHING, STORE_BOOK, STORE_FURNITURE, STORE_PETS, STORE_RETAIL, STORE_RETAIL, STORE_RETAIL};
+	unsigned const NUM_STORE_SELECT = 9;
+	unsigned const store_selects[NUM_STORE_SELECT] = {STORE_CLOTHING, STORE_CLOTHING, STORE_BOOK, STORE_FURNITURE, STORE_PETS, STORE_APPLIANCE, STORE_RETAIL, STORE_RETAIL, STORE_RETAIL};
 	unsigned const objs_start(objs.size());
 	unsigned store_type(store_selects[rgen.rand() % NUM_STORE_SELECT]);
 	cube_t const &fc_area(interior->mall_info->food_court_bounds);
@@ -1411,8 +1411,9 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		// place 50% of the time if partially overlaps food court
 		else if (room.d[mall_dim][0] < fc_area.d[mall_dim][1] && room.d[mall_dim][1] > fc_area.d[mall_dim][0] && rgen.rand_bool()) {store_type = STORE_FOOD;}
 	}
-	// bookstore and clothing stores are too expensive for the larger end stores, and pet stores should be small, so make them retail or furniture stores instead
-	if (is_end_store && (store_type == STORE_BOOK || store_type == STORE_CLOTHING || store_type == STORE_PETS)) {store_type = (rgen.rand_bool() ? STORE_FURNITURE : STORE_RETAIL);}
+	// bookstore and clothing stores are too expensive for the larger end stores, and pet stores/appliance stores should be small, so make them retail or furniture stores instead
+	if (is_end_store && (store_type == STORE_BOOK || store_type == STORE_CLOTHING || store_type == STORE_PETS || store_type == STORE_APPLIANCE))
+		{store_type = (rgen.rand_bool() ? STORE_FURNITURE : STORE_RETAIL);}
 	// furniture stores should be larger, so make them book or clothing stores if small
 	else if (store_type == STORE_FURNITURE && room_width < 0.8*room_len) {store_type = (rgen.rand_bool() ? STORE_BOOK : STORE_CLOTHING);}
 	// mixed: 225FPS, 2991MB, 249ms
@@ -1702,7 +1703,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 
 							// only if interior; skip if overlaps the room wall; check for back hallway doorway
 							if (wall_area.contains_cube_xy_exp(wall, wall_thickness) && !is_cube_close_to_doorway(wall, sub_room, 0.0, 1, 1)) {
-								objs.emplace_back(wall, TYPE_PG_WALL, room_id, wdim, wdir, (RO_FLAG_IN_MALL | RO_FLAG_ADJ_TOP), light_amt, SHAPE_CUBE); // draw top
+								objs.emplace_back(wall, TYPE_PG_WALL, room_id, wdim, wdir, (RO_FLAG_IN_MALL | RO_FLAG_ADJ_TOP), light_amt); // draw top
 							
 								if (rgen.rand_float() < 0.67) { // add a picture on the wall 67% of the time
 									float const height(window_vspace*rgen.rand_uniform(0.28, 0.42));
@@ -1790,20 +1791,22 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 						// place appliances around the perimeter of the sub-room facing outward
 						for (unsigned D = 0; D < 2; ++D) {
 							bool const sdim(bool(D) ^ pri_dir);
+							bool const add_hoods(D == 0 && obj_type == TYPE_STOVE && building_obj_model_loader.is_model_valid(OBJ_MODEL_HOOD));
 							float const width(height*sz.y/sz.z), depth(height*sz.x/sz.z), min_spacing(1.1*width + wall_thickness), sub_room_sz(r.get_sz_dim(sdim));
 							unsigned const num(sub_room_sz/min_spacing); // take the floor
 							if (num == 0) continue; // too large for this sub-room; shouldn't happen
 							float const spacing(sub_room_sz/num);
 							cube_t place_area(room_area);
 							place_area.expand_in_dim(!sdim, -depth); // shink sides to avoid placing appliance facing a wall
+							cube_t walls[2]; // for stove hoods
 
 							for (unsigned n = 0; n < num; ++n) {
 								set_wall_width(app, (r.d[sdim][0] + (n + 0.5)*spacing), 0.5*width, sdim);
 
 								for (unsigned sdir = 0; sdir < 2; ++sdir) {
-									float const edge_pos(r.d[!sdim][sdir]);
+									float const edge_pos(r.d[!sdim][sdir]), dsign(sdir ? 1.0 : -1.0);
 									app.d[!sdim][ sdir] = edge_pos; // front
-									app.d[!sdim][!sdir] = edge_pos + (sdir ? -1.0 : 1.0)*depth; // back
+									app.d[!sdim][!sdir] = edge_pos - dsign*depth; // back
 									if (!place_area.contains_cube_xy(app))           continue; // against a wall or store window
 									if (is_cube_close_to_doorway(app, r, 0.0, 1, 1)) continue; // blocking back hallway door
 									if (door_blocker.intersects_xy(app))             continue; // blocking front door
@@ -1812,11 +1815,29 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 									blockers.push_back(app);
 									any_placed = 1;
 
-									if (obj_type == TYPE_STOVE) {
-										// TODO: TYPE_HOOD
+									if (add_hoods) { // add hood above the stove
+										vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_HOOD)); // D, W, H
+										float const height(width*sz.z/sz.y), depth(width*sz.x/sz.y); // scale to the width of the stove
+										float const ceiling_z(zval + get_floor_ceil_gap()), z_top(ceiling_z + get_fc_thickness()); // shift up a bit because it's too low
+										float const back_pos(app.d[!sdim][!sdir]);
+										cube_t hood(app);
+										set_cube_zvals(hood, z_top-height, z_top);
+										hood.d[!sdim][sdir] = back_pos + dsign*depth; // extend front outward from wall
+										objs.emplace_back(hood, TYPE_HOOD, room_id, !sdim, sdir, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, LT_GRAY);
+										// add wall segment connecting this hood
+										cube_t wall_seg(app);
+										wall_seg.z2() = hood.z2();
+										wall_seg.d[!sdim][ sdir] = back_pos; // front
+										wall_seg.d[!sdim][!sdir] = back_pos - dsign*0.8*wall_thickness; // back
+										walls[sdir].assign_or_union_with_cube(wall_seg);
 									}
 								} // for sdir
 							} // for n
+							for (unsigned d = 0; d < 2; ++d) {
+								if (walls[d].is_all_zeros()) continue;
+								objs.emplace_back(walls[d], TYPE_PG_WALL, room_id, !sdim, d, (RO_FLAG_IN_MALL | RO_FLAG_ADJ_TOP), light_amt); // draw top
+								blockers.push_back(walls[d]);
+							}
 						} // for sdim
 						if (any_placed) {
 							types_used |= (1 << model_type_id);
