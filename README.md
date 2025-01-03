@@ -84,12 +84,12 @@ There is also a textures directory with additional textures used with building i
 System requirements:
 * Windows 8/10/11; Linux when using the makefile with gcc.
 * Microsoft Visual Studio 2019 or 2022. The professional or community version is needed for OpenMP support. You can also try to use gcc on linux.
-* A relatively new generation of Nvidia or ATI GPU (Runs on my laptop with Intel graphics, but at 12-20 FPS)
+* A relatively new generation of Nvidia or AMD GPU (Runs on my laptop with Intel graphics, but at 12-20 FPS)
 * At least 8GB system memory for the larger scenes
 * At least 4GB GPU memory for the larger scenes; My GPU has 12GB of memory
 
 Troubleshooting:
-It seems like some systems (ATI cards in particular) require an OpenGL core context. This can be selected by adding "use_core_context 1" in the config file.
+It seems like some systems (AMD cards in particular) require an OpenGL core context. This can be selected by adding "use_core_context 1" in the config file.
 This can also be enabled in scene_config/config_post.txt, which is a file that applies after reading all other top-level config files.
 In some situations (some Nvidia cards), using a core context can be slower, which is why I don't have it enabled by default.
 
