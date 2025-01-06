@@ -22,7 +22,7 @@ struct building_animal_t {
 	bool is_sleeping() const {return (wake_time > 0.0);}
 	vector3d get_upv() const {return plus_z;}
 	void sleep_for(float time_secs_min, float time_secs_max);
-	float move(float timestep, bool can_move_forward=1);
+	float move(float timestep, bool can_move_forward=1, float anim_time_scale=1.0);
 	bool detailed_sphere_coll(point const &sc, float sr, point &coll_pos, float &coll_radius) const {return 1;} // defaults to true
 };
 

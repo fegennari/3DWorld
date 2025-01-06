@@ -38,9 +38,9 @@ void building_animal_t::sleep_for(float time_secs_min, float time_secs_max) {
 	wake_time = (float)tfticks + rand_uniform(time_secs_min, time_secs_max)*TICKS_PER_SECOND;
 	dist_since_sleep = 0.0; // reset the counter
 }
-float building_animal_t::move(float timestep, bool can_move_forward) { // returns movement distance
+float building_animal_t::move(float timestep, bool can_move_forward, float anim_time_scale) { // returns movement distance
 	// update animation time using position change; note that we can't just do the update in the rat movement code below because pos may be reset in case of collision
-	anim_time += p2p_dist(pos, last_pos)/radius; // scale with size so that small rat/spider legs move faster
+	anim_time += anim_time_scale*p2p_dist(pos, last_pos)/radius; // scale with size so that small rat/spider legs move faster
 	last_pos   = pos;
 	if (anim_time > 100000.0) {anim_time = 0.0;} // reset animation after awhile to avoid precision problems; should this be done when the player isn't looking?
 	float move_dist(0.0);
@@ -389,11 +389,11 @@ void building_t::update_sewer_rats(point const &camera_bs, unsigned building_ix)
 void building_t::update_pet_rats(point const &camera_bs, unsigned building_ix) {
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_RAT)) return; // no rat model
 	vect_rat_t &rats(interior->room_geom->pet_rats);
+	vect_room_object_t const &objs(interior->room_geom->objs);
 
 	if (!rats.placed && has_mall()) { // add pet store rats on first update frame
 		for (pet_tank_t const &t : interior->mall_info->pet_tanks) {
 			if (t.animal_type != TYPE_RAT) continue;
-			vect_room_object_t const &objs(interior->room_geom->objs);
 			assert(t.obj_ix < objs.size());
 			room_object_t const &obj(objs[t.obj_ix]);
 			if (obj.type != TYPE_FISHTANK) continue; // taken by the player?
@@ -405,7 +405,7 @@ void building_t::update_pet_rats(point const &camera_bs, unsigned building_ix) {
 			float const height(obj.dz()), zval(obj.z1() + 0.1*height); // around substrate height
 
 			for (unsigned n = 0; n < num_rats; ++n) {
-				float const radius(rgen.rand_uniform(0.5, 1.0)*0.1*height);
+				float const radius(rgen.rand_uniform(0.5, 1.0)*0.15*height);
 				point const pos(gen_xy_pos_in_area(obj, vector3d(radius, radius, radius), rgen, zval));
 				rats.emplace_back(pos, radius, rgen.signed_rand_vector_spherical_xy_norm(), rats.size(), 0, t.obj_ix); // dead=0
 			}
@@ -414,13 +414,41 @@ void building_t::update_pet_rats(point const &camera_bs, unsigned building_ix) {
 	}
 	if (rats.empty()) return; // no pet rats placed in this building
 	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
+	bool any_removed(0);
+	rand_gen_t rgen;
+	rgen.set_state(building_ix+1, frame_counter+1); // unique per building and per frame
 
 	for (rat_t &rat : rats) { // update logic
+		// check for tank removed
+		assert(rat.tunnel_tank_ix < objs.size());
+		room_object_t const &obj(objs[rat.tunnel_tank_ix]);
+
+		if (obj.type != TYPE_FISHTANK) { // taken by the player?
+			any_removed = rat.dead = 1; // will be removed below
+			continue;
+		}
 		if (rat.speed > 0.0) { // moving
-			// TODO
-			rat.move(timestep);
+			rat.move(timestep, 1, 0.25); // can_move_forward=1, anim_time_scale=0.25
+			// check for invalid pos
+			point const old_pos(rat.pos);
+			cube_t valid_area(obj);
+			valid_area.expand_by_xy(-(0.02*obj.dz() + rat.radius));
+			valid_area.clamp_pt_xy(rat.pos);
+
+			if (rat.pos != old_pos) { // moved due to coll
+				vector3d const normal((old_pos - rat.pos).get_norm());
+				rat.dir = rgen.signed_rand_vector_spherical_xy_norm();
+				if (dot_product(rat.dir, normal) > 0.0) {rat.dir.negate();} // must point away from the collision
+				// TODO: predict coll and gradually turn
+			}
+			// TODO: collisions with other rats
+		}
+		else { // stopped
+			// TODO: something with sleep time
+			rat.speed = global_building_params.rat_speed*rgen.rand_uniform(0.1, 0.15); // slower than free rats
 		}
 	} // for rat
+	if (any_removed) {rats.erase(remove_if(rats.begin(), rats.end(), [](rat_t const &r) {return r.dead;}), rats.end());}
 }
 
 bool can_hide_under(room_object_t const &c, cube_t &hide_area) {
