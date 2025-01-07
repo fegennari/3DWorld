@@ -67,6 +67,7 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix) {
 	update_spiders      (camera_bs, building_ix);
 	update_sewer_spiders(camera_bs, building_ix);
 	update_snakes       (camera_bs, building_ix);
+	update_pet_snakes   (camera_bs, building_ix);
 	update_insects      (camera_bs, building_ix);
 	interior->room_geom->last_animal_update_frame = frame_counter;
 }
@@ -1476,6 +1477,7 @@ snake_t::snake_t(point const &pos_, float radius_, vector3d const &dir_, unsigne
 	radius *= 0.04;
 	color   = WHITE*(1.0 - rgen.rand_float()*rgen.rand_float()); // random color shade, weighted toward lighter
 	has_rattle = rgen.rand_bool();
+	last_valid_dir = dir; // needed for init frame and pet store snakes
 	unsigned const NUM_SEGS = 20; // head + 18 segments + tail
 	float const seg_length(length/NUM_SEGS);
 	vector3d const seg_step(-seg_length*dir); // head -> tail
@@ -1570,7 +1572,6 @@ float snake_t::get_curve_factor() const {
 void building_t::update_snakes(point const &camera_bs, unsigned building_ix) {
 	vect_snake_t &snakes(interior->room_geom->snakes);
 	if (snakes.placed && snakes.empty()) return; // no snakes placed in this building
-	//timer_t timer("Update Snakes");
 	add_animals_on_floor(snakes, building_ix, global_building_params.num_snakes_min, global_building_params.num_snakes_max,
 		global_building_params.snake_size_min, global_building_params.snake_size_max);
 	// update snakes
@@ -1579,6 +1580,48 @@ void building_t::update_snakes(point const &camera_bs, unsigned building_ix) {
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, frame_counter+1); // unique per building and per frame
 	for (snake_t &snake : snakes) {update_snake(snake, camera_bs, timestep, snakes.max_xmove, rgen);}
+}
+
+void building_t::update_pet_snakes(point const &camera_bs, unsigned building_ix) {
+	vect_snake_t &snakes(interior->room_geom->pet_snakes);
+	vect_room_object_t const &objs(interior->room_geom->objs);
+
+	if (!snakes.placed && has_mall()) { // add pet store snakes on first update frame; one snake per tank
+		for (pet_tank_t const &t : interior->mall_info->pet_tanks) {
+			if (t.animal_type != TYPE_SNAKE) continue;
+			assert(t.obj_ix < objs.size());
+			room_object_t const &obj(objs[t.obj_ix]);
+			if (obj.type != TYPE_FISHTANK) continue; // taken by the player?
+			assert(obj.item_flags == TYPE_SNAKE);
+			rand_gen_t rgen;
+			rgen.set_state(building_ix+1, t.obj_ix+1); // unique per building and per tank
+			rgen.rand_mix();
+			float const zval(obj.z1() + 0.1*obj.dz()); // around substrate height
+			float const tank_len(obj.get_sz_dim(!obj.dim)), radius(rgen.rand_uniform(0.25, 0.4)*tank_len);
+			vector3d sz;
+			sz.z = 0.1*radius;
+			sz[ obj.dim] = 0.1*radius;
+			sz[!obj.dim] = 1.0*radius;
+			point const pos(gen_xy_pos_in_area(obj, 1.2*sz, rgen, zval));
+			vector3d dir;
+			dir[!obj.dim] = (rgen.rand_bool() ? 1.0 : -1.0);
+			snakes.emplace_back(pos, radius, dir, t.obj_ix);
+		} // for t
+		snakes.placed = 1;
+	}
+	bool any_removed(0);
+
+	for (snake_t &snake : snakes) { // check for tank removed
+		assert(snake.id < objs.size());
+		room_object_t const &obj(objs[snake.id]);
+
+		if (obj.type != TYPE_FISHTANK) { // taken by the player?
+			snake.length = 0.0;
+			any_removed  = 1; // will be removed below
+		}
+	} // for snake
+	if (any_removed) {snakes.erase(remove_if(snakes.begin(), snakes.end(), [](snake_t const &s) {return (s.length == 0.0);}), snakes.end());}
+	// no movement update logic?
 }
 
 // Note: non-const because biting the player can add blood and the player's inventory items to the building

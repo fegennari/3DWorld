@@ -485,25 +485,27 @@ class snake_draw_t {
 		}
 	}
 public:
-	void draw(vect_snake_t const &snakes, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc,
+	void draw(vect_snake_t const &snakes, vect_snake_t const &pet_snakes, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc,
 		vector3d const &xlate, bool shadow_only, bool reflection_pass, bool check_clip_cube)
 	{
-		if (snakes.empty()) return; // nothing to draw
+		if (snakes.empty() && pet_snakes.empty()) return; // nothing to draw
 		//highres_timer_t timer("Draw Snakes");
 		point const camera_bs(camera_pdu.pos - xlate);
 		bool const check_occlusion(display_mode & 0x08);
 		bool any_drawn(0);
 
-		for (snake_t const &S : snakes) {
-			if (shadow_only && S.shadow_non_visible) continue; // shadow not visible to the camera (player)
-			cube_t const bcube(S.get_bcube());
-			if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
-			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
-			if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
-			bool const is_distant(!dist_less_than(camera_bs, S.pos, 6.0*S.length));
-			draw_snake(S, shadow_only, reflection_pass, is_distant);
-			any_drawn = 1;
-		} // for S
+		for (unsigned d = 0; d < (shadow_only ? 1 : 2); ++d) { // skip pet snakes in the shadow pass
+			for (snake_t const &S : (d ? pet_snakes : snakes)) {
+				if (shadow_only && S.shadow_non_visible) continue; // shadow not visible to the camera (player)
+				cube_t const bcube(S.get_bcube());
+				if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
+				if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
+				if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
+				bool const is_distant(!dist_less_than(camera_bs, S.pos, 6.0*S.length));
+				draw_snake(S, shadow_only, reflection_pass, is_distant);
+				any_drawn = 1;
+			} // for S
+		} // for d
 		if (!any_drawn) return;
 		tid_nm_pair_dstate_t state(s);
 		s.add_uniform_float("bump_map_mag", 0.0);
@@ -580,13 +582,11 @@ void building_room_geom_t::draw_animals(shader_t &s, building_t const &building,
 		bind_default_flat_normal_map();
 		if (rat_drawn) {check_mvm_update();} // needed after popping model transform matrix
 	} // end rats drawing
-	spider_draw.draw(spiders, s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);
-	snake_draw .draw(snakes,  s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);
+	spider_draw.draw(spiders,            s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);
+	snake_draw .draw(snakes, pet_snakes, s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);
 	if (!shadow_only) {insect_draw.draw(insects, s, building, oc, xlate, reflection_pass);} // insects are too small to cast shadows
-
-	if (player_in_tunnel && !shadow_only) { // draw sewer spiders
-		spider_draw.draw(sewer_spiders, s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);
-	}
+	// draw sewer spiders
+	if (player_in_tunnel && !shadow_only) {spider_draw.draw(sewer_spiders, s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);}
 }
 
 
