@@ -428,7 +428,7 @@ void building_t::update_pet_rats(point const &camera_bs, unsigned building_ix) {
 			continue;
 		}
 		if (rat.speed > 0.0) { // moving
-			rat.move(timestep, 1, 0.25); // can_move_forward=1, anim_time_scale=0.25
+			rat.move(timestep, 1, 0.5); // can_move_forward=1, anim_time_scale=0.5
 			// check for invalid pos
 			point const old_pos(rat.pos);
 			cube_t valid_area(obj);
