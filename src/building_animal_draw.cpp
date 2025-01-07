@@ -464,8 +464,8 @@ class snake_draw_t {
 			eye_pos += ((d ? -1.0 : 1.0)*eye_extend_side)*side_dir; // move to the side
 			untex_mat.add_sphere_to_verts(eye_pos, 0.25*S.radius, BLACK, 1); // low_detail=1
 		}
-		if (fract(0.015f*S.anim_time) < 0.2) { // occasionally stick tongue out
-			colorRGBA const tongue_color((S.id & 2) ? BLACK : colorRGBA(1.0, 0.7, 0.5)); // black or pink
+		if (fract(0.015f*S.anim_time) > 0.8) { // occasionally stick tongue out
+			colorRGBA const tongue_color((S.id & 2) ? BLACK : colorRGBA(1.0, 0.6, 0.4)); // black or pink
 			color_wrapper const tip_color(BLACK);
 			float const radius(0.04*head_hlen), fwd_dist(0.9*head_hlen), split_len(0.6*head_hlen), tip_len(0.5*head_hlen);
 			
