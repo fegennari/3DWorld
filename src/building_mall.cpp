@@ -1721,6 +1721,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 					}
 					else if (rtype == RTYPE_LIVING) {
 						colorRGBA const color(get_couch_color(rgen));
+						unsigned const place_start(objs.size());
 						unsigned const num_couches(1 + rgen.rand_bool()); // 1-2
 
 						for (unsigned n = 0; n < num_couches; ++n) { // place up to 2 couches
@@ -1736,7 +1737,8 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 							if (add_table_and_chairs(rgen, sub_room, blockers, room_id, room_center, chair_color, 0.25, light_amt, 0, 0, 0)) break;
 							rgen.rand_mix(); // needed to get different rand values
 						}
-						// TODO: plant?
+						unsigned const num_plants(rgen.rand() % 3); // 0-2
+						add_plants_to_room(rgen, sub_room, zval, room_id, light_amt, place_start, num_plants);
 						// TODO: lamp?
 					}
 					else if (rtype == RTYPE_KITCHEN || rtype == RTYPE_DINING) { // tables only, for now
