@@ -5059,18 +5059,25 @@ bool building_t::add_ceil_vent_to_room(rand_gen_t rgen, room_t const &room, floa
 }
 
 bool building_t::check_if_placed_on_interior_wall(cube_t const &c, room_t const &room, bool dim, bool dir) const {
-	if (!has_small_part && !room.has_open_wall(dim, dir)) return 1; // check not needed, any non-door location is a wall
+	bool const mall_or_store(room.is_mall_or_store());
+	if (!has_small_part && !mall_or_store && !room.has_open_wall(dim, dir)) return 1; // check not needed, any non-door location is a wall
 	float const wall_thickness(get_wall_thickness()), wall_face(c.d[dim][dir]);
 	cube_t test_cube(c);
 	test_cube.d[dim][0] = test_cube.d[dim][1] = wall_face - (dir ? -1.0 : 1.0)*0.5*wall_thickness; // move inward
 	test_cube.expand_in_dim(!dim, 0.5*wall_thickness);
+
+	if (mall_or_store) { // special logic to handle mall store windows and doors
+		if (has_bcube_int(test_cube, interior->int_windows              )) return 0; // on window, not wall
+		if (has_bcube_int(test_cube, interior->mall_info->store_doorways)) return 0; // on store door, not wall
+		return 1;
+	}
 	// check for exterior wall
 	bool intersects_part(0);
 
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
 		if (p->intersects(test_cube)) {intersects_part = 1; break;}
 	}
-	if (!intersects_part) return 1; // not contained in a part, must be an exterior wall
+	if (!intersects_part) return 1; // not contained in a part, must be an exterior wall or extended basement
 	// check for interior wall
 	for (auto const &w : interior->walls[dim]) {
 		if (w.contains_cube(test_cube)) return 1;
