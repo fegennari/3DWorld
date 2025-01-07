@@ -431,7 +431,14 @@ void building_t::update_pet_rats(point const &camera_bs, unsigned building_ix) {
 			any_removed = rat.dead = 1; // will be removed below
 			continue;
 		}
-		if (rat.speed > 0.0) { // moving
+		if (rat.is_sleeping()) {
+			if ((float)tfticks > rat.wake_time) {rat.wake_time = 0.0;} // time to wake up
+		}
+		else if (rat.dist_since_sleep > 0.75*(obj.dx() + obj.dy())) { // maybe stop and rest
+			rat.sleep_for(1.0, 10.0); // 2-10s
+			rat.speed = 0.0; // will reset anim_time in the next frame
+		}
+		else if (rat.speed > 0.0) { // moving
 			rat.move(timestep, 1, 0.5); // can_move_forward=1, anim_time_scale=0.5
 			// check for invalid pos; should this be predicted with lookahead?
 			point const old_pos(rat.pos);
@@ -458,10 +465,14 @@ void building_t::update_pet_rats(point const &camera_bs, unsigned building_ix) {
 				// gradually turn; dest is the destination dir here, not the destination pos
 				rat.dest = rgen.signed_rand_vector_spherical_xy_norm();
 				if (dot_product(rat.dest, coll_normal) > 0.0) {rat.dest.negate();} // must point away from the collision
+
+				if (rgen.rand_float() < 0.25) { // maybe stop and rest
+					rat.sleep_for(1.0, 5.0); // 1-5s
+					rat.speed = 0.0; // will reset anim_time in the next frame
+				}
 			}
 		}
 		else { // stopped
-			// TODO: something with sleep time
 			rat.speed = global_building_params.rat_speed*rgen.rand_uniform(0.1, 0.15); // slower than free rats
 		}
 	} // for rat i
