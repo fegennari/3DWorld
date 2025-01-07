@@ -408,6 +408,7 @@ void building_t::update_pet_rats(point const &camera_bs, unsigned building_ix) {
 				float const radius(rgen.rand_uniform(0.5, 1.0)*0.15*height);
 				point const pos(gen_xy_pos_in_area(obj, vector3d(radius, radius, radius), rgen, zval));
 				rats.emplace_back(pos, radius, rgen.signed_rand_vector_spherical_xy_norm(), rats.size(), 0, t.obj_ix); // dead=0
+				rats.back().dest = rats.back().dir;
 			}
 		} // for t
 		rats.placed = 1;
@@ -417,8 +418,11 @@ void building_t::update_pet_rats(point const &camera_bs, unsigned building_ix) {
 	bool any_removed(0);
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, frame_counter+1); // unique per building and per frame
+	auto tank_start(rats.begin());
 
-	for (rat_t &rat : rats) { // update logic
+	for (auto i = rats.begin(); i != rats.end(); ++i) { // update logic
+		rat_t &rat(*i);
+		if (rat.tunnel_tank_ix != tank_start->tunnel_tank_ix) {tank_start = i;} // start a new tank
 		// check for tank removed
 		assert(rat.tunnel_tank_ix < objs.size());
 		room_object_t const &obj(objs[rat.tunnel_tank_ix]);
@@ -429,25 +433,38 @@ void building_t::update_pet_rats(point const &camera_bs, unsigned building_ix) {
 		}
 		if (rat.speed > 0.0) { // moving
 			rat.move(timestep, 1, 0.5); // can_move_forward=1, anim_time_scale=0.5
-			// check for invalid pos
+			// check for invalid pos; should this be predicted with lookahead?
 			point const old_pos(rat.pos);
 			cube_t valid_area(obj);
 			valid_area.expand_by_xy(-(0.02*obj.dz() + rat.radius));
 			valid_area.clamp_pt_xy(rat.pos);
+			vector3d coll_normal;
 
-			if (rat.pos != old_pos) { // moved due to coll
-				vector3d const normal((old_pos - rat.pos).get_norm());
-				rat.dir = rgen.signed_rand_vector_spherical_xy_norm();
-				if (dot_product(rat.dir, normal) > 0.0) {rat.dir.negate();} // must point away from the collision
-				// TODO: predict coll and gradually turn
+			if (rat.dest != rat.dir) { // turning
+				update_dir_incremental(rat.dir, rat.dest, 0.5, timestep, rgen); // turn_rate=0.5
+				if (dot_product(rat.dir, rat.dest) > 0.99) {rat.dest = rat.dir;} // turn complete
 			}
-			// TODO: collisions with other rats
+			else if (rat.pos != old_pos) { // moved due to coll
+				coll_normal = (old_pos - rat.pos);
+			}
+			else { // check for collisions with other rats
+				for (auto j = tank_start; j != rats.end() && j->tunnel_tank_ix == i->tunnel_tank_ix; ++j) {
+					if (j == i || !dist_xy_less_than(i->pos, j->pos, (i->radius + j->radius))) continue;
+					coll_normal = (j->pos - rat.pos);
+					break; // only handles one coll
+				}
+			}
+			if (coll_normal != zero_vector && dot_product(rat.dir, coll_normal) > 0.0) {
+				// gradually turn; dest is the destination dir here, not the destination pos
+				rat.dest = rgen.signed_rand_vector_spherical_xy_norm();
+				if (dot_product(rat.dest, coll_normal) > 0.0) {rat.dest.negate();} // must point away from the collision
+			}
 		}
 		else { // stopped
 			// TODO: something with sleep time
 			rat.speed = global_building_params.rat_speed*rgen.rand_uniform(0.1, 0.15); // slower than free rats
 		}
-	} // for rat
+	} // for rat i
 	if (any_removed) {rats.erase(remove_if(rats.begin(), rats.end(), [](rat_t const &r) {return r.dead;}), rats.end());}
 }
 
