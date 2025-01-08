@@ -1687,10 +1687,14 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 
 					if (rtype == RTYPE_BED) { // Note: light_ix_assign is needed for closet lights, but these aren't added here
 						unsigned const bed_ix(objs.size());
+						cube_t picture_blocker;
 
 						if (add_bedroom_objs(rgen, sub_room, blockers, chair_color, zval, room_id, 0, light_amt, start_ix, 1, 0, 1, light_ix_assign)) {
 							for (auto i = objs.begin()+bed_ix+1; i != objs.end(); ++i) { // set has_mirror flag if a dresser mirror was placed
-								if (i->type == TYPE_DRESS_MIR) {room.set_has_mirror();}
+								if (i->type != TYPE_DRESS_MIR) continue;
+								room.set_has_mirror();
+								picture_blocker = *i;
+								picture_blocker.expand_in_dim(i->dim, wall_thickness);
 							}
 							// add wall at head of bed
 							room_object_t const &bed(objs[bed_ix]); // should be the first object placed
@@ -1715,8 +1719,11 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 									set_wall_width(c, wall.get_center_dim(!wdim), 0.5*width, !wdim);
 									c.d[wdim][ wdir] = wall_pos;
 									c.d[wdim][!wdir] = wall_pos + (wdir ? -1.0 : 1.0)*0.04*wall_thickness; // shift into room
-									objs.emplace_back(c, TYPE_PICTURE, room_id, wdim, !wdir, RO_FLAG_NOCOLL, light_amt); // picture faces dir opposite the wall
-									set_obj_id(objs);
+
+									if (picture_blocker.is_all_zeros() || !c.intersects(picture_blocker)) { // skip if blocked by dresser mirror
+										objs.emplace_back(c, TYPE_PICTURE, room_id, wdim, !wdir, RO_FLAG_NOCOLL, light_amt); // picture faces dir opposite the wall
+										set_obj_id(objs);
+									}
 								}
 							}
 						}
