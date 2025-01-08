@@ -1786,31 +1786,59 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 					for (unsigned N = 0; N < 20; ++N) { // 20 attempts to place a new and valid model type
 						float const val(rgen.rand_float());
 						room_object obj_type(TYPE_NONE);
+						room_obj_shape shape(SHAPE_CUBE);
+						unsigned model_type_id(0);
 						float hscale(1.0);
+						vector3d sz(1.0, 1.0, 1.0); // D, W, H
 
-						if (val < 0.4) { // 40% kitchen appliances
-							if (val < 0.2) {obj_type = TYPE_FRIDGE; hscale = 0.75;}
-							else           {obj_type = TYPE_STOVE ; hscale = 0.46;}
-							// TODO: TYPE_DWASHER (TYPE_KSINK with special case)?
+						if (val < 0.3) { // 30% kitchen appliances; 0.0 - 0.3
+							if (val < 0.15) {obj_type = TYPE_FRIDGE; hscale = 0.75;} // 0.0  - 0.15
+							else            {obj_type = TYPE_STOVE ; hscale = 0.46;} // 0.15 - 0.3
+
+							if (0) {
+								obj_type = TYPE_DWASHER; // (TYPE_KSINK with special case)?
+								hscale   = sz.z = 0.345*(1.0 - 0.06 - 0.05); // see get_dishwasher_for_ksink()
+								sz.x     = 0.74;
+								sz.y     = 1.05*sz.x;
+								model_type_id = 26; // unused index < 32
+							}
 						}
-						else if (val < 0.6) { // 20% laundry appliances
-							if (val < 0.5) {obj_type = TYPE_WASHER; hscale = 0.42;}
-							else           {obj_type = TYPE_DRYER ; hscale = 0.38;}
+						else if (val < 0.5) { // 20% laundry appliances; 0.3 - 0.5
+							if (val < 0.4) {obj_type = TYPE_WASHER; hscale = 0.42;} // 0.3 - 0.4
+							else           {obj_type = TYPE_DRYER ; hscale = 0.38;} // 0.4 - 0.5
 						}
-						else { // 40% bathroom plumbing fixtures
-							if      (val < 0.70) {obj_type = TYPE_TUB   ; hscale = 0.20;}
-							else if (val < 0.85) {obj_type = TYPE_TOILET; hscale = 0.35;}
-							else                 {obj_type = TYPE_SINK  ; hscale = 0.45;}
-							// TYPE_SHOWERTUB, WHEATER, TYPE_FURNACE?
+						else if (val < 0.8) { // 30% bathroom plumbing fixtures; 0.5 - 0.8
+							if      (val < 0.6) {obj_type = TYPE_TUB   ; hscale = 0.20;} // 0.5 - 0.6
+							else if (val < 0.7) {obj_type = TYPE_TOILET; hscale = 0.35;} // 0.6 - 0.7
+							else                {obj_type = TYPE_SINK  ; hscale = 0.45;} // 0.7 - 0.8
+							// TYPE_SHOWERTUB?
+						}
+						else { // 20% HVAC/WH; 0.8 - 1.0
+							if (val < 0.9) { // 0.8 - 0.9
+								obj_type = TYPE_WHEATER;
+								hscale   = (1.0 - get_floor_thick_val());
+								sz.x     = sz.y = 2.0*0.18;
+								shape    = SHAPE_CYLIN;
+								model_type_id = 24; // unused index < 32
+							}
+							else { // 0.9 - 1.0
+								obj_type = TYPE_FURNACE;
+								hscale   = 0.563;
+								sz.x     = 2.0*0.219;
+								sz.y     = 2.0*0.182;
+								model_type_id = 25; // unused index < 32
+							}
 						}
 						// TYPE_CEIL_FAN?
 						if (obj_type == TYPE_NONE) continue;
-						assert(obj_type >= TYPE_TOILET);
-						unsigned const model_type_id(obj_type - TYPE_TOILET);
+						
+						if (obj_type >= TYPE_TOILET) { // 3D model object
+							model_type_id = (obj_type - TYPE_TOILET);
+							unsigned const model_id(model_type_id + OBJ_MODEL_TOILET);
+							if (!building_obj_model_loader.is_model_valid(model_id)) continue; // no model
+							sz = building_obj_model_loader.get_model_world_space_size(model_id);
+						}
 						if (N < 10 && (types_used & (1 << model_type_id))) continue; // type already placed
-						unsigned const model_id(model_type_id + OBJ_MODEL_TOILET);
-						if (!building_obj_model_loader.is_model_valid(model_id)) continue; // no model
-						vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id)); // D, W, H
 						float const height(hscale*window_vspace);
 						bool const pri_dir(rgen.rand_bool());
 						cube_t app;
@@ -1840,7 +1868,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 									if (is_cube_close_to_doorway(app, r, 0.0, 1, 1)) continue; // blocking back hallway door
 									if (door_blocker.intersects_xy(app))             continue; // blocking front door
 									if (has_bcube_int(app, blockers))                continue; // blocked
-									objs.emplace_back(app, obj_type, room_id, !sdim, sdir, RO_FLAG_IN_MALL, light_amt);
+									objs.emplace_back(app, obj_type, room_id, !sdim, sdir, RO_FLAG_IN_MALL, light_amt, shape);
 									blockers.push_back(app);
 									any_placed = 1;
 

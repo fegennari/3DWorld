@@ -3880,7 +3880,7 @@ void building_room_geom_t::add_bucket(room_object_t const &c, bool draw_metal, b
 }
 
 void building_room_geom_t::add_water_heater(room_object_t const &c) {
-	bool const is_house(c.flags & RO_FLAG_IS_HOUSE);
+	bool const is_house(c.flags & RO_FLAG_IS_HOUSE), in_store(c.in_mall()), bend_pipes(!is_house && !in_store);
 	float const height(c.dz()), radius(c.get_radius()), pipe_radius(0.05*radius);
 	float const front_pos(c.d[c.dim][c.dir]), front_dir(c.dir ? 1.0 : -1.0), top_z(c.z1() + 0.8*height);
 	cube_t body(c), pan(c), top(c), vent(c), cone(c), box, pipes[2];
@@ -3909,9 +3909,9 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 	metal_mat.add_vcylin_to_verts(body, apply_light_color(c, GRAY   ), 0, 0, 0); // main body - draw sides only
 	metal_mat.add_vcylin_to_verts(pan,  apply_light_color(c, LT_GRAY), 1, 0, 1, 0, 1.0, 1.0, 1.0, 1.0, 0, 64); // bottom pan - two sided, with bottom; ndiv=64
 	metal_mat.add_vcylin_to_verts(top,  apply_light_color(c, DK_GRAY), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 64); // top - draw top; ndiv=64
-	metal_mat.add_vcylin_to_verts(vent, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // ndiv=16
+	metal_mat.add_vcylin_to_verts(vent, apply_light_color(c, LT_GRAY), 0, in_store, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // ndiv=16; draw top if in store
 	metal_mat.add_vcylin_to_verts(cone, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.8, 0.0); // cone
-	if (!is_house) {get_metal_material(1, 0, 1, 0, BRASS_C);} // make sure it exists in the materials
+	if (bend_pipes) {get_metal_material(1, 0, 1, 0, BRASS_C);} // make sure it exists in the materials
 	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 1, 0, COPPER_C)); // small=1
 	colorRGBA const copper_color(apply_light_color(c, COPPER_C));
 	bool const low_detail = 1;
@@ -3920,7 +3920,7 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 	for (unsigned d = 0; d < 2; ++d) {
 		cube_t &pipe(pipes[d]);
 
-		if (!is_house) { // bend office building water pipes back down into the floor since routing is in the basement
+		if (bend_pipes) { // bend office building water pipes back down into the floor since routing is in the basement
 			float const bend_zval(pipe.zc()), pipe_len(WHEATER_PIPE_H_DIST*radius);
 			pipe.z2() = bend_zval; // shorten; no longer reaches the ceiling
 			cube_t v_pipe(pipe);
@@ -3987,6 +3987,9 @@ void building_room_geom_t::add_furnace(room_object_t const &c) {
 
 	if (c.in_attic()) {
 		// add ductwork on the top ... somewhere?
+	}
+	else if (c.in_mall()) { // appliance store
+		// no duct on top
 	}
 	else { // basement: add duct up into the ceiling; not a collision object
 		room_object_t duct(c);
