@@ -1166,6 +1166,8 @@ struct building_room_geom_t {
 	void add_false_door(room_object_t const &c);
 	void add_counter(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);
 	void add_cabinet(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);
+	void add_dishwasher_front(room_object_t const &c, float back_wall, unsigned dw_skip_faces);
+	void add_dishwasher(room_object_t const &c);
 	void add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, colorRGBA const &trim_color, bool inc_lg, bool inc_sm);
 	void add_hanger_rod(room_object_t const &c);
 	void add_drain_cover(cube_t const &c, colorRGBA const &color);

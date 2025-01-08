@@ -1792,12 +1792,11 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 						vector3d sz(1.0, 1.0, 1.0); // D, W, H
 
 						if (val < 0.3) { // 30% kitchen appliances; 0.0 - 0.3
-							if (val < 0.15) {obj_type = TYPE_FRIDGE; hscale = 0.75;} // 0.0  - 0.15
-							else            {obj_type = TYPE_STOVE ; hscale = 0.46;} // 0.15 - 0.3
-
-							if (0) {
-								obj_type = TYPE_DWASHER; // (TYPE_KSINK with special case)?
-								hscale   = sz.z = 0.345*(1.0 - 0.06 - 0.05); // see get_dishwasher_for_ksink()
+							if      (val < 0.1) {obj_type = TYPE_FRIDGE; hscale = 0.75;} // 0.0 - 0.1
+							else if (val < 0.2) {obj_type = TYPE_STOVE ; hscale = 0.46;} // 0.1 - 0.2
+							else { // 0.2 - 0.3
+								obj_type = TYPE_DWASHER;
+								hscale   = 0.345*(1.0 - 0.06 - 0.05); // see get_dishwasher_for_ksink()
 								sz.x     = 0.74;
 								sz.y     = 1.05*sz.x;
 								model_type_id = 26; // unused index < 32

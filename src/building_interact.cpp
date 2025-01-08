@@ -530,6 +530,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 					else if (!check_only && type == TYPE_SHELFRACK && !i->obj_expanded()) {keep = 1;} // expand shelfrack when action key is actually applied
 					else if (type == TYPE_POOL_BALL && player_has_pool_cue()) {keep = 1;} // can only push pool ball if holding a pool cue
 					else if (type == TYPE_FALSE_DOOR && !((i->flags & RO_FLAG_WALKWAY) && i->is_interior())) {keep = 1;} // skip walkway only decal doors
+					else if (type == TYPE_DWASHER) {keep = 1;} // bare dishwasher, in an appliance store
 				}
 				else if (type == TYPE_LIGHT) {keep = 1;} // closet light
 				if (!keep) continue;
@@ -617,14 +618,15 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		sound_scale = 0.5;
 		//refill_thirst(); // player can drink from toilet?
 	}
-	else if (obj.type == TYPE_KSINK && get_dishwasher_for_ksink(obj, dishwasher) && dishwasher.line_intersects(int_pos, query_ray_end)) { // dishwasher
+	else if ((obj.type == TYPE_KSINK && get_dishwasher_for_ksink(obj, dishwasher) && dishwasher.line_intersects(int_pos, query_ray_end)) || obj.type == TYPE_DWASHER) { // dishwasher
 		gen_sound_thread_safe_at_player(SOUND_METAL_DOOR, 0.2, 0.75);
 		obj.flags       ^= RO_FLAG_OPEN; // toggle open/closed
 		sound_scale      = 0.5;
 		update_draw_data = 1;
 
+		if (obj.type == TYPE_DWASHER) {} // no dishes in bare dishwasher
 		// since TYPE_KSINK already uses the RO_FLAG_EXPANDED flag for cabinet doors, we have to use the RO_FLAG_USED for dishwasher expansion
-		if (obj.is_open() && !obj.is_used()) { // newly opened
+		else if (obj.is_open() && !obj.is_used()) { // newly opened
 			interior->room_geom->expand_dishwasher(obj, dishwasher);
 			obj.flags |= RO_FLAG_USED; // can't expand again
 		}

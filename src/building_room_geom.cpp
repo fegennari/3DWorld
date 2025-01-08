@@ -4548,44 +4548,14 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 			get_material(marble_tex, 1).add_cube_to_verts(front, top_color, tex_origin, EF_Z2); // front surface, no top face; same as top_mat
 		}
 		else if (hash_dishwasher) { // add dishwasher
-			unsigned const dw_skip_faces(~get_face_mask(c.dim, !c.dir));
-			colorRGBA const dw_color(apply_light_color(c, LT_GRAY));
-			float const front_pos(dishwasher.d[c.dim][c.dir]), handle_diameter(0.04*depth), handle_height(0.82*dz);
-			cube_t dishwasher_back(dishwasher), handle(dishwasher);
-			dishwasher_back.d[c.dim][!c.dir] = c.d[c.dim][!c.dir]; // flush with the cabinet
-			metal_mat.add_cube_to_verts_untextured(dishwasher_back, dw_color, ~dw_skip_faces); // draw only the back face, in case it's visible through a window
-			handle.expand_in_dim(!c.dim, -0.1*depth); // set width
-			
-			if (c.is_open()) { // draw open; does it need to be a separate object for this?
-				unsigned const front_mask(get_face_mask(c.dim, c.dir));
-				float const wall_width(0.1*dz), door_thickness(0.035*depth), front_without_door(front_pos - dir_sign*door_thickness);
-				cube_t body(dishwasher), door(dishwasher);
-				body.d[c.dim][c.dir] = door.d[c.dim][!c.dir] = front_without_door;
-				metal_mat.add_cube_to_verts_untextured(body, dw_color, (dw_skip_faces | ~front_mask)); // no front face
-				colorRGBA const interior_color(apply_light_color(c, colorRGBA(0.8, 0.9, 1.0))); // slightly blue-green
-				body.d[c.dim][!c.dir] = c.d[c.dim][!c.dir]; // extend back toward the wall so that interior is correct
-				add_interior_and_front_face(c, body, metal_mat, wall_width, front_mask, interior_color);
-				// door
-				door.z2() = door.z1() + door_thickness;
-				door.d[c.dim][c.dir] = front_pos + dir_sign*dz;
-				metal_mat.add_cube_to_verts_untextured(door, dw_color, dw_skip_faces);
-				cube_t door_inner(door);
-				set_cube_zvals(door_inner, door.z2(), (door.z2() + wall_width));
-				door_inner.expand_by_xy(-wall_width); // shrink
-				metal_mat.add_cube_to_verts_untextured(door_inner, interior_color, EF_Z1);
-				// handle
-				set_wall_width(handle, (front_pos + dir_sign*handle_height), 0.5*handle_diameter, c.dim);
-				handle.z1()  = handle.z2() = dishwasher.z1();
-				handle.z1() -= handle_diameter; // bottom
-			}
-			else { // draw closed
-				metal_mat.add_cube_to_verts_untextured(dishwasher, dw_color, dw_skip_faces); // front face
-				// handle
-				set_wall_width(handle, (handle.z1() + handle_height), 0.5*handle_diameter, 2);
-				handle.d[c.dim][ c.dir]  = handle.d[c.dim][!c.dir] = front_pos;
-				handle.d[c.dim][ c.dir] += dir_sign*handle_diameter; // move to front
-			}
-			metal_mat.add_ortho_cylin_to_verts(handle, sink_color, !c.dim, 1, 1); // add handle as a cylinder in the proper dim with both ends
+			unsigned const dw_skip_faces(~get_face_mask(c.dim, !c.dir)); // skip back
+			float const back_wall(c.d[c.dim][!c.dir]);
+			cube_t dishwasher_back(c), handle(c);
+			dishwasher_back.d[c.dim][!c.dir] = back_wall; // flush with the cabinet
+			metal_mat.add_cube_to_verts_untextured(dishwasher_back, apply_light_color(c, LT_GRAY), ~dw_skip_faces); // draw back face, in case visible through window
+			room_object_t dwc(c);
+			dwc.copy_from(dishwasher);
+			add_dishwasher_front(dwc, back_wall, dw_skip_faces); // skip back
 		}
 	}
 	else { // regular counter top
@@ -4610,6 +4580,58 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 			bs_mat.add_cube_to_verts(bs, top_color, zero_vector, (EF_Z1 | ~get_face_mask(!c.dim, d)));
 		}
 	}
+}
+
+void building_room_geom_t::add_dishwasher_front(room_object_t const &c, float back_wall, unsigned dw_skip_faces) {
+	colorRGBA const dw_color(apply_light_color(c, LT_GRAY));
+	float const dz(c.dz()), depth(fabs(c.d[c.dim][c.dir] - back_wall)), dir_sign(c.dir ? 1.0 : -1.0);
+	float const front_pos(c.d[c.dim][c.dir]), handle_diameter(0.04*depth), handle_height(0.82*dz);
+	rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed, specular metal
+	cube_t handle(c);
+	handle.expand_in_dim(!c.dim, -0.1*depth); // set width
+
+	if (c.is_open()) { // draw open; does it need to be a separate object for this?
+		unsigned const front_mask(get_face_mask(c.dim, c.dir));
+		float const wall_width(0.1*dz), door_thickness(0.035*depth), front_without_door(front_pos - dir_sign*door_thickness);
+		cube_t body(c), door(c);
+		body.d[c.dim][c.dir] = door.d[c.dim][!c.dir] = front_without_door;
+		metal_mat.add_cube_to_verts_untextured(body, dw_color, (dw_skip_faces | ~front_mask)); // no front face
+		colorRGBA const interior_color(apply_light_color(c, colorRGBA(0.8, 0.9, 1.0))); // slightly blue-green
+		body.d[c.dim][!c.dir] = back_wall; // extend back toward the wall so that interior is correct
+		add_interior_and_front_face(c, body, metal_mat, wall_width, front_mask, interior_color);
+		// door
+		door.z2() = door.z1() + door_thickness;
+		door.d[c.dim][c.dir] = front_pos + dir_sign*dz;
+		metal_mat.add_cube_to_verts_untextured(door, dw_color, dw_skip_faces);
+		cube_t door_inner(door);
+		set_cube_zvals(door_inner, door.z2(), (door.z2() + wall_width));
+		door_inner.expand_by_xy(-wall_width); // shrink
+		metal_mat.add_cube_to_verts_untextured(door_inner, interior_color, EF_Z1);
+		// handle
+		set_wall_width(handle, (front_pos + dir_sign*handle_height), 0.5*handle_diameter, c.dim);
+		handle.z1()  = handle.z2() = c.z1();
+		handle.z1() -= handle_diameter; // bottom
+	}
+	else { // draw closed
+		metal_mat.add_cube_to_verts_untextured(c, dw_color, dw_skip_faces); // front face
+		// handle
+		set_wall_width(handle, (handle.z1() + handle_height), 0.5*handle_diameter, 2);
+		handle.d[c.dim][ c.dir]  = handle.d[c.dim][!c.dir] = front_pos;
+		handle.d[c.dim][ c.dir] += dir_sign*handle_diameter; // move to front
+	}
+	metal_mat.add_ortho_cylin_to_verts(handle, apply_light_color(c, GRAY), !c.dim, 1, 1); // add handle as a cylinder in the proper dim with both ends
+}
+
+void building_room_geom_t::add_dishwasher(room_object_t const &c) {
+	room_object_t front(c);
+	cube_t body(c);
+	body .d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*0.15*c.get_depth(); // back of front
+	front.d[c.dim][!c.dir]  = body.d[c.dim][c.dir];
+	body.expand_in_dim(!c.dim, -0.02*c.get_width());
+	body.z2() -= 0.02*c.dz();
+	rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed, specular metal
+	metal_mat.add_cube_to_verts_untextured(body, apply_light_color(c, WHITE), (~get_face_mask(c.dim, c.dir) | EF_Z1)); // skip front and bottom
+	add_dishwasher_front(front, c.d[c.dim][!c.dir], 0); // dw_skip_faces=0
 }
 
 // Note: returns both doors and drawers

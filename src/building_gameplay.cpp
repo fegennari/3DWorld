@@ -194,7 +194,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_THEFT_SENS] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 100.0, 30.0,  "theft sensor"); // should this be a large object to avoid updating sm_static with lights?
 	bldg_obj_types[TYPE_ELEC_WIRE ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 0.0,   0.0,   "electrical wire");
 	bldg_obj_types[TYPE_ERASER    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 3.0,   0.05,  "whiteboard eraser");
-	bldg_obj_types[TYPE_DWASHER   ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 250.0, 120.0, "dishwasher"); // in appliance store; marked as small
+	bldg_obj_types[TYPE_DWASHER   ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1, 250.0, 120.0, "dishwasher"); // in appliance store; not small because it shares code with kitchen sinks
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
