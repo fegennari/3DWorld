@@ -1085,6 +1085,8 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 
 	// start with sewer pipes and water heaters
 	for (room_object_t const &i : interior->room_geom->objs) { // check all objects placed so far
+		if (i.in_mall()) continue; // skip appliance/plumbing store objects
+
 		if (i.type == TYPE_WHEATER) { // water heaters are special because they take cold water and return hot water
 			// maybe skip if in the basement, since this must connect directly to pipes rather than through a riser;
 			// this can happen for houses (which don't have parking garages or pipes), but currently not for office buildings;
@@ -1095,7 +1097,7 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 		}
 		// Note: the dishwasher is always next to the kitchen sink and uses the same water connections
 		bool const hot_cold_obj (i.type == TYPE_SINK || i.type == TYPE_BRSINK || i.type == TYPE_KSINK || i.type == TYPE_TUB ||
-			i.type == TYPE_SHOWER || i.type == TYPE_SHOWERTUB || i.type == TYPE_WASHER);
+			i.type == TYPE_SHOWER || i.type == TYPE_SHOWERTUB || i.type == TYPE_WASHER || i.type == TYPE_DWASHER);
 		bool const cold_only_obj(i.type == TYPE_TOILET || i.type == TYPE_URINAL || i.type == TYPE_DRAIN);
 		if (!hot_cold_obj && !cold_only_obj) continue;
 

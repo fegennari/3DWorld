@@ -1791,7 +1791,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 						if (val < 0.4) { // 40% kitchen appliances
 							if (val < 0.2) {obj_type = TYPE_FRIDGE; hscale = 0.75;}
 							else           {obj_type = TYPE_STOVE ; hscale = 0.46;}
-							// TODO: dishwasher (TYPE_KSINK with special case)?
+							// TODO: TYPE_DWASHER (TYPE_KSINK with special case)?
 						}
 						else if (val < 0.6) { // 20% laundry appliances
 							if (val < 0.5) {obj_type = TYPE_WASHER; hscale = 0.42;}
