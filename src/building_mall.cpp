@@ -19,6 +19,8 @@ void add_city_ug_elevator_entrance(ug_elev_info_t const &uge);
 void offset_hanging_tv(room_object_t &obj);
 void rotate_obj_cube(cube_t &c, cube_t const &bc, bool in_dim, bool dir);
 colorRGBA get_couch_color(rand_gen_t &rgen);
+bool try_add_lamp(cube_t const &place_area, float floor_spacing, unsigned room_id, unsigned flags, float light_amt,
+	vect_cube_t &cubes, vect_room_object_t &objects, rand_gen_t &rgen);
 
 extern object_model_loader_t building_obj_model_loader;
 
@@ -1734,12 +1736,30 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 							blockers.push_back(objs.back());
 						}
 						for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place a valid table; wood, no chairs, tall=0
-							if (add_table_and_chairs(rgen, sub_room, blockers, room_id, room_center, chair_color, 0.25, light_amt, 0, 0, 0)) break;
+							if (add_table_and_chairs(rgen, sub_room, blockers, room_id, room_center, chair_color, 0.25, light_amt, 0, 0, 0)) {
+								cube_t const table(objs.back());
+
+								if (building_obj_model_loader.is_model_valid(OBJ_MODEL_LAMP) && rgen.rand_bool()) {
+									// maybe add a lamp on the table; lamps aren't added to regular living rooms, but we can add them here
+									float const height(0.25*window_vspace), radius(0.5*height*get_lamp_width_scale());
+
+									if (radius < 3.0*min(table.dx(), table.dy())) { // add if it fits
+										point center(gen_xy_pos_in_area(table, 1.2*radius, rgen, table.z2()));
+										cube_t lamp(get_cube_height_radius(center, radius, height));
+										unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_IN_MALL); // no collisions
+										if (rgen.rand_bool()) {flags |= RO_FLAG_LIT;} // 50% chance of being lit
+										objs.back().flags |= RO_FLAG_ADJ_TOP; // flag table as having something on it
+										objs.emplace_back(lamp, TYPE_LAMP, room_id, rgen.rand_bool(), 0, flags, light_amt, SHAPE_CYLIN, lamp_colors[rgen.rand()%NUM_LAMP_COLORS]);
+									}
+								}
+								break;
+							}
 							rgen.rand_mix(); // needed to get different rand values
-						}
+						} // for n
 						unsigned const num_plants(rgen.rand() % 3); // 0-2
 						add_plants_to_room(rgen, sub_room, zval, room_id, light_amt, place_start, num_plants);
-						// TODO: lamp?
+						// try to place a lamp 50% of the time; these go on the floor but aren't really meant to be floor lamps; they can be placeholders for future tall lamps
+						//if (rgen.rand_bool()) {try_add_lamp(sub_room, window_vspace, room_id, RO_FLAG_IN_MALL, light_amt, blockers, objs, rgen);}
 					}
 					else if (rtype == RTYPE_KITCHEN || rtype == RTYPE_DINING) { // tables only, for now
 						sub_room.expand_by_xy(room_pad); // make it larger to allow chairs to stick out a bit, since they don't block the player

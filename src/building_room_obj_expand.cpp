@@ -11,7 +11,6 @@ float const TAPE_HEIGHT_TO_RADIUS = 0.6;
 extern building_params_t global_building_params;
 extern object_model_loader_t building_obj_model_loader;
 
-float get_lamp_width_scale();
 vect_cube_t &get_temp_cubes();
 bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher);
 void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim);

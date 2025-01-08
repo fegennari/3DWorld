@@ -2915,6 +2915,7 @@ void apply_building_fall_damage(float delta_z);
 float get_bldg_player_height();
 cube_t get_stairs_bcube_expanded(stairwell_t const &s, float ends_clearance, float sides_clearance, float doorway_width);
 float get_door_open_dist();
+float get_lamp_width_scale();
 unsigned get_face_mask(unsigned dim, bool dir);
 unsigned get_skip_mask_for_xy(bool dim);
 // functions in building_room_obj_expand.cc
