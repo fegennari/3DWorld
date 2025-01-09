@@ -313,11 +313,12 @@ class building_nav_graph_t {
 
 	unsigned num_rooms=0, num_stairs=0;
 	float stairs_extend=0;
-	bool has_pg_ramp=0;
-	vector<node_t> nodes;
+	bool has_pg_ramp=0, has_mall_ent=0;
+	vector<node_t> nodes; // {rooms, stairs, mall entrance stairs, parking garage ramp}
 	mutable vector<building_cube_nav_grid> nav_grids; // for use with backrooms; cached during path finding
 	node_t       &get_node(unsigned room)       {assert(room < nodes.size()); return nodes[room];}
 	node_t const &get_node(unsigned room) const {assert(room < nodes.size()); return nodes[room];}
+	unsigned get_stairs_end() const {return (num_stairs + num_rooms + has_mall_ent);}
 
 	void remove_connection(unsigned from, unsigned to) {
 		auto &conn(get_node(from).conn_rooms);
@@ -335,22 +336,23 @@ public:
 	}
 	building_nav_graph_t(float stairs_extend_) : stairs_extend(stairs_extend_) {}
 
-	void set_num_rooms(unsigned num_rooms_, unsigned num_stairs_, bool has_pg_ramp_) {
-		num_rooms   = num_rooms_;
-		num_stairs  = num_stairs_;
-		has_pg_ramp = has_pg_ramp_;
-		nodes.resize(num_rooms + num_stairs + has_pg_ramp);
-		for (unsigned n = num_rooms; n < (num_rooms + num_stairs); ++n) {nodes[n].is_stairs = 1;}
+	void set_num_rooms(unsigned num_rooms_, unsigned num_stairs_, bool has_pg_ramp_, bool has_mall_ent_) {
+		num_rooms    = num_rooms_;
+		num_stairs   = num_stairs_;
+		has_pg_ramp  = has_pg_ramp_;
+		has_mall_ent = has_mall_ent_;
+		nodes.resize(get_stairs_end() + has_pg_ramp);
+		for (unsigned n = num_rooms; n < get_stairs_end(); ++n) {nodes[n].is_stairs = 1;}
 		if (has_pg_ramp) {nodes.back().is_ramp = 1;}
 	}
 	void set_room_bcube  (unsigned room,   cube_t const &c) {get_node(room).bcube = c;}
 	void set_stairs_bcube(unsigned stairs, cube_t const &c) {get_node(stairs + num_rooms).bcube = c;}
-	void set_ramp_bcube                   (cube_t const &c) {get_node(num_stairs + num_rooms).bcube = c;}
+	void set_ramp_bcube                   (cube_t const &c) {get_node(get_stairs_end()  ).bcube = c;}
 	void mark_hallway(unsigned room) {get_node(room).is_hallway = 1;} // or mall concourse
 	void mark_exit   (unsigned room) {get_node(room).has_exit   = 1;}
 
 	void connect_stairs(unsigned room, unsigned stairs, stairwell_t const &s, float doorway_width) {
-		assert(room < num_rooms && stairs < num_stairs);
+		assert(room < num_rooms && stairs < (num_stairs + has_mall_ent));
 		unsigned const node_ix2(num_rooms + stairs);
 		node_t &n2(get_node(node_ix2));
 		assert(n2.is_stairs);
@@ -370,6 +372,10 @@ public:
 			get_L_stairs_entrances(s, doorway_width, 0, entrances); // for_placement=0
 			entry_u = entrances[0]; entry_d = entrances[1];
 		}
+		else if (s.shape == SHAPE_FAN) { // mall entrance
+			entry_u.d[dim][ dir] = entry_u.d[dim][!dir]; // no extend?
+			entry_d.d[dim][!dir] = entry_d.d[dim][ dir];
+		}
 		else { // straight stairs: entrances are on opposite ends
 			entry_u.d[dim][ dir] = entry_u.d[dim][!dir] + extend; // shrink to extend length at the entrance to the stairs when going up
 			entry_d.d[dim][!dir] = entry_d.d[dim][ dir] - extend; // shrink to extend length at the entrance to the stairs when going down
@@ -379,7 +385,7 @@ public:
 	}
 	void connect_ramp(unsigned room, bool dim, bool dir) {
 		assert(room < num_rooms);
-		unsigned const node_ix2(num_rooms + num_stairs); // pg_ramp comes after all stairs
+		unsigned const node_ix2(get_stairs_end()); // pg_ramp comes after all stairs
 		node_t &n2(get_node(node_ix2));
 		assert(n2.is_ramp);
 		cube_t entry_u(n2.bcube), entry_d(n2.bcube);
@@ -942,7 +948,7 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 	float const wall_width(get_wall_thickness()), doorway_width(get_doorway_width());
 	unsigned const num_rooms(interior->rooms.size()), num_stairs(interior->stairwells.size());
 	bool const has_ramp(has_pg_ramp());
-	ng.set_num_rooms(num_rooms, num_stairs, has_ramp);
+	ng.set_num_rooms(num_rooms, num_stairs, has_ramp, has_mall());
 	for (unsigned s = 0; s < num_stairs; ++s) {ng.set_stairs_bcube(s, interior->stairwells[s]);}
 	if (has_ramp) {ng.set_ramp_bcube(interior->pg_ramp);}
 
@@ -975,7 +981,9 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 			for (store_doorway_t const &d : interior->mall_info->store_doorways) {
 				if (!d.closed) {ng.connect_rooms(r, d.room_id, -1, d);} // door_ix=-1 (no door)
 			}
-			// TODO: consider interior->mall_info->ent_stairs; also must increment num_stairs
+			if (!interior->mall_info->ent_stairs.is_all_zeros()) { // handle mall entrance stairs; should always be true
+				ng.connect_stairs(r, num_stairs, interior->mall_info->ent_stairs, doorway_width);
+			}
 		}
 		if (room.open_wall_mask || (has_complex_floorplan && !room.is_ext_basement())) { // check for connected hallways in office buildings, or open wall rooms
 			for (unsigned r2 = r+1; r2 < num_rooms; ++r2) { // check rooms with higher index (since graph is bidirectional)
@@ -1719,7 +1727,7 @@ void building_t::find_nearest_stairs_ramp_esc(point const &p1, point const &p2, 
 	assert(part_ix < 0 || (unsigned)part_ix < parts.size());
 	bool const maybe_in_basement(part_ix < 0 || part_ix == basement_part_ix);
 	float const zmin(min(p1.z, p2.z)), zmax(max(p1.z, p2.z));
-	unsigned const num_stairwells(interior->stairwells.size());
+	unsigned const num_stairwells(interior->stairwells.size()), stairs_end(num_stairwells + has_mall());
 	vector<pair<float, unsigned>> sorted;
 
 	for (unsigned s = 0; s < num_stairwells; ++s) {
@@ -1732,7 +1740,7 @@ void building_t::find_nearest_stairs_ramp_esc(point const &p1, point const &p2, 
 	}
 	if (maybe_in_basement && has_pg_ramp() && zmax < ground_floor_z1) { // parking garage ramp
 		if (zmin > interior->pg_ramp.z1() && zmax < interior->pg_ramp.z2()) { // ramp is within vertical range
-			sorted.emplace_back(get_dist_xy_through_pt(p1, interior->pg_ramp.get_cube_center(), p2), num_stairwells); // ix=num_stairwells
+			sorted.emplace_back(get_dist_xy_through_pt(p1, interior->pg_ramp.get_cube_center(), p2), stairs_end); // ix=stairs_end
 		}
 	}
 	if (maybe_in_basement && has_mall()) {
@@ -1742,10 +1750,10 @@ void building_t::find_nearest_stairs_ramp_esc(point const &p1, point const &p2, 
 				if (!e.in_mall) continue; // only consider mall escalators
 				if (zmin < e.z1() || zmax > e.z2())   continue; // escalator doesn't span the correct floors
 				if (e.is_going_up() != (p2.z > p1.z)) continue; // wrong direction
-				sorted.emplace_back(get_dist_xy_through_pt(p1, e.get_cube_center(), p2), (i + num_stairwells + 1));
+				sorted.emplace_back(get_dist_xy_through_pt(p1, e.get_cube_center(), p2), (i + stairs_end + 1));
 			}
 		}
-		// something with interior->mall_info->ent_stairs?
+		// TODO: use interior->mall_info->ent_stairs (num_stairwells) if one point in parking garage and the other is in the mall
 	}
 	sort(sorted.begin(), sorted.end()); // sort by distance, min first
 	for (auto s = sorted.begin(); s != sorted.end(); ++s) {nearest_stairs.push_back(s->second);}
@@ -1867,10 +1875,12 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 		vector<unsigned> cand_stairs_ramp_esc;
 		find_nearest_stairs_ramp_esc(from, to, cand_stairs_ramp_esc); // pass in loc1.part_ix if both loc part_ix values are equal?
 		bool const up_or_down(loc1.floor_ix > loc2.floor_ix); // 0=up, 1=down; Note: floor_ix is relative to bcube.z1() (or ext_basement z1), so is consistent across parts
-		unsigned const num_stairwells(interior->stairwells.size());
+		unsigned const num_stairwells(interior->stairwells.size()), stairs_end(num_stairwells + has_mall());
 
-		for (unsigned s : cand_stairs_ramp_esc) { // try using stairs, ramp, or escalator, closest to furthest
-			bool const is_ramp(s == num_stairwells), is_escalator(s > num_stairwells);
+		for (unsigned s : cand_stairs_ramp_esc) { // try using stairs, ramp, or escalator, closest to furthest: {stairs, mall stairs, ramp, escalators}
+			bool const is_ramp(s == stairs_end), is_escalator(s > stairs_end);
+			if (is_ramp     ) {assert(has_pg_ramp());}
+			if (is_escalator) {assert(!interior->escalators.empty());}
 			// map to graph space; should work for stairs or ramp, and escalator is always in the mall
 			unsigned const sre_room_ix(is_escalator ? (unsigned)interior->ext_basement_hallway_room_id : (s + interior->rooms.size()));
 			// this case is currently not handled (escalator from/to mall concourse rather than store)
@@ -1879,7 +1889,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 			ai_path_t from_path, escalator_path;
 
 			if (is_escalator) {
-				person.cur_escalator = (s - num_stairwells - 1);
+				person.cur_escalator = (s - stairs_end - 1);
 				add_escalator_points(person, escalator_path);
 				seg2_start = escalator_path[0]; // escalator exit point
 				enter_pt   = escalator_path[3]; // escalator entrance point
@@ -1915,8 +1925,9 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 				for (unsigned i = 1; i < 3; ++i) {path.add(escalator_path[i]);} // add the two middle points; the exit point was added above
 			}
 			else { // stairs
-				assert(s < num_stairwells);
-				stairwell_t const &stairs(interior->stairwells[s]);
+				assert(s < stairs_end); // last set is mall stairwell
+				stairwell_t const &stairs((s == num_stairwells) ? interior->mall_info->ent_stairs : interior->stairwells[s]);
+				assert(!stairs.is_all_zeros());
 				cube_t const stairs_ext(get_stairs_plus_step_up(stairs, radius));
 				enter_pt = stairs_ext.closest_pt(from_path.front());
 				point const exit_pt(stairs_ext.closest_pt(path.back()));
@@ -1969,7 +1980,9 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 					path.add((landing_center + exit_dir_xy *landing_offset), 1);
 					path.add((landing_center + enter_dir_xy*landing_offset), 1);
 				}
-				//else if (stairs.shape == SHAPE_FAN) {}
+				else if (stairs.shape == SHAPE_FAN) { // mall stairs
+					// TODO: same as straight stairs?
+				}
 			} // end stairs case
 			if (from_path.empty() || from_path.front() != enter_pt) {path.add(enter_pt, 1);} // don't add a duplicate
 			from_path.front().fixed = 1;
