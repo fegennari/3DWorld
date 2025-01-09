@@ -1930,9 +1930,14 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			else if (building.point_in_mall     (obj_center)) {cull_dist *= 2.0;} // increased culling distance for malls
 			if (!dist_less_than(camera_bs, obj_center, cull_dist)) continue; // too far
 		}
-		if (camera_in_building && player_in_basement >= 2 && obj_center.z > building.ground_floor_z1) continue; // player in basement, obj not
-		if (camera_in_building && player_in_basement == 0 && obj_center.z < building.ground_floor_z1) continue; // obj in basement, player not
+		bool cull(0);
+		cull |= (camera_in_building && player_in_basement >= 2 && obj_center.z > building.ground_floor_z1); // player in basement, obj not
+		cull |= (camera_in_building && player_in_basement == 0 && obj_center.z < building.ground_floor_z1); // obj in basement, player not
 
+		if (cull) { // basement separation; check for primary stairs visibility (for reception desk chair, etc.)
+			vect_stairwell_t const &sw(building.interior->stairwells);
+			if (sw.empty() || sw.front().is_u_shape() || !sw.front().line_intersects(camera_bs, obj_center)) continue;
+		}
 		if (player_in_building && obj.room_id != last_culled_room_ix) { // new room; apply room-based VFC + occlusion culling
 			last_culled_room_ix = obj.room_id;
 
