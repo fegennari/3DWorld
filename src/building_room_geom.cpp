@@ -2667,7 +2667,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 	// add floor numbers to the panel; buttons are added in building_t::add_stairs_and_elevators()
 	unsigned const num_floors(c.drawer_flags), cur_floor(c.item_flags);
 	assert(num_floors > 1);
-	assert(e.in_mall || num_floors >= floor_offset); // no sub-basement only elevators, except for underground malls
+	assert(e.in_mall || e.in_backrooms || num_floors >= floor_offset); // no sub-basement only elevators, except for underground malls and backrooms
 	bool const use_small_text(floor_offset > 1 || (int(num_floors) - int(floor_offset)) >= 20); // need more space for two non-1 digits (B2 | 20)
 	float const button_spacing(panel.dz()/(num_floors + 1)); // add extra spacing on bottom and top of panel
 	float const panel_width(panel.get_sz_dim(!c.dim));
