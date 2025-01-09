@@ -1459,7 +1459,7 @@ void building_t::maybe_add_basement(rand_gen_t rgen) { // rgen passed by value s
 		real_num_parts = (uint8_t)parts.size(); // set now because it's needed in the call below
 		expand_ground_floor_cube(basement);
 		// maybe extend the basement downward with extra floors
-		unsigned const num_basement_floors(1 + (rgen.rand() % (global_building_params.max_office_basement_floors - 1))); // 1+
+		unsigned const num_basement_floors(1 + (rgen.rand() % global_building_params.max_office_basement_floors)); // 1+
 		for (unsigned n = 1; n < num_basement_floors && (basement_z1 - floor_spacing) > max_sea_level; ++n) {basement_z1 -= floor_spacing;}
 	}
 	set_cube_zvals(basement, basement_z1, ground_floor_z1);

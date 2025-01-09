@@ -202,7 +202,8 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 			elevator.d[dim][!edir] = ww_edge; // front is adjacent to walkway
 			elevator.d[dim][ edir] = ww_edge + (edir ? 1.0 : -1.0)*depth; // extend back away from walkway by depth
 
-			if (EXTEND_MALL_ELEVATOR_TO_CITY && is_in_city && d < 2) { // extend elevator up to street level if there's space?
+			// extend elevator up to street level if there's space and if the mall is not too deep underground
+			if (EXTEND_MALL_ELEVATOR_TO_CITY && is_in_city && d < 2 && elevator.z2() + 0.5*window_vspace > ground_floor_z1) {
 				cube_t entrance(elevator);
 				entrance.expand_by_xy(0.25*wall_thickness + 0.1*depth); // account for city exterior entrance wall thickness == 0.1*depth
 				cube_t test_cube(entrance);

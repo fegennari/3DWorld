@@ -512,6 +512,7 @@ unsigned building_t::max_expand_underground_room(cube_t &room, bool dim, bool di
 	float const room_floor_spacing((is_mall ? MALL_FLOOR_HEIGHT : 1.0)*floor_spacing); // mall has larger (2x) floor spacing
 
 	if (is_mall) {
+		// TODO: shift upward one level if this is a lower basement floor
 		unsigned const max_levels(global_building_params.max_mall_levels);
 		assert(max_levels > 0);
 		if (max_levels <= 2) {num_floors_add = max_levels - 1;} // 1-2 levels
