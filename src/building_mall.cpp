@@ -87,16 +87,23 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), door_width(get_doorway_width());
 	float const floor_thickness(get_floor_thickness()), fc_thick(get_fc_thickness()), wall_thickness(get_wall_thickness()), trim_thickness(get_trim_thickness());
 	
-	// add wall section below the door on lower floors, since the entrace door is on the top level
-	float const room_end(room.d[dim][!dir]); // entrance end
-	door_t const &door(interior->get_ext_basement_door()); // entrance door to mall
-	assert(door.dim == dim);
-	cube_t wall(door);
-	set_cube_zvals(wall, room.z1()+fc_thick, door.z1()); // below the door
-	wall.d[dim][!dir] = room_end; // doesn't exactly match the regular wall width, but not visible anyway
-	wall.d[dim][ dir] = room_end + (dir ? 1.0 : -1.0)*wall_thickness; // extend into the room
-	if (wall.dz() > 0.0) {interior->walls[dim].push_back(wall);}
-
+	{ // add wall section below the door on lower floors, since the entrace door is on the top level
+		float const dscale(dir ? 1.0 : -1.0), room_end(room.d[dim][!dir]); // entrance end
+		door_t const &door(interior->get_ext_basement_door()); // entrance door to mall
+		assert(door.dim == dim);
+		cube_t wall(door);
+		set_cube_zvals(wall, room.z1()+fc_thick, door.z1()); // below the door
+		wall.d[dim][!dir] = room_end + 0.1*dscale*wall_thickness; // needed for upper wall Z-fighting; doesn't exactly match the regular wall width, but not visible anyway
+		wall.d[dim][ dir] = room_end +     dscale*wall_thickness; // extend into the room
+		if (wall.dz() > 0.0) {interior->walls[dim].push_back(wall);}
+		float const top_floor_ceil(room.z2() - fc_thick);
+		cout << (door.z2() < top_floor_ceil - trim_thickness); // TESTING
+	
+		if (door.z2() < top_floor_ceil - trim_thickness) { // add a wall section above the door if needed
+			set_cube_zvals(wall, door.z2(), top_floor_ceil);
+			interior->walls[dim].push_back(wall);
+		}
+	}
 	// handle upper floors
 	unsigned const num_floors(interior->num_extb_floors);
 	if (num_floors == 1) return; // single floor; nothing else to do
@@ -326,6 +333,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 	unsigned const max_bathrooms(max(1, round_fp(0.1*num_floors*room.get_sz_dim(dim)/room.get_sz_dim(!dim)))); // scale with number of stores
 	unsigned num_bathrooms(0);
 	bool at_stack_end[2] = {0, 0};
+	cube_t const basement(get_basement());
 	vect_cube_t &side_walls(interior->walls[!dim]);
 	vector<room_t> &rooms(interior->rooms);
 	vector<unsigned> hall_stacks[2]; // one per end hallway
@@ -458,7 +466,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			floor_bcube.union_with_cube(store);
 		} // for d
 		interior->mall_info->store_bounds.union_with_cube(floor_bcube);
-		// add a narrower non-public hallway behind each row of stores
+		// add a narrower non-public back hallways behind each row of stores
 		bool const is_tall_room(floor_spacing > 1.1*window_vspace);
 		unsigned const rooms_end(rooms.size());
 		float const hall_width(2.0*doorway_width);
@@ -467,6 +475,10 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 		hall.z2() = floor_bcube.z1() + window_vspace; // normal height
 		cube_t side_halls[2];
 
+		// if this floor overlaps the basement in Z, clip hallway to the basement edge (including wall thickness); can't place perpendicular hallway in this case
+		if (hall.z1() < basement.z1() && hall.z2() > basement.z1()) {
+			hall.d[dim][entrance_dir] = room.d[dim][entrance_dir] + (entrance_dir ? -1.0 : 1.0)*wall_thickness;
+		}
 		for (unsigned d = 0; d < 2; ++d) { // sides of mall
 			float const wall_pos(floor_bcube.d[!dim][d]);
 			if (room.d[!dim][d] == wall_pos) continue; // no stores added to this side, skip; excludes bathrooms
@@ -508,6 +520,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 				cube_t hall(hall_union);
 				hall.d[dim][!d] = wall_pos;
 				hall.d[dim][ d] = wall_pos + dsign*hall_width;
+				if (basement.intersects_no_adj(hall)) continue; // intersects basement
 				if (is_store_placement_invalid(hall)) continue;
 				unsigned const hall_room_ix(rooms.size());
 				rooms.emplace_back(hall, basement_part_ix, 0, 1, 0, 0, 2); // num_lights=0, is_hallway=1, is_office=0, is_sec_floor=0, interior=1 (extb)

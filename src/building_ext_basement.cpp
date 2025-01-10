@@ -512,17 +512,26 @@ unsigned building_t::max_expand_underground_room(cube_t &room, bool dim, bool di
 	float const room_floor_spacing((is_mall ? MALL_FLOOR_HEIGHT : 1.0)*floor_spacing); // mall has larger (2x) floor spacing
 
 	if (is_mall) {
-		// TODO: shift upward one level if this is a lower basement floor
 		unsigned const max_levels(global_building_params.max_mall_levels);
 		assert(max_levels > 0);
 		if (max_levels <= 2) {num_floors_add = max_levels - 1;} // 1-2 levels
 		else {num_floors_add = rgen.rand_uniform_uint(2, max_levels) - 1;} // 2-max_levels levels
 
 		if (room_floor_spacing > floor_spacing) { // check if we can lower the floor to increase room height
+			float mall_floor_z(room.z1() - (room_floor_spacing - floor_spacing)); // of upper level
 			cube_t cand(room);
-			set_cube_zvals(cand, (room.z1() - (room_floor_spacing - floor_spacing)), room.z1()); // one floor below
-			if (check_buildings_cube_coll(cand, 0, 1, this)) {room = orig_room; return 0;} // not enough space below
-			room.z1() = cand.z1();
+			set_cube_zvals(cand, mall_floor_z, room.z1()); // one floor below
+			// shift upward if this is a lower basement floor; shift is limited by the min of the gap above the mall celing and the gap below the basement floor (stairs height)
+			float const max_shift_up(min((ground_floor_z1 - room.z2()), (get_basement().z1() - mall_floor_z)));
+			bool valid(0);
+
+			if (max_shift_up > get_floor_thickness()) {
+				cube_t cand_shift(cand);
+				cand_shift.translate_dim(2, max_shift_up); // Z
+				if (!check_buildings_cube_coll(cand_shift, 0, 1, this)) {room.z2() += max_shift_up; mall_floor_z += max_shift_up; valid = 1;} // can shift up
+			}
+			if (!valid && check_buildings_cube_coll(cand, 0, 1, this)) {room = orig_room; return 0;} // not enough space below
+			room.z1() = mall_floor_z;
 		}
 	}
 	else {
