@@ -572,7 +572,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			stairs.d[dim][ d] = wall_pos + dsign*3.2*doorway_width; // depth
 			assert(stairs.is_strictly_normalized());
 
-			if (!is_store_placement_invalid(elevator_bc)) {
+			if (!is_store_placement_invalid(stairs)) {
 				unsigned const stairs_num_floors(2*stack_height - 1); // 2 floors per hallway except for the top
 				stairwell_t stairwell(stairs, stairs_num_floors, dim, d, SHAPE_U);
 				stairwell.in_mall = 2;
