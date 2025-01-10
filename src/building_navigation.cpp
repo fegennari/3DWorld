@@ -472,9 +472,10 @@ public:
 		// should we always move to the right side on wide stairs such as in malls so that other people can pass by going the other direction?
 		node_t const &node(get_node(node_ix));
 		assert(node.is_stairs || node.is_ramp);
+		assert(!node.bcube.is_all_zeros()); // must have been filled in during graph building
 		if (node.conn_rooms.empty()) {cout << TXT(node.is_stairs) << TXT(node.is_ramp) << TXT(node_ix) << TXT(node.bcube.str()) << endl;}
 		assert(!node.conn_rooms.empty());
-		vector2d const &pt(node.conn_rooms.front().pt[up_or_down]); // Note: all conn_rooms should be the same value
+		vector2d const &pt(node.conn_rooms.front().pt[up_or_down]); // Note: all conn_rooms should be the same x/y value
 		return point(pt.x, pt.y, zval);
 	}
 	static bool find_valid_pt_in_room(vect_cube_t const &avoid, building_t const &building, float radius, float zval,
@@ -947,9 +948,10 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 	building_nav_graph_t &ng(*interior->nav_graph);
 	float const wall_width(get_wall_thickness()), doorway_width(get_doorway_width());
 	unsigned const num_rooms(interior->rooms.size()), num_stairs(interior->stairwells.size());
-	bool const has_ramp(has_pg_ramp());
-	ng.set_num_rooms(num_rooms, num_stairs, has_ramp, has_mall());
+	bool const has_ramp(has_pg_ramp()), add_mall_ent_stairs(has_mall_ent_stairs());
+	ng.set_num_rooms(num_rooms, num_stairs, has_ramp, add_mall_ent_stairs);
 	for (unsigned s = 0; s < num_stairs; ++s) {ng.set_stairs_bcube(s, interior->stairwells[s]);}
+	if (add_mall_ent_stairs) {ng.set_stairs_bcube(num_stairs, interior->mall_info->ent_stairs);}
 	if (has_ramp) {ng.set_ramp_bcube(interior->pg_ramp);}
 
 	for (unsigned r = 0; r < num_rooms; ++r) {
@@ -977,11 +979,15 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 			// allow adjacency only for mall back hallway stairs, since they don't intersect the room
 			if ((stairwell.in_mall == 2) ? room.intersects(stairwell) : room.intersects_no_adj(stairwell)) {ng.connect_stairs(r, s, stairwell, doorway_width);}
 		}
-		if (has_mall() && (int)r == interior->ext_basement_hallway_room_id) { // bidirectional; only need to check mall => store/parking garage direction
-			for (store_doorway_t const &d : interior->mall_info->store_doorways) {
-				if (!d.closed) {ng.connect_rooms(r, d.room_id, -1, d);} // door_ix=-1 (no door)
+		if (has_mall()) {
+			bool const is_mall_concourse((int)r == interior->ext_basement_hallway_room_id);
+
+			if (is_mall_concourse) { // bidirectional; only need to check mall => store/parking garage direction
+				for (store_doorway_t const &d : interior->mall_info->store_doorways) {
+					if (!d.closed) {ng.connect_rooms(r, d.room_id, -1, d);} // door_ix=-1 (no door)
+				}
 			}
-			if (!interior->mall_info->ent_stairs.is_all_zeros()) { // handle mall entrance stairs; should always be true
+			if (add_mall_ent_stairs && (is_mall_concourse || room.is_parking())) { // handle mall entrance stairs
 				ng.connect_stairs(r, num_stairs, interior->mall_info->ent_stairs, doorway_width);
 			}
 		}
@@ -1587,7 +1593,7 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 		} // for s
 	}
 	// Note: move inside the skip_stairs case above when the AI is updated to use these stairs
-	if (has_mall() && mall_info->ent_stairs.z1() < z2 && mall_info->ent_stairs.z2() > z1) {avoid.push_back(mall_info->ent_stairs);}
+	if (has_mall_ent_stairs() && mall_info->ent_stairs.z1() < z2 && mall_info->ent_stairs.z2() > z1) {avoid.push_back(mall_info->ent_stairs);}
 	add_bcube_if_overlaps_zval(elevators,  avoid, z1, z2); // clearance not required
 	
 	for (escalator_t const &e : escalators) {
@@ -1725,9 +1731,9 @@ void building_t::find_nearest_stairs_ramp_esc(point const &p1, point const &p2, 
 	nearest_stairs.clear();
 	assert(interior);
 	assert(part_ix < 0 || (unsigned)part_ix < parts.size());
-	bool const maybe_in_basement(part_ix < 0 || part_ix == basement_part_ix);
+	bool const maybe_in_basement(part_ix < 0 || part_ix == basement_part_ix), inc_mall_ent_stairs(has_mall_ent_stairs());
 	float const zmin(min(p1.z, p2.z)), zmax(max(p1.z, p2.z));
-	unsigned const num_stairwells(interior->stairwells.size()), stairs_end(num_stairwells + has_mall());
+	unsigned const num_stairwells(interior->stairwells.size()), stairs_end(num_stairwells + inc_mall_ent_stairs);
 	vector<pair<float, unsigned>> sorted;
 
 	for (unsigned s = 0; s < num_stairwells; ++s) {
@@ -1753,7 +1759,19 @@ void building_t::find_nearest_stairs_ramp_esc(point const &p1, point const &p2, 
 				sorted.emplace_back(get_dist_xy_through_pt(p1, e.get_cube_center(), p2), (i + stairs_end + 1));
 			}
 		}
-		// TODO: use interior->mall_info->ent_stairs (num_stairwells) if one point in parking garage and the other is in the mall
+		if (inc_mall_ent_stairs && zmax < ground_floor_z1) { // consider mall entrance stairs
+			cube_t const pg(get_basement());
+			float const mall_top_floor_zval(get_mall_concourse().z2() - get_mall_floor_spacing()), pg_bot_ceil_zval(pg.z1() + get_window_vspace());
+
+			for (unsigned d = 0; d < 2; ++d) {
+				point const &A(d ? p2 : p1), &B(d ? p1 : p2);
+
+				// check if one point is in lowest level of the parking garage and the other is in the upper level of the mall
+				if (pg.contains_pt(A) && A.z < pg_bot_ceil_zval && point_in_mall(B) && B.z > mall_top_floor_zval) {
+					sorted.emplace_back(get_dist_xy_through_pt(p1, interior->mall_info->ent_stairs.get_cube_center(), p2), num_stairwells); // ix=num_stairwells
+				}
+			} // for d
+		}
 	}
 	sort(sorted.begin(), sorted.end()); // sort by distance, min first
 	for (auto s = sorted.begin(); s != sorted.end(); ++s) {nearest_stairs.push_back(s->second);}
@@ -1808,8 +1826,9 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 	point const &from(person.pos), &to(person.target_pos);
 	building_loc_t const loc1(get_building_loc_for_pt(from)), loc2(get_building_loc_for_pt(to));
 	if (loc1.part_ix < 0 || loc2.part_ix < 0 || loc1.room_ix < 0 || loc2.room_ix < 0) return 0; // not in a room
+	unsigned const num_rooms(interior->rooms.size());
 	assert((unsigned)loc1.part_ix < parts.size() && (unsigned)loc2.part_ix < parts.size());
-	assert((unsigned)loc1.room_ix < interior->rooms.size() && (unsigned)loc2.room_ix < interior->rooms.size());
+	assert((unsigned)loc1.room_ix < num_rooms && (unsigned)loc2.room_ix < num_rooms);
 	float const height(person.get_height());
 	vect_cube_t &avoid(reused_avoid_cubes[0]);
 
@@ -1875,14 +1894,14 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 		vector<unsigned> cand_stairs_ramp_esc;
 		find_nearest_stairs_ramp_esc(from, to, cand_stairs_ramp_esc); // pass in loc1.part_ix if both loc part_ix values are equal?
 		bool const up_or_down(loc1.floor_ix > loc2.floor_ix); // 0=up, 1=down; Note: floor_ix is relative to bcube.z1() (or ext_basement z1), so is consistent across parts
-		unsigned const num_stairwells(interior->stairwells.size()), stairs_end(num_stairwells + has_mall());
+		unsigned const num_stairwells(interior->stairwells.size()), stairs_end(num_stairwells + has_mall_ent_stairs());
 
 		for (unsigned s : cand_stairs_ramp_esc) { // try using stairs, ramp, or escalator, closest to furthest: {stairs, mall stairs, ramp, escalators}
 			bool const is_ramp(s == stairs_end), is_escalator(s > stairs_end);
 			if (is_ramp     ) {assert(has_pg_ramp());}
 			if (is_escalator) {assert(!interior->escalators.empty());}
 			// map to graph space; should work for stairs or ramp, and escalator is always in the mall
-			unsigned const sre_room_ix(is_escalator ? (unsigned)interior->ext_basement_hallway_room_id : (s + interior->rooms.size()));
+			unsigned const sre_room_ix(is_escalator ? (unsigned)interior->ext_basement_hallway_room_id : (s + num_rooms));
 			// this case is currently not handled (escalator from/to mall concourse rather than store)
 			if (is_escalator && ((int)sre_room_ix == loc1.room_ix || (int)sre_room_ix == loc2.room_ix)) continue;
 			point seg2_start, enter_pt;
@@ -1896,6 +1915,10 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 			}
 			else { // stairs or ramp
 				seg2_start = interior->nav_graph->get_stairs_entrance_pt(to.z, sre_room_ix, !up_or_down); // other/exit end
+			}
+			if (!point_in_building_or_basement_bcube(seg2_start)) {
+				cout << TXT(s) << TXT(num_stairwells) TXT(stairs_end) << TXT(sre_room_ix) << TXT(is_ramp) << TXT(is_escalator) << endl;
+				cout << TXT(seg2_start.str()) << TXT(bcube.str()) << TXT(get_basement().str()) << TXT(interior->basement_ext_bcube.str()) << TXT(from.str()) << TXT(to.str()) << endl;
 			}
 			assert(point_in_building_or_basement_bcube(seg2_start));
 			point const *const seg1_dest(is_escalator ? &enter_pt : nullptr); // must enter the escalator exactly at this point

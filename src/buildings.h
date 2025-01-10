@@ -1805,6 +1805,7 @@ struct building_interior_t {
 	room_t const &get_extb_start_room() const {return get_room(ext_basement_hallway_room_id);} // extb hallway, backrooms, or mall
 	room_t       &get_extb_start_room()       {return get_room(ext_basement_hallway_room_id);} // extb hallway, backrooms, or mall
 	bool has_mall() const {return bool(mall_info);}
+	bool has_mall_ent_stairs() const {return (has_mall() && !mall_info->ent_stairs.is_all_zeros());}
 	int get_store_id_for_room(unsigned room_id) const;
 	bool is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin=0.0f, bool inc_open=0, bool check_open_dir=0) const;
 	bool is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin=0.0f, bool elevators_only=0, int no_check_enter_exit=0) const;
@@ -1939,6 +1940,7 @@ struct building_t : public building_geom_t {
 	bool has_retail   () const {return (retail_floor_levels > 0);}
 	bool has_tall_retail() const {return (retail_floor_levels > 1);}
 	bool has_mall       () const {return (interior && interior->has_mall());}
+	bool has_mall_ent_stairs() const {return (interior && interior->has_mall_ent_stairs());}
 	bool is_apartment   () const {return (btype == BTYPE_APARTMENT);}
 	bool is_hotel       () const {return (btype == BTYPE_HOTEL);}
 	bool is_apt_or_hotel() const {return (is_apartment() || is_hotel());}
