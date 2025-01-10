@@ -11,7 +11,7 @@
 
 
 bool const ALLOW_AI_IN_MALLS  = 1;
-// TODO: zombies use escalators when following the player
+// TODO: store => escalator => mall concourse path
 // TODO: enter/leave mall from parking garage
 // TODO: use back hallway stairs?
 float const COLL_RADIUS_SCALE = 0.75; // somewhat smaller than radius, but larger than PED_WIDTH_SCALE
@@ -1814,6 +1814,18 @@ void ai_path_t::add(ai_path_t const &path) {
 	uses_nav_grid |= path.uses_nav_grid;
 }
 
+void remove_escalator_from_avoid_cubes(person_t const &person, float radius, vector<escalator_t> const &escalators, vect_cube_t &avoid) {
+	escalator_t const &e(escalators[person.cur_escalator]);
+	cube_t person_bc;
+	person_bc.set_from_sphere(person.pos, radius); // tighter than person.get_bcube()
+
+	if (person_bc.intersects(e)) {
+		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
+			if (*i == e) {avoid.erase(i); break;} // only applies to top floor of escalator
+		}
+	}
+}
+
 void building_t::get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player, cube_t const *const fires_select_cube) const {
 	assert(interior);
 	float const z1(zval - radius);
@@ -1835,7 +1847,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 	if (person.goal_type == GOAL_TYPE_ESCALATOR) {
 		ai_path_t epath;
 		add_escalator_points(person, epath);
-		assert(epath.size() >= 2);
+		assert(epath.size() == 4);
 		point const &eenter(epath.back()), &eexit(epath.front()); // entrance and exit point of escalator
 		get_avoid_cubes(to.z, height, radius, avoid, following_player);
 		// upper path should be constrained to glass floor rather than room; assumes glass floors create a full rectangle
@@ -1846,16 +1858,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 			is_first_path, following_player, (going_up ? clamp_area : cube_t()), avoid, *this, path)) return 0; // escalator to target
 		path.add(epath); // add escalator segment
 		get_avoid_cubes(from.z, height, radius, avoid, following_player);
-		// check if already intersecting the escalator; if so, remove it from avoid
-		escalator_t const &e(interior->escalators[person.cur_escalator]);
-		cube_t person_bc;
-		person_bc.set_from_sphere(person.pos, radius); // tighter than person.get_bcube()
-
-		if (person_bc.intersects(e)) {
-			for (auto i = avoid.begin(); i != avoid.end(); ++i) {
-				if (*i == e) {avoid.erase(i); break;}
-			}
-		}
+		remove_escalator_from_avoid_cubes(person, radius, interior->escalators, avoid); // check if already intersecting the escalator; if so, remove it from avoid
 		return interior->nav_graph->complete_path_within_room(from, eenter, loc1.room_ix, person.ssn, radius, person.cur_rseed,
 			is_first_path, following_player, (going_up ? cube_t() : clamp_area), avoid, *this, path); // person to escalator
 	}
@@ -1901,17 +1904,34 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 			if (is_ramp     ) {assert(has_pg_ramp());}
 			if (is_escalator) {assert(!interior->escalators.empty());}
 			// map to graph space; should work for stairs or ramp, and escalator is always in the mall
-			unsigned const sre_room_ix(is_escalator ? (unsigned)interior->ext_basement_hallway_room_id : (s + num_rooms));
-			// this case is currently not handled (escalator from/to mall concourse rather than store)
-			if (is_escalator && ((int)sre_room_ix == loc1.room_ix || (int)sre_room_ix == loc2.room_ix)) continue;
+			unsigned const sre_room_ix(is_escalator ? (unsigned)interior->ext_basement_hallway_room_id : (s + num_rooms)); // escalators are not assigned nav graph nodes
 			point seg2_start, enter_pt;
 			ai_path_t from_path, escalator_path;
+			path.clear();
 
 			if (is_escalator) {
 				person.cur_escalator = (s - stairs_end - 1);
 				add_escalator_points(person, escalator_path);
-				seg2_start = escalator_path[0]; // escalator exit point
-				enter_pt   = escalator_path[3]; // escalator entrance point
+				assert(escalator_path.size() == 4);
+				seg2_start   = escalator_path[0]; // escalator exit point
+				enter_pt     = escalator_path[3]; // escalator entrance point
+				seg2_start.z = to.z; // required to avoid assert; should be close, but may not be exactly to.z
+				assert(enter_pt.z == from.z);
+
+				// escalator from/to mall concourse rather than store requires special handling since room1==room2
+				if ((int)sre_room_ix == loc1.room_ix || (int)sre_room_ix == loc2.room_ix) {
+					if (loc1.room_ix == loc2.room_ix) { // mall concourse to mall concourse can be handled similar to retail escalators
+						get_avoid_cubes(to.z, height, radius, avoid, following_player);
+						if (!interior->nav_graph->complete_path_within_room(seg2_start, to, loc1.room_ix, person.ssn, radius, person.cur_rseed,
+							is_first_path, following_player, cube_t(), avoid, *this, path)) continue; // escalator to target
+						path.add(escalator_path); // add escalator segment
+						get_avoid_cubes(from.z, height, radius, avoid, following_player);
+						remove_escalator_from_avoid_cubes(person, radius, interior->escalators, avoid); // check if already intersecting the escalator
+						if (interior->nav_graph->complete_path_within_room(from, enter_pt, loc1.room_ix, person.ssn, radius, person.cur_rseed,
+							is_first_path, following_player, cube_t(), avoid, *this, path)) return 1; // person to escalator
+					}
+					continue; // failed, or start/end room is not the mall concourse
+				}
 			}
 			else { // stairs or ramp
 				seg2_start = interior->nav_graph->get_stairs_entrance_pt(to.z, sre_room_ix, !up_or_down); // other/exit end
@@ -1922,7 +1942,6 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 			}
 			assert(point_in_building_or_basement_bcube(seg2_start));
 			point const *const seg1_dest(is_escalator ? &enter_pt : nullptr); // must enter the escalator exactly at this point
-			path.clear();
 			// Note: passing use_stairs=0 here because it's unclear if we want to go through stairs nodes in our A* algorithm
 			// from => stairs/ramp/escalator
 			if (!interior->nav_graph->find_path_points(loc1.room_ix, sre_room_ix, person.ssn, radius, 0, is_first_path,
