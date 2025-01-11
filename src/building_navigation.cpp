@@ -12,7 +12,6 @@
 
 bool const ALLOW_AI_IN_MALLS  = 1;
 // TODO: enter/leave mall from parking garage
-// TODO: use back hallway stairs?
 float const COLL_RADIUS_SCALE = 0.75; // somewhat smaller than radius, but larger than PED_WIDTH_SCALE
 
 int player_hiding_frame(0);
@@ -1591,7 +1590,7 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 			avoid.push_back(ac);
 		} // for s
 	}
-	// Note: move inside the skip_stairs case above when the AI is updated to use these stairs
+	// TODO: move inside the skip_stairs case above when the AI is updated to use these stairs
 	if (has_mall_ent_stairs() && mall_info->ent_stairs.z1() < z2 && mall_info->ent_stairs.z2() > z1) {avoid.push_back(mall_info->ent_stairs);}
 	add_bcube_if_overlaps_zval(elevators,  avoid, z1, z2); // clearance not required
 	
@@ -1737,7 +1736,6 @@ void building_t::find_nearest_stairs_ramp_esc(point const &p1, point const &p2, 
 
 	for (unsigned s = 0; s < num_stairwells; ++s) {
 		stairwell_t const &stairs(interior->stairwells[s]);
-		if (stairs.in_mall == 2) continue; // skip mall back hallway stairs until this is implemented
 		if (zmin < stairs.z1() || zmax > stairs.z2()) continue; // stairs don't span the correct floors
 		if (part_ix >= 0 && !stairs_contained_in_part(stairs, parts[part_ix])) continue; // stairs don't belong to this part (Note: this option is currently unused)
 		//if (no_stairs_exit_on_floor(stairs, p2.z))    continue; // not an exit; now handled in path reconstruction by pathing to the floor above or below through this point
@@ -1977,18 +1975,19 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 				if (stairs.is_u_shape()) {
 					// add 2 extra points on mid-level landing and possibly more for non-exit landings; entrance and exit will be on the same side
 					bool const dim(stairs.dim), dir(stairs.dir); // Note: see code in add_stairs_and_elevators()
-					float const turn_pt(stairs.d[dim][dir] - 0.1*(dir ? 1.0 : -1.0)*stairs.get_length()), seg_delta_z(0.45f*(to.z - from.z));
+					float const window_vspace(get_window_vspace());
+					float const turn_pt(stairs.d[dim][dir] - 0.1*(dir ? 1.0 : -1.0)*stairs.get_length()), seg_delta_z(0.45f*SIGN(to.z - from.z)*window_vspace);
+					bool const going_up(exit_pt.z > enter_pt.z);
+					point const next_floor_delta(0.0, 0.0, (going_up ? 1.0 : -1.0)*window_vspace); // dz
 					point exit_turn (exit_pt .x, exit_pt .y, (to  .z - seg_delta_z));
 					point enter_turn(enter_pt.x, enter_pt.y, (from.z + seg_delta_z));
 					exit_turn [dim] = turn_pt;
 					enter_turn[dim] = turn_pt;
 
-					if (no_stairs_exit_on_floor(stairs, exit_pt.z)) {
+					if (stairs.in_mall != 2 && no_stairs_exit_on_floor(stairs, exit_pt.z)) {
 						// two level retail stairs where exit point is at the middle level that can't be exited;
 						// end our path here, since it may be invalid, then extend a new path away from the stairs
 						path.clear();
-						bool const going_up(exit_pt.z > enter_pt.z);
-						point const next_floor_delta(0.0, 0.0, (going_up ? 1.0 : -1.0)*get_window_vspace()); // dz
 						vector3d path_extend;
 						path_extend[dim] -= (dir ? 1.0 : -1.0)*0.5*get_doorway_width(); // move out of the extended stairs area
 						path.add((exit_pt    + next_floor_delta + path_extend), 1); // exit point from stairwell area (clear of walls)
@@ -2003,6 +2002,14 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 						// Note: person.dest_room can be wrong when exiting in the hallway above the retail room, but it should be unused
 					}
 					path.add(exit_turn,  1); // turning point for exit side of stairs
+
+					if (stairs.in_mall == 2) { // two floor tall mall back hallway stairs
+						// two floors of separation; create another loop around the stairs to connect the upper and lower segments
+						path.add((enter_turn + next_floor_delta), 1); // turning point for entrance side of stairs on other floor
+						path.add((enter_pt   + next_floor_delta), 1); // entrance on prev exit floor
+						path.add((exit_pt    - next_floor_delta), 1); // move the exit to the other floor
+						path.add((exit_turn  - next_floor_delta), 1); // turning point for exit side of stairs on other floor (slightly sloped)
+					}
 					path.add(enter_turn, 1); // turning point for entrance side of stairs
 				}
 				else if (stairs.is_l_shape()) {
@@ -2911,8 +2918,20 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 						accumulate_shared_xy_area(*r, sc, cont_area);
 					}
 					for (tunnel_seg_t const &t : interior->tunnels) { // include tunnels
+						if (new_pos.z < t.bcube_ext.z1() || new_pos.z > t.bcube_ext.z2()) continue; // wrong zval
 						if (t.room_conn && t.bcube_ext.contains_pt(new_pos)) {cur_room_bcube = t.bcube_ext;}
 						accumulate_shared_xy_area(t.bcube_ext, sc, cont_area);
+					}
+					if (has_mall()) { // include mall back hallway stairs, which are outside any rooms
+						for (stairwell_t const &s : interior->stairwells) {
+							if (s.in_mall != 2) continue; // not mall back hallway stairs
+							if (new_pos.z < s.z1() || new_pos.z > s.z2()) continue; // wrong level
+							cube_t stairs_ext(s);
+							stairs_ext.expand_in_dim(s.dim, (0.2*s.get_length() + coll_dist)); // expand to allow room for people to turn around at corners
+							if (stairs_ext.contains_pt(new_pos)) {cur_room_bcube = stairs_ext;}
+							accumulate_shared_xy_area(stairs_ext, sc, cont_area);
+							clip_cube.union_with_cube(stairs_ext);
+						}
 					}
 					if (cont_area < 0.99*sc.get_area_xy()) {clip_cube = cur_room_bcube;} // not contained - force into containing room
 				}
