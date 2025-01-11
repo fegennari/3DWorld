@@ -11,7 +11,6 @@
 
 
 bool const ALLOW_AI_IN_MALLS  = 1;
-// TODO: store => escalator => mall concourse path
 // TODO: enter/leave mall from parking garage
 // TODO: use back hallway stairs?
 float const COLL_RADIUS_SCALE = 0.75; // somewhat smaller than radius, but larger than PED_WIDTH_SCALE
@@ -1917,21 +1916,6 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 				enter_pt     = escalator_path[3]; // escalator entrance point
 				seg2_start.z = to.z; // required to avoid assert; should be close, but may not be exactly to.z
 				assert(enter_pt.z == from.z);
-
-				// escalator from/to mall concourse rather than store requires special handling since room1==room2
-				if ((int)sre_room_ix == loc1.room_ix || (int)sre_room_ix == loc2.room_ix) {
-					if (loc1.room_ix == loc2.room_ix) { // mall concourse to mall concourse can be handled similar to retail escalators
-						get_avoid_cubes(to.z, height, radius, avoid, following_player);
-						if (!interior->nav_graph->complete_path_within_room(seg2_start, to, loc1.room_ix, person.ssn, radius, person.cur_rseed,
-							is_first_path, following_player, cube_t(), avoid, *this, path)) continue; // escalator to target
-						path.add(escalator_path); // add escalator segment
-						get_avoid_cubes(from.z, height, radius, avoid, following_player);
-						remove_escalator_from_avoid_cubes(person, radius, interior->escalators, avoid); // check if already intersecting the escalator
-						if (interior->nav_graph->complete_path_within_room(from, enter_pt, loc1.room_ix, person.ssn, radius, person.cur_rseed,
-							is_first_path, following_player, cube_t(), avoid, *this, path)) return 1; // person to escalator
-					}
-					continue; // failed, or start/end room is not the mall concourse
-				}
 			}
 			else { // stairs or ramp
 				seg2_start = interior->nav_graph->get_stairs_entrance_pt(to.z, sre_room_ix, !up_or_down); // other/exit end
@@ -1941,17 +1925,32 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 				cout << TXT(seg2_start.str()) << TXT(bcube.str()) << TXT(get_basement().str()) << TXT(interior->basement_ext_bcube.str()) << TXT(from.str()) << TXT(to.str()) << endl;
 			}
 			assert(point_in_building_or_basement_bcube(seg2_start));
-			point const *const seg1_dest(is_escalator ? &enter_pt : nullptr); // must enter the escalator exactly at this point
-			// Note: passing use_stairs=0 here because it's unclear if we want to go through stairs nodes in our A* algorithm
+			
 			// from => stairs/ramp/escalator
-			if (!interior->nav_graph->find_path_points(loc1.room_ix, sre_room_ix, person.ssn, radius, 0, is_first_path,
-				up_or_down, person.cur_rseed, avoid, *this, from, interior->doors, person.has_key, seg1_dest, is_escalator, from_path)) continue; // custom_dest for escalator
+			if (is_escalator && (int)sre_room_ix == loc1.room_ix) {
+				remove_escalator_from_avoid_cubes(person, radius, interior->escalators, avoid); // check if already intersecting the escalator
+				if (!interior->nav_graph->complete_path_within_room(from, enter_pt, loc1.room_ix, person.ssn, radius, person.cur_rseed,
+					is_first_path, following_player, cube_t(), avoid, *this, from_path)) continue; // person to escalator
+			}
+			else {
+				point const *const seg1_dest(is_escalator ? &enter_pt : nullptr); // must enter the escalator exactly at this point
+				// Note: passing use_stairs=0 here because it's unclear if we want to go through stairs nodes in our A* algorithm
+				if (!interior->nav_graph->find_path_points(loc1.room_ix, sre_room_ix, person.ssn, radius, 0, is_first_path,
+					up_or_down, person.cur_rseed, avoid, *this, from, interior->doors, person.has_key, seg1_dest, is_escalator, from_path)) continue; // custom_dest for escalator
+			}
 			// new floor, new zval, new avoid cubes
 			vect_cube_t &avoid2(reused_avoid_cubes[1]);
 			get_avoid_cubes(seg2_start.z, height, radius, avoid2, following_player); // no fires_select_cube
+			
 			// stairs/ramp/escalator => to
-			if (!interior->nav_graph->find_path_points(sre_room_ix, loc2.room_ix, person.ssn, radius, 0, is_first_path,
-				!up_or_down, person.cur_rseed, avoid2, *this, seg2_start, interior->doors, person.has_key, custom_dest, req_custom_dest, path)) continue;
+			if (is_escalator && (int)sre_room_ix == loc2.room_ix) {
+				if (!interior->nav_graph->complete_path_within_room(seg2_start, to, loc2.room_ix, person.ssn, radius, person.cur_rseed,
+					is_first_path, following_player, cube_t(), avoid2, *this, path)) continue; // escalator to target
+			}
+			else {
+				if (!interior->nav_graph->find_path_points(sre_room_ix, loc2.room_ix, person.ssn, radius, 0, is_first_path,
+					!up_or_down, person.cur_rseed, avoid2, *this, seg2_start, interior->doors, person.has_key, custom_dest, req_custom_dest, path)) continue;
+			}
 			assert(!path.empty() && !from_path.empty());
 			path.add(seg2_start, 0); // exit end of the stairs/ramp/escalator, extended with clearance
 
@@ -2754,6 +2753,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			choose_dest = 1; // or increment person.cur_rseed and return AI_WAITING? or restore person to prev value?
 		}
 		else { // success
+			assert(!person.path.empty());
 			person.next_path_pt(1);
 			person.following_player = 1;
 			choose_dest = 0;
@@ -2795,6 +2795,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		if (has_rgeom) {person.is_first_path = 0;} // treat the path as the first path until room geom is generated
 		if      (person.target_pos.z < person.pos.z) {person.prev_walked_down = 1;}
 		else if (person.target_pos.z > person.pos.z) {person.prev_walked_down = 0;}
+		assert(!person.path.empty());
 		person.next_path_pt(1);
 		return AI_BEGIN_PATH;
 	}
