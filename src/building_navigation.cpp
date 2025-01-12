@@ -10,9 +10,9 @@
 #include <queue>
 
 
-bool const ALLOW_AI_IN_MALLS  = 1;
-// TODO: enter/leave mall from parking garage
-float const COLL_RADIUS_SCALE = 0.75; // somewhat smaller than radius, but larger than PED_WIDTH_SCALE
+bool  const ALLOW_AI_IN_MALLS   = 1;
+bool  const USE_MALL_ENT_STAIRS = 0; // TODO: not yet working
+float const COLL_RADIUS_SCALE   = 0.75; // somewhat smaller than radius, but larger than PED_WIDTH_SCALE
 
 int player_hiding_frame(0);
 building_dest_t cur_player_building_loc, prev_player_building_loc;
@@ -1590,8 +1590,9 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 			avoid.push_back(ac);
 		} // for s
 	}
-	// TODO: move inside the skip_stairs case above when the AI is updated to use these stairs
-	if (has_mall_ent_stairs() && mall_info->ent_stairs.z1() < z2 && mall_info->ent_stairs.z2() > z1) {avoid.push_back(mall_info->ent_stairs);}
+	if (!(USE_MALL_ENT_STAIRS && skip_stairs) && has_mall_ent_stairs() && mall_info->ent_stairs.z1() < z2 && mall_info->ent_stairs.z2() > z1) {
+		avoid.push_back(mall_info->ent_stairs); // only allow walking on mall entrance stairs when enabled, and path includes stairs (so stairs coll is skipped)
+	}
 	add_bcube_if_overlaps_zval(elevators,  avoid, z1, z2); // clearance not required
 	
 	for (escalator_t const &e : escalators) {
@@ -2644,7 +2645,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	if (person.speed == 0.0) {person.anim_time = 0.0; return AI_STOP;} // stopped
 	assert(interior);
 	if (!interior->room_geom && frame_counter < 60) {person.anim_time = 0.0; return AI_WAITING;} // wait until room geom is generated for this building
-	float const coll_dist(COLL_RADIUS_SCALE*person.radius), floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness());
+	float const radius(person.radius), coll_dist(COLL_RADIUS_SCALE*radius), floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness());
 	float &wait_time(person.waiting_start); // reuse this field
 	float const base_speed_mult(is_house ? 1.0 : 1.2); // 20% faster in office buildings, if targeting the player, player last pos, or sound
 	float speed_mult((person.goal_type >= GOAL_TYPE_PLAYER) ? base_speed_mult : 1.0);
@@ -2722,7 +2723,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		assert(has_pool());
 		person.retreat_time = 0.5*TICKS_PER_SECOND; // retreat for 0.5s to avoid falling back into the pool chasing the player
 		person.abort_dest(); // reset target to avoid walking back toward the pool
-		max_eq(person.pos.z, (get_room(interior->pool.room_ix).z1() + fc_thick + person.radius)); // make sure completely out of pool
+		max_eq(person.pos.z, (get_room(interior->pool.room_ix).z1() + fc_thick + radius)); // make sure completely out of pool
 	}
 	if (run_ai_tunnel_logic(person, speed_mult)) {person.no_wait_at_dest = 1;}
 	build_nav_graph();
@@ -2734,7 +2735,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		// it may not be safe to use an object iterator or even an index since we're in a different thread, so do a linear search for the target object
 		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 		cube_t coll_cube(person.get_bcube());
-		coll_cube.expand_by_xy(1.5*person.radius);
+		coll_cube.expand_by_xy(1.5*radius);
 
 		for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 			if (*i != player_hiding_obj)   continue;
@@ -2824,8 +2825,8 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			if (person.target_pos == person.pos) { // this is rare and maybe should be an error, but I've seen it fail once, and it can fail for tunnels
 				cout << "Invalid building AI path point: " << person.pos.str() << " " << TXT(person.in_tunnel) << endl;
 				//register_debug_event(person.target_pos, "invalid building AI path point");
-				if (person.dir.x != 0.0 || person.dir.y != 0.0) {person.target_pos += 0.01*person.radius*person.dir;} // move forward slightly
-				else {person.target_pos += 0.01*person.radius*rgen.signed_rand_vector_xy();} // add a small random offset so that dir isn't a zero vector
+				if (person.dir.x != 0.0 || person.dir.y != 0.0) {person.target_pos += 0.01*radius*person.dir;} // move forward slightly
+				else {person.target_pos += 0.01*radius*rgen.signed_rand_vector_xy();} // add a small random offset so that dir isn't a zero vector
 			}
 			//return AI_NEXT_PT; // returning here and recalculating the path on the next frame can get us stuck at this point when chasing the player
 		}
@@ -2876,7 +2877,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	point new_pos;
 
 	if (dir_dp < 0.9999) { // dir not perfectly aligned
-		//if (person.is_close_to_player()) {cout << TXT(new_dir.str()) << TXT(person.dir.str()) << TXT(new_dir_mag) << TXT(delta_dir) << TXT(max_dist) << TXT(person.radius) << endl;}
+		//if (person.is_close_to_player()) {cout << TXT(new_dir.str()) << TXT(person.dir.str()) << TXT(new_dir_mag) << TXT(delta_dir) << TXT(max_dist) << TXT(radius) << endl;}
 		assert(new_dir != zero_vector); // should be guaranteed by dist_less_than() test, assuming zvals are equal (which they should be)
 		float const step_scale(max(0.1f, dot_product(person.dir, new_dir))); // move more slowly when direction misaligns to avoid overshooting target_pos
 		
@@ -2941,7 +2942,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		else {clip_cube = bcube;} // above ground
 		// make sure person stays within building bcube; can't clip to room because person may be exiting it
 		clip_cube.expand_by_xy(-coll_dist); // shrink
-		clamp_person_to_building_bcube(new_pos, clip_cube, person.radius, fc_thick);
+		clamp_person_to_building_bcube(new_pos, clip_cube, radius, fc_thick);
 	}
 	if (!is_cube() && !person.on_fixed_path() && !check_cube_within_part_sides(person.get_bcube() + (new_pos - person.pos))) { // outside the building
 		int const part_ix(get_part_ix_containing_pt(new_pos));
@@ -2952,7 +2953,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			// seems to work better than calling do_sphere_coll_polygon_sides() here
 			point const part_center(parts[part_ix].get_cube_center());
 			vector3d const move_dir((part_center.x - new_pos.x), (part_center.y - new_pos.y), 0.0);
-			new_pos += move_dir*(0.1*person.radius/move_dir.mag());
+			new_pos += move_dir*(0.1*radius/move_dir.mag());
 			person.abort_dest();
 		}
 	}
@@ -3027,7 +3028,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			} // for dix
 		} // for i
 	}
-	handle_vert_cylin_tape_collision(new_pos, person.pos, person.get_z1(), person.get_z2(), person.radius, 0); // should be okay to use zvals from old pos; is_player=0
+	handle_vert_cylin_tape_collision(new_pos, person.pos, person.get_z1(), person.get_z2(), radius, 0); // should be okay to use zvals from old pos; is_player=0
 	// logic to clip this person to correct room Z-bounds in case something went wrong; remove if/when this is fixed
 	// Note: we probably can't use the room Z bounds here becase the person may be on the stairs connecting two stacked parts
 	float true_z1(bcube.z1());
@@ -3038,7 +3039,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		int const extb_num_floors(round_fp(extb_depth/floor_spacing + 0.25)); // bias larger to capture pool depth slightly less than half a floor
 		min_eq(true_z1, (bcube.z1() - extb_num_floors*floor_spacing));
 	}
-	float const min_valid_zval(true_z1 + fc_thick + person.radius), max_valid_zval(bcube.z2() - person.radius); // Note: max should include the attic
+	float const min_valid_zval(true_z1 + fc_thick + radius), max_valid_zval(bcube.z2() - radius); // Note: max should include the attic
 
 	if (/*player_in_this_building &&*/ !person.in_pool && !person.in_tunnel && !person.on_stairs() && person.cur_room >= 0) {
 		// movement in XY, not on stairs, room is valid: snap to nearest floor; this is optional and is done just in case something went wrong
@@ -3053,8 +3054,16 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		int const max_floor(round_fp((room.z2() - true_z1)/room_floor_spacing) - 1);
 		min_eq(cur_floor, max_floor); // clip to the valid floors for this room relative to lowest building floor
 		float const adj_zval(cur_floor*room_floor_spacing + min_valid_zval);
-		if (fabs(adj_zval - new_pos.z) > 0.1*person.radius) {person.abort_dest();} // if we snap to the floor, reset the target and path
+		if (fabs(adj_zval - new_pos.z) > 0.1*radius) {person.abort_dest();} // if we snap to the floor, reset the target and path
 		new_pos.z = adj_zval;
+	}
+	if (USE_MALL_ENT_STAIRS) { // handle mall entrance stairs
+		float feet_zval(new_pos.z - radius);
+
+		if (!person.in_pool && !person.in_tunnel && adjust_zval_for_mall_stairs(new_pos, feet_zval)) {
+			new_pos.z = feet_zval + radius; // move up onto stairs
+			//person.is_on_stairs = 1; // ???
+		}
 	}
 	max_eq(new_pos.z, min_valid_zval); // don't let the person go below the ground floor
 	min_eq(new_pos.z, max_valid_zval); // don't let the person go above the room ceiling
@@ -3075,7 +3084,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		check_for_water_splash(person.pos, 1.5, 1, 1, 1); // full_room_height=1, draw_splash=1, alert_zombies=1
 	}
 	else if (point_in_water_area(point(person.pos.x, person.pos.y, person.get_z1()), 0) && person.get_z2() > interior->water_zval) { // full_room_height=0
-		float const splash_dist(2.0*person.radius);
+		float const splash_dist(2.0*radius);
 
 		if (round_fp(old_anim_time/splash_dist) != round_fp(person.anim_time/splash_dist)) { // update every splash_dist
 			check_for_water_splash(person.pos, 1.0, 1, 0, 0); // full_room_height=1, draw_splash=0, alert_zombies=0

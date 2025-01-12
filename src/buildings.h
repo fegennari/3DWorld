@@ -1761,7 +1761,7 @@ struct building_mall_info_t {
 	vector<pet_tank_t> pet_tanks; // except for fish (rats, snakes, spiders)
 	cube_t store_bounds, food_court_bounds;
 	colorRGBA mall_wall_color=WHITE;
-	int city_elevator_ix=-1;
+	int city_elevator_ix=-1, ent_stairs_start_ix=-1;
 };
 
 struct building_interior_t {
@@ -2394,6 +2394,7 @@ private:
 	void add_mall_store(cube_t const &store, cube_t const &window_area, bool dim, bool dir, bool &has_adj_store, rand_gen_t &rgen);
 	void add_extb_room_floor_and_ceil(cube_t const &room);
 	void add_mall_stairs();
+	bool adjust_zval_for_mall_stairs(point const &pos, float &zval) const;
 	float get_mall_floor_spacing(cube_t const &room) const;
 	bool inside_mall_hallway(point const &pos) const;
 	bool is_inside_mall_stores(point const &pos) const;

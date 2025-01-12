@@ -606,17 +606,18 @@ void building_t::add_mall_stairs() { // connecting to the entrance door
 	if (!has_mall()) return;
 	room_t const &room(get_mall_concourse());
 	door_t const &door(interior->get_ext_basement_door());
-	bool const dim(interior->extb_wall_dim), dir(interior->extb_wall_dir);
-	assert(door.dim == dim);
-	vect_room_object_t &objs(interior->room_geom->objs);
-	unsigned const room_id(interior->ext_basement_hallway_room_id);
-	float const floor_spacing(get_mall_floor_spacing(room)), fc_thick(get_fc_thickness()), wall_thickness(get_wall_thickness());
+	float const floor_spacing(get_mall_floor_spacing(room)), fc_thick(get_fc_thickness());
 	// add stairs under the door if needed, using shape=SHAPE_FAN for building AI path finding
 	float const upper_floor_zval(room.z2() - floor_spacing + fc_thick), delta_z(door.z1() - upper_floor_zval);
 	unsigned const num_steps(max(0, (int)ceil(NUM_STAIRS_PER_FLOOR*delta_z/get_floor_ceil_gap())));
 	if (num_steps == 0) return; // no stairs needed
-	float const step_height(delta_z/num_steps), step_len(2.0*step_height);
+	bool const dim(interior->extb_wall_dim), dir(interior->extb_wall_dir);
+	assert(door.dim == dim);
+	unsigned const room_id(interior->ext_basement_hallway_room_id);
+	float const step_height(delta_z/num_steps), step_len(2.0*step_height), wall_thickness(get_wall_thickness());
 	float const wall_edge(room.d[dim][!dir]), dsign(dir ? 1.0 : -1.0), front_step_dist(dsign*step_len);
+	vect_room_object_t &objs(interior->room_geom->objs);
+	interior->mall_info->ent_stairs_start_ix = objs.size();
 	cube_t stair(door);
 	set_cube_zvals(stair, door.z1()-step_height, door.z1());
 	stair.d[dim][!dir] = wall_edge; // starts at wall
@@ -643,6 +644,23 @@ void building_t::add_mall_stairs() { // connecting to the entrance door
 	}
 	stair.z2() = door.z2(); // set height
 	interior->mall_info->ent_stairs = stairwell_t(stair, 1, dim, !dir, SHAPE_FAN);
+}
+
+bool building_t::adjust_zval_for_mall_stairs(point const &pos, float &zval) const {
+	if (!has_mall_ent_stairs() || zval > ground_floor_z1) return 0;
+	stairwell_t const &s(interior->mall_info->ent_stairs);
+	if (!s.contains_pt_xy(pos) || zval < s.z1() || zval > s.z2()) return 0;
+	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const esix(interior->mall_info->ent_stairs_start_ix);
+	assert(esix < objs.size());
+	bool updated(0);
+
+	for (unsigned i = esix; i < objs.size(); ++i) {
+		room_object_t const &stair(objs[i]);
+		if (stair.type != TYPE_STAIR) break; // end of stairs
+		if (stair.contains_pt_xy(pos) && zval <= stair.z2()) {zval = stair.z2(); updated = 1;} // move up
+	}
+	return updated;
 }
 
 // and back hallway stairs lights
