@@ -1103,8 +1103,14 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				float const railing_zval(railing.p1.z + CLIP_TO_01(t)*(railing.p2.z - railing.p1.z));
 				if ((railing_zval - get_railing_height(*c)) > float(pos.z + camera_height) || railing_zval < (pos.z - radius)) continue; // no Z collision
 			}
+			if (c->type == TYPE_INT_LADDER && c->dz() > (camera_height + radius)) { // vertical ladder leaning against a wall
+				pos.z = p_last.z + 0.25*get_player_move_dist()*cview_dir.z; // move up/down based on player vertical view (looking up vs. down)
+				pos.z = min(float(c->z2() - camera_height), max(float(c->z1() + radius), pos.z)); // clamp to ladder height range
+				obj_z = max(pos.z, p_last.z);
+				had_coll = 1;
+			}
 			// Note: only vert pipes have player coll; ducts are not vert and are treated as cubes
-			if (c->is_vert_cylinder()) { // vertical cylinder
+			else if (c->is_vert_cylinder()) { // vertical cylinder
 				cylinder_3dw cylin(c->get_cylinder());
 				cylin.p2.z += radius; // extend upward by radius
 				had_coll |= sphere_vert_cylin_intersect_with_ends(pos, xy_radius, cylin, cnorm);
