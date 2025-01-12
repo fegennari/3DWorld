@@ -1674,6 +1674,12 @@ void building_t::add_trim_for_door_or_int_window(cube_t const &c, bool dim, bool
 			cube_t btrim(trim);
 			set_cube_zvals(btrim, z, z+0.5*trim_thickness);
 			btrim.expand_in_dim(dim, -0.25*trim.get_sz_dim(dim)); // half the thickness
+
+			if (dim == interior->extb_wall_dim) {
+				// extend floor trim to cover basement/parking garage wall and concrete floor for mall entrance door and also cover any stairs Z-fighting
+				float &trim_edge(btrim.d[dim][!interior->extb_wall_dir]);
+				if (fabs(trim_edge - get_basement().d[dim][interior->extb_wall_dir]) < get_wall_thickness()) {trim_edge = trim.d[dim][!interior->extb_wall_dir];}
+			}
 			objs.emplace_back(btrim, TYPE_WALL_TRIM, 0, dim, 0, bot_flags, 1.0, SHAPE_SHORT, GRAY);
 		}
 	} // for f
@@ -1713,10 +1719,10 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	}
 	// handle interior windows similar to interior doors, except we also draw bottom trim
 	for (cube_t const &w : interior->int_windows) {
-		bool const dim(w.dy() < w.dx()), is_in_mall(has_mall() && w.z2() < ground_floor_z1);
+		bool const dim(w.dy() < w.dx()), is_in_mall(has_mall() && w.z2() < ground_floor_z1), draw_top_edge(is_in_mall);
 		float const floor_spacing(is_in_mall ? get_mall_floor_spacing() : window_vspacing);
 		float extra_top_gap(is_in_mall ? get_mall_top_window_gap(floor_spacing, window_vspacing) : 0.0);
-		add_trim_for_door_or_int_window(w, dim, 0, 1, door_trim_width, door_trim_width, door_trim_exp, floor_spacing, extra_top_gap); // draw_top_edge=0, draw_bot_trim=1
+		add_trim_for_door_or_int_window(w, dim, draw_top_edge, 1, door_trim_width, door_trim_width, door_trim_exp, floor_spacing, extra_top_gap); // draw_bot_trim=1
 	}
 	if (has_mall()) { // add floor trim for mall store doors
 		for (cube_t const &d : interior->mall_info->store_doorways) {

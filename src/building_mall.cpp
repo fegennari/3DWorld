@@ -616,8 +616,9 @@ void building_t::add_mall_stairs() { // connecting to the entrance door
 	room_t const &room(get_mall_concourse());
 	door_t const &door(interior->get_ext_basement_door());
 	float const floor_spacing(get_mall_floor_spacing(room)), fc_thick(get_fc_thickness());
+	float const stairs_top(door.z1() /*- get_trim_thickness()*/); // slightly below the door to prevent Z-fighting with the parking garage floor? then there's a gap
 	// add stairs under the door if needed, using shape=SHAPE_FAN for building AI path finding
-	float const upper_floor_zval(room.z2() - floor_spacing + fc_thick), delta_z(door.z1() - upper_floor_zval);
+	float const upper_floor_zval(room.z2() - floor_spacing + fc_thick), delta_z(stairs_top - upper_floor_zval);
 	unsigned const num_steps(max(0, (int)ceil(NUM_STAIRS_PER_FLOOR*delta_z/get_floor_ceil_gap())));
 	if (num_steps == 0) return; // no stairs needed
 	bool const dim(interior->extb_wall_dim), dir(interior->extb_wall_dir);
@@ -628,7 +629,7 @@ void building_t::add_mall_stairs() { // connecting to the entrance door
 	vect_room_object_t &objs(interior->room_geom->objs);
 	interior->mall_info->ent_stairs_start_ix = objs.size();
 	cube_t stair(door);
-	set_cube_zvals(stair, door.z1()-step_height, door.z1());
+	set_cube_zvals(stair, stairs_top-step_height, stairs_top);
 	stair.d[dim][!dir] = wall_edge; // starts at wall
 	stair.d[dim][ dir] = wall_edge + 2.0*front_step_dist;
 
@@ -641,7 +642,7 @@ void building_t::add_mall_stairs() { // connecting to the entrance door
 	}
 	// add railings against the wall
 	cube_t railing;
-	set_cube_zvals(railing, upper_floor_zval, door.z1());
+	set_cube_zvals(railing, upper_floor_zval, stairs_top);
 	railing.d[dim][!dir] = wall_edge + dsign*1.0*wall_thickness;
 	railing.d[dim][ dir] = wall_edge + dsign*1.6*wall_thickness;
 

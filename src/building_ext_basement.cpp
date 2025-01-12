@@ -190,8 +190,15 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 
 			if (is_mall) {
 				interior->mall_info.reset(new building_mall_info_t);
-				interior->doors      .back().open_dir ^= 1; // door opens into the parking garage rather than the mall
-				interior->door_stacks.back().open_dir ^= 1;
+				door_t &ent_door(interior->doors.back());
+				door_stack_t &ent_ds(interior->door_stacks.back());
+				ent_door.open_dir ^= 1; // door opens into the parking garage rather than the mall
+				ent_ds  .open_dir ^= 1;
+				
+				if (ent_door.z2() < (hallway.z2() - 2.0*fc_thick)) { // counts as multi-floor (for drawing top edge)
+					ent_door.set_mult_floor();
+					ent_ds  .set_mult_floor();
+				}
 				setup_mall_concourse(hallway, wall_dim, wall_dir, rgen);
 			}
 			else { // backrooms, possibly flooded
