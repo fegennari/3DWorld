@@ -1879,7 +1879,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	water_sound_manager_t water_sound_manager(camera_bs);
 	rgeom_mat_t monitor_screens_mat, onscreen_text_mat=rgeom_mat_t(tid_nm_pair_t(FONT_TEXTURE_ID));
 	string onscreen_text;
-	bool const is_rotated(building.is_rotated()), is_residential(building.is_residential());
+	bool const is_rotated(building.is_rotated()), is_residential(building.is_residential()), is_player_building(&building == player_building);
 	bool const check_clip_cube(shadow_only && !is_rotated && !smap_light_clip_cube.is_all_zeros()); // check clip cube for shadow pass; not implemented for rotated buildings
 	bool const skip_interior_objs(!player_in_building_or_doorway && !shadow_only), has_windows(building.has_windows());
 	float const one_floor_above(camera_bs.z + floor_spacing), two_floors_below(camera_bs.z - 2.0*floor_spacing);
@@ -2063,7 +2063,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 
 	// draw water for sinks that are turned on, lava lamps, fish in fishtanks, and AO shadows; these aren't visible when the player is outside looking in through a window
 	if (player_in_building_or_doorway && !shadow_only) {
-		bool const draw_fish(!reflection_pass && have_fish_model() && (player_in_doorway || building.point_in_building_or_basement_bcube(camera_bs)));
+		// only update and draw fish in the player building (since two extended basement bcubes can overlap); skip in reflection pass
+		bool const draw_fish(!reflection_pass && have_fish_model() && (player_in_doorway || (is_player_building && building.point_in_building_or_basement_bcube(camera_bs))));
 		float const ao_z_off(1.1*building.get_flooring_thick()); // slightly above rugs and flooring
 		float const ao_zmin(camera_bs.z - 2.0*floor_spacing);
 		static quad_batch_draw ao_qbd;
