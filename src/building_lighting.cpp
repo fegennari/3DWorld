@@ -1076,6 +1076,10 @@ void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: 
 	} // for i
 	if (get_light_pos().z > 0.0) { // if primary light (sun/moon) is above the horizon, add skylight indir lighting
 		for (cube_t const &skylight : skylights) {windows.emplace_back(skylight, 0);} // add skylights as vertical windows with ix=0
+
+		if (has_mall()) { // mall skylights; maybe too bright and noisy?
+			for (cube_t const &skylight : interior->mall_info->skylights) {windows.emplace_back(skylight, 0);} // add skylights as vertical windows with ix=0
+		}
 	}
 }
 
