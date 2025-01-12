@@ -2305,7 +2305,7 @@ public:
 	bool is_obj_pos_valid(room_object_t const &obj, bool keep_in_room, bool allow_block_door, bool check_stairs) const;
 	bool is_rot_cube_visible(cube_t const &c, vector3d const &xlate, bool inc_mirror_reflections=0) const;
 	bool is_cube_face_visible_from_pt(cube_t const &c, point const &p, unsigned dim, bool dir, bool same_room) const;
-	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t &oc, bool reflection_pass=0, bool c_is_building_part=0) const;
+	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t &oc, bool reflection_pass=0, bool c_is_building_part=0, bool skip_basement_check=0) const;
 	bool check_pg_br_wall_occlusion(point const &viewer, point const *const pts, unsigned npts, cube_t const &occ_area, vector3d const &view_dir) const;
 	bool check_shelfrack_occlusion (point const &viewer, point const *const pts, unsigned npts, cube_t const &occ_area) const;
 	bool is_entire_building_occluded(point const &viewer, occlusion_checker_noncity_t &oc) const;

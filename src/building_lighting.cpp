@@ -1411,11 +1411,12 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 {
 	if (!has_room_geom()) return; // error?
 	point const camera_bs(camera_pdu.pos - xlate), building_center(bcube.get_cube_center()); // camera in building space
-	bool walkway_only(0), same_floor_only(0), same_or_adj_floor_only(0), player_by_ext_door(0), camera_can_see_ext_basement(0);
+	bool walkway_only(0), same_floor_only(0), same_or_adj_floor_only(0), player_by_ext_door(0), camera_can_see_ext_basement(0), player_can_see_mall(0);
 
 	if (!camera_in_building) {
-		player_by_ext_door = point_near_ext_door(camera_bs, get_door_open_dist());
-		camera_can_see_ext_basement = interior_visible_from_other_building_ext_basement(xlate, 1); // expand_for_light=1
+		player_by_ext_door  = point_near_ext_door(camera_bs, get_door_open_dist());
+		player_can_see_mall = player_can_see_in_mall_skylight(xlate);
+		camera_can_see_ext_basement = (interior_visible_from_other_building_ext_basement(xlate, 1) || player_can_see_mall); // expand_for_light=1
 
 		if (camera_can_see_ext_basement) {} // skip occlusion checks below
 		else if (!has_windows()) { // can't see interior through windows
@@ -1638,14 +1639,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		// basement, attic, and elevator lights are only visible when player is in the building;
 		// elevator test is questionable because it can be open on the ground floor of a room with windows in a small office building, but should be good enough
 		if (!camera_in_building && ((light_in_basement && !camera_can_see_ext_basement) || is_in_windowless_attic || is_in_elevator)) continue;
+		room_t const &room(get_room(i->room_id));
+		bool const in_ext_basement(room.is_ext_basement()), mall_light_vis(in_ext_basement && player_can_see_mall);
 
 		if (lpos.z < camera_z) { // light below the player
-			if (is_in_elevator || is_in_closet)                 continue; // elevator or closet light on the floor below the player
-			if (light_in_basement && camera_above_ground_floor) continue; // basement lights only visible if player is on basement or ground floor
+			if (is_in_elevator || is_in_closet) continue; // elevator or closet light on the floor below the player
+			if (light_in_basement && camera_above_ground_floor && !mall_light_vis) continue; // basement lights only visible if player is on basement or ground floor
 		}
-		room_t const &room(get_room(i->room_id));
-		bool const in_ext_basement(room.is_ext_basement());
-		if (in_ext_basement && camera_feet_above_basement && lpos.z < camera_z) continue; // light in extended basement, and camera not in basement or on basement stairs
+		if (in_ext_basement && camera_feet_above_basement && lpos.z < camera_z && !mall_light_vis) continue; // light in ext basement, camera not in basement or on basement stairs
 		bool light_vis_from_basement(light_in_basement || in_ext_basement); // the in_ext_basement is there to handle mall elevators that extend above ground
 
 		if (camera_in_ext_basement && !light_vis_from_basement && lpos.z < ground_floor_z2) {
@@ -1694,11 +1695,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool const diff_floors(floor_is_above || floor_is_below);
 		if (same_floor_only && diff_floors) continue;
 		if (same_or_adj_floor_only && (camera_z < level_z-window_vspacing || camera_z > ceil_z+fc_thick+window_vspacing)) continue;
-		if (!is_house && floor_is_below &&  in_ext_basement && !camera_in_ext_basement && lpos.z   < get_basement().z1()) continue; // light  in lower level extb, player not in extb
+		if (!is_house && floor_is_below &&  in_ext_basement && !camera_in_ext_basement && lpos.z   < get_basement().z1() && !mall_light_vis) continue; // light  in lower level extb, player not in extb
 		if (!is_house && floor_is_above && !in_ext_basement &&  camera_in_ext_basement && camera_z < get_basement().z1()) continue; // player in lower level extb, light  not in extb
 		if (!camera_on_stairs && floor_is_below && !floor_below_region.is_all_zeros() && !floor_below_region.contains_pt_xy(lpos)) continue; // check floor_below_region
 		if (!camera_on_stairs && floor_is_above && !floor_above_region.is_all_zeros() && !floor_above_region.contains_pt_xy(lpos) && !(i->flags & RO_FLAG_TOS)) continue; // check floor_below_region
-		if (is_exterior && (floor_is_below || floor_is_above)) continue; // different floor of walkway - not visible
+		if (is_exterior && (floor_is_below || floor_is_above))          continue; // different floor of walkway - not visible
 		if (player_by_ext_door && camera_z < level_z - window_vspacing) continue; // can't see more than one floor above current floor through open door
 		cube_t const &room_part(get_part_for_room(room));
 		bool const camera_in_room_part_xy(room_part.contains_pt_xy(camera_rot)), in_camera_room((int)i->room_id == camera_room);
@@ -1737,7 +1738,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		if (!camera_in_elevator) { // none of the below culling applies when the player is in the elevator
 			// if the light is in the basement and the camera isn't, it's not visible unless the player is by the stairs
-			if ( light_in_basement && player_in_basement == 0 && !camera_somewhat_by_stairs) continue;
+			if (light_in_basement && player_in_basement == 0 && !camera_somewhat_by_stairs && !mall_light_vis) continue;
 			//if (!light_vis_from_basement && player_in_basement >= 2 && !light_room_has_stairs_or_ramp) continue; // player is fully in basement but light isn't; too strong
 			if (!light_vis_from_basement && player_in_basement >= 3) continue; // player is in the extended basement but the light isn't in the basement
 			bool const check_stairs(stairs_or_ramp_visible || light_above_stairs);
@@ -2051,7 +2052,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 		}
 		if (!is_rot_cube_visible(clipped_bc, xlate, 1)) continue; // VFC - post clip; inc_mirror_reflections=1
-		if (check_occ && !clipped_bc.contains_pt(camera_rot) && check_obj_occluded(clipped_bc, camera_bs, oc)) continue; // occlusion culling (expensive)
+		// occlusion culling (expensive); skip basement check for mall lights viewed through skylights
+		if (check_occ && !clipped_bc.contains_pt(camera_rot) && check_obj_occluded(clipped_bc, camera_bs, oc, 0, 0, mall_light_vis)) continue;
 		//float const bwidth(wall_light ? 1.0 : 0.25); // wall light omnidirectional; ceiling light as close to 180 degree FOV as can get without shadow clipping; shadows are wrong
 		float const bwidth(0.25); // as close to 180 degree FOV as we can get without shadow clipping
 		// should bwidth be set smaller for (in_retail_room && has_tall_retail())?

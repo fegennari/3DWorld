@@ -2501,7 +2501,9 @@ void building_t::debug_people_in_building(shader_t &s, point const &camera_bs) c
 }
 
 // Note: c is in local building space and viewer_in is in non-rotated building space
-bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occlusion_checker_noncity_t &oc, bool reflection_pass, bool c_is_building_part) const {
+bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occlusion_checker_noncity_t &oc,
+	bool reflection_pass, bool c_is_building_part, bool skip_basement_check) const
+{
 	if (!interior) return 0; // could probably make this an assert
 	//highres_timer_t timer("Check Object Occlusion"); // 0.001ms
 	point const viewer(get_inv_rot_pos(viewer_in)); // rotate viewer pos into building space
@@ -2510,7 +2512,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	float const floor_spacing(get_window_vspace()), ground_floor_ceiling(ground_floor_z1 + floor_spacing);
 	bool checked_conn_ret(0);
 	
-	if (targ_in_basement) { // fully inside basement
+	if (targ_in_basement && !skip_basement_check) { // fully inside basement
 		if (viewer.z > ground_floor_ceiling) return 1; // viewer not on first floor
 		
 		if (!player_in_building) { // player not in this building
