@@ -343,7 +343,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 	unsigned num_bathrooms(0);
 	bool at_stack_end[2] = {0, 0};
 	cube_t const basement(get_basement());
-	vect_cube_t &side_walls(interior->walls[!dim]);
+	vect_cube_t &side_walls(interior->walls[!dim]), &end_walls(interior->walls[dim]);
 	vector<room_t> &rooms(interior->rooms);
 	vector<unsigned> hall_stacks[2]; // one per end hallway
 	interior->mall_info->store_bounds = room; // start with the mall concourse
@@ -370,7 +370,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 	} // for d
 	for (unsigned f = 0; f < num_floors; ++f) {
 		bool const is_top_floor(f+1 == num_floors);
-		unsigned const rooms_start(rooms.size()), store_walls_start(side_walls.size());
+		unsigned const rooms_start(rooms.size()), store_side_walls_start(side_walls.size()), store_end_walls_start(end_walls.size());
 		bool added_bathrooms(0); // at most one pair per floor
 		cube_t store, floor_bcube(room);
 		store.z1() = floor_bcube.z1() = room .z1() + f*floor_spacing;
@@ -454,6 +454,8 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			} // while
 		} // for d
 		// place a store at each end
+		bool added_end_store[2] = {0, 0};
+
 		for (unsigned d = 0; d < 2; ++d) { // ends of mall
 			bool const entrance_side(bool(d) == entrance_dir);
 			if (entrance_side && is_top_floor) continue; // blocked by top floor entrance
@@ -473,6 +475,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			bool has_adj_store(0); // unused
 			add_mall_store(store, window_area, !dim, d, has_adj_store, rgen);
 			floor_bcube.union_with_cube(store);
+			added_end_store[d] = 1;
 		} // for d
 		interior->mall_info->store_bounds.union_with_cube(floor_bcube);
 		// add a narrower non-public back hallways behind each row of stores
@@ -480,7 +483,12 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 		unsigned const rooms_end(rooms.size());
 		float const hall_width(2.0*doorway_width);
 		cube_t hall(floor_bcube); // extends full length of the mall, including the end stores
-		hall.expand_in_dim(dim, wall_thickness); // extend a bit further to allow connecting a parallel hallway between the two side hallways at each end
+
+		// extend a bit further when there is no end store so that mall concourse and back hallway walls are separate and correctly textured;
+		// we can't split these walls because the concourse is merged across all floors, but we don't need to add any doors in this wall
+		for (unsigned d = 0; d < 2; ++d) {
+			if (!added_end_store[d]) {hall.d[dim][d] += (d ? 1.0 : -1.0)*wall_thickness;}
+		}
 		hall.z2() = floor_bcube.z1() + window_vspace; // normal height
 		cube_t side_halls[2];
 
@@ -502,7 +510,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			side_halls[d] = hall;
 
 			// split walls between stores and hallways into two half slices so that they can be textured differently; is there a way to skip drawing interior faces?
-			for (auto w = side_walls.begin()+store_walls_start; w != side_walls.end(); ++w) {
+			for (auto w = side_walls.begin()+store_side_walls_start; w != side_walls.end(); ++w) {
 				if (w->d[!dim][0] >= wall_pos || w->d[!dim][1] <= wall_pos) continue; // wrong wall
 				w->d[!dim][bool(d) ^ (w < side_walls.begin()+hall_walls_start) ^ 1] = wall_pos; // set to half width
 			}
@@ -531,15 +539,23 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 				hall.d[dim][ d] = wall_pos + dsign*hall_width;
 				if (basement.intersects_no_adj(hall)) continue; // intersects basement
 				if (is_store_placement_invalid(hall)) continue;
-				unsigned const hall_room_ix(rooms.size());
+				unsigned const hall_room_ix(rooms.size()), end_walls_start(end_walls.size());
 				rooms.emplace_back(hall, basement_part_ix, 0, 1, 0, 0, 2); // num_lights=0, is_hallway=1, is_office=0, is_sec_floor=0, interior=1 (extb)
 				add_extb_room_floor_and_ceil(hall);
 				bool has_adj_store(0); // unused
-				add_mall_room_walls(hall, wall_thickness, !dim, d, 1, has_adj_store, interior->walls); // at_mall_end=1 (to cover missing stores)
+				add_mall_room_walls(hall, wall_thickness, dim, d, 1, has_adj_store, interior->walls); // at_mall_end=1 (to cover missing stores)
 				
+				for (auto w = end_walls.begin()+store_end_walls_start; w != end_walls.end(); ++w) {
+					if (w->d[dim][0] >= wall_pos || w->d[dim][1] <= wall_pos) continue; // wrong wall
+					w->d[dim][bool(d) ^ (w < end_walls.begin()+end_walls_start) ^ 1] = wall_pos; // set to half width
+				}
 				for (unsigned e = 0; e < 2; ++e) { // add doors to each end connecting to the other hallways
 					cube_t const door_cut(add_ext_basement_door(side_halls[e], doorway_width, dim, d, 0, 0, rgen)); // is_end_room=0 (unlocked), is_tall_room=0
-					subtract_cube_from_cubes(door_cut, interior->walls[dim], nullptr, 1); // no holes; clip_in_z=1
+					subtract_cube_from_cubes(door_cut, end_walls, nullptr, 1); // no holes; clip_in_z=1
+				}
+				if (added_end_store[d]) { // if there's an end store, add a door connecting to it
+					cube_t const door_cut(add_ext_basement_door(hall, doorway_width, dim, !d, 1, is_tall_room, rgen)); // is_end_room=1 (may be locked)
+					subtract_cube_from_cubes(door_cut, end_walls, nullptr, 1); // no holes; clip_in_z=1
 				}
 				if (at_stack_end[d]) continue; // done with this stack
 				vector<unsigned> &stacks(hall_stacks[d]);
@@ -570,7 +586,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 				interior->elevators.emplace_back(elevator_bc, stack.front(), dim, !d, 1, 1, 2); // at_edge=1, interior_room=1, in_mall=2 (back hallway)
 				cube_t elevator_cut(elevator_bc);
 				elevator_cut.d[dim][!d] -= dsign*2.0*wall_thickness; // extend a bit into the hallway
-				subtract_cube_from_cubes(elevator_cut, interior->walls[dim], nullptr, 0); // no holes; clip_in_z=0
+				subtract_cube_from_cubes(elevator_cut, end_walls, nullptr, 0); // no holes; clip_in_z=0
 				interior->basement_ext_bcube.assign_or_union_with_cube(elevator_bc); // required for elevator lights logic
 				for (unsigned i : stack) {get_room(i).has_elevator = 1;} // elevator connects to all rooms in this stack
 			}
@@ -598,7 +614,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 				interior->stairwells.emplace_back(stairwell);
 				cube_t stairs_cut(stairs);
 				stairs_cut.d[dim][!d] -= dsign*2.0*wall_thickness; // extend a bit into the hallway
-				subtract_cube_from_cubes(stairs_cut, interior->walls[dim], nullptr, 0); // no holes; clip_in_z=0
+				subtract_cube_from_cubes(stairs_cut, end_walls, nullptr, 0); // no holes; clip_in_z=0
 				interior->basement_ext_bcube.assign_or_union_with_cube(stairs);
 				for (unsigned i : stack) {get_room(i).has_stairs = 1;} // all rooms in this stack have stairs (on their first floors)
 				cube_t bot_floor(stairs), top_ceil(stairs);
