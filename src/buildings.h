@@ -2327,6 +2327,7 @@ public:
 	cube_t get_step_for_ext_door(tquad_with_ix_t const &door) const;
 	bool interior_visible_from_other_building_ext_basement(vector3d const &xlate, bool expand_for_light=0) const;
 	bool top_of_mall_elevator_visible(point const &camera_bs, vector3d const &xlate) const;
+	bool can_have_basement() const;
 	void try_connect_ext_basement_to_building(building_t &b);
 	void finalize_extb_conn_rooms(unsigned ds_start);
 	template<typename T> void add_door_verts(cube_t const &D, T &drawer, door_rotation_t &drot, uint8_t door_type, bool dim, bool dir,

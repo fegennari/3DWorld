@@ -1418,10 +1418,15 @@ void try_expand_into_xy(cube_t &c1, cube_t const &c2) {
 	} // for d
 }
 
+bool building_t::can_have_basement() const {
+	if (!is_cube())          return 0; // simple cube shaped buildings only
+	if (!interior_enabled()) return 0; // if there's no interior, there's no point in adding a basement
+	return 1;
+}
+
 // for houses or office buildings
 void building_t::maybe_add_basement(rand_gen_t rgen) { // rgen passed by value so that the original isn't modified
-	if (!is_cube()) return; // simple cube shaped buildings only
-	if (!interior_enabled()) return; // if there's no interior, there's no point in adding a basement
+	if (!can_have_basement()) return;
 	float basement_prob(is_house ? global_building_params.basement_prob_house : global_building_params.basement_prob_office);
 	if (is_in_city && !is_house) {basement_prob *= 2.0;} // double the basement/parking garage probability for city office buildings
 	if (!rgen.rand_probability(basement_prob)) return; // no basement

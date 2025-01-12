@@ -84,7 +84,7 @@ struct ext_basement_room_params_t {
 };
 
 bool building_t::is_basement_room_not_int_bldg(cube_t const &room, building_t const *exclude, bool allow_outside_grid) const {
-	// check for other buildings, including their extended basements;
+	// check for other buildings, including their extended basements
 	if (check_buildings_cube_coll(room, 0, 1, this, exclude)) return 0; // xy_only=0, inc_basement=1, exclude ourself
 
 	if (!allow_outside_grid) {
