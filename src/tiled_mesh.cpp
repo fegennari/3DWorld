@@ -2809,7 +2809,8 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 		if (shadow_map_enabled()) {draw_tiles(reflection_pass, 1);} // shadow map pass
 		draw_tiles(reflection_pass, 0); // non-shadow map pass
 	}
-	if (reflection_pass < 3) { // trees/scenerg/grass not very visible in glass floor reflection, so disable
+	// trees/scenerg/grass not very visible in glass floor reflection, so disable; also disable for player in extended basement since tree roots may be visible
+	if (reflection_pass < 3 && player_in_basement < 3) {
 		if (pine_trees_enabled ()) {draw_pine_trees (reflection_pass);}
 		if (decid_trees_enabled()) {draw_decid_trees(reflection_pass);}
 	
