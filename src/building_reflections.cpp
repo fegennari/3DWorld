@@ -19,6 +19,7 @@ extern building_t const *player_building;
 colorRGBA get_clear_color();
 void draw_sun_moon_stars(bool no_update);
 cube_t get_mirror_surface(room_object_t const &c);
+void draw_ortho_screen_space_triangle();
 
 bool is_mirror(room_object_t const &obj) {return (obj.type == TYPE_MIRROR || obj.type == TYPE_DRESS_MIR);}
 
@@ -75,9 +76,16 @@ void draw_scene_for_building_reflection(unsigned &ref_tid, unsigned dim, bool di
 	end_stencil_write();
 	// enable stencil test for drawing building interiors as an optimization
 	glEnable(GL_STENCIL_TEST);
-	glStencilFunc(GL_NOTEQUAL, 0, ~0U); // keep if stencil bit has been set by the mirror draw
 	glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
+
+	if (!is_water) {
+		// draw a gray color outside the stencil area for other mirrors that aren't using the correct reflections, since it works better than the sky light blue
+		glStencilFunc(GL_EQUAL, 0, ~0U); // keep if stencil bit has been set by the mirror draw
+		s.begin_color_only_shader(GRAY);
+		draw_ortho_screen_space_triangle();
+	}
 	// draw reflected geometry
+	glStencilFunc(GL_NOTEQUAL, 0, ~0U); // keep if stencil bit has been set by the mirror draw
 	glEnable(GL_CLIP_DISTANCE0);
 	draw_buildings(0, reflection_pass, xlate);
 	glDisable(GL_CLIP_DISTANCE0);
