@@ -2735,7 +2735,7 @@ tile_draw_t::occluder_cubes_t::occluder_cubes_t(tile_t const *const tile_) : til
 
 void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=water plane Z, 2=building horizontal mirror, 3=building vertical mirror
 
-	if (player_cant_see_outside_building()) return; // no need to draw tiles if player in extended basement or parking garage
+	if (player_cant_see_outside_building()) return; // no need to draw tiles if player in the extended basement, parking garage, or attic
 	//timer_t timer("TT Draw");
 	shadow_maps_disabled = 0; // reset for this frame
 	to_draw.clear();
@@ -2809,8 +2809,7 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 		if (shadow_map_enabled()) {draw_tiles(reflection_pass, 1);} // shadow map pass
 		draw_tiles(reflection_pass, 0); // non-shadow map pass
 	}
-	// trees/scenerg/grass not visible when player is in the extended basement, parking garage, or attic; also not very visible in glass floor reflection, so disable
-	if (!player_cant_see_outside_building() && reflection_pass < 3) {
+	if (reflection_pass < 3) { // trees/scenerg/grass not very visible in glass floor reflection, so disable
 		if (pine_trees_enabled ()) {draw_pine_trees (reflection_pass);}
 		if (decid_trees_enabled()) {draw_decid_trees(reflection_pass);}
 	
