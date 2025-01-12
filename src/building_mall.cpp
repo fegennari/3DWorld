@@ -1273,6 +1273,12 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		} // for d
 	} // for f
 
+	// add vents along the ceiling above the storefronts
+	for (unsigned f = 0; f < num_floors; ++f) {
+		if (rgen.rand_float() > ((f+1 == num_floors) ? 0.75 : 0.25)) continue; // 75% of the time on the top floor, 25% of the time on the bottom floor
+		float const ceil_zval(room.z1() + (f + 1)*floor_spacing);
+		add_mall_ceiling_ducts(room, ceil_zval, room_id, mall_dim, 2, light_amt, rgen); // skip_dir=2 (neither)
+	}
 	// add pillars last so that we can check lights against them
 	unsigned const pillars_start(objs.size());
 	for (cube_t const &pillar : pillars) {objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, !mall_dim, 0, 0, light_amt, SHAPE_CUBE, WHITE, EF_Z12);}
@@ -1954,15 +1960,20 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		place_area.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.5*wall_thickness; // shink for front window frame clearance
 		for (unsigned n = 0; n < num_fishtanks; ++n) {add_fishtank_to_room(rgen, room, zval, room_id, light_amt, objs_start, place_area);}
 	}
-	// add ducts and vents in the ceiling
+	unsigned const skip_dir((room_width < 0.8*room_len) ? rgen.rand_bool() : 2); // skip one side if room is narrow
+	add_mall_ceiling_ducts(room, room.z2(), room_id, dim, skip_dir, light_amt, rgen);
+}
+
+void building_t::add_mall_ceiling_ducts(room_t &room, float ceil_zval, unsigned room_id, bool dim, unsigned skip_dir, float light_amt, rand_gen_t &rgen) {
+	float const window_vspace(get_window_vspace()), wall_hthick(0.5*get_wall_thickness()), room_len(room.get_sz_dim(dim));
 	unsigned const num_vents(max(2U, (unsigned)round_fp(0.5*room_len/window_vspace))); // per side
 	float const vent_spacing(room_len/num_vents), duct_height(0.2*window_vspace);
-	unsigned const skip_dir((room_width < 0.8*room_len) ? rgen.rand_bool() : 2); // skip one side if room is narrow
 	unsigned const duct_flags(RO_FLAG_IN_MALL | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // skip both ends
 	cube_t duct(room);
-	duct.z2() -= fc_thick;
-	duct.z1()  = duct.z2() - duct_height;
+	duct.z2() = ceil_zval - get_fc_thickness();
+	duct.z1() = duct.z2() - duct_height;
 	duct.expand_in_dim(dim, -wall_hthick); // shrink
+	vect_room_object_t &objs(interior->room_geom->objs);
 
 	for (unsigned d = 0; d < 2; ++d) { // each side
 		if (unsigned(d) == skip_dir) continue;
