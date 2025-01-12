@@ -651,8 +651,11 @@ void building_interior_t::place_exterior_room(extb_room_t const &room, cube_t co
 	ceiling.z1() = room.z2() - fc_thick;
 	floor  .z2() = room.z1() + fc_thick;
 	subtract_cubes_from_cube(ceiling, P.stairs, P.wall_segs, P.temp_cubes, 2); // cut out stairs; zval_mode=2 (check for zval overlap)
-	// subtract mall elevator shaft from mall concourse ceiling
-	if (is_first_extb_room && has_mall() && mall_info->city_elevator_ix >= 0) {subtract_cube_from_cubes(elevators[mall_info->city_elevator_ix], P.wall_segs);}
+	
+	if (is_first_extb_room && has_mall()) { // subtract mall elevator shaft and skylights from mall concourse ceiling
+		if (mall_info->city_elevator_ix >= 0) {subtract_cube_from_cubes(elevators[mall_info->city_elevator_ix], P.wall_segs);}
+		for (cube_t const &skylight : mall_info->skylights) {subtract_cube_from_cubes(skylight, P.wall_segs);}
+	}
 	vector_add_to(P.wall_segs, ceilings);
 	subtract_cubes_from_cube(floor,   P.stairs, P.wall_segs, P.temp_cubes, 2); // cut out stairs; zval_mode=2 (check for zval overlap)
 	vector_add_to(P.wall_segs, floors);

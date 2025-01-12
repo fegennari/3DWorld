@@ -5,7 +5,8 @@
 #include "buildings.h"
 #include "city_model.h"
 
-bool const EXTEND_MALL_ELEVATOR_TO_CITY = 1;
+bool const EXT_MALL_ELEV_TO_CITY = 1;
+bool const ADD_MALL_SKYLIGHTS    = 0;
 
 extern bool camera_in_building;
 using std::string;
@@ -210,7 +211,7 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 			elevator.d[dim][ edir] = ww_edge + (edir ? 1.0 : -1.0)*depth; // extend back away from walkway by depth
 
 			// extend elevator up to street level if there's space and if the mall is not too deep underground
-			if (EXTEND_MALL_ELEVATOR_TO_CITY && is_in_city && d < 2 && elevator.z2() + 0.5*window_vspace > ground_floor_z1) {
+			if (EXT_MALL_ELEV_TO_CITY && is_in_city && d < 2 && elevator.z2() + 0.5*window_vspace > ground_floor_z1) {
 				cube_t entrance(elevator);
 				entrance.expand_by_xy(0.25*wall_thickness + 0.1*depth); // account for city exterior entrance wall thickness == 0.1*depth
 				cube_t test_cube(entrance);
@@ -236,8 +237,16 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 		} // for d
 		interior->elevators.push_back(elevator);
 	}
-	if (is_in_city) { // add skylight(s)?
-		// must call is_cube_city_placement_invalid() and add_city_plot_cut()
+	if (ADD_MALL_SKYLIGHTS && is_in_city) { // add ceiling skylights
+		for (cube_t const &opening : openings) {
+			cube_t skylight(opening);
+			set_cube_zvals(skylight, room.z2()-floor_thickness, ground_floor_z1);
+			if (skylight.dz() > 0.5*window_vspace) break; // too deep for skylights
+			for (unsigned d = 0; d < 2; ++d) {skylight.expand_in_dim(d, -0.4*opening.get_sz_dim(d));}
+			if (is_cube_city_placement_invalid(skylight)) continue; // too strict? some objects can be placed over skylights since they're flush with the ground
+			add_city_plot_cut(skylight);
+			interior->mall_info->skylights.push_back(skylight);
+		} // for opening
 	}
 }
 

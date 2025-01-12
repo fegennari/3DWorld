@@ -1758,6 +1758,7 @@ struct building_mall_info_t {
 	vector<store_info_t> stores;
 	stairwell_t ent_stairs;
 	vect_cube_t bathrooms; // actually bathroom pairs
+	vect_cube_t skylights;
 	vector<pet_tank_t> pet_tanks; // except for fish (rats, snakes, spiders)
 	cube_t store_bounds, food_court_bounds;
 	colorRGBA mall_wall_color=WHITE;
