@@ -360,6 +360,17 @@ Pet Oasis
 Pet Central
 Petropolis
 
+appliance:
+Nexappliance
+Home Essentials
+Electro Essentials
+Electra Appliance World
+Appliance Emporium
+The Applicance Stop
+Smart Living Appliances
+Home Comfort Center
+Home Appliance Warehouse
+
 
 # general
 
