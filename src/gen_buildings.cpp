@@ -3681,7 +3681,8 @@ public:
 						bool const ext_basement_conn_visible(b.interior_visible_from_other_building_ext_basement(xlate));
 						if (reflection_pass && !player_in_building_bcube && !ext_basement_conn_visible) continue; // not the correct building
 						bool const mall_elevator_visible(b.top_of_mall_elevator_visible(camera_bs, xlate));
-						bool const interior_visible(ext_basement_conn_visible || mall_elevator_visible); // only covers extb connector and mall elevator cases
+						bool const mall_skylight_visible(b.player_can_see_in_mall_skylight(xlate)); // not entirely correct because grid may not be visible
+						bool const interior_visible(ext_basement_conn_visible || mall_elevator_visible || mall_skylight_visible); // only covers extb conn and mall elevator/slylight
 						bool const debug_draw(0 && b.interior->has_backrooms); // TESTING
 						
 						if (b.check_pt_in_or_near_walkway(camera_bs, 1, 1, 1)) { // owned_only=1, inc_open_door=1, inc_conn_room=1

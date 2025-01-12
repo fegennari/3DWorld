@@ -78,13 +78,19 @@ bool building_t::player_can_see_outside() const {
 	if (has_pg_ramp() && !interior->ignore_ramp_placement) {} // what about ramp?
 	return 0;
 }
-bool building_t::player_can_see_out_mall_skylight(vector3d const &xlate) const {
-	if (!point_in_mall(camera_pos - xlate)) return 0;
-
+bool building_t::player_can_see_mall_skylight(vector3d const &xlate) const { // looking in or out
 	for (cube_t const &skylight : interior->mall_info->skylights) {
 		if (camera_pdu.cube_visible(skylight + xlate)) return 1;
 	}
 	return 0;
+}
+bool building_t::player_can_see_out_mall_skylight(vector3d const &xlate) const { // in mall looking out
+	return (point_in_mall(camera_pos - xlate) && player_can_see_mall_skylight(xlate));
+}
+bool building_t::player_can_see_in_mall_skylight(vector3d const &xlate) const { // above mall looking in
+	if (!has_mall_skylight()) return 0;
+	point const cbs(camera_pos - xlate);
+	return (cbs.z > ground_floor_z1 && point_in_mall(point(cbs.x, cbs.y, (ground_floor_z1 - 0.5*get_window_vspace()))) && player_can_see_mall_skylight(xlate));
 }
 bool player_in_windowless_building() {return (player_building != nullptr && !player_building->player_can_see_outside());}
 

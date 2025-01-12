@@ -1942,6 +1942,7 @@ struct building_t : public building_geom_t {
 	bool has_tall_retail() const {return (retail_floor_levels > 1);}
 	bool has_mall       () const {return (interior && interior->has_mall());}
 	bool has_mall_ent_stairs() const {return (interior && interior->has_mall_ent_stairs());}
+	bool has_mall_skylight  () const {return (has_mall() && !interior->mall_info->skylights.empty());}
 	bool is_apartment   () const {return (btype == BTYPE_APARTMENT);}
 	bool is_hotel       () const {return (btype == BTYPE_HOTEL);}
 	bool is_apt_or_hotel() const {return (is_apartment() || is_hotel());}
@@ -2042,7 +2043,9 @@ struct building_t : public building_geom_t {
 	bool point_in_mall(point const &pos) const {return (has_mall() && point_in_extended_basement_not_basement(pos));} // including stores and hallways
 	bool check_point_xy_in_part(point const &pos) const;
 	bool player_can_see_outside() const;
+	bool player_can_see_mall_skylight(vector3d const &xlate) const;
 	bool player_can_see_out_mall_skylight(vector3d const &xlate) const;
+	bool player_can_see_in_mall_skylight(vector3d const &xlate) const;
 	void set_building_colors(building_colors_t &bcolors) const;
 	bool ray_cast_exterior_walls(point const &p1, point const &p2, vector3d &cnorm, float &t) const;
 	bool ray_cast_interior(point const &pos, vector3d const &dir, cube_t const &valid_area, cube_bvh_t const &bvh, bool in_attic, bool in_ext_basement,
