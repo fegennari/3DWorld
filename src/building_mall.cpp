@@ -240,8 +240,8 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 	if (ADD_MALL_SKYLIGHTS && is_in_city) { // add ceiling skylights
 		for (cube_t const &opening : openings) {
 			cube_t skylight(opening);
-			set_cube_zvals(skylight, room.z2()-floor_thickness, ground_floor_z1);
-			if (skylight.dz() > 0.5*window_vspace) break; // too deep for skylights
+			set_cube_zvals(skylight, room.z2()-0.7*floor_thickness, ground_floor_z1);
+			if (skylight.dz() > 0.5*window_vspace) break; // too deep for (any) skylights
 			for (unsigned d = 0; d < 2; ++d) {skylight.expand_in_dim(d, -0.4*opening.get_sz_dim(d));}
 			if (is_cube_city_placement_invalid(skylight)) continue; // too strict? some objects can be placed over skylights since they're flush with the ground
 			add_city_plot_cut(skylight);

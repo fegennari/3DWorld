@@ -2171,7 +2171,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	} // for i (objs)
 	//if (camera_in_building) {cout << name << ": " << num_add << endl;} // TESTING
 
-	// add skylight lights
+	// add skylight lights; mall skylights are not added here
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
 		if (skylights.empty() || camera_in_basement) continue;
 		point sun_moon_pos;

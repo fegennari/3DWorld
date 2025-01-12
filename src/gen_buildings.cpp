@@ -2228,15 +2228,23 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	if (!is_valid()) return; // invalid building
 
 	if (!no_skylights && !lights_pass) { // draw skylight glass
+		tid_nm_pair_t tp;
+		tp.transparent = 1; // doesn't do anything?
+
 		for (cube_t const &skylight : skylights) {
-			tid_nm_pair_t tp;
-			tp.transparent = 1; // doesn't do anything?
 			cube_t glass(skylight);
 			float const ceil_thickness(glass.dz());
 			glass.z1() += 0.50*ceil_thickness; // glass pane is only 25% of ceiling thickness
 			glass.z2() -= 0.25*ceil_thickness;
 			bdraw.add_cube(*this, glass, tp, colorRGBA(WHITE, 0.1), 0, 4, 0, 0, 0); // top and bottom only, untextured
-		} // for skylight
+		}
+		if (has_mall()) {
+			for (cube_t const &skylight : interior->mall_info->skylights) {
+				cube_t glass(skylight);
+				glass.z1() = glass.zc(); // top half thickness is glass
+				bdraw.add_cube(*this, glass, tp, colorRGBA(WHITE, 0.1), 0, 4, 0, 0, 0); // top and bottom only, untextured
+			}
+		}
 	}
 	point const only_cont_pt(only_cont_pt_in ? get_inv_rot_pos(*only_cont_pt_in) : all_zeros);
 	bool const cut_door_holes(only_cont_pt_in != nullptr); // needed even for non-cube buildings, so capture before clearing

@@ -2330,6 +2330,24 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 			} // for w
 		} // for ww
 	}
+	if (add_trim && has_mall()) { // add mall skylight trim
+		for (cube_t const &skylight : interior->mall_info->skylights) {
+			cube_t window(skylight);
+			swap_cube_dims(window, 0, 2); // swap X and Z to convert XY plane into ZY plane
+			unsigned const trim_start(trim_objs.size());
+			add_window_trim(window, cube_t(), trim_color, window_trim_width, window_trim_width, extra_depth, 0, 1, RO_FLAG_NOCOLL, trim_objs, trims); // dim=0, dir=1
+			unsigned const trim_end(trim_objs.size());
+			
+			for (unsigned i = trim_start; i != trim_end; ++i) {
+				swap_cube_dims(trim_objs[i], 2, 0); // swap back
+				room_object_t top_trim(trim_objs[i]);
+				top_trim.z1()   = top_trim.z2();
+				top_trim.z2()  += trim_thickness;
+				top_trim.flags |= (RO_FLAG_EXTERIOR | RO_FLAG_HAS_EXTRA);
+				trim_objs.push_back(top_trim); // add exterior trim to the top
+			}
+		} // for skylight
+	}
 	if (is_house && add_ext_trim && add_trim && rgen.rand_float() < 0.2) { // add exterior house wall first floor trim
 		float const zval(ground_floor_z1 + floor_spacing), width(4.0*window_trim_depth);
 
