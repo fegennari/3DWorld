@@ -56,6 +56,7 @@ bool building_t::player_can_see_outside() const {
 			test_area.z1() -= floor_spacing; // include the floor below
 			if (test_area.contains_pt(camera_bs)) return 1; // outside may be visible through the skylight
 		}
+		if (player_can_see_out_mall_skylight(xlate)) return 1;
 		return 0;
 	}
 	// maybe can see out a window
@@ -77,12 +78,22 @@ bool building_t::player_can_see_outside() const {
 	if (has_pg_ramp() && !interior->ignore_ramp_placement) {} // what about ramp?
 	return 0;
 }
+bool building_t::player_can_see_out_mall_skylight(vector3d const &xlate) const {
+	if (!point_in_mall(camera_pos - xlate)) return 0;
+
+	for (cube_t const &skylight : interior->mall_info->skylights) {
+		if (camera_pdu.cube_visible(skylight + xlate)) return 1;
+	}
+	return 0;
+}
 bool player_in_windowless_building() {return (player_building != nullptr && !player_building->player_can_see_outside());}
 
 bool player_cant_see_outside_building() {
-	if (player_in_basement >= 3 || player_in_attic == 2) return 1; // player in extended basement or windowless attic
-	if (player_in_windowless_building()) return 1;
-	return 0;
+	if (player_in_basement >= 3) { // player in extended basement; only outside view is through mall skylight
+		return (!player_building || !player_building->player_can_see_out_mall_skylight(get_tiled_terrain_model_xlate()));
+	}
+	if (player_in_attic == 2) return 1; // player in windowless attic
+	return player_in_windowless_building();
 }
 bool building_t::check_bcube_overlap_xy(building_t const &b, float expand_rel, float expand_abs) const {
 	if (expand_rel == 0.0 && expand_abs == 0.0 && !bcube.intersects(b.bcube)) return 0;
