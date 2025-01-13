@@ -2013,6 +2013,7 @@ struct building_t : public building_geom_t {
 	cube_t const &get_chimney  () const {assert(has_chimney      && parts.size() > 1); return parts.back();}
 	cube_t const &get_fireplace() const {assert(has_chimney == 2 && parts.size() > 2); return parts[parts.size()-2];}
 	cube_t get_interior_bcube(bool inc_ext_basement) const;
+	cube_t get_ext_vis_bcube() const;
 	void union_with_coll_bcube(cube_t const &c);
 
 	bool check_sphere_coll(point const &pos, float radius, bool xy_only, vector3d *cnorm=nullptr) const {
@@ -2171,7 +2172,7 @@ struct building_t : public building_geom_t {
 	void draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 		unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building);
 	void gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, occlusion_checker_noncity_t &oc, vector3d const &xlate, unsigned building_ix,
-		bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building, bool ext_basement_conn_visible, bool mall_elevator_visible);
+		bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building, bool ext_basement_conn_visible, bool mall_visible);
 	bool has_glass_floor() const {return (has_room_geom() && !interior->room_geom->glass_floors.empty());}
 	bool glass_floor_visible(vector3d const &xlate, bool from_outside_building=0) const;
 	bool point_over_glass_floor(point const &pos, bool inc_escalator=0) const;

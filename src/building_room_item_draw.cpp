@@ -1578,12 +1578,12 @@ void building_t::draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	//s.set_cur_color(colorRGBA(1.0, 0.0, 0.0, 0.5)); // for use with debug visualization
 }
 void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, occlusion_checker_noncity_t &oc, vector3d const &xlate,
-	unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building, bool ext_basement_conn_visible, bool mall_elevator_visible)
+	unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building, bool ext_basement_conn_visible, bool mall_visible)
 {
 	if (!interior) return;
 	if (!global_building_params.enable_rotated_room_geom && is_rotated()) return; // rotated buildings: need to fix texture coords, room object collisions, mirrors, etc.
 
-	if (!shadow_only && !player_in_building && !mall_elevator_visible && !camera_pdu.point_visible_test(bcube.get_cube_center() + xlate)) {
+	if (!shadow_only && !player_in_building && !mall_visible && !camera_pdu.point_visible_test(bcube.get_cube_center() + xlate)) {
 		// skip if none of the building parts are visible to the camera; this is rare, so it may not help
 		bool any_part_visible(0);
 

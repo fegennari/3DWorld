@@ -2683,7 +2683,7 @@ class building_creator_t {
 	struct grid_elem_t {
 		vector<cube_with_ix_t> bc_ixs;
 		vect_cube_t road_segs; // or driveways, porches, etc.
-		cube_t bcube, extb_bcube; // base building, extended basement
+		cube_t bcube, extb_bcube, ext_vis_bcube; // base building, extended basement, exterior visible (with skylights)
 		bool has_room_geom=0;
 
 		bool empty() const {return (bc_ixs.empty() && road_segs.empty());}
@@ -2695,6 +2695,7 @@ class building_creator_t {
 		void add_building(building_t const &b, unsigned ix) {
 			add_bcube(b.bcube, ix);
 			if (b.has_ext_basement()) {extb_bcube.assign_or_union_with_cube(b.interior->basement_ext_bcube);}
+			ext_vis_bcube.assign_or_union_with_cube(b.get_ext_vis_bcube());
 
 			if (DRAW_WALKWAY_INTERIORS) {
 				for (building_walkway_t const &w : b.walkways) {
@@ -2702,7 +2703,7 @@ class building_creator_t {
 				}
 			}
 		}
-		cube_t const &get_vis_bcube() const {return ((player_in_ext_basement() || player_in_uge) ? extb_bcube : bcube);}
+		cube_t const &get_vis_bcube() const {return ((player_in_ext_basement() || player_in_uge) ? extb_bcube : ext_vis_bcube);}
 	};
 	vector<grid_elem_t> grid, grid_by_tile;
 
@@ -3438,7 +3439,7 @@ public:
 				bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_bs, 0.0, points, 1, 1, 0)); // inc_attic=1, inc_ext_basement=1, inc_roof_acc=0
 				if (sec_camera_mode && !camera_in_this_building) continue; // security cameras only show lights in their building
 				// limit room lights to when the player is in a building because we can restrict them to a single floor, otherwise it's too slow
-				if (!camera_in_this_building && !camera_pdu.cube_visible(b.bcube + xlate) &&
+				if (!camera_in_this_building && !camera_pdu.cube_visible(b.get_ext_vis_bcube() + xlate) &&
 					!b.interior_visible_from_other_building_ext_basement(xlate, 1) && !b.check_pt_in_or_near_walkway(camera_bs, 1, 1, 0)) continue; // VFC
 				if (is_first_building) {oc.set_camera(camera_pdu, sec_camera_mode);} // setup occlusion culling on the first visible building; cur_building_only=sec_camera_mode
 				is_first_building = 0;
@@ -3681,8 +3682,9 @@ public:
 						bool const ext_basement_conn_visible(b.interior_visible_from_other_building_ext_basement(xlate));
 						if (reflection_pass && !player_in_building_bcube && !ext_basement_conn_visible) continue; // not the correct building
 						bool const mall_elevator_visible(b.top_of_mall_elevator_visible(camera_bs, xlate));
-						bool const mall_skylight_visible(b.player_can_see_in_mall_skylight(xlate)); // not entirely correct because grid may not be visible
-						bool const interior_visible(ext_basement_conn_visible || mall_elevator_visible || mall_skylight_visible); // only covers extb conn and mall elevator/slylight
+						bool const mall_skylight_visible(b.player_can_see_in_mall_skylight(xlate)); // Note: occlusion culling will still cull models
+						bool const mall_visible(mall_elevator_visible || mall_skylight_visible);
+						bool const interior_visible(ext_basement_conn_visible || mall_visible); // only covers extb conn and mall elevator/slylight
 						bool const debug_draw(0 && b.interior->has_backrooms); // TESTING
 						
 						if (b.check_pt_in_or_near_walkway(camera_bs, 1, 1, 1)) { // owned_only=1, inc_open_door=1, inc_conn_room=1
@@ -3713,7 +3715,7 @@ public:
 						bool const player_in_bldg(debug_draw || player_in_building_bcube);
 						if (ext_basement_conn_visible) {s.add_uniform_float("wet_effect", 0.0);} // disable for non-player building
 						b.gen_and_draw_room_geom(&bbd, s, amask_shader, oc, xlate, bi->ix, 0, reflection_pass,
-							inc_small, player_in_bldg, ext_basement_conn_visible, mall_elevator_visible); // shadow_only=0
+							inc_small, player_in_bldg, ext_basement_conn_visible, mall_visible); // shadow_only=0
 						if (ext_basement_conn_visible) {s.add_uniform_float("wet_effect", water_damage);}
 						g->has_room_geom = 1;
 						if (!draw_interior) continue;

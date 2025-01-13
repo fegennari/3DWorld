@@ -6,7 +6,7 @@
 #include "city_model.h"
 
 bool const EXT_MALL_ELEV_TO_CITY = 1;
-bool const ADD_MALL_SKYLIGHTS    = 0;
+bool const ADD_MALL_SKYLIGHTS    = 1;
 
 extern bool camera_in_building;
 using std::string;

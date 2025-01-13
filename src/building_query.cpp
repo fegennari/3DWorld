@@ -252,6 +252,12 @@ cube_t building_t::get_interior_bcube(bool inc_ext_basement) const { // Note: ca
 	int_bcube.z2() = interior_z2;
 	return int_bcube;
 }
+cube_t building_t::get_ext_vis_bcube() const {
+	if (!has_mall_skylight()) return bcube;
+	cube_t ext_vis_bc(bcube);
+	for (cube_t const &s : interior->mall_info->skylights) {ext_vis_bc.union_with_cube(s);}
+	return ext_vis_bc;
+}
 void building_t::union_with_coll_bcube(cube_t const &c) {
 	coll_bcube.union_with_cube(c);
 	for (unsigned d = 0; d < 2; ++d) {max_eq(building_bcube_expand, max((bcube.d[d][0] - c.d[d][0]), (c.d[d][1] - bcube.d[d][1])));}
