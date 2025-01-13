@@ -5579,6 +5579,12 @@ void building_room_geom_t::add_spider_web(room_object_t const &c) {
 	mat.add_cube_to_verts(c, apply_light_color(c), c.get_llc(), ~get_skip_mask_for_xy(c.dim), !c.dim, !c.dir, 0); // draw front and back faces
 }
 
+void building_room_geom_t::add_pet_cage(room_object_t const &c) {
+	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small
+	// TODO: metal bars in a grid pattern
+	mat.add_cube_to_verts_untextured(c, apply_light_color(c), EF_Z1); // skip bottom
+}
+
 void maybe_rotate_door_verts(rgeom_storage_t::vect_vertex_t &verts, unsigned start_ix, door_t const &door, door_rotation_t const &drot) {
 	if (door.open_amt == 0.0) return; // not rotated
 	// rotate around door pivot point, similar to rotate_and_shift_door()

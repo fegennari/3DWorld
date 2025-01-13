@@ -1252,6 +1252,7 @@ struct building_room_geom_t {
 	void add_lava_lamp(room_object_t const &c);
 	void add_trash(room_object_t const &c);
 	void add_spider_web(room_object_t const &c);
+	void add_pet_cage(room_object_t const &c);
 	void add_debug_shape(room_object_t const &c);
 	static void draw_ball_in_building(room_object_t  const &c, shader_t &s);
 	void draw_interactive_player_obj(carried_item_t const &c, shader_t &s, vector3d const &xlate);
