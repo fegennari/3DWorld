@@ -1158,6 +1158,7 @@ void building_room_geom_t::create_obj_model_insts(building_t const &building) { 
 		if (get_room_object_by_index(i.obj_id).type == TYPE_OFF_CHAIR) {saved_office_chair_dirs[i.obj_id] = i.dir;}
 	}
 	obj_model_insts.clear();
+	bool const is_residential(building.is_residential());
 
 	for (unsigned vect_id = 0; vect_id < 2; ++vect_id) {
 		auto const &obj_vect((vect_id == 1) ? expanded_objs : objs);
@@ -1182,7 +1183,10 @@ void building_room_geom_t::create_obj_model_insts(building_t const &building) { 
 			}
 			if (building.is_rotated()) {building.do_xy_rotate_normal(dir);}
 			unsigned const obj_id(i - obj_vect.begin() + obj_id_offset);
-			obj_model_insts.emplace_back(obj_id, dir);
+			// don't draw objects in interior rooms if the player is outside the building (useful for office bathrooms);
+			// draw interior objects in residential buildings, such as plumbing fixtures visible through open interior bathroom doors, but not if in basement
+			bool const int_vis_only(i->is_interior() && (!is_residential || i->z1() < building.ground_floor_z1));
+			obj_model_insts.emplace_back(obj_id, dir, int_vis_only);
 
 			if (i->type == TYPE_OFF_CHAIR) { // apply saved office chair rotations
 				auto it(saved_office_chair_dirs.find(obj_id));
@@ -1901,13 +1905,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	// draw object models
 	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
 		if (i == model_to_cull) continue;
+		if (skip_interior_objs && i->int_vis_only) continue; // interior, not visible
 		room_object_t &obj(get_room_object_by_index(i->obj_id));
-		if ((int)obj.room_id == cull_room_ix) continue; // cull all objects in this room
-
-		if (skip_interior_objs && obj.is_interior()) { // don't draw objects in interior rooms if the player is outside the building (useful for office bathrooms)
-			// draw interior objects in residential buildings, such as plumbing fixtures visible through open interior bathroom doors, but not if in basement
-			if (!is_residential || obj.z1() < building.ground_floor_z1) continue;
-		}
+		if ((int)obj.room_id == cull_room_ix)                 continue; // cull all objects in this room
 		if (check_clip_cube && !clip_cube_bs.intersects(obj)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 
 		if (shadow_only) {
