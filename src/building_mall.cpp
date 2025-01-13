@@ -1466,6 +1466,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	bool const on_new_floor(room.z1() != prev_room.z1()), on_new_row(room.d[dim][0] != prev_room.d[dim][0]);
 	if (on_new_floor || on_new_row) {type_mask = 0;}
 	unsigned const NUM_STORE_SELECT = 9;
+	// STORE_SHOE?
 	unsigned const store_selects[NUM_STORE_SELECT] = {STORE_CLOTHING, STORE_CLOTHING, STORE_BOOK, STORE_FURNITURE, STORE_PETS, STORE_APPLIANCE, STORE_RETAIL, STORE_RETAIL, STORE_RETAIL};
 	unsigned const objs_start(objs.size());
 	unsigned store_type(store_selects[rgen.rand() % NUM_STORE_SELECT]);
@@ -1477,8 +1478,8 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		// place 50% of the time if partially overlaps food court
 		else if (room.d[mall_dim][0] < fc_area.d[mall_dim][1] && room.d[mall_dim][1] > fc_area.d[mall_dim][0] && rgen.rand_bool()) {store_type = STORE_FOOD;}
 	}
-	// bookstore and clothing stores are too expensive for the larger end stores, and pet stores/appliance stores should be small, so make them retail or furniture stores instead
-	if (is_end_store && (store_type == STORE_BOOK || store_type == STORE_CLOTHING || store_type == STORE_PETS || store_type == STORE_APPLIANCE))
+	// bookstore, clothing, and shoe stores are too expensive for the larger end stores, and pet stores/appliance stores should be small, so make them retail or furniture stores instead
+	if (is_end_store && (store_type == STORE_BOOK || store_type == STORE_CLOTHING || store_type == STORE_SHOE || store_type == STORE_PETS || store_type == STORE_APPLIANCE))
 		{store_type = (rgen.rand_bool() ? STORE_FURNITURE : STORE_RETAIL);}
 	// furniture stores should be larger, so make them book or clothing stores if small
 	else if (store_type == STORE_FURNITURE && room_width < 0.8*room_len) {store_type = (rgen.rand_bool() ? STORE_BOOK : STORE_CLOTHING);}
@@ -1527,8 +1528,8 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		objs.emplace_back(sign, TYPE_SIGN, interior->ext_basement_hallway_room_id, dim, dir, flags, light_amt, SHAPE_CUBE, sign_color); // always lit
 		objs.back().obj_id = register_sign_text(store_name);
 	}
-	// add theft sensors to either side of the doorway for retail and clothing stores
-	if (store_type == STORE_RETAIL || store_type == STORE_CLOTHING) {
+	// add theft sensors to either side of the doorway for retail, clothing, and shoe stores
+	if (store_type == STORE_RETAIL || store_type == STORE_CLOTHING || store_type == STORE_SHOE) {
 		cube_t ts_area(doorway);
 		ts_area.z2() = doorway.z1() + 0.6*window_vspace; // set height
 		ts_area.d[dim][ dir] = doorway.d[dim][!dir] + (dir ? -1.0 : 1.0)*0.75*wall_thickness; // move slightly away from the doorway
@@ -1545,7 +1546,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	room_area.expand_by_xy(-wall_hthick);
 
 	// add checkout counter(s)/cash register(s) to the side of the door
-	if (store_type == STORE_CLOTHING || store_type == STORE_RETAIL || store_type == STORE_BOOK) {
+	if (store_type == STORE_CLOTHING || store_type == STORE_RETAIL || store_type == STORE_BOOK || store_type == STORE_SHOE) {
 		bool const side(rgen.rand_bool());
 		float const checkout_width(0.6*window_vspace), door_edge(doorway.d[!dim][side]);
 		cube_t checkout_area(room);
@@ -1574,8 +1575,8 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 			} // for xc
 		} // for yc
 	}
-	// add rows of shelves for retail and book stores, and rows of clothing to clothing stores, and rows of shelves to pet stores
-	if (store_type == STORE_RETAIL || store_type == STORE_BOOK || store_type == STORE_CLOTHING || store_type == STORE_PETS) {
+	// add rows of shelves for retail, book, and shoe stores, and rows of clothing to clothing stores, and rows of shelves to pet stores
+	if (store_type == STORE_RETAIL || store_type == STORE_BOOK || store_type == STORE_CLOTHING || store_type == STORE_PETS || store_type == STORE_SHOE) {
 		cube_t place_area(room_area);
 		place_area.expand_in_dim(dim, -0.5*door_width); // add extra padding in front and back for doors
 		// simplified version of building_t::add_retail_room_objs() with no escalators, checkout counters, wall light, or short racks
@@ -1676,7 +1677,11 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 						add_shelves_along_walls(center_wall, zval, room_id, light_amt, !dim, store_type, shelf_height, shelf_depth, 0, rgen); // place_inside=0
 						objs.emplace_back(center_wall, TYPE_PG_WALL, room_id, !dim, 0, (RO_FLAG_IN_MALL | RO_FLAG_ADJ_TOP), light_amt, SHAPE_CUBE); // draw top; or TYPE_STAIR_WALL?
 					}
+					else if (store_type == STORE_SHOE) {
+						// TODO
+					}
 					else { // add retail shelf racks
+						assert(store_type == STORE_RETAIL);
 						add_shelf_rack(rack, dim, style_id, rack_id, room_id, RO_FLAG_IN_MALL, item_category+1, 0, rgen); // add_occluders=0
 					}
 					if (n > 0 && n+1 < nrows && (n & 1)) { // use alternating/odd rows, skipping ends
@@ -1693,7 +1698,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		bc_area.expand_in_dim(dim, -0.1*room_len); // shrink ends
 		add_row_of_bookcases(bc_area, zval, room_id, light_amt, !dim, 1); // place_inside=1
 	}
-	else if (store_type == STORE_CLOTHING) { // add shelves of TYPE_FOLD_SHIRT along walls; clothes racks are added above
+	else if (store_type == STORE_CLOTHING || store_type == STORE_SHOE) { // add shelves of TYPE_FOLD_SHIRT or shoes along walls; clothes racks are added above
 		float const shelf_height(0.63*window_vspace), shelf_depth(0.25*window_vspace); // set height so that the top shelf is below the camera height
 		add_shelves_along_walls(room_area, zval, room_id, light_amt, !dim, store_type, shelf_height, shelf_depth, 1, rgen); // place_inside=1
 	}

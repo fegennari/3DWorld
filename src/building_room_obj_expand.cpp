@@ -547,7 +547,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 		if (c.in_mall()) {
 			float const shelf_depth(S.get_sz_dim(c.dim)), shelf_len(S.get_sz_dim(!c.dim)), ld_ratio(shelf_len/shelf_depth);
 
-			if (c.item_flags == STORE_CLOTHING) {
+			if (c.item_flags == STORE_CLOTHING) { // clothing store shelf
 				unsigned const num_items(round_fp(rgen.rand_uniform(0.5, 1.0)*ld_ratio)); // 50-100% full
 				C.shape = SHAPE_CUBE;
 				C.dim   =  c.dim;
@@ -584,7 +584,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 					add_if_not_intersecting(C, objects, cubes);
 				}
 			}
-			else if (c.item_flags == STORE_PETS) {
+			else if (c.item_flags == STORE_PETS) { // pet store shelf
 				if (add_models_mode) { // fishtanks count as models since they have fish models and are added to objs rather than expanded_objs
 					unsigned const num_fishtanks(round_fp(0.4*rgen.rand_uniform(0.5, 1.0)*ld_ratio));
 					unsigned const num_animal_types(4);
@@ -606,6 +606,9 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 				else { // cages with rats and birds + terrariums with snakes and spiders
 					// added during animal update pass
 				}
+			}
+			else if (c.item_flags == STORE_SHOE) { // shoe store shelf
+				// TODO
 			}
 			else {assert(0);} // unsupported store type
 			continue;
