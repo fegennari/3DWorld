@@ -637,8 +637,8 @@ void building_t::add_mall_stairs() { // connecting to the entrance door
 	float const stairs_top(door.z1() /*- get_trim_thickness()*/); // slightly below the door to prevent Z-fighting with the parking garage floor? then there's a gap
 	// add stairs under the door if needed, using shape=SHAPE_FAN for building AI path finding
 	float const upper_floor_zval(room.z2() - floor_spacing + fc_thick), delta_z(stairs_top - upper_floor_zval);
+	if (delta_z < fc_thick) return; // no stairs needed
 	unsigned const num_steps(max(0, (int)ceil(NUM_STAIRS_PER_FLOOR*delta_z/get_floor_ceil_gap())));
-	if (num_steps == 0) return; // no stairs needed
 	bool const dim(interior->extb_wall_dim), dir(interior->extb_wall_dir);
 	assert(door.dim == dim);
 	unsigned const room_id(interior->ext_basement_hallway_room_id);
@@ -667,6 +667,7 @@ void building_t::add_mall_stairs() { // connecting to the entrance door
 	for (unsigned d = 0; d < 2; ++d) {
 		railing.d[!dim][!d] = door .d[!dim][d] + (d ? 1.0 : -1.0)*1.5*wall_thickness;
 		railing.d[!dim][ d] = stair.d[!dim][d] + (d ? 1.0 : -1.0)*1.5*wall_thickness;
+		assert(railing.is_strictly_normalized());
 		if (!room.contains_cube_xy(railing)) continue; // skip if outside mall in case door is close to a wall
 		objs.emplace_back(railing, TYPE_RAILING, room_id, !dim, !d, 0, 1.0, SHAPE_CUBE, GOLD); // no balusters
 	}
