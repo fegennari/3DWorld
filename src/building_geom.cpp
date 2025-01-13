@@ -301,7 +301,8 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		}
 		else { // single part, entire cube/cylinder
 			parts.push_back(base);
-			if ((rgen.rand()&3) != 0) {maybe_add_special_roof(rgen);} // 75% chance
+			unsigned const rand_val(rgen.rand());
+			if ((rand_val&3) != 0) {maybe_add_special_roof(rgen);} // 75% chance
 			
 			// consider a possible vertical split of the floorplan into two parts
 			if (!interior_enabled() || height < 1.5*floor_spacing) {} // no interior, or single floor, can't split vertically
@@ -320,6 +321,9 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				if (height > 3.5*floor_spacing && rgen2.rand_probability(global_building_params.two_floor_retail_prob)) {retail_floor_levels = 2;}
 				parts.push_back(base);
 				parts[0].z2() = parts[1].z1() = base.z1() + retail_floor_levels*floor_spacing; // split in Z: parts[0] is the bottom, parts[1] is the top
+			}
+			else if (btype == BTYPE_OFFICE && is_cube() && height < 4.5*floor_spacing) { // <= 4 floors
+				btype = BTYPE_FACTORY; // make this a factory
 			}
 			gen_details(rgen, 1);
 		}
