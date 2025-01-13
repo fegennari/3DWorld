@@ -1680,7 +1680,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 						objs.emplace_back(center_wall, TYPE_PG_WALL, room_id, !dim, 0, (RO_FLAG_IN_MALL | RO_FLAG_ADJ_TOP), light_amt, SHAPE_CUBE); // draw top; or TYPE_STAIR_WALL?
 					}
 					else if (store_type == STORE_SHOE) {
-						// TODO
+						// TODO: TYPE_SHOE
 					}
 					else { // add retail shelf racks
 						assert(store_type == STORE_RETAIL);

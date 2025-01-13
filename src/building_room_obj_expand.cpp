@@ -608,7 +608,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 				}
 			}
 			else if (c.item_flags == STORE_SHOE) { // shoe store shelf
-				// TODO
+				// TODO: TYPE_SHOE
 			}
 			else {assert(0);} // unsupported store type
 			continue;

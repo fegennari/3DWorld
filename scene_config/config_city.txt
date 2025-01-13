@@ -233,7 +233,8 @@ city banana_peel_model  ../models/interiors/banana_peel.glb       0 0 0  0 0 0  
 city door_handle_model  ../models/interiors/door_handle.fbx       0 0 0  0 0 0  1 1.0 1.0
 city phone_model        ../models/interiors/landline_phone.glb    0 0 0  0 0 90 1 1.0 1.0
 
-# closet objects
+# closet/clothing objects
+# filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [keywords] [shadow_mat_ids]
 #city hanger_model  ../models/interiors/clothes_hanger.model3d                       0 0 0  0 0 0  1 1.0 1.0
 city hanger_model   "../models/interiors/closet_items/Metal Wire Hanger.model3d"    0 0 0  0 0 0  1 1.0 1.0
 city hanger_model   "../models/interiors/closet_items/Plastic Hanger.model3d"       0 0 0  0 0 0  1 1.0 1.0
@@ -243,6 +244,7 @@ city hanger_model   "../models/interiors/closet_items/Wooden Bar Hanger.model3d"
 city clothing_model "../models/interiors/closet_items/Shirt.model3d"                0 0 5  0 0 0  1 1.0 1.0 # XZ centered
 city clothing_model "../models/interiors/closet_items/Long Shirt.model3d"           0 0 5  0 0 0  1 1.0 1.0 # XZ centered
 city clothing_model "../models/interiors/closet_items/Pants.model3d"                0 1 0  0 0 0  1 0.79 1.0 # two sided
+city shoe_model      ../models/interiors/shoes/dress_shoe.glb                       0 0 0  -1 -1 0  1 1.0 1.0
 
 # plants
 city plant_model ../models/potted_plants/pink_plumeria/Plant3_Flowers.model3d 0 0 0  -1 -1 90  1 1.0 1.0

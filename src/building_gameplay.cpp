@@ -235,6 +235,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_BANANA    ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 0.25,  0.3,   "banana");
 	bldg_obj_types[TYPE_BAN_PEEL  ] = bldg_obj_type_t(1, 0, 1, 1, 0, 1, 0, 0.0,   0.05,  "banana peel");
 	bldg_obj_types[TYPE_CONF_PHONE] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 40.0,  2.0,   "phone");
+	bldg_obj_types[TYPE_SHOE      ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 60.0,  1.0,   "shoe");
 	bldg_obj_types[TYPE_GBIKE     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 150.0, 20.0,  "bike"); // garage bike
 	bldg_obj_types[TYPE_XFORMER   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 0.0,   0.0,   "transformer");
 	bldg_obj_types[TYPE_US_FLAG   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 30.0,  1.0,   "American Flag");
