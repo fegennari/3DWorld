@@ -1627,7 +1627,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				continue;
 			}
 		}
-		if (!i->is_light_on() || !i->is_light_type()) continue; // light not on, or not a light or lamp
+		if (!i->is_light_type() || !i->is_light_on()) continue; // not a light or lamp, or not on
 		point lpos(i->get_cube_center()); // centered in the light fixture
 		min_eq(lpos.z, (i->z2() - 0.0125f*window_vspacing)); // make sure the light isn't too close to the ceiling (if shifted up to avoid a door intersection)
 		point lpos_rot(lpos); // lpos in global space

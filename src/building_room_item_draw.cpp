@@ -2012,11 +2012,12 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	} // for i
 	if (!skip_interior_objs && !door_handles.empty()) { // optimization: skip door handles for player outside building
 		colorRGBA const handle_color(building.get_door_handle_color());
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_DOOR_HANDLE)); // L, W, H
+		vector3d const exp_val((0.5/sz.z)*sz);
 
 		for (door_handle_t const &h : door_handles) {
-			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_DOOR_HANDLE)); // L, W, H
 			cube_t bc(h.center);
-			bc.expand_by((0.5*h.height/sz.z)*sz);
+			bc.expand_by(h.height*exp_val);
 			if (check_clip_cube && !clip_cube_bs.intersects(bc)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 
 			if (shadow_only) {
