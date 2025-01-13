@@ -1759,7 +1759,7 @@ struct pet_tank_t : public cube_t {
 struct building_mall_info_t {
 	vect_cube_with_ix_t landings; // ix stores {is_escalator, se_dim, se_dir, ww_dir}
 	vector<store_doorway_t> store_doorways; // ix stores store room index
-	vector<store_info_t> stores;
+	vector<store_info_t> stores; // added during interior object placement
 	stairwell_t ent_stairs;
 	vect_cube_t bathrooms; // actually bathroom pairs
 	vect_cube_t skylights;
@@ -1767,6 +1767,7 @@ struct building_mall_info_t {
 	cube_t store_bounds, food_court_bounds;
 	colorRGBA mall_wall_color=WHITE;
 	int city_elevator_ix=-1, ent_stairs_start_ix=-1;
+	void clear_room_details() {stores.clear(); pet_tanks.clear();}
 };
 
 struct building_interior_t {

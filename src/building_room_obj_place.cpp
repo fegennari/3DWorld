@@ -2409,6 +2409,7 @@ void building_room_geom_t::add_fishtank(cube_t const &tank, unsigned room_id, fl
 		case TYPE_RAT   : is_lit = 1; break;
 		case TYPE_SNAKE : is_lit = (rgen.rand_float() < 0.6); break;
 		case TYPE_SPIDER: is_lit = (rgen.rand_float() < 0.4); break;
+		case TYPE_BIRD  : break; // unlit
 		default: assert(0); // unsupported
 		}
 		flags |= RO_FLAG_ADJ_TOP; // pet store fishtanks always have a lid
