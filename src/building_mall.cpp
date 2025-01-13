@@ -487,7 +487,9 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 		// extend a bit further when there is no end store so that mall concourse and back hallway walls are separate and correctly textured;
 		// we can't split these walls because the concourse is merged across all floors, but we don't need to add any doors in this wall
 		for (unsigned d = 0; d < 2; ++d) {
-			if (!added_end_store[d]) {hall.d[dim][d] += (d ? 1.0 : -1.0)*wall_thickness;}
+			if (added_end_store[d]) continue; // extend not needed
+			if ((bool(d) == entrance_dir) && hall.z2() > basement.z1()) continue; // blocked by top floor entrance - end hallway will not be added
+			hall.d[dim][d] += (d ? 1.0 : -1.0)*wall_thickness;
 		}
 		hall.z2() = floor_bcube.z1() + window_vspace; // normal height
 		cube_t side_halls[2];
