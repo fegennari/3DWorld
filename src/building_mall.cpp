@@ -1990,6 +1990,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		cube_t place_area(room_area);
 		place_area.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.5*wall_thickness; // shink for front window frame clearance
 		for (unsigned n = 0; n < num_fishtanks; ++n) {add_fishtank_to_room(rgen, room, zval, room_id, light_amt, objs_start, place_area);}
+		// TYPE_PET_CAGE?
 	}
 	unsigned const skip_dir((room_width < 0.8*room_len) ? rgen.rand_bool() : 2); // skip one side if room is narrow
 	add_mall_ceiling_ducts(room, room.z2(), room_id, dim, skip_dir, light_amt, rgen);

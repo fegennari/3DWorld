@@ -303,7 +303,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 		if (type  == TYPE_BLOCKER || type == TYPE_COLLIDER  ) continue; // blockers and colliders are not drawn
 		if (c->shape == SHAPE_ANGLED) continue; // sloped objects such as parking garage and pool ramps aren't cubes
 		if (c->is_exterior())         continue; // interior objects only
-		// skip other object types that are too small, not cube shaped, or not interior
+		// skip other object types that are too small, not cube shaped, transparent, or not interior
 		if (type == TYPE_WALL_TRIM || type == TYPE_BOOK || type == TYPE_CRACK || type == TYPE_PLANT || type == TYPE_RAILING || type == TYPE_SHELVES || c->is_a_drink() ||
 			type == TYPE_PEN || type == TYPE_PENCIL || is_ball_type(type) || type == TYPE_HANGER_ROD || type == TYPE_DRAIN || type == TYPE_MONEY || type == TYPE_PHONE ||
 			type == TYPE_TPROLL || type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BUTTON || type == TYPE_SWITCH || type == TYPE_TAPE || type == TYPE_OUTLET ||
@@ -313,7 +313,8 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			type == TYPE_TOY_MODEL || type == TYPE_CEIL_FAN || type == TYPE_PLANT_MODEL || type == TYPE_POOL_FLOAT || type == TYPE_BENCH || type == TYPE_DIV_BOARD ||
 			type == TYPE_POOL_LAD || type == TYPE_FLASHLIGHT || type == TYPE_CANDLE || type == TYPE_CAMERA || type == TYPE_CLOCK || type == TYPE_BAR_STOOL || type == TYPE_PADLOCK ||
 			type == TYPE_WFOUNTAIN || type == TYPE_BANANA || type == TYPE_BAN_PEEL || type == TYPE_VALVE || type == TYPE_INT_LADDER || type == TYPE_CONF_PHONE ||
-			type == TYPE_SPIWEB || type == TYPE_TREE || type == TYPE_STORE_GATE || type == TYPE_THEFT_SENS || type == TYPE_ELEC_WIRE || type == TYPE_ERASER) continue;
+			type == TYPE_SPIWEB || type == TYPE_TREE || type == TYPE_STORE_GATE || type == TYPE_THEFT_SENS || type == TYPE_ELEC_WIRE || type == TYPE_ERASER ||
+			type == TYPE_FISHTANK || type == TYPE_PET_CAGE) continue;
 		bool const is_stairs(type == TYPE_STAIR || type == TYPE_STAIR_WALL || type == TYPE_US_FLAG || type == TYPE_BLDG_FOUNT);
 		if (c->z1() > (is_stairs ? stairs_z2 : z2) || c->z2() < (is_stairs ? stairs_z1 : z1)) continue;
 		if (!c->intersects_xy(ext_bcube)) continue;
