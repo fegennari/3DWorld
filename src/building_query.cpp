@@ -3054,13 +3054,14 @@ void building_t::print_building_manifest() const { // Note: skips expanded_objs
 		cout << TXT(walls) << TXT(rooms) << TXT(floors) << TXT(ceilings) << TXT(door_stacks) << TXT(doors) << TXT(stairs) << TXT(elevators) << TXT(escalators);
 	}
 	if (has_room_geom()) {
-		unsigned const objects(interior->room_geom->objs.size()), models(interior->room_geom->obj_model_insts.size()), snakes(interior->room_geom->snakes.size());
-		unsigned const rats(interior->room_geom->rats.size()), sewer_rats(interior->room_geom->sewer_rats.size()), pet_rats(interior->room_geom->pet_rats.size());
-		unsigned const spiders(interior->room_geom->spiders.size()), sewer_spiders(interior->room_geom->sewer_spiders.size()), pet_snakes(interior->room_geom->pet_snakes.size());
+		building_room_geom_t const &g(*interior->room_geom);
+		unsigned const objects(g.objs.size()), models(g.obj_model_insts.size()), snakes(g.snakes.size());
+		unsigned const rats(g.rats.size()), sewer_rats(g.sewer_rats.size()), pet_rats(g.pet_rats.size());
+		unsigned const spiders(g.spiders.size()), sewer_spiders(g.sewer_spiders.size()), pet_snakes(g.pet_snakes.size());
 		cout << TXT(objects) << TXT(models) << TXT(rats) << TXT(sewer_rats) << TXT(pet_rats) << TXT(spiders) << TXT(sewer_spiders) << TXT(snakes) << TXT(pet_snakes) << endl;
 		unsigned obj_counts[NUM_ROBJ_TYPES] = {};
 
-		for (auto const &i : interior->room_geom->objs) {
+		for (auto const &i : g.objs) {
 			assert(i.type < NUM_ROBJ_TYPES);
 			++obj_counts[i.type];
 		}
