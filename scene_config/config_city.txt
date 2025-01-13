@@ -220,7 +220,7 @@ city fire_ext_model ../models/interiors/fire_extinguisher/fire_extinguisher_co2.
 city folded_shirt_model "../models/interiors/teeshirt/simple folded shirt.model3d"  0 0 0  0 0 90  1 1.0 1.0
 city pool_table_model   ../models/interiors/pool_table/pool_table_002.fbx  0 0 0  0 0 0  1 1.0 1.0
 city pool_ladder_model  ../models/ladder-pool.fbx                 0 0 0  0 0 0  1 1.0 1.0
-city bar_stool_model    ../models/interiors/bar_stool/bar_stool_avorio.glb  0 0 0  1 -1 90  1 1.0 2.0
+city bar_stool_model    ../models/interiors/bar_stool/bar_stool_avorio.glb  0 0 0  1 -1 90  1 1.0 4.0
 #city bar_stool_model   ../models/interiors/bar_stool/Bar_Stool_Bellatier.fbx  0 0 0  0 0 90  1 1.0 1.0
 #city bar_stool_model   ../models/interiors/bar_stool/bar_stool_triangle/scene.gltf  0 0 0  0 0 90  1 1.0 1.0
 #city bar_stool_model   ../models/interiors/bar_stool/pub_stool/scene.gltf  0 0 0  0 0 90  1 1.0 1.0
