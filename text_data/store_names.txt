@@ -370,6 +370,21 @@ The Applicance Stop
 Smart Living Appliances
 Home Comfort Center
 Home Appliance Warehouse
+Smartify
+
+shoe:
+Soulful Steps
+LaceUp
+Shoe Haven
+SoleSphere
+SoleMate
+Kicks and Co.
+Footloose
+ShoeVibe
+Step Into Style
+Shoe Emporium
+Footwear Fusion
+The Shoe Shop
 
 
 # general
