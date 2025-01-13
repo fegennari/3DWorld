@@ -553,8 +553,8 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 					cube_t const door_cut(add_ext_basement_door(side_halls[e], doorway_width, dim, d, 0, 0, rgen)); // is_end_room=0 (unlocked), is_tall_room=0
 					subtract_cube_from_cubes(door_cut, end_walls, nullptr, 1); // no holes; clip_in_z=1
 				}
-				if (added_end_store[d]) { // if there's an end store, add a door connecting to it
-					cube_t const door_cut(add_ext_basement_door(hall, doorway_width, dim, !d, 1, is_tall_room, rgen)); // is_end_room=1 (may be locked)
+				if (added_end_store[d]) { // if there's an end store, add a door connecting to it that opens into the store
+					cube_t const door_cut(add_ext_basement_door(hall, doorway_width, dim, !d, 1, is_tall_room, rgen, 1)); // is_end_room=1 (may be locked); opens_other_side=1
 					subtract_cube_from_cubes(door_cut, end_walls, nullptr, 1); // no holes; clip_in_z=1
 				}
 				if (at_stack_end[d]) continue; // done with this stack

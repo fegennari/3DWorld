@@ -555,13 +555,13 @@ unsigned building_t::max_expand_underground_room(cube_t &room, bool dim, bool di
 	return (num_floors_add + 1); // return the total number of floors
 }
 
-cube_t building_t::add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, bool is_tall_room, rand_gen_t &rgen) {
+cube_t building_t::add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, bool is_tall_room, rand_gen_t &rgen, bool opens_other_side) {
 	float const fc_thick(get_fc_thickness());
 	cube_t door;
 	set_cube_zvals(door, room.z1()+fc_thick, room.z2()-fc_thick);
 	set_wall_width(door, room.get_center_dim(!dim), 0.5*door_width, !dim);
 	door.d[dim][0] = door.d[dim][1] = room.d[dim][dir]; // one end of the room
-	door_t Door(door, dim, !dir, rgen.rand_bool()); // open 50% of the time
+	door_t Door(door, dim, (!dir ^ opens_other_side), rgen.rand_bool()); // open 50% of the time
 	if (is_tall_room) {Door.set_mult_floor();}
 	add_interior_door(Door, 0, !is_end_room); // is_bathroom=0, make_unlocked=!is_end_room
 	door.expand_in_dim(dim, 2.0*get_wall_thickness());
