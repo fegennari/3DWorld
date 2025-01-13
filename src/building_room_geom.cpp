@@ -5423,14 +5423,31 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 	float tscale(1.0);
 	
 	switch (animal_type) {
-	case TYPE_FISH  : tid = get_texture_by_name("gravel.jpg"    ); tscale = 3.0; break;
-	case TYPE_RAT   : tid = get_texture_by_name("wood_chips.jpg"); tscale = 2.0; break;
-	case TYPE_SNAKE : tid = get_texture_by_name("wood_chips.jpg"); tscale = 2.0; break;
+	case TYPE_FISH  : tid = get_texture_by_name("gravel.jpg"); tscale = 3.0; break;
+	case TYPE_RAT   : case TYPE_SNAKE: case TYPE_BIRD: tid = get_texture_by_name("wood_chips.jpg"); tscale = 2.0; break;
 	case TYPE_SPIDER: tid = DIRT_TEX; break;
 	default: assert(0); // unsupported
 	}
+	colorRGBA const color(apply_light_color(c, WHITE));
 	rgeom_mat_t &gravel_mat(get_material(tid_nm_pair_t(tid, tscale/height), 1));
-	gravel_mat.add_cube_to_verts(substrate, apply_light_color(c, WHITE), c.get_llc(), EF_Z1);
+	gravel_mat.add_cube_to_verts(substrate, color, c.get_llc(), EF_Z1);
+
+	// add animal hides; there's no easy way to store this per fishtank, so we can have collision detection, which means this only works for stationary animals
+	if (animal_type == TYPE_SNAKE) { // snake wood half log
+		cube_t hide(c);
+		hide.expand_in_dim( c.dim, -0.20*c.get_length());
+		hide.expand_in_dim(!c.dim, -0.35*c.get_width ());
+		set_wall_width(hide, substrate.z2(), 0.5*hide.get_sz_dim(c.dim), 2);
+		rgeom_mat_t &hide_mat(get_material(tid_nm_pair_t(BARK2_TEX), 1)); // shadowed, though the tank light doesn't cast a shadow
+		unsigned const verts_start(hide_mat.itri_verts.size());
+		hide_mat.add_ortho_cylin_to_verts(hide, color, !c.dim, 0, 0, 1, 0, 1.0, 1.0, 3.0, 1.0, 0, N_CYL_SIDES, 0.0, 0, 1.5, 0.0, 1); // draw sides only, two sided, half
+
+		if (!c.dim) { // rotate into the correct half
+			vector3d rot_axis;
+			rot_axis[!c.dim] = 1.0;
+			rotate_verts(hide_mat.itri_verts, rot_axis, PI_TWO, hide.get_cube_center(), verts_start);
+		}
+	}
 }
 
 void building_room_geom_t::add_metal_bar(room_object_t const &c) {

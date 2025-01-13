@@ -1597,12 +1597,12 @@ void building_t::update_pet_snakes(point const &camera_bs, unsigned building_ix)
 			rgen.set_state(building_ix+1, t.obj_ix+1); // unique per building and per tank
 			rgen.rand_mix();
 			float const zval(obj.z1() + 0.1*obj.dz()); // around substrate height
-			float const tank_len(obj.get_sz_dim(!obj.dim)), radius(rgen.rand_uniform(0.25, 0.4)*tank_len);
+			float const tank_len(obj.get_width()), tank_width(obj.get_length()), radius(rgen.rand_uniform(0.25, 0.4)*tank_len);
 			vector3d sz;
 			sz.z = 0.1*radius;
-			sz[ obj.dim] = 0.1*radius;
-			sz[!obj.dim] = 1.0*radius;
-			point const pos(gen_xy_pos_in_area(obj, 1.2*sz, rgen, zval));
+			sz[ obj.dim] = min(0.4*radius, 0.4*tank_width);
+			sz[!obj.dim] = 1.2*radius;
+			point const pos(gen_xy_pos_in_area(obj, sz, rgen, zval));
 			vector3d dir;
 			dir[!obj.dim] = (rgen.rand_bool() ? 1.0 : -1.0);
 			snakes.emplace_back(pos, radius, dir, t.obj_ix);
