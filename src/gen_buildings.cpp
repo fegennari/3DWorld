@@ -412,9 +412,12 @@ void interpolate_over_time(float &val, float target_val, float transition_secs, 
 	else if (val < target_val) {val = min(target_val, (val + delta_val));} // increase
 }
 void set_interior_lighting(shader_t &s, bool have_indir) {
-	bool const player_in_mall(player_in_basement == 3 && player_building && player_building->has_mall());
-	float const light_scale(0.5), target_blscale((player_in_basement || player_in_attic) ? (player_in_mall ? 0.8 : 0.0) : (player_in_walkway ? 2.0 : 1.0));
-	float const target_ascale(player_in_tunnel ? 0.0 : 1.0); // brighter ambient unless in tunnel
+	bool const is_in_mall(player_in_basement == 3 && player_building && player_building->has_mall());
+	bool const has_mall_skylight(is_in_mall && player_building->has_mall_skylight());
+	// if the player is in the basement or attic, ambient light should be a constant color rather than the color of the sun or moon;
+	// but this is set elsewhere and we have no control over it, and some areas such as malls require ambient light, so we can't leave it at zero
+	float const target_blscale((player_in_basement || player_in_attic) ? (is_in_mall ? (has_mall_skylight ? 1.0 : 0.8) : 0.0) : (player_in_walkway ? 2.0 : 1.0));
+	float const light_scale(0.5), target_ascale(player_in_tunnel ? 0.0 : 1.0); // brighter ambient unless in tunnel
 	static float blscale(1.0), ascale(1.0);
 	static int lu_frame1(0), lu_frame2(0);
 	interpolate_over_time(blscale, target_blscale, 0.5, lu_frame1); // indir/ambient lighting slowly transitions when entering or leaving the basement or walkway
@@ -423,17 +426,16 @@ void set_interior_lighting(shader_t &s, bool have_indir) {
 	float diffuse_scale(0.2f*blscale*light_scale); // reduce diffuse and specular lighting for sun/moon
 	float hemi_scale(   0.2f*blscale*light_scale); // reduced hemispherical lighting
 
+	if (have_indir) { // set ambient color to use with indir lookups outside the current building
+		// since we can't add proper diffuse, make 50% of diffuse the ambient color assuming 50% of surfaces are diffusely lit
+		s.add_uniform_color("out_range_indir_color", (cur_ambient*ambient_scale + cur_diffuse*(0.5*diffuse_scale)));
+	}
 	if (have_indir || player_in_dark_room()) { // using indir lighting, or player in a closed closet/windowless room with the light off
 		s.add_uniform_float("SHADOW_LEAKAGE", 0.0); // no light leakage
-		
-		if (have_indir) { // set ambient color to use with indir lookups outside the current building
-			// since we can't add proper diffuse, make 50% of diffuse the ambient color assuming 50% of surfaces are diffusely lit
-			s.add_uniform_color("out_range_indir_color", (cur_ambient*ambient_scale + cur_diffuse*(0.5*diffuse_scale)));
-		}
 		ambient_scale = ((!have_indir && player_in_dark_room()) ? 0.1 : 0.0); // no ambient for indir; slight ambient for closed closet/windowless room with light off
 		diffuse_scale = hemi_scale = 0.0; // no diffuse or hemispherical from sun/moon
 	}
-	else if (player_in_basement && !player_in_mall) {
+	else if (player_in_basement && !is_in_mall) {
 		s.add_uniform_float("SHADOW_LEAKAGE", 0.0); // make basements darker and avoid lights leaking through parking garage ceilings
 	}
 	s.add_uniform_float("diffuse_scale",       diffuse_scale);

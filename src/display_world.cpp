@@ -391,13 +391,9 @@ colorRGBA attenuate_sun_color(colorRGBA const &c) {
 void calc_bkg_color() {
 
 	float const star_alpha(get_star_alpha());
+	if (!have_sun) {bkg_color = BACKGROUND_NIGHT;}
+	else {blend_color(bkg_color, BACKGROUND_NIGHT, attenuate_sun_color(base_sky_color), star_alpha, 1);}
 
-	if (!have_sun) {
-		bkg_color = BACKGROUND_NIGHT;
-	}
-	else {
-		blend_color(bkg_color, BACKGROUND_NIGHT, attenuate_sun_color(base_sky_color), star_alpha, 1);
-	}
 	if (is_cloudy) {
 		colorRGBA const orig_bkgc(bkg_color);
 		blend_color(bkg_color, bkg_color, GRAY, 0.5, 1);
@@ -421,7 +417,6 @@ void add_sun_effect(colorRGBA &color) {
 
 
 void setup_linear_fog(colorRGBA const &color, float fog_end) {
-
 	cur_fog_color = color;
 	cur_fog_end   = fog_end;
 	add_sun_effect(cur_fog_color);
@@ -429,14 +424,12 @@ void setup_linear_fog(colorRGBA const &color, float fog_end) {
 
 
 void auto_advance_camera() {
-
 	if (run_forward && !advanced) advance_camera(MOVE_FRONT);
 	advanced = 0;
 }
 
 
 void config_bkg_color_and_clear(bool no_fog) {
-
 	calc_bkg_color();
 	glClearColor_rgba((!no_fog && show_fog) ? GRAY : bkg_color);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // Clear the background
@@ -444,7 +437,6 @@ void config_bkg_color_and_clear(bool no_fog) {
 
 
 void reset_planet_defaults() {
-
 	have_sun   = 1;
 	atmosphere = def_atmosphere;
 	vegetation = def_vegetation;
@@ -517,7 +509,6 @@ void setup_lighting() {
 		calc_moon_atten(ambient, diffuse, mlf);
 		set_colors_and_enable_light(1, ambient, diffuse*moonlight_brightness); // moon
 	}
-
 	// setup light position (after enabling lights)
 	setup_sun_moon_light_pos();
 	setup_gl_light_atten(0, 1.0, 0.0, 0.0); // reset attenuation to 1.0
