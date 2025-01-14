@@ -166,6 +166,7 @@ bool building_t::cube_intersects_extb_room(cube_t const &c, bool check_tunnel_pi
 		}
 	} // for r
 	if (has_pool() && c.intersects(interior->pool)) return 1;
+	if (has_mall() && has_bcube_int(c, interior->mall_info->ext_stairs_elevators)) return 1; // check mall back hallway stairs and elevator
 	return 0;
 }
 

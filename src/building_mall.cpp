@@ -588,6 +588,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 
 			if (!is_store_placement_invalid(elevator_bc)) {
 				interior->elevators.emplace_back(elevator_bc, stack.front(), dim, !d, 1, 1, 2); // at_edge=1, interior_room=1, in_mall=2 (back hallway)
+				interior->mall_info->ext_stairs_elevators.push_back(elevator_bc);
 				cube_t elevator_cut(elevator_bc);
 				elevator_cut.d[dim][!d] -= dsign*2.0*wall_thickness; // extend a bit into the hallway
 				subtract_cube_from_cubes(elevator_cut, end_walls, nullptr, 0); // no holes; clip_in_z=0
@@ -616,6 +617,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 					if (f < 16 && (f & 1)) {stairwell.not_an_exit_mask |= (1 << f);} // odd floors are not exits
 				} // for f
 				interior->stairwells.emplace_back(stairwell);
+				interior->mall_info->ext_stairs_elevators.push_back(stairwell);
 				cube_t stairs_cut(stairs);
 				stairs_cut.d[dim][!d] -= dsign*2.0*wall_thickness; // extend a bit into the hallway
 				subtract_cube_from_cubes(stairs_cut, end_walls, nullptr, 0); // no holes; clip_in_z=0

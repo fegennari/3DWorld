@@ -764,10 +764,10 @@ bool building_interior_t::point_in_ext_basement_room(point const &pos, float flo
 	if (pool.valid && pool.contains_pt_exp(pos, expand)) return 1;
 
 	if (has_mall()) { // check player in mall elevator or U-shaped stairs, which may be outside building rooms
-		for (elevator_t const &e : elevators) {
-			if (e.in_mall && e.contains_pt_exp(pos, expand)) return 1;
+		for (cube_t const &c : mall_info->ext_stairs_elevators) {
+			if (c.contains_pt_exp(pos, expand)) return 1;
 		}
-		if (point_in_U_stairwell(pos, floor_spacing, 1)) return 1; // in_mall=1; doesn't handle expand
+		if (point_in_U_stairwell(pos, floor_spacing, 1)) return 1; // in_mall=1; handles landing, but doesn't handle expand
 	}
 	return 0;
 }
