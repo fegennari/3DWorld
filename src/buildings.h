@@ -1342,6 +1342,7 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 	int at_dest_frame=0, adj_elevator_ix=-1;
 	float open_amt=0;
 	deque<call_request_t> call_requests; // used as a queue
+	vector<unsigned> all_room_ids;
 
 	elevator_t(cube_t const &c, unsigned rid, bool dim_, bool dir_, bool at_edge_, bool interior_room_, uint8_t in_mall_=0, bool in_br=0) :
 		oriented_cube_t(c, dim_, dir_), at_edge(at_edge_), interior_room(interior_room_), in_backrooms(in_br), in_mall(in_mall_), room_id(rid)

@@ -3163,8 +3163,16 @@ int building_t::get_room_containing_pt(point const &pt) const {
 int building_t::get_room_containing_camera(point const &camera_rot) const {
 	if (player_in_elevator) { // use room assigned to elevator the player is in; more correct when elevator overlaps rooms other than the one it opens to
 		for (elevator_t const &e : interior->elevators) {
-			if (e.get_bcube_padded(get_wall_thickness()).contains_pt(camera_rot)) {return e.room_id;}
-		}
+			if (!e.get_bcube_padded(get_wall_thickness()).contains_pt(camera_rot)) continue;
+			
+			if (e.all_room_ids.size() > 1) { // elevator spans multiple rooms vertically (mall back hallway elevator); find the correct room
+				for (unsigned room_id : e.all_room_ids) {
+					room_t const &room(get_room(room_id));
+					if (camera_rot.z > room.z1() && camera_rot.z < room.z2()) return room_id; // only need to check zvals to get the correct floor
+				}
+			}
+			return e.room_id;
+		} // for e
 	}
 	return get_room_containing_pt(camera_rot);
 }

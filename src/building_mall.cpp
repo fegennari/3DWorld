@@ -588,6 +588,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 
 			if (!is_store_placement_invalid(elevator_bc)) {
 				interior->elevators.emplace_back(elevator_bc, stack.front(), dim, !d, 1, 1, 2); // at_edge=1, interior_room=1, in_mall=2 (back hallway)
+				interior->elevators.back().all_room_ids = stack; // record all hallway rooms
 				interior->mall_info->ext_stairs_elevators.push_back(elevator_bc);
 				cube_t elevator_cut(elevator_bc);
 				elevator_cut.d[dim][!d] -= dsign*2.0*wall_thickness; // extend a bit into the hallway
