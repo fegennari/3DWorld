@@ -372,7 +372,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 	} // for d
 	for (unsigned f = 0; f < num_floors; ++f) {
 		bool const is_top_floor(f+1 == num_floors);
-		unsigned const rooms_start(rooms.size()), store_side_walls_start(side_walls.size()), store_end_walls_start(end_walls.size());
+		unsigned const rooms_start(rooms.size());
 		bool added_bathrooms(0); // at most one pair per floor
 		cube_t store, floor_bcube(room);
 		store.z1() = floor_bcube.z1() = room .z1() + f*floor_spacing;
@@ -441,7 +441,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 						add_interior_door(Door, 1); // is_bathroom=1
 						cube_t walls_cut(door);
 						walls_cut.expand_in_dim(!dim, wall_thickness);
-						subtract_cube_from_cubes(walls_cut, interior->walls[!dim], nullptr, 1); // no holes; clip_in_z=1
+						subtract_cube_from_cubes(walls_cut, side_walls, nullptr, 1); // no holes; clip_in_z=1
 					} // for e
 					add_extb_room_floor_and_ceil(bathrooms); // add for both bathrooms together
 					if (use_low_ceiling) {has_adj_store = 0;} // bathroom wall does not fully cover the height needed by an adjacent store wall
@@ -514,8 +514,8 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 			side_halls[d] = hall;
 
 			// split walls between stores and hallways into two half slices so that they can be textured differently; is there a way to skip drawing interior faces?
-			for (auto w = side_walls.begin()+store_side_walls_start; w != side_walls.end(); ++w) {
-				if (w->d[!dim][0] >= wall_pos || w->d[!dim][1] <= wall_pos) continue; // wrong wall
+			for (auto w = side_walls.begin(); w != side_walls.end(); ++w) {
+				if (!w->intersects(hall) || w->d[!dim][0] >= wall_pos || w->d[!dim][1] <= wall_pos) continue; // not the wall between the store and the hall
 				w->d[!dim][bool(d) ^ (w < side_walls.begin()+hall_walls_start) ^ 1] = wall_pos; // set to half width
 			}
 			// connect to rooms with doors
@@ -527,7 +527,7 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 				cube_t conn_room(*r);
 				copy_zvals(conn_room, hall);
 				cube_t const door_cut(add_ext_basement_door(conn_room, doorway_width, !dim, d, 1, (is_tall_room && !is_bath), rgen)); // is_end_room=1 (may be locked)
-				subtract_cube_from_cubes(door_cut, interior->walls[!dim], nullptr, 1); // no holes; clip_in_z=1
+				subtract_cube_from_cubes(door_cut, side_walls, nullptr, 1); // no holes; clip_in_z=1
 				interior->doors.back().rtype = rtype; // flag door (in particular if bathroom) so that the correct sign is added
 			}
 		} // for d
@@ -549,8 +549,8 @@ void building_t::add_mall_stores(cube_t const &room, bool dim, bool entrance_dir
 				bool has_adj_store(0); // unused
 				add_mall_room_walls(hall, wall_thickness, dim, d, 1, has_adj_store, interior->walls); // at_mall_end=1 (to cover missing stores)
 				
-				for (auto w = end_walls.begin()+store_end_walls_start; w != end_walls.end(); ++w) {
-					if (w->d[dim][0] >= wall_pos || w->d[dim][1] <= wall_pos) continue; // wrong wall
+				for (auto w = end_walls.begin(); w != end_walls.end(); ++w) {
+					if (!w->intersects(hall) || w->d[dim][0] >= wall_pos || w->d[dim][1] <= wall_pos) continue; // not the wall between the store and the hall
 					w->d[dim][bool(d) ^ (w < end_walls.begin()+end_walls_start) ^ 1] = wall_pos; // set to half width
 				}
 				for (unsigned e = 0; e < 2; ++e) { // add doors to each end connecting to the other hallways
