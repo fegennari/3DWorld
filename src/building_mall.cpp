@@ -1491,6 +1491,8 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		{store_type = (rgen.rand_bool() ? STORE_FURNITURE : STORE_RETAIL);}
 	// furniture stores should be larger, so make them book or clothing stores if small
 	else if (store_type == STORE_FURNITURE && room_width < 0.8*room_len) {store_type = (rgen.rand_bool() ? STORE_BOOK : STORE_CLOTHING);}
+	if (store_type == STORE_SHOE     && !building_obj_model_loader.is_model_valid(OBJ_MODEL_SHOE   )) {store_type = STORE_CLOTHING;} // use clothing if there are no shoe models
+	if (store_type == STORE_CLOTHING && !building_obj_model_loader.is_model_valid(OBJ_MODEL_CLOTHES)) {store_type = STORE_RETAIL  ;} // use retail if there are no clothing models
 	// mixed: 225FPS, 2991MB, 249ms
 	// bookstores: 295FPS, 3463MB, 838ms
 	// clothing stores: 163FPS, 2737MB, 19ms
