@@ -2576,7 +2576,7 @@ private:
 		unsigned room_id, float tot_light_amt, bool dim, unsigned tid_tag, vect_cube_t &blockers);
 	bool add_food_court_objs(rand_gen_t &rgen, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, vect_cube_t const &blockers);
 	void add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned &type_mask, light_ix_assign_t &light_ix_assign);
-	void add_mall_ceiling_ducts(room_t &room, float ceil_zval, unsigned room_id, bool dim, unsigned skip_dir, float light_amt, rand_gen_t &rgen);
+	void add_mall_ceiling_ducts(room_t &room, float ceil_zval, unsigned room_id, bool dim, unsigned skip_dir, float light_amt, bool cylin_ducts, rand_gen_t &rgen);
 	void add_row_of_bookcases(cube_t const &row, float zval, unsigned room_id, float light_amt, bool dim, bool place_inside);
 	void add_shelves_along_walls(cube_t const &room_area, float zval, unsigned room_id, float light_amt,
 		bool dim, unsigned store_type, float height, float depth, bool place_inside, rand_gen_t &rgen);

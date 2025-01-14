@@ -2445,7 +2445,7 @@ void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) {
 	//assert(0.5*c.get_sz_dim((dim+2)%3) == radius); // must be a square cross section, but too strong due to FP error
 	// only vertical pipes cast shadows; horizontal ceiling pipes are too high and outside the ceiling light shadow map,
 	// or otherwise don't look correct when an area light is treated as a point light
-	bool const is_duct(c.type == TYPE_DUCT);
+	bool const is_duct(c.type == TYPE_DUCT), mall_duct(is_duct && c.in_mall());
 	// Note: attic ducts have the attic flag set, which is aliased as the hanging flag, so we have to disable flat ends for ducts
 	bool const flat_ends(!is_duct && c.is_hanging()), shadowed(is_duct || (c.flags & RO_FLAG_LIT)); // RO_FLAG_LIT flag is interpreted as "casts shadows"
 	// adj flags indicate adjacencies where we draw joints connecting to other pipe sections
@@ -2465,13 +2465,15 @@ void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) {
 	mat.add_ortho_cylin_to_verts(c, color, dim, (flat_ends && draw_joints[0]), (flat_ends && draw_joints[1]),
 		0, 0, 1.0, 1.0, side_tscale, 1.0, 0, ndiv, 0.0, is_duct, len_tscale);
 
-	for (unsigned d = 0; d < 2; ++d) { // draw round joints as spheres
-		if ((flat_ends || !draw_joints[d]) && !(c.flags & (d ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT))) continue; // ADJ_BOT/ADJ_TOP flags are for pipes with one round end
-		point center(c.get_cube_center());
-		center[dim] = c.d[dim][d]; // move to one end along the cylinder
-		vector3d skip_hemi_dir;
-		skip_hemi_dir[dim] = (d ? -1.0 : 1.0); // use the correct hemisphere
-		mat.add_sphere_to_verts(center, vector3d(radius, radius, radius), color, 0, skip_hemi_dir); // low_detail=0
+	if (!mall_duct) { // draw round joints as spheres
+		for (unsigned d = 0; d < 2; ++d) {
+			if ((flat_ends || !draw_joints[d]) && !(c.flags & (d ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT))) continue; // ADJ_BOT/ADJ_TOP flags are for pipes with one round end
+			point center(c.get_cube_center());
+			center[dim] = c.d[dim][d]; // move to one end along the cylinder
+			vector3d skip_hemi_dir;
+			skip_hemi_dir[dim] = (d ? -1.0 : 1.0); // use the correct hemisphere
+			mat.add_sphere_to_verts(center, vector3d(radius, radius, radius), color, 0, skip_hemi_dir); // low_detail=0
+		} // for d
 	}
 }
 
