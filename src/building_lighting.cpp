@@ -42,6 +42,7 @@ bool line_int_polygon_sides(point const &p1, point const &p2, cube_t const &bcub
 void get_pool_table_cubes(room_object_t const &c, cube_t cubes[5]);
 unsigned get_couch_cubes(room_object_t const &c, cube_t cubes[4]);
 unsigned get_cashreg_cubes(room_object_t const &c, cube_t cubes[2]);
+void get_fishtank_cubes(room_object_t const &c, cube_t sides[4], cube_t &substrate, cube_t &lid, cube_t &light);
 
 bool check_indir_enabled(bool in_basement, bool in_attic) {
 	if (in_basement) return INDIR_BASEMENT_EN;
@@ -314,7 +315,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			type == TYPE_POOL_LAD || type == TYPE_FLASHLIGHT || type == TYPE_CANDLE || type == TYPE_CAMERA || type == TYPE_CLOCK || type == TYPE_BAR_STOOL || type == TYPE_PADLOCK ||
 			type == TYPE_WFOUNTAIN || type == TYPE_BANANA || type == TYPE_BAN_PEEL || type == TYPE_VALVE || type == TYPE_INT_LADDER || type == TYPE_CONF_PHONE ||
 			type == TYPE_SPIWEB || type == TYPE_TREE || type == TYPE_STORE_GATE || type == TYPE_THEFT_SENS || type == TYPE_ELEC_WIRE || type == TYPE_ERASER ||
-			type == TYPE_FISHTANK || type == TYPE_PET_CAGE || type == TYPE_SHOE) continue;
+			type == TYPE_PET_CAGE || type == TYPE_SHOE) continue;
 		bool const is_stairs(type == TYPE_STAIR || type == TYPE_STAIR_WALL || type == TYPE_US_FLAG || type == TYPE_BLDG_FOUNT);
 		if (c->z1() > (is_stairs ? stairs_z2 : z2) || c->z2() < (is_stairs ? stairs_z1 : z1)) continue;
 		if (!c->intersects_xy(ext_bcube)) continue;
@@ -436,6 +437,12 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			get_cashreg_cubes(*c, cubes);
 			cc.emplace_back(cubes[0], color); // only add the body
 		}
+		else if (type == TYPE_FISHTANK) { // add lid and substrate only
+			cube_t substrate, lid, light, sides[4];
+			get_fishtank_cubes(*c, sides, substrate, lid, light);
+			if (!lid      .is_all_zeros()) {cc.emplace_back(lid,       BKGRAY  );} // ignore the light since it's small
+			if (!substrate.is_all_zeros()) {cc.emplace_back(substrate, LT_BROWN);} // substrate has different textures, but they're all sort of light brown-ish
+		}
 		else { // single cube
 			cube_t bc(*c); // handle 3D models that don't fill the entire cube
 			bool const dim(c->dim), dir(c->dir);
@@ -551,9 +558,10 @@ class building_indir_light_mgr_t {
 			light_cube = window;
 
 			if (window.dz() < min(window.dx(), window.dy())) { // skylight; we could encode skylights as a different ix, but testing aspect ratio is easier
+				bool const in_mall(window.z1() <= b.ground_floor_z1);
 				is_skylight    = 1;
 				surface_area   = window.dx()*window.dy();
-				base_num_rays *= 8; // more rays, since skylights are larger and can cover multiple rooms
+				base_num_rays *= (in_mall ? 16 : 8); // more rays, since skylights are larger and can cover multiple rooms
 				weight        *= 10.0; // stronger due to direct sun/moon/cloud lighting and reduced occlusion from buildings and terrain
 				light_cube.translate_dim(2, -b.get_fc_thickness()); // shift slightly down into the building to avoid collision with the roof/ceiling
 				// select primary light rays oriented away from the sun/moon; doesn't work well due to reduced ray scattering
