@@ -3706,11 +3706,11 @@ public:
 						}
 						// draw interior detail objects if player is in the building (inc ext basement), even if far from the building center
 						unsigned inc_small(bdist_sq < rgeom_sm_draw_dist_sq || mall_elevator_visible);
-						if      (cant_see_inside)                                  {inc_small = 4;} // only exterior detail objects
-						else if (player_in_building_bcube)                         {inc_small = 3;} // include interior and exterior detail objects
-						else if (ext_basement_conn_visible)                        {inc_small = 3;} // include interior and exterior detail objects
-						else if (inc_small && bdist_sq < rgeom_int_detail_dist_sq) {inc_small = 3;} // include interior and exterior detail objects
-						else if (inc_small && bdist_sq < rgeom_ext_detail_dist_sq) {inc_small = 2;} // include exterior detail objects
+						if      (cant_see_inside)                                    {inc_small = 4;} // only exterior detail objects
+						else if (player_in_building_bcube)                           {inc_small = 3;} // include interior and exterior detail objects
+						else if (ext_basement_conn_visible || mall_skylight_visible) {inc_small = 3;} // include interior and exterior detail objects
+						else if (inc_small && bdist_sq < rgeom_int_detail_dist_sq)   {inc_small = 3;} // include interior and exterior detail objects
+						else if (inc_small && bdist_sq < rgeom_ext_detail_dist_sq)   {inc_small = 2;} // include exterior detail objects
 						if (debug_draw) {inc_small = 3;} // TESTING
 						bool const player_in_bldg(debug_draw || player_in_building_bcube);
 						if (ext_basement_conn_visible) {s.add_uniform_float("wet_effect", 0.0);} // disable for non-player building
