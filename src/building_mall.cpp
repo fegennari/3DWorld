@@ -243,9 +243,22 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 			set_cube_zvals(skylight, room.z2()-0.7*floor_thickness, ground_floor_z1);
 			if (skylight.dz() > 0.5*window_vspace) break; // too deep for (any) skylights
 			for (unsigned d = 0; d < 2; ++d) {skylight.expand_in_dim(d, -0.4*opening.get_sz_dim(d));}
-			cube_t test_cube(skylight);
-			test_cube.z2() += window_vspace; // must be free above; don't place under other buildings
-			if (is_cube_city_placement_invalid(test_cube)) continue; // too strict? some objects can be placed over skylights since they're flush with the ground
+			skylight.z2() += window_vspace; // must be free above; don't place under other buildings
+			if (is_cube_city_placement_invalid(skylight)) continue; // some objects such as benches can be placed over skylights since they're flush with the ground
+
+			// try to widen, then lengthen
+			for (unsigned d = 0; d < 2; ++d) {
+				bool const exp_dim(dim ^ bool(d) ^ 1);
+				float const step(0.1*skylight.get_sz_dim(exp_dim));
+
+				for (unsigned n = 0; n < 5; ++n) { // expand in 5 steps
+					cube_t cand(skylight);
+					cand.expand_in_dim(exp_dim, step);
+					if (is_cube_city_placement_invalid(cand)) break;
+					skylight = cand;
+				} // for n
+			}
+			skylight.z2() -= window_vspace; // subtract back off
 			add_city_plot_cut(skylight);
 			interior->mall_info->skylights.push_back(skylight);
 		} // for opening
