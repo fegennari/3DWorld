@@ -1768,6 +1768,7 @@ struct building_mall_info_t {
 	cube_t store_bounds, food_court_bounds;
 	colorRGBA mall_wall_color=WHITE;
 	int city_elevator_ix=-1, ent_stairs_start_ix=-1;
+	bool mall_cylin_ducts=0, store_cylin_ducts=0;
 	void clear_room_details() {stores.clear(); pet_tanks.clear();}
 };
 

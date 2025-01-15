@@ -1307,12 +1307,13 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		} // for d
 	} // for f
 	// add ducts/vents along the ceiling above the storefronts
-	bool const cylin_ducts(rgen.rand_float() < 0.4);
+	interior->mall_info->mall_cylin_ducts  = (rgen.rand_float() < 0.4);
+	interior->mall_info->store_cylin_ducts = (rgen.rand_float() < 0.6);
 
 	for (unsigned f = 0; f < num_floors; ++f) {
 		if (rgen.rand_float() > ((f+1 == num_floors) ? 0.75 : 0.25)) continue; // 75% of the time on the top floor, 25% of the time on the bottom floor
 		float const ceil_zval(room.z1() + (f + 1)*floor_spacing);
-		add_mall_ceiling_ducts(room, ceil_zval, room_id, mall_dim, 2, light_amt, cylin_ducts, rgen); // skip_dir=2 (neither)
+		add_mall_ceiling_ducts(room, ceil_zval, room_id, mall_dim, 2, light_amt, interior->mall_info->mall_cylin_ducts, rgen); // skip_dir=2 (neither)
 	}
 	// add pillars last so that we can check lights against them
 	unsigned const pillars_start(objs.size());
@@ -2004,8 +2005,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		// TYPE_PET_CAGE?
 	}
 	unsigned const skip_dir((room_width < 0.8*room_len) ? rgen.rand_bool() : 2); // skip one side if room is narrow
-	bool const cylin_ducts(rgen.rand_float() < 0.6);
-	add_mall_ceiling_ducts(room, room.z2(), room_id, dim, skip_dir, light_amt, cylin_ducts, rgen);
+	add_mall_ceiling_ducts(room, room.z2(), room_id, dim, skip_dir, light_amt, interior->mall_info->store_cylin_ducts, rgen);
 }
 
 void building_t::add_mall_ceiling_ducts(room_t &room, float ceil_zval, unsigned room_id, bool dim, unsigned skip_dir, float light_amt, bool cylin_ducts, rand_gen_t &rgen) {
