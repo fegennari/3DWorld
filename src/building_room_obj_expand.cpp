@@ -607,8 +607,30 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 					// added during animal update pass
 				}
 			}
-			else if (c.item_flags == STORE_SHOE) { // shoe store shelf
-				// TODO: TYPE_SHOE
+			else if (c.item_flags == STORE_SHOE) { // shoe store shelf; // add shoes displayed sideways
+				if (add_models_mode) {
+					assert(building_obj_model_loader.is_model_valid(OBJ_MODEL_SHOE));
+					vector3d const ssz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SHOE)); // L, W, H
+					float const length(0.25*floor_spacing), spacing(1.5*length), width(min(0.5f*shelf_len, length*ssz.y/ssz.x)), height(length*ssz.z/ssz.x); // set max
+					C.shape = SHAPE_CUBE;
+					C.dim   = !c.dim;
+					C.dir   = rgen.rand_bool(); // random orient, but consistent per shelf
+					C.type  = TYPE_SHOE;
+					C.color = WHITE; // recolor?
+					C.z1()  = S.z2();
+					unsigned const num_slots(shelf_len / spacing);
+					float const slot_spacing(shelf_len / num_slots);
+
+					for (unsigned n = 0; n < num_slots; ++n) {
+						// add in pairs?
+						if (rgen.rand_float() < 0.35) continue; // no shoe in this slot
+						float const scale(rgen.rand_uniform(0.75, 1.0));
+						C.z2() = C.z1() + scale*height; // set height
+						set_wall_width(C, c.get_center_dim(c.dim), 0.5*scale*width, c.dim);
+						set_wall_width(C, (c.d[!c.dim][0] + (n + 0.5)*slot_spacing), 0.5*scale*length, !c.dim);
+						add_if_not_intersecting(C, objects, cubes, add_models_mode);
+					} // for n
+				}
 			}
 			else {assert(0);} // unsupported store type
 			continue;

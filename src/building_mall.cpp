@@ -1489,8 +1489,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	bool const on_new_floor(room.z1() != prev_room.z1()), on_new_row(room.d[dim][0] != prev_room.d[dim][0]);
 	if (on_new_floor || on_new_row) {type_mask = 0;}
 	unsigned const NUM_STORE_SELECT = 9;
-	// STORE_SHOE?
-	unsigned const store_selects[NUM_STORE_SELECT] = {STORE_CLOTHING, STORE_CLOTHING, STORE_BOOK, STORE_FURNITURE, STORE_PETS, STORE_APPLIANCE, STORE_RETAIL, STORE_RETAIL, STORE_RETAIL};
+	unsigned const store_selects[NUM_STORE_SELECT] = {STORE_CLOTHING, STORE_SHOE, STORE_BOOK, STORE_FURNITURE, STORE_PETS, STORE_APPLIANCE, STORE_RETAIL, STORE_RETAIL, STORE_RETAIL};
 	unsigned const objs_start(objs.size());
 	unsigned store_type(store_selects[rgen.rand() % NUM_STORE_SELECT]);
 	cube_t const &fc_area(interior->mall_info->food_court_bounds);
