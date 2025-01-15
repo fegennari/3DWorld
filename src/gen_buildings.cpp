@@ -3680,6 +3680,9 @@ public:
 						float const bdist_sq(p2p_dist_sq(camera_bs, b.bcube.closest_pt(camera_bs)));
 						//if (bdist_sq > rgeom_clear_dist_sq) {b.clear_room_geom(); continue;} // too far away - is this useful?
 						if (bdist_sq > rgeom_draw_dist_sq) continue; // too far away
+						bool const has_mall(b.has_mall());
+						float const ddist_scale(has_mall ? 0.5 : 1.0); // reduced draw distance for malls, since they have so much geom
+						if (has_mall && bdist_sq > ddist_scale*rgeom_draw_dist_sq) continue; // too far away (for a mall)
 						bool player_in_building_bcube(b.bcube.contains_pt_xy(camera_bs) || b.point_in_extended_basement(camera_bs)); // player within building's bcube
 						bool const ext_basement_conn_visible(b.interior_visible_from_other_building_ext_basement(xlate));
 						if (reflection_pass && !player_in_building_bcube && !ext_basement_conn_visible) continue; // not the correct building
@@ -3707,7 +3710,7 @@ public:
 							else if ((display_mode & 0x08) && !player_in_building_bcube && b.is_entire_building_occluded(camera_bs, oc)) continue; // check occlusion
 						}
 						// draw interior detail objects if player is in the building (inc ext basement), even if far from the building center
-						unsigned inc_small(bdist_sq < rgeom_sm_draw_dist_sq || mall_elevator_visible);
+						unsigned inc_small(bdist_sq < ddist_scale*rgeom_sm_draw_dist_sq || mall_elevator_visible);
 						if      (cant_see_inside)                                    {inc_small = 4;} // only exterior detail objects
 						else if (player_in_building_bcube)                           {inc_small = 3;} // include interior and exterior detail objects
 						else if (ext_basement_conn_visible || mall_skylight_visible) {inc_small = 3;} // include interior and exterior detail objects
