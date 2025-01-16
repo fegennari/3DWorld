@@ -611,7 +611,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 				if (add_models_mode) {
 					assert(building_obj_model_loader.is_model_valid(OBJ_MODEL_SHOE));
 					vector3d const ssz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SHOE)); // L, W, H
-					float const length(0.25*floor_spacing), spacing(1.5*length), width(min(0.5f*shelf_len, length*ssz.y/ssz.x)), height(length*ssz.z/ssz.x); // set max
+					float const length(0.25*floor_spacing), spacing(1.25*length), width(min(0.5f*shelf_len, length*ssz.y/ssz.x)), height(length*ssz.z/ssz.x); // set max
 					C.shape = SHAPE_CUBE;
 					C.dim   = !c.dim;
 					C.dir   = rgen.rand_bool(); // random orient, but consistent per shelf
@@ -623,11 +623,12 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 
 					for (unsigned n = 0; n < num_slots; ++n) {
 						// add in pairs?
-						if (rgen.rand_float() < 0.35) continue; // no shoe in this slot
-						float const scale(rgen.rand_uniform(0.75, 1.0));
+						if (rgen.rand_float() < 0.25) continue; // no shoe in this slot
+						C.item_flags = rgen.rand(); // random shoe sub-model
+						float const scale(rgen.rand_uniform(0.85, 1.0));
 						C.z2() = C.z1() + scale*height; // set height
 						set_wall_width(C, c.get_center_dim(c.dim), 0.5*scale*width, c.dim);
-						set_wall_width(C, (c.d[!c.dim][0] + (n + 0.5)*slot_spacing), 0.5*scale*length, !c.dim);
+						set_wall_width(C, (c.d[!c.dim][0] + (n + 0.5 + 0.05*rgen.signed_rand_float())*slot_spacing), 0.5*scale*length, !c.dim);
 						add_if_not_intersecting(C, objects, cubes, add_models_mode);
 					} // for n
 				}

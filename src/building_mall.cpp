@@ -1722,16 +1722,14 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 							building_room_geom_t::add_hangers_and_clothing(window_vspace, num_hangers, flags, hanger_model_id, clothing_model_id, objs, rgen);
 						} // for n
 					}
-					else if (store_type == STORE_PETS) {
-						float const shelf_height(0.85*window_vspace), shelf_depth(0.22*window_vspace);
+					else if (store_type == STORE_PETS || store_type == STORE_SHOE) {
+						float const shelf_height(((store_type == STORE_PETS) ? 0.85 : 0.60)*window_vspace);
+						float const shelf_depth (((store_type == STORE_PETS) ? 0.22 : 0.18)*window_vspace);
 						cube_t center_wall(rack);
 						center_wall.z2() = zval + shelf_height + fc_thick; // increase height above top of shelf wall anchors
 						set_wall_width(center_wall, rack_center, 0.38*wall_thickness, !dim);
 						add_shelves_along_walls(center_wall, zval, room_id, light_amt, !dim, store_type, shelf_height, shelf_depth, 0, rgen); // place_inside=0
 						objs.emplace_back(center_wall, TYPE_PG_WALL, room_id, !dim, 0, (RO_FLAG_IN_MALL | RO_FLAG_ADJ_TOP), light_amt, SHAPE_CUBE); // draw top; or TYPE_STAIR_WALL?
-					}
-					else if (store_type == STORE_SHOE) {
-						// TODO: TYPE_SHOE
 					}
 					else { // add retail shelf racks
 						assert(store_type == STORE_RETAIL);
