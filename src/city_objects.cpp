@@ -153,7 +153,7 @@ void bench_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scal
 	bcube_with_back.d[!dim][dir] += (dir ? 1.0 : -1.0)*0.2*radius; // adjust slightly since the back tilts outside the bcube
 	if (!dstate.check_cube_visible(bcube_with_back, dist_scale)) return;
 
-	cube_t cubes[] = { // Note: taken from mapx/bench.txt; front-back is in X
+	cube_t cubes[] = { // Note: taken from mapx/bench.txt; front-back is in X; bottom surfaces are not drawn
 		cube_t(-0.4, 0.0,  -5.0,   5.0,   1.6, 5.0), // back (straight)
 		cube_t( 0.0, 4.0,  -5.35,  5.35,  1.6, 2.0), // seat
 		cube_t( 0.3, 1.3,  -5.3,  -4.7,   0.0, 1.6), // legs

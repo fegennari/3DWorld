@@ -1062,7 +1062,7 @@ public:
 		city_obj_placer = city_obj_placer_t(); // clear; should be empty anyway, since city_obj_placer is not reused
 		city_obj_placer.set_plot_subdiv_sz(get_plot_subdiv_sz());
 		city_obj_placer.add_city_ug_elevator_entrances(uges); // Note: can clear ug_elev_entrances after this, but it's not needed
-		city_obj_placer.gen_parking_and_place_objects(plots, plot_colliders, cars, roads, isecs, bcube, city_id, have_cars, is_residential, !streetlights.empty());
+		city_obj_placer.gen_parking_and_place_objects(plots, plot_colliders, cars, roads, isecs, bcube, plot_cuts, city_id, have_cars, is_residential, !streetlights.empty());
 		add_tile_blocks(city_obj_placer.parking_lots, tile_to_block_map, TYPE_PARK_LOT); // need to do this later, after gen_tile_blocks()
 		add_tile_blocks(city_obj_placer.driveways,    tile_to_block_map, TYPE_DRIVEWAY);
 		city_obj_placer.remap_parking_lot_ixs(); // required after sorting parking_lots

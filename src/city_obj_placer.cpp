@@ -534,7 +534,7 @@ bool check_close_to_door(point const &pos, float min_dist, unsigned building_ix)
 
 // Note: blockers are used for placement of objects within this plot; colliders are used for pedestrian AI
 void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders,
-	vector<point> const &tree_pos, vect_cube_t const &pond_blockers, rand_gen_t &rgen, bool have_streetlights)
+	vector<point> const &tree_pos, vect_cube_t const &pond_blockers, vect_cube_t const &plot_cuts, rand_gen_t &rgen, bool have_streetlights)
 {
 	bool const is_residential(plot.is_residential), is_park(plot.is_park);
 	float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
@@ -634,6 +634,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				point pos;
 				if (!try_place_obj(plot, blockers, rgen, 0.5*max(pt_len, pt_width), 0.0, 1, pos, 0)) continue; // 1 try
 				picnic_t const pt(pos, pt_height, rgen.rand_bool(), 0); // random dim; dir=0 since picnic tables are symmetric
+				if (has_bcube_int(pt.bcube, plot_cuts)) continue; // don't place over mall skylights
 				if (check_path_coll_xy(pt.bcube, ppaths, paths_start)) continue; // check park path collision
 				picnic_groups.add_obj(pt, picnics);
 				add_cube_to_colliders_and_blockers(pt.bcube, colliders, blockers);
@@ -800,6 +801,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				}
 			}
 			bench_t const bench(pos, bench_radius, bench_dim, bench_dir);
+			if (has_bcube_int(bench.bcube, plot_cuts)) continue; // don't place over mall skylights
 			if (is_park && check_path_coll_xy(bench.bcube, ppaths, paths_start)) continue; // check park path collision
 			bench_groups.add_obj(bench, benches);
 			add_cube_to_colliders_and_blockers(bench.bcube, colliders, blockers);
@@ -1913,7 +1915,7 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 }
 
 void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, vector<road_t> const &roads,
-	vector<road_isec_t> isecs[3], cube_t const &city_bcube, unsigned city_id, bool have_cars, bool is_residential, bool have_streetlights)
+	vector<road_isec_t> isecs[3], cube_t const &city_bcube, vect_cube_t const &plot_cuts, unsigned city_id, bool have_cars, bool is_residential, bool have_streetlights)
 {
 	// Note: fills in plots.has_parking
 	//highres_timer_t timer("Gen Parking Lots and Place Objects");
@@ -1970,7 +1972,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 			place_residential_plot_objects(*i, blockers, colliders, roads, underground_blockers, driveways_start, city_id, detail_rgen); // before placing trees
 		}
 		place_trees_in_plot  (*i, blockers, colliders, tree_pos, detail_rgen, buildings_end);
-		place_detail_objects (*i, blockers, colliders, tree_pos, underground_blockers, detail_rgen, have_streetlights);
+		place_detail_objects (*i, blockers, colliders, tree_pos, underground_blockers, plot_cuts, detail_rgen, have_streetlights);
 		add_objs_on_buildings(*i, blockers, colliders, hospital_signs);
 	} // for i (plot)
 	for (unsigned n = 0; n < 3; ++n) {

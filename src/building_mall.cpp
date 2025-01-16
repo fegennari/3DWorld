@@ -243,7 +243,7 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 			if (skylight.dz() > 0.5*window_vspace) break; // too deep for (any) skylights
 			for (unsigned d = 0; d < 2; ++d) {skylight.expand_in_dim(d, -0.4*opening.get_sz_dim(d));}
 			skylight.z2() += window_vspace; // must be free above; don't place under other buildings
-			if (is_cube_city_placement_invalid(skylight)) continue; // some objects such as benches can be placed over skylights since they're flush with the ground
+			if (is_cube_city_placement_invalid(skylight)) continue; // some objects can be placed over skylights since they're flush with the ground
 
 			// try to widen, then lengthen
 			for (unsigned d = 0; d < 2; ++d) {
