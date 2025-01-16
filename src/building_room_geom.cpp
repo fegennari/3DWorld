@@ -3806,7 +3806,7 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 			}
 			// draw the lighter front panel with a texture
 			rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(get_texture_by_name("roads/asphalt.jpg"), 1.0/width, 0), 0, 0, 1)); // unshadowed, small
-			front_mat.add_cube_to_verts(front, color*1.6, c.get_llc(), (~get_face_mask(c.dim, !c.dir) | EF_Z1)); // skip back and bottom
+			front_mat.add_cube_to_verts(front, colorRGBA(1.0, 0.9, 0.65), c.get_llc(), (~get_face_mask(c.dim, !c.dir) | EF_Z1)); // skip back and bottom
 		}
 	}
 	else { // smaller house/office trashcan

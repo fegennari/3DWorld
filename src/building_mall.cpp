@@ -760,6 +760,11 @@ struct plant_loc_t : public sphere_t {
 	colorRGBA color;
 	plant_loc_t(point const &p, float r, colorRGBA const &c, bool uf=0) : sphere_t(p, r), upper_floor(uf), color(c) {}
 };
+struct tcan_loc_t {
+	float wall_pos, center_pos;
+	bool dir;
+	tcan_loc_t(float wpos, float cpos, bool d) : wall_pos(wpos), center_pos(cpos), dir(d) {}
+};
 
 // this is for the central mall concourse; store objects are added in add_mall_store_objs() below; treated as a single floor
 unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, vect_cube_t &rooms_to_light) {
@@ -1101,20 +1106,45 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		if (num_floors*num_openings < 4) {place_area.d[mall_dim][rgen.rand_bool()] = place_area.get_center_dim(mall_dim);} // half sized food court for small malls
 
 		// add trashcans in food court next to main (not landing support) pillars on the ground floor
+		vector<tcan_loc_t> tcan_locs;
+
 		for (cube_t const &p : main_pillars) {
 			if (!p.intersects_xy(place_area)) continue;
 			bool const pdir(room_centerline < p.get_center_dim(!mall_dim));
-			cube_t tcan;
-			set_cube_zvals(tcan, zval, zval+tcan_height); // set height
 			float const wall_pos(p.d[!mall_dim][!pdir] + (pdir ? -1.0 : 1.0)*0.5*wall_thickness); // with a bit of padding
-			tcan.d[!mall_dim][ pdir] = wall_pos; // against the wall
-			tcan.d[!mall_dim][!pdir] = wall_pos + (pdir ? -1.0 : 1.0)*(is_cylin_tcan ? 2.0 : 1.6)*tcan_radius;
-			set_wall_width(tcan, p.get_center_dim(mall_dim), tcan_radius, mall_dim);
-			room_object_t const tcan_obj(tcan, TYPE_TCAN, room_id, !mall_dim, !pdir, RO_FLAG_IN_MALL, light_amt, tcan_shape, tcan_color);
+			tcan_locs.emplace_back(wall_pos, p.get_center_dim(mall_dim), pdir);
+		}
+		// add trashcans next to nearby stairs and elevators
+		for (stairwell_t const &s : interior->stairwells) {
+			if (s.in_mall != 1 || s.z1() > room.z1() + 0.5*floor_spacing || !s.intersects_xy(place_area)) continue; // not in mall food court ground floor
+			bool const pdir(room_centerline < s.get_center_dim(!mall_dim));
+			float const wall_pos(s.d[!mall_dim][!pdir] + (pdir ? -1.0 : 1.0)*0.7*wall_thickness); // with a bit of padding
+			float const center_pos(0.75*s.d[s.dim][!s.dir] + 0.25*s.d[s.dim][s.dir]);
+			tcan_locs.emplace_back(wall_pos, center_pos, pdir);
+		}
+		for (escalator_t const &e : interior->escalators) {
+			if (!e.in_mall || e.z1() > room.z1() + 0.5*floor_spacing || !e.intersects_xy(place_area)) continue; // not in mall food court ground floor
+			bool const pdir(room_centerline < e.get_center_dim(!mall_dim)), side(e.dir ^ e.move_dir ^ e.dim);
+			if (pdir == side) continue; // wrong side
+			float const wall_pos(e.d[!mall_dim][!pdir] + (pdir ? -1.0 : 1.0)*0.7*wall_thickness); // with a bit of padding
+			float const center_pos(0.75*e.d[e.dim][!e.dir] + 0.25*e.d[e.dim][e.dir]);
+			tcan_locs.emplace_back(wall_pos, center_pos, pdir);
+		}
+		colorRGBA const recycle_color(0.0, 0.2, 0.8); // blue
+		bool is_recycle(rgen.rand_bool());
+		cube_t tcan;
+		set_cube_zvals(tcan, zval, zval+tcan_height); // set height
+
+		for (tcan_loc_t const &t : tcan_locs) {
+			tcan.d[!mall_dim][ t.dir] = t.wall_pos; // against the wall
+			tcan.d[!mall_dim][!t.dir] = t.wall_pos + (t.dir ? -1.0 : 1.0)*(is_cylin_tcan ? 2.0 : 1.6)*tcan_radius;
+			set_wall_width(tcan, t.center_pos, tcan_radius, mall_dim);
+			room_object_t const tcan_obj(tcan, TYPE_TCAN, room_id, !mall_dim, !t.dir, RO_FLAG_IN_MALL, light_amt, tcan_shape, (is_recycle ? recycle_color : tcan_color));
 			objs.push_back(tcan_obj);
 			add_large_trashcan_contents(rgen, tcan_obj, room_id, light_amt);
 			blockers.push_back(tcan);
-		} // for p
+			is_recycle ^= 1; // alternate between recycling and trashcan
+		} // for t
 		add_food_court_objs(rgen, place_area, zval, room_id, light_amt, blockers);
 		interior->mall_info->food_court_bounds = place_area;
 	}
