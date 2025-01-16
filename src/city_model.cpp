@@ -362,8 +362,10 @@ unsigned object_model_loader_t::get_num_sub_models(unsigned id) const {
 	return city_params.building_models[get_model_id(id)].size();
 }
 int object_model_loader_t::get_valid_sub_model_id(unsigned id, vector<city_model_t> const &models) const {
+	unsigned const sub_model_id(id >> 8); // shift sub-model ID bits back to LSB; needed when models.size() is a power of 2
+
 	for (unsigned i = 0; i < models.size(); ++i) { // check all models starting with the selected one and return the first valid
-		unsigned const cand((id + i) % models.size()); // index will wrap around if too large, which allows rand() to be passed in
+		unsigned const cand((sub_model_id + i) % models.size()); // index will wrap around if too large, which allows rand() to be passed in
 		city_model_t const &model(models[cand]);
 		if (model.valid && (!model.tried_to_load || model.is_loaded())) return cand;
 	}
