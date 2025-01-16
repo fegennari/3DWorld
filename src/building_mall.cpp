@@ -98,7 +98,6 @@ void building_t::setup_mall_concourse(cube_t const &room, bool dim, bool dir, ra
 		wall.d[dim][ dir] = room_end +     dscale*wall_thickness; // extend into the room
 		if (wall.dz() > 0.0) {interior->walls[dim].push_back(wall);}
 		float const top_floor_ceil(room.z2() - fc_thick);
-		cout << (door.z2() < top_floor_ceil - trim_thickness); // TESTING
 	
 		if (door.z2() < top_floor_ceil - trim_thickness) { // add a wall section above the door if needed
 			set_cube_zvals(wall, door.z2(), top_floor_ceil);
