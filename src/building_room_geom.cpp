@@ -4495,7 +4495,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 	float const dz(c.dz()), depth(c.get_depth()), dir_sign(c.dir ? 1.0 : -1.0);
 	cube_t top(c), dishwasher;
 	top.z1() += 0.95*dz;
-	bool const hash_dishwasher(c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)); // kitchen sink - add dishwasher if wide enough
+	bool const has_dishwasher(c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)); // kitchen sink - add dishwasher if wide enough
 
 	if (c.type != TYPE_BRSINK) { // add wood sides of counter/cabinet
 		float const overhang(0.05*depth);
@@ -4503,7 +4503,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 		cabinet.z2() = top.z1();
 		//cabinet.expand_in_dim(!c.dim, -overhang); // add side overhang: disable to allow cabinets to be flush with objects
 		cabinet.d[c.dim][c.dir] -= dir_sign*overhang; // add front overhang
-		if (hash_dishwasher) {add_cabinet(split_cabinet_at_dishwasher(cabinet, dishwasher), tscale, inc_lg, inc_sm);}
+		if (has_dishwasher) {add_cabinet(split_cabinet_at_dishwasher(cabinet, dishwasher), tscale, inc_lg, inc_sm);}
 		add_cabinet(cabinet, tscale, inc_lg, inc_sm); // draw the wood part
 	}
 	if (!inc_lg) return; // everything below this point is large static
@@ -4556,10 +4556,10 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 			front.d[c.dim][!c.dir] += dir_sign*0.94*depth;
 			get_material(marble_tex, 1).add_cube_to_verts(front, top_color, tex_origin, EF_Z2); // front surface, no top face; same as top_mat
 		}
-		else if (hash_dishwasher) { // add dishwasher
+		else if (has_dishwasher) { // add dishwasher
 			unsigned const dw_skip_faces(~get_face_mask(c.dim, !c.dir)); // skip back
 			float const back_wall(c.d[c.dim][!c.dir]);
-			cube_t dishwasher_back(c), handle(c);
+			cube_t dishwasher_back(dishwasher);
 			dishwasher_back.d[c.dim][!c.dir] = back_wall; // flush with the cabinet
 			metal_mat.add_cube_to_verts_untextured(dishwasher_back, apply_light_color(c, LT_GRAY), ~dw_skip_faces); // draw back face, in case visible through window
 			room_object_t dwc(c);
