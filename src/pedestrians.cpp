@@ -1773,9 +1773,7 @@ bool ped_manager_t::has_car_at_pt(point const &pos, unsigned city, bool is_parke
 	car_city_vect_t const &cv(get_cars_for_city(city));
 
 	if (is_parked) { // handle parked cars case
-		for (cube_t const &c : cv.parked_car_bcubes) {
-			if (c.contains_pt_xy(pos)) return 1;
-		}
+		if (check_vect_cube_contains_pt_xy(cv.parked_car_bcubes, pos)) return 1;
 	}
 	else { // check all dims/dirs of non-parked cars
 		for (unsigned d = 0; d < 4; ++d) {

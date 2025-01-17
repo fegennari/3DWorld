@@ -2798,6 +2798,10 @@ template<typename T> static bool check_vect_cube_contains_pt_xy(vector<T> const 
 	for (cube_t const &c : cubes) {if (c.contains_pt_xy(pos)) return 1;}
 	return 0;
 }
+inline bool point_in_cubes_xy_exp(vect_cube_t const &cubes, point const &p, float dist) {
+	for (cube_t const &c : cubes) {if (c.contains_pt_xy_exp(p, dist)) return 1;}
+	return 0;
+}
 template<typename T> static bool check_vect_cube_contains_pt(vector<T> const &cubes, point const &pos) {
 	for (cube_t const &c : cubes) {if (c.contains_pt(pos)) return 1;}
 	return 0;

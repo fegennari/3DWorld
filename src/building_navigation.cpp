@@ -50,12 +50,6 @@ bool check_line_int_xy(vect_cube_t const &c, point const &p1, point const &p2) {
 }
 float get_dist_xy_through_pt(point const &p1, point const &p2, point const &p3) {return (p2p_dist_xy(p1, p2) + p2p_dist_xy(p2, p3));}
 
-/*static*/ bool cube_nav_grid::pt_contained_xy(point const &pt, vect_cube_t const &cubes) {
-	for (cube_t const &c : cubes) {
-		if (c.contains_pt_xy(pt)) return 1;
-	}
-	return 0;
-}
 unsigned cube_nav_grid::get_node_ix(point p) const {
 	float gxy[2]; // grid index, with partial offset
 	get_grid_ix_fp(p, gxy);
@@ -151,7 +145,7 @@ void cube_nav_grid::build(cube_t const &bcube_, vect_cube_t const &blockers, flo
 			if (c.y1() < yval && c.y2() > yval) {row_blockers.push_back(c);} // include if it spans yval
 		}
 		for (unsigned x = 0; x < num[0]; ++x) {
-			if (pt_contained_xy(get_grid_pt(x, y), row_blockers)) {nodes[get_node_ix(x, y)] = 1;} // mark blocked
+			if (check_vect_cube_contains_pt_xy(row_blockers, get_grid_pt(x, y))) {nodes[get_node_ix(x, y)] = 1;} // mark blocked
 		}
 	} // for y
 }
@@ -529,12 +523,6 @@ public:
 		return pos;
 	}
 
-	static bool check_pt_contained_xy(vect_cube_t const &c, point const &p) {
-		for (auto i = c.begin(); i != c.end(); ++i) {
-			if (i->contains_pt_xy(p)) return 1;
-		}
-		return 0;
-	}
 	static void choose_pt_xy_in_room_avoid_pool(point &pos, cube_t const &c, building_t const &building, unsigned room_ix, unsigned pt_ix, rand_gen_t &rgen) {
 		if (pt_ix < 4 && building.has_pool()) { // check for and handle the pool with a special case, since it can be difficult to navigate around
 			indoor_pool_t const &pool(building.interior->pool);
@@ -626,8 +614,8 @@ public:
 				pos.z = pos2.z = p1.z;
 				cube_t const &pref_bcube((use_pts_bcube && n < num_tries/2) ? pts_bcube : walk_area); // prefer point inside p1/p2 bcube (for backrooms)
 				choose_pt_xy_in_room_avoid_pool(pos, pref_bcube, building, room_ix, n, rgen); // choose a rand point in the room
-				if (check_pt_contained_xy(keepout, pos))       continue; // bad point
-				if (!building.check_pt_within_part_sides(pos)) continue; // outside non-cube building
+				if (check_vect_cube_contains_pt_xy(keepout, pos)) continue; // bad point
+				if (!building.check_pt_within_part_sides(pos))    continue; // outside non-cube building
 				bool const seg1_bad(check_line_int_xy(keepout, p1, pos)), seg2_bad(check_line_int_xy(keepout, pos, p2));
 
 				if (npts == 1 || !(seg1_bad || seg2_bad)) { // single point or both segments valid
@@ -642,7 +630,7 @@ public:
 					for (unsigned m = 0; m < 20; ++m) { // make 20 random attempts
 						choose_pt_xy_in_room_avoid_pool(pos2, pref_bcube, building, room_ix, m, rgen); // choose a rand point in the room
 						if (!building.check_pt_within_part_sides(pos2)) continue; // outside non-cube building
-						if (!check_pt_contained_xy(keepout, pos2) && !check_line_int_xy(keepout, pos, pos2)) {success = 1; break;} // good point
+						if (!check_vect_cube_contains_pt_xy(keepout, pos2) && !check_line_int_xy(keepout, pos, pos2)) {success = 1; break;} // good point
 					}
 					if (!success) continue; // no good point
 

@@ -27,7 +27,6 @@ protected:
 		float g_score=0.0, f_score=0.0;
 		void set(unsigned from_x, unsigned from_y, unsigned x, unsigned y) {came_from[0] = from_x; came_from[1] = from_y; xy[0] = x; xy[1] = y;}
 	};
-	static bool pt_contained_xy(point const &pt, vect_cube_t const &cubes);
 	bool    are_ixs_valid(unsigned x, unsigned y) const {return (x < num[0] && y < num[1]);} // negative numbers will wrap around and still fail
 	unsigned get_node_ix (unsigned x, unsigned y) const {assert(are_ixs_valid(x, y)); return (x + y* num[0]);}
 	point    get_grid_pt (unsigned x, unsigned y, float zval) const {return point((grid_bcube.x1() + x*step[0]), (grid_bcube.y1() + y*step[1]), zval);}

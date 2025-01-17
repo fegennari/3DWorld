@@ -494,7 +494,7 @@ public:
 		bool const check_occlusion(display_mode & 0x08);
 		bool any_drawn(0);
 
-		for (unsigned d = 0; d < (shadow_only ? 1 : 2); ++d) { // skip pet snakes in the shadow pass
+		for (unsigned d = 0; d < (shadow_only ? 1U : 2U); ++d) { // skip pet snakes in the shadow pass
 			for (snake_t const &S : (d ? pet_snakes : snakes)) {
 				if (shadow_only && S.shadow_non_visible) continue; // shadow not visible to the camera (player)
 				cube_t const bcube(S.get_bcube());
