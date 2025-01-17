@@ -2353,10 +2353,17 @@ void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d cons
 	get_material(get_scaled_wall_tex(wall_tex), 1).add_cube_to_verts(c, c.color, tex_origin, skip_faces); // no room lighting color atten
 }
 void building_room_geom_t::add_wall_or_pillar(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
-	// backroom pillars and upper (ADJ_HI) sections of retail room pillars are concrete; other objects are plaster/stucco
-	bool const is_concrete(c.flags & (RO_FLAG_BACKROOM | RO_FLAG_ADJ_HI)), draw_top(c.flags & RO_FLAG_ADJ_TOP);
-	tid_nm_pair_t const tex(is_concrete ? tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1) : get_scaled_wall_tex(wall_tex));
+	bool const draw_top(c.flags & RO_FLAG_ADJ_TOP);
 	unsigned const small((c.type == TYPE_PG_WALL) ? 2 : 0); // small=2/detail for parking garage or backrooms wall or pillar
+
+	if (c.shape == SHAPE_CUBE && c.color == BROWN) { // special case for mall store wooden walls
+		rgeom_mat_t &mat(get_material(get_tex_auto_nm(FENCE_TEX, 2.0*wall_tex.tscale_x, 1), 1, 0, small)); // shadowed
+		mat.add_cube_to_verts(c, WHITE, tex_origin, (draw_top ? EF_Z1 : EF_Z12), c.dim);
+		return;
+	}
+	// backroom pillars and upper (ADJ_HI) sections of retail room pillars are concrete; other objects are plaster/stucco
+	bool const is_concrete(c.flags & (RO_FLAG_BACKROOM | RO_FLAG_ADJ_HI));
+	tid_nm_pair_t const tex(is_concrete ? tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1) : get_scaled_wall_tex(wall_tex));
 	rgeom_mat_t &mat(get_material(tex, 1, 0, small)); // shadowed, no color atten, sides only unless draw_top
 	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts  (c, c.color, tex_origin, (draw_top ? EF_Z1 : EF_Z12));}
 	else if (c.shape == SHAPE_CYLIN) {mat.add_vcylin_to_verts_tscale(c, c.color, 0, draw_top);}

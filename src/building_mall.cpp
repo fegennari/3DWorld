@@ -1536,10 +1536,11 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	else if (store_type == STORE_FURNITURE && room_width < 0.8*room_len) {store_type = (rgen.rand_bool() ? STORE_BOOK : STORE_CLOTHING);}
 	if (store_type == STORE_SHOE     && !building_obj_model_loader.is_model_valid(OBJ_MODEL_SHOE   )) {store_type = STORE_CLOTHING;} // use clothing if there are no shoe models
 	if (store_type == STORE_CLOTHING && !building_obj_model_loader.is_model_valid(OBJ_MODEL_CLOTHES)) {store_type = STORE_RETAIL  ;} // use retail if there are no clothing models
-	// mixed: 225FPS, 2991MB, 249ms
-	// bookstores: 295FPS, 3463MB, 838ms
-	// clothing stores: 163FPS, 2737MB, 19ms
-	// retail stores: 300FPS, 2897MB, 177ms
+	// mixed: 203FPS, 2966MB, 125ms
+	// bookstores: 280FPS, 3463MB, 372ms
+	// clothing stores: 175FPS, 2737MB, 6ms
+	// shoe stores: 186FPS, 2760MB, 9ms
+	// retail stores: 290FPS, 2922MB, 135ms
 	// don't place two pet stores in the same row; assign as retail or clothing instead
 	if (store_type == STORE_PETS && (type_mask & (1U << store_type))) {store_type = (rgen.rand_bool() ? STORE_RETAIL : STORE_CLOTHING);}
 	bool const is_retail(store_type == STORE_RETAIL);
@@ -1723,13 +1724,15 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 						} // for n
 					}
 					else if (store_type == STORE_PETS || store_type == STORE_SHOE) {
-						float const shelf_height(((store_type == STORE_PETS) ? 0.85 : 0.60)*window_vspace);
-						float const shelf_depth (((store_type == STORE_PETS) ? 0.22 : 0.18)*window_vspace);
+						bool const is_pet_store(store_type == STORE_PETS);
+						float const shelf_height((is_pet_store ? 0.85 : 0.60)*window_vspace);
+						float const shelf_depth ((is_pet_store ? 0.22 : 0.18)*window_vspace);
+						colorRGBA const color(is_pet_store ? WHITE : BROWN); // stucco for pet store, wood for shoe store
 						cube_t center_wall(rack);
-						center_wall.z2() = zval + shelf_height + fc_thick; // increase height above top of shelf wall anchors
+						center_wall.z2() = zval + shelf_height + (is_pet_store ? 1.0 : 0.5)*fc_thick; // increase height above top of shelf wall anchors
 						set_wall_width(center_wall, rack_center, 0.38*wall_thickness, !dim);
 						add_shelves_along_walls(center_wall, zval, room_id, light_amt, !dim, store_type, shelf_height, shelf_depth, 0, rgen); // place_inside=0
-						objs.emplace_back(center_wall, TYPE_PG_WALL, room_id, !dim, 0, (RO_FLAG_IN_MALL | RO_FLAG_ADJ_TOP), light_amt, SHAPE_CUBE); // draw top; or TYPE_STAIR_WALL?
+						objs.emplace_back(center_wall, TYPE_PG_WALL, room_id, !dim, 0, (RO_FLAG_IN_MALL | RO_FLAG_ADJ_TOP), light_amt, SHAPE_CUBE, color); // draw top
 					}
 					else { // add retail shelf racks
 						assert(store_type == STORE_RETAIL);

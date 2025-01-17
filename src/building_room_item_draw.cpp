@@ -977,7 +977,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 }
 
 void building_room_geom_t::create_small_static_vbos(building_t const &building) {
-	//highres_timer_t timer("Gen Room Geom Small"); // 7.8ms, slow building at 26,16; up to 36ms on new computer for buildings with large retail areas
+	//highres_timer_t timer("Gen Room Geom Small"); // up to 36ms on new computer for buildings with large retail areas
 	float const floor_ceil_gap(building.get_floor_ceil_gap());
 	model_objs.clear(); // currently model_objs are only created for small objects in drawers, so we clear this here
 	add_small_static_objs_to_verts(expanded_objs, building.get_trim_color(), 0, floor_ceil_gap); // inc_text=0
