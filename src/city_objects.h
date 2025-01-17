@@ -708,11 +708,13 @@ private:
 	float plot_subdiv_sz=0.0;
 	bool has_residential_plots=0;
 	
-	bool gen_parking_lots_for_plot(cube_t const &full_plot, vector<car_t> &cars, unsigned city_id, unsigned plot_ix, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t &rgen);
+	bool gen_parking_lots_for_plot(cube_t const &full_plot, vector<car_t> &cars, unsigned city_id, unsigned plot_ix,
+		vect_cube_t &bcubes, vect_cube_t &colliders, vect_cube_t const &plot_cuts, rand_gen_t &rgen);
 	void add_cars_to_driveways(vector<car_t> &cars, vector<road_plot_t> const &plots, vector<vect_cube_t> &plot_colliders, unsigned city_id, rand_gen_t &rgen);
-	void place_trees_in_plot(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> &tree_pos, rand_gen_t &rgen, unsigned buildings_end);
+	void place_trees_in_plot(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders,
+		vector<point> &tree_pos, vect_cube_t const &plot_cuts, rand_gen_t &rgen, unsigned buildings_end);
 	void place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos,
-		vect_cube_t const &pond_blockers, vect_cube_t const &plot_cuts, rand_gen_t &rgen, bool have_streetlights);
+		vect_cube_t const &pond_blockers, rand_gen_t &rgen, bool have_streetlights);
 	void place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<road_t> const &roads,
 		vect_cube_t const &pool_blockers, unsigned driveways_start, unsigned city_ix, rand_gen_t &rgen);
 	bool place_swimming_pool(road_plot_t const &plot, city_zone_t const &yard, cube_with_ix_t const &house, bool dim, bool dir, bool shrink_dim, unsigned prev_blockers_end,
@@ -756,7 +758,7 @@ public:
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
 	bool intersects_parking_lot(cube_t const &c) const;
 	bool player_under_roof(point const &camera_bs) const;
-	bool get_color_at_xy(point const &pos, colorRGBA &color, bool skip_in_road) const;
+	bool get_color_at_xy(point const &pos, vect_cube_t const &plot_cuts, colorRGBA &color, bool skip_in_road) const;
 	bool get_color_at_xy_pre_road(point const &pos, colorRGBA &color) const;
 	void get_occluders(pos_dir_up const &pdu, vector3d const &xlate, vect_cube_t &occluders) const;
 	void get_plot_cuts(cube_t const &plot, vect_cube_t &cuts) const;
