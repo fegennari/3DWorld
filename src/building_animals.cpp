@@ -68,6 +68,7 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix) {
 	update_sewer_spiders(camera_bs, building_ix);
 	update_snakes       (camera_bs, building_ix);
 	update_pet_snakes   (camera_bs, building_ix);
+	update_pet_birds    (camera_bs, building_ix);
 	update_insects      (camera_bs, building_ix);
 	interior->room_geom->last_animal_update_frame = frame_counter;
 }
@@ -1765,6 +1766,44 @@ int building_t::check_for_snake_coll(snake_t const &snake, point const &camera_b
 		return 4; // collision with ourself
 	}
 	return 0;
+}
+
+
+// *** Pet Birds ***
+
+void building_t::update_pet_birds(point const &camera_bs, unsigned building_ix) {
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_BIRD_ANIM)) return; // or OBJ_MODEL_PIGEON?
+	vect_bird_t &birds(interior->room_geom->pet_birds);
+	vect_room_object_t const &objs(interior->room_geom->objs);
+
+	if (!birds.placed && has_mall()) { // add pet store rats on first update frame
+		for (pet_tank_t const &t : interior->mall_info->pet_tanks) {
+			if (t.animal_type != TYPE_BIRD) continue;
+			assert(t.obj_ix < objs.size());
+			room_object_t const &obj(objs[t.obj_ix]);
+			if (obj.type != TYPE_FISHTANK) continue; // taken by the player?
+			assert(obj.item_flags == TYPE_BIRD);
+			rand_gen_t rgen;
+			rgen.set_state(building_ix+1, t.obj_ix+1); // unique per building and per tank
+			rgen.rand_mix();
+			float const radius(rgen.rand_uniform(0.2, 0.3)*min(obj.dz(), obj.get_depth()));
+			point const pos(obj.xc(), obj.yc(), (obj.z1() + radius));
+			//vector3d const dir(rgen.signed_rand_vector_spherical_xy_norm());
+			vector3d dir;
+			dir[obj.dim] = (obj.dir ? 1.0 : -1.0); // facing out
+			birds.emplace_back(pos, radius, dir, t.obj_ix, WHITE*rgen.rand_float()); // black-white
+		} // for t
+		birds.placed = 1;
+	}
+	bool any_removed(0);
+
+	for (auto i = birds.begin(); i != birds.end(); ++i) { // check for cage removed
+		assert(i->id < objs.size());
+		if (objs[i->id].type == TYPE_FISHTANK) continue;
+		any_removed = 1; // taken by the player?; will be removed below
+		i->radius = 0.0;
+	}
+	if (any_removed) {birds.erase(remove_if(birds.begin(), birds.end(), [](pet_bird_t const &b) {return (b.radius == 0.0);}), birds.end());}
 }
 
 

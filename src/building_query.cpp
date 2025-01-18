@@ -3056,9 +3056,10 @@ void building_t::print_building_manifest() const { // Note: skips expanded_objs
 	if (has_room_geom()) {
 		building_room_geom_t const &g(*interior->room_geom);
 		unsigned const objects(g.objs.size()), models(g.obj_model_insts.size()), snakes(g.snakes.size());
-		unsigned const rats(g.rats.size()), sewer_rats(g.sewer_rats.size()), pet_rats(g.pet_rats.size());
+		unsigned const rats(g.rats.size()), sewer_rats(g.sewer_rats.size()), pet_rats(g.pet_rats.size()), pet_birds(g.pet_birds.size());
 		unsigned const spiders(g.spiders.size()), sewer_spiders(g.sewer_spiders.size()), pet_snakes(g.pet_snakes.size());
-		cout << TXT(objects) << TXT(models) << TXT(rats) << TXT(sewer_rats) << TXT(pet_rats) << TXT(spiders) << TXT(sewer_spiders) << TXT(snakes) << TXT(pet_snakes) << endl;
+		cout << TXT(objects) << TXT(models) << TXT(rats) << TXT(sewer_rats) << TXT(pet_rats)
+			 << TXT(spiders) << TXT(sewer_spiders) << TXT(snakes) << TXT(pet_snakes) << TXT(pet_birds) << endl;
 		unsigned obj_counts[NUM_ROBJ_TYPES] = {};
 
 		for (auto const &i : g.objs) {

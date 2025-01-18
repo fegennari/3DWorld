@@ -587,8 +587,8 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 			else if (c.item_flags == STORE_PETS) { // pet store shelf
 				if (add_models_mode) { // fishtanks count as models since they have fish models and are added to objs rather than expanded_objs
 					unsigned const num_fishtanks(round_fp(0.4*rgen.rand_uniform(0.5, 1.0)*ld_ratio));
-					unsigned const num_animal_types(4);
-					unsigned const animals[num_animal_types] = {TYPE_FISH, TYPE_RAT, TYPE_SNAKE, TYPE_SPIDER/*, TYPE_BIRD*/};
+					unsigned const num_animal_types(5);
+					unsigned const animals[num_animal_types] = {TYPE_FISH, TYPE_RAT, TYPE_SNAKE, TYPE_SPIDER, TYPE_BIRD};
 					unsigned const animal_type(animals[rgen.rand() % num_animal_types]);
 					cube_t tank;
 

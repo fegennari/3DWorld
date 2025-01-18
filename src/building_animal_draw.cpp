@@ -582,6 +582,24 @@ void building_room_geom_t::draw_animals(shader_t &s, building_t const &building,
 		bind_default_flat_normal_map();
 		if (rat_drawn) {check_mvm_update();} // needed after popping model transform matrix
 	} // end rats drawing
+	if (!pet_birds.empty()) {
+		bool const enable_animations(0/*!shadow_only*/); // can't see the animation in the shadow pass?
+		animation_state_t anim_state(enable_animations, ANIM_ID_SKELETAL);
+		bool bird_drawn(0);
+
+		for (pet_bird_t const &bird : pet_birds) {
+			if (!camera_pdu.sphere_visible_test((bird.pos + xlate), bird.radius)) continue; // VFC
+			cube_t bcube(bird.pos);
+			bcube.expand_by_xy(bird.radius);
+			if ((display_mode & 0x08) && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
+			anim_state.anim_time = bird.anim_time;
+			building_obj_model_loader.draw_model(s, bird.pos, bcube, bird.dir, bird.color, xlate, OBJ_MODEL_BIRD_ANIM, shadow_only, 0, &anim_state);
+			bird_drawn = 1;
+		} // for bird
+		anim_state.clear_animation_id(s); // clear animations
+		bind_default_flat_normal_map();
+		if (bird_drawn) {check_mvm_update();} // needed after popping model transform matrix
+	} // end birds drawing
 	spider_draw.draw(spiders,            s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);
 	snake_draw .draw(snakes, pet_snakes, s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);
 	if (!shadow_only) {insect_draw.draw(insects, s, building, oc, xlate, reflection_pass);} // insects are too small to cast shadows

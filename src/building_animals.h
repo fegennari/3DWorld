@@ -99,6 +99,11 @@ struct snake_t : public building_animal_t {
 	float get_curve_factor() const;
 };
 
+struct pet_bird_t : public building_animal_t {
+	colorRGBA color;
+	pet_bird_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_, colorRGBA const &c) : building_animal_t(pos_, radius_, dir_, id_), color(c) {}
+};
+
 enum {INSECT_TYPE_FLY=0, INSECT_TYPE_ROACH, INSECT_TYPE_CENTIPEDE, NUM_INSECT_TYPES};
 
 struct insect_t : public building_animal_t {
@@ -140,8 +145,9 @@ template<typename T> struct vect_animal_t : public vector<T> {
 	void update_delta_sum_for_animal_coll(point const &pos, point const &cur_obj_pos, float radius,
 		float z1, float z2, float radius_scale, float &max_overlap, vector3d &delta_sum) const;
 };
-typedef vect_animal_t<rat_t   > vect_rat_t;
-typedef vect_animal_t<spider_t> vect_spider_t;
-typedef vect_animal_t<snake_t > vect_snake_t;
-typedef vect_animal_t<insect_t> vect_insect_t;
+typedef vect_animal_t<rat_t     > vect_rat_t;
+typedef vect_animal_t<spider_t  > vect_spider_t;
+typedef vect_animal_t<snake_t   > vect_snake_t;
+typedef vect_animal_t<insect_t  > vect_insect_t;
+typedef vect_animal_t<pet_bird_t> vect_bird_t;
 

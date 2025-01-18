@@ -1047,6 +1047,7 @@ struct building_room_geom_t {
 	vect_rat_t    rats, sewer_rats, pet_rats;
 	vect_spider_t spiders, sewer_spiders;
 	vect_snake_t  snakes, pet_snakes;
+	vect_bird_t   pet_birds;
 	vect_insect_t insects;
 	// {large static, small static, dynamic, lights, alpha mask, transparent, door} materials
 	building_materials_t mats_static, mats_small, mats_text, mats_detail, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors, mats_exterior, mats_ext_detail;
@@ -2258,6 +2259,7 @@ public:
 	void update_sewer_spiders(point const &camera_bs, unsigned building_ix);
 	void update_snakes       (point const &camera_bs, unsigned building_ix);
 	void update_pet_snakes   (point const &camera_bs, unsigned building_ix);
+	void update_pet_birds    (point const &camera_bs, unsigned building_ix);
 	void update_insects      (point const &camera_bs, unsigned building_ix);
 	void get_objs_at_or_below_ground_floor(vect_room_object_t &ret, bool for_spider) const;
 	bool begin_fish_draw() const;
