@@ -31,9 +31,7 @@ class font_texture_manager_t {
 public:
 	font_texture_manager_t() : texture(0, 7, 0, 0, 0, 4, 1, "", 0, 0, 8.0) {} // use mipmaps, uncompressed
 
-	bool check_nonempty_tile_column(unsigned tx, unsigned ty, unsigned x, unsigned tsize) const {
-		unsigned char const *data(texture.get_data());
-
+	bool check_nonempty_tile_column(unsigned char const *data, unsigned tx, unsigned ty, unsigned x, unsigned tsize) const {
 		for (unsigned y = 0; y < tsize; ++y) { // iterate over one character tile
 			unsigned const pixel((ty*tsize + y)*texture.width + tx*tsize + x);
 			if (data[(pixel<<2)+3] != 0) return 1; // check alpha component
@@ -41,20 +39,20 @@ public:
 		return 0;
 	}
 
-	// Note: expects to find a square texture with 16x16 tiles, one per ASCII value, starting from the ULC
+	// Note: expects to find a square texture with 16x16 tiles, one per ASCII value, starting from the ULC, in RGBA format
 	void load(string const &fn) {
 		texture.free_data();
 		texture.name = (fn.empty() ? font_texture_atlas_fn : fn);
 		texture.no_avg_color_alpha_fill = 1; // since we set alpha equal to luminance
 		texture.load(-1);
-		assert(texture.ncolors == 4); // RGBA (really only need RA though)
+		assert(texture.ncolors == 4); // RGBA (really only need RA though, but there's currently no support for this format)
 		assert(texture.width == texture.height);
 		assert((texture.width & 15) == 0); // multiple of 16
 		float const duv(1.0/16.0), pw(1.0/texture.width);
-		unsigned const tsize(texture.width >> 4); // tile size
+		unsigned const num_pixels(texture.num_pixels()), tsize(texture.width >> 4); // tile size
 		unsigned char *data(texture.get_data());
 
-		for (unsigned i = 0; i < texture.num_pixels(); ++i) {
+		for (unsigned i = 0; i < num_pixels; ++i) {
 			unsigned weight(0);
 			UNROLL_3X(weight += data[4*i+i_];)
 			data[4*i+3] = (unsigned char)(weight/3.0); // set alpha equal to luminance
@@ -67,10 +65,10 @@ public:
 				unsigned const ty_inv(15-ty), dix((ty_inv<<4) + tx); // index into pcd
 
 				for (unsigned x = 0; x < tsize; ++x) { // forward iterate over one character tile
-					if (check_nonempty_tile_column(tx, ty, x, tsize)) {col_start = x; break;}
+					if (check_nonempty_tile_column(data, tx, ty, x, tsize)) {col_start = x; break;}
 				}
 				for (unsigned x = tsize; x > col_start; --x) { // backward iterate over one character tile
-					if (check_nonempty_tile_column(tx, ty, x-1, tsize)) {col_end = x; break;}
+					if (check_nonempty_tile_column(data, tx, ty, x-1, tsize)) {col_end = x; break;}
 				}
 				float const width(float(col_end - col_start)/float(tsize));
 				pcd[dix] = per_char_data_t(tx*duv+pw*col_start, (tx+1)*duv-pw*(tsize - col_end), ty*duv, (ty+1)*duv-pw, width);
