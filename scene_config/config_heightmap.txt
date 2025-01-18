@@ -67,7 +67,8 @@ mh_filename heightmaps/heightmap_island_128.png 180.3 -18.75 0
 #mh_filename_tiled_terrain ../heightmaps/heightmap_island.png
 #write_heightmap_png ../heightmaps/heightmap_island_eroded.png
 mh_filename_tiled_terrain heightmaps/heightmap_island_eroded.png
-font_texture_atlas_fn textures/atlas/DejaVu_Sans_Mono.png
+#font_texture_atlas_fn textures/atlas/DejaVu_Sans_Mono.png
+font_texture_atlas_fn textures/atlas/Helvetica.png
 
 two_sided_lighting 1 # this one is important
 #model3d_winding_number_normal 1 # works better?
