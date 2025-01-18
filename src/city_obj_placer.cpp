@@ -2260,7 +2260,7 @@ void city_obj_placer_t::next_frame() {
 
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
 	float const dist_scale((player_in_basement >= 2) ? 0.1 : 1.0); // small distance scale for player in mall since only cur city is visible through skylight
-	if (!dstate.check_cube_visible(all_objs_bcube, 1.0)) return; // check bcube
+	if (!dstate.check_cube_visible(all_objs_bcube, dist_scale)) return; // check bcube
 	dstate.pass_ix = 0;
 	draw_objects(benches,   bench_groups,    dstate, 0.16, shadow_only, 0); // dist_scale=0.16, has_immediate_draw=0
 	draw_objects(fhydrants, fhydrant_groups, dstate, 0.06, shadow_only, 1);

@@ -884,7 +884,7 @@ struct obj_model_inst_t {
 	bool int_vis_only;
 	unsigned obj_id;
 	vector3d dir;
-	obj_model_inst_t(unsigned oid, vector3d const &d, bool ivo) : obj_id(oid), dir(d), int_vis_only(ivo) {}
+  obj_model_inst_t(unsigned oid, vector3d const &d, bool ivo) : int_vis_only(ivo), obj_id(oid), dir(d) {}
 };
 struct obj_model_inst_with_obj_t : obj_model_inst_t {
 	obj_model_inst_with_obj_t(obj_model_inst_t const &i, room_object_t const &obj_) : obj_model_inst_t(i), obj(obj_) {}
