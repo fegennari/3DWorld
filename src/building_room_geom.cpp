@@ -5622,6 +5622,15 @@ void building_room_geom_t::add_pet_cage(room_object_t const &c) {
 	// add wood chips in tray
 	rgeom_mat_t &gravel_mat(get_material(tid_nm_pair_t(get_texture_by_name("wood_chips.jpg"), 2.0/sz.z), 1, 0, 1)); // shadowed, small
 	gravel_mat.add_cube_to_verts(tray, apply_light_color(c, WHITE), c.get_llc(), ~EF_Z2); // draw top only
+
+	if (c.item_flags == TYPE_BIRD) { // add a wooden bar for birds to stand on
+		float const bar_radius(0.02*sz.z);
+		cube_t bar(c);
+		bar.expand_in_dim(!c.dim, bar_hthick); // slight expand to avoid Z-fighting
+		set_wall_width(bar, (top.z1() + 0.2*sz.z),   bar_radius, 2); // Z
+		set_wall_width(bar, c.get_center_dim(c.dim), bar_radius, c.dim);
+		get_wood_material(1.0, 1, 0, 1).add_ortho_cylin_to_verts(bar, LT_GRAY, !c.dim, 1, 1, 0, 0, 1.0, 1.0, 0.25, 1.0, 0, 16, 0.0, 1); // 16 sides + ends, swap_txy=1
+	}
 }
 
 void maybe_rotate_door_verts(rgeom_storage_t::vect_vertex_t &verts, unsigned start_ix, door_t const &door, door_rotation_t const &drot) {

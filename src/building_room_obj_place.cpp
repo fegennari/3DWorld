@@ -2397,7 +2397,7 @@ bool building_t::add_fishtank_to_room(rand_gen_t &rgen, room_t const &room, floa
 	return 1;
 }
 void building_room_geom_t::add_pet_container(cube_t const &tank, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool in_pet_store,
-	vect_room_object_t &objects, rand_gen_t &rgen, unsigned animal_type)
+	vect_room_object_t &objects, rand_gen_t &rgen, unsigned animal_type, unsigned shelf_ix)
 {
 	bool is_cage(0);
 	unsigned flags(RO_FLAG_NOCOLL);
@@ -2408,7 +2408,7 @@ void building_room_geom_t::add_pet_container(cube_t const &tank, unsigned room_i
 
 		switch (animal_type) {
 		case TYPE_FISH  : is_lit = 1; break;
-		case TYPE_RAT   : is_lit = 1; /*is_cage = 1;*/ break; // really should be a cage, and not lit, but a lit tank looks better visually
+		case TYPE_RAT   : is_lit = 1; is_cage = ((shelf_ix + room_id) & 1); break; // should be a cage, and not lit, but a lit tank looks better visually
 		case TYPE_SNAKE : is_lit = (rgen.rand_float() < 0.6); break;
 		case TYPE_SPIDER: is_lit = (rgen.rand_float() < 0.4); break;
 		case TYPE_BIRD  : is_cage = 1; break; // unlit
@@ -2416,7 +2416,8 @@ void building_room_geom_t::add_pet_container(cube_t const &tank, unsigned room_i
 		}
 		if (!is_cage) {flags |= RO_FLAG_ADJ_TOP;} // pet store tanks always have a lid
 		if ( is_lit ) {flags |= RO_FLAG_LIT    ;}
-		if (is_cage && rgen.rand_bool()) {color = BLACK;} // cages are 50% black, 50% white
+		colorRGBA const cage_colors[3] = {WHITE, BLACK, BRASS_C};
+		if (is_cage) {color = cage_colors[rgen.rand() % 3];} // select a random cage color
 	}
 	else if (rgen.rand_float() < 0.80) { // add a lid 80% of the time
 		flags |= RO_FLAG_ADJ_TOP;
