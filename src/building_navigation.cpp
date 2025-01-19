@@ -1795,6 +1795,10 @@ cube_t get_stairs_plus_step_up(stairwell_t const &stairs, float max_ext) {
 	return stairs_ext;
 }
 
+void ai_path_t::add(path_pt_t const &p) {
+	if (empty() || p != back()) {push_back(p);} // don't add duplicates
+	else {back().fixed |= p.fixed;} // if it was a duplicate, update the fixed flag
+}
 void ai_path_t::add(ai_path_t const &path) {
 	for (path_pt_t const &p : path) {add(p);}
 	uses_nav_grid |= path.uses_nav_grid;
@@ -1939,7 +1943,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 					!up_or_down, person.cur_rseed, avoid2, *this, seg2_start, interior->doors, person.has_key, custom_dest, req_custom_dest, path)) continue;
 			}
 			assert(!path.empty() && !from_path.empty());
-			path.add(seg2_start, 0); // exit end of the stairs/ramp/escalator, extended with clearance
+			path.add(seg2_start, 1); // exit end of the stairs/ramp/escalator, extended with clearance
 
 			// add two or more more points to straighten the entrance and exit paths and wrap around stairs; this segment doesn't check for intersection with stairs
 			if (is_ramp) { // ramp
@@ -2021,9 +2025,8 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 					// TODO: same as straight stairs?
 				}
 			} // end stairs case
-			if (from_path.empty() || from_path.front() != enter_pt) {path.add(enter_pt, 1);} // don't add a duplicate
-			from_path.front().fixed = 1;
-			path.add(from_path); // concatenate the two path segments in reverse order
+			if (from_path.front() != enter_pt) {path.add(enter_pt, 1);} // don't add a duplicate
+			path.add(from_path); // concatenate the two path segments in reverse order: to + from
 			return 1; // done/success
 		} // for s
 		path.clear(); // not necessary?

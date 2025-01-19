@@ -61,7 +61,7 @@ struct path_pt_t : public point {
 struct ai_path_t : public vector<path_pt_t> {
 	bool uses_nav_grid=0, is_shortened=0;
 	void clear() {vector<path_pt_t>::clear(); uses_nav_grid = is_shortened = 0;}
-	void add(path_pt_t const &p) {if (empty() || p != back()) {push_back(p);}}
+	void add(path_pt_t const &p);
 	void add(point const &p, unsigned f) {add(path_pt_t(p, f));}
 	void add(float x, float y, float z, unsigned f=0) {add(path_pt_t(x, y, z, f));}
 	void add(ai_path_t const &path);
