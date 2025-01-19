@@ -22,8 +22,6 @@ extern vector3d wind;
 extern city_params_t city_params;
 extern object_model_loader_t building_obj_model_loader;
 
-enum {BIRD_STATE_FLYING=0, BIRD_STATE_GLIDING, BIRD_STATE_LANDING, BIRD_STATE_STANDING, BIRD_STATE_TAKEOFF, NUM_BIRD_STATES};
-
 
 void bird_poop_manager_t::next_frame(float fticks_stable) {
 	if (poops.empty()) return;

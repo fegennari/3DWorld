@@ -583,16 +583,16 @@ void building_room_geom_t::draw_animals(shader_t &s, building_t const &building,
 		if (rat_drawn) {check_mvm_update();} // needed after popping model transform matrix
 	} // end rats drawing
 	if (!pet_birds.empty()) {
-		bool const enable_animations(0/*!shadow_only*/); // can't see the animation in the shadow pass?
-		animation_state_t anim_state(enable_animations, ANIM_ID_SKELETAL);
+		bool const enable_animations(1);
+		animation_state_t anim_state(enable_animations, ANIM_ID_SKELETAL, 0.0, BIRD_STATE_STANDING);
 		bool bird_drawn(0);
 
 		for (pet_bird_t const &bird : pet_birds) {
 			if (!camera_pdu.sphere_visible_test((bird.pos + xlate), bird.radius)) continue; // VFC
 			cube_t bcube(bird.pos);
-			bcube.expand_by_xy(bird.radius);
+			bcube.expand_by(bird.radius);
 			if ((display_mode & 0x08) && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
-			anim_state.anim_time = bird.anim_time;
+			anim_state.anim_time = 0.02*bird.anim_time/SKELETAL_ANIM_TIME_CONST;
 			building_obj_model_loader.draw_model(s, bird.pos, bcube, bird.dir, bird.color, xlate, OBJ_MODEL_BIRD_ANIM, shadow_only, 0, &anim_state);
 			bird_drawn = 1;
 		} // for bird

@@ -1786,18 +1786,21 @@ void building_t::update_pet_birds(point const &camera_bs, unsigned building_ix) 
 			rand_gen_t rgen;
 			rgen.set_state(building_ix+1, t.obj_ix+1); // unique per building and per tank
 			rgen.rand_mix();
-			float const radius(rgen.rand_uniform(0.2, 0.3)*min(obj.dz(), obj.get_depth()));
-			point const pos(obj.xc(), obj.yc(), (obj.z1() + radius));
-			//vector3d const dir(rgen.signed_rand_vector_spherical_xy_norm());
-			vector3d dir;
+			float const height(obj.dz()), width(obj.get_width()), depth(obj.get_depth()), radius(rgen.rand_uniform(0.2, 0.3)*min(height, depth));
+			point pos(obj.xc(), obj.yc(), (obj.z1() + 0.1*height + radius));
+			if (width > depth) {pos[!obj.dim] += 0.4*(width - depth)*rgen.signed_rand_float();} // add some random shift to the side
+			vector3d dir(0.1*rgen.signed_rand_vector_spherical_xy_norm()); // slight random variation
 			dir[obj.dim] = (obj.dir ? 1.0 : -1.0); // facing out
+			dir.normalize();
 			birds.emplace_back(pos, radius, dir, t.obj_ix, WHITE*rgen.rand_float()); // black-white
+			birds.back().anim_time = rgen.rand_float(); // random animation offset
 		} // for t
 		birds.placed = 1;
 	}
 	bool any_removed(0);
 
 	for (auto i = birds.begin(); i != birds.end(); ++i) { // check for cage removed
+		if (animate2) {i->anim_time += fticks;}
 		assert(i->id < objs.size());
 		if (objs[i->id].type == TYPE_FISHTANK) continue;
 		any_removed = 1; // taken by the player?; will be removed below

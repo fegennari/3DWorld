@@ -255,6 +255,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	// Note: in model space, front-back=z, left-right=x, top-bot=y (for model_file.swap_yz=1)
 	float const height(model_file.swap_xz ? bcube.dx() : (model_file.swap_yz ? bcube.dy() : bcube.dz()));
 	// animated models don't have valid bcubes because they sometimes start in a bind pose, so use the height as the size scale since it's more likely to be accurate
+	assert(obj_bcube.is_strictly_normalized());
 	float sz_scale(0.0);
 	if (is_animated) {sz_scale = (obj_bcube.dz() / height);} // use zsize only for scale
 	else             {sz_scale = (obj_bcube.get_size().sum() / bcube.get_size().sum());} // use average XYZ size for scale

@@ -264,7 +264,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>dependencies\meshoptimizer\src;dependencies\glew-2.0.0\include;Targa;dependencies\openal-soft\include\AL;dependencies\freealut\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.1;dependencies\tiff-4.3.0\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src;dependencies\openal-soft\include;dependencies\stb;..\vcpkg\packages\assimp_x64-windows\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>dependencies\meshoptimizer\src;dependencies\glew-2.0.0\include;Targa;dependencies\openal-soft\include\AL;dependencies\freealut\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.1;dependencies\tiff-4.3.0\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src;dependencies\openal-soft\include;dependencies\stb;dependencies\assimp\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;ENABLE_PNG;ENABLE_TIFF;ENABLE_DDS;ENABLE_STB_IMAGE;ENABLE_ASSIMP;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -293,10 +293,10 @@
     </ResourceCompile>
     <Link>
       <AdditionalOptions>/FIXED:NO %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;tiff.lib;freeglut.lib;assimp-vc143-mt.lib</AdditionalDependencies>
+      <AdditionalDependencies>libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;tiff.lib;freeglut.lib;assimp-vc140-mt.lib</AdditionalDependencies>
       <OutputFile>.\Debug/3DWorld.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <AdditionalLibraryDirectories>dependencies\glew-2.0.0\lib\Release\x64;dependencies\openal-soft\Release;dependencies\freealut\admin\VisualStudioDotNET\x64\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win64_LIB_Release;dependencies\zlib-1.2.11\contrib\vstudio\vc14\x64\ZlibStatRelease;dependencies\tiff-4.3.0\libtiff\RelWithDebInfo;dependencies\freeglut-2.8.1\lib\x64\Debug;..\vcpkg\packages\assimp_x64-windows\lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>dependencies\glew-2.0.0\lib\Release\x64;dependencies\openal-soft\Release;dependencies\freealut\admin\VisualStudioDotNET\x64\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win64_LIB_Release;dependencies\zlib-1.2.11\contrib\vstudio\vc14\x64\ZlibStatRelease;dependencies\tiff-4.3.0\libtiff\RelWithDebInfo;dependencies\freeglut-2.8.1\lib\x64\Debug;dependencies\assimp\lib64\RelWithDebInfo</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>MSVCRT;LIBCMT;LIBCMTD;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>.\Debug/3DWorld.pdb</ProgramDatabaseFile>
@@ -419,7 +419,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <WholeProgramOptimization>true</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>dependencies\meshoptimizer\src;dependencies\glew-2.0.0\include;Targa;dependencies\openal-soft\include\AL;dependencies\freealut\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.1;dependencies\tiff-4.3.0\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src;dependencies\openal-soft\include;dependencies\stb;..\vcpkg\packages\assimp_x64-windows\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>dependencies\meshoptimizer\src;dependencies\glew-2.0.0\include;Targa;dependencies\openal-soft\include\AL;dependencies\freealut\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.1;dependencies\tiff-4.3.0\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src;dependencies\openal-soft\include;dependencies\stb;dependencies\assimp\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CONSOLE;ENABLE_PNG;ENABLE_TIFF;ENABLE_DDS;ENABLE_STB_IMAGE;ENABLE_ASSIMP;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -445,10 +445,10 @@
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;tiff.lib;freeglut.lib;assimp-vc143-mt.lib</AdditionalDependencies>
+      <AdditionalDependencies>libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;tiff.lib;freeglut.lib;assimp-vc140-mt.lib</AdditionalDependencies>
       <OutputFile>.\Release/3DWorld.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <AdditionalLibraryDirectories>dependencies\glew-2.0.0\lib\Release\x64;dependencies\openal-soft\Release;dependencies\freealut\admin\VisualStudioDotNET\x64\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win64_LIB_Release;dependencies\zlib-1.2.11\contrib\vstudio\vc14\x64\ZlibStatRelease;dependencies\tiff-4.3.0\libtiff\RelWithDebInfo;dependencies\freeglut-2.8.1\lib\x64\Debug;..\vcpkg\packages\assimp_x64-windows\lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>dependencies\glew-2.0.0\lib\Release\x64;dependencies\openal-soft\Release;dependencies\freealut\admin\VisualStudioDotNET\x64\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win64_LIB_Release;dependencies\zlib-1.2.11\contrib\vstudio\vc14\x64\ZlibStatRelease;dependencies\tiff-4.3.0\libtiff\RelWithDebInfo;dependencies\freeglut-2.8.1\lib\x64\Debug;dependencies\assimp\lib64\RelWithDebInfo</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>MSVCRT;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <SubSystem>Console</SubSystem>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
