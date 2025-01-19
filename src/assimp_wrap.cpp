@@ -475,6 +475,7 @@ class file_reader_assimp {
 		}
 		for (unsigned i = 0; i < pBone->mNumWeights; i++) {
 			aiVertexWeight const &vw(pBone->mWeights[i]);
+			if (vw.mWeight == 0.0) continue; // ignore zero weights; I've seen these in Blender exported GLTF models
 			unsigned const vertex_id(first_vertex_offset + vw.mVertexId);
 			assert(vertex_id < bone_data.vertex_to_bones.size());
 			bone_data.vertex_to_bones[vertex_id].add(bone_id, vw.mWeight, had_vertex_error);
