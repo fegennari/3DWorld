@@ -5739,7 +5739,8 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_POOL_TABLE: return (BROWN*0.75 + GREEN*0.25);
 	case TYPE_POOL_TILE: return texture_color(get_pool_tile_params(*this).get_tid());
 	case TYPE_FOOD_BOX:  return texture_color(get_food_box_tid());
-	case TYPE_FISHTANK:  return table_glass_color; // glass
+	case TYPE_FISHTANK:  return table_glass_color; // glass; black lid is ignored
+	case TYPE_PET_CAGE:  return colorRGBA(color, 0.1); // mostly transparent
 	//case TYPE_POOL_BALL: return ???; // texture_color(get_ball_tid(*this))? uses a texture atlas, so unclear what color to use here; use white by default
 	//case TYPE_CHIMNEY:  return texture_color(get_material().side_tex); // should modulate with texture color, but we don't have it here
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.

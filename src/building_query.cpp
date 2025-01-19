@@ -2260,7 +2260,7 @@ bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start, b
 		// Note: light switches/outlets/vents/pipes don't collide with the player or AI, but they collide with other placed objects to avoid blocking them;
 		// however, it's okay to block outlets with furniture
 		if ((check_all || !i->no_coll() || i->type == TYPE_SWITCH || i->type == TYPE_OUTLET || i->type == TYPE_VENT || i->type == TYPE_PIPE ||
-			i->type == TYPE_FALSE_DOOR || i->type == TYPE_FISHTANK) && i->intersects(c)) return 1;
+			i->type == TYPE_FALSE_DOOR || i->is_pet_container()) && i->intersects(c)) return 1;
 		if (i->type == TYPE_DESK && i->shape == SHAPE_TALL && i->intersects_xy_no_adj(c) && c.intersects_no_adj(get_desk_top_back(*i))) return 1; // check tall desk back
 		if (i->type == TYPE_BOOK && (i->flags & RO_FLAG_ON_FLOOR) && i->intersects(c))   return 1; // books on floors count
 	} // for i
@@ -2368,7 +2368,7 @@ bool room_object_t::is_spider_collidable() const { // include objects on the flo
 	if (!is_floor_collidable()) { // below are the exceptions: objects that are not floor collidable but spiders can walk on
 		if (type != TYPE_LIGHT && type != TYPE_BRSINK && type != TYPE_MIRROR && type != TYPE_MWAVE && type != TYPE_HANGER_ROD &&
 			type != TYPE_LAPTOP && type != TYPE_MONITOR && type != TYPE_CLOTHES && type != TYPE_TOASTER && type != TYPE_CABINET &&
-			type != TYPE_FISHTANK && type != TYPE_PET_CAGE && type != TYPE_INT_WINDOW) return 0;
+			type != TYPE_PET_CAGE && type != TYPE_INT_WINDOW && !is_pet_container()) return 0;
 	}
 	// these objects are ignored by spiders and will be walked through; ceiling fan is probably okay because it connects to the ceiling with a small cylinder
 	if (type == TYPE_CEIL_FAN || type == TYPE_BANANA || type == TYPE_BAN_PEEL) return 0; // not a cube

@@ -300,7 +300,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		if (obj.taken_level < 4) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 0.5, 0.025, "toy ring");}
 		// else take the toy base
 	}
-	if (otype == TYPE_FISHTANK) { // fishtank, glass terrarium, or pet cage
+	if (obj.is_pet_container()) { // fishtank, glass terrarium, or pet cage
 		if (obj.has_lid()) return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 10.0, 1.0, "tank lid and light"); // take the lid and light
 		float value(0.0), weight(0.0);
 		string name;

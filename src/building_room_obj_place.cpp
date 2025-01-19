@@ -2400,26 +2400,27 @@ void building_room_geom_t::add_fishtank(cube_t const &tank, unsigned room_id, fl
 	vect_room_object_t &objects, rand_gen_t &rgen, unsigned animal_type)
 {
 	unsigned flags(RO_FLAG_NOCOLL);
+	bool is_cage(0);
 
 	if (in_pet_store) {
 		bool is_lit(0);
 
 		switch (animal_type) {
 		case TYPE_FISH  : is_lit = 1; break;
-		case TYPE_RAT   : is_lit = 1; break;
+		case TYPE_RAT   : is_lit = 1; /*is_cage = 1;*/ break; // really should be a cage, and not lit, but a lit tank looks better visually
 		case TYPE_SNAKE : is_lit = (rgen.rand_float() < 0.6); break;
 		case TYPE_SPIDER: is_lit = (rgen.rand_float() < 0.4); break;
-		case TYPE_BIRD  : break; // unlit
+		case TYPE_BIRD  : is_cage = 1; break; // unlit
 		default: assert(0); // unsupported
 		}
-		flags |= RO_FLAG_ADJ_TOP; // pet store fishtanks always have a lid
-		if (is_lit) {flags |= RO_FLAG_LIT;}
+		if (!is_cage) {flags |= RO_FLAG_ADJ_TOP;} // pet store tanks always have a lid
+		if ( is_lit ) {flags |= RO_FLAG_LIT    ;}
 	}
 	else if (rgen.rand_float() < 0.80) { // add a lid 80% of the time
 		flags |= RO_FLAG_ADJ_TOP;
 		if (rgen.rand_float() < 0.85) {flags |= RO_FLAG_LIT;} // light is on 85% of the time
 	}
-	objects.emplace_back(tank, TYPE_FISHTANK, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, WHITE, animal_type); // store animal_type in item_flags
+	objects.emplace_back(tank, (is_cage ? TYPE_PET_CAGE : TYPE_FISHTANK), room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, WHITE, animal_type); // item_flags=animal_type
 	set_obj_id(objects);
 }
 
@@ -2694,7 +2695,7 @@ void building_t::add_shelves(cube_t const &c, bool dim, bool dir, unsigned room_
 		assert(has_mall());
 
 		for (auto c = objs.begin()+objs_start; c != objs.end(); ++c) {
-			if (c->type == TYPE_FISHTANK && c->item_flags != TYPE_FISH) {interior->mall_info->pet_tanks.emplace_back(*c, c->item_flags, (c - objs.begin()));}
+			if (c->is_pet_container() && c->item_flags != TYPE_FISH) {interior->mall_info->pet_tanks.emplace_back(*c, c->item_flags, (c - objs.begin()));}
 		}
 	}
 }

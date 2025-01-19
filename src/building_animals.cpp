@@ -213,7 +213,7 @@ bool is_pet_cont_of_type(pet_tank_t const &t, vect_room_object_t const &objs, un
 	if (t.animal_type != animal_type) return 0;
 	assert(t.obj_ix < objs.size());
 	room_object_t const &obj(objs[t.obj_ix]);
-	if (obj.type != TYPE_FISHTANK) return 0; // taken by the player?
+	if (!obj.is_pet_container()) return 0; // taken by the player?
 	assert(obj.item_flags == animal_type);
 	return 1;
 }
@@ -435,7 +435,7 @@ void building_t::update_pet_rats(point const &camera_bs, unsigned building_ix) {
 		assert(rat.tunnel_tank_ix < objs.size());
 		room_object_t const &obj(objs[rat.tunnel_tank_ix]);
 
-		if (obj.type != TYPE_FISHTANK) { // taken by the player?
+		if (!obj.is_pet_container()) { // taken by the player?
 			any_removed = rat.dead = 1; // will be removed below
 			continue;
 		}
@@ -1147,7 +1147,7 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 		assert(spider.tunnel_tank_ix < interior->room_geom->objs.size());
 		room_object_t const &tank(interior->room_geom->objs[spider.tunnel_tank_ix]);
 
-		if (tank.type != TYPE_FISHTANK) { // tank was taken, set the spider free
+		if (!tank.is_pet_container()) { // tank was taken, set the spider free
 			spider.in_tank = 0;
 			return 0;
 		}
@@ -1615,9 +1615,8 @@ void building_t::update_pet_snakes(point const &camera_bs, unsigned building_ix)
 
 	for (snake_t &snake : snakes) { // check for tank removed
 		assert(snake.id < objs.size());
-		room_object_t const &obj(objs[snake.id]);
 
-		if (obj.type != TYPE_FISHTANK) { // taken by the player?
+		if (!objs[snake.id].is_pet_container()) { // taken by the player?
 			snake.length = 0.0;
 			any_removed  = 1; // will be removed below
 		}
@@ -1800,7 +1799,7 @@ void building_t::update_pet_birds(point const &camera_bs, unsigned building_ix) 
 	for (auto i = birds.begin(); i != birds.end(); ++i) { // check for cage removed
 		if (animate2) {i->anim_time += fticks;}
 		assert(i->id < objs.size());
-		if (objs[i->id].type == TYPE_FISHTANK) continue;
+		if (objs[i->id].is_pet_container()) continue;
 		any_removed = 1; // taken by the player?; will be removed below
 		i->radius = 0.0;
 	}
