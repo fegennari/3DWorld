@@ -302,17 +302,16 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	}
 	if (obj.is_pet_container()) { // fishtank, glass terrarium, or pet cage
 		if (obj.has_lid()) return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 10.0, 1.0, "tank lid and light"); // take the lid and light
-		float value(0.0), weight(0.0);
-		string name;
+		bldg_obj_type_t type(get_room_obj_type(obj));
 		switch (obj.item_flags) {
-		case TYPE_FISH  : value = 100.0; weight = 160.0; name = "fish tank"; break;
-		case TYPE_RAT   : value =  50.0; weight =  30.0; name = "rat tank"; break;
-		case TYPE_SNAKE : value =  60.0; weight =  35.0; name = "snake terrarium"; break;
-		case TYPE_SPIDER: value =  40.0; weight =  25.0; name = "spider terrarium"; break;
-		case TYPE_BIRD  : value =  50.0; weight =  10.0; name = "bird cage"; break;
+		case TYPE_FISH  : type.value = 100.0; type.weight = 160.0; type.name = "fish tank";        break;
+		case TYPE_RAT   : type.value =  50.0; type.weight =  30.0; type.name = "rat tank";         break;
+		case TYPE_SNAKE : type.value =  60.0; type.weight =  35.0; type.name = "snake terrarium";  break;
+		case TYPE_SPIDER: type.value =  40.0; type.weight =  25.0; type.name = "spider terrarium"; break;
+		case TYPE_BIRD  : type.value =  50.0; type.weight =  10.0; type.name = "bird cage";        break;
 		default: assert(0); // unsupported
 		}
-		return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, value, weight, name);
+		return type;
 	}
 	if (otype == TYPE_SHOWERTUB) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 20.0, 2.0, "shower curtain");} // only the curtains can be taken
 	if (otype == TYPE_TABLE    && obj.is_broken ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1,  25.0, 40.0, "broken table");} // glass tables only

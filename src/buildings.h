@@ -1317,7 +1317,7 @@ public:
 	static void get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects, bool add_models_mode=0, bool books_only=0);
 	static void add_hangers_and_clothing(float window_vspacing, unsigned num_hangers, unsigned flags, int hanger_model_id, int clothing_model_id,
 		vect_room_object_t &objects, rand_gen_t &rgen);
-	static void add_fishtank(cube_t const &tank, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool in_pet_store,
+	static void add_pet_container(cube_t const &tank, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool in_pet_store,
 		vect_room_object_t &objects, rand_gen_t &rgen, unsigned animal_type=TYPE_FISH);
 private:
 	static void add_wine_rack_bottles(room_object_t const &c, vect_room_object_t &objects);

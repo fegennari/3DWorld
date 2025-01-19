@@ -534,7 +534,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 	float const box_zscale(shelf_clearance*sz_scale), h_val(0.21*floor_spacing);
 	rand_gen_t base_rgen(c.create_rgen());
 
-	// Note: this function doesn't support placement of objects drawn as 3D models such as fire extinguishers
+	// Note: this function supports placement of objects drawn as 3D models such as fire extinguishers when add_models_mode=1
 	for (unsigned s = 0; s < num_shelves; ++s) {
 		cube_t const &S(shelves[s]);
 		bool const top_shelf(s+1 == num_shelves);
@@ -585,7 +585,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 				}
 			}
 			else if (c.item_flags == STORE_PETS) { // pet store shelf
-				if (add_models_mode) { // fishtanks count as models since they have fish models and are added to objs rather than expanded_objs
+				if (add_models_mode) { // fishtanks and cages count as models since they have fish models and are added to objs rather than expanded_objs
 					unsigned const num_place(round_fp(0.4*rgen.rand_uniform(0.5, 1.0)*ld_ratio));
 					vector<unsigned> animal_types{TYPE_FISH, TYPE_SNAKE, TYPE_SPIDER};
 					if (building_obj_model_loader.is_model_valid(OBJ_MODEL_RAT      )) {animal_types.push_back(TYPE_RAT );}
@@ -599,14 +599,12 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 						sz[!c.dim] = 0.5*min(0.5f*shelf_len, rgen.rand_uniform(1.6, 2.8)*shelf_depth); // set length
 						gen_xy_pos_for_cube_obj(tank, S, sz, height, rgen);
 						if (has_bcube_int(tank, cubes)) continue;
-						add_fishtank(tank, C.room_id, C.light_amt, c.dim, !c.dir, 1, objects, rgen, animal_type); // in_pet_store=1
+						add_pet_container(tank, C.room_id, C.light_amt, c.dim, !c.dir, 1, objects, rgen, animal_type); // in_pet_store=1
 						tank.expand_in_dim(!c.dim, 0.05*shelf_depth); // add a bit of extra spacing between tanks
 						cubes.push_back(tank);
 					} // for n
 				}
-				else { // cages with rats and birds + terrariums with snakes and spiders
-					// added during animal update pass
-				}
+				// else added during animal update pass
 			}
 			else if (c.item_flags == STORE_SHOE) { // shoe store shelf; // add shoes displayed sideways
 				if (add_models_mode) {

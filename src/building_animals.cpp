@@ -1790,7 +1790,7 @@ void building_t::update_pet_birds(point const &camera_bs, unsigned building_ix) 
 			dir[obj.dim] = (obj.dir ? 1.0 : -1.0); // facing out
 			dir.normalize();
 			birds.emplace_back(pos, radius, dir, t.obj_ix, WHITE*rgen.rand_float()); // black-white
-			birds.back().anim_time = rgen.rand_float(); // random animation offset
+			birds.back().anim_time = 100.0*rgen.rand_float(); // random animation offset
 		} // for t
 		birds.placed = 1;
 	}

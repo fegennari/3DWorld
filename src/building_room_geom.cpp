@@ -36,7 +36,8 @@ void add_pipe_with_bend(rgeom_mat_t &mat, colorRGBA const &color, point const &b
 void draw_metal_handle_wheel(cube_t const &c, unsigned dim, colorRGBA const &color, colorRGBA const &shaft_color, rgeom_mat_t &mat, rgeom_mat_t &shaft_mat);
 
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // draw only these faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
-unsigned get_skip_mask_for_xy(bool dim) {return (dim ? EF_Y12 : EF_X12);} // skip these faces
+unsigned get_skip_mask_for_xy (bool     dim) {return (dim ? EF_Y12 : EF_X12);} // skip these faces
+unsigned get_skip_mask_for_dim(unsigned dim) {return ((dim == 2) ? EF_Z12 : get_skip_mask_for_xy(dim));} // skip these faces
 unsigned get_def_cylin_ndiv(room_object_t const &c) {return get_rgeom_sphere_ndiv(c.is_on_srack());} // low detail for shelfrack objects
 tid_nm_pair_t get_tex_auto_nm(int tid, float tscale=1.0, bool shadowed=1) {return tid_nm_pair_t(tid, get_normal_map_for_bldg_tid(tid), tscale, tscale, 0.0, 0.0, shadowed);}
 int get_counter_tid  () {return get_texture_by_name("marble2.jpg");}
@@ -5464,27 +5465,31 @@ void building_room_geom_t::add_metal_bar(room_object_t const &c) {
 	metal_mat.add_cube_to_verts_untextured(c, apply_light_color(c), c.item_flags); // skip_faces is stored in item_flags
 }
 
-void building_room_geom_t::add_store_gate(room_object_t const &c) {
-	colorRGBA const color(apply_light_color(c));
-	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small
-	unsigned const num_vbars(6), num_hbars(30);
-	float const thickness(c.get_depth()), vbar_hthick(0.6*thickness), hbar_hthick(0.4*thickness);
-	float const v_span(c.get_width() - 2.0*vbar_hthick), h_span(c.dz() - 2.0*hbar_hthick);
+void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars,
+	float vbar_hthick, float hbar_hthick, unsigned vdim, unsigned hdim)
+{
+	assert(num_vbars > 1 && num_hbars > 1);
+	float const v_span(c.get_sz_dim(hdim) - 2.0*vbar_hthick), h_span(c.get_sz_dim(vdim) - 2.0*hbar_hthick);
 	float const v_step(v_span/(num_vbars - 1)), h_step(h_span/(num_hbars - 1));
+	unsigned const skip_faces[2] = {get_skip_mask_for_dim(vdim), get_skip_mask_for_dim(hdim)};
 	cube_t bar(c);
-	bar.expand_in_z(-hbar_hthick);
+	bar.expand_in_dim(vdim, -hbar_hthick);
 
 	for (unsigned n = 0; n < num_vbars; ++n) { // vertical
-		set_wall_width(bar, (c.d[!c.dim][0] + vbar_hthick + n*v_step), vbar_hthick, !c.dim);
-		metal_mat.add_cube_to_verts_untextured(bar, color, EF_Z12);
+		set_wall_width(bar, (c.d[hdim][0] + vbar_hthick + n*v_step), vbar_hthick, hdim);
+		mat.add_cube_to_verts_untextured(bar, color, skip_faces[0]);
 	}
-	unsigned const skip_faces(get_skip_mask_for_xy(!c.dim));
 	bar = c;
 
 	for (unsigned n = 0; n < num_hbars; ++n) { // horizontal
-		set_wall_width(bar, (c.z1() + hbar_hthick + n*h_step), hbar_hthick, 2);
-		metal_mat.add_cube_to_verts_untextured(bar, color, skip_faces);
+		set_wall_width(bar, (c.d[vdim][0] + hbar_hthick + n*h_step), hbar_hthick, vdim);
+		mat.add_cube_to_verts_untextured(bar, color, skip_faces[1]);
 	}
+}
+void building_room_geom_t::add_store_gate(room_object_t const &c) {
+	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small
+	float const thickness(c.get_depth()), vbar_hthick(0.6*thickness), hbar_hthick(0.4*thickness);
+	add_grid_of_bars(mat, apply_light_color(c), c, 6, 30, vbar_hthick, hbar_hthick, 2, !c.dim);
 }
 
 void building_room_geom_t::add_theft_sensor(room_object_t const &c, bool alarm_mode) {
@@ -5589,9 +5594,34 @@ void building_room_geom_t::add_spider_web(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_pet_cage(room_object_t const &c) {
-	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small
-	// TODO: metal bars in a grid pattern
-	mat.add_cube_to_verts_untextured(c, apply_light_color(c), EF_Z1); // skip bottom
+	vector3d const sz(c.get_size());
+	cube_t top(c), tray(c);
+	top.z1() = tray.z2() = c.z1() + 0.1*sz.z;
+	// add metal bars in a grid pattern around sides and top
+	float const bar_thick(0.005*sz.z), bar_hthick(0.5*bar_thick);
+	unsigned const num_hbars(12);
+	rgeom_mat_t &metal_mat(get_metal_material(0, 0, 1)); // unshadowed, small
+	colorRGBA const color(apply_light_color(c));
+	unsigned num_xy_bars[2] = {};
+
+	for (unsigned dim = 0; dim < 2; ++dim) { // sides
+		num_xy_bars[dim] = num_hbars*sz[1-dim]/sz.z;
+
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			cube_t side(top);
+			side.d[dim][!dir] = c.d[dim][dir] - (dir ? 1.0 : -1.0)*bar_thick;
+			add_grid_of_bars(metal_mat, color, side, num_xy_bars[dim], num_hbars, bar_hthick, bar_hthick, 2, 1-dim);
+		}
+	} // for dim
+	// top
+	cube_t top_bars(top);
+	top_bars.z1() = top.z2() - bar_thick;
+	add_grid_of_bars(metal_mat, color, top_bars, num_xy_bars[0], num_xy_bars[1], bar_hthick, bar_hthick, 0, 1);
+	// add bottom tray
+	get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(tray, apply_light_color(c, BKGRAY), EF_Z12); // shadowed, small; skip top and bottom
+	// add wood chips in tray
+	rgeom_mat_t &gravel_mat(get_material(tid_nm_pair_t(get_texture_by_name("wood_chips.jpg"), 2.0/sz.z), 1, 0, 1)); // shadowed, small
+	gravel_mat.add_cube_to_verts(tray, apply_light_color(c, WHITE), c.get_llc(), ~EF_Z2); // draw top only
 }
 
 void maybe_rotate_door_verts(rgeom_storage_t::vect_vertex_t &verts, unsigned start_ix, door_t const &door, door_rotation_t const &drot) {
