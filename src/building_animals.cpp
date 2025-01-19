@@ -209,6 +209,15 @@ bool play_attack_sound(point const &pos, float gain, float pitch, rand_gen_t &rg
 	return 0;
 }
 
+bool is_pet_cont_of_type(pet_tank_t const &t, vect_room_object_t const &objs, unsigned animal_type) {
+	if (t.animal_type != animal_type) return 0;
+	assert(t.obj_ix < objs.size());
+	room_object_t const &obj(objs[t.obj_ix]);
+	if (obj.type != TYPE_FISHTANK) return 0; // taken by the player?
+	assert(obj.item_flags == animal_type);
+	return 1;
+}
+
 
 // *** Rats ***
 
@@ -395,11 +404,8 @@ void building_t::update_pet_rats(point const &camera_bs, unsigned building_ix) {
 
 	if (!rats.placed && has_mall()) { // add pet store rats on first update frame
 		for (pet_tank_t const &t : interior->mall_info->pet_tanks) {
-			if (t.animal_type != TYPE_RAT) continue;
-			assert(t.obj_ix < objs.size());
+			if (!is_pet_cont_of_type(t, objs, TYPE_RAT)) continue;
 			room_object_t const &obj(objs[t.obj_ix]);
-			if (obj.type != TYPE_FISHTANK) continue; // taken by the player?
-			assert(obj.item_flags == TYPE_RAT);
 			rand_gen_t rgen;
 			rgen.set_state(building_ix+1, t.obj_ix+1); // unique per building and per tank
 			rgen.rand_mix();
@@ -937,13 +943,11 @@ void building_t::update_spiders(point const &camera_bs, unsigned building_ix) {
 		global_building_params.spider_size_min, global_building_params.spider_size_max);
 
 	if (!was_placed && has_mall()) { // add pet store spiders on first update frame
+		vect_room_object_t const &objs(interior->room_geom->objs);
+
 		for (pet_tank_t const &t : interior->mall_info->pet_tanks) {
-			if (t.animal_type != TYPE_SPIDER) continue;
-			vect_room_object_t const &objs(interior->room_geom->objs);
-			assert(t.obj_ix < objs.size());
+			if (!is_pet_cont_of_type(t, objs, TYPE_SPIDER)) continue;
 			room_object_t const &obj(objs[t.obj_ix]);
-			if (obj.type != TYPE_FISHTANK) continue; // taken by the player?
-			assert(obj.item_flags == TYPE_SPIDER);
 			rand_gen_t rgen;
 			rgen.set_state(building_ix+1, t.obj_ix+1); // unique per building and per tank
 			rgen.rand_mix();
@@ -1589,11 +1593,8 @@ void building_t::update_pet_snakes(point const &camera_bs, unsigned building_ix)
 
 	if (!snakes.placed && has_mall()) { // add pet store snakes on first update frame; one snake per tank
 		for (pet_tank_t const &t : interior->mall_info->pet_tanks) {
-			if (t.animal_type != TYPE_SNAKE) continue;
-			assert(t.obj_ix < objs.size());
+			if (!is_pet_cont_of_type(t, objs, TYPE_SNAKE)) continue;
 			room_object_t const &obj(objs[t.obj_ix]);
-			if (obj.type != TYPE_FISHTANK) continue; // taken by the player?
-			assert(obj.item_flags == TYPE_SNAKE);
 			rand_gen_t rgen;
 			rgen.set_state(building_ix+1, t.obj_ix+1); // unique per building and per tank
 			rgen.rand_mix();
@@ -1778,11 +1779,8 @@ void building_t::update_pet_birds(point const &camera_bs, unsigned building_ix) 
 
 	if (!birds.placed && has_mall()) { // add pet store rats on first update frame
 		for (pet_tank_t const &t : interior->mall_info->pet_tanks) {
-			if (t.animal_type != TYPE_BIRD) continue;
-			assert(t.obj_ix < objs.size());
+			if (!is_pet_cont_of_type(t, objs, TYPE_BIRD)) continue;
 			room_object_t const &obj(objs[t.obj_ix]);
-			if (obj.type != TYPE_FISHTANK) continue; // taken by the player?
-			assert(obj.item_flags == TYPE_BIRD);
 			rand_gen_t rgen;
 			rgen.set_state(building_ix+1, t.obj_ix+1); // unique per building and per tank
 			rgen.rand_mix();
