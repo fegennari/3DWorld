@@ -2477,14 +2477,18 @@ void building_t::debug_people_in_building(shader_t &s, point const &camera_bs) c
 		for (point const &v : p.path) {append_line_pt(line_pts, v);}
 		if (p.target_valid ())        {append_line_pt(line_pts, p.target_pos);} // next target - not dest
 		if (!line_pts.empty())        {append_line_pt(line_pts, p.pos);} // add starting point if there's a valid path
-		if (line_pts.size() > 1) {draw_verts(line_pts, GL_LINES);}
+		if (line_pts.size() > 1)      {draw_verts    (line_pts, GL_LINES);}
 		line_pts.clear();
 		float const sradius(0.25*p.radius);
+		point from;
 
-		for (path_pt_t const &v : p.path) {
-			if (v == p.path.front()) continue; // skip first point
+		for (path_pt_t const &v : p.path) { // Note: backwards
+			if (v == p.path.front()) {from = v; continue;} // skip first point
 			color_shader.set_cur_color(path_color*(v.fixed ? 0.5 : 1.0));
 			draw_sphere_vbo(v, sradius, ndiv, 0);
+			point const arrow_start(v + (2.0*sradius)*(from - v).get_norm());
+			draw_fast_cylinder(v, arrow_start, 0.5*sradius, 0.0, ndiv, 0);
+			from = v;
 		}
 		assert(p.goal_type < NUM_GOAL_TYPES);
 		colorRGBA const goal_colors[NUM_GOAL_TYPES] = {BLACK, BLUE, PINK, MAGENTA, RED, ORANGE, PURPLE}; // NONE, ROOM, ELEVATOR, ESCALATOR, PLAYER, PLAYER_LAST_POS, SOUND
