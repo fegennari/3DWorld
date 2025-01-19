@@ -103,9 +103,10 @@ void model_anim_t::transform_node_hierarchy_recur(float anim_time, animation_t c
 void model_anim_t::get_bone_transforms(unsigned anim_id, float cur_time) {
 	//highres_timer_t timer("get_bone_transforms");  // 0.011ms
 	assert(!animations.empty());
-	static bool had_anim_id_error(0);
 
 	if (anim_id >= animations.size()) {
+		static bool had_anim_id_error(0);
+
 		if (!had_anim_id_error) {
 			cerr << "*** Error: Invalid animation ID " << anim_id << "; Max is " << (animations.size()-1) << "; Using max value." << endl;
 			had_anim_id_error = 1;
@@ -118,7 +119,15 @@ void model_anim_t::get_bone_transforms(unsigned anim_id, float cur_time) {
 	transform_node_hierarchy_recur(anim_time, animation, 0, root_transform); // root node is 0
 }
 bool model_anim_t::check_anim_wrapped(unsigned anim_id, float old_time, float new_time) const {
-	assert(anim_id < animations.size());
+	if (anim_id >= animations.size()) {
+		static bool had_anim_id_error(0);
+
+		if (!had_anim_id_error) {
+			cerr << "*** Error: Invalid animation ID " << anim_id << "; Max is " << (animations.size()-1) << "." << endl;
+			had_anim_id_error = 1;
+		}
+		return 0;
+	}
 	animation_t const &animation(animations[anim_id]);
 	return (int((new_time * animation.ticks_per_sec)/animation.duration) != int((old_time * animation.ticks_per_sec)/animation.duration));
 }
