@@ -529,7 +529,7 @@ snake_draw_t snake_draw;
 void building_room_geom_t::draw_animals(shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 	point const &camera_bs, bool shadow_only, bool reflection_pass, bool check_clip_cube) const
 {
-	if (!rats.empty() || !sewer_rats.empty() || !pet_rats.empty()) {
+	if ((!rats.empty() || !sewer_rats.empty() || !pet_rats.empty()) && building_obj_model_loader.is_model_valid(OBJ_MODEL_RAT)) {
 		bool const enable_animations(!shadow_only); // can't see the animation in the shadow pass
 		animation_state_t anim_state(enable_animations, ANIM_ID_RAT);
 		bool rat_drawn(0);
@@ -582,7 +582,7 @@ void building_room_geom_t::draw_animals(shader_t &s, building_t const &building,
 		bind_default_flat_normal_map();
 		if (rat_drawn) {check_mvm_update();} // needed after popping model transform matrix
 	} // end rats drawing
-	if (!pet_birds.empty()) {
+	if (!pet_birds.empty() && building_obj_model_loader.is_model_valid(OBJ_MODEL_BIRD_ANIM)) {
 		bool const enable_animations(1);
 		animation_state_t anim_state(enable_animations, ANIM_ID_SKELETAL, 0.0, BIRD_STATE_STANDING);
 		bool bird_drawn(0);

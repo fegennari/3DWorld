@@ -586,13 +586,14 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 			}
 			else if (c.item_flags == STORE_PETS) { // pet store shelf
 				if (add_models_mode) { // fishtanks count as models since they have fish models and are added to objs rather than expanded_objs
-					unsigned const num_fishtanks(round_fp(0.4*rgen.rand_uniform(0.5, 1.0)*ld_ratio));
-					unsigned const num_animal_types(5);
-					unsigned const animals[num_animal_types] = {TYPE_FISH, TYPE_RAT, TYPE_SNAKE, TYPE_SPIDER, TYPE_BIRD};
-					unsigned const animal_type(animals[rgen.rand() % num_animal_types]);
+					unsigned const num_place(round_fp(0.4*rgen.rand_uniform(0.5, 1.0)*ld_ratio));
+					vector<unsigned> animal_types{TYPE_FISH, TYPE_SNAKE, TYPE_SPIDER};
+					if (building_obj_model_loader.is_model_valid(OBJ_MODEL_RAT      )) {animal_types.push_back(TYPE_RAT );}
+					if (building_obj_model_loader.is_model_valid(OBJ_MODEL_BIRD_ANIM)) {animal_types.push_back(TYPE_BIRD);}
+					unsigned const animal_type(animal_types[rgen.rand() % animal_types.size()]);
 					cube_t tank;
 
-					for (unsigned n = 0; n < num_fishtanks; ++n) {
+					for (unsigned n = 0; n < num_place; ++n) {
 						float const height((top_shelf ? 1.2 : 1.0)*rgen.rand_uniform(0.82, 0.92)*shelf_clearance);
 						sz[ c.dim] = 0.5*rgen.rand_uniform(0.86, 0.98)*shelf_depth; // set depth
 						sz[!c.dim] = 0.5*min(0.5f*shelf_len, rgen.rand_uniform(1.6, 2.8)*shelf_depth); // set length
