@@ -1188,7 +1188,7 @@ struct building_room_geom_t {
 	void add_tape(room_object_t const &c);
 	static void add_spraycan_to_material(room_object_t const &c, rgeom_mat_t &mat, bool draw_bottom=0);
 	void add_spraycan(room_object_t const &c);
-	void add_button(room_object_t const &c);
+	void add_button(room_object_t const &c, bool inc_geom, bool inc_text);
 	void add_crate(room_object_t const &c);
 	void add_box(room_object_t const &c);
 	void add_paint_can(room_object_t const &c);

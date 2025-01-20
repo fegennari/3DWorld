@@ -943,23 +943,36 @@ void building_room_geom_t::add_spraycan(room_object_t const &c) { // is_small=1
 	add_spraycan_to_material(c, get_untextured_material(1, 0, 1));
 }
 
-void building_room_geom_t::add_button(room_object_t const &c) {
+void building_room_geom_t::add_button(room_object_t const &c, bool inc_geom, bool inc_text) {
 	bool const in_elevator(c.in_elevator());
-	tid_nm_pair_t tp; // unshadowed
-	if (c.is_active()) {tp.emissive = 1.0;} // make it lit when active
-	colorRGBA const color(apply_light_color(c));
-	rgeom_mat_t &mat(get_material(tp, 0, in_elevator, !in_elevator)); // (in_elevator ? dynamic : small)
-	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts_untextured(c, color, ~get_face_mask(c.dim, !c.dir));} // square button
-	else if (c.shape == SHAPE_CYLIN) {mat.add_ortho_cylin_to_verts(c, color, c.dim, !c.dir, c.dir);} // round button
-	else {assert(0);}
+
+	if (inc_geom) {
+		tid_nm_pair_t tp; // unshadowed
+		if (c.is_active()) {tp.emissive = 1.0;} // make it lit when active
+		colorRGBA const color(apply_light_color(c));
+		rgeom_mat_t &mat(get_material(tp, 0, in_elevator, !in_elevator)); // (in_elevator ? dynamic : small)
+		if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts_untextured(c, color, ~get_face_mask(c.dim, !c.dir));} // square button
+		else if (c.shape == SHAPE_CYLIN) {mat.add_ortho_cylin_to_verts(c, color, c.dim, !c.dir, c.dir);} // round button
+		else {assert(0);}
 	
-	if (!in_elevator) { // add the frame for better color contrast
-		float const expand(0.7*c.dz());
-		cube_t frame(c);
-		frame.d[c.dim][c.dir] -= 0.9*(c.dir ? 1.0 : -1.0)*c.get_depth(); // shorten to a sliver against the elevator wall
-		frame.expand_in_dim(!c.dim, expand);
-		frame.expand_in_dim(2,      expand); // Z
-		get_untextured_material(0, 0, 1).add_cube_to_verts_untextured(frame, apply_light_color(c, DK_GRAY), ~get_face_mask(c.dim, !c.dir)); // small
+		if (!in_elevator) { // add the frame for better color contrast
+			float const expand(0.7*c.dz());
+			cube_t frame(c);
+			frame.d[c.dim][c.dir] -= 0.9*(c.dir ? 1.0 : -1.0)*c.get_depth(); // shorten to a sliver against the elevator wall
+			frame.expand_in_dim(!c.dim, expand);
+			frame.expand_in_dim(2,      expand); // Z
+			get_untextured_material(0, 0, 1).add_cube_to_verts_untextured(frame, apply_light_color(c, DK_GRAY), ~get_face_mask(c.dim, !c.dir)); // small
+		}
+	}
+	if (inc_text && !in_elevator) { // add up/down arrows
+		bool const is_up(c.flags & RO_FLAG_ADJ_TOP), is_down(c.flags & RO_FLAG_ADJ_BOT);
+
+		if (is_up || is_down) {
+			cube_t sign(c);
+			sign.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*0.25*c.get_depth(); // shift outward
+			rgeom_mat_t &mat(get_material(tid_nm_pair_t(FONT_TEXTURE_ID), 0, 0, 1));
+			add_sign_text_verts("V", sign, c.dim, c.dir, apply_light_color(c, BLACK), mat.quad_verts, 0.0, 0.0, 0, is_up); // unshadowed, small, invert_z=is_up
+		}
 	}
 }
 
@@ -4234,7 +4247,7 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 	// add sign text
 	tid_nm_pair_t tex(FONT_TEXTURE_ID);
 	if (c.flags & RO_FLAG_EMISSIVE) {tex.emissive = 1.0;}
-	add_room_obj_sign_text_verts(c, apply_light_color(c), get_material(tex, 0, 0, small, 0, exterior).quad_verts); // unshadowed, small=1
+	add_room_obj_sign_text_verts(c, apply_light_color(c), get_material(tex, 0, 0, small, 0, exterior).quad_verts); // unshadowed
 }
 
 void building_room_geom_t::add_window_sill(room_object_t const &c) {

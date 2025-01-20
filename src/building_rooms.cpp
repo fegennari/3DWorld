@@ -2861,6 +2861,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 		float const button_radius(0.3*wall_thickness), ewidth(i->get_width()), floor_spacing(get_elevator_floor_spacing(*i));
 		unsigned const num_floors(calc_num_floors(*i, floor_spacing, floor_thickness)), elevator_id(i - interior->elevators.begin());
+		bool const dim(i->dim), dir(i->dir);
 		assert(num_floors > 1); // otherwise, why have an elevator?
 		i->button_id_start = objs.size();
 
@@ -2868,30 +2869,30 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		for (unsigned f = 0; f < num_floors; ++f) {
 			if (i->skip_floor_ix(f)) continue;
 			point pos;
-			pos[ i->dim] = i->d[i->dim][i->dir]; // front of the elevator
-			pos[!i->dim] = i->d[!i->dim][0] + 0.1*ewidth; // to the low side
+			pos[ dim] = i->d[ dim][dir]; // front of the elevator
+			pos[!dim] = i->d[!dim][0] + 0.1*ewidth; // to the low side
 
 			for (unsigned d = 0; d < 2; ++d) { // {down, up} call buttons
 				if ((d == 0 && f == 0) || (d == 1 && f == num_floors-1)) continue; // no floor above/below
 				pos.z = i->z1() + f*floor_spacing + (0.05*d + 0.45)*window_vspacing;
-				add_elevator_button(pos, button_radius, i->dim, i->dir, elevator_id, f, 0, d, objs); // inside=0, is_up=d
+				add_elevator_button(pos, button_radius, dim, dir, elevator_id, f, 0, d, objs); // inside=0, is_up=d
 			}
 		} // for f
 		// call buttons for each floor inside the elevator car; first find the panel location for the starting elevator car position;
 		// floor numbers are added in building_room_geom_t::add_elevator();
-		cube_t const panel(get_elevator_car_panel(room_object_t(get_init_elevator_car(*i), TYPE_ELEVATOR, elevator_id, i->dim, i->dir, 0), fc_thick_scale));
+		cube_t const panel(get_elevator_car_panel(room_object_t(get_init_elevator_car(*i), TYPE_ELEVATOR, elevator_id, dim, dir, 0), fc_thick_scale));
 		float const dz(panel.dz()), button_spacing(dz/(num_floors + 1)); // add extra spacing on bottom and top of panel
-		float const inner_button_radius(min(button_radius, min(0.35f*button_spacing, 0.25f*panel.get_sz_dim(!i->dim)))); // may need to be smaller
+		float const inner_button_radius(min(button_radius, min(0.35f*button_spacing, 0.25f*panel.get_sz_dim(!dim)))); // may need to be smaller
 		point pos;
-		pos[ i->dim] = panel.d[i->dim][!i->dir]; // front face of inside panel
-		pos[!i->dim] = panel.get_center_dim(!i->dim) + 0.8*inner_button_radius; // a bit right of center to make room for floor number text
+		pos[ dim] = panel.d[dim][!dir]; // front face of inside panel
+		pos[!dim] = panel.get_center_dim(!dim) + 0.8*inner_button_radius; // a bit right of center to make room for floor number text
 		float cur_z(panel.z1() + button_spacing);
 		
 		for (unsigned f = 0; f < num_floors; ++f) {
 			if (i->skip_floor_ix(f)) continue; // also skips cur_z update to avoid a gap in the buttons, but there's still a gap in the floor numbers
 			pos.z  = cur_z;
 			cur_z += button_spacing;
-			add_elevator_button(pos, inner_button_radius, i->dim, !i->dir, elevator_id, f, 1, 0, objs); // inside=1, is_up=0, pointing in opposite dir
+			add_elevator_button(pos, inner_button_radius, dim, !dir, elevator_id, f, 1, 0, objs); // inside=1, is_up=0, pointing in opposite dir
 		}
 		i->button_id_end = objs.size();
 	} // for e

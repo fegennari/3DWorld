@@ -1048,7 +1048,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_LAPTOP:    add_laptop  (c); break;
 		case TYPE_PIZZA_BOX: add_pizza_box(c); break;
 		case TYPE_PIZZA_TOP: add_pizza_top(c); break;
-		case TYPE_BUTTON:    if (!c.in_elevator()) {add_button(c);} break; // skip buttons inside elevators, which are drawn as dynamic objects
+		case TYPE_BUTTON:    if (!c.in_elevator()) {add_button(c, 1, 0);} break; // skip buttons inside elevators, which are drawn as dynamic objects; inc_geom=1, inc_text=0
 		case TYPE_LBASKET:   add_laundry_basket(c); break;
 		case TYPE_TOASTER:   add_toaster_proxy (c); break;
 		case TYPE_WHEATER:   add_water_heater  (c); break;
@@ -1106,10 +1106,11 @@ void building_room_geom_t::add_text_objs_to_verts(vect_room_object_t const &objs
 	for (room_object_t const &c : objs_to_add) {
 		if (!c.is_visible()) continue; // skip invisible objects
 		switch (c.type) {
-		case TYPE_BOOK:  add_book    (c, 0, 0, 1); break; // text only
-		case TYPE_BCASE: add_bookcase(c, 0, 0, 1, 1.0, 0); break; // text only
-		case TYPE_SIGN:  add_sign    (c, 0, 1); break; // text only
-		case TYPE_SHELFRACK: add_rack(c, 0, 1, 1); break; // add_rack=0, add_objs=1, obj_text_pass=1
+		case TYPE_BOOK:   add_book    (c, 0, 0, 1); break; // text only
+		case TYPE_BCASE:  add_bookcase(c, 0, 0, 1, 1.0, 0); break; // text only
+		case TYPE_SIGN:   add_sign    (c, 0, 1); break; // text only
+		case TYPE_BUTTON: add_button  (c, 0, 1); break; // inc_geom=0, inc_text=1
+		case TYPE_SHELFRACK:  add_rack(c, 0, 1, 1); break; // add_rack=0, add_objs=1, obj_text_pass=1
 		default: break;
 		} // end switch
 	} // for i
@@ -1260,7 +1261,7 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building, point
 		for (auto j = objs.begin() + e.button_id_start; j != objs.begin() + e.button_id_end; ++j) {
 			if (j->type == TYPE_BLOCKER || j->type == TYPE_ELEC_WIRE) continue; // button was removed?
 			assert(j->type == TYPE_BUTTON);
-			if (j->in_elevator()) {add_button(*j);} // add button as a dynamic object if it's inside the elevator
+			if (j->in_elevator()) {add_button(*j, 1, 0);} // add button as a dynamic object if it's inside the elevator; inc_geom=1, inc_text=0
 		}
 	} // for e
 	for (escalator_t  const &e : building.interior->escalators) {add_escalator(e, floor_spacing, 0, 1);} // draw_static=0, draw_dynamic=1
