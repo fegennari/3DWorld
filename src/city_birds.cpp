@@ -97,6 +97,7 @@ city_bird_t::city_bird_t(point const &pos_, float height_, vector3d const &init_
 	city_bird_base_t(pos_, height_, init_dir, OBJ_MODEL_BIRD_ANIM), state(BIRD_STATE_STANDING), loc_ix(loc_ix_), height(height_), prev_frame_pos(pos), color(color_)
 {
 	anim_time = 1.0*TICKS_PER_SECOND*rgen.rand_float(); // 1s random variation so that birds aren't all in sync
+	bcube    -= 0.28*radius*plus_z; // required for GLB bird model
 }
 
 void city_bird_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {

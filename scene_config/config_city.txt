@@ -285,9 +285,10 @@ city deck_chair_model    ../models/beach_chair/scene.gltf             0 0 0  -1 
 city picnic_table_model  ../models/picnic_table.glb                   0 0 0  -1 -1 0    1 1.0 1.0
 
 # animated bird model
-city model_anim_scale 100.0 # model animations are scaled by 100 for some reason
+#city model_anim_scale 100.0 # model animations are scaled by 100 for some reason; this is only needed for the FBX version
 city default_anim_name standing # required to enable animations
-city bird_animated_model ../models/birds/bird_animated.fbx            0 0 0   0 -1 90   1 1.0 1.0
+#city bird_animated_model ../models/birds/bird_animated.fbx            0 0 0   0 -1 90   1 1.0 1.0 # broken in Assimp 5.43
+city bird_animated_model ../models/birds/bird_animated.glb            0 0 0   0 -1 90   0 1.0 1.0 # shifted in +z from FBX version
 city default_anim_name "" # clear to empty
 city model_anim_scale 1.0 # reset
 
