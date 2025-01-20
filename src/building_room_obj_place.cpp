@@ -3624,6 +3624,10 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	}
 }
 
+void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
+	// TODO
+}
+
 void building_t::add_retail_pillar(cube_t const &pillar, float zval, unsigned room_id, bool is_tall) {
 	assert(pillar.is_strictly_normalized());
 	vect_room_object_t &objs(interior->room_geom->objs);
