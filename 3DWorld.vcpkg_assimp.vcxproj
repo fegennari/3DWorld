@@ -1,0 +1,1417 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Tracy|Win32">
+      <Configuration>Tracy</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Tracy|x64">
+      <Configuration>Tracy</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{711D1005-3287-42A8-8A3D-9BD58DF298AA}</ProjectGuid>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\Debug\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">.\Debug\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\Debug\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">.\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\Debug\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">.\Debug\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\Debug\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">.\Debug\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'" />
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'" />
+    <EmbedManifest Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</EmbedManifest>
+    <EmbedManifest Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">true</EmbedManifest>
+    <EmbedManifest Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</EmbedManifest>
+    <EmbedManifest Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">true</EmbedManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\Release\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\Release\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\Release\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</GenerateManifest>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</GenerateManifest>
+    <EmbedManifest Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</EmbedManifest>
+    <EmbedManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</EmbedManifest>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+    <EnableClangTidyCodeAnalysis>false</EnableClangTidyCodeAnalysis>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">
+    <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+    <EnableClangTidyCodeAnalysis>false</EnableClangTidyCodeAnalysis>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+    <EnableClangTidyCodeAnalysis>false</EnableClangTidyCodeAnalysis>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Midl>
+      <TypeLibraryName>.\Debug/3DWorld.tlb</TypeLibraryName>
+      <HeaderFileName>
+      </HeaderFileName>
+    </Midl>
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <AdditionalIncludeDirectories>dependencies\meshoptimizer\src;dependencies\glew-2.0.0\include;Targa;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;dependencies\freealut\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src;dependencies\stb;dependencies\assimp\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;ENABLE_PNG;ENABLE_TIFF;ENABLE_DDS;ENABLE_STB_IMAGE;ENABLE_ASSIMP;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <StringPooling>true</StringPooling>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <PrecompiledHeaderOutputFile>.\Debug/3DWorld.pch</PrecompiledHeaderOutputFile>
+      <AssemblerListingLocation>.\Debug/</AssemblerListingLocation>
+      <ObjectFileName>.\Debug/</ObjectFileName>
+      <ProgramDataBaseFileName>.\Debug/</ProgramDataBaseFileName>
+      <BrowseInformation>false</BrowseInformation>
+      <WarningLevel>Level3</WarningLevel>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <CallingConvention>Cdecl</CallingConvention>
+      <CompileAs>Default</CompileAs>
+      <AdditionalOptions>/openmp %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OpenMPSupport>true</OpenMPSupport>
+      <DisableSpecificWarnings>4244;6993;26437</DisableSpecificWarnings>
+      <EnablePREfast>false</EnablePREfast>
+      <LanguageStandard>Default</LanguageStandard>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+    </ResourceCompile>
+    <Link>
+      <AdditionalOptions>/FIXED:NO %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;libtiff.lib;freeglut.lib;assimp-vc140-mt.lib</AdditionalDependencies>
+      <OutputFile>.\Debug/3DWorld.exe</OutputFile>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <AdditionalLibraryDirectories>dependencies\glew-2.0.0\lib\Release\Win32;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win32;dependencies\freealut\admin\VisualStudioDotNET\alut\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win32_LIB_Release;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\freeglut-2.8.1\lib\x86;dependencies\assimp\lib\RelWithDebInfo</AdditionalLibraryDirectories>
+      <IgnoreSpecificDefaultLibraries>MSVCRT;LIBCMT;LIBCMTD;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>.\Debug/3DWorld.pdb</ProgramDatabaseFile>
+      <SubSystem>Console</SubSystem>
+      <TargetMachine>MachineX86</TargetMachine>
+      <LargeAddressAware>true</LargeAddressAware>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+    </Link>
+    <Bscmake>
+      <PreserveSBR>true</PreserveSBR>
+    </Bscmake>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">
+    <Midl>
+      <TypeLibraryName>.\Debug/3DWorld.tlb</TypeLibraryName>
+      <HeaderFileName>
+      </HeaderFileName>
+    </Midl>
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <AdditionalIncludeDirectories>dependencies\meshoptimizer\src;dependencies\glew-2.0.0\include;Targa;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;dependencies\freealut\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src;dependencies\stb;dependencies\assimp\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;ENABLE_JPEG;ENABLE_PNG;ENABLE_TIFF;ENABLE_DDS;_CRT_SECURE_NO_DEPRECATE;TRACY_ENABLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <StringPooling>true</StringPooling>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <PrecompiledHeaderOutputFile>.\Debug/3DWorld.pch</PrecompiledHeaderOutputFile>
+      <AssemblerListingLocation>.\Debug/</AssemblerListingLocation>
+      <ObjectFileName>.\Debug/</ObjectFileName>
+      <ProgramDataBaseFileName>.\Debug/</ProgramDataBaseFileName>
+      <BrowseInformation>false</BrowseInformation>
+      <WarningLevel>Level3</WarningLevel>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <CallingConvention>Cdecl</CallingConvention>
+      <CompileAs>Default</CompileAs>
+      <AdditionalOptions>/openmp %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OpenMPSupport>true</OpenMPSupport>
+      <DisableSpecificWarnings>4244;6993;26437</DisableSpecificWarnings>
+      <EnablePREfast>false</EnablePREfast>
+      <LanguageStandard>Default</LanguageStandard>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+    </ResourceCompile>
+    <Link>
+      <AdditionalOptions>/FIXED:NO %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>jpeg.lib;libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;libtiff.lib;freeglut.lib;assimp-vc140-mt.lib;Advapi32.lib</AdditionalDependencies>
+      <OutputFile>.\Debug/3DWorld.exe</OutputFile>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <AdditionalLibraryDirectories>dependencies\glew-2.0.0\lib\Release\Win32;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win32;dependencies\freealut\admin\VisualStudioDotNET\alut\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win32_LIB_Release;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\freeglut-2.8.1\lib\x86;dependencies\assimp\lib\RelWithDebInfo</AdditionalLibraryDirectories>
+      <IgnoreSpecificDefaultLibraries>MSVCRT;LIBCMT;LIBCMTD;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>.\Debug/3DWorld.pdb</ProgramDatabaseFile>
+      <SubSystem>Console</SubSystem>
+      <TargetMachine>MachineX86</TargetMachine>
+      <LargeAddressAware>true</LargeAddressAware>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+    </Link>
+    <Bscmake>
+      <PreserveSBR>true</PreserveSBR>
+    </Bscmake>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Midl>
+      <TypeLibraryName>.\Debug/3DWorld.tlb</TypeLibraryName>
+      <HeaderFileName>
+      </HeaderFileName>
+    </Midl>
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <AdditionalIncludeDirectories>dependencies\meshoptimizer\src;dependencies\glew-2.0.0\include;Targa;dependencies\openal-soft\include\AL;dependencies\freealut\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.1;dependencies\tiff-4.3.0\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src;dependencies\openal-soft\include;dependencies\stb;..\vcpkg\packages\assimp_x64-windows\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;ENABLE_PNG;ENABLE_TIFF;ENABLE_DDS;ENABLE_STB_IMAGE;ENABLE_ASSIMP;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <StringPooling>true</StringPooling>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <PrecompiledHeaderOutputFile>.\Debug/3DWorld.pch</PrecompiledHeaderOutputFile>
+      <AssemblerListingLocation>.\Debug/</AssemblerListingLocation>
+      <ObjectFileName>.\Debug/</ObjectFileName>
+      <ProgramDataBaseFileName>.\Debug/</ProgramDataBaseFileName>
+      <BrowseInformation>false</BrowseInformation>
+      <WarningLevel>Level3</WarningLevel>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <CallingConvention>Cdecl</CallingConvention>
+      <CompileAs>Default</CompileAs>
+      <AdditionalOptions>/openmp %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OpenMPSupport>true</OpenMPSupport>
+      <DisableSpecificWarnings>4244;6993;26437</DisableSpecificWarnings>
+      <LanguageStandard>Default</LanguageStandard>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+    </ResourceCompile>
+    <Link>
+      <AdditionalOptions>/FIXED:NO %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;tiff.lib;freeglut.lib;assimp-vc143-mt.lib</AdditionalDependencies>
+      <OutputFile>.\Debug/3DWorld.exe</OutputFile>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <AdditionalLibraryDirectories>dependencies\glew-2.0.0\lib\Release\x64;dependencies\openal-soft\Release;dependencies\freealut\admin\VisualStudioDotNET\x64\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win64_LIB_Release;dependencies\zlib-1.2.11\contrib\vstudio\vc14\x64\ZlibStatRelease;dependencies\tiff-4.3.0\libtiff\RelWithDebInfo;dependencies\freeglut-2.8.1\lib\x64\Debug;..\vcpkg\packages\assimp_x64-windows\lib</AdditionalLibraryDirectories>
+      <IgnoreSpecificDefaultLibraries>MSVCRT;LIBCMT;LIBCMTD;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>.\Debug/3DWorld.pdb</ProgramDatabaseFile>
+      <SubSystem>Console</SubSystem>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">
+    <Midl>
+      <TypeLibraryName>.\Debug/3DWorld.tlb</TypeLibraryName>
+      <HeaderFileName>
+      </HeaderFileName>
+    </Midl>
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <AdditionalIncludeDirectories>dependencies\meshoptimizer\src;dependencies\glew-2.0.0\include;Targa;dependencies\openal-soft\include\AL;dependencies\freealut\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.1;dependencies\tiff-4.3.0\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src;dependencies\openal-soft\include;dependencies\stb;dependencies\assimp\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;ENABLE_JPEG;ENABLE_PNG;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <StringPooling>true</StringPooling>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <PrecompiledHeaderOutputFile>.\Debug/3DWorld.pch</PrecompiledHeaderOutputFile>
+      <AssemblerListingLocation>.\Debug/</AssemblerListingLocation>
+      <ObjectFileName>.\Debug/</ObjectFileName>
+      <ProgramDataBaseFileName>.\Debug/</ProgramDataBaseFileName>
+      <BrowseInformation>true</BrowseInformation>
+      <WarningLevel>Level3</WarningLevel>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <CallingConvention>Cdecl</CallingConvention>
+      <CompileAs>Default</CompileAs>
+      <AdditionalOptions>/openmp %(AdditionalOptions)</AdditionalOptions>
+      <LanguageStandard>Default</LanguageStandard>
+      <OpenMPSupport>true</OpenMPSupport>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+    </ResourceCompile>
+    <Link>
+      <AdditionalOptions>/FIXED:NO %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>libjpeg.lib;libpng.lib;zlib.lib;openal32.lib;alut.lib;pthreadVCE.lib;glew32.lib;glut64.lib</AdditionalDependencies>
+      <OutputFile>.\Debug/3DWorld.exe</OutputFile>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <AdditionalLibraryDirectories>dependencies\glew-2.0.0\lib\Release\x64;dependencies\openal-soft\Release;dependencies\freealut\admin\VisualStudioDotNET\x64\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win64_LIB_Release;dependencies\zlib-1.2.11\contrib\vstudio\vc14\x64\ZlibStatRelease;dependencies\tiff-4.3.0\libtiff\RelWithDebInfo;dependencies\freeglut-2.8.1\lib\x64\Debug;dependencies\libjpeg-turbo\RelWithDebInfo;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\assimp\lib\RelWithDebInfo</AdditionalLibraryDirectories>
+      <IgnoreSpecificDefaultLibraries>MSVCRT;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>.\Debug/3DWorld.pdb</ProgramDatabaseFile>
+      <SubSystem>Console</SubSystem>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Midl>
+      <TypeLibraryName>.\Release/3DWorld.tlb</TypeLibraryName>
+      <HeaderFileName>
+      </HeaderFileName>
+    </Midl>
+    <ClCompile>
+      <Optimization>Full</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <AdditionalIncludeDirectories>dependencies\meshoptimizer\src;dependencies\glew-2.0.0\include;Targa;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;dependencies\freealut\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src;dependencies\stb;dependencies\assimp\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_CONSOLE;ENABLE_PNG;ENABLE_TIFF;ENABLE_DDS;ENABLE_STB_IMAGE;ENABLE_ASSIMP;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <StringPooling>true</StringPooling>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <FloatingPointExceptions>false</FloatingPointExceptions>
+      <PrecompiledHeaderOutputFile>.\Release/3DWorld.pch</PrecompiledHeaderOutputFile>
+      <AssemblerListingLocation>.\Release/</AssemblerListingLocation>
+      <ObjectFileName>.\Release/</ObjectFileName>
+      <ProgramDataBaseFileName>.\Release/</ProgramDataBaseFileName>
+      <BrowseInformation>false</BrowseInformation>
+      <WarningLevel>Level3</WarningLevel>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <CompileAs>Default</CompileAs>
+      <AdditionalOptions>/openmp %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OpenMPSupport>true</OpenMPSupport>
+      <DisableSpecificWarnings>4244;6993;26437</DisableSpecificWarnings>
+      <EnablePREfast>false</EnablePREfast>
+      <LanguageStandard>Default</LanguageStandard>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+    </ResourceCompile>
+    <Link>
+      <AdditionalDependencies>libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;libtiff.lib;freeglut.lib;assimp-vc140-mt.lib</AdditionalDependencies>
+      <OutputFile>.\Release/3DWorld.exe</OutputFile>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <AdditionalLibraryDirectories>dependencies\glew-2.0.0\lib\Release\Win32;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win32;dependencies\freealut\admin\VisualStudioDotNET\alut\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win32_LIB_Release;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\freeglut-2.8.1\lib\x86;dependencies\assimp\lib\RelWithDebInfo</AdditionalLibraryDirectories>
+      <IgnoreSpecificDefaultLibraries>MSVCRT;LIBCMT;LIBCMTD;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <SubSystem>Console</SubSystem>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+      <TargetMachine>MachineX86</TargetMachine>
+      <LargeAddressAware>true</LargeAddressAware>
+      <Profile>false</Profile>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Midl>
+      <TypeLibraryName>.\Release/3DWorld.tlb</TypeLibraryName>
+      <HeaderFileName>
+      </HeaderFileName>
+    </Midl>
+    <ClCompile>
+      <Optimization>Full</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <AdditionalIncludeDirectories>dependencies\meshoptimizer\src;dependencies\glew-2.0.0\include;Targa;dependencies\openal-soft\include\AL;dependencies\freealut\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.1;dependencies\tiff-4.3.0\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src;dependencies\openal-soft\include;dependencies\stb;..\vcpkg\packages\assimp_x64-windows\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_CONSOLE;ENABLE_PNG;ENABLE_TIFF;ENABLE_DDS;ENABLE_STB_IMAGE;ENABLE_ASSIMP;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <StringPooling>true</StringPooling>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <FloatingPointExceptions>false</FloatingPointExceptions>
+      <PrecompiledHeaderOutputFile>.\Release/3DWorld.pch</PrecompiledHeaderOutputFile>
+      <AssemblerListingLocation>.\Release/</AssemblerListingLocation>
+      <ObjectFileName>.\Release/</ObjectFileName>
+      <ProgramDataBaseFileName>.\Release/</ProgramDataBaseFileName>
+      <BrowseInformation>false</BrowseInformation>
+      <WarningLevel>Level3</WarningLevel>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <CompileAs>Default</CompileAs>
+      <AdditionalOptions>/openmp %(AdditionalOptions)</AdditionalOptions>
+      <LanguageStandard>Default</LanguageStandard>
+      <OpenMPSupport>true</OpenMPSupport>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+    </ResourceCompile>
+    <Link>
+      <AdditionalDependencies>libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;tiff.lib;freeglut.lib;assimp-vc143-mt.lib</AdditionalDependencies>
+      <OutputFile>.\Release/3DWorld.exe</OutputFile>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <AdditionalLibraryDirectories>dependencies\glew-2.0.0\lib\Release\x64;dependencies\openal-soft\Release;dependencies\freealut\admin\VisualStudioDotNET\x64\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win64_LIB_Release;dependencies\zlib-1.2.11\contrib\vstudio\vc14\x64\ZlibStatRelease;dependencies\tiff-4.3.0\libtiff\RelWithDebInfo;dependencies\freeglut-2.8.1\lib\x64\Debug;..\vcpkg\packages\assimp_x64-windows\lib</AdditionalLibraryDirectories>
+      <IgnoreSpecificDefaultLibraries>MSVCRT;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <SubSystem>Console</SubSystem>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="dependencies\meshoptimizer\src\simplifier.cpp" />
+    <ClCompile Include="src\3DWorld.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">MaxSpeed</Optimization>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">true</BrowseInformation>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
+    </ClCompile>
+    <ClCompile Include="src\ai.cpp" />
+    <ClCompile Include="src\animals.cpp" />
+    <ClCompile Include="src\assimp_wrap.cpp" />
+    <ClCompile Include="src\asteroid.cpp" />
+    <ClCompile Include="src\building_animals.cpp" />
+    <ClCompile Include="src\building_animal_draw.cpp" />
+    <ClCompile Include="src\building_attic.cpp" />
+    <ClCompile Include="src\building_backrooms.cpp" />
+    <ClCompile Include="src\building_basement.cpp" />
+    <ClCompile Include="src\building_clocks.cpp" />
+    <ClCompile Include="src\building_ext_basement.cpp" />
+    <ClCompile Include="src\building_fish.cpp" />
+    <ClCompile Include="src\building_floorplan.cpp" />
+    <ClCompile Include="src\building_gameplay.cpp" />
+    <ClCompile Include="src\building_geom.cpp" />
+    <ClCompile Include="src\building_interact.cpp" />
+    <ClCompile Include="src\building_lighting.cpp" />
+    <ClCompile Include="src\building_machines.cpp" />
+    <ClCompile Include="src\building_mall.cpp" />
+    <ClCompile Include="src\building_names_signs.cpp" />
+    <ClCompile Include="src\building_navigation.cpp" />
+    <ClCompile Include="src\building_pictures.cpp" />
+    <ClCompile Include="src\building_pipes.cpp" />
+    <ClCompile Include="src\building_query.cpp" />
+    <ClCompile Include="src\building_reflections.cpp" />
+    <ClCompile Include="src\building_rooms.cpp" />
+    <ClCompile Include="src\building_room_geom.cpp" />
+    <ClCompile Include="src\building_room_item_draw.cpp" />
+    <ClCompile Include="src\building_room_obj_expand.cpp" />
+    <ClCompile Include="src\building_room_obj_place.cpp" />
+    <ClCompile Include="src\building_tunnels.cpp" />
+    <ClCompile Include="src\building_water.cpp" />
+    <ClCompile Include="src\build_world.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">MaxSpeed</Optimization>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">true</BrowseInformation>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
+    </ClCompile>
+    <ClCompile Include="src\cars.cpp" />
+    <ClCompile Include="src\city_birds.cpp" />
+    <ClCompile Include="src\city_building_params.cpp" />
+    <ClCompile Include="src\city_gen.cpp" />
+    <ClCompile Include="src\city_interact.cpp" />
+    <ClCompile Include="src\city_model.cpp" />
+    <ClCompile Include="src\city_objects.cpp" />
+    <ClCompile Include="src\city_obj_placer.cpp" />
+    <ClCompile Include="src\city_skyway.cpp" />
+    <ClCompile Include="src\city_terrain.cpp" />
+    <ClCompile Include="src\clouds.cpp" />
+    <ClCompile Include="src\cobj_bsp_tree.cpp" />
+    <ClCompile Include="src\coll_cell_search.cpp" />
+    <ClCompile Include="src\collision_detect.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">MaxSpeed</Optimization>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">true</BrowseInformation>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
+    </ClCompile>
+    <ClCompile Include="src\csg.cpp" />
+    <ClCompile Include="src\destroy_cobj.cpp" />
+    <ClCompile Include="src\display_world.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">MaxSpeed</Optimization>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">true</BrowseInformation>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
+    </ClCompile>
+    <ClCompile Include="src\draw_groups.cpp" />
+    <ClCompile Include="src\draw_mech.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">MaxSpeed</Optimization>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">true</BrowseInformation>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
+    </ClCompile>
+    <ClCompile Include="src\draw_mesh.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">MaxSpeed</Optimization>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">true</BrowseInformation>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
+    </ClCompile>
+    <ClCompile Include="src\draw_primitives.cpp" />
+    <ClCompile Include="src\draw_shapes.cpp" />
+    <ClCompile Include="src\draw_text.cpp" />
+    <ClCompile Include="src\draw_utils.cpp" />
+    <ClCompile Include="src\draw_world.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">MaxSpeed</Optimization>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">true</BrowseInformation>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
+    </ClCompile>
+    <ClCompile Include="src\dynamic_particle.cpp" />
+    <ClCompile Include="src\edit_ui.cpp" />
+    <ClCompile Include="src\erosion.cpp" />
+    <ClCompile Include="src\explosion.cpp" />
+    <ClCompile Include="src\Gameplay.cpp" />
+    <ClCompile Include="src\gen_buildings.cpp" />
+    <ClCompile Include="src\gen_object.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">MaxSpeed</Optimization>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">true</BrowseInformation>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
+    </ClCompile>
+    <ClCompile Include="src\glflare.cpp" />
+    <ClCompile Include="src\gl_ext_arb.cpp" />
+    <ClCompile Include="src\grass.cpp" />
+    <ClCompile Include="src\heightmap.cpp" />
+    <ClCompile Include="src\image_io.cpp" />
+    <ClCompile Include="src\lightmap.cpp" />
+    <ClCompile Include="src\lightning.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">MaxSpeed</Optimization>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">true</BrowseInformation>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
+    </ClCompile>
+    <ClCompile Include="src\light_source.cpp" />
+    <ClCompile Include="src\map_view.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">MaxSpeed</Optimization>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">true</BrowseInformation>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
+    </ClCompile>
+    <ClCompile Include="src\Math3d.cpp" />
+    <ClCompile Include="src\matrix_ops.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">MaxSpeed</Optimization>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">true</BrowseInformation>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
+    </ClCompile>
+    <ClCompile Include="src\mesh_gen.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">MaxSpeed</Optimization>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">true</BrowseInformation>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
+    </ClCompile>
+    <ClCompile Include="src\mesh_intersect.cpp" />
+    <ClCompile Include="src\model3d.cpp" />
+    <ClCompile Include="src\movable_cobj.cpp" />
+    <ClCompile Include="src\objects.cpp" />
+    <ClCompile Include="src\object_file_reader.cpp" />
+    <ClCompile Include="src\openal_wrap.cpp" />
+    <ClCompile Include="src\pedestrians.cpp" />
+    <ClCompile Include="src\Physics.cpp" />
+    <ClCompile Include="src\platform.cpp" />
+    <ClCompile Include="src\postproc_effects.cpp" />
+    <ClCompile Include="src\precipitation.cpp" />
+    <ClCompile Include="src\profiler.cpp" />
+    <ClCompile Include="src\ray_trace.cpp" />
+    <ClCompile Include="src\read_3ds.cpp" />
+    <ClCompile Include="src\reflections.cpp" />
+    <ClCompile Include="src\roads.cpp" />
+    <ClCompile Include="src\scenery.cpp" />
+    <ClCompile Include="src\screenshot.cpp" />
+    <ClCompile Include="src\shaders.cpp" />
+    <ClCompile Include="src\shadows.cpp" />
+    <ClCompile Include="src\shadow_map.cpp" />
+    <ClCompile Include="src\shape_line3d.cpp" />
+    <ClCompile Include="src\smoke.cpp" />
+    <ClCompile Include="src\sm_tree.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">MaxSpeed</Optimization>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">true</BrowseInformation>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
+    </ClCompile>
+    <ClCompile Include="src\snow.cpp" />
+    <ClCompile Include="src\sphere_materials.cpp" />
+    <ClCompile Include="src\spillover.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">MaxSpeed</Optimization>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">true</BrowseInformation>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
+    </ClCompile>
+    <ClCompile Include="src\spray_paint.cpp" />
+    <ClCompile Include="src\teleporter.cpp" />
+    <ClCompile Include="src\tessellate.cpp" />
+    <ClCompile Include="src\Textures.cpp" />
+    <ClCompile Include="src\texture_tile_blend\texture_tile_blend.cpp" />
+    <ClCompile Include="src\texture_utils.cpp" />
+    <ClCompile Include="src\tiled_mesh.cpp" />
+    <ClCompile Include="src\transform_obj.cpp" />
+    <ClCompile Include="src\Tree.cpp" />
+    <ClCompile Include="src\triListOpt.cpp" />
+    <ClCompile Include="src\Universe.cpp" />
+    <ClCompile Include="src\u_event.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">MaxSpeed</Optimization>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">true</BrowseInformation>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
+    </ClCompile>
+    <ClCompile Include="src\vertex_opt.cpp" />
+    <ClCompile Include="src\visibility.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">MaxSpeed</Optimization>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">true</BrowseInformation>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
+    </ClCompile>
+    <ClCompile Include="src\voxels.cpp" />
+    <ClCompile Include="src\Water.cpp" />
+    <ClCompile Include="src\waypoints.cpp" />
+    <ClCompile Include="src\weapon_draw.cpp" />
+    <ClCompile Include="src\intersect.cpp" />
+    <ClCompile Include="src\loadlum.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">MaxSpeed</Optimization>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">true</BrowseInformation>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
+    </ClCompile>
+    <ClCompile Include="src\quartic.cpp" />
+    <ClCompile Include="src\draw_ship.cpp" />
+    <ClCompile Include="src\free_obj.cpp" />
+    <ClCompile Include="src\modmap.cpp" />
+    <ClCompile Include="src\ship.cpp" />
+    <ClCompile Include="src\ship_base.cpp" />
+    <ClCompile Include="src\ship_config.cpp" />
+    <ClCompile Include="src\ship_intersect.cpp" />
+    <ClCompile Include="src\ship_query.cpp" />
+    <ClCompile Include="src\u_ship.cpp" />
+    <ClCompile Include="src\Universe_control.cpp" />
+    <ClCompile Include="src\Universe_name.cpp" />
+    <ClCompile Include="src\upsurface.cpp" />
+    <ClCompile Include="Targa\targa.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\3DWorld.h" />
+    <ClInclude Include="src\allocators.h" />
+    <ClInclude Include="src\animals.h" />
+    <ClInclude Include="src\asteroid.h" />
+    <ClInclude Include="src\binary_file_io.h" />
+    <ClInclude Include="src\buildings.h" />
+    <ClInclude Include="src\building_animals.h" />
+    <ClInclude Include="src\city.h" />
+    <ClInclude Include="src\city_model.h" />
+    <ClInclude Include="src\city_objects.h" />
+    <ClInclude Include="src\city_terrain.h" />
+    <ClInclude Include="src\cobj_bsp_tree.h" />
+    <ClInclude Include="src\collision_detect.h" />
+    <ClInclude Include="src\csg.h" />
+    <ClInclude Include="src\cube_map_shadow_manager.h" />
+    <ClInclude Include="src\draw_utils.h" />
+    <ClInclude Include="src\dynamic_particle.h" />
+    <ClInclude Include="src\fast_atof.h" />
+    <ClInclude Include="src\file_reader.h" />
+    <ClInclude Include="src\file_utils.h" />
+    <ClInclude Include="src\function_registry.h" />
+    <ClInclude Include="src\gameplay.h" />
+    <ClInclude Include="src\globals.h" />
+    <ClInclude Include="src\gl_ext_arb.h" />
+    <ClInclude Include="src\gl_includes.h" />
+    <ClInclude Include="src\grass.h" />
+    <ClInclude Include="src\heightmap.h" />
+    <ClInclude Include="src\inlines.h" />
+    <ClInclude Include="src\lightmap.h" />
+    <ClInclude Include="src\main.h" />
+    <ClInclude Include="src\marching_cubes.h" />
+    <ClInclude Include="src\mesh.h" />
+    <ClInclude Include="src\mesh2d.h" />
+    <ClInclude Include="src\mesh_intersect.h" />
+    <ClInclude Include="src\model3d.h" />
+    <ClInclude Include="src\nav_grid.h" />
+    <ClInclude Include="src\openal_wrap.h" />
+    <ClInclude Include="src\pedestrians.h" />
+    <ClInclude Include="src\physics_objects.h" />
+    <ClInclude Include="src\player_state.h" />
+    <ClInclude Include="src\profiler.h" />
+    <ClInclude Include="src\rand_gen.h" />
+    <ClInclude Include="src\scenery.h" />
+    <ClInclude Include="src\shaders.h" />
+    <ClInclude Include="src\shadow_map.h" />
+    <ClInclude Include="src\shape_line3d.h" />
+    <ClInclude Include="src\sinf.h" />
+    <ClInclude Include="src\small_tree.h" />
+    <ClInclude Include="src\sphere_materials.h" />
+    <ClInclude Include="src\spillover.h" />
+    <ClInclude Include="src\subdiv.h" />
+    <ClInclude Include="src\textures.h" />
+    <ClInclude Include="src\texture_tile_blend\jacobi.h" />
+    <ClInclude Include="src\texture_tile_blend\tlingandblending.h" />
+    <ClInclude Include="src\tiled_mesh.h" />
+    <ClInclude Include="src\timetest.h" />
+    <ClInclude Include="src\transform_obj.h" />
+    <ClInclude Include="src\tree_3dw.h" />
+    <ClInclude Include="src\tree_leaf.h" />
+    <ClInclude Include="src\trigger.h" />
+    <ClInclude Include="src\triListOpt.h" />
+    <ClInclude Include="src\universe_base.h" />
+    <ClInclude Include="src\u_event.h" />
+    <ClInclude Include="src\explosion.h" />
+    <ClInclude Include="src\obj_sort.h" />
+    <ClInclude Include="src\ship.h" />
+    <ClInclude Include="src\ship_util.h" />
+    <ClInclude Include="src\universe.h" />
+    <ClInclude Include="src\upsurface.h" />
+    <ClInclude Include="src\vertex_opt.h" />
+    <ClInclude Include="src\vertex_types.h" />
+    <ClInclude Include="src\voxels.h" />
+    <ClInclude Include="Targa\targa.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include=".gitignore" />
+    <None Include="house\cobjs_out.txt" />
+    <None Include="icon1.ico" />
+    <None Include="defaults.txt" />
+    <None Include="mapx\basement.txt" />
+    <None Include="mapx\bench.txt" />
+    <None Include="mapx\bottle.txt" />
+    <None Include="mapx\bottle2.txt" />
+    <None Include="mapx\chair.txt" />
+    <None Include="mapx\cobjs_out.txt" />
+    <None Include="mapx\config_mapx.txt" />
+    <None Include="mapx\config_mapx_base.txt" />
+    <None Include="mapx\config_mapx_voxels.txt" />
+    <None Include="mapx\courtyard.txt" />
+    <None Include="mapx\crate.txt" />
+    <None Include="mapx\exploding_tank.txt" />
+    <None Include="mapx\floor1.txt" />
+    <None Include="mapx\floor2.txt" />
+    <None Include="mapx\floor3.txt" />
+    <None Include="mapx\floor4.txt" />
+    <None Include="mapx\lamp.txt" />
+    <None Include="mapx\lightbulb.txt" />
+    <None Include="mapx\outside.txt" />
+    <None Include="mapx\placements.txt" />
+    <None Include="mapx\roof.txt" />
+    <None Include="mapx\round_table.txt" />
+    <None Include="mapx\stairs.txt" />
+    <None Include="mapx\table.txt" />
+    <None Include="mapx\vsupport.txt" />
+    <None Include="mapx\vsupport_low.txt" />
+    <None Include="house\COLL_OBJS_House.TXT" />
+    <None Include="house\config_house.txt" />
+    <None Include="house\config_house_winter.txt" />
+    <None Include="house\placements.TXT" />
+    <None Include="README.defaults" />
+    <None Include="README.md" />
+    <None Include="shaders\alpha_mask.frag" />
+    <None Include="shaders\alpha_mask_shadow.frag" />
+    <None Include="shaders\asteroid.frag" />
+    <None Include="shaders\asteroid.vert" />
+    <None Include="shaders\asteroid_dust.frag" />
+    <None Include="shaders\asteroid_dust.vert" />
+    <None Include="shaders\atmosphere.frag" />
+    <None Include="shaders\atmosphere.vert" />
+    <None Include="shaders\bcc_noise.part.frag" />
+    <None Include="shaders\black_body_burn.part.frag" />
+    <None Include="shaders\building_water.frag" />
+    <None Include="shaders\building_water.vert" />
+    <None Include="shaders\bump_map.part.frag" />
+    <None Include="shaders\bump_map.part.vert" />
+    <None Include="shaders\caustics_overlay.frag" />
+    <None Include="shaders\circular_portal.frag" />
+    <None Include="shaders\clouds.frag" />
+    <None Include="shaders\clouds.vert" />
+    <None Include="shaders\cloud_billboard.frag" />
+    <None Include="shaders\cloud_sphere.vert" />
+    <None Include="shaders\cloud_sphere_shadow.part.frag" />
+    <None Include="shaders\common_header.frag" />
+    <None Include="shaders\common_header.geom" />
+    <None Include="shaders\common_header.vert" />
+    <None Include="shaders\common_header_shared.part" />
+    <None Include="shaders\convert_to_grayscale.frag" />
+    <None Include="shaders\craters.part.frag" />
+    <None Include="shaders\csm_layers.geom" />
+    <None Include="shaders\csm_layers_tc.geom" />
+    <None Include="shaders\cube_map.frag" />
+    <None Include="shaders\cube_map.vert" />
+    <None Include="shaders\depth_of_field.frag" />
+    <None Include="shaders\depth_utils.part.frag" />
+    <None Include="shaders\detail_normal_map.part.frag" />
+    <None Include="shaders\double_vision.frag" />
+    <None Include="shaders\draw_mesh.frag" />
+    <None Include="shaders\draw_mesh.vert" />
+    <None Include="shaders\drunken_wave.frag" />
+    <None Include="shaders\dynamic_lighting.part" />
+    <None Include="shaders\empty_shader.frag" />
+    <None Include="shaders\exponential_fog.part.frag" />
+    <None Include="shaders\fish_animate.vert" />
+    <None Include="shaders\flowers.frag" />
+    <None Include="shaders\flowers_pp_dl.vert" />
+    <None Include="shaders\flowers_tiled.frag" />
+    <None Include="shaders\flowers_tiled.vert" />
+    <None Include="shaders\flowers_tiled_gs.vert" />
+    <None Include="shaders\flower_from_pt.geom" />
+    <None Include="shaders\fresnel.part" />
+    <None Include="shaders\gen_voxel_weights.comp" />
+    <None Include="shaders\gen_voxel_weights.frag" />
+    <None Include="shaders\glass_surface.frag" />
+    <None Include="shaders\glass_surface.vert" />
+    <None Include="shaders\glsl_sandbox_planet.frag" />
+    <None Include="shaders\glsl_sandbox_terrain.frag" />
+    <None Include="shaders\god_rays.frag" />
+    <None Include="shaders\grass_pp_dl.vert" />
+    <None Include="shaders\grass_texture.part.vert" />
+    <None Include="shaders\grass_tiled.frag" />
+    <None Include="shaders\grass_tiled.geom" />
+    <None Include="shaders\grass_tiled.tesc" />
+    <None Include="shaders\grass_tiled.tese" />
+    <None Include="shaders\grass_tiled.vert" />
+    <None Include="shaders\grass_with_dlights.frag" />
+    <None Include="shaders\heat_waves.frag" />
+    <None Include="shaders\indir_lighting.part.frag" />
+    <None Include="shaders\lava_lamp.frag" />
+    <None Include="shaders\leaf_lighting.part.vert" />
+    <None Include="shaders\leaf_lighting_comp.part" />
+    <None Include="shaders\leaf_lighting_ppl.frag" />
+    <None Include="shaders\leaf_wind.part.vert" />
+    <None Include="shaders\line_draw_halo.frag" />
+    <None Include="shaders\mirror_reflection.frag" />
+    <None Include="shaders\mirror_reflection.vert" />
+    <None Include="shaders\model_animation.part.vert" />
+    <None Include="shaders\moon_draw.frag" />
+    <None Include="shaders\moon_draw.vert" />
+    <None Include="shaders\msdf_text.frag" />
+    <None Include="shaders\multitex_2.vert" />
+    <None Include="shaders\nebula.frag" />
+    <None Include="shaders\nebula.vert" />
+    <None Include="shaders\noise_2d_3d.part" />
+    <None Include="shaders\noise_deriv.part" />
+    <None Include="shaders\noise_dither.part.frag" />
+    <None Include="shaders\no_lighting_pos_tc.vert" />
+    <None Include="shaders\no_lighting_tc_fog.vert" />
+    <None Include="shaders\no_lighting_tex_coord.vert" />
+    <None Include="shaders\ocean.frag" />
+    <None Include="shaders\output_textured_quad.part.geom" />
+    <None Include="shaders\particle_draw.vert" />
+    <None Include="shaders\passthrough.geom" />
+    <None Include="shaders\pedestrian_animation.part.vert" />
+    <None Include="shaders\perlin_clouds.part" />
+    <None Include="shaders\perlin_clouds_3d.part" />
+    <None Include="shaders\pine_tree.frag" />
+    <None Include="shaders\pine_tree.vert" />
+    <None Include="shaders\pine_tree_billboard.geom" />
+    <None Include="shaders\pine_tree_billboard_auto_orient.vert" />
+    <None Include="shaders\pine_tree_billboard_gs.vert" />
+    <None Include="shaders\pine_tree_ppl.frag" />
+    <None Include="shaders\pine_tree_ppl.vert" />
+    <None Include="shaders\planet_draw.frag" />
+    <None Include="shaders\planet_draw.tesc" />
+    <None Include="shaders\planet_draw.tese" />
+    <None Include="shaders\planet_draw.vert" />
+    <None Include="shaders\planet_draw_distant.frag" />
+    <None Include="shaders\planet_draw_procedural.vert" />
+    <None Include="shaders\planet_draw_procedural_tess.vert" />
+    <None Include="shaders\planet_rings.frag" />
+    <None Include="shaders\point_sprite.vert" />
+    <None Include="shaders\point_sprite_circle.frag" />
+    <None Include="shaders\point_sprite_texture.frag" />
+    <None Include="shaders\point_to_quad.geom" />
+    <None Include="shaders\postproc_bloom.frag" />
+    <None Include="shaders\postproc_bloom_2d.frag" />
+    <None Include="shaders\postproc_water_fog.frag" />
+    <None Include="shaders\pos_only.vert" />
+    <None Include="shaders\procedural_gen.frag" />
+    <None Include="shaders\procedural_gen.vert" />
+    <None Include="shaders\procedural_height_gen.comp" />
+    <None Include="shaders\procedural_height_gen.frag" />
+    <None Include="shaders\procedural_planet.part" />
+    <None Include="shaders\procedural_rock.frag" />
+    <None Include="shaders\procedural_rock.vert" />
+    <None Include="shaders\procedural_texture.part.frag" />
+    <None Include="shaders\rainbow.frag" />
+    <None Include="shaders\rand_gen.part" />
+    <None Include="shaders\recolor.frag" />
+    <None Include="shaders\screen_space_ao.frag" />
+    <None Include="shaders\screen_space_ao_blur.frag" />
+    <None Include="shaders\screen_space_ao_v2.frag" />
+    <None Include="shaders\screen_space_blur.frag" />
+    <None Include="shaders\screen_space_blur_1d.frag" />
+    <None Include="shaders\shadow_map.part" />
+    <None Include="shaders\shadow_map.vert" />
+    <None Include="shaders\shadow_map_csm.vert" />
+    <None Include="shaders\shadow_map_csm_tc.vert" />
+    <None Include="shaders\shadow_map_csm_xlate_scale.vert" />
+    <None Include="shaders\ship_draw.frag" />
+    <None Include="shaders\ship_draw.vert" />
+    <None Include="shaders\ship_shields.frag" />
+    <None Include="shaders\simplex_noise.part" />
+    <None Include="shaders\simple_texture_luminance.frag" />
+    <None Include="shaders\snow.vert" />
+    <None Include="shaders\spec_map.part.frag" />
+    <None Include="shaders\sphere_refract_screen.frag" />
+    <None Include="shaders\sphere_shadow.part" />
+    <None Include="shaders\sphere_shadow_casters.part.frag" />
+    <None Include="shaders\spotlight_volume.frag" />
+    <None Include="shaders\star_draw.frag" />
+    <None Include="shaders\star_draw.vert" />
+    <None Include="shaders\star_draw_iq.frag" />
+    <None Include="shaders\sun_flare_with_clouds.frag" />
+    <None Include="shaders\textured_with_fog.frag" />
+    <None Include="shaders\textured_with_fog_opacity.frag" />
+    <None Include="shaders\textured_with_tb.frag" />
+    <None Include="shaders\texture_tile_utils.part.frag" />
+    <None Include="shaders\tiled_mesh.frag" />
+    <None Include="shaders\tiled_mesh_shadow.vert" />
+    <None Include="shaders\tiled_shadow_map.part" />
+    <None Include="shaders\tiled_tree_branches.frag" />
+    <None Include="shaders\tiled_tree_branches.vert" />
+    <None Include="shaders\tiling_and_blending.part.frag" />
+    <None Include="shaders\tree_billboard.geom" />
+    <None Include="shaders\tree_billboard_gs.vert" />
+    <None Include="shaders\tree_branches_billboard.frag" />
+    <None Include="shaders\tree_branches_billboard.vert" />
+    <None Include="shaders\tree_branches_no_lighting.vert" />
+    <None Include="shaders\tree_leaf_lighting.part" />
+    <None Include="shaders\tree_leaves_billboard.frag" />
+    <None Include="shaders\tree_leaves_billboard.vert" />
+    <None Include="shaders\tree_leaves_no_lighting.vert" />
+    <None Include="shaders\tree_leaves_ppl.vert" />
+    <None Include="shaders\triplanar_bump_map.part.frag" />
+    <None Include="shaders\triplanar_texture.part.frag" />
+    <None Include="shaders\vertex_xlate_scale.vert" />
+    <None Include="shaders\vert_plus_normal.vert" />
+    <None Include="shaders\vert_xform_only.vert" />
+    <None Include="shaders\vert_xform_vpos.vert" />
+    <None Include="shaders\vignette.frag" />
+    <None Include="shaders\vorocracks.frag" />
+    <None Include="shaders\vorocracks.part.frag" />
+    <None Include="shaders\voxel_asteroid.frag" />
+    <None Include="shaders\voxel_texture.part.frag" />
+    <None Include="shaders\water_fog.part" />
+    <None Include="shaders\water_fog.part.vert" />
+    <None Include="shaders\water_plane.frag" />
+    <None Include="shaders\water_plane.tesc" />
+    <None Include="shaders\water_plane.tese" />
+    <None Include="shaders\water_plane.vert" />
+    <None Include="shaders\water_plane_tess.vert" />
+    <None Include="shaders\water_ripples.part.frag" />
+    <None Include="shaders\wind.part" />
+    <None Include="shaders\window_lights.frag" />
+    <None Include="shaders\window_lights.vert" />
+    <None Include="shaders\world_space_offset_rot.part.vert" />
+    <None Include="shaders\write_const_depth.frag" />
+    <None Include="shaders\write_depth.frag" />
+    <None Include="shaders\write_normal.frag" />
+    <None Include="shaders\write_normal.vert" />
+    <None Include="shaders\write_normal_textured.frag" />
+    <None Include="shaders\xy_billboard.vert" />
+    <None Include="sponza\coll_objs_sponza.txt" />
+    <None Include="sponza\coll_objs_sponza2.txt" />
+    <None Include="sponza\config_sponza.txt" />
+    <None Include="sponza\config_sponza2.txt" />
+    <None Include="todo.txt" />
+    <None Include="universe\config_universe.txt" />
+    <None Include="universe\formatting.txt" />
+    <None Include="universe\ship_defs.txt" />
+    <None Include="universe\ship_defs_assault.txt" />
+    <None Include="universe\ship_defs_base.txt" />
+    <None Include="universe\ship_defs_colonize.txt" />
+    <None Include="universe\ship_defs_fight.txt" />
+    <None Include="universe\ship_defs_teams.txt" />
+    <None Include="universe.modmap" />
+    <None Include="cornell_box\coll_objs_box.txt" />
+    <None Include="cornell_box\config_box.txt" />
+    <None Include="shaders\grass.vert" />
+    <None Include="shaders\no_lighting_texture_gen.vert" />
+    <None Include="shaders\no_lt_texgen_smoke.vert" />
+    <None Include="shaders\per_pixel_lighting.vert" />
+    <None Include="shaders\per_pixel_lighting_textured.vert" />
+    <None Include="shaders\texture_gen.part.vert" />
+    <None Include="shaders\tiled_mesh.vert" />
+    <None Include="shaders\tree_leaves.vert" />
+    <None Include="shaders\two_lights.vert" />
+    <None Include="shaders\two_lights_no_xform.vert" />
+    <None Include="shaders\two_lights_texture.vert" />
+    <None Include="shaders\two_lights_texture_gen.vert" />
+    <None Include="shaders\color_only.frag" />
+    <None Include="shaders\linear_fog.part.frag" />
+    <None Include="shaders\multitex_2.frag" />
+    <None Include="shaders\per_pixel_lighting.frag" />
+    <None Include="shaders\per_pixel_lighting_textured.frag" />
+    <None Include="shaders\simple_texture.frag" />
+    <None Include="shaders\textured_with_smoke.frag" />
+    <None Include="shaders\pt_billboard.geom" />
+    <None Include="shaders\pt_billboard_tri.geom" />
+    <None Include="shaders\tri_wind.geom" />
+    <None Include="shaders\ads_lighting.part" />
+    <None Include="shaders\line_clip.part" />
+    <None Include="readme-keys.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Script1.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="coll_objs\COLL_OBJS.TXT" />
+    <Text Include="coll_objs\COLL_OBJS1.TXT" />
+    <Text Include="coll_objs\COLL_OBJS2.TXT" />
+    <Text Include="coll_objs\COLL_OBJS3.TXT" />
+    <Text Include="coll_objs\coll_objs_heightmap.txt" />
+    <Text Include="coll_objs\COLL_OBJS_Maze.TXT" />
+    <Text Include="coll_objs\coll_objs_minecraft.txt" />
+    <Text Include="coll_objs\COLL_OBJS_museum.txt" />
+    <Text Include="coll_objs\COLL_OBJS_museum_tt_model.txt" />
+    <Text Include="coll_objs\coll_objs_playground.txt" />
+    <Text Include="coll_objs\coll_objs_puget_sound.txt" />
+    <Text Include="coll_objs\coll_objs_puzzle.txt" />
+    <Text Include="coll_objs\COLL_OBJS_River.TXT" />
+    <Text Include="coll_objs\coll_objs_samples.txt" />
+    <Text Include="coll_objs\coll_objs_san_miguel.txt" />
+    <Text Include="coll_objs\COLL_OBJS_Test.TXT" />
+    <Text Include="coll_objs\coll_objs_transformed.txt" />
+    <Text Include="coll_objs\spheres.txt" />
+    <Text Include="mapx\coll_objs_cubes.txt" />
+    <Text Include="mapx\coll_objs_mapx.txt" />
+    <Text Include="mapx\coll_objs_spheres.txt" />
+    <Text Include="mapx\plant.txt" />
+    <Text Include="scene_config\buildings.txt" />
+    <Text Include="scene_config\building_materials.txt" />
+    <Text Include="scene_config\building_params.txt" />
+    <Text Include="scene_config\config.txt" />
+    <Text Include="scene_config\config_berkeley.txt" />
+    <Text Include="scene_config\config_buildings.txt" />
+    <Text Include="scene_config\config_city.txt" />
+    <Text Include="scene_config\config_gameplay.txt" />
+    <Text Include="scene_config\config_grand_canyon.txt" />
+    <Text Include="scene_config\config_grand_canyon_tt.txt" />
+    <Text Include="scene_config\config_gym.txt" />
+    <Text Include="scene_config\config_heightmap.txt" />
+    <Text Include="scene_config\config_ice_caves.txt" />
+    <Text Include="scene_config\config_landscape.txt" />
+    <Text Include="scene_config\config_lava_moon.txt" />
+    <Text Include="scene_config\config_minecraft.txt" />
+    <Text Include="scene_config\config_museum.txt" />
+    <Text Include="scene_config\config_museum_tt_model.txt" />
+    <Text Include="scene_config\config_playground.txt" />
+    <Text Include="scene_config\config_post.txt" />
+    <Text Include="scene_config\config_pre.txt" />
+    <Text Include="scene_config\config_puget_sound.txt" />
+    <Text Include="scene_config\config_puget_sound_tt.txt" />
+    <Text Include="scene_config\config_puzzle.txt" />
+    <Text Include="scene_config\config_resolution.txt" />
+    <Text Include="scene_config\config_river.txt" />
+    <Text Include="scene_config\config_samples.txt" />
+    <Text Include="scene_config\config_san_miguel.txt" />
+    <Text Include="scene_config\config_scrolling.txt" />
+    <Text Include="scene_config\config_spheres.txt" />
+    <Text Include="scene_config\config_t.txt" />
+    <Text Include="scene_config\config_trees.txt" />
+    <Text Include="scene_config\config_voxels.txt" />
+    <Text Include="scene_config\config_voxels2.txt" />
+    <Text Include="scene_config\config_voxels_grass.txt" />
+    <Text Include="scene_config\config_voxel_params.txt" />
+    <Text Include="scene_config\config_water.txt" />
+    <Text Include="sphere_materials.txt" />
+    <Text Include="text_data\book_titles.txt" />
+    <Text Include="text_data\store_names.txt" />
+    <Text Include="universe\ship_defs_colonize_sparse.txt" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
