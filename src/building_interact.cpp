@@ -742,7 +742,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 				else {++obj.obj_id;} // toggle on/off, and also change the picture
 				update_draw_data = 1;
 			}
-			gen_sound_thread_safe(SOUND_CLICK, local_center, 0.4);
+			gen_sound_thread_safe(SOUND_CLICK, local_center, 0.5);
 		}
 	}
 	else if (obj.type == TYPE_BUTTON) { // Note: currently, buttons are only used for elevators
@@ -751,11 +751,13 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			obj.flags |= RO_FLAG_IS_ACTIVE;
 			interior->room_geom->invalidate_draw_data_for_obj(obj); // need to regen object data due to lit state change; don't have to set modified_by_player
 		}
+		gen_sound_thread_safe_at_player(SOUND_CLICK, 0.5);
+		sound_scale = 0.05; // very quiet
 	}
 	else if (obj.type == TYPE_SWITCH) {
 		// should select the correct light(s) for the room containing the switch
 		toggle_room_light(obj.get_cube_center(), 1, obj.room_id, 0, obj.in_closet(), obj.in_attic()); // exclude lamps; select closet lights if a closet light switch
-		gen_sound_thread_safe_at_player(SOUND_CLICK, 0.5);
+		gen_sound_thread_safe_at_player(SOUND_CLICK, 0.7);
 		obj.flags       ^= RO_FLAG_OPEN; // toggle on/off
 		sound_scale      = 0.1;
 		update_draw_data = 1;
@@ -873,11 +875,11 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	else if (obj.type == TYPE_LAVALAMP) {
 		obj.flags       ^= RO_FLAG_LIT; // toggle lit
 		update_draw_data = 1;
-		gen_sound_thread_safe(SOUND_CLICK, local_center, 0.35);
+		gen_sound_thread_safe(SOUND_CLICK, local_center, 0.4);
 	}
 	else if (obj.type == TYPE_FISHTANK) {
 		obj.flags       ^= RO_FLAG_LIT; // toggle the light on the lid; no draw data update
-		gen_sound_thread_safe(SOUND_CLICK, local_center, 0.4);
+		gen_sound_thread_safe(SOUND_CLICK, local_center, 0.5);
 	}
 	else if (obj.type == TYPE_WFOUNTAIN) {
 		refill_thirst();
