@@ -5468,7 +5468,8 @@ void building_room_geom_t::add_metal_bar(room_object_t const &c) {
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars,
 	float vbar_hthick, float hbar_hthick, unsigned vdim, unsigned hdim)
 {
-	assert(num_vbars > 1 && num_hbars > 1);
+	max_eq(num_vbars, 2U);
+	max_eq(num_hbars, 2U);
 	float const v_span(c.get_sz_dim(hdim) - 2.0*vbar_hthick), h_span(c.get_sz_dim(vdim) - 2.0*hbar_hthick);
 	float const v_step(v_span/(num_vbars - 1)), h_step(h_span/(num_hbars - 1));
 	unsigned const skip_faces[2] = {get_skip_mask_for_dim(vdim), get_skip_mask_for_dim(hdim)};
@@ -5599,13 +5600,13 @@ void building_room_geom_t::add_pet_cage(room_object_t const &c) {
 	top.z1() = tray.z2() = c.z1() + 0.1*sz.z;
 	// add metal bars in a grid pattern around sides and top
 	float const bar_thick(0.005*sz.z), bar_hthick(0.5*bar_thick);
-	unsigned const num_hbars(12);
+	unsigned const num_vbars(21), num_hbars(7);
 	rgeom_mat_t &metal_mat(get_metal_material(0, 0, 1)); // unshadowed, small
 	colorRGBA const color(apply_light_color(c));
 	unsigned num_xy_bars[2] = {};
 
 	for (unsigned dim = 0; dim < 2; ++dim) { // sides
-		num_xy_bars[dim] = num_hbars*sz[1-dim]/sz.z;
+		num_xy_bars[dim] = num_vbars*sz[1-dim]/sz.z; // less vertically compared to horizontally
 
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			cube_t side(top);
@@ -5614,6 +5615,7 @@ void building_room_geom_t::add_pet_cage(room_object_t const &c) {
 		}
 	} // for dim
 	// top
+	num_xy_bars[!c.dim] /= 3; // fewer in this dim
 	cube_t top_bars(top);
 	top_bars.z1() = top.z2() - bar_thick;
 	add_grid_of_bars(metal_mat, color, top_bars, num_xy_bars[0], num_xy_bars[1], bar_hthick, bar_hthick, 0, 1);

@@ -413,7 +413,7 @@ void building_t::update_pet_rats(point const &camera_bs, unsigned building_ix) {
 			float const height(obj.dz()), zval(obj.z1() + 0.1*height); // around substrate height
 
 			for (unsigned n = 0; n < num_rats; ++n) {
-				float const radius(rgen.rand_uniform(0.5, 1.0)*0.15*height);
+				float const radius(rgen.rand_uniform(0.7, 1.0)*0.25*height);
 				point const pos(gen_xy_pos_in_area(obj, vector3d(radius, radius, radius), rgen, zval));
 				rats.emplace_back(pos, radius, rgen.signed_rand_vector_spherical_xy_norm(), rats.size(), 0, t.obj_ix); // dead=0
 				rats.back().dest = rats.back().dir;
