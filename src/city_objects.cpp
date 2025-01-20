@@ -51,9 +51,7 @@ bool city_obj_t::proc_sphere_coll(point &pos_, point const &p_last, float radius
 }
 
 vector3d oriented_city_obj_t::get_orient_dir() const {
-	vector3d orient(zero_vector);
-	orient[dim] = (dir ? 1.0 : -1.0); // here dim is assumed to be 0=x or 1=y; 2=z has so far not been needed
-	return orient;
+	return vector_from_dim_dir(dim, dir); // here dim is assumed to be 0=x or 1=y; 2=z has so far not been needed
 }
 
 bool sphere_city_obj_cylin_coll(point const &cpos, float cradius, point &spos, point const &p_last, float sradius, point const &xlate, vector3d *cnorm) {

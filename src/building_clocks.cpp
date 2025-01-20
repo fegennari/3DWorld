@@ -107,8 +107,7 @@ void add_clock_hand(rgeom_mat_t &mat, point const &center, float length, float s
 	pts[1][!dim] = pts[2][!dim] =  bot_hwidth;
 	pts[3][!dim] =  top_hwidth;
 	pts[4][!dim] = -top_hwidth;
-	vector3d rot_axis;
-	rot_axis[dim] = (dir ? 1.0 : -1.0);
+	vector3d const rot_axis(vector_from_dim_dir(dim, dir));
 	rotate_vector3d_multi(rot_axis, angle, pts, 6);
 	norm_comp const normal(rot_axis);
 	color_wrapper const cw(BLACK);
