@@ -2954,6 +2954,9 @@ void gen_xy_pos_for_cube_obj(cube_t &C, cube_t const &S, vector3d const &sz, flo
 void gen_xy_pos_for_round_obj(cube_t &C, cube_t const &S, float radius, float height, float spacing, rand_gen_t &rgen, bool place_at_z1=0);
 // functions in building_interact.cc and building_gameplay.cc
 void gen_sound_thread_safe(unsigned id, point const &pos, float gain=1.0, float pitch=1.0, float gain_scale=1.0, bool skip_if_already_playing=0);
+// from building_room_geom.cpp
+template<typename T> void add_sign_text_verts(std::string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color,
+	vector<T> &verts_out, float first_char_clip_val=0.0, float last_char_clip_val=0.0, bool include_space_chars=0, bool invert_z=0);
 
 inline void gen_sound_thread_safe_at_player(unsigned id, float gain=1.0, float pitch=1.0, bool skip_if_already_playing=0) {
 	gen_sound_thread_safe(id, get_camera_pos(), gain, pitch, 1.0, skip_if_already_playing);

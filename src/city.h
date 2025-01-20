@@ -1003,6 +1003,4 @@ void init_city_spectate_manager(car_manager_t &car_manager, ped_manager_t &ped_m
 bool skip_bai_draw(person_t     const &bai);
 bool skip_ped_draw(pedestrian_t const &ped);
 bool skip_car_draw(car_t        const &car);
-// from building_room_geom.cpp
-template<typename T> void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color,
-	vector<T> &verts_out, float first_char_clip_val=0.0, float last_char_clip_val=0.0, bool include_space_chars=0);
+

@@ -209,8 +209,9 @@ float clip_char_quad(vector<vert_tc_t> &verts, unsigned start_ix, bool dim, bool
 	return clip_vlo;
 }
 template<typename T> void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color,
-	vector<T> &verts_out, float first_char_clip_val, float last_char_clip_val, bool include_space_chars)
+	vector<T> &verts_out, float first_char_clip_val, float last_char_clip_val, bool include_space_chars, bool invert_z)
 {
+	float const z_sign(invert_z ? -1.0 : 1.0);
 	assert(!text.empty());
 	cube_t ct(sign); // text area is slightly smaller than full cube
 	ct.expand_in_dim(!dim, -0.10*ct.get_sz_dim(!dim));
@@ -223,7 +224,7 @@ template<typename T> void add_sign_text_verts(string const &text, cube_t const &
 	verts.clear();
 	point pos;
 	pos[dim] = ct.d[dim][dir] + (dir ? 1.0 : -1.0)*0.2*ct.get_sz_dim(dim); // shift away from the front face to prevent z-fighting
-	gen_text_verts(verts, pos, text, 1.0, col_dir, plus_z, 1, include_space_chars); // use_quads=1
+	gen_text_verts(verts, pos, text, 1.0, col_dir, z_sign*plus_z, 1, include_space_chars); // use_quads=1
 	assert(!verts.empty());
 	if (last_char_clip_val  > 0.0) {clip_char_quad(verts, verts.size()-4, !dim, ldir, 0.0, 1.0-last_char_clip_val);}
 
@@ -242,7 +243,7 @@ template<typename T> void add_sign_text_verts(string const &text, cube_t const &
 	for (char c : text) { // count newlines
 		if (c == '\n') {++num_newlines;}
 	}
-	float const tz1(ct.z1() + ct.dz()*num_newlines/(num_newlines+1));
+	float const tz1(ct.d[2][invert_z] + z_sign*ct.dz()*num_newlines/(num_newlines+1));
 
 	for (auto i = verts.begin(); i != verts.end(); ++i) {
 		i->v[!dim] = i->v[!dim]*width_scale + ct.d[!dim][!ldir]; // line
@@ -251,9 +252,9 @@ template<typename T> void add_sign_text_verts(string const &text, cube_t const &
 	}
 }
 template void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color, 
-	vector<vert_norm_comp_tc_color> &verts_out, float first_char_clip_val, float last_char_clip_val, bool include_space_chars);
+	vector<vert_norm_comp_tc_color> &verts_out, float first_char_clip_val, float last_char_clip_val, bool include_space_chars, bool invert_z);
 template void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color,
-	vector<vert_norm_tc_color     > &verts_out, float first_char_clip_val, float last_char_clip_val, bool include_space_chars);
+	vector<vert_norm_tc_color     > &verts_out, float first_char_clip_val, float last_char_clip_val, bool include_space_chars, bool invert_z);
 
 void add_sign_text_verts_both_sides(string const &text, cube_t const &sign, bool dim, bool dir, vect_vnctcc_t &verts) {
 	assert(!text.empty());
