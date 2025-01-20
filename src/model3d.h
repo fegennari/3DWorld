@@ -217,6 +217,8 @@ struct model_anim_t {
 	unordered_map<string, unsigned> bone_name_to_index_map;
 	vector<xform_matrix> bone_transforms, bone_offset_matrices;
 	xform_matrix global_inverse_transform, root_transform;
+	string model_name; // for debug printouts
+	mutable bool had_anim_id_error=0;
 
 	struct anim_node_t {
 		int bone_index; // cached to avoid bone_name_to_index_map lookup; -1 is no bone

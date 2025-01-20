@@ -102,16 +102,15 @@ void model_anim_t::transform_node_hierarchy_recur(float anim_time, animation_t c
 }
 void model_anim_t::get_bone_transforms(unsigned anim_id, float cur_time) {
 	//highres_timer_t timer("get_bone_transforms");  // 0.011ms
-	assert(!animations.empty());
+	unsigned const num_anims(animations.size());
+	assert(num_anims > 0);
 
-	if (anim_id >= animations.size()) {
-		static bool had_anim_id_error(0);
-
+	if (anim_id >= num_anims) {
 		if (!had_anim_id_error) {
-			cerr << "*** Error: Invalid animation ID " << anim_id << "; Max is " << (animations.size()-1) << "; Using max value." << endl;
+			cerr << "*** Error: Invalid animation ID " << anim_id << " for model " << model_name << "; Max is " << (num_anims-1) << "; Using max value." << endl;
 			had_anim_id_error = 1;
 		}
-		anim_id = animations.size() - 1;
+		anim_id = num_anims - 1;
 	}
 	animation_t const &animation(animations[anim_id]);
 	float const time_in_ticks(cur_time * animation.ticks_per_sec);
@@ -120,10 +119,8 @@ void model_anim_t::get_bone_transforms(unsigned anim_id, float cur_time) {
 }
 bool model_anim_t::check_anim_wrapped(unsigned anim_id, float old_time, float new_time) const {
 	if (anim_id >= animations.size()) {
-		static bool had_anim_id_error(0);
-
 		if (!had_anim_id_error) {
-			cerr << "*** Error: Invalid animation ID " << anim_id << "; Max is " << (animations.size()-1) << "." << endl;
+			cerr << "*** Error: Invalid animation ID " << anim_id << " for model " << model_name << "; Max is " << (animations.size()-1) << "." << endl;
 			had_anim_id_error = 1;
 		}
 		return 0;
@@ -442,8 +439,9 @@ class file_reader_assimp {
 	}
 	void extract_animation_data(aiScene const *const scene, model_anim_t &model_anim) {
 		assert(scene && scene->mRootNode);
-		model_anim.root_transform = cur_xf.create_xform_matrix();
+		model_anim.root_transform           = cur_xf.create_xform_matrix();
 		model_anim.global_inverse_transform = aiMatrix4x4_to_xform_matrix(scene->mRootNode->mTransformation).inverse();
+		model_anim.model_name               = model_fn;
 		model_anim.animations.reserve(scene->mNumAnimations);
 
 		for (unsigned a = 0; a < scene->mNumAnimations; ++a) {
