@@ -557,6 +557,11 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				if (in_dir != zero_vector && !obj_bc.line_intersects(closest_to, query_ray_end)) continue; // player is not pointing at this object
 				// checking for office chair rotation is expensive, so it's done last, just before updating closest
 				if (type == TYPE_OFF_CHAIR && !chair_can_be_rotated(*i)) continue;
+				//if (check_for_wall_ceil_floor_int(closest_to, query_ray_end)) continue; // skip if it's on the other side of a wall, ceiling, or floor; too strong
+
+				if (type == TYPE_BUTTON || type == TYPE_SWITCH) {
+					if (dot_product_ptv(i->get_dir(), closest_to, center) < 0.0) continue; // can't press from behind
+				}
 				closest_dist_sq = dist_sq;
 				obj_ix = (i - obj_vect.begin()) + obj_id_offset;
 				is_obj = found_item = 1;
@@ -749,18 +754,20 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		sound_scale = 0.05; // very quiet, unless set in gate opening/closing case below
 
 		if (obj.in_mall()) { // mall store gate
-			assert(has_mall());
-			auto &doorways(interior->mall_info->store_doorways);
-			assert(obj.room_id < doorways.size());
-			store_doorway_t &doorway(doorways[obj.room_id]);
-			bool const up_dir(obj.flags & RO_FLAG_ADJ_TOP);
+			if (obj.is_powered()) { // check if gate is powered; currently always true
+				assert(has_mall());
+				auto &doorways(interior->mall_info->store_doorways);
+				assert(obj.room_id < doorways.size());
+				store_doorway_t &doorway(doorways[obj.room_id]);
+				bool const up_dir(obj.flags & RO_FLAG_ADJ_TOP);
 
-			if (doorway.press_button(up_dir)) {
-				interior->room_geom->invalidate_door_geom();
-				interior->door_state_updated = 1;
-				//invalidate_nav_graph();
-				gen_sound_thread_safe(SOUND_METAL_DOOR, local_to_camera_space(doorway.get_cube_center()), 1.0);
-				sound_scale = 1.0; // very loud
+				if (doorway.press_button(up_dir)) {
+					interior->room_geom->invalidate_door_geom();
+					interior->door_state_updated = 1;
+					//invalidate_nav_graph();
+					gen_sound_thread_safe(SOUND_METAL_DOOR, local_to_camera_space(doorway.get_cube_center()), 1.0);
+					sound_scale = 1.0; // very loud
+				}
 			}
 		}
 		else if (!obj.is_active() && !interior->elevators_disabled) { // elevator button; update if not already active
