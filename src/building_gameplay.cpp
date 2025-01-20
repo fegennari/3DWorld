@@ -1925,8 +1925,11 @@ float building_room_geom_t::get_combined_obj_weight(room_object_t const &obj) co
 }
 
 bool is_movable(room_object_t const &obj) {
-	if (obj.no_coll() || obj.type == TYPE_BLOCKER) return 0; // no blockers
+	room_object const type(obj.type);
+	if (obj.no_coll() || type == TYPE_BLOCKER) return 0; // no blockers
 	bldg_obj_type_t const &bot(get_room_obj_type(obj));
+	// allow pushing of appliance store objects
+	if (obj.in_mall() && (type == TYPE_TUB || type == TYPE_TOILET || type == TYPE_SINK || type == TYPE_URINAL || type == TYPE_FURNACE || type == TYPE_WHEATER)) return 1;
 	return (bot.weight >= 40.0 && !bot.attached); // heavy non-attached objects, including tables
 }
 bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir, float range, int mode) { // mode: 0=normal, 1=pull
