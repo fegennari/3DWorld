@@ -1730,7 +1730,10 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 	}
 	if (has_mall()) {
 		for (store_doorway_t const &d : mall_info->store_doorways) {
-			if (d.closed) {had_coll |= sphere_cube_int_update_pos_zval(pos, obj_z, radius, d, p_last, cnorm);}
+			if (d.open_amt == 1.0) continue; // fully open
+			cube_t gate(d);
+			gate.z1() = d.get_gate_z1();
+			had_coll |= sphere_cube_int_update_pos_zval(pos, obj_z, radius, gate, p_last, cnorm);
 		}
 	}
 	if (conn_info) { // check for collision with closed door separating the adjacent building at the end of the connecting room
@@ -2230,7 +2233,10 @@ bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2,
 
 	if (has_mall()) { // check closed mall store gates
 		for (store_doorway_t const &d : interior->mall_info->store_doorways) {
-			if (d.closed && d.line_intersects(p1, p2)) return 1;
+			if (d.open_amt == 1.0) continue; // fully open
+			cube_t gate(d);
+			gate.z1() = d.get_gate_z1();
+			if (gate.line_intersects(p1, p2)) return 1;
 		}
 	}
 	return 0;

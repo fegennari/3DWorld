@@ -5500,10 +5500,11 @@ void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c,
 		mat.add_cube_to_verts_untextured(bar, color, skip_faces[1]);
 	}
 }
-void building_room_geom_t::add_store_gate(room_object_t const &c) {
+void building_room_geom_t::add_store_gate(cube_t const &c, bool dim, float open_amt) {
 	rgeom_mat_t &mat(get_metal_material(1, 0, 3)); // untextured, shadowed, small=3 (door)
-	float const thickness(c.get_depth()), vbar_hthick(0.6*thickness), hbar_hthick(0.4*thickness);
-	add_grid_of_bars(mat, apply_light_color(c), c, 6, 30, vbar_hthick, hbar_hthick, 2, !c.dim);
+	float const thickness(c.get_sz_dim(dim)), vbar_hthick(0.6*thickness), hbar_hthick(0.2*thickness);
+	unsigned const num_hbars(max(2, round_fp(30 * min(1.0, 2.0*(1.0 - open_amt)))));
+	add_grid_of_bars(mat, LT_GRAY, c, 6, num_hbars, vbar_hthick, hbar_hthick, 2, !dim);
 }
 
 void building_room_geom_t::add_theft_sensor(room_object_t const &c, bool alarm_mode) {

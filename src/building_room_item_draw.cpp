@@ -1329,13 +1329,14 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 		float const window_vspace(building.get_window_vspace()), wall_thickness(building.get_wall_thickness()), trim_thick(building.get_trim_thickness());
 
 		for (store_doorway_t const &d : building.interior->mall_info->store_doorways) {
-			if (!d.closed) continue; // open gate
+			if (d.open_amt == 1.0) continue; // open gate
 			cube_t gate(d);
-			gate.z2()  = d.z2() - 0.1*window_vspace;
-			gate.z1() += trim_thick;
+			gate.z2() = d.z2() - 0.1*window_vspace - trim_thick;
+			gate.z1() = d.get_gate_z1() + trim_thick;
+			if (gate.dz() <= 0.0) continue; // none visible
 			gate.expand_in_dim( d.dim, -0.4*d.get_sz_dim(d.dim)); // shrink
 			gate.expand_in_dim(!d.dim, -0.5*wall_thickness); // shrink (same as cbox)
-			add_store_gate(room_object_t(gate, TYPE_BLOCKER, d.room_id, d.dim, 0, 0, 1.0, SHAPE_CUBE, LT_GRAY)); // type doesn't matter
+			add_store_gate(gate, d.dim, d.open_amt);
 		} // for d
 	}
 	mats_doors.create_vbos(building);

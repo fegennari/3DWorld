@@ -1042,6 +1042,11 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		cbox.expand_in_dim( dim,  1.0*wall_thickness); // grow
 		cbox.expand_in_dim(!dim, -0.5*wall_thickness); // shrink
 		objs.emplace_back(cbox, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, GRAY);
+		// add slot for the gate
+		cube_t slot(cbox);
+		set_cube_zvals(slot, cbox.z1()-trim_thick, cbox.z1());
+		set_wall_width(slot, cbox.get_center_dim(dim), 0.2*wall_thickness, dim);
+		objs.emplace_back(slot, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, BLACK);
 		// add gate control buttons on the inside
 		unsigned const dix(i - interior->mall_info->store_doorways.begin());
 		float const trim_thickness(get_trim_thickness()), trim_width(0.5*wall_thickness), trim_exp(2.0*trim_thickness + trim_width);

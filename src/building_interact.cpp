@@ -753,16 +753,13 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			auto &doorways(interior->mall_info->store_doorways);
 			assert(obj.room_id < doorways.size());
 			store_doorway_t &doorway(doorways[obj.room_id]);
-			bool const is_up(obj.flags & RO_FLAG_ADJ_TOP);
-			
-			if (doorway.locked || (is_up && !doorway.closed) || (!is_up && doorway.closed)) {} // pressed, but has no effect
-			else {
-				// TODO: gradually open or close
-				doorway.closed ^= 1; // toggle state
+			bool const up_dir(obj.flags & RO_FLAG_ADJ_TOP);
+
+			if (doorway.press_button(up_dir)) {
 				interior->room_geom->invalidate_door_geom();
 				interior->door_state_updated = 1;
 				//invalidate_nav_graph();
-				gen_sound_thread_safe_at_player(SOUND_METAL_DOOR, 1.0);
+				gen_sound_thread_safe(SOUND_METAL_DOOR, local_to_camera_space(doorway.get_cube_center()), 1.0);
 				sound_scale = 1.0; // very loud
 			}
 		}
@@ -1057,6 +1054,34 @@ bool door_t::next_frame() { // returns true if state changed
 	open_amt  = CLIP_TO_01(open_amt);
 	return 1;
 }
+
+bool store_doorway_t::press_button(bool up_dir) { // returns true if state changed
+	if (locked)                           return 0; // button has no effect
+	if (uint8_t(up_dir) == move_dir)      return 0; // already moving in this dir
+	if (open_amt == (up_dir ? 1.0 : 0.0)) return 0; // already fully open or closed
+	move_dir = uint8_t(up_dir);
+	return 1;
+}
+int store_doorway_t::next_frame() { // returns true if gate moved
+	if (move_dir == 2) return 0; // not moving
+	open_amt += (move_dir ? 1.0 : -1.0)*0.5*fticks/TICKS_PER_SECOND; // 2s for full movement
+
+	if (open_amt <= 0.0) { // fully closed
+		open_amt = 0.0;
+		move_dir = 2;
+		closed   = 1;
+		return 2;
+	}
+	if (open_amt >= 1.0) { // fully open
+		open_amt = 1.0;
+		move_dir = 2;
+		closed   = 0;
+		return 3;
+	}
+	closed = ((get_gate_z1() - z1()) < 1.2*get_bldg_player_height()); // closed if player can't fit under
+	return 1; // partially open
+}
+
 void building_t::doors_next_frame(point const &player_pos) {
 	if (!has_room_geom()) return;
 	interior->last_active_door_ix = -1;
@@ -1087,7 +1112,16 @@ void building_t::doors_next_frame(point const &player_pos) {
 		}
 		interior->last_active_door_ix = (d - interior->doors.begin());
 	} // for d
-	if (interior->last_active_door_ix >= 0) {interior->room_geom->invalidate_door_geom();} // need to recreate doors VBO
+	bool updated(interior->last_active_door_ix >= 0);
+
+	if (interior->door_state_updated && has_mall()) { // check mall store gates
+		for (store_doorway_t &d : interior->mall_info->store_doorways) {
+			int const moved(d.next_frame());
+			updated |= moved;
+			if (moved > 1) {gen_sound_thread_safe(SOUND_METAL_DOOR, local_to_camera_space(d.get_cube_center()), 1.0);} // fully open or closed
+		}
+	}
+	if (updated) {interior->room_geom->invalidate_door_geom();} // need to recreate doors VBO
 }
 
 point building_t::local_to_camera_space(point const &pos) const {

@@ -1253,7 +1253,7 @@ struct building_room_geom_t {
 	void add_checkout(room_object_t const &c, float tscale);
 	void add_fishtank(room_object_t const &c);
 	void add_metal_bar(room_object_t const &c);
-	void add_store_gate(room_object_t const &c);
+	void add_store_gate(cube_t const &c, bool dim, float open_amt);
 	void add_theft_sensor(room_object_t const &c, bool alarm_mode=0);
 	void add_lava_lamp(room_object_t const &c);
 	void add_trash(room_object_t const &c);
@@ -1745,10 +1745,15 @@ struct skyway_conn_t : public cube_t {
 
 struct store_doorway_t : public cube_t {
 	unsigned room_id;
+	uint8_t move_dir=2; // 0=down, 1=up, 2=stopped
 	bool dim, dir, closed, locked=0;
 	float open_amt=0.0;
+
 	store_doorway_t(cube_t const &bc, unsigned r, bool dim_, bool dir_, bool c) : cube_t(bc), room_id(r), dim(dim_), dir(dir_), closed(c), open_amt(closed ? 0.0 : 1.0) {}
 	bool locked_closed() const {return (closed && locked);}
+	float get_gate_z1 () const {return (z1() + open_amt*dz());}
+	bool press_button(bool up_dir);
+	int next_frame();
 };
 typedef vector<store_doorway_t> vect_store_doorway_t;
 
