@@ -280,7 +280,7 @@ public:
 class building_nav_graph_t {
 	struct conn_room_t { // size=16
 		unsigned ix; // node index
-		int door_ix; // index of connecting door on first floor; -1 for connections with out a door
+		int door_ix; // index of connecting door on first floor, or connecting mall gate if >= doors.size(); -1 for connections with out a door
 		vector2d pt[2]; // stairs entry/exit point {up, down}
 		conn_room_t(unsigned ix_, int dix, vector2d const &ptu, vector2d const &ptd) : ix(ix_), door_ix(dix) {pt[0] = ptu; pt[1] = ptd;}
 	};
@@ -398,7 +398,7 @@ public:
 		remove_connection(room1, room2);
 		remove_connection(room2, room1);
 	}
-	bool is_room_connected_to(unsigned room1, unsigned room2, vect_door_t const &doors, float zval, unsigned has_key) const {
+	bool is_room_connected_to(unsigned room1, unsigned room2, building_interior_t const &interior, float zval, unsigned has_key) const {
 		// Note: likely faster than running full A* algorithm
 		assert(room1 < num_rooms && room2 < num_rooms);
 		if (room1 == room2) return 1;
@@ -413,7 +413,7 @@ public:
 
 			for (auto i = node.conn_rooms.begin(); i != node.conn_rooms.end(); ++i) {
 				if (seen[i->ix]) continue;
-				if (!can_use_conn(*i, doors, zval, has_key)) continue; // blocked by closed or locked door
+				if (!can_use_conn(*i, interior, zval, has_key)) continue; // blocked by closed or locked door
 				if (i->ix == room2) return 1; // found, done
 				pend.push_back(i->ix);
 				seen[i->ix] = 1;
@@ -825,14 +825,20 @@ public:
 		return 1;
 	}
 
-	bool can_use_conn(conn_room_t const &conn, vect_door_t const &doors, float zval, unsigned has_key) const {
+	bool can_use_conn(conn_room_t const &conn, building_interior_t const &interior, float zval, unsigned has_key) const {
 		if (conn.door_ix < 0) return 1; // no door
-		//if (global_building_params.ai_opens_doors && has_key) return 1; // locked door won't stop us; incorrect because door may not cover z-range (for multi-floor backrooms)
-		unsigned const door_ix(conn.door_ix);
-		assert(door_ix < doors.size());
-		door_t const &first_door(doors[door_ix]);
+		unsigned door_ix(conn.door_ix);
 
-		for (auto i = (doors.begin() + door_ix); i != doors.end(); ++i) {
+		if (door_ix >= interior.doors.size()) { // mall gate
+			door_ix -= interior.doors.size();
+			assert(interior.has_mall());
+			assert(door_ix < interior.mall_info->store_doorways.size());
+			return !interior.mall_info->store_doorways[door_ix].closed;
+		}
+		//if (global_building_params.ai_opens_doors && has_key) return 1; // locked door won't stop us; incorrect because door may not cover z-range (for multi-floor backrooms)
+		door_t const &first_door(interior.doors[door_ix]);
+
+		for (auto i = (interior.doors.begin() + door_ix); i != interior.doors.end(); ++i) {
 			if (!i->is_same_stack(first_door))        break;    // we've reached the end of the vertical stack of doors
 			//if (i->mult_floor_room && zval > i->z2()) return 0; // no door at this level - can't pass; but then if the AI gets here they can't get out
 			if (zval < i->z1() || zval > i->z2())     continue; // not the correct floor
@@ -844,7 +850,7 @@ public:
 	// A* algorithm; Note: path is stored backwards
 	bool find_path_points(unsigned room1, unsigned room2, unsigned ped_ix, float radius, bool use_stairs, bool is_first_path,
 		bool up_or_down, unsigned ped_rseed, vect_cube_t const &avoid, building_t const &building, point const &cur_pt,
-		vect_door_t const &doors, unsigned has_key, point const *const custom_dest, bool req_custom_dest, ai_path_t &path) const
+		unsigned has_key, point const *const custom_dest, bool req_custom_dest, ai_path_t &path) const
 	{
 		// Note: opening and closing doors updates the nav graph; an AI encountering a closed door after choosing a path can either open it or stop and wait
 		assert(room1 < nodes.size() && room2 < nodes.size());
@@ -875,8 +881,8 @@ public:
 				if (closed[i->ix]) continue; // already closed (duplicate)
 				bool const is_goal(i->ix == room2);
 				node_t const &conn_node(get_node(i->ix));
-				if (conn_node.is_vert_conn() && !use_stairs && !is_goal) continue; // skip stairs/ramp in this mode
-				if (!can_use_conn(*i, doors, cur_pt.z, has_key))         continue; // blocked by closed or locked door; must do this check before setting open state
+				if (conn_node.is_vert_conn() && !use_stairs && !is_goal)      continue; // skip stairs/ramp in this mode
+				if (!can_use_conn(*i, *building.interior, cur_pt.z, has_key)) continue; // blocked by closed or locked door; must do this check before setting open state
 				point const node_pt((cur == room1) ? cur_pt   : cur_node .get_center(cur_pt.z));
 				point const next_pt(is_goal        ? dest_pos : conn_node.get_center(cur_pt.z));
 				a_star_node_state_t &sn(state[i->ix]);
@@ -969,8 +975,10 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 			bool const is_mall_concourse((int)r == interior->ext_basement_hallway_room_id);
 
 			if (is_mall_concourse) { // bidirectional; only need to check mall => store/parking garage direction
-				for (store_doorway_t const &d : interior->mall_info->store_doorways) {
-					if (!d.closed) {ng.connect_rooms(r, d.room_id, -1, d);} // door_ix=-1 (no door)
+				for (auto i = interior->mall_info->store_doorways.begin(); i != interior->mall_info->store_doorways.end(); ++i) {
+					store_doorway_t const &d(*i);
+					unsigned const dix(i - interior->mall_info->store_doorways.begin() + interior->doors.size()); // offset by the number of doors
+					if (!d.locked_closed()) {ng.connect_rooms(r, d.room_id, dix, d);}
 				}
 			}
 			if (add_mall_ent_stairs && (is_mall_concourse || room.is_parking())) { // handle mall entrance stairs
@@ -1161,7 +1169,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 	if (!goal.is_valid()) return 0; // no player or sound
 	unsigned const cand_room(goal.room_ix);
 	room_t const &room(get_room(cand_room)); // target room
-	if (!interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room, interior->doors, person.pos.z, person.has_key)) return 0; // unreachable
+	if (!interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room, *interior, person.pos.z, person.has_key)) return 0; // unreachable
 	person.cur_room     = loc.room_ix;
 	person.dest_room    = cand_room; // set but not yet used
 	person.target_pos   = (global_building_params.ai_target_player ? goal.pos: get_center_of_room(cand_room));
@@ -1427,7 +1435,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 				assert(elevator_room >= 0); // elevator must be in a valid room
 
 				// Note: to simplify multiple AI logic, we could check e.in_use here and not even go to the elevator if someone else is using it
-				if (interior->nav_graph->is_room_connected_to(loc.room_ix, elevator_room, interior->doors, person.pos.z, person.has_key)) { // check if reachable
+				if (interior->nav_graph->is_room_connected_to(loc.room_ix, elevator_room, *interior, person.pos.z, person.has_key)) { // check if reachable
 					person.target_pos   = pos_to_stand; // check if this is blocked, or leave that up to path finding?
 					person.dest_room    = elevator_room;
 					person.goal_type    = GOAL_TYPE_ELEVATOR;
@@ -1481,7 +1489,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		if ((person.pos.z + floor_spacing) < bot_floor_z || (person.pos.z - floor_spacing) > top_ceil_z) continue; // room more than one floor above/below current pos
 		// allow move to a different stacked part 25% of the time; 100% of the time for parking garages and retail, since they're more rare
 		if ((person.pos.z < bot_floor_z || person.pos.z > top_ceil_z) && !(has_parking_garage && bot_floor_z < ground_floor_z1) && !is_retail && (rgen.rand()&3) != 0) continue;
-		if (!interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room, interior->doors, person.pos.z, person.has_key)) continue;
+		if (!interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room, *interior, person.pos.z, person.has_key)) continue;
 		person.target_pos   = get_center_of_room(cand_room);
 		person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
 
@@ -1597,6 +1605,11 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 	if (pool.valid && z1 < (pool.z2() + floor_ceil_gap)) { // skip if !same_as_player to allow zombies in pools?
 		avoid.push_back(pool);
 		avoid.back().z2() += floor_ceil_gap; // increase height so that it overlaps a person standing over it
+	}
+	if (has_mall()) {
+		for (store_doorway_t const &d : mall_info->store_doorways) {
+			if (d.closed) {avoid.push_back(d);}
+		}
 	}
 	if (!room_geom) return; // no room objects
 	auto objs_end(room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
@@ -1927,7 +1940,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 				point const *const seg1_dest(is_escalator ? &enter_pt : nullptr); // must enter the escalator exactly at this point
 				// Note: passing use_stairs=0 here because it's unclear if we want to go through stairs nodes in our A* algorithm
 				if (!interior->nav_graph->find_path_points(loc1.room_ix, sre_room_ix, person.ssn, radius, 0, is_first_path,
-					up_or_down, person.cur_rseed, avoid, *this, from, interior->doors, person.has_key, seg1_dest, is_escalator, from_path)) continue; // custom_dest for escalator
+					up_or_down, person.cur_rseed, avoid, *this, from, person.has_key, seg1_dest, is_escalator, from_path)) continue; // custom_dest for escalator
 			}
 			// new floor, new zval, new avoid cubes
 			vect_cube_t &avoid2(reused_avoid_cubes[1]);
@@ -1940,7 +1953,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 			}
 			else {
 				if (!interior->nav_graph->find_path_points(sre_room_ix, loc2.room_ix, person.ssn, radius, 0, is_first_path,
-					!up_or_down, person.cur_rseed, avoid2, *this, seg2_start, interior->doors, person.has_key, custom_dest, req_custom_dest, path)) continue;
+					!up_or_down, person.cur_rseed, avoid2, *this, seg2_start, person.has_key, custom_dest, req_custom_dest, path)) continue;
 			}
 			assert(!path.empty() && !from_path.empty());
 			path.add(seg2_start, 1); // exit end of the stairs/ramp/escalator, extended with clearance
@@ -2034,7 +2047,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 	}
 	assert(loc1.room_ix != loc2.room_ix);
 	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, person.ssn, radius, 0, is_first_path,
-		0, person.cur_rseed, avoid, *this, from, interior->doors, person.has_key, custom_dest, req_custom_dest, path)) return 0;
+		0, person.cur_rseed, avoid, *this, from, person.has_key, custom_dest, req_custom_dest, path)) return 0;
 	assert(!path.empty());
 	return 1;
 }
@@ -2135,7 +2148,7 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 					}
 					if (any_unlocked_doors) break;
 				} // for i
-				if (!any_unlocked_doors && has_mall() && r->is_store()) { // check mall store doorways
+				if (!any_unlocked_doors && has_mall() && r->is_store()) { // check mall store doorways; uses initial closed state
 					for (store_doorway_t const &d : interior->mall_info->store_doorways) {
 						if (!d.closed && d.room_id == room_ix) {any_unlocked_doors = 1; break;}
 					}
@@ -3018,6 +3031,18 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 				}
 			} // for dix
 		} // for i
+		if (has_mall()) { // handle mall store gates that the player may have closed
+			for (store_doorway_t const &d : interior->mall_info->store_doorways) {
+				if (!d.closed) continue; // open gate
+				if (new_pos.z < d.z1() || new_pos.z > d.z2() || !d.intersects(sc)) continue; // wrong part/floor or no intersection with door
+
+				if (!d.line_intersects(person.pos, person.target_pos)) { // check if path goes through door, to allow for "glancing blows" when pushed or turning
+					if (person.path.empty() || !d.line_intersects(person.target_pos, person.path.back())) continue; // check next path point as well
+				}
+				person.wait_for(5.0); // wait for 5s and then choose a new desination
+				return AI_WAITING; // cut the path short at this closed door
+			} // for d
+		}
 	}
 	handle_vert_cylin_tape_collision(new_pos, person.pos, person.get_z1(), person.get_z2(), radius, 0); // should be okay to use zvals from old pos; is_player=0
 	// logic to clip this person to correct room Z-bounds in case something went wrong; remove if/when this is fixed

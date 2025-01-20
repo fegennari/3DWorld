@@ -482,7 +482,7 @@ enum { // room object types
 	TYPE_POOL_BALL, TYPE_POOL_CUE, TYPE_WALL_MOUNT, TYPE_POOL_TILE, TYPE_POOL_FLOAT, TYPE_BENCH, TYPE_DIV_BOARD, TYPE_FALSE_DOOR, TYPE_FLASHLIGHT, TYPE_CANDLE,
 	TYPE_CAMERA, TYPE_CLOCK, TYPE_DOWNSPOUT, TYPE_SHELFRACK, TYPE_CHIM_CAP, TYPE_FOOD_BOX, TYPE_SAFE, TYPE_LADDER, TYPE_CHECKOUT, TYPE_FISHTANK,
 	TYPE_LAVALAMP, TYPE_SHOWERTUB, TYPE_TRASH, TYPE_VALVE, TYPE_METAL_BAR, TYPE_OFF_PILLAR, TYPE_DRINK_CAN, TYPE_CONF_TABLE, TYPE_INT_WINDOW, TYPE_INT_LADDER,
-	TYPE_MACHINE, TYPE_BUCKET, TYPE_SPIWEB, TYPE_TREE, TYPE_STORE_GATE, TYPE_THEFT_SENS, TYPE_ELEC_WIRE, TYPE_ERASER, TYPE_DWASHER, TYPE_PET_CAGE,
+	TYPE_MACHINE, TYPE_BUCKET, TYPE_SPIWEB, TYPE_TREE, TYPE_THEFT_SENS, TYPE_ELEC_WIRE, TYPE_ERASER, TYPE_DWASHER, TYPE_PET_CAGE,
 	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_WALL_LAMP, TYPE_CUP, TYPE_TOASTER,
@@ -1073,6 +1073,7 @@ struct building_room_geom_t {
 	void invalidate_lights_geom  () {invalidate_mats_mask |= (1 << MAT_TYPE_LIGHTS );} // cache state and apply change later in case this is called from a different thread
 	void invalidate_detail_geom  () {invalidate_mats_mask |= (1 << MAT_TYPE_DETAIL );}
 	void update_dynamic_draw_data() {invalidate_mats_mask |= (1 << MAT_TYPE_DYNAMIC);}
+	void invalidate_door_geom    () {invalidate_mats_mask |= (1 << MAT_TYPE_DOORS  );}
 	void check_invalid_draw_data();
 	void invalidate_draw_data_for_obj(room_object_t const &obj, bool was_taken=0);
 	unsigned get_num_verts() const;
@@ -1744,9 +1745,12 @@ struct skyway_conn_t : public cube_t {
 
 struct store_doorway_t : public cube_t {
 	unsigned room_id;
-	bool dim, dir, closed;
-	store_doorway_t(cube_t const &bc, unsigned r, bool dim_, bool dir_, bool c) : cube_t(bc), room_id(r), dim(dim_), dir(dir_), closed(c) {}
+	bool dim, dir, closed, locked=0;
+	float open_amt=0.0;
+	store_doorway_t(cube_t const &bc, unsigned r, bool dim_, bool dir_, bool c) : cube_t(bc), room_id(r), dim(dim_), dir(dir_), closed(c), open_amt(closed ? 0.0 : 1.0) {}
+	bool locked_closed() const {return (closed && locked);}
 };
+typedef vector<store_doorway_t> vect_store_doorway_t;
 
 struct ug_elev_info_t {
 	cube_t entrance;
@@ -1763,7 +1767,7 @@ struct pet_tank_t : public cube_t {
 
 struct building_mall_info_t {
 	vect_cube_with_ix_t landings; // ix stores {is_escalator, se_dim, se_dir, ww_dir}
-	vector<store_doorway_t> store_doorways; // ix stores store room index
+	vect_store_doorway_t store_doorways; // ix stores store room index
 	vector<store_info_t> stores; // added during interior object placement
 	stairwell_t ent_stairs;
 	vect_cube_t bathrooms; // actually bathroom pairs

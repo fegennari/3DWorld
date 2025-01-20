@@ -1691,7 +1691,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	assert(has_room_geom());
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const trim_height(get_trim_height()), trim_thickness(get_trim_thickness()), expand_val(2.0*trim_thickness), door_trim_offset(0.025*window_vspacing);
-	float const door_trim_exp(2.0*trim_thickness + 0.5*wall_thickness), door_trim_width(0.5*wall_thickness), floor_to_ceil_height(window_vspacing - floor_thickness);
+	float const door_trim_width(0.5*wall_thickness), door_trim_exp(2.0*trim_thickness + door_trim_width), floor_to_ceil_height(window_vspacing - floor_thickness);
 	float const fc_gap(get_floor_ceil_gap());
 	float const trim_toler(0.1*trim_thickness); // required to handle wall intersections that were calculated with FP math and may misalign due to FP rounding error
 	float const ext_wall_toler(0.01*trim_thickness); // required to prevent z-fighting when AA is disabled
@@ -2681,17 +2681,20 @@ int building_t::get_room_id_for_window(cube_t const &window, bool dim, bool dir,
 
 // *** Stairs and Elevators ***
 
-void add_elevator_button(point const &pos, float button_radius, bool dim, bool dir, unsigned elevator_id, unsigned floor_id, bool inside, bool is_up, vect_room_object_t &objs) {
+void add_button(point const &pos, float button_radius, bool dim, bool dir, unsigned function_id, unsigned flags, vect_room_object_t &objs) {
 	float const button_thickness(0.25*button_radius);
 	cube_t c; c.set_from_point(pos);
 	c.expand_in_dim(!dim, button_radius);
 	c.expand_in_dim(2,    button_radius); // Z
 	c.d[dim][dir] += (dir ? 1.0 : -1.0)*button_thickness;
+	expand_to_nonzero_area(c, button_thickness, dim);
+	objs.emplace_back(c, TYPE_BUTTON, function_id, dim, dir, flags, 1.0, SHAPE_CYLIN, colorRGBA(1.0, 0.9, 0.5)); // room_id=function_id (elevator_id, gate_id)
+}
+void add_elevator_button(point const &pos, float button_radius, bool dim, bool dir, unsigned elevator_id, unsigned floor_id, bool inside, bool is_up, vect_room_object_t &objs) {
 	unsigned flags(RO_FLAG_NOCOLL);
 	if (inside) {flags |= RO_FLAG_IN_ELEV;}
 	else        {flags |= (is_up ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT);}
-	expand_to_nonzero_area(c, button_thickness, dim);
-	objs.emplace_back(c, TYPE_BUTTON, elevator_id, dim, dir, flags, 1.0, SHAPE_CYLIN, colorRGBA(1.0, 0.9, 0.5)); // room_id=elevator_id
+	add_button(pos, button_radius, dim, dir, elevator_id, flags, objs);
 	objs.back().obj_id = floor_id; // encode floor index as obj_id
 }
 // Note: floor_ix=1 is ground floor in the following two functions

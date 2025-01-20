@@ -19,6 +19,7 @@ void add_city_plot_cut(cube_t const &cut);
 void add_city_ug_elevator_entrance(ug_elev_info_t const &uge);
 void offset_hanging_tv(room_object_t &obj);
 void rotate_obj_cube(cube_t &c, cube_t const &bc, bool in_dim, bool dir);
+void add_button(point const &pos, float button_radius, bool dim, bool dir, unsigned function_id, unsigned flags, vect_room_object_t &objs);
 colorRGBA get_couch_color(rand_gen_t &rgen);
 bool try_add_lamp(cube_t const &place_area, float floor_spacing, unsigned room_id, unsigned flags, float light_amt,
 	vect_cube_t &cubes, vect_room_object_t &objects, rand_gen_t &rgen);
@@ -1030,9 +1031,10 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	} // for f
 
 	// add objects for store doors, which are always between pairs of interior windows
-	for (store_doorway_t const &d : interior->mall_info->store_doorways) {
+	for (auto i = interior->mall_info->store_doorways.begin(); i != interior->mall_info->store_doorways.end(); ++i) {
+		store_doorway_t const &d(*i);
 		//room_t const &store(get_room(d.room_id));
-		bool const dim(d.dim);
+		bool const dim(d.dim), dir(d.dir);
 		// can either use room_id or d.room_id for these objects
 		// add ceiling box where the gate would come down from
 		cube_t cbox(d);
@@ -1040,14 +1042,17 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		cbox.expand_in_dim( dim,  1.0*wall_thickness); // grow
 		cbox.expand_in_dim(!dim, -0.5*wall_thickness); // shrink
 		objs.emplace_back(cbox, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, GRAY);
-		
-		if (d.closed) { // add closed gate
-			cube_t gate(d);
-			gate.z2()  = cbox.z1();
-			gate.z1() += trim_thick;
-			gate.expand_in_dim( dim, -0.4*d.get_sz_dim(dim)); // shrink
-			gate.expand_in_dim(!dim, -0.5*wall_thickness); // shrink (same as cbox)
-			objs.emplace_back(gate, TYPE_STORE_GATE, room_id, dim, 0, 0, light_amt, SHAPE_CUBE, LT_GRAY);
+		// add gate control buttons on the inside
+		unsigned const dix(i - interior->mall_info->store_doorways.begin());
+		float const trim_thickness(get_trim_thickness()), trim_width(0.5*wall_thickness), trim_exp(2.0*trim_thickness + trim_width);
+		point pos;
+		pos[ dim] = i->get_center_dim(dim) + (dir ? 1.0 : -1.0)*trim_exp; // inside front of the gate trim
+		pos[!dim] = i->d[!dim][0] + 0.5*trim_width; // to the low side
+
+		for (unsigned du = 0; du < 2; ++du) { // {down, up}
+			pos.z = d.z1() + (0.05*du + 0.45)*window_vspace;
+			unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_IN_MALL | (du ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT));
+			add_button(pos, 0.2*wall_thickness, dim, dir, dix, flags, objs);
 		}
 	} // for d
 

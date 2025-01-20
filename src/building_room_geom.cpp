@@ -944,7 +944,7 @@ void building_room_geom_t::add_spraycan(room_object_t const &c) { // is_small=1
 }
 
 void building_room_geom_t::add_button(room_object_t const &c, bool inc_geom, bool inc_text) {
-	bool const in_elevator(c.in_elevator());
+	bool const in_elevator(c.in_elevator()), for_mall_gate(c.in_mall());
 
 	if (inc_geom) {
 		tid_nm_pair_t tp; // unshadowed
@@ -952,10 +952,10 @@ void building_room_geom_t::add_button(room_object_t const &c, bool inc_geom, boo
 		colorRGBA const color(apply_light_color(c));
 		rgeom_mat_t &mat(get_material(tp, 0, in_elevator, !in_elevator)); // (in_elevator ? dynamic : small)
 		if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts_untextured(c, color, ~get_face_mask(c.dim, !c.dir));} // square button
-		else if (c.shape == SHAPE_CYLIN) {mat.add_ortho_cylin_to_verts(c, color, c.dim, !c.dir, c.dir);} // round button
+		else if (c.shape == SHAPE_CYLIN) {mat.add_ortho_cylin_to_verts    (c, color, c.dim, !c.dir, c.dir);} // round button
 		else {assert(0);}
 	
-		if (!in_elevator) { // add the frame for better color contrast
+		if (!in_elevator &&!for_mall_gate) { // call button or doorbell; add the frame for better color contrast
 			float const expand(0.7*c.dz());
 			cube_t frame(c);
 			frame.d[c.dim][c.dir] -= 0.9*(c.dir ? 1.0 : -1.0)*c.get_depth(); // shorten to a sliver against the elevator wall
@@ -970,8 +970,8 @@ void building_room_geom_t::add_button(room_object_t const &c, bool inc_geom, boo
 		if (is_up || is_down) {
 			cube_t sign(c);
 			sign.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*0.25*c.get_depth(); // shift outward
-			rgeom_mat_t &mat(get_material(tid_nm_pair_t(FONT_TEXTURE_ID), 0, 0, 1));
-			add_sign_text_verts("V", sign, c.dim, c.dir, apply_light_color(c, BLACK), mat.quad_verts, 0.0, 0.0, 0, is_up); // unshadowed, small, invert_z=is_up
+			rgeom_mat_t &mat(get_material(tid_nm_pair_t(FONT_TEXTURE_ID), 0, 0, 1)); // unshadowed, small
+			add_sign_text_verts("V", sign, c.dim, c.dir, apply_light_color(c, BLACK), mat.quad_verts, 0.0, 0.0, 0, is_up); // invert_z=is_up
 		}
 	}
 }
@@ -5501,7 +5501,7 @@ void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c,
 	}
 }
 void building_room_geom_t::add_store_gate(room_object_t const &c) {
-	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small
+	rgeom_mat_t &mat(get_metal_material(1, 0, 3)); // untextured, shadowed, small=3 (door)
 	float const thickness(c.get_depth()), vbar_hthick(0.6*thickness), hbar_hthick(0.4*thickness);
 	add_grid_of_bars(mat, apply_light_color(c), c, 6, 30, vbar_hthick, hbar_hthick, 2, !c.dim);
 }

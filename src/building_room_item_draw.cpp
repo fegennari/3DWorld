@@ -870,11 +870,12 @@ unsigned building_room_geom_t::get_num_verts() const {
 
 building_materials_t &building_room_geom_t::get_building_mat(tid_nm_pair_t const &tex, bool dynamic, unsigned small, bool transparent, bool exterior) {
 	assert(!(dynamic && exterior));
-	assert(small <= 2); // 0=mats_static, 1=mats_small, 2=mats_detail
+	assert(small <= 3); // 0=mats_static, 1=mats_small, 2=mats_detail, 3=doors
 	if (transparent) {assert(!small && !dynamic && !exterior);} // transparent objects must be static and can't be small
 	if (exterior)   return (small ? mats_ext_detail : mats_exterior);
 	if (dynamic)    return mats_dynamic;
 	if (small == 2) return mats_detail;
+	if (small == 3) return mats_doors; // treated as a door
 	if (small)      return ((tex.tid == FONT_TEXTURE_ID) ? mats_text : mats_small);
 	return (transparent ? mats_alpha : mats_static);
 }
@@ -1085,7 +1086,6 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_LAVALAMP:   add_lava_lamp(c); break;
 		case TYPE_TRASH:      add_trash(c); break;
 		case TYPE_METAL_BAR:  add_metal_bar(c); break;
-		case TYPE_STORE_GATE: add_store_gate(c); break;
 		case TYPE_THEFT_SENS: add_theft_sensor(c); break;
 		case TYPE_INT_LADDER: add_int_ladder(c); break;
 		case TYPE_MACHINE:    add_machine(c, floor_ceil_gap); break;
@@ -1325,6 +1325,19 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 		}
 		else {add_door_handle(d, drot, handle_color, residential);}
 	} // for d
+	if (building.has_mall()) {
+		float const window_vspace(building.get_window_vspace()), wall_thickness(building.get_wall_thickness()), trim_thick(building.get_trim_thickness());
+
+		for (store_doorway_t const &d : building.interior->mall_info->store_doorways) {
+			if (!d.closed) continue; // open gate
+			cube_t gate(d);
+			gate.z2()  = d.z2() - 0.1*window_vspace;
+			gate.z1() += trim_thick;
+			gate.expand_in_dim( d.dim, -0.4*d.get_sz_dim(d.dim)); // shrink
+			gate.expand_in_dim(!d.dim, -0.5*wall_thickness); // shrink (same as cbox)
+			add_store_gate(room_object_t(gate, TYPE_BLOCKER, d.room_id, d.dim, 0, 0, 1.0, SHAPE_CUBE, LT_GRAY)); // type doesn't matter
+		} // for d
+	}
 	mats_doors.create_vbos(building);
 }
 

@@ -1724,9 +1724,14 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 			cube_t const pillar(e.get_support_pillar());
 			had_coll |= sphere_cube_int_update_pos_zval(pos, obj_z, radius, pillar, p_last, cnorm);
 		}
-	} // for e
+	} // for escalator e
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
 		had_coll |= check_door_coll(building, *i, pos, p_last, radius, obj_z, check_open_doors, cnorm);
+	}
+	if (has_mall()) {
+		for (store_doorway_t const &d : mall_info->store_doorways) {
+			if (d.closed) {had_coll |= sphere_cube_int_update_pos_zval(pos, obj_z, radius, d, p_last, cnorm);}
+		}
 	}
 	if (conn_info) { // check for collision with closed door separating the adjacent building at the end of the connecting room
 		door_t const *const conn_door(conn_info->get_door_to_conn_part(building, pos));
@@ -2042,8 +2047,8 @@ public:
 					type == TYPE_CAMERA || type == TYPE_CLOCK || type == TYPE_DOWNSPOUT || type == TYPE_CHIM_CAP || type == TYPE_FOOD_BOX || type == TYPE_LADDER ||
 					type == TYPE_LAVALAMP || type == TYPE_POOL_LAD || type == TYPE_PADLOCK || type == TYPE_KEY || type == TYPE_HANGER || type == TYPE_CLOTHES ||
 					type == TYPE_WALL_LAMP || type == TYPE_SILVER || type == TYPE_TOY_MODEL || type == TYPE_CEIL_FAN || type == TYPE_FOLD_SHIRT || type == TYPE_TRASH ||
-					type == TYPE_INT_WINDOW || type == TYPE_INT_LADDER || type == TYPE_CONF_PHONE || type == TYPE_SPIWEB || type == TYPE_TREE || type == TYPE_STORE_GATE ||
-					type == TYPE_ELEC_WIRE || type == TYPE_ERASER || type == TYPE_SHOE) continue;
+					type == TYPE_INT_WINDOW || type == TYPE_INT_LADDER || type == TYPE_CONF_PHONE || type == TYPE_SPIWEB || type == TYPE_TREE || type == TYPE_ELEC_WIRE ||
+					type == TYPE_ERASER || type == TYPE_SHOE) continue;
 				if (z1 > obj.z2() || z2 < obj.z1()) continue; // zval test
 
 				if (obj.type == TYPE_PARK_SPACE) {
@@ -2443,7 +2448,7 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 	if (c.is_round() || c.is_floor_clutter()) {non_cubes.push_back(c);}
 	else if (type == TYPE_RAILING || type == TYPE_RAMP || type == TYPE_BALCONY || type == TYPE_POOL_LAD || type == TYPE_OFF_CHAIR || type == TYPE_BAR_STOOL ||
 		type == TYPE_LAVALAMP || type == TYPE_WFOUNTAIN || type == TYPE_INT_LADDER || type == TYPE_MACHINE || type == TYPE_CONF_PHONE || type == TYPE_XFORMER ||
-		type == TYPE_US_FLAG || type == TYPE_BLDG_FOUNT || type == TYPE_THEFT_SENS/*|| type == TYPE_STORE_GATE*/)
+		type == TYPE_US_FLAG || type == TYPE_BLDG_FOUNT || type == TYPE_THEFT_SENS)
 	{
 		non_cubes.push_back(c); // non-cubes; bar stools are close, should they be included?
 		// allow walking on the floor above a parking garage ramp if there's no cutout; shrink ramp bcube to the ceiling of the top floor of the parking garage

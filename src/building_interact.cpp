@@ -745,8 +745,24 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			gen_sound_thread_safe(SOUND_CLICK, local_center, 0.5);
 		}
 	}
-	else if (obj.type == TYPE_BUTTON) { // Note: currently, buttons are only used for elevators
-		if (!obj.is_active() && !interior->elevators_disabled) { // if not already active
+	else if (obj.type == TYPE_BUTTON) { // Note: currently, buttons are only used for elevators and mall store gates
+		if (obj.in_mall()) { // mall store gate
+			assert(has_mall());
+			auto &doorways(interior->mall_info->store_doorways);
+			assert(obj.room_id < doorways.size());
+			store_doorway_t &doorway(doorways[obj.room_id]);
+			bool const is_up(obj.flags & RO_FLAG_ADJ_TOP);
+			
+			if (doorway.locked || (is_up && !doorway.closed) || (!is_up && doorway.closed)) {} // pressed, but has no effect
+			else {
+				// TODO: gradually open or close
+				doorway.closed ^= 1; // toggle state
+				interior->room_geom->invalidate_door_geom();
+				interior->door_state_updated = 1;
+				//invalidate_nav_graph();
+			}
+		}
+		else if (!obj.is_active() && !interior->elevators_disabled) { // elevator button; update if not already active
 			register_button_event(obj);
 			obj.flags |= RO_FLAG_IS_ACTIVE;
 			interior->room_geom->invalidate_draw_data_for_obj(obj); // need to regen object data due to lit state change; don't have to set modified_by_player
@@ -963,7 +979,7 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 	// we changed the door state, but navigation should adapt to this, except for doors on stairs (which are special)
 	if ( door.on_stairs) {invalidate_nav_graph();} // any in-progress paths may have people walking to and stopping at closed/locked doors
 	if (!door.get_for_closet()) {interior->door_state_updated = 1;} // required for AI navigation logic to adjust to this change; what about backrooms doors?
-	if (has_room_geom()) {interior->room_geom->invalidate_mats_mask |= (1 << MAT_TYPE_DOORS);} // need to recreate doors VBO
+	if (has_room_geom()) {interior->room_geom->invalidate_door_geom();} // need to recreate doors VBO
 	check_for_water_splash(cube_bot_center(door), 2.0); // big splash
 
 	if (player_in_this_building || by_player) { // is it really safe to call this from the AI thread?
@@ -1068,7 +1084,7 @@ void building_t::doors_next_frame(point const &player_pos) {
 		}
 		interior->last_active_door_ix = (d - interior->doors.begin());
 	} // for d
-	if (interior->last_active_door_ix >= 0) {interior->room_geom->invalidate_mats_mask |= (1 << MAT_TYPE_DOORS);} // need to recreate doors VBO
+	if (interior->last_active_door_ix >= 0) {interior->room_geom->invalidate_door_geom();} // need to recreate doors VBO
 }
 
 point building_t::local_to_camera_space(point const &pos) const {
