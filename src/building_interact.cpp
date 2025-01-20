@@ -608,7 +608,7 @@ void obj_dynamic_to_static(room_object_t &obj, building_interior_t &interior) {
 bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, point const &query_ray_end, vector3d const &int_dir) {
 	auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));
 	point const sound_origin(obj.xc(), obj.yc(), int_pos.z), local_center(local_to_camera_space(sound_origin)); // generate sound from the player height
-	float sound_scale(0.5); // for building sound level
+	float sound_scale(0.0); // for building sound level
 	bool update_draw_data(0);
 	cube_t dishwasher;
 
@@ -746,6 +746,8 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		}
 	}
 	else if (obj.type == TYPE_BUTTON) { // Note: currently, buttons are only used for elevators and mall store gates
+		sound_scale = 0.05; // very quiet, unless set in gate opening/closing case below
+
 		if (obj.in_mall()) { // mall store gate
 			assert(has_mall());
 			auto &doorways(interior->mall_info->store_doorways);
@@ -760,6 +762,8 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 				interior->room_geom->invalidate_door_geom();
 				interior->door_state_updated = 1;
 				//invalidate_nav_graph();
+				gen_sound_thread_safe_at_player(SOUND_METAL_DOOR, 1.0);
+				sound_scale = 1.0; // very loud
 			}
 		}
 		else if (!obj.is_active() && !interior->elevators_disabled) { // elevator button; update if not already active
@@ -768,7 +772,6 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			interior->room_geom->invalidate_draw_data_for_obj(obj); // need to regen object data due to lit state change; don't have to set modified_by_player
 		}
 		gen_sound_thread_safe_at_player(SOUND_CLICK, 0.5);
-		sound_scale = 0.05; // very quiet
 	}
 	else if (obj.type == TYPE_SWITCH) {
 		// should select the correct light(s) for the room containing the switch
