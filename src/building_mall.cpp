@@ -1560,8 +1560,8 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	// clothing stores: 175FPS, 2737MB, 6ms
 	// shoe stores: 186FPS, 2760MB, 9ms
 	// retail stores: 290FPS, 2922MB, 135ms
-	// don't place two pet stores in the same row; assign as retail or clothing instead
-	if (store_type == STORE_PETS && (type_mask & (1U << store_type))) {store_type = (rgen.rand_bool() ? STORE_RETAIL : STORE_CLOTHING);}
+	// don't place two pet stores or two book stores in the same row; assign as retail or clothing instead
+	if ((store_type == STORE_PETS || store_type == STORE_BOOK) && (type_mask & (1U << store_type))) {store_type = (rgen.rand_bool() ? STORE_RETAIL : STORE_CLOTHING);}
 	bool const is_retail(store_type == STORE_RETAIL);
 	unsigned item_category(is_retail ? (rgen.rand() % NUM_RETAIL_CAT) : 0); // same category for each rack with equal probability
 	if (is_end_store && is_retail && item_category == RETAIL_BOXED) {item_category = RETAIL_FOOD;} // make end retail stores food rather than boxes
