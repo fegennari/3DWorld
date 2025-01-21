@@ -425,7 +425,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						unsigned const floors_end(min(num_floors, NUM_RTYPE_SLOTS-1)); // not too high a floor so that slot clamp occurs
 						unsigned const floors_start((floors_end < 3) ? 0 : 1); // skip first floor to avoid ext doors (which haven't been placed yet), unless 1-2 floors
 						unsigned floor_ix(floors_start + (rgen.rand() % (floors_end - floors_start)));
-						if (!(br_floors_used & (1<<floor_ix))) {interior->rooms.back().assign_to(RTYPE_BATH, floor_ix);}
+						if (!(br_floors_used & (1<<floor_ix))) {rooms.back().assign_to(RTYPE_BATH, floor_ix);}
 						br_floors_used |= (1<<floor_ix); // at most one bathroom per floor
 					}
 				} // for r
@@ -435,17 +435,15 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			}
 		} // end non-cube room
 		else if (is_factory) { // first part is factory space
-			add_room(*p, part_id, 1); // add entire part as a room; num_lights will be calculated later
-			rooms.back().assign_all_to(RTYPE_FACTORY);
-			rooms.back().is_single_floor = 1;
+			create_factory_floorplan(part_id, rgen);
 		}
 		else if (!is_house && is_basement_part && min(psz.x, psz.y) > 5.0*car_sz.x && max(psz.x, psz.y) > 12.0*car_sz.y) { // make this a parking garage
-			add_room(*p, part_id, 1); // add entire part as a room; num_lights will be calculated later
+			add_room(*p, part_id); // add entire part as a room; num_lights will be calculated later
 			rooms.back().assign_all_to(RTYPE_PARKING); // make it a parking garage
 			has_parking_garage = 1;
 		}
 		else if (has_retail() && part_id == 0) {
-			add_room(*p, part_id, 1); // add entire part as a room; num_lights will be calculated later
+			add_room(*p, part_id); // add entire part as a room; num_lights will be calculated later
 			rooms.back().assign_all_to(RTYPE_RETAIL);
 			rooms.back().is_single_floor = 1;
 		}
@@ -1481,6 +1479,65 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 		r->unit_id = next_unit_id;
 	}
 	++next_unit_id;
+}
+
+void building_t::create_factory_floorplan(unsigned part_id, rand_gen_t &rgen) {
+	assert(part_id < parts.size());
+	cube_t const &part(parts[part_id]);
+	vector<room_t> &rooms(interior->rooms);
+	// add entire part as a room (factory floor)
+	add_room(part, part_id); // num_lights will be calculated later
+	rooms.back().assign_all_to(RTYPE_FACTORY);
+	rooms.back().is_single_floor = 1;
+
+	// add bathroom and office to either side of the front entrance door
+	if (!doors.empty()) { // FIXME: doors have not yet been added
+		cube_t const door_bc(doors.front().get_bcube());
+		bool const dim(door_bc.dy() < door_bc.dx()), dir(part.get_center_dim(dim) < door_bc.get_center_dim(dim));
+		float const door_width(get_doorway_width()), door_hwidth(0.5*door_width), floor_spacing(get_window_vspace());
+		float const wall_thick(get_wall_thickness()), floor_thick(get_floor_thickness()), fc_thick(get_fc_thickness());
+		float const door_ent_pad(0.75*door_width), room_len(part.get_sz_dim(dim)), sub_room_len(max(1.5*floor_spacing, min(3.0*floor_spacing, 0.2*room_len)));
+		float const split_pos(part.d[dim][dir] + (dir ? -1.0 : 1.0)*sub_room_len);
+		unsigned const num_floors(calc_num_floors(part, floor_spacing, floor_thick));
+		assert(num_floors >= 2); // main factory must be at least 2 floors tall
+		cube_t sub_rooms(part);
+		sub_rooms.z2() = part.z1() + floor_spacing;
+		sub_rooms.d[dim][!dir] = split_pos;
+		cube_t sub_room[2] = {sub_rooms, sub_rooms}; // to each side of the entrance
+		sub_room[0].d[!dim][1] = door_bc.d[!dim][0] - door_ent_pad;
+		sub_room[1].d[!dim][0] = door_bc.d[!dim][1] + door_ent_pad;
+		bool const larger_room(sub_room[0].get_sz_dim(!dim) < sub_room[1].get_sz_dim(!dim));
+
+		for (unsigned d = 0; d < 2; ++d) { // add walls, doors, and ceilings/floors
+			bool const is_larger(d == larger_room), is_office(is_larger), is_bathroom(!is_larger);
+			cube_t const &r(sub_room[d]);
+			cube_t lwall(r), swall(r), lwall2, swall2;
+			lwall.z2() += fc_thick; // extend up to cover the floor above the room
+			swall.z2() += fc_thick;
+			set_wall_width(lwall, split_pos,     0.5*wall_thick,  dim);
+			set_wall_width(swall, r.d[!dim][!d], 0.5*wall_thick, !dim);
+			
+			// add door(s) and walls
+			for (unsigned e = 0; e < 2; ++e) {
+				bool const wdim(dim ^ e), ddir(e ? d : dir);
+				cube_t &wall(e ? swall : lwall);
+				float const wall_center(wall.get_center_dim(!wdim));
+				insert_door_in_wall_and_add_seg(wall, (wall_center - door_hwidth), (wall_center + door_hwidth), !wdim, ddir, 0, is_bathroom);
+				interior->walls[wdim].push_back(wall);
+			} // for e
+			// add ceiling and floor
+			cube_t room_ceil(r), room_floor(r);
+			room_ceil .z1() = r.z2() - fc_thick;
+			room_floor.z1() = r.z2();
+			room_floor.z2() = r.z2() + fc_thick;
+			interior->ceilings.push_back(room_ceil );
+			interior->floors  .push_back(room_floor);
+			// add room itself; will overlap main factory room
+			add_room(r, part_id, 1, 0, is_office);
+			rooms.back().assign_all_to(is_larger ? RTYPE_OFFICE : RTYPE_BATH); // office or bathroom
+		} // for d
+		// TODO: should there be an entryway room, then the factory doesn't overlap the sub-rooms? but then there will be empty space above them
+	}
 }
 
 bool building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
