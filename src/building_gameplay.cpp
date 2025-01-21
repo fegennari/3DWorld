@@ -1544,6 +1544,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			if (type == TYPE_MWAVE   && i->is_nonempty())       continue; // can't take a microwave with something inside it
 			if (type == TYPE_PADLOCK && i->is_active())         continue; // padlock in locked onto a door, can't take
 			if (type == TYPE_SHOWERTUB && (i->taken_level & 3) == 3) continue; // both shower curtains already taken
+			if (type == TYPE_BUTTON && i->in_elevator() != bool(player_in_elevator)) continue; // check for buttons inside/outside elevator
 
 			if (type == TYPE_SHELFRACK && i->obj_expanded()) { // shelf rack is already expanded, can no longer select this object
 				// check the back of the shelf rack to make sure the player can't take an object through it
