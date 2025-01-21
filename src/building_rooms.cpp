@@ -243,7 +243,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		unsigned const num_floors((is_mall || is_factory) ? 1 : calc_num_floors_room(*r, floor_height, floor_thickness)); // consider mall and factory a single floor
 		unsigned const room_id(r - rooms.begin());
 		unsigned const min_br(multi_family ? num_floors : 1); // multi-family house requires one per floor; can apply to both bedrooms and bathrooms
-		room_obj_shape const light_shape(residential_room ? SHAPE_CYLIN : SHAPE_CUBE);
+		room_obj_shape const light_shape((residential_room || is_factory) ? SHAPE_CYLIN : SHAPE_CUBE);
 		float light_density(0.0), light_size(def_light_size); // default size for houses
 		unsigned const room_objs_start(objs.size());
 		unsigned nx(1), ny(1), min_num_lights(0); // number of lights in X and Y for this room
@@ -301,7 +301,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		}
 		else if (is_factory) {
 			light_density = 0.5;
-			light_size   *= 1.5; // must be large to reach the floor below
+			light_size   *= 1.33; // must be large to reach the floor below
 		}
 		else if (r->is_single_floor) {
 			light_size *= sqrt(r->dz()/window_vspacing); // larger lights for taller rooms

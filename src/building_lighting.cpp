@@ -577,6 +577,11 @@ class building_indir_light_mgr_t {
 				surface_area = window.dz()*window.get_sz_dim(!bool(dim));
 				light_cube.translate_dim(dim, (dir ? 1.0 : -1.0)*0.5*b.get_wall_thickness()); // shift slightly inside the building to avoid collision with the exterior wall
 				lcolor = outdoor_color;
+				
+				if (b.is_factory()) {
+					base_num_rays /= 8; // faster indir lighting, since there are many windows
+					surface_area  *= 0.25; // less indir light, since there are many windows and we want factories to be darker than retail areas
+				}
 			}
 			// light intensity scales with surface area, since incoming light is a constant per unit area (large windows = more light)
 			weight *= surface_area/0.0016f; // a fraction the surface area weight of lights
