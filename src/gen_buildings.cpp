@@ -169,7 +169,7 @@ void building_geom_t::do_xy_rotate_normal_inv(point &n) const {::do_xy_rotate_no
 class building_texture_mgr_t {
 	int window_tid=-1, hdoor_tid=-1, odoor_tid=-1, bdoor_tid=-1, bdoor2_tid=-1, gdoor_tid=-1, mdoor_tid=-1, ac_unit_tid1=-1, ac_unit_tid2=-1, bath_wind_tid=-1;
 	int helipad_tid=-1,	solarp_tid=-1, concrete_tid=-1, met_plate_tid=-1, mplate_nm_tid=-1, met_roof_tid=-1, tile_floor_tid=-1, tile_floor_nm_tid=-1, duct_tid=-1;
-	int vent_tid=-1, marble_floor_tid=-1, granite_floor_tid=-1;
+	int vent_tid=-1, marble_floor_tid=-1, granite_floor_tid=-1, corr_metal_tid=-1, corr_metal_nm_tid=-1;
 
 	int ensure_tid(int &tid, const char *name, bool is_normal_map=0, bool invert_y=0) {
 		if (tid < 0) {tid = get_texture_by_name(name, is_normal_map, invert_y);}
@@ -199,6 +199,8 @@ public:
 	int get_tile_floor_nm_tid() {return ensure_tid(tile_floor_nm_tid, "interiors/mosaic_tiles_normal.jpg");}
 	int get_marble_floor_tid () {return ensure_tid(marble_floor_tid,  "interiors/marble_floor.jpg");}
 	int get_granite_floor_tid() {return ensure_tid(granite_floor_tid, "interiors/granite_floor.jpg");}
+	int get_corr_metal_tid   () {return ensure_tid(corr_metal_tid,    "buildings/corrugated_metal.tif");}
+	int get_corr_metal_nm_tid() {return ensure_tid(corr_metal_nm_tid, "buildings/corrugated_metal_normal.tif");}
 
 	bool check_windows_texture() {
 		if (!global_building_params.windows_enabled()) return 0;
@@ -278,6 +280,8 @@ public:
 		register_tid(building_texture_mgr.get_tile_floor_nm_tid());
 		register_tid(building_texture_mgr.get_marble_floor_tid());
 		register_tid(building_texture_mgr.get_granite_floor_tid());
+		register_tid(building_texture_mgr.get_corr_metal_tid());
+		register_tid(building_texture_mgr.get_corr_metal_nm_tid());
 		register_tid(get_plywood_tid()); // for attics
 		register_tid(FONT_TEXTURE_ID); // for roof signs
 		for (unsigned i = 0; i < num_special_tids; ++i) {register_tid(special_tids[i]);}
@@ -1439,7 +1443,9 @@ tid_nm_pair_t building_t::get_basement_wall_texture() const { // okay to call if
 		return tid_nm_pair_t(get_texture_by_name("cblock2.jpg"), get_texture_by_name("normal_maps/cblock2_NRM.jpg", 1), 1.0, 1.0);
 	}
 }
-
+tid_nm_pair_t building_t::get_factory_wall_texture() const {
+	return get_basement_wall_texture(); // for now, this is the same as the basement
+}
 tid_nm_pair_t building_t::get_attic_texture() const {
 	if (!has_attic()) return tid_nm_pair_t();
 	// plywood 50% of the time, boards 50% of the time
@@ -1473,7 +1479,8 @@ colorRGBA building_t::get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_p
 			case 2: tex = tid_nm_pair_t(building_texture_mgr.get_granite_floor_tid(), 0.4*tscale); break; // no normal map
 			}
 		}
-		else if (in_basement && (has_parking_garage || in_ext_basement)) {tex = get_concrete_texture();} // parking garage or extended basement
+		else if (in_basement && (has_parking_garage || in_ext_basement)) {tex = get_concrete_texture();} // parking garage or extended basement is concrete
+		else if (is_factory()) {tex = get_concrete_texture();} // factory floor is always concrete; could also use a dark tile texture
 		else {tex = mat.floor_tex;} // office block
 	}
 	return (is_house ? mat.house_floor_color : mat.floor_color);
@@ -1487,13 +1494,18 @@ colorRGBA building_t::get_ceil_tex_and_color(cube_t const &ceil_cube, tid_nm_pai
 		tex = mat.house_floor_tex;
 		return (is_house ? mat.house_floor_color : mat.floor_color);
 	}
-	else if (!is_house && in_ext_basement && !is_inside_mall_stores(ceil_cube.get_cube_center())) { // use concrete for office building ext basements except for malls
+	if (!is_house && in_ext_basement && !is_inside_mall_stores(ceil_cube.get_cube_center())) { // use concrete for office building ext basements except for malls
 		tex = get_concrete_texture();
 		return WHITE;
 	}
-	else if (in_basement && (is_house || (has_parking_garage && !in_ext_basement))) { // use wall texture for basement/parking garage ceilings, not ceiling texture
+	if (in_basement && (is_house || (has_parking_garage && !in_ext_basement))) { // use wall texture for basement/parking garage ceilings, not ceiling texture
 		tex = mat.wall_tex;
 		return WHITE; // basement walls are always white
+	}
+	if (is_factory()) {
+		float const txy(0.5*mat.ceil_tex.tscale_x);
+		tex = tid_nm_pair_t(building_texture_mgr.get_corr_metal_tid(), building_texture_mgr.get_corr_metal_nm_tid(), txy, txy);
+		return WHITE;
 	}
 	// normal ceiling texture
 	bool const residential(is_residential()); // apartments and hotels use house ceiling textures and colors
@@ -1837,15 +1849,15 @@ void building_t::get_detail_shadow_casters(building_draw_t &bdraw) {
 void building_t::get_all_drawn_ext_wall_verts(building_draw_t &bdraw) {
 	//if (interior == nullptr) return; // only needed if building has an interior?
 	if (!is_valid()) return; // invalid building
-	building_mat_t const &mat(get_material());
-	ext_side_qv_range.draw_ix = bdraw.get_to_draw_ix(mat.wall_tex);
-	ext_side_qv_range.start   = bdraw.get_num_verts (mat.wall_tex);
+	tid_nm_pair_t const &wall_tex(get_interior_ext_wall_texture());
+	ext_side_qv_range.draw_ix = bdraw.get_to_draw_ix(wall_tex);
+	ext_side_qv_range.start   = bdraw.get_num_verts (wall_tex);
 
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels, room parts only, no AO
-		if (!is_basement(i)) {bdraw.add_section(*this, 1, *i, mat.wall_tex, wall_color, 3, 0, 0, 1, 0);} // XY
+		if (!is_basement(i)) {bdraw.add_section(*this, 1, *i, wall_tex, wall_color, 3, 0, 0, 1, 0);} // XY
 	}
-	ext_side_qv_range.end = bdraw.get_num_verts(mat.wall_tex);
-	get_basement_ext_wall_verts(bdraw);
+	ext_side_qv_range.end = bdraw.get_num_verts(wall_tex);
+	get_basement_ext_wall_verts(bdraw); // Note: not visible from outside building, so not needed in ext_side_qv_range
 }
 void building_t::get_basement_ext_wall_verts(building_draw_t &bdraw) const {
 	if (!has_basement()) return;
@@ -2487,6 +2499,7 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 	if (!is_valid()) return; // invalid building
 	point const only_cont_pt(get_inv_rot_pos(only_cont_pt_in));
 	building_mat_t const &mat(get_material());
+	tid_nm_pair_t const &wall_tex(get_interior_ext_wall_texture());
 	cube_t const cont_part(get_part_containing_pt(only_cont_pt)); // part containing the point
 	// complex floorplan buildings can have odd exterior wall geometry where this splitting approach doesn't work well,
 	// but if the building is windowless, then we can at least make the walls all front so that exterior doors are drawn properly
@@ -2502,7 +2515,7 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 		if (make_all_front || *i == cont_part || i->contains_pt(only_cont_pt) || // part containing the point
 			are_parts_stacked(*i, cont_part)) // stacked building parts, contained, draw as front in case player can see through stairs
 		{
-			bdraw_front.add_section(*this, 1, *i, mat.wall_tex, wall_color, 3, 0, 0, 1, 0); // XY
+			bdraw_front.add_section(*this, 1, *i, wall_tex, wall_color, 3, 0, 0, 1, 0); // XY
 			continue;
 		}
 		unsigned back_dim_mask(3), front_dim_mask(0); // enable dims: 1=x, 2=y, 4=z | disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2, 128=z1, 256=z2
@@ -2524,14 +2537,14 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 				if (i->d[!d][e] != cont_part.d[!d][e] && ((i->d[!d][e] < cont_part.d[!d][e]) ^ e)) {
 					cube_t back_clip_cube(*i);
 					front_clip_cube.d[!d][e] = back_clip_cube.d[!d][!e] = cont_part.d[!d][e]; // split point
-					bdraw_back.add_section(*this, 1, *i, mat.wall_tex, wall_color, back_dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 0, &back_clip_cube);
+					bdraw_back.add_section(*this, 1, *i, wall_tex, wall_color, back_dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 0, &back_clip_cube);
 				}
 			}
 			back_dim_mask &= ~(1<<d); front_dim_mask |= (1<<d); // draw only the other dim as back and this dim as front
 			break;
 		} // for d
-		if (back_dim_mask  > 0) {bdraw_back .add_section(*this, 1, *i, mat.wall_tex, wall_color, back_dim_mask,  0, 0, 1, 0);}
-		if (front_dim_mask > 0) {bdraw_front.add_section(*this, 1, *i, mat.wall_tex, wall_color, front_dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 0, &front_clip_cube);}
+		if (back_dim_mask  > 0) {bdraw_back .add_section(*this, 1, *i, wall_tex, wall_color, back_dim_mask,  0, 0, 1, 0);}
+		if (front_dim_mask > 0) {bdraw_front.add_section(*this, 1, *i, wall_tex, wall_color, front_dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 0, &front_clip_cube);}
 	} // for i
 }
 

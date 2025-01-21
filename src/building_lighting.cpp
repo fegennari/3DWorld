@@ -139,8 +139,8 @@ bool line_contained_in_cube(point const &p1, point const &p2, vect_cube_t const 
 
 void building_t::set_building_colors(building_colors_t &bcolors) const {
 	building_mat_t const &mat(get_material());
-	bcolors.side_color = side_color.modulate_with(mat.side_tex.get_avg_color());
-	bcolors.wall_color = mat.wall_color.modulate_with(mat.wall_tex.get_avg_color());
+	bcolors.side_color = side_color.modulate_with(mat.side_tex.get_avg_color()); // exterior wall
+	bcolors.wall_color = mat.wall_color.modulate_with(get_interior_ext_wall_texture().get_avg_color()); // interior of exterior wall
 	if (has_basement()) {bcolors.basement_wall_color = get_basement_wall_texture().get_avg_color();} // this one is particularly expensive
 	if (has_attic   ()) {bcolors.attic_color         = interior->get_attic_ceiling_color();}
 }

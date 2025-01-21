@@ -349,7 +349,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		vector3d const psz(p->get_size());
 		bool const is_basement_part(is_basement(p)), first_part(part_id == 0), first_part_this_stack(first_part || is_basement_part || (p-1)->z1() < p->z1());
 		// office building hallways only; house hallways are added later
-		bool const is_factory(btype == BTYPE_FACTORY && first_part);
+		bool const is_factory(is_factory() && first_part);
 		if (is_factory) {num_floors = 1;} // factory is a single floor
 		bool const use_hallway(!is_factory && can_use_hallway_for_part(part_id)), min_dim(psz.y < psz.x);
 		unsigned const rooms_start(rooms.size()), doors_start(interior->doors.size()), num_doors_per_stack(num_floors);

@@ -1966,6 +1966,7 @@ struct building_t : public building_geom_t {
 	bool is_apartment   () const {return (btype == BTYPE_APARTMENT);}
 	bool is_hotel       () const {return (btype == BTYPE_HOTEL);}
 	bool is_apt_or_hotel() const {return (is_apartment() || is_hotel());}
+	bool is_factory     () const {return (btype == BTYPE_FACTORY);}
 	bool is_residential () const {return (is_house || is_apt_or_hotel());}
 	bool is_retail_part(cube_t const &part) const {return (has_retail() && part.z1() == ground_floor_z1);}
 	bool skip_top_of_ceilings() const {return (roof_type == ROOF_TYPE_FLAT || !is_house || has_attic());}
@@ -2130,7 +2131,9 @@ struct building_t : public building_geom_t {
 	void add_roof_to_bcube();
 	void gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax);
 	tid_nm_pair_t get_basement_wall_texture() const;
+	tid_nm_pair_t get_factory_wall_texture() const;
 	tid_nm_pair_t get_attic_texture() const;
+	tid_nm_pair_t const &get_interior_ext_wall_texture() const {return (is_factory() ? get_factory_wall_texture() : get_material().wall_tex);}
 	colorRGBA get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_pair_t &tex) const;
 	colorRGBA get_ceil_tex_and_color (cube_t const &ceil_cube,  tid_nm_pair_t &tex) const;
 	colorRGBA get_trim_color() const {return (is_house ? WHITE : DK_GRAY);}
