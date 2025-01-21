@@ -2029,10 +2029,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 		tid_nm_pair_t wall_panel_tex(FENCE_TEX, -1, 16.0, 16.0);
 		wall_panel_tex.set_specular(0.1, 50.0);
 		bdraw.add_section(*this, 0, inner_cube, wall_panel_tex, WHITE, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1);
-
-		if (i->under_skylight ) { // under skylight, draw the top
-			bdraw.add_section(*this, 0, shaft, mat.wall_tex, WHITE, 4, 1, 0, 1, 0); // top surface only
-		}
+		if (i->under_skylight) {bdraw.add_section(*this, 0, shaft, mat.wall_tex, WHITE, 4, 1, 0, 1, 0);} // under skylight, draw top surface only
 		// Note elevator doors are dynamic and are drawn as part of room_geom
 	} // for i
 	if (has_attic()) {

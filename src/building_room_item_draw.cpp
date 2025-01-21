@@ -896,7 +896,7 @@ void room_object_t::set_as_bottle(unsigned rand_id, unsigned max_type, bool no_e
 
 void building_room_geom_t::create_static_vbos(building_t const &building) {
 	float const tscale(2.0/obj_scale);
-	tid_nm_pair_t const &wall_tex(building.get_material().wall_tex);
+	tid_nm_pair_t const &wall_tex(building.get_material().wall_tex); // interior wall texture
 	static vect_room_object_t rugs;
 	rugs.clear();
 
@@ -1119,7 +1119,7 @@ void building_room_geom_t::add_text_objs_to_verts(vect_room_object_t const &objs
 void building_room_geom_t::create_detail_vbos(building_t const &building) {
 	// currently only small objects that are non-interactive and can't be taken; TYPE_SWITCH almost counts; also, anything in the basement not seen from outside the building
 	auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
-	tid_nm_pair_t const &wall_tex(building.get_material().wall_tex);
+	tid_nm_pair_t const &wall_tex(building.get_material().wall_tex); // interior wall texture
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_visible()) continue;
