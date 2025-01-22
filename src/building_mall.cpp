@@ -770,12 +770,15 @@ struct tcan_loc_t {
 // this is for the central mall concourse; store objects are added in add_mall_store_objs() below; treated as a single floor
 unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, vect_cube_t &rooms_to_light) {
 	bool const mall_dim(interior->extb_wall_dim);
+	bool const use_cylin_pillars((room_id + mat_ix) & 1);
 	float const floor_spacing(get_mall_floor_spacing(room)), window_vspace(get_window_vspace()), fc_thick(get_fc_thickness()), doorway_width(get_doorway_width());
-	float const wall_thickness(get_wall_thickness()), trim_thick(get_trim_thickness()), room_centerline(room.get_center_dim(!mall_dim)), pillar_hwidth(2.0*wall_thickness);
+	float const wall_thickness(get_wall_thickness()), trim_thick(get_trim_thickness()), room_centerline(room.get_center_dim(!mall_dim));
+	float const pillar_hwidth((use_cylin_pillars ? 3.0 : 2.0)*wall_thickness);
 	float const railing_height(0.42*window_vspace), railing_top_bar_thick(0.04*window_vspace), vbar_hwidth(0.35*wall_thickness);
 	float const plate_thickness(0.1*wall_thickness), bot_bar_thickness(0.4*wall_thickness), top_bar_thickness(0.5*wall_thickness);
 	float const light_amt = 1.0; // fully lit, for now
 	unsigned const num_floors(interior->num_extb_floors);
+	room_obj_shape const pillar_shape(use_cylin_pillars ? SHAPE_CYLIN : SHAPE_CUBE);
 	cube_t const mall_center(get_mall_center(room));
 	vect_cube_t openings, railing_cuts, railing_segs, temp, pillars, blockers; // blockers are on the first/ground floor only
 	vector<plant_loc_t> plant_locs;
@@ -918,6 +921,10 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		set_wall_width(pillar, (railing_area.d[se_dim][0] + (se_dir ? 0.1 : 0.9)*railing_area.get_sz_dim(se_dim)), pillar_hwidth, se_dim); // close to stairs/escalator
 		pillars .push_back(pillar);
 		blockers.push_back(pillar);
+
+		if (use_cylin_pillars) { // add pillar connecting cubes
+			// TODO
+		}
 		// add railing cut where landing connects to walkway
 		cube_t cut(c);
 		cut.z2() += 0.5*floor_spacing; // extend above top of railing
@@ -1378,7 +1385,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	}
 	// add pillars last so that we can check lights against them
 	unsigned const pillars_start(objs.size());
-	for (cube_t const &pillar : pillars) {objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, !mall_dim, 0, 0, light_amt, SHAPE_CUBE, WHITE, EF_Z12);}
+	for (cube_t const &pillar : pillars) {objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, !mall_dim, 0, 0, light_amt, pillar_shape, WHITE, EF_Z12);}
 	return pillars_start;
 }
 
