@@ -1531,7 +1531,7 @@ void building_t::create_factory_floorplan(unsigned part_id, rand_gen_t &rgen) {
 			bool const wdim(dim ^ e), ddir(e ? d : dir);
 			cube_t &wall(e ? swall : lwall);
 			float const wall_center(wall.get_center_dim(!wdim));
-			//insert_door_in_wall_and_add_seg(wall, (wall_center - door_hwidth), (wall_center + door_hwidth), !wdim, ddir, 0, is_bathroom);
+			insert_door_in_wall_and_add_seg(wall, (wall_center - door_hwidth), (wall_center + door_hwidth), !wdim, ddir, 0, is_bathroom);
 			interior->walls[wdim].push_back(wall);
 		} // for e
 		// add ceiling and floor
@@ -2714,15 +2714,21 @@ void building_interior_t::assign_door_conn_rooms(unsigned start_ds_ix) {
 		point const door_center(d->get_cube_center());
 		float const test_pt_shift(0.5*d->get_width());
 		assert(d->first_door_ix < doors.size());
+		point test_pts[2] = {door_center, door_center};
 
 		for (unsigned s = 0; s < 2; ++s) { // for each side of the door
-			point test_pt(door_center);
-			if (d->on_stairs) {test_pt.z += (s ? d->dz() : 0.0);} // stairs door, test below and above
-			else {test_pt[d->dim] += (s ? 1.0 : -1.0)*test_pt_shift;} // normal door, test front and back
+			if (d->on_stairs) {test_pts[s].z += (s ? d->dz() : 0.0);} // stairs door, test below and above
+			else {test_pts[s][d->dim] += (s ? 1.0 : -1.0)*test_pt_shift;} // normal door, test front and back
+		}
+		for (unsigned s = 0; s < 2; ++s) { // for each side of the door
+			point test_pt(test_pts[s]);
 			int ds_room_ix(-1);
 
 			for (unsigned r = rooms_start; r < rooms_end; ++r) {
-				if (rooms[r].contains_pt(test_pt)) {ds_room_ix = r; break;}
+				if (!rooms[r].contains_pt(test_pt)) continue;
+				ds_room_ix = r;
+				// only break if room does not contain the other side of the door; if it does, then this is likely a larger containing room and should be skipped
+				if (!rooms[r].contains_pt(test_pts[!s])) break;
 			}
 			if (ds_room_ix == -1) { // adj room not found
 				if (d->get_bldg_conn()) { // door connecting adjacent building with no room for this building on the other side
