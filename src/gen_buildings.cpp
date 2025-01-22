@@ -1849,7 +1849,7 @@ void building_t::get_detail_shadow_casters(building_draw_t &bdraw) {
 void building_t::get_all_drawn_ext_wall_verts(building_draw_t &bdraw) {
 	//if (interior == nullptr) return; // only needed if building has an interior?
 	if (!is_valid()) return; // invalid building
-	tid_nm_pair_t const &wall_tex(get_interior_ext_wall_texture());
+	tid_nm_pair_t const wall_tex(get_interior_ext_wall_texture());
 	ext_side_qv_range.draw_ix = bdraw.get_to_draw_ix(wall_tex);
 	ext_side_qv_range.start   = bdraw.get_num_verts (wall_tex);
 
@@ -2499,7 +2499,7 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 	if (!is_valid()) return; // invalid building
 	point const only_cont_pt(get_inv_rot_pos(only_cont_pt_in));
 	building_mat_t const &mat(get_material());
-	tid_nm_pair_t const &wall_tex(get_interior_ext_wall_texture());
+	tid_nm_pair_t const wall_tex(get_interior_ext_wall_texture());
 	cube_t const cont_part(get_part_containing_pt(only_cont_pt)); // part containing the point
 	// complex floorplan buildings can have odd exterior wall geometry where this splitting approach doesn't work well,
 	// but if the building is windowless, then we can at least make the walls all front so that exterior doors are drawn properly

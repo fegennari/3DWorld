@@ -1124,7 +1124,7 @@ void building_t::doors_next_frame(point const &player_pos) {
 	if (interior->door_state_updated && has_mall()) { // check mall store gates
 		for (store_doorway_t &d : interior->mall_info->store_doorways) {
 			int const moved(d.next_frame());
-			updated |= moved;
+			updated |= bool(moved);
 			if (moved > 1) {gen_sound_thread_safe(SOUND_METAL_DOOR, local_to_camera_space(d.get_cube_center()), 1.0);} // fully open or closed
 		}
 	}

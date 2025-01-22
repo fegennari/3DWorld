@@ -97,7 +97,7 @@ void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float di
 			if (fabs(dist) < fabs(door_shift)) {door_shift = dist;}
 		} // for p
 		if (door_shift == large_val) { // not found
-			std::cerr << TXT(c.str()) << TXT(dim) << TXT(dir) << TXT(real_num_parts) << TXT(is_cube()) << endl;
+			std::cerr << TXT(c.str()) << TXT(dim) << TXT(dir) << TXTi(real_num_parts) << TXT(is_cube()) << endl;
 			assert(0);
 		}
 	}

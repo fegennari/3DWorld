@@ -47,7 +47,8 @@ void building_t::remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, fl
 	// add a door stack and doors
 	door_t door(c, !xy, open_dir, 1, 0, hinge_side); // open=1, on_stairs=0
 	door.d[!xy][0] = door.d[!xy][1] = c.get_center_dim(!xy); // zero area at wall centerline
-	door.d[ xy][0] = v1; door.d[ xy][1] = v2;
+	door.d[ xy][0] = v1;
+	door.d[ xy][1] = v2;
 	add_interior_door(door, is_bathroom, make_unlocked, make_closed);
 }
 

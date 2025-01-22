@@ -2134,7 +2134,7 @@ struct building_t : public building_geom_t {
 	tid_nm_pair_t get_basement_wall_texture() const;
 	tid_nm_pair_t get_factory_wall_texture() const;
 	tid_nm_pair_t get_attic_texture() const;
-	tid_nm_pair_t const &get_interior_ext_wall_texture() const {return (is_factory() ? get_factory_wall_texture() : get_material().wall_tex);}
+	tid_nm_pair_t get_interior_ext_wall_texture() const {return (is_factory() ? get_factory_wall_texture() : get_material().wall_tex);}
 	colorRGBA get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_pair_t &tex) const;
 	colorRGBA get_ceil_tex_and_color (cube_t const &ceil_cube,  tid_nm_pair_t &tex) const;
 	colorRGBA get_trim_color() const {return (is_house ? WHITE : DK_GRAY);}
