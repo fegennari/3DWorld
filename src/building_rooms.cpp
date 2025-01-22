@@ -236,14 +236,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_swim_pool_room(init_rtype_f0 == RTYPE_SWIM); // room with a swimming pool
 		bool const is_retail_room   (init_rtype_f0 == RTYPE_RETAIL);
 		bool const is_mall_store    (init_rtype_f0 == RTYPE_STORE);
-		bool const is_factory       (init_rtype_f0 == RTYPE_FACTORY);
+		bool const is_factory_room  (init_rtype_f0 == RTYPE_FACTORY);
 		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(r->is_backrooms()), is_apt_or_hotel_room(r->is_apt_or_hotel_room());
 		bool const residential_room(is_house || (residential && !r->is_hallway && !is_basement && !is_retail_room));
 		bool const is_mall_room(is_ext_basement && has_mall()), is_mall_bathroom(is_mall_room && is_bathroom(init_rtype_f0));
-		unsigned const num_floors((is_mall || is_factory) ? 1 : calc_num_floors_room(*r, floor_height, floor_thickness)); // consider mall and factory a single floor
+		unsigned const num_floors((is_mall || is_factory_room) ? 1 : calc_num_floors_room(*r, floor_height, floor_thickness)); // consider mall and factory a single floor
 		unsigned const room_id(r - rooms.begin());
 		unsigned const min_br(multi_family ? num_floors : 1); // multi-family house requires one per floor; can apply to both bedrooms and bathrooms
-		room_obj_shape const light_shape((residential_room || is_factory) ? SHAPE_CYLIN : SHAPE_CUBE);
+		room_obj_shape const light_shape((residential_room || is_factory_room) ? SHAPE_CYLIN : SHAPE_CUBE);
 		float light_density(0.0), light_size(def_light_size); // default size for houses
 		unsigned const room_objs_start(objs.size());
 		unsigned nx(1), ny(1), min_num_lights(0); // number of lights in X and Y for this room
@@ -299,7 +299,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		else if (is_ext_basement) {
 			light_density = (is_house ? 0.25 : 0.3);
 		}
-		else if (is_factory) {
+		else if (is_factory_room) {
 			light_density = 0.5;
 			light_size   *= 1.33; // must be large to reach the floor below
 		}
@@ -344,7 +344,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		else if (is_backrooms)      {color = get_light_color_temp_range(0.2, 0.4, rgen);} // backrooms - yellow-white
 		else if (is_mall)           {color = get_light_color_temp(0.46);} // mall concourse - yellowish white
 		else if (is_mall_store)     {color = get_light_color_temp(0.42);} // mall store - yellowish white (a bit more yellow than concourse)
-		else if (is_factory)        {color = get_light_color_temp(0.44);} // factory - yellowish white
+		else if (is_factory_room)   {color = get_light_color_temp(0.44);} // factory - yellowish white
 		else if (r->is_office)      {color = get_light_color_temp(0.60);} // office - blueish
 		else if (r->is_hallway)     {color = get_light_color_temp(0.60);} // office building hallway - blueish
 		else                        {color = get_light_color_temp(0.50);} // small office - white
@@ -383,7 +383,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				add_light_switches_to_room(rgen, *r, room_center.z,  room_id, objs_start, 0, 0); // is_ground_floor=is_basement=0
 				rgen.rand_mix(); // make sure numbers are different for each store
 			}
-			else if (is_factory) {
+			else if (is_factory_room) {
 				add_factory_objs(rgen, *r, room_center.z, room_id);
 			}
 			if ((!has_stairs && (f == 0 || top_floor) && interior->stairwells.size() > 1) || top_of_stairs) { // should this be outside the loop?
@@ -407,7 +407,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			else if (r->is_sec_bldg) {is_lit = 0;} // garage and shed lights start off
 			else {
 				// 50% of lights are on, 75% for top of stairs, 100% for non-basement hallways, 100% for parking garages, backrooms, and malls
-				is_lit  = ((r->is_hallway && !is_basement) || is_parking_garage || is_backrooms || is_mall_room || is_retail_room || is_factory);
+				is_lit  = ((r->is_hallway && !is_basement) || is_parking_garage || is_backrooms || is_mall_room || is_retail_room || is_factory_room);
 				is_lit |= ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0); // 75% for top of stairs light, 50% otherwise
 				is_lit |= (r->is_ext_basement_conn() || (r->is_ext_basement() && r->intersects(get_basement()))); // ext basement conn or primary hallway
 
@@ -544,7 +544,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				add_mall_lower_floor_lights(*r, room_id, objs_start_inc_lights, light_ix_assign);
 				continue; // nothing else to add
 			}
-			if (is_parking_garage || is_retail_room || is_mall_store || is_factory) continue; // generated above, done; no outlets or light switches
+			if (is_parking_garage || is_retail_room || is_mall_store || is_factory_room) continue; // generated above, done; no outlets or light switches
 			if (is_unfinished) continue; // no objects for now; if adding objects later, need to make sure they stay inside the building bounds
 			uint64_t const floor_mask(uint64_t(1) << f);
 			bool const is_garage_or_shed(r->is_garage_or_shed(f));
@@ -770,7 +770,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					if (is_bathroom) {r->assign_to(RTYPE_BATH, f);}
 				}
 			}
-			if (!added_obj && r->is_office) { // add cubicles if this is a large office
+			if (!added_obj && r->is_office /*&& !is_factory()*/) { // add cubicles if this is a large office
 				added_obj = no_whiteboard = create_office_cubicles(rgen, *r, room_center.z, room_id, tot_light_amt);
 			}
 			if (!added_obj && is_ext_basement && rgen.rand_float() < 0.5) { // machine room
@@ -792,7 +792,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (num_tcs > 0) {added_tc = added_obj = can_place_onto = 1; num_chairs = num_tcs - 1;}
 				// on ground floor, try to make this a kitchen; not all houses will have a kitchen with this logic - maybe we need fewer bedrooms?
 				// office buildings can also have kitchens, even on non-ground floors; no tall room kitchens because the cabinets and stove hood have no ceiling to connect to
-				if (!(added_kitchen_mask & floor_mask) && (!residential || is_entry_floor) && !is_basement && !is_tall_room) {
+				if (!(added_kitchen_mask & floor_mask) && (!residential || is_entry_floor) && !is_basement && !is_tall_room && !is_factory()) {
 					// make it a kitchen if it's the last room in a house, even if there's no table or it has stairs
 					if ((added_tc && !has_stairs) || (is_house && (r+1) == rooms.end())) {
 						if (add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_living)) {
@@ -802,6 +802,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						}
 					}
 				}
+			}
+			if (is_factory() && !is_basement && init_rtype_f0 == RTYPE_OFFICE) { // add factory office desk, etc.
+				added_desk = add_office_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_basement);
+				added_obj |= added_desk;
 			}
 			if (!added_obj && !added_pool_room && is_house && is_basement && add_pool_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt)) { // pool room
 				r->assign_to(RTYPE_POOL, f);
@@ -1649,6 +1653,7 @@ void building_t::add_trim_for_door_or_int_window(cube_t const &c, bool dim, bool
 	vect_room_object_t &objs(interior->room_geom->trim_objs);
 	cube_t trim(c);
 	set_wall_width(trim, trim.get_center_dim(dim), side_texp, dim);
+	if (is_factory()) {min_eq(trim.z2(), (ground_floor_z1 + floor_spacing - get_fc_thickness()));} // constrain to bottom floor of factory room
 	trim.z2() += top_z_adj;
 	if (top_z_adj == 0.0) {trim.z2() -= 0.01*trim_thickness;} // shift top down oh so slightly to prevent z-fighting with top of wall when drawn under a skylight
 
@@ -1708,7 +1713,8 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	unsigned const flags(RO_FLAG_NOCOLL);
 	// ceiling trim disabled for large office buildings with outside corners because there's a lot of trim to add, and outside corners don't join correctly;
 	// ceiling trim also disabled for non-houses (all office buildings), because it doesn't really work with acoustic paneling
-	bool const has_outside_corners(!is_house && !pri_hall.is_all_zeros()), has_ceil_trim(!has_outside_corners && is_house);
+	bool const has_outside_corners((!is_house && !pri_hall.is_all_zeros()) || is_factory());
+	bool const has_ceil_trim(!has_outside_corners && is_house);
 	colorRGBA const trim_color(get_trim_color());
 	vect_room_object_t &objs(interior->room_geom->trim_objs);
 	vect_cube_t trim_cubes, trim_parts;

@@ -1502,7 +1502,7 @@ colorRGBA building_t::get_ceil_tex_and_color(cube_t const &ceil_cube, tid_nm_pai
 		tex = mat.wall_tex;
 		return WHITE; // basement walls are always white
 	}
-	if (is_factory()) {
+	if (is_factory() && ceil_cube.z1() > ground_floor_z1 + get_window_vspace()) { // factory upper ceiling, not office or bathroom ceiling
 		float const txy(0.5*mat.ceil_tex.tscale_x);
 		tex = tid_nm_pair_t(building_texture_mgr.get_corr_metal_tid(), building_texture_mgr.get_corr_metal_nm_tid(), txy, txy);
 		return WHITE;

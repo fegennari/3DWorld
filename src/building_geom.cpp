@@ -580,8 +580,9 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 		if (calc_center) { // add door to first part of house/building
 			float const offset(centered ? 0.5 : rgen.rand_uniform(0.5-door_center_shift, 0.5+door_center_shift));
 			door_center = offset*base_lo + (1.0 - offset)*base_hi;
-			door_pos    = base.d[dim][dir];
 		}
+		if (calc_center || door_pos == 0.0) {door_pos = base.d[dim][dir];}
+
 		if (pref_near_stairs && n < 15) { // check if room has stairs or is a hallway; basement stairs stairs don't count
 			point center;
 			center.z     = door.zc();
@@ -1918,6 +1919,14 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 					} // for d
 				} // for i
 				continue;
+			}
+			if (num == 0 && interior && interior->factory_info) { // factory main entrance is between the smaller rooms
+				bool const dim(interior->factory_info->entrance_dim), dir(interior->factory_info->entrance_dir);
+				
+				if (add_door(place_door(*b, dim, dir, door_height, interior->factory_info->entrance_pos, 0.0, 0.0, wscale, 0, 0, rgen), part_ix, dim, dir, 1)) {
+					used[2*dim + dir] = 1; // mark used
+					placed = 1;
+				}
 			}
 			for (unsigned n = 0; n < 4; ++n) {
 				bool const dim(pref_dim ^ bool(n>>1)), dir(pref_dir ^ bool(n&1));

@@ -1782,7 +1782,15 @@ struct building_mall_info_t {
 	colorRGBA mall_wall_color=WHITE;
 	int city_elevator_ix=-1, ent_stairs_start_ix=-1;
 	bool mall_cylin_ducts=0, store_cylin_ducts=0;
+
 	void clear_room_details() {stores.clear(); pet_tanks.clear();}
+};
+
+struct bldg_factory_info_t {
+	bool entrance_dim, entrance_dir;
+	float entrance_pos;
+
+	bldg_factory_info_t(bool dim, bool dir, float pos) : entrance_dim(dim), entrance_dir(dir), entrance_pos(pos) {}
 };
 
 struct building_interior_t {
@@ -1802,6 +1810,7 @@ struct building_interior_t {
 	std::unique_ptr<building_nav_graph_t> nav_graph;
 	std::unique_ptr<building_conn_info_t> conn_info;
 	std::unique_ptr<building_mall_info_t> mall_info;
+	std::unique_ptr<bldg_factory_info_t > factory_info;
 	cube_with_ix_t pg_ramp, attic_access; // ix stores {2*dim + dir}
 	indoor_pool_t pool;
 	cube_t basement_ext_bcube, elevator_equip_room;
@@ -2108,7 +2117,7 @@ struct building_t : public building_geom_t {
 	void add_conference_room_window(unsigned room_ix);
 	void divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsigned hall_num_rooms, unsigned tot_num_windows,
 		unsigned windows_per_room, unsigned windows_per_room_side, bool hall_dim, bool hall_dir, rand_gen_t &rgen);
-	void create_factory_floorplan(unsigned part_id, rand_gen_t &rgen);
+	void create_factory_floorplan(unsigned part_id, float window_hspacing[2], float window_border, rand_gen_t &rgen);
 	bool maybe_assign_interior_garage(bool &gdim, bool &gdir);
 	void add_parking_garage_ramp(rand_gen_t &rgen);
 	bool add_machines_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool less_clearance=0);

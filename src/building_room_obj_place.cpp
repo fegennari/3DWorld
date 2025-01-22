@@ -1553,7 +1553,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 	bool const have_toilet(building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)), have_sink(building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK));
 	vect_room_object_t &objs(interior->room_geom->objs);
 
-	if ((have_toilet || have_sink) && is_cube()) { // bathroom with at least a toilet or sink; cube shaped parts only
+	if ((have_toilet || have_sink) && is_cube() && !is_factory()) { // bathroom with at least a toilet or sink; cube shaped parts only; no factories; add flooring
 		int const flooring_type(is_residential() ? (is_basement ? (int)FLOORING_CONCRETE : (int)FLOORING_TILE) : (int)FLOORING_MARBLE);
 		if (flooring_type == FLOORING_CONCRETE && get_material().basement_floor_tex.tid == get_concrete_tid()) {} // already concrete
 		else { // replace carpet/wood with marble/tile/concrete
@@ -3625,6 +3625,9 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 }
 
 void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
+	// add ceiling beams - avoid lights
+	// TODO
+	// add support pillars between windows
 	// TODO
 }
 

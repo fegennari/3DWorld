@@ -436,7 +436,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			}
 		} // end non-cube room
 		else if (is_factory) { // first part is factory space
-			create_factory_floorplan(part_id, rgen);
+			create_factory_floorplan(part_id, window_hspacing, window_border, rgen);
 		}
 		else if (!is_house && is_basement_part && min(psz.x, psz.y) > 5.0*car_sz.x && max(psz.x, psz.y) > 12.0*car_sz.y) { // make this a parking garage
 			add_room(*p, part_id); // add entire part as a room; num_lights will be calculated later
@@ -1482,73 +1482,83 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 	++next_unit_id;
 }
 
-void building_t::create_factory_floorplan(unsigned part_id, rand_gen_t &rgen) {
+void building_t::create_factory_floorplan(unsigned part_id, float window_hspacing[2], float window_border, rand_gen_t &rgen) {
 	assert(part_id < parts.size());
 	cube_t const &part(parts[part_id]);
 	vector<room_t> &rooms(interior->rooms);
-	// add entire part as a room (factory floor)
-	add_room(part, part_id); // num_lights will be calculated later
-	rooms.back().assign_all_to(RTYPE_FACTORY);
-	rooms.back().is_single_floor = 1;
 
 	// add bathroom and office to either side of a potential placement of the front entrance door
-	bool const dim(part.dx() < part.dy()), dir(rgen.rand_bool());
+	bool const dim(part.dx() < part.dy()), dir(rgen.rand_bool()); // long dim
 	float const door_width(get_doorway_width()), door_hwidth(0.5*door_width), floor_spacing(get_window_vspace());
 	float const wall_thick(get_wall_thickness()), wall_hthick(0.5*wall_thick), floor_thick(get_floor_thickness()), fc_thick(get_fc_thickness());
-	float const door_ent_pad(1.0*door_width), room_len(part.get_sz_dim(dim)), room_width(part.get_sz_dim(!dim));
+	float const door_ent_pad(2.0*door_width), room_len(part.get_sz_dim(dim)), room_width(part.get_sz_dim(!dim));
 	float const sub_room_len(max(1.5*floor_spacing, min(3.0*floor_spacing, 0.2*room_len)));
 	float const dsign(dir ? -1.0 : 1.0), split_pos(part.d[dim][dir] + dsign*sub_room_len);
 	float const centerline(part.d[!dim][0] + rgen.rand_uniform(0.3, 0.7)*room_width);
+	float const hspace(window_hspacing[!dim]);
 	unsigned const num_floors(calc_num_floors(part, floor_spacing, floor_thick));
 	assert(num_floors >= 2); // main factory must be at least 2 floors tall
 	cube_t sub_rooms(part);
 	sub_rooms.z2() = part.z1() + floor_spacing;
 	sub_rooms.d[dim][!dir] = split_pos;
 	cube_t sub_room[2] = {sub_rooms, sub_rooms}; // to each side of the entrance
-	sub_room[0].d[!dim][1] = centerline - door_ent_pad;
-	sub_room[1].d[!dim][0] = centerline + door_ent_pad;
+	float wall_edge[2] = {(centerline - door_ent_pad), (centerline + door_ent_pad)};
+
+	for (unsigned d = 0; d < 2; ++d) { // determine wall positions to avoid intersecting windows
+		wall_edge[d] = shift_val_to_not_intersect_window(part, wall_edge[d], hspace, window_border, !dim);
+		sub_room[d].d[!dim][!d] = wall_edge[d];
+	}
+	interior->factory_info.reset(new bldg_factory_info_t(dim, dir, 0.5*(wall_edge[0] + wall_edge[1])));
 	bool const larger_room(sub_room[0].get_sz_dim(!dim) < sub_room[1].get_sz_dim(!dim));
 
 	for (unsigned d = 0; d < 2; ++d) { // add walls, doors, and ceilings/floors
-		// TODO: trim outside corner
-		// TODO: concrete interior walls, but paneling ceiling
-		// TODO: no cubicles in office?
-		// TODO: place door in gap
-		// FIXME: missing toilet and office chair models
-		// FIXME: door room_ix assert
-		// FIXME: light toggle for nested rooms
-		bool const is_larger(d == larger_room), is_office(is_larger), is_bathroom(!is_larger);
+		// TODO: concrete interior walls
+		// FIXME: mirror reflects wrong terrain?
+		bool const is_larger(bool(d) == larger_room), is_office(is_larger), is_bathroom(!is_larger);
 		cube_t const &r(sub_room[d]);
-		cube_t lwall(r), swall(r), lwall2, swall2;
-		lwall.z2() += fc_thick; // extend up to cover the floor above the room
-		swall.z2() += fc_thick;
-		swall.d[ dim][!dir] += dsign*wall_hthick;
-		lwall.d[!dim][!d  ] += (d ? -1.0 : 1.0)*wall_hthick;
+		cube_t wall_z_range(r);
+		wall_z_range.translate_dim(2, fc_thick); // extend up to cover the floor above the room
+		cube_t lwall(wall_z_range), swall(wall_z_range), lwall2, swall2;
+		swall.d[ dim][!dir] += dsign*wall_hthick; // extend out
+		lwall.d[!dim][!d  ] += (d ? -1.0 : 1.0)*wall_hthick; // extend out
 		set_wall_width(lwall, split_pos,     wall_hthick,  dim);
 		set_wall_width(swall, r.d[!dim][!d], wall_hthick, !dim);
 			
 		// add door(s) and walls
 		for (unsigned e = 0; e < 2; ++e) {
-			bool const wdim(dim ^ e), ddir(e ? d : dir);
-			cube_t &wall(e ? swall : lwall);
-			float const wall_center(wall.get_center_dim(!wdim));
-			insert_door_in_wall_and_add_seg(wall, (wall_center - door_hwidth), (wall_center + door_hwidth), !wdim, ddir, 0, is_bathroom);
+			bool const wdim(dim ^ bool(e)), ddir(e ? d : dir);
+			cube_t wall(e ? swall : lwall); // copy so that it can be clipped
+			float const wall_center(wall.get_center_dim(!wdim)), door_lo(wall_center - door_hwidth), door_hi(wall_center + door_hwidth);
+			insert_door_in_wall_and_add_seg(wall, door_lo, door_hi, !wdim, ddir, 0, is_bathroom);
+			interior->door_stacks.back().set_mult_floor(); // counts as multi-floor (for drawing top edge)
+			interior->walls[wdim].push_back(wall);
+			// add section of wall above the door
+			wall.d[!wdim][0] = door_lo;
+			wall.d[!wdim][1] = door_hi;
+			wall.z1() = interior->doors.back().z2();
 			interior->walls[wdim].push_back(wall);
 		} // for e
+		cube_t room_inner(r);
+		room_inner.d[ dim][!dir] -= dsign*wall_hthick; // extend in
+		room_inner.d[!dim][!d  ] -= (d ? -1.0 : 1.0)*wall_hthick; // extend in
 		// add ceiling and floor
-		cube_t room_ceil(r), room_floor(r);
+		cube_t room_ceil(room_inner), room_floor(r); // floor above the room
 		room_ceil .z1() = r.z2() - fc_thick;
 		room_floor.z1() = r.z2();
 		room_floor.z2() = r.z2() + fc_thick;
-		room_ceil.d[ dim][!dir] = swall.d[ dim][!dir];
-		room_ceil.d[!dim][!d  ] = lwall.d[!dim][!d  ];
+		room_floor.d[ dim][!dir] = swall.d[ dim][!dir];
+		room_floor.d[!dim][!d  ] = lwall.d[!dim][!d  ];
 		interior->ceilings.push_back(room_ceil );
 		interior->floors  .push_back(room_floor);
 		// add room itself; will overlap main factory room
-		add_room(r, part_id, 1, 0, is_office);
+		add_room(room_inner, part_id, 2); // 2 lights; not a typical office building office
 		rooms.back().assign_all_to(is_larger ? RTYPE_OFFICE : RTYPE_BATH); // office or bathroom
 	} // for d
-	// TODO: should there be an entryway room, then the factory doesn't overlap the sub-rooms? but then there will be empty space above them
+	// should there be an entryway room, then the factory doesn't overlap the sub-rooms? but then there will be empty space above them
+	// add entire part as a room (factory floor); must be done last so that smaller contained rooms are picked up in early exit queries (model occlusion, light toggle, door conn)
+	add_room(part, part_id); // num_lights will be calculated later
+	rooms.back().assign_all_to(RTYPE_FACTORY);
+	rooms.back().is_single_floor = 1;
 }
 
 bool building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
