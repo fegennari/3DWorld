@@ -914,16 +914,22 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			set_cube_zvals(panel, zb2, zt1);
 			objs.emplace_back(panel, TYPE_INT_WINDOW, room_id, dim, 0, 0, light_amt);
 		} // for dim
-		// add a vertical support next to the landing
-		float const attach_pos(inner_edge + (ww_dir ? -1.0 : 1.0)*bot_bar_thickness);
+		float const wwd_sign(ww_dir ? -1.0 : 1.0), attach_pos(inner_edge + wwd_sign*bot_bar_thickness);
 		pillar.d[!se_dim][ ww_dir] = attach_pos;
-		pillar.d[!se_dim][!ww_dir] = attach_pos + (ww_dir ? -1.0 : 1.0)*2.0*pillar_hwidth; // extend into the opening
+		pillar.d[!se_dim][!ww_dir] = attach_pos + wwd_sign*2.0*pillar_hwidth; // extend into the opening
 		set_wall_width(pillar, (railing_area.d[se_dim][0] + (se_dir ? 0.1 : 0.9)*railing_area.get_sz_dim(se_dim)), pillar_hwidth, se_dim); // close to stairs/escalator
-		pillars .push_back(pillar);
-		blockers.push_back(pillar);
 
-		if (use_cylin_pillars) { // add pillar connecting cubes
-			// TODO
+		if (c.z1() < room.z1() + 1.5*floor_spacing) { // add a vertical support next to the landing; only added for first landing
+			pillars .push_back(pillar);
+			blockers.push_back(pillar);
+		}
+		if (use_cylin_pillars) { // add pillar connecting cubes, for every level
+			float const shrink_z(0.12*c.dz());
+			cube_t conn(pillar);
+			set_cube_zvals(conn, (c.z1() + shrink_z), (c.z2() - shrink_z));
+			conn.d[!se_dim][!ww_dir] = pillar.get_center_dim(!se_dim);
+			conn.expand_in_dim(se_dim, -0.25*pillar_hwidth);
+			objs.emplace_back(conn, TYPE_STAIR_WALL, room_id, !mall_dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), light_amt, SHAPE_CUBE, WHITE);
 		}
 		// add railing cut where landing connects to walkway
 		cube_t cut(c);
@@ -1385,7 +1391,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	}
 	// add pillars last so that we can check lights against them
 	unsigned const pillars_start(objs.size());
-	for (cube_t const &pillar : pillars) {objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, !mall_dim, 0, 0, light_amt, pillar_shape, WHITE, EF_Z12);}
+	for (cube_t const &pillar : pillars) {objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, !mall_dim, 0, 0, light_amt, pillar_shape, WHITE);}
 	return pillars_start;
 }
 

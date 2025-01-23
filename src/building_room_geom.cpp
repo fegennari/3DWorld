@@ -36,8 +36,8 @@ void add_pipe_with_bend(rgeom_mat_t &mat, colorRGBA const &color, point const &b
 void draw_metal_handle_wheel(cube_t const &c, unsigned dim, colorRGBA const &color, colorRGBA const &shaft_color, rgeom_mat_t &mat, rgeom_mat_t &shaft_mat);
 
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // draw only these faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
-unsigned get_skip_mask_for_xy (bool     dim) {return (dim ? EF_Y12 : EF_X12);} // skip these faces
-unsigned get_skip_mask_for_dim(unsigned dim) {return ((dim == 2) ? EF_Z12 : get_skip_mask_for_xy(dim));} // skip these faces
+unsigned get_skip_mask_for_xy (bool       dim) {return (dim ? EF_Y12 : EF_X12);} // skip these faces
+unsigned get_skip_mask_for_dim(unsigned   dim) {return ((dim == 2) ? EF_Z12 : get_skip_mask_for_xy(dim));} // skip these faces
 unsigned get_def_cylin_ndiv(room_object_t const &c) {return get_rgeom_sphere_ndiv(c.is_on_srack());} // low detail for shelfrack objects
 tid_nm_pair_t get_tex_auto_nm(int tid, float tscale=1.0, bool shadowed=1) {return tid_nm_pair_t(tid, get_normal_map_for_bldg_tid(tid), tscale, tscale, 0.0, 0.0, shadowed);}
 int get_counter_tid  () {return get_texture_by_name("marble2.jpg");}
