@@ -786,15 +786,21 @@ bool building_t::add_conference_objs(rand_gen_t rgen, room_t const &room, float 
 			tv.d[dim][!dir] = tv.d[dim][dir] + (dir ? -1.0 : 1.0)*tv_depth;
 			if (overlaps_or_adj_int_window(tv)) continue; // check interior windows
 			if (is_cube_close_to_doorway(tv, room, 0.0, 1)) continue; // too close to a doorway
-			// here we want the name, weight, and value of a TV, but we want the images of a computer monitor, so set as TYPE_TV + SHAPE_SHORT
-			objs.emplace_back(tv, TYPE_TV, room_id, dim, !dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), tot_light_amt, SHAPE_SHORT, BLACK);
-			offset_hanging_tv(objs.back());
-			set_obj_id(objs);
-			objs.back().obj_id |= 1; // off by default; set LSB
+			add_tv_to_wall(tv, room_id, tot_light_amt, dim, !dir, 1, 0); // use_monitor_image=1, on_off=0 (off)
+			break; // done
 		} // for n
 	}
 	add_door_sign("Conference", room, zval, room_id);
 	return 1;
+}
+void building_t::add_tv_to_wall(cube_t const &tv, unsigned room_id, float light_amt, bool dim, bool dir, bool use_monitor_image, int on_off) {
+	vect_room_object_t &objs(interior->room_geom->objs);
+	// use_monitor_image: want the name, weight, and value of a TV, but we want the images of a computer monitor, so set as TYPE_TV + SHAPE_SHORT
+	objs.emplace_back(tv, TYPE_TV, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), light_amt, (use_monitor_image ? SHAPE_SHORT : SHAPE_CUBE), BLACK);
+	offset_hanging_tv(objs.back());
+	set_obj_id(objs);
+	if (on_off == 0) {objs.back().obj_id |=  1;} // off; set   LSB
+	else             {objs.back().obj_id &= ~1;} // on ; clear LSB
 }
 
 void add_lounge_blockers(vect_room_object_t const &objs, unsigned objs_start, vect_cube_t &blockers) {

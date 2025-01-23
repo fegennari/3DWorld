@@ -1373,10 +1373,8 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 				tv.z2() = tv.z1() + tv_height;
 				set_wall_width(tv, centerline, tv_hwidth, !mall_dim);
 				tv.d[mall_dim][ d] = wall_pos + d_sign*0.5*wall_thickness; // on the wall
-				tv.d[mall_dim][!d] = tv.d[mall_dim][d] + (d ? -1.0 : 1.0)*tv_depth;
-				objs.emplace_back(tv, TYPE_TV, room_id, mall_dim, !d, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), light_amt, SHAPE_CUBE, BLACK);
-				offset_hanging_tv(objs.back());
-				set_obj_id(objs);
+				tv.d[mall_dim][!d] = tv.d[mall_dim][d] + d_sign*tv_depth;
+				add_tv_to_wall(tv, room_id, light_amt, mall_dim, !d, 0, 2); // use_monitor_image=0, on_off=2 (random)
 			}
 		} // for d
 	} // for f
@@ -2078,6 +2076,27 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		place_area.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.5*wall_thickness; // shink for front window frame clearance
 		for (unsigned n = 0; n < num_fishtanks; ++n) {add_fishtank_to_room(rgen, room, zval, room_id, light_amt, objs_start, place_area);}
 		// TYPE_PET_CAGE?
+	}
+	if (store_type == STORE_RETAIL && item_category == RETAIL_ELECTRONICS && building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) {
+		// add TVs along one of the side walls of random sizes
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H
+		float const max_height(0.3*floor_spacing), max_width(max_height*sz.y/sz.z);
+		unsigned const num_tvs(0.9*room_len/max_width);
+		float const tv_spacing(room_len/max(1U, num_tvs));
+		bool const d(rgen.rand_bool()); // random wall dir
+
+		for (unsigned n = 0; n < num_tvs; ++n) {
+			float const tv_height(max_height*rgen.rand_uniform(0.67, 1.0)), tv_hwidth(0.5*tv_height*sz.y/sz.z), tv_depth(tv_height*sz.x/sz.z);
+			cube_t tv;
+			tv.z1() = zval + 0.2*floor_spacing*rgen.rand_uniform(1.0, 1.2);
+			tv.z2() = tv.z1() + tv_height;
+			tv.d[!dim][ d] = room.d[!dim][d] + (d ? -1.0 : 1.0)*0.5*wall_thickness; // on the wall
+			tv.d[!dim][!d] = tv  .d[!dim][d] + (d ? -1.0 : 1.0)*tv_depth;
+			set_wall_width(tv, (room.d[dim][0] + (n + 0.5)*tv_spacing), tv_hwidth, dim);
+			if (is_cube_close_to_doorway(tv, room, 0.0, 1, 1)) continue; // blocking back hallway door
+			add_tv_to_wall(tv, room_id, light_amt, !dim, !d, 0, 2); // use_monitor_image=0, on_off=1 (on)
+			objs.emplace_back(tv, TYPE_BLOCKER, 0, 0, 0, (RO_FLAG_INVIS | RO_FLAG_NOCOLL)); // add a placeholder blocker so that screens cycle through different images
+		} // for n
 	}
 	unsigned const skip_dir((room_width < 0.8*room_len) ? rgen.rand_bool() : 2); // skip one side if room is narrow
 	add_mall_ceiling_ducts(room, room.z2(), room_id, dim, skip_dir, light_amt, interior->mall_info->store_cylin_ducts, rgen);

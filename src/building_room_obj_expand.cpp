@@ -1123,7 +1123,7 @@ void building_room_geom_t::get_shelfrack_objects(room_object_t const &c, vect_ro
 					else if (type_ix == 2) { // monitors
 						if (!add_models_mode) continue; // not adding models
 						if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) continue;
-						vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV));
+						vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H
 						float const mheight(height*rgen2.rand_uniform(0.85, 0.95)), mwidth(mheight*sz.y/sz.z), mdepth(mheight*sz.x/sz.z);
 						add_row_of_cubes(c, section, mwidth, mdepth, mheight, 0.2, TYPE_MONITOR, unpowered_flags, objects, rgen2, dir);
 					}
