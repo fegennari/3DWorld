@@ -3631,10 +3631,54 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 }
 
 void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
-	// add ceiling beams - avoid lights
-	// TODO: TYPE_IBEAM
-	// add support pillars between windows
-	// TODO: TYPE_OFF_PILLAR?
+	float const light_amt(1.0); // always lit?
+	bool const long_dim(room.dx() < room.dy()), beam_dim(!long_dim);
+	float const /*floor_spacing(get_window_vspace()),*/ wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness());
+	vect_room_object_t &objs(interior->room_geom->objs);
+	// add support pillars around the exterior, between windows; add ceiling beams
+	float const support_width(2.5*wall_thick), support_hwidth(0.5*support_width);
+	float const ceil_zval(room.z2() - fc_thick), beams_z1(ceil_zval - support_width);
+	cube_t support_bounds(room);
+	support_bounds.expand_by_xy(-1.2*support_hwidth); // extra gap to prevent Z-fighting with building exterior sides
+	cube_t support, beam;
+	set_cube_zvals(support, zval,     beams_z1 );
+	set_cube_zvals(beam,    beams_z1, ceil_zval);
+
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		unsigned const num_windows(get_num_windows_on_side(room, !dim));
+		float const side_len(support_bounds.get_sz_dim(!dim)), spacing(side_len/num_windows);
+
+		for (unsigned dir = 0; dir < 2; ++dir) { // walls
+			float const wall_pos(room.d[dim][dir]);
+			support.d[dim][ dir] = wall_pos;
+			support.d[dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*support_width;
+
+			for (unsigned n = 0; n <= num_windows; ++n) {
+				if (dim == 1 && (n == 0 || n == num_windows)) continue; // don't duplicate add corners
+				set_wall_width(support, (support_bounds.d[!dim][0] + n*spacing), support_hwidth, !dim);
+				cube_t test_cube(support);
+				test_cube.expand_by_xy(wall_thick);
+				if (cube_int_ext_door(test_cube)) continue; // skip if blocked by an exterior door
+				unsigned skip_faces(~get_face_mask(dim, dir));
+				objs.emplace_back(support, TYPE_IBEAM, room_id, dim, 2, 0, light_amt, SHAPE_CUBE, WHITE, skip_faces); // vertical
+				
+				for (room_t const &r : interior->rooms) { // clip in Z if intersects a room
+					if (r == room) continue; // skip self (factory)
+					if (r.intersects(support)) {objs.back().z1() = r.z2();}
+				}
+			} // for n
+		} // for dir
+		// add beams
+		// TODO: add intermediate beams and hang lights on them
+		for (unsigned d = 0; d < 2; ++d) {beam.d[dim][d] = room.d[dim][d];}
+		if (dim == beam_dim) {beam.expand_in_dim(beam_dim, -support_width);} // don't overlap vert supports
+
+		for (unsigned n = 0; n <= num_windows; ++n) {
+			if (dim != beam_dim && n > 0 && n < num_windows) continue; // only add edge beams in this dim
+			set_wall_width(beam, (support_bounds.d[!dim][0] + n*spacing), support_hwidth, !dim);
+			objs.emplace_back(beam, TYPE_IBEAM, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, WHITE, EF_Z2);
+		} // for n
+	} // for dim
 }
 
 void building_t::add_retail_pillar(cube_t const &pillar, float zval, unsigned room_id, bool is_tall) {

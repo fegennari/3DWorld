@@ -300,8 +300,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			light_density = (is_house ? 0.25 : 0.3);
 		}
 		else if (is_factory_room) {
-			light_density = 0.5;
-			light_size   *= 1.33; // must be large to reach the floor below
+			nx = get_num_windows_on_side(*r, 0); // align lights to windows
+			ny = get_num_windows_on_side(*r, 1);
+			light_size *= 1.2; // must be larger to reach the floor below; TODO: reduced spotlight cone angle?
 		}
 		else if (r->is_single_floor) {
 			light_size *= sqrt(r->dz()/window_vspacing); // larger lights for taller rooms

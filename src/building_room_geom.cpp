@@ -5479,17 +5479,20 @@ void building_room_geom_t::add_metal_bar(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_ibeam(room_object_t const &c) {
-	float const tb_thick(0.12*c.dz());
 	rgeom_mat_t &mat(get_metal_material(1)); // TODO: make textured
 	colorRGBA const color(apply_light_color(c));
-	unsigned const skip_ends(get_skip_mask_for_xy(c.dim));
+	unsigned const dim (c.dir ? 2 : unsigned(c.dim)); // long dim; encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1 (same as pipes)
+	unsigned const idim(c.dir ? unsigned(c.dim) : 2); // I-shape dim
+	unsigned const wdim(!c.dim); // width dim
+	float const tb_thick(0.12*c.get_sz_dim(idim));
+	unsigned const skip_ends(get_skip_mask_for_dim(dim));
 	cube_t bot(c), mid(c), top(c);
-	bot.z2() = mid.z1() = c.z1() + tb_thick;
-	mid.z2() = top.z1() = c.z2() - tb_thick;
-	mid.expand_in_dim(!c.dim, 0.4*c.get_width());
-	mat.add_cube_to_verts(bot, color, all_zeros, skip_ends);
-	mat.add_cube_to_verts(mid, color, all_zeros, (skip_ends | EF_Z12)); // skip top and bottom
-	mat.add_cube_to_verts(top, color, all_zeros, (skip_ends | EF_Z2 )); // skip top
+	bot.d[idim][1] = mid.d[idim][0] = c.d[idim][0] + tb_thick;
+	mid.d[idim][1] = top.d[idim][0] = c.d[idim][1] - tb_thick;
+	mid.expand_in_dim(wdim, -0.4*c.get_sz_dim(wdim));
+	mat.add_cube_to_verts(bot, color, all_zeros, (skip_ends | c.item_flags)); // skip based on item flags
+	mat.add_cube_to_verts(mid, color, all_zeros, (skip_ends | get_skip_mask_for_dim(idim))); // skip edges
+	mat.add_cube_to_verts(top, color, all_zeros, (skip_ends | c.item_flags)); // skip based on item flags
 }
 
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars,
