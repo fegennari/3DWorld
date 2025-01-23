@@ -2346,7 +2346,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			float const space(0.25*floor_spacing), toler(0.1*floor_spacing);
 
 			for (unsigned dim = 0; dim < 2; ++dim) {
-				unsigned const num_windows(get_num_windows_on_side(i->d[!dim][0], i->d[!dim][1]));
+				unsigned const num_windows(get_num_windows_on_side(*i, !dim));
 				if (num_windows <= 1) continue; // no space to split the windows on this wall
 				float const window_spacing(i->get_sz_dim(!dim)/num_windows), side_lo(i->d[!dim][0]), side_hi(i->d[!dim][1]);
 

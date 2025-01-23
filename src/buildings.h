@@ -2109,6 +2109,7 @@ struct building_t : public building_geom_t {
 	void add_company_sign(rand_gen_t &rgen);
 	cube_t get_helipad_bcube() const;
 	int get_num_windows_on_side(float xy1, float xy2) const;
+	int get_num_windows_on_side(cube_t const &c, bool dim) const {return get_num_windows_on_side(c.d[dim][0], c.d[dim][1]);}
 	float get_window_h_border() const;
 	float get_window_v_border() const;
 	float get_hspacing_for_part(cube_t const &part, bool dim) const;

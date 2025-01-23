@@ -132,7 +132,7 @@ int building_t::get_num_windows_on_side(float xy1, float xy2) const {
 }
 float building_t::get_window_h_border() const {return 0.5*(1.0 - global_building_params.get_window_width_fract ());} // (0.0, 1.0)
 float building_t::get_window_v_border() const {return 0.5*(1.0 - global_building_params.get_window_height_fract());} // (0.0, 1.0)
-float building_t::get_hspacing_for_part(cube_t const &part, bool dim) const {return part.get_sz_dim(dim)/get_num_windows_on_side(part.d[dim][0], part.d[dim][1]);}
+float building_t::get_hspacing_for_part(cube_t const &part, bool dim) const {return part.get_sz_dim(dim)/get_num_windows_on_side(part, dim);}
 
 void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim) {
 	wall.d[dim][0] = pos - half_thick;
@@ -281,7 +281,7 @@ bool building_t::can_use_hallway_for_part(unsigned part_id) const {
 }
 cube_t building_t::get_hallway_for_part(cube_t const &part, float &num_hall_windows, float &hall_width, float &room_width) {
 	bool const min_dim(part.dy() < part.dx());
-	int const num_windows_od(get_num_windows_on_side(part.d[min_dim][0], part.d[min_dim][1])); // in short dim
+	int const num_windows_od(get_num_windows_on_side(part, min_dim)); // in short dim
 	float const part_width(part.get_sz_dim(min_dim)), min_hall_width(get_min_hallway_width()); // need wider hallway for U-shaped stairs
 	bool const is_odd(num_windows_od & 1);
 	num_hall_windows = (is_odd ? 1.4 : 1.8); // hall either contains 1 (odd) or 2 (even) windows, wider for single window case to make room for stairs
@@ -362,7 +362,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		vector<unsigned> utility_room_cands, special_room_cands; // used for parts with a hallway + assign_special_room_types()
 
 		for (unsigned d = 0; d < 2; ++d) {
-			num_windows_per_side[d] = get_num_windows_on_side(p->d[d][0], p->d[d][1]);
+			num_windows_per_side[d] = get_num_windows_on_side(*p, d);
 			window_hspacing     [d] = psz[d]/num_windows_per_side[d];
 		}
 		if (!is_cube()) { // cylinder, etc.
@@ -1376,7 +1376,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 
 			if (has_int_windows()) { // prevent walls from intersecting windows
 				cube_t const &part(parts[part_id]);
-				float const window_hspacing(part.get_sz_dim(hall_dim)/get_num_windows_on_side(part.d[hall_dim][0], part.d[hall_dim][1]));
+				float const window_hspacing(part.get_sz_dim(hall_dim)/get_num_windows_on_side(part, hall_dim));
 				bed_bath_split_pos = shift_val_to_not_intersect_window(part, bed_bath_split_pos, window_hspacing, get_window_h_border(), hall_dim);
 				set_wall_width(bath_wall, bed_bath_split_pos, wall_half_thick, hall_dim); // update wall pos in case it was moved
 			}
@@ -1415,7 +1415,7 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 			}
 			if (at_lo_end || at_hi_end) { // check side windows
 				cube_t const &part(parts[part_id]);
-				float const window_hspacing(part.get_sz_dim(!hall_dim)/get_num_windows_on_side(part.d[!hall_dim][0], part.d[!hall_dim][1]));
+				float const window_hspacing(part.get_sz_dim(!hall_dim)/get_num_windows_on_side(part, !hall_dim));
 				front_back_split_pos = shift_val_to_not_intersect_window(part, front_back_split_pos, window_hspacing, get_window_h_border(), !hall_dim);
 			}
 		}
