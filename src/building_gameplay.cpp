@@ -234,7 +234,8 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_BANANA    ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 0.25,  0.3,   "banana");
 	bldg_obj_types[TYPE_BAN_PEEL  ] = bldg_obj_type_t(1, 0, 1, 1, 0, 1, 0, 0.0,   0.05,  "banana peel");
 	bldg_obj_types[TYPE_CONF_PHONE] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 40.0,  2.0,   "phone");
-	bldg_obj_types[TYPE_SHOE      ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 60.0,  1.0,   "shoe");
+	bldg_obj_types[TYPE_SHOE      ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 40.0,  1.0,   "shoe"); // one shoe
+	bldg_obj_types[TYPE_SHOEBOX   ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 80.0,  2.1,   "shoebox"); // assumed to contain a pair of shoes
 	bldg_obj_types[TYPE_GBIKE     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 150.0, 20.0,  "bike"); // garage bike
 	bldg_obj_types[TYPE_XFORMER   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 0.0,   0.0,   "transformer");
 	bldg_obj_types[TYPE_US_FLAG   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 30.0,  1.0,   "American Flag");
@@ -328,6 +329,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	if (otype == TYPE_POOL_FLOAT&&obj.is_broken ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   5.0,  1.0, "deflated pool float");} // half value, no player coll
 	if (otype == TYPE_VASE     && obj.in_mall   ()) {return bldg_obj_type_t(1, 1, 0, 1, 0, 0, 2,  500.0,250.0,"sculpture");}
 	if (otype == TYPE_BENCH    && obj.in_mall   ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,  150.0,100.0,"mall bench");}
+	if (otype == TYPE_SHOEBOX  && obj.is_broken ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,   0.0,  0.1, "empty shoebox");}
 
 	if (otype == TYPE_INSECT) { // unused
 		bool const is_fly(obj.is_hanging());

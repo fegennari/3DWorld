@@ -2003,6 +2003,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		}
 		else {
 			//draw_simple_cube(obj); // TESTING
+			//if (obj.type == TYPE_SHOE && (obj.flags & RO_FLAG_ADJ_BOT)) {} // TODO: mirror in !obj.dim - but this inverts triangle vertex order and breaks back face culling
 			draw_obj_model(*i, obj, s, xlate, obj_center, shadow_only); // draw now
 			obj_drawn = 1;
 		}

@@ -30,9 +30,18 @@ bool is_shirt_model     (room_object_t const &obj) {return is_shirt_model     (o
 bool is_pants_model     (room_object_t const &obj) {return is_pants_model     (obj.get_model_id());}
 bool is_bar_hanger_model(room_object_t const &obj) {return is_bar_hanger_model(obj.get_model_id());}
 
-bool add_if_not_intersecting(room_object_t const &obj, vect_room_object_t &objects, vect_cube_t &cubes, bool add_obj=1) {
+bool add_if_not_intersecting(room_object_t const &obj, vect_room_object_t &objects, vect_cube_t &cubes, bool add_obj=1, bool is_pair=0) {
 	if (has_bcube_int(obj, cubes)) return 0;
-	if (add_obj) {objects.push_back(obj);}
+	if (!add_obj) {} // nothing
+	else if (is_pair) {
+		bool const dim(!obj.dim);
+		room_object_t o1(obj), o2(obj);
+		o1.d[dim][1] = o2.d[dim][0] = obj.get_center_dim(dim); // abutting
+		o2.flags |= RO_FLAG_ADJ_BOT; // flag as mirrored; use for shoes; really this should flag either o1 or o2 based on whether the shoe is left or right
+		objects.push_back(o1);
+		objects.push_back(o2);
+	}
+	else {objects.push_back(obj);} // single object
 	cubes.push_back(obj);
 	return 1;
 }
@@ -533,6 +542,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 	float const z_step(dz/(num_shelves + 1)), shelf_clearance(z_step - thickness - bracket_thickness), sz_scale(is_house ? 0.7 : 1.0);
 	float const box_zscale(shelf_clearance*sz_scale), h_val(0.21*floor_spacing);
 	rand_gen_t base_rgen(c.create_rgen());
+	bool prev_add_shoe_boxes(0);
 
 	// Note: this function supports placement of objects drawn as 3D models such as fire extinguishers when add_models_mode=1
 	for (unsigned s = 0; s < num_shelves; ++s) {
@@ -608,27 +618,45 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 			}
 			else if (c.item_flags == STORE_SHOE) { // shoe store shelf; // add shoes displayed sideways
 				if (add_models_mode) {
-					assert(building_obj_model_loader.is_model_valid(OBJ_MODEL_SHOE));
+					float length(0.0), spacing(0.0);
+					unsigned model_id(0);
+					bool add_pairs(0);
+
+					// add shoe boxes rather than shoes, with a preference toward bottom shelves
+					if ((s == 0 || prev_add_shoe_boxes) && building_obj_model_loader.is_model_valid(OBJ_MODEL_SHOEBOX) && rgen.rand_float() > (0.5*s + 0.4)) {
+						model_id = OBJ_MODEL_SHOEBOX;
+						C.type   = TYPE_SHOEBOX;
+						C.dir    = c.dir; // same dir as shelf so that box opens outward
+						length   = 0.3*floor_spacing;
+						spacing  = 1.1*length;
+						prev_add_shoe_boxes = 1;
+					}
+					else { // add shoes
+						assert(building_obj_model_loader.is_model_valid(OBJ_MODEL_SHOE));
+						model_id = OBJ_MODEL_SHOE;
+						C.type   = TYPE_SHOE;
+						C.dir    = rgen.rand_bool(); // random orient, but consistent per shelf
+						length   = 0.25*floor_spacing;
+						spacing  = 1.25*length;
+						add_pairs= (shelf_len < 8.0*floor_spacing); // only for short shelves, not full wall shelves
+					}
 					vector3d const ssz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SHOE)); // L, W, H
-					float const length(0.25*floor_spacing), spacing(1.25*length), width(min(0.5f*shelf_len, length*ssz.y/ssz.x)), height(length*ssz.z/ssz.x); // set max
+					float const width(min(0.5*shelf_len, (add_pairs ? 2.0 : 1.0)*length*ssz.y/ssz.x)), height(length*ssz.z/ssz.x); // set max
 					C.shape = SHAPE_CUBE;
 					C.dim   = !c.dim;
-					C.dir   = rgen.rand_bool(); // random orient, but consistent per shelf
-					C.type  = TYPE_SHOE;
-					C.color = WHITE; // recolor?
+					C.color = WHITE;
 					C.z1()  = S.z2();
 					unsigned const num_slots(shelf_len / spacing);
 					float const slot_spacing(shelf_len / num_slots);
 
 					for (unsigned n = 0; n < num_slots; ++n) {
-						// add in pairs?
 						if (rgen.rand_float() < 0.25) continue; // no shoe in this slot
 						C.item_flags = rgen.rand(); // random shoe sub-model
 						float const scale(rgen.rand_uniform(0.85, 1.0));
 						C.z2() = C.z1() + scale*height; // set height
 						set_wall_width(C, c.get_center_dim(c.dim), 0.5*scale*width, c.dim);
 						set_wall_width(C, (c.d[!c.dim][0] + (n + 0.5 + 0.05*rgen.signed_rand_float())*slot_spacing), 0.5*scale*length, !c.dim);
-						add_if_not_intersecting(C, objects, cubes, add_models_mode);
+						add_if_not_intersecting(C, objects, cubes, add_models_mode, add_pairs);
 					} // for n
 				}
 			}
