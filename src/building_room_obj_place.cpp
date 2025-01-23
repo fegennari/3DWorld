@@ -3632,9 +3632,9 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 
 void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
 	// add ceiling beams - avoid lights
-	// TODO
+	// TODO: TYPE_IBEAM
 	// add support pillars between windows
-	// TODO
+	// TODO: TYPE_OFF_PILLAR?
 }
 
 void building_t::add_retail_pillar(cube_t const &pillar, float zval, unsigned room_id, bool is_tall) {

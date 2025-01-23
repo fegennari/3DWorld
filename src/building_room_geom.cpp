@@ -5478,6 +5478,20 @@ void building_room_geom_t::add_metal_bar(room_object_t const &c) {
 	metal_mat.add_cube_to_verts_untextured(c, apply_light_color(c), c.item_flags); // skip_faces is stored in item_flags
 }
 
+void building_room_geom_t::add_ibeam(room_object_t const &c) {
+	float const tb_thick(0.12*c.dz());
+	rgeom_mat_t &mat(get_metal_material(1)); // TODO: make textured
+	colorRGBA const color(apply_light_color(c));
+	unsigned const skip_ends(get_skip_mask_for_xy(c.dim));
+	cube_t bot(c), mid(c), top(c);
+	bot.z2() = mid.z1() = c.z1() + tb_thick;
+	mid.z2() = top.z1() = c.z2() - tb_thick;
+	mid.expand_in_dim(!c.dim, 0.4*c.get_width());
+	mat.add_cube_to_verts(bot, color, all_zeros, skip_ends);
+	mat.add_cube_to_verts(mid, color, all_zeros, (skip_ends | EF_Z12)); // skip top and bottom
+	mat.add_cube_to_verts(top, color, all_zeros, (skip_ends | EF_Z2 )); // skip top
+}
+
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars,
 	float vbar_hthick, float hbar_hthick, unsigned vdim, unsigned hdim)
 {

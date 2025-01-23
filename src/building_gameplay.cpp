@@ -195,6 +195,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_ERASER    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 3.0,   0.05,  "whiteboard eraser");
 	bldg_obj_types[TYPE_DWASHER   ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1, 250.0, 120.0, "dishwasher"); // in appliance store; not small because it shares code with kitchen sinks
 	bldg_obj_types[TYPE_PET_CAGE  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 50.0,  10.0,  "pet cage");
+	bldg_obj_types[TYPE_IBEAM     ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1,  0.0,  0.0,   "I-beam");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
