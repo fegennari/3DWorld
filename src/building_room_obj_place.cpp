@@ -3636,17 +3636,18 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	float const /*floor_spacing(get_window_vspace()),*/ wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// add support pillars around the exterior, between windows; add ceiling beams
-	float const support_width(2.5*wall_thick), support_hwidth(0.5*support_width);
+	float const support_width(FACTORY_BEAM_THICK*wall_thick), support_hwidth(0.5*support_width);
 	float const ceil_zval(room.z2() - fc_thick), beams_z1(ceil_zval - support_width);
 	cube_t support_bounds(room);
-	support_bounds.expand_by_xy(-1.2*support_hwidth); // extra gap to prevent Z-fighting with building exterior sides
+	support_bounds.expand_by_xy(-support_hwidth);
 	cube_t support, beam;
 	set_cube_zvals(support, zval,     beams_z1 );
 	set_cube_zvals(beam,    beams_z1, ceil_zval);
+	vect_cube_t support_parts;
 
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		unsigned const num_windows(get_num_windows_on_side(room, !dim));
-		float const side_len(support_bounds.get_sz_dim(!dim)), spacing(side_len/num_windows);
+		float const spacing(room.get_sz_dim(!dim)/num_windows);
 
 		for (unsigned dir = 0; dir < 2; ++dir) { // walls
 			float const wall_pos(room.d[dim][dir]);
@@ -3655,28 +3656,44 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 
 			for (unsigned n = 0; n <= num_windows; ++n) {
 				if (dim == 1 && (n == 0 || n == num_windows)) continue; // don't duplicate add corners
-				set_wall_width(support, (support_bounds.d[!dim][0] + n*spacing), support_hwidth, !dim);
+				float const centerline(max(support_bounds.d[!dim][0], min(support_bounds.d[!dim][1], room.d[!dim][0] + n*spacing))); // clamp to support_bounds
+				set_wall_width(support, centerline, support_hwidth, !dim);
 				cube_t test_cube(support);
 				test_cube.expand_by_xy(wall_thick);
 				if (cube_int_ext_door(test_cube)) continue; // skip if blocked by an exterior door
 				unsigned skip_faces(~get_face_mask(dim, dir));
-				objs.emplace_back(support, TYPE_IBEAM, room_id, dim, 2, 0, light_amt, SHAPE_CUBE, WHITE, skip_faces); // vertical
+				if (n == 0          ) {skip_faces |= ~get_face_mask(!dim, 0);}
+				if (n == num_windows) {skip_faces |= ~get_face_mask(!dim, 1);}
+				objs.emplace_back(support, TYPE_IBEAM, room_id, dim, 1, 0, light_amt, SHAPE_CUBE, WHITE, skip_faces); // vertical
 				
 				for (room_t const &r : interior->rooms) { // clip in Z if intersects a room
 					if (r == room) continue; // skip self (factory)
-					if (r.intersects(support)) {objs.back().z1() = r.z2();}
-				}
+					if (!r.intersects(support)) continue;
+					cube_t bot(support);
+					objs.back().z1() = r.z2() + fc_thick; // top of room cube
+					bot.z2() = objs.back().z1() + 0.1*fc_thick; // shift up slightly
+					cube_t sub(r);
+					sub.expand_by(0.5*wall_thick);
+					support_parts.clear();
+					subtract_cube_from_cube(bot, sub, support_parts);
+					for (cube_t const &c : support_parts) {objs.emplace_back(c, TYPE_IBEAM, room_id, dim, 1, RO_FLAG_ADJ_TOP, light_amt, SHAPE_CUBE, WHITE, skip_faces);}
+					break;
+				} // for r
 			} // for n
 		} // for dir
 		// add beams
-		// TODO: add intermediate beams and hang lights on them
+		unsigned const num_hdiv(2*num_windows); // add intermediate beams and hang lights on them
 		for (unsigned d = 0; d < 2; ++d) {beam.d[dim][d] = room.d[dim][d];}
-		if (dim == beam_dim) {beam.expand_in_dim(beam_dim, -support_width);} // don't overlap vert supports
+		if (dim == beam_dim) {beam.expand_in_dim(beam_dim, -support_hwidth);} // half overlap of vert supports
 
-		for (unsigned n = 0; n <= num_windows; ++n) {
-			if (dim != beam_dim && n > 0 && n < num_windows) continue; // only add edge beams in this dim
-			set_wall_width(beam, (support_bounds.d[!dim][0] + n*spacing), support_hwidth, !dim);
-			objs.emplace_back(beam, TYPE_IBEAM, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, WHITE, EF_Z2);
+		for (unsigned n = 0; n <= num_hdiv; ++n) {
+			if (dim != beam_dim && n > 0 && n < num_hdiv) continue; // only add edge beams in this dim
+			float const centerline(max(support_bounds.d[!dim][0], min(support_bounds.d[!dim][1], room.d[!dim][0] + n*0.5f*spacing))); // clamp to support_bounds
+			set_wall_width(beam, centerline, support_hwidth, !dim);
+			unsigned skip_faces(EF_Z2);
+			if (n == 0       ) {skip_faces |= ~get_face_mask(!dim, 0);}
+			if (n == num_hdiv) {skip_faces |= ~get_face_mask(!dim, 1);}
+			objs.emplace_back(beam, TYPE_IBEAM, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, WHITE, skip_faces);
 		} // for n
 	} // for dim
 }
@@ -5334,6 +5351,7 @@ template<typename T> bool any_cube_contains(cube_t const &cube, T const &cubes) 
 	return 0;
 }
 bool building_t::is_light_placement_valid(cube_t const &light, room_t const &room, float pad) const {
+	if (room.get_room_type(0) == RTYPE_FACTORY) return 1; // factory lights hang from the ceiling; assume they are placed correctly
 	cube_t light_ext(light);
 	light_ext.expand_by_xy(pad);
 	if (!room.contains_cube(light_ext))             return 0; // room too small?

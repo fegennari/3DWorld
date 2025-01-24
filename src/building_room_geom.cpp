@@ -5481,18 +5481,30 @@ void building_room_geom_t::add_metal_bar(room_object_t const &c) {
 void building_room_geom_t::add_ibeam(room_object_t const &c) {
 	rgeom_mat_t &mat(get_metal_material(1)); // TODO: make textured
 	colorRGBA const color(apply_light_color(c));
-	unsigned const dim (c.dir ? 2 : unsigned(c.dim)); // long dim; encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1 (same as pipes)
+	unsigned const bdim(c.dir ? 2 : unsigned(c.dim)); // long dim; encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1 (same as pipes)
 	unsigned const idim(c.dir ? unsigned(c.dim) : 2); // I-shape dim
 	unsigned const wdim(!c.dim); // width dim
 	float const tb_thick(0.12*c.get_sz_dim(idim));
-	unsigned const skip_ends(get_skip_mask_for_dim(dim));
+	unsigned skip_ends(get_skip_mask_for_dim(bdim));
+	if (c.flags & RO_FLAG_ADJ_TOP) {skip_ends &= ~EF_Z2;} // draw top surface of short/clipped pillars
 	cube_t bot(c), mid(c), top(c);
 	bot.d[idim][1] = mid.d[idim][0] = c.d[idim][0] + tb_thick;
 	mid.d[idim][1] = top.d[idim][0] = c.d[idim][1] - tb_thick;
 	mid.expand_in_dim(wdim, -0.4*c.get_sz_dim(wdim));
-	mat.add_cube_to_verts(bot, color, all_zeros, (skip_ends | c.item_flags)); // skip based on item flags
 	mat.add_cube_to_verts(mid, color, all_zeros, (skip_ends | get_skip_mask_for_dim(idim))); // skip edges
-	mat.add_cube_to_verts(top, color, all_zeros, (skip_ends | c.item_flags)); // skip based on item flags
+
+	for (unsigned d = 0; d < 2; ++d) {
+		cube_t const &tb(d ? top : bot);
+		unsigned skip_faces(skip_ends);
+		
+		for (unsigned dim = 0; dim < 3; ++dim) { // skip based on item flags, but only for exterior edges
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				unsigned const mask(EFLAGS[dim][dir]);
+				if ((c.item_flags & mask) && tb.d[dim][dir] == c.d[dim][dir]) {skip_faces |= mask;}
+			}
+		}
+		mat.add_cube_to_verts(tb, color, all_zeros, skip_faces);
+	} // for d
 }
 
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars,

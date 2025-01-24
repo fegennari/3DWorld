@@ -302,7 +302,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		else if (is_factory_room) {
 			nx = get_num_windows_on_side(*r, 0); // align lights to windows
 			ny = get_num_windows_on_side(*r, 1);
-			light_size *= 1.2; // must be larger to reach the floor below; TODO: reduced spotlight cone angle?
+			unsigned &short_n(room_dim ? nx : ny);
+			short_n     = 2*short_n/3; // 2/3 as many in the short dim
+			light_size *= 1.25; // must be larger to reach the floor below; TODO: reduced spotlight cone angle?
 		}
 		else if (r->is_single_floor) {
 			light_size *= sqrt(r->dz()/window_vspacing); // larger lights for taller rooms
@@ -399,7 +401,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				} // for s
 			}
 			unsigned num_lights(r->num_lights), flags(0);
-			float const light_z2(z + floor_height - fc_thick + light_delta_z);
+			float light_z2(z + floor_height - fc_thick + light_delta_z);
+			if (is_factory_room) {light_z2 -= FACTORY_BEAM_THICK*wall_thickness;} // on the underside of factory ceiling beams
 
 			// motion detection lights for large office building office and mall bathrooms; limit to interior rooms so that we still have some lit rooms viewed through windows
 			if ((!is_house && has_pri_hall() && r->is_office && r->interior) || is_mall_bathroom) {
