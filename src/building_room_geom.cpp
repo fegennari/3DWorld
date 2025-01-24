@@ -5479,18 +5479,19 @@ void building_room_geom_t::add_metal_bar(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_ibeam(room_object_t const &c) {
-	rgeom_mat_t &mat(get_metal_material(1)); // TODO: make textured
-	colorRGBA const color(apply_light_color(c));
 	unsigned const bdim(c.dir ? 2 : unsigned(c.dim)); // long dim; encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1 (same as pipes)
 	unsigned const idim(c.dir ? unsigned(c.dim) : 2); // I-shape dim
 	unsigned const wdim(!c.dim); // width dim
-	float const tb_thick(0.12*c.get_sz_dim(idim));
+	float const thickness(c.get_sz_dim(idim)), tb_thick(0.12*thickness);
 	unsigned skip_ends(get_skip_mask_for_dim(bdim));
 	if (c.flags & RO_FLAG_ADJ_TOP) {skip_ends &= ~EF_Z2;} // draw top surface of short/clipped pillars
 	cube_t bot(c), mid(c), top(c);
 	bot.d[idim][1] = mid.d[idim][0] = c.d[idim][0] + tb_thick;
 	mid.d[idim][1] = top.d[idim][0] = c.d[idim][1] - tb_thick;
 	mid.expand_in_dim(wdim, -0.4*c.get_sz_dim(wdim));
+	//65_Painted_dirty_metal.jpg
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("metals/67_rusty_dirty_metal.jpg"), 1.0/thickness, 1), 1)); // shadowed
+	colorRGBA const color(apply_light_color(c));
 	mat.add_cube_to_verts(mid, color, all_zeros, (skip_ends | get_skip_mask_for_dim(idim))); // skip edges
 
 	for (unsigned d = 0; d < 2; ++d) {
