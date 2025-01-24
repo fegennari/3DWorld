@@ -1785,6 +1785,21 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	else if (store_type == STORE_CLOTHING || store_type == STORE_SHOE) { // add shelves of TYPE_FOLD_SHIRT or shoes along walls; clothes racks are added above
 		float const shelf_height(0.63*window_vspace), shelf_depth(0.25*window_vspace); // set height so that the top shelf is below the camera height
 		add_shelves_along_walls(room_area, zval, room_id, light_amt, !dim, store_type, shelf_height, shelf_depth, 1, rgen); // place_inside=1
+		// add long narrow TYPE_MIRROR along a back wall
+		bool const side(rgen.rand_bool());
+		float const wall_thick_signed((dir ? 1.0 : -1.0)*wall_thickness), back_wall(room.d[dim][!dir] + 0.5*wall_thick_signed);
+		cube_t mirror;
+		set_cube_zvals(mirror, zval+0.1*window_vspace, zval+0.7*window_vspace);
+		set_wall_width(mirror, (room.get_center_dim(!dim) + (side ? 1.0 : -1.0)*0.33*room_width), 0.15*window_vspace, !dim);
+		mirror.d[dim][!dir] = back_wall;
+		mirror.d[dim][ dir] = back_wall + 0.2*wall_thick_signed;
+		cube_t mirror_exp(mirror);
+		mirror_exp.expand_by_xy(2.0*wall_thickness); // add extra clearance for door
+		
+		if (!mirror_exp.intersects(doorway)) {
+			objs.emplace_back(mirror, TYPE_MIRROR, room_id, dim, dir, RO_FLAG_NOCOLL, light_amt);
+			room.set_has_mirror();
+		}
 	}
 	else if (store_type == STORE_FURNITURE || store_type == STORE_APPLIANCE) {
 		// divide the store up into a 2D square grid of "rooms": bedrooms, dining rooms, living rooms, etc. and populate these
@@ -2075,7 +2090,6 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		cube_t place_area(room_area);
 		place_area.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.5*wall_thickness; // shink for front window frame clearance
 		for (unsigned n = 0; n < num_fishtanks; ++n) {add_fishtank_to_room(rgen, room, zval, room_id, light_amt, objs_start, place_area);}
-		// TYPE_PET_CAGE?
 	}
 	if (store_type == STORE_RETAIL && item_category == RETAIL_ELECTRONICS && building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) {
 		// add TVs along one of the side walls of random sizes
