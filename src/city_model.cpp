@@ -70,6 +70,9 @@ bool city_model_t::read(FILE *fp, bool is_helicopter, bool is_person) {
 		if (keyword == "reverse_winding") {
 			if (!read_uint64(fp, rev_winding_mask)) return 0;
 		}
+		else if (keyword == "mirrored") {
+			if (!read_bool(fp, mirrored)) return 0;
+		}
 		else {
 			cerr << "Error: Unrecognized keyword " << keyword << " in config file" << endl;
 			return 0;
@@ -227,7 +230,7 @@ float city_model_loader_t::get_anim_duration(unsigned model_id, unsigned model_a
 
 void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
 	vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, animation_state_t *anim_state, unsigned skip_mat_mask,
-	bool untextured, bool force_high_detail, bool upside_down, bool emissive, bool do_local_rotate)
+	bool untextured, bool force_high_detail, bool upside_down, bool emissive, bool do_local_rotate, int mirror_dim)
 {
 	assert(!(low_detail && force_high_detail));
 	bool const is_valid(is_model_valid(model_id)); // first 8 bits is model ID, last 8 bits is sub-model ID
@@ -287,12 +290,14 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 			s.add_uniform_float("model_delta_height", (0.1*height + (model_file.swap_xz ? bcube.x1() : (model_file.swap_yz ? bcube.y1() : bcube.z1()))));
 		}
 	}
+	bool const do_mirror(mirror_dim < 3);
 	vector3d const local_rotate(do_local_rotate ? model_file.rotate_about : zero_vector);
 	fgPushMatrix();
 	translate_to(pos + z_offset*sz_scale*plus_z - local_rotate); // z_offset is in model space, scale to world space
 	rotate_model_from_plus_x_to_dir(dir); // typically rotated about the Z axis
 	if (local_rotate != all_zeros) {translate_to(local_rotate);}
 	if (dir.z != 0.0) {fgRotate(TO_DEG*asinf(-dir.z), 0.0, 1.0, 0.0);} // handle cars on a slope
+	if (do_mirror         ) {fgScale(((mirror_dim == 0) ? -1.0 : 1.0), ((mirror_dim == 1) ? -1.0 : 1.0), ((mirror_dim == 2) ? -1.0 : 1.0));}
 	if (model_file.xy_rot != 0.0) {fgRotate(model_file.xy_rot, 0.0, 0.0, 1.0);} // apply model rotation about z/up axis (in degrees)
 	if (model_file.swap_xz) {fgRotate( 90.0, 0.0, 1.0, 0.0);} // swap X and Z dirs; models have up=X, but we want up=Z
 	if (model_file.swap_yz) {fgRotate( 90.0, 1.0, 0.0, 0.0);} // swap Y and Z dirs; models have up=Y, but we want up=Z
@@ -303,6 +308,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	translate_to(-center); // cancel out model local translate
 	bool const disable_cull_face_this_obj(/*!is_shadow_pass &&*/ model_file.two_sided && glIsEnabled(GL_CULL_FACE));
 	if (disable_cull_face_this_obj) {glDisable(GL_CULL_FACE);}
+	if (do_mirror) {glFrontFace(GL_CW);}
 
 	if (!force_high_detail && (low_detail || is_shadow_pass)) { // low detail pass, normal maps disabled
 		if (!is_shadow_pass && use_model3d_bump_maps()) {bind_default_flat_normal_map();} // still need to set the default here in case the shader is using it
@@ -320,6 +326,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 		model.render_materials(s, is_shadow_pass, 0, 0, 2, 3, 3, model.get_unbound_material(), rotation_t(),
 			nullptr, nullptr, is_shadow_pass, lod_mult, fixed_lod_dist, 0, 1, 1, skip_mat_mask); // enable_alpha_mask=2 (both), is_scaled=1, no_set_min_alpha=1
 	}
+	if (do_mirror) {glFrontFace(GL_CCW);}
 	if (disable_cull_face_this_obj) {glEnable(GL_CULL_FACE);} // restore previous value
 	fgPopMatrix();
 	camera_pdu.valid = camera_pdu_valid;

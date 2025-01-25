@@ -34,7 +34,7 @@ struct animation_state_t {
 struct city_model_t {
 
 	string fn;
-	bool valid=0, swap_xz=0, swap_yz=1, two_sided=0, is_zombie=0, tried_to_load=0;
+	bool valid=0, swap_xz=0, swap_yz=1, two_sided=0, mirrored=0, is_zombie=0, tried_to_load=0;
 	int body_mat_id=-1, fixed_color_id=-1, recalc_normals=1, centered=0; // recalc_normals: 0=no, 1=yes, 2=face_weight_avg
 	int blade_mat_id=-1; // for helicopters
 	int model3d_id=-1; // index into model3ds vector; -1 is not set
@@ -81,9 +81,9 @@ public:
 	void load_model_id(unsigned id);
 	bool check_anim_wrapped(unsigned model_id, unsigned model_anim_id, float old_time, float new_time);
 	float get_anim_duration(unsigned model_id, unsigned model_anim_id);
-	void draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
-		vector3d const &xlate, unsigned model_id, bool is_shadow_pass=0, bool low_detail=0, animation_state_t *anim_state=nullptr,
-		unsigned skip_mat_mask=0, bool untextured=0, bool force_high_detail=0, bool upside_down=0, bool emissive=0, bool do_local_rotate=0);
+	void draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color, vector3d const &xlate,
+		unsigned model_id, bool is_shadow_pass=0, bool low_detail=0, animation_state_t *anim_state=nullptr, unsigned skip_mat_mask=0,
+		bool untextured=0, bool force_high_detail=0, bool upside_down=0, bool emissive=0, bool do_local_rotate=0, int mirror_dim=3);
 	static void rotate_model_from_plus_x_to_dir(vector3d const &dir);
 };
 

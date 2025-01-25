@@ -1694,7 +1694,7 @@ void draw_stove_flames(room_object_t const &stove, point const &camera_bs, shade
 	s.set_color_e(BLACK);
 }
 
-void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_t &s, vector3d const &xlate, point const &obj_center, bool shadow_only) {
+void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_t &s, vector3d const &xlate, point const &obj_center, bool shadow_only, int mirror_dim=3) {
 	bool const emissive_first_mat(!shadow_only && obj.type == TYPE_LAMP      && obj.is_light_on());
 	bool const emissive_body_mat (!shadow_only && obj.type == TYPE_WALL_LAMP && obj.is_light_on());
 	bool const use_low_z_bias(obj.type == TYPE_CUP && !shadow_only);
@@ -1721,7 +1721,7 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 	if ((obj.type == TYPE_MONITOR || obj.type == TYPE_TV) && obj.is_hanging()) {rot_only_mat_mask |= 20;}
 
 	building_obj_model_loader.draw_model(s, obj_center, obj, dir, obj.color, xlate, model_id, shadow_only,
-		0, nullptr, rot_only_mat_mask, untextured, 0, upside_down, emissive_body_mat);
+		0, nullptr, rot_only_mat_mask, untextured, 0, upside_down, emissive_body_mat, 0, mirror_dim);
 	if (!shadow_only && obj.type == TYPE_STOVE) {draw_stove_flames(obj, (camera_pdu.pos - xlate), s);} // draw blue burner flame
 	if (use_low_z_bias    ) {s.add_uniform_float("norm_bias_scale", DEF_NORM_BIAS_SCALE);} // restore to the defaults
 	if (emissive_first_mat) {s.set_color_e(BLACK);}
@@ -2007,8 +2007,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		}
 		else {
 			//draw_simple_cube(obj); // TESTING
-			//if (obj.type == TYPE_SHOE && (obj.flags & RO_FLAG_ADJ_BOT)) {} // TODO: mirror in !obj.dim - but this inverts triangle vertex order and breaks back face culling
-			draw_obj_model(*i, obj, s, xlate, obj_center, shadow_only); // draw now
+			int mirror_dim(3); // 3=none
+			if (obj.type == TYPE_SHOE && (obj.flags & RO_FLAG_ADJ_BOT)) {mirror_dim = 1;} // shoes may be mirrored in !obj.dim (Y in model space)
+			draw_obj_model(*i, obj, s, xlate, obj_center, shadow_only, mirror_dim); // draw now
 			obj_drawn = 1;
 		}
 		// check for security camera monitor if player is in this building; must be on on, powered, and active
