@@ -17,7 +17,7 @@ quad_batch_draw candle_qbd;
 vect_room_object_t pending_objs;
 object_model_loader_t building_obj_model_loader;
 
-extern bool camera_in_building, player_in_tunnel, building_alarm_active;
+extern bool camera_in_building, player_in_tunnel, player_in_mall, building_alarm_active;
 extern int display_mode, frame_counter, animate2, player_in_basement, player_in_elevator;
 extern unsigned room_mirror_ref_tid;
 extern float fticks, office_chair_rot_rate, building_ambient_scale;
@@ -28,6 +28,7 @@ extern cube_t smap_light_clip_cube;
 extern pos_dir_up camera_pdu;
 extern building_t const *player_building;
 extern carried_item_t player_held_object;
+extern room_object_t cur_room_mirror;
 extern building_params_t global_building_params;
 
 unsigned get_num_screenshot_tids();
@@ -1927,6 +1928,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		room_object_t &obj(get_room_object_by_index(i->obj_id));
 		if ((int)obj.room_id == cull_room_ix)                 continue; // cull all objects in this room
 		if (check_clip_cube && !clip_cube_bs.intersects(obj)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
+		// optimization: only draw models in the same room as the mirror for malls; applies to furniture stores, clothing stores, and bathrooms
+		if (reflection_pass && player_in_mall && cur_room_mirror.room_id > 0 && obj.room_id != cur_room_mirror.room_id) continue;
 
 		if (shadow_only) {
 			if (obj.type == TYPE_CEIL_FAN) continue; // not shadow casting; would shadow its own light
