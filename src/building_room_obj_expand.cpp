@@ -640,7 +640,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 						spacing  = 1.25*length;
 						add_pairs= (shelf_len < 8.0*floor_spacing); // only for short shelves, not full wall shelves
 					}
-					vector3d const ssz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SHOE)); // L, W, H
+					vector3d const ssz(building_obj_model_loader.get_model_world_space_size(model_id)); // L, W, H
 					float const width(min(0.5*shelf_len, (add_pairs ? 2.0 : 1.0)*length*ssz.y/ssz.x)), height(length*ssz.z/ssz.x); // set max
 					C.shape = SHAPE_CUBE;
 					C.dim   = !c.dim;

@@ -350,9 +350,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		vector3d const psz(p->get_size());
 		bool const is_basement_part(is_basement(p)), first_part(part_id == 0), first_part_this_stack(first_part || is_basement_part || (p-1)->z1() < p->z1());
 		// office building hallways only; house hallways are added later
-		bool const is_factory(is_factory() && first_part);
-		if (is_factory) {num_floors = 1;} // factory is a single floor
-		bool const use_hallway(!is_factory && can_use_hallway_for_part(part_id)), min_dim(psz.y < psz.x);
+		bool const is_factory_part(is_factory() && first_part);
+		if (is_factory_part) {num_floors = 1;} // factory is a single floor
+		bool const use_hallway(!is_factory_part && can_use_hallway_for_part(part_id)), min_dim(psz.y < psz.x);
 		unsigned const rooms_start(rooms.size()), doors_start(interior->doors.size()), num_doors_per_stack(num_floors);
 		cube_t hall, place_area(*p);
 		place_area.expand_by_xy(-wall_edge_spacing); // shrink slightly to avoid z-fighting with walls
@@ -435,7 +435,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				add_room(*p, part_id, 1, 0, is_office); // add entire part as a room; num_lights will be calculated later
 			}
 		} // end non-cube room
-		else if (is_factory) { // first part is factory space
+		else if (is_factory_part) { // first part is factory space
 			create_factory_floorplan(part_id, window_hspacing, window_border, rgen);
 		}
 		else if (!is_house && is_basement_part && min(psz.x, psz.y) > 5.0*car_sz.x && max(psz.x, psz.y) > 12.0*car_sz.y) { // make this a parking garage
@@ -1036,7 +1036,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				} // for p2
 			} // end !too_small
 		} // end wall placement
-		add_ceilings_floors_stairs(rgen, *p, hall, part_id, num_floors, rooms_start, use_hallway, first_part_this_stack, window_hspacing, window_border, is_factory);
+		add_ceilings_floors_stairs(rgen, *p, hall, part_id, num_floors, rooms_start, use_hallway, first_part_this_stack, window_hspacing, window_border, is_factory_part);
 		assign_special_room_types(utility_room_cands, special_room_cands, doors_start, rgen); // for rooms with hallways
 		
 		if (no_split_walls_this_part) { // don't split any walls added up to this point (for fixed floorplans with primary hallways)
@@ -1514,7 +1514,7 @@ void building_t::create_factory_floorplan(unsigned part_id, float window_hspacin
 	for (unsigned d = 0; d < 2; ++d) { // add walls, doors, and ceilings/floors
 		// TODO: concrete interior walls
 		// FIXME: mirror reflects wrong terrain?
-		bool const is_larger(bool(d) == larger_room), is_office(is_larger), is_bathroom(!is_larger);
+		bool const is_larger(bool(d) == larger_room), is_bathroom(!is_larger);
 		cube_t const &r(sub_room[d]);
 		cube_t wall_z_range(r);
 		wall_z_range.translate_dim(2, fc_thick); // extend up to cover the floor above the room
@@ -1651,7 +1651,7 @@ void find_and_merge_with_landing(vector<landing_t> &landings, cube_t const &stai
 }
 
 void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,
-	unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border, bool is_factory)
+	unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border, bool is_factory_part)
 {
 	// increase floor thickness if !is_house? but then we would probably have to increase the space between floors as well, which involves changing the texture scale
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
@@ -1956,7 +1956,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	interior->floors.push_back(C); // ground floor, full area
 	bool const has_stairs(!stairs_cut.is_all_zeros()), has_elevator(!elevator_cut.is_all_zeros());
 	bool const stairs_dir((force_stairs_dir < 2) ? force_stairs_dir : (has_stairs ? rgen.rand_bool() : 0)); // same for every floor, could maybe alternate for stairwells
-	float const floor_vert_spacing(is_factory ? part.dz() : (is_retail_part(part) ? retail_floor_levels : 1)*window_vspacing);
+	float const floor_vert_spacing(is_factory_part ? part.dz() : (is_retail_part(part) ? retail_floor_levels : 1)*window_vspacing);
 	cube_t &first_cut(has_elevator ? elevator_cut : stairs_cut); // elevator is larger
 	//unsigned const first_ceiling_ix(max(1U, unsigned(retail_floor_levels))); // skip first floor and any ground floor retail space
 	unsigned last_landing_ix(0);
