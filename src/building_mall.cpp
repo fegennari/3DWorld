@@ -1797,7 +1797,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		mirror_exp.expand_by_xy(2.0*wall_thickness); // add extra clearance for door
 		
 		if (!mirror_exp.intersects(doorway)) {
-			objs.emplace_back(mirror, TYPE_MIRROR, room_id, dim, dir, RO_FLAG_NOCOLL, light_amt);
+			objs.emplace_back(mirror, TYPE_MIRROR, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_IN_MALL), light_amt, SHAPE_CUBE, BKGRAY); // dark frame
 			room.set_has_mirror();
 		}
 	}

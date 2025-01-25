@@ -44,6 +44,7 @@ int get_counter_tid  () {return get_texture_by_name("marble2.jpg");}
 int get_blinds_tid   () {return get_texture_by_name("interiors/blinds.jpg",    0, 0, 1, 8.0);} // use high aniso
 int get_blinds_nm_tid() {return get_texture_by_name("interiors/blinds_hn.jpg", 1, 0, 1, 8.0);} // use high aniso
 int get_money_tid    () {return get_texture_by_name("interiors/dollar20.jpg");}
+int get_ibeam_tid    () {return get_texture_by_name("metals/67_rusty_dirty_metal.jpg");} // or could use 65_Painted_dirty_metal.jpg?
 
 tid_nm_pair_t get_metal_plate_tex(float tscale, bool shadowed) {
 	return tid_nm_pair_t(get_met_plate_tid(), get_mplate_nm_tid(), tscale, tscale, 0.0, 0.0, shadowed);
@@ -1497,7 +1498,24 @@ void building_room_geom_t::add_mirror(room_object_t const &c) {
 	}
 	else { // closed medicine cabinet, or bathroom mirror
 		draw_mirror_surface(c, c, c.dim, c.dir, shadowed);
-		get_untextured_material(shadowed).add_cube_to_verts_untextured(c, side_color, get_skip_mask_for_xy(c.dim)); // draw only the exterior sides, untextured
+		rgeom_mat_t &mat(get_untextured_material(shadowed));
+
+		if (c.in_mall()) { // mall store mirror; draw frame, which extends a bit outside the mirror
+			unsigned const skip_faces(~get_face_mask(c.dim, !c.dir)); // skip back face
+			float const frame_thick(0.05*min(c.get_width(), c.dz()));
+			cube_t ce(c);
+			ce.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*0.25*frame_thick;
+			cube_t l(ce), r(ce), b(ce), t(ce);
+			l.z1() = r.z1() = b.z2() = c.z1() + frame_thick;
+			l.z2() = r.z2() = t.z1() = c.z2() - frame_thick;
+			l.d[!c.dim][1] = c.d[!c.dim][0]   + frame_thick;
+			r.d[!c.dim][0] = c.d[!c.dim][1]   - frame_thick;
+			mat.add_cube_to_verts_untextured(l, side_color, (skip_faces | EF_Z12));
+			mat.add_cube_to_verts_untextured(r, side_color, (skip_faces | EF_Z12));
+			mat.add_cube_to_verts_untextured(b, side_color,  skip_faces);
+			mat.add_cube_to_verts_untextured(t, side_color,  skip_faces);
+		}
+		else {mat.add_cube_to_verts_untextured(c, side_color, get_skip_mask_for_xy(c.dim));} // draw only the exterior sides, untextured
 	}
 }
 
@@ -5489,8 +5507,7 @@ void building_room_geom_t::add_ibeam(room_object_t const &c) {
 	bot.d[idim][1] = mid.d[idim][0] = c.d[idim][0] + tb_thick;
 	mid.d[idim][1] = top.d[idim][0] = c.d[idim][1] - tb_thick;
 	mid.expand_in_dim(wdim, -0.4*c.get_sz_dim(wdim));
-	//65_Painted_dirty_metal.jpg
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("metals/67_rusty_dirty_metal.jpg"), 1.0/thickness, 1), 1)); // shadowed
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_ibeam_tid(), 1.0/thickness, 1), 1)); // shadowed
 	colorRGBA const color(apply_light_color(c));
 	mat.add_cube_to_verts(mid, color, all_zeros, (skip_ends | get_skip_mask_for_dim(idim))); // skip edges
 
@@ -5826,6 +5843,8 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_FOOD_BOX:  return texture_color(get_food_box_tid());
 	case TYPE_FISHTANK:  return table_glass_color; // glass; black lid is ignored
 	case TYPE_PET_CAGE:  return colorRGBA(color, 0.1); // mostly transparent
+	case TYPE_IBEAM:     return texture_color(get_ibeam_tid()).modulate_with(color);
+	case TYPE_MIRROR:    return WHITE; // should be reflecting
 	//case TYPE_POOL_BALL: return ???; // texture_color(get_ball_tid(*this))? uses a texture atlas, so unclear what color to use here; use white by default
 	//case TYPE_CHIMNEY:  return texture_color(get_material().side_tex); // should modulate with texture color, but we don't have it here
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
