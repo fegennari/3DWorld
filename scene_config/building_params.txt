@@ -18,8 +18,8 @@ buildings basement_water_level_min -0.5 # < 0.0 has a chance of no water
 buildings basement_water_level_max 1.1 # flooded a bit onto the floor above
 buildings ball_prob 0.6 # set to 1.0 for testing of balls
 buildings split_stack_floorplan_prob 0.0
-buildings retail_floorplan_prob 0.5
-buildings two_floor_retail_prob 0.5
+buildings retail_floorplan_prob 0.6
+buildings two_floor_retail_prob 0.7
 buildings glass_floor_alpha 0.25 # set to 1.0 for opaque floor
 buildings add_office_basements 1
 buildings add_basement_tunnels 1
