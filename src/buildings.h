@@ -1421,6 +1421,7 @@ struct room_t : public cube_t { // size=56
 	bool is_mall             () const {return (get_room_type(0) == RTYPE_MALL     );}
 	bool is_store            () const {return (get_room_type(0) == RTYPE_STORE    );}
 	bool is_retail           () const {return (get_room_type(0) == RTYPE_RETAIL   );}
+	bool is_factory          () const {return (get_room_type(0) == RTYPE_FACTORY  );}
 	bool is_mall_or_store    () const {return (is_mall() || is_store());}
 	bool is_apt_or_hotel_room() const {return (unit_id > 0);}
 	bool has_room_of_type(room_type type) const;

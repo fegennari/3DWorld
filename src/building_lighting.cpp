@@ -2069,9 +2069,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (!is_rot_cube_visible(clipped_bc, xlate, 1)) continue; // VFC - post clip; inc_mirror_reflections=1
 		// occlusion culling (expensive); skip basement check for mall lights viewed through skylights
 		if (check_occ && !clipped_bc.contains_pt(camera_rot) && check_obj_occluded(clipped_bc, camera_bs, oc, 0, 0, mall_light_vis)) continue;
-		//float const bwidth(wall_light ? 1.0 : 0.25); // wall light omnidirectional; ceiling light as close to 180 degree FOV as can get without shadow clipping; shadows are wrong
-		float const bwidth(0.25); // as close to 180 degree FOV as we can get without shadow clipping
-		// should bwidth be set smaller for (in_retail_room && has_tall_retail())?
+		bool const in_factory(room.is_factory()), tall_retail(in_retail_room && has_tall_retail()); // narrower for factory ceiling lights and a bit lower for tall retail
+		float bwidth(in_factory ? 0.125 : (tall_retail ? 0.24 : 0.25)); // as close to 180 degree FOV as we can get without shadow clipping
+		//if (wall_light) {bwidth = 1.0;} // wall light omnidirectional, but shadows are wrong
 		vector3d dir;
 		if (wall_light) {dir[i->dim] = (i->dir ? 1.0 : -1.0);} else {dir = -plus_z;} // points down, unless it's a wall light
 		dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, dir, bwidth);
@@ -2166,7 +2166,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 			else { // add a second, smaller unshadowed light for the upper hemisphere or omnidirectional for wall lights
 				// the secondary light is unshadowed and won't pick up shadows from any stairs in the room, so reduce the radius
-				float const rscale((room.is_hallway ? 0.25 : (room.is_office ? 0.45 : 0.5))*(has_stairs_this_floor ? 0.67 : 1.0));
+				float const rscale((room.is_hallway ? 0.25 : (in_factory ? 0.35 : (room.is_office ? 0.45 : 0.5)))*(has_stairs_this_floor ? 0.67 : 1.0));
 				sec_light_radius = rscale*light_radius;
 
 				if (wall_light) {
@@ -2177,7 +2177,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 				else { // ceiling light
 					sec_lpos.z -= wall_thickness; // shift down somewhat; use a constant that works with recessed lights at doorways
-					dl_sources.emplace_back(sec_light_radius, sec_lpos, sec_lpos, color, 0, plus_z, 0.5); // hemisphere that points up
+					dl_sources.emplace_back(sec_light_radius, sec_lpos, sec_lpos, color, 0, plus_z, (in_factory ? 0.6 : 0.5)); // hemisphere that points up
 				}
 			}
 			if (!light_bc2.is_all_zeros()) {

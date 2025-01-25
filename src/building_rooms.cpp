@@ -304,7 +304,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			ny = get_num_windows_on_side(*r, 1);
 			unsigned &short_n(room_dim ? nx : ny);
 			short_n     = 2*short_n/3; // 2/3 as many in the short dim
-			light_size *= 1.25; // must be larger to reach the floor below; TODO: reduced spotlight cone angle?
+			light_size *= 1.3; // must be larger to reach the floor below
 		}
 		else if (r->is_single_floor) {
 			light_size *= sqrt(r->dz()/window_vspacing); // larger lights for taller rooms
