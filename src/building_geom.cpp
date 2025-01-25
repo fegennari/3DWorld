@@ -2270,6 +2270,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 }
 
 void building_t::maybe_add_skylight(rand_gen_t &rgen) {
+	if (is_factory()) return; // no factory skylights; they work, but factories have enough windows already
 	// maybe add skylights; cube roofs only for now, since we can't cut holes in other shapes; only for office buildings with interiors;
 	// could add skylights to house rooms such as bathrooms, but they haven't been assigned and we would need to cut holes in the roof and possibly attic
 	// note that at this point there has been no floorplanning, so we don't know where primary hallways, etc. will be

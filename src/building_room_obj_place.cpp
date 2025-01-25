@@ -3661,6 +3661,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 				cube_t test_cube(support);
 				test_cube.expand_by_xy(wall_thick);
 				if (cube_int_ext_door(test_cube)) continue; // skip if blocked by an exterior door
+				if (interior->is_blocked_by_stairs_or_elevator(test_cube)) continue; // skip if blocked by basement stairs
 				unsigned skip_faces(~get_face_mask(dim, dir));
 				if (n == 0          ) {skip_faces |= ~get_face_mask(!dim, 0);}
 				if (n == num_windows) {skip_faces |= ~get_face_mask(!dim, 1);}
@@ -3696,6 +3697,8 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			objs.emplace_back(beam, TYPE_IBEAM, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, WHITE, skip_faces);
 		} // for n
 	} // for dim
+	// add machines
+	// TODO: TYPE_MACHINE, and larger
 }
 
 void building_t::add_retail_pillar(cube_t const &pillar, float zval, unsigned room_id, bool is_tall) {
