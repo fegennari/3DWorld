@@ -584,7 +584,8 @@ unsigned const RO_FLAG_FOR_CAR   = 0x1000; // for car blockers, aliased with RO_
 unsigned const RO_FLAG_WALKWAY   = 0x1000; // for walkway objects (outside of buildings), aliased with RO_FLAG_ADJ_BOT
 // object flags, third byte, for pickup/interact state
 unsigned const RO_FLAG_IN_HALLWAY= 0x010000; // for attic doors and trashcans
-unsigned const RO_FLAG_IN_MALL   = 0x010000; // for mall chairs, tables, benches, trashcans, etc.; aliased with RO_FLAG_IN_HALLWAY
+unsigned const RO_FLAG_IN_MALL   = 0x010000; // for mall chairs, tables, benches, trashcans, etc.; aliased with RO_FLAG_IN_HALLWAY and RO_FLAG_IN_FACTORY
+unsigned const RO_FLAG_IN_FACTORY= 0x010000; // for machines, ladders, etc.; aliased with RO_FLAG_IN_HALLWAY and RO_FLAG_IN_MALL
 unsigned const RO_FLAG_IN_ATTIC  = 0x020000;
 unsigned const RO_FLAG_HAS_EXTRA = 0x040000; // used for counter backsplash, exterior wall trim, desks with computer monitors and keyboards, books on glass tables, and hotel closets
 unsigned const RO_FLAG_EXTERIOR  = 0x080000; // for signs, window trim, etc.
@@ -692,6 +693,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool in_closet  () const {return  (flags & RO_FLAG_IN_CLOSET);}
 	bool in_attic   () const {return  (flags & RO_FLAG_IN_ATTIC);}
 	bool in_mall    () const {return  (flags & RO_FLAG_IN_MALL);}
+	bool in_factory () const {return  (flags & RO_FLAG_IN_FACTORY);}
 	bool in_hallway () const {return  (flags & RO_FLAG_IN_HALLWAY);}
 	bool is_exterior() const {return  (flags & RO_FLAG_EXTERIOR);}
 	bool rotates    () const {return  (flags & RO_FLAG_RAND_ROT);}

@@ -152,7 +152,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 	float const height(c.dz()), width(c.get_width()), depth(c.get_depth());
 	float const pipe_rmax(0.033*min(height, min(width, depth)));
 	bool const dim(c.dim), dir(c.dir), two_part(width > rgen.rand_uniform(1.5, 2.2)*depth);
-	bool const in_factory(!factory_floor.is_all_zeros() && factory_floor.intersects(c));
+	bool const in_factory(/*!factory_floor.is_all_zeros() && factory_floor.intersects(c)*/c.in_factory());
 	float const back_wall_pos(c.d[dim][!dir]);
 	unsigned const num_parts(two_part ? 2U : 1U);
 	colorRGBA const base_color(apply_light_color(c, c.color));
@@ -582,7 +582,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 			set_wall_width(c, center, hwidth, !dim);
 			if (c.intersects(avoid) || overlaps_other_room_obj(c, objs_start)) continue;
 			if (interior->is_blocked_by_stairs_or_elevator(c) || is_cube_close_to_doorway(c, room, 0.0, 1)) continue;
-			objs.emplace_back(c, TYPE_MACHINE, room_id, dim, !dir, 0, tot_light_amt, SHAPE_CUBE, LT_GRAY);
+			objs.emplace_back(c, TYPE_MACHINE, room_id, dim, !dir, RO_FLAG_IN_FACTORY, tot_light_amt, SHAPE_CUBE, LT_GRAY);
 			objs.back().item_flags = rgen.rand(); // add more randomness
 			set_obj_id(objs);
 			break; // done

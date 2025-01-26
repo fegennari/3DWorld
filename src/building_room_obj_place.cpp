@@ -3633,8 +3633,8 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
 	assert(interior->factory_info);
 	float const light_amt(1.0); // always lit?
-	bool const long_dim(room.dx() < room.dy()), beam_dim(!long_dim);
-	float const /*floor_spacing(get_window_vspace()),*/ wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness());
+	bool const edim(interior->factory_info->entrance_dim), edir(interior->factory_info->entrance_dir), beam_dim(!edim); // edim is the long dim
+	float const window_vspace(get_window_vspace()), wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// add support pillars around the exterior, between windows; add ceiling beams
 	float const support_width(FACTORY_BEAM_THICK*wall_thick), support_hwidth(0.5*support_width);
@@ -3648,7 +3648,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	float const shift_vals[6] = {-0.1, 0.2, -0.3, 0.4, -0.5, 0.6}; // cumulative version of {-0.1, 0.1, -0.2, 0.2, -0.3, 0.3}; not enough shift to overlap a window
 
 	for (room_t const &r : interior->rooms) {
-		if (!r.intersects(room)) break; // done with above ground factory rooms
+		if (!r.intersects_no_adj(room)) break; // done with above ground factory rooms
 		if (r != room) {nested_rooms.push_back(r);} // skip self (factory)
 	}
 	for (unsigned dim = 0; dim < 2; ++dim) {
@@ -3715,15 +3715,34 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	set_cube_zvals(dbg, bcube.z2(), bcube.z2()+bcube.dz());
 	objs.emplace_back(dbg, TYPE_DBG_SHAPE, room_id, 0, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, RED);
 #endif
-	// add ladders to walls
-	for (cube_t const &r : nested_rooms) {
-		// TODO
-	}
-	// add machines
-	unsigned const objs_start(objs.size());
+	float const clearance(get_min_front_clearance_inc_people());
 	cube_t place_area(room);
 	place_area.expand_by_xy(-support_width); // inside the supports
 	place_area.intersect_with_cube(interior->factory_info->floor_space); // clip off side rooms and floor/ceiling
+	unsigned const objs_start(objs.size());
+
+	// add ladders to walls
+	for (cube_t const &r : nested_rooms) {
+		float const wall_pos(r.d[edim][!edir]);
+		float const lo(max(r.d[!edim][0], place_area.d[!edim][0])), hi(min(r.d[!edim][1], place_area.d[!edim][1]));
+		float const ladder_hwidth(rgen.rand_uniform(0.1, 0.11)*window_vspace);
+		if ((hi - lo) < 4.0*ladder_hwidth) continue; // too narrow
+		cube_t ladder;
+		set_cube_zvals(ladder, zval, (r.z2() + fc_thick + 0.25*window_vspace));
+		ladder.d[edim][ edir] = wall_pos;
+		ladder.d[edim][!edir] = wall_pos + (edir ? -1.0 : 1.0)*0.1*window_vspace; // set depth
+
+		for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place a ladder that doesn't block the door
+			set_wall_width(ladder, rgen.rand_uniform((lo + ladder_hwidth), (hi - ladder_hwidth)), ladder_hwidth, !edim);
+			if (cube_int_ext_door(ladder) || interior->is_blocked_by_stairs_or_elevator(ladder)) continue; // blocked
+			objs.emplace_back(ladder, TYPE_INT_LADDER, room_id, edim, !edir, RO_FLAG_IN_FACTORY, light_amt, SHAPE_CUBE, GRAY);
+			cube_t blocker(ladder);
+			blocker.d[edim][!edir] + (edir ? -1.0 : 1.0)*clearance;
+			objs.emplace_back(blocker, TYPE_BLOCKER, room_id, edim, !edir, RO_FLAG_INVIS);
+			break;
+		} // for n
+	} // for r
+	// add machines
 	add_machines_to_factory(rgen, room, place_area, zval, room_id, light_amt, objs_start);
 }
 

@@ -1280,12 +1280,14 @@ void building_room_geom_t::add_int_ladder(room_object_t const &c) {
 	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small, specular metal
 	unsigned const verts_start(mat.quad_verts.size());
 	add_ladder_geom(mat, c_unrot, apply_light_color(c), EF_Z1); // skip bottom
-	// rotate the ladder about the bottom to lean up against the wall
-	point about;
-	about.z       = c.z1();
-	about[ c.dim] = c.d[c.dim][!c.dir];
-	about[!c.dim] = c.get_center_dim(!c.dim);
-	rotate_verts(mat.quad_verts, vector_from_dim_dir(!c.dim, (c.dim ^ c.dir)), 0.063*PI, about, verts_start);
+
+	if (!c.in_factory()) { // rotate the ladder about the bottom to lean up against the wall, unless in a factory
+		point about;
+		about.z       = c.z1();
+		about[ c.dim] = c.d[c.dim][!c.dir];
+		about[!c.dim] = c.get_center_dim(!c.dim);
+		rotate_verts(mat.quad_verts, vector_from_dim_dir(!c.dim, (c.dim ^ c.dir)), 0.063*PI, about, verts_start);
+	}
 }
 
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {
