@@ -1792,8 +1792,10 @@ struct building_mall_info_t {
 struct bldg_factory_info_t {
 	bool entrance_dim, entrance_dir;
 	float entrance_pos;
+	cube_t floor_space, entrance_area;
 
-	bldg_factory_info_t(bool dim, bool dir, float pos) : entrance_dim(dim), entrance_dir(dir), entrance_pos(pos) {}
+	bldg_factory_info_t(bool dim, bool dir, float epos, cube_t const &fs, cube_t const &ee) :
+		entrance_dim(dim), entrance_dir(dir), entrance_pos(epos), floor_space(fs), entrance_area(ee) {}
 };
 
 struct building_interior_t {

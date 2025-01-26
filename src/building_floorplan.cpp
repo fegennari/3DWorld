@@ -1498,17 +1498,20 @@ void building_t::create_factory_floorplan(unsigned part_id, float window_hspacin
 	float const hspace(window_hspacing[!dim]);
 	unsigned const num_floors(calc_num_floors(part, floor_spacing, floor_thick));
 	assert(num_floors >= 2); // main factory must be at least 2 floors tall
-	cube_t sub_rooms(part);
+	cube_t sub_rooms(part), floor_space(part);
 	sub_rooms.z2() = part.z1() + floor_spacing;
-	sub_rooms.d[dim][!dir] = split_pos;
+	sub_rooms.d[dim][!dir] = floor_space.d[dim][dir] = split_pos;
 	cube_t sub_room[2] = {sub_rooms, sub_rooms}; // to each side of the entrance
 	float wall_edge[2] = {(centerline - door_ent_pad), (centerline + door_ent_pad)};
+	cube_t entrance_area(sub_rooms);
 
 	for (unsigned d = 0; d < 2; ++d) { // determine wall positions to avoid intersecting windows
 		wall_edge[d] = shift_val_to_not_intersect_window(part, wall_edge[d], hspace, window_border, !dim);
-		sub_room[d].d[!dim][!d] = wall_edge[d];
+		sub_room[d].d[!dim][!d] = entrance_area.d[!dim][d] = wall_edge[d];
 	}
-	interior->factory_info.reset(new bldg_factory_info_t(dim, dir, 0.5*(wall_edge[0] + wall_edge[1])));
+	floor_space.expand_in_z(-fc_thick); // shrink to remove ceiling and floor
+	float const entrance_pos(0.5*(wall_edge[0] + wall_edge[1]));
+	interior->factory_info.reset(new bldg_factory_info_t(dim, dir, entrance_pos, floor_space, entrance_area));
 	bool const larger_room(sub_room[0].get_sz_dim(!dim) < sub_room[1].get_sz_dim(!dim));
 
 	for (unsigned d = 0; d < 2; ++d) { // add walls, doors, and ceilings/floors

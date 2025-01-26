@@ -3631,6 +3631,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 }
 
 void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
+	assert(interior->factory_info);
 	float const light_amt(1.0); // always lit?
 	bool const long_dim(room.dx() < room.dy()), beam_dim(!long_dim);
 	float const /*floor_spacing(get_window_vspace()),*/ wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness());
