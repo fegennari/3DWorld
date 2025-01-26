@@ -3721,12 +3721,10 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	}
 	// add machines
 	unsigned const objs_start(objs.size());
-	cube_t open_area(room);
-	open_area.expand_by_xy(-support_width); // inside the supports
-	room_t factory_room(room);
-	factory_room.copy_from(interior->factory_info->floor_space); // clip off side rooms
-	factory_room.intersect_with_cube(open_area); // avoid intersecting pillars
-	add_machines_to_room(rgen, factory_room, zval, room_id, light_amt, objs_start, 0); // less_clearance=0
+	cube_t place_area(room);
+	place_area.expand_by_xy(-support_width); // inside the supports
+	place_area.intersect_with_cube(interior->factory_info->floor_space); // clip off side rooms and floor/ceiling
+	add_machines_to_factory(rgen, room, place_area, zval, room_id, light_amt, objs_start);
 }
 
 void building_t::add_retail_pillar(cube_t const &pillar, float zval, unsigned room_id, bool is_tall) {
