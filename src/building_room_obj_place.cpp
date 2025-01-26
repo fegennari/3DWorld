@@ -3644,6 +3644,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	set_cube_zvals(support, zval,     beams_z1 );
 	set_cube_zvals(beam,    beams_z1, ceil_zval);
 	vect_cube_t support_parts;
+	float const shift_vals[6] = {-0.1, 0.2, -0.3, 0.4, -0.5, 0.6}; // cumulative version of {-0.1, 0.1, -0.2, 0.2, -0.3, 0.3}; not enough shift to overlap a window
 
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		unsigned const num_windows(get_num_windows_on_side(room, !dim));
@@ -3660,8 +3661,16 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 				set_wall_width(support, centerline, support_hwidth, !dim);
 				cube_t test_cube(support);
 				test_cube.expand_by_xy(wall_thick);
-				if (cube_int_ext_door(test_cube)) continue; // skip if blocked by an exterior door
-				if (interior->is_blocked_by_stairs_or_elevator(test_cube)) continue; // skip if blocked by basement stairs
+				bool valid(0);
+				
+				// check and either move or skip if blocked by exterior door or basement stairs
+				for (unsigned m = 0; m < 6; ++m) {
+					if (!cube_int_ext_door(test_cube) && !interior->is_blocked_by_stairs_or_elevator(test_cube)) {valid = 1; break;}
+					float const shift(shift_vals[m]*spacing);
+					support  .translate_dim(!dim, shift);
+					test_cube.translate_dim(!dim, shift);
+				}
+				if (!valid) continue; // failed, skip
 				unsigned skip_faces(~get_face_mask(dim, dir));
 				if (n == 0          ) {skip_faces |= ~get_face_mask(!dim, 0);}
 				if (n == num_windows) {skip_faces |= ~get_face_mask(!dim, 1);}
@@ -3697,6 +3706,11 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			objs.emplace_back(beam, TYPE_IBEAM, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, WHITE, skip_faces);
 		} // for n
 	} // for dim
+#if 0 // debug visualization
+	cube_t dbg(room);
+	set_cube_zvals(dbg, bcube.z2(), bcube.z2()+bcube.dz());
+	objs.emplace_back(dbg, TYPE_DBG_SHAPE, room_id, 0, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, RED);
+#endif
 	// add machines
 	// TODO: TYPE_MACHINE, and larger
 }
