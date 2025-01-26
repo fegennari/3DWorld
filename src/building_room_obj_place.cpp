@@ -3644,9 +3644,13 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	cube_t support, beam;
 	set_cube_zvals(support, zval,     beams_z1 );
 	set_cube_zvals(beam,    beams_z1, ceil_zval);
-	vect_cube_t support_parts;
+	vect_cube_t support_parts, nested_rooms;
 	float const shift_vals[6] = {-0.1, 0.2, -0.3, 0.4, -0.5, 0.6}; // cumulative version of {-0.1, 0.1, -0.2, 0.2, -0.3, 0.3}; not enough shift to overlap a window
 
+	for (room_t const &r : interior->rooms) {
+		if (!r.intersects(room)) break; // done with above ground factory rooms
+		if (r != room) {nested_rooms.push_back(r);} // skip self (factory)
+	}
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		unsigned const num_windows(get_num_windows_on_side(room, !dim));
 		float const spacing(room.get_sz_dim(!dim)/num_windows);
@@ -3677,8 +3681,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 				if (n == num_windows) {skip_faces |= ~get_face_mask(!dim, 1);}
 				objs.emplace_back(support, TYPE_IBEAM, room_id, dim, 1, 0, light_amt, SHAPE_CUBE, WHITE, skip_faces); // vertical
 				
-				for (room_t const &r : interior->rooms) { // clip in Z if intersects a room
-					if (r == room) continue; // skip self (factory)
+				for (cube_t const &r : nested_rooms) { // clip in Z if intersects a room
 					if (!r.intersects(support)) continue;
 					cube_t bot(support);
 					objs.back().z1() = r.z2() + fc_thick; // top of room cube
@@ -3712,8 +3715,18 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	set_cube_zvals(dbg, bcube.z2(), bcube.z2()+bcube.dz());
 	objs.emplace_back(dbg, TYPE_DBG_SHAPE, room_id, 0, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, RED);
 #endif
+	// add ladders to walls
+	for (cube_t const &r : nested_rooms) {
+		// TODO
+	}
 	// add machines
-	// TODO: TYPE_MACHINE, and larger
+	unsigned const objs_start(objs.size());
+	cube_t open_area(room);
+	open_area.expand_by_xy(-support_width); // inside the supports
+	room_t factory_room(room);
+	factory_room.copy_from(interior->factory_info->floor_space); // clip off side rooms
+	factory_room.intersect_with_cube(open_area); // avoid intersecting pillars
+	add_machines_to_room(rgen, factory_room, zval, room_id, light_amt, objs_start, 0); // less_clearance=0
 }
 
 void building_t::add_retail_pillar(cube_t const &pillar, float zval, unsigned room_id, bool is_tall) {

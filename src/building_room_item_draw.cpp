@@ -982,9 +982,10 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 void building_room_geom_t::create_small_static_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Small"); // up to 36ms on new computer for buildings with large retail areas
 	float const floor_ceil_gap(building.get_floor_ceil_gap());
+	cube_t const factory_floor(building.interior->factory_info ? building.interior->factory_info->floor_space : cube_t());
 	model_objs.clear(); // currently model_objs are only created for small objects in drawers, so we clear this here
-	add_small_static_objs_to_verts(expanded_objs, building.get_trim_color(), 0, floor_ceil_gap); // inc_text=0
-	add_small_static_objs_to_verts(objs,          building.get_trim_color(), 0, floor_ceil_gap); // inc_text=0
+	add_small_static_objs_to_verts(expanded_objs, building.get_trim_color(), 0, floor_ceil_gap, factory_floor); // inc_text=0
+	add_small_static_objs_to_verts(objs,          building.get_trim_color(), 0, floor_ceil_gap, factory_floor); // inc_text=0
 	add_attic_interior_and_rafters(building, 2.0/obj_scale, 0); // only if there's an attic; detail_pass=0
 	for (tunnel_seg_t const &t : building.interior->tunnels) {add_tunnel(t);}
 }
@@ -992,7 +993,9 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 void building_room_geom_t::add_nested_objs_to_verts(vect_room_object_t const &objs_to_add) {
 	vector_add_to(objs_to_add, pending_objs); // nested objects are added at the end so that small and text materials are thread safe
 }
-void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add, colorRGBA const &trim_color, bool inc_text, float floor_ceil_gap) {
+void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add, colorRGBA const &trim_color,
+	bool inc_text, float floor_ceil_gap, cube_t const &factory_floor)
+{
 	if (objs_to_add.empty()) return; // don't add untextured material, otherwise we may fail the (num_verts > 0) assert
 	float const tscale(2.0/obj_scale);
 
@@ -1090,7 +1093,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_METAL_BAR:  add_metal_bar(c); break;
 		case TYPE_THEFT_SENS: add_theft_sensor(c); break;
 		case TYPE_INT_LADDER: add_int_ladder(c); break;
-		case TYPE_MACHINE:    add_machine(c, floor_ceil_gap); break;
+		case TYPE_MACHINE:    add_machine(c, floor_ceil_gap, factory_floor); break;
 		case TYPE_SPIWEB:     add_spider_web(c); break;
 		case TYPE_PET_CAGE:   add_pet_cage(c); break;
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;

@@ -146,12 +146,13 @@ void building_room_geom_t::add_spring(point pos, float radius, float r_wire, flo
 	}
 }
 
-void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_gap) { // components are shadowed and small
+void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_gap, cube_t const &factory_floor) { // components are shadowed and small
 	// can use AC Unit, metal plate texture, buttons, lights, etc.
 	rand_gen_t rgen(c.create_rgen());
 	float const height(c.dz()), width(c.get_width()), depth(c.get_depth());
 	float const pipe_rmax(0.033*min(height, min(width, depth)));
 	bool const dim(c.dim), dir(c.dir), two_part(width > rgen.rand_uniform(1.5, 2.2)*depth);
+	bool const in_factory(!factory_floor.is_all_zeros() && factory_floor.intersects(c));
 	float const back_wall_pos(c.d[dim][!dir]);
 	unsigned const num_parts(two_part ? 2U : 1U);
 	colorRGBA const base_color(apply_light_color(c, c.color));
@@ -164,6 +165,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 	unsigned cylin_dims[2] = {2, 2}; // defaults to Z
 	vect_cube_t avoid, shapes;
 	vect_sphere_t pipe_ends;
+	if (in_factory) {floor_ceil_gap = factory_floor.dz();}
 
 	if (two_part) {
 		float const split_pos(main.d[!dim][0] + rgen.rand_uniform(0.4, 0.6)*width);
@@ -303,7 +305,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		}
 		// add pipes if gap is large enough
 		float const cylin_radius(0.25*(part_sz[(cylin_dim+1)%3] + part_sz[(cylin_dim+2)%3])), pipe_rmax(0.05*part_sz.get_min_val());
-		bool const has_gap(fabs(part.d[dim][dir] - c.d[dim][dir]) > pipe_rmax);
+		bool const has_gap(!in_factory && fabs(part.d[dim][dir] - c.d[dim][dir]) > pipe_rmax); // only for interior (basement) machines, not in factories next to windows
 		cube_t region(part);
 		region.d[dim][ dir] = (is_cylin ? part.get_center_dim(dim) : part.d[dim][!dir]); // center plane of cylinder or back of cube
 		region.d[dim][!dir] = back_wall_pos; // wall behind the machine
@@ -502,27 +504,28 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 	}
 }
 
-vector2d get_machine_max_sz(cube_t const &place_area, float min_gap, float sz_cap_mult) {
+vector2d get_machine_max_sz(cube_t const &place_area, float min_gap, float max_place_sz, float sz_cap_mult) {
 	vector2d const place_sz(place_area.dx(), place_area.dy());
 	vector2d avail_sz, max_sz;
-	for (unsigned d = 0; d < 2; ++d) {avail_sz[d] = min(0.4f*place_sz[d], sz_cap_mult*(place_sz[d] - min_gap));}
+	for (unsigned d = 0; d < 2; ++d) {avail_sz[d] = min(max_place_sz, min(0.4f*place_sz[d], sz_cap_mult*(place_sz[d] - min_gap)));}
 	for (unsigned d = 0; d < 2; ++d) {max_sz  [d] = min(avail_sz[d], 2.0f*avail_sz[!d]);} // keep aspect ratio <= 2:1
 	return max_sz;
 }
 bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool less_clearance) {
-	float const floor_spacing(get_window_vspace()), fc_gap(get_floor_ceil_gap());
-	float const clearance_factor(less_clearance ? 0.2 : 1.0), min_place_sz((less_clearance ? 0.25 : 0.5)*floor_spacing);
+	bool const room_is_factory(room.is_factory());
+	float const floor_spacing(get_window_vspace()), fc_gap(room.is_single_floor ? room.dz() : get_floor_ceil_gap());
+	float const clearance_factor(less_clearance ? 0.2 : 1.0), min_place_sz((less_clearance ? 0.25 : 0.5)*floor_spacing), max_place_sz(2.0*floor_spacing);
 	float const min_clearance(clearance_factor*get_min_front_clearance_inc_people()), min_gap(max(clearance_factor*get_doorway_width(), min_clearance));
+	unsigned const num_machines(room_is_factory ? ((rgen.rand() % 11) + 10) : ((rgen.rand() % 5) + 1)); // 1-5; 10-20 for factories
 	cube_t const place_area(get_walkable_room_bounds(room)); // ignore trim?
 	cube_t avoid;
 	avoid.set_from_sphere(point(place_area.xc(), place_area.yc(), zval), min_clearance);
-	unsigned const flags(0), num_machines((rgen.rand() % 5) + 1); // 1-5
 	bool any_placed(0), no_opposite_sides(0), used_orients[4] = {};
 	vect_room_object_t &objs(interior->room_geom->objs);
-	vector2d max_sz(get_machine_max_sz(place_area, min_gap, 0.5)); // start with a larger gap that allows two opposing machines
+	vector2d max_sz(get_machine_max_sz(place_area, min_gap, max_place_sz, 0.5)); // start with a larger gap that allows two opposing machines
 
 	if (min(max_sz.x, max_sz.y) < min_place_sz) { // not enough space
-		max_sz = get_machine_max_sz(place_area, min_gap, 1.0); // try again with larger size cap, which means we can't place machines on opposite walls
+		max_sz = get_machine_max_sz(place_area, min_gap, max_place_sz, 1.0); // try again with larger size cap, which means we can't place machines on opposite walls
 		if (min(max_sz.x, max_sz.y) < min_place_sz) return 0; // still too small of a room to place a machine
 		no_opposite_sides = 1;
 	}
@@ -543,7 +546,7 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 			set_wall_width(c, center, hwidth, !dim);
 			if (c.intersects(avoid) || overlaps_other_room_obj(c, objs_start)) continue;
 			if (interior->is_blocked_by_stairs_or_elevator(c) || is_cube_close_to_doorway(c, room, 0.0, 1)) continue;
-			objs.emplace_back(c, TYPE_MACHINE, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CUBE, LT_GRAY);
+			objs.emplace_back(c, TYPE_MACHINE, room_id, dim, !dir, 0, tot_light_amt, SHAPE_CUBE, LT_GRAY);
 			objs.back().item_flags = rgen.rand(); // add more randomness
 			set_obj_id(objs);
 			if (no_opposite_sides) {used_orients[unsigned(dim) + unsigned(dir)] = 1;} // mark this orient as used
