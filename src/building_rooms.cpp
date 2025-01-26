@@ -260,7 +260,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			light_density = 0.5;
 			light_size   *= 0.7; // smaller, since the ceiling is lower
 		}
-		else if (r->is_office || r->get_has_skylight()) { // more lights for large offices; light size varies by office size; parking garages are handled later
+		else if (r->is_office || (r->get_has_skylight() && !is_factory_room)) {
+			// more lights for large offices; light size varies by office size; parking garages are handled later
 			light_density = 0.5;
 			float const room_size(dx + dy); // normalized to office size
 			light_size = max(0.015f*room_size, 0.67f*def_light_size);
@@ -478,7 +479,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					}
 				}
 			}
-			else if (nx > 1 || ny > 1) { // office, parking garage, backrooms, or mall with multiple lights
+			else if (nx > 1 || ny > 1) { // office, parking garage, backrooms, mall, or factory with multiple lights
 				vector3d const shrink(0.5*light.dx()*sqrt((nx - 1)/nx), 0.5*light.dy()*sqrt((ny - 1)/ny), 0.0);
 				float xstep(dx/nx), ystep(dy/ny), xs(-0.5f*dx + 0.5*xstep), ys(-0.5f*dy + 0.5*ystep);
 
