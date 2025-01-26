@@ -1805,13 +1805,13 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 	else if (store_type == STORE_FURNITURE || store_type == STORE_APPLIANCE) {
 		// divide the store up into a 2D square grid of "rooms": bedrooms, dining rooms, living rooms, etc. and populate these
 		float const trim_thick(get_trim_thickness()), room_pad(1.0*door_width), room_size(1.5*window_vspace), room_spacing(room_size + room_pad);
-		float const size_delta(room_pad - wall_thickness - 2.0*trim_thick), pad_len(room_len + size_delta), pad_width(room_width + size_delta);
+		float const size_delta(room_pad - wall_thickness - 2.0*trim_thick), pad_len(room_len + size_delta - wall_thickness), pad_width(room_width + size_delta);
 		unsigned const rooms_long(max(1U, unsigned(pad_len/room_spacing))), rooms_wide(max(1U, unsigned(pad_width/room_spacing)));
 		bool const pdirs[2] = {rgen.rand_bool(), rgen.rand_bool()};
 		float const rlen(pad_len/rooms_long), rwidth(pad_width/rooms_wide);
 		cube_t door_blocker(doorway), div_area(room);
 		door_blocker.expand_by_xy(0.2*window_vspace);
-		div_area.expand_by_xy(0.5*room_pad - wall_hthick - trim_thick); // offset for for the shrink of rooms
+		div_area.expand_by_xy(0.5*size_delta); // offset for the shrink of rooms
 		div_area.d[dim][dir] -= (dir ? 1.0 : -1.0)*wall_thickness; // shink for front window/wall clearance
 		vect_cube_t blockers; // may be empty
 		cube_t r; // sub-room bounds
