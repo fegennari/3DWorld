@@ -149,7 +149,7 @@ void building_room_geom_t::add_spring(point pos, float radius, float r_wire, flo
 void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_gap, cube_t const &factory_floor) { // components are shadowed and small
 	// can use AC Unit, metal plate texture, buttons, lights, etc.
 	rand_gen_t rgen(c.create_rgen());
-	float const height(c.dz()), width(c.get_width()), depth(c.get_depth());
+	float const height(c.dz()), width(c.get_width()), depth(c.get_depth()), orig_floor_ceil_gap(floor_ceil_gap);
 	float const pipe_rmax(0.033*min(height, min(width, depth)));
 	bool const dim(c.dim), dir(c.dir), two_part(width > rgen.rand_uniform(1.5, 2.2)*depth), in_factory(c.in_factory());
 	float const back_wall_pos(c.d[dim][!dir]);
@@ -195,6 +195,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 	for (unsigned n = 0; n < num_parts; ++n) {
 		cube_t const &part(parts[n]);
 		vector3d const part_sz(part.get_size());
+		float const size_scale(min(1.0f, orig_floor_ceil_gap/part_sz.z)); // not too large for factory machines
 		bool const is_cylin(is_cylins[n]);
 		unsigned const cylin_dim(cylin_dims[n]);
 		avoid .clear();
@@ -226,7 +227,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		// maybe add a breaker panel if a cube
 		if (!is_cylin && rgen.rand_float() < 0.6) {
 			unsigned const flags((rgen.rand_float() < 0.2) ? RO_FLAG_OPEN : 0); // open 20% of the time
-			float panel_hheight(part_sz.z*rgen.rand_uniform(0.15, 0.22)), panel_hwidth(part_sz[!dim]*rgen.rand_uniform(0.15, 0.22));
+			float panel_hheight(size_scale*part_sz.z*rgen.rand_uniform(0.15, 0.22)), panel_hwidth(size_scale*part_sz[!dim]*rgen.rand_uniform(0.15, 0.22));
 			min_eq(panel_hheight, 1.5f*panel_hwidth ); // set reasonable aspect ratio
 			min_eq(panel_hwidth,  1.5f*panel_hheight); // set reasonable aspect ratio
 			float const panel_depth(min(panel_hheight, panel_hwidth)*rgen.rand_uniform(0.3, 0.4));
@@ -254,7 +255,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		}
 		// maybe add a valve handle to the front if a cube
 		if (!is_cylin && rgen.rand_float() < 0.75) {
-			float const valve_radius(min(5.0f*pipe_rmax, 0.4f*min(part_sz[!dim], part_sz.z))*rgen.rand_uniform(0.75, 1.0));
+			float const valve_radius(size_scale*min(5.0f*pipe_rmax, 0.4f*min(part_sz[!dim], part_sz.z))*rgen.rand_uniform(0.75, 1.0));
 			float const valve_depth(valve_radius*rgen.rand_uniform(0.4, 0.5));
 			cube_t valve(place_obj_on_cube_side(part, dim, dir, valve_radius, valve_radius, valve_depth, 1.1, rgen)); // Note: may extend a bit outside c in the front
 			assert(valve.is_strictly_normalized());
@@ -288,7 +289,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 				float const pwidth(part_sz[!vdim]), pheight(part_sz.z);
 
 				for (unsigned N = 0; N < 10; ++N) { // make 10 attempts to place it
-					float const vhwidth((add_ac_unit ? rgen.rand_uniform(0.36, 0.4) : rgen.rand_uniform(0.24, 0.32))*min(pwidth, 1.0f*pheight));
+					float const vhwidth(sqrt(size_scale)*(add_ac_unit ? rgen.rand_uniform(0.36, 0.4) : rgen.rand_uniform(0.24, 0.32))*min(pwidth, 1.0f*pheight));
 					float const vhheight((add_ac_unit ? 0.7 : rgen.rand_uniform(0.4, 0.6))*vhwidth), vdepth(rgen.rand_uniform(0.02, 0.4)*vhwidth);
 					cube_t vent(place_obj_on_cube_side(part, vdim, vdir, vhheight, vhwidth, vdepth, (add_ac_unit ? 1.02 : 1.2), rgen));
 					vent.intersect_with_cube(main); // can't extend outside or into the base
