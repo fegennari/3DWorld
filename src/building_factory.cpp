@@ -11,18 +11,17 @@ void building_t::create_factory_floorplan(unsigned part_id, float window_hspacin
 	assert(part_id < parts.size());
 	cube_t const &part(parts[part_id]);
 	vector<room_t> &rooms(interior->rooms);
-
-	// add bathroom and office to either side of a potential placement of the front entrance door
 	bool const dim(part.dx() < part.dy()), dir(rgen.rand_bool()); // long dim
 	float const door_width(get_doorway_width()), door_hwidth(0.5*door_width), floor_spacing(get_window_vspace());
 	float const wall_thick(get_wall_thickness()), wall_hthick(0.5*wall_thick), floor_thick(get_floor_thickness()), fc_thick(get_fc_thickness());
-	float const door_ent_pad(2.0*door_width), room_len(part.get_sz_dim(dim)), room_width(part.get_sz_dim(!dim));
-	float const sub_room_len(max(1.5*floor_spacing, min(3.0*floor_spacing, 0.2*room_len)));
-	float const dsign(dir ? -1.0 : 1.0), split_pos(part.d[dim][dir] + dsign*sub_room_len);
-	float const centerline(part.d[!dim][0] + rgen.rand_uniform(0.3, 0.7)*room_width);
-	float const hspace(window_hspacing[!dim]);
+	float const door_ent_pad(2.0*door_width), room_len(part.get_sz_dim(dim)), room_width(part.get_sz_dim(!dim)), dsign(dir ? -1.0 : 1.0);
+	float const sub_room_len(max(1.5*floor_spacing, min(3.0*floor_spacing, 0.2*room_len))*rgen.rand_uniform(0.9, 1.0));
+	float const centerline(part.get_center_dim(!dim) + (rgen.rand_bool() ? 1.0 : -1.0)*rgen.rand_uniform(0.15, 0.25)*room_width); // biased to a random side
 	unsigned const num_floors(calc_num_floors(part, floor_spacing, floor_thick));
 	assert(num_floors >= 2); // main factory must be at least 2 floors tall
+	// add bathroom and office to either side of a potential placement of the front entrance door
+	float split_pos(part.d[dim][dir] + dsign*sub_room_len);
+	split_pos = shift_val_to_not_intersect_window(part, split_pos, window_hspacing[dim], window_border, dim);
 	cube_t sub_rooms(part), floor_space(part);
 	sub_rooms.z2() = part.z1() + floor_spacing;
 	sub_rooms.d[dim][!dir] = floor_space.d[dim][dir] = split_pos;
@@ -31,7 +30,7 @@ void building_t::create_factory_floorplan(unsigned part_id, float window_hspacin
 	cube_t entrance_area(sub_rooms);
 
 	for (unsigned d = 0; d < 2; ++d) { // determine wall positions to avoid intersecting windows
-		wall_edge[d] = shift_val_to_not_intersect_window(part, wall_edge[d], hspace, window_border, !dim);
+		wall_edge[d] = shift_val_to_not_intersect_window(part, wall_edge[d], window_hspacing[!dim], window_border, !dim);
 		sub_room[d].d[!dim][!d] = entrance_area.d[!dim][d] = wall_edge[d];
 	}
 	floor_space.expand_in_z(-fc_thick); // shrink to remove ceiling and floor
@@ -55,14 +54,17 @@ void building_t::create_factory_floorplan(unsigned part_id, float window_hspacin
 		for (unsigned e = 0; e < 2; ++e) {
 			bool const wdim(dim ^ bool(e)), ddir(e ? d : dir);
 			cube_t wall(e ? swall : lwall); // copy so that it can be clipped
-			float const wall_center(wall.get_center_dim(!wdim)), door_lo(wall_center - door_hwidth), door_hi(wall_center + door_hwidth);
-			insert_door_in_wall_and_add_seg(wall, door_lo, door_hi, !wdim, ddir, 0, is_bathroom);
-			interior->door_stacks.back().set_mult_floor(); // counts as multi-floor (for drawing top edge)
-			interior->walls[wdim].push_back(wall);
-			// add section of wall above the door
-			wall.d[!wdim][0] = door_lo;
-			wall.d[!wdim][1] = door_hi;
-			wall.z1() = interior->doors.back().z2();
+			
+			if (is_larger || e == 1) { // no door in factory floor side of bathroom
+				float const wall_center(wall.get_center_dim(!wdim)), door_lo(wall_center - door_hwidth), door_hi(wall_center + door_hwidth);
+				insert_door_in_wall_and_add_seg(wall, door_lo, door_hi, !wdim, ddir, 0, is_bathroom);
+				interior->door_stacks.back().set_mult_floor(); // counts as multi-floor (for drawing top edge)
+				interior->walls[wdim].push_back(wall);
+				// add section of wall above the door
+				wall.d[!wdim][0] = door_lo;
+				wall.d[!wdim][1] = door_hi;
+				wall.z1() = interior->doors.back().z2();
+			}
 			interior->walls[wdim].push_back(wall);
 		} // for e
 		cube_t room_inner(r);
