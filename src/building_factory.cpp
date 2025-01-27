@@ -83,8 +83,8 @@ void building_t::create_factory_floorplan(unsigned part_id, float window_hspacin
 		add_room(room_inner, part_id, 2); // 2 lights; not a typical office building office
 		rooms.back().assign_all_to(is_larger ? RTYPE_OFFICE : RTYPE_BATH); // office or bathroom
 	} // for d
-	  // should there be an entryway room, then the factory doesn't overlap the sub-rooms? but then there will be empty space above them
-	  // add entire part as a room (factory floor); must be done last so that smaller contained rooms are picked up in early exit queries (model occlusion, light toggle, door conn)
+	// should there be an entryway room, then the factory doesn't overlap the sub-rooms? but then there will be empty space above them
+	// add entire part as a room (factory floor); must be done last so that smaller contained rooms are picked up in early exit queries (model occlusion, light toggle, door conn)
 	add_room(part, part_id); // num_lights will be calculated later
 	rooms.back().assign_all_to(RTYPE_FACTORY);
 	rooms.back().is_single_floor = 1;
@@ -155,7 +155,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 				} // for r
 			} // for n
 		} // for dir
-		  // add beams
+		// add beams
 		unsigned const num_hdiv(2*num_windows); // add intermediate beams and hang lights on them
 		for (unsigned d = 0; d < 2; ++d) {beam.d[dim][d] = room.d[dim][d];}
 		if (bool(dim) == beam_dim) {beam.expand_in_dim(beam_dim, -support_hwidth);} // half overlap of vert supports
@@ -183,14 +183,14 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 
 	// add ladders to walls
 	for (cube_t const &r : nested_rooms) {
-		float const wall_pos(r.d[edim][!edir]);
+		float const wall_pos(r.d[edim][!edir] + (edir ? -1.0 : 1.0)*wall_thick);
 		float const lo(max(r.d[!edim][0], place_area.d[!edim][0])), hi(min(r.d[!edim][1], place_area.d[!edim][1]));
 		float const ladder_hwidth(rgen.rand_uniform(0.1, 0.11)*window_vspace);
 		if ((hi - lo) < 4.0*ladder_hwidth) continue; // too narrow
 		cube_t ladder;
-		set_cube_zvals(ladder, zval, (r.z2() + fc_thick + 0.25*window_vspace));
+		set_cube_zvals(ladder, zval, (r.z2() + fc_thick + 0.35*window_vspace));
 		ladder.d[edim][ edir] = wall_pos;
-		ladder.d[edim][!edir] = wall_pos + (edir ? -1.0 : 1.0)*0.1*window_vspace; // set depth
+		ladder.d[edim][!edir] = wall_pos + (edir ? -1.0 : 1.0)*0.05*window_vspace; // set depth
 
 		for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place a ladder that doesn't block the door
 			set_wall_width(ladder, rgen.rand_uniform((lo + ladder_hwidth), (hi - ladder_hwidth)), ladder_hwidth, !edim);
@@ -202,7 +202,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			break;
 		} // for n
 	} // for r
-	  // add machines
+	// add machines
 	add_machines_to_factory(rgen, room, place_area, zval, room_id, light_amt, objs_start);
 	// TODO: catwalks
 	// TODO: large fans in the ceiling

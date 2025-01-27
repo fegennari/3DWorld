@@ -1636,7 +1636,7 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 	// Note: pos.z may be too small here and we should really use obj_z, so skip_z must be set to 1 in cube tests and obj_z tested explicitly instead
 	for (unsigned d = 0; d < 2; ++d) { // check XY collision with walls
 		for (auto i = walls[d].begin(); i != walls[d].end(); ++i) {
-			if (wall_test_z < i->z1() || wall_test_z > i->z2()) continue; // wrong part/floor
+			if (wall_test_z < i->z1() || obj_z > i->z2()) continue; // wrong part/floor
 			had_coll |= sphere_cube_int_update_pos(pos, radius, *i, p_last, 1, cnorm); // skip_z=1 (handled by zval test above)
 		}
 	}
