@@ -404,8 +404,9 @@ void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t
 		float const coll_radius(spacing + bldg_extra_radius);
 		point pos;
 		if (!try_place_obj(plot, blockers, rgen, coll_radius, (radius - bldg_extra_radius), 10, pos, 1)) continue; // 10 tries per tree, extra spacing for palm trees
-		if (point_in_cubes_xy_exp(plot_cuts, pos, radius_exp)) continue; // no retry
-		if (check_walkway_coll_xy(pos, coll_radius))           continue; // should be rare; no retry
+		if (point_in_cubes_xy_exp(plot_cuts, pos, radius_exp))  continue; // no retry
+		// check walkways; waklway elevators haven't been placed yet for this plot, so add extra padding
+		if (check_walkway_coll_xy(pos, (coll_radius + radius))) continue; // no retry
 		// size is randomly selected by the tree generator using default values; allow bushes in parks
 		place_tree(pos, radius, ttype, colliders, &tree_pos, allow_bush, add_bush, is_sm_tree, has_planter, 0.0, pine_xy_sz);
 		if (plot.is_park) continue; // skip row logic and just place trees randomly throughout the park
