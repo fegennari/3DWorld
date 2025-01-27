@@ -201,7 +201,7 @@ private:
 	terrain_params_t params[2][2]; // {ylo,yhi} x {xlo,xhi}
 
 	void update_terrain_params();
-	unsigned get_lod_level(bool reflection_pass) const;
+	unsigned get_lod_level(int reflection_pass) const;
 
 public:
 	tile_t();

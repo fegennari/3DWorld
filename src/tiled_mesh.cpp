@@ -1790,10 +1790,11 @@ void tile_t::pre_draw(mesh_xy_grid_cache_t &height_gen) {
 }
 
 
-unsigned tile_t::get_lod_level(bool reflection_pass) const {
+unsigned tile_t::get_lod_level(int reflection_pass) const {
 
 	if (mzmax == mzmin) {return NUM_LODS-1;} // flat, use lowest LOD (city plots)
-	unsigned lod_level((reflection_pass && min_normal_z > 0.1) ? min(NUM_LODS-1, 1U) : 0);
+	bool const low_detail(reflection_pass == 1 && min_normal_z > 0.1); // only for water reflections, not building reflections - can cause terrain to clip through buildings
+	unsigned lod_level(low_detail ? min(NUM_LODS-1, 1U) : 0);
 	float dist(get_dist_to_camera_in_tiles(0));
 	if (shadow_maps_allocated()) {dist /= 2;} // decrease distance for higher LOD when shadow maps are in use to avoid shadow artifacts on low res mesh
 	
