@@ -491,6 +491,7 @@
     <ClCompile Include="src\building_basement.cpp" />
     <ClCompile Include="src\building_clocks.cpp" />
     <ClCompile Include="src\building_ext_basement.cpp" />
+    <ClCompile Include="src\building_factory.cpp" />
     <ClCompile Include="src\building_fish.cpp" />
     <ClCompile Include="src\building_floorplan.cpp" />
     <ClCompile Include="src\building_gameplay.cpp" />
