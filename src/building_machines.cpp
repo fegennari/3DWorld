@@ -156,7 +156,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 	unsigned const num_parts(two_part ? 2U : 1U);
 	colorRGBA const base_color(apply_light_color(c, c.color));
 	cube_t base(c), main(c);
-	base.z2() = main.z1() = c.z1() + rgen.rand_uniform(0.04, 0.1)*height;
+	base.z2() = main.z1() = c.z1() + rgen.rand_uniform(0.04, 0.1)*min(height, floor_ceil_gap);
 	cube_t parts[2] = {main, main};
 	rgeom_mat_t &base_mat(get_material(tid_nm_pair_t(get_concrete_tid(), 12.0), 1, 0, 1)); // shadowed, small
 	base_mat.add_cube_to_verts(base, base_color, all_zeros, EF_Z1); // skip bottom

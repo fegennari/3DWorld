@@ -44,7 +44,7 @@ int get_counter_tid  () {return get_texture_by_name("marble2.jpg");}
 int get_blinds_tid   () {return get_texture_by_name("interiors/blinds.jpg",    0, 0, 1, 8.0);} // use high aniso
 int get_blinds_nm_tid() {return get_texture_by_name("interiors/blinds_hn.jpg", 1, 0, 1, 8.0);} // use high aniso
 int get_money_tid    () {return get_texture_by_name("interiors/dollar20.jpg");}
-int get_ibeam_tid    () {return get_texture_by_name("metals/67_rusty_dirty_metal.jpg");} // or could use 65_Painted_dirty_metal.jpg?
+int get_ibeam_tid    () {return get_texture_by_name("metals/67_rusty_dirty_metal.jpg");}
 
 tid_nm_pair_t get_metal_plate_tex(float tscale, bool shadowed) {
 	return tid_nm_pair_t(get_met_plate_tid(), get_mplate_nm_tid(), tscale, tscale, 0.0, 0.0, shadowed);
@@ -1250,11 +1250,12 @@ void add_ladder_geom(rgeom_mat_t &mat, room_object_t const &c, colorRGBA const &
 	float const height(c.get_height()), depth(c.get_depth()), width(c.get_width());
 	float const side_width(0.06*width), rung_spacing(0.8*width), rung_height(0.08*rung_spacing), rung_inset(0.05*depth);
 	unsigned const num_rungs((height - rung_height)/rung_spacing); // round down
+	point const llc(c.get_llc());
 
 	for (unsigned d = 0; d < 2; ++d) { // left/right side verticals
 		cube_t side(c);
 		side.d[!c.dim][!d] = c.d[!c.dim][d] + (d ? -1.0 : 1.0)*side_width;
-		mat.add_cube_to_verts_untextured(side, color, sides_dim_mask);
+		mat.add_cube_to_verts(side, color, llc, sides_dim_mask);
 	}
 	cube_t rung(c);
 	rung.expand_in_dim(!c.dim, -side_width);
@@ -1264,7 +1265,7 @@ void add_ladder_geom(rgeom_mat_t &mat, room_object_t const &c, colorRGBA const &
 
 	for (unsigned r = 0; r < num_rungs; ++r) { // draw rungs
 		rung.translate_dim(2, rung_spacing); // translate up, starting with first rung
-		mat.add_cube_to_verts_untextured(rung, color, rung_skip_faces);
+		mat.add_cube_to_verts(rung, color, llc, rung_skip_faces);
 	}
 }
 void building_room_geom_t::add_ext_ladder(room_object_t const &c) {
@@ -1273,10 +1274,14 @@ void building_room_geom_t::add_ext_ladder(room_object_t const &c) {
 	add_ladder_geom(mat, c, c.color, sides_dim_mask); // no apply_light_color()
 }
 void building_room_geom_t::add_int_ladder(room_object_t const &c) {
-	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small, specular metal
+	int const tid(get_texture_by_name("metals/65_Painted_dirty_metal.jpg"));
+	tid_nm_pair_t tex(tid, 0.5/c.get_width(), 1);
+	tex.set_specular_color(WHITE, 0.6, 50.0);
+	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // shadowed, small, specular metal
+	colorRGBA const color(apply_light_color(c, WHITE)); // average color is light gray = white + texture
 
 	if (c.in_factory()) { // no rotation
-		add_ladder_geom(mat, c, apply_light_color(c), EF_Z1); // skip bottom
+		add_ladder_geom(mat, c, color, EF_Z1); // skip bottom
 		return;
 	}
 	float const depth(c.get_depth());
@@ -1284,7 +1289,7 @@ void building_room_geom_t::add_int_ladder(room_object_t const &c) {
 	c_unrot.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.8*depth; // shrink depth prior to rotate/lean against wall
 	c_unrot.z1() -= 0.2*depth; // move down slightly so that the legs are on the floor when rotated
 	unsigned const verts_start(mat.quad_verts.size());
-	add_ladder_geom(mat, c_unrot, apply_light_color(c), EF_Z1); // skip bottom
+	add_ladder_geom(mat, c_unrot, color, EF_Z1); // skip bottom
 	// rotate the ladder about the bottom to lean up against the wall
 	point about;
 	about.z       = c.z1();
