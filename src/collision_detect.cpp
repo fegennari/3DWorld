@@ -1782,10 +1782,11 @@ void force_onto_surface_mesh(point &pos) { // for camera
 		pos.z += radius;
 		float const prev_zval(pos.z);
 		proc_player_city_sphere_coll(pos);
-		float const delta_z(pos.z - camera_last_pos.z), delta_rate((delta_z/CAMERA_RADIUS)/fticks);
 
 		// handle player falling off/in a building or snapping to a different floor due to collision enabling or a collision bug
 		if (frame_counter > 100 && !player_wait_respawn) { // skip for first N frames from player spawn and when dead
+			float const delta_z(pos.z - camera_last_pos.z), delta_rate((delta_z/CAMERA_RADIUS)/fticks);
+
 			if (delta_z < 0.0) { // falling
 				float const MAX_FALL_RATE = 2.0; // distance per tick in units of camera radius
 				float const fall_rate_mod(MAX_FALL_RATE*((player_in_water == 2) ? 0.05 : ((player_in_water == 1) ? 0.1 : 1.0))); // fall slower in water

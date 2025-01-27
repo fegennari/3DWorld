@@ -572,8 +572,9 @@ class player_inventory_t { // manages player inventory, health, and other stats
 	vector<dead_person_t > dead_players;
 	set<unsigned> rooms_stolen_from;
 	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, oxygen, thirst;
-	float prev_player_zval, respawn_time=0.0;
+	float prev_player_zval, respawn_time=0.0, accum_fall_damage=0.0;
 	unsigned num_doors_unlocked, has_key; // has_key is a bit mask for key colors
+	int prev_respawn_frame=0;
 	bool prev_in_building, has_flashlight, is_poisoned, poison_from_spider, has_pool_cue;
 
 	void register_player_death(unsigned sound_id, string const &why) {
@@ -601,7 +602,7 @@ public:
 
 	void clear() { // called on player death
 		max_eq(best_value, tot_value);
-		cur_value     = cur_weight = tot_value = tot_weight = damage_done = 0.0;
+		cur_value     = cur_weight = tot_value = tot_weight = damage_done = accum_fall_damage = 0.0;
 		drunkenness   = bladder = bladder_time = prev_player_zval = 0.0;
 		player_health = oxygen = thirst = 1.0; // full health, oxygen, and (anti-)thirst
 		num_doors_unlocked = has_key = 0; // num_doors_unlocked not saved on death, but maybe should be?
@@ -629,6 +630,7 @@ public:
 		point const xlate(get_camera_coord_space_xlate());
 		place_player_at_xy(xlate.x, xlate.y); // move back to the origin/spawn location
 		if (PLAYER_RESPAWN > 0.0) {print_text_onscreen("You Have Been Reborn", RED, 2.0, 2*TICKS_PER_SECOND, 10);}
+		prev_respawn_frame  = frame_counter;
 		player_wait_respawn = 0;
 	}
 	void take_damage(float amt, int poison_type=0) { // poison_type: 0=none, 1=spider, 2=snake
@@ -1016,14 +1018,19 @@ public:
 		if (has_flashlight) {show_flashlight_icon();}
 		if (has_pool_cue  ) {show_pool_cue_icon  ();}
 	}
-	bool apply_fall_damage(float delta_z, float dscale=1.0) {
-		if (!in_building_gameplay_mode()) return 0;
-		if (player_wait_respawn)          return 0;
-		if (!camera_surf_collide)         return 0; // no fall damage when flying
+	void apply_fall_damage(float delta_z, float dscale=1.0) {
+		if (!in_building_gameplay_mode()) return;
+		if (player_wait_respawn)          return;
+		if (!camera_surf_collide)         return; // no fall damage when flying
 		//if (!camera_in_building)          return 0; // only take fall damage when inside the building (no falling off the roof) - not needed due to terminal velocity logic
 		float const fall_damage_start(3.0*CAMERA_RADIUS); // should be a function of building floor spacing?
-		if (delta_z < fall_damage_start)  return 0; // no damage
-		player_health -= dscale*(delta_z - fall_damage_start)/fall_damage_start;
+		if (delta_z < fall_damage_start)  return; // no damage
+		accum_fall_damage += dscale*(delta_z - fall_damage_start)/fall_damage_start;
+	}
+	bool subtract_fall_damage_from_health() {
+		if (accum_fall_damage == 0.0) return 0;
+		player_health -= accum_fall_damage;
+		accum_fall_damage = 0.0;
 		if (player_is_dead()) {register_player_death(SOUND_SQUISH, " from a fall"); return 1;} // dead
 		gen_sound_thread_safe_at_player(SOUND_SQUISH, 0.5);
 		add_camera_filter(colorRGBA(RED, 0.25), 4, -1, CAM_FILT_DAMAGE); // 4 ticks of red damage
@@ -1076,7 +1083,9 @@ public:
 		point const camera_pos(get_camera_pos());
 		float const player_zval(camera_pos.z), delta_z(prev_player_zval - player_zval);
 		if (camera_in_building != prev_in_building) {prev_in_building = camera_in_building;}
-		else if (prev_player_zval != 0.0 && delta_z > 0.0 && apply_fall_damage(delta_z)) return; // Note: fall damage may no longer trigger with slow player fall logic
+		// Note: fall damage may no longer trigger with slow player fall logic; allow a few extra frames after a raspawn for the player pos to stabilize
+		else if (frame_counter > prev_respawn_frame+4 && prev_player_zval != 0.0 && delta_z > 0.0) {apply_fall_damage(delta_z);}
+		if (delta_z <= 0.0 && subtract_fall_damage_from_health()) return; // apply fall damage when falling has stopped; return if dead
 		prev_player_zval = player_zval;
 		// handle death events
 		if (player_is_dead()) {register_player_death(SOUND_SCREAM3, ""); return;} // dead
