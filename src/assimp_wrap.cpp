@@ -7,6 +7,7 @@
 #include "model3d.h"
 #include "profiler.h"
 
+extern bool enable_spec_map, enable_shine_map;
 extern int display_mode;
 extern string assimp_alpha_exclude_str;
 
@@ -544,8 +545,10 @@ class file_reader_assimp {
 			// setup and load textures
 			mat.a_tid    = load_texture(scene, material, aiTextureType_AMBIENT);
 			mat.d_tid    = load_texture(scene, material, aiTextureType_DIFFUSE);
-			mat.s_tid    = load_texture(scene, material, aiTextureType_SPECULAR);
 			mat.bump_tid = load_texture(scene, material, aiTextureType_NORMALS, 1); // is_normal_map=1; or aiTextureType_HEIGHT?
+			if (enable_spec_map ) {mat.s_tid  = load_texture(scene, material, aiTextureType_SPECULAR );} // not always used
+			if (enable_shine_map) {mat.ns_tid = load_texture(scene, material, aiTextureType_SHININESS);} // usually unused
+			//mat.alpha_tid= load_texture(scene, material, aiTextureType_OPACITY); // unused/not supported?
 			//mat.refl_tid = load_texture(material, aiTextureType_REFLECTION); // unused
 			// setup colors
 			aiColor4D color;

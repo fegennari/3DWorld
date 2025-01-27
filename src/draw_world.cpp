@@ -356,7 +356,7 @@ void setup_puddles_texture(shader_t &s) {
 
 
 // texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7: shadow map,
-//                     8: specular map, 9: depth map/future gloss map (unused), 10: burn mask/sky_zval, 11: noise, 12: landscape texture/blue noise,
+//                     8: specular map, 9: depth map/future gloss map, 10: burn mask/sky_zval, 11: noise, 12: landscape texture/blue noise,
 //                     13: depth, 14: reflection, 15: ripples/dlight bcubes, 16-31: dlight shadow maps
 // use_texgen: 0 = use texture coords, 1 = use standard texture gen matrix, 2 = use custom shader tex0_s/tex0_t,
 //             3 = use vertex id for texture, 4 = use bent quad vertex id for texture, 5 = mix between tc and texgen using tc_texgen_mix

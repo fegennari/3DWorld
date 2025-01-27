@@ -78,6 +78,8 @@ auto_calc_tt_model_zvals 1
 flatten_tt_mesh_under_models 1
 #use_model_lod_blocks 1
 #vertex_optimize_flags 1 0 0
+enable_spec_map  0 # not used for cities/buildings, and adds load time and memory
+enable_shine_map 0 # not used for cities/buildings, and adds load time and memory
 model_hemi_lighting_scale 0.3 # reduced from the default of 0.5 for Ferris wheel
 coll_obj_file coll_objs/coll_objs_heightmap.txt
 

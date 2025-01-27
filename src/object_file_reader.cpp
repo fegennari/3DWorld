@@ -12,7 +12,7 @@
 #include "fast_atof.h"
 
 
-extern bool use_obj_file_bump_grayscale, model_calc_tan_vect, enable_model_animations;
+extern bool use_obj_file_bump_grayscale, model_calc_tan_vect, enable_model_animations, enable_spec_map, enable_shine_map;
 extern float model_auto_tc_scale, model_mat_lod_thresh;
 extern model3ds all_models;
 
@@ -385,12 +385,12 @@ public:
 			else if (s == "map_ks") {
 				assert(cur_mat);
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ks for " << material_name << endl; return 0;}
-				check_and_bind(cur_mat->s_tid, tfn, 0, verbose);
+				if (enable_spec_map) {check_and_bind(cur_mat->s_tid, tfn, 0, verbose);}
 			}
 			else if (s == "map_ns") {
 				assert(cur_mat);
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ns for " << material_name << endl; return 0;}
-				check_and_bind(cur_mat->ns_tid, tfn, 0, verbose);
+				if (enable_shine_map) {check_and_bind(cur_mat->ns_tid, tfn, 0, verbose);}
 			}
 			else if (s == "map_d") { // dissolve
 				assert(cur_mat);
