@@ -4,6 +4,8 @@
 #include "function_registry.h"
 #include "buildings.h"
 
+extern float CAMERA_RADIUS;
+
 
 float shift_val_to_not_intersect_window(cube_t const &c, float val, float hspace, float window_border, bool dim);
 
@@ -175,7 +177,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	set_cube_zvals(dbg, bcube.z2(), bcube.z2()+bcube.dz());
 	objs.emplace_back(dbg, TYPE_DBG_SHAPE, room_id, 0, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, RED);
 #endif
-	float const clearance(get_min_front_clearance_inc_people());
+	float const clearance(get_min_front_clearance_inc_people()), player_height(get_player_height());
 	cube_t place_area(room);
 	place_area.expand_by_xy(-support_width); // inside the supports
 	place_area.intersect_with_cube(interior->factory_info->floor_space); // clip off side rooms and floor/ceiling
@@ -183,14 +185,14 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 
 	// add ladders to walls
 	for (cube_t const &r : nested_rooms) {
-		float const wall_pos(r.d[edim][!edir] + (edir ? -1.0 : 1.0)*wall_thick);
+		float const wall_pos(r.d[edim][!edir] + 0.5*(edir ? -1.0 : 1.0)*wall_thick); // partially inside the wall
 		float const lo(max(r.d[!edim][0], place_area.d[!edim][0])), hi(min(r.d[!edim][1], place_area.d[!edim][1]));
 		float const ladder_hwidth(rgen.rand_uniform(0.1, 0.11)*window_vspace);
 		if ((hi - lo) < 4.0*ladder_hwidth) continue; // too narrow
 		cube_t ladder;
-		set_cube_zvals(ladder, zval, (r.z2() + fc_thick + 0.35*window_vspace));
+		set_cube_zvals(ladder, zval, (r.z2() + fc_thick + player_height + CAMERA_RADIUS));
 		ladder.d[edim][ edir] = wall_pos;
-		ladder.d[edim][!edir] = wall_pos + (edir ? -1.0 : 1.0)*0.05*window_vspace; // set depth
+		ladder.d[edim][!edir] = wall_pos + (edir ? -1.0 : 1.0)*0.06*window_vspace; // set depth
 
 		for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place a ladder that doesn't block the door
 			set_wall_width(ladder, rgen.rand_uniform((lo + ladder_hwidth), (hi - ladder_hwidth)), ladder_hwidth, !edim);
