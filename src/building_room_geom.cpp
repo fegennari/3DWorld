@@ -4575,7 +4575,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 		colorRGBA const sink_color(apply_light_color(c, GRAY));
 		rgeom_mat_t &basin_mat(get_scratched_metal_material(4.0/c.dz(), 0)); // unshadowed
 		basin_mat.add_cube_to_verts(sink, sink_color, tex_origin, EF_Z2, 0, 0, 0, 1); // basin: inverted, skip top face, unshadowed
-		float const water_level(c.state_flags ? 0.3 : 0.0); // may be 30% filled
+		float const water_level((c.state_flags & sink_water_state_bit) ? 0.3 : 0.0); // may be 30% filled
 		if (water_level > 0.0) {add_water_plane(c, sink, water_level);} // draw water
 		// drain
 		cube_t drain(cube_bot_center(sink));
@@ -4971,7 +4971,7 @@ void building_room_geom_t::add_tub_outer(room_object_t const &c) {
 	add_water_plane(c, water_area, water_level); // draw water
 }
 void building_room_geom_t::add_sink_water(room_object_t const &c) {
-	float water_level(c.state_flags ? 0.3 : 0.0); // may be 30% filled
+	float water_level((c.state_flags & sink_water_state_bit) ? 0.3 : 0.0); // may be 30% filled
 	if (water_level <= 0.0) return; // no water
 	water_level = (0.7 + 0.1*water_level); // adjust for top of sink
 	float const width(c.get_width()), signed_depth((c.dir ? -1.0 : 1.0)*c.get_depth());

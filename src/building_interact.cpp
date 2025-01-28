@@ -653,8 +653,8 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		if (obj.is_sink_type()) {
 			obj.flags ^= RO_FLAG_IS_ACTIVE; // toggle active bit, only for sinks for now
 
-			if (obj.is_active() && obj.state_flags == 0) { // no water yet
-				obj.state_flags ^= 1; // mark as filled with water
+			if (obj.is_active() && (obj.state_flags & sink_water_state_bit) == 0) { // no water yet
+				obj.state_flags ^= sink_water_state_bit; // mark as filled with water
 				interior->room_geom->invalidate_static_geom();
 			}
 			refill_thirst(); // player can drink from sink

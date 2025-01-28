@@ -648,6 +648,8 @@ struct oriented_cube_t : public cube_t {
 	float get_height() const {return dz();}
 };
 
+uint16_t const sink_water_state_bit(1 << 15); // MSB of uint16_t; hopefully doesn't conflict with doors or drawers
+
 struct room_object_t : public oriented_cube_t { // size=68
 	uint8_t taken_level=0;
 	// Note: state_flags is used for drawer was_opened state, railing num_stairs, pool balls, and sink/tub/shower water
