@@ -197,7 +197,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place a ladder that doesn't block the door
 			set_wall_width(ladder, rgen.rand_uniform((lo + ladder_hwidth), (hi - ladder_hwidth)), ladder_hwidth, !edim);
 			if (cube_int_ext_door(ladder) || interior->is_blocked_by_stairs_or_elevator(ladder)) continue; // blocked
-			objs.emplace_back(ladder, TYPE_INT_LADDER, room_id, edim, !edir, RO_FLAG_IN_FACTORY, light_amt, SHAPE_CUBE, GRAY);
+			objs.emplace_back(ladder, TYPE_INT_LADDER, room_id, edim, !edir, RO_FLAG_IN_FACTORY, light_amt);
 			cube_t blocker(ladder);
 			blocker.d[edim][!edir] += (edir ? -1.0 : 1.0)*clearance;
 			objs.emplace_back(blocker, TYPE_BLOCKER, room_id, edim, !edir, RO_FLAG_INVIS);

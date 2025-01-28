@@ -2713,7 +2713,7 @@ bool building_t::add_ladder_to_room(rand_gen_t &rgen, room_t const &room, float 
 	float const ladder_height(rgen.rand_uniform(0.77, 0.95)*get_floor_ceil_gap());
 	vector3d const ladder_sz(0.25, rgen.rand_uniform(0.2, 0.22), 1.0); // D, W, H
 	cube_t const place_area(get_walkable_room_bounds(room));
-	return place_obj_along_wall(TYPE_INT_LADDER, room, ladder_height, ladder_sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 1, 4, 0, GRAY);
+	return place_obj_along_wall(TYPE_INT_LADDER, room, ladder_height, ladder_sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 1, 4, 0);
 }
 
 bool building_t::add_interrogation_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {

@@ -1268,17 +1268,19 @@ void add_ladder_geom(rgeom_mat_t &mat, room_object_t const &c, colorRGBA const &
 		mat.add_cube_to_verts(rung, color, llc, rung_skip_faces);
 	}
 }
+tid_nm_pair_t get_ladder_tex(float width, bool shadowed) {
+	tid_nm_pair_t tex(get_texture_by_name("metals/65_Painted_dirty_metal.jpg"), 0.5/width, shadowed);
+	tex.set_specular_color(WHITE, 0.6, 50.0);
+	return tex;
+}
 void building_room_geom_t::add_ext_ladder(room_object_t const &c) {
-	rgeom_mat_t &mat(get_metal_material(0, 0, 0, 1)); // unshadowed, specular metal, exterior
+	rgeom_mat_t &mat(get_material(get_ladder_tex(c.get_width(), 0), 0, 0, 0, 0, 1)); // unshadowed, exterior
 	unsigned const sides_dim_mask(EF_Z1 | ~get_face_mask(c.dim, !c.dir)); // draw all but the bottom and back face against the wall
 	add_ladder_geom(mat, c, c.color, sides_dim_mask); // no apply_light_color()
 }
 void building_room_geom_t::add_int_ladder(room_object_t const &c) {
-	int const tid(get_texture_by_name("metals/65_Painted_dirty_metal.jpg"));
-	tid_nm_pair_t tex(tid, 0.5/c.get_width(), 1);
-	tex.set_specular_color(WHITE, 0.6, 50.0);
-	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // shadowed, small, specular metal
-	colorRGBA const color(apply_light_color(c, WHITE)); // average color is light gray = white + texture
+	rgeom_mat_t &mat(get_material(get_ladder_tex(c.get_width(), 1), 1, 0, 1)); // shadowed, small, specular metal
+	colorRGBA const color(apply_light_color(c));
 
 	if (c.in_factory()) { // no rotation
 		add_ladder_geom(mat, c, color, EF_Z1); // skip bottom

@@ -1117,7 +1117,7 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) { // or ladder
 				if (cube_int_ext_door(bc_exp))                    continue; // check exterior doors
 				if (has_bcube_int(bc_exp, details))               continue; // check details; outdoor AC units can intersect
 				if (!deck_bounds.is_all_zeros() && bc.intersects_xy(deck_bounds)) continue; // check deck
-				interior->room_geom->objs.emplace_back(bc, TYPE_LADDER, 0, dim, dir, RO_FLAG_EXTERIOR, 1.0, SHAPE_CUBE, GRAY); // room_id=0
+				interior->room_geom->objs.emplace_back(bc, TYPE_LADDER, 0, dim, dir, RO_FLAG_EXTERIOR, 1.0, SHAPE_CUBE, WHITE); // room_id=0
 				union_with_coll_bcube(bc);
 				ladder = bc;
 				return; // success/done
