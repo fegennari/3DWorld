@@ -885,6 +885,11 @@ rgeom_mat_t &building_room_geom_t::get_metal_material(bool inc_shadows, bool dyn
 	tex.set_specular_color(spec_color, 0.8, 60.0);
 	return get_material(tex, inc_shadows, dynamic, small, 0, exterior);
 }
+rgeom_mat_t &building_room_geom_t::get_scratched_metal_material(float tscale, bool inc_shadows, bool dynamic, unsigned small, bool exterior) {
+	tid_nm_pair_t tex(get_texture_by_name("metals/60_scratch_metal.jpg"), tscale, inc_shadows);
+	tex.set_specular_color(WHITE, 0.8, 60.0);
+	return get_material(tex, inc_shadows, dynamic, small, 0, exterior);
+}
 
 void room_object_t::set_as_bottle(unsigned rand_id, unsigned max_type, bool no_empty, unsigned exclude_mask) {
 	assert(max_type > 0 && max_type < NUM_BOTTLE_TYPES);

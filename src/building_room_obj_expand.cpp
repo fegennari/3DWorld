@@ -856,7 +856,7 @@ void add_rows_of_vcylinders(room_object_t const &c, cube_t const &region, float 
 				else if (type == TYPE_TCAN      ) {obj.color = tcan_colors[rgen.rand()%NUM_TCAN_COLORS];}
 				else if (type == TYPE_LAMP      ) {obj.color = lamp_colors[rgen.rand()%NUM_LAMP_COLORS];}
 				else if (type == TYPE_BUCKET    ) {obj.color = LT_GRAY;}
-				else if (type == TYPE_PAN       ) {obj.color = GRAY_BLACK;}
+				else if (type == TYPE_PAN       ) {obj.color = DK_GRAY;}
 				objects.push_back(obj);
 			}
 			row_obj.translate_dim(c.dim, col_spacing);

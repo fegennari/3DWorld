@@ -1106,16 +1106,17 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	unsigned const skip_faces((is_house || in_room_center) ? 0 : ~get_face_mask(c.dim, c.dir));
 	rgeom_mat_t &wood_mat(get_wood_material(tscale, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
 	colorRGBA const shelf_color(apply_light_color(c));
+	vector3d const origin(c.get_llc());
 
 	for (unsigned s = 0; s < num_shelves; ++s) {
-		wood_mat.add_cube_to_verts(shelves[s], shelf_color, c.get_llc(), skip_faces, !c.dim); // make wood grain horizontal
+		wood_mat.add_cube_to_verts(shelves[s], shelf_color, origin, skip_faces, !c.dim); // make wood grain horizontal
 	}
 	if (c.flags & RO_FLAG_INTERIOR) { // add support brackets to interior shelves; skip them if against an exterior wall in case they intersect a window
 		unsigned const skip_faces_vbracket(skip_faces | (c.in_mall() ? EF_Z1 : EF_Z12)); // only draw top face for mall shelves since ceiling is high
-		rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // shadowed, specular metal; small=1
-		colorRGBA const bracket_color(apply_light_color(c, LT_GRAY));
 		static vect_cube_with_ix_t brackets;
 		get_shelf_brackets(c, shelves, num_shelves, brackets);
+		rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // shadowed, specular metal; small=1
+		colorRGBA const bracket_color(apply_light_color(c, LT_GRAY));
 
 		for (cube_with_ix_t const &b : brackets) {
 			unsigned const skip_faces_b(b.ix ? skip_faces_vbracket : (skip_faces | EF_Z2));
@@ -3914,7 +3915,7 @@ void building_room_geom_t::add_bucket(room_object_t const &c, bool draw_metal, b
 	float const bot_rscale = 0.65;
 
 	if (draw_metal) {
-		rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+		rgeom_mat_t &mat(get_scratched_metal_material(2.0/c.dz(), 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
 		colorRGBA const color(apply_light_color(c));
 		mat.add_vcylin_to_verts(c, color, 1, 0, 1, 1, bot_rscale, 1.0); // untextured, bottom only, two_sided truncated cone with inverted bottom normal
 		// draw a half torus handle
@@ -4572,7 +4573,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 		subtract_cube_from_cube(top, sink, cubes);
 		for (auto i = cubes.begin(); i != cubes.end(); ++i) {top_mat.add_cube_to_verts(*i, top_color, tex_origin);} // should always be 4 cubes
 		colorRGBA const sink_color(apply_light_color(c, GRAY));
-		rgeom_mat_t &basin_mat(get_metal_material(0));
+		rgeom_mat_t &basin_mat(get_scratched_metal_material(4.0/c.dz(), 0)); // unshadowed
 		basin_mat.add_cube_to_verts(sink, sink_color, tex_origin, EF_Z2, 0, 0, 0, 1); // basin: inverted, skip top face, unshadowed
 		float const water_level(c.state_flags ? 0.3 : 0.0); // may be 30% filled
 		if (water_level > 0.0) {add_water_plane(c, sink, water_level);} // draw water
@@ -4586,7 +4587,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 			cube_t sink_outer(sink);
 			sink_outer.expand_by_xy(0.01*dz); // expand by sink basin thickness
 			sink_outer.z1() -= 0.1*dz;
-			basin_mat.add_cube_to_verts_untextured(sink_outer, sink_color, (~get_face_mask(c.dim, !c.dir) | EF_Z2)); // skip back and top
+			basin_mat.add_cube_to_verts(sink_outer, sink_color, tex_origin, (~get_face_mask(c.dim, !c.dir) | EF_Z2)); // skip back and top
 		}
 		rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed, specular metal (specular doesn't do much because it's flat, but may make more of a diff using a cylinder later)
 		metal_mat.add_cube_to_verts_untextured(faucet1, sink_color, EF_Z12); // vertical part of faucet, skip top and bottom faces
@@ -5194,7 +5195,7 @@ void building_room_geom_t::add_toy(room_object_t const &c) { // is_small=1
 
 void building_room_geom_t::add_pan(room_object_t const &c) { // is_small=1
 	colorRGBA const color(apply_light_color(c));
-	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small
+	rgeom_mat_t &mat(get_scratched_metal_material(1.0/c.dz(), 1, 0, 1)); // shadowed, small
 	mat.add_vcylin_to_verts(c, color, 1, 0, 1, 1, 0.8, 1.0);
 	// add handle
 	float const diameter(c.get_sz_dim(!c.dim)), handle_radius(0.08*diameter), edge_pos(c.d[!c.dim][c.dir]);
@@ -5504,7 +5505,7 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 }
 
 void building_room_geom_t::add_metal_bar(room_object_t const &c) {
-	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small
+	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small; should there be an option to make it scratched?
 	metal_mat.add_cube_to_verts_untextured(c, apply_light_color(c), c.item_flags); // skip_faces is stored in item_flags
 }
 
@@ -5547,21 +5548,22 @@ void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c,
 	unsigned const skip_faces[2] = {get_skip_mask_for_dim(vdim), get_skip_mask_for_dim(hdim)};
 	cube_t bar(c);
 	bar.expand_in_dim(vdim, -hbar_hthick);
+	vector3d const origin(c.get_llc());
 
 	for (unsigned n = 0; n < num_vbars; ++n) { // vertical
 		set_wall_width(bar, (c.d[hdim][0] + vbar_hthick + n*v_step), vbar_hthick, hdim);
-		mat.add_cube_to_verts_untextured(bar, color, skip_faces[0]);
+		mat.add_cube_to_verts(bar, color, origin, skip_faces[0]);
 	}
 	bar = c;
 	if (h_adj_val != 0.0) {bar.expand_in_dim(adj_dim, h_adj_val);}
 
 	for (unsigned n = 0; n < num_hbars; ++n) { // horizontal
 		set_wall_width(bar, (c.d[vdim][0] + hbar_hthick + n*h_step), hbar_hthick, vdim);
-		mat.add_cube_to_verts_untextured(bar, color, skip_faces[1]);
+		mat.add_cube_to_verts(bar, color, origin, skip_faces[1]);
 	}
 }
 void building_room_geom_t::add_store_gate(cube_t const &c, bool dim, float open_amt) {
-	rgeom_mat_t &mat(get_metal_material(1, 0, 3)); // untextured, shadowed, small=3 (door)
+	rgeom_mat_t &mat(get_scratched_metal_material(10.0/c.dz(), 1, 0, 3)); // shadowed, small=3 (door)
 	float const thickness(c.get_sz_dim(dim)), vbar_hthick(0.6*thickness), hbar_hthick(0.2*thickness);
 	unsigned const num_hbars(max(2, round_fp(30 * min(1.0, 2.0*(1.0 - open_amt)))));
 	add_grid_of_bars(mat, LT_GRAY, c, 6, num_hbars, vbar_hthick, hbar_hthick, 2, !dim, dim, -0.1*thickness); // h-bars slightly thinner
