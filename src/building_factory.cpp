@@ -180,6 +180,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	cube_t place_area(room);
 	place_area.expand_by_xy(-support_width); // inside the supports
 	place_area.intersect_with_cube(interior->factory_info->floor_space); // clip off side rooms and floor/ceiling
+	cube_t const &entry(interior->factory_info->entrance_area);
 	unsigned const objs_start(objs.size());
 
 	// add ladders to walls
@@ -205,7 +206,9 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	} // for r
 	// add machines
 	add_machines_to_factory(rgen, room, place_area, zval, room_id, light_amt, objs_start);
+	// add fire extinguisher
+	add_fire_ext_along_wall(entry, zval, room_id, light_amt, !edim, rgen.rand_bool(), rgen); // choose a random side
 	// TODO: catwalks
 	// TODO: large fans in the ceiling
-	// TODO: fire extinguishers, stacks of boxes and crates, paint cans, buckets, breaker panels, fire sprinklers, clock, transformer, water fountain?
+	// TODO: stacks of boxes and crates, paint cans, buckets, breaker panels, fire sprinklers, clock, transformer, water fountain?
 }

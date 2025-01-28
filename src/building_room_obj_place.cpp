@@ -3816,6 +3816,24 @@ bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float 
 	radius = height*(0.5*(sz.x + sz.y)/sz.z);
 	return 1;
 }
+bool building_t::add_fire_ext_along_wall(cube_t const &room, float zval, unsigned room_id, float tot_light_amt, bool dim, bool dir, rand_gen_t &rgen) {
+	float const window_vspacing(get_window_vspace());
+	float fe_height(0.0), fe_radius(0.0);
+	if (!get_fire_ext_height_and_radius(window_vspacing, fe_height, fe_radius)) return 0;
+	float const min_clearance(2.0*fe_radius), wall_pos_lo(room.d[!dim][0] + min_clearance), wall_pos_hi(room.d[!dim][1] - min_clearance);
+	if (wall_pos_lo >= wall_pos_hi) return 0; // should never fail?
+	float const wall_pos(room.d[dim][dir] + (dir ? -1.0 : 1.0)*0.5*get_wall_thickness());
+
+	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts at placing a fire extinguisher
+		float const val(rgen.rand_uniform(wall_pos_lo, wall_pos_hi)), cov_lo(val - min_clearance), cov_hi(val + min_clearance);
+
+		if (is_contained_in_wall_range(wall_pos, cov_lo, cov_hi, (zval + 0.5*window_vspacing), dim)) { // shouldn't need to check anything else?
+			add_fire_ext(fe_height, fe_radius, zval, wall_pos, val, room_id, tot_light_amt, dim, dir);
+			return 1; // done/success
+		}
+	} // for n
+	return 0; // failed to place
+}
 void building_t::add_fire_ext(float height, float radius, float zval, float wall_edge, float pos_along_wall, unsigned room_id, float tot_light_amt, bool dim, bool dir) {
 	float const window_vspacing(get_window_vspace()), dir_sign(dir ? -1.0 : 1.0);
 	point pos(0.0, 0.0, (zval + 0.32*window_vspacing)); // bottom position
@@ -3929,25 +3947,8 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 	}
 	// add a fire extinguisher on the wall
 	bool const pri_dir(room_rgen.rand_bool()); // random, but the same across all floors
-	float fe_height(0.0), fe_radius(0.0);
+	add_fire_ext_along_wall(room, zval, room_id, tot_light_amt, !long_dim, pri_dir, room_rgen);
 
-	if (get_fire_ext_height_and_radius(window_vspacing, fe_height, fe_radius)) {
-		float const min_clearance(2.0*fe_radius), wall_pos_lo(room.d[long_dim][0] + min_clearance), wall_pos_hi(room.d[long_dim][1] - min_clearance);
-
-		if (wall_pos_lo < wall_pos_hi) { // should always be true?
-			bool const dim(!long_dim), dir(pri_dir);
-			float const wall_pos(room.d[dim][dir] + (dir ? -1.0 : 1.0)*0.5*wall_thickness);
-
-			for (unsigned n = 0; n < 20; ++n) { // make 20 attempts at placing a fire extinguisher
-				float const val(room_rgen.rand_uniform(wall_pos_lo, wall_pos_hi)), cov_lo(val - min_clearance), cov_hi(val + min_clearance);
-
-				if (is_contained_in_wall_range(wall_pos, cov_lo, cov_hi, (zval + 0.5*window_vspacing), dim)) { // shouldn't need to check anything else?
-					add_fire_ext(fe_height, fe_radius, zval, wall_pos, val, room_id, tot_light_amt, dim, dir);
-					break; // done/success
-				}
-			} // for n
-		}
-	}
 	// add a water fountain to the center of the hall (likely between stairs and elevator)
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_WFOUNTAIN)) {
 		float used_space_center(0.0); // calculate occupied hallway width near water fountain, assuming the first stairwell and elevator are in the primary hallway
