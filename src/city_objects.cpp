@@ -992,7 +992,7 @@ power_pole_t::power_pole_t(point const &base_, point const &center_, float pole_
 	bcube.set_from_point(center);
 	bcube.z2() += height;
 	pos    = bcube.get_cube_center();
-	radius = bcube.get_bsphere_radius();
+	radius = 0.5*height;
 	for (unsigned d = 0; d < 2; ++d) {bcube.expand_in_dim(d, (has_dim_set(!d) ? get_bar_extend() : pole_radius));} // add bar if dim bit not set
 	bcube_with_wires = bcube; // cache for visibility query; could also recompute on each call
 

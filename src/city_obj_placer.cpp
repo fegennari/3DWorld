@@ -963,12 +963,16 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 					newsrack_t const newsrack(pos, nr_height, nr_width, nr_depth, dim, !dir, rgen.rand(), nr_colors[rgen.rand() % NUM_NR_COLORS]); // random style
 					cube_t test_cube(newsrack.bcube);
 					test_cube.d[dim][!dir] += (dir ? -1.0 : 1.0)*nr_depth; // add front clearance; faces inward from the plot
+					if (has_bcube_int_xy(test_cube, blockers, max(0.1f*nr_width, min_obj_spacing))) continue; // skip if intersects a building or parking lot, with padding
+					bool has_ppole_int(0);
 
-					if (!has_bcube_int_xy(test_cube, blockers, max(0.1f*nr_width, min_obj_spacing))) { // skip if intersects a building or parking lot, with padding
-						nrack_groups.add_obj(newsrack, newsracks);
-						colliders.push_back(newsrack.bcube); // no clearance
-						blockers .push_back(test_cube); // includes clearance
+					for (auto i = ppoles.begin()+ppoles_start; i != ppoles.end(); ++i) {
+						if (sphere_cube_intersect_xy(i->get_base(), i->get_pole_radius(), test_cube)) {has_ppole_int = 1; break;}
 					}
+					if (has_ppole_int) continue; // should be rare
+					nrack_groups.add_obj(newsrack, newsracks);
+					colliders.push_back(newsrack.bcube); // no clearance
+					blockers .push_back(test_cube); // includes clearance
 				} // for n
 			} // for dir
 		} // for dim

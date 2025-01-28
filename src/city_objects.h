@@ -228,12 +228,13 @@ class power_pole_t : public city_obj_t {
 public:
 	power_pole_t(point const &base_, point const &center_, float pole_radius_, float height, float wires_offset_,
 		float const pole_spacing_[2], uint8_t dims_, bool at_grid_edge_, bool const at_line_end_[2], bool residential_);
-	bool is_at_grid_edge() const {return at_grid_edge;}
-	bool has_transformer() const {return (dims == 3);}
+	bool is_at_grid_edge () const {return at_grid_edge;}
+	bool has_transformer () const {return (dims == 3);}
+	float get_pole_radius() const {return pole_radius;}
+	point const &get_base() const {return base;}
 	point get_top() const {return point(base.x, base.y, bcube.z2());}
 	void get_wires_conn_pts(point pts[3], bool d) const;
 	void get_top_wires_conn_pts(point pts[3]) const {get_wires_conn_pts(pts, ((dims&1) ? 0 : 1));} // use X if enabled, otherwise Y
-	float get_pole_radius() const {return pole_radius;}
 	float get_bsphere_radius(bool shadow_only) const {return (shadow_only ? radius : bsphere_radius);} // non-shadow pass includes wires bsphere radius
 	cube_t const &get_outer_bcube() const {return bcube_with_wires;}
 	cube_t get_bird_bcube  () const {return get_ped_occluder();} // centered on the pole; same as pedestrians
