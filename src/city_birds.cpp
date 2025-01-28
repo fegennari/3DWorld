@@ -97,15 +97,17 @@ city_bird_t::city_bird_t(point const &pos_, float height_, vector3d const &init_
 	city_bird_base_t(pos_, height_, init_dir, OBJ_MODEL_BIRD_ANIM), state(BIRD_STATE_STANDING), loc_ix(loc_ix_), height(height_), prev_frame_pos(pos), color(color_)
 {
 	anim_time = 1.0*TICKS_PER_SECOND*rgen.rand_float(); // 1s random variation so that birds aren't all in sync
-	bcube    -= 0.28*radius*plus_z; // required for GLB bird model
 }
 
 void city_bird_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	if (dstate.is_visible_and_unoccluded(bcube, dist_scale)) {
+	cube_t draw_bcube(bcube);
+	draw_bcube.translate_dim(2, -0.28*radius); // required for GLB bird model
+
+	if (dstate.is_visible_and_unoccluded(draw_bcube, dist_scale)) {
 		// animations: 0=flying, 1=gliding, 2=landing, 3=standing, 4=takeoff
 		float const model_anim_time(anim_time_scale*anim_time/SKELETAL_ANIM_TIME_CONST); // divide by constant to cancel out multiply in draw_model()
 		animation_state_t anim_state(1, ANIM_ID_SKELETAL, model_anim_time, get_model_anim_id()); // enabled=1
-		building_obj_model_loader.draw_model(dstate.s, pos, bcube, dir, color, dstate.xlate, OBJ_MODEL_BIRD_ANIM, shadow_only, 0, &anim_state);
+		building_obj_model_loader.draw_model(dstate.s, pos, draw_bcube, dir, color, dstate.xlate, OBJ_MODEL_BIRD_ANIM, shadow_only, 0, &anim_state);
 	}
 	if (0 && dest_valid() && is_close_to_player()) { // debug drawing, even if bcube not visible
 		post_draw(dstate, shadow_only); // clear animations
@@ -230,6 +232,7 @@ void city_bird_t::next_frame(float timestep, float delta_dir, point const &camer
 		// update direction
 		if (dir_dp < 0.999) { // not oriented in dir
 			delta_dir *= max(1.0f, 4.0f*radius/dist_xy); // faster correction when close to destination to prevent circling
+			//if (dir_dp < 0.9 && state == BIRD_STATE_FLYING && ((loc_ix + frame_counter + 1) & 7) == 0) {} // check for pending collision?
 			// if directions are nearly opposite, pick a side to turn using the cross product to get an orthogonal vector
 			if (dir_dp < -0.9) {dest_dir_xy = cross_product(dir, plus_z)*((loc_ix & 1) ? -1.0 : 1.0);} // random turn direction (CW/CCW)
 			dir = delta_dir*dest_dir_xy + (1.0 - delta_dir)*dir; // merge new_dir into dir gradually for smooth turning
