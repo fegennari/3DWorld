@@ -150,8 +150,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 					bot.z2() = objs.back().z1() + 0.1*fc_thick; // shift up slightly
 					cube_t sub(r);
 					sub.expand_by(0.5*wall_thick);
-					support_parts.clear();
-					subtract_cube_from_cube(bot, sub, support_parts);
+					subtract_cube_from_cube(bot, sub, support_parts, 1); // clear_out=1
 					for (cube_t const &c : support_parts) {objs.emplace_back(c, TYPE_IBEAM, room_id, dim, 1, RO_FLAG_ADJ_TOP, light_amt, SHAPE_CUBE, WHITE, skip_faces);}
 					break;
 				} // for r

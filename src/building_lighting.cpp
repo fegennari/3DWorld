@@ -401,8 +401,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			}
 			cube_t inside(sides);
 			inside.expand_by_xy(-(is_stall ? 0.0125 : 0.07)*dz); // shrink by wall thickness
-			temp.clear();
-			subtract_cube_from_cube(sides, inside, temp);
+			subtract_cube_from_cube(sides, inside, temp, 1); // clear_out=1
 			assert(temp.size() == 4); // -y, +y, -x, +x
 			unsigned const front_ix(3 - (2*c->dim + c->dir)); // dim|dir:front_ix: 00:3, 01:2, 10:1, 11:0
 
@@ -453,8 +452,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 				top.z1() = bc.z2();
 				cube_t inside(top);
 				inside.expand_by_xy(-0.1*c->get_sz_dim(dim)); // shrink
-				temp.clear();
-				subtract_cube_from_cube(top, inside, temp);
+				subtract_cube_from_cube(top, inside, temp, 1); // clear_out=1
 				assert(temp.size() == 4); // -y, +y, -x, +x
 				add_colored_cubes(temp, color, ext_bcube, cc);
 			}

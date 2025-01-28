@@ -424,7 +424,7 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 	for (cube_t &f : interior->floors) {
 		if (!room.contains_cube(f)) continue;
 		vect_cube_t floor_parts;
-		subtract_cube_from_cube(f, pool, floor_parts);
+		subtract_cube_from_cube(f, pool, floor_parts); // should only get here for one floor
 		assert(floor_parts.size() == 4);
 		f = pool;
 		set_cube_zvals(f, pool_bottom, pool.z1()); // move to the bottom of the pool

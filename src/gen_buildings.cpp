@@ -2608,8 +2608,7 @@ void building_t::get_walkway_end_verts(building_draw_t &bdraw, point const &pos)
 				door_bc_exp.expand_in_dim(w.dim, wall_thickness);
 				swap_cube_dims(wall_cube,   w.dim, 2); // swap so that subtract can be done in the XY plane
 				swap_cube_dims(door_bc_exp, w.dim, 2);
-				cubes.clear();
-				subtract_cube_from_cube(wall_cube, door_bc_exp, cubes);
+				subtract_cube_from_cube(wall_cube, door_bc_exp, cubes, 1); // clear_out=1
 				for (cube_t &c : cubes) {swap_cube_dims(c, w.dim, 2);} // swap back
 				// draw open side doors
 				float const door_width(door_bc.get_sz_dim(!w.dim)), door_hwidth(0.5*door_width);

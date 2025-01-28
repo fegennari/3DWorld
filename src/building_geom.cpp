@@ -691,8 +691,7 @@ bool building_t::add_walkway_door(building_walkway_geom_t &walkway, bool dir, un
 bool building_t::clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const { // use for fences
 	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {
 		if (!p->intersects(c)) continue;
-		cubes.clear();
-		subtract_cube_from_cube(c, *p, cubes);
+		subtract_cube_from_cube(c, *p, cubes, 1); // clear_out=1
 		// each part should either not intersect the fence, or clip off one side of it; if this doesn't hold for some reason (bad house size, etc.), then return failured
 		assert(!cubes.empty());
 		if (cubes.size() > 1) return 0; // failed
@@ -977,8 +976,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			cube_t empty_space(bcube);
 
 			for (unsigned e = 0; e < 2; ++e) {
-				cubes.clear();
-				subtract_cube_from_cube(empty_space, parts[e], cubes);
+				subtract_cube_from_cube(empty_space, parts[e], cubes, 1); // clear_out=1
 				assert(cubes.size() == 1); // Note: may fail for rotated buildings
 				empty_space = cubes[0];
 			}

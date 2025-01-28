@@ -2937,7 +2937,7 @@ void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim);
 void resize_around_center_xy(cube_t &c, float radius);
 bool is_val_inside_window(cube_t const &c, bool dim, float val, float window_spacing, float window_border);
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius);
-template<typename T> void subtract_cube_from_cube(T const &c, cube_t const &s, vector<T> &out);
+template<typename T> void subtract_cube_from_cube(T const &c, cube_t const &s, vector<T> &out, bool clear_out=0);
 template<typename T> void subtract_cube_from_cube_inplace(cube_t const &s, vector<T> &cubes, unsigned &ix, unsigned &iter_end);
 template<typename T> void subtract_cubes_from_cube(cube_t const &c, vector<T> const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode=0);
 template<typename T> bool subtract_cube_from_cubes(cube_t const &s, vector<T> &cubes, vect_cube_t *holes=nullptr, bool clip_in_z=0, bool include_adj=0, bool no_z_test=0);
