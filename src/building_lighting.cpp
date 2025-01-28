@@ -461,13 +461,22 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 				bc.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.25*c->get_sz_dim(dim); // shift front in
 				bc.z2() += 0.25*bc.dz(); // shift bottom up
 			}
-			else if (type == TYPE_STOVE ) {bc.z2() -= 0.20*bc.dz();}
+			else if (type == TYPE_KSINK) {
+				cube_t const sink(get_sink_cube(*c));
+				cube_t top(*c);
+				top.z1() = sink.z1();
+				subtract_cube_from_cube(top, sink, temp, 1); // clear_out=1
+				add_colored_cubes(temp, color, ext_bcube, cc); // add 4 sides around the sink
+				bc.z2() = sink.z1(); // remainder will be the bottom half
+			}
+			else if (type == TYPE_STOVE ) {bc.z2() -= 0.22*bc.dz();}
 			else if (type == TYPE_TOILET) {bc.z2() -= 0.33*bc.dz();}
 			else if (type == TYPE_SINK  ) {bc.z2() -= 0.20*bc.dz(); bc.z1() += 0.65*bc.dz();}
 			else if (type == TYPE_MONITOR || type == TYPE_TV) {bc.expand_in_dim(dim, -0.3*bc.get_sz_dim(dim));} // reduce thickness
 			else if (type == TYPE_BRSINK) {bc.z1() += 0.60*bc.dz();}
 			else if (type == TYPE_ATTIC_DOOR) {bc = get_attic_access_door_cube(*c, 0);} // inc_ladder=0: includes door but not ladder
 			else if (type == TYPE_SHOWERTUB ) {bc = get_shower_tub_wall(*c);}
+			// what about open microwaves and dishwashers?
 			cc.emplace_back(bc, color);
 		}
 	} // for c
