@@ -204,6 +204,17 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			break;
 		} // for n
 	} // for r
+	// add catwalk above the entryway
+	float const catwalk_width(1.0*get_doorway_width()), catwalk_hwidth(0.5*catwalk_width), catwalk_height(0.5*window_vspace);
+	float const cw_lo(entry.d[edim][0] + 1.2*catwalk_hwidth), cw_hi(entry.d[edim][1] - 1.2*catwalk_hwidth);
+
+	if (0 && cw_lo < cw_hi) { // should always be true
+		cube_t catwalk(entry);
+		catwalk.z1() = entry  .z2() + fc_thick;
+		catwalk.z2() = catwalk.z1() + catwalk_height;
+		set_wall_width(catwalk, rgen.rand_uniform(cw_lo, cw_hi), catwalk_hwidth, edim);
+		objs.emplace_back(catwalk, TYPE_CATWALK, room_id, !edim, 0, RO_FLAG_IN_FACTORY, light_amt);
+	}
 	// add machines
 	add_machines_to_factory(rgen, room, place_area, zval, room_id, light_amt, objs_start);
 	// add fire extinguisher

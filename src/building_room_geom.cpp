@@ -1301,6 +1301,19 @@ void building_room_geom_t::add_int_ladder(room_object_t const &c) {
 	rotate_verts(mat.quad_verts, vector_from_dim_dir(!c.dim, (c.dim ^ c.dir)), 0.063*PI, about, verts_start);
 }
 
+void building_room_geom_t::add_catwalk(room_object_t const &c) {
+	float const height(c.dz()), width(c.get_width());
+	// add bottom surface metal mesh
+	tid_nm_pair_t tex(get_texture_by_name("metals/78_wire_mesh.png"), 2.0/width, 1); // shadowed=1
+	tex.set_specular_color(WHITE, 0.6, 50.0);
+	cube_t bot(c);
+	bot.z2() = c.z1() + 0.05*height;
+	get_material(tex, 1).add_cube_to_verts(bot, apply_light_color(c), c.get_llc(), get_skip_mask_for_xy(c.dim)); // skip ends
+	// add side railings
+	colorRGBA const railing_color(apply_light_color(c, YELLOW));
+	// TODO
+}
+
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name(texture_name), 0.0), 1, 0, is_small)); // shadows
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // top face only

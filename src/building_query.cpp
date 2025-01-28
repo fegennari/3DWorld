@@ -1133,6 +1133,9 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				obj_z = max(pos.z, p_last.z);
 				had_coll = 1;
 			}
+			else if (c->type == TYPE_CATWALK) {
+				// TODO: bottom + sides coll
+			}
 			// Note: only vert pipes have player coll; ducts are not vert and are treated as cubes
 			else if (c->is_vert_cylinder()) { // vertical cylinder
 				cylinder_3dw cylin(c->get_cylinder());
@@ -2052,7 +2055,7 @@ public:
 					type == TYPE_LAVALAMP || type == TYPE_POOL_LAD || type == TYPE_PADLOCK || type == TYPE_KEY || type == TYPE_HANGER || type == TYPE_CLOTHES ||
 					type == TYPE_WALL_LAMP || type == TYPE_SILVER || type == TYPE_TOY_MODEL || type == TYPE_CEIL_FAN || type == TYPE_FOLD_SHIRT || type == TYPE_TRASH ||
 					type == TYPE_INT_WINDOW || type == TYPE_INT_LADDER || type == TYPE_CONF_PHONE || type == TYPE_SPIWEB || type == TYPE_TREE || type == TYPE_ELEC_WIRE ||
-					type == TYPE_ERASER || type == TYPE_SHOE) continue;
+					type == TYPE_ERASER || type == TYPE_SHOE || type == TYPE_CATWALK) continue;
 				if (z1 > obj.z2() || z2 < obj.z1()) continue; // zval test
 
 				if (obj.type == TYPE_PARK_SPACE) {
