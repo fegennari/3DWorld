@@ -966,7 +966,6 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_BUCKET:    add_bucket(*i, 0, 1); break; // draw_metal=0, draw_liquid=1
 		case TYPE_DWASHER:   add_dishwasher(*i); break;
 		case TYPE_IBEAM:     add_ibeam(*i); break;
-		case TYPE_CATWALK:   add_catwalk(*i); break;
 		//case TYPE_FRIDGE: if (i->is_open()) {} break; // draw open fridge?
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
@@ -1102,6 +1101,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_MACHINE:    add_machine(c, floor_ceil_gap, factory_floor); break;
 		case TYPE_SPIWEB:     add_spider_web(c); break;
 		case TYPE_PET_CAGE:   add_pet_cage(c); break;
+		case TYPE_CATWALK:    add_catwalk(c); break;
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		default: break;
 		} // end switch

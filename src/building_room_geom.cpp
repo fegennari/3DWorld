@@ -1301,17 +1301,66 @@ void building_room_geom_t::add_int_ladder(room_object_t const &c) {
 	rotate_verts(mat.quad_verts, vector_from_dim_dir(!c.dim, (c.dim ^ c.dir)), 0.063*PI, about, verts_start);
 }
 
+void get_catwalk_cubes(room_object_t const &c, cube_t cubes[3]) { // bottom, left side, right side
+	float const height(c.dz());
+	cubes[0] = c; // bottom
+	cubes[0].z2() = (c.z1() + 0.4*0.08*height);
+
+	for (unsigned d = 0; d < 2; ++d) { // sides
+		cubes[d+1] = c;
+		cubes[d+1].d[!c.dim][!d] = c.d[!c.dim][d] - (d ? 1.0 : -1.0)*0.05*height;
+	}
+}
 void building_room_geom_t::add_catwalk(room_object_t const &c) {
-	float const height(c.dz()), width(c.get_width());
+	bool const dim(c.dim);
+	float const height(c.dz()), length(c.get_length()), width(c.get_width()), bot_thick(0.08*height);
+	float const hbar_width(0.04*height), hbar_hwidth(0.5*hbar_width), vbar_width(0.05*height), vbar_hwidth(0.5*vbar_width), hbar_inset(vbar_hwidth - hbar_hwidth);
 	// add bottom surface metal mesh
-	tid_nm_pair_t tex(get_texture_by_name("metals/78_wire_mesh.png"), 2.0/width, 1); // shadowed=1
+	// 4_perforated_metal.png, 23_perforated_metal_plate.png
+	tid_nm_pair_t tex(get_texture_by_name("metals/17_perforated_metal_plate.png", 0, 0, 1, 4.0, 1, 3), 2.0/width, 1); // shadowed=1, custom alpha mipmaps
 	tex.set_specular_color(WHITE, 0.6, 50.0);
 	cube_t bot(c);
-	bot.z2() = c.z1() + 0.05*height;
-	get_material(tex, 1).add_cube_to_verts(bot, apply_light_color(c), c.get_llc(), get_skip_mask_for_xy(c.dim)); // skip ends
+	set_cube_zvals(bot, (c.z1() + 0.2*bot_thick), (c.z1() + 0.4*bot_thick));
+	bot.expand_in_dim(!dim, -(hbar_width + hbar_inset)); // abut inside of bottom bars
+	mats_amask.get_material(tex, 1).add_cube_to_verts(bot, apply_light_color(c), c.get_llc(), ~EF_Z12); // draw top and bottom only
 	// add side railings
-	colorRGBA const railing_color(apply_light_color(c, YELLOW));
-	// TODO
+	unsigned const num_vbars(max(2U, unsigned(length/width)));
+	unsigned const hbar_sf(get_skip_mask_for_xy(dim)), ends_sf(get_skip_mask_for_xy(!dim)); // skip ends
+	float const spacing((length - vbar_width) / (num_vbars-1));
+	float const bz1(c.z1()), bz2(bz1 + bot_thick), tz1(c.z2() - hbar_width), tz2(c.z2()); // bottom and top bar zvals
+	float const bzc(0.5*(bz2 + tz1)), mz1(bzc - hbar_hwidth), mz2(bzc + hbar_hwidth);
+	float const z1s[3] = {bz1, mz1, tz1}, z2s[3] = {bz2, mz2, tz2};
+	colorRGBA const bar_color(apply_light_color(c, YELLOW)), end_color(apply_light_color(c, LT_GRAY));
+	rgeom_mat_t &bar_mat(get_metal_material(1, 0, 1)); // shadowed, specular metal, small
+	
+	for (unsigned side = 0; side < 2; ++side) {
+		float const edge(c.d[!dim][side]), ssign(side ? 1.0 : -1.0);
+		// horizontal bars
+		cube_t bar(c);
+		bar.d[!dim][ side] -= ssign*hbar_inset;
+		bar.d[!dim][!side]  = bar.d[!dim][side] - ssign*hbar_width;
+		bar.expand_in_dim(dim, -vbar_width); // remove overlap with vbars
+
+		for (unsigned n = 0; n < 3; ++n) { // bot, mid, top
+			set_cube_zvals(bar, z1s[n], z2s[n]);
+			bar_mat.add_cube_to_verts_untextured(bar, bar_color, hbar_sf);
+		}
+		// vertical bars
+		set_cube_zvals(bar, bz1, tz2); // full height
+		bar.d[!dim][ side] = edge;
+		bar.d[!dim][!side] = edge - ssign*vbar_width;
+
+		for (unsigned n = 0; n < num_vbars; ++n) {
+			set_wall_width(bar, (c.d[dim][0] + n*spacing + vbar_hwidth), vbar_hwidth, dim);
+			bar_mat.add_cube_to_verts_untextured(bar, bar_color, ((n == 0 || n+1 == num_vbars) ? EF_Z1 : 0)); // skip bottom of end bars
+		}
+		// end floor bar
+		bar = c;
+		bar.z2() = bot.z2() + 0.1*bot_thick;
+		bar.expand_in_dim(!dim, -vbar_width); // remove overlap with hbars
+		bar.d[dim][!side] = c.d[dim][side] - ssign*vbar_width;
+		bar_mat.add_cube_to_verts_untextured(bar, end_color, ends_sf);
+	} // for side
 }
 
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {
@@ -5687,7 +5736,7 @@ void building_room_geom_t::add_pet_cage(room_object_t const &c) {
 	vector3d const sz(c.get_size());
 	cube_t top(c), tray(c);
 	top.z1() = tray.z2() = c.z1() + 0.1*sz.z;
-	// add metal bars in a grid pattern around sides and top
+	// add metal bars in a grid pattern around sides and top; or we can use metals/78_wire_mesh.png?
 	float const bar_thick(0.005*sz.z), bar_hthick(0.5*bar_thick);
 	unsigned const num_vbars(21), num_hbars(7);
 	rgeom_mat_t &metal_mat(get_metal_material(0, 0, 1)); // unshadowed, small

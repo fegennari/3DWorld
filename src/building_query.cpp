@@ -27,6 +27,7 @@ bool is_player_model_female();
 bool get_sphere_poly_int_val(point const &sc, float sr, point const *const points, unsigned npoints, vector3d const &normal, float thickness, float &val, vector3d &cnorm);
 float get_player_move_dist();
 void get_shelf_brackets(room_object_t const &c, cube_t shelves[4], unsigned num_shelves, vect_cube_with_ix_t &brackets);
+void get_catwalk_cubes(room_object_t const &c, cube_t cubes[3]);
 
 
 // assumes player is in this building; handles windows and exterior doors but not attics and basements
@@ -663,6 +664,11 @@ unsigned check_chair_collision(room_object_t const &c, point &pos, point const &
 	get_tc_leg_cubes(cubes[2], c, c.get_chair_leg_width(), 1, leg_cubes);
 	return (check_cubes_collision(cubes, 2, pos, p_last, radius, cnorm) | check_cubes_collision(leg_cubes, 4, pos, p_last, radius, cnorm));
 }
+cube_t get_catwalk_bottom(room_object_t const &c) {
+	cube_t cubes[3];
+	get_catwalk_cubes(c, cubes);
+	return cubes[0];
+}
 
 float get_tub_water_level(room_object_t const &c);
 void get_tub_cubes(room_object_t const &c, cube_t cubes[5], float radius_if_ball=0.0) { // bottom, front, back, 2 sides
@@ -1117,6 +1123,21 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				apply_speed_factor(pos, p_last, 2.0); // player slips; doesn't have much of an effect
 				continue;
 			}
+			if (c->type == TYPE_CATWALK) {
+				if (!sphere_cube_intersect_xy(pos, xy_radius, *c)) continue;
+				cube_t cubes[3];
+				get_catwalk_cubes(*c, cubes);
+				cube_t const &bot(cubes[0]);
+
+				if (bot.contains_pt_xy(pos) && obj_z > bot.z1()) {
+					max_eq(pos.z, (bot.z2() + radius));
+					obj_z = max(pos.z, p_last.z);
+					if (cnorm) {*cnorm = plus_z;}
+					had_coll = 1;
+				}
+				for (unsigned side = 0; side < 2; ++side) {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, cubes[side+1], p_last, 0, cnorm);} // check sides
+				continue;
+			}
 			if (!sphere_cube_intersect(pos, xy_radius, c_extended)) continue; // optimization
 
 			if (c->type == TYPE_RAILING && !(c->flags & RO_FLAG_IN_POOL)) { // stairs railing, not on a pool
@@ -1132,9 +1153,6 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				pos.z = min(float(c->z2() - camera_height), max(float(c->z1() + radius), pos.z)); // clamp to ladder height range
 				obj_z = max(pos.z, p_last.z);
 				had_coll = 1;
-			}
-			else if (c->type == TYPE_CATWALK) {
-				// TODO: bottom + sides coll
 			}
 			// Note: only vert pipes have player coll; ducts are not vert and are treated as cubes
 			else if (c->is_vert_cylinder()) { // vertical cylinder
@@ -1457,7 +1475,8 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			type == TYPE_SPIWEB || type == TYPE_ELEC_WIRE) continue;
 		if (type == TYPE_RAILING && (!(c->flags & RO_FLAG_TOS) || !c->is_open())) continue; // only railings at the top of stairs (non-sloped) with balusters have collisions
 		if (type == TYPE_POOL_TILE && c->no_coll()) continue;
-		cube_t const bc(get_true_room_obj_bcube(*c));
+		cube_t bc(get_true_room_obj_bcube(*c));
+		if (type == TYPE_CATWALK) {bc = get_catwalk_bottom(*c);} // only bottom surface is collidable
 		if (!sphere_cube_intersect(pos, radius, bc)) continue; // no intersection (optimization)
 		if (is_ball && type == TYPE_BOOK && c->dz() < 0.2*radius) continue; // large ball vs. small book on the floor: unstable, skip
 		unsigned coll_ret(0);
@@ -2562,6 +2581,7 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		//non_cubes.push_back(c); // using the colliders around the cubicles somewhat works
 	}
 	else if (type == TYPE_ATTIC_DOOR) {lg_cubes.push_back(get_true_room_obj_bcube(c));}
+	else if (type == TYPE_CATWALK   ) {lg_cubes.push_back(get_catwalk_bottom(c));}
 	// otherwise, treat as a large object; this includes: TYPE_BCASE, TYPE_KSINK (with dishwasher), TYPE_COUCH, TYPE_COLLIDER (cars)
 	else {lg_cubes.push_back(c);}
 }
@@ -2676,7 +2696,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 			// skip non-colliding objects except for balls and books (that the player can drop), computers under desks, and expanded objects from closets,
 			// since rats must collide with these
 			if (!(for_spider ? c->is_spider_collidable() : c->is_floor_collidable())) continue;
-			if (!line_bcube.intersects(*c) || !line_int_cube_exp(p1, p2, get_true_room_obj_bcube(*c), expand)) continue;
+			if (!line_bcube.intersects(*c) || !line_int_cube_exp(p1, p2, get_true_room_obj_bcube(*c), expand)) continue; // catwalk floor only?
 			if (c->type == TYPE_RAMP && interior->ignore_ramp_placement && obj_z1 >= ground_floor_z1) continue;
 
 			if (c->is_vert_cylinder()) { // vertical cylinder (should bathroom sink count?)

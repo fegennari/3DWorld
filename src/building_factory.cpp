@@ -205,10 +205,10 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		} // for n
 	} // for r
 	// add catwalk above the entryway
-	float const catwalk_width(1.0*get_doorway_width()), catwalk_hwidth(0.5*catwalk_width), catwalk_height(0.5*window_vspace);
+	float const catwalk_width(1.1*get_doorway_width()), catwalk_hwidth(0.5*catwalk_width), catwalk_height(0.5*window_vspace);
 	float const cw_lo(entry.d[edim][0] + 1.2*catwalk_hwidth), cw_hi(entry.d[edim][1] - 1.2*catwalk_hwidth);
 
-	if (0 && cw_lo < cw_hi) { // should always be true
+	if (cw_lo < cw_hi) { // should always be true
 		cube_t catwalk(entry);
 		catwalk.z1() = entry  .z2() + fc_thick;
 		catwalk.z2() = catwalk.z1() + catwalk_height;
