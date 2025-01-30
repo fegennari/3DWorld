@@ -1850,9 +1850,9 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 					sub_room.mark_open_wall(dim, dir); // front wall is glass and always considered open
 					point const room_center(r.xc(), r.yc(), zval);
 					colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
-					unsigned const NUM_RTYPES = 6;
-					unsigned const rtypes[NUM_RTYPES] = {RTYPE_BED, RTYPE_BED, RTYPE_LIVING, RTYPE_LIVING, RTYPE_OFFICE, RTYPE_DINING};
-					unsigned const rtype(rtypes[rgen.rand() % NUM_RTYPES]);
+					unsigned const NUM_MRTYPES = 6;
+					unsigned const rtypes[NUM_MRTYPES] = {RTYPE_BED, RTYPE_BED, RTYPE_LIVING, RTYPE_LIVING, RTYPE_OFFICE, RTYPE_DINING};
+					unsigned const rtype(rtypes[rgen.rand() % NUM_MRTYPES]);
 
 					if (rtype == RTYPE_BED) { // Note: light_ix_assign is needed for closet lights, but these aren't added here
 						unsigned const bed_ix(objs.size());

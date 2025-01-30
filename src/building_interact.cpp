@@ -243,7 +243,7 @@ breaker_zone_t building_interior_t::get_circuit_breaker_info(unsigned zone_id, u
 	// Note: if there are multiple panels, they will affect the same set of zones; it seems too difficult to assign rooms/zones across panels;
 	// this means that zones will follow the state of the last breaker that was toggled to a different state
 	if (!elevators.empty()) { // elevators are always zone 0 (lower left or right breaker)
-		if (zone_id == 0) return breaker_zone_t(RTYPE_ELEVATOR, 0, 0, -1);
+		if (zone_id == 0) return breaker_zone_t(RTYPE_ELEVATOR, 0, 0, -1, 0);
 		--zone_id; --num_zones; // exclude elevator
 	}
 	unsigned const num_rooms(rooms.size());
@@ -252,6 +252,7 @@ breaker_zone_t building_interior_t::get_circuit_breaker_info(unsigned zone_id, u
 	// labels will use room names on upper floors for wrapped zones; maybe this should also split toggle behavior by floor groups?
 	// but that would be extra complex because we would need per-floor room unpowered flags, and it's unclear if the player would even understand how this works
 	unsigned const floor_block_ix(zone_id/num_rooms);
+	bool const is_dup(zone_id >= num_rooms);
 	zone_id = zone_id % num_rooms;
 	// determine which rooms this breaker controls;
 	// we really should have breakers control lights on separate floors rather than vertical rooms stacks, but this is much easier;
@@ -261,7 +262,6 @@ breaker_zone_t building_interior_t::get_circuit_breaker_info(unsigned zone_id, u
 	unsigned const room_start(round_fp(zone_id*rooms_per_zone)), room_end(min((unsigned)round_fp((zone_id+1)*rooms_per_zone), num_rooms));
 	if (room_start >= room_end) return breaker_zone_t(); // no rooms
 	// pick a room with the highest priority for the label
-	unsigned const room_priorities[NUM_RTYPES] = {0, 2, 1, 1, 2, 2, 3, 3, 3, 2, 1, 3, 2, 3, 3, 3, 2, 2, 2, 2, 3, 3, 0, 3, 3, 0, 4, 3, 4, 4, 4, 0};
 	unsigned ret_rtype(0), highest_priority(0), pri_room(0);
 
 	for (unsigned r = room_start; r < room_end; ++r) {
@@ -273,12 +273,12 @@ breaker_zone_t building_interior_t::get_circuit_breaker_info(unsigned zone_id, u
 		unsigned const priority(room_priorities[rtype] + 1); // add one to be nonzero
 		if (priority > highest_priority) {ret_rtype = rtype; highest_priority = priority; pri_room = r;}
 	}
-	return breaker_zone_t(ret_rtype, room_start, room_end, pri_room);
+	return breaker_zone_t(ret_rtype, room_start, room_end, pri_room, is_dup);
 }
 void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned num_zones) {
 	assert(has_room_geom());
 	breaker_zone_t const zone(interior->get_circuit_breaker_info(zone_id, num_zones, get_window_vspace()));
-	if (zone.invalid()) return; // no rooms for this zone
+	if (zone.invalid()) return; // no rooms for this zone; allow duplicates so that all breakers can have an effect
 
 	if (zone.rtype == RTYPE_ELEVATOR) { // disable elevator; as long as we don't place breakers in elevators, the player can't get trapped in an elevator
 		interior->elevators_disabled = !is_on;

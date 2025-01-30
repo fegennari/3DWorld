@@ -517,14 +517,22 @@ std::string const room_names[NUM_RTYPES] =
 	 "Dining Room", "Study", "Entryway", "Library", "Storage Room", "Garage", "Shed", "Lobby", "Laundry Room", "Card Room",
 	 "Play Room", "Art Room", "Utility Room", "Parking Garage", "Ramp Exit", "Attic", "Master Bedroom", "Unfinished Room", "Server Room", "Pool Room",
 	 "Swimming Pool Room", "Security Room", "Lounge", "Common Room", "Backrooms", "Retail", "Elevator", "Conference Room", "Machine Room", "Interrogation Room",
-	 "Elev Equip Room", "Store", "Mall Concourse", "Restaurant"};
+	 "Elev Equip Room", "Store", "Mall Concourse", "Restaurant", "Factory Floor"};
 // short room names for elevator buttons (should be <= 8 characters)
 std::string const room_names_short[NUM_RTYPES] =
 	{"", "Hall", "Stairs", "Office", "Bath", "Men", "Women", "Bed", "Kitchen", "Living",
 	"Dining", "Study", "Entry", "Library", "Storage", "Garage", "Shed", "Lobby", "Laundry", "Card",
 	"Play", "Art", "Utility", "Garage", "Ramp", "Attic", "Bed", "", "Server", "Pool",
 	"Swim", "Security", "Lounge", "Common", "Basement", "Retail", "Elevator", "Conference", "Machine", "Dungeon",
-	"Equipment", "Store", "Mall", "Restaurant"};
+	"Equipment", "Store", "Mall", "Restaurant", "Factory"};
+
+unsigned const room_priorities[NUM_RTYPES] = { // for breaker labels
+	0, 2, 1, 1, 2, 2, 2, 3, 3, 3,
+	3, 1, 3, 3, 2, 3, 3, 2, 2, 2,
+	2, 2, 3, 3, 0, 3, 3, 0, 4, 3,
+	4, 4, 4, 0, 1, 2, 1, 3, 2, 2,
+	1, 3, 4, 3, 1
+};
 
 // store types, for use with object placement and naming
 enum {STORE_OTHER=0, STORE_CLOTHING, STORE_FOOD, STORE_BOOK, STORE_RETAIL, STORE_FURNITURE, STORE_PETS, STORE_APPLIANCE, STORE_SHOE, NUM_STORE_TYPES};
@@ -1510,8 +1518,10 @@ typedef vector<tunnel_seg_t> vect_tunnel_seg_t;
 struct breaker_zone_t {
 	unsigned rtype, room_start=0, room_end=0;
 	int pri_room=-1;
+	bool is_dup=0; // used when there are more breakers than rooms, such as in factories with no basements
+
 	breaker_zone_t() : rtype(RTYPE_NOTSET) {} // invalid room
-	breaker_zone_t(unsigned t, unsigned s, unsigned e, int pr) : rtype(t), room_start(s), room_end(e), pri_room(pr) {}
+	breaker_zone_t(unsigned t, unsigned s, unsigned e, int pr, bool dup) : rtype(t), room_start(s), room_end(e), pri_room(pr), is_dup(dup) {}
 	bool invalid() const {return (rtype != RTYPE_ELEVATOR && room_start == room_end);}
 };
 

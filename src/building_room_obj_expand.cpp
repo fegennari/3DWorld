@@ -425,7 +425,7 @@ void building_room_geom_t::expand_breaker_panel(room_object_t const &c, building
 			expanded_objs.push_back(obj);
 			// add labels
 			breaker_zone_t const zone(building.interior->get_circuit_breaker_info(obj.obj_id, num_breakers, building.get_window_vspace()));
-			if (zone.invalid()) continue; // no zone/label
+			if (zone.invalid() || zone.is_dup) continue; // no zone/label
 			float label_xlate(0.0);
 			if      (C == 0         ) {label_xlate = -0.75;} // first column/lo side
 			else if (C == num_cols-1) {label_xlate =  0.75;} // last column/hi side
