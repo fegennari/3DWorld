@@ -1773,7 +1773,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	static unsigned num_geom_this_frame(0); // used to limit per-frame geom gen time; doesn't apply to shadow pass, in case shadows are cached
 	if (frame_counter < 100 || frame_counter > last_frame) {num_geom_this_frame = 0; last_frame = frame_counter;} // unlimited for the first 100 frames
 	point const camera_bs(camera_pdu.pos - xlate);
-	float const floor_spacing(building.get_window_vspace());
+	float const floor_spacing(building.get_window_vspace()), ground_floor_z1(building.ground_floor_z1);
 	bool const draw_ext_only(inc_small == 4), check_occlusion(display_mode & 0x08);
 	if (draw_ext_only) {inc_small = 0;}
 	// don't draw ceiling lights when player is above the building unless there's a light placed on a skylight
@@ -1785,7 +1785,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	bool const update_clocks(player_in_building && inc_small >= 2 && !shadow_only && !reflection_pass && have_clock && check_clock_time());
 	bool const player_in_doorway(building.point_near_ext_door(camera_bs, get_door_open_dist()));
 	bool const player_in_building_or_doorway(player_in_building || player_in_doorway);
-	if (bbd != nullptr) {bbd->set_camera_dir_mask(camera_bs, ((camera_bs.z < building.ground_floor_z1) ? building.get_bcube_inc_extensions() : building.bcube));}
+	if (bbd != nullptr) {bbd->set_camera_dir_mask(camera_bs, ((camera_bs.z < ground_floor_z1) ? building.get_bcube_inc_extensions() : building.bcube));}
 	brg_batch_draw_t *const bbd_in(bbd); // capture bbd for instance drawing before setting to null if player_in_building
 	if (player_in_building_or_doorway) {bbd = nullptr;} // use immediate drawing when player is in the building because draw order matters for alpha blending
 	bool const update_tunnel_water(animate2 && player_in_building && !shadow_only && (player_in_tunnel || building.interior->point_near_tunnel_entrance(camera_bs)));
@@ -1914,7 +1914,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	bool const is_rotated(building.is_rotated()), is_player_building(&building == player_building);
 	bool const check_clip_cube(shadow_only && !is_rotated && !smap_light_clip_cube.is_all_zeros()); // check clip cube for shadow pass; not implemented for rotated buildings
 	bool const skip_interior_objs(!player_in_building_or_doorway && !shadow_only), has_windows(building.has_windows());
-	float const one_floor_above(camera_bs.z + floor_spacing), two_floors_below(camera_bs.z - 2.0*floor_spacing);
+	float const one_floor_above(camera_bs.z + floor_spacing);
+	float two_floors_below(camera_bs.z - 2.0*floor_spacing);
+	if (building.is_factory() && building.get_factory_area().contains_pt(camera_bs)) {min_eq(two_floors_below, ground_floor_z1);} // factory lights reach more than 2 floors
 	cube_t const clip_cube_bs(smap_light_clip_cube - xlate);
 	// skip for rotated buildings and reflection pass, since reflected pos may be in a different room; should we use actual_player_pos for shadow_only mode?
 	int const camera_room((is_rotated || reflection_pass) ? -1 : building.get_room_containing_camera(camera_bs));
@@ -1961,8 +1963,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			if (!dist_less_than(camera_bs, obj_center, cull_dist)) continue; // too far
 		}
 		bool cull(0);
-		cull |= (camera_in_building && player_in_basement >= 2 && obj_center.z > building.ground_floor_z1); // player in basement, obj not
-		cull |= (camera_in_building && player_in_basement == 0 && obj_center.z < building.ground_floor_z1); // obj in basement, player not
+		cull |= (camera_in_building && player_in_basement >= 2 && obj_center.z > ground_floor_z1); // player in basement, obj not
+		cull |= (camera_in_building && player_in_basement == 0 && obj_center.z < ground_floor_z1); // obj in basement, player not
 
 		if (cull) { // basement separation; check for primary stairs visibility (for reception desk chair, etc.)
 			vect_stairwell_t const &sw(building.interior->stairwells);
@@ -2061,8 +2063,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			point obj_center(h.center);
 			if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
 			if (h.closed && (camera_bs[h.dim] < obj_center[h.dim]) == h.hdir) continue; // opposite side of closed door
-			if (camera_in_building && player_in_basement >= 2 && obj_center.z > building.ground_floor_z1)      continue; // player in basement, obj not
-			if (camera_in_building && player_in_basement == 0 && obj_center.z < building.ground_floor_z1)      continue; // obj in basement, player not
+			if (camera_in_building && player_in_basement >= 2 && obj_center.z > ground_floor_z1)               continue; // player in basement, obj not
+			if (camera_in_building && player_in_basement == 0 && obj_center.z < ground_floor_z1)               continue; // obj in basement, player not
 			if (!(is_rotated ? building.is_rot_cube_visible(bc, xlate) : camera_pdu.cube_visible(bc + xlate))) continue; // VFC
 			if (check_occlusion && building.check_obj_occluded(bc, camera_bs, oc, reflection_pass))            continue;
 			building_obj_model_loader.draw_model(s, obj_center, bc, h.dir, handle_color, xlate, OBJ_MODEL_DOOR_HANDLE, shadow_only, 0, nullptr, 0, 0, 0, h.mirror);
@@ -2075,8 +2077,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				point obj_center(i->get_cube_center());
 				if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
 				if (!shadow_only && !dist_less_than(camera_bs, obj_center, 100.0*i->max_len()))                    continue; // too far away
-				if (camera_in_building && player_in_basement >= 2 && obj_center.z > building.ground_floor_z1)      continue; // player in basement, obj not
-				if (camera_in_building && player_in_basement == 0 && obj_center.z < building.ground_floor_z1)      continue; // obj in basement, player not
+				if (camera_in_building && player_in_basement >= 2 && obj_center.z > ground_floor_z1)               continue; // player in basement, obj not
+				if (camera_in_building && player_in_basement == 0 && obj_center.z < ground_floor_z1)               continue; // obj in basement, player not
 				if (!(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate))) continue; // VFC
 				if (check_occlusion && building.check_obj_occluded(*i, camera_bs, oc, reflection_pass))            continue;
 				vector3d dir(i->get_dir());

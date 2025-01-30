@@ -2390,6 +2390,7 @@ public:
 	cube_t get_ext_basement_entrance() const;
 	cube_t get_best_occluder(point const &camera_bs) const;
 	cube_t get_step_for_ext_door(tquad_with_ix_t const &door) const;
+	cube_t const &get_factory_area() const {assert(is_factory()); assert(!parts.empty()); return parts.front();}
 	bool interior_visible_from_other_building_ext_basement(vector3d const &xlate, bool expand_for_light=0) const;
 	bool top_of_mall_elevator_visible(point const &camera_bs, vector3d const &xlate) const;
 	bool can_have_basement() const;
@@ -2465,7 +2466,7 @@ private:
 	bool inside_mall_hallway(point const &pos) const;
 	bool is_inside_mall_stores(point const &pos) const;
 	room_t const &get_mall_concourse() const {assert(has_mall()); return interior->get_extb_start_room();}
-	float get_mall_floor_spacing() const {return get_mall_floor_spacing(get_mall_concourse());}
+	float get_mall_floor_spacing    () const {return get_mall_floor_spacing(get_mall_concourse());}
 	static float get_mall_top_window_gap(float mall_floor_spacing, float window_vspace) {return 0.5*(mall_floor_spacing - window_vspace);}
 	cube_t get_mall_center(cube_t const &room) const;
 	void get_mall_open_areas(cube_t const &room, vect_cube_t &openings) const;

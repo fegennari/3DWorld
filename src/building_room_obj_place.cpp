@@ -626,11 +626,12 @@ bool building_t::add_office_objs(rand_gen_t rgen, room_t const &room, vect_cube_
 		float const floor_spacing(get_window_vspace()), clock_height((digital ? 0.08 : 0.16)*floor_spacing), clock_z1(zval + get_floor_ceil_gap() - 1.4*clock_height);
 		float const clock_width((digital ? 4.0 : 1.0)*clock_height), clock_depth((digital ? 0.05 : 0.08)*clock_width);
 		cube_t const place_area(get_walkable_room_bounds(room));
+		cube_t const &factory_area(get_factory_area());
 		cube_t clock;
 		set_cube_zvals(clock, clock_z1, clock_z1+clock_height);
 
 		for (unsigned n = 0; n < 10; ++n) { // 10 attempts
-			bool const dim(rgen.rand_bool()), dir(room.d[dim][0] == parts.front().d[dim][0]); // interior wall
+			bool const dim(rgen.rand_bool()), dir(room.d[dim][0] == factory_area.d[dim][0]); // interior wall
 			float const edge_space(max(1.5*clock_width, 0.25*room.get_sz_dim(!dim))); // somewhat centered
 			float const lo(place_area.d[!dim][0] + edge_space), hi(place_area.d[!dim][1] - edge_space);
 			if (lo >= hi) continue; // wall too short
