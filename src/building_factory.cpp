@@ -205,7 +205,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		} // for n
 	} // for r
 	// add catwalk above the entryway
-	float const catwalk_width(1.1*get_doorway_width()), catwalk_hwidth(0.5*catwalk_width), catwalk_height(0.5*window_vspace);
+	float const doorway_width(get_doorway_width()), catwalk_width(1.1*doorway_width), catwalk_hwidth(0.5*catwalk_width), catwalk_height(0.5*window_vspace);
 	float const cw_lo(entry.d[edim][0] + 1.5*catwalk_hwidth), cw_hi(entry.d[edim][1] - 1.2*catwalk_hwidth);
 
 	if (cw_lo < cw_hi) { // should always be true
@@ -215,6 +215,11 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		set_wall_width(catwalk, rgen.rand_uniform(cw_lo, cw_hi), catwalk_hwidth, edim);
 		objs.emplace_back(catwalk, TYPE_CATWALK, room_id, !edim, 0, RO_FLAG_IN_FACTORY, light_amt);
 	}
+	// add transformer
+	float const tzval(zval - 0.02*window_vspace); // transformer is slightly below floor level
+	cube_t xfmr_area(place_area);
+	xfmr_area.d[edim][edir] -= (edir ? 1.0 : -1.0)*1.2*doorway_width; // don't place too close to sub-rooms or entrance
+	place_model_along_wall(OBJ_MODEL_SUBSTATION, TYPE_XFORMER, room, 0.6, rgen, tzval, room_id, light_amt, xfmr_area, objs_start, 0.0, 4, 0, WHITE, 0, 0, 0, 1); // sideways
 	// add machines
 	add_machines_to_factory(rgen, room, place_area, zval, room_id, light_amt, objs_start);
 	// add fire extinguisher
