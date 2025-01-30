@@ -2452,6 +2452,7 @@ bool building_t::get_zval_for_obj_placement(point const &pos, float radius, floa
 		if (is_placed_on_obj && is_blocking_obj_on_top_surface(*i)) {} // check it; skips the code below
 		else if (!i->is_floor_collidable())          continue; // ignore
 		if (!sphere_cube_intersect(pos, radius, *i)) continue; // no intersection
+		if (i->type == TYPE_RAMP && interior->ignore_ramp_placement && zval >= ground_floor_z1)         continue; // ignore ramp if placed above
 		if (i->is_round() && !dist_xy_less_than(pos, i->get_cube_center(), (i->get_radius() + radius))) continue; // round object (approx)
 		return 0; // object in the way, can't place here
 	} // for i
