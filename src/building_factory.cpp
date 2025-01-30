@@ -187,15 +187,15 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	for (cube_t const &r : nested_rooms) {
 		float const wall_pos(r.d[edim][!edir] + 0.5*(edir ? -1.0 : 1.0)*wall_thick); // partially inside the wall
 		float const lo(max(r.d[!edim][0], place_area.d[!edim][0])), hi(min(r.d[!edim][1], place_area.d[!edim][1]));
-		float const ladder_hwidth(rgen.rand_uniform(0.1, 0.11)*window_vspace);
-		if ((hi - lo) < 4.0*ladder_hwidth) continue; // too narrow
+		float const ladder_hwidth(rgen.rand_uniform(0.1, 0.11)*window_vspace), edge_spacing(2.0*ladder_hwidth);
+		if ((hi - lo) < 4.0*edge_spacing) continue; // too narrow
 		cube_t ladder;
 		set_cube_zvals(ladder, zval, (r.z2() + fc_thick + player_height + CAMERA_RADIUS));
 		ladder.d[edim][ edir] = wall_pos;
 		ladder.d[edim][!edir] = wall_pos + (edir ? -1.0 : 1.0)*0.06*window_vspace; // set depth
 
 		for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place a ladder that doesn't block the door
-			set_wall_width(ladder, rgen.rand_uniform((lo + ladder_hwidth), (hi - ladder_hwidth)), ladder_hwidth, !edim);
+			set_wall_width(ladder, rgen.rand_uniform((lo + edge_spacing), (hi - edge_spacing)), ladder_hwidth, !edim);
 			if (cube_int_ext_door(ladder) || interior->is_blocked_by_stairs_or_elevator(ladder)) continue; // blocked
 			objs.emplace_back(ladder, TYPE_INT_LADDER, room_id, edim, !edir, RO_FLAG_IN_FACTORY, light_amt);
 			cube_t blocker(ladder);
@@ -206,7 +206,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	} // for r
 	// add catwalk above the entryway
 	float const catwalk_width(1.1*get_doorway_width()), catwalk_hwidth(0.5*catwalk_width), catwalk_height(0.5*window_vspace);
-	float const cw_lo(entry.d[edim][0] + 1.2*catwalk_hwidth), cw_hi(entry.d[edim][1] - 1.2*catwalk_hwidth);
+	float const cw_lo(entry.d[edim][0] + 1.5*catwalk_hwidth), cw_hi(entry.d[edim][1] - 1.2*catwalk_hwidth);
 
 	if (cw_lo < cw_hi) { // should always be true
 		cube_t catwalk(entry);
@@ -219,7 +219,31 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	add_machines_to_factory(rgen, room, place_area, zval, room_id, light_amt, objs_start);
 	// add fire extinguisher
 	add_fire_ext_along_wall(entry, zval, room_id, light_amt, !edim, rgen.rand_bool(), rgen); // choose a random side
+	
+	if (!nested_rooms.empty()) { // add breaker panel
+		float const bp_ceil_zval(zval + get_floor_ceil_gap());
+
+		for (unsigned n = 0; n < 20; ++n) { // 10 attempts
+			unsigned const rix(rgen.rand() % nested_rooms.size());
+			cube_t const &bpr(nested_rooms[rix]);
+			bool const bpdim(rgen.rand_bool()), bpdir((bpdim == edim) ? (!edir) : (bpr.get_center_dim(bpdim) < entry.get_center_dim(bpdim)));
+			float const hwidth(0.5*rgen.rand_uniform(0.25, 0.35)*window_vspace), depth(0.04*window_vspace), edge_space(1.5*hwidth);
+			float const lo(bpr.d[!bpdim][0] + edge_space), hi(bpr.d[!bpdim][1] - edge_space);
+			if (lo >= hi) continue; // wall too short
+			float const dsign(bpdir ? 1.0 : -1.0), wall_pos(bpr.d[bpdim][bpdir] + dsign*wall_thick), wall_center(rgen.rand_uniform(lo, hi));
+			cube_t breaker_panel;
+			set_cube_zvals(breaker_panel, (bp_ceil_zval - 0.7*window_vspace), (bp_ceil_zval - rgen.rand_uniform(0.25, 0.3)*window_vspace));
+			set_wall_width(breaker_panel, wall_center, hwidth, !bpdim);
+			breaker_panel.d[bpdim][!bpdir] = wall_pos;
+			breaker_panel.d[bpdim][ bpdir] = wall_pos + dsign*depth;
+			cube_t tc(breaker_panel);
+			tc.d[bpdim][bpdir] += dsign*2.0*hwidth; // add clearance so that it can open
+			if (is_cube_close_to_doorway(tc, room, 0.0, 1) || overlaps_other_room_obj(tc, objs_start)) continue; // avoid doors and machines
+			add_breaker_panel(rgen, breaker_panel, bp_ceil_zval, bpdim, !bpdir, room_id, light_amt);
+			break; // success
+		} // for n
+	}
 	// TODO: catwalks
 	// TODO: large fans in the ceiling
-	// TODO: stacks of boxes and crates, paint cans, buckets, breaker panels, fire sprinklers, clock, transformer, water fountain?
+	// TODO: stacks of boxes and crates, paint cans, buckets, fire sprinklers, clock, transformer, water fountain?
 }
