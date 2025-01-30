@@ -82,7 +82,7 @@ void building_t::create_factory_floorplan(unsigned part_id, float window_hspacin
 		interior->ceilings.push_back(room_ceil );
 		interior->floors  .push_back(room_floor);
 		// add room itself; will overlap main factory room
-		add_room(room_inner, part_id, 2); // 2 lights; not a typical office building office
+		add_room(room_inner, part_id, (is_larger ? 2 : 1)); // 2 lights in larger room; not a typical office building office
 		rooms.back().assign_all_to(is_larger ? RTYPE_OFFICE : RTYPE_BATH); // office or bathroom
 	} // for d
 	// should there be an entryway room, then the factory doesn't overlap the sub-rooms? but then there will be empty space above them
