@@ -223,17 +223,17 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	if (!nested_rooms.empty()) { // add breaker panel
 		float const bp_ceil_zval(zval + get_floor_ceil_gap());
 
-		for (unsigned n = 0; n < 20; ++n) { // 10 attempts
+		for (unsigned n = 0; n < 10; ++n) { // 10 attempts
 			unsigned const rix(rgen.rand() % nested_rooms.size());
 			cube_t const &bpr(nested_rooms[rix]);
 			bool const bpdim(rgen.rand_bool()), bpdir((bpdim == edim) ? (!edir) : (bpr.get_center_dim(bpdim) < entry.get_center_dim(bpdim)));
 			float const hwidth(0.5*rgen.rand_uniform(0.25, 0.35)*window_vspace), depth(0.04*window_vspace), edge_space(1.5*hwidth);
 			float const lo(bpr.d[!bpdim][0] + edge_space), hi(bpr.d[!bpdim][1] - edge_space);
 			if (lo >= hi) continue; // wall too short
-			float const dsign(bpdir ? 1.0 : -1.0), wall_pos(bpr.d[bpdim][bpdir] + dsign*wall_thick), wall_center(rgen.rand_uniform(lo, hi));
+			float const dsign(bpdir ? 1.0 : -1.0), wall_pos(bpr.d[bpdim][bpdir] + dsign*wall_thick);
 			cube_t breaker_panel;
 			set_cube_zvals(breaker_panel, (bp_ceil_zval - 0.7*window_vspace), (bp_ceil_zval - rgen.rand_uniform(0.25, 0.3)*window_vspace));
-			set_wall_width(breaker_panel, wall_center, hwidth, !bpdim);
+			set_wall_width(breaker_panel, rgen.rand_uniform(lo, hi), hwidth, !bpdim);
 			breaker_panel.d[bpdim][!bpdir] = wall_pos;
 			breaker_panel.d[bpdim][ bpdir] = wall_pos + dsign*depth;
 			cube_t tc(breaker_panel);
@@ -245,5 +245,5 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	}
 	// TODO: catwalks
 	// TODO: large fans in the ceiling
-	// TODO: stacks of boxes and crates, paint cans, buckets, fire sprinklers, clock, transformer, water fountain?
+	// TODO: stacks of boxes and crates, paint cans, buckets, fire sprinklers, transformer, water fountain?
 }

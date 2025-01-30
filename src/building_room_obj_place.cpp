@@ -621,6 +621,30 @@ bool building_t::add_office_objs(rand_gen_t rgen, room_t const &room, vect_cube_
 	if (rgen.rand_float() < (is_house ? 0.25 : 0.75)) { // maybe place a filing cabinet along a wall; more likely for office buildings than houses
 		add_filing_cabinet_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	}
+	if (!is_basement && is_factory()) { // factory office - add a clock
+		bool const digital(rgen.rand_bool());
+		float const floor_spacing(get_window_vspace()), clock_height((digital ? 0.08 : 0.16)*floor_spacing), clock_z1(zval + get_floor_ceil_gap() - 1.4*clock_height);
+		float const clock_width((digital ? 4.0 : 1.0)*clock_height), clock_depth((digital ? 0.05 : 0.08)*clock_width);
+		cube_t const place_area(get_walkable_room_bounds(room));
+		cube_t clock;
+		set_cube_zvals(clock, clock_z1, clock_z1+clock_height);
+
+		for (unsigned n = 0; n < 10; ++n) { // 10 attempts
+			bool const dim(rgen.rand_bool()), dir(room.d[dim][0] == parts.front().d[dim][0]); // interior wall
+			float const edge_space(max(1.5*clock_width, 0.25*room.get_sz_dim(!dim))); // somewhat centered
+			float const lo(place_area.d[!dim][0] + edge_space), hi(place_area.d[!dim][1] - edge_space);
+			if (lo >= hi) continue; // wall too short
+			float const dsign(dir ? -1.0 : 1.0), wall_pos(place_area.d[dim][dir]);
+			set_wall_width(clock, rgen.rand_uniform(lo, hi), 0.5*clock_width, !dim);
+			clock.d[dim][ dir] = wall_pos;
+			clock.d[dim][!dir] = wall_pos + dsign*clock_depth;
+			cube_t tc(clock);
+			tc.d[dim][!dir] += dsign*0.25*floor_spacing; // add clearance
+			if (is_cube_close_to_doorway(tc, room, 0.0, 1) || overlaps_other_room_obj(tc, objs_start)) continue;
+			add_clock(clock, room_id, tot_light_amt, dim, !dir, digital);
+			break; // success
+		} // for n
+	}
 	return 1;
 }
 
