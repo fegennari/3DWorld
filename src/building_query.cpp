@@ -311,7 +311,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 	}
 	if (check_interior && draw_building_interiors && interior != nullptr) { // check for interior case first
 		// this is the real zval for use in collsion detection, in building space
-		float zval(((p_last2.z < ground_floor_z1) ? min(pos2.z, p_last2.z) : max(pos2.z, p_last2.z)) - xlate.z); // min/max away from the ground floor
+		float zval(((p_last2.z < ground_floor_z1) ? min(pos2.z, p_last2.z) : /*max(pos2.z, p_last2.z)*/p_last2.z) - xlate.z); // min/max away from the ground floor
 		// if the player is in flight mode and enables collision detection at the ground floor or basement with their feet just below the floor,
 		// clamp to Z1 to keep them inside the building rather than putting them on the roof
 		if (zval < bcube.z1() && zval+camera_zh > bcube.z1() && bcube.contains_pt_xy(pos2 - xlate) && p_last == p_last2) {zval = bcube.z1();}
