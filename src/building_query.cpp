@@ -2289,14 +2289,15 @@ bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start, b
 	assert(objs_start <= objs.size() && start <= end);
 
 	for (auto i = start; i != end; ++i) {
-		if (i->type == TYPE_POOL_TILE) continue; // always excluded, since it's thin and objects can be mounted over it
+		room_object const type(i->type);
+		if (type == TYPE_POOL_TILE) continue; // always excluded, since it's thin and objects can be mounted over it
 		if (i->is_a_drink() && i->is_on_floor() && i->intersects(c)) return 1; // bottles and cans on the floor do count
 		// Note: light switches/outlets/vents/pipes don't collide with the player or AI, but they collide with other placed objects to avoid blocking them;
 		// however, it's okay to block outlets with furniture
-		if ((check_all || !i->no_coll() || i->type == TYPE_SWITCH || i->type == TYPE_OUTLET || i->type == TYPE_VENT || i->type == TYPE_PIPE ||
-			i->type == TYPE_FALSE_DOOR || i->is_pet_container()) && i->intersects(c)) return 1;
-		if (i->type == TYPE_DESK && i->shape == SHAPE_TALL && i->intersects_xy_no_adj(c) && c.intersects_no_adj(get_desk_top_back(*i))) return 1; // check tall desk back
-		if (i->type == TYPE_BOOK && (i->flags & RO_FLAG_ON_FLOOR) && i->intersects(c))   return 1; // books on floors count
+		if ((check_all || !i->no_coll() || type == TYPE_SWITCH || type == TYPE_OUTLET || type == TYPE_VENT || type == TYPE_PIPE ||
+			type == TYPE_FALSE_DOOR || type == TYPE_FIRE_EXT || i->is_pet_container()) && i->intersects(c)) return 1;
+		if (type == TYPE_DESK && i->shape == SHAPE_TALL && i->intersects_xy_no_adj(c) && c.intersects_no_adj(get_desk_top_back(*i))) return 1; // check tall desk back
+		if (type == TYPE_BOOK && (i->flags & RO_FLAG_ON_FLOOR) && i->intersects(c))   return 1; // books on floors count
 	} // for i
 	return 0;
 }
@@ -2697,7 +2698,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 			// since rats must collide with these
 			if (!(for_spider ? c->is_spider_collidable() : c->is_floor_collidable())) continue;
 			if (!line_bcube.intersects(*c) || !line_int_cube_exp(p1, p2, get_true_room_obj_bcube(*c), expand)) continue; // catwalk floor only?
-			if (c->type == TYPE_RAMP && interior->ignore_ramp_placement && obj_z1 >= ground_floor_z1) continue;
+			if (c->type == TYPE_RAMP && interior->ignore_ramp_placement && obj_z1 >= ground_floor_z1)          continue;
 
 			if (c->is_vert_cylinder()) { // vertical cylinder (should bathroom sink count?)
 				if (!is_house && c->type == TYPE_WHEATER) return 9; // office building water heaters have pipes into the floor, more than a cylinder, so use their bcubes
