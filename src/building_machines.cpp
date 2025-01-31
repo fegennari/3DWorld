@@ -559,7 +559,7 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 
 void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	assert(interior->factory_info);
-	float const floor_spacing(get_window_vspace()), fc_gap(room.dz()), max_place_sz(2.0*floor_spacing);
+	float const floor_spacing(get_window_vspace()), fc_gap(room.dz()), max_place_sz(1.6*floor_spacing);
 	float const doorway_width(get_doorway_width()), min_gap(max(doorway_width, get_min_front_clearance_inc_people()));
 	unsigned const num_machines((rgen.rand() % 11) + 10); // 10-20
 	vect_room_object_t &objs(interior->room_geom->objs);

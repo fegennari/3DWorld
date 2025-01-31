@@ -233,7 +233,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		for (unsigned n = 0; n < 10; ++n) { // 10 attempts
 			unsigned const rix(rgen.rand() % nested_rooms.size());
 			cube_t const &bpr(nested_rooms[rix]);
-			bool const bpdim(rgen.rand_bool()), bpdir((bpdim == edim) ? (!edir) : (bpr.get_center_dim(bpdim) < entry.get_center_dim(bpdim)));
+			bool const bpdim(rgen.rand_bool()), bpdir((bpdim == edim) ? !edir : (bpr.get_center_dim(bpdim) < entry.get_center_dim(bpdim)));
 			float const hwidth(0.5*rgen.rand_uniform(0.25, 0.35)*window_vspace), depth(0.04*window_vspace), edge_space(hwidth + support_width);
 			float const lo(bpr.d[!bpdim][0] + edge_space), hi(bpr.d[!bpdim][1] - edge_space);
 			if (lo >= hi) continue; // wall too short
@@ -257,7 +257,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		for (unsigned n = 0; n < 10; ++n) { // 10 attempts
 			unsigned const rix(rgen.rand() % nested_rooms.size());
 			cube_t const &wfr(nested_rooms[rix]);
-			bool const wfdim(rgen.rand_bool()), wfdir((wfdim == edim) ? (!edir) : (wfr.get_center_dim(wfdim) < entry.get_center_dim(wfdim)));
+			bool const wfdim(rgen.rand_bool()), wfdir((wfdim == edim) ? !edir : (wfr.get_center_dim(wfdim) < entry.get_center_dim(wfdim)));
 			float const lo(wfr.d[!wfdim][0] + edge_space), hi(wfr.d[!wfdim][1] - edge_space);
 			if (lo >= hi) continue; // wall too short
 			float const wall_pos(wfr.d[wfdim][wfdir] + (wfdir ? 1.0 : -1.0)*wall_thick);
@@ -273,5 +273,65 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	}
 	// TODO: catwalks
 	// TODO: large fans in the ceiling
-	// TODO: stacks of boxes and crates, paint cans, buckets, fire sprinklers
+	
+	// add boxes and crates in piles
+	unsigned const num_piles(4 + (rgen.rand() % 5)); // 4-8
+	vect_cube_t exclude; // empty
+
+	for (unsigned n = 0; n < num_piles; ++n) {
+		unsigned const side(rgen.rand() % 3); // all sides but the entrance
+		bool const pdim((side == 2) ? edim : !edim), pdir((pdim == edim) ? !edir : bool(side));
+		point center;
+		center[ pdim] = place_area.d[pdim][pdir]; // against the wall/pillars
+		center[!pdim] = rgen.rand_uniform(place_area.d[!pdim][0], place_area.d[!pdim][1]); // random pos along wall
+		cube_t crate_bounds(center);
+		crate_bounds.expand_in_dim( pdim, window_vspace*rgen.rand_uniform(0.5, 1.0)); // random depth; half the space is outside the bounds and wasted
+		crate_bounds.expand_in_dim(!pdim, window_vspace*rgen.rand_uniform(0.5, 1.0)); // random width; may be clipped at the corner of the building
+		crate_bounds.intersect_with_cube(place_area);
+		add_boxes_and_crates(rgen, room, zval, room_id, light_amt, objs_start, 13, 0, interior->factory_info->floor_space, crate_bounds, exclude); // 4-16; is_basement=0
+	} // for n
+	// add paint cans and buckets
+	
+	// TODO: fire sprinklers
+}
+
+void building_t::add_factory_office_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, unsigned floor, float tot_light_amt, unsigned objs_start) {
+	// add a clock on the wall
+	bool const digital(rgen.rand_bool());
+	float const floor_spacing(get_window_vspace()), clock_height((digital ? 0.08 : 0.16)*floor_spacing), clock_z1(zval + get_floor_ceil_gap() - 1.4*clock_height);
+	float const clock_width((digital ? 4.0 : 1.0)*clock_height), clock_depth((digital ? 0.05 : 0.08)*clock_width);
+	cube_t const place_area(get_walkable_room_bounds(room));
+	cube_t const &factory_area(get_factory_area());
+	cube_t clock;
+	set_cube_zvals(clock, clock_z1, clock_z1+clock_height);
+
+	for (unsigned n = 0; n < 10; ++n) { // 10 attempts
+		bool const dim(rgen.rand_bool()), dir(room.d[dim][0] == factory_area.d[dim][0]); // interior wall
+		float const edge_space(max(1.5*clock_width, 0.25*room.get_sz_dim(!dim))); // somewhat centered
+		float const lo(place_area.d[!dim][0] + edge_space), hi(place_area.d[!dim][1] - edge_space);
+		if (lo >= hi) continue; // wall too short
+		float const dsign(dir ? -1.0 : 1.0), wall_pos(place_area.d[dim][dir]);
+		set_wall_width(clock, rgen.rand_uniform(lo, hi), 0.5*clock_width, !dim);
+		clock.d[dim][ dir] = wall_pos;
+		clock.d[dim][!dir] = wall_pos + dsign*clock_depth;
+		cube_t tc(clock);
+		tc.d[dim][!dir] += dsign*0.25*floor_spacing; // add clearance
+		if (is_cube_close_to_doorway(tc, room, 0.0, 1) || overlaps_other_room_obj(tc, objs_start)) continue;
+		add_clock(clock, room_id, tot_light_amt, dim, !dir, digital);
+		break; // success
+	} // for n
+	// add boxes and crates
+	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const objs_pre(objs.size());
+	add_boxes_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, 8); // up to 8 boxes along walls
+
+	if (objs_pre == objs.size() || rgen.rand_bool()) { // no boxes were added; try adding to the middle of the room; also try half the time
+		cube_t const room_bounds(get_walkable_room_bounds(room)), crate_bounds(room_bounds);
+		vect_cube_t exclude;
+	
+		for (door_stack_t const &ds : interior->door_stacks) {
+			if (ds.is_connected_to_room(room_id)) {exclude.push_back(ds.get_open_door_bcube_for_room(room));}
+		}
+		add_boxes_and_crates(rgen, room, zval, room_id, tot_light_amt, objs_start, 3, 0, room_bounds, crate_bounds, exclude); // 4-6; is_basement=0
+	}
 }

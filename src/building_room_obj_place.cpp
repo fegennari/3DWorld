@@ -621,31 +621,7 @@ bool building_t::add_office_objs(rand_gen_t rgen, room_t const &room, vect_cube_
 	if (rgen.rand_float() < (is_house ? 0.25 : 0.75)) { // maybe place a filing cabinet along a wall; more likely for office buildings than houses
 		add_filing_cabinet_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	}
-	if (!is_basement && is_factory()) { // factory office - add a clock
-		bool const digital(rgen.rand_bool());
-		float const floor_spacing(get_window_vspace()), clock_height((digital ? 0.08 : 0.16)*floor_spacing), clock_z1(zval + get_floor_ceil_gap() - 1.4*clock_height);
-		float const clock_width((digital ? 4.0 : 1.0)*clock_height), clock_depth((digital ? 0.05 : 0.08)*clock_width);
-		cube_t const place_area(get_walkable_room_bounds(room));
-		cube_t const &factory_area(get_factory_area());
-		cube_t clock;
-		set_cube_zvals(clock, clock_z1, clock_z1+clock_height);
-
-		for (unsigned n = 0; n < 10; ++n) { // 10 attempts
-			bool const dim(rgen.rand_bool()), dir(room.d[dim][0] == factory_area.d[dim][0]); // interior wall
-			float const edge_space(max(1.5*clock_width, 0.25*room.get_sz_dim(!dim))); // somewhat centered
-			float const lo(place_area.d[!dim][0] + edge_space), hi(place_area.d[!dim][1] - edge_space);
-			if (lo >= hi) continue; // wall too short
-			float const dsign(dir ? -1.0 : 1.0), wall_pos(place_area.d[dim][dir]);
-			set_wall_width(clock, rgen.rand_uniform(lo, hi), 0.5*clock_width, !dim);
-			clock.d[dim][ dir] = wall_pos;
-			clock.d[dim][!dir] = wall_pos + dsign*clock_depth;
-			cube_t tc(clock);
-			tc.d[dim][!dir] += dsign*0.25*floor_spacing; // add clearance
-			if (is_cube_close_to_doorway(tc, room, 0.0, 1) || overlaps_other_room_obj(tc, objs_start)) continue;
-			add_clock(clock, room_id, tot_light_amt, dim, !dir, digital);
-			break; // success
-		} // for n
-	}
+	if (!is_basement && is_factory()) {add_factory_office_objs(rgen, room, zval, room_id, floor, tot_light_amt, objs_start);} // factory office
 	return 1;
 }
 
@@ -2589,12 +2565,11 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	if (is_int_garage) {max_eq(shelf_shorten, 0.36f*window_vspacing);}
 	cube_t room_bounds(get_walkable_room_bounds(room)), crate_bounds(room_bounds);
 	vect_room_object_t &objs(interior->room_geom->objs);
-	unsigned const num_crates(4 + (rgen.rand() % (is_house ? (is_basement ? 12 : 5) : 30))); // 4-33 for offices, 4-8 for houses, 4-16 for house basements
 	vector<unsigned> ds_ixs;
 	vect_cube_t exclude;
 	cube_t test_cube(room);
 	set_cube_zvals(test_cube, zval, zval+wall_thickness); // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
-	unsigned num_placed(0), num_doors(0);
+	unsigned num_doors(0);
 
 	// first pass to record the doors in this room
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) { // check both dirs
@@ -2615,7 +2590,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	for (unsigned dsix : ds_ixs) {
 		door_stack_t const &ds(interior->door_stacks[dsix]);
 		exclude.push_back(ds);
-		exclude.back().expand_in_dim( ds.dim, 0.6*room.get_sz_dim(ds.dim));
+		exclude.back().expand_in_dim(ds.dim, 0.6*room.get_sz_dim(ds.dim));
 		
 		if (num_doors > 1) { // if there are multiple doors (houses only?), expand the exclude area more in the other dimension to make sure there's a path between doors
 			exclude.back().expand_in_dim(!ds.dim, min(1.2f*ds.get_width(), 0.3f*room.get_sz_dim(!ds.dim)));
@@ -2680,7 +2655,23 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 			objs.emplace_back(chair, TYPE_OFF_CHAIR, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_RAND_ROT, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK);
 		}
 	}
+	unsigned const num_max(is_house ? (is_basement ? 12 : 5) : 30); // 4-33 for offices, 4-8 for houses, 4-16 for house basements
+	add_boxes_and_crates(rgen, room, zval, room_id, tot_light_amt, objs_start, num_max, is_basement, room_bounds, crate_bounds, exclude);
+	// add a ladder leaning against the wall if storage room is on the ground floor or basement
+	if (zval < ground_floor_z1 + window_vspacing && rgen.rand_bool()) {add_ladder_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);}
+	// add office building storage room sign, in a hallway, basement, etc.
+	if (!is_house) {add_door_sign((has_stairs ? "Stairs" : "Storage"), room, zval, room_id);}
+	return 1; // it's always a storage room, even if it's empty
+}
+
+void building_t::add_boxes_and_crates(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
+	unsigned num_max, bool is_basement, cube_t const &room_bounds, cube_t const &crate_bounds, vect_cube_t const &exclude)
+{
+	float const window_vspacing(get_window_vspace()), ceil_zval(zval + get_floor_ceil_gap());
+	unsigned const num_crates(4 + (rgen.rand() % num_max));
+	vect_room_object_t &objs(interior->room_geom->objs);
 	door_path_checker_t door_path_checker;
+	unsigned num_placed(0);
 
 	for (unsigned n = 0; n < 4*num_crates; ++n) { // make up to 4 attempts for every crate/box
 		vector3d sz; // half size relative to window_vspacing
@@ -2704,7 +2695,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		c2.expand_by(vector3d(0.5*c2.dx(), 0.5*c2.dy(), 0.0)); // approx extents of flaps if open
 		room_object const type(rgen.rand_bool() ? TYPE_CRATE : TYPE_BOX);
 		unsigned flags(0);
-		
+
 		if (type == TYPE_BOX) { // determine which sides are against a wall, for use with box flaps logic
 			for (unsigned d = 0; d < 4; ++d) {
 				bool const dim(d>>1), dir(d&1);
@@ -2716,11 +2707,6 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		set_obj_id(objs); // used to select texture and box contents
 		if (++num_placed == num_crates) break; // we're done
 	} // for n
-	// add a ladder leaning against the wall if storage room is on the ground floor or basement
-	if (zval < ground_floor_z1 + window_vspacing && rgen.rand_bool()) {add_ladder_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);}
-	// add office building storage room sign, in a hallway, basement, etc.
-	if (!is_house /*&& !is_basement*/) {add_door_sign((has_stairs ? "Stairs" : "Storage"), room, zval, room_id);}
-	return 1; // it's always a storage room, even if it's empty
 }
 
 void building_t::add_shelves(cube_t const &c, bool dim, bool dir, unsigned room_id, float tot_light_amt, unsigned flags, unsigned item_flags, rand_gen_t &rgen) {
