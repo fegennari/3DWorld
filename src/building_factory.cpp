@@ -3,8 +3,10 @@
 
 #include "function_registry.h"
 #include "buildings.h"
+#include "city_model.h"
 
 extern float CAMERA_RADIUS;
+extern object_model_loader_t building_obj_model_loader;
 
 
 float shift_val_to_not_intersect_window(cube_t const &c, float val, float hspace, float window_border, bool dim);
@@ -232,7 +234,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			unsigned const rix(rgen.rand() % nested_rooms.size());
 			cube_t const &bpr(nested_rooms[rix]);
 			bool const bpdim(rgen.rand_bool()), bpdir((bpdim == edim) ? (!edir) : (bpr.get_center_dim(bpdim) < entry.get_center_dim(bpdim)));
-			float const hwidth(0.5*rgen.rand_uniform(0.25, 0.35)*window_vspace), depth(0.04*window_vspace), edge_space(1.5*hwidth);
+			float const hwidth(0.5*rgen.rand_uniform(0.25, 0.35)*window_vspace), depth(0.04*window_vspace), edge_space(hwidth + support_width);
 			float const lo(bpr.d[!bpdim][0] + edge_space), hi(bpr.d[!bpdim][1] - edge_space);
 			if (lo >= hi) continue; // wall too short
 			float const dsign(bpdir ? 1.0 : -1.0), wall_pos(bpr.d[bpdim][bpdir] + dsign*wall_thick);
@@ -248,7 +250,28 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			break; // success
 		} // for n
 	}
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_WFOUNTAIN)) { // add water fountain
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_WFOUNTAIN)); // D, W, H
+		float const height(0.25*window_vspace), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z), edge_space(hwidth + support_width), z1(zval + 0.18*window_vspace);
+
+		for (unsigned n = 0; n < 10; ++n) { // 10 attempts
+			unsigned const rix(rgen.rand() % nested_rooms.size());
+			cube_t const &wfr(nested_rooms[rix]);
+			bool const wfdim(rgen.rand_bool()), wfdir((wfdim == edim) ? (!edir) : (wfr.get_center_dim(wfdim) < entry.get_center_dim(wfdim)));
+			float const lo(wfr.d[!wfdim][0] + edge_space), hi(wfr.d[!wfdim][1] - edge_space);
+			if (lo >= hi) continue; // wall too short
+			float const wall_pos(wfr.d[wfdim][wfdir] + (wfdir ? 1.0 : -1.0)*wall_thick);
+			cube_t wf;
+			set_wall_width(wf, rgen.rand_uniform(lo, hi), hwidth, !wfdim);
+			set_cube_zvals(wf, z1, z1+height);
+			wf.d[wfdim][!wfdir] = wall_pos;
+			wf.d[wfdim][ wfdir] = wall_pos + (wfdir ? 1.0 : -1.0)*depth;
+			if (is_cube_close_to_doorway(wf, room, 0.0, 1) || overlaps_other_room_obj(wf, objs_start)) continue; // avoid doors and machines
+			objs.emplace_back(wf, TYPE_WFOUNTAIN, room_id, wfdim, !wfdir, 0, light_amt, SHAPE_CUBE);
+			break; // success
+		} // for n
+	}
 	// TODO: catwalks
 	// TODO: large fans in the ceiling
-	// TODO: stacks of boxes and crates, paint cans, buckets, fire sprinklers, transformer, water fountain?
+	// TODO: stacks of boxes and crates, paint cans, buckets, fire sprinklers
 }
