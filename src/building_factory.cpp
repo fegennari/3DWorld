@@ -97,7 +97,7 @@ void building_t::create_factory_floorplan(unsigned part_id, float window_hspacin
 void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
 	assert(interior->factory_info);
 	float const light_amt(1.0); // always lit?
-	bool const edim(interior->factory_info->entrance_dim), edir(interior->factory_info->entrance_dir), beam_dim(!edim); // edim is the long dim
+	bool const edim(interior->factory_info->entrance_dim), edir(interior->factory_info->entrance_dir), beam_dim(!edim); // edim is the long dim; beam_dim is short dim
 	float const window_vspace(get_window_vspace()), wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// add support pillars around the exterior, between windows; add ceiling beams
@@ -158,13 +158,14 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 				} // for r
 			} // for n
 		} // for dir
-		// add beams
+		// add horizontal beams
 		unsigned const num_hdiv(2*num_windows); // add intermediate beams and hang lights on them
 		for (unsigned d = 0; d < 2; ++d) {beam.d[dim][d] = room.d[dim][d];}
-		if (bool(dim) == beam_dim) {beam.expand_in_dim(beam_dim, -support_hwidth);} // half overlap of vert supports
+		bool const short_dim(bool(dim) == beam_dim);
+		if (short_dim) {beam.expand_in_dim(beam_dim, -support_hwidth);} // half overlap of vert supports
 
 		for (unsigned n = 0; n <= num_hdiv; ++n) {
-			if (bool(dim) != beam_dim && n > 0 && n < num_hdiv) continue; // only add edge beams in this dim
+			if (!short_dim && n > 0 && n < num_hdiv) continue; // only add edge beams in this dim
 			float const centerline(max(support_bounds.d[!dim][0], min(support_bounds.d[!dim][1], room.d[!dim][0] + n*0.5f*spacing))); // clamp to support_bounds
 			set_wall_width(beam, centerline, support_hwidth, !dim);
 			unsigned skip_faces(EF_Z2);
@@ -172,6 +173,10 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			if (n == num_hdiv) {skip_faces |= ~get_face_mask(!dim, 1);}
 			objs.emplace_back(beam, TYPE_IBEAM, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, WHITE, skip_faces);
 		} // for n
+		if (!short_dim) { // add center beam; will intersect/overlap beams in other dim
+			set_wall_width(beam, room.get_center_dim(!dim), support_hwidth, !dim);
+			objs.emplace_back(beam, TYPE_IBEAM, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, WHITE, EF_Z2);
+		}
 	} // for dim
 #if 0 // debug visualization
 	cube_t dbg(room);
