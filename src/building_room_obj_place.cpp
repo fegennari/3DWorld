@@ -2874,20 +2874,29 @@ cube_t place_cylin_object_maybe_near(rand_gen_t &rgen, cube_t const &place_on, p
 	return c;
 }
 void building_t::add_basement_clutter_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	vect_room_object_t &objs(interior->room_geom->objs);
+	bool const add_bottles(rgen.rand_float() < 0.35); // 35% of rooms
+	bool const add_trash  (rgen.rand_float() < 0.35); // 35% of rooms
+	bool const add_papers (rgen.rand_float() < 0.50); // 50% of rooms
+	bool const add_glass  (rgen.rand_float() < 0.65); // 65% of the time
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-get_trim_thickness()); // add some extra padding
 	place_area.z1() = zval;
-	float const floor_spacing(get_window_vspace()), stain_height(1.5*get_flooring_thick()), min_place_sz(min(place_area.dx(), place_area.dy()));
+	add_floor_clutter_objs(rgen, room, place_area, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass);
+}
+void building_t::add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
+	bool add_bottles, bool add_trash, bool add_papers, bool add_glass)
+{
+	vect_room_object_t &objs(interior->room_geom->objs);
+	float const floor_spacing(get_window_vspace()), min_place_sz(min(place_area.dx(), place_area.dy()));
 	vect_cube_t avoid;
 
-	if (rgen.rand_float() < 0.35) { // add bottles on the floor to 35% of rooms
+	if (add_bottles) { // add bottles on the floor
 		unsigned const num_bottles((rgen.rand() % 12) + 1); // 1-12
 		float const near_prob(0.75), near_dist(0.3*floor_spacing);
 		point prev_pos;
-	
+
 		for (unsigned n = 0; n < num_bottles; ++n) {
-			float const height(floor_spacing*rgen.rand_uniform(0.075, 0.12)), radius(floor_spacing*rgen.rand_uniform(0.012, 0.018));
+			float const height(floor_spacing*rgen.rand_uniform(0.075, 0.12)), radius(floor_spacing*rgen.rand_uniform(0.012, 0.018)), stain_height(1.5*get_flooring_thick());
 			if (min_place_sz < 6.0*radius) return; // room is too small to place this bottle; shouldn't get here
 			cube_t bottle(place_cylin_object_maybe_near(rgen, place_area, prev_pos, radius, height, max(2.0f*radius, height), near_prob, 2.0*height, near_dist));
 			cube_t bc(bottle);
@@ -2927,7 +2936,7 @@ void building_t::add_basement_clutter_objs(rand_gen_t rgen, room_t const &room, 
 			}
 		} // for n
 	}
-	if (rgen.rand_float() < 0.35) { // add trash (paper balls) on the floor to 35% of rooms
+	if (add_trash) { // add trash (paper balls) on the floor
 		unsigned const num_trash((rgen.rand() % 6) + 1); // 1-6
 		float const near_prob(0.6), near_dist(0.3*floor_spacing);
 		point prev_pos;
@@ -2942,7 +2951,7 @@ void building_t::add_basement_clutter_objs(rand_gen_t rgen, room_t const &room, 
 			set_obj_id(objs);
 		} // for n
 	}
-	if (rgen.rand_float() < 0.50) { // add sheets of paper on the floor to 50% of rooms
+	if (add_papers) { // add sheets of paper on the floor
 		// similar to add_papers_to_surface()
 		unsigned const num_papers((rgen.rand() % 5) + 1); // 1-5
 		float const plen(0.115*floor_spacing), pwidth(0.77*plen), thickness(0.00025*floor_spacing); // 8.5x11
@@ -2960,11 +2969,11 @@ void building_t::add_basement_clutter_objs(rand_gen_t rgen, room_t const &room, 
 			paper.z2() += thickness; // to avoid Z-fighting if different colors
 		} // for n
 	}
-	if (rgen.rand_float() < 0.65) { // add broken glass on the floor 65% of the time; often fails to be placed
+	if (add_glass) { // add broken glass on the floor; often fails to be placed
 		float const glass_zval(zval + 1.1*get_flooring_thick()); // slightly above the flooring/rug to avoid z-fighting
 		float const radius(rgen.rand_uniform(0.08, 0.12)*min(floor_spacing, min_place_sz));
 		cube_t const bc(place_cylin_object(rgen, place_area, radius, 0.1*radius, 1.5*radius, 1)); // place_at_z1=1
-		
+
 		if (!is_obj_placement_blocked(bc, room, 1) && !overlaps_other_room_obj(bc, objs_start) && !has_bcube_int(bc, avoid)) {
 			avoid.push_back(bc);
 			add_broken_glass_decal(point(bc.xc(), bc.yc(), glass_zval), radius, rgen);

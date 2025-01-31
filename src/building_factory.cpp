@@ -293,8 +293,13 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	// add buckets (and paint cans?)
 	unsigned const num_buckets((rgen.rand() % 4) + 1); // 1-4
 	add_buckets_to_room(rgen, place_area, zval, room_id, light_amt, objs_start, num_buckets);
+	// add floor clutter
+	bool const add_bottles(1), add_papers(0), add_glass(1), add_trash(rgen.rand_float() < 0.65); // 65% of rooms
+	place_area.z1() = zval; // is this needed/correct?
+	add_floor_clutter_objs(rgen, room, place_area, zval, room_id, light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass);
 
-	// TODO: fire sprinklers
+	// fire sprinklers
+	// TODO
 }
 
 void building_t::add_factory_office_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, unsigned floor, float tot_light_amt, unsigned objs_start) {

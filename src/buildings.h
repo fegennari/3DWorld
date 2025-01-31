@@ -2582,6 +2582,8 @@ private:
 	bool add_ladder_to_room  (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_garage_objs     (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_floor_clutter_objs(rand_gen_t  rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
+	void add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
+		bool add_bottles, bool add_trash, bool add_papers, bool add_glass);
 	void add_basement_clutter_objs(rand_gen_t  rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	unsigned add_water_heaters (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool single_only=0);
 	bool add_basement_utility_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
