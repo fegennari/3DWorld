@@ -2746,7 +2746,6 @@ bool building_t::add_interrogation_objs(rand_gen_t rgen, room_t const &room, flo
 		break; // found the door - done
 	}
 	// add chair(s) facing the door; they may have falled over
-	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness());
 	unsigned const num_chairs((rgen.rand_float() < 0.25) ? 2 : 1); // add a pair of chairs 25% of the time
 	colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
 	point const room_center(room.xc(), room.yc(), zval);
@@ -2754,7 +2753,7 @@ bool building_t::add_interrogation_objs(rand_gen_t rgen, room_t const &room, flo
 	bool added_chair(0);
 
 	if (num_chairs == 2) { // add two chairs: pairwise interrogation!
-		float const chair_offset(0.2*floor_spacing);
+		float const chair_offset(0.2*get_window_vspace());
 		chair_pos[0][!dim] -= chair_offset;
 		chair_pos[1][!dim] += chair_offset;
 	}
@@ -2764,20 +2763,24 @@ bool building_t::add_interrogation_objs(rand_gen_t rgen, room_t const &room, flo
 	if (!added_chair) return 0;
 	// add bucket(s)
 	unsigned const num_buckets((rgen.rand() % 3) + 1); // 1-3
-	vect_room_object_t &objs(interior->room_geom->objs);
-	cube_t place_area(get_walkable_room_bounds(room));
-	place_area.z1() = zval + 1.5*get_flooring_thick(); // slightly above the flooring/rug to avoid z-fighting
-
-	for (unsigned n = 0; n < num_buckets; ++n) {
-		float const height(rgen.rand_uniform(0.1, 0.15)*floor_spacing), radius(rgen.rand_uniform(0.4, 0.6)*height);
-		cube_t const bucket(place_cylin_object(rgen, place_area, radius, height, (radius + trim_thickness), 1)); // place_at_z1=1
-		if (is_obj_placement_blocked(bucket, room, 1) || overlaps_other_room_obj(bucket, objs_start)) continue; // bad placement
-		objs.emplace_back(bucket, TYPE_BUCKET, room_id, rgen.rand_bool(), 0, 0, tot_light_amt, SHAPE_CYLIN, LT_GRAY); // dir=0 (unused)
-		set_obj_id(objs); // used for setting water/liquid properties
-	}
+	add_buckets_to_room(rgen, get_walkable_room_bounds(room), zval, room_id, tot_light_amt, objs_start, num_buckets);
 	// add a ladder leaning against the wall
 	if (rgen.rand_bool()) {add_ladder_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);}
 	return 1;
+}
+
+void building_t::add_buckets_to_room(rand_gen_t &rgen, cube_t place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned num) {
+	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness());
+	vect_room_object_t &objs(interior->room_geom->objs);
+	place_area.z1() = zval + 1.5*get_flooring_thick(); // slightly above the flooring/rug to avoid z-fighting
+
+	for (unsigned n = 0; n < num; ++n) {
+		float const height(rgen.rand_uniform(0.1, 0.15)*floor_spacing), radius(rgen.rand_uniform(0.4, 0.6)*height);
+		cube_t const bucket(place_cylin_object(rgen, place_area, radius, height, (radius + trim_thickness), 1)); // place_at_z1=1
+		if (is_obj_placement_blocked(bucket, place_area, 1) || overlaps_other_room_obj(bucket, objs_start)) continue; // bad placement
+		objs.emplace_back(bucket, TYPE_BUCKET, room_id, rgen.rand_bool(), 0, 0, tot_light_amt, SHAPE_CYLIN, LT_GRAY); // dir=0 (unused)
+		set_obj_id(objs); // used for setting water/liquid properties
+	}
 }
 
 void building_t::add_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {

@@ -290,8 +290,10 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		crate_bounds.intersect_with_cube(place_area);
 		add_boxes_and_crates(rgen, room, zval, room_id, light_amt, objs_start, 13, 0, interior->factory_info->floor_space, crate_bounds, exclude); // 4-16; is_basement=0
 	} // for n
-	// add paint cans and buckets
-	
+	// add buckets (and paint cans?)
+	unsigned const num_buckets((rgen.rand() % 4) + 1); // 1-4
+	add_buckets_to_room(rgen, place_area, zval, room_id, light_amt, objs_start, num_buckets);
+
 	// TODO: fire sprinklers
 }
 
