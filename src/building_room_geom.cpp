@@ -1307,6 +1307,7 @@ void get_catwalk_cubes(room_object_t const &c, cube_t cubes[3]) { // bottom, lef
 	cubes[0].z2() = (c.z1() + 0.4*0.08*height);
 
 	for (unsigned d = 0; d < 2; ++d) { // sides
+		if (c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_HI)) continue; // bars on this side are missing
 		cubes[d+1] = c;
 		cubes[d+1].d[!c.dim][!d] = c.d[!c.dim][d] - (d ? 1.0 : -1.0)*0.05*height;
 	}
@@ -1334,6 +1335,7 @@ void building_room_geom_t::add_catwalk(room_object_t const &c) {
 	rgeom_mat_t &bar_mat(get_metal_material(1, 0, 1)); // shadowed, specular metal, small
 	
 	for (unsigned side = 0; side < 2; ++side) {
+		if (c.flags & (side ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_HI)) continue; // bars on this side are missing
 		float const edge(c.d[!dim][side]), ssign(side ? 1.0 : -1.0);
 		// horizontal bars
 		cube_t bar(c);
@@ -1354,13 +1356,14 @@ void building_room_geom_t::add_catwalk(room_object_t const &c) {
 			set_wall_width(bar, (c.d[dim][0] + n*spacing + vbar_hwidth), vbar_hwidth, dim);
 			bar_mat.add_cube_to_verts_untextured(bar, bar_color, ((n == 0 || n+1 == num_vbars) ? EF_Z1 : 0)); // skip bottom of end bars
 		}
-		// end floor bar
-		bar = c;
+	} // for side
+	for (unsigned end = 0; end < 2; ++end) { // end floor bars
+		cube_t bar(c);
 		bar.z2() = bot.z2() + 0.1*bot_thick;
 		bar.expand_in_dim(!dim, -vbar_width); // remove overlap with hbars
-		bar.d[dim][!side] = c.d[dim][side] - ssign*vbar_width;
+		bar.d[dim][!end] = c.d[dim][end] - (end ? 1.0 : -1.0)*vbar_width;
 		bar_mat.add_cube_to_verts_untextured(bar, end_color, ends_sf);
-	} // for side
+	}
 }
 
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {

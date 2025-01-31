@@ -1135,7 +1135,9 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 					if (cnorm) {*cnorm = plus_z;}
 					had_coll = 1;
 				}
-				for (unsigned side = 0; side < 2; ++side) {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, cubes[side+1], p_last, 0, cnorm);} // check sides
+				for (unsigned side = 0; side < 2; ++side) { // check sides that are present
+					if (!cubes[side+1].is_all_zeros()) {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, cubes[side+1], p_last, 0, cnorm);}
+				}
 				continue;
 			}
 			if (!sphere_cube_intersect(pos, xy_radius, c_extended)) continue; // optimization

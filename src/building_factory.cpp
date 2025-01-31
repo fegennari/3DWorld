@@ -102,7 +102,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// add support pillars around the exterior, between windows; add ceiling beams
 	float const support_width(FACTORY_BEAM_THICK*wall_thick), support_hwidth(0.5*support_width);
-	float const ceil_zval(room.z2() - fc_thick), beams_z1(ceil_zval - support_width);
+	float const ceil_zval(room.z2() - fc_thick), beams_z1(ceil_zval - support_width), room_center_short(room.get_center_dim(!edim));
 	cube_t support_bounds(room);
 	support_bounds.expand_by_xy(-support_hwidth);
 	cube_t support, beam;
@@ -174,7 +174,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			objs.emplace_back(beam, TYPE_IBEAM, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, WHITE, skip_faces);
 		} // for n
 		if (!short_dim) { // add center beam; will intersect/overlap beams in other dim
-			set_wall_width(beam, room.get_center_dim(!dim), support_hwidth, !dim);
+			set_wall_width(beam, room_center_short, support_hwidth, !dim);
 			objs.emplace_back(beam, TYPE_IBEAM, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, WHITE, EF_Z2);
 		}
 	} // for dim
@@ -186,6 +186,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	float const clearance(get_min_front_clearance_inc_people()), player_height(get_player_height());
 	cube_t place_area(room);
 	place_area.expand_by_xy(-support_width); // inside the supports
+	cube_t const place_area_upper(place_area); // includes space above office and bathroom
 	place_area.intersect_with_cube(interior->factory_info->floor_space); // clip off side rooms and floor/ceiling
 	cube_t const &entry(interior->factory_info->entrance_area);
 	unsigned const objs_start(objs.size());
@@ -221,6 +222,15 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		catwalk.z2() = catwalk.z1() + catwalk_height;
 		set_wall_width(catwalk, rgen.rand_uniform(cw_lo, cw_hi), catwalk_hwidth, edim);
 		objs.emplace_back(catwalk, TYPE_CATWALK, room_id, !edim, 0, RO_FLAG_IN_FACTORY, light_amt);
+	}
+	if (1) { // central upper catwalk in long dim
+		cube_t catwalk(place_area_upper); // set the length
+		catwalk.z1() = room.z2() - window_vspace + fc_thick - support_width; // would be upper floor zval - support_width
+		catwalk.z2() = catwalk.z1() + catwalk_height;
+		set_wall_width(catwalk, room_center_short, catwalk_hwidth, !edim);
+		objs.emplace_back(catwalk, TYPE_CATWALK, room_id, edim, 0, RO_FLAG_IN_FACTORY, light_amt);
+		// TODO: avoid machines
+		// TODO: connect to floor with stairs and/or ladders
 	}
 	// add transformer
 	float const tzval(zval - 0.02*window_vspace); // transformer is slightly below floor level
@@ -276,7 +286,6 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			break; // success
 		} // for n
 	}
-	// TODO: catwalks
 	// TODO: large fans in the ceiling
 	
 	// add boxes and crates in piles
