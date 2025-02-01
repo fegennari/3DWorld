@@ -2582,7 +2582,7 @@ void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) {
 	//assert(0.5*c.get_sz_dim((dim+2)%3) == radius); // must be a square cross section, but too strong due to FP error
 	// only vertical pipes cast shadows; horizontal ceiling pipes are too high and outside the ceiling light shadow map,
 	// or otherwise don't look correct when an area light is treated as a point light
-	bool const is_duct(c.type == TYPE_DUCT), mall_duct(is_duct && c.in_mall());
+	bool const is_duct(c.type == TYPE_DUCT), mall_duct(is_duct && c.in_mall()), factory_rod(!is_duct && dim == 2 && c.in_factory());
 	// Note: attic ducts have the attic flag set, which is aliased as the hanging flag, so we have to disable flat ends for ducts
 	bool const flat_ends(!is_duct && c.is_hanging()), shadowed(is_duct || (c.flags & RO_FLAG_LIT)); // RO_FLAG_LIT flag is interpreted as "casts shadows"
 	// adj flags indicate adjacencies where we draw joints connecting to other pipe sections
@@ -2591,16 +2591,16 @@ void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) {
 	bool const is_bolt(c.flags & RO_FLAG_RAND_ROT); // use RO_FLAG_RAND_ROT to indicate this is a bolt on the pipe rather than a pipe section
 	unsigned const ndiv(is_bolt ? 6 : N_CYL_SIDES);
 	float const side_tscale(is_bolt ? 0.0 : 1.0); // bolts are untextured
-	float const len_tscale(is_duct ? 0.1*c.get_length()/radius : 1.0);
+	float const len_tscale(is_duct ? 0.1*c.get_length()/radius : (factory_rod ? 20.0 : 1.0)); // factory rod is drawn textured as screw threads
 	// draw sides and possibly one or both ends
-	tid_nm_pair_t tex((is_duct ? get_cylin_duct_tid() : -1), 1.0, shadowed); // custom specular color
+	tid_nm_pair_t tex(((is_duct || factory_rod) ? get_cylin_duct_tid() : -1), 1.0, shadowed); // custom specular color
 	// make specular; maybe should not make specular if rusty, but setting per-pipe specular doesn't work, and water effect adds specular anyway
 	colorRGBA const spec_color(get_specular_color(c.color)); // special case metals
 	tex.set_specular_color(spec_color, 0.8, 60.0);
 	rgeom_mat_t &mat(get_material(tex, shadowed, 0, (exterior ? 0 : 2), 0, exterior)); // detail or exterior object
 	// swap texture XY for ducts
 	mat.add_ortho_cylin_to_verts(c, color, dim, (flat_ends && draw_joints[0]), (flat_ends && draw_joints[1]),
-		0, 0, 1.0, 1.0, side_tscale, 1.0, 0, ndiv, 0.0, is_duct, len_tscale);
+		0, 0, 1.0, 1.0, side_tscale, 1.0, 0, ndiv, 0.0, (is_duct || factory_rod), len_tscale);
 
 	if (!mall_duct) { // draw round joints as spheres
 		for (unsigned d = 0; d < 2; ++d) {

@@ -109,6 +109,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	set_cube_zvals(support, zval,     beams_z1 );
 	set_cube_zvals(beam,    beams_z1, ceil_zval);
 	vect_cube_t support_parts, nested_rooms;
+	vector<float> beam_pos; // in short dim; needed for hanging catwalks
 	float const shift_vals[6] = {-0.1, 0.2, -0.3, 0.4, -0.5, 0.6}; // cumulative version of {-0.1, 0.1, -0.2, 0.2, -0.3, 0.3}; not enough shift to overlap a window
 
 	for (room_t const &r : interior->rooms) {
@@ -116,6 +117,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		if (r != room) {nested_rooms.push_back(r);} // skip self (factory)
 	}
 	for (unsigned dim = 0; dim < 2; ++dim) {
+		bool const short_dim(bool(dim) == beam_dim);
 		unsigned const num_windows(get_num_windows_on_side(room, !dim));
 		float const spacing(room.get_sz_dim(!dim)/num_windows);
 
@@ -125,7 +127,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			support.d[dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*support_width;
 
 			for (unsigned n = 0; n <= num_windows; ++n) {
-				if (dim == 1 && (n == 0 || n == num_windows)) continue; // don't duplicate add corners
+				if (!short_dim && (n == 0 || n == num_windows)) continue; // don't duplicate add corners
 				float const centerline(max(support_bounds.d[!dim][0], min(support_bounds.d[!dim][1], room.d[!dim][0] + n*spacing))); // clamp to support_bounds
 				set_wall_width(support, centerline, support_hwidth, !dim);
 				cube_t test_cube(support);
@@ -161,7 +163,6 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		// add horizontal beams
 		unsigned const num_hdiv(2*num_windows); // add intermediate beams and hang lights on them
 		for (unsigned d = 0; d < 2; ++d) {beam.d[dim][d] = room.d[dim][d];}
-		bool const short_dim(bool(dim) == beam_dim);
 		if (short_dim) {beam.expand_in_dim(beam_dim, -support_hwidth);} // half overlap of vert supports
 
 		for (unsigned n = 0; n <= num_hdiv; ++n) {
@@ -172,6 +173,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			if (n == 0       ) {skip_faces |= ~get_face_mask(!dim, 0);}
 			if (n == num_hdiv) {skip_faces |= ~get_face_mask(!dim, 1);}
 			objs.emplace_back(beam, TYPE_IBEAM, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, WHITE, skip_faces);
+			if (short_dim) {beam_pos.push_back(centerline);}
 		} // for n
 		if (!short_dim) { // add center beam; will intersect/overlap beams in other dim
 			set_wall_width(beam, room_center_short, support_hwidth, !dim);
@@ -231,6 +233,26 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		catwalk.expand_in_dim(edim, -0.1*window_vspace); // shorten ends to provide a gap between beams
 		unsigned const flags(RO_FLAG_IN_FACTORY | RO_FLAG_HANGING | RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT); // draw bars at ends
 		objs.emplace_back(catwalk, TYPE_CATWALK, room_id, edim, rgen.rand_bool(), flags, light_amt); // random mesh texture
+		// add bars to hang the catwalk from beams
+		float const rod_radius(0.008*window_vspace);
+		bool last_added(0);
+
+		for (float bpos : beam_pos) {
+			if (bpos < catwalk.d[edim][0] || bpos > catwalk.d[edim][1]) continue; // not over catwalk
+			if (last_added) {last_added = 0; continue;} // alternate every other beam
+			last_added = 1;
+
+			for (unsigned d = 0; d < 2; ++d) { // each side of catwalk
+				point center;
+				center[ edim] = bpos;
+				center[!edim] = catwalk.d[!edim][d] + (d ? 1.0 : -1.0)*0.9*rod_radius; // just outside the edge and slightly overlapping
+				cube_t rod(center);
+				rod.expand_by_xy(rod_radius);
+				set_cube_zvals(rod, (catwalk.z1() + 1.0*rod_radius), beams_z1);
+				unsigned const flags(RO_FLAG_IN_FACTORY | RO_FLAG_HANGING | RO_FLAG_ADJ_LO); // draw bottom surface
+				objs.emplace_back(rod, TYPE_PIPE, room_id, 0, 1, flags, light_amt, SHAPE_CYLIN); // vertical
+			} // for d
+		} // for bpos
 		// TODO: connect to floor with stairs and/or ladders
 	}
 	// add transformer
