@@ -1301,24 +1301,29 @@ void building_room_geom_t::add_int_ladder(room_object_t const &c) {
 	rotate_verts(mat.quad_verts, vector_from_dim_dir(!c.dim, (c.dim ^ c.dir)), 0.063*PI, about, verts_start);
 }
 
-void get_catwalk_cubes(room_object_t const &c, cube_t cubes[3]) { // bottom, left side, right side
+void get_catwalk_cubes(room_object_t const &c, cube_t cubes[5]) { // {bottom, left side, right side, lo end, hi end}
 	float const height(c.dz());
 	cubes[0] = c; // bottom
 	cubes[0].z2() = (c.z1() + 0.4*0.08*height);
 
 	for (unsigned d = 0; d < 2; ++d) { // sides
-		if (c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_HI)) continue; // bars on this side are missing
-		cubes[d+1] = c;
-		cubes[d+1].d[!c.dim][!d] = c.d[!c.dim][d] - (d ? 1.0 : -1.0)*0.05*height;
-	}
+		if (!(c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_HI))) { // include bars on this side if not missing
+			cubes[d+1] = c;
+			cubes[d+1].d[!c.dim][!d] = c.d[!c.dim][d] - (d ? 1.0 : -1.0)*0.05*height;
+		}
+		if (c.flags & (d ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT)) { // include bars on this end if present
+			cubes[d+3] = c;
+			cubes[d+3].d[c.dim][!d] = c.d[c.dim][d] - (d ? 1.0 : -1.0)*0.05*height;
+		}
+	} // for d
 }
 void building_room_geom_t::add_catwalk(room_object_t const &c) {
-	bool const dim(c.dim);
+	bool const dim(c.dim), hanging(c.is_hanging());
 	float const height(c.dz()), length(c.get_length()), width(c.get_width()), bot_thick(0.08*height);
 	float const hbar_width(0.04*height), hbar_hwidth(0.5*hbar_width), vbar_width(0.05*height), vbar_hwidth(0.5*vbar_width), hbar_inset(vbar_hwidth - hbar_hwidth);
 	// add bottom surface metal mesh; select from one of two textures using "dir", which isn't otherwise used
 	string const fn((c.dir & 1) ? "metals/4_perforated_metal.png" : "metals/17_perforated_metal_plate.png");
-	tid_nm_pair_t tex(get_texture_by_name(fn, 0, 0, 1, 4.0, 1, 3), 2.0/width, 1); // shadowed=1, custom alpha mipmaps
+	tid_nm_pair_t tex(get_texture_by_name(fn, 0, 0, 1, 1.0, 1, 3), 2.0/width, 1); // shadowed=1, custom alpha mipmaps
 	tex.set_specular_color(WHITE, 0.6, 50.0);
 	cube_t bot(c);
 	set_cube_zvals(bot, (c.z1() + 0.2*bot_thick), (c.z1() + 0.4*bot_thick));
@@ -1353,17 +1358,32 @@ void building_room_geom_t::add_catwalk(room_object_t const &c) {
 		bar.d[!dim][!side] = edge - ssign*vbar_width;
 
 		for (unsigned n = 0; n < num_vbars; ++n) {
+			bool const skip_bottom(!hanging && (n == 0 || n+1 == num_vbars)); // skip bottom of end bars, unless hanging
 			set_wall_width(bar, (c.d[dim][0] + n*spacing + vbar_hwidth), vbar_hwidth, dim);
-			bar_mat.add_cube_to_verts_untextured(bar, bar_color, ((n == 0 || n+1 == num_vbars) ? EF_Z1 : 0)); // skip bottom of end bars
+			bar_mat.add_cube_to_verts_untextured(bar, bar_color, (skip_bottom ? EF_Z1 : 0));
 		}
 	} // for side
-	for (unsigned end = 0; end < 2; ++end) { // end floor bars
+	for (unsigned end = 0; end < 2; ++end) { // add end railings
+		float const esign(end ? 1.0 : -1.0);
 		cube_t bar(c);
-		bar.z2() = bot.z2() + 0.1*bot_thick;
-		bar.expand_in_dim(!dim, -vbar_width); // remove overlap with hbars
-		bar.d[dim][!end] = c.d[dim][end] - (end ? 1.0 : -1.0)*vbar_width;
-		bar_mat.add_cube_to_verts_untextured(bar, end_color, ends_sf);
-	}
+
+		if (c.flags & (end ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT)) {
+			bar.d[dim][ end] -= esign*hbar_inset;
+			bar.d[dim][!end]  = bar.d[dim][end] - esign*hbar_width;
+			bar.expand_in_dim(!dim, -vbar_width); // remove overlap with vbars
+
+			for (unsigned n = 0; n < 3; ++n) { // bot, mid, top
+				set_cube_zvals(bar, z1s[n], z2s[n]);
+				bar_mat.add_cube_to_verts_untextured(bar, bar_color, ends_sf);
+			}
+		}
+		else { // add end floor bars
+			bar.z2() = bot.z2() + 0.1*bot_thick;
+			bar.expand_in_dim(!dim, -vbar_width); // remove overlap with hbars
+			bar.d[dim][!end] = c.d[dim][end] - esign*vbar_width;
+			bar_mat.add_cube_to_verts_untextured(bar, end_color, ends_sf);
+		}
+	} // for end
 }
 
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {

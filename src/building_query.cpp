@@ -27,7 +27,7 @@ bool is_player_model_female();
 bool get_sphere_poly_int_val(point const &sc, float sr, point const *const points, unsigned npoints, vector3d const &normal, float thickness, float &val, vector3d &cnorm);
 float get_player_move_dist();
 void get_shelf_brackets(room_object_t const &c, cube_t shelves[4], unsigned num_shelves, vect_cube_with_ix_t &brackets);
-void get_catwalk_cubes(room_object_t const &c, cube_t cubes[3]);
+void get_catwalk_cubes(room_object_t const &c, cube_t cubes[5]);
 
 
 // assumes player is in this building; handles windows and exterior doors but not attics and basements
@@ -665,7 +665,7 @@ unsigned check_chair_collision(room_object_t const &c, point &pos, point const &
 	return (check_cubes_collision(cubes, 2, pos, p_last, radius, cnorm) | check_cubes_collision(leg_cubes, 4, pos, p_last, radius, cnorm));
 }
 cube_t get_catwalk_bottom(room_object_t const &c) {
-	cube_t cubes[3];
+	cube_t cubes[5];
 	get_catwalk_cubes(c, cubes);
 	return cubes[0];
 }
@@ -1125,7 +1125,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			}
 			if (c->type == TYPE_CATWALK) {
 				if (!sphere_cube_intersect_xy(pos, xy_radius, *c)) continue;
-				cube_t cubes[3];
+				cube_t cubes[5];
 				get_catwalk_cubes(*c, cubes);
 				cube_t const &bot(cubes[0]);
 
@@ -1135,8 +1135,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 					if (cnorm) {*cnorm = plus_z;}
 					had_coll = 1;
 				}
-				for (unsigned side = 0; side < 2; ++side) { // check sides that are present
-					if (!cubes[side+1].is_all_zeros()) {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, cubes[side+1], p_last, 0, cnorm);}
+				for (unsigned n = 1; n < 5; ++n) { // check sides/ends that are present
+					if (!cubes[n].is_all_zeros()) {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, cubes[n], p_last, 0, cnorm);}
 				}
 				continue;
 			}

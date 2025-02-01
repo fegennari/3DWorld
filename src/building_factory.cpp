@@ -228,7 +228,9 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		catwalk.z1() = room.z2() - window_vspace + fc_thick - support_width; // would be upper floor zval - support_width
 		catwalk.z2() = catwalk.z1() + catwalk_height;
 		set_wall_width(catwalk, room_center_short, catwalk_hwidth, !edim);
-		objs.emplace_back(catwalk, TYPE_CATWALK, room_id, edim, rgen.rand_bool(), RO_FLAG_IN_FACTORY, light_amt); // random mesh texture
+		catwalk.expand_in_dim(edim, -0.1*window_vspace); // shorten ends to provide a gap between beams
+		unsigned const flags(RO_FLAG_IN_FACTORY | RO_FLAG_HANGING | RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT); // draw bars at ends
+		objs.emplace_back(catwalk, TYPE_CATWALK, room_id, edim, rgen.rand_bool(), flags, light_amt); // random mesh texture
 		// TODO: connect to floor with stairs and/or ladders
 	}
 	// add transformer
