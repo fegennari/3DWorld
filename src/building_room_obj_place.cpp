@@ -4738,15 +4738,9 @@ void building_t::add_stains_to_room(rand_gen_t rgen, room_t const &room, float z
 	cube_t const place_area(get_walkable_room_bounds(room));
 	float const place_area_xymin(min(place_area.dx(), place_area.dy()));
 	if (rmax > 0.25*place_area_xymin) return; // room is too small
-
 	// stains on the floor
-	for (unsigned n = 0; n < num_floor_stains; ++n) {
-		float const radius(rmax*rgen.rand_uniform(0.5, 1.0));
-		point const pos(gen_xy_pos_in_area(place_area, radius, rgen, zval));
-		cube_t const c(get_cube_height_radius(pos, radius, height));
-		if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 0)) continue; // for now, just make one random attempt
-		interior->room_geom->decal_manager.add_blood_or_stain(point(pos.x, pos.y, zval+height), radius, get_stain_color(rgen), 0, 2, 1); // is_blood=0; +z
-	}
+	add_floor_stains(rgen, place_area, zval, room_id, tot_light_amt, objs_start, num_floor_stains, rmax);
+
 	// black mold stains on the ceiling if wood or tile
 	if (!room.is_ext_basement() && !has_parking_garage && (!is_house || has_basement_pipes)) {
 		float const bot_zval(zval + get_floor_ceil_gap() - height), ceil_rmax(min(0.5f*window_vspacing, 0.4f*place_area_xymin)); // larger radius
@@ -4788,6 +4782,17 @@ void building_t::add_stains_to_room(rand_gen_t rgen, room_t const &room, float z
 		if (bad_place) continue;
 		interior->room_geom->decal_manager.add_blood_or_stain(pos, radius, get_stain_color(rgen), 0, dim, !dir); // is_blood=0
 	} // for n
+}
+void building_t::add_floor_stains(rand_gen_t &rgen, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned num, float rmax) {
+	float const height(1.5*get_flooring_thick());
+
+	for (unsigned n = 0; n < num; ++n) {
+		float const radius(rmax*rgen.rand_uniform(0.5, 1.0));
+		point const pos(gen_xy_pos_in_area(place_area, radius, rgen, zval));
+		cube_t const c(get_cube_height_radius(pos, radius, height));
+		if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, place_area, 0)) continue; // for now, just make one random attempt
+		interior->room_geom->decal_manager.add_blood_or_stain(point(pos.x, pos.y, zval+height), radius, get_stain_color(rgen), 0, 2, 1); // is_blood=0; +z
+	}
 }
 
 room_object_t get_conduit(bool dim, bool dir, float radius, float wall_pos_dim, float wall_pos_not_dim, float z1, float z2, unsigned room_id) {

@@ -229,7 +229,6 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		catwalk.z2() = catwalk.z1() + catwalk_height;
 		set_wall_width(catwalk, room_center_short, catwalk_hwidth, !edim);
 		objs.emplace_back(catwalk, TYPE_CATWALK, room_id, edim, rgen.rand_bool(), RO_FLAG_IN_FACTORY, light_amt); // random mesh texture
-		// TODO: avoid machines
 		// TODO: connect to floor with stairs and/or ladders
 	}
 	// add transformer
@@ -307,10 +306,13 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	// add buckets (and paint cans?)
 	unsigned const num_buckets((rgen.rand() % 4) + 1); // 1-4
 	add_buckets_to_room(rgen, place_area, zval, room_id, light_amt, objs_start, num_buckets);
-	// add floor clutter
+	// add floor clutter and stains
 	bool const add_bottles(1), add_papers(0), add_glass(1), add_trash(rgen.rand_float() < 0.65); // 65% of rooms
 	place_area.z1() = zval; // is this needed/correct?
 	add_floor_clutter_objs(rgen, room, place_area, zval, room_id, light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass);
+	unsigned const num_floor_stains(rgen.rand() % 9); // 0-8
+	float const stain_rmax(0.25*min(window_vspace, min(room.dx(), room.dy())));
+	add_floor_stains(rgen, place_area, zval, room_id, light_amt, objs_start, num_floor_stains, stain_rmax);
 
 	// fire sprinklers
 	// TODO
