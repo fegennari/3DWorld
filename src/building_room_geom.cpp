@@ -1316,14 +1316,14 @@ void building_room_geom_t::add_catwalk(room_object_t const &c) {
 	bool const dim(c.dim);
 	float const height(c.dz()), length(c.get_length()), width(c.get_width()), bot_thick(0.08*height);
 	float const hbar_width(0.04*height), hbar_hwidth(0.5*hbar_width), vbar_width(0.05*height), vbar_hwidth(0.5*vbar_width), hbar_inset(vbar_hwidth - hbar_hwidth);
-	// add bottom surface metal mesh
-	// 4_perforated_metal.png, 23_perforated_metal_plate.png
-	tid_nm_pair_t tex(get_texture_by_name("metals/17_perforated_metal_plate.png", 0, 0, 1, 4.0, 1, 3), 2.0/width, 1); // shadowed=1, custom alpha mipmaps
+	// add bottom surface metal mesh; select from one of two textures using "dir", which isn't otherwise used
+	string const fn((c.dir & 1) ? "metals/4_perforated_metal.png" : "metals/17_perforated_metal_plate.png");
+	tid_nm_pair_t tex(get_texture_by_name(fn, 0, 0, 1, 4.0, 1, 3), 2.0/width, 1); // shadowed=1, custom alpha mipmaps
 	tex.set_specular_color(WHITE, 0.6, 50.0);
 	cube_t bot(c);
 	set_cube_zvals(bot, (c.z1() + 0.2*bot_thick), (c.z1() + 0.4*bot_thick));
 	bot.expand_in_dim(!dim, -(hbar_width + hbar_inset)); // abut inside of bottom bars
-	mats_amask.get_material(tex, 1).add_cube_to_verts(bot, apply_light_color(c), c.get_llc(), ~EF_Z12); // draw top and bottom only
+	mats_amask.get_material(tex, 1).add_cube_to_verts(bot, apply_light_color(c), c.get_llc(), ~EF_Z12, !dim); // draw top and bottom only
 	// add side railings
 	unsigned const num_vbars(max(2U, unsigned(length/width)));
 	unsigned const hbar_sf(get_skip_mask_for_xy(dim)), ends_sf(get_skip_mask_for_xy(!dim)); // skip ends

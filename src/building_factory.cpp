@@ -221,14 +221,14 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		catwalk.z1() = entry  .z2() + fc_thick;
 		catwalk.z2() = catwalk.z1() + catwalk_height;
 		set_wall_width(catwalk, rgen.rand_uniform(cw_lo, cw_hi), catwalk_hwidth, edim);
-		objs.emplace_back(catwalk, TYPE_CATWALK, room_id, !edim, 0, RO_FLAG_IN_FACTORY, light_amt);
+		objs.emplace_back(catwalk, TYPE_CATWALK, room_id, !edim, rgen.rand_bool(), RO_FLAG_IN_FACTORY, light_amt); // random mesh texture
 	}
 	if (1) { // central upper catwalk in long dim
 		cube_t catwalk(place_area_upper); // set the length
 		catwalk.z1() = room.z2() - window_vspace + fc_thick - support_width; // would be upper floor zval - support_width
 		catwalk.z2() = catwalk.z1() + catwalk_height;
 		set_wall_width(catwalk, room_center_short, catwalk_hwidth, !edim);
-		objs.emplace_back(catwalk, TYPE_CATWALK, room_id, edim, 0, RO_FLAG_IN_FACTORY, light_amt);
+		objs.emplace_back(catwalk, TYPE_CATWALK, room_id, edim, rgen.rand_bool(), RO_FLAG_IN_FACTORY, light_amt); // random mesh texture
 		// TODO: avoid machines
 		// TODO: connect to floor with stairs and/or ladders
 	}
