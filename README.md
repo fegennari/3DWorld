@@ -124,6 +124,14 @@ https://3dworldgen.blogspot.com
 
 Here are some screenshots linked from my blog:
 
+![alt text](https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh7bt1KabOKD8tUIxaACMEEDsk2oP4105fUaz4RMGqucAxEAkSKGN4-sX0yMv2IXHMUkWNUNspp0KDuGZIduZoBXAo_K_PQizCx_CtfGjj88GLMXw44jOGmPAs2VUwy__8GckC5MICg4dUV0cK-ripMByVsHX80Wjkzb4XRuuugZXi5_nT4Rc5VwTTI6nP7/w640-h360/mall_7_levels.jpg)
+
+This is the interior of a 7 level procedurally generated mall interior. (config_heightmap.txt)
+
+![alt text](https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh7PsshxXhRFU_pkkJn9yv4e4-STzjeO1ZnwlKEXL2xGC-nrf0mb9fL4G2etkCRonHcjb7OQ1IdLrNhA9lDyTmitVcDQZeXVBRTsww2FxhEwbCwGVZ4XdthBSYfZL4EM-SsRx6yfBjYDozqpEaje0vDy5pdryYG2Flw45Dj4sFRPyvejizgTxerSYWJUQJU/w640-h360/mall_food_court.jpg)
+
+Here is a procedurally generated mall food court with tables and chairs, and stores to the sides. (config_heightmap.txt)
+
 ![alt text](https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiDYcHMxI8d4EmqEt_R9zwbcmtk0wfCadahSXeP3xZU9SdXGkMqMAcFVxMMlcOvDRh7Lg5KhEjgosmId9HtHdtuErQd0okK7Vb7IU0RHeKpONDTc887BDIgWeuR8E0dHChU-vKQxkdnjWzaRLGSWBjmIa3O7z6PYR9v-j4oNYpuOzD9PJcv4XR-45YJYghK/w640-h360/racks1.jpg)
 
 Here is a retail area of a building with racks of shelves. Buildings can contain tens of thousands of interactive objects the player can take and carry around. (config_heightmap.txt)
