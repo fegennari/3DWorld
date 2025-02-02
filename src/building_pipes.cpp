@@ -952,16 +952,37 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 		}
 		if (is_blocked) continue;
 		objs.emplace_back(c, TYPE_PIPE, room_id, 0, 1, (pipe_flags | RO_FLAG_LIT), tot_light_amt, SHAPE_CYLIN, pcolor); // dir=1 for vertical; casts shadows; add to pipe_cubes?
-		// add flanges at top and bottom of each floor
 		cube_t flange(c);
 		flange.expand_by_xy(flange_expand);
+		bool add_bot_flange(0);
+
+		if (!in_basement && has_parking_garage) { // extend into basement parking garage?
+			cube_t const &basement(get_basement());
+
+			if (basement.contains_cube_xy(c)) { // always true?
+				cube_t c_ext(c);
+				set_cube_zvals(c_ext, (basement.z1() + fc_thickness), (basement.z2() - fc_thickness));
+
+				if (!is_obj_placement_blocked(c_ext, basement, 1)) {
+					objs.emplace_back(objs.back()); // duplicate the vertical pipe and adjust it's zvals
+					objs.back().copy_from(c_ext);
+					// add flange (no bolts on bottom)
+					flange.z1() = basement.z1() + 1.00*fc_thickness;
+					flange.z2() = basement.z1() + 1.15*fc_thickness;
+					objs.emplace_back(flange, TYPE_PIPE, room_id, 0, 1, (pipe_flags | RO_FLAG_HANGING | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, pcolor);
+					add_bot_flange = 1;
+				}
+			}
+		}
+		// add flanges at top and bottom of each floor
 		point const center(c.get_cube_center());
 
 		for (unsigned f = 0; f <= num_floors; ++f) { // flanges for each ceiling/floor
-			unsigned flags(pipe_flags | RO_FLAG_HANGING | (f > 0)*RO_FLAG_ADJ_LO | (f < num_floors)*RO_FLAG_ADJ_HI);
+			bool const at_bot(!add_bot_flange && f == 0), at_top(f == num_floors);
+			unsigned flags(pipe_flags | RO_FLAG_HANGING | (!at_bot)*RO_FLAG_ADJ_LO | (!at_top)*RO_FLAG_ADJ_HI);
 			float const z(room.z1() + f*floor_spacing);
-			flange.z1() = z - ((f ==          0) ? -1.0 : 1.15)*fc_thickness;
-			flange.z2() = z + ((f == num_floors) ? -1.0 : 1.15)*fc_thickness;
+			flange.z1() = z - (at_bot ? -1.0 : 1.15)*fc_thickness;
+			flange.z2() = z + (at_top ? -1.0 : 1.15)*fc_thickness;
 			objs.emplace_back(flange, TYPE_PIPE, room_id, 0, 1, flags, tot_light_amt, SHAPE_CYLIN, pcolor);
 			unsigned const NUM_BOLTS = 8;
 			float const angle_step(TWO_PI/NUM_BOLTS);
