@@ -1557,13 +1557,11 @@ unsigned model3d::add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_m
 	split_polygons_buffer.resize(0);
 	split_polygon(poly, split_polygons_buffer, 0.0, allow_model3d_quads);
 
-	for (vector<polygon_t>::iterator i = split_polygons_buffer.begin(); i != split_polygons_buffer.end(); ++i) {
-		if (mat_id < 0) {
-			unbound_geom.add_poly(*i, vmap, obj_id);
-		}
+	for (polygon_t &p : split_polygons_buffer) {
+		if (mat_id < 0) {unbound_geom.add_poly(p, vmap, obj_id);}
 		else {
 			assert((unsigned)mat_id < materials.size());
-			materials[mat_id].add_poly(*i, vmap, vmap_tan, obj_id);
+			materials[mat_id].add_poly(p, vmap, vmap_tan, obj_id);
 		}
 	}
 	if (mat_id < 0 || !materials[mat_id].skip) {update_bbox(poly);} // don't include skipped materials in the bbox
@@ -1611,9 +1609,9 @@ void model3d::get_polygons(vector<coll_tquad> &polygons, bool quads_only, bool a
 	get_polygon_args_t args(polygons, quads_only, lod_level);
 	unbound_geom.get_polygons(args);
 
-	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
-		m->geom.get_polygons    (args);
-		m->geom_tan.get_polygons(args);
+	for (material_t const &m : materials) {
+		m.geom.get_polygons    (args);
+		m.geom_tan.get_polygons(args);
 	}
 	if (apply_transforms && !transforms.empty()) { // handle transforms
 		// first clone the polygons for each transform; first transform is done already
@@ -1669,14 +1667,14 @@ template<typename T> unsigned add_polygons_to_voxel_grid(vector<coll_tquad> &pol
 	cont.get_polygons(args);
 	xform_polygons(polygons, xf, 0);
 	
-	for (vector<coll_tquad>::const_iterator i = polygons.begin(); i != polygons.end(); ++i) { // Note: colors are unused
-		assert(i->npts == 4);
-		if (fabs(i->normal.z) < 0.99) continue; // only keep top/bottom cube sides
-		cube_t const bcube(i->get_bcube());
+	for (coll_tquad const &i : polygons) { // Note: colors are unused
+		assert(i.npts == 4);
+		if (fabs(i.normal.z) < 0.99)    continue; // only keep top/bottom cube sides
+		cube_t const bcube(i.get_bcube());
 		if ((bcube.dz()) > 0.5*spacing) continue; // can this happen?
 		int cbounds[2][2];
 		calc_bounds(bcube, cbounds, spacing);
-		bool const is_top(i->normal.z > 0.0);
+		bool const is_top(i.normal.z > 0.0);
 		float_plus_dir const fd(bcube.d[2][0], is_top);
 		++nhq;
 		
@@ -1719,9 +1717,9 @@ void model3d::get_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf) const 
 		vector<coll_tquad> polygons;
 		num_polys += add_polygons_to_voxel_grid(polygons, unbound_geom, zvals, bounds, num_xy, spacing, num_horiz_quads, xf);
 
-		for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
-			num_polys += add_polygons_to_voxel_grid(polygons, m->geom,     zvals, bounds, num_xy, spacing, num_horiz_quads, xf);
-			num_polys += add_polygons_to_voxel_grid(polygons, m->geom_tan, zvals, bounds, num_xy, spacing, num_horiz_quads, xf);
+		for (material_t const &m : materials) {
+			num_polys += add_polygons_to_voxel_grid(polygons, m.geom,     zvals, bounds, num_xy, spacing, num_horiz_quads, xf);
+			num_polys += add_polygons_to_voxel_grid(polygons, m.geom_tan, zvals, bounds, num_xy, spacing, num_horiz_quads, xf);
 		}
 	}
 
@@ -1878,9 +1876,9 @@ void model3d::clear() {
 
 void model3d::free_context() {
 
-	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
-		m->geom.free_vbos();
-		m->geom_tan.free_vbos();
+	for (material_t &m : materials) {
+		m.geom.free_vbos();
+		m.geom_tan.free_vbos();
 	}
 	unbound_geom.free_vbos();
 	clear_smaps();
@@ -1920,44 +1918,44 @@ void model3d::bind_all_used_tids() {
 
 	load_all_used_tids();
 		
-	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
-		if (!m->mat_is_used()) continue;
-		m->check_for_tc_invert_y(tmgr);
-		tmgr.ensure_tid_bound(m->get_render_texture()); // only one tid for now
+	for (material_t &m : materials) {
+		if (!m.mat_is_used()) continue;
+		m.check_for_tc_invert_y(tmgr);
+		tmgr.ensure_tid_bound(m.get_render_texture()); // only one tid for now
 		
-		if (m->use_bump_map()) {
-			if (model_calc_tan_vect && !m->geom.empty()) {
-				cerr << "Error loading model3d material " << m->name << ": Geometry is missing tangent vectors, so bump map cannot be enabled." << endl;
-				m->bump_tid = -1; // disable bump map
+		if (m.use_bump_map()) {
+			if (model_calc_tan_vect && !m.geom.empty()) {
+				cerr << "Error loading model3d material " << m.name << ": Geometry is missing tangent vectors, so bump map cannot be enabled." << endl;
+				m.bump_tid = -1; // disable bump map
 			}
 			else {
-				tmgr.ensure_tid_bound(m->bump_tid);
+				tmgr.ensure_tid_bound(m.bump_tid);
 			}
 			needs_bump_maps = 1;
 		}
-		if (m->use_spec_map()) {
-			tmgr.ensure_tid_bound(m->s_tid);
-			tmgr.ensure_tid_bound(m->ns_tid);
-			has_spec_maps  |= (m->s_tid  >= 0);
-			has_gloss_maps |= (m->ns_tid >= 0);
+		if (m.use_spec_map()) {
+			tmgr.ensure_tid_bound(m.s_tid);
+			tmgr.ensure_tid_bound(m.ns_tid);
+			has_spec_maps  |= (m.s_tid  >= 0);
+			has_gloss_maps |= (m.ns_tid >= 0);
 		}
-		needs_alpha_test |= m->get_needs_alpha_test();
-		needs_trans_pass |= m->is_partial_transparent();
-		has_alpha_mask   |= m->has_alpha_mask();
+		needs_alpha_test |= m.get_needs_alpha_test();
+		needs_trans_pass |= m.is_partial_transparent();
+		has_alpha_mask   |= m.has_alpha_mask();
 	} // for m
 	calc_tangent_vectors();
 }
 
 void model3d::calc_tangent_vectors() {
 
-	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
-		if (!m->mat_is_used() || !m->use_bump_map()) continue;
-		m->geom_tan.calc_tangents();
+	for (material_t &m : materials) {
+		if (!m.mat_is_used() || !m.use_bump_map()) continue;
+		m.geom_tan.calc_tangents();
 	}
 }
 
 void model3d::simplify_indices(float reduce_target) {
-	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {m->simplify_indices(reduce_target);}
+	for (material_t &m : materials) {m.simplify_indices(reduce_target);}
 	unbound_geom.simplify_indices(reduce_target);
 }
 
@@ -2315,11 +2313,11 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 				point pts[8];
 				unsigned const ncorners(get_cube_corners(bc.d, pts, camera, 0)); // 8 corners allocated, but only 6 used
 
-				for (vector<cube_t>::const_iterator j = occluders.begin(); j != occluders.end(); ++j) {
+				for (cube_t const &j : occluders) {
 					bool int_all(1);
 
 					for (unsigned c = 0; c < ncorners; ++c) {
-						if (!check_line_clip(camera, pts[c], j->d)) {int_all = 0; break;}
+						if (!check_line_clip(camera, pts[c], j.d)) {int_all = 0; break;}
 					}
 					if (int_all) {skip = 1; break;}
 				}
@@ -2513,7 +2511,7 @@ bool model3d::check_coll_line(point const &p1, point const &p2, point &cpos, vec
 
 
 void model3d::get_all_mat_lib_fns(set<string> &mat_lib_fns) const {
-	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {mat_lib_fns.insert(m->filename);}
+	for (material_t const &m : materials) {mat_lib_fns.insert(m.filename);}
 }
 
 void model3d::compute_area_per_tri() {
@@ -2530,9 +2528,9 @@ void model3d::get_stats(model3d_stats_t &stats) const {
 	stats.transforms += transforms.size();
 	unbound_geom.get_stats(stats);
 	
-	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
-		m->geom.get_stats(stats);
-		m->geom_tan.get_stats(stats);
+	for (material_t const &m : materials) {
+		m.geom.get_stats(stats);
+		m.geom_tan.get_stats(stats);
 		++stats.mats;
 	}
 }
@@ -2567,12 +2565,13 @@ bool model3d::write_to_disk(string const &fn) const { // as model3d file; Note: 
 	if (!unbound_geom.write(out)) return 0;
 	write_uint(out, (unsigned)materials.size());
 	
-	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
-		if (!m->write(out)) {
-			cerr << "Error writing material " << m->name << endl;
+	for (material_t const &m : materials) {
+		if (!m.write(out)) {
+			cerr << "Error writing material " << m.name << endl;
 			return 0;
 		}
 	}
+	//if (!model_anim_data.write(out)) {cerr << "Error writing animation data" << endl; return 0;}
 	return out.good();
 }
 
@@ -2605,6 +2604,7 @@ bool model3d::read_from_disk(string const &fn) { // as model3d file; Note: trans
 		}
 		mat_map[m->name] = (m - materials.begin());
 	}
+	//if (!model_anim_data.read(in) {cerr << "Error reading animation data" << endl; return 0;}
 	//simplify_indices(0.1); // TESTING
 	return in.good();
 }
@@ -2624,13 +2624,14 @@ bool model3d::write_as_obj_file(string const &fn) {
 	unsigned cur_vert_ix(0);
 	if (!unbound_geom.write_to_obj_file(out, cur_vert_ix)) return 0; // no usemtl
 
-	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
-		if (!m->write_to_obj_file(out, cur_vert_ix)) {
-			cerr << "Error writing material " << m->name << endl;
+	for (material_t const &m : materials) {
+		if (!m.write_to_obj_file(out, cur_vert_ix)) {
+			cerr << "Error writing material " << m.name << endl;
 			return 0;
 		}
 	} // for m
 	if (!out.good()) return 0;
+	// Note: model_anim_data not written
 	out.close();
 
 	// write mtllib file
@@ -2642,29 +2643,27 @@ bool model3d::write_as_obj_file(string const &fn) {
 	}
 	cout << "Writing mtllib file " << mtllib_fn << endl;
 	out << "# Created by 3DWorld, by Frank Gennari 2022" << endl;
-	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {m->write_mtllib_entry(out, tmgr);}
+	for (material_t const &m : materials) {m.write_mtllib_entry(out, tmgr);}
 	return out.good();
 }
 
 
 void model3d::proc_model_normals(vector<counted_normal> &cn, int recalc_normals, float nmag_thresh) {
-
-	for (vector<counted_normal>::iterator i = cn.begin(); i != cn.end(); ++i) {
-		if (!i->is_valid()) continue; // invalid, remains invalid
-		float const mag(i->mag());
-		if (mag < TOLERANCE) {i->count = 0; continue;} // make invalid
-		*i /= mag; // normalize
-		i->count = (recalc_normals > 1 || mag > nmag_thresh*i->count); // stores the 'valid' state of the normal
+	for (counted_normal &i : cn) {
+		if (!i.is_valid()) continue; // invalid, remains invalid
+		float const mag(i.mag());
+		if (mag < TOLERANCE) {i.count = 0; continue;} // make invalid
+		i /= mag; // normalize
+		i.count = (recalc_normals > 1 || mag > nmag_thresh*i.count); // stores the 'valid' state of the normal
 	}
 }
 
 void model3d::proc_model_normals(vector<weighted_normal> &wn, int recalc_normals, float nmag_thresh) { // unused
-
-	for (vector<weighted_normal>::iterator i = wn.begin(); i != wn.end(); ++i) {
-		if (!i->is_valid()) continue; // invalid, remains invalid
-		float const mag(i->mag());
-		if (mag < TOLERANCE) {i->weight = 0.0; continue;} // make invalid
-		*i /= mag; // normalize
+	for (weighted_normal &i : wn) {
+		if (!i.is_valid()) continue; // invalid, remains invalid
+		float const mag(i.mag());
+		if (mag < TOLERANCE) {i.weight = 0.0; continue;} // make invalid
+		i /= mag; // normalize
 	}
 }
 
