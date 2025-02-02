@@ -935,6 +935,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_CABINET: add_cabinet (*i, tscale, 1, 0); break; // lg
 		case TYPE_KSINK:   add_counter (*i, tscale, 1, 0); break; // counter with kitchen  sink; lg
 		case TYPE_BRSINK:  add_counter (*i, tscale, 1, 0); break; // counter with bathroom sink; lg
+		case TYPE_VANITY:  add_counter (*i, tscale, 1, 0); break; // counter with bathroom sink; lg
 		case TYPE_PLANT:   add_potted_plant(*i, 1, 0); break; // pot only
 		case TYPE_TREE:    add_tree(*i, 1, 0); break; // pot only
 		case TYPE_DRESSER: case TYPE_NIGHTSTAND: add_dresser(*i, tscale, 1, 0); break;
@@ -1071,6 +1072,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_COUNTER: add_counter (c, tscale, 0, 1); break; // sm
 		case TYPE_KSINK:   add_counter (c, tscale, 0, 1); break; // sm
 		case TYPE_CABINET: add_cabinet (c, tscale, 0, 1); break; // sm
+		case TYPE_VANITY:  add_counter (c, tscale, 0, 1); break; // sm
 		case TYPE_FCABINET: add_filing_cabinet(c,  0, 1); break; // sm
 		case TYPE_STAPLER: add_stapler(c); break;
 		case TYPE_ERASER:  add_eraser (c); break;
@@ -1507,7 +1509,7 @@ public:
 
 	void add_water_for_sink(room_object_t const &obj) {
 		if (!obj.is_active()) return;
-		bool const is_cube(obj.type == TYPE_KSINK || obj.type == TYPE_BRSINK);
+		bool const is_cube(obj.type == TYPE_KSINK || obj.type == TYPE_BRSINK || obj.type == TYPE_VANITY);
 		float const dz(obj.dz());
 		cube_t c;
 		point pos(obj.get_cube_center());
@@ -2108,7 +2110,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		point pts[4];
 
 		for (auto i = objs.begin(); i != objs_end; ++i) {
-			if (i->type == TYPE_KSINK || i->type == TYPE_BRSINK) { // TYPE_SINK is handled above
+			if (i->type == TYPE_KSINK || i->type == TYPE_BRSINK || i->type == TYPE_VANITY) { // TYPE_SINK is handled above
 				if (i->room_id == camera_room) {water_sound_manager.register_running_water(*i, building);}
 				if (!i->is_active()) continue; // not turned on
 				if (!(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate))) continue; // VFC

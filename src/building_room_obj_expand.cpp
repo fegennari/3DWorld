@@ -285,7 +285,7 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 	cube_t interior(c), dishwasher;
 	interior.expand_by(-wall_thickness);
 	vector3d const c_sz(interior.get_size());
-	bool const is_counter(c.type == TYPE_COUNTER || c.type == TYPE_KSINK);
+	bool const is_counter(c.type == TYPE_COUNTER || c.type == TYPE_KSINK || c.type == TYPE_VANITY);
 	
 	if (c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)) { // avoid placing objects that overlap the dishwasher
 		dishwasher.d[c.dim][!c.dir] = c.d[c.dim][!c.dir]; // extend to the back of the cabinet
@@ -1649,7 +1649,7 @@ bool building_room_geom_t::expand_object(room_object_t &c, building_t const &bui
 	case TYPE_SHELVES:   expand_shelves  (c); break;
 	case TYPE_SHELFRACK: expand_shelfrack(c); break;
 	case TYPE_WINE_RACK: expand_wine_rack(c); break;
-	case TYPE_CABINET: case TYPE_COUNTER: case TYPE_KSINK: expand_cabinet(c); break;
+	case TYPE_CABINET: case TYPE_COUNTER: case TYPE_KSINK: case TYPE_VANITY: expand_cabinet(c); break;
 	case TYPE_MIRROR:    expand_med_cab(c); break;
 	case TYPE_BRK_PANEL: expand_breaker_panel(c, building); break;
 	//case TYPE_TCAN:      expand_trashcan(c); break;

@@ -461,7 +461,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 				bc.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.25*c->get_sz_dim(dim); // shift front in
 				bc.z2() += 0.25*bc.dz(); // shift bottom up
 			}
-			else if (type == TYPE_KSINK) {
+			else if (type == TYPE_KSINK || type == TYPE_VANITY) {
 				cube_t const sink(get_sink_cube(*c));
 				cube_t top(*c);
 				top.z1() = sink.z1();

@@ -1584,8 +1584,11 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 		}
 	}
 	float const tub_height_factor(0.2); // in units of floor spacing
-	bool placed_obj(0), placed_toilet(0), no_tub(0);
+	bool placed_obj(0), placed_toilet(0), no_tub(0), added_vanity(0);
 	
+	if (is_house && !is_basement) {
+		// TODO: try to place vanity and set added_vanity=1
+	}
 	// place toilet first because it's in the corner out of the way and higher priority
 	if (have_toilet) { // have a toilet model
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOILET)); // L, W, H
@@ -1752,7 +1755,8 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 		}
 		unsigned const sink_obj_ix(objs.size());
 
-		if (place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6)) {
+		if (added_vanity) {} // added vanity, no need to place a sink
+		else if (place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6)) {
 			placed_obj = 1;
 			bathroom_objs_mask |= PLACED_SINK;
 			assert(sink_obj_ix < objs.size());

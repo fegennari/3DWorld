@@ -197,6 +197,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_PET_CAGE  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 50.0,  10.0,  "pet cage");
 	bldg_obj_types[TYPE_IBEAM     ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1,  0.0,  0.0,   "I-beam");
 	bldg_obj_types[TYPE_CATWALK   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2,  0.0,  0.0,   "catwalk"); // small, due to use of mats_amask and expense of drawing
+	bldg_obj_types[TYPE_VANITY    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 3,  0.0,  0.0,   "bathroom vanity");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -1580,7 +1581,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 	return closest_obj_id;
 }
 
-bool is_counter   (room_object_t const &obj) {return (obj.type == TYPE_COUNTER || obj.type == TYPE_KSINK);}
+bool is_counter   (room_object_t const &obj) {return (obj.type == TYPE_COUNTER || obj.type == TYPE_KSINK || obj.type == TYPE_VANITY);}
 bool obj_has_doors(room_object_t const &obj) {return (is_counter(obj) || obj.type == TYPE_CABINET);}
 
 void get_obj_drawers_or_doors(room_object_t const &obj, vect_cube_t &drawers, room_object_t &drawers_part, float &drawer_extend) {
@@ -2668,7 +2669,7 @@ bool room_object_t::can_use() const { // excludes dynamic objects
 bool room_object_t::can_place_onto() const { // Note: excludes flat objects such as TYPE_RUG and TYPE_BLANKET
 	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_COUNTER || type == TYPE_KSINK ||
 		type == TYPE_BRSINK || type == TYPE_BED || type == TYPE_BOX || type == TYPE_CRATE || type == TYPE_KEYBOARD || type == TYPE_BOOK ||
-		type == TYPE_FCABINET || type == TYPE_MWAVE || type == TYPE_POOL_TABLE || type == TYPE_CONF_TABLE || type == TYPE_CHECKOUT); // TYPE_STAIR?
+		type == TYPE_FCABINET || type == TYPE_MWAVE || type == TYPE_POOL_TABLE || type == TYPE_CONF_TABLE || type == TYPE_CHECKOUT || type == TYPE_VANITY); // TYPE_STAIR?
 }
 
 bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir, float half_width) {

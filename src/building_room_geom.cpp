@@ -4611,7 +4611,7 @@ room_object_t split_cabinet_at_dishwasher(room_object_t &cabinet, cube_t const &
 	return left_part;
 }
 cube_t get_sink_cube(room_object_t const &c) {
-	assert(c.type == TYPE_KSINK || c.type == TYPE_BRSINK);
+	assert(c.type == TYPE_KSINK || c.type == TYPE_BRSINK || c.type == TYPE_VANITY);
 	float const dz(c.dz()), sdepth(0.8*c.get_depth()), swidth(min(1.4f*sdepth, 0.75f*c.get_width()));
 	vector3d const center(c.get_cube_center());
 	cube_t sink(center, center);
@@ -4641,7 +4641,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 	rgeom_mat_t &top_mat(get_material(marble_tex, 1));
 	colorRGBA const top_color(apply_light_color(c, WHITE));
 
-	if (c.type == TYPE_KSINK || c.type == TYPE_BRSINK) { // counter with kitchen or bathroom sink
+	if (c.type == TYPE_KSINK || c.type == TYPE_BRSINK || c.type == TYPE_VANITY) { // counter with kitchen or bathroom sink
 		float const sdepth(0.8*depth);
 		vector3d faucet_pos(c.get_cube_center());
 		faucet_pos[c.dim] -= dir_sign*0.56*sdepth;
