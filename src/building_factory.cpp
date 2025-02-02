@@ -108,7 +108,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	cube_t support, beam;
 	set_cube_zvals(support, zval,     beams_z1 );
 	set_cube_zvals(beam,    beams_z1, ceil_zval);
-	vect_cube_t support_parts, nested_rooms;
+	vect_cube_t support_parts, nested_rooms, beams;
 	vector<float> beam_pos; // in short dim; needed for hanging catwalks
 	float const shift_vals[6] = {-0.1, 0.2, -0.3, 0.4, -0.5, 0.6}; // cumulative version of {-0.1, 0.1, -0.2, 0.2, -0.3, 0.3}; not enough shift to overlap a window
 
@@ -160,7 +160,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 				} // for r
 			} // for n
 		} // for dir
-		// add horizontal beams
+		// add horizontal beams in the roof
 		unsigned const num_hdiv(2*num_windows); // add intermediate beams and hang lights on them
 		for (unsigned d = 0; d < 2; ++d) {beam.d[dim][d] = room.d[dim][d];}
 		if (short_dim) {beam.expand_in_dim(beam_dim, -support_hwidth);} // half overlap of vert supports
@@ -173,11 +173,13 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			if (n == 0       ) {skip_faces |= ~get_face_mask(!dim, 0);}
 			if (n == num_hdiv) {skip_faces |= ~get_face_mask(!dim, 1);}
 			objs.emplace_back(beam, TYPE_IBEAM, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, WHITE, skip_faces);
+			beams.push_back(beam); // needed for sprinkler pipe hanging brackets
 			if (short_dim) {beam_pos.push_back(centerline);}
 		} // for n
 		if (!short_dim) { // add center beam; will intersect/overlap beams in other dim
 			set_wall_width(beam, room_center_short, support_hwidth, !dim);
 			objs.emplace_back(beam, TYPE_IBEAM, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, WHITE, EF_Z2);
+			beams.push_back(beam); // needed for sprinkler pipe hanging brackets
 		}
 	} // for dim
 #if 0 // debug visualization
@@ -249,7 +251,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 				cube_t rod(center);
 				rod.expand_by_xy(rod_radius);
 				set_cube_zvals(rod, (catwalk.z1() + 1.0*rod_radius), beams_z1);
-				unsigned const flags(RO_FLAG_IN_FACTORY | RO_FLAG_HANGING | RO_FLAG_ADJ_LO); // draw bottom surface
+				unsigned const flags(RO_FLAG_IN_FACTORY | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_NOCOLL); // draw bottom surface
 				objs.emplace_back(rod, TYPE_PIPE, room_id, 0, 1, flags, light_amt, SHAPE_CYLIN); // vertical
 			} // for d
 		} // for bpos
@@ -310,6 +312,27 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		} // for n
 	}
 	// TODO: large fans in the ceiling
+
+	// add fire sprinkler pipes
+	float const custom_floor_spacing(room.dz() - support_width); // place sprinklers under ceiling beams
+	float const wall_pad(1.1*support_width); // add a gap between the wall supports
+	vect_cube_t obstacles(nested_rooms), walls, pipe_cubes; // avoid nested rooms; walls and pipe_cubes start empty and are unused
+	cube_t entry_area(entry);
+	entry_area.z2() = room.z1() + window_vspace;
+	entry_area.expand_in_dim(edim, doorway_width);
+	obstacles.push_back(entry_area); // don't block the entryway with the vertical pipe
+
+	for (tquad_with_ix_t const &door : doors) {
+		obstacles.push_back(door.get_bcube());
+		obstacles.back().expand_by_xy(doorway_width); // don't block an exterior door
+	}
+	for (stairwell_t const &s : interior->stairwells) { // is this needed?
+		if (s.intersects(room)) {obstacles.push_back(s);}
+	}
+	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+		if (!i->no_coll()) {obstacles.push_back(*i);}
+	}
+	add_sprinkler_pipes(obstacles, walls, beams, pipe_cubes, room_id, 1, objs_start, rgen, custom_floor_spacing, wall_pad); // num_floors=1
 	
 	// add boxes and crates in piles
 	unsigned const num_piles(4 + (rgen.rand() % 5)); // 4-8
@@ -325,11 +348,13 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		crate_bounds.expand_in_dim( pdim, window_vspace*rgen.rand_uniform(0.5, 1.0)); // random depth; half the space is outside the bounds and wasted
 		crate_bounds.expand_in_dim(!pdim, window_vspace*rgen.rand_uniform(0.5, 1.0)); // random width; may be clipped at the corner of the building
 		crate_bounds.intersect_with_cube(place_area);
+		if (interior->is_blocked_by_stairs_or_elevator(crate_bounds)) continue; // don't block stairs
 		add_boxes_and_crates(rgen, room, zval, room_id, light_amt, objs_start, 13, 0, interior->factory_info->floor_space, crate_bounds, exclude); // 4-16; is_basement=0
 	} // for n
 	// add buckets (and paint cans?)
 	unsigned const num_buckets((rgen.rand() % 4) + 1); // 1-4
 	add_buckets_to_room(rgen, place_area, zval, room_id, light_amt, objs_start, num_buckets);
+
 	// add floor clutter and stains
 	bool const add_bottles(1), add_papers(0), add_glass(1), add_trash(rgen.rand_float() < 0.65); // 65% of rooms
 	place_area.z1() = zval; // is this needed/correct?
@@ -337,9 +362,6 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	unsigned const num_floor_stains(rgen.rand() % 9); // 0-8
 	float const stain_rmax(0.25*min(window_vspace, min(room.dx(), room.dy())));
 	add_floor_stains(rgen, place_area, zval, room_id, light_amt, objs_start, num_floor_stains, stain_rmax);
-
-	// fire sprinklers
-	// TODO
 }
 
 void building_t::add_factory_office_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, unsigned floor, float tot_light_amt, unsigned objs_start) {
