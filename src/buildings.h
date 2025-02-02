@@ -2271,7 +2271,7 @@ struct building_t : public building_geom_t {
 	bool maybe_zombie_retreat(unsigned person_ix, point const &hit_pos);
 	void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
 	bool is_room_backrooms(unsigned room_ix)   const {return get_room(room_ix).is_backrooms();}
-	bool is_single_large_room(room_t const &room) const {return(room.is_parking() || room.is_backrooms() || room.is_retail() || room.is_mall());}
+	bool is_single_large_room(room_t const &room) const {return(room.is_parking() || room.is_backrooms() || room.is_retail() || room.is_mall() || room.is_factory());}
 	bool is_single_large_room_or_store(room_t const &room) const {return (is_single_large_room(room) || room.is_store());}
 	bool is_single_large_room(int room_ix) const {return (room_ix >= 0 && is_single_large_room(get_room(room_ix)));}
 	bool is_single_large_room_or_store(int room_ix) const {return (room_ix >= 0 && is_single_large_room_or_store(get_room(room_ix)));}

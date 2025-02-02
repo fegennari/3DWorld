@@ -293,7 +293,7 @@ class building_nav_graph_t {
 		bool is_vert_conn() const {return (is_stairs || is_ramp);} // or is_elevator if added later
 
 		void add_conn_room(unsigned room, int door_ix, cube_t const &cu, cube_t const &cd) {
-			for (auto i = conn_rooms.begin(); i != conn_rooms.end(); ++i) {if (i->ix == room) return;} // ignore duplicates
+			for (auto i = conn_rooms.begin(); i != conn_rooms.end(); ++i) {if (i->ix == room && i->door_ix == door_ix) return;} // ignore duplicates
 			conn_rooms.emplace_back(room, door_ix, vector2d(cu.xc(), cu.yc()), vector2d(cd.xc(), cd.yc()));
 		}
 	};
@@ -875,6 +875,7 @@ public:
 			node_t const &cur_node(get_node(cur));
 			closed[cur] = 1;
 			open  [cur] = 0;
+			bool reached_goal(0);
 
 			for (auto i = cur_node.conn_rooms.begin(); i != cur_node.conn_rooms.end(); ++i) {
 				assert(i->ix < nodes.size());
@@ -899,14 +900,14 @@ public:
 				else if (new_g_score >= sn.g_score) continue; // not better
 				sn.came_from_ix = cur;
 				sn.path_pt.assign(pt.x, pt.y, cur_pt.z);
-				
-				if (is_goal) { // done, reconstruct path (in reverse)
-					return reconstruct_path(state, avoid, building, cur_pt, radius, i->ix, room1, ped_ix, is_first_path, up_or_down, ped_rseed, custom_dest, req_custom_dest, path);
-				}
+				reached_goal |= is_goal; // Note: can't call reconstruct_path() until the iteration is done in case there's a second door that's closer
 				sn.g_score = new_g_score;
 				sn.f_score = sn.g_score + p2p_dist_xy(next_pt, dest_pos);
 				open_queue.push(make_pair(-sn.f_score, i->ix));
 			} // for i
+			if (reached_goal) { // done, reconstruct path (in reverse)
+				return reconstruct_path(state, avoid, building, cur_pt, radius, room2, room1, ped_ix, is_first_path, up_or_down, ped_rseed, custom_dest, req_custom_dest, path);
+			}
 		} // end while()
 		return 0; // failed - no path from room1 to room2
 	}
@@ -1589,7 +1590,7 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 	if (!(USE_MALL_ENT_STAIRS && skip_stairs) && has_mall_ent_stairs() && mall_info->ent_stairs.z1() < z2 && mall_info->ent_stairs.z2() > z1) {
 		avoid.push_back(mall_info->ent_stairs); // only allow walking on mall entrance stairs when enabled, and path includes stairs (so stairs coll is skipped)
 	}
-	add_bcube_if_overlaps_zval(elevators,  avoid, z1, z2); // clearance not required
+	add_bcube_if_overlaps_zval(elevators, avoid, z1, z2); // clearance not required
 	
 	for (escalator_t const &e : escalators) {
 		if (e.z1() > z2 || e.z2() < z1) continue; // no Z overlap
@@ -1610,6 +1611,9 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 		for (store_doorway_t const &d : mall_info->store_doorways) {
 			if (d.closed) {avoid.push_back(d);}
 		}
+	}
+	if (factory_info && z2 > factory_info->floor_space.z1()) { // in factory; add interior walls of sub-rooms
+		for (unsigned d = 0; d < 2; ++d) {add_bcube_if_overlaps_zval(walls[d], avoid, z1, z2);}
 	}
 	if (!room_geom) return; // no room objects
 	auto objs_end(room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
@@ -1892,7 +1896,9 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 	if (person.goal_type == GOAL_TYPE_ELEVATOR) {have_goal_pos = req_custom_dest = 1;}
 	// if the target is the player and they're in a hallway, use the correct dest along the hallway
 	else if (person.goal_type == GOAL_TYPE_PLAYER || person.goal_type == GOAL_TYPE_PLAYER_LAST_POS) {
-		have_goal_pos = get_room(loc2.room_ix).is_hallway;//is_valid_ai_placement(person.target_pos, person.radius, 0, 1); // skip_nocoll=0, no_check_objs=1
+		//have_goal_pos = is_valid_ai_placement(person.target_pos, person.radius, 0, 1); // skip_nocoll=0, no_check_objs=1
+		room_t const &dest_room(get_room(loc2.room_ix));
+		have_goal_pos = (dest_room.is_hallway || dest_room.is_factory());
 	}
 	point const *const custom_dest(have_goal_pos ? &person.target_pos : nullptr);
 
