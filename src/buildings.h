@@ -54,6 +54,7 @@ float const PERSON_INT_SMAP_DSCALE = 0.8; // building person shadow caster dista
 float const ESCALATOR_SPEED        = 1.0/TICKS_PER_SECOND; // in steps per tick
 float const MALL_FLOOR_HEIGHT      = 2.0; // as a multiple of normal building floor height
 float const FACTORY_BEAM_THICK     = 2.5; // as a multiple of wall thickness
+float const BACKSPLASH_HEIGHT      = 0.33; // relative to cabinet height
 
 unsigned const NUM_CHAIR_COLORS = 12;
 unsigned const MAX_BCASE_BOOKS  = 48; // limited by available bit flags
@@ -2676,7 +2677,7 @@ private:
 	void add_stains_to_room  (rand_gen_t  rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_floor_stains    (rand_gen_t &rgen, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned num, float rmax);
 	void add_light_switches_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool is_ground_floor, bool is_basement);
-	void add_outlets_to_room  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool is_ground_floor, bool is_basement);
+	void add_outlets_to_room  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool is_ground_floor, bool is_basement, bool is_kitchen=0);
 	bool add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool check_for_ducts);
 	bool add_ceil_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start);
 	bool check_if_placed_on_interior_wall(cube_t const &c, room_t const &room, bool dim, bool dir) const;

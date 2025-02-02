@@ -4705,7 +4705,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 		rgeom_mat_t &bs_mat(get_material(bs_tex, 0)); // no shadows
 		cube_t bsz(c);
 		bsz.z1()  = c.z2();
-		bsz.z2() += 0.33*c.dz();
+		bsz.z2() += BACKSPLASH_HEIGHT*c.dz();
 
 		if (c.flags & RO_FLAG_ADJ_BOT) { // back
 			cube_t bs(bsz);

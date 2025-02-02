@@ -2265,7 +2265,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 				objs.back().flags |= (RO_FLAG_ADJ_BOT | RO_FLAG_HAS_EXTRA); // flag back as having a back backsplash
 				cube_t bs(c);
 				bs.z1()  = c.z2();
-				bs.z2() += 0.33*c.dz();
+				bs.z2() += BACKSPLASH_HEIGHT*c.dz();
 				bs.d[dim][!dir] -= (dir ? -1.0 : 1.0)*0.99*depth; // matches building_room_geom_t::add_counter()
 				objs.emplace_back(bs, TYPE_BLOCKER, room_id, dim, !dir, RO_FLAG_INVIS); // add blocker to avoid placing light switches here
 			}
@@ -4916,17 +4916,18 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 	} // for i
 }
 
-void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool is_ground_floor, bool is_basement) {
+void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id,
+	unsigned objs_start, bool is_ground_floor, bool is_basement, bool is_kitchen)
+{
 	float const wall_thickness(get_wall_thickness()), plate_height(1.8*wall_thickness), plate_hwidth(0.5*wall_thickness), min_wall_spacing(4.0*plate_hwidth);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 3.0*min_wall_spacing) return; // room is too small; shouldn't happen
+	float const outlet_z1(zval + get_trim_height() + 0.4*plate_height); // wall trim height + some extra padding; same for every outlet
 	float plate_thickness(0.03*wall_thickness);
 	if ((int)room_id == interior->pool.room_ix) {plate_thickness += 0.5*get_flooring_thick();} // add over pool tile, somewhat recessed
 	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval));
 	vect_room_object_t &objs(interior->room_geom->objs);
-	cube_t c;
-	c.z1() = zval + get_trim_height() + 0.4*plate_height; // wall trim height + some extra padding; same for every outlet
-	c.z2() = c.z1() + plate_height;
+	unsigned const num_outlets_per_wall(is_kitchen ? 2 : 1); // more outlets in kitchen
 
 	// try to add an outlet to each wall, down near the floor so that they don't intersect objects such as pictures
 	for (unsigned wall = 0; wall < 4; ++wall) {
@@ -4935,56 +4936,79 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 		bool const is_exterior_wall(classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT); // includes basement
 		if (is_exterior_wall && !is_cube()) continue; // don't place on ext wall if it's not X/Y aligned
 		cube_t const &wall_bounds(is_exterior_wall ? room : room_bounds); // exterior wall should use the original room, not room_bounds
-		float const wall_pos(rgen.rand_uniform((room_bounds.d[!dim][0] + min_wall_spacing), (room_bounds.d[!dim][1] - min_wall_spacing)));
 		float const wall_face(wall_bounds.d[dim][dir]), dir_sign(dir ? -1.0 : 1.0);
-		c.d[dim][ dir] = wall_face; // flush with wall
-		c.d[dim][!dir] = wall_face + dir_sign*plate_thickness; // expand out a bit
-		set_wall_width(c, wall_pos, plate_hwidth, !dim);
 
-		if (!is_basement && has_int_windows() && is_exterior_wall) { // check for window intersection
-			cube_t const &part(get_part_for_room(room));
-			float const window_hspacing(get_hspacing_for_part(part, !dim)), window_h_border(get_window_h_border());
-			// expand by the width of the window trim, plus some padded wall plate width, then check to the left and right;
-			// 2*xy_expand should be smaller than a window so we can't have a window fit in between the left and right sides
-			float const xy_expand(get_trim_thickness() + 1.2f*plate_hwidth);
-			if (is_val_inside_window(part, !dim, (wall_pos - xy_expand), window_hspacing, window_h_border) ||
-				is_val_inside_window(part, !dim, (wall_pos + xy_expand), window_hspacing, window_h_border)) continue;
-		}
-		cube_t c_exp(c);
-		c_exp.expand_by_xy(wall_thickness);
-		if (overlaps_other_room_obj(c_exp, objs_start, 1))     continue; // check for things like closets; check_all=1 to include blinds
-		if (interior->is_blocked_by_stairs_or_elevator(c_exp)) continue; // check stairs and elevators
-		if (!check_cube_within_part_sides(c_exp))              continue; // handle non-cube buildings
-		if (overlaps_or_adj_int_window(c_exp))                 continue; // check interior windows
-		bool bad_place(0);
+		for (unsigned n = 0; n < num_outlets_per_wall; ++n) {
+			float const wall_pos(rgen.rand_uniform((room_bounds.d[!dim][0] + min_wall_spacing), (room_bounds.d[!dim][1] - min_wall_spacing)));
+			cube_t c;
+			set_cube_zvals(c, outlet_z1, (outlet_z1 + plate_height));
+			c.d[dim][ dir] = wall_face; // flush with wall
+			c.d[dim][!dir] = wall_face + dir_sign*plate_thickness; // expand out a bit
+			set_wall_width(c, wall_pos, plate_hwidth, !dim);
 
-		if (is_ground_floor || !walkways.empty()) { // handle exterior doors
-			for (auto d = doors.begin(); d != doors.end(); ++d) {
-				if (!d->is_exterior_door() || d->type == tquad_with_ix_t::TYPE_RDOOR) continue;
-				cube_t bc(d->get_bcube());
-				bc.expand_in_dim(dim, wall_thickness); // make sure it's nonzero area
-				if (bc.intersects(c_exp)) {bad_place = 1; break;}
+			if (!is_basement && has_int_windows() && is_exterior_wall) { // check for window intersection
+				cube_t const &part(get_part_for_room(room));
+				float const window_hspacing(get_hspacing_for_part(part, !dim)), window_h_border(get_window_h_border());
+				// expand by the width of the window trim, plus some padded wall plate width, then check to the left and right;
+				// 2*xy_expand should be smaller than a window so we can't have a window fit in between the left and right sides
+				float const xy_expand(get_trim_thickness() + 1.2f*plate_hwidth);
+				if (is_val_inside_window(part, !dim, (wall_pos - xy_expand), window_hspacing, window_h_border) ||
+					is_val_inside_window(part, !dim, (wall_pos + xy_expand), window_hspacing, window_h_border)) continue;
+			}
+			cube_t c_exp(c);
+			c_exp.expand_by_xy(wall_thickness);
+			bool hit_cabinet(0);
+		
+			if (overlaps_other_room_obj(c_exp, objs_start, 1)) { // check for things like closets; check_all=1 to include blinds
+				if (!is_kitchen) continue;
+
+				for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) { // check for kitchen cabinets
+					if (i->type != TYPE_COUNTER && i->type != TYPE_KSINK) continue;
+					if (!i->intersects(c_exp)) continue;
+					if (i->type == TYPE_KSINK && get_sink_cube(*i).intersects_xy(c_exp)) break; // don't place behind the kitchen sink
+					float new_zval(i->z2());
+					if ((i->flags & RO_FLAG_HAS_EXTRA) && (i->flags & RO_FLAG_ADJ_BOT)) {new_zval += BACKSPLASH_HEIGHT*i->dz();} // place above the backsplash if present
+					c.z1() = c_exp.z1() = new_zval + 0.1*plate_height; // slightly above counter
+					c.z2() = c_exp.z2() = c.z1() + plate_height;
+					hit_cabinet = 1;
+					break;
+				} // for i
+				if (!hit_cabinet) continue; // hit something else
+				if (overlaps_other_room_obj(c_exp, objs_start, 1)) continue;
+			}
+			if (interior->is_blocked_by_stairs_or_elevator(c_exp)) continue; // check stairs and elevators
+			if (!check_cube_within_part_sides(c_exp))              continue; // handle non-cube buildings
+			if (overlaps_or_adj_int_window(c_exp))                 continue; // check interior windows
+			bool bad_place(0);
+
+			if (is_ground_floor || !walkways.empty()) { // handle exterior doors
+				for (auto d = doors.begin(); d != doors.end(); ++d) {
+					if (!d->is_exterior_door() || d->type == tquad_with_ix_t::TYPE_RDOOR) continue;
+					cube_t bc(d->get_bcube());
+					bc.expand_in_dim(dim, wall_thickness); // make sure it's nonzero area
+					if (bc.intersects(c_exp)) {bad_place = 1; break;}
+				}
+				if (bad_place) continue;
+			}
+			for (auto const &d : doorways) {
+				if (d.get_true_bcube().intersects(c_exp)) {bad_place = 1; break;}
 			}
 			if (bad_place) continue;
-		}
-		for (auto const &d : doorways) {
-			if (d.get_true_bcube().intersects(c_exp)) {bad_place = 1; break;}
-		}
-		if (bad_place) continue;
-		if (!check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the outlet is on a wall
-		unsigned flags(RO_FLAG_NOCOLL);
+			if (!hit_cabinet && !check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the outlet is on a wall; skip for cabinets/backsplashes
+			unsigned flags(RO_FLAG_NOCOLL);
 
-		if (is_house && is_basement && is_exterior_wall) { // house exterior basement wall; non-recessed
-			room_object_t const conduit(get_conduit(dim, dir, 0.25*plate_hwidth, c.d[dim][dir], wall_pos, c.z2(), (zval + get_floor_ceil_gap()), room_id));
+			if (is_house && is_basement && is_exterior_wall) { // house exterior basement wall; non-recessed
+				room_object_t const conduit(get_conduit(dim, dir, 0.25*plate_hwidth, c.d[dim][dir], wall_pos, c.z2(), (zval + get_floor_ceil_gap()), room_id));
 
-			if (!overlaps_other_room_obj(conduit, objs_start)) {
-				objs.push_back(conduit);
-				c.d[dim][!dir] += dir_sign*1.2*plate_hwidth; // shift front outward more
-				flags |= RO_FLAG_HANGING;
+				if (!overlaps_other_room_obj(conduit, objs_start)) {
+					objs.push_back(conduit);
+					c.d[dim][!dir] += dir_sign*1.2*plate_hwidth; // shift front outward more
+					flags |= RO_FLAG_HANGING;
+				}
 			}
-		}
-		expand_to_nonzero_area(c, plate_thickness, dim);
-		objs.emplace_back(c, TYPE_OUTLET, room_id, dim, dir, flags, 1.0); // dim/dir matches wall; fully lit
+			expand_to_nonzero_area(c, plate_thickness, dim);
+			objs.emplace_back(c, TYPE_OUTLET, room_id, dim, dir, flags, 1.0); // dim/dir matches wall; fully lit
+		} // for n
 	} // for wall
 }
 
