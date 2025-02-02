@@ -2654,7 +2654,8 @@ void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
 	if (!interior || !has_basement()) return;
 	float const zval(get_basement().z2()), camera_z(get_camera_pos().z);
 	if (camera_z < zval) return; // below upper basement level
-	if (!is_house && camera_z > ground_floor_z1 + 2.0*get_window_vspace()) return; // floor 3+ of office building (can be visible through house L-shaped stairs)
+	// floor 3+ of office building; skip factories; skip houses because entrance can be visible through L-shaped stairs
+	if (!is_house && !is_factory() && camera_z > ground_floor_z1 + 2.0*get_window_vspace()) return;
 	float const z(zval + BASEMENT_ENTRANCE_SCALE*get_floor_thickness()); // offset is required to prevent Z-fighting
 	bool const depth_clamp_enabled(glIsEnabled(GL_DEPTH_CLAMP));
 	s.set_cur_color(ALPHA0); // fully transparent
@@ -2666,9 +2667,7 @@ void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
 	for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
 		if (i->z1() < zval && !i->in_ext_basement) {draw_basement_entrance_cap(*i, z);} // draw if this is a basement stairwell (not extended basement stairs)
 	}
-	if (has_pg_ramp() && !interior->ignore_ramp_placement) { // add opening for the ramp onto the ground floor
-		draw_basement_entrance_cap(interior->pg_ramp, z);
-	}
+	if (has_pg_ramp() && !interior->ignore_ramp_placement) {draw_basement_entrance_cap(interior->pg_ramp, z);} // add opening for ramp onto ground floor
 	if (!depth_clamp_enabled) {glDisable(GL_DEPTH_CLAMP);}
 	glDisable(GL_CULL_FACE);
 	disable_blend();
