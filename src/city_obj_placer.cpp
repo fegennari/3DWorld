@@ -34,7 +34,7 @@ bool are_birds_enabled() {return building_obj_model_loader.is_model_valid(OBJ_MO
 
 
 bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vector<car_t> &cars, unsigned city_id, unsigned plot_ix,
-	vect_cube_t &bcubes, vect_cube_t &colliders, vect_cube_t const &plot_cuts, rand_gen_t &rgen)
+	vect_cube_t &bcubes, vect_cube_t &colliders, vect_cube_t const &plot_cuts, rand_gen_t &rgen, bool add_cars)
 {
 	vector3d const nom_car_size(city_params.get_nom_car_size()); // {length, width, height}
 	float const space_width(PARK_SPACE_WIDTH *nom_car_size.y); // add 50% extra space between cars
@@ -160,7 +160,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 		car.dim = car_dim; car.dir = cdir;
 		point pos(corner_pos.x, corner_pos.y, plot.z2());
 		pos[car_dim] += 0.5*dr + (cdir ? 0.15 : -0.15)*fabs(dr); // offset for centerline, biased toward the front of the parking space
-		float const car_density(rgen.rand_uniform(city_params.min_park_density, city_params.max_park_density));
+		float const car_density(add_cars ? rgen.rand_uniform(city_params.min_park_density, city_params.max_park_density) : 0.0);
 
 		for (unsigned row = 0; row < park.num_rows; ++row) { // car lengths
 			pos[!car_dim] = corner_pos[!car_dim] + 0.5*dw; // start at the low end; add half offset for centerline
@@ -174,7 +174,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 					prev_was_bad   = 0;
 					pspace.blocked = 1;
 				}
-				else if (rgen.rand_float() < car_density) { // only half the spaces are filled on average
+				else if (add_cars && rgen.rand_float() < car_density) { // only half the spaces are filled on average
 					point cpos(pos);
 					cpos[ car_dim] += 0.05*dr*rgen.rand_uniform(-1.0, 1.0); // randomness of front amount
 					cpos[!car_dim] += 0.12*dw*rgen.rand_uniform(-1.0, 1.0); // randomness of side  amount
@@ -197,6 +197,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 			} // for col
 			pos[car_dim] += dr;
 		} // for row
+		if (!add_cars) continue;
 		// generate colliders for each group of used parking space columns
 		cube_t cur_cube(park); // set zvals, etc.
 		unsigned row_min(park.num_rows), row_max(0);
@@ -1930,7 +1931,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	rgen.set_state(city_id, 123);
 	detail_rgen.set_state(3145739*(city_id+1), 1572869*(city_id+1));
 	if (city_params.max_trees_per_plot > 0) {tree_placer.begin_block(0); tree_placer.begin_block(1);} // both small and large trees
-	bool const add_parking_lots(have_cars && !is_residential && city_params.min_park_spaces > 0 && city_params.min_park_rows > 0);
+	bool const add_parking_lots(/*have_cars &&*/ !is_residential && city_params.min_park_spaces > 0 && city_params.min_park_rows > 0);
 	float const sidewalk_width(get_sidewalk_width());
 	get_building_ext_basement_bcubes(city_bcube, underground_blockers); // used for inground swimming pools and ponds in parks
 
@@ -1956,7 +1957,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 		size_t const plot_id(i - plots.begin()), buildings_end(blockers.size());
 		assert(plot_id < plot_colliders.size());
 		vect_cube_t &colliders(plot_colliders[plot_id]); // used for pedestrians
-		if (add_parking_lots && !i->is_park) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, plot_id, blockers, colliders, plot_cuts, rgen);}
+		if (add_parking_lots && !i->is_park) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, plot_id, blockers, colliders, plot_cuts, rgen, have_cars);}
 		unsigned const driveways_start(driveways.size());
 		if (is_residential) {add_house_driveways(*i, temp_cubes, detail_rgen, plot_id);}
 
