@@ -2471,7 +2471,13 @@ bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, cube_t const
 	// assume all doors are the same size and use the last for reference, but pad by 1.5x anyway; upper bound on the door bcube when open any amount in any direction
 	float const door_width(max(dmin, max(door_stacks.back().dx(), door_stacks.back().dy())));
 	test_cube.expand_by_xy(1.5*door_width);
-
+	
+	if (!room.is_all_zeros()) { // don't go outside the original room
+		assert(room.intersects_xy(c)); // can't test zval in case of ball in pool
+		cube_t room_exp(room);
+		room_exp.expand_by_xy(0.1*door_width); // small amount to include wall width
+		test_cube.intersect_with_cube_xy(room_exp);
+	}
 	for (auto i = door_stacks.begin(); i != door_stacks.end(); ++i) { // interior doors
 		if (!test_cube.intersects(*i)) continue; // optimization
 		if (is_cube_close_to_door(c, dmin, (inc_open && door_opens_inward(*i, room)), *i, i->get_check_dirs(), (check_open_dir ? i->open_dir : 2))) return 1;
