@@ -2735,7 +2735,7 @@ private:
 	bool same_room_and_floor_as_player(person_t const &person) const;
 	bool is_player_visible(person_t const &person, unsigned vis_test) const;
 	bool can_target_player(person_t const &person) const;
-	bool need_to_update_ai_path(person_t const &person) const;
+	bool need_to_update_ai_path(person_t &person) const;
 	void set_bcube_from_rotated_cube(cube_t const &bc);
 	bool apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, unsigned emissive_color_id, room_object const obj_type) const;
 	bool apply_toilet_paper(point const &pos, vector3d const &dir, float half_width);

@@ -1175,7 +1175,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 	person.dest_room    = cand_room; // set but not yet used
 	person.target_pos   = (global_building_params.ai_target_player ? goal.pos: get_center_of_room(cand_room));
 	person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
-	person.is_on_stairs = person.path_is_fixed = person.last_used_stairs = 0; // non-stairs dest, reset
+	person.is_on_stairs = person.path_is_fixed = person.last_used_stairs = person.missed_player_room_change = 0; // non-stairs dest, reset
 
 	if (global_building_params.ai_target_player && point_over_glass_floor(person.pos) && point_over_glass_floor(person.target_pos)) {
 		return 1; // person/zombie and player both on glass floor
@@ -1411,7 +1411,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 	if (loc.room_ix < 0) return 0; // not in a room
 	person.dest_room    = person.cur_room = loc.room_ix; // set to the same room and pos just in case
 	person.target_pos   = person.pos; // set but not yet used
-	person.is_on_stairs = person.path_is_fixed = 0;
+	person.is_on_stairs = person.path_is_fixed = person.missed_player_room_change = 0;
 	if (interior->rooms.size() == 1) return 0; // no other room to move to
 	bool const last_used_escalator(person.last_used_escalator);
 	person.last_used_escalator = 0;
@@ -2288,7 +2288,7 @@ bool building_t::can_target_player(person_t const &person) const {
 	return is_player_visible(person, global_building_params.ai_player_vis_test); // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
 }
 
-bool building_t::need_to_update_ai_path(person_t const &person) const {
+bool building_t::need_to_update_ai_path(person_t &person) const {
 	if (!global_building_params.ai_target_player || !can_ai_follow_player(person) || !interior) return 0; // disabled
 	if (point_in_or_above_pool(cur_player_building_loc.pos)) return 0; // don't follow the player into the pool (including player above the pool)
 	building_dest_t const &target(cur_player_building_loc);
@@ -2300,23 +2300,27 @@ bool building_t::need_to_update_ai_path(person_t const &person) const {
 		if (target.same_room_floor(prev_player_building_loc) && !same_room && !person.on_new_path_seg && !person.path.empty()) return 0;
 	}
 	//if (same_room && person.path.size() > 1) return 0; // same room but path has a jog, continue on existing path (faster, but slower to adapt to player position change)
-	if (dist_less_than(person.pos, target.pos, person.radius)) return 0; // already close enough
+	if (dist_less_than(person.pos, target.pos, person.radius)) {person.missed_player_room_change = 0; return 0;} // already close enough
 	if (person.on_fixed_path()) return 0; // don't change paths when on the stairs/ramp/escalator
 	float const floor_spacing(get_window_vspace());
 
-	if (int(target.pos.z/floor_spacing) != int(prev_player_building_loc.pos.z/floor_spacing)) { // if player did not change floors
+	if (get_floor_for_zval(target.pos.z) != get_floor_for_zval(prev_player_building_loc.pos.z)) { // if player did not change floors
 		if (fabs(person.pos.z - target.pos.z) > 2.0f*floor_spacing) return 0; // person/player are > 2 floors apart, continue toward stairs (should it be one floor apart?) (optimization)
 	}
+	bool const goal_player(person.goal_type == GOAL_TYPE_PLAYER), player_room_changed(!target.same_room_floor(prev_player_building_loc));
+
 	if (can_target_player(person)) { // have player visibility
-		if (person.goal_type == GOAL_TYPE_PLAYER && target.same_room_floor(prev_player_building_loc) && !person.on_new_path_seg && !person.path.empty()) {
+		if (goal_player && !player_room_changed && !person.missed_player_room_change && !person.on_new_path_seg && !person.path.empty()) {
 			if (!same_room) return 0;
 			if (is_pos_in_pg_or_backrooms(person.pos) && ((person.ssn + frame_counter) & 3) != 0) return 0; // path finding is expensive, update every 4th frame
 		}
+		person.missed_player_room_change = 0;
 		return 1;
 	}
+	else if (goal_player && player_room_changed) {person.missed_player_room_change = 1;}
 	// if we were following the player, don't get distracted by a sound such as another zombie moaning
-	if (person.goal_type == GOAL_TYPE_PLAYER && person.target_valid() && !person.path.empty()) return 0;
-	if (has_nearby_sound(person, floor_spacing)) return 1; // new sound source
+	if (goal_player && person.target_valid() && !person.path.empty()) return 0;
+	if (has_nearby_sound(person, floor_spacing)) {person.missed_player_room_change = 0; return 1;} // new sound source; ignore player as they're not visible
 	return 0; // continue on the previously chosen path
 }
 
