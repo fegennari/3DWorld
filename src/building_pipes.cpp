@@ -918,10 +918,11 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 {
 	// add vertical red (possibly rusted brown) sprinkler system pipe
 	cube_t room(get_room(room_id));
-	bool const in_basement(room.z1() < ground_floor_z1);
+	bool const in_basement(room.z1() < ground_floor_z1); // else in factory
 	float const tot_light_amt = 1.0; // to offset the darkness of the basement
 	float const window_vspace(get_window_vspace()), floor_spacing((custom_floor_spacing > 0.0) ? custom_floor_spacing : window_vspace);
-	float const fc_thickness(get_fc_thickness()), sp_radius(1.2*get_wall_thickness()), spacing(2.0*sp_radius), flange_expand(0.3*sp_radius);
+	float const fc_thickness(get_fc_thickness()), wall_thickness(get_wall_thickness());
+	float const sp_radius((in_basement ? 1.2 : 0.9)*wall_thickness), spacing(2.0*sp_radius), flange_expand(0.3*sp_radius); // larger for basement, smaller for factory
 	float const bolt_dist(sp_radius + 0.5*flange_expand), bolt_radius(0.32*flange_expand), bolt_height(0.1*fc_thickness);
 	bool const inverted_sprinklers(room_id & 1); // random-ish
 	// pipe color; fade to rusty brown for basement pipes when there's water damage
@@ -1013,7 +1014,7 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 			objs.emplace_back(band, TYPE_PIPE, room_id, 0, 1, (RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, BRASS_C);
 		} // for f
 		// attempt to run horizontal pipes across the room ceiling
-		float const h_pipe_radius(0.5*sp_radius), conn_thickness(0.2*h_pipe_radius);
+		float const h_pipe_radius(0.6*wall_thickness), conn_thickness(0.2*h_pipe_radius);
 		float const ceil_gap(max(0.25f*fc_thickness, 0.05f*get_floor_ceil_gap())); // make enough room for both flange + bolts and ceiling beams
 		unsigned const max_shorten_steps(n/5); // start off with no horizontal pipe shortening to get better coverage, but relax this constraint as we go
 		bool place_failed(0);
