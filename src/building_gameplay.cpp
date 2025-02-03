@@ -1031,7 +1031,7 @@ public:
 	}
 	bool subtract_fall_damage_from_health() {
 		if (accum_fall_damage == 0.0) return 0;
-		player_health -= accum_fall_damage;
+		player_health    -= accum_fall_damage;
 		accum_fall_damage = 0.0;
 		if (player_is_dead()) {register_player_death(SOUND_SQUISH, " from a fall"); return 1;} // dead
 		gen_sound_thread_safe_at_player(SOUND_SQUISH, 0.5);
@@ -1084,9 +1084,11 @@ public:
 		// handle player fall damage logic
 		point const camera_pos(get_camera_pos());
 		float const player_zval(camera_pos.z), delta_z(prev_player_zval - player_zval);
+		bool const in_respawn_period(frame_counter <= prev_respawn_frame+4);
+		if (in_respawn_period) {accum_fall_damage = 0.0;}
 		if (camera_in_building != prev_in_building) {prev_in_building = camera_in_building;}
 		// Note: fall damage may no longer trigger with slow player fall logic; allow a few extra frames after a raspawn for the player pos to stabilize
-		else if (frame_counter > prev_respawn_frame+4 && prev_player_zval != 0.0 && delta_z > 0.0) {apply_fall_damage(delta_z);}
+		else if (!in_respawn_period && prev_player_zval != 0.0 && delta_z > 0.0) {apply_fall_damage(delta_z);}
 		if (delta_z <= 0.0 && subtract_fall_damage_from_health()) return; // apply fall damage when falling has stopped; return if dead
 		prev_player_zval = player_zval;
 		// handle death events
