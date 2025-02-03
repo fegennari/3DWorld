@@ -564,6 +564,7 @@ public:
 		cube_t walk_area_exp(walk_area);
 		walk_area_exp.expand_by_xy(radius); // to capture objects that we could intersect when our center is in walk_area
 		keepout.clear();
+		building.add_factory_sub_rooms_to_avoid_if_needed(building.get_room(room_ix), keepout); // must avoid sub-rooms
 
 		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
 			if (!i->intersects_xy(walk_area_exp)) continue;
@@ -697,7 +698,7 @@ public:
 		}
 		return walk_area;
 	}
-	bool reconstruct_path(vector<a_star_node_state_t> const &state, vect_cube_t const &avoid, building_t const &building, point const &cur_pt,
+	bool reconstruct_path(vector<a_star_node_state_t> const &state, vect_cube_t &avoid, building_t const &building, point const &cur_pt,
 		float radius, unsigned start_ix, unsigned end_ix, unsigned ped_ix, bool is_first_path, bool up_or_down, unsigned ped_rseed,
 		point const *const custom_dest, bool req_custom_dest, ai_path_t &path) const
 	{
@@ -730,7 +731,10 @@ public:
 						// choose a random new point on iterations after the first one, and on first iteration for large rooms unless we have a custom dest
 						bool const no_use_init(N > 0 || (is_lg_room && !req_custom_dest));
 						bool not_room_center(0);
+						unsigned const avoid_size(avoid.size());
+						building.add_factory_sub_rooms_to_avoid_if_needed(building.get_room(n), avoid); // must avoid sub-rooms
 						point const end_point(find_valid_room_dest(avoid, building, radius, cur_pt.z, n, up_or_down, not_room_center, rgen, no_use_init, custom_dest));
+						avoid.resize(avoid_size); // remove added sub-rooms
 						path.add(end_point);
 						point const room_exit(closest_room_pt(walk_area, next)); // first doorway, or stairs/ramp in this room
 						if (connect_room_endpoints(avoid, building, walk_area, n, end_point, room_exit, radius, path, keepout, rgen)) {path.add(room_exit); success = 1; break;}
@@ -849,7 +853,7 @@ public:
 	
 	// A* algorithm; Note: path is stored backwards
 	bool find_path_points(unsigned room1, unsigned room2, unsigned ped_ix, float radius, bool use_stairs, bool is_first_path,
-		bool up_or_down, unsigned ped_rseed, vect_cube_t const &avoid, building_t const &building, point const &cur_pt,
+		bool up_or_down, unsigned ped_rseed, vect_cube_t &avoid, building_t const &building, point const &cur_pt,
 		unsigned has_key, point const *const custom_dest, bool req_custom_dest, ai_path_t &path) const
 	{
 		// Note: opening and closing doors updates the nav graph; an AI encountering a closed door after choosing a path can either open it or stop and wait
@@ -1268,6 +1272,7 @@ bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, 
 	point dest_pos(valid_area.get_cube_center());
 	vect_cube_t &avoid(reused_avoid_cubes[0]);
 	get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
+	add_factory_sub_rooms_to_avoid_if_needed(room, avoid); // must avoid sub-rooms
 	bool const no_use_init(is_single_large_room_or_store(room)); // don't use the room center for a parking garage, backrooms, retail area, mall, or store
 	if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, person.target_pos.z, valid_area, rgen, dest_pos, no_use_init)) return 0;
 	
@@ -1614,7 +1619,13 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 		}
 	}
 	if (factory_info && z2 > factory_info->floor_space.z1()) { // in factory; add interior walls of sub-rooms
-		for (unsigned d = 0; d < 2; ++d) {add_bcube_if_overlaps_zval(walls[d], avoid, z1, z2);}
+		float const wall_shrink(0.25*floor_thickness); // shrink walls slightly at ends since doorways are narrow
+
+		for (unsigned d = 0; d < 2; ++d) {
+			unsigned const avoid_start(avoid.size());
+			add_bcube_if_overlaps_zval(walls[d], avoid, z1, z2);
+			for (auto i = avoid.begin()+avoid_start; i != avoid.end(); ++i) {i->expand_in_dim(!d, -wall_shrink);}
+		}
 	}
 	if (!room_geom) return; // no room objects
 	auto objs_end(room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
@@ -1839,6 +1850,10 @@ void building_t::get_avoid_cubes(float zval, float height, float radius, vect_cu
 	float const z1(zval - radius);
 	interior->get_avoid_cubes(avoid, z1, (z1 + height), 0.5*radius, get_floor_thickness(), get_floor_ceil_gap(), following_player, 0, fires_select_cube); // skip_stairs=0
 }
+void building_t::add_factory_sub_rooms_to_avoid_if_needed(room_t const &room, vect_cube_t &avoid) const {
+	if (room.is_factory() && interior->factory_info) {vector_add_to(interior->factory_info->sub_rooms, avoid);}
+}
+
 bool building_t::find_route_to_point(person_t &person, float radius, bool is_first_path, bool following_player, ai_path_t &path) const {
 
 	assert(interior && interior->nav_graph);
@@ -1870,7 +1885,8 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 		return interior->nav_graph->complete_path_within_room(from, eenter, loc1.room_ix, person.ssn, radius, person.cur_rseed,
 			is_first_path, following_player, (going_up ? cube_t() : clamp_area), avoid, *this, path); // person to escalator
 	}
-	get_avoid_cubes(from.z, height, radius, avoid, following_player, &get_room(loc1.room_ix)); // include fires in the current room
+	room_t const &start_room(get_room(loc1.room_ix));
+	get_avoid_cubes(from.z, height, radius, avoid, following_player, &start_room); // include fires in the current room
 
 	if (loc1.same_room_floor(loc2)) { // same room/floor (not checking stairs_ix)
 		assert(from.z == to.z);
@@ -1887,6 +1903,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 				valid_area.clamp_pt_xy(dest);
 			}
 		}
+		add_factory_sub_rooms_to_avoid_if_needed(start_room, avoid); // must avoid sub-rooms
 		cube_t const constrain_area(point_over_glass_floor(from) ? get_bcubes_union(interior->room_geom->glass_floors) : cube_t());
 		if (!interior->nav_graph->complete_path_within_room(from, dest, loc1.room_ix, person.ssn, radius,
 			person.cur_rseed, is_first_path, following_player, constrain_area, avoid, *this, path)) return 0;

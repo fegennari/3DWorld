@@ -2280,6 +2280,7 @@ struct building_t : public building_geom_t {
 	bool is_pos_in_pg_or_backrooms(point const &pos) const;
 	bool has_backrooms_or_mall() const {return (interior && (interior->has_backrooms || has_mall()));}
 	point get_retail_upper_stairs_landing_center() const;
+	void add_factory_sub_rooms_to_avoid_if_needed(room_t const &room, vect_cube_t &avoid) const;
 private:
 	void build_nav_graph() const;
 	bool is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll, bool no_check_objs=0) const;
