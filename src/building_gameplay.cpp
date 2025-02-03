@@ -45,6 +45,7 @@ float get_filing_cabinet_drawers(room_object_t const &c, vect_cube_t &drawers);
 colorRGBA get_bucket_liquid_info(room_object_t const &c, float &liquid_level);
 void reset_creepy_sounds();
 void clear_building_water_splashes();
+bool detailed_obj_intersect(room_object_t const &A, room_object_t const &B);
 
 bool in_building_gameplay_mode() {return (game_mode == GAME_MODE_BUILDINGS);} // replaces dodgeball mode
 
@@ -2027,7 +2028,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 					get_closet_cubes(*i, cubes, 1); // get cubes for walls and door; for_collision=1
 					for (unsigned n = 0; n < 5; ++n) {bad_placement |= (!cubes[n].is_all_zeros() && cubes[n].intersects(moved_obj));}
 				}
-				else {bad_placement = i->intersects(moved_obj);}
+				else if (i->intersects(moved_obj)) {bad_placement = detailed_obj_intersect(moved_obj, *i);}
 			} // for i
 			// Note: okay to skip expanded_objs because these should already be on/inside some other object; this allows us to move wine racks containing wine
 			if (bad_placement) continue; // intersects another object, try a smaller movement

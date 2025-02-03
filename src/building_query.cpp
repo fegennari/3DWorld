@@ -626,7 +626,7 @@ unsigned check_bed_collision(room_object_t const &c, point &pos, point const &p_
 	return coll_ret;
 }
 bool can_use_table_coll(room_object_t const &c) {
-	return (c.type == TYPE_DESK || c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND || c.type == TYPE_TABLE);
+	return (c.type == TYPE_DESK || c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND || (c.type == TYPE_TABLE && !c.is_round()));
 }
 // actually applies to tables, desks, dressers, and nightstands
 unsigned get_table_like_object_cubes(room_object_t const &c, cube_t cubes[7]) { // tables, desks, dressers, and nightstands
@@ -2798,6 +2798,27 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 			}
 		} // for c
 	} // for vect_id
+	return 0;
+}
+
+bool has_bcube_int(cube_t const &bcube, cube_t const *const cubes, unsigned num_cubes) {
+	for (unsigned i = 0; i < num_cubes; ++i) {if (cubes[i].intersects(bcube)) return 1;}
+	return 0;
+}
+bool detailed_obj_intersect(room_object_t const &A, room_object_t const &B) {
+	if (!A.intersects(B)) return 0;
+	// currently, we only handle chair vs. table or desk coll, since these are the likely situations
+	if (B.type == TYPE_CHAIR && A.type != TYPE_CHAIR) return detailed_obj_intersect(B, A); // call in the other order
+	if (A.type != TYPE_CHAIR)   return 1;
+	if (!can_use_table_coll(B)) return 1;
+	cube_t chair_cubes[3]; // seat, back, legs_bcube
+	get_chair_cubes(A, chair_cubes);
+	cube_t cubes[7];
+	unsigned const num(get_table_like_object_cubes(B, cubes));
+
+	for (unsigned i = 0; i < num; ++i) {
+		if (has_bcube_int(cubes[i], chair_cubes, 3)) return 1;
+	}
 	return 0;
 }
 
