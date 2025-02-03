@@ -285,7 +285,8 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 	cube_t interior(c), dishwasher;
 	interior.expand_by(-wall_thickness);
 	vector3d const c_sz(interior.get_size());
-	bool const is_counter(c.type == TYPE_COUNTER || c.type == TYPE_KSINK || c.type == TYPE_VANITY);
+	unsigned const sz_ratio(round_fp(c_sz[!c.dim]/c_sz.z));
+	bool const is_vanity(c.type == TYPE_VANITY), in_kitchen(!is_vanity), is_counter(c.type == TYPE_COUNTER || c.type == TYPE_KSINK || is_vanity);
 	
 	if (c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)) { // avoid placing objects that overlap the dishwasher
 		dishwasher.d[c.dim][!c.dir] = c.d[c.dim][!c.dir]; // extend to the back of the cabinet
@@ -294,7 +295,7 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 	}
 	unsigned const start_num_cubes(cubes.size()), flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 
-	if (is_counter && rgen.rand_bool()) {
+	if (is_counter && rgen.rand_bool()) { // maybe add a trashcan
 		float const tcan_height(c_sz.z*rgen.rand_uniform(0.35, 0.55)), tcan_radius(min(tcan_height/rgen.rand_uniform(1.6, 2.8), 0.4f*min(c_sz.x, c_sz.y)));
 		cube_t tcan;
 		gen_xy_pos_for_round_obj(tcan, interior, tcan_radius, tcan_height, 1.1*tcan_radius, rgen, 1); // place_at_z1=1
@@ -319,7 +320,8 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 	room_object_t cb(c);
 	cb.light_amt = light_amt;
 	add_boxes_to_space(cb, expanded_objs, interior, cubes, rgen, num_boxes, box_sz, 0.8*box_sz, 1.5*box_sz, 0, (flags | RO_FLAG_NOCOLL)); // allow_crates=0
-	// add paint cans (slightly smaller than normal)
+
+	// add paint cans (slightly smaller than normal); even for bathroom vanity?
 	float const sz_scale(0.7*c_sz.z), pc_height(0.6*sz_scale), pc_radius(0.24*sz_scale);
 
 	if (3*pc_radius < min(c_sz.x, c_sz.y)) { // have enough space for for paint cans
@@ -332,37 +334,38 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 			add_if_not_intersecting(obj, expanded_objs, cubes);
 		}
 	}
-	// add plates
-	unsigned const sz_ratio(round_fp(c_sz[!c.dim]/c_sz.z));
-	unsigned const max_plates(0 + 1*sz_ratio), num_plates(rgen.rand() % max_plates); // wider cabinet has more plates
-	float const plate_radius(min(sz_scale*rgen.rand_uniform(0.30, 0.35), 0.45f*min(c_sz.x, c_sz.y))), plate_height(0.1*plate_radius);
+	if (in_kitchen) {
+		// add plates
+		unsigned const max_plates(0 + 1*sz_ratio), num_plates(rgen.rand() % max_plates); // wider cabinet has more plates
+		float const plate_radius(min(sz_scale*rgen.rand_uniform(0.30, 0.35), 0.45f*min(c_sz.x, c_sz.y))), plate_height(0.1*plate_radius);
 
-	for (unsigned n = 0; n < num_plates; ++n) {
-		cube_t plate;
-		gen_xy_pos_for_round_obj(plate, interior, plate_radius, plate_height, 1.2*plate_radius, rgen, 1); // place_at_z1=1
-		room_object_t obj(plate, TYPE_PLATE, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN);
-		if (!add_if_not_intersecting(obj, expanded_objs, cubes)) continue; // can't place the bottom plate
-		unsigned const stack_height(1 + (rgen.rand()%5)); // 1-6
+		for (unsigned n = 0; n < num_plates; ++n) {
+			cube_t plate;
+			gen_xy_pos_for_round_obj(plate, interior, plate_radius, plate_height, 1.2*plate_radius, rgen, 1); // place_at_z1=1
+			room_object_t obj(plate, TYPE_PLATE, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN);
+			if (!add_if_not_intersecting(obj, expanded_objs, cubes)) continue; // can't place the bottom plate
+			unsigned const stack_height(1 + (rgen.rand()%5)); // 1-6
 
-		for (unsigned s = 1; s < stack_height; ++s) {
-			obj.translate_dim(2, plate_height); // shift up in z
-			if (obj.z2() + plate_height > interior.z2()) break; // stack is too high, end it here
-			expanded_objs.push_back(obj);
-		}
-	} // for n
-	// add pans
-	unsigned const num_pans(rgen.rand()%3); // 0-2
-	float const pan_radius(min(sz_scale*rgen.rand_uniform(0.40, 0.45), 0.45f*min(c_sz.x, c_sz.y))), pan_height(rgen.rand_uniform(0.4, 0.5)*pan_radius);
+			for (unsigned s = 1; s < stack_height; ++s) {
+				obj.translate_dim(2, plate_height); // shift up in z
+				if (obj.z2() + plate_height > interior.z2()) break; // stack is too high, end it here
+				expanded_objs.push_back(obj);
+			}
+		} // for n
+		// add pans
+		unsigned const num_pans(rgen.rand()%3); // 0-2
+		float const pan_radius(min(sz_scale*rgen.rand_uniform(0.40, 0.45), 0.45f*min(c_sz.x, c_sz.y))), pan_height(rgen.rand_uniform(0.4, 0.5)*pan_radius);
 
-	for (unsigned n = 0; n < num_pans; ++n) {
-		cube_t pan;
-		gen_xy_pos_for_round_obj(pan, interior, pan_radius, pan_height, 1.1*pan_radius, rgen, 1); // place_at_z1=1
-		pan.translate_dim(2, 0.01*pan_height); // shift in +z to prevent z-fighting with the bottom of the pan
-		bool const dir(pan.get_center_dim(!c.dim) < c.get_center_dim(!c.dim)); // point toward the cabinet center to avoid the handle clipping through the side/end
-		room_object_t obj(pan, TYPE_PAN, c.room_id, c.dim, dir, flags, light_amt, SHAPE_CYLIN, GRAY_BLACK);
-		// Note: the pan's handle extends outside its bcube and may clip through other objects, but this isn't very noticeable when viewed from normal head height
-		add_if_not_intersecting(obj, expanded_objs, cubes);
-	} // for n
+		for (unsigned n = 0; n < num_pans; ++n) {
+			cube_t pan;
+			gen_xy_pos_for_round_obj(pan, interior, pan_radius, pan_height, 1.1*pan_radius, rgen, 1); // place_at_z1=1
+			pan.translate_dim(2, 0.01*pan_height); // shift in +z to prevent z-fighting with the bottom of the pan
+			bool const dir(pan.get_center_dim(!c.dim) < c.get_center_dim(!c.dim)); // point toward the cabinet center to avoid the handle clipping through the side/end
+			room_object_t obj(pan, TYPE_PAN, c.room_id, c.dim, dir, flags, light_amt, SHAPE_CYLIN, GRAY_BLACK);
+			// Note: the pan's handle extends outside its bcube and may clip through other objects, but this isn't very noticeable when viewed from normal head height
+			add_if_not_intersecting(obj, expanded_objs, cubes);
+		} // for n
+	}
 	// add bottles
 	unsigned const max_bottles(3 + 2*sz_ratio), num_bottles(rgen.rand() % max_bottles); // wider cabinet has more bottles
 

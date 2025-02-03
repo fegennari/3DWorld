@@ -1562,7 +1562,8 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 	}
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
 	place_area.expand_by(-0.5*wall_thickness);
-	if (min(place_area.dx(), place_area.dy()) < 0.7*floor_spacing) return 0; // room is too small (should be rare)
+	vector2d const place_area_sz(place_area.dx(), place_area.dy());
+	if (min(place_area_sz.x, place_area_sz.y) < 0.7*floor_spacing) return 0; // room is too small (should be rare)
 	bool const have_toilet(building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)), have_sink(building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK));
 	vect_room_object_t &objs(interior->room_geom->objs);
 
@@ -1574,9 +1575,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 		}
 	}
 	if (have_toilet && room.is_office) { // office bathroom
-		float const room_dx(place_area.dx()), room_dy(place_area.dy());
-
-		if (min(room_dx, room_dy) > 1.5*floor_spacing && max(room_dx, room_dy) > 2.0*floor_spacing) {
+		if (min(place_area_sz.x, place_area_sz.y) > 1.5*floor_spacing && max(place_area_sz.x, place_area_sz.y) > 2.0*floor_spacing) {
 			if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, floor)) { // large enough, try to divide into bathroom stalls
 				added_bathroom_objs_mask |= (PLACED_TOILET | PLACED_SINK);
 				return 1;
@@ -1586,8 +1585,59 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 	float const tub_height_factor(0.2); // in units of floor spacing
 	bool placed_obj(0), placed_toilet(0), no_tub(0), added_vanity(0);
 	
-	if (is_house && !is_basement) {
-		// TODO: try to place vanity and set added_vanity=1
+	if (is_house && !is_basement) { // try to place vanity (has doors but no drawers)
+		vector2d const room_sz(room_bounds.dx(), room_bounds.dy());
+		// select an interior wall that doesn't have a door
+		vect_door_stack_t const &doorways(get_doorways_for_room(room, zval)); // get interior doors; there should be no exterior doors
+		vector<pair<float, unsigned>> avail_walls;
+		unsigned num_ext_walls(0);
+
+		for (unsigned d = 0; d < 4; ++d) {
+			bool const dim(d >> 1), dir(d & 1);
+			if (classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) {++num_ext_walls; continue;} // skip exterior wall
+			cube_t wall(room);
+			set_wall_width(wall, room.d[dim][dir], wall_thickness, dim);
+			if (has_bcube_int(wall, doorways)) continue;
+			avail_walls.emplace_back(rgen.rand_uniform(1.0, 1.1)*room_sz[dim], d); // prefer long wall, with some randomness
+		} // for d
+		sort(avail_walls.begin(), avail_walls.end());
+
+		for (auto const &cand : avail_walls) {
+			bool const dim(cand.second >> 1), dir(cand.second & 1);
+			float const wall_len(room_sz[!dim]), wall_edge(room_bounds.d[dim][dir]); // no trim padding
+			float const height(0.34*floor_spacing), depth(0.74*height), length(rgen.rand_uniform(0.8, 1.0)*floor_spacing), dsign(dir ? -1.0 : 1.0);
+			cube_t vanity(room_bounds);
+			vanity.expand_in_dim(!dim, -get_trim_thickness()); // avoid Z-fighting with exterior wall
+			set_cube_zvals(vanity, zval, zval+height);
+			vanity.d[dim][!dir] = wall_edge + dsign*depth;
+
+			if (wall_len <= length) {} // short wall: vanity is full width; nothing to do
+			else if (wall_len < 1.5*length) { // middle size: vanity against 2 walls/corner
+				bool const shift_dir(rgen.rand_bool());
+				vanity.d[!dim][shift_dir] += (shift_dir ? -1.0 : 0.0)*(wall_len - length);
+			}
+			else { // long wall: vanity centered
+				set_wall_width(vanity, (room_bounds.get_center_dim(!dim) + 0.1*rgen.signed_rand_float()*length), 0.5*length, !dim);
+			}
+			cube_t blocker(vanity);
+			blocker.d[dim][!dir] += 0.9*dsign*depth;
+			if (overlaps_other_room_obj(blocker, objs_start) || is_cube_close_to_doorway(blocker, room, 0.0, 1)) continue; // bad placement; don't need to check for stairs
+			objs.emplace_back(vanity,  TYPE_VANITY,  room_id, dim, !dir, 0, tot_light_amt);
+			objs.emplace_back(blocker, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker in front
+			added_vanity = placed_obj = 1;
+			added_bathroom_objs_mask |= PLACED_SINK;
+			// add a mirror/medicine cabinet above the sink; shouldn't need to check for overlaps since vanity is placed first
+			cube_t mirror(vanity); // start with the sink left and right position
+			mirror.z1() = vanity.z2() + 0.14*floor_spacing;
+			mirror.z2() = mirror.z1() + 0.30*floor_spacing;
+			set_wall_width(mirror, vanity.get_center_dim(!dim), 0.13*floor_spacing, !dim);
+			mirror.d[dim][!dir] = wall_edge + dsign*wall_thickness; // thickness
+			unsigned const flags(RO_FLAG_IS_HOUSE | ((num_ext_walls == 1) ? RO_FLAG_INTERIOR : 0)); // flag as interior if windows are opaque glass blocks
+			objs.emplace_back(mirror, TYPE_MIRROR, room_id, dim, !dir, flags, tot_light_amt);
+			set_obj_id(objs); // for crack texture selection/orient
+			room.set_has_mirror();
+			break; // success/done
+		} // for cand
 	}
 	// place toilet first because it's in the corner out of the way and higher priority
 	if (have_toilet) { // have a toilet model
@@ -1764,7 +1814,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 		
 			if (point_in_water_area(sink.get_cube_center())) {} // no medicine cabinet, because the reflection system doesn't support both a mirror and water reflection
 			else if (is_basement || classify_room_wall(room, zval, sink.dim, !sink.dir, 0) != ROOM_WALL_EXT) { // interior wall only
-				// add a mirror/medicine cabinet above the sink; could later make into medicine cabinet
+				// add a mirror/medicine cabinet above the sink
 				float const mirror_expand(0.1*sink.get_sz_dim(!sink.dim));
 				cube_t mirror(sink); // start with the sink left and right position
 				mirror.expand_in_dim(!sink.dim, mirror_expand); // make slightly wider

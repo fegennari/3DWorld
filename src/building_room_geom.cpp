@@ -4625,9 +4625,10 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 	float const dz(c.dz()), depth(c.get_depth()), dir_sign(c.dir ? 1.0 : -1.0);
 	cube_t top(c), dishwasher;
 	top.z1() += 0.95*dz;
+	bool const is_vanity(c.type == TYPE_VANITY);
 	bool const has_dishwasher(c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)); // kitchen sink - add dishwasher if wide enough
 
-	if (c.type != TYPE_BRSINK) { // add wood sides of counter/cabinet
+	if (c.type != TYPE_BRSINK) { // add wood sides of counter/cabinet/vanity
 		float const overhang(0.05*depth);
 		room_object_t cabinet(c);
 		cabinet.z2() = top.z1();
@@ -4641,7 +4642,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 	rgeom_mat_t &top_mat(get_material(marble_tex, 1));
 	colorRGBA const top_color(apply_light_color(c, WHITE));
 
-	if (c.type == TYPE_KSINK || c.type == TYPE_BRSINK || c.type == TYPE_VANITY) { // counter with kitchen or bathroom sink
+	if (c.type == TYPE_KSINK || c.type == TYPE_BRSINK || is_vanity) { // counter with kitchen or bathroom sink
 		float const sdepth(0.8*depth);
 		vector3d faucet_pos(c.get_cube_center());
 		faucet_pos[c.dim] -= dir_sign*0.56*sdepth;
@@ -4657,8 +4658,8 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 		vect_cube_t &cubes(get_temp_cubes());
 		subtract_cube_from_cube(top, sink, cubes);
 		for (auto i = cubes.begin(); i != cubes.end(); ++i) {top_mat.add_cube_to_verts(*i, top_color, tex_origin);} // should always be 4 cubes
-		colorRGBA const sink_color(apply_light_color(c, GRAY));
-		rgeom_mat_t &basin_mat(get_scratched_metal_material(4.0/c.dz(), 0)); // unshadowed
+		colorRGBA const faucet_color(apply_light_color(c, GRAY)), sink_color(is_vanity ? apply_light_color(c) : faucet_color);
+		rgeom_mat_t &basin_mat(is_vanity ? get_metal_material(0) : get_scratched_metal_material(4.0/c.dz(), 0)); // unshadowed
 		basin_mat.add_cube_to_verts(sink, sink_color, tex_origin, EF_Z2, 0, 0, 0, 1); // basin: inverted, skip top face, unshadowed
 		float const water_level((c.state_flags & sink_water_state_bit) ? 0.3 : 0.0); // may be 30% filled
 		if (water_level > 0.0) {add_water_plane(c, sink, water_level);} // draw water
@@ -4675,8 +4676,8 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 			basin_mat.add_cube_to_verts(sink_outer, sink_color, tex_origin, (~get_face_mask(c.dim, !c.dir) | EF_Z2)); // skip back and top
 		}
 		rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed, specular metal (specular doesn't do much because it's flat, but may make more of a diff using a cylinder later)
-		metal_mat.add_cube_to_verts_untextured(faucet1, sink_color, EF_Z12); // vertical part of faucet, skip top and bottom faces
-		metal_mat.add_cube_to_verts_untextured(faucet2, sink_color, 0); // horizontal part of faucet, draw all faces
+		metal_mat.add_cube_to_verts_untextured(faucet1, faucet_color, EF_Z12); // vertical part of faucet, skip top and bottom faces
+		metal_mat.add_cube_to_verts_untextured(faucet2, faucet_color, 0); // horizontal part of faucet, draw all faces
 
 		if (c.type == TYPE_BRSINK) { // bathroom sink
 			metal_mat.add_cube_to_verts_untextured(sink, sink_color, EF_Z2); // outside of basin, no top surface, shadowed
@@ -4785,7 +4786,8 @@ float get_cabinet_doors(room_object_t const &c, vect_cube_t &doors, vect_cube_t 
 	unsigned const num_doors(min((unsigned)round_fp(cab_width/door_spacing), 16U)); // cap to 16 as this is how many door open bits we have to work with
 	if (num_doors == 0) return 0.0; // is this possible?
 	door_spacing = cab_width/num_doors;
-	bool const add_drawers(c.type == TYPE_COUNTER && num_doors <= 8); // limit to 16 total doors + drawers; counter does not include the section with the sink
+	// no drawers for kitchen since or bathroom vanity; limit to 16 total doors + drawers; counter does not include the section with the sink
+	bool const add_drawers(c.type == TYPE_COUNTER && num_doors <= 8);
 	float const tb_border(0.5f*(c.dz() - door_height)), side_border(0.10*door_width), dir_sign(c.dir ? 1.0 : -1.0);
 	float const signed_thick(dir_sign*get_drawer_wall_thick(door_height, cab_depth));
 	door_width = (door_spacing - 2.0*side_border); // recalculate actual value
@@ -4843,17 +4845,17 @@ void get_cabinet_or_counter_doors(room_object_t const &c, vect_cube_t &doors, ve
 
 void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) { // for kitchens
 	assert(c.is_strictly_normalized());
-	bool const any_doors_open(c.drawer_flags > 0), is_counter(c.type == TYPE_COUNTER); // Note: counter does not include the section with the sink
+	bool const any_doors_open(c.drawer_flags > 0), is_counter(c.type == TYPE_COUNTER), is_vanity(c.type == TYPE_VANITY); // Note: counter does not include section with sink
 	unsigned const skip_front_face(~get_face_mask(c.dim, c.dir)); // used in the any_doors_open=1 case
-	colorRGBA const cabinet_color(apply_wood_light_color(c));
+	colorRGBA const cabinet_color(is_vanity ? apply_light_color(c) : apply_wood_light_color(c));
 	static vect_cube_t doors, drawers;
 	doors  .clear();
 	drawers.clear();
 	float const door_width(get_cabinet_doors(c, doors, drawers, 1)); // front_only=1
 
-	if (inc_lg) {
+	if (inc_lg) { // draw front and sides
 		unsigned skip_faces(is_counter ? EF_Z12 : EF_Z2); // skip top face (can't skip back in case it's against a window)
-		rgeom_mat_t &wood_mat(get_wood_material(tscale));
+		rgeom_mat_t &mat(is_vanity ? get_untextured_material(1) : get_wood_material(tscale)); // shadowed
 		
 		if (any_doors_open) { // draw front faces with holes cut in them for open doors
 			vect_cube_t &cubes(get_temp_cubes());
@@ -4865,35 +4867,36 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale, boo
 				hole.expand_in_dim(c.dim, c.get_depth()); // expand so that it cuts entirely through the cabinet
 				subtract_cube_from_cubes(hole, cubes, nullptr, 1); // clip_in_z=1
 			}
-			for (auto i = cubes.begin(); i != cubes.end(); ++i) {wood_mat.add_cube_to_verts(*i, cabinet_color, tex_origin, ~skip_front_face);}
+			for (auto i = cubes.begin(); i != cubes.end(); ++i) {mat.add_cube_to_verts(*i, cabinet_color, tex_origin, ~skip_front_face);}
 			skip_faces |= skip_front_face; // front face drawn above, don't draw it again below
 		}
-		wood_mat.add_cube_to_verts(c, cabinet_color, tex_origin, skip_faces); // draw wood exterior
+		mat.add_cube_to_verts(c, cabinet_color, tex_origin, skip_faces); // draw wood exterior
 	}
 	if (!inc_sm) return; // everything below this point is small
 	float const dir_sign(c.dir ? 1.0 : -1.0);
-	rgeom_mat_t &wood_mat(get_wood_material(tscale, 1, 0, 1)); // shadows=1, small=1
 
 	if (any_doors_open) {
 		float const wall_thickness(0.04*c.dz());
 		cube_t interior(c);
 		interior.expand_by(-wall_thickness);
-		wood_mat.add_cube_to_verts(interior, cabinet_color*0.5, tex_origin, skip_front_face, 0, 0, 0, 1); // darker interior; skip front face; inverted
+		rgeom_mat_t &mat(is_vanity ? get_untextured_material(1, 0, 1) : get_wood_material(tscale, 1, 0, 1)); // shadows=1, small=1
+		mat.add_cube_to_verts(interior, cabinet_color*0.5, tex_origin, skip_front_face, 0, 0, 0, 1); // darker interior; skip front face; inverted
 
 		for (unsigned n = 0; n < doors.size(); ++n) { // draw open doors as holes
 			if (!(c.drawer_flags & (1 << n))) continue; // not open
 			cube_t frame(doors[n]);
 			frame.d[c.dim][ c.dir]  = frame.d[c.dim][!c.dir];
 			frame.d[c.dim][!c.dir] -= dir_sign*wall_thickness; // move inward by door thickness
-			wood_mat.add_cube_to_verts(frame, cabinet_color, tex_origin, get_skip_mask_for_xy(c.dim), 0, 0, 0, 1); // skip front/back face; inverted
+			mat.add_cube_to_verts(frame, cabinet_color, tex_origin, get_skip_mask_for_xy(c.dim), 0, 0, 0, 1); // skip front/back face; inverted
 		} // for n
 	}
 	// add cabinet doors; maybe these should be small objects, but there are at most a few cabinets per house and none in office buildings
 	if (doors.empty() && drawers.empty()) return; // no doors or drawers
 	get_metal_material(0, 0, 1); // ensure material exists so that door_mat reference is not invalidated
-	rgeom_mat_t &door_mat(get_wood_material(1.5*tscale, any_doors_open, 0, 1)); // only shadowed if a door is open; small=1
+	bool const shadowed(1 || any_doors_open); // shadowed if a door is open? but shadows will change when doors are opened and closed, so always enable
+	rgeom_mat_t &door_mat(is_vanity ? get_untextured_material(shadowed, 0, 1) : get_wood_material(1.5*tscale, shadowed, 0, 1)); // shadowed if a door is open; small=1
 	rgeom_mat_t &handle_mat(get_metal_material(0, 0, 1)); // untextured, unshadowed, small
-	colorRGBA const door_color(apply_light_color(c, WHITE)); // lighter color than cabinet
+	colorRGBA const door_color(is_vanity ? cabinet_color : apply_light_color(c, WHITE)); // lighter color than cabinet
 	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
 	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir));
 	float const door_thick(doors[0].get_sz_dim(c.dim)), handle_thick(0.75*door_thick);
