@@ -2113,7 +2113,7 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, mat_ix); // should be canonical per building
 	rgen.rand_mix();
-	unsigned const num_people(num_min + (rgen.rand()%(num_max - num_min + 1)));
+	unsigned num_people(num_min + (rgen.rand()%(num_max - num_min + 1)));
 	if (num_people == 0) return 0;
 	float const floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
 	// weight rooms by number of floors to avoid placing too many people in basements
@@ -2165,7 +2165,9 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 			for (unsigned n = 0; n < num_cands; ++n) {room_cands.emplace_back(room_ix, f);}
 		} // for f
 	} // for r
-	for (unsigned N = 0; N < num_people && !room_cands.empty(); ++N) {
+	min_eq(num_people, (unsigned)room_cands.size()); // don't place more people than we have rooms (notably for factories with 3 single floor rooms total)
+
+	for (unsigned N = 0; N < num_people; ++N) {
 		unsigned const max_cand_ix((N == 0 && first_basement_room > 0) ? first_basement_room : room_cands.size()); // place the first person in a non-basement room
 
 		for (unsigned n = 0; n < 10; ++n) { // make 10 attempts at choosing a room
