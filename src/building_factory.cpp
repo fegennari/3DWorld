@@ -86,6 +86,7 @@ void building_t::create_factory_floorplan(unsigned part_id, float window_hspacin
 		// add room itself; will overlap main factory room
 		add_room(room_inner, part_id, (is_larger ? 2 : 1)); // 2 lights in larger room; not a typical office building office
 		rooms.back().assign_all_to(is_larger ? RTYPE_OFFICE : RTYPE_BATH); // office or bathroom
+		interior->factory_info->sub_rooms.push_back(room_inner);
 	} // for d
 	// should there be an entryway room, then the factory doesn't overlap the sub-rooms? but then there will be empty space above them
 	// add entire part as a room (factory floor); must be done last so that smaller contained rooms are picked up in early exit queries (model occlusion, light toggle, door conn)
@@ -108,14 +109,11 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	cube_t support, beam;
 	set_cube_zvals(support, zval,     beams_z1 );
 	set_cube_zvals(beam,    beams_z1, ceil_zval);
-	vect_cube_t support_parts, nested_rooms, beams;
+	vect_cube_t support_parts, beams;
 	vector<float> beam_pos; // in short dim; needed for hanging catwalks
+	vect_cube_t const &nested_rooms(interior->factory_info->sub_rooms);
 	float const shift_vals[6] = {-0.1, 0.2, -0.3, 0.4, -0.5, 0.6}; // cumulative version of {-0.1, 0.1, -0.2, 0.2, -0.3, 0.3}; not enough shift to overlap a window
 
-	for (room_t const &r : interior->rooms) {
-		if (!r.intersects_no_adj(room)) break; // done with above ground factory rooms
-		if (r != room) {nested_rooms.push_back(r);} // skip self (factory)
-	}
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		bool const short_dim(bool(dim) == beam_dim);
 		unsigned const num_windows(get_num_windows_on_side(room, !dim));

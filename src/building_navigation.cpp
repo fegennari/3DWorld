@@ -913,7 +913,8 @@ public:
 	}
 }; // end building_nav_graph_t
 
-cube_t building_t::get_walkable_room_bounds(room_t const &room) const {
+cube_t building_t::get_walkable_room_bounds(room_t const &room, bool floor_space_only) const {
+	if (floor_space_only && room.is_factory() && interior->factory_info) return interior->factory_info->floor_space; // currently unused
 	// regular house rooms start and end at the walls;
 	// offices, hallways, and extended basement rooms tile exactly and include half the walls, so we have to subtract those back off
 	if (!room.inc_half_walls()) return room;

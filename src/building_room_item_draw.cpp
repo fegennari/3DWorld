@@ -2535,6 +2535,7 @@ void building_t::debug_people_in_building(shader_t &s, point const &camera_bs) c
 		interior->get_avoid_cubes(avoid, (camera_bs.z - get_bldg_player_height()), (camera_bs.z + CAMERA_RADIUS),
 			CAMERA_RADIUS*global_building_params.player_coll_radius_scale, get_floor_thickness(), get_floor_ceil_gap(), 1, 0); // same_as_player=1, skip_stairs=0
 		color_shader.set_cur_color(RED);
+		//for (cube_t &c : avoid) {c.expand_by_xy(0.75*interior->people.front().radius);} // expand by ref person's radius
 		for (cube_t const &c : avoid) {draw_simple_cube(c);}
 	}
 	color_shader.end_shader();

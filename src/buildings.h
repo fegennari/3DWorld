@@ -1812,6 +1812,7 @@ struct bldg_factory_info_t {
 	bool entrance_dim, entrance_dir;
 	float entrance_pos;
 	cube_t floor_space, entrance_area;
+	vect_cube_t sub_rooms;
 
 	bldg_factory_info_t(bool dim, bool dir, float epos, cube_t const &fs, cube_t const &ee) :
 		entrance_dim(dim), entrance_dir(dir), entrance_pos(epos), floor_space(fs), entrance_area(ee) {}
@@ -2496,7 +2497,7 @@ private:
 		unsigned nx, unsigned ny, unsigned check_coll_start, vect_cube_t &lights, rand_gen_t &rgen) const;
 	void try_place_light_on_wall   (cube_t const &light, room_t const &room, bool room_dim, float zval, vect_cube_t &lights, rand_gen_t &rgen) const;
 	bool clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
-	cube_t get_walkable_room_bounds(room_t const &room) const;
+	cube_t get_walkable_room_bounds(room_t const &room, bool floor_space_only=0) const;
 	bool is_cube_contained_in_parts(cube_t const &c) const;
 	void expand_ground_floor_cube(cube_t &cube, cube_t const &skip=cube_t()) const;
 	void get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude, bool camera_in_building) const;
