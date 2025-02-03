@@ -247,7 +247,7 @@ void draw_overhead_map() {
 							mh_set = 1;
 						}
 						if (over_mesh && get_buildings_line_hit_color(point(xval, yval, mh+max_building_dz), point(xval, yval, mh), building_color)) {
-							//unpack_color(rgb, building_color*(is_shadowed(cpos, plus_z, lpos, cindex2) ? 0.5 : 1.0));
+							// if the player is inside a building, should we draw room labels with text? or is that too difficult and not worth the effort?
 							unpack_color(rgb, building_color); // no shadows
 							continue;
 						}
