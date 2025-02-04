@@ -1608,7 +1608,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			float const height(0.34*floor_spacing), depth(0.74*height), length(rgen.rand_uniform(0.8, 1.0)*floor_spacing), dsign(dir ? -1.0 : 1.0);
 			unsigned flags(0);
 			cube_t vanity(room_bounds);
-			//vanity.expand_in_dim(!dim, -get_trim_thickness()); // avoid Z-fighting with exterior wall
+			vanity.expand_in_dim(!dim, -get_trim_thickness()); // avoid Z-fighting with exterior wall
 			set_cube_zvals(vanity, zval, zval+height);
 			vanity.d[dim][!dir] = wall_edge + dsign*depth;
 

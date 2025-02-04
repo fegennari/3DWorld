@@ -4626,7 +4626,6 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 	float const dz(c.dz()), depth(c.get_depth()), dir_sign(dir ? 1.0 : -1.0);
 	cube_t top(c), dishwasher;
 	bool const has_dishwasher(c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)); // kitchen sink - add dishwasher if wide enough
-	bool const skip_ends[2] = {(c.flags & RO_FLAG_ADJ_BOT), (c.flags & RO_FLAG_ADJ_TOP)};
 	top.z1() += 0.95*dz;
 
 	if (c.type != TYPE_BRSINK) { // add wood sides of counter/cabinet/vanity
@@ -4640,7 +4639,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 
 		if (is_vanity) { // add top sides overhang
 			for (unsigned d = 0; d < 2; ++d) {
-				if (!skip_ends[d]) {top.d[!dim][d] += (d ? 1.0 : -1.0)*overhang;}
+				if (!(c.flags & (d ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT))) {top.d[!dim][d] += (d ? 1.0 : -1.0)*overhang;}
 			}
 		}
 	}
@@ -4664,15 +4663,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 		faucet2.d[dim][dir] += dir_sign*0.28*sdepth;
 		vect_cube_t &cubes(get_temp_cubes());
 		subtract_cube_from_cube(top, sink, cubes);
-		
-		for (cube_t const &i : cubes) { // should always be 4 cubes
-			unsigned skip_faces(0);
-
-			for (unsigned d = 0; d < 2; ++d) {
-				if (skip_ends[d] && i.d[!dim][d] == top.d[!dim][d]) {skip_faces |= ~get_face_mask(!dim, d);} // used for vanity
-			}
-			top_mat.add_cube_to_verts(i, top_color, tex_origin, skip_faces);
-		}
+		for (cube_t const &i : cubes) {top_mat.add_cube_to_verts(i, top_color, tex_origin);} // should always be 4 cubes
 		colorRGBA const faucet_color(apply_light_color(c, GRAY)), sink_color(is_vanity ? apply_light_color(c) : faucet_color);
 		rgeom_mat_t &basin_mat(is_vanity ? get_metal_material(0) : get_scratched_metal_material(4.0/c.dz(), 0)); // unshadowed
 		basin_mat.add_cube_to_verts(sink, sink_color, tex_origin, EF_Z2, 0, 0, 0, 1); // basin: inverted, skip top face, unshadowed
@@ -4869,9 +4860,8 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale, boo
 	float const door_width(get_cabinet_doors(c, doors, drawers, 1)); // front_only=1
 
 	if (inc_lg) { // draw front and sides
+		// Note: can't skip ends even if against wall as they may be visible through a window
 		unsigned skip_faces(is_counter ? EF_Z12 : EF_Z2); // skip top face (can't skip back in case it's against a window)
-		if (c.flags & RO_FLAG_ADJ_BOT) {skip_faces |= ~get_face_mask(!c.dim, 0);} // used for vanity
-		if (c.flags & RO_FLAG_ADJ_TOP) {skip_faces |= ~get_face_mask(!c.dim, 1);} // used for vanity
 		rgeom_mat_t &mat(is_vanity ? get_untextured_material(1) : get_wood_material(tscale)); // shadowed
 		
 		if (any_doors_open) { // draw front faces with holes cut in them for open doors
