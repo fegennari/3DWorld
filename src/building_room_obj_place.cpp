@@ -1606,15 +1606,19 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			bool const dim(cand.second >> 1), dir(cand.second & 1);
 			float const wall_len(room_sz[!dim]), wall_edge(room_bounds.d[dim][dir]); // no trim padding
 			float const height(0.34*floor_spacing), depth(0.74*height), length(rgen.rand_uniform(0.8, 1.0)*floor_spacing), dsign(dir ? -1.0 : 1.0);
+			unsigned flags(0);
 			cube_t vanity(room_bounds);
-			vanity.expand_in_dim(!dim, -get_trim_thickness()); // avoid Z-fighting with exterior wall
+			//vanity.expand_in_dim(!dim, -get_trim_thickness()); // avoid Z-fighting with exterior wall
 			set_cube_zvals(vanity, zval, zval+height);
 			vanity.d[dim][!dir] = wall_edge + dsign*depth;
 
-			if (wall_len <= length) {} // short wall: vanity is full width; nothing to do
+			if (wall_len <= length) { // short wall: vanity is full width
+				flags |= (RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP); // flag to not draw either end
+			}
 			else if (wall_len < 1.5*length) { // middle size: vanity against 2 walls/corner
 				bool const shift_dir(rgen.rand_bool());
-				vanity.d[!dim][shift_dir] += (shift_dir ? -1.0 : 0.0)*(wall_len - length);
+				vanity.d[!dim][shift_dir] += (shift_dir ? -1.0 : 1.0)*(wall_len - length);
+				flags |= (shift_dir ? RO_FLAG_ADJ_BOT : RO_FLAG_ADJ_TOP); // flag to not draw one end
 			}
 			else { // long wall: vanity centered
 				set_wall_width(vanity, (room_bounds.get_center_dim(!dim) + 0.1*rgen.signed_rand_float()*length), 0.5*length, !dim);
@@ -1622,7 +1626,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			cube_t blocker(vanity);
 			blocker.d[dim][!dir] += 0.9*dsign*depth;
 			if (overlaps_other_room_obj(blocker, objs_start) || is_cube_close_to_doorway(blocker, room, 0.0, 1)) continue; // bad placement; don't need to check for stairs
-			objs.emplace_back(vanity,  TYPE_VANITY,  room_id, dim, !dir, 0, tot_light_amt);
+			objs.emplace_back(vanity,  TYPE_VANITY,  room_id, dim, !dir, flags, tot_light_amt);
 			objs.emplace_back(blocker, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker in front
 			added_vanity = placed_obj = 1;
 			added_bathroom_objs_mask |= PLACED_SINK;
@@ -1632,8 +1636,8 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			mirror.z2() = mirror.z1() + 0.30*floor_spacing;
 			set_wall_width(mirror, vanity.get_center_dim(!dim), 0.13*floor_spacing, !dim);
 			mirror.d[dim][!dir] = wall_edge + dsign*wall_thickness; // thickness
-			unsigned const flags(RO_FLAG_IS_HOUSE | ((num_ext_walls == 1) ? RO_FLAG_INTERIOR : 0)); // flag as interior if windows are opaque glass blocks
-			objs.emplace_back(mirror, TYPE_MIRROR, room_id, dim, !dir, flags, tot_light_amt);
+			unsigned const mirror_flags(RO_FLAG_IS_HOUSE | ((num_ext_walls == 1) ? RO_FLAG_INTERIOR : 0)); // flag as interior if windows are opaque glass blocks
+			objs.emplace_back(mirror, TYPE_MIRROR, room_id, dim, !dir, mirror_flags, tot_light_amt);
 			set_obj_id(objs); // for crack texture selection/orient
 			room.set_has_mirror();
 			break; // success/done

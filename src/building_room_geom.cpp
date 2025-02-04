@@ -4622,20 +4622,27 @@ cube_t get_sink_cube(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_counter(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) { // for kitchens
-	float const dz(c.dz()), depth(c.get_depth()), dir_sign(c.dir ? 1.0 : -1.0);
+	bool const is_vanity(c.type == TYPE_VANITY), dim(c.dim), dir(c.dir);
+	float const dz(c.dz()), depth(c.get_depth()), dir_sign(dir ? 1.0 : -1.0);
 	cube_t top(c), dishwasher;
-	top.z1() += 0.95*dz;
-	bool const is_vanity(c.type == TYPE_VANITY);
 	bool const has_dishwasher(c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)); // kitchen sink - add dishwasher if wide enough
+	bool const skip_ends[2] = {(c.flags & RO_FLAG_ADJ_BOT), (c.flags & RO_FLAG_ADJ_TOP)};
+	top.z1() += 0.95*dz;
 
 	if (c.type != TYPE_BRSINK) { // add wood sides of counter/cabinet/vanity
 		float const overhang(0.05*depth);
 		room_object_t cabinet(c);
 		cabinet.z2() = top.z1();
-		//cabinet.expand_in_dim(!c.dim, -overhang); // add side overhang: disable to allow cabinets to be flush with objects
-		cabinet.d[c.dim][c.dir] -= dir_sign*overhang; // add front overhang
+		//cabinet.expand_in_dim(!dim, -overhang); // add side overhang: disable to allow cabinets to be flush with objects
+		cabinet.d[dim][dir] -= dir_sign*overhang; // add front overhang
 		if (has_dishwasher) {add_cabinet(split_cabinet_at_dishwasher(cabinet, dishwasher), tscale, inc_lg, inc_sm);}
 		add_cabinet(cabinet, tscale, inc_lg, inc_sm); // draw the wood part
+
+		if (is_vanity) { // add top sides overhang
+			for (unsigned d = 0; d < 2; ++d) {
+				if (!skip_ends[d]) {top.d[!dim][d] += (d ? 1.0 : -1.0)*overhang;}
+			}
+		}
 	}
 	if (!inc_lg) return; // everything below this point is large static
 	tid_nm_pair_t const marble_tex(get_counter_tid(), 2.5*tscale, 1);
@@ -4645,19 +4652,27 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 	if (c.type == TYPE_KSINK || c.type == TYPE_BRSINK || is_vanity) { // counter with kitchen or bathroom sink
 		float const sdepth(0.8*depth);
 		vector3d faucet_pos(c.get_cube_center());
-		faucet_pos[c.dim] -= dir_sign*0.56*sdepth;
+		faucet_pos[dim] -= dir_sign*0.56*sdepth;
 		cube_t const sink(get_sink_cube(c));
 		cube_t faucet1(faucet_pos, faucet_pos);
 		set_cube_zvals(faucet1, top.z2(), (top.z2() + 0.30*dz));
-		faucet1.expand_in_dim( c.dim, 0.04*sdepth);
-		faucet1.expand_in_dim(!c.dim, 0.07*sdepth);
+		faucet1.expand_in_dim( dim, 0.04*sdepth);
+		faucet1.expand_in_dim(!dim, 0.07*sdepth);
 		cube_t faucet2(faucet1);
 		faucet2.z1()  = faucet1.z2();
 		faucet2.z2() += 0.035*dz;
-		faucet2.d[c.dim][c.dir] += dir_sign*0.28*sdepth;
+		faucet2.d[dim][dir] += dir_sign*0.28*sdepth;
 		vect_cube_t &cubes(get_temp_cubes());
 		subtract_cube_from_cube(top, sink, cubes);
-		for (auto i = cubes.begin(); i != cubes.end(); ++i) {top_mat.add_cube_to_verts(*i, top_color, tex_origin);} // should always be 4 cubes
+		
+		for (cube_t const &i : cubes) { // should always be 4 cubes
+			unsigned skip_faces(0);
+
+			for (unsigned d = 0; d < 2; ++d) {
+				if (skip_ends[d] && i.d[!dim][d] == top.d[!dim][d]) {skip_faces |= ~get_face_mask(!dim, d);} // used for vanity
+			}
+			top_mat.add_cube_to_verts(i, top_color, tex_origin, skip_faces);
+		}
 		colorRGBA const faucet_color(apply_light_color(c, GRAY)), sink_color(is_vanity ? apply_light_color(c) : faucet_color);
 		rgeom_mat_t &basin_mat(is_vanity ? get_metal_material(0) : get_scratched_metal_material(4.0/c.dz(), 0)); // unshadowed
 		basin_mat.add_cube_to_verts(sink, sink_color, tex_origin, EF_Z2, 0, 0, 0, 1); // basin: inverted, skip top face, unshadowed
@@ -4673,7 +4688,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 			cube_t sink_outer(sink);
 			sink_outer.expand_by_xy(0.01*dz); // expand by sink basin thickness
 			sink_outer.z1() -= 0.1*dz;
-			basin_mat.add_cube_to_verts(sink_outer, sink_color, tex_origin, (~get_face_mask(c.dim, !c.dir) | EF_Z2)); // skip back and top
+			basin_mat.add_cube_to_verts(sink_outer, sink_color, tex_origin, (~get_face_mask(dim, !dir) | EF_Z2)); // skip back and top
 		}
 		rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed, specular metal (specular doesn't do much because it's flat, but may make more of a diff using a cylinder later)
 		metal_mat.add_cube_to_verts_untextured(faucet1, faucet_color, EF_Z12); // vertical part of faucet, skip top and bottom faces
@@ -4684,14 +4699,14 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 			cube_t front(c);
 			front.z2() = top.z1();
 			front.z1() = sink.z1() - 0.1*dz; // slightly below the sink basin
-			front.d[c.dim][!c.dir] += dir_sign*0.94*depth;
+			front.d[dim][!dir] += dir_sign*0.94*depth;
 			get_material(marble_tex, 1).add_cube_to_verts(front, top_color, tex_origin, EF_Z2); // front surface, no top face; same as top_mat
 		}
 		else if (has_dishwasher) { // add dishwasher
-			unsigned const dw_skip_faces(~get_face_mask(c.dim, !c.dir)); // skip back
-			float const back_wall(c.d[c.dim][!c.dir]);
+			unsigned const dw_skip_faces(~get_face_mask(dim, !dir)); // skip back
+			float const back_wall(c.d[dim][!dir]);
 			cube_t dishwasher_back(dishwasher);
-			dishwasher_back.d[c.dim][!c.dir] = back_wall; // flush with the cabinet
+			dishwasher_back.d[dim][!dir] = back_wall; // flush with the cabinet
 			metal_mat.add_cube_to_verts_untextured(dishwasher_back, apply_light_color(c, LT_GRAY), ~dw_skip_faces); // draw back face, in case visible through window
 			room_object_t dwc(c);
 			dwc.copy_from(dishwasher);
@@ -4710,14 +4725,14 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 
 		if (c.flags & RO_FLAG_ADJ_BOT) { // back
 			cube_t bs(bsz);
-			bs.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.99*depth;
-			bs_mat.add_cube_to_verts(bs, top_color, zero_vector, (EF_Z1 | ~get_face_mask(c.dim, !c.dir)));
+			bs.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.99*depth;
+			bs_mat.add_cube_to_verts(bs, top_color, zero_vector, (EF_Z1 | ~get_face_mask(dim, !dir)));
 		}
 		for (unsigned d = 0; d < 2; ++d) { // handle the other dim
 			if (!(c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO))) continue; // not adjacent in this dir
 			cube_t bs(bsz);
-			bs.d[!c.dim][!d] -= (d ? -1.0 : 1.0)*(c.get_width() - 0.01*depth);
-			bs_mat.add_cube_to_verts(bs, top_color, zero_vector, (EF_Z1 | ~get_face_mask(!c.dim, d)));
+			bs.d[!dim][!d] -= (d ? -1.0 : 1.0)*(c.get_width() - 0.01*depth);
+			bs_mat.add_cube_to_verts(bs, top_color, zero_vector, (EF_Z1 | ~get_face_mask(!dim, d)));
 		}
 	}
 }
@@ -4855,6 +4870,8 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale, boo
 
 	if (inc_lg) { // draw front and sides
 		unsigned skip_faces(is_counter ? EF_Z12 : EF_Z2); // skip top face (can't skip back in case it's against a window)
+		if (c.flags & RO_FLAG_ADJ_BOT) {skip_faces |= ~get_face_mask(!c.dim, 0);} // used for vanity
+		if (c.flags & RO_FLAG_ADJ_TOP) {skip_faces |= ~get_face_mask(!c.dim, 1);} // used for vanity
 		rgeom_mat_t &mat(is_vanity ? get_untextured_material(1) : get_wood_material(tscale)); // shadowed
 		
 		if (any_doors_open) { // draw front faces with holes cut in them for open doors
