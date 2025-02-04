@@ -278,7 +278,7 @@ void building_room_geom_t::add_hangers_and_clothing(float window_vspacing, unsig
 	objects[hanger_rod_ix].item_flags = uint16_t(objects.size() - hanger_rod_ix); // number of objects hanging on the hanger rod, including hangers and shirts
 }
 
-void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on cabinets, counters, and kitchen sinks
+bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects) { // called on cabinets, counters, kitchen sinks, and bathroom vanities
 	rand_gen_t rgen(c.create_rgen());
 	vect_cube_t &cubes(get_temp_cubes());
 	float const wall_thickness(0.04*c.dz()), light_amt(0.25*c.light_amt);
@@ -287,7 +287,7 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 	vector3d const c_sz(interior.get_size());
 	unsigned const sz_ratio(round_fp(c_sz[!c.dim]/c_sz.z));
 	bool const is_vanity(c.type == TYPE_VANITY), in_kitchen(!is_vanity), is_counter(c.type == TYPE_COUNTER || c.type == TYPE_KSINK || is_vanity);
-	
+
 	if (c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)) { // avoid placing objects that overlap the dishwasher
 		dishwasher.d[c.dim][!c.dir] = c.d[c.dim][!c.dir]; // extend to the back of the cabinet
 		dishwasher.expand_by_xy(wall_thickness);
@@ -300,7 +300,7 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 		cube_t tcan;
 		gen_xy_pos_for_round_obj(tcan, interior, tcan_radius, tcan_height, 1.1*tcan_radius, rgen, 1); // place_at_z1=1
 		room_object_t obj(tcan, TYPE_TCAN, c.room_id, c.dim, c.dir, flags, light_amt, (rgen.rand_bool() ? SHAPE_CYLIN : SHAPE_CUBE), tcan_colors[rgen.rand()%NUM_TCAN_COLORS]);
-		add_if_not_intersecting(obj, expanded_objs, cubes);
+		add_if_not_intersecting(obj, objects, cubes);
 	}
 	// maybe add fire extinguisher
 	if (is_counter && building_obj_model_loader.is_model_valid(OBJ_MODEL_FIRE_EXT) && rgen.rand_float() < 0.3) { // 30% of the time
@@ -311,7 +311,7 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 			cube_t fire_ext;
 			gen_xy_pos_for_round_obj(fire_ext, interior, fe_radius, fe_height, 1.05*fe_radius, rgen, 1); // place_at_z1=1
 			room_object_t obj(fire_ext, TYPE_FIRE_EXT, c.room_id, rgen.rand_bool(), rgen.rand_bool(), flags, light_amt, SHAPE_CYLIN);
-			add_if_not_intersecting(obj, expanded_objs, cubes);
+			add_if_not_intersecting(obj, objects, cubes);
 		}
 	}
 	// add boxes
@@ -319,7 +319,7 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 	float const box_sz(0.3*c.get_length());
 	room_object_t cb(c);
 	cb.light_amt = light_amt;
-	add_boxes_to_space(cb, expanded_objs, interior, cubes, rgen, num_boxes, box_sz, 0.8*box_sz, 1.5*box_sz, 0, (flags | RO_FLAG_NOCOLL)); // allow_crates=0
+	add_boxes_to_space(cb, objects, interior, cubes, rgen, num_boxes, box_sz, 0.8*box_sz, 1.5*box_sz, 0, (flags | RO_FLAG_NOCOLL)); // allow_crates=0
 
 	// add paint cans (slightly smaller than normal); even for bathroom vanity?
 	float const sz_scale(0.7*c_sz.z), pc_height(0.6*sz_scale), pc_radius(0.24*sz_scale);
@@ -331,7 +331,7 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 			cube_t pcan;
 			gen_xy_pos_for_round_obj(pcan, interior, pc_radius, pc_height, 1.2*pc_radius, rgen, 1); // place_at_z1=1
 			room_object_t obj(pcan, TYPE_PAINTCAN, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN);
-			add_if_not_intersecting(obj, expanded_objs, cubes);
+			add_if_not_intersecting(obj, objects, cubes);
 		}
 	}
 	if (in_kitchen) {
@@ -343,13 +343,13 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 			cube_t plate;
 			gen_xy_pos_for_round_obj(plate, interior, plate_radius, plate_height, 1.2*plate_radius, rgen, 1); // place_at_z1=1
 			room_object_t obj(plate, TYPE_PLATE, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN);
-			if (!add_if_not_intersecting(obj, expanded_objs, cubes)) continue; // can't place the bottom plate
+			if (!add_if_not_intersecting(obj, objects, cubes)) continue; // can't place the bottom plate
 			unsigned const stack_height(1 + (rgen.rand()%5)); // 1-6
 
 			for (unsigned s = 1; s < stack_height; ++s) {
 				obj.translate_dim(2, plate_height); // shift up in z
 				if (obj.z2() + plate_height > interior.z2()) break; // stack is too high, end it here
-				expanded_objs.push_back(obj);
+				objects.push_back(obj);
 			}
 		} // for n
 		// add pans
@@ -363,7 +363,7 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 			bool const dir(pan.get_center_dim(!c.dim) < c.get_center_dim(!c.dim)); // point toward the cabinet center to avoid the handle clipping through the side/end
 			room_object_t obj(pan, TYPE_PAN, c.room_id, c.dim, dir, flags, light_amt, SHAPE_CYLIN, GRAY_BLACK);
 			// Note: the pan's handle extends outside its bcube and may clip through other objects, but this isn't very noticeable when viewed from normal head height
-			add_if_not_intersecting(obj, expanded_objs, cubes);
+			add_if_not_intersecting(obj, objects, cubes);
 		} // for n
 	}
 	// add bottles
@@ -377,9 +377,13 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 		room_object_t obj(bottle, TYPE_BOTTLE, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN); // vertical
 		bool const allow_medicine(rgen.rand_bool()); // medicine is half as common
 		obj.set_as_bottle(rgen.rand(), (allow_medicine ? (unsigned)NUM_BOTTLE_TYPES : (unsigned)BOTTLE_TYPE_MEDS)-1, 1); // all bottle types, no_empty=1
-		add_if_not_intersecting(obj, expanded_objs, cubes);
+		add_if_not_intersecting(obj, objects, cubes);
 	}
-	if (cubes.size() > start_num_cubes) {invalidate_small_geom();} // some object was added
+	return (cubes.size() > start_num_cubes); // returns true if some object was added
+}
+void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on cabinets, counters, kitchen sinks, and bathroom vanities
+	bool any_objs_added(add_cabinet_objects(c, expanded_objs));
+	if (any_objs_added) {invalidate_small_geom();} // some object was added
 }
 
 void building_room_geom_t::expand_med_cab(room_object_t const &c) { // aka house "mirrors"

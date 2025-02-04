@@ -34,6 +34,7 @@ unsigned get_rgeom_sphere_ndiv(bool low_detail);
 void rotate_verts(point *verts, unsigned num_verts, vector3d const &axis, float angle, vector3d const &about);
 void add_pipe_with_bend(rgeom_mat_t &mat, colorRGBA const &color, point const &bot_pt, point const &top_pt, point const &bend, unsigned ndiv, float radius, bool draw_ends);
 void draw_metal_handle_wheel(cube_t const &c, unsigned dim, colorRGBA const &color, colorRGBA const &shaft_color, rgeom_mat_t &mat, rgeom_mat_t &shaft_mat);
+bool add_cabinet_objects(room_object_t const &c, vect_room_object_t &objects);
 
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // draw only these faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
 unsigned get_skip_mask_for_xy (bool       dim) {return (dim ? EF_Y12 : EF_X12);} // skip these faces
@@ -4851,8 +4852,9 @@ void get_cabinet_or_counter_doors(room_object_t const &c, vect_cube_t &doors, ve
 
 void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) { // for kitchens
 	assert(c.is_strictly_normalized());
+	bool const dim(c.dim), dir(c.dir);
 	bool const any_doors_open(c.drawer_flags > 0), is_counter(c.type == TYPE_COUNTER), is_vanity(c.type == TYPE_VANITY); // Note: counter does not include section with sink
-	unsigned const skip_front_face(~get_face_mask(c.dim, c.dir)); // used in the any_doors_open=1 case
+	unsigned const skip_front_face(~get_face_mask(dim, dir)); // used in the any_doors_open=1 case
 	colorRGBA const cabinet_color(is_vanity ? apply_light_color(c) : apply_wood_light_color(c));
 	static vect_cube_t doors, drawers;
 	doors  .clear();
@@ -4865,22 +4867,44 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale, boo
 		rgeom_mat_t &mat(is_vanity ? get_untextured_material(1) : get_wood_material(tscale)); // shadowed
 		
 		if (any_doors_open) { // draw front faces with holes cut in them for open doors
+			float const depth(c.get_depth());
 			vect_cube_t &cubes(get_temp_cubes());
 			cubes.push_back(c); // start with entire cabinet
 
 			for (unsigned n = 0; n < doors.size(); ++n) { // draw open doors as holes
 				if (!(c.drawer_flags & (1 << n))) continue; // not open
 				cube_t hole(doors[n]);
-				hole.expand_in_dim(c.dim, c.get_depth()); // expand so that it cuts entirely through the cabinet
+				hole.expand_in_dim(dim, depth); // expand so that it cuts entirely through the cabinet
 				subtract_cube_from_cubes(hole, cubes, nullptr, 1); // clip_in_z=1
 			}
 			for (auto i = cubes.begin(); i != cubes.end(); ++i) {mat.add_cube_to_verts(*i, cabinet_color, tex_origin, ~skip_front_face);}
 			skip_faces |= skip_front_face; // front face drawn above, don't draw it again below
+			
+			if (doors.size() > 1) { // draw drawer dividers
+				bool const has_sink(c.type == TYPE_KSINK || is_vanity);
+				cube_t const sink(has_sink ? get_sink_cube(c) : cube_t());
+				unsigned const div_skip_faces(get_skip_mask_for_xy(dim) | EF_Z12); // only draw the sides
+				float const wall_hthick(0.02*depth);
+				cube_t divider(c);
+				divider.d[dim][dir] -= (dir ? 1.0 : -1.0)*wall_hthick;
+				static vect_room_object_t objects;
+				objects.clear();
+				add_cabinet_objects(c, objects); // get cabinet objects; only needed when player opens a door, so not perf critical
+
+				for (unsigned n = 0; n+1 < doors.size(); ++n) { // looking at pairs - skip last door
+					float const center(0.5*(doors[n].d[!dim][1] + doors[n+1].d[!dim][0])); // halfway between the doors
+					set_wall_width(divider, center, wall_hthick, !dim);
+					if (has_sink && divider.intersects(sink)) continue; // don't intersect the sink
+					// since we can't easily constrain objects to not intersect dividers, instead skip dividers that intersect placed objects
+					if (has_bcube_int(divider, objects)) continue;
+					mat.add_cube_to_verts(divider, cabinet_color, tex_origin, div_skip_faces);
+				} // for n
+			}
 		}
 		mat.add_cube_to_verts(c, cabinet_color, tex_origin, skip_faces); // draw wood exterior
 	}
 	if (!inc_sm) return; // everything below this point is small
-	float const dir_sign(c.dir ? 1.0 : -1.0);
+	float const dir_sign(dir ? 1.0 : -1.0);
 
 	if (any_doors_open) {
 		float const wall_thickness(0.04*c.dz());
@@ -4892,9 +4916,9 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale, boo
 		for (unsigned n = 0; n < doors.size(); ++n) { // draw open doors as holes
 			if (!(c.drawer_flags & (1 << n))) continue; // not open
 			cube_t frame(doors[n]);
-			frame.d[c.dim][ c.dir]  = frame.d[c.dim][!c.dir];
-			frame.d[c.dim][!c.dir] -= dir_sign*wall_thickness; // move inward by door thickness
-			mat.add_cube_to_verts(frame, cabinet_color, tex_origin, get_skip_mask_for_xy(c.dim), 0, 0, 0, 1); // skip front/back face; inverted
+			frame.d[dim][ dir]  = frame.d[dim][!dir];
+			frame.d[dim][!dir] -= dir_sign*wall_thickness; // move inward by door thickness
+			mat.add_cube_to_verts(frame, cabinet_color, tex_origin, get_skip_mask_for_xy(dim), 0, 0, 0, 1); // skip front/back face; inverted
 		} // for n
 	}
 	// add cabinet doors; maybe these should be small objects, but there are at most a few cabinets per house and none in office buildings
@@ -4905,8 +4929,8 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale, boo
 	rgeom_mat_t &handle_mat(get_metal_material(0, 0, 1)); // untextured, unshadowed, small
 	colorRGBA const door_color(is_vanity ? cabinet_color : apply_light_color(c, WHITE)); // lighter color than cabinet
 	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
-	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir));
-	float const door_thick(doors[0].get_sz_dim(c.dim)), handle_thick(0.75*door_thick);
+	unsigned const door_skip_faces(~get_face_mask(dim, !dir));
+	float const door_thick(doors[0].get_sz_dim(dim)), handle_thick(0.75*door_thick);
 	float const hwidth(0.04*doors[0].dz()), near_side(0.1*door_width), far_side(door_width - near_side - hwidth);
 
 	for (unsigned n = 0; n < doors.size(); ++n) {
@@ -4914,25 +4938,25 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale, boo
 		cube_t &door(doors[n]);
 
 		if (is_open) { // make this door open
-			door.d[ c.dim][c.dir] += dir_sign*(door_width - door_thick); // expand out to full width
-			door.d[!c.dim][!handle_side] -= (handle_side ? -1.0f : 1.0f)*(door_width - door_thick); // shrink to correct thickness
+			door.d[ dim][dir] += dir_sign*(door_width - door_thick); // expand out to full width
+			door.d[!dim][!handle_side] -= (handle_side ? -1.0f : 1.0f)*(door_width - door_thick); // shrink to correct thickness
 		}
 		door_mat.add_cube_to_verts(door, door_color, tex_origin, door_skip_faces);
 		// add door handle
 		cube_t handle(door);
-		handle.d[c.dim][!c.dir]  = door.d[c.dim][c.dir];
-		handle.d[c.dim][ c.dir] += dir_sign*handle_thick; // expand out a bit
+		handle.d[dim][!dir]  = door.d[dim][dir];
+		handle.d[dim][ dir] += dir_sign*handle_thick; // expand out a bit
 		handle.expand_in_z(-0.4*door.dz()); // shrink in Z
 
 		if (is_open) { // rotate 90 degrees
-			handle.d[!c.dim][!handle_side] = door.d[!c.dim][handle_side];
-			handle.d[!c.dim][ handle_side] = door.d[!c.dim][handle_side] + (handle_side ? 1.0 : -1.0)*handle_thick; // expand out a bit
-			handle.d[ c.dim][0] = door.d[c.dim][0] + (!c.dir ? near_side : far_side);
-			handle.d[ c.dim][1] = door.d[c.dim][1] - (!c.dir ? far_side : near_side);
+			handle.d[!dim][!handle_side] = door.d[!dim][handle_side];
+			handle.d[!dim][ handle_side] = door.d[!dim][handle_side] + (handle_side ? 1.0 : -1.0)*handle_thick; // expand out a bit
+			handle.d[ dim][0] = door.d[dim][0] + (!dir ? near_side : far_side);
+			handle.d[ dim][1] = door.d[dim][1] - (!dir ? far_side : near_side);
 		}
 		else {
-			handle.d[!c.dim][0] = door.d[!c.dim][0] + (handle_side ? near_side : far_side);
-			handle.d[!c.dim][1] = door.d[!c.dim][1] - (handle_side ? far_side : near_side);
+			handle.d[!dim][0] = door.d[!dim][0] + (handle_side ? near_side : far_side);
+			handle.d[!dim][1] = door.d[!dim][1] - (handle_side ? far_side : near_side);
 		}
 		handle_mat.add_cube_to_verts_untextured(handle, handle_color, door_skip_faces); // same skip_faces
 	} // for n
