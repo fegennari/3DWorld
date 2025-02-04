@@ -247,11 +247,13 @@ city clothing_model "../models/interiors/closet_items/Pants.model3d"            
 city shoe_model      ../models/interiors/shoes/dress_shoe.glb                       0 0 0  -1 -1 180 1 1.0 1.0  mirrored=1
 city shoe_model      ../models/interiors/shoes/nike_air_zoom_pegasus.glb            0 0 0  -1 -1 270 1 1.0 1.0
 city shoe_model      ../models/interiors/shoes/old_oxford_shoe.glb                  0 0 0  -1 -1 25  1 1.0 1.0
-city shoe_model      ../models/interiors/shoes/nike_shoe.glb                        0 0 0  -1 -1 0   1 1.0 1.0
-city shoe_model      ../models/interiors/shoes/vans_shoe.glb                        0 0 0  -1 -1 90  1 1.0 1.0
-city shoe_model      ../models/interiors/shoes/winter_shoe.glb                      0 0 0  -1 -1 90  1 1.0 1.0 # emissive?
 city shoe_model      ../models/interiors/shoes/canvas_shoe.glb                      0 0 0  -1 -1 90  1 1.0 1.0  mirrored=1
 city shoe_model      ../models/interiors/shoes/photocatch_shoe.glb                  0 0 0  -1 -1 180 1 1.0 1.0
+city shoe_model      ../models/interiors/shoes/lasocki_shoe.glb                     0 0 0  -1 -1 90  1 1.0 1.0
+city shoe_model      ../models/interiors/shoes/nike_shoe_low.glb                    0 0 0  -1 -1 180 1 1.0 1.0  mirrored=1
+city shoe_model      ../models/interiors/shoes/new_balance_shoe.glb                 0 0 0  -1 -1 180 1 1.0 1.0
+city shoe_model      ../models/interiors/shoes/cat_shoe.glb                         0 0 0  -1 -1 0   1 1.0 1.0  mirrored=1
+city shoe_model      ../models/interiors/shoes/puma_shoe_purple.glb                 0 0 0  -1 -1 90  1 1.0 1.0
 city shoebox_model   ../models/interiors/shoes/nike_shoe_box.glb                    0 0 0  -1 -1 180 1 1.0 1.0
 
 # plants
