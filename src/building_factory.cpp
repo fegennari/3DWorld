@@ -285,6 +285,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			tc.d[bpdim][bpdir] += dsign*2.0*hwidth; // add clearance so that it can open
 			if (is_cube_close_to_doorway(tc, room, 0.0, 1) || overlaps_other_room_obj(tc, objs_start)) continue; // avoid doors and machines
 			add_breaker_panel(rgen, breaker_panel, bp_ceil_zval, bpdim, !bpdir, room_id, light_amt);
+			objs.emplace_back(tc, TYPE_BLOCKER, room_id, bpdim, !bpdir, RO_FLAG_INVIS); // don't place objects such as boxes in front of the panel
 			break; // success
 		} // for n
 	}
