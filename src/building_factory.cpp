@@ -95,11 +95,18 @@ void building_t::create_factory_floorplan(unsigned part_id, float window_hspacin
 	rooms.back().is_single_floor = 1;
 }
 
+void add_ladder_with_blocker(cube_t const &ladder, unsigned room_id, bool dim, bool dir, float light_amt, float clearance, vect_room_object_t &objs) {
+	objs.emplace_back(ladder, TYPE_INT_LADDER, room_id, dim, dir, RO_FLAG_IN_FACTORY, light_amt);
+	cube_t blocker(ladder);
+	blocker.d[dim][dir] += (dir ? 1.0 : -1.0)*clearance;
+	objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, dir, RO_FLAG_INVIS);
+}
+
 void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
 	assert(interior->factory_info);
 	float const light_amt(1.0); // always lit?
 	bool const edim(interior->factory_info->entrance_dim), edir(interior->factory_info->entrance_dir), beam_dim(!edim); // edim is the long dim; beam_dim is short dim
-	float const window_vspace(get_window_vspace()), wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness());
+	float const window_vspace(get_window_vspace()), wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness()), edir_sign(edir ? 1.0 : -1.0);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// add support pillars around the exterior, between windows; add ceiling beams
 	float const support_width(FACTORY_BEAM_THICK*wall_thick), support_hwidth(0.5*support_width);
@@ -185,7 +192,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	set_cube_zvals(dbg, bcube.z2(), bcube.z2()+bcube.dz());
 	objs.emplace_back(dbg, TYPE_DBG_SHAPE, room_id, 0, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, RED);
 #endif
-	float const clearance(get_min_front_clearance_inc_people()), player_height(get_player_height());
+	float const clearance(get_min_front_clearance_inc_people()), player_height(get_player_height()), ladder_extend_up(player_height + CAMERA_RADIUS);
 	cube_t place_area(room);
 	place_area.expand_by_xy(-support_width); // inside the supports
 	cube_t const place_area_upper(place_area); // includes space above office and bathroom
@@ -195,24 +202,21 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 
 	// add ladders to walls
 	for (cube_t const &r : nested_rooms) {
-		float const wall_pos(r.d[edim][!edir] + 0.5*(edir ? -1.0 : 1.0)*wall_thick); // partially inside the wall
+		float const wall_pos(r.d[edim][!edir] - 0.5*edir_sign*wall_thick); // partially inside the wall
 		float const lo(max(r.d[!edim][0], place_area.d[!edim][0])), hi(min(r.d[!edim][1], place_area.d[!edim][1]));
 		float const ladder_hwidth(rgen.rand_uniform(0.1, 0.11)*window_vspace), edge_spacing(2.0*ladder_hwidth);
 		if ((hi - lo) < 4.0*edge_spacing) continue; // too narrow
 		cube_t ladder;
-		set_cube_zvals(ladder, zval, (r.z2() + fc_thick + player_height + CAMERA_RADIUS));
+		set_cube_zvals(ladder, zval, (r.z2() + fc_thick + ladder_extend_up));
 		ladder.d[edim][ edir] = wall_pos;
-		ladder.d[edim][!edir] = wall_pos + (edir ? -1.0 : 1.0)*0.06*window_vspace; // set depth
+		ladder.d[edim][!edir] = wall_pos - edir_sign*0.06*window_vspace; // set depth
 
 		for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place a ladder that doesn't block the door
 			set_wall_width(ladder, rgen.rand_uniform((lo + edge_spacing), (hi - edge_spacing)), ladder_hwidth, !edim);
 			if (cube_int_ext_door(ladder) || interior->is_blocked_by_stairs_or_elevator(ladder)) continue; // blocked
-			objs.emplace_back(ladder, TYPE_INT_LADDER, room_id, edim, !edir, RO_FLAG_IN_FACTORY, light_amt);
-			cube_t blocker(ladder);
-			blocker.d[edim][!edir] += (edir ? -1.0 : 1.0)*clearance;
-			objs.emplace_back(blocker, TYPE_BLOCKER, room_id, edim, !edir, RO_FLAG_INVIS);
-			break;
-		} // for n
+			add_ladder_with_blocker(ladder, room_id, edim, !edir, light_amt, clearance, objs);
+			break; // success
+		}
 	} // for r
 	// add catwalk above the entryway
 	float const doorway_width(get_doorway_width()), catwalk_width(1.1*doorway_width), catwalk_hwidth(0.5*catwalk_width), catwalk_height(0.5*window_vspace);
@@ -226,12 +230,36 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		objs.emplace_back(catwalk, TYPE_CATWALK, room_id, !edim, rgen.rand_bool(), RO_FLAG_IN_FACTORY, light_amt); // random mesh texture
 	}
 	if (1) { // central upper catwalk in long dim
+		// determine catwalk placement
+		float const ladder_depth(0.08*window_vspace), end_pad(0.1*window_vspace), end_pad_ladder(0.5*(clearance - ladder_depth));
 		cube_t catwalk(place_area_upper); // set the length
 		catwalk.z1() = room.z2() - window_vspace + fc_thick - support_width; // would be upper floor zval - support_width
 		catwalk.z2() = catwalk.z1() + catwalk_height;
 		set_wall_width(catwalk, room_center_short, catwalk_hwidth, !edim);
-		catwalk.expand_in_dim(edim, -0.1*window_vspace); // shorten ends to provide a gap between beams
-		unsigned const flags(RO_FLAG_IN_FACTORY | RO_FLAG_HANGING | RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT); // draw bars at ends
+		catwalk.expand_in_dim(edim, -end_pad); // shorten ends to provide a gap between beams
+		// connect to floor with stairs and/or ladders
+		float const wall_pos(room.d[edim][!edir]); // wall opposite the main entrance
+		cube_t ladder;
+		set_cube_zvals(ladder, zval, (catwalk.z1() + ladder_extend_up)); // extend up to catwalk
+		set_wall_width(ladder, room_center_short, 0.5*catwalk_hwidth, !edim);
+		ladder.d[edim][!edir] = wall_pos;
+		ladder.d[edim][ edir] = wall_pos + edir_sign*ladder_depth; // set depth
+		assert(ladder.is_strictly_normalized());
+		bool add_end_bars[2] = {1, 1};
+
+		// FIXME: need to expand in edim and also test beams
+		if (cube_int_ext_door(ladder) || interior->is_blocked_by_stairs_or_elevator(ladder)) { // blocked
+			// shift to the side?
+		}
+		else {
+			add_ladder_with_blocker(ladder, room_id, edim, edir, light_amt, clearance, objs);
+			if (end_pad_ladder > end_pad) {catwalk.d[edim][!edir] += edir_sign*(end_pad_ladder - end_pad);} // need more clearance
+			add_end_bars[!edir] = 0; // no bars on this end so that ladder is accessible
+		}
+		// TODO: try adding a ladder to the middle of the catwalk
+		unsigned flags(RO_FLAG_IN_FACTORY | RO_FLAG_HANGING); // draw bars at ends if no ladder connection
+		if (add_end_bars[0]) {flags |= RO_FLAG_ADJ_BOT;}
+		if (add_end_bars[1]) {flags |= RO_FLAG_ADJ_TOP;}
 		objs.emplace_back(catwalk, TYPE_CATWALK, room_id, edim, rgen.rand_bool(), flags, light_amt); // random mesh texture
 		// add bars to hang the catwalk from beams
 		float const rod_radius(0.008*window_vspace);
@@ -249,16 +277,15 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 				cube_t rod(center);
 				rod.expand_by_xy(rod_radius);
 				set_cube_zvals(rod, (catwalk.z1() + 1.0*rod_radius), beams_z1);
-				unsigned const flags(RO_FLAG_IN_FACTORY | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_NOCOLL); // draw bottom surface
-				objs.emplace_back(rod, TYPE_PIPE, room_id, 0, 1, flags, light_amt, SHAPE_CYLIN); // vertical
+				unsigned const pflags(RO_FLAG_IN_FACTORY | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_NOCOLL); // draw bottom surface
+				objs.emplace_back(rod, TYPE_PIPE, room_id, 0, 1, pflags, light_amt, SHAPE_CYLIN); // vertical
 			} // for d
 		} // for bpos
-		// TODO: connect to floor with stairs and/or ladders
 	}
 	// add transformer
 	float const tzval(zval - 0.02*window_vspace); // transformer is slightly below floor level
 	cube_t xfmr_area(place_area);
-	xfmr_area.d[edim][edir] -= (edir ? 1.0 : -1.0)*1.2*doorway_width; // don't place too close to sub-rooms or entrance
+	xfmr_area.d[edim][edir] -= edir_sign*1.2*doorway_width; // don't place too close to sub-rooms or entrance
 	place_model_along_wall(OBJ_MODEL_SUBSTATION, TYPE_XFORMER, room, 0.6, rgen, tzval, room_id, light_amt, xfmr_area, objs_start, 0.0, 4, 0, WHITE, 0, 0, 0, 1); // sideways
 	// add machines
 	add_machines_to_factory(rgen, room, place_area, zval, room_id, light_amt, objs_start);
