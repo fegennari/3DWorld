@@ -1763,6 +1763,7 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 						set_wall_width(center_wall, rack_center, 0.38*wall_thickness, !dim);
 						add_shelves_along_walls(center_wall, zval, room_id, light_amt, !dim, store_type, shelf_height, shelf_depth, 0, rgen); // place_inside=0
 						objs.emplace_back(center_wall, TYPE_PG_WALL, room_id, !dim, 0, (RO_FLAG_IN_MALL | RO_FLAG_ADJ_TOP), light_amt, SHAPE_CUBE, color); // draw top
+						interior->mall_info->stores.back().occluders.push_back(center_wall);
 					}
 					else { // add retail shelf racks
 						assert(store_type == STORE_RETAIL);

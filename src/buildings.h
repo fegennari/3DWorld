@@ -215,7 +215,9 @@ class occlusion_checker_noncity_t {
 	building_occlusion_state_t state;
 	building_creator_t const &bc;
 public:
-	bool query_is_for_light;
+	bool query_is_for_light, extra_occluders_dim=0;
+	vect_cube_t extra_occluders;
+
 	occlusion_checker_noncity_t(building_creator_t const &bc_, bool for_light=0) : bc(bc_), query_is_for_light(for_light) {}
 	void set_exclude_bix(int exclude_bix) {state.exclude_bix = exclude_bix;}
 	void set_camera(pos_dir_up const &pdu, bool cur_building_only=0);
@@ -1480,6 +1482,7 @@ struct store_info_t {
 	bool dim, dir;
 	unsigned room_id, store_type, item_category;
 	std::string name;
+	vect_cube_t occluders;
 
 	store_info_t(bool d, bool D, unsigned rid, unsigned type, unsigned cat, std::string const &n) : dim(d), dir(D), room_id(rid), store_type(type), item_category(cat), name(n) {}
 	std::string get_full_name() const;

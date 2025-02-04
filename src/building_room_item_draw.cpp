@@ -1927,12 +1927,22 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	bool camera_in_closed_room(0), last_room_closed(0), obj_drawn(0), no_cull_room(0);
 	auto model_to_cull(obj_model_insts.end()), model_to_not_cull(obj_model_insts.end());
 
-	if (camera_room >= 0) { // check for stairs in case an object is visible through an open door on a floor above or below
+	if (camera_room >= 0) {
+		// check for stairs in case an object is visible through an open door on a floor above or below
 		room_t const &room(building.get_room(camera_room));
 		unsigned const camera_floor(room.get_floor_containing_zval(max(camera_bs.z, room.z1()), floor_spacing)); // clamp zval to room range
 		camera_in_closed_room = (!room.has_stairs_on_floor(camera_floor) && building.all_room_int_doors_closed(camera_room, camera_bs.z));
 		camera_part           = room.part_id;
-		no_cull_room          = room.is_store(); // don't need to cull objects in the same store as the player
+
+		if (room.is_store()) { // add mall store occluders for the room the player is in
+			for (store_info_t const &s : building.interior->mall_info->stores) {
+				if ((int)s.room_id != camera_room) continue;
+				oc.extra_occluders     = s.occluders;
+				oc.extra_occluders_dim = !s.dim; // currently, all occluder walls are perpendicular to the store dim
+				break;
+			}
+			no_cull_room = 1; // don't need to cull objects in the same store as the player
+		}
 	}
 	// draw object models
 	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
@@ -1986,7 +1996,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (!(is_rotated ? building.is_rot_cube_visible(obj, xlate) : camera_pdu.cube_visible(obj + xlate))) continue; // VFC
 		//highres_timer_t timer("Draw " + get_room_obj_type(obj).name);
 
-		if (check_occlusion && !(no_cull_room && obj.room_id == (unsigned)camera_room) && i != model_to_not_cull) { // occlusion culling
+		if (check_occlusion && i != model_to_not_cull && !(no_cull_room && obj.room_id == (unsigned)camera_room && oc.extra_occluders.empty())) { // occlusion culling
 			if (obj.type == TYPE_HANGER && obj.is_hanging() && i+1 != obj_model_insts.end()) {
 				room_object_t &obj2(get_room_object_by_index((i+1)->obj_id));
 
@@ -2157,6 +2167,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	}
 	water_sound_manager.finalize();
 	water_draw.draw_and_clear(s);
+	oc.extra_occluders.clear(); // no longer needed/valid
 
 	if (player_in_building && !shadow_only && player_held_object.is_valid() && &building == player_building) {
 		// draw the item the player is holding; actual_player_pos should be the correct position for reflections
@@ -2636,6 +2647,9 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 			} // for D
 		}
 	}
+	// check any extra occluders from special rooms such as mall stores
+	if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, oc.extra_occluders, oc.extra_occluders_dim)) return 1;
+	
 	if (!c_is_building_part && player_in_building) {
 		// viewer inside this building; includes shadow_only case and reflection_pass (even if reflected camera is outside the building);
 		// okay for retail glass floor reflections because the reflection won't cross an opaque floor or ceiling in fc_occluders
