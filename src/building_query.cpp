@@ -1036,10 +1036,11 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 		for (auto c = objs.begin(); c != objs.end(); ++c) { // check for other objects to collide with (including stairs)
 			if (!c->is_player_collidable()) continue;
 			if (on_attic_ladder && c->type == TYPE_ATTIC_DOOR) continue; // collision with attic door/ladder is handled above
+			bool const dim(c->dim), dir(c->dir);
 
 			if (c->type == TYPE_ELEVATOR) { // special handling for elevators
 				cube_t car_inc_door(*c);
-				car_inc_door.d[c->dim][c->dir] += get_wall_thickness()*(c->dir ? 1.0 : -1.0); // add extra space in front of the elevator for the door
+				car_inc_door.d[dim][dir] += get_wall_thickness()*(dir ? 1.0 : -1.0); // add extra space in front of the elevator for the door
 				if (!car_inc_door.contains_pt_xy(pos)) continue;
 				elevator_t const &elevator(get_elevator(c->room_id));
 				bool ecoll(0);
@@ -1063,10 +1064,10 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				float const reff((is_falling ? 1.01 : 0.99)*radius); // effective radius
 				if ((obj_z - reff) > c->z2()) continue; // above the top of the ramp - not walking on it
 				if (!sphere_cube_intersect_xy(pos, xy_radius, *c)) continue; // optimization - not actually on the ramp
-				float &pos_dim(pos[c->dim]);
-				if (pos_dim < c->d[c->dim][0] || pos_dim > c->d[c->dim][1]) continue; // not yet over ramp
-				float const length(c->get_length()), height(c->dz()), t(CLIP_TO_01((pos_dim - c->d[c->dim][0])/length));
-				float const ztop(c->z1() + height*(c->dir ? t : (1.0-t))), zbot(ztop - RAMP_THICKNESS_SCALE*height);
+				float &pos_dim(pos[dim]);
+				if (pos_dim < c->d[dim][0] || pos_dim > c->d[dim][1]) continue; // not yet over ramp
+				float const length(c->get_length()), height(c->dz()), t(CLIP_TO_01((pos_dim - c->d[dim][0])/length));
+				float const ztop(c->z1() + height*(dir ? t : (1.0-t))), zbot(ztop - RAMP_THICKNESS_SCALE*height);
 				float const player_height(camera_height + NEAR_CLIP); // include near clip for collisions with the bottom of ramps
 				float const player_bot_z(obj_z - radius), player_bot_z_step(player_bot_z + C_STEP_HEIGHT*radius), player_top_z(obj_z + player_height);
 					
@@ -1080,7 +1081,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 							if (!i->contains_pt_xy(pos)) continue; // sphere not in this ceiling
 							if (player_bot_z_step > i->z2() || player_top_z < i->z1()) continue; // no Z overlap
 							float const dz(player_top_z - i->z1()), delta(dz*length/height);
-							pos_dim += (c->dir ? -1.0 : 1.0)*delta; // push player back down the ramp
+							pos_dim += (dir ? -1.0 : 1.0)*delta; // push player back down the ramp
 							break; // only change zval once
 						}
 					}
@@ -1088,11 +1089,11 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				}
 				else if (c->type == TYPE_RAMP && zbot < player_top_z) { // colliding with sides or bottom of the ramp (not pool)
 					cube_t ramp_ext(*c);
-					ramp_ext.expand_in_dim(c->dim, 1.01*xy_radius); // extend to include the player radius at both ends
+					ramp_ext.expand_in_dim(dim, 1.01*xy_radius); // extend to include the player radius at both ends
 
 					if (ramp_ext.contains_pt_xy(pos)) { // colliding with the bottom
 						float const dz(player_top_z - zbot), delta(dz*length/height);
-						pos_dim += (c->dir ? 1.0 : -1.0)*delta;
+						pos_dim += (dir ? 1.0 : -1.0)*delta;
 						had_coll = 1;
 						continue;
 					} // else treat it as a cube side collision
@@ -1145,12 +1146,13 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			if (c->type == TYPE_RAILING && !(c->flags & RO_FLAG_IN_POOL)) { // stairs railing, not on a pool
 				// only collide with railing at top of stairs, not when walking under stairs
 				cylinder_3dw const railing(get_railing_cylinder(*c));
-				float const t((pos[c->dim] - railing.p1[c->dim])/(railing.p2[c->dim] - railing.p1[c->dim]));
+				float const t((pos[dim] - railing.p1[dim])/(railing.p2[dim] - railing.p1[dim]));
 				float const railing_zval(railing.p1.z + CLIP_TO_01(t)*(railing.p2.z - railing.p1.z));
 				if ((railing_zval - get_railing_height(*c)) > float(pos.z + camera_height) || railing_zval < (pos.z - radius)) continue; // no Z collision
 			}
 			if (c->type == TYPE_INT_LADDER && c->dz() > (camera_height + radius)) { // vertical ladder attached to or leaning against a wall
-				if (c->in_factory() && (pos[c->dim] < c->get_center_dim(c->dim)) == c->dir) continue; // wrong side of vertical factory ladder
+				if (pos[!dim] < c->d[!dim][0] || pos[!dim] > c->d[!dim][1])        continue; // not centered on the ladder
+				if (c->in_factory() && (pos[dim] < c->get_center_dim(dim)) == dir) continue; // wrong side of vertical factory ladder
 				pos.z = p_last.z + 0.25*get_player_move_dist()*cview_dir.z; // move up/down based on player vertical view (looking up vs. down)
 				pos.z = min(float(c->z2() - camera_height), max(float(c->z1() + radius), pos.z)); // clamp to ladder height range
 				obj_z = max(pos.z, p_last.z);
