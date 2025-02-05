@@ -1308,7 +1308,7 @@ void get_catwalk_cubes(room_object_t const &c, cube_t cubes[5]) { // {bottom, le
 	cubes[0].z2() = (c.z1() + 0.4*0.08*height);
 
 	for (unsigned d = 0; d < 2; ++d) { // sides
-		if (!(c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_HI))) { // include bars on this side if not missing
+		if (!(c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO))) { // include bars on this side if not missing
 			cubes[d+1] = c;
 			cubes[d+1].d[!c.dim][!d] = c.d[!c.dim][d] - (d ? 1.0 : -1.0)*0.05*height;
 		}
@@ -1341,7 +1341,6 @@ void building_room_geom_t::add_catwalk(room_object_t const &c) {
 	rgeom_mat_t &bar_mat(get_metal_material(1, 0, 1)); // shadowed, specular metal, small
 	
 	for (unsigned side = 0; side < 2; ++side) {
-		if (c.flags & (side ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_HI)) continue; // bars on this side are missing
 		float const edge(c.d[!dim][side]), ssign(side ? 1.0 : -1.0);
 		// horizontal bars
 		cube_t bar(c);
@@ -1350,6 +1349,7 @@ void building_room_geom_t::add_catwalk(room_object_t const &c) {
 		bar.expand_in_dim(dim, -vbar_width); // remove overlap with vbars
 
 		for (unsigned n = 0; n < 3; ++n) { // bot, mid, top
+			if (n > 0 && (c.flags & (side ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO))) continue; // mid and top bars on this side are missing
 			set_cube_zvals(bar, z1s[n], z2s[n]);
 			bar_mat.add_cube_to_verts_untextured(bar, bar_color, hbar_sf);
 		}
