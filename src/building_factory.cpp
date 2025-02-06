@@ -95,11 +95,21 @@ void building_t::create_factory_floorplan(unsigned part_id, float window_hspacin
 	rooms.back().is_single_floor = 1;
 }
 
-void add_ladder_with_blocker(cube_t const &ladder, unsigned room_id, bool dim, bool dir, float light_amt, float clearance, vect_room_object_t &objs) {
-	objs.emplace_back(ladder, TYPE_INT_LADDER, room_id, dim, dir, RO_FLAG_IN_FACTORY, light_amt);
+void add_ladder_with_blocker(cube_t const &ladder, unsigned room_id, bool dim, bool dir, float light_amt, float clearance, vect_room_object_t &objs, unsigned flags=0) {
+	objs.emplace_back(ladder, TYPE_INT_LADDER, room_id, dim, dir, (flags | RO_FLAG_IN_FACTORY), light_amt);
 	cube_t blocker(ladder);
 	blocker.d[dim][dir] += (dir ? 1.0 : -1.0)*clearance;
 	objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, dir, RO_FLAG_INVIS);
+}
+void add_hanging_ladder(cube_t const &ladder, unsigned room_id, bool dim, bool dir, float light_amt, float clearance, float collider_z2, vect_room_object_t &objs) {
+	add_ladder_with_blocker(ladder, room_id, dim, dir, light_amt, clearance, objs, RO_FLAG_HANGING);
+	// add an invisible collider to the back of the ladder to block the player
+	float const edge_pos(ladder.d[dim][!dir]);
+	cube_t collider(ladder);
+	collider.z2() = collider_z2;
+	collider.d[dim][ dir] = edge_pos;
+	collider.d[dim][!dir] = edge_pos - (dir ? 1.0 : -1.0)*0.1*ladder.get_sz_dim(dim); // set depth
+	objs.emplace_back(collider, TYPE_COLLIDER, room_id, dim, !dir, (RO_FLAG_INVIS | RO_FLAG_ADJ_TOP), light_amt);
 }
 
 void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
@@ -293,8 +303,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			bool const ldir(rgen.rand_bool());
 			float const edge_pos(catwalk.d[!edim][ldir]), ldsign(ldir ? 1.0 : -1.0);
 			float const llo(catwalk.d[edim][0] + catwalk_hwidth), lhi(catwalk.d[edim][1] - catwalk_hwidth);
-			ladder.d[!edim][!ldir] = edge_pos;
-			ladder.d[!edim][ ldir] = edge_pos + ldsign*ladder_depth; // set depth
+			set_wall_width(ladder, edge_pos, 0.5*ladder_depth, !edim); // centered on the catwalk edge; if adjacent, the player will fall
 
 			for (unsigned n = 0; n < 20; ++n) { // some random attempts
 				if (llo >= lhi) continue; // shouldn't happen
@@ -312,13 +321,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 				near_end.d[edim][ edir] = middle.d[edim][!edir] = seg_split.d[edim][!edir];
 				objs.push_back(near_end);
 				objs.push_back(middle  );
-				add_ladder_with_blocker(ladder, room_id, !edim, ldir, light_amt, clearance, objs);
-				// add an invisible collider to the back of the ladder to block the player
-				cube_t collider(ladder);
-				collider.z2() = catwalk.z1(); // ends at bottom of catwalk
-				collider.d[!edim][ ldir] = edge_pos;
-				collider.d[!edim][!ldir] = edge_pos - ldsign*wall_thick; // set depth
-				objs.emplace_back(collider, TYPE_COLLIDER, room_id, !edim, !ldir, RO_FLAG_INVIS, light_amt);
+				add_hanging_ladder(ladder, room_id, !edim, ldir, light_amt, clearance, catwalk.z1(), objs);
 				break; // success/done
 			} // for n
 			catwalk_obj.flags |= (edir ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT); // add end bars to non-ladder side

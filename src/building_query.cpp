@@ -1152,8 +1152,10 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				if ((railing_zval - get_railing_height(*c)) > float(pos.z + camera_height) || railing_zval < (pos.z - radius)) continue; // no Z collision
 			}
 			if (type == TYPE_INT_LADDER && c->dz() > (camera_height + radius)) { // vertical ladder attached to or leaning against a wall
-				if (pos[!dim] < c->d[!dim][0] || pos[!dim] > c->d[!dim][1])        continue; // not centered on the ladder
 				if (c->in_factory() && (pos[dim] < c->get_center_dim(dim)) == dir) continue; // wrong side of vertical factory ladder
+				if (p_last[!dim] < c->d[!dim][0] || p_last[!dim] > c->d[!dim][1])  continue; // not centered on the ladder in previous frame
+				max_eq(pos[!dim], c->d[!dim][0]); // clamp to ladder range to avoid falling off to the side
+				min_eq(pos[!dim], c->d[!dim][1]);
 				pos.z = p_last.z + 0.25*get_player_move_dist()*cview_dir.z; // move up/down based on player vertical view (looking up vs. down)
 				pos.z = min(float(c->z2() - camera_height), max(float(c->z1() + radius), pos.z)); // clamp to ladder height range
 				obj_z = max(pos.z, p_last.z);
@@ -1194,6 +1196,13 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			}
 			else if (type == TYPE_RDESK) {
 				had_coll |= (check_rdesk_collision(*c, pos, p_last, xy_radius, cnorm) != 0);
+			}
+			else if (type == TYPE_COLLIDER && (c->flags & RO_FLAG_ADJ_TOP)) { // special handling for ladder collider
+				point const orig_pos(pos);
+
+				if (sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 0, cnorm)) {
+					if (pos.z > orig_pos.z) {pos = orig_pos;} else {had_coll = 1;} // can't move in Z+ / ignore top coll
+				}
 			}
 			else if (sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 0, cnorm)) { // assume it's a cube; skip_z=0
 				if (type == TYPE_TOILET || (type == TYPE_URINAL && !is_player_model_female())) {player_near_toilet = 1;} // females can't use urinals
