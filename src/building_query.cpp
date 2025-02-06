@@ -1035,10 +1035,11 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 
 		for (auto c = objs.begin(); c != objs.end(); ++c) { // check for other objects to collide with (including stairs)
 			if (!c->is_player_collidable()) continue;
-			if (on_attic_ladder && c->type == TYPE_ATTIC_DOOR) continue; // collision with attic door/ladder is handled above
+			room_object const type(c->type);
+			if (on_attic_ladder && type == TYPE_ATTIC_DOOR) continue; // collision with attic door/ladder is handled above
 			bool const dim(c->dim), dir(c->dir);
 
-			if (c->type == TYPE_ELEVATOR) { // special handling for elevators
+			if (type == TYPE_ELEVATOR) { // special handling for elevators
 				cube_t car_inc_door(*c);
 				car_inc_door.d[dim][dir] += get_wall_thickness()*(dir ? 1.0 : -1.0); // add extra space in front of the elevator for the door
 				if (!car_inc_door.contains_pt_xy(pos)) continue;
@@ -1056,7 +1057,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				}
 				continue;
 			}
-			if ((c->type == TYPE_STAIR || (on_stairs && c->type != TYPE_RAILING)) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
+			if ((type == TYPE_STAIR || (on_stairs && type != TYPE_RAILING)) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
 
 			if (c->is_sloped_ramp()) { // ramp, should be SHAPE_ANGLED
 				// slight adjust so that player is above ramp when on the floor above, but below when falling through the ramp gap
@@ -1087,7 +1088,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 					}
 					continue;
 				}
-				else if (c->type == TYPE_RAMP && zbot < player_top_z) { // colliding with sides or bottom of the ramp (not pool)
+				else if (type == TYPE_RAMP && zbot < player_top_z) { // colliding with sides or bottom of the ramp (not pool)
 					cube_t ramp_ext(*c);
 					ramp_ext.expand_in_dim(dim, 1.01*xy_radius); // extend to include the player radius at both ends
 
@@ -1102,9 +1103,9 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			} // end ramp case
 			cube_t c_extended(get_true_room_obj_bcube(*c));
 			// handle the player's head for stairs and attic doors; only applied to bottom floor of stairs to avoid getting stuck on steep stairs that span multiple floors
-			if ((c->type == TYPE_STAIR && (c->flags & RO_FLAG_ADJ_BOT)) || c->type == TYPE_ATTIC_DOOR) {c_extended.z1() -= camera_height;}
+			if ((type == TYPE_STAIR && (c->flags & RO_FLAG_ADJ_BOT)) || type == TYPE_ATTIC_DOOR) {c_extended.z1() -= camera_height;}
 
-			if (c->type == TYPE_DIV_BOARD && c_extended.contains_pt_xy(pos)) {
+			if (type == TYPE_DIV_BOARD && c_extended.contains_pt_xy(pos)) {
 				// diving boards are special because the player can walk on them across different floor heights
 				vector3d coll_norm;
 
@@ -1118,13 +1119,13 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 					continue;
 				}
 			}
-			if (c->type == TYPE_BAN_PEEL) {
+			if (type == TYPE_BAN_PEEL) {
 				c_extended.z2() += radius; // increase height
 				if (!sphere_cube_intersect(pos, xy_radius, c_extended)) continue;
 				apply_speed_factor(pos, p_last, 2.0); // player slips; doesn't have much of an effect
 				continue;
 			}
-			if (c->type == TYPE_CATWALK) {
+			if (type == TYPE_CATWALK) {
 				if (!sphere_cube_intersect_xy(pos, xy_radius, *c)) continue;
 				cube_t cubes[5];
 				get_catwalk_cubes(*c, cubes);
@@ -1143,14 +1144,14 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			}
 			if (!sphere_cube_intersect(pos, xy_radius, c_extended)) continue; // optimization
 
-			if (c->type == TYPE_RAILING && !(c->flags & RO_FLAG_IN_POOL)) { // stairs railing, not on a pool
+			if (type == TYPE_RAILING && !(c->flags & RO_FLAG_IN_POOL)) { // stairs railing, not on a pool
 				// only collide with railing at top of stairs, not when walking under stairs
 				cylinder_3dw const railing(get_railing_cylinder(*c));
 				float const t((pos[dim] - railing.p1[dim])/(railing.p2[dim] - railing.p1[dim]));
 				float const railing_zval(railing.p1.z + CLIP_TO_01(t)*(railing.p2.z - railing.p1.z));
 				if ((railing_zval - get_railing_height(*c)) > float(pos.z + camera_height) || railing_zval < (pos.z - radius)) continue; // no Z collision
 			}
-			if (c->type == TYPE_INT_LADDER && c->dz() > (camera_height + radius)) { // vertical ladder attached to or leaning against a wall
+			if (type == TYPE_INT_LADDER && c->dz() > (camera_height + radius)) { // vertical ladder attached to or leaning against a wall
 				if (pos[!dim] < c->d[!dim][0] || pos[!dim] > c->d[!dim][1])        continue; // not centered on the ladder
 				if (c->in_factory() && (pos[dim] < c->get_center_dim(dim)) == dir) continue; // wrong side of vertical factory ladder
 				pos.z = p_last.z + 0.25*get_player_move_dist()*cview_dir.z; // move up/down based on player vertical view (looking up vs. down)
@@ -1170,7 +1171,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				if (cnorm) {*cnorm = (pos - center).get_norm();}
 				had_coll = 1;
 			}
-			else if (c->type == TYPE_CLOSET) { // special case to handle closet interiors
+			else if (type == TYPE_CLOSET) { // special case to handle closet interiors
 				had_coll |= (bool)check_closet_collision(*c, pos, p_last, xy_radius, cnorm);
 				
 				if (c->contains_pt(pos)) {
@@ -1179,26 +1180,26 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 					if (c->is_open()) {player_in_closet |= RO_FLAG_OPEN;} else {register_player_hiding(*c);} // player is hiding if the closet door is closed
 				}
 			}
-			else if (c->type == TYPE_STALL && maybe_inside_room_object(*c, pos, xy_radius)) {
+			else if (type == TYPE_STALL && maybe_inside_room_object(*c, pos, xy_radius)) {
 				// stall is open and intersecting player, or player is inside stall; perform collision test with sides only
 				had_coll |= check_stall_collision(*c, pos, p_last, xy_radius, cnorm);
 				if (!c->is_open() && c->contains_pt(pos)) {register_in_closed_bathroom_stall();}
 			}
-			else if (c->type == TYPE_SHOWER && maybe_inside_room_object(*c, pos, xy_radius)) {
+			else if (type == TYPE_SHOWER && maybe_inside_room_object(*c, pos, xy_radius)) {
 				// shower is open and intersecting player, or player is inside shower; perform collision test with side only
 				had_coll |= check_shower_collision(*c, pos, p_last, xy_radius, cnorm);
 			}
-			else if (c->type == TYPE_BALCONY) {
+			else if (type == TYPE_BALCONY) {
 				had_coll |= check_balcony_collision(*c, pos, p_last, xy_radius, cnorm);
 			}
-			else if (c->type == TYPE_RDESK) {
+			else if (type == TYPE_RDESK) {
 				had_coll |= (check_rdesk_collision(*c, pos, p_last, xy_radius, cnorm) != 0);
 			}
 			else if (sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 0, cnorm)) { // assume it's a cube; skip_z=0
-				if (c->type == TYPE_TOILET || (c->type == TYPE_URINAL && !is_player_model_female())) {player_near_toilet = 1;} // females can't use urinals
+				if (type == TYPE_TOILET || (type == TYPE_URINAL && !is_player_model_female())) {player_near_toilet = 1;} // females can't use urinals
 				had_coll = 1;
 			}
-			if ((c->type == TYPE_STALL || c->type == TYPE_SHOWER) && !c->is_open() && c->contains_pt(pos)) {register_player_hiding(*c);} // player is hiding in the stall/shower
+			if ((type == TYPE_STALL || type == TYPE_SHOWER) && !c->is_open() && c->contains_pt(pos)) {register_player_hiding(*c);} // player is hiding in the stall/shower
 		} // for c
 	} // end interior->room_geom
 	if (!player_wait_respawn) { // zombies push player, but not when player is dead
