@@ -327,6 +327,7 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 			}
 		}
 		if (pri_hall.is_all_zeros() && rgen.rand_bool()) return; // place exit signs on buildings with primary hallways and 50% of other buildings
+		if (is_factory()) return; // factory has no exit signs because there's no ceiling to attach them to
 		colorRGBA const exit_color(rgen.rand_bool() ? RED : GREEN);
 
 		for (auto d = doors.begin(); d != doors.end(); ++d) {
