@@ -10,6 +10,7 @@ extern object_model_loader_t building_obj_model_loader;
 
 
 float shift_val_to_not_intersect_window(cube_t const &c, float val, float hspace, float window_border, bool dim);
+cube_t place_cylin_object(rand_gen_t rgen, cube_t const &place_on, float radius, float height, float dist_from_edge, bool place_at_z1=0);
 
 void building_t::create_factory_floorplan(unsigned part_id, float window_hspacing[2], float window_border, rand_gen_t &rgen) {
 	assert(part_id < parts.size());
@@ -233,6 +234,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	// add catwalk above the entryway connecting the roofs of the two sub-rooms
 	float const doorway_width(get_doorway_width()), catwalk_width(1.1*doorway_width), catwalk_hwidth(0.5*catwalk_width), catwalk_height(0.5*window_vspace);
 	float const cw_lo(entry.d[edim][0] + 1.5*catwalk_hwidth), cw_hi(entry.d[edim][1] - 1.2*catwalk_hwidth);
+	float const trim_thickness(get_trim_thickness());
 
 	if (cw_lo < cw_hi) { // should always be true
 		cube_t catwalk(entry);
@@ -271,7 +273,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			cube_t ladder;
 			set_cube_zvals(ladder, zval, (catwalk.z1() + ladder_extend_up)); // extend up to catwalk
 			set_wall_width(ladder, catwalk_center, ladder_hwidth, !edim);
-			ladder.d[edim][!edir] = wall_pos + edir_sign*get_trim_thickness(); // prevent Z-fighting
+			ladder.d[edim][!edir] = wall_pos + edir_sign*trim_thickness; // prevent Z-fighting
 			ladder.d[edim][ edir] = wall_pos + edir_sign*ladder_depth; // set depth
 			add_ladder_with_blocker(ladder, room_id, edim, edir, light_amt, clearance, objs);
 			objs.back().expand_in_dim(!edim, (catwalk_hwidth - ladder_hwidth)); // expand blocker to the width of the ladder; required to avoid nearby pipes, etc.
@@ -424,10 +426,18 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		if (interior->is_blocked_by_stairs_or_elevator(crate_bounds)) continue; // don't block stairs
 		add_boxes_and_crates(rgen, room, zval, room_id, light_amt, objs_start, 13, 0, interior->factory_info->floor_space, crate_bounds, exclude); // 4-16; is_basement=0
 	} // for n
-	// add buckets (and paint cans?)
+	// add buckets
 	unsigned const num_buckets((rgen.rand() % 4) + 1); // 1-4
 	add_buckets_to_room(rgen, place_area, zval, room_id, light_amt, objs_start, num_buckets);
+	// add paint cans
+	unsigned const num_pcans((rgen.rand() % 4) + 1); // 1-4
 
+	for (unsigned n = 0; n < num_pcans; ++n) {
+		float const height(rgen.rand_uniform(0.08, 0.1)*window_vspace), radius(0.44*height);
+		cube_t const pcan(place_cylin_object(rgen, place_area, radius, height, (radius + trim_thickness), 1)); // place_at_z1=1
+		if (is_obj_placement_blocked(pcan, place_area, 1) || overlaps_other_room_obj(pcan, objs_start)) continue; // bad placement
+		objs.emplace_back(pcan, TYPE_PAINTCAN, room_id, 0, 0, 0, light_amt, SHAPE_CYLIN, WHITE);
+	}
 	// add floor clutter and stains
 	bool const add_bottles(1), add_papers(0), add_glass(1), add_trash(rgen.rand_float() < 0.65); // 65% of rooms
 	place_area.z1() = zval; // is this needed/correct?
