@@ -136,7 +136,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_VENT      ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0, 20.0,  2.0,   "vent"); // detail object
 	bldg_obj_types[TYPE_ATTIC_DOOR] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 100.0, 50.0,  "attic door"); // door/ladder
 	bldg_obj_types[TYPE_CHIMNEY   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 1000.0,1000.0,"chimney"); // interior chimney in attic
-	bldg_obj_types[TYPE_DUCT      ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 0.0,   0.0,   "duct"); // detail object
+	bldg_obj_types[TYPE_DUCT      ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 0.0,   0.0,   "duct");
 	bldg_obj_types[TYPE_TOY       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 2.0,   0.1,   "toy"); // plastic ring stack
 	bldg_obj_types[TYPE_DRESS_MIR ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 1, 100.0, 30.0,  "mirror");
 	bldg_obj_types[TYPE_PAN       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 15.0,  4.0,   "frying pan");

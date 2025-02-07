@@ -2598,7 +2598,7 @@ void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) {
 	// make specular; maybe should not make specular if rusty, but setting per-pipe specular doesn't work, and water effect adds specular anyway
 	colorRGBA const spec_color(get_specular_color(c.color)); // special case metals
 	tex.set_specular_color(spec_color, 0.8, 60.0);
-	rgeom_mat_t &mat(get_material(tex, shadowed, 0, (exterior ? 0 : 2), 0, exterior)); // detail or exterior object
+	rgeom_mat_t &mat(get_material(tex, shadowed, 0, (exterior ? 0 : (is_duct ? 1 : 2)), 0, exterior)); // detail, small, or exterior object
 	// swap texture XY for ducts
 	mat.add_ortho_cylin_to_verts(c, color, dim, (flat_ends && draw_joints[0]), (flat_ends && draw_joints[1]),
 		0, 0, 1.0, 1.0, side_tscale, 1.0, 0, ndiv, 0.0, (is_duct || factory_rod), len_tscale);
@@ -2637,6 +2637,7 @@ void building_room_geom_t::add_duct(room_object_t const &c) {
 		tscales[w2 ] = 1.0/width2;
 		tid_nm_pair_t tex(get_cube_duct_tid(), -1, 0.0, 0.0, 1); // shadowed
 		tex.set_specular_color(WHITE, 0.8, 60.0); // set metal specular
+		colorRGBA const color(apply_light_color(c));
 
 		// each face must be drawn with a different texture scale, so three cubes drawn
 		for (unsigned d = 0; d < 3; ++d) { // d is the face dim
@@ -2647,10 +2648,17 @@ void building_room_geom_t::add_duct(room_object_t const &c) {
 			tex.tscale_y = tscales[d1];
 			bool const swap_st(d2 != dim);
 			(swap_st ? tex.tscale_y : tex.tscale_x) *= 0.5; // account for the 2x texture repetition in X
-			get_material(tex, 1, 0, 2).add_cube_to_verts(c, c.color, c.get_llc(), face_sf, swap_st); // shadowed, detail, not using lit color
+			get_material(tex, 1, 0, 1).add_cube_to_verts(c, color, c.get_llc(), face_sf, swap_st); // shadowed, small, not using lit color
 		} // for d
 	}
-	else if (c.shape == SHAPE_CYLIN) {add_pipe(c, 0);} // draw using pipe logic; add_exterior=0
+	else if (c.shape == SHAPE_CYLIN) {
+		add_pipe(c, 0); // draw using pipe logic; add_exterior=0
+		bool const draw_lo_end(!(c.flags & RO_FLAG_ADJ_LO)), draw_hi_end(!(c.flags & RO_FLAG_ADJ_HI));
+
+		if (draw_lo_end || draw_hi_end) { // draw ends, shadowed, small; skip_sides=1
+			get_untextured_material(1, 0, 1).add_ortho_cylin_to_verts(c, apply_light_color(c, GRAY), dim, draw_lo_end, draw_hi_end, 0, 0, 1.0, 1.0, 1.0, 1.0, 1);
+		}
+	}
 	else {assert(0);} // unsupported shape
 }
 
