@@ -386,8 +386,30 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			break; // success
 		} // for n
 	}
-	// TODO: large fans in the ceiling
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_CEIL_FAN)) { // add ceiling fans
+		unsigned const fans_per_beam = 2;
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_CEIL_FAN)); // D, W, H
+		float const diameter(0.75*window_vspace), height(diameter*sz.z/sz.y); // assumes width = depth = diameter
+		point top_center(0.0, 0.0, beams_z1);
 
+		for (cube_t const &beam : beams) {
+			bool const bdim(beam.dx() < beam.dy());
+			float const length(beam.get_sz_dim(bdim)), spacing(length/(fans_per_beam + 1));
+			top_center[!bdim] = beam.get_center_dim(!bdim);
+
+			for (unsigned n = 0; n < fans_per_beam; ++n) {
+				top_center[bdim] = beam.d[bdim][0] + (n+1)*spacing;
+				cube_t fan(top_center);
+				fan.expand_by_xy(0.5*diameter);
+				fan.z1() -= height;
+				if (!support_bounds.contains_cube(fan))          continue; // skip for edge beams
+				if (overlaps_other_room_obj(fan, objs_start, 1)) continue; // including other fans; check_all=1
+				unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_IN_FACTORY);
+				if (rgen.rand_float() < 0.65) {flags |= RO_FLAG_ROTATING;} // make fan rotate when turned on 65% of the time
+				objs.emplace_back(fan, TYPE_CEIL_FAN, room_id, 0, 0, flags, light_amt, SHAPE_CYLIN, WHITE);
+			} // for n
+		} // for beams
+	}
 	// add fire sprinkler pipes
 	float const custom_floor_spacing(room.dz() - support_width); // place sprinklers under ceiling beams
 	float const wall_pad(1.1*support_width); // add a gap between the wall supports
@@ -418,8 +440,6 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		pipe.flags = RO_FLAG_NOCOLL;
 		objs.push_back(pipe);
 	}
-	// add ceiling fans
-
 	// add ceiling ducts and vents (similar to malls)
 	float const ducts_z2(room.z2() - 0.8*window_vspace); // under the first window, below beams, lights, and pipes
 	cube_t duct_bounds(room);

@@ -1357,6 +1357,7 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 
 bool ceiling_fan_is_on(room_object_t &obj, vect_room_object_t const &objs) {
 	if (!obj.is_powered()) return 0; // only enabled for some fans
+	if (obj.in_factory () && (obj.flags & RO_FLAG_ROTATING)) return 1; // always on if rotating
 	assert(obj.obj_id < objs.size());
 	return (objs[obj.obj_id].type == TYPE_LIGHT && objs[obj.obj_id].is_light_on()); // fan is on if light is on
 }

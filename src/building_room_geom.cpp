@@ -2365,6 +2365,7 @@ void building_room_geom_t::add_pants(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_ceiling_fan_light(room_object_t const &fan, room_object_t const &light) {
+	if (light.type != TYPE_LIGHT) return; // no light for this ceiling fan
 	bool const is_on(light.is_light_on() && !light.is_broken());
 	if (!is_on) return; // only drawn when light is on
 	tid_nm_pair_t tp(WHITE_TEX);

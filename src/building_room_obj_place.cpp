@@ -1208,8 +1208,7 @@ bool building_t::replace_light_with_ceiling_fan(rand_gen_t &rgen, cube_t const &
 	float const floor_spacing(get_window_vspace());
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_CEIL_FAN)); // D, W, H
 	float const diameter(min(0.4*min(room.dx(), room.dy()), 0.5*floor_spacing)), height(diameter*sz.z/sz.y); // assumes width = depth = diameter
-	point const top_center(cube_top_center(light)); // center on the light, with z2 on the ceiling
-	cube_t fan(top_center, top_center);
+	cube_t fan(cube_top_center(light)); // center on the light, with z2 on the ceiling
 	fan.expand_by_xy(0.5*diameter);
 	fan.z1() -= height;
 	if (!avoid.is_all_zeros() && avoid.intersects(fan)) return 0; // check for closet intersection
@@ -1224,7 +1223,7 @@ bool building_t::replace_light_with_ceiling_fan(rand_gen_t &rgen, cube_t const &
 	light.flags |= RO_FLAG_HANGING; // don't draw upward facing light
 	unsigned flags(RO_FLAG_NOCOLL);
 	if (rgen.rand_float() < 0.65) {flags |= RO_FLAG_ROTATING;} // make fan rotate when turned on 65% of the time
-	objs.emplace_back(fan, TYPE_CEIL_FAN, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ROTATING), tot_light_amt, SHAPE_CYLIN, WHITE);
+	objs.emplace_back(fan, TYPE_CEIL_FAN, room_id, 0, 0, flags, tot_light_amt, SHAPE_CYLIN, WHITE);
 	objs.back().obj_id = light_obj_ix; // store light index in this object
 	return 1;
 }
