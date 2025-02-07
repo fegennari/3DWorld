@@ -408,8 +408,16 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		if (!i->no_coll()) {obstacles.push_back(*i);}
 	}
 	// main pipe not under lights? but lights are placed later
+	unsigned const main_pipe_ix(objs.size());
 	add_sprinkler_pipes(obstacles, walls, beams, pipe_cubes, room_id, 1, objs_start, rgen, custom_floor_spacing, wall_pad); // num_floors=1
 
+	if (main_pipe_ix < objs.size()) { // added a pipe, but it won't cast shadows because it's a detail object, so add a slightly smaller shadow casting object inside it
+		room_object_t pipe(objs[main_pipe_ix]);
+		pipe.expand_by_xy(-0.01*pipe.get_radius()); // slight shrink
+		pipe.type  = TYPE_DUCT;
+		pipe.flags = RO_FLAG_NOCOLL;
+		objs.push_back(pipe);
+	}
 	// add ceiling fans
 
 	// add ceiling ducts and vents (similar to malls)
