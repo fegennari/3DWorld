@@ -407,7 +407,17 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 		if (!i->no_coll()) {obstacles.push_back(*i);}
 	}
+	// main pipe not under lights? but lights are placed later
 	add_sprinkler_pipes(obstacles, walls, beams, pipe_cubes, room_id, 1, objs_start, rgen, custom_floor_spacing, wall_pad); // num_floors=1
+
+	// add ceiling fans
+
+	// add ceiling ducts and vents (similar to malls)
+	float const ducts_z2(room.z2() - 0.8*window_vspace); // under the first window, below beams, lights, and pipes
+	cube_t duct_bounds(room);
+	duct_bounds.expand_by_xy(-(support_width - 0.5*wall_thick));
+	bool const cylin_ducts(rgen.rand_bool());
+	add_ceiling_ducts(duct_bounds, ducts_z2, room_id, edim, 2, light_amt, cylin_ducts, 0, 0, rgen); // draw ends and top
 	
 	// add boxes and crates in piles
 	unsigned const num_piles(4 + (rgen.rand() % 5)); // 4-8

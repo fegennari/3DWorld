@@ -1385,7 +1385,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	for (unsigned f = 0; f < num_floors; ++f) {
 		if (rgen.rand_float() > ((f+1 == num_floors) ? 0.75 : 0.25)) continue; // 75% of the time on the top floor, 25% of the time on the bottom floor
 		float const ceil_zval(room.z1() + (f + 1)*floor_spacing);
-		add_mall_ceiling_ducts(room, ceil_zval, room_id, mall_dim, 2, light_amt, interior->mall_info->mall_cylin_ducts, rgen); // skip_dir=2 (neither)
+		add_ceiling_ducts(room, ceil_zval, room_id, mall_dim, 2, light_amt, interior->mall_info->mall_cylin_ducts, 1, 1, rgen); // skip_dir=2 (neither); skip ends and top
 	}
 	// add pillars last so that we can check lights against them
 	unsigned const pillars_start(objs.size());
@@ -2115,15 +2115,18 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		} // for n
 	}
 	unsigned const skip_dir((room_width < 0.8*room_len) ? rgen.rand_bool() : 2); // skip one side if room is narrow
-	add_mall_ceiling_ducts(room, room.z2(), room_id, dim, skip_dir, light_amt, interior->mall_info->store_cylin_ducts, rgen);
+	add_ceiling_ducts(room, room.z2(), room_id, dim, skip_dir, light_amt, interior->mall_info->store_cylin_ducts, 1, 1, rgen); // skip ends and top
 }
 
-void building_t::add_mall_ceiling_ducts(room_t &room, float ceil_zval, unsigned room_id, bool dim, unsigned skip_dir, float light_amt, bool cylin_ducts, rand_gen_t &rgen) {
+void building_t::add_ceiling_ducts(cube_t const &room, float ceil_zval, unsigned room_id, bool dim, unsigned skip_dir, float light_amt,
+	bool cylin_ducts, bool skip_ends, bool skip_top, rand_gen_t &rgen)
+{
 	float const window_vspace(get_window_vspace()), wall_hthick(0.5*get_wall_thickness()), room_len(room.get_sz_dim(dim));
 	unsigned const num_vents(max(2U, (unsigned)round_fp(0.5*room_len/window_vspace))); // per side
 	float const vent_spacing(room_len/num_vents), vent_ext((cylin_ducts ? 0.05 : 0.1)*window_vspace);
-	float const duct_height((cylin_ducts ? 0.25 : 0.2)*window_vspace), duct_width((cylin_ducts ? 0.25 : 0.3)*window_vspace);
-	unsigned const duct_flags(RO_FLAG_IN_MALL | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // skip both ends
+	float const duct_height((cylin_ducts ? 0.25 : 0.2)*window_vspace), duct_width((cylin_ducts ? 0.25 : 0.26)*window_vspace);
+	unsigned const duct_flags(RO_FLAG_IN_MALL | (skip_ends ? (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI) : 0)); // Note: mall and factory flag are the same, so we don't need to know
+	unsigned const main_duct_flags(duct_flags | (skip_top ? RO_FLAG_ADJ_TOP : 0));
 	cube_t duct(room);
 	duct.z2() = ceil_zval - get_fc_thickness();
 	duct.z1() = duct.z2() - duct_height;
@@ -2135,10 +2138,10 @@ void building_t::add_mall_ceiling_ducts(room_t &room, float ceil_zval, unsigned 
 		float const dscale(d ? 1.0 : -1.0);
 		duct.d[!dim][ d] = room.d[!dim][d] - dscale*wall_hthick;
 		duct.d[!dim][!d] = duct.d[!dim][d] - dscale*duct_width;
-		objs.emplace_back(duct, TYPE_DUCT, room_id, dim, 0, (duct_flags | RO_FLAG_ADJ_TOP), light_amt, (cylin_ducts ? SHAPE_CYLIN : SHAPE_CUBE)); // skip top as well; dir=0 (XY)
+		objs.emplace_back(duct, TYPE_DUCT, room_id, dim, 0, main_duct_flags, light_amt, (cylin_ducts ? SHAPE_CYLIN : SHAPE_CUBE)); // dir=0 (XY)
 		// add vents along the duct
 		cube_t duct_ext(duct); // duct => vent extension
-		duct_ext.expand_in_z(-(cylin_ducts ? 0.2 : 0.15)*duct_height); // shrink
+		duct_ext.expand_in_z( -(cylin_ducts ? 0.2 : 0.15)*duct_height); // shrink
 		duct_ext.d[!dim][ d] = (cylin_ducts ? duct.get_center_dim(!dim) : duct.d[!dim][!d]); // centered if cylinder, flush with duct if cube
 		duct_ext.d[!dim][!d] = duct.d[!dim][!d] - dscale*vent_ext; // extend a bit further out
 
