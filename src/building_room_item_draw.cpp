@@ -1659,6 +1659,7 @@ void building_t::clear_room_geom() {
 	interior->door_stacks.resize(interior->room_geom->init_num_dstacks);
 	interior->room_geom->clear(); // free VBO data before deleting the room_geom object
 	interior->room_geom.reset();
+	invalidate_nav_graph(); // required since interior doors may be removed
 }
 
 void get_stove_burner_locs(room_object_t const &stove, point locs[4]) {

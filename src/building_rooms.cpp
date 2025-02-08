@@ -188,6 +188,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	while (!interior->escalators.empty() && !interior->escalators.back().in_mall) {interior->escalators.pop_back();}
 	for (building_walkway_t &w : walkways) {w.has_door = 0;} // reset for each call
 	if (has_mall()) {interior->mall_info->clear_room_details();}
+	invalidate_nav_graph();
 	has_int_fplace = 0; // reset for this generation
 
 	if (rooms.size() > 1) { // choose best room assignments for required rooms; if a single room, skip this step

@@ -402,6 +402,7 @@ public:
 		// Note: likely faster than running full A* algorithm
 		assert(room1 < num_rooms && room2 < num_rooms);
 		if (room1 == room2) return 1;
+		assert(!invalid);
 		vector<uint8_t> seen(nodes.size(), 0);
 		vector<unsigned> pend;
 		pend.push_back(room1);
@@ -856,6 +857,7 @@ public:
 		bool up_or_down, unsigned ped_rseed, vect_cube_t &avoid, building_t const &building, point const &cur_pt,
 		unsigned has_key, point const *const custom_dest, bool req_custom_dest, ai_path_t &path) const
 	{
+		assert(!invalid);
 		// Note: opening and closing doors updates the nav graph; an AI encountering a closed door after choosing a path can either open it or stop and wait
 		assert(room1 < nodes.size() && room2 < nodes.size());
 		assert(room1 != room2); // but one can be the stairs in the same room as the other
