@@ -355,7 +355,7 @@ public:
 		cube_t const lighting_bcube(get_building_indir_light_bounds());
 		float const dx(lighting_bcube.dx()/MESH_X_SIZE), dy(lighting_bcube.dy()/MESH_Y_SIZE), dxy_offset(0.5f*(dx + dy));
 		bind_texture_tu(tid, 1); // indir texture uses TU_ID=1
-		s.add_uniform_vector3d("alt_scene_llc",   lighting_bcube.get_llc());
+		s.add_uniform_vector3d("alt_scene_llc",   lighting_bcube.get_llc ());
 		s.add_uniform_vector3d("alt_scene_scale", lighting_bcube.get_size());
 		s.add_uniform_float("half_dxy", dxy_offset);
 		return 1;
@@ -531,9 +531,8 @@ void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir,
 /*static*/ void building_draw_utils::calc_poly_pts(building_geom_t const &bg, cube_t const &bcube, cube_t const &part, vect_point &pts) {
 
 	calc_normals(bg, pts, bg.num_sides);
-	vector3d const sz(part.get_size());
 	point const cc(part.get_cube_center());
-	float const rx(0.5*sz.x), ry(0.5*sz.y);
+	float const rx(0.5*part.dx()), ry(0.5*part.dy());
 
 	if (bg.is_rotated() && part != bcube) {
 		// the building is rotated around the bcube center, but the part itself is rotated around its own center, so we have to adjust the points correctly
@@ -2817,8 +2816,7 @@ class building_creator_t {
 		float min_building_spacing, unsigned plot_ix, bool non_city_only, bool use_city_plots, bool check_plot_coll) const
 	{
 		float const expand_val(b.is_rotated() ? 0.05 : 0.1); // expand by 5-10% (relative - multiplied by building size)
-		vector3d const b_sz(b.bcube.get_size());
-		vector3d expand(expand_val*b_sz);
+		vector3d expand(expand_val*b.bcube.get_size());
 		for (unsigned d = 0; d < 2; ++d) {max_eq(expand[d], min_building_spacing);} // ensure the min building spacing (only applies to the current building)
 		cube_t test_bc(b.bcube);
 		test_bc.expand_by_xy(expand);
@@ -3064,7 +3062,7 @@ public:
 				b.mat_ix = params.choose_rand_mat(rgen_mat, city_only, non_city_only, residential); // set material
 				building_mat_t const &mat(b.get_material());
 				if (!use_city_plots) {pos_range = mat.pos_range + delta_range;} // select pos range by material
-				vector3d const pos_range_sz(pos_range.get_size());
+				vector2d const pos_range_sz(pos_range.get_size_xy());
 				assert(pos_range_sz.x > 0.0 && pos_range_sz.y > 0.0);
 				point const place_center(pos_range.get_cube_center());
 				bool const is_residential_block(residential && !pref_dir);

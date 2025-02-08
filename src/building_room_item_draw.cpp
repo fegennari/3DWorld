@@ -1680,13 +1680,12 @@ void get_stove_burner_locs(room_object_t const &stove, point locs[4]) {
 void draw_stove_flames(room_object_t const &stove, point const &camera_bs, shader_t &s) {
 	if (stove.item_flags == 0) return; // no burners on
 	static quad_batch_draw flame_qbd; // reused across frames
-	vector3d const sz(stove.get_size());
 	point locs[4];
 	get_stove_burner_locs(stove, locs);
 	float const dsign(stove.dir ? -1.0 : 1.0);
 
 	for (unsigned w = 0; w < 2; ++w) { // width dim
-		float const radius((w ? 0.09 : 0.07)*sz.z);
+		float const radius((w ? 0.09 : 0.07)*stove.dz());
 
 		for (unsigned d = 0; d < 2; ++d) { // depth dim
 			if (!(stove.item_flags & (1U<<(2U*w + d)))) continue; // burner not on

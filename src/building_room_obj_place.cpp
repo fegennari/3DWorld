@@ -150,12 +150,11 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, room_t const &room, v
 	// use a long table for a large room 50% of the time
 	bool const use_long_table(!use_tall_table && max(room_dx, room_dy) > 3.0*window_vspacing && min(room_dx, room_dy) > 2.0*window_vspacing && rgen.rand_bool());
 	bool const long_dim(room_dx < room_dy);
-	vector3d const room_sz(room.get_size());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	point table_pos(place_pos);
 	vector3d table_sz; // half size
 	for (unsigned d = 0; d < 2; ++d) {table_sz [d]  = table_rscale*window_vspacing*(1.0 + rgen.rand_float());} // half size relative to window_vspacing
-	for (unsigned d = 0; d < 2; ++d) {table_pos[d] += rand_place_off*room_sz[d]*rgen.rand_uniform(-1.0, 1.0);} // near the center of the room
+	for (unsigned d = 0; d < 2; ++d) {table_pos[d] += rand_place_off*room.get_sz_dim(d)*rgen.rand_uniform(-1.0, 1.0);} // near the center of the room
 	if (use_long_table) {table_sz[long_dim] *= 1.5;}
 	float const long_edge_len(2.0*max(table_sz.x, table_sz.y));
 	bool const is_round(!use_tall_table && !use_long_table && rgen.rand_float() < 0.25); // 25% of the time
@@ -1459,7 +1458,7 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 {
 	float const hwidth(0.5*height*sz_scale.y/sz_scale.z), depth(height*sz_scale.x/sz_scale.z);
 	float const min_space(max(2.8f*hwidth, 2.1f*(max(hwidth, 0.5f*depth) + get_scaled_player_radius()))); // make sure the player can get around the object
-	vector3d const place_area_sz(place_area.get_size());
+	vector2d const place_area_sz(place_area.get_size_xy());
 	if (max(place_area_sz.x, place_area_sz.y) <= min_space) return 0; // can't fit in either dim
 	unsigned const force_dim((place_area_sz.x <= min_space) ? 0 : ((place_area_sz.y <= min_space) ? 1 : 2)); // *other* dim; 2=neither
 	float const obj_clearance(depth*front_clearance), clearance(max(obj_clearance, get_min_front_clearance_inc_people()));
@@ -3064,7 +3063,7 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 	float const front_clearance(get_min_front_clearance_inc_people());
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.25*get_wall_thickness()); // common spacing to wall for appliances
-	vector3d const place_area_sz(place_area.get_size());
+	vector2d const place_area_sz(place_area.get_size_xy());
 	vect_room_object_t &objs(interior->room_geom->objs);
 
 	// check for bookcase and add blocker, since it's possible to have both a bookcase and laundry objects placed in the same room
@@ -3134,7 +3133,6 @@ bool check_dist_and_add_center(point const &pos, float diameter_xy, vector<point
 // room with pool table, not swimming pool, that one is below
 bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
 	float const floor_spacing(get_window_vspace()), sz_in_feet(floor_spacing/8.0), clearance(get_min_front_clearance_inc_people());
-	vector3d const room_sz(room.get_size());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_start(objs.size()), pool_table_obj_ix(objs_start);
 	bool const long_dim(room.dx() < room.dy());
@@ -4487,7 +4485,7 @@ bool building_t::place_phone_on_obj(rand_gen_t &rgen, cube_t const &place_on, un
 
 bool building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	if (!room_object_t::enable_rugs()) return 0; // disabled
-	vector3d const room_sz(room.get_size());
+	vector2d const room_sz(room.get_size_xy());
 	bool const min_dim(room_sz.y < room_sz.x);
 	float const ar(rgen.rand_uniform(0.65, 0.85)), length(min(0.7f*room_sz[min_dim]/ar, room_sz[!min_dim]*rgen.rand_uniform(0.4, 0.7))), width(length*ar);
 	cube_t rug;

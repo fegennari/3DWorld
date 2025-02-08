@@ -337,7 +337,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 
 	if (!do_split && not_too_small && (rgen.rand()&3) < (was_cube ? 2 : 3) && !has_windows()) {
 		// oddly shaped multi-sided overlapping sections (50% chance for cube buildings and 75% chance for others)
-		point const sz(base.get_size());
+		vector2d const sz(base.get_size_xy());
 		parts.reserve(num_levels); // at least this many
 
 		for (unsigned i = 0; i < num_levels; ++i) { // generate overlapping cube levels, tallest to shortest
@@ -479,7 +479,8 @@ void building_t::finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cube
 void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
 
 	// generate L, T, U, H, +, O shape
-	point const llc(seed_cube.get_llc()), sz(seed_cube.get_size());
+	point const llc(seed_cube.get_llc());
+	vector2d const sz(seed_cube.get_size_xy());
 	bool const allow_courtyard(seed_cube.dx() < 1.6*seed_cube.dy() && seed_cube.dy() < 1.6*seed_cube.dx()); // AR < 1.6:1
 	int const shape(rgen.rand()%(allow_courtyard ? 10 : 9)); // 0-9
 	bool const has_hole(shape == 9);
@@ -876,7 +877,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			float const tot_shrink(shrink[0] - shrink[1]), un_shrink_each(0.5*(tot_shrink - 0.6)); // max shrink summed across each side is 0.6 to prevent too-small parts
 			if (un_shrink_each > 0.0) {shrink[0] -= un_shrink_each; shrink[1] += un_shrink_each;}
 		}
-		vector3d const sz(base.get_size());
+		vector2d const sz(base.get_size_xy());
 		parts[0].d[ dim][ dir] += (dir ? -1.0 : 1.0)*split*sz[dim]; // split in dim
 		parts[1].d[ dim][!dir]  = parts[0].d[dim][dir];
 		cube_t const pre_shrunk_p1(parts[1]); // save for use in details below
@@ -2135,7 +2136,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 			}
 		}
 		if (num_ac_units > 0) {
-			float const xy_sz(0.75*bcube.get_size().xy_mag()*rgen.rand_uniform(0.012, 0.02)); // size based on bcube
+			float const xy_sz(0.75*bcube.get_size_xy().mag()*rgen.rand_uniform(0.012, 0.02)); // size based on bcube
 
 			for (auto p = parts.begin(); p != parts.end(); ++p) {
 				unsigned const num_this_part(min(num_ac_units, unsigned(num_ac_units*p->dx()*p->dy()/(bcube.dx()*bcube.dy()) + 1))); // distribute based on area

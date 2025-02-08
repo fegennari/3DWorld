@@ -122,7 +122,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	// add support pillars around the exterior, between windows; add ceiling beams
 	float const support_width(FACTORY_BEAM_THICK*wall_thick), support_hwidth(0.5*support_width);
 	float const ceil_zval(room.z2() - fc_thick), beams_z1(ceil_zval - support_width), room_center_short(room.get_center_dim(!edim));
-	vector3d const room_sz(room.get_size());
+	vector2d const room_sz(room.get_size_xy());
 	cube_t support_bounds(room);
 	support_bounds.expand_by_xy(-support_hwidth);
 	cube_t support, beam;
@@ -163,7 +163,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 				if (n == 0          ) {skip_faces |= ~get_face_mask(!dim, 0);}
 				if (n == num_windows) {skip_faces |= ~get_face_mask(!dim, 1);}
 				objs.emplace_back(support, TYPE_IBEAM, room_id, dim, 1, 0, light_amt, SHAPE_CUBE, WHITE, skip_faces); // vertical
-				if (dim == edim) {supports.push_back(support);} // currently only need to track in one dim for catwalk + ladder placement
+				if ((bool)dim == edim) {supports.push_back(support);} // currently only need to track in one dim for catwalk + ladder placement
 
 				for (cube_t const &r : nested_rooms) { // clip in Z if intersects a room
 					if (!r.intersects(support)) continue;

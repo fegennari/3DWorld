@@ -519,8 +519,7 @@ public:
 			cerr << "Error: City road_width should not be set larger than half the road spacing" << endl;
 			exit(1);
 		}
-		vector3d const size(bcube.get_size()); // use our bcube as the region to process
-		assert(size.x > 0.0 && size.y > 0.0);
+		assert(bcube.dx() > 0.0 && bcube.dy() > 0.0); // use our bcube as the region to process
 		float const half_width(0.5*road_width), zval(bcube.z1() + ROAD_HEIGHT);
 		float const rx1(bcube.x1() + half_width), rx2(bcube.x2() - half_width), ry1(bcube.y1() + half_width), ry2(bcube.y2() - half_width); // shrink to include centerlines
 		float road_pitch_x(road_width + road_spacing.x), road_pitch_y(road_width + road_spacing.y);
@@ -1108,7 +1107,7 @@ public:
 			}
 			zones.emplace_back(*i, 0.0, i->is_park, is_residential, 0, 0, cur_global_plot_ix, city_id, max_floors); // cube, zval, park, res, sdir, capacity, ppix, cix, max_floors
 		}
-		vector3d const city_radius(0.5*bcube.get_size());
+		vector2d const city_radius(0.5*bcube.get_size_xy());
 		point const city_center(bcube.get_cube_center());
 
 		for (auto i = zones.begin()+start; i != zones.end(); ++i) { // set zvals to control building height range, higher in city center

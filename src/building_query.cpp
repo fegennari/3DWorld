@@ -1962,7 +1962,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t,
 		if (use_cylinder_coll()) { // vertical cylinder
 			// Note: we know the line intersects the cylinder's bcube, and there's a good chance it intersects the cylinder, so we don't need any expensive early termination cases here
 			point const cc(i->get_cube_center());
-			vector3d const csz(i->get_size());
+			vector2d const csz(i->get_size_xy());
 
 			if (vert) { // vertical line + vertical cylinder optimization + handling of ellipsoids
 				if (!point_in_ellipse(p1r, cc, 0.5*csz.x, 0.5*csz.y)) continue; // no intersection (below test should return true as well)
@@ -2188,7 +2188,7 @@ int building_t::check_point_or_cylin_contained(point const &pos, float xy_radius
 
 			if (use_cylinder_coll()) { // vertical cylinder
 				point const cc(i->get_cube_center());
-				vector3d const csz(i->get_size());
+				vector2d const csz(i->get_size_xy());
 				float const dx(cc.x - pr.x), dy(cc.y - pr.y), rx(0.5*csz.x + xy_radius), ry(0.5*csz.y + xy_radius);
 				if (dx*dx/(rx*rx) + dy*dy/(ry*ry) > 1.0f) continue; // no intersection (below test should return true as well)
 			}

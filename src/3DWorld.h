@@ -337,7 +337,8 @@ template<typename T> struct pointT { // size = 12 (float), 24(double)
 };
 
 // premultiply a pointT by a scalar
-template<typename S, typename T> pointT<T> inline operator*(S const v, pointT<T> const &p) {return pointT<T>(v*p.x, v*p.y, v*p.z);}
+template<typename S, typename T> point2d<T> inline operator*(S const v, point2d<T> const &p) {return point2d<T>(v*p.x, v*p.y);}
+template<typename S, typename T> pointT <T> inline operator*(S const v, pointT <T> const &p) {return pointT <T>(v*p.x, v*p.y, v*p.z);}
 
 
 typedef pointT<float>  point;
@@ -609,7 +610,8 @@ struct cube_t { // size = 24; Note: AABB, not actually a cube
 	sphere_t get_bcylin () const {return sphere_t(get_cube_center(), get_xy_bsphere_radius());}
 	point get_llc() const {return point(x1(), y1(), z1());}
 	point get_urc() const {return point(x2(), y2(), z2());}
-	vector3d get_size() const {return vector3d((x2()-x1()), (y2()-y1()), (z2()-z1()));}
+	vector3d get_size   () const {return vector3d((x2()-x1()), (y2()-y1()), (z2()-z1()));}
+	vector2d get_size_xy() const {return vector2d((x2()-x1()), (y2()-y1()));}
 	float get_center_dim(unsigned dim) const {assert(dim < 3); return 0.5f*(d[dim][0] + d[dim][1]);}
 	float get_sz_dim    (unsigned dim) const {assert(dim < 3); return (d[dim][1] - d[dim][0]);}
 	void expand_by(float val) {UNROLL_3X(d[i_][0] -= val; d[i_][1] += val;)}
@@ -617,6 +619,7 @@ struct cube_t { // size = 24; Note: AABB, not actually a cube
 	void expand_by(vector3d const &val) {UNROLL_3X(d[i_][0] -= val[i_]; d[i_][1] += val[i_];)}
 	void expand_by_xy(float val) {UNROLL_2X(d[i_][0] -= val; d[i_][1] += val;)}
 	void expand_by_xy(vector3d const &val) {UNROLL_2X(d[i_][0] -= val[i_]; d[i_][1] += val[i_];)}
+	void expand_by_xy(vector2d const &val) {UNROLL_2X(d[i_][0] -= val[i_]; d[i_][1] += val[i_];)}
 	void expand_in_dim(unsigned dim, float val) {assert(dim < 3); d[dim][0] -= val; d[dim][1] += val;}
 	void expand_in_x(float val) {x1() -= val; x2() += val;}
 	void expand_in_y(float val) {y1() -= val; y2() += val;}

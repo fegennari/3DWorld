@@ -203,7 +203,7 @@ bool car_t::maybe_apply_turn(float centerline, bool for_driveway) {
 	return 1;
 }
 void car_t::complete_turn_and_swap_dim() {
-	vector3d const car_sz(bcube.get_size());
+	vector2d const car_sz(bcube.get_size_xy());
 	float const size_adj(0.5f*(car_sz[dim] - car_sz[!dim]));
 	vector3d expand(zero_vector);
 	expand[dim] -= size_adj; expand[!dim] += size_adj;

@@ -381,8 +381,7 @@ void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t
 	if (city_params.max_trees_per_plot == 0) return;
 	float const radius(city_params.tree_spacing*city_params.get_nom_car_size().x); // in multiples of car length
 	float const spacing(max(radius, get_min_obj_spacing())), radius_exp(2.0*spacing);
-	vector3d const plot_sz(plot.get_size());
-	if (min(plot_sz.x, plot_sz.y) < 2.0*radius_exp) return; // plot is too small for trees of this size
+	if (min(plot.dx(), plot.dy()) < 2.0*radius_exp) return; // plot is too small for trees of this size
 	unsigned num_trees(city_params.max_trees_per_plot);
 	if (plot.is_park) {num_trees += (rgen.rand() % city_params.max_trees_per_plot);} // allow up to twice as many trees in parks
 	assert(buildings_end <= blockers.size());

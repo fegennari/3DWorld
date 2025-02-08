@@ -227,7 +227,7 @@ void tree_planter_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float di
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 	color_wrapper const cw(LT_GRAY);
 	cube_t dirt(bcube);
-	dirt.expand_by_xy(-0.1*dirt.get_size()); // shrink 10% on all XY sides
+	dirt.expand_by_xy(-0.1*dirt.get_size_xy()); // shrink 10% on all XY sides
 
 	if (dstate.pass_ix == 0) { // draw dirt
 		dirt.z2() -= 0.25*bcube.dz(); // move down 25%
@@ -295,7 +295,7 @@ void trashcan_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 		if (shadow_only) {dstate.draw_cube(qbds.qbd, bcube, WHITE, 1); return;} // draw a cube for the shadow
 		color_wrapper const tan(colorRGBA(0.8, 0.6, 0.3, 1.0));
 		cube_t hole(bcube);
-		hole.expand_by_xy(-0.08*bcube.get_size()); // shrink on all XY sides
+		hole.expand_by_xy(-0.08*bcube.get_size_xy()); // shrink on all XY sides
 		draw_xy_walls(bcube, hole, tan, 25.0, dstate, qbds.qbd); // sides
 
 		if (bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dist_scale*dstate.draw_tile_dist)) {
@@ -307,7 +307,7 @@ void trashcan_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 			top.z1() += 0.92*height;
 			top.z2() -= 0.02*height;
 			cube_t top_hole(top);
-			top_hole.expand_by_xy(-0.22*bcube.get_size()); // shrink on all XY sides
+			top_hole.expand_by_xy(-0.22*bcube.get_size_xy()); // shrink on all XY sides
 			draw_xy_walls(top, top_hole, color_wrapper(BROWN), 200.0, dstate, qbds.qbd); // brown top; technically don't need to draw some of the interior surfaces
 		}
 	}

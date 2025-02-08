@@ -121,7 +121,7 @@ void cube_nav_grid::build(cube_t const &bcube_, vect_cube_t const &blockers, flo
 	// determine grid size and allocate vectors
 	float const spacing(SQRT2*radius); // can't be further than the test diameter or we'll miss blockers in the gap; use sqrt(2) to make spheres diagonally tangential
 	if (add_edge_pad) {grid_bcube.expand_by_xy(-radius);} // entity must fit fully inside the grid if add_edge_pad=1
-	point const size(grid_bcube.get_size());
+	vector2d const size(grid_bcube.get_size_xy());
 	if (min(size.x, size.y) <= 2.0*spacing) return; // too small (error?)
 
 	for (unsigned d = 0; d < 2; ++d) {
