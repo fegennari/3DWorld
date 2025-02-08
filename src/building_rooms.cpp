@@ -305,7 +305,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			ny = get_num_windows_on_side(*r, 1);
 			unsigned &short_n(room_dim ? nx : ny);
 			short_n     = 2*short_n/3; // 2/3 as many in the short dim
-			light_size *= 1.3; // must be larger to reach the floor below
+			light_size *= 0.9; // light intensity will be scaled larger to reach the floor
 		}
 		else if (r->is_single_floor) {
 			light_size *= sqrt(r->dz()/window_vspacing); // larger lights for taller rooms
@@ -523,6 +523,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				else {l_flags |= RO_FLAG_NOCOLL;} // no collision detection for ceiling lights
 				if (check_skylight_intersection(l)) {l_flags |= RO_FLAG_ADJ_TOP; has_skylight_light = 1;} // if attached to a skylight, draw top surface
 				if (has_bcube_int(l, interior->stairwells)) {l_flags |= RO_FLAG_TOS;} // assumes light at top of stairs, since other cases are illegal
+				if (is_factory_room) {l_flags |= RO_FLAG_IN_FACTORY;}
 				room_object_t light_obj(l, TYPE_LIGHT, room_id, dim, dir, l_flags, light_amt, light_shape, color);
 				light_obj.obj_id = light_ix_assign.get_ix_for_light(l, walls_not_shared);
 				// flicker 2% chance parking garage, 5% chance ext basement/backrooms except for mall and its stores

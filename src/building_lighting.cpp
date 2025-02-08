@@ -1324,7 +1324,8 @@ float get_radius_for_room_light(room_object_t const &obj) {
 	float radius(6.0f*(obj.dx() + obj.dy()));
 	//if (obj.type == TYPE_LAMP) {radius *= 1.0;}
 	if (obj.flags & RO_FLAG_ADJ_HI) {radius *= 2.0;} // wall lights have a larger radius since they're not as centered in the room
-	if (obj.in_attic()) {radius *= ATTIC_LIGHT_RADIUS_SCALE;}
+	if (obj.in_attic  ()) {radius *= ATTIC_LIGHT_RADIUS_SCALE;}
+	if (obj.in_factory()) {radius *= 1.5;} // more light so that it can reach the floor
 	return radius;
 }
 
