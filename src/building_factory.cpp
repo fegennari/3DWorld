@@ -122,6 +122,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	// add support pillars around the exterior, between windows; add ceiling beams
 	float const support_width(FACTORY_BEAM_THICK*wall_thick), support_hwidth(0.5*support_width);
 	float const ceil_zval(room.z2() - fc_thick), beams_z1(ceil_zval - support_width), room_center_short(room.get_center_dim(!edim));
+	vector3d const room_sz(room.get_size());
 	cube_t support_bounds(room);
 	support_bounds.expand_by_xy(-support_hwidth);
 	cube_t support, beam;
@@ -135,7 +136,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		bool const short_dim(bool(dim) == beam_dim);
 		unsigned const num_windows(get_num_windows_on_side(room, !dim));
-		float const spacing(room.get_sz_dim(!dim)/num_windows);
+		float const spacing(room_sz[!dim]/num_windows);
 
 		for (unsigned dir = 0; dir < 2; ++dir) { // walls
 			float const wall_pos(room.d[dim][dir]);
@@ -245,7 +246,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	}
 	if (1) { // add central upper catwalk in long dim
 		// find a location near the center not obstructed by a door, stairs, or beam
-		float const max_shift(0.4*room.get_sz_dim(!edim)), wall_pos(room.d[edim][!edir]); // wall opposite the main entrance
+		float const max_shift(0.4*room_sz[!edim]), wall_pos(room.d[edim][!edir]); // wall opposite the main entrance
 		float catwalk_center(room_center_short), cur_shift(1.0*support_width*(rgen.rand_bool() ? 1.0 : -1.0));
 		bool add_catwalk(0);
 		cube_t cand(room); // copy zvals
@@ -389,26 +390,28 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_CEIL_FAN)) { // add ceiling fans
 		unsigned const fans_per_beam = 2;
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_CEIL_FAN)); // D, W, H
-		float const diameter(0.75*window_vspace), height(diameter*sz.z/sz.y); // assumes width = depth = diameter
+		float const diameter(0.8*window_vspace), height(diameter*sz.z/sz.y); // assumes width = depth = diameter
+		float const length(room_sz[!edim]), spacing(length/fans_per_beam);
 		point top_center(0.0, 0.0, beams_z1);
+		bool last_added(0);
 
-		for (cube_t const &beam : beams) {
-			bool const bdim(beam.dx() < beam.dy());
-			float const length(beam.get_sz_dim(bdim)), spacing(length/(fans_per_beam + 1));
-			top_center[!bdim] = beam.get_center_dim(!bdim);
+		for (float bpos : beam_pos) {
+			if (last_added) {last_added = 0; continue;} // alternate every other beam
+			last_added = 1;
+			top_center[edim] = bpos;
 
 			for (unsigned n = 0; n < fans_per_beam; ++n) {
-				top_center[bdim] = beam.d[bdim][0] + (n+1)*spacing;
+				top_center[!edim] = room.d[!edim][0] + (n + 0.5)*spacing;
 				cube_t fan(top_center);
 				fan.expand_by_xy(0.5*diameter);
 				fan.z1() -= height;
 				if (!support_bounds.contains_cube(fan))          continue; // skip for edge beams
 				if (overlaps_other_room_obj(fan, objs_start, 1)) continue; // including other fans; check_all=1
 				unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_IN_FACTORY);
-				if (rgen.rand_float() < 0.65) {flags |= RO_FLAG_ROTATING;} // make fan rotate when turned on 65% of the time
+				if (rgen.rand_float() < 0.75) {flags |= RO_FLAG_ROTATING;} // make fan rotate when turned on 75% of the time
 				objs.emplace_back(fan, TYPE_CEIL_FAN, room_id, 0, 0, flags, light_amt, SHAPE_CYLIN, WHITE);
 			} // for n
-		} // for beams
+		} // for bpos
 	}
 	// add fire sprinkler pipes
 	float const custom_floor_spacing(room.dz() - support_width); // place sprinklers under ceiling beams
