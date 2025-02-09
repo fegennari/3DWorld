@@ -130,6 +130,7 @@ building_fish.o
 building_machines.o
 building_tunnels.o
 building_factory.o
+building_retail.o
 simplifier.o
 city_model.o
 city_building_params.o

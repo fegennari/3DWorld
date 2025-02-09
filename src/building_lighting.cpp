@@ -2306,19 +2306,6 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	}
 }
 
-colorRGBA building_t::get_retail_light_color() const {
-	assert(has_room_geom());
-	vect_room_object_t const &objs(interior->room_geom->objs);
-	assert(interior->room_geom->retail_start < objs.size());
-	
-	// find the first light placed in the retail area, starting with the first retail room object (which should be a light)
-	for (auto i = objs.begin()+interior->room_geom->retail_start; i != objs.end(); ++i) {
-		if (i->type == TYPE_LIGHT) {return (i->is_light_on() ? i->color : BLACK);}
-	}
-	assert(0);
-	return BLACK; // not found?
-}
-
 bool check_bcube_visible_for_building(cube_t const &bcube, vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t &oc, cube_t &lights_bcube) {
 	if (!lights_bcube.intersects_xy(bcube)) return 0;
 	cube_t const bcube_cs(bcube + xlate); // maybe we should check each parent object separately? but it could be rare if there's more than one

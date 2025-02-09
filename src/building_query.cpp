@@ -1604,62 +1604,6 @@ bool check_door_coll(building_t const &building, door_t const &door, point &pos,
 	return sphere_cube_int_update_pos_zval(pos, obj_z, radius, door, p_last, cnorm);
 }
 
-cube_t escalator_t::get_ramp_bcube(bool exclude_sides) const {
-	cube_t ramp(*this);
-	if (exclude_sides) {ramp.expand_in_dim(!dim, -get_side_width());} // subtract off sides to get the belt/stairs
-	cube_t lo_end(ramp), hi_end(ramp);
-	ramp.expand_in_dim(dim, -end_ext); // subtract off ends
-	ramp.z2() = z1() + delta_z;
-	assert(ramp.is_strictly_normalized());
-	return ramp;
-}
-void escalator_t::get_ends_bcube(cube_t &lo_end, cube_t &hi_end, bool exclude_sides) const {
-	cube_t const ramp(get_ramp_bcube(exclude_sides));
-	lo_end = hi_end = *this;
-	for (unsigned d = 0; d < 2; ++d) {lo_end.d[!dim][d] = hi_end.d[!dim][d] = ramp.d[!dim][d];}
-	float const side_height(get_side_height());
-	lo_end.z2() = z1() + side_height;
-	hi_end.z1() = ramp.z2();
-	hi_end.z2() = hi_end.z1() + side_height;
-	lo_end.d[dim][ dir] = ramp.d[dim][!dir];
-	hi_end.d[dim][!dir] = ramp.d[dim][ dir];
-}
-cube_t escalator_t::get_side_for_end(cube_t const &end, bool lr) const {
-	cube_t end_side(end);
-	end_side.d[!dim][!lr] = end.d[!dim][lr] + (lr ? -1.0 : 1.0)*get_side_width();
-	return end_side;
-}
-cube_t escalator_t::get_support_pillar() const {
-	float const support_radius(0.15*get_width());
-	cube_t support(*this);
-	support.z2() = z1() + delta_z - get_upper_hang();
-	set_wall_width(support, get_center_dim(!dim), support_radius, !dim);
-	set_wall_width(support, (d[dim][dir] + (dir ? -1.0 : 1.0)*0.5*end_ext), support_radius, dim); // center of upper end
-	return support;
-}
-void escalator_t::get_ramp_bottom_pts(cube_t const &ramp, point bot_pts[4]) const { // {lo-left, lo-right, hi-right, hi-left} (or reversed)
-	bot_pts[0].z = bot_pts[1].z = ramp.z1() - bot_edge_shift; // shift below the steps for extra space and to hide the walking feet of people
-	bot_pts[2].z = bot_pts[3].z = ramp.z2() - bot_edge_shift;
-	bot_pts[0][ dim] = bot_pts[1][ dim] = ramp.d[dim][!dir];
-	bot_pts[2][ dim] = bot_pts[3][ dim] = ramp.d[dim][ dir];
-	bot_pts[0][!dim] = bot_pts[3][!dim] = ramp.d[!dim][0];
-	bot_pts[1][!dim] = bot_pts[2][!dim] = ramp.d[!dim][1];
-	if (dim ^ dir ^ 1) {std::reverse(bot_pts, bot_pts+4);} // use correct vertex winding order
-}
-void escalator_t::get_all_cubes(cube_t cubes[7]) const { // {lo left wall, lo right wall, lo floor, hi left wall, hi right wall, hi floor, pillar}
-	cube_t ends[2];
-	get_ends_bcube(ends[0], ends[1], 0); // exclude_sides=0
-	unsigned ix(0);
-
-	for (unsigned hi = 0; hi < 2; ++hi) {
-		cube_t end(ends[hi]);
-		for (unsigned lr = 0; lr < 2; ++lr) {cubes[ix++] = get_side_for_end(end, lr);}
-		end.z2() = end.z1() + get_floor_thick();
-		cubes[ix++] = end;
-	}
-	cubes[ix++] = get_support_pillar();
-}
-
 // Note: should be valid for player and other spherical objects; also checks escalators
 bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t const &building, point &pos, point const &p_last, float radius,
 	float wall_test_extra_z, bool is_player, vector3d *cnorm) const

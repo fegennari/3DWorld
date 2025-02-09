@@ -1326,19 +1326,6 @@ void building_t::add_escalator_points(person_t const &person, ai_path_t &path) c
 	path.add(enter_pt, 1);
 }
 
-bool building_t::point_over_glass_floor(point const &pos, bool inc_escalator) const {
-	if (!has_glass_floor()) return 0;
-	float const floor_spacing(get_window_vspace());
-	bool is_above_floor(0);
-
-	for (cube_t const &f : interior->room_geom->glass_floors) {
-		if (pos.z < f.z2() || pos.z > f.z2() + floor_spacing) continue; // below, or more than one floor above
-		if (f.contains_pt_xy(pos)) return 1;
-		is_above_floor = 1;
-	}
-	return (inc_escalator && is_above_floor && point_in_escalator(pos));
-}
-
 int building_t::maybe_use_escalator(person_t &person, building_loc_t const &loc, bool last_used_escalator, rand_gen_t &rgen) const { // for retail area, not malls
 
 	if (!has_tall_retail() || interior->escalators.empty() || !has_glass_floor()) return 0;
@@ -1712,23 +1699,6 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 		set_cube_zvals(sel_cube, z1, z2); // clip to the current Z-range
 		room_geom->fire_manager.add_fire_bcubes_for_cube(sel_cube, avoid);
 	}
-}
-
-point building_t::get_retail_upper_stairs_landing_center() const {
-	assert(has_tall_retail());
-	float const floor_spacing(get_window_vspace());
-	room_t const &room(get_retail_room());
-
-	for (stairwell_t const &s : interior->stairwells) {
-		if (s.z2() < room.z2() || !s.intersects(room)) continue; // wrong stairs
-		point pos;
-		pos[!s.dim] = s.get_center_dim(!s.dim);
-		pos[ s.dim] = s.d[s.dim][!s.dir] + (s.dir ? -1.0 : 1.0)*0.5*s.get_retail_landing_width(floor_spacing); // halfway out
-		pos.z = room.z2() - floor_spacing;
-		return pos;
-	} // for s
-	assert(0); // should never get here
-	return all_zeros;
 }
 
 unsigned get_elevator_floor(float zval, elevator_t const &e, float floor_spacing) { // floor index relative to this elevator

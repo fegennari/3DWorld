@@ -506,6 +506,7 @@
     <ClCompile Include="src\building_pipes.cpp" />
     <ClCompile Include="src\building_query.cpp" />
     <ClCompile Include="src\building_reflections.cpp" />
+    <ClCompile Include="src\building_retail.cpp" />
     <ClCompile Include="src\building_rooms.cpp" />
     <ClCompile Include="src\building_room_geom.cpp" />
     <ClCompile Include="src\building_room_item_draw.cpp" />
