@@ -1387,9 +1387,8 @@ bool building_t::add_ball_to_room(rand_gen_t &rgen, room_t const &room, cube_t c
 		c.expand_by(radius);
 		if (!avoid_xy.is_all_zeros() && c.intersects_xy(avoid_xy)) continue;
 		if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
-		objs.emplace_back(c, TYPE_LG_BALL, room_id, 0, 0, RO_FLAG_DSTATE, tot_light_amt, SHAPE_SPHERE, WHITE);
-		objs.back().obj_id     = (uint16_t)interior->room_geom->allocate_dynamic_state(); // allocate a new dynamic state object
-		objs.back().item_flags = btype; // selects ball type
+		objs.emplace_back(c, TYPE_LG_BALL, room_id, 0, 0, RO_FLAG_DSTATE, tot_light_amt, SHAPE_SPHERE, WHITE, btype);
+		objs.back().obj_id = (uint16_t)interior->room_geom->allocate_dynamic_state(); // allocate a new dynamic state object
 		return 1; // done
 	} // for n
 	return 0;
@@ -2767,9 +2766,8 @@ void building_t::add_boxes_and_crates(rand_gen_t &rgen, room_t const &room, floa
 
 void building_t::add_shelves(cube_t const &c, bool dim, bool dir, unsigned room_id, float tot_light_amt, unsigned flags, unsigned item_flags, rand_gen_t &rgen) {
 	vect_room_object_t &objs(interior->room_geom->objs);
-	objs.emplace_back(c, TYPE_SHELVES, room_id, dim, dir, flags, tot_light_amt);
+	objs.emplace_back(c, TYPE_SHELVES, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, WHITE, item_flags);
 	set_obj_id(objs);
-	objs.back().item_flags = item_flags;
 	unsigned const objs_start(objs.size());
 	interior->room_geom->expand_shelves(objs.back(), 1); // add_models_mode=1
 
@@ -3623,8 +3621,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 							subtract_stairs_and_elevators_from_cube(beam_area, obj_parts);
 
 							for (cube_t const &c : obj_parts) {
-								objs.emplace_back(c, TYPE_METAL_BAR, room_id, !d, 0, 0, 1.0, SHAPE_CUBE, BLACK);
-								objs.back().item_flags = skip_faces;
+								objs.emplace_back(c, TYPE_METAL_BAR, room_id, !d, 0, 0, 1.0, SHAPE_CUBE, BLACK, skip_faces); // item_flags=skip_faces
 							}
 						} // for v
 					} // for d
@@ -3632,8 +3629,8 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 						cube_t beam(upper_floor);
 						set_cube_zvals(beam, beam_z1, upper_floor.zc()); // below the floor and slightly intersecting
 						set_wall_width(beam, upper_floor.d[dim][!dir], 0.5*beam_thickness, dim);
-						objs.emplace_back(beam, TYPE_METAL_BAR, room_id, !dim, !dir, 0, 1.0, SHAPE_CUBE, BLACK);
-						objs.back().item_flags = get_skip_mask_for_xy(!dim); // skip ends
+						unsigned const item_flags(get_skip_mask_for_xy(!dim)); // skip ends
+						objs.emplace_back(beam, TYPE_METAL_BAR, room_id, !dim, !dir, 0, 1.0, SHAPE_CUBE, BLACK, item_flags);
 					}
 					// add another level of shelf racks on this floor;
 					// stairs/elevators/escalators/pillars extend through both floors, so we don't need to recheck intersections, but we may need to increase their height
@@ -3671,8 +3668,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 						for (unsigned d = 0; d < 2; ++d) {beam.d[!e.dim][d] = e.d[!e.dim][d];} // flush with sides of elevator
 						beam.d[e.dim][!e.dir] = e.d[e.dim][e.dir]; // flush with elevator entrance side
 						beam.d[e.dim][ e.dir] = e.d[e.dim][e.dir] + (e.dir ? 1.0 : -1.0)*beam_hwidth; // extend outward
-						objs.emplace_back(beam, TYPE_METAL_BAR, room_id, !e.dim, e.dir, 0, 1.0, SHAPE_CUBE, BLACK);
-						objs.back().item_flags = 0; // draw all faces
+						objs.emplace_back(beam, TYPE_METAL_BAR, room_id, !e.dim, e.dir, 0, 1.0, SHAPE_CUBE, BLACK, 0); // item_flags=1: draw all faces
 					}
 					break; // done
 				} // for dir
@@ -4381,8 +4377,8 @@ bool building_t::place_plant_on_obj(rand_gen_t &rgen, cube_t const &place_on, un
 		cube_t const plant(place_cylin_object(rgen, place_on, radius, radius/radius_to_height, 1.2*radius)); // recompute height from radius
 		
 		if (!has_bcube_int(plant, avoid)) { // only make one attempt
-			objs.emplace_back(plant, TYPE_PLANT_MODEL, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT), tot_light_amt, SHAPE_CYLIN, WHITE);
-			objs.back().item_flags = rgen.rand(); // choose a random potted plant model if there are more than one
+			unsigned const item_flags(rgen.rand()); // choose a random potted plant model if there are more than one
+			objs.emplace_back(plant, TYPE_PLANT_MODEL, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT), tot_light_amt, SHAPE_CYLIN, WHITE, item_flags);
 			return 1;
 		} // else try to place a non-model plant
 	}

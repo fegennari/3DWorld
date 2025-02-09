@@ -1529,8 +1529,7 @@ void building_t::add_box_contents(room_object_t const &box) {
 			if (c.min_len() < 2.0*radius) continue; // can't fit any of this item
 			point const center(cube_bot_center(c) + radius*plus_z);
 			cube_t ball; ball.set_from_sphere(center, radius);
-			objs.emplace_back(ball, TYPE_LG_BALL, room_id, 0, 0, flags, light_amt, SHAPE_SPHERE);
-			objs.back().item_flags = btype;
+			objs.emplace_back(ball, TYPE_LG_BALL, room_id, 0, 0, flags, light_amt, SHAPE_SPHERE, WHITE, btype);
 		}
 		else if (obj_type == 3) { // paint cans
 			float const height(0.64*base_height), radius(0.28*base_height);
