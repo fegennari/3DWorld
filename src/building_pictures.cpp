@@ -101,8 +101,9 @@ class video_camera_manager_t {
 		std::string tag;
 		unsigned obj_ix, tid=0;
 		int last_update_frame=0;
+		room_type rtype;
 		bool valid=1;
-		camera_t(point const &p, vector3d const &d, unsigned ix) : pos(p), dir(d), obj_ix(ix) {}
+		camera_t(point const &p, vector3d const &d, unsigned ix, unsigned rtype_) : pos(p), dir(d), obj_ix(ix), rtype(rtype_) {}
 	};
 	struct monitor_t {
 		unsigned obj_ix;
@@ -143,6 +144,10 @@ class video_camera_manager_t {
 		int const reflection_pass(REF_PASS_ENABLED | REF_PASS_INTERIOR | REF_PASS_NO_MIRROR);
 		draw_buildings(0, reflection_pass, xlate);
 		
+		if (cur_building && camera.rtype == RTYPE_RETAIL) { // draw retail glass floors
+			translate_to(xlate);
+			cur_building->draw_glass_surfaces(xlate);
+		}
 		if ((display_mode & 0x20) && (int)SEC_CAMERA_XSIZE <= window_width && (int)SEC_CAMERA_YSIZE <= window_height) { // experimental grayscale mode; doesn't work for small windows
 			postproc_convert_to_grayscale(SEC_CAMERA_XSIZE, SEC_CAMERA_YSIZE);
 		}
@@ -178,12 +183,14 @@ public:
 				lens_pt -= rot_pt;
 				rotate_vector3d(rot_axis, rot_angle, lens_pt); // lens rotates about rot_pt
 				lens_pt += rot_pt;
-				cameras.emplace_back(lens_pt, camera_dir, (i - objs.begin()));
 				room_t const &room(b.get_room(i->room_id));
-				unsigned const floor_ix(room.get_floor_containing_zval(i->z1(), b.get_window_vspace()));
+				unsigned const floor_ix(room.get_floor_containing_zval(i->zc(), b.get_window_vspace()));
+				room_type const rtype(room.get_room_type(floor_ix));
+				assert(rtype < NUM_RTYPES);
+				cameras.emplace_back(lens_pt, camera_dir, (i - objs.begin()), rtype);
 				std::string const dir_strs[4] = {"E", "W", "N", "S"};
 				std::string const &dir_str(dir_strs[i->get_orient()]);
-				std::string const &room_str(room_names[room.get_room_type(floor_ix)]); // what about store names? currently there are no cameras in stores
+				std::string const &room_str(room_names[rtype]); // what about store names? currently there are no cameras in stores
 				std::ostringstream oss;
 				
 				if (room_str == "Hallway") { // shorten hallway => hall and add floor number
