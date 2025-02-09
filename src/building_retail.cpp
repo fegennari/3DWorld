@@ -218,8 +218,9 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 					// stairs/elevators/escalators/pillars extend through both floors, so we don't need to recheck intersections, but we may need to increase their height
 					unsigned const objs_end(objs.size());
 					float const min_rack_len(min(0.5f*rack_length, 1.0f*floor_spacing)), min_pillar_z2(floor_z2 + 0.85*fc_gap);
-					cube_t upper_place_area(upper_floor);
+					cube_t upper_place_area(upper_floor), avoid_area(upper_conn);
 					upper_place_area.expand_by_xy(-nom_aisle_width); // add space around the edges for aisles
+					avoid_area.expand_by_xy(1.25*door_width);
 
 					for (unsigned i = objs_start; i < objs_end; ++i) {
 						room_object_t &obj(objs[i]);
@@ -231,6 +232,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 							cand.intersect_with_cube_xy(upper_place_area); // clip to fit in upper floor area
 							if (cand.get_sz_dim(dim) < min_rack_len) continue; // too short
 							cand.translate_dim(2, (floor_z2 - obj.z1())); // move to the floor above
+							if (cand.intersects_xy(avoid_area)) {cand.d[dim][!dir] = avoid_area.d[dim][dir];} // too close to escalator, shorten
 							add_shelf_rack(cand, dim, style_id, rack_id, room_id, RO_FLAG_ON_FLOOR, 0, 1, rgen); // flag so that bot surf is drawn; item_category=0, add_occluders=0
 						}
 					} // for i
