@@ -172,7 +172,7 @@ bool building_t::is_pos_inside_building(point const &pos, float xy_pad, float hh
 		else if (!basement.contains_pt_xy_exp(pos, -bcube_pad)) return 0; // check the basement
 	}
 	else if (!bcube.contains_pt_xy_exp(pos, -bcube_pad)) return 0; // check for end point inside building bcube
-	cube_t req_area(pos, pos);
+	cube_t req_area(pos);
 	req_area.expand_by_xy(xy_pad);
 	req_area.z2() += hheight;
 	if (!is_cube_contained_in_parts(req_area) && !(inc_attic && cube_in_attic(req_area))) return 0;
@@ -230,7 +230,7 @@ rat_t::rat_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id
 cube_t get_obj_model_bcube_for_dir(point const &pos, vector3d const &dir, float radius, float height, unsigned model_id) {
 	bool const pri_dim(fabs(dir.x) < fabs(dir.y));
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id));
-	cube_t bcube(pos, pos);
+	cube_t bcube(pos);
 	bcube.expand_in_dim( pri_dim, radius); // larger dim
 	bcube.expand_in_dim(!pri_dim, radius*min(sz.x, sz.y)/max(sz.x, sz.y)); // smaller dim
 	bcube.z2() += height;

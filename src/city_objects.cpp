@@ -1144,7 +1144,7 @@ void draw_wire(point const *const pts, float radius, color_wrapper const &cw, qu
 	}
 }
 void draw_ortho_wire(point const &p, float radius, float pole_spacing, bool d, color_wrapper const &cw, draw_state_t &dstate, quad_batch_draw &untex_qbd) {
-	cube_t wire(p, p);
+	cube_t wire(p);
 	wire.d[d][0] -= pole_spacing; // extend to the adjacent pole
 	wire.expand_in_dim(!d, radius);
 	wire.expand_in_dim(2,  radius);

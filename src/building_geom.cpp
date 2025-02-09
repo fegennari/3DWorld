@@ -293,7 +293,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 
 			if (has_city_trees()) { // see if we can place a tree in the courtyard
 				point const center(bcube.get_cube_center());
-				cube_t place_area(center, center);
+				cube_t place_area(center);
 				place_area.expand_by_xy(0.05f*(bcube.dx() + bcube.dy()));
 				if (!has_bcube_int(place_area, parts)) {tree_pos = place_area.get_cube_center(); tree_pos.z = ground_floor_z1;}
 			}

@@ -571,7 +571,7 @@ void cobj_bvh_tree::get_coll_sphere_cobjs(point const &center, float radius, int
 
 	if (nodes.empty()) return;
 	unsigned const num_nodes((unsigned)nodes.size());
-	cube_t bcube(center, center);
+	cube_t bcube(center);
 	bcube.expand_by(radius);
 
 	for (unsigned nix = 0; nix < num_nodes;) {

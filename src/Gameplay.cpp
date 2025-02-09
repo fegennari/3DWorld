@@ -1346,7 +1346,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	}
 	if (size > 0.3) {
 		float const search_radius(0.25*bradius);
-		cube_t bcube(pos, pos);
+		cube_t bcube(pos);
 		bcube.expand_by(search_radius);
 		vector<unsigned> &cobjs(coll_objects.get_temp_cobjs());
 		get_intersecting_cobjs_tree(bcube, cobjs, -1, 0.0, 0, 0, -1); // get candidates

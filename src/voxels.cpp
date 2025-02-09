@@ -1838,7 +1838,7 @@ bool voxel_query_tree::check_coll_line(point const &p1, point const &p2, point &
 void voxel_query_tree::get_coll_sphere_cobjs(point const &center, float radius, int ignore_cobj, vert_coll_detector &vcd) const {
 
 	if (tree_matrix.empty()) return;
-	cube_t sphere_bcube(center, center);
+	cube_t sphere_bcube(center);
 	sphere_bcube.expand_by(radius);
 	if (!tree_matrix.bcube.intersects(sphere_bcube)) return;
 

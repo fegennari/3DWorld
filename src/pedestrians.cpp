@@ -776,7 +776,7 @@ cube_t get_avoid_area_for_plot(cube_t const &plot_bcube, float radius) {
 void move_to_closest_pt_outside_cube(cube_t const &c, point &pos) {
 	if (!c.contains_pt(pos)) return; // already outside cube
 	bool dim(0), dir(0);
-	get_closest_dim_dir_xy(cube_t(pos, pos), c, dim, dir);
+	get_closest_dim_dir_xy(cube_t(pos), c, dim, dir);
 	pos[dim] = c.d[dim][dir]; // move to the edge of the avoid cube
 }
 point get_obj_avoid_move_pos(vector3d const &target_dir, point const &pos, float radius, cube_t const &c) { // Note: target_dir does not need to be normalized

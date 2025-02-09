@@ -380,7 +380,7 @@ bool city_road_connector_t::is_tline_seg_valid(point const &p1, point const &p2,
 }
 bool check_and_add_tower_pt(point const &pos, float height, float clearance_radius, transmission_line_t &tline, vect_cube_t &blockers) {
 	// Note: this doesn't check for two transmission line wires intersecting each other, but this should be unlikely, and I've never seen it happen
-	cube_t tower_area(pos, pos);
+	cube_t tower_area(pos);
 	tower_area.z1() -= height; // set base of tower
 	if (tower_area.z1() < water_plane_z) return 0; // underwater, invalid tower location
 	tower_area.expand_by_xy(clearance_radius);

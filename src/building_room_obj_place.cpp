@@ -2019,7 +2019,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		for (unsigned n = 0; n < num_stalls; ++n, stall_pos += stall_step) {
 			point center(stall_from_wall, stall_pos, zval);
 			if (br_dim) {swap(center.x, center.y);} // R90 about z
-			cube_t toilet(center, center), stall(toilet);
+			cube_t toilet(center), stall(toilet);
 			toilet.expand_in_dim( br_dim, 0.5*tlength);
 			toilet.expand_in_dim(!br_dim, 0.5*twidth);
 			toilet.z2() += theight;
@@ -2064,7 +2064,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		for (unsigned n = 0; n < num_sinks; ++n, sink_pos += sink_step) {
 			point center(sink_from_wall, sink_pos, zval);
 			if (br_dim) {swap(center.x, center.y);} // R90 about z
-			cube_t sink(center, center);
+			cube_t sink(center);
 			sink.expand_in_dim(br_dim, 0.5*slength);
 			sink.z2() += sheight;
 			if (interior->is_cube_close_to_doorway(sink, room, 0.0, 1)) continue; // skip if close to a door, inc_open=1, pre expand
@@ -2092,7 +2092,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				set_wall_width(sep_wall, (u_pos - 0.5*sink_step), 0.2*wall_thickness, !br_dim);
 				point center(u_from_wall, u_pos, (zval + 0.2*uheight));
 				if (br_dim) {swap(center.x, center.y);} // R90 about z
-				cube_t urinal(center, center);
+				cube_t urinal(center);
 				urinal.expand_in_dim( br_dim, 0.5*ulength);
 				urinal.expand_in_dim(!br_dim, 0.5*uwidth);
 				urinal.z2() += uheight;
@@ -3137,7 +3137,7 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 	unsigned const objs_start(objs.size()), pool_table_obj_ix(objs_start);
 	bool const long_dim(room.dx() < room.dy());
 	point const pos(room.xc(), room.yc(), zval); // place in the center of the room
-	cube_t ptable(pos, pos);
+	cube_t ptable(pos);
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_POOL_TABLE)) return 0;
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_POOL_TABLE)); // L, W, H
 	// size is 8ft long x 4ft wide x 2.5 ft tall, with 4.5 feet of side clearance
@@ -4700,7 +4700,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 					if (hi - lo < width) break; // not enough space to shift, can't place this picture
 					center[!dim] = rgen.rand_uniform(lo, hi);
 				}
-				cube_t c(center, center);
+				cube_t c(center);
 				c.expand_in_z(0.5*height);
 				c.d[dim][!dir] += 0.2*base_shift; // move out to prevent z-fighting
 				// add an additional half wall thickness for interior hallway and office walls

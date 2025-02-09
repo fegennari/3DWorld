@@ -147,8 +147,8 @@ cube_t cloud_manager_t::get_bcube() const {
 	for (unsigned i = 0; i < size(); ++i) {
 		point const &pos((*this)[i].pos);
 		float const radius((*this)[i].radius);
-		if (i == 0) {bcube = cube_t(pos, pos); bcube.expand_by(radius);}
-		else {bcube.union_with_sphere(pos, radius);}
+		if (i == 0) {bcube.set_from_sphere  (pos, radius);}
+		else        {bcube.union_with_sphere(pos, radius);}
 	}
 	return bcube;
 }

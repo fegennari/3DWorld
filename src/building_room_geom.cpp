@@ -4624,7 +4624,7 @@ cube_t get_sink_cube(room_object_t const &c) {
 	assert(c.type == TYPE_KSINK || c.type == TYPE_BRSINK || c.type == TYPE_VANITY);
 	float const dz(c.dz()), sdepth(0.8*c.get_depth()), swidth(min(1.4f*sdepth, 0.75f*c.get_width()));
 	vector3d const center(c.get_cube_center());
-	cube_t sink(center, center);
+	cube_t sink(center);
 	set_cube_zvals(sink, (c.z2() - 0.3*dz), (c.z2() - 0.05*dz));
 	sink.expand_in_dim( c.dim, 0.5*sdepth);
 	sink.expand_in_dim(!c.dim, 0.5*swidth);

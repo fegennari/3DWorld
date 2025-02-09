@@ -141,7 +141,7 @@ cube_t building_t::calc_splash_bounds(point const &pos) const {
 	unsigned const NUM_RAYS = 90;
 	cube_t const &extb(interior->basement_ext_bcube);
 	float const ray_len(extb.dx()*extb.dx() + extb.dy()*extb.dy()); // max room diagonal
-	cube_t bounds(pos, pos);
+	cube_t bounds(pos);
 
 	for (unsigned n = 0; n < NUM_RAYS; ++n) {
 		float const angle(TWO_PI*n/NUM_RAYS);

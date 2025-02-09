@@ -879,7 +879,7 @@ int add_sprinkler_pipe(building_t const &b, point const &p1, float end_val, floa
 		bool any_added(0);
 
 		for (unsigned n = 0; n < num_sprinklers; ++n, center[dim] += spacing) {
-			cube_t s(center, center);
+			cube_t s(center);
 			s.d[2][!inverted] += sprinkler_dz;
 			s.expand_by_xy(sprinkler_radius);
 			cube_t s_ext(s); // includes some extra clearance

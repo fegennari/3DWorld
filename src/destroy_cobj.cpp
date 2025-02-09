@@ -43,10 +43,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 	csg_cube cube;
 
 	if (!custom_cube.is_all_zeros()) {cube = custom_cube;} // set from cube
-	else { // set from radius
-		cube.set_from_point(pos);
-		cube.expand_by(radius);
-	}
+	else {cube.set_from_sphere(pos, radius);} // set from sphere radius
 	unsigned nrem(subtract_cube(cts, cdir, cube, dmin));
 	if (nrem == 0 || cts.empty()) return; // nothing removed
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
