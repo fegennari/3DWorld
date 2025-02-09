@@ -3761,15 +3761,16 @@ bool building_t::add_reception_desk(rand_gen_t &rgen, cube_t const &desk, bool d
 }
 
 void building_t::add_cameras_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	// add cameras at each end of the room in the long dim (for hallways, etc.)
+	// add cameras at each end of the room in the long dim (for hallways, retail, etc.)
 	bool const long_dim(room.dx() < room.dy());
-	float const window_vspacing(get_window_vspace()), ceil_zval(zval + get_floor_ceil_gap()), doorway_width(get_doorway_width());
+	float const window_vspacing(get_window_vspace()), doorway_width(get_doorway_width());
+	float const ceil_zval(room.is_single_floor ? (room.z2() - get_fc_thickness()) : (zval + get_floor_ceil_gap())); // on upper floor of retail
 	float const length(0.09*window_vspacing), width(0.4*length), height(0.5*length);
-	cube_t camera;
-	set_cube_zvals(camera, (ceil_zval - height), ceil_zval);
 	cube_t const place_area(get_walkable_room_bounds(room));
 	bool const camera_side(rgen.rand_bool()), is_ground_floor(zval >= ground_floor_z1 && zval < ground_floor_z1 + window_vspacing);
 	vect_room_object_t &objs(interior->room_geom->objs);
+	cube_t camera;
+	set_cube_zvals(camera, (ceil_zval - height), ceil_zval);
 
 	for (unsigned dir = 0; dir < 2; ++dir) {
 		float const wall_pos(place_area.d[long_dim][!dir]), signed_len((dir ? 1.0 : -1.0)*length);
@@ -3797,6 +3798,7 @@ void building_t::add_cameras_to_room(rand_gen_t &rgen, room_t const &room, float
 			if (i->type == TYPE_BLOCKER && i->intersects(camera)) {blocked = 1; break;}
 		}
 		if (!blocked) {objs.emplace_back(camera, TYPE_CAMERA, room_id, long_dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, WHITE);}
+		// Note: if we want to have cameras on the bottom retail floor, they need brackets extending from the wall
 	} // for dir
 }
 
