@@ -557,16 +557,46 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 
 void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	assert(interior->factory_info);
-	float const floor_spacing(get_window_vspace()), fc_gap(room.dz()), max_place_sz(1.6*floor_spacing);
+	float const floor_spacing(get_window_vspace()), fc_gap(room.dz()), max_place_sz(1.0*floor_spacing), max_height(fc_gap - floor_spacing);
 	float const doorway_width(get_doorway_width()), min_gap(max(doorway_width, get_min_front_clearance_inc_people()));
-	unsigned const num_machines((rgen.rand() % 11) + 10); // 10-20
+	if (max_height <= 0.0) return; // should never happen
 	vect_room_object_t &objs(interior->room_geom->objs);
 	vector2d max_sz(get_machine_max_sz(place_area, min_gap, max_place_sz, 0.5));
 	cube_t avoid(interior->factory_info->entrance_area);
 	avoid.expand_in_dim(interior->factory_info->entrance_dim, doorway_width);
+	
+	if (1) { // add a 2D grid of machines to the center of the place area
+		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // maybe doesn't matter?
+		float const height(max_height*rgen.rand_uniform(0.6, 0.8)), aisle_spacing(1.25*doorway_width);
+		vector2d const machine_sz(max_place_sz*vector2d(rgen.rand_uniform(0.8, 1.0), rgen.rand_uniform(0.8, 1.0)));
+		unsigned const item_flags(rgen.rand()), rand_seed(rgen.rand());
+		cube_t center_area(place_area);
+		center_area.expand_by_xy(-(max_place_sz + 0.5*doorway_width)); // space for machines along the wall
+		vector2d const center_sz(center_area.get_size_xy());
+		vector2d spacing;
+		unsigned num_xy[2]={};
+
+		for (unsigned d = 0; d < 2; ++d) {
+			num_xy [d] = center_sz[d]/(machine_sz[d] + aisle_spacing);
+			spacing[d] = center_sz[d]/num_xy[d];
+		}
+		for (unsigned ny = 0; ny < num_xy[1]; ++ny) {
+			for (unsigned nx = 0; nx < num_xy[0]; ++nx) {
+				point const center((center_area.x1() + (nx + 0.5)*spacing.x), (center_area.y1() + (ny + 0.5)*spacing.y), zval);
+				cube_t c(center);
+				c.expand_by_xy(0.5*machine_sz);
+				c.z2() += height;
+				if (c.intersects(avoid) || overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // inc_open_doors=1
+				objs.emplace_back(c, TYPE_MACHINE, room_id, dim, dir, RO_FLAG_IN_FACTORY, tot_light_amt, SHAPE_CUBE, LT_GRAY, item_flags);
+				objs.back().item_flags = rand_seed;
+			} // for nx
+		} // for ny
+	}
+	// add machines along the walls
+	unsigned const num_machines((rgen.rand() % 11) + 10); // 10-20
 
 	for (unsigned n = 0; n < num_machines; ++n) {
-		float const height(fc_gap*rgen.rand_uniform(0.5, 0.8));
+		float const height(min(fc_gap*rgen.rand_uniform(0.4, 0.7), max_height));
 		cube_t c;
 		set_cube_zvals(c, zval, zval+height);
 
