@@ -2161,7 +2161,7 @@ struct building_t : public building_geom_t {
 	cube_t get_init_elevator_car(elevator_t const &elevator) const;
 	void add_stairs_and_elevators(rand_gen_t &rgen);
 	int get_ext_door_dir(cube_t const &door_bcube, bool dim) const;
-	void add_sign_by_door(tquad_with_ix_t const &door, bool outside, std::string const &text, colorRGBA const &color, bool emissive);
+	bool add_sign_by_door(tquad_with_ix_t const &door, bool outside, std::string const &text, colorRGBA const &color, bool emissive);
 	void add_doorbell_lamp_and_porch_items(tquad_with_ix_t const &door, rand_gen_t &rgen);
 	void add_exterior_door_items(rand_gen_t &rgen);
 	unsigned get_street_house_number() const;

@@ -252,7 +252,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 						for (unsigned d = 0; d < 2; ++d) {beam.d[!e.dim][d] = e.d[!e.dim][d];} // flush with sides of elevator
 						beam.d[e.dim][!e.dir] = e.d[e.dim][e.dir]; // flush with elevator entrance side
 						beam.d[e.dim][ e.dir] = e.d[e.dim][e.dir] + (e.dir ? 1.0 : -1.0)*beam_hwidth; // extend outward
-						objs.emplace_back(beam, TYPE_METAL_BAR, room_id, !e.dim, e.dir, 0, 1.0, SHAPE_CUBE, BLACK, 0); // item_flags=1: draw all faces
+						objs.emplace_back(beam, TYPE_METAL_BAR, room_id, !e.dim, e.dir, 0, 1.0, SHAPE_CUBE, BLACK, 0); // item_flags=0: draw all faces
 					}
 					break; // done
 				} // for dir

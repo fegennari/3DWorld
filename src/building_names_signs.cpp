@@ -297,6 +297,8 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 		}
 	}
 	else { // office building; add signs
+		vect_room_object_t &objs(interior->room_geom->objs);
+
 		if (!name.empty()) {
 			// Note: these will only appear when the player is close to city office building exterior doors
 			colorRGBA const &sign_color(choose_sign_color(rgen));
@@ -321,20 +323,31 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 					c.d[e.dim][!e.dir] = front_face;
 					c.d[e.dim][ e.dir] = front_face + (e.dir ? 1.0 : -1.0)*0.01*width; // set thickness
 					unsigned const flags(RO_FLAG_LIT | RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR);
-					interior->room_geom->objs.emplace_back(c, TYPE_SIGN, interior->ext_basement_hallway_room_id, e.dim, e.dir, flags, 1.0, SHAPE_CUBE, sign_color); // lit
-					interior->room_geom->objs.back().obj_id = register_sign_text("MALL");
+					objs.emplace_back(c, TYPE_SIGN, interior->ext_basement_hallway_room_id, e.dim, e.dir, flags, 1.0, SHAPE_CUBE, sign_color); // lit
+					objs.back().obj_id = register_sign_text("MALL");
 				}
 			}
 		}
 		if (pri_hall.is_all_zeros() && rgen.rand_bool()) return; // place exit signs on buildings with primary hallways and 50% of other buildings
-		if (is_factory()) return; // factory has no exit signs because there's no ceiling to attach them to
+		bool const tall_room(is_factory() || has_tall_retail());
 		colorRGBA const exit_color(rgen.rand_bool() ? RED : GREEN);
 
 		for (auto d = doors.begin(); d != doors.end(); ++d) {
 			if (int(d - doors.begin()) == courtyard_door_ix) break; // courtyard door is not an exit
 			if (!d->is_building_door()) continue; // roof door, etc.
-			add_sign_by_door(*d, 0, "Exit", exit_color, 1); // inside exit sign, emissive
-		}
+			unsigned const sign_obj_ix(objs.size());
+			if (!add_sign_by_door(*d, 0, "Exit", exit_color, 1)) continue; // inside exit sign, emissive
+
+			if (tall_room) { // add horizontal bracket holding sign
+				assert(sign_obj_ix < objs.size());
+				room_object_t const &sign(objs[sign_obj_ix]);
+				cube_t bracket(sign);
+				set_cube_zvals(bracket, sign.z2(), sign.z2() + 0.5*sign.get_depth());
+				bracket.d[sign.dim][!sign.dir] = d->get_bcube().d[sign.dim][sign.dir]; // extend to the wall
+				unsigned const skip_faces(~get_face_mask(sign.dim, !sign.dir)); // skip face against the wall
+				objs.emplace_back(bracket, TYPE_METAL_BAR, sign.room_id, 0, 0, RO_FLAG_NOCOLL, sign.light_amt, SHAPE_CUBE, LT_GRAY, skip_faces);
+			}
+		} // for d
 	}
 }
 
@@ -500,12 +513,12 @@ void building_t::add_company_sign(rand_gen_t &rgen) {
 }
 
 // interior (exit) or exterior signs
-void building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std::string const &text, colorRGBA const &color, bool emissive) {
+bool building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std::string const &text, colorRGBA const &color, bool emissive) {
 	assert(!text.empty());
 	cube_t const door_bcube(door.get_bcube());
 	bool const dim(door_bcube.dy() < door_bcube.dx());
 	int const dir_ret(get_ext_door_dir(door_bcube, dim));
-	if (dir_ret > 1) return; // not found, skip sign
+	if (dir_ret > 1) return 0; // not found, skip sign
 	bool dir(dir_ret != 0);
 	float const width(door_bcube.get_sz_dim(!dim)), height(door_bcube.dz());
 	cube_t c(door_bcube);
@@ -525,13 +538,14 @@ void building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std
 
 	if (outside) {
 		for (auto p2 = get_real_parts_end_inc_sec(); p2 != parts.end(); ++p2) {
-			if (p2->intersects(c)) return; // sign intersects porch roof, skip this building
+			if (p2->intersects(c)) return 0; // sign intersects porch roof, skip this building
 		}
 	}
 	unsigned const flags(RO_FLAG_LIT | RO_FLAG_NOCOLL | (emissive ? RO_FLAG_EMISSIVE : 0) | (outside ? RO_FLAG_EXTERIOR : RO_FLAG_HANGING));
 	vect_room_object_t &objs(interior->room_geom->objs);
 	objs.emplace_back(c, TYPE_SIGN, 0, dim, dir, flags, 1.0, SHAPE_CUBE, color); // always lit; room_id is not valid
 	objs.back().obj_id = register_sign_text(text);
+	return 1;
 }
 
 void add_sign_outside_door(vect_room_object_t &objs, cube_t const &sign, string const &text, colorRGBA const &color, unsigned room_id, bool dim, bool dir, bool add_frame) {
