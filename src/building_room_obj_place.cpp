@@ -1842,6 +1842,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 		added_bathroom_objs_mask |= bathroom_objs_mask;
 		break;
 	} // for n
+	if (room.is_office) {add_door_sign("Restroom", room, zval, room_id);} // add office bathroom sign
 	return placed_obj;
 }
 
