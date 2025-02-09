@@ -46,16 +46,22 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 	}
 	float const wall_thickness(get_wall_thickness()), pillar_width(2.0*wall_thickness), fc_gap(get_floor_ceil_gap());
 	float const col_aisle_width(nom_aisle_width + pillar_width), rack_spacing((length - col_aisle_width)/nracks), rack_length(rack_spacing - col_aisle_width);
+	float const e_width(0.8*door_width), pair_width(2.1*e_width), end_pad(1.2*door_width); // for escalators
 	assert(rack_length > 0.0);
 	vect_room_object_t &objs(interior->room_geom->objs);
-	vect_cube_t pillars;
-	cube_t rack, pillar;
+	vect_cube_t pillars, rack_bcubes;
+	cube_t rack, pillar, srack_avoid;
 	set_cube_zvals(rack,   zval, (zval + rack_height));
 	set_cube_zvals(pillar, zval, room.z2()-get_fc_thickness()); // up to the ceiling
 	unsigned const objs_start(objs.size()), style_id(rgen.rand()); // same style for each rack
 	unsigned rack_id(0);
 	bool const skip_middle_row(nrows & 1), tall_retail(has_tall_retail());
 	for (unsigned d = 0; d < 2; ++d) {interior->room_geom->shelf_rack_occluders[d].reserve((nrows - skip_middle_row)*nracks);}
+
+	if (tall_retail) {
+		srack_avoid = room;
+		set_wall_width(srack_avoid, room.get_center_dim(!dim), (door_width + 0.5*pair_width), !dim);
+	}
 	//vect_room_object_t temp_objs;
 	
 	for (unsigned n = 0; n < nrows; ++n) { // n+1 aisles
@@ -82,6 +88,8 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 				cube_t test_cube(cand);
 				test_cube.expand_by_xy(se_pad); // add extra padding
 				if (interior->is_blocked_by_stairs_or_elevator(test_cube)) {was_shortened = 1; continue;} // blocked
+				rack_bcubes.push_back(cand); // can add to the upper floor even if blocked by an escalator because it can be clipped in length
+				if (tall_retail && cand.intersects_xy(srack_avoid)) break; // may block potential escalator; shortening won't help
 				add_shelf_rack(cand, dim, style_id, rack_id, room_id, 0, 0, 1, rgen); // extra_flags=0, item_category=0, add_occluers=1
 				//for (unsigned n = 0; n < 2; ++n) {interior->room_geom->get_shelfrack_objects(objs.back(), temp_objs, n);}
 				break; // done
@@ -98,7 +106,6 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 		bool const add_glass_floor = 1;
 		float const floor_thickness(get_floor_thickness()), e_height(room.dz() - floor_thickness), delta_z(e_height - get_floor_ceil_gap());
 		float const e_length(1.0*delta_z + 2.0*door_width); // upward at 45 degree angle + entrance/exit
-		float const e_width(0.8*door_width), pair_width(2.1*e_width), end_pad(1.2*door_width);
 		float const door_extra_pad(0.5*door_width + (add_glass_floor ? 2.0*floor_spacing : 0.0)); // add extra spaacing so that the glass floor at the top is wide enough
 		cube_t centered;
 		set_cube_zvals(centered, zval, (zval + e_height));
@@ -230,20 +237,21 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 					upper_place_area.expand_by_xy(-nom_aisle_width); // add space around the edges for aisles
 					avoid_area.expand_by_xy(1.25*door_width);
 
-					for (unsigned i = objs_start; i < objs_end; ++i) {
-						room_object_t &obj(objs[i]);
-						if (!upper_place_area.intersects_xy(obj)) continue;
-
-						if (obj.type == TYPE_OFF_PILLAR) {max_eq(obj.z2(), min_pillar_z2);} // raise pillar outer
-						else if (obj.type == TYPE_SHELFRACK) {
-							cube_t cand(obj);
-							cand.intersect_with_cube_xy(upper_place_area); // clip to fit in upper floor area
-							if (cand.get_sz_dim(dim) < min_rack_len) continue; // too short
-							cand.translate_dim(2, (floor_z2 - obj.z1())); // move to the floor above
-							if (cand.intersects_xy(avoid_area)) {cand.d[dim][!dir] = avoid_area.d[dim][dir];} // too close to escalator, shorten
-							add_shelf_rack(cand, dim, style_id, rack_id, room_id, RO_FLAG_ON_FLOOR, 0, 1, rgen); // flag so that bot surf is drawn; item_category=0, add_occluders=0
+					for (cube_t const &rack : rack_bcubes) {
+						if (!upper_place_area.intersects_xy(rack)) continue;
+						cube_t cand(rack);
+						cand.intersect_with_cube_xy(upper_place_area); // clip to fit in upper floor area
+						if (cand.get_sz_dim(dim) < min_rack_len) continue; // too short
+						cand.translate_dim(2, (floor_z2 - rack.z1())); // move to the floor above
+						if (cand.intersects_xy(avoid_area)) {cand.d[dim][!dir] = avoid_area.d[dim][dir];} // too close to escalator, shorten
+						add_shelf_rack(cand, dim, style_id, rack_id, room_id, RO_FLAG_ON_FLOOR, 0, 1, rgen); // flag so that bot surf is drawn; item_category=0, add_occluders=0
+					} // for rack
+					if (!pillars.empty()) { // raise office pillar outer cubes above upper level
+						for (unsigned i = objs_start; i < objs_end; ++i) {
+							room_object_t &obj(objs[i]);
+							if (obj.type == TYPE_OFF_PILLAR && upper_place_area.intersects_xy(obj)) {max_eq(obj.z2(), min_pillar_z2);}
 						}
-					} // for i
+					}
 					// re-enable this floor on any elevator passing through it; add short beams under elevator entrances
 					for (elevator_t &e : interior->elevators) {
 						if (e.skip_floors_mask == 0 || e.z2() < floor_z2 || e.z1() > floor_z1 || !upper_floor.contains_cube_xy(e)) continue;
