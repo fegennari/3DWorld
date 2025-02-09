@@ -544,8 +544,7 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 			c.d[dim][ dir] = place_area.d[dim][dir];
 			c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
 			set_wall_width(c, center, hwidth, !dim);
-			if (c.intersects(avoid) || overlaps_other_room_obj(c, objs_start)) continue;
-			if (interior->is_blocked_by_stairs_or_elevator(c) || is_cube_close_to_doorway(c, room, 0.0, 1)) continue;
+			if (c.intersects(avoid) || overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // inc_open_doors=1
 			objs.emplace_back(c, TYPE_MACHINE, room_id, dim, !dir, 0, tot_light_amt, SHAPE_CUBE, LT_GRAY);
 			objs.back().item_flags = rgen.rand(); // add more randomness
 			set_obj_id(objs);
@@ -580,8 +579,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 			c.d[dim][ dir] = place_area.d[dim][dir];
 			c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
 			set_wall_width(c, center, hwidth, !dim);
-			if (c.intersects(avoid) || overlaps_other_room_obj(c, objs_start)) continue;
-			if (interior->is_blocked_by_stairs_or_elevator(c) || is_cube_close_to_doorway(c, room, 0.0, 1)) continue;
+			if (c.intersects(avoid) || overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // inc_open_doors=1
 			objs.emplace_back(c, TYPE_MACHINE, room_id, dim, !dir, RO_FLAG_IN_FACTORY, tot_light_amt, SHAPE_CUBE, LT_GRAY);
 			objs.back().item_flags = rgen.rand(); // add more randomness
 			set_obj_id(objs);

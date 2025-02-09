@@ -3267,8 +3267,7 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 			bool const dir(bool(d) ^ pref_dir);
 			room_object_t bs2(bs);
 			bs2.translate_dim(!bs.dim, (dir ? 1.0 : -1.0)*translate_dist);
-			if (!place_area.contains_cube_xy(bs2)) continue;
-			if (overlaps_other_room_obj(bs2, objs_start) || interior->is_blocked_by_stairs_or_elevator(bs2) || is_cube_close_to_doorway(bs2, room, 0.0, 1)) continue;
+			if (!place_area.contains_cube_xy(bs2) || overlaps_other_room_obj(bs2, objs_start) || is_obj_placement_blocked(bs2, room, 1)) continue; // inc_open_doors=1
 			objs.push_back(bs2);
 			placed = 1;
 		} // for d
