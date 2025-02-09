@@ -192,12 +192,27 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 							}
 						} // for v
 					} // for d
-					if (!pillar_xy[0].empty()) { // at least one pillar, add an additional metal bar under the railing to cover the exposed end
+					bool const add_wall_frame = 1;
+
+					if (add_wall_frame || !pillar_xy[0].empty()) { // wall frame, or at least one pillar
+						// add an additional metal bar under the railing to cover the exposed end
 						cube_t beam(upper_floor);
-						set_cube_zvals(beam, beam_z1, upper_floor.zc()); // below the floor and slightly intersecting
+						set_cube_zvals(beam, beam_z1, metal_frame_z2); // was previously upper_floor.zc()
 						set_wall_width(beam, upper_floor.d[dim][!dir], 0.5*beam_thickness, dim);
 						unsigned const item_flags(get_skip_mask_for_xy(!dim)); // skip ends
 						objs.emplace_back(beam, TYPE_METAL_BAR, room_id, !dim, !dir, 0, 1.0, SHAPE_CUBE, BLACK, item_flags);
+					}
+					if (add_wall_frame) { // add framing around the exterior wall
+						for (unsigned fdim = 0; fdim < 2; ++fdim) {
+							for (unsigned fdir = 0; fdir < 2; ++fdir) {
+								if ((bool)fdim == dim && (bool)fdir == !dir) continue; // skip railing side
+								cube_t beam(upper_floor);
+								set_cube_zvals(beam, beam_z1, metal_frame_z2); // below the floor spanning to slightly above
+								beam.d[fdim][!fdir] = room.d[fdim][fdir] + (fdir ? -1.0 : 1.0)*0.25*beam_hwidth;
+								unsigned const item_flags(get_skip_mask_for_xy(!fdim) | ~get_face_mask(fdim, fdir)); // skip ends and side facing wall
+								objs.emplace_back(beam, TYPE_METAL_BAR, room_id, fdim, fdir, 0, 1.0, SHAPE_CUBE, BLACK, item_flags);
+							} // for fdir
+						} // for fdim
 					}
 					// add another level of shelf racks on this floor;
 					// stairs/elevators/escalators/pillars extend through both floors, so we don't need to recheck intersections, but we may need to increase their height
