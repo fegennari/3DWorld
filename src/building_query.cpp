@@ -1055,6 +1055,12 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 					player_in_int_elevator = elevator.interior_room;
 					had_coll = 1;
 				}
+				if (!elevator.is_moving && elevator.open_amt > 0.0) { // partially open, check if blocked by the player
+					cube_t doors(*c); // copy zvals
+					doors.d[dim][!dir] = c->d[dim][dir] + (dir ? -1.0f : 1.0f)*elevator.get_wall_thickness(); // extend out
+					set_wall_width(doors, c->get_center_dim(!dim), 0.1*c->get_width(), !dim); // narrow to only trigger when the player is between the doors
+					if (sphere_cube_intersect(pos, xy_radius, doors)) {interior->elevators[c->room_id].hold_doors = 1;} // Note: can't use elevator due to const
+				}
 				continue;
 			}
 			if ((type == TYPE_STAIR || (on_stairs && type != TYPE_RAILING)) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
