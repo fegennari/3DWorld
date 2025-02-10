@@ -132,6 +132,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	vector<float> beam_pos; // in short dim; needed for hanging catwalks
 	vect_cube_t const &nested_rooms(interior->factory_info->sub_rooms);
 	float const shift_vals[6] = {-0.1, 0.2, -0.3, 0.4, -0.5, 0.6}; // cumulative version of {-0.1, 0.1, -0.2, 0.2, -0.3, 0.3}; not enough shift to overlap a window
+	unsigned support_count(0);
 
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		bool const short_dim(bool(dim) == beam_dim);
@@ -164,6 +165,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 				if (n == num_windows) {skip_faces |= ~get_face_mask(!dim, 1);}
 				objs.emplace_back(support, TYPE_IBEAM, room_id, dim, 1, 0, light_amt, SHAPE_CUBE, WHITE, skip_faces); // vertical
 				if ((bool)dim == edim) {supports.push_back(support);} // currently only need to track in one dim for catwalk + ladder placement
+				bool was_clipped(0);
 
 				for (cube_t const &r : nested_rooms) { // clip in Z if intersects a room
 					if (!r.intersects(support)) continue;
@@ -174,8 +176,24 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 					sub.expand_by(0.5*wall_thick);
 					subtract_cube_from_cube(bot, sub, support_parts, 1); // clear_out=1
 					for (cube_t const &c : support_parts) {objs.emplace_back(c, TYPE_IBEAM, room_id, dim, 1, RO_FLAG_ADJ_TOP, light_amt, SHAPE_CUBE, WHITE, skip_faces);}
+					was_clipped = 1;
 					break;
 				} // for r
+				if (!was_clipped && (support_count % 4) == 0) { // add a roof drain pipe every 4th support, if unclipped
+					bool const side(centerline < room.get_center_dim(!dim)); // side of beam to place the pipe; closer to building center
+					float const pipe_radius(0.6*support_hwidth);
+					point pipe_center(0.0, 0.0, zval);
+					pipe_center[ dim] = wall_pos + (dir ? -1.0 : 1.0)*pipe_radius; // against the wall
+					pipe_center[!dim] = support.d[!dim][side] + (side ? 1.0 : -1.0)*1.25*pipe_radius;
+					cube_t pipe(pipe_center);
+					pipe.expand_by_xy(pipe_radius);
+					pipe.z2() = ceil_zval; // all the way up to the ceiling (beams_z1?)
+
+					if (!has_bcube_int(pipe, nested_rooms) && !cube_int_ext_door(pipe) && !interior->is_blocked_by_stairs_or_elevator(pipe)) {
+						objs.emplace_back(pipe, TYPE_PIPE, room_id, 0, 1, RO_FLAG_NOCOLL, light_amt, SHAPE_CYLIN, DK_BROWN, skip_faces); // vertical
+					}
+				}
+				++support_count;
 			} // for n
 		} // for dir
 		// add horizontal beams in the roof
