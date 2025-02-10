@@ -1133,6 +1133,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			}
 			if (type == TYPE_CATWALK) {
 				if (!sphere_cube_intersect_xy(pos, xy_radius, *c)) continue;
+				if (obj_z - radius > c->z2()) continue; // above the catwalk
 				cube_t cubes[5];
 				get_catwalk_cubes(*c, cubes);
 				cube_t const &bot(cubes[0]);
