@@ -282,7 +282,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		} // while
 		if (add_catwalk) {
 			// determine catwalk placement
-			float const ladder_depth(0.1*window_vspace), end_pad(0.1*window_vspace), end_pad_ladder(clearance - ladder_depth - support_width);
+			float const ladder_depth(0.1*window_vspace), end_pad(clearance - ladder_depth - support_width);
 			cube_t catwalk(place_area_upper); // set the length
 			catwalk.z1() = room   .z2() - window_vspace + fc_thick - support_width; // would be upper floor zval - support_width
 			catwalk.z2() = catwalk.z1() + catwalk_height;
@@ -296,8 +296,19 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			ladder.d[edim][ edir] = wall_pos + edir_sign*ladder_depth; // set depth
 			add_ladder_with_blocker(ladder, room_id, edim, edir, light_amt, clearance, objs);
 			objs.back().expand_in_dim(!edim, (catwalk_hwidth - ladder_hwidth)); // expand blocker to the width of the ladder; required to avoid nearby pipes, etc.
-			catwalk.d[edim][!edir] += edir_sign*end_pad_ladder; // need more clearance
-			catwalk.d[edim][ edir] -= edir_sign*end_pad;
+			// try to add a ladder on the other end; it may be on top of a sub-room
+			cube_t ladder2(ladder);
+			ladder2.translate_dim(edim, edir_sign*(room_sz[edim] - ladder_depth - 2.0*trim_thickness)); // translate to the other wall
+			bool add_sec_ladder(1);
+
+			for (cube_t const &r : nested_rooms) {
+				if (r.contains_cube_xy(ladder2)) {ladder2.z1()   = r.z2() + fc_thick; break;} // ladd starts on the roof of this room
+				if (r.intersects_xy   (ladder2)) {add_sec_ladder = 0; break;} // skip if partially overlapping
+			}
+			if (add_sec_ladder && has_bcube_int(ladder2, supports) || cube_int_ext_door(ladder2) || interior->is_blocked_by_stairs_or_elevator(ladder2)) {add_sec_ladder = 0;}
+			if (add_sec_ladder) {add_ladder_with_blocker(ladder2, room_id, edim, !edir, light_amt, clearance, objs);}
+			// create catwalk
+			catwalk.expand_in_dim(edim, -end_pad); // shrink
 			unsigned const flags(RO_FLAG_IN_FACTORY | RO_FLAG_HANGING);
 			room_object_t catwalk_obj(catwalk, TYPE_CATWALK, room_id, edim, rgen.rand_bool(), flags, light_amt); // random mesh texture
 			// add bars to hang the catwalk from beams
@@ -345,7 +356,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 				add_hanging_ladder(ladder, room_id, !edim, ldir, light_amt, clearance, catwalk.z1(), objs);
 				break; // success/done
 			} // for n
-			catwalk_obj.flags |= (edir ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT); // add end bars to non-ladder side
+			if (!add_sec_ladder) {catwalk_obj.flags |= (edir ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT);} // add end bars to non-ladder side unless there's a second ladder
 			objs.push_back(catwalk_obj);
 			// TODO: connect with stairs along a wall?
 		}
