@@ -466,8 +466,22 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	cube_t duct_bounds(room);
 	duct_bounds.expand_by_xy(-(support_width - 0.5*wall_thick));
 	bool const cylin_ducts(rgen.rand_bool());
+	unsigned const ducts_start(objs.size());
 	add_ceiling_ducts(duct_bounds, ducts_z2, room_id, edim, 2, light_amt, cylin_ducts, 0, 0, rgen); // draw ends and top
-	
+	unsigned const ducts_end(objs.size());
+
+	// add vertical section of duct up to the ceiling; maybe should add HVAC unit along the vent somewhere?
+	for (unsigned i = ducts_start; i < ducts_end; ++i) {
+		room_object_t const &obj(objs[i]);
+		if (obj.type != TYPE_DUCT || obj.dim != edim) continue; // not the long duct
+		// if there are an odd number of vertical supports, offset to a random side to avoid intersecting the center support
+		float const hwidth(0.5*obj.dz()), center(obj.get_center_dim(edim) + (rgen.rand_bool() ? 1.0 : -1.0)*(support_hwidth + hwidth));
+		cube_t duct(obj);
+		set_cube_zvals(duct, obj.zc(), ceil_zval);
+		set_wall_width(duct, center, hwidth, edim);
+		unsigned const duct_flags(RO_FLAG_IN_MALL | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI);
+		objs.emplace_back(duct, TYPE_DUCT, room_id, 0, 1, duct_flags, light_amt, obj.shape); // vertical, same shape
+	} // for i
 	// add boxes and crates in piles
 	unsigned const num_piles(4 + (rgen.rand() % 5)); // 4-8
 	vect_cube_t exclude; // empty
