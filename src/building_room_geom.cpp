@@ -5691,6 +5691,18 @@ void building_room_geom_t::add_chem_tank(room_object_t const &c) {
 	mat.add_vcylin_to_verts(mid,  color, 0, 0); // draw sides only
 	mat.add_sphere_to_verts(bot,  color, 0,  plus_z); // bot hemisphere
 	mat.add_sphere_to_verts(top,  color, 0, -plus_z); // top hemisphere
+	// add pipe to floor
+	unsigned const pipe_ndiv(get_rgeom_sphere_ndiv(1)); // low_detail=1
+	rgeom_mat_t &pipe_mat(get_metal_material(1, 0, 1, 0, COPPER_C)); // small=1
+	colorRGBA const pipe_color(apply_light_color(c, COPPER_C));
+	float const pipe_radius(0.04*radius);
+	point entry_pos(c.get_cube_center());
+	entry_pos.z = c.z1() + 0.6*height;
+	point bend(entry_pos);
+	bend[c.dim] += (c.dir ? 1.0 : -1.0)*1.1*radius; // move outward
+	point bot_pos(bend);
+	bot_pos.z = c.z1();
+	add_pipe_with_bend(pipe_mat, pipe_color, bot_pos, entry_pos, bend, pipe_ndiv, pipe_radius, 0); // draw_ends=0
 }
 
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars,

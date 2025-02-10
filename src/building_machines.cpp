@@ -11,6 +11,7 @@ int get_ac_unit_tid   (unsigned ix);
 int get_metal_texture (unsigned id);
 tid_nm_pair_t get_metal_plate_tex(float tscale, bool shadowed);
 colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c);
+float get_merged_pipe_radius(float r1, float r2, float exponent);
 
 
 colorRGBA choose_pipe_color(rand_gen_t &rgen) {
@@ -567,15 +568,20 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 	
 	if (1) { // add a 2D grid of machines to the center of the place area
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // maybe doesn't matter?
-		float const height(max_height*rgen.rand_uniform(0.6, 0.8)), aisle_spacing(1.25*doorway_width);
+		float const height(max_height*rgen.rand_uniform(0.6, 0.8)), tank_height(0.75*height), aisle_spacing(1.25*doorway_width);
 		vector2d const machine_sz(max_place_sz*vector2d(rgen.rand_uniform(0.8, 1.0), rgen.rand_uniform(0.8, 1.0)));
+		float const tank_radius(0.5*machine_sz.get_min_val());
 		unsigned const item_flags(rgen.rand()), rand_seed(rgen.rand());
 		cube_t center_area(place_area);
 		center_area.expand_by_xy(-(max_place_sz + 0.5*doorway_width)); // space for machines along the wall
 		vector2d const center_sz(center_area.get_size_xy());
 		bool const tank_dim(rgen.rand_bool()), tank_dir(rgen.rand_bool());
+		colorRGBA const pipe_color(COPPER_C), fitting_color(BRASS_C);
 		vector2d spacing;
 		unsigned num_xy[2]={};
+		vector<point> tank_conn_pts;
+		float merged_pipe_radius(0.0);
+		cube_t tank_conn_pipe;
 
 		for (unsigned d = 0; d < 2; ++d) {
 			num_xy [d] = center_sz[d]/(machine_sz[d] + aisle_spacing);
@@ -586,13 +592,25 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 				bool const is_tank((tank_dim ? ny : nx) == (tank_dir ? num_xy[tank_dim]-1 : 0));
 				point const center((center_area.x1() + (nx + 0.5)*spacing.x), (center_area.y1() + (ny + 0.5)*spacing.y), zval);
 				cube_t c(center);
-				if (is_tank) {c.expand_by_xy(0.4*machine_sz.get_min_val());} // tank is square and smaller
+				c.z2() += height;
+				if (is_tank) {c.expand_by_xy(tank_radius);} // tank is square
 				else         {c.expand_by_xy(0.5*machine_sz);}
-				c.z2() += (is_tank ? 0.75 : 1.0)*height;
 				if (c.intersects(avoid) || overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // inc_open_doors=1
 
-				if (is_tank) { // make it a chemical tank
-					objs.emplace_back(c, TYPE_CHEM_TANK, room_id, dim, dir, RO_FLAG_IN_FACTORY, tot_light_amt, SHAPE_CYLIN, WHITE);
+				if (is_tank) { // make it a chemical tank; the tank itself is smaller to make room for pipes
+					cube_t tank(c);
+					tank.z2() = zval + tank_height;
+					tank.expand_by_xy(-0.1*tank_radius);
+					objs.emplace_back(tank, TYPE_CHEM_TANK, room_id, dim, dir, RO_FLAG_IN_FACTORY, tot_light_amt, SHAPE_CYLIN, WHITE);
+					// add a pipe to the top; the tank itself has a pipe going down to the floor
+					float const pipe_radius(0.04*tank_radius);
+					cube_t pipe(center);
+					set_cube_zvals(pipe, (tank.z2() - pipe_radius), (tank.z2() + 0.1*height - pipe_radius));
+					pipe.expand_by_xy(pipe_radius);
+					objs.emplace_back(pipe, TYPE_PIPE, room_id, 0, 1, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, pipe_color); // vertical
+					tank_conn_pipe.assign_or_union_with_cube(pipe);
+					merged_pipe_radius = get_merged_pipe_radius(merged_pipe_radius, pipe_radius, 3.0);
+					tank_conn_pts.emplace_back(center.x, center.y, pipe.z2());
 				}
 				else { // make it a machine
 					objs.emplace_back(c, TYPE_MACHINE, room_id, dim, dir, RO_FLAG_IN_FACTORY, tot_light_amt, SHAPE_CUBE, LT_GRAY, item_flags);
@@ -600,6 +618,24 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 				}
 			} // for nx
 		} // for ny
+		if (merged_pipe_radius > 0.0) { // create horizontal pipe connecting tanks
+			// what about the single pipe case?
+			tank_conn_pipe.z1() = tank_conn_pipe.z2() - 2.0*merged_pipe_radius;
+			set_wall_width(tank_conn_pipe, tank_conn_pipe.get_center_dim(tank_dim), merged_pipe_radius, tank_dim);
+			objs.emplace_back(tank_conn_pipe, TYPE_PIPE, room_id, !tank_dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, pipe_color); // horizontal
+			// add pipe fittings
+			unsigned const fittings_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI);
+			float const fitting_exp(0.25*merged_pipe_radius), fitting_hlen(1.2*merged_pipe_radius);
+
+			for (point const &pos : tank_conn_pts) {
+				cube_t fitting(tank_conn_pipe);
+				fitting.expand_in_dim(tank_dim, fitting_exp);
+				fitting.expand_in_z(fitting_exp);
+				set_wall_width(fitting, pos[!tank_dim], fitting_hlen, !tank_dim); // Note: extends off the ends of the pipe
+				objs.emplace_back(fitting, TYPE_PIPE, room_id, !tank_dim, 0, fittings_flags, tot_light_amt, SHAPE_CYLIN, fitting_color); // horizontal
+			} // for pos
+			// TODO: add a bend and another segment to the ceiling, floor, or wall
+		}
 	}
 	// add machines along the walls
 	unsigned const num_machines((rgen.rand() % 11) + 10); // 10-20
