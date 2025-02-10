@@ -189,7 +189,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 					pipe.z2() = ceil_zval; // all the way up to the ceiling (beams_z1?)
 
 					if (!has_bcube_int(pipe, nested_rooms) && !cube_int_ext_door(pipe) && !interior->is_blocked_by_stairs_or_elevator(pipe)) {
-						objs.emplace_back(pipe, TYPE_PIPE, room_id, 0, 1, RO_FLAG_NOCOLL, light_amt, SHAPE_CYLIN, DK_BROWN, skip_faces); // vertical
+						objs.emplace_back(pipe, TYPE_METAL_BAR, room_id, 0, 1, RO_FLAG_NOCOLL, light_amt, SHAPE_CYLIN, DK_BROWN); // vertical
 					}
 				}
 				++support_count;

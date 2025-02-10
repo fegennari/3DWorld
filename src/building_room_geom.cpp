@@ -5633,8 +5633,17 @@ void building_room_geom_t::add_fishtank(room_object_t const &c) { // unshadowed,
 }
 
 void building_room_geom_t::add_metal_bar(room_object_t const &c) {
+	colorRGBA const color(apply_light_color(c));
 	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small; should there be an option to make it scratched?
-	metal_mat.add_cube_to_verts_untextured(c, apply_light_color(c), c.item_flags); // skip_faces is stored in item_flags
+
+	if (c.shape == SHAPE_CUBE) {
+		metal_mat.add_cube_to_verts_untextured(c, color, c.item_flags); // skip_faces is stored in item_flags
+	}
+	else if (c.shape == SHAPE_CYLIN) {
+		unsigned const dim(c.dir ? 2 : unsigned(c.dim)); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
+		metal_mat.add_ortho_cylin_to_verts(c, color, dim, 0, 0); // skip top and bottom
+	}
+	else {assert(0);}
 }
 
 void building_room_geom_t::add_ibeam(room_object_t const &c) {
