@@ -573,6 +573,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 		cube_t center_area(place_area);
 		center_area.expand_by_xy(-(max_place_sz + 0.5*doorway_width)); // space for machines along the wall
 		vector2d const center_sz(center_area.get_size_xy());
+		bool const tank_dim(rgen.rand_bool()), tank_dir(rgen.rand_bool());
 		vector2d spacing;
 		unsigned num_xy[2]={};
 
@@ -582,13 +583,21 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 		}
 		for (unsigned ny = 0; ny < num_xy[1]; ++ny) {
 			for (unsigned nx = 0; nx < num_xy[0]; ++nx) {
+				bool const is_tank((tank_dim ? ny : nx) == (tank_dir ? num_xy[tank_dim]-1 : 0));
 				point const center((center_area.x1() + (nx + 0.5)*spacing.x), (center_area.y1() + (ny + 0.5)*spacing.y), zval);
 				cube_t c(center);
-				c.expand_by_xy(0.5*machine_sz);
-				c.z2() += height;
+				if (is_tank) {c.expand_by_xy(0.4*machine_sz.get_min_val());} // tank is square and smaller
+				else         {c.expand_by_xy(0.5*machine_sz);}
+				c.z2() += (is_tank ? 0.75 : 1.0)*height;
 				if (c.intersects(avoid) || overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // inc_open_doors=1
-				objs.emplace_back(c, TYPE_MACHINE, room_id, dim, dir, RO_FLAG_IN_FACTORY, tot_light_amt, SHAPE_CUBE, LT_GRAY, item_flags);
-				objs.back().item_flags = rand_seed;
+
+				if (is_tank) { // make it a chemical tank
+					objs.emplace_back(c, TYPE_CHEM_TANK, room_id, dim, dir, RO_FLAG_IN_FACTORY, tot_light_amt, SHAPE_CYLIN, WHITE);
+				}
+				else { // make it a machine
+					objs.emplace_back(c, TYPE_MACHINE, room_id, dim, dir, RO_FLAG_IN_FACTORY, tot_light_amt, SHAPE_CUBE, LT_GRAY, item_flags);
+					objs.back().item_flags = rand_seed;
+				}
 			} // for nx
 		} // for ny
 	}
