@@ -244,7 +244,7 @@ void add_colored_cubes(cube_t const *const cubes, unsigned num_cubes, colorRGBA 
 void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ext_bcube) const {
 	if (!interior) return; // nothing to do
 	building_mat_t const &mat(get_material());
-	colorRGBA const wall_color(wall_color.modulate_with(mat.wall_tex.get_avg_color())), extb_wall_color(texture_color(get_concrete_tid()));
+	colorRGBA const concrete_color(texture_color(get_concrete_tid())), wall_color(wall_color.modulate_with(mat.wall_tex.get_avg_color()));
 	float const floor_spacing(get_window_vspace()), z1(ext_bcube.z1()), z2(ext_bcube.z2());
 	float const stairs_z1(z1 - floor_spacing), stairs_z2(z2 + floor_spacing); // stairs extend an extra floor up and down to block rays in stairwells
 	
@@ -252,11 +252,11 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 		for (auto i = interior->walls[d].begin(); i != interior->walls[d].end(); ++i) {
 			if (!i->intersects(ext_bcube)) continue;
 			bool const in_basement(i->z1() < ground_floor_z1), in_ext_basement(in_basement && i >= (interior->walls[d].begin() + interior->extb_walls_start[d]));
-			colorRGBA color(in_basement ? WHITE : wall_color); // basement walls are always white
+			colorRGBA color(in_basement ? WHITE : (is_factory() ? concrete_color : wall_color)); // basement walls are always white
 
 			if (!is_house && in_ext_basement) { // office building extended basement, backrooms, or mall
 				if (is_inside_mall_stores(i->get_cube_center())) {color = interior->mall_info->mall_wall_color;}
-				else {color = extb_wall_color;} // extended basement
+				else {color = concrete_color;} // extended basement
 			}
 			cc.emplace_back(*i, color);
 		} // for i

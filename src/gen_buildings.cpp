@@ -1991,6 +1991,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 				if (is_inside_mall_stores(i->get_cube_center())) {tex = mat.wall_tex; color = mall_wall_color;}
 				else {tex = get_concrete_texture();} // extended basement
 			}
+			else if (is_factory() && i->z1() >= ground_floor_z1) {tex = get_concrete_texture();} // factory interior walls
 			else {tex = mat.wall_tex;}
 			bdraw.add_section(*this, 0, *i, tex, color, dim_mask, 1, 0, 1, 0); // no AO; X and/or Y dims only, skip bottom, only draw top if under skylight
 		} // for i

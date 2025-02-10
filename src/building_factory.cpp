@@ -44,7 +44,6 @@ void building_t::create_factory_floorplan(unsigned part_id, float window_hspacin
 	bool const larger_room(sub_room[0].get_sz_dim(!dim) < sub_room[1].get_sz_dim(!dim));
 
 	for (unsigned d = 0; d < 2; ++d) { // add walls, doors, and ceilings/floors
-		// TODO: concrete interior walls?
 		bool const is_larger(bool(d) == larger_room), is_bathroom(!is_larger);
 		cube_t const &r(sub_room[d]);
 		cube_t wall_z_range(r);
