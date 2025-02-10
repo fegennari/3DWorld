@@ -174,7 +174,7 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 						for (cube_t const &c : obj_parts) {objs.emplace_back(c, TYPE_RAILING, room_id, !dim, d, railing_flags, 1.0, SHAPE_CUBE, railing_color);}
 					}
 					// add support beams connected to pillars
-					float const beam_hwidth(0.36*pillar_width), beam_thickness(0.3*pillar_width);
+					float const beam_hwidth(0.36*pillar_width), beam_thickness(0.3*pillar_width), beam_frame_depth(0.25*beam_hwidth);
 					float const beam_z2(upper_floor.z1() + 0.1*beam_thickness), beam_z1(beam_z2 - beam_thickness); // slightly overlapping with bottom of upper floor
 					float const metal_frame_z2(upper_floor.z2() + 0.1*beam_thickness);
 					vector<float> pillar_xy[2];
@@ -215,16 +215,16 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 								if ((bool)fdim == dim && (bool)fdir == !dir) continue; // skip railing side
 								cube_t beam(upper_floor);
 								set_cube_zvals(beam, beam_z1, metal_frame_z2); // below the floor spanning to slightly above
-								beam.d[fdim][!fdir] = room.d[fdim][fdir] + (fdir ? -1.0 : 1.0)*0.25*beam_hwidth;
+								beam.d[fdim][!fdir] = room.d[fdim][fdir] + (fdir ? -1.0 : 1.0)*beam_frame_depth;
 								unsigned const item_flags(get_skip_mask_for_xy(!fdim) | ~get_face_mask(fdim, fdir)); // skip ends and side facing wall
-								objs.emplace_back(beam, TYPE_METAL_BAR, room_id, fdim, fdir, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, BLACK, item_flags);
+								objs.emplace_back(beam, TYPE_METAL_BAR, room_id, fdim, !fdir, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, BLACK, item_flags);
 							} // for fdir
 						} // for fdim
 					}
 					if (1) { // add frame around escalator
 						cube_t beam(upper_conn);
 						set_cube_zvals(beam, beam_z1, metal_frame_z2); // below the floor spanning to slightly above
-						beam.expand_by_xy(0.25*beam_hwidth);
+						beam.expand_by_xy(beam_frame_depth);
 						beam.d[dim][!dir] = upper_floor.d[dim][!dir]; // clip to upper floor edge
 						unsigned const item_flags(~get_face_mask(dim, !dir)); // skip side facing railing
 						objs.emplace_back(beam, TYPE_METAL_BAR, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, BLACK, item_flags);
@@ -262,14 +262,20 @@ void building_t::add_retail_room_objs(rand_gen_t rgen, room_t const &room, float
 						if (upper_conn.intersects(bc_pad))         continue; // too close to escalator
 						unsigned const floor_ix(round_fp((floor_z1 - e.z1())/floor_spacing));
 						e.skip_floors_mask &= ~(1ULL << floor_ix); // unset this floor
-						// add beam at the bottom of the elevator entrance
-						cube_t beam(upper_floor);
-						set_cube_zvals(beam, beam_z1, metal_frame_z2); // below the floor spanning to slightly above
-						for (unsigned d = 0; d < 2; ++d) {beam.d[!e.dim][d] = e.d[!e.dim][d];} // flush with sides of elevator
-						beam.d[e.dim][!e.dir] = e.d[e.dim][e.dir]; // flush with elevator entrance side
-						beam.d[e.dim][ e.dir] = e.d[e.dim][e.dir] + (e.dir ? 1.0 : -1.0)*beam_hwidth; // extend outward
-						objs.emplace_back(beam, TYPE_METAL_BAR, room_id, !e.dim, e.dir, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, BLACK, 0); // item_flags=0: draw all faces
-						// what about metal bars around the other sides of the elevator?
+
+						// add beams around the edges of the elevator
+						for (unsigned fdim = 0; fdim < 2; ++fdim) {
+							for (unsigned fdir = 0; fdir < 2; ++fdir) {
+								float const edge(e.d[fdim][fdir]);
+								cube_t beam(e);
+								set_cube_zvals(beam, beam_z1, metal_frame_z2); // below the floor spanning to slightly above
+								beam.d[fdim][!fdir] = edge - (fdir ? 1.0 : -1.0)*0.4*wall_thickness; // interior - cover most of the door gap at the floor
+								beam.d[fdim][ fdir] = edge + (fdir ? 1.0 : -1.0)*beam_frame_depth; // exterior
+								beam.expand_in_dim(!fdim, beam_frame_depth); // cover the corners
+								unsigned const item_flags(get_skip_mask_for_xy(!fdim) | ~get_face_mask(fdim, !fdir)); // skip ends and side facing elevator
+								objs.emplace_back(beam, TYPE_METAL_BAR, room_id, fdim, fdir, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, BLACK, item_flags);
+							} // for fdir
+						} // for fdim
 					} // for e
 					break; // done
 				} // for dir
