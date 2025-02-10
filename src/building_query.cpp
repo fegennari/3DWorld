@@ -918,6 +918,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 		// check Z collision with floors; no need to check ceilings; this will set pos.z correctly so that we can set skip_z=0 in later tests
 		float const floor_test_zval(obj_z + floor_thickness); // move up by floor thickness to better handle steep stairs
 		float closest_floor_zval(pos.z - radius); // start at the player's feet
+		point const p_test(pos.x, pos.y, obj_z);
 
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // Note: includes attic and basement floors
 			if (!i->contains_pt_xy(pos)) continue; // sphere not in this floor
@@ -927,14 +928,13 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 		if (interior->room_geom) { // check glass floors
 			for (cube_t const &f : interior->room_geom->glass_floors) {
 				if (!f.contains_pt_xy(pos)) continue; // sphere not on this floor
-				if (point_in_elevator(pos) || point_in_stairwell(pos)) continue; // elevators and stairwells cut out glass floors, so ignore them in this case
+				if (point_in_elevator(p_test) || point_in_stairwell(p_test)) continue; // elevators and stairwells cut out glass floors, so ignore them in this case
 				float const z(f.z2());
 				if (z <= floor_test_zval && z > closest_floor_zval) {closest_floor_zval = z; had_coll = 1;} // move up
 			}
 		}
 		// check tunnels
 		if (!interior->tunnels.empty() && point_in_extended_basement_not_basement(pos)) {
-			point const p_test(pos.x, pos.y, obj_z);
 			bool found(0);
 
 			// first pass checks bcube, second pass checks bcube_ext (which may overlap other tunnels)
