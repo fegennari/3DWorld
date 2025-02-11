@@ -1813,13 +1813,22 @@ struct building_mall_info_t {
 };
 
 struct bldg_factory_info_t {
+	struct smoke_source_t {
+		point pos;
+		float radius=0.0, time=0.0, next_smoke_time=0.0;
+		int pid;
+		smoke_source_t(point const &pos_, float radius_, int pid_=-1) : pos(pos_), radius(radius_), pid(pid_) {}
+	};
 	bool entrance_dim, entrance_dir;
 	float entrance_pos;
 	cube_t floor_space, entrance_area;
+	rand_gen_t rgen; // used for generating smoke
 	vect_cube_t sub_rooms;
+	vector<smoke_source_t> smoke_emitters;
 
 	bldg_factory_info_t(bool dim, bool dir, float epos, cube_t const &fs, cube_t const &ee) :
 		entrance_dim(dim), entrance_dir(dir), entrance_pos(epos), floor_space(fs), entrance_area(ee) {}
+	void next_frame(particle_manager_t &particle_manager);
 };
 
 struct building_interior_t {
@@ -2241,6 +2250,7 @@ struct building_t : public building_geom_t {
 	bool glass_floor_visible(vector3d const &xlate, bool from_outside_building=0) const;
 	bool point_over_glass_floor(point const &pos, bool inc_escalator=0) const;
 	void draw_glass_surfaces(vector3d const &xlate) const;
+	void draw_factory_smoke (vector3d const &xlate) const;
 	bool has_cars_to_draw(bool player_in_building) const;
 	void draw_cars_in_building(shader_t &s, vector3d const &xlate, bool player_in_building, bool shadow_only) const;
 	bool check_for_water_splash(point const &pos_bs, float size=1.0, bool full_room_height=0, bool draw_splash=0, bool alert_zombies=1) const;

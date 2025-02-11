@@ -5,7 +5,9 @@
 #include "buildings.h"
 #include "city_model.h"
 
-extern float CAMERA_RADIUS;
+float const SMOKE_VEL_FACTORY = 0.0008;
+
+extern float CAMERA_RADIUS, fticks;
 extern object_model_loader_t building_obj_model_loader;
 
 
@@ -366,7 +368,16 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	xfmr_area.d[edim][edir] -= edir_sign*1.2*doorway_width; // don't place too close to sub-rooms or entrance
 	place_model_along_wall(OBJ_MODEL_SUBSTATION, TYPE_XFORMER, room, 0.6, rgen, tzval, room_id, light_amt, xfmr_area, objs_start, 0.0, 4, 0, WHITE, 0, 0, 0, 1); // sideways
 	// add machines
+	unsigned const machines_start(objs.size());
 	add_machines_to_factory(rgen, room, place_area, zval, room_id, light_amt, objs_start);
+
+	for (auto i = objs.begin()+machines_start; i != objs.end(); ++i) { // add some smoke emitters
+		if (i->type != TYPE_MACHINE)  continue;
+		if (rgen.rand_float() > 0.15) continue; // 15% chance
+		float const smoke_radius(0.12*(i->dx() + i->dy()));
+		point const pos(i->xc(), i->yc(), (i->z1() + 0.8*i->dz())); // smoke starts near machine top and rises up to the ceiling
+		interior->factory_info->smoke_emitters.emplace_back(pos, smoke_radius, (i - objs.begin())); // store machine obj id
+	}
 	// add fire extinguisher
 	add_fire_ext_along_wall(entry, zval, room_id, light_amt, !edim, rgen.rand_bool(), rgen); // choose a random side
 	
@@ -568,5 +579,14 @@ void building_t::add_factory_office_objs(rand_gen_t &rgen, room_t const &room, f
 			if (ds.is_connected_to_room(room_id)) {exclude.push_back(ds.get_open_door_bcube_for_room(room));}
 		}
 		add_boxes_and_crates(rgen, room, zval, room_id, tot_light_amt, objs_start, 3, 0, room_bounds, crate_bounds, exclude); // 4-6; is_basement=0
+	}
+}
+
+void bldg_factory_info_t::next_frame(particle_manager_t &particle_manager) {
+	for (smoke_source_t &s : smoke_emitters) { // generate smoke
+		s.time += fticks;
+		if (s.time < s.next_smoke_time) continue;
+		particle_manager.add_particle(s.pos, SMOKE_VEL_FACTORY*plus_z, GRAY, s.radius, PART_EFFECT_SMOKE, s.pid);
+		s.next_smoke_time = s.time + rgen.rand_uniform(0.5, 0.8)*TICKS_PER_SECOND;
 	}
 }

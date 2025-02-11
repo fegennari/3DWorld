@@ -2184,9 +2184,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	// alpha blended, should be drawn near last
 	decal_manager.draw_building_interior_decals(s, player_in_building_or_doorway, shadow_only); // draw decals in this building
 	
-	if (player_in_building && !shadow_only) {
-		particle_manager.draw(s, xlate);
-		fire_manager    .draw(s, xlate);
+	if (player_in_building && !shadow_only) { // ideally should be drawn after all buildings, but the shaders won't be setup correctly
+		if (!building.is_factory()) {particle_manager.draw(s, xlate);} // factory smoke is drawn later
+		fire_manager.draw(s, xlate);
 	}
 	if (!shadow_only && !mats_alpha.empty()) { // draw last; not shadow casters; for shower glass, etc.
 		enable_blend();
@@ -2281,6 +2281,13 @@ void building_t::draw_glass_surfaces(vector3d const &xlate) const {
 	s.end_shader();
 	if (interior->room_geom->glass_floor_split) {glDisable(GL_CULL_FACE);}
 	disable_blend();
+}
+
+void building_t::draw_factory_smoke(vector3d const &xlate) const {
+	if (!has_room_geom() || !is_factory()) return;
+	shader_t s;
+	s.begin_simple_textured_shader();
+	interior->room_geom->particle_manager.draw(s, xlate);
 }
 
 void draw_billboards(quad_batch_draw &qbd, int tid, bool no_depth_write=1, bool do_blend=1) {

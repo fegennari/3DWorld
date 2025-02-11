@@ -4120,11 +4120,18 @@ public:
 
 	static void draw_player_building_transparent(int reflection_pass, vector3d const &xlate) {
 		// draw glass materials such as floors for the player's building
-		if (reflection_pass || !draw_building_interiors) return;
-		if (player_building == nullptr || !player_building->glass_floor_visible(xlate)) return;
-		push_scene_xlate(xlate);
-		player_building->draw_glass_surfaces(xlate);
-		pop_scene_xlate();
+		if (reflection_pass || !draw_building_interiors || player_building == nullptr) return;
+
+		if (player_building->glass_floor_visible(xlate)) {
+			push_scene_xlate(xlate);
+			player_building->draw_glass_surfaces(xlate);
+			pop_scene_xlate();
+		}
+		if (player_building->is_factory()) { // draw smoke in factory
+			push_scene_xlate(xlate);
+			player_building->draw_factory_smoke(xlate);
+			pop_scene_xlate();
+		}
 	}
 
 	void draw_building_lights(vector3d const &xlate) { // add night time lights to buildings; non-const because it modifies building_lights

@@ -1704,6 +1704,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 	doors_next_frame(player_pos); // run for current and connected buildings
 	interior->room_geom->particle_manager.next_frame(*this);
 	interior->room_geom->fire_manager.next_frame(interior->room_geom->particle_manager);
+	if (is_factory()) {interior->factory_info->next_frame(interior->room_geom->particle_manager);}
 }
 
 // particle_manager_t
@@ -1855,8 +1856,7 @@ void fire_manager_t::next_frame(particle_manager_t &particle_manager) {
 		if (lifetime > 0.7) {f.radius = (1.0 - (lifetime - 0.7)/0.3)*f.max_radius;} // shink at end of life
 		// slow random drift? would need to check object collisions
 		if (f.time < f.next_smoke_time) continue;
-		float const radius(1.0*f.radius);
-		particle_manager.add_particle((f.pos + 1.1*radius*plus_z), SMOKE_VELOCITY*plus_z, GRAY, radius, PART_EFFECT_SMOKE); // generate smoke
+		particle_manager.add_particle((f.pos + 1.1*f.radius*plus_z), SMOKE_VELOCITY*plus_z, GRAY, f.radius, PART_EFFECT_SMOKE); // generate smoke
 		f.next_smoke_time = f.time + rgen.rand_uniform(0.25, 0.5)*TICKS_PER_SECOND;
 	} // for f
 	// remove dead fires
