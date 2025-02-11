@@ -1580,7 +1580,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 		last_player_pos = player_pos;
 		camera_rot      = get_inv_rot_pos(camera_rot); // rotate camera pos into building space; should we use camera_rot elsewhere below?
 		player_room_ix  = get_room_containing_camera(camera_rot);
-		if (player_in_elevator >= 3) {hum_amt = 0.2; hum_freq = 100.0;} // moving elevator sound
+		if (player_in_elevator >= 3) {hum_amt += 0.2; hum_freq = 100.0;} // moving elevator sound
 	}
 	// update dynamic objects; run for current and connected buildings
 	auto &objs(interior->room_geom->objs);
@@ -1645,13 +1645,13 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 			if (c->type == TYPE_CEIL_FAN) {
 				if (camera_rot.z < c->z2() && camera_rot.z > c->z1() - floor_spacing && ceiling_fan_is_on(*c, objs)) {
 					float const dist(p2p_dist(camera_rot, c->get_cube_center())), sound_dist(2.0*floor_spacing);
-					if (dist < sound_dist) {hum_amt = 0.15*(1.0 - dist/sound_dist); hum_freq = 90.0;}
+					if (dist < sound_dist) {hum_amt += 0.15*(1.0 - dist/sound_dist); hum_freq = 90.0;}
 				}
 			}
 			else if (c->type == TYPE_BRK_PANEL) {
 				if (c->is_open()) {
 					float const dist(p2p_dist(camera_rot, c->get_cube_center())), sound_dist(0.75*floor_spacing);
-					if (dist < sound_dist) {hum_amt = 0.2*(1.0 - dist/sound_dist); hum_freq = 60.0;}
+					if (dist < sound_dist) {hum_amt += 0.2*(1.0 - dist/sound_dist); hum_freq = 60.0;}
 				}
 			}
 			else if (c->type == TYPE_LIGHT && !c->is_powered()) {player_room_no_power = 1;}
@@ -1691,10 +1691,10 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 			unsigned const camera_floor(room.get_floor_containing_zval(camera_rot.z, get_window_vspace()));
 			unsigned const room_type(room.get_room_type(camera_floor));
 			assert(room_type < NUM_RTYPES);
-			if      (room_type == RTYPE_UTILITY ) {hum_amt = 0.10; hum_freq =  60.0;}
-			else if (room_type == RTYPE_SERVER  ) {hum_amt = 0.20; hum_freq = 120.0;}
-			else if (room_type == RTYPE_MACHINE ) {hum_amt = 0.10; hum_freq =  60.0;}
-			else if (room_type == RTYPE_FACTORY ) {hum_amt = 0.05; hum_freq =  60.0;} // only if by a machine?
+			if      (room_type == RTYPE_UTILITY ) {hum_amt += 0.10; hum_freq =  60.0;}
+			else if (room_type == RTYPE_SERVER  ) {hum_amt += 0.20; hum_freq = 120.0;}
+			else if (room_type == RTYPE_MACHINE ) {hum_amt += 0.10; hum_freq =  60.0;}
+			else if (room_type == RTYPE_FACTORY ) {hum_amt += 0.05; hum_freq =  60.0;} // only if by a machine?
 			//else if (room_type == RTYPE_SECURITY) {}
 			//else if (room_type == RTYPE_SWIM    ) {}
 			//else if (room_type == RTYPE_LAUNDRY ) {}
