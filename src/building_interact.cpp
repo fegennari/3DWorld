@@ -1691,9 +1691,10 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 			unsigned const camera_floor(room.get_floor_containing_zval(camera_rot.z, get_window_vspace()));
 			unsigned const room_type(room.get_room_type(camera_floor));
 			assert(room_type < NUM_RTYPES);
-			if      (room_type == RTYPE_UTILITY ) {hum_amt = 0.1; hum_freq =  60.0;}
-			else if (room_type == RTYPE_SERVER  ) {hum_amt = 0.2; hum_freq = 120.0;}
-			else if (room_type == RTYPE_MACHINE ) {hum_amt = 0.1; hum_freq =  60.0;}
+			if      (room_type == RTYPE_UTILITY ) {hum_amt = 0.10; hum_freq =  60.0;}
+			else if (room_type == RTYPE_SERVER  ) {hum_amt = 0.20; hum_freq = 120.0;}
+			else if (room_type == RTYPE_MACHINE ) {hum_amt = 0.10; hum_freq =  60.0;}
+			else if (room_type == RTYPE_FACTORY ) {hum_amt = 0.05; hum_freq =  60.0;} // only if by a machine?
 			//else if (room_type == RTYPE_SECURITY) {}
 			//else if (room_type == RTYPE_SWIM    ) {}
 			//else if (room_type == RTYPE_LAUNDRY ) {}
