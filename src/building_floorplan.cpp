@@ -2855,12 +2855,13 @@ void building_t::remove_intersecting_roof_cubes(cube_t const &c) {
 
 	for (unsigned i = 0; i < details.size(); ++i) { // remove any existing objects that overlap ecap
 		auto &obj(details[i]);
-		// only remove blocks, AC units, ducts, antennas, and water towers; may cause ducts to become disconnected from AC units
-		if (obj.type != ROOF_OBJ_BLOCK && obj.type != ROOF_OBJ_AC && obj.type != ROOF_OBJ_DUCT && obj.type != ROOF_OBJ_ANT && obj.type != ROOF_OBJ_WTOWER) continue;
+		uint8_t const type(obj.type);
+		// only remove blocks, AC units, ducts, antennas, water towers, and smoke stacks; may cause ducts to become disconnected from AC units
+		if (type != ROOF_OBJ_BLOCK && type != ROOF_OBJ_AC && type != ROOF_OBJ_DUCT && type != ROOF_OBJ_ANT && type != ROOF_OBJ_WTOWER && type != ROOF_OBJ_SMOKESTACK) continue;
 		if (!obj.intersects(c)) continue;
-		if (obj.type == ROOF_OBJ_AC) {ac_to_remove.push_back(obj);} // need to remove ducts connected to this AC unit
+		if (type == ROOF_OBJ_AC) {ac_to_remove.push_back(obj);} // need to remove ducts connected to this AC unit
 
-		if (obj.type == ROOF_OBJ_BLOCK) { // see if there's a door associated with this block
+		if (type == ROOF_OBJ_BLOCK) { // see if there's a door associated with this block
 			cube_t test_cube(obj);
 			test_cube.expand_by_xy(get_wall_thickness());
 

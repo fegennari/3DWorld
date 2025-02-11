@@ -1295,12 +1295,13 @@ public:
 		}
 	}
 
-	void add_vert_cylinder(point const &center, float z1, float z2, float radius, float tscale_x, float tscale_y, unsigned ndiv, colorRGBA const &color, vect_vnctcc_t &qverts) {
+	void add_vert_cylinder(point const &center, float z1, float z2, float radius, float tscale_x, float tscale_y,
+		unsigned ndiv, colorRGBA const &color, vect_vnctcc_t &qverts, float rscale1=1.0, float rscale2=1.0) {
 		float const ndiv_inv(1.0/ndiv);
 		color_wrapper const cw(color);
 		point const ce[2] = {point(center.x, center.y, z1), point(center.x, center.y, z2)};
 		vector3d v12;
-		vector_point_norm const &vpn(gen_cylinder_data(ce, radius, radius, ndiv, v12));
+		vector_point_norm const &vpn(gen_cylinder_data(ce, rscale1*radius, rscale2*radius, ndiv, v12));
 
 		for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color
 			for (unsigned j = 0; j < 2; ++j) {
@@ -1775,6 +1776,17 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		}
 		if (i->type == ROOF_OBJ_WTOWER) {
 			bdraw.add_water_tower(*this, *i);
+			continue;
+		}
+		if (i->type == ROOF_OBJ_SMOKESTACK) { // truncated cone
+			auto &qverts(bdraw.get_verts(mat.side_tex, 0));
+			float const radius(0.25*(i->dx() + i->dy()));
+			bdraw.add_vert_cylinder(i->get_cube_center(), i->z1(), i->z2(), radius, 1.0, 4.0, N_CYL_SIDES, side_color, qverts, 1.0, 0.7);
+			// add inner surface as an inverted cone
+			unsigned const qverts_start(qverts.size());
+			bdraw.add_vert_cylinder(i->get_cube_center(), i->z1(), i->z2(), radius, 1.0, 4.0, N_CYL_SIDES, side_color, qverts, 0.0, 0.7);
+			reverse(qverts.begin()+qverts_start, qverts.end());
+			for (auto i = qverts.begin()+qverts_start; i != qverts.end(); ++i) {i->invert_normal();}
 			continue;
 		}
 		bool const skip_bot(i->type != ROOF_OBJ_SCAP && i->type != ROOF_OBJ_SIGN && i->type != ROOF_OBJ_SIGN_CONN);

@@ -1683,7 +1683,7 @@ typedef vector<door_t> vect_door_t;
 
 // Note: some of these roof objects are actually on the ground next to houses
 enum {ROOF_OBJ_BLOCK=0, ROOF_OBJ_ANT, ROOF_OBJ_WALL, ROOF_OBJ_ECAP, ROOF_OBJ_AC, ROOF_OBJ_SCAP, ROOF_OBJ_SIGN, ROOF_OBJ_SIGN_CONN, ROOF_OBJ_WTOWER, ROOF_OBJ_DUCT,
-	DETAIL_OBJ_COLLIDER, DETAIL_OBJ_COLL_SHAD, DETAIL_OBJ_SHAD_ONLY};
+	ROOF_OBJ_SMOKESTACK, DETAIL_OBJ_COLLIDER, DETAIL_OBJ_COLL_SHAD, DETAIL_OBJ_SHAD_ONLY};
 enum {ROOF_TYPE_FLAT=0, ROOF_TYPE_SLOPE, ROOF_TYPE_PEAK, ROOF_TYPE_HIPPED, ROOF_TYPE_DOME, ROOF_TYPE_ONION, ROOF_TYPE_SHED};
 
 struct roof_obj_t : public cube_t {
@@ -2142,6 +2142,7 @@ struct building_t : public building_geom_t {
 	void place_roof_ac_units(unsigned num, float sz_scale, cube_t const &bounds, vect_cube_t const &avoid, rand_gen_t &rgen);
 	void add_roof_walls(cube_t const &c, float wall_width, bool overlap_corners, cube_t out[4]);
 	void gen_details(rand_gen_t &rgen, bool is_rectangle);
+	void add_factory_smokestack(rand_gen_t &rgen);
 	void maybe_add_skylight(rand_gen_t &rgen);
 	void add_company_sign(rand_gen_t &rgen);
 	cube_t get_helipad_bcube() const;

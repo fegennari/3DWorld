@@ -820,11 +820,22 @@ bool building_t::add_chimney(bool two_parts, bool stacked_parts, bool hipped_roo
 }
 
 void building_t::maybe_gen_chimney_smoke() const {
-	if (has_chimney != 2 || !has_int_fplace || !animate2 || !begin_motion) return; // only if there's an interior fireplace; activate with 'b' key
-	if (int(24534*bcube.x1()) & 3) return; // only 25% of houses have chimney smoke; use position as random seed
+	if (!animate2 || !begin_motion) return; // activate with 'b' key
+	cube_t chimney;
+
+	if (has_chimney == 2 && has_int_fplace) { // chimney with interior fireplace
+		if (int(24534*bcube.x1()) & 3) return; // only 25% of houses have chimney smoke; use position as random seed
+		chimney = get_chimney();
+	}
+	else if (is_factory()) { // look for smokestack
+		for (auto const &c : details) {
+			if (c.type == ROOF_OBJ_SMOKESTACK) {chimney = c; break;}
+		}
+	}
+	if (chimney.is_all_zeros()) return;
 	static rand_gen_t smoke_rgen;
 	if (smoke_rgen.rand_float() > 4.0f*fticks/TICKS_PER_SECOND) return; // randomly spawn every so often
-	gen_arb_smoke(cube_top_center(get_chimney()), GRAY, vector3d(0.0, 0.0, 0.75), 0.25*smoke_rgen.rand_uniform(0.015, 0.025),
+	gen_arb_smoke(cube_top_center(chimney), GRAY, vector3d(0.0, 0.0, 0.75), 0.25*smoke_rgen.rand_uniform(0.015, 0.025),
 		smoke_rgen.rand_uniform(0.5, 0.7), smoke_rgen.rand_uniform(0.5, 0.75), 0.0, NO_SOURCE, SMOKE, 1, 1.0, 1);
 }
 
@@ -2264,6 +2275,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		add_roof_walls(top, wall_width, 0, cubes); // overlap_corners=0
 		for (unsigned i = 0; i < 4; ++i) {details.emplace_back(cubes[i], (uint8_t)ROOF_OBJ_WALL);}
 	}
+	if (is_factory()) {add_factory_smokestack(rgen);}
 	for (auto i = details.begin(); i != details.end(); ++i) {assert(i->is_strictly_normalized()); max_eq(bcube.z2(), i->z2());} // extend bcube z2 to contain details
 	if (roof_type == ROOF_TYPE_FLAT) {gen_grayscale_detail_color(rgen, 0.2, 0.6);} // for antenna and roof
 }

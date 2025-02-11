@@ -582,6 +582,22 @@ void building_t::add_factory_office_objs(rand_gen_t &rgen, room_t const &room, f
 	}
 }
 
+void building_t::add_factory_smokestack(rand_gen_t &rgen) {
+	assert(is_factory());
+	assert(!parts.empty());
+	cube_t const &base(parts[0]);
+	float const ss_radius(rgen.rand_uniform(0.01, 0.02)*(base.dx() + base.dy()));
+
+	for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place smokestack
+		point const ss_center(gen_xy_pos_in_area(base, 2.5*ss_radius, rgen, base.z2()));
+		cube_t smokestack(ss_center);
+		smokestack.expand_by_xy(ss_radius);
+		smokestack.z2() += rgen.rand_uniform(0.75, 1.0)*base.dz(); // set height; should be above roof peak
+		if (!has_bcube_int(smokestack, details)) {details.emplace_back(smokestack, (uint8_t)ROOF_OBJ_SMOKESTACK);}
+		break; // success/done
+	} // for n
+}
+
 void bldg_factory_info_t::next_frame(particle_manager_t &particle_manager) {
 	for (smoke_source_t &s : smoke_emitters) { // generate smoke
 		s.time += fticks;
