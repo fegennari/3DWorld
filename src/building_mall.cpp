@@ -963,7 +963,9 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			if (add_fire_extinguishers) { // maybe add fire extinguisher on pillar
 				if (add_fe ^ bool(dir)) {
 					bool const dim(!mall_dim), dir(pillar.get_center_dim(dim) < room_centerline);
-					add_fire_ext(fe_height, fe_radius, zval, pillar.d[dim][!dir], pillar.get_center_dim(!dim), room_id, light_amt, dim, dir);
+					float edge_pos(pillar.d[dim][!dir]);
+					if (use_cylin_pillars) {edge_pos += (dir ? 1.0 : -1.0)*0.01*pillar_hwidth;} // shift slightly into the pillar
+					add_fire_ext(fe_height, fe_radius, zval, edge_pos, pillar.get_center_dim(!dim), room_id, light_amt, dim, dir);
 				}
 			}
 			blockers.push_back(pillar);
