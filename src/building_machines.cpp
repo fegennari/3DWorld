@@ -572,7 +572,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // maybe doesn't matter?
 		float const height(max_height*rgen.rand_uniform(0.6, 0.8)), tank_height(0.75*height), aisle_spacing(1.25*doorway_width);
 		vector2d const machine_sz(max_place_sz*vector2d(rgen.rand_uniform(0.8, 1.0), rgen.rand_uniform(0.8, 1.0)));
-		float const tank_radius(0.5*machine_sz.get_min_val());
+		float const tank_radius(0.5*machine_sz.get_min_val()), pipe_radius(0.04*tank_radius);
 		unsigned const item_flags(rgen.rand()), rand_seed(rgen.rand());
 		cube_t center_area(place_area);
 		center_area.expand_by_xy(-(max_place_sz + 0.5*doorway_width)); // space for machines along the wall
@@ -605,7 +605,6 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 					tank.expand_by_xy(-0.1*tank_radius);
 					objs.emplace_back(tank, TYPE_CHEM_TANK, room_id, dim, dir, RO_FLAG_IN_FACTORY, tot_light_amt, SHAPE_CYLIN, WHITE);
 					// add a pipe to the top; the tank itself has a pipe going down to the floor
-					float const pipe_radius(0.04*tank_radius);
 					cube_t pipe(center);
 					set_cube_zvals(pipe, (tank.z2() - pipe_radius), (tank.z2() + 0.1*height - pipe_radius));
 					pipe.expand_by_xy(pipe_radius);
@@ -622,19 +621,25 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 		} // for ny
 		if (merged_pipe_radius > 0.0) { // create horizontal pipe connecting tanks
 			// what about the single pipe case?
-			tank_conn_pipe.z1() = tank_conn_pipe.z2() - 2.0*merged_pipe_radius;
+			set_wall_width(tank_conn_pipe, tank_conn_pipe.z2(), merged_pipe_radius, 2); // set zvals
 			set_wall_width(tank_conn_pipe, tank_conn_pipe.get_center_dim(tank_dim), merged_pipe_radius, tank_dim);
 			objs.emplace_back(tank_conn_pipe, TYPE_PIPE, room_id, !tank_dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, pipe_color); // horizontal
 			// add pipe fittings
-			unsigned const fittings_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI);
-			float const fitting_exp(0.25*merged_pipe_radius), fitting_hlen(1.2*merged_pipe_radius);
+			unsigned const fittings_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_LO);
+			float const fitting_exp(0.2*merged_pipe_radius), fitting_hlen(1.2*merged_pipe_radius);
 
 			for (point const &pos : tank_conn_pts) {
+				// horizontal fitting
 				cube_t fitting(tank_conn_pipe);
 				fitting.expand_in_dim(tank_dim, fitting_exp);
 				fitting.expand_in_z(fitting_exp);
 				set_wall_width(fitting, pos[!tank_dim], fitting_hlen, !tank_dim); // Note: extends off the ends of the pipe
-				objs.emplace_back(fitting, TYPE_PIPE, room_id, !tank_dim, 0, fittings_flags, tot_light_amt, SHAPE_CYLIN, fitting_color); // horizontal
+				objs.emplace_back(fitting, TYPE_PIPE, room_id, !tank_dim, 0, (fittings_flags | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, fitting_color);
+				// vertical fitting
+				fitting.set_from_point(pos);
+				fitting.expand_by_xy(1.2*pipe_radius);
+				fitting.z1() -= merged_pipe_radius + 2.0*pipe_radius;
+				objs.emplace_back(fitting, TYPE_PIPE, room_id, 0, 1, fittings_flags, tot_light_amt, SHAPE_CYLIN, fitting_color);
 			} // for pos
 			// TODO: add a bend and another segment to the ceiling, floor, or wall
 		}
