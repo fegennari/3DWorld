@@ -258,7 +258,9 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		if (!is_cylin && rgen.rand_float() < 0.75) {
 			float const valve_radius(size_scale*min(5.0f*pipe_rmax, 0.4f*min(part_sz[!dim], part_sz.z))*rgen.rand_uniform(0.75, 1.0));
 			float const valve_depth(valve_radius*rgen.rand_uniform(0.4, 0.5));
-			cube_t valve(place_obj_on_cube_side(part, dim, dir, valve_radius, valve_radius, valve_depth, 1.1, rgen)); // Note: may extend a bit outside c in the front
+			cube_t lower_part(part);
+			if (in_factory) {min_eq(lower_part.z2(), (part.z1() + max(2.0f*valve_radius, 0.15f*floor_ceil_gap)));} // not too high for factory machines
+			cube_t valve(place_obj_on_cube_side(lower_part, dim, dir, valve_radius, valve_radius, valve_depth, 1.1, rgen)); // Note: may extend a bit outside c in the front
 			assert(valve.is_strictly_normalized());
 
 			if (!has_bcube_int(valve, avoid)) {
