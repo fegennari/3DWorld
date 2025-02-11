@@ -251,9 +251,9 @@ city shoe_model      ../models/interiors/shoes/canvas_shoe.glb                  
 city shoe_model      ../models/interiors/shoes/photocatch_shoe.glb                  0 0 0  -1 -1 180 1 1.0 1.0
 city shoe_model      ../models/interiors/shoes/lasocki_shoe.glb                     0 0 0  -1 -1 90  1 1.0 1.0
 city shoe_model      ../models/interiors/shoes/nike_shoe_low.glb                    0 0 0  -1 -1 180 1 1.0 1.0  mirrored=1
-city shoe_model      ../models/interiors/shoes/new_balance_shoe.glb                 0 0 0  -1 -1 180 1 1.0 1.0
 city shoe_model      ../models/interiors/shoes/cat_shoe.glb                         0 0 0  -1 -1 0   1 1.0 1.0  mirrored=1
 city shoe_model      ../models/interiors/shoes/puma_shoe_purple.glb                 0 0 0  -1 -1 90  1 1.0 1.0
+#city shoe_model      ../models/interiors/shoes/new_balance.glb                      0 0 0  -1 -1 90  1 1.0 1.0 # missing interior surface
 city shoebox_model   ../models/interiors/shoes/nike_shoe_box.glb                    0 0 0  -1 -1 180 1 1.0 1.0
 
 # plants
