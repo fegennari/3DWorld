@@ -980,7 +980,7 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 
 		for (unsigned f = 0; f <= num_floors; ++f) { // flanges for each ceiling/floor
 			bool const at_bot(!add_bot_flange && f == 0), at_top(f == num_floors);
-			unsigned flags(pipe_flags | RO_FLAG_HANGING | (!at_bot)*RO_FLAG_ADJ_LO | (!at_top)*RO_FLAG_ADJ_HI);
+			unsigned flags(pipe_flags | RO_FLAG_HANGING | (!at_bot)*RO_FLAG_ADJ_LO | (!at_top || !in_basement)*RO_FLAG_ADJ_HI);
 			float const z(room.z1() + f*floor_spacing);
 			flange.z1() = z - (at_bot ? -1.0 : 1.15)*fc_thickness;
 			flange.z2() = z + (at_top ? -1.0 : 1.15)*fc_thickness;

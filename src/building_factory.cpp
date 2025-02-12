@@ -454,7 +454,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	}
 	// add fire sprinkler pipes
 	float const custom_floor_spacing(room.dz() - support_width); // place sprinklers under ceiling beams
-	float const wall_pad(1.1*support_width); // add a gap between the wall supports
+	float const wall_pad(1.05*support_width); // add a gap between the wall supports
 	vect_cube_t obstacles(nested_rooms), walls, pipe_cubes; // avoid nested rooms; walls and pipe_cubes start empty and are unused
 	cube_t entry_area(entry);
 	entry_area.z2() = room.z1() + window_vspace;
