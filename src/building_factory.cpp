@@ -343,7 +343,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 				set_wall_width(ladder, rgen.rand_uniform(llo, lhi), ladder_hwidth, edim);
 				cube_t tc(ladder);
 				tc.d[!edim][ldir] += ldsign*clearance; // add space in front
-				if (is_obj_placement_blocked(tc, room, 1) || overlaps_other_room_obj(tc, objs_start)) continue;
+				if (is_obj_placement_blocked(tc, room, 1) || overlaps_other_room_obj(tc, objs_start) || has_bcube_int(ladder, nested_rooms)) continue;
 				// ladder pos is valid; split the catwalk that was added into left, right, and center parts so that we can insert a cut into the railing
 				cube_t seg_split(ladder);
 				seg_split.expand_in_dim(edim, 0.25*doorway_width); // increase width beyond the ladder
