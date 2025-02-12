@@ -71,7 +71,7 @@ bool building_t::player_can_see_outside() const {
 		if (s.is_u_shape())                 continue; // can't see around the bend
 		if (!is_rot_cube_visible(s, xlate)) continue; // VFC
 		if (!s.contains_pt(camera_bs) && s.stairs_door_ix >= 0 && get_door(s.stairs_door_ix).open_amt == 0.0) continue; // closed stairs door, not visible
-		if (!has_parking_garage) return 1; // assume exterior may be visible through normal stairs, but not parking garage stairs
+		if (!has_parking_garage || is_factory()) return 1; // assume exterior may be visible through normal stairs, but not parking garage stairs, unless it's a factory
 		cube_t stairs_exp(s);
 		stairs_exp.expand_by_xy(floor_spacing);
 		if (!get_basement().contains_cube_xy(stairs_exp)) return 1; // stairs near the edge of the building basement - window may be visible
