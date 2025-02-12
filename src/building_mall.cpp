@@ -965,7 +965,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 					bool const dim(!mall_dim), dir(pillar.get_center_dim(dim) < room_centerline);
 					float edge_pos(pillar.d[dim][!dir]);
 					if (use_cylin_pillars) {edge_pos += (dir ? 1.0 : -1.0)*0.01*pillar_hwidth;} // shift slightly into the pillar
-					add_fire_ext(fe_height, fe_radius, zval, edge_pos, pillar.get_center_dim(!dim), room_id, light_amt, dim, dir);
+					add_fire_ext(fe_height, fe_radius, zval, edge_pos, pillar.get_center_dim(!dim), room_id, light_amt, dim, dir, 1); // center_mount=1
 				}
 			}
 			blockers.push_back(pillar);

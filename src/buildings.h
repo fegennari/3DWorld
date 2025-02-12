@@ -2627,7 +2627,8 @@ private:
 	void add_clock(cube_t const &clock, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool digital);
 	void add_clock_to_cube(cube_t const &c, float zval, unsigned room_id, float tot_light_amt, bool dim, bool dir, bool digital);
 	bool add_fire_ext_along_wall(cube_t const &room, float zval, unsigned room_id, float tot_light_amt, bool dim, bool dir, rand_gen_t &rgen);
-	void add_fire_ext        (float height, float radius, float zval, float wall_edge, float pos_along_wall, unsigned room_id, float tot_light_amt, bool dim, bool dir);
+	void add_fire_ext        (float height, float radius, float zval, float wall_edge, float pos_along_wall,
+		unsigned room_id, float tot_light_amt, bool dim, bool dir, bool center_mount=0);
 	bool is_contained_in_wall_range(float wall_pos, float cov_lo, float cov_hi, float zval, bool dim) const;
 	void add_pri_hall_objs   (rand_gen_t rgen, rand_gen_t room_rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor_ix, unsigned objs_start);
 	bool add_reception_desk  (rand_gen_t &rgen, cube_t const &desk, bool dim, bool dir, unsigned room_id, float tot_light_amt);

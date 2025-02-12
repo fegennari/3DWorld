@@ -3560,11 +3560,13 @@ bool building_t::add_fire_ext_along_wall(cube_t const &room, float zval, unsigne
 	} // for n
 	return 0; // failed to place
 }
-void building_t::add_fire_ext(float height, float radius, float zval, float wall_edge, float pos_along_wall, unsigned room_id, float tot_light_amt, bool dim, bool dir) {
-	float const window_vspacing(get_window_vspace()), dir_sign(dir ? -1.0 : 1.0);
+void building_t::add_fire_ext(float height, float radius, float zval, float wall_edge, float pos_along_wall,
+	unsigned room_id, float tot_light_amt, bool dim, bool dir, bool center_mount)
+{
+	float const window_vspacing(get_window_vspace()), dir_sign(dir ? -1.0 : 1.0), xlate(((dim ^ dir ^ 1) ? 1.0 : -1.0)*0.24*radius);
 	point pos(0.0, 0.0, (zval + 0.32*window_vspacing)); // bottom position
 	pos[ dim] = wall_edge + dir_sign*radius; // radius away from the wall
-	pos[!dim] = pos_along_wall;
+	pos[!dim] = pos_along_wall + (center_mount ? -xlate : 0.0);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// add fire extinguisher
 	cube_t const fe_bcube(get_cube_height_radius(pos, radius, height));
@@ -3572,7 +3574,7 @@ void building_t::add_fire_ext(float height, float radius, float zval, float wall
 	// add the wall mounting bracket; what about adding a small box with a door that contains the fire extinguisher?
 	cube_t wall_mount(fe_bcube);
 	wall_mount.expand_in_dim(!dim, -0.52*radius);
-	wall_mount.translate_dim(!dim, ((dim ^ dir ^ 1) ? 1.0 : -1.0)*0.24*radius); // shift to line up with FE body
+	wall_mount.translate_dim(!dim, xlate); // shift to line up with FE body
 	wall_mount.d[dim][ dir]  = wall_edge; // extend to touch the wall
 	wall_mount.d[dim][!dir] -= dir_sign*0.8*radius; // move inward
 	wall_mount.z1() -= 0.02*height; // under the fire extinguisher
