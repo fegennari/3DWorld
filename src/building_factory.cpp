@@ -587,14 +587,17 @@ void building_t::add_factory_smokestack(rand_gen_t &rgen) {
 	assert(!parts.empty());
 	cube_t const &base(parts[0]);
 	float const ss_radius(rgen.rand_uniform(0.01, 0.02)*(base.dx() + base.dy()));
+	unsigned const num(1 + (rgen.rand()&1)); // 1-2
 
-	for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place smokestack
-		point const ss_center(gen_xy_pos_in_area(base, 2.5*ss_radius, rgen, base.z2()));
-		cube_t smokestack(ss_center);
-		smokestack.expand_by_xy(ss_radius);
-		smokestack.z2() += rgen.rand_uniform(0.75, 1.0)*base.dz(); // set height; should be above roof peak
-		if (!has_bcube_int(smokestack, details)) {details.emplace_back(smokestack, (uint8_t)ROOF_OBJ_SMOKESTACK);}
-		break; // success/done
+	for (unsigned n = 0; n < num; ++n) {
+		for (unsigned m = 0; m < 10; ++m) { // 10 attempts to place smokestack
+			point const ss_center(gen_xy_pos_in_area(base, 2.5*ss_radius, rgen, base.z2()));
+			cube_t smokestack(ss_center);
+			smokestack.expand_by_xy(ss_radius);
+			smokestack.z2() += rgen.rand_uniform(0.75, 1.0)*base.dz(); // set height; should be above roof peak
+			if (!has_bcube_int(smokestack, details)) {details.emplace_back(smokestack, (uint8_t)ROOF_OBJ_SMOKESTACK);}
+			break; // success/done
+		} // for m
 	} // for n
 }
 
