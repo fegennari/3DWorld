@@ -474,12 +474,18 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	}
 	// main pipe not under lights? but lights are placed later
 	unsigned const main_pipe_ix(objs.size());
-	add_sprinkler_pipes(obstacles, walls, beams, pipe_cubes, room_id, 1, objs_start, rgen, custom_floor_spacing, wall_pad); // num_floors=1
+	bool const added_sprinklers(add_sprinkler_pipes(obstacles, walls, beams, pipe_cubes, room_id, 1, objs_start, rgen, custom_floor_spacing, wall_pad)); // num_floors=1
 
 	// add ceiling ducts and vents (similar to malls)
 	float const ducts_z2(room.z2() - 0.8*window_vspace); // under the first window, below beams, lights, and pipes
 	cube_t duct_bounds(room);
 	duct_bounds.expand_by_xy(-(support_width - 0.5*wall_thick));
+
+	if (added_sprinklers) { // shorten ends so as to not overlap sprinkler pipe
+		room_object_t const &main_pipe(objs[main_pipe_ix]);
+		assert(main_pipe.type == TYPE_PIPE);
+		duct_bounds.expand_in_dim(edim, -1.5*main_pipe.get_sz_dim(edim));
+	}
 	bool const cylin_ducts(rgen.rand_bool());
 	unsigned const ducts_start(objs.size());
 	add_ceiling_ducts(duct_bounds, ducts_z2, room_id, edim, 2, light_amt, cylin_ducts, 0, 0, rgen); // draw ends and top

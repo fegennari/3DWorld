@@ -913,7 +913,7 @@ int add_sprinkler_pipe(building_t const &b, point const &p1, float end_val, floa
 	add_pass_through_fittings(pipe, walls, fitting_len, fitting_expand, dim, ccolor, objs);
 	return ret;
 }
-void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes,
+bool building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes,
 		unsigned room_id, unsigned num_floors, unsigned objs_start, rand_gen_t &rgen, float custom_floor_spacing, float wall_pad)
 {
 	// add vertical red (possibly rusted brown) sprinkler system pipe
@@ -1093,8 +1093,9 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 			objs.resize(sprinker_pipes_start);
 			continue;
 		}
-		break; // done
+		return 1; // done
 	} // for n
+	return 0; // failed
 }
 
 // here each sphere represents the entry point of a pipe with this radius into the basement ceiling
