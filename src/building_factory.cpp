@@ -192,7 +192,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 					pipe.z2() = ceil_zval; // all the way up to the ceiling (beams_z1?)
 
 					if (!has_bcube_int(pipe, nested_rooms) && !cube_int_ext_door(pipe) && !interior->is_blocked_by_stairs_or_elevator(pipe)) {
-						objs.emplace_back(pipe, TYPE_METAL_BAR, room_id, 0, 1, RO_FLAG_NOCOLL, light_amt, SHAPE_CYLIN, DK_BROWN); // vertical
+						objs.emplace_back(pipe, TYPE_PIPE, room_id, 0, 1, (RO_FLAG_NOCOLL | RO_FLAG_LIT), light_amt, SHAPE_CYLIN, DK_BROWN); // vertical, shadowed
 					}
 				}
 				++support_count;
@@ -329,7 +329,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 					cube_t rod(center);
 					rod.expand_by_xy(rod_radius);
 					set_cube_zvals(rod, (catwalk.z1() + 1.0*rod_radius), beams_z1);
-					unsigned const pflags(RO_FLAG_IN_FACTORY | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_NOCOLL); // draw bottom surface
+					unsigned const pflags(RO_FLAG_IN_FACTORY | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_NOCOLL | RO_FLAG_LIT); // draw bottom surface
 					objs.emplace_back(rod, TYPE_PIPE, room_id, 0, 1, pflags, light_amt, SHAPE_CYLIN); // vertical
 				} // for d
 			} // for bpos
@@ -476,13 +476,6 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	unsigned const main_pipe_ix(objs.size());
 	add_sprinkler_pipes(obstacles, walls, beams, pipe_cubes, room_id, 1, objs_start, rgen, custom_floor_spacing, wall_pad); // num_floors=1
 
-	if (main_pipe_ix < objs.size()) { // added a pipe, but it won't cast shadows because it's a detail object, so add a slightly smaller shadow casting object inside it
-		room_object_t pipe(objs[main_pipe_ix]);
-		pipe.expand_by_xy(-0.01*pipe.get_radius()); // slight shrink
-		pipe.type  = TYPE_DUCT;
-		pipe.flags = RO_FLAG_NOCOLL;
-		objs.push_back(pipe);
-	}
 	// add ceiling ducts and vents (similar to malls)
 	float const ducts_z2(room.z2() - 0.8*window_vspace); // under the first window, below beams, lights, and pipes
 	cube_t duct_bounds(room);

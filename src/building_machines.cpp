@@ -663,7 +663,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 				} // for d
 			} // for n
 			// what about the single pipe case?
-			objs.emplace_back(h_pipe, TYPE_PIPE, room_id, !tank_dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_LIT), tot_light_amt, SHAPE_CYLIN, pipe_color); // horizontal
+			objs.emplace_back(h_pipe, TYPE_PIPE, room_id, !tank_dim, 0, h_pipe_flags, tot_light_amt, SHAPE_CYLIN, pipe_color); // horizontal
 			// add pipe fittings
 			unsigned const fittings_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_LO);
 			float const fitting_exp(0.2*merged_pipe_radius), fitting_hlen(1.2*merged_pipe_radius);
