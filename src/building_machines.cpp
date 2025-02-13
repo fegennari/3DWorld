@@ -314,7 +314,21 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		region.d[dim][!dir] = back_wall_pos; // wall behind the machine
 		assert(region.is_strictly_normalized());
 
-		if (!in_factory && (is_cylin || has_gap) && cylin_dim != unsigned(dim)) { // if there's a gap between the machine and the wall; not for cylinders facing the wall
+		if (in_factory) { // connect to neighbors on low X/Y edges
+			for (unsigned ndim = 0; ndim < 2; ++ndim) {
+				if (!(c.flags & (ndim ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO))) continue; // no neighbor in this dim
+				float const machine_spacing(width); // TODO: pass this in
+				cube_t region2(part);
+				// TODO: max_eq(region2.z1(), (c.z1() + player_height));
+				region2.d[ndim][1] = (is_cylin ? part.get_center_dim(ndim) : part.d[ndim][0]); // center plane of cylinder or low edge of cube
+				region2.d[ndim][0] = (is_cylin ? part.get_center_dim(ndim) : part.d[ndim][1]) - machine_spacing; // opposite edge of this part on adjacet machine
+				assert(region2.is_strictly_normalized());
+				unsigned const num_pipes((rgen.rand() % 4) + 1); // 1-4
+				pipe_ends.clear();
+				for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region2, pipe_rmax, ndim, pipe_ends, rgen);}
+			} // for n
+		}
+		else if ((is_cylin || has_gap) && cylin_dim != unsigned(dim)) { // if there's a gap between the machine and the wall; not for cylinders facing the wall
 			// add pipe(s) connecting to back wall in {dim, !dir} or ceiling
 			unsigned const num_pipes((rgen.rand() % 4) + 1); // 1-4
 			pipe_ends.clear();
@@ -583,14 +597,16 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 		colorRGBA const pipe_color(COPPER_C), fitting_color(BRASS_C);
 		vector2d spacing;
 		unsigned num_xy[2]={};
-		vector<point> tank_conn_pts;
-		float merged_pipe_radius(0.0);
-		cube_t tank_conn_pipe;
 
 		for (unsigned d = 0; d < 2; ++d) {
 			num_xy [d] = center_sz[d]/(machine_sz[d] + aisle_spacing);
 			spacing[d] = center_sz[d]/num_xy[d];
 		}
+		vector<room_object> obj_grid(num_xy[0]*num_xy[1], TYPE_NONE);
+		vector<point> tank_conn_pts;
+		float merged_pipe_radius(0.0);
+		cube_t tank_conn_pipe;
+
 		for (unsigned ny = 0; ny < num_xy[1]; ++ny) {
 			for (unsigned nx = 0; nx < num_xy[0]; ++nx) {
 				bool const is_tank((tank_dim ? ny : nx) == (tank_dir ? num_xy[tank_dim]-1 : 0));
@@ -600,6 +616,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 				if (is_tank) {c.expand_by_xy(tank_radius);} // tank is square
 				else         {c.expand_by_xy(0.5*machine_sz);}
 				if (c.intersects(avoid) || overlaps_obj_or_placement_blocked(c, room, objs_start)) continue;
+				unsigned const gix(ny*num_xy[0] + nx);
 
 				if (is_tank) { // make it a chemical tank; the tank itself is smaller to make room for pipes
 					cube_t tank(c);
@@ -616,9 +633,13 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 					tank_conn_pts.emplace_back(center.x, center.y, pipe.z2());
 				}
 				else { // make it a machine
-					objs.emplace_back(c, TYPE_MACHINE, room_id, dim, dir, RO_FLAG_IN_FACTORY, tot_light_amt, SHAPE_CUBE, LT_GRAY, item_flags);
+					unsigned flags(RO_FLAG_IN_FACTORY);
+					if (nx > 0 && obj_grid[gix - 1        ] == TYPE_MACHINE) {flags |= RO_FLAG_ADJ_LO;} // has prev X neighbor
+					if (ny > 0 && obj_grid[gix - num_xy[0]] == TYPE_MACHINE) {flags |= RO_FLAG_ADJ_HI;} // has prev Y neighbor
+					objs.emplace_back(c, TYPE_MACHINE, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, LT_GRAY, item_flags);
 					objs.back().item_flags = rand_seed;
 				}
+				obj_grid[gix] = (is_tank ? TYPE_CHEM_TANK : TYPE_MACHINE);
 			} // for nx
 		} // for ny
 		if (merged_pipe_radius > 0.0) { // create horizontal pipe connecting tanks
@@ -662,7 +683,6 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 					} // for e
 				} // for d
 			} // for n
-			// what about the single pipe case?
 			objs.emplace_back(h_pipe, TYPE_PIPE, room_id, !tank_dim, 0, h_pipe_flags, tot_light_amt, SHAPE_CYLIN, pipe_color); // horizontal
 			// add pipe fittings
 			unsigned const fittings_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_LO);
