@@ -558,10 +558,12 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 	return any_placed;
 }
 
-void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cube_t const &place_area, float zval,
+	unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned objs_start_inc_beams)
+{
 	assert(interior->factory_info);
 	float const floor_spacing(get_window_vspace()), fc_gap(room.dz()), max_place_sz(1.0*floor_spacing), max_height(fc_gap - floor_spacing);
-	float const doorway_width(get_doorway_width()), min_gap(max(doorway_width, get_min_front_clearance_inc_people()));
+	float const doorway_width(get_doorway_width()), min_gap(max(doorway_width, get_min_front_clearance_inc_people())), ceil_zval(room.z2() - get_fc_thickness());
 	if (max_height <= 0.0) return; // should never happen
 	vect_room_object_t &objs(interior->room_geom->objs);
 	vector2d max_sz(get_machine_max_sz(place_area, min_gap, max_place_sz, 0.5));
@@ -597,7 +599,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 				c.z2() += height;
 				if (is_tank) {c.expand_by_xy(tank_radius);} // tank is square
 				else         {c.expand_by_xy(0.5*machine_sz);}
-				if (c.intersects(avoid) || overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // inc_open_doors=1
+				if (c.intersects(avoid) || overlaps_obj_or_placement_blocked(c, room, objs_start)) continue;
 
 				if (is_tank) { // make it a chemical tank; the tank itself is smaller to make room for pipes
 					cube_t tank(c);
@@ -620,17 +622,55 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 			} // for nx
 		} // for ny
 		if (merged_pipe_radius > 0.0) { // create horizontal pipe connecting tanks
-			// what about the single pipe case?
 			set_wall_width(tank_conn_pipe, tank_conn_pipe.z2(), merged_pipe_radius, 2); // set zvals
 			set_wall_width(tank_conn_pipe, tank_conn_pipe.get_center_dim(tank_dim), merged_pipe_radius, tank_dim);
-			objs.emplace_back(tank_conn_pipe, TYPE_PIPE, room_id, !tank_dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, pipe_color); // horizontal
+			// add a bend and another segment to the ceiling, floor, or wall
+			bool const pri_ext_dir(rgen.rand_bool());
+			float const tank_gap(tank_radius + merged_pipe_radius), wall_gap(merged_pipe_radius + 0.26*floor_spacing); // leave wall gap for duct width
+			float const pipe_len(tank_conn_pipe.get_sz_dim(!tank_dim));
+			cube_t h_pipe(tank_conn_pipe);
+			unsigned h_pipe_flags(RO_FLAG_NOCOLL | RO_FLAG_LIT);
+			bool connected(0);
+
+			for (unsigned n = 0; n < 50 && !connected; ++n) { // 50 attempts to extend the horizontal pipe and connect it vertically
+				for (unsigned d = 0; d < 2 && !connected; ++d) { // try to extend both sides
+					bool const dir(bool(d) ^ pri_ext_dir);
+					float const pipe_end(tank_conn_pipe.d[!tank_dim][d]), wall_pos(place_area.d[!tank_dim][d]), dsign(d ? 1.0 : -1.0);
+					float cand_pos(0.0);
+					if (d == 0) {cand_pos = rgen.rand_uniform((wall_pos + wall_gap), (pipe_end - tank_gap));}
+					else        {cand_pos = rgen.rand_uniform((pipe_end + tank_gap), (wall_pos - wall_gap));}
+					cube_t ext_pipe(tank_conn_pipe);
+					ext_pipe.d[!tank_dim][!d] = pipe_end + dsign*tank_gap; // shift so as not to intersect the tank
+					ext_pipe.d[!tank_dim][ d] = cand_pos + dsign*merged_pipe_radius; // extend to outer edge
+					if (ext_pipe.intersects(avoid) || overlaps_obj_or_placement_blocked(ext_pipe, room, objs_start)) continue;
+					ext_pipe.d[!tank_dim][ d] = cand_pos; // clip off overlapping end so that we can add a bend
+					// horizontal pipe is okay, check vertical pipe up and down
+					cube_t v_pipe(ext_pipe);
+					set_wall_width(v_pipe, cand_pos, merged_pipe_radius, !tank_dim);
+					bool init_up(rgen.rand_bool());
+
+					for (unsigned e = 0; e < 2 && !connected; ++e) {
+						bool const is_up(init_up ^ bool(e));
+						if (is_up) {set_cube_zvals(v_pipe, ext_pipe.zc(), ceil_zval);} // up
+						else       {set_cube_zvals(v_pipe, zval, ext_pipe.zc());} // down
+						if (v_pipe.intersects(avoid) || overlaps_obj_or_placement_blocked(v_pipe, room, (is_up ? objs_start_inc_beams : objs_start), is_up)) continue;
+						h_pipe.union_with_cube(ext_pipe); // extend pipe
+						unsigned const flags(RO_FLAG_LIT | (is_up ? RO_FLAG_NOCOLL : 0)); // cast shadows; only collide if going down
+						objs.emplace_back(v_pipe, TYPE_PIPE, room_id, 0, 1, flags, tot_light_amt, SHAPE_CYLIN, pipe_color);
+						h_pipe_flags |= (d ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT); // make the bend round
+						connected     = 1;
+					} // for e
+				} // for d
+			} // for n
+			// what about the single pipe case?
+			objs.emplace_back(h_pipe, TYPE_PIPE, room_id, !tank_dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_LIT), tot_light_amt, SHAPE_CYLIN, pipe_color); // horizontal
 			// add pipe fittings
 			unsigned const fittings_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_LO);
 			float const fitting_exp(0.2*merged_pipe_radius), fitting_hlen(1.2*merged_pipe_radius);
 
 			for (point const &pos : tank_conn_pts) {
 				// horizontal fitting
-				cube_t fitting(tank_conn_pipe);
+				cube_t fitting(h_pipe);
 				fitting.expand_in_dim(tank_dim, fitting_exp);
 				fitting.expand_in_z(fitting_exp);
 				set_wall_width(fitting, pos[!tank_dim], fitting_hlen, !tank_dim); // Note: extends off the ends of the pipe
@@ -641,7 +681,6 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 				fitting.z1() -= merged_pipe_radius + 2.0*pipe_radius;
 				objs.emplace_back(fitting, TYPE_PIPE, room_id, 0, 1, fittings_flags, tot_light_amt, SHAPE_CYLIN, fitting_color);
 			} // for pos
-			// TODO: add a bend and another segment to the ceiling, floor, or wall
 		}
 	}
 	// add machines along the walls
@@ -660,7 +699,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 			c.d[dim][ dir] = place_area.d[dim][dir];
 			c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
 			set_wall_width(c, center, hwidth, !dim);
-			if (c.intersects(avoid) || overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // inc_open_doors=1
+			if (c.intersects(avoid) || overlaps_obj_or_placement_blocked(c, room, objs_start)) continue;
 			objs.emplace_back(c, TYPE_MACHINE, room_id, dim, !dir, RO_FLAG_IN_FACTORY, tot_light_amt, SHAPE_CUBE, LT_GRAY, rgen.rand()); // add more randomness
 			set_obj_id(objs);
 			break; // done

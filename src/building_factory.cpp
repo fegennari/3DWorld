@@ -132,6 +132,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	vect_cube_t support_parts, beams, supports;
 	vector<float> beam_pos; // in short dim; needed for hanging catwalks
 	vect_cube_t const &nested_rooms(interior->factory_info->sub_rooms);
+	unsigned const objs_start_inc_beams(objs.size());
 	float const shift_vals[6] = {-0.1, 0.2, -0.3, 0.4, -0.5, 0.6}; // cumulative version of {-0.1, 0.1, -0.2, 0.2, -0.3, 0.3}; not enough shift to overlap a window
 	unsigned support_count(0);
 
@@ -343,7 +344,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 				set_wall_width(ladder, rgen.rand_uniform(llo, lhi), ladder_hwidth, edim);
 				cube_t tc(ladder);
 				tc.d[!edim][ldir] += ldsign*clearance; // add space in front
-				if (is_obj_placement_blocked(tc, room, 1) || overlaps_other_room_obj(tc, objs_start) || has_bcube_int(ladder, nested_rooms)) continue;
+				if (overlaps_obj_or_placement_blocked(tc, room, objs_start) || has_bcube_int(tc, nested_rooms)) continue;
 				// ladder pos is valid; split the catwalk that was added into left, right, and center parts so that we can insert a cut into the railing
 				cube_t seg_split(ladder);
 				seg_split.expand_in_dim(edim, 0.25*doorway_width); // increase width beyond the ladder
@@ -369,7 +370,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	place_model_along_wall(OBJ_MODEL_SUBSTATION, TYPE_XFORMER, room, 0.6, rgen, tzval, room_id, light_amt, xfmr_area, objs_start, 0.0, 4, 0, WHITE, 0, 0, 0, 1); // sideways
 	// add machines
 	unsigned const machines_start(objs.size());
-	add_machines_to_factory(rgen, room, place_area, zval, room_id, light_amt, objs_start);
+	add_machines_to_factory(rgen, room, place_area, zval, room_id, light_amt, objs_start, objs_start_inc_beams);
 
 	for (auto i = objs.begin()+machines_start; i != objs.end(); ++i) { // add some smoke emitters
 		if (i->type != TYPE_MACHINE)  continue;
@@ -529,7 +530,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	for (unsigned n = 0; n < num_pcans; ++n) {
 		float const height(rgen.rand_uniform(0.08, 0.1)*window_vspace), radius(0.44*height);
 		cube_t const pcan(place_cylin_object(rgen, place_area, radius, height, (radius + trim_thickness), 1)); // place_at_z1=1
-		if (is_obj_placement_blocked(pcan, place_area, 1) || overlaps_other_room_obj(pcan, objs_start)) continue; // bad placement
+		if (overlaps_obj_or_placement_blocked(pcan, place_area, objs_start)) continue; // bad placement
 		objs.emplace_back(pcan, TYPE_PAINTCAN, room_id, 0, 0, 0, light_amt, SHAPE_CYLIN, WHITE);
 	}
 	// add floor clutter and stains
