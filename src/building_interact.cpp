@@ -1780,7 +1780,7 @@ void particle_manager_t::next_frame(building_t &building) {
 		auto self(objs.end());
 		if (p.parent_obj_id >= 0) {assert((unsigned)p.parent_obj_id < objs.size()); self = objs.begin() + p.parent_obj_id;}
 
-		if (building.interior->check_sphere_coll(building, p.pos, p_last, p.radius, self, cnorm, hardness, obj_ix)) {
+		if (building.interior->check_sphere_coll(building, p.pos, p_last, p.radius*p.coll_radius, self, cnorm, hardness, obj_ix)) {
 			if (p.effect == PART_EFFECT_CLOUD || p.effect == PART_EFFECT_SMOKE) {p.effect = PART_EFFECT_NONE; continue;} // no bounce
 			apply_floor_vel_thresh(p.vel, cnorm);
 			bool const bounced(apply_object_bounce(p.vel, cnorm, bounce_scale*hardness, 0)); // on_floor=0
