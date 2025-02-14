@@ -476,6 +476,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	entry_area.z2() = room.z1() + window_vspace;
 	entry_area.expand_in_dim(edim, doorway_width);
 	obstacles.push_back(entry_area); // don't block the entryway with the vertical pipe
+	vector_add_to(lights, obstacles);
 
 	for (tquad_with_ix_t const &door : doors) {
 		obstacles.push_back(door.get_bcube());

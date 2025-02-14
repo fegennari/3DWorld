@@ -126,7 +126,7 @@ void add_hanging_pipe_bracket(cube_t const &pipe, float len_pos, float ceiling_z
 	bracket.expand_in_dim(!dim, radius_expand);
 	bracket.expand_in_dim(2,    radius_expand);
 	cube_t bc(bracket);
-	bc.z1() = ceiling_zval; // extend up to ceiling
+	bc.z2() = ceiling_zval; // extend up to ceiling
 	if (has_bcube_int(bc, obstacles) || has_bcube_int(bc, walls)) return;
 
 	for (auto i = objs.begin()+pipe_conn_start; i != objs.end(); ++i) {
