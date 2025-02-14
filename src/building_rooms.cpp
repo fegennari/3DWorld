@@ -388,9 +388,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				add_light_switches_to_room(rgen, *r, room_center.z,  room_id, objs_start, 0, 0); // is_ground_floor=is_basement=0
 				rgen.rand_mix(); // make sure numbers are different for each store
 			}
-			else if (is_factory_room) {
-				add_factory_objs(rgen, *r, room_center.z, room_id);
-			}
 			if ((!has_stairs && (f == 0 || top_floor) && interior->stairwells.size() > 1) || top_of_stairs) { // should this be outside the loop?
 				// check for stairwells connecting stacked parts (is this still needed?); check for roof access stairs and set top_of_stairs=0
 				for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
@@ -551,7 +548,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				add_mall_lower_floor_lights(*r, room_id, objs_start_inc_lights, light_ix_assign);
 				continue; // nothing else to add
 			}
-			if (is_parking_garage || is_retail_room || is_mall_store || is_factory_room) continue; // generated above, done; no outlets or light switches
+			if (is_factory_room) {
+				add_factory_objs(rgen, *r, room_center.z, room_id, objs_start_inc_lights);
+				continue; // nothing else to add
+			}
+			if (is_parking_garage || is_retail_room || is_mall_store) continue; // generated above, done; no outlets or light switches
 			if (is_unfinished) continue; // no objects for now; if adding objects later, need to make sure they stay inside the building bounds
 			uint64_t const floor_mask(uint64_t(1) << f);
 			bool const is_garage_or_shed(r->is_garage_or_shed(f));

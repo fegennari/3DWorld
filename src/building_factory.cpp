@@ -114,9 +114,8 @@ void add_hanging_ladder(cube_t const &ladder, unsigned room_id, bool dim, bool d
 	objs.emplace_back(collider, TYPE_COLLIDER, room_id, dim, !dir, (RO_FLAG_INVIS | RO_FLAG_ADJ_TOP), light_amt);
 }
 
-void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
+void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start_inc_lights) {
 	assert(interior->factory_info);
-	float const light_amt(1.0); // always lit?
 	bool const edim(interior->factory_info->entrance_dim), edir(interior->factory_info->entrance_dir), beam_dim(!edim); // edim is the long dim; beam_dim is short dim
 	float const window_vspace(get_window_vspace()), wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness()), edir_sign(edir ? 1.0 : -1.0);
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -124,17 +123,26 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	float const support_width(FACTORY_BEAM_THICK*wall_thick), support_hwidth(0.5*support_width);
 	float const ceil_zval(room.z2() - fc_thick), beams_z1(ceil_zval - support_width), room_center_short(room.get_center_dim(!edim));
 	vector2d const room_sz(room.get_size_xy());
-	cube_t support_bounds(room);
+	cube_t support_bounds(room), support, beam;
 	support_bounds.expand_by_xy(-support_hwidth);
-	cube_t support, beam;
 	set_cube_zvals(support, zval,     beams_z1 );
 	set_cube_zvals(beam,    beams_z1, ceil_zval);
-	vect_cube_t support_parts, beams, supports;
+	vect_cube_t support_parts, beams, supports, lights;
 	vector<float> beam_pos; // in short dim; needed for hanging catwalks
 	vect_cube_t const &nested_rooms(interior->factory_info->sub_rooms);
 	unsigned const objs_start_inc_beams(objs.size());
 	float const shift_vals[6] = {-0.1, 0.2, -0.3, 0.4, -0.5, 0.6}; // cumulative version of {-0.1, 0.1, -0.2, 0.2, -0.3, 0.3}; not enough shift to overlap a window
 	unsigned support_count(0);
+	// gather all lights and calculate light amount
+	float light_amt(0.0);
+
+	for (auto i = objs.begin()+objs_start_inc_lights; i != objs.end(); ++i) {
+		if (i->type != TYPE_LIGHT) continue;
+		lights.push_back(*i);
+		if (i->is_lit()) {light_amt += 1.0;}
+	}
+	assert(!lights.empty());
+	light_amt /= lights.size(); // average
 
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		bool const short_dim(bool(dim) == beam_dim);
@@ -266,7 +274,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	}
 	if (1) { // add central upper catwalk in long dim
 		// find a location near the center not obstructed by a door, stairs, or beam
-		float const max_shift(0.4*room_sz[!edim]), wall_pos(room.d[edim][!edir]); // wall opposite the main entrance
+		float const max_shift(0.3*room_sz[!edim]), wall_pos(room.d[edim][!edir]); // wall opposite the main entrance; don't shift so much that we intersect ceiling fans
 		float catwalk_center(room_center_short), cur_shift(1.0*support_width*(rgen.rand_bool() ? 1.0 : -1.0));
 		bool add_catwalk(0);
 		cube_t cand(room); // copy zvals
@@ -276,11 +284,18 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		while (fabs(cur_shift) < max_shift) {
 			set_wall_width(cand, catwalk_center, catwalk_hwidth, !edim);
 			
-			if (has_bcube_int(cand, supports) || cube_int_ext_door(cand) || interior->is_blocked_by_stairs_or_elevator(cand)) { // bad placement
-				catwalk_center = room_center_short + cur_shift;
-				cur_shift      = -1.2*cur_shift; // increase step and swap sides
+			if (!has_bcube_int(cand, supports) && !cube_int_ext_door(cand) && !interior->is_blocked_by_stairs_or_elevator(cand)) { // valid placement
+				bool bad_place(0); // don't let supports intersect lights
+				
+				for (unsigned d = 0; d < 2; ++d) { // each side of catwalk
+					cube_t side(cand);
+					side.d[!edim][!d] = side.d[!edim][d]; // shrink to zero area
+					if (has_bcube_int(side, lights)) {bad_place = 1; break;}
+				}
+				if (!bad_place) {add_catwalk = 1; break;} // success
 			}
-			else {add_catwalk = 1; break;} // success
+			catwalk_center = room_center_short + cur_shift;
+			cur_shift      = -1.2*cur_shift; // bad placement; increase step and swap sides
 		} // while
 		if (add_catwalk) {
 			// determine catwalk placement
