@@ -628,7 +628,7 @@ bool swimming_pool_t::proc_sphere_coll(point &pos_, point const &p_last, float r
 		return sphere_vert_cylin_intersect(pos_, radius_, cylinder_3dw(point(xc, yc, z1), point(xc, yc, z2), radius, radius), cnorm); // checks sides
 	}
 	cube_t bcube_tall(bcube + xlate);
-	bcube_tall.z2() += CAMERA_RADIUS + camera_zh; // extend upward so that player collision detection works better
+	bcube_tall.z2() += get_player_eye_height(); // extend upward so that player collision detection works better
 	return sphere_cube_int_update_pos(pos_, radius_, bcube_tall, p_last, 0, cnorm);
 }
 bool swimming_pool_t::update_depth_if_underwater(point const &p, float &depth) const {

@@ -122,6 +122,7 @@ struct city_flag_t;
 struct door_t;
 struct pipe_t;
 struct tunnel_seg_t;
+struct bldg_factory_info_t;
 typedef vector<point> vect_point;
 typedef vector<sphere_t> vect_sphere_t;
 
@@ -1219,7 +1220,7 @@ struct building_room_geom_t {
 	void add_catwalk(room_object_t const &c);
 	void add_machine_pipe_in_region(room_object_t const &c, cube_t const &region, float rmax, unsigned dim, vect_sphere_t &pipe_ends, rand_gen_t &rgen, bool add_coil=0);
 	void add_spring(point pos, float radius, float r_wire, float length, float coil_gap, unsigned dim, colorRGBA const &color, colorRGBA const &spec_color=WHITE);
-	void add_machine(room_object_t const &c, float floor_ceil_gap, cube_t const &factory_floor);
+	void add_machine(room_object_t const &c, float floor_ceil_gap, bldg_factory_info_t const *factory_info);
 	void add_keyboard(room_object_t const &c);
 	void add_obj_with_top_texture  (room_object_t const &c, std::string const &texture_name, colorRGBA const &sides_color, bool is_small=0);
 	void add_obj_with_front_texture(room_object_t const &c, std::string const &texture_name, colorRGBA const &sides_color, bool is_small=0);
@@ -1327,7 +1328,7 @@ private:
 	void create_detail_vbos(building_t const &building);
 	void add_nested_objs_to_verts(vect_room_object_t const &objs_to_add);
 	void add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add, colorRGBA const &trim_color,
-		bool inc_text=0, float floor_ceil_gap=0.0, cube_t const &factory_floor=cube_t());
+		bool inc_text=0, float floor_ceil_gap=0.0, bldg_factory_info_t const *factory_info=nullptr);
 	void create_obj_model_insts(building_t const &building);
 	void create_lights_vbos(building_t const &building);
 	void create_dynamic_vbos(building_t const &building, point const &camera_bs, vector3d const &xlate, bool play_clock_tick);
@@ -1821,6 +1822,7 @@ struct bldg_factory_info_t {
 	};
 	bool entrance_dim, entrance_dir;
 	float entrance_pos;
+	vector2d machine_row_spacing;
 	cube_t floor_space, entrance_area;
 	rand_gen_t rgen; // used for generating smoke
 	vect_cube_t sub_rooms;
@@ -3022,6 +3024,7 @@ bool player_cant_see_outside_building();
 bool player_take_damage(float damage_scale, bool scream=0, int poison_type=0, uint8_t *has_key=nullptr);
 void apply_building_fall_damage(float delta_z);
 float get_bldg_player_height();
+float get_player_eye_height();
 cube_t get_stairs_bcube_expanded(stairwell_t const &s, float ends_clearance, float sides_clearance, float doorway_width);
 float get_door_open_dist();
 float get_lamp_width_scale();

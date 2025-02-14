@@ -147,13 +147,12 @@ void building_room_geom_t::add_spring(point pos, float radius, float r_wire, flo
 	}
 }
 
-void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_gap, cube_t const &factory_floor) { // components are shadowed and small
+void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_gap, bldg_factory_info_t const *factory_info) { // components are shadowed and small
 	// can use AC Unit, metal plate texture, buttons, lights, etc.
 	rand_gen_t rgen(c.create_rgen());
 	float const height(c.dz()), width(c.get_width()), depth(c.get_depth()), orig_floor_ceil_gap(floor_ceil_gap);
-	float const pipe_rmax(0.033*min(height, min(width, depth)));
 	bool const dim(c.dim), dir(c.dir), two_part(width > rgen.rand_uniform(1.5, 2.2)*depth), in_factory(c.in_factory());
-	float const back_wall_pos(c.d[dim][!dir]);
+	float const pipe_rmax(0.033*min(height, min(width, depth))), back_wall_pos(c.d[dim][!dir]);
 	unsigned const num_parts(two_part ? 2U : 1U);
 	colorRGBA const base_color(apply_light_color(c, c.color));
 	cube_t base(c), main(c);
@@ -165,7 +164,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 	unsigned cylin_dims[2] = {2, 2}; // defaults to Z
 	vect_cube_t avoid, shapes;
 	vect_sphere_t pipe_ends;
-	if (in_factory) {floor_ceil_gap = factory_floor.dz();}
+	if (in_factory && factory_info) {floor_ceil_gap = factory_info->floor_space.dz();}
 
 	if (two_part) {
 		float const split_pos(main.d[!dim][0] + rgen.rand_uniform(0.4, 0.6)*width);
@@ -176,7 +175,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 	// calculate size and shape of each part
 	for (unsigned n = 0; n < num_parts; ++n) {
 		cube_t &part(parts[n]);
-		bool const is_cylin(!is_cylins[0] && rgen.rand_float() < 0.5 && max(part.dx(), part.dy()) < 1.5*min(part.dx(), part.dy())); // don't place two cylinders
+		bool const is_cylin(!is_cylins[0] && max(part.dx(), part.dy()) < 1.5*min(part.dx(), part.dy()) && rgen.rand_float() < (in_factory ? 0.35 : 0.5)); // don't place two cylinders
 		if (is_cylin) {cylin_dims[n] = (rgen.rand_bool() ? 2 : rgen.rand_bool());} // 50% chance vert/Z, 25% chance X, 25% chance Y
 		is_cylins[n] = is_cylin;
 		float const max_shrink_val(is_cylin ? 0.15 : 0.25);
@@ -314,19 +313,33 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		region.d[dim][!dir] = back_wall_pos; // wall behind the machine
 		assert(region.is_strictly_normalized());
 
-		if (in_factory) { // connect to neighbors on low X/Y edges
-			for (unsigned ndim = 0; ndim < 2; ++ndim) {
-				if (!(c.flags & (ndim ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO))) continue; // no neighbor in this dim
-				float const machine_spacing(width); // TODO: pass this in
-				cube_t region2(part);
-				// TODO: max_eq(region2.z1(), (c.z1() + player_height));
-				region2.d[ndim][1] = (is_cylin ? part.get_center_dim(ndim) : part.d[ndim][0]); // center plane of cylinder or low edge of cube
-				region2.d[ndim][0] = (is_cylin ? part.get_center_dim(ndim) : part.d[ndim][1]) - machine_spacing; // opposite edge of this part on adjacet machine
-				assert(region2.is_strictly_normalized());
-				unsigned const num_pipes((rgen.rand() % 4) + 1); // 1-4
-				pipe_ends.clear();
-				for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region2, pipe_rmax, ndim, pipe_ends, rgen);}
-			} // for n
+		if (in_factory && factory_info) { // connect to neighbors on low X/Y edges
+			float const min_height(get_player_eye_height() + 2.0*pipe_rmax); // add space for pipe/coil
+
+			if (part_sz.z > 1.25*min_height) {
+				bool const coil_dim(rgen.rand_bool());
+
+				for (unsigned ndim = 0; ndim < 2; ++ndim) {
+					if (!(c.flags & (ndim ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO))) continue; // no neighbor in this dim
+					float const row_spacing(factory_info->machine_row_spacing[ndim]);
+					cube_t region2(part);
+					max_eq(region2.z1(), (c.z1() + min_height));
+					region2.d[ndim][1] = (is_cylin ? part.get_center_dim(ndim) : part.d[ndim][0]); // center plane of cylinder or low edge of cube
+					region2.d[ndim][0] = (is_cylin ? part.get_center_dim(ndim) : part.d[ndim][1]) - row_spacing; // opposite edge of this part on adjacet machine
+					assert(region2.is_strictly_normalized());
+					rand_gen_t rgen2(rgen); // copy rgen so that we can make pipe connections differ across machine instances
+					rgen2.rseed1 += (ndim ? c.state_flags : c.drawer_flags); // make it different per row/column
+					unsigned const num_pipes((rgen2.rand() % 4) + 2); // 2-5
+					unsigned num_coils(0);
+					pipe_ends.clear();
+
+					for (unsigned n = 0; n < num_pipes; ++n) {
+						bool const is_coil(ndim == coil_dim && num_coils == 0 && rgen2.rand_bool()); // max of 1 coil across both dims
+						num_coils += is_coil;
+						add_machine_pipe_in_region(c, region2, (is_coil ? 2.0 : 1.0)*pipe_rmax, ndim, pipe_ends, rgen2, is_coil);
+					}
+				} // for n
+			}
 		}
 		else if ((is_cylin || has_gap) && cylin_dim != unsigned(dim)) { // if there's a gap between the machine and the wall; not for cylinders facing the wall
 			// add pipe(s) connecting to back wall in {dim, !dir} or ceiling
@@ -595,7 +608,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 		vector2d const center_sz(center_area.get_size_xy());
 		bool const tank_dim(rgen.rand_bool()), tank_dir(rgen.rand_bool());
 		colorRGBA const pipe_color(COPPER_C), fitting_color(BRASS_C);
-		vector2d spacing;
+		vector2d &spacing(interior->factory_info->machine_row_spacing);
 		unsigned num_xy[2]={};
 
 		for (unsigned d = 0; d < 2; ++d) {
@@ -637,7 +650,9 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 					if (nx > 0 && obj_grid[gix - 1        ] == TYPE_MACHINE) {flags |= RO_FLAG_ADJ_LO;} // has prev X neighbor
 					if (ny > 0 && obj_grid[gix - num_xy[0]] == TYPE_MACHINE) {flags |= RO_FLAG_ADJ_HI;} // has prev Y neighbor
 					objs.emplace_back(c, TYPE_MACHINE, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, LT_GRAY, item_flags);
-					objs.back().item_flags = rand_seed;
+					objs.back().obj_id       = rand_seed;
+					objs.back().state_flags  = nx;
+					objs.back().drawer_flags = ny;
 				}
 				obj_grid[gix] = (is_tank ? TYPE_CHEM_TANK : TYPE_MACHINE);
 			} // for nx
