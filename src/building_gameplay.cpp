@@ -200,6 +200,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CATWALK   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2,  0.0,  0.0,   "catwalk"); // small, due to use of mats_amask and expense of drawing
 	bldg_obj_types[TYPE_VANITY    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 3,  0.0,  0.0,   "bathroom vanity");
 	bldg_obj_types[TYPE_CHEM_TANK ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1,  0.0,  0.0,   "chemical tank");
+	bldg_obj_types[TYPE_HVAC_UNIT ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 800.0, 200.0, "HVAC unit");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");

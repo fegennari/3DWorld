@@ -2109,7 +2109,8 @@ void merge_cubes_xy(vect_cube_t &cubes) {
 void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the roof; office buildings, not houses
 
 	bool const flat_roof(roof_type == ROOF_TYPE_FLAT), add_walls(is_cube() && flat_roof); // simple cube buildings with flat roofs
-	unsigned const num_ac_units((flat_roof && is_cube()) ? (rgen.rand() % 7) : 0); // cube buildings only for now
+	unsigned num_ac_units(0);
+	if (flat_roof && is_cube()) {num_ac_units = (rgen.rand() % (is_factory() ? 9 : 7));} // cube buildings only for now; 0-8 for factory, otherwise 0-6
 	float const window_vspacing(get_window_vspace()), wall_width(0.049*window_vspacing); // slightly narrower than interior wall width to avoid z-fighting with roof access
 	assert(!parts.empty());
 	create_per_part_ext_verts(); // needed for roof containment queries

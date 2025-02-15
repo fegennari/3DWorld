@@ -24,6 +24,7 @@ vect_room_object_t &get_temp_objects(bool ix=0) {temp_objects[ix].clear(); retur
 extern int display_mode, player_in_closet, frame_counter, animate2;
 
 int get_rand_screenshot_texture(unsigned rand_ix);
+int get_ac_unit_tid(unsigned ix);
 unsigned get_num_screenshot_tids();
 string gen_random_full_name(rand_gen_t &rgen);
 void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize,
@@ -5710,6 +5711,17 @@ void building_room_geom_t::add_chem_tank(room_object_t const &c) {
 	rotate_verts(pipe_mat.itri_verts, plus_z, 0.25*PI, c.get_cube_center(), itris_start); // rotate 45 degrees
 }
 
+int get_hvac_tid(room_object_t const &c) {return get_ac_unit_tid(c.obj_id);}
+
+void building_room_geom_t::add_hvac_unit(room_object_t const &c) {
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_hvac_tid(c), 0.0, 1), 1)); // shadows
+	colorRGBA const color(apply_light_color(c));
+	unsigned const front_mask(get_face_mask(c.dim, c.dir));
+	mat.add_cube_to_verts(c, color, zero_vector, front_mask, !c.dim, (c.dim ^ c.dir), 1); // front face only
+	mat.tex.tscale_x = mat.tex.tscale_y = 0.2/c.min_len(); // scale to remove the fan
+	mat.add_cube_to_verts(c, color, c.get_llc(), ~front_mask); // sides
+}
+
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars,
 	float vbar_hthick, float hbar_hthick, unsigned vdim, unsigned hdim, unsigned adj_dim=0, float h_adj_val=0.0)
 {
@@ -6031,6 +6043,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_FISHTANK:  return table_glass_color; // glass; black lid is ignored
 	case TYPE_PET_CAGE:  return colorRGBA(color, 0.1); // mostly transparent
 	case TYPE_IBEAM:     return texture_color(get_ibeam_tid()).modulate_with(color);
+	case TYPE_HVAC_UNIT: return texture_color(get_hvac_tid(*this)).modulate_with(color);
 	case TYPE_MIRROR:    return WHITE; // should be reflecting
 	//case TYPE_POOL_BALL: return ???; // texture_color(get_ball_tid(*this))? uses a texture atlas, so unclear what color to use here; use white by default
 	//case TYPE_CHIMNEY:  return texture_color(get_material().side_tex); // should modulate with texture color, but we don't have it here

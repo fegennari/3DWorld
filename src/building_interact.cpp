@@ -1655,7 +1655,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 				}
 			}
 			else if (c->type == TYPE_LIGHT && !c->is_powered()) {player_room_no_power = 1;}
-			//else if (c->type == TYPE_FURNACE) {} // or AC unit?
+			//else if (c->type == TYPE_FURNACE) {} // or TYPE_HVAC_UNIT?
 			//else if (c->type == TYPE_FRIDGE ) {}
 		}
 		if (!c->has_dstate()) continue; // Note: no test of player_coll flag

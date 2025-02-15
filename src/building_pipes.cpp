@@ -1260,7 +1260,7 @@ void building_t::get_pipe_basement_gas_connections(vect_riser_pos_t &pipes) cons
 	for (room_object_t const &i : interior->room_geom->objs) { // check all objects placed so far
 		if (i.z1() < ground_floor_z1) continue; // object in the house basement; unclear how to handle it here
 		bool const is_gas_dryer(i.type == TYPE_DRYER && (i.obj_id & 3)); // gas dryer 75% of the time, since it makes the pipes more interesting
-		if (i.type != TYPE_WHEATER && i.type != TYPE_FURNACE && i.type != TYPE_STOVE && i.type != TYPE_FPLACE && !is_gas_dryer) continue;
+		if (i.type != TYPE_WHEATER && i.type != TYPE_FURNACE && i.type != TYPE_STOVE && i.type != TYPE_FPLACE && i.type != TYPE_HVAC_UNIT && !is_gas_dryer) continue;
 		pipes.emplace_back(point(i.xc(), i.yc(), ceil_zval), pipe_radius, 0, 1); // flows in
 	}
 }
