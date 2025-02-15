@@ -327,7 +327,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			// create catwalk
 			catwalk.expand_in_dim(edim, -end_pad); // shrink
 			unsigned const flags(RO_FLAG_IN_FACTORY | RO_FLAG_HANGING);
-			room_object_t catwalk_obj(catwalk, TYPE_CATWALK, room_id, edim, rgen.rand_bool(), flags, light_amt); // random mesh texture
+			room_object_t catwalk_obj(catwalk, TYPE_CATWALK, room_id, edim, rgen.rand_bool(), flags, light_amt); // random mesh texture stored in dir
 			// add bars to hang the catwalk from beams
 			float const rod_radius(0.008*window_vspace);
 			bool last_added(0);

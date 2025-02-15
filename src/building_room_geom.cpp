@@ -1319,14 +1319,18 @@ void get_catwalk_cubes(room_object_t const &c, cube_t cubes[5]) { // {bottom, le
 		}
 	} // for d
 }
+tid_nm_pair_t get_metal_grate_tex(float tscale, unsigned sel_ix) {
+	string const fn((sel_ix & 1) ? "metals/4_perforated_metal.png" : "metals/17_perforated_metal_plate.png");
+	tid_nm_pair_t tex(get_texture_by_name(fn, 0, 0, 1, 1.0, 1, 3), tscale, 1); // shadowed=1, custom alpha mipmaps
+	tex.set_specular_color(WHITE, 0.6, 50.0);
+	return tex;
+}
 void building_room_geom_t::add_catwalk(room_object_t const &c) {
 	bool const dim(c.dim), hanging(c.is_hanging());
 	float const height(c.dz()), length(c.get_length()), width(c.get_width()), bot_thick(0.08*height);
 	float const hbar_width(0.04*height), hbar_hwidth(0.5*hbar_width), vbar_width(0.05*height), vbar_hwidth(0.5*vbar_width), hbar_inset(vbar_hwidth - hbar_hwidth);
 	// add bottom surface metal mesh; select from one of two textures using "dir", which isn't otherwise used
-	string const fn((c.dir & 1) ? "metals/4_perforated_metal.png" : "metals/17_perforated_metal_plate.png");
-	tid_nm_pair_t tex(get_texture_by_name(fn, 0, 0, 1, 1.0, 1, 3), 2.0/width, 1); // shadowed=1, custom alpha mipmaps
-	tex.set_specular_color(WHITE, 0.6, 50.0);
+	tid_nm_pair_t const tex(get_metal_grate_tex(2.0/width, c.dir));
 	cube_t bot(c);
 	set_cube_zvals(bot, (c.z1() + 0.2*bot_thick), (c.z1() + 0.4*bot_thick));
 	bot.expand_in_dim(!dim, -(hbar_width + hbar_inset)); // abut inside of bottom bars
