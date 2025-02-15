@@ -64,10 +64,11 @@ void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cu
 	}
 }
 
-void clip_cylin_to_square(cube_t &c, unsigned dim) { // about the center
+void clip_cylin_to_square(cube_t &c, unsigned dim, bool clip_to_z2=0) { // about the center
 	unsigned const d1((dim+1)%3), d2((dim+2)%3); // the non-cylin long dims
-	float const da(c.get_sz_dim(d1)), db(c.get_sz_dim(d2));
+	float const da(c.get_sz_dim(d1)), db(c.get_sz_dim(d2)), orig_z2(c.z2());
 	if (da < db) {c.expand_in_dim(d2, -0.5*(db - da));} else {c.expand_in_dim(d1, -0.5*(da - db));} // shrink
+	if (clip_to_z2 && dim != 2) {c.translate_dim(2, (orig_z2 - c.z2()));} // shift upward to original zval
 }
 
 cube_t place_obj_on_cube_side(cube_t const &c, bool dim, bool dir, float hheight, float hwidth, float depth, float pad, rand_gen_t &rgen) {
@@ -183,7 +184,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		part.z2() -= rgen.rand_uniform(0.05, 0.2)*height; // make a bit shorter
 
 		if (is_cylin) { // make it square
-			clip_cylin_to_square(part, cylin_dims[n]);
+			clip_cylin_to_square(part, cylin_dims[n], 1); // clip_to_z2=1
 
 			if (two_part && part.intersects(parts[1-n])) { // if adjacent, shrink to force a gap; maybe can't happen now?
 				part.expand_by_xy(-0.1*min(part.dx(), part.dy()));

@@ -391,7 +391,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		if (i->type != TYPE_MACHINE)  continue;
 		if (rgen.rand_float() > 0.15) continue; // 15% chance
 		float const smoke_radius(0.12*(i->dx() + i->dy()));
-		point const pos(i->xc(), i->yc(), (i->z1() + 0.8*i->dz())); // smoke starts near machine top and rises up to the ceiling
+		point const pos(i->xc(), i->yc(), (i->z1() + 0.9*i->dz())); // smoke starts near machine top and rises up to the ceiling
 		interior->factory_info->smoke_emitters.emplace_back(pos, smoke_radius, (i - objs.begin())); // store machine obj id
 	}
 	// add fire extinguisher
