@@ -148,37 +148,30 @@ void building_room_geom_t::add_spring(point pos, float radius, float r_wire, flo
 	}
 }
 
-void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_gap, bldg_factory_info_t const *factory_info) { // components are shadowed and small
-	// can use AC Unit, metal plate texture, buttons, lights, etc.
+rand_gen_t get_machine_info(room_object_t const &c, float floor_ceil_gap, cube_t &base, cube_t parts[2], cube_t &support,
+	bool is_cylins[2], unsigned cylin_dims[2], unsigned &num_parts, bool &parts_swapped)
+{
 	rand_gen_t rgen(c.create_rgen());
-	float const height(c.dz()), width(c.get_width()), depth(c.get_depth()), orig_floor_ceil_gap(floor_ceil_gap);
-	bool const dim(c.dim), dir(c.dir), two_part(width > rgen.rand_uniform(1.5, 2.2)*depth), in_factory(c.in_factory());
-	float const pipe_rmax(0.033*min(height, min(width, depth))), back_wall_pos(c.d[dim][!dir]);
-	unsigned const num_parts(two_part ? 2U : 1U);
-	colorRGBA const base_color(apply_light_color(c, c.color));
-	cube_t base(c), main(c);
+	float const height(c.dz()), width(c.get_width());
+	bool const two_part(width > rgen.rand_uniform(1.5, 2.2)*c.get_depth());
+	cube_t main(c);
+	num_parts = (two_part ? 2U : 1U);
+	base      = c;
 	base.z2() = main.z1() = c.z1() + rgen.rand_uniform(0.04, 0.1)*min(height, floor_ceil_gap);
-	cube_t parts[2] = {main, main};
-	rgeom_mat_t &base_mat(get_material(tid_nm_pair_t(get_concrete_tid(), 12.0), 1, 0, 1)); // shadowed, small
-	base_mat.add_cube_to_verts(base, base_color, all_zeros, EF_Z1); // skip bottom
-	bool parts_swapped(0), is_cylins[2] = {0, 0};
-	unsigned cylin_dims[2] = {2, 2}; // defaults to Z
-	vect_cube_t avoid, shapes;
-	vect_sphere_t pipe_ends;
-	if (in_factory && factory_info) {floor_ceil_gap = factory_info->floor_space.dz();}
+	parts[0] = parts[1] = main;
 
 	if (two_part) {
-		float const split_pos(main.d[!dim][0] + rgen.rand_uniform(0.4, 0.6)*width);
-		parts[0].d[!dim][1] = split_pos - max(0.0f, rgen.rand_uniform(-0.1, 0.1))*width; // maybe add a gap
-		parts[1].d[!dim][0] = split_pos + max(0.0f, rgen.rand_uniform(-0.1, 0.1))*width; // maybe add a gap
+		float const split_pos(main.d[!c.dim][0] + rgen.rand_uniform(0.4, 0.6)*width);
+		parts[0].d[!c.dim][1] = split_pos - max(0.0f, rgen.rand_uniform(-0.1, 0.1))*width; // maybe add a gap
+		parts[1].d[!c.dim][0] = split_pos + max(0.0f, rgen.rand_uniform(-0.1, 0.1))*width; // maybe add a gap
 		if (rgen.rand_bool()) {swap(parts[0], parts[1]); parts_swapped = 1;} // remove any bias toward the left/right
 	}
 	// calculate size and shape of each part
 	for (unsigned n = 0; n < num_parts; ++n) {
 		cube_t &part(parts[n]);
 		vector3d const psz(part.get_size());
-		bool const is_cylin(!is_cylins[0] && max(psz.x, psz.y) < 1.5*min(psz.x, psz.y) && rgen.rand_float() < (in_factory ? 0.35 : 0.5)); // don't place two cylinders
-		
+		bool const is_cylin(!is_cylins[0] && max(psz.x, psz.y) < 1.5*min(psz.x, psz.y) && rgen.rand_float() < (c.in_factory() ? 0.35 : 0.5)); // don't place two cylinders
+
 		if (is_cylin) { // 50% chance vert/Z, 25% chance X, 25% chance Y
 			bool const must_be_vert(psz.z > 2.0*min(psz.x, psz.y)); // tall thin cylinders must be vertical
 			cylin_dims[n] = ((must_be_vert || rgen.rand_bool()) ? 2 : rgen.rand_bool());
@@ -195,8 +188,42 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 				part.expand_by_xy(-0.1*min(part.dx(), part.dy()));
 				clip_cylin_to_square(part, cylin_dims[n]);
 			}
+			if (cylin_dims[n] < 2 && part.z1() > main.z1()) { // horizontal cylinder off the ground - add a supporting cube
+				support = part;
+				set_cube_zvals(support, main.z1(), part.zc());
+				for (unsigned d = 0; d < 2; ++d) {support.expand_in_dim(d, -rgen.rand_uniform(0.05, 0.45)*part.get_sz_dim(d));} // shrink in both dims
+			}
 		}
-	}
+	} // for n
+	return rgen; // return for use in drawing
+}
+unsigned get_machine_part_cubes(room_object_t const &c, float floor_ceil_gap, cube_t cubes[4]) {
+	cube_t support;
+	bool parts_swapped(0), is_cylins[2] = {0, 0};
+	unsigned num_parts(0), cylin_dims[2] = {2, 2}; // defaults to Z
+	get_machine_info(c, floor_ceil_gap, cubes[0], cubes+1, support, is_cylins, cylin_dims, num_parts, parts_swapped);
+	unsigned ncubes(num_parts + 1);
+	if (!support.is_all_zeros()) {cubes[ncubes++] = support;}
+	return ncubes;
+}
+
+void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_gap, bldg_factory_info_t const *factory_info) { // components are shadowed and small
+	// can use AC Unit, metal plate texture, buttons, lights, etc.
+	float const height(c.dz()), width(c.get_width()), depth(c.get_depth()), orig_floor_ceil_gap(floor_ceil_gap);
+	cube_t base, parts[2], support;
+	bool parts_swapped(0), is_cylins[2] = {0, 0};
+	unsigned num_parts(0), cylin_dims[2] = {2, 2}; // defaults to Z
+	rand_gen_t rgen(get_machine_info(c, floor_ceil_gap, base, parts, support, is_cylins, cylin_dims, num_parts, parts_swapped));
+	bool const dim(c.dim), dir(c.dir), two_part(num_parts == 2), in_factory(c.in_factory());
+	float const pipe_rmax(0.033*min(height, min(width, depth))), back_wall_pos(c.d[dim][!dir]);
+	rgeom_mat_t &base_mat(get_material(tid_nm_pair_t(get_concrete_tid(), 12.0), 1, 0, 1)); // shadowed, small
+	base_mat.add_cube_to_verts(base, apply_light_color(c, c.color), all_zeros, EF_Z1); // skip bottom
+	vect_cube_t avoid, shapes;
+	vect_sphere_t pipe_ends;
+	if (in_factory && factory_info) {floor_ceil_gap = factory_info->floor_space.dz();}
+	cube_t main(c);
+	main.z1() = base.z2();
+
 	// add/draw shapes/objects for each part
 	for (unsigned n = 0; n < num_parts; ++n) {
 		cube_t const &part(parts[n]);
@@ -218,10 +245,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 				vector3d const ts(calc_cylin_tscales(tscale, part_sz, cylin_dim)); // {side_tscale, end_tscale, len_tscale}
 				part_mat.add_ortho_cylin_to_verts(part, part_color, cylin_dim, (cylin_dim < 2), 1, 0, 0, 1.0, 1.0, ts.x, ts.y, 0, 32, 0.0, 0, ts.z); // draw sides and top
 
-				if (cylin_dim < 2 && part.z1() > main.z1()) { // horizontal cylinder off the ground - draw a supporting cube
-					cube_t support(part);
-					set_cube_zvals(support, main.z1(), part.zc());
-					for (unsigned d = 0; d < 2; ++d) {support.expand_in_dim(d, -rgen.rand_uniform(0.05, 0.45)*part.get_sz_dim(d));} // shrink in both dims
+				if (!support.is_all_zeros()) { // add/draw cylinder support; should only be for the first part
 					tid_nm_pair_t const tex(get_machine_part_texture(0, support.get_size(), tscale, rgen)); // is_cylin=0
 					rgeom_mat_t &support_mat(get_material(tex, 1, 0, 1)); // shadowed, small
 					colorRGBA const support_color(apply_light_color(c, choose_machine_part_color(rgen, (part_tex.tid >= 0))));

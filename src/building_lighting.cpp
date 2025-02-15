@@ -43,6 +43,7 @@ void get_pool_table_cubes(room_object_t const &c, cube_t cubes[5]);
 unsigned get_couch_cubes(room_object_t const &c, cube_t cubes[4]);
 unsigned get_cashreg_cubes(room_object_t const &c, cube_t cubes[2]);
 void get_fishtank_cubes(room_object_t const &c, cube_t sides[4], cube_t &substrate, cube_t &lid, cube_t &light);
+unsigned get_machine_part_cubes(room_object_t const &c, float floor_ceil_gap, cube_t cubes[4]);
 
 bool check_indir_enabled(bool in_basement, bool in_attic) {
 	if (in_basement) return INDIR_BASEMENT_EN;
@@ -448,6 +449,11 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			get_fishtank_cubes(*c, sides, substrate, lid, light);
 			if (!lid      .is_all_zeros()) {cc.emplace_back(lid,       BKGRAY  );} // ignore the light since it's small
 			if (!substrate.is_all_zeros()) {cc.emplace_back(substrate, LT_BROWN);} // substrate has different textures, but they're all sort of light brown-ish
+		}
+		else if (type == TYPE_MACHINE) {
+			cube_t cubes[4];
+			unsigned const num_cubes(get_machine_part_cubes(*c, get_floor_ceil_gap(), cubes));
+			add_colored_cubes(cubes, num_cubes, color.modulate_with(GRAY), cc); // use light gray, since we don't have the actual metal textures used
 		}
 		else { // single cube
 			cube_t bc(*c); // handle 3D models that don't fill the entire cube

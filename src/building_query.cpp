@@ -28,6 +28,7 @@ bool get_sphere_poly_int_val(point const &sc, float sr, point const *const point
 float get_player_move_dist();
 void get_shelf_brackets(room_object_t const &c, cube_t shelves[4], unsigned num_shelves, vect_cube_with_ix_t &brackets);
 void get_catwalk_cubes(room_object_t const &c, cube_t cubes[5]);
+unsigned get_machine_part_cubes(room_object_t const &c, float floor_ceil_gap, cube_t cubes[4]);
 
 
 // assumes player is in this building; handles windows and exterior doors but not attics and basements
@@ -1534,6 +1535,11 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			cube_t shelves[4]; // max number of shelves
 			unsigned const num_shelves(get_shelves_for_object(*c, shelves));
 			coll_ret |= check_cubes_collision(shelves, num_shelves, pos, p_last, radius, &cnorm);
+		}
+		else if (type == TYPE_MACHINE) { // is this needed? includes large cubes and bcubes of cylinders, but not smaller parts, pipes, etc.
+			cube_t cubes[4];
+			unsigned const num_cubes(get_machine_part_cubes(*c, building.get_floor_ceil_gap(), cubes));
+			coll_ret |= check_cubes_collision(cubes, num_cubes, pos, p_last, radius, &cnorm);
 		}
 		else { // assume it's a cube
 			// some object types are special because they're common collision objects and they're not filled cubes
