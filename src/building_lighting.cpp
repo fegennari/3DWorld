@@ -614,6 +614,7 @@ class building_indir_light_mgr_t {
 			if (ro.type == TYPE_LAMP) {weight *= 0.33;} // lamps are less bright
 			if (ro.is_round())        {light_radius = ro.get_radius();}
 			if (in_attic)             {weight *= ATTIC_LIGHT_RADIUS_SCALE*ATTIC_LIGHT_RADIUS_SCALE;} // based on surface area rather than radius
+			else if (b.point_in_factory(light_center)) {base_num_rays /= 4;} // many lights in factory, fewer rays needed
 			else if (light_in_basement) {
 				if (in_ext_basement) {
 					if      (b.interior->has_backrooms) {weight *= 0.2; base_num_rays /= 4;} // darker and fewer rays
@@ -870,6 +871,9 @@ public:
 		if (b.point_in_attic(target)) {
 			VA = b.get_attic_part();
 			set_cube_zvals(VA, b.interior->attic_access.z1(), b.interior_z2);
+		}
+		else if (b.point_in_factory(target)) { // factory is full Z range
+			VA = b.get_factory_area();
 		}
 		else {
 			bool const in_ext_basement(b.point_in_extended_basement_not_basement(target));
