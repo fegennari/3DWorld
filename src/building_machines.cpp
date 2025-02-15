@@ -176,8 +176,13 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 	// calculate size and shape of each part
 	for (unsigned n = 0; n < num_parts; ++n) {
 		cube_t &part(parts[n]);
-		bool const is_cylin(!is_cylins[0] && max(part.dx(), part.dy()) < 1.5*min(part.dx(), part.dy()) && rgen.rand_float() < (in_factory ? 0.35 : 0.5)); // don't place two cylinders
-		if (is_cylin) {cylin_dims[n] = (rgen.rand_bool() ? 2 : rgen.rand_bool());} // 50% chance vert/Z, 25% chance X, 25% chance Y
+		vector3d const psz(part.get_size());
+		bool const is_cylin(!is_cylins[0] && max(psz.x, psz.y) < 1.5*min(psz.x, psz.y) && rgen.rand_float() < (in_factory ? 0.35 : 0.5)); // don't place two cylinders
+		
+		if (is_cylin) { // 50% chance vert/Z, 25% chance X, 25% chance Y
+			bool const must_be_vert(psz.z > 2.0*min(psz.x, psz.y)); // tall thin cylinders must be vertical
+			cylin_dims[n] = ((must_be_vert || rgen.rand_bool()) ? 2 : rgen.rand_bool());
+		}
 		is_cylins[n] = is_cylin;
 		float const max_shrink_val(is_cylin ? 0.15 : 0.25);
 		for (unsigned d = 0; d < 2; ++d) {part.expand_in_dim(d, -rgen.rand_uniform(0.1, 1.0)*max_shrink_val*part.get_sz_dim(d));} // shrink in both dims independently
@@ -227,7 +232,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		}
 		// maybe add a breaker panel if a cube
 		if (!is_cylin && rgen.rand_float() < 0.6) {
-			unsigned const flags((rgen.rand_float() < 0.2) ? RO_FLAG_OPEN : 0); // open 20% of the time
+			unsigned const flags((!in_factory && rgen.rand_float() < 0.2) ? RO_FLAG_OPEN : 0); // open 20% of the time; not for factory machines
 			float panel_hheight(size_scale*part_sz.z*rgen.rand_uniform(0.15, 0.22)), panel_hwidth(size_scale*part_sz[!dim]*rgen.rand_uniform(0.15, 0.22));
 			min_eq(panel_hheight, 1.5f*panel_hwidth ); // set reasonable aspect ratio
 			min_eq(panel_hwidth,  1.5f*panel_hheight); // set reasonable aspect ratio
@@ -286,7 +291,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		// add vents or AC unit fans
 		if (!is_cylin && rgen.rand_float() < 0.9) {
 			for (unsigned m = 0; m < (two_part ? 2U : 3U); ++m) {
-				if (rgen.rand_bool()) continue;
+				if (rgen.rand_float() > (in_factory ? 0.75 : 0.5)) continue;
 				bool const vdim(orients[m] >> 1), vdir(orients[m] & 1);
 				bool const add_ac_unit(rgen.rand_float() < ((vdim == dim) ? 0.75 : 0.25)), mirror_y(add_ac_unit);
 				float const pwidth(part_sz[!vdim]), pheight(part_sz.z);
@@ -466,7 +471,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 			} // for m
 		} // for N
 		// add pipes down to the floor
-		unsigned const num_floor_pipes(rgen.rand() % (in_factory ? 7 : 5)); // 0-4, 0-6 for factories
+		unsigned const num_floor_pipes((rgen.rand() % (in_factory ? 6 : 5)) + in_factory); // 0-4, 1-6 for factories
 
 		if (num_floor_pipes > 0) {
 			colorRGBA const color(choose_pipe_color(rgen)), spec_color(get_specular_color(color)), pcolor(apply_light_color(c, color));
@@ -723,7 +728,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 	unsigned const num_machines((rgen.rand() % 11) + 10); // 10-20
 
 	for (unsigned n = 0; n < num_machines; ++n) {
-		float const height(min(fc_gap*rgen.rand_uniform(0.4, 0.7), max_height));
+		float const height(min(fc_gap*rgen.rand_uniform(0.3, 0.7), max_height));
 		cube_t c;
 		set_cube_zvals(c, zval, zval+height);
 
