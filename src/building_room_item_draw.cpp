@@ -1918,9 +1918,10 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	bool const is_rotated(building.is_rotated()), is_player_building(&building == player_building);
 	bool const check_clip_cube(shadow_only && !is_rotated && !smap_light_clip_cube.is_all_zeros()); // check clip cube for shadow pass; not implemented for rotated buildings
 	bool const skip_interior_objs(!player_in_building_or_doorway && !shadow_only), has_windows(building.has_windows());
+	bool const player_in_factory(building.point_in_factory(camera_bs));
 	float const one_floor_above(camera_bs.z + floor_spacing);
 	float two_floors_below(camera_bs.z - 2.0*floor_spacing);
-	if (is_factory && building.get_factory_area().contains_pt(camera_bs)) {min_eq(two_floors_below, ground_floor_z1);} // factory lights reach more than 2 floors
+	if (player_in_factory) {min_eq(two_floors_below, ground_floor_z1);} // factory lights reach more than 2 floors
 	cube_t const clip_cube_bs(smap_light_clip_cube - xlate);
 	// skip for rotated buildings and reflection pass, since reflected pos may be in a different room; should we use actual_player_pos for shadow_only mode?
 	int const camera_room((is_rotated || reflection_pass) ? -1 : building.get_room_containing_camera(camera_bs));
@@ -2103,9 +2104,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		}
 	}
 	if (player_in_building_or_doorway) {
-		// draw animals; skip animal shadows for retail rooms and malls/stores as an optimization (must agree with lighting code)
-		bool const skip_animals(shadow_only && ((building.has_retail() && building.get_retail_part().contains_pt(camera_bs)) || building.point_in_mall(camera_bs)));
-		if (!skip_animals) {draw_animals(s, building, oc, xlate, camera_bs, shadow_only, reflection_pass, check_clip_cube);}
+		// draw animals; skip animal shadows for factories, retail rooms, and malls/stores as an optimization (must agree with lighting code)
+		if (shadow_only && (player_in_factory || (building.has_retail() && building.get_retail_part().contains_pt(camera_bs)) || building.point_in_mall(camera_bs))) {}
+		else {draw_animals(s, building, oc, xlate, camera_bs, shadow_only, reflection_pass, check_clip_cube);}
 	}
 	if (disable_cull_face) {glEnable(GL_CULL_FACE);} // re-enable face culling
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
@@ -2670,7 +2671,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 				max_sep_dist = get_mall_floor_spacing();
 			}
 			else if (has_tall_retail()) { // handle ceilings more than one part tall
-				cube_t const retail_part(get_retail_part());
+				cube_t const &retail_part(get_retail_part());
 				if (retail_part.contains_pt(viewer) || retail_part.contains_pt(center)) {max_sep_dist *= retail_floor_levels;}
 			}
 			if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, interior->fc_occluders, 2, 0.0, max_sep_dist)) return 1;

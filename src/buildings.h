@@ -2109,9 +2109,10 @@ struct building_t : public building_geom_t {
 	int check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points,
 		bool inc_attic=0, bool inc_ext_basement=0, bool inc_roof_acc=0, bool inc_details=0, cube_t *coll_cube=nullptr) const;
 	bool point_under_attic_roof(point const &pos, vector3d *const cnorm=nullptr) const;
-	bool point_in_attic(point const &pos, vector3d *const cnorm=nullptr) const;
-	bool cube_in_attic(cube_t const &c) const;
-	bool point_in_mall(point const &pos) const {return (has_mall() && point_in_extended_basement_not_basement(pos));} // including stores and hallways
+	bool point_in_attic  (point const &pos, vector3d *const cnorm=nullptr) const;
+	bool cube_in_attic   (cube_t const &c) const;
+	bool point_in_mall   (point const &pos) const {return (has_mall  () && point_in_extended_basement_not_basement(pos));} // including stores and hallways
+	bool point_in_factory(point const &pos) const {return (is_factory() && get_factory_area().contains_pt(pos));}
 	bool check_point_xy_in_part(point const &pos) const;
 	bool player_can_see_outside() const;
 	bool player_can_see_mall_skylight(vector3d const &xlate) const;

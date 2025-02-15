@@ -1614,7 +1614,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	}
 	if (has_room_geom() && frame_counter <= (int)interior->room_geom->last_animal_update_frame+1) { // animals were updated this frame or the previous frame
 		if (has_retail() && get_retail_part().contains_pt(camera_rot)) {} // optimization: no dynamic animal shadows in retail area
-		else if (point_in_mall(camera_rot)) {} // optimization: no dynamic animal shadows in malls
+		else if (point_in_mall(camera_rot) || point_in_factory(camera_rot)) {} // optimization: no dynamic animal shadows in malls or factories
 		else { // add a base index to each animal group to make all moving objects unique
 			// Note: sewer_rats, pet_rats, sewer_spiders, and pet_snakes don't cast shadows
 			get_animal_shadow_casters(interior->room_geom->rats,    moving_objs, xlate, 10000);
