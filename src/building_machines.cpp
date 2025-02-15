@@ -153,7 +153,7 @@ rand_gen_t get_machine_info(room_object_t const &c, float floor_ceil_gap, cube_t
 {
 	rand_gen_t rgen(c.create_rgen());
 	float const height(c.dz()), width(c.get_width());
-	bool const two_part(width > rgen.rand_uniform(1.5, 2.2)*c.get_depth());
+	bool const two_part(width > rgen.rand_uniform(1.2, 1.6)*c.get_depth());
 	cube_t main(c);
 	num_parts = (two_part ? 2U : 1U);
 	base      = c;
