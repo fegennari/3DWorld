@@ -340,7 +340,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 					pipe_ends.clear();
 
 					for (unsigned n = 0; n < num_pipes; ++n) {
-						bool const is_coil(ndim == coil_dim && num_coils == 0 && rgen2.rand_bool()); // max of 1 coil across both dims
+						bool const is_coil(bool(ndim) == coil_dim && num_coils == 0 && rgen2.rand_bool()); // max of 1 coil across both dims
 						num_coils += is_coil;
 						add_machine_pipe_in_region(c, region2, (is_coil ? 2.0 : 1.0)*pipe_rmax, ndim, pipe_ends, rgen2, is_coil);
 					}

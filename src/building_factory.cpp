@@ -127,7 +127,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	support_bounds.expand_by_xy(-support_hwidth);
 	set_cube_zvals(support, zval,     beams_z1 );
 	set_cube_zvals(beam,    beams_z1, ceil_zval);
-	vect_cube_t support_parts, beams, supports, lights;
+	vect_cube_t support_parts, beams, supports[2], lights;
 	vector<float> beam_pos; // in short dim; needed for hanging catwalks
 	vect_cube_t const &nested_rooms(interior->factory_info->sub_rooms);
 	unsigned const objs_start_inc_beams(objs.size());
@@ -174,7 +174,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 				if (n == 0          ) {skip_faces |= ~get_face_mask(!dim, 0);}
 				if (n == num_windows) {skip_faces |= ~get_face_mask(!dim, 1);}
 				objs.emplace_back(support, TYPE_IBEAM, room_id, dim, 1, 0, light_amt, SHAPE_CUBE, WHITE, skip_faces); // vertical
-				if ((bool)dim == edim) {supports.push_back(support);} // currently only need to track in one dim for catwalk + ladder placement
+				supports[dim].push_back(support);
 				bool was_clipped(0);
 
 				for (cube_t const &r : nested_rooms) { // clip in Z if intersects a room
@@ -284,7 +284,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		while (fabs(cur_shift) < max_shift) {
 			set_wall_width(cand, catwalk_center, catwalk_hwidth, !edim);
 			
-			if (!has_bcube_int(cand, supports) && !cube_int_ext_door(cand) && !interior->is_blocked_by_stairs_or_elevator(cand)) { // valid placement
+			if (!has_bcube_int(cand, supports[edim]) && !cube_int_ext_door(cand) && !interior->is_blocked_by_stairs_or_elevator(cand)) { // valid placement
 				bool bad_place(0); // don't let supports intersect lights
 				
 				for (unsigned d = 0; d < 2; ++d) { // each side of catwalk
@@ -322,7 +322,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 				if (r.contains_cube_xy(ladder2)) {ladder2.z1()   = r.z2() + fc_thick; break;} // ladd starts on the roof of this room
 				if (r.intersects_xy   (ladder2)) {add_sec_ladder = 0; break;} // skip if partially overlapping
 			}
-			if (add_sec_ladder && has_bcube_int(ladder2, supports) || cube_int_ext_door(ladder2) || interior->is_blocked_by_stairs_or_elevator(ladder2)) {add_sec_ladder = 0;}
+			if (add_sec_ladder && has_bcube_int(ladder2, supports[edim]) || cube_int_ext_door(ladder2) || interior->is_blocked_by_stairs_or_elevator(ladder2)) {add_sec_ladder = 0;}
 			if (add_sec_ladder) {add_ladder_with_blocker(ladder2, room_id, edim, !edir, light_amt, clearance, objs);}
 			// create catwalk
 			catwalk.expand_in_dim(edim, -end_pad); // shrink
@@ -508,32 +508,38 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	unsigned const ducts_end(objs.size());
 	vector2d const hvac_sz(rgen.rand_uniform(6.0, 7.0), rgen.rand_uniform(4.0, 5.0)); // length and depth relative to duct radius; consistent for both sides
 
-	// add vertical section of duct up to the ceiling
+	// add vertical sections of duct up to the ceiling and HVAC units on each side
 	for (unsigned i = ducts_start; i < ducts_end; ++i) {
 		room_object_t const &duct(objs[i]);
 		if (duct.type != TYPE_DUCT || duct.dim != edim) continue; // not the long duct
-		// if there are an odd number of vertical supports, offset to a random side to avoid intersecting the center support
-		float const hwidth(0.5*duct.dz()), center(duct.get_center_dim(edim) + (rgen.rand_bool() ? 1.0 : -1.0)*(support_hwidth + hwidth));
+		room_obj_shape const duct_shape(duct.shape);
+		unsigned const duct_flags(RO_FLAG_IN_MALL | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI);
+		float const hwidth(0.5*duct.dz());
 		cube_t vduct(duct);
 		set_cube_zvals(vduct, duct.zc(), ceil_zval);
-		set_wall_width(vduct, center, hwidth, edim);
-		unsigned const duct_flags(RO_FLAG_IN_MALL | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI);
-		objs.emplace_back(vduct, TYPE_DUCT, room_id, 0, 1, duct_flags, light_amt, duct.shape); // vertical, same shape
 		// Note: duct is invalidated at this point
-		// add HVAC unit along the duct
+		// add HVAC unit along the duct; must be placed on a support
 		float const length(hwidth*hvac_sz.x), depth(hwidth*hvac_sz.y), height(0.7*length); // height set relative to length for 1:1 texture mapping; clipped smaller in width below
-		float const edge_spacing(1.0*length + 0.1*room_sz[edim]), pos_lo(place_area_upper.d[edim][0] + edge_spacing), pos_hi(place_area_upper.d[edim][1] - edge_spacing);
+		float const center_pos(duct.get_center_dim(!edim)), edge_spacing(1.0*length + 0.1*room_sz[edim]);
+		bool const hvac_dir(center_pos < room.get_center_dim(!edim)); // side of wall
+		cube_t hvac_area(duct);
+		hvac_area.expand_in_dim(!edim, support_width); // extend to cover supports
+		hvac_area.expand_in_dim( edim, -edge_spacing);
+		vector<float> cand_pos;
 
-		if (pos_lo < pos_hi) { // should always be true
-			float const center_pos(duct.get_center_dim(!edim));
-			bool const hvac_dir(center_pos < room.get_center_dim(!edim)); // side of wall
+		for (cube_t const &support : supports[!edim]) {
+			if (support.intersects(hvac_area)) {cand_pos.push_back(support.get_center_dim(edim));}
+		}
+		if (!cand_pos.empty()) { // should always be true
+			std::shuffle(cand_pos.begin(), cand_pos.end(), rand_gen_wrap_t(rgen));
 			cube_t hvac;
 			set_wall_width(hvac, center_pos, 0.5*depth, !edim); // depth
 			set_wall_width(hvac, duct.zc(), 0.5*height, 2); // height
+			bool vduct_placed(0);
 
-			for (unsigned n = 0; n < 20; ++n) { // 20 attempts to place HVAC unit
-				set_wall_width(hvac, rgen.rand_uniform(pos_lo, pos_hi), 0.5*length, edim); // length
-				if (hvac.intersects(vduct) || overlaps_other_room_obj(hvac, objs_start, 1, &ducts_start)) continue; // check_all=1; stop at ducts since we know they intersect
+			for (float hvac_pos : cand_pos) {
+				set_wall_width(hvac, hvac_pos, 0.5*length, edim); // length
+				if (overlaps_other_room_obj(hvac, objs_start, 1, &ducts_start)) continue; // check_all=1; stop at ducts since we know they intersect
 				hvac.intersect_with_cube(place_area_upper);
 				objs.emplace_back(hvac, TYPE_HVAC_UNIT, room_id, !edim, hvac_dir, RO_FLAG_IN_FACTORY, light_amt);
 				objs.back().obj_id = ducts_start; // consistent for both sides; sets texture
@@ -546,8 +552,26 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 					if (obj.type == TYPE_DUCT && obj.dim == edim) continue; // skip the long duct
 					if (obj.intersects(hvac_exp)) {obj.type = TYPE_BLOCKER;} // turn into a blocker if it intersects
 				}
+				// translate vduct to intersect with top of HVAC unit; try centered and to either side to avoid a beam
+				set_wall_width(vduct, hvac_pos, hwidth, edim);
+				vduct.expand_in_dim(!edim, -0.1*hwidth); // slight shrink to avoid false positives with abutting beams along the top edge of the wall
+				vduct_placed = !has_bcube_int(vduct, beams);
+
+				if (!vduct_placed) {
+					float const offset((rgen.rand_bool() ? 1.0 : -1.0)*(0.5*length - 1.25*hwidth));
+
+					for (unsigned d = 0; d < 2; ++d) {
+						set_wall_width(vduct, (hvac_pos + (d ? -1.0 : 1.0)*offset), hwidth, edim);
+						if (!has_bcube_int(vduct, beams)) {vduct_placed = 1; break;}
+					}
+				}
+				vduct.expand_in_dim(!edim, 0.1*hwidth); // undo the slight shrink
 				break; // success/done
 			} // for n
+			if (!vduct_placed) { // not placed; use room center; if odd number of vertical supports, offset to a random side to avoid intersecting the center support
+				set_wall_width(vduct, (duct.get_center_dim(edim) + (rgen.rand_bool() ? 1.0 : -1.0)*(support_hwidth + hwidth)), hwidth, edim);
+			}
+			objs.emplace_back(vduct, TYPE_DUCT, room_id, 0, 1, duct_flags, light_amt, duct_shape); // vertical, same shape
 		}
 	} // for i
 	// add boxes and crates in piles
