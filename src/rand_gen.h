@@ -108,6 +108,16 @@ public:
 typedef rand_gen_template_t<rgen_core_t> rand_gen_t;
 typedef rand_gen_template_t<rgen_pregen_t> rand_gen_pregen_t;
 
+class rand_gen_wrap_t {
+public:
+	rand_gen_t &rgen;
+	rand_gen_wrap_t(rand_gen_t &rgen_) : rgen(rgen_) {}
+	typedef unsigned result_type;
+	static result_type min() {return 0;}
+	static result_type max() {return 2147483647;} // max signed int
+	size_t operator()() {return rgen.rand();}
+};
+
 // based on xxHash
 // see: https://blogs.unity3d.com/2015/01/07/a-primer-on-repeatable-random-numbers/
 inline unsigned RotateLeft(unsigned value, unsigned count) {return (value << count) | (value >> (32 - count));}
