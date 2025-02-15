@@ -330,10 +330,17 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 				cc.emplace_back(cubes[1], color); // add pipes directly
 				inner_cube = cubes[0]; // tank
 			}
-			float const shrink(c->get_radius()*(1.0 - 1.0/SQRT2));
+			float const radius(c->get_radius()), shrink(radius*(1.0 - 1.0/SQRT2));
 			inner_cube.expand_by_xy(-shrink); // shrink to inscribed cube in XY
-			if (c->shape == SHAPE_SPHERE) {inner_cube.expand_in_z(-shrink);} // shrink in Z as well
-			if (   type  == TYPE_TABLE  ) {inner_cube.z1() += 0.88*c->dz();} // top of table
+			if  (c->shape == SHAPE_SPHERE  ) {inner_cube.expand_in_z(-shrink);} // shrink in Z as well
+			else if (type == TYPE_TABLE    ) {inner_cube.z1() += 0.88*c->dz();} // top of table
+			else if (type == TYPE_CHEM_TANK) {
+				inner_cube.expand_in_z(-shrink); // shrink in Z
+				cube_t base(*c);
+				base.z2() = inner_cube.z1();
+				base.expand_by_xy(0.5*(radius - shrink) - radius); // half radius, shrunk
+				cc.emplace_back(base, color);
+			}
 			cc.emplace_back(inner_cube, color);
 		}
 		else if (type == TYPE_CLOSET) { // Note: lighting cubes and indir lighting are *not* updated when closet doors are opened and closed

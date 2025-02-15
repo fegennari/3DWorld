@@ -1512,6 +1512,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 				base.r1  *= 0.4; base.r2 *= 0.4; // vertical support has radius 0.08, legs have radius of 0.6, so use something in between
 				coll_ret |= unsigned(sphere_vert_cylin_intersect_with_ends(pos, radius, top, &cnorm) || sphere_vert_cylin_intersect_with_ends(pos, radius, base, &cnorm));
 			}
+			//else if (type == TYPE_CHEM_TANK) {} // capsule on top of cylinder? how do we handle that? use bounding cylinder for now; okay for player, and no balls in factory
 			else {coll_ret |= (unsigned)sphere_vert_cylin_intersect_with_ends(pos, radius, cylin, &cnorm);}
 		}
 		else if (c->shape == SHAPE_SPHERE) { // sphere
