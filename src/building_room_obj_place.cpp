@@ -4522,7 +4522,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 	if (min(room_bounds.dx(), room_bounds.dy()) < 8.0*switch_hwidth) return; // room is too small; shouldn't happen
 	float const ceil_zval(zval + get_floor_ceil_gap());
 	vect_door_stack_t &doorways(get_doorways_for_room(room, zval)); // place light switch next to a door
-	if (doorways.size() > 1 && rgen.rand_bool()) {std::reverse(doorways.begin(), doorways.end());} // random permute if more than 2 doorways?
+	std::shuffle(doorways.begin(), doorways.end(), rand_gen_wrap_t(rgen));
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_end(objs.size());
 	bool const first_side(rgen.rand_bool());
