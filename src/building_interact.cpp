@@ -1738,7 +1738,8 @@ void particle_manager_t::next_frame(building_t &building) {
 	if (particles.empty()) return;
 	float const fticks_stable(min(fticks, 4.0f)); // clamp to 0.1s
 	auto const &objs(building.interior->room_geom->objs);
-	float const lifetimes[NUM_PART_EFFECTS] = {0.0, 2.5, 3.0, 2.0, 0.25, 2.0}; // none, sparks, clouds, smoke, splash, bubble
+	//                                        none sparks clouds smoke splash bubble
+	float const lifetimes[NUM_PART_EFFECTS] = {0.0, 2.5,   3.0,   2.0,  0.25,  2.0};
 
 	for (particle_t &p : particles) {
 		point const p_last(p.pos);
@@ -1757,7 +1758,8 @@ void particle_manager_t::next_frame(building_t &building) {
 		}
 		else if (p.effect == PART_EFFECT_SMOKE) { // floats up
 			p.radius = p.init_radius*(1.0 + 3.0*lifetime); // radius increases over lifetime
-			p.color  = colorRGBA(WHITE*(0.25*(1.0 - lifetime)), p.alpha*(1.0 - lifetime)); // gray => transparent black
+			p.color  = colorRGBA(DK_GRAY*(1.0 - lifetime), p.alpha*(1.0 - lifetime)); // dark gray => transparent black
+			//if (building.is_factory() && p.pos.z > building.ground_floor_z1) {} // should factory smoke be different?
 		}
 		else if (p.effect == PART_EFFECT_SPLASH) {
 			p.radius  = p.init_radius*(1.0 + 1.0*lifetime); // radius increases over lifetime
@@ -1856,7 +1858,7 @@ void fire_manager_t::next_frame(particle_manager_t &particle_manager) {
 		if (lifetime > 0.7) {f.radius = (1.0 - (lifetime - 0.7)/0.3)*f.max_radius;} // shink at end of life
 		// slow random drift? would need to check object collisions
 		if (f.time < f.next_smoke_time) continue;
-		particle_manager.add_particle((f.pos + 1.1*f.radius*plus_z), SMOKE_VELOCITY*plus_z, GRAY, f.radius, PART_EFFECT_SMOKE); // generate smoke
+		particle_manager.add_particle((f.pos + 1.1*f.radius*plus_z), SMOKE_VELOCITY*plus_z, DK_GRAY, f.radius, PART_EFFECT_SMOKE); // generate smoke
 		f.next_smoke_time = f.time + rgen.rand_uniform(0.25, 0.5)*TICKS_PER_SECOND;
 	} // for f
 	// remove dead fires

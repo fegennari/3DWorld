@@ -621,7 +621,7 @@ void bldg_factory_info_t::next_frame(particle_manager_t &particle_manager) {
 	for (smoke_source_t &s : smoke_emitters) { // generate smoke
 		s.time += fticks;
 		if (s.time < s.next_smoke_time) continue;
-		particle_manager.add_particle(s.pos, SMOKE_VEL_FACTORY*plus_z, GRAY, s.radius, PART_EFFECT_SMOKE, s.pid, 0.5); // coll_radius=0.5
+		particle_manager.add_particle(s.pos, SMOKE_VEL_FACTORY*plus_z, DK_GRAY, s.radius, PART_EFFECT_SMOKE, s.pid, 0.5); // coll_radius=0.5
 		s.next_smoke_time = s.time + rgen.rand_uniform(0.5, 0.8)*TICKS_PER_SECOND;
 	}
 }
