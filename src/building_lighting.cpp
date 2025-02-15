@@ -2086,8 +2086,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, dir, bwidth);
 		if (track_lights) {enabled_bldg_lights.push_back(lpos_rot);}
 		//++num_add;
-		// use smaller shadow radius for retail rooms, malls, and stores since there are so many lights (meaning shadows are less visible and perf is more important)
-		bool const reduced_shadows(in_retail_room || room.is_mall_or_store());
+		// use smaller shadow radius for retail rooms, factories, malls, and stores since there are so many lights (meaning shadows are less visible and perf is more important)
+		bool const reduced_shadows(in_retail_room || in_factory || room.is_mall_or_store());
 		float const light_radius_shadow((reduced_shadows ? RETAIL_SMAP_DSCALE : 1.0)*light_radius);
 		bool force_smap_update(0);
 

@@ -3385,7 +3385,7 @@ public:
 						}
 						b.draw_cars_in_building(s, xlate, 1, 1); // player_in_building=1, shadow_only=1
 						is_house |= b.is_house;
-						bool const in_retail_room(b.check_pt_in_retail_room(lpos) || b.point_in_mall(lpos)); // including malls and stores
+						bool const in_retail_room(b.check_pt_in_retail_room(lpos) || b.point_in_mall(lpos) || b.point_in_factory(lpos)); // retail, factory, malls, and mall stores
 						float const player_smap_dist((in_retail_room ? RETAIL_SMAP_DSCALE : 1.0)*camera_pdu.far_);
 						bool const viewer_close(dist_less_than(lpos, pre_smap_player_pos, player_smap_dist)); // Note: pre_smap_player_pos already in building space
 						bool const add_player_shadow(camera_surf_collide && camera_in_this_building && viewer_close && !sec_camera_mode &&
