@@ -669,14 +669,13 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 			// add a bend and another segment to the ceiling, floor, or wall
 			bool const pri_ext_dir(rgen.rand_bool());
 			float const tank_gap(tank_radius + merged_pipe_radius), wall_gap(merged_pipe_radius + 0.26*floor_spacing); // leave wall gap for duct width
-			float const pipe_len(tank_conn_pipe.get_sz_dim(!tank_dim));
 			cube_t h_pipe(tank_conn_pipe);
 			unsigned h_pipe_flags(RO_FLAG_NOCOLL | RO_FLAG_LIT);
 			bool connected(0);
 
 			for (unsigned n = 0; n < 50 && !connected; ++n) { // 50 attempts to extend the horizontal pipe and connect it vertically
-				for (unsigned d = 0; d < 2 && !connected; ++d) { // try to extend both sides
-					bool const dir(bool(d) ^ pri_ext_dir);
+				for (unsigned D = 0; D < 2 && !connected; ++D) { // try to extend both sides
+					bool const d(bool(D) ^ pri_ext_dir);
 					float const pipe_end(tank_conn_pipe.d[!tank_dim][d]), wall_pos(place_area.d[!tank_dim][d]), dsign(d ? 1.0 : -1.0);
 					float cand_pos(0.0);
 					if (d == 0) {cand_pos = rgen.rand_uniform((wall_pos + wall_gap), (pipe_end - tank_gap));}
@@ -702,7 +701,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 						h_pipe_flags |= (d ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT); // make the bend round
 						connected     = 1;
 					} // for e
-				} // for d
+				} // for D
 			} // for n
 			objs.emplace_back(h_pipe, TYPE_PIPE, room_id, !tank_dim, 0, h_pipe_flags, tot_light_amt, SHAPE_CYLIN, pipe_color); // horizontal
 			// add pipe fittings

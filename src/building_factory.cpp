@@ -322,7 +322,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 				if (r.contains_cube_xy(ladder2)) {ladder2.z1()   = r.z2() + fc_thick; break;} // ladd starts on the roof of this room
 				if (r.intersects_xy   (ladder2)) {add_sec_ladder = 0; break;} // skip if partially overlapping
 			}
-			if (add_sec_ladder && has_bcube_int(ladder2, supports[edim]) || cube_int_ext_door(ladder2) || interior->is_blocked_by_stairs_or_elevator(ladder2)) {add_sec_ladder = 0;}
+			if (add_sec_ladder && (has_bcube_int(ladder2, supports[edim]) || cube_int_ext_door(ladder2) || interior->is_blocked_by_stairs_or_elevator(ladder2))) {add_sec_ladder = 0;}
 			if (add_sec_ladder) {add_ladder_with_blocker(ladder2, room_id, edim, !edir, light_amt, clearance, objs);}
 			// create catwalk
 			catwalk.expand_in_dim(edim, -end_pad); // shrink
