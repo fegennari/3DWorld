@@ -69,6 +69,7 @@ void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float di
 	bool const dim(c.dy() < c.dx()), dir(door.get_norm()[dim] > 0.0); // closest cube side dir
 	float door_shift(0.0);
 	if (invert_normal) {swap(door.pts[0], door.pts[1]); swap(door.pts[2], door.pts[3]);} // swap vertex order to invert normal
+	float const door_edge(door.pts[0][dim]);
 
 	if (door.type == tquad_with_ix_t::TYPE_RDOOR) { // not on a wall, use shift relative to floor/wall thickness
 		door_shift = (dir ? 1.0 : -1.0)*get_door_shift_dist();
@@ -93,7 +94,7 @@ void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float di
 					break; // should be only one
 				}
 			}
-			float const dist(door.pts[0][dim] - edge_pos); // signed
+			float const dist(door_edge - edge_pos); // signed
 			if (fabs(dist) < fabs(door_shift)) {door_shift = dist;}
 		} // for p
 		if (door_shift == large_val) { // not found
@@ -102,6 +103,7 @@ void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float di
 		}
 	}
 	door_shift *= -(1.0 + dist_mult); // reflect on other side
+	while ((door_edge + door_shift) == door_edge) {door_shift *= 2.0;} // double door_shift until it changes the value; needed for buildings far from the origin
 	for (unsigned n = 0; n < door.npts; ++n) {door.pts[n][dim] += door_shift;} // move to opposite side of wall
 }
 
