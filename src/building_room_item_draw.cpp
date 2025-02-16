@@ -914,7 +914,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		switch (i->type) {
 		case TYPE_TABLE:   add_table   (*i, tscale, 0.1, 0.08); break; // top_dz=10% of height, leg_width=8% of height
 		case TYPE_CHAIR:   add_chair   (*i, tscale); break;
-		case TYPE_STAIR:   add_stair   (*i, tscale, tex_origin); break;
+		case TYPE_STAIR:   add_stair   (*i, tscale, tex_origin, 0); break; // is_small_pass=0
 		case TYPE_STAIR_WALL: add_stairs_wall(*i, tex_origin, wall_tex); break;
 		case TYPE_RUG:     rugs.push_back(*i); break; // must be drawn last - save until later
 		case TYPE_PICTURE: add_picture (*i); break;
@@ -1013,6 +1013,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		assert(c.type < NUM_ROBJ_TYPES);
 
 		switch (c.type) {
+		case TYPE_STAIR:     add_stair    (c, tscale, tex_origin, 1); break; // is_small_pass=1
 		case TYPE_BOOK:      add_book     (c, 0, 1, inc_text); break; // sm, maybe text
 		case TYPE_BCASE:     add_bookcase (c, 0, 1, inc_text, tscale, 0); break; // sm, maybe text
 		case TYPE_BED:       add_bed      (c, 0, 1, tscale); break;
@@ -1896,8 +1897,10 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		// this is expensive: only enable for the main draw pass and skip for buildings the player isn't in
 		else if (inc_small >= 2 && (player_in_building || !camera_in_building)) {
 			// without the special shader these won't look correct when drawn through windows
-			// used for both plant/tree leaves and spider webs; plants are above ground and in malls and use high min_alpha; spider webs are in basement and use low min_alpha
-			float const min_alpha((player_in_basement >= 2 && !building.has_mall()) ? 0.1 : 0.9);
+			// used for both plant/tree leaves and spider webs;
+			// plants are above ground and in malls with high min_alpha; metal stairs are above ground and in basements with high min_alpha;
+			// spider webs are in ext basement with low min_alpha
+			float const min_alpha((player_in_basement >= 3 && !building.has_mall()) ? 0.1 : 0.9);
 
 			if (!amask_shader.is_setup()) {
 				setup_building_draw_shader(amask_shader, min_alpha, 1, 1, 0); // enable_indir=1, force_tsl=1, use_texgen=0, water_damage=0.0

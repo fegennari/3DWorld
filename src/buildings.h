@@ -1120,7 +1120,7 @@ struct building_room_geom_t {
 	void add_dresser_mirror(room_object_t const &c, float tscale);
 	void add_dresser_drawers(room_object_t const &c, float tscale);
 	void add_drawers(room_object_t const &c, float tscale, vect_cube_t const &drawers, unsigned drawer_index_offset=0);
-	void add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin);
+	void add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin, bool is_small_pass);
 	void add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
 	void add_wall_or_pillar (room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
 	void add_basement_pillar(room_object_t const &c, tid_nm_pair_t const &wall_tex);

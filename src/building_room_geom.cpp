@@ -2438,7 +2438,16 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 	}
 }
 
-void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin) { // Note: no room lighting color atten
+void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin, bool is_small_pass) {
+	// Note: no room lighting color atten
+	bool const is_metal(c.in_factory());
+	if (is_metal != is_small_pass) return; // wrong pass; metal stairs are small, regular stairs are not
+
+	if (is_metal) {
+		rgeom_mat_t &mat(mats_amask.get_material(get_metal_grate_tex(2.0/c.get_width(), (c.dim ^ c.dir)), 1)); // shadowed, alpha mask
+		mat.add_cube_to_verts(c, WHITE, c.get_llc()); // all faces drawn
+		return;
+	}
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale, 1), 1)); // shadowed
 
 	if (c.flags & RO_FLAG_IN_POOL) { // pool stairs are simpler with no separate top vs. bottom
