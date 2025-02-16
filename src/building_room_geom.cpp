@@ -5090,7 +5090,7 @@ void building_room_geom_t::add_water_plane(room_object_t const &c, cube_t const 
 	water.z2() = water_area.z1() + min(water_level, 1.0f)*water_area.dz();
 	get_untextured_material(0, 0, 0, 1).add_cube_to_verts_untextured(water, apply_light_color(c, colorRGBA(0.4, 0.6, 1.0, 0.5)), ~EF_Z2); // no shadows + transparent, top only
 }
-float get_tub_water_level(room_object_t const &c) {
+float get_tub_water_level(room_object_t const &c) { // should this slowly reduce over time when turned off? would need to update geom each frame
 	return min(0.84f, 0.21f*c.state_flags);
 }
 void building_room_geom_t::add_tub_outer(room_object_t const &c) {

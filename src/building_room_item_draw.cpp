@@ -1653,7 +1653,11 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shad
 }
 void building_t::clear_room_geom() {
 	if (!has_room_geom()) return;
-	if (interior->room_geom->modified_by_player) return; // keep the player's modifications and don't delete the room geom
+
+	if (interior->room_geom->modified_by_player) { // keep the player's modifications and don't delete the room geom
+		interior->room_geom->clear_materials(); // but we can still clear the materials
+		return;
+	}
 	// restore pre-room_geom door state by removing any doors added to backrooms
 	assert(interior->room_geom->init_num_doors   <= interior->doors      .size());
 	assert(interior->room_geom->init_num_dstacks <= interior->door_stacks.size());
