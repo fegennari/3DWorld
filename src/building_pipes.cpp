@@ -914,7 +914,7 @@ int add_sprinkler_pipe(building_t const &b, point const &p1, float end_val, floa
 	return ret;
 }
 bool building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes,
-		unsigned room_id, unsigned num_floors, unsigned objs_start, rand_gen_t &rgen, float custom_floor_spacing, float wall_pad)
+		unsigned room_id, unsigned num_floors, unsigned objs_start, rand_gen_t &rgen, float custom_floor_spacing, float wall_pad, unsigned pref_dim)
 {
 	// add vertical red (possibly rusted brown) sprinkler system pipe
 	cube_t room(get_room(room_id));
@@ -937,7 +937,7 @@ bool building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 	set_cube_zvals(c, (room.z1() + fc_thickness), (room.z2() - fc_thickness));
 
 	for (unsigned n = 0; n < 100; ++n) { // 100 random tries
-		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
+		bool const dim((pref_dim < 2 && n < 50) ? bool(pref_dim) : rgen.rand_bool()), dir(rgen.rand_bool()); // wall dim/dir
 		set_wall_width(c, rgen.rand_uniform(room.d[!dim][0]+spacing, room.d[!dim][1]-spacing), sp_radius, !dim);
 		c.d[dim][ dir] = room.d[dim][dir] + (dir ? -1.0 : 1.0)*flange_expand; // against the wall (with space for the flange)
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*2.0*sp_radius;

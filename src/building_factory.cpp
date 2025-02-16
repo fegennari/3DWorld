@@ -114,7 +114,7 @@ void add_hanging_ladder(cube_t const &ladder, unsigned room_id, bool dim, bool d
 	objs.emplace_back(collider, TYPE_COLLIDER, room_id, dim, !dir, (RO_FLAG_INVIS | RO_FLAG_ADJ_TOP), light_amt);
 }
 
-void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start_inc_lights) {
+void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start_inc_lights) { // ~0.25ms
 	assert(interior->factory_info);
 	bool const edim(interior->factory_info->entrance_dim), edir(interior->factory_info->entrance_dir), beam_dim(!edim); // edim is the long dim; beam_dim is short dim
 	float const window_vspace(get_window_vspace()), wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness()), edir_sign(edir ? 1.0 : -1.0);
@@ -468,40 +468,11 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			} // for n
 		} // for bpos
 	}
-	// add fire sprinkler pipes
-	float const custom_floor_spacing(room.dz() - support_width); // place sprinklers under ceiling beams
-	float const wall_pad(1.05*support_width); // add a gap between the wall supports
-	vect_cube_t obstacles(nested_rooms), walls, pipe_cubes; // avoid nested rooms; walls and pipe_cubes start empty and are unused
-	cube_t entry_area(entry);
-	entry_area.z2() = room.z1() + window_vspace;
-	entry_area.expand_in_dim(edim, doorway_width);
-	obstacles.push_back(entry_area); // don't block the entryway with the vertical pipe
-	vector_add_to(lights, obstacles);
-
-	for (tquad_with_ix_t const &door : doors) {
-		obstacles.push_back(door.get_bcube());
-		obstacles.back().expand_by_xy(doorway_width); // don't block an exterior door
-	}
-	for (stairwell_t const &s : interior->stairwells) { // is this needed?
-		if (s.intersects(room)) {obstacles.push_back(s);}
-	}
-	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
-		if (!i->no_coll()) {obstacles.push_back(*i);}
-	}
-	// main pipe not under lights? but lights are placed later
-	unsigned const main_pipe_ix(objs.size());
-	bool const added_sprinklers(add_sprinkler_pipes(obstacles, walls, beams, pipe_cubes, room_id, 1, objs_start, rgen, custom_floor_spacing, wall_pad)); // num_floors=1
-
 	// add ceiling ducts and vents (similar to malls)
 	float const ducts_z2(room.z2() - 0.8*window_vspace); // under the first window, below beams, lights, and pipes
 	cube_t duct_bounds(room);
 	duct_bounds.expand_by_xy(-(support_width - 0.5*wall_thick));
-
-	if (added_sprinklers) { // shorten ends so as to not overlap sprinkler pipe
-		room_object_t const &main_pipe(objs[main_pipe_ix]);
-		assert(main_pipe.type == TYPE_PIPE);
-		duct_bounds.expand_in_dim(edim, -1.5*main_pipe.get_sz_dim(edim));
-	}
+	duct_bounds.expand_in_dim(edim, -1.2*support_width); // shorten ends so as to not overlap sprinkler pipe
 	bool const cylin_ducts(rgen.rand_bool());
 	unsigned const ducts_start(objs.size());
 	add_ceiling_ducts(duct_bounds, ducts_z2, room_id, edim, 2, light_amt, cylin_ducts, 0, 0, rgen); // draw ends and top
@@ -574,6 +545,31 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			objs.emplace_back(vduct, TYPE_DUCT, room_id, 0, 1, duct_flags, light_amt, duct_shape); // vertical, same shape
 		}
 	} // for i
+	// add fire sprinkler pipes
+	float const custom_floor_spacing(room.dz() - support_width); // place sprinklers under ceiling beams
+	float const wall_pad(1.05*support_width); // add a gap between the wall supports
+	vect_cube_t obstacles(nested_rooms), walls, pipe_cubes; // avoid nested rooms; walls and pipe_cubes start empty and are unused
+	cube_t entry_area(entry);
+	entry_area.z2() = room.z1() + window_vspace;
+	entry_area.expand_in_dim(edim, doorway_width);
+	obstacles.push_back(entry_area); // don't block the entryway with the vertical pipe
+	vector_add_to(lights, obstacles);
+
+	for (tquad_with_ix_t const &door : doors) {
+		obstacles.push_back(door.get_bcube());
+		obstacles.back().expand_by_xy(doorway_width); // don't block an exterior door
+	}
+	for (stairwell_t const &s : interior->stairwells) { // is this needed?
+		if (s.intersects(room)) {obstacles.push_back(s);}
+	}
+	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+		if (!i->no_coll()) {obstacles.push_back(*i);}
+	}
+	// TODO: main pipe not under lights?
+	unsigned const main_pipe_ix(objs.size());
+	// num_floors=1; prefer to place on edim walls to avoid ducts
+	bool const added_sprinklers(add_sprinkler_pipes(obstacles, walls, beams, pipe_cubes, room_id, 1, objs_start, rgen, custom_floor_spacing, wall_pad, edim));
+
 	// add boxes and crates in piles
 	unsigned const num_piles(4 + (rgen.rand() % 5)); // 4-8
 	vect_cube_t exclude; // empty
