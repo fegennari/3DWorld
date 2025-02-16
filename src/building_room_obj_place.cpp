@@ -2375,11 +2375,12 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 
 				for (unsigned n = 0; n < num_objs; ++n) {
 					unsigned const obj_type(rgen.rand()%3);
-					cube_t avoid;
-					if (objs.size() > objs_start) {avoid = objs.back();} // avoid the last object that was placed, if there was one
+					static vect_cube_t avoid;
+					avoid.clear();
+					if (objs.size() > objs_start) {avoid.push_back(objs.back());} // avoid the last object that was placed, if there was one
 
-					if      (obj_type == 0) {place_plate_on_obj(rgen, sink, room_id, tot_light_amt);} // add a plate
-					else if (obj_type == 1) {place_cup_on_obj  (rgen, sink, room_id, tot_light_amt);} // add a cup
+					if      (obj_type == 0) {place_plate_on_obj(rgen, sink, room_id, tot_light_amt, avoid);} // add a plate
+					else if (obj_type == 1) {place_cup_on_obj  (rgen, sink, room_id, tot_light_amt, avoid);} // add a cup
 					else if (obj_type == 2 && building_obj_model_loader.is_model_valid(OBJ_MODEL_ROACH)) { // add a cockroach (upside down?)
 						sink.d[dim][!dir] = sink.get_center_dim(dim); // use the half area near the back wall to make sure the roach is visible to the player
 						cube_t roach;
