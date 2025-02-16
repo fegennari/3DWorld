@@ -1324,10 +1324,24 @@ void building_t::run_ball_update(vect_room_object_t::iterator ball_it, point con
 						gen_sound_thread_safe(SOUND_GLASS, local_to_camera_space(sound_origin), 0.7);
 						register_building_sound(sound_origin, 0.7);
 						interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);
+						
 						if (obj.type == TYPE_DRESS_MIR || obj.type == TYPE_MIRROR) {register_achievement("7 Years of Bad Luck");}
 						else if ((obj.type == TYPE_TV || obj.type == TYPE_MONITOR) && obj.is_powered()/*!(obj.obj_id & 1)*/) { // only if turned on?
 							unsigned const obj_id(ball_it - interior->room_geom->objs.begin());
 							interior->room_geom->particle_manager.add_for_obj(ball, 0.06*radius, front_dir, 1.0*KICK_VELOCITY, 50, 60, PART_EFFECT_SPARK, obj_id);
+						}
+						// only dresser mirrors leave broken glass; TV and monitor screens have an outer film that holds in the glass;
+						// medicine cabinet mirrors and office bathroom mirrors have sinks below them rather than a flat surface for the glass to rest on
+						if (obj.type == TYPE_DRESS_MIR && obj_ix >= 2) { // create broken glass
+							room_object_t const &dresser(interior->room_geom->get_room_object_by_index(obj_ix - 2)); // should be dresser, blocker, mirror
+
+							if (dresser.type == TYPE_DRESSER) { // should always be true
+								static rand_gen_t rgen;
+								float const glass_radius(0.45*dresser.get_depth());
+								point glass_pos(cube_top_center(dresser));
+								glass_pos.z += 0.005*dresser.dz(); // slightly above
+								add_broken_glass_decal(glass_pos, glass_radius, rgen);
+							}
 						}
 						handled = 1;
 					}
