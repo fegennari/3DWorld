@@ -913,8 +913,8 @@ int add_sprinkler_pipe(building_t const &b, point const &p1, float end_val, floa
 	add_pass_through_fittings(pipe, walls, fitting_len, fitting_expand, dim, ccolor, objs);
 	return ret;
 }
-bool building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes,
-		unsigned room_id, unsigned num_floors, unsigned objs_start, rand_gen_t &rgen, float custom_floor_spacing, float wall_pad, unsigned pref_dim)
+bool building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes, unsigned room_id,
+	unsigned num_floors, unsigned objs_start, rand_gen_t &rgen, float custom_floor_spacing, float wall_pad, unsigned pref_dim, vect_cube_t const &vpipe_avoid)
 {
 	// add vertical red (possibly rusted brown) sprinkler system pipe
 	cube_t room(get_room(room_id));
@@ -943,7 +943,7 @@ bool building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*2.0*sp_radius;
 		cube_t c2(c);
 		c2.expand_in_dim(!dim, 0.5*sp_radius); // add a bit of extra space to the sides for the flanges and valves
-		if (has_bcube_int(c2, obstacles) || has_bcube_int(c2, walls) || has_bcube_int(c2, beams) || has_bcube_int(c2, pipe_cubes)) continue; // include walls and beams
+		if (has_bcube_int(c2, obstacles) || has_bcube_int(c2, walls) || has_bcube_int(c2, beams) || has_bcube_int(c2, pipe_cubes) || has_bcube_int(c2, vpipe_avoid)) continue;
 		// skip if the pipe aligns with a pillar because we won't be able to place a horizontal sprinkler pipe
 		bool is_blocked(0);
 		

@@ -442,6 +442,8 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			break; // success
 		} // for n
 	}
+	unsigned const fans_start(objs.size());
+
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_CEIL_FAN)) { // add ceiling fans
 		unsigned const fans_per_beam = 2;
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_CEIL_FAN)); // D, W, H
@@ -565,10 +567,29 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 		if (!i->no_coll()) {obstacles.push_back(*i);}
 	}
-	// TODO: main pipe not under lights?
+	vect_cube_t vpipe_avoid;
+
+	if (1) { // avoid placing vertical/main pipe under a row of lights
+		float light_radius(0.0);
+		vector<float> avoid_vals; // light row locations in !edim
+
+		for (cube_t const &light : lights) {
+			if (light_radius == 0.0) {light_radius = 0.5*light.get_sz_dim(!edim);} // calculate on first light
+			avoid_vals.push_back(light.get_center_dim(!edim));
+		}
+		for (auto i = objs.begin()+fans_start; i < objs.begin()+ducts_start; ++i) { // avoid ceiling fans as well; should be good enough to use light radius
+			if (i->type == TYPE_CEIL_FAN) {avoid_vals.push_back(i->get_center_dim(!edim));}
+		}
+		sort_and_unique(avoid_vals);
+
+		for (float v : avoid_vals) {
+			vpipe_avoid.push_back(room);
+			set_wall_width(vpipe_avoid.back(), v, light_radius, !edim);
+		}
+	}
 	unsigned const main_pipe_ix(objs.size());
 	// num_floors=1; prefer to place on edim walls to avoid ducts
-	bool const added_sprinklers(add_sprinkler_pipes(obstacles, walls, beams, pipe_cubes, room_id, 1, objs_start, rgen, custom_floor_spacing, wall_pad, edim));
+	bool const added_sprinklers(add_sprinkler_pipes(obstacles, walls, beams, pipe_cubes, room_id, 1, objs_start, rgen, custom_floor_spacing, wall_pad, edim, vpipe_avoid));
 
 	// add boxes and crates in piles
 	unsigned const num_piles(4 + (rgen.rand() % 5)); // 4-8
