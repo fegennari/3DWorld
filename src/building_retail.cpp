@@ -14,11 +14,7 @@ colorRGBA get_light_color_temp(float t);
 bool check_for_overlap(cube_t const &c, vect_room_object_t const &objs, unsigned objs_start, float xy_spacing) {
 	cube_t test_cube(c);
 	test_cube.expand_by_xy(xy_spacing);
-
-	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
-		if (i->intersects(test_cube)) return 1;
-	}
-	return 0;
+	return has_bcube_int(test_cube, objs, objs_start);
 }
 bool building_t::get_retail_long_dim() const {
 	cube_t const &part(get_retail_part());

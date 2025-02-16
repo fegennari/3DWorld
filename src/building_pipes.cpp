@@ -128,10 +128,7 @@ void add_hanging_pipe_bracket(cube_t const &pipe, float len_pos, float ceiling_z
 	cube_t bc(bracket);
 	bc.z2() = ceiling_zval; // extend up to ceiling
 	if (has_bcube_int(bc, obstacles) || has_bcube_int(bc, walls)) return;
-
-	for (auto i = objs.begin()+pipe_conn_start; i != objs.end(); ++i) {
-		if (i->intersects(bc)) return; // is this intersection possible given the existing constraints on pipe placement? maybe only for vertically stacked pipes
-	}
+	if (has_bcube_int(bc, objs, pipe_conn_start)) return; // is this possible given the existing constraints on pipe placement? maybe only for vertically stacked pipes
 	objs.emplace_back(bracket, TYPE_PIPE, room_id, dim, 0, (pipe_flags | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, LT_GRAY);
 
 	if (bracket.z2() < ceiling_zval) { // add a vertical bolt into the ceiling
