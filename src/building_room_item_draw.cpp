@@ -1751,20 +1751,21 @@ void brg_batch_draw_t::draw_obj_models(shader_t &s, vector3d const &xlate, bool 
 }
 
 float get_ao_shadow(room_object_t const &c, bool enable_indir) {
+	room_object const type(c.type);
 	// include types that don't contribute to indir lighting; these always contribute AO shadows
-	if (c.type == TYPE_BAR_STOOL || c.type == TYPE_SHELVES) return 0.25; // light shadow
-	if (c.type == TYPE_OFF_CHAIR || c.type == TYPE_BENCH || c.type == TYPE_RCHAIR || c.type == TYPE_CASHREG) return 0.5; // medium shadow
-	if (c.type == TYPE_PARK_SPACE && c.is_used()) return 0.75; // parked car; dense shadow
+	if (type == TYPE_BAR_STOOL || type == TYPE_SHELVES) return 0.25; // light shadow
+	if (type == TYPE_OFF_CHAIR || type == TYPE_BENCH || type == TYPE_RCHAIR || type == TYPE_CASHREG || type == TYPE_CHEM_TANK) return 0.5; // medium shadow
+	if (type == TYPE_PARK_SPACE && c.is_used()) return 0.75; // parked car; dense shadow
 	if (enable_indir) return 0.0; // skip objects below because they're already handled by indir lighting
 
-	if (c.type == TYPE_TABLE) {
+	if (type == TYPE_TABLE) {
 		if (c.is_glass_table()) return 0.0; // no shadow
 		return ((c.shape == SHAPE_TALL) ? 0.25 : 0.5); // small/medium shadow
 	}
-	if (c.type == TYPE_BED) {return ((c.taken_level > 2) ? 0.35 : 0.5);} // reduced AO when the mattress has been taken and light gets through the slats
-	if (c.type == TYPE_BCASE || c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND || c.type == TYPE_COUCH || c.type == TYPE_CONF_TABLE) return 0.75; // dense shadow
-	if (c.type == TYPE_SINK || c.type == TYPE_TOILET || c.type == TYPE_STALL) return 0.25; // light shadow
-	if (c.type == TYPE_CHAIR || c.type == TYPE_DESK || c.type == TYPE_RDESK || c.type == TYPE_POOL_TABLE || c.type == TYPE_MACHINE || c.type == TYPE_XFORMER) return 0.5; // med shadow
+	if (type == TYPE_BED) {return ((c.taken_level > 2) ? 0.35 : 0.5);} // reduced AO when the mattress has been taken and light gets through the slats
+	if (type == TYPE_BCASE || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_COUCH || type == TYPE_CONF_TABLE) return 0.75; // dense shadow
+	if (type == TYPE_SINK || type == TYPE_TOILET || type == TYPE_STALL) return 0.25; // light shadow
+	if (type == TYPE_CHAIR || type == TYPE_DESK || type == TYPE_RDESK || type == TYPE_POOL_TABLE || type == TYPE_MACHINE || type == TYPE_XFORMER) return 0.5; // med shadow
 	return 0.0; // no shadow
 }
 
