@@ -475,7 +475,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	cube_t duct_bounds(room);
 	duct_bounds.expand_by_xy(-(support_width - 0.5*wall_thick));
 	duct_bounds.expand_in_dim(edim, -1.2*support_width); // shorten ends so as to not overlap sprinkler pipe
-	bool const cylin_ducts(rgen.rand_bool());
+	bool const cylin_ducts(rgen.rand_bool() ^ edim);
 	unsigned const ducts_start(objs.size());
 	add_ceiling_ducts(duct_bounds, ducts_z2, room_id, edim, 2, light_amt, cylin_ducts, 0, 0, rgen); // draw ends and top
 	unsigned const ducts_end(objs.size());

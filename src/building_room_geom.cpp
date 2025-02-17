@@ -2599,7 +2599,7 @@ void building_room_geom_t::add_pg_ramp(room_object_t const &c, float tscale) {
 }
 
 void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) { // should be SHAPE_CYLIN
-	bool const exterior(c.is_exterior());//, is_rusty(c.is_broken());
+	bool const exterior(c.is_exterior());
 	if (exterior != add_exterior) return;
 	unsigned const dim(c.dir ? 2 : unsigned(c.dim)); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
 	float const radius(0.5*c.get_sz_dim((dim+1)%3));
@@ -2613,11 +2613,15 @@ void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) {
 	bool const draw_joints[2] = {((c.flags & RO_FLAG_ADJ_LO) != 0), ((c.flags & RO_FLAG_ADJ_HI) != 0)};
 	colorRGBA const color(apply_light_color(c));
 	bool const is_bolt(c.flags & RO_FLAG_RAND_ROT); // use RO_FLAG_RAND_ROT to indicate this is a bolt on the pipe rather than a pipe section
+	bool const is_dirty(!is_duct && !factory_rod && c.is_broken()), is_textured(is_duct || factory_rod || is_dirty);
 	unsigned const ndiv(is_bolt ? 6 : N_CYL_SIDES);
 	float const side_tscale(is_bolt ? 0.0 : 1.0); // bolts are untextured
-	float const len_tscale(is_duct ? 0.1*c.get_length()/radius : (factory_rod ? 20.0 : 1.0)); // factory rod is drawn textured as screw threads
+	float const len_tscale(is_textured ? (factory_rod ? 0.5 : 0.1)*c.get_sz_dim(dim)/radius : 1.0); // factory rod drawn textured as screw threads
 	// draw sides and possibly one or both ends
-	tid_nm_pair_t tex(((is_duct || factory_rod) ? get_cylin_duct_tid() : -1), 1.0, shadowed); // custom specular color
+	int tid(-1);
+	if (is_duct || factory_rod) {tid = get_cylin_duct_tid();}
+	else if (is_dirty) {tid = get_texture_by_name("metals/67_rusty_dirty_metal.jpg");} // "metals/65_Painted_dirty_metal.jpg" works as well
+	tid_nm_pair_t tex(tid, 1.0, shadowed); // custom specular color
 	// make specular; maybe should not make specular if rusty, but setting per-pipe specular doesn't work, and water effect adds specular anyway
 	colorRGBA const spec_color(get_specular_color(c.color)); // special case metals
 	tex.set_specular_color(spec_color, 0.8, 60.0);

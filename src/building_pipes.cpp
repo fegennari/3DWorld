@@ -167,6 +167,14 @@ bool building_t::cube_intersects_extb_room(cube_t const &c, bool check_tunnel_pi
 	return 0;
 }
 
+void make_pipes_dirty(vect_room_object_t &objs, unsigned pipes_start) {
+	assert(pipes_start <= objs.size());
+
+	for (auto i = objs.begin()+pipes_start; i != objs.end(); ++i) {
+		if (i->type == TYPE_PIPE) {i->flags |= RO_FLAG_BROKEN;}
+	}
+}
+
 bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_riser_pos_t const &risers,
 	vect_cube_t &pipe_cubes, unsigned room_id, unsigned num_floors, unsigned objs_start, float ceil_zval, rand_gen_t &rgen, unsigned pipe_type, bool allow_place_fail)
 {
@@ -181,6 +189,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	cube_t const &basement(get_basement());
 	float r_main(get_merged_risers_radius(risers, (is_closed_loop ? 0 : 2))); // exclude incoming water from hot water heaters for hot water pipes
 	if (r_main == 0.0) return 0; // hot water heater but no hot water pipes?
+	unsigned const pipes_start(objs.size());
 	float const insul_thickness(0.4), min_insum_len(4.0); // both relative to pipe radius
 	float const window_vspacing(get_window_vspace()), fc_thickness(get_fc_thickness()), wall_thickness(get_wall_thickness());
 	float const radius_factor(add_insul ? 1.0+insul_thickness : 1.0), max_pipe_radius(max_pipe_radius_mult[pipe_type]*wall_thickness);
@@ -766,6 +775,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			}
 		} // for p
 	}
+	if ((pipe_type == PIPE_TYPE_SEWER || pipe_type == PIPE_TYPE_GAS) && water_damage > 0.25) {make_pipes_dirty(objs, pipes_start);}
 	return 1;
 }
 
@@ -927,7 +937,6 @@ bool building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 	colorRGBA const ccolor(BRASS_C); // connector color
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const sprinker_pipes_start(objs.size());
-	unsigned const pipe_flags((water_damage > 0.25) ? RO_FLAG_BROKEN : 0);
 	room.expand_by_xy(-wall_pad);
 	assert(room.is_strictly_normalized());
 	cube_t c;
@@ -949,7 +958,7 @@ bool building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 			if ((wall.x2() > c.x1() && wall.x1() < c.x2()) || (wall.y2() > c.y1() && wall.y1() < c.y2())) {is_blocked = 1; break;} // X or Y projection
 		}
 		if (is_blocked) continue;
-		objs.emplace_back(c, TYPE_PIPE, room_id, 0, 1, (pipe_flags | RO_FLAG_LIT), tot_light_amt, SHAPE_CYLIN, pcolor); // dir=1 for vertical; casts shadows; add to pipe_cubes?
+		objs.emplace_back(c, TYPE_PIPE, room_id, 0, 1, RO_FLAG_LIT, tot_light_amt, SHAPE_CYLIN, pcolor); // dir=1 for vertical; casts shadows; add to pipe_cubes?
 		cube_t flange(c);
 		flange.expand_by_xy(flange_expand);
 		bool add_bot_flange(0);
@@ -967,7 +976,7 @@ bool building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 					// add flange (no bolts on bottom)
 					flange.z1() = basement.z1() + 1.00*fc_thickness;
 					flange.z2() = basement.z1() + 1.15*fc_thickness;
-					objs.emplace_back(flange, TYPE_PIPE, room_id, 0, 1, (pipe_flags | RO_FLAG_HANGING | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, pcolor);
+					objs.emplace_back(flange, TYPE_PIPE, room_id, 0, 1, (RO_FLAG_HANGING | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, pcolor);
 					add_bot_flange = 1;
 				}
 			}
@@ -977,7 +986,7 @@ bool building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 
 		for (unsigned f = 0; f <= num_floors; ++f) { // flanges for each ceiling/floor
 			bool const at_bot(!add_bot_flange && f == 0), at_top(f == num_floors);
-			unsigned flags(pipe_flags | RO_FLAG_HANGING | (!at_bot)*RO_FLAG_ADJ_LO | (!at_top || !in_basement)*RO_FLAG_ADJ_HI);
+			unsigned flags(RO_FLAG_HANGING | (!at_bot)*RO_FLAG_ADJ_LO | (!at_top || !in_basement)*RO_FLAG_ADJ_HI);
 			float const z(room.z1() + f*floor_spacing);
 			flange.z1() = z - (at_bot ? -1.0 : 1.15)*fc_thickness;
 			flange.z2() = z + (at_top ? -1.0 : 1.15)*fc_thickness;
@@ -1003,7 +1012,7 @@ bool building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 			valve.expand_in_dim(!dim,     valve_radius);
 			valve.expand_in_dim( dim, 0.4*valve_radius);
 			if (has_bcube_int(valve, obstacles) || has_bcube_int(valve, walls)) continue; // check for pillars, etc.; should be rare
-			objs.emplace_back(valve, TYPE_VALVE, room_id, dim, 0, (pipe_flags | RO_FLAG_NOCOLL), tot_light_amt, SHAPE_CYLIN, pcolor);
+			objs.emplace_back(valve, TYPE_VALVE, room_id, dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, pcolor);
 			// add a brass band around the pipe where the valve connects
 			cube_t band(c);
 			band.expand_by_xy(0.1*sp_radius);
@@ -1090,6 +1099,7 @@ bool building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 			objs.resize(sprinker_pipes_start);
 			continue;
 		}
+		if (in_basement && water_damage > 0.25) {make_pipes_dirty(objs, sprinker_pipes_start);} // make all pipes rusty
 		return 1; // done
 	} // for n
 	return 0; // failed
