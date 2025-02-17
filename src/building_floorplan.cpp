@@ -2279,7 +2279,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			// place stairs in shared area if there's space and no walls are in the way for either the room above or below
 			cube_t cand;
 			stairs_shape sshape(SHAPE_STRAIGHT);
-			bool cand_is_valid(0), dim(0), stairs_dir(0), add_railing(1), stack_conn(1), is_at_top(0);
+			bool cand_is_valid(0), dim(0), stairs_dir(0), bend_dir(0), add_railing(1), stack_conn(1), is_at_top(0);
 			float const stairs_height((is_retail ? retail_floor_levels : 1)*window_vspacing);
 			float const cand_z2(part.z2() + fc_thick); // top of bottom floor of upper part *p
 			float const cand_z1(cand_z2 - stairs_height); // top of top floor for this/lower part
@@ -2318,7 +2318,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 						bool const allow_clip_walls(0); // clipping walls rarely helps and tends to create some strange stairs
 						if (!is_valid_stairs_elevator_placement(ext_cube, s_bc, stairs_pad, s.dim, !allow_clip_walls, check_private_rooms)) continue; // bad placement
 						(ab ? s.extends_above : s.extends_below) = 1;
-						cand = s; dim = s.dim; stairs_dir = s.dir; sshape = s.shape; // copy fields from these stairs and extend down/up
+						cand = s; dim = s.dim; stairs_dir = s.dir; bend_dir = s.bend_dir; sshape = s.shape; // copy fields from these stairs and extend down/up
 						stack_conn    = 0; // not stacked - extended main stairs
 						cand_is_valid = 1;
 						if (ab) {is_at_top = 1;} // adding to the top, so this landing is the new top
@@ -2464,6 +2464,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				// extend stairs to other floors of the part above and/or below if the parts don't already have stairs?
 			}
 			landing_t landing(cand, 0, 0, dim, stairs_dir, add_railing, sshape, 0, is_at_top, stack_conn); // roof_access=0
+			landing.bend_dir = bend_dir;
 			stairs_landing_base_t stairwell(landing);
 			landing  .z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
 			stairwell.z2() = part.z2() + window_vspacing - fc_thick; // bottom of ceiling of upper part; must cover z-range of upper floor for AIs and room object collisions
