@@ -667,7 +667,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 					cube_t tank(c);
 					tank.z2() = zval + tank_height;
 					tank.expand_by_xy(-0.1*tank_radius);
-					objs.emplace_back(tank, TYPE_CHEM_TANK, room_id, dim, dir, RO_FLAG_IN_FACTORY, tot_light_amt, SHAPE_CYLIN, WHITE);
+					objs.emplace_back(tank, TYPE_CHEM_TANK, room_id, dim, dir, RO_FLAG_IN_FACTORY, tot_light_amt, SHAPE_CYLIN, WHITE, item_flags);
 					// add a pipe to the top; the tank itself has a pipe going down to the floor
 					cube_t pipe(center);
 					set_cube_zvals(pipe, (tank.z2() - pipe_radius), (tank.z2() + 0.1*height - pipe_radius));

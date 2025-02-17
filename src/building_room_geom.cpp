@@ -5697,11 +5697,19 @@ void building_room_geom_t::add_ibeam(room_object_t const &c) {
 	} // for d
 }
 
+int get_chem_tank_tid(room_object_t const &c) {
+	string const tex_names[4] = {"", "metals/60_scratch_metal.jpg", "metals/65_Painted_dirty_metal.jpg", "metals/67_rusty_dirty_metal.jpg"};
+	string const tex_name(tex_names[c.item_flags & 3]); // select a random texture
+	return (tex_name.empty() ? -1 : get_texture_by_name(tex_name));
+}
 void building_room_geom_t::add_chem_tank(room_object_t const &c) {
 	float const height(c.dz()), radius(c.get_radius());
 	assert(height > 2.0*radius);
 	colorRGBA const color(apply_light_color(c));
-	rgeom_mat_t &mat(get_metal_material(1)); // shadowed=1
+	int const tid(get_chem_tank_tid(c));
+	tid_nm_pair_t tex(tid);
+	tex.set_specular_color(WHITE, 0.5, 40.0); // applies to textured case
+	rgeom_mat_t &mat((tid < 0) ? get_metal_material(1) : get_material(tex, 1)); // shadowed
 	// capsule shape
 	cube_t bot(c), mid(c), top(c), base(c);
 	bot.z2() = c.z1() + 2.0*radius;
@@ -5710,7 +5718,7 @@ void building_room_geom_t::add_chem_tank(room_object_t const &c) {
 	base.expand_by_xy(-0.5*radius); // half radius
 	base.z2() = mid.z1();
 	mat.add_vcylin_to_verts(base, color, 0, 0); // draw sides only
-	mat.add_vcylin_to_verts(mid,  color, 0, 0); // draw sides only
+	mat.add_vcylin_to_verts(mid,  color, 0, 0, 0, 0, 1.0, 1.0, 2.0*mid.dz()/radius); // draw sides only; side_tscale scaled
 	mat.add_sphere_to_verts(bot,  color, 0,  plus_z); // bot hemisphere
 	mat.add_sphere_to_verts(top,  color, 0, -plus_z); // top hemisphere
 	// add pipes to floor
@@ -6064,6 +6072,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_FISHTANK:  return table_glass_color; // glass; black lid is ignored
 	case TYPE_PET_CAGE:  return colorRGBA(color, 0.1); // mostly transparent
 	case TYPE_IBEAM:     return texture_color(get_ibeam_tid()).modulate_with(color);
+	case TYPE_CHEM_TANK: return texture_color(get_chem_tank_tid(*this)).modulate_with(color);
 	case TYPE_HVAC_UNIT: return texture_color(get_hvac_tid(*this)).modulate_with(color);
 	case TYPE_MIRROR:    return WHITE; // should be reflecting
 	//case TYPE_POOL_BALL: return ???; // texture_color(get_ball_tid(*this))? uses a texture atlas, so unclear what color to use here; use white by default
