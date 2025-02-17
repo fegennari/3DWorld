@@ -1921,8 +1921,10 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 				seg2_start = interior->nav_graph->get_stairs_entrance_pt(to.z, sre_room_ix, !up_or_down); // other/exit end
 			}
 			if (!point_in_building_or_basement_bcube(seg2_start)) {
-				cout << TXT(s) << TXT(num_stairwells) TXT(stairs_end) << TXT(sre_room_ix) << TXT(is_ramp) << TXT(is_escalator) << endl;
-				cout << TXT(seg2_start.str()) << TXT(bcube.str()) << TXT(get_basement().str()) << TXT(interior->basement_ext_bcube.str()) << TXT(from.str()) << TXT(to.str()) << endl;
+				cerr << TXT(s) << TXT(num_stairwells) TXT(stairs_end) << TXT(sre_room_ix) << TXT(is_ramp) << TXT(is_escalator) << endl;
+				cerr << TXT(seg2_start.str()) << TXT(bcube.str());
+				if (has_basement()) {cerr << TXT(get_basement().str());}
+				cerr << TXT(interior->basement_ext_bcube.str()) << TXT(from.str()) << TXT(to.str()) << endl;
 			}
 			assert(point_in_building_or_basement_bcube(seg2_start));
 			
