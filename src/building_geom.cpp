@@ -103,7 +103,8 @@ void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float di
 		}
 	}
 	door_shift *= -(1.0 + dist_mult); // reflect on other side
-	while ((door_edge + door_shift) == door_edge) {door_shift *= 2.0;} // double door_shift until it changes the value; needed for buildings far from the origin
+	// double door_shift until it changes the value; needed for buildings far from the origin; use tolerance of 1E-7 since max precision is around 6E-8
+	while (fabs(door_shift/door_edge) < 1.0E-7) {door_shift *= 2.0;}
 	for (unsigned n = 0; n < door.npts; ++n) {door.pts[n][dim] += door_shift;} // move to opposite side of wall
 }
 
