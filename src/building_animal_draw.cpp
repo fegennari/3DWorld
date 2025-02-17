@@ -569,12 +569,15 @@ void building_room_geom_t::draw_animals(shader_t &s, building_t const &building,
 			else if (player_in_mall  ) {to_draw = &pet_rats  ;}
 
 			if (to_draw) {
+				colorRGBA const pet_rat_colors[4] = {WHITE, LT_BROWN, GRAY, BLACK};
+
 				for (rat_t const &rat : *to_draw) {
 					cube_t const bcube(rat.get_bcube());
 					if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
 					if ((display_mode & 0x08) && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
 					anim_state.anim_time = rat.anim_time;
-					building_obj_model_loader.draw_model(s, bcube.get_cube_center(), rat.get_bcube_with_dir(), rat.dir, rat_color, xlate, OBJ_MODEL_RAT, shadow_only, 0, &anim_state);
+					colorRGBA const color(player_in_mall ? pet_rat_colors[rat.id&3] : rat_color);
+					building_obj_model_loader.draw_model(s, bcube.get_cube_center(), rat.get_bcube_with_dir(), rat.dir, color, xlate, OBJ_MODEL_RAT, shadow_only, 0, &anim_state);
 					rat_drawn = 1;
 				}
 			}

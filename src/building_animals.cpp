@@ -1777,6 +1777,10 @@ void building_t::update_pet_birds(point const &camera_bs, unsigned building_ix) 
 	vect_room_object_t const &objs(interior->room_geom->objs);
 
 	if (!birds.placed && has_mall()) { // add pet store rats on first update frame
+		unsigned const NUM_BIRD_COLORS = 8;
+		colorRGBA const bird_colors[NUM_BIRD_COLORS] =
+		{WHITE, GRAY, BLACK, colorRGB(0.8, 0.8, 0.0), colorRGB(0.8, 0.4, 0.0), colorRGB(0.7, 0.0, 0.0), colorRGB(0.2, 0.4, 0.1), colorRGB(0.0, 0.1, 0.4)};
+
 		for (pet_tank_t const &t : interior->mall_info->pet_tanks) {
 			if (!is_pet_cont_of_type(t, objs, TYPE_BIRD)) continue;
 			room_object_t const &obj(objs[t.obj_ix]);
@@ -1790,7 +1794,7 @@ void building_t::update_pet_birds(point const &camera_bs, unsigned building_ix) 
 			vector3d dir(0.1*rgen.signed_rand_vector_spherical_xy_norm()); // slight random variation
 			dir[obj.dim] = (obj.dir ? 1.0 : -1.0); // facing out
 			dir.normalize();
-			birds.emplace_back(pos, radius, dir, t.obj_ix, WHITE*rgen.rand_float()); // black-white
+			birds.emplace_back(pos, radius, dir, t.obj_ix, bird_colors[rgen.rand() % NUM_BIRD_COLORS]); // black-white: WHITE*rgen.rand_float()
 			birds.back().anim_time = 100.0*rgen.rand_float(); // random animation offset
 		} // for t
 		birds.placed = 1;
