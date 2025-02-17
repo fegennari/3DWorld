@@ -2444,8 +2444,16 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vecto
 	if (is_metal != is_small_pass) return; // wrong pass; metal stairs are small, regular stairs are not
 
 	if (is_metal) {
-		rgeom_mat_t &mat(mats_amask.get_material(get_metal_grate_tex(2.0/c.get_width(), (c.dim ^ c.dir)), 1)); // shadowed, alpha mask
-		mat.add_cube_to_verts(c, WHITE, c.get_llc()); // all faces drawn
+		rgeom_mat_t &mat(mats_amask.get_material(get_metal_grate_tex(1.0, (c.dim ^ c.dir)), 1)); // shadowed, alpha mask
+		point const llc(c.get_llc()), sz(c.get_size());
+		unsigned const long_dim(!c.dim); // width
+
+		for (unsigned d = 0; d < 3; ++d) { // draw all three face dims, with the texture tiled exactly so that edges align
+			unsigned const xdim((d+2)%3), ydim((d+1)%3);
+			mat.tex.tscale_x = ((xdim == long_dim) ? 2.0 : 1.0)/sz[xdim];
+			mat.tex.tscale_y = ((ydim == long_dim) ? 2.0 : 1.0)/sz[ydim];
+			mat.add_cube_to_verts(c, WHITE, llc, ~get_skip_mask_for_dim(d), (d != unsigned(c.dim)));
+		}
 		return;
 	}
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale, 1), 1)); // shadowed
