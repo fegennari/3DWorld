@@ -4702,7 +4702,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 		vect_cube_t &cubes(get_temp_cubes());
 		subtract_cube_from_cube(top, sink, cubes);
 		for (cube_t const &i : cubes) {top_mat.add_cube_to_verts(i, top_color, tex_origin);} // should always be 4 cubes
-		colorRGBA const faucet_color(apply_light_color(c, GRAY)), sink_color(is_vanity ? apply_light_color(c) : faucet_color);
+		colorRGBA const faucet_color(apply_light_color(c, GRAY)), sink_color(is_vanity ? apply_light_color(c) : apply_light_color(c, LT_GRAY));
 		rgeom_mat_t &basin_mat(is_vanity ? get_metal_material(0) : get_scratched_metal_material(4.0/c.dz(), 0)); // unshadowed
 		basin_mat.add_cube_to_verts(sink, sink_color, tex_origin, EF_Z2, 0, 0, 0, 1); // basin: inverted, skip top face, unshadowed
 		float const water_level((c.state_flags & sink_water_state_bit) ? 0.3 : 0.0); // may be 30% filled
@@ -4724,7 +4724,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 		metal_mat.add_cube_to_verts_untextured(faucet2, faucet_color, 0); // horizontal part of faucet, draw all faces
 
 		if (c.type == TYPE_BRSINK) { // bathroom sink
-			metal_mat.add_cube_to_verts_untextured(sink, sink_color, EF_Z2); // outside of basin, no top surface, shadowed
+			metal_mat.add_cube_to_verts_untextured(sink, faucet_color, EF_Z2); // outside of basin, no top surface, shadowed
 			cube_t front(c);
 			front.z2() = top.z1();
 			front.z1() = sink.z1() - 0.1*dz; // slightly below the sink basin

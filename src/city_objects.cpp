@@ -1224,7 +1224,7 @@ void power_pole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist
 			ce[0].x = ce[1].x = base.x;
 			ce[0].y = ce[1].y = base.y + y_sign*(tf_radius + pole_radius); // offset in -y, +y at end (so that wires cross above it)
 			bool const draw_top_bot(camera_bs.z > 0.5f*(ce[0].z + ce[1].z));
-			add_cylin_as_tris(s_qbd.verts, ce, tf_radius, tf_radius, gray, ndiv, (draw_top_bot ? 2 : 1)); // specular
+			add_cylin_as_tris(s_qbd.verts, ce, tf_radius, tf_radius, colorRGBA(0.35, 0.4, 0.45), ndiv, (draw_top_bot ? 2 : 1)); // specular
 			tf_bcube.set_from_points(ce, 2);
 			tf_bcube.expand_by_xy(tf_radius);
 
