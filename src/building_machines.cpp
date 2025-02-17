@@ -216,8 +216,10 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 	rand_gen_t rgen(get_machine_info(c, floor_ceil_gap, base, parts, support, is_cylins, cylin_dims, num_parts, parts_swapped));
 	bool const dim(c.dim), dir(c.dir), two_part(num_parts == 2), in_factory(c.in_factory());
 	float const pipe_rmax(0.033*min(height, min(width, depth))), back_wall_pos(c.d[dim][!dir]);
-	rgeom_mat_t &base_mat(get_material(tid_nm_pair_t(get_concrete_tid(), 12.0), 1, 0, 1)); // shadowed, small
-	base_mat.add_cube_to_verts(base, apply_light_color(c, c.color), all_zeros, EF_Z1); // skip bottom
+	bool const metal_base(c.flags & RO_FLAG_FROM_SET); // factory machine grid
+	int const base_tid(metal_base ? get_texture_by_name("metals/249_iron_metal_plate.jpg") : get_concrete_tid());
+	rgeom_mat_t &base_mat(get_material(tid_nm_pair_t(base_tid, 3.0/(width + depth)), 1, 0, 1)); // shadowed, small
+	base_mat.add_cube_to_verts(base, apply_light_color(c, (metal_base ? WHITE : c.color)), all_zeros, EF_Z1); // skip bottom
 	vect_cube_t avoid, shapes;
 	vect_sphere_t pipe_ends;
 	if (in_factory && factory_info) {floor_ceil_gap = factory_info->floor_space.dz();}
@@ -676,7 +678,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 					tank_conn_pts.emplace_back(center.x, center.y, pipe.z2());
 				}
 				else { // make it a machine
-					unsigned flags(RO_FLAG_IN_FACTORY);
+					unsigned flags(RO_FLAG_IN_FACTORY | RO_FLAG_FROM_SET); // tag as part of a group
 					if (nx > 0 && obj_grid[gix - 1        ] == TYPE_MACHINE) {flags |= RO_FLAG_ADJ_LO;} // has prev X neighbor
 					if (ny > 0 && obj_grid[gix - num_xy[0]] == TYPE_MACHINE) {flags |= RO_FLAG_ADJ_HI;} // has prev Y neighbor
 					objs.emplace_back(c, TYPE_MACHINE, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, LT_GRAY, item_flags);
