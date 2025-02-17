@@ -319,6 +319,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 			}
 			else if (btype == BTYPE_OFFICE && is_cube() && height < 4.5*floor_spacing) { // <= 4 floors
 				btype = BTYPE_FACTORY; // make this a factory
+				assign_name(rgen); // re-assign a name
 			}
 			else if (is_cube() && height > 2.5*floor_spacing && rgen.rand_probability(global_building_params.retail_floorplan_prob)) { // 3+ floors
 				rand_gen_t rgen2(rgen); // create a new rgen to avoid affecting the other building parameters when this option is changed
