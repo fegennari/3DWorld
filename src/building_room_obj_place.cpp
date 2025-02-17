@@ -4819,11 +4819,11 @@ bool building_t::add_ceil_vent_to_room(rand_gen_t rgen, room_t const &room, floa
 		set_wall_width(c, center[!dim], hwid, !dim);
 		cube_t c_exp(c);
 		c_exp.expand_by_xy(0.5*wall_thickness); // add a bit of padding
-		if (overlaps_other_room_obj(c_exp, objs_start, 1))     continue; // check for things like closets; check_all=1 to inc whiteboards; excludes picture frames
-		if (interior->is_blocked_by_stairs_or_elevator(c_exp)) continue; // check stairs and elevators
-		if (is_cube_close_to_doorway(c, room, 0.0, 1, 1))      continue;
-		if (vent_in_attic_test(c, dim) == 2)                   continue; // not enough clearance in attic for duct
-		if (has_attic() && c.intersects(attic_access))         continue; // check attic access door
+		if (has_bcube_int(c_exp, interior->stairwells) || has_bcube_int(c_exp, interior->elevators)) continue; // check stairs and elevators
+		if (overlaps_other_room_obj(c_exp, objs_start, 1)) continue; // check for things like closets; check_all=1 to inc whiteboards; excludes picture frames
+		if (is_cube_close_to_doorway(c, room, 0.0, 1, 1))  continue;
+		if (vent_in_attic_test(c, dim) == 2)               continue; // not enough clearance in attic for duct
+		if (has_attic() && c.intersects(attic_access))     continue; // check attic access door
 		interior->room_geom->objs.emplace_back(c, TYPE_VENT, room_id, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0); // dir=0; fully lit
 		return 1; // done
 	} // for n
