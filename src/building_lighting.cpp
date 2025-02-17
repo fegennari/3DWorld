@@ -1496,7 +1496,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	float camera_z(camera_bs.z), up_light_zmin(camera_z);
 	// if player is in the pool, increase camera zval to the top of the pool so that lights in the room above are within a single floor and not culled
 	if (player_in_pool) {camera_z = interior->pool.z2();}
-	int camera_room(-1), L_stairs_room(-1);
+	int camera_room(-1);
+	vector<unsigned> L_stairs_rooms; // there can be two for stacked part houses
 	vect_cube_t cuts_above, cuts_below, cuts_above_nonvis; // only used when player is in the building
 	vect_cube_with_ix_t moving_objs;
 	cube_t floor_above_region, floor_below_region; // filters for lights on the floors above/below based on stairs
@@ -1532,15 +1533,21 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			vect_cube_with_ix_t stair_ramp_cuts; // ix enables cuts {below, above}
 
 			for (stairwell_t const &s : interior->stairwells) { // check stairs
-				if (s.z1() > camera_z || s.z2() < camera_z) continue; // wrong floor
-				
 				if (s.is_l_shape()) {
-					L_stairs_room = get_room_containing_pt(s.get_cube_center()); // there should be only one
-					if (s.intersects(room)) {camera_by_L_stairs = 1;} // same room
-					else if (L_stairs_room >= 0) { // adjacent connected rooms
-						if (are_rooms_connected(room, get_room(L_stairs_room), (zval + 0.5*window_vspacing), 1)) {camera_by_L_stairs = 1;} // check_door_open=1
+					// if stairs span stacked parts there will be different rooms at the top and bottom, and both should be included
+					int stairs_room[2] = {get_room_containing_pt(point(s.xc(), s.yc(), s.z1()+0.5*window_vspacing)),
+						                  get_room_containing_pt(point(s.xc(), s.yc(), s.z2()-0.5*window_vspacing))};
+					if (stairs_room[1] == stairs_room[0]) {stairs_room[1] = -1;} // only need to check one room
+
+					for (unsigned d = 0; d < 2; ++d) {
+						if (stairs_room[d] < 0) continue;
+						camera_by_L_stairs |= are_rooms_connected(room, get_room(stairs_room[d]), (zval + 0.5*window_vspacing), 1); // check_door_open=1
+						L_stairs_rooms.push_back(stairs_room[d]);
 					}
+					sort_and_unique(L_stairs_rooms);
 				}
+				if (s.z1() > camera_z || s.z2() < camera_z) continue; // wrong floor
+				if (s.is_l_shape() && s.intersects(room)) {camera_by_L_stairs = 1;} // same room
 				unsigned cut_mask(3); // both dirs enabled by default
 
 				if (!s.contains_pt(camera_rot)) { // disable these optimizations if the player is on the stairs
@@ -1748,7 +1755,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool const has_stairs_this_floor(!is_in_attic && room.has_stairs_on_floor(cur_floor));
 		bool const light_room_has_stairs_or_ramp(i->has_stairs() || has_stairs_this_floor || (check_ramp && is_room_above_ramp(room, i->z1())));
 		bool const is_over_pool(has_pool() && (int)i->room_id == interior->pool.room_ix);
-		bool const light_and_camera_by_L_stairs((in_camera_room || (int)i->room_id == L_stairs_room) && has_stairs_this_floor && camera_by_L_stairs);
+		bool const light_and_camera_by_L_stairs((in_camera_room || (std::find(L_stairs_rooms.begin(), L_stairs_rooms.end(), i->room_id) != L_stairs_rooms.end())) &&
+			has_stairs_this_floor && camera_by_L_stairs);
 		//bool const light_room_is_tall(room.is_single_floor && lpos.z > room.z1() + window_vspacing);
 		// special case for light shining down from above stairs or ramp when the player is below
 		bool const light_above_stairs(lpos.z > camera_z && light_room_has_stairs_or_ramp); // or ramp
