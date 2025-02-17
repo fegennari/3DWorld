@@ -540,6 +540,11 @@ bool building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std
 		for (auto p2 = get_real_parts_end_inc_sec(); p2 != parts.end(); ++p2) {
 			if (p2->intersects(c)) return 0; // sign intersects porch roof, skip this building
 		}
+		if (!ext_steps.empty()) { // check for exterior stairs intersection
+			cube_t test_cube(c);
+			test_cube.expand_by(0.02*height);
+			if (has_bcube_int(test_cube, ext_steps)) return 0;
+		}
 	}
 	unsigned const flags(RO_FLAG_LIT | RO_FLAG_NOCOLL | (emissive ? RO_FLAG_EMISSIVE : 0) | (outside ? RO_FLAG_EXTERIOR : RO_FLAG_HANGING));
 	vect_room_object_t &objs(interior->room_geom->objs);
