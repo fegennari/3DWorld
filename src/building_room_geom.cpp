@@ -3885,7 +3885,7 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 					rgeom_mat_t &canopy_mat(get_material(tid_nm_pair_t(get_canopy_texture(), canopy_tscale, shadowed), shadowed));
 					colorRGBA const base_color(WHITE*0.5 + c.color.modulate_with(texture_color(sheet_tex.tid))*0.5); // brighter version of sheet color, 50% white
 					colorRGBA const color(apply_light_color(c, base_color)); // partially transparent?
-					float const dz(posts[0].z2() - c.z1()), offset(0.0001*dz); // full bed height
+					float const dz(posts[0].z2() - c.z1()), offset(0.001*dz); // full bed height
 					cube_t canopy(c);
 					canopy.expand_by_xy(offset); // expand slightly to prevent z-fighting with the bed posts and top frame
 					canopy.z1() = canopy.z2() = posts[0].z2() + offset; // copy zvals from the first post z2, since they're all the same; zero height
