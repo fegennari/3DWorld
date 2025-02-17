@@ -761,7 +761,7 @@ class building_draw_t {
 		}
 		void clear_verts() {quad_verts.clear(); tri_verts.clear(); pos_by_tile.clear();}
 		
-		void clear_vbos() {
+		void clear_vbos() { // Note: ivbo not used
 			vbo_cache.free(vao_mgr.vbo, vert_vbo_sz, 0);
 			vao_mgr.clear_vaos(); // Note: VAOs not reused
 			vert_vbo_sz = 0;
@@ -4333,7 +4333,7 @@ public:
 		building_draw_wind_lights.clear_vbos();
 		building_draw_interior.clear_vbos();
 		building_draw_int_ext_walls.clear_vbos();
-		for (auto i = buildings.begin(); i != buildings.end(); ++i) {i->clear_room_geom();} // likely required for tiled buildings
+		for (auto i = buildings.begin(); i != buildings.end(); ++i) {i->clear_room_geom();}
 		gpu_mem_usage = 0;
 	}
 	bool check_point_coll_xy(point const &pos) const { // Note: pos is in camera space

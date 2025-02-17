@@ -353,7 +353,7 @@ struct building_params_t {
 	float window_width=0.0, window_height=0.0, window_xspace=0.0, window_yspace=0.0; // windows
 	float wall_split_thresh=4.0, max_fp_wind_xscale=0.0, max_fp_wind_yscale=0.0, basement_water_level_min=0.0, basement_water_level_max=0.0; // interiors
 	float open_door_prob=1.0, locked_door_prob=0.0, basement_prob_house=0.5, basement_prob_office=0.5, ball_prob=0.3, two_floor_retail_prob=0.0; // interior probabilities
-	float split_stack_floorplan_prob=0.0, retail_floorplan_prob=0.0; // floorplan probabilities
+	float split_stack_floorplan_prob=0.0, retail_floorplan_prob=0.0, mall_prob=0.5; // floorplan probabilities
 	float glass_floor_alpha=GLASS_COLOR.A;
 	// consistency probabilities of houses for cities and blocks
 	float house_same_mat_prob =0.0, house_same_size_prob =0.0, house_same_geom_prob =0.0, house_same_per_city_prob =0.0;
@@ -841,7 +841,7 @@ public:
 	bool en_shadows=0;
 
 	rgeom_mat_t(tid_nm_pair_t const &tex_=tid_nm_pair_t()) : rgeom_storage_t(tex_) {}
-	//~rgeom_mat_t() {assert(vbo_mgr.vbo == 0); assert(vbo_mgr.ivbo == 0);} // VBOs should be freed before destruction
+	//~rgeom_mat_t() {assert(vao_mgr.vbo == 0); assert(vao_mgr.ivbo == 0);} // VBOs should be freed before destruction
 	void enable_shadows() {en_shadows = 1;}
 	void clear();
 	void clear_vbos();

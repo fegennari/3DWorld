@@ -176,7 +176,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	bool added_lg_room(0);
 
 	if (!is_house && has_parking_garage) { // office building with parking garage
-		bool const add_malls(global_building_params.max_mall_levels > 0), try_mall_first(add_malls && rgen.rand_bool());
+		bool const add_malls(global_building_params.max_mall_levels > 0), try_mall_first(add_malls && rgen.rand_probability(global_building_params.mall_prob));
 
 		for (unsigned n = 0; n < 2; ++n) {
 			bool const is_mall((n == 0) == try_mall_first);
