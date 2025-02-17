@@ -2402,13 +2402,15 @@ cylinder_3dw get_railing_cylinder(room_object_t const &c) {
 void building_room_geom_t::add_railing(room_object_t const &c) {
 	cylinder_3dw const railing(get_railing_cylinder(c));
 	bool const is_u_stairs(c.flags & (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI)), is_top_railing(c.flags & RO_FLAG_TOS), is_L_seg(c.state_flags > 0); // L-railings have num_stairs set
-	bool const draw_ends(!(c.flags & RO_FLAG_ADJ_BOT)), is_exterior(c.is_exterior());
+	bool const draw_ends(!(c.flags & RO_FLAG_ADJ_BOT)), is_exterior(c.is_exterior()), is_dirty(c.is_broken());
 	float const pole_radius(0.75*railing.r1), length(c.get_length()), height(get_railing_height(c));
-	unsigned const num_floors(c.item_flags + 1);
-	tid_nm_pair_t tex(-1, 1.0, 1); // shadowed
-	tex.set_specular_color(c.color, 0.7, 70.0); // use a non-white metal specular color
+	unsigned const num_floors(c.item_flags + 1), ndiv(N_CYL_SIDES);
+	colorRGBA const &color(c.color);
+	tid_nm_pair_t tex((is_dirty ? get_texture_by_name((buttons_start & 1) ? "metals/65_Painted_dirty_metal.jpg" : "metals/67_rusty_dirty_metal.jpg") : -1), 1.0, 1); // shadowed
+	tex.set_specular_color(((color == BLACK) ? WHITE : color), (is_dirty ? 0.3 : 0.7), (is_dirty ? 30.0 : 70.0)); // use a non-white metal specular color unless black
 	rgeom_mat_t &mat(get_material(tex, 1, 0, !is_exterior, 0, is_exterior)); // inc_shadows=1, dynamic=0, small|exterior
-	mat.add_cylin_to_verts(railing.p1, railing.p2, railing.r1, railing.r2, c.color, draw_ends, draw_ends); // draw sloped railing
+	float const side_tscale(is_dirty ? 0.1*length/railing.r1 : 1.0), v_side_tscale(is_dirty ? 0.1*height/railing.r1 : 1.0);
+	mat.add_cylin_to_verts(railing.p1, railing.p2, railing.r1, railing.r2, color, draw_ends, draw_ends, 0, 0, 1.0, 1.0, 0, ndiv, 0.0, 0, side_tscale); // draw sloped railing
 
 	if (!is_u_stairs && !(c.flags & RO_FLAG_ADJ_TOP)) {
 		for (unsigned d = 0; d < 2; ++d) { // add the two vertical poles
@@ -2419,8 +2421,8 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 			float const hscale((d && !is_top_railing && !is_L_seg) ? 1.25 : 1.0); // shorten for lower end, which rests on the step (unless top railing or L-segment)
 			point const p1(pt - vector3d(0, 0, hscale*height)), p2(pt - vector3d(0, 0, (is_top_railing ? 0.0 : num_floors*0.02*(d ? 1.0 : -1.0)*height)));
 			bool const draw_bot(is_L_seg && d == 1); // only draw bottom of L-shaped stairs railing upper end (needed for landing)
-			mat.add_cylin_to_verts(p1, p2, pole_radius, pole_radius, c.color, draw_bot, 0); // no top
-		}
+			mat.add_cylin_to_verts(p1, p2, pole_radius, pole_radius, color, draw_bot, 0, 0, 0, 1.0, 1.0, 0, ndiv, 0.0, 0, v_side_tscale); // no top
+		} // for d
 	}
 	if (!is_u_stairs && c.is_open()) { // add balusters
 		unsigned num(0);
@@ -2432,9 +2434,9 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 		for (unsigned n = 0; n < num; ++n) {
 			float const t((n+1)*step_sz);
 			point const pt(t*railing.p1 + (1.0 - t)*railing.p2);
-			mat.add_cylin_to_verts((pt + delta), pt, radius, radius, c.color, 0, 0, 0, 0, 1.0, 1.0, 0, 16); // only 16 sides, no top or bottom
+			mat.add_cylin_to_verts((pt + delta), pt, radius, radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv/2, 0.0, 0, v_side_tscale); // only 16 sides, no top or bottom
 		}
-		mat.add_cylin_to_verts((railing.p1 + delta), (railing.p2 + delta), bot_radius, bot_radius, c.color, 1, 1); // bottom bar with both ends
+		mat.add_cylin_to_verts((railing.p1 + delta), (railing.p2 + delta), bot_radius, bot_radius, color, 1, 1, 0, 0, 1.0, 1.0, 0, ndiv, 0.0, 0, side_tscale); // bot bar with both ends
 	}
 }
 
