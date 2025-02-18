@@ -54,7 +54,9 @@ void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cu
 	colorRGBA const color(choose_pipe_color(rgen)), spec_color(get_specular_color(color)); // special case metals
 
 	if (add_coil) {
-		float const coil_radius(rgen.rand_uniform(0.05, 0.15)*radius), coil_gap(rgen.rand_uniform(1.5, 4.0)*coil_radius);
+		bool const sparse(c.in_factory()); // larger coil gap for factories
+		float const coil_radius(rgen.rand_uniform(0.05, 0.15)*radius);
+		float const coil_gap(rgen.rand_uniform((sparse ? 2.5 : 1.5), (sparse ? 5.0 : 4.0))*coil_radius);
 		p1[dim] -= coil_radius; p2[dim] += coil_radius; // must start and end inside the object
 		float const length(p2[dim] - p1[dim]);
 		add_spring(p1, radius, coil_radius, length, coil_gap, dim, color, spec_color);
@@ -366,7 +368,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 					pipe_ends.clear();
 
 					for (unsigned n = 0; n < num_pipes; ++n) {
-						bool const is_coil(bool(ndim) == coil_dim && num_coils == 0 && rgen2.rand_bool()); // max of 1 coil across both dims
+						bool const is_coil(!is_cylin && bool(ndim) == coil_dim && num_coils == 0 && rgen2.rand_bool()); // max of 1 coil across both dims; cubes only
 						num_coils += is_coil;
 						add_machine_pipe_in_region(c, region2, (is_coil ? 2.0 : 1.0)*pipe_rmax, ndim, pipe_ends, rgen2, is_coil);
 					}
@@ -550,7 +552,8 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		for (unsigned d = 0; d < 2; ++d) {side_pos[d] = (is_cylins[d] ? parts[d].get_center_dim(!dim) : parts[d].d[!dim][bool(d)^parts_swapped^1]);}
 
 		if (side_pos[0] != side_pos[1]) {
-			float const coil_prob((is_cylins[0] || is_cylins[1]) ? 0.25 : 0.5); // less likely for cylinders since some of the coils are hidden inside the cylider
+			bool const either_cylin(is_cylins[0] || is_cylins[1]);
+			float const coil_prob(either_cylin ? 0.2 : 0.5); // less likely for cylinders since some of the coils are hidden inside the cylider
 			region.d[!dim][0] = min(side_pos[0], side_pos[1]);
 			region.d[!dim][1] = max(side_pos[0], side_pos[1]);
 			assert(region.is_strictly_normalized());
@@ -558,7 +561,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 			pipe_ends.clear();
 			
 			for (unsigned n = 0; n < num_pipes; ++n) {
-				bool const is_coil(num_coils < 2 && rgen.rand_float() < coil_prob); // max of 2 coils
+				bool const is_coil(num_coils < (either_cylin ? 1 : 2) && rgen.rand_float() < coil_prob); // max of 2 coils
 				num_coils += is_coil;
 				add_machine_pipe_in_region(c, region, (is_coil ? 2.0 : 1.0)*pipe_rmax, !dim, pipe_ends, rgen, is_coil);
 			}
