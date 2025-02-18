@@ -606,8 +606,8 @@ class building_indir_light_mgr_t {
 			}
 			// light intensity scales with surface area, since incoming light is a constant per unit area (large windows = more light)
 			weight *= surface_area/0.0016f; // a fraction the surface area weight of lights
-		}
-		else { // room light or lamp, pointing downward
+		} // end window case
+		else { // room light or lamp, pointing downward (unless on the wall)
 			vect_room_object_t const &objs(b.interior->room_geom->objs);
 			assert((unsigned)cur_light < objs.size());
 			room_object_t const &ro(objs[cur_light]);
@@ -620,6 +620,7 @@ class building_indir_light_mgr_t {
 			if (in_attic) {base_num_rays *= 4;} // more rays in attic, since light is large and there are only 1-2 of them
 			if (is_lamp ) {base_num_rays /= 2;} // half the rays for lamps
 			if (is_lamp ) {dir = 2;} // onmidirectional; dim stays at 2/Z
+			else if (ro.flags & RO_FLAG_ADJ_HI) {dim = ro.dim; dir = ro.dir;} // wall light
 			float const surface_area(ro.dx()*ro.dy() + 2.0f*(ro.dx() + ro.dy())*ro.dz()); // bottom + 4 sides (top is occluded), 0.0003 for houses
 			lcolor  = (is_lamp ? LAMP_COLOR : ro.get_color());
 			weight *= surface_area/0.0003f;
@@ -639,7 +640,7 @@ class building_indir_light_mgr_t {
 					base_num_rays /= 4;
 				}
 			}
-		}
+		} // end room light case
 		if (b.check_pt_in_retail_room(light_center)) {weight *= 0.5; base_num_rays /= 5;} // many lights, fewer rays
 		if (b.is_house)        {weight *=  2.0;} // houses have dimmer lights and seem to work better with more indir
 		if (is_negative_light) {weight *= -1.0;}
@@ -665,9 +666,9 @@ class building_indir_light_mgr_t {
 				ray_lcolor = pri_lcolor;
 			}
 			else { // omidirectional or sky ambient from windows
-				pri_dir = rgen.signed_rand_vector_spherical().get_norm(); // should this be cosine weighted for windows?
+				pri_dir = rgen.signed_rand_vector_spherical().get_norm(); // should this be cosine weighted for windows? and clipped to the beamwidth for ceiling lights?
 				if (is_window && ((pri_dir[dim] > 0.0) ^ dir)) {pri_dir[dim] *= -1.0;} // reflect light if needed about window plane to ensure it enters the room
-				//if (!is_window && dim == 2 && dir == 2 && pri_dir.z > 0.0) {pri_dir.z = -pri_dir.z;} // must point down
+				//if (!is_window && dir < 2 && (pri_dir[dim] > 0) != bool(dir)) {pri_dir[dim] *= -1.0;} // point in general light dir/hemisphere; doesn't seem to improve quality
 			}
 			float const lum_thresh(0.1*ray_lcolor.get_luminance());
 			point origin, init_cpos, cpos;
