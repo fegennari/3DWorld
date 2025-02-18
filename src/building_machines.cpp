@@ -544,14 +544,23 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 	if (two_part) {
 		// connect the two parts with pipe and coils
 		unsigned const num_pipes((rgen.rand() % (in_factory ? 6 : 4)) + 1); // 1-4, 1-6 for factories
-		cube_t region(parts[0]);
-		min_eq(region.z2(), parts[1].z2()); // shared Z range
-		max_eq(region.d[dim][0], parts[1].d[dim][0]); // shared range
-		min_eq(region.d[dim][1], parts[1].d[dim][1]);
+		cube_t region(parts[0]), region2(parts[1]);
 		float side_pos[2] = {};
-		for (unsigned d = 0; d < 2; ++d) {side_pos[d] = (is_cylins[d] ? parts[d].get_center_dim(!dim) : parts[d].d[!dim][bool(d)^parts_swapped^1]);}
 
-		if (side_pos[0] != side_pos[1]) {
+		for (unsigned d = 0; d < 2; ++d) {
+			bool const end_on_cylin(is_cylins[d] && cylin_dims[d] == unsigned(!dim));
+			side_pos[d] = ((is_cylins[d] && !end_on_cylin) ? parts[d].get_center_dim(!dim) : parts[d].d[!dim][bool(d)^parts_swapped^1]);
+			if (!end_on_cylin) continue; // not end-on horizontal cylinder
+			cube_t &r(d ? region2 : region);
+			float const cylin_radius(0.5*r.dz()), exp_val(-(1.0 - SQRTOFTWOINV)*cylin_radius);
+			region.expand_in_z  (     exp_val); // clip to inscribed cube
+			region.expand_in_dim(dim, exp_val);
+		} // for d
+		min_eq(region.z2(), region2.z2()); // shared Z range
+		max_eq(region.d[dim][0], region2.d[dim][0]); // shared range
+		min_eq(region.d[dim][1], region2.d[dim][1]);
+
+		if (region.is_strictly_normalized() && side_pos[0] != side_pos[1]) {
 			bool const either_cylin(is_cylins[0] || is_cylins[1]);
 			float const coil_prob(either_cylin ? 0.2 : 0.5); // less likely for cylinders since some of the coils are hidden inside the cylider
 			region.d[!dim][0] = min(side_pos[0], side_pos[1]);
