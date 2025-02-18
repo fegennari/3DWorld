@@ -989,6 +989,22 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			manhole_groups.add_obj(manhole_t(pos, radius), manholes); // Note: colliders not needed
 		}
 	}
+	// place sewers in roads near sidewalks, all 4 sides
+	if (1) {
+		float const length(0.075*city_params.road_width), width(0.68*length), height(0.01*length); // W/L based on texture aspect ratio
+		cube_t sewer;
+		set_cube_zvals(sewer, plot.z2(), (plot.z2() + height));
+
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				set_wall_width(sewer, (plot.d[!dim][0] + (dir ? 0.33 : 0.67)*plot.get_sz_dim(!dim)), 0.5*length, !dim); // one/two thirds along plot on alternating sides
+				float const road_edge(plot.d[dim][dir] + (dir ? 1.0 : -1.0)*1.24*sidewalk_width); // offset by sidewalk + curb
+				sewer.d[dim][!dir] = road_edge;
+				sewer.d[dim][ dir] = road_edge + (dir ? 1.0 : -1.0)*width;
+				sewer_groups.add_obj(street_sewer_t(sewer, dim, dir), sewers);
+			}
+		} // for dim
+	}
 	// maybe place a flag in a city commercial plot or a park
 	if ((!is_residential && rgen.rand_float() < 0.3) || (is_park && rgen.rand_float() < 0.75)) { // 30% of the time for commerical plots, 75% of the time for parks
 		float const length(0.25*city_params.road_width*rgen.rand_uniform(0.8, 1.25)), pradius(0.05*length);
@@ -2005,6 +2021,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	ppole_groups   .create_groups(ppoles,    all_objs_bcube);
 	hcap_groups    .create_groups(hcaps,     all_objs_bcube);
 	manhole_groups .create_groups(manholes,  all_objs_bcube);
+	sewer_groups   .create_groups(sewers,    all_objs_bcube);
 	mbox_groups    .create_groups(mboxes,    all_objs_bcube);
 	tcone_groups   .create_groups(tcones,    all_objs_bcube);
 	pigeon_groups  .create_groups(pigeons,   all_objs_bcube);
@@ -2296,6 +2313,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	if (!shadow_only) { // non shadow casting objects
 		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0);
 		draw_objects(manholes, manhole_groups, dstate, 0.07, shadow_only, 1);
+		draw_objects(sewers,   sewer_groups,   dstate, 0.06, shadow_only, 1);
 		draw_objects(pigeons,  pigeon_groups,  dstate, 0.03, shadow_only, 1);
 		draw_objects(birds,    bird_groups,    dstate, 0.03, shadow_only, 1);
 		draw_objects(pladders, plad_groups,    dstate, 0.06, shadow_only, 1);
@@ -2452,7 +2470,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(p_solars,  p_solar_groups,  pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(clines,    cline_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	// Note: no coll with tree_planters because the tree coll should take care of it;
-	// no coll with hcaps, manholes, tcones, flowers, pladders, bballs, pfloats, pigeons, ppaths, or birds
+	// no coll with hcaps, manholes, sewers, tcones, flowers, pladders, bballs, pfloats, pigeons, ppaths, or birds
 	return 0;
 }
 
@@ -2487,7 +2505,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(ug_elevs,  uge_groups,      p1, p2, t, ret);
 	check_vector_line_intersect(dumpsters, dumpster_groups, p1, p2, t, ret);
 	check_vector_line_intersect(picnics,   picnic_groups,   p1, p2, t, ret);
-	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, tcones, flowers, pladders, chairs, pdecks, bballs, pfloats, clines, pigeons, ppaths, or birds;
+	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, sewers, tcones, flowers, pladders, chairs, pdecks, bballs, pfloats, clines, pigeons, ppaths, or birds;
 	// mboxes, swings, tramps, umbrellas, bikes, plants, ponds, p_solars, and momorail are ignored because they're small or not simple shapes
 	return ret;
 }
@@ -2593,7 +2611,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, vect_cube_t const &plo
 	if (check_city_obj_pt_xy_contains(wwe_groups,      elevators, pos, obj_ix, 0)) {color = colorRGBA(0.8, 1.0, 0.8, 1.0); return 1;} // slightly blue-green glass; transparent?
 	if (check_city_obj_pt_xy_contains(uge_groups,      ug_elevs,  pos, obj_ix, 0)) {color = LT_GRAY; return 1;}
 	if (check_vect_cube_contains_pt_xy(plot_cuts, pos)) {color = colorRGBA(0.7, 0.7, 1.0); return 1;} // mall skylight; very light blue
-	// Note: ppoles, hcaps, manholes, mboxes, tcones, flowers, pladders, chairs, stopsigns, flags, clines, pigeons, birds, swings, umbrellas, bikes, and plants are skipped;
+	// Note: ppoles, hcaps, manholes, sewers, mboxes, tcones, flowers, pladders, chairs, stopsigns, flags, clines, pigeons, birds, swings, umbrellas, bikes, and plants are skipped;
 	// pillars aren't visible under walkways;
 	// free standing signs can be added, but they're small and expensive to iterate over and won't contribute much
 	return 0;

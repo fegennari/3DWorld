@@ -284,6 +284,12 @@ struct manhole_t : public city_obj_t {
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
 
+struct street_sewer_t : public oriented_city_obj_t {
+	street_sewer_t(cube_t const &c, bool dim_, bool dir_) : oriented_city_obj_t(c, dim_, dir_) {}
+	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+};
+
 struct mailbox_t : public model_city_obj_t {
 	mailbox_t(point const &pos_, float height, bool dim_, bool dir_) : model_city_obj_t(pos_, height, dim_, dir_, get_model_id()) {}
 	float get_height() const {return 2.0*radius;}
@@ -406,7 +412,6 @@ struct ug_elevator_t : public oriented_city_obj_t { // underground elevator to m
 
 	ug_elevator_t(ug_elev_info_t const &uge);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
-	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
@@ -667,6 +672,7 @@ private:
 	vector<power_pole_t> ppoles;
 	vector<hcap_space_t> hcaps; // handicap signs painted on parking lots
 	vector<manhole_t> manholes;
+	vector<street_sewer_t> sewers;
 	vector<mailbox_t> mboxes;
 	vector<traffic_cone_t> tcones;
 	vector<pigeon_t> pigeons;
@@ -697,7 +703,7 @@ private:
 	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, fountain_groups, divider_groups, pool_groups, plad_groups,
 		chair_groups, pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups, stopsign_groups,
 		flag_groups, nrack_groups, cline_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups, dumpster_groups, plant_groups, flower_groups,
-		picnic_groups, pond_groups, walkway_groups, pillar_groups, wwe_groups, uge_groups, p_solar_groups, bball_groups, pfloat_groups;
+		picnic_groups, pond_groups, walkway_groups, pillar_groups, wwe_groups, uge_groups, p_solar_groups, bball_groups, pfloat_groups, sewer_groups;
 	skyway_t skyway; // optional
 	vect_parking_space_t pspaces;
 	bird_poop_manager_t bird_poop_manager;

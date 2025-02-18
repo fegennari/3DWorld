@@ -1493,11 +1493,14 @@ hcap_space_t::hcap_space_t(point const &pos_, float radius_, bool dim_, bool dir
 	assert(!shadow_only); // not drawn in the shadow pass
 	select_texture(get_texture_by_name("roads/handicap_parking.jpg"));
 }
-void hcap_space_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+void draw_textured_quad_plus_z(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, cube_t const &bcube, bool dim, bool dir) {
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 	float const x1(bcube.x1()), y1(bcube.y1()), x2(bcube.x2()), y2(bcube.y2()), z(bcube.z2());
 	point const pts[4] = {point(x1, y1, z), point(x2, y1, z), point(x2, y2, z), point(x1, y2, z)};
 	qbds.qbd.add_quad_pts(pts, WHITE, plus_z, tex_range_t(0.0, float(dir^dim), 1.0, float(dir^dim^1), 0, !dim));
+}
+void hcap_space_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	draw_textured_quad_plus_z(dstate, qbds, dist_scale, bcube, dim, dir);
 }
 
 hcap_with_dist_t::hcap_with_dist_t(hcap_space_t const &hs, cube_t const &plot, vect_cube_t &bcubes, unsigned bcubes_end) : hcap_space_t(hs), dmin_sq(plot.dx() + plot.dy()) {
@@ -1522,6 +1525,15 @@ manhole_t::manhole_t(point const &pos_, float radius_) : city_obj_t(pos_, radius
 void manhole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	unsigned const ndiv(max(4U, min(32U, unsigned(1.0f*dist_scale*dstate.get_lod_factor(pos)))));
 	draw_circle_normal(0.0, radius, ndiv, 0, point(pos.x, pos.y, pos.z+get_height()), -1.0); // draw top surface, invert texture coords
+}
+
+ // street sewers
+
+/*static*/ void street_sewer_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {select_texture(get_texture_by_name("roads/metal_grid.jpg"));}
+}
+void street_sewer_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	draw_textured_quad_plus_z(dstate, qbds, dist_scale, bcube, dim, dir);
 }
 
 // trampolines
@@ -2095,9 +2107,6 @@ ug_elevator_t::ug_elevator_t(ug_elev_info_t const &uge) : oriented_city_obj_t(ug
 }
 /*static*/ void ug_elevator_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {select_texture(get_texture_by_name("roads/concrete.jpg"));}
-}
-/*static*/ void ug_elevator_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	// nothing?
 }
 void ug_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	float const tscale(1.0/get_width());
