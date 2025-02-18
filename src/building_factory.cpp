@@ -507,7 +507,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			std::shuffle(cand_pos.begin(), cand_pos.end(), rand_gen_wrap_t(rgen));
 			cube_t hvac;
 			set_wall_width(hvac, center_pos, 0.5*depth, !edim); // depth
-			set_wall_width(hvac, duct.zc(), 0.5*height, 2); // height
+			set_wall_width(hvac, duct.zc(),  0.5*height, 2); // height
 			bool vduct_placed(0);
 
 			for (float hvac_pos : cand_pos) {
@@ -539,24 +539,33 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 					}
 				}
 				vduct.expand_in_dim(!edim, 0.1*hwidth); // undo the slight shrink
-				// add pipes for heat exchanger and gas from the top of the HVAC unit into the ceiling
+				// add pipes from the top or bottom of the HVAC unit into the ceiling or floor
 				unsigned const hvac_pipes_start(objs.size());
 				float const pipe_radius(0.1*hwidth), edge_pad(2.0*pipe_radius), place_lo(hvac.d[edim][0] + edge_pad), place_hi(hvac.d[edim][1] - edge_pad);
 				cube_t vpipe;
-				set_cube_zvals(vpipe, hvac.z2(), ceil_zval);
-				set_wall_width(vpipe, center_pos, pipe_radius, !edim);
+				set_wall_width(vpipe, (center_pos - (hvac_dir ? 1.0 : -1.0)*0.3*duct.get_sz_dim(!edim)), pipe_radius, !edim); // closer to the wall
+				colorRGBA const pipe_colors[4] = {COPPER_C, COPPER_C, YELLOW, GRAY};
+				float const     r_shrink   [4] = {0.0,      0.0,      0.25,   0.12};
 
-				for (unsigned N = 0; N < 3; ++N) {
-					colorRGBA const pipe_color((N == 0) ? GRAY : COPPER_C); // 1 gas + 2 copper heat exchange pipes
-
+				for (unsigned N = 0; N < 4; ++N) { // 2x heat exchange, gas, electric
 					for (unsigned m = 0; m < 20; ++m) { // 20 placement attempts
 						set_wall_width(vpipe, rgen.rand_uniform(place_lo, place_hi), pipe_radius, edim);
-						if ((vduct_placed && vpipe.intersects(vduct)) || has_bcube_int(vpipe, objs, hvac_pipes_start) || has_bcube_int(vpipe, beams)) continue;
-						// Note: may still intersect sprinkler pipes, but this is relatively rare and difficult to avoid
-						objs.emplace_back(vpipe, TYPE_PIPE, room_id, 0, 1, (RO_FLAG_NOCOLL | RO_FLAG_LIT), light_amt, SHAPE_CYLIN, pipe_color); // vertical, shadowed
-						if (N == 0) {objs.back().expand_by_xy(-0.2*pipe_radius);} // gas pipe is slightly smaller
+
+						if (N >= 2 && m < 10) { // gas and electric pipes go down to the floor in the first half of iterations
+							set_cube_zvals(vpipe, zval, hvac.z1());
+							cube_t test_cube(vpipe);
+							test_cube.z2() -= pipe_radius; // shorted so that it doesn't intersect the HVAC unit
+							if (has_bcube_int(test_cube, objs, objs_start) || is_cube_close_to_doorway(vpipe, room, 0.0, 1)) continue;
+						}
+						else { // go up to the ceiling
+							set_cube_zvals(vpipe, hvac.z2(), ceil_zval);
+							if ((vduct_placed && vpipe.intersects(vduct)) || has_bcube_int(vpipe, objs, hvac_pipes_start) || has_bcube_int(vpipe, beams)) continue;
+							// Note: may still intersect sprinkler pipes, but this is relatively rare and difficult to avoid
+						}
+						objs.emplace_back(vpipe, TYPE_PIPE, room_id, 0, 1, (RO_FLAG_NOCOLL | RO_FLAG_LIT), light_amt, SHAPE_CYLIN, pipe_colors[N]); // vertical, shadowed
+						if (r_shrink[N] > 0.0) {objs.back().expand_by_xy(-r_shrink[N]*pipe_radius);} // reduce pipe radius
 						break; // success/done
-					}
+					} // for m
 				} // for N
 				break; // success/done
 			} // for n
