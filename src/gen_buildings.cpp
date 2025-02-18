@@ -846,6 +846,7 @@ public:
 		for (draw_block_t const &b : to_draw) {
 			if (!b.empty()) {cout << "S=" << b.num_verts() << " " << get_texture_by_id(b.tex.tid).name << endl;}
 		}
+		vbo_cache.print_stats();
 	}
 	void get_all_mat_verts(vect_vnctcc_t &verts, bool triangles) const {
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {vector_add_to((triangles ? i->tri_verts : i->quad_verts), verts);}

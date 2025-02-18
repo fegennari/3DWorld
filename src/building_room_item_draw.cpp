@@ -480,11 +480,11 @@ vbo_cache_t::vbo_cache_entry_t vbo_cache_t::alloc(unsigned size, bool is_index) 
 		best_fit = i;
 		if (i->size < target_sz) break; // close fit, done
 	}
-	if (best_fit != e.end()) {
+	if (best_fit != e.end()) { // found a compatible VBO to reuse
 		vbo_cache_entry_t const ret(*best_fit); // deep copy
 		swap(*best_fit, e.back());
 		e.pop_back();
-		++v_reuse; s_reuse += ret.size; ++v_used; s_used += ret.size; // Note: s_reuse can overflow
+		++v_reuse; s_reuse += ret.size; ++v_used; s_used += ret.size;
 		assert(v_free > 0); assert(s_free >= size);
 		--v_free; s_free -= size;
 		return ret; // done
@@ -510,6 +510,10 @@ void vbo_cache_t::clear() { // unused
 	}
 }
 void vbo_cache_t::print_stats() const {
+	// v_alloc / s_alloc: number of VBOs / size allocated
+	// v_used  / s_used : number of VBOs / size currently in use
+	// v_reuse / s_reuse: number of VBOs / size reused, cumulative
+	// v_free  / s_free : number of VBOs / size in free list
 	cout << "VBOs: A " << v_alloc << " U " << v_used << " R " << v_reuse << " F " << v_free
 		 << "  SZ: A " << (s_alloc>>20) << " U " << (s_used>>20) << " R " << (s_reuse>>20) << " F " << (s_free>>20) << endl; // in MB
 }

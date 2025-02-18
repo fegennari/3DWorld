@@ -804,7 +804,8 @@ class vbo_cache_t {
 	};
 private:
 	vector<vbo_cache_entry_t> entries[2]; // {vertex, index}
-	unsigned v_alloc=0, v_used=0, v_reuse=0, v_free=0, s_alloc=0, s_used=0, s_reuse=0, s_free=0;
+	unsigned v_alloc=0, v_used=0, v_reuse=0, v_free=0;
+	size_t s_alloc=0, s_used=0, s_reuse=0, s_free=0;
 public:
 	vbo_cache_entry_t alloc( unsigned size, bool is_index=0);
 	void free(unsigned &vbo, unsigned size, bool is_index=0);
