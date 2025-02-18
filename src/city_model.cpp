@@ -266,11 +266,12 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	
 	if (anim_state && anim_state->enabled) {
 		// skip expensive animations if low detail; may cause the model to T-pose, but it should be far enough that the user can't tell
-		bool const has_bone_animations(city_params.use_animated_people && is_animated && !low_detail);
+		bool const use_bone_animations(city_params.use_animated_people && is_animated && !low_detail &&
+			(anim_state->anim_id == ANIM_ID_WALK || anim_state->anim_id == ANIM_ID_SKELETAL)); // people use ANIM_ID_WALK; animals/others use ANIM_ID_SKELETAL
 		float const anim_speed(anim_state->fixed_anim_speed ? 1.0 : model_file.anim_speed);
-		anim_state->set_animation_id_and_time(s, has_bone_animations, anim_speed);
+		anim_state->set_animation_id_and_time(s, use_bone_animations, anim_speed);
 
-		if (has_bone_animations) {
+		if (use_bone_animations) {
 			int const anim_id(anim_state->get_anim_id_for_setup_bone_transforms());
 			float const speed_mult(SKELETAL_ANIM_TIME_CONST*anim_speed), anim_time(speed_mult*anim_state->anim_time);
 

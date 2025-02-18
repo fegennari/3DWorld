@@ -5,7 +5,7 @@ uniform float animation_scale    = 1.0;
 uniform float model_delta_height = 0.0;
 uniform float rotate_amount      = 1.0; // for swings
 uniform int   animation_id       = 0;
-// 0=none, 1=walk, 2=bunny hop, 3=flip, 4=twirl, 5=march, 6=alien walk, 7=rat, 8=spider, 9=bones animation, 10=helicopter rotate, 11=swingset, 12=fish tail
+// 0=none, 1=walk, 2=bunny hop, 3=flip, 4=twirl, 5=march, 6=alien walk, 7=rat, 8=spider, 9=bones animation, 10=helicopter rotate, 11=swingset, 12=fish tail, 13=flap arms
 
 #ifdef USE_BONE_ANIMATIONS
 layout(location = 4) in uvec4 bone_ids;
@@ -159,6 +159,18 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, in vec2 tc) {
 		vertex.xyz *= do_rotation(axis, rot);
 		normal     *= do_rotation(axis, rot);
 		vertex.xyz += center;
+	}
+	else if (animation_id == 13) { // flap arms
+		// y = up/down, x = left/right, z = front/back; x and z are centered around 0, y is about [0, height]
+		if (abs(vertex.x) > 0.4*anim_scale) { // arms
+			float shoulder_height = 2.15*anim_scale + model_delta_height;
+			float lr_sign = ((vertex.x < 0.0) ? -1.0 : 1.0);
+			float delta_x = -lr_sign*0.4*anim_scale;
+			float angle   = 0.011*anim_scale*abs(sin(2.2*anim_val)) - 0.6;
+			vertex.x += delta_x;
+			rotate_about(vertex.xyz, normal, shoulder_height, vec3(0.0, 0.0, 1.0), lr_sign*angle);
+			vertex.x -= delta_x;
+		}
 	}
 	// else error/skip
 }
