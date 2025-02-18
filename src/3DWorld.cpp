@@ -226,7 +226,7 @@ void display_window_resized() {invalidate_cached_stars();}
 void post_window_redisplay () {glutPostRedisplay();} // Schedule a new display event
 
 
-void clear_context() { // free all textures, shaders, VBOs, etc.; used on context switch and at shutdown
+void clear_context() { // free all textures, shaders, VBOs, etc.; used at shutdown, but technically not needed
 
 	reset_textures();
 	free_universe_context();
@@ -251,7 +251,7 @@ void clear_context() { // free all textures, shaders, VBOs, etc.; used on contex
 	free_animal_context();
 	reflective_cobjs.free_textures();
 	clear_landscape_vbo_now();
-	clear_building_vbos();
+	//clear_building_vbos(); // too slow/not needed?
 	free_city_context();
 }
 
