@@ -65,8 +65,9 @@ void update_security_camera_image();
 void get_pedestrians_in_area(cube_t const &area, int building_ix, vector<point> &pts);
 void setup_puddles_texture(shader_t &s);
 
-float get_door_open_dist   () {return 3.5*CAMERA_RADIUS;}
-bool player_in_ext_basement() {return (player_in_basement == 3 && player_building != nullptr);}
+float get_door_open_dist    () {return 3.5*CAMERA_RADIUS;}
+float get_interior_draw_dist() {return global_building_params.interior_view_dist_scale*2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE);}
+bool player_in_ext_basement () {return (player_in_basement == 3 && player_building != nullptr);}
 
 void tid_nm_pair_dstate_t::set_for_shader(float new_bump_map_mag) {
 	if (new_bump_map_mag == bump_map_mag) return; // no change
@@ -1373,7 +1374,8 @@ public:
 	}
 	void upload_to_vbos() {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->upload_to_vbos();}}
 	void clear_vbos    () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear_vbos();}}
-	void clear         () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear();}}
+	void clear_drawn   () {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->clear();}}
+	void clear         () {clear_drawn(); to_draw.clear();}
 	unsigned get_num_draw_blocks() const {return to_draw.size();}
 	void finalize(unsigned num_tiles) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->finalize(num_tiles);}}
 	
@@ -2689,7 +2691,7 @@ void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
 
 class building_creator_t {
 
-	bool use_smap_this_frame=0, has_interior_geom=0, is_city=0, vbos_created=0;
+	bool use_smap_this_frame=0, has_interior_geom=0, is_city=0, vbos_created=0, has_room_geom=0;
 	unsigned grid_sz=1, gpu_mem_usage=0;
 	vector3d range_sz, range_sz_inv, max_extent;
 	cube_t range, buildings_bcube;
@@ -2890,6 +2892,7 @@ public:
 	building_t const &get_building(unsigned ix) const {assert(ix < buildings.size()); return buildings[ix];}
 	building_t       &get_building(unsigned ix)       {assert(ix < buildings.size()); return buildings[ix];} // non-const version; not intended to be used to change geometry
 	cube_t const &get_building_bcube(unsigned ix) const {return get_building(ix).bcube;}
+	void flag_has_room_geom() {has_room_geom = 1;}
 	
 	bool get_building_door_pos_closest_to(unsigned ix, point const &target_pos, point &door_pos, bool inc_garage_door) const {
 		return get_building(ix).get_building_door_pos_closest_to(target_pos, door_pos, inc_garage_door);
@@ -3427,7 +3430,7 @@ public:
 		bool const enable_back_faces((interior_shadow_maps && is_house) || ext_two_sided);
 		if ( enable_back_faces) {glDisable(GL_CULL_FACE);}
 		ext_parts_draw.draw(s, 1, 1); // shadow_only=1, direct_draw_no_vbo=1
-		ext_parts_draw.clear();
+		ext_parts_draw.clear_drawn();
 		if (!enable_back_faces) {glDisable(GL_CULL_FACE);}
 		s.end_shader();
 		pop_scene_xlate();
@@ -3590,7 +3593,7 @@ public:
 		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
 		if (have_interior) {
 			//timer_t timer2("Draw Building Interiors");
-			float const interior_draw_dist(global_building_params.interior_view_dist_scale*2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE));
+			float const interior_draw_dist(get_interior_draw_dist());
 			float const room_geom_draw_dist(0.4*interior_draw_dist), room_geom_clear_dist(1.05*room_geom_draw_dist), room_geom_sm_draw_dist(0.14*interior_draw_dist);
 			float const room_geom_int_detail_draw_dist(0.045*interior_draw_dist), room_geom_ext_detail_draw_dist(0.08*interior_draw_dist), z_prepass_dist(0.25*interior_draw_dist);
 			glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders
@@ -3742,6 +3745,7 @@ public:
 							inc_small, player_in_bldg, ext_basement_conn_visible, mall_visible); // shadow_only=0
 						if (ext_basement_conn_visible) {s.add_uniform_float("wet_effect", water_damage);}
 						g->has_room_geom = 1;
+						(*i)->flag_has_room_geom();
 						if (!draw_interior) continue;
 
 						if (!player_in_building_bcube && mall_elevator_visible) { // above the mall in the elevator
@@ -4192,7 +4196,7 @@ public:
 	}
 
 	void get_all_window_verts(building_draw_t &bdraw, bool light_pass) { // for exterior drawing
-		bdraw.clear();
+		bdraw.clear_drawn();
 
 		for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 			bdraw.cur_tile_id = (g - grid_by_tile.begin());
@@ -4235,8 +4239,8 @@ public:
 			if (count > 0) {building_draw_interior.reserve_verts(tid_nm_pair_t(i), count);}
 		}
 		// generate vertex data
-		building_draw_interior.clear();
-		building_draw_int_ext_walls.clear();
+		building_draw_interior     .clear_drawn();
+		building_draw_int_ext_walls.clear_drawn();
 
 		for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 			building_draw_interior.cur_tile_id = (g - grid_by_tile.begin());
@@ -4265,7 +4269,7 @@ public:
 #pragma omp parallel for schedule(static) num_threads(num_passes)
 		for (int pass = 0; pass < num_passes; ++pass) { // parallel loop doesn't help much because pass 0 takes most of the time
 			if (pass == 0) { // exterior pass
-				building_draw_vbo.clear();
+				building_draw_vbo.clear_drawn();
 
 				for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 					building_draw_vbo.cur_tile_id = (g - grid_by_tile.begin());
@@ -4318,23 +4322,29 @@ public:
 		//timer_t timer("Create Building Interiors VBOs");
 		get_interior_drawn_verts();
 		update_mem_usage(1); // is_tile=1
-		building_draw_interior.upload_to_vbos();
+		building_draw_interior     .upload_to_vbos();
 		building_draw_int_ext_walls.upload_to_vbos();
 	}
 	void ensure_window_lights_vbos() {
 		if (!building_draw_wind_lights.empty()) return; // already calculated
 		building_texture_mgr.check_windows_texture();
 		get_all_window_verts(building_draw_wind_lights, 1);
+		update_mem_usage(1); // is_tile=1 (assumed - no printout)
 		building_draw_wind_lights.upload_to_vbos();
 	}
+	void clear_room_geom() {
+		if (!has_room_geom) return;
+		for (building_t &b : buildings) {b.clear_room_geom();}
+		has_room_geom = 0;
+	}
 	void clear_vbos() {
-		building_draw.clear_vbos();
-		building_draw_vbo.clear_vbos();
-		building_draw_windows.clear_vbos();
-		building_draw_wind_lights.clear_vbos();
-		building_draw_interior.clear_vbos();
+		building_draw              .clear_vbos();
+		building_draw_vbo          .clear_vbos();
+		building_draw_windows      .clear_vbos();
+		building_draw_wind_lights  .clear_vbos();
+		building_draw_interior     .clear_vbos();
 		building_draw_int_ext_walls.clear_vbos();
-		for (auto i = buildings.begin(); i != buildings.end(); ++i) {i->clear_room_geom();}
+		clear_room_geom();
 		gpu_mem_usage = 0;
 	}
 	bool check_point_coll_xy(point const &pos) const { // Note: pos is in camera space
@@ -5127,13 +5137,15 @@ public:
 		return ((it == tiles.end()) ? cube_t() : it->second.get_grid_bcube_for_building(b));
 	}
 	void add_drawn(vector3d const &xlate, vector<building_creator_t *> &bcs) {
-		float const draw_dist(get_draw_tile_dist());
-		point const camera(get_camera_pos() - xlate);
+		float const draw_dist(get_draw_tile_dist()), rgeom_draw_dist(0.5*get_interior_draw_dist()); // a bit larger than the 0.4*1.05 in multi_draw()
+		point const camera_bs(get_camera_pos() - xlate);
 
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {
-			//if (!i->second.get_bcube().closest_dist_xy_less_than(camera, draw_dist)) continue; // distance test (conservative)
-			if (!dist_xy_less_than(camera, i->second.get_bcube().get_cube_center(), draw_dist)) continue; // distance test (aggressive)
+			cube_t const tile_bcube(i->second.get_bcube());
+			//if (!tile_bcube.closest_dist_xy_less_than(camera_bs, draw_dist)) continue; // distance test (conservative)
+			if (!dist_xy_less_than(camera_bs, tile_bcube.get_cube_center(), draw_dist)) continue; // distance test (aggressive)
 			if (i->second.is_visible(xlate)) {bcs.push_back(&i->second);}
+			else if (!tile_bcube.closest_dist_less_than(camera_bs, rgeom_draw_dist)) {i->second.clear_room_geom();} // mem opt: clear room geom when far
 		}
 	}
 	void add_interior_lights(vector3d const &xlate, cube_t &lights_bcube, bool sec_camera_mode) {
