@@ -190,7 +190,7 @@ rand_gen_t get_machine_info(room_object_t const &c, float floor_ceil_gap, cube_t
 				part.expand_by_xy(-0.1*min(part.dx(), part.dy()));
 				clip_cylin_to_square(part, cylin_dims[n]);
 			}
-			if (cylin_dims[n] < 2 && part.z1() > main.z1()) { // horizontal cylinder off the ground - add a supporting cube
+			if (cylin_dims[n] < 2 && part.zc() > main.z1()) { // horizontal cylinder - add a supporting cube (should be always)
 				support = part;
 				set_cube_zvals(support, main.z1(), part.zc());
 				for (unsigned d = 0; d < 2; ++d) {support.expand_in_dim(d, -rgen.rand_uniform(0.05, 0.45)*part.get_sz_dim(d));} // shrink in both dims
