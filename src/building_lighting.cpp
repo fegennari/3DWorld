@@ -1673,7 +1673,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				dl_sources.back().set_custom_bcube(clip_cube);
 				continue;
 			}
-		}
+			else if (i->type == TYPE_THEFT_SENS && i->is_active() && tid_nm_pair_t(RED_TEX).get_emissive_val() > 0.0) {
+				// no culling - only active if set off by the player
+				add_dlight_if_visible(cube_top_center(*i), 1.0*i->dz(), RED, xlate, lights_bcube); // no custom clip cube
+			}
+		} // end light emitters
 		if (!i->is_light_type() || !i->is_light_on()) continue; // not a light or lamp, or not on
 		point lpos(i->get_cube_center()); // centered in the light fixture
 		min_eq(lpos.z, (i->z2() - 0.0125f*window_vspacing)); // make sure the light isn't too close to the ceiling (if shifted up to avoid a door intersection)
