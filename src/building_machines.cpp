@@ -199,9 +199,9 @@ rand_gen_t get_machine_info(room_object_t const &c, float floor_ceil_gap, cube_t
 	} // for n
 	return rgen; // return for use in drawing
 }
-unsigned get_machine_part_cubes(room_object_t const &c, float floor_ceil_gap, cube_t cubes[4]) {
+unsigned get_machine_part_cubes(room_object_t const &c, float floor_ceil_gap, cube_t cubes[4]) { // base part0 [part1] [support]
 	cube_t support;
-	bool parts_swapped(0), is_cylins[2] = {0, 0};
+	bool parts_swapped(0), is_cylins [2] = {0, 0};
 	unsigned num_parts(0), cylin_dims[2] = {2, 2}; // defaults to Z
 	get_machine_info(c, floor_ceil_gap, cubes[0], cubes+1, support, is_cylins, cylin_dims, num_parts, parts_swapped);
 	unsigned ncubes(num_parts + 1);
@@ -659,6 +659,8 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 			num_xy [d] = center_sz[d]/(machine_sz[d] + aisle_spacing);
 			spacing[d] = center_sz[d]/num_xy[d];
 		}
+		unsigned machine_range[2][2] = {{0, num_xy[0]-1}, {0, num_xy[1]-1}};
+		if (tank_dir) {--machine_range[tank_dim][1];} else {++machine_range[tank_dim][0];} // clip off tank row/column
 		vector<room_object> obj_grid(num_xy[0]*num_xy[1], TYPE_NONE);
 		vector<point> tank_conn_pts;
 		float merged_pipe_radius(0.0);
@@ -694,9 +696,45 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 					if (nx > 0 && obj_grid[gix - 1        ] == TYPE_MACHINE) {flags |= RO_FLAG_ADJ_LO;} // has prev X neighbor
 					if (ny > 0 && obj_grid[gix - num_xy[0]] == TYPE_MACHINE) {flags |= RO_FLAG_ADJ_HI;} // has prev Y neighbor
 					objs.emplace_back(c, TYPE_MACHINE, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, LT_GRAY, item_flags);
-					objs.back().obj_id       = rand_seed;
-					objs.back().state_flags  = nx;
-					objs.back().drawer_flags = ny;
+					room_object_t &machine(objs.back());
+					machine.obj_id       = rand_seed;
+					machine.state_flags  = nx;
+					machine.drawer_flags = ny;
+					bool added_light(0);
+
+					// add corner machine warning lights
+					for (unsigned ydir = 0; ydir < 2 && !added_light; ++ydir) {
+						if (ny != machine_range[1][ydir]) continue; // not edge row
+
+						for (unsigned xdir = 0; xdir < 2 && !added_light; ++xdir) {
+							if (nx != machine_range[0][xdir]) continue; // not edge row
+							cube_t cubes[4];
+							get_machine_part_cubes(machine, get_floor_ceil_gap(), cubes);
+							cube_t const &part(cubes[1]); // first (should be only) part
+							assert(part.is_strictly_normalized());
+							float const light_height(0.14*height), light_radius(0.12*light_height);
+							point center(0.0, 0.0, (part.z1() + min(floor_spacing, 0.4f*part.dz())));
+
+							for (unsigned D = 0; D < 2; ++D) { // extend dim
+								for (unsigned d = 0; d < 2; ++d) {
+									bool const dir(d ? ydir : xdir), extend_dim(bool(d) != D);
+									// contained in part range for dim D, outside part in !D; may extend outside machine bcube, but shouldn't intersect anything
+									center[d] = (extend_dim ? c : part).d[d][dir] + (dir ? -1.0 : 1.0)*(extend_dim ? -1.5 : 3.0)*light_radius;
+								}
+								cube_t light(center);
+								light.z2() += light_height;
+								light.expand_by_xy(light_radius);
+								objs.emplace_back(light, TYPE_WARN_LIGHT, room_id, 0, 0, (RO_FLAG_IN_FACTORY | RO_FLAG_NOCOLL | RO_FLAG_LIT), tot_light_amt, SHAPE_CYLIN);
+								// add a horizontal rod connecting the light to the machine part
+								bool const bar_dir(D ? xdir : ydir);
+								cube_t bar(center);
+								bar.expand_by(0.2*light_radius);
+								bar.d[!D][!bar_dir] = /*part.d[!D][bar_dir]*/part.get_center_dim(!D); // use center in case part is a cylinder
+								objs.emplace_back(bar, TYPE_METAL_BAR, room_id, !D, bar_dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, GRAY);
+							} // for D
+							added_light = 1;
+						} // for xdir
+					} // for ydir
 				}
 				obj_grid[gix] = (is_tank ? TYPE_CHEM_TANK : TYPE_MACHINE);
 			} // for nx

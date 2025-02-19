@@ -201,6 +201,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_VANITY    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 3,  0.0,  0.0,   "bathroom vanity");
 	bldg_obj_types[TYPE_CHEM_TANK ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1,  0.0,  0.0,   "chemical tank");
 	bldg_obj_types[TYPE_HVAC_UNIT ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 800.0, 200.0, "HVAC unit");
+	bldg_obj_types[TYPE_WARN_LIGHT] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 50.0,  2.0,   "warning light");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");

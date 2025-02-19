@@ -2691,6 +2691,23 @@ void building_room_geom_t::add_duct(room_object_t const &c) {
 	else {assert(0);} // unsupported shape
 }
 
+void building_room_geom_t::add_warning_light(room_object_t const &c) {
+	// red emissive vertical cylinder on a light gray cylinder on a tall thin gray pole
+	bool const is_on(c.is_light_on());
+	float const height(c.dz()), radius(c.get_radius());
+	cube_t top(c), pole(c);
+	pole.z2() = top.z1() = c.z1() + 0.5*height;
+	cube_t light(top), base(top);
+	base.z2() = light.z1() = top.z1() + 0.3*top.dz();
+	light.expand_by_xy(-0.05*radius); // slight shrink
+	pole .expand_by_xy(-0.85*radius);
+	rgeom_mat_t &base_pole_mat(get_untextured_material(1, 0, 1)); // shadowed, small
+	base_pole_mat.add_vcylin_to_verts(pole, apply_light_color(c,    GRAY), 0, 0); // sides only
+	base_pole_mat.add_vcylin_to_verts(base, apply_light_color(c, LT_GRAY), 1, 1); // sides + top and bottom
+	rgeom_mat_t &light_mat(get_material(tid_nm_pair_t((is_on ? RED_TEX : -1), 0.0, 1), 1, 0, 1)); // shadowed, small
+	light_mat.add_vcylin_to_verts(light, (is_on ? RED : colorRGBA(0.5, 0.0, 0.0)), 0, 1); // draw sides and top
+}
+
 void mirror_cube_z(cube_t &c, cube_t const &obj) {
 	c.translate_dim(2, 2.0*(obj.zc() - c.zc()));
 }

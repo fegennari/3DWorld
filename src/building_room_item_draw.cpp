@@ -1111,6 +1111,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_PET_CAGE:   add_pet_cage(c); break;
 		case TYPE_CATWALK:    add_catwalk(c); break;
 		case TYPE_DUCT:       add_duct(c); break;
+		case TYPE_WARN_LIGHT: add_warning_light(c); break;
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		default: break;
 		} // end switch

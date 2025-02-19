@@ -316,7 +316,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			type == TYPE_POOL_LAD || type == TYPE_FLASHLIGHT || type == TYPE_CANDLE || type == TYPE_CAMERA || type == TYPE_CLOCK || type == TYPE_BAR_STOOL || type == TYPE_PADLOCK ||
 			type == TYPE_WFOUNTAIN || type == TYPE_BANANA || type == TYPE_BAN_PEEL || type == TYPE_VALVE || type == TYPE_INT_LADDER || type == TYPE_CONF_PHONE ||
 			type == TYPE_SPIWEB || type == TYPE_TREE || type == TYPE_THEFT_SENS || type == TYPE_ELEC_WIRE || type == TYPE_ERASER || type == TYPE_PET_CAGE || type == TYPE_SHOE ||
-			type == TYPE_SHOEBOX || type == TYPE_LADDER || type == TYPE_CATWALK) continue;
+			type == TYPE_SHOEBOX || type == TYPE_LADDER || type == TYPE_CATWALK || type == TYPE_WARN_LIGHT) continue;
 		bool const is_stairs(type == TYPE_STAIR || type == TYPE_STAIR_WALL || type == TYPE_US_FLAG || type == TYPE_BLDG_FOUNT);
 		if (c->z1() > (is_stairs ? stairs_z2 : z2) || c->z2() < (is_stairs ? stairs_z1 : z1)) continue;
 		if (!c->intersects_xy(ext_bcube)) continue;
@@ -1654,17 +1654,24 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (camera_near_building && !walkway_only) { // handle light emitting objects in the player's building
-			if ((i->type == TYPE_LAVALAMP || i->type == TYPE_FISHTANK) && i->is_light_on()) { // should we do an occlusion query?
+			room_object const type(i->type);
+
+			// should we do an occlusion query?
+			if ((type == TYPE_LAVALAMP || type == TYPE_FISHTANK || type == TYPE_WARN_LIGHT) && i->is_light_on()) {
 				room_t const &room(get_room(i->room_id)); // should we clip to the current floor in Z?
-				if (camera_room_tall && camera_room == (int)i->room_id) {} // special case for player in a tall room - skip the continue case below
-				else if (camera_in_mall && room.is_store()) {} // special case for store visible from another floor of the mall
+				if ((camera_room_tall || room.is_factory() || room.is_retail() || room.is_mall_or_store()) && camera_room == (int)i->room_id) {} // player in a tall room
+				else if (camera_in_mall && room.is_store()) {} // store visible from another floor of the mall
 				else if (int((camera_bs.z - ground_floor_z1)/window_vspacing) != int((i->zc() - ground_floor_z1)/window_vspacing)) continue; // different floor
 
-				if (i->type == TYPE_LAVALAMP) {
+				if (type == TYPE_LAVALAMP) {
 					if (!add_dlight_if_visible(i->get_cube_center(), 10.0*i->get_radius(), colorRGBA(1.0, 0.75, 0.25), xlate, lights_bcube)) continue;
 				}
-				else if (i->type == TYPE_FISHTANK) { // pointed downward
+				else if (type == TYPE_FISHTANK) { // pointed downward
 					if (!add_dlight_if_visible(cube_top_center(*i), 1.25*(i->dx() + i->dy()), colorRGBA(0.8, 0.9, 1.0), xlate, lights_bcube, -plus_z, 0.3)) continue;
+				}
+				else if (type == TYPE_WARN_LIGHT) {
+					if (tid_nm_pair_t(RED_TEX).get_emissive_val() == 0.0) continue; // not on
+					if (!add_dlight_if_visible(point(i->xc(), i->yc(), (i->z1() + 0.75*i->dz())), 25.0*i->get_radius(), RED, xlate, lights_bcube)) continue; // point light
 				}
 				assert(room.contains_pt(dl_sources.back().get_pos()));
 				cube_t clip_cube(room);
@@ -1673,9 +1680,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				dl_sources.back().set_custom_bcube(clip_cube);
 				continue;
 			}
-			else if (i->type == TYPE_THEFT_SENS && i->is_active() && tid_nm_pair_t(RED_TEX).get_emissive_val() > 0.0) {
+			else if (type == TYPE_THEFT_SENS && i->is_active() && tid_nm_pair_t(RED_TEX).get_emissive_val() > 0.0) {
 				// no culling - only active if set off by the player
-				add_dlight_if_visible(cube_top_center(*i), 1.0*i->dz(), RED, xlate, lights_bcube); // no custom clip cube
+				add_dlight_if_visible(cube_top_center(*i), 1.0*i->dz(), RED, xlate, lights_bcube); // point light; no custom clip cube
 			}
 		} // end light emitters
 		if (!i->is_light_type() || !i->is_light_on()) continue; // not a light or lamp, or not on
