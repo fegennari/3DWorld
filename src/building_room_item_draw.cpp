@@ -779,7 +779,7 @@ rgeom_mat_t &building_materials_t::get_material(tid_nm_pair_t const &tex, bool i
 	rgeom_alloc.alloc_safe(back());
 	return back();
 }
-void building_materials_t::create_vbos(building_t const &building) {
+void building_materials_t::create_vbos(building_t const &building) { // up to ~100 materials and ~2M verts
 	for (iterator m = begin(); m != end(); ++m) {m->create_vbo(building);}
 	valid = 1;
 }

@@ -134,7 +134,7 @@ bool city_model_loader_t::is_model_valid(unsigned id) {
 	return model.is_loaded();
 }
 
-void city_model_loader_t::load_model_id(unsigned id) {
+void city_model_loader_t::load_model_id(unsigned id) { // currently up to 72 models loaded with people and cars
 	unsigned const num_sub_models(get_num_sub_models(id));
 
 	for (unsigned sm = 0; sm < num_sub_models; ++sm) { // load all sub-models

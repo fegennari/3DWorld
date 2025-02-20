@@ -361,7 +361,7 @@ int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y, i
 	}
 	textures.push_back(new_tex);
 	texture_name_map[name] = tid;
-	return tid;
+	return tid; // Note: city/buildings scene currently loads 348 textures
 }
 
 unsigned load_cube_map_texture(string const &name) { // used for sky boxes
