@@ -455,6 +455,24 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			unsigned const num_cubes(get_machine_part_cubes(*c, get_floor_ceil_gap(), cubes));
 			add_colored_cubes(cubes, num_cubes, color.modulate_with(GRAY), cc); // use light gray, since we don't have the actual metal textures used
 		}
+		else if (type == TYPE_VENT_FAN) { // modeled as sides + center
+			float const radius(0.5*c->dz()), side_thick(0.2*radius), center_radius(0.2*radius);
+			unsigned dims[2] = {!c->dim, 2};
+
+			for (unsigned d = 0; d < 2; ++d) {
+				bool const dim(dims[d]);
+
+				for (unsigned dir = 0; dir < 2; ++dir) {
+					cube_t side(*c); // okay if corners overlap
+					side.d[dim][!dir] = c->d[dim][dir] + (dir ? -1.0 : 1.0)*side_thick;
+					cc.emplace_back(side, color);
+				}
+			}
+			cube_t center(*c);
+			set_wall_width(center, c->zc(), center_radius, 2);
+			set_wall_width(center, c->get_center_dim(!c->dim), center_radius, !c->dim);
+			cc.emplace_back(center, color);
+		}
 		else { // single cube
 			cube_t bc(*c); // handle 3D models that don't fill the entire cube
 			bool const dim(c->dim), dir(c->dir);

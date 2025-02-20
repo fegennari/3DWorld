@@ -594,15 +594,19 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 
 		for (unsigned dir = 0; dir < 2; ++dir) { // end walls
 			bool const first_skip(rgen.rand_bool());
-			float const wall_pos(room.d[edim][dir]), mount_pos(wall_pos - (dir ? -1.0 : 1.0)*0.36*depth); // outside the window
+			float const dsign(dir ? -1.0 : 1.0), wall_pos(room.d[edim][dir]), mount_pos(wall_pos - dsign*0.36*depth); // outside the window
 			fan.d[edim][ dir] = mount_pos;
-			fan.d[edim][!dir] = mount_pos + (dir ? -1.0 : 1.0)*depth;
+			fan.d[edim][!dir] = mount_pos + dsign*depth;
 
-			for (unsigned n = first_skip; n < num_windows; n += 2) { // every other window
+			for (unsigned n = first_skip; n < num_windows; ++n) { // every other window
 				set_wall_width(fan, (room.d[!edim][0] + (n + 0.5)*window_hspace), hwidth, !edim); // centered on the window
-				if (has_bcube_int(fan, ladders)) continue; // blocked by ladder on the wall
+				if (has_bcube_int(fan, ladders) || has_bcube_int(fan, supports[edim])) continue; // blocked by ladder on the wall or a vertical support
 				objs.emplace_back(fan, TYPE_VENT_FAN, room_id, edim, !dir, RO_FLAG_IN_FACTORY, light_amt, SHAPE_CUBE);
-			}
+				cube_t blocker(fan);
+				blocker.translate_dim(edim, dsign*depth); // move into the building; should block sprinkler pipes
+				objs.emplace_back(fan, TYPE_BLOCKER, room_id, edim, !dir, RO_FLAG_NOCOLL, light_amt); // prevent sprinkler pipe from getting too close to the fan
+				++n; // skip the next window if a fan was placed
+			} // for n
 		} // for dir
 	}
 	// add fire sprinkler pipes
@@ -623,7 +627,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		if (s.intersects(room)) {obstacles.push_back(s);}
 	}
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
-		if (!i->no_coll()) {obstacles.push_back(*i);}
+		if (!i->no_coll() || i->type == TYPE_BLOCKER) {obstacles.push_back(*i);}
 	}
 	vect_cube_t vpipe_avoid;
 
