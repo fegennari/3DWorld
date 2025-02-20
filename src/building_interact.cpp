@@ -313,7 +313,7 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 			if (i->obj_id != 1) {interior->room_geom->invalidate_draw_data_for_obj(*i);}
 			i->obj_id = 1; // turn it off
 			i->flags ^= RO_FLAG_NO_POWER;
-		}
+		} // TYPE_VENT_FAN?
 		else if (i->type == TYPE_MWAVE || i->type == TYPE_CEIL_FAN || i->type == TYPE_CAMERA || i->type == TYPE_CLOCK || i->type == TYPE_LAVALAMP || i->type == TYPE_FISHTANK) {
 			i->flags ^= RO_FLAG_NO_POWER; // interactive powered devices; stove is gas and not electric powered
 		}
