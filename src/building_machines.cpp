@@ -773,7 +773,8 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 						if (v_pipe.intersects(avoid) || overlaps_obj_or_placement_blocked(v_pipe, room, (is_up ? objs_start_inc_beams : objs_start), is_up)) continue;
 						h_pipe.union_with_cube(ext_pipe); // extend pipe
 						unsigned const flags(RO_FLAG_LIT | (is_up ? RO_FLAG_NOCOLL : 0)); // cast shadows; only collide if going down
-						objs.emplace_back(v_pipe, TYPE_PIPE, room_id, 0, 1, flags, tot_light_amt, SHAPE_CYLIN, pipe_color);
+						objs.emplace_back(v_pipe, TYPE_PIPE,    room_id, 0, 1, flags, tot_light_amt, SHAPE_CYLIN, pipe_color);
+						objs.emplace_back(v_pipe, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_NOCOLL, 1.0); // add a blocker over the pipe so that we don't intersect it with sprinklers
 						h_pipe_flags |= (d ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT); // make the bend round
 						connected     = 1;
 					} // for e
