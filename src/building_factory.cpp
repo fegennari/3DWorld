@@ -264,6 +264,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	float const doorway_width(get_doorway_width()), catwalk_width(1.1*doorway_width), catwalk_hwidth(0.5*catwalk_width), catwalk_height(0.5*window_vspace);
 	float const cw_lo(entry.d[edim][0] + 1.5*catwalk_hwidth), cw_hi(entry.d[edim][1] - 1.2*catwalk_hwidth);
 	float const trim_thickness(get_trim_thickness());
+	cube_t center_ladder;
 
 	if (cw_lo < cw_hi) { // should always be true
 		cube_t catwalk(entry);
@@ -377,6 +378,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 				objs.push_back(near_end);
 				objs.push_back(middle  );
 				add_hanging_ladder(ladder, room_id, !edim, ldir, light_amt, clearance, catwalk.z1(), objs);
+				center_ladder = tc; // ladder + space; will be used in machine pipe routing
 				break; // success/done
 			} // for n
 			if (!add_sec_ladder) {catwalk_obj.flags |= (edir ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT);} // add end bars to non-ladder side unless there's a second ladder
@@ -391,7 +393,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	place_model_along_wall(OBJ_MODEL_SUBSTATION, TYPE_XFORMER, room, 0.6, rgen, tzval, room_id, light_amt, xfmr_area, objs_start, 0.0, 4, 0, WHITE, 0, 0, 0, 1); // sideways
 	// add machines
 	unsigned const machines_start(objs.size());
-	add_machines_to_factory(rgen, room, place_area, zval, room_id, light_amt, objs_start, objs_start_inc_beams);
+	add_machines_to_factory(rgen, room, place_area, zval, room_id, light_amt, objs_start, objs_start_inc_beams, center_ladder);
 
 	for (auto i = objs.begin()+machines_start; i != objs.end(); ++i) { // add some smoke emitters
 		if (i->type != TYPE_MACHINE)  continue;

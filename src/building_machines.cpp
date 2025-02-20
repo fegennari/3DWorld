@@ -630,12 +630,13 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 }
 
 void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cube_t const &place_area, float zval,
-	unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned objs_start_inc_beams)
+	unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned objs_start_inc_beams, cube_t const &ladder)
 {
 	assert(interior->factory_info);
 	float const floor_spacing(get_window_vspace()), fc_gap(room.dz()), max_place_sz(1.0*floor_spacing), max_height(fc_gap - floor_spacing);
 	float const doorway_width(get_doorway_width()), min_gap(max(doorway_width, get_min_front_clearance_inc_people())), ceil_zval(room.z2() - get_fc_thickness());
 	if (max_height <= 0.0) return; // should never happen
+	bool const check_ladder(!ladder.is_all_zeros());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	vector2d max_sz(get_machine_max_sz(place_area, min_gap, max_place_sz, 0.5));
 	cube_t avoid(interior->factory_info->entrance_area);
@@ -674,7 +675,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 				c.z2() += height;
 				if (is_tank) {c.expand_by_xy(tank_radius);} // tank is square
 				else         {c.expand_by_xy(0.5*machine_sz);}
-				if (c.intersects(avoid) || overlaps_obj_or_placement_blocked(c, room, objs_start)) continue;
+				if (c.intersects(avoid) || (check_ladder && c.intersects(ladder)) || overlaps_obj_or_placement_blocked(c, room, objs_start)) continue;
 				unsigned const gix(ny*num_xy[0] + nx);
 
 				if (is_tank) { // make it a chemical tank; the tank itself is smaller to make room for pipes
@@ -693,8 +694,16 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 				}
 				else { // make it a machine
 					unsigned flags(RO_FLAG_IN_FACTORY | RO_FLAG_FROM_SET); // tag as part of a group
-					if (nx > 0 && obj_grid[gix - 1        ] == TYPE_MACHINE) {flags |= RO_FLAG_ADJ_LO;} // has prev X neighbor
-					if (ny > 0 && obj_grid[gix - num_xy[0]] == TYPE_MACHINE) {flags |= RO_FLAG_ADJ_HI;} // has prev Y neighbor
+					cube_t space_x(c), space_y(c);
+					space_x.x1() -= spacing.x;
+					space_y.y1() -= spacing.y;
+					
+					if (nx > 0 && obj_grid[gix - 1        ] == TYPE_MACHINE) { // has prev X neighbor	
+						if (!check_ladder || !space_x.intersects(ladder)) {flags |= RO_FLAG_ADJ_LO;} // add pipes if not blocked by a ladder
+					}
+					if (ny > 0 && obj_grid[gix - num_xy[0]] == TYPE_MACHINE) { // has prev Y neighbor
+						if (!check_ladder || !space_y.intersects(ladder)) {flags |= RO_FLAG_ADJ_HI;} // add pipes if not blocked by a ladder
+					}
 					objs.emplace_back(c, TYPE_MACHINE, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, LT_GRAY, item_flags);
 					room_object_t &machine(objs.back());
 					machine.obj_id       = rand_seed;
