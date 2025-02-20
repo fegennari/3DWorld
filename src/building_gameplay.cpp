@@ -229,7 +229,6 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_SILVER    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 2, 10.0,  0.2,   "silverware"); // drawn as a small static object when expanded (in a drawer)
 	bldg_obj_types[TYPE_TOY_MODEL ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 4.0,   0.2,   "toy"); // plastic ring stack
 	bldg_obj_types[TYPE_CEIL_FAN  ] = bldg_obj_type_t(0, 0, 0, 0, 1, 1, 0, 200.0, 25.0,  "ceiling fan");
-	bldg_obj_types[TYPE_VENT_FAN  ] = bldg_obj_type_t(0, 0, 0, 0, 1, 1, 0, 200.0, 40.0,  "ventilation fan");
 	bldg_obj_types[TYPE_FIRE_EXT  ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 25.0,  10.0,  "fire extinguisher", 250);
 	bldg_obj_types[TYPE_FOLD_SHIRT] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 2, 10.0,  0.25,  "folded shirt"); // drawn as a small static object when expanded (in a drawer)
 	bldg_obj_types[TYPE_PLANT_MODEL]= bldg_obj_type_t(0, 1, 1, 1, 0, 1, 0, 15.0,  5.0,   "potted plant"); // AI collides with plants on the floor
@@ -244,6 +243,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CONF_PHONE] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 40.0,  2.0,   "phone");
 	bldg_obj_types[TYPE_SHOE      ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 40.0,  1.0,   "shoe"); // one shoe
 	bldg_obj_types[TYPE_SHOEBOX   ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 80.0,  2.1,   "shoebox"); // assumed to contain a pair of shoes
+	bldg_obj_types[TYPE_VENT_FAN  ] = bldg_obj_type_t(0, 0, 0, 0, 1, 1, 1, 200.0, 40.0,  "ventilation fan"); // mixed model and object geom
 	bldg_obj_types[TYPE_GBIKE     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 150.0, 20.0,  "bike"); // garage bike
 	bldg_obj_types[TYPE_XFORMER   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 0.0,   0.0,   "transformer");
 	bldg_obj_types[TYPE_US_FLAG   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 30.0,  1.0,   "American Flag");

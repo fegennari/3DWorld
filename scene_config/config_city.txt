@@ -216,6 +216,7 @@ city hood_model   ../models/interiors/decorative_hood.model3d   1 1 0  0 -1 90  
 city rocking_chair_model ../models/interiors/rocker/Glider_Rocker.model3d 0 0 0  0 -1 0   1 1.0 1.0
 city silverware_model    ../models/interiors/S3_cutlery_gold_Obj.model3d  1 0 0  0 -1 90  1 1.0 1.0
 city ceiling_fan_model ../models/interiors/ceiling_fan/CeilingFan.model3d 0 1 5  -1 -1 0   1 1.0 1.0  reverse_winding=4 # bad vertex winding order for top/bot; missing texture; centered in XZ (xy)
+city vent_fan_model ../models/interiors/fans/ventilation_fan.glb 0 1 0  -1 -1 270   1 1.0 1.0 # two sided, since it extends out the window
 city fire_ext_model ../models/interiors/fire_extinguisher/fire_extinguisher_co2.fbx 0 0 0  -1 -1 0 1 1.0 1.0
 city folded_shirt_model "../models/interiors/teeshirt/simple folded shirt.model3d"  0 0 0  0 0 90  1 1.0 1.0
 city pool_table_model   ../models/interiors/pool_table/pool_table_002.fbx  0 0 0  0 0 0  1 1.0 1.0

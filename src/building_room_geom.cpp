@@ -5774,6 +5774,27 @@ void building_room_geom_t::add_hvac_unit(room_object_t const &c) {
 	mat.add_cube_to_verts(c, color, c.get_llc(), ~front_mask); // sides
 }
 
+void building_room_geom_t::add_vent_fan_frame(room_object_t const &c) {
+	// draw sides of fan housing
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_ibeam_tid(), 0.0, 1), 1)); // shadowed; same material as I-Beam
+	cube_t housing(c);
+	housing.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*0.36*c.get_depth(); // part inside the building
+	colorRGBA const color(apply_light_color(c));
+	point const llc(c.get_llc());
+
+	for (unsigned inv = 0; inv < 2; ++inv) { // draw two sided
+		mat.add_cube_to_verts(housing, color, llc, get_skip_mask_for_xy(c.dim), 0, 0, 0, bool(inv)); // skip front and back
+	}
+	// draw the missing circular back of the motor
+	vector3d dir;
+	dir[c.dim] = (c.dir ? -1.0 : 1.0); // facing the back
+	float const radius(0.073*c.dz());
+	point motor_back(0.0, 0.0, c.zc());
+	motor_back[ c.dim] = c.d[c.dim][!c.dir];
+	motor_back[!c.dim] = c.get_center_dim(!c.dim);
+	get_untextured_material(0).add_disk_to_verts(motor_back, radius, dir, WHITE); // unshadowed
+}
+
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars,
 	float vbar_hthick, float hbar_hthick, unsigned vdim, unsigned hdim, unsigned adj_dim=0, float h_adj_val=0.0)
 {
@@ -6097,6 +6118,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_IBEAM:     return texture_color(get_ibeam_tid()).modulate_with(color);
 	case TYPE_CHEM_TANK: return texture_color(get_chem_tank_tid(*this)).modulate_with(color);
 	case TYPE_HVAC_UNIT: return texture_color(get_hvac_tid(*this)).modulate_with(color);
+	case TYPE_VENT_FAN:  return texture_color(get_ibeam_tid()).modulate_with(color);
 	case TYPE_MIRROR:    return WHITE; // should be reflecting
 	//case TYPE_POOL_BALL: return ???; // texture_color(get_ball_tid(*this))? uses a texture atlas, so unclear what color to use here; use white by default
 	//case TYPE_CHIMNEY:  return texture_color(get_material().side_tex); // should modulate with texture color, but we don't have it here

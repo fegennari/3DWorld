@@ -127,7 +127,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	support_bounds.expand_by_xy(-support_hwidth);
 	set_cube_zvals(support, zval,     beams_z1 );
 	set_cube_zvals(beam,    beams_z1, ceil_zval);
-	vect_cube_t support_parts, beams, supports[2], lights;
+	vect_cube_t support_parts, beams, supports[2], lights, ladders;
 	vector<float> beam_pos; // in short dim; needed for hanging catwalks
 	vect_cube_t const &nested_rooms(interior->factory_info->sub_rooms);
 	unsigned const objs_start_inc_beams(objs.size());
@@ -313,6 +313,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			ladder.d[edim][ edir] = wall_pos + edir_sign*ladder_depth; // set depth
 			add_ladder_with_blocker(ladder, room_id, edim, edir, light_amt, clearance, objs);
 			objs.back().expand_in_dim(!edim, (catwalk_hwidth - ladder_hwidth)); // expand blocker to the width of the ladder; required to avoid nearby pipes, etc.
+			ladders.push_back(ladder);
 			// try to add a ladder on the other end; it may be on top of a sub-room
 			cube_t ladder2(ladder);
 			ladder2.translate_dim(edim, edir_sign*(room_sz[edim] - ladder_depth - 2.0*trim_thickness)); // translate to the other wall
@@ -322,8 +323,13 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 				if (r.contains_cube_xy(ladder2)) {ladder2.z1()   = r.z2() + fc_thick; break;} // ladd starts on the roof of this room
 				if (r.intersects_xy   (ladder2)) {add_sec_ladder = 0; break;} // skip if partially overlapping
 			}
-			if (add_sec_ladder && (has_bcube_int(ladder2, supports[edim]) || cube_int_ext_door(ladder2) || interior->is_blocked_by_stairs_or_elevator(ladder2))) {add_sec_ladder = 0;}
-			if (add_sec_ladder) {add_ladder_with_blocker(ladder2, room_id, edim, !edir, light_amt, clearance, objs);}
+			if (add_sec_ladder && (has_bcube_int(ladder2, supports[edim]) || cube_int_ext_door(ladder2) ||
+				interior->is_blocked_by_stairs_or_elevator(ladder2))) {add_sec_ladder = 0;}
+			
+			if (add_sec_ladder) {
+				add_ladder_with_blocker(ladder2, room_id, edim, !edir, light_amt, clearance, objs);
+				ladders.push_back(ladder2);
+			}
 			// create catwalk
 			catwalk.expand_in_dim(edim, -end_pad); // shrink
 			unsigned const flags(RO_FLAG_IN_FACTORY | RO_FLAG_HANGING);
@@ -575,6 +581,30 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			objs.emplace_back(vduct, TYPE_DUCT, room_id, 0, 1, duct_flags, light_amt, duct_shape); // vertical, same shape
 		}
 	} // for i
+	// add ventilation fans between windows
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_VENT_FAN)) {
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_VENT_FAN)); // D, W, H
+		unsigned const num_windows(get_num_windows_on_side(room, !edim));
+		float const window_hspace(room_sz[!edim]/num_windows);
+		float const window_width(window_hspace*(1.0 - 2.0*get_window_h_border())), window_height(window_vspace*(1.0 - 2.0*get_window_v_border()));
+		float const height(1.08*max(window_width, window_height)), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
+		float const fan_zc(min((room.z2() - 0.5f*window_vspace), (beams_z1 - 0.5f*height))); // not intersecting the beams
+		cube_t fan;
+		set_wall_width(fan, fan_zc, 0.5*height, 2); // set zvals inside the top floor window; okay if it clips through the edge of a beam or support
+
+		for (unsigned dir = 0; dir < 2; ++dir) { // end walls
+			bool const first_skip(rgen.rand_bool());
+			float const wall_pos(room.d[edim][dir]), mount_pos(wall_pos - (dir ? -1.0 : 1.0)*0.36*depth); // outside the window
+			fan.d[edim][ dir] = mount_pos;
+			fan.d[edim][!dir] = mount_pos + (dir ? -1.0 : 1.0)*depth;
+
+			for (unsigned n = first_skip; n < num_windows; n += 2) { // every other window
+				set_wall_width(fan, (room.d[!edim][0] + (n + 0.5)*window_hspace), hwidth, !edim); // centered on the window
+				if (has_bcube_int(fan, ladders)) continue; // blocked by ladder on the wall
+				objs.emplace_back(fan, TYPE_VENT_FAN, room_id, edim, !dir, RO_FLAG_IN_FACTORY, light_amt, SHAPE_CUBE);
+			}
+		} // for dir
+	}
 	// add fire sprinkler pipes
 	float const custom_floor_spacing(room.dz() - support_width); // place sprinklers under ceiling beams
 	float const wall_pad(1.05*support_width); // add a gap between the wall supports

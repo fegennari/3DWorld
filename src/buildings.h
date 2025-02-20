@@ -1278,6 +1278,7 @@ struct building_room_geom_t {
 	void add_ibeam(room_object_t const &c);
 	void add_chem_tank(room_object_t const &c);
 	void add_hvac_unit(room_object_t const &c);
+	void add_vent_fan_frame(room_object_t const &c);
 	void add_store_gate(cube_t const &c, bool dim, float open_amt);
 	void add_theft_sensor(room_object_t const &c, bool alarm_mode=0);
 	void add_lava_lamp(room_object_t const &c);
