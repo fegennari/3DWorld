@@ -510,7 +510,7 @@ enum {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_
 	  RTYPE_DINING, RTYPE_STUDY, RTYPE_ENTRY, RTYPE_LIBRARY, RTYPE_STORAGE, RTYPE_GARAGE, RTYPE_SHED, RTYPE_LOBBY, RTYPE_LAUNDRY, RTYPE_CARD,
 	  RTYPE_PLAY, RTYPE_ART, RTYPE_UTILITY, RTYPE_PARKING, RTYPE_RAMP_EXIT, RTYPE_ATTIC, RTYPE_MASTER_BED, RTYPE_UNFINISHED, RTYPE_SERVER, RTYPE_POOL,
 	  RTYPE_SWIM, RTYPE_SECURITY, RTYPE_LOUNGE, RTYPE_COMMON, RTYPE_BACKROOMS, RTYPE_RETAIL, RTYPE_ELEVATOR, RTYPE_CONF, RTYPE_MACHINE, RTYPE_INTERR,
-	  RTYPE_ELEV_EQUIP, RTYPE_STORE, RTYPE_MALL, RTYPE_RESTAURANT, RTYPE_FACTORY, NUM_RTYPES};
+	  RTYPE_ELEV_EQUIP, RTYPE_STORE, RTYPE_MALL, RTYPE_RESTAURANT, RTYPE_FACTORY, RTYPE_HOS_BED, RTYPE_HOS_OR, NUM_RTYPES};
 typedef uint8_t room_type;
 
 inline bool is_bathroom (room_type   const rtype) {return (rtype == RTYPE_BATH || rtype == RTYPE_MENS || rtype == RTYPE_WOMENS);}
@@ -522,14 +522,14 @@ std::string const room_names[NUM_RTYPES] =
 	 "Dining Room", "Study", "Entryway", "Library", "Storage Room", "Garage", "Shed", "Lobby", "Laundry Room", "Card Room",
 	 "Play Room", "Art Room", "Utility Room", "Parking Garage", "Ramp Exit", "Attic", "Master Bedroom", "Unfinished Room", "Server Room", "Pool Room",
 	 "Swimming Pool Room", "Security Room", "Lounge", "Common Room", "Backrooms", "Retail", "Elevator", "Conference Room", "Machine Room", "Interrogation Room",
-	 "Elev Equip Room", "Store", "Mall Concourse", "Restaurant", "Factory Floor"};
+	 "Elev Equip Room", "Store", "Mall Concourse", "Restaurant", "Factory Floor", "Hospital Bedroom", "Operating Room"};
 // short room names for elevator buttons (should be <= 8 characters)
 std::string const room_names_short[NUM_RTYPES] =
 	{"", "Hall", "Stairs", "Office", "Bath", "Men", "Women", "Bed", "Kitchen", "Living",
 	"Dining", "Study", "Entry", "Library", "Storage", "Garage", "Shed", "Lobby", "Laundry", "Card",
 	"Play", "Art", "Utility", "Garage", "Ramp", "Attic", "Bed", "", "Server", "Pool",
 	"Swim", "Security", "Lounge", "Common", "Basement", "Retail", "Elevator", "Conference", "Machine", "Dungeon",
-	"Equipment", "Store", "Mall", "Restaurant", "Factory"};
+	"Equipment", "Store", "Mall", "Restaurant", "Factory", "Bedroom", "OR"};
 
 unsigned const room_priorities[NUM_RTYPES] = { // for breaker labels
 	0, 2, 1, 1, 2, 2, 2, 3, 3, 3,
