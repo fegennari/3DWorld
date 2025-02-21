@@ -651,9 +651,8 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			set_wall_width(vpipe_avoid.back(), v, light_radius, !edim);
 		}
 	}
-	unsigned const main_pipe_ix(objs.size());
 	// num_floors=1; prefer to place on edim walls to avoid ducts
-	bool const added_sprinklers(add_sprinkler_pipes(obstacles, walls, beams, pipe_cubes, room_id, 1, objs_start, rgen, custom_floor_spacing, wall_pad, edim, vpipe_avoid));
+	add_sprinkler_pipes(obstacles, walls, beams, pipe_cubes, room_id, 1, objs_start, rgen, custom_floor_spacing, wall_pad, edim, vpipe_avoid);
 
 	// add boxes and crates in piles
 	unsigned const num_piles(4 + (rgen.rand() % 5)); // 4-8

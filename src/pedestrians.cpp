@@ -2312,7 +2312,7 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 	}
 	float const crouch_amt(get_crouch_amt());
 	static bone_transform_data_t cached_player_transforms;
-	animation_state_t anim_state(1, (walk_anim ? animation_id : ANIM_ID_FLAP_ARMS), player_anim_time, MODEL_ANIM_WALK); // enabled=1
+	animation_state_t anim_state(1, (walk_anim ? animation_id : (unsigned)ANIM_ID_FLAP_ARMS), player_anim_time, MODEL_ANIM_WALK); // enabled=1
 
 	if (walk_anim && crouch_amt > 0.0 && model.has_animation(animation_names[MODEL_ANIM_CROUCH])) { // handle crouching
 		if (crouch_amt == 1.0) {anim_state.model_anim_id = MODEL_ANIM_CROUCH;} // full crouch
