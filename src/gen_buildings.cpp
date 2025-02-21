@@ -3663,6 +3663,7 @@ public:
 				// this is generally okay when the player is flying over, and necessary for performance;
 				// however, details won't show up when the player is on the ground, so use a larger scale in that case
 				bool const int_not_visible((*i)->building_draw_windows.empty());
+				bool const draw_debug_vis(!camera_in_building && (display_mode & 0x20)); // key '6'
 				float const ddist_scale(int_not_visible ? (camera_surf_collide ? 0.1 : 0.05) : 1.0), ddist_scale_sq(ddist_scale*ddist_scale);
 				float const int_draw_dist_sq(ddist_scale_sq*interior_draw_dist*interior_draw_dist);
 				float const rgeom_clear_dist_sq(ddist_scale_sq*room_geom_clear_dist*room_geom_clear_dist);
@@ -3699,6 +3700,21 @@ public:
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t &b((*i)->get_building(bi->ix));
 						if (!b.interior) continue; // no interior, skip
+
+						if (draw_debug_vis) {
+							colorRGBA debug_color(btype_colors[b.btype]);
+							if (debug_color == WHITE && b.has_retail()) {debug_color = PINK;}
+							
+							if (debug_color != WHITE) { // special building type
+								cube_t debug_cube(b.bcube);
+								set_cube_zvals(debug_cube, b.bcube.z2(), (b.bcube.z2() + 4.0*b.get_window_vspace()));
+								select_texture(WHITE_TEX);
+								s.set_cur_color(debug_color);
+								s.set_color_e(debug_color);
+								draw_simple_cube(debug_cube);
+								s.clear_color_e();
+							}
+						}
 						float const bdist_sq(p2p_dist_sq(camera_bs, b.bcube.closest_pt(camera_bs)));
 						//if (bdist_sq > rgeom_clear_dist_sq) {b.clear_room_geom(); continue;} // too far away - is this useful?
 						if (bdist_sq > rgeom_draw_dist_sq) continue; // too far away

@@ -228,11 +228,6 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			beams.push_back(beam); // needed for sprinkler pipe hanging brackets
 		}
 	} // for dim
-#if 0 // debug visualization
-	cube_t dbg(room);
-	set_cube_zvals(dbg, bcube.z2(), bcube.z2()+bcube.dz());
-	objs.emplace_back(dbg, TYPE_DBG_SHAPE, room_id, 0, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, RED);
-#endif
 	float const clearance(/*get_min_front_clearance_inc_people()*/get_min_front_clearance());
 	float const player_height(get_player_height()), ladder_extend_up(player_height + CAMERA_RADIUS);
 	cube_t place_area(room);
