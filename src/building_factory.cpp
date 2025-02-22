@@ -100,7 +100,8 @@ void building_t::create_factory_floorplan(unsigned part_id, float window_hspacin
 void add_ladder_with_blocker(cube_t const &ladder, unsigned room_id, bool dim, bool dir, float light_amt, float clearance, vect_room_object_t &objs, unsigned flags=0) {
 	objs.emplace_back(ladder, TYPE_INT_LADDER, room_id, dim, dir, (flags | RO_FLAG_IN_FACTORY), light_amt);
 	cube_t blocker(ladder);
-	blocker.d[dim][dir] += (dir ? 1.0 : -1.0)*clearance;
+	blocker.d[dim][dir] += (dir ? 1.0 : -1.0)*clearance; // add front clearance
+	blocker.expand_in_dim(!dim, 0.25*clearance); // add side clearance
 	objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, dir, RO_FLAG_INVIS);
 }
 void add_hanging_ladder(cube_t const &ladder, unsigned room_id, bool dim, bool dir, float light_amt, float clearance, float collider_z2, vect_room_object_t &objs) {
@@ -237,7 +238,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	cube_t const &entry(interior->factory_info->entrance_area);
 	unsigned const objs_start(objs.size());
 
-	// add ladders to walls
+	// add ladders to nested room walls
 	for (cube_t const &r : nested_rooms) {
 		float const wall_pos(r.d[edim][!edir] - 0.5*edir_sign*wall_thick); // partially inside the wall
 		float const lo(max(r.d[!edim][0], place_area.d[!edim][0])), hi(min(r.d[!edim][1], place_area.d[!edim][1]));
@@ -250,7 +251,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 
 		for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place a ladder that doesn't block the door
 			set_wall_width(ladder, rgen.rand_uniform((lo + edge_spacing), (hi - edge_spacing)), ladder_hwidth, !edim);
-			if (cube_int_ext_door(ladder) || interior->is_blocked_by_stairs_or_elevator(ladder)) continue; // blocked
+			if (cube_int_ext_door(ladder) || is_obj_placement_blocked(ladder, room, 1)) continue; // blocked
 			add_ladder_with_blocker(ladder, room_id, edim, !edir, light_amt, clearance, objs);
 			break; // success
 		}
