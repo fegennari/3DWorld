@@ -578,6 +578,12 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			objs.emplace_back(vduct, TYPE_DUCT, room_id, 0, 1, duct_flags, light_amt, duct_shape); // vertical, same shape
 		}
 	} // for i
+	// add a trashcan
+	room_t factory_room(room);
+	factory_room.copy_from(interior->factory_info->floor_space); // clip off entrance and sub-rooms
+	factory_room.d[edim][edir] -= (edir ? 1.0 : -1.0)*0.5*wall_thick; // clip off sub-room walls
+	add_trashcan_to_room(rgen, factory_room, zval, room_id, light_amt, objs_start_inc_beams, 0); // check_last_obj=0
+
 	// add ventilation fans between windows
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_VENT_FAN)) {
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_VENT_FAN)); // D, W, H
