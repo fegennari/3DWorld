@@ -1114,7 +1114,6 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_CATWALK:    add_catwalk(c); break;
 		case TYPE_DUCT:       add_duct(c); break;
 		case TYPE_WARN_LIGHT: add_warning_light(c); break;
-		//case TYPE_HOSP_BED:   add_hospital_bed(c); break;
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		default: break;
 		} // end switch
@@ -1767,7 +1766,7 @@ float get_ao_shadow(room_object_t const &c, bool enable_indir) {
 	room_object const type(c.type);
 	// include types that don't contribute to indir lighting; these always contribute AO shadows
 	if (type == TYPE_BAR_STOOL || type == TYPE_SHELVES) return 0.25; // light shadow
-	if (type == TYPE_OFF_CHAIR || type == TYPE_BENCH || type == TYPE_RCHAIR || type == TYPE_CASHREG || type == TYPE_CHEM_TANK) return 0.5; // medium shadow
+	if (type == TYPE_OFF_CHAIR || type == TYPE_BENCH || type == TYPE_RCHAIR || type == TYPE_CASHREG || type == TYPE_CHEM_TANK || type == TYPE_HOSP_BED) return 0.5; // medium shadow
 	if (type == TYPE_PARK_SPACE && c.is_used()) return 0.75; // parked car; dense shadow
 	if (enable_indir) return 0.0; // skip objects below because they're already handled by indir lighting
 

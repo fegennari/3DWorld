@@ -1442,6 +1442,8 @@ bool building_t::maybe_add_fireplace_to_room(rand_gen_t &rgen, room_t const &roo
 }
 
 bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_BED)) return 0; // no hospital bed
+	// TODO
 	return 0;
 }
 
