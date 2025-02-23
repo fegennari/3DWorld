@@ -1456,7 +1456,7 @@ void building_room_geom_t::add_pizza_box(room_object_t const &c) {
 	float const height(c.dz()), depth(c.get_depth()); // Note: width should be equal to depth
 	box_color = apply_light_color(c, box_color);
 	cube_t bot(c), lid(c);
-	bot.z2() -= 0.98*height; // shift bottom up slightly to prevent z-fighting, but draw the top
+	bot.z2() -= 0.9*height; // shift bottom up slightly to prevent z-fighting and to place over papers, but draw the top
 	lid.z2()  = c.z1() + depth; // set top edge
 	lid.d[c.dim][c.dir] = c.d[c.dim][!c.dir] + (c.dir ? 1.0 : -1.0)*height; // set thickness; width remains unchanged
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name(pbox_tex_fn), 0.0), 1, 0, 1)); // shadows, is_small=1

@@ -379,7 +379,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			} // for n
 			if (!add_sec_ladder) {catwalk_obj.flags |= (edir ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT);} // add end bars to non-ladder side unless there's a second ladder
 			objs.push_back(catwalk_obj);
-			// TODO: connect with stairs along a wall?
+			// connect with stairs along a wall?
 		}
 	} // end upper catwalk
 	// add transformer
