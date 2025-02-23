@@ -59,7 +59,7 @@ void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cu
 		float const coil_gap(rgen.rand_uniform((sparse ? 2.5 : 1.5), (sparse ? 5.0 : 4.0))*coil_radius);
 		p1[dim] -= coil_radius; p2[dim] += coil_radius; // must start and end inside the object
 		float const length(p2[dim] - p1[dim]);
-		add_spring(p1, radius, coil_radius, length, coil_gap, dim, color, spec_color);
+		add_spring(p1, radius, coil_radius, length, coil_gap, dim, color, spec_color, sparse);
 	}
 	else {
 		get_metal_material(1, 0, 1, 0, spec_color).add_cylin_to_verts(p1, p2, radius, radius, apply_light_color(c, color), 0, 0, 0, 0, 1.0, 1.0, 0, 16); // shadowed, small
@@ -138,16 +138,29 @@ void draw_metal_handle_wheel(cube_t const &c, unsigned dim, colorRGBA const &col
 	shaft_mat.add_ortho_cylin_to_verts(shaft, shaft_color, dim, 1, 1); // draw sides and ends
 }
 
-void building_room_geom_t::add_spring(point pos, float radius, float r_wire, float length, float coil_gap, unsigned dim, colorRGBA const &color, colorRGBA const &spec_color) {
+void building_room_geom_t::add_spring(point pos, float radius, float r_wire, float length, float coil_gap, unsigned dim,
+	colorRGBA const &color, colorRGBA const &spec_color, bool sparse)
+{
 	assert(dim < 3);
 	unsigned num_coils(max(1, round_fp(length/(2.0*r_wire + coil_gap))));
+	unsigned const ndivo(N_CYL_SIDES / (sparse ? 2 : 1)), ndivi(N_CYL_SIDES/2);
 	float const coil_spacing(length/num_coils);
 	rgeom_mat_t &mat(get_metal_material(1, 0, 1, 0, spec_color)); // shadowed, small
-	
-	for (unsigned n = 0; n < num_coils; ++n) {
-		mat.add_ortho_torus_to_verts(pos, r_wire, radius, dim, color, 1.0, 0, 0, 0.0, N_CYL_SIDES, N_CYL_SIDES/2, coil_spacing); // reduce inner ndiv
-		pos[dim] += coil_spacing;
-	}
+	// create one coil, then copy and translate to get the others
+	unsigned const verts_start(mat.itri_verts.size()), indices_start(mat.indices.size());
+	mat.add_ortho_torus_to_verts(pos, r_wire, radius, dim, color, 1.0, 0, 0, 0.0, ndivo, ndivi, coil_spacing);
+	unsigned const verts_end(mat.itri_verts.size()), indices_end(mat.indices.size());
+
+	for (unsigned n = 1; n < num_coils; ++n) {
+		unsigned const ix_off(mat.itri_verts.size() - verts_start);
+		float const xlate(n*coil_spacing);
+
+		for (unsigned v = verts_start; v != verts_end; ++v) {
+			mat.itri_verts.push_back(mat.itri_verts[v]);
+			mat.itri_verts.back().v[dim] += xlate;
+		}
+		for (unsigned i = indices_start; i != indices_end; ++i) {mat.indices.push_back(mat.indices[i] + ix_off);}
+	} // for n
 }
 
 rand_gen_t get_machine_info(room_object_t const &c, float floor_ceil_gap, cube_t &base, cube_t parts[2], cube_t &support,
