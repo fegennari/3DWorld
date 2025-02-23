@@ -724,34 +724,33 @@ class building_draw_t {
 			draw_geom_range(state, shadow_only, pos_by_tile[tile_id], pos_by_tile[tile_id+1]); // shadow_only=0
 		}
 		void upload_to_vbos() {
-			assert((num_quad_verts()%4) == 0);
-			assert((num_tri_verts ()%3) == 0);
-			tri_vbo_off = quad_verts.size(); // triangles start after quads
-			vector_add_to(tri_verts, quad_verts);
-			clear_cont(tri_verts); // no longer needed
-			
-			if (!quad_verts.empty()) {
-				assert(!vao_mgr.vbo_valid());
-				unsigned const verts_sz(quad_verts.size()*sizeof(vect_vnctcc_t::value_type));
-				auto vret(vbo_cache.alloc(verts_sz, 0));
-				vao_mgr.vbo = vret.vbo;
-				check_bind_vbo(vao_mgr.vbo);
+			unsigned const num_qv(num_quad_verts()), num_tv(num_tri_verts()), num_verts(num_qv + num_tv);
+			assert((num_qv%4) == 0);
+			assert((num_tv%3) == 0);
+			tri_vbo_off = num_qv; // triangles start after quads
+			if (num_verts == 0) return; // empty
+			assert(!vao_mgr.vbo_valid());
+			unsigned const vsz(sizeof(vect_vnctcc_t::value_type)), qv_sz(num_qv*vsz), tv_sz(num_tv*vsz), verts_sz(qv_sz + tv_sz);
+			auto vret(vbo_cache.alloc(verts_sz, 0));
+			vao_mgr.vbo = vret.vbo;
+			check_bind_vbo(vao_mgr.vbo);
 
-				if (vret.size == 0) { // newly created
-					vert_vbo_sz = verts_sz;
-					upload_vbo_data(quad_verts.data(), verts_sz);
-				}
-				else { // existing
-					vert_vbo_sz = vret.size;
-					assert(verts_sz <= vert_vbo_sz);
-					upload_vector_to_vbo(quad_verts);
-				}
-				bind_vbo(0);
+			if (vret.size == 0) { // newly created
+				vert_vbo_sz = verts_sz;
+				upload_vbo_data(nullptr, verts_sz);
 			}
+			else { // existing
+				vert_vbo_sz = vret.size;
+				assert(verts_sz <= vert_vbo_sz);
+			}
+			if (num_qv > 0) {upload_vbo_sub_data(quad_verts.data(), 0,     qv_sz);}
+			if (num_tv > 0) {upload_vbo_sub_data(tri_verts .data(), qv_sz, tv_sz);}
 			clear_cont(quad_verts); // no longer needed
+			clear_cont(tri_verts ); // no longer needed
+			bind_vbo(0);
 		}
 		void register_tile_id(unsigned tid) {
-			if (tid+1 == pos_by_tile.size()) return; // already saw this tile
+			if (tid+1  == pos_by_tile.size()) return; // already saw this tile
 			assert(tid >= pos_by_tile.size()); // tid must be strictly increasing
 			pos_by_tile.resize(tid+1, vert_ix_pair(num_quad_verts(), num_tri_verts())); // push start of new range back onto all previous tile slots
 		}

@@ -72,8 +72,8 @@ template<typename T> void upload_to_vbo(unsigned &vbo, vector<T> const &data, bo
 	upload_vbo_data(data.data(), data.size()*sizeof(T), is_index, dynamic_level);
 	if (end_with_bind0) {bind_vbo(0, is_index);}
 }
-template<typename T> void upload_vector_to_vbo(vector<T> const &data, bool is_index=0) {
-	upload_vbo_sub_data(data.data(), 0, data.size()*sizeof(T), is_index); // offset=0
+template<typename T> void upload_vector_to_vbo(vector<T> const &data, bool is_index=0, int offset=0) {
+	upload_vbo_sub_data(data.data(), offset, data.size()*sizeof(T), is_index);
 }
 
 template<typename T> void upload_to_ubo(unsigned &vbo, vector<T> const &data, bool end_with_bind0=0, int dynamic_level=0) {
