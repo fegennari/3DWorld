@@ -821,11 +821,17 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				added_pool_room = added_obj = 1;
 			}
 			// if we haven't added any objects yet, and this room is an interior office on the first floor or basement, make it a storage room 50% of the time; at most 4x
-			if (!added_obj && num_storage_rooms <= 4 && (is_basement || (r->is_office && r->interior && f == 0 /*&& r->z1() == ground_floor_z1*/)) && rgen.rand_bool()) {
+			if (!added_obj && num_storage_rooms <= 4 && (is_basement || (r->is_office && r->interior && f == 0)) && rgen.rand_bool()) {
 				added_obj = no_whiteboard = is_storage = add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement, has_stairs);
 				if (added_obj) {r->assign_to(RTYPE_STORAGE, f); ++num_storage_rooms;}
 			}
-			if (!added_obj && (!is_basement || rgen.rand_bool())) { // try to place a desk if there's no table, bed, etc.
+			if (!added_obj && is_hospital()) {
+				// TODO: make RTYPE_HOS_OR or other room type with some probability
+				added_obj = add_hospital_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+				if (added_obj) {r->assign_to(RTYPE_HOS_BED, f);}
+			}
+			// try to place a desk if there's no table, bed, etc.; this can be an office
+			if (!added_obj && (!is_basement || rgen.rand_bool())) {
 				added_obj = can_place_onto = added_desk = add_office_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_basement);
 				if (added_obj && !has_stairs_this_floor) {r->assign_to((is_house ? (room_type)RTYPE_STUDY : (room_type)RTYPE_OFFICE), f);} // or other room type - may overwrite below
 			}

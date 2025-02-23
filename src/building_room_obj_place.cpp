@@ -1441,6 +1441,10 @@ bool building_t::maybe_add_fireplace_to_room(rand_gen_t &rgen, room_t const &roo
 	return 1;
 }
 
+bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	return 0;
+}
+
 bool building_t::check_if_against_window(cube_t const &c, room_t const &room, bool dim, bool dir) const {
 	if (!has_int_windows() || classify_room_wall(room, c.zc(), dim, dir, 0) != ROOM_WALL_EXT) return 0;
 	cube_t const &part(get_part_for_room(room));
