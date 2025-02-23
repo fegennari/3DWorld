@@ -2691,6 +2691,9 @@ void building_room_geom_t::add_duct(room_object_t const &c) {
 	else {assert(0);} // unsupported shape
 }
 
+point get_warning_light_src_pos(room_object_t const &c) {
+	return point(c.xc(), c.yc(), (c.z1() + 0.825*c.dz())); // center of light at [0.65, 1.0]*height
+}
 void building_room_geom_t::add_warning_light(room_object_t const &c) {
 	// red emissive vertical cylinder on a light gray cylinder on a tall thin gray pole
 	bool const is_on(c.is_light_on());
@@ -2698,7 +2701,7 @@ void building_room_geom_t::add_warning_light(room_object_t const &c) {
 	cube_t top(c), pole(c);
 	pole.z2() = top.z1() = c.z1() + 0.5*height;
 	cube_t light(top), base(top);
-	base.z2() = light.z1() = top.z1() + 0.3*top.dz();
+	base.z2() = light.z1() = top.z1() + 0.3*top.dz(); // c.z1() + 0.65*height
 	light.expand_by_xy(-0.05*radius); // slight shrink
 	pole .expand_by_xy(-0.85*radius);
 	rgeom_mat_t &base_pole_mat(get_untextured_material(1, 0, 1)); // shadowed, small

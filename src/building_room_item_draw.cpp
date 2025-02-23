@@ -50,6 +50,7 @@ void reset_interior_lighting_and_end_shader(shader_t &s);
 
 bool has_key_3d_model      () {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 bool has_office_chair_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR);}
+bool is_flashing_light_on  () {return (tid_nm_pair_t(RED_TEX).get_emissive_val() > 0.5);}
 
 colorRGBA room_object_t::get_model_color() const {return building_obj_model_loader.get_avg_color(get_model_id());}
 
@@ -1780,6 +1781,14 @@ float get_ao_shadow(room_object_t const &c, bool enable_indir) {
 	return 0.0; // no shadow
 }
 
+void draw_and_clear_flares(quad_batch_draw &qbd, shader_t &s, colorRGBA const &color) {
+	if (qbd.empty()) return;
+	s.set_color_e(RED);
+	draw_and_clear_blur_qbd(qbd);
+	s.clear_color_e();
+}
+quad_batch_draw flare_qbd; // resed across/between frames
+
 // Note: non-const because it creates the VBO; inc_small: 0=large only, 1=large+small, 2=large+small+ext detail, 3=large+small+ext detail+int detail, 4=ext only
 void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, building_t const &building, occlusion_checker_noncity_t &oc,
 	vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
@@ -2153,6 +2162,11 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				if (visible && check_occlusion && building.check_obj_occluded(*i, camera_bs, oc, reflection_pass)) {visible = 0;}
 				register_fishtank(*i, visible);
 			}
+			else if (i->type == TYPE_WARN_LIGHT && is_flashing_light_on()) {
+				float const radius(3.0*i->get_radius());
+				point const light_center(get_warning_light_src_pos(*i));
+				flare_qbd.add_billboard(light_center, camera_bs, plus_x, RED, radius, radius);
+			}
 			if (i->z1() < camera_bs.z && i->z1() > ao_zmin) { // camera not below or too far above this object
 				float const ao_shadow(get_ao_shadow(*i, enable_indir));
 
@@ -2182,6 +2196,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (!reflection_pass) {lava_lamp_draw.next_frame();}
 		end_fish_draw(s, inc_pools_and_fb);
 		draw_and_clear_blur_qbd(ao_qbd);
+		if (!is_factory) {draw_and_clear_flares(flare_qbd, s, RED);} // factory flares are drawn later
 	}
 	water_sound_manager.finalize();
 	water_draw.draw_and_clear(s);
@@ -2299,11 +2314,12 @@ void building_t::draw_glass_surfaces(vector3d const &xlate) const {
 	disable_blend();
 }
 
-void building_t::draw_factory_smoke(vector3d const &xlate) const {
+void building_t::draw_factory_alpha(vector3d const &xlate) const { // smoke and light flares
 	if (!has_room_geom() || !is_factory()) return;
 	shader_t s;
 	s.begin_simple_textured_shader();
 	interior->room_geom->particle_manager.draw(s, xlate);
+	draw_and_clear_flares(flare_qbd, s, RED);
 }
 
 void draw_billboards(quad_batch_draw &qbd, int tid, bool no_depth_write=1, bool do_blend=1) {

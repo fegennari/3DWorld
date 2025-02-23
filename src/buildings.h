@@ -2260,7 +2260,7 @@ struct building_t : public building_geom_t {
 	bool glass_floor_visible(vector3d const &xlate, bool from_outside_building=0) const;
 	bool point_over_glass_floor(point const &pos, bool inc_escalator=0) const;
 	void draw_glass_surfaces(vector3d const &xlate) const;
-	void draw_factory_smoke (vector3d const &xlate) const;
+	void draw_factory_alpha (vector3d const &xlate) const;
 	bool has_cars_to_draw(bool player_in_building) const;
 	void draw_cars_in_building(shader_t &s, vector3d const &xlate, bool player_in_building, bool shadow_only) const;
 	bool check_for_water_splash(point const &pos_bs, float size=1.0, bool full_room_height=0, bool draw_splash=0, bool alert_zombies=1) const;
@@ -2994,6 +2994,7 @@ void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim);
 void resize_around_center_xy(cube_t &c, float radius);
 bool is_val_inside_window(cube_t const &c, bool dim, float val, float window_spacing, float window_border);
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius);
+point get_warning_light_src_pos(room_object_t const &c);
 template<typename T> void subtract_cube_from_cube(T const &c, cube_t const &s, vector<T> &out, bool clear_out=0);
 template<typename T> void subtract_cube_from_cube_inplace(cube_t const &s, vector<T> &cubes, unsigned &ix, unsigned &iter_end);
 template<typename T> void subtract_cubes_from_cube(cube_t const &c, vector<T> const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode=0);

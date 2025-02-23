@@ -39,6 +39,7 @@ int get_counter_tid   ();
 colorRGBA get_canopy_base_color(room_object_t const &c);
 void get_water_heater_cubes(room_object_t const &wh, cube_t cubes[2]);
 bool line_int_polygon_sides(point const &p1, point const &p2, cube_t const &bcube, vect_point const &points, float &t);
+bool is_flashing_light_on();
 void get_pool_table_cubes(room_object_t const &c, cube_t cubes[5]);
 unsigned get_couch_cubes(room_object_t const &c, cube_t cubes[4]);
 unsigned get_cashreg_cubes(room_object_t const &c, cube_t cubes[2]);
@@ -1688,8 +1689,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					if (!add_dlight_if_visible(cube_top_center(*i), 1.25*(i->dx() + i->dy()), colorRGBA(0.8, 0.9, 1.0), xlate, lights_bcube, -plus_z, 0.3)) continue;
 				}
 				else if (type == TYPE_WARN_LIGHT) {
-					if (tid_nm_pair_t(RED_TEX).get_emissive_val() == 0.0) continue; // not on
-					if (!add_dlight_if_visible(point(i->xc(), i->yc(), (i->z1() + 0.75*i->dz())), 25.0*i->get_radius(), RED, xlate, lights_bcube)) continue; // point light
+					if (!is_flashing_light_on()) continue; // not on
+					if (!add_dlight_if_visible(get_warning_light_src_pos(*i), 25.0*i->get_radius(), RED, xlate, lights_bcube)) continue; // point light
 				}
 				assert(room.contains_pt(dl_sources.back().get_pos()));
 				cube_t clip_cube(room);
@@ -1698,7 +1699,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				dl_sources.back().set_custom_bcube(clip_cube);
 				continue;
 			}
-			else if (type == TYPE_THEFT_SENS && i->is_active() && tid_nm_pair_t(RED_TEX).get_emissive_val() > 0.0) {
+			else if (type == TYPE_THEFT_SENS && i->is_active() && is_flashing_light_on()) {
 				// no culling - only active if set off by the player
 				add_dlight_if_visible(cube_top_center(*i), 1.0*i->dz(), RED, xlate, lights_bcube); // point light; no custom clip cube
 			}

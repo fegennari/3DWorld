@@ -4162,7 +4162,7 @@ public:
 		}
 		if (player_building->is_factory()) { // draw smoke in factory
 			push_scene_xlate(xlate);
-			player_building->draw_factory_smoke(xlate);
+			player_building->draw_factory_alpha(xlate);
 			pop_scene_xlate();
 		}
 	}
