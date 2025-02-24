@@ -1600,7 +1600,7 @@ int room_object_t::get_model_id() const { // Note: first 8 bits is model ID, las
 	if (type == TYPE_BLDG_FOUNT) return OBJ_MODEL_FOUNTAIN + ((int)item_flags << 8); // same models as city fountains; select a sub_model_id
 	int id((int)type + OBJ_MODEL_TOILET - TYPE_TOILET);
 	// choose a sub_model_id for these types using bits 8-15
-	if (type == TYPE_HANGER || type == TYPE_CLOTHES || type == TYPE_PLANT_MODEL || type == TYPE_SHOE) {id += ((int)item_flags << 8);}
+	if (type == TYPE_HANGER || type == TYPE_CLOTHES || type == TYPE_PLANT_MODEL || type == TYPE_SHOE || type == TYPE_HOSP_BED) {id += ((int)item_flags << 8);}
 	return id;
 }
 

@@ -238,6 +238,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_retail_room   (init_rtype_f0 == RTYPE_RETAIL);
 		bool const is_mall_store    (init_rtype_f0 == RTYPE_STORE);
 		bool const is_factory_room  (init_rtype_f0 == RTYPE_FACTORY);
+		bool const is_office(r->is_office && (!is_hospital() || r->interior)); // hospital offices are converted to patient rooms, etc. if they have windows
 		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(r->is_backrooms()), is_apt_or_hotel_room(r->is_apt_or_hotel_room());
 		bool const residential_room(is_house || (residential && !r->is_hallway && !is_basement && !is_retail_room));
 		bool const is_mall_room(is_ext_basement && has_mall()), is_mall_bathroom(is_mall_room && is_bathroom(init_rtype_f0));
@@ -404,7 +405,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (is_factory_room) {light_z2 -= FACTORY_BEAM_THICK*wall_thickness;} // on the underside of factory ceiling beams
 
 			// motion detection lights for large office building office and mall bathrooms; limit to interior rooms so that we still have some lit rooms viewed through windows
-			if ((!is_house && has_pri_hall() && r->is_office && r->interior) || is_mall_bathroom) {
+			if ((!is_house && has_pri_hall() && is_office && r->interior) || is_mall_bathroom) {
 				flags |= RO_FLAG_IS_ACTIVE; // leave unlit and enable motion detection for lights
 			}
 			else if (r->is_sec_bldg) {is_lit = 0;} // garage and shed lights start off
@@ -778,7 +779,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					if (is_bathroom) {r->assign_to(RTYPE_BATH, f);}
 				}
 			}
-			if (!added_obj && r->is_office /*&& !is_factory()*/) { // add cubicles if this is a large office
+			if (!added_obj && is_office) { // add cubicles if this is a large office
 				added_obj = no_whiteboard = create_office_cubicles(rgen, *r, room_center.z, room_id, tot_light_amt);
 			}
 			if (!added_obj && is_ext_basement && rgen.rand_float() < 0.5) { // machine room
@@ -793,7 +794,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					added_obj = no_whiteboard = is_inter = 1;
 				}
 			}
-			if (!added_obj && rgen.rand_float() < (is_basement ? 0.4 : (r->is_office ? 0.6 : (is_house ? 0.95 : 0.5)))) {
+			if (!added_obj && rgen.rand_float() < (is_basement ? 0.4 : (r->is_office ? (is_hospital() ? 0.2 : 0.6) : (is_house ? 0.95 : 0.5)))) {
 				// place a table and maybe some chairs near the center of the room if it's not a hallway;
 				// 60% of the time for offices, 95% of the time for houses, and 50% for other buildings
 				unsigned const num_tcs(add_table_and_chairs(rgen, *r, blockers, room_id, room_center, chair_color, 0.1, tot_light_amt));
@@ -825,9 +826,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				added_obj = no_whiteboard = is_storage = add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement, has_stairs);
 				if (added_obj) {r->assign_to(RTYPE_STORAGE, f); ++num_storage_rooms;}
 			}
-			if (!added_obj && is_hospital()) {
+			if (!added_obj && !r->interior && is_hospital()) { // hospital room with a window
 				// TODO: make RTYPE_HOS_OR or other room type with some probability
-				added_obj = add_hospital_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+				added_obj = no_whiteboard = add_hospital_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				if (added_obj) {r->assign_to(RTYPE_HOS_BED, f);}
 			}
 			// try to place a desk if there's no table, bed, etc.; this can be an office
@@ -873,7 +874,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				r->assign_to(RTYPE_STAIRS, f);
 				no_whiteboard = 1;
 			}
-			if (!is_house && r->is_office && !no_whiteboard && (rgen.rand() % (pri_hall.is_all_zeros() ? 30U : max(50U, (unsigned)interior->rooms.size()))) == 0) {
+			if (!is_house && is_office && !no_whiteboard && (rgen.rand() % (pri_hall.is_all_zeros() ? 30U : max(50U, (unsigned)interior->rooms.size()))) == 0) {
 				// office, no cubicles or bathroom - try to make it a library (in rare cases)
 				if (add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement)) {
 					r->assign_to(RTYPE_LIBRARY, f);

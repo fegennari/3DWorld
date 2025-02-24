@@ -1441,10 +1441,41 @@ bool building_t::maybe_add_fireplace_to_room(rand_gen_t &rgen, room_t const &roo
 	return 1;
 }
 
-bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_BED)) return 0; // no hospital bed
-	// TODO
-	return 0;
+	float const floor_spacing(get_window_vspace()), clerance(1.25*get_min_front_clearance_inc_people());
+	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
+	place_area.expand_by(-1.0*get_wall_thickness()); // add extra padding, since bed models are slightly different sizes
+	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const beds_start(objs.size());
+	unsigned const max_beds(max(1U, unsigned(0.25*room_bounds.get_area_xy()/(floor_spacing*floor_spacing))));
+	unsigned num_beds(0), pref_orient(4);
+
+	for (unsigned n = 0; n < max_beds; ++n) {
+		unsigned const bed_ix(objs.size());
+		if (!place_model_along_wall(OBJ_MODEL_HOSP_BED, TYPE_HOSP_BED, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.5, pref_orient)) continue;
+		assert(bed_ix < objs.size());
+		room_object_t &bed(objs[bed_ix]);
+		assert(bed.type == TYPE_HOSP_BED);
+		bed.item_flags = (7*mat_ix + 11*room.part_id + interior->rooms.size()); // select a random sub-model per building part
+		room_object_t &blocker(objs.back());
+		assert(blocker.type == TYPE_BLOCKER);
+		blocker.expand_in_dim(!blocker.dim, clerance); // add extra clearance to the sides of the bed
+		blocker.intersect_with_cube(room); // but don't go outside the room if near a wall
+		pref_orient = 2*bed.dim + bed.dir; // try to place later beds along the same wall
+		++num_beds;
+	} // for n
+	if (num_beds == 0) return 0;
+	// TODO: curtains, bathroom, etc.
+	bool const add_tall_table(rgen.rand_bool());
+	point const table_pos(room.xc(), room.yc(), zval); // approximate
+	vect_cube_t blockers;
+
+	for (auto i = objs.begin()+beds_start; i != objs.end(); ++i) {
+		if (i->type == TYPE_BLOCKER) {blockers.push_back(*i);}
+	}
+	add_table_and_chairs(rgen, room, blockers, room_id, table_pos, WHITE, 0.25, tot_light_amt, 1, add_tall_table); // 1 chair
+	return 1;
 }
 
 bool building_t::check_if_against_window(cube_t const &c, room_t const &room, bool dim, bool dir) const {
