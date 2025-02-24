@@ -52,11 +52,12 @@ float query_min_height(cube_t const &c, float stop_at) { // c_in is in global bu
 	float hmin(FLT_MAX);
 
 	if (using_tiled_terrain_hmap_tex() && !using_hmap_with_detail()) { // optimized flow when using heightmap texture; not adding xoff2/yoff2
+		float const pad(0.5), step(0.5);
 		float x1((c.x1() + X_SCENE_SIZE)*DX_VAL_INV + 0.5), x2((c.x2() + X_SCENE_SIZE)*DX_VAL_INV + 0.5);
 		float y1((c.y1() + Y_SCENE_SIZE)*DY_VAL_INV + 0.5), y2((c.y2() + Y_SCENE_SIZE)*DY_VAL_INV + 0.5);
 
-		for (float y = y1-0.5; y < y2+0.5; y += 0.5) {
-			for (float x = x1-0.5; x < x2+0.5; x += 0.5) {
+		for (float y = y1-pad; y < y2+pad; y += step) {
+			for (float x = x1-pad; x < x2+pad; x += step) {
 				min_eq(hmin, get_tiled_terrain_height_tex(x, y, 1)); // check every grid point with the X/Y range; nearest_texel=1
 				if (hmin < stop_at) return hmin;
 			}
@@ -535,7 +536,13 @@ unsigned building_t::max_expand_underground_room(cube_t &room, bool dim, bool di
 			if (max_shift_up > get_floor_thickness()) {
 				cube_t cand_shift(cand);
 				cand_shift.translate_dim(2, max_shift_up); // Z
-				if (!check_buildings_cube_coll(cand_shift, 0, 1, this)) {room.z2() += max_shift_up; mall_floor_z += max_shift_up; valid = 1;} // can shift up
+				float const ceiling_zval(room.z2() + max_shift_up - get_fc_thickness());
+
+				if (!check_buildings_cube_coll(cand_shift, 0, 1, this) && query_min_height(room, ceiling_zval) > ceiling_zval) { // can shift up
+					room.z2()    += max_shift_up;
+					mall_floor_z += max_shift_up;
+					valid = 1;
+				}
 			}
 			if (!valid && check_buildings_cube_coll(cand, 0, 1, this)) {room = orig_room; return 0;} // not enough space below
 			room.z1() = mall_floor_z;
