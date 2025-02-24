@@ -1953,12 +1953,16 @@ void draw_framerate(float val) {
 	draw_text(WHITE, -0.011*ar, -0.011, -0.02, text);
 }
 
+point get_world_space_camera_pos() {
+	return point((camera_origin.x+double(int64_t(xoff2)-xoff)*DX_VAL), (camera_origin.y+double(int64_t(yoff2)-yoff)*DY_VAL), camera_origin.z);
+}
 void draw_compass_and_alt() { // and temperature
 
 	char text[64];
 	float const aspect_ratio((float)window_width/(float)window_height);
 	string const dirs[8] = {"N", "NW", "W", "SW", "S", "SE", "E", "NE"};
-	sprintf(text, "Loc: (%3.2f, %3.2f, %3.2f)", (camera_origin.x+double(int64_t(xoff2)-xoff)*DX_VAL), (camera_origin.y+double(int64_t(yoff2)-yoff)*DY_VAL), camera_origin.z);
+	point const pos(get_world_space_camera_pos());
+	sprintf(text, "Loc: (%3.2f, %3.2f, %3.2f)", pos.x, pos.y, pos.z);
 	draw_text(YELLOW, -0.005*aspect_ratio, -0.01, -0.02, text);
 	vector3d dir_xy(vector3d(cview_dir.x, cview_dir.y, 0.0).get_norm());
 	float const theta(safe_acosf(dir_xy.x)*TO_DEG);

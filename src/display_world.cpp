@@ -78,6 +78,7 @@ void toggle_fullscreen();
 void calc_cur_ambient_diffuse();
 void print_texture_memory_usage();
 void show_debug_event_pos(point const &pos);
+point get_world_space_camera_pos();
 
 vector3d calc_camera_direction();
 void draw_player_model(point const &pos, vector3d const &dir, int time);
@@ -263,7 +264,7 @@ void log_location(point const &pos) {
 void draw_frame_rate(float framerate) {
 
 	if (show_framerate) {
-		point const camera((world_mode == WMODE_UNIVERSE) ? get_universe_display_camera_pos() : get_camera_pos());
+		point const camera((world_mode == WMODE_UNIVERSE) ? get_universe_display_camera_pos() : get_world_space_camera_pos());
 		cout << "FPS: " << framerate << "  loc: (" << camera.str() << ") @ frame " << frame_counter << endl;
 		log_location(camera);
 		show_framerate = 0;
