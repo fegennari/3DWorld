@@ -3623,38 +3623,45 @@ cube_t get_rand_reception_desk_placement_cube(room_object_t const &rdesk, rand_g
 void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t const &room, float zval,
 	unsigned room_id, float tot_light_amt, unsigned floor_ix, unsigned objs_start)
 {
-	bool const long_dim(room.dx() < room.dy());
+	bool const long_dim(room.dx() < room.dy()), first_floor(floor_ix == 0);
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), hall_width(room.get_sz_dim(!long_dim));
 	float const hall_side_clearance(max(get_doorway_width(), get_min_front_clearance_inc_people())); // front clearance is generally slightly larger
 	vect_room_object_t &objs(interior->room_geom->objs);
 
-	// place ground floor/lobby objects
-	if (floor_ix == 0 && room.z1() == ground_floor_z1) {
+	// place ground floor/lobby objects + hospital per-floor desks
+	if ((first_floor && room.z1() == ground_floor_z1) || is_hospital()) {
 		// add lobby reception desks
 		float const nom_desk_width(0.9*window_vspacing);
 		
 		if (hall_width > (nom_desk_width + 1.6*hall_side_clearance)) { // hallway is wide enough for a reception desk
 			float const desk_width(min(nom_desk_width, 0.5f*(hall_width - hall_side_clearance))); // shrink to make sure there's clearance on each side
-			float const centerline(room.get_center_dim(!long_dim)), desk_depth(0.6*nom_desk_width);
+			float const centerline(room.get_center_dim(!long_dim)), desk_depth(0.6*nom_desk_width), hall_len(room.get_sz_dim(long_dim));
 			cube_t desk;
 			set_cube_zvals(desk, zval, zval+0.32*window_vspacing);
 			set_wall_width(desk, centerline, 0.5*desk_width, !long_dim);
 
 			for (unsigned dir = 0; dir < 2; ++dir) { // add a reception desk at each entrance
-				float const hall_len(room.get_sz_dim(long_dim)), hall_start(room.d[long_dim][dir]), dir_sign(dir ? -1.0 : 1.0);
-				// range of reasonable desk placements along the hall
-				float const val1(hall_start + max(0.1f*hall_len, window_vspacing)*dir_sign), val2(hall_start + 0.3*hall_len*dir_sign);
+				float const hall_start(room.d[long_dim][dir]), dir_sign(dir ? -1.0 : 1.0);
 
-				for (unsigned n = 0; n < 10; ++n) { // try to find the closest valid placement to the door, make 10 random attempts
-					float const val(rgen.rand_uniform(min(val1, val2), max(val1, val2)));
-					set_wall_width(desk, val, 0.5*desk_depth, long_dim);
-					if (add_reception_desk(rgen, desk, long_dim, dir, room_id, tot_light_amt)) break;
+				if (first_floor) { // use a range of reasonable desk placements along the hall
+					float const val1(hall_start + max(0.1f*hall_len, window_vspacing)*dir_sign), val2(hall_start + 0.3*hall_len*dir_sign);
+
+					for (unsigned n = 0; n < 10; ++n) { // try to find a valid placement near the door; make 10 random attempts
+						float const val(rgen.rand_uniform(min(val1, val2), max(val1, val2)));
+						set_wall_width(desk, val, 0.5*desk_depth, long_dim);
+						if (add_reception_desk(rgen, desk, long_dim, dir, room_id, tot_light_amt)) break;
+					}
+				}
+				else { // place near the far end of the hallway, since there's no door to block
+					if (dir == ((interior->rooms.size() & 1) ? 1 : 0)) continue; // place only at one end of the hallway, consistent per floor
+					set_wall_width(desk, (hall_start + 0.8*window_vspacing*dir_sign), 0.5*desk_depth, long_dim);
+					add_reception_desk(rgen, desk, long_dim, !dir, room_id, tot_light_amt); // place facing the stairs/elevator
 				}
 			} // for dir
 		} // end reception desk
 	}
 	// maybe add a clock on the back of the stairs, if this is the lobby or the floor directly above the retail area
-	if (floor_ix == 0 && is_ground_floor_excluding_retail(room.z1()) && room.has_stairs) {
+	if (first_floor && is_ground_floor_excluding_retail(room.z1()) && room.has_stairs) {
 		for (stairwell_t const &s : interior->stairwells) {
 			if (!s.is_u_shape() && s.shape != SHAPE_WALLED_SIDES) continue;
 			if (s.extends_below && !s.is_u_shape())               continue; // skip stairs extending down to the basement/parking garage
