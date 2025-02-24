@@ -2131,9 +2131,9 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 			float const zval(r->z1() + f*floor_spacing);
 			if (has_water() && r->intersects(get_water_cube()) && zval < interior->water_zval) continue; // don't place in a room with water on the floor
 			
-			if (!r->is_hallway && !r->has_stairs_on_floor(f) && !is_single_large_room(*r)) { // check if this room has all locked doors
+			if (!r->is_hallway && !r->has_stairs_on_floor(f) && !is_single_large_room(*r)) { // check if this room has all closed/locked doors
 				float const z_test(zval + 0.5*floor_spacing); // mid-floor height
-				bool any_unlocked_doors(0);
+				bool any_usable_doors(0);
 
 				for (door_stack_t const &ds : doorways) {
 					assert(ds.first_door_ix < interior->doors.size());
@@ -2142,16 +2142,16 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 						door_t const &door(interior->doors[dix]);
 						if (!ds.is_same_stack(door)) break; // moved to a different stack, done
 						if (door.z1() > z_test || door.z2() < z_test) continue; // wrong floor
-						if (!door.is_closed_and_locked()) {any_unlocked_doors = 1; break;}
+						if ((global_building_params.ai_opens_doors >= 2) ? !door.is_closed_and_locked() : door.open) {any_usable_doors = 1; break;}
 					}
-					if (any_unlocked_doors) break;
+					if (any_usable_doors) break;
 				} // for i
-				if (!any_unlocked_doors && has_mall() && r->is_store()) { // check mall store doorways; uses initial closed state
+				if (!any_usable_doors && has_mall() && r->is_store()) { // check mall store doorways; uses initial closed state
 					for (store_doorway_t const &d : interior->mall_info->store_doorways) {
-						if (!d.closed && d.room_id == room_ix) {any_unlocked_doors = 1; break;}
+						if (!d.closed && d.room_id == room_ix) {any_usable_doors = 1; break;}
 					}
 				}
-				if (!any_unlocked_doors) continue; // skip
+				if (!any_usable_doors) continue; // skip
 			}
 			unsigned const num_cands(r->is_backrooms() ? 4 : 1); // add 4x for backrooms since this is one room with many sub-rooms (even if multi-level?)
 			for (unsigned n = 0; n < num_cands; ++n) {room_cands.emplace_back(room_ix, f);}
