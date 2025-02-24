@@ -726,7 +726,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 								s_hall.d[ min_dim][!d] = hall.d[min_dim][d]; // ends at main hall
 								s_hall.d[!min_dim][ 0] = hall_start_pos;
 								s_hall.d[!min_dim][ 1] = hall_end_pos;
-								add_room(s_hall, part_id, 2, 1, 0); // add sec hallway as room with 2 lights (could use more lights if longer?)
+								unsigned const num_lights(min(4U, max(2U, unsigned(0.35*s_hall.get_sz_dim(min_dim)/window_vspacing))));
+								add_room(s_hall, part_id, num_lights, 1, 0); // add sec hallway as room
 								rooms.back().mark_open_wall(min_dim, !d); // adjacent to main hallway on this side
 								cube_t exclude(s_hall);
 								exclude.d[min_dim][!d] += 1.25*dsign*doorway_width; // expand out into the main hallway to ensure there's space to enter this hallway
