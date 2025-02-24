@@ -249,10 +249,10 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	wall_color      = mat.wall_color; // start with default wall color
 
 	if (btype == BTYPE_UNSET) { // building type not customized
-		if (is_house)              {btype = BTYPE_HOUSE   ;} // may be flatted as BTYPE_MULT_FAM in gen_house()
+		if (is_house)                                       {btype = BTYPE_HOUSE   ;} // may be flatted as BTYPE_MULT_FAM in gen_house()
 		else if (rgen.rand_probability(mat.apartment_prob)) {btype = ((rseed1 & 1) ? BTYPE_HOTEL : BTYPE_APARTMENT);}
-		else if ((rseed1&15) == 0) {btype = BTYPE_HOSPITAL;} // 1/16 the time; should hospitals only be assigned to cube buildings?
-		else                       {btype = BTYPE_OFFICE  ;} // office is the default for non-residential buildings
+		else if (is_cube() && (rseed1&15) == 0)             {btype = BTYPE_HOSPITAL;} // 1/16 the time
+		else                                                {btype = BTYPE_OFFICE  ;} // office is the default for non-residential buildings
 	}
 	assign_name(rgen);
 	
@@ -304,11 +304,11 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		}
 		else { // single part, entire cube/cylinder
 			parts.push_back(base);
-			unsigned const rand_val(rgen.rand());
+			unsigned const rand_val(rgen.rand()), num_floors(round_fp(height/floor_spacing));
 			if ((rand_val&3) != 0) {maybe_add_special_roof(rgen);} // 75% chance
 			
 			// consider a possible vertical split of the floorplan into two parts
-			if (!interior_enabled() || height < 1.5*floor_spacing) {} // no interior, or single floor, can't split vertically
+			if (!interior_enabled() || num_floors < 2) {} // no interior, or single floor, can't split vertically
 			else if (rgen.rand_probability(global_building_params.split_stack_floorplan_prob)) {
 				// while this works, it doesn't seem to add much value, it only creates odd geometry and makes connecting stairs/elevators difficult
 				// two stacked parts of the same x/y dimensions but different interior floorplans
@@ -317,15 +317,15 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				adjust_part_zvals_for_floor_spacing(parts[0]);
 				parts[1].z1() = parts[0].z2();
 			}
-			else if (btype == BTYPE_OFFICE && is_cube() && height < 4.5*floor_spacing) { // <= 4 floors
+			else if (btype == BTYPE_OFFICE && is_cube() && num_floors <= 4) { // <= 4 floors
 				btype = BTYPE_FACTORY; // make this a factory
 				assign_name(rgen); // re-assign a name
 			}
-			else if (is_cube() && height > 2.5*floor_spacing && rgen.rand_probability(global_building_params.retail_floorplan_prob)) { // 3+ floors
+			else if (is_cube() && num_floors >= 3 && !is_hospital() && rgen.rand_probability(global_building_params.retail_floorplan_prob)) { // 3+ floors, consider retail
 				rand_gen_t rgen2(rgen); // create a new rgen to avoid affecting the other building parameters when this option is changed
 				retail_floor_levels = 1;
 				// only create a tall retail area if there are at least 4 floors (2 below and 2 above), otherwise the top part won't have central stairs to extend below
-				if (height > 3.5*floor_spacing && rgen2.rand_probability(global_building_params.two_floor_retail_prob)) {retail_floor_levels = 2;}
+				if (num_floors >= 4 && rgen2.rand_probability(global_building_params.two_floor_retail_prob)) {retail_floor_levels = 2;}
 				parts.push_back(base);
 				parts[0].z2() = parts[1].z1() = base.z1() + retail_floor_levels*floor_spacing; // split in Z: parts[0] is the bottom, parts[1] is the top
 			}
@@ -429,7 +429,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	max_eq(bcube.z2(), parts[num_levels-1].z2()); // adjust bcube if needed
 	cube_t const split_cube(parts.back());
 
-	if (do_split && split_cube.dx() > 0.4*bcube.dx() && split_cube.dy() > 0.4*bcube.dy()) { // generate L, T, or U shape if not too small
+	if (do_split && split_cube.dx() > 0.4*bcube.dx() && split_cube.dy() > 0.4*bcube.dy()) { // generate L, T, or U shape for top level if not too small
 		parts.pop_back();
 		split_in_xy(split_cube, rgen);
 		if (num_levels <= 3) {gen_details(rgen, 0);}
@@ -464,8 +464,8 @@ void building_t::finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cube
 	create_per_part_ext_verts();
 	parts_generated = 1;
 
-	// apartments and hotels must have a primary hallway; if we can't add a hallway to the first/bottom part, then make it an office instead
-	if (is_apt_or_hotel() && !can_use_hallway_for_part(0)) {
+	// apartments, hotels, and hospitals must have a primary hallway; if we can't add a hallway to the first/bottom part, then make it an office instead
+	if ((is_apt_or_hotel() || is_hospital()) && !can_use_hallway_for_part(0)) {
 		btype = BTYPE_OFFICE;
 		assign_name(rgen); // re-assign a name
 	}
