@@ -2274,12 +2274,14 @@ void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 
 	if (is_hospital_sign() && bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dmax)) { // special case for hospital
 		select_texture(get_texture_by_name("roads/hospital_sign.png"));
+		dstate.s.add_uniform_float("min_alpha", 0.9); // fix for alpha blending
 		cube_t top_part(frame_bcube);
 		top_part.z1() = text_bcube.z2(); // above the text
 		top_part.expand_in_dim(dim, 0.1*frame_bcube.get_sz_dim(dim)); // expand slightly to prevent Z-fighting
 		dstate.draw_cube(temp_qbd, top_part, WHITE, 1, 0.0, (dim ? 5 : 6)); // only draw faces in <dim>
 		temp_qbd.draw_and_clear();
 		text_drawer::bind_font_texture(); // restore
+		dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // restore to the default
 	}
 	if (!(emissive && is_night()) && !bcube.closest_dist_less_than(dstate.camera_bs, 0.9*(small ? 0.4 : 1.0)*dmax)) return; // too far to see the text in daytime
 
