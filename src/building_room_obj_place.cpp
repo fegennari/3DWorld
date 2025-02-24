@@ -1484,6 +1484,7 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 		set_wall_width(c, center, hwidth, !dim);
 		if (not_ext_wall  && classify_room_wall(room, c.zc(), dim, dir, 0) == ROOM_WALL_EXT) continue;
 		if (not_at_window && check_if_against_window(c, room, dim, dir)) continue;
+		if (!room.contains_cube(c)) continue; // larger than room width?
 		cube_t c2(c), c3(c); // used for collision tests
 		c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
 		cube_t c2b(c2);
