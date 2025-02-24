@@ -212,10 +212,17 @@ template<typename T> void add_sign_text_verts(string const &text, cube_t const &
 	vector<T> &verts_out, float first_char_clip_val, float last_char_clip_val, bool include_space_chars, bool invert_z)
 {
 	float const z_sign(invert_z ? -1.0 : 1.0);
+	bool const no_shrink(text.size() == 1); // hospital "+" sign
 	assert(!text.empty());
-	cube_t ct(sign); // text area is slightly smaller than full cube
-	ct.expand_in_dim(!dim, -0.10*ct.get_sz_dim(!dim));
-	ct.expand_in_dim(2,    -0.05*ct.dz());
+	cube_t ct(sign);
+
+	if (no_shrink) { // expand to fill the entire height
+		ct.expand_in_z(0.7*sign.dz());
+	}
+	else { // text area is slightly smaller than full cube
+		ct.expand_in_dim(!dim, -0.10*sign.get_sz_dim(!dim));
+		ct.expand_in_dim(2,    -0.05*sign.dz());
+	}
 	vector3d col_dir(zero_vector), normal(zero_vector);
 	bool const ldir(dim ^ dir);
 	col_dir[!dim] = (ldir  ? 1.0 : -1.0);
@@ -351,6 +358,13 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 	}
 }
 
+bool check_int_part_range(cube_t const &c, vect_cube_t const &parts, vect_cube_t::const_iterator parts_end, float part_z2_match) {
+	for (auto i = parts.begin(); i != parts_end; ++i) { // check for interior split edges
+		if (i->z2() == part_z2_match && i->intersects_xy_no_adj(c)) return 1;
+	}
+	return 0;
+}
+
 void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior city objects
 	// house welcome and other door signs are currently part of the interior - should they be? I guess at least for secondary buildings, which aren't in a city
 	if (is_house) { // add address sign above porch; should be 3-4 digits
@@ -374,7 +388,7 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 		signs.emplace_back(sign, dim, dir, to_string(get_street_house_number()), WHITE, BLACK, 0, 0, 1); // two_sided=0, emissive=0, small=1
 		return;
 	}
-	if (btype == BTYPE_HOSPITAL) { // add hospital signs at front entrance(s)
+	if (is_hospital()) { // add hospital signs at front entrance(s)
 		float const z1_thresh(ground_floor_z1 + get_floor_thickness());
 		bool added_emergency(0);
 
@@ -421,7 +435,7 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 		} // for d
 		// what about placing hospital signs with arrows at intersections?
 	} // end hospital
-	else if (btype == BTYPE_PARKING) {
+	else if (is_parking()) {
 		// add parking signs
 	}
 	if (name.empty())  return; // no company name; shouldn't get here
@@ -456,7 +470,7 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 	}
 	bool sign_both_sides(rgen.rand_bool());
 	bool const two_sided(!sign_both_sides && 0);
-	bool const emissive(is_in_city && rgen.rand_float() < 0.65);
+	bool const emissive(is_in_city && (is_hospital() || rgen.rand_float() < 0.65)); // city hospital signs are always emissive
 	bool const scrolling(emissive && name.size() >= 8 && rgen.rand_float() < 0.75);
 	// non-cube buildings can have signs tangent to a point or curve and need proper connectors; also, only cube buildings have roof walls that connectors may clip through
 	bool const add_connector(!is_cube());
@@ -476,12 +490,7 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 		sign.d[dim][!dir] = wpos;
 		sign.d[dim][ dir] = wpos + (dir ? 1.0 : -1.0)*sign_depth;
 		assert(sign.is_strictly_normalized());
-		bool bad_place(0);
-
-		for (auto i = parts.begin(); i != parts_end; ++i) { // check for interior split edges
-			if (i->z2() == part_zmax && i->intersects_xy_no_adj(sign)) {bad_place = 1; break;}
-		}
-		if (bad_place) continue; // Note: intentionally skips the break below
+		if (check_int_part_range(sign, parts, parts_end, part_zmax)) continue; // Note: intentionally skips the break below
 		cube_t conn;
 
 		if (add_connector) {
@@ -493,14 +502,26 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 			assert(conn.is_strictly_normalized());
 		}
 		signs.emplace_back(sign, dim, dir, name, WHITE, color, two_sided, emissive, 0, scrolling, 0, 0, conn); // small=0, free_standing=0, in_skyway=0
+
+		if (is_in_city && is_hospital()) { // add additional emissive red "+" signs to either side
+			cube_t plus_sign(sign);
+
+			for (unsigned e = 0; e < 2; ++e) {
+				float const sign_end(sign.d[!dim][e]);
+				plus_sign.d[!dim][!e] = sign_end;
+				plus_sign.d[!dim][ e] = sign_end + (e ? 1.0 : -1.0)*sign_height; // make it a square "+"
+				if (check_int_part_range(plus_sign, parts, parts_end, part_zmax)) continue;
+				signs.emplace_back(plus_sign, dim, dir, "+", WHITE, RED, two_sided, 1, 0, 0, 0, 0, cube_t()); // emissive=1
+			}
+		}
 		if (sign_both_sides) break; // one side only - done
 	} // for d
 }
 
 void building_t::add_company_sign(rand_gen_t &rgen) {
-	if (is_house || name.empty()) return; // shouldn't be called?
-	if (is_in_city)               return; // already has a sign added as a city object
-	if (rgen.rand_bool())         return; // only add sign 50% of the time
+	if (is_house || name.empty())           return; // shouldn't be called?
+	if (is_in_city)                         return; // already has a sign added as a city object
+	if (!is_hospital() && rgen.rand_bool()) return; // only add sign 50% of the time
 	vector<sign_t> signs;
 	add_signs(signs); // should add office building rooftop signs only
 

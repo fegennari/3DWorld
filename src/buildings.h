@@ -2025,6 +2025,7 @@ struct building_t : public building_geom_t {
 	bool is_apt_or_hotel() const {return (is_apartment() || is_hotel());}
 	bool is_factory     () const {return (btype == BTYPE_FACTORY);}
 	bool is_hospital    () const {return (btype == BTYPE_HOSPITAL);}
+	bool is_parking     () const {return (btype == BTYPE_PARKING);}
 	bool is_residential () const {return (is_house || is_apt_or_hotel());}
 	bool is_retail_part(cube_t const &part) const {return (has_retail() && part.z1() == ground_floor_z1);}
 	bool skip_top_of_ceilings() const {return (roof_type == ROOF_TYPE_FLAT || !is_house || has_attic());}
