@@ -1487,14 +1487,38 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 		++num_beds;
 	} // for n
 	if (num_beds == 0) return 0;
-	// TODO: curtains, bathroom, etc.
+	// TODO: bathroom, etc.
 	bool const add_tall_table(rgen.rand_bool());
+	bool const add_curtains(num_beds > 1 && building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_CURT));
 	point const table_pos(room.xc(), room.yc(), zval); // approximate
 	vect_cube_t blockers;
+	vect_cube_with_ix_t curtains;
 
 	for (auto i = objs.begin()+beds_start; i != objs.end(); ++i) {
 		if (i->type == TYPE_BLOCKER) {blockers.push_back(*i);}
-	}
+
+		if (add_curtains && i->type == TYPE_HOSP_BED) { // place curtains between adjacent beds
+			for (auto j = i+1; j != objs.end(); ++j) {
+				if (j->type != TYPE_HOSP_BED || j->dim != i->dim || j->dir != i->dir) continue; // not a bed along the same wall
+				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_HOSP_CURT)); // D, L, H
+				float const fc_gap(get_floor_ceil_gap()), height(0.9*fc_gap);
+				cube_t merged(*i), curtain;
+				merged.union_with_cube(*j);
+				bool is_blocked(0);
+
+				for (auto k = objs.begin()+beds_start; k != objs.end(); ++k) {
+					if (k != i && k != j && k->type == TYPE_HOSP_BED && k->intersects(merged)) {is_blocked = 1; break;}
+				}
+				if (is_blocked) continue; // another bed is between i and j
+				curtain.z2() = zval + fc_gap; // ceiling
+				curtain.z1() = curtain.z2() - height; // hanging down near the floor
+				set_wall_width(curtain, merged.get_center_dim(!i->dim), 0.5*height*sz.x/sz.z, !i->dim); // between the beds
+				set_wall_width(curtain, merged.get_center_dim( i->dim), 0.5*height*sz.y/sz.z,  i->dim);
+				curtains.emplace_back(curtain, !i->dim); // don't invalidate references
+			} // for j
+		}
+	} // for i
+	for (cube_with_ix_t const &c : curtains) {objs.emplace_back(c, TYPE_HOSP_CURT, room_id, c.ix, rgen.rand_bool(), 0);}
 	unsigned const table_ix(objs.size());
 
 	if (add_table_and_chairs(rgen, room, blockers, room_id, table_pos, WHITE, 0.2, tot_light_amt, 1, add_tall_table) > 0) { // 1 chair

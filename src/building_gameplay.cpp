@@ -245,6 +245,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_SHOEBOX   ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 80.0,  2.1,   "shoebox"); // assumed to contain a pair of shoes
 	bldg_obj_types[TYPE_VENT_FAN  ] = bldg_obj_type_t(0, 0, 0, 0, 1, 1, 1, 200.0, 40.0,  "ventilation fan"); // mixed model and object geom
 	bldg_obj_types[TYPE_HOSP_BED  ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 300.0, 200.0, "hospital bed");
+	bldg_obj_types[TYPE_HOSP_CURT ] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 0, 50.0,  20.0,  "hospital curtain");
 	bldg_obj_types[TYPE_GBIKE     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 150.0, 20.0,  "bike"); // garage bike
 	bldg_obj_types[TYPE_XFORMER   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 0.0,   0.0,   "transformer");
 	bldg_obj_types[TYPE_US_FLAG   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 30.0,  1.0,   "American Flag");
