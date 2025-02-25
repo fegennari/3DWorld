@@ -1521,14 +1521,17 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 	for (cube_with_ix_t const &c : curtains) {objs.emplace_back(c, TYPE_HOSP_CURT, room_id, c.ix, rgen.rand_bool(), 0);}
 	unsigned const table_ix(objs.size());
 
-	if (add_table_and_chairs(rgen, room, blockers, room_id, table_pos, WHITE, 0.2, tot_light_amt, 1, add_tall_table) > 0) { // 1 chair
-		if (rgen.rand_bool()) { // place a phone on the table using a random dim/dir; should it face the chair?
+	for (unsigned n = 0; n < 4; ++n) { // 4 attempts to place a table and chair
+		if (!add_table_and_chairs(rgen, room, blockers, room_id, table_pos, WHITE, 0.25, tot_light_amt, 1, add_tall_table) > 0) continue; // 1 chair
+		
+		if (rgen.rand_bool()) { // maybe place a phone on the table using a random dim/dir; should it face the chair?
 			assert(table_ix < objs.size());
 			room_object_t &table(objs[table_ix]);
 			assert(table.type == TYPE_TABLE);
 			if (place_phone_on_obj(rgen, table, room_id, tot_light_amt, rgen.rand_bool(), rgen.rand_bool())) {table.flags |= RO_FLAG_ADJ_TOP;}
 		}
-	}
+		break; // done/success
+	} // for n
 	return 1;
 }
 
