@@ -1142,25 +1142,46 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 	}
 	if (is_store) return 1; // no flashlight, candle, balls, t-shirt, or jeans in furniture store rooms
 
-	// maybe add a flashlight or candle on a dresser, night stand, or desk; or in a drawer?
-	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
-		if (!((i->type == TYPE_DRESSER || i->type == TYPE_NIGHTSTAND || i->type == TYPE_DESK) && !(i->flags & RO_FLAG_ADJ_TOP))) continue; // not empty dresser/nightstand/desk
-		unsigned const rand_val(rgen.rand());
-		if (rand_val & 3) continue; // only add 25% of the time
-		bool const is_flashlight(rand_val & 4);
-		float const height((is_flashlight ? 0.1 : 0.09)*window_vspacing), radius((is_flashlight ? 0.2 : 0.16)*height);
-		if (min(i->dx(), i->dy()) < 3.0*radius) continue; // surface is too small
-		i->flags |= RO_FLAG_ADJ_TOP;
-		cube_t bc;
-		gen_xy_pos_for_round_obj(bc, *i, radius, height, 1.2*radius, rgen);
-		colorRGBA const color(is_flashlight ? BLACK : candle_color);
-		objs.emplace_back(bc, (is_flashlight ? TYPE_FLASHLIGHT : TYPE_CANDLE), room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, color);
-		break; // only add one object; adding invalidates the iterator anyway
-	} // for i
-	if (rgen.rand_float() < 0.3) {add_laundry_basket(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);} // try to place a laundry basket 25% of the time
+	if (is_hotel()) { // hotel specific items
+		// add a phone on a dresser, nightstand, or desk
+		static vector<unsigned> cands;
+		cands.clear();
 
-	if (btype != BTYPE_HOTEL && rgen.rand_probability(global_building_params.ball_prob)) { // maybe add a ball to the room if not a hotel
-		add_ball_to_room(rgen, room, place_area, zval, room_id, tot_light_amt, objs_start);
+		for (unsigned i = objs_start; i < objs.size(); ++i) {
+			room_object_t const &obj(objs[i]);
+			if (obj.flags & RO_FLAG_ADJ_TOP) continue; // skip if an item has already been placed
+			unsigned num_slots(0);
+			if      (obj.type == TYPE_DRESSER   ) {num_slots = 2;}
+			else if (obj.type == TYPE_NIGHTSTAND) {num_slots = 1;}
+			else if (obj.type == TYPE_DESK      ) {num_slots = 3;}
+			cands.resize(cands.size()+num_slots, i);
+		} // for i
+		if (!cands.empty()) {
+			room_object_t &obj(objs[cands[rgen.rand() % cands.size()]]);
+			if (place_phone_on_obj(rgen, obj, room_id, tot_light_amt, obj.dim, obj.dir)) {obj.flags |= RO_FLAG_ADJ_TOP;}
+		}
+	}
+	else { // not a hotel
+		// maybe add a flashlight or candle on a dresser, night stand, or desk; or in a drawer?
+		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+			if (!((i->type == TYPE_DRESSER || i->type == TYPE_NIGHTSTAND || i->type == TYPE_DESK) && !(i->flags & RO_FLAG_ADJ_TOP))) continue; // not empty dresser/nightstand/desk
+			unsigned const rand_val(rgen.rand());
+			if (rand_val & 3) continue; // only add 25% of the time
+			bool const is_flashlight(rand_val & 4);
+			float const height((is_flashlight ? 0.1 : 0.09)*window_vspacing), radius((is_flashlight ? 0.2 : 0.16)*height);
+			if (min(i->dx(), i->dy()) < 3.0*radius) continue; // surface is too small
+			i->flags |= RO_FLAG_ADJ_TOP;
+			cube_t bc;
+			gen_xy_pos_for_round_obj(bc, *i, radius, height, 1.2*radius, rgen);
+			colorRGBA const color(is_flashlight ? BLACK : candle_color);
+			objs.emplace_back(bc, (is_flashlight ? TYPE_FLASHLIGHT : TYPE_CANDLE), room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, color);
+			break; // only add one object; adding invalidates the iterator anyway
+		} // for i
+		if (rgen.rand_float() < 0.3) {add_laundry_basket(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);} // try to place a laundry basket 25% of the time
+
+		if (rgen.rand_probability(global_building_params.ball_prob)) { // maybe add a ball to the room
+			add_ball_to_room(rgen, room, place_area, zval, room_id, tot_light_amt, objs_start);
+		}
 	}
 	cube_t const avoid(placed_closet ? objs[closet_obj_id] : cube_t()); // avoid intersecting the closet, since it meets the ceiling
 	if (objs_start > 0) {replace_light_with_ceiling_fan(rgen, room, avoid, room_id, tot_light_amt, objs_start-1);} // light is prev placed object; should always be true
@@ -1474,7 +1495,16 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 	for (auto i = objs.begin()+beds_start; i != objs.end(); ++i) {
 		if (i->type == TYPE_BLOCKER) {blockers.push_back(*i);}
 	}
-	add_table_and_chairs(rgen, room, blockers, room_id, table_pos, WHITE, 0.25, tot_light_amt, 1, add_tall_table); // 1 chair
+	unsigned const table_ix(objs.size());
+
+	if (add_table_and_chairs(rgen, room, blockers, room_id, table_pos, WHITE, 0.2, tot_light_amt, 1, add_tall_table) > 0) { // 1 chair
+		if (rgen.rand_bool()) { // place a phone on the table using a random dim/dir; should it face the chair?
+			assert(table_ix < objs.size());
+			room_object_t &table(objs[table_ix]);
+			assert(table.type == TYPE_TABLE);
+			if (place_phone_on_obj(rgen, table, room_id, tot_light_amt, rgen.rand_bool(), rgen.rand_bool())) {table.flags |= RO_FLAG_ADJ_TOP;}
+		}
+	}
 	return 1;
 }
 
