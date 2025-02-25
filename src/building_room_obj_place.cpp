@@ -1478,7 +1478,7 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 		assert(bed_ix < objs.size());
 		room_object_t &bed(objs[bed_ix]);
 		assert(bed.type == TYPE_HOSP_BED);
-		bed.item_flags = (7*mat_ix + 11*room.part_id + interior->rooms.size()); // select a random sub-model per building part
+		bed.item_flags = (7U*mat_ix + 11U*room.part_id + interior->rooms.size()); // select a random sub-model per building part
 		room_object_t &blocker(objs.back());
 		assert(blocker.type == TYPE_BLOCKER);
 		blocker.expand_in_dim(!blocker.dim, clerance); // add extra clearance to the sides of the bed
@@ -1500,7 +1500,7 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 		if (add_curtains && i->type == TYPE_HOSP_BED) { // place curtains between adjacent beds
 			for (auto j = i+1; j != objs.end(); ++j) {
 				if (j->type != TYPE_HOSP_BED || j->dim != i->dim || j->dir != i->dir) continue; // not a bed along the same wall
-				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_HOSP_CURT)); // D, L, H
+				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_HOSP_CURT)); // D, W, H
 				float const fc_gap(get_floor_ceil_gap()), height(0.9*fc_gap);
 				cube_t merged(*i), curtain;
 				merged.union_with_cube(*j);

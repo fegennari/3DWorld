@@ -6122,6 +6122,8 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_CHEM_TANK: return texture_color(get_chem_tank_tid(*this)).modulate_with(color);
 	case TYPE_HVAC_UNIT: return texture_color(get_hvac_tid(*this)).modulate_with(color);
 	case TYPE_VENT_FAN:  return texture_color(get_ibeam_tid()).modulate_with(color);
+	case TYPE_HOSP_BED:  return GRAY; // approximate, since it varies across models
+	case TYPE_HOSP_CURT: return LT_BLUE;
 	case TYPE_MIRROR:    return WHITE; // should be reflecting
 	//case TYPE_POOL_BALL: return ???; // texture_color(get_ball_tid(*this))? uses a texture atlas, so unclear what color to use here; use white by default
 	//case TYPE_CHIMNEY:  return texture_color(get_material().side_tex); // should modulate with texture color, but we don't have it here

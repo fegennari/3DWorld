@@ -317,7 +317,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			type == TYPE_POOL_LAD || type == TYPE_FLASHLIGHT || type == TYPE_CANDLE || type == TYPE_CAMERA || type == TYPE_CLOCK || type == TYPE_BAR_STOOL || type == TYPE_PADLOCK ||
 			type == TYPE_WFOUNTAIN || type == TYPE_BANANA || type == TYPE_BAN_PEEL || type == TYPE_VALVE || type == TYPE_INT_LADDER || type == TYPE_CONF_PHONE ||
 			type == TYPE_SPIWEB || type == TYPE_TREE || type == TYPE_THEFT_SENS || type == TYPE_ELEC_WIRE || type == TYPE_ERASER || type == TYPE_PET_CAGE || type == TYPE_SHOE ||
-			type == TYPE_SHOEBOX || type == TYPE_LADDER || type == TYPE_CATWALK || type == TYPE_WARN_LIGHT || type == TYPE_HOSP_BED) continue;
+			type == TYPE_SHOEBOX || type == TYPE_LADDER || type == TYPE_CATWALK || type == TYPE_WARN_LIGHT) continue;
 		bool const is_stairs(type == TYPE_STAIR || type == TYPE_STAIR_WALL || type == TYPE_US_FLAG || type == TYPE_BLDG_FOUNT);
 		if (c->z1() > (is_stairs ? stairs_z2 : z2) || c->z2() < (is_stairs ? stairs_z1 : z1)) continue;
 		if (!c->intersects_xy(ext_bcube)) continue;
@@ -473,6 +473,18 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			set_wall_width(center, c->zc(), center_radius, 2);
 			set_wall_width(center, c->get_center_dim(!c->dim), center_radius, !c->dim);
 			cc.emplace_back(center, color);
+		}
+		else if (type == TYPE_HOSP_BED) { // horizontal cube around mattress
+			float const height(c->dz());
+			cube_t C(*c);
+			set_cube_zvals(C, (c->z1() + 0.65*height), (c->z1() + 0.7*height));
+			cc.emplace_back(C, color);
+		}
+		else if (type == TYPE_HOSP_CURT) { // vertical cube around the center
+			float const height(c->dz()), depth(c->get_depth()), length(c->get_width());
+			cube_t C(get_true_room_obj_bcube(*c));
+			C.expand_in_dim(c->dim, -0.25*C.get_sz_dim(c->dim)); // very narrow
+			cc.emplace_back(C, color);
 		}
 		else { // single cube
 			cube_t bc(*c); // handle 3D models that don't fill the entire cube

@@ -1216,7 +1216,7 @@ void building_room_geom_t::create_obj_model_insts(building_t const &building) { 
 				auto it(saved_office_chair_dirs.find(obj_id));
 				if (it != saved_office_chair_dirs.end()) {obj_model_insts.back().dir = it->second;}
 			}
-			//get_untextured_material().add_cube_to_verts_untextured(*i, WHITE); // for debugging of model bcubes
+			//get_untextured_material().add_cube_to_verts_untextured(get_true_room_obj_bcube(*i), WHITE); // for debugging of model bcubes
 		} // for i
 	} // for vect_id
 }
