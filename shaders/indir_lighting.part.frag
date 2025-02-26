@@ -1,4 +1,5 @@
 uniform float half_dxy;
+uniform float max_indir_light     = 1.0;
 uniform float indir_vert_offset   = 0.25;
 uniform float hemi_lighting_scale = 0.5;
 uniform float hemi_lighting_normal_scale = 1.0;
@@ -90,7 +91,7 @@ vec3 get_indir_lighting(in float normal_sign) {
 #endif
 		}
 	}
-	return indir_color;
+	return min(indir_color, max_indir_light);
 }
 
 void add_indir_lighting(inout vec3 lit_color, in float normal_sign) {
