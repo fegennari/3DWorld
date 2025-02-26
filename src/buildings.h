@@ -1413,6 +1413,8 @@ unsigned const ROOM_FLAG_HAS_OOO  = 0x0020; // has out-of-order sign
 unsigned const ROOM_FLAG_INT_WIND = 0x0040; // has interior window
 unsigned const ROOM_FLAG_RO_GEOM  = 0x0080; // room should not have objects placed in it
 unsigned const ROOM_FLAG_TUNNEL   = 0x0100; // room has a tunnel connection at one end
+unsigned const ROOM_FLAG_NESTED   = 0x0200; // room is nested inside another room
+unsigned const ROOM_FLAG_HAS_SUB  = 0x0400; // room has a sub-room nested inside it
 
 struct room_t : public cube_t { // size=56
 	bool is_hallway=0, is_office=0, is_sec_bldg=0, is_single_floor=0;
@@ -1465,9 +1467,11 @@ struct room_t : public cube_t { // size=56
 	void set_is_entryway      () {flags |= ROOM_FLAG_IS_ENTRY;}
 	void set_has_mirror       () {flags |= ROOM_FLAG_MIRROR  ;}
 	void set_has_out_of_order () {flags |= ROOM_FLAG_HAS_OOO ;}
+	void set_interior_window  () {flags |= ROOM_FLAG_INT_WIND;}
 	void set_no_geom          () {flags |= ROOM_FLAG_RO_GEOM ;}
 	void set_has_tunnel_conn  () {flags |= ROOM_FLAG_TUNNEL  ;}
-	void set_interior_window  () {flags |= ROOM_FLAG_INT_WIND;}
+	void set_is_nested        () {flags |= ROOM_FLAG_NESTED  ;}
+	void set_has_subroom      () {flags |= ROOM_FLAG_HAS_SUB ;}
 	bool get_has_center_stairs() const {return (flags & ROOM_FLAG_CSTAIRS );}
 	bool get_office_floorplan () const {return (flags & ROOM_FLAG_OFF_FP  );}
 	bool get_has_skylight     () const {return (flags & ROOM_FLAG_SKYLIGHT);}
@@ -1477,6 +1481,8 @@ struct room_t : public cube_t { // size=56
 	bool has_interior_window  () const {return (flags & ROOM_FLAG_INT_WIND);}
 	bool has_no_geom          () const {return (flags & ROOM_FLAG_RO_GEOM );}
 	bool has_tunnel_conn      () const {return (flags & ROOM_FLAG_TUNNEL  );}
+	bool is_nested            () const {return (flags & ROOM_FLAG_NESTED  );}
+	bool has_subroom          () const {return (flags & ROOM_FLAG_HAS_SUB );}
 }; // room_t
 
 struct extb_room_t : public cube_t { // extended basement room candidate
