@@ -1462,16 +1462,30 @@ bool building_t::maybe_add_fireplace_to_room(rand_gen_t &rgen, room_t const &roo
 	return 1;
 }
 
+bool can_create_hospital_room() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_BED);}
+
 bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_BED)) return 0; // no hospital bed
-	float const floor_spacing(get_window_vspace()), clerance(1.25*get_min_front_clearance_inc_people());
+	if (!can_create_hospital_room()) return 0; // no hospital bed
+	float const floor_spacing(get_window_vspace()), clerance(1.25*get_min_front_clearance_inc_people()), wall_thickness(get_wall_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
-	place_area.expand_by(-1.0*get_wall_thickness()); // add extra padding, since bed models are slightly different sizes
+	place_area.expand_by(-1.0*wall_thickness); // add extra padding, since bed models are slightly different sizes
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const beds_start(objs.size());
 	unsigned const max_beds(max(1U, unsigned(0.25*room_bounds.get_area_xy()/(floor_spacing*floor_spacing))));
 	unsigned num_beds(0), pref_orient(4);
 
+	if (room.has_subroom()) {
+		// first, determine if this room has a nested bathroom, and add a blocker over the entire room;
+		// bathroom objects should have been placed already, so the blocker won't cause problems, and we can stop iterating at the current room
+		// TODO: something better than a linear search?
+		for (auto r = interior->rooms.begin(); r != interior->rooms.begin()+room_id; ++r) {
+			if (!room.contains_cube(*r)) continue;
+			cube_t blocker(*r);
+			blocker.expand_by_xy(0.5*wall_thickness); // include room walls
+			objs.emplace_back(blocker, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS);
+			break; // there should only be one
+		} // for r
+	}
 	for (unsigned n = 0; n < max_beds; ++n) {
 		unsigned const bed_ix(objs.size());
 		if (!place_model_along_wall(OBJ_MODEL_HOSP_BED, TYPE_HOSP_BED, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.5, pref_orient)) continue;
@@ -1487,7 +1501,6 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 		++num_beds;
 	} // for n
 	if (num_beds == 0) return 0;
-	// TODO: bathroom, etc.
 	bool const add_tall_table(rgen.rand_bool());
 	bool const add_curtains(num_beds > 1 && building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_CURT));
 	point const table_pos(room.xc(), room.yc(), zval); // approximate

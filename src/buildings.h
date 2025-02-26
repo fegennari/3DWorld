@@ -2176,6 +2176,8 @@ struct building_t : public building_geom_t {
 	void add_conference_room_window(unsigned room_ix);
 	void divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsigned hall_num_rooms, unsigned tot_num_windows,
 		unsigned windows_per_room, unsigned windows_per_room_side, bool hall_dim, bool hall_dir, rand_gen_t &rgen);
+	void add_hospital_bathrooms(unsigned rooms_start, rand_gen_t &rgen);
+	bool maybe_create_nested_bathroom(room_t &room, rand_gen_t &rgen);
 	void create_factory_floorplan(unsigned part_id, float window_hspacing[2], float window_border, rand_gen_t &rgen);
 	bool maybe_assign_interior_garage(bool &gdim, bool &gdir);
 	void add_parking_garage_ramp(rand_gen_t &rgen);
