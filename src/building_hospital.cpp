@@ -8,6 +8,8 @@
 extern object_model_loader_t building_obj_model_loader;
 
 
+void clip_wall_to_ceil_floor(cube_t &wall, float fc_thick);
+
 bool can_create_hospital_room() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_HOSP_BED);}
 
 void building_t::add_hospital_bathrooms(unsigned rooms_start, rand_gen_t &rgen) {
@@ -25,9 +27,8 @@ bool building_t::maybe_create_nested_bathroom(room_t &room, rand_gen_t &rgen) { 
 	if (check_skylight_intersection(room)) return 0; // unlikely, but not handled here
 	float const floor_spacing(get_window_vspace()), rdx(room.dx()), rdy(room.dy());
 	if (min(rdx, rdy) < 2.0*floor_spacing || max(rdx, rdy) < 2.5*floor_spacing) return 0; // too small
-	float const door_width(get_doorway_width()), door_hwidth(0.5*door_width), min_sz(2.0*door_width), max_sz(4.0*door_width), rzc(room.zc());
-	//float const wall_thick(get_wall_thickness()), wall_hthick(0.5*wall_thick);
-	//float const floor_thick(get_floor_thickness()), fc_thick(get_fc_thickness());
+	float const door_width(get_doorway_width()), door_hwidth(0.5*door_width), wall_thick(get_wall_thickness()), wall_hthick(0.5*wall_thick);
+	float const min_sz(2.0*door_width), max_sz(4.0*door_width), rzc(room.zc());
 	bool const pref_dx(rgen.rand_bool()), pref_dy(rgen.rand_bool());
 
 	// choose a valid dir in each dim, not along an exterior wall
@@ -42,7 +43,7 @@ bool building_t::maybe_create_nested_bathroom(room_t &room, rand_gen_t &rgen) { 
 
 			for (unsigned d = 0; d < 2; ++d) {
 				bool const dir(d ? dy : dx);
-				bathroom.d[d][!dir] = room.d[d][dir] + (dir ? -1.0 : 1.0)*max(min_sz, min(max_sz, 0.4f*(d ? rdy : rdx)));
+				bathroom.d[d][!dir] = room.d[d][dir] + (dir ? -1.0 : 1.0)*max(min_sz, min(max_sz, 0.35f*(d ? rdy : rdx)));
 			}
 			assert(bathroom.is_strictly_normalized());
 			if (is_cube_close_to_doorway(bathroom, room, 0.0, 1)) continue; // inc_open=1
@@ -55,7 +56,34 @@ bool building_t::maybe_create_nested_bathroom(room_t &room, rand_gen_t &rgen) { 
 			orig_room.set_has_subroom();
 			interior->rooms.push_back(orig_room); // re-add full room; invalidates room reference
 			// add wall sections and door
-			// TODO
+			float const fc_thick(get_fc_thickness());
+			bool door_dim(0);
+			cube_t walls[2] = {bathroom, bathroom};
+			vect_door_stack_t doorways;
+			get_doorways_for_room(orig_room, orig_room.zc(), doorways, 1); // get interior doors; all_floors=1
+			
+			for (unsigned d = 0; d < 2; ++d) { // wall dim
+				cube_t &wall(walls[d]);
+				clip_wall_to_ceil_floor(wall, fc_thick);
+				set_wall_width(wall, bathroom.d[d][!(d ? dy : dx)], wall_hthick, d);
+				if (d == 0) {wall.d[1][!dy] += (dy ? -1.0 : 1.0)*wall_hthick;} // expand to overlap the corner in X
+				else        {wall.d[0][!dx] += (dx ? -1.0 : 1.0)*wall_hthick;} // shrink to remove overlap in Y
+			}
+			if (doorways.empty()) {door_dim = rgen.rand_bool(); assert(0);} // shouldn't happen
+			else { // select wall side closer to room doorway
+				point const door_center(doorways.front().get_cube_center());
+				door_dim = (p2p_dist_xy_sq(door_center, walls[1].get_cube_center()) < p2p_dist_xy_sq(door_center, walls[0].get_cube_center()));
+			}
+			for (unsigned d = 0; d < 2; ++d) { // wall dim
+				cube_t &wall(walls[d]);
+
+				if (d == door_dim) { // add door in this dim
+					float const door_center(bathroom.get_center_dim(!d));
+					// opens into bathroom; keep_high_side=0, is_bathroom=0 (not always closed), make_unlocked=1, make_closed=0
+					insert_door_in_wall_and_add_seg(wall, (door_center - door_hwidth), (door_center + door_hwidth), !d, (d ? dy : dx), 0, 0, 1, 0);
+				}
+				interior->walls[d].push_back(wall);
+			} // for d
 			return 1; // success/done
 		} // for DY
 	} // for DX

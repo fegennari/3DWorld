@@ -620,6 +620,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			unsigned num_chairs(0);
 			// unset room type if not locked on this floor during floorplanning; required to generate determinstic room geom
 			if (!r->is_rtype_locked(f)) {r->assign_to(RTYPE_NOTSET, f);}
+			if (r->has_subroom()) {no_whiteboard = 1;} // whiteboard placer ingores sub-rooms
 
 			// place room objects
 			bool const added_living(added_living_mask & floor_mask);
@@ -748,7 +749,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					is_numbered_room = 1; // increments room number even if not numbered (so that numbers are consistent across floors)
 				}
 				added_obj = 1; // assume something was added above, and don't place any other furniture or try to assign to another room type
-			}
+			} // end is_apt_or_hotel_room
 			if (r->get_room_type(f) == RTYPE_CONF) { // already assigned to a conference room
 				if (add_conference_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f)) {added_obj = can_place_onto = 1;}
 				else if (f < NUM_RTYPE_SLOTS) { // failed, maybe because stairs were added to the room
@@ -794,7 +795,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					added_obj = no_whiteboard = is_inter = 1;
 				}
 			}
-			if (!added_obj && rgen.rand_float() < (is_basement ? 0.4 : (r->is_office ? (is_hospital() ? 0.2 : 0.6) : (is_house ? 0.95 : 0.5)))) {
+			if (!added_obj && !r->has_subroom() && rgen.rand_float() < (is_basement ? 0.4 : (r->is_office ? (is_hospital() ? 0.2 : 0.6) : (is_house ? 0.95 : 0.5)))) {
 				// place a table and maybe some chairs near the center of the room if it's not a hallway;
 				// 60% of the time for offices, 95% of the time for houses, and 50% for other buildings
 				unsigned const num_tcs(add_table_and_chairs(rgen, *r, blockers, room_id, room_center, chair_color, 0.1, tot_light_amt));
@@ -1729,7 +1730,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	unsigned const flags(RO_FLAG_NOCOLL);
 	// ceiling trim disabled for large office buildings with outside corners because there's a lot of trim to add, and outside corners don't join correctly;
 	// ceiling trim also disabled for non-houses (all office buildings), because it doesn't really work with acoustic paneling
-	bool const has_outside_corners((!is_house && !pri_hall.is_all_zeros()) || is_factory());
+	bool const has_outside_corners((!is_house && !pri_hall.is_all_zeros()) || is_factory() || is_hospital()); // factories and hospitals have nested rooms with inside corners
 	bool const has_ceil_trim(!has_outside_corners && is_house);
 	colorRGBA const trim_color(get_trim_color());
 	vect_room_object_t &objs(interior->room_geom->trim_objs);
