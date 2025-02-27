@@ -558,10 +558,8 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				// checking for office chair rotation is expensive, so it's done last, just before updating closest
 				if (type == TYPE_OFF_CHAIR && !chair_can_be_rotated(*i)) continue;
 				//if (check_for_wall_ceil_floor_int(closest_to, query_ray_end)) continue; // skip if it's on the other side of a wall, ceiling, or floor; too strong
-
-				if (type == TYPE_BUTTON || type == TYPE_SWITCH) {
-					if (dot_product_ptv(i->get_dir(), closest_to, center) < 0.0) continue; // can't press from behind
-				}
+				if (type == TYPE_BUTTON && dot_product_ptv(i->get_dir(), closest_to, center) < 0.0) continue; // can't press from behind
+				if (type == TYPE_SWITCH && dot_product_ptv(i->get_dir(), closest_to, center) > 0.0) continue; // can't press from behind (inverted from button dir)
 				closest_dist_sq = dist_sq;
 				obj_ix = (i - obj_vect.begin()) + obj_id_offset;
 				is_obj = found_item = 1;
