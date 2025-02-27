@@ -443,7 +443,9 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			set_cube_zvals(wf, z1, z1+height);
 			wf.d[wfdim][!wfdir] = wall_pos;
 			wf.d[wfdim][ wfdir] = wall_pos + (wfdir ? 1.0 : -1.0)*depth;
-			if (is_cube_close_to_doorway(wf, room, 0.0, 1) || overlaps_other_room_obj(wf, objs_start)) continue; // avoid doors and machines
+			cube_t test_cube(wf);
+			test_cube.d[wfdim][wfdir] += (wfdir ? 1.0 : -1.0)*clearance; // add front clearance
+			if (is_cube_close_to_doorway(test_cube, room, 0.0, 1) || overlaps_other_room_obj(test_cube, objs_start)) continue; // avoid doors and machines
 			objs.emplace_back(wf, TYPE_WFOUNTAIN, room_id, wfdim, !wfdir, 0, light_amt, SHAPE_CUBE);
 			break; // success
 		} // for n
