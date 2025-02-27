@@ -5789,13 +5789,11 @@ void building_room_geom_t::add_vent_fan_frame(room_object_t const &c) {
 		mat.add_cube_to_verts(housing, color, llc, get_skip_mask_for_xy(c.dim), 0, 0, 0, bool(inv)); // skip front and back
 	}
 	// draw the missing circular back of the motor
-	vector3d dir;
-	dir[c.dim] = (c.dir ? -1.0 : 1.0); // facing the back
 	float const radius(0.073*c.dz());
 	point motor_back(0.0, 0.0, c.zc());
 	motor_back[ c.dim] = c.d[c.dim][!c.dir];
 	motor_back[!c.dim] = c.get_center_dim(!c.dim);
-	get_untextured_material(0).add_disk_to_verts(motor_back, radius, dir, WHITE); // unshadowed
+	get_untextured_material(0).add_disk_to_verts(motor_back, radius, vector_from_dim_dir(c.dim, !c.dir), WHITE); // unshadowed, facing the back
 }
 
 void add_grid_of_bars(rgeom_mat_t &mat, colorRGBA const &color, cube_t const &c, unsigned num_vbars, unsigned num_hbars,
