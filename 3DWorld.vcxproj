@@ -496,6 +496,7 @@
     <ClCompile Include="src\building_floorplan.cpp" />
     <ClCompile Include="src\building_gameplay.cpp" />
     <ClCompile Include="src\building_geom.cpp" />
+    <ClCompile Include="src\building_hospital.cpp" />
     <ClCompile Include="src\building_interact.cpp" />
     <ClCompile Include="src\building_lighting.cpp" />
     <ClCompile Include="src\building_machines.cpp" />

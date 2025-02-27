@@ -1483,60 +1483,6 @@ void building_t::divide_last_room_into_apt_or_hotel(unsigned room_row_ix, unsign
 	++next_unit_id;
 }
 
-bool can_create_hospital_room();
-
-void building_t::add_hospital_bathrooms(unsigned rooms_start, rand_gen_t &rgen) {
-	assert(interior);
-	if (!can_create_hospital_room()) return;
-	vector<room_t> &rooms(interior->rooms);
-	unsigned const rooms_end(rooms.size());
-	assert(rooms_start <= rooms_end);
-	rand_gen_t local_rgen(rgen); // copy so as not to disrupt rgen
-	for (unsigned r = rooms_start; r < rooms_end; ++r) {maybe_create_nested_bathroom(rooms[r], local_rgen);} // can't iterate because rooms are added to
-}
-
-bool building_t::maybe_create_nested_bathroom(room_t &room, rand_gen_t &rgen) { // for hospital rooms
-	if (is_room_windowless         (room)) return 0; // windowless room can't be a hospital bedroom, but it can be a bathroom, storage, office, etc.
-	if (check_skylight_intersection(room)) return 0; // unlikely, but not handled here
-	float const floor_spacing(get_window_vspace()), rdx(room.dx()), rdy(room.dy());
-	if (min(rdx, rdy) < 2.0*floor_spacing || max(rdx, rdy) < 2.5*floor_spacing) return 0; // too small
-	float const door_width(get_doorway_width()), door_hwidth(0.5*door_width), min_sz(2.0*door_width), max_sz(4.0*door_width), rzc(room.zc());
-	//float const wall_thick(get_wall_thickness()), wall_hthick(0.5*wall_thick);
-	//float const floor_thick(get_floor_thickness()), fc_thick(get_fc_thickness());
-	bool const pref_dx(rgen.rand_bool()), pref_dy(rgen.rand_bool());
-	
-	// choose a valid dir in each dim, not along an exterior wall
-	for (unsigned DX = 0; DX < 2; ++DX) {
-		bool const dx(bool(DX) ^ pref_dx);
-		if (classify_room_wall(room, rzc, 0, dx, 0) == ROOM_WALL_EXT) continue; // skip if exterior wall
-
-		for (unsigned DY = 0; DY < 2; ++DY) {
-			bool const dy(bool(DY) ^ pref_dy);
-			if (classify_room_wall(room, rzc, 1, dy, 0) == ROOM_WALL_EXT) continue; // skip if exterior wall
-			cube_t bathroom(room);
-
-			for (unsigned d = 0; d < 2; ++d) {
-				bool const dir(d ? dy : dx);
-				bathroom.d[d][!dir] = room.d[d][dir] + (dir ? -1.0 : 1.0)*max(min_sz, min(max_sz, 0.4f*(d ? rdy : rdx)));
-			}
-			assert(bathroom.is_strictly_normalized());
-			if (is_cube_close_to_doorway(bathroom, room, 0.0, 1)) continue; // inc_open=1
-			// Note: stairs have not yet been placed, so we don't need to avoid them
-			room_t orig_room(room); // copy as room reference may be invalidated below
-			room.copy_from(bathroom); // first (contained) room must be the bathroom
-			calc_room_ext_sides(room);
-			room.assign_all_to(RTYPE_BATH);
-			room.set_is_nested();
-			orig_room.set_has_subroom();
-			interior->rooms.push_back(orig_room); // re-add full room; invalidates room reference
-			// add wall sections and door
-			// TODO
-			return 1; // success/done
-		} // for DY
-	} // for DX
-	return 0; // no valid location found
-}
-
 bool building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
 	if (interior == nullptr) return 0;
 	vector<room_t> &rooms(interior->rooms);
