@@ -342,6 +342,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		colorRGBA const &chair_color(chair_colors[(13*r->part_id + 123*tot_num_rooms + 617*mat_ix + 1367*num_floors) % NUM_CHAIR_COLORS]);
 		light_ix_assign.next_room();
 		rand_gen_t room_rgen(rgen); // shared across all floors of this room
+		int nested_room_ix(-1);
 		// select light color for this room
 		colorRGBA color;
 		if (r->is_ext_basement_conn()) {color = RED;}
@@ -829,7 +830,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			if (!added_obj && !r->interior && is_hospital()) { // hospital room with a window
 				// TODO: make RTYPE_HOS_OR or other room type with some probability
-				added_obj = no_whiteboard = add_hospital_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+				added_obj = no_whiteboard = add_hospital_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, nested_room_ix);
 				if (added_obj) {r->assign_to(RTYPE_HOS_BED, f);}
 			}
 			// try to place a desk if there's no table, bed, etc.; this can be an office

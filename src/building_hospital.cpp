@@ -90,7 +90,7 @@ bool building_t::maybe_create_nested_bathroom(room_t &room, rand_gen_t &rgen) { 
 	return 0; // no valid location found
 }
 
-bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, int &nested_room_ix) {
 	if (!can_create_hospital_room()) return 0; // no hospital bed
 	float const floor_spacing(get_window_vspace()), clerance(1.25*get_min_front_clearance_inc_people()), wall_thickness(get_wall_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
@@ -103,14 +103,16 @@ bool building_t::add_hospital_room_objs(rand_gen_t rgen, room_t const &room, flo
 	if (room.has_subroom()) {
 		// first, determine if this room has a nested bathroom, and add a blocker over the entire room;
 		// bathroom objects should have been placed already, so the blocker won't cause problems, and we can stop iterating at the current room
-		// TODO: something better than a linear search?
-		for (auto r = interior->rooms.begin(); r != interior->rooms.begin()+room_id; ++r) {
-			if (!room.contains_cube(*r)) continue;
-			cube_t blocker(*r);
+		if (nested_room_ix < 0) { // not yet found; find for the first floor
+			for (unsigned r = 0; r < room_id; ++r) {
+				if (room.contains_cube(get_room(r))) {nested_room_ix = r; break;} // there should only be one
+			}
+		}
+		if (nested_room_ix >= 0) { // found
+			cube_t blocker(get_room(nested_room_ix));
 			blocker.expand_by_xy(0.5*wall_thickness); // include room walls
 			objs.emplace_back(blocker, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS);
-			break; // there should only be one
-		} // for r
+		}
 	}
 	for (unsigned n = 0; n < max_beds; ++n) {
 		unsigned const bed_ix(objs.size());
