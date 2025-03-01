@@ -2058,7 +2058,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		else {
 			//draw_simple_cube(obj); // TESTING
 			int mirror_dim(3); // 3=none
-			if (obj.type == TYPE_SHOE && (obj.flags & RO_FLAG_ADJ_BOT)) {mirror_dim = 1;} // shoes may be mirrored in !obj.dim (Y in model space)
+			if (obj.type == TYPE_SHOE && (obj.flags & RO_FLAG_ADJ_TOP)) {mirror_dim = 1;} // shoes may be mirrored in !obj.dim (Y in model space)
 			draw_obj_model(*i, obj, s, xlate, obj_center, shadow_only, mirror_dim); // draw now
 			obj_drawn = 1;
 		}

@@ -37,7 +37,7 @@ bool add_if_not_intersecting(room_object_t const &obj, vect_room_object_t &objec
 		bool const dim(!obj.dim);
 		room_object_t o1(obj), o2(obj);
 		o1.d[dim][1] = o2.d[dim][0] = obj.get_center_dim(dim); // abutting
-		((obj.dim ^ obj.dir ^ mirrored) ? o2 : o1).flags |= RO_FLAG_ADJ_BOT; // flag as mirrored; use for shoes; flag either o1 or o2 based on whether the shoe is left/right
+		((obj.dim ^ obj.dir ^ mirrored) ? o2 : o1).flags |= RO_FLAG_ADJ_TOP; // flag as mirrored; use for shoes; flag either o1 or o2 based on whether the shoe is left/right
 		objects.push_back(o1);
 		objects.push_back(o2);
 	}
@@ -634,6 +634,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 						model_id = OBJ_MODEL_SHOEBOX;
 						C.type   = TYPE_SHOEBOX;
 						C.dir    = c.dir; // same dir as shelf so that box opens outward
+						C.color  = WHITE;
 						length   = 0.3*floor_spacing;
 						spacing  = 1.1*length;
 						prev_add_shoe_boxes = 1;
@@ -643,6 +644,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 						model_id = OBJ_MODEL_SHOE;
 						C.type   = TYPE_SHOE;
 						C.dir    = rgen.rand_bool(); // random orient, but consistent per shelf
+						C.color  = WHITE; // currently always white; most shoe models are a single textured material, and it doesn't look right to color every part
 						length   = 0.25*floor_spacing;
 						spacing  = 1.25*length;
 						add_pairs= (shelf_len < 8.0*floor_spacing); // only for short shelves, not full wall shelves
@@ -651,7 +653,6 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 					float const width(min(0.5*shelf_len, (add_pairs ? 2.0 : 1.0)*length*ssz.y/ssz.x)), height(length*ssz.z/ssz.x); // set max
 					C.shape = SHAPE_CUBE;
 					C.dim   = !c.dim;
-					C.color = WHITE;
 					C.z1()  = S.z2();
 					unsigned const num_slots(shelf_len / spacing);
 					float const slot_spacing(shelf_len / num_slots);
