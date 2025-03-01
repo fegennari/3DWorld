@@ -27,7 +27,7 @@ cobj_groups_t cobj_groups;
 cobj_draw_groups cdraw_groups;
 
 extern bool lm_alloc, has_snow, player_wait_respawn, camera_in_building, player_on_house_stairs, player_in_walkway, player_in_skyway, player_in_ww_elevator;
-extern bool player_on_moving_ww, player_in_tunnel;
+extern bool player_on_moving_ww, player_in_tunnel, player_on_escalator;
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
 extern int camera_in_air, mesh_scale_change, camera_invincible, camera_flight, num_smileys, iticks, frame_counter, player_in_water, player_in_basement;
 extern unsigned snow_coverage_resolution;
@@ -1698,7 +1698,7 @@ void play_camera_footstep_sound() { // tiled terrain mode
 
 	if (!(display_mode & 0x0100)) return;
 	if (player_in_water == 2)     return; // no footsteps when underwater
-	if (player_on_moving_ww )     return; // player is moving, but may not be walking - no footsteps
+	if (player_on_moving_ww || player_on_escalator) return; // player is moving, but may not be walking - no footsteps
 	static double fs_time(0.0);
 	static point last_pos(all_zeros), prev_frame_pos(all_zeros);
 	point const pos(get_camera_pos());
