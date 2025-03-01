@@ -5747,6 +5747,14 @@ void building_room_geom_t::add_chem_tank(room_object_t const &c) {
 	mat.add_vcylin_to_verts(mid,  color, 0, 0, 0, 0, 1.0, 1.0, 2.0*mid.dz()/radius); // draw sides only; side_tscale scaled
 	mat.add_sphere_to_verts(bot,  color, 0,  plus_z); // bot hemisphere
 	mat.add_sphere_to_verts(top,  color, 0, -plus_z); // top hemisphere
+	// warning label on side of tank
+	cube_t label(mid);
+	label.expand_by_xy(0.001*radius);
+	label.z1() += 0.05*height;
+	label.z2() -= 0.22*height;
+	string const tex_fn((c.dim ^ c.dir) ? "interiors/flammable_sign.png" : "interiors/hazardous_chemicals.png"); // select one of two textures
+	rgeom_mat_t &label_mat(get_material(tid_nm_pair_t(get_texture_by_name(tex_fn)), 0)); // unshadowed
+	label_mat.add_vcylin_to_verts(label, apply_light_color(c, WHITE), 0, 0, 0, 0, 1.0, 1.0, 8.0, 1.0, 0, N_CYL_SIDES, 0.0, 0, 1.0, 0.0, 4); // sides, eighth
 	// add pipes to floor
 	unsigned const pipe_ndiv(get_rgeom_sphere_ndiv(1)); // low_detail=1
 	rgeom_mat_t &pipe_mat(get_metal_material(1, 0, 1, 0, COPPER_C)); // small=1

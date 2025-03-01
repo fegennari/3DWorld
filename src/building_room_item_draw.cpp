@@ -125,11 +125,12 @@ template<typename T> void add_inverted_triangles(T &verts, vector<unsigned> &ind
 	for (unsigned i = 0; i < numi; ++i) {indices[ixs_end + i] = (indices[ixs_end - i - 1] + numv);} // copy in reverse order
 }
 
-void apply_half_or_quarter(int half_or_quarter, unsigned &s_end) { // 0=full circle, 1=half circle, 2=quarter circle, 3=half a full circle in the other dim
+void apply_half_or_quarter(int half_or_quarter, unsigned &s_end) { // 0=full circle, 1=half circle, 2=quarter circle, 3=half a full circle in the other dim, 4=eighth circle
 	if      (half_or_quarter == 0) {} // full
 	else if (half_or_quarter == 1) {s_end /= 2;} // half
 	else if (half_or_quarter == 2) {s_end /= 4;} // quarter
 	else if (half_or_quarter == 3) {} // half in other dim - not handled here
+	else if (half_or_quarter == 4) {s_end /= 8;} // eighth
 	else {assert(0);}
 }
 
@@ -181,7 +182,7 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 		unsigned const ixs_off[6] = {1,2,0, 3,2,1}; // 1 quad = 2 triangles
 		bool const flat_sides(ndiv <= 6 && side_tscale == 0.0); // hack to draw bolts untextured with flat sides, since no other cylinders have only 6 sides
 		unsigned ndiv_draw(ndiv);
-		assert(half_or_quarter <= 2); // no half-in-other-dim
+		assert(half_or_quarter != 3); // no half-in-other-dim
 		apply_half_or_quarter(half_or_quarter, ndiv_draw);
 		unsigned const num_side_verts(flat_sides ? 4*ndiv_draw : 2*(ndiv_draw+1)), unique_verts_per_side(flat_sides ? 4 : 2);
 		itri_verts.resize(itris_start + num_side_verts);
