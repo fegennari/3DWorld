@@ -361,7 +361,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		assert(region.is_strictly_normalized());
 
 		if (in_factory && factory_info) { // connect to neighbors on low X/Y edges
-			float const min_height(get_player_eye_height() + 2.0*pipe_rmax); // add space for pipe/coil
+			float const min_height(get_player_eye_height() + 2.4*pipe_rmax); // add space for pipe/coil
 
 			if (part_sz.z > 1.25*min_height) {
 				bool const coil_dim(rgen.rand_bool());
@@ -376,14 +376,14 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 					assert(region2.is_strictly_normalized());
 					rand_gen_t rgen2(rgen); // copy rgen so that we can make pipe connections differ across machine instances
 					rgen2.rseed1 += (ndim ? c.state_flags : c.drawer_flags); // make it different per row/column
-					unsigned const num_pipes((rgen2.rand() % 4) + 2); // 2-5
+					unsigned const num_pipes((rgen2.rand() % 4) + 3); // 3-6
 					unsigned num_coils(0);
 					pipe_ends.clear();
 
 					for (unsigned n = 0; n < num_pipes; ++n) {
 						bool const is_coil(!is_cylin && bool(ndim) == coil_dim && num_coils == 0 && rgen2.rand_bool()); // max of 1 coil across both dims; cubes only
 						num_coils += is_coil;
-						add_machine_pipe_in_region(c, region2, (is_coil ? 2.0 : 1.0)*pipe_rmax, ndim, pipe_ends, rgen2, is_coil);
+						add_machine_pipe_in_region(c, region2, (is_coil ? 2.0 : 1.25)*pipe_rmax, ndim, pipe_ends, rgen2, is_coil);
 					}
 				} // for n
 			}
