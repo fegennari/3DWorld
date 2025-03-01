@@ -481,7 +481,6 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			cc.emplace_back(C, color);
 		}
 		else if (type == TYPE_HOSP_CURT) { // vertical cube around the center
-			float const height(c->dz()), depth(c->get_depth()), length(c->get_width());
 			cube_t C(get_true_room_obj_bcube(*c));
 			C.expand_in_dim(c->dim, -0.25*C.get_sz_dim(c->dim)); // very narrow
 			cc.emplace_back(C, color);
