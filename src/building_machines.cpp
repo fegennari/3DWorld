@@ -583,7 +583,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 			pipe_ends.clear();
 			
 			for (unsigned n = 0; n < num_pipes; ++n) {
-				bool const is_coil(num_coils < (either_cylin ? 1 : 2) && rgen.rand_float() < coil_prob); // max of 2 coils
+				bool const is_coil(num_coils < (either_cylin ? 1U : 2U) && rgen.rand_float() < coil_prob); // max of 2 coils
 				num_coils += is_coil;
 				add_machine_pipe_in_region(c, region, (is_coil ? 2.0 : 1.0)*pipe_rmax, !dim, pipe_ends, rgen, is_coil);
 			}
@@ -739,7 +739,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 
 							for (unsigned D = 0; D < 2; ++D) { // extend dim
 								for (unsigned d = 0; d < 2; ++d) {
-									bool const dir(d ? ydir : xdir), extend_dim(bool(d) != D);
+									bool const dir(d ? ydir : xdir), extend_dim(d != D);
 									// contained in part range for dim D, outside part in !D; may extend outside machine bcube, but shouldn't intersect anything
 									center[d] = (extend_dim ? c : part).d[d][dir] + (dir ? -1.0 : 1.0)*(extend_dim ? -1.5 : 3.0)*light_radius;
 								}

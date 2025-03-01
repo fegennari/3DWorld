@@ -77,7 +77,7 @@ bool building_t::maybe_create_nested_bathroom(room_t &room, rand_gen_t &rgen) { 
 			for (unsigned d = 0; d < 2; ++d) { // wall dim
 				cube_t &wall(walls[d]);
 
-				if (d == door_dim) { // add door in this dim
+				if (bool(d) == door_dim) { // add door in this dim
 					float const door_center(bathroom.get_center_dim(!d));
 					// opens into bathroom; keep_high_side=0, is_bathroom=0 (not always closed), make_unlocked=1, make_closed=0
 					insert_door_in_wall_and_add_seg(wall, (door_center - door_hwidth), (door_center + door_hwidth), !d, (d ? dy : dx), 0, 0, 1, 0);
