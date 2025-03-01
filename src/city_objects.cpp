@@ -2137,7 +2137,7 @@ void parking_solar_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 	cube_t roof(bcube);
 	roof.z1() = bcube.z2() - 0.05*height;
 	cube_t panel(roof);
-	panel.z2() += 0.004*height; // slightly above the roof
+	panel.z2() += 0.01*height; // slightly above the roof to prevent Z-fighting
 	panel.expand_by_xy(-0.04*height); // small shrink to create a border
 	unsigned const vs1(qbds.qbd.verts.size()), vs2(qbds.untex_qbd.verts.size());
 	dstate.draw_cube(qbds.qbd,       panel, WHITE,   1, 1.0/height, 3, 0, 0, 0, 1.0, 1.0, 1.0, 0, 1); // top surface only; no_cull=1 since it's rotated

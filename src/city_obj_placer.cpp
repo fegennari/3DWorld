@@ -60,7 +60,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 	for (unsigned c = 0; c < 4; ++c) { // generate 0-4 parking lots per plot, starting at the corners, in random order
 		unsigned const cix((first_corner + c) & 3), xdir(cix & 1), ydir(cix >> 1), wdir(car_dim ? xdir : ydir), rdir(car_dim ? ydir : xdir);
 		float const dx(xdir ? -xsz : xsz), dy(ydir ? -ysz : ysz), dw(car_dim ? dx : dy), dr(car_dim ? dy : dx); // delta-width and delta-row
-		point const corner_pos(plot.d[0][xdir], plot.d[1][ydir], (plot.z1() + 0.1*ROAD_HEIGHT)); // shift up slightly to avoid z-fighting
+		point const corner_pos(plot.d[0][xdir], plot.d[1][ydir], (plot.z1() + 0.2*ROAD_HEIGHT)); // shift up slightly to avoid z-fighting
 		assert(dw != 0.0 && dr != 0.0);
 		unsigned const parking_lot_ix(parking_lots.size());
 		// start as min size at the corner
