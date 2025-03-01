@@ -76,8 +76,8 @@ These files are too large to store in the git repo. I've attempted to have 3DWor
 Many of the larger models can be found at the McGuire Computer Graphics Archive:
 http://casual-effects.com/data/
 
-I've packaged up the 3D models that are too large for the GitHub repo and put them on Google Drive here (up to v6 now):
-https://drive.google.com/file/d/1crN9rqT-LSvYyTZTw5wtkhwsubE651ex/view?usp=sharing
+I've packaged up the 3D models that are too large for the GitHub repo and put them on Google Drive here (up to v7 now, 732MB):
+https://drive.google.com/file/d/1T2fPwiJ7x2ga8hRPrLAZDlkWZMh-NsVp/view?usp=drive_link
 Some of these models are stored in 3DWorld's internal format and should not be reused in other projects. Others come from websites such as Mixamo.
 There is also a textures directory with additional textures used with building interiors that can be merged with the project textures directory.
 
@@ -123,6 +123,10 @@ However, I do have a blog that includes descriptions of the algorithms and lots 
 https://3dworldgen.blogspot.com
 
 Here are some screenshots linked from my blog:
+
+![alt text](https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiXdx3c9m1WFQm68JOPsoYzLE7DkXxGrEEwuvzo0VupI23hMSzuW8DDnqsWYD85cy-EV92BacvNky0vsgEgHnO3vgnGW4WYZ3Nj3Z1vSCM5y4IfdLrYg2JaaYzXf6dRonqosb7t7lmQZZ7ZJ9LlK_t3TUYJKWiyJUk0gmIfaC0hs0gOA_I8Uj9bDtO6RYaA/w640-h360/factory_office_roof.jpg)
+
+This is a procedurally generated factory interior with machines, tanks, catwalks, ladders, and pipes. (config_heightmap.txt)
 
 ![alt text](https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh7bt1KabOKD8tUIxaACMEEDsk2oP4105fUaz4RMGqucAxEAkSKGN4-sX0yMv2IXHMUkWNUNspp0KDuGZIduZoBXAo_K_PQizCx_CtfGjj88GLMXw44jOGmPAs2VUwy__8GckC5MICg4dUV0cK-ripMByVsHX80Wjkzb4XRuuugZXi5_nT4Rc5VwTTI6nP7/w640-h360/mall_7_levels.jpg)
 
