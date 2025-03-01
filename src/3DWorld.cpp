@@ -116,7 +116,7 @@ float ocean_wave_height(DEF_OCEAN_WAVE_HEIGHT), tree_density_thresh(0.55), model
 float custom_glaciate_exp(0.0), tree_type_rand_zone(0.0), jump_height(1.0), force_czmin(0.0), force_czmax(0.0), smap_thresh_scale(1.0), dlight_intensity_scale(1.0);
 float model_mat_lod_thresh(5.0), clouds_per_tile(0.5), def_atmosphere(1.0), def_vegetation(1.0), ocean_depth_opacity_mult(1.0), erode_amount(1.0), ambient_scale(1.0);
 float model_hemi_lighting_scale(0.5), pine_tree_radius_scale(1.0), sunlight_brightness(1.0), moonlight_brightness(1.0), sm_tree_scale(1.0), tt_fog_density(1.0);
-float mouse_smooth_factor(0.0), tree_depth_scale(1.0);
+float mouse_smooth_factor(0.0), tree_depth_scale(1.0), head_bob_amount(0.0);
 float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0, 1.0, 1.0}, first_ray_weight[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0, 1.0, 1.0};
 double camera_zh(0.0);
 point mesh_origin(all_zeros), camera_pos(all_zeros), cube_map_center(all_zeros);
@@ -137,7 +137,7 @@ bool vert_opt_flags[3] = {0}; // {enable, full_opt, verbose}
 
 
 extern bool clear_landscape_vbo, use_dense_voxels, tree_4th_branches, model_calc_tan_vect, water_is_lava, use_grass_tess, def_tex_compress, ship_cube_map_reflection;
-extern bool flashlight_on, player_wait_respawn, camera_in_building, player_in_tunnel;
+extern bool flashlight_on, player_wait_respawn, camera_in_building, player_in_tunnel, player_on_moving_ww, player_on_escalator;
 extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display, mesh_freq_filter, show_waypoints, last_inventory_frame;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST, mesh_gen_mode, mesh_gen_shape, map_drag_x, map_drag_y, player_in_water;
 extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, DYNAMIC_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz;
@@ -631,11 +631,23 @@ struct player_height_mgr_t {
 			adj_val = -0.5;
 		}
 		else if (ctrl_key_pressed) { // crouch
-			if (cur_height == 0) return; // already fully down
+			if (cur_height <= 0) return; // already fully down
 			adj_val = -1.0;
 		}
+		else if (head_bob_amount > 0.0 && camera_surf_collide && cur_height > (1.0 - head_bob_amount)*camera_zh) { // mostly up, do head bob
+			static double bob_time(0.0);
+
+			if (!player_on_moving_ww && !player_on_escalator) { // player is walking if moving
+				static point prev_frame_pos(all_zeros);
+				point const pos(get_camera_pos());
+				if (!dist_xy_less_than(pos, prev_frame_pos, 0.001*CAMERA_RADIUS)) {bob_time += fticks;} // update if player has moved
+				prev_frame_pos = pos;
+			}
+			cur_height = camera_zh*(1.0 + head_bob_amount*sin(4.0*PI*bob_time/TICKS_PER_SECOND));
+			return;
+		}
 		else { // uncrouch
-			if (cur_height == camera_zh) return; // already fully up
+			if (cur_height >= camera_zh) return; // already fully up
 			adj_val = 1.0;
 		}
 		cur_height += adj_val*camera_zh*5.0*(fticks/TICKS_PER_SECOND); // 200ms for complete transition
@@ -1984,6 +1996,7 @@ int load_config(string const &config_file) {
 	kwmf.add("tiled_terrain_fog_density", tt_fog_density); // (0.0, 1.0]
 	kwmf.add("mouse_smooth_factor", mouse_smooth_factor); // >= 0.0
 	kwmf.add("tree_depth_scale", tree_depth_scale); // >= 0.0
+	kwmf.add("head_bob_amount", head_bob_amount); // [0.0, 1.0)
 
 	kwmf.add("hmap_plat_bot",    hmap_params.plat_bot);
 	kwmf.add("hmap_plat_height", hmap_params.plat_h);

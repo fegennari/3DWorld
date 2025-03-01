@@ -14,15 +14,11 @@ game_mode_disable_mask 2 # disable FPS gameplay mode; only building gameplay and
 play_gameplay_alert 0 # disable the alert sound
 vsync_enabled 1
 
-camera_radius 0.03 # default is 0.06
-camera_height 0.02 # added to camera_radius; default is 0.0
-player_speed 0.5 # default is 1.0
-#player_start -2.95222 2.68602 -4.79387 # location near a mall
-
 # smaller/slower, good for entering buildings
-camera_radius 0.012
-camera_height 0.016
-player_speed 0.2
+camera_radius 0.012 # default is 0.06
+camera_height 0.016 # added to camera_radius; default is 0.0
+player_speed 0.2 # default is 1.0
+head_bob_amount 0.04
 
 buildings tt_only 1
 #buildings infinite_buildings     1 # enables building tiles
