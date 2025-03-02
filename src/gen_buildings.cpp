@@ -2300,7 +2300,9 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	if (lights_pass) { // slight yellow-blue tinting using bcube x1/y1 as a hash
 		float const tint(0.2*fract(100.0f*(bcube.x1() + bcube.y1())));
 		color = colorRGBA((1.0 - tint), (1.0 - tint), (0.8 + tint), 1.0);
-	} else {color = mat.window_color;}
+	}
+	else {color = mat.window_color;}
+
 	int const clip_windows(draw_windows ? (is_house ? 2 : 1) : 0);
 	float const floor_spacing(get_window_vspace()), first_floor_z1(ground_floor_z1 + floor_spacing);
 	float const gf_door_ztop(doors.empty() ? 0.0f : (EXACT_MULT_FLOOR_HEIGHT ? first_floor_z1 : doors.front().pts[2].z));
@@ -2314,7 +2316,27 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	}
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels, excluding chimney/porch/etc.
 		if (is_basement(i)) continue; // skip the basement
-		bool const split_per_floor(i == parts.begin() && floor_ext_door_mask > 1); // for multi-family houses
+		unsigned const part_ix(i - parts.begin());
+
+		if (part_ix == 0 && is_factory()) { // factory has top 1-2 rows of windows and bottom windows for bathroom and office
+			float const window_z1(min((i->z2() - floor_spacing), (i->z1() + 2.0f*floor_spacing)));
+			cube_t part(*i);
+			set_cube_zvals(part, max(i->z1(), window_z1), i->z2()); // top row only
+			bdraw.add_section(*this, 1, part, tex, color, 3, 0, 0, 1, clip_windows, 0.0, 0, offset_scale, 0, nullptr); // XY, no_ao=1
+			if (window_z1 <= i->z1()) continue; // all windows drawn
+
+			for (cube_t const &r : interior->factory_info->sub_rooms) {
+				unsigned dim_mask(3); // disable faces not along exterior walls: 8=x1, 16=x2, 32=y1, 64=y2
+				if (i->x1() != r.x1()) {dim_mask |= 8 ;}
+				if (i->x2() != r.x2()) {dim_mask |= 16;}
+				if (i->y1() != r.y1()) {dim_mask |= 32;}
+				if (i->y2() != r.y2()) {dim_mask |= 64;}
+				bdraw.add_section(*this, 1, r, tex, color, dim_mask, 0, 0, 1, clip_windows, 0.0, 0, offset_scale, 0, nullptr); // XY, no_ao=1
+			} // for r
+			draw_parts_mask |= (1 << part_ix);
+			continue;
+		}
+		bool const split_per_floor(part_ix == 0 && floor_ext_door_mask > 1); // for multi-family houses
 		unsigned const num_splits(split_per_floor ? calc_num_floors(*i, floor_spacing, get_floor_thickness()) : 1);
 
 		for (unsigned f = 0; f < num_splits; ++f) {
@@ -2350,7 +2372,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 				}
 			}
 			// skip windows on sides with doors, but only for buildings with windows
-			unsigned const part_ix(i - parts.begin()), dsides((part_ix < 4 && draw_windows && i->z1() == ground_floor_z1) ? door_sides[part_ix] : 0);
+			unsigned const dsides((part_ix < 4 && draw_windows && i->z1() == ground_floor_z1) ? door_sides[part_ix] : 0);
 			bdraw.add_section(*this, 1, part, tex, color, 3, 0, 0, 1, clip_windows, door_ztop, dsides, offset_scale, 0, clamp_cube); // XY, no_ao=1
 			draw_parts_mask |= (1 << part_ix);
 
