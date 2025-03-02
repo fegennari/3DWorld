@@ -1270,6 +1270,39 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 		objs.emplace_back(plant, TYPE_PLANT, room_id, 0, 0, flags, light_amt, SHAPE_CYLIN, p.color);
 		set_obj_id(objs);
 	}
+	// add ducts/vents along the ceiling above the storefronts
+	interior->mall_info->mall_cylin_ducts  = (rgen.rand_float() < 0.4);
+	interior->mall_info->store_cylin_ducts = (rgen.rand_float() < 0.6);
+	unsigned has_ducts_per_floor(0); // should be good for up to 32 floors
+
+	for (unsigned f = 0; f < num_floors; ++f) {
+		if (rgen.rand_float() > ((f+1 == num_floors) ? 0.75 : 0.25)) continue; // 75% of the time on the top floor, 25% of the time on the bottom floor
+		float const ceil_zval(room.z1() + (f + 1)*floor_spacing);
+		add_ceiling_ducts(room, ceil_zval, room_id, mall_dim, 2, light_amt, interior->mall_info->mall_cylin_ducts, 1, 1, rgen); // skip_dir=2 (neither); skip ends and top
+		has_ducts_per_floor |= (1 << f);
+	}
+	vect_cube_t wall_pillars;
+
+	if (rgen.rand_bool()) { // maybe add pillars between stores
+		for (auto r = interior->rooms.begin()+interior->ext_basement_hallway_room_id+1; r < interior->rooms.end(); ++r) { // skip mall concourse
+			room_t const &rp(*(r-1)), &rn(*r);
+			if (!rp.is_store() || !rn.is_store())       continue; // skip non-stores (bathrooms)
+			if (rp.z1() != rn.z1())                     continue; // different levels
+			if (rp.d[!mall_dim][0] != rn.d[!mall_dim][0] || rp.d[!mall_dim][1] != rn.d[!mall_dim][1]) continue; // not same row
+			if (rp.d[mall_dim][1] != rn.d[mall_dim][0]) continue; // not adjacent stores
+			unsigned const floor_ix((rp.zc() - room.z1())/floor_spacing);
+			if (has_ducts_per_floor & (1 << floor_ix))  continue; // has ducts on this floor, skip
+			bool const dir(room_centerline < rp.get_center_dim(!mall_dim));
+			float const wall_pos(room.d[!mall_dim][dir]), pillar_width(4.0*wall_thickness);
+			cube_t pillar;
+			set_cube_zvals(pillar, rp.z1()+fc_thick, rp.z1()+floor_spacing-fc_thick); // floor to ceiling of level
+			set_wall_width(pillar, rp.d[mall_dim][1], 0.5*pillar_width, mall_dim);
+			pillar.d[!mall_dim][ dir] = wall_pos;
+			pillar.d[!mall_dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*pillar_width;
+			objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, !mall_dim, 0, 0, light_amt, SHAPE_CUBE, interior->mall_info->mall_wall_color); // should these have floor trim?
+			wall_pillars.push_back(pillar);
+		} // for r
+	}
 	// place objects along mall-store walls on each floor, but not in front of glass
 	cube_t place_area(room);
 	place_area.expand_by_xy(-wall_thickness);
@@ -1289,6 +1322,11 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 
 		for (unsigned d = 0; d < 2; ++d) { // side
 			float const dsign(d ? -1.0 : 1.0), wall_pos(place_area.d[!mall_dim][d]); // with a bit of padding
+			wall_blockers.clear();
+
+			for (cube_t const &wp : wall_pillars) { // start with just the pillars on this floor
+				if (wp.z1() < tcan.z2() && wp.z2() > tcan.z1()) {wall_blockers.push_back(wp);}
+			}
 			// add benches
 			bench.d[!mall_dim][ d] = wall_pos; // against the wall
 			bench.d[!mall_dim][!d] = wall_pos + dsign*bench_depth;
@@ -1346,7 +1384,6 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 					wall_blockers.push_back(test_cube);
 				} // for N
 			} // for n
-			wall_blockers.clear();
 		} // for d
 	} // for f
 	// add a reception desk and TV in front of end walls that have no store
@@ -1380,15 +1417,6 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 			}
 		} // for d
 	} // for f
-	// add ducts/vents along the ceiling above the storefronts
-	interior->mall_info->mall_cylin_ducts  = (rgen.rand_float() < 0.4);
-	interior->mall_info->store_cylin_ducts = (rgen.rand_float() < 0.6);
-
-	for (unsigned f = 0; f < num_floors; ++f) {
-		if (rgen.rand_float() > ((f+1 == num_floors) ? 0.75 : 0.25)) continue; // 75% of the time on the top floor, 25% of the time on the bottom floor
-		float const ceil_zval(room.z1() + (f + 1)*floor_spacing);
-		add_ceiling_ducts(room, ceil_zval, room_id, mall_dim, 2, light_amt, interior->mall_info->mall_cylin_ducts, 1, 1, rgen); // skip_dir=2 (neither); skip ends and top
-	}
 	// add pillars last so that we can check lights against them
 	unsigned const pillars_start(objs.size());
 	for (cube_t const &pillar : pillars) {objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, !mall_dim, 0, 0, light_amt, pillar_shape, WHITE);}
