@@ -643,7 +643,7 @@ struct player_height_mgr_t {
 				if (!dist_xy_less_than(pos, prev_frame_pos, 0.001*CAMERA_RADIUS)) {bob_time += fticks;} // update if player has moved
 				prev_frame_pos = pos;
 			}
-			cur_height = camera_zh*(1.0 + head_bob_amount*sin(4.0*PI*bob_time/TICKS_PER_SECOND));
+			cur_height = camera_zh*(1.0 + head_bob_amount*sin(5.0*PI*bob_time/TICKS_PER_SECOND));
 			return;
 		}
 		else { // uncrouch
