@@ -1088,10 +1088,11 @@ void add_camera_flashlight() {
 }
 
 light_source get_player_flashlight_light_source(float radius_scale) {
-	point camera(get_camera_pos());
-	if (world_mode == WMODE_INF_TERRAIN) {camera -= get_tiled_terrain_model_xlate();}
+	point pos(get_camera_pos());
+	if (world_mode == WMODE_INF_TERRAIN) {pos   -= get_tiled_terrain_model_xlate();}
+	if (world_mode == WMODE_INF_TERRAIN) {pos.z -= 0.5*CAMERA_RADIUS;} // below eye level
 	float const bw((world_mode == WMODE_INF_TERRAIN) ? 0.001 : FLASHLIGHT_BW); // hack to adjust flashlight for city/building larger falloff values
-	return light_source(FLASHLIGHT_RAD*radius_scale, camera, camera, get_flashlight_color(), 1, cview_dir, bw);
+	return light_source(FLASHLIGHT_RAD*radius_scale, pos, pos, get_flashlight_color(), 1, cview_dir, bw);
 }
 
 void add_player_flashlight_light_source(float radius_scale) { // for buildings
