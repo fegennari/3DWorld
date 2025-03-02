@@ -24,6 +24,34 @@ colorRGBA choose_machine_part_color(rand_gen_t &rgen, bool is_textured) { // sha
 	return colorRGBA(lum, lum, lum);
 }
 
+void draw_metal_handle_wheel(cube_t const &c, unsigned dim, colorRGBA const &color, colorRGBA const &shaft_color, rgeom_mat_t &mat, rgeom_mat_t &shaft_mat) {
+	float const radius(0.5*c.get_sz_dim((dim+1)%3));
+	// draw the outer handle
+	float const r_inner(0.12*radius), r_outer(radius - r_inner), r_bar(0.075*radius), r_shaft(0.1*radius);
+	point const center(c.get_cube_center());
+	mat.add_ortho_torus_to_verts(center, r_inner, r_outer, dim, color);
+	// draw inner sphere for handle
+	mat.add_sphere_to_verts(center, 0.2*radius, color, 1); // low_detail=1
+	// draw horizontal and vertical bars
+	unsigned const dims[2] = {(dim+1)%3, (dim+2)%3};
+	unsigned const verts_start(mat.itri_verts.size());
+	cube_t bar;
+	set_wall_width(bar, center[dim], r_bar, dim);
+
+	for (unsigned d = 0; d < 2; ++d) {
+		set_wall_width(bar, center[dims[ d]], r_bar,   dims[ d]);
+		set_wall_width(bar, center[dims[!d]], r_outer, dims[!d]);
+		mat.add_ortho_cylin_to_verts(bar, color, dims[!d], 0, 0); // draw sides only
+	}
+	// rotate a random-ish amount
+	float const rot_angle((c.x1() + c.y1() + c.z1())/radius);
+	rotate_verts(mat.itri_verts, vector_from_dim_dir(dim, 1), rot_angle, center, verts_start);
+	// draw the shaft
+	cube_t shaft(c);
+	for (unsigned d = 0; d < 2; ++d) {set_wall_width(shaft, center[dims[d]], r_shaft, dims[d]);}
+	shaft_mat.add_ortho_cylin_to_verts(shaft, shaft_color, dim, 1, 1); // draw sides and ends
+}
+
 void select_pipe_location(point &p1, point &p2, cube_t const &region, float radius, unsigned dim, rand_gen_t &rgen) {
 	float const edge_space(1.5*radius);
 	p1[dim] = region.d[dim][0];
@@ -108,34 +136,6 @@ void add_pipe_with_bend(rgeom_mat_t &mat, colorRGBA const &color, point const &b
 	mat.add_sphere_to_verts(bend, vector3d(radius, radius, radius), color, (ndiv == 16), -plus_z); // round part, low detail if ndiv==16, top hemisphere (always bends down)
 	mat.add_cylin_to_verts (bot_pt, bend, radius, radius, color, draw_ends, 0, 0, 0, 1.0, 1.0, 0, ndiv); // vertical
 	mat.add_cylin_to_verts (top_pt, bend, radius, radius, color, draw_ends, 0, 0, 0, 1.0, 1.0, 0, ndiv); // horizontal
-}
-
-void draw_metal_handle_wheel(cube_t const &c, unsigned dim, colorRGBA const &color, colorRGBA const &shaft_color, rgeom_mat_t &mat, rgeom_mat_t &shaft_mat) {
-	float const radius(0.5*c.get_sz_dim((dim+1)%3));
-	// draw the outer handle
-	float const r_inner(0.12*radius), r_outer(radius - r_inner), r_bar(0.075*radius), r_shaft(0.1*radius);
-	point const center(c.get_cube_center());
-	mat.add_ortho_torus_to_verts(center, r_inner, r_outer, dim, color);
-	// draw inner sphere for handle
-	mat.add_sphere_to_verts(center, 0.2*radius, color, 1); // low_detail=1
-	// draw horizontal and vertical bars
-	unsigned const dims[2] = {(dim+1)%3, (dim+2)%3};
-	unsigned const verts_start(mat.itri_verts.size());
-	cube_t bar;
-	set_wall_width(bar, center[dim], r_bar, dim);
-
-	for (unsigned d = 0; d < 2; ++d) {
-		set_wall_width(bar, center[dims[ d]], r_bar,   dims[ d]);
-		set_wall_width(bar, center[dims[!d]], r_outer, dims[!d]);
-		mat.add_ortho_cylin_to_verts(bar, color, dims[!d], 0, 0); // draw sides only
-	}
-	// rotate a random-ish amount
-	float const rot_angle((c.x1() + c.y1() + c.z1())/radius);
-	rotate_verts(mat.itri_verts, vector_from_dim_dir(dim, 1), rot_angle, center, verts_start);
-	// draw the shaft
-	cube_t shaft(c);
-	for (unsigned d = 0; d < 2; ++d) {set_wall_width(shaft, center[dims[d]], r_shaft, dims[d]);}
-	shaft_mat.add_ortho_cylin_to_verts(shaft, shaft_color, dim, 1, 1); // draw sides and ends
 }
 
 void building_room_geom_t::add_spring(point pos, float radius, float r_wire, float length, float coil_gap, unsigned dim,
@@ -767,9 +767,9 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 			// add a bend and another segment to the ceiling, floor, or wall
 			bool const pri_ext_dir(rgen.rand_bool());
 			float const tank_gap(tank_radius + merged_pipe_radius), wall_gap(merged_pipe_radius + 0.26*floor_spacing); // leave wall gap for duct width
-			cube_t h_pipe(tank_conn_pipe);
+			cube_t h_pipe(tank_conn_pipe), v_pipe;
 			unsigned h_pipe_flags(RO_FLAG_NOCOLL | RO_FLAG_LIT);
-			bool connected(0);
+			bool connected(0), conn_dir(0), conn_up(0);
 
 			for (unsigned n = 0; n < 50 && !connected; ++n) { // 50 attempts to extend the horizontal pipe and connect it vertically
 				for (unsigned D = 0; D < 2 && !connected; ++D) { // try to extend both sides
@@ -784,21 +784,20 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 					if (ext_pipe.intersects(avoid) || overlaps_obj_or_placement_blocked(ext_pipe, room, objs_start)) continue;
 					ext_pipe.d[!tank_dim][ d] = cand_pos; // clip off overlapping end so that we can add a bend
 					// horizontal pipe is okay, check vertical pipe up and down
-					cube_t v_pipe(ext_pipe);
+					v_pipe = ext_pipe;
 					set_wall_width(v_pipe, cand_pos, merged_pipe_radius, !tank_dim);
 					bool init_up(rgen.rand_bool());
 
 					for (unsigned e = 0; e < 2 && !connected; ++e) {
-						bool const is_up(init_up ^ bool(e));
-						if (is_up) {set_cube_zvals(v_pipe, ext_pipe.zc(), ceil_zval);} // up
-						else       {set_cube_zvals(v_pipe, zval, ext_pipe.zc());} // down
-						if (v_pipe.intersects(avoid) || overlaps_obj_or_placement_blocked(v_pipe, room, (is_up ? objs_start_inc_beams : objs_start), is_up)) continue;
+						conn_up = (init_up ^ bool(e));
+						if (conn_up) {set_cube_zvals(v_pipe, ext_pipe.zc(), ceil_zval);} // up
+						else         {set_cube_zvals(v_pipe, zval, ext_pipe.zc());} // down
+						if (v_pipe.intersects(avoid) || overlaps_obj_or_placement_blocked(v_pipe, room, (conn_up ? objs_start_inc_beams : objs_start), conn_up)) continue;
 						h_pipe.union_with_cube(ext_pipe); // extend pipe
-						unsigned const flags(RO_FLAG_LIT | (is_up ? RO_FLAG_NOCOLL : 0)); // cast shadows; only collide if going down
+						unsigned const flags(RO_FLAG_LIT | (conn_up ? RO_FLAG_NOCOLL : 0)); // cast shadows; only collide if going down
 						objs.emplace_back(v_pipe, TYPE_PIPE,    room_id, 0, 1, flags, tot_light_amt, SHAPE_CYLIN, pipe_color);
 						objs.emplace_back(v_pipe, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_NOCOLL, 1.0); // add a blocker over the pipe so that we don't intersect it with sprinklers
-						h_pipe_flags |= (d ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT); // make the bend round
-						connected     = 1;
+						connected = 1; conn_dir = d;
 					} // for e
 				} // for D
 			} // for n
@@ -806,21 +805,44 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 			// add pipe fittings
 			unsigned const fittings_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
 			float const fitting_exp(0.2*merged_pipe_radius), fitting_hlen(1.2*merged_pipe_radius);
+			cube_t h_fitting(h_pipe);
+			h_fitting.expand_in_dim(tank_dim, fitting_exp);
+			h_fitting.expand_in_z(fitting_exp);
 
+			if (connected) {
+				// add v_pipe fitting into ceiling or floor
+				unsigned vfflags(fittings_flags);
+				cube_t fitting(v_pipe);
+				fitting.expand_by_xy(fitting_exp);
+				if (conn_up) {fitting.z1() = v_pipe.z2() - fitting_hlen; vfflags |= RO_FLAG_ADJ_LO;} // up
+				else         {fitting.z2() = v_pipe.z1() + fitting_hlen; vfflags |= RO_FLAG_ADJ_HI;} // down
+				objs.emplace_back(fitting, TYPE_PIPE, room_id, 0, 1, vfflags, tot_light_amt, SHAPE_CYLIN, fitting_color); // vertical
+				// add a bend
+				float const end_pos(h_pipe.d[!tank_dim][conn_dir]);
+				unsigned const hfflags(fittings_flags | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI | (conn_dir ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT)); // rounded
+				fitting = h_fitting;
+				fitting.d[!tank_dim][ conn_dir] = end_pos; // flush with pipe end
+				fitting.d[!tank_dim][!conn_dir] = end_pos + (conn_dir ? -1.0 : 1.0)*2.0*fitting_hlen; // extend into pipe
+				objs.emplace_back(fitting, TYPE_PIPE, room_id, !tank_dim, 0, hfflags, tot_light_amt, SHAPE_CYLIN, fitting_color); // horizontal
+				set_wall_width(fitting, end_pos, (merged_pipe_radius + fitting_exp), !tank_dim);
+				set_cube_zvals(fitting, h_pipe.zc(), h_pipe.zc());
+				if (conn_up) {fitting.z2() += merged_pipe_radius + fitting_hlen;} // up
+				else         {fitting.z1() -= merged_pipe_radius + fitting_hlen;} // down
+				vfflags ^= (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // swap end bits
+				objs.emplace_back(fitting, TYPE_PIPE, room_id, 0, 1, vfflags, tot_light_amt, SHAPE_CYLIN, fitting_color); // vertical
+			}
 			for (point const &pos : tank_conn_pts) {
 				// horizontal fitting to connector pipe
-				cube_t fitting(h_pipe);
-				fitting.expand_in_dim(tank_dim, fitting_exp);
-				fitting.expand_in_z(fitting_exp);
+				cube_t fitting(h_fitting);
 				set_wall_width(fitting, pos[!tank_dim], fitting_hlen, !tank_dim); // Note: extends off the ends of the pipe
 				objs.emplace_back(fitting, TYPE_PIPE, room_id, !tank_dim, 0, (fittings_flags | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, fitting_color);
 				// vertical fittings for top and bottom of pipe
 				fitting.set_from_point(pos);
 				fitting.expand_by_xy(1.2*pipe_radius);
 				fitting.z1() -= merged_pipe_radius + 1.5*pipe_radius;
-				objs.emplace_back(fitting, TYPE_PIPE, room_id, 0, 1, (fittings_flags | RO_FLAG_ADJ_LO), tot_light_amt, SHAPE_CYLIN, fitting_color);
+				objs.emplace_back(fitting, TYPE_PIPE, room_id, 0, 1, (fittings_flags | RO_FLAG_ADJ_LO), tot_light_amt, SHAPE_CYLIN, fitting_color); // top
 				set_cube_zvals(fitting, (tank_z2 - pipe_radius), (tank_z2 + 1.5*pipe_radius));
-				objs.emplace_back(fitting, TYPE_PIPE, room_id, 0, 1, (fittings_flags | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, fitting_color);
+				objs.emplace_back(fitting, TYPE_PIPE, room_id, 0, 1, (fittings_flags | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, fitting_color); // bottom
 			} // for pos
 		}
 	}
