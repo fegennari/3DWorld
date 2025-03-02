@@ -2157,6 +2157,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool const reduced_shadows(in_retail_room || in_factory || room.is_mall_or_store());
 		float const light_radius_shadow((reduced_shadows ? RETAIL_SMAP_DSCALE : 1.0)*light_radius);
 		bool force_smap_update(0);
+		// must update factory shadows when the player enters the building to include detail object shadows such as pipes
+		if (in_factory && camera_in_building) {shadow_caster_hash ^= 12345;}
 
 		// check for dynamic shadows; check the player first; use full light_radius_shadow
 		if (camera_surf_collide && (camera_in_building || in_camera_walkway || (player_in_walkway && maybe_walkway) || camera_can_see_ext_basement) &&

@@ -819,7 +819,8 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 				objs.emplace_back(fitting, TYPE_PIPE, room_id, 0, 1, vfflags, tot_light_amt, SHAPE_CYLIN, fitting_color); // vertical
 				// add a bend
 				float const end_pos(h_pipe.d[!tank_dim][conn_dir]);
-				unsigned const hfflags(fittings_flags | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI | (conn_dir ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT)); // rounded
+				// make this section rounded and shadow casting, since it forms the elbow of the pipe
+				unsigned const hfflags(fittings_flags | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI | RO_FLAG_LIT | (conn_dir ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT));
 				fitting = h_fitting;
 				fitting.d[!tank_dim][ conn_dir] = end_pos; // flush with pipe end
 				fitting.d[!tank_dim][!conn_dir] = end_pos + (conn_dir ? -1.0 : 1.0)*2.0*fitting_hlen; // extend into pipe
