@@ -933,7 +933,7 @@ void building_room_geom_t::add_tape(room_object_t const &c) { // is_small=1
 	add_vert_roll_to_material(c, mat); // shadowed, small
 }
 
-void building_room_geom_t::add_spraycan_to_material(room_object_t const &c, rgeom_mat_t &mat, bool draw_bottom) {
+void building_room_geom_t::add_spraycan_to_material(room_object_t const &c, rgeom_mat_t &mat, bool draw_bottom) { // should this have specular?
 	unsigned const dim(get_max_dim(c.get_size())), ndiv(get_def_cylin_ndiv(c));
 	draw_bottom |= (dim != 2); // if on its side or held by the player
 	cube_t can(c), cap(c);
@@ -5474,10 +5474,8 @@ void building_room_geom_t::add_diving_board(room_object_t const &c) {
 	mat.add_cube_to_verts_untextured(cubes[1], apply_light_color(c, WHITE), EF_Z12); // base; draw sides of base, always white
 }
 
-void building_room_geom_t::add_flashlight(room_object_t const &c) {
-	unsigned const ndiv(get_def_cylin_ndiv(c));
+void building_room_geom_t::add_flashlight_to_material(room_object_t const &c, rgeom_mat_t &mat, unsigned ndiv) {
 	colorRGBA const color(apply_light_color(c));
-	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small
 	cube_t bot(c), top(c);
 	unsigned const dim(get_max_dim(c.get_size())), d1((dim+1)%3), d2((dim+2)%3);
 	bot.d[dim][!c.dir] = top.d[dim][c.dir] = (c.d[dim][c.dir] + 0.25*c.get_sz_dim(dim)*(c.dir ? -1.0 : 1.0));
@@ -5485,6 +5483,10 @@ void building_room_geom_t::add_flashlight(room_object_t const &c) {
 	top.expand_in_dim(d2, -0.15*c.get_sz_dim(d2));
 	mat.add_ortho_cylin_to_verts(bot, color, dim, (dim != 2), 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // draw sides, top, and bottom if horizontal
 	mat.add_ortho_cylin_to_verts(top, color, dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // draw sides and top
+}
+void building_room_geom_t::add_flashlight(room_object_t const &c) {
+	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small
+	add_flashlight_to_material(c, mat, get_def_cylin_ndiv(c));
 }
 
 void building_room_geom_t::add_candle(room_object_t const &c) {

@@ -888,12 +888,12 @@ building_materials_t &building_room_geom_t::get_building_mat(tid_nm_pair_t const
 }
 rgeom_mat_t &building_room_geom_t::get_metal_material(bool inc_shadows, bool dynamic, unsigned small, bool exterior, colorRGBA const &spec_color) {
 	tid_nm_pair_t tex(-1, 1.0, inc_shadows);
-	tex.set_specular_color(spec_color, 0.8, 60.0);
+	tex.set_metal_specular(spec_color);
 	return get_material(tex, inc_shadows, dynamic, small, 0, exterior);
 }
 rgeom_mat_t &building_room_geom_t::get_scratched_metal_material(float tscale, bool inc_shadows, bool dynamic, unsigned small, bool exterior) {
 	tid_nm_pair_t tex(get_texture_by_name("metals/60_scratch_metal.jpg"), tscale, inc_shadows);
-	tex.set_specular_color(WHITE, 0.8, 60.0);
+	tex.set_metal_specular(WHITE);
 	return get_material(tex, inc_shadows, dynamic, small, 0, exterior);
 }
 
@@ -1398,6 +1398,7 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst, vect_room
 		assert(0); // unsupported object type
 	}
 }
+float get_camera_z_rotate() {return -atan2(cview_dir.y, cview_dir.x);}
 
 void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, shader_t &s, vector3d const &xlate) { // held by the player
 	static rgeom_mat_t mat; // allocated memory is reused across frames; VBO is recreated every time; untextured
@@ -1422,7 +1423,7 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 	}
 	else if (c.type == TYPE_BOOK) {
 		static building_room_geom_t tmp_rgeom;
-		float const z_rot_angle(-(atan2(cview_dir.y, cview_dir.x) + PI_TWO));
+		float const z_rot_angle(get_camera_z_rotate() - PI_TWO);
 		tmp_rgeom.add_book(c, 1, 1, 1, 0.0, 0, 0, z_rot_angle); // draw lg/sm/text
 		enable_blend(); // needed for book text
 		tmp_rgeom.mats_small.upload_draw_and_clear(s);
@@ -1431,7 +1432,7 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 		return;
 	}
 	else if (c.type == TYPE_PHONE) {
-		float const z_rot_angle(-atan2(cview_dir.y, cview_dir.x));
+		float const z_rot_angle(get_camera_z_rotate());
 
 		if (c.flags & (RO_FLAG_EMISSIVE | RO_FLAG_OPEN)) { // phone is ringing or locked screen
 			static rgeom_mat_t screen_mat;
@@ -1499,7 +1500,13 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 		mat.add_cube_to_verts_untextured(c, c.color); // simple untextured cube; all sides drawn
 	}
 	else if (c.type == TYPE_FLASHLIGHT) {
-		assert(0); // not yet implemented because the flashlight is triggered by the mouse but not actually drawn
+		room_object_t c_rot(c);
+		c_rot.dir = 1; // points outward
+		c_rot.swap_dims(0, 2); // swap X and Z to make it horizontal
+		c_rot.translate(c.get_cube_center() - c_rot.get_cube_center()); // translate it back to the correct location
+		mat.tex.set_metal_specular(); // shiny
+		add_flashlight_to_material(c_rot, mat, N_CYL_SIDES);
+		rotate_verts(mat.itri_verts, plus_z, get_camera_z_rotate(), c.get_cube_center(), 0); // rotate all itri verts about Z axis
 	}
 	else {assert(0);}
 	if (needs_blend) {enable_blend();}
@@ -1507,6 +1514,7 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 	mat.upload_draw_and_clear(state);
 	if (reset_mat_nm_tid) {mat.tex.nm_tid = -1;}
 	if (needs_blend) {disable_blend();}
+	mat.tex.set_specular(0.0, 0.0); // clear specular
 }
 
 void draw_candle_flames() {

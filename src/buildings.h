@@ -274,6 +274,7 @@ struct tid_nm_pair_t { // size=32
 	void set_shininess(float shine) {shininess = (unsigned char)max(1, min(255, round_fp(shine)));}
 	void set_specular(float mag, float shine) {set_specular_color(WHITE, mag, shine);}
 	void set_specular_color(colorRGB const &color, float mag, float shine);
+	void set_metal_specular(colorRGB const &color=WHITE) {set_specular_color(color, 0.8, 60.0);}
 	bool enabled() const {return (tid >= 0 || nm_tid >= 0);}
 
 	bool is_compat_ignore_shadowed(tid_nm_pair_t const &t) const {
@@ -1273,6 +1274,7 @@ struct building_room_geom_t {
 	void add_pool_float(room_object_t const &c);
 	void add_bench(room_object_t const &c);
 	void add_diving_board(room_object_t const &c);
+	void add_flashlight_to_material(room_object_t const &c, rgeom_mat_t &mat, unsigned ndiv);
 	void add_flashlight(room_object_t const &c);
 	void add_candle(room_object_t const &c);
 	void add_camera(room_object_t const &c);

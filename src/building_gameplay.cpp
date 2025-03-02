@@ -2246,12 +2246,10 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 			point const fire_ray_end(player_pos + (4.0f*r_sum)*dir); // longer range
 			interior->room_geom->fire_manager.put_out_fires(ray_start, fire_ray_end, 0.5*r_sum); // check for fires in range and put them out
 		}
-		else if (obj.type == TYPE_CANDLE) { // nothing else to do at the moment
-			delay_use = 1;
-		}
-		//else if (obj.type == TYPE_FLASHLIGHT) {} // only use flashlight when selected in inventory?
+		else if (obj.type == TYPE_CANDLE    ) {delay_use = 1;} // nothing else to do at the moment
+		else if (obj.type == TYPE_FLASHLIGHT) {} // handled by flashlight key; only use flashlight when selected in inventory?
 		else {assert(0);}
-	}
+	} // end can_use()
 	else {assert(0);}
 	last_use_time = tfticks;
 	return 1;
@@ -2673,7 +2671,7 @@ bool room_object_t::can_use() const { // excludes dynamic objects
 	if (is_medicine()) return 1; // medicine can be carried in the inventory and used later
 	if (type == TYPE_TPROLL) {return (taken_level == 0);} // can only use the TP roll, not the holder
 	return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BOOK || type == TYPE_PHONE || type == TYPE_TAPE || type == TYPE_RAT ||
-		type == TYPE_FIRE_EXT || type == TYPE_CANDLE || type == TYPE_ERASER /*|| type == TYPE_FLASHLIGHT*/);
+		type == TYPE_FIRE_EXT || type == TYPE_CANDLE || type == TYPE_ERASER || type == TYPE_FLASHLIGHT);
 }
 bool room_object_t::can_place_onto() const { // Note: excludes flat objects such as TYPE_RUG and TYPE_BLANKET
 	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_COUNTER || type == TYPE_KSINK ||
