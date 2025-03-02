@@ -5476,13 +5476,23 @@ void building_room_geom_t::add_diving_board(room_object_t const &c) {
 
 void building_room_geom_t::add_flashlight_to_material(room_object_t const &c, rgeom_mat_t &mat, unsigned ndiv) {
 	colorRGBA const color(apply_light_color(c));
-	cube_t bot(c), top(c);
+	cube_t bot(c), mid(c), top(c); // {light, slope, handle}
 	unsigned const dim(get_max_dim(c.get_size())), d1((dim+1)%3), d2((dim+2)%3);
-	bot.d[dim][!c.dir] = top.d[dim][c.dir] = (c.d[dim][c.dir] + 0.25*c.get_sz_dim(dim)*(c.dir ? -1.0 : 1.0));
-	top.expand_in_dim(d1, -0.15*c.get_sz_dim(d1));
-	top.expand_in_dim(d2, -0.15*c.get_sz_dim(d2));
-	mat.add_ortho_cylin_to_verts(bot, color, dim, (dim != 2), 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // draw sides, top, and bottom if horizontal
+	float const length(c.get_sz_dim(dim)), diameter(c.get_sz_dim(d1)), dsign(c.dir ? 1.0 : -1.0);
+	float const rsb(c.dir ? 0.7 : 1.0), rst(c.dir ? 1.0 : 0.7); // for mid/cone
+	bot.d[dim][!c.dir] = mid.d[dim][c.dir] = (c.d[dim][c.dir] - 0.2*length*dsign);
+	mid.d[dim][!c.dir] = top.d[dim][c.dir] = (c.d[dim][c.dir] - 0.4*length*dsign);
+	top.expand_in_dim(d1, -0.15*diameter);
+	top.expand_in_dim(d2, -0.15*diameter);
+	mat.add_ortho_cylin_to_verts(bot, color, dim, (dim != 2), 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // draw sides and bottom if horizontal
 	mat.add_ortho_cylin_to_verts(top, color, dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // draw sides and top
+	mat.add_ortho_cylin_to_verts(mid, color, dim, 0,     0,      0, 0, rsb, rst, 1.0, 1.0, 0, ndiv); // draw sides only; cone
+
+	if (dim != 2) { // horizontal, draw the lens
+		point lens_center(c.get_cube_center());
+		lens_center[dim] += 0.51*length*dsign;
+		mat.add_disk_to_verts(lens_center, 0.4*diameter, vector_from_dim_dir(dim, c.dir), apply_light_color(c, GRAY));
+	}
 }
 void building_room_geom_t::add_flashlight(room_object_t const &c) {
 	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small

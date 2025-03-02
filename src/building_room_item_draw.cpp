@@ -1500,9 +1500,10 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 		mat.add_cube_to_verts_untextured(c, c.color); // simple untextured cube; all sides drawn
 	}
 	else if (c.type == TYPE_FLASHLIGHT) {
+		unsigned const dim(get_max_dim(c.get_size()));
 		room_object_t c_rot(c);
 		c_rot.dir = 1; // points outward
-		c_rot.swap_dims(0, 2); // swap X and Z to make it horizontal
+		c_rot.swap_dims(0, dim); // swap so that dim==X
 		c_rot.translate(c.get_cube_center() - c_rot.get_cube_center()); // translate it back to the correct location
 		mat.tex.set_metal_specular(); // shiny
 		add_flashlight_to_material(c_rot, mat, N_CYL_SIDES);

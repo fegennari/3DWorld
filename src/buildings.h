@@ -640,7 +640,7 @@ unsigned const REF_PASS_NO_MIRROR   = 0x20;
 unsigned const REF_PASS_INT_ONLY    = 0x40;
 unsigned const REF_PASS_GLASS_FLOOR = 0x80;
 
-inline vector3d vector_from_dim_dir(bool dim, bool dir) {
+inline vector3d vector_from_dim_dir(int dim, bool dir) {
 	vector3d v;
 	v[dim] = (dir ? 1.0 : -1.0);
 	return v;
