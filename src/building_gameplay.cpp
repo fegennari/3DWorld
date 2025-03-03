@@ -521,7 +521,7 @@ public:
 		}
 		gen_sound_thread_safe_at_player(SOUND_CLICK, 0.5);
 	}
-};
+}; // phone_manager_t
 
 phone_manager_t phone_manager;
 
@@ -667,7 +667,8 @@ public:
 	bool  player_has_pool_cue  () const {return has_pool_cue;}
 	bool  player_at_full_health() const {return (player_health == 1.0 && !is_poisoned);}
 	bool  player_is_thirsty    () const {return (thirst < 0.5);}
-	bool  player_holding_lit_candle() const {return (!carried.empty() && carried.back().type == TYPE_CANDLE && carried.back().is_lit());}
+	bool  player_holding_lit_candle    () const {return (!carried.empty() && carried.back().type == TYPE_CANDLE     && carried.back().is_lit());}
+	bool  player_holding_lit_flashlight() const {return (!carried.empty() && carried.back().type == TYPE_FLASHLIGHT && carried.back().is_lit());}
 	bool  was_room_stolen_from(unsigned room_id) const {return (rooms_stolen_from.find(room_id) != rooms_stolen_from.end());}
 	void  refill_thirst() {thirst = 1.0;}
 
@@ -885,7 +886,14 @@ public:
 		
 		if (!obj.has_dstate()) { // not a droppable/throwable item(ball)
 			if (!obj.can_use()) return 0; // should never get here?
-			if (obj.type == TYPE_CANDLE && player_in_water != 2 && carried.back().get_remaining_capacity_ratio() > 0.0) {carried.back().flags ^= RO_FLAG_LIT;} // toggle candle light
+
+			if (obj.type == TYPE_CANDLE && player_in_water != 2 && carried.back().get_remaining_capacity_ratio() > 0.0) {
+				carried.back().flags ^= RO_FLAG_LIT; // toggle candle light
+			}
+			else if (obj.type == TYPE_FLASHLIGHT) {
+				carried.back().flags ^= RO_FLAG_LIT; // toggle flashlight light
+				gen_sound_thread_safe_at_player(SOUND_CLICK, 0.75);
+			}
 			return 1;
 		}
 		remove_last_item(); // drop the item - remove it from our inventory
@@ -1059,7 +1067,7 @@ public:
 		if (!carried.empty()) {
 			carried_item_t &obj(carried.back());
 
-			if (obj.type == TYPE_CANDLE && obj.is_lit()) {
+			if (obj.type == TYPE_CANDLE && obj.is_lit()) { // apply lit candle use and water effect
 				if ((frame_counter % 10) == 0) {obj.use_count += 10.0*elapsed_time;} // special logic for integer incrementing
 				min_eq(obj.use_count, get_room_obj_type(obj).capacity); // use_count can't be > capacity
 				if (obj.get_remaining_capacity_ratio() <= 0.0) {obj.flags &= ~RO_FLAG_LIT;} // goes out when used up
@@ -1164,7 +1172,8 @@ bool player_can_open_door(door_t const &door) {return player_inventory.can_open_
 void register_in_closed_bathroom_stall() {player_inventory.register_in_closed_bathroom_stall();}
 bool player_at_full_health() {return player_inventory.player_at_full_health();}
 bool player_is_thirsty    () {return player_inventory.player_is_thirsty    ();}
-bool player_holding_lit_candle() {return player_inventory.player_holding_lit_candle();}
+bool player_holding_lit_candle    () {return player_inventory.player_holding_lit_candle    ();}
+bool player_holding_lit_flashlight() {return player_inventory.player_holding_lit_flashlight();}
 bool was_room_stolen_from(unsigned room_id) {return player_inventory.was_room_stolen_from(room_id);}
 void refill_thirst() {player_inventory.refill_thirst();}
 void apply_building_fall_damage(float delta_z) {player_inventory.apply_fall_damage(delta_z, 0.5);} // dscale=0.5
@@ -2247,7 +2256,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 			interior->room_geom->fire_manager.put_out_fires(ray_start, fire_ray_end, 0.5*r_sum); // check for fires in range and put them out
 		}
 		else if (obj.type == TYPE_CANDLE    ) {delay_use = 1;} // nothing else to do at the moment
-		else if (obj.type == TYPE_FLASHLIGHT) {} // handled by flashlight key; only use flashlight when selected in inventory?
+		else if (obj.type == TYPE_FLASHLIGHT) {delay_use = 1;} // handled by flashlight key as well; only use flashlight when selected in inventory?
 		else {assert(0);}
 	} // end can_use()
 	else {assert(0);}

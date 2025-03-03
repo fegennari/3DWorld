@@ -57,6 +57,7 @@ cube_t get_building_indir_light_bounds(); // from building_lighting.cpp
 float get_power_pole_height();
 void register_player_not_in_building();
 bool player_holding_lit_candle();
+bool player_holding_lit_flashlight();
 void parse_universe_name_str_tables();
 void try_join_city_building_ext_basements(vect_building_t &buildings);
 void add_sign_text_verts_both_sides(string const &text, cube_t const &sign, bool dim, bool dir, vect_vnctcc_t &verts);
@@ -364,7 +365,8 @@ public:
 };
 indir_tex_mgr_t indir_tex_mgr;
 
-bool player_in_dark_room() {return (player_in_unlit_room || (player_in_closet && !(player_in_closet & (RO_FLAG_OPEN | RO_FLAG_LIT))));}
+bool player_in_dark_room     () {return (player_in_unlit_room || (player_in_closet && !(player_in_closet & (RO_FLAG_OPEN | RO_FLAG_LIT))));}
+bool enable_player_flashlight() {return (flashlight_on || (camera_in_building && player_holding_lit_flashlight()));}
 
 struct building_lights_manager_t : public city_lights_manager_t {
 	void setup_building_lights(vector3d const &xlate, bool sec_camera_mode=0) {
@@ -375,7 +377,8 @@ struct building_lights_manager_t : public city_lights_manager_t {
 		if (player_building != nullptr) {lights_bcube.union_with_cube_xy(player_building->get_bcube_inc_extensions());}
 		// no room lights if player is hiding in a closed closet/windowless room with light off (prevents light leakage)
 		if (sec_camera_mode || !player_in_dark_room()) {add_building_interior_lights(xlate, lights_bcube, sec_camera_mode);}
-		if (flashlight_on && !sec_camera_mode) {add_player_flashlight(0.12);} // add player flashlight, even when outside of building so that flashlight can shine through windows
+		// add player flashlight, even when outside of building so that flashlight can shine through windows
+		if (enable_player_flashlight() && !sec_camera_mode) {add_player_flashlight(0.12);}
 		if (camera_in_building && !sec_camera_mode && player_holding_lit_candle()) {add_player_candle_light(xlate);}
 		clamp_to_max_lights(xlate, dl_sources);
 		tighten_light_bcube_bounds(dl_sources); // clip bcube to tight bounds around lights for better dlights texture utilization (possible optimization)
@@ -396,7 +399,7 @@ struct building_lights_manager_t : public city_lights_manager_t {
 		min_eq(lights_bcube.z1(), (pos.z - radius));
 		max_eq(lights_bcube.z2(), (pos.z + radius));
 	}
-	virtual bool enable_lights() const {return (draw_building_interiors || flashlight_on);}
+	virtual bool enable_lights() const {return (draw_building_interiors || enable_player_flashlight());}
 };
 
 building_lights_manager_t building_lights_manager;

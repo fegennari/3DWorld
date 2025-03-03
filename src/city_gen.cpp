@@ -37,6 +37,7 @@ vector3d get_tt_xlate_val();
 float get_max_house_size();
 bool proc_buildings_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm=nullptr, bool check_interior=0, bool exclude_city=0);
 void draw_player_building_transparent(int reflection_pass, vector3d const &xlate);
+bool enable_player_flashlight();
 
 
 template<typename S, typename T> void get_all_bcubes(vector<T> const &v, S &bcubes) {
@@ -51,7 +52,7 @@ void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool
 		s.setup_scene_bounds_from_bcube(lights_bcube); // reset with correct values
 		s.add_uniform_float("LT_DIR_FALLOFF", CITY_LIGHT_FALLOFF); // smooth falloff for car headlights and streetlights
 
-		if (flashlight_on) { // use a quicker falloff for flashlight beams
+		if (enable_player_flashlight()) { // use a quicker falloff for flashlight beams
 			s.add_uniform_float("LT_DIR_FALLOFF_SM", 0.02);
 			s.add_uniform_float("LDIR_FALL_THRESH",  1.5*FLASHLIGHT_BW);
 		}
@@ -3117,7 +3118,7 @@ unsigned ped_manager_t::get_next_plot(pedestrian_t &ped, int exclude_plot) const
 
 
 void city_lights_manager_t::add_player_flashlight(float radius_scale) {
-	if (!flashlight_on) return;
+	if (!enable_player_flashlight()) return;
 	add_player_flashlight_light_source(radius_scale);
 	assert(!dl_sources.empty()); // must have been added
 	float const zval(dl_sources.back().get_pos().z), light_radius(dl_sources.back().get_radius());

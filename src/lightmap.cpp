@@ -1097,7 +1097,7 @@ light_source get_player_flashlight_light_source(float radius_scale) {
 
 void add_player_flashlight_light_source(float radius_scale) { // for buildings
 	dl_sources.push_back(get_player_flashlight_light_source(radius_scale));
-	dl_sources.back().disable_shadows(); // shadows not needed
+	dl_sources.back().disable_shadows(); // shadows not needed; also, this doesn't work correctly
 }
 
 void init_lights() {
