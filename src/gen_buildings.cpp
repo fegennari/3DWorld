@@ -2340,10 +2340,12 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		unsigned const num_splits(split_per_floor ? calc_num_floors(*i, floor_spacing, get_floor_thickness()) : 1);
 
 		for (unsigned f = 0; f < num_splits; ++f) {
-			float const floor_offset(f*floor_spacing), slice_z1(i->z1() + floor_offset), door_ztop(gf_door_ztop + floor_offset);
+			float const floor_offset(f*floor_spacing), slice_z1(i->z1() + floor_offset);
+			float const slice_z2((split_per_floor && f+1 < num_splits) ? (i->z1() + (f+1)*floor_spacing) : i->z2()); // Note: last slice must end at exactly i->z2()
+			float const door_ztop(EXACT_MULT_FLOOR_HEIGHT ? slice_z2 : (gf_door_ztop + floor_offset));
 			cube_t part(*i), draw_part;
 			cube_t const *clamp_cube(nullptr);
-			set_cube_zvals(part, slice_z1, (split_per_floor ? (slice_z1 + floor_spacing) : i->z2()));
+			set_cube_zvals(part, slice_z1, slice_z2);
 
 			if (only_cont_pt_in && *i != cont_part && !i->contains_pt(only_cont_pt)) { // not the part containing the point
 				float const z_exp(get_fc_thickness()); // allow a bit of extra Z overlap, which helps when the player is on the stairs
