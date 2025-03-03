@@ -2342,7 +2342,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		for (unsigned f = 0; f < num_splits; ++f) {
 			float const floor_offset(f*floor_spacing), slice_z1(i->z1() + floor_offset);
 			float const slice_z2((split_per_floor && f+1 < num_splits) ? (i->z1() + (f+1)*floor_spacing) : i->z2()); // Note: last slice must end at exactly i->z2()
-			float const door_ztop(EXACT_MULT_FLOOR_HEIGHT ? slice_z2 : (gf_door_ztop + floor_offset));
+			float const door_ztop((split_per_floor && EXACT_MULT_FLOOR_HEIGHT) ? slice_z2 : (gf_door_ztop + floor_offset));
 			cube_t part(*i), draw_part;
 			cube_t const *clamp_cube(nullptr);
 			set_cube_zvals(part, slice_z1, slice_z2);
