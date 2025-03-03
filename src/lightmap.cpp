@@ -37,7 +37,7 @@ indir_dlight_group_manager_t indir_dlight_group_manager;
 
 extern int animate2, display_mode, camera_coll_id, scrolling, read_light_files[], write_light_files[];
 extern unsigned create_voxel_landscape;
-extern bool disable_dlights;
+extern bool disable_dlights, camera_in_building;
 extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE, FAR_CLIP, CAMERA_RADIUS, indir_light_exp, light_int_scale[], force_czmin, force_czmax;
 extern colorRGB cur_ambient, cur_diffuse;
 extern coll_obj_group coll_objects;
@@ -1089,15 +1089,20 @@ void add_camera_flashlight() {
 
 light_source get_player_flashlight_light_source(float radius_scale) {
 	point pos(get_camera_pos());
-	if (world_mode == WMODE_INF_TERRAIN) {pos   -= get_tiled_terrain_model_xlate();}
-	if (world_mode == WMODE_INF_TERRAIN) {pos.z -= 0.5*CAMERA_RADIUS;} // below eye level
+
+	if (world_mode == WMODE_INF_TERRAIN) {
+		pos   -= get_tiled_terrain_model_xlate();
+		pos.z -= 0.5*CAMERA_RADIUS; // below eye level
+		pos   += 0.5*CAMERA_RADIUS*cview_dir; // move away from the camera
+	}
 	float const bw((world_mode == WMODE_INF_TERRAIN) ? 0.001 : FLASHLIGHT_BW); // hack to adjust flashlight for city/building larger falloff values
 	return light_source(FLASHLIGHT_RAD*radius_scale, pos, pos, get_flashlight_color(), 1, cview_dir, bw);
 }
 
 void add_player_flashlight_light_source(float radius_scale) { // for buildings
 	dl_sources.push_back(get_player_flashlight_light_source(radius_scale));
-	dl_sources.back().disable_shadows(); // shadows not needed; also, this doesn't work correctly
+	if (camera_in_building) {dl_sources.back().assign_smap_mgr_id(1);} // needed for building interiors
+	else {dl_sources.back().disable_shadows();} // shadows not needed
 }
 
 void init_lights() {
