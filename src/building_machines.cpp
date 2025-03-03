@@ -67,7 +67,7 @@ float get_cylin_radius(vector3d const &sz, unsigned dim) {
 	return 0.25*(sz[(dim+1)%3] + sz[(dim+2)%3]);
 }
 void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cube_t const &region, float rmax, unsigned dim,
-	vect_sphere_t &pipe_ends, rand_gen_t &rgen, bool add_coil)
+	vect_sphere_t &pipe_ends, rand_gen_t &rgen, bool allow_valve, bool add_coil, bool is_high)
 {
 	assert(region.is_strictly_normalized());
 	min_eq(rmax, get_cylin_radius(region.get_size(), dim));
@@ -88,10 +88,61 @@ void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cu
 		p1[dim] -= coil_radius; p2[dim] += coil_radius; // must start and end inside the object
 		float const length(p2[dim] - p1[dim]);
 		add_spring(p1, radius, coil_radius, length, coil_gap, dim, color, spec_color, sparse);
+		return;
 	}
-	else {
-		get_metal_material(1, 0, 1, 0, spec_color).add_cylin_to_verts(p1, p2, radius, radius, apply_light_color(c, color), 0, 0, 0, 0, 1.0, 1.0, 0, 16); // shadowed, small
+	rgeom_mat_t &pipe_mat(get_metal_material(1, 0, 1, 0, spec_color));
+	pipe_mat.add_cylin_to_verts(p1, p2, radius, radius, apply_light_color(c, color), 0, 0, 0, 0, 1.0, 1.0, 0, 16); // shadowed, small
+	// maybe add a valve; vertical facing up for horizontal pipes, horizontal facing away from the machine for vertical pipes
+	if (!allow_valve || rgen.rand_float() > 0.3) return; // no valve; added 30% of the time
+	float const valve_radius(radius*rgen.rand_uniform(2.4, 3.2)), valve_depth(valve_radius*rgen.rand_uniform(0.4, 0.5));
+	float const pipe_len(p2[dim] - p1[dim]);
+	assert(pipe_len > 0.0);
+	if (pipe_len < 4.0*valve_radius) return; // too short to add a valve
+
+	for (auto pe = pipe_ends.begin(); pe+1 != pipe_ends.end(); ++pe) { // skip pipe end added above
+		if (dist_less_than(p1, pe->pos, (valve_radius + pe->radius))) return; // too close to a previously placed pipe
 	}
+	pipe_ends.emplace_back(p1, valve_radius);
+	float const end_pad(max(0.25*pipe_len, 1.5*valve_radius)), valve_pos(rgen.rand_uniform((p1[dim] + end_pad), (p2[dim] - end_pad)));
+	unsigned vdim(0), odim(0);
+	bool vdir(0);
+
+	if (dim == 2) { // vertical pipe
+		vector3d const pipe_dir(p1 - c.get_cube_center());
+		vdim = (fabs(pipe_dir.x) < fabs(pipe_dir.y));
+		vdir = ((c.dim == vdim) ? c.dir : (pipe_dir[vdim] > 0.0)); // toward the front, or the closer side
+		odim = 1 - vdim;
+	}
+	else { // horizontal pipe
+		if (rgen.rand_bool()) { // vertical valve
+			vdim = 2;
+			vdir = !is_high; // if horizontal, place below high pipes and above low pipes
+			odim = (1 - dim);
+		}
+		else { // horizontal valve
+			vdim = (1 - dim);
+			vdir = ((c.dim == vdim) ? c.dir : rgen.rand_bool()); // toward the front, or a random side
+			odim = 2;
+		}
+	}
+	float const valve_attach_pt(p1[vdim] + (vdir ? 1.0 : -1.0)*radius);
+	cube_t valve;
+	set_wall_width(valve, valve_pos, valve_radius,  dim);
+	set_wall_width(valve, p1[odim],  valve_radius, odim); // pipe centerline
+	valve.d[vdim][!vdir] = valve_attach_pt;
+	valve.d[vdim][ vdir] = valve_attach_pt + (vdir ? 1.0 : -1.0)*valve_depth;
+	unsigned const NUM_HANDLE_COLORS = 4;
+	colorRGBA const handle_colors[NUM_HANDLE_COLORS] = {DK_RED, colorRGBA(0.1, 0.2, 0.4), colorRGBA(0.05, 0.3, 0.05), BKGRAY};
+	colorRGBA const handle_color(handle_colors[rgen.rand() % NUM_HANDLE_COLORS]), shaft_color(choose_pipe_color(rgen));
+	rgeom_mat_t &handle_mat(get_metal_material(1, 0, 1)); // shadowed
+	draw_metal_handle_wheel(valve, vdim, apply_light_color(c, handle_color), apply_light_color(c, shaft_color), handle_mat, handle_mat);
+	// draw the fitting
+	float const fitting_radius(1.25*radius), fitting_hlen(1.6*radius);
+	colorRGBA const fitting_color(is_known_metal_color(color) ? BRASS_C : color); // brass if metal, otherwise keep the pipe color
+	rgeom_mat_t &fitting_mat(get_metal_material(0, 0, 1, 0, get_specular_color(fitting_color))); // unshadowed
+	p1[dim] = valve_pos - fitting_hlen;
+	p2[dim] = valve_pos + fitting_hlen;
+	fitting_mat.add_cylin_to_verts(p1, p2, fitting_radius, fitting_radius, apply_light_color(c, fitting_color), 1, 1, 0, 0, 1.0, 1.0, 0, N_CYL_SIDES); // draw ends
 }
 
 void clip_cylin_to_square(cube_t &c, unsigned dim, bool clip_to_z2=0) { // about the center
@@ -311,7 +362,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 
 			if (!has_bcube_int(valve, avoid)) {
 				unsigned const NUM_HANDLE_COLORS = 5;
-				colorRGBA const handle_colors[NUM_HANDLE_COLORS] = {colorRGBA(0.5, 0.0, 0.0), colorRGBA(0.7, 0.0, 0.0), colorRGBA(0.5, 0.25, 0.0), LT_GRAY, BKGRAY};
+				colorRGBA const handle_colors[NUM_HANDLE_COLORS] = {colorRGBA(0.5, 0.0, 0.0), DK_RED, colorRGBA(0.5, 0.25, 0.0), LT_GRAY, BKGRAY};
 				colorRGBA const handle_color(handle_colors[rgen.rand() % NUM_HANDLE_COLORS]), shaft_color(choose_pipe_color(rgen));
 				rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small, specular metal
 				// use the same material for the handle and the shaft
@@ -361,7 +412,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		assert(region.is_strictly_normalized());
 
 		if (in_factory && factory_info) { // connect to neighbors on low X/Y edges
-			float const min_height(get_player_eye_height() + 2.4*pipe_rmax); // add space for pipe/coil
+			float const min_height(get_player_eye_height() + 2.8*pipe_rmax); // add space for pipe/coil
 
 			if (part_sz.z > 1.25*min_height) {
 				bool const coil_dim(rgen.rand_bool());
@@ -375,7 +426,8 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 					region2.d[ndim][0] = (is_cylin ? part.get_center_dim(ndim) : part.d[ndim][1]) - row_spacing; // opposite edge of this part on adjacet machine
 					assert(region2.is_strictly_normalized());
 					rand_gen_t rgen2(rgen); // copy rgen so that we can make pipe connections differ across machine instances
-					rgen2.rseed1 += (ndim ? c.state_flags : c.drawer_flags); // make it different per row/column
+					rgen2.rseed1 += (ndim ? c.state_flags : c.drawer_flags); // make it different per row or column
+					//rgen2.rseed1 += 17*c.state_flags + 31*c.drawer_flags; // make it different per row and column
 					unsigned const num_pipes((rgen2.rand() % 4) + 3); // 3-6
 					unsigned num_coils(0);
 					pipe_ends.clear();
@@ -383,7 +435,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 					for (unsigned n = 0; n < num_pipes; ++n) {
 						bool const is_coil(!is_cylin && bool(ndim) == coil_dim && num_coils == 0 && rgen2.rand_bool()); // max of 1 coil across both dims; cubes only
 						num_coils += is_coil;
-						add_machine_pipe_in_region(c, region2, (is_coil ? 2.0 : 1.25)*pipe_rmax, ndim, pipe_ends, rgen2, is_coil);
+						add_machine_pipe_in_region(c, region2, (is_coil ? 2.0 : 1.25)*pipe_rmax, ndim, pipe_ends, rgen2, 1, is_coil, 1); // allow_valve=1, is_high=1
 					}
 				} // for n
 			}
@@ -391,8 +443,9 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		else if ((is_cylin || has_gap) && cylin_dim != unsigned(dim)) { // if there's a gap between the machine and the wall; not for cylinders facing the wall
 			// add pipe(s) connecting to back wall in {dim, !dir} or ceiling
 			unsigned const num_pipes((rgen.rand() % 4) + 1); // 1-4
+			bool const allow_valve(!is_cylin); // add valves to cubes only so that they don't intersect the parts
 			pipe_ends.clear();
-			for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region, pipe_rmax, dim, pipe_ends, rgen);}
+			for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region, pipe_rmax, dim, pipe_ends, rgen, allow_valve);}
 		}
 		// if there's space and floor_ceil_gap was specified; skip for factories to avoid clipping through lights and beams
 		if (!in_factory && height < floor_ceil_gap) {
@@ -401,15 +454,16 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 			unsigned const num_pipes(rgen.rand() % 4); // 0-3
 
 			if (num_pipes > 0) {
+				bool allow_valve(1);
 				cube_t region(part);
 				set_cube_zvals(region, part.z2(), ceil_zval);
 				
 				if (is_cylin) {
-					if (cylin_dim == 2) {region.expand_by_xy(-(1.0 - SQRTOFTWOINV)*cylin_radius);} // use square inscribed in circle
-					else {region.z1() = part.zc();} // extend to center of cylinder
+					if (cylin_dim == 2) {region.expand_by_xy(-(1.0 - SQRTOFTWOINV)*cylin_radius);} // vertical; use square inscribed in circle
+					else {region.z1() = part.zc(); allow_valve = 0;} // horizontal; extend to center of cylinder; no valves
 				}
 				pipe_ends.clear();
-				for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region, pipe_rmax, 2, pipe_ends, rgen);} // dim=2
+				for (unsigned n = 0; n < num_pipes; ++n) {add_machine_pipe_in_region(c, region, pipe_rmax, 2, pipe_ends, rgen, allow_valve);}
 			}
 			// maybe add a spider web between the machine and the wall; only for cubes and vertical cylinders, and basement machines
 			if (!in_factory && (!is_cylin || cylin_dim == 2) && rgen.rand_float() < 0.75) {
@@ -574,7 +628,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		min_eq(region.d[dim][1], region2.d[dim][1]);
 
 		if (region.is_strictly_normalized() && side_pos[0] != side_pos[1]) {
-			bool const either_cylin(is_cylins[0] || is_cylins[1]);
+			bool const either_cylin(is_cylins[0] || is_cylins[1]), allow_valve(!either_cylin);
 			float const coil_prob(either_cylin ? 0.2 : 0.5); // less likely for cylinders since some of the coils are hidden inside the cylider
 			region.d[!dim][0] = min(side_pos[0], side_pos[1]);
 			region.d[!dim][1] = max(side_pos[0], side_pos[1]);
@@ -585,7 +639,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 			for (unsigned n = 0; n < num_pipes; ++n) {
 				bool const is_coil(num_coils < (either_cylin ? 1U : 2U) && rgen.rand_float() < coil_prob); // max of 2 coils
 				num_coils += is_coil;
-				add_machine_pipe_in_region(c, region, (is_coil ? 2.0 : 1.0)*pipe_rmax, !dim, pipe_ends, rgen, is_coil);
+				add_machine_pipe_in_region(c, region, (is_coil ? 2.0 : 1.0)*pipe_rmax, !dim, pipe_ends, rgen, allow_valve, is_coil);
 			}
 			// add flanges if large and connecting to a cube?
 		}
