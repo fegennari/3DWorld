@@ -2711,6 +2711,10 @@ void building_room_geom_t::add_warning_light(room_object_t const &c) {
 	light_mat.add_vcylin_to_verts(light, (is_on ? RED : colorRGBA(0.5, 0.0, 0.0)), 0, 1); // draw sides and top
 }
 
+void building_room_geom_t::add_pallet(room_object_t const &c) {
+	// TODO
+}
+
 void mirror_cube_z(cube_t &c, cube_t const &obj) {
 	c.translate_dim(2, 2.0*(obj.zc() - c.zc()));
 }
@@ -2741,6 +2745,10 @@ void building_room_geom_t::add_valve(room_object_t const &c) {
 	colorRGBA const color(apply_light_color(c)), spec_color(get_specular_color(c.color)); // special case metals
 	rgeom_mat_t &mat(get_metal_material(1, 0, 2, 0, spec_color)); // detail object
 	draw_metal_handle_wheel(c, dim, color, apply_light_color(c, WHITE), mat, get_metal_material(1, 0, 2));
+}
+
+void building_room_geom_t::add_gauge(room_object_t const &c) {
+	// TODO
 }
 
 void building_room_geom_t::add_curb(room_object_t const &c) {

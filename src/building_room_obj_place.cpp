@@ -2763,7 +2763,7 @@ void building_t::add_boxes_and_crates(rand_gen_t &rgen, room_t const &room, floa
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 			if (!i->intersects(crate)) continue;
 			// only handle stacking of crates on other crates
-			if ((i->type == TYPE_CRATE || i->type == TYPE_BOX) && i->z1() == zval && (i->z2() + crate.dz() < ceil_zval) && i->contains_pt_xy(pos)) {crate.translate_dim(2, i->dz());}
+			if (i->is_crate_or_box() && i->z1() == zval && (i->z2() + crate.dz() < ceil_zval) && i->contains_pt_xy(pos)) {crate.translate_dim(2, i->dz());}
 			else {bad_placement = 1; break;}
 		}
 		if (bad_placement) continue;

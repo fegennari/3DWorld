@@ -1115,6 +1115,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_CATWALK:    add_catwalk(c); break;
 		case TYPE_DUCT:       add_duct(c); break;
 		case TYPE_WARN_LIGHT: add_warning_light(c); break;
+		case TYPE_PALLET:     add_pallet(c); break;
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		default: break;
 		} // end switch
@@ -1160,7 +1161,8 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 		case TYPE_PIPE:       add_pipe(*i, 0); break; // add_exterior=0
 		case TYPE_SPRINKLER:  add_sprinkler(*i); break;
 		case TYPE_VALVE:      add_valve(*i); break;
-		case TYPE_CURB:       add_curb(*i); break;
+		case TYPE_GAUGE:      add_gauge(*i); break;
+		case TYPE_CURB:       add_curb (*i); break;
 		case TYPE_CHIMNEY:    add_chimney(*i, building.get_material().side_tex); break; // uses exterior wall texture
 		default: break;
 		} // end switch

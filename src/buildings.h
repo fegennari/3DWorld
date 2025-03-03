@@ -493,13 +493,13 @@ enum { // room object types
 	TYPE_CAMERA, TYPE_CLOCK, TYPE_DOWNSPOUT, TYPE_SHELFRACK, TYPE_CHIM_CAP, TYPE_FOOD_BOX, TYPE_SAFE, TYPE_LADDER, TYPE_CHECKOUT, TYPE_FISHTANK,
 	TYPE_LAVALAMP, TYPE_SHOWERTUB, TYPE_TRASH, TYPE_VALVE, TYPE_METAL_BAR, TYPE_OFF_PILLAR, TYPE_DRINK_CAN, TYPE_CONF_TABLE, TYPE_INT_WINDOW, TYPE_INT_LADDER,
 	TYPE_MACHINE, TYPE_BUCKET, TYPE_SPIWEB, TYPE_TREE, TYPE_THEFT_SENS, TYPE_ELEC_WIRE, TYPE_ERASER, TYPE_DWASHER, TYPE_PET_CAGE, TYPE_IBEAM,
-	TYPE_CATWALK, TYPE_VANITY, TYPE_CHEM_TANK, TYPE_HVAC_UNIT, TYPE_WARN_LIGHT,
+	TYPE_CATWALK, TYPE_VANITY, TYPE_CHEM_TANK, TYPE_HVAC_UNIT, TYPE_WARN_LIGHT, TYPE_GAUGE, TYPE_PALLET,
 	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_WALL_LAMP, TYPE_CUP, TYPE_TOASTER,
 	TYPE_HOOD, TYPE_RCHAIR, TYPE_SILVER, TYPE_TOY_MODEL, TYPE_CEIL_FAN, TYPE_FIRE_EXT, TYPE_FOLD_SHIRT, TYPE_PLANT_MODEL, TYPE_POOL_TABLE, TYPE_POOL_LAD,
 	TYPE_BAR_STOOL, TYPE_PADLOCK, TYPE_CASHREG, TYPE_WFOUNTAIN, TYPE_BANANA, TYPE_BAN_PEEL, TYPE_CONF_PHONE, TYPE_SHOE, TYPE_SHOEBOX, TYPE_VENT_FAN,
-	TYPE_HOSP_BED, TYPE_HOSP_CURT,
+	TYPE_HOSP_BED, TYPE_HOSP_CURT, TYPE_FORKLIFT,
 	/* shared with city objects */
 	TYPE_GBIKE, TYPE_XFORMER, TYPE_US_FLAG, TYPE_BLDG_FOUNT,
 	/* animals; bird is only used for pet stores */
@@ -567,7 +567,7 @@ enum {/*building models*/ OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ
 	OBJ_MODEL_OFFICE_CHAIR, OBJ_MODEL_URINAL, OBJ_MODEL_LAMP, OBJ_MODEL_WASHER, OBJ_MODEL_DRYER, OBJ_MODEL_KEY, OBJ_MODEL_HANGER, OBJ_MODEL_CLOTHES, OBJ_MODEL_FESCAPE,
 	OBJ_MODEL_WALL_LAMP, OBJ_MODEL_CUP, OBJ_MODEL_TOASTER, OBJ_MODEL_HOOD, OBJ_MODEL_RCHAIR, OBJ_MODEL_SILVER, OBJ_MODEL_TOY, OBJ_MODEL_CEIL_FAN, OBJ_MODEL_FIRE_EXT,
 	OBJ_MODEL_FOLD_SHIRT, OBJ_MODEL_PLANT, OBJ_MODEL_POOL_TABLE, OBJ_MODEL_POOL_LAD, OBJ_MODEL_BAR_STOOL, OBJ_MODEL_PADLOCK, OBJ_MODEL_CASHREG, OBJ_MODEL_WFOUNTAIN,
-	OBJ_MODEL_BANANA, OBJ_MODEL_BAN_PEEL, OBJ_MODEL_PHONE, OBJ_MODEL_SHOE, OBJ_MODEL_SHOEBOX, OBJ_MODEL_VENT_FAN, OBJ_MODEL_HOSP_BED, OBJ_MODEL_HOSP_CURT,
+	OBJ_MODEL_BANANA, OBJ_MODEL_BAN_PEEL, OBJ_MODEL_PHONE, OBJ_MODEL_SHOE, OBJ_MODEL_SHOEBOX, OBJ_MODEL_VENT_FAN, OBJ_MODEL_HOSP_BED, OBJ_MODEL_HOSP_CURT, OBJ_MODEL_FORKLIFT,
 	OBJ_MODEL_GBIKE/*unused*/, OBJ_MODEL_XFMR/*unused*/, OBJ_MODEL_US_FLAG/*unused*/, OBJ_MODEL_BLDG_FOUNT/*unused*/,
 	/*animal models*/ OBJ_MODEL_RAT, OBJ_MODEL_ROACH,
 	/*building non-room objects*/ OBJ_MODEL_DOOR_HANDLE,
@@ -722,6 +722,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool is_on_floor() const {return  (flags & RO_FLAG_ON_FLOOR);}
 	bool is_nonempty() const {return  (flags & RO_FLAG_NONEMPTY);}
 	bool has_lid    () const {return  (flags & RO_FLAG_ADJ_TOP);} // for fishtanks
+	bool is_crate_or_box() const {return (type == TYPE_CRATE || type == TYPE_BOX);}
 	bool is_on_srack() const {return (was_expanded() && (flags & RO_FLAG_ON_SRACK));} // Note: RO_FLAG_ON_SRACK is aliased with other flags, so also check was_expanded
 	bool is_floor_clutter() const {return ((is_a_drink() || type == TYPE_TRASH) && is_on_floor());}
 	bool is_light_type() const {return (type == TYPE_LIGHT || (type == TYPE_LAMP && !was_expanded() && !in_attic()));} // light, or lamp not in closet
@@ -1139,8 +1140,10 @@ struct building_room_geom_t {
 	void add_pipe(room_object_t const &c, bool add_exterior);
 	void add_sprinkler(room_object_t const &c);
 	void add_valve(room_object_t const &c);
+	void add_gauge(room_object_t const &c);
 	void add_duct(room_object_t const &c);
 	void add_warning_light(room_object_t const &c);
+	void add_pallet(room_object_t const &c);
 	void add_curb(room_object_t const &c);
 	void add_chimney(room_object_t const &c, tid_nm_pair_t const &tex);
 	void add_breaker_panel(room_object_t const &c);

@@ -202,6 +202,8 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CHEM_TANK ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1,  0.0,  0.0,   "chemical tank");
 	bldg_obj_types[TYPE_HVAC_UNIT ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 800.0, 200.0, "HVAC unit");
 	bldg_obj_types[TYPE_WARN_LIGHT] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 50.0,  2.0,   "warning light");
+	bldg_obj_types[TYPE_GAUGE     ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0,  0.0,  0.0,   "gauge"); // detail object
+	bldg_obj_types[TYPE_PALLET    ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 10.0,  35.0,  "pallet");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -246,6 +248,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_VENT_FAN  ] = bldg_obj_type_t(0, 0, 0, 0, 1, 1, 1, 200.0, 40.0,  "ventilation fan"); // mixed model and object geom
 	bldg_obj_types[TYPE_HOSP_BED  ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 300.0, 200.0, "hospital bed");
 	bldg_obj_types[TYPE_HOSP_CURT ] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 0, 50.0,  20.0,  "hospital curtain");
+	bldg_obj_types[TYPE_FORKLIFT  ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 10000, 9000,  "forklift");
 	bldg_obj_types[TYPE_GBIKE     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 150.0, 20.0,  "bike"); // garage bike
 	bldg_obj_types[TYPE_XFORMER   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 0.0,   0.0,   "transformer");
 	bldg_obj_types[TYPE_US_FLAG   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 30.0,  1.0,   "American Flag");
@@ -429,7 +432,7 @@ bool is_refillable(room_object_t const &obj) {return (obj.type == TYPE_FIRE_EXT)
 
 float get_obj_value(room_object_t const &obj) {
 	float value(get_taken_obj_type(obj).value);
-	if (obj.type == TYPE_CRATE || obj.type == TYPE_BOX) {value *= (1 + (rgen_from_obj(obj).rand() % 20));}
+	if (obj.is_crate_or_box())       {value *= (1 + (rgen_from_obj(obj).rand() % 20));}
 	else if (obj.type == TYPE_PAPER) {value = get_paper_value(obj);}
 	else if (obj.type == TYPE_MONEY) {
 		unsigned const num_bills(round_fp(obj.dz()/(0.01*obj.get_length())));
@@ -1433,8 +1436,8 @@ bool object_can_have_something_on_it(room_object_t const &obj) {
 	auto const type(obj.type);
 	// only these types can have objects placed on them (what about TYPE_SHELF? what about TYPE_BED with a ball, book, or blanket placed on it?)
 	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_COUNTER || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_CONF_TABLE ||
-		type == TYPE_RDESK || type == TYPE_BOX || type == TYPE_CRATE || type == TYPE_WINE_RACK || type == TYPE_BOOK || type == TYPE_STOVE || type == TYPE_MWAVE ||
-		type == TYPE_BED || type == TYPE_SERVER || type == TYPE_PIZZA_BOX || type == TYPE_LAPTOP || type == TYPE_FOLD_SHIRT
+		type == TYPE_RDESK || obj.is_crate_or_box() || type == TYPE_WINE_RACK || type == TYPE_BOOK || type == TYPE_STOVE || type == TYPE_MWAVE ||
+		type == TYPE_BED || type == TYPE_SERVER || type == TYPE_PIZZA_BOX || type == TYPE_LAPTOP || type == TYPE_FOLD_SHIRT || type == TYPE_PALLET
 		/*|| type == TYPE_FCABINET*/ /*|| type == TYPE_SHELF*/);
 }
 bool object_has_something_on_it(room_object_t const &obj, vect_room_object_t const &objs, vect_room_object_t::const_iterator objs_end) {
@@ -2684,7 +2687,7 @@ bool room_object_t::can_use() const { // excludes dynamic objects
 }
 bool room_object_t::can_place_onto() const { // Note: excludes flat objects such as TYPE_RUG and TYPE_BLANKET
 	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_COUNTER || type == TYPE_KSINK ||
-		type == TYPE_BRSINK || type == TYPE_BED || type == TYPE_BOX || type == TYPE_CRATE || type == TYPE_KEYBOARD || type == TYPE_BOOK ||
+		type == TYPE_BRSINK || type == TYPE_BED || is_crate_or_box() || type == TYPE_PALLET || type == TYPE_KEYBOARD || type == TYPE_BOOK ||
 		type == TYPE_FCABINET || type == TYPE_MWAVE || type == TYPE_POOL_TABLE || type == TYPE_CONF_TABLE || type == TYPE_CHECKOUT || type == TYPE_VANITY); // TYPE_STAIR?
 }
 
