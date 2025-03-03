@@ -2753,6 +2753,7 @@ private:
 	void add_wall_and_door_trim();
 	void add_window_trim_and_coverings(bool add_trim, bool add_blinds, bool add_ext_sills=0);
 	void add_pool_trim();
+	bool check_ext_step_valid(cube_t const &c, unsigned ext_objs_start, unsigned exclude_ix, float head_clearance) const;
 	void add_ext_door_steps(unsigned ext_objs_start);
 	unsigned count_num_int_doors(room_t const &room) const;
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs) const;

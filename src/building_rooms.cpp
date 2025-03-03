@@ -2450,6 +2450,28 @@ cube_t building_t::get_step_for_ext_door(tquad_with_ix_t const &door) const {
 	step.d[dim][ dir] += (dir ? 1.0 : -1.0)*length; // extend outward
 	return step;
 }
+bool building_t::check_ext_step_valid(cube_t const &c, unsigned ext_objs_start, unsigned exclude_ix, float head_clearance) const {
+	cube_t check_cube(c);
+	check_cube.z2() += head_clearance;
+	vect_room_object_t &objs(interior->room_geom->objs);
+
+	// check for collisions with previous steps, balconies, and fire escapes
+	for (auto i = objs.begin()+ext_objs_start; i != objs.end(); ++i) {
+		if ((i - objs.begin()) == exclude_ix) continue; // skip our starting step
+		cube_t no_block(*i);
+		no_block.z2() += head_clearance; // the other object can be walked on as well
+		if (check_cube.intersects(no_block)) return 0;
+	}
+	for (roof_obj_t const &ro : details) {
+		if (ro.type == ROOF_OBJ_AC && check_cube.intersects(ro)) return 0; // check AC unit (may be on the ground rather than rooftop)
+	}
+	if (has_chimney == 2) { // exterior chimney
+		if (check_cube.intersects(get_chimney  ())) return 0; // chimney
+		if (check_cube.intersects(get_fireplace())) return 0; // fireplace
+	}
+	return 1;
+}
+
 void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 	float const floor_spacing(get_window_vspace()), fc_thickness(get_fc_thickness());
 	float const door_shift_dist(2.5*get_door_shift_dist()); // 1x for door shift and 1.5x offset in add_door()
@@ -2497,7 +2519,7 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 		float const step_height(delta_z/num_steps), max_step_len(2.25*step_height), init_step_len(s.get_sz_dim(!dim)), step_overlap(1.0*step_height), dir_sign(dir ? 1.0 : -1.0);
 		bool step_dir(s.get_center_dim(!dim) < part.get_center_dim(!dim)); // preferred steps go down toward longer wall segment
 		s.z1() = s.z2() - step_height; // set correct step height for the first step
-		cube_t const door_step(s);
+		cube_t door_step(s); // may be expanded into balcony if steps can't connect
 		colorRGBA const railing_color(BLACK);
 		float const railing_inside_edge(door_step.d[dim][!dir] + dir_sign*railing_thickness);
 		cube_t top_railing(door_step);
@@ -2526,30 +2548,10 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 
 			for (unsigned n = 0; n <= num_steps; ++n) { // one extra iteration to check for collisions at the bottom
 				step += translate;
-				cube_t check_cube(step);
-				check_cube.z2() += head_clearance;
-
-				// check for collisions with previous steps, balconies, and fire escapes
-				for (auto i = objs.begin()+ext_objs_start; i != objs.end(); ++i) {
-					if ((i - objs.begin()) == ix) continue; // skip our starting step
-					cube_t no_block(*i);
-					no_block.z2() += head_clearance; // the other object can be walked on as well
-					if (check_cube.intersects(no_block)) {success = 0; break;}
-				}
-				if (!success) break;
-
-				for (roof_obj_t const &ro : details) {
-					if (ro.type == ROOF_OBJ_AC && check_cube.intersects(ro)) {success = 0; break;} // check AC unit (may be on the ground rather than rooftop)
-				}
-				if (!success) break;
-
-				if (has_chimney == 2) { // exterior chimney
-					if (check_cube.intersects(get_chimney  ())) {success = 0; break;} // chimney
-					if (check_cube.intersects(get_fireplace())) {success = 0; break;} // fireplace
-				}
+				if (!check_ext_step_valid(step, ext_objs_start, ix, head_clearance)) {success = 0; break;}
 				// what about residential city objects such as fences and trashcans? currently, we don't have multi-family houses in cities, so maybe it's okay
 				if (n < num_steps) {cand_steps.push_back(step);} // don't add the last step
-			} // for n
+			}
 			if (!success) {step_dir ^= 1; continue;} // try other dir
 			assert(!cand_steps.empty());
 
@@ -2588,6 +2590,13 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 			break; // done
 		} // for d
 		if (!success) { // failed to connect stairs in either dim; add railings and turn into a tiny balcony instead
+			for (unsigned d = 0; d < 2; ++d) { // attempt to expand to either side
+				cube_t door_step_exp(door_step);
+				door_step_exp.d[!dim][d] += (d ? 1.0 : -1.0)*0.1*floor_spacing;
+				if (!check_ext_step_valid(door_step_exp, ext_objs_start, ix, head_clearance)) continue;
+				door_step = door_step_exp;
+				top_railing.d[!dim][d] = s.d[!dim][d] = door_step_exp.d[!dim][d];
+			}
 			for (unsigned d = 0; d < 2; ++d) { // add end railings
 				cube_t railing(top_railing);
 				railing.d[!dim][d  ]  = railing.d[!dim][!d] + (d ? 1.0 : -1.0)*railing_thickness;
