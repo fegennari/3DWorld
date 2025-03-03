@@ -2517,11 +2517,12 @@ void building_room_geom_t::add_wall_or_pillar(room_object_t const &c, vector3d c
 		mat.add_cube_to_verts(c, WHITE, tex_origin, (draw_top ? EF_Z1 : EF_Z12), c.dim);
 		return;
 	}
+	if (c.type == TYPE_OFF_PILLAR && c.in_mall()) {} // special case for mall pillar?
 	// backroom pillars and upper (ADJ_HI) sections of retail room pillars are concrete; other objects are plaster/stucco
 	bool const is_concrete(c.flags & (RO_FLAG_BACKROOM | RO_FLAG_ADJ_HI));
 	tid_nm_pair_t const tex(is_concrete ? tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1) : get_scaled_wall_tex(wall_tex));
 	rgeom_mat_t &mat(get_material(tex, 1, 0, small)); // shadowed, no color atten, sides only unless draw_top
-	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts  (c, c.color, tex_origin, (draw_top ? EF_Z1 : EF_Z12));}
+	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts(c, c.color, tex_origin, (draw_top ? EF_Z1 : EF_Z12));}
 	else if (c.shape == SHAPE_CYLIN) {mat.add_vcylin_to_verts_tscale(c, c.color, 0, draw_top);}
 	else {assert(0);} // unsupported shape
 }

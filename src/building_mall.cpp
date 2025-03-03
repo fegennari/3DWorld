@@ -1419,7 +1419,7 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 	} // for f
 	// add pillars last so that we can check lights against them
 	unsigned const pillars_start(objs.size());
-	for (cube_t const &pillar : pillars) {objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, !mall_dim, 0, 0, light_amt, pillar_shape, WHITE);}
+	for (cube_t const &pillar : pillars) {objs.emplace_back(pillar, TYPE_OFF_PILLAR, room_id, !mall_dim, 0, RO_FLAG_IN_MALL, light_amt, pillar_shape, WHITE);}
 	return pillars_start;
 }
 
