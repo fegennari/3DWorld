@@ -2553,7 +2553,7 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 			if (!success) {step_dir ^= 1; continue;} // try other dir
 			assert(!cand_steps.empty());
 
-			for (cube_t const &cand : cand_steps) { // cube, dim, step_dir, wall_dir, at_door
+			for (cube_t const &cand : cand_steps) {
 				cube_t step(cand);
 				if (add_step_gaps) {step.z1() += 0.5*cand.dz();} // move the bottom halfway up
 				objs.emplace_back(step, TYPE_EXT_STEP, 0, dim, dir, flags, 1.0, SHAPE_CUBE, step_color);
@@ -2599,7 +2599,8 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 			railing.d[dim][dir] = railing_inside_edge;
 			railings.emplace_back(railing, TYPE_RAILING, 0, !dim, !step_dir, (RO_FLAG_TOS | RO_FLAG_EXTERIOR), 1.0, SHAPE_CUBE, railing_color);
 		}
-		ext_steps.emplace_back(door_step, !dim, step_dir, dir, 1); // add the door step; here dim is wall dim, but we store stairs dim
+		bool const enclosed(!success); // if there are no stairs, this is an enclosed/balcony area
+		ext_steps.emplace_back(door_step, !dim, step_dir, dir, 1, 0, 0, enclosed); // add the door step; here dim is wall dim, but we store stairs dim
 		details.emplace_back(door_step, DETAIL_OBJ_SHAD_ONLY);
 	} // for ix
 	vector_add_to(railings, objs); // add railings at the end
