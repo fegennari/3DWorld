@@ -212,7 +212,7 @@ template<typename T> void add_sign_text_verts(string const &text, cube_t const &
 	vector<T> &verts_out, float first_char_clip_val, float last_char_clip_val, bool include_space_chars, bool invert_z)
 {
 	float const z_sign(invert_z ? -1.0 : 1.0);
-	bool const no_shrink(text.size() == 1); // hospital "+" sign
+	bool const no_shrink(text == "+"); // hospital "+" sign
 	assert(!text.empty());
 	cube_t ct(sign);
 
