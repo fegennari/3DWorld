@@ -762,8 +762,9 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 			} // for nx
 		} // for ny
 		if (merged_pipe_radius > 0.0) { // create horizontal pipe connecting tanks
+			float const conn_pipe_center(tank_conn_pipe.get_center_dim(tank_dim));
 			set_wall_width(tank_conn_pipe, tank_conn_pipe.z2(), merged_pipe_radius, 2); // set zvals
-			set_wall_width(tank_conn_pipe, tank_conn_pipe.get_center_dim(tank_dim), merged_pipe_radius, tank_dim);
+			set_wall_width(tank_conn_pipe, conn_pipe_center,    merged_pipe_radius, tank_dim);
 			// add a bend and another segment to the ceiling, floor, or wall
 			bool const pri_ext_dir(rgen.rand_bool());
 			float const tank_gap(tank_radius + merged_pipe_radius), wall_gap(merged_pipe_radius + 0.26*floor_spacing); // leave wall gap for duct width
@@ -818,19 +819,31 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 				else         {fitting.z2() = v_pipe.z1() + fitting_hlen; vfflags |= RO_FLAG_ADJ_HI;} // down
 				objs.emplace_back(fitting, TYPE_PIPE, room_id, 0, 1, vfflags, tot_light_amt, SHAPE_CYLIN, fitting_color); // vertical
 				// add a bend
-				float const end_pos(h_pipe.d[!tank_dim][conn_dir]);
+				float const end_pos(h_pipe.d[!tank_dim][conn_dir]), hpipe_zc(h_pipe.zc()), dsign(conn_dir ? 1.0 : -1.0);
 				// make this section rounded and shadow casting, since it forms the elbow of the pipe
 				unsigned const hfflags(fittings_flags | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI | RO_FLAG_LIT | (conn_dir ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT));
 				fitting = h_fitting;
 				fitting.d[!tank_dim][ conn_dir] = end_pos; // flush with pipe end
-				fitting.d[!tank_dim][!conn_dir] = end_pos + (conn_dir ? -1.0 : 1.0)*2.0*fitting_hlen; // extend into pipe
+				fitting.d[!tank_dim][!conn_dir] = end_pos - dsign*2.0*fitting_hlen; // extend into pipe
 				objs.emplace_back(fitting, TYPE_PIPE, room_id, !tank_dim, 0, hfflags, tot_light_amt, SHAPE_CYLIN, fitting_color); // horizontal
 				set_wall_width(fitting, end_pos, (merged_pipe_radius + fitting_exp), !tank_dim);
-				set_cube_zvals(fitting, h_pipe.zc(), h_pipe.zc());
+				set_cube_zvals(fitting, hpipe_zc, hpipe_zc);
 				if (conn_up) {fitting.z2() += merged_pipe_radius + fitting_hlen;} // up
 				else         {fitting.z1() -= merged_pipe_radius + fitting_hlen;} // down
 				vfflags ^= (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // swap end bits
 				objs.emplace_back(fitting, TYPE_PIPE, room_id, 0, 1, vfflags, tot_light_amt, SHAPE_CYLIN, fitting_color); // vertical
+				// add valve with fitting along v_pipe
+				float const valve_radius(2.5*merged_pipe_radius), valve_depth(0.45*valve_radius), outside_edge(end_pos + dsign*merged_pipe_radius);
+				float const valve_height(conn_up ? (hpipe_zc + 2.0*valve_radius) : (zval + 0.8*get_player_eye_height()));
+				set_wall_width(fitting, valve_height, 1.5*fitting_hlen, 2); // set zval
+				vfflags |= (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // set both top and bottom end bits
+				objs.emplace_back(fitting, TYPE_PIPE, room_id, 0, 1, vfflags, tot_light_amt, SHAPE_CYLIN, fitting_color); // vertical
+				cube_t valve;
+				set_wall_width(valve, valve_height,     valve_radius, 2); // set zval
+				set_wall_width(valve, conn_pipe_center, valve_radius, tank_dim);
+				valve.d[!tank_dim][!conn_dir] = outside_edge; // outside edge of pipe
+				valve.d[!tank_dim][ conn_dir] = outside_edge + dsign*valve_depth;
+				objs.emplace_back(valve, TYPE_VALVE, room_id, !tank_dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, RED);
 			}
 			for (point const &pos : tank_conn_pts) {
 				// horizontal fitting to connector pipe
