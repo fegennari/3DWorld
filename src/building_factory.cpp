@@ -739,7 +739,7 @@ void building_t::add_factory_office_objs(rand_gen_t &rgen, room_t const &room, f
 	}
 }
 
-void building_t::add_factory_smokestack(rand_gen_t &rgen) {
+void building_t::add_smokestack(rand_gen_t &rgen) {
 	assert(is_factory());
 	assert(!parts.empty());
 	cube_t const &base(parts[0]);
@@ -753,6 +753,7 @@ void building_t::add_factory_smokestack(rand_gen_t &rgen) {
 			smokestack.expand_by_xy(ss_radius);
 			smokestack.z2() += rgen.rand_uniform(0.75, 1.0)*base.dz(); // set height; should be above roof peak
 			if (!has_bcube_int(smokestack, details)) {details.emplace_back(smokestack, (uint8_t)ROOF_OBJ_SMOKESTACK);}
+			has_smokestack = 1;
 			break; // success/done
 		} // for m
 	} // for n

@@ -1462,6 +1462,7 @@ struct room_t : public cube_t { // size=56
 	bool is_store            () const {return (get_room_type(0) == RTYPE_STORE    );}
 	bool is_retail           () const {return (get_room_type(0) == RTYPE_RETAIL   );}
 	bool is_factory          () const {return (get_room_type(0) == RTYPE_FACTORY  );}
+	bool is_warehouse        () const {return (get_room_type(0) == RTYPE_WAREHOUSE);}
 	bool is_mall_or_store    () const {return (is_mall() || is_store());}
 	bool is_apt_or_hotel_room() const {return (unit_id > 0);}
 	bool has_room_of_type(room_type type) const;
@@ -1984,7 +1985,8 @@ struct building_t : public building_geom_t {
 	uint8_t floor_ext_door_mask=0; // used for multi-family houses
 	uint8_t next_unit_id=1; // for apartments and hotels
 	building_type_t btype=BTYPE_UNSET;
-	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_complex_floorplan=0, has_helipad=0, has_ac=0, has_fake_roof_door=0, has_tline_conn=0;
+	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_complex_floorplan=0, has_helipad=0, has_ac=0, has_fake_roof_door=0;
+	bool has_tline_conn=0, has_smokestack=0;
 	mutable bool has_attic_window=0; // make mutable so that drawing code can update/cache this value
 	bool multi_family=0; // apartments, multi-family house, duplex, etc. - split by floor
 	bool has_int_fplace=0, has_parking_garage=0, has_small_part=0, has_basement_door=0, has_basement_pipes=0, parts_generated=0, is_in_city=0, has_skylight_light=0;
@@ -2174,7 +2176,7 @@ struct building_t : public building_geom_t {
 	void place_roof_ac_units(unsigned num, float sz_scale, cube_t const &bounds, vect_cube_t const &avoid, rand_gen_t &rgen);
 	void add_roof_walls(cube_t const &c, float wall_width, bool overlap_corners, cube_t out[4]);
 	void gen_details(rand_gen_t &rgen, bool is_rectangle);
-	void add_factory_smokestack(rand_gen_t &rgen);
+	void add_smokestack(rand_gen_t &rgen);
 	void maybe_add_skylight(rand_gen_t &rgen);
 	void add_company_sign(rand_gen_t &rgen);
 	cube_t get_helipad_bcube() const;
@@ -2198,7 +2200,7 @@ struct building_t : public building_geom_t {
 	void add_machines_to_factory(rand_gen_t rgen, room_t const &room, cube_t const &place_area, float zval,
 		unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned objs_start_inc_beams, cube_t const &ladder);
 	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,
-		unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border, bool is_factory_part);
+		unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border, bool is_single_floor);
 	void connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part);
 	void create_two_story_tall_rooms(rand_gen_t &rgen);
 	void setup_courtyard();
@@ -2321,8 +2323,10 @@ struct building_t : public building_geom_t {
 	bool run_ai_tunnel_logic(person_t &person, float &speed_mult) const;
 	bool maybe_zombie_retreat(unsigned person_ix, point const &hit_pos);
 	void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
-	bool is_room_backrooms(unsigned room_ix)   const {return get_room(room_ix).is_backrooms();}
-	bool is_single_large_room(room_t const &room) const {return(room.is_parking() || room.is_backrooms() || room.is_retail() || room.is_mall() || room.is_factory());}
+	bool is_room_backrooms(unsigned room_ix) const {return get_room(room_ix).is_backrooms();}
+	bool is_single_large_room(room_t const &room) const {
+		return(room.is_parking() || room.is_backrooms() || room.is_retail() || room.is_mall() || room.is_factory() || room.is_warehouse());
+	}
 	bool is_single_large_room_or_store(room_t const &room) const {return (is_single_large_room(room) || room.is_store());}
 	bool is_single_large_room(int room_ix) const {return (room_ix >= 0 && is_single_large_room(get_room(room_ix)));}
 	bool is_single_large_room_or_store(int room_ix) const {return (room_ix >= 0 && is_single_large_room_or_store(get_room(room_ix)));}

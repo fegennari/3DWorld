@@ -1573,7 +1573,7 @@ void find_and_merge_with_landing(vector<landing_t> &landings, cube_t const &stai
 }
 
 void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,
-	unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border, bool is_factory_part)
+	unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border, bool is_single_floor)
 {
 	// increase floor thickness if !is_house? but then we would probably have to increase the space between floors as well, which involves changing the texture scale
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
@@ -1878,7 +1878,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	interior->floors.push_back(C); // ground floor, full area
 	bool const has_stairs(!stairs_cut.is_all_zeros()), has_elevator(!elevator_cut.is_all_zeros());
 	bool const stairs_dir((force_stairs_dir < 2) ? force_stairs_dir : (has_stairs ? rgen.rand_bool() : 0)); // same for every floor, could maybe alternate for stairwells
-	float const floor_vert_spacing(is_factory_part ? part.dz() : (is_retail_part(part) ? retail_floor_levels : 1)*window_vspacing);
+	float const floor_vert_spacing(is_single_floor ? part.dz() : (is_retail_part(part) ? retail_floor_levels : 1)*window_vspacing);
 	cube_t &first_cut(has_elevator ? elevator_cut : stairs_cut); // elevator is larger
 	//unsigned const first_ceiling_ix(max(1U, unsigned(retail_floor_levels))); // skip first floor and any ground floor retail space
 	unsigned last_landing_ix(0);

@@ -831,7 +831,7 @@ void building_t::maybe_gen_chimney_smoke() const {
 		if (int(24534*bcube.x1()) & 3) return; // only 25% of houses have chimney smoke; use position as random seed
 		chimney = get_chimney();
 	}
-	else if (is_factory()) { // look for smokestack
+	else if (has_smokestack) { // look for smokestack
 		for (auto const &c : details) {
 			if (c.type == ROOF_OBJ_SMOKESTACK) {chimney = c; break;}
 		}

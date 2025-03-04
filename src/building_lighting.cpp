@@ -1689,7 +1689,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			// should we do an occlusion query?
 			if ((type == TYPE_LAVALAMP || type == TYPE_FISHTANK || type == TYPE_WARN_LIGHT) && i->is_light_on()) {
 				room_t const &room(get_room(i->room_id)); // should we clip to the current floor in Z?
-				if ((camera_room_tall || room.is_factory() || room.is_retail() || room.is_mall_or_store()) && camera_room == (int)i->room_id) {} // player in a tall room
+				if ((camera_room_tall || room.is_factory() || room.is_warehouse() || room.is_retail() || room.is_mall_or_store()) &&
+					camera_room == (int)i->room_id) {} // player in a tall room
 				else if (camera_in_mall && room.is_store()) {} // store visible from another floor of the mall
 				else if (int((camera_bs.z - ground_floor_z1)/window_vspacing) != int((i->zc() - ground_floor_z1)/window_vspacing)) continue; // different floor
 
