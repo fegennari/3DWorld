@@ -13,7 +13,7 @@
 
 bool const CHECK_HEIGHT_BORDER_ONLY = 1; // choose building site to minimize edge discontinuity rather than amount of land that needs to be modified
 float const CAR_LANE_OFFSET         = 0.15; // in units of road width
-float const CITY_LIGHT_FALLOFF      = 0.2;
+float const CITY_LIGHT_FALLOFF      = 0.2; // smooth falloff for headlights, streetlights, and room lights
 
 
 bool had_building_interior_coll(0), city_lights_custom_bcube(0);
@@ -53,7 +53,7 @@ void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool
 		s.add_uniform_float("LT_DIR_FALLOFF", CITY_LIGHT_FALLOFF); // smooth falloff for car headlights and streetlights
 
 		if (enable_player_flashlight()) { // use a quicker falloff for flashlight beams
-			s.add_uniform_float("LT_DIR_FALLOFF_SM", 0.02);
+			s.add_uniform_float("LT_DIR_FALLOFF_SM",     FLASHLIGHT_BW);
 			s.add_uniform_float("LDIR_FALL_THRESH",  1.5*FLASHLIGHT_BW);
 		}
 	}
@@ -3201,7 +3201,11 @@ void city_lights_manager_t::setup_shadow_maps(vector<light_source> &light_source
 		selected.emplace_back((i - light_sources.begin()), matched_smap_id);
 	} // for i
 	// now that all smaps have been allocated, we can create them without worrying about the backing texture array getting resized and overwriting earlier shadow maps
-	for (sel_smap_light_t const &s : selected) {light_sources[s.lix].update_shadow_map(s.matched_smap_id, CITY_LIGHT_FALLOFF);}
+	for (sel_smap_light_t const &s : selected) {
+		light_source &ls(light_sources[s.lix]);
+		float const falloff((ls.get_beamwidth() == FLASHLIGHT_BW) ? FLASHLIGHT_BW : CITY_LIGHT_FALLOFF); // handle flashlight falloff correctly
+		ls.update_shadow_map(s.matched_smap_id, falloff);
+	}
 	dl_smap_enabled |= !selected.empty();
 	check_gl_error(431);
 }

@@ -1095,8 +1095,7 @@ light_source get_player_flashlight_light_source(float radius_scale) {
 		pos.z -= 0.5*CAMERA_RADIUS; // below eye level
 		pos   += 0.5*CAMERA_RADIUS*cview_dir; // move away from the camera
 	}
-	float const bw((world_mode == WMODE_INF_TERRAIN) ? 0.001 : FLASHLIGHT_BW); // hack to adjust flashlight for city/building larger falloff values
-	return light_source(FLASHLIGHT_RAD*radius_scale, pos, pos, get_flashlight_color(), 1, cview_dir, bw);
+	return light_source(FLASHLIGHT_RAD*radius_scale, pos, pos, get_flashlight_color(), 1, cview_dir, FLASHLIGHT_BW);
 }
 
 void add_player_flashlight_light_source(float radius_scale) { // for buildings

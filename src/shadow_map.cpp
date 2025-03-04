@@ -417,7 +417,7 @@ void set_smap_mvm_pjm(point const &eye, point const &center, vector3d const &up_
 	fgLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, up_dir.x, up_dir.y, up_dir.z);
 }
 
-pos_dir_up get_pt_cube_frustum_pdu(point const &pos_, cube_t const &bounds) {
+pos_dir_up get_pt_cube_frustum_pdu(point const &pos_, cube_t const &bounds) { // used for directional lights
 
 	assert(bounds.is_strictly_normalized());
 	point const center(bounds.get_cube_center());
@@ -610,7 +610,7 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *c
 	fgMatrixMode(FG_PROJECTION);
 	fgPushMatrix();
 	fgMatrixMode(FG_MODELVIEW);
-	if (bounds && (do_update || !pdu.valid)) {pdu = get_pt_cube_frustum_pdu(lpos, *bounds);} // else pdu should have been set by the caller
+	if (bounds && (do_update || !pdu.valid)) {pdu = get_pt_cube_frustum_pdu(lpos, *bounds);} // else pdu should have been set by the caller (point/spot light)
 
 	if (is_csm) {
 		cascade_matrices.resize(NUM_CSM_CASCADES);
@@ -783,7 +783,7 @@ bool local_smap_data_t::needs_update(point const &lpos) {
 }
 
 
-void create_shadow_map_inner(bool no_update) {
+void create_shadow_map_inner(bool no_update) { // directional scene lights (sun, moon, etc.)
 
 	cube_t const bounds(get_scene_bounds());
 	
