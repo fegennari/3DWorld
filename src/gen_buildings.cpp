@@ -3281,6 +3281,13 @@ public:
 			add_to_grid(b->bcube, bix, 0);
 			buildings_bcube.assign_or_union_with_cube(b->bcube);
 			has_interior_geom |= b->has_interior();
+
+			if (!is_tile && !city_only && b->is_industrial()) { // industrial secondary building - can connect to nearby transmission line
+				float const tline_dist(10.0*get_road_max_width());
+				point const bldg_conn_pt(cube_top_center(b->bcube));
+				point tline_conn_pt; // not currently used, but could be used for building intersection query to cancel this connection
+				b->has_tline_conn = connect_to_nearest_transmission_line(bldg_conn_pt, tline_dist, tline_conn_pt);
+			}
 		} // for b
 		if (!is_tile && (!city_only || maybe_residential)) {place_building_trees(rgen);}
 

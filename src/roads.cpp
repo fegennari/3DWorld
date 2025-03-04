@@ -1574,5 +1574,13 @@ void road_draw_state_t::draw_transmission_line(transmission_line_t const &tline)
 		cur_pt = p;
 	} // for p
 	draw_transmission_line_wires(cur_pt, all_zeros, wire_pts, tline.p2_wire_pts, wire_radius); // final segment
+
+	if (!tline.connections.empty()) { // draw connections: building to tline tower
+		// connect to building roof near the center, spaced slightly apart; sometimes wires get very close and may even intersect, though that's hard to avoid
+		float const dist_mult[3] = {0.0, -1.0, 1.0};
+		point bldg_pts[3];
+		for (unsigned n = 0; n < 3; ++n) {bldg_pts[n] += (0.1*dist_mult[n]*tower_bar_len)*wire_sep_dir;}
+		for (auto const &conn : tline.connections) {draw_transmission_line_wires(conn.first, conn.second, bldg_pts, wire_pts, wire_radius);}
+	}
 }
 

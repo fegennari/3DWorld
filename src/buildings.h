@@ -1984,7 +1984,7 @@ struct building_t : public building_geom_t {
 	uint8_t floor_ext_door_mask=0; // used for multi-family houses
 	uint8_t next_unit_id=1; // for apartments and hotels
 	building_type_t btype=BTYPE_UNSET;
-	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_complex_floorplan=0, has_helipad=0, has_ac=0, has_fake_roof_door=0;
+	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_complex_floorplan=0, has_helipad=0, has_ac=0, has_fake_roof_door=0, has_tline_conn=0;
 	mutable bool has_attic_window=0; // make mutable so that drawing code can update/cache this value
 	bool multi_family=0; // apartments, multi-family house, duplex, etc. - split by floor
 	bool has_int_fplace=0, has_parking_garage=0, has_small_part=0, has_basement_door=0, has_basement_pipes=0, parts_generated=0, is_in_city=0, has_skylight_light=0;
@@ -3102,6 +3102,7 @@ void create_mirror_reflection_if_needed(building_t const *vis_conn_bldg, vector3
 void draw_city_roads(int trans_op_mask, vector3d const &xlate);
 void get_closest_dim_dir_xy(cube_t const &inner, cube_t const &outer, bool &dim, bool &dir);
 bool check_city_tline_cube_intersect_xy(cube_t const &c);
+bool connect_to_nearest_transmission_line(point const &pos, float dmax, point &conn_pt);
 inline uint64_t get_tile_id_for_cube(cube_t const &c) {return get_tile_id_containing_point_no_xyoff(c.get_cube_center());}
 std::string gen_random_name(rand_gen_t &rgen, unsigned min_len=0, bool for_universe=0); // from Universe_name.cpp
 void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos);

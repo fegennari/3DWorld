@@ -2742,6 +2742,27 @@ public:
 			t.calc_bcube();
 		}
 	}
+	bool connect_to_nearest_transmission_line(point const &pos, float dmax, point &conn_pt) {
+		transmission_line_t *conn_tl(nullptr);
+
+		for (auto &t : transmission_lines) {
+			if (!pt_line_dist_less_than(pos, t.p1, t.p2, dmax)) continue; // too far
+
+			for (point const &p : t.tower_pts) {
+				float const dist_sq(p2p_dist_sq(p, pos));
+				if (dist_sq >= dmax*dmax) continue;
+				// we should check if this line intersects terrain or another building before adding it; but buildings haven't been placed yet;
+				// I haven't seen any other building intersections yet, since dmax is relatively small, so maybe it's okay?
+				//if (!city_road_connector_t(hq).is_tline_seg_valid(pos, p, 0.1*t.tower_height)) continue; // can't do, don't have access to heightmap here
+				conn_pt = p;
+				conn_tl = &t;
+				dmax    = sqrt(dist_sq);
+			} // for p
+		} // for t
+		if (conn_tl == nullptr) return 0;
+		conn_tl->connections.emplace_back(pos, conn_pt);
+		return 1;
+	}
 	void add_streetlights() {
 		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->add_streetlights();}
 	}
@@ -3292,6 +3313,7 @@ public:
 		return ret;
 	}
 	bool check_tline_cube_intersect_xy(cube_t const &c) const {return road_gen.check_tline_cube_intersect_xy(c);}
+	bool connect_to_nearest_transmission_line(point const &pos, float dmax, point &conn_pt) {return road_gen.connect_to_nearest_transmission_line(pos, dmax, conn_pt);}
 
 	void get_grass_coll_cubes(cube_t const &region, vect_cube_t &out, vect_cube_t &out_bt) const { // region is in camera space
 		get_plots_in_region(region, out);
@@ -3405,7 +3427,7 @@ void gen_cities(float *heightmap, unsigned xsize, unsigned ysize) {
 	if (!have_cities()) return; // nothing to do
 	city_gen.init(heightmap, xsize, ysize); // only need to call once for any given heightmap
 	city_gen.gen_cities();
-	city_gen.invalidate_heightmap();
+	city_gen.invalidate_heightmap(); // caller holds the reference to heightmap, so it's not valid after this call
 }
 void gen_city_details() {city_gen.gen_details();} // called after gen_buildings()
 cube_t get_city_bcube(unsigned city_id) {return city_gen.get_city_bcube(city_id);}
@@ -3461,6 +3483,7 @@ bool line_intersect_city(point const &p1, point const &p2, point &p_int) {
 	return 1;
 }
 bool check_city_tline_cube_intersect_xy(cube_t const &c) {return city_gen.check_tline_cube_intersect_xy(c);}
+bool connect_to_nearest_transmission_line(point const &pos, float dmax, point &conn_pt) {return city_gen.connect_to_nearest_transmission_line(pos, dmax, conn_pt);}
 
 class model_bcube_checker_t {
 	vect_cube_t model_bcubes;
