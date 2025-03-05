@@ -1884,11 +1884,11 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 	bool have_goal_pos(0), req_custom_dest(0);
 	// if the target is an elevator, use that as the required destination rather than the center of the room
 	if (person.goal_type == GOAL_TYPE_ELEVATOR) {have_goal_pos = req_custom_dest = 1;}
-	// if the target is the player and they're in a hallway, use the correct dest along the hallway
+	// if the target is the player and they're in a hallway or industrial area, use the correct dest along the hallway
 	else if (person.goal_type == GOAL_TYPE_PLAYER || person.goal_type == GOAL_TYPE_PLAYER_LAST_POS) {
 		//have_goal_pos = is_valid_ai_placement(person.target_pos, person.radius, 0, 1); // skip_nocoll=0, no_check_objs=1
 		room_t const &dest_room(get_room(loc2.room_ix));
-		have_goal_pos = (dest_room.is_hallway || dest_room.is_factory());
+		have_goal_pos = (dest_room.is_hallway || dest_room.is_industrial());
 	}
 	point const *const custom_dest(have_goal_pos ? &person.target_pos : nullptr);
 

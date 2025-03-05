@@ -619,7 +619,7 @@ bool building_t::add_office_objs(rand_gen_t rgen, room_t const &room, vect_cube_
 	if (rgen.rand_float() < (is_house ? 0.25 : 0.75)) { // maybe place a filing cabinet along a wall; more likely for office buildings than houses
 		add_filing_cabinet_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	}
-	if (!is_basement && is_factory()) {add_factory_office_objs(rgen, room, zval, room_id, floor, tot_light_amt, objs_start);} // factory office
+	if (!is_basement && is_industrial()) {add_industrial_office_objs(rgen, room, zval, room_id, floor, tot_light_amt, objs_start);} // industrial office
 	return 1;
 }
 
@@ -1585,7 +1585,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 	bool const have_toilet(building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)), have_sink(building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK));
 	vect_room_object_t &objs(interior->room_geom->objs);
 
-	if ((have_toilet || have_sink) && is_cube() && !is_factory()) { // bathroom with at least a toilet or sink; cube shaped parts only; no factories; add flooring
+	if ((have_toilet || have_sink) && is_cube() && !is_industrial()) { // bathroom with at least a toilet or sink; cube shaped parts only; no industrial; add flooring
 		int const flooring_type(is_residential() ? (is_basement ? (int)FLOORING_CONCRETE : (int)FLOORING_TILE) : (int)FLOORING_MARBLE);
 		if (flooring_type == FLOORING_CONCRETE && get_material().basement_floor_tex.tid == get_concrete_tid()) {} // already concrete
 		else { // replace carpet/wood with marble/tile/concrete
@@ -5073,7 +5073,7 @@ template<typename T> bool any_cube_contains(cube_t const &cube, T const &cubes) 
 	return 0;
 }
 bool building_t::is_light_placement_valid(cube_t const &light, room_t const &room, float pad) const {
-	if (room.is_factory()) return 1; // factory lights hang from the ceiling; assume they are placed correctly
+	if (room.is_industrial()) return 1; // industrial lights hang from the ceiling; assume they are placed correctly
 	cube_t light_ext(light);
 	light_ext.expand_by_xy(pad);
 	if (!room.contains_cube(light_ext))             return 0; // room too small?

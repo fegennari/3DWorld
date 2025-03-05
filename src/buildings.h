@@ -1463,6 +1463,7 @@ struct room_t : public cube_t { // size=56
 	bool is_retail           () const {return (get_room_type(0) == RTYPE_RETAIL   );}
 	bool is_factory          () const {return (get_room_type(0) == RTYPE_FACTORY  );}
 	bool is_warehouse        () const {return (get_room_type(0) == RTYPE_WAREHOUSE);}
+	bool is_industrial       () const {return (is_factory() || is_warehouse());}
 	bool is_mall_or_store    () const {return (is_mall() || is_store());}
 	bool is_apt_or_hotel_room() const {return (unit_id > 0);}
 	bool has_room_of_type(room_type type) const;
@@ -2140,10 +2141,10 @@ struct building_t : public building_geom_t {
 	int check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points,
 		bool inc_attic=0, bool inc_ext_basement=0, bool inc_roof_acc=0, bool inc_details=0, cube_t *coll_cube=nullptr) const;
 	bool point_under_attic_roof(point const &pos, vector3d *const cnorm=nullptr) const;
-	bool point_in_attic  (point const &pos, vector3d *const cnorm=nullptr) const;
-	bool cube_in_attic   (cube_t const &c) const;
-	bool point_in_mall   (point const &pos) const {return (has_mall  () && point_in_extended_basement_not_basement(pos));} // including stores and hallways
-	bool point_in_factory(point const &pos) const {return (is_factory() && get_factory_area().contains_pt(pos));}
+	bool point_in_attic        (point const &pos, vector3d *const cnorm=nullptr) const;
+	bool cube_in_attic         (cube_t const &c) const;
+	bool point_in_mall         (point const &pos) const {return (has_mall     () && point_in_extended_basement_not_basement(pos));} // including stores and hallways
+	bool point_in_industrial   (point const &pos) const {return (is_industrial() && get_industrial_area().contains_pt(pos));}
 	bool check_point_xy_in_part(point const &pos) const;
 	bool player_can_see_outside() const;
 	bool player_can_see_mall_skylight(vector3d const &xlate) const;
@@ -2218,10 +2219,10 @@ struct building_t : public building_geom_t {
 	void gen_sloped_roof(rand_gen_t &rgen, cube_t const &top);
 	void add_roof_to_bcube();
 	void gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax);
-	tid_nm_pair_t get_basement_wall_texture() const;
-	tid_nm_pair_t get_factory_wall_texture() const;
+	tid_nm_pair_t get_basement_wall_texture  () const;
+	tid_nm_pair_t get_industrial_wall_texture() const;
 	tid_nm_pair_t get_attic_texture() const;
-	tid_nm_pair_t get_interior_ext_wall_texture() const {return (is_factory() ? get_factory_wall_texture() : get_material().wall_tex);}
+	tid_nm_pair_t get_interior_ext_wall_texture() const {return (is_industrial() ? get_industrial_wall_texture() : get_material().wall_tex);}
 	colorRGBA get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_pair_t &tex) const;
 	colorRGBA get_ceil_tex_and_color (cube_t const &ceil_cube,  tid_nm_pair_t &tex) const;
 	colorRGBA get_trim_color() const {return (is_house ? WHITE : DK_GRAY);}
@@ -2324,9 +2325,7 @@ struct building_t : public building_geom_t {
 	bool maybe_zombie_retreat(unsigned person_ix, point const &hit_pos);
 	void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
 	bool is_room_backrooms(unsigned room_ix) const {return get_room(room_ix).is_backrooms();}
-	bool is_single_large_room(room_t const &room) const {
-		return(room.is_parking() || room.is_backrooms() || room.is_retail() || room.is_mall() || room.is_factory() || room.is_warehouse());
-	}
+	bool is_single_large_room(room_t const &room) const {return(room.is_parking() || room.is_backrooms() || room.is_retail() || room.is_mall() || room.is_industrial());}
 	bool is_single_large_room_or_store(room_t const &room) const {return (is_single_large_room(room) || room.is_store());}
 	bool is_single_large_room(int room_ix) const {return (room_ix >= 0 && is_single_large_room(get_room(room_ix)));}
 	bool is_single_large_room_or_store(int room_ix) const {return (room_ix >= 0 && is_single_large_room_or_store(get_room(room_ix)));}
@@ -2447,7 +2446,7 @@ public:
 	cube_t get_ext_basement_entrance() const;
 	cube_t get_best_occluder(point const &camera_bs) const;
 	cube_t get_step_for_ext_door(tquad_with_ix_t const &door) const;
-	cube_t const &get_factory_area() const {assert(is_factory()); assert(!parts.empty()); return parts.front();}
+	cube_t const &get_industrial_area() const {assert(is_industrial()); assert(!parts.empty()); return parts.front();}
 	bool interior_visible_from_other_building_ext_basement(vector3d const &xlate, bool expand_for_light=0) const;
 	bool top_of_mall_elevator_visible(point const &camera_bs, vector3d const &xlate) const;
 	bool can_have_basement() const;
@@ -2601,7 +2600,7 @@ private:
 	void add_filing_cabinet_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool add_office_objs     (rand_gen_t rgen, room_t const &room, vect_cube_t &blockers, colorRGBA const &chair_color,
 		float zval, unsigned room_id, unsigned floor, float tot_light_amt, unsigned objs_start, bool is_basement);
-	void add_factory_office_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, unsigned floor, float tot_light_amt, unsigned objs_start);
+	void add_industrial_office_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, unsigned floor, float tot_light_amt, unsigned objs_start);
 	bool create_office_cubicles(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_office_pillars(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t const &lights, vect_cube_t &blockers);
 	vector2d get_conf_room_table_length_width(cube_t const &room) const;

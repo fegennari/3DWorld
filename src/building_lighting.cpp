@@ -254,7 +254,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 		for (auto i = interior->walls[d].begin(); i != interior->walls[d].end(); ++i) {
 			if (!i->intersects(ext_bcube)) continue;
 			bool const in_basement(i->z1() < ground_floor_z1), in_ext_basement(in_basement && i >= (interior->walls[d].begin() + interior->extb_walls_start[d]));
-			colorRGBA color(in_basement ? WHITE : (is_factory() ? concrete_color : wall_color)); // basement walls are always white
+			colorRGBA color(in_basement ? WHITE : (is_industrial() ? concrete_color : wall_color)); // basement walls are always white
 
 			if (!is_house && in_ext_basement) { // office building extended basement, backrooms, or mall
 				if (is_inside_mall_stores(i->get_cube_center())) {color = interior->mall_info->mall_wall_color;}
@@ -629,9 +629,9 @@ class building_indir_light_mgr_t {
 				light_cube.translate_dim(dim, (dir ? 1.0 : -1.0)*0.5*b.get_wall_thickness()); // shift slightly inside the building to avoid collision with the exterior wall
 				lcolor = outdoor_color;
 				
-				if (b.is_factory()) {
+				if (b.is_industrial()) {
 					base_num_rays /= 8; // faster indir lighting, since there are many windows
-					surface_area  *= 0.25; // less indir light, since there are many windows and we want factories to be darker than retail areas
+					surface_area  *= 0.25; // less indir light, since there are many windows and we want industrial buildings to be darker than retail areas
 				}
 			}
 			// light intensity scales with surface area, since incoming light is a constant per unit area (large windows = more light)
@@ -658,7 +658,7 @@ class building_indir_light_mgr_t {
 			if (ro.type == TYPE_LAMP) {weight *= 0.33;} // lamps are less bright
 			if (ro.is_round())        {light_radius = ro.get_radius();}
 			if (in_attic)             {weight *= ATTIC_LIGHT_RADIUS_SCALE*ATTIC_LIGHT_RADIUS_SCALE;} // based on surface area rather than radius
-			else if (b.point_in_factory(light_center)) {base_num_rays /= 4;} // many lights in factory, fewer rays needed
+			else if (b.point_in_industrial(light_center)) {base_num_rays /= 4;} // many lights in industrial areas, fewer rays needed
 			else if (light_in_basement) {
 				if (in_ext_basement) {
 					if      (b.interior->has_backrooms) {weight *= 0.2; base_num_rays /= 4;} // darker and fewer rays
@@ -916,8 +916,8 @@ public:
 			VA = b.get_attic_part();
 			set_cube_zvals(VA, b.interior->attic_access.z1(), b.interior_z2);
 		}
-		else if (b.point_in_factory(target)) { // factory is full Z range
-			VA = b.get_factory_area();
+		else if (b.point_in_industrial(target)) { // industrial is full Z range
+			VA = b.get_industrial_area();
 		}
 		else {
 			bool const in_ext_basement(b.point_in_extended_basement_not_basement(target));
@@ -1669,7 +1669,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	}
 	if (has_room_geom() && frame_counter <= (int)interior->room_geom->last_animal_update_frame+1) { // animals were updated this frame or the previous frame
 		if (has_retail() && get_retail_part().contains_pt(camera_rot)) {} // optimization: no dynamic animal shadows in retail area
-		else if (point_in_mall(camera_rot) || point_in_factory(camera_rot)) {} // optimization: no dynamic animal shadows in malls or factories
+		else if (point_in_mall(camera_rot) || point_in_industrial(camera_rot)) {} // optimization: no dynamic animal shadows in malls or industrial areas
 		else { // add a base index to each animal group to make all moving objects unique
 			// Note: sewer_rats, pet_rats, sewer_spiders, and pet_snakes don't cast shadows
 			get_animal_shadow_casters(interior->room_geom->rats,    moving_objs, xlate, 10000);
@@ -1689,8 +1689,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			// should we do an occlusion query?
 			if ((type == TYPE_LAVALAMP || type == TYPE_FISHTANK || type == TYPE_WARN_LIGHT) && i->is_light_on()) {
 				room_t const &room(get_room(i->room_id)); // should we clip to the current floor in Z?
-				if ((camera_room_tall || room.is_factory() || room.is_warehouse() || room.is_retail() || room.is_mall_or_store()) &&
-					camera_room == (int)i->room_id) {} // player in a tall room
+				if ((camera_room_tall || room.is_industrial() || room.is_retail() || room.is_mall_or_store()) && camera_room == (int)i->room_id) {} // player in a tall room
 				else if (camera_in_mall && room.is_store()) {} // store visible from another floor of the mall
 				else if (int((camera_bs.z - ground_floor_z1)/window_vspacing) != int((i->zc() - ground_floor_z1)/window_vspacing)) continue; // different floor
 
@@ -2146,20 +2145,20 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (!is_rot_cube_visible(clipped_bc, xlate, 1)) continue; // VFC - post clip; inc_mirror_reflections=1
 		// occlusion culling (expensive); skip basement check for mall lights viewed through skylights
 		if (check_occ && !clipped_bc.contains_pt(camera_rot) && check_obj_occluded(clipped_bc, camera_bs, oc, 0, 0, mall_light_vis)) continue;
-		bool const in_factory(room.is_factory()), tall_retail(in_retail_room && has_tall_retail()); // narrower for factory ceiling lights and a bit lower for tall retail
-		float bwidth(in_factory ? 0.125 : (tall_retail ? 0.24 : 0.25)); // as close to 180 degree FOV as we can get without shadow clipping
+		bool const in_industrial(room.is_industrial()), tall_retail(in_retail_room && has_tall_retail()); // narrower for industrial ceiling lights and a bit lower for tall retail
+		float bwidth(in_industrial ? 0.125 : (tall_retail ? 0.24 : 0.25)); // as close to 180 degree FOV as we can get without shadow clipping
 		//if (wall_light) {bwidth = 1.0;} // wall light omnidirectional, but shadows are wrong
 		vector3d dir;
 		if (wall_light) {dir[i->dim] = (i->dir ? 1.0 : -1.0);} else {dir = -plus_z;} // points down, unless it's a wall light
 		dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, dir, bwidth);
 		if (track_lights) {enabled_bldg_lights.push_back(lpos_rot);}
 		//++num_add;
-		// use smaller shadow radius for retail rooms, factories, malls, and stores since there are so many lights (meaning shadows are less visible and perf is more important)
-		bool const reduced_shadows(in_retail_room || in_factory || room.is_mall_or_store());
+		// use smaller shadow radius for retail rooms, industrial, malls, and stores since there are so many lights (meaning shadows are less visible and perf is more important)
+		bool const reduced_shadows(in_retail_room || in_industrial || room.is_mall_or_store());
 		float const light_radius_shadow((reduced_shadows ? RETAIL_SMAP_DSCALE : 1.0)*light_radius);
 		bool force_smap_update(0);
-		// must update factory shadows when the player enters the building to include detail object shadows such as pipes
-		if (in_factory && camera_in_building) {shadow_caster_hash ^= 12345;}
+		// must update industrial shadows when the player enters the building to include detail object shadows such as pipes
+		if (in_industrial && camera_in_building) {shadow_caster_hash ^= 12345;}
 
 		// check for dynamic shadows; check the player first; use full light_radius_shadow
 		if (camera_surf_collide && (camera_in_building || in_camera_walkway || (player_in_walkway && maybe_walkway) || camera_can_see_ext_basement) &&
@@ -2245,7 +2244,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 			else { // add a second, smaller unshadowed light for the upper hemisphere or omnidirectional for wall lights
 				// the secondary light is unshadowed and won't pick up shadows from any stairs in the room, so reduce the radius
-				float const rscale((room.is_hallway ? 0.25 : (in_factory ? 0.35 : (room.is_office ? 0.45 : 0.5)))*(has_stairs_this_floor ? 0.67 : 1.0));
+				float const rscale((room.is_hallway ? 0.25 : (in_industrial ? 0.35 : (room.is_office ? 0.45 : 0.5)))*(has_stairs_this_floor ? 0.67 : 1.0));
 				sec_light_radius = rscale*light_radius;
 
 				if (wall_light) {
@@ -2256,7 +2255,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 				else { // ceiling light
 					sec_lpos.z -= wall_thickness; // shift down somewhat; use a constant that works with recessed lights at doorways
-					dl_sources.emplace_back(sec_light_radius, sec_lpos, sec_lpos, color, 0, plus_z, (in_factory ? 0.6 : 0.5)); // hemisphere that points up
+					dl_sources.emplace_back(sec_light_radius, sec_lpos, sec_lpos, color, 0, plus_z, (in_industrial ? 0.6 : 0.5)); // hemisphere that points up
 				}
 			}
 			if (!light_bc2.is_all_zeros()) {

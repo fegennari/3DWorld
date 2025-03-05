@@ -186,7 +186,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_DRINK_CAN ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 1.0,   0.75,  "drink can", 1); // single use
 	bldg_obj_types[TYPE_CONF_TABLE] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1, 200.0, 300.0, "conference table");
 	bldg_obj_types[TYPE_INT_WINDOW] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1,  0.0,  0.0,   "window"); // window in interior wall between two rooms
-	bldg_obj_types[TYPE_INT_LADDER] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 50.0,  40.0,  "ladder"); // should factory ladders be pickup objects?
+	bldg_obj_types[TYPE_INT_LADDER] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 50.0,  40.0,  "ladder"); // should factory/industrial ladders be pickup objects?
 	bldg_obj_types[TYPE_MACHINE   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2,  0.0,  0.0,   "machine");
 	bldg_obj_types[TYPE_BUCKET    ] = bldg_obj_type_t(0, 1, 1, 1, 0, 0, 3,  8.0,  1.0,   "bucket"); // with transparent liquid
 	bldg_obj_types[TYPE_SPIWEB    ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 2,  0.0,  0.0,   "spider web");

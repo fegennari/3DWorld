@@ -925,11 +925,11 @@ bool building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 {
 	// add vertical red (possibly rusted brown) sprinkler system pipe
 	cube_t room(get_room(room_id));
-	bool const in_basement(room.z1() < ground_floor_z1); // else in factory
+	bool const in_basement(room.z1() < ground_floor_z1); // else in industrial area
 	float const tot_light_amt = 1.0; // to offset the darkness of the basement
 	float const window_vspace(get_window_vspace()), floor_spacing((custom_floor_spacing > 0.0) ? custom_floor_spacing : window_vspace);
 	float const fc_thickness(get_fc_thickness()), wall_thickness(get_wall_thickness());
-	float const sp_radius((in_basement ? 1.2 : 0.9)*wall_thickness), spacing(2.0*sp_radius), flange_expand(0.3*sp_radius); // larger for basement, smaller for factory
+	float const sp_radius((in_basement ? 1.2 : 0.9)*wall_thickness), spacing(2.0*sp_radius), flange_expand(0.3*sp_radius); // larger for basement, smaller for industrial
 	float const bolt_dist(sp_radius + 0.5*flange_expand), bolt_radius(0.32*flange_expand), bolt_height(0.1*fc_thickness);
 	bool const inverted_sprinklers(room_id & 1); // random-ish
 	// pipe color; fade to rusty brown for basement pipes when there's water damage

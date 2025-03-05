@@ -2114,7 +2114,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 
 	bool const flat_roof(roof_type == ROOF_TYPE_FLAT), add_walls(is_cube() && flat_roof); // simple cube buildings with flat roofs
 	unsigned num_ac_units(0);
-	if (flat_roof && is_cube()) {num_ac_units = (rgen.rand() % (is_factory() ? 9 : 7));} // cube buildings only for now; 0-8 for factory, otherwise 0-6
+	if (flat_roof && is_cube()) {num_ac_units = (rgen.rand() % (is_industrial() ? 9 : 7));} // cube buildings only for now; 0-8 for industrial, otherwise 0-6
 	float const window_vspacing(get_window_vspace()), wall_width(0.049*window_vspacing); // slightly narrower than interior wall width to avoid z-fighting with roof access
 	assert(!parts.empty());
 	create_per_part_ext_verts(); // needed for roof containment queries
@@ -2280,13 +2280,13 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		add_roof_walls(top, wall_width, 0, cubes); // overlap_corners=0
 		for (unsigned i = 0; i < 4; ++i) {details.emplace_back(cubes[i], (uint8_t)ROOF_OBJ_WALL);}
 	}
-	if (is_factory()) {add_factory_smokestack(rgen);}
+	if (is_factory() || is_powerplant()) {add_smokestack(rgen);}
 	for (auto i = details.begin(); i != details.end(); ++i) {assert(i->is_strictly_normalized()); max_eq(bcube.z2(), i->z2());} // extend bcube z2 to contain details
 	if (roof_type == ROOF_TYPE_FLAT) {gen_grayscale_detail_color(rgen, 0.2, 0.6);} // for antenna and roof
 }
 
 void building_t::maybe_add_skylight(rand_gen_t &rgen) {
-	if (is_factory()) return; // no factory skylights; they work, but factories have enough windows already
+	if (is_industrial()) return; // no industrial building skylights; they work, but factories, etc. have enough windows already
 	// maybe add skylights; cube roofs only for now, since we can't cut holes in other shapes; only for office buildings with interiors;
 	// could add skylights to house rooms such as bathrooms, but they haven't been assigned and we would need to cut holes in the roof and possibly attic
 	// note that at this point there has been no floorplanning, so we don't know where primary hallways, etc. will be

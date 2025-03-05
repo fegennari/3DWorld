@@ -1448,7 +1448,7 @@ tid_nm_pair_t building_t::get_basement_wall_texture() const { // okay to call if
 		return tid_nm_pair_t(get_texture_by_name("cblock2.jpg"), get_texture_by_name("normal_maps/cblock2_NRM.jpg", 1), 1.0, 1.0);
 	}
 }
-tid_nm_pair_t building_t::get_factory_wall_texture() const {
+tid_nm_pair_t building_t::get_industrial_wall_texture() const {
 	return get_basement_wall_texture(); // for now, this is the same as the basement
 }
 tid_nm_pair_t building_t::get_attic_texture() const {
@@ -1485,7 +1485,7 @@ colorRGBA building_t::get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_p
 			}
 		}
 		else if (in_basement && (has_parking_garage || in_ext_basement)) {tex = get_concrete_texture();} // parking garage or extended basement is concrete
-		else if (is_factory()) {tex = get_concrete_texture();} // factory floor is always concrete; could also use a dark tile texture
+		else if (is_industrial()) {tex = get_concrete_texture();} // industrial floor is always concrete; could also use a dark tile texture
 		else {tex = mat.floor_tex;} // office block
 	}
 	return (is_house ? mat.house_floor_color : mat.floor_color);
@@ -1507,7 +1507,7 @@ colorRGBA building_t::get_ceil_tex_and_color(cube_t const &ceil_cube, tid_nm_pai
 		tex = mat.wall_tex;
 		return WHITE; // basement walls are always white
 	}
-	if (is_factory() && ceil_cube.z1() > ground_floor_z1 + get_window_vspace()) { // factory upper ceiling, not office or bathroom ceiling
+	if (is_industrial() && ceil_cube.z1() > ground_floor_z1 + get_window_vspace()) { // industrial upper ceiling, not office or bathroom ceiling
 		float const txy(0.5*mat.ceil_tex.tscale_x);
 		tex = tid_nm_pair_t(building_texture_mgr.get_corr_metal_tid(), building_texture_mgr.get_corr_metal_nm_tid(), txy, txy);
 		return WHITE;
@@ -2008,7 +2008,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 				if (is_inside_mall_stores(i->get_cube_center())) {tex = mat.wall_tex; color = mall_wall_color;}
 				else {tex = get_concrete_texture();} // extended basement
 			}
-			else if (is_factory() && i->z1() >= ground_floor_z1) {tex = get_concrete_texture();} // factory interior walls
+			else if (is_industrial() && i->z1() >= ground_floor_z1) {tex = get_concrete_texture();} // industrial interior walls
 			else {tex = mat.wall_tex;}
 			bdraw.add_section(*this, 0, *i, tex, color, dim_mask, 1, 0, 1, 0); // no AO; X and/or Y dims only, skip bottom, only draw top if under skylight
 		} // for i
@@ -2321,21 +2321,23 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		if (is_basement(i)) continue; // skip the basement
 		unsigned const part_ix(i - parts.begin());
 
-		if (part_ix == 0 && is_factory()) { // factory has top 1-2 rows of windows and bottom windows for bathroom and office
+		if (part_ix == 0 && is_industrial()) { // industrial has top 1-2 rows of windows and bottom windows for bathroom and office
 			float const window_z1(min((i->z2() - floor_spacing), (i->z1() + 2.0f*floor_spacing)));
 			cube_t part(*i);
 			set_cube_zvals(part, max(i->z1(), window_z1), i->z2()); // top row only
 			bdraw.add_section(*this, 1, part, tex, color, 3, 0, 0, 1, clip_windows, 0.0, 0, offset_scale, 0, nullptr); // XY, no_ao=1
 			if (window_z1 <= i->z1()) continue; // all windows drawn
 
-			for (cube_t const &r : interior->factory_info->sub_rooms) {
-				unsigned dim_mask(3); // disable faces not along exterior walls: 8=x1, 16=x2, 32=y1, 64=y2
-				if (i->x1() != r.x1()) {dim_mask |= 8 ;}
-				if (i->x2() != r.x2()) {dim_mask |= 16;}
-				if (i->y1() != r.y1()) {dim_mask |= 32;}
-				if (i->y2() != r.y2()) {dim_mask |= 64;}
-				bdraw.add_section(*this, 1, r, tex, color, dim_mask, 0, 0, 1, clip_windows, 0.0, 0, offset_scale, 0, nullptr); // XY, no_ao=1
-			} // for r
+			if (interior->factory_info) { // draw factory sub-room windows
+				for (cube_t const &r : interior->factory_info->sub_rooms) {
+					unsigned dim_mask(3); // disable faces not along exterior walls: 8=x1, 16=x2, 32=y1, 64=y2
+					if (i->x1() != r.x1()) {dim_mask |= 8 ;}
+					if (i->x2() != r.x2()) {dim_mask |= 16;}
+					if (i->y1() != r.y1()) {dim_mask |= 32;}
+					if (i->y2() != r.y2()) {dim_mask |= 64;}
+					bdraw.add_section(*this, 1, r, tex, color, dim_mask, 0, 0, 1, clip_windows, 0.0, 0, offset_scale, 0, nullptr); // XY, no_ao=1
+				} // for r
+			}
 			draw_parts_mask |= (1 << part_ix);
 			continue;
 		}
@@ -2695,8 +2697,8 @@ void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
 	if (!interior || !has_basement()) return;
 	float const zval(get_basement().z2()), camera_z(get_camera_pos().z);
 	if (camera_z < zval) return; // below upper basement level
-	// floor 3+ of office building; skip factories; skip houses because entrance can be visible through L-shaped stairs
-	if (!is_house && !is_factory() && camera_z > ground_floor_z1 + 2.0*get_window_vspace()) return;
+	// floor 3+ of office building; skip industrial buildings; skip houses because entrance can be visible through L-shaped stairs
+	if (!is_house && !is_industrial() && camera_z > ground_floor_z1 + 2.0*get_window_vspace()) return;
 	float const z(zval + BASEMENT_ENTRANCE_SCALE*get_floor_thickness()); // offset is required to prevent Z-fighting
 	bool const depth_clamp_enabled(glIsEnabled(GL_DEPTH_CLAMP));
 	s.set_cur_color(ALPHA0); // fully transparent
@@ -3422,8 +3424,8 @@ public:
 						}
 						b.draw_cars_in_building(s, xlate, 1, 1); // player_in_building=1, shadow_only=1
 						is_house |= b.is_house;
-						bool const in_retail_room(b.check_pt_in_retail_room(lpos) || b.point_in_mall(lpos) || b.point_in_factory(lpos)); // retail, factory, malls, and mall stores
-						float const player_smap_dist((in_retail_room ? RETAIL_SMAP_DSCALE : 1.0)*camera_pdu.far_);
+						bool const in_open_room(b.check_pt_in_retail_room(lpos) || b.point_in_mall(lpos) || b.point_in_industrial(lpos)); // retail, industrial, malls, stores
+						float const player_smap_dist((in_open_room ? RETAIL_SMAP_DSCALE : 1.0)*camera_pdu.far_);
 						bool const viewer_close(dist_less_than(lpos, pre_smap_player_pos, player_smap_dist)); // Note: pre_smap_player_pos already in building space
 						bool const add_player_shadow(camera_surf_collide && camera_in_this_building && viewer_close && !sec_camera_mode &&
 							(actual_player_pos.z - get_bldg_player_height()) < lpos.z);
@@ -3433,7 +3435,7 @@ public:
 						if (add_people_shadow || add_player_shadow) {
 							shader_t &shader(enable_animations ? person_shader : s);
 							if (enable_animations) {select_person_shadow_shader(person_shader);}
-							if (add_people_shadow) {gen_and_draw_people_in_building(ped_draw_vars_t(b, oc, shader, xlate, bi->ix, 1, 0, in_retail_room));}
+							if (add_people_shadow) {gen_and_draw_people_in_building(ped_draw_vars_t(b, oc, shader, xlate, bi->ix, 1, 0, in_open_room));}
 							if (add_player_shadow) {draw_player_model(shader, xlate, 1);} // shadow_only=1
 							if (enable_animations) {s.make_current();} // switch back to normal building shader
 						}

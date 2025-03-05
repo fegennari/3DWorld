@@ -1812,12 +1812,12 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (frame_counter < 100 || frame_counter > last_frame) {num_geom_this_frame = 0; last_frame = frame_counter;} // unlimited for the first 100 frames
 	point const camera_bs(camera_pdu.pos - xlate);
 	float const floor_spacing(building.get_window_vspace()), ground_floor_z1(building.ground_floor_z1);
-	bool const draw_ext_only(inc_small == 4), check_occlusion(display_mode & 0x08), is_factory(building.is_factory());
+	bool const draw_ext_only(inc_small == 4), check_occlusion(display_mode & 0x08);
 	if (draw_ext_only) {inc_small = 0;}
 	// don't draw ceiling lights when player is above the building unless there's a light placed on a skylight
 	bool const draw_lights(!draw_ext_only && (camera_bs.z < building.bcube.z2() + (building.has_skylight_light ? 20.0*floor_spacing : 0.0)));
-	// only factories, parking garages, backrooms, and attics have detail objects that cast shadows
-	bool const draw_detail_objs(inc_small >= 2 && (!shadow_only || is_factory || building.point_in_attic(camera_bs) || building.is_pos_in_pg_or_backrooms(camera_bs)));
+	// only industrial, parking garages, backrooms, and attics have detail objects that cast shadows
+	bool const draw_detail_objs(inc_small >= 2 && (!shadow_only || building.is_industrial() || building.point_in_attic(camera_bs) || building.is_pos_in_pg_or_backrooms(camera_bs)));
 	bool const draw_int_detail_objs(inc_small >= 3 && !shadow_only);
 	// update clocks if moved to next second; only applies to the player's building
 	bool const update_clocks(player_in_building && inc_small >= 2 && !shadow_only && !reflection_pass && have_clock && check_clock_time());
@@ -1954,10 +1954,10 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	bool const is_rotated(building.is_rotated()), is_player_building(&building == player_building);
 	bool const check_clip_cube(shadow_only && !is_rotated && !smap_light_clip_cube.is_all_zeros()); // check clip cube for shadow pass; not implemented for rotated buildings
 	bool const skip_interior_objs(!player_in_building_or_doorway && !shadow_only), has_windows(building.has_windows());
-	bool const player_in_factory(building.point_in_factory(camera_bs));
+	bool const player_in_industrial(building.point_in_industrial(camera_bs));
 	float const one_floor_above(camera_bs.z + floor_spacing);
 	float two_floors_below(camera_bs.z - 2.0*floor_spacing);
-	if (player_in_factory) {min_eq(two_floors_below, ground_floor_z1);} // factory lights reach more than 2 floors
+	if (player_in_industrial) {min_eq(two_floors_below, ground_floor_z1);} // industrial lights reach more than 2 floors
 	cube_t const clip_cube_bs(smap_light_clip_cube - xlate);
 	// skip for rotated buildings and reflection pass, since reflected pos may be in a different room; should we use actual_player_pos for shadow_only mode?
 	int const camera_room((is_rotated || reflection_pass) ? -1 : building.get_room_containing_camera(camera_bs));
@@ -2140,8 +2140,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		}
 	}
 	if (player_in_building_or_doorway) {
-		// draw animals; skip animal shadows for factories, retail rooms, and malls/stores as an optimization (must agree with lighting code)
-		if (shadow_only && (player_in_factory || (building.has_retail() && building.get_retail_part().contains_pt(camera_bs)) || building.point_in_mall(camera_bs))) {}
+		// draw animals; skip animal shadows for industrial areas, retail rooms, and malls/stores as an optimization (must agree with lighting code)
+		if (shadow_only && (player_in_industrial || (building.has_retail() && building.get_retail_part().contains_pt(camera_bs)) || building.point_in_mall(camera_bs))) {}
 		else {draw_animals(s, building, oc, xlate, camera_bs, shadow_only, reflection_pass, check_clip_cube);}
 	}
 	if (disable_cull_face) {glEnable(GL_CULL_FACE);} // re-enable face culling
@@ -2208,7 +2208,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (!reflection_pass) {lava_lamp_draw.next_frame();}
 		end_fish_draw(s, inc_pools_and_fb);
 		draw_and_clear_blur_qbd(ao_qbd);
-		if (!is_factory) {draw_and_clear_flares(flare_qbd, s, RED);} // factory flares are drawn later
+		if (!building.is_factory()) {draw_and_clear_flares(flare_qbd, s, RED);} // factory flares are drawn later
 	}
 	water_sound_manager.finalize();
 	water_draw.draw_and_clear(s);
@@ -2228,7 +2228,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	decal_manager.draw_building_interior_decals(s, player_in_building_or_doorway, shadow_only); // draw decals in this building
 	
 	if (player_in_building && !shadow_only) { // ideally should be drawn after all buildings, but the shaders won't be setup correctly
-		if (!is_factory) {particle_manager.draw(s, xlate);} // factory smoke is drawn later
+		if (!building.is_factory()) {particle_manager.draw(s, xlate);} // factory smoke is drawn later
 		fire_manager.draw(s, xlate);
 	}
 	if (!shadow_only && !mats_alpha.empty()) { // draw last; not shadow casters; for shower glass, etc.
