@@ -110,7 +110,7 @@ void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cu
 	if (dim == 2) { // vertical pipe
 		vector3d const pipe_dir(p1 - c.get_cube_center());
 		vdim = (fabs(pipe_dir.x) < fabs(pipe_dir.y));
-		vdir = ((c.dim == vdim) ? c.dir : (pipe_dir[vdim] > 0.0)); // toward the front, or the closer side
+		vdir = ((c.dim == bool(vdim)) ? c.dir : (pipe_dir[vdim] > 0.0)); // toward the front, or the closer side
 		odim = 1 - vdim;
 	}
 	else { // horizontal pipe
@@ -121,7 +121,7 @@ void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cu
 		}
 		else { // horizontal valve
 			vdim = (1 - dim);
-			vdir = ((c.dim == vdim) ? c.dir : rgen.rand_bool()); // toward the front, or a random side
+			vdir = ((c.dim == bool(vdim)) ? c.dir : rgen.rand_bool()); // toward the front, or a random side
 			odim = 2;
 		}
 	}
