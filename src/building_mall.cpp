@@ -1043,6 +1043,14 @@ unsigned building_t::add_mall_objs(rand_gen_t rgen, room_t &room, float zval, un
 				objs.emplace_back(vbar, TYPE_METAL_BAR, room_id, 0, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, bar_color, EF_Z12); // skip top and bottom
 			}
 		}
+		if (f > 0) { // add pillar collars for upper floors
+			for (cube_t const &pillar : main_pillars) {
+				cube_t collar(pillar);
+				set_wall_width(collar, z, 0.8*fc_thick, 2); // set zvals
+				collar.expand_by_xy(0.1*pillar_hwidth);
+				objs.emplace_back(collar, TYPE_METAL_BAR, room_id, 0, 1, RO_FLAG_NOCOLL, light_amt, pillar_shape, bar_color, 0); // draw all sides, vertical, shape of pillar
+			}
+		}
 	} // for f
 
 	// add objects for store doors, which are always between pairs of interior windows

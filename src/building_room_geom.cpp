@@ -5710,7 +5710,8 @@ void building_room_geom_t::add_metal_bar(room_object_t const &c) {
 	}
 	else if (c.shape == SHAPE_CYLIN) {
 		unsigned const dim(c.dir ? 2 : unsigned(c.dim)); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
-		metal_mat.add_ortho_cylin_to_verts(c, color, dim, 0, 0); // skip top and bottom
+		bool const draw_bot(!(c.item_flags & EF_Z1)), draw_top(!(c.item_flags & EF_Z2));
+		metal_mat.add_ortho_cylin_to_verts(c, color, dim, draw_bot, draw_top);
 	}
 	else {assert(0);}
 }
