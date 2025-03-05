@@ -1466,6 +1466,8 @@ struct room_t : public cube_t { // size=56
 	bool is_warehouse        () const {return (get_room_type(0) == RTYPE_WAREHOUSE);}
 	bool is_industrial       () const {return (is_factory() || is_warehouse());}
 	bool is_mall_or_store    () const {return (is_mall() || is_store());}
+	bool is_single_large_room() const {return(is_parking() || is_backrooms() || is_retail() || is_mall() || is_industrial());}
+	bool is_single_large_room_or_store() const {return (is_single_large_room() || is_store());}
 	bool is_apt_or_hotel_room() const {return (unit_id > 0);}
 	bool has_room_of_type(room_type type) const;
 	void init_pre_populate(bool is_first_pass);
@@ -2328,10 +2330,8 @@ struct building_t : public building_geom_t {
 	bool maybe_zombie_retreat(unsigned person_ix, point const &hit_pos);
 	void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
 	bool is_room_backrooms(unsigned room_ix) const {return get_room(room_ix).is_backrooms();}
-	bool is_single_large_room(room_t const &room) const {return(room.is_parking() || room.is_backrooms() || room.is_retail() || room.is_mall() || room.is_industrial());}
-	bool is_single_large_room_or_store(room_t const &room) const {return (is_single_large_room(room) || room.is_store());}
-	bool is_single_large_room(int room_ix) const {return (room_ix >= 0 && is_single_large_room(get_room(room_ix)));}
-	bool is_single_large_room_or_store(int room_ix) const {return (room_ix >= 0 && is_single_large_room_or_store(get_room(room_ix)));}
+	bool is_single_large_room         (int room_ix) const {return (room_ix >= 0 && get_room(room_ix).is_single_large_room());}
+	bool is_single_large_room_or_store(int room_ix) const {return (room_ix >= 0 && get_room(room_ix).is_single_large_room_or_store());}
 	bool is_above_retail_area(point const &pos) const;
 	bool is_pos_in_pg_or_backrooms(point const &pos) const;
 	bool has_backrooms_or_mall() const {return (interior && (interior->has_backrooms || has_mall()));}

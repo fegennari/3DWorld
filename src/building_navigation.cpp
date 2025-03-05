@@ -1275,7 +1275,7 @@ bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, 
 	vect_cube_t &avoid(reused_avoid_cubes[0]);
 	get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
 	add_sub_rooms_to_avoid_if_needed(room, avoid); // must avoid sub-rooms
-	bool const no_use_init(is_single_large_room_or_store(room)); // don't use the room center for a parking garage, backrooms, retail area, mall, or store
+	bool const no_use_init(room.is_single_large_room_or_store()); // don't use the room center for a parking garage, backrooms, retail area, mall, or store
 	if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, person.target_pos.z, valid_area, rgen, dest_pos, no_use_init)) return 0;
 	
 	if (!is_cube()) { // non-cube building
@@ -1444,7 +1444,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		}
 	}
 	room_t const &cur_room(get_room(loc.room_ix));
-	bool const single_large_room(is_single_large_room(cur_room));
+	bool const single_large_room(cur_room.is_single_large_room());
 	bool const must_leave_room(point_in_water_area(person.pos) || (is_above_retail_area(person.pos) && !point_over_glass_floor(person.pos)));
 
 	if (single_large_room && !must_leave_room) {
@@ -2131,7 +2131,7 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 			float const zval(r->z1() + f*floor_spacing);
 			if (has_water() && r->intersects(get_water_cube()) && zval < interior->water_zval) continue; // don't place in a room with water on the floor
 			
-			if (!r->is_hallway && !r->has_stairs_on_floor(f) && !is_single_large_room(*r)) { // check if this room has all closed/locked doors
+			if (!r->is_hallway && !r->has_stairs_on_floor(f) && !r->is_single_large_room()) { // check if this room has all closed/locked doors
 				float const z_test(zval + 0.5*floor_spacing); // mid-floor height
 				bool any_usable_doors(0);
 
@@ -2223,7 +2223,7 @@ bool building_t::is_player_visible(person_t const &person, unsigned vis_test) co
 	if (same_room_and_floor) {
 		room_t const &room(get_room(person.cur_room));
 
-		if (is_single_large_room(room) && has_room_geom() && !room.is_mall()) { // rooms with additional occluders
+		if (room.is_single_large_room() && has_room_geom() && !room.is_mall()) { // rooms with additional occluders
 			point const viewer(person.get_eye_pos());
 			cube_t occ_area(target.pos);
 			occ_area.expand_by(player_radius);
@@ -3119,7 +3119,7 @@ void building_t::ai_room_lights_update(person_t const &person) {
 	if (room_ix >= 0) {set_room_light_state_to(get_room(room_ix), person.pos.z, 1);} // make sure current room light is on when entering
 	if (person.cur_room < 0)        return; // no old room (error?)
 	room_t const &room(get_room(person.cur_room));
-	if (is_single_large_room_or_store(room)) return; // don't turn off parking garage/backrooms/retail/mall/store lights since they affect a large area
+	if (room.is_single_large_room_or_store()) return; // don't turn off parking garage/backrooms/retail/mall/store lights since they affect a large area
 	float const floor_spacing(get_window_vspace());
 	bool other_person_in_room(cur_player_building_loc.building_ix == person.cur_bldg && same_room_and_floor_as_player(person)); // player counts
 
