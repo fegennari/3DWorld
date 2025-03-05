@@ -1168,7 +1168,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				if ((railing_zval - get_railing_height(*c)) > float(pos.z + camera_height) || railing_zval < (pos.z - radius)) continue; // no Z collision
 			}
 			if (type == TYPE_INT_LADDER && c->dz() > (camera_height + radius)) { // vertical ladder attached to or leaning against a wall
-				if (c->in_factory() && (pos[dim] < c->get_center_dim(dim)) == dir) continue; // wrong side of vertical factory ladder
+				if (c->in_factory() && (pos[dim] < c->get_center_dim(dim)) == dir) continue; // wrong side of vertical factory/industrial ladder
 				if (p_last[!dim] < c->d[!dim][0] || p_last[!dim] > c->d[!dim][1])  continue; // not centered on the ladder in previous frame
 				max_eq(pos[!dim], c->d[!dim][0]); // clamp to ladder range to avoid falling off to the side
 				min_eq(pos[!dim], c->d[!dim][1]);

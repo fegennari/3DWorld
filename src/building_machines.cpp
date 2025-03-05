@@ -273,7 +273,7 @@ unsigned get_machine_part_cubes(room_object_t const &c, float floor_ceil_gap, cu
 	return ncubes;
 }
 
-void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_gap, bldg_factory_info_t const *factory_info) { // components are shadowed and small
+void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_gap, bldg_industrial_info_t const *ind_info) { // components are shadowed and small
 	// can use AC Unit, metal plate texture, buttons, lights, etc.
 	float const height(c.dz()), width(c.get_width()), depth(c.get_depth()), orig_floor_ceil_gap(floor_ceil_gap);
 	cube_t base, parts[2], support;
@@ -288,7 +288,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 	base_mat.add_cube_to_verts(base, apply_light_color(c, (metal_base ? WHITE : c.color)), all_zeros, EF_Z1); // skip bottom
 	vect_cube_t avoid, shapes;
 	vect_sphere_t pipe_ends;
-	if (in_factory && factory_info) {floor_ceil_gap = factory_info->floor_space.dz();}
+	if (in_factory && ind_info) {floor_ceil_gap = ind_info->floor_space.dz();}
 	cube_t main(c);
 	main.z1() = base.z2();
 
@@ -411,7 +411,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 		region.d[dim][!dir] = back_wall_pos; // wall behind the machine
 		assert(region.is_strictly_normalized());
 
-		if (in_factory && factory_info) { // connect to neighbors on low X/Y edges
+		if (in_factory && ind_info) { // connect to neighbors on low X/Y edges
 			float const min_height(get_player_eye_height() + 2.8*pipe_rmax); // add space for pipe/coil
 
 			if (part_sz.z > 1.25*min_height) {
@@ -419,7 +419,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 
 				for (unsigned ndim = 0; ndim < 2; ++ndim) {
 					if (!(c.flags & (ndim ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO))) continue; // no neighbor in this dim
-					float const row_spacing(factory_info->machine_row_spacing[ndim]);
+					float const row_spacing(ind_info->machine_row_spacing[ndim]);
 					cube_t region2(part);
 					max_eq(region2.z1(), (c.z1() + min_height));
 					region2.d[ndim][1] = (is_cylin ? part.get_center_dim(ndim) : part.d[ndim][0]); // center plane of cylinder or low edge of cube
@@ -699,15 +699,15 @@ bool building_t::add_machines_to_room(rand_gen_t rgen, room_t const &room, float
 void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cube_t const &place_area, float zval,
 	unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned objs_start_inc_beams, cube_t const &ladder)
 {
-	assert(interior->factory_info);
+	assert(is_factory() && interior->ind_info);
 	float const floor_spacing(get_window_vspace()), fc_gap(room.dz()), max_place_sz(1.0*floor_spacing), max_height(fc_gap - floor_spacing);
 	float const doorway_width(get_doorway_width()), min_gap(max(doorway_width, get_min_front_clearance_inc_people())), ceil_zval(room.z2() - get_fc_thickness());
 	if (max_height <= 0.0) return; // should never happen
 	bool const check_ladder(!ladder.is_all_zeros());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	vector2d max_sz(get_machine_max_sz(place_area, min_gap, max_place_sz, 0.5));
-	cube_t avoid(interior->factory_info->entrance_area);
-	avoid.expand_in_dim(interior->factory_info->entrance_dim, doorway_width);
+	cube_t avoid(interior->ind_info->entrance_area);
+	avoid.expand_in_dim(interior->ind_info->entrance_dim, doorway_width);
 	
 	if (1) { // add a 2D grid of machines to the center of the place area
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // maybe doesn't matter?
@@ -720,7 +720,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 		vector2d const center_sz(center_area.get_size_xy());
 		bool const tank_dim(rgen.rand_bool()), tank_dir(rgen.rand_bool());
 		colorRGBA const pipe_color(COPPER_C), fitting_color(BRASS_C);
-		vector2d &spacing(interior->factory_info->machine_row_spacing);
+		vector2d &spacing(interior->ind_info->machine_row_spacing);
 		unsigned num_xy[2]={};
 
 		for (unsigned d = 0; d < 2; ++d) {

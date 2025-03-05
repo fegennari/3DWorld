@@ -42,7 +42,7 @@ void building_t::create_factory_floorplan(unsigned part_id, float window_hspacin
 	}
 	floor_space.expand_in_z(-fc_thick); // shrink to remove ceiling and floor
 	float const entrance_pos(0.5*(wall_edge[0] + wall_edge[1]));
-	interior->factory_info.reset(new bldg_factory_info_t(dim, dir, entrance_pos, floor_space, entrance_area));
+	interior->ind_info.reset(new bldg_industrial_info_t(dim, dir, entrance_pos, floor_space, entrance_area));
 	bool const larger_room(sub_room[0].get_sz_dim(!dim) < sub_room[1].get_sz_dim(!dim));
 
 	for (unsigned d = 0; d < 2; ++d) { // add walls, doors, and ceilings/floors
@@ -89,7 +89,7 @@ void building_t::create_factory_floorplan(unsigned part_id, float window_hspacin
 		add_room(room_inner, part_id, (is_larger ? 2 : 1)); // 2 lights in larger room; not a typical office building office
 		rooms.back().assign_all_to(is_larger ? RTYPE_OFFICE : RTYPE_BATH); // office or bathroom
 		rooms.back().set_is_nested();
-		interior->factory_info->sub_rooms.push_back(room_inner);
+		interior->ind_info->sub_rooms.push_back(room_inner);
 	} // for d
 	// should there be an entryway room, then the factory doesn't overlap the sub-rooms? but then there will be empty space above them
 	// add entire part as a room (factory floor); must be done last so that smaller contained rooms are picked up in early exit queries (model occlusion, light toggle, door conn)
@@ -118,12 +118,12 @@ void add_hanging_ladder(cube_t const &ladder, unsigned room_id, bool dim, bool d
 }
 
 void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start_inc_lights) { // ~0.25ms
-	assert(interior->factory_info);
-	bool const edim(interior->factory_info->entrance_dim), edir(interior->factory_info->entrance_dir), beam_dim(!edim); // edim is the long dim; beam_dim is short dim
+	assert(interior->ind_info);
+	bool const edim(interior->ind_info->entrance_dim), edir(interior->ind_info->entrance_dir), beam_dim(!edim); // edim is the long dim; beam_dim is short dim
 	float const window_vspace(get_window_vspace()), wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness()), edir_sign(edir ? 1.0 : -1.0);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// add support pillars around the exterior, between windows; add ceiling beams
-	float const support_width(FACTORY_BEAM_THICK*wall_thick), support_hwidth(0.5*support_width);
+	float const support_width(CEILING_BEAM_THICK*wall_thick), support_hwidth(0.5*support_width);
 	float const ceil_zval(room.z2() - fc_thick), beams_z1(ceil_zval - support_width), room_center_short(room.get_center_dim(!edim));
 	vector2d const room_sz(room.get_size_xy());
 	cube_t support_bounds(room), support, beam;
@@ -132,7 +132,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	set_cube_zvals(beam,    beams_z1, ceil_zval);
 	vect_cube_t support_parts, beams, supports[2], lights, ladders;
 	vector<float> beam_pos; // in short dim; needed for hanging catwalks
-	vect_cube_t const &nested_rooms(interior->factory_info->sub_rooms);
+	vect_cube_t const &nested_rooms(interior->ind_info->sub_rooms);
 	unsigned const objs_start_inc_beams(objs.size());
 	float const shift_vals[6] = {-0.1, 0.2, -0.3, 0.4, -0.5, 0.6}; // cumulative version of {-0.1, 0.1, -0.2, 0.2, -0.3, 0.3}; not enough shift to overlap a window
 	unsigned support_count(0);
@@ -236,8 +236,8 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	cube_t place_area(room);
 	place_area.expand_by_xy(-support_width); // inside the supports
 	cube_t const place_area_upper(place_area); // includes space above office and bathroom
-	place_area.intersect_with_cube(interior->factory_info->floor_space); // clip off side rooms and floor/ceiling
-	cube_t const &entry(interior->factory_info->entrance_area);
+	place_area.intersect_with_cube(interior->ind_info->floor_space); // clip off side rooms and floor/ceiling
+	cube_t const &entry(interior->ind_info->entrance_area);
 	unsigned const objs_start(objs.size());
 
 	// add ladders to nested room walls
@@ -398,7 +398,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		if (rgen.rand_float() > 0.15) continue; // 15% chance
 		float const smoke_radius(0.12*(i->dx() + i->dy()));
 		point const pos(i->xc(), i->yc(), (i->z1() + 0.9*i->dz())); // smoke starts near machine top and rises up to the ceiling
-		interior->factory_info->smoke_emitters.emplace_back(pos, smoke_radius, (i - objs.begin())); // store machine obj id
+		interior->ind_info->smoke_emitters.emplace_back(pos, smoke_radius, (i - objs.begin())); // store machine obj id
 	}
 	// add fire extinguisher
 	add_fire_ext_along_wall(entry, zval, room_id, light_amt, !edim, rgen.rand_bool(), rgen); // choose a random side
@@ -585,7 +585,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	} // for i
 	// add a trashcan
 	room_t factory_room(room);
-	factory_room.copy_from(interior->factory_info->floor_space); // clip off entrance and sub-rooms
+	factory_room.copy_from(interior->ind_info->floor_space); // clip off entrance and sub-rooms
 	factory_room.d[edim][edir] -= (edir ? 1.0 : -1.0)*0.5*wall_thick; // clip off sub-room walls
 	add_trashcan_to_room(rgen, factory_room, zval, room_id, light_amt, objs_start_inc_beams, 0); // check_last_obj=0
 
@@ -675,7 +675,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		crate_bounds.expand_in_dim(!pdim, window_vspace*rgen.rand_uniform(0.5, 1.0)); // random width; may be clipped at the corner of the building
 		crate_bounds.intersect_with_cube(place_area);
 		if (interior->is_blocked_by_stairs_or_elevator(crate_bounds)) continue; // don't block stairs
-		add_boxes_and_crates(rgen, room, zval, room_id, light_amt, objs_start, 13, 0, interior->factory_info->floor_space, crate_bounds, exclude); // 4-16; is_basement=0
+		add_boxes_and_crates(rgen, room, zval, room_id, light_amt, objs_start, 13, 0, interior->ind_info->floor_space, crate_bounds, exclude); // 4-16; is_basement=0
 	} // for n
 	// add buckets
 	unsigned const num_buckets((rgen.rand() % 4) + 1); // 1-4
@@ -758,7 +758,7 @@ void building_t::add_smokestack(rand_gen_t &rgen) { // factory or power plant
 	} // for n
 }
 
-void bldg_factory_info_t::next_frame(particle_manager_t &particle_manager) {
+void bldg_industrial_info_t::next_frame(particle_manager_t &particle_manager) { // for factories
 	for (smoke_source_t &s : smoke_emitters) { // generate smoke
 		s.time += fticks;
 		if (s.time < s.next_smoke_time) continue;

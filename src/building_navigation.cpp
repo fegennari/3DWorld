@@ -565,7 +565,7 @@ public:
 		cube_t walk_area_exp(walk_area);
 		walk_area_exp.expand_by_xy(radius); // to capture objects that we could intersect when our center is in walk_area
 		keepout.clear();
-		building.add_factory_sub_rooms_to_avoid_if_needed(building.get_room(room_ix), keepout); // must avoid sub-rooms
+		building.add_sub_rooms_to_avoid_if_needed(building.get_room(room_ix), keepout); // must avoid sub-rooms
 
 		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
 			if (!i->intersects_xy(walk_area_exp)) continue;
@@ -733,7 +733,7 @@ public:
 						bool const no_use_init(N > 0 || (is_lg_room && !req_custom_dest));
 						bool not_room_center(0);
 						unsigned const avoid_size(avoid.size());
-						building.add_factory_sub_rooms_to_avoid_if_needed(building.get_room(n), avoid); // must avoid sub-rooms
+						building.add_sub_rooms_to_avoid_if_needed(building.get_room(n), avoid); // must avoid sub-rooms
 						point const end_point(find_valid_room_dest(avoid, building, radius, cur_pt.z, n, up_or_down, not_room_center, rgen, no_use_init, custom_dest));
 						avoid.resize(avoid_size); // remove added sub-rooms
 						path.add(end_point);
@@ -920,7 +920,7 @@ public:
 }; // end building_nav_graph_t
 
 cube_t building_t::get_walkable_room_bounds(room_t const &room, bool floor_space_only) const {
-	if (floor_space_only && room.is_factory() && interior->factory_info) return interior->factory_info->floor_space; // currently unused
+	if (floor_space_only && room.is_industrial() && interior->ind_info) return interior->ind_info->floor_space; // currently unused
 	// regular house rooms start and end at the walls;
 	// offices, hallways, and extended basement rooms tile exactly and include half the walls, so we have to subtract those back off
 	if (!room.inc_half_walls()) return room;
@@ -1274,7 +1274,7 @@ bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, 
 	point dest_pos(valid_area.get_cube_center());
 	vect_cube_t &avoid(reused_avoid_cubes[0]);
 	get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
-	add_factory_sub_rooms_to_avoid_if_needed(room, avoid); // must avoid sub-rooms
+	add_sub_rooms_to_avoid_if_needed(room, avoid); // must avoid sub-rooms
 	bool const no_use_init(is_single_large_room_or_store(room)); // don't use the room center for a parking garage, backrooms, retail area, mall, or store
 	if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, person.target_pos.z, valid_area, rgen, dest_pos, no_use_init)) return 0;
 	
@@ -1607,7 +1607,7 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 			if (d.closed) {avoid.push_back(d);}
 		}
 	}
-	if (factory_info && z2 > factory_info->floor_space.z1()) { // in factory; add interior walls of sub-rooms
+	if (ind_info && z2 > ind_info->floor_space.z1()) { // in industrial area; add interior walls of sub-rooms
 		float const wall_shrink(0.25*floor_thickness); // shrink walls slightly at ends since doorways are narrow
 
 		for (unsigned d = 0; d < 2; ++d) {
@@ -1822,8 +1822,8 @@ void building_t::get_avoid_cubes(float zval, float height, float radius, vect_cu
 	float const z1(zval - radius);
 	interior->get_avoid_cubes(avoid, z1, (z1 + height), 0.5*radius, get_floor_thickness(), get_floor_ceil_gap(), following_player, 0, fires_select_cube); // skip_stairs=0
 }
-void building_t::add_factory_sub_rooms_to_avoid_if_needed(room_t const &room, vect_cube_t &avoid) const {
-	if (room.is_factory() && interior->factory_info) {vector_add_to(interior->factory_info->sub_rooms, avoid);}
+void building_t::add_sub_rooms_to_avoid_if_needed(room_t const &room, vect_cube_t &avoid) const {
+	if (room.is_industrial() && interior->ind_info) {vector_add_to(interior->ind_info->sub_rooms, avoid);}
 }
 
 bool building_t::find_route_to_point(person_t &person, float radius, bool is_first_path, bool following_player, ai_path_t &path) const {
@@ -1875,7 +1875,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 				valid_area.clamp_pt_xy(dest);
 			}
 		}
-		add_factory_sub_rooms_to_avoid_if_needed(start_room, avoid); // must avoid sub-rooms
+		add_sub_rooms_to_avoid_if_needed(start_room, avoid); // must avoid sub-rooms
 		cube_t const constrain_area(point_over_glass_floor(from) ? get_bcubes_union(interior->room_geom->glass_floors) : cube_t());
 		if (!interior->nav_graph->complete_path_within_room(from, dest, loc1.room_ix, person.ssn, radius,
 			person.cur_rseed, is_first_path, following_player, constrain_area, avoid, *this, path)) return 0;

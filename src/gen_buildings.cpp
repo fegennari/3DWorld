@@ -2327,17 +2327,16 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			set_cube_zvals(part, max(i->z1(), window_z1), i->z2()); // top row only
 			bdraw.add_section(*this, 1, part, tex, color, 3, 0, 0, 1, clip_windows, 0.0, 0, offset_scale, 0, nullptr); // XY, no_ao=1
 			if (window_z1 <= i->z1()) continue; // all windows drawn
+			assert(interior->ind_info);
 
-			if (interior->factory_info) { // draw factory sub-room windows
-				for (cube_t const &r : interior->factory_info->sub_rooms) {
-					unsigned dim_mask(3); // disable faces not along exterior walls: 8=x1, 16=x2, 32=y1, 64=y2
-					if (i->x1() != r.x1()) {dim_mask |= 8 ;}
-					if (i->x2() != r.x2()) {dim_mask |= 16;}
-					if (i->y1() != r.y1()) {dim_mask |= 32;}
-					if (i->y2() != r.y2()) {dim_mask |= 64;}
-					bdraw.add_section(*this, 1, r, tex, color, dim_mask, 0, 0, 1, clip_windows, 0.0, 0, offset_scale, 0, nullptr); // XY, no_ao=1
-				} // for r
-			}
+			for (cube_t const &r : interior->ind_info->sub_rooms) { // draw industrial sub-room windows
+				unsigned dim_mask(3); // disable faces not along exterior walls: 8=x1, 16=x2, 32=y1, 64=y2
+				if (i->x1() != r.x1()) {dim_mask |= 8 ;}
+				if (i->x2() != r.x2()) {dim_mask |= 16;}
+				if (i->y1() != r.y1()) {dim_mask |= 32;}
+				if (i->y2() != r.y2()) {dim_mask |= 64;}
+				bdraw.add_section(*this, 1, r, tex, color, dim_mask, 0, 0, 1, clip_windows, 0.0, 0, offset_scale, 0, nullptr); // XY, no_ao=1
+			} // for r
 			draw_parts_mask |= (1 << part_ix);
 			continue;
 		}

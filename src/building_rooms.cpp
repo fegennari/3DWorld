@@ -403,12 +403,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			unsigned num_lights(r->num_lights), flags(0);
 			float light_z2(z + floor_height - fc_thick + light_delta_z);
-			if (industrial_room) {light_z2 -= FACTORY_BEAM_THICK*wall_thickness;} // on the underside of factory/industrial ceiling beams
+			if (industrial_room) {light_z2 -= CEILING_BEAM_THICK*wall_thickness;} // on the underside of industrial ceiling beams
 
 			// motion detection lights for large office building office and mall bathrooms; limit to interior rooms so that we still have some lit rooms viewed through windows
-			if ((!is_house && has_pri_hall() && is_office && r->interior) || is_mall_bathroom) {
-				flags |= RO_FLAG_IS_ACTIVE; // leave unlit and enable motion detection for lights
-			}
+			if ((!is_house && has_pri_hall() && is_office && r->interior) || is_mall_bathroom) {flags |= RO_FLAG_IS_ACTIVE;} // leave unlit initially
 			else if (r->is_sec_bldg) {is_lit = 0;} // garage and shed lights start off
 			else {
 				// 50% of lights are on, 75% for top of stairs, 100% for non-basement hallways, 100% for parking garages, backrooms, and malls
@@ -424,8 +422,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					}
 				}
 			}
-			if (is_lit)     {flags |= RO_FLAG_LIT | RO_FLAG_EMISSIVE;}
-			if (has_stairs) {flags |= RO_FLAG_RSTAIRS;}
+			if (is_lit)                    {flags |= RO_FLAG_LIT | RO_FLAG_EMISSIVE;}
+			if (has_stairs)                {flags |= RO_FLAG_RSTAIRS;}
 			if (r->is_ext_basement_conn()) {flags |= RO_FLAG_EXTERIOR;} // flag as exterior since this light may reach the connected building
 			// add one or more lights to the ceiling of this room if there's space (always for top of stairs);
 			// must check lights vs. backrooms walls and pillars, and mall pillars

@@ -1706,7 +1706,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 			if      (room_type == RTYPE_UTILITY ) {hum_amt += 0.10; hum_freq =  60.0;}
 			else if (room_type == RTYPE_SERVER  ) {hum_amt += 0.20; hum_freq = 120.0;}
 			else if (room_type == RTYPE_MACHINE ) {hum_amt += 0.10; hum_freq =  60.0;}
-			else if (room_type == RTYPE_FACTORY ) {hum_amt += 0.05; hum_freq =  60.0;} // only if by a machine?
+			else if (room_type == RTYPE_FACTORY ) {hum_amt += 0.05; hum_freq =  60.0;}
 			//else if (room_type == RTYPE_SECURITY) {}
 			//else if (room_type == RTYPE_SWIM    ) {}
 			//else if (room_type == RTYPE_LAUNDRY ) {}
@@ -1716,7 +1716,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 	doors_next_frame(player_pos); // run for current and connected buildings
 	interior->room_geom->particle_manager.next_frame(*this);
 	interior->room_geom->fire_manager.next_frame(interior->room_geom->particle_manager);
-	if (is_factory()) {interior->factory_info->next_frame(interior->room_geom->particle_manager);} // update smoke
+	if (is_factory()) {interior->ind_info->next_frame(interior->room_geom->particle_manager);} // update factory smoke
 }
 
 // particle_manager_t

@@ -53,7 +53,7 @@ float const RETAIL_SMAP_DSCALE     = 0.7; // player shadow caster distance for r
 float const PERSON_INT_SMAP_DSCALE = 0.8; // building person shadow caster distance relative to light radius
 float const ESCALATOR_SPEED        = 1.0/TICKS_PER_SECOND; // in steps per tick
 float const MALL_FLOOR_HEIGHT      = 2.0; // as a multiple of normal building floor height
-float const FACTORY_BEAM_THICK     = 2.5; // as a multiple of wall thickness
+float const CEILING_BEAM_THICK     = 2.5; // as a multiple of wall thickness
 float const BACKSPLASH_HEIGHT      = 0.33; // relative to cabinet height
 
 unsigned const NUM_CHAIR_COLORS = 12;
@@ -122,7 +122,7 @@ struct city_flag_t;
 struct door_t;
 struct pipe_t;
 struct tunnel_seg_t;
-struct bldg_factory_info_t;
+struct bldg_industrial_info_t;
 typedef vector<point> vect_point;
 typedef vector<sphere_t> vect_sphere_t;
 
@@ -1234,7 +1234,7 @@ struct building_room_geom_t {
 		vect_sphere_t &pipe_ends, rand_gen_t &rgen, bool allow_valve=0, bool add_coil=0, bool is_high=0);
 	void add_spring(point pos, float radius, float r_wire, float length, float coil_gap, unsigned dim,
 		colorRGBA const &color, colorRGBA const &spec_color=WHITE, bool sparse=0);
-	void add_machine(room_object_t const &c, float floor_ceil_gap, bldg_factory_info_t const *factory_info);
+	void add_machine(room_object_t const &c, float floor_ceil_gap, bldg_industrial_info_t const *ind_info);
 	void add_keyboard(room_object_t const &c);
 	void add_obj_with_top_texture  (room_object_t const &c, std::string const &texture_name, colorRGBA const &sides_color, bool is_small=0);
 	void add_obj_with_front_texture(room_object_t const &c, std::string const &texture_name, colorRGBA const &sides_color, bool is_small=0);
@@ -1345,7 +1345,7 @@ private:
 	void create_detail_vbos(building_t const &building);
 	void add_nested_objs_to_verts(vect_room_object_t const &objs_to_add);
 	void add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add, colorRGBA const &trim_color,
-		bool inc_text=0, float floor_ceil_gap=0.0, bldg_factory_info_t const *factory_info=nullptr);
+		bool inc_text=0, float floor_ceil_gap=0.0, bldg_industrial_info_t const *ind_info=nullptr);
 	void create_obj_model_insts(building_t const &building);
 	void create_lights_vbos(building_t const &building);
 	void create_dynamic_vbos(building_t const &building, point const &camera_bs, vector3d const &xlate, bool play_clock_tick);
@@ -1838,22 +1838,24 @@ struct building_mall_info_t {
 	void clear_room_details() {stores.clear(); pet_tanks.clear();}
 };
 
-struct bldg_factory_info_t {
+struct bldg_industrial_info_t {
+	bool entrance_dim, entrance_dir;
+	float entrance_pos;
+	cube_t floor_space, entrance_area;
+	rand_gen_t rgen; // used for generating smoke
+	vect_cube_t sub_rooms;
+
+	// specifically for factories
 	struct smoke_source_t {
 		point pos;
 		float radius=0.0, time=0.0, next_smoke_time=0.0;
 		int pid;
 		smoke_source_t(point const &pos_, float radius_, int pid_=-1) : pos(pos_), radius(radius_), pid(pid_) {}
 	};
-	bool entrance_dim, entrance_dir;
-	float entrance_pos;
 	vector2d machine_row_spacing;
-	cube_t floor_space, entrance_area;
-	rand_gen_t rgen; // used for generating smoke
-	vect_cube_t sub_rooms;
 	vector<smoke_source_t> smoke_emitters;
 
-	bldg_factory_info_t(bool dim, bool dir, float epos, cube_t const &fs, cube_t const &ee) :
+	bldg_industrial_info_t(bool dim, bool dir, float epos, cube_t const &fs, cube_t const &ee) :
 		entrance_dim(dim), entrance_dir(dir), entrance_pos(epos), floor_space(fs), entrance_area(ee) {}
 	void next_frame(particle_manager_t &particle_manager);
 };
@@ -1871,11 +1873,11 @@ struct building_interior_t {
 	vector<elevator_t> elevators;
 	vector<escalator_t> escalators;
 	vector<person_t> people;
-	std::unique_ptr<building_room_geom_t> room_geom;
-	std::unique_ptr<building_nav_graph_t> nav_graph;
-	std::unique_ptr<building_conn_info_t> conn_info;
-	std::unique_ptr<building_mall_info_t> mall_info;
-	std::unique_ptr<bldg_factory_info_t > factory_info;
+	std::unique_ptr<building_room_geom_t  > room_geom;
+	std::unique_ptr<building_nav_graph_t  > nav_graph;
+	std::unique_ptr<building_conn_info_t  > conn_info;
+	std::unique_ptr<building_mall_info_t  > mall_info;
+	std::unique_ptr<bldg_industrial_info_t> ind_info ;
 	cube_with_ix_t pg_ramp, attic_access; // ix stores {2*dim + dir}
 	indoor_pool_t pool;
 	cube_t basement_ext_bcube, elevator_equip_room;
@@ -2333,7 +2335,7 @@ struct building_t : public building_geom_t {
 	bool is_pos_in_pg_or_backrooms(point const &pos) const;
 	bool has_backrooms_or_mall() const {return (interior && (interior->has_backrooms || has_mall()));}
 	point get_retail_upper_stairs_landing_center() const;
-	void add_factory_sub_rooms_to_avoid_if_needed(room_t const &room, vect_cube_t &avoid) const;
+	void add_sub_rooms_to_avoid_if_needed(room_t const &room, vect_cube_t &avoid) const;
 private:
 	void build_nav_graph() const;
 	bool is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll, bool no_check_objs=0) const;
