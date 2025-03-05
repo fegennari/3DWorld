@@ -434,10 +434,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				add_room(*p, part_id, 1, 0, is_office); // add entire part as a room; num_lights will be calculated later
 			}
 		} // end non-cube room
-		else if (is_industrial_part) { // first part is industrial space
-			if (is_factory()) {create_factory_floorplan(part_id, window_hspacing, window_border, rgen);}
-			// TODO: warehouse floorplan
-			else {assert(0);}
+		else if (is_industrial_part) { // first part is industrial space: factory, warehouse, power plant, etc.
+			create_industrial_floorplan(part_id, window_hspacing, window_border, rgen);
 		}
 		else if (!is_house && is_basement_part && min(psz.x, psz.y) > 5.0*car_sz.x && max(psz.x, psz.y) > 12.0*car_sz.y) { // make this a parking garage
 			add_room(*p, part_id); // add entire part as a room; num_lights will be calculated later

@@ -14,7 +14,7 @@ extern object_model_loader_t building_obj_model_loader;
 float shift_val_to_not_intersect_window(cube_t const &c, float val, float hspace, float window_border, bool dim);
 cube_t place_cylin_object(rand_gen_t rgen, cube_t const &place_on, float radius, float height, float dist_from_edge, bool place_at_z1=0);
 
-void building_t::create_factory_floorplan(unsigned part_id, float window_hspacing[2], float window_border, rand_gen_t &rgen) {
+void building_t::create_industrial_floorplan(unsigned part_id, float window_hspacing[2], float window_border, rand_gen_t &rgen) {
 	assert(part_id < parts.size());
 	cube_t const &part(parts[part_id]);
 	vector<room_t> &rooms(interior->rooms);
@@ -25,7 +25,7 @@ void building_t::create_factory_floorplan(unsigned part_id, float window_hspacin
 	float const sub_room_len(max(1.5*floor_spacing, min(3.0*floor_spacing, 0.2*room_len))*rgen.rand_uniform(0.9, 1.0));
 	float const centerline(part.get_center_dim(!dim) + (rgen.rand_bool() ? 1.0 : -1.0)*rgen.rand_uniform(0.15, 0.25)*room_width); // biased to a random side
 	unsigned const num_floors(calc_num_floors(part, floor_spacing, floor_thick));
-	assert(num_floors >= 2); // main factory must be at least 2 floors tall
+	assert(num_floors >= 2); // main open area must be at least 2 floors tall (and generally is 3-4 floors)
 	// add bathroom and office to either side of a potential placement of the front entrance door
 	float split_pos(part.d[dim][dir] + dsign*sub_room_len);
 	split_pos = shift_val_to_not_intersect_window(part, split_pos, window_hspacing[dim], window_border, dim);
@@ -61,7 +61,7 @@ void building_t::create_factory_floorplan(unsigned part_id, float window_hspacin
 			bool const wdim(dim ^ bool(e)), ddir(e ? d : dir);
 			cube_t wall(e ? swall : lwall); // copy so that it can be clipped
 			
-			if (is_larger || e == 1) { // no door in factory floor side of bathroom
+			if (is_larger || e == 1) { // no door in open floor side of bathroom
 				float const wall_center(wall.get_center_dim(!wdim)), door_lo(wall_center - door_hwidth), door_hi(wall_center + door_hwidth);
 				insert_door_in_wall_and_add_seg(wall, door_lo, door_hi, !wdim, ddir, 0, is_bathroom);
 				interior->door_stacks.back().set_mult_floor(); // counts as multi-floor (for drawing top edge)
@@ -85,16 +85,16 @@ void building_t::create_factory_floorplan(unsigned part_id, float window_hspacin
 		room_floor.d[!dim][!d  ] = lwall.d[!dim][!d  ];
 		interior->ceilings.push_back(room_ceil );
 		interior->floors  .push_back(room_floor);
-		// add room itself; will overlap main factory room
+		// add room itself; will overlap main open room
 		add_room(room_inner, part_id, (is_larger ? 2 : 1)); // 2 lights in larger room; not a typical office building office
 		rooms.back().assign_all_to(is_larger ? RTYPE_OFFICE : RTYPE_BATH); // office or bathroom
 		rooms.back().set_is_nested();
 		interior->ind_info->sub_rooms.push_back(room_inner);
 	} // for d
-	// should there be an entryway room, then the factory doesn't overlap the sub-rooms? but then there will be empty space above them
-	// add entire part as a room (factory floor); must be done last so that smaller contained rooms are picked up in early exit queries (model occlusion, light toggle, door conn)
+	// should there be an entryway room, then the main room doesn't overlap the sub-rooms? but then there will be empty space above them
+	// add entire part as a room (open floor); must be done last so that smaller contained rooms are picked up in early exit queries (model occlusion, light toggle, door conn)
 	add_room(part, part_id); // num_lights will be calculated later
-	rooms.back().assign_all_to(RTYPE_FACTORY);
+	rooms.back().assign_all_to(is_warehouse() ? RTYPE_WAREHOUSE : RTYPE_FACTORY); // what about RTYPE_POWERPLANT (which has not yet been added)?
 	rooms.back().set_has_subroom();
 	rooms.back().is_single_floor = 1;
 }
@@ -696,6 +696,11 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	unsigned const num_floor_stains(rgen.rand() % 9); // 0-8
 	float const stain_rmax(0.25*min(window_vspace, min(room.dx(), room.dy())));
 	add_floor_stains(rgen, place_area, zval, room_id, light_amt, objs_start, num_floor_stains, stain_rmax);
+} // end add_factory_objs
+
+void building_t::add_warehouse_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start_inc_lights) {
+	// TODO: share with factories: beams, supports, hanging lights, drain pipes, ladders, fans, fire extinguisher, ducts and vents, sprinkler pipes, clutter/stains
+	// TODO: rows of shelves, stacked boxes and crates, pallets, forklift
 }
 
 void building_t::add_industrial_office_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, unsigned floor, float tot_light_amt, unsigned objs_start) {

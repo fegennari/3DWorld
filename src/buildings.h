@@ -2196,7 +2196,7 @@ struct building_t : public building_geom_t {
 		unsigned windows_per_room, unsigned windows_per_room_side, bool hall_dim, bool hall_dir, rand_gen_t &rgen);
 	void add_hospital_bathrooms(unsigned rooms_start, rand_gen_t &rgen);
 	bool maybe_create_nested_bathroom(room_t &room, rand_gen_t &rgen);
-	void create_factory_floorplan(unsigned part_id, float window_hspacing[2], float window_border, rand_gen_t &rgen);
+	void create_industrial_floorplan(unsigned part_id, float window_hspacing[2], float window_border, rand_gen_t &rgen);
 	bool maybe_assign_interior_garage(bool &gdim, bool &gdir);
 	void add_parking_garage_ramp(rand_gen_t &rgen);
 	bool add_machines_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool less_clearance=0);
@@ -2658,7 +2658,8 @@ private:
 	bool add_pool_room_objs  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, light_ix_assign_t &light_ix_assign);
-	void add_factory_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start_inc_lights);
+	void add_factory_objs  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start_inc_lights);
+	void add_warehouse_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start_inc_lights);
 	void add_retail_pillar(cube_t const &pillar, float zval, unsigned room_id, bool is_tall);
 	void add_U_stair_landing_lights(stairwell_t const &s, unsigned room_id, unsigned light_ix, float floor_zval);
 	void add_checkout_objs   (cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool dim, bool dir, bool cr_dir);

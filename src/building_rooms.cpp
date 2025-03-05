@@ -237,7 +237,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_swim_pool_room(init_rtype_f0 == RTYPE_SWIM); // room with a swimming pool
 		bool const is_retail_room   (init_rtype_f0 == RTYPE_RETAIL);
 		bool const is_mall_store    (init_rtype_f0 == RTYPE_STORE);
-		bool const is_factory_room  (init_rtype_f0 == RTYPE_FACTORY);
 		bool const is_office(r->is_office && (!is_hospital() || r->interior)); // hospital offices are converted to patient rooms, etc. if they have windows
 		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(r->is_backrooms()), is_apt_or_hotel_room(r->is_apt_or_hotel_room());
 		bool const residential_room(is_house || (residential && !r->is_hallway && !is_basement && !is_retail_room)), industrial_room(r->is_industrial());
@@ -548,8 +547,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				add_mall_lower_floor_lights(*r, room_id, objs_start_inc_lights, light_ix_assign);
 				continue; // nothing else to add
 			}
-			if (is_factory_room) {
+			if (init_rtype_f0 == RTYPE_FACTORY) {
 				add_factory_objs(rgen, *r, room_center.z, room_id, objs_start_inc_lights);
+				continue; // nothing else to add
+			}
+			if (init_rtype_f0 == RTYPE_WAREHOUSE) {
+				add_warehouse_objs(rgen, *r, room_center.z, room_id, objs_start_inc_lights);
 				continue; // nothing else to add
 			}
 			if (is_parking_garage || is_retail_room || is_mall_store) continue; // generated above, done; no outlets or light switches
