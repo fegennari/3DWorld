@@ -90,6 +90,8 @@ void building_t::create_industrial_floorplan(unsigned part_id, float window_hspa
 		rooms.back().assign_all_to(is_larger ? RTYPE_OFFICE : RTYPE_BATH); // office or bathroom
 		rooms.back().set_is_nested();
 		interior->ind_info->sub_rooms.push_back(room_inner);
+		// warehouse has the entrance in the office room rather than between the office and bathroom
+		if (is_warehouse() && is_larger) {interior->ind_info->entrance_pos = room_inner.get_center_dim(!dim);}
 	} // for d
 	// should there be an entryway room, then the main room doesn't overlap the sub-rooms? but then there will be empty space above them
 	// add entire part as a room (open floor); must be done last so that smaller contained rooms are picked up in early exit queries (model occlusion, light toggle, door conn)
@@ -442,7 +444,8 @@ void building_t::add_industrial_sprinkler_pipes(rand_gen_t &rgen, room_t const &
 	add_sprinkler_pipes(obstacles, walls, beams, pipe_cubes, room_id, 1, objs_start, rgen, custom_floor_spacing, wall_pad, edim, vpipe_avoid);
 }
 
-void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start_inc_lights) { // ~0.25ms
+void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start_inc_lights) { // ~0.25ms
+	bool const room_is_factory(room.is_factory()), room_is_warehouse(room.is_warehouse());
 	assert(interior->ind_info);
 	bool const edim(interior->ind_info->entrance_dim), edir(interior->ind_info->entrance_dir), beam_dim(!edim); // edim is the long dim; beam_dim is short dim
 	float const window_vspace(get_window_vspace()), wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness()), edir_sign(edir ? 1.0 : -1.0);
@@ -548,31 +551,36 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 			beams.push_back(beam); // needed for sprinkler pipe hanging brackets
 		}
 	} // for dim
-	float const clearance(get_min_front_clearance()), player_height(get_player_height());
+	float const clearance(get_min_front_clearance());
 	cube_t place_area(room);
 	place_area.expand_by_xy(-support_width); // inside the supports
 	cube_t const place_area_upper(place_area); // includes space above office and bathroom
 	place_area.intersect_with_cube(interior->ind_info->floor_space); // clip off side rooms and floor/ceiling
 	cube_t const &entry(interior->ind_info->entrance_area);
 	unsigned const objs_start(objs.size());
-	cube_t const center_ladder(add_factory_ladders_and_catwalks(rgen, room, zval, room_id, light_amt, place_area, place_area_upper,
-		beams_z1, support_width, supports, lights, ladders, beam_pos));
 
-	// add transformer
-	float const tzval(zval - 0.02*window_vspace); // transformer is slightly below floor level
-	cube_t xfmr_area(place_area);
-	xfmr_area.d[edim][edir] -= edir_sign*1.2*doorway_width; // don't place too close to sub-rooms or entrance
-	place_model_along_wall(OBJ_MODEL_SUBSTATION, TYPE_XFORMER, room, 0.6, rgen, tzval, room_id, light_amt, xfmr_area, objs_start, 0.0, 4, 0, WHITE, 0, 0, 0, 1); // sideways
-	// add machines
-	unsigned const machines_start(objs.size());
-	add_machines_to_factory(rgen, room, place_area, zval, room_id, light_amt, objs_start, objs_start_inc_beams, center_ladder);
+	if (room_is_factory) { // add factory-specific objects
+		cube_t const center_ladder(add_factory_ladders_and_catwalks(rgen, room, zval, room_id, light_amt, place_area, place_area_upper,
+			beams_z1, support_width, supports, lights, ladders, beam_pos));
+		// add transformer
+		float const tzval(zval - 0.02*window_vspace); // transformer is slightly below floor level
+		cube_t xfmr_area(place_area);
+		xfmr_area.d[edim][edir] -= edir_sign*1.2*doorway_width; // don't place too close to sub-rooms or entrance
+		place_model_along_wall(OBJ_MODEL_SUBSTATION, TYPE_XFORMER, room, 0.6, rgen, tzval, room_id, light_amt, xfmr_area, objs_start, 0.0, 4, 0, WHITE, 0, 0, 0, 1); // sideways
+		// add machines
+		unsigned const machines_start(objs.size());
+		add_machines_to_factory(rgen, room, place_area, zval, room_id, light_amt, objs_start, objs_start_inc_beams, center_ladder);
 
-	for (auto i = objs.begin()+machines_start; i != objs.end(); ++i) { // add some smoke emitters
-		if (i->type != TYPE_MACHINE)  continue;
-		if (rgen.rand_float() > 0.15) continue; // 15% chance
-		float const smoke_radius(0.12*(i->dx() + i->dy()));
-		point const pos(i->xc(), i->yc(), (i->z1() + 0.9*i->dz())); // smoke starts near machine top and rises up to the ceiling
-		interior->ind_info->smoke_emitters.emplace_back(pos, smoke_radius, (i - objs.begin())); // store machine obj id
+		for (auto i = objs.begin()+machines_start; i != objs.end(); ++i) { // add some smoke emitters
+			if (i->type != TYPE_MACHINE)  continue;
+			if (rgen.rand_float() > 0.15) continue; // 15% chance
+			float const smoke_radius(0.12*(i->dx() + i->dy()));
+			point const pos(i->xc(), i->yc(), (i->z1() + 0.9*i->dz())); // smoke starts near machine top and rises up to the ceiling
+			interior->ind_info->smoke_emitters.emplace_back(pos, smoke_radius, (i - objs.begin())); // store machine obj id
+		}
+	}
+	if (room_is_warehouse) { // add warehouse-specific objects
+		// TODO: rows of shelves, stacked boxes and crates, pallets, forklift
 	}
 	// add fire extinguisher
 	add_fire_ext_along_wall(entry, zval, room_id, light_amt, !edim, rgen.rand_bool(), rgen); // choose a random side
@@ -713,17 +721,19 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 		if (interior->is_blocked_by_stairs_or_elevator(crate_bounds)) continue; // don't block stairs
 		add_boxes_and_crates(rgen, room, zval, room_id, light_amt, objs_start, 13, 0, interior->ind_info->floor_space, crate_bounds, exclude); // 4-16; is_basement=0
 	} // for n
-	// add buckets
-	unsigned const num_buckets((rgen.rand() % 4) + 1); // 1-4
-	add_buckets_to_room(rgen, place_area, zval, room_id, light_amt, objs_start, num_buckets);
-	// add paint cans
-	unsigned const num_pcans((rgen.rand() % 4) + 1); // 1-4
+	if (room_is_factory) {
+		// add buckets
+		unsigned const num_buckets((rgen.rand() % 4) + 1); // 1-4
+		add_buckets_to_room(rgen, place_area, zval, room_id, light_amt, objs_start, num_buckets);
+		// add paint cans
+		unsigned const num_pcans((rgen.rand() % 4) + 1); // 1-4
 
-	for (unsigned n = 0; n < num_pcans; ++n) {
-		float const height(rgen.rand_uniform(0.08, 0.1)*window_vspace), radius(0.44*height);
-		cube_t const pcan(place_cylin_object(rgen, place_area, radius, height, (radius + trim_thickness), 1)); // place_at_z1=1
-		if (overlaps_obj_or_placement_blocked(pcan, place_area, objs_start)) continue; // bad placement
-		objs.emplace_back(pcan, TYPE_PAINTCAN, room_id, 0, 0, 0, light_amt, SHAPE_CYLIN, WHITE);
+		for (unsigned n = 0; n < num_pcans; ++n) {
+			float const height(rgen.rand_uniform(0.08, 0.1)*window_vspace), radius(0.44*height);
+			cube_t const pcan(place_cylin_object(rgen, place_area, radius, height, (radius + trim_thickness), 1)); // place_at_z1=1
+			if (overlaps_obj_or_placement_blocked(pcan, place_area, objs_start)) continue; // bad placement
+			objs.emplace_back(pcan, TYPE_PAINTCAN, room_id, 0, 0, 0, light_amt, SHAPE_CYLIN, WHITE);
+		}
 	}
 	// add floor clutter and stains
 	bool const add_bottles(1), add_papers(0), add_glass(1), add_trash(rgen.rand_float() < 0.65); // 65% of rooms
@@ -732,12 +742,7 @@ void building_t::add_factory_objs(rand_gen_t rgen, room_t const &room, float zva
 	unsigned const num_floor_stains(rgen.rand() % 9); // 0-8
 	float const stain_rmax(0.25*min(window_vspace, min(room.dx(), room.dy())));
 	add_floor_stains(rgen, place_area, zval, room_id, light_amt, objs_start, num_floor_stains, stain_rmax);
-} // end add_factory_objs
-
-void building_t::add_warehouse_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start_inc_lights) {
-	// TODO: share with factories: beams, supports, hanging lights, drain pipes, ladders, fans, fire extinguisher, ducts and vents, sprinkler pipes, clutter/stains
-	// TODO: rows of shelves, stacked boxes and crates, pallets, forklift
-}
+} // end add_industrial_objs
 
 void building_t::add_industrial_office_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, unsigned floor, float tot_light_amt, unsigned objs_start) {
 	// add a clock on the wall

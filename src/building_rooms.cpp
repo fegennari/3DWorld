@@ -547,12 +547,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				add_mall_lower_floor_lights(*r, room_id, objs_start_inc_lights, light_ix_assign);
 				continue; // nothing else to add
 			}
-			if (init_rtype_f0 == RTYPE_FACTORY) {
-				add_factory_objs(rgen, *r, room_center.z, room_id, objs_start_inc_lights);
-				continue; // nothing else to add
-			}
-			if (init_rtype_f0 == RTYPE_WAREHOUSE) {
-				add_warehouse_objs(rgen, *r, room_center.z, room_id, objs_start_inc_lights);
+			if (industrial_room) { // factory, warehouse, etc.
+				add_industrial_objs(rgen, *r, room_center.z, room_id, objs_start_inc_lights);
 				continue; // nothing else to add
 			}
 			if (is_parking_garage || is_retail_room || is_mall_store) continue; // generated above, done; no outlets or light switches

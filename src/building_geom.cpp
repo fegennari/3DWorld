@@ -1935,7 +1935,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 				continue;
 			}
 			if (interior && interior->ind_info) { // industrial building custom doors
-				if (num == 0) { // main entrance is between the smaller rooms
+				if (num == 0) { // main entrance is in or between the smaller rooms
 					bool const dim(interior->ind_info->entrance_dim), dir(interior->ind_info->entrance_dir);
 				
 					if (add_door(place_door(*b, dim, dir, door_height, interior->ind_info->entrance_pos, 0.0, 0.0, wscale, 0, 0, rgen), part_ix, dim, dir, 1)) {
