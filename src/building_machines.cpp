@@ -700,6 +700,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 	unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned objs_start_inc_beams, cube_t const &ladder)
 {
 	assert(is_factory() && interior->ind_info);
+	bool const edim(interior->ind_info->entrance_dim), edir(interior->ind_info->entrance_dir);
 	float const floor_spacing(get_window_vspace()), fc_gap(room.dz()), max_place_sz(1.0*floor_spacing), max_height(fc_gap - floor_spacing);
 	float const doorway_width(get_doorway_width()), min_gap(max(doorway_width, get_min_front_clearance_inc_people())), ceil_zval(room.z2() - get_fc_thickness());
 	if (max_height <= 0.0) return; // should never happen
@@ -707,7 +708,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 	vect_room_object_t &objs(interior->room_geom->objs);
 	vector2d max_sz(get_machine_max_sz(place_area, min_gap, max_place_sz, 0.5));
 	cube_t avoid(interior->ind_info->entrance_area);
-	avoid.expand_in_dim(interior->ind_info->entrance_dim, doorway_width);
+	avoid.expand_in_dim(edim, doorway_width); // don't block entrance area
 	
 	if (1) { // add a 2D grid of machines to the center of the place area
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // maybe doesn't matter?
@@ -916,6 +917,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 	}
 	// add machines along the walls
 	unsigned const num_machines((rgen.rand() % 11) + 10); // 10-20
+	avoid.d[edim][!edir] = room.d[edim][!edir]; // extend to opposite end of the factory so that we have space to place a ladder and sprinkler pipe
 
 	for (unsigned n = 0; n < num_machines; ++n) {
 		float const height(min(fc_gap*rgen.rand_uniform(0.3, 0.7), max_height));
