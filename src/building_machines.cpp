@@ -67,7 +67,7 @@ float get_cylin_radius(vector3d const &sz, unsigned dim) {
 	return 0.25*(sz[(dim+1)%3] + sz[(dim+2)%3]);
 }
 void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cube_t const &region, float rmax, unsigned dim,
-	vect_sphere_t &pipe_ends, rand_gen_t &rgen, bool allow_valve, bool add_coil, bool is_high)
+	vect_sphere_t &pipe_ends, rand_gen_t &rgen, bool allow_valve, bool valve_on_cylin, bool add_coil, bool is_high)
 {
 	assert(region.is_strictly_normalized());
 	min_eq(rmax, get_cylin_radius(region.get_size(), dim));
@@ -103,7 +103,8 @@ void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cu
 		if (dist_less_than(p1, pe->pos, (valve_radius + pe->radius))) return; // too close to a previously placed pipe
 	}
 	pipe_ends.emplace_back(p1, valve_radius);
-	float const end_pad(max(0.25*pipe_len, 1.5*valve_radius)), valve_pos(rgen.rand_uniform((p1[dim] + end_pad), (p2[dim] - end_pad)));
+	float const end_pad(max((valve_on_cylin ? 0.4 : 0.25)*pipe_len, 1.5*valve_radius)); // place closer to the middle if part is a cylinder
+	float const valve_pos(rgen.rand_uniform((p1[dim] + end_pad), (p2[dim] - end_pad)));
 	unsigned vdim(0), odim(0);
 	bool vdir(0);
 
@@ -435,7 +436,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 					for (unsigned n = 0; n < num_pipes; ++n) {
 						bool const is_coil(!is_cylin && bool(ndim) == coil_dim && num_coils == 0 && rgen2.rand_bool()); // max of 1 coil across both dims; cubes only
 						num_coils += is_coil;
-						add_machine_pipe_in_region(c, region2, (is_coil ? 2.0 : 1.25)*pipe_rmax, ndim, pipe_ends, rgen2, 1, is_coil, 1); // allow_valve=1, is_high=1
+						add_machine_pipe_in_region(c, region2, (is_coil ? 2.0 : 1.25)*pipe_rmax, ndim, pipe_ends, rgen2, 1, is_cylin, is_coil, 1); // allow_valve=1, is_high=1
 					}
 				} // for n
 			}
@@ -639,7 +640,7 @@ void building_room_geom_t::add_machine(room_object_t const &c, float floor_ceil_
 			for (unsigned n = 0; n < num_pipes; ++n) {
 				bool const is_coil(num_coils < (either_cylin ? 1U : 2U) && rgen.rand_float() < coil_prob); // max of 2 coils
 				num_coils += is_coil;
-				add_machine_pipe_in_region(c, region, (is_coil ? 2.0 : 1.0)*pipe_rmax, !dim, pipe_ends, rgen, allow_valve, is_coil);
+				add_machine_pipe_in_region(c, region, (is_coil ? 2.0 : 1.0)*pipe_rmax, !dim, pipe_ends, rgen, allow_valve, either_cylin, is_coil);
 			}
 			// add flanges if large and connecting to a cube?
 		}

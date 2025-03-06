@@ -1232,7 +1232,7 @@ struct building_room_geom_t {
 	void add_int_ladder(room_object_t const &c);
 	void add_catwalk(room_object_t const &c);
 	void add_machine_pipe_in_region(room_object_t const &c, cube_t const &region, float rmax, unsigned dim,
-		vect_sphere_t &pipe_ends, rand_gen_t &rgen, bool allow_valve=0, bool add_coil=0, bool is_high=0);
+		vect_sphere_t &pipe_ends, rand_gen_t &rgen, bool allow_valve=0, bool valve_on_cylin=0, bool add_coil=0, bool is_high=0);
 	void add_spring(point pos, float radius, float r_wire, float length, float coil_gap, unsigned dim,
 		colorRGBA const &color, colorRGBA const &spec_color=WHITE, bool sparse=0);
 	void add_machine(room_object_t const &c, float floor_ceil_gap, bldg_industrial_info_t const *ind_info);
