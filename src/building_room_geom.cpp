@@ -2749,7 +2749,13 @@ void building_room_geom_t::add_valve(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_gauge(room_object_t const &c) {
-	// TODO
+	unsigned const dim(c.dir ? 2 : unsigned(c.dim)); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
+	colorRGBA const color(apply_light_color(c)), spec_color(get_specular_color(c.color)); // special case metals
+	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 2, 0, spec_color));
+	// TODO: should have some way to determine top vs. bottom
+	metal_mat.add_ortho_cylin_to_verts(c, color, dim, 1, 0); // draw sides and bottom
+	rgeom_mat_t &dial_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/pressure_gauge.jpg"), 0.0, 1), 1, 0, 2)); // shadowed, detail
+	dial_mat.add_ortho_cylin_to_verts(c, apply_light_color(c, WHITE), dim, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // draw top only (skip_sides=1)
 }
 
 void building_room_geom_t::add_curb(room_object_t const &c) {
