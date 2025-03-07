@@ -318,7 +318,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				parts[1].z1() = parts[0].z2();
 			}
 			else if (btype == BTYPE_OFFICE && is_cube() && num_floors <= 4) { // <= 4 floors
-				btype = BTYPE_FACTORY; // make this a factory
+				btype = (rgen.rand_bool() ? BTYPE_WAREHOUSE : BTYPE_FACTORY); // make this a factory or warehouse
 				assign_name(rgen); // re-assign a name
 			}
 			else if (is_cube() && num_floors >= 3 && !is_hospital() && rgen.rand_probability(global_building_params.retail_floorplan_prob)) { // 3+ floors, consider retail

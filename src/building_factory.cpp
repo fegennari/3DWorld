@@ -556,6 +556,8 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 	place_area.expand_by_xy(-support_width); // inside the supports
 	cube_t const place_area_upper(place_area); // includes space above office and bathroom
 	place_area.intersect_with_cube(interior->ind_info->floor_space); // clip off side rooms and floor/ceiling
+	cube_t xfmr_fl_area(place_area);
+	xfmr_fl_area.d[edim][edir] -= edir_sign*1.2*doorway_width; // don't place too close to sub-rooms or entrance
 	cube_t const &entry(interior->ind_info->entrance_area);
 	unsigned const objs_start(objs.size());
 
@@ -564,9 +566,7 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 			beams_z1, support_width, supports, lights, ladders, beam_pos));
 		// add transformer
 		float const tzval(zval - 0.02*window_vspace); // transformer is slightly below floor level
-		cube_t xfmr_area(place_area);
-		xfmr_area.d[edim][edir] -= edir_sign*1.2*doorway_width; // don't place too close to sub-rooms or entrance
-		place_model_along_wall(OBJ_MODEL_SUBSTATION, TYPE_XFORMER, room, 0.6, rgen, tzval, room_id, light_amt, xfmr_area, objs_start, 0.0, 4, 0, WHITE, 0, 0, 0, 1); // sideways
+		place_model_along_wall(OBJ_MODEL_SUBSTATION, TYPE_XFORMER, room, 0.6, rgen, tzval, room_id, light_amt, xfmr_fl_area, objs_start, 0.0, 4, 0, WHITE, 0, 0, 0, 1); // sideways
 		// add machines
 		unsigned const machines_start(objs.size());
 		add_machines_to_factory(rgen, room, place_area, zval, room_id, light_amt, objs_start, objs_start_inc_beams, center_ladder);
@@ -580,7 +580,11 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 		}
 	}
 	if (room_is_warehouse) { // add warehouse-specific objects
-		// TODO: rows of shelves, stacked boxes and crates, pallets, forklift
+		// TODO: rows of shelves, stacked boxes and crates, pallets, etc.
+
+		// add a forklift
+		xfmr_fl_area.expand_by_xy(-wall_thick*rgen.rand_uniform(0.5, 1.5)); // not too close to the wall
+		place_model_along_wall(OBJ_MODEL_FORKLIFT, TYPE_FORKLIFT, room, 1.0, rgen, zval, room_id, light_amt, xfmr_fl_area, objs_start, 0.25, 4, 0, WHITE, 0, 0, 0);
 	}
 	// add fire extinguisher
 	add_fire_ext_along_wall(entry, zval, room_id, light_amt, !edim, rgen.rand_bool(), rgen); // choose a random side
