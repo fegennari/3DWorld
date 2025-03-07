@@ -2322,20 +2322,38 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		unsigned const part_ix(i - parts.begin());
 
 		if (part_ix == 0 && is_industrial()) { // industrial has top 1-2 rows of windows and bottom windows for bathroom and office
-			float const window_z1(min((i->z2() - floor_spacing), (i->z1() + 2.0f*floor_spacing)));
+			float const window_z1(min((i->z2() - floor_spacing), (i->z1() + 2.0f*floor_spacing))), wall_thickness(get_wall_thickness());
 			cube_t part(*i);
 			set_cube_zvals(part, max(i->z1(), window_z1), i->z2()); // top row only
 			bdraw.add_section(*this, 1, part, tex, color, 3, 0, 0, 1, clip_windows, 0.0, 0, offset_scale, 0, nullptr); // XY, no_ao=1
 			if (window_z1 <= i->z1()) continue; // all windows drawn
 			assert(interior->ind_info);
 
-			for (cube_t const &r : interior->ind_info->sub_rooms) { // draw industrial sub-room windows
-				unsigned dim_mask(3); // disable faces not along exterior walls: 8=x1, 16=x2, 32=y1, 64=y2
-				if (i->x1() != r.x1()) {dim_mask |= 8 ;}
-				if (i->x2() != r.x2()) {dim_mask |= 16;}
-				if (i->y1() != r.y1()) {dim_mask |= 32;}
-				if (i->y2() != r.y2()) {dim_mask |= 64;}
-				bdraw.add_section(*this, 1, r, tex, color, dim_mask, 0, 0, 1, clip_windows, 0.0, 0, offset_scale, 0, nullptr); // XY, no_ao=1
+			for (cube_t const &room : interior->ind_info->sub_rooms) { // draw industrial sub-room windows
+				// check if room has an exterior door (warehouse); if so, split into two smaller rooms
+				unsigned nparts(1);
+				cube_t rp[2] = {room, cube_t()}; // room parts
+
+				for (tquad_with_ix_t const &door : doors) {
+					cube_t dbc(door.get_bcube());
+					dbc.expand_by_xy(wall_thickness);
+					if (!dbc.intersects(room)) continue;
+					bool const wdim(dbc.dx() < dbc.dy()); // dim of wall we need to split, opposite of door dim
+					rp[1] = room;
+					for (unsigned d = 0; d < 2; ++d) {rp[d].d[wdim][!d] = dbc.d[wdim][d];}
+					nparts = 2;
+					break; // there should only be one door
+				} // for door
+				for (unsigned rpix = 0; rpix < nparts; ++rpix) {
+					cube_t const &r(rp[rpix]);
+					if (!r.is_strictly_normalized()) {assert(0); continue;} // door halfway inside room?
+					unsigned dim_mask(3); // disable faces not along exterior walls: 8=x1, 16=x2, 32=y1, 64=y2
+					if (i->x1() != r.x1()) {dim_mask |= 8 ;}
+					if (i->x2() != r.x2()) {dim_mask |= 16;}
+					if (i->y1() != r.y1()) {dim_mask |= 32;}
+					if (i->y2() != r.y2()) {dim_mask |= 64;}
+					bdraw.add_section(*this, 1, r, tex, color, dim_mask, 0, 0, 1, clip_windows, 0.0, 0, offset_scale, 0, nullptr); // XY, no_ao=1
+				} // for rpix
 			} // for r
 			draw_parts_mask |= (1 << part_ix);
 			continue;
