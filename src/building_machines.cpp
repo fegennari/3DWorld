@@ -92,19 +92,18 @@ void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cu
 	}
 	rgeom_mat_t &pipe_mat(get_metal_material(1, 0, 1, 0, spec_color));
 	pipe_mat.add_cylin_to_verts(p1, p2, radius, radius, apply_light_color(c, color), 0, 0, 0, 0, 1.0, 1.0, 0, 16); // shadowed, small
-	// maybe add a valve; vertical facing up for horizontal pipes, horizontal facing away from the machine for vertical pipes
-	if (!allow_valve || rgen.rand_float() > 0.3) return; // no valve; added 30% of the time
-	float const valve_radius(radius*rgen.rand_uniform(2.4, 3.2)), valve_depth(valve_radius*rgen.rand_uniform(0.4, 0.5));
-	float const pipe_len(p2[dim] - p1[dim]);
-	assert(pipe_len > 0.0);
-	if (pipe_len < 4.0*valve_radius) return; // too short to add a valve
 
-	for (auto pe = pipe_ends.begin(); pe+1 != pipe_ends.end(); ++pe) { // skip pipe end added above
-		if (dist_less_than(p1, pe->pos, (valve_radius + pe->radius))) return; // too close to a previously placed pipe
-	}
-	pipe_ends.emplace_back(p1, valve_radius);
-	float const end_pad(max((valve_on_cylin ? 0.4 : 0.25)*pipe_len, 1.5*valve_radius)); // place closer to the middle if part is a cylinder
-	float const valve_pos(rgen.rand_uniform((p1[dim] + end_pad), (p2[dim] - end_pad)));
+	// maybe add a valve or gauge
+	if (!allow_valve || rgen.rand_float() > 0.6) return; // no valve or gauge; added 60% of the time
+	// valve: vertical facing up for horizontal pipes, horizontal facing away from the machine for vertical pipes; gauge: facing X/Y
+	bool const is_gauge(rgen.rand_bool());
+	float const pipe_len(p2[dim] - p1[dim]), vg_radius(radius*(is_gauge ? rgen.rand_uniform(1.0, 2.4) : rgen.rand_uniform(2.4, 3.6)));
+	assert(pipe_len > 0.0);
+	if (pipe_len < 4.0*vg_radius) return; // too short to add a valve or gauge
+	point attach_pt(p1);
+	float const end_pad(max((valve_on_cylin ? 0.4 : 0.25)*pipe_len, 1.5*vg_radius)); // place closer to the middle if part is a cylinder
+	float const vg_pos(rgen.rand_uniform((p1[dim] + end_pad), (p2[dim] - end_pad)));
+	float const fitting_radius(1.25*radius), fitting_hlen(1.6*radius);
 	unsigned vdim(0), odim(0);
 	bool vdir(0);
 
@@ -115,34 +114,48 @@ void building_room_geom_t::add_machine_pipe_in_region(room_object_t const &c, cu
 		odim = 1 - vdim;
 	}
 	else { // horizontal pipe
-		if (rgen.rand_bool()) { // vertical valve
+		if (!is_gauge && rgen.rand_bool()) { // vertical valve
 			vdim = 2;
 			vdir = !is_high; // if horizontal, place below high pipes and above low pipes
 			odim = (1 - dim);
 		}
-		else { // horizontal valve
+		else { // horizontal valve or gauge
 			vdim = (1 - dim);
 			vdir = ((c.dim == bool(vdim)) ? c.dir : rgen.rand_bool()); // toward the front, or a random side
 			odim = 2;
 		}
 	}
-	float const valve_attach_pt(p1[vdim] + (vdir ? 1.0 : -1.0)*radius);
-	cube_t valve;
-	set_wall_width(valve, valve_pos, valve_radius,  dim);
-	set_wall_width(valve, p1[odim],  valve_radius, odim); // pipe centerline
-	valve.d[vdim][!vdir] = valve_attach_pt;
-	valve.d[vdim][ vdir] = valve_attach_pt + (vdir ? 1.0 : -1.0)*valve_depth;
-	unsigned const NUM_HANDLE_COLORS = 4;
-	colorRGBA const handle_colors[NUM_HANDLE_COLORS] = {DK_RED, colorRGBA(0.1, 0.2, 0.4), colorRGBA(0.05, 0.3, 0.05), BKGRAY};
-	colorRGBA const handle_color(handle_colors[rgen.rand() % NUM_HANDLE_COLORS]), shaft_color(choose_pipe_color(rgen));
-	rgeom_mat_t &handle_mat(get_metal_material(1, 0, 1)); // shadowed
-	draw_metal_handle_wheel(valve, vdim, apply_light_color(c, handle_color), apply_light_color(c, shaft_color), handle_mat, handle_mat);
-	// draw the fitting
-	float const fitting_radius(1.25*radius), fitting_hlen(1.6*radius);
+	bool const is_top_gauge(is_gauge && dim < 2 && rgen.rand_bool()); // horizontal pipes only
+	if (is_top_gauge) {attach_pt.z += (fitting_radius + 1.5*vg_radius);} // shift up
+	else {attach_pt[vdim] += (vdir ? 1.0 : -1.0)*radius;} // shift toward the front
+
+	for (auto pe = pipe_ends.begin(); pe+1 != pipe_ends.end(); ++pe) { // skip pipe end added above
+		if (dist_less_than(attach_pt, pe->pos, (vg_radius + pe->radius))) return; // too close to a previously placed pipe
+	}
+	pipe_ends.emplace_back(attach_pt, vg_radius);
+	cube_t vg;
+	set_wall_width(vg, vg_pos,          vg_radius,  dim);
+	set_wall_width(vg, attach_pt[odim], vg_radius, odim); // pipe centerline
 	colorRGBA const fitting_color(is_known_metal_color(color) ? BRASS_C : color); // brass if metal, otherwise keep the pipe color
+
+	if (is_gauge) { // gauge
+		set_wall_width(vg, attach_pt[vdim], max(1.1f*(fitting_radius - radius), vg_radius*rgen.rand_uniform(0.2, 0.25)), vdim); // set depth
+		unsigned flags(RO_FLAG_NOCOLL | (is_top_gauge ? RO_FLAG_ADJ_BOT : 0));
+		add_gauge(room_object_t(vg, TYPE_GAUGE, c.room_id, vdim, vdir, flags, c.light_amt, SHAPE_CYLIN, fitting_color)); // same color as fitting
+	}
+	else { // valve
+		vg.d[vdim][!vdir] = attach_pt[vdim];
+		vg.d[vdim][ vdir] = attach_pt[vdim] + (vdir ? 1.0 : -1.0)*vg_radius*rgen.rand_uniform(0.4, 0.5); // set depth
+		unsigned const NUM_HANDLE_COLORS = 4;
+		colorRGBA const handle_colors[NUM_HANDLE_COLORS] = {DK_RED, colorRGBA(0.1, 0.2, 0.4), colorRGBA(0.05, 0.3, 0.05), BKGRAY};
+		colorRGBA const handle_color(handle_colors[rgen.rand() % NUM_HANDLE_COLORS]), shaft_color(choose_pipe_color(rgen));
+		rgeom_mat_t &handle_mat(get_metal_material(1, 0, 1)); // shadowed
+		draw_metal_handle_wheel(vg, vdim, apply_light_color(c, handle_color), apply_light_color(c, shaft_color), handle_mat, handle_mat);
+	}
+	// draw the fitting
 	rgeom_mat_t &fitting_mat(get_metal_material(0, 0, 1, 0, get_specular_color(fitting_color))); // unshadowed
-	p1[dim] = valve_pos - fitting_hlen;
-	p2[dim] = valve_pos + fitting_hlen;
+	p1[dim] = vg_pos - fitting_hlen;
+	p2[dim] = vg_pos + fitting_hlen;
 	fitting_mat.add_cylin_to_verts(p1, p2, fitting_radius, fitting_radius, apply_light_color(c, fitting_color), 1, 1, 0, 0, 1.0, 1.0, 0, N_CYL_SIDES); // draw ends
 }
 
@@ -721,7 +734,7 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 		center_area.expand_by_xy(-(max_place_sz + 0.5*doorway_width)); // space for machines along the wall
 		vector2d const center_sz(center_area.get_size_xy());
 		bool const tank_dim(rgen.rand_bool()), tank_dir(rgen.rand_bool());
-		colorRGBA const pipe_color(COPPER_C), fitting_color(BRASS_C);
+		colorRGBA const pipe_color(COPPER_C), fitting_color(BRASS_C), gauge_color(BRASS_C);
 		vector2d &spacing(interior->ind_info->machine_row_spacing);
 		unsigned num_xy[2]={};
 
@@ -752,6 +765,14 @@ void building_t::add_machines_to_factory(rand_gen_t rgen, room_t const &room, cu
 					tank.z2() = tank_z2;
 					tank.expand_by_xy(-0.1*tank_radius);
 					objs.emplace_back(tank, TYPE_CHEM_TANK, room_id, dim, dir, RO_FLAG_IN_FACTORY, tot_light_amt, SHAPE_CYLIN, WHITE, item_flags);
+					// add a gauge to the side of the tank
+					float const gauge_radius(0.08*tank_radius), gauge_depth(0.25*gauge_radius), tank_side(tank.d[dim][dir]);
+					cube_t gauge;
+					set_wall_width(gauge, (tank.z1() + 1.25*tank_radius), gauge_radius, 2); // Z
+					set_wall_width(gauge, center[!dim], gauge_radius, !dim);
+					gauge.d[dim][!dir] = tank_side;
+					gauge.d[dim][ dir] = tank_side + (dir ? 1.0 : -1.0)*gauge_depth;
+					objs.emplace_back(gauge, TYPE_GAUGE, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, gauge_color);
 					// add a pipe to the top; the tank itself has a pipe going down to the floor
 					cube_t pipe(center);
 					set_cube_zvals(pipe, (tank_z2 - pipe_radius), (tank_z2 + 0.15*height - pipe_radius));

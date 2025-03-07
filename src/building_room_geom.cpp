@@ -2749,13 +2749,23 @@ void building_room_geom_t::add_valve(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_gauge(room_object_t const &c) {
-	unsigned const dim(c.dir ? 2 : unsigned(c.dim)); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
 	colorRGBA const color(apply_light_color(c)), spec_color(get_specular_color(c.color)); // special case metals
 	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 2, 0, spec_color));
-	// TODO: should have some way to determine top vs. bottom
-	metal_mat.add_ortho_cylin_to_verts(c, color, dim, 1, 0); // draw sides and bottom
+	metal_mat.add_ortho_cylin_to_verts(c, color, c.dim, c.dir, !c.dir); // draw sides and bottom
 	rgeom_mat_t &dial_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/pressure_gauge.jpg"), 0.0, 1), 1, 0, 2)); // shadowed, detail
-	dial_mat.add_ortho_cylin_to_verts(c, apply_light_color(c, WHITE), dim, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // draw top only (skip_sides=1)
+	point const center(c.get_cube_center());
+	point dial_center(center);
+	dial_center[c.dim] = c.d[c.dim][c.dir]; // front face
+	bool const swap_txy(1), inv_ts(c.dir ^ c.dim), inv_tt(c.dir ^ c.dim ^ 1); // same as clock
+	dial_mat.add_disk_to_verts(dial_center, 0.5*c.dz(), vector_from_dim_dir(c.dim, c.dir), apply_light_color(c, WHITE), swap_txy, inv_ts, inv_tt);
+	
+	if (c.flags & RO_FLAG_ADJ_BOT) { // draw the bottom stem part
+		cube_t stem(center);
+		stem.expand_by_xy(0.35*c.get_size().get_min_val());
+		set_cube_zvals(stem, (c.z1() - 0.25*c.dz()), c.zc()); // extends below the gauge
+		rgeom_mat_t &brass_mat(get_metal_material(1, 0, 2, 0, BRASS_C )); // shadowed, detail
+		brass_mat.add_vcylin_to_verts(stem, apply_light_color(c, BRASS_C), 0, 0); // draw sides only
+	}
 }
 
 void building_room_geom_t::add_curb(room_object_t const &c) {
@@ -4142,7 +4152,7 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 			copper_mat.add_vcylin_to_verts(v_pipe, copper_color, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, pipe_ndiv);
 			copper_mat.add_cylin_to_verts(bends[0], bends[1], pipe_radius, pipe_radius, copper_color, 0, 0, 0, 0, 1.0, 1.0, 0, pipe_ndiv);
 			// add brass fittings
-			rgeom_mat_t &brass_mat(get_metal_material(1, 0, 1, 0, BRASS_C )); // small=1
+			rgeom_mat_t &brass_mat(get_metal_material(1, 0, 1, 0, BRASS_C)); // small=1
 			colorRGBA const brass_color(apply_light_color(c, BRASS_C));
 			float const fr(1.1*pipe_radius), extend(2.0*fr);
 			vector3d const delta((bends[0] - bends[1])*(extend/pipe_len));
