@@ -433,8 +433,14 @@ void building_t::add_industrial_sprinkler_pipes(rand_gen_t &rgen, room_t const &
 	}
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 		if (!i->no_coll() || i->type == TYPE_BLOCKER) {obstacles.push_back(*i);}
-		if (i->type == TYPE_CEIL_FAN) {avoid_vals.push_back(i->get_center_dim(!edim));} // avoid ceiling fans; should be good enough to use light radius
-	}
+		// avoid ceiling fans; should be good enough to use light radius; not needed because fans are on beams, and beams are avoided?
+		if (i->type == TYPE_CEIL_FAN) {avoid_vals.push_back(i->get_center_dim(!edim));}
+		
+		if (i->type == TYPE_DUCT && i->dim == edim) { // avoid pacing pipes at the ends of ducts so that horizontal pipes intersect the vertical duct
+			obstacles.push_back(*i);
+			UNROLL_2X(obstacles.back().d[edim][i_] = room.d[edim][i_];)
+		}
+	} // for i
 	// avoid placing vertical/main pipe under a row of lights
 	for (cube_t const &light : lights) {
 		if (light_radius == 0.0) {light_radius = 0.5*light.get_sz_dim(!edim);} // calculate on first light

@@ -931,7 +931,8 @@ bool building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 	float const fc_thickness(get_fc_thickness()), wall_thickness(get_wall_thickness());
 	float const sp_radius((in_basement ? 1.2 : 0.9)*wall_thickness), spacing(2.0*sp_radius), flange_expand(0.3*sp_radius); // larger for basement, smaller for industrial
 	float const bolt_dist(sp_radius + 0.5*flange_expand), bolt_radius(0.32*flange_expand), bolt_height(0.1*fc_thickness);
-	bool const inverted_sprinklers(room_id & 1); // random-ish
+	bool const inverted_sprinklers((room_id + obstacles.size()) & 1); // random-ish
+	int const add_sprinklers(inverted_sprinklers ? 1 : 2);
 	// pipe color; fade to rusty brown for basement pipes when there's water damage
 	colorRGBA const pcolor(in_basement ? blend_color(DK_BROWN, RED, min(1.0f, 2.0f*water_damage), 0) : RED);
 	colorRGBA const ccolor(BRASS_C); // connector color
@@ -1057,29 +1058,39 @@ bool building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 			unsigned const pri_pipe_end_ix(objs.size()), num_conn(max(1U, unsigned(h_pipe_len/(1.5*window_vspace))));
 			bool const end_flush(ret == 2); // if a partial pipe was added, place the last connector at the end of the pipe so that there's no unused length
 			float const conn_step((dir ? -1.0 : 1.0)*h_pipe_len/(num_conn - (end_flush ? 0.5 : 0.0))); // signed step (pipe runs in -dir)
+			float const retry_step_offset(0.1*conn_step*((objs_start & 1) ? 1.0 : -1.0)), test_offsets[3] = {0.0, -retry_step_offset, retry_step_offset};
 			p1[dim] += 0.5*conn_step; // first half step
 			int added(0);
 			float last_added_conn_pipe_pos(center[dim]); // start at center of vertical pipe
+			vector<float> conn_pts;
 
 			for (unsigned n = 0; n < num_conn; ++n) { // add secondary connector pipes, with sprinklers
 				added = 0; // reset for this conn
 
 				for (unsigned d = 0; d < 2; ++d) { // extend to either side of the pipe
 					float const wpos2(room.d[!dim][!d]); // extend to the opposite wall
-					added |= add_sprinkler_pipe(*this, p1, wpos2, conn_radius, !dim, d, obstacles_, walls_, beams_, pipe_cubes,
-						interior->pg_ramp, ceiling_zval, room_id, tot_light_amt, objs, pcolor, ccolor, 8, (inverted_sprinklers ? 1 : 2)); // add sprinklers
-				}
-				if (added) { // if conn was added in either dir, add a connector segment
-					unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // flat ends on both sides
-					cube_t conn(h_pipe);
-					set_wall_width(conn, p1[dim], 1.2*h_pipe_radius, dim); // set length
-					conn.expand_in_dim(!dim, conn_thickness);
-					conn.expand_in_dim(2,    conn_thickness);
-					objs.emplace_back(conn, TYPE_PIPE, room_id, dim, 0, flags, tot_light_amt, SHAPE_CYLIN, ccolor);
-					last_added_conn_pipe_pos = p1[dim];
-				}
+
+					for (unsigned t = 0; t < 3; ++t) { // try 3 alignments
+						point p1_mod(p1);
+						p1_mod[dim] += test_offsets[t];
+						if (!add_sprinkler_pipe(*this, p1_mod, wpos2, conn_radius, !dim, d, obstacles_, walls_, beams_, pipe_cubes,
+							interior->pg_ramp, ceiling_zval, room_id, tot_light_amt, objs, pcolor, ccolor, 8, add_sprinklers)) continue;
+						added = 1;
+						conn_pts.push_back(p1_mod[dim]);
+						break; // success
+					} // for t
+				} // for d
 				p1[dim] += conn_step;
 			} // for n
+			for (float v : conn_pts) { // if conn was added in either dir, add a connector segment
+				unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // flat ends on both sides
+				cube_t conn(h_pipe);
+				set_wall_width(conn, v, 1.2*h_pipe_radius, dim); // set length
+				conn.expand_in_dim(!dim, conn_thickness);
+				conn.expand_in_dim(2,    conn_thickness);
+				objs.emplace_back(conn, TYPE_PIPE, room_id, dim, 0, flags, tot_light_amt, SHAPE_CYLIN, ccolor);
+				if (dir) {min_eq(last_added_conn_pipe_pos, v);} else {max_eq(last_added_conn_pipe_pos, v);} // Note: may not be at the end if offset above
+			} // for v
 			if (end_flush && !added && last_added_conn_pipe_pos != center[dim]) { // partial pipe with final connector not added, but some other connector added
 				cube_t &pipe_bc(objs[pipe_obj_ix]);
 				float &end_to_move(pipe_bc.d[dim][!dir]);
