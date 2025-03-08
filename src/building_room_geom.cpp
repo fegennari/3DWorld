@@ -2715,9 +2715,26 @@ void building_room_geom_t::add_warning_light(room_object_t const &c) {
 void building_room_geom_t::add_pallet(room_object_t const &c) {
 	rgeom_mat_t &wood_mat(get_wood_material(2.0/c.get_length(), 1, 0, 1)); // shadowed, small
 	point const origin(c.get_llc());
-	colorRGBA const color(apply_light_color(c));
-	wood_mat.add_cube_to_verts(c, color, origin, EF_Z1);
-	// TODO
+	colorRGBA const stringer_color(apply_light_color(c)), board_color(apply_light_color(c, colorRGBA(0.8, 0.6, 0.4))); // stringer is lighter than board
+	unsigned const num_stringers(3), num_boards(7);
+	float const length(c.get_length()), width(c.get_width()), height(c.dz());
+	float const board_thick(0.12*height), board_width(0.07*length), board_hwidth(0.5*board_width), stringer_thick(0.03*width), stringer_hthick(0.5*stringer_thick);
+	float const stringer_spacing((width - stringer_thick)/(num_stringers - 1)), board_spacing((length - board_width)/(num_boards - 1));
+	cube_t stringer(c);
+	stringer.expand_in_z(-board_thick);
+	
+	for (unsigned n = 0; n < num_stringers; ++n) { // stringers
+		set_wall_width(stringer, (c.d[!c.dim][0] + stringer_hthick + n*stringer_spacing), stringer_hthick, !c.dim);
+		wood_mat.add_cube_to_verts(stringer, stringer_color, origin, EF_Z1); // skip bottom
+	}
+	for (unsigned n = 0; n < num_boards; ++n) { // boards
+		for (unsigned d = 0; d < 2; ++d) { // {bottom, top}
+			cube_t board(c);
+			board.d[2][!d] = stringer.d[2][d]; // set zval
+			set_wall_width(board, (c.d[c.dim][0] + board_hwidth + n*board_spacing), board_hwidth, c.dim);
+			wood_mat.add_cube_to_verts(board, board_color, origin, (d ? 0 : EF_Z1)); // skip bottom?
+		}
+	} // for n
 }
 
 void mirror_cube_z(cube_t &c, cube_t const &obj) {

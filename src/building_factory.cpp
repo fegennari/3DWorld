@@ -600,7 +600,7 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 		place_model_along_wall(OBJ_MODEL_FORKLIFT, TYPE_FORKLIFT, room, 1.0, rgen, zval, room_id, light_amt, xfmr_fl_area, objs_start, 0.25, 4, 0, WHITE, 0, 0, 0);
 		// scatter some random pallets on the floor
 		unsigned const num_pallets((rgen.rand() % 4) + 2); // 2-5
-		float const one_inch(window_vspace/(8*12)), length(48*one_inch), width(40*one_inch), height(3.5*one_inch); // 48x40x3.5 inches
+		float const one_inch(window_vspace/(8*12)), length(48*one_inch), width(40*one_inch), height(4.5*one_inch); // 48x40x4.5 inches
 
 		for (unsigned n = 0; n < num_pallets; ++n) {
 			bool const pdim(rgen.rand_bool());
