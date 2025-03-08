@@ -2853,11 +2853,15 @@ void building_t::add_buckets_to_room(rand_gen_t &rgen, cube_t place_area, float 
 
 	for (unsigned n = 0; n < num; ++n) {
 		float const height(rgen.rand_uniform(0.1, 0.15)*floor_spacing), radius(rgen.rand_uniform(0.4, 0.6)*height);
-		cube_t const bucket(place_cylin_object(rgen, place_area, radius, height, (radius + trim_thickness), 1)); // place_at_z1=1
-		if (is_obj_placement_blocked(bucket, place_area, 1) || overlaps_other_room_obj(bucket, objs_start)) continue; // bad placement
-		objs.emplace_back(bucket, TYPE_BUCKET, room_id, rgen.rand_bool(), 0, 0, tot_light_amt, SHAPE_CYLIN, LT_GRAY); // dir=0 (unused)
-		set_obj_id(objs); // used for setting water/liquid properties
-	}
+
+		for (unsigned N = 0; N < 10; ++N) { // 10 place attempts
+			cube_t const bucket(place_cylin_object(rgen, place_area, radius, height, (radius + trim_thickness), 1)); // place_at_z1=1
+			if (is_obj_placement_blocked(bucket, place_area, 1) || overlaps_other_room_obj(bucket, objs_start)) continue; // bad placement
+			objs.emplace_back(bucket, TYPE_BUCKET, room_id, rgen.rand_bool(), 0, 0, tot_light_amt, SHAPE_CYLIN, LT_GRAY); // dir=0 (unused)
+			set_obj_id(objs); // used for setting water/liquid properties
+			break; // success
+		}
+	} // for n
 }
 
 void building_t::add_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {

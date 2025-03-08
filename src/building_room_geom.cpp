@@ -2713,6 +2713,10 @@ void building_room_geom_t::add_warning_light(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_pallet(room_object_t const &c) {
+	rgeom_mat_t &wood_mat(get_wood_material(2.0/c.get_length(), 1, 0, 1)); // shadowed, small
+	point const origin(c.get_llc());
+	colorRGBA const color(apply_light_color(c));
+	wood_mat.add_cube_to_verts(c, color, origin, EF_Z1);
 	// TODO
 }
 

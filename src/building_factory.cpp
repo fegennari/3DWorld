@@ -568,6 +568,7 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 	place_area.expand_by_xy(-support_width); // inside the supports
 	cube_t const place_area_upper(place_area); // includes space above office and bathroom
 	place_area.intersect_with_cube(interior->ind_info->floor_space); // clip off side rooms and floor/ceiling
+	place_area.z1() = zval;
 	cube_t xfmr_fl_area(place_area);
 	xfmr_fl_area.d[edim][edir] -= edir_sign*1.2*doorway_width; // don't place too close to sub-rooms or entrance
 	cube_t const &entry(interior->ind_info->entrance_area);
@@ -592,11 +593,28 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 		}
 	}
 	if (room_is_warehouse) { // add warehouse-specific objects
-		// TODO: rows of shelves, stacked boxes and crates, pallets, etc.
+		// TODO: rows of shelves, stacked boxes and crates, etc.
 
 		// add a forklift
 		xfmr_fl_area.expand_by_xy(-wall_thick*rgen.rand_uniform(0.5, 1.5)); // not too close to the wall
 		place_model_along_wall(OBJ_MODEL_FORKLIFT, TYPE_FORKLIFT, room, 1.0, rgen, zval, room_id, light_amt, xfmr_fl_area, objs_start, 0.25, 4, 0, WHITE, 0, 0, 0);
+		// scatter some random pallets on the floor
+		unsigned const num_pallets((rgen.rand() % 4) + 2); // 2-5
+		float const one_inch(window_vspace/(8*12)), length(48*one_inch), width(40*one_inch), height(3.5*one_inch); // 48x40x3.5 inches
+
+		for (unsigned n = 0; n < num_pallets; ++n) {
+			bool const pdim(rgen.rand_bool());
+			vector3d pallet_sz(0.5*length, 0.5*width, height); // half size
+			if (pdim) {swap(pallet_sz.x, pallet_sz.y);}
+			cube_t pallet;
+
+			for (unsigned N = 0; N < 10; ++N) { // 10 place attempts
+				gen_xy_pos_for_cube_obj(pallet, place_area, pallet_sz, height, rgen, 1); // place_at_z1=1
+				if (overlaps_obj_or_placement_blocked(pallet, place_area, objs_start)) continue; // bad placement
+				objs.emplace_back(pallet, TYPE_PALLET, room_id, pdim, 0, 0, light_amt);
+				break; // success
+			}
+		} // for n
 	}
 	// add fire extinguisher
 	add_fire_ext_along_wall(entry, zval, room_id, light_amt, !edim, rgen.rand_bool(), rgen); // choose a random side
@@ -746,14 +764,17 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 
 		for (unsigned n = 0; n < num_pcans; ++n) {
 			float const height(rgen.rand_uniform(0.08, 0.1)*window_vspace), radius(0.44*height);
-			cube_t const pcan(place_cylin_object(rgen, place_area, radius, height, (radius + trim_thickness), 1)); // place_at_z1=1
-			if (overlaps_obj_or_placement_blocked(pcan, place_area, objs_start)) continue; // bad placement
-			objs.emplace_back(pcan, TYPE_PAINTCAN, room_id, 0, 0, 0, light_amt, SHAPE_CYLIN, WHITE);
-		}
+
+			for (unsigned N = 0; N < 10; ++N) { // 10 place attempts
+				cube_t const pcan(place_cylin_object(rgen, place_area, radius, height, (radius + trim_thickness), 1)); // place_at_z1=1
+				if (overlaps_obj_or_placement_blocked(pcan, place_area, objs_start)) continue; // bad placement
+				objs.emplace_back(pcan, TYPE_PAINTCAN, room_id, 0, 0, 0, light_amt, SHAPE_CYLIN, WHITE);
+				break; // success
+			}
+		} // for n
 	}
 	// add floor clutter and stains
 	bool const add_bottles(1), add_papers(0), add_glass(1), add_trash(rgen.rand_float() < 0.65); // 65% of rooms
-	place_area.z1() = zval; // is this needed/correct?
 	add_floor_clutter_objs(rgen, room, place_area, zval, room_id, light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass);
 	unsigned const num_floor_stains(rgen.rand() % 9); // 0-8
 	float const stain_rmax(0.25*min(window_vspace, min(room.dx(), room.dy())));
