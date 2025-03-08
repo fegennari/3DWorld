@@ -464,12 +464,6 @@ bool is_healing_food(room_object_t const &obj) {
 	return (obj.type == TYPE_PIZZA_BOX && obj.is_open() && obj.taken_level == 0 && in_building_gameplay_mode() && !player_at_full_health());
 }
 
-void show_weight_limit_message() {
-	std::ostringstream oss;
-	oss << "Over weight limit of " << global_building_params.player_weight_limit << " lbs";
-	print_text_onscreen(oss.str(), RED, 1.0, 1.5*TICKS_PER_SECOND, 0);
-}
-
 class phone_manager_t {
 	bool is_enabled=0, is_ringing = 0, is_on=0;
 	double stop_ring_time=0.0, next_ring_time=0.0, next_cycle_time=0.0, auto_off_time=0.0, next_button_time=0.0;
@@ -717,6 +711,12 @@ public:
 		print_text_onscreen(oss.str(), YELLOW, 1.0, 1.5*TICKS_PER_SECOND, 0);
 		cur_value += value; // doesn't count as damage
 	}
+	void show_weight_limit_message(float item_weight) {
+		float const weight_limit(global_building_params.player_weight_limit), over_amt(item_weight + cur_weight - weight_limit);
+		std::ostringstream oss;
+		oss << "Over weight limit of " << weight_limit << " by " << over_amt << " lbs";
+		print_text_onscreen(oss.str(), RED, 1.0, 1.5*TICKS_PER_SECOND, 0);
+	}
 	void switch_item(bool dir) { // Note: current item is always carried.back()
 		if (carried.size() <= 1) return; // no other item to switch to
 		if (dir) {std::rotate(carried.begin(), carried.begin()+1, carried.end());}
@@ -872,7 +872,7 @@ public:
 			return 0;
 		}
 		float const value(1000), weight((person_height > 0.025) ? 180.0 : 80.0); // always worth $1000; use height to select man vs. girl
-		if (!check_weight_limit(weight)) {show_weight_limit_message(); return 0;}
+		if (!check_weight_limit(weight)) {show_weight_limit_message(weight); return 0;}
 		has_key |= person_has_key; // steal their key(s)
 		person_has_key = 0;
 		cur_value  += value;
@@ -1209,7 +1209,7 @@ bool register_player_object_pickup(room_object_t const &obj, point const &at_pos
 		can_pickup_bldg_obj = (can_pick_up ? 1 : 2);
 		return 0;
 	}
-	if (!can_pick_up) {show_weight_limit_message(); return 0;}
+	if (!can_pick_up) {player_inventory.show_weight_limit_message(get_obj_weight(obj)); return 0;}
 	if      (is_consumable  (obj)) {gen_sound_thread_safe_at_player(SOUND_GULP,   1.00);}
 	else if (is_healing_food(obj)) {gen_sound_thread_safe_at_player(SOUND_EATING, 1.00);}
 	else                           {gen_sound_thread_safe_at_player(SOUND_ITEM,   0.25);}
@@ -1359,7 +1359,7 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 		if (loot.item.valid()) {
 			bool const can_pick_up(player_inventory.check_weight_limit(loot.item.weight));
 			if (!do_room_obj_pickup) {can_pickup_bldg_obj = (can_pick_up ? 1 : 2);} // notify the player of an object to pick up
-			else if (!can_pick_up) {show_weight_limit_message();}
+			else if (!can_pick_up) {player_inventory.show_weight_limit_message(loot.item.weight);}
 			else {
 				do_room_obj_pickup = 0; // no more object pickups
 				gen_sound_thread_safe_at_player(SOUND_ITEM, 0.25);
