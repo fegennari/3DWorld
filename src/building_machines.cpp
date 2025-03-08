@@ -250,7 +250,8 @@ rand_gen_t get_machine_info(room_object_t const &c, float floor_ceil_gap, cube_t
 	for (unsigned n = 0; n < num_parts; ++n) {
 		cube_t &part(parts[n]);
 		vector3d const psz(part.get_size());
-		bool const is_cylin(!is_cylins[0] && max(psz.x, psz.y) < 1.5*min(psz.x, psz.y) && rgen.rand_float() < (c.in_factory() ? 0.35 : 0.5)); // don't place two cylinders
+		// fewer cylinders in factories; don't place two cylinders
+		bool const is_cylin(!is_cylins[0] && max(psz.x, psz.y) < 1.5*min(psz.x, psz.y) && rgen.rand_float() < (c.in_factory() ? 0.2 : 0.5));
 
 		if (is_cylin) { // 50% chance vert/Z, 25% chance X, 25% chance Y
 			bool const must_be_vert(psz.z > 2.0*min(psz.x, psz.y)); // tall thin cylinders must be vertical
