@@ -4663,9 +4663,11 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 	// try to add an outlet to each wall, down near the floor so that they don't intersect objects such as pictures
 	for (unsigned wall = 0; wall < 4; ++wall) {
 		bool const dim(wall >> 1), dir(wall & 1);
-		if (!is_residential() && room.get_sz_dim(!dim) < room.get_sz_dim(dim)) continue; // only add outlets to the long walls of office building rooms
+		if (!is_commercial() && room.get_sz_dim(!dim) < room.get_sz_dim(dim)) continue; // only add outlets to the long walls of office building rooms
 		bool const is_exterior_wall(classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT); // includes basement
 		if (is_exterior_wall && !is_cube()) continue; // don't place on ext wall if it's not X/Y aligned
+		bool const might_have_windows(!is_basement && has_int_windows() && is_exterior_wall);
+		if (might_have_windows && is_industrial()) continue; // industrial buildings have irregular sub-room window placement, so skip these exterior walls
 		cube_t const &wall_bounds(is_exterior_wall ? room : room_bounds); // exterior wall should use the original room, not room_bounds
 		float const wall_face(wall_bounds.d[dim][dir]), dir_sign(dir ? -1.0 : 1.0);
 
@@ -4673,11 +4675,11 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 			float const wall_pos(rgen.rand_uniform((room_bounds.d[!dim][0] + min_wall_spacing), (room_bounds.d[!dim][1] - min_wall_spacing)));
 			cube_t c;
 			set_cube_zvals(c, outlet_z1, (outlet_z1 + plate_height));
+			set_wall_width(c, wall_pos, plate_hwidth, !dim);
 			c.d[dim][ dir] = wall_face; // flush with wall
 			c.d[dim][!dir] = wall_face + dir_sign*plate_thickness; // expand out a bit
-			set_wall_width(c, wall_pos, plate_hwidth, !dim);
 
-			if (!is_basement && has_int_windows() && is_exterior_wall) { // check for window intersection
+			if (might_have_windows) { // check for window intersection
 				cube_t const &part(get_part_for_room(room));
 				float const window_hspacing(get_hspacing_for_part(part, !dim)), window_h_border(get_window_h_border());
 				// expand by the width of the window trim, plus some padded wall plate width, then check to the left and right;
