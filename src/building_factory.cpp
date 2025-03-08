@@ -293,7 +293,7 @@ cube_t building_t::add_factory_ladders_and_catwalks(rand_gen_t &rgen, room_t con
 void building_t::add_industrial_ducts_and_hvac(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float light_amt, float support_width, float ceil_zval,
 	cube_t const &place_area_upper, vect_cube_t const &beams, vect_cube_t supports[2], unsigned objs_start)
 {
-	bool const edim(interior->ind_info->entrance_dim), edir(interior->ind_info->entrance_dir); // long dim
+	bool const edim(interior->ind_info->entrance_dim); // long dim
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// add ceiling ducts and vents (similar to malls)
 	float const ducts_z2(room.z2() - 0.8*get_window_vspace()); // under the first window, below beams, lights, and pipes
@@ -669,8 +669,6 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 		} // for n
 	}
 	// add ceiling fans
-	unsigned const fans_start(objs.size());
-
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_CEIL_FAN)) {
 		unsigned const fans_per_beam = 2;
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_CEIL_FAN)); // D, W, H
@@ -698,7 +696,6 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 		} // for bpos
 	}
 	// add ducts, vents, and HVAC units
-	unsigned const ducts_start(objs.size());
 	add_industrial_ducts_and_hvac(rgen, room, zval, room_id, light_amt, support_width, ceil_zval, place_area_upper, beams, supports, objs_start);
 
 	// add a trashcan
