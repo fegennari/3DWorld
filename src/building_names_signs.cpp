@@ -345,9 +345,10 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 			unsigned const sign_obj_ix(objs.size());
 			if (!add_sign_by_door(*d, 0, "Exit", exit_color, 1)) continue; // inside exit sign, emissive
 
-			if (tall_room) { // add horizontal bracket holding sign
+			if (tall_room) { // maybe add horizontal bracket holding sign
 				assert(sign_obj_ix < objs.size());
 				room_object_t const &sign(objs[sign_obj_ix]);
+				if (interior->ind_info && has_bcube_int(sign, interior->ind_info->sub_rooms)) continue; // inside a sub-room with a low ceiling, no bracket needed
 				cube_t bracket(sign);
 				set_cube_zvals(bracket, sign.z2(), sign.z2() + 0.5*sign.get_depth());
 				bracket.d[sign.dim][!sign.dir] = d->get_bcube().d[sign.dim][sign.dir]; // extend to the wall
