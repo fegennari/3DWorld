@@ -258,8 +258,8 @@ cube_t building_t::add_factory_ladders_and_catwalks(rand_gen_t &rgen, room_t con
 			} // for bpos
 			// try adding a ladder to the middle of the catwalk
 			bool const ldir(rgen.rand_bool());
-			float const edge_pos(catwalk.d[!edim][ldir]), ldsign(ldir ? 1.0 : -1.0);
-			float const llo(catwalk.d[edim][0] + catwalk_hwidth), lhi(catwalk.d[edim][1] - catwalk_hwidth);
+			float const edge_pos(catwalk.d[!edim][ldir]), ldsign(ldir ? 1.0 : -1.0), end_spacing(max(2.0*catwalk_hwidth, 0.2*room_sz[edim]));
+			float const llo(catwalk.d[edim][0] + end_spacing), lhi(catwalk.d[edim][1] - end_spacing);
 			set_wall_width(ladder, edge_pos, 0.5*ladder_depth, !edim); // centered on the catwalk edge; if adjacent, the player will fall
 
 			for (unsigned n = 0; n < 20; ++n) { // some random attempts
@@ -378,8 +378,12 @@ void building_t::add_industrial_ducts_and_hvac(rand_gen_t &rgen, room_t const &r
 
 						if (N >= 2 && m < 10) { // gas and electric pipes go down to the floor in the first half of iterations
 							set_cube_zvals(vpipe, zval, hvac.z1());
+
+							for (cube_t const &r : interior->ind_info->sub_rooms) {
+								if (r.intersects(vpipe)) {vpipe.z1() = r.z2(); break;} // end at the room ceiling if intersects a sub-room (will be completely inside the wall)
+							}
 							cube_t test_cube(vpipe);
-							test_cube.z2() -= pipe_radius; // shorted so that it doesn't intersect the HVAC unit
+							test_cube.z2() -= pipe_radius; // shorten so that it doesn't intersect the HVAC unit
 							if (has_bcube_int(test_cube, objs, objs_start) || is_cube_close_to_doorway(vpipe, room, 0.0, 1)) continue;
 						}
 						else { // go up to the ceiling
@@ -422,8 +426,10 @@ void building_t::add_industrial_sprinkler_pipes(rand_gen_t &rgen, room_t const &
 		obstacles.push_back(door.get_bcube());
 		obstacles.back().expand_by_xy(doorway_width); // don't block an exterior door
 	}
-	for (stairwell_t const &s : interior->stairwells) { // is this needed?
-		if (s.intersects(room)) {obstacles.push_back(s);}
+	for (stairwell_t const &s : interior->stairwells) { // handle stairs going down to the basement
+		if (!s.intersects(room)) continue;
+		obstacles.push_back(s);
+		obstacles.back().d[s.dim][s.dir] += (s.dir ? 1.0 : -1.0)*doorway_width; // add space at the top of the stairs
 	}
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 		if (!i->no_coll() || i->type == TYPE_BLOCKER) {obstacles.push_back(*i);}
@@ -483,6 +489,7 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 				set_wall_width(support, centerline, support_hwidth, !dim);
 				cube_t test_cube(support);
 				test_cube.expand_by_xy(wall_thick);
+				++support_count; // even if skipped
 				bool valid(0);
 
 				// check and either move or skip if blocked by exterior door or basement stairs
@@ -526,7 +533,6 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 						objs.emplace_back(pipe, TYPE_PIPE, room_id, 0, 1, (RO_FLAG_NOCOLL | RO_FLAG_LIT), light_amt, SHAPE_CYLIN, DK_BROWN); // vertical, shadowed
 					}
 				}
-				++support_count;
 			} // for n
 		} // for dir
 		// add horizontal beams in the roof
