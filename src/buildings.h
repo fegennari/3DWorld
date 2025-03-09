@@ -1511,10 +1511,12 @@ typedef vector<extb_room_t> vect_extb_room_t;
 struct store_info_t {
 	bool dim, dir;
 	unsigned room_id, store_type, item_category;
+	colorRGBA logo_color;
 	std::string name;
 	vect_cube_t occluders;
 
-	store_info_t(bool d, bool D, unsigned rid, unsigned type, unsigned cat, std::string const &n) : dim(d), dir(D), room_id(rid), store_type(type), item_category(cat), name(n) {}
+	store_info_t(bool d, bool D, unsigned rid, unsigned type, unsigned cat, colorRGBA const &color, std::string const &n) :
+		dim(d), dir(D), room_id(rid), store_type(type), item_category(cat), logo_color(color), name(n) {}
 	std::string get_full_name() const;
 };
 

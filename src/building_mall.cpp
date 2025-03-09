@@ -1629,7 +1629,9 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		if (!is_duplicate) break; // unique name, done
 	}
 	//cout << store_name << endl; // TESTING
-	interior->mall_info->stores.emplace_back(dim, dir, room_id, store_type, item_category, store_name);
+	bool const emissive(0);
+	colorRGBA const logo_color(choose_sign_color(rgen, emissive));
+	interior->mall_info->stores.emplace_back(dim, dir, room_id, store_type, item_category, logo_color, store_name);
 
 	// place items
 	if (1) { // add store name on sign above the entrance
@@ -1644,10 +1646,8 @@ void building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zval, 
 		sign.d[dim][!dir] = ext_wall_pos;
 		sign.d[dim][ dir] = ext_wall_pos + (dir ? 1.0 : -1.0)*sign_thick;
 		set_wall_width(sign, door_center, sign_hwidth, !dim);
-		bool const emissive(0);
 		unsigned const flags(RO_FLAG_LIT | RO_FLAG_NOCOLL | (emissive ? RO_FLAG_EMISSIVE : 0) | RO_FLAG_HANGING);
-		colorRGBA const sign_color(choose_sign_color(rgen, emissive));
-		objs.emplace_back(sign, TYPE_SIGN, interior->ext_basement_hallway_room_id, dim, dir, flags, light_amt, SHAPE_CUBE, sign_color); // always lit
+		objs.emplace_back(sign, TYPE_SIGN, interior->ext_basement_hallway_room_id, dim, dir, flags, light_amt, SHAPE_CUBE, logo_color); // always lit
 		objs.back().obj_id = register_sign_text(store_name);
 	}
 	// add theft sensors to either side of the doorway for retail, clothing, and shoe stores
