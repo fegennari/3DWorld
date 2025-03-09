@@ -1617,6 +1617,83 @@ int room_object_t::get_model_id() const { // Note: first 8 bits is model ID, las
 	return id;
 }
 
+// must be here for store_texture_manager_t definition
+building_mall_info_t:: building_mall_info_t() {}
+building_mall_info_t::~building_mall_info_t() {}
+
+class store_texture_manager_t { // simplified version of model3d texture_manager; for store clothing logos
+	string_map_t tex_map;
+	vector<vert_norm_comp_tc_color> verts;
+public:
+	void clear() {
+		for (auto &kv : tex_map) {free_texture(kv.second);}
+		tex_map.clear();
+	}
+	bool bind_logo_texture(std::string const &name, colorRGBA const &bg_color, colorRGBA const &text_color, shader_t &cur_shader,
+		unsigned nrows=1, unsigned ncols=1, unsigned skip_mask=0)
+	{
+		//return select_texture(YUCK_TEX);
+		unsigned tid(0);
+		// use store name as map key; assumes names are unique, so no need to include color; but do need to include grid params as this differs per clothing item
+		ostringstream oss;
+		oss << name << 'r' << nrows << 'c' << ncols << 's' << skip_mask;
+		string const map_key(oss.str());
+		string_map_t::const_iterator it(tex_map.find(map_key));
+		
+		if (it == tex_map.end()) { // not found, create texture
+			//cur_shader.disable();
+			highres_timer_t timer("Gen Logo Texture");
+			unsigned const tsize = 1024;
+			bool const mipmap(0);
+			unsigned fbo_id(0);
+			glViewport(0, 0, tsize, tsize);
+			fgMatrixMode(FG_PROJECTION);
+			fgPushIdentityMatrix();
+			fgOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
+			fgMatrixMode(FG_MODELVIEW);
+			fgPushIdentityMatrix();
+			ensure_texture_loaded(tid, tsize, tsize, mipmap, 0); // nearest=0
+			enable_fbo(fbo_id, tid);
+			set_temp_clear_color(bg_color);
+			//cur_shader.enable(); // update state
+			//shader_t s;
+			//s.begin_simple_textured_shader(0.1); // min_alpha=0.1
+			verts.clear();
+			// TODO: grid with nrows, ncols, and skip_mask
+			cube_t const draw_area(-1.0, 1.0, -1.0, 1.0, 0.0, 0.0);
+			add_sign_text_verts(name, draw_area, 0, 0, text_color, verts);
+			text_drawer::bind_font_texture();
+			draw_verts(verts, GL_QUADS);
+			//s.end_shader();
+			if (mipmap) {build_texture_mipmaps(tid, 2);}
+			restore_prev_mvm_pjm_state();
+			disable_fbo();
+			free_fbo(fbo_id);
+			set_standard_viewport();
+			tex_map[map_key] = tid;
+			//cur_shader.enable(); // restore state
+			//if (cur_shader.is_setup()) {cur_shader.enable();}
+			cout << TXT(name) << TXT(tid) << TXT(tex_map.size()) << endl; // TESTING
+		}
+		else {tid = it->second;}
+		if (tid == 0) return 0;
+		bind_2d_texture(tid);
+		return 1;
+	}
+};
+
+bool building_t::bind_custom_clothing_texure(room_object_t const &obj, shader_t &shader) const { // technically not const because this modifies a nested pointer
+	return 0; // TODO: enable when working
+	if (obj.type == TYPE_CLOTHES && !(obj.flags & RO_FLAG_UNTEXTURED) && has_mall() && is_long_shirt_model(obj) && get_room(obj.room_id).is_store()) {
+		for (store_info_t const &s : interior->mall_info->stores) {
+			if (s.room_id != obj.room_id) continue;
+			if (!interior->mall_info->tmgr) {interior->mall_info->tmgr.reset(new store_texture_manager_t);}
+			return interior->mall_info->tmgr->bind_logo_texture(s.name, WHITE, s.logo_color, shader, 2, 1, 0);
+		}
+	}
+	return 0; // no texture bound
+}
+
 void building_t::draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 	unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
 {
@@ -1673,6 +1750,7 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shad
 	draw_room_geom(bbd, s, amask_shader, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
 }
 void building_t::clear_room_geom() {
+	if (interior && interior->mall_info && interior->mall_info->tmgr) {interior->mall_info->tmgr->clear();} // free texture data
 	if (!has_room_geom()) return;
 
 	if (interior->room_geom->modified_by_player) { // keep the player's modifications and don't delete the room geom
@@ -1733,7 +1811,9 @@ void draw_stove_flames(room_object_t const &stove, point const &camera_bs, shade
 	s.set_color_e(BLACK);
 }
 
-void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_t &s, vector3d const &xlate, point const &obj_center, bool shadow_only, int mirror_dim=3) {
+void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_t &s, vector3d const &xlate, point const &obj_center, bool shadow_only,
+	int mirror_dim=3, bool using_custom_tid=0)
+{
 	bool const emissive_first_mat(!shadow_only && obj.type == TYPE_LAMP      && obj.is_light_on());
 	bool const emissive_body_mat (!shadow_only && obj.type == TYPE_WALL_LAMP && obj.is_light_on());
 	bool const use_low_z_bias(obj.type == TYPE_CUP && !shadow_only);
@@ -1745,8 +1825,6 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 	int const model_id(obj.get_model_id()); // first 8 bits is model ID, last 8 bits is sub-model ID
 	unsigned rot_only_mat_mask(0);
 	vector3d dir(i.dir);
-	int custom_tid(-1);
-	//if (obj.type == TYPE_CLOTHES && is_long_shirt_model(obj)) {custom_tid = x;}
 
 	if (dir != obj.get_dir()) { // handle models that have rotating parts; similar to car_draw_state_t::draw_helicopter()
 		if      (obj.type == TYPE_CEIL_FAN ) {rot_only_mat_mask =  1;} // only the first material (fan blades) rotate
@@ -1754,7 +1832,7 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 
 		if (rot_only_mat_mask > 0) { // draw the rotated part
 			building_obj_model_loader.draw_model(s, obj_center, obj, dir, obj.color, xlate, model_id, shadow_only,
-				0, nullptr, ~rot_only_mat_mask, untextured, 0, upside_down, emissive_body_mat, 0, 3, custom_tid);
+				0, nullptr, ~rot_only_mat_mask, untextured, 0, upside_down, emissive_body_mat, 0, 3, using_custom_tid);
 			dir = obj.get_dir(); // base model rotation based on object dim/dir orient and not instance rotation vector
 		}
 	}
@@ -1762,7 +1840,7 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 	if ((obj.type == TYPE_MONITOR || obj.type == TYPE_TV) && obj.is_hanging()) {rot_only_mat_mask |= 20;}
 
 	building_obj_model_loader.draw_model(s, obj_center, obj, dir, obj.color, xlate, model_id, shadow_only,
-		0, nullptr, rot_only_mat_mask, untextured, 0, upside_down, emissive_body_mat, 0, mirror_dim, custom_tid);
+		0, nullptr, rot_only_mat_mask, untextured, 0, upside_down, emissive_body_mat, 0, mirror_dim, using_custom_tid);
 	if (!shadow_only && obj.type == TYPE_STOVE) {draw_stove_flames(obj, (camera_pdu.pos - xlate), s);} // draw blue burner flame
 	if (use_low_z_bias    ) {s.add_uniform_float("norm_bias_scale", DEF_NORM_BIAS_SCALE);} // restore to the defaults
 	if (emissive_first_mat) {s.set_color_e(BLACK);}
@@ -2066,15 +2144,16 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		}
 		apply_room_obj_rotate(obj, *i, objs); // Note: may modify obj by clearing flags and inst by updating dir
 		
-		if (bbd_in && !shadow_only && !is_rotated && (obj.type == TYPE_WALL_LAMP || obj.is_exterior())) { // not for rotated buildings
+		if (bbd_in && !shadow_only && !is_rotated && (obj.type == TYPE_WALL_LAMP || obj.is_exterior())) { // draw exterior objects later; not for rotated buildings
 			// wall lamp has transparent glass and must be drawn last; fire escape and wall lamp use outdoor lighting
 			bbd_in->models_to_draw.emplace_back(*i, obj);
 		}
-		else {
+		else { // draw now
 			//draw_simple_cube(obj); // TESTING
 			int mirror_dim(3); // 3=none
+			bool const using_custom_tid(building.bind_custom_clothing_texure(obj, s));
 			if (obj.type == TYPE_SHOE && (obj.flags & RO_FLAG_ADJ_TOP)) {mirror_dim = 1;} // shoes may be mirrored in !obj.dim (Y in model space)
-			draw_obj_model(*i, obj, s, xlate, obj_center, shadow_only, mirror_dim); // draw now
+			draw_obj_model(*i, obj, s, xlate, obj_center, shadow_only, mirror_dim, using_custom_tid);
 			obj_drawn = 1;
 		}
 		// check for security camera monitor if player is in this building; must be on on, powered, and active

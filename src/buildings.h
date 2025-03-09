@@ -1827,6 +1827,8 @@ struct pet_tank_t : public cube_t {
 	pet_tank_t(cube_t const &c, unsigned at, unsigned ix) : cube_t(c), animal_type(at), obj_ix(ix) {}
 };
 
+class store_texture_manager_t;
+
 struct building_mall_info_t {
 	vect_cube_with_ix_t landings; // ix stores {is_escalator, se_dim, se_dir, ww_dir}
 	vect_store_doorway_t store_doorways; // ix stores store room index
@@ -1835,11 +1837,14 @@ struct building_mall_info_t {
 	vect_cube_t bathrooms; // actually bathroom pairs
 	vect_cube_t skylights, ext_stairs_elevators;
 	vector<pet_tank_t> pet_tanks; // except for fish (rats, snakes, spiders)
+	std::unique_ptr<store_texture_manager_t> tmgr;
 	cube_t store_bounds, food_court_bounds;
 	colorRGBA mall_wall_color=WHITE;
 	int city_elevator_ix=-1, ent_stairs_start_ix=-1;
 	bool mall_cylin_ducts=0, store_cylin_ducts=0;
 
+	building_mall_info_t();
+	~building_mall_info_t();
 	void clear_room_details() {stores.clear(); pet_tanks.clear();}
 };
 
@@ -2320,6 +2325,7 @@ struct building_t : public building_geom_t {
 	point get_center_of_room(unsigned room_ix) const {return get_room(room_ix).get_cube_center();}
 	room_t const &get_pool_room() const {assert(interior); return get_room(interior->pool.room_ix);}
 	std::string get_room_name(point const &pos, int room_id=-1, unsigned floor_ix=0) const;
+	bool bind_custom_clothing_texure(room_object_t const &obj, shader_t &shader) const;
 
 	// building AI people
 	unsigned count_connected_room_components();

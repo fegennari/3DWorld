@@ -86,7 +86,6 @@ unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, b
 }
 
 void texture_manager::clear() {
-
 	free_textures();
 	textures.clear();
 	tex_map.clear();
