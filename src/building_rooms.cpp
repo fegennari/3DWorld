@@ -826,7 +826,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (added_obj) {r->assign_to(RTYPE_STORAGE, f); ++num_storage_rooms;}
 			}
 			if (!added_obj && !r->interior && is_hospital()) { // hospital room with a window
-				// TODO: make RTYPE_HOS_OR or other room type with some probability
+				// TODO: make RTYPE_HOS_OR, RTYPE_HOS_EXAM, or other room type with some probability
 				added_obj = no_whiteboard = add_hospital_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, nested_room_ix);
 				if (added_obj) {r->assign_to(RTYPE_HOS_BED, f);}
 			}

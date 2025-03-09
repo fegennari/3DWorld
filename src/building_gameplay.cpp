@@ -461,7 +461,10 @@ bool is_consumable(room_object_t const &obj) {
 	return 1;
 }
 bool is_healing_food(room_object_t const &obj) {
-	return (obj.type == TYPE_PIZZA_BOX && obj.is_open() && obj.taken_level == 0 && in_building_gameplay_mode() && !player_at_full_health());
+	if (!in_building_gameplay_mode() || player_at_full_health()) return 0; // heal not needed
+	if (obj.type == TYPE_PIZZA_BOX && obj.is_open() && obj.taken_level == 0) return 1; // pizza
+	if (obj.type == TYPE_BANANA) return 1;
+	return 0;
 }
 
 class phone_manager_t {
@@ -773,7 +776,9 @@ public:
 			else {assert(0);} // invalid type
 		}
 		else if (is_healing_food(obj)) {
-			health = 0.50; // healing pizza
+			if      (obj.type == TYPE_PIZZA_BOX) {health = 0.50;}
+			else if (obj.type == TYPE_BANANA   ) {health = 0.20;}
+			else {assert(0);}
 		}
 		if (health > 0.0) { // heal
 			player_health = min(1.0f, (player_health + health));
@@ -1210,9 +1215,11 @@ bool register_player_object_pickup(room_object_t const &obj, point const &at_pos
 		return 0;
 	}
 	if (!can_pick_up) {player_inventory.show_weight_limit_message(get_obj_weight(obj)); return 0;}
-	if      (is_consumable  (obj)) {gen_sound_thread_safe_at_player(SOUND_GULP,   1.00);}
-	else if (is_healing_food(obj)) {gen_sound_thread_safe_at_player(SOUND_EATING, 1.00);}
-	else                           {gen_sound_thread_safe_at_player(SOUND_ITEM,   0.25);}
+	if      (is_consumable  (obj)) {gen_sound_thread_safe_at_player(SOUND_GULP, 1.00);}
+	else if (is_healing_food(obj)) {
+		if (obj.type == TYPE_PIZZA_BOX) {gen_sound_thread_safe_at_player(SOUND_EATING, 1.00);} // eating pizza is noisy, but eating a banana is quiet
+	}
+	else {gen_sound_thread_safe_at_player(SOUND_ITEM, 0.25);}
 	register_building_sound_for_obj(obj, at_pos);
 	do_room_obj_pickup = 0; // no more object pickups
 	return 1;
