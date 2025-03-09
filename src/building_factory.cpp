@@ -132,35 +132,40 @@ float building_t::gather_room_lights(unsigned objs_start_inc_lights, vect_cube_t
 	return light_amt / lights.size(); // average
 }
 
-cube_t building_t::add_factory_ladders_and_catwalks(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float light_amt, cube_t const &place_area,
-	cube_t const &place_area_upper, float beams_z1, float support_width, vect_cube_t supports[2], vect_cube_t const &lights, vect_cube_t &ladders, vector<float> const &beam_pos)
-{
+void building_t::add_ladders_to_nested_room_roofs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float light_amt, cube_t const &place_area) {
+	assert(interior->ind_info);
 	bool const edim(interior->ind_info->entrance_dim), edir(interior->ind_info->entrance_dir); // long dim
-	float const window_vspace(get_window_vspace()), wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness()), edir_sign(edir ? 1.0 : -1.0);
-	float const player_height(get_player_height()), ladder_extend_up(player_height + CAMERA_RADIUS);
-	float const clearance(get_min_front_clearance()), room_center_short(room.get_center_dim(!edim));
-	vect_cube_t const &nested_rooms(interior->ind_info->sub_rooms);
-	vect_room_object_t &objs(interior->room_geom->objs);
-	unsigned const objs_start(objs.size());
+	float const window_vspace(get_window_vspace()), wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness());
+	float const ladder_extend_up(get_player_height() + CAMERA_RADIUS), clearance(get_min_front_clearance());
 
-	// add ladders to nested room walls
-	for (cube_t const &r : nested_rooms) {
-		float const wall_pos(r.d[edim][!edir] - 0.5*edir_sign*wall_thick); // partially inside the wall
+	for (cube_t const &r : interior->ind_info->sub_rooms) {
+		float const wall_pos(r.d[edim][!edir] - 0.5*(edir ? 1.0 : -1.0)*wall_thick); // partially inside the wall
 		float const lo(max(r.d[!edim][0], place_area.d[!edim][0])), hi(min(r.d[!edim][1], place_area.d[!edim][1]));
 		float const ladder_hwidth(rgen.rand_uniform(0.1, 0.11)*window_vspace), edge_spacing(2.0*ladder_hwidth);
 		if ((hi - lo) < 4.0*edge_spacing) continue; // too narrow
 		cube_t ladder;
 		set_cube_zvals(ladder, zval, (r.z2() + fc_thick + ladder_extend_up));
 		ladder.d[edim][ edir] = wall_pos;
-		ladder.d[edim][!edir] = wall_pos - edir_sign*0.06*window_vspace; // set depth
+		ladder.d[edim][!edir] = wall_pos - (edir ? 1.0 : -1.0)*0.06*window_vspace; // set depth
 
 		for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place a ladder that doesn't block the door
 			set_wall_width(ladder, rgen.rand_uniform((lo + edge_spacing), (hi - edge_spacing)), ladder_hwidth, !edim);
 			if (cube_int_ext_door(ladder) || is_obj_placement_blocked(ladder, room, 1)) continue; // blocked
-			add_ladder_with_blocker(ladder, room_id, edim, !edir, light_amt, clearance, objs);
+			add_ladder_with_blocker(ladder, room_id, edim, !edir, light_amt, clearance, interior->room_geom->objs);
 			break; // success
 		}
 	} // for r
+}
+
+cube_t building_t::add_factory_ladders_and_catwalks(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float light_amt, cube_t const &place_area,
+	cube_t const &place_area_upper, float beams_z1, float support_width, vect_cube_t supports[2], vect_cube_t const &lights, vect_cube_t &ladders, vector<float> const &beam_pos)
+{
+	assert(interior->ind_info);
+	bool const edim(interior->ind_info->entrance_dim), edir(interior->ind_info->entrance_dir); // long dim
+	float const window_vspace(get_window_vspace()), fc_thick(get_fc_thickness()), edir_sign(edir ? 1.0 : -1.0);
+	float const ladder_extend_up(get_player_height() + CAMERA_RADIUS), clearance(get_min_front_clearance()), room_center_short(room.get_center_dim(!edim));
+	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const objs_start(objs.size());
 	// add catwalk above the entryway connecting the roofs of the two sub-rooms
 	cube_t const &entry(interior->ind_info->entrance_area);
 	float const doorway_width(get_doorway_width()), catwalk_width(1.1*doorway_width), catwalk_hwidth(0.5*catwalk_width), catwalk_height(0.5*window_vspace);
@@ -221,7 +226,7 @@ cube_t building_t::add_factory_ladders_and_catwalks(rand_gen_t &rgen, room_t con
 			ladder2.translate_dim(edim, edir_sign*(room_sz[edim] - ladder_depth - 2.0*trim_thickness)); // translate to the other wall
 			bool add_sec_ladder(1);
 
-			for (cube_t const &r : nested_rooms) {
+			for (cube_t const &r : interior->ind_info->sub_rooms) {
 				if (r.contains_cube_xy(ladder2)) {ladder2.z1()   = r.z2() + fc_thick; break;} // ladd starts on the roof of this room
 				if (r.intersects_xy   (ladder2)) {add_sec_ladder = 0; break;} // skip if partially overlapping
 			}
@@ -267,7 +272,7 @@ cube_t building_t::add_factory_ladders_and_catwalks(rand_gen_t &rgen, room_t con
 				set_wall_width(ladder, rgen.rand_uniform(llo, lhi), ladder_hwidth, edim);
 				cube_t tc(ladder);
 				tc.d[!edim][ldir] += ldsign*clearance; // add space in front
-				if (overlaps_obj_or_placement_blocked(tc, room, objs_start) || has_bcube_int(tc, nested_rooms)) continue;
+				if (overlaps_obj_or_placement_blocked(tc, room, objs_start) || has_bcube_int(tc, interior->ind_info->sub_rooms)) continue;
 				// ladder pos is valid; split the catwalk that was added into left, right, and center parts so that we can insert a cut into the railing
 				cube_t seg_split(ladder);
 				seg_split.expand_in_dim(edim, 0.25*doorway_width); // increase width beyond the ladder
@@ -293,6 +298,7 @@ cube_t building_t::add_factory_ladders_and_catwalks(rand_gen_t &rgen, room_t con
 void building_t::add_industrial_ducts_and_hvac(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float light_amt, float support_width, float ceil_zval,
 	cube_t const &place_area_upper, vect_cube_t const &beams, vect_cube_t supports[2], unsigned objs_start)
 {
+	assert(interior->ind_info);
 	bool const edim(interior->ind_info->entrance_dim); // long dim
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// add ceiling ducts and vents (similar to malls)
@@ -409,6 +415,7 @@ void building_t::add_industrial_ducts_and_hvac(rand_gen_t &rgen, room_t const &r
 void building_t::add_industrial_sprinkler_pipes(rand_gen_t &rgen, room_t const &room, unsigned room_id,
 	float support_width, unsigned objs_start, vect_cube_t const &lights, vect_cube_t const &beams)
 {
+	assert(interior->ind_info);
 	bool const edim(interior->ind_info->entrance_dim);
 	float const doorway_width(get_doorway_width()), custom_floor_spacing(room.dz() - support_width); // place sprinklers under ceiling beams
 	float const wall_pad(1.05*support_width); // add a gap between the wall supports
@@ -457,8 +464,8 @@ void building_t::add_industrial_sprinkler_pipes(rand_gen_t &rgen, room_t const &
 }
 
 void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start_inc_lights) { // ~0.25ms
-	bool const room_is_factory(room.is_factory()), room_is_warehouse(room.is_warehouse());
 	assert(interior->ind_info);
+	bool const room_is_factory(room.is_factory()), room_is_warehouse(room.is_warehouse());
 	bool const edim(interior->ind_info->entrance_dim), edir(interior->ind_info->entrance_dir), beam_dim(!edim); // edim is the long dim; beam_dim is short dim
 	float const window_vspace(get_window_vspace()), wall_thick(get_wall_thickness()), fc_thick(get_fc_thickness()), edir_sign(edir ? 1.0 : -1.0);
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -573,6 +580,7 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 	xfmr_fl_area.d[edim][edir] -= edir_sign*1.2*doorway_width; // don't place too close to sub-rooms or entrance
 	cube_t const &entry(interior->ind_info->entrance_area);
 	unsigned const objs_start(objs.size());
+	add_ladders_to_nested_room_roofs(rgen, room, zval, room_id, light_amt, place_area); // added for both factories and warehouses
 
 	if (room_is_factory) { // add factory-specific objects
 		cube_t const center_ladder(add_factory_ladders_and_catwalks(rgen, room, zval, room_id, light_amt, place_area, place_area_upper,
