@@ -47,6 +47,7 @@ void register_fishtank(room_object_t const &obj, bool is_visible);
 void end_fish_draw(shader_t &s, bool inc_pools_and_fb);
 void calc_cur_ambient_diffuse();
 void reset_interior_lighting_and_end_shader(shader_t &s);
+bool is_long_shirt_model(room_object_t const &obj);
 
 bool has_key_3d_model      () {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 bool has_office_chair_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR);}
@@ -1744,6 +1745,8 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 	int const model_id(obj.get_model_id()); // first 8 bits is model ID, last 8 bits is sub-model ID
 	unsigned rot_only_mat_mask(0);
 	vector3d dir(i.dir);
+	int custom_tid(-1);
+	//if (obj.type == TYPE_CLOTHES && is_long_shirt_model(obj)) {custom_tid = x;}
 
 	if (dir != obj.get_dir()) { // handle models that have rotating parts; similar to car_draw_state_t::draw_helicopter()
 		if      (obj.type == TYPE_CEIL_FAN ) {rot_only_mat_mask =  1;} // only the first material (fan blades) rotate
@@ -1751,7 +1754,7 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 
 		if (rot_only_mat_mask > 0) { // draw the rotated part
 			building_obj_model_loader.draw_model(s, obj_center, obj, dir, obj.color, xlate, model_id, shadow_only,
-				0, nullptr, ~rot_only_mat_mask, untextured, 0, upside_down, emissive_body_mat);
+				0, nullptr, ~rot_only_mat_mask, untextured, 0, upside_down, emissive_body_mat, 0, 3, custom_tid);
 			dir = obj.get_dir(); // base model rotation based on object dim/dir orient and not instance rotation vector
 		}
 	}
@@ -1759,7 +1762,7 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 	if ((obj.type == TYPE_MONITOR || obj.type == TYPE_TV) && obj.is_hanging()) {rot_only_mat_mask |= 20;}
 
 	building_obj_model_loader.draw_model(s, obj_center, obj, dir, obj.color, xlate, model_id, shadow_only,
-		0, nullptr, rot_only_mat_mask, untextured, 0, upside_down, emissive_body_mat, 0, mirror_dim);
+		0, nullptr, rot_only_mat_mask, untextured, 0, upside_down, emissive_body_mat, 0, mirror_dim, custom_tid);
 	if (!shadow_only && obj.type == TYPE_STOVE) {draw_stove_flames(obj, (camera_pdu.pos - xlate), s);} // draw blue burner flame
 	if (use_low_z_bias    ) {s.add_uniform_float("norm_bias_scale", DEF_NORM_BIAS_SCALE);} // restore to the defaults
 	if (emissive_first_mat) {s.set_color_e(BLACK);}

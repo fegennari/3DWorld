@@ -24,9 +24,11 @@ void resize_model_cube_xy(cube_t &cube, float dim_pos, float not_dim_pos, unsign
 }
 
 bool is_shirt_model     (unsigned model_id) {return building_obj_model_loader.model_filename_contains(model_id, "shirt", "Shirt");}
+bool is_long_shirt_model(unsigned model_id) {return building_obj_model_loader.model_filename_contains(model_id, "long shirt", "Long Shirt");}
 bool is_pants_model     (unsigned model_id) {return building_obj_model_loader.model_filename_contains(model_id, "pants", "Pants");}
 bool is_bar_hanger_model(unsigned model_id) {return building_obj_model_loader.model_filename_contains(model_id, "bar hanger", "Bar Hanger");}
 bool is_shirt_model     (room_object_t const &obj) {return is_shirt_model     (obj.get_model_id());}
+bool is_long_shirt_model(room_object_t const &obj) {return is_long_shirt_model(obj.get_model_id());}
 bool is_pants_model     (room_object_t const &obj) {return is_pants_model     (obj.get_model_id());}
 bool is_bar_hanger_model(room_object_t const &obj) {return is_bar_hanger_model(obj.get_model_id());}
 

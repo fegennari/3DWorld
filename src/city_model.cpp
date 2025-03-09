@@ -230,7 +230,7 @@ float city_model_loader_t::get_anim_duration(unsigned model_id, unsigned model_a
 
 void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
 	vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, animation_state_t *anim_state, unsigned skip_mat_mask,
-	bool untextured, bool force_high_detail, bool upside_down, bool emissive, bool do_local_rotate, int mirror_dim)
+	bool untextured, bool force_high_detail, bool upside_down, bool emissive, bool do_local_rotate, int mirror_dim, int custom_tid)
 {
 	assert(!(low_detail && force_high_detail));
 	bool const is_valid(is_model_valid(model_id)); // first 8 bits is model ID, last 8 bits is sub-model ID
@@ -242,13 +242,18 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	bool const have_body_mat(model_file.body_mat_id >= 0);
 	bool const use_custom_color   (!is_shadow_pass && have_body_mat && color.A != 0.0);
 	bool const use_custom_emissive(!is_shadow_pass && have_body_mat && emissive);
-	bool const use_custom_texture (!is_shadow_pass && have_body_mat && untextured);
+	bool const use_custom_texture (!is_shadow_pass && have_body_mat && (untextured || custom_tid >= 0));
 	colorRGBA orig_color;
 	int orig_tid(-1);
-	int const untex_tid(-1); // Note: this indexes into the model's texture_manager textures vector; it's not a global texture ID
 	if (use_custom_color   ) {orig_color = model.set_color_for_material  (model_file.body_mat_id, color    );} // use custom color for body material
-	if (use_custom_texture ) {orig_tid   = model.set_texture_for_material(model_file.body_mat_id, untex_tid);}
 	if (use_custom_emissive) {model.set_material_emissive_color(model_file.body_mat_id, color);} // use custom color for body material
+
+	if (use_custom_texture ) {
+		// Note: this indexes into the model's texture_manager textures vector; it's not a global texture ID
+		int const untex_tid((custom_tid >= 0) ? -2 : -1); // -2: texture is pre-bound, don't set; -1: use white texture
+		if (custom_tid >= 0) {assert(model_file.body_mat_id == 0); select_texture(custom_tid);} // only works when body_mat_id is the first material
+		orig_tid = model.set_texture_for_material(model_file.body_mat_id, untex_tid);
+	}
 	model.bind_all_used_tids();
 	cube_t const bcube(model.get_bcube() * model_file.model_anim_scale);
 	point const orig_camera_pos(camera_pdu.pos), bcube_center(bcube.get_cube_center());
