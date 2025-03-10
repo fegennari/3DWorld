@@ -702,7 +702,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 		cube_t bounds(S);
 		bounds.z1() = S.z2(); // place on top of shelf
 		add_boxes_to_space(c, objects, bounds, cubes, rgen, num_boxes, 0.42*width*sz_scale*(is_house ? 1.5 : 1.0),
-			0.4*box_zscale, 0.98*box_zscale, 1, (c.flags | RO_FLAG_NOCOLL)); // allow_crates=1
+			0.4*box_zscale, 0.98*box_zscale, 1, ((c.flags & ~RO_FLAG_OPEN) | RO_FLAG_NOCOLL)); // allow_crates=1; copy flags from shelf, except for open flag
 		// add computers; what about monitors?
 		float const cheight(0.75*h_val), cwidth(0.44*cheight), cdepth(0.9*cheight); // fixed AR=0.44 to match the texture
 		sz[ c.dim] = 0.5*cdepth;
