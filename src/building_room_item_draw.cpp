@@ -2183,7 +2183,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 				point const light_center(get_warning_light_src_pos(*i));
 				flare_qbd.add_billboard(light_center, camera_bs, plus_x, RED, radius, radius);
 			}
-			if (i->z1() < camera_bs.z && i->z1() > ao_zmin) { // camera not below or too far above this object
+			if (i->z1() < camera_bs.z && i->z1() > ao_zmin - max(0.0f, (i->dz() - floor_spacing))) { // camera not below or too far above this object; handle tall objects
 				float const ao_shadow(get_ao_shadow(*i, enable_indir));
 
 				if (ao_shadow > 0.0) { // add AO shadow quad on the floor below the object
