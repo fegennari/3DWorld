@@ -601,28 +601,130 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 		}
 	}
 	if (room_is_warehouse) { // add warehouse-specific objects
-		// TODO: rows of shelves, stacked boxes and crates, etc.
+		// add rows of shelves along each side wall, and back-to-back pairs in the center of the room
+		float const room_width(room.get_sz_dim(!edim)), shelf_height(0.7*room.dz()), shelf_width(0.5*window_vspace), min_aisle_width(1.2*window_vspace);
+		float const shelf_wall_thick(1.0*wall_thick), shelf_pair_width(2*shelf_width + shelf_wall_thick), min_spacing(min_aisle_width + shelf_pair_width);
+		unsigned const num_rows(room_width/min_spacing);
+		cube_t shelf_area(place_area);
+		shelf_area.expand_in_dim(edim, -1.2*min_aisle_width); // add space on the ends
+		shelf_area.z2() = zval + shelf_height;
+		vect_cube_t shelf_segs, wall_segs;
+
+		if (shelf_area.get_sz_dim(edim) < min_aisle_width) {} // too short to place shelves; shouldn't happen
+		else if (num_rows > 0) {
+			unsigned const num_segs = 20;
+			float const shelf_spacing(room_width/num_rows), seg_len(shelf_area.get_sz_dim(edim)/num_segs);
+			float const windows_z1(min(get_industrial_window_z1(), (room.z2() - 1.5f*window_vspace)) + window_vspace*get_window_v_border()); // leave room for ducts
+			float pos(shelf_area.d[!edim][0]); // starts at left edge
+
+			for (unsigned n = 0; n < num_rows; ++n) { // shelf - aisle - shelf - wall
+				bool const last_row(n+1 == num_rows);
+				float const next_pos(last_row ? shelf_area.d[!edim][1] : (pos + shelf_spacing)); // end exactly at the wall
+				float const second_shelf_end(next_pos - (last_row ? 0.0 : shelf_wall_thick)); // add space for a wall if not the last row
+				cube_t shelves[2] = {shelf_area, shelf_area}; // start as full area
+				shelves[0].d[!edim][0] = pos;
+				shelves[0].d[!edim][1] = pos + shelf_width;
+				shelves[1].d[!edim][0] = second_shelf_end - shelf_width;
+				shelves[1].d[!edim][1] = second_shelf_end;
+
+				for (unsigned d = 0; d < 2; ++d) { // {left, right} shelf
+					bool const against_ext_wall((n == 0 && d == 0) || (last_row && d == 1));
+					cube_t &shelf(shelves[d]);
+					if (against_ext_wall) {min_eq(shelf.z2(), windows_z1);} // don't block window
+					cube_t test_box(shelf);
+					test_box.d[!edim][!d] += (d ? -1.0 : 1.0)*min_aisle_width; // include min aisle (not current/full aisle)
+					shelf_segs.clear();
+					
+					// check for blockers, split into multiple segments, keep non-blocked, and merge together
+					if (overlaps_obj_or_placement_blocked(test_box, place_area, objs_start)) {
+						float spos(shelf.d[edim][0]);
+						
+						for (unsigned s = 0; s < num_segs; ++s) {
+							float const next_spos(spos + seg_len);
+							cube_t seg(shelf);
+							seg.d[edim][0] = spos; seg.d[edim][1] = next_spos;
+							cube_t tb(seg);
+							tb.d[!edim][d] = test_box.d[!edim][d];
+
+							if (!overlaps_obj_or_placement_blocked(tb, place_area, objs_start)) { // seg is valid
+								if (shelf_segs.empty() || shelf_segs.back().d[edim][1] != spos) {shelf_segs.push_back(seg);} // start a new segment
+								else {shelf_segs.back().d[edim][1] = next_spos;} // extend existing segment
+							}
+							spos = next_spos;
+						} // for s
+					}
+					else {shelf_segs.push_back(shelf);} // add entire shelf
+
+					unsigned shelf_flags(RO_FLAG_INTERIOR | RO_FLAG_NONEMPTY | RO_FLAG_ADJ_HI); // draw tops of brackets
+					// if shelf is in middle of room, flag as open so that back is drawn; or not needed because there's a wall? draw the ends as well if they're by windows?
+					if (!against_ext_wall) {shelf_flags |= RO_FLAG_OPEN;}
+
+					for (cube_t const &S : shelf_segs) {
+						add_shelves(S, !edim, d, room_id, light_amt, shelf_flags, 0, rgen);
+						if (!against_ext_wall) continue;
+						// add a metal bar behind the shelves that connects the bracket to the wall beams
+						float const back_pos(S.d[!edim][d]), bar_z2(S.z2() - fc_thick);
+						cube_t bar(S);
+						bar.d[!edim][ d] = back_pos;
+						bar.d[!edim][!d] = back_pos + (d ? -1.0 : 1.0)*0.5*support_hwidth; // set depth
+						set_cube_zvals(bar, (bar_z2 - 1.0*support_hwidth), bar_z2);
+						objs.emplace_back(bar, TYPE_METAL_BAR, room_id, !edim, d, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, LT_GRAY, 0); // draw all faces
+					} // for S
+				}
+				if (!last_row) { // add a wall
+					cube_t wall(shelf_area);
+					wall.z2() += 1.0*fc_thick; // increase height above top of shelf wall anchors
+					wall.d[!edim][0] = second_shelf_end;
+					wall.d[!edim][1] = next_pos;
+
+					// check for blockers and split into multiple segments
+					if (overlaps_obj_or_placement_blocked(wall, place_area, objs_start)) {
+						float spos(wall.d[edim][0]);
+
+						for (unsigned s = 0; s < num_segs; ++s) {
+							float const next_spos(spos + seg_len);
+							cube_t seg(wall);
+							seg.d[edim][0] = spos; seg.d[edim][1] = next_spos;
+
+							if (!overlaps_obj_or_placement_blocked(seg, place_area, objs_start)) { // seg is valid
+								if (wall_segs.empty() || wall_segs.back().d[!edim][1] != next_pos || wall_segs.back().d[edim][1] != spos) {wall_segs.push_back(seg);}
+								else {wall_segs.back().d[edim][1] = next_spos;} // extend existing segment
+							}
+							spos = next_spos;
+						} // for s
+					}
+					else {wall_segs.push_back(wall);} // add entire wall
+				}
+				pos = next_pos;
+			} // for n
+			for (cube_t const &wall : wall_segs) {
+				objs.emplace_back(wall, TYPE_PG_WALL, room_id, !edim, 0, RO_FLAG_ADJ_TOP, light_amt, SHAPE_CUBE, BROWN); // draw top
+				interior->room_geom->shelf_rack_occluders[0].push_back(wall); // TODO: make this work
+			}
+		} // end shelves
 
 		// add a forklift
 		xfmr_fl_area.expand_by_xy(-wall_thick*rgen.rand_uniform(0.5, 1.5)); // not too close to the wall
-		place_model_along_wall(OBJ_MODEL_FORKLIFT, TYPE_FORKLIFT, room, 1.0, rgen, zval, room_id, light_amt, xfmr_fl_area, objs_start, 0.25, 4, 0, WHITE, 0, 0, 0);
-		// scatter some random pallets on the floor
-		unsigned const num_pallets((rgen.rand() % 4) + 2); // 2-5
-		float const one_inch(window_vspace/(8*12)), length(48*one_inch), width(40*one_inch), height(4.5*one_inch); // 48x40x4.5 inches
+		place_model_along_wall(OBJ_MODEL_FORKLIFT, TYPE_FORKLIFT, room, 0.9, rgen, zval, room_id, light_amt, xfmr_fl_area, objs_start, 0.25, 4, 0, WHITE, 0, 0, 0);
+		
+		if (1) { // scatter some random pallets on the floor
+			unsigned const num_pallets((rgen.rand() % 4) + 2); // 2-5
+			float const one_inch(window_vspace/(8*12)), length(48*one_inch), width(40*one_inch), height(4.5*one_inch); // 48x40x4.5 inches
 
-		for (unsigned n = 0; n < num_pallets; ++n) {
-			bool const pdim(rgen.rand_bool());
-			vector3d pallet_sz(0.5*length, 0.5*width, height); // half size
-			if (pdim) {swap(pallet_sz.x, pallet_sz.y);}
-			cube_t pallet;
+			for (unsigned n = 0; n < num_pallets; ++n) {
+				bool const pdim(rgen.rand_bool());
+				vector3d pallet_sz(0.5*length, 0.5*width, height); // half size
+				if (pdim) {swap(pallet_sz.x, pallet_sz.y);}
+				cube_t pallet;
 
-			for (unsigned N = 0; N < 10; ++N) { // 10 place attempts
-				gen_xy_pos_for_cube_obj(pallet, place_area, pallet_sz, height, rgen, 1); // place_at_z1=1
-				if (overlaps_obj_or_placement_blocked(pallet, place_area, objs_start)) continue; // bad placement
-				objs.emplace_back(pallet, TYPE_PALLET, room_id, pdim, 0, 0, light_amt);
-				break; // success
-			}
-		} // for n
+				for (unsigned N = 0; N < 10; ++N) { // 10 place attempts
+					gen_xy_pos_for_cube_obj(pallet, place_area, pallet_sz, height, rgen, 1); // place_at_z1=1
+					if (overlaps_obj_or_placement_blocked(pallet, place_area, objs_start)) continue; // bad placement
+					objs.emplace_back(pallet, TYPE_PALLET, room_id, pdim, 0, 0, light_amt);
+					break; // success
+				}
+			} // for n
+		}
 	}
 	// add fire extinguisher
 	add_fire_ext_along_wall(entry, zval, room_id, light_amt, !edim, rgen.rand_bool(), rgen); // choose a random side

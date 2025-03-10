@@ -1114,7 +1114,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 		wood_mat.add_cube_to_verts(shelves[s], shelf_color, origin, skip_faces, !c.dim); // make wood grain horizontal
 	}
 	if (c.flags & RO_FLAG_INTERIOR) { // add support brackets to interior shelves; skip them if against an exterior wall in case they intersect a window
-		unsigned const skip_faces_vbracket(skip_faces | (c.in_mall() ? EF_Z1 : EF_Z12)); // only draw top face for mall shelves since ceiling is high
+		unsigned const skip_faces_vbracket(skip_faces | ((c.flags & RO_FLAG_ADJ_HI) ? EF_Z1 : EF_Z12)); // only draw top face for high shelves since ceiling is high
 		static vect_cube_with_ix_t brackets;
 		get_shelf_brackets(c, shelves, num_shelves, brackets);
 		rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // shadowed, specular metal; small=1

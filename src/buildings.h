@@ -2105,6 +2105,7 @@ struct building_t : public building_geom_t {
 	float get_landing_width  () const {return 1.0*get_doorway_width();} // for L-shaped stairs
 	float get_nominal_doorway_width   () const {return DOOR_WIDTH_SCALE*get_window_vspace();} // constant per-building, but not exactly the same as get_doorway_width()
 	float get_office_ext_doorway_width() const {return DOOR_WIDTH_SCALE_OFFICE*get_window_vspace();}
+	float get_industrial_window_z1    () const;
 	bool is_ground_floor_excluding_retail(float zval) const;
 	float get_ground_floor_z_thresh(bool for_spider) const;
 	void gen_rotation(rand_gen_t &rgen);

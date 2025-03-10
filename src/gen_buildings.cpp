@@ -2322,7 +2322,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		unsigned const part_ix(i - parts.begin());
 
 		if (part_ix == 0 && is_industrial()) { // industrial has top 1-2 rows of windows and bottom windows for bathroom and office
-			float const window_z1(min((i->z2() - floor_spacing), (i->z1() + 2.0f*floor_spacing))), wall_thickness(get_wall_thickness());
+			float const window_z1(get_industrial_window_z1()), wall_thickness(get_wall_thickness());
 			cube_t part(*i);
 			set_cube_zvals(part, max(i->z1(), window_z1), i->z2()); // top row only
 			bdraw.add_section(*this, 1, part, tex, color, 3, 0, 0, 1, clip_windows, 0.0, 0, offset_scale, 0, nullptr); // XY, no_ao=1

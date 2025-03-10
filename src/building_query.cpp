@@ -2409,6 +2409,11 @@ bool building_t::is_ground_floor_excluding_retail(float zval) const {
 	if (!has_retail())           return 0;
 	return (fabs(zval - (ground_floor_z1 + retail_floor_levels*get_window_vspace())) < get_floor_thickness()); // close to the second floor zval
 }
+float building_t::get_industrial_window_z1() const {
+	float const floor_spacing(get_window_vspace());
+	cube_t const &ip(get_industrial_area());
+	return min((ip.z2() - floor_spacing), (ip.z1() + 2.0f*floor_spacing));
+}
 float building_t::get_ground_floor_z_thresh(bool for_spider) const {
 	return (ground_floor_z1 + (for_spider ? 1.0f : 0.25f)*get_window_vspace()); // rats are on the ground, while spiders can climb walls and insects can fly
 }
