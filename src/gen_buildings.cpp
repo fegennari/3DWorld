@@ -3573,6 +3573,7 @@ public:
 		update_security_camera_image();
 		setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass
 		create_mirror_reflection_if_needed(vis_conn_bldg, xlate);
+		if (player_building) {player_building->create_pending_textures();} // I guess this goes here
 	}
 	static void push_scene_xlate(vector3d const &xlate) {
 		fgPushMatrix();

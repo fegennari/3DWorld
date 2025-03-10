@@ -2325,7 +2325,8 @@ struct building_t : public building_geom_t {
 	point get_center_of_room(unsigned room_ix) const {return get_room(room_ix).get_cube_center();}
 	room_t const &get_pool_room() const {assert(interior); return get_room(interior->pool.room_ix);}
 	std::string get_room_name(point const &pos, int room_id=-1, unsigned floor_ix=0) const;
-	bool bind_custom_clothing_texure(room_object_t const &obj, shader_t &shader) const;
+	void create_pending_textures() const;
+	bool bind_custom_clothing_texure(room_object_t const &obj) const;
 
 	// building AI people
 	unsigned count_connected_room_components();

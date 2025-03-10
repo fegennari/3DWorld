@@ -211,17 +211,18 @@ float clip_char_quad(vector<vert_tc_t> &verts, unsigned start_ix, bool dim, bool
 template<typename T> void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color,
 	vector<T> &verts_out, float first_char_clip_val, float last_char_clip_val, bool include_space_chars, bool invert_z)
 {
-	float const z_sign(invert_z ? -1.0 : 1.0);
+	float const height(sign.dz()), z_sign(invert_z ? -1.0 : 1.0);
 	bool const no_shrink(text == "+"); // hospital "+" sign
 	assert(!text.empty());
+	assert(height > 0.0);
 	cube_t ct(sign);
 
 	if (no_shrink) { // expand to fill the entire height
-		ct.expand_in_z(0.7*sign.dz());
+		ct.expand_in_z(0.7*height);
 	}
 	else { // text area is slightly smaller than full cube
 		ct.expand_in_dim(!dim, -0.10*sign.get_sz_dim(!dim));
-		ct.expand_in_dim(2,    -0.05*sign.dz());
+		ct.expand_in_dim(2,    -0.05*height);
 	}
 	vector3d col_dir(zero_vector), normal(zero_vector);
 	bool const ldir(dim ^ dir);
