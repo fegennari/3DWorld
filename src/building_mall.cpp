@@ -2228,7 +2228,7 @@ void building_t::add_shelves_along_walls(cube_t const &room_area, float zval, un
 		float const back_pos(room_area.d[dim][bool(d) ^ place_inside]);
 		c.d[dim][!d] = back_pos;
 		c.d[dim][ d] = back_pos + (d ? 1.0 : -1.0)*depth;
-		unsigned shelf_flags(RO_FLAG_INTERIOR | RO_FLAG_IN_MALL);
+		unsigned shelf_flags(RO_FLAG_INTERIOR | ((zval < ground_floor_z1) ? RO_FLAG_IN_MALL : 0)); // in mall or warehouse
 		if (!place_inside) {shelf_flags |= RO_FLAG_OPEN | RO_FLAG_NONEMPTY;} // shelf in middle of rooms; flag as open so that back is drawn; no empty shelves
 		else if (rgen.rand_float() < 0.9) {shelf_flags |= RO_FLAG_NONEMPTY;} // shelf against room wall; 10% chance of being empty
 		add_shelves(c, dim, !d, room_id, light_amt, shelf_flags, store_type, rgen);
