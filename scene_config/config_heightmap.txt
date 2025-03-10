@@ -20,6 +20,12 @@ camera_height 0.016 # added to camera_radius; default is 0.0
 player_speed 0.2 # default is 1.0
 head_bob_amount 0.04
 
+#player_start -2.95222 2.68602 -4.79387 # location near a mall
+#player_start -7.52293 -4.31459 -4.96527 # location near a factory
+#player_start -5.40119 -4.19905 -4.77675 # location near a warehouse
+#player_start -11.2919 4.2314 -5.16728 # location near a city hospital
+#player_start -41.8632 -3.30429 -6.1543 # location near a non-city hospital
+
 buildings tt_only 1
 #buildings infinite_buildings     1 # enables building tiles
 buildings add_city_interiors     1
