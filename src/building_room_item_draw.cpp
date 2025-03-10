@@ -47,7 +47,6 @@ void register_fishtank(room_object_t const &obj, bool is_visible);
 void end_fish_draw(shader_t &s, bool inc_pools_and_fb);
 void calc_cur_ambient_diffuse();
 void reset_interior_lighting_and_end_shader(shader_t &s);
-bool is_long_shirt_model(room_object_t const &obj);
 
 bool has_key_3d_model      () {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 bool has_office_chair_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR);}
@@ -1617,116 +1616,6 @@ int room_object_t::get_model_id() const { // Note: first 8 bits is model ID, las
 	return id;
 }
 
-// must be here for store_texture_manager_t definition
-building_mall_info_t:: building_mall_info_t() {}
-building_mall_info_t::~building_mall_info_t() {}
-
-class store_texture_manager_t { // simplified version of model3d texture_manager; for store clothing logos
-	struct tex_params_t {
-		string name;
-		colorRGBA bg_color, text_color;
-		unsigned nrows, ncols, draw_mask;
-
-		tex_params_t(string const &n, colorRGBA const &bc, colorRGBA const &tc, unsigned nr, unsigned nc, unsigned dm) :
-			name(n), bg_color(bc), text_color(tc), nrows(nr), ncols(nc), draw_mask(dm) {}
-		bool operator==(tex_params_t const &tp) const {
-			return (name == tp.name && bg_color == tp.bg_color && text_color == tp.text_color && nrows == tp.nrows && ncols == tp.ncols && draw_mask == tp.draw_mask);
-		}
-	};
-	map<pair<string, unsigned>, unsigned> tex_map;
-	vector<tex_params_t> pending;
-	vector<vert_norm_comp_tc_color> verts;
-
-	static unsigned construct_map_key_ix(unsigned nrows, unsigned ncols, unsigned draw_mask) {return ((nrows << 16) + (ncols << 8) + draw_mask);}
-
-	void create_texture(tex_params_t const &tp) {
-		pair<string, unsigned> const map_key(tp.name, construct_map_key_ix(tp.nrows, tp.ncols, tp.draw_mask));
-		if (tex_map.find(map_key) != tex_map.end()) return; // already created
-		highres_timer_t timer("Gen Logo Texture"); // ~0.5 ms
-		unsigned const tsize = 1024;
-		bool const mipmap(0); // too slow
-		unsigned tid(0), fbo_id(0);
-		// setup viewport and transforms
-		glViewport(0, 0, tsize, tsize);
-		fgMatrixMode(FG_PROJECTION);
-		fgPushIdentityMatrix();
-		fgOrtho(0.0, 1.0,  0.0, 1.0,  -1.0, 1.0);
-		fgMatrixMode(FG_MODELVIEW);
-		fgPushIdentityMatrix();
-		// create texture and FBO; setup shader
-		ensure_texture_loaded(tid, tsize, tsize, mipmap, 0); // nearest=0
-		enable_fbo(fbo_id, tid);
-		set_temp_clear_color(tp.bg_color);
-		shader_t s;
-		s.begin_simple_textured_shader(0.1); // min_alpha=0.1
-		// draw text data
-		float const xstep(1.0/tp.ncols), zstep(1.0/tp.nrows);
-		verts.clear();
-
-		for (unsigned c = 0; c < tp.ncols; ++c) { // x
-			for (unsigned r = 0; r < tp.nrows; ++r) { // z
-				if (!(tp.draw_mask & (1 << (r*tp.ncols + c)))) continue;
-				cube_t const draw_area(c*xstep, (c+1)*xstep,  0.0, 0.0,  r*zstep, (r+1)*zstep);
-				add_sign_text_verts(tp.name, draw_area, 1, 0, tp.text_color, verts);
-			}
-		} // for c
-		for (auto &v : verts) {swap(v.v.y, v.v.z);} // swap Y with Z
-		enable_blend();
-		text_drawer::bind_font_texture();
-		draw_verts(verts, GL_QUADS);
-		disable_blend();
-		s.end_shader();
-		if (mipmap) {build_texture_mipmaps(tid, 2);}
-		// restore state and cleanup
-		restore_prev_mvm_pjm_state();
-		disable_fbo();
-		free_fbo(fbo_id);
-		set_standard_viewport();
-		tex_map[map_key] = tid; // cache in map
-	}
-public:
-	void clear() {
-		for (auto &kv : tex_map) {free_texture(kv.second);}
-		tex_map.clear();
-		pending.clear();
-	}
-	void create_pending_textures() {
-		for (tex_params_t const &tp : pending) {create_texture(tp);} // TODO: reuse shaders
-		pending.clear();
-	}
-	bool bind_logo_texture(string const &name, colorRGBA const &bg_color, colorRGBA const &text_color, unsigned nrows, unsigned ncols, unsigned draw_mask) {
-		assert(nrows > 0 && ncols > 0);
-		assert(nrows*ncols <= 32);
-		// assumes names are unique, so no need to include color; but do need to include grid params as this differs per clothing item
-		auto it(tex_map.find(make_pair(name, construct_map_key_ix(nrows, ncols, draw_mask))));
-		
-		if (it == tex_map.end()) { // not found, must create
-			tex_params_t const tp(name, bg_color, text_color, nrows, ncols, draw_mask);
-			if (pending.empty() || !(tp == pending.back())) {pending.push_back(tp);} // don't add duplicates
-			return 0; // TODO: bind white texture?
-		}
-		unsigned const tid(it->second);
-		if (tid == 0) return 0; // error?
-		bind_2d_texture(tid);
-		return 1;
-	}
-};
-
-void building_t::create_pending_textures() const { // technically not const because this modifies a nested pointer
-	if (has_mall() && interior->mall_info->tmgr) {interior->mall_info->tmgr->create_pending_textures();}
-}
-bool building_t::bind_custom_clothing_texure(room_object_t const &obj) const { // technically not const because this modifies a nested pointer
-	//return 0; // TODO: enable when working
-	if (obj.type == TYPE_CLOTHES && !(obj.flags & RO_FLAG_UNTEXTURED) && has_mall() && is_long_shirt_model(obj) && get_room(obj.room_id).is_store()) {
-		for (store_info_t const &s : interior->mall_info->stores) {
-			if (s.room_id != obj.room_id) continue;
-			if (!interior->mall_info->tmgr) {interior->mall_info->tmgr.reset(new store_texture_manager_t);}
-			return interior->mall_info->tmgr->bind_logo_texture(s.name, WHITE, s.logo_color, 6, 3, ((1<<4) + (1<<13)));
-		}
-	}
-	return 0; // no texture bound
-}
-
 void building_t::draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 	unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
 {
@@ -1783,7 +1672,7 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shad
 	draw_room_geom(bbd, s, amask_shader, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
 }
 void building_t::clear_room_geom() {
-	if (interior && interior->mall_info && interior->mall_info->tmgr) {interior->mall_info->tmgr->clear();} // free texture data
+	clear_clothing_textures();
 	if (!has_room_geom()) return;
 
 	if (interior->room_geom->modified_by_player) { // keep the player's modifications and don't delete the room geom

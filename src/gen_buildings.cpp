@@ -3568,7 +3568,7 @@ public:
 		else {s.enable();}
 	}
 
-	static void create_building_reflections(vector3d const &xlate) {
+	static void create_building_reflections_and_textures(vector3d const &xlate) {
 		bind_default_sun_moon_smap_textures();
 		update_security_camera_image();
 		setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass
@@ -5301,9 +5301,9 @@ void draw_buildings(int shadow_only, int reflection_pass, vector3d const &xlate)
 	building_tiles.add_drawn(xlate, bcs);
 	building_creator_t::multi_draw(shadow_only, reflection_pass, xlate, bcs);
 }
-void create_building_reflections() {
+void create_building_reflections_and_textures() {
 	building_creator_city.create_vbos(); // create VBOs for city buildings (after adding skyways, etc.), if needed
-	building_creator_t::create_building_reflections(get_tiled_terrain_model_xlate());
+	building_creator_t::create_building_reflections_and_textures(get_tiled_terrain_model_xlate());
 }
 void draw_player_building_transparent(int reflection_pass, vector3d const &xlate) {building_creator_t::draw_player_building_transparent(reflection_pass, xlate);}
 

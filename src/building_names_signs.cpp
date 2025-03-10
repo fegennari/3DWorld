@@ -1,4 +1,4 @@
-// 3D World - Building/Company Names Signs, and Flags
+// 3D World - Building/Company Names Signs, Flags, and Store Logo Textures
 // by Frank Gennari 01/11/23
 
 #include "function_registry.h"
@@ -9,6 +9,8 @@ using std::string;
 
 // names
 
+bool is_shirt_model     (room_object_t const &obj);
+bool is_long_shirt_model(room_object_t const &obj);
 string gen_random_full_name(rand_gen_t &rgen); // from pedestrians.cpp
 
 string choose_family_name(rand_gen_t rgen) { // Note: deep copying so as not to update the state of the rgen that was passed in
@@ -733,6 +735,120 @@ void building_t::add_flags(vector<city_flag_t> &flags) { // non-const because fl
 	float const height_add(bcube.z2() - base_pt.z), height( 2.0*window_spacing*rgen.rand_uniform(0.8, 1.25) + height_add);
 	flags.push_back(create_flag(dim, dir, base_pt, height, length, rgen.rand()));
 	exterior_flag = flags.back().bcube; // maybe we don't need to cache this since it's on the roof, but it doesn't hurt
+}
+
+// must be here for store_texture_manager_t definition
+building_mall_info_t:: building_mall_info_t() {}
+building_mall_info_t::~building_mall_info_t() {}
+
+struct rect_t {
+	float x1, x2, z1, z2;
+	rect_t(float x1_, float x2_, float z1_, float z2_) : x1(x1_), x2(x2_), z1(z1_), z2(z2_) {}
+	bool operator==(rect_t const &r) const {return (x1 == r.x1 && x2 == r.x2 && z1 == r.z1 && z2 == r.z2);}
+	bool valid() const {return (x1 < x2 && z1 < z2);}
+};
+
+class store_texture_manager_t { // simplified version of model3d texture_manager; for store clothing logos
+	struct tex_params_t {
+		string name;
+		colorRGBA bg_color, text_color;
+		rect_t fb, bb; // front and back text bounds
+		unsigned style;
+
+		tex_params_t(string const &n, colorRGBA const &bc, colorRGBA const &tc, rect_t const &fb_, rect_t const &bb_, unsigned s) :
+			name(n), bg_color(bc), text_color(tc), fb(fb_), bb(bb_), style(s) {}
+		bool operator==(tex_params_t const &tp) const {return (name == tp.name && bg_color == tp.bg_color && text_color == tp.text_color && style == tp.style);}
+	};
+	map<pair<string, unsigned>, unsigned> tex_map;
+	vector<tex_params_t> pending;
+	vector<vert_norm_comp_tc_color> verts;
+
+	void create_texture(tex_params_t const &tp) {
+		pair<string, unsigned> const map_key(tp.name, tp.style);
+		if (tex_map.find(map_key) != tex_map.end()) return; // already created
+		//highres_timer_t timer("Gen Logo Texture"); // ~0.3 ms
+		unsigned const tsize = 1024;
+		unsigned tid(0), fbo_id(0);
+		// setup viewport and transforms
+		glViewport(0, 0, tsize, tsize);
+		fgMatrixMode(FG_PROJECTION);
+		fgPushIdentityMatrix();
+		fgOrtho(0.0, 1.0,  0.0, 1.0,  -1.0, 1.0);
+		fgMatrixMode(FG_MODELVIEW);
+		fgPushIdentityMatrix();
+		// create texture and FBO; setup shader
+		ensure_texture_loaded(tid, tsize, tsize, 0, 0); // mipmap=0 (too slow), nearest=0
+		enable_fbo(fbo_id, tid);
+		set_temp_clear_color(tp.bg_color);
+		shader_t s;
+		s.begin_simple_textured_shader(0.1); // min_alpha=0.1
+		// draw text data
+		verts.clear();
+
+		for (unsigned i = 0; i < 2; ++i) { // {front, back}
+			rect_t const &bnds(i ? tp.bb : tp.fb);
+			if (!bnds.valid()) continue; // no text on this side
+			cube_t const draw_area(bnds.x1, bnds.x2,  0.0, 0.0,  bnds.z1, bnds.z2);
+			add_sign_text_verts(tp.name, draw_area, 1, 0, tp.text_color, verts);
+		}
+		for (auto &v : verts) {swap(v.v.y, v.v.z);} // swap Y with Z
+		enable_blend();
+		text_drawer::bind_font_texture();
+		draw_verts(verts, GL_QUADS);
+		disable_blend();
+		s.end_shader();
+		// restore state and cleanup
+		restore_prev_mvm_pjm_state();
+		disable_fbo();
+		free_fbo(fbo_id);
+		set_standard_viewport();
+		tex_map[map_key] = tid; // cache in map
+	}
+public:
+	void clear() {
+		for (auto &kv : tex_map) {free_texture(kv.second);}
+		tex_map.clear();
+		pending.clear();
+	}
+	void create_pending_textures() {
+		for (tex_params_t const &tp : pending) {create_texture(tp);} // TODO: reuse shaders
+		pending.clear();
+	}
+	bool bind_logo_texture(string const &name, colorRGBA const &bg_color, colorRGBA const &text_color, rect_t const &fb, rect_t const &bb, unsigned style) {
+		// assumes names are unique, so no need to include color; but do need to include grid params as this differs per clothing item
+		auto it(tex_map.find(make_pair(name, style)));
+
+		if (it == tex_map.end()) { // not found, must create
+			tex_params_t const tp(name, bg_color, text_color, fb, bb, style);
+			if (pending.empty() || !(tp == pending.back())) {pending.push_back(tp);} // don't add duplicates
+			select_texture(WHITE_TEX); // make it white until the logo texture is generated
+			return 1;
+		}
+		unsigned const tid(it->second);
+		if (tid == 0) return 0; // error?
+		bind_2d_texture(tid);
+		return 1;
+	}
+};
+
+bool building_t::bind_custom_clothing_texure(room_object_t const &obj) const { // technically not const because this modifies a nested pointer
+	if (obj.type == TYPE_CLOTHES && (obj.flags & RO_FLAG_HAS_EXTRA) && has_mall() && is_shirt_model(obj) && get_room(obj.room_id).is_store()) {
+		for (store_info_t const &s : interior->mall_info->stores) {
+			if (s.room_id != obj.room_id) continue;
+			if (!interior->mall_info->tmgr) {interior->mall_info->tmgr.reset(new store_texture_manager_t);}
+			bool const is_long(is_long_shirt_model(obj)); // else short
+			rect_t const fb(is_long ? rect_t(0.40, 0.64,  0.28, 0.38) : rect_t(0.15, 0.45,  0.80, 0.90));
+			rect_t const bb(is_long ? rect_t(0.40, 0.64,  0.76, 0.86) : rect_t(0.59, 0.89,  0.33, 0.43));
+			return interior->mall_info->tmgr->bind_logo_texture(s.name, WHITE, s.logo_color, fb, bb, is_long);
+		} // for s
+	}
+	return 0; // no texture bound
+}
+void building_t::create_pending_textures() const { // technically not const because this modifies a nested pointer
+	if (has_mall() && interior->mall_info->tmgr) {interior->mall_info->tmgr->create_pending_textures();}
+}
+void building_t::clear_clothing_textures() const {
+	if (interior && interior->mall_info && interior->mall_info->tmgr) {interior->mall_info->tmgr->clear();}
 }
 
 

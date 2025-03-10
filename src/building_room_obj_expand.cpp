@@ -269,9 +269,14 @@ void building_room_geom_t::add_hangers_and_clothing(float window_vspacing, unsig
 			}
 			if (skip) continue;
 
-			if (is_shirt_model(clothes) && rgen.rand_float() < 0.67) { // 67% of shirts are randomly colored rather than colored + textured with the model
-				clothes.color  = shirt_colors[rgen.rand()%NUM_SHIRT_COLORS];
-				clothes.flags |= RO_FLAG_UNTEXTURED;
+			if (is_shirt_model(clothes)) {
+				if (rgen.rand_float() < 0.6) { // 60% of shirts are randomly colored rather than colored + textured with the model
+					clothes.color  = shirt_colors[rgen.rand()%NUM_SHIRT_COLORS];
+					clothes.flags |= RO_FLAG_UNTEXTURED;
+				}
+				else if (rgen.rand_float() < 0.7) { // 70% of textured shirts have the store name/logo
+					clothes.flags |= RO_FLAG_HAS_EXTRA;
+				}
 			}
 			objects.push_back(clothes);
 		}
