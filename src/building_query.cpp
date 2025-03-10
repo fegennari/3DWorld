@@ -1119,6 +1119,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			cube_t c_extended(get_true_room_obj_bcube(*c));
 			// handle the player's head for stairs and attic doors; only applied to bottom floor of stairs to avoid getting stuck on steep stairs that span multiple floors
 			if ((type == TYPE_STAIR && (c->flags & RO_FLAG_ADJ_BOT)) || type == TYPE_ATTIC_DOOR) {c_extended.z1() -= camera_height;}
+			if (type  == TYPE_SHELVES) {c_extended.z1() = max(c->z1(), (c_extended.z1() - (float)camera_height));} // handle player walking under a tall shelf
 
 			if (type == TYPE_DIV_BOARD && c_extended.contains_pt_xy(pos)) {
 				// diving boards are special because the player can walk on them across different floor heights
