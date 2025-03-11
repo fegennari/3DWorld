@@ -811,7 +811,7 @@ public:
 		pending.clear();
 	}
 	void create_pending_textures() {
-		for (tex_params_t const &tp : pending) {create_texture(tp);} // TODO: reuse shaders
+		for (tex_params_t const &tp : pending) {create_texture(tp);} // Note: could reuse shaders across textures, but timing difference is negligible
 		pending.clear();
 	}
 	bool bind_logo_texture(string const &name, colorRGBA const &bg_color, colorRGBA const &text_color, rect_t const &fb, rect_t const &bb, unsigned style) {

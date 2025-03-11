@@ -51,6 +51,12 @@ int get_ibeam_tid    () {return get_texture_by_name("metals/67_rusty_dirty_metal
 tid_nm_pair_t get_metal_plate_tex(float tscale, bool shadowed) {
 	return tid_nm_pair_t(get_met_plate_tid(), get_mplate_nm_tid(), tscale, tscale, 0.0, 0.0, shadowed);
 }
+tid_nm_pair_t get_metal_grate_tex(float tscale, unsigned sel_ix) {
+	string const fn((sel_ix & 1) ? "metals/4_perforated_metal.png" : "metals/17_perforated_metal_plate.png");
+	tid_nm_pair_t tex(get_texture_by_name(fn, 0, 0, 1, 1.0, 1, 3), tscale, 1); // shadowed=1, custom alpha mipmaps
+	tex.set_specular_color(WHITE, 0.6, 50.0);
+	return tex;
+}
 
 struct pool_texture_params_t {
 	string fn, nm_fn;
@@ -1103,16 +1109,17 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	bool const is_house(c.is_house()), in_room_center(c.is_open()), in_warehouse(c.in_warehouse());
 	cube_t shelves[MAX_SHELVES]; // max number of shelves
 	unsigned const num_shelves(get_shelves_for_object(c, shelves));
-	// TODO: make metal if in_warehouse?
-	// add wooden shelves
-	// skip back face at wall unless it's a house because it could be against a window (though it really shouldn't be), or unless it's a shelf in the middle of a store
+	// add wooden or metal shelves
+	// skip back face at wall unless it's a house because it could be against a window (though it really shouldn't be), or unless it's a shelf mid store/warehouse
 	unsigned const skip_faces((is_house || in_room_center) ? 0 : ~get_face_mask(c.dim, c.dir));
-	rgeom_mat_t &wood_mat(get_wood_material(tscale, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+	// inc_shadows=1, dynamic=0, small=1
+	rgeom_mat_t &shelf_mat(in_warehouse ? mats_amask.get_material(get_metal_grate_tex(2.6*tscale, unsigned(1000.0*c.z1())), 1) : get_wood_material(tscale, 1, 0, 1));
 	colorRGBA const shelf_color(apply_light_color(c));
-	vector3d const origin(c.get_llc());
 
 	for (unsigned s = 0; s < num_shelves; ++s) {
-		wood_mat.add_cube_to_verts(shelves[s], shelf_color, origin, skip_faces, !c.dim); // make wood grain horizontal
+		for (unsigned d = 0; d < (in_warehouse ? 2 : 1); ++d) { // {exterior, interior}
+			shelf_mat.add_cube_to_verts(shelves[s], shelf_color, shelves[s].get_llc(), skip_faces, !c.dim, 0, 0, bool(d)); // make wood grain horizontal
+		}
 	}
 	if (c.flags & RO_FLAG_INTERIOR) { // add support brackets to interior shelves; skip them if against an exterior wall in case they intersect a window
 		unsigned const skip_faces_vbracket(skip_faces | ((c.flags & RO_FLAG_ADJ_HI) ? EF_Z1 : EF_Z12)); // only draw top face for high shelves since ceiling is high
@@ -1319,12 +1326,6 @@ void get_catwalk_cubes(room_object_t const &c, cube_t cubes[5]) { // {bottom, le
 			cubes[d+3].d[c.dim][!d] = c.d[c.dim][d] - (d ? 1.0 : -1.0)*0.05*height;
 		}
 	} // for d
-}
-tid_nm_pair_t get_metal_grate_tex(float tscale, unsigned sel_ix) {
-	string const fn((sel_ix & 1) ? "metals/4_perforated_metal.png" : "metals/17_perforated_metal_plate.png");
-	tid_nm_pair_t tex(get_texture_by_name(fn, 0, 0, 1, 1.0, 1, 3), tscale, 1); // shadowed=1, custom alpha mipmaps
-	tex.set_specular_color(WHITE, 0.6, 50.0);
-	return tex;
 }
 void building_room_geom_t::add_catwalk(room_object_t const &c) {
 	bool const dim(c.dim), hanging(c.is_hanging());
@@ -2443,7 +2444,7 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 
 void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin, bool is_small_pass) {
 	// Note: no room lighting color atten
-	bool const is_metal(c.in_factory());
+	bool const is_metal(c.in_factory()); // Note: includes mall stairs, if under a factory
 	if (is_metal != is_small_pass) return; // wrong pass; metal stairs are small, regular stairs are not
 
 	if (is_metal) {
@@ -2452,10 +2453,11 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vecto
 		unsigned const long_dim(!c.dim); // width
 
 		for (unsigned d = 0; d < 3; ++d) { // draw all three face dims, with the texture tiled exactly so that edges align
-			unsigned const xdim((d+2)%3), ydim((d+1)%3);
+			bool const swap_xy(d != unsigned(c.dim));
+			unsigned const xdim((d+2)%3), ydim((d+1)%3), skip_faces(~get_skip_mask_for_dim(d));
 			mat.tex.tscale_x = ((xdim == long_dim) ? 2.0 : 1.0)/sz[xdim];
 			mat.tex.tscale_y = ((ydim == long_dim) ? 2.0 : 1.0)/sz[ydim];
-			mat.add_cube_to_verts(c, WHITE, llc, ~get_skip_mask_for_dim(d), (d != unsigned(c.dim)));
+			for (unsigned e = 0; e < 2; ++e) {mat.add_cube_to_verts(c, WHITE, llc, skip_faces, swap_xy, 0, 0, bool(e));} // {exterior, interior}
 		}
 		return;
 	}
