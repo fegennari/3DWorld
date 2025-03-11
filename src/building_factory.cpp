@@ -576,7 +576,7 @@ void building_t::add_warehouse_shelves(rand_gen_t &rgen, room_t const &room, flo
 	} // for n
 	for (cube_t const &wall : wall_segs) {
 		objs.emplace_back(wall, TYPE_PG_WALL, room_id, !edim, 0, (RO_FLAG_ADJ_TOP | RO_FLAG_IN_WH), light_amt, SHAPE_CUBE, BROWN); // draw top
-		interior->room_geom->shelf_rack_occluders[0].push_back(wall); // TODO: make this work
+		interior->room_geom->shelf_rack_occluders[0].push_back(wall);
 	}
 }
 

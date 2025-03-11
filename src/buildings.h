@@ -2441,6 +2441,7 @@ public:
 	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t &oc, bool reflection_pass=0, bool c_is_building_part=0, bool skip_basement_check=0) const;
 	bool check_pg_br_wall_occlusion(point const &viewer, point const *const pts, unsigned npts, cube_t const &occ_area, vector3d const &view_dir) const;
 	bool check_shelfrack_occlusion (point const &viewer, point const *const pts, unsigned npts, cube_t const &occ_area) const;
+	bool check_warehouse_shelf_occlusion(point const &viewer, point const *const pts, unsigned npts, cube_t const &occ_area) const;
 	bool is_entire_building_occluded(point const &viewer, occlusion_checker_noncity_t &oc) const;
 	bool register_indir_lighting_state_change(unsigned light_ix, bool is_door_change=0) const;
 	bool is_attic_roof(tquad_with_ix_t const &tq, bool type_roof_only) const;

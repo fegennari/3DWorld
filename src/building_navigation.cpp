@@ -2234,6 +2234,9 @@ bool building_t::is_player_visible(person_t const &person, unsigned vis_test) co
 			if (room.is_retail()) { // retail room
 				if (check_shelfrack_occlusion(viewer, pts, 5, occ_area)) return 0; // blocked by a shelfrack
 			}
+			else if (is_warehouse()) {
+				if (check_warehouse_shelf_occlusion(viewer, pts, 5, occ_area)) return 0; // blocked by a shelf
+			}
 			else { // parking garage or backrooms
 				if (check_pg_br_wall_occlusion(viewer, pts, 5, occ_area, (viewer - target.pos))) return 0; // blocked by a wall
 			}
