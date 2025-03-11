@@ -2016,6 +2016,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 	if (!is_movable(obj))        return 0; // closest object isn't movable
 	if (obj.contains_pt(at_pos)) return 0; // player is inside this object?
 	float const obj_weight(interior->room_geom->get_combined_obj_weight(obj));
+	if (obj_weight > 10.0*global_building_params.player_weight_limit) return 0; // to heavy to push (forklift, etc.)
 	float const move_dist(rand_uniform(0.5, 1.0)*CAMERA_RADIUS*(100.0f/max(75.0f, obj_weight))); // heavier objects move less; add some global randomness
 	vector3d delta(obj.closest_pt(at_pos) - at_pos);
 	delta.z = 0.0; // XY only
