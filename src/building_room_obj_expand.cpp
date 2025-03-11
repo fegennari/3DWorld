@@ -530,7 +530,7 @@ unsigned room_object_t::get_num_shelves() const {
 unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[MAX_SHELVES]) {
 	unsigned const num_shelves(c.get_num_shelves()); // 2-4 shelves
 	assert(num_shelves <= MAX_SHELVES);
-	float const bot_space_ratio((num_shelves == 2) ? 0.75 : 1.0); // less space for the 2 shelves case
+	float const bot_space_ratio(c.in_warehouse() ? 0.25 : ((num_shelves == 2) ? 0.75 : 1.0)); // small space for warehouse shelves; less space for the 2 shelves case
 	float const thickness((c.in_warehouse() ? 0.01 : 0.02)*c.dz()), bracket_thickness(0.8*thickness);
 	float const z_step(c.dz()/(num_shelves + bot_space_ratio)); // include a space at the bottom
 	cube_t shelf(c);

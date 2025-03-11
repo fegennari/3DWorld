@@ -469,7 +469,7 @@ void building_t::add_warehouse_shelves(rand_gen_t &rgen, room_t const &room, flo
 	// add rows of shelves along each side wall, and back-to-back pairs in the center of the room
 	bool const edim(interior->ind_info->entrance_dim);
 	float const window_vspace(get_window_vspace()), fc_thick(get_fc_thickness());
-	float const room_width(room.get_sz_dim(!edim)), shelf_height(0.7*room.dz()), shelf_width(0.5*window_vspace), min_aisle_width(1.2*window_vspace);
+	float const room_width(room.get_sz_dim(!edim)), shelf_height(0.6*room.dz()), shelf_width(0.5*window_vspace), min_aisle_width(1.2*window_vspace);
 	float const shelf_wall_thick(1.0*get_wall_thickness()), shelf_pair_width(2*shelf_width + shelf_wall_thick), min_spacing(min_aisle_width + shelf_pair_width);
 	unsigned const num_rows(room_width/min_spacing);
 	cube_t shelf_area(place_area);
