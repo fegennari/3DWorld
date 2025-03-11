@@ -477,7 +477,7 @@ void building_t::add_warehouse_shelves(rand_gen_t &rgen, room_t const &room, flo
 	shelf_area.z2() = zval + shelf_height;
 	if (num_rows == 0 || shelf_area.get_sz_dim(edim) < min_aisle_width) return; // too short or narrow to place shelves; shouldn't happen
 	unsigned const num_segs = 20;
-	float const shelf_spacing(room_width/num_rows), seg_len(shelf_area.get_sz_dim(edim)/num_segs), stairs_pad(0.5*get_doorway_width()); // extra pad for stairs
+	float const shelf_spacing(room_width/num_rows), wall_seg_len(shelf_area.get_sz_dim(edim)/num_segs), stairs_pad(0.5*get_doorway_width()); // extra pad for stairs
 	float const windows_z1(min(get_industrial_window_z1(), (room.z2() - 1.5f*window_vspace)) + window_vspace*get_window_v_border()); // leave room for ducts
 	float pos(shelf_area.d[!edim][0]); // starts at left edge
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -496,13 +496,18 @@ void building_t::add_warehouse_shelves(rand_gen_t &rgen, room_t const &room, flo
 		for (unsigned d = 0; d < 2; ++d) { // {left, right} shelf
 			bool const against_ext_wall((n == 0 && d == 0) || (last_row && d == 1));
 			cube_t &shelf(shelves[d]);
-			if (against_ext_wall) {min_eq(shelf.z2(), windows_z1);} // don't block window
+			
+			if (against_ext_wall) {
+				min_eq(shelf.z2(), windows_z1); // don't block window
+				shelf.expand_in_dim(edim, 1.0*min_aisle_width); // remove most of the end pad, since the aisle doesn't need to extend to the exterior wall
+			}
 			cube_t test_box(shelf);
 			test_box.d[!edim][!d] += (d ? -1.0 : 1.0)*min_aisle_width; // include min aisle (not current/full aisle)
 			shelf_segs.clear();
 
 			// check for blockers, split into multiple segments, keep non-blocked, and merge together
 			if (overlaps_obj_or_placement_blocked(test_box, place_area, objs_start, 0, stairs_pad)) {
+				float const seg_len(against_ext_wall ? shelf.get_sz_dim(edim)/num_segs : wall_seg_len); // recalculate for longer exterior wall shelves
 				float spos(shelf.d[edim][0]);
 
 				for (unsigned s = 0; s < num_segs; ++s) {
@@ -554,7 +559,7 @@ void building_t::add_warehouse_shelves(rand_gen_t &rgen, room_t const &room, flo
 				float spos(wall.d[edim][0]);
 
 				for (unsigned s = 0; s < num_segs; ++s) {
-					float const next_spos(spos + seg_len);
+					float const next_spos(spos + wall_seg_len);
 					cube_t seg(wall);
 					seg.d[edim][0] = spos; seg.d[edim][1] = next_spos;
 
