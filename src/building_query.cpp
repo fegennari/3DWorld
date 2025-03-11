@@ -2282,8 +2282,8 @@ bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start, b
 	} // for i
 	return 0;
 }
-bool building_t::overlaps_obj_or_placement_blocked(cube_t const &c, cube_t const &room, unsigned objs_start, bool check_all) const {
-	return (overlaps_other_room_obj(c, objs_start, check_all) || is_obj_placement_blocked(c, room, 1)); // inc_open_doors=1
+bool building_t::overlaps_obj_or_placement_blocked(cube_t const &c, cube_t const &room, unsigned objs_start, bool check_all, float dmin) const {
+	return (overlaps_other_room_obj(c, objs_start, check_all) || is_obj_placement_blocked(c, room, 1, 0, dmin)); // inc_open_doors=1, check_open_dir=0
 }
 // Note: for dynamic player object placement and book opening; includes expanded_objs but not blockers
 bool building_t::overlaps_any_placed_obj(cube_t const &c) const { // Note: includes expanded_objs

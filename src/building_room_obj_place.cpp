@@ -37,9 +37,9 @@ public:
 	void clear() {door_centers.clear();} // to allow for reuse across rooms
 };
 
-bool building_t::is_obj_placement_blocked(cube_t const &c, cube_t const &room, bool inc_open_doors, bool check_open_dir) const {
+bool building_t::is_obj_placement_blocked(cube_t const &c, cube_t const &room, bool inc_open_doors, bool check_open_dir, float dmin) const {
 	if (is_cube_close_to_doorway(c, room, 0.0, inc_open_doors, check_open_dir)) return 1; // too close to a doorway
-	if (interior && interior->is_blocked_by_stairs_or_elevator(c))              return 1; // faster to check only one per stairwell, but then we need to store another vector?
+	if (interior && interior->is_blocked_by_stairs_or_elevator(c, dmin))        return 1; // faster to check only one per stairwell, but then we need to store another vector?
 	if (!check_cube_within_part_sides(c)) return 1; // handle non-cube buildings
 	return 0;
 }

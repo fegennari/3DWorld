@@ -604,6 +604,7 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 		// add rows of shelves along each side wall, and back-to-back pairs in the center of the room
 		float const room_width(room.get_sz_dim(!edim)), shelf_height(0.7*room.dz()), shelf_width(0.5*window_vspace), min_aisle_width(1.2*window_vspace);
 		float const shelf_wall_thick(1.0*wall_thick), shelf_pair_width(2*shelf_width + shelf_wall_thick), min_spacing(min_aisle_width + shelf_pair_width);
+		float const stairs_pad(0.5*doorway_width); // extra pad for stairs
 		unsigned const num_rows(room_width/min_spacing);
 		cube_t shelf_area(place_area);
 		shelf_area.expand_in_dim(edim, -1.2*min_aisle_width); // add space on the ends
@@ -636,7 +637,7 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 					shelf_segs.clear();
 					
 					// check for blockers, split into multiple segments, keep non-blocked, and merge together
-					if (overlaps_obj_or_placement_blocked(test_box, place_area, objs_start)) {
+					if (overlaps_obj_or_placement_blocked(test_box, place_area, objs_start, 0, stairs_pad)) {
 						float spos(shelf.d[edim][0]);
 						
 						for (unsigned s = 0; s < num_segs; ++s) {
@@ -646,7 +647,7 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 							cube_t tb(seg);
 							tb.d[!edim][d] = test_box.d[!edim][d];
 
-							if (!overlaps_obj_or_placement_blocked(tb, place_area, objs_start)) { // seg is valid
+							if (!overlaps_obj_or_placement_blocked(tb, place_area, objs_start, 0, stairs_pad)) { // seg is valid
 								if (shelf_segs.empty() || shelf_segs.back().d[edim][1] != spos) {shelf_segs.push_back(seg);} // start a new segment
 								else {shelf_segs.back().d[edim][1] = next_spos;} // extend existing segment
 							}
@@ -678,7 +679,7 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 					wall.d[!edim][1] = next_pos;
 
 					// check for blockers and split into multiple segments
-					if (overlaps_obj_or_placement_blocked(wall, place_area, objs_start)) {
+					if (overlaps_obj_or_placement_blocked(wall, place_area, objs_start, 0, stairs_pad)) {
 						float spos(wall.d[edim][0]);
 
 						for (unsigned s = 0; s < num_segs; ++s) {
@@ -686,7 +687,7 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 							cube_t seg(wall);
 							seg.d[edim][0] = spos; seg.d[edim][1] = next_spos;
 
-							if (!overlaps_obj_or_placement_blocked(seg, place_area, objs_start)) { // seg is valid
+							if (!overlaps_obj_or_placement_blocked(seg, place_area, objs_start, 0, stairs_pad)) { // seg is valid
 								if (wall_segs.empty() || wall_segs.back().d[!edim][1] != next_pos || wall_segs.back().d[edim][1] != spos) {wall_segs.push_back(seg);}
 								else {wall_segs.back().d[edim][1] = next_spos;} // extend existing segment
 							}

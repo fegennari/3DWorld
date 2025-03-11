@@ -2575,7 +2575,7 @@ private:
 	bool is_valid_door_pos(cube_t const &door, float door_width, bool dim) const;
 	bool is_cube_close_to_exterior_doorway(cube_t const &c, float dmin=0.0, bool inc_open=0) const;
 	bool is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin=0.0, bool inc_open=0, bool check_open_dir=0) const;
-	bool is_obj_placement_blocked(cube_t const &c, cube_t const &room, bool inc_open_doors, bool check_open_dir=0) const;
+	bool is_obj_placement_blocked(cube_t const &c, cube_t const &room, bool inc_open_doors, bool check_open_dir=0, float dmin=0.0) const;
 	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, bool inc_open_doors, float room_pad=0.0) const;
 	bool check_cube_intersect_walls(cube_t const &c) const;
 	bool check_cube_contained_in_part(cube_t const &c) const;
@@ -2587,7 +2587,7 @@ private:
 	void add_or_extend_elevator(elevator_t const &elevator, bool add);
 	void remove_intersecting_roof_cubes(cube_t const &c);
 	bool overlaps_other_room_obj(cube_t const &c, unsigned objs_start=0, bool check_all=0, unsigned const *objs_end=nullptr) const;
-	bool overlaps_obj_or_placement_blocked(cube_t const &c, cube_t const &room, unsigned objs_start, bool check_all=0) const;
+	bool overlaps_obj_or_placement_blocked(cube_t const &c, cube_t const &room, unsigned objs_start, bool check_all=0, float dmin=0.0) const;
 	bool overlaps_any_placed_obj(cube_t const &c) const;
 	bool overlaps_or_adj_int_window (cube_t const &c) const;
 	bool check_skylight_intersection(cube_t const &c) const;
