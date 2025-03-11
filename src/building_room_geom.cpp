@@ -1072,7 +1072,7 @@ void get_shelf_brackets(room_object_t const &c, cube_t shelves[4], unsigned num_
 	// add a small gap between the back of the bracket and the wall to prevent clipping through building exterior wall, except for shelves in the center of a room
 	float const bracket_wall_offset(in_room_center ? 0.0 : (c.dir ? -1.0 : 1.0)*0.1*bracket_thickness);
 	unsigned const num_brackets(2 + round_fp(0.5*length/dz));
-	float const b_offset(0.05*dz), b_step((length - 2*b_offset)/(num_brackets-1)), bracket_width(1.8*thickness);
+	float const b_offset(max(0.05*dz, 0.02*length)), bracket_width(1.8*thickness), b_step((length - 2*b_offset - bracket_width)/(num_brackets-1));
 	brackets.clear();
 
 	for (unsigned s = 0; s < num_shelves; ++s) {
