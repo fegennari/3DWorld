@@ -463,6 +463,118 @@ void building_t::add_industrial_sprinkler_pipes(rand_gen_t &rgen, room_t const &
 	add_sprinkler_pipes(obstacles, walls, beams, pipe_cubes, room_id, 1, objs_start, rgen, custom_floor_spacing, wall_pad, edim, vpipe_avoid);
 }
 
+void building_t::add_warehouse_shelves(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start,
+	float light_amt, float support_width, cube_t const &place_area, vect_cube_t const &supports)
+{
+	// add rows of shelves along each side wall, and back-to-back pairs in the center of the room
+	bool const edim(interior->ind_info->entrance_dim);
+	float const window_vspace(get_window_vspace()), fc_thick(get_fc_thickness());
+	float const room_width(room.get_sz_dim(!edim)), shelf_height(0.7*room.dz()), shelf_width(0.5*window_vspace), min_aisle_width(1.2*window_vspace);
+	float const shelf_wall_thick(1.0*get_wall_thickness()), shelf_pair_width(2*shelf_width + shelf_wall_thick), min_spacing(min_aisle_width + shelf_pair_width);
+	unsigned const num_rows(room_width/min_spacing);
+	cube_t shelf_area(place_area);
+	shelf_area.expand_in_dim(edim, -1.2*min_aisle_width); // add space on the ends
+	shelf_area.z2() = zval + shelf_height;
+	if (num_rows == 0 || shelf_area.get_sz_dim(edim) < min_aisle_width) return; // too short or narrow to place shelves; shouldn't happen
+	unsigned const num_segs = 20;
+	float const shelf_spacing(room_width/num_rows), seg_len(shelf_area.get_sz_dim(edim)/num_segs), stairs_pad(0.5*get_doorway_width()); // extra pad for stairs
+	float const windows_z1(min(get_industrial_window_z1(), (room.z2() - 1.5f*window_vspace)) + window_vspace*get_window_v_border()); // leave room for ducts
+	float pos(shelf_area.d[!edim][0]); // starts at left edge
+	vect_room_object_t &objs(interior->room_geom->objs);
+	vect_cube_t shelf_segs, wall_segs;
+
+	for (unsigned n = 0; n < num_rows; ++n) { // shelf - aisle - shelf - wall
+		bool const last_row(n+1 == num_rows);
+		float const next_pos(last_row ? shelf_area.d[!edim][1] : (pos + shelf_spacing)); // end exactly at the wall
+		float const second_shelf_end(next_pos - (last_row ? 0.0 : shelf_wall_thick)); // add space for a wall if not the last row
+		cube_t shelves[2] = {shelf_area, shelf_area}; // start as full area
+		shelves[0].d[!edim][0] = pos;
+		shelves[0].d[!edim][1] = pos + shelf_width;
+		shelves[1].d[!edim][0] = second_shelf_end - shelf_width;
+		shelves[1].d[!edim][1] = second_shelf_end;
+
+		for (unsigned d = 0; d < 2; ++d) { // {left, right} shelf
+			bool const against_ext_wall((n == 0 && d == 0) || (last_row && d == 1));
+			cube_t &shelf(shelves[d]);
+			if (against_ext_wall) {min_eq(shelf.z2(), windows_z1);} // don't block window
+			cube_t test_box(shelf);
+			test_box.d[!edim][!d] += (d ? -1.0 : 1.0)*min_aisle_width; // include min aisle (not current/full aisle)
+			shelf_segs.clear();
+
+			// check for blockers, split into multiple segments, keep non-blocked, and merge together
+			if (overlaps_obj_or_placement_blocked(test_box, place_area, objs_start, 0, stairs_pad)) {
+				float spos(shelf.d[edim][0]);
+
+				for (unsigned s = 0; s < num_segs; ++s) {
+					float const next_spos(spos + seg_len);
+					cube_t seg(shelf);
+					seg.d[edim][0] = spos; seg.d[edim][1] = next_spos;
+					cube_t tb(seg);
+					tb.d[!edim][d] = test_box.d[!edim][d];
+
+					if (!overlaps_obj_or_placement_blocked(tb, place_area, objs_start, 0, stairs_pad)) { // seg is valid
+						if (shelf_segs.empty() || shelf_segs.back().d[edim][1] != spos) {shelf_segs.push_back(seg);} // start a new segment
+						else {shelf_segs.back().d[edim][1] = next_spos;} // extend existing segment
+					}
+					spos = next_spos;
+				} // for s
+			}
+			else {shelf_segs.push_back(shelf);} // add entire shelf
+
+			unsigned shelf_flags(RO_FLAG_INTERIOR | RO_FLAG_NONEMPTY | RO_FLAG_ADJ_HI); // draw tops of brackets
+			// if shelf is in middle of room, flag as open so that back is drawn; or not needed because there's a wall? draw the ends as well if they're by windows?
+			if (!against_ext_wall) {shelf_flags |= RO_FLAG_OPEN;}
+
+			for (cube_t const &S : shelf_segs) {
+				if (against_ext_wall) { // check that shelf is against at least one support beam
+					cube_t test_cube(S);
+					test_cube.expand_in_dim( edim, -support_width); // must span at least a full support
+					test_cube.expand_in_dim(!edim,  support_width); // handle adjacency
+					if (!has_bcube_int(test_cube, supports)) continue;
+				}
+				add_shelves(S, !edim, d, room_id, light_amt, shelf_flags, 0, rgen);
+				if (!against_ext_wall) continue;
+				// add a metal bar behind the shelves that connects the bracket to the wall beams
+				float const back_pos(S.d[!edim][d]), bar_z2(S.z2() - fc_thick);
+				cube_t bar(S);
+				bar.d[!edim][ d] = back_pos;
+				bar.d[!edim][!d] = back_pos + (d ? -1.0 : 1.0)*0.25*support_width; // set depth
+				set_cube_zvals(bar, (bar_z2 - 0.5*support_width), bar_z2);
+				objs.emplace_back(bar, TYPE_METAL_BAR, room_id, !edim, d, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, LT_GRAY, 0); // draw all faces
+			} // for S
+		}
+		if (!last_row) { // add a wall
+			cube_t wall(shelf_area);
+			wall.z2() += 1.0*fc_thick; // increase height above top of shelf wall anchors
+			wall.d[!edim][0] = second_shelf_end;
+			wall.d[!edim][1] = next_pos;
+
+			// check for blockers and split into multiple segments
+			if (overlaps_obj_or_placement_blocked(wall, place_area, objs_start, 0, stairs_pad)) {
+				float spos(wall.d[edim][0]);
+
+				for (unsigned s = 0; s < num_segs; ++s) {
+					float const next_spos(spos + seg_len);
+					cube_t seg(wall);
+					seg.d[edim][0] = spos; seg.d[edim][1] = next_spos;
+
+					if (!overlaps_obj_or_placement_blocked(seg, place_area, objs_start, 0, stairs_pad)) { // seg is valid
+						if (wall_segs.empty() || wall_segs.back().d[!edim][1] != next_pos || wall_segs.back().d[edim][1] != spos) {wall_segs.push_back(seg);}
+						else {wall_segs.back().d[edim][1] = next_spos;} // extend existing segment
+					}
+					spos = next_spos;
+				} // for s
+			}
+			else {wall_segs.push_back(wall);} // add entire wall
+		}
+		pos = next_pos;
+	} // for n
+	for (cube_t const &wall : wall_segs) {
+		objs.emplace_back(wall, TYPE_PG_WALL, room_id, !edim, 0, RO_FLAG_ADJ_TOP, light_amt, SHAPE_CUBE, BROWN); // draw top
+		interior->room_geom->shelf_rack_occluders[0].push_back(wall); // TODO: make this work
+	}
+}
+
 void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start_inc_lights) { // ~0.25ms
 	assert(interior->ind_info);
 	bool const room_is_factory(room.is_factory()), room_is_warehouse(room.is_warehouse());
@@ -601,109 +713,7 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 		}
 	}
 	if (room_is_warehouse) { // add warehouse-specific objects
-		// add rows of shelves along each side wall, and back-to-back pairs in the center of the room
-		float const room_width(room.get_sz_dim(!edim)), shelf_height(0.7*room.dz()), shelf_width(0.5*window_vspace), min_aisle_width(1.2*window_vspace);
-		float const shelf_wall_thick(1.0*wall_thick), shelf_pair_width(2*shelf_width + shelf_wall_thick), min_spacing(min_aisle_width + shelf_pair_width);
-		float const stairs_pad(0.5*doorway_width); // extra pad for stairs
-		unsigned const num_rows(room_width/min_spacing);
-		cube_t shelf_area(place_area);
-		shelf_area.expand_in_dim(edim, -1.2*min_aisle_width); // add space on the ends
-		shelf_area.z2() = zval + shelf_height;
-		vect_cube_t shelf_segs, wall_segs;
-
-		if (shelf_area.get_sz_dim(edim) < min_aisle_width) {} // too short to place shelves; shouldn't happen
-		else if (num_rows > 0) {
-			unsigned const num_segs = 20;
-			float const shelf_spacing(room_width/num_rows), seg_len(shelf_area.get_sz_dim(edim)/num_segs);
-			float const windows_z1(min(get_industrial_window_z1(), (room.z2() - 1.5f*window_vspace)) + window_vspace*get_window_v_border()); // leave room for ducts
-			float pos(shelf_area.d[!edim][0]); // starts at left edge
-
-			for (unsigned n = 0; n < num_rows; ++n) { // shelf - aisle - shelf - wall
-				bool const last_row(n+1 == num_rows);
-				float const next_pos(last_row ? shelf_area.d[!edim][1] : (pos + shelf_spacing)); // end exactly at the wall
-				float const second_shelf_end(next_pos - (last_row ? 0.0 : shelf_wall_thick)); // add space for a wall if not the last row
-				cube_t shelves[2] = {shelf_area, shelf_area}; // start as full area
-				shelves[0].d[!edim][0] = pos;
-				shelves[0].d[!edim][1] = pos + shelf_width;
-				shelves[1].d[!edim][0] = second_shelf_end - shelf_width;
-				shelves[1].d[!edim][1] = second_shelf_end;
-
-				for (unsigned d = 0; d < 2; ++d) { // {left, right} shelf
-					bool const against_ext_wall((n == 0 && d == 0) || (last_row && d == 1));
-					cube_t &shelf(shelves[d]);
-					if (against_ext_wall) {min_eq(shelf.z2(), windows_z1);} // don't block window
-					cube_t test_box(shelf);
-					test_box.d[!edim][!d] += (d ? -1.0 : 1.0)*min_aisle_width; // include min aisle (not current/full aisle)
-					shelf_segs.clear();
-					
-					// check for blockers, split into multiple segments, keep non-blocked, and merge together
-					if (overlaps_obj_or_placement_blocked(test_box, place_area, objs_start, 0, stairs_pad)) {
-						float spos(shelf.d[edim][0]);
-						
-						for (unsigned s = 0; s < num_segs; ++s) {
-							float const next_spos(spos + seg_len);
-							cube_t seg(shelf);
-							seg.d[edim][0] = spos; seg.d[edim][1] = next_spos;
-							cube_t tb(seg);
-							tb.d[!edim][d] = test_box.d[!edim][d];
-
-							if (!overlaps_obj_or_placement_blocked(tb, place_area, objs_start, 0, stairs_pad)) { // seg is valid
-								if (shelf_segs.empty() || shelf_segs.back().d[edim][1] != spos) {shelf_segs.push_back(seg);} // start a new segment
-								else {shelf_segs.back().d[edim][1] = next_spos;} // extend existing segment
-							}
-							spos = next_spos;
-						} // for s
-					}
-					else {shelf_segs.push_back(shelf);} // add entire shelf
-
-					unsigned shelf_flags(RO_FLAG_INTERIOR | RO_FLAG_NONEMPTY | RO_FLAG_ADJ_HI); // draw tops of brackets
-					// if shelf is in middle of room, flag as open so that back is drawn; or not needed because there's a wall? draw the ends as well if they're by windows?
-					if (!against_ext_wall) {shelf_flags |= RO_FLAG_OPEN;}
-
-					for (cube_t const &S : shelf_segs) {
-						add_shelves(S, !edim, d, room_id, light_amt, shelf_flags, 0, rgen);
-						if (!against_ext_wall) continue;
-						// add a metal bar behind the shelves that connects the bracket to the wall beams
-						float const back_pos(S.d[!edim][d]), bar_z2(S.z2() - fc_thick);
-						cube_t bar(S);
-						bar.d[!edim][ d] = back_pos;
-						bar.d[!edim][!d] = back_pos + (d ? -1.0 : 1.0)*0.5*support_hwidth; // set depth
-						set_cube_zvals(bar, (bar_z2 - 1.0*support_hwidth), bar_z2);
-						objs.emplace_back(bar, TYPE_METAL_BAR, room_id, !edim, d, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, LT_GRAY, 0); // draw all faces
-					} // for S
-				}
-				if (!last_row) { // add a wall
-					cube_t wall(shelf_area);
-					wall.z2() += 1.0*fc_thick; // increase height above top of shelf wall anchors
-					wall.d[!edim][0] = second_shelf_end;
-					wall.d[!edim][1] = next_pos;
-
-					// check for blockers and split into multiple segments
-					if (overlaps_obj_or_placement_blocked(wall, place_area, objs_start, 0, stairs_pad)) {
-						float spos(wall.d[edim][0]);
-
-						for (unsigned s = 0; s < num_segs; ++s) {
-							float const next_spos(spos + seg_len);
-							cube_t seg(wall);
-							seg.d[edim][0] = spos; seg.d[edim][1] = next_spos;
-
-							if (!overlaps_obj_or_placement_blocked(seg, place_area, objs_start, 0, stairs_pad)) { // seg is valid
-								if (wall_segs.empty() || wall_segs.back().d[!edim][1] != next_pos || wall_segs.back().d[edim][1] != spos) {wall_segs.push_back(seg);}
-								else {wall_segs.back().d[edim][1] = next_spos;} // extend existing segment
-							}
-							spos = next_spos;
-						} // for s
-					}
-					else {wall_segs.push_back(wall);} // add entire wall
-				}
-				pos = next_pos;
-			} // for n
-			for (cube_t const &wall : wall_segs) {
-				objs.emplace_back(wall, TYPE_PG_WALL, room_id, !edim, 0, RO_FLAG_ADJ_TOP, light_amt, SHAPE_CUBE, BROWN); // draw top
-				interior->room_geom->shelf_rack_occluders[0].push_back(wall); // TODO: make this work
-			}
-		} // end shelves
-
+		add_warehouse_shelves(rgen, room, zval, room_id, objs_start, light_amt, support_width, place_area, supports[!edim]);
 		// add a forklift
 		xfmr_fl_area.expand_by_xy(-wall_thick*rgen.rand_uniform(0.5, 1.5)); // not too close to the wall
 		place_model_along_wall(OBJ_MODEL_FORKLIFT, TYPE_FORKLIFT, room, 0.9, rgen, zval, room_id, light_amt, xfmr_fl_area, objs_start, 0.25, 4, 0, WHITE, 0, 0, 0);
