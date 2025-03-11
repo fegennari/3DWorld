@@ -1065,10 +1065,10 @@ void building_room_geom_t::add_paint_can(room_object_t const &c) {
 	get_metal_material(1, 0, 1).add_vert_disk_to_verts(top, 0.5*min(c.dx(), c.dy()), 0, apply_light_color(c, LT_GRAY)); // shadowed, specular metal; small=1
 }
 
-void get_shelf_brackets(room_object_t const &c, cube_t shelves[4], unsigned num_shelves, vect_cube_with_ix_t &brackets) {
-	bool const in_room_center(c.is_open());
+void get_shelf_brackets(room_object_t const &c, cube_t shelves[MAX_SHELVES], unsigned num_shelves, vect_cube_with_ix_t &brackets) {
+	bool const in_room_center(c.is_open()), in_warehouse(c.in_warehouse());
 	vector3d const c_sz(c.get_size());
-	float const dz(c_sz.z), length(c_sz[!c.dim]), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.8*thickness);
+	float const dz(c_sz.z), length(c_sz[!c.dim]), width(c_sz[c.dim]), thickness((in_warehouse ? 0.01 : 0.02)*dz), bracket_thickness(0.8*thickness);
 	// add a small gap between the back of the bracket and the wall to prevent clipping through building exterior wall, except for shelves in the center of a room
 	float const bracket_wall_offset(in_room_center ? 0.0 : (c.dir ? -1.0 : 1.0)*0.1*bracket_thickness);
 	unsigned const num_brackets(2 + round_fp(0.5*length/dz));
@@ -1100,9 +1100,10 @@ void get_shelf_brackets(room_object_t const &c, cube_t shelves[4], unsigned num_
 void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	// Note: draw as "small", not because shelves are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
 	// draw back in case it's against a window, even though that shouldn't happen
-	bool const is_house(c.is_house()), in_room_center(c.is_open());
-	cube_t shelves[4]; // max number of shelves
+	bool const is_house(c.is_house()), in_room_center(c.is_open()), in_warehouse(c.in_warehouse());
+	cube_t shelves[MAX_SHELVES]; // max number of shelves
 	unsigned const num_shelves(get_shelves_for_object(c, shelves));
+	// TODO: make metal if in_warehouse?
 	// add wooden shelves
 	// skip back face at wall unless it's a house because it could be against a window (though it really shouldn't be), or unless it's a shelf in the middle of a store
 	unsigned const skip_faces((is_house || in_room_center) ? 0 : ~get_face_mask(c.dim, c.dir));
@@ -2512,8 +2513,9 @@ void building_room_geom_t::add_wall_or_pillar(room_object_t const &c, vector3d c
 	bool const draw_top(c.flags & RO_FLAG_ADJ_TOP);
 	unsigned const small((c.type == TYPE_PG_WALL) ? 2 : 0); // small=2/detail for parking garage or backrooms wall or pillar
 
-	if (c.shape == SHAPE_CUBE && c.color == BROWN) { // special case for mall store wooden walls
-		rgeom_mat_t &mat(get_material(get_tex_auto_nm(FENCE_TEX, 2.0*wall_tex.tscale_x, 1), 1, 0, small)); // shadowed
+	if (c.shape == SHAPE_CUBE && c.color == BROWN) { // special case for wooden walls in mall store or warehouse
+		int const tid(c.in_warehouse() ? get_plywood_tid() : FENCE_TEX);
+		rgeom_mat_t &mat(get_material(get_tex_auto_nm(tid, 2.0*wall_tex.tscale_x, 1), 1, 0, small)); // shadowed
 		mat.add_cube_to_verts(c, WHITE, tex_origin, (draw_top ? EF_Z1 : EF_Z12), c.dim);
 		return;
 	}

@@ -26,7 +26,7 @@ void force_player_height(double height);
 bool is_player_model_female();
 bool get_sphere_poly_int_val(point const &sc, float sr, point const *const points, unsigned npoints, vector3d const &normal, float thickness, float &val, vector3d &cnorm);
 float get_player_move_dist();
-void get_shelf_brackets(room_object_t const &c, cube_t shelves[4], unsigned num_shelves, vect_cube_with_ix_t &brackets);
+void get_shelf_brackets(room_object_t const &c, cube_t shelves[MAX_SHELVES], unsigned num_shelves, vect_cube_with_ix_t &brackets);
 void get_catwalk_cubes(room_object_t const &c, cube_t cubes[5]);
 unsigned get_machine_part_cubes(room_object_t const &c, float floor_ceil_gap, cube_t cubes[4]);
 
@@ -1541,7 +1541,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			}
 		}
 		else if (type == TYPE_SHELVES && c->in_mall()) { // mall shelves have fishtanks (pet stores) and flat items (clothing stores) that we can collide with
-			cube_t shelves[4]; // max number of shelves
+			cube_t shelves[MAX_SHELVES]; // max number of shelves
 			unsigned const num_shelves(get_shelves_for_object(*c, shelves));
 			coll_ret |= check_cubes_collision(shelves, num_shelves, pos, p_last, radius, &cnorm);
 		}
@@ -2475,7 +2475,7 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 	}
 	else if (type == TYPE_SHELVES) {
 		if (c.in_mall()) { // mall shelves have fishtanks (pet stores) and flat items (clothing stores), so we can handle walking on the shelves
-			cube_t shelves[4]; // max number of shelves
+			cube_t shelves[MAX_SHELVES]; // max number of shelves
 			unsigned const num_shelves(get_shelves_for_object(c, shelves));
 			lg_cubes.insert(lg_cubes.end(), shelves, shelves+num_shelves);
 			// add brackets for small pet store spiders to walk on
@@ -2756,7 +2756,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 			}
 			else if (c->type == TYPE_SHELVES) {
 				if (c->in_mall()) { // mall shelves have fishtanks (pet stores) and flat items (clothing stores)
-					cube_t shelves[4]; // max number of shelves
+					cube_t shelves[MAX_SHELVES]; // max number of shelves
 					unsigned const num_shelves(get_shelves_for_object(*c, shelves));
 					if (line_int_cubes_exp(p1, p2, shelves, num_shelves, expand)) return 9;
 				}

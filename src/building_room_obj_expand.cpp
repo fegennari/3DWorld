@@ -524,12 +524,15 @@ void building_room_geom_t::unexpand_dishwasher(room_object_t &c, cube_t const &d
 unsigned room_object_t::get_num_shelves() const {
 	assert(type == TYPE_SHELVES);
 	if (in_mall() && item_flags == STORE_PETS) return 2; // pet store shelves always have two levels
+	if (in_warehouse())                        return 4; // warehouse special case, always 4 shelves
 	return (2 + (room_id % (in_mall() ? 2 : 3))); // 2-4 shelves, 2-3 for mall clothing stores
 }
-unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]) {
+unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[MAX_SHELVES]) {
 	unsigned const num_shelves(c.get_num_shelves()); // 2-4 shelves
+	assert(num_shelves <= MAX_SHELVES);
 	float const bot_space_ratio((num_shelves == 2) ? 0.75 : 1.0); // less space for the 2 shelves case
-	float const thickness(0.02*c.dz()), bracket_thickness(0.8*thickness), z_step(c.dz()/(num_shelves + bot_space_ratio)); // include a space at the bottom
+	float const thickness((c.in_warehouse() ? 0.01 : 0.02)*c.dz()), bracket_thickness(0.8*thickness);
+	float const z_step(c.dz()/(num_shelves + bot_space_ratio)); // include a space at the bottom
 	cube_t shelf(c);
 	shelf.z2() = shelf.z1() + thickness; // set shelf thickness
 	shelf.d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*bracket_thickness; // leave space behind the shelf for brackets
@@ -546,14 +549,14 @@ void set_spraypaint_color(room_object_t &obj, rand_gen_t &rgen, unsigned *color_
 	obj.obj_id = rgen.rand(); // used to select emissive color
 }
 
-void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vect_room_object_t &objects, bool add_models_mode) {
+void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t const shelves[MAX_SHELVES], unsigned num_shelves, vect_room_object_t &objects, bool add_models_mode) {
 	if (!c_in.is_nonempty()) return; // empty - no objects
 	room_object_t c(c_in); // deep copy so that we can set flags and don't invalidate the reference
 	if (!add_models_mode) {c.flags |= RO_FLAG_WAS_EXP;} // only expand for non-models mode
-	bool const is_house(c.is_house());
+	bool const is_house(c.is_house()), in_mall(c.in_mall()), in_warehouse(c.in_warehouse());
 	vector3d const c_sz(c.get_size());
 	float const dz(c_sz.z), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.75*thickness), floor_spacing(1.1*dz);
-	float const z_step(dz/(num_shelves + 1)), shelf_clearance(z_step - thickness - bracket_thickness), sz_scale(is_house ? 0.7 : 1.0);
+	float const z_step(dz/(num_shelves + 1)), shelf_clearance(z_step - thickness - bracket_thickness), sz_scale(is_house ? 0.7 : (in_warehouse ? 0.8 : 1.0));
 	float const box_zscale(shelf_clearance*sz_scale), h_val(0.21*floor_spacing);
 	rand_gen_t base_rgen(c.create_rgen());
 	bool prev_add_shoe_boxes(0);
@@ -570,7 +573,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 		room_object_t C(c);
 		vector3d sz;
 
-		if (c.in_mall()) {
+		if (in_mall) {
 			float const shelf_depth(S.get_sz_dim(c.dim)), shelf_len(S.get_sz_dim(!c.dim)), ld_ratio(shelf_len/shelf_depth);
 
 			if (c.item_flags == STORE_CLOTHING) { // clothing store shelf
@@ -681,28 +684,35 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 			else {assert(0);} // unsupported store type
 			continue;
 		}
-		// add fire extinguishers if we have a model and it fits (2 level shelves)
-		float const max_height((top_shelf ? 1.0 : 0.8)*shelf_clearance); // more space on the top shelf
-		float fe_height(0.0), fe_radius(0.0);
+		if (!in_warehouse) { // add fire extinguishers if we have a model and it fits (2 level shelves)
+			float const max_height((top_shelf ? 1.0 : 0.8)*shelf_clearance); // more space on the top shelf
+			float fe_height(0.0), fe_radius(0.0);
 
-		if (get_fire_ext_height_and_radius(floor_spacing, fe_height, fe_radius) && fe_height < max_height && 2.2*fe_radius < s_sz_min_xy) {
-			if (rgen.rand_float() < 0.3) { // 30% of the time
-				C.color = WHITE;
-				C.type  = TYPE_FIRE_EXT;
-				C.shape = SHAPE_CYLIN;
-				C.dim   = rgen.rand_bool(); // random orient
-				C.dir   = rgen.rand_bool();
-				gen_xy_pos_for_round_obj(C, S, fe_radius, fe_height, 1.1*fe_radius, rgen);
-				add_if_not_intersecting(C, objects, cubes, add_models_mode);
+			if (get_fire_ext_height_and_radius(floor_spacing, fe_height, fe_radius) && fe_height < max_height && 2.2*fe_radius < s_sz_min_xy) {
+				if (rgen.rand_float() < 0.3) { // 30% of the time
+					C.color = WHITE;
+					C.type  = TYPE_FIRE_EXT;
+					C.shape = SHAPE_CYLIN;
+					C.dim   = rgen.rand_bool(); // random orient
+					C.dir   = rgen.rand_bool();
+					gen_xy_pos_for_round_obj(C, S, fe_radius, fe_height, 1.1*fe_radius, rgen);
+					add_if_not_intersecting(C, objects, cubes, add_models_mode);
+				}
 			}
 		}
 		if (add_models_mode) continue; // all items added below are non-models
+
+		if (in_warehouse) { // add pallets
+			// TODO: TYPE_PALLET
+		}
 		// add crates/boxes
-		unsigned const num_boxes(rgen.rand() % (is_house ? 8 : 13)); // 0-12
+		unsigned const num_boxes(rgen.rand() % (is_house ? 8 : (in_warehouse ? 25 : 13))); // 0-7/24/12
 		cube_t bounds(S);
 		bounds.z1() = S.z2(); // place on top of shelf
 		add_boxes_to_space(c, objects, bounds, cubes, rgen, num_boxes, 0.42*width*sz_scale*(is_house ? 1.5 : 1.0),
 			0.4*box_zscale, 0.98*box_zscale, 1, ((c.flags & ~RO_FLAG_OPEN) | RO_FLAG_NOCOLL)); // allow_crates=1; copy flags from shelf, except for open flag
+		if (in_warehouse) continue; // done placing objects
+
 		// add computers; what about monitors?
 		float const cheight(0.75*h_val), cwidth(0.44*cheight), cdepth(0.9*cheight); // fixed AR=0.44 to match the texture
 		sz[ c.dim] = 0.5*cdepth;
@@ -827,7 +837,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 }
 
 void building_room_geom_t::expand_shelves(room_object_t const &c, bool add_models_mode) {
-	cube_t shelves[4]; // max number of shelves
+	cube_t shelves[MAX_SHELVES]; // max number of shelves
 	unsigned const num_shelves(get_shelves_for_object(c, shelves));
 	get_shelf_objects(c, shelves, num_shelves, (add_models_mode ? objs : expanded_objs), add_models_mode); // models expand to objs; everything else expands to expanded_objs
 }

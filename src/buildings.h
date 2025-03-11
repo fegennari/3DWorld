@@ -22,6 +22,7 @@ unsigned const NUM_STAIRS_PER_FLOOR= 12;
 unsigned const NUM_STAIRS_PER_FLOOR_U = 16;
 unsigned const NUM_STAIRS_PER_FLOOR_L = 12;
 unsigned const NUM_STAIRS_PER_FLOOR_ESC = 12;
+unsigned const MAX_SHELVES         = 4;
 float const FLOOR_THICK_VAL_HOUSE  = 0.10; // 10% of floor spacing
 float const FLOOR_THICK_VAL_OFFICE = 0.11; // thicker for office buildings
 float const FLOOR_THICK_VAL_WINDOWLESS = 0.12; // even thicker for windowless office buildings
@@ -583,6 +584,7 @@ enum {BIRD_STATE_FLYING=0, BIRD_STATE_GLIDING, BIRD_STATE_LANDING, BIRD_STATE_ST
 // object flags
 unsigned const RO_FLAG_LIT     = 0x01; // light is on
 unsigned const RO_FLAG_TOS     = 0x02; // at top of stairs; used for railings and lights
+unsigned const RO_FLAG_IN_WH   = 0x02; // in warehouse; aliased with RO_FLAG_TOS
 unsigned const RO_FLAG_RSTAIRS = 0x04; // in a room with stairs
 unsigned const RO_FLAG_INVIS   = 0x08; // invisible
 unsigned const RO_FLAG_NOCOLL  = 0x10; // no collision detection
@@ -607,7 +609,7 @@ unsigned const RO_FLAG_WALKWAY   = 0x1000; // for walkway objects (outside of bu
 unsigned const RO_FLAG_IN_HALLWAY= 0x010000; // for attic doors and trashcans
 unsigned const RO_FLAG_IN_MALL   = 0x010000; // for mall chairs, tables, benches, trashcans, etc.; aliased with RO_FLAG_IN_HALLWAY and RO_FLAG_IN_FACTORY
 unsigned const RO_FLAG_IN_FACTORY= 0x010000; // for machines, ladders, etc.; aliased with RO_FLAG_IN_HALLWAY and RO_FLAG_IN_MALL
-unsigned const RO_FLAG_IN_ATTIC  = 0x020000;
+unsigned const RO_FLAG_IN_ATTIC  = 0x020000; // in attic
 unsigned const RO_FLAG_HAS_EXTRA = 0x040000; // used for counter backsplash, exterior wall trim, desks with computer monitors and keyboards, books on glass tables, and hotel closets
 unsigned const RO_FLAG_EXTERIOR  = 0x080000; // for signs, window trim, etc.
 unsigned const RO_FLAG_EXPANDED  = 0x100000; // for shelves, closets, boxes, and mirrors
@@ -717,6 +719,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool in_attic   () const {return  (flags & RO_FLAG_IN_ATTIC);}
 	bool in_mall    () const {return  (flags & RO_FLAG_IN_MALL);}
 	bool in_factory () const {return  (flags & RO_FLAG_IN_FACTORY);}
+	bool in_warehouse()const {return  (flags & RO_FLAG_IN_WH);}
 	bool in_hallway () const {return  (flags & RO_FLAG_IN_HALLWAY);}
 	bool is_exterior() const {return  (flags & RO_FLAG_EXTERIOR);}
 	bool rotates    () const {return  (flags & RO_FLAG_RAND_ROT);}
@@ -1354,7 +1357,7 @@ private:
 	void add_door_handle(door_t const &door, door_rotation_t const &drot, colorRGBA const &color, bool residential);
 	void maybe_add_door_sign(door_t const &door, door_rotation_t const &drot);
 	static void add_closet_objects(room_object_t const &c, vect_room_object_t &objects);
-	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vect_room_object_t &objects, bool add_models_mode=0);
+	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[MAX_SHELVES], unsigned num_shelves, vect_room_object_t &objects, bool add_models_mode=0);
 public:
 	static void get_shelfrack_objects(room_object_t const &c, vect_room_object_t &objects, bool add_models_mode=0, bool books_only=0);
 	static void add_hangers_and_clothing(float window_vspacing, unsigned num_hangers, unsigned flags, int hanger_model_id, int clothing_model_id,
@@ -3018,7 +3021,7 @@ void get_bookcase_cubes(room_object_t const &c, cube_t &top, cube_t &middle, cub
 float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only, bool inside_only);
 unsigned get_bench_cubes(room_object_t const &c, cube_t cubes[4]);
 void get_diving_board_cubes(room_object_t const &c, cube_t cubes[2]);
-unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]);
+unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[MAX_SHELVES]);
 unsigned get_shelf_rack_cubes(room_object_t const &c, cube_t &back, cube_t &top, cube_t sides[2], cube_t shelves[5]);
 cube_t get_shower_tub_wall(room_object_t const &c);
 cube_t get_open_closet_door(room_object_t const &obj);

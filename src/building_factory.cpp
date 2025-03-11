@@ -526,7 +526,7 @@ void building_t::add_warehouse_shelves(rand_gen_t &rgen, room_t const &room, flo
 			}
 			else {shelf_segs.push_back(shelf);} // add entire shelf
 
-			unsigned shelf_flags(RO_FLAG_INTERIOR | RO_FLAG_NONEMPTY | RO_FLAG_ADJ_HI); // draw tops of brackets
+			unsigned shelf_flags(RO_FLAG_INTERIOR | RO_FLAG_NONEMPTY | RO_FLAG_ADJ_HI | RO_FLAG_IN_WH); // draw tops of brackets
 			// if shelf is in middle of room, flag as open so that back is drawn; or not needed because there's a wall? draw the ends as well if they're by windows?
 			if (!against_ext_wall) {shelf_flags |= RO_FLAG_OPEN;}
 
@@ -575,7 +575,7 @@ void building_t::add_warehouse_shelves(rand_gen_t &rgen, room_t const &room, flo
 		pos = next_pos;
 	} // for n
 	for (cube_t const &wall : wall_segs) {
-		objs.emplace_back(wall, TYPE_PG_WALL, room_id, !edim, 0, RO_FLAG_ADJ_TOP, light_amt, SHAPE_CUBE, BROWN); // draw top
+		objs.emplace_back(wall, TYPE_PG_WALL, room_id, !edim, 0, (RO_FLAG_ADJ_TOP | RO_FLAG_IN_WH), light_amt, SHAPE_CUBE, BROWN); // draw top
 		interior->room_geom->shelf_rack_occluders[0].push_back(wall); // TODO: make this work
 	}
 }
