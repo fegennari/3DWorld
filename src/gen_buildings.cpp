@@ -3405,12 +3405,16 @@ public:
 			if (interior_shadow_maps) { // draw interior shadow maps
 				occlusion_checker_noncity_t oc(**i);
 				point const lpos(get_camera_pos() - xlate); // Note: camera_pos is actually the light pos
+				bool const light_in_player_building_extb(player_in_basement && player_building && player_building->point_in_extended_basement(lpos));
 				bool found_building(0);
 
 				// draw interior for the building containing the light
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
-					if (!g->get_vis_bcube().contains_pt_xy(lpos)) continue; // wrong tile (note that z test is skipped to handle skylights)
-
+					if (!g->get_vis_bcube().contains_pt_xy(lpos)) { // wrong tile (note that z test is skipped to handle skylights)
+						// handle light in extended basement visible from player in basement of same building where extended basement is outside the building's grid
+						if (light_in_player_building_extb && g->bcube.contains_cube(player_building->bcube)) {} // draw tile
+						else {continue;} // not visible
+					}
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t &b((*i)->get_building(bi->ix));
 						if (!b.interior) continue; // no interior
