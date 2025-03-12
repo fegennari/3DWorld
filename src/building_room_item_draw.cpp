@@ -1016,7 +1016,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 	for (unsigned i = 0; i < objs_to_add.size(); ++i) { // Note: iterating with indices to avoid invalid ref when add_nested_objs_to_verts() is called
 		room_object_t const &c(objs_to_add[i]);
 		if (!c.is_visible() || c.is_dynamic()) continue; // skip invisible and dynamic objects
-		assert(c.is_strictly_normalized());
+		if (!c.is_strictly_normalized()) {cerr << "Denormalized object of type " << int(c.type) << ": " << c.str() << endl; assert(0);}
 		assert(c.type < NUM_ROBJ_TYPES);
 
 		switch (c.type) {

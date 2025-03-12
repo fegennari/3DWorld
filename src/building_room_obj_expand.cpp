@@ -554,9 +554,9 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 	if (!c_in.is_nonempty()) return; // empty - no objects
 	room_object_t c(c_in); // deep copy so that we can set flags and don't invalidate the reference
 	if (!add_models_mode) {c.flags |= RO_FLAG_WAS_EXP;} // only expand for non-models mode
-	bool const is_house(c.is_house()), in_mall(c.in_mall()), in_warehouse(c.in_warehouse());
+	bool const dim(c.dim), dir(c.dir), is_house(c.is_house()), in_mall(c.in_mall()), in_warehouse(c.in_warehouse());
 	vector3d const c_sz(c.get_size());
-	float const dz(c_sz.z), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.75*thickness), floor_spacing(1.1*dz);
+	float const dz(c_sz.z), width(c_sz[dim]), thickness(0.02*dz), bracket_thickness(0.75*thickness), floor_spacing(1.1*dz);
 	float const z_step(dz/(num_shelves + 1)), shelf_clearance(z_step - thickness - bracket_thickness), sz_scale(is_house ? 0.7 : (in_warehouse ? 0.8 : 1.0));
 	float const box_zscale(shelf_clearance*sz_scale), h_val(0.21*floor_spacing);
 	rand_gen_t base_rgen(c.create_rgen());
@@ -575,13 +575,13 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 		vector3d sz;
 
 		if (in_mall) {
-			float const shelf_depth(S.get_sz_dim(c.dim)), shelf_len(S.get_sz_dim(!c.dim)), ld_ratio(shelf_len/shelf_depth);
+			float const shelf_depth(s_sz[dim]), shelf_len(s_sz[!dim]), ld_ratio(shelf_len/shelf_depth);
 
 			if (c.item_flags == STORE_CLOTHING) { // clothing store shelf
 				unsigned const num_items(round_fp(rgen.rand_uniform(0.5, 1.0)*ld_ratio)); // 50-100% full
 				C.shape = SHAPE_CUBE;
-				C.dim   =  c.dim;
-				C.dir   = !c.dir;
+				C.dim   =  dim;
+				C.dir   = !dir;
 
 				if (building_obj_model_loader.is_model_valid(OBJ_MODEL_FOLD_SHIRT) && rgen.rand_bool()) { // 50% chance of shirt models
 					vector3d const ssz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FOLD_SHIRT)); // D, W, H
@@ -589,8 +589,8 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 					float const width(min(0.5f*shelf_len, length*ssz.x/ssz.y)), height(length*ssz.z/ssz.y);
 					C.type = TYPE_FOLD_SHIRT;
 					C.z2() = C.z1() + height; // set height
-					sz[ c.dim] = 0.5*length;
-					sz[!c.dim] = 0.5*width;
+					sz[ dim] = 0.5*length;
+					sz[!dim] = 0.5*width;
 
 					for (unsigned n = 0; n < num_items; ++n) {
 						// should folded shirts be stacked? this will increase drawing/culling time
@@ -605,8 +605,8 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 				float const length((is_teeshirt ? 1.0 : 0.8)*rgen.rand_uniform(0.9, 1.0)*shelf_depth), height(0.02*shelf_depth);
 				C.type = (is_teeshirt ? TYPE_TEESHIRT : TYPE_PANTS);
 				C.z2() = C.z1() + height; // set height lower
-				sz[ c.dim] = 0.5*length;
-				sz[!c.dim] = 0.5*min(0.98f*length, 0.5f*shelf_len); // width
+				sz[ dim] = 0.5*length;
+				sz[!dim] = 0.5*min(0.98f*length, 0.5f*shelf_len); // width
 
 				for (unsigned n = 0; n < num_items; ++n) {
 					C.color = (is_teeshirt ? TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS] : WHITE); // T-shirts are colored, jeans are always white
@@ -625,12 +625,12 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 
 					for (unsigned n = 0; n < num_place; ++n) {
 						float const height((top_shelf ? 1.2 : 1.0)*rgen.rand_uniform(0.82, 0.92)*shelf_clearance);
-						sz[ c.dim] = 0.5*rgen.rand_uniform(0.86, 0.98)*shelf_depth; // set depth
-						sz[!c.dim] = 0.5*min(0.5f*shelf_len, rgen.rand_uniform(1.6, 2.8)*shelf_depth); // set length
+						sz[ dim] = 0.5*rgen.rand_uniform(0.86, 0.98)*shelf_depth; // set depth
+						sz[!dim] = 0.5*min(0.5f*shelf_len, rgen.rand_uniform(1.6, 2.8)*shelf_depth); // set length
 						gen_xy_pos_for_cube_obj(tank, S, sz, height, rgen);
 						if (has_bcube_int(tank, cubes)) continue;
-						add_pet_container(tank, C.room_id, C.light_amt, c.dim, !c.dir, 1, objects, rgen, animal_type, s); // in_pet_store=1
-						tank.expand_in_dim(!c.dim, 0.05*shelf_depth); // add a bit of extra spacing between tanks
+						add_pet_container(tank, C.room_id, C.light_amt, dim, !dir, 1, objects, rgen, animal_type, s); // in_pet_store=1
+						tank.expand_in_dim(!dim, 0.05*shelf_depth); // add a bit of extra spacing between tanks
 						cubes.push_back(tank);
 					} // for n
 				}
@@ -646,7 +646,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 					if ((s == 0 || prev_add_shoe_boxes) && building_obj_model_loader.is_model_valid(OBJ_MODEL_SHOEBOX) && rgen.rand_float() > (0.5*s + 0.4)) {
 						model_id = OBJ_MODEL_SHOEBOX;
 						C.type   = TYPE_SHOEBOX;
-						C.dir    = c.dir; // same dir as shelf so that box opens outward
+						C.dir    = dir; // same dir as shelf so that box opens outward
 						C.color  = WHITE;
 						length   = 0.3*floor_spacing;
 						spacing  = 1.1*length;
@@ -665,7 +665,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 					vector3d const ssz(building_obj_model_loader.get_model_world_space_size(model_id)); // L, W, H
 					float const width(min(0.5*shelf_len, (add_pairs ? 2.0 : 1.0)*length*ssz.y/ssz.x)), height(length*ssz.z/ssz.x); // set max
 					C.shape = SHAPE_CUBE;
-					C.dim   = !c.dim;
+					C.dim   = !dim;
 					C.z1()  = S.z2();
 					unsigned const num_slots(shelf_len / spacing);
 					float const slot_spacing(shelf_len / num_slots);
@@ -675,8 +675,8 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 						C.item_flags = rgen.rand(); // random shoe sub-model
 						float const scale(rgen.rand_uniform(0.85, 1.0));
 						C.z2() = C.z1() + scale*height; // set height
-						set_wall_width(C, c.get_center_dim(c.dim), 0.5*scale*width, c.dim);
-						set_wall_width(C, (c.d[!c.dim][0] + (n + 0.5 + 0.05*rgen.signed_rand_float())*slot_spacing), 0.5*scale*length, !c.dim);
+						set_wall_width(C, c.get_center_dim(dim), 0.5*scale*width, dim);
+						set_wall_width(C, (c.d[!dim][0] + (n + 0.5 + 0.05*rgen.signed_rand_float())*slot_spacing), 0.5*scale*length, !dim);
 						bool const mirrored(add_pairs ? building_obj_model_loader.get_model(C.get_model_id()).mirrored : 0);
 						add_if_not_intersecting(C, objects, cubes, add_models_mode, add_pairs, mirrored);
 					} // for n
@@ -694,8 +694,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 					C.color = WHITE;
 					C.type  = TYPE_FIRE_EXT;
 					C.shape = SHAPE_CYLIN;
-					C.dim   = rgen.rand_bool(); // random orient
-					C.dir   = rgen.rand_bool();
+					C.dim   = rgen.rand_bool(); C.dir = rgen.rand_bool(); // random orient
 					gen_xy_pos_for_round_obj(C, S, fe_radius, fe_height, 1.1*fe_radius, rgen);
 					add_if_not_intersecting(C, objects, cubes, add_models_mode);
 				}
@@ -716,12 +715,12 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 
 		// add computers; what about monitors?
 		float const cheight(0.75*h_val), cwidth(0.44*cheight), cdepth(0.9*cheight); // fixed AR=0.44 to match the texture
-		sz[ c.dim] = 0.5*cdepth;
-		sz[!c.dim] = 0.5*cwidth;
+		sz[ dim] = 0.5*cdepth;
+		sz[!dim] = 0.5*cwidth;
 
 		if (2.1*sz.x < s_sz.x && 2.1*sz.y < s_sz.y && (top_shelf || cheight < shelf_clearance)) { // if it fits in all dims
 			unsigned const num_comps(rgen.rand() % (is_house ? 3 : 6)); // 0-5
-			C.dim    = c.dim; C.dir = !c.dir; // reset dim, flip dir
+			C.dim    = dim; C.dir = !dir; // reset dim, flip dir
 			C.type   = TYPE_COMPUTER;
 			C.shape  = SHAPE_CUBE;
 			C.flags |= RO_FLAG_BROKEN; // flag as old
@@ -734,8 +733,8 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 		}
 		// add keyboards
 		float const kbd_hwidth(0.7*0.5*1.1*2.0*h_val), kbd_depth(0.6*kbd_hwidth), kbd_height(0.06*kbd_hwidth);
-		sz[ c.dim] = 0.5*kbd_depth;
-		sz[!c.dim] = kbd_hwidth;
+		sz[ dim] = 0.5*kbd_depth;
+		sz[!dim] = kbd_hwidth;
 
 		if (2.1*sz.x < s_sz.x && 2.1*sz.y < s_sz.y && (top_shelf || kbd_height < shelf_clearance)) { // if it fits in all dims
 			unsigned const num_kbds(rgen.rand() % 5); // 0-4
