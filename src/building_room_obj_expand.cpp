@@ -701,16 +701,53 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 			}
 		}
 		if (add_models_mode) continue; // all items added below are non-models
+		unsigned const objs_start(objects.size());
 
-		if (in_warehouse) { // add pallets
-			// TODO: TYPE_PALLET
-		}
 		// add crates/boxes
 		unsigned const num_boxes(rgen.rand() % (is_house ? 8 : (in_warehouse ? 25 : 13))); // 0-7/24/12
 		cube_t bounds(S);
 		bounds.z1() = S.z2(); // place on top of shelf
 		add_boxes_to_space(c, objects, bounds, cubes, rgen, num_boxes, 0.42*width*sz_scale*(is_house ? 1.5 : 1.0),
 			0.4*box_zscale, 0.98*box_zscale, 1, ((c.flags & ~RO_FLAG_OPEN) | RO_FLAG_NOCOLL)); // allow_crates=1; copy flags from shelf, except for open flag
+
+		if (in_warehouse) { // add pallets
+			float const pdepth(0.96*s_sz[dim]), pwidth(40.0/48*pdepth), pheight(4.5/48*pdepth); // 48x40x4.5 inches, scaled to shelf depth
+
+			if (pwidth < 3.0*s_sz[!dim]) { // don't place on short shelves
+				float const half_width(0.5*pwidth);
+				unsigned const num_pallets((rgen.rand() % 3) + 4); // 4-6
+				C.dim   = dim; C.dir = 0;
+				C.type  = TYPE_PALLET;
+				C.shape = SHAPE_CUBE;
+				set_cube_zvals(C, S.z2(), (S.z2() + pheight));
+				set_wall_width(C, S.get_center_dim(dim), 0.5*pdepth, dim); // set depth
+				vector<vect_room_object_t::iterator> to_move_up;
+
+				for (unsigned n = 0; n < num_pallets; ++n) {
+					for (unsigned N = 0; N < 10; ++N) { // N placement attempts
+						set_wall_width(C, rgen.rand_uniform((S.d[!dim][0] + half_width), (S.d[!dim][1] - half_width)), half_width, !dim);
+						bool valid(1);
+						to_move_up.clear();
+
+						// Note: not using cubes because logic depends on object type
+						for (auto i = objects.begin()+objs_start; i != objects.end(); ++i) {
+							if (!i->intersects(C)) continue;
+							if (i->type != TYPE_BOX && i->type != TYPE_CRATE) {valid = 0; break;} // another pallet, etc.
+							cube_t contain_area(C);
+							contain_area.expand_by_xy(0.2*i->get_size_xy()); // all a bit of overlap
+							if (!contain_area.contains_cube_xy(*i))  {valid = 0; break;} // partial overlap
+							if (i->dz() + pheight > shelf_clearance) {valid = 0; break;} // too tall
+							to_move_up.push_back(i);
+						} // for i
+						if (!valid) continue;
+						for (auto const &i : to_move_up) {i->translate_dim(2, pheight);} // move up onto pallet
+						objects.push_back(C);
+						if (!to_move_up.empty()) {objects.back().flags |= RO_FLAG_ADJ_TOP;} // flag as having something on it
+						break; // done/success
+					} // for N
+				} // for n
+			}
+		}
 		if (in_warehouse) continue; // done placing objects
 
 		// add computers; what about monitors?
