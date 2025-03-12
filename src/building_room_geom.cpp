@@ -1074,18 +1074,18 @@ void building_room_geom_t::add_paint_can(room_object_t const &c) {
 void get_shelf_brackets(room_object_t const &c, cube_t shelves[MAX_SHELVES], unsigned num_shelves, vect_cube_with_ix_t &brackets) {
 	bool const in_room_center(c.is_open()), in_warehouse(c.in_warehouse());
 	vector3d const c_sz(c.get_size());
-	float const dz(c_sz.z), length(c_sz[!c.dim]), width(c_sz[c.dim]), thickness((in_warehouse ? 0.01 : 0.02)*dz), bracket_thickness(0.8*thickness);
+	float const dz(c_sz.z), length(c_sz[!c.dim]), depth(c_sz[c.dim]), thickness((in_warehouse ? 0.01 : 0.02)*dz), bracket_thickness(0.8*thickness);
 	// add a small gap between the back of the bracket and the wall to prevent clipping through building exterior wall, except for shelves in the center of a room
-	float const bracket_wall_offset(in_room_center ? 0.0 : (c.dir ? -1.0 : 1.0)*0.1*bracket_thickness);
+	float const dsign(c.dir ? -1.0 : 1.0), bracket_wall_offset(in_room_center ? 0.0 : dsign*0.1*bracket_thickness);
 	unsigned const num_brackets(2 + round_fp(0.5*length/dz));
 	float const b_offset(max(0.05*dz, 0.02*length)), bracket_width(1.8*thickness), b_step((length - 2*b_offset - bracket_width)/(num_brackets-1));
 	brackets.clear();
 
 	for (unsigned s = 0; s < num_shelves; ++s) {
 		cube_t bracket(shelves[s]);
-		bracket.z2()  = bracket.z1(); // below the shelf
+		bracket.z2()  = (in_warehouse ? bracket.zc() : bracket.z1()); // below the shelf, or inside the shelf for warehouses
 		bracket.z1() -= bracket_thickness;
-		bracket.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.1*width; // shorten slightly
+		if (!in_warehouse) {bracket.d[c.dim][!c.dir] -= dsign*0.1*depth;} // shorten slightly
 		bracket.d[!c.dim][1] = bracket.d[!c.dim][0] + bracket_width; // set width
 		bracket.translate_dim(!c.dim, b_offset);
 
@@ -1098,6 +1098,12 @@ void get_shelf_brackets(room_object_t const &c, cube_t shelves[MAX_SHELVES], uns
 				vbracket.d[c.dim][ c.dir] = c         .d[c.dim][c.dir] + bracket_wall_offset;
 				vbracket.d[c.dim][!c.dir] = shelves[s].d[c.dim][c.dir]; // against the shelf
 				brackets.emplace_back(vbracket, 1); // vertical
+
+				if (in_warehouse) { // add additional vertical brackets along the exterior edges of shelves
+					vbracket.z2() = shelves[num_shelves-1].z2() + bracket_thickness; // ends slightly above the top shelf
+					vbracket.translate_dim(c.dim, 0.995*dsign*depth);
+					brackets.emplace_back(vbracket, 2); // vertical
+				}
 			}
 			bracket.translate_dim(!c.dim, b_step);
 		} // for b
@@ -1111,7 +1117,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	unsigned const num_shelves(get_shelves_for_object(c, shelves));
 	// add wooden or metal shelves
 	// skip back face at wall unless it's a house because it could be against a window (though it really shouldn't be), or unless it's a shelf mid store/warehouse
-	unsigned const skip_faces((is_house || in_room_center) ? 0 : ~get_face_mask(c.dim, c.dir));
+	unsigned const skip_back_face(~get_face_mask(c.dim, c.dir)), skip_faces((is_house || in_room_center) ? 0 : skip_back_face);
 	// inc_shadows=1, dynamic=0, small=1
 	rgeom_mat_t &shelf_mat(in_warehouse ? mats_amask.get_material(get_metal_grate_tex(2.6*tscale, unsigned(1000.0*c.z1())), 1) : get_wood_material(tscale, 1, 0, 1));
 	colorRGBA const shelf_color(apply_light_color(c));
@@ -1122,14 +1128,18 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 		}
 	}
 	if (c.flags & RO_FLAG_INTERIOR) { // add support brackets to interior shelves; skip them if against an exterior wall in case they intersect a window
-		unsigned const skip_faces_vbracket(skip_faces | ((c.flags & RO_FLAG_ADJ_HI) ? EF_Z1 : EF_Z12)); // only draw top face for high shelves since ceiling is high
+		unsigned const skip_faces_z((c.flags & RO_FLAG_ADJ_HI) ? EF_Z1 : EF_Z12); // only draw top face for high shelves since ceiling is high
 		static vect_cube_with_ix_t brackets;
 		get_shelf_brackets(c, shelves, num_shelves, brackets);
 		rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // shadowed, specular metal; small=1
 		colorRGBA const bracket_color(apply_light_color(c, LT_GRAY));
 
 		for (cube_with_ix_t const &b : brackets) {
-			unsigned const skip_faces_b(b.ix ? skip_faces_vbracket : (skip_faces | EF_Z2));
+			unsigned skip_faces_b(0);
+			if      (b.ix == 0) {skip_faces_b = (skip_back_face | (in_warehouse ? 0 : EF_Z2));} // horizontal: skip back and top, if not in warehouse with holes in shelves
+			else if (b.ix == 1) {skip_faces_b = (skip_faces | skip_faces_z);} // vertical back: skip back if against a wall, bottom, and top if reaches the ceiling
+			else if (b.ix == 2) {skip_faces_b = skip_faces_z;} // vertical front: skip bottom, and top if reaches the ceiling
+			else {assert(0);}
 			metal_mat.add_cube_to_verts_untextured(b, bracket_color, skip_faces_b);
 		}
 	}
